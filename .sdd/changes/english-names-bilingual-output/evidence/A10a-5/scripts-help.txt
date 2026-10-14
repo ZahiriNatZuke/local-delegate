@@ -1,0 +1,51 @@
+$ PYTHONIOENCODING=utf-8 uv run python scripts/adoption_experiment.py --help
+usage: adoption_experiment.py [-h] [--bench BENCH] [--repetitions REPETITIONS]
+                              [--seed SEED] [--cost-per-run COST_PER_RUN]
+                              [--resume] [--pilot] [--variants VARIANTS]
+                              [--sources SOURCES] [--yes]
+                              [--report-only REPORT_ONLY]
+
+Experimento de adopción: ¿qué oferta de los hooks hace que el modelo delegue?
+(REQ-102)
+
+options:
+  -h, --help            show this help message and exit
+  --bench BENCH         directorio de trabajo neutro (fuera del repo)
+  --repetitions REPETITIONS
+  --seed SEED
+  --cost-per-run COST_PER_RUN
+  --resume
+  --pilot               3 tareas de docs, resumen sin datos concretos,
+                        corrección por títulos de sección
+  --variants VARIANTS   etiquetas a correr, separadas por comas (por defecto
+                        v0,v1,v2); hoy son iguales
+  --sources SOURCES     carpeta de copias fijas (con MANIFEST.json al lado) en
+                        vez de los ficheros vivos
+  --yes                 no preguntar antes de gastar cuota
+  --report-only REPORT_ONLY
+                        recalcula el veredicto de un results.jsonl
+
+$ ... --report-only <resultados.jsonl de 9 filas con claves viejas>
+{
+  "valid_runs": 9,
+  "correct_ones": 6,
+  "contenido_en_contexto": 3,
+  "per_task": {
+    "readme": {
+      "runs": 3,
+      "correct_ones": 2,
+      "contenido_en_contexto": 1
+    },
+    "wiki-daemon": {
+      "runs": 3,
+      "correct_ones": 2,
+      "contenido_en_contexto": 1
+    },
+    "wiki-instalacion": {
+      "runs": 3,
+      "correct_ones": 2,
+      "contenido_en_contexto": 1
+    }
+  },
+  "decision": "se queda"
+}

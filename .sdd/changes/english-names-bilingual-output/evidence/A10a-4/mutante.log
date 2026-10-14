@@ -1,0 +1,21 @@
+# mutante 1 (no discrimina): 'in delegated_ids' -> 'not in delegated_ids'
+hash 6c8a3d48a46f -> d8f69b87e1d8
+1 passed in 0.18s
+restaurado 6c8a3d48a46f
+
+# mutante 2 (test_test_sessions): sin respaldo al fichero viejo
+hash ae1792bc0436 -> 77a4bd4b923a
+E       AssertionError: assert ['z'] == ['a', 'z']
+E         
+E         At index 0 diff: 'z' != 'a'
+E         Right contains one more item: 'z'
+E         Use -v to get more diff
+1 failed in 0.32s
+restaurado ae1792bc0436
+
+# mutante 3 (test_measure_adoption): delegated_ids = set()
+hash 6c8a3d48a46f -> ad1b04aab441
+>       assert result["accepted"] == 1
+E       assert 0 == 1
+1 failed
+restaurado 6c8a3d48a46f

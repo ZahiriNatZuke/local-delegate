@@ -16,36 +16,36 @@ import pytest
 
 from local_delegate import config
 
-RAIZ = Path(__file__).parents[1]
+ROOT = Path(__file__).parents[1]
 
 
-def _cargar():
+def _load():
     spec = importlib.util.spec_from_file_location(
-        "medir_adopcion", RAIZ / "scripts" / "medir_adopcion.py"
+        "measure_adoption", ROOT / "scripts" / "measure_adoption.py"
     )
     assert spec and spec.loader
-    modulo = importlib.util.module_from_spec(spec)
-    sys.modules["medir_adopcion"] = modulo
-    spec.loader.exec_module(modulo)
-    return modulo
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["measure_adoption"] = module
+    spec.loader.exec_module(module)
+    return module
 
 
-medir_adopcion = _cargar()
+measure_adoption = _load()
 
 
-def _escribir(ruta: Path, eventos: list[dict]) -> None:
-    ruta.parent.mkdir(parents=True, exist_ok=True)
-    ruta.write_text(
-        "\n".join(json.dumps(e, ensure_ascii=False) for e in eventos) + "\n", encoding="utf-8"
+def _write(path: Path, events: list[dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "\n".join(json.dumps(e, ensure_ascii=False) for e in events) + "\n", encoding="utf-8"
     )
 
 
 @pytest.fixture
-def escenario(tmp_path, monkeypatch):
+def scenario(tmp_path, monkeypatch):
     """Una muestra pequena pero completa: de cada caso, uno que cuenta y uno que no."""
     hooks = tmp_path / "telemetry.jsonl"
-    usos = tmp_path / "usage"
-    _escribir(
+    usages = tmp_path / "usage"
+    _write(
         hooks,
         [
             # Un bloqueo que SI acabo en delegacion.
@@ -121,7 +121,7 @@ def escenario(tmp_path, monkeypatch):
                 "session_id": "s1",
                 "version": "def67890",
             },
-            # Fuera de ventana: no debe contarse cuando se pide --desde.
+            # Fuera de ventana: no debe contarse cuando se pide --since.
             {
                 "ts": "2026-09-01T10:00:00Z",
                 "category": "read",
@@ -134,76 +134,76 @@ def escenario(tmp_path, monkeypatch):
             },
         ],
     )
-    _escribir(
-        usos / "usage-202609.jsonl",
+    _write(
+        usages / "usage-202609.jsonl",
         [
             {"ts": "2026-09-12T10:00:05Z", "tool": "local_summarize", "bloqueo_id": "aaa"},
             {"ts": "2026-09-12T10:10:00Z", "tool": "local_extract"},
-            {"ts": "2026-09-12T10:11:00Z", "tool": "otra_cosa"},
+            {"ts": "2026-09-12T10:11:00Z", "tool": "something_else"},
         ],
     )
     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(hooks))
-    monkeypatch.setattr(config, "LOG_DIR", usos)
+    monkeypatch.setattr(config, "LOG_DIR", usages)
     return hooks
 
 
-def test_el_cruce_dice_cuantos_bloqueos_acabaron_en_delegacion(escenario):
+def test_the_join_says_how_many_blocks_ended_in_delegation(scenario):
     """La pregunta que ninguna de las cuatro mediciones anteriores pudo responder."""
-    resultado = medir_adopcion.medir("2026-09-10")
+    result = measure_adoption.measure("2026-09-10")
 
-    assert resultado["bloqueos"] == 2
-    assert resultado["aceptados"] == 1
-    assert resultado["tasa_de_aceptacion"] == 0.5
+    assert result["blocks"] == 2
+    assert result["accepted"] == 1
+    assert result["acceptance_rate"] == 0.5
 
 
-def test_una_delegacion_que_nadie_provoco_no_cuenta_como_aceptada(escenario):
+def test_a_delegation_nobody_prompted_does_not_count_as_accepted(scenario):
     """Control positivo: contarla inflaria la adopcion con lo que el agente ya hacia solo."""
-    resultado = medir_adopcion.medir("2026-09-10")
+    result = measure_adoption.measure("2026-09-10")
 
-    assert resultado["delegaciones_totales"] == 2, "`otra_cosa` no es una tool local_*"
-    assert resultado["delegaciones_espontaneas"] == 1
-
-
-def test_la_ventana_deja_fuera_lo_de_antes(escenario):
-    con_ventana = medir_adopcion.medir("2026-09-10")
-    sin_ventana = medir_adopcion.medir(None)
-
-    assert con_ventana["bloqueos"] == 2
-    assert sin_ventana["bloqueos"] == 3, "sin ventana entra tambien el bloqueo del 1 de septiembre"
+    assert result["total_delegations"] == 2, "`something_else` no es una tool local_*"
+    assert result["spontaneous_delegations"] == 1
 
 
-def test_la_guarda_de_acotada_se_mide_con_el_criterio_escrito(escenario):
+def test_the_window_leaves_out_what_came_before(scenario):
+    with_window = measure_adoption.measure("2026-09-10")
+    without_window = measure_adoption.measure(None)
+
+    assert with_window["blocks"] == 2
+    assert without_window["blocks"] == 3, "sin ventana entra tambien el bloqueo del 1 de septiembre"
+
+
+def test_the_bounded_guard_is_measured_with_the_written_criterion(scenario):
     """De las dos lecturas por franjas, solo una era de un fichero que acabo leyendose entero."""
-    resultado = medir_adopcion.medir("2026-09-10")
+    result = measure_adoption.measure("2026-09-10")
 
-    assert resultado["acotadas_con_huella"] == 2
-    assert resultado["acotadas_que_convenia_delegar"] == 1
-
-
-def test_se_cuentan_los_dos_caminos_de_lectura(escenario):
-    resultado = medir_adopcion.medir("2026-09-10")
-
-    assert resultado["por_camino"] == {"read": 6, "shell": 1}
+    assert result["bounded_with_footprint"] == 2
+    assert result["bounded_worth_delegating"] == 1
 
 
-def test_se_ve_si_la_muestra_mezcla_dos_versiones_de_script(escenario):
+def test_both_read_paths_are_counted(scenario):
+    result = measure_adoption.measure("2026-09-10")
+
+    assert result["by_path"] == {"read": 6, "shell": 1}
+
+
+def test_it_shows_if_the_sample_mixes_two_script_versions(scenario):
     """Una sesion abierta hereda el entorno del lanzador: sin esto la muestra miente y no lo dice."""
-    resultado = medir_adopcion.medir("2026-09-10")
+    result = measure_adoption.measure("2026-09-10")
 
-    assert resultado["versiones_de_script"] == ["abc12345", "def67890"]
+    assert result["script_versions"] == ["abc12345", "def67890"]
 
 
-def test_sin_logs_no_revienta(tmp_path, monkeypatch):
-    monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(tmp_path / "no-existe.jsonl"))
+def test_without_logs_it_does_not_crash(tmp_path, monkeypatch):
+    monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(tmp_path / "does-not-exist.jsonl"))
     monkeypatch.setattr(config, "LOG_DIR", tmp_path / "tampoco")
 
-    resultado = medir_adopcion.medir(None)
+    result = measure_adoption.measure(None)
 
-    assert resultado["lecturas"] == 0
-    assert resultado["tasa_de_aceptacion"] is None
+    assert result["reads"] == 0
+    assert result["acceptance_rate"] is None
 
 
-def test_una_linea_corrupta_no_tumba_la_medicion(tmp_path, monkeypatch):
+def test_a_corrupt_line_does_not_break_the_measurement(tmp_path, monkeypatch):
     hooks = tmp_path / "telemetry.jsonl"
     hooks.write_text(
         'no es json\n{"ts": "2026-09-12T10:00:00Z", "category": "read", "suggested": true}\n',
@@ -212,107 +212,108 @@ def test_una_linea_corrupta_no_tumba_la_medicion(tmp_path, monkeypatch):
     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(hooks))
     monkeypatch.setattr(config, "LOG_DIR", tmp_path / "vacio")
 
-    assert medir_adopcion.medir(None)["ofrecidos"] == 1
+    assert measure_adoption.measure(None)["offered"] == 1
 
 
 # --- Ventanas de prueba (test-windows-out-of-metrics, REQ-021 y REQ-022) -------------------------
 
 
-def test_el_directorio_es_el_de_config(tmp_path, monkeypatch):
+def test_the_directory_is_the_config_one(tmp_path, monkeypatch):
     """REQ-022: el panel y los scripts leen el MISMO `test-windows.json`."""
     monkeypatch.setattr(config, "LOG_DIR", tmp_path / "uno")
     monkeypatch.setenv("LOCAL_DELEGATE_LOG_DIR", str(tmp_path / "otro"))
-    assert medir_adopcion.directorio_de_logs() == tmp_path / "uno"
+    assert measure_adoption.logs_dir() == tmp_path / "uno"
     monkeypatch.delenv("LOCAL_DELEGATE_LOG_DIR")
-    assert medir_adopcion.directorio_de_logs() == config.LOG_DIR
+    assert measure_adoption.logs_dir() == config.LOG_DIR
 
 
-def test_un_bloqueo_y_su_delegacion_en_ventana_no_cuentan(escenario):
+def test_a_block_and_its_delegation_in_a_window_do_not_count(scenario):
     """Control: mutante «se ignora el fichero de ventanas» → los bloqueos siguen en 2."""
     from local_delegate import test_windows
 
     test_windows.add(config.LOG_DIR, "2026-09-12T09:59:00Z", "2026-09-12T10:00:30Z", "prueba")
-    sin = medir_adopcion.medir("2026-09-10")
-    con = medir_adopcion.medir("2026-09-10", include_tests=True)
-    assert (con["bloqueos"], con["aceptados"]) == (2, 1), "guarda: sin quitar nada, lo de siempre"
-    assert (sin["bloqueos"], sin["aceptados"]) == (1, 0)
-    assert sin["excluded_tests"] == {"hooks": 1, "usage": 1}
-    assert con["excluded_tests"] == {"hooks": 0, "usage": 0}
+    without_tests = measure_adoption.measure("2026-09-10")
+    with_tests = measure_adoption.measure("2026-09-10", include_tests=True)
+    assert (with_tests["blocks"], with_tests["accepted"]) == (2, 1), (
+        "guarda: sin quitar nada, lo de siempre"
+    )
+    assert (without_tests["blocks"], without_tests["accepted"]) == (1, 0)
+    assert without_tests["excluded_tests"] == {"hooks": 1, "usage": 1}
+    assert with_tests["excluded_tests"] == {"hooks": 0, "usage": 0}
 
 
-def test_las_filas_del_cliente_mcp_no_cuentan_como_delegacion(escenario):
-    _escribir(
+def test_mcp_client_rows_do_not_count_as_delegation(scenario):
+    _write(
         config.LOG_DIR / "usage-202610.jsonl",
         [{"ts": "2026-10-01T10:00:00Z", "tool": "local_summarize", "client": "mcp"}],
     )
-    assert medir_adopcion.medir("2026-09-10")["delegaciones_totales"] == 2
-    assert medir_adopcion.medir("2026-09-10", include_tests=True)["delegaciones_totales"] == 3
+    assert measure_adoption.measure("2026-09-10")["total_delegations"] == 2
+    assert measure_adoption.measure("2026-09-10", include_tests=True)["total_delegations"] == 3
 
 
-def test_main_de_verdad_sale_con_cero(escenario, monkeypatch, capsys):
-    monkeypatch.setattr(sys, "argv", ["medir_adopcion.py", "--desde", "2026-09-10", "--json"])
-    assert medir_adopcion.main() == 0
-    datos = json.loads(capsys.readouterr().out)
-    assert "excluded_tests" in datos and "test_windows" in datos
-    monkeypatch.setattr(sys, "argv", ["medir_adopcion.py", "--desde", "2026-09-10"])
-    assert medir_adopcion.main() == 0
+def test_real_main_exits_with_zero(scenario, monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["measure_adoption.py", "--since", "2026-09-10", "--json"])
+    assert measure_adoption.main() == 0
+    data = json.loads(capsys.readouterr().out)
+    assert "excluded_tests" in data and "test_windows" in data
+    # `--desde`, el nombre de antes de `--since`, sigue valiendo (alias).
+    monkeypatch.setattr(sys, "argv", ["measure_adoption.py", "--desde", "2026-09-10"])
+    assert measure_adoption.main() == 0
     assert "Pruebas fuera:" in capsys.readouterr().out
 
 
-def test_las_filas_de_banco_no_cuentan_como_delegacion(escenario):
+def test_bench_rows_do_not_count_as_delegation(scenario):
     """La marca `banco` llega por el relleno, no por el log: sin fundir, la fila se colaba.
     Control: mutante «sin fundir» (filas crudas) → la delegación de banco vuelve a contar."""
     from local_delegate import attribution
 
-    _escribir(
+    _write(
         config.LOG_DIR / "usage-202610.jsonl",
         [{"ts": "2026-10-01T10:00:00Z", "tool": "local_summarize", "tool_use_id": "toolu_bk"}],
     )
-    assert medir_adopcion.medir("2026-09-10")["delegaciones_totales"] == 3, "guarda: sin relleno"
+    assert measure_adoption.measure("2026-09-10")["total_delegations"] == 3, "guarda: sin relleno"
     attribution.write_backfill(config.LOG_DIR, "202610", {"toolu_bk": {"bench": True}})
-    assert medir_adopcion.medir("2026-09-10")["delegaciones_totales"] == 2
-    assert medir_adopcion.medir("2026-09-10", include_tests=True)["delegaciones_totales"] == 3
+    assert measure_adoption.measure("2026-09-10")["total_delegations"] == 2
+    assert measure_adoption.measure("2026-09-10", include_tests=True)["total_delegations"] == 3
 
 
 # --- Telemetría vieja y nueva (REQ-006, ola A2 del renombrado) ---------------------------------
 
 
-def _a_formato_nuevo(evento: dict) -> dict:
+def _to_new_format(event: dict) -> dict:
     """La misma fila con las claves y valores en inglés, como la escribe un hook de hoy."""
     from local_delegate import legacy_names
 
-    return legacy_names.normalize("hook_telemetry", evento)
+    return legacy_names.normalize("hook_telemetry", event)
 
 
-@pytest.mark.parametrize("formato", ["nuevo", "mezclado"])
-def test_las_filas_nuevas_o_mezcladas_dan_la_misma_medida_que_las_viejas(escenario, formato):
+@pytest.mark.parametrize("fmt", ["new", "mixed"])
+def test_new_or_mixed_rows_give_the_same_measure_as_the_old_ones(scenario, fmt):
     """El escenario está escrito en el formato viejo (`motivo`, `camino`…). Traducido entero, o la
     mitad, la medida tiene que salir idéntica: la historia en español se sigue contando."""
-    antes = medir_adopcion.medir("2026-09-10")
-    filas = [json.loads(x) for x in escenario.read_text(encoding="utf-8").splitlines() if x]
-    assert any("motivo" in f for f in filas), "guarda: el escenario trae filas viejas"
-    nuevas = [
-        _a_formato_nuevo(f) if formato == "nuevo" or i % 2 else f for i, f in enumerate(filas)
-    ]
-    assert any("reason" in f for f in nuevas)
-    _escribir(escenario, nuevas)
+    before = measure_adoption.measure("2026-09-10")
+    rows = [json.loads(x) for x in scenario.read_text(encoding="utf-8").splitlines() if x]
+    assert any("motivo" in f for f in rows), "guarda: el escenario trae filas viejas"
+    new_ones = [_to_new_format(f) if fmt == "new" or i % 2 else f for i, f in enumerate(rows)]
+    assert any("reason" in f for f in new_ones)
+    _write(scenario, new_ones)
 
-    assert medir_adopcion.medir("2026-09-10") == antes
+    assert measure_adoption.measure("2026-09-10") == before
 
 
 # --- Log de uso viejo y nuevo (REQ-006, ola A3 del renombrado) ---------------------------------
 
 
-def test_el_block_id_nuevo_cuenta_igual_que_el_bloqueo_id_viejo(escenario):
+def test_the_new_block_id_counts_the_same_as_the_old_bloqueo_id(scenario):
     """El escenario trae la delegación aceptada con `bloqueo_id` (0.34.0). Con `block_id`, la
     aceptación y las delegaciones espontáneas salen iguales."""
-    antes = medir_adopcion.medir("2026-09-10")
-    assert antes["aceptados"] == 1, "guarda: el escenario cruza un bloqueo con su delegación"
-    uso = config.LOG_DIR / "usage-202609.jsonl"
-    filas = [json.loads(x) for x in uso.read_text(encoding="utf-8").splitlines() if x]
-    assert any("bloqueo_id" in f for f in filas), "guarda: el escenario trae la clave vieja"
-    _escribir(
-        uso, [{("block_id" if k == "bloqueo_id" else k): v for k, v in f.items()} for f in filas]
+    before = measure_adoption.measure("2026-09-10")
+    assert before["accepted"] == 1, "guarda: el escenario cruza un bloqueo con su delegación"
+    usage = config.LOG_DIR / "usage-202609.jsonl"
+    rows = [json.loads(x) for x in usage.read_text(encoding="utf-8").splitlines() if x]
+    assert any("bloqueo_id" in f for f in rows), "guarda: el escenario trae la clave vieja"
+    _write(
+        usage, [{("block_id" if k == "bloqueo_id" else k): v for k, v in f.items()} for f in rows]
     )
 
-    assert medir_adopcion.medir("2026-09-10") == antes
+    assert measure_adoption.measure("2026-09-10") == before

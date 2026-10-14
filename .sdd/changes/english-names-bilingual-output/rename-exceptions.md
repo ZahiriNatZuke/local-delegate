@@ -36,6 +36,8 @@ sección de su motivo.
 | anotar_llamada.py | src/local_delegate/install.py | alias de compatibilidad permanente (REQ-012): nombre del hook hasta la 0.34.0 en `_RETIRED_SCRIPTS`; misma razón (ola A2, apuntado en A6, respuesta 7) |
 | delegacion-local | tests/* | alias de compatibilidad (REQ-012): instalación 0.34.0 simulada en los tests de `install`/`update` y de la retirada de la skill (ola A6) |
 | ld_sesion | tests/test_web_auth.py | alias de compatibilidad (REQ-012): cookie de la 0.34.0 que tiene que dar 401 (ola A6) |
+| --desde | scripts/measure_adoption.py | alias de compatibilidad (decisión 10 de A10a): nombre de antes de `--since`, por los comandos escritos en la wiki y en el `verification.md` de `delegacion-precisa-y-fiable`; el test lo usa en una de las dos llamadas a `main` (ola A10a-4) |
+| --desde | tests/test_measure_adoption.py | alias de compatibilidad (decisión 10 de A10a): nombre de antes de `--since`, por los comandos escritos en la wiki y en el `verification.md` de `delegacion-precisa-y-fiable`; el test lo usa en una de las dos llamadas a `main` (ola A10a-4) |
 
 ## Lectura de formato viejo
 
@@ -54,6 +56,31 @@ sección de su motivo.
 | peticion | tests/test_measure_cooldown.py | lectura de formato viejo (REQ-007): clase de error vieja que el test escribe a propósito (ola A10a-3) |
 | enfriamiento | tests/test_measure_cooldown.py | lectura de formato viejo (REQ-007): clase de salto vieja que el test escribe a propósito (ola A10a-3) |
 | enfriamiento-eventos.jsonl | tests/test_measure_cooldown.py | lectura de formato viejo (REQ-007): nombre del fichero viejo de eventos, que el script sigue leyendo (ola A10a-3) |
+| motivo | tests/test_measure_adoption.py | lectura de formato viejo (REQ-006): clave de la telemetría vieja de hooks que el escenario escribe a propósito; `test_new_or_mixed_rows_give_the_same_measure_as_the_old_ones` exige que esté (ola A10a-4) |
+| camino | tests/test_measure_adoption.py | lectura de formato viejo (REQ-006): clave vieja de la telemetría de hooks (`route` en la nueva) que el escenario escribe a propósito (ola A10a-4) |
+| prosa_grande | tests/test_measure_adoption.py | lectura de formato viejo (REQ-006): valor viejo de `motivo` en el escenario (ola A10a-4) |
+| acotada | tests/test_measure_adoption.py | lectura de formato viejo (REQ-006): valor viejo de `motivo` en el escenario (ola A10a-4) |
+| no_es_volcado | tests/test_measure_adoption.py | lectura de formato viejo (REQ-006): valor viejo de `motivo` en el escenario (ola A10a-4) |
+| bloqueo_id | tests/test_measure_adoption.py | lectura de formato viejo (REQ-006): clave del log de uso de la 0.34.0 que el escenario escribe a propósito; `test_the_new_block_id_counts_the_same_as_the_old_bloqueo_id` la traduce y compara (ola A10a-4) |
+| test_the_new_block_id_counts_the_same_as_the_old_bloqueo_id | tests/test_measure_adoption.py | lectura de formato viejo (REQ-006): el nombre del test cita la clave vieja `bloqueo_id` que prueba (ola A10a-4) |
+| sesiones | tests/test_test_sessions.py | lectura de formato viejo (decisión 6 de A10a): el fichero de ventanas excluidas que el test escribe en el formato viejo para probar que `merge` lo lee y lo devuelve en el nuevo (ola A10a-4) |
+| ventanas | tests/test_test_sessions.py | lectura de formato viejo (decisión 6 de A10a): el fichero de ventanas excluidas que el test escribe en el formato viejo para probar que `merge` lo lee y lo devuelve en el nuevo (ola A10a-4) |
+| inicio | tests/test_test_sessions.py | lectura de formato viejo (decisión 6 de A10a): el fichero de ventanas excluidas que el test escribe en el formato viejo para probar que `merge` lo lee y lo devuelve en el nuevo (ola A10a-4) |
+| fin | tests/test_test_sessions.py | lectura de formato viejo (decisión 6 de A10a): el fichero de ventanas excluidas que el test escribe en el formato viejo para probar que `merge` lo lee y lo devuelve en el nuevo (ola A10a-4) |
+| ventanas-excluidas.json | scripts/test_sessions.py | lectura de formato viejo (decisión 6 de A10a): nombre de antes de `benchmarks/excluded-windows.json`, que `merge` lee si el nuevo no existe y nunca escribe; el congelado de `benchmarks/` no se renombra (ola A10a-4) |
+| ventanas-excluidas.json | tests/test_test_sessions.py | lectura de formato viejo (decisión 6 de A10a): nombre de antes de `benchmarks/excluded-windows.json`, que `merge` lee si el nuevo no existe y nunca escribe; el congelado de `benchmarks/` no se renombra (ola A10a-4) |
+| sesiones | tests/test_adoption_experiment.py | lectura de formato viejo (decisión 7 de A10a): el fichero de ventanas excluidas en el formato de antes, que el test escribe a propósito para probar que `_banco_claude.anotar_ventana` lo lee y escribe el nuevo (ola A10a-5) |
+| ventanas | tests/test_adoption_experiment.py | lectura de formato viejo (decisión 7 de A10a): el fichero de ventanas excluidas en el formato de antes, que el test escribe a propósito para probar que `_banco_claude.anotar_ventana` lo lee y escribe el nuevo (ola A10a-5) |
+| inicio | tests/test_adoption_experiment.py | lectura de formato viejo (decisión 7 de A10a): el fichero de ventanas excluidas en el formato de antes, que el test escribe a propósito para probar que `_banco_claude.anotar_ventana` lo lee y escribe el nuevo (ola A10a-5) |
+| fin | tests/test_adoption_experiment.py | lectura de formato viejo (decisión 7 de A10a): el fichero de ventanas excluidas en el formato de antes, que el test escribe a propósito para probar que `_banco_claude.anotar_ventana` lo lee y escribe el nuevo (ola A10a-5) |
+| motivo | tests/test_adoption_experiment.py | lectura de formato viejo (decisión 7 de A10a): el fichero de ventanas excluidas en el formato de antes, que el test escribe a propósito para probar que `_banco_claude.anotar_ventana` lo lee y escribe el nuevo (ola A10a-5) |
+| tanda | tests/test_adoption_experiment.py | lectura de formato viejo (decisión 7 de A10a): el fichero de ventanas excluidas en el formato de antes, que el test escribe a propósito para probar que `_banco_claude.anotar_ventana` lo lee y escribe el nuevo (ola A10a-5) |
+| ventanas-excluidas.json | tests/test_adoption_experiment.py | lectura de formato viejo (decisión 7 de A10a): el fichero de ventanas excluidas en el formato de antes, que el test escribe a propósito para probar que `_banco_claude.anotar_ventana` lo lee y escribe el nuevo (ola A10a-5) |
+| bloqueo | tests/test_adoption_experiment.py | lectura de formato viejo (REQ-006): clave de la telemetría vieja de hooks (`bloqueo: encendido`) que el test da a `corrida_valida` a propósito (ola A10a-5) |
+| apagado_fichero | tests/test_adoption_experiment.py | lectura de formato viejo (REQ-006): valor viejo de `bloqueo` en la misma fila (ola A10a-5) |
+| ficheros | tests/test_adoption_experiment.py | lectura de formato viejo: el `MANIFEST.json` del test copia el congelado de `benchmarks/resumen-estructurado/`, que `source_text` traduce con la tabla `sources_manifest` (ola A10a-5) |
+| origen | tests/test_adoption_experiment.py | lectura de formato viejo: mismo `MANIFEST.json` del test (ola A10a-5) |
+| resultados.jsonl | scripts/adoption_experiment.py | lectura de formato viejo: `--resume` sigue en el `resultados.jsonl` de una tanda empezada antes del renombrado; sus filas se leen con la tabla `adoption_runs` (ola A10a-5) |
 
 ## Envoltorio de REQ-046
 
@@ -89,6 +116,11 @@ sección de su motivo.
 | nonce-neutro | scripts/clean_watcher_fixtures.py | dato congelado de corpus o caso: valor neutro (`NEUTRAL_NONCE`) que el limpiador ya escribió en las copias de `tests/fixtures/vigilante/*.html`; cambiarlo obligaría a reescribir esas copias (ola A10a-1) |
 | catalogo-2026-09 | tests/test_resource_probe.py | dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10a-3) |
 | clasificar-53 | tests/test_resource_probe.py | dato congelado de corpus o caso: id de un caso del corpus congelado (ola A10a-3) |
+| adopcion-directa | scripts/adoption_experiment.py | dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10a-5) |
+| tareas.json | scripts/adoption_experiment.py | dato congelado de corpus o caso: `benchmarks/adopcion-directa/tareas.json`, que no reescribe nadie; `load_tasks` traduce sus claves (ola A10a-5) |
+| wiki-instalacion | scripts/adoption_experiment.py | dato congelado de corpus o caso: id de una tarea del corpus congelado (ola A10a-5) |
+| wiki-instalacion | tests/test_adoption_experiment.py | dato congelado de corpus o caso: id de una tarea del corpus congelado (ola A10a-5) |
+| experimento-adopcion | scripts/adoption_experiment.py | dato congelado de corpus o caso: etiqueta de las tandas ya anotadas en el fichero congelado de ventanas excluidas (ola A10a-5) |
 
 ## Pendiente
 

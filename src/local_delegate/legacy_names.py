@@ -174,6 +174,49 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
         },
         "values": {"source": {"rechazo": "rejection"}},
     },
+    # Sesiones y ventanas que las mediciones de adopción excluyen (`benchmarks/excluded-windows.json`;
+    # antes `ventanas-excluidas.json`, que se sigue leyendo). La misma tabla vale para el primer
+    # nivel y para cada entrada de `sessions[]` y `windows[]`.
+    "excluded_windows": {
+        "keys": {
+            "sesiones": "sessions",
+            "ventanas": "windows",
+            "inicio": "start",
+            "fin": "end",
+            "motivo": "reason",
+            "tanda": "batch",
+        },
+    },
+    # Las tareas del experimento de adopción (`benchmarks/adopcion-directa/tareas.json`, congelado:
+    # nadie lo reescribe). La misma tabla vale para el primer nivel y para cada tarea.
+    "adoption_tasks": {
+        "keys": {
+            "tareas": "tasks",
+            "fuente": "source",
+            "comando": "command",
+            "estilo": "style",
+            "nombre": "name",
+        },
+    },
+    # El `MANIFEST.json` de las copias fijas (`benchmarks/resumen-estructurado/`, congelado). La
+    # misma tabla vale para el primer nivel y para cada entrada de `files`.
+    "sources_manifest": {
+        "keys": {"ficheros": "files", "origen": "origin"},
+    },
+    # Cada corrida del experimento de adopción (`results.jsonl` del banco; antes `resultados.jsonl`).
+    "adoption_runs": {
+        "keys": {
+            "tarea": "task",
+            "oferta": "offer",
+            "valida": "valid",
+            "correcta": "correct",
+            "coste_usd": "cost_usd",
+            "cobertura_titulos": "title_coverage",
+            "hecho_en_respuesta": "fact_in_answer",
+            "tools_locales": "local_tools",
+            "intentos": "attempts",
+        },
+    },
 }
 
 #: Motivos de descarte de la cuota: las claves de `discards[<tipo>]` (y los dos que añade
@@ -231,6 +274,11 @@ COST_AGGREGATES_FILE_NAMES: tuple[str, str] = ("coste-agregados.json", "cost-agg
 #: El registro del statusline (en `~/.claude`), como `(viejo, nuevo)`. Lo escribe el statusline del
 #: usuario, que es código ajeno al paquete: se leen los dos si existen los dos (REQ-008).
 QUOTA_STATUSLINE_FILE_NAMES: tuple[str, str] = ("cuota-statusline.jsonl", "quota-statusline.jsonl")
+
+#: Las sesiones y ventanas que excluyen las mediciones de adopción (en `benchmarks/`), como
+#: `(viejo, nuevo)`. Lo escriben `scripts/test_sessions.py` y `_banco_claude.anotar_ventana`, solo el
+#: nuevo; si no existe, parten del viejo, que está congelado y no se reescribe nunca.
+EXCLUDED_WINDOWS_FILE_NAMES: tuple[str, str] = ("ventanas-excluidas.json", "excluded-windows.json")
 
 #: Valores que el panel recibe de `/api/hooks` y que su diccionario de etiquetas tiene que entender
 #: también en el formato viejo (REQ-009). El servidor lo inyecta en el HTML: el JS no copia la tabla.
@@ -294,6 +342,18 @@ def normalize(fmt: str, row: Mapping[str, Any]) -> dict[str, Any]:
         value = out.get(key)
         if isinstance(value, str) and value in mapping:
             out[key] = mapping[value]
+    return out
+
+
+def normalize_excluded_windows(data: Mapping[str, Any]) -> dict[str, Any]:
+    """El fichero de ventanas excluidas en el formato nuevo: el primer nivel y cada entrada de
+    `sessions[]` y `windows[]`. Un fichero ya nuevo sale igual."""
+    out = normalize("excluded_windows", data)
+    for key in ("sessions", "windows"):
+        if isinstance(out.get(key), list):
+            out[key] = [
+                normalize("excluded_windows", e) if isinstance(e, Mapping) else e for e in out[key]
+            ]
     return out
 
 

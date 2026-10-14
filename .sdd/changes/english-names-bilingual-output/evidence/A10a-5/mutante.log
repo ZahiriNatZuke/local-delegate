@@ -1,0 +1,24 @@
+## scripts/_banco_claude.py: origen = destino if destino.is_file() else destino.with_name(old_name) -> origen = destino
+hash c0cb43e14073 -> 542c7827a86e
+>       assert [s["session_id"] for s in data["sessions"]] == ["s1", "s2"]
+E       AssertionError: assert ['s2'] == ['s1', 's2']
+E         
+E         At index 0 diff: 's2' != 's1'
+E         Right contains one more item: 's2'
+restaurado c0cb43e14073
+Traceback (most recent call last):
+  File "<string>", line 2, in <module>
+    import sys;p=sys.argv[1];s=open(p,encoding='utf-8',newline='').read();assert s.count(sys.argv[2])==1;open(p,'w',encoding='utf-8',newline='').write(s.replace(sys.argv[2],sys.argv[3]))
+                                                                                 ^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+## scripts/adoption_experiment.py: v: [t for t in tasks if correct_ones[(t, v)] > correct_ones[(t, "v0")]] for v in ("v1", "v2") -> v: [t for t in tasks if correct_ones[(t, v)] >= correct_ones[(t, "v0")]] for v in ("v1", "v2")
+hash f42e09d91a1c -> f42e09d91a1c
+1 passed in 0.13s
+restaurado f42e09d91a1c
+
+## (el intento anterior no mutó: el patrón no coincidía y el hash no cambió) scripts/adoption_experiment.py: > -> >=
+hash f42e09d91a1c -> 78afa731d2eb
+>       assert result["chosen"] is None
+E       AssertionError: assert 'v1' is None
+1 failed in 3.03s
+restaurado f42e09d91a1c

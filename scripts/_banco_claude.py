@@ -244,26 +244,37 @@ def corrida_valida(telemetria: list[dict], session_id: str) -> bool:
 
 
 def anotar_ventana(destino: Path, tanda: str, corridas: list[Corrida]) -> None:
-    """Ventana de la tanda (+10 min: los modelos quedan calientes) y sus sesiones, para excluirlas."""
-    datos = {"sesiones": [], "ventanas": []}
-    if destino.is_file():
-        datos = json.loads(destino.read_text(encoding="utf-8"))
+    """Ventana de la tanda (+10 min: los modelos quedan calientes) y sus sesiones, para excluirlas.
+
+    `destino` es el fichero nuevo (`excluded-windows.json`): si aún no existe, se parte del de antes
+    que tenga al lado (`ventanas-excluidas.json`, que no se reescribe), con sus claves traducidas.
+    Se escribe siempre en el formato nuevo.
+    """
+    from local_delegate import legacy_names
+
+    old_name = legacy_names.EXCLUDED_WINDOWS_FILE_NAMES[0]
+    origen = destino if destino.is_file() else destino.with_name(old_name)
+    datos: dict = {"sessions": [], "windows": []}
+    if origen.is_file():
+        datos = legacy_names.normalize_excluded_windows(
+            json.loads(origen.read_text(encoding="utf-8"))
+        )
     validas = [c for c in corridas if c.inicio]
     if not validas:
         return
     fin = datetime.fromisoformat(max(c.fin for c in validas)).timestamp() + 600
-    datos.setdefault("ventanas", []).append(
+    datos.setdefault("windows", []).append(
         {
-            "tanda": tanda,
-            "inicio": min(c.inicio for c in validas),
-            "fin": datetime.fromtimestamp(fin, UTC).isoformat(timespec="seconds"),
+            "batch": tanda,
+            "start": min(c.inicio for c in validas),
+            "end": datetime.fromtimestamp(fin, UTC).isoformat(timespec="seconds"),
         }
     )
-    conocidas = {s["session_id"] for s in datos.setdefault("sesiones", [])}
+    conocidas = {s["session_id"] for s in datos.setdefault("sessions", [])}
     for c in validas:
         if c.session_id and c.session_id not in conocidas:
-            datos["sesiones"].append(
-                {"session_id": c.session_id, "inicio": c.inicio, "fin": c.fin, "motivo": tanda}
+            datos["sessions"].append(
+                {"session_id": c.session_id, "start": c.inicio, "end": c.fin, "reason": tanda}
             )
     destino.write_text(json.dumps(datos, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 

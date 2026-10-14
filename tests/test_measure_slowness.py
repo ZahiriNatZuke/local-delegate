@@ -35,7 +35,7 @@ def _load():
 
 ml = _load()
 
-MODEL = "modelo-a"
+MODEL = "model-a"
 
 
 def _ev(i: int, tok_s: float, *, tokens_out: int = 100, tokens_in: int = 500, **extra) -> dict:
@@ -118,7 +118,7 @@ def test_each_model_has_its_window() -> None:
     slow_ones = [{**_ev(i, 100.0), "model": "rapido"} for i in range(12)]
     slow_ones += [_ev(100 + i, 10.0) for i in range(12)]
     result = ml.compute_slowness(slow_ones)
-    assert not any(e.get("slow") for e in result)  # 10 tok/s es normal para modelo-a
+    assert not any(e.get("slow") for e in result)  # 10 tok/s es normal para model-a
 
 
 def test_threshold_is_strict() -> None:
@@ -197,10 +197,10 @@ def _row(
 ) -> dict:
     return {
         "id": id_,
-        "fin": end,
-        "modelo": model,
-        "entrada": entry,
-        "salida": output,
+        "end": end,
+        "model": model,
+        "entry": entry,
+        "output": output,
         "tps": tps,
         "dur": dur,
     }
@@ -208,9 +208,9 @@ def _row(
 
 def _call(end: float, *, latency: float = 10.0, model: str = MODEL, ok: bool = True) -> dict:
     return {
-        "fin": end,
+        "end": end,
         "ini": end - latency,
-        "modelo": model,
+        "model": model,
         "ok": ok,
         "tool": "local_summarize",
     }
@@ -225,7 +225,7 @@ def test_rows_of_same_event_grouped_with_sigma_output_over_sigma_ms() -> None:
     events = ml.group_by_event(rows, calls)
     assert len(events) == 1
     e = events[0]
-    assert e["origen"] == "PC" and e["filas"] == [1, 2]
+    assert e["origin"] == "PC" and e["rows"] == [1, 2]
     assert e["tokens_out"] == 200
     assert e["tok_s"] == pytest.approx(200 / 6)
     assert e["tokens_in"] == 900  # la mayor entrada de una llamada, no la suma
@@ -233,12 +233,12 @@ def test_rows_of_same_event_grouped_with_sigma_output_over_sigma_ms() -> None:
 
 def test_row_without_log_call_is_non_pc_event() -> None:
     events = ml.group_by_event([_row(7, T0 + 500)], [_call(T0 + 100)])
-    assert [(e["origen"], e["filas"]) for e in events] == [("no-PC", [7])]
+    assert [(e["origin"], e["rows"]) for e in events] == [("no-PC", [7])]
 
 
 def test_call_from_other_model_does_not_claim_row() -> None:
     events = ml.group_by_event([_row(1, T0 + 99)], [_call(T0 + 100, model="otro")])
-    assert events[0]["origen"] == "no-PC"
+    assert events[0]["origin"] == "no-PC"
 
 
 def test_with_two_simultaneous_calls_tightest_wins() -> None:
@@ -289,10 +289,10 @@ def _log(folder: Path, calls: list[dict]) -> None:
     lines = [
         json.dumps(
             {
-                "ts": datetime.fromtimestamp(c["fin"], UTC).isoformat(),
+                "ts": datetime.fromtimestamp(c["end"], UTC).isoformat(),
                 "tool": "local_summarize",
-                "model": c["modelo"],
-                "latency_ms": int((c["fin"] - c["ini"]) * 1000),
+                "model": c["model"],
+                "latency_ms": int((c["end"] - c["ini"]) * 1000),
                 "ok": c["ok"],
                 "backend": "local",
             }
@@ -310,12 +310,12 @@ def _scenario(tmp_path: Path, *, slow_pc: bool, slow_mac: bool) -> tuple[Path, P
     for i in range(12):
         end = T0 + 100 * i
         rows.append((id_ + i, int(end), model, 200, 0, 500, 100, 40.0, 8000))
-        calls.append({"fin": end + 1, "ini": end - 9, "modelo": model, "ok": True})
+        calls.append({"end": end + 1, "ini": end - 9, "model": model, "ok": True})
     if slow_pc:
         for i in range(12, 24):
             end = T0 + 100 * i
             rows.append((id_ + i, int(end), model, 200, 0, 500, 100, 10.0, 8000))
-            calls.append({"fin": end + 1, "ini": end - 9, "modelo": model, "ok": True})
+            calls.append({"end": end + 1, "ini": end - 9, "model": model, "ok": True})
     for k, row in enumerate(ml.EXPECTED_ROWS):
         tps = 8.0 if slow_mac else 40.0
         rows.append((row, int(T0 + 5000 + 100 * k), model, 200, 0, 500, 100, tps, 8000))
@@ -354,7 +354,7 @@ def test_read_rows_opens_read_only_and_drops_non_generation(tmp_path: Path) -> N
     )
     rows = ml.read_rows(path)
     assert [f["id"] for f in rows] == [1]
-    assert rows[0]["entrada"] == 105  # entrada + cache
+    assert rows[0]["entry"] == 105  # entrada + cache
     with_ = sqlite3.connect(f"file:{path.as_posix()}?mode=ro", uri=True)
     with pytest.raises(sqlite3.OperationalError):
         with_.execute("delete from activity")
@@ -364,26 +364,26 @@ def test_read_rows_opens_read_only_and_drops_non_generation(tmp_path: Path) -> N
 def test_control_b_marks_three_mac_rows(tmp_path: Path) -> None:
     folder, logs = _scenario(tmp_path, slow_pc=False, slow_mac=True)
     r = ml.measure(ml.read_rows(folder / "metrics.db"), ml.read_calls(logs), since="2026-10-01")
-    assert r["b"]["cumple"] is True
-    assert r["b"]["marcadas_de_las_esperadas"] == [570, 571, 573]
-    assert r["a"]["marcados"] == 0 and r["a"]["supera_el_tope"] is False
-    assert r["a"]["eventos_pc"] == 12
+    assert r["b"]["meets"] is True
+    assert r["b"]["flagged_of_expected"] == [570, 571, 573]
+    assert r["a"]["flagged"] == 0 and r["a"]["exceeds_cap"] is False
+    assert r["a"]["pc_events"] == 12
 
 
 def test_control_b_fails_if_mac_ran_at_normal_speed(tmp_path: Path) -> None:
     folder, logs = _scenario(tmp_path, slow_pc=False, slow_mac=False)
     r = ml.measure(ml.read_rows(folder / "metrics.db"), ml.read_calls(logs), since="2026-10-01")
-    assert r["b"]["cumple"] is False
-    assert r["b"]["faltan"] == [570, 571, 573]
+    assert r["b"]["meets"] is False
+    assert r["b"]["missing"] == [570, 571, 573]
 
 
 def test_control_a_exceeds_cap_when_pc_is_slow(tmp_path: Path) -> None:
     folder, logs = _scenario(tmp_path, slow_pc=True, slow_mac=True)
     r = ml.measure(ml.read_rows(folder / "metrics.db"), ml.read_calls(logs), since="2026-10-01")
-    assert r["a"]["supera_el_tope"] is True
+    assert r["a"]["exceeds_cap"] is True
     # 24 eventos de la PC; los 10 primeros no tienen referencia; de los 14 restantes, 12 van lentos.
-    assert (r["a"]["con_referencia"], r["a"]["marcados"]) == (14, 12)
-    assert r["a"]["pct_sobre_con_referencia"] == 85.71
+    assert (r["a"]["with_reference"], r["a"]["flagged"]) == (14, 12)
+    assert r["a"]["pct_of_with_reference"] == 85.71
 
 
 def test_date_window_counts_only_inner_events(tmp_path: Path) -> None:
@@ -396,8 +396,8 @@ def test_date_window_counts_only_inner_events(tmp_path: Path) -> None:
         since="2026-10-01",
         until="2026-10-01T00:15:00",
     )
-    assert r["a"]["marcados"] == 0
-    assert r["a"]["eventos_pc"] == 10
+    assert r["a"]["flagged"] == 0
+    assert r["a"]["pc_events"] == 10
 
 
 @pytest.mark.parametrize(
@@ -409,7 +409,7 @@ def test_main_returns_stop_code(tmp_path, capsys, slow_pc, slow_mac, code) -> No
     rc = ml.main(["--copy", str(folder), "--logs", str(logs), "--since", "2026-10-01"])
     output = json.loads(capsys.readouterr().out)
     assert rc == code
-    assert "referencia_elegida" in output
+    assert "chosen_reference" in output
 
 
 def test_main_copies_from_source_and_leaves_original(tmp_path, capsys) -> None:

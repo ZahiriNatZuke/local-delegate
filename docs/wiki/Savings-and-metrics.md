@@ -491,14 +491,14 @@ VIVO y `/api/inflight`) tampoco se filtra.
 ### Los medidores
 
 ```bash
-uv run python scripts/medir_adopcion.py --desde 2026-09-12 --json
+uv run python scripts/measure_adoption.py --since 2026-09-12 --json
 uv run python scripts/measure_cooldown.py --since 2026-09-15T19:26:41
 ```
 
 Los dos leen el `LOG_DIR` de `config` (el mismo `test-windows.json` que el panel) y aplican las
 ventanas solos; `--include-tests` las desactiva. `measure_cooldown.py` aplica además los tramos de
 `--exclude` (con la misma regla de instantes), y su salida dice cuánto quitó cada fuente.
-`medir_adopcion.py` aparta también, en el log de uso, las filas del cliente `mcp`.
+`measure_adoption.py` aparta también, en el log de uso, las filas del cliente `mcp`.
 
 ## La web
 
@@ -690,11 +690,11 @@ ese identificador y una **huella** de la ruta —nunca la ruta—, y la tool que
 `path` se queda con él en su evento (`block_id`; `bloqueo_id` hasta la 0.34.0). El identificador no viaja por el agente a
 propósito: pedirle que lo pase sería depender de que obedezca, que es justo lo que se quiere medir.
 
-Quien responde la pregunta es `scripts/medir_adopcion.py`, que cruza los dos registros sin trabajo
+Quien responde la pregunta es `scripts/measure_adoption.py`, que cruza los dos registros sin trabajo
 manual:
 
 ```bash
-python scripts/medir_adopcion.py --desde 2026-09-12
+python scripts/measure_adoption.py --since 2026-09-12
 ```
 
 Da el denominador por motivo y por camino, los bloqueos, cuántos acabaron en una delegación
