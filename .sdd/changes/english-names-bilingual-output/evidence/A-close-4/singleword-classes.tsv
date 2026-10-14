@@ -1,0 +1,10 @@
+class	meaning
+formato-viejo	lectura de formato viejo (lectura dual o tabla de nombres viejos)
+pendiente-REQ-010	subclave de `_local_delegate` (REQ-010, sale en B2)
+entrada-persona	entrada que escribe una persona (respuesta de la hoja o de un `input`)
+dato-congelado	carpeta o fichero de un corpus o copia congelada (`benchmarks/`, `tests/fixtures/`)
+contenido-de-caso	contenido de los casos del corpus que genera `build_corpus.py` (prompts en español)
+palabras-del-idioma	palabras españolas que el código usa para analizar texto en español (sufijos y tildes del detector, palabras vacías de `pair_sheet`)
+tercero	texto de un tercero (mensaje de error del backend, salida de `nvidia-smi`)
+valor-interno	valor interno en español que el detector no ve: pregunta abierta del lote 4
+texto-salida	texto de salida para una persona (rótulo, motivo, mensaje): frente B

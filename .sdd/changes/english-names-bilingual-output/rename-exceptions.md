@@ -3,7 +3,8 @@
 Lista de nombres en español que pueden quedar en el repo al cerrar el frente A, cada uno con su
 motivo. La lee `scripts/detect_spanish_names.py --exceptions <este fichero>`: toma las filas de las
 tablas (`| Nombre | Fichero | Motivo |`) y aparta un hallazgo cuando coinciden el nombre y el
-fichero (el fichero admite comodines, `*` para cualquiera).
+fichero (los dos admiten comodines, `*` para cualquiera; el nombre distingue mayúsculas; el
+comodín del nombre funciona desde el cierre del frente A, lote 4).
 
 Los únicos motivos válidos (REQ-016):
 
@@ -23,11 +24,15 @@ Los únicos motivos válidos (REQ-016):
   sesión principal como desviación de REQ-016): las respuestas que la persona escribe a mano en
   una hoja `.md` en español (`si`, `parcial`, `empate`), y lo que el programa guarda de ellas; se
   traducen en el frente B, que lee las dos formas;
+- texto de salida que traduce el frente B (enmienda del 2026-10-14, cierre del frente A, decisión 1
+  de la sesión principal, como desviación de REQ-016): rótulos y motivos que ve una persona y que
+  el detector toma por nombres de máquina (rótulos del JS del panel, `sin_cruce` de `recompute`,
+  `pruebas` de `excluded_by_reason`); cada fila nombra la ola B que lo traduce;
 - **pendiente**: lo que el frente A renombra pero se publica en el B (las subclaves y marcadores
   de REQ-010, que salen en B2).
 
 Al cerrar el frente A, la sección «Pendiente» solo puede tener lo de REQ-010; al cerrar el cambio,
-tiene que estar vacía.
+tiene que estar vacía, igual que «Texto de salida que traduce el frente B».
 
 Estado al terminar la ola A0: **lista vacía**. Cada ola añade aquí las filas que necesite, en la
 sección de su motivo.
@@ -42,6 +47,38 @@ sección de su motivo.
 | ld_sesion | tests/test_web_auth.py | alias de compatibilidad (REQ-012): cookie de la 0.34.0 que tiene que dar 401 (ola A6) |
 | --desde | scripts/measure_adoption.py | alias de compatibilidad (decisión 10 de A10a): nombre de antes de `--since`, por los comandos escritos en la wiki y en el `verification.md` de `delegacion-precisa-y-fiable`; el test lo usa en una de las dos llamadas a `main` (ola A10a-4) |
 | --desde | tests/test_measure_adoption.py | alias de compatibilidad (decisión 10 de A10a): nombre de antes de `--since`, por los comandos escritos en la wiki y en el `verification.md` de `delegacion-precisa-y-fiable`; el test lo usa en una de las dos llamadas a `main` (ola A10a-4) |
+| LD_HOOK_READ_BLOQUEAR | src/local_delegate/config.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del interruptor del bloqueo que leen el daemon y los hooks, y los tests que la prueban (cierre del frente A, lote 4) |
+| LD_HOOK_READ_BLOQUEAR | src/local_delegate/deprecations.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del interruptor del bloqueo que leen el daemon y los hooks, y los tests que la prueban (cierre del frente A, lote 4) |
+| LD_HOOK_READ_BLOQUEAR | src/local_delegate/resources/hooks/hook_common.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del interruptor del bloqueo que leen el daemon y los hooks, y los tests que la prueban (cierre del frente A, lote 4) |
+| LD_HOOK_READ_BLOQUEAR | tests/test_cli_renamed_names.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del interruptor del bloqueo que leen el daemon y los hooks, y los tests que la prueban (cierre del frente A, lote 4) |
+| LD_HOOK_READ_BLOQUEAR | tests/test_hook_legacy_names.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del interruptor del bloqueo que leen el daemon y los hooks, y los tests que la prueban (cierre del frente A, lote 4) |
+| LD_HOOK_READ_BLOQUEAR | tests/test_environment_isolation.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del interruptor del bloqueo que leen el daemon y los hooks, y los tests que la prueban (cierre del frente A, lote 4) |
+| LD_HOOK_READ_INTERRUPTOR | src/local_delegate/config.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable de la ruta del interruptor, y los tests que la prueban (cierre del frente A, lote 4) |
+| LD_HOOK_READ_INTERRUPTOR | src/local_delegate/deprecations.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable de la ruta del interruptor, y los tests que la prueban (cierre del frente A, lote 4) |
+| LD_HOOK_READ_INTERRUPTOR | src/local_delegate/resources/hooks/hook_common.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable de la ruta del interruptor, y los tests que la prueban (cierre del frente A, lote 4) |
+| LD_HOOK_READ_INTERRUPTOR | tests/test_cli_renamed_names.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable de la ruta del interruptor, y los tests que la prueban (cierre del frente A, lote 4) |
+| LD_HOOK_READ_INTERRUPTOR | tests/test_hook_legacy_names.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable de la ruta del interruptor, y los tests que la prueban (cierre del frente A, lote 4) |
+| LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO | src/local_delegate/config.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del resumen estructurado, y los tests que la prueban (cierre del frente A, lote 4) |
+| LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO | src/local_delegate/deprecations.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del resumen estructurado, y los tests que la prueban (cierre del frente A, lote 4) |
+| LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO | tests/test_cli_renamed_names.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del resumen estructurado, y los tests que la prueban (cierre del frente A, lote 4) |
+| LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO | tests/test_structured_summary.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del resumen estructurado, y los tests que la prueban (cierre del frente A, lote 4) |
+| LOCAL_DELEGATE_COSTE_RESPALDO | src/local_delegate/config.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del coste de respaldo, y los tests que la prueban (cierre del frente A, lote 4) |
+| LOCAL_DELEGATE_COSTE_RESPALDO | src/local_delegate/deprecations.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del coste de respaldo, y los tests que la prueban (cierre del frente A, lote 4) |
+| LOCAL_DELEGATE_COSTE_RESPALDO | tests/test_cli_renamed_names.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del coste de respaldo, y los tests que la prueban (cierre del frente A, lote 4) |
+| LOCAL_DELEGATE_COSTE_RESPALDO | tests/test_density.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del coste de respaldo, y los tests que la prueban (cierre del frente A, lote 4) |
+| recalcular-coste | src/local_delegate/cli.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); subcomando viejo de `recompute-cost`, y el test que lo prueba (cierre del frente A, lote 4) |
+| recalcular-coste | src/local_delegate/deprecations.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); subcomando viejo de `recompute-cost`, y el test que lo prueba (cierre del frente A, lote 4) |
+| recalcular-coste | tests/test_cli_renamed_names.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); subcomando viejo de `recompute-cost`, y el test que lo prueba (cierre del frente A, lote 4) |
+| reiniciar-calibracion | tests/test_cli_renamed_names.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); opción vieja `--reiniciar-calibracion` de `--reset-calibration`, que el test usa (cierre del frente A, lote 4) |
+| local-delegate-bloqueo-apagado | src/local_delegate/deprecations.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); fichero de `~/.claude/` que apaga el bloqueo; lo lee el hook (REQ-012) (cierre del frente A, lote 4) |
+| local-delegate-bloqueo-apagado | src/local_delegate/resources/hooks/hook_common.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); fichero de `~/.claude/` que apaga el bloqueo; lo lee el hook (REQ-012) (cierre del frente A, lote 4) |
+| enfriamiento.json | src/local_delegate/deprecations.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); escritura doble (`legacy_write`) de `cooldown.json` con el nombre viejo, para que los hooks de versiones anteriores vean los modelos enfriados (REQ-005) (cierre del frente A, lote 4) |
+| enfriamiento.json | src/local_delegate/resources/hooks/hook_common.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); escritura doble (`legacy_write`) de `cooldown.json` con el nombre viejo, para que los hooks de versiones anteriores vean los modelos enfriados (REQ-005) (cierre del frente A, lote 4) |
+| enfriamiento.json | tests/test_cooldown.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); escritura doble (`legacy_write`) de `cooldown.json` con el nombre viejo, para que los hooks de versiones anteriores vean los modelos enfriados (REQ-005) (cierre del frente A, lote 4) |
+| enfriamiento.json | tests/test_fallback.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); escritura doble (`legacy_write`) de `cooldown.json` con el nombre viejo, para que los hooks de versiones anteriores vean los modelos enfriados (REQ-005) (cierre del frente A, lote 4) |
+| enfriamiento.json | tests/test_f1_conformance.py | alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); escritura doble (`legacy_write`) de `cooldown.json` con el nombre viejo, para que los hooks de versiones anteriores vean los modelos enfriados (REQ-005) (cierre del frente A, lote 4) |
+| anotar_llamada.py | tests/test_install.py | alias de compatibilidad permanente (REQ-012), como la fila de `install.py`: los tests que comprueban que `install` sobre una 0.34 retira el hook viejo `anotar_llamada.py` (cierre del frente A, lote 4) |
+| test_*anotar_llamada* | tests/test_install.py | alias de compatibilidad permanente (REQ-012), como la fila de `install.py`: los tests que comprueban que `install` sobre una 0.34 retira el hook viejo `anotar_llamada.py` (cierre del frente A, lote 4) |
 
 ## Lectura de formato viejo
 
@@ -140,6 +177,57 @@ sección de su motivo.
 | generado | tests/test_benchmark.py | lectura de formato viejo (cierre del frente A, lote 3): valor viejo de `provenance` del corpus congelado, escrito a mano para comprobar que `load_corpus` lo da como `generated` |
 | inventado | tests/test_benchmark.py | lectura de formato viejo (cierre del frente A, lote 3): mismo test; sale como `made_up` |
 | tipo | tests/test_pair_sheet.py | lectura de formato viejo (cierre del frente A, lote 3): clave vieja del par de `clave-1.json` congelado, que el test lee en crudo para comprobar que el par `trampa` sale como `trap` |
+| * | src/local_delegate/legacy_names.py | lectura de formato viejo: es la tabla de nombres viejos que se traducen al leer (claves y valores de cada formato persistido) (cierre del frente A, lote 4) |
+| * | tests/test_recompute_legacy.py | lectura de formato viejo (REQ-005, REQ-006, REQ-008): siembra a propósito `coste-agregados.json` y el registro del statusline con los nombres viejos para probar su lectura (cierre del frente A, lote 4) |
+| * | tests/test_deprecations.py | lectura de formato viejo: prueba la API de `legacy_names` (`read_key`, `normalize`) con claves y valores viejos (cierre del frente A, lote 4) |
+| fallos | src/local_delegate/resources/hooks/hook_common.py | lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4) |
+| fallos | tests/test_cooldown.py | lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4) |
+| fallos | tests/test_fallback.py | lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4) |
+| fallos | tests/test_f1_conformance.py | lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4) |
+| fallos | tests/test_fallback_observability.py | lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4) |
+| espera_s | src/local_delegate/resources/hooks/hook_common.py | lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4) |
+| espera_s | tests/test_cooldown.py | lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4) |
+| espera_s | tests/test_fallback.py | lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4) |
+| espera_s | tests/test_f1_conformance.py | lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4) |
+| espera_s | tests/test_fallback_observability.py | lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4) |
+| hasta | src/local_delegate/resources/hooks/hook_common.py | lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4) |
+| hasta | tests/test_cooldown.py | lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4) |
+| hasta | tests/test_fallback.py | lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4) |
+| hasta | tests/test_f1_conformance.py | lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4) |
+| hasta | tests/test_fallback_observability.py | lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4) |
+| enfriamiento-eventos.jsonl | tests/test_cooldown.py | lectura de formato viejo (REQ-005): registro viejo de eventos de enfriamiento que el test siembra (cierre del frente A, lote 4) |
+| local-delegate-bloqueos.jsonl | src/local_delegate/resources/hooks/hook_common.py | lectura de formato viejo (REQ-012): registro y carpeta de los hooks de la 0.34, que el hook sigue leyendo (cierre del frente A, lote 4) |
+| local-delegate-bloqueos.jsonl | tests/test_hook_legacy_names.py | lectura de formato viejo (REQ-012): registro y carpeta de los hooks de la 0.34, que el hook sigue leyendo (cierre del frente A, lote 4) |
+| local-delegate-llamadas | src/local_delegate/resources/hooks/hook_common.py | lectura de formato viejo (REQ-012): registro y carpeta de los hooks de la 0.34, que el hook sigue leyendo (cierre del frente A, lote 4) |
+| local-delegate-llamadas | tests/test_hook_legacy_names.py | lectura de formato viejo (REQ-012): registro y carpeta de los hooks de la 0.34, que el hook sigue leyendo (cierre del frente A, lote 4) |
+| toolu_viejo | tests/test_hook_legacy_names.py | lectura de formato viejo (REQ-012): llamada sembrada en la carpeta vieja de los hooks (cierre del frente A, lote 4) |
+| toolu_viejo.json | tests/test_hook_legacy_names.py | lectura de formato viejo (REQ-012): llamada sembrada en la carpeta vieja de los hooks (cierre del frente A, lote 4) |
+| cuota-statusline.jsonl | tests/test_dashboard_cost.py | lectura de formato viejo (REQ-033): nombre viejo del registro del statusline, que se sigue leyendo (cierre del frente A, lote 4) |
+| cuota-statusline.jsonl | tests/test_recompute.py | lectura de formato viejo (REQ-033): nombre viejo del registro del statusline, que se sigue leyendo (cierre del frente A, lote 4) |
+| bloqueo_id | tests/test_metrics.py | lectura de formato viejo (REQ-007, REQ-008): filas de log y bloqueos con claves y clases de error viejas que el test siembra (cierre del frente A, lote 4) |
+| secciones | tests/test_metrics.py | lectura de formato viejo (REQ-007, REQ-008): filas de log y bloqueos con claves y clases de error viejas que el test siembra (cierre del frente A, lote 4) |
+| fallo_conexion | tests/test_metrics.py | lectura de formato viejo (REQ-007, REQ-008): filas de log y bloqueos con claves y clases de error viejas que el test siembra (cierre del frente A, lote 4) |
+| b-viejo | tests/test_metrics.py | lectura de formato viejo (REQ-007, REQ-008): filas de log y bloqueos con claves y clases de error viejas que el test siembra (cierre del frente A, lote 4) |
+| timeout_lectura | tests/test_metrics.py | lectura de formato viejo (REQ-007, REQ-008): filas de log y bloqueos con claves y clases de error viejas que el test siembra (cierre del frente A, lote 4) |
+| backend_ausente | tests/test_metrics.py | lectura de formato viejo (REQ-007, REQ-008): filas de log y bloqueos con claves y clases de error viejas que el test siembra (cierre del frente A, lote 4) |
+| mcp_ajeno | tests/test_hooks_telemetry_api.py | lectura de formato viejo (REQ-008): telemetría de hooks en el formato viejo que el test siembra (cierre del frente A, lote 4) |
+| prosa_grande | tests/test_hooks_telemetry_api.py | lectura de formato viejo (REQ-008): telemetría de hooks en el formato viejo que el test siembra (cierre del frente A, lote 4) |
+| entradas | tests/test_attribution.py | lectura de formato viejo (REQ-005): relleno viejo (`_old_backfill`) que el test siembra (cierre del frente A, lote 4) |
+| banco | tests/test_attribution.py | lectura de formato viejo (REQ-005): relleno viejo (`_old_backfill`) que el test siembra (cierre del frente A, lote 4) |
+| cruce | tests/test_attribution.py | lectura de formato viejo (REQ-005): relleno viejo (`_old_backfill`) que el test siembra (cierre del frente A, lote 4) |
+| sin_cruce | tests/test_attribution.py | lectura de formato viejo (REQ-005): relleno viejo (`_old_backfill`) que el test siembra (cierre del frente A, lote 4) |
+| causa | tests/test_checks.py | lectura de formato viejo: claves viejas que `checks.py` lee con `read_key` (cierre del frente A, lote 4) |
+| detalle | tests/test_checks.py | lectura de formato viejo: claves viejas que `checks.py` lee con `read_key` (cierre del frente A, lote 4) |
+| n_por_mes | src/local_delegate/valuation.py | lectura de formato viejo (REQ-006): claves viejas de `coste-agregados.json` que `valuation.py` lee con `read_key` (cierre del frente A, lote 4) |
+| plazo_dias | src/local_delegate/valuation.py | lectura de formato viejo (REQ-006): claves viejas de `coste-agregados.json` que `valuation.py` lee con `read_key` (cierre del frente A, lote 4) |
+| config.rol_retirado | tests/test_fast_role_retired.py | lectura de formato viejo: id de check retirado que el test comprueba que ya no sale (cierre del frente A, lote 4) |
+| celdas | tests/test_affinity.py | lectura de formato viejo (cierre del frente A, lote 1): claves viejas de `veredicto.json` congelado que el test lee en crudo para comprobar que siguen viejas y se normalizan (cierre del frente A, lote 4) |
+| huella | tests/test_affinity.py | lectura de formato viejo (cierre del frente A, lote 1): claves viejas de `veredicto.json` congelado que el test lee en crudo para comprobar que siguen viejas y se normalizan (cierre del frente A, lote 4) |
+| huella_rol | tests/test_affinity.py | lectura de formato viejo (cierre del frente A, lote 1): claves viejas de `veredicto.json` congelado que el test lee en crudo para comprobar que siguen viejas y se normalizan (cierre del frente A, lote 4) |
+| congelado | tests/test_benchmark.py | lectura de formato viejo (cierre del frente A, lote 3): valores viejos de `provenance` del corpus congelado, escritos a mano para comprobar que se leen como `frozen` y `reconstructed` (cierre del frente A, lote 4) |
+| congelado | tests/test_corpus.py | lectura de formato viejo (cierre del frente A, lote 3): valores viejos de `provenance` del corpus congelado, escritos a mano para comprobar que se leen como `frozen` y `reconstructed` (cierre del frente A, lote 4) |
+| reconstruido | tests/test_benchmark.py | lectura de formato viejo (cierre del frente A, lote 3): valores viejos de `provenance` del corpus congelado, escritos a mano para comprobar que se leen como `frozen` y `reconstructed` (cierre del frente A, lote 4) |
+| reconstruido | tests/test_corpus.py | lectura de formato viejo (cierre del frente A, lote 3): valores viejos de `provenance` del corpus congelado, escritos a mano para comprobar que se leen como `frozen` y `reconstructed` (cierre del frente A, lote 4) |
 
 ## Envoltorio de REQ-046
 
@@ -153,6 +241,7 @@ sección de su motivo.
 
 | Nombre | Fichero | Motivo |
 | --- | --- | --- |
+| de-DE | src/local_delegate/web/metrics.py | dato de un tercero: etiqueta de idioma BCP 47 que se pasa a `toLocaleString` y a Chart.js; `de` es alemán (cierre del frente A, lote 4) |
 
 ## Dato de prueba del detector
 
@@ -167,6 +256,8 @@ sección de su motivo.
 | --- | --- | --- |
 | meterHTML | src/local_delegate/web/metrics.py | «meter» = medidor (inglés): pinta las barras `.meter` de la tarjeta Sistema; el léxico lo lee como el verbo español (ola A8b, decisión 7) |
 | quotaMeter | src/local_delegate/web/metrics.py | «meter» = medidor (inglés): nombre nuevo de `medidorCuota` en A8b, mismo falso positivo que `meterHTML` |
+| test_the_calibrated_quota_appears_as_a_meter | tests/test_dashboard_ui.py | «meter» = medidor (inglés), mismo caso que `meterHTML` (cierre del frente A, lote 4) |
+| nobody-blocked-me.md | tests/test_correlation.py | «me» es el pronombre inglés; el léxico lo tiene como el pronombre español (cierre del frente A, lote 4) |
 
 ## Dato congelado de corpus o caso
 
@@ -295,6 +386,8 @@ sección de su motivo.
 | clave-falsa | tests/test_residency.py | dato congelado de corpus o caso: marcador con que las copias congeladas de configs reales (`tests/fixtures/residency/*.yaml`) sustituyen las claves; el test comprueba la sustitución y no se reescriben las copias (cierre del frente A, lote 2) |
 | clave-falsa-1 | tests/test_residency.py | dato congelado de corpus o caso: la clave sustituida que llevan esas copias congeladas (cierre del frente A, lote 2) |
 | estado.json | tests/test_corpus.py | dato congelado de corpus o caso: identificador sacado del diff de un commit real del historial (`commit-diff-19k`), contenido del caso (ola A10b-6) |
+| resumen-estructurado | tests/test_structured_summary.py | dato congelado de corpus o caso: directorio del corpus congelado `benchmarks/resumen-estructurado/` y clave de su `MANIFEST.json`, que no se reescriben (cierre del frente A, lote 4) |
+| ficheros | tests/test_structured_summary.py | dato congelado de corpus o caso: directorio del corpus congelado `benchmarks/resumen-estructurado/` y clave de su `MANIFEST.json`, que no se reescriben (cierre del frente A, lote 4) |
 
 ## Entrada de interfaz escrita por una persona
 
@@ -308,7 +401,44 @@ sección de su motivo.
 | empate | tests/test_pair_sheet.py | entrada de interfaz escrita por una persona; se traduce en el frente B con lectura de las dos formas: la elección «empate» que `unblind --json` escribe en `human` (ola A10b-6) |
 | Inventa | tests/test_pair_sheet.py | entrada de interfaz escrita por una persona; se traduce en el frente B con lectura de las dos formas: la etiqueta de la pregunta en la hoja `.md` que la persona contesta a mano (ola A10b-6) |
 
+## Texto de salida que traduce el frente B
+
+| Nombre | Fichero | Motivo |
+| --- | --- | --- |
+| montado | src/local_delegate/web/metrics.py | texto de salida que traduce el frente B (B4): rótulo del JS del panel (cierre del frente A, lote 4) |
+| cargando | src/local_delegate/web/metrics.py | texto de salida que traduce el frente B (B4): rótulo del JS del panel (cierre del frente A, lote 4) |
+| descargando | src/local_delegate/web/metrics.py | texto de salida que traduce el frente B (B4): rótulo del JS del panel (cierre del frente A, lote 4) |
+| procesando | src/local_delegate/web/metrics.py | texto de salida que traduce el frente B (B4): rótulo del JS del panel (cierre del frente A, lote 4) |
+| remoto | src/local_delegate/web/metrics.py | texto de salida que traduce el frente B (B4): rótulo del JS del panel (cierre del frente A, lote 4) |
+| Remoto | src/local_delegate/web/metrics.py | texto de salida que traduce el frente B (B4): rótulo del JS del panel (cierre del frente A, lote 4) |
+| llamada | src/local_delegate/web/metrics.py | texto de salida que traduce el frente B (B4): rótulo del JS del panel (cierre del frente A, lote 4) |
+| fallo | src/local_delegate/web/metrics.py | texto de salida que traduce el frente B (B4): rótulo del JS del panel (cierre del frente A, lote 4) |
+| sin_cruce | src/local_delegate/recompute.py | texto de salida que traduce el frente B (B1): rótulo de `_MATCH_LABEL` que imprime `recompute-cost` (los rótulos de la 0.34.0) (cierre del frente A, lote 4) |
+| pruebas | tests/test_metrics.py | texto de salida que traduce el frente B (B4; B2 para `local_status`): motivo de `excluded_by_reason` («pruebas», hermano de «no es Claude») que muestran `/api/stats` y el panel; el test comprueba el texto de hoy (cierre del frente A, lote 4) |
+| pruebas | tests/test_valuation.py | texto de salida que traduce el frente B (B4; B2 para `local_status`): motivo de `excluded_by_reason` («pruebas», hermano de «no es Claude») que muestran `/api/stats` y el panel; el test comprueba el texto de hoy (cierre del frente A, lote 4) |
+
 ## Pendiente
 
 | Nombre | Fichero | Motivo |
 | --- | --- | --- |
+| respaldo | src/local_delegate/server.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` que pasa a `fallback` (cierre del frente A, lote 4) |
+| respondio | src/local_delegate/server.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` que pasa a `fallback.answered_by` (cierre del frente A, lote 4) |
+| en_lugar_de | src/local_delegate/server.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` que pasa a `fallback.instead_of` (cierre del frente A, lote 4) |
+| motivo | src/local_delegate/server.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` que pasa a `fallback.reason` (cierre del frente A, lote 4) |
+| clase | src/local_delegate/server.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` que pasa a `fallback.class` (cierre del frente A, lote 4) |
+| truncado | src/local_delegate/server.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` que pasa a `truncated` (cierre del frente A, lote 4) |
+| aviso | src/local_delegate/server.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` que pasa a `warning` (cierre del frente A, lote 4) |
+| leido_server_side | src/local_delegate/server.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` que pasa a `read_server_side` (cierre del frente A, lote 4) |
+| tokens_aprox | src/local_delegate/server.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` que pasa a `read_server_side.approx_tokens` (cierre del frente A, lote 4) |
+| crudo | src/local_delegate/server.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` que pasa a `raw` (cierre del frente A, lote 4) |
+| crudo | tests/test_core.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate`; el test comprueba la salida de hoy (cierre del frente A, lote 4) |
+| truncado | tests/test_core.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate`; el test comprueba la salida de hoy (cierre del frente A, lote 4) |
+| aviso | tests/test_core.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate`; el test comprueba la salida de hoy (cierre del frente A, lote 4) |
+| leido_server_side | tests/test_core.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate`; el test comprueba la salida de hoy (cierre del frente A, lote 4) |
+| respaldo | tests/test_fallback.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` (`fallback.*`); el test comprueba la salida de hoy (cierre del frente A, lote 4) |
+| respondio | tests/test_fallback.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` (`fallback.*`); el test comprueba la salida de hoy (cierre del frente A, lote 4) |
+| en_lugar_de | tests/test_fallback.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` (`fallback.*`); el test comprueba la salida de hoy (cierre del frente A, lote 4) |
+| motivo | tests/test_fallback.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` (`fallback.*`); el test comprueba la salida de hoy (cierre del frente A, lote 4) |
+| tokens_aprox | tests/test_density.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate`; el test comprueba la salida de hoy (cierre del frente A, lote 4) |
+| leido_server_side | tests/test_density.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate`; el test comprueba la salida de hoy (cierre del frente A, lote 4) |
+| tokens_aprox | tests/test_dashboard_cost.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate`; el test lee el bloque de `local_extract` para comprobar el texto (cierre del frente A, lote 4) |

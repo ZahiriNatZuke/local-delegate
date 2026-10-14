@@ -1,0 +1,42 @@
+[pesado] plaza plaza-1 tomada tras 0s: .venv/Scripts/python.exe -X utf8 C:/Users/Yohan/AppData/Local/Temp/claude/D--Projects-local-delegate/99a3bd70-675b-4b0c-8aca-af2fdb5b3582/scratchpad/a-close-4/mutants.py
+=== comodin (detect_spanish_names.py) rc=1
+>       assert sorted((f["file"], f["name"]) for f in report["findings"]) == [
+E       AssertionError: assert [('scripts/pa...eer_precios')] == [('scripts/pa...eer_precios')]
+E         
+E         At index 2 diff: ('tests/test_detect_spanish_names.py', 'fallo_conexion') != ('tests/test_other.py', 'leer_precios')
+E         Left contains 2 more items, first extra item: ('tests/test_detect_spanish_names.py', 'leer_precios')
+E         Use -v to get more diff
+tests\test_detect_spanish_names.py:250: AssertionError
+FAILED tests/test_detect_spanish_names.py::test_a_name_wildcard_sets_aside_every_name_of_its_file_and_only_of_its_file
+1 failed in 0.22s
+sha256 antes 79b04772c89c despues 79b04772c89c OK
+=== mayusculas (detect_spanish_names.py) rc=1
+>       assert sorted((f["file"], f["name"]) for f in report["findings"]) == [
+E       AssertionError: assert [('scripts/pa...eer_precios')] == [('scripts/pa...eer_precios')]
+E         
+E         At index 0 diff: ('scripts/pair_sheet.py', 'motivo') != ('scripts/pair_sheet.py', 'EMPATE')
+E         Right contains one more item: ('tests/test_other.py', 'leer_precios')
+E         Use -v to get more diff
+tests\test_detect_spanish_names.py:250: AssertionError
+FAILED tests/test_detect_spanish_names.py::test_a_name_wildcard_sets_aside_every_name_of_its_file_and_only_of_its_file
+1 failed in 0.23s
+sha256 antes 79b04772c89c despues 79b04772c89c OK
+=== comas (detect_spanish_names.py) rc=1
+>       assert [n for n in declared if n in expected] == expected
+E       AssertionError: assert ['uno', 'cinco', 'i', 'nueve'] == ['uno', 'dos'..., 'seis', ...]
+E         
+E         At index 1 diff: 'cinco' != 'dos'
+E         Right contains 6 more items, first extra item: 'cinco'
+E         Use -v to get more diff
+tests\test_detect_spanish_names.py:174: AssertionError
+FAILED tests/test_detect_spanish_names.py::test_declarations_with_commas_declare_every_name
+1 failed in 0.22s
+sha256 antes 79b04772c89c despues 79b04772c89c OK
+=== sigma (measure_slowness.py) rc=1
+>           ml.main(["--help"])
+tests\test_measure_slowness.py:458: 
+>       return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+E       UnicodeEncodeError: 'charmap' codec can't encode character '\u03a3' in position 2143: character maps to <undefined>
+FAILED tests/test_measure_slowness.py::test_help_prints_in_a_cp1252_console_without_doing_the_work
+1 failed in 0.28s
+sha256 antes e86f7df17de1 despues e86f7df17de1 OK

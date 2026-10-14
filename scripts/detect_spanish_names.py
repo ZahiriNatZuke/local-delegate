@@ -42,7 +42,7 @@ import tokenize
 import unicodedata
 from collections import Counter
 from dataclasses import dataclass, field
-from fnmatch import fnmatch
+from fnmatch import fnmatch, fnmatchcase
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -370,10 +370,7 @@ def js_declared_names(tokens: list[JsToken]) -> list[tuple[str, int]]:
             continue
         nxt = tokens[k + 1] if k + 1 < len(tokens) else None
         if tok.value in _DECL_KEYWORDS and nxt is not None:
-            if nxt.kind == "name":
-                found.append((nxt.value, nxt.line))
-            elif nxt.kind == "punct" and nxt.value in "{[":
-                found += _names_until_close(tokens, k + 1)
+            found += _declarators(tokens, k + 1)
         elif tok.value in ("function", "class") and nxt is not None:
             j = k + 1
             if nxt.kind == "name":
@@ -399,6 +396,53 @@ def js_declared_names(tokens: list[JsToken]) -> list[tuple[str, int]]:
                     j -= 1
                 if j >= 0:
                     found += _names_until_close(tokens, j)
+    return found
+
+
+_OPEN = frozenset("([{")
+_CLOSE = frozenset(")]}")
+
+
+def _declarators(tokens: list[JsToken], start: int) -> list[tuple[str, int]]:
+    """Los nombres de una declaración `const`/`let`/`var`, también los que van tras una coma.
+
+    `const a = 1, b = 2` declara `a` y `b`; `let {x}, [y] = z` declara `x` e `y`. La declaración
+    acaba en el `;` de su nivel, en un cierre que baja del nivel (`for (let i = 0, j = 1 …)`,
+    `for (const x of y)`) o, sin `;`, en un salto de línea que no deja la expresión a medias (la
+    línea no termina en coma ni en operador). Las comas de dentro de `(…)`, `[…]` y `{…}` (llamadas,
+    literales, parámetros) no separan declaradores.
+    """
+    found: list[tuple[str, int]] = []
+    expect_name, depth = True, 0
+    for j in range(start, len(tokens)):
+        tok = tokens[j]
+        if expect_name:
+            expect_name = False
+            if tok.kind == "name":
+                found.append((tok.value, tok.line))
+                continue
+            if tok.kind == "punct" and tok.value in "{[":
+                found += _names_until_close(tokens, j)
+                # Se sigue recorriendo el patrón para llevar la cuenta de niveles.
+            else:
+                break
+        prev = tokens[j - 1]
+        if depth == 0 and tok.line > prev.line:
+            continues = prev.kind == "punct" and prev.value not in _CLOSE
+            if not continues:
+                break
+        if tok.kind != "punct":
+            continue
+        if tok.value in _OPEN:
+            depth += 1
+        elif tok.value in _CLOSE:
+            depth -= 1
+            if depth < 0:
+                break
+        elif depth == 0 and tok.value == ";":
+            break
+        elif depth == 0 and tok.value == ",":
+            expect_name = True
     return found
 
 
@@ -647,7 +691,14 @@ def load_exceptions(path: Path) -> list[ExceptionEntry]:
 
 
 def is_excepted(finding: Finding, exceptions: list[ExceptionEntry]) -> bool:
-    return any(e.name == finding.name and fnmatch(finding.file, e.file_glob) for e in exceptions)
+    """El nombre y el fichero de la fila admiten comodines (`*` aparta todo el fichero).
+
+    El nombre se compara distinguiendo mayúsculas (`fnmatchcase`): `EMPATE` y `empate` son filas
+    distintas, también en Windows, donde `fnmatch` las igualaría.
+    """
+    return any(
+        fnmatchcase(finding.name, e.name) and fnmatch(finding.file, e.file_glob) for e in exceptions
+    )
 
 
 # --- Informe ------------------------------------------------------------------

@@ -1,0 +1,4 @@
+[pesado] plaza plaza-1 tomada tras 0s: uv run pytest -q -p no:cacheprovider tests/test_detect_spanish_names.py tests/test_measure_slowness.py
+........................................................................ [ 90%]
+........                                                                 [100%]
+80 passed in 0.42s

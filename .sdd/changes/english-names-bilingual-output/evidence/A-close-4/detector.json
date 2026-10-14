@@ -1,0 +1,146 @@
+{
+ "unique_findings": 713,
+ "occurrences_by_category": {
+  "file_name": 1,
+  "identifier": 8,
+  "js_identifier": 2,
+  "js_string": 11,
+  "string_key": 533,
+  "string_value": 500
+ },
+ "unique_findings_by_category": {
+  "file_name": 1,
+  "identifier": 8,
+  "js_identifier": 2,
+  "js_string": 9,
+  "string_key": 369,
+  "string_value": 324
+ },
+ "unique_spanish_names": 355,
+ "outside_exceptions": 0,
+ "unclassified_words": {},
+ "files_with_findings": 58,
+ "top_files": [
+  [
+   "src/local_delegate/legacy_names.py",
+   288
+  ],
+  [
+   "scripts/build_corpus.py",
+   73
+  ],
+  [
+   "tests/test_analyze_benchmark.py",
+   38
+  ],
+  [
+   "tests/test_corpus.py",
+   32
+  ],
+  [
+   "tests/test_recompute_legacy.py",
+   24
+  ],
+  [
+   "tests/test_measure_cooldown.py",
+   18
+  ],
+  [
+   "tests/test_detect_spanish_names.py",
+   16
+  ],
+  [
+   "src/local_delegate/server.py",
+   13
+  ],
+  [
+   "tests/test_adoption_experiment.py",
+   12
+  ],
+  [
+   "tests/test_benchmark.py",
+   11
+  ],
+  [
+   "tests/test_cli_renamed_names.py",
+   11
+  ],
+  [
+   "src/local_delegate/web/metrics.py",
+   11
+  ],
+  [
+   "src/local_delegate/resources/hooks/hook_common.py",
+   10
+  ],
+  [
+   "tests/test_fallback.py",
+   10
+  ],
+  [
+   "tests/test_pair_sheet.py",
+   10
+  ],
+  [
+   "tests/test_metrics.py",
+   9
+  ],
+  [
+   "src/local_delegate/deprecations.py",
+   7
+  ],
+  [
+   "tests/test_affinity.py",
+   7
+  ],
+  [
+   "tests/test_hook_legacy_names.py",
+   7
+  ],
+  [
+   "tests/test_measure_adoption.py",
+   7
+  ],
+  [
+   "tests/test_affinity_batch.py",
+   6
+  ],
+  [
+   "tests/test_cooldown.py",
+   6
+  ],
+  [
+   "tests/test_core.py",
+   5
+  ],
+  [
+   "tests/test_density.py",
+   5
+  ],
+  [
+   "tests/test_f1_conformance.py",
+   5
+  ],
+  [
+   "scripts/adoption_experiment.py",
+   5
+  ],
+  [
+   "scripts/pair_sheet.py",
+   5
+  ],
+  [
+   "src/local_delegate/config.py",
+   4
+  ],
+  [
+   "tests/test_attribution.py",
+   4
+  ],
+  [
+   "tests/test_deprecations.py",
+   4
+  ]
+ ],
+ "findings": []
+}

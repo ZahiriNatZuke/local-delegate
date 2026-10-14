@@ -37,3 +37,11 @@ Estado en la rama de release de la 0.35.0 (no cierra el gate `quality`, que espe
 - El plan pedía anunciar que «`doctor --json` cambia sus ids»; `doctor` no tiene `--json`. El
   CHANGELOG dice que cambian los ids y grupos de los checks, que solo se ven en `checks.CHECKS` y
   la wiki.
+- **Limitación conocida de REQ-016 (cierre del frente A, decisión 5):** el detector solo cuenta como
+  valor de máquina una cadena con separador (`_`, `-`, `.`); no ve los valores de **una sola
+  palabra**. No se amplió (metería cientos de rótulos y prosa). En su lugar, el barrido
+  complementario por AST de `src/` y `scripts/` queda como evidencia del cierre, clasificado línea
+  a línea: `evidence/A-close-4/singleword-src.tsv` (254) y `singleword-scripts.tsv` (191), con la
+  leyenda en `singleword-classes.tsv`. Lo que no es texto de salida, formato viejo, dato
+  congelado, contenido de caso o entrada de una persona son 21 valores internos de `scripts/`
+  (`valor-interno`), traídos como pregunta abierta en `waves/A-close.md`, sección «A-close-4».

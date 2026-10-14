@@ -436,3 +436,27 @@ def test_main_copies_from_source_and_leaves_original(tmp_path, capsys) -> None:
 def test_main_without_copy_returns_2(tmp_path, capsys) -> None:
     assert ml.main(["--copy", str(tmp_path / "vacia"), "--logs", str(tmp_path)]) == 2
     assert "No hay copia" in capsys.readouterr().err
+
+
+def test_help_prints_in_a_cp1252_console_without_doing_the_work(monkeypatch):
+    """`--help` sale con rc 0 en una consola cp1252 y no copia ni mide nada.
+
+    El docstring, que `argparse` imprime entero, llevaba una `Σ` que cp1252 no codifica: `--help`
+    reventaba con `UnicodeEncodeError` (cierre del frente A).
+    """
+    import io
+
+    def must_not_run(*_args, **_kwargs):
+        raise AssertionError("--help no debe hacer el trabajo del script")
+
+    monkeypatch.setattr(ml, "copy_metrics", must_not_run)
+    monkeypatch.setattr(ml, "measure", must_not_run)
+    out = io.BytesIO()
+    console = io.TextIOWrapper(out, encoding="cp1252", errors="strict")
+    monkeypatch.setattr(sys, "stdout", console)
+    with pytest.raises(SystemExit) as exit_info:
+        ml.main(["--help"])
+    console.flush()
+    assert exit_info.value.code == 0
+    text = out.getvalue().decode("cp1252")
+    assert "--copy" in text and "Uso:" in text
