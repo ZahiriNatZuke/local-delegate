@@ -262,7 +262,7 @@ def _aggregate(rows: list[dict]) -> dict:
     )
     # Quién PIDIÓ la delegación. Sin esto el KPI acumulado no puede distinguir un mes de smoke
     # tests de un mes de trabajo real: es lo que obligó a cruzar a mano contra los transcripts en
-    # la medición del 3-ago. Las líneas anteriores a que existiera el campo caen en "desconocido"
+    # la medición del 3-ago. Las líneas anteriores a que existiera el campo caen en "unknown"
     # —una casilla propia, ni repartidas ni descartadas—, que es lo que de verdad se sabe de ellas.
     by_client: dict[str, dict] = defaultdict(
         lambda: {
@@ -362,7 +362,7 @@ def _aggregate(rows: list[dict]) -> dict:
             b["hosts"].add(host)
 
         client = r.get("client")
-        c = by_client[client if isinstance(client, str) and client else "desconocido"]
+        c = by_client[client if isinstance(client, str) and client else "unknown"]
         c["calls"] += 1
         c["backend_calls"] += acc["backend_calls"]
         c["saved"] += acc["saved"]
@@ -1837,7 +1837,7 @@ async function fetchData(){
 
 // --- Quién delegó: el desglose por cliente de /api/stats ---
 //
-// "desconocido" no es un fallo: son las llamadas anteriores a que se registrara el cliente, y las
+// "unknown" no es un fallo: son las llamadas anteriores a que se registrara el cliente, y las
 // que no vienen de una sesión MCP (el benchmark, un script). Se muestra tal cual porque
 // repartirlas entre los demás sería inventar de quién eran.
 function renderClients(s){
@@ -1894,7 +1894,7 @@ const LABELS = {
     unrecorded:'Sin registrar'},
   client: {'claude-code':'Claude Code', 'claude-desktop':'Claude Desktop', 'claude-ai':'Claude Desktop',
     codex:'Codex', 'codex-mcp-client':'Codex',
-    desconocido:'Desconocido'},
+    unknown:'Desconocido'},
   effort: {low:'Bajo', medium:'Medio', high:'Alto', xhigh:'Muy alto', max:'Máximo', no_data:'Sin dato',
     'sin dato':'Sin dato'},
   thread: {main:'Hilo principal', subagent:'Subagente'},

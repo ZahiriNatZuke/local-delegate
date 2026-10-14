@@ -124,6 +124,10 @@ sección de su motivo.
 | reglas.json | tests/test_pair_sheet.py | lectura de formato viejo (decisión 6 de A10): el `reglas.json` congelado de la hoja 1, que `read_rules` sigue leyendo (ola A10b-4; fila añadida en A10b-6) |
 | calidad | tests/test_analyze_benchmark.py | lectura de formato viejo (decisión 6 de A10): valor viejo de `kind` del corpus y de los resultados congelados, escrito a mano en `_OLD_KINDS` para comprobar que los cargadores lo dan como `quality` (ola A10b-5) |
 | techo | tests/test_analyze_benchmark.py | lectura de formato viejo (decisión 6 de A10): mismo test; valor viejo de `kind` del sondeo de techo, que se lee como `ceiling` (ola A10b-5) |
+| ruta | tests/test_affinity.py | lectura de formato viejo (cierre del frente A, lote 1): clave de la huella del `veredicto.json` congelado que el test lee a propósito para comprobar que sale como `path` |
+| tamano_bytes | tests/test_affinity.py | lectura de formato viejo (cierre del frente A, lote 1): mismo test; sale como `size_bytes` |
+| ruta | tests/test_analyze_benchmark.py | lectura de formato viejo (cierre del frente A, lote 1): clave de la huella del `huellas.json` congelado que el test lee a propósito para comprobar que sale como `path` |
+| tamano_bytes | tests/test_analyze_benchmark.py | lectura de formato viejo (cierre del frente A, lote 1): mismo test; sale como `size_bytes` |
 | huellas.json | tests/test_analyze_benchmark.py | lectura de formato viejo (decisión 6 de A10): `huellas.json` congelado, que `footprints_file` sigue leyendo si falta `footprints.json` (ola A10b-2; fila añadida en A10b-5) |
 
 ## Envoltorio de REQ-046

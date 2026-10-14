@@ -1,0 +1,51 @@
+usage: measure_slowness.py [-h] --copy COPY [--source SOURCE] [--logs LOGS]
+                           [--since SINCE] [--until UNTIL] [--json]
+
+Control de lentitud con datos reales (SDD `daemon-reparte-el-backend`, REQ-025).
+
+Aplica la regla exacta de la spec sobre una **copia** de `metrics.db` y el log de uso, y contesta
+las tres preguntas que bloquean la implementacion de D:
+
+(a) Sobre los eventos **de la PC**, que porcentaje marca la regla. Si pasa del 5 %, el umbral se
+    revisa con el usuario antes de implementar.
+(b) Control positivo de la regla: sobre las filas de Qwen3.6 de **todos** los origenes, la misma
+    regla marca las filas 570, 571 y 573 (las llamadas de la Mac del 2026-09-30). Si no las marca,
+    la regla esta mal; se corrige la regla, no el umbral.
+(c) Mediana de generacion por tramos de entrada (`< 2k`, `2k-10k`, `> 10k` tokens): si el tramo de
+    mas de 10k queda por debajo de 0,75 x el de menos de 2k, la referencia va por tramos.
+
+La regla (REQ-025, en `local_delegate.pace`), por modelo y en orden temporal: la referencia de un evento es la mediana de
+`tok_s` de los **50 ultimos eventos correctos con `tokens_out >= 8` anteriores a el**, con un minimo
+de 10; el evento lleva `pace_rel = tok_s / referencia` y es `slow` si `pace_rel < umbral`.
+
+Reglas de lectura de los datos:
+
+- `metrics.db` no se abre en su sitio: lo usa llama-swap. `copy_metrics` copia `metrics.db`,
+  `-wal` y `-shm` a una carpeta propia y se abre la copia en solo lectura.
+- Una fila de `metrics.db` es **de la PC** si su intervalo `[ts - duration, ts]` cae dentro del
+  intervalo de una llamada `backend: local` de `usage-*.jsonl` (mismo modelo, 2 s de holgura). Es lo
+  que ya hacia el insumo `llamaswap-grupos.md`: `metrics.db` guarda `src = ip:127.0.0.1` para todos,
+  porque la Mac entra por `tailscale serve`, asi que su campo `src` no distingue el origen. El log
+  de uso si: lo escribe el daemon de la PC. Las filas sin llamada de log son «no-PC» (Mac u otro
+  cliente directo).
+- Un evento agrupa las filas de las llamadas al backend de una misma operacion del log (troceado,
+  reintentos). Su `tok_s` es suma de tokens de salida / suma de ms de generacion, como en REQ-024; los ms de
+  generacion de una fila son `output_tokens / tokens_per_second`. Una fila no-PC es un evento por si
+  sola.
+- Entrada de un evento: el mayor `input_tokens + cache_tokens` de sus filas (la lentitud de la
+  generacion depende del contexto de cada llamada, no de la suma).
+
+Uso:
+    uv run python scripts/measure_slowness.py --copy <carpeta_de_la_copia> \
+        --source <carpeta_con_metrics.db> --since 2026-09-15T19:26:41
+    uv run python scripts/measure_slowness.py --copy <carpeta> --json
+
+options:
+  -h, --help       show this help message and exit
+  --copy COPY      carpeta donde queda la copia de metrics.db
+  --source SOURCE  carpeta con el metrics.db real; si se omite, se usa la
+                   copia que ya haya en --copy
+  --logs LOGS      carpeta de usage-*.jsonl (por defecto config.LOG_DIR)
+  --since SINCE    inicio UTC de la ventana medida
+  --until UNTIL    fin UTC de la ventana medida
+  --json           salida JSON completa

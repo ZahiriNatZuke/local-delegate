@@ -42,7 +42,7 @@ def test_reads_short_form_of_real_config():
     f = footprint_mod.cmd_flags(CMD_26B)
     assert f["n_cpu_moe"] == 12
     assert f["ctx_size"] == 38400
-    assert f["modelo"] == "D:\\modelos\\gemma4-26b-a4b\\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf"
+    assert f["model"] == "D:\\modelos\\gemma4-26b-a4b\\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf"
     assert f["reasoning"] == "off"
     assert f["mmproj"] is None
 
@@ -61,14 +61,14 @@ def test_reads_long_form():
     assert f["ctx_size"] == 4096
     assert f["cache_type_k"] == "q8_0"
     assert f["cache_type_v"] == "q4_0"
-    assert f["modelo"] == "/modelos/x.gguf"
+    assert f["model"] == "/modelos/x.gguf"
 
 
 def test_short_forms_of_cache_ctx_and_model():
     f = footprint_mod.cmd_flags(
         "llama-server -m /m/y.gguf -c 2048 -ctk f16 -ctv q8_0 -mm /m/p.gguf"
     )
-    assert (f["modelo"], f["ctx_size"], f["cache_type_k"], f["cache_type_v"], f["mmproj"]) == (
+    assert (f["model"], f["ctx_size"], f["cache_type_k"], f["cache_type_v"], f["mmproj"]) == (
         "/m/y.gguf",
         2048,
         "f16",
@@ -82,7 +82,7 @@ def test_flag_with_equals_quotes_and_negative_value():
         'llama-server --model="D:\\mis modelos\\z.gguf" --n-cpu-moe=7 --reasoning-budget -1 '
         "--reasoning-format none"
     )
-    assert f["modelo"] == "D:\\mis modelos\\z.gguf"
+    assert f["model"] == "D:\\mis modelos\\z.gguf"
     assert f["n_cpu_moe"] == 7
     assert f["reasoning_budget"] == "-1"
     assert f["reasoning_format"] == "none"
@@ -91,7 +91,7 @@ def test_flag_with_equals_quotes_and_negative_value():
 
 def test_cmd_without_flags_gives_all_empty_keys():
     f = footprint_mod.cmd_flags("llama-server")
-    assert f["n_cpu_moe"] is None and f["ctx_size"] is None and f["modelo"] is None
+    assert f["n_cpu_moe"] is None and f["ctx_size"] is None and f["model"] is None
     assert set(footprint_mod.cmd_flags(CMD_26B)) >= set(f)
 
 
@@ -109,7 +109,7 @@ def test_two_footprints_differing_only_in_ncmoe_are_distinct(tmp_path):
     base = f"llama-server --model {gguf} --ctx-size 4096 -ncmoe 12"
     h1 = footprint_mod.footprint(_cfg(base), "Eres un asistente.")
     h2 = footprint_mod.footprint(_cfg(base.replace("-ncmoe 12", "-ncmoe 16")), "Eres un asistente.")
-    assert h1["ruta"] == h2["ruta"] and h1["tamano_bytes"] == h2["tamano_bytes"] == 10
+    assert h1["path"] == h2["path"] and h1["size_bytes"] == h2["size_bytes"] == 10
     assert h1["prompt_sha256"] == h2["prompt_sha256"]
     assert h1 != h2
     assert h1["flags"]["n_cpu_moe"] == 12 and h2["flags"]["n_cpu_moe"] == 16
@@ -123,15 +123,15 @@ def test_footprint_changes_with_prompt_size_and_path(tmp_path):
     assert base["prompt_sha256"] == hashlib.sha256(b"uno").hexdigest()
     assert footprint_mod.footprint(cfg, "dos") != base
     gguf.write_bytes(b"x" * 11)
-    assert footprint_mod.footprint(cfg, "uno")["tamano_bytes"] == 11
+    assert footprint_mod.footprint(cfg, "uno")["size_bytes"] == 11
     another = tmp_path / "otro.gguf"
     another.write_bytes(b"x" * 11)
-    assert footprint_mod.footprint(_cfg(f"llama-server --model {another}"), "uno")["ruta"] == str(
+    assert footprint_mod.footprint(_cfg(f"llama-server --model {another}"), "uno")["path"] == str(
         another
     )
 
 
 def test_missing_gguf_does_not_break_footprint(tmp_path):
     h = footprint_mod.footprint(_cfg(f"llama-server --model {tmp_path / 'falta.gguf'}"), "p")
-    assert h["tamano_bytes"] is None
-    assert footprint_mod.footprint({}, "p")["ruta"] is None
+    assert h["size_bytes"] is None
+    assert footprint_mod.footprint({}, "p")["path"] is None

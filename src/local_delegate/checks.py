@@ -1531,7 +1531,7 @@ def _stale_affinity_cells(photo) -> tuple[list[str], int]:
         if model_cfg is None or prompt is None:
             continue
         current = matrix.current_footprint(model_cfg, prompt)
-        measured, configured = cell.footprint.get("ruta"), current.get("ruta")
+        measured, configured = cell.footprint.get("path"), current.get("path")
         if configured != measured and not (_is_file(measured) and _is_file(configured)):
             elsewhere += 1
             continue
@@ -1543,7 +1543,7 @@ def _stale_affinity_cells(photo) -> tuple[list[str], int]:
             changes.append(
                 f"el modelo del rol es {role}, la celda se midió contra {cell.compared_role}"
             )
-        changes += [c for c in matrix.footprint_differences(cell, current) if c != "ruta"]
+        changes += [c for c in matrix.footprint_differences(cell, current) if c != "path"]
         if changes:
             stale.append(f"`{cell.tool}` → `{cell.alternative}` ({', '.join(changes)})")
     return stale, elsewhere

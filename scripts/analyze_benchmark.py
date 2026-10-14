@@ -1615,7 +1615,8 @@ def rules_file(path: Path) -> Path:
 
 def _footprint(footprints: dict[str, Any], model: str, tool: str) -> dict[str, Any]:
     try:
-        return dict(footprints[model][tool])
+        # `huellas.json` congelado trae `ruta`/`tamano_bytes`: el veredicto sale con las nuevas.
+        return dict(LEGACY_NAMES.normalize_footprint(dict(footprints[model][tool])))
     except (KeyError, TypeError) as exc:
         raise NoData(f"footprints.json no trae la huella de {model} para {tool}") from exc
 

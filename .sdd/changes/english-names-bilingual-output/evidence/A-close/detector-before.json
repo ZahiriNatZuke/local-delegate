@@ -1,0 +1,7934 @@
+{
+ "unique_findings": 960,
+ "occurrences_by_category": {
+  "file_name": 1,
+  "identifier": 13,
+  "js_identifier": 2,
+  "js_key": 1,
+  "js_string": 11,
+  "string_key": 545,
+  "string_value": 849
+ },
+ "unique_findings_by_category": {
+  "file_name": 1,
+  "identifier": 13,
+  "js_identifier": 2,
+  "js_key": 1,
+  "js_string": 9,
+  "string_key": 372,
+  "string_value": 562
+ },
+ "unique_spanish_names": 574,
+ "outside_exceptions": 741,
+ "unclassified_words": {
+  "able": "tests/test_daemon.py:220",
+  "about": "tests/test_capture.py:125",
+  "absolute": "tests/test_hook_shell_absolute_path.py:100",
+  "accent": "tests/test_corpus.py:320",
+  "accents": "tests/test_benchmark.py:63",
+  "acceptance": "tests/test_measure_adoption.py:156",
+  "account": "tests/test_site.py:271",
+  "accounts": "tests/test_site.py:274",
+  "accumulated": "scripts/build_corpus.py:85",
+  "acquired": "tests/test_core.py:635",
+  "acronyms": "tests/test_agents.py:99",
+  "adds": "tests/test_attribution.py:654",
+  "admitted": "tests/test_analyze_benchmark.py:481",
+  "adoption": "src/local_delegate/legacy_names.py:197",
+  "advance": "tests/test_cooldown.py:32",
+  "agree": "tests/test_smoke.py:260",
+  "agreement": "tests/test_pair_sheet.py:113",
+  "agreements": "tests/test_pair_sheet.py:123",
+  "aim": "tests/test_hook_recipes.py:234",
+  "allocate": "src/local_delegate/sections.py:333",
+  "allocated": "tests/test_structured_summary.py:567",
+  "allocation": "src/local_delegate/sections.py:424",
+  "alpha": "tests/test_pair_sheet.py:220",
+  "alter": "tests/test_install_clients.py:394",
+  "altered": "tests/test_price_watcher.py:445",
+  "ambiguous": "src/local_delegate/attribution.py:51",
+  "among": "tests/test_resource_probe.py:49",
+  "amount": "src/local_delegate/server.py:882",
+  "analysis": "tests/test_benchmark.py:462",
+  "annulled": "tests/test_resource_probe.py:489",
+  "annuls": "tests/test_resource_probe.py:297",
+  "anonymous": "tests/test_checks.py:1083",
+  "appear": "tests/test_update.py:310",
+  "appears": "tests/test_adoption_experiment.py:111",
+  "approx": "tests/test_dashboard_cost.py:527",
+  "aprobada": "src/local_delegate/legacy_names.py:277",
+  "around": "tests/test_web_auth.py:195",
+  "article": "scripts/price_watcher.py:448",
+  "artifacts": "tests/test_site.py:317",
+  "asked": "tests/test_delegation_connection.py:46",
+  "asking": "tests/test_daemon.py:197",
+  "asserted": "tests/test_checks.py:325",
+  "assumed": "src/local_delegate/cost.py:32",
+  "async": "tests/test_dashboard_states.py:61",
+  "attached": "scripts/_claude_bench.py:172",
+  "attributed": "tests/test_benchmark.py:150",
+  "attribution": "src/local_delegate/legacy_names.py:126",
+  "authenticates": "tests/test_checks.py:1307",
+  "authorized": "src/local_delegate/web/auth.py:85",
+  "average": "tests/test_measure_cooldown.py:237",
+  "avoids": "tests/test_load_probe.py:87",
+  "backfill": "src/local_delegate/attribution.py:282",
+  "backfilled": "src/local_delegate/recompute.py:340",
+  "bands": "scripts/dev/measure_bash_outputs.py:29",
+  "bars": "tests/test_dashboard_ui.py:1113",
+  "bases": "src/local_delegate/attribution.py:75",
+  "basis": "tests/test_pair_sheet.py:131",
+  "beating": "tests/test_adoption_experiment.py:62",
+  "beats": "tests/test_adoption_experiment.py:88",
+  "because": "tests/test_chains.py:154",
+  "becomes": "tests/test_wiki.py:132",
+  "behaves": "tests/test_checks.py:189",
+  "behavior": "tests/test_fallback.py:447",
+  "belongs": "tests/test_backend_probe.py:138",
+  "blamed": "tests/test_dashboard_states.py:435",
+  "blow": "tests/test_clients.py:92",
+  "blowing": "tests/test_dashboard_js.py:247",
+  "blows": "tests/test_attribution.py:482",
+  "bold": "src/local_delegate/sections.py:138",
+  "bother": "tests/test_checks.py:1294",
+  "boundaries": "tests/test_chunking.py:352",
+  "bounded": "src/local_delegate/resources/hooks/suggest_delegate_read.py:158",
+  "bounds": "src/local_delegate/sections.py:388",
+  "brackets": "tests/test_density.py:274",
+  "breaking": "tests/test_core.py:295",
+  "breaks": "tests/test_hook_shell.py:145",
+  "bring": "tests/test_checks.py:272",
+  "bringing": "tests/test_dashboard_cost.py:306",
+  "buttons": "tests/test_dashboard_ui.py:442",
+  "calibrated": "src/local_delegate/recompute.py:353",
+  "calibration": "src/local_delegate/cli.py:318",
+  "came": "tests/test_measure_adoption.py:167",
+  "cancel": "src/local_delegate/server.py:1212",
+  "cancels": "tests/test_questions.py:141",
+  "canonical": "tests/test_site.py:145",
+  "captures": "tests/test_failure_captures.py:56",
+  "cards": "tests/test_dashboard_ui.py:554",
+  "carry": "tests/test_dashboard_js.py:547",
+  "catches": "tests/test_corpus.py:155",
+  "caught": "tests/test_corpus.py:327",
+  "challenge": "tests/test_daemon.py:186",
+  "changing": "tests/test_dashboard_ui.py:197",
+  "channel": "tests/test_questions.py:66",
+  "channels": "tests/test_smoke.py:260",
+  "characters": "tests/test_metrics.py:920",
+  "charset": "scripts/price_watcher.py:567",
+  "checked": "tests/test_price_watcher.py:536",
+  "children": "tests/test_resource_probe.py:549",
+  "chunking": "tests/test_corpus.py:147",
+  "claimed": "tests/test_update.py:274",
+  "claims": "src/local_delegate/server.py:982",
+  "clamp": "src/local_delegate/cooldown.py:218",
+  "classes": "src/local_delegate/cooldown.py:48",
+  "classic": "tests/test_chunking.py:399",
+  "classified": "tests/test_connection_cause.py:192",
+  "claudes": "tests/test_density.py:375",
+  "clause": "src/local_delegate/server.py:3304",
+  "cleaner": "tests/test_price_watcher.py:665",
+  "clipped": "tests/test_cooldown.py:192",
+  "closes": "tests/test_analyze_benchmark.py:1566",
+  "cloud": "tests/test_site.py:171",
+  "collaborator": "tests/test_checks.py:151",
+  "collaborators": "tests/test_checks.py:173",
+  "collapsed": "tests/test_core.py:794",
+  "collapses": "tests/test_core.py:790",
+  "colon": "tests/test_web_auth.py:144",
+  "comma": "tests/test_dashboard_js.py:434",
+  "comment": "tests/test_price_watcher.py:494",
+  "compaction": "tests/test_transcripts.py:94",
+  "compactions": "src/local_delegate/transcripts.py:75",
+  "compares": "tests/test_benchmark.py:462",
+  "comparison": "tests/test_analyze_benchmark.py:647",
+  "completed": "tests/test_measure_structured_summary.py:72",
+  "completes": "tests/test_structured_summary.py:160",
+  "concatenated": "tests/test_structured_summary.py:438",
+  "conclusions": "scripts/ci_gate.py:110",
+  "conclusive": "tests/test_analyze_benchmark.py:380",
+  "concrete": "tests/test_price_watcher.py:737",
+  "configurations": "tests/test_pair_sheet.py:89",
+  "configures": "tests/test_install_clients.py:171",
+  "confirmed": "tests/test_vendor.py:170",
+  "confused": "tests/test_hook_recipes.py:490",
+  "connected": "tests/test_dashboard_states.py:214",
+  "connector": "tests/test_adoption_experiment.py:113",
+  "connectors": "scripts/adoption_experiment.py:62",
+  "consecutive": "tests/test_cooldown.py:62",
+  "conservative": "src/local_delegate/web/metrics.py:1993",
+  "constants": "tests/test_recompute_legacy.py:229",
+  "construction": "tests/test_fallback.py:275",
+  "consulted": "src/local_delegate/recompute.py:183",
+  "contaminated": "src/local_delegate/quota.py:191",
+  "continuation": "tests/test_map_reduce.py:287",
+  "continuations": "tests/test_map_reduce.py:302",
+  "continued": "src/local_delegate/sections.py:395",
+  "convention": "tests/test_adoption_experiment.py:241",
+  "converse": "tests/test_clients.py:39",
+  "converted": "tests/test_wiki.py:145",
+  "converts": "tests/test_dashboard_js.py:330",
+  "cool": "tests/test_cooldown.py:62",
+  "cooled": "src/local_delegate/cooldown.py:214",
+  "cooling": "src/local_delegate/server.py:1071",
+  "cools": "tests/test_cooldown.py:154",
+  "correct": "tests/test_adoption_experiment.py:37",
+  "costs": "src/local_delegate/transcripts.py:89",
+  "could": "tests/test_checks.py:725",
+  "counting": "src/local_delegate/cooldown.py:48",
+  "country": "tests/test_price_watcher.py:691",
+  "covered": "tests/test_post_chat_paths.py:133",
+  "crash": "tests/test_measure_adoption.py:196",
+  "credits": "tests/test_metrics.py:1472",
+  "cross": "tests/test_attribution.py:553",
+  "crosscheck": "tests/test_cost_doctor.py:65",
+  "css": "tests/test_dashboard_states.py:183",
+  "culprits": "tests/test_chains.py:219",
+  "cycle": "tests/test_analyze_benchmark.py:1566",
+  "daily": "tests/test_analyze_benchmark.py:869",
+  "damaged": "tests/test_recompute_legacy.py:155",
+  "dark": "tests/test_dashboard_ui.py:786",
+  "dashboards": "tests/test_site.py:126",
+  "dates": "tests/test_cooldown.py:237",
+  "decidable": "tests/test_analyze_benchmark.py:490",
+  "decides": "tests/test_adoption_experiment.py:281",
+  "decimals": "tests/test_analyze_benchmark.py:129",
+  "declare": "tests/test_fast_role_retired.py:74",
+  "declines": "tests/test_questions.py:137",
+  "decoded": "src/local_delegate/web/auth.py:75",
+  "deduct": "tests/test_metrics.py:905",
+  "defined": "tests/test_environment_isolation.py:30",
+  "definition": "tests/test_install_clients.py:107",
+  "degrades": "tests/test_core.py:353",
+  "delays": "tests/test_dashboard_states.py:569",
+  "delegated": "tests/test_dashboard_ui.py:462",
+  "delegating": "tests/test_adoption_experiment.py:119",
+  "deleted": "tests/test_install_opencode.py:407",
+  "deletions": "tests/test_update.py:187",
+  "deliver": "tests/test_clients.py:183",
+  "delivering": "src/local_delegate/web/auth.py:192",
+  "denied": "tests/test_adoption_experiment.py:183",
+  "density": "src/local_delegate/cost.py:172",
+  "depend": "tests/test_boilerplate_output.py:120",
+  "deprecation": "tests/test_cli_renamed_names.py:165",
+  "derive": "scripts/build_corpus.py:172",
+  "descending": "tests/test_dashboard_js.py:270",
+  "describes": "tests/test_capture.py:63",
+  "descriptions": "tests/test_site.py:248",
+  "detection": "tests/test_map_reduce.py:368",
+  "diagnosis": "tests/test_checks.py:272",
+  "dialog": "tests/test_dashboard_ui.py:702",
+  "dictionary": "tests/test_hooks_telemetry_api.py:481",
+  "differ": "tests/test_corpus.py:285",
+  "differently": "tests/test_bump_version.py:134",
+  "dimmed": "tests/test_dashboard_states.py:155",
+  "directly": "tests/test_doctor.py:338",
+  "directories": "tests/test_boilerplate_output.py:110",
+  "disappearing": "tests/test_price_watcher.py:213",
+  "discarded": "src/local_delegate/benchmark.py:1316",
+  "discards": "src/local_delegate/legacy_names.py:632",
+  "dispatched": "tests/test_price_watcher.py:403",
+  "distant": "src/local_delegate/cooldown.py:218",
+  "diverted": "tests/test_measure_cooldown.py:237",
+  "documented": "tests/test_measure_cooldown.py:425",
+  "documents": "tests/test_measure_structured_summary.py:114",
+  "dollars": "src/local_delegate/quota.py:86",
+  "door": "tests/test_density.py:162",
+  "double": "tests/test_benchmark.py:508",
+  "doubles": "tests/test_fallback.py:232",
+  "doubling": "tests/test_benchmark.py:281",
+  "doubt": "tests/test_doctor.py:331",
+  "downgrade": "tests/conftest.py:302",
+  "download": "scripts/price_watcher.py:560",
+  "drafted": "tests/test_map_reduce.py:173",
+  "drafts": "tests/test_map_reduce.py:160",
+  "drag": "tests/test_install_opencode.py:419",
+  "draws": "tests/test_pair_sheet.py:75",
+  "drift": "src/local_delegate/quota.py:300",
+  "drifted": "src/local_delegate/quota.py:306",
+  "drop": "src/local_delegate/quota.py:246",
+  "dual": "tests/test_cooldown.py:391",
+  "due": "src/local_delegate/clients.py:161",
+  "dumping": "tests/test_map_reduce.py:399",
+  "duplicated": "tests/test_agents.py:200",
+  "duplicates": "tests/test_chains.py:172",
+  "eats": "tests/test_failures_integration.py:73",
+  "echo": "tests/test_clients.py:48",
+  "edge": "tests/test_test_windows.py:72",
+  "eight": "tests/test_attribution.py:179",
+  "either": "tests/test_adoption_experiment.py:318",
+  "embedded": "tests/test_chunking.py:375",
+  "emptied": "tests/test_price_watcher.py:299",
+  "empties": "tests/test_dashboard_ui.py:425",
+  "enables": "tests/test_failures.py:229",
+  "entering": "tests/test_cooldown.py:270",
+  "episode": "tests/test_cooldown.py:303",
+  "errnos": "src/local_delegate/failures.py:257",
+  "escape": "tests/test_ctrl_c.py:50",
+  "escaped": "src/local_delegate/install.py:795",
+  "excess": "src/local_delegate/server.py:2829",
+  "exclusion": "src/local_delegate/attribution.py:394",
+  "executable": "tests/test_wiki.py:62",
+  "exhausted": "tests/test_fallback.py:326",
+  "exhausts": "tests/test_ci_gate.py:211",
+  "existed": "tests/test_test_windows_cli.py:87",
+  "exotic": "tests/test_checks.py:1118",
+  "expects": "tests/test_install_opencode.py:176",
+  "experiment": "tests/test_adoption_experiment.py:31",
+  "expired": "src/local_delegate/quota.py:393",
+  "expiries": "src/local_delegate/cooldown.py:218",
+  "expiring": "tests/test_web_auth.py:293",
+  "expiry": "src/local_delegate/cooldown.py:194",
+  "explained": "tests/test_map_reduce.py:399",
+  "explaining": "tests/test_ci_gate.py:310",
+  "explodes": "tests/test_checks.py:436",
+  "exported": "tests/test_pair_sheet.py:996",
+  "extended": "tests/test_web_auth.py:206",
+  "extending": "tests/test_web_auth.py:224",
+  "extraction": "tests/test_role_caps.py:81",
+  "fact": "src/local_delegate/legacy_names.py:220",
+  "fall": "tests/test_analyze_benchmark.py:1545",
+  "fallbacks": "tests/test_fallback.py:532",
+  "falling": "tests/test_metrics.py:1450",
+  "falsy": "src/local_delegate/resources/hooks/suggest_delegate_read.py:78",
+  "families": "src/local_delegate/cost.py:143",
+  "far": "tests/test_cooldown.py:192",
+  "faster": "tests/test_analyze_benchmark.py:195",
+  "fastest": "tests/test_analyze_benchmark.py:318",
+  "fault": "tests/test_checks.py:259",
+  "few": "tests/test_pair_sheet.py:131",
+  "fewer": "tests/test_density.py:98",
+  "fifty": "tests/test_analyze_benchmark.py:249",
+  "filled": "tests/test_analyze_benchmark.py:825",
+  "filtered": "tests/test_metrics.py:1905",
+  "filtering": "tests/test_checks.py:133",
+  "filters": "tests/test_hooks_telemetry_api.py:173",
+  "fingerprint": "tests/test_hook_common.py:106",
+  "finished": "tests/test_ci_gate.py:60",
+  "finishing": "tests/test_dashboard_states.py:555",
+  "fired": "src/local_delegate/server.py:1204",
+  "fires": "tests/test_measure_cooldown.py:205",
+  "flagged": "tests/test_analyze_benchmark.py:1403",
+  "footnote": "tests/test_price_watcher.py:151",
+  "forces": "tests/test_price_watcher.py:578",
+  "forgotten": "tests/test_checks.py:1887",
+  "formatters": "tests/test_dashboard_js.py:400",
+  "formed": "src/local_delegate/quota.py:214",
+  "four": "tests/test_analyze_benchmark.py:129",
+  "fourth": "tests/test_fallback.py:174",
+  "freed": "tests/test_connection_cause.py:243",
+  "freeze": "tests/test_dashboard_states.py:572",
+  "frills": "src/local_delegate/legacy_names.py:676",
+  "further": "tests/test_hook_legacy_names.py:248",
+  "generates": "tests/test_metrics.py:863",
+  "gets": "tests/test_structured_summary.py:310",
+  "getting": "tests/test_daemon.py:225",
+  "give": "tests/test_analyze_benchmark.py:129",
+  "glance": "tests/test_wiki.py:286",
+  "globals": "tests/test_dashboard_states.py:43",
+  "going": "tests/test_delegation_connection.py:260",
+  "grace": "tests/test_ci_gate.py:303",
+  "green": "tests/test_ci_gate.py:183",
+  "gross": "tests/test_dashboard_ui.py:454",
+  "grow": "tests/test_boilerplate_output.py:63",
+  "growing": "tests/test_analyze_benchmark.py:453",
+  "guarantees": "tests/test_boilerplate_output.py:99",
+  "guessed": "tests/test_resource_probe.py:96",
+  "halfway": "tests/test_corpus.py:414",
+  "hands": "tests/test_web_auth.py:244",
+  "hang": "tests/test_benchmark.py:247",
+  "hanging": "tests/test_smoke.py:147",
+  "harness": "src/local_delegate/benchmark.py:179",
+  "headline": "tests/test_site.py:171",
+  "headlines": "tests/test_corpus.py:394",
+  "health": "src/local_delegate/legacy_names.py:477",
+  "healthy": "src/local_delegate/failures.py:249",
+  "highest": "tests/test_structured_summary.py:66",
+  "highlight": "tests/test_site.py:171",
+  "highlighted": "tests/test_site.py:189",
+  "historical": "tests/test_install_clients.py:196",
+  "hit": "scripts/adoption_experiment.py:320",
+  "hoppable": "src/local_delegate/server.py:1068",
+  "huge": "tests/test_structured_summary.py:478",
+  "identical": "tests/test_agents.py:143",
+  "identifiers": "scripts/build_corpus.py:243",
+  "identity": "src/local_delegate/clients.py:61",
+  "images": "src/local_delegate/valuation.py:292",
+  "immediate": "tests/test_measure_cooldown.py:171",
+  "importing": "tests/test_core.py:709",
+  "improves": "tests/test_analyze_benchmark.py:165",
+  "inconclusive": "tests/test_measure_cooldown.py:138",
+  "incumbent": "tests/test_analyze_benchmark.py:203",
+  "infinite": "tests/test_benchmark.py:247",
+  "inflates": "tests/test_metrics.py:1009",
+  "inherit": "tests/test_dashboard_ui.py:442",
+  "inject": "tests/test_dashboard_ui.py:747",
+  "insertions": "src/local_delegate/sections.py:253",
+  "installation": "tests/test_measure_structured_summary.py:117",
+  "installer": "tests/test_f1_conformance.py:152",
+  "installing": "tests/test_install_opencode.py:167",
+  "instants": "tests/test_attribution.py:399",
+  "instead": "tests/test_dashboard_js.py:247",
+  "integrity": "tests/test_vendor.py:228",
+  "interactive": "src/local_delegate/entrypoint.py:25",
+  "intercepted": "scripts/build_corpus.py:683",
+  "internal": "tests/test_clients.py:119",
+  "interrupt": "tests/test_ctrl_c.py:46",
+  "introduce": "tests/test_clients.py:405",
+  "introduction": "src/local_delegate/sections.py:283",
+  "intruder": "scripts/check_vendor.py:186",
+  "intruders": "tests/test_site.py:105",
+  "invalidates": "tests/test_web_auth.py:237",
+  "invites": "tests/test_web_auth.py:159",
+  "invoke": "tests/test_f1_conformance.py:299",
+  "judge": "src/local_delegate/pricing.py:78",
+  "judged": "src/local_delegate/checks.py:1841",
+  "july": "tests/test_benchmark.py:54",
+  "jumps": "scripts/measure_cooldown.py:174",
+  "just": "tests/test_connection_cause.py:243",
+  "killed": "tests/test_update.py:513",
+  "killing": "tests/test_analyze_benchmark.py:423",
+  "know": "tests/test_smoke.py:268",
+  "knowing": "tests/test_checks.py:795",
+  "languages": "tests/test_site.py:109",
+  "larger": "tests/test_chunking.py:367",
+  "latencies": "tests/test_analyze_benchmark.py:81",
+  "launched": "tests/test_update.py:487",
+  "launcher": "tests/test_checks.py:897",
+  "launches": "tests/test_price_watcher.py:449",
+  "leads": "tests/test_chunking.py:209",
+  "leak": "tests/test_affinity_batch.py:357",
+  "leaking": "tests/test_capture.py:110",
+  "leftovers": "scripts/clean_watcher_fixtures.py:61",
+  "let": "tests/test_ctrl_c.py:50",
+  "letters": "scripts/build_corpus.py:849",
+  "levels": "tests/test_structured_summary.py:93",
+  "lie": "tests/test_smoke.py:31",
+  "lift": "tests/test_f1_conformance.py:183",
+  "link": "tests/test_dashboard_ui.py:591",
+  "linked": "tests/test_wiki.py:126",
+  "links": "tests/test_wiki.py:58",
+  "listed": "tests/test_pair_sheet.py:152",
+  "listing": "src/local_delegate/agents.py:85",
+  "literals": "tests/test_site.py:57",
+  "loading": "tests/test_dashboard_states.py:369",
+  "loads": "tests/test_benchmark.py:54",
+  "logged": "tests/test_structured_summary.py:541",
+  "longest": "tests/test_dashboard_ui.py:696",
+  "loses": "tests/test_analyze_benchmark.py:195",
+  "losing": "tests/test_chunking.py:367",
+  "lower": "tests/test_ci_gate.py:326",
+  "lowered": "src/local_delegate/failures.py:164",
+  "mains": "tests/test_structured_summary.py:291",
+  "makes": "tests/test_checks.py:1326",
+  "mapped": "tests/test_resource_probe.py:565",
+  "maps": "tests/test_map_reduce.py:301",
+  "markers": "src/local_delegate/server.py:2819",
+  "masked": "tests/test_install_opencode.py:407",
+  "matching": "src/local_delegate/sections.py:166",
+  "mcps": "tests/test_f1_conformance.py:152",
+  "measurement": "tests/test_measure_adoption.py:206",
+  "measurements": "tests/test_dashboard_ui.py:361",
+  "meets": "tests/test_measure_slowness.py:367",
+  "memo": "src/local_delegate/attribution.py:248",
+  "mention": "tests/test_structured_summary.py:142",
+  "merged": "src/local_delegate/attribution.py:344",
+  "met": "scripts/measure_cooldown.py:148",
+  "metacharacters": "src/local_delegate/resources/hooks/suggest_delegate_shell.py:59",
+  "middle": "tests/test_adoption_experiment.py:111",
+  "million": "tests/test_valuation.py:67",
+  "mirrors": "tests/test_corpus.py:47",
+  "mismatched": "tests/test_wiki.py:89",
+  "mismatching": "tests/test_corpus.py:90",
+  "mistake": "tests/test_core.py:757",
+  "mix": "tests/test_hooks_telemetry_api.py:469",
+  "mixed": "tests/test_hooks_telemetry_api.py:462",
+  "mixes": "tests/test_measure_adoption.py:189",
+  "mocked": "tests/backend_mock.py:121",
+  "modes": "tests/test_install_timeouts.py:37",
+  "modules": "tests/test_price_watcher.py:648",
+  "money": "src/local_delegate/valuation.py:148",
+  "mount": "tests/test_questions.py:103",
+  "mounted": "tests/test_web_auth.py:122",
+  "moved": "tests/test_price_watcher.py:479",
+  "much": "tests/test_map_reduce.py:173",
+  "naming": "tests/test_adoption_experiment.py:211",
+  "native": "tests/test_dashboard_ui.py:777",
+  "near": "tests/test_adoption_experiment.py:111",
+  "need": "tests/test_hook_recipes.py:426",
+  "needle": "src/local_delegate/attribution.py:161",
+  "negatives": "tests/test_dashboard_js.py:302",
+  "negotiated": "tests/test_clients.py:141",
+  "neither": "tests/test_adoption_experiment.py:119",
+  "neutral": "tests/test_cooldown.py:123",
+  "newer": "tests/test_checks.py:374",
+  "nonexistent": "tests/test_resource_probe.py:584",
+  "nonzero": "tests/test_update.py:564",
+  "normalisation": "tests/test_corpus.py:320",
+  "normalised": "tests/test_adoption_experiment.py:134",
+  "normalization": "tests/test_structured_summary.py:125",
+  "normalizes": "tests/test_pricing.py:92",
+  "noted": "tests/test_hook_legacy_names.py:132",
+  "noun": "tests/test_checks.py:1196",
+  "numbering": "src/local_delegate/sections.py:136",
+  "objects": "src/local_delegate/checks.py:295",
+  "observation": "tests/test_checks.py:1081",
+  "observations": "src/local_delegate/checks.py:588",
+  "observer": "tests/test_clients.py:265",
+  "observing": "tests/test_checks.py:1021",
+  "occurrence": "tests/test_measure_structured_summary.py:105",
+  "offer": "tests/test_adoption_experiment.py:264",
+  "offered": "tests/test_hook_shell_absolute_path.py:109",
+  "offering": "tests/test_checks.py:407",
+  "offers": "tests/test_checks.py:1123",
+  "oldest": "src/local_delegate/checks.py:1770",
+  "omitted": "scripts/pair_sheet.py:641",
+  "opener": "src/local_delegate/attribution.py:153",
+  "opening": "src/local_delegate/sections.py:100",
+  "operator": "tests/test_benchmark.py:253",
+  "oracle": "tests/test_corpus.py:432",
+  "origins": "src/local_delegate/valuation.py:37",
+  "orphaned": "tests/test_wiki.py:123",
+  "otherwise": "tests/test_install_opencode.py:136",
+  "outbound": "tests/test_backend_probe.py:222",
+  "outer": "tests/test_web_auth.py:60",
+  "overflows": "tests/test_dashboard_ui.py:829",
+  "overlapping": "src/local_delegate/quota.py:246",
+  "overridden": "tests/test_chains.py:143",
+  "overwrites": "tests/test_price_watcher.py:557",
+  "pagination": "tests/test_dashboard_ui.py:154",
+  "paint": "src/local_delegate/web/metrics.py:2911",
+  "pairings": "tests/test_corpus.py:261",
+  "pairwise": "tests/test_analyze_benchmark.py:647",
+  "parameter": "tests/test_dashboard_ui.py:1335",
+  "parentheses": "tests/test_dashboard_js.py:450",
+  "parity": "tests/test_metrics.py:1123",
+  "parsing": "tests/test_resource_probe.py:49",
+  "passes": "tests/test_analyze_benchmark.py:730",
+  "password": "src/local_delegate/web/auth.py:80",
+  "performance": "tests/test_dashboard_ui.py:1232",
+  "phantom": "tests/test_ci_gate.py:78",
+  "phantoms": "scripts/ci_gate.py:218",
+  "pilot": "tests/test_adoption_experiment.py:127",
+  "pinned": "tests/test_affinity_batch.py:315",
+  "placeholder": "scripts/price_watcher.py:89",
+  "plainly": "tests/test_failures_integration.py:73",
+  "plant": "scripts/adoption_experiment.py:113",
+  "platforms": "tests/test_site.py:248",
+  "plurals": "tests/test_dashboard_js.py:464",
+  "pngs": "tests/test_site.py:381",
+  "pointing": "tests/test_checks.py:1502",
+  "polling": "tests/test_dashboard_states.py:532",
+  "postprocess": "src/local_delegate/server.py:2395",
+  "precedes": "tests/test_measure_cooldown.py:303",
+  "predicate": "tests/test_metrics.py:1066",
+  "prefixes": "src/local_delegate/legacy_names.py:494",
+  "prelude": "tests/test_dashboard_cost.py:174",
+  "prepare": "src/local_delegate/server.py:4567",
+  "preparing": "tests/test_ctrl_c.py:123",
+  "presented": "src/local_delegate/web/auth.py:57",
+  "pretending": "tests/test_hooks_telemetry_api.py:135",
+  "price": "src/local_delegate/valuation.py:60",
+  "prices": "src/local_delegate/pricing.py:47",
+  "pricing": "src/local_delegate/pricing.py:0",
+  "printable": "tests/test_checks.py:1113",
+  "printing": "tests/test_checks.py:1429",
+  "prints": "tests/test_install_header.py:190",
+  "probed": "tests/test_hook_common.py:143",
+  "probes": "tests/test_corpus.py:186",
+  "promising": "tests/test_corpus.py:198",
+  "prompted": "tests/test_measure_adoption.py:159",
+  "propagate": "tests/test_clients.py:126",
+  "properly": "tests/test_checks.py:1294",
+  "proportion": "tests/test_benchmark.py:98",
+  "propose": "scripts/price_watcher.py:684",
+  "protect": "src/local_delegate/web/auth.py:254",
+  "protects": "tests/test_vendor.py:143",
+  "provenances": "src/local_delegate/benchmark.py:53",
+  "publish": "tests/test_capture.py:88",
+  "put": "tests/test_adoption_experiment.py:169",
+  "putting": "tests/test_adoption_experiment.py:202",
+  "qualities": "tests/test_analyze_benchmark.py:81",
+  "queried": "tests/test_load_probe.py:62",
+  "quoted": "scripts/build_corpus.py:233",
+  "rank": "src/local_delegate/attribution.py:331",
+  "reach": "tests/test_cli_renamed_names.py:92",
+  "reaches": "tests/test_benchmark.py:334",
+  "rebuild": "tests/test_corpus.py:346",
+  "received": "tests/test_smoke.py:228",
+  "receives": "tests/test_cooldown.py:135",
+  "recognized": "tests/test_daemon.py:167",
+  "recognizes": "tests/test_attribution.py:643",
+  "recompute": "src/local_delegate/checks.py:1765",
+  "recomputed": "tests/test_recompute.py:224",
+  "recorder": "tests/test_doctor.py:386",
+  "recorders": "tests/test_delegation_connection.py:44",
+  "recording": "tests/test_clients.py:334",
+  "recovered": "tests/test_cooldown.py:303",
+  "recovers": "tests/test_measure_cooldown.py:254",
+  "reenter": "tests/test_cooldown.py:391",
+  "reentered": "tests/test_measure_cooldown.py:359",
+  "reentering": "tests/test_cooldown.py:284",
+  "reenters": "tests/test_measure_cooldown.py:244",
+  "reentries": "src/local_delegate/cooldown.py:82",
+  "reentry": "tests/test_cooldown.py:290",
+  "referenced": "src/local_delegate/checks.py:78",
+  "refetches": "tests/test_dashboard_ui.py:197",
+  "reformat": "tests/test_bump_version.py:110",
+  "refreeze": "tests/test_corpus.py:346",
+  "refreshed": "tests/test_dashboard_states.py:596",
+  "regenerate": "tests/test_capture.py:43",
+  "regenerating": "tests/test_dashboard_cost.py:273",
+  "registers": "tests/test_f1_conformance.py:152",
+  "reinstalling": "tests/test_install_opencode.py:185",
+  "rejections": "src/local_delegate/quota.py:68",
+  "relaunches": "tests/test_price_watcher.py:479",
+  "remain": "tests/test_dashboard_js.py:464",
+  "remainder": "src/local_delegate/sections.py:343",
+  "remains": "tests/test_site.py:72",
+  "remember": "src/local_delegate/questions.py:51",
+  "remembered": "tests/test_dashboard_ui.py:1394",
+  "reminds": "tests/test_update.py:376",
+  "removing": "tests/test_install.py:774",
+  "renamed": "tests/test_cli_renamed_names.py:25",
+  "rendered": "tests/test_hooks_telemetry_api.py:288",
+  "rendering": "tests/test_hooks_telemetry_api.py:252",
+  "renewed": "tests/test_test_windows.py:149",
+  "repaired": "tests/test_update.py:92",
+  "repetitions": "scripts/adoption_experiment.py:183",
+  "replaceable": "scripts/build_site.py:51",
+  "replaced": "tests/test_agents.py:200",
+  "replacement": "tests/test_analyze_benchmark.py:221",
+  "reply": "tests/test_boilerplate_output.py:25",
+  "reporting": "tests/test_install_clients.py:237",
+  "reproduce": "tests/test_install_opencode.py:115",
+  "resolution": "tests/test_attribution.py:478",
+  "restarting": "tests/test_update.py:575",
+  "restarts": "tests/test_quota.py:279",
+  "restores": "tests/test_install_opencode.py:429",
+  "retirement": "tests/test_install.py:580",
+  "retires": "tests/test_install.py:160",
+  "retouched": "tests/test_corpus.py:327",
+  "reversed": "tests/test_structured_summary.py:168",
+  "review": "tests/test_analyze_benchmark.py:788",
+  "reviewable": "tests/test_analyze_benchmark.py:1729",
+  "rising": "tests/test_analyze_benchmark.py:775",
+  "rotate": "src/local_delegate/clients.py:161",
+  "rotating": "tests/test_clients.py:296",
+  "rounding": "tests/test_analyze_benchmark.py:129",
+  "safe": "src/local_delegate/attribution.py:94",
+  "said": "tests/test_dashboard_cost.py:329",
+  "sanitize": "src/local_delegate/quota.py:110",
+  "sanitized": "tests/test_structured_summary.py:213",
+  "saves": "tests/test_metrics.py:863",
+  "saving": "tests/test_dashboard_cost.py:589",
+  "saw": "tests/test_connection_cause.py:289",
+  "say": "tests/test_checks.py:847",
+  "saying": "tests/test_analyze_benchmark.py:696",
+  "scaffolding": "tests/test_install_clients.py:237",
+  "scattered": "tests/test_cooldown.py:324",
+  "schemas": "tests/test_questions.py:361",
+  "scratch": "tests/test_recompute_legacy.py:76",
+  "screenshot": "tests/test_capture.py:63",
+  "secondary": "scripts/build_corpus.py:2175",
+  "seeded": "tests/test_price_watcher.py:566",
+  "segment": "src/local_delegate/cost.py:268",
+  "segments": "src/local_delegate/cost.py:70",
+  "separating": "tests/test_analyze_benchmark.py:775",
+  "sequence": "tests/test_dashboard_states.py:128",
+  "serialise": "tests/test_price_watcher.py:257",
+  "serialize": "scripts/price_watcher.py:349",
+  "sessions": "src/local_delegate/quota.py:153",
+  "share": "tests/test_attribution.py:579",
+  "shorter": "tests/test_checks.py:254",
+  "showcase": "tests/test_dashboard_ui.py:327",
+  "shuffles": "tests/test_analyze_benchmark.py:804",
+  "siblings": "tests/test_wiki.py:152",
+  "signature": "src/local_delegate/web/auth.py:114",
+  "signatures": "tests/test_clients.py:395",
+  "silent": "tests/test_attribution.py:146",
+  "simplest": "tests/test_adoption_experiment.py:79",
+  "simplicity": "scripts/adoption_experiment.py:59",
+  "simulate": "tests/test_install.py:147",
+  "sinks": "tests/test_benchmark.py:98",
+  "slip": "tests/test_install.py:454",
+  "slower": "tests/test_analyze_benchmark.py:203",
+  "someones": "tests/test_affinity_batch.py:307",
+  "sorts": "tests/test_dashboard_js.py:270",
+  "space": "scripts/build_corpus.py:881",
+  "sparkline": "tests/test_dashboard_js.py:321",
+  "speak": "tests/test_dashboard_ui.py:1195",
+  "speaks": "tests/test_checks.py:709",
+  "spend": "tests/test_boilerplate_output.py:144",
+  "spent": "tests/test_metrics.py:821",
+  "splitting": "tests/test_chunking.py:362",
+  "spontaneous": "tests/test_correlation.py:147",
+  "spread": "scripts/analyze_benchmark.py:182",
+  "spreads": "scripts/analyze_benchmark.py:297",
+  "stating": "tests/test_install_clients.py:382",
+  "stay": "tests/test_hook_recipes.py:208",
+  "stored": "tests/test_benchmark.py:134",
+  "stores": "tests/test_benchmark.py:462",
+  "stretch": "tests/test_map_reduce.py:86",
+  "strings": "tests/test_install_opencode.py:70",
+  "strips": "tests/test_boilerplate_output.py:88",
+  "structural": "tests/test_structured_summary.py:66",
+  "structured": "src/local_delegate/config.py:307",
+  "stumble": "tests/test_analyze_benchmark.py:565",
+  "stylesheet": "tests/test_dashboard_ui.py:449",
+  "subagents": "tests/test_transcripts.py:203",
+  "subcommands": "tests/test_smoke.py:211",
+  "subdivided": "tests/test_chunking.py:367",
+  "subheadings": "src/local_delegate/sections.py:292",
+  "subprocess": "tests/test_cli_renamed_names.py:138",
+  "subsection": "tests/test_measure_structured_summary.py:123",
+  "subsections": "tests/test_structured_summary.py:597",
+  "subtitles": "scripts/measure_structured_summary.py:114",
+  "subtract": "tests/test_density.py:179",
+  "succeeds": "tests/test_fallback.py:220",
+  "successes": "scripts/analyze_benchmark.py:336",
+  "successfully": "tests/test_update.py:642",
+  "summarized": "src/local_delegate/sections.py:231",
+  "summarizes": "tests/test_structured_summary.py:694",
+  "summed": "tests/test_analyze_benchmark.py:1668",
+  "surfaces": "src/local_delegate/legacy_names.py:466",
+  "surplus": "tests/test_wiki.py:234",
+  "suspicious": "src/local_delegate/checks.py:1194",
+  "swallow": "tests/test_agents.py:99",
+  "switches": "tests/test_fallback.py:247",
+  "symmetric": "tests/test_dashboard_ui.py:1072",
+  "symmetry": "tests/test_dashboard_ui.py:1055",
+  "tables": "tests/test_dashboard_ui.py:1016",
+  "tagged": "tests/test_checks.py:1282",
+  "tagline": "tests/test_density.py:348",
+  "tasks": "src/local_delegate/legacy_names.py:197",
+  "terminates": "tests/test_connection_cause.py:210",
+  "terminator": "tests/test_bump_version.py:122",
+  "tested": "tests/test_checks.py:1502",
+  "testing": "tests/test_daemon.py:205",
+  "thing": "tests/test_update.py:157",
+  "things": "tests/test_cost_doctor.py:115",
+  "this": "tests/test_dashboard_js.py:163",
+  "those": "tests/test_ci_gate.py:276",
+  "thousands": "tests/test_dashboard_js.py:417",
+  "thresholds": "tests/test_hook_recipes.py:324",
+  "tolerated": "tests/test_backend_probe.py:170",
+  "topics": "src/local_delegate/sections.py:317",
+  "touched": "tests/test_agents.py:116",
+  "track": "tests/test_clients.py:296",
+  "travels": "tests/test_hook_legacy_names.py:204",
+  "treat": "tests/test_ctrl_c.py:79",
+  "trial": "tests/test_pricing.py:210",
+  "triggered": "tests/test_cooldown.py:270",
+  "triggers": "tests/test_map_reduce.py:342",
+  "trimmed": "tests/test_install_clients.py:375",
+  "trip": "tests/test_attribution.py:117",
+  "truncating": "tests/test_map_reduce.py:65",
+  "trusted": "tests/test_hook_common.py:143",
+  "truthy": "src/local_delegate/resources/hooks/hook_common.py:280",
+  "turning": "tests/test_f1_conformance.py:280",
+  "twenty": "tests/test_clients.py:223",
+  "twin": "tests/test_recompute_legacy.py:79",
+  "twins": "tests/test_dashboard_ui.py:420",
+  "typography": "tests/test_dashboard_ui.py:1016",
+  "unable": "tests/test_checks.py:1334",
+  "unblind": "tests/test_analyze_benchmark.py:820",
+  "unblinded": "src/local_delegate/legacy_names.py:438",
+  "unbounded": "tests/test_correlation.py:80",
+  "uncalibrated": "src/local_delegate/recompute.py:353",
+  "uncaptured": "tests/test_failure_captures.py:104",
+  "unconcluded": "tests/test_ci_gate.py:122",
+  "undecidable": "tests/test_analyze_benchmark.py:348",
+  "undeclared": "tests/test_analyze_benchmark.py:405",
+  "understands": "tests/test_checks.py:915",
+  "unlimited": "scripts/build_corpus.py:773",
+  "unmarked": "src/local_delegate/sections.py:143",
+  "unmocked": "tests/test_capture.py:88",
+  "unnamed": "src/local_delegate/checks.py:526",
+  "unnumbered": "src/local_delegate/cost.py:147",
+  "unpriced": "src/local_delegate/checks.py:1825",
+  "unreachable": "tests/test_hook_common.py:189",
+  "unrecorded": "tests/test_hooks_telemetry_api.py:417",
+  "unrecoverable": "src/local_delegate/cost.py:71",
+  "unregistered": "tests/test_install.py:595",
+  "unresolvable": "tests/test_install_clients.py:83",
+  "unstable": "tests/test_analyze_benchmark.py:547",
+  "untouched": "src/local_delegate/install.py:1353",
+  "unusable": "tests/test_checks.py:1139",
+  "unused": "src/local_delegate/sections.py:211",
+  "updates": "tests/test_bump_version.py:101",
+  "usages": "tests/test_measure_adoption.py:47",
+  "userprofile": "tests/test_hook_legacy_names.py:178",
+  "usual": "tests/test_checks.py:795",
+  "validates": "tests/test_role_caps.py:88",
+  "validity": "src/local_delegate/quota.py:29",
+  "valuation": "src/local_delegate/valuation.py:0",
+  "valued": "src/local_delegate/valuation.py:183",
+  "vanished": "scripts/price_watcher.py:305",
+  "vanishing": "tests/test_resource_probe.py:139",
+  "variants": "scripts/adoption_experiment.py:183",
+  "vendored": "tests/test_vendor.py:143",
+  "verbs": "src/local_delegate/resources/hooks/suggest_delegate_shell.py:47",
+  "verified": "tests/test_corpus.py:99",
+  "vetoes": "tests/test_analyze_benchmark.py:547",
+  "visit": "tests/test_price_watcher.py:673",
+  "voided": "tests/test_analyze_benchmark.py:231",
+  "voiding": "tests/test_benchmark.py:536",
+  "volume": "tests/test_hooks_telemetry_api.py:125",
+  "vote": "tests/test_pair_sheet.py:141",
+  "vulnerability": "tests/test_vendor.py:170",
+  "was": "tests/test_clients.py:141",
+  "wave": "tests/test_test_windows.py:57",
+  "weakly": "tests/test_analyze_benchmark.py:490",
+  "went": "tests/test_boilerplate_output.py:226",
+  "were": "tests/test_metrics.py:1514",
+  "whether": "tests/test_metrics.py:368",
+  "whoami": "tests/test_clients.py:372",
+  "whoever": "tests/test_backend_probe.py:64",
+  "winning": "tests/test_analyze_benchmark.py:114",
+  "wipe": "tests/test_agents.py:160",
+  "withstand": "tests/test_dashboard_states.py:144",
+  "workdir": "src/local_delegate/benchmark.py:214",
+  "worth": "tests/test_hook_recipes.py:218",
+  "would": "tests/test_benchmark.py:188",
+  "wrapping": "src/local_delegate/legacy_names.py:413",
+  "writer": "tests/test_recompute_legacy.py:229",
+  "yellow": "tests/test_site.py:171",
+  "yesterday": "tests/test_hooks_telemetry_api.py:94",
+  "yet": "tests/test_clients.py:183",
+  "your": "tests/test_dashboard_js.py:96"
+ },
+ "files_with_findings": 99,
+ "top_files": [
+  [
+   "src/local_delegate/legacy_names.py",
+   275
+  ],
+  [
+   "scripts/build_corpus.py",
+   73
+  ],
+  [
+   "tests/test_analyze_benchmark.py",
+   36
+  ],
+  [
+   "tests/test_attribution.py",
+   25
+  ],
+  [
+   "tests/test_recompute_legacy.py",
+   24
+  ],
+  [
+   "tests/test_checks.py",
+   20
+  ],
+  [
+   "tests/test_corpus.py",
+   19
+  ],
+  [
+   "tests/test_connection_cause.py",
+   18
+  ],
+  [
+   "tests/test_measure_cooldown.py",
+   18
+  ],
+  [
+   "tests/test_metrics.py",
+   18
+  ],
+  [
+   "tests/test_topology.py",
+   18
+  ],
+  [
+   "tests/test_detect_spanish_names.py",
+   16
+  ],
+  [
+   "tests/test_cli_renamed_names.py",
+   15
+  ],
+  [
+   "tests/test_core.py",
+   15
+  ],
+  [
+   "src/local_delegate/server.py",
+   14
+  ],
+  [
+   "tests/test_dashboard_ui.py",
+   13
+  ],
+  [
+   "tests/test_hook_recipes.py",
+   13
+  ],
+  [
+   "tests/test_adoption_experiment.py",
+   12
+  ],
+  [
+   "tests/test_install.py",
+   12
+  ],
+  [
+   "src/local_delegate/web/metrics.py",
+   12
+  ],
+  [
+   "tests/test_fallback.py",
+   11
+  ],
+  [
+   "src/local_delegate/resources/hooks/hook_common.py",
+   10
+  ],
+  [
+   "tests/test_dashboard_cost.py",
+   10
+  ],
+  [
+   "tests/test_hook_legacy_names.py",
+   10
+  ],
+  [
+   "tests/test_agents.py",
+   9
+  ],
+  [
+   "tests/test_density.py",
+   9
+  ],
+  [
+   "tests/test_f1_conformance.py",
+   9
+  ],
+  [
+   "tests/test_pair_sheet.py",
+   9
+  ],
+  [
+   "tests/test_residency.py",
+   9
+  ],
+  [
+   "tests/test_correlation.py",
+   8
+  ]
+ ],
+ "findings": [
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/checks.py",
+   "line": 1534,
+   "name": "ruta",
+   "words": [
+    "ruta"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/cli.py",
+   "line": 357,
+   "name": "recalcular-coste",
+   "words": [
+    "recalcular",
+    "coste"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/config.py",
+   "line": 247,
+   "name": "LD_HOOK_READ_BLOQUEAR",
+   "words": [
+    "bloquear"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/config.py",
+   "line": 253,
+   "name": "LD_HOOK_READ_INTERRUPTOR",
+   "words": [
+    "interruptor"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/config.py",
+   "line": 308,
+   "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
+   "words": [
+    "resumen",
+    "estructurado"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/config.py",
+   "line": 470,
+   "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
+   "words": [
+    "coste",
+    "respaldo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/deprecations.py",
+   "line": 58,
+   "name": "recalcular-coste",
+   "words": [
+    "recalcular",
+    "coste"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/deprecations.py",
+   "line": 61,
+   "name": "LD_HOOK_READ_BLOQUEAR",
+   "words": [
+    "bloquear"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/deprecations.py",
+   "line": 65,
+   "name": "LD_HOOK_READ_INTERRUPTOR",
+   "words": [
+    "interruptor"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/deprecations.py",
+   "line": 72,
+   "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
+   "words": [
+    "resumen",
+    "estructurado"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/deprecations.py",
+   "line": 77,
+   "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
+   "words": [
+    "coste",
+    "respaldo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/deprecations.py",
+   "line": 82,
+   "name": "local-delegate-bloqueo-apagado",
+   "words": [
+    "bloqueo",
+    "apagado"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/deprecations.py",
+   "line": 90,
+   "name": "enfriamiento.json",
+   "words": [
+    "enfriamiento"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/footprint.py",
+   "line": 29,
+   "name": "modelo",
+   "words": [
+    "modelo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/footprint.py",
+   "line": 138,
+   "name": "ruta",
+   "words": [
+    "ruta"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/footprint.py",
+   "line": 139,
+   "name": "tamano_bytes",
+   "words": [
+    "tamano"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/footprint.py",
+   "line": 139,
+   "name": "tamano_bytes",
+   "words": [
+    "tamano"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 27,
+   "name": "peticion",
+   "words": [
+    "peticion"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 28,
+   "name": "capacidad_o_carga",
+   "words": [
+    "capacidad",
+    "o",
+    "carga"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 29,
+   "name": "timeout_lectura",
+   "words": [
+    "lectura"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 30,
+   "name": "configuracion",
+   "words": [
+    "configuracion"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 31,
+   "name": "modelo",
+   "words": [
+    "modelo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 32,
+   "name": "sin_clasificar",
+   "words": [
+    "sin",
+    "clasificar"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 33,
+   "name": "enfriamiento",
+   "words": [
+    "enfriamiento"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 38,
+   "name": "rechazada",
+   "words": [
+    "rechazada"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 39,
+   "name": "sin_ruta",
+   "words": [
+    "sin",
+    "ruta"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 40,
+   "name": "timeout_conexion",
+   "words": [
+    "conexion"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 41,
+   "name": "credencial",
+   "words": [
+    "credencial"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 42,
+   "name": "sin_respuesta",
+   "words": [
+    "sin",
+    "respuesta"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 43,
+   "name": "respuesta_invalida",
+   "words": [
+    "respuesta",
+    "invalida"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 44,
+   "name": "url_invalida",
+   "words": [
+    "invalida"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 45,
+   "name": "transporte",
+   "words": [
+    "transporte"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 46,
+   "name": "desconocida",
+   "words": [
+    "desconocida"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 52,
+   "name": "calidad",
+   "words": [
+    "calidad"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 52,
+   "name": "techo",
+   "words": [
+    "techo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 451,
+   "name": "linea_corrupta",
+   "words": [
+    "linea",
+    "corrupta"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 452,
+   "name": "fuera_de_rango",
+   "words": [
+    "fuera",
+    "de",
+    "rango"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 453,
+   "name": "delta_pequeno",
+   "words": [
+    "pequeno"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 454,
+   "name": "sin_uso_local",
+   "words": [
+    "sin",
+    "uso"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 455,
+   "name": "contaminado",
+   "words": [
+    "contaminado"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 456,
+   "name": "solapado",
+   "words": [
+    "solapado"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 457,
+   "name": "caducado",
+   "words": [
+    "caducado"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 458,
+   "name": "reinicio",
+   "words": [
+    "reinicio"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 525,
+   "name": "especifico",
+   "words": [
+    "especifico"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 534,
+   "name": "aviso",
+   "words": [
+    "aviso"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 58,
+   "name": "bloqueo_id",
+   "words": [
+    "bloqueo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 59,
+   "name": "secciones",
+   "words": [
+    "secciones"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 60,
+   "name": "fallo_conexion",
+   "words": [
+    "fallo",
+    "conexion"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 72,
+   "name": "motivo",
+   "words": [
+    "motivo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 73,
+   "name": "bloqueo",
+   "words": [
+    "bloqueo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 74,
+   "name": "camino",
+   "words": [
+    "camino"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 75,
+   "name": "rutas",
+   "words": [
+    "rutas"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 76,
+   "name": "oferta",
+   "words": [
+    "oferta"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 103,
+   "name": "fallos",
+   "words": [
+    "fallos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 104,
+   "name": "espera_s",
+   "words": [
+    "espera"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 105,
+   "name": "hasta",
+   "words": [
+    "hasta"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 113,
+   "name": "evento",
+   "words": [
+    "evento"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 114,
+   "name": "clase",
+   "words": [
+    "clase"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 115,
+   "name": "tras_vencer",
+   "words": [
+    "tras",
+    "vencer"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 128,
+   "name": "cruce",
+   "words": [
+    "cruce"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 129,
+   "name": "banco",
+   "words": [
+    "banco"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 147,
+   "name": "generado",
+   "words": [
+    "generado"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 148,
+   "name": "plazo_dias",
+   "words": [
+    "plazo",
+    "dias"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 149,
+   "name": "cotejo",
+   "words": [
+    "cotejo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 150,
+   "name": "n_por_mes",
+   "words": [
+    "por",
+    "mes"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 151,
+   "name": "puntos",
+   "words": [
+    "puntos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 152,
+   "name": "descartes",
+   "words": [
+    "descartes"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 153,
+   "name": "reinicios",
+   "words": [
+    "reinicios"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 154,
+   "name": "fuentes",
+   "words": [
+    "fuentes"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 160,
+   "name": "fecha",
+   "words": [
+    "fecha"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 161,
+   "name": "version_tabla",
+   "words": [
+    "tabla"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 162,
+   "name": "juzgadas",
+   "words": [
+    "juzgadas"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 163,
+   "name": "fuera",
+   "words": [
+    "fuera"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 164,
+   "name": "sin_precio",
+   "words": [
+    "sin",
+    "precio"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 165,
+   "name": "veredicto",
+   "words": [
+    "veredicto"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 173,
+   "name": "fuente",
+   "words": [
+    "fuente"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 174,
+   "name": "tipo",
+   "words": [
+    "tipo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 175,
+   "name": "inicio",
+   "words": [
+    "inicio"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 176,
+   "name": "fin",
+   "words": [
+    "fin"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 177,
+   "name": "marcas",
+   "words": [
+    "marcas"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 178,
+   "name": "peticiones_sin_precio",
+   "words": [
+    "peticiones",
+    "sin",
+    "precio"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 187,
+   "name": "sesiones",
+   "words": [
+    "sesiones"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 188,
+   "name": "ventanas",
+   "words": [
+    "ventanas"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 192,
+   "name": "tanda",
+   "words": [
+    "tanda"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 199,
+   "name": "tareas",
+   "words": [
+    "tareas"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 201,
+   "name": "comando",
+   "words": [
+    "comando"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 202,
+   "name": "estilo",
+   "words": [
+    "estilo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 203,
+   "name": "nombre",
+   "words": [
+    "nombre"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 209,
+   "name": "ficheros",
+   "words": [
+    "ficheros"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 209,
+   "name": "origen",
+   "words": [
+    "origen"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 214,
+   "name": "tarea",
+   "words": [
+    "tarea"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 216,
+   "name": "valida",
+   "words": [
+    "valida"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 217,
+   "name": "correcta",
+   "words": [
+    "correcta"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 218,
+   "name": "coste_usd",
+   "words": [
+    "coste"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 219,
+   "name": "cobertura_titulos",
+   "words": [
+    "cobertura",
+    "titulos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 220,
+   "name": "hecho_en_respuesta",
+   "words": [
+    "hecho",
+    "en",
+    "respuesta"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 221,
+   "name": "tools_locales",
+   "words": [
+    "locales"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 222,
+   "name": "intentos",
+   "words": [
+    "intentos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 224,
+   "name": "tools_diferidas",
+   "words": [
+    "diferidas"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 225,
+   "name": "read_completo",
+   "words": [
+    "completo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 226,
+   "name": "read_franjas",
+   "words": [
+    "franjas"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 227,
+   "name": "volcado_bash",
+   "words": [
+    "volcado"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 228,
+   "name": "bloqueado",
+   "words": [
+    "bloqueado"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 229,
+   "name": "contenido_en_contexto",
+   "words": [
+    "contenido",
+    "en",
+    "contexto"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 238,
+   "name": "descartada",
+   "words": [
+    "descartada"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 238,
+   "name": "descartada_motivo",
+   "words": [
+    "descartada",
+    "motivo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 251,
+   "name": "procedencia",
+   "words": [
+    "procedencia"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 268,
+   "name": "celdas",
+   "words": [
+    "celdas"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 269,
+   "name": "alternativo",
+   "words": [
+    "alternativo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 270,
+   "name": "rol_comparado",
+   "words": [
+    "rol",
+    "comparado"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 271,
+   "name": "estado",
+   "words": [
+    "estado"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 272,
+   "name": "huella",
+   "words": [
+    "huella"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 284,
+   "name": "rol_en_hoja",
+   "words": [
+    "rol",
+    "en",
+    "hoja"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 285,
+   "name": "discriminante",
+   "words": [
+    "discriminante"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 296,
+   "name": "seleccion",
+   "words": [
+    "seleccion"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 297,
+   "name": "regla",
+   "words": [
+    "regla"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 298,
+   "name": "fecha_limite",
+   "words": [
+    "fecha",
+    "limite"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 299,
+   "name": "paso",
+   "words": [
+    "paso"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 300,
+   "name": "privacidad",
+   "words": [
+    "privacidad"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 301,
+   "name": "caso_de_f2",
+   "words": [
+    "caso",
+    "de"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 302,
+   "name": "reales",
+   "words": [
+    "reales"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 303,
+   "name": "trampas",
+   "words": [
+    "trampas"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 312,
+   "name": "regla_de_forma",
+   "words": [
+    "regla",
+    "de",
+    "forma"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 313,
+   "name": "misma-zona",
+   "words": [
+    "misma",
+    "zona"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 314,
+   "name": "secundario",
+   "words": [
+    "secundario"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 315,
+   "name": "generico",
+   "words": [
+    "generico"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 316,
+   "name": "juegos",
+   "words": [
+    "juegos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 317,
+   "name": "juego",
+   "words": [
+    "juego"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 319,
+   "name": "caso",
+   "words": [
+    "caso"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 321,
+   "name": "asunto",
+   "words": [
+    "asunto"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 322,
+   "name": "cuerpo",
+   "words": [
+    "cuerpo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 323,
+   "name": "cuerpo_origen",
+   "words": [
+    "cuerpo",
+    "origen"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 324,
+   "name": "asunto_de",
+   "words": [
+    "asunto",
+    "de"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 325,
+   "name": "fichero",
+   "words": [
+    "fichero"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 335,
+   "name": "hoja",
+   "words": [
+    "hoja"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 337,
+   "name": "semilla",
+   "words": [
+    "semilla"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 338,
+   "name": "pares",
+   "words": [
+    "pares"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 339,
+   "name": "omitidos",
+   "words": [
+    "omitidos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 342,
+   "name": "lados",
+   "words": [
+    "lados"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 343,
+   "name": "trampa_tipo",
+   "words": [
+    "trampa",
+    "tipo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 359,
+   "name": "parcial",
+   "words": [
+    "parcial"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 360,
+   "name": "respuestas",
+   "words": [
+    "respuestas"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 361,
+   "name": "inventa",
+   "words": [
+    "inventa"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 363,
+   "name": "preferencia",
+   "words": [
+    "preferencia"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 370,
+   "name": "eventos",
+   "words": [
+    "eventos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 371,
+   "name": "eventos_local",
+   "words": [
+    "eventos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 372,
+   "name": "descartados_no_local",
+   "words": [
+    "descartados"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 374,
+   "name": "por_modelo",
+   "words": [
+    "por",
+    "modelo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 376,
+   "name": "troceados",
+   "words": [
+    "troceados"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 377,
+   "name": "fuentes_del_repo",
+   "words": [
+    "fuentes",
+    "del"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 378,
+   "name": "fuentes_fuera_del_repo",
+   "words": [
+    "fuentes",
+    "fuera",
+    "del"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 379,
+   "name": "chars_in_mediana",
+   "words": [
+    "mediana"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 380,
+   "name": "modelos",
+   "words": [
+    "modelos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 387,
+   "name": "aceptables",
+   "words": [
+    "aceptables"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 388,
+   "name": "etiquetas",
+   "words": [
+    "etiquetas"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 389,
+   "name": "claves",
+   "words": [
+    "claves"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 390,
+   "name": "esperado",
+   "words": [
+    "esperado"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 391,
+   "name": "titulos",
+   "words": [
+    "titulos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 392,
+   "name": "listas",
+   "words": [
+    "listas"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 393,
+   "name": "bloques",
+   "words": [
+    "bloques"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 394,
+   "name": "codigo",
+   "words": [
+    "codigo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 395,
+   "name": "conteos",
+   "words": [
+    "conteos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 396,
+   "name": "formato",
+   "words": [
+    "formato"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 405,
+   "name": "max_inventa_26b",
+   "words": [
+    "inventa"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 406,
+   "name": "preguntas_opcionales",
+   "words": [
+    "preguntas",
+    "opcionales"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 408,
+   "name": "parada_anticipada",
+   "words": [
+    "parada",
+    "anticipada"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 409,
+   "name": "primera_linea_max",
+   "words": [
+    "primera",
+    "linea"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 410,
+   "name": "prefijo",
+   "words": [
+    "prefijo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 411,
+   "name": "sin_adornos",
+   "words": [
+    "sin",
+    "adornos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 412,
+   "name": "vallas_de_codigo",
+   "words": [
+    "vallas",
+    "de",
+    "codigo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 413,
+   "name": "comillas_envolventes",
+   "words": [
+    "comillas",
+    "envolventes"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 414,
+   "name": "encabezados_markdown",
+   "words": [
+    "encabezados"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 415,
+   "name": "frases_de_presentacion",
+   "words": [
+    "frases",
+    "de",
+    "presentacion"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 439,
+   "name": "humano",
+   "words": [
+    "humano"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 444,
+   "name": "inicio_utc",
+   "words": [
+    "inicio"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 444,
+   "name": "fin_utc",
+   "words": [
+    "fin"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 444,
+   "name": "solo",
+   "words": [
+    "solo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 80,
+   "name": "acotada",
+   "words": [
+    "acotada"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 82,
+   "name": "pequeno",
+   "words": [
+    "pequeno"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 83,
+   "name": "backend_ausente",
+   "words": [
+    "ausente"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 84,
+   "name": "modelo_enfriado",
+   "words": [
+    "modelo",
+    "enfriado"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 85,
+   "name": "prosa_grande",
+   "words": [
+    "prosa",
+    "grande"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 86,
+   "name": "no_es_volcado",
+   "words": [
+    "es",
+    "volcado"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 87,
+   "name": "sin_fichero",
+   "words": [
+    "sin",
+    "fichero"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 88,
+   "name": "no_es_prosa",
+   "words": [
+    "es",
+    "prosa"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 89,
+   "name": "bloqueo_apagado",
+   "words": [
+    "bloqueo",
+    "apagado"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 90,
+   "name": "mcp_ajeno",
+   "words": [
+    "ajeno"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 93,
+   "name": "encendido",
+   "words": [
+    "encendido"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 94,
+   "name": "apagado_fichero",
+   "words": [
+    "apagado",
+    "fichero"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 95,
+   "name": "apagado_variable",
+   "words": [
+    "apagado"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 120,
+   "name": "entra",
+   "words": [
+    "entra"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 120,
+   "name": "limpia",
+   "words": [
+    "limpia"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 134,
+   "name": "exacto",
+   "words": [
+    "exacto"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 135,
+   "name": "ventana",
+   "words": [
+    "ventana"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 137,
+   "name": "ambiguo",
+   "words": [
+    "ambiguo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 138,
+   "name": "sin_cruce",
+   "words": [
+    "sin",
+    "cruce"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 167,
+   "name": "pasa",
+   "words": [
+    "pasa"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 167,
+   "name": "falla",
+   "words": [
+    "falla"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 180,
+   "name": "rechazo",
+   "words": [
+    "rechazo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 240,
+   "name": "rechazo_por_contexto",
+   "words": [
+    "rechazo",
+    "por",
+    "contexto"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 245,
+   "name": "truncado_repetido",
+   "words": [
+    "truncado",
+    "repetido"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 255,
+   "name": "cobertura",
+   "words": [
+    "cobertura"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 256,
+   "name": "prohibido",
+   "words": [
+    "prohibido"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 257,
+   "name": "json_valido",
+   "words": [
+    "valido"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 258,
+   "name": "json_campos",
+   "words": [
+    "campos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 259,
+   "name": "ejecucion",
+   "words": [
+    "ejecucion"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 28,
+   "name": "capacidad_o_carga",
+   "words": [
+    "capacidad",
+    "o",
+    "carga"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 29,
+   "name": "timeout_lectura",
+   "words": [
+    "lectura"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 32,
+   "name": "sin_clasificar",
+   "words": [
+    "sin",
+    "clasificar"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 39,
+   "name": "sin_ruta",
+   "words": [
+    "sin",
+    "ruta"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 40,
+   "name": "timeout_conexion",
+   "words": [
+    "conexion"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 42,
+   "name": "sin_respuesta",
+   "words": [
+    "sin",
+    "respuesta"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 43,
+   "name": "respuesta_invalida",
+   "words": [
+    "respuesta",
+    "invalida"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 44,
+   "name": "url_invalida",
+   "words": [
+    "invalida"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 58,
+   "name": "bloqueo_id",
+   "words": [
+    "bloqueo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 60,
+   "name": "fallo_conexion",
+   "words": [
+    "fallo",
+    "conexion"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 83,
+   "name": "backend_ausente",
+   "words": [
+    "ausente"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 84,
+   "name": "modelo_enfriado",
+   "words": [
+    "modelo",
+    "enfriado"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 85,
+   "name": "prosa_grande",
+   "words": [
+    "prosa",
+    "grande"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 86,
+   "name": "no_es_volcado",
+   "words": [
+    "es",
+    "volcado"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 87,
+   "name": "sin_fichero",
+   "words": [
+    "sin",
+    "fichero"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 88,
+   "name": "no_es_prosa",
+   "words": [
+    "es",
+    "prosa"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 89,
+   "name": "bloqueo_apagado",
+   "words": [
+    "bloqueo",
+    "apagado"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 90,
+   "name": "mcp_ajeno",
+   "words": [
+    "ajeno"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 94,
+   "name": "apagado_fichero",
+   "words": [
+    "apagado",
+    "fichero"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 95,
+   "name": "apagado_variable",
+   "words": [
+    "apagado"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 104,
+   "name": "espera_s",
+   "words": [
+    "espera"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 115,
+   "name": "tras_vencer",
+   "words": [
+    "tras",
+    "vencer"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 138,
+   "name": "sin_cruce",
+   "words": [
+    "sin",
+    "cruce"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 148,
+   "name": "plazo_dias",
+   "words": [
+    "plazo",
+    "dias"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 150,
+   "name": "n_por_mes",
+   "words": [
+    "por",
+    "mes"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 161,
+   "name": "version_tabla",
+   "words": [
+    "tabla"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 164,
+   "name": "sin_precio",
+   "words": [
+    "sin",
+    "precio"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 178,
+   "name": "peticiones_sin_precio",
+   "words": [
+    "peticiones",
+    "sin",
+    "precio"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 218,
+   "name": "coste_usd",
+   "words": [
+    "coste"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 219,
+   "name": "cobertura_titulos",
+   "words": [
+    "cobertura",
+    "titulos"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 220,
+   "name": "hecho_en_respuesta",
+   "words": [
+    "hecho",
+    "en",
+    "respuesta"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 221,
+   "name": "tools_locales",
+   "words": [
+    "locales"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 224,
+   "name": "tools_diferidas",
+   "words": [
+    "diferidas"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 225,
+   "name": "read_completo",
+   "words": [
+    "completo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 226,
+   "name": "read_franjas",
+   "words": [
+    "franjas"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 227,
+   "name": "volcado_bash",
+   "words": [
+    "volcado"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 229,
+   "name": "contenido_en_contexto",
+   "words": [
+    "contenido",
+    "en",
+    "contexto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 238,
+   "name": "descartada_motivo",
+   "words": [
+    "descartada",
+    "motivo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 240,
+   "name": "rechazo_por_contexto",
+   "words": [
+    "rechazo",
+    "por",
+    "contexto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 245,
+   "name": "truncado_repetido",
+   "words": [
+    "truncado",
+    "repetido"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 257,
+   "name": "json_valido",
+   "words": [
+    "valido"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 258,
+   "name": "json_campos",
+   "words": [
+    "campos"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 270,
+   "name": "rol_comparado",
+   "words": [
+    "rol",
+    "comparado"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 284,
+   "name": "rol_en_hoja",
+   "words": [
+    "rol",
+    "en",
+    "hoja"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 298,
+   "name": "fecha_limite",
+   "words": [
+    "fecha",
+    "limite"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 301,
+   "name": "caso_de_f2",
+   "words": [
+    "caso",
+    "de"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 312,
+   "name": "regla_de_forma",
+   "words": [
+    "regla",
+    "de",
+    "forma"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 313,
+   "name": "misma-zona",
+   "words": [
+    "misma",
+    "zona"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 323,
+   "name": "cuerpo_origen",
+   "words": [
+    "cuerpo",
+    "origen"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 324,
+   "name": "asunto_de",
+   "words": [
+    "asunto",
+    "de"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 343,
+   "name": "trampa_tipo",
+   "words": [
+    "trampa",
+    "tipo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 371,
+   "name": "eventos_local",
+   "words": [
+    "eventos"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 372,
+   "name": "descartados_no_local",
+   "words": [
+    "descartados"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 374,
+   "name": "por_modelo",
+   "words": [
+    "por",
+    "modelo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 377,
+   "name": "fuentes_del_repo",
+   "words": [
+    "fuentes",
+    "del"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 378,
+   "name": "fuentes_fuera_del_repo",
+   "words": [
+    "fuentes",
+    "fuera",
+    "del"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 379,
+   "name": "chars_in_mediana",
+   "words": [
+    "mediana"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 405,
+   "name": "max_inventa_26b",
+   "words": [
+    "inventa"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 406,
+   "name": "preguntas_opcionales",
+   "words": [
+    "preguntas",
+    "opcionales"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 408,
+   "name": "parada_anticipada",
+   "words": [
+    "parada",
+    "anticipada"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 409,
+   "name": "primera_linea_max",
+   "words": [
+    "primera",
+    "linea"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 411,
+   "name": "sin_adornos",
+   "words": [
+    "sin",
+    "adornos"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 412,
+   "name": "vallas_de_codigo",
+   "words": [
+    "vallas",
+    "de",
+    "codigo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 413,
+   "name": "comillas_envolventes",
+   "words": [
+    "comillas",
+    "envolventes"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 414,
+   "name": "encabezados_markdown",
+   "words": [
+    "encabezados"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 415,
+   "name": "frases_de_presentacion",
+   "words": [
+    "frases",
+    "de",
+    "presentacion"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 444,
+   "name": "inicio_utc",
+   "words": [
+    "inicio"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 444,
+   "name": "fin_utc",
+   "words": [
+    "fin"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 451,
+   "name": "linea_corrupta",
+   "words": [
+    "linea",
+    "corrupta"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 452,
+   "name": "fuera_de_rango",
+   "words": [
+    "fuera",
+    "de",
+    "rango"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 453,
+   "name": "delta_pequeno",
+   "words": [
+    "pequeno"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 454,
+   "name": "sin_uso_local",
+   "words": [
+    "sin",
+    "uso"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 474,
+   "name": "local-delegate-bloqueo-apagado",
+   "words": [
+    "bloqueo",
+    "apagado"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 475,
+   "name": "local-delegate-bloqueos.jsonl",
+   "words": [
+    "bloqueos"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 476,
+   "name": "local-delegate-llamadas",
+   "words": [
+    "llamadas"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 480,
+   "name": "enfriamiento.json",
+   "words": [
+    "enfriamiento"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 486,
+   "name": "enfriamiento-eventos.jsonl",
+   "words": [
+    "enfriamiento",
+    "eventos"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 498,
+   "name": "coste-agregados.json",
+   "words": [
+    "coste",
+    "agregados"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 502,
+   "name": "cuota-statusline.jsonl",
+   "words": [
+    "cuota"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 507,
+   "name": "ventanas-excluidas.json",
+   "words": [
+    "ventanas",
+    "excluidas"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 514,
+   "name": "huellas.json",
+   "words": [
+    "huellas"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 515,
+   "name": "ventanas-tanda.json",
+   "words": [
+    "ventanas",
+    "tanda"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 516,
+   "name": "veredicto.json",
+   "words": [
+    "veredicto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 519,
+   "name": "reglas.json",
+   "words": [
+    "reglas"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 522,
+   "name": "trampas.json",
+   "words": [
+    "trampas"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/legacy_names.py",
+   "line": 523,
+   "name": "conteos-log.json",
+   "words": [
+    "conteos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/matrix.py",
+   "line": 64,
+   "name": "ruta",
+   "words": [
+    "ruta"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/matrix.py",
+   "line": 65,
+   "name": "tamano_bytes",
+   "words": [
+    "tamano"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/matrix.py",
+   "line": 65,
+   "name": "tamano_bytes",
+   "words": [
+    "tamano"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/recompute.py",
+   "line": 361,
+   "name": "sin_cruce",
+   "words": [
+    "sin",
+    "cruce"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/resources/hooks/hook_common.py",
+   "line": 183,
+   "name": "fallos",
+   "words": [
+    "fallos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/resources/hooks/hook_common.py",
+   "line": 184,
+   "name": "espera_s",
+   "words": [
+    "espera"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/resources/hooks/hook_common.py",
+   "line": 185,
+   "name": "hasta",
+   "words": [
+    "hasta"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/resources/hooks/hook_common.py",
+   "line": 171,
+   "name": "local-delegate-bloqueo-apagado",
+   "words": [
+    "bloqueo",
+    "apagado"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/resources/hooks/hook_common.py",
+   "line": 172,
+   "name": "local-delegate-bloqueos.jsonl",
+   "words": [
+    "bloqueos"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/resources/hooks/hook_common.py",
+   "line": 173,
+   "name": "local-delegate-llamadas",
+   "words": [
+    "llamadas"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/resources/hooks/hook_common.py",
+   "line": 177,
+   "name": "enfriamiento.json",
+   "words": [
+    "enfriamiento"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/resources/hooks/hook_common.py",
+   "line": 184,
+   "name": "espera_s",
+   "words": [
+    "espera"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/resources/hooks/hook_common.py",
+   "line": 286,
+   "name": "LD_HOOK_READ_BLOQUEAR",
+   "words": [
+    "bloquear"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/resources/hooks/hook_common.py",
+   "line": 287,
+   "name": "LD_HOOK_READ_INTERRUPTOR",
+   "words": [
+    "interruptor"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/server.py",
+   "line": 1101,
+   "name": "respondio",
+   "words": [
+    "respondio"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/server.py",
+   "line": 1102,
+   "name": "en_lugar_de",
+   "words": [
+    "en",
+    "lugar",
+    "de"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/server.py",
+   "line": 1103,
+   "name": "motivo",
+   "words": [
+    "motivo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/server.py",
+   "line": 1104,
+   "name": "clase",
+   "words": [
+    "clase"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/server.py",
+   "line": 3639,
+   "name": "truncado",
+   "words": [
+    "truncado"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/server.py",
+   "line": 3640,
+   "name": "aviso",
+   "words": [
+    "aviso"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/server.py",
+   "line": 3644,
+   "name": "leido_server_side",
+   "words": [
+    "leido"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/server.py",
+   "line": 3646,
+   "name": "tokens_aprox",
+   "words": [
+    "aprox"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/server.py",
+   "line": 3650,
+   "name": "respaldo",
+   "words": [
+    "respaldo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/server.py",
+   "line": 2351,
+   "name": "trozo",
+   "words": [
+    "trozo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "src/local_delegate/server.py",
+   "line": 3635,
+   "name": "crudo",
+   "words": [
+    "crudo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/server.py",
+   "line": 1102,
+   "name": "en_lugar_de",
+   "words": [
+    "en",
+    "lugar",
+    "de"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/server.py",
+   "line": 3644,
+   "name": "leido_server_side",
+   "words": [
+    "leido"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/server.py",
+   "line": 3646,
+   "name": "tokens_aprox",
+   "words": [
+    "aprox"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/valuation.py",
+   "line": 74,
+   "name": "n_por_mes",
+   "words": [
+    "por",
+    "mes"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "src/local_delegate/valuation.py",
+   "line": 162,
+   "name": "plazo_dias",
+   "words": [
+    "plazo",
+    "dias"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/conftest.py",
+   "line": 110,
+   "name": "daemon-cortado",
+   "words": [
+    "cortado"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/fake_llama_server.py",
+   "line": 102,
+   "name": "chatcmpl-falso",
+   "words": [
+    "falso"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_affinity.py",
+   "line": 369,
+   "name": "ruta",
+   "words": [
+    "ruta"
+   ]
+  },
+  {
+   "category": "identifier",
+   "file": "tests/test_agents.py",
+   "line": 145,
+   "name": "ajeno",
+   "words": [
+    "ajeno"
+   ]
+  },
+  {
+   "category": "identifier",
+   "file": "tests/test_agents.py",
+   "line": 153,
+   "name": "raro",
+   "words": [
+    "raro"
+   ]
+  },
+  {
+   "category": "identifier",
+   "file": "tests/test_agents.py",
+   "line": 164,
+   "name": "roto",
+   "words": [
+    "roto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_agents.py",
+   "line": 122,
+   "name": "no-existe.md",
+   "words": [
+    "existe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_agents.py",
+   "line": 124,
+   "name": "sin-recursos",
+   "words": [
+    "sin",
+    "recursos"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_agents.py",
+   "line": 149,
+   "name": "ajeno.md.bak",
+   "words": [
+    "ajeno"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_agents.py",
+   "line": 155,
+   "name": "raro.md",
+   "words": [
+    "raro"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_agents.py",
+   "line": 166,
+   "name": "roto.md",
+   "words": [
+    "roto"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_analyze_benchmark.py",
+   "line": 1076,
+   "name": "ruta",
+   "words": [
+    "ruta"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_attribution.py",
+   "line": 676,
+   "name": "cruce",
+   "words": [
+    "cruce"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_attribution.py",
+   "line": 676,
+   "name": "banco",
+   "words": [
+    "banco"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_attribution.py",
+   "line": 669,
+   "name": "entradas",
+   "words": [
+    "entradas"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_attribution.py",
+   "line": 372,
+   "name": "relleno",
+   "words": [
+    "relleno"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_attribution.py",
+   "line": 68,
+   "name": "sesion-sintetica",
+   "words": [
+    "sesion",
+    "sintetica"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_attribution.py",
+   "line": 125,
+   "name": "toolu_ida",
+   "words": [
+    "ida"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_attribution.py",
+   "line": 144,
+   "name": "stdin_roto",
+   "words": [
+    "roto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_attribution.py",
+   "line": 144,
+   "name": "id_malo",
+   "words": [
+    "malo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_attribution.py",
+   "line": 153,
+   "name": "toolu_calla",
+   "words": [
+    "calla"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_attribution.py",
+   "line": 164,
+   "name": "toolu_calla.json",
+   "words": [
+    "calla"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_attribution.py",
+   "line": 205,
+   "name": "toolu_medias.json",
+   "words": [
+    "medias"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_attribution.py",
+   "line": 209,
+   "name": "toolu_medias",
+   "words": [
+    "medias"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_attribution.py",
+   "line": 219,
+   "name": "toolu_vieja",
+   "words": [
+    "vieja"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_attribution.py",
+   "line": 220,
+   "name": "toolu_vieja.json",
+   "words": [
+    "vieja"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_attribution.py",
+   "line": 223,
+   "name": "toolu_nueva",
+   "words": [
+    "nueva"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_attribution.py",
+   "line": 225,
+   "name": "toolu_nueva.json",
+   "words": [
+    "nueva"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_attribution.py",
+   "line": 238,
+   "name": "toolu_otro",
+   "words": [
+    "otro"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_attribution.py",
+   "line": 278,
+   "name": "toolu_fuera",
+   "words": [
+    "fuera"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_attribution.py",
+   "line": 291,
+   "name": "toolu_otra",
+   "words": [
+    "otra"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_attribution.py",
+   "line": 294,
+   "name": "toolu_carrera",
+   "words": [
+    "carrera"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_attribution.py",
+   "line": 374,
+   "name": "toolu_lejos",
+   "words": [
+    "lejos"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_attribution.py",
+   "line": 392,
+   "name": "toolu_lento",
+   "words": [
+    "lento"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_attribution.py",
+   "line": 453,
+   "name": "sesion-marcador-7f3a",
+   "words": [
+    "sesion",
+    "marcador"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_attribution.py",
+   "line": 488,
+   "name": "toolu_roto",
+   "words": [
+    "roto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_attribution.py",
+   "line": 679,
+   "name": "sin_cruce",
+   "words": [
+    "sin",
+    "cruce"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_backend_probe.py",
+   "line": 155,
+   "name": "data-texto",
+   "words": [
+    "texto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_boilerplate_output.py",
+   "line": 50,
+   "name": "suma.py",
+   "words": [
+    "suma"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_boilerplate_output.py",
+   "line": 138,
+   "name": "relativo.py",
+   "words": [
+    "relativo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_boilerplate_output.py",
+   "line": 146,
+   "name": "ya.py",
+   "words": [
+    "ya"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_boilerplate_output.py",
+   "line": 171,
+   "name": "soy_carpeta",
+   "words": [
+    "soy",
+    "carpeta"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_boilerplate_output.py",
+   "line": 204,
+   "name": "roto.py",
+   "words": [
+    "roto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_bump_version.py",
+   "line": 135,
+   "name": "no-soy-una-version",
+   "words": [
+    "soy",
+    "una"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_chains.py",
+   "line": 169,
+   "name": "modelo-que-no-existe",
+   "words": [
+    "modelo",
+    "que",
+    "existe"
+   ]
+  },
+  {
+   "category": "identifier",
+   "file": "tests/test_checks.py",
+   "line": 1342,
+   "name": "test_header_present_but_variable_absent_warns_as_suspicion",
+   "words": [
+    "suspicion"
+   ]
+  },
+  {
+   "category": "identifier",
+   "file": "tests/test_checks.py",
+   "line": 1544,
+   "name": "test_desktop_with_missing_variable_warns_as_suspicion",
+   "words": [
+    "suspicion"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_checks.py",
+   "line": 1391,
+   "name": "otro-servidor",
+   "words": [
+    "otro",
+    "servidor"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_checks.py",
+   "line": 923,
+   "name": "causa",
+   "words": [
+    "causa"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_checks.py",
+   "line": 924,
+   "name": "detalle",
+   "words": [
+    "detalle"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_checks.py",
+   "line": 670,
+   "name": "otro",
+   "words": [
+    "otro"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_checks.py",
+   "line": 321,
+   "name": "hook_de_terceros.py",
+   "words": [
+    "de",
+    "terceros"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_checks.py",
+   "line": 412,
+   "name": "vete-a-saber",
+   "words": [
+    "vete",
+    "saber"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_checks.py",
+   "line": 439,
+   "name": "test.roto",
+   "words": [
+    "roto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_checks.py",
+   "line": 720,
+   "name": "secreto-de-mentira",
+   "words": [
+    "secreto",
+    "de",
+    "mentira"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_checks.py",
+   "line": 783,
+   "name": "un-secreto-que-no-debe-salir",
+   "words": [
+    "un",
+    "secreto",
+    "que",
+    "debe",
+    "salir"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_checks.py",
+   "line": 1055,
+   "name": "cliente-mudo",
+   "words": [
+    "cliente",
+    "mudo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_checks.py",
+   "line": 1158,
+   "name": "sin-crear",
+   "words": [
+    "sin",
+    "crear"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_checks.py",
+   "line": 1253,
+   "name": "un-token-cualquiera",
+   "words": [
+    "un",
+    "cualquiera"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_checks.py",
+   "line": 1382,
+   "name": "token-literal-de-desktop-que-no-debe-salir-nunca",
+   "words": [
+    "de",
+    "que",
+    "debe",
+    "salir",
+    "nunca"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_checks.py",
+   "line": 1391,
+   "name": "otro-servidor",
+   "words": [
+    "otro",
+    "servidor"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_checks.py",
+   "line": 1516,
+   "name": "TOKEN_DESKTOP_PRUEBA",
+   "words": [
+    "prueba"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_checks.py",
+   "line": 1516,
+   "name": "valor-del-entorno",
+   "words": [
+    "valor",
+    "del",
+    "entorno"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_checks.py",
+   "line": 1540,
+   "name": "token-bueno",
+   "words": [
+    "bueno"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_checks.py",
+   "line": 1604,
+   "name": "mi_hook_propio.py",
+   "words": [
+    "mi",
+    "propio"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_cli_renamed_names.py",
+   "line": 155,
+   "name": "LD_HOOK_READ_BLOQUEAR",
+   "words": [
+    "bloquear"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_cli_renamed_names.py",
+   "line": 156,
+   "name": "LD_HOOK_READ_INTERRUPTOR",
+   "words": [
+    "interruptor"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_cli_renamed_names.py",
+   "line": 157,
+   "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
+   "words": [
+    "resumen",
+    "estructurado"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_cli_renamed_names.py",
+   "line": 158,
+   "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
+   "words": [
+    "coste",
+    "respaldo"
+   ]
+  },
+  {
+   "category": "identifier",
+   "file": "tests/test_cli_renamed_names.py",
+   "line": 270,
+   "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
+   "words": [
+    "coste",
+    "respaldo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_cli_renamed_names.py",
+   "line": 26,
+   "name": "LD_HOOK_READ_BLOQUEAR",
+   "words": [
+    "bloquear"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_cli_renamed_names.py",
+   "line": 27,
+   "name": "LD_HOOK_READ_INTERRUPTOR",
+   "words": [
+    "interruptor"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_cli_renamed_names.py",
+   "line": 28,
+   "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
+   "words": [
+    "resumen",
+    "estructurado"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_cli_renamed_names.py",
+   "line": 29,
+   "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
+   "words": [
+    "coste",
+    "respaldo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_cli_renamed_names.py",
+   "line": 61,
+   "name": "recalcular-coste",
+   "words": [
+    "recalcular",
+    "coste"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_cli_renamed_names.py",
+   "line": 125,
+   "name": "reiniciar-calibracion",
+   "words": [
+    "reiniciar",
+    "calibracion"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_cli_renamed_names.py",
+   "line": 156,
+   "name": "viejo.flag",
+   "words": [
+    "viejo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_cli_renamed_names.py",
+   "line": 169,
+   "name": "nuevo.flag",
+   "words": [
+    "nuevo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_cli_renamed_names.py",
+   "line": 232,
+   "name": "no-existe",
+   "words": [
+    "existe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_cli_renamed_names.py",
+   "line": 246,
+   "name": "apagado.flag",
+   "words": [
+    "apagado"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_clients.py",
+   "line": 142,
+   "name": "cliente-prueba",
+   "words": [
+    "cliente",
+    "prueba"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_clients.py",
+   "line": 233,
+   "name": "cliente-a",
+   "words": [
+    "cliente"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_clients.py",
+   "line": 234,
+   "name": "cliente-b",
+   "words": [
+    "cliente"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_clients.py",
+   "line": 457,
+   "name": "toolu_prueba",
+   "words": [
+    "prueba"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_connection_cause.py",
+   "line": 64,
+   "name": "gaierror-en-loopback-sigue-siendo-dns",
+   "words": [
+    "en",
+    "sigue",
+    "siendo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_connection_cause.py",
+   "line": 70,
+   "name": "econnrefused-es-rechazada",
+   "words": [
+    "es",
+    "rechazada"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_connection_cause.py",
+   "line": 76,
+   "name": "enetunreach-es-sin-ruta",
+   "words": [
+    "es",
+    "sin",
+    "ruta"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_connection_cause.py",
+   "line": 82,
+   "name": "ehostunreach-es-sin-ruta",
+   "words": [
+    "es",
+    "sin",
+    "ruta"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_connection_cause.py",
+   "line": 88,
+   "name": "winsock-10051-es-sin-ruta",
+   "words": [
+    "es",
+    "sin",
+    "ruta"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_connection_cause.py",
+   "line": 94,
+   "name": "winsock-10065-es-sin-ruta",
+   "words": [
+    "es",
+    "sin",
+    "ruta"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_connection_cause.py",
+   "line": 100,
+   "name": "connect-timeout-en-loopback-es-rechazada",
+   "words": [
+    "en",
+    "es",
+    "rechazada"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_connection_cause.py",
+   "line": 106,
+   "name": "connect-timeout-remoto-es-timeout-conexion",
+   "words": [
+    "remoto",
+    "es",
+    "conexion"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_connection_cause.py",
+   "line": 112,
+   "name": "caso-de-la-mac-etimedout-remoto",
+   "words": [
+    "caso",
+    "de",
+    "la",
+    "remoto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_connection_cause.py",
+   "line": 118,
+   "name": "caso-de-la-mac-etimedout-en-loopback",
+   "words": [
+    "caso",
+    "de",
+    "la",
+    "en"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_connection_cause.py",
+   "line": 127,
+   "name": "json-roto",
+   "words": [
+    "roto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_connection_cause.py",
+   "line": 148,
+   "name": "codigo-401",
+   "words": [
+    "codigo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_connection_cause.py",
+   "line": 149,
+   "name": "codigo-403",
+   "words": [
+    "codigo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_connection_cause.py",
+   "line": 150,
+   "name": "codigo-404",
+   "words": [
+    "codigo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_connection_cause.py",
+   "line": 151,
+   "name": "codigo-500",
+   "words": [
+    "codigo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_connection_cause.py",
+   "line": 157,
+   "name": "propia-que-envuelve-connect-timeout",
+   "words": [
+    "propia",
+    "que",
+    "envuelve"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_connection_cause.py",
+   "line": 301,
+   "name": "causa_del_futuro",
+   "words": [
+    "causa",
+    "del",
+    "futuro"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_connection_cause.py",
+   "line": 398,
+   "name": "no_existe",
+   "words": [
+    "existe"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_cooldown.py",
+   "line": 413,
+   "name": "hasta",
+   "words": [
+    "hasta"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_cooldown.py",
+   "line": 418,
+   "name": "fallos",
+   "words": [
+    "fallos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_cooldown.py",
+   "line": 418,
+   "name": "espera_s",
+   "words": [
+    "espera"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_cooldown.py",
+   "line": 378,
+   "name": "enfriamiento.json",
+   "words": [
+    "enfriamiento"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_cooldown.py",
+   "line": 412,
+   "name": "espera_s",
+   "words": [
+    "espera"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_cooldown.py",
+   "line": 463,
+   "name": "enfriamiento-eventos.jsonl",
+   "words": [
+    "enfriamiento",
+    "eventos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_core.py",
+   "line": 268,
+   "name": "crudo",
+   "words": [
+    "crudo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_core.py",
+   "line": 289,
+   "name": "puerto",
+   "words": [
+    "puerto"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_core.py",
+   "line": 308,
+   "name": "truncado",
+   "words": [
+    "truncado"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_core.py",
+   "line": 309,
+   "name": "aviso",
+   "words": [
+    "aviso"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_core.py",
+   "line": 349,
+   "name": "leido_server_side",
+   "words": [
+    "leido"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_core.py",
+   "line": 327,
+   "name": "fuente.md",
+   "words": [
+    "fuente"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_core.py",
+   "line": 349,
+   "name": "leido_server_side",
+   "words": [
+    "leido"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_core.py",
+   "line": 372,
+   "name": "modelo-a",
+   "words": [
+    "modelo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_core.py",
+   "line": 438,
+   "name": "no-existe.yaml",
+   "words": [
+    "existe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_core.py",
+   "line": 644,
+   "name": "afuera.txt",
+   "words": [
+    "afuera"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_core.py",
+   "line": 654,
+   "name": "dentro.txt",
+   "words": [
+    "dentro"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_core.py",
+   "line": 754,
+   "name": "uno.py",
+   "words": [
+    "uno"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_core.py",
+   "line": 754,
+   "name": "dos.py",
+   "words": [
+    "dos"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_core.py",
+   "line": 767,
+   "name": "nota.md",
+   "words": [
+    "nota"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_core.py",
+   "line": 780,
+   "name": "nuevo.py",
+   "words": [
+    "nuevo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_correlation.py",
+   "line": 23,
+   "name": "bloqueos.jsonl",
+   "words": [
+    "bloqueos"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_correlation.py",
+   "line": 26,
+   "name": "viejo.jsonl",
+   "words": [
+    "viejo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_correlation.py",
+   "line": 32,
+   "name": "informe.md",
+   "words": [
+    "informe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_correlation.py",
+   "line": 44,
+   "name": "otro.md",
+   "words": [
+    "otro"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_correlation.py",
+   "line": 54,
+   "name": "id-largo-1234",
+   "words": [
+    "largo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_correlation.py",
+   "line": 89,
+   "name": "secreto-del-cliente.md",
+   "words": [
+    "secreto",
+    "del",
+    "cliente"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_correlation.py",
+   "line": 93,
+   "name": "secreto-del-cliente",
+   "words": [
+    "secreto",
+    "del",
+    "cliente"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_correlation.py",
+   "line": 163,
+   "name": "nadie-me-bloqueo.md",
+   "words": [
+    "nadie",
+    "me",
+    "bloqueo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_cost_doctor.py",
+   "line": 28,
+   "name": "sesion.jsonl",
+   "words": [
+    "sesion"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_cost_doctor.py",
+   "line": 53,
+   "name": "notas.md",
+   "words": [
+    "notas"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_cost_doctor.py",
+   "line": 95,
+   "name": "log-corto",
+   "words": [
+    "corto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_daemon.py",
+   "line": 79,
+   "name": "el-token-del-puerto",
+   "words": [
+    "el",
+    "del",
+    "puerto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_daemon.py",
+   "line": 207,
+   "name": "el-token-del-entorno",
+   "words": [
+    "el",
+    "del",
+    "entorno"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_daemon.py",
+   "line": 211,
+   "name": "el-del-cliente",
+   "words": [
+    "el",
+    "del",
+    "cliente"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_dashboard_cost.py",
+   "line": 538,
+   "name": "coletilla",
+   "words": [
+    "coletilla"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_dashboard_cost.py",
+   "line": 540,
+   "name": "recibo",
+   "words": [
+    "recibo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_dashboard_cost.py",
+   "line": 541,
+   "name": "tokens_aprox",
+   "words": [
+    "aprox"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_dashboard_cost.py",
+   "line": 183,
+   "name": "textos.mjs",
+   "words": [
+    "textos"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_dashboard_cost.py",
+   "line": 317,
+   "name": "un_mes",
+   "words": [
+    "un",
+    "mes"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_dashboard_cost.py",
+   "line": 392,
+   "name": "sesion.jsonl",
+   "words": [
+    "sesion"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_dashboard_cost.py",
+   "line": 393,
+   "name": "cuota-statusline.jsonl",
+   "words": [
+    "cuota"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_dashboard_cost.py",
+   "line": 521,
+   "name": "salida.py",
+   "words": [
+    "salida"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_dashboard_cost.py",
+   "line": 528,
+   "name": "tokens_aprox",
+   "words": [
+    "aprox"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_dashboard_cost.py",
+   "line": 612,
+   "name": "celdas.mjs",
+   "words": [
+    "celdas"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_dashboard_js.py",
+   "line": 68,
+   "name": "prueba.mjs",
+   "words": [
+    "prueba"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_dashboard_states.py",
+   "line": 330,
+   "name": "turno_grupo",
+   "words": [
+    "turno",
+    "grupo"
+   ]
+  },
+  {
+   "category": "identifier",
+   "file": "tests/test_dashboard_ui.py",
+   "line": 735,
+   "name": "test_the_calibrated_quota_appears_as_a_meter",
+   "words": [
+    "meter"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_dashboard_ui.py",
+   "line": 495,
+   "name": "remoto",
+   "words": [
+    "remoto"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_dashboard_ui.py",
+   "line": 1204,
+   "name": "causa",
+   "words": [
+    "causa"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_dashboard_ui.py",
+   "line": 1205,
+   "name": "etiqueta",
+   "words": [
+    "etiqueta"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_dashboard_ui.py",
+   "line": 1206,
+   "name": "detalle",
+   "words": [
+    "detalle"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_dashboard_ui.py",
+   "line": 427,
+   "name": "procesosVacia",
+   "words": [
+    "procesos",
+    "vacia"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_dashboard_ui.py",
+   "line": 82,
+   "name": "modelo-de-prueba",
+   "words": [
+    "modelo",
+    "de",
+    "prueba"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_dashboard_ui.py",
+   "line": 594,
+   "name": "pc.ejemplo.ts.net",
+   "words": [
+    "ejemplo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_dashboard_ui.py",
+   "line": 896,
+   "name": "clave_rara_nueva",
+   "words": [
+    "clave",
+    "rara",
+    "nueva"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_dashboard_ui.py",
+   "line": 908,
+   "name": "motivo_que_no_existe",
+   "words": [
+    "motivo",
+    "que",
+    "existe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_dashboard_ui.py",
+   "line": 937,
+   "name": "cliente_nuevo",
+   "words": [
+    "cliente",
+    "nuevo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_dashboard_ui.py",
+   "line": 1201,
+   "name": "modelo-b",
+   "words": [
+    "modelo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_dashboard_ui.py",
+   "line": 1210,
+   "name": "modelo-a",
+   "words": [
+    "modelo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_delegation_connection.py",
+   "line": 194,
+   "name": "punto.png",
+   "words": [
+    "punto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_delegation_connection.py",
+   "line": 200,
+   "name": "troceada-map-reduce",
+   "words": [
+    "troceada"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_delegation_connection.py",
+   "line": 200,
+   "name": "troceada-por-trozos",
+   "words": [
+    "troceada",
+    "por",
+    "trozos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_density.py",
+   "line": 321,
+   "name": "tokens_aprox",
+   "words": [
+    "aprox"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_density.py",
+   "line": 380,
+   "name": "leido_server_side",
+   "words": [
+    "leido"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_density.py",
+   "line": 60,
+   "name": "casos.json",
+   "words": [
+    "casos"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_density.py",
+   "line": 164,
+   "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
+   "words": [
+    "coste",
+    "respaldo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_density.py",
+   "line": 321,
+   "name": "tokens_aprox",
+   "words": [
+    "aprox"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_density.py",
+   "line": 352,
+   "name": "notas.md",
+   "words": [
+    "notas"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_density.py",
+   "line": 366,
+   "name": "salida.py",
+   "words": [
+    "salida"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_density.py",
+   "line": 377,
+   "name": "datos.json",
+   "words": [
+    "datos"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_density.py",
+   "line": 380,
+   "name": "leido_server_side",
+   "words": [
+    "leido"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_deprecations.py",
+   "line": 210,
+   "name": "bloqueo_id",
+   "words": [
+    "bloqueo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_deprecations.py",
+   "line": 219,
+   "name": "motivo",
+   "words": [
+    "motivo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_deprecations.py",
+   "line": 219,
+   "name": "pequeno",
+   "words": [
+    "pequeno"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_deprecations.py",
+   "line": 210,
+   "name": "bloqueo_id",
+   "words": [
+    "bloqueo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_detect_spanish_names.py",
+   "line": 43,
+   "name": "bloqueo_id",
+   "words": [
+    "bloqueo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_detect_spanish_names.py",
+   "line": 43,
+   "name": "fallo_conexion",
+   "words": [
+    "fallo",
+    "conexion"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_detect_spanish_names.py",
+   "line": 43,
+   "name": "recalcular_coste",
+   "words": [
+    "recalcular",
+    "coste"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_detect_spanish_names.py",
+   "line": 44,
+   "name": "VARIABLES_DE_ENTORNO",
+   "words": [
+    "de",
+    "entorno"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_detect_spanish_names.py",
+   "line": 44,
+   "name": "reiniciar_calibracion",
+   "words": [
+    "reiniciar",
+    "calibracion"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_detect_spanish_names.py",
+   "line": 45,
+   "name": "HOOK_READ_INTERRUPTOR",
+   "words": [
+    "interruptor"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_detect_spanish_names.py",
+   "line": 45,
+   "name": "rol_retirado",
+   "words": [
+    "rol",
+    "retirado"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_detect_spanish_names.py",
+   "line": 45,
+   "name": "config.coste",
+   "words": [
+    "coste"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_detect_spanish_names.py",
+   "line": 46,
+   "name": "local-delegate-bloqueo-apagado",
+   "words": [
+    "bloqueo",
+    "apagado"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_detect_spanish_names.py",
+   "line": 46,
+   "name": "respaldo_invalido",
+   "words": [
+    "respaldo",
+    "invalido"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_detect_spanish_names.py",
+   "line": 46,
+   "name": "leido_server_side",
+   "words": [
+    "leido"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_detect_spanish_names.py",
+   "line": 133,
+   "name": "de_la",
+   "words": [
+    "de",
+    "la"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_detect_spanish_names.py",
+   "line": 175,
+   "name": "recalcular-coste",
+   "words": [
+    "recalcular",
+    "coste"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_detect_spanish_names.py",
+   "line": 201,
+   "name": "cuota.py",
+   "words": [
+    "cuota"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_detect_spanish_names.py",
+   "line": 205,
+   "name": "datos.json",
+   "words": [
+    "datos"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_detect_spanish_names.py",
+   "line": 209,
+   "name": "leer_precios",
+   "words": [
+    "leer",
+    "precios"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_doctor.py",
+   "line": 21,
+   "name": "sin-numero",
+   "words": [
+    "sin",
+    "numero"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_doctor.py",
+   "line": 109,
+   "name": "no-es-fecha",
+   "words": [
+    "es",
+    "fecha"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_environment_isolation.py",
+   "line": 178,
+   "name": "LD_HOOK_READ_BLOQUEAR",
+   "words": [
+    "bloquear"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_f1_conformance.py",
+   "line": 91,
+   "name": "fallos",
+   "words": [
+    "fallos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_f1_conformance.py",
+   "line": 92,
+   "name": "espera_s",
+   "words": [
+    "espera"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_f1_conformance.py",
+   "line": 93,
+   "name": "hasta",
+   "words": [
+    "hasta"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_f1_conformance.py",
+   "line": 51,
+   "name": "telemetria.jsonl",
+   "words": [
+    "telemetria"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_f1_conformance.py",
+   "line": 55,
+   "name": "bloqueo-apagado",
+   "words": [
+    "bloqueo",
+    "apagado"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_f1_conformance.py",
+   "line": 79,
+   "name": "informe.md",
+   "words": [
+    "informe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_f1_conformance.py",
+   "line": 87,
+   "name": "enfriamiento.json",
+   "words": [
+    "enfriamiento"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_f1_conformance.py",
+   "line": 92,
+   "name": "espera_s",
+   "words": [
+    "espera"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_f1_conformance.py",
+   "line": 199,
+   "name": "mi-largo",
+   "words": [
+    "mi",
+    "largo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_fake_llamaswap.py",
+   "line": 85,
+   "name": "m-otro",
+   "words": [
+    "otro"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_fake_llamaswap.py",
+   "line": 116,
+   "name": "yaml_roto",
+   "words": [
+    "roto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_fake_llamaswap.py",
+   "line": 116,
+   "name": "modelo_sin_cmd",
+   "words": [
+    "modelo",
+    "sin"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_fake_llamaswap.py",
+   "line": 150,
+   "name": "cambia_el_modelo",
+   "words": [
+    "cambia",
+    "el",
+    "modelo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_fake_llamaswap.py",
+   "line": 150,
+   "name": "cambio_ajeno",
+   "words": [
+    "cambio",
+    "ajeno"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_fallback.py",
+   "line": 557,
+   "name": "respaldo",
+   "words": [
+    "respaldo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_fallback.py",
+   "line": 215,
+   "name": "fallos",
+   "words": [
+    "fallos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_fallback.py",
+   "line": 215,
+   "name": "espera_s",
+   "words": [
+    "espera"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_fallback.py",
+   "line": 215,
+   "name": "hasta",
+   "words": [
+    "hasta"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_fallback.py",
+   "line": 559,
+   "name": "motivo",
+   "words": [
+    "motivo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_fallback.py",
+   "line": 558,
+   "name": "respondio",
+   "words": [
+    "respondio"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_fallback.py",
+   "line": 558,
+   "name": "en_lugar_de",
+   "words": [
+    "en",
+    "lugar",
+    "de"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_fallback.py",
+   "line": 71,
+   "name": "enfriamiento.json",
+   "words": [
+    "enfriamiento"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_fallback.py",
+   "line": 215,
+   "name": "espera_s",
+   "words": [
+    "espera"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_fallback.py",
+   "line": 438,
+   "name": "no-existe",
+   "words": [
+    "existe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_fallback.py",
+   "line": 558,
+   "name": "en_lugar_de",
+   "words": [
+    "en",
+    "lugar",
+    "de"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_fallback_observability.py",
+   "line": 171,
+   "name": "fallos",
+   "words": [
+    "fallos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_fallback_observability.py",
+   "line": 171,
+   "name": "espera_s",
+   "words": [
+    "espera"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_fallback_observability.py",
+   "line": 171,
+   "name": "hasta",
+   "words": [
+    "hasta"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_fallback_observability.py",
+   "line": 171,
+   "name": "espera_s",
+   "words": [
+    "espera"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_fast_role_retired.py",
+   "line": 184,
+   "name": "OTRA",
+   "words": [
+    "otra"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_fast_role_retired.py",
+   "line": 52,
+   "name": "no-existe-este-rol",
+   "words": [
+    "existe",
+    "este",
+    "rol"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_fast_role_retired.py",
+   "line": 134,
+   "name": "no-existe",
+   "words": [
+    "existe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_fast_role_retired.py",
+   "line": 151,
+   "name": "lo-que-sea",
+   "words": [
+    "lo",
+    "que",
+    "sea"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_fast_role_retired.py",
+   "line": 172,
+   "name": "config.rol_retirado",
+   "words": [
+    "rol",
+    "retirado"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_footprint.py",
+   "line": 45,
+   "name": "modelo",
+   "words": [
+    "modelo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_footprint.py",
+   "line": 126,
+   "name": "tamano_bytes",
+   "words": [
+    "tamano"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_footprint.py",
+   "line": 129,
+   "name": "ruta",
+   "words": [
+    "ruta"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_footprint.py",
+   "line": 112,
+   "name": "tamano_bytes",
+   "words": [
+    "tamano"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_footprint.py",
+   "line": 127,
+   "name": "otro.gguf",
+   "words": [
+    "otro"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_common.py",
+   "line": 117,
+   "name": "no-existe.py",
+   "words": [
+    "existe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_common.py",
+   "line": 138,
+   "name": "salud.json",
+   "words": [
+    "salud"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_common.py",
+   "line": 156,
+   "name": "no-existe.json",
+   "words": [
+    "existe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_common.py",
+   "line": 157,
+   "name": "rota.json",
+   "words": [
+    "rota"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_common.py",
+   "line": 201,
+   "name": "no-es-una-url",
+   "words": [
+    "es",
+    "una"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_hook_legacy_names.py",
+   "line": 197,
+   "name": "LD_HOOK_READ_BLOQUEAR",
+   "words": [
+    "bloquear"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_legacy_names.py",
+   "line": 48,
+   "name": "LD_HOOK_READ_INTERRUPTOR",
+   "words": [
+    "interruptor"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_legacy_names.py",
+   "line": 49,
+   "name": "LD_HOOK_READ_BLOQUEAR",
+   "words": [
+    "bloquear"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_legacy_names.py",
+   "line": 79,
+   "name": "informe.md",
+   "words": [
+    "informe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_legacy_names.py",
+   "line": 80,
+   "name": "local-delegate-bloqueos.jsonl",
+   "words": [
+    "bloqueos"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_legacy_names.py",
+   "line": 107,
+   "name": "local-delegate-llamadas",
+   "words": [
+    "llamadas"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_legacy_names.py",
+   "line": 109,
+   "name": "toolu_viejo",
+   "words": [
+    "viejo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_legacy_names.py",
+   "line": 110,
+   "name": "toolu_viejo.json",
+   "words": [
+    "viejo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_legacy_names.py",
+   "line": 114,
+   "name": "toolu_nuevo",
+   "words": [
+    "nuevo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_legacy_names.py",
+   "line": 115,
+   "name": "toolu_nuevo.json",
+   "words": [
+    "nuevo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_recipes.py",
+   "line": 178,
+   "name": "servicio.ts",
+   "words": [
+    "servicio"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_recipes.py",
+   "line": 186,
+   "name": "informe.md",
+   "words": [
+    "informe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_recipes.py",
+   "line": 202,
+   "name": "notas.md",
+   "words": [
+    "notas"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_recipes.py",
+   "line": 244,
+   "name": "componente.tsx",
+   "words": [
+    "componente"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_recipes.py",
+   "line": 266,
+   "name": "cliente-confidencial",
+   "words": [
+    "cliente",
+    "confidencial"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_recipes.py",
+   "line": 268,
+   "name": "informe-secreto.md",
+   "words": [
+    "informe",
+    "secreto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_recipes.py",
+   "line": 380,
+   "name": "servicio.py",
+   "words": [
+    "servicio"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_recipes.py",
+   "line": 441,
+   "name": "telemetria.jsonl",
+   "words": [
+    "telemetria"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_recipes.py",
+   "line": 474,
+   "name": "el-informe-del-cliente.md",
+   "words": [
+    "el",
+    "informe",
+    "del",
+    "cliente"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_recipes.py",
+   "line": 486,
+   "name": "el-informe-del-cliente",
+   "words": [
+    "el",
+    "informe",
+    "del",
+    "cliente"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_recipes.py",
+   "line": 494,
+   "name": "uno.md",
+   "words": [
+    "uno"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_recipes.py",
+   "line": 494,
+   "name": "dos.md",
+   "words": [
+    "dos"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_recipes.py",
+   "line": 527,
+   "name": "no-existe",
+   "words": [
+    "existe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_shell.py",
+   "line": 48,
+   "name": "informe.md",
+   "words": [
+    "informe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_shell.py",
+   "line": 131,
+   "name": "notas.md",
+   "words": [
+    "notas"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_shell.py",
+   "line": 154,
+   "name": "telemetria.jsonl",
+   "words": [
+    "telemetria"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_shell_absolute_path.py",
+   "line": 60,
+   "name": "no-existe",
+   "words": [
+    "existe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hook_shell_absolute_path.py",
+   "line": 90,
+   "name": "informe.md",
+   "words": [
+    "informe"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_hooks_telemetry_api.py",
+   "line": 504,
+   "name": "mcp_ajeno",
+   "words": [
+    "ajeno"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hooks_telemetry_api.py",
+   "line": 152,
+   "name": "no-existe.jsonl",
+   "words": [
+    "existe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hooks_telemetry_api.py",
+   "line": 265,
+   "name": "casos.json",
+   "words": [
+    "casos"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hooks_telemetry_api.py",
+   "line": 454,
+   "name": "mcp_ajeno",
+   "words": [
+    "ajeno"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hooks_telemetry_api.py",
+   "line": 454,
+   "name": "prosa_grande",
+   "words": [
+    "prosa",
+    "grande"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_hooks_telemetry_api.py",
+   "line": 490,
+   "name": "etiquetas.mjs",
+   "words": [
+    "etiquetas"
+   ]
+  },
+  {
+   "category": "identifier",
+   "file": "tests/test_install.py",
+   "line": 160,
+   "name": "test_install_over_a_034_retires_anotar_llamada_and_registers_record_call",
+   "words": [
+    "anotar",
+    "llamada"
+   ]
+  },
+  {
+   "category": "identifier",
+   "file": "tests/test_install.py",
+   "line": 176,
+   "name": "test_a_hand_made_copy_of_anotar_llamada_is_also_retired",
+   "words": [
+    "anotar",
+    "llamada"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_install.py",
+   "line": 410,
+   "name": "otro",
+   "words": [
+    "otro"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_install.py",
+   "line": 414,
+   "name": "cosa",
+   "words": [
+    "cosa"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_install.py",
+   "line": 751,
+   "name": "proyecto",
+   "words": [
+    "proyecto"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_install.py",
+   "line": 414,
+   "name": "otra",
+   "words": [
+    "otra"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_install.py",
+   "line": 152,
+   "name": "anotar_llamada.py",
+   "words": [
+    "anotar",
+    "llamada"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_install.py",
+   "line": 238,
+   "name": "grande.txt",
+   "words": [
+    "grande"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_install.py",
+   "line": 547,
+   "name": "hook_de_terceros.py",
+   "words": [
+    "de",
+    "terceros"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_install.py",
+   "line": 549,
+   "name": "algo.pyc",
+   "words": [
+    "algo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_install.py",
+   "line": 690,
+   "name": "informe.md",
+   "words": [
+    "informe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_install_clients.py",
+   "line": 316,
+   "name": "lo-puse-yo",
+   "words": [
+    "lo",
+    "puse",
+    "yo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_install_header.py",
+   "line": 131,
+   "name": "OTRA_VARIABLE",
+   "words": [
+    "otra"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_install_header.py",
+   "line": 197,
+   "name": "s3cr3t-escrito-a-pelo",
+   "words": [
+    "escrito",
+    "pelo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_install_opencode.py",
+   "line": 190,
+   "name": "otro",
+   "words": [
+    "otro"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_install_opencode.py",
+   "line": 285,
+   "name": "ajeno",
+   "words": [
+    "ajeno"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_install_opencode.py",
+   "line": 101,
+   "name": "secreto-de-mentira",
+   "words": [
+    "secreto",
+    "de",
+    "mentira"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_install_opencode.py",
+   "line": 109,
+   "name": "token-de-mentira",
+   "words": [
+    "de",
+    "mentira"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_llamaswap_api.py",
+   "line": 200,
+   "name": "viva",
+   "words": [
+    "viva"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_llamaswap_api.py",
+   "line": 66,
+   "name": "clave-falsa-1",
+   "words": [
+    "clave",
+    "falsa"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_llamaswap_api.py",
+   "line": 90,
+   "name": "clave-falsa-2",
+   "words": [
+    "clave",
+    "falsa"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_llamaswap_api.py",
+   "line": 120,
+   "name": "clave-falsa-3",
+   "words": [
+    "clave",
+    "falsa"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_llamaswap_api.py",
+   "line": 190,
+   "name": "no-existe",
+   "words": [
+    "existe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_llamaswap_config.py",
+   "line": 616,
+   "name": "no-existe",
+   "words": [
+    "existe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_map_reduce.py",
+   "line": 91,
+   "name": "MARCA-DEL-FINAL",
+   "words": [
+    "marca",
+    "del"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_map_reduce.py",
+   "line": 98,
+   "name": "ERROR-QUE-IMPORTA",
+   "words": [
+    "que",
+    "importa"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_map_reduce.py",
+   "line": 157,
+   "name": "MARCA-DEL-ULTIMO-ARCHIVO",
+   "words": [
+    "marca",
+    "del",
+    "ultimo",
+    "archivo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_metrics.py",
+   "line": 1620,
+   "name": "desconocido",
+   "words": [
+    "desconocido"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_metrics.py",
+   "line": 1846,
+   "name": "pruebas",
+   "words": [
+    "pruebas"
+   ]
+  },
+  {
+   "category": "identifier",
+   "file": "tests/test_metrics.py",
+   "line": 1522,
+   "name": "bloqueo_id",
+   "words": [
+    "bloqueo"
+   ]
+  },
+  {
+   "category": "identifier",
+   "file": "tests/test_metrics.py",
+   "line": 1522,
+   "name": "secciones",
+   "words": [
+    "secciones"
+   ]
+  },
+  {
+   "category": "identifier",
+   "file": "tests/test_metrics.py",
+   "line": 1528,
+   "name": "fallo_conexion",
+   "words": [
+    "fallo",
+    "conexion"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_metrics.py",
+   "line": 421,
+   "name": "no-existe.invalid",
+   "words": [
+    "existe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_metrics.py",
+   "line": 1013,
+   "name": "backend_ausente",
+   "words": [
+    "ausente"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_metrics.py",
+   "line": 1229,
+   "name": "claude-desconocido-9",
+   "words": [
+    "desconocido"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_metrics.py",
+   "line": 1273,
+   "name": "casos.json",
+   "words": [
+    "casos"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_metrics.py",
+   "line": 1275,
+   "name": "paridad.mjs",
+   "words": [
+    "paridad"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_metrics.py",
+   "line": 1522,
+   "name": "b-viejo",
+   "words": [
+    "viejo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_metrics.py",
+   "line": 1531,
+   "name": "timeout_lectura",
+   "words": [
+    "lectura"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_metrics.py",
+   "line": 1535,
+   "name": "b-nuevo",
+   "words": [
+    "nuevo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_metrics.py",
+   "line": 1558,
+   "name": "bloqueo_id",
+   "words": [
+    "bloqueo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_metrics.py",
+   "line": 1558,
+   "name": "fallo_conexion",
+   "words": [
+    "fallo",
+    "conexion"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_metrics.py",
+   "line": 1685,
+   "name": "clave-falsa-1",
+   "words": [
+    "clave",
+    "falsa"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_metrics.py",
+   "line": 1686,
+   "name": "clave-falsa-2",
+   "words": [
+    "clave",
+    "falsa"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_metrics.py",
+   "line": 1724,
+   "name": "clave-falsa-3",
+   "words": [
+    "clave",
+    "falsa"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_pace.py",
+   "line": 19,
+   "name": "modelo-a",
+   "words": [
+    "modelo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_pace.py",
+   "line": 190,
+   "name": "otro-modelo",
+   "words": [
+    "otro",
+    "modelo"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_pace.py",
+   "line": 260,
+   "name": "no-existe",
+   "words": [
+    "existe"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_pricing.py",
+   "line": 223,
+   "name": "_otra",
+   "words": [
+    "otra"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_pricing.py",
+   "line": 223,
+   "name": "_otra",
+   "words": [
+    "otra"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_questions.py",
+   "line": 232,
+   "name": "no-existe",
+   "words": [
+    "existe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_questions.py",
+   "line": 250,
+   "name": "tampoco-existe",
+   "words": [
+    "tampoco",
+    "existe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_questions.py",
+   "line": 291,
+   "name": "SECRETO-EN-EL-INPUT",
+   "words": [
+    "secreto",
+    "en",
+    "el"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_questions.py",
+   "line": 299,
+   "name": "por-defecto",
+   "words": [
+    "por",
+    "defecto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_recompute.py",
+   "line": 34,
+   "name": "sesion-sintetica-0001",
+   "words": [
+    "sesion",
+    "sintetica"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_recompute.py",
+   "line": 55,
+   "name": "MARCADORA-7f3a",
+   "words": [
+    "marcadora"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_recompute.py",
+   "line": 56,
+   "name": "sesion-marcadora-9c41",
+   "words": [
+    "sesion",
+    "marcadora"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_recompute.py",
+   "line": 57,
+   "name": "toolu_privado01",
+   "words": [
+    "privado"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_recompute.py",
+   "line": 91,
+   "name": "cuota-statusline.jsonl",
+   "words": [
+    "cuota"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 35,
+   "name": "fuente",
+   "words": [
+    "fuente"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 36,
+   "name": "marcas",
+   "words": [
+    "marcas"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 84,
+   "name": "generado",
+   "words": [
+    "generado"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 85,
+   "name": "plazo_dias",
+   "words": [
+    "plazo",
+    "dias"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 86,
+   "name": "cotejo",
+   "words": [
+    "cotejo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 94,
+   "name": "n_por_mes",
+   "words": [
+    "por",
+    "mes"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 95,
+   "name": "puntos",
+   "words": [
+    "puntos"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 96,
+   "name": "descartes",
+   "words": [
+    "descartes"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 97,
+   "name": "reinicios",
+   "words": [
+    "reinicios"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 98,
+   "name": "fuentes",
+   "words": [
+    "fuentes"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 87,
+   "name": "fecha",
+   "words": [
+    "fecha"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 88,
+   "name": "version_tabla",
+   "words": [
+    "tabla"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 89,
+   "name": "juzgadas",
+   "words": [
+    "juzgadas"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 90,
+   "name": "fuera",
+   "words": [
+    "fuera"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 91,
+   "name": "sin_precio",
+   "words": [
+    "sin",
+    "precio"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 92,
+   "name": "veredicto",
+   "words": [
+    "veredicto"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 96,
+   "name": "delta_pequeno",
+   "words": [
+    "pequeno"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 85,
+   "name": "plazo_dias",
+   "words": [
+    "plazo",
+    "dias"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 88,
+   "name": "version_tabla",
+   "words": [
+    "tabla"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 91,
+   "name": "sin_precio",
+   "words": [
+    "sin",
+    "precio"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 94,
+   "name": "n_por_mes",
+   "words": [
+    "por",
+    "mes"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 96,
+   "name": "delta_pequeno",
+   "words": [
+    "pequeno"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 259,
+   "name": "s-vieja",
+   "words": [
+    "vieja"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_recompute_legacy.py",
+   "line": 260,
+   "name": "s-nueva",
+   "words": [
+    "nueva"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_residency.py",
+   "line": 416,
+   "name": "flujo",
+   "words": [
+    "flujo"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_residency.py",
+   "line": 420,
+   "name": "ancla",
+   "words": [
+    "ancla"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_residency.py",
+   "line": 426,
+   "name": "duplicadas",
+   "words": [
+    "duplicadas"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_residency.py",
+   "line": 728,
+   "name": "residente",
+   "words": [
+    "residente"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_residency.py",
+   "line": 143,
+   "name": "clave-falsa-1",
+   "words": [
+    "clave",
+    "falsa"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_residency.py",
+   "line": 557,
+   "name": "clave-falsa",
+   "words": [
+    "clave",
+    "falsa"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_residency.py",
+   "line": 835,
+   "name": "mala.bak",
+   "words": [
+    "mala"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_residency.py",
+   "line": 845,
+   "name": "copia.bak",
+   "words": [
+    "copia"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_residency.py",
+   "line": 1046,
+   "name": "clave-secreta-sin-cerrar",
+   "words": [
+    "clave",
+    "secreta",
+    "sin",
+    "cerrar"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_residency_cli.py",
+   "line": 51,
+   "name": "clave-falsa-1",
+   "words": [
+    "clave",
+    "falsa"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_role_caps.py",
+   "line": 74,
+   "name": "FIN-DEL-TEXTO\n",
+   "words": [
+    "fin",
+    "del",
+    "texto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_site.py",
+   "line": 76,
+   "name": "colado.html",
+   "words": [
+    "colado"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_structured_summary.py",
+   "line": 40,
+   "name": "ficheros",
+   "words": [
+    "ficheros"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_structured_summary.py",
+   "line": 31,
+   "name": "resumen-estructurado",
+   "words": [
+    "resumen",
+    "estructurado"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_structured_summary.py",
+   "line": 665,
+   "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
+   "words": [
+    "resumen",
+    "estructurado"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_test_windows.py",
+   "line": 137,
+   "name": "no-es-fecha",
+   "words": [
+    "es",
+    "fecha"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_test_windows.py",
+   "line": 222,
+   "name": "w-nada",
+   "words": [
+    "nada"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_test_windows_cli.py",
+   "line": 51,
+   "name": "w-nada",
+   "words": [
+    "nada"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_topology.py",
+   "line": 296,
+   "name": "menos_uno",
+   "words": [
+    "menos",
+    "uno"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_topology.py",
+   "line": 354,
+   "name": "no-existe.yaml",
+   "words": [
+    "existe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_topology.py",
+   "line": 370,
+   "name": "routing_es_texto",
+   "words": [
+    "es",
+    "texto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_topology.py",
+   "line": 371,
+   "name": "router_es_texto",
+   "words": [
+    "es",
+    "texto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_topology.py",
+   "line": 372,
+   "name": "settings_es_numero",
+   "words": [
+    "es",
+    "numero"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_topology.py",
+   "line": 373,
+   "name": "use_es_lista",
+   "words": [
+    "es",
+    "lista"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_topology.py",
+   "line": 374,
+   "name": "groups_es_lista",
+   "words": [
+    "es",
+    "lista"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_topology.py",
+   "line": 375,
+   "name": "grupo_es_lista",
+   "words": [
+    "grupo",
+    "es",
+    "lista"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_topology.py",
+   "line": 377,
+   "name": "grupo_es_lista_en_routing",
+   "words": [
+    "grupo",
+    "es",
+    "lista",
+    "en"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_topology.py",
+   "line": 381,
+   "name": "members_es_numero",
+   "words": [
+    "es",
+    "numero"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_topology.py",
+   "line": 382,
+   "name": "members_es_texto",
+   "words": [
+    "es",
+    "texto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_topology.py",
+   "line": 383,
+   "name": "miembro_es_mapa",
+   "words": [
+    "miembro",
+    "es",
+    "mapa"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_topology.py",
+   "line": 384,
+   "name": "hooks_es_lista",
+   "words": [
+    "es",
+    "lista"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_topology.py",
+   "line": 385,
+   "name": "on_startup_es_lista",
+   "words": [
+    "es",
+    "lista"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_topology.py",
+   "line": 386,
+   "name": "preload_es_texto",
+   "words": [
+    "es",
+    "texto"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_topology.py",
+   "line": 409,
+   "name": "aliases_es_numero",
+   "words": [
+    "es",
+    "numero"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_topology.py",
+   "line": 409,
+   "name": "alias_es_lista",
+   "words": [
+    "es",
+    "lista"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_topology.py",
+   "line": 409,
+   "name": "cmd_es_lista",
+   "words": [
+    "es",
+    "lista"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_transcripts.py",
+   "line": 17,
+   "name": "sesion-sintetica-0001",
+   "words": [
+    "sesion",
+    "sintetica"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_transcripts.py",
+   "line": 281,
+   "name": "toolu_banco",
+   "words": [
+    "banco"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_transcripts.py",
+   "line": 287,
+   "name": "toolu_no_esta",
+   "words": [
+    "esta"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_turn_daemon.py",
+   "line": 346,
+   "name": "tomar_plaza",
+   "words": [
+    "tomar",
+    "plaza"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_turn_daemon.py",
+   "line": 350,
+   "name": "soltar_plaza",
+   "words": [
+    "soltar",
+    "plaza"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_update.py",
+   "line": 392,
+   "name": "sin-numeros",
+   "words": [
+    "sin",
+    "numeros"
+   ]
+  },
+  {
+   "category": "string_key",
+   "file": "tests/test_valuation.py",
+   "line": 263,
+   "name": "pruebas",
+   "words": [
+    "pruebas"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_valuation.py",
+   "line": 169,
+   "name": "claude-nadie-9",
+   "words": [
+    "nadie"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_vendor.py",
+   "line": 111,
+   "name": "intruso.min.js",
+   "words": [
+    "intruso"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_vision.py",
+   "line": 50,
+   "name": "no-existe.png",
+   "words": [
+    "existe"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_vision.py",
+   "line": 56,
+   "name": "no-es-imagen.txt",
+   "words": [
+    "es",
+    "imagen"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_web_auth.py",
+   "line": 24,
+   "name": "el-token-bueno",
+   "words": [
+    "el",
+    "bueno"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_web_auth.py",
+   "line": 134,
+   "name": "quien-sea",
+   "words": [
+    "quien",
+    "sea"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_web_auth.py",
+   "line": 204,
+   "name": "otro-token",
+   "words": [
+    "otro"
+   ]
+  },
+  {
+   "category": "string_value",
+   "file": "tests/test_web_auth.py",
+   "line": 217,
+   "name": "no-es-una-sesion",
+   "words": [
+    "es",
+    "una",
+    "sesion"
+   ]
+  },
+  {
+   "category": "js_string",
+   "file": "src/local_delegate/web/metrics.py",
+   "line": 1729,
+   "name": "de-DE",
+   "words": [
+    "de",
+    "de"
+   ]
+  },
+  {
+   "category": "js_key",
+   "file": "src/local_delegate/web/metrics.py",
+   "line": 1897,
+   "name": "desconocido",
+   "words": [
+    "desconocido"
+   ]
+  },
+  {
+   "category": "js_string",
+   "file": "src/local_delegate/web/metrics.py",
+   "line": 2310,
+   "name": "montado",
+   "words": [
+    "montado"
+   ]
+  },
+  {
+   "category": "js_string",
+   "file": "src/local_delegate/web/metrics.py",
+   "line": 2360,
+   "name": "cargando",
+   "words": [
+    "cargando"
+   ]
+  },
+  {
+   "category": "js_string",
+   "file": "src/local_delegate/web/metrics.py",
+   "line": 2360,
+   "name": "descargando",
+   "words": [
+    "descargando"
+   ]
+  },
+  {
+   "category": "js_string",
+   "file": "src/local_delegate/web/metrics.py",
+   "line": 2362,
+   "name": "procesando",
+   "words": [
+    "procesando"
+   ]
+  },
+  {
+   "category": "js_string",
+   "file": "src/local_delegate/web/metrics.py",
+   "line": 2476,
+   "name": "remoto",
+   "words": [
+    "remoto"
+   ]
+  },
+  {
+   "category": "js_string",
+   "file": "src/local_delegate/web/metrics.py",
+   "line": 2706,
+   "name": "llamada",
+   "words": [
+    "llamada"
+   ]
+  },
+  {
+   "category": "js_string",
+   "file": "src/local_delegate/web/metrics.py",
+   "line": 2717,
+   "name": "fallo",
+   "words": [
+    "fallo"
+   ]
+  },
+  {
+   "category": "js_string",
+   "file": "src/local_delegate/web/metrics.py",
+   "line": 2860,
+   "name": "Remoto",
+   "words": [
+    "remoto"
+   ]
+  }
+ ]
+}

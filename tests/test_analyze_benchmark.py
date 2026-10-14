@@ -1073,7 +1073,7 @@ def _mechanical(
 def _footprints():
     return {
         model: {
-            t: {"ruta": f"{model}.gguf", "flags": {"n_cpu_moe": 12}, "tool": t}
+            t: {"path": f"{model}.gguf", "flags": {"n_cpu_moe": 12}, "tool": t}
             for t in (*analyze.TOOLS_WITH_CELL, analyze.TOOL_COMMIT)
         }
         for model in (ROLE, ALT, QWEN, WEAK)
@@ -1549,6 +1549,22 @@ def test_footprints_fall_back_to_the_frozen_file(tmp_path):
     (tmp_path / "footprints.json").write_text("{}", encoding="utf-8")
     assert analyze.footprints_file(tmp_path / "footprints.json") == tmp_path / "footprints.json"
     assert analyze.footprints_file(tmp_path / "other.json") == tmp_path / "other.json"
+
+
+def test_frozen_footprints_with_old_keys_reach_the_verdict_with_the_new_ones():
+    """`huellas.json` congelado trae `ruta`/`tamano_bytes`; la celda del veredicto sale con
+    `path`/`size_bytes` (cierre del frente A, lote 1)."""
+    frozen = json.loads(
+        (ROOT / "benchmarks" / "afinidad-2026-10" / "huellas.json").read_text(encoding="utf-8")
+    )
+    model = next(iter(frozen))
+    tool = next(iter(frozen[model]))
+    old = frozen[model][tool]
+    assert "ruta" in old and "tamano_bytes" in old, "guarda: el congelado sigue en el formato viejo"
+    new = analyze._footprint(frozen, model, tool)
+    assert new["path"] == old["ruta"] and new["size_bytes"] == old["tamano_bytes"]
+    assert not {"ruta", "tamano_bytes"} & set(new)
+    assert new["flags"] == old["flags"] and new["prompt_sha256"] == old["prompt_sha256"]
 
 
 # --- Formato nuevo del veredicto y lectura dual de sus entradas (ola A10b-2) ----------------------

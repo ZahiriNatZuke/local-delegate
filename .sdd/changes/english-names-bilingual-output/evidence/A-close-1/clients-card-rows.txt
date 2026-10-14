@@ -1,0 +1,17 @@
+[pesado] plaza plaza-1 tomada tras 1s: D:\Projects\local-delegate\.venv\Scripts\python.exe C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\669f6e68-23f5-47f3-b3cb-3f83f3edf3fa\scratchpad\a-close\shot.py D:\Projects\local-delegate\.sdd\changes\english-names-bilingual-output\evidence\A-close-1
+HTTP Request: GET http://127.0.0.1:9292/v1/models "HTTP/1.1 401 Unauthorized"
+HTTP Request: GET http://127.0.0.1:9292/v1/models "HTTP/1.1 401 Unauthorized"
+HTTP Request: GET http://127.0.0.1:9292/api/metrics/stats "HTTP/1.1 401 Unauthorized"
+HTTP Request: GET http://127.0.0.1:9292/v1/models "HTTP/1.1 401 Unauthorized"
+HTTP Request: GET http://127.0.0.1:9292/v1/models "HTTP/1.1 401 Unauthorized"
+HTTP Request: GET http://127.0.0.1:9292/api/metrics/stats "HTTP/1.1 401 Unauthorized"
+{
+ "light": [
+  "Claude Code 4 4 1.480 66,7 %",
+  "Desconocido 2 2 740 33,3 %"
+ ],
+ "dark": [
+  "Claude Code 4 4 1.480 66,7 %",
+  "Desconocido 2 2 740 33,3 %"
+ ]
+}

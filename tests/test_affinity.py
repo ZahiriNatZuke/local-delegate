@@ -366,7 +366,7 @@ def test_doctor_other_machine_is_ok_and_says_affinity_is_inert(affinity, tmp_pat
     """Celdas medidas en otra máquina (su GGUF no existe aquí): sin `[WARN]`, pero lo dice."""
     elsewhere = tmp_path / "does-not-exist" / "gemma-4-26B.gguf"
     cells = tuple(
-        matrix.Cell(c.tool, c.alternative, c.compared_role, {**c.footprint, "ruta": str(elsewhere)})
+        matrix.Cell(c.tool, c.alternative, c.compared_role, {**c.footprint, "path": str(elsewhere)})
         for c in matrix.CELLS
     )
     monkeypatch.setattr(matrix, "CELLS", cells)
@@ -517,6 +517,30 @@ def test_matrix_cells_are_the_approved_cells_of_the_verdict():
     for cell in matrix.CELLS:
         assert dict(cell.footprint) == footprints[(cell.tool, cell.alternative, cell.compared_role)]
     assert len(matrix.CELLS) == len(code_cells), "una celda repetida"
+
+
+def test_frozen_verdict_footprints_with_old_keys_are_read_with_the_new_ones():
+    """El `veredicto.json` congelado guarda la huella con `ruta`/`tamano_bytes` (cierre del frente A,
+    lote 1): la lectura dual la entrega con `path`/`size_bytes` en `footprint` y `role_footprint`.
+
+    Mutante: quitar `"ruta": "path"` de `legacy_names.FORMATS["footprint"]` hace fallar este test y
+    `test_matrix_cells_are_the_approved_cells_of_the_verdict`.
+    """
+    old_name, _new_name = legacy_names.VERDICT_FILE_NAMES
+    raw = json.loads((VERDICT_DIR / old_name).read_text(encoding="utf-8"))
+    raw_cells = [c for c in raw["celdas"] if "huella" in c]
+    assert raw_cells, "guarda: el congelado tiene celdas con huella"
+    assert all("ruta" in c["huella"] and "tamano_bytes" in c["huella"] for c in raw_cells), (
+        "guarda: el congelado sigue en el formato viejo"
+    )
+    cells = legacy_names.normalize_affinity_verdict(raw)["cells"]
+    for old, new in zip(raw["celdas"], cells, strict=True):
+        for old_key, new_key in (("huella", "footprint"), ("huella_rol", "role_footprint")):
+            if old_key not in old:
+                continue
+            assert new[new_key]["path"] == old[old_key]["ruta"]
+            assert new[new_key]["size_bytes"] == old[old_key]["tamano_bytes"]
+            assert not {"ruta", "tamano_bytes"} & set(new[new_key])
 
 
 def test_prompt_footprint_of_the_code_is_the_measured_one():

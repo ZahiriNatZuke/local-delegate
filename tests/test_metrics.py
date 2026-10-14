@@ -1617,7 +1617,7 @@ def test_stats_neither_splits_nor_drops_the_lines_without_client():
     aggregate = metrics._aggregate([_usage_row(client="claude-code"), _usage_row()])
 
     by_client = {c["client"]: c["calls"] for c in aggregate["by_client"]}
-    assert by_client == {"claude-code": 1, "desconocido": 1}
+    assert by_client == {"claude-code": 1, "unknown": 1}
     assert sum(c["calls"] for c in aggregate["by_client"]) == aggregate["total"]["calls"]
 
 

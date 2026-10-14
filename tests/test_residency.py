@@ -305,7 +305,7 @@ routing:
 """
 
 _RESIDENT_GROUP_LINES_TODAY = [
-    ("+", "  residente:\n"),
+    ("+", "  resident:\n"),
     ("+", "    persistent: true\n"),
     ("+", "    swap: false\n"),
     ("+", "    exclusive: false\n"),
@@ -323,7 +323,7 @@ _CASES = {
         TODAY.read_bytes(),
         [
             RemoveMember("swap", "gemma3-4b"),
-            CreateGroup("residente", True, False, False, ("gemma3-4b",)),
+            CreateGroup("resident", True, False, False, ("gemma3-4b",)),
             SetTTL("gemma3-4b", 0),
         ],
         [
@@ -712,7 +712,7 @@ def test_pin_4b_with_todays_config_accepted(tmp_path, capsys):
     assert accepted, output.err
     assert "ocupará 3,19 GiB de VRAM de forma permanente" in output.out
     data = yaml.safe_load(path.read_bytes())
-    assert data["groups"]["residente"]["members"] == ["gemma3-4b"]
+    assert data["groups"]["resident"]["members"] == ["gemma3-4b"]
     assert data["models"]["gemma3-4b"]["ttl"] == 0
     assert "gemma3-4b" not in data["groups"]["swap"]["members"]
 
@@ -725,7 +725,7 @@ def test_pin_writes_explicit_exclusive_false(tmp_path):
         "--config", str(path), "--pin", "gemma3-4b", "--vram-gb", "16", *_vram_args(), "--now"
     )
     assert rc == 0
-    group = yaml.safe_load(path.read_bytes())["groups"]["residente"]
+    group = yaml.safe_load(path.read_bytes())["groups"]["resident"]
     assert group.get("exclusive") is False
     assert group.get("persistent") is True and group.get("swap") is False
     snapshot = topology.read(path)
@@ -762,7 +762,7 @@ def test_pin_with_estimator_only_if_control_passed(tmp_path, monkeypatch, capsys
 
     monkeypatch.setattr(lc, "NCMOE_ESTIMATOR_VALIDATED", True)
     assert _residency("--config", str(path), "--pin", "a", "--vram-gb", "16", "--now") == 0
-    assert yaml.safe_load(path.read_bytes())["groups"]["residente"]["members"] == ["a"]
+    assert yaml.safe_load(path.read_bytes())["groups"]["resident"]["members"] == ["a"]
 
 
 def test_dated_copy_without_overwrite(tmp_path, monkeypatch):
@@ -1069,7 +1069,7 @@ def test_dry_run_numbers_lines_and_says_model_leaves_swap(tmp_path, capsys):
     output = capsys.readouterr().out
     assert "# gemma3-4b sale del grupo `swap`" in output
     assert re.search(r"^- +" + str(n_member) + r" \|     - gemma3-4b$", output, re.MULTILINE)
-    assert re.search(r"^\+ +" + str(len(lines)) + r" \|   residente:$", output, re.MULTILINE)
+    assert re.search(r"^\+ +" + str(len(lines)) + r" \|   resident:$", output, re.MULTILINE)
     assert path.read_bytes() == TODAY.read_bytes()
 
 

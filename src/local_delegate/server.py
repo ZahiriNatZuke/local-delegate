@@ -2305,7 +2305,7 @@ class _CurrentModel:
         info = _fallback_info(self.model, result, attempts, self.affinity_tried)
         if info is not None:
             if self.hop is None:
-                self.hop = {**info, "en_lugar_de": self.requested, "trozo": self.chunk}
+                self.hop = {**info, "en_lugar_de": self.requested, "chunk": self.chunk}
             self.model = info["respondio"]
             self.role = None
         return result, ms, attempts
@@ -2348,7 +2348,7 @@ class _CurrentModel:
             return ""
         origin = None
         if multiple:
-            chunk = self.hop["trozo"]
+            chunk = self.hop["chunk"]
             origin = f"desde el trozo {chunk}" if chunk is not None else "en la reducción"
         return _fallback_notice(self.hop, origin)
 
