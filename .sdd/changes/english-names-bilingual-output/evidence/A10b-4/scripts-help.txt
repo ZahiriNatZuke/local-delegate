@@ -1,0 +1,120 @@
+usage: build_corpus.py [-h] [--dest DEST] [--log-dir LOG_DIR] [--check]
+                       [--refresh-sources]
+
+Congela las fuentes y construye el corpus v2 de la tanda de F2 (tarea 14 del
+SDD).
+
+options:
+  -h, --help         show this help message and exit
+  --dest DEST
+  --log-dir LOG_DIR  carpeta con usage-*.jsonl; si no existe, no se regeneran
+                     los conteos
+  --check            solo recaptura lo versionado
+  --refresh-sources  vuelve a congelar las fuentes desde los ficheros vivos
+                     (cambia el corpus medido)
+usage: build_corpus.py affinity [-h] [--dest DEST]
+                                [--privacy {fallar,excluir}] [--check]
+                                [--dry-run]
+
+options:
+  -h, --help            show this help message and exit
+  --dest DEST
+  --privacy {fallar,excluir}
+                        que hacer si un diff lleva datos privados: parar, o
+                        pasar al siguiente candidato
+  --check               reconstruye y compara
+  --dry-run             no escribe nada, solo informa
+usage: pair_sheet.py [-h] {generate,generate-commit,read-commit,unblind} ...
+
+Hoja por pares, a ciegas, para validar la puntuacion automatica contra juicio
+humano (P-15).
+
+positional arguments:
+  {generate,generate-commit,read-commit,unblind}
+    generate-commit     hoja a ciegas de local_commit_msg (REQ-042)
+    read-commit         valida las respuestas de la hoja de commit
+
+options:
+  -h, --help            show this help message and exit
+usage: pair_sheet.py generate [-h] --sheet SHEET --key KEY --cases CASES
+                              --small SMALL --large LARGE --case CASE
+                              [--seed SEED]
+                              jsonl [jsonl ...]
+
+positional arguments:
+  jsonl
+
+options:
+  -h, --help     show this help message and exit
+  --sheet SHEET
+  --key KEY
+  --cases CASES
+  --small SMALL
+  --large LARGE
+  --case CASE
+  --seed SEED    solo para pruebas
+usage: pair_sheet.py unblind [-h] --sheet SHEET --key KEY [--json JSON]
+
+options:
+  -h, --help     show this help message and exit
+  --sheet SHEET
+  --key KEY
+  --json JSON    escribe el resultado por caso; es el --pairs de
+                 `analyze_benchmark.py decide`
+usage: pair_sheet.py generate-commit [-h] [--cases CASES] [--traps TRAPS]
+                                     [--rules RULES] [--trap-set TRAP_SET]
+                                     [--number NUMBER] [--seed SEED]
+                                     [--label-26b LABEL_26B]
+                                     [--label-qwen LABEL_QWEN]
+                                     [--sheet-dir SHEET_DIR]
+                                     [--key-dir KEY_DIR]
+                                     jsonl [jsonl ...]
+
+positional arguments:
+  jsonl                 resultados de la tanda con --save-responses
+
+options:
+  -h, --help            show this help message and exit
+  --cases CASES
+  --traps TRAPS
+  --rules RULES
+  --trap-set TRAP_SET   juego de trampas (1 a 3)
+  --number NUMBER       numero de hoja
+  --seed SEED           solo para pruebas
+  --label-26b LABEL_26B
+  --label-qwen LABEL_QWEN
+  --sheet-dir SHEET_DIR
+  --key-dir KEY_DIR
+usage: pair_sheet.py read-commit [-h] --key KEY [--rules RULES]
+                                 (--answers ANSWERS | --md MD) [--partial]
+                                 [--output OUTPUT]
+
+options:
+  -h, --help         show this help message and exit
+  --key KEY
+  --rules RULES
+  --answers ANSWERS  respuestas-<n>.json de la pagina
+  --md MD            la hoja .md contestada a mano
+  --partial          solo contesta «puedes parar» o «sigue»
+  --output OUTPUT    juicio ya destapado, para el veredicto
+usage: analyze_benchmark.py decide [-h] --cases CASES [--json JSON]
+                                   [--output OUTPUT] [--cp3 CP3] --pair ROLE
+                                   INCUMBENT CANDIDATE [--pairs PAIRS]
+                                   [--shared-mib-threshold SHARED_MIB_THRESHOLD]
+                                   jsonl [jsonl ...]
+
+positional arguments:
+  jsonl
+
+options:
+  -h, --help            show this help message and exit
+  --cases CASES         cases.json del corpus v2
+  --json JSON           escribe tambien el resultado en JSON
+  --output OUTPUT       escribe el informe aqui en vez de stdout
+  --cp3 CP3             JSON de `cp3` (repetible)
+  --pair ROLE INCUMBENT CANDIDATE
+  --pairs PAIRS         JSON de `pair_sheet.py unblind --json` (repetible, uno
+                        por comparacion)
+  --shared-mib-threshold SHARED_MIB_THRESHOLD
+                        crecimiento de Shared Usage tolerado antes de dar CP-1
+                        por caido (sin calibrar: tarea 18)

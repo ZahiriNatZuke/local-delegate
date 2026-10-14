@@ -1,0 +1,20 @@
+# Mutantes de A10b-4 (2026-10-14): build_corpus.build_traps con source_body="real" fijo; legacy_names sin la traducción de 'cobertura' en reference_signal y con la tabla commit_key vacía
+# sha256 (16) build_corpus / legacy_names: antes fba44c850c2e2e51 5e657e10440a4980 | mutante 91d5faacd6a49c04 64a0d7a2a70b57b0 | restaurado fba44c850c2e2e51 5e657e10440a4980 
+>       assert sorted(c.raw["reference_signal"] for c in parejas) == sorted(
+>           assert difieren == construir.EXPECTED_DIFFERENCES[raw["reference_signal"]], caso.id
+>       assert construir.check_versioned(DESTINO) == []
+>       assert construir.check_versioned(copia) == [
+>       assert {c.raw["reference_signal"] for c in _parejas()} == set(construir.EXPECTED_DIFFERENCES)
+>           assert distinct == _COMPONENTS_BY_SIGNAL[raw["reference_signal"]], case.id
+>       judgement, missing = hoja_pares.read_commit(answers, key, rules)
+>       key_pairs = key["pairs"]
+>       assert rewritten["source_body"] == "real-reescrito"
+FAILED tests/test_corpus.py::test_las_senales_de_texto_tienen_cada_una_su_pareja
+FAILED tests/test_corpus.py::test_cada_pareja_versionada_difiere_solo_en_su_senal_y_mide_lo_mismo
+FAILED tests/test_corpus.py::test_corpus_versionado_sigue_reflejando_a_produccion
+FAILED tests/test_corpus.py::test_referencia_retocada_que_sigue_siendo_valida_la_caza_la_vigilancia
+FAILED tests/test_corpus.py::test_frozen_reference_signals_are_read_in_english
+FAILED tests/test_benchmark.py::test_cp4_the_scorer_separates_each_pair_by_its_signal
+FAILED tests/test_hoja_pares.py::test_the_frozen_key_answers_and_rules_give_a_complete_judgement_in_the_new_format
+FAILED tests/test_corpus.py::test_build_traps_gives_three_per_set_with_three_kinds
+8 failed, 119 passed in 10.49s

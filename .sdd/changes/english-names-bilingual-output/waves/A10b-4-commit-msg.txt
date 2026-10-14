@@ -1,0 +1,48 @@
+refactor(rename): build_corpus y pair_sheet en inglés, con sus formatos y su página (ola A10b, lote 4)
+
+Renombra a inglés las cadenas y la CLI de scripts/construir_corpus.py y
+todo scripts/hoja_pares.py, con su JS y su CSS: las 273 filas del mapping
+aprobado (waves/A10b-4-mapping.csv), salvo 6 que se explican abajo.
+
+- Los ficheros pasan a scripts/build_corpus.py y scripts/pair_sheet.py
+  (git mv, modo 100755 conservado).
+- CLI sin alias: `--dest` y `--check` en build_corpus; `generate`,
+  `unblind`, `--sheet`, `--key`, `--small`, `--large`, `--case`, `--seed`,
+  `--output` y `dest` `mode` en pair_sheet.
+- build_corpus escribe en inglés:
+  - en el corpus: `provenance`/`origin`, las 6 señales de
+    `reference_signal`, `scorer` (antes `puntuador`), `discriminating`,
+    `sheet_role` y `selection`;
+  - las trampas, en `traps.json`;
+  - los conteos del log, en `log-counts.json`.
+- pair_sheet escribe en inglés la clave, la hoja, el juicio y las
+  respuestas de su página (`made_up`, `specific`, `preference`).
+- Lo que se imprime sigue en español: las preguntas en los avisos, la
+  elección «empate» y los veredictos de `unblind`.
+
+Lectura dual de lo congelado en benchmarks/, por legacy_names:
+- tablas nuevas: affinity_corpus, affinity_traps, commit_key,
+  commit_answers y log_counts;
+- `origen` y los valores de `reference_signal` en benchmark_corpus;
+- `puntuador` en affinity_case;
+- los valores de `optional_questions`;
+- TRAPS_FILE_NAMES y LOG_COUNTS_FILE_NAMES.
+
+Cada lector normaliza en la función que recibe el dato. Las rutas por
+defecto buscan primero el fichero nuevo. check_versioned_affinity compara
+ya normalizado. La clave, las respuestas y las reglas congeladas de la
+hoja 1 dan el juicio completo en el formato nuevo. 5 tests nuevos leen lo
+congelado.
+
+Por decisión de la sesión principal, se adelantan aquí las filas de
+A10b-6 que leen lo que escriben los dos programas, para que escritor y
+tests cambien juntos. También cambian test_benchmark (señales),
+analyze_benchmark (`scorer`, `specific` y citas), la wiki y
+rename-exceptions.md.
+
+Sin aplicar (discrepancias del mapping):
+- el valor `calidad` de `kind`, que pide decisión;
+- contenido de casos congelados (`primer_paquete`, `nombre`,
+  `latencia_ms`);
+- las respuestas en español que se escriben a mano en la hoja (`si`,
+  `EMPATE`).

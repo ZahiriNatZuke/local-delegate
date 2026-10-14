@@ -155,13 +155,13 @@ def test_zero_coverage_is_attributed_to_coverage():
 # --- CP-4: el puntuador separa cada pareja, y por la senal correcta -------------------------------
 
 _COMPONENTS_BY_SIGNAL = {
-    "cobertura": {"coverage", "matched_terms"},
-    "prohibido": {"forbidden_hits"},
-    "json_valido": {"json_valid", "json_fields_ratio"},
-    "json_campos": {"json_fields_ratio"},
+    "coverage": {"coverage", "matched_terms"},
+    "forbidden": {"forbidden_hits"},
+    "json_valid": {"json_valid", "json_fields_ratio"},
+    "json_fields": {"json_fields_ratio"},
     "unicode": {"coverage", "matched_terms"},
-    "ejecucion": {"execution_ratio", "execution_passed"},
-    "conteos": {"counts_ratio", "counts_wrong"},
+    "execution": {"execution_ratio", "execution_passed"},
+    "counts": {"counts_ratio", "counts_wrong"},
 }
 
 

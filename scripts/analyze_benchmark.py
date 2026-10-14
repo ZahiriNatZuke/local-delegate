@@ -351,7 +351,7 @@ def pairs_for_role(
     incumbent: str,
     candidate: str,
 ) -> dict[str, Any] | None:
-    """Suma las elecciones de `hoja_pares.py destapar --json` en los casos por pares del rol."""
+    """Suma las elecciones de `pair_sheet.py unblind --json` en los casos por pares del rol."""
     if pairs is None:
         return None
     cases = [cid for cid in _review_only(corpus, role) if cid in pairs]
@@ -1057,12 +1057,13 @@ def score_affinity(
 ) -> dict[str, Any]:
     """`{"calidad": 0..1, "formato": bool}` de una respuesta, con el puntuador DEL caso.
 
-    El puntuador sale de `cases.json` (`puntuador`), con lo esperado calculado por el constructor del
+    El puntuador sale de `cases.json` (`scorer`), con lo esperado calculado por el constructor del
     corpus a partir de la fuente, no de lo que respondio un modelo. `formato` es lo que la tool
     prometio (una etiqueta, un objeto JSON con esas claves, la estructura Markdown, un limite de
     palabras, un formato exacto); `calidad` es si ademas es correcto.
     """
-    spec = LEGACY_NAMES.normalize("affinity_scorer", case.get("puntuador") or {})
+    case = LEGACY_NAMES.normalize("affinity_case", case)
+    spec = LEGACY_NAMES.normalize("affinity_scorer", case.get("scorer") or {})
     kind = spec.get("kind")
     if kind == "classify":
         response = text.strip()
@@ -1116,7 +1117,7 @@ def score_affinity(
 
 # --- Reglas, huellas y resultados -----------------------------------------------------------------
 
-POSSIBLE_OPTIONAL_QUESTIONS = frozenset({"principal", "especifico"})
+POSSIBLE_OPTIONAL_QUESTIONS = frozenset({"principal", "specific"})
 
 
 def read_affinity_rules(path: Path) -> dict[str, Any]:
@@ -1129,7 +1130,7 @@ def read_affinity_rules(path: Path) -> dict[str, Any]:
     optional_ones = rules.get("optional_questions")
     if not isinstance(optional_ones, list) or not set(optional_ones) <= POSSIBLE_OPTIONAL_QUESTIONS:
         raise SystemExit(
-            f"{path.name}: optional_questions solo admite 'principal' y 'especifico'; "
+            f"{path.name}: optional_questions solo admite 'principal' y 'specific'; "
             "'inventa' y la preferencia no pueden ser opcionales"
         )
     if not isinstance(rules.get("format"), dict):
@@ -1615,7 +1616,7 @@ def compute_verdict(
     if not mechanical_only:
         if judgement is None:
             raise NoData(
-                "falta el juicio del usuario (`leer-commit --salida`) para la celda de commit"
+                "falta el juicio del usuario (`read-commit --output`) para la celda de commit"
             )
         real = [c for c in cases if c["tool"] == TOOL_COMMIT and c.get("sheet_role") == "real"]
         ceiling = [c for c in corpus.values() if c["id"] == CEILING_CASE_ID]
@@ -1713,7 +1714,7 @@ def _verdict_parser(sub: argparse._SubParsersAction) -> None:
     p.add_argument("--rules", type=Path, default=base / LEGACY_NAMES.RULES_FILE_NAMES[1])
     p.add_argument("--footprints", type=Path, default=base / LEGACY_NAMES.FOOTPRINTS_FILE_NAMES[1])
     p.add_argument(
-        "--judgement", type=Path, default=None, help="salida de `hoja_pares.py leer-commit`"
+        "--judgement", type=Path, default=None, help="salida de `pair_sheet.py read-commit`"
     )
     p.add_argument("--metrics-db", type=Path, default=None, help="una COPIA de metrics.db")
     p.add_argument("--mechanical-only", action="store_true", help="sin la celda de commit")
@@ -1726,7 +1727,7 @@ def _verdict_parser(sub: argparse._SubParsersAction) -> None:
 
 
 def merge_unblinded_pairs(paths: list[Path]) -> dict[str, Any] | None:
-    """Suma por caso las elecciones de varios `hoja_pares.py destapar --json`; `None` sin ninguno.
+    """Suma por caso las elecciones de varios `pair_sheet.py unblind --json`; `None` sin ninguno.
     Lee las filas en los dos formatos (`humano` antes del renombrado, `human` despues)."""
     pairs: dict[str, Any] | None = None
     for path in paths:
@@ -1772,7 +1773,7 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         action="append",
         default=[],
-        help="JSON de `hoja_pares.py destapar --json` (repetible, uno por comparacion)",
+        help="JSON de `pair_sheet.py unblind --json` (repetible, uno por comparacion)",
     )
     decide.add_argument(
         "--shared-mib-threshold",

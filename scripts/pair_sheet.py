@@ -6,21 +6,21 @@ mismo modelo pasar de 1,0 a 0 segun nombrara o describiera, y al 2B puntuar tras
 fuente. Antes de fiarse de ella en la tanda, se contrasta con la pregunta que §7 decide de verdad:
 ¿cual de estas dos respuestas es mejor?
 
-- `generar` empareja, por caso, la corrida i de dos configuraciones (solo si las dos son validas y
+- `generate` empareja, por caso, la corrida i de dos configuraciones (solo si las dos son validas y
   puntuadas), sortea que respuesta va como A y cual como B, baraja los pares y numera DESPUES. La
   clave, con los modelos y las puntuaciones automaticas, va a un fichero aparte.
 - `generate-commit` y `read-commit`: la hoja a ciegas de `local_commit_msg` del SDD
   `daemon-reparte-el-backend` (REQ-042), al final de este modulo.
-- `destapar` lee las elecciones (A, B o =) y dice, por caso, en cuantos pares la metrica prefiere a
+- `unblind` lee las elecciones (A, B o =) y dice, por caso, en cuantos pares la metrica prefiere a
   uno y en cuantos de esos coincide la persona. Un empate humano donde la metrica ve diferencia NO es
   acuerdo: la metrica afirmo algo que la persona no ve. Un caso es valido con al menos
-  `MIN_PREFERENCIAS` preferencias de la metrica y `UMBRAL_ACUERDO` de acuerdo; con menos, «sin base».
+  `MIN_PREFERENCES` preferencias de la metrica y `AGREEMENT_THRESHOLD` de acuerdo; con menos, «sin base».
 
 Uso:
-    python scripts/hoja_pares.py generar --hoja pares.md --clave pares-clave.json \\
-        --cases benchmarks/catalogo-2026-09/cases.json --pequeno cp3-qwen35-2b \\
-        --grande cp3-qwen25-coder-14b --caso resumen-changelog-7k ... resultados/cp3d-*.jsonl
-    python scripts/hoja_pares.py destapar --hoja pares.md --clave pares-clave.json
+    python scripts/pair_sheet.py generate --sheet pares.md --key pares-clave.json \\
+        --cases benchmarks/catalogo-2026-09/cases.json --small cp3-qwen35-2b \\
+        --large cp3-qwen25-coder-14b --case resumen-changelog-7k ... resultados/cp3d-*.jsonl
+    python scripts/pair_sheet.py unblind --sheet pares.md --key pares-clave.json
 """
 
 from __future__ import annotations
@@ -37,11 +37,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
-UMBRAL_ACUERDO = 0.8
-MIN_PREFERENCIAS = 3
+AGREEMENT_THRESHOLD = 0.8
+MIN_PREFERENCES = 3
 
-_PAR_RE = re.compile(r"^## Par (\d+)\s*$")
-_ELECCION_RE = re.compile(r"^Mejor \(A/B/=\):[ \t]*(\S*)[ \t]*$")
+_PAIR_RE = re.compile(r"^## Par (\d+)\s*$")
+_CHOICE_RE = re.compile(r"^Mejor \(A/B/=\):[ \t]*(\S*)[ \t]*$")
 
 
 def _load_legacy_names() -> Any:
@@ -58,63 +58,61 @@ def _load_legacy_names() -> Any:
 LEGACY_NAMES = _load_legacy_names()
 
 
-def _registros(rutas: list[Path]) -> list[dict[str, Any]]:
-    registros = []
-    for ruta in rutas:
-        for linea in ruta.read_text(encoding="utf-8").splitlines():
-            if linea.strip():
-                registros.append(LEGACY_NAMES.normalize_benchmark_result(json.loads(linea)))
-    return registros
+def _records(paths: list[Path]) -> list[dict[str, Any]]:
+    records = []
+    for path in paths:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                records.append(LEGACY_NAMES.normalize_benchmark_result(json.loads(line)))
+    return records
 
 
-def _valla(texto: str) -> str:
+def _fence(text: str) -> str:
     """Una valla mas larga que cualquier racha de acentos graves de la respuesta."""
-    rachas = [len(m) for m in re.findall(r"`+", texto)]
-    return "`" * max(3, max(rachas, default=0) + 1)
+    streaks = [len(m) for m in re.findall(r"`+", text)]
+    return "`" * max(3, max(streaks, default=0) + 1)
 
 
-def _corridas_validas(
-    registros: list[dict[str, Any]], label: str, caso: str
-) -> dict[int, dict[str, Any]]:
+def _valid_runs(records: list[dict[str, Any]], label: str, case: str) -> dict[int, dict[str, Any]]:
     """El ultimo intento de cada corrida, si es valido y tiene puntuacion automatica."""
-    ultimos: dict[int, dict[str, Any]] = {}
-    for r in registros:
-        if r.get("label") == label and r.get("case") == caso and r.get("input_variant") is None:
-            ultimos[int(r["run"])] = r  # el fichero va en orden: el ultimo intento pisa a los otros
-    validas = {}
-    for run, r in ultimos.items():
-        calidad = (r.get("score") or {}).get("quality")
-        if r.get("discarded") or calidad is None:
+    latest: dict[int, dict[str, Any]] = {}
+    for r in records:
+        if r.get("label") == label and r.get("case") == case and r.get("input_variant") is None:
+            latest[int(r["run"])] = r  # el fichero va en orden: el ultimo intento pisa a los otros
+    valid_ones = {}
+    for run, r in latest.items():
+        quality = (r.get("score") or {}).get("quality")
+        if r.get("discarded") or quality is None:
             continue
         if "response" not in r:
             raise ValueError(
-                f"{label}:{caso} run {run} sin respuesta guardada (el runner necesita --save-responses)"
+                f"{label}:{case} run {run} sin respuesta guardada (el runner necesita --save-responses)"
             )
-        validas[run] = r
-    return validas
+        valid_ones[run] = r
+    return valid_ones
 
 
-def generar(
-    registros: list[dict[str, Any]],
+def generate(
+    records: list[dict[str, Any]],
     corpus: dict[str, dict[str, Any]],
-    casos: list[str],
-    pequeno: str,
-    grande: str,
-    semilla: int,
+    cases: list[str],
+    small: str,
+    large: str,
+    seed: int,
 ) -> tuple[str, dict[str, Any]]:
-    azar = random.Random(semilla)
-    pares = []
-    for caso in casos:
+    rng = random.Random(seed)
+    pairs = []
+    for case in cases:
         a, b = (
-            _corridas_validas(registros, pequeno, caso),
-            _corridas_validas(registros, grande, caso),
+            _valid_runs(records, small, case),
+            _valid_runs(records, large, case),
         )
         for run in sorted(set(a) & set(b)):
-            pares.append((caso, run, a[run], b[run]))
-    if not pares:
+            pairs.append((case, run, a[run], b[run]))
+    if not pairs:
         raise ValueError("ningun par valido: ¿etiquetas o casos equivocados?")
-    azar.shuffle(pares)
-    lineas = [
+    rng.shuffle(pairs)
+    lines = [
         "# Comparacion por pares, a ciegas",
         "",
         "En cada par, lee la tarea y las dos respuestas (abre la fuente si hace falta) y escribe detras",
@@ -122,100 +120,100 @@ def generar(
         "Juzga si es correcta y util para quien la pidio, no si nombra mas cosas. No abras la clave.",
         "",
     ]
-    clave: dict[str, Any] = {"semilla": semilla, "pequeno": pequeno, "grande": grande, "pares": {}}
-    for numero, (caso, run, reg_p, reg_g) in enumerate(pares, 1):
-        par = f"{numero:02d}"
-        meta = corpus.get(caso) or {}
-        lados = [(pequeno, reg_p), (grande, reg_g)]
-        azar.shuffle(lados)
-        lineas += [
-            f"## Par {par}",
+    key: dict[str, Any] = {"seed": seed, "small": small, "large": large, "pairs": {}}
+    for number, (case, run, reg_p, reg_g) in enumerate(pairs, 1):
+        pair = f"{number:02d}"
+        meta = corpus.get(case) or {}
+        sides = [(small, reg_p), (large, reg_g)]
+        rng.shuffle(sides)
+        lines += [
+            f"## Par {pair}",
             "",
             f"Tarea: `{meta.get('tool', '?')}` sobre `fuentes/{meta.get('source_file', '?')}`",
             "",
             f"> {meta.get('system') or ''}",
             "",
         ]
-        for letra, (_label, reg) in zip("AB", lados, strict=True):
-            respuesta = str(reg["response"])
-            valla = _valla(respuesta)
-            lineas += [f"### Respuesta {letra}", "", valla, respuesta, valla, ""]
-        lineas += ["Mejor (A/B/=): ", ""]
-        clave["pares"][par] = {
-            "case": caso,
+        for letter, (_label, reg) in zip("AB", sides, strict=True):
+            response = str(reg["response"])
+            fence = _fence(response)
+            lines += [f"### Respuesta {letter}", "", fence, response, fence, ""]
+        lines += ["Mejor (A/B/=): ", ""]
+        key["pairs"][pair] = {
+            "case": case,
             "run": run,
-            "A": {"label": lados[0][0], "quality": lados[0][1]["score"]["quality"]},
-            "B": {"label": lados[1][0], "quality": lados[1][1]["score"]["quality"]},
+            "A": {"label": sides[0][0], "quality": sides[0][1]["score"]["quality"]},
+            "B": {"label": sides[1][0], "quality": sides[1][1]["score"]["quality"]},
         }
-    return "\n".join(lineas), clave
+    return "\n".join(lines), key
 
 
-def leer_elecciones(hoja: str) -> dict[str, str | None]:
+def read_choices(sheet: str) -> dict[str, str | None]:
     """Lee las elecciones saltandose lo que va dentro de la valla: la respuesta la escribio un
     modelo, y una linea «Mejor (A/B/=): A» dentro de ella no puede votar por el."""
-    elecciones: dict[str, str | None] = {}
-    actual: str | None = None
-    valla: str | None = None
-    for linea in hoja.splitlines():
-        if valla is not None:
-            if linea == valla:
-                valla = None
+    choices: dict[str, str | None] = {}
+    current: str | None = None
+    fence: str | None = None
+    for line in sheet.splitlines():
+        if fence is not None:
+            if line == fence:
+                fence = None
             continue
-        if re.fullmatch(r"`{3,}", linea):
-            valla = linea
+        if re.fullmatch(r"`{3,}", line):
+            fence = line
             continue
-        if m := _PAR_RE.match(linea):
-            actual = m.group(1)
-            elecciones[actual] = None
-        elif actual is not None and (m := _ELECCION_RE.match(linea)):
-            valor = m.group(1).upper()
-            if valor == "":
-                elecciones[actual] = None
-            elif valor in {"A", "B", "="}:
-                elecciones[actual] = valor
+        if m := _PAIR_RE.match(line):
+            current = m.group(1)
+            choices[current] = None
+        elif current is not None and (m := _CHOICE_RE.match(line)):
+            value = m.group(1).upper()
+            if value == "":
+                choices[current] = None
+            elif value in {"A", "B", "="}:
+                choices[current] = value
             else:
-                raise ValueError(f"par {actual}: eleccion {m.group(1)!r} no es A, B ni =")
-            actual = None
-    return elecciones
+                raise ValueError(f"par {current}: eleccion {m.group(1)!r} no es A, B ni =")
+            current = None
+    return choices
 
 
-def destapar(hoja: str, clave: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
-    elecciones = leer_elecciones(hoja)
-    pares = clave["pares"]
-    if set(elecciones) != set(pares):
+def unblind(sheet: str, key: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    choices = read_choices(sheet)
+    pairs = key["pairs"]
+    if set(choices) != set(pairs):
         raise ValueError(
             "la hoja y la clave no tienen los mismos pares: ¿son de la misma generacion?"
         )
-    faltan = sorted(par for par, eleccion in elecciones.items() if eleccion is None)
-    por_caso: dict[str, dict[str, Any]] = {}
-    for par, eleccion in sorted(elecciones.items()):
-        if eleccion is None:
+    missing = sorted(pair for pair, choice in choices.items() if choice is None)
+    per_case: dict[str, dict[str, Any]] = {}
+    for pair, choice in sorted(choices.items()):
+        if choice is None:
             continue
-        meta = pares[par]
-        fila = por_caso.setdefault(
+        meta = pairs[pair]
+        row = per_case.setdefault(
             meta["case"],
-            {"pares": 0, "metrica_prefiere": 0, "acuerdos": 0, "humano": {}},
+            {"pairs": 0, "metric_prefers": 0, "agreements": 0, "human": {}},
         )
-        fila["pares"] += 1
-        ganador_humano = "empate" if eleccion == "=" else meta[eleccion]["label"]
-        fila["humano"][ganador_humano] = fila["humano"].get(ganador_humano, 0) + 1
+        row["pairs"] += 1
+        human_winner = "empate" if choice == "=" else meta[choice]["label"]
+        row["human"][human_winner] = row["human"].get(human_winner, 0) + 1
         qa, qb = meta["A"]["quality"], meta["B"]["quality"]
         if qa == qb:
             continue  # la metrica no prefiere: nada que validar en este par
-        fila["metrica_prefiere"] += 1
-        preferida = "A" if qa > qb else "B"
-        if eleccion == preferida:
-            fila["acuerdos"] += 1
-    for fila in por_caso.values():
-        n = fila["metrica_prefiere"]
-        fila["acuerdo"] = fila["acuerdos"] / n if n else None
-        if n < MIN_PREFERENCIAS:
-            fila["veredicto"] = "sin base"
-        elif fila["acuerdo"] >= UMBRAL_ACUERDO:
-            fila["veredicto"] = "valida"
+        row["metric_prefers"] += 1
+        preferred = "A" if qa > qb else "B"
+        if choice == preferred:
+            row["agreements"] += 1
+    for row in per_case.values():
+        n = row["metric_prefers"]
+        row["agreement"] = row["agreements"] / n if n else None
+        if n < MIN_PREFERENCES:
+            row["verdict"] = "sin base"
+        elif row["agreement"] >= AGREEMENT_THRESHOLD:
+            row["verdict"] = "valida"
         else:
-            fila["veredicto"] = "no valida"
-    return por_caso, faltan
+            row["verdict"] = "no valida"
+    return per_case, missing
 
 
 # --- Hoja a ciegas de `local_commit_msg` (REQ-042) --------------------------------------------------
@@ -229,34 +227,50 @@ AFFINITY_BASE = Path(__file__).resolve().parents[1] / "benchmarks" / "afinidad-2
 MODEL_26B = "gemma4-26b-a4b"
 QWEN_MODEL = "qwen36-35b-a3b"
 TRAP = "trampa"
+
+
+def _affinity_file(names: tuple[str, str]) -> Path:
+    """El fichero nuevo de la evaluacion de afinidad si existe y, si no, el congelado."""
+    old_name, new_name = names
+    new = AFFINITY_BASE / new_name
+    return new if new.exists() else AFFINITY_BASE / old_name
+
+
 MAX_BODY_LINES = 5
-POSSIBLE_OPTIONAL_QUESTIONS = ("principal", "especifico")
+POSSIBLE_OPTIONAL_QUESTIONS = ("principal", "specific")
 _VALUES = {
-    "inventa": ("s", "n"),
+    "made_up": ("s", "n"),
     "principal": ("s", "p", "n"),
-    "especifico": ("s", "n"),
-    "preferencia": ("A", "B", "="),
+    "specific": ("s", "n"),
+    "preference": ("A", "B", "="),
+}
+#: Como se nombra cada pregunta en lo que se imprime (frente B): el valor de maquina va en ingles.
+_QUESTION_LABELS = {
+    "made_up": "inventa",
+    "principal": "principal",
+    "specific": "especifico",
+    "preference": "preferencia",
 }
 _SYNONYMS_RESPONSE = {"si": "s", "sí": "s", "no": "n", "parcial": "p", "empate": "=", "": ""}
 
 
 def read_rules(path: Path) -> dict[str, Any]:
-    """`reglas.json`, validado. «Inventa» y la preferencia no pueden ser opcionales: son lo que
+    """`rules.json` (o el `reglas.json` congelado), validado. «Inventa» y la preferencia no pueden ser opcionales: son lo que
     decide la celda, y una hoja que no los pidiera no decidiria nada."""
-    rules = json.loads(path.read_text(encoding="utf-8"))
-    maximum = rules.get("max_inventa_26b")
+    rules = LEGACY_NAMES.normalize_affinity_rules(json.loads(path.read_text(encoding="utf-8")))
+    maximum = rules.get("max_made_up_26b")
     if not isinstance(maximum, int) or isinstance(maximum, bool) or maximum < 0:
-        raise SystemExit("reglas.json: max_inventa_26b tiene que ser un entero >= 0")
-    optional_ones = rules.get("preguntas_opcionales")
+        raise SystemExit(f"{path.name}: max_made_up_26b tiene que ser un entero >= 0")
+    optional_ones = rules.get("optional_questions")
     if not isinstance(optional_ones, list) or not set(optional_ones) <= set(
         POSSIBLE_OPTIONAL_QUESTIONS
     ):
         raise SystemExit(
-            "reglas.json: preguntas_opcionales solo admite 'principal' y 'especifico'; "
+            f"{path.name}: optional_questions solo admite 'principal' y 'specific'; "
             "'inventa' y la preferencia no pueden ser opcionales"
         )
-    if not isinstance(rules.get("parada_anticipada"), bool):
-        raise SystemExit("reglas.json: parada_anticipada tiene que ser true o false")
+    if not isinstance(rules.get("early_stop"), bool):
+        raise SystemExit(f"{path.name}: early_stop tiene que ser true o false")
     return rules
 
 
@@ -271,7 +285,7 @@ def split_message(message: str) -> tuple[str, list[str], bool]:
     return subject, [x for x in rest if x.strip()], separate
 
 
-def forma(message: str) -> tuple[bool, int]:
+def shape(message: str) -> tuple[bool, int]:
     """Lo que tiene que copiar la trampa: si lleva cuerpo y cuantas lineas (como mucho 5)."""
     _subject, body, _sep = split_message(message)
     return bool(body), min(len(body), MAX_BODY_LINES)
@@ -428,11 +442,12 @@ def shaped_trap(trap: dict[str, Any], pair_message: str) -> str:
     la trampa tampoco) y, si sus n primeras unidades pasan de `MAX_LENGTH_FACTOR` veces la viñeta
     media de la pareja, lleva las n unidades MAS CORTAS, en su orden. Nunca acorta una frase.
     """
+    trap = LEGACY_NAMES.normalize_affinity_trap(trap)
     _subject, model_body, separate = split_message(pair_message)
     n = min(len(model_body), MAX_BODY_LINES)
     if n == 0:
-        return str(trap["asunto"])
-    units_list = body_units([str(x) for x in trap["cuerpo"]])
+        return str(trap["subject"])
+    units_list = body_units([str(x) for x in trap["body"]])
     lines = units_list[:n]
     pair_length = mean_bullet_length(pair_message)
 
@@ -449,7 +464,7 @@ def shaped_trap(trap: dict[str, Any], pair_message: str) -> str:
     with_bullets = sum(x.lstrip().startswith(_BULLETS) for x in model_body) * 2 >= len(model_body)
     if with_bullets:
         lines = [x if x.startswith(_BULLETS) else f"- {x}" for x in lines]
-    return "\n".join([str(trap["asunto"]), *([""] if separate else []), *lines])
+    return "\n".join([str(trap["subject"]), *([""] if separate else []), *lines])
 
 
 def diff_summary(diff: str) -> tuple[int, int, int]:
@@ -492,7 +507,7 @@ def _balanced_split(rng: random.Random, n: int, a: str, b: str) -> list[str]:
 
 
 def sheet_id(number: int, pair_items: list[dict[str, Any]]) -> str:
-    content = json.dumps({"n": number, "pares": pair_items}, sort_keys=True, ensure_ascii=False)
+    content = json.dumps({"n": number, "pairs": pair_items}, sort_keys=True, ensure_ascii=False)
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
@@ -514,10 +529,12 @@ def build_commit_sheet(
     La hoja lleva los diffs y los mensajes tal como los devolvio la tool y nada mas: ni ids de
     modelo, ni etiquetas, ni latencias. La clave dice quien es cada lado y cual es la trampa.
     """
+    rules = LEGACY_NAMES.normalize_affinity_rules(rules)
     rng = random.Random(seed)
-    sets = traps["juegos"]
+    traps = LEGACY_NAMES.normalize_affinity_traps(traps)
+    sets = traps["sets"]
     if not 1 <= case_set_item <= len(sets):
-        raise SystemExit(f"trampas.json no tiene el juego {case_set_item}")
+        raise SystemExit(f"las trampas no tienen el juego {case_set_item}")
 
     def diff_of(case_id: str) -> str:
         name = cases[case_id]["source_file"]
@@ -526,7 +543,8 @@ def build_commit_sheet(
     real: list[tuple[str, str, str]] = []
     skipped: list[str] = []
     for case_id, case in cases.items():
-        if case.get("rol_en_hoja") != "real":
+        case = LEGACY_NAMES.normalize("affinity_case", case)
+        if case.get("sheet_role") != "real":
             continue
         a = _message_of(records, label_26b, case_id)
         b = _message_of(records, label_qwen, case_id)
@@ -544,14 +562,14 @@ def build_commit_sheet(
         if first != label_26b:
             sides.reverse()
         pending_items.append(
-            {"tipo": "real", "caso": case_id, "lados": sides, "diff": diff_of(case_id)}
+            {"kind": "real", "case": case_id, "sides": sides, "diff": diff_of(case_id)}
         )
-    entries = sets[case_set_item - 1]["trampas"]
+    entries = sets[case_set_item - 1]["traps"]
     # De las trampas tambien se equilibra el lado de la trampa y el modelo con el que se empareja.
     trap_in_a = _balanced_split(rng, len(entries), "A", "B")
     pairs = _balanced_split(rng, len(entries), label_26b, label_qwen)
     for entry, trap_side, model in zip(entries, trap_in_a, pairs, strict=True):
-        case_id = entry["caso"]
+        case_id = entry["case"]
         message = _message_of(records, model, case_id)
         if message is None:
             raise SystemExit(f"la trampa de {case_id} no tiene mensaje del modelo elegido")
@@ -566,10 +584,10 @@ def build_commit_sheet(
             sides.reverse()
         pending_items.append(
             {
-                "tipo": TRAP,
-                "caso": case_id,
-                "trampa_tipo": entry["tipo"],
-                "lados": sides,
+                "kind": TRAP,
+                "case": case_id,
+                "trap_kind": entry["kind"],
+                "sides": sides,
                 "diff": diff_of(case_id),
             }
         )
@@ -583,19 +601,19 @@ def build_commit_sheet(
         pair_items.append(
             {
                 "num": num,
-                "ficheros": files_list,
-                "mas": more,
-                "menos": less,
+                "files": files_list,
+                "more": more,
+                "fewer": less,
                 "diff": p["diff"],
-                "A": p["lados"][0][1],
-                "B": p["lados"][1][1],
+                "A": p["sides"][0][1],
+                "B": p["sides"][1][1],
             }
         )
         pairs_key[num] = {
-            "tipo": p["tipo"],
-            "caso": p["caso"],
-            "lados": {"A": p["lados"][0][0], "B": p["lados"][1][0]},
-            **({"trampa_tipo": p["trampa_tipo"]} if p["tipo"] == TRAP else {}),
+            "kind": p["kind"],
+            "case": p["case"],
+            "sides": {"A": p["sides"][0][0], "B": p["sides"][1][0]},
+            **({"trap_kind": p["trap_kind"]} if p["kind"] == TRAP else {}),
         }
     seen_set: set[str] = set()
     for pair in pair_items:
@@ -608,19 +626,19 @@ def build_commit_sheet(
     sheet = {
         "id": sheet_id(number, pair_items),
         "n": number,
-        "opcionales": list(rules["preguntas_opcionales"]),
-        "pares": pair_items,
+        "optional": list(rules["optional_questions"]),
+        "pairs": pair_items,
     }
     key = {
         "schema_version": 1,
-        "hoja": number,
-        "juego": case_set_item,
+        "sheet": number,
+        "set": case_set_item,
         "sha256": sheet["id"],
-        "semilla": seed,
+        "seed": seed,
         "label_26b": label_26b,
         "label_qwen": label_qwen,
-        "pares": pairs_key,
-        "omitidos": skipped,
+        "pairs": pairs_key,
+        "omitted": skipped,
     }
     return sheet, key
 
@@ -639,8 +657,9 @@ _INSTRUCTIONS = [
 
 
 def estimated_time(rules: dict[str, Any]) -> str:
-    optional_ones = set(rules["preguntas_opcionales"])
-    if {"principal", "especifico"} <= optional_ones:
+    rules = LEGACY_NAMES.normalize_affinity_rules(rules)
+    optional_ones = set(rules["optional_questions"])
+    if {"principal", "specific"} <= optional_ones:
         return "unos 45–60 minutos (solo «inventa» y la preferencia son obligatorias)"
     return "entre 60 y 90 minutos"
 
@@ -651,7 +670,8 @@ def _fence_for(text: str) -> str:
 
 
 def render_md(sheet: dict[str, Any], rules: dict[str, Any]) -> str:
-    optional_ones = set(rules["preguntas_opcionales"])
+    rules = LEGACY_NAMES.normalize_affinity_rules(rules)
+    optional_ones = set(rules["optional_questions"])
     lines = [
         f"# Hoja {sheet['n']}: mensajes de commit, a ciegas",
         "",
@@ -664,9 +684,9 @@ def render_md(sheet: dict[str, Any], rules: dict[str, Any]) -> str:
     for name, text in _INSTRUCTIONS:
         lines.append(f"- **{name}**: {text}")
     lines.append("")
-    for pair in sheet["pares"]:
+    for pair in sheet["pairs"]:
         lines += [f"## Par {pair['num']}", ""]
-        lines.append(f"Diff: {pair['ficheros']} ficheros, +{pair['mas']} −{pair['menos']}")
+        lines.append(f"Diff: {pair['files']} ficheros, +{pair['more']} −{pair['fewer']}")
         lines.append("")
         fence = _fence_for(pair["diff"])
         lines += [fence + "diff", pair["diff"].rstrip("\n"), fence, ""]
@@ -680,7 +700,7 @@ def render_md(sheet: dict[str, Any], rules: dict[str, Any]) -> str:
             mark = " [opcional]" if "principal" in optional_ones else ""
             lines.append(f"Lo principal {side} (s/p/n):{mark} ")
         for side in "AB":
-            mark = " [opcional]" if "especifico" in optional_ones else ""
+            mark = " [opcional]" if "specific" in optional_ones else ""
             lines.append(f"Específico {side} (s/n):{mark} ")
         lines += ["Mejor (A/B/=): ", ""]
     return "\n".join(lines)
@@ -694,30 +714,30 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
 <title>Hoja __N__: mensajes de commit, a ciegas</title>
 <style>
 body{font-family:system-ui,sans-serif;max-width:1100px;margin:0 auto;padding:1rem 1.5rem 6rem;color:#1b1b1b;line-height:1.45}
-header.barra{position:sticky;top:0;background:#fff;border-bottom:2px solid #ccc;padding:.5rem 0;z-index:5;display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
+header.bar{position:sticky;top:0;background:#fff;border-bottom:2px solid #ccc;padding:.5rem 0;z-index:5;display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
 #faltan{font-weight:700}
 button{font:inherit;padding:.4rem .8rem;cursor:pointer}
-section.par{border:1px solid #bbb;border-radius:6px;margin:1.5rem 0;padding:.5rem 1rem 1rem}
-section.par.completo{border-color:#2e7d32}
+section.pair{border:1px solid #bbb;border-radius:6px;margin:1.5rem 0;padding:.5rem 1rem 1rem}
+section.pair.complete{border-color:#2e7d32}
 pre{font-family:ui-monospace,Consolas,monospace;font-size:.88rem;white-space:pre-wrap;word-break:break-word;background:#f6f6f6;border:1px solid #ddd;padding:.6rem;margin:.3rem 0}
 pre.diff{max-height:28rem;overflow:auto;white-space:pre}
-.mensajes{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
-@media (max-width:800px){.mensajes{grid-template-columns:1fr}}
+.messages{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media (max-width:800px){.messages{grid-template-columns:1fr}}
 fieldset{border:1px solid #ccc;margin:.4rem 0;padding:.3rem .6rem}
 legend{font-size:.9rem;color:#444}
 label{margin-right:1rem;white-space:nowrap}
 fieldset.pref{margin-top:.8rem;border-color:#555}
 fieldset.pref:disabled{opacity:.5}
-details.opcional>summary{cursor:pointer;color:#555}
+details.optional_q>summary{cursor:pointer;color:#555}
 textarea{width:100%;height:7rem;font-family:ui-monospace,Consolas,monospace;font-size:.8rem}
 dl dt{font-weight:700}
 </style>
 </head>
 <body>
 <h1>Hoja __N__: mensajes de commit, a ciegas</h1>
-<p>En cada par hay dos mensajes de commit para el mismo cambio. Léelos tal como están, abre el diff si lo necesitas y contesta. Tiempo estimado: __TIEMPO__. Puedes hacerlo en varias sentadas: tu progreso se guarda en este navegador.</p>
-<dl>__INSTRUCCIONES__</dl>
-<header class="barra">
+<p>En cada par hay dos mensajes de commit para el mismo cambio. Léelos tal como están, abre el diff si lo necesitas y contesta. Tiempo estimado: __TIME__. Puedes hacerlo en varias sentadas: tu progreso se guarda en este navegador.</p>
+<dl>__INSTRUCTIONS__</dl>
+<header class="bar">
 <span id="faltan">Faltan … respuestas</span>
 <button type="button" id="descargar">Descargar respuestas</button>
 <button type="button" id="parar">¿Puedo parar ya?</button>
@@ -727,135 +747,135 @@ dl dt{font-weight:700}
 <h2>Respuestas en texto</h2>
 <p>Si el navegador no deja descargar, copia este cuadro y pégalo en un mensaje.</p>
 <textarea id="copia" readonly aria-label="Respuestas en JSON"></textarea>
-<script type="application/json" id="datos">__DATOS__</script>
+<script type="application/json" id="datos">__DATA__</script>
 <script id="logica">
-const CAMPOS_DE_PREGUNTA = {
-  inventa: ["s", "n"],
+const QUESTION_FIELDS = {
+  made_up: ["s", "n"],
   principal: ["s", "p", "n"],
-  especifico: ["s", "n"],
+  specific: ["s", "n"],
 };
-function camposObligatorios(datos) {
-  const campos = ["inventa.A", "inventa.B"];
-  for (const q of ["principal", "especifico"]) {
-    if (!datos.opcionales.includes(q)) campos.push(q + ".A", q + ".B");
+function requiredFields(data) {
+  const fields = ["made_up.A", "made_up.B"];
+  for (const q of ["principal", "specific"]) {
+    if (!data.optional.includes(q)) fields.push(q + ".A", q + ".B");
   }
-  campos.push("preferencia");
-  return campos;
+  fields.push("preference");
+  return fields;
 }
-function faltan(estado, datos) {
-  const falta = [];
-  for (const par of datos.pares) {
-    const e = estado[par.num] || {};
-    for (const campo of camposObligatorios(datos)) {
-      if (!e[campo]) falta.push([par.num, campo]);
+function missing(state, data) {
+  const isMissing = [];
+  for (const pair of data.pairs) {
+    const e = state[pair.num] || {};
+    for (const field of requiredFields(data)) {
+      if (!e[field]) isMissing.push([pair.num, field]);
     }
   }
-  return falta;
+  return isMissing;
 }
-function exportar(estado, datos, parcial) {
-  const respuestas = {};
-  for (const par of datos.pares) {
-    const e = estado[par.num] || {};
+function exportar(state, data, partial) {
+  const answers = {};
+  for (const pair of data.pairs) {
+    const e = state[pair.num] || {};
     const r = {};
-    for (const q of Object.keys(CAMPOS_DE_PREGUNTA)) {
-      for (const lado of ["A", "B"]) {
-        const v = e[q + "." + lado];
+    for (const q of Object.keys(QUESTION_FIELDS)) {
+      for (const side of ["A", "B"]) {
+        const v = e[q + "." + side];
         if (v) {
           r[q] = r[q] || {};
-          r[q][lado] = v;
+          r[q][side] = v;
         }
       }
     }
-    if (e.preferencia) r.preferencia = e.preferencia;
-    if (Object.keys(r).length) respuestas[par.num] = r;
+    if (e.preference) r.preference = e.preference;
+    if (Object.keys(r).length) answers[pair.num] = r;
   }
-  return { hoja: datos.n, sha256: datos.id, parcial: !!parcial, respuestas };
+  return { sheet: data.n, sha256: data.id, partial: !!partial, answers };
 }
 </script>
 <script id="interfaz">
 (function () {
-  const datos = JSON.parse(document.getElementById("datos").textContent);
-  const clave = "hoja-commit-" + datos.id.slice(0, 16);
-  let estado = {};
-  try { estado = JSON.parse(localStorage.getItem(clave) || "{}"); } catch (e) { estado = {}; }
-  const NOMBRES = { s: "sí", n: "no", p: "parcial" };
-  const raiz = document.getElementById("pares");
-  function radios(par, campo, valores, etiquetas) {
+  const data = JSON.parse(document.getElementById("datos").textContent);
+  const key = "hoja-commit-" + data.id.slice(0, 16);
+  let state = {};
+  try { state = JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) { state = {}; }
+  const NAMES = { s: "sí", n: "no", p: "parcial" };
+  const root = document.getElementById("pares");
+  function radios(pair, field, values, labels) {
     const out = [];
-    for (const v of valores) {
-      const id = "r-" + par.num + "-" + campo + "-" + v;
-      out.push('<label for="' + id + '"><input type="radio" id="' + id + '" name="' + par.num + "-" + campo + '" value="' + v + '" data-par="' + par.num + '" data-campo="' + campo + '"> ' + etiquetas[v] + "</label>");
+    for (const v of values) {
+      const id = "r-" + pair.num + "-" + field + "-" + v;
+      out.push('<label for="' + id + '"><input type="radio" id="' + id + '" name="' + pair.num + "-" + field + '" value="' + v + '" data-pair="' + pair.num + '" data-field="' + field + '"> ' + labels[v] + "</label>");
     }
     return out.join("");
   }
-  function pregunta(par, q, lado, texto) {
-    return '<fieldset><legend>' + texto + "</legend>" + radios(par, q + "." + lado, CAMPOS_DE_PREGUNTA[q], NOMBRES) + "</fieldset>";
+  function question(pair, q, side, text) {
+    return '<fieldset><legend>' + text + "</legend>" + radios(pair, q + "." + side, QUESTION_FIELDS[q], NAMES) + "</fieldset>";
   }
-  function mensaje(par, lado) {
-    const opc = (q) => datos.opcionales.includes(q);
-    const principal = pregunta(par, "principal", lado, "¿Nombra el cambio más importante?");
-    const especifico = pregunta(par, "especifico", lado, "¿Se entiende sin abrir el diff?");
-    const extras = (opc("principal") || opc("especifico"))
-      ? '<details class="opcional"><summary>Si te apetece</summary>' + (opc("principal") ? principal : "") + (opc("especifico") ? especifico : "") + "</details>"
+  function message(pair, side) {
+    const opc = (q) => data.optional.includes(q);
+    const principal = question(pair, "principal", side, "¿Nombra el cambio más importante?");
+    const specific = question(pair, "specific", side, "¿Se entiende sin abrir el diff?");
+    const extras = (opc("principal") || opc("specific"))
+      ? '<details class="optional_q"><summary>Si te apetece</summary>' + (opc("principal") ? principal : "") + (opc("specific") ? specific : "") + "</details>"
       : "";
-    return '<div class="msg"><h3>Mensaje ' + lado + "</h3><pre>" + esc(par[lado]) + "</pre>" +
-      pregunta(par, "inventa", lado, "¿Dice algo que el diff no hace?") +
-      (opc("principal") ? "" : principal) + (opc("especifico") ? "" : especifico) + extras + "</div>";
+    return '<div class="msg"><h3>Mensaje ' + side + "</h3><pre>" + esc(pair[side]) + "</pre>" +
+      question(pair, "made_up", side, "¿Dice algo que el diff no hace?") +
+      (opc("principal") ? "" : principal) + (opc("specific") ? "" : specific) + extras + "</div>";
   }
   function esc(t) { return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
-  for (const par of datos.pares) {
+  for (const pair of data.pairs) {
     const sec = document.createElement("section");
-    sec.className = "par";
-    sec.id = "par-" + par.num;
-    sec.innerHTML = "<h2>Par " + par.num + "</h2>" +
-      "<details><summary>Diff (" + par.ficheros + " ficheros, +" + par.mas + " −" + par.menos + ")</summary><pre class=\"diff\">" + esc(par.diff) + "</pre></details>" +
-      '<div class="mensajes">' + mensaje(par, "A") + mensaje(par, "B") + "</div>" +
-      '<fieldset class="pref" id="pref-' + par.num + '"><legend>¿Cuál prefieres?</legend>' +
-      radios(par, "preferencia", ["A", "B", "="], { A: "Mensaje A", B: "Mensaje B", "=": "Empate" }) + "</fieldset>";
-    raiz.appendChild(sec);
+    sec.className = "pair";
+    sec.id = "par-" + pair.num;
+    sec.innerHTML = "<h2>Par " + pair.num + "</h2>" +
+      "<details><summary>Diff (" + pair.files + " ficheros, +" + pair.more + " −" + pair.fewer + ")</summary><pre class=\"diff\">" + esc(pair.diff) + "</pre></details>" +
+      '<div class="messages">' + message(pair, "A") + message(pair, "B") + "</div>" +
+      '<fieldset class="pref" id="pref-' + pair.num + '"><legend>¿Cuál prefieres?</legend>' +
+      radios(pair, "preference", ["A", "B", "="], { A: "Mensaje A", B: "Mensaje B", "=": "Empate" }) + "</fieldset>";
+    root.appendChild(sec);
   }
-  function refrescar() {
+  function refresh() {
     for (const input of document.querySelectorAll("input[type=radio]")) {
-      const e = estado[input.dataset.par] || {};
-      input.checked = e[input.dataset.campo] === input.value;
+      const e = state[input.dataset.pair] || {};
+      input.checked = e[input.dataset.field] === input.value;
     }
-    for (const par of datos.pares) {
-      const e = estado[par.num] || {};
-      const listo = !!(e["inventa.A"] && e["inventa.B"]);
-      document.getElementById("pref-" + par.num).disabled = !listo;
-      const falta = faltan({ [par.num]: e }, { ...datos, pares: [par] });
-      document.getElementById("par-" + par.num).classList.toggle("completo", falta.length === 0);
+    for (const pair of data.pairs) {
+      const e = state[pair.num] || {};
+      const listo = !!(e["made_up.A"] && e["made_up.B"]);
+      document.getElementById("pref-" + pair.num).disabled = !listo;
+      const isMissing = missing({ [pair.num]: e }, { ...data, pairs: [pair] });
+      document.getElementById("par-" + pair.num).classList.toggle("complete", isMissing.length === 0);
     }
-    const n = faltan(estado, datos).length;
+    const n = missing(state, data).length;
     document.getElementById("faltan").textContent = n === 0 ? "No falta ninguna respuesta" : "Faltan " + n + " respuestas";
-    document.getElementById("copia").value = JSON.stringify(exportar(estado, datos, n > 0), null, 1);
+    document.getElementById("copia").value = JSON.stringify(exportar(state, data, n > 0), null, 1);
   }
   document.addEventListener("change", (ev) => {
     const t = ev.target;
-    if (!t.dataset || !t.dataset.par) return;
-    estado[t.dataset.par] = estado[t.dataset.par] || {};
-    estado[t.dataset.par][t.dataset.campo] = t.value;
-    try { localStorage.setItem(clave, JSON.stringify(estado)); } catch (e) { /* sin almacenamiento: queda el cuadro de texto */ }
-    refrescar();
+    if (!t.dataset || !t.dataset.pair) return;
+    state[t.dataset.pair] = state[t.dataset.pair] || {};
+    state[t.dataset.pair][t.dataset.field] = t.value;
+    try { localStorage.setItem(key, JSON.stringify(state)); } catch (e) { /* sin almacenamiento: queda el cuadro de texto */ }
+    refresh();
   });
-  function descargar(nombre, contenido) {
+  function download(name, content) {
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(contenido, null, 1)], { type: "application/json" }));
-    a.download = nombre;
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(content, null, 1)], { type: "application/json" }));
+    a.download = name;
     document.body.appendChild(a);
     a.click();
     a.remove();
   }
   document.getElementById("descargar").addEventListener("click", () => {
-    const n = faltan(estado, datos).length;
-    descargar("respuestas-" + datos.n + ".json", exportar(estado, datos, n > 0));
+    const n = missing(state, data).length;
+    download("respuestas-" + data.n + ".json", exportar(state, data, n > 0));
     document.getElementById("aviso").textContent = n > 0 ? "Descargadas con " + n + " respuestas sin contestar." : "Descargadas.";
   });
   document.getElementById("parar").addEventListener("click", () => {
-    descargar("respuestas-parcial-" + datos.n + ".json", exportar(estado, datos, true));
+    download("respuestas-parcial-" + data.n + ".json", exportar(state, data, true));
     document.getElementById("aviso").textContent = "Descargado: pásalo para saber si puedes parar.";
   });
-  refrescar();
+  refresh();
 })();
 </script>
 </body>
@@ -870,9 +890,9 @@ def render_html(sheet: dict[str, Any], rules: dict[str, Any]) -> str:
     )
     return (
         _HTML_TEMPLATE.replace("__N__", str(sheet["n"]))
-        .replace("__TIEMPO__", html.escape(estimated_time(rules)))
-        .replace("__INSTRUCCIONES__", instructions)
-        .replace("__DATOS__", data)
+        .replace("__TIME__", html.escape(estimated_time(rules)))
+        .replace("__INSTRUCTIONS__", instructions)
+        .replace("__DATA__", data)
     )
 
 
@@ -890,7 +910,7 @@ def write_sheet(
     paths = {
         "html": sheet_dir / f"hoja-{n}.html",
         "md": sheet_dir / f"hoja-{n}.md",
-        "clave": key_dir / f"clave-{n}.json",
+        "key": key_dir / f"clave-{n}.json",
     }
     existing = [str(r) for r in paths.values() if r.exists()]
     if existing:
@@ -900,7 +920,7 @@ def write_sheet(
     key_dir.mkdir(parents=True, exist_ok=True)
     paths["html"].write_text(render_html(sheet, rules), encoding="utf-8", newline="\n")
     paths["md"].write_text(render_md(sheet, rules), encoding="utf-8", newline="\n")
-    paths["clave"].write_text(
+    paths["key"].write_text(
         json.dumps(key, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
     )
     return paths
@@ -938,16 +958,16 @@ def md_answers(sheet_md: str) -> dict[str, Any]:
         elif m := re.match(r"^## Par (\d+)\s*$", line):
             pair = m.group(1)
         elif pair is not None:
-            actual = responses.setdefault(pair, {})
+            current = responses.setdefault(pair, {})
             if m := _MD_INVENTS.match(line):
-                actual.setdefault("inventa", {})[m.group(1)] = m.group(2)
+                current.setdefault("made_up", {})[m.group(1)] = m.group(2)
             elif m := _MD_PRINCIPAL.match(line):
-                actual.setdefault("principal", {})[m.group(1)] = m.group(2)
+                current.setdefault("principal", {})[m.group(1)] = m.group(2)
             elif m := _MD_SPECIFIC.match(line):
-                actual.setdefault("especifico", {})[m.group(1)] = m.group(2)
+                current.setdefault("specific", {})[m.group(1)] = m.group(2)
             elif m := _MD_BETTER.match(line):
-                actual["preferencia"] = m.group(1)
-    return {"sha256": sha, "respuestas": responses}
+                current["preference"] = m.group(1)
+    return {"sha256": sha, "answers": responses}
 
 
 def _normal(value: Any, question: str, pair: str) -> str | None:
@@ -955,7 +975,7 @@ def _normal(value: Any, question: str, pair: str) -> str | None:
     if value is None:
         return None
     text = str(value).strip()
-    if question == "preferencia":
+    if question == "preference":
         text = text.upper() if text.lower() not in ("empate", "=") else "="
         text = {"EMPATE": "="}.get(text, text)
     else:
@@ -964,7 +984,7 @@ def _normal(value: Any, question: str, pair: str) -> str | None:
         return None
     if text not in _VALUES[question]:
         raise SystemExit(
-            f"par {pair}: el valor {value!r} no es valido para {question} "
+            f"par {pair}: el valor {value!r} no es valido para {_QUESTION_LABELS[question]} "
             f"(admite {', '.join(_VALUES[question])})"
         )
     return text
@@ -980,79 +1000,86 @@ def read_commit(
     """`(juicio, faltan)`: las respuestas ya validadas y destapadas con la clave.
 
     Valida que son de ESA hoja (`sha256`) y que los valores son validos. Con la hoja entera, `faltan`
-    lista lo obligatorio segun `reglas.json` que no esta contestado; con `parcial`, solo se valida lo
+    lista lo obligatorio segun `reglas.json` que no esta contestado; con `partial`, solo se valida lo
     que hay y `faltan` va vacio (la parada solo necesita lo contestado).
     """
+    rules = LEGACY_NAMES.normalize_affinity_rules(rules)
+    key = LEGACY_NAMES.normalize_commit_key(key)
+    responses = LEGACY_NAMES.normalize_commit_answers(responses)
     if responses.get("sha256") != key["sha256"]:
         raise SystemExit(
             "las respuestas no son de esta hoja: el sha256 no coincide con el de la clave"
         )
-    key_pairs = key["pares"]
-    unknown_ones = sorted(set(responses.get("respuestas", {})) - set(key_pairs))
+    key_pairs = key["pairs"]
+    unknown_ones = sorted(set(responses.get("answers", {})) - set(key_pairs))
     if unknown_ones:
         raise SystemExit(
             f"las respuestas traen pares que la hoja no tiene: {', '.join(unknown_ones)}"
         )
-    optional_ones = set(rules["preguntas_opcionales"])
+    optional_ones = set(rules["optional_questions"])
     pairs_judgement: dict[str, Any] = {}
     missing: list[str] = []
     for num, meta in sorted(key_pairs.items()):
-        given = responses.get("respuestas", {}).get(num, {})
-        pair: dict[str, Any] = {"tipo": meta["tipo"], "caso": meta["caso"], "lados": meta["lados"]}
-        for question in ("inventa", "principal", "especifico"):
+        given = responses.get("answers", {}).get(num, {})
+        pair: dict[str, Any] = {"kind": meta["kind"], "case": meta["case"], "sides": meta["sides"]}
+        for question in ("made_up", "principal", "specific"):
             by_side = {
                 side: _normal((given.get(question) or {}).get(side), question, num) for side in "AB"
             }
             pair[question] = by_side
             if question not in optional_ones and not partial:
                 missing += [
-                    f"par {num}: {question} {side}" for side in "AB" if by_side[side] is None
+                    f"par {num}: {_QUESTION_LABELS[question]} {side}"
+                    for side in "AB"
+                    if by_side[side] is None
                 ]
-        pair["preferencia"] = _normal(given.get("preferencia"), "preferencia", num)
-        if pair["preferencia"] is None and not partial:
+        pair["preference"] = _normal(given.get("preference"), "preference", num)
+        if pair["preference"] is None and not partial:
             missing.append(f"par {num}: preferencia")
         pairs_judgement[num] = pair
     judgement = {
         "schema_version": 1,
-        "hoja": key["sha256"],
-        "juego": key.get("juego"),
-        "parcial": partial,
+        "sheet": key["sha256"],
+        "set": key.get("set"),
+        "partial": partial,
         "label_26b": key["label_26b"],
         "label_qwen": key["label_qwen"],
-        "pares": pairs_judgement,
+        "pairs": pairs_judgement,
     }
     return judgement, missing
 
 
 def _winner(pair: dict[str, Any]) -> str:
-    choice = pair["preferencia"]
-    return "empate" if choice == "=" else str(pair["lados"][choice])
+    choice = pair["preference"]
+    return "tie" if choice == "=" else str(pair["sides"][choice])
 
 
 def can_stop(judgement: dict[str, Any], rules: dict[str, Any]) -> str:
     """«puedes parar» o «sigue», y nada mas: ni hacia donde va el resultado ni quien va ganando.
 
     Solo contesta «puedes parar» si las 3 trampas estan contestadas y la hoja vale (criterio 0) Y el
-    desenlace ya no puede cambiar con los pares que faltan: el 26B ya pasa de `max_inventa_26b`, o
+    desenlace ya no puede cambiar con los pares que faltan: el 26B ya pasa de `max_made_up_26b`, o
     `v - c` es mayor que los pares reales sin contestar.
     """
-    if not rules["parada_anticipada"]:
+    rules = LEGACY_NAMES.normalize_affinity_rules(rules)
+    judgement = LEGACY_NAMES.normalize_commit_judgement(judgement)
+    if not rules["early_stop"]:
         return "sigue"
-    pair_items = judgement["pares"].values()
-    traps = [p for p in pair_items if p["tipo"] == TRAP]
-    if len(traps) < 3 or any(p["preferencia"] is None for p in traps):
+    pair_items = judgement["pairs"].values()
+    traps = [p for p in pair_items if p["kind"] == TRAP]
+    if len(traps) < 3 or any(p["preference"] is None for p in traps):
         return "sigue"
-    if sum(_winner(p) not in ("empate", TRAP) for p in traps) < 2:
+    if sum(_winner(p) not in ("tie", TRAP) for p in traps) < 2:
         return "sigue"
-    real = [p for p in pair_items if p["tipo"] == "real"]
+    real = [p for p in pair_items if p["kind"] == "real"]
     model = judgement["label_26b"]
     invents = 0
     for p in real:
-        side = "A" if p["lados"]["A"] == model else "B"
-        invents += p["inventa"][side] == "s"
-    if invents > int(rules["max_inventa_26b"]):
+        side = "A" if p["sides"]["A"] == model else "B"
+        invents += p["made_up"][side] == "s"
+    if invents > int(rules["max_made_up_26b"]):
         return "puedes parar"
-    answered = [p for p in real if p["preferencia"] is not None]
+    answered = [p for p in real if p["preference"] is not None]
     c = sum(_winner(p) == model for p in answered)
     v = sum(_winner(p) == judgement["label_qwen"] for p in answered)
     unanswered = len(real) - len(answered)
@@ -1070,11 +1097,11 @@ def run_generate_commit(args: argparse.Namespace) -> int:
     cases = {c["id"]: c for c in data["cases"]}
     rules = read_rules(args.rules)
     traps = json.loads(args.traps.read_text(encoding="utf-8"))
-    seed = args.semilla if args.semilla is not None else secrets.randbits(32)
+    seed = args.seed if args.seed is not None else secrets.randbits(32)
     sheet, key = build_commit_sheet(
         cases=cases,
         sources=args.cases.parent / "fuentes",
-        records=_registros(args.jsonl),
+        records=_records(args.jsonl),
         traps=traps,
         rules=rules,
         case_set_item=args.trap_set,
@@ -1085,16 +1112,16 @@ def run_generate_commit(args: argparse.Namespace) -> int:
     )
     paths = write_sheet(sheet, key, rules, args.sheet_dir, args.key_dir)
     print(
-        f"{len(sheet['pares'])} pares en {paths['html']}; la clave ({paths['clave'].parent}) no se abre"
+        f"{len(sheet['pairs'])} pares en {paths['html']}; la clave ({paths['key'].parent}) no se abre"
     )
-    if key["omitidos"]:
-        print(f"omitidos por falta de mensaje: {', '.join(key['omitidos'])}", file=sys.stderr)
+    if key["omitted"]:
+        print(f"omitidos por falta de mensaje: {', '.join(key['omitted'])}", file=sys.stderr)
     return 0
 
 
 def run_read_commit(args: argparse.Namespace) -> int:
     rules = read_rules(args.rules)
-    key = json.loads(args.clave.read_text(encoding="utf-8"))
+    key = json.loads(args.key.read_text(encoding="utf-8"))
     judgement, missing = read_commit(_load_responses(args), key, rules, partial=args.partial)
     if args.partial:
         print(can_stop(judgement, rules))
@@ -1104,8 +1131,8 @@ def run_read_commit(args: argparse.Namespace) -> int:
         for line in missing:
             print(f"  - {line}", file=sys.stderr)
         return 1
-    if args.salida:
-        args.salida.write_text(
+    if args.output:
+        args.output.write_text(
             json.dumps(judgement, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
             newline="\n",
@@ -1116,23 +1143,23 @@ def run_read_commit(args: argparse.Namespace) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n", 1)[0])
-    sub = parser.add_subparsers(dest="modo", required=True)
-    gen = sub.add_parser("generar")
-    gen.add_argument("--hoja", type=Path, required=True)
-    gen.add_argument("--clave", type=Path, required=True)
+    sub = parser.add_subparsers(dest="mode", required=True)
+    gen = sub.add_parser("generate")
+    gen.add_argument("--sheet", type=Path, required=True)
+    gen.add_argument("--key", type=Path, required=True)
     gen.add_argument("--cases", type=Path, required=True)
-    gen.add_argument("--pequeno", required=True)
-    gen.add_argument("--grande", required=True)
-    gen.add_argument("--caso", action="append", required=True)
-    gen.add_argument("--semilla", type=int, default=None, help="solo para pruebas")
+    gen.add_argument("--small", required=True)
+    gen.add_argument("--large", required=True)
+    gen.add_argument("--case", action="append", required=True)
+    gen.add_argument("--seed", type=int, default=None, help="solo para pruebas")
     gen.add_argument("jsonl", nargs="+", type=Path)
     gc = sub.add_parser("generate-commit", help="hoja a ciegas de local_commit_msg (REQ-042)")
     gc.add_argument("--cases", type=Path, default=AFFINITY_BASE / "cases.json")
-    gc.add_argument("--traps", type=Path, default=AFFINITY_BASE / "trampas.json")
-    gc.add_argument("--rules", type=Path, default=AFFINITY_BASE / "reglas.json")
+    gc.add_argument("--traps", type=Path, default=_affinity_file(LEGACY_NAMES.TRAPS_FILE_NAMES))
+    gc.add_argument("--rules", type=Path, default=_affinity_file(LEGACY_NAMES.RULES_FILE_NAMES))
     gc.add_argument("--trap-set", type=int, default=1, help="juego de trampas (1 a 3)")
     gc.add_argument("--number", type=int, default=1, help="numero de hoja")
-    gc.add_argument("--semilla", type=int, default=None, help="solo para pruebas")
+    gc.add_argument("--seed", type=int, default=None, help="solo para pruebas")
     gc.add_argument("--label-26b", default=MODEL_26B)
     gc.add_argument("--label-qwen", default=QWEN_MODEL)
     gc.add_argument("--sheet-dir", type=Path, default=AFFINITY_BASE / "hoja")
@@ -1141,18 +1168,18 @@ def main(argv: list[str] | None = None) -> int:
         "jsonl", nargs="+", type=Path, help="resultados de la tanda con --save-responses"
     )
     lc = sub.add_parser("read-commit", help="valida las respuestas de la hoja de commit")
-    lc.add_argument("--clave", type=Path, required=True)
-    lc.add_argument("--rules", type=Path, default=AFFINITY_BASE / "reglas.json")
-    origen = lc.add_mutually_exclusive_group(required=True)
-    origen.add_argument("--answers", type=Path, help="respuestas-<n>.json de la pagina")
-    origen.add_argument("--md", type=Path, help="la hoja .md contestada a mano")
+    lc.add_argument("--key", type=Path, required=True)
+    lc.add_argument("--rules", type=Path, default=_affinity_file(LEGACY_NAMES.RULES_FILE_NAMES))
+    origin = lc.add_mutually_exclusive_group(required=True)
+    origin.add_argument("--answers", type=Path, help="respuestas-<n>.json de la pagina")
+    origin.add_argument("--md", type=Path, help="la hoja .md contestada a mano")
     lc.add_argument("--partial", action="store_true", help="solo contesta «puedes parar» o «sigue»")
     lc.add_argument(
-        "--salida", type=Path, default=None, help="juicio ya destapado, para el veredicto"
+        "--output", type=Path, default=None, help="juicio ya destapado, para el veredicto"
     )
-    des = sub.add_parser("destapar")
-    des.add_argument("--hoja", type=Path, required=True)
-    des.add_argument("--clave", type=Path, required=True)
+    des = sub.add_parser("unblind")
+    des.add_argument("--sheet", type=Path, required=True)
+    des.add_argument("--key", type=Path, required=True)
     des.add_argument(
         "--json",
         type=Path,
@@ -1162,52 +1189,52 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
-    if args.modo == "generate-commit":
+    if args.mode == "generate-commit":
         return run_generate_commit(args)
-    if args.modo == "read-commit":
+    if args.mode == "read-commit":
         return run_read_commit(args)
     try:
-        if args.modo == "generar":
-            if args.clave.exists() or args.hoja.exists():
+        if args.mode == "generate":
+            if args.key.exists() or args.sheet.exists():
                 # Regenerar sortea otra vez: una hoja ya elegida quedaria emparejada con otra clave.
                 raise ValueError("la hoja o la clave ya existen; elige otras rutas")
             data = json.loads(args.cases.read_text(encoding="utf-8"))
             corpus = {c["id"]: c for c in data["cases"]}
-            semilla = args.semilla if args.semilla is not None else secrets.randbits(32)
-            hoja, clave = generar(
-                _registros(args.jsonl), corpus, args.caso, args.pequeno, args.grande, semilla
+            seed = args.seed if args.seed is not None else secrets.randbits(32)
+            sheet, key = generate(
+                _records(args.jsonl), corpus, args.case, args.small, args.large, seed
             )
-            args.hoja.write_text(hoja, encoding="utf-8")
-            args.clave.write_text(
-                json.dumps(clave, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+            args.sheet.write_text(sheet, encoding="utf-8")
+            args.key.write_text(
+                json.dumps(key, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
             )
-            print(f"{len(clave['pares'])} pares en {args.hoja}; la clave no se abre hasta elegir")
+            print(f"{len(key['pairs'])} pares en {args.sheet}; la clave no se abre hasta elegir")
             return 0
-        resultado, faltan = destapar(
-            args.hoja.read_text(encoding="utf-8"),
-            json.loads(args.clave.read_text(encoding="utf-8")),
+        result, missing = unblind(
+            args.sheet.read_text(encoding="utf-8"),
+            json.loads(args.key.read_text(encoding="utf-8")),
         )
     except (OSError, ValueError, KeyError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    if args.json and not faltan:
+    if args.json and not missing:
         # Solo con la hoja entera: una decision sobre elecciones a medias parece una medida.
         args.json.write_text(
-            json.dumps(resultado, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+            json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
     print(
         "| Caso | Pares | Metrica prefiere | Acuerdos | Acuerdo | Veredicto | Elegido por la persona |"
     )
     print("| --- | --- | --- | --- | --- | --- | --- |")
-    for caso, fila in resultado.items():
-        acuerdo = "—" if fila["acuerdo"] is None else f"{fila['acuerdo']:.0%}"
-        humano = ", ".join(f"{k}: {v}" for k, v in sorted(fila["humano"].items()))
+    for case, row in result.items():
+        agreement = "—" if row["agreement"] is None else f"{row['agreement']:.0%}"
+        human = ", ".join(f"{k}: {v}" for k, v in sorted(row["human"].items()))
         print(
-            f"| {caso} | {fila['pares']} | {fila['metrica_prefiere']} | {fila['acuerdos']} | "
-            f"{acuerdo} | {fila['veredicto']} | {humano} |"
+            f"| {case} | {row['pairs']} | {row['metric_prefers']} | {row['agreements']} | "
+            f"{agreement} | {row['verdict']} | {human} |"
         )
-    if faltan:
-        print(f"\nfaltan por elegir {len(faltan)} pares: {', '.join(faltan)}", file=sys.stderr)
+    if missing:
+        print(f"\nfaltan por elegir {len(missing)} pares: {', '.join(missing)}", file=sys.stderr)
         return 1
     return 0
 
