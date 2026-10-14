@@ -1,19 +1,16 @@
-fix(i18n): sin ciclo de imports en deprecations y Python 3.15 bloqueante en la matriz del CLI (frente B, ola B1a)
+fix(ci): sin la lista de exclusión de versiones de Python, que nadie usaba (frente B, ola B1a)
 
-Arreglo del PR #311 sobre eedbc36, que pasó el CI pero quedó bloqueado.
+Segundo arreglo del PR #311, sobre 0bc3e17. CodeQL marcó
+PYTHON_WITHOUT_WHEELS como global sin usar (py/unused-global-variable):
+vacía, solo la leían los tests.
 
-- CodeQL py/cyclic-import en deprecations.py: config importa deprecations
-  e i18n importa config, así que el import diferido de i18n en
-  deprecations cerraba un ciclo. warning_text pasa a deprecation_notices.py
-  (nuevo); deprecations.py ya no importa nada del paquete, y el ValueError
-  de parse_version lleva solo el valor (sale cli.deprecations.bad_version).
-  Lo vigila test_deprecations_imports_nothing_from_the_package.
-- La celda cli-python-matrix (3.15) instaló y pasó en el CI: la exclusión
-  se basaba en una prueba local con la 3.15.0a7 en Windows, que no
-  representa la final. La 3.15 entra en EXPECTED_JOBS y en los
-  clasificadores; PYTHON_WITHOUT_WHEELS queda vacío, con un test que
-  ejerce el mecanismo con una exclusión sintética.
-- Léxico del detector de nombres: classifiers, notices y wheels.
+- scripts/ci_gate.py y ci.yml: fuera la constante y sus comentarios;
+  todas las celdas de cli-python-matrix bloquean.
+- tests/test_ci_gate.py: fuera el helper y los dos tests del mecanismo;
+  siguen el de las celdas esperadas y el de los clasificadores, ahora
+  contra la matriz entera.
+- Si una versión futura sale sin wheels, la exclusión vuelve junto con su
+  uso real en ci_gate.py (plan D8).
 
-Suite: 2796 passed, 2 skipped (LANG=es_ES.UTF-8, xdist); 3 controles
-positivos del arreglo.
+Suite: 2794 passed, 2 skipped (xdist); control positivo: sin la celda
+3.13 en EXPECTED_JOBS falla test_the_expected_jobs_are_exactly_those_of_ci_yml.

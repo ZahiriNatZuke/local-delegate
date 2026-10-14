@@ -96,22 +96,13 @@ EXPECTED_JOBS = (
     "install-smoke",
     # La suite entera con el sistema en español (REQ-043, ola B0a).
     "test-lang-es",
-    # Los tests del CLI en cada Python admitido (D8, ola B1a). Una versión de
-    # `PYTHON_WITHOUT_WHEELS` correría sin figurar aquí.
+    # Los tests del CLI en cada Python admitido (D8, ola B1a): todas las celdas bloquean.
     "cli-python-matrix (3.11)",
     "cli-python-matrix (3.12)",
     "cli-python-matrix (3.13)",
     "cli-python-matrix (3.14)",
     "cli-python-matrix (3.15)",
 )
-
-# Versiones de la matriz `cli-python-matrix` que corren sin bloquear: alguna dependencia no tiene
-# todavía wheel para ellas y su celda falla al INSTALAR, no en un test (plan D8). Versión → fecha y
-# motivo. Una versión sale de aquí en cuanto `uv sync` funciona con ella; un test que falla nunca se
-# tapa así. Vacío: las cinco versiones instalan y pasan en el CI (PR #311). Solo cuenta lo que se vea
-# en el log de la celda del CI: una prueba local no la representa (B1a probó la 3.15.0a7 en Windows,
-# que no instalaba, y la celda del CI, con la 3.15.0 final en ubuntu, instaló y pasó).
-PYTHON_WITHOUT_WHEELS: dict[str, str] = {}
 
 # El plazo cubre COLA + EJECUCIÓN, que no es lo mismo que el `timeout-minutes` de un job: aquel
 # corre solo sobre la ejecución. Un `install-smoke` que espere runner 5 min y ejecute 10 suma 15, y

@@ -298,21 +298,8 @@ def test_the_expected_jobs_are_exactly_those_of_ci_yml():
     job a `ci.yml` y olvidarlo aquí pasaría desapercibido, y el gate aprobaría un run sin haberlo
     mirado.
     """
-    declared = _jobs_declared_in_ci() - {ci_gate.GATE_NAME} - _cells_without_wheels()
+    declared = _jobs_declared_in_ci() - {ci_gate.GATE_NAME}
     assert declared == set(ci_gate.EXPECTED_JOBS)
-
-
-def _cells_without_wheels() -> set[str]:
-    return {f"cli-python-matrix ({version})" for version in ci_gate.PYTHON_WITHOUT_WHEELS}
-
-
-def test_every_version_without_wheels_is_a_cell_of_the_matrix_with_a_reason():
-    """Una exclusión caducada (la versión ya no está en la matriz) o sin motivo no vale (plan D8)."""
-    declared = _jobs_declared_in_ci()
-    for version, reason in ci_gate.PYTHON_WITHOUT_WHEELS.items():
-        assert f"cli-python-matrix ({version})" in declared, version
-        assert reason.strip(), version
-    assert not _cells_without_wheels() & set(ci_gate.EXPECTED_JOBS)
 
 
 def test_the_cli_matrix_starts_at_the_oldest_supported_python():
@@ -386,15 +373,11 @@ def test_the_tests_step_has_its_own_limit_lower_than_the_jobs():
 
 
 def test_the_classifiers_are_the_blocking_cells_of_the_matrix():
-    """`pyproject.toml` declara justo las versiones que el CI prueba y bloquean (D8, ola B1a).
-
-    Una versión de `PYTHON_WITHOUT_WHEELS` no se declara: el paquete no se instala en ella.
-    """
+    """`pyproject.toml` declara justo las versiones de la matriz del CLI, que bloquean todas (D8)."""
     import tomllib
 
     data = yaml.safe_load(CI_YML.read_text(encoding="utf-8"))
     versions = data["jobs"]["cli-python-matrix"]["strategy"]["matrix"]["python"]
-    blocking = {v for v in versions if v not in ci_gate.PYTHON_WITHOUT_WHEELS}
     pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     prefix = "Programming Language :: Python :: 3."
     declared = {
@@ -402,23 +385,4 @@ def test_the_classifiers_are_the_blocking_cells_of_the_matrix():
         for c in pyproject["project"]["classifiers"]
         if c.startswith(prefix)
     }
-    assert declared == blocking
-
-
-def test_the_exclusion_mechanism_takes_a_cell_out_of_the_expected_ones(monkeypatch):
-    """`PYTHON_WITHOUT_WHEELS` está vacío hoy: este test ejerce el mecanismo con una exclusión
-    sintética, para que los dos tests de arriba no pasen solo en vacío (plan D8)."""
-    cell = "cli-python-matrix (3.15)"
-    monkeypatch.setattr(
-        ci_gate, "PYTHON_WITHOUT_WHEELS", {"3.15": "sin wheel (exclusión de prueba)"}
-    )
-    monkeypatch.setattr(
-        ci_gate, "EXPECTED_JOBS", tuple(job for job in ci_gate.EXPECTED_JOBS if job != cell)
-    )
-    test_the_expected_jobs_are_exactly_those_of_ci_yml()
-    test_every_version_without_wheels_is_a_cell_of_the_matrix_with_a_reason()
-
-    # Una versión excluida que sigue entre los esperados se rechaza.
-    monkeypatch.setattr(ci_gate, "EXPECTED_JOBS", (*ci_gate.EXPECTED_JOBS, cell))
-    with pytest.raises(AssertionError):
-        test_every_version_without_wheels_is_a_cell_of_the_matrix_with_a_reason()
+    assert declared == set(versions)

@@ -224,9 +224,9 @@ jobs:
   # admite cualquiera desde la 3.11 y `uv tool install` suele tomar la más nueva, así que los tests
   # del CLI corren en todas. Son pocos y sin Playwright: la matriz es barata aunque crezca.
   #
-  # Cada celda figura por su nombre en `EXPECTED_JOBS` de `scripts/ci_gate.py`, salvo las de
-  # `PYTHON_WITHOUT_WHEELS` (versión sin wheels de alguna dependencia: corre, pero no bloquea). Nada
-  # de `continue-on-error`: `ci_gate.py` da por mala toda conclusión que no sea success/skipped.
+  # Cada celda figura por su nombre en `EXPECTED_JOBS` de `scripts/ci_gate.py`: todas bloquean. Nada
+  # de `continue-on-error`: `ci_gate.py` da por mala toda conclusión que no sea success/skipped. Si
+  # una versión futura sale sin wheels, la exclusión se reintroduce en `ci_gate.py` con su uso real.
   # `tests/test_ci_gate.py` ata esta lista a la de `ci_gate.py`. Una versión estable nueva se
   # añade en los dos sitios a la vez.
   cli-python-matrix:

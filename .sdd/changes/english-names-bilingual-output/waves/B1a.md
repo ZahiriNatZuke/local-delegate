@@ -30,7 +30,7 @@ commit ni push: los hace la sesión principal.
 | `tests/test_cli_english.py` (nuevo) | LF | 50 casos: msgid del argparse en ejecución, ayuda española sin armazón inglés (16 rutas), ayuda inglesa sin palabras distintivas del catálogo español ni tildes (15 rutas), restauración del parche (también tras un error), errores en los dos idiomas, humo en inglés de doce salidas con su guarda de camino, control positivo permanente en español, y números |
 | `tests/test_smoke.py` | CRLF | dos asserts pasan del armazón inglés al español («uso: local-delegate», «opción no válida»): la suite corre en español (REQ-043) |
 | `.github/workflows/ci.yml` | LF | trabajo `cli-python-matrix`: ubuntu, `python: ["3.11", "3.12", "3.13", "3.14", "3.15"]`, `fail-fast: false`, `uv sync --group dev`, sin Playwright, `test_cli_english.py` y `test_cli_renamed_names.py` |
-| `scripts/ci_gate.py` | LF | las cinco celdas en `EXPECTED_JOBS` (3.11–3.15) y `PYTHON_WITHOUT_WHEELS` vacío (en el commit `eedbc36` tenía la 3.15; corregido en el arreglo del PR #311) |
+| `scripts/ci_gate.py` | LF | las cinco celdas en `EXPECTED_JOBS` (3.11–3.15); sin `PYTHON_WITHOUT_WHEELS` (en `eedbc36` tenía la 3.15 y en `0bc3e17` quedó vacío; se quitó en el segundo arreglo) |
 | `tests/test_ci_gate.py` | LF | la coherencia resta las celdas sin wheels; tres tests nuevos: toda exclusión es una celda viva con motivo y no está en los esperados; la matriz empieza en el `requires-python`; los clasificadores de `pyproject.toml` son las celdas que bloquean |
 | `pyproject.toml` | CRLF | clasificadores 3.14 y 3.15 (decisión 8; la 3.15, en el arreglo del PR #311) |
 | `tests/data/uncatalogued_pending/cli.json` | LF | salen `cli.py`, `daemon.py`, `deprecations.py`, `entrypoint.py`, `recompute.py` y `test_windows.py` (cada uno tenía apariciones antes; ahora, cero) |
@@ -174,6 +174,26 @@ Corridas del arreglo: tests afectados (`test_ci_gate`, `test_deprecations`, `tes
 limpio; detector de nombres 0 fuera de la lista y 0 sin clasificar (tres palabras inglesas más al
 léxico: `classifiers` y `wheels`, que ya estaban en `eedbc36` sin que el detector se volviera a
 pasar tras escribir esos tests, y `notices`). Log de los mutantes: `evidence/B1a/fix-mutants.txt`.
+
+## Segundo arreglo del PR #311 (fix(ci))
+
+Tras `0bc3e17`, CodeQL abrió `py/unused-global-variable` en `scripts/ci_gate.py:114`:
+`PYTHON_WITHOUT_WHEELS`, vacío, solo lo leían los tests. Se quita el mecanismo entero: la constante
+y sus comentarios en `ci_gate.py`, el comentario de `ci.yml`, y en `tests/test_ci_gate.py` el
+helper `_cells_without_wheels`, `test_every_version_without_wheels_is_a_cell_of_the_matrix_with_a_reason`
+y `test_the_exclusion_mechanism_takes_a_cell_out_of_the_expected_ones`. Siguen los asserts que
+valen: todas las celdas de la matriz están en `EXPECTED_JOBS`
+(`test_the_expected_jobs_are_exactly_those_of_ci_yml`) y todas las versiones tienen su clasificador
+(`test_the_classifiers_are_the_blocking_cells_of_the_matrix`, ahora contra la matriz entera). Si una
+versión futura sale sin wheels, la exclusión se reintroduce junto con su uso real en `ci_gate.py`.
+
+| Control positivo del segundo arreglo | Test | Assert que dispara |
+| --- | --- | --- |
+| F4 la celda 3.13 fuera de `EXPECTED_JOBS` | `test_the_expected_jobs_are_exactly_those_of_ci_yml` | `assert {'cli-python-…} == {'cli-python-…, 'lint', …}` (1 failed, 25 passed) |
+
+Corridas: `test_ci_gate.py` 26 passed; suite entera con `-n 4 --dist loadgroup` bajo `pesado.sh`
+**2794 passed, 2 skipped** (dos tests menos, los del mecanismo); `ruff` limpio; detector de nombres
+0 fuera de la lista y 0 sin clasificar. Log del mutante: `evidence/B1a/fix-mutants.txt`.
 
 ## Llamadas `local_*`
 

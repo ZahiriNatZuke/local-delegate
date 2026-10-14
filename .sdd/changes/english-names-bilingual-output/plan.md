@@ -1197,6 +1197,12 @@ ficheros) y las dos mitades son independientes. B0a se mezcla antes que B0b; las
     clasificador: su celda instaló y pasó en el CI. B1a la había dejado en `PYTHON_WITHOUT_WHEELS`
     por una prueba local con la 3.15.0a7 en Windows, que no representa la final en ubuntu; la lista
     queda vacía, con un test que ejerce el mecanismo, y solo vale el log de la celda del CI.
+    **Segundo arreglo (fix(ci), mismo PR):** CodeQL marcó `PYTHON_WITHOUT_WHEELS` como global sin
+    usar (`py/unused-global-variable`: solo la leían los tests), así que el mecanismo se quita entero
+    de `ci_gate.py`, `ci.yml` y `test_ci_gate.py`; todas las celdas de la matriz bloquean y todas
+    tienen su clasificador. Si una versión futura sale sin wheels, la exclusión se reintroduce junto
+    con su uso real en `ci_gate.py` (la política de D8 sigue valiendo; su lista no existe hasta que
+    haga falta).
   - **B1b — `doctor`:** `resources/i18n/{es,en}/doctor.json`, `checks.py`, `doctor.py`, `probes.py`,
     la línea de idioma en la cabecera de `doctor` (no es un check), el campo `stored_source` de
     `LanguageResolution` (desviación: `hook_common.py`) y el remedio de D11, `tests/test_wiki.py`,
