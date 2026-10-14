@@ -1,6 +1,6 @@
 """El script que aplica el criterio de P-4.
 
-Se prueba por la misma razon que `medir_adopcion.py`: es quien va a dar el resultado, y un script
+Se prueba por la misma razon que `measure_adoption.py`: es quien va a dar el resultado, y un script
 que cuenta mal parece una medida. Cada regla tiene su caso y su control en el borde, porque un
 umbral mal escrito (`>` por `>=`) cambia el resultado sin que nada falle.
 """

@@ -35,7 +35,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from medir_adopcion import directorio_de_logs, leer, logs_de_uso
+from measure_adoption import logs_dir, read, usage_logs
 
 from local_delegate import legacy_names, test_windows
 from local_delegate.cooldown import COUNTING_CLASSES, EVENTS_FILE, LEGACY_EVENTS_FILE
@@ -85,9 +85,7 @@ class _Filter:
 
     def __init__(self, excluded: list, include_tests: bool) -> None:
         self.by_hand = _by_hand(excluded)
-        self.file = (
-            test_windows.Windows() if include_tests else test_windows.load(directorio_de_logs())
-        )
+        self.file = test_windows.Windows() if include_tests else test_windows.load(logs_dir())
         self.removed = {"manual": Counter(), "test_windows": Counter()}
         self.per_window: Counter = Counter()
 
@@ -164,8 +162,8 @@ def measure(
     window_filter = _Filter(excluded, include_tests)
     usages = [
         legacy_names.normalize("usage", event)
-        for path in logs_de_uso()
-        for event in leer(path, None)
+        for path in usage_logs()
+        for event in read(path, None)
         if _in_range(_ts(event), since, until)
         and window_filter.lets_through(_ts(event), "usage_rows")
     ]
@@ -181,7 +179,7 @@ def measure(
     record = [
         event
         for name in (LEGACY_EVENTS_FILE, EVENTS_FILE)
-        for event in leer(directorio_de_logs() / name, None)
+        for event in read(logs_dir() / name, None)
     ]
     eps = [
         ep

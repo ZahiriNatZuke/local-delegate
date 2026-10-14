@@ -140,10 +140,10 @@ def read_rows(copy: Path) -> list[dict[str, Any]]:
         return [
             {
                 "id": r[0],
-                "fin": float(r[1]),
-                "modelo": r[2],
-                "entrada": r[3] + r[4],
-                "salida": r[5],
+                "end": float(r[1]),
+                "model": r[2],
+                "entry": r[3] + r[4],
+                "output": r[5],
                 "tps": r[6],
                 "dur": r[7] / 1000,
             }
@@ -168,9 +168,9 @@ def read_calls(directory: Path) -> list[dict[str, Any]]:
                 continue
             calls.append(
                 {
-                    "fin": end,
+                    "end": end,
                     "ini": end - latency,
-                    "modelo": u.get("model"),
+                    "model": u.get("model"),
                     "ok": bool(u.get("ok", True)),
                     "tool": u.get("tool"),
                 }
@@ -180,13 +180,13 @@ def read_calls(directory: Path) -> list[dict[str, Any]]:
 
 def _call_of(row: dict[str, Any], calls: Sequence[dict[str, Any]]) -> int | None:
     """Indice de la llamada del log que contiene la fila; si hay varias, la mas ajustada."""
-    ini = row["fin"] - row["dur"]
+    ini = row["end"] - row["dur"]
     best, best_slack = None, None
     for i, call in enumerate(calls):
-        if call["modelo"] not in (None, row["modelo"]):
+        if call["model"] not in (None, row["model"]):
             continue
-        if call["ini"] - SLACK_S <= ini and row["fin"] <= call["fin"] + SLACK_S:
-            slack = (ini - call["ini"]) + (call["fin"] - row["fin"])
+        if call["ini"] - SLACK_S <= ini and row["end"] <= call["end"] + SLACK_S:
+            slack = (ini - call["ini"]) + (call["end"] - row["end"])
             if best_slack is None or slack < best_slack:
                 best, best_slack = i, slack
     return best
@@ -204,24 +204,24 @@ def group_by_event(rows: Sequence[dict[str, Any]], calls: Sequence[dict[str, Any
             by_call[i].append(row)
 
     def _event(group: list[dict[str, Any]], origin: str, ok: bool, ts: float) -> Event:
-        output = sum(f["salida"] for f in group)
-        generation_ms = sum(f["salida"] / f["tps"] for f in group)  # segundos
+        output = sum(f["output"] for f in group)
+        generation_ms = sum(f["output"] / f["tps"] for f in group)  # segundos
         return {
             "ts": ts,
-            "model": group[0]["modelo"],
-            "origen": origin,
+            "model": group[0]["model"],
+            "origin": origin,
             "ok": ok,
             "tokens_out": output,
-            "tokens_in": max(f["entrada"] for f in group),
+            "tokens_in": max(f["entry"] for f in group),
             "tok_s": output / generation_ms,
-            "filas": sorted(f["id"] for f in group),
+            "rows": sorted(f["id"] for f in group),
         }
 
     events = [
-        _event(group, "PC", calls[i]["ok"], max(f["fin"] for f in group))
+        _event(group, "PC", calls[i]["ok"], max(f["end"] for f in group))
         for i, group in by_call.items()
     ]
-    events += [_event([f], "no-PC", True, f["fin"]) for f in loose_ones]
+    events += [_event([f], "no-PC", True, f["end"]) for f in loose_ones]
     return events
 
 
@@ -241,28 +241,26 @@ def control_a(
     pc = [
         e
         for e in evaluated
-        if e["origen"] == "PC" and e["ts"] >= since_ts and (until_ts is None or e["ts"] <= until_ts)
+        if e["origin"] == "PC" and e["ts"] >= since_ts and (until_ts is None or e["ts"] <= until_ts)
     ]
     with_ref = [e for e in pc if "pace_rel" in e]
     marked = [e for e in with_ref if e["slow"]]
     return {
-        "eventos_pc": len(pc),
-        "con_referencia": len(with_ref),
-        "marcados": len(marked),
-        "pct_sobre_con_referencia": round(100 * len(marked) / len(with_ref), 2)
-        if with_ref
-        else 0.0,
-        "pct_sobre_eventos_pc": round(100 * len(marked) / len(pc), 2) if pc else 0.0,
-        "supera_el_tope": bool(with_ref) and len(marked) / len(with_ref) > MARKED_CAP,
-        "detalle": [
+        "pc_events": len(pc),
+        "with_reference": len(with_ref),
+        "flagged": len(marked),
+        "pct_of_with_reference": round(100 * len(marked) / len(with_ref), 2) if with_ref else 0.0,
+        "pct_of_pc_events": round(100 * len(marked) / len(pc), 2) if pc else 0.0,
+        "exceeds_cap": bool(with_ref) and len(marked) / len(with_ref) > MARKED_CAP,
+        "detail": [
             {
-                "filas": e["filas"],
-                "modelo": e["model"],
+                "rows": e["rows"],
+                "model": e["model"],
                 "tok_s": round(e["tok_s"], 1),
                 "ref": round(e["ref"], 1),
                 "pace_rel": e["pace_rel"],
                 "tokens_in": e["tokens_in"],
-                "fecha": _iso(e["ts"]),
+                "date": _iso(e["ts"]),
             }
             for e in marked
         ],
@@ -274,26 +272,26 @@ def control_b(evaluated: Sequence[Event]) -> dict[str, Any]:
     marked_ones: set[int] = set()
     for e in evaluated:
         if e["model"] == CONTROL_MODEL and e.get("slow"):
-            marked_ones.update(e["filas"])
+            marked_ones.update(e["rows"])
     by_row = {}
     for e in evaluated:
         if e["model"] == CONTROL_MODEL:
-            for row in e["filas"]:
+            for row in e["rows"]:
                 if row in EXPECTED_ROWS or row == 574:
                     by_row[row] = {
-                        "origen": e["origen"],
+                        "origin": e["origin"],
                         "tok_s": round(e["tok_s"], 1),
                         "ref": round(e["ref"], 1) if "ref" in e else None,
                         "pace_rel": e.get("pace_rel"),
                         "slow": e.get("slow"),
                     }
     return {
-        "esperadas": list(EXPECTED_ROWS),
-        "marcadas_de_las_esperadas": sorted(set(EXPECTED_ROWS) & marked_ones),
-        "faltan": sorted(set(EXPECTED_ROWS) - marked_ones),
-        "cumple": set(EXPECTED_ROWS) <= marked_ones,
-        "filas_clave": dict(sorted(by_row.items())),
-        "total_marcadas_qwen36": len(marked_ones),
+        "expected": list(EXPECTED_ROWS),
+        "flagged_of_expected": sorted(set(EXPECTED_ROWS) & marked_ones),
+        "missing": sorted(set(EXPECTED_ROWS) - marked_ones),
+        "meets": set(EXPECTED_ROWS) <= marked_ones,
+        "key_rows": dict(sorted(by_row.items())),
+        "total_flagged_qwen36": len(marked_ones),
     }
 
 
@@ -306,7 +304,7 @@ def control_spans(events: Sequence[Event], since_ts: float) -> dict[str, Any]:
     pc = [
         e
         for e in events
-        if e["origen"] == "PC"
+        if e["origin"] == "PC"
         and e["ts"] >= since_ts
         and e.get("ok", True)
         and e["tokens_out"] >= MINIMAL_OUTPUT
@@ -323,9 +321,9 @@ def control_spans(events: Sequence[Event], since_ts: float) -> dict[str, Any]:
         mean, long = medians[SPANS[1]], medians[SPANS[2]]
         models_summary[model] = {
             "n": {t: len(spans.get(t, [])) for t in SPANS},
-            "mediana_tok_s": medians,
-            "ratio_largo_sobre_medio": round(long / mean, 3) if long and mean else None,
-            "decision_si_solo_este_modelo": (
+            "median_tok_s": medians,
+            "long_to_medium_ratio": round(long / mean, 3) if long and mean else None,
+            "decision_if_only_this_model": (
                 decide_reference(medians)
                 if len(spans.get(SPANS[0], [])) >= MINIMUM
                 and len(spans.get(SPANS[2], [])) >= MINIMUM
@@ -336,9 +334,9 @@ def control_spans(events: Sequence[Event], since_ts: float) -> dict[str, Any]:
             normalized[t] += [v / model_median for v in items]
     normalized_medians = {t: _fine_median(normalized.get(t, [])) for t in SPANS}
     return {
-        "por_modelo": models_summary,
+        "by_model": models_summary,
         "n_global": {t: len(normalized.get(t, [])) for t in SPANS},
-        "mediana_normalizada_por_modelo": normalized_medians,
+        "normalized_median_per_model": normalized_medians,
         "decision": decide_reference(normalized_medians),
     }
 
@@ -354,7 +352,7 @@ def long_false_positives(
     long_ones_list = [
         e
         for e in evaluated
-        if e["origen"] == "PC"
+        if e["origin"] == "PC"
         and e["ts"] >= since_ts
         and (until_ts is None or e["ts"] <= until_ts)
         and span_of(e["tokens_in"]) == SPANS[2]
@@ -362,17 +360,17 @@ def long_false_positives(
     ]
     marked = [e for e in long_ones_list if e["slow"]]
     return {
-        "eventos_largos_evaluados": len(long_ones_list),
-        "marcados": len(marked),
-        "detalle": [
+        "long_events_evaluated": len(long_ones_list),
+        "flagged": len(marked),
+        "detail": [
             {
-                "filas": e["filas"],
-                "modelo": e["model"],
+                "rows": e["rows"],
+                "model": e["model"],
                 "tok_s": round(e["tok_s"], 1),
                 "ref": round(e["ref"], 1),
                 "pace_rel": e["pace_rel"],
                 "tokens_in": e["tokens_in"],
-                "fecha": _iso(e["ts"]),
+                "date": _iso(e["ts"]),
             }
             for e in marked
         ],
@@ -403,24 +401,24 @@ def measure(
     by_spans = spans["decision"] == "por tramos"
     chosen = compute_slowness(events, by_spans=True) if by_spans else one_item
     return {
-        "ventana": {
-            "desde": since,
-            "hasta": until,
-            "primera_fila": _iso(min(f["fin"] for f in rows)) if rows else None,
-            "ultima_fila": _iso(max(f["fin"] for f in rows)) if rows else None,
-            "filas": len(rows),
-            "eventos": len(events),
-            "eventos_pc": sum(1 for e in events if e["origen"] == "PC"),
+        "window": {
+            "since": since,
+            "until": until,
+            "first_row": _iso(min(f["end"] for f in rows)) if rows else None,
+            "last_row": _iso(max(f["end"] for f in rows)) if rows else None,
+            "rows": len(rows),
+            "events": len(events),
+            "pc_events": sum(1 for e in events if e["origin"] == "PC"),
         },
         "a": control_a(one_item, since_ts, until_ts),
         "b": control_b(one_item),
-        "tramos": spans,
-        "referencia_elegida": spans["decision"],
-        "falsos_positivos_largos": {
-            "una_referencia": long_false_positives(one_item, since_ts, until_ts),
-            "regla_elegida": long_false_positives(chosen, since_ts, until_ts),
+        "spans": spans,
+        "chosen_reference": spans["decision"],
+        "long_false_positives": {
+            "single_reference": long_false_positives(one_item, since_ts, until_ts),
+            "chosen_rule": long_false_positives(chosen, since_ts, until_ts),
         },
-        "a_con_regla_elegida": control_a(chosen, since_ts, until_ts) if by_spans else None,
+        "a_with_chosen_rule": control_a(chosen, since_ts, until_ts) if by_spans else None,
     }
 
 
@@ -471,10 +469,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     logs = args.logs or _log_dir()
     result = measure(read_rows(base), read_calls(logs), since=args.since, until=args.until)
     print(json.dumps(result, indent=2, ensure_ascii=False))
-    if result["a"]["supera_el_tope"]:
+    if result["a"]["exceeds_cap"]:
         print("PARAR: (a) marca mas del 5 %; revisar el umbral con el usuario.", file=sys.stderr)
         return 3
-    if not result["b"]["cumple"]:
+    if not result["b"]["meets"]:
         print("PARAR: (b) no marca 570, 571 y 573; la regla esta mal.", file=sys.stderr)
         return 4
     return 0

@@ -174,6 +174,19 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
         },
         "values": {"source": {"rechazo": "rejection"}},
     },
+    # Sesiones y ventanas que las mediciones de adopción excluyen (`benchmarks/excluded-windows.json`;
+    # antes `ventanas-excluidas.json`, que se sigue leyendo). La misma tabla vale para el primer
+    # nivel y para cada entrada de `sessions[]` y `windows[]`.
+    "excluded_windows": {
+        "keys": {
+            "sesiones": "sessions",
+            "ventanas": "windows",
+            "inicio": "start",
+            "fin": "end",
+            "motivo": "reason",
+            "tanda": "batch",
+        },
+    },
 }
 
 #: Motivos de descarte de la cuota: las claves de `discards[<tipo>]` (y los dos que añade

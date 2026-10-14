@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "_acerca_de": [
+  "_about": [
     "Manifiesto de la captura del README. Es la FUENTE DE VERDAD de con qué versión se generó.",
     "Lo escribe `scripts/dev/capture_dashboard.py` al capturar, NUNCA a mano y nunca el bump de",
     "versión: si lo actualizara quien sube la versión, el check se cumpliría sin que nadie",

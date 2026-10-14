@@ -122,7 +122,7 @@ def test_the_manifest_is_not_written_by_hand():
     Es la misma regla que el vendorizado: la fuente de verdad se explica donde vive.
     """
     manifest = _manifest()
-    about = " ".join(manifest["_acerca_de"])
+    about = " ".join(manifest["_about"])
     assert "capture_dashboard.py" in about
     assert "/api/status" in about, (
         "el manifiesto tiene que dejar dicho que la versión sale del dashboard capturado y no de "

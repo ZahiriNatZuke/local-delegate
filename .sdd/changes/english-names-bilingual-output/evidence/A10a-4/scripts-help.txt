@@ -1,0 +1,21 @@
+$ uv run python scripts/measure_adoption.py --help
+usage: measure_adoption.py [-h] [--since SINCE] [--json] [--include-tests]
+$ uv run python scripts/test_sessions.py --help
+usage: test_sessions.py [-h] --day DAY [--projects PROJECTS] [--output OUTPUT]
+                        [--reason REASON]
+
+Anota las sesiones `claude -p` de un día para que las mediciones de adopción
+las excluyan.
+
+options:
+  -h, --help           show this help message and exit
+  --day DAY            AAAA-MM-DD (UTC)
+  --projects PROJECTS
+  --output OUTPUT
+  --reason REASON
+$ PYTHONIOENCODING=utf-8 uv run python scripts/measure_slowness.py --help (usage)
+usage: measure_slowness.py [-h] --copy COPY [--source SOURCE] [--logs LOGS]
+                           [--since SINCE] [--until UNTIL] [--json]
+$ uv run python scripts/dev/capture_dashboard.py --help
+usage: capture_dashboard.py [-h] [--url URL] [--out OUT] [--width WIDTH]
+                            [--timezone TIMEZONE]

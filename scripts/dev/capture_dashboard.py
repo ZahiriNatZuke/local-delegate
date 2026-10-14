@@ -62,7 +62,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parents[2]
 
-MANIFIESTO_ACERCA_DE = [
+ABOUT_MANIFEST = [
     "Manifiesto de la captura del README. Es la FUENTE DE VERDAD de con qué versión se generó.",
     "Lo escribe `scripts/dev/capture_dashboard.py` al capturar, NUNCA a mano y nunca el bump de",
     "versión: si lo actualizara quien sube la versión, el check se cumpliría sin que nadie",
@@ -74,7 +74,7 @@ MANIFIESTO_ACERCA_DE = [
 ]
 
 
-def _version_del_dashboard(url: str) -> str:
+def _dashboard_version(url: str) -> str:
     """Versión que sirve el dashboard que se va a capturar, leída de `/api/status`.
 
     Se lee **antes** de capturar y a propósito: si no se puede, el script falla sin haber tocado
@@ -83,22 +83,22 @@ def _version_del_dashboard(url: str) -> str:
     """
     endpoint = url.rstrip("/") + "/api/status"
     with urllib.request.urlopen(endpoint, timeout=5) as resp:
-        datos = json.load(resp)
-    version = datos.get("version")
+        data = json.load(resp)
+    version = data.get("version")
     if not version:
-        raise RuntimeError(f"{endpoint} no declara `version`: {sorted(datos)}")
+        raise RuntimeError(f"{endpoint} no declara `version`: {sorted(data)}")
     return str(version)
 
 
-def _escribir_manifiesto(png: Path, version: str) -> Path:
+def _write_manifest(png: Path, version: str) -> Path:
     """Deja junto al PNG el manifiesto que lo describe. Devuelve su ruta."""
     blob = png.read_bytes()
-    destino = png.with_suffix(".json")
-    destino.write_text(
+    dest = png.with_suffix(".json")
+    dest.write_text(
         json.dumps(
             {
                 "schemaVersion": 1,
-                "_acerca_de": MANIFIESTO_ACERCA_DE,
+                "_about": ABOUT_MANIFEST,
                 "file": png.name,
                 "version": version,
                 "sha256": hashlib.sha256(blob).hexdigest(),
@@ -111,12 +111,12 @@ def _escribir_manifiesto(png: Path, version: str) -> Path:
         encoding="utf-8",
         newline="\n",
     )
-    return destino
+    return dest
 
 
 # Datos de ejemplo. La semilla fija hace la captura reproducible; los nombres de archivo y el
 # host remoto son inventados a propósito para no filtrar nada de la máquina real.
-SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
+SEED_AND_MOCK = """({DENSITY, PRICES_CHECKED}) => {
   const TOOLS = ['local_summarize','local_translate','local_extract','local_classify',
     'local_lint_summary','local_boilerplate','local_commit_msg','local_explain_code',
     'local_describe_image','local_delegate'];
@@ -132,25 +132,25 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
   // en Python); el JS del panel solo divide. Sin `density`, `claudeTokens` da 0 y las series por
   // día saldrían planas. Esta es una resolución de juguete para los datos de ejemplo —familia
   // `new`, clase por la tool o por la extensión `.md`— con los valores de la tabla del paquete.
-  const DENS = DENSIDAD.families.new;
-  const CLASE_TOOL = {local_lint_summary: 'log', local_commit_msg: 'diff',
+  const DENS = DENSITY.families.new;
+  const TOOL_CLASS = {local_lint_summary: 'log', local_commit_msg: 'diff',
     local_explain_code: 'code'};
-  const celda = (columna, clase) => {
-    if (DENS[columna][clase]) return [DENS[columna][clase], 'measured'];
-    return [DENS.unnumbered[clase], 'unnumbered'];
+  const cell = (column, kind) => {
+    if (DENS[column][kind]) return [DENS[column][kind], 'measured'];
+    return [DENS.unnumbered[kind], 'unnumbered'];
   };
-  const densidadDe = (tool, porPath) => {
+  const densityOf = (tool, byPath) => {
     if (tool === 'local_describe_image') return {text: null, returned: null, output: null};
-    const clase = CLASE_TOOL[tool] || 'prose';
-    const devuelta = tool === 'local_extract' ? 'structured'
+    const kind = TOOL_CLASS[tool] || 'prose';
+    const returned = tool === 'local_extract' ? 'structured'
       : (tool === 'local_boilerplate' ? 'code' : 'prose');
     return {
-      text: porPath ? celda('read_format', clase) : [DENS.unnumbered[clase], 'measured'],
-      returned: [DENS.unnumbered[devuelta], 'measured'],
+      text: byPath ? cell('read_format', kind) : [DENS.unnumbered[kind], 'measured'],
+      returned: [DENS.unnumbered[returned], 'measured'],
       output: [DENS.unnumbered[tool === 'local_boilerplate' ? 'code' : 'prose'], 'measured'],
     };
   };
-  const aTokens = (cantidad, c) => (c ? Math.floor(cantidad * 100 / c[0]) : 0);
+  const aTokens = (amount, c) => (c ? Math.floor(amount * 100 / c[0]) : 0);
 
   const now = new Date();
   const events = [];
@@ -175,7 +175,7 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
         tokens_in: Math.floor(chars / 4), tokens_out: 120 + Math.floor(rnd() * 400),
         raw_len: chars, ...(chunks > 1 ? {chunks} : {}),
         ...(path ? {path: 'D:\\\\docs\\\\informe-' + (i % 7) + '.md'} : {}),
-        family: 'new', density: densidadDe(tool, path),
+        family: 'new', density: densityOf(tool, path),
       });
     }
   }
@@ -203,7 +203,7 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
     const chunks = e.chunks || 1;
     // `chars_in` de local_describe_image son BYTES, no caracteres. Una imagen sale entera del
     // neto (no hay forma de saber sus tokens de Claude) y se cuenta aparte, en «Imágenes».
-    const imagen = e.tool === 'local_describe_image';
+    const isImage = e.tool === 'local_describe_image';
     a.calls += 1;
     a.backend_calls += chunks;
     a.tokens_in += e.tokens_in;
@@ -211,10 +211,10 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
     // Un fallo (`ok` exactamente false) no ahorra ni devuelve nada: solo cuenta como error y
     // con los tokens que gastó el backend.
     if (e.ok === false) { a.errors += 1; return a; }
-    if (imagen) {
+    if (isImage) {
       if (e.source === 'path') {
         a.img_n += 1; a.img_bytes += e.chars_in;
-        if (e.tokens_in > 0) a.img_devueltos += e.chars_out;
+        if (e.tokens_in > 0) a.img_returned += e.chars_out;
       }
       return a;
     }
@@ -226,14 +226,14 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
     }
     return a;
   }, {calls: 0, backend_calls: 0, tokens_in: 0, tokens_out: 0, saved: 0, returned: 0,
-      errors: 0, img_n: 0, img_bytes: 0, img_devueltos: 0});
+      errors: 0, img_n: 0, img_bytes: 0, img_returned: 0});
 
   // Coste equivalente y cuota de ejemplo. Salen de correr `valuation.cost_block` y
   // `quota.status` de verdad sobre un log y un `cost-aggregates.json` sintéticos (sin datos de
   // nadie): así la forma es la que sirve `/api/stats` y las cifras cuadran entre sí (la cifra es
   // la suma del desglose, la barra suma las valoradas). La cuota sale «sin calibrar», que es lo
   // que verá casi todo el mundo: nunca se enseña un % sin calibración.
-  const COSTE = {figure: {low_bound: 6.87, estimate: 27.4}, reason: null, events: 98,
+  const COST = {figure: {low_bound: 6.87, estimate: 27.4}, reason: null, events: 98,
     T: 1241362,
     bar: {excluded: 22, at_call: 94, backfilled: 0, pending: 4, assumed: 0,
       valued: 98, with_assumed_model: 4,
@@ -255,10 +255,10 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
       {model: 'claude-opus-5-5', name: 'Opus 5.5', thread: 'subagent', effort: 'no_data',
        cases: 4, T: 51743, low_bound: 0.26, estimate: 0.67},
     ],
-    table: {consulted: PRECIOS_CONSULTADO,
+    table: {consulted: PRICES_CHECKED,
       source: 'https://platform.claude.com/docs/en/about-claude/pricing'},
     command: 'local-delegate recompute-cost'};
-  const CUOTA = {
+  const QUOTA = {
     five_hour: {drift: false, points: 1, status: 'uncalibrated',
       reason: 'faltan 2 puntos del statusline', rejection_points: 1,
       discards: {contaminated: 1, small_delta: 2}, reset: null},
@@ -331,9 +331,9 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
       ],
       // Las tres tarjetas de coste-api-y-cuota se esconden si falta su clave: sin ellas la
       // captura saldría como antes. «Imágenes» se deriva de los mismos eventos de ejemplo.
-      cost: COSTE, quota: CUOTA,
-      images: {n: stats.img_n, bytes: stats.img_bytes, chars_returned: stats.img_devueltos},
-      density_table: DENSIDAD},
+      cost: COST, quota: QUOTA,
+      images: {n: stats.img_n, bytes: stats.img_bytes, chars_returned: stats.img_returned},
+      density_table: DENSITY},
     // La tarjeta de hooks lee de aquí, y este mock **no es cosmético**: `/api/hooks` se quedó
     // fuera de la lista y el endpoint llegaba al servidor real, así que la captura publicaba la
     // telemetría de quien la regeneraba —conteos por categoría de su propia sesión— justo lo que
@@ -354,7 +354,7 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
       ];
       const total = cats.reduce((a, c) => a + c.total, 0);
       const suggested = cats.reduce((a, c) => a + c.suggested, 0);
-      const motivos = [
+      const reasons = [
         {reason: 'code', total: 52},
         {reason: 'suggested', total: 41},
         {reason: 'bounded', total: 24},
@@ -366,8 +366,8 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
         // La puntería del hook de lectura. Su total es el de la categoría 'read' —130— y los
         // avisos son sus 'suggested' —41—, no números sueltos: un panel cuyas dos tablas no
         // cuadran es un panel que el dashboard real nunca puede pintar.
-        read_total: motivos.reduce((a, m) => a + m.total, 0),
-        by_reason: motivos,
+        read_total: reasons.reduce((a, m) => a + m.total, 0),
+        by_reason: reasons,
         by_ext: [{ext: '.ts', total: 48}, {ext: '.md', total: 39},
                  {ext: '.py', total: 22}, {ext: 'no_extension', total: 21}]};
     })(),
@@ -433,23 +433,23 @@ REFRESH = """async () => {
   return {
     live: document.getElementById('liveTxt')?.textContent,
     canvas: [...document.querySelectorAll('canvas')].length,
-    filas: document.querySelectorAll('tbody tr').length,
+    rows: document.querySelectorAll('tbody tr').length,
   };
 }"""
 
 
-def _tablas_del_paquete() -> dict:
+def _package_tables() -> dict:
     """La tabla de densidad y la fecha de la de precios, leídas del paquete (no son datos de nadie).
 
     Se leen del fichero en vez de copiarlas al mock para que la captura no se quede con unos
     valores que el vigilante de precios o una medida nueva ya cambiaron.
     """
-    datos = ROOT / "src" / "local_delegate" / "resources" / "data"
-    densidad = json.loads((datos / "density.json").read_text(encoding="utf-8"))
-    precios = json.loads((datos / "prices.json").read_text(encoding="utf-8"))
+    data = ROOT / "src" / "local_delegate" / "resources" / "data"
+    density = json.loads((data / "density.json").read_text(encoding="utf-8"))
+    prices = json.loads((data / "prices.json").read_text(encoding="utf-8"))
     return {
-        "DENSIDAD": {k: v for k, v in densidad.items() if not k.startswith("_")},
-        "PRECIOS_CONSULTADO": precios.get("consulted"),
+        "DENSITY": {k: v for k, v in density.items() if not k.startswith("_")},
+        "PRICES_CHECKED": prices.get("consulted"),
     }
 
 
@@ -467,7 +467,7 @@ async def run(url: str, out: Path, width: int, timezone: str) -> int:
     # Antes de abrir el navegador: si el dashboard no dice qué versión sirve, no hay captura que
     # valga. Fallar aquí deja el PNG y el manifiesto anteriores intactos.
     try:
-        version = _version_del_dashboard(url)
+        version = _dashboard_version(url)
     except (urllib.error.URLError, OSError, ValueError, RuntimeError) as exc:
         print(f"no se pudo leer la versión de {url}: {exc}", file=sys.stderr)
         return 3
@@ -482,17 +482,17 @@ async def run(url: str, out: Path, width: int, timezone: str) -> int:
             )
             page = await context.new_page()
             await page.goto(url, wait_until="networkidle")
-            total = await page.evaluate(SEED_AND_MOCK, _tablas_del_paquete())
+            total = await page.evaluate(SEED_AND_MOCK, _package_tables())
             info = await page.evaluate(REFRESH)
             # Cinco gráficos: el hero, el de ahorro en el tiempo y los tres donuts/barras.
-            if info["canvas"] < 5 or not info["filas"]:
+            if info["canvas"] < 5 or not info["rows"]:
                 print(f"el panel no se pobló como se esperaba: {info}", file=sys.stderr)
                 return 1
             out.parent.mkdir(parents=True, exist_ok=True)
             await page.screenshot(path=str(out), full_page=True)
             print(f"{out} — {total} eventos, indicador «{info['live']}», {info['canvas']} gráficos")
-            manifiesto = _escribir_manifiesto(out, version)
-            print(f"{manifiesto} — versión {version}, la que sirvió el dashboard capturado")
+            manifest = _write_manifest(out, version)
+            print(f"{manifest} — versión {version}, la que sirvió el dashboard capturado")
         finally:
             await browser.close()
     return 0

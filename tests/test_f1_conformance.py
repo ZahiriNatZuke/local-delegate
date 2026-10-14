@@ -115,7 +115,7 @@ def test_a_read_through_another_mcp_is_counted_and_not_blocked(hook_env, monkeyp
     assert output == "", "ni bloqueo ni sugerencia"
     (event,) = _events(hook_env)
     assert event["route"] == "mcp"
-    assert event["category"] == "read", "tiene que entrar en el denominador de medir_adopcion"
+    assert event["category"] == "read", "tiene que entrar en el denominador de measure_adoption"
     assert event["reason"] == "foreign_mcp"
     assert event["path_sha"] == common.path_digest(str(dest))
     assert str(dest) not in json.dumps(event), "la telemetria nunca guarda rutas"

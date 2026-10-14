@@ -1,0 +1,36 @@
+refactor(rename): nombres en inglés en la medición de adopción, las sesiones de prueba, el control de lentitud y dos scripts de dev (ola A10a, lote 4)
+
+Renombra a inglés los scripts que miden la adopción, anotan las
+sesiones de prueba y controlan la lentitud, con sus tests, y dos
+scripts de desarrollo: 284 filas del mapping aprobado
+(waves/A10a-4-mapping.csv).
+
+- scripts/medir_adopcion.py pasa a scripts/measure_adoption.py, con
+  --since (--desde sigue valiendo como alias, decisión 10) y las claves
+  del informe --json en inglés (blocks, accepted, acceptance_rate…).
+  tests/test_medir_adopcion.py pasa a tests/test_measure_adoption.py,
+  que prueba también el alias.
+- scripts/sesiones_de_prueba.py pasa a scripts/test_sessions.py, con
+  --day, --projects, --output y --reason. Escribe
+  benchmarks/excluded-windows.json con claves nuevas y lee el fichero de
+  antes (ventanas-excluidas.json, que no se renombra) si el nuevo no
+  existe, con la tabla nueva excluded_windows de legacy_names.py.
+  tests/test_sesiones_de_prueba.py pasa a tests/test_test_sessions.py.
+- scripts/measure_slowness.py y su test: las claves internas y del
+  informe en inglés, sin lectura dual (no lee nada de benchmarks/).
+- scripts/dev/medir_salidas_bash.py pasa a
+  scripts/dev/measure_bash_outputs.py; en capture_dashboard.py, los
+  nombres del JS del mock y la clave _acerca_de del manifiesto pasan a
+  inglés (_about), también en docs/assets/dashboard.json.
+
+El escenario de test_measure_adoption.py sigue escrito en el formato
+viejo de la telemetría (motivo, camino, bloqueo_id…) a propósito: el
+test de lectura dual lo exige. Esas claves van a rename-exceptions.md
+(lectura de formato viejo), con el alias --desde.
+
+Fuera de los ficheros del lote, por consecuencia: el import de
+measure_cooldown.py, dos citas en tests, el formato nuevo de
+legacy_names.py y los comandos de docs/wiki/Savings-and-metrics.md.
+
+Solo se renombra: ningún assert cambia de sentido y los textos en
+español que imprimen los scripts o afirman los tests no se tocan.
