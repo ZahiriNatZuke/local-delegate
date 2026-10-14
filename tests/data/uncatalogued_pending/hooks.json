@@ -1,0 +1,10 @@
+{
+  "surface": "hooks",
+  "owner": "B3",
+  "files": [
+    "src/local_delegate/resources/hooks/hook_common.py",
+    "src/local_delegate/resources/hooks/suggest_delegate_prompt.py",
+    "src/local_delegate/resources/hooks/suggest_delegate_read.py",
+    "src/local_delegate/resources/hooks/suggest_delegate_shell.py"
+  ]
+}

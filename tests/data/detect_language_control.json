@@ -1,0 +1,167 @@
+{
+ "_about": "Control congelado del detector de D10 en la ola B0b: 20 frases de docs/wiki (es) y 20 del diccionario en de site/index.html (en), elegidas por regla fija (8 a 40 palabras, al menos 8 corrientes y el 70 % o más). NO es independiente: «ambos» y «casi» entraron en la lista a la vista de sus fallos. El control independiente es el de B1 (60 + 60 frases nuevas, congeladas antes de ver la lista).",
+ "es": [
+  {
+   "source": "docs/wiki/Architecture.md",
+   "text": "El modo recomendado para varias sesiones es el daemon singleton Streamable HTTP; el transporte stdio sigue disponible sin argumentos para compatibilidad."
+  },
+  {
+   "source": "docs/wiki/Backend-versions.md",
+   "text": "Esta página es solo una referencia probada: las versiones y la disposición de carpetas con las que el autor verifica cada release."
+  },
+  {
+   "source": "docs/wiki/Configuration.md",
+   "text": "Todo se configura por variables de entorno (en el bloque env de tu config MCP, o en el shell)."
+  },
+  {
+   "source": "docs/wiki/Daemon.md",
+   "text": "El transporte MCP stdio requiere un proceso por cliente o sesión."
+  },
+  {
+   "source": "docs/wiki/Integration-install.md",
+   "text": "Instalar el MCP nunca fue solo registrar el servidor: las tools se usan de verdad cuando el cliente además tiene los hooks, la skill y la regla en memoria."
+  },
+  {
+   "source": "docs/wiki/Publishing.md",
+   "text": "Cada release: bump de versión en pyproject.toml, uv.lock y las dos versiones de server.json (version y packages[0].version), entrada en CHANGELOG.md, y tag vX.Y.Z."
+  },
+  {
+   "source": "docs/wiki/Remote-backend.md",
+   "text": "La configuración recomendada ejecuta el MCP en la Mac y solo manda inferencia al llama-swap de la PC."
+  },
+  {
+   "source": "docs/wiki/Repo-hardening.md",
+   "text": "Esta página recoge la configuración mínima que sostiene esa confianza, separada en lo que vive en el repo (y por tanto se revisa en un PR) y lo que solo existe en los ajustes de GitHub."
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "text": "El MCP escribe una línea JSONL por llamada."
+  },
+  {
+   "source": "docs/wiki/Tools.md",
+   "text": "Las once tools local_* que expone el servidor MCP, con su firma exacta, lo que devuelven y la letra pequeña que solo estaba en el código."
+  },
+  {
+   "source": "docs/wiki/Troubleshooting.md",
+   "text": "Ese mensaje es el síntoma de un proceso muerto, no la causa, y el cliente no enseña más."
+  },
+  {
+   "source": "docs/wiki/Architecture.md",
+   "text": "Cada tool arma un prompt con *guardrails*, hace POST /chat/completions al endpoint configurado y devuelve solo texto."
+  },
+  {
+   "source": "docs/wiki/Backend-versions.md",
+   "text": "Ambos proyectos publican en *rolling release* (llama.cpp etiqueta casi cada merge; llama-swap numera correlativo)."
+  },
+  {
+   "source": "docs/wiki/Configuration.md",
+   "text": "Para una Mac que usa llama-swap en otra máquina, conserva el MCP en la Mac, fija LOCAL_DELEGATE_AUTOSTART=0 y carga LOCAL_DELEGATE_API_KEY desde Keychain."
+  },
+  {
+   "source": "docs/wiki/Daemon.md",
+   "text": "Eso es compatible y simple, pero el dashboard embebido vive y muere con el proceso que ganó el puerto 9393."
+  },
+  {
+   "source": "docs/wiki/Integration-install.md",
+   "text": "Por defecto (--clients auto), solo los clientes que están instalados: se mira si existen ~/.claude, ~/.codex y el directorio de configuración de opencode."
+  },
+  {
+   "source": "docs/wiki/Publishing.md",
+   "text": "Ninguno de los dos publicadores usa secretos: PyPI confía en el OIDC del workflow (Trusted Publishing) y el registro MCP valida el namespace io.github.ZahiriNatZuke/* contra ese mismo token."
+  },
+  {
+   "source": "docs/wiki/Remote-backend.md",
+   "text": "Así local_summarize(path=\"/Users/...\") abre el archivo en la Mac y conserva el ahorro de contexto; un MCP ejecutado entero en Windows no puede abrir ese path."
+  },
+  {
+   "source": "docs/wiki/Repo-hardening.md",
+   "text": "Pasó tres veces en dos días (PRs #77, #86 y #88): test (windows-latest) se quedó en in_progress y bloqueó el merge —1954 s, 651 s y 10+ min— mientras GitHub Status decía «All Systems Operational»."
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "text": "El usage.jsonl legado de versiones anteriores a la 0.2 no se migra: el dashboard lo sigue leyendo como fuente adicional."
+  }
+ ],
+ "en": [
+  {
+   "source": "site/index.html (diccionario en)",
+   "text": "Summarize a file, classify a prompt, write a commit message from a diff."
+  },
+  {
+   "source": "site/index.html (diccionario en)",
+   "text": "Your agent sends them upstream and you pay reasoning prices for them."
+  },
+  {
+   "source": "site/index.html (diccionario en)",
+   "text": "local-delegate reroutes them to a model already running on your machine , and returns the result over the same protocol."
+  },
+  {
+   "source": "site/index.html (diccionario en)",
+   "text": "TASK — the agent needs a summary of a 40,000-token file"
+  },
+  {
+   "source": "site/index.html (diccionario en)",
+   "text": "The whole file enters the agent's context so it can read it, and you pay reasoning prices for it."
+  },
+  {
+   "source": "site/index.html (diccionario en)",
+   "text": "The MCP server reads the file itself, right there on your machine."
+  },
+  {
+   "source": "site/index.html (diccionario en)",
+   "text": "All the agent gets back is the summary."
+  },
+  {
+   "source": "site/index.html (diccionario en)",
+   "text": "What changes is that the file never enters your window — it neither fills it nor bills it."
+  },
+  {
+   "source": "site/index.html (diccionario en)",
+   "text": "If the step fits in a single sentence with an explicit output format, it gets delegated."
+  },
+  {
+   "source": "site/index.html (diccionario en)",
+   "text": "If it needs judgment, architecture or threading several sources, the model upstairs does it ."
+  },
+  {
+   "source": "site/index.html (diccionario en)",
+   "text": "It is not a heuristic you have to remember: it ships installed."
+  },
+  {
+   "source": "site/index.html (diccionario en)",
+   "text": "local-delegate install writes the rule into your client's global memory, plus a skill that expands on it, so the agent takes the detour on its own."
+  },
+  {
+   "source": "site/index.html (diccionario en)",
+   "text": "Passing path= instead of the text is the difference between saving a little and saving all at once: the server reads the file and its contents never enter the agent's context."
+  },
+  {
+   "source": "site/index.html (diccionario en)",
+   "text": "A 40,000-token file costs you the call, not the file."
+  },
+  {
+   "source": "site/index.html (diccionario en)",
+   "text": "The savings dashboard lives at 127.0.0.1:9393 , showing cost against saving with the real calls made to your backend — not estimates."
+  },
+  {
+   "source": "site/index.html (diccionario en)",
+   "text": "One month of work · tokens that never went up"
+  },
+  {
+   "source": "site/index.html (diccionario en)",
+   "text": "Example volume for a month of heavy use."
+  },
+  {
+   "source": "site/index.html (diccionario en)",
+   "text": "No inflated rate: the same tokens per task, counted over more tasks."
+  },
+  {
+   "source": "site/index.html (diccionario en)",
+   "text": "The dollar figure uses public API pricing; on a subscription what you preserve is quota."
+  },
+  {
+   "source": "site/index.html (diccionario en)",
+   "text": "Your own numbers are measured by the dashboard from what your backend returns."
+  }
+ ]
+}

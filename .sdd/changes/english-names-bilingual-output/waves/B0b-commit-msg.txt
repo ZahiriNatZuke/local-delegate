@@ -1,0 +1,36 @@
+feat(i18n): guardián de textos fuera del catálogo y detector de idioma (frente B, ola B0b)
+
+Segunda mitad de B0 (REQ-045 y D10). No cambia ningún texto de salida.
+
+- tests/test_no_uncatalogued_text.py: escáner AST del paquete y de los
+  tres scripts de B1 con dos redes, contextos de salida (print, write,
+  raise, help=/description=…, return, constantes) y tildes. Fuera de la
+  lista de pendientes y de las excepciones no puede quedar texto para
+  personas.
+- tests/data/uncatalogued_pending/: una lista por superficie (cli,
+  doctor, mcp, hooks, panel, install) con su ola dueña, incluidos los
+  ocho módulos sin dueña: recompute, probes, deprecations y entrypoint a
+  B1; questions a B2; quota, valuation y attribution a B4. Cada pendiente
+  tiene que tener al menos una aparición antes de salir, y web/metrics.py
+  no sale mientras B4 no escriba el escáner del panel.
+- tests/data/uncatalogued_exceptions.json: medir_enfriamiento.py
+  (envoltorio de REQ-046 que se retira tras P-4) y legacy_names.py
+  (valores viejos de la lectura dual) fuera del escaneo; cabeceras HTTP
+  como excepciones de texto. Una excepción con prosa o caducada falla.
+- scripts/detect_language.py y scripts/data/function_words.json: el
+  detector de D10, sin dependencias (es, en o unknown por palabras
+  funcionales, con 20 tokens y margen 0,15 por defecto).
+- tests/test_detect_language.py: control congelado de 20 + 20 frases
+  (docs/wiki y site/index.html) con min_tokens=8 y como mucho un fallo.
+  Dio 38/40, y 0/40 con las listas invertidas; se añadieron «ambos» y
+  «casi», así que no es un control independiente: el de verdad es el de
+  B1 (60 + 60 frases nuevas, ≥ 98 %, sin ajustar las listas).
+- plan.md: esa condición en D10 y en B0b. Léxico: 11 palabras en
+  inglés.
+- 15 mutantes disparan el assert esperado.
+
+waves/B0b.md: registro de la ola, con evidence/B0b/.
+
+2741 tests; suite 2739 passed, 2 skipped con LANG=en_US.UTF-8 y con
+LANG=es_ES.UTF-8; ruff limpio. Detector con la lista: 0 fuera de la lista
+y 0 palabras sin clasificar.
