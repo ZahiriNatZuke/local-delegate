@@ -1,0 +1,26 @@
+feat(i18n): el modelo local responde en el idioma elegido y el commit sale en el del producto, con fronteras de medición por versión (frente B, ola B2b-2)
+
+Tercer PR de B2 (waves/B2-proposal.md; REQ-028 y REQ-041). Los prompts
+no se traducen: se añade una orden de idioma detrás de _guard.
+
+- i18n.response_language(): la única regla del idioma de respuesta
+  (LOCAL_DELEGATE_OUTPUT_LANGUAGE si vale; si no, el idioma vigente).
+- local_summarize, local_lint_summary, local_explain_code y
+  local_describe_image piden responder en ese idioma, también en cada
+  paso del troceado (map, reagrupado y reduce).
+- local_commit_msg: LOCAL_DELEGATE_COMMIT_LANGUAGE y, sin ella, el idioma
+  del producto; diff conserva la regla de antes; OUTPUT_LANGUAGE no le
+  afecta.
+- local_status y doctor muestran el idioma de respuesta y su origen, y
+  avisan de un valor no válido.
+- scripts/measurement_boundaries.py y su JSON: frontera 0.36.0 por la
+  versión v que cada fila de uso lleva desde F1, nunca por fecha (spec
+  y plan enmendados: v en vez del package_version propuesto).
+- build_corpus: PROMPT_BOUNDARIES declara el cambio de prompt de las
+  cuatro tools (aviso, no error), F2 se recaptura con diff y la captura
+  fija la interfaz en español. La celda de afinidad de lint queda sin
+  base hasta el lote B2-affinity (test_affinity lo exige).
+- Wiki y README: las dos variables de idioma.
+
+Suite: 2911 passed, 2 skipped con LANG en inglés y en español (xdist);
+8 controles positivos.

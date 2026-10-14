@@ -1,0 +1,11 @@
+[pesado] plaza plaza-1 tomada tras 0s: uv run --frozen python scripts/detect_spanish_names.py --exceptions .sdd/changes/english-names-bilingual-output/rename-exceptions.md --json .sdd/changes/english-names-bilingual-output/evidence/B2b-2/detector.json
+nombres en español (únicos por categoría y fichero): 766
+  file_name: 1
+  identifier: 8
+  js_identifier: 2
+  js_string: 9
+  json_value: 55
+  string_key: 363
+  string_value: 328
+fuera de la lista de excepciones: 0
+palabras sin clasificar: 0

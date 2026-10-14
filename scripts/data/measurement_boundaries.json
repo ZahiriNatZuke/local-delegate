@@ -1,0 +1,5 @@
+{
+  "_about": "Fronteras de tramo de las mediciones (REQ-041, plan D9). La de `usage-*.jsonl` es por version: una fila con `v` (la version del paquete, que cada fila lleva desde F1) igual o posterior va al tramo «despues»; una fila sin version, siempre al de «antes». La de la telemetria de hooks es un conjunto de hashes en un fichero aparte, que crea la ola B3.",
+  "package_version_after": "0.36.0",
+  "hook_hashes_after": "scripts/data/hook_hashes_after.json"
+}

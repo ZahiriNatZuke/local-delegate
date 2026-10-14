@@ -48,7 +48,7 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 
-from local_delegate import benchmark, config, legacy_names, server
+from local_delegate import benchmark, config, i18n, legacy_names, server
 
 ROOT = Path(__file__).resolve().parents[1]
 DESTINATION = ROOT / "benchmarks" / "catalogo-2026-09"
@@ -668,11 +668,45 @@ CONTROLS = (
 # `--check` del corpus F2, al reves: 2 diferencias CON la variable). Ninguno de los dos corpus
 # guarda el idioma, asi que va aqui, una constante por corpus. Cambiarla cambia el corpus medido.
 COMMIT_LANGUAGE_VARIABLE = "LOCAL_DELEGATE_COMMIT_LANGUAGE"
-# `benchmarks/catalogo-2026-09/`: congelado antes de REQ-044, sin variable (vacio = el idioma del
-# diff).
-F2_COMMIT_LANGUAGE = ""
+# `benchmarks/catalogo-2026-09/`: congelado antes de REQ-044, sin variable, cuando vacio era el idioma
+# del diff. Desde la 0.36.0 (B2b-2) vacio es el idioma vigente del producto y la regla del diff es el
+# valor explicito `diff`: el corpus se recaptura con el, y su prompt es el de entonces.
+F2_COMMIT_LANGUAGE = "diff"
 # `benchmarks/afinidad-2026-10/`: congelado con `es`, el idioma que tiene la PC en produccion.
 AFFINITY_COMMIT_LANGUAGE = "es"
+# El idioma de la interfaz (REQ-018) con que se capturan los dos corpus: desde la 0.36.0 la orden de
+# idioma de las tools de texto libre (REQ-028) depende de el, y sin fijarlo la recaptura dependeria
+# de la maquina (lo mismo que paso con el idioma del commit). Los dos se congelaron en esta PC, en
+# espanol.
+INTERFACE_LANGUAGE_VARIABLE = "LOCAL_DELEGATE_LANG"
+CORPUS_INTERFACE_LANGUAGE = "es"
+
+# Cambios de prompt de produccion DECLARADOS, por la version que los trae (REQ-041, B2b-2). Un corpus
+# congelado mide el prompt de cuando se congelo: si produccion lo cambia a proposito, la recaptura
+# difiere y el corpus ya no mide el prompt de hoy. Eso se dice (aviso, no error) solo para los campos
+# del prompt (`system`, `max_tokens`) de las tools de la lista; cualquier otro campo, u otra tool,
+# sigue siendo un error. Los corpus NO se regeneran: sus respuestas se midieron con el prompt viejo.
+PROMPT_BOUNDARIES: dict[str, frozenset[str]] = {
+    # REQ-028: la orden de idioma de las cuatro tools de texto libre.
+    "0.36.0": frozenset(
+        {"local_summarize", "local_lint_summary", "local_explain_code", "local_describe_image"}
+    ),
+}
+_PROMPT_BOUNDARY_FIELDS = frozenset({"system", "max_tokens"})
+
+
+def declared_prompt_change(tool: str, field_name: str) -> str | None:
+    """La version que cambio a proposito ese campo del prompt de esa tool, o `None`."""
+    if field_name not in _PROMPT_BOUNDARY_FIELDS:
+        return None
+    for version, tools in PROMPT_BOUNDARIES.items():
+        if tool in tools:
+            return version
+    return None
+
+
+def _boundary_notice(case_id: str, field_name: str, version: str) -> str:
+    return f"{case_id}: {field_name} cambio con los prompts de la {version} (frontera declarada)"
 
 
 @dataclass
@@ -700,6 +734,7 @@ def intercepted_production(commit_language: str = F2_COMMIT_LANGUAGE) -> Iterato
     }
     # Aparte de `saved`: se lee al llamar, asi que fijarla no obliga a recargar `config`.
     saved_language = os.environ.get(COMMIT_LANGUAGE_VARIABLE)
+    saved_interface = os.environ.get(INTERFACE_LANGUAGE_VARIABLE)
 
     def run_chat(model, system, user, max_tokens, temperature, *, response_format=None, **_):
         calls.append(Call(model, system, user, max_tokens, temperature, response_format))
@@ -717,6 +752,8 @@ def intercepted_production(commit_language: str = F2_COMMIT_LANGUAGE) -> Iterato
             os.environ.pop(COMMIT_LANGUAGE_VARIABLE, None)
         if saved:
             importlib.reload(config)
+        os.environ[INTERFACE_LANGUAGE_VARIABLE] = CORPUS_INTERFACE_LANGUAGE
+        i18n.reset()
         with (
             mock.patch.object(server, "_run_chat", run_chat),
             mock.patch.object(server, "_log_event", lambda **_: None),
@@ -732,6 +769,11 @@ def intercepted_production(commit_language: str = F2_COMMIT_LANGUAGE) -> Iterato
             os.environ.pop(COMMIT_LANGUAGE_VARIABLE, None)
         else:
             os.environ[COMMIT_LANGUAGE_VARIABLE] = saved_language
+        if saved_interface is None:
+            os.environ.pop(INTERFACE_LANGUAGE_VARIABLE, None)
+        else:
+            os.environ[INTERFACE_LANGUAGE_VARIABLE] = saved_interface
+        i18n.reset()
         if saved:
             importlib.reload(config)
 
@@ -1290,7 +1332,7 @@ _WATCHED_FIELDS = (
 )
 
 
-def check_versioned(dest: Path) -> list[str]:
+def check_versioned(dest: Path, notices: list[str] | None = None) -> list[str]:
     """Recaptura cada caso versionado contra el codigo de hoy. Si produccion cambio de rol, de
     troceado o de prompt, el corpus ya no mide lo que dice y hay que regenerarlo."""
     corpus = benchmark.load_corpus(dest / "cases.json")
@@ -1312,6 +1354,11 @@ def check_versioned(dest: Path) -> list[str]:
         current = corpus_entry(case, versioned.source_file, data, captured, single)
         for field_name in _WATCHED_FIELDS:
             if current.get(field_name) != versioned.raw.get(field_name):
+                version = declared_prompt_change(case.tool, field_name)
+                if version is not None:
+                    if notices is not None:
+                        notices.append(_boundary_notice(versioned.id, field_name, version))
+                    continue
                 # Tambien lo que no sale de produccion: el corpus no se edita a mano, y una
                 # referencia retocada en el JSON dejaria de ser la que el constructor comprobo.
                 errors.append(f"{versioned.id}: {field_name} ya no coincide con el constructor")
@@ -2669,7 +2716,32 @@ def _versioned(target: Path, names: tuple[str, str]) -> Path:
     return target / new_name if (target / new_name).exists() else target / old_name
 
 
-def check_versioned_affinity(target: Path, root: Path = ROOT) -> list[str]:
+def _apart_declared_changes(
+    built: dict[str, Any], versioned: dict[str, Any], notices: list[str] | None
+) -> dict[str, Any]:
+    """`built` con los campos de prompt de los cambios DECLARADOS puestos como en lo versionado.
+
+    Lo que difiere en esos campos se dice en `notices`; el resto de la comparacion queda igual de
+    estricta (REQ-041, B2b-2)."""
+    old_cases = {c.get("id"): c for c in versioned.get("cases", [])}
+    cases = []
+    for case in built.get("cases", []):
+        old = old_cases.get(case.get("id"))
+        if old is not None:
+            case = dict(case)
+            for field_name in sorted(_PROMPT_BOUNDARY_FIELDS):
+                version = declared_prompt_change(str(case.get("tool")), field_name)
+                if version is not None and case.get(field_name) != old.get(field_name):
+                    if notices is not None:
+                        notices.append(_boundary_notice(str(case.get("id")), field_name, version))
+                    case[field_name] = old.get(field_name)
+        cases.append(case)
+    return {**built, "cases": cases}
+
+
+def check_versioned_affinity(
+    target: Path, root: Path = ROOT, notices: list[str] | None = None
+) -> list[str]:
     """Reconstruye el corpus en una carpeta temporal y lo compara con lo versionado. Lo versionado
     puede estar en el formato viejo (congelado, ola A10b-4): se compara ya normalizado."""
     versioned_corpus = legacy_names.normalize_affinity_corpus(
@@ -2684,7 +2756,10 @@ def check_versioned_affinity(target: Path, root: Path = ROOT) -> list[str]:
             return list(report["errors"])
         differences = []
         built_corpus = json.loads((copy / "cases.json").read_text(encoding="utf-8"))
-        if legacy_names.normalize_affinity_corpus(built_corpus) != versioned_corpus:
+        built_normalized = _apart_declared_changes(
+            legacy_names.normalize_affinity_corpus(built_corpus), versioned_corpus, notices
+        )
+        if built_normalized != versioned_corpus:
             differences.append("cases.json ya no coincide con el constructor")
         traps_name = legacy_names.TRAPS_FILE_NAMES[1]
         built_traps = json.loads((copy / traps_name).read_text(encoding="utf-8"))
@@ -2725,7 +2800,10 @@ def main_affinity(argv: list[str]) -> int:
             "entorno: no se usa)"
         )
     if args.check:
-        differences = check_versioned_affinity(args.dest)
+        notices: list[str] = []
+        differences = check_versioned_affinity(args.dest, notices=notices)
+        for notice in notices:
+            print(f"  · {notice}")
         for d in differences:
             print(f"  - {d}")
         print("ok" if not differences else f"{len(differences)} diferencias")
@@ -2765,7 +2843,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     if args.check:
-        errors = check_versioned(args.dest)
+        notices: list[str] = []
+        errors = check_versioned(args.dest, notices=notices)
+        for notice in notices:
+            print(f"  · {notice}")
         for error in errors:
             print(f"  - {error}")
         print("ok" if not errors else f"{len(errors)} diferencias")

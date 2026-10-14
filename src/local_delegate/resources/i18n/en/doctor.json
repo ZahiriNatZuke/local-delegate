@@ -58,6 +58,7 @@
   "doctor.issues.none": "  {status} {component}: none found among the 30 most recently updated",
   "doctor.language.follow_system": "                  to follow the system again, delete `{path}` and run `local-delegate install`",
   "doctor.language.line": "Language:         {lang} ({source}; {path})",
+  "doctor.language.response_line": "Response:         {value} ({source})",
   "doctor.language.warning": "                  warning: {detail}",
   "doctor.legend": "States: {ok} ready · {warn} review · {missing} missing · {unknown} could not be checked",
   "doctor.nor": "nor",

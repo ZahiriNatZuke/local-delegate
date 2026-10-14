@@ -121,6 +121,55 @@ def language_report() -> LanguageReport:
     )
 
 
+#: Avisos de `LOCAL_DELEGATE_OUTPUT_LANGUAGE` no válida → su texto (B0a).
+_OUTPUT_LANGUAGE_WARNINGS = {
+    "control_chars": "common.output_language.warning.control_chars",
+    "too_long": "common.output_language.warning.too_long",
+}
+
+
+@dataclass(frozen=True)
+class ResponseLanguage:
+    """El idioma en que las tools de texto libre piden responder al modelo (REQ-028).
+
+    `value` es `es`/`en` (el idioma vigente) o el texto de `LOCAL_DELEGATE_OUTPUT_LANGUAGE`;
+    `source` es `output_variable` o el origen del idioma vigente (`variable`, `preference`…);
+    `problem` es el código del aviso si la variable estaba puesta y no vale.
+    """
+
+    value: str
+    source: str
+    problem: str | None
+
+
+def response_language() -> ResponseLanguage:
+    """La ÚNICA regla del idioma de respuesta: la variable de salida si vale; si no, el vigente.
+
+    Se lee en cada llamada, como `config.commit_language()`: no se cachea con el idioma del proceso.
+    No la usa `local_commit_msg`, que tiene su propia regla (REQ-028, enmienda del 2026-10-14).
+    """
+    output = config.output_language()
+    if output.value:
+        return ResponseLanguage(output.value, "output_variable", None)
+    resolution = current()
+    return ResponseLanguage(resolution.lang, resolution.source, output.problem)
+
+
+def response_language_lines() -> tuple[str, str, str | None]:
+    """(valor, rótulo del origen, aviso ya redactado o `None`) para `doctor` y `local_status`."""
+    response = response_language()
+    if response.source == "output_variable":
+        source = t("common.output_language.source.output_variable")
+    else:
+        source = t(_LANGUAGE_SOURCES[response.source])
+    warning = None
+    if response.problem in _OUTPUT_LANGUAGE_WARNINGS:
+        warning = t(
+            _OUTPUT_LANGUAGE_WARNINGS[response.problem], max=config.OUTPUT_LANGUAGE_MAX_CHARS
+        )
+    return response.value, source, warning
+
+
 #: Separadores de miles y decimal por idioma (REQ-026): `20.027` y `1,5` en español, `20,027` y
 #: `1.5` en inglés.
 _SEPARATORS = {"es": (".", ","), "en": (",", ".")}

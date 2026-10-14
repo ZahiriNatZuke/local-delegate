@@ -291,9 +291,10 @@ dos campos:
   conjunto de hashes por script; es de B3, para que no comparta fichero con B2;
 
 **Regla de las filas sin versión (hallazgo 4 de la ronda 2):** una fila de `usage-*.jsonl` **sin
-`package_version` es siempre del tramo «antes»**, sea cual sea su fecha. El motivo es que toda
-versión del lado «después» (0.36.0 en adelante) escribe la clave, así que una fila sin ella la
-escribió una 0.34.0 o una 0.35.0, por ejemplo una Mac rezagada. La spec ya lo recoge (enmienda del
+versión es siempre del tramo «antes»**, sea cual sea su fecha. **Enmienda del 2026-10-14 (decisión
+de la sesión principal en B2b-2):** la versión es la clave `v` que toda fila lleva desde F1, no una
+clave nueva `package_version` (la spec la daba como «propuesto», y habría duplicado `v`); por eso una
+fila sin versión es anterior a F1. La spec ya lo recoge (enmienda del
 2026-10-12, `spec.md:562-563`), así que no hay fecha de reserva ni campo para ella. Test en B2b: una fila sin versión y con fecha posterior a la frontera
 cae en «antes». Control positivo: clasificar por fecha hace fallar ese caso.
 
@@ -302,7 +303,7 @@ lo lee como un conjunto vacío: no hay frontera de hooks y todo evento de teleme
 igual que hoy. B2b no consume nada que produzca una ola posterior. Test en B2b: sin el fichero, el
 lector no da error y devuelve un conjunto vacío.
 
-Las filas de uso llevan `package_version` desde B2 (lote B2b).
+Las filas de uso llevan la versión en `v` desde F1; B2b no añade clave (enmienda del 2026-10-14).
 
 **El conjunto de hashes «después» solo crece.** En cada PR de release,
 `scripts/bump_version.py --boundaries` **añade** al conjunto de cada script el hash actual de
@@ -1072,7 +1073,7 @@ ficheros) y las dos mitades son independientes. B0a se mezcla antes que B0b; las
 - **Imports de `i18n.py`:** stdlib, `config` (por `config.LOG_DIR`, D7) y `hook_common`. No hay
   ciclo: `config` no importa `i18n`, y lo que `config` devuelve sobre el idioma son códigos, no
   textos.
-- La clave `package_version` de las filas de uso pasa a B2 (lote B2b), que es la dueña de
+- La versión de las filas de uso (`v`, desde F1; antes se proponía `package_version`) pasa a B2 (lote B2b), que es la dueña de
   `server.py`. Sale en la misma versión 0.36.0, así que la frontera no cambia.
 
 ##### B0a — Base de idioma, catálogo, paridad, fixtures y `test-lang-es`
@@ -1275,7 +1276,7 @@ en vivo) **antes del PR de release**.
 - **B2b-2:** idioma de respuesta (REQ-028) con `i18n.response_language()` (en `i18n.py`, no en
   `server.py`: `doctor` también la usa), la orden de idioma **detrás** de `_guard` (los prompts no se
   traducen), `LOCAL_DELEGATE_OUTPUT_LANGUAGE`, el idioma por defecto de `commit_msg` (valor explícito
-  `diff` para la regla del diff), `package_version` y `measurement_boundaries.json` (REQ-041), y
+  `diff` para la regla del diff), la frontera por la versión `v` de cada fila y `measurement_boundaries.json` (REQ-041), y
   `PROMPT_BOUNDARIES` versionada en `scripts/build_corpus.py`.
 - **B2c:** lo de «B2c» de abajo; `truncated`/`warning` de `_local_delegate` pasan a significar «salida
   truncada en un trozo» (contrato y CHANGELOG).
@@ -1321,11 +1322,11 @@ en vivo) **antes del PR de release**.
     `local_status`; además, `failures.py`, `chains.py`, `sections.py` y `mcp.json`.
   - **Tamaño:** 159 literales en `server`, 33 en `failures` y unos 10 en `chains`/`sections`.
 - **B2b, contrato, descripciones y prompts.**
-  - **REQ:** 010, 027, 028 y 041 (`package_version` en las filas de uso y fronteras de las
+  - **REQ:** 010, 027, 028 y 041 (la versión `v` de las filas de uso y fronteras de las
     descripciones y los prompts).
   - **Toca:** en `server.py`, los docstrings, las anotaciones, la `description` (`:68-73`), las
     subclaves de `_local_delegate` (`:3612-3631`), los marcadores (`:474`, `:1099`, `:2169` y
-    `:2422`), los prompts (`:3201-3316` y `:2964`) y la clave `package_version` de la fila;
+    `:2422`) y los prompts (`:3201-3316` y `:2964`) (la versión de la fila ya va en `v`);
     además, `tools.json`, `measurement_boundaries.json`, la wiki del contrato, `lang_sample/` y
     `rename-exceptions.md`.
   - **Tamaño:** 11 docstrings (8 771 caracteres), 11 títulos y 1 descripción; 5 subclaves y 3
@@ -1361,7 +1362,7 @@ en vivo) **antes del PR de release**.
   - *recibos en inglés:* sin cadenas `es` del catálogo.
   - *números:* `20027`, no `20,027`.
   - *muestra en vivo de D10:* se guarda en `evidence/B2/lang-sample.json` con el id de la ventana.
-  - *fronteras:* el test de dos máquinas sobre `usage-*` (fila con `package_version` vieja y fecha
+  - *fronteras:* el test de dos máquinas sobre `usage-*` (fila con `v` vieja y fecha
     posterior → tramo «antes»).
 - **Cierre de B2:** la sección «pendiente» de `rename-exceptions.md` queda vacía.
 
@@ -1801,7 +1802,7 @@ paridad, `uv tool install`, `uv sync`, build y capturas. Nunca dos a la vez en t
 | 038 | verificación en vivo (0.35.0 y 0.36.0) | ids de ventana |
 | 039 | todas | `pesado.sh` en los registros |
 | 040 | releases 0.35.0 y 0.36.0 (+B5 wiki del idioma) | diff de docs en los PR de release |
-| 041 | B2b (`package_version`, descripciones y prompts), B3 (hashes y script), cada release | fichero de fronteras; tests |
+| 041 | B2b (fronteras por `v`, descripciones y prompts), B3 (hashes y script), cada release | fichero de fronteras; tests |
 | 042 | todas | `eol-check.txt` sobre todo el diff, con los renombres seguidos |
 | 043 | B0 (fixtures, incluido el de `locale`; B4 lo usa) | doble corrida; trabajo `test-lang-es` de `ci.yml`, vigilado por `ci-gate`; controles |
 | 044 | A0 | detector, léxico y auditoría |
@@ -1851,7 +1852,7 @@ Ninguna que reabra la spec. Hay dos precisiones de ejecución, dichas aquí para
 - **REQ-006, lista de lectores.** Se revisó `scripts/measure_slowness.py`, que no estaba en la
   lista: lee `usage-*`, pero ninguna clave ni valor en español (`search_regex` sin coincidencias).
   No necesita lectura dual. Queda escrito para que no parezca un olvido.
-- **REQ-041, filas sin `package_version`.** Ya no es una desviación: la spec lo incorporó en la
+- **REQ-041, filas sin versión (`v`).** Ya no es una desviación: la spec lo incorporó en la
   enmienda del 2026-10-12 (`spec.md:562-563`). Una fila sin versión cuenta siempre como «antes».
   El plan lo aplica en D9, con test y control positivo, y no hay fecha de reserva.
 - **REQ-041 y REQ-043, reparto entre olas.** La traceability de la spec ponía `package_version` en
