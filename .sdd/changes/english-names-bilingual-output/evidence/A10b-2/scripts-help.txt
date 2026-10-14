@@ -1,0 +1,66 @@
+usage: analyze_benchmark.py [-h] {affinity-verdict,cp3,decide} ...
+
+Agrega el JSONL de `local-delegate benchmark` y aplica por programa §6 y §7 de
+protocolo-f2.md.
+
+positional arguments:
+  {affinity-verdict,cp3,decide}
+    affinity-verdict    aplica los criterios de aceptacion de las celdas
+                        (REQ-043) y escribe verdict.json
+
+options:
+  -h, --help            show this help message and exit
+usage: analyze_benchmark.py decide [-h] --cases CASES [--json JSON]
+                                   [--output OUTPUT] [--cp3 CP3] --pair ROL
+                                   VIGENTE CANDIDATO [--pairs PAIRS]
+                                   [--umbral-shared-mib UMBRAL_SHARED_MIB]
+                                   jsonl [jsonl ...]
+
+positional arguments:
+  jsonl
+
+options:
+  -h, --help            show this help message and exit
+  --cases CASES         cases.json del corpus v2
+  --json JSON           escribe tambien el resultado en JSON
+  --output OUTPUT       escribe el informe aqui en vez de stdout
+  --cp3 CP3             JSON de `cp3` (repetible)
+  --pair ROL VIGENTE CANDIDATO
+  --pairs PAIRS         JSON de `hoja_pares.py destapar --json` (repetible,
+                        uno por comparacion)
+  --umbral-shared-mib UMBRAL_SHARED_MIB
+                        crecimiento de Shared Usage tolerado antes de dar CP-1
+                        por caido (sin calibrar: tarea 18)
+usage: analyze_benchmark.py cp3 [-h] --cases CASES [--json JSON]
+                                [--output OUTPUT] --small SMALL --large LARGE
+                                jsonl [jsonl ...]
+
+positional arguments:
+  jsonl
+
+options:
+  -h, --help       show this help message and exit
+  --cases CASES    cases.json del corpus v2
+  --json JSON      escribe tambien el resultado en JSON
+  --output OUTPUT  escribe el informe aqui en vez de stdout
+  --small SMALL    label, o label@control
+  --large LARGE    label, o label@control
+usage: review_sheet.py generate [-h] --sheet SHEET --key KEY [--cases CASES]
+                                [--seed SEED]
+                                jsonl [jsonl ...]
+
+positional arguments:
+  jsonl
+
+options:
+  -h, --help     show this help message and exit
+  --sheet SHEET
+  --key KEY
+  --cases CASES  cases.json, para citar la fuente
+  --seed SEED    solo para pruebas; por defecto aleatoria
+usage: review_sheet.py unblind [-h] --sheet SHEET --key KEY
+
+options:
+  -h, --help     show this help message and exit
+  --sheet SHEET
+  --key KEY

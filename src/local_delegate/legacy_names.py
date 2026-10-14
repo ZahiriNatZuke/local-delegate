@@ -226,7 +226,7 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
     },
     # Cada fila de resultados de `local-delegate benchmark` y del techo de
     # `scripts/dev/affinity_batch.py` (`benchmarks/*/resultados*/*.jsonl`, congelados). Solo lo que
-    # leen sus cargadores (`analizar_benchmark`, `hoja_pares`, `hoja_revision` y `affinity_batch`):
+    # leen sus cargadores (`analyze_benchmark`, `hoja_pares`, `review_sheet` y `affinity_batch`):
     # `procedencia` y `entorno_fijado` cambian de nombre al escribir, pero nadie los lee de vuelta.
     # `zero_by` va dentro de `score`: lo traduce `normalize_benchmark_result`.
     "benchmark_results": {
@@ -251,6 +251,65 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
             "estado": "state",
             "huella": "footprint",
         },
+    },
+    # El corpus de afinidad (`benchmarks/afinidad-2026-10/cases.json`, congelado; lo escribe
+    # `construir_corpus`) tal como lo lee `analyze_benchmark`: de cada caso, solo estas dos claves…
+    "affinity_case": {
+        "keys": {"rol_en_hoja": "sheet_role", "discriminante": "discriminating"},
+    },
+    # …y su puntuador (`puntuador`), que lee `analyze_benchmark.score_affinity`.
+    "affinity_scorer": {
+        "keys": {
+            "tipo": "kind",
+            "aceptables": "acceptable",
+            "etiquetas": "labels",
+            "claves": "keys",
+            "esperado": "expected",
+            "titulos": "titles",
+            "listas": "lists",
+            "bloques": "blocks",
+            "codigo": "code",
+            "conteos": "counts",
+            "formato": "format",
+        },
+    },
+    # `reglas.json` de la evaluación de afinidad (congelado, escrito a mano; ahora `rules.json`).
+    # La misma tabla vale para el primer nivel, `formato` y `sin_adornos`
+    # (`normalize_affinity_rules`).
+    "affinity_rules": {
+        "keys": {
+            "max_inventa_26b": "max_made_up_26b",
+            "preguntas_opcionales": "optional_questions",
+            "formato": "format",
+            "parada_anticipada": "early_stop",
+            "primera_linea_max": "first_line_max",
+            "prefijo": "prefix",
+            "sin_adornos": "no_frills",
+            "vallas_de_codigo": "code_fences",
+            "comillas_envolventes": "wrapping_quotes",
+            "encabezados_markdown": "markdown_headings",
+            "frases_de_presentacion": "intro_phrases",
+        },
+    },
+    # El juicio del usuario sobre la hoja de commits (salida de `hoja_pares.py leer-commit`), que
+    # lee `analyze_benchmark`: el primer nivel y cada par de `pares`
+    # (`normalize_commit_judgement`).
+    "commit_judgement": {
+        "keys": {
+            "parcial": "partial",
+            "pares": "pairs",
+            "juego": "set",
+            "tipo": "kind",
+            "preferencia": "preference",
+            "lados": "sides",
+            "inventa": "made_up",
+            "especifico": "specific",
+            "caso": "case",
+        },
+    },
+    # Cada fila de `hoja_pares.py destapar --json`, que suma `analyze_benchmark decide --pairs`.
+    "unblinded_pairs": {
+        "keys": {"humano": "human"},
     },
     # Cada entrada de las ventanas de la tanda de afinidad (`batch-windows.json`; antes
     # `ventanas-tanda.json`, congelado).
@@ -322,12 +381,15 @@ EXCLUDED_WINDOWS_FILE_NAMES: tuple[str, str] = ("ventanas-excluidas.json", "excl
 
 #: Ficheros de la tanda de afinidad (`benchmarks/afinidad-2026-10/`), como `(viejo, nuevo)`. Se
 #: escribe solo el nuevo; si no existe, se lee el viejo, que está congelado y no se reescribe.
-#: Las huellas las escribe `scripts/dev/affinity_batch.py` y las lee `analizar_benchmark`; las
-#: ventanas, `affinity_batch`; el veredicto lo escribe `analizar_benchmark` y lo lee
+#: Las huellas las escribe `scripts/dev/affinity_batch.py` y las lee `analyze_benchmark`; las
+#: ventanas, `affinity_batch`; el veredicto lo escribe `analyze_benchmark` y lo lee
 #: `tests/test_affinity.py`.
 FOOTPRINTS_FILE_NAMES: tuple[str, str] = ("huellas.json", "footprints.json")
 BATCH_WINDOWS_FILE_NAMES: tuple[str, str] = ("ventanas-tanda.json", "batch-windows.json")
 VERDICT_FILE_NAMES: tuple[str, str] = ("veredicto.json", "verdict.json")
+#: Las reglas de la evaluación de afinidad, como `(viejo, nuevo)`: las lee `analyze_benchmark`
+#: (y `hoja_pares`); el viejo, congelado, se lee si el nuevo no existe.
+RULES_FILE_NAMES: tuple[str, str] = ("reglas.json", "rules.json")
 
 #: Valores que el panel recibe de `/api/hooks` y que su diccionario de etiquetas tiene que entender
 #: también en el formato viejo (REQ-009). El servidor lo inyecta en el HTML: el JS no copia la tabla.
@@ -465,4 +527,29 @@ def normalize_affinity_verdict(data: Mapping[str, Any]) -> dict[str, Any]:
         out["cells"] = [
             normalize("affinity_verdict", c) if isinstance(c, Mapping) else c for c in out["cells"]
         ]
+    return out
+
+
+def normalize_affinity_rules(data: Mapping[str, Any]) -> dict[str, Any]:
+    """Las reglas de afinidad en el formato nuevo: el primer nivel, `format` y `no_frills`. Unas
+    reglas ya nuevas salen igual."""
+    out = normalize("affinity_rules", data)
+    fmt = out.get("format")
+    if isinstance(fmt, Mapping):
+        fmt = normalize("affinity_rules", fmt)
+        if isinstance(fmt.get("no_frills"), Mapping):
+            fmt["no_frills"] = normalize("affinity_rules", fmt["no_frills"])
+        out["format"] = fmt
+    return out
+
+
+def normalize_commit_judgement(data: Mapping[str, Any]) -> dict[str, Any]:
+    """El juicio de la hoja de commits en el formato nuevo: el primer nivel y cada par de `pairs`.
+    Un juicio ya nuevo sale igual."""
+    out = normalize("commit_judgement", data)
+    if isinstance(out.get("pairs"), Mapping):
+        out["pairs"] = {
+            k: normalize("commit_judgement", p) if isinstance(p, Mapping) else p
+            for k, p in out["pairs"].items()
+        }
     return out

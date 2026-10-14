@@ -11,6 +11,7 @@ OK    A10a.md
       · A10a-6-mapping.csv: 288 filas, 0 discrepancia(s)
 OK    A10b.md
       · A10b-1-mapping.csv: 225 filas, 7 discrepancia(s)
+      · A10b-2-mapping.csv: 207 filas, 0 discrepancia(s)
 OK    A2.md
       · A2-mapping.csv: 156 filas, 9 discrepancia(s)
 OK    A3.md

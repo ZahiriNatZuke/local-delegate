@@ -840,8 +840,8 @@ def test_each_mechanical_case_discriminates_with_its_scorer(affinity):
     for case in mechanical_ones:
         ok = analyze.score_affinity(case, case["reference_ok"])
         bad = analyze.score_affinity(case, case["reference_bad"])
-        assert ok == {"calidad": 1.0, "formato": True}, case["id"]
-        assert bad["calidad"] < 1.0, case["id"]
+        assert ok == {"quality": 1.0, "format": True}, case["id"]
+        assert bad["quality"] < 1.0, case["id"]
 
 
 def test_corpus_declares_what_spec_requires(affinity):

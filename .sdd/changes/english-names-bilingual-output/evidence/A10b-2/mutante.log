@@ -1,0 +1,27 @@
+# Controles positivos de A10b-2 (2026-10-13). Copias en scratchpad a10b/mut2/.
+
+## 1. Escritor del veredicto: scripts/analyze_benchmark.py
+sha256 antes:  ca53124308f46a9181b09409684479b0a26db58a0334b36c7560f5d7d81e21d5
+mutante: compute_verdict escribe "celdas" en vez de "cells"
+sha256 mutado: 57992340148cf6419a1daf291b88399f7bcfac49080f7020aa57975d33573547
+pytest test_analisis_benchmark + test_affinity -> caen los tests del veredicto con `KeyError: 'cells'`
+(entre ellos test_the_written_verdict_closes_the_cycle_and_the_frozen_one_is_still_read y
+test_does_not_import_package)
+restaurado desde la copia: sha256 vuelve a ca531243...; los tests pasan
+
+## 2. Lectura dual: src/local_delegate/legacy_names.py sin las tablas de entrada
+sha256 antes:  14587a182df6672c32145f0b0b7bd22c082ec15fd18c06eb918880827c4887c0
+mutante: affinity_scorer, affinity_rules, commit_judgement, unblinded_pairs y affinity_case con "keys": {}
+sha256 mutado: 6a6016357c4a491bef9869fe2e50872698b224ea03a3fcf833e905cee229b070
+-> 5 failed (antes del test del corpus de afinidad):
+  test_an_old_format_judgement_gives_the_same_commit_cell        E KeyError: 'pairs'
+  test_an_old_format_scorer_scores_the_same                      E ValueError: puntuador None desconocido
+  test_unblinded_pairs_are_summed_in_either_format               E KeyError: 'human'
+  test_the_frozen_rules_are_read_with_the_new_keys               (read_affinity_rules sale con SystemExit)
+  test_corpus::test_each_mechanical_case_discriminates_with_its_scorer  E ValueError: puntuador None desconocido
+  Un primer intento derivaba el formato viejo de la propia tabla: con la tabla vacía disparaban las
+  guardas, no la comparación. Se reescribió con los nombres viejos a mano (_OLD_NAMES) y se repitió.
+mutante aparte: solo affinity_case vacía (sha256 7ae01467...):
+  test_the_frozen_affinity_corpus_is_read_with_the_new_case_keys  E Regex pattern did not match
+  ('local_classify: el corpus no trae casos discriminantes')
+restaurado desde la copia: sha256 vuelve a 14587a18...; los tests pasan

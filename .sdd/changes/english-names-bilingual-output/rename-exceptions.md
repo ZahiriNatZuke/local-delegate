@@ -90,6 +90,13 @@ sección de su motivo.
 | ventanas-tanda.json | tests/test_affinity_batch.py | lectura de formato viejo (decisión 6 de A10): nombre del fichero de ventanas de antes de `batch-windows.json`, del que parte `register_window` (ola A10b-1) |
 | huellas.json | tests/test_affinity_batch.py | lectura de formato viejo (decisión 6 de A10): nombre de las huellas de antes de `footprints.json`, con las que `write_footprints` compara una tanda empezada antes (ola A10b-1) |
 | procedencia | tests/test_benchmark.py | lectura de formato viejo (decisión 6 de A10): el test nuevo comprueba que el corpus congelado dice `procedencia` y `load_corpus` lo da como `provenance` (ola A10b-1) |
+| veredicto.json | tests/test_analisis_benchmark.py | lectura de formato viejo (decisión 6 de A10): el test del ciclo copia el veredicto congelado y comprueba que se lee si falta `verdict.json` (ola A10b-2) |
+| solo_mecanicas | tests/test_analisis_benchmark.py | lectura de formato viejo (decisión 6 de A10): clave vieja del veredicto que el test exige que ya no se escriba (ola A10b-2) |
+| reglas_sha256 | tests/test_analisis_benchmark.py | lectura de formato viejo (decisión 6 de A10): clave vieja del veredicto que el test exige que ya no se escriba (ola A10b-2) |
+| rol_comparado | tests/test_analisis_benchmark.py | lectura de formato viejo (decisión 6 de A10): clave vieja de la celda que el test exige que ya no se escriba (ola A10b-2) |
+| pares | tests/test_analisis_benchmark.py | lectura de formato viejo (decisión 6 de A10): el juicio de la hoja de commits en el formato de `hoja_pares` de antes, escrito a mano en `_OLD_NAMES` (ola A10b-2) |
+| reglas.json | tests/test_analisis_benchmark.py | lectura de formato viejo (decisión 6 de A10): `reglas.json` congelado, que `read_affinity_rules` y `rules_file` siguen leyendo (ola A10b-2) |
+| humano | tests/test_analisis_benchmark.py | lectura de formato viejo (decisión 6 de A10): fila de `hoja_pares.py destapar --json` de antes, que `merge_unblinded_pairs` suma (ola A10b-2) |
 
 ## Envoltorio de REQ-046
 
@@ -131,7 +138,7 @@ sección de su motivo.
 | wiki-instalacion | tests/test_adoption_experiment.py | dato congelado de corpus o caso: id de una tarea del corpus congelado (ola A10a-5) |
 | experimento-adopcion | scripts/adoption_experiment.py | dato congelado de corpus o caso: etiqueta de las tandas ya anotadas en el fichero congelado de ventanas excluidas (ola A10a-5) |
 | resumen-estructurado | scripts/measure_structured_summary.py | dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (copias fijas, `MANIFEST.json` y resultados ya escritos) (ola A10a-6) |
-| afinidad-2026-10 | scripts/analizar_benchmark.py | dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10b-1) |
+| afinidad-2026-10 | scripts/analyze_benchmark.py | dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10b-1) |
 | afinidad-2026-10 | scripts/dev/affinity_batch.py | dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10b-1) |
 | afinidad-2026-10 | tests/test_affinity.py | dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10b-1) |
 | afinidad-2026-10 | tests/test_affinity_batch.py | dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10b-1) |
@@ -141,7 +148,7 @@ sección de su motivo.
 | leer-cifras-dashboard | tests/test_benchmark.py | dato congelado de corpus o caso: id de un caso del corpus congelado (ola A10b-1) |
 | resumen-md-2k | tests/test_benchmark.py | dato congelado de corpus o caso: id de un caso del corpus congelado (ola A10b-1) |
 | techo-resumen-103k | tests/test_benchmark.py | dato congelado de corpus o caso: id de un caso del corpus congelado (ola A10b-1) |
-| techo-commit-156k | scripts/analizar_benchmark.py | dato congelado de corpus o caso: id del caso de techo del corpus congelado; resultados, hojas y claves lo citan (ola A10b-1) |
+| techo-commit-156k | scripts/analyze_benchmark.py | dato congelado de corpus o caso: id del caso de techo del corpus congelado; resultados, hojas y claves lo citan (ola A10b-1) |
 | techo-commit-156k | scripts/dev/affinity_batch.py | dato congelado de corpus o caso: id del caso de techo del corpus congelado (ola A10b-1) |
 
 ## Pendiente

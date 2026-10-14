@@ -1525,20 +1525,20 @@ def private_data(text: str) -> list[str]:
 # comprueba algo objetivo que un modelo puede fallar, con su `reference_ok` (puntua 1) y su
 # `reference_bad` (puntua menos de 1) escritos antes de medir. Los textos son inventados para el
 # caso: ninguno sale de un log ni de un fichero del usuario. Los puntuadores viven en
-# `analizar_benchmark.py` (no importa el paquete) y se cargan por ruta.
+# `analyze_benchmark.py` (no importa el paquete) y se cargan por ruta.
 
 
 def analyzer() -> Any:
-    """`analizar_benchmark.py` cargado por ruta: de el salen los puntuadores y el veredicto."""
-    module = sys.modules.get("analizar_benchmark")
+    """`analyze_benchmark.py` cargado por ruta: de el salen los puntuadores y el veredicto."""
+    module = sys.modules.get("analyze_benchmark")
     if module is not None and hasattr(module, "score_affinity"):
         return module
     spec = importlib.util.spec_from_file_location(
-        "analizar_benchmark", RAIZ / "scripts" / "analizar_benchmark.py"
+        "analyze_benchmark", RAIZ / "scripts" / "analyze_benchmark.py"
     )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
-    sys.modules["analizar_benchmark"] = module
+    sys.modules["analyze_benchmark"] = module
     spec.loader.exec_module(module)
     return module
 
@@ -1601,10 +1601,10 @@ def _translates(id_: str, text: str, good_one: str, bad_one: str):
         "md",
         {
             "tipo": "translate",
-            "titulos": est["titulos"],
-            "listas": est["listas"],
-            "bloques": est["bloques"],
-            "codigo": est["codigo"],
+            "titulos": est["titles"],
+            "listas": est["lists"],
+            "bloques": est["blocks"],
+            "codigo": est["code"],
         },
         good_one,
         bad_one,
@@ -2465,7 +2465,7 @@ def build_affinity(
         errors.extend(check_affinity(case, capture))
         spec = {"id": c.id, "puntuador": c.scorer}
         ok, bad = score_fn(spec, c.reference_ok), score_fn(spec, c.reference_bad)
-        if ok["calidad"] != 1.0 or not ok["formato"] or bad["calidad"] >= 1.0:
+        if ok["quality"] != 1.0 or not ok["format"] or bad["quality"] >= 1.0:
             errors.append(f"{c.id}: las referencias no separan (ok={ok}, bad={bad})")
         if not capture.llamadas:
             continue
