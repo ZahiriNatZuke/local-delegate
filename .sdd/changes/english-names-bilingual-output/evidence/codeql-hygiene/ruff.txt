@@ -1,0 +1,4 @@
+[pesado] plaza plaza-1 tomada tras 0s: uv run ruff check .
+All checks passed!
+[pesado] plaza plaza-1 tomada tras 0s: uv run ruff format --check .
+197 files already formatted

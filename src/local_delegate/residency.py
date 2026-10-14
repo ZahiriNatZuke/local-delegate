@@ -33,6 +33,7 @@ en vuelo, modelos cargados) y la vigía de la recarga no viven aquí: las hace e
 
 from __future__ import annotations
 
+import contextlib
 import copy
 import difflib
 import json
@@ -1058,10 +1059,10 @@ def atomic_replace(path: Path, data: bytes) -> None:
             "el original queda intacto"
         )
     except BaseException:
-        try:
+        # Limpieza del temporal antes de relanzar: si ya no existe (lo movió `os.replace`, o no
+        # llegó a crearse), no queda nada que borrar.
+        with contextlib.suppress(FileNotFoundError):
             os.unlink(tmp_dir)
-        except FileNotFoundError:
-            pass
         raise
 
 

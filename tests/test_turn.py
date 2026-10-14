@@ -249,7 +249,7 @@ class Request:
 
     def __init__(self, t: Turn, request: PendingRequest) -> None:
         self.grant: turn.Grant | None = None
-        self.error: BaseException | None = None
+        self.error: Exception | None = None
         self.instant: float | None = None
         self.warnings: list[tuple[int, tuple[str, ...]]] = []
         self.ready = threading.Event()
@@ -258,7 +258,7 @@ class Request:
             try:
                 self.grant = t.request(request, lambda *a: self.warnings.append(a))
                 self.instant = time.monotonic()
-            except BaseException as exc:
+            except Exception as exc:  # el test lo mira; un hilo no puede propagarlo
                 self.error = exc
             finally:
                 self.ready.set()

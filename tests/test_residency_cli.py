@@ -364,7 +364,7 @@ def test_without_a_watch_it_does_not_write_unless_now(tmp_path, monkeypatch, cap
     )
 
     def cannot_open(backend):
-        raise llamaswap_api.QueryError("ya hay 4 vigías abiertas")
+        raise llamaswap_api.TooManyWatches("ya hay 4 vigías abiertas")
 
     monkeypatch.setattr(llamaswap_api.watches, "open", cannot_open)
     monkeypatch.setattr(config, "BASE_URL", "http://127.0.0.1:9/v1")
@@ -376,7 +376,10 @@ def test_without_a_watch_it_does_not_write_unless_now(tmp_path, monkeypatch, cap
         output = _output(capsys)
         assert rc == 2
         assert "no se puede vigilar la recarga" in output
-        assert "ya hay 4 vigías abiertas" in output
+        # El 502 no lleva el texto de la excepción (CodeQL py/stack-trace-exposure), sino el fijo
+        # de su familia: el del tope de vigías.
+        assert metrics.WATCH_LIMIT in output
+        assert "ya hay 4 vigías abiertas" not in output
         assert "--now" in output
         assert _sha(path) == before
 

@@ -91,6 +91,10 @@ class QueryError(Exception):
     """llama-swap contestó, pero no se puede saber lo que se pedía (401, respuesta rara...)."""
 
 
+class TooManyWatches(QueryError):
+    """El daemon ya tiene abiertas todas las vigías que admite (`Watches.max_watchers`)."""
+
+
 @dataclass(frozen=True)
 class Backend:
     """Dónde está llama-swap (sin el `/v1`) y con qué cabeceras se le pregunta."""
@@ -616,7 +620,7 @@ class WatchRegistry:
             self._forget_old(time.monotonic())
             alive = sum(1 for w, _ in self._watchers.values() if w.outcome is None)
             if alive + self._reserved >= self.max_watchers:
-                raise QueryError(f"ya hay {alive + self._reserved} vigías abiertas")
+                raise TooManyWatches(f"ya hay {alive + self._reserved} vigías abiertas")
             self._reserved += 1
         try:
             watcher = Watcher(backend)

@@ -23,7 +23,7 @@ import sys
 import threading
 import time
 from collections.abc import Callable, Collection, Generator, Iterable, Sequence
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -562,7 +562,16 @@ def _timing_sum(timed: Sequence[dict], key: str) -> float | None:
 #: vez por origen de la siembra (el mes en curso y el anterior, o el log fijo entero) y se alimenta
 #: con cada evento.
 _pace_lock = threading.Lock()
-_pace_state: tuple[tuple[str, Path], pace.References] | None = None
+
+
+@dataclass
+class _PaceCache:
+    """La siembra vigente: de dónde salió y sus referencias (`None` hasta la primera)."""
+
+    entry: tuple[tuple[str, Path], pace.References] | None = None
+
+
+_pace_cache = _PaceCache()
 
 
 def _pace_source() -> tuple[str, Path]:
@@ -578,11 +587,10 @@ def _pace_references() -> pace.References:
     Van atadas a lo que se siembra: si cambia (otro `LOCAL_DELEGATE_LOG_DIR`, otro
     `LOCAL_DELEGATE_LOG`, o un test con su `tmp_path`), se siembran de nuevo desde ahí.
     """
-    global _pace_state
     source = _pace_source()
     with _pace_lock:
-        if _pace_state is not None and _pace_state[0] == source:
-            return _pace_state[1]
+        if _pace_cache.entry is not None and _pace_cache.entry[0] == source:
+            return _pace_cache.entry[1]
         references = pace.References()
         kind, location = source
         if kind == "rotated":
@@ -593,7 +601,7 @@ def _pace_references() -> pace.References:
                 references.seed(location.read_text(encoding="utf-8", errors="replace").splitlines())
             except Exception:
                 pass  # sembrar es una mejora: sin siembra, la ventana se llena con los eventos
-        _pace_state = (source, references)
+        _pace_cache.entry = (source, references)
         return references
 
 
@@ -849,7 +857,7 @@ def _log_event(
         # Espera frente a lentitud (REQ-024 a REQ-026). Su propio `try`: el general de abajo solo
         # atrapa `OSError`, y observar no puede romper una tool (REQ-028). Si algo falla, el
         # evento se escribe sin ninguno de estos campos.
-        try:
+        with suppress(Exception):
             rec.update(
                 _slowness_fields(
                     attempts,
@@ -861,17 +869,15 @@ def _log_event(
                     local_backend=rec["backend"] == "local",
                 )
             )
-        except Exception:
-            pass
         log_path = _current_log_path()
         log_path.parent.mkdir(parents=True, exist_ok=True)
         _append_log_line(log_path, json.dumps(rec, ensure_ascii=False) + "\n")
         # Después de medir: el evento entra en la ventana de su modelo (REQ-025).
         if "tok_s" in rec:
-            try:
+            # Registrar la velocidad también es observar: si falla, el evento ya está escrito y la
+            # ventana se queda sin él (REQ-028).
+            with suppress(Exception):
                 _pace_references().record(rec)
-            except Exception:
-                pass
     except OSError:
         pass  # el logging es best-effort; jamás propaga
 
@@ -1369,7 +1375,9 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
     # dedujo leyendo, se midió: se enumeraron las 16 formas de terminar el `try` y ninguna
     # llegó hasta aquí, y con la guarda del intento quitada el mismo experimento sí la
     # alcanzaba —control positivo—. Lo que antes prometía esa línea lo garantiza ahora
-    # `tests/test_post_chat_paths.py`, que sí se ejecuta.
+    # `tests/test_post_chat_paths.py`, que sí se ejecuta. Este `raise` deja escrito ese invariante
+    # (y que la función nunca cae al final con un `None` implícito).
+    raise AssertionError("_post_chat: los dos intentos terminan siempre en un return")
 
 
 _THINK_RE = re.compile(r"<think(?:ing)?>.*?</think(?:ing)?>", re.IGNORECASE | re.DOTALL)
@@ -1418,16 +1426,24 @@ def _new_turn() -> turn.Turn:
 
 _turn = _new_turn()
 _turn_lock = threading.Lock()
-#: La versión de la foto de topología que rige en `_turn` (REQ-009).
-_turn_version: int | None = None
+
+
+@dataclass
+class _TurnVersion:
+    """La versión de la foto de topología que rige en `_turn` (REQ-009); `None` sin foto aún."""
+
+    value: int | None = None
+
+
+_turn_version = _TurnVersion()
 
 
 def _reset_turn() -> None:
     """El estado del turno, a cero, con el `TURN_MAX_S` vigente (lo usan los tests)."""
-    global _turn, _turn_version
+    global _turn
     with _turn_lock:
         _turn = _new_turn()
-        _turn_version = None
+        _turn_version.value = None
 
 
 def _on_snapshot_seen(snapshot: topology.Snapshot) -> None:
@@ -1436,11 +1452,10 @@ def _on_snapshot_seen(snapshot: topology.Snapshot) -> None:
     Solo hacia delante: dos hilos que leen fotos distintas pueden llegar aquí en orden inverso, y
     la más vieja no puede pisar a la nueva.
     """
-    global _turn_version
     with _turn_lock:
-        if _turn_version is None or snapshot.version > _turn_version:
+        if _turn_version.value is None or snapshot.version > _turn_version.value:
             _turn.topology_change(snapshot.clashes)
-            _turn_version = snapshot.version
+            _turn_version.value = snapshot.version
 
 
 def _topology() -> topology.Snapshot | topology.NoTopology:
@@ -4509,11 +4524,10 @@ def local_status() -> str:
             f"  Ventana de prueba abierta: {window.id} desde "
             f"{test_windows.format_instant(window.start)}"
         )
-    # REQ-027: la velocidad normal de cada modelo. Observar no rompe la tool (REQ-028).
-    try:
+    # REQ-027: la velocidad normal de cada modelo. Observar no rompe la tool (REQ-028): si no se
+    # puede describir, el informe sale sin esa línea.
+    with suppress(Exception):
         lines.append(f"  {_describe_pace()}")
-    except Exception:
-        pass
 
     lines.append("")
     if config.WEB_ENABLED:

@@ -23,6 +23,7 @@ estándar.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import threading
@@ -130,9 +131,9 @@ def main() -> int:
             f.write(json.dumps({"pid": os.getpid(), "ppid": os.getppid()}) + "\n")
     server = create_server(args.port, delay=args.delay, record=args.record)
     try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        pass
+        # Ctrl+C es la forma normal de pararlo a mano: sale sin traza y cierra el socket.
+        with contextlib.suppress(KeyboardInterrupt):
+            server.serve_forever()
     finally:
         server.server_close()
     return 0

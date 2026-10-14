@@ -1,0 +1,30 @@
+[pesado] plaza plaza-1 tomada tras 0s: bash /c/Users/Yohan/AppData/Local/Temp/claude/D--Projects-local-delegate/99a3bd70-675b-4b0c-8aca-af2fdb5b3582/scratchpad/codeql/mutant.sh
+sha256 antes bdc029ca3abe
+mutado metrics.py: '{"error": message}' -> '{"error": str(e) or message}' (sha256 967b55beb2e0)
+>       assert r.json() == {"error": metrics.WATCH_REJECTED}
+E       AssertionError: assert {'error': 'll...events (401)'} == {'error': 'll... del daemon)'}
+E         
+E         Differing items:
+E         {'error': 'llama-swap rechaza la credencial en /api/events (401)'} != {'error': 'llama-swap contestó, pero no dejó abrir la vigía (detalle en el log del daemon)'}
+E         Use -v to get more diff
+>       assert secret not in r.text
+E       assert 'internal-detail-7f3a9c' not in '{"error":"i...ail-7f3a9c"}'
+E         
+E         'internal-detail-7f3a9c' is contained here:
+E           {"error":"internal-detail-7f3a9c"}
+>       assert secret not in r.text
+E       assert 'internal-detail-7f3a9c' not in '{"error":"i...ail-7f3a9c"}'
+E         
+E         'internal-detail-7f3a9c' is contained here:
+E           {"error":"internal-detail-7f3a9c"}
+>       assert secret not in r.text
+E       assert 'internal-detail-7f3a9c' not in '{"error":"i...ail-7f3a9c"}'
+E         
+E         'internal-detail-7f3a9c' is contained here:
+E           {"error":"internal-detail-7f3a9c"}
+FAILED tests/test_metrics.py::test_llamaswap_watch_that_cannot_open_is_502 - ...
+FAILED tests/test_metrics.py::test_llamaswap_watch_502_does_not_expose_the_exception[query_error]
+FAILED tests/test_metrics.py::test_llamaswap_watch_502_does_not_expose_the_exception[too_many_watches]
+FAILED tests/test_metrics.py::test_llamaswap_watch_502_does_not_expose_the_exception[http_error]
+4 failed, 1 passed, 95 deselected, 1 warning in 0.47s
+restaurado metrics.py: sha256 bdc029ca3abe
