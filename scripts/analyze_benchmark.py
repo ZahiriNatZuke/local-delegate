@@ -1307,8 +1307,8 @@ def evaluate_mechanical_cell(
 ) -> dict[str, Any]:
     """Estado y criterios de una celda mecanica `tool -> alternativo`, comparada con `rol`.
 
-    El orden de los desenlaces es fijo: si falla el criterio 1 la celda queda `sin base`, falle lo
-    que falle ademas; si el 1 se cumple y falla cualquier otro, `rechazada`; si todos, `aprobada`.
+    El orden de los desenlaces es fijo: si falla el criterio 1 la celda queda `no_baseline`, falle lo
+    que falle ademas; si el 1 se cumple y falla cualquier otro, `rejected`; si todos, `approved`.
     Los casos de regresion (no discriminantes) cuentan en los criterios 2 a 6 pero no en el 1.
     """
     cases = [LEGACY_NAMES.normalize("affinity_case", c) for c in cases]
@@ -1403,11 +1403,11 @@ def evaluate_mechanical_cell(
         "latency": latency,
     }
     if not discriminates["ok"]:
-        state = "sin base"
+        state = "no_baseline"
     elif all(v["ok"] for v in criteria.values()):
-        state = "aprobada"
+        state = "approved"
     else:
-        state = "rechazada"
+        state = "rejected"
     return {
         "tool": tool,
         "alternative": alternative,
@@ -1445,8 +1445,8 @@ def evaluate_commit_cell(
 
     0 (hoja valida): el usuario marca peor la trampa en 2 de las 3. 1: «inventa = si» en no mas de
     `max_made_up_26b` de los 30 mensajes del 26B. 2: `c >= v`. 3: el techo termina 3 de 3 y ningun
-    caso falla en el 26B si no falla en el modelo de codigo. Si falla el 0, `sin base`; si el 0 se
-    cumple y falla el 1, el 2 o el 3, `rechazada`.
+    caso falla en el 26B si no falla en el modelo de codigo. Si falla el 0, `no_baseline`; si el 0 se
+    cumple y falla el 1, el 2 o el 3, `rejected`.
     """
     judgement = LEGACY_NAMES.normalize_commit_judgement(judgement)
     rules = LEGACY_NAMES.normalize_affinity_rules(rules)
@@ -1527,16 +1527,16 @@ def evaluate_commit_cell(
     }
     report = None
     if not sheet["ok"]:
-        state = "sin base"
+        state = "no_baseline"
         report = (
             "repetir hoja"
             if int(judgement.get("set") or 1) < 3
             else "la tercera hoja tampoco vale: sin base"
         )
     elif invents["ok"] and preference["ok"] and behaviour["ok"]:
-        state = "aprobada"
+        state = "approved"
     else:
-        state = "rechazada"
+        state = "rejected"
     return {
         "tool": TOOL_COMMIT,
         "alternative": alternative,
@@ -1631,6 +1631,11 @@ def compute_verdict(
     }
 
 
+#: Como se lee el estado de una celda en la tabla: el `verdict.json` guarda el valor en ingles
+#: (`state`), la tabla es para leerla una persona y sigue en espanol (frente B).
+_STATE_LABELS = {"approved": "aprobada", "rejected": "rechazada", "no_baseline": "sin base"}
+
+
 def verdict_table(verdict: dict[str, Any]) -> str:
     """La tabla Markdown que se pega en `verification.md`."""
     lines = [
@@ -1642,7 +1647,7 @@ def verdict_table(verdict: dict[str, Any]) -> str:
         extra = f" ({cell['report']})" if cell.get("report") else ""
         lines.append(
             f"| {cell['tool']} | {cell['alternative']} | {cell['compared_role']} | "
-            f"{cell['state']}{extra} | {', '.join(fails) or '—'} |"
+            f"{_STATE_LABELS.get(cell['state'], cell['state'])}{extra} | {', '.join(fails) or '—'} |"
         )
     commit = next((c for c in verdict["cells"] if c["tool"] == TOOL_COMMIT), None)
     if commit:
@@ -1756,7 +1761,11 @@ def main(argv: list[str] | None = None) -> int:
         "--cp3", type=Path, action="append", default=[], help="JSON de `cp3` (repetible)"
     )
     decide.add_argument(
-        "--pair", nargs=3, action="append", required=True, metavar=("ROL", "VIGENTE", "CANDIDATO")
+        "--pair",
+        nargs=3,
+        action="append",
+        required=True,
+        metavar=("ROLE", "INCUMBENT", "CANDIDATE"),
     )
     decide.add_argument(
         "--pairs",
@@ -1766,7 +1775,7 @@ def main(argv: list[str] | None = None) -> int:
         help="JSON de `hoja_pares.py destapar --json` (repetible, uno por comparacion)",
     )
     decide.add_argument(
-        "--umbral-shared-mib",
+        "--shared-mib-threshold",
         type=float,
         default=0.0,
         help="crecimiento de Shared Usage tolerado antes de dar CP-1 por caido (sin calibrar: tarea 18)",
@@ -1808,7 +1817,7 @@ def main(argv: list[str] | None = None) -> int:
                         pair[1],
                         corpus,
                         cp3_per_role.get(role),
-                        round(args.umbral_shared_mib * 1024 * 1024),
+                        round(args.shared_mib_threshold * 1024 * 1024),
                         pairs,
                     )
                 )

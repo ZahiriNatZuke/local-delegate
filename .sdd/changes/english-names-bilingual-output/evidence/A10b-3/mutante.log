@@ -1,0 +1,15 @@
+# Mutantes de A10b-3 (2026-10-13): construir_corpus.comprobar con 'and case.terms_in_source' en la regla de una llamada; legacy_names con affinity_verdict.values.state vacía
+# sha256 (16): construir_corpus 12a8dc9616fa8788 -> 3bc67d9799f30130 -> 12a8dc9616fa8788; legacy_names 71a4f2b30b5be567 -> cfc81e0c1b06a5fd -> 71a4f2b30b5be567
+>       assert len(errores) == 1 and "no cabe en una llamada, produccion hace" in errores[0]
+>       assert {c["state"] for c in frozen["cells"]} == {"approved", "rejected"}
+>       assert read["cells"] == [{"tool": "t", "state": new}]
+>       assert read["cells"] == [{"tool": "t", "state": new}]
+>       assert read["cells"] == [{"tool": "t", "state": new}]
+>       assert code_cells == verdict_approved_cells
+FAILED tests/test_corpus.py::test_regla_de_una_llamada_caza_el_traducir_14k
+FAILED tests/test_analisis_benchmark.py::test_the_written_verdict_closes_the_cycle_and_the_frozen_one_is_still_read
+FAILED tests/test_analisis_benchmark.py::test_an_old_format_cell_state_is_read_in_english[aprobada-approved]
+FAILED tests/test_analisis_benchmark.py::test_an_old_format_cell_state_is_read_in_english[rechazada-rejected]
+FAILED tests/test_analisis_benchmark.py::test_an_old_format_cell_state_is_read_in_english[sin base-no_baseline]
+FAILED tests/test_affinity.py::test_matrix_cells_are_the_approved_cells_of_the_verdict
+6 failed, 193 passed in 12.40s
