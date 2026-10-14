@@ -195,9 +195,7 @@ def test_numbers_are_machine_format(monkeypatch, tmp_path, lang):
     monkeypatch.setattr(
         server,
         "_pace_references",
-        lambda: type(
-            "R", (), {"summary": lambda self: [{"model": "m", "median": 1.5, "samples": 3}]}
-        )(),
+        type("R", (), {"summary": lambda self: [{"model": "m", "median": 1.5, "samples": 3}]}),
     )
     pace_line = server._describe_pace()
     assert "1.5 tok/s" in pace_line and "1,5" not in pace_line
