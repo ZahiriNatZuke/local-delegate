@@ -45,7 +45,7 @@ def _run(monkeypatch, capsys, command, *, backend=True, block=True, log=None):
 
 @pytest.fixture
 def document(tmp_path):
-    file = tmp_path / "informe.md"
+    file = tmp_path / "report.md"
     file.write_text("x" * 40 * 1024, encoding="utf-8")
     return file
 
@@ -128,7 +128,7 @@ def test_a_large_json_is_not_blocked(monkeypatch, capsys, tmp_path):
 
 
 def test_a_small_document_is_not_blocked(monkeypatch, capsys, tmp_path):
-    short = tmp_path / "notas.md"
+    short = tmp_path / "notes.md"
     short.write_text("x" * 2 * 1024, encoding="utf-8")
 
     assert _run(monkeypatch, capsys, f"cat {short}") == ""
@@ -151,7 +151,7 @@ def test_a_missing_file_breaks_nothing(monkeypatch, capsys, tmp_path):
 
 def test_every_command_leaves_a_trace_to_measure(monkeypatch, capsys, document, tmp_path):
     """Sin denominador no se sabe cuánta lectura se va por aquí, que es lo que nadie pudo medir."""
-    log = tmp_path / "telemetria.jsonl"
+    log = tmp_path / "telemetry.jsonl"
 
     _run(monkeypatch, capsys, f"cat {document} | head -5", log=log)
     _run(monkeypatch, capsys, "rtk git status", log=log)
@@ -184,7 +184,7 @@ def test_metacharacters_without_spaces_also_stop_it(
     se trocea como dos palabras, y sin esa guarda se bloquearía una redirección, que es un comando
     completamente distinto del que el usuario escribió.
     """
-    log = tmp_path / "telemetria.jsonl"
+    log = tmp_path / "telemetry.jsonl"
 
     assert _run(monkeypatch, capsys, command.format(p=document), log=log) == ""
 
@@ -201,7 +201,7 @@ def test_a_loose_flag_is_not_mistaken_for_a_path(monkeypatch, capsys, tmp_path):
     registraría «no_file»: el mismo no-bloqueo, pero por la razón equivocada, y la telemetría
     contaría mal.
     """
-    log = tmp_path / "telemetria.jsonl"
+    log = tmp_path / "telemetry.jsonl"
 
     assert _run(monkeypatch, capsys, "cat -v", log=log) == ""
 

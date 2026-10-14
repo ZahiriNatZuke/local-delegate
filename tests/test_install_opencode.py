@@ -98,18 +98,18 @@ def test_http_entry_is_remote_with_the_daemon_url():
 
 def test_the_key_is_referenced_with_opencode_syntax_and_never_written(monkeypatch):
     """`${VAR}` no se sustituye en opencode (medido): escribirla dejaría la variable literal."""
-    monkeypatch.setenv("LOCAL_DELEGATE_API_KEY", "secreto-de-mentira")
+    monkeypatch.setenv("LOCAL_DELEGATE_API_KEY", "fake-secret")
     text = json.dumps(inst.opencode_mcp_entry("stdio", None, True, None))
     assert "{env:LOCAL_DELEGATE_API_KEY}" in text
     assert "${LOCAL_DELEGATE_API_KEY}" not in text
-    assert "secreto-de-mentira" not in text
+    assert "fake-secret" not in text
 
 
 def test_the_port_token_is_not_written_either(monkeypatch):
-    monkeypatch.setenv(inst.WEB_TOKEN_VAR, "token-de-mentira")
+    monkeypatch.setenv(inst.WEB_TOKEN_VAR, "fake-token")
     text = json.dumps(inst.opencode_mcp_entry("http", None, False, None, web_token_env=True))
     assert f"Bearer {{env:{inst.WEB_TOKEN_VAR}}}" in text
-    assert "token-de-mentira" not in text
+    assert "fake-token" not in text
 
 
 def test_the_cli_arguments_reproduce_the_entry():
@@ -187,7 +187,7 @@ def test_reinstalling_is_idempotent_and_keeps_foreign_content(tmp_path):
     d = _oc(home)
     (d / "opencode.json").write_text(
         json.dumps(
-            {"$schema": inst.OPENCODE_SCHEMA, "theme": "mio", "mcp": {"otro": {"type": "local"}}}
+            {"$schema": inst.OPENCODE_SCHEMA, "theme": "mio", "mcp": {"other": {"type": "local"}}}
         ),
         encoding="utf-8",
     )
@@ -195,7 +195,7 @@ def test_reinstalling_is_idempotent_and_keeps_foreign_content(tmp_path):
     assert _install(home) == 0
     data = json.loads((d / "opencode.json").read_text(encoding="utf-8"))
     assert data["theme"] == "mio"
-    assert set(data["mcp"]) == {"otro", inst.SERVER_NAME}
+    assert set(data["mcp"]) == {"other", inst.SERVER_NAME}
 
 
 def test_a_top_level_key_outside_the_schema_is_never_written(tmp_path):
@@ -282,14 +282,14 @@ def test_uninstall_removes_ours_and_leaves_foreign_content(tmp_path):
     home = tmp_path / "home"
     d = _oc(home)
     (d / "opencode.json").write_text(
-        json.dumps({"$schema": inst.OPENCODE_SCHEMA, "mcp": {"ajeno": {"type": "local"}}}),
+        json.dumps({"$schema": inst.OPENCODE_SCHEMA, "mcp": {"foreign": {"type": "local"}}}),
         encoding="utf-8",
     )
     assert _install(home) == 0
     assert cli.run(["uninstall", "--home", str(home), "--clients", "opencode"]) == 0
 
     data = json.loads((d / "opencode.json").read_text(encoding="utf-8"))
-    assert set(data["mcp"]) == {"ajeno"}
+    assert set(data["mcp"]) == {"foreign"}
     assert not (d / inst.OPENCODE_SKILL_SUBDIR / inst.SKILL_NAME).exists()
     assert inst.MD_BEGIN not in (d / "AGENTS.md").read_text(encoding="utf-8")
 

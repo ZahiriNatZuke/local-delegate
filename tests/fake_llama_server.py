@@ -99,7 +99,7 @@ def create_server(
             self._respond(
                 200,
                 {
-                    "id": "chatcmpl-falso",
+                    "id": "chatcmpl-fake",
                     "object": "chat.completion",
                     "model": body.get("model", "falso"),
                     "choices": [

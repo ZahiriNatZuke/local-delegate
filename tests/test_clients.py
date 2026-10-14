@@ -139,9 +139,9 @@ def test_a_write_failure_does_not_propagate(tmp_path, monkeypatch):
 
 
 def test_a_client_leaves_one_line_with_what_was_negotiated(tmp_path):
-    negotiated = anyio.run(_converse, "cliente-prueba", "9.9.9")
+    negotiated = anyio.run(_converse, "test-client", "9.9.9")
     (line,) = _lines(tmp_path)
-    assert line["client"] == "cliente-prueba"
+    assert line["client"] == "test-client"
     assert line["version"] == "9.9.9"
     assert line["protocol"] == negotiated
     # El dato que motivó el change: la revisión no la predicen las constantes del SDK.
@@ -208,7 +208,7 @@ def test_on_initialize_the_sdk_does_not_deliver_the_data_yet():
                         sr, sw, low.create_initialization_options(), raise_exceptions=True
                     )
                 )
-                info = Implementation(name="cliente-prueba", version="9.9.9")
+                info = Implementation(name="test-client", version="9.9.9")
                 async with ClientSession(cr, cw, client_info=info) as client:
                     await client.initialize()
                     await client.call_tool("echo", {"text": "hola"})
@@ -222,7 +222,7 @@ def test_on_initialize_the_sdk_does_not_deliver_the_data_yet():
 
 def test_twenty_messages_leave_a_single_line(tmp_path):
     # REQ-003. Es la prueba que caza el dedupe roto y la sección crítica mal delimitada.
-    anyio.run(_converse, "cliente-prueba", "9.9.9", 20)
+    anyio.run(_converse, "test-client", "9.9.9", 20)
     assert len(_lines(tmp_path)) == 1
     (alive,) = clients.snapshot()
     assert alive["messages"] > 1
@@ -230,17 +230,17 @@ def test_twenty_messages_leave_a_single_line(tmp_path):
 
 
 def test_two_different_clients_leave_two_lines(tmp_path):
-    anyio.run(_converse, "cliente-a", "1.0.0")
-    anyio.run(_converse, "cliente-b", "2.0.0")
+    anyio.run(_converse, "client-a", "1.0.0")
+    anyio.run(_converse, "client-b", "2.0.0")
     lines = _lines(tmp_path)
     assert len(lines) == 2
-    assert {x["client"] for x in lines} == {"cliente-a", "cliente-b"}
+    assert {x["client"] for x in lines} == {"client-a", "client-b"}
     assert len(clients.snapshot()) == 2
 
 
 def test_the_same_client_with_another_version_is_another_identity(tmp_path):
-    anyio.run(_converse, "cliente-a", "1.0.0")
-    anyio.run(_converse, "cliente-a", "1.0.1")
+    anyio.run(_converse, "client-a", "1.0.0")
+    anyio.run(_converse, "client-a", "1.0.1")
     assert len(_lines(tmp_path)) == 2
 
 
@@ -252,12 +252,12 @@ def test_api_status_exposes_the_observed_clients(tmp_path):
 
     clients.record(
         _Caps({"elicitation": {}, "roots": {}}),
-        Implementation(name="cliente-prueba", version="9.9.9"),
+        Implementation(name="test-client", version="9.9.9"),
         "2025-11-25",
     )
     data = TestClient(metrics.app).get("/api/status").json()
     (seen,) = data["clients"]
-    assert seen["client"] == "cliente-prueba"
+    assert seen["client"] == "test-client"
     assert seen["protocol"] == "2025-11-25"
     assert seen["caps"] == ["elicitation", "roots"]
 
@@ -268,7 +268,7 @@ def test_an_observer_that_blows_up_does_not_break_the_call(tmp_path, monkeypatch
         raise RuntimeError("boom")
 
     monkeypatch.setattr(clients, "record", blows_up)
-    negotiated = anyio.run(_converse, "cliente-prueba", "9.9.9")
+    negotiated = anyio.run(_converse, "test-client", "9.9.9")
     assert negotiated  # la conversación completa funcionó
     assert _lines(tmp_path) == []
 
@@ -454,14 +454,12 @@ async def _seen_tool_use_id(meta: dict | None) -> str | None:
 
 def test_the_tool_sees_the_tool_use_id():
     """Control (c): en el corte de interfaz `current_tool_use_id()` devolvía `None`."""
-    seen = anyio.run(_seen_tool_use_id, {"claudecode/toolUseId": "toolu_prueba"})
-    assert seen == "toolu_prueba"
+    seen = anyio.run(_seen_tool_use_id, {"claudecode/toolUseId": "toolu_test"})
+    assert seen == "toolu_test"
 
 
 def test_without_meta_there_is_no_tool_use_id():
     """Guarda: un cliente que no lo manda (Codex, scripts) no hereda el de nadie."""
-    assert anyio.run(_seen_tool_use_id, {"claudecode/toolUseId": "toolu_prueba"}) == (
-        "toolu_prueba"
-    )
+    assert anyio.run(_seen_tool_use_id, {"claudecode/toolUseId": "toolu_test"}) == ("toolu_test")
     seen = anyio.run(_seen_tool_use_id, None)
     assert seen is None

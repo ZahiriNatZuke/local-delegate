@@ -48,11 +48,11 @@ shell_hook = _load("suggest_delegate_shell")
 @pytest.fixture
 def hook_env(tmp_path, monkeypatch):
     """Telemetria, interruptor y LOG_DIR en tmp; bloqueo encendido y backend vivo por defecto."""
-    log = tmp_path / "telemetria.jsonl"
+    log = tmp_path / "telemetry.jsonl"
     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
     monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1")
-    monkeypatch.setenv("LD_HOOK_READ_SWITCH_FILE", str(tmp_path / "bloqueo-apagado"))
+    monkeypatch.setenv("LD_HOOK_READ_SWITCH_FILE", str(tmp_path / "block-off"))
     monkeypatch.setenv("LOCAL_DELEGATE_LOG_DIR", str(tmp_path / "logs"))
     for variable in ("LOCAL_DELEGATE_MODEL_LONG", "LOCAL_DELEGATE_MODEL_MECHANICAL"):
         monkeypatch.delenv(variable, raising=False)
@@ -63,7 +63,7 @@ def hook_env(tmp_path, monkeypatch):
 
 
 def _events(tmp_path: Path) -> list[dict]:
-    log = tmp_path / "telemetria.jsonl"
+    log = tmp_path / "telemetry.jsonl"
     if not log.exists():
         return []
     return [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
@@ -76,7 +76,7 @@ def _run(hook, monkeypatch, capsys, payload: dict) -> str:
 
 
 def _prose(tmp_path: Path, kb: int = 40) -> Path:
-    dest = tmp_path / "informe.md"
+    dest = tmp_path / "report.md"
     dest.write_text("x" * kb * 1024, encoding="utf-8")
     return dest
 
@@ -196,8 +196,8 @@ def test_another_model_cooling_down_does_not_lift_the_block(hook_env, monkeypatc
 
 def test_the_model_is_taken_from_the_variable_if_set(hook_env, monkeypatch, capsys):
     dest = _prose(hook_env)
-    monkeypatch.setenv("LOCAL_DELEGATE_MODEL_LONG", "mi-largo")
-    _cool_down(hook_env, "mi-largo", 100)
+    monkeypatch.setenv("LOCAL_DELEGATE_MODEL_LONG", "my-long")
+    _cool_down(hook_env, "my-long", 100)
     output = _run(read_hook, monkeypatch, capsys, {"tool_input": {"file_path": str(dest)}})
     assert "deny" not in output
 
@@ -244,7 +244,7 @@ def test_the_switch_file_turns_off_the_block_even_if_the_variable_says_1(
     dest = _prose(hook_env)
     payload = {"tool_input": {"file_path": str(dest)}}
     assert "deny" in _run(read_hook, monkeypatch, capsys, payload)
-    (hook_env / "bloqueo-apagado").write_text("", encoding="utf-8")
+    (hook_env / "block-off").write_text("", encoding="utf-8")
     assert "deny" not in _run(read_hook, monkeypatch, capsys, payload)
 
 
@@ -252,10 +252,10 @@ def test_each_event_records_the_block_state(hook_env, monkeypatch, capsys):
     dest = _prose(hook_env)
     slice = {"tool_input": {"file_path": str(dest), "offset": 1, "limit": 10}}
     _run(read_hook, monkeypatch, capsys, slice)
-    (hook_env / "bloqueo-apagado").write_text("", encoding="utf-8")
+    (hook_env / "block-off").write_text("", encoding="utf-8")
     _run(read_hook, monkeypatch, capsys, slice)
     monkeypatch.setenv("LD_HOOK_READ_BLOCK", "0")
-    (hook_env / "bloqueo-apagado").unlink()
+    (hook_env / "block-off").unlink()
     _run(read_hook, monkeypatch, capsys, slice)
     _run(shell_hook, monkeypatch, capsys, {"tool_input": {"command": "git status"}})
     assert [e["block"] for e in _events(hook_env)] == [
@@ -285,7 +285,7 @@ def test_turning_off_needs_no_relaunch(tmp_path):
     threading.Thread(target=server.serve_forever, daemon=True).start()
     try:
         dest = _prose(tmp_path)
-        switch = tmp_path / "bloqueo-apagado"
+        switch = tmp_path / "block-off"
         env = {
             **os.environ,
             "LD_HOOK_READ_BLOCK": "1",

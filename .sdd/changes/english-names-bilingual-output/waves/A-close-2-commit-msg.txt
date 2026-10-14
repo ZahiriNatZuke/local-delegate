@@ -1,0 +1,25 @@
+refactor(rename): datos de prueba de los tests en inglés (cierre del frente A, lote 2)
+
+Aplica el mapping aprobado (waves/A-close-2-mapping.csv): 266 de sus 268
+filas, en 60 ficheros de tests/. Solo cambian datos propios de los tests
+(rutas de tmp_path, fixtures, ids de parametrize, ids de tool_use, claves
+falsas y claves de mocks); ningún assert cambia de sentido y el producto
+no se toca.
+
+- Los kwargs `ajeno`/`raro`/`roto` de `_agents_dir` pasan a
+  `foreign`/`odd`/`broken`, a mano: el MCP de PyCharm estaba caído y no
+  renombra claves de **kwargs.
+- Los contenidos que dependen de esos datos se cambian con ellos: TOML de
+  test_install, JSON del mock de test_core y los rótulos que el panel
+  deriva de las claves desconocidas en test_dashboard_ui.
+- Se mantiene en español lo que no es dato del test: el texto de la
+  negativa del producto (`ancla`), la prosa de comentarios y docstrings,
+  y el marcador `clave-falsa` de las copias congeladas de configs reales
+  de tests/fixtures/residency (2 filas sin aplicar, con su excepción en
+  rename-exceptions.md).
+- ruff format en 5 tests cuyas líneas cambiaron de longitud.
+
+waves/A-close.md: registro del lote 2.
+
+2603 tests; suite 2601 passed, 2 skipped; ruff limpio. Detector fuera
+de la lista: 731 -> 462.

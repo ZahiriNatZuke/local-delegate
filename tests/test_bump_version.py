@@ -132,7 +132,7 @@ def test_bump_preserves_the_original_line_terminator(repo: Path):
 
 
 def test_rejects_versions_the_registry_would_normalize_differently(repo: Path):
-    for invalid in ["1.0", "v1.0.0", "1.0.0-rc1", "no-soy-una-version"]:
+    for invalid in ["1.0", "v1.0.0", "1.0.0-rc1", "not-a-version"]:
         with pytest.raises(bump_version.BumpError):
             bump_version.plan(invalid, repo)
 

@@ -76,13 +76,13 @@ def test_the_cli_authenticates_against_its_own_daemon(monkeypatch):
     al propio CLI fuera. `doctor` reportaría el daemon caído y el singleton levantaría un segundo
     daemon sobre un puerto ocupado, los dos por un 401 que nadie relaciona con el token.
     """
-    monkeypatch.setattr(config, "WEB_TOKEN", "el-token-del-puerto")
+    monkeypatch.setattr(config, "WEB_TOKEN", "the-port-token")
     sent: list[dict] = []
     _stub_get(monkeypatch, {"available": True, "models": []}, record=sent)
 
     daemon.query_backend("127.0.0.1", 9393)
 
-    assert sent == [{"Authorization": "Bearer el-token-del-puerto"}]
+    assert sent == [{"Authorization": "Bearer the-port-token"}]
 
 
 def test_the_daemon_status_is_also_authenticated(monkeypatch):
@@ -91,7 +91,7 @@ def test_the_daemon_status_is_also_authenticated(monkeypatch):
     Doblados por separado a propósito. Con un solo test, una de las dos funciones podría quedarse
     sin cabecera y aprobar por la del otro camino — el error que ya costó un día en este repo.
     """
-    monkeypatch.setattr(config, "WEB_TOKEN", "el-token-del-puerto")
+    monkeypatch.setattr(config, "WEB_TOKEN", "the-port-token")
     sent: list[dict] = []
     _stub_get(
         monkeypatch,
@@ -101,7 +101,7 @@ def test_the_daemon_status_is_also_authenticated(monkeypatch):
 
     daemon.query_daemon("127.0.0.1", 9393)
 
-    assert sent == [{"Authorization": "Bearer el-token-del-puerto"}]
+    assert sent == [{"Authorization": "Bearer the-port-token"}]
 
 
 def test_without_token_no_header_is_sent(monkeypatch):
@@ -154,7 +154,7 @@ def test_the_token_question_goes_WITHOUT_credential(monkeypatch):
     aunque el código estuviera mal, que es como este agujero sobrevivió a la primera tanda de
     mutantes.
     """
-    monkeypatch.setattr(config, "WEB_TOKEN", "el-token-del-puerto")
+    monkeypatch.setattr(config, "WEB_TOKEN", "the-port-token")
     sent: list = []
     _stub_get_raw(monkeypatch, _HTTPResponse(200, {}), record=sent)
 
@@ -204,12 +204,12 @@ def test_a_port_that_answers_without_asking_anything_does_not_require_a_token(mo
 
 def test_testing_a_token_sends_that_token_and_not_the_environment_one(monkeypatch):
     """El token que se prueba es el del cliente. Mandar el de `config` diría «entra» siempre aquí."""
-    monkeypatch.setattr(config, "WEB_TOKEN", "el-token-del-entorno")
+    monkeypatch.setattr(config, "WEB_TOKEN", "the-env-token")
     sent: list = []
     _stub_get_raw(monkeypatch, _HTTPResponse(200, {}), record=sent)
 
-    assert daemon.daemon_accepts_token("127.0.0.1", 9393, "el-del-cliente") is True
-    assert sent == [{"Authorization": "Bearer el-del-cliente"}]
+    assert daemon.daemon_accepts_token("127.0.0.1", 9393, "the-clients-one") is True
+    assert sent == [{"Authorization": "Bearer the-clients-one"}]
 
 
 def test_a_401_with_the_token_means_it_does_not_get_in(monkeypatch):
@@ -234,14 +234,14 @@ def test_with_token_the_whole_port_asks_for_credential(monkeypatch):
     **enchufado** a la que se sirve de verdad, con el dashboard montado debajo. Son dos preguntas
     distintas y la segunda es la que se olvida.
     """
-    monkeypatch.setattr(config, "WEB_TOKEN", "el-token-del-puerto")
+    monkeypatch.setattr(config, "WEB_TOKEN", "the-port-token")
     app = daemon.build_app("127.0.0.1", 19393)
 
     with TestClient(app) as client:
         for path in (daemon.DAEMON_STATUS_PATH, "/", "/api/status"):
             assert client.get(path).status_code == 401, f"{path} quedó sin proteger"
 
-        header = {"Authorization": "Bearer el-token-del-puerto"}
+        header = {"Authorization": "Bearer the-port-token"}
         assert client.get(daemon.DAEMON_STATUS_PATH, headers=header).status_code == 200
 
 

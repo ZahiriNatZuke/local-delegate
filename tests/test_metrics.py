@@ -412,13 +412,13 @@ def test_api_backend_stats_states_the_code_on_a_404(monkeypatch):
 
 def test_api_backend_stats_states_the_cause_on_a_name_that_does_not_resolve(monkeypatch):
     """Red real: un nombre `.invalid` no resuelve nunca (RFC 6761). Sin código HTTP."""
-    monkeypatch.setattr(config, "BASE_URL", "http://no-existe.invalid:9292/v1")
+    monkeypatch.setattr(config, "BASE_URL", "http://missing.invalid:9292/v1")
 
     j = TestClient(metrics.app).get("/api/backend/stats").json()
 
     assert j.get("cause") == "dns"
     assert j.get("status_http") is None
-    assert "no-existe.invalid" in (j.get("detail") or "")
+    assert "missing.invalid" in (j.get("detail") or "")
 
 
 def _connect_timeout_of(t):
@@ -1226,7 +1226,7 @@ def test_acct_parity_between_python_and_the_dashboard_js(tmp_path):
             tokens_out=200,
         ),
         # Modelo fuera de la tabla: familia nueva supuesta.
-        _ev(path="C:/src/app.py", caller_model="claude-desconocido-9", tokens_in=1100),
+        _ev(path="C:/src/app.py", caller_model="claude-unknown-9", tokens_in=1100),
     ]
     # Como en producción: las filas pasan antes por la fusión de Python (REQ-006, REQ-037). Sin
     # relleno en `tmp_path`, las que no traen `caller_model` toman el respaldo declarado.
@@ -1270,9 +1270,9 @@ def _acct_in_js(node: str, tmp_path: Path, cases: list[dict]) -> list[dict]:
     """`acct` del panel, con su `claudeTokens` de verdad, corrido con node sobre `cases`."""
     tokens_claude_js = _extract_js_function(metrics.HTML, "function claudeTokens(")
     acct_js = _extract_js_function(metrics.HTML, "function acct(e){")
-    input_file = tmp_path / "casos.json"
+    input_file = tmp_path / "cases.json"
     input_file.write_text(json.dumps(cases), encoding="utf-8")
-    program = tmp_path / "paridad.mjs"
+    program = tmp_path / "parity.mjs"
     program.write_text(
         "import {readFileSync} from 'node:fs';\n"
         "const CPT = 4;\n"
@@ -1532,7 +1532,7 @@ def test_a_log_with_old_and_new_rows_reads_as_if_all_were_new(tmp_path, monkeypa
         ),
     ]
     new_ones = [
-        _ev(ts="2026-07-15T11:00:00+00:00", block_id="b-nuevo", sections=4),
+        _ev(ts="2026-07-15T11:00:00+00:00", block_id="b-new", sections=4),
         _ev(
             ts="2026-07-15T11:01:00+00:00",
             ok=False,
@@ -1549,7 +1549,7 @@ def test_a_log_with_old_and_new_rows_reads_as_if_all_were_new(tmp_path, monkeypa
 
     events = client.get(f"/api/events?{range_qs}").json()["events"]
     assert len(events) == 6
-    assert sorted(e["block_id"] for e in events if "block_id" in e) == ["b-nuevo", "b-viejo"]
+    assert sorted(e["block_id"] for e in events if "block_id" in e) == ["b-new", "b-viejo"]
     assert [e["connection_failure"] for e in events if "connection_failure" in e] == [
         "refused",
         "refused",
@@ -1644,7 +1644,7 @@ def _llamaswap_with_secrets() -> None:
                         "model": "m",
                         "state": "ready",
                         "ttl": 120,
-                        "cmd": "llama-server -m MODELOS/m.gguf --api-key clave-falsa-1",
+                        "cmd": "llama-server -m MODELOS/m.gguf --api-key fake-key-1",
                         "proxy": "http://localhost:5800",
                     }
                 ]
@@ -1663,7 +1663,7 @@ def _llamaswap_with_secrets() -> None:
                         "requests": [
                             {
                                 "model": "m",
-                                "req_headers": {"Authorization": "Bearer clave-falsa-2"},
+                                "req_headers": {"Authorization": "Bearer fake-key-2"},
                             }
                         ],
                     },
@@ -1682,8 +1682,8 @@ def test_llamaswap_status_never_returns_cmd_headers_or_keys(monkeypatch):
     r = TestClient(metrics.app).get("/api/llamaswap/status")
 
     assert r.status_code == 200
-    assert "clave-falsa-1" not in r.text
-    assert "clave-falsa-2" not in r.text
+    assert "fake-key-1" not in r.text
+    assert "fake-key-2" not in r.text
     data = r.json()
     assert data["llamaswap"] == "ok"
     assert data["models"] == [{"id": "m", "state": "ready", "ttl": 120}]
@@ -1721,14 +1721,14 @@ def test_llamaswap_endpoints_require_the_web_token(monkeypatch, method, path):
     `BASE_URL` va a un puerto sin nadie: si la dependencia faltara, el endpoint no saldría a la red
     de verdad (ni al llama-swap real del 9292).
     """
-    monkeypatch.setattr(config, "WEB_TOKEN", "clave-falsa-3")
+    monkeypatch.setattr(config, "WEB_TOKEN", "fake-key-3")
     monkeypatch.setattr(config, "BASE_URL", "http://127.0.0.1:9/v1")
     client = TestClient(metrics.app)
 
     r = client.request(method, path)
 
     assert r.status_code == 401
-    with_token = client.request(method, path, headers={"Authorization": "Bearer clave-falsa-3"})
+    with_token = client.request(method, path, headers={"Authorization": "Bearer fake-key-3"})
     assert with_token.status_code != 401
 
 

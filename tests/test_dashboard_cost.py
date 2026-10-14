@@ -180,7 +180,7 @@ def _texts(tmp_path, stats: dict) -> dict[str, str]:
         "console.log(JSON.stringify({cost: costText(j).join('\\n'), "
         "quota: quotaText(j).join('\\n'), images: imagesText(j).join('\\n')}));\n"
     )
-    program = tmp_path / "textos.mjs"
+    program = tmp_path / "texts.mjs"
     program.write_text(
         "\n".join([prelude, *(_extract(f) for f in _FUNCTIONS), body]), encoding="utf-8"
     )
@@ -314,7 +314,7 @@ def test_a_malformed_point_is_dropped_without_bringing_the_response_down(env):
     without_c = _point(now - timedelta(days=3), 155.0)
     del without_c["C"]
     c_text = {**_point(now - timedelta(days=4), 155.0), "C": "abc"}
-    odd_type = {**_point(now - timedelta(days=5), 155.0), "type": "un_mes"}
+    odd_type = {**_point(now - timedelta(days=5), 155.0), "type": "one_month"}
     _aggregates(logs, [*good_ones, without_c, c_text, odd_type, "no soy un punto"])
 
     r = TestClient(metrics.app, raise_server_exceptions=False).get("/api/stats")
@@ -389,7 +389,7 @@ def test_the_dashboard_does_not_read_claude(env, monkeypatch):
     logs, home = env
     claude = home / ".claude"
     (claude / "projects" / "C--proyecto").mkdir(parents=True)
-    (claude / "projects" / "C--proyecto" / "sesion.jsonl").write_text("{}\n", encoding="utf-8")
+    (claude / "projects" / "C--proyecto" / "session.jsonl").write_text("{}\n", encoding="utf-8")
     (claude / "cuota-statusline.jsonl").write_text("{}\n", encoding="utf-8")
     (claude / "settings.json").write_text('{"cleanupPeriodDays": 90}', encoding="utf-8")
     _write_log(logs, [_line(_now() - timedelta(hours=1), caller_src="hook")])
@@ -518,7 +518,7 @@ def test_forbidden_phrases(env, tmp_path, monkeypatch):
         ),
     )
     receipt = server._write_target(
-        tmp_path / "salida.py",
+        tmp_path / "output.py",
         "x = 1\n",
         event=cost.in_flight_row(tool="local_boilerplate", source="inline"),
     )
@@ -535,9 +535,9 @@ def test_forbidden_phrases(env, tmp_path, monkeypatch):
         "costText": texts["cost"],
         "quotaText": texts["quota"],
         "imagesText": texts["images"],
-        "coletilla": tail_note,
-        "coletilla de imagen": image_tail_note,
-        "recibo": receipt,
+        "tail_note": tail_note,
+        "image_tail_note": image_tail_note,
+        "receipt": receipt,
         "tokens_aprox": approx_tokens,
     }
     assert "cuota que no gastaste" not in html
@@ -609,7 +609,7 @@ def test_a_row_without_saving_shows_no_dollars(env, tmp_path):
     assert len(by_t) == 2 and by_t[0]["T"] < 0 < by_t[1]["T"]  # guarda: una de cada
     assert by_t[0]["estimate"] == 0.0  # sin signo: redondea a cero
 
-    program = tmp_path / "celdas.mjs"
+    program = tmp_path / "cells.mjs"
     program.write_text(
         "\n".join(
             [

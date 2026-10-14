@@ -235,7 +235,7 @@ def test_enable_read_hook_leaves_the_hook_REALLY_on(tmp_path, monkeypatch):
     command = _read_hook_command(tmp_path)
     assert command is not None, "el hook de Read no quedó registrado"
 
-    large = tmp_path / "grande.txt"
+    large = tmp_path / "large.txt"
     large.write_text("x" * 40_000, encoding="utf-8")  # 39 KB: por encima del umbral de aviso
     hook_input = json.dumps({"tool_input": {"file_path": str(large)}})
 
@@ -308,7 +308,7 @@ def test_uninstall_reverts_only_our_changes(tmp_path):
     memory.write_text("# Mis reglas\n", encoding="utf-8")
     codex_config = tmp_path / ".codex" / "config.toml"
     codex_config.parent.mkdir(parents=True)
-    codex_config.write_text('[mcp_servers.otro]\ncommand = "foo"\n', encoding="utf-8")
+    codex_config.write_text('[mcp_servers.other]\ncommand = "foo"\n', encoding="utf-8")
 
     _install(tmp_path)
     assert _uninstall(tmp_path) == 0
@@ -319,7 +319,7 @@ def test_uninstall_reverts_only_our_changes(tmp_path):
     assert settings["hooks"] == {"Stop": [{"hooks": [{"type": "command", "command": "~/mio.sh"}]}]}
     assert memory.read_text(encoding="utf-8") == "# Mis reglas\n"
     remaining = tomllib.loads(codex_config.read_text(encoding="utf-8"))
-    assert list(remaining["mcp_servers"]) == ["otro"]
+    assert list(remaining["mcp_servers"]) == ["other"]
     assert json.loads((tmp_path / ".claude.json").read_text(encoding="utf-8"))["mcpServers"] == {}
 
 
@@ -399,7 +399,7 @@ def test_mcp_entry_never_writes_the_api_key(tmp_path):
 
 def test_codex_block_is_valid_toml_and_replaces_manual_entries(tmp_path):
     existing = (
-        "[mcp_servers.otro]\ncommand = 'foo'\n\n"
+        "[mcp_servers.other]\ncommand = 'foo'\n\n"
         "[mcp_servers.local-delegate]\ncommand = 'viejo'\n\n"
         "[mcp_servers.local-delegate.env]\nX = '1'\n"
     )
@@ -407,11 +407,11 @@ def test_codex_block_is_valid_toml_and_replaces_manual_entries(tmp_path):
     result = inst.upsert_codex_mcp(existing, inst.codex_mcp_block(entry))
     data = tomllib.loads(result)
     assert data["mcp_servers"]["local-delegate"]["command"] == "uvx"
-    assert data["mcp_servers"]["otro"]["command"] == "foo"
+    assert data["mcp_servers"]["other"]["command"] == "foo"
     assert result.count("[mcp_servers.local-delegate]") == 1
     # el bloque gestionado es una sola tabla: lo que se escriba después no cae dentro de env
-    appended = tomllib.loads(result + '\n[otra.cosa]\nz = "1"\n')
-    assert appended["otra"]["cosa"]["z"] == "1"
+    appended = tomllib.loads(result + '\n[another.thing]\nz = "1"\n')
+    assert appended["another"]["thing"]["z"] == "1"
     assert "env" not in appended["mcp_servers"]["local-delegate"] or set(
         appended["mcp_servers"]["local-delegate"]["env"]
     ) == {"LOCAL_DELEGATE_BASE_URL", "LOCAL_DELEGATE_AUTOSTART"}
@@ -544,9 +544,9 @@ def _with_orphans(home: Path) -> Path:
     for name in inst.packaged_hook_names():
         (root / name).write_text("# instalacion anterior\n", encoding="utf-8")
     (root / "telemetry.jsonl").write_text('{"ok": true}\n', encoding="utf-8")
-    (root / "hook_de_terceros.py").write_text("# ajeno\n", encoding="utf-8")
+    (root / "third_party_hook.py").write_text("# ajeno\n", encoding="utf-8")
     (root / "__pycache__").mkdir(exist_ok=True)
-    (root / "__pycache__" / "algo.pyc").write_bytes(b"\x00")
+    (root / "__pycache__" / "something.pyc").write_bytes(b"\x00")
     return root
 
 
@@ -687,7 +687,7 @@ def test_enable_read_hook_ALSO_leaves_the_shell_hook_on(tmp_path, monkeypatch):
     command = _shell_hook_command(tmp_path)
     assert command is not None, "el hook de shell no quedó registrado"
 
-    large = tmp_path / "informe.md"
+    large = tmp_path / "report.md"
     large.write_text("x" * 40_000, encoding="utf-8")
     hook_input = json.dumps({"tool_input": {"command": f"cat {large}"}})
 
@@ -729,7 +729,7 @@ _CODEX_REWRITTEN_BY_OTHER = """model = "x"
   [mcp_servers.pycharm]
     url = "http://127.0.0.1:64342/sse"
 
-  [projects.proyecto]
+  [projects.project]
     trust_level = "trusted"
 """
 
@@ -748,7 +748,7 @@ def test_codex_rewritten_by_another_program_is_replaced_without_duplicating(tmp_
     assert result.count("mcp_servers.local-delegate]") == 1
     assert data["mcp_servers"]["pycharm"]["url"].endswith("/sse")
     assert data["mcp_servers"]["git"]["command"] == "uvx"
-    assert data["projects"]["proyecto"]["trust_level"] == "trusted"
+    assert data["projects"]["project"]["trust_level"] == "trusted"
     assert result.count(inst.TOML_BEGIN) == 1
     assert result.count(inst.TOML_END) == 1
 
@@ -768,7 +768,7 @@ def test_an_orphan_marker_does_not_take_what_follows(tmp_path):
     assert second == first
     data = tomllib.loads(second)
     assert "pycharm" in data["mcp_servers"]
-    assert "proyecto" in data["projects"]
+    assert "project" in data["projects"]
 
 
 def test_removing_the_entry_of_a_rewritten_codex_leaves_the_rest(tmp_path):

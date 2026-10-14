@@ -280,7 +280,7 @@ def test_effective_ttl_and_residents(tmp_path):
         """\
 globalTTL: 120
 models:
-  menos_uno:
+  minus_one:
     cmd: x
     ttl: -1
   ausente:
@@ -293,7 +293,7 @@ models:
     ttl: 30
 """,
     )
-    assert f.effective_ttl("menos_uno") == 120
+    assert f.effective_ttl("minus_one") == 120
     assert f.effective_ttl("ausente") == 120
     assert f.effective_ttl("cero") == 0
     assert f.effective_ttl("treinta") == 30
@@ -351,8 +351,8 @@ def test_without_pyyaml(monkeypatch, tmp_path):
 
 def test_unreadable(monkeypatch, tmp_path):
     assert _snapshot(tmp_path, "models: [a\n") == NoTopology("ilegible")
-    assert topology.read(tmp_path / "no-existe.yaml") == NoTopology("ilegible")
-    monkeypatch.setenv("LLAMASWAP_CONFIG", str(tmp_path / "no-existe.yaml"))
+    assert topology.read(tmp_path / "missing.yaml") == NoTopology("ilegible")
+    monkeypatch.setenv("LLAMASWAP_CONFIG", str(tmp_path / "missing.yaml"))
     assert topology.snapshot() == NoTopology("ilegible")
 
 
@@ -367,23 +367,23 @@ def test_config_rejected_by_load_go(tmp_path):
 # YAML valido con un tipo que el `Config` de v255 no puede deserializar. Antes lanzaban
 # AttributeError/TypeError desde `read`, que promete no lanzar nunca (REQ-002: van sin turno).
 _ODD_SHAPES = [
-    ("routing_es_texto", "routing: hola\n", "`routing` no es un mapa"),
-    ("router_es_texto", "routing:\n  router: hola\n", "`routing.router` no es un mapa"),
-    ("settings_es_numero", "routing:\n  router:\n    settings: 5\n", "settings` no es un mapa"),
-    ("use_es_lista", "routing:\n  router:\n    use: [group]\n", "use` no es un texto"),
-    ("groups_es_lista", "groups: [a]\n", "`groups` no es un mapa"),
-    ("grupo_es_lista", "groups:\n  g: [a]\n", "grupo g: no es un mapa"),
+    ("routing_is_text", "routing: hola\n", "`routing` no es un mapa"),
+    ("router_is_text", "routing:\n  router: hola\n", "`routing.router` no es un mapa"),
+    ("settings_is_number", "routing:\n  router:\n    settings: 5\n", "settings` no es un mapa"),
+    ("use_is_list", "routing:\n  router:\n    use: [group]\n", "use` no es un texto"),
+    ("groups_is_list", "groups: [a]\n", "`groups` no es un mapa"),
+    ("group_is_list", "groups:\n  g: [a]\n", "grupo g: no es un mapa"),
     (
-        "grupo_es_lista_en_routing",
+        "group_is_list_in_routing",
         "routing:\n  router:\n    settings:\n      groups:\n        g: [a]\n",
         "grupo g: no es un mapa",
     ),
-    ("members_es_numero", "groups:\n  g:\n    members: 3\n", "`members` no es una lista"),
-    ("members_es_texto", "groups:\n  g:\n    members: a\n", "`members` no es una lista"),
-    ("miembro_es_mapa", "groups:\n  g:\n    members: [{x: 1}]\n", "un miembro no es un texto"),
-    ("hooks_es_lista", "hooks: [1]\n", "`hooks` no es un mapa"),
-    ("on_startup_es_lista", "hooks:\n  on_startup: [1]\n", "on_startup` no es un mapa"),
-    ("preload_es_texto", "hooks:\n  on_startup:\n    preload: 7\n", "preload` no es una lista"),
+    ("members_is_number", "groups:\n  g:\n    members: 3\n", "`members` no es una lista"),
+    ("members_is_text", "groups:\n  g:\n    members: a\n", "`members` no es una lista"),
+    ("member_is_map", "groups:\n  g:\n    members: [{x: 1}]\n", "un miembro no es un texto"),
+    ("hooks_is_list", "hooks: [1]\n", "`hooks` no es un mapa"),
+    ("on_startup_is_list", "hooks:\n  on_startup: [1]\n", "on_startup` no es un mapa"),
+    ("preload_is_text", "hooks:\n  on_startup:\n    preload: 7\n", "preload` no es una lista"),
 ]
 
 
@@ -406,7 +406,7 @@ def test_valid_odd_shaped_yaml_does_not_raise_and_runs_without_turn(tmp_path, ex
         ("    aliases: [[x]]\n", "un alias no es un texto"),
         ("    cmd: [llama-server]\n", "`cmd` no es un texto"),
     ],
-    ids=["aliases_es_numero", "alias_es_lista", "cmd_es_lista"],
+    ids=["aliases_is_number", "alias_is_list", "cmd_is_list"],
 )
 def test_odd_shaped_model_does_not_raise(tmp_path, cfg_a, chunk):
     try:

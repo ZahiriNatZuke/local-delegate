@@ -48,7 +48,7 @@ def _direct_to(ls, monkeypatch) -> None:
     """El camino directo de REQ-039 contra el llama-swap de prueba, con una key falsa."""
     assert ls.port != 9292
     monkeypatch.setattr(config, "BASE_URL", f"{ls.url}/v1")
-    monkeypatch.setattr(config, "API_KEY", "clave-falsa-1")
+    monkeypatch.setattr(config, "API_KEY", "fake-key-1")
 
 
 def _live_delegation() -> None:

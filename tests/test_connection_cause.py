@@ -61,61 +61,61 @@ _CASES = [
         ConnectionCause.DNS,
     ),
     (
-        "gaierror-en-loopback-sigue-siendo-dns",
+        "gaierror-on-loopback-is-still-dns",
         lambda: _wrapped(httpx2.ConnectError, socket.gaierror(11001, "getaddrinfo failed")),
         True,
         ConnectionCause.DNS,
     ),
     (
-        "econnrefused-es-rechazada",
+        "econnrefused-is-refused",
         lambda: _wrapped(httpx2.ConnectError, OSError(errno.ECONNREFUSED, "refused")),
         False,
         ConnectionCause.REFUSED,
     ),
     (
-        "enetunreach-es-sin-ruta",
+        "enetunreach-is-no-route",
         lambda: _wrapped(httpx2.ConnectError, OSError(errno.ENETUNREACH, "Network is unreachable")),
         False,
         ConnectionCause.NO_ROUTE,
     ),
     (
-        "ehostunreach-es-sin-ruta",
+        "ehostunreach-is-no-route",
         lambda: _wrapped(httpx2.ConnectError, OSError(errno.EHOSTUNREACH, "No route to host")),
         False,
         ConnectionCause.NO_ROUTE,
     ),
     (
-        "winsock-10051-es-sin-ruta",
+        "winsock-10051-is-no-route",
         lambda: _wrapped(httpx2.ConnectError, OSError(10051, "red inalcanzable")),
         False,
         ConnectionCause.NO_ROUTE,
     ),
     (
-        "winsock-10065-es-sin-ruta",
+        "winsock-10065-is-no-route",
         lambda: _wrapped(httpx2.ConnectError, OSError(10065, "host inalcanzable")),
         False,
         ConnectionCause.NO_ROUTE,
     ),
     (
-        "connect-timeout-en-loopback-es-rechazada",
+        "connect-timeout-on-loopback-is-refused",
         lambda: _wrapped(httpx2.ConnectTimeout, TimeoutError()),
         True,
         ConnectionCause.REFUSED,
     ),
     (
-        "connect-timeout-remoto-es-timeout-conexion",
+        "connect-timeout-remote-is-connect-timeout",
         lambda: _wrapped(httpx2.ConnectTimeout, TimeoutError()),
         False,
         ConnectionCause.CONNECT_TIMEOUT,
     ),
     (
-        "caso-de-la-mac-etimedout-remoto",
+        "mac-case-etimedout-remote",
         lambda: _wrapped(httpx2.ConnectTimeout, TimeoutError(errno.ETIMEDOUT, "timed out")),
         False,
         ConnectionCause.CONNECT_TIMEOUT,
     ),
     (
-        "caso-de-la-mac-etimedout-en-loopback",
+        "mac-case-etimedout-on-loopback",
         lambda: _wrapped(httpx2.ConnectTimeout, TimeoutError(errno.ETIMEDOUT, "timed out")),
         True,
         ConnectionCause.REFUSED,
@@ -124,7 +124,7 @@ _CASES = [
     ("write-timeout", lambda: httpx2.WriteTimeout("escritura"), False, ConnectionCause.NO_RESPONSE),
     ("value-error", lambda: ValueError("sin data"), False, ConnectionCause.INVALID_RESPONSE),
     (
-        "json-roto",
+        "broken-json",
         lambda: json.JSONDecodeError("Expecting value", "<html>", 0),
         False,
         ConnectionCause.INVALID_RESPONSE,
@@ -145,16 +145,16 @@ _CASES = [
     ("http-status-401", lambda: _http_status(401), False, ConnectionCause.CREDENTIAL),
     ("http-status-403", lambda: _http_status(403), False, ConnectionCause.CREDENTIAL),
     ("http-status-500", lambda: _http_status(500), False, ConnectionCause.HTTP_ERROR),
-    ("codigo-401", lambda: 401, False, ConnectionCause.CREDENTIAL),
-    ("codigo-403", lambda: 403, False, ConnectionCause.CREDENTIAL),
-    ("codigo-404", lambda: 404, False, ConnectionCause.HTTP_ERROR),
-    ("codigo-500", lambda: 500, False, ConnectionCause.HTTP_ERROR),
+    ("code-401", lambda: 401, False, ConnectionCause.CREDENTIAL),
+    ("code-403", lambda: 403, False, ConnectionCause.CREDENTIAL),
+    ("code-404", lambda: 404, False, ConnectionCause.HTTP_ERROR),
+    ("code-500", lambda: 500, False, ConnectionCause.HTTP_ERROR),
     ("attribute-error", lambda: AttributeError("x"), False, ConnectionCause.UNKNOWN),
     ("key-error", lambda: KeyError("data"), False, ConnectionCause.UNKNOWN),
     (
         # Las reglas 7 a 12 miran solo la excepción de arriba: una propia que envuelve un
         # `ConnectTimeout` cae en la 12, de forma determinista.
-        "propia-que-envuelve-connect-timeout",
+        "own-wrapping-connect-timeout",
         lambda: _wrapped(_OwnError, httpx2.ConnectTimeout("plazo")),
         True,
         ConnectionCause.UNKNOWN,
@@ -298,7 +298,7 @@ def test_hint_without_cause_is_the_generic_one():
     """Daemon antiguo que no manda `causa`, o una causa que este código no conoce."""
     expected = f"revisa el backend en {HOST}"
     assert hint(None, origin="local", source="daemon", host=HOST) == expected
-    assert hint("causa_del_futuro", origin="remote", source="daemon", host=HOST) == expected
+    assert hint("future_cause", origin="remote", source="daemon", host=HOST) == expected
 
 
 def test_every_detail_names_the_host():
@@ -395,4 +395,4 @@ def test_the_old_causes_table_covers_every_one_that_changed():
     new_ones = {c.value for c in ConnectionCause} - unchanged
     assert set(legacy_names.CONNECTION_CAUSE_VALUES.values()) == new_ones
     with pytest.raises(ValueError):
-        ConnectionCause("no_existe")
+        ConnectionCause("missing")

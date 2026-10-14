@@ -18,7 +18,7 @@ def test_vnum_extracts_number():
     assert probes._vnum("v238") == 238
     assert probes._vnum("b9925") == 9925
     assert probes._vnum(None) is None
-    assert probes._vnum("sin-numero") is None
+    assert probes._vnum("no-number") is None
 
 
 def test_llamaserver_exe_from_config_windows_path(tmp_path):
@@ -106,7 +106,7 @@ def test_release_age_days():
     now = datetime(2026, 7, 23, 12, tzinfo=UTC)
     assert probes._release_age_days("2026-07-20T10:00:00Z", now) == 3
     assert probes._release_age_days("", now) is None
-    assert probes._release_age_days("no-es-fecha", now) is None
+    assert probes._release_age_days("not-a-date", now) is None
 
 
 def test_online_new_release_is_held_before_soak(monkeypatch):

@@ -31,7 +31,7 @@ MONTH = "202610"
 
 
 def _delegation_with_n(
-    path: Path, tid: str, n: int, *, session: str = "sesion-sintetica-0001", s0: float = 0
+    path: Path, tid: str, n: int, *, session: str = "synthetic-session-0001", s0: float = 0
 ) -> list:
     """Un hilo con una delegación y `n` peticiones después de su resultado (sin caducidades)."""
     lines = [
@@ -52,9 +52,9 @@ def _texts(log: Path) -> dict[str, str]:
 
 
 def test_privacy(tmp_path):
-    MARKER = "MARCADORA-7f3a"
-    SESSION = "sesion-marcadora-9c41"
-    TOOL_USE_ID = "toolu_privado01"
+    MARKER = "MARKER-7f3a"
+    SESSION = "session-marker-9c41"
+    TOOL_USE_ID = "toolu_private01"
     claude, log = tmp_path / "claude", tmp_path / "log"
     project = f"D--{MARKER}-proyecto"
     path = f"{MARKER}/doc.md"

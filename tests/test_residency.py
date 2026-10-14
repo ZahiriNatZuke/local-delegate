@@ -413,17 +413,17 @@ def test_table_covers_spec_requirements():
 
 
 _REFUSALS = {
-    "flujo": (
+    "flow": (
         b"models:\n  a:\n    cmd: x --model a.gguf\n    ttl: 60\ngroups:\n  g:\n    members: [a]\n",
         "estilo flujo",
     ),
-    "ancla": (b"models:\n  a:\n    cmd: &c x --model a.gguf\n    ttl: 60\n", "ancla"),
+    "anchor": (b"models:\n  a:\n    cmd: &c x --model a.gguf\n    ttl: 60\n", "ancla"),
     "alias": (
         b"models:\n  a:\n    cmd: x --model a.gguf\n    ttl: 60\n  b:\n    cmd: *c\n",
         "alias",
     ),
     "fusion": (b"models:\n  a:\n    <<:\n      cmd: x --model a.gguf\n    ttl: 60\n", "fusión"),
-    "duplicadas": (
+    "duplicates": (
         b"models:\n  a:\n    cmd: x --model a.gguf\n    ttl: 60\n    ttl: 90\n",
         "clave duplicada",
     ),
@@ -832,7 +832,7 @@ def test_restore_a_copy(tmp_path, capsys):
 
 def test_restore_copy_failing_load_go_refused(tmp_path, capsys):
     path = _copy(TODAY, tmp_path)
-    bad_one = _writes(tmp_path, b"models:\n  a:\n    cmd: x\n    ttl: -5\n", "mala.bak")
+    bad_one = _writes(tmp_path, b"models:\n  a:\n    cmd: x\n    ttl: -5\n", "bad.bak")
     before = _sha(path)
     assert _residency("--config", str(path), "--restore", str(bad_one), "--now") == 2
     assert "load.go" in capsys.readouterr().err
@@ -842,7 +842,7 @@ def test_restore_copy_failing_load_go_refused(tmp_path, capsys):
 def test_looping_reader_never_sees_half_written_yaml(tmp_path, monkeypatch):
     """Restauración lenta (la escritura se para a mitad) con un lector leyendo sin parar."""
     path = _copy(TODAY, tmp_path)
-    copy = _copy(PRE_NO_RESIDENT, tmp_path, "copia.bak")
+    copy = _copy(PRE_NO_RESIDENT, tmp_path, "copy.bak")
     valid = {TODAY.read_bytes(), copy.read_bytes()}
     writing = threading.Event()
 
@@ -966,7 +966,7 @@ def test_restore_dry_run_masks_key_lists_and_env_tokens(tmp_path, capsys):
         tmp_path,
         b'apiKeys:\n  - "clave-falsa-copia-1"\nmodels:\n  a:\n    cmd: x --model a.gguf\n'
         b'    env:\n      - "HF_TOKEN=clave-falsa-hf-copia"\n    ttl: 90\n',
-        "copia.bak",
+        "copy.bak",
     )
     rc = _residency("--config", str(current), "--restore", str(copy), "--dry-run")
     output = capsys.readouterr().out
@@ -1040,21 +1040,21 @@ def test_pin_swap_false_group_counts_whole(tmp_path, capsys):
 
 
 def test_yaml_error_does_not_quote_fragment(tmp_path, capsys):
-    content = b'apiKeys:\n  - "clave-secreta-sin-cerrar\nmodels:\n  a:\n    cmd: x\n'
+    content = b'apiKeys:\n  - "secret-key-unclosed\nmodels:\n  a:\n    cmd: x\n'
     with pytest.raises(yaml.YAMLError) as raw:
         yaml.safe_load(content)
-    assert "clave-secreta-sin-cerrar" in str(raw.value)  # guarda: PyYAML sí lo citaría
+    assert "secret-key-unclosed" in str(raw.value)  # guarda: PyYAML sí lo citaría
     with pytest.raises(ResidencyError) as e:
         residency.edit(content, [SetTTL("a", 30)])
-    assert "clave-secreta-sin-cerrar" not in str(e.value)
+    assert "secret-key-unclosed" not in str(e.value)
     assert "línea" in str(e.value)
     with pytest.raises(ResidencyError) as e:
         residency.validate_copy(content)
-    assert "clave-secreta-sin-cerrar" not in str(e.value)
+    assert "secret-key-unclosed" not in str(e.value)
     path = _writes(tmp_path, content)
     assert _residency("--config", str(path)) == 2
     err = capsys.readouterr().err
-    assert "clave-secreta-sin-cerrar" not in err
+    assert "secret-key-unclosed" not in err
     assert "no se puede leer" in err
 
 

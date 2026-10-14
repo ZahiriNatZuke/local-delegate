@@ -48,7 +48,7 @@ def test_stop_without_id(log_dir, capsys, open_ones, code):
 
 
 def test_stop_of_a_nonexistent_id_gives_2(log_dir, capsys):
-    assert cli.run(["test-window", "stop", "w-nada"]) == 2
+    assert cli.run(["test-window", "stop", "w-none"]) == 2
     assert "no existe" in capsys.readouterr().err
 
 

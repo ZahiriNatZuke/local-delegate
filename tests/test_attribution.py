@@ -65,7 +65,7 @@ def _notes_dir(tmp_dir: Path) -> Path:
 
 def _hook_input(tool_use_id: str, transcript: Path | str, **extra) -> dict:
     return {
-        "session_id": "sesion-sintetica",
+        "session_id": "synthetic-session",
         "transcript_path": str(transcript),
         "cwd": "C:/proyecto",
         "hook_event_name": "PreToolUse",
@@ -122,7 +122,7 @@ def test_hook_server_round_trip(tmp_path):
     """
     tmp_dir = _tmp_dir(tmp_path)
     entry = _hook_input(
-        "toolu_ida",
+        "toolu_outbound",
         "C:/x/s1.jsonl",
         agent_id="a1",
         agent_type=AGENT,
@@ -130,7 +130,7 @@ def test_hook_server_round_trip(tmp_path):
     )
     proc = _launch_hook(json.dumps(entry).encode("utf-8"), tmp_dir)
     assert proc.returncode == 0, proc.stderr
-    note = attribution.read_note("toolu_ida", directory=_notes_dir(tmp_dir))
+    note = attribution.read_note("toolu_outbound", directory=_notes_dir(tmp_dir))
     assert note is not None, "el hook no dejó nota legible"
     assert note.get("effort") == "low"
     assert note.get("agent_id") == "a1"
@@ -141,7 +141,7 @@ def test_hook_server_round_trip(tmp_path):
 
 @pytest.mark.parametrize(
     "case",
-    ["valida", "stdin_roto", "id_malo"],
+    ["valida", "broken_stdin", "bad_id"],
 )
 def test_the_hook_stays_silent_and_exits_with_0(tmp_path, case):
     """El hook no imprime nada y sale con 0 siempre; con un id que no casa, no deja nota.
@@ -150,9 +150,9 @@ def test_the_hook_stays_silent_and_exits_with_0(tmp_path, case):
     """
     tmp_dir = _tmp_dir(tmp_path)
     if case == "valida":
-        entry = json.dumps(_hook_input("toolu_calla", "C:/x/s.jsonl")).encode("utf-8")
-    elif case == "stdin_roto":
-        entry = b'{"tool_use_id": "toolu_roto", '
+        entry = json.dumps(_hook_input("toolu_silent", "C:/x/s.jsonl")).encode("utf-8")
+    elif case == "broken_stdin":
+        entry = b'{"tool_use_id": "toolu_broken", '
     else:
         entry = json.dumps(_hook_input("toolu_../../fuera", "C:/x/s.jsonl")).encode("utf-8")
     proc = _launch_hook(entry, tmp_dir)
@@ -161,7 +161,7 @@ def test_the_hook_stays_silent_and_exits_with_0(tmp_path, case):
     notes_dir = _notes_dir(tmp_dir)
     written = sorted(p.name for p in notes_dir.iterdir()) if notes_dir.exists() else []
     if case == "valida":
-        assert written == ["toolu_calla.json"], "guarda: el caso bueno sí escribe"
+        assert written == ["toolu_silent.json"], "guarda: el caso bueno sí escribe"
     else:
         assert written == []
     assert not any(tmp_path.rglob("fuera*")), "un id con `..` no puede escribir fuera"
@@ -202,11 +202,11 @@ def test_a_half_written_note_counts_as_no_note(tmp_path):
     """Control (b): mutante «`read_note` sin `try`» → la excepción escapa."""
     notes = tmp_path / "notas"
     notes.mkdir()
-    (notes / "toolu_medias.json").write_text('{"tool_use_id": ', encoding="utf-8")
+    (notes / "toolu_half.json").write_text('{"tool_use_id": ', encoding="utf-8")
     escaped = False
     result = "sin leer"
     try:
-        result = attribution.read_note("toolu_medias", directory=notes)
+        result = attribution.read_note("toolu_half", directory=notes)
     except Exception:
         escaped = True
     assert not escaped
@@ -216,13 +216,13 @@ def test_a_half_written_note_counts_as_no_note(tmp_path):
 def test_the_hook_prunes_old_notes(tmp_path):
     """Las notas de más de 10 min ya no cuentan, y el hook las borra al escribir otra."""
     notes = tmp_path / "notas"
-    _write_note(notes, "toolu_vieja", tmp_path / "s.jsonl")
-    old = notes / "toolu_vieja.json"
+    _write_note(notes, "toolu_old", tmp_path / "s.jsonl")
+    old = notes / "toolu_old.json"
     eleven_min_ago = time.time() - 11 * 60
     os.utime(old, (eleven_min_ago, eleven_min_ago))
-    _write_note(notes, "toolu_nueva", tmp_path / "s.jsonl")
+    _write_note(notes, "toolu_new", tmp_path / "s.jsonl")
     assert not old.exists()
-    assert (notes / "toolu_nueva.json").is_file()
+    assert (notes / "toolu_new.json").is_file()
 
 
 # --- La resolución ------------------------------------------------------------------------------
@@ -235,7 +235,7 @@ def test_resolves_the_subagent_model(tmp_path):
     """
     root = _projects(tmp_path)
     main_transcript = _write(
-        root / "D--proyecto" / "s1.jsonl", [_tool_use_line("toolu_otro", OPUS)]
+        root / "D--proyecto" / "s1.jsonl", [_tool_use_line("toolu_other", OPUS)]
     )
     _write(
         root / "D--proyecto" / "s1" / "subagents" / "agent-a1.jsonl",
@@ -275,10 +275,10 @@ def test_the_main_agent_has_no_agent_type(tmp_path):
 def test_a_path_outside_projects_is_not_opened(tmp_path):
     """Control (b): mutante «sin la validación de la ruta» → el fichero tiene la línea."""
     root = _projects(tmp_path)
-    outside = _write(tmp_path / "fuera" / "s1.jsonl", [_tool_use_line("toolu_fuera", OPUS)])
+    outside = _write(tmp_path / "fuera" / "s1.jsonl", [_tool_use_line("toolu_outside", OPUS)])
     notes = tmp_path / "notas"
-    _write_note(notes, "toolu_fuera", outside, effort={"level": "high"})
-    r = attribution.resolve_call("toolu_fuera", notes=notes, projects=root)
+    _write_note(notes, "toolu_outside", outside, effort={"level": "high"})
+    r = attribution.resolve_call("toolu_outside", notes=notes, projects=root)
     assert r.get("caller_kind") == "main", "guarda: la nota sí se leyó"
     assert r.get("caller_model") is None
     assert r.get("caller_src") == "hook"
@@ -288,11 +288,11 @@ def test_the_race_leaves_caller_src_hook(tmp_path):
     """Guarda: hay nota pero la línea aún no está escrita (la carrera medida)."""
     root = _projects(tmp_path)
     main_transcript = _write(
-        root / "D--proyecto" / "s1.jsonl", [_tool_use_line("toolu_otra", OPUS)]
+        root / "D--proyecto" / "s1.jsonl", [_tool_use_line("toolu_another", OPUS)]
     )
     notes = tmp_path / "notas"
-    _write_note(notes, "toolu_carrera", main_transcript, effort={"level": "high"})
-    r = attribution.resolve_call("toolu_carrera", notes=notes, projects=root)
+    _write_note(notes, "toolu_race", main_transcript, effort={"level": "high"})
+    r = attribution.resolve_call("toolu_race", notes=notes, projects=root)
     assert r.get("caller_src") == "hook"
     assert "caller_model" not in r
 
@@ -300,16 +300,14 @@ def test_the_race_leaves_caller_src_hook(tmp_path):
 def test_an_old_note_does_not_count(tmp_path):
     """Control (b): mutante «sin el filtro de edad» → la nota de hace 11 min cuenta."""
     root = _projects(tmp_path)
-    main_transcript = _write(
-        root / "D--proyecto" / "s1.jsonl", [_tool_use_line("toolu_vieja", OPUS)]
-    )
+    main_transcript = _write(root / "D--proyecto" / "s1.jsonl", [_tool_use_line("toolu_old", OPUS)])
     notes = tmp_path / "notas"
-    _write_note(notes, "toolu_vieja", main_transcript)
+    _write_note(notes, "toolu_old", main_transcript)
     now = time.time()
     assert "caller_kind" in attribution.resolve_call(
-        "toolu_vieja", notes=notes, projects=root, now=now
+        "toolu_old", notes=notes, projects=root, now=now
     ), "guarda: la misma nota, fresca, sí cuenta"
-    r = attribution.resolve_call("toolu_vieja", notes=notes, projects=root, now=now + 660)
+    r = attribution.resolve_call("toolu_old", notes=notes, projects=root, now=now + 660)
     assert "caller_kind" not in r
 
 
@@ -369,16 +367,16 @@ def test_does_not_read_more_than_256_kb(tmp_path):
     """Control (b): mutante «leer el fichero entero» → lee 50 MB."""
     root = _projects(tmp_path)
     main_transcript = root / "D--proyecto" / "s1.jsonl"
-    padding = (json.dumps({"type": "user", "relleno": "x" * 1000}) + "\n").encode("utf-8")
+    padding = (json.dumps({"type": "user", "padding": "x" * 1000}) + "\n").encode("utf-8")
     with main_transcript.open("wb") as stream:
-        stream.write((_tool_use_line("toolu_lejos", OPUS) + "\n").encode("utf-8"))
+        stream.write((_tool_use_line("toolu_far", OPUS) + "\n").encode("utf-8"))
         block = padding * 1024
         while stream.tell() < 50 * 1024 * 1024:
             stream.write(block)
     notes = tmp_path / "notas"
-    _write_note(notes, "toolu_lejos", main_transcript)
+    _write_note(notes, "toolu_far", main_transcript)
     spy = _ReadSpy()
-    r = attribution.resolve_call("toolu_lejos", notes=notes, projects=root, opener=spy)
+    r = attribution.resolve_call("toolu_far", notes=notes, projects=root, opener=spy)
     assert spy.reads > 0, "guarda: se llegó a abrir el transcript"
     assert spy.reads <= 256 * 1024
     assert r.get("caller_model") is None
@@ -389,16 +387,16 @@ def test_the_50_ms_budget_cuts_off(tmp_path):
     root = _projects(tmp_path)
     main_transcript = _write(
         root / "D--proyecto" / "s1.jsonl",
-        [json.dumps({"type": "user"})] * 5 + [_tool_use_line("toolu_lento", OPUS)],
+        [json.dumps({"type": "user"})] * 5 + [_tool_use_line("toolu_slow", OPUS)],
     )
     notes = tmp_path / "notas"
-    _write_note(notes, "toolu_lento", main_transcript)
-    stopped = attribution.resolve_call("toolu_lento", notes=notes, projects=root, clock=lambda: 0.0)
+    _write_note(notes, "toolu_slow", main_transcript)
+    stopped = attribution.resolve_call("toolu_slow", notes=notes, projects=root, clock=lambda: 0.0)
     assert stopped.get("caller_model") == OPUS, "guarda: con tiempo de sobra se encuentra"
 
     instants = iter(i * 0.060 for i in range(1000))
     r = attribution.resolve_call(
-        "toolu_lento", notes=notes, projects=root, clock=lambda: next(instants)
+        "toolu_slow", notes=notes, projects=root, clock=lambda: next(instants)
     )
     assert r.get("caller_model") is None
 
@@ -450,7 +448,7 @@ def _in_request(tool_use_id: str, function):
 def test_log_event_writes_the_attribution_and_no_session_id(log_and_notes):
     """Control (c): en el corte, `current_tool_use_id()` devolvía `None` y no había campo."""
     log, notes, root = log_and_notes
-    marker = "sesion-marcador-7f3a"
+    marker = "session-marker-7f3a"
     main_transcript = _write(
         root / "D--proyecto" / f"{marker}.jsonl",
         [_tool_use_line("toolu_x", OPUS, session=marker)],
@@ -485,13 +483,13 @@ def test_a_broken_resolution_does_not_take_the_line_down(log_and_notes, monkeypa
     monkeypatch.setattr(attribution, "resolve_call", blows_up)
     escaped = False
     try:
-        _in_request("toolu_roto", _minimal_log)
+        _in_request("toolu_broken", _minimal_log)
     except Exception:
         escaped = True
     assert not escaped
     lines = _lines(log)
     assert len(lines) == 1
-    assert lines[0].get("tool_use_id") == "toolu_roto"
+    assert lines[0].get("tool_use_id") == "toolu_broken"
 
 
 class _Spy:

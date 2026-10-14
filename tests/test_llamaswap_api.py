@@ -63,7 +63,7 @@ def inflight_request(model: str, key: str) -> dict:
 @backend_mock.mock
 def test_running_keeps_only_id_state_and_ttl():
     backend_mock.get(RUNNING).mock(
-        return_value=httpx2.Response(200, json={"running": [running_row("m", "clave-falsa-1")]})
+        return_value=httpx2.Response(200, json={"running": [running_row("m", "fake-key-1")]})
     )
     assert llamaswap_api.running(Backend(BASE)) == [{"id": "m", "state": "ready", "ttl": 120}]
 
@@ -87,9 +87,9 @@ def test_in_flight_counts_by_model_and_drops_everything_else():
                     {
                         "operation": "snapshot",
                         "requests": [
-                            inflight_request("a", "clave-falsa-2"),
-                            inflight_request("a", "clave-falsa-2"),
-                            inflight_request("b", "clave-falsa-2"),
+                            inflight_request("a", "fake-key-2"),
+                            inflight_request("a", "fake-key-2"),
+                            inflight_request("b", "fake-key-2"),
                         ],
                     },
                 ),
@@ -117,7 +117,7 @@ def test_activity_returns_the_last_row_without_request_data():
         "duration_ms": 1200,
         "resp_status_code": 200,
         "req_path": "/v1/chat/completions",
-        "metadata": {"x": "clave-falsa-3"},
+        "metadata": {"x": "fake-key-3"},
     }
     backend_mock.get(f"{BASE}/api/metrics/activity?model=m&limit=1").mock(
         return_value=httpx2.Response(200, json={"data": [row]})
@@ -187,7 +187,7 @@ def test_registry_caps_open_watchers(monkeypatch):
     assert registry.result(down_watcher)["outcome"] == llamaswap_api.DOWN
     other = registry.open(Backend(BASE))
     assert registry.result(other)["outcome"] == llamaswap_api.DOWN
-    assert registry.result("no-existe") is None
+    assert registry.result("missing") is None
 
 
 @backend_mock.mock
@@ -197,7 +197,7 @@ def test_registry_refuses_when_the_live_watchers_fill_the_cap():
     registry = llamaswap_api.WatchRegistry(max_watchers=1)
     alive = llamaswap_api.Watcher(Backend(BASE))
     assert alive.outcome is None
-    registry._watchers["viva"] = (alive, time.monotonic())
+    registry._watchers["alive"] = (alive, time.monotonic())
 
     with pytest.raises(llamaswap_api.QueryError, match="vigías abiertas"):
         registry.open(Backend(BASE))

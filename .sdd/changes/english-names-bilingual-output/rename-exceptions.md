@@ -281,6 +281,8 @@ sección de su motivo.
 | resumen-md-2k.md | tests/test_corpus.py | dato congelado de corpus o caso: fichero de `fuentes/` de un corpus congelado en `benchmarks/` (no se reescribe) (ola A10b-6) |
 | real-reescrito | tests/test_corpus.py | dato congelado de corpus o caso: valor de `source_body` de la trampa de la misma zona en el `trampas.json` congelado (ola A10b-6) |
 | real-reescrito | tests/test_pair_sheet.py | dato congelado de corpus o caso: valor de `source_body` de la trampa de la misma zona en el `trampas.json` congelado (ola A10b-6) |
+| clave-falsa | tests/test_residency.py | dato congelado de corpus o caso: marcador con que las copias congeladas de configs reales (`tests/fixtures/residency/*.yaml`) sustituyen las claves; el test comprueba la sustitución y no se reescriben las copias (cierre del frente A, lote 2) |
+| clave-falsa-1 | tests/test_residency.py | dato congelado de corpus o caso: la clave sustituida que llevan esas copias congeladas (cierre del frente A, lote 2) |
 | estado.json | tests/test_corpus.py | dato congelado de corpus o caso: identificador sacado del diff de un commit real del historial (`commit-diff-19k`), contenido del caso (ola A10b-6) |
 
 ## Entrada de interfaz escrita por una persona

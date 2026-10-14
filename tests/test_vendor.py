@@ -108,7 +108,7 @@ def test_missing_blob_fails(vendor_copy):
 
 def test_undeclared_file_fails(vendor_copy):
     """Un vendorizado no declarado es el punto ciego que este cambio viene a cerrar."""
-    (vendor_copy.parent / "intruso.min.js").write_text("window.x = 1", encoding="utf-8")
+    (vendor_copy.parent / "intruder.min.js").write_text("window.x = 1", encoding="utf-8")
 
     assert check_vendor.main(["--offline", "--manifest", str(vendor_copy)]) == (
         check_vendor.INTEGRITY_FAILURE

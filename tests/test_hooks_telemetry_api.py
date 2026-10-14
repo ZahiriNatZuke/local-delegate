@@ -149,7 +149,7 @@ def test_without_the_variable_the_endpoint_says_so_instead_of_pretending_there_i
 
 
 def test_with_the_variable_but_no_file_it_says_it_is_enabled(monkeypatch, tmp_path):
-    monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", tmp_path / "no-existe.jsonl")
+    monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", tmp_path / "missing.jsonl")
     data = TestClient(metrics.app).get("/api/hooks").json()
 
     assert data["enabled"] is True
@@ -262,7 +262,7 @@ def test_the_log_category_is_escaped_before_rendering(tmp_path):
 
     esc_js = _extract_js_function(metrics.HTML, "function escHooks(s){")
     cases = ["bash", "<img src=x onerror=alert(1)>", None, "a&b", '"comillas"', "it's"]
-    input_file = tmp_path / "casos.json"
+    input_file = tmp_path / "cases.json"
     input_file.write_text(json.dumps(cases), encoding="utf-8")
 
     program = tmp_path / "esc.mjs"
@@ -487,7 +487,7 @@ def test_the_reason_dictionary_gives_the_same_label_to_the_old_and_new_value(tmp
     from local_delegate import legacy_names
 
     pairs = sorted(legacy_names.PANEL_VALUE_ALIASES["hookReason"].items())
-    program = tmp_path / "etiquetas.mjs"
+    program = tmp_path / "labels.mjs"
     program.write_text(
         f"{_labels_js(metrics.render_index())}\n"
         f"const aliasPairs = {json.dumps(pairs)};\n"

@@ -57,7 +57,7 @@ SHELL_TEXT = (
 def _env(tmp_path, monkeypatch):
     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
     monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1")
-    monkeypatch.setenv("LD_HOOK_READ_SWITCH_FILE", str(tmp_path / "no-existe"))
+    monkeypatch.setenv("LD_HOOK_READ_SWITCH_FILE", str(tmp_path / "missing"))
     # Hook y servidor importan `hook_common` por caminos distintos (módulo suelto y paquete): son
     # dos objetos. Los dos calculan la ruta de las notas con `tempfile.gettempdir()` en cada
     # llamada, así que redirigir eso los apunta al mismo fichero.
@@ -87,7 +87,7 @@ def _read(monkeypatch, capsys, file: Path) -> str:
 
 @pytest.fixture
 def document(tmp_path) -> Path:
-    file = tmp_path / "docs" / "informe.md"
+    file = tmp_path / "docs" / "report.md"
     file.parent.mkdir()
     file.write_text("x" * 40 * 1024, encoding="utf-8")
     return file
@@ -98,14 +98,14 @@ def test_the_read_block_text_does_not_change_a_single_byte(monkeypatch, capsys, 
 
 
 def test_a_relative_cat_offers_the_absolute_path(monkeypatch, capsys, document, tmp_path):
-    reason = _reason(_shell(monkeypatch, capsys, "cat docs/informe.md", tmp_path))
+    reason = _reason(_shell(monkeypatch, capsys, "cat docs/report.md", tmp_path))
     assert reason == SHELL_TEXT.format(p=document)
 
 
 def test_a_relative_cat_is_matched_with_the_delegation(monkeypatch, capsys, document, tmp_path):
     from local_delegate import server
 
-    reason = _reason(_shell(monkeypatch, capsys, "cat docs/informe.md", tmp_path))
+    reason = _reason(_shell(monkeypatch, capsys, "cat docs/report.md", tmp_path))
     offered = re.search(r'path="([^"]+)"', reason).group(1)
     # El modelo delega con la ruta que se le ofreció, y la nota tiene que estar a ese nombre.
     assert Path(offered) == document

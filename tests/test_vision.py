@@ -47,13 +47,13 @@ def test_describe_image_sends_multimodal_payload(monkeypatch, tmp_path):
 
 
 def test_describe_image_missing_file_returns_error(tmp_path):
-    text = server.local_describe_image(str(tmp_path / "no-existe.png"))
+    text = server.local_describe_image(str(tmp_path / "missing.png"))
     assert text.startswith("[local-delegate error]")
     assert "No existe el archivo" in text
 
 
 def test_describe_image_invalid_extension_returns_error(tmp_path):
-    p = tmp_path / "no-es-imagen.txt"
+    p = tmp_path / "not-an-image.txt"
     p.write_text("hola", encoding="utf-8")
     text = server.local_describe_image(str(p))
     assert text.startswith("[local-delegate error]")

@@ -191,13 +191,13 @@ def _chunked_by_chunks(_tmp_path, _monkeypatch):
 
 
 def _image(tmp_path, _monkeypatch):
-    return server.local_describe_image(path=_minimal_png(tmp_path / "punto.png"))
+    return server.local_describe_image(path=_minimal_png(tmp_path / "dot.png"))
 
 
 @pytest.mark.parametrize(
     "path",
     [_simple, _chunked_map_reduce, _chunked_by_chunks, _image],
-    ids=["simple", "troceada-map-reduce", "troceada-por-trozos", "imagen"],
+    ids=["simple", "chunked-map-reduce", "chunked-per-chunk", "imagen"],
 )
 @backend_mock.mock
 def test_the_connection_error_states_the_cause_and_goes_to_the_log(

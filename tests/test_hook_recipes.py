@@ -175,7 +175,7 @@ def test_read_hook_stays_quiet_on_code(tmp_path, monkeypatch, capsys):
 
     Era el caso mas frecuente del ruido: 562 de las 1 579 lecturas medidas.
     """
-    target = tmp_path / "servicio.ts"
+    target = tmp_path / "service.ts"
     target.write_text("x" * 150 * 1024, encoding="utf-8")
 
     assert _run_hook(monkeypatch, capsys, {"file_path": str(target)}) == ""
@@ -183,7 +183,7 @@ def test_read_hook_stays_quiet_on_code(tmp_path, monkeypatch, capsys):
 
 def test_read_hook_respects_a_range_asked_on_purpose(tmp_path, monkeypatch, capsys):
     """Con offset/limit el modelo ya sabe que parte quiere; sugerirle un resumen sobra."""
-    target = tmp_path / "informe.md"
+    target = tmp_path / "report.md"
     target.write_text("x" * 200 * 1024, encoding="utf-8")
 
     output = _run_hook(monkeypatch, capsys, {"file_path": str(target), "offset": 500, "limit": 100})
@@ -199,7 +199,7 @@ def test_read_hook_stays_quiet_on_a_small_file(tmp_path, monkeypatch, capsys):
     movió está en la cabecera del hook — 24 de 24 lecturas calladas por tamaño eran documentación,
     17 de ellas entre 8 y 16 KB, o sea dentro de los 20 KB que este test daba por «mediano».
     """
-    target = tmp_path / "notas.md"
+    target = tmp_path / "notes.md"
     target.write_text("x" * 5 * 1024, encoding="utf-8")
 
     assert _run_hook(monkeypatch, capsys, {"file_path": str(target)}) == ""
@@ -207,7 +207,7 @@ def test_read_hook_stays_quiet_on_a_small_file(tmp_path, monkeypatch, capsys):
 
 def test_read_hook_warns_in_the_band_that_used_to_stay_silent(tmp_path, monkeypatch, capsys):
     """20 KB: callaba con el umbral de 32 y ahora avisa. Es el cambio, medido por su efecto."""
-    target = tmp_path / "notas.md"
+    target = tmp_path / "notes.md"
     target.write_text("x" * 20 * 1024, encoding="utf-8")
 
     output = _run_hook(monkeypatch, capsys, {"file_path": str(target)})
@@ -241,7 +241,7 @@ def test_read_hook_records_the_discards_to_measure_aim(tmp_path, monkeypatch):
     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
     monkeypatch.setattr(read_hook, "record", common.record)
 
-    target = tmp_path / "componente.tsx"
+    target = tmp_path / "component.tsx"
     target.write_text("x" * 90 * 1024, encoding="utf-8")
     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
     monkeypatch.setattr(
@@ -263,9 +263,9 @@ def test_read_hook_does_not_leak_the_file_name_through_the_extension(tmp_path, m
     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
     monkeypatch.setattr(read_hook, "record", common.record)
 
-    folder = tmp_path / "cliente-confidencial"
+    folder = tmp_path / "confidential-client"
     folder.mkdir()
-    target = folder / "informe-secreto.md"
+    target = folder / "secret-report.md"
     target.write_text("x" * 10 * 1024, encoding="utf-8")
     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
     monkeypatch.setattr(
@@ -352,7 +352,7 @@ def _decision(output: str) -> dict:
 
 def test_large_prose_is_blocked_and_the_message_says_the_way_out(tmp_path, monkeypatch, capsys):
     """El caso acotado: un `.md` de 40 KB leido entero, con el backend vivo."""
-    target = tmp_path / "informe.md"
+    target = tmp_path / "report.md"
     target.write_text("x" * 40 * 1024, encoding="utf-8")
 
     decision = _decision(_run_with_block(monkeypatch, capsys, {"file_path": str(target)}))
@@ -377,7 +377,7 @@ def test_a_large_json_is_warned_about_but_not_blocked(tmp_path, monkeypatch, cap
 
 def test_code_still_says_nothing(tmp_path, monkeypatch, capsys):
     """Ni bloqueo ni aviso: el mercado medido es documentacion, no codigo."""
-    target = tmp_path / "servicio.py"
+    target = tmp_path / "service.py"
     target.write_text("x" * 200 * 1024, encoding="utf-8")
 
     assert _run_with_block(monkeypatch, capsys, {"file_path": str(target)}) == ""
@@ -385,7 +385,7 @@ def test_code_still_says_nothing(tmp_path, monkeypatch, capsys):
 
 def test_a_range_asked_on_purpose_is_not_blocked(tmp_path, monkeypatch, capsys):
     """Es la salida de emergencia que el propio mensaje del bloqueo ofrece: tiene que funcionar."""
-    target = tmp_path / "informe.md"
+    target = tmp_path / "report.md"
     target.write_text("x" * 200 * 1024, encoding="utf-8")
 
     output = _run_with_block(
@@ -397,7 +397,7 @@ def test_a_range_asked_on_purpose_is_not_blocked(tmp_path, monkeypatch, capsys):
 
 def test_without_backend_it_is_not_blocked_even_when_due(tmp_path, monkeypatch, capsys):
     """Bloquear sin sitio a donde delegar deja al agente sin forma de leer el fichero."""
-    target = tmp_path / "informe.md"
+    target = tmp_path / "report.md"
     target.write_text("x" * 40 * 1024, encoding="utf-8")
 
     decision = _decision(
@@ -413,7 +413,7 @@ def test_without_backend_it_is_not_blocked_even_when_due(tmp_path, monkeypatch, 
 
 def test_the_block_starts_off(tmp_path, monkeypatch, capsys):
     """Se enciende cuando este escrito el criterio de la quinta medicion, no antes."""
-    target = tmp_path / "informe.md"
+    target = tmp_path / "report.md"
     target.write_text("x" * 40 * 1024, encoding="utf-8")
     monkeypatch.delenv("LD_HOOK_READ_BLOCK", raising=False)
     monkeypatch.setattr(read_hook, "backend_available", lambda **k: True)
@@ -425,7 +425,7 @@ def test_the_block_starts_off(tmp_path, monkeypatch, capsys):
 
 def test_turning_off_does_not_need_a_session_restart(tmp_path, monkeypatch, capsys):
     """La variable se consulta en CADA invocacion: un freno que exige reiniciar no es un freno."""
-    target = tmp_path / "informe.md"
+    target = tmp_path / "report.md"
     target.write_text("x" * 40 * 1024, encoding="utf-8")
     monkeypatch.setattr(read_hook, "backend_available", lambda **k: True)
 
@@ -438,12 +438,12 @@ def test_turning_off_does_not_need_a_session_restart(tmp_path, monkeypatch, caps
 
 def test_each_event_says_which_script_ran_and_in_which_session(tmp_path, monkeypatch):
     """Sin esto una medicion no se puede leer: una sesion abierta hereda el entorno del lanzador."""
-    log = tmp_path / "telemetria.jsonl"
+    log = tmp_path / "telemetry.jsonl"
     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
     monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1")
     monkeypatch.setattr(read_hook, "backend_available", lambda **k: True)
-    target = tmp_path / "informe.md"
+    target = tmp_path / "report.md"
     target.write_text("x" * 40 * 1024, encoding="utf-8")
     monkeypatch.setattr(
         sys,
@@ -469,9 +469,9 @@ def test_the_fingerprint_groups_by_file_without_saying_which(tmp_path, monkeypat
     La huella lo permite —el mismo fichero da el mismo valor— sin que el log diga nunca que
     fichero era.
     """
-    log = tmp_path / "telemetria.jsonl"
+    log = tmp_path / "telemetry.jsonl"
     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
-    document = tmp_path / "el-informe-del-cliente.md"
+    document = tmp_path / "the-client-report.md"
     document.write_text("x" * 40 * 1024, encoding="utf-8")
 
     # Primero una franja, despues el fichero entero: dos eventos del MISMO fichero.
@@ -483,15 +483,15 @@ def test_the_fingerprint_groups_by_file_without_saying_which(tmp_path, monkeypat
     assert events[0]["path_sha"] == events[1]["path_sha"], "el mismo fichero, la misma huella"
 
     raw = log.read_text(encoding="utf-8")
-    assert "el-informe-del-cliente" not in raw
+    assert "the-client-report" not in raw
     assert str(tmp_path) not in raw
 
 
 def test_two_distinct_files_are_not_confused(tmp_path, monkeypatch, capsys):
     """Control positivo: una huella constante agruparia todo y la medicion diria cualquier cosa."""
-    log = tmp_path / "telemetria.jsonl"
+    log = tmp_path / "telemetry.jsonl"
     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
-    for name in ("uno.md", "dos.md"):
+    for name in ("one.md", "two.md"):
         file = tmp_path / name
         file.write_text("x" * 40 * 1024, encoding="utf-8")
         _run_hook(monkeypatch, capsys, {"file_path": str(file)})
@@ -524,7 +524,7 @@ def test_every_prompt_event_carries_session_version_and_block(tmp_path, monkeypa
             monkeypatch,
             text,
             LD_HOOK_READ_BLOCK="1",
-            LD_HOOK_READ_SWITCH_FILE=str(tmp_path / "no-existe"),
+            LD_HOOK_READ_SWITCH_FILE=str(tmp_path / "missing"),
         )
         assert event["session_id"] == "s-123", text
         assert event["version"]  # huella del script que corrió

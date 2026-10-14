@@ -76,7 +76,7 @@ def test_the_old_switch_is_in_the_registry_and_in_the_hooks_copy():
 def test_the_daemon_reads_the_block_notes_of_an_old_hook(temp_dir, tmp_path):
     """Un hook de la 0.34.0 sigue escribiendo `local-delegate-bloqueos.jsonl`: el bloqueo que
     provocó tiene que seguir contando como aceptado cuando el agente delega."""
-    document = tmp_path / "informe.md"
+    document = tmp_path / "report.md"
     old = temp_dir / "local-delegate-bloqueos.jsonl"
     note = {"id": "viejo1234567", "sha": hook_common.path_digest(str(document)), "ts": time.time()}
     old.write_text(json.dumps(note) + "\n", encoding="utf-8")
@@ -87,7 +87,7 @@ def test_the_daemon_reads_the_block_notes_of_an_old_hook(temp_dir, tmp_path):
 def test_the_hook_writes_the_notes_only_under_the_new_name_and_the_most_recent_wins(
     temp_dir, tmp_path
 ):
-    document = tmp_path / "informe.md"
+    document = tmp_path / "report.md"
     old = temp_dir / "local-delegate-bloqueos.jsonl"
     older = {
         "id": "viejo1234567",
@@ -111,10 +111,10 @@ def test_the_attribution_note_of_an_old_hook_is_still_found(temp_dir):
 
     assert attribution.read_note("toolu_viejo") == note
 
-    assert hook_common.record_call({"tool_use_id": "toolu_nuevo", "agent_type": "Explore"})
-    assert (temp_dir / "local-delegate-calls" / "toolu_nuevo.json").is_file()
-    assert not (old / "toolu_nuevo.json").exists()
-    assert attribution.read_note("toolu_nuevo")["agent_type"] == "Explore"
+    assert hook_common.record_call({"tool_use_id": "toolu_new", "agent_type": "Explore"})
+    assert (temp_dir / "local-delegate-calls" / "toolu_new.json").is_file()
+    assert not (old / "toolu_new.json").exists()
+    assert attribution.read_note("toolu_new")["agent_type"] == "Explore"
 
 
 def test_the_health_mark_uses_the_new_name(temp_dir, monkeypatch):

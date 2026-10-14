@@ -25,7 +25,7 @@ def _home(tmp_path: Path, *, projects: bool = True, cleanup: int | None = None) 
     if projects:
         project = claude / "projects" / "D--algo"
         project.mkdir(parents=True)
-        (project / "sesion.jsonl").write_text(
+        (project / "session.jsonl").write_text(
             json.dumps({"type": "assistant", "message": {"model": "claude-opus-5"}}) + "\n",
             encoding="utf-8",
         )
@@ -50,7 +50,7 @@ def _log(log_dir: Path, *days: float, client: str = "claude-code") -> list[dict]
             "ts": ts,
             "tool": TOOL,
             "source": "path",
-            "path": "notas.md",
+            "path": "notes.md",
             "client": client,
             "ok": True,
             "chars_in": 4000,
@@ -92,7 +92,7 @@ def test_command_never_run_and_21_days_pending(tmp_path):
     assert r.fix_hint == "local-delegate recompute-cost"
 
     # Con 10 días todavía hay margen: sin cotejo, `unknown`.
-    short_log = tmp_path / "log-corto"
+    short_log = tmp_path / "short-log"
     _log(short_log, 10)
     assert _probe(tmp_path / "home", short_log).status == checks.UNKNOWN
 

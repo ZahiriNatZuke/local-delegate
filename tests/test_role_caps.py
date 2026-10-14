@@ -71,8 +71,8 @@ def test_long_equal_to_code_does_not_truncate_a_translation_that_fits(reload_con
     """`local_translate` trunca la entrada al tope antes de trocear: el final no puede perderse."""
     reload_config(LOCAL_DELEGATE_MODEL_CODE=LONG_MODEL)
     path = backend_mock.post(URL_CHAT).mock(return_value=_response("traducido"))
-    server.local_translate(target_lang="inglés", text=_text(30000, final="FIN-DEL-TEXTO\n"))
-    assert any(b"FIN-DEL-TEXTO" in call.request.content for call in path.calls), (
+    server.local_translate(target_lang="inglés", text=_text(30000, final="END-OF-TEXT\n"))
+    assert any(b"END-OF-TEXT" in call.request.content for call in path.calls), (
         "el final del texto no llegó al backend: se truncó con el tope de otro rol"
     )
 

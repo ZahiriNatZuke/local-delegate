@@ -153,12 +153,12 @@ def test_package_reads_the_old_names_alone():
     values = _config_in_subprocess(
         {
             "LD_HOOK_READ_BLOQUEAR": "1",
-            "LD_HOOK_READ_INTERRUPTOR": "viejo.flag",
+            "LD_HOOK_READ_INTERRUPTOR": "old.flag",
             "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO": "1",
             "LOCAL_DELEGATE_COSTE_RESPALDO": "claude-haiku-4-5",
         }
     )
-    assert values[:4] == ["True", "viejo.flag", "True", "claude-haiku-4-5"]
+    assert values[:4] == ["True", "old.flag", "True", "claude-haiku-4-5"]
     assert values[4] == repr(sorted(old for _new, old in RENAMED_ENV))
 
 
@@ -166,12 +166,12 @@ def test_package_reads_the_new_names_without_deprecation():
     values = _config_in_subprocess(
         {
             "LD_HOOK_READ_BLOCK": "1",
-            "LD_HOOK_READ_SWITCH_FILE": "nuevo.flag",
+            "LD_HOOK_READ_SWITCH_FILE": "new.flag",
             "LOCAL_DELEGATE_STRUCTURED_SUMMARY": "1",
             "LOCAL_DELEGATE_COST_FALLBACK": "claude-opus-5:main",
         }
     )
-    assert values == ["True", "nuevo.flag", "True", "claude-opus-5:main", "[]"]
+    assert values == ["True", "new.flag", "True", "claude-opus-5:main", "[]"]
 
 
 def test_package_prefers_the_new_name_when_both_are_set():
@@ -179,15 +179,15 @@ def test_package_prefers_the_new_name_when_both_are_set():
         {
             "LD_HOOK_READ_BLOCK": "0",
             "LD_HOOK_READ_BLOQUEAR": "1",
-            "LD_HOOK_READ_SWITCH_FILE": "nuevo.flag",
-            "LD_HOOK_READ_INTERRUPTOR": "viejo.flag",
+            "LD_HOOK_READ_SWITCH_FILE": "new.flag",
+            "LD_HOOK_READ_INTERRUPTOR": "old.flag",
             "LOCAL_DELEGATE_STRUCTURED_SUMMARY": "0",
             "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO": "1",
             "LOCAL_DELEGATE_COST_FALLBACK": "nuevo",
             "LOCAL_DELEGATE_COSTE_RESPALDO": "viejo",
         }
     )
-    assert values == ["False", "nuevo.flag", "False", "nuevo", "[]"]
+    assert values == ["False", "new.flag", "False", "nuevo", "[]"]
 
 
 def test_both_names_are_in_the_isolated_inventory():
@@ -229,7 +229,7 @@ def _installed_prompt_hook_state(home: Path, variables: dict[str, str]) -> str:
     ids=["old-only", "new-only", "both-new-wins", "none"],
 )
 def test_installed_hook_reads_block_variable_and_alias(tmp_path, variables, expected):
-    switch = {"LD_HOOK_READ_SWITCH_FILE": str(tmp_path / "no-existe")}
+    switch = {"LD_HOOK_READ_SWITCH_FILE": str(tmp_path / "missing")}
     assert _installed_prompt_hook_state(tmp_path, {**switch, **variables}) == expected
 
 
@@ -243,9 +243,9 @@ def test_installed_hook_reads_block_variable_and_alias(tmp_path, variables, expe
     ids=["old-only", "new-only", "both-new-wins"],
 )
 def test_installed_hook_reads_switch_file_variable_and_alias(tmp_path, variables):
-    switch = tmp_path / "apagado.flag"
+    switch = tmp_path / "off.flag"
     switch.write_text("", encoding="utf-8")
-    other = tmp_path / "no-existe"
+    other = tmp_path / "missing"
     resolved = {k: v.format(switch=switch, other=other) for k, v in variables.items()}
     state = _installed_prompt_hook_state(tmp_path, {"LD_HOOK_READ_BLOCK": "1", **resolved})
     assert state == "off_file"

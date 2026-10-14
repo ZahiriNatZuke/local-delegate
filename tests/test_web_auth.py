@@ -21,7 +21,7 @@ from starlette.testclient import TestClient
 
 from local_delegate.web import auth
 
-TOKEN = "el-token-bueno"
+TOKEN = "the-good-token"
 
 
 def _basic(user: str, password: str) -> str:
@@ -87,13 +87,13 @@ def test_without_header_nothing_gets_in_on_any_route(client, path):
         "Bearer",
         "Bearer ",
         "Bearer el-token-malo",
-        "Bearer el-token-bueno-y-un-poco-mas",
+        "Bearer the-good-token-and-a-bit-more",
         "Bearer el-token-buen",
-        "el-token-bueno",  # sin esquema
+        "the-good-token",  # sin esquema
         "Basic no-es-base64-valido",
         "Basic " + base64.b64encode(b"sin-dos-puntos").decode(),
         "Basic " + base64.b64encode(b"usuario:el-token-malo").decode(),
-        "Negotiate el-token-bueno",
+        "Negotiate the-good-token",
     ],
 )
 def test_a_credential_that_is_not_the_token_does_not_get_in(client, header):
@@ -131,7 +131,7 @@ def test_basic_gets_in_because_a_browser_does_not_send_bearer(client):
     Sin esta vía el token dejaría el panel inalcanzable para su único usuario real, que es la
     clase de arreglo de seguridad que acaba desactivado a la semana.
     """
-    response = client.get("/", headers={"Authorization": _basic("quien-sea", TOKEN)})
+    response = client.get("/", headers={"Authorization": _basic("whoever", TOKEN)})
     assert response.status_code == 200
 
 
@@ -201,7 +201,7 @@ def test_the_good_cookie_gets_in_and_the_ones_around_it_do_not():
     )
 
     expired = auth.create_session(TOKEN, -1)
-    from_another_token = auth.create_session("otro-token", 3600)
+    from_another_token = auth.create_session("other-token", 3600)
     expires, _, signature = good.partition(".")
     extended = f"{int(expires) + 10 * 3600}.{signature}"
 
@@ -214,7 +214,7 @@ def test_the_good_cookie_gets_in_and_the_ones_around_it_do_not():
         ("sin separador", str(int(expires))),
         ("con el token dentro tal cual", TOKEN),
         ("vacía", ""),
-        ("basura", "no-es-una-sesion"),
+        ("basura", "not-a-session"),
         ("expiración no numérica", f"manana.{signature}"),
     ):
         response = client.get("/", headers=_with_cookie(value))
@@ -244,7 +244,7 @@ def test_rotating_the_token_invalidates_live_sessions():
 def test_basic_hands_out_a_session_and_the_second_visit_asks_for_nothing():
     """El punto de todo esto: entrar una vez con el token y que el navegador siga dentro."""
     client = _app()
-    first = client.get("/", headers={"Authorization": _basic("quien-sea", TOKEN)})
+    first = client.get("/", headers={"Authorization": _basic("whoever", TOKEN)})
     assert first.status_code == 200
 
     cookie = first.headers["set-cookie"]
@@ -302,7 +302,7 @@ def test_the_session_in_use_is_renewed_before_expiring():
 def test_with_zero_duration_there_is_no_session_at_all():
     """La salida para quien no quiera que el navegador guarde nada: la puerta de siempre."""
     client = _app(duration=0)
-    with_basic = client.get("/", headers={"Authorization": _basic("quien-sea", TOKEN)})
+    with_basic = client.get("/", headers={"Authorization": _basic("whoever", TOKEN)})
     assert with_basic.status_code == 200
     assert "set-cookie" not in with_basic.headers
     # Y una cookie perfectamente firmada tampoco abre nada, que es la mitad que se olvida.

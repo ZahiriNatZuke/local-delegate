@@ -57,7 +57,7 @@ def _acct_in_js(tmp_path, cases: list[dict]) -> list[dict]:
     node = shutil.which("node")
     if node is None:
         pytest.skip("node no está en el PATH")
-    entry = tmp_path / "casos.json"
+    entry = tmp_path / "cases.json"
     entry.write_text(json.dumps(cases), encoding="utf-8")
     program = tmp_path / "acct.mjs"
     program.write_text(
@@ -349,7 +349,7 @@ def test_the_tagline_uses_claude_tokens(monkeypatch, tmp_path):
     """`local_summarize` con `path` a un `.md` de 4000 caracteres: prosa, formato `Read`, familia
     nueva del respaldo → 4000 × 100 // 200 = 2000 tokens de Claude, no los 9999 del modelo local."""
     _backend(monkeypatch, tmp_path, prompt_tokens=9999)
-    doc = tmp_path / "notas.md"
+    doc = tmp_path / "notes.md"
     doc.write_text("palabra " * 500, encoding="utf-8")
     assert len(doc.read_text(encoding="utf-8")) == 4000  # guarda del tamaño
     text = server.local_summarize(path=str(doc))
@@ -363,7 +363,7 @@ def test_the_output_receipt_uses_claude_tokens(monkeypatch, tmp_path):
     """Salida a fichero de `local_boilerplate`: clase `code`, sin numerar → c = 2,41."""
     code = "x = 1\n" * 100  # 600 caracteres
     _backend(monkeypatch, tmp_path, prompt_tokens=10, text=code.strip())
-    dest = tmp_path / "salida.py"
+    dest = tmp_path / "output.py"
     receipt = server.local_boilerplate(spec="un módulo", language="python", target=str(dest))
     assert len(dest.read_text(encoding="utf-8")) == 600  # guarda del tamaño escrito
     assert (
@@ -374,7 +374,7 @@ def test_the_output_receipt_uses_claude_tokens(monkeypatch, tmp_path):
 @backend_mock.mock
 def test_extract_approx_tokens_are_claudes(monkeypatch, tmp_path):
     _backend(monkeypatch, tmp_path, prompt_tokens=9999, text='{"titulo": "x"}')
-    doc = tmp_path / "datos.json"
+    doc = tmp_path / "data.json"
     doc.write_text('{"a": "' + "b" * 3991 + '"}', encoding="utf-8")
     data = server.local_extract(fields=["titulo"], path=str(doc))
     read_back = data.get("_local_delegate", {}).get("leido_server_side", {})
@@ -394,7 +394,7 @@ def test_the_tagline_uses_the_note_model_if_already_present(monkeypatch, tmp_pat
         "current_call",
         lambda: {"caller_model": "claude-haiku-4-5", "caller_kind": "main", "caller_src": "hook"},
     )
-    doc = tmp_path / "notas.md"
+    doc = tmp_path / "notes.md"
     doc.write_text("palabra " * 500, encoding="utf-8")
     text = server.local_summarize(path=str(doc))
     assert "≈ 1,328 tokens de Claude" in text

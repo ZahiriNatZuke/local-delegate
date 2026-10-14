@@ -16,7 +16,7 @@ import pytest
 
 from local_delegate import pace
 
-MODEL = "modelo-a"
+MODEL = "model-a"
 
 
 def _ev(i: int, tok_s: float, *, tokens_out: int = 100, tokens_in: int = 500, **extra) -> dict:
@@ -187,7 +187,7 @@ def test_each_model_has_its_window_and_summary_shows_it() -> None:
         (MODEL, True, 500),
         (MODEL, 15.0, "mucho"),
         (["lista"], 15.0, 500),
-        ("otro-modelo", 15.0, 500),
+        ("other-model", 15.0, 500),
     ],
 )
 def test_measure_odd_input_returns_empty_without_raising(model, tok_s, tokens_in) -> None:
@@ -257,13 +257,13 @@ def test_seed_in_january_reads_previous_december(tmp_path: Path) -> None:
 def test_seed_without_files_gives_zero(tmp_path: Path) -> None:
     refs = pace.References()
     now = datetime(2026, 10, 2, tzinfo=UTC)
-    assert pace.seed_from_log(refs, tmp_path / "no-existe", now) == 0
+    assert pace.seed_from_log(refs, tmp_path / "missing", now) == 0
     assert refs.summary() == []
 
 
 def test_corrupt_line_does_not_break_seeding() -> None:
     lines = [json.dumps(_log(40.0)) for _ in range(12)]
-    lines.insert(5, '{"model": "modelo-a", "ok": tru')  # linea cortada a medio escribir
+    lines.insert(5, '{"model": "model-a", "ok": tru')  # linea cortada a medio escribir
     refs = pace.References()
     try:
         n = refs.seed(lines)

@@ -1,5 +1,6 @@
 OK    A-close.md
       · A-close-1-mapping.csv: 19 filas, 0 discrepancia(s)
+      · A-close-2-mapping.csv: 268 filas, 2 discrepancia(s)
 OK    A0.md
       · A0-mapping.csv: 2 filas, 0 discrepancia(s)
 OK    A1.md

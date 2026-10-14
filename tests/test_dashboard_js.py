@@ -65,7 +65,7 @@ def _run(tmp_path, functions: list[str], body: str, prelude: str = ""):
     if node is None:
         pytest.skip("node no está en el PATH")
 
-    program = tmp_path / "prueba.mjs"
+    program = tmp_path / "test.mjs"
     program.write_text(
         "\n".join([_legacy(), prelude, *(_extract(f) for f in functions), body]),
         encoding="utf-8",

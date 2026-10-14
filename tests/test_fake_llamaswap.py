@@ -82,11 +82,11 @@ def test_a_ttl_counts_from_request_end(tmp_path: Path) -> None:
 
 
 def test_c_alias_request_activity_carries_real_id(tmp_path: Path) -> None:
-    models = [FakeModel("m-real", alias=("alias-m",)), FakeModel("m-otro")]
+    models = [FakeModel("m-real", alias=("alias-m",)), FakeModel("m-other")]
     with fake_llamaswap(tmp_path, models) as ls:
         assert ls.chat("alias-m").status_code == 200
         end = ls.last_end("m-real")
-        assert ls.chat("m-otro").status_code == 200
+        assert ls.chat("m-other").status_code == 200
         by_id = ls.activity("m-real", limit=1)
         by_alias = ls.activity("alias-m", limit=1)
         all_ones = ls.activity(limit=5)
@@ -113,12 +113,12 @@ def test_d_valid_reload_gives_reloaded(tmp_path: Path) -> None:
         assert ls.chat("m").status_code == 200
 
 
-@pytest.mark.parametrize("case", ["yaml_roto", "modelo_sin_cmd"])
+@pytest.mark.parametrize("case", ["broken_yaml", "model_without_cmd"])
 def test_d_rejected_config_gives_refusal_and_old_keeps_serving(tmp_path: Path, case: str) -> None:
     with fake_llamaswap(tmp_path, [FakeModel("m", ttl=2)]) as ls:
         good_one = ls.config_text()
         bad_one = (
-            "models: [\n  a: : :\n" if case == "yaml_roto" else good_one.replace("cmd:", "cmdx:")
+            "models: [\n  a: : :\n" if case == "broken_yaml" else good_one.replace("cmd:", "cmdx:")
         )
         output = ls.wait_reload_output(lambda: ls.write_config(bad_one))
         print(f"\n(d) {case}: {output} -> {ls.reload_detail!r}")
@@ -147,13 +147,13 @@ def test_d_llamaswap_off_gives_down(tmp_path: Path) -> None:
         assert ls.reload_detail == "conexión rechazada"
 
 
-@pytest.mark.parametrize("case", ["cambia_el_modelo", "cambio_ajeno"])
+@pytest.mark.parametrize("case", ["model_changes", "foreign_change"])
 def test_d_8_s_request_in_progress_on_reload(tmp_path: Path, case: str) -> None:
     """Anota si la recarga corta una petición en curso. Fija lo observado con v255."""
     models = [FakeModel("m", ttl=60)]
     new_items = (
         [FakeModel("m", ttl=61)]
-        if case == "cambia_el_modelo"
+        if case == "model_changes"
         else [FakeModel("m", ttl=60), FakeModel("otro", ttl=60)]
     )
     with fake_llamaswap(tmp_path, models) as ls:

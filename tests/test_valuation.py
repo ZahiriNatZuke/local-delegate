@@ -166,16 +166,16 @@ def test_a_model_without_a_price_does_not_give_zero(tmp_path):
     """Uno sin precio y uno de Opus 5.5: la cifra suma solo el de Opus 5.5 y cuenta el otro aparte.
     Los dos sin precio: no hay cifra y sí el motivo."""
     lines = [_line(0), _line(1)]
-    backfill = {"toolu_0000": _backfill(), "toolu_0001": _backfill(model="claude-nadie-9")}
+    backfill = {"toolu_0000": _backfill(), "toolu_0001": _backfill(model="claude-nobody-9")}
     rows = _merged(tmp_path, lines, backfill)
     b = valuation.cost_block(rows, None, now=NOW)
     assert b["unpriced"]["n"] == 1
-    assert b["unpriced"]["ids"] == ["claude-nadie-9"]
+    assert b["unpriced"]["ids"] == ["claude-nobody-9"]
     assert b["figure"] == {"low_bound": 2.50, "estimate": 6.50}
 
     # Los dos con un modelo sin precio en la propia línea (`at_call`).
     alone = cost.merge(
-        [_line(5, caller_model="claude-nadie-9"), _line(6, caller_model="claude-nadie-9")],
+        [_line(5, caller_model="claude-nobody-9"), _line(6, caller_model="claude-nobody-9")],
         log_dir=tmp_path,
     )
     assert all(f["caller_origin"] == "line" for f in alone)  # guarda: no tomó el respaldo
