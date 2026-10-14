@@ -1,0 +1,73 @@
+### python scripts/measure_cooldown.py --help
+usage: measure_cooldown.py [-h] [--since SINCE] [--until UNTIL]
+                           [--exclude EXCLUDE] [--tmax TMAX] [--json]
+                           [--include-tests]
+
+Aplica el criterio de P-4: si los numeros del enfriamiento se cambian, se
+quedan o no se sabe. El criterio esta escrito en `verification.md` («Criterio
+de P-4») antes de encender el mecanismo, y este script es quien lo aplica. Si
+el recuento se hiciera a mano, el criterio volveria a ser una opinion. Lee dos
+rc=0
+### python scripts/medir_enfriamiento.py --help
+usage: medir_enfriamiento.py [-h] [--since SINCE] [--until UNTIL]
+                             [--exclude EXCLUDE] [--tmax TMAX] [--json]
+                             [--include-tests]
+
+Aplica el criterio de P-4: si los numeros del enfriamiento se cambian, se
+quedan o no se sabe. El criterio esta escrito en `verification.md` («Criterio
+de P-4») antes de encender el mecanismo, y este script es quien lo aplica. Si
+el recuento se hiciera a mano, el criterio volveria a ser una opinion. Lee dos
+rc=0
+### python scripts/resource_probe.py --help
+usage: resource_probe.py [-h] --process PROCESS [--gpu-luid GPU_LUID]
+                         [--interval INTERVAL] --output OUTPUT
+                         ...
+
+Mide la RAM y la VRAM de un proceso mientras corre un comando: el envoltorio
+de llama-bench.
+
+positional arguments:
+rc=0
+### python scripts/macos_mcp_canary.py --help
+usage: macos_mcp_canary.py [-h] [--base-url BASE_URL] --package-source
+                           PACKAGE_SOURCE [--calls CALLS] [--timeout TIMEOUT]
+                           [--expect-auth]
+
+Canary end-to-end: MCP local en macOS -> backend OpenAI remoto. Solo usa la
+biblioteca estandar. Lanza la revision indicada con ``uvx``, habla MCP por
+stdio, prueba un path que existe unicamente en la Mac, concurrencia y
+reinicio. El bearer token se hereda desde ``LOCAL_DELEGATE_API_KEY`` y nunca
+rc=0
+### python scripts/dev/capture_icons.py --help
+127.0.0.1 - - [13/Oct/2026 21:39:33] "GET /icon.src.html HTTP/1.1" 200 -
+127.0.0.1 - - [13/Oct/2026 21:39:33] "GET /favicon.svg HTTP/1.1" 200 -
+site/apple-touch-icon.png — 180x180
+site/favicon-32x32.png — 32x32
+site/icons.json — sha del SVG registrado
+rc=0
+### python scripts/dev/measure_ttl_race.py --help
+usage: measure_ttl_race.py [-h] [--decisions DECISIONS]
+                           [--concurrency CONCURRENCY] [--margin MARGIN]
+                           [--directory DIRECTORY] [--verbose]
+
+Mide la ventana entre «decidir» y «llegar» que usa el margen de «cargado con
+margen» (REQ-013). Con la afinidad al modelo cargado, el daemon decide con una
+foto de llama-swap (las tres consultas de REQ-013, con tope de 1 s) y, al
+acabar el cálculo, manda la petición. Entre una cosa y otra el TTL sigue
+rc=0
+### alias en el envoltorio: --desde=2030-01-01 --hasta 2030-02-01 --excluir 2030-01-02T00:00,2030-01-03T00:00 --json
+{
+  "window_since": "2030-01-01",
+  "window_until": "2030-02-01",
+  "excluded": [
+    [
+      "2030-01-02T00:00",
+### nuevo: --since=2030-01-01 --until 2030-02-01 --exclude ... --json
+{
+  "window_since": "2030-01-01",
+  "window_until": "2030-02-01",
+  "excluded": [
+    [
+      "2030-01-02T00:00",
+### el nuevo NO acepta --desde
+measure_cooldown.py: error: unrecognized arguments: --desde 2030-01-01

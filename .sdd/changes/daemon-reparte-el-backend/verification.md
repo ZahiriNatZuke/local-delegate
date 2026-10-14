@@ -1065,3 +1065,11 @@ revisión del paso 9 comprobó que de REQ-001 a REQ-044 todos tienen tarea, cód
 - **Hooks de otra versión en esta PC.** `doctor` (paso 4) avisa de «hooks copiados: scripts de otra
   versión»; no se corrió `update` porque reescribe las entradas de los clientes.
 - **Captura del README desfasada.** No enseña «lento» ni el desglose espera/inferencia (ola 10).
+
+## Nota del 2026-10-13 (`english-names-bilingual-output`, ola A10a, REQ-046)
+
+El script de la medición P-4 se llama ahora `scripts/measure_cooldown.py`, con `--since`, `--until`
+y `--exclude`. El comando de este documento (`scripts/medir_enfriamiento.py --desde …`, con
+`--hasta` y `--excluir`) sigue funcionando sin cambios: `scripts/medir_enfriamiento.py` queda como
+envoltorio que traduce las opciones viejas y llama a `measure_cooldown.main()`. El envoltorio se
+retira tras la medición de P-4 de los 90 días (~2026-12-14). Lo escrito arriba no se reescribe.

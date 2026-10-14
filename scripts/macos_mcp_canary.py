@@ -274,7 +274,7 @@ def main() -> int:
     command = _package_command(args.package_source)
     with tempfile.TemporaryDirectory(prefix="local-delegate-mac-canary-") as temp_dir:
         root = Path(temp_dir)
-        mac_path = root / "solo-en-esta-mac.txt"
+        mac_path = root / "only-on-this-mac.txt"
         mac_path.write_text(
             "Este archivo temporal existe solamente en la Mac que ejecuta el MCP. " * 80,
             encoding="utf-8",

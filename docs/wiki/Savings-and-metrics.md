@@ -492,12 +492,12 @@ VIVO y `/api/inflight`) tampoco se filtra.
 
 ```bash
 uv run python scripts/medir_adopcion.py --desde 2026-09-12 --json
-uv run python scripts/medir_enfriamiento.py --desde 2026-09-15T19:26:41
+uv run python scripts/measure_cooldown.py --since 2026-09-15T19:26:41
 ```
 
 Los dos leen el `LOG_DIR` de `config` (el mismo `test-windows.json` que el panel) y aplican las
-ventanas solos; `--include-tests` las desactiva. `medir_enfriamiento.py` aplica además los tramos de
-`--excluir` (con la misma regla de instantes), y su salida dice cuánto quitó cada fuente.
+ventanas solos; `--include-tests` las desactiva. `measure_cooldown.py` aplica además los tramos de
+`--exclude` (con la misma regla de instantes), y su salida dice cuánto quitó cada fuente.
 `medir_adopcion.py` aparta también, en el log de uso, las filas del cliente `mcp`.
 
 ## La web

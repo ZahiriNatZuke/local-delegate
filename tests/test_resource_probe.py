@@ -463,11 +463,11 @@ def test_runner_asks_for_the_luid_if_it_cannot_resolve_it(tmp_path, fake_backend
 
 def _load_probe_script():
     spec = importlib.util.spec_from_file_location(
-        "sonda_recursos", ROOT / "scripts" / "sonda_recursos.py"
+        "resource_probe", ROOT / "scripts" / "resource_probe.py"
     )
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
-    sys.modules["sonda_recursos"] = module
+    sys.modules["resource_probe"] = module
     spec.loader.exec_module(module)
     return module
 
@@ -475,7 +475,7 @@ def _load_probe_script():
 def test_wrapper_writes_the_command_measurement(tmp_path):
     script = _load_probe_script()
     probe, _ = _probe([[40160]] * 1000)
-    output = tmp_path / "medida.json"
+    output = tmp_path / "measurement.json"
     rc = script.main(
         ["--process", "llama-bench.exe", "--output", str(output), "--", sys.executable, "-c", ""],
         probe_factory=lambda _name, _luid: probe,
@@ -509,16 +509,16 @@ def test_wrapper_returns_3_if_the_measurement_is_annulled(tmp_path):
 
 _CHILD = (
     "import mmap, os, sys\n"
-    "modo, n, ruta = sys.argv[1], int(sys.argv[2]), sys.argv[3]\n"
-    "vivo = None\n"
-    "if modo == 'anonimo':\n"
-    "    vivo = bytearray(n)\n"
+    "mode, n, path = sys.argv[1], int(sys.argv[2]), sys.argv[3]\n"
+    "held = None\n"
+    "if mode == 'anonymous':\n"
+    "    held = bytearray(n)\n"
     "    for i in range(0, n, 4096):\n"
-    "        vivo[i] = 1\n"
-    "elif modo == 'mapeado':\n"
-    "    f = open(ruta, 'rb')\n"
-    "    vivo = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)\n"
-    "    total = sum(vivo[i] for i in range(0, n, 4096))\n"
+    "        held[i] = 1\n"
+    "elif mode == 'mapped':\n"
+    "    f = open(path, 'rb')\n"
+    "    held = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)\n"
+    "    total = sum(held[i] for i in range(0, n, 4096))\n"
     "print(os.getpid(), flush=True)\n"
     "sys.stdin.read()\n"
 )
@@ -541,7 +541,7 @@ def test_positive_control_private_ram_and_working_set_are_told_apart(tmp_path):
     set como privada lo paso—, y esa diferencia es justo la que decide CP-2b.
     """
     size = 128 * MIB
-    file = tmp_path / "mapeado.bin"
+    file = tmp_path / "mapped.bin"
     with file.open("wb") as dest:
         block = bytes(range(256)) * (MIB // 256)
         for _ in range(size // MIB):
@@ -549,7 +549,7 @@ def test_positive_control_private_ram_and_working_set_are_told_apart(tmp_path):
     children = []
     try:
         measurements = {}
-        for mode in ("quieto", "anonimo", "mapeado"):
+        for mode in ("still", "anonymous", "mapped"):
             child = subprocess.Popen(
                 [sys.executable, "-c", _CHILD, mode, str(size), str(file)],
                 stdin=subprocess.PIPE,
@@ -563,9 +563,9 @@ def test_positive_control_private_ram_and_working_set_are_told_apart(tmp_path):
             pid = int(child.stdout.readline())
             measurements[mode] = benchmark.read_process_memory(pid)
         idle, anonymous, mapped = (
-            measurements["quieto"],
-            measurements["anonimo"],
-            measurements["mapeado"],
+            measurements["still"],
+            measurements["anonymous"],
+            measurements["mapped"],
         )
         assert idle and anonymous and mapped
         assert anonymous[0] - idle[0] > 100 * MIB, "lo anonimo tiene que subir la privada"

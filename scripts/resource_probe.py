@@ -7,7 +7,7 @@ del comando lanzado: un lanzador intermedio tiene otro PID que el proceso que ca
 
 Uso (Windows):
 
-    python scripts/sonda_recursos.py --process llama-bench.exe --output medida.json -- \
+    python scripts/resource_probe.py --process llama-bench.exe --output measurement.json -- \
         llama-bench.exe -m modelo.gguf -ngl 99
 
 Exit code: el del comando si fallo; 3 si el comando fue bien pero la medida quedo anulada (por

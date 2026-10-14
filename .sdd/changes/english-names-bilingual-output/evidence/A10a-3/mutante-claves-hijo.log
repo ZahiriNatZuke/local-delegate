@@ -1,0 +1,53 @@
+[pesado] plaza plaza-1 tomada tras 0s: D:\Projects\local-delegate\.venv\Scripts\python.exe -m pytest tests/test_resource_probe.py::test_positive_control_private_ram_and_working_set_are_told_apart -q -p no:cacheprovider
+F                                                                        [100%]
+================================== FAILURES ===================================
+______ test_positive_control_private_ram_and_working_set_are_told_apart _______
+
+tmp_path = WindowsPath('C:/Users/Yohan/AppData/Local/Temp/pytest-of-Yohan/pytest-1468/test_positive_control_private_0')
+
+    @windows_only
+    def test_positive_control_private_ram_and_working_set_are_told_apart(tmp_path):
+        """Tres hijos: quieto, 128 MiB anonimos y 128 MiB mapeados desde fichero y leidos.
+    
+        Lo anonimo sube los dos contadores; lo mapeado sube el working set y NO la privada. Sin el
+        hijo mapeado el test no distinguiria un contador del otro —un mutante que devolvia el working
+        set como privada lo paso—, y esa diferencia es justo la que decide CP-2b.
+        """
+        size = 128 * MIB
+        file = tmp_path / "mapped.bin"
+        with file.open("wb") as dest:
+            block = bytes(range(256)) * (MIB // 256)
+            for _ in range(size // MIB):
+                dest.write(block)
+        children = []
+        try:
+            measurements = {}
+            for mode in ("still", "anonymous", "mapped"):
+                child = subprocess.Popen(
+                    [sys.executable, "-c", _CHILD, mode, str(size), str(file)],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    text=True,
+                )
+                children.append(child)
+                assert child.stdout is not None
+                # El PID lo dice el hijo: con el python.exe de un venv, Popen.pid es el del lanzador,
+                # que no tiene la memoria (la primera pasada de la tarea 12 midio justo ese).
+                pid = int(child.stdout.readline())
+                measurements[mode] = benchmark.read_process_memory(pid)
+            idle, anonymous, mapped = (
+                measurements["still"],
+                measurements["anonymous"],
+                measurements["mapped"],
+            )
+            assert idle and anonymous and mapped
+            assert anonymous[0] - idle[0] > 100 * MIB, "lo anonimo tiene que subir la privada"
+>           assert mapped[1] - idle[1] > 100 * MIB, "lo mapeado tiene que subir el working set"
+E           AssertionError: lo mapeado tiene que subir el working set
+E           assert (10948608 - 10940416) > (100 * 1048576)
+
+tests\test_resource_probe.py:572: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_resource_probe.py::test_positive_control_private_ram_and_working_set_are_told_apart
+1 failed in 0.39s
+hash original 190c578a1c994989 mutante 3a789addfe095426 restaurado 190c578a1c994989

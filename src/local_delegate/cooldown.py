@@ -19,7 +19,7 @@ Solo guarda nombres de modelo, contadores y fechas. Nunca prompts, rutas ni cont
 
 Además del estado, cada transición deja una línea en `cooldown-events.jsonl`: `enter`, `reenter`
 y `clear` (antes `enfriamiento-eventos.jsonl`, con `entra`, `reentra` y `limpia`; ese fichero ya
-no se escribe, pero `scripts/medir_enfriamiento.py` lo sigue leyendo). El estado solo guarda el
+no se escribe, pero `scripts/measure_cooldown.py` lo sigue leyendo). El estado solo guarda el
 presente y el primer éxito lo borra, así que sin ese registro nadie podría contar después cuántos
 episodios hubo ni cómo acabaron, que es lo que decide el criterio de P-4 (tarea 30).
 
@@ -53,7 +53,7 @@ LOCK_WAIT_S = 2.0
 #: El fichero de estado, con su nombre viejo, que se sigue escribiendo mientras viva `legacy_write`.
 LEGACY_STATE_FILE, STATE_FILE = legacy_names.FILE_NAMES["cooldown_state"]
 
-#: El registro de episodios, junto al fichero de estado. Lo lee `scripts/medir_enfriamiento.py`,
+#: El registro de episodios, junto al fichero de estado. Lo lee `scripts/measure_cooldown.py`,
 #: que lee también el viejo.
 LEGACY_EVENTS_FILE, EVENTS_FILE = legacy_names.COOLDOWN_EVENTS_FILE_NAMES
 

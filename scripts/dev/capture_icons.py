@@ -41,26 +41,26 @@ import sys
 import threading
 from pathlib import Path
 
-RAIZ = Path(__file__).resolve().parents[2]
-SITIO = RAIZ / "site"
-SVG = SITIO / "favicon.svg"
-FUENTE = "icon.src.html"
-MANIFIESTO = SITIO / "icons.json"
+ROOT = Path(__file__).resolve().parents[2]
+SITE = ROOT / "site"
+SVG = SITE / "favicon.svg"
+FONT = "icon.src.html"
+MANIFEST = SITE / "icons.json"
 
 # (fichero, lado en px). Los tamaños los declaran el `<link sizes>` y el manifest de la landing,
 # y hay tests que leen la cabecera de cada PNG: cambiarlos aquí sin cambiarlos allí rompe el CI.
-ICONOS = ((SITIO / "apple-touch-icon.png", 180), (SITIO / "favicon-32x32.png", 32))
+ICONS = ((SITE / "apple-touch-icon.png", 180), (SITE / "favicon-32x32.png", 32))
 
 
-def _servir(directorio: Path) -> tuple[socketserver.TCPServer, int]:
+def _serve(directory: Path) -> tuple[socketserver.TCPServer, int]:
     """Sirve el directorio en un puerto libre. Playwright no abre `file://`."""
-    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(directorio))
-    servidor = socketserver.TCPServer(("127.0.0.1", 0), handler)
-    threading.Thread(target=servidor.serve_forever, daemon=True).start()
-    return servidor, servidor.server_address[1]
+    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(directory))
+    server = socketserver.TCPServer(("127.0.0.1", 0), handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server, server.server_address[1]
 
 
-def sha_del_svg(ruta: Path) -> str:
+def svg_sha(path: Path) -> str:
     """sha256 del SVG **normalizado a LF**, no del fichero tal cual está en disco.
 
     El SVG es texto, y git lo entrega con los finales de línea que tenga configurada cada máquina.
@@ -70,16 +70,16 @@ def sha_del_svg(ruta: Path) -> str:
 
     Los PNG no necesitan esto: son binarios y git no los toca.
     """
-    return hashlib.sha256(ruta.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
 
 
-def _escribir_manifiesto(sha_svg: str) -> Path:
+def _write_manifest(sha_svg: str) -> Path:
     """Deja junto a los PNG el manifiesto que dice de qué SVG salieron."""
-    MANIFIESTO.write_text(
+    MANIFEST.write_text(
         json.dumps(
             {
                 "schemaVersion": 1,
-                "_acerca_de": [
+                "_about": [
                     "Manifiesto de los PNG de la marca. Es la FUENTE DE VERDAD de con qué",
                     "favicon.svg se generaron.",
                     "Lo escribe `scripts/dev/capture_icons.py` al capturar, NUNCA a mano: un",
@@ -92,11 +92,11 @@ def _escribir_manifiesto(sha_svg: str) -> Path:
                 "icons": [
                     {
                         "file": png.name,
-                        "size": lado,
+                        "size": side,
                         "sha256": hashlib.sha256(png.read_bytes()).hexdigest(),
                         "bytes": png.stat().st_size,
                     }
-                    for png, lado in ICONOS
+                    for png, side in ICONS
                 ],
             },
             ensure_ascii=False,
@@ -105,10 +105,10 @@ def _escribir_manifiesto(sha_svg: str) -> Path:
         + "\n",
         encoding="utf-8",
     )
-    return MANIFIESTO
+    return MANIFEST
 
 
-async def capturar() -> int:
+async def capture() -> int:
     try:
         from playwright.async_api import async_playwright
     except ImportError:
@@ -123,31 +123,31 @@ async def capturar() -> int:
         print(f"no existe {SVG}", file=sys.stderr)
         return 1
 
-    servidor, puerto = _servir(SITIO)
+    server, port = _serve(SITE)
     try:
         async with async_playwright() as p:
-            navegador = await p.chromium.launch()
-            pagina = await navegador.new_page()
-            for png, lado in ICONOS:
+            browser = await p.chromium.launch()
+            page = await browser.new_page()
+            for png, side in ICONS:
                 # `scale="css"` y no `device`: con `device` el PNG sale al doble en una pantalla
                 # retina y deja de medir lo que declaran el `sizes` del <link> y el manifest.
-                await pagina.set_viewport_size({"width": lado, "height": lado})
-                await pagina.goto(f"http://127.0.0.1:{puerto}/{FUENTE}")
-                await pagina.screenshot(path=str(png), scale="css")
-                print(f"{png.relative_to(RAIZ).as_posix()} — {lado}x{lado}")
-            await navegador.close()
+                await page.set_viewport_size({"width": side, "height": side})
+                await page.goto(f"http://127.0.0.1:{port}/{FONT}")
+                await page.screenshot(path=str(png), scale="css")
+                print(f"{png.relative_to(ROOT).as_posix()} — {side}x{side}")
+            await browser.close()
     finally:
         # Sin esto queda un servidor escuchando: el repo ya pagó ese descuido una vez.
-        servidor.shutdown()
-        servidor.server_close()
+        server.shutdown()
+        server.server_close()
 
-    manifiesto = _escribir_manifiesto(sha_del_svg(SVG))
-    print(f"{manifiesto.relative_to(RAIZ).as_posix()} — sha del SVG registrado")
+    manifest = _write_manifest(svg_sha(SVG))
+    print(f"{manifest.relative_to(ROOT).as_posix()} — sha del SVG registrado")
     return 0
 
 
 def main() -> int:
-    return asyncio.run(capturar())
+    return asyncio.run(capture())
 
 
 if __name__ == "__main__":

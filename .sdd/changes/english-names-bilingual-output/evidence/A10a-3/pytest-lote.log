@@ -1,0 +1,4 @@
+[pesado] plaza plaza-1 tomada tras 0s: D:\Projects\local-delegate\.venv\Scripts\python.exe -m pytest tests/test_measure_cooldown.py tests/test_resource_probe.py tests/test_bump_version.py tests/test_site.py tests/test_cooldown.py -q -p no:cacheprovider
+........................................................................ [ 53%]
+...............................................................          [100%]
+135 passed in 1.45s

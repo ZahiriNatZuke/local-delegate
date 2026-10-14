@@ -242,9 +242,9 @@ def main(argv: list[str] | None = None) -> int:
     # imprimiendo, no escribiendo —los archivos se tocan después—, pero un release que se cae
     # con un traceback de codificación invita a hacer el bump a mano, que es exactamente lo que
     # este script existe para evitar.
-    for flujo in (sys.stdout, sys.stderr):
-        if hasattr(flujo, "reconfigure"):
-            flujo.reconfigure(encoding="utf-8", errors="replace")
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
 
     try:
         if args.check:

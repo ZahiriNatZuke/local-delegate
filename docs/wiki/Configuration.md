@@ -127,7 +127,7 @@ una línea a `cooldown-events.jsonl` (antes `enfriamiento-eventos.jsonl`, que se
 junto al log de uso: modelo, hora, clase del fallo, espera y reentradas, nunca prompts ni rutas.
 `cooldown.json` solo guarda el presente; este
 registro es lo que permite contar después cuántos episodios hubo y cómo acabaron. Para saber si los
-números de abajo convienen, `uv run python scripts/medir_enfriamiento.py --desde AAAA-MM-DD` lo
+números de abajo convienen, `uv run python scripts/measure_cooldown.py --since AAAA-MM-DD` lo
 cruza con el log de uso y responde «cambiar», «se quedan» o «no concluyente» (con menos de 5
 episodios y 10 fallos que cuenten no hay datos para decidir).
 
