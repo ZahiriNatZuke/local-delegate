@@ -27,22 +27,22 @@ import tempfile
 import tomllib
 from pathlib import Path
 
-RAIZ = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 
 
 def _run(cmd: list[str], **kw) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", **kw)
 
 
-def _fallo(msg: str) -> None:
+def _failure(msg: str) -> None:
     print(f"ERROR: {msg}", file=sys.stderr)
     sys.exit(1)
 
 
-def _versiones_declaradas() -> dict[str, str]:
+def _declared_versions() -> dict[str, str]:
     """Los tres sitios que `check-version` de publish.yml compara contra el tag."""
-    pyproject = tomllib.loads((RAIZ / "pyproject.toml").read_text(encoding="utf-8"))
-    server = json.loads((RAIZ / "server.json").read_text(encoding="utf-8"))
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    server = json.loads((ROOT / "server.json").read_text(encoding="utf-8"))
     return {
         "pyproject.toml": pyproject["project"]["version"],
         "server.json": server["version"],
@@ -50,49 +50,49 @@ def _versiones_declaradas() -> dict[str, str]:
     }
 
 
-def _notas_del_changelog(version: str) -> str:
+def _changelog_notes(version: str) -> str:
     """Extrae la sección `## [X.Y.Z]` hasta la siguiente cabecera de versión."""
-    texto = (RAIZ / "CHANGELOG.md").read_text(encoding="utf-8")
-    patron = rf"^## \[{re.escape(version)}\].*?$(.*?)(?=^## \[)"
-    match = re.search(patron, texto, re.MULTILINE | re.DOTALL)
+    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    pattern = rf"^## \[{re.escape(version)}\].*?$(.*?)(?=^## \[)"
+    match = re.search(pattern, text, re.MULTILINE | re.DOTALL)
     if not match:
-        _fallo(
+        _failure(
             f"CHANGELOG.md no tiene una sección `## [{version}]`. "
             "El release se documenta antes de publicarse, no después."
         )
     return match.group(1).strip()
 
 
-def _comprobaciones(version: str) -> None:
+def _checks(version: str) -> None:
     if not re.fullmatch(r"\d+\.\d+\.\d+", version):
-        _fallo(f"la versión '{version}' no tiene forma X.Y.Z")
+        _failure(f"la versión '{version}' no tiene forma X.Y.Z")
 
-    declaradas = _versiones_declaradas()
-    desalineadas = {k: v for k, v in declaradas.items() if v != version}
+    declared = _declared_versions()
+    desalineadas = {k: v for k, v in declared.items() if v != version}
     if desalineadas:
-        detalle = ", ".join(f"{k}={v}" for k, v in desalineadas.items())
-        _fallo(
-            f"hay archivos que no declaran {version}: {detalle}\n"
+        detail = ", ".join(f"{k}={v}" for k, v in desalineadas.items())
+        _failure(
+            f"hay archivos que no declaran {version}: {detail}\n"
             f"       Ejecuta antes:  uv run python scripts/bump_version.py {version}"
         )
 
-    rama = _run(["git", "rev-parse", "--abbrev-ref", "HEAD"]).stdout.strip()
-    if rama != "main":
-        _fallo(f"estás en la rama '{rama}'. El release sale de `main`.")
+    branch = _run(["git", "rev-parse", "--abbrev-ref", "HEAD"]).stdout.strip()
+    if branch != "main":
+        _failure(f"estás en la rama '{branch}'. El release sale de `main`.")
 
     # `main` está protegida: si local y remoto difieren, lo publicado no sería lo revisado.
     _run(["git", "fetch", "origin", "main"])
     local = _run(["git", "rev-parse", "HEAD"]).stdout.strip()
-    remoto = _run(["git", "rev-parse", "origin/main"]).stdout.strip()
-    if local != remoto:
-        _fallo("`main` local y `origin/main` no coinciden. Haz pull (o push) antes de publicar.")
+    remote = _run(["git", "rev-parse", "origin/main"]).stdout.strip()
+    if local != remote:
+        _failure("`main` local y `origin/main` no coinciden. Haz pull (o push) antes de publicar.")
 
     if _run(["git", "tag", "-l", f"v{version}"]).stdout.strip():
-        _fallo(f"el tag v{version} ya existe en local.")
+        _failure(f"el tag v{version} ya existe en local.")
 
-    ya_publicada = _run(["gh", "release", "view", f"v{version}", "--json", "tagName"])
-    if ya_publicada.returncode == 0:
-        _fallo(f"la release v{version} ya existe en GitHub.")
+    already_published = _run(["gh", "release", "view", f"v{version}", "--json", "tagName"])
+    if already_published.returncode == 0:
+        _failure(f"la release v{version} ya existe en GitHub.")
 
 
 def main() -> int:
@@ -106,11 +106,11 @@ def main() -> int:
     args = parser.parse_args()
     version = args.version.lstrip("v")
 
-    _comprobaciones(version)
-    notas = _notas_del_changelog(version)
+    _checks(version)
+    notes = _changelog_notes(version)
 
     print(f"Versión {version} coherente en los tres archivos, `main` al día, tag libre.")
-    print(f"Notas tomadas del CHANGELOG ({len(notas.splitlines())} líneas).")
+    print(f"Notas tomadas del CHANGELOG ({len(notes.splitlines())} líneas).")
 
     if args.dry_run:
         print("\n--dry-run: no se crea nada. Se haría:")
@@ -120,22 +120,22 @@ def main() -> int:
         return 0
 
     print("\nConstruyendo wheel y sdist...")
-    build = _run(["uv", "build"], cwd=RAIZ)
+    build = _run(["uv", "build"], cwd=ROOT)
     if build.returncode != 0:
-        _fallo(f"`uv build` falló:\n{build.stderr}")
+        _failure(f"`uv build` falló:\n{build.stderr}")
 
-    artefactos = sorted(str(p) for p in (RAIZ / "dist").glob(f"*{version}*"))
-    if not artefactos:
-        _fallo(f"`uv build` no dejó artefactos de {version} en dist/")
-    print(f"Artefactos: {', '.join(Path(a).name for a in artefactos)}")
+    artifacts = sorted(str(p) for p in (ROOT / "dist").glob(f"*{version}*"))
+    if not artifacts:
+        _failure(f"`uv build` no dejó artefactos de {version} en dist/")
+    print(f"Artefactos: {', '.join(Path(a).name for a in artifacts)}")
 
     # Fichero temporal porque `gh` no lee las notas de stdin.
     with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False, encoding="utf-8") as f:
-        f.write(notas)
-        notas_path = f.name
+        f.write(notes)
+        notes_path = f.name
 
     try:
-        crear = _run(
+        create = _run(
             [
                 "gh",
                 "release",
@@ -146,18 +146,18 @@ def main() -> int:
                 "--title",
                 f"v{version}",
                 "--notes-file",
-                notas_path,
-                *artefactos,
+                notes_path,
+                *artifacts,
             ],
-            cwd=RAIZ,
+            cwd=ROOT,
         )
     finally:
-        Path(notas_path).unlink(missing_ok=True)
+        Path(notes_path).unlink(missing_ok=True)
 
-    if crear.returncode != 0:
-        _fallo(f"`gh release create` falló:\n{crear.stderr}")
+    if create.returncode != 0:
+        _failure(f"`gh release create` falló:\n{create.stderr}")
 
-    print(f"\nRelease creada: {crear.stdout.strip()}")
+    print(f"\nRelease creada: {create.stdout.strip()}")
     print("El tag ya disparó publish.yml (check-version -> pypi -> mcp-registry).")
     print(
         "Seguimiento:  gh run watch $(gh run list --workflow publish.yml --limit 1 --json databaseId -q '.[0].databaseId') --exit-status"

@@ -27,7 +27,7 @@ def _load(name: str):
     return module
 
 
-bench = _load("_banco_claude")
+bench = _load("_claude_bench")
 exp = _load("adoption_experiment")
 
 
@@ -175,9 +175,9 @@ def test_delegating_with_path_does_not_put_in_the_content(tmp_path):
         _usage("2", bench.TOOL_PRINCIPAL, {"path": str(f)}),
         _res("2", "resumen"),
     ]
-    seen = bench.analizar(events, f)
-    assert seen["local_con_path"] == [bench.TOOL_PRINCIPAL]
-    assert seen["toolsearch"] and not seen["contenido_en_contexto"]
+    seen = bench.analyze(events, f)
+    assert seen["local_with_path"] == [bench.TOOL_PRINCIPAL]
+    assert seen["toolsearch"] and not seen["content_in_context"]
 
 
 def test_a_denied_read_does_not_count_as_read(tmp_path):
@@ -187,25 +187,25 @@ def test_a_denied_read_does_not_count_as_read(tmp_path):
         _usage("1", "Read", {"file_path": str(f)}),
         _res("1", "40 KB y es prosa", True),
     ]
-    seen = bench.analizar(events, f)
-    assert seen["bloqueado"] and not seen["read_completo"]
+    seen = bench.analyze(events, f)
+    assert seen["blocked"] and not seen["read_full"]
 
 
 @pytest.mark.parametrize(
     ("usage", "result", "key"),
     [
-        (("Read", {"file_path": "{f}"}), "texto", "read_completo"),
-        (("Read", {"file_path": "{f}", "offset": 10, "limit": 50}), "trozo", "read_franjas"),
-        (("Bash", {"command": "cat doc.md"}), "x" * 3000, "volcado_bash"),
+        (("Read", {"file_path": "{f}"}), "texto", "read_full"),
+        (("Read", {"file_path": "{f}", "offset": 10, "limit": 50}), "trozo", "read_ranges"),
+        (("Bash", {"command": "cat doc.md"}), "x" * 3000, "bash_dump"),
     ],
 )
 def test_the_three_ways_of_putting_in_the_content(tmp_path, usage, result, key):
     f = tmp_path / "doc.md"
     name, entry = usage
     entry = {k: (str(f) if v == "{f}" else v) for k, v in entry.items()}
-    seen = bench.analizar([_deferred(), _usage("1", name, entry), _res("1", result)], f)
+    seen = bench.analyze([_deferred(), _usage("1", name, entry), _res("1", result)], f)
     assert seen[key]
-    assert seen["contenido_en_contexto"]
+    assert seen["content_in_context"]
 
 
 def test_a_short_bash_naming_the_file_is_not_a_dump(tmp_path):
@@ -215,31 +215,31 @@ def test_a_short_bash_naming_the_file_is_not_a_dump(tmp_path):
         _usage("1", "Bash", {"command": "wc -c doc.md"}),
         _res("1", "40000 doc.md"),
     ]
-    assert not bench.analizar(events, f)["contenido_en_contexto"]
+    assert not bench.analyze(events, f)["content_in_context"]
 
 
 def test_the_subagent_part_does_not_count_as_main_thread(tmp_path):
     f = tmp_path / "doc.md"
     read = {**_usage("1", "Read", {"file_path": str(f)}), "isSidechain": True}
-    assert not bench.analizar([_deferred(), read, _res("1", "t")], f)["read_completo"]
+    assert not bench.analyze([_deferred(), read, _res("1", "t")], f)["read_full"]
 
 
 def test_without_the_deferred_list_the_format_is_unknown(tmp_path):
-    with pytest.raises(bench.FormatoDesconocido):
-        bench.analizar([_usage("1", "Read", {"file_path": "x"})], tmp_path / "x")
+    with pytest.raises(bench.UnknownFormat):
+        bench.analyze([_usage("1", "Read", {"file_path": "x"})], tmp_path / "x")
 
 
 def test_the_run_is_only_valid_with_its_prompt_event():
     good = {"event": "UserPromptSubmit", "session_id": "s1", "bloqueo": "encendido"}
-    assert bench.corrida_valida([good], "s1")
-    assert not bench.corrida_valida([good], "s2")  # otra sesión
-    assert not bench.corrida_valida([{**good, "bloqueo": "apagado_fichero"}], "s1")
-    assert not bench.corrida_valida([{**good, "event": "PreToolUse"}], "s1")
-    assert not bench.corrida_valida([], "s1")
+    assert bench.valid_run([good], "s1")
+    assert not bench.valid_run([good], "s2")  # otra sesión
+    assert not bench.valid_run([{**good, "bloqueo": "apagado_fichero"}], "s1")
+    assert not bench.valid_run([{**good, "event": "PreToolUse"}], "s1")
+    assert not bench.valid_run([], "s1")
 
 
 def test_project_dir_follows_the_claude_code_convention():
-    path = bench.dir_de_proyecto(Path(r"C:\Users\ana\AppData\Local\Temp\banco-lector"))
+    path = bench.project_dir(Path(r"C:\Users\ana\AppData\Local\Temp\banco-lector"))
     assert path.name == "C--Users-ana-AppData-Local-Temp-banco-lector"
 
 
@@ -248,11 +248,11 @@ def test_the_deferred_ones_accumulate_delta_by_delta(tmp_path):
     f = tmp_path / "doc.md"
     first = {"attachment": {"type": "deferred_tools_delta", "addedNames": [bench.TOOL_PRINCIPAL]}}
     last = {"attachment": {"type": "deferred_tools_delta", "addedNames": ["CronList"]}}
-    assert bench.analizar([first, last], f)["tools_diferidas"]
+    assert bench.analyze([first, last], f)["deferred_tools"]
     removes = {
         "attachment": {"type": "deferred_tools_delta", "removedNames": [bench.TOOL_PRINCIPAL]}
     }
-    assert not bench.analizar([first, last, removes], f)["tools_diferidas"]
+    assert not bench.analyze([first, last, removes], f)["deferred_tools"]
 
 
 # --- Etapa 2 del SDD resumen-por-secciones --------------------------------------------------------
@@ -264,7 +264,7 @@ def _row(task: str, correct: bool, in_context: bool) -> dict:
         "offer": "v0",
         "valid": True,
         "correct": correct,
-        "contenido_en_contexto": in_context,
+        "content_in_context": in_context,
     }
 
 
@@ -286,7 +286,7 @@ def test_summary_report_decides_only_by_correct_ones(correct_ones, decision):
     ]
     report = exp.summary_report(rows)
     assert report["correct_ones"] == correct_ones
-    assert report["contenido_en_contexto"] == 9 - correct_ones
+    assert report["content_in_context"] == 9 - correct_ones
     assert report["decision"] == decision
     assert sum(t["runs"] for t in report["per_task"].values()) == 9
 
@@ -320,14 +320,14 @@ def test_the_excluded_windows_are_read_from_either_file_and_written_in_the_new_o
     antes (claves en español, como el congelado de `benchmarks/`), y escribe solo el nuevo."""
     new_name, old_name = exp.WINDOWS.name, "ventanas-excluidas.json"
     assert new_name == "excluded-windows.json"
-    run = bench.Corrida("s2", "", 0.0, "2026-10-13T10:00:00+00:00", "2026-10-13T10:05:00+00:00")
+    run = bench.Run("s2", "", 0.0, "2026-10-13T10:00:00+00:00", "2026-10-13T10:05:00+00:00")
     old = {
         "sesiones": [{"session_id": "s1", "inicio": "a", "fin": "b", "motivo": "prueba"}],
         "ventanas": [{"tanda": "t0", "inicio": "a", "fin": "b"}],
     }
     # Solo el viejo: se lee, se traduce y el resultado va al nuevo; el viejo queda intacto.
     (tmp_path / old_name).write_text(json.dumps(old), encoding="utf-8")
-    bench.anotar_ventana(tmp_path / new_name, "t1", [run])
+    bench.note_window(tmp_path / new_name, "t1", [run])
     data = json.loads((tmp_path / new_name).read_text(encoding="utf-8"))
     assert [s["session_id"] for s in data["sessions"]] == ["s1", "s2"]
     assert data["sessions"][0] == {"session_id": "s1", "start": "a", "end": "b", "reason": "prueba"}
@@ -335,7 +335,7 @@ def test_the_excluded_windows_are_read_from_either_file_and_written_in_the_new_o
     assert "sesiones" not in data and "ventanas" not in data
     assert json.loads((tmp_path / old_name).read_text(encoding="utf-8")) == old
     # Con el nuevo ya escrito, manda el nuevo: la tanda siguiente se suma a lo que hay en él.
-    bench.anotar_ventana(tmp_path / new_name, "t2", [run])
+    bench.note_window(tmp_path / new_name, "t2", [run])
     data = json.loads((tmp_path / new_name).read_text(encoding="utf-8"))
     assert [w["batch"] for w in data["windows"]] == ["t0", "t1", "t2"]
     assert [s["session_id"] for s in data["sessions"]] == ["s1", "s2"]

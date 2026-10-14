@@ -1,0 +1,1 @@
+{'módulo': 17, '0 restos': 1637, 'queda, con excepción o discrepancia': 25}

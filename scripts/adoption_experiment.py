@@ -46,7 +46,7 @@ from pathlib import Path
 from statistics import mean
 
 sys.path.insert(0, str(Path(__file__).parent))
-import _banco_claude as bench
+import _claude_bench as bench
 
 from local_delegate import legacy_names
 
@@ -191,18 +191,18 @@ def summary_report(rows: list[dict]) -> dict:
     """Informe de la etapa 2 del SDD resumen-por-secciones: se decide solo por correctas.
 
     «Correcta» ya exige que el contenido no entrara al contexto; las corridas con el contenido en
-    el contexto (`contenido_en_contexto`, la misma definición que en T5) se informan aparte, con
+    el contexto (`content_in_context`, la misma definición que en T5) se informan aparte, con
     el desglose por tarea para no leer un total como uniforme.
     """
     valid_ones = [f for f in rows if f.get("valid")]
     per_task: dict[str, dict[str, int]] = defaultdict(
-        lambda: {"runs": 0, "correct_ones": 0, "contenido_en_contexto": 0}
+        lambda: {"runs": 0, "correct_ones": 0, "content_in_context": 0}
     )
     for f in valid_ones:
         row = per_task[f["task"]]
         row["runs"] += 1
         row["correct_ones"] += bool(f.get("correct"))
-        row["contenido_en_contexto"] += bool(f.get("contenido_en_contexto"))
+        row["content_in_context"] += bool(f.get("content_in_context"))
     correct_ones = sum(t["correct_ones"] for t in per_task.values())
     runs = len(valid_ones)
     if runs == 9:
@@ -218,7 +218,7 @@ def summary_report(rows: list[dict]) -> dict:
     return {
         "valid_runs": runs,
         "correct_ones": correct_ones,
-        "contenido_en_contexto": sum(t["contenido_en_contexto"] for t in per_task.values()),
+        "content_in_context": sum(t["content_in_context"] for t in per_task.values()),
         "per_task": dict(sorted(per_task.items())),
         "decision": decision,
     }
@@ -271,7 +271,7 @@ def execute(args: argparse.Namespace) -> int:
             row = legacy_names.normalize("adoption_runs", json.loads(line))
             done.add((row["task"], row["offer"], row["rep"]))
     pending = [c for c in runs if c not in done]
-    if not bench.confirmar(len(pending), args.cost_per_run, si=args.yes):
+    if not bench.confirm(len(pending), args.cost_per_run, yes=args.yes):
         print("Cancelado.")
         return 1
 
@@ -280,12 +280,12 @@ def execute(args: argparse.Namespace) -> int:
     switch.unlink(missing_ok=True)
     sample = args.bench / "precedence.md"
     sample.write_text((ROOT / "README.md").read_text(encoding="utf-8"), encoding="utf-8")
-    if not bench.control_de_precedencia(args.bench, sample, switch):
+    if not bench.precedence_control(args.bench, sample, switch):
         print("ABORTA: con LD_HOOK_ENABLED=0 por --settings el Read siguió bloqueado o no se leyó.")
         return 2
 
     rng = random.Random(args.seed)
-    launched: list[bench.Corrida] = []
+    launched: list[bench.Run] = []
     for task_id, offer, rep in pending:
         task = by_id[task_id]
         row = None
@@ -301,26 +301,26 @@ def execute(args: argparse.Namespace) -> int:
             file = run_dir / task["name"]
             file.write_text(text, encoding="utf-8")
             telemetry = run_dir / "telemetry.jsonl"
-            settings = bench.escribir_settings(
-                run_dir / "settings.json", bench.env_de_tanda(telemetry, switch)
+            settings = bench.write_settings(
+                run_dir / "settings.json", bench.batch_env(telemetry, switch)
             )
             prompt = pilot_question(file) if args.pilot else question(file, task["style"])
-            run = bench.correr(prompt, args.bench, settings)
+            run = bench.run(prompt, args.bench, settings)
             launched.append(run)
             if run.error or not run.session_id:
                 continue
-            seen = bench.analizar(bench.leer_transcript(args.bench, run.session_id), file)
-            valid = seen["tools_diferidas"] and bench.corrida_valida(
-                bench.eventos_de_telemetria(telemetry), run.session_id
+            seen = bench.analyze(bench.read_transcript(args.bench, run.session_id), file)
+            valid = seen["deferred_tools"] and bench.valid_run(
+                bench.telemetry_events(telemetry), run.session_id
             )
             if not valid:
                 continue
             if args.pilot:
-                coverage = title_coverage(run.resultado, section_titles(text))
+                coverage = title_coverage(run.result, section_titles(text))
                 hit = coverage >= MIN_COVERAGE
                 measurement = {"title_coverage": round(coverage, 2)}
             else:
-                hit = value in run.resultado
+                hit = value in run.result
                 measurement = {"fact_in_answer": hit}
             row = {
                 "task": task_id,
@@ -328,23 +328,23 @@ def execute(args: argparse.Namespace) -> int:
                 "rep": rep,
                 "session_id": run.session_id,
                 "valid": True,
-                "correct": hit and not seen["contenido_en_contexto"],
+                "correct": hit and not seen["content_in_context"],
                 **measurement,
-                "cost_usd": run.coste_usd,
-                **{k: v for k, v in seen.items() if k != "local_con_path"},
-                "local_tools": seen["local_con_path"],
+                "cost_usd": run.cost_usd,
+                **{k: v for k, v in seen.items() if k != "local_with_path"},
+                "local_tools": seen["local_with_path"],
                 "attempts": attempt + 1,
             }
             break
         if row is None:
-            bench.anotar_ventana(WINDOWS, "experimento-adopcion (abortado)", launched)
+            bench.note_window(WINDOWS, "experimento-adopcion (abortado)", launched)
             print(f"ABORTA: {task_id}/{offer}/{rep} no dio una corrida válida en 3 intentos.")
             return 3
         with output.open("a", encoding="utf-8") as f:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
         print(f"{task_id:18} {offer} #{rep}: correcta={row['correct']} coste={row['cost_usd']:.2f}")
 
-    bench.anotar_ventana(WINDOWS, "experimento-adopcion", launched)
+    bench.note_window(WINDOWS, "experimento-adopcion", launched)
     return report(output)
 
 
