@@ -1,0 +1,758 @@
+{
+ "_about": "Control independiente del detector de D10 (ola B1e), congelado en un commit propio ANTES de correr el detector sobre él; quien lo eligió no abrió scripts/data/function_words.json. Regla de B1-proposal.md §5: es = 30 valores de es/cli.json + es/doctor.json y 30 frases de docs/wiki/*.md (12 páginas); en = 60 valores de en/cli.json + en/doctor.json de claves distintas de las 30 españolas. Se quitan enlaces Markdown (queda su texto), spans entre comillas invertidas, marcadores ({x}, %(x)s, %s), URL y rutas (todo trozo sin espacios con / o \\). Wiki: solo párrafos y elementos de lista sin su marcador (fuera encabezados, tablas, citas >, HTML y bloques de código), partidos en frases por (?<=[.!?])\\s+. Elegible: 8 a 40 palabras separadas por espacios y al menos 8 tokens [a-záéíóúüñ]+. Sin duplicados (minúsculas). Fuera las 40 frases del control de B0b. Orden por sha256(\"<source>\\n<text>\") dentro de cada fuente y se toman las primeras N. Ninguna decisión humana.",
+ "_base_commit": "58ff9c6f473f0d21d118e9cb6991c039e1733803",
+ "_rule": "B1-proposal.md §5",
+ "_stats": {
+  "es_catalog_values": 883,
+  "es_catalog": {
+   "eligible": 296,
+   "unique": 295,
+   "duplicates_dropped": 1,
+   "taken": 30
+  },
+  "wiki_sentences": 1165,
+  "b0b_es_found_in_wiki": 20,
+  "es_wiki": {
+   "eligible": 883,
+   "unique": 883,
+   "duplicates_dropped": 0,
+   "taken": 30
+  },
+  "en_catalog_values": 883,
+  "en_catalog": {
+   "eligible": 265,
+   "unique": 262,
+   "duplicates_dropped": 3,
+   "taken": 60
+  },
+  "b0b_excluded": {
+   "es_catalog": 0,
+   "wiki": 20,
+   "en_catalog": 0
+  }
+ },
+ "es": [
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.residency.dry_run",
+   "text": "--dry-run: no se escribe nada. Líneas que cambiarían:",
+   "sha256": "00aa823666282643d2057a4f165321385447308b4fedbf57c9b65b061fdccbdc"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/doctor.json",
+   "key": "doctor.probe.daemon.export_token",
+   "text": "exporta con el mismo valor con el que arrancó el daemon",
+   "sha256": "014cd09df42ea2de4a0d1797a9019ae3607979f3f206ff2a2770bbced2bf7853"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/doctor.json",
+   "key": "doctor.probe.fallback.ignored",
+   "text": ": no son roles ni modelos del catálogo, y se ignoran",
+   "sha256": "01874bf90d7c0f3bc871d1f95d07e6c4b9329289d813e6d42d95ded8af5e9834"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/doctor.json",
+   "key": "doctor.header.versions_online",
+   "text": "Versiones (instalada vs probada; consultando GitHub por la última)…",
+   "sha256": "02422a1ac0e06fcda34cc5e555af3ab6ce8a422239e251d6c3927ead15a37111"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.script.analyze_benchmark.reason.no_aggregate",
+   "text": "no presenta agregado (§7): decide la tabla caso a caso y la revision",
+   "sha256": "036aa18f34341e2e91a8848942548f32a44ef1ab90cf3ae88728eb506f0c0ec6"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.help.init_llamaswap.swap",
+   "text": "ids de modelos (coma-separados) para el grupo swap (1 a la vez)",
+   "sha256": "0a1a639d1339af3d2adff546bc673a4d4ec1d0d73b6323d1ef593525b2a6c629"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.residency.bad_target_group",
+   "text": "--group : no es un grupo de la config que no sea persistent (válidos: )",
+   "sha256": "0ac4883d776c16b52c4e1ffb9c764248c445252a28a2002ad78228be19f646b4"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.install.foreign_codex.dry_run",
+   "text": "En una ejecución real se pediría confirmación antes de reemplazarla.",
+   "sha256": "0c0031281a6fd53cd5161492bdf8e20179cbde974cac5f737a014dd2250b9f9f"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.install.clients_and_target",
+   "text": "--clients y --target no se combinan: usa uno de los dos",
+   "sha256": "0c218ffa98afcbbe965baadf686f2e66b09e94dcb721d54f809caec0c573608e"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.residency.view.ttl_zero_outside",
+   "text": "tiene TTL efectivo 0 fuera de un grupo persistent: se queda cargado hasta que otro lo desaloje",
+   "sha256": "0d1c6329271d03477dcb0cb2c711fb1cc46e247c7eaf55906ce91b56f910b18b"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/doctor.json",
+   "key": "doctor.hint.cli",
+   "text": "uv tool install local-delegate-mcp (deja en el PATH)",
+   "sha256": "0d3115657687edeabedec5aa86a85f3ef1ae6048030b6d8d80081007ee5ff478"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/doctor.json",
+   "key": "doctor.probe.daemon_auth.no_entries",
+   "text": "el puerto exige token, pero no hay entrada MCP que mirar",
+   "sha256": "0e0b3ec4b87c605ad95b09abe520bf80df6ca10303caa257cf5a07e17e5cdf3b"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.residency.none_no_suggestion",
+   "text": "no queda ningún TTL distinto de 0 que sugerir (sin ni , todos los modelos tienen TTL efectivo 0): pasa --ttl MODEL=SECONDS para cada uno",
+   "sha256": "0e9c000c5c16571774b140112ee960cf47b9beda27bf3e3af373b4453d119b35"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.script.pair_sheet.bad_optional_questions",
+   "text": ": optional_questions solo admite 'principal' y 'specific'; «inventa» y la preferencia no pueden ser opcionales",
+   "sha256": "0ee047df2078553c9cf8bf6f65e7425226abb6a5d703d2b07895eb74b2ea22d0"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.help.init_llamaswap",
+   "text": "groups en un config.yaml de llama-swap con guardrail de",
+   "sha256": "0f6287b54a7597c94f36fb285330529e08c5340b14d940f9199578f750dea05c"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/doctor.json",
+   "key": "doctor.probe.version.candidate",
+   "text": "d; candidata a canary, no a promoción directa",
+   "sha256": "101211618b4883c4eaa14673c0d80ade2bb9f6e510450b4a7faa655ba15cd532"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/doctor.json",
+   "key": "doctor.probe.desktop_auth.no_header",
+   "text": "el puerto del daemon exige token y Claude Desktop entra sin cabecera de autorización: sus tools local_* responderán 401",
+   "sha256": "10b3d8a17a54ad7dd4869a267753f8afe448e2146891462c1ad2627d2f298e43"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.help.test_window.add",
+   "text": "añade una ventana cerrada (ISO 8601; sin zona = UTC)",
+   "sha256": "11ebb8a49beeaed639247468ca3e2e53fbaa4dcedeb9d815fa8ad780d90f9f73"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.help.benchmark.save_responses",
+   "text": "guarda las respuestas completas; hacen falta para la revisión a ciegas",
+   "sha256": "11f519eb3bdefa1fa2404fd99e73f00fc1a5bc5841358b137955e7b5ddb3a6a8"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/doctor.json",
+   "key": "doctor.probe.desktop_auth.rejected",
+   "text": "el daemon rechaza el token que lleva Claude Desktop (401): se rotó el token del puerto y su entrada, que install no toca, se quedó con el viejo",
+   "sha256": "12feb1829e86c99efedc0b55f594fdc610f1a1246b35f75c1d18eba096382f60"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.script.analyze_benchmark.no_cp3",
+   "text": ": falta el resultado de CP-3; sin el no hay casos admitidos",
+   "sha256": "1351fbfcd06749b25a08423df2f6687598262df0594d81c2a81809e28784eb55"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.install.clients_auto_none",
+   "text": "deteccion automatica (--clients auto): no se encontró ninguno",
+   "sha256": "13cbba54489e5084b6674ca28d7e7418783998d02fb548d785c304b10128a2d8"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.script.analyze_benchmark.nodata.no_metrics_db",
+   "text": "falta --metrics-db (una COPIA de metrics.db) para el criterio 6",
+   "sha256": "149b190e700d2f5eb9076e1c7c059d4682f3b8acafc463380b485451bac854c8"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/doctor.json",
+   "key": "doctor.probe.daemon.no_token",
+   "text": "nuestro daemon escucha en : pero este entorno no tiene su token",
+   "sha256": "155068555f928524dd3129529d91a77b95b84241294b9eff92c8272ede5f7641"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.help.llamaswap.residency",
+   "text": "Muestra o cambia qué modelo se queda cargado y los TTL.",
+   "sha256": "157de8d6050de2f5dcbe77e5a1c86a8e5900ba0675c35aab8714a868aff24a4c"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.outcome.down",
+   "text": "llama-swap : no responde ( ); el cambio se aplicará en el próximo arranque",
+   "sha256": "16bf67c369ae36ede4a531ed030817bb54a45ce2324d94d3a91b7dd5853cbd42"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/doctor.json",
+   "key": "doctor.summary.ok",
+   "text": "Resultado: todo a punto (andamiaje, servicios y versiones probadas).",
+   "sha256": "180e0cadacd3a2cf00a778e01605b75341afa8be7ce67fd3d87f6e7eb4f27ffd"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.init_llamaswap.out_exists",
+   "text": "error: ya existe — usa --force para sobreescribir (se guarda un .bak)",
+   "sha256": "19f8312644a5b393043eb3810998f30d638f31422dd516c5c4ec4dc2ba39d636"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.script.pair_sheet.answers_other_sheet",
+   "text": "las respuestas no son de esta hoja: el sha256 no coincide con el de la clave",
+   "sha256": "1a7b4db20935644ee153cd64c7c96347be9c4a3870bd5bdeac1eb354b7b1c9cd"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.script.pair_sheet.bad_early_stop",
+   "text": ": early_stop tiene que ser true o false",
+   "sha256": "1bcbd285fea9dc0d418822e34991bacf0a96d882d1ec00aebe8bdcb80601b52a"
+  },
+  {
+   "source": "docs/wiki/Configuration.md",
+   "line": 87,
+   "text": "El salto **suelta su plaza de concurrencia**, pide turno para el modelo nuevo y vuelve a pedir plaza (el tope de se mantiene), y con explícito no salta nunca.",
+   "sha256": "00007267282db0983c85748d4d033d275708ec44b9324b826605b65e2a9706c9"
+  },
+  {
+   "source": "docs/wiki/Troubleshooting.md",
+   "line": 192,
+   "text": "Ajusta el de llama-swap para el equilibrio — ver recipe · Descarga de VRAM.",
+   "sha256": "001d55850acb07d3acb835364daa4ae8b7a2aa36ae85e45554d8aade073a81ea"
+  },
+  {
+   "source": "docs/wiki/Backend-versions.md",
+   "line": 131,
+   "text": "La puntuación normaliza antes de comparar (una tilde no resta cobertura), pone la calidad a 0 si aparece un término prohibido y guarda en **qué componente** la hundió.",
+   "sha256": "003d73c19bef36b19a8058dce2eb54ad1867a5ae865627c09132ccd7dfa5090a"
+  },
+  {
+   "source": "docs/wiki/Tools.md",
+   "line": 271,
+   "text": "Si el modelo grande ya está en memoria, a veces es mejor usarlo para una tarea mecánica que desalojarlo para cargar el pequeño.",
+   "sha256": "0049c435bebd009e6f5c1e71f8b77ab983d1cc972be96b5c546ed0d8bbc4c605"
+  },
+  {
+   "source": "docs/wiki/Integration-install.md",
+   "line": 262,
+   "text": "Qué dice después sobre la recarga, en Troubleshooting.",
+   "sha256": "012f8887e181abb2b70b07c54673d509e26c930873629121c5b4291e8f6e6209"
+  },
+  {
+   "source": "docs/wiki/Remote-backend.md",
+   "line": 101,
+   "text": "Después, reinicia Claude Code y Codex; el paquete se descarga solo al arrancar el cliente.",
+   "sha256": "0147609fde22589301edc1a446c77d286a4f016d4b082bef0a02fae5d0afd59f"
+  },
+  {
+   "source": "docs/wiki/Troubleshooting.md",
+   "line": 186,
+   "text": "Si hay **otra instancia** de Claude (Code + Desktop) ya sirviendo el puerto, la segunda no monta una web embebida nueva.",
+   "sha256": "014b42792c5526485c820f2e7554c90ff78685193e1350a219a53cf6976eb1a7"
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 160,
+   "text": "La columna es la conversión de antes; la de la derecha, la de ahora, por densidad:",
+   "sha256": "0159916878c96328eb28cffcf67f38936acf655bb473763b5935abebc9af7e07"
+  },
+  {
+   "source": "docs/wiki/Architecture.md",
+   "line": 145,
+   "text": "Un salto de respaldo suelta la plaza y vuelve a pedir turno.",
+   "sha256": "018ded049df10b678308a79c4d148dbfd5f48b3f9938b779bcc8da31f207f650"
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 378,
+   "text": "Si la capacidad calibrada sale menor que la de un rechazo observado, avisa de un probable uso en otras superficies.",
+   "sha256": "02dc29e67e73c7e5bbaaa4e09949780685fc1c2235ee34ae3a2a5c8c95956b70"
+  },
+  {
+   "source": "docs/wiki/Daemon.md",
+   "line": 241,
+   "text": "**Caso con secreto DPAPI.** Si el backend está autenticado, la acción ya no puede ser directo: hace falta un launcher de PowerShell que importe el antes de arrancar el daemon (ver Remote-backend).",
+   "sha256": "02fac69082c14f0b94a295ebc7183063ab1e94ce634d245d89970f4866aecff4"
+  },
+  {
+   "source": "docs/wiki/Daemon.md",
+   "line": 86,
+   "text": "El turno se pide antes que la plaza de , y una cola que no avanza se destraba sola a los (600 s) sin llamadas en vuelo.",
+   "sha256": "035a607c7ffdfe18cff13f289e98edd982542bf4b4a6fd4cb1bd79eeb6161bdc"
+  },
+  {
+   "source": "docs/wiki/Daemon.md",
+   "line": 147,
+   "text": "Un secreto largo que hay que pegar varias veces al día es un secreto que se acaba quitando.",
+   "sha256": "03aa6ef2159e046f2190a21e9c307dd0962ccd18a697031b0c0619adcc71cee1"
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 260,
+   "text": "**El contrafactual** es «si Claude hubiera leído el fichero entero una vez con »: por eso la densidad usa la columna con numeración de líneas.",
+   "sha256": "03c15a06acad8a3edc74ffa77e1da81c3407bc1415ae231918caa23be1d6a2e5"
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 111,
+   "text": "**Generado en local** (el KPI «Generado») = Σ : generación que hicieron los modelos locales en vez de Claude.",
+   "sha256": "03f483cc2e71f382bad2eb83facc9752e172c5d101cdc057cb806f5c0c8d2dee"
+  },
+  {
+   "source": "docs/wiki/Tools.md",
+   "line": 82,
+   "text": "Devuelve **una** de las etiquetas de , sin prosa alrededor.",
+   "sha256": "04b9e12c72470a90908e7782d711862f264077ccd8e403f66ccc59aa97f0e0b1"
+  },
+  {
+   "source": "docs/wiki/Configuration.md",
+   "line": 339,
+   "text": "Los hooks y el daemon comparten ficheros en el temporal del usuario.",
+   "sha256": "0552ffa065baebb12df60ef1715446f670de8f2a3929a6796ba77344da677e97"
+  },
+  {
+   "source": "docs/wiki/Troubleshooting.md",
+   "line": 259,
+   "text": "Mientras tanto, las delegaciones de un modelo sin precio no suman dólares y el panel las cuenta aparte.",
+   "sha256": "05d9fbe5edd74f13bb7dc8c84789754ede3e903b3504f8f4a12e88577176eb33"
+  },
+  {
+   "source": "docs/wiki/Architecture.md",
+   "line": 68,
+   "text": "** ** — preguntar al usuario en vez de fallar seco ( ).",
+   "sha256": "05fa47ceb8cc2e9d370cbbdd5768518a841a325569eaa47d43a3815dd6f6076f"
+  },
+  {
+   "source": "docs/wiki/Tools.md",
+   "line": 249,
+   "text": "Una delegación cuyo modelo choca con lo que está en uso **espera**, en cola; una con un modelo compatible pasa sin esperar si tampoco choca con lo que piden las de delante.",
+   "sha256": "0620d4ba3dfb4692ea2d921c9bea268f3e301d5cde2d77da75dd2f5c97c59866"
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 686,
+   "text": "Durante mucho tiempo eso no se podía medir de ninguna forma: eran dos registros sin identificador común, y cruzarlos habría sido inventar una correlación y presentarla como un dato.",
+   "sha256": "0660ffc32e9f68dea2a96e1bc185df61b48de736cdc14e1f226f150e20717824"
+  },
+  {
+   "source": "docs/wiki/Daemon.md",
+   "line": 226,
+   "text": "Al pertenecer al subsistema GUI, nunca crea consola:",
+   "sha256": "066e1ac607792d7b9c0e13960f24dfe7ad45146ed91e9a75562f3b70e87d04e0"
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 307,
+   "text": "si no, el declarado de su hilo: **127 en el principal y 40 en subagente**, medidos con los datos de referencia.",
+   "sha256": "06e6a0bd1d7a79bdd002e32aaa1805ed2701e3444f3dd5b1c017b69c8e69486e"
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 72,
+   "text": ": la velocidad normal de ese modelo (la mediana de de sus últimos 50 eventos correctos con ≥ 8; hacen falta 10).",
+   "sha256": "06f0ec5b0d1f077b1624395b9de48eec4a86daa9e229a7b1b333a29168a4b695"
+  },
+  {
+   "source": "docs/wiki/Tools.md",
+   "line": 198,
+   "text": "Explica código en prosa, con el modelo de código.",
+   "sha256": "0717df9de94310913eae56b9c92557c157dbf0c13397dbd338f826a4878b8b67"
+  },
+  {
+   "source": "docs/wiki/Remote-backend.md",
+   "line": 111,
+   "text": "**Fija la actual, no una vieja**: un pin congela también los rangos de dependencias de aquel wheel, y las anteriores a la 0.12.2 pedían sin techo, así que hoy mueren en el import.",
+   "sha256": "07583eb2b7bf878a9d1222e61568ce6d28a55e7e1525d402bd211a0cbd61e86a"
+  },
+  {
+   "source": "docs/wiki/Repo-hardening.md",
+   "line": 61,
+   "text": "y con **estados internos distintos** — dos con todavía , uno con **todos** los pasos en , incluido (el fantasma puro).",
+   "sha256": "0765adb54564d32e41f87eacc07c70ec339e72f906149115daf5515bc770fad4"
+  },
+  {
+   "source": "docs/wiki/Daemon.md",
+   "line": 97,
+   "text": "Los tres van detrás del token del puerto ( ) y **nunca** devuelven , cabeceras ni claves:",
+   "sha256": "077d4f00dd4a2ccbc51ce48a1b4db749aea05183c14eedb2235488e8bbd23b5e"
+  },
+  {
+   "source": "docs/wiki/Repo-hardening.md",
+   "line": 172,
+   "text": "Con se salta, para el caso de un repo cuyo CI todavía no ha corrido nunca.",
+   "sha256": "07f1a3376151bd04616c3f9d2cf096bc2bff99b6b887057f300899a099f51375"
+  },
+  {
+   "source": "docs/wiki/Tools.md",
+   "line": 260,
+   "text": "Red de seguridad: si la primera de la cola lleva (600 s) esperando **y** el daemon lleva otros tantos sin que empiece ni termine ninguna llamada al backend, se le concede igual ( en el log).",
+   "sha256": "0804bf7e95215a5ba04959e2a57377cbb9acbd95a37076ec971b240d831cf269"
+  }
+ ],
+ "en": [
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.script.measure_cooldown.help._description",
+   "text": "Applies the P-4 criterion: whether the cooldown numbers change, stay or it is not known. Usage: uv run python --since 2026-09-16 uv run python --since 2026-09-16 --exclude 2026-09-16T10:00,2026-09-16T11:30 uv run python --since 2026-09-16 --json",
+   "sha256": "01583627744f60ad158e8d531d8c8bdba3b6984c62f0ba703bc30cc82ac0eff6"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.install.foreign_codex.kept",
+   "text": "The user's entry is kept; everything else is installed.",
+   "sha256": "040fa20c4e38c6c847e0468c8b1bd6b62f554b0ed34363dd87046561e8ae4bf3"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.script.analyze_benchmark.verdict.header",
+   "text": "| Tool | Alternative | Compared with | State | Criteria not met |",
+   "sha256": "05695d69431df8817841924742a75360ebc31713e0921594e08c497106b7632c"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.residency.none_needs_ttl",
+   "text": "--none needs --ttl for the models with effective TTL 0: ;",
+   "sha256": "06be5ad55424a8abbdabea2b48c7b7c1a837a3fc5a27db44dd90c228dfd91408"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.llamaswap_api.reload_unfinished",
+   "text": "llama-swap did not finish the reload within s",
+   "sha256": "09bd7076dc7f5d4eb54f9e25c8f862d534650ecee8316245cdc272b69f2de26f"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.benchmark.probe_windows_only",
+   "text": "error: --probe-process only works on Windows (Toolhelp32, psapi and typeperf)",
+   "sha256": "0c0b892133b0aea3fe8410359ceff2f3d453d6d0b9ec2848ccd3a1088e8fa2ba"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.script.pair_sheet.missing_header",
+   "text": "Still unanswered, and nothing is produced until it is complete:",
+   "sha256": "0f740737da6b6404969a1d3c8e425e761865184aa46b89a8caff72f99dba9545"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.script.analyze_benchmark.cp3.band",
+   "text": "- band of the aggregate (mean of the per-case bands):",
+   "sha256": "0fac19ac18d864507b5fc43907fe7d9d9d908accbd419796c4867dd0114c8c73"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.residency.groups_block_empty",
+   "text": "the groups block is empty or not a map: create it by hand",
+   "sha256": "103741e790445fe54fa7620820bf804eedcf1143452dc277fa70652b587dac9a"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.script.measure_cooldown.rule.1.reason",
+   "text": "R > 60 %: the model was still broken when it expired",
+   "sha256": "11b31a8d5668c784552fb61515524440f710939fa2892ba8e12c758db13f1c76"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.script.analyze_benchmark.nodata.no_judgement",
+   "text": "the user's judgement ( ) for the commit cell is missing",
+   "sha256": "12d87b335a65027205402ba023700bd7dc39ebbd60b7f410873024b939dc04b6"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/doctor.json",
+   "key": "doctor.probe.desktop_auth.not_configured",
+   "text": "Claude Desktop is not configured on this machine",
+   "sha256": "13da9687a23cf3744b5540aa24db4c3a0eee09d94765e1aa2a4de7afb5cbd366"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.residency.none_suggestion",
+   "text": "suggestion: (the most common TTL among the other models without --mmproj)",
+   "sha256": "13ff9f0c9bd7cb789cc2a445c5c9bb7e11604e1f052dc71a263c8d409cb1fa1d"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.install.not_on_path.why",
+   "text": "It happens when installing with , which deletes its environment when it finishes.",
+   "sha256": "15192666d35e73cc15dd8eeb233aa6f8073ceaf1e471b4d94756cbd2643eec85"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/doctor.json",
+   "key": "doctor.probe.daemon_auth.ok",
+   "text": "the daemon port requires a token and the MCP entries reference it",
+   "sha256": "1665d9f28a2dff4a6780c8956259a9fa8286018aa65207e04603891184fe67b6"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.outcome.rejected",
+   "text": "error: llama-swap the config and keeps the previous one. Its error:",
+   "sha256": "16c633b0319e7a39c4f80677ea83bee1d08d703e82b6481842ff49d2bdc4f3f0"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.llamaswap_config.detail_gguf",
+   "text": "weights GiB + KV GiB (ctx= , layers= , kv_heads= , cache_k= , cache_v= )",
+   "sha256": "1738573c4f5cec6303595b062ea2867dd3bd2743fa82fee407075e896f2606ee"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/doctor.json",
+   "key": "doctor.probe.version.no_exe",
+   "text": "the llama-server path was not found in the config's 'cmd' entries",
+   "sha256": "177b46962c2f24a1d33a39a181f1ac82dc134b060d24763db56b7e2deb0ad55c"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/doctor.json",
+   "key": "doctor.legend",
+   "text": "States: ready · review · missing · could not be checked",
+   "sha256": "1982a6e5e4040a3addd208f675a5941da23296974d0c59f89fa7b5f0480d2774"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/doctor.json",
+   "key": "doctor.probe.daemon.install_behind",
+   "text": "— but the installed version is : the installation is behind",
+   "sha256": "1c98dbb14f6da5a814d06a38d5a5f71b5e98ef57ff8f6818c8fb148d44bc5c57"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.script.analyze_benchmark.help.shared_mib_threshold",
+   "text": "Shared Usage growth tolerated before CP-1 is taken as broken (not calibrated: task 18)",
+   "sha256": "1d08593a7a93c426bcda75ae7c4d7c544eab127a97f680fd20fd6c667fd8982d"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/doctor.json",
+   "key": "doctor.probe.version.no_config",
+   "text": "no --config or LLAMASWAP_CONFIG (llama-server cannot be located)",
+   "sha256": "1e0843ca8a3db55b734979b288e01c94b9ce9ba0f18ec28fd083909e4b2aa9fc"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/doctor.json",
+   "key": "doctor.probe.daemon.cannot_compare",
+   "text": "— the installed one is and they could not be compared",
+   "sha256": "1ebc989c3deb632d1d98fd31db2105604d176ce07ebd3595c97618a36bbd4165"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.install.foreign_codex.no_terminal",
+   "text": "No terminal to ask: it is kept as is and left untouched.",
+   "sha256": "209f5fa3614ff894d2a02cdbab9ff281056f812cbe54814eaaa352c7488224ae"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.outcome.restored",
+   "text": "restored the config llama-swap is running at ; the rejected one was kept at",
+   "sha256": "2176e3d263bc2291214ef4c676da31c64423645e803aaa01ddf9012efc3225d4"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.script.pair_sheet.instruction.preference.text",
+   "text": "A, B or tie, after marking both messages.",
+   "sha256": "2206ba08dd8e27fc8973e620c382d6e433a8d534ef7de27f795205d88f195dd6"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.residency.estimator_not_validated",
+   "text": "the VRAM estimator did not pass its check against the measured models",
+   "sha256": "22e566d3776d7923954bcb7136062ae50ea50908a80ec20f6193e6053b615922"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.script.analyze_benchmark.report_value.third_sheet",
+   "text": "the third sheet is not valid either: no baseline",
+   "sha256": "23ec2c38023f4ebc189f683714fd83eb84f4860aed3119776b8bc63d609531e3"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/doctor.json",
+   "key": "doctor.probe.desktop_auth.variable_not_in_env",
+   "text": "the daemon port requires a token and Claude Desktop uses , which is not in this process's environment: if Claude Desktop does not see it either, it will answer 401",
+   "sha256": "242cd0188d550fdd0279c99c4d4ea71661db58b8a987f93513a332628f435053"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.script.pair_sheet.defect.too_long",
+   "text": "mean bullet of characters, more than times the partner's",
+   "sha256": "24f9a20f56fb645d9a40d8f186ae78426e9148d6f107b6e68653b9d877c8bd50"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.script.analyze_benchmark.cp3.review_only",
+   "text": "- no automatic score, the blind pairwise comparison decides:",
+   "sha256": "260bdedd1291c04bb283364ff64a5c84d4c9397edd457ae7b42e6f7de04d508b"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.script.analyze_benchmark.block.ceiling_worse",
+   "text": "the candidate does not withstand the ceiling probe that the incumbent does",
+   "sha256": "2640396b4eecea26ae83cd1e2fc7f947a3d8e99a036796425d37d420697d7259"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.help.install",
+   "text": "Installs hooks, skill, memory and the MCP entry in Claude Code Codex opencode.",
+   "sha256": "266b295f9135eb9998b9f4524bc91849f647bab7d74b95cb74528a384850f714"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.script.pair_sheet.page.copy_hint",
+   "text": "If the browser does not allow downloads, copy this box and paste it into a message.",
+   "sha256": "278377c482a2c30f9a52d04efde37bd1b4d19be10d8ec3b959760a4e18270e71"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.script.analyze_benchmark.reason.shared_grew",
+   "text": ": Shared Usage grew bytes in run= : CP-1 is no longer valid, repeat the stretch",
+   "sha256": "27cf30f6d33b9fc582811e4c6a43b15b7940986ad993d1067813ebdcb72d5b3c"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/doctor.json",
+   "key": "doctor.probe.desktop_auth.bad_url",
+   "text": "the URL of the Claude Desktop entry cannot be read",
+   "sha256": "2a0589da734645bb90cfa0f8e48a6a57c12e695a29b515232d1ca6d59a685085"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.help.doctor",
+   "text": "Diagnoses the scaffolding (hooks, skill, memory, MCP), the daemon and the backend.",
+   "sha256": "2a0c15c8d8928ec2ad49cdee2ec52c14dfc15748d0da5fc0aebf59114c006494"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.residency.ttl_minus_one",
+   "text": "--ttl =-1 means , which here is 0 (residency): set a TTL >= 1",
+   "sha256": "2a61df08670078fda5cfdb806d511117971232cafe99388f7e8cccdc226b8485"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.help.install_common.python",
+   "text": "interpreter that runs the hooks (default: python3 python on Windows)",
+   "sha256": "2a6c1b6ef9a3e33c8e8a62cd5307f4c7af3ba9d0b8256d7ca94c9907e4e6d16a"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.residency.pinned_warning",
+   "text": "will take GiB of VRAM permanently (group , persistent and ttl 0);",
+   "sha256": "2b5c14c085d835161f5ce444838efa594c5459e1d5326c1b609e3e6c54bbe341"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.help.install.web_token_env",
+   "text": "with --mcp-mode http, authenticates against the daemon by referencing LOCAL_DELEGATE_WEB_TOKEN from the environment (never writes the credential). Without this flag or --no-web-token-env, the entry keeps the header it already had",
+   "sha256": "2b819e143be8c24c331c53b7ce4bbccb7391b8926e28584a2d7a80ae3fd5e78a"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.help.init_llamaswap.config",
+   "text": "existing config.yaml to extend (if it does not exist, an empty one is used)",
+   "sha256": "2baf19dab577188642dddf451083ac002dbc7d49123a7e9c44e847e042eb4e94"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.help.benchmark.probe_process",
+   "text": "measure RAM and VRAM of this process by name, e.g. llama-server.exe (Windows only)",
+   "sha256": "2bedb2c72a9e211c9fb63cdcc10f5fbaf8059ecc3fc6f156ed6f5bfff1686a14"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/doctor.json",
+   "key": "doctor.probe.hook_settings.legacy",
+   "text": "of come from a previous installation ('args' format and scripts outside ); they work, but reinstalling leaves them the way the current version sets them",
+   "sha256": "2c50dd57d0fd6f9a0b30611bbc4e5eb44e00f83a8896ff503b0069ac28e9fc8e"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/doctor.json",
+   "key": "doctor.probe.daemon.daemon_behind",
+   "text": "— but the installed version is : the daemon serves the old one",
+   "sha256": "2d9abeae8d4df6260c61e1da152f959e837586fa48da261fd2850bdc6ca965e2"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.llamaswap_config.extra_missing",
+   "text": "PyYAML is missing; it comes with the [llamaswap] extra: pip install \" \"",
+   "sha256": "2e7ac7629191d922cb0b562f29cc7ba0976d61992e9962250daffad55a3850fd"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.help.test_window.start",
+   "text": "opens a window that starts now and prints its id (keep it)",
+   "sha256": "2fa4652e0861e5e1b0ceccfa447be37ff55c505739cd4f051394d89a33ec2c68"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/doctor.json",
+   "key": "doctor.probe.desktop_auth.other_target",
+   "text": "Claude Desktop points to , not to the daemon at",
+   "sha256": "2fd9db8ba33e9a9cecc1e84b823bdc06a814b753de56154ed550efe1be7e2cb7"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.check_llamaswap.no_groups",
+   "text": "error: there is no 'groups:' in , nothing to validate",
+   "sha256": "30433736955dc802fdc2ffc2c69e4e7ab434de20ae8dd67a4e3a2f1e2ed58a4a"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/doctor.json",
+   "key": "doctor.probe.mcp_codex.closing_marker_lost",
+   "text": "managed block in ( ); another program rewrote the file and dropped the closing marker",
+   "sha256": "335d69813422f80e5cb8d0f3ff171ceb98429570b4186097f7c2ed05f778a281"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/doctor.json",
+   "key": "doctor.hint.serve",
+   "text": "local-delegate serve (or start the daemon's scheduled task)",
+   "sha256": "354b805244f7c964e77857fef78877d1298d153843a8f47d07aa72cec4a62008"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.residency.unknown_config",
+   "text": "unknown which config llama-swap uses: there is no --config, LLAMASWAP_CONFIG is empty and the daemon does not answer. Pass --config PATH.",
+   "sha256": "3554bd130b0f07bf6909399f20d5ed02a96ecbe9c0423005f873282948293992"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.outcome.not_watching_hint",
+   "text": "; if the daemon started llama-swap, it lacks -watch-config (LLAMASWAP_WATCH_CONFIG=1 in the daemon launcher)",
+   "sha256": "36e5d5b0b932219299425c9933a57ce4ebeb45d94c6aa3674f2089898173b717"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.script.pair_sheet.page.downloaded_stop",
+   "text": "Downloaded: pass it on to know whether you can stop.",
+   "sha256": "38b3feb1b4c9c9d307235fedbc241b033986a377deb7b98f8132d508310d1b56"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.test_window.error.start_after_end",
+   "text": "the start has to be before the end",
+   "sha256": "38d1563f529ac89ce9039d177094f810c51a23b73cc8cda696c876b2d81f1ee7"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.help.llamaswap.residency.reserve_gb",
+   "text": "VRAM left for the rest of the PC (default 2)",
+   "sha256": "3aa2f05c0110217d4ccc40ab7e96b16ebbcf9552f260ad90091b36c3656c2de2"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.script.measure_cooldown.rule.2.reason",
+   "text": "half or more of the episodes are opened by a read timeout",
+   "sha256": "3b9adb59af41b7a8218a0230f12eecb97c9562c3d93fe2078912a4e071906c6e"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.help.init_llamaswap.server_exe",
+   "text": "executable used in the cmd generated for --add-model (default: llama-server)",
+   "sha256": "3dd254d64a97776ec939fdc722b4d040b22626517fae8ecc4a0ade141de39705"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.install.simulated_home",
+   "text": "Simulated HOME: the machine's daemon is not touched.",
+   "sha256": "3de5166d4d4174e8b2fe465278f9f9dd0bca1be124ebdd09bb6fdf7973da0d98"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/en/cli.json",
+   "key": "cli.script.pair_sheet.trap_without_message",
+   "text": "the trap of has no message from the chosen model",
+   "sha256": "3efd5df218cd2891dbb81b13c8e3b77dbad445b2c8822b9f537cc5861170e973"
+  }
+ ]
+}
