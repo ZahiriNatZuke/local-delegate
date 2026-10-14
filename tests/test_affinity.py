@@ -543,6 +543,12 @@ def test_frozen_verdict_footprints_with_old_keys_are_read_with_the_new_ones():
             assert not {"ruta", "tamano_bytes"} & set(new[new_key])
 
 
+#: Celdas cuya huella cambió a propósito con un cambio de prompt declarado (REQ-028, B2b-2) y que
+#: quedan sin base hasta el lote B2-affinity. Solo puede encoger: cambiar `_guard` o el prompt de
+#: traducción las dejaría a todas fuera y este test lo diría.
+CELLS_WITHOUT_BASE = frozenset({"local_lint_summary"})
+
+
 def test_prompt_footprint_of_the_code_is_the_measured_one():
     """El prompt que `server` reconstruye para cada tool da el `sha256` que midió la evaluación:
     si cambia `_guard` o el texto de la tool, este test lo dice (y la celda queda sin base)."""
@@ -552,7 +558,12 @@ def test_prompt_footprint_of_the_code_is_the_measured_one():
         prompt = server._affinity_prompt(cell.tool)
         assert prompt is not None
         digest = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
-        assert digest == cell.footprint["prompt_sha256"], cell.tool
+        if cell.tool in CELLS_WITHOUT_BASE:
+            # B2b-2: la orden de idioma de REQ-028 cambia el prompt de lint; la celda queda «sin
+            # base» (a propósito) hasta que el lote B2-affinity la vuelva a medir.
+            assert digest != cell.footprint["prompt_sha256"], cell.tool
+        else:
+            assert digest == cell.footprint["prompt_sha256"], cell.tool
 
 
 # --- Camino feliz sin red ---------------------------------------------------------------------

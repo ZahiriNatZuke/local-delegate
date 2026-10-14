@@ -586,8 +586,9 @@ El orden es obligatorio: el frente A antes que el B (brief, «Desired outcome»;
   propuesto): el cambio de descripciones de tools (REQ-027), el cambio de prompts del modelo local
   (REQ-028) y **cualquier** cambio de texto de los hooks en cualquier idioma (REQ-024). La frontera se
   decide por **versión**, no por fecha, porque los logs de la Mac se miden en la PC y cada máquina se
-  actualiza cuando quiere. Para `usage-*.jsonl`, una clave nueva con la versión del paquete
-  (`package_version`, propuesto) en cada fila escrita desde el cambio, que sí tiene orden. Para la
+  actualiza cuando quiere. Para `usage-*.jsonl`, la versión del paquete de cada fila, que sí tiene
+  orden: la clave `v`, que toda fila lleva desde F1 (enmienda del 2026-10-14: el `package_version`
+  que aquí se proponía habría duplicado ese dato, así que se usa `v` y no se añade clave). Para la
   telemetría, la versión de hook que ya lleva cada evento es un hash del script, sin orden: la
   frontera es un **conjunto**, la lista por script de los hashes que quedan del lado «después»,
   generada en el PR de release a partir de `resources/hooks/`; un test exige que el hash de los
@@ -597,7 +598,7 @@ El orden es obligatorio: el frente A antes que el B (brief, «Desired outcome»;
   defecto `scripts/medir_adopcion.py` y todo script de medición de calidad del modelo local que
   compare periodos (el plan los enumera tras revisar `scripts/`; si no hay ninguno, lo deja
   escrito), que informan por separado antes y después; sus tests lo comprueban con filas de dos
-  máquinas actualizadas en fechas distintas: una fila de `usage-*` con `package_version` anterior y
+  máquinas actualizadas en fechas distintas: una fila de `usage-*` con `v` anterior y
   fecha posterior, y un evento de telemetría con un hash viejo y fecha posterior, quedan los dos en
   el tramo de antes.
 - **REQ-042 — Formato de línea preservado.** Cada fichero tocado conserva su final de línea (LF o
@@ -842,7 +843,7 @@ skill y bloques). Cada ola deja su registro `waves/<ola>.md` (REQ-036/037).
 | REQ-038 | verificación en vivo | ids de ventana de prueba en `verification.md` |
 | REQ-039 | todas | registro del cerrojo en la verificación |
 | REQ-040 | cada release | diff de CHANGELOG, README y `docs/wiki/` en el PR de release, con los anuncios exigidos |
-| REQ-041 | B0 (`package_version` en el log) + B2 (descripciones y prompts) + B3 (hooks) + cada release (conjunto de hashes) | fichero de fronteras por versión y conjunto de hashes; test de que el hash actual está en el conjunto; tests con filas de dos máquinas actualizadas en fechas distintas |
+| REQ-041 | B0 (la versión `v` del log, que ya existía desde F1) + B2 (descripciones y prompts) + B3 (hooks) + cada release (conjunto de hashes) | fichero de fronteras por versión y conjunto de hashes; test de que el hash actual está en el conjunto; tests con filas de dos máquinas actualizadas en fechas distintas |
 | REQ-042 | todas | `git ls-files --eol` antes/después |
 | REQ-043 | B0 (+ B4 para el fixture de Playwright) | suite en verde, Playwright incluido, con `LANG=en_US.UTF-8` y `LANG=es_ES.UTF-8`; controles positivos sin el fixture de variable, sin el de `locale` y con un `language.json` falso en el directorio de datos real simulado |
 | REQ-044 | A0 | `scripts/detect_spanish_names.py`, léxico congelado, tests de regresión y de palabras reservadas en verde; auditoría de ≥100 palabras con error ≤ 2 % en `evidence/`; resultado de Socket si hay dependencia |

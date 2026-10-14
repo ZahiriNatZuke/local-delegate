@@ -781,6 +781,8 @@ def _log_event(
             # son siempre locales; esto separa el cómputo, no el origen del archivo.
             "backend": config.backend_origin(),
             "backend_host": config.backend_host(),
+            # La versión del paquete (desde F1). REQ-041 decide con ella la frontera de medición
+            # (`scripts/measurement_boundaries.py`): era el `package_version` propuesto por la spec.
             "v": _get_version(),
         }
         # Quién pidió la delegación. Sin esto el panel no puede distinguir un mes de smoke tests
@@ -3289,24 +3291,48 @@ _LANGUAGE_NAMES: dict[str, str] = {
 }
 
 
+#: El valor explícito de `LOCAL_DELEGATE_COMMIT_LANGUAGE` que conserva la regla de antes: el
+#: idioma predominante de los textos del diff.
+COMMIT_LANGUAGE_DIFF = "diff"
+
+
 def _commit_language_instruction() -> str:
-    """La orden de idioma del prompt de sistema de `local_commit_msg` (REQ-044).
+    """La orden de idioma del prompt de sistema de `local_commit_msg` (REQ-044, REQ-028).
 
     Medido en la tanda de afinidad (2026-10-07): con el prompt de antes, que no pedía idioma, el
     26B escribió 17 de 30 mensajes en inglés y Qwen3.6 6 de 30, sobre un repo documentado en
-    español. Con `LOCAL_DELEGATE_COMMIT_LANGUAGE` puesta, el idioma es el que dice la variable;
-    sin ella, el predominante de los textos del diff, en vez de lo que el modelo prefiera.
+    español. Precedencia (enmienda del 2026-10-14, decisión del usuario): la variable
+    `LOCAL_DELEGATE_COMMIT_LANGUAGE` si está puesta; si no, el idioma vigente del producto. La regla
+    de antes, «el idioma predominante del diff», queda solo como el valor explícito `diff`: en repos
+    bilingües el modelo elegía uno u otro. `LOCAL_DELEGATE_OUTPUT_LANGUAGE` no entra aquí.
     """
     code = config.commit_language()
-    if not code:
+    if code.lower() == COMMIT_LANGUAGE_DIFF:
         return (
             "Escribe el mensaje de commit entero (primera línea y cuerpo) en el idioma "
             "predominante de los textos del diff (comentarios, documentación y mensajes)."
         )
-    # `es-CU` y `es_ES` se reconocen por su primera parte; si no se conoce, se usa tal cual.
-    first_part = code.lower().replace("_", "-").split("-")[0]
-    name = _LANGUAGE_NAMES.get(first_part, code)
+    name = _language_name(code or i18n.lang())
     return f"Escribe el mensaje de commit entero (primera línea y cuerpo) en {name}."
+
+
+def _language_name(code: str) -> str:
+    """Un código de idioma con su nombre legible para el prompt; lo que no se conoce, tal cual.
+
+    `es-CU` y `es_ES` se reconocen por su primera parte.
+    """
+    first_part = code.lower().replace("_", "-").split("-")[0]
+    return _LANGUAGE_NAMES.get(first_part, code)
+
+
+def _response_language_clause() -> str:
+    """La orden de idioma de las 4 tools de texto libre (REQ-028), que va DETRÁS de `_guard`.
+
+    Sale de `i18n.response_language()`, la única regla (variable de salida → idioma vigente), y se
+    lee en cada llamada. Los prompts no se traducen: solo se añade esta orden.
+    """
+    name = _language_name(i18n.response_language().value)
+    return f" Responde en {name}, aunque el contenido esté en otro idioma."
 
 
 def _guard(output_format: str, max_words: int | None = None) -> str:
@@ -3318,11 +3344,16 @@ def _guard(output_format: str, max_words: int | None = None) -> str:
 
 
 def _lint_system(max_words: int) -> str:
-    """El prompt de sistema de `local_lint_summary`. También entra en la huella (T15)."""
-    return _guard(
-        "un resumen de los problemas agrupados por archivo, con el conteo por tipo de "
-        "error/regla y los más relevantes primero",
-        max_words,
+    """El prompt de sistema de `local_lint_summary`. También entra en la huella (T15): con la orden
+    de idioma de REQ-028 la huella deja de ser la medida y la celda de afinidad de lint queda «sin
+    base» hasta el lote B2-affinity, que la vuelve a medir."""
+    return (
+        _guard(
+            "un resumen de los problemas agrupados por archivo, con el conteo por tipo de "
+            "error/regla y los más relevantes primero",
+            max_words,
+        )
+        + _response_language_clause()
     )
 
 
@@ -3567,7 +3598,9 @@ def local_summarize(
     role, model = _role_for_size(probe_len)
     content, truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
     clean_focus = sections.sanitize_focus(focus)
-    extra = _focus_clause(clean_focus)
+    # La orden de idioma (REQ-028) va con el enfoque: así llega al map, al reduce y a cada trozo
+    # del resumen estructurado, que la reciben por `extra`/`reduce_extra`.
+    extra = _focus_clause(clean_focus) + _response_language_clause()
     # Solo con el modelo largo: el mecánico (4B, entradas cortas) se saltó la «Introducción» en la
     # etapa 1 de la v3 (0,86), y el criterio escrito antes de medir era limitarlo al rol `long`.
     structured = config.STRUCTURED_SUMMARY and role == "long"
@@ -3587,8 +3620,8 @@ def local_summarize(
             path=path,
         )
 
-    # Sin estructura (o con el interruptor apagado): el camino de siempre. Sin enfoque, el prompt
-    # es byte a byte el de antes; los benchmarks y el corpus lo copian literal.
+    # Sin estructura (o con el interruptor apagado): el camino de siempre. Desde la 0.36.0 lleva
+    # la orden de idioma (REQ-028); los corpus congelados lo declaran en `PROMPT_BOUNDARIES`.
     system = _guard("un resumen en prosa clara", max_words) + extra
 
     def _build(piece: str) -> str:
@@ -3907,6 +3940,8 @@ def local_lint_summary(
             max_words=max_words,
             raw_len=raw_len,
             path=path,
+            # El reduce por defecto (y el reagrupado) no usan `system`: la orden va también aquí.
+            reduce_extra=_response_language_clause(),
         )
 
     user = _build(content)
@@ -4128,8 +4163,11 @@ def local_explain_code(
     """
     content, truncated_in, raw_len = _read_input(code, path, config.max_chars_for_role("code"))
     extra = f" Enfócate en: {question}." if question else ""
-    system = _guard(
-        f"una explicación clara en prosa de qué hace el código y cómo.{extra}", max_words=250
+    system = (
+        _guard(
+            f"una explicación clara en prosa de qué hace el código y cómo.{extra}", max_words=250
+        )
+        + _response_language_clause()
     )
     user = f"Explica el siguiente código:\n\n{content}"
     result = _chat(
@@ -4178,7 +4216,10 @@ def local_describe_image(
     raw_len = len(raw_bytes)
     b64 = base64.b64encode(raw_bytes).decode("ascii")
     prompt = question or "Describe esta imagen con detalle."
-    system = _guard("una respuesta en prosa clara sobre la imagen", max_words)
+    system = (
+        _guard("una respuesta en prosa clara sobre la imagen", max_words)
+        + _response_language_clause()
+    )
     content = [
         {"type": "text", "text": prompt},
         {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
@@ -4686,6 +4727,11 @@ def _describe_language() -> list[str]:
     lines.extend(i18n.t("mcp.status.language.warning", detail=d) for d in report.warnings)
     if report.follow_system:
         lines.append(i18n.t("mcp.status.language.follow_system", path=report.path))
+    # REQ-028 (issue #260): el idioma en que las tools de texto libre piden responder al modelo.
+    value, source, warning = i18n.response_language_lines()
+    lines.append(i18n.t("mcp.status.output_language.line", value=value, source=source))
+    if warning:
+        lines.append(i18n.t("mcp.status.language.warning", detail=warning))
     return lines
 
 

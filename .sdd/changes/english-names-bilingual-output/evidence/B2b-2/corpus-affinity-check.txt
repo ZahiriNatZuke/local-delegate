@@ -1,0 +1,9 @@
+[pesado] plaza plaza-1 tomada tras 0s: uv run --frozen python scripts/build_corpus.py affinity --check
+idioma del mensaje de commit del corpus: es
+  (LOCAL_DELEGATE_COMMIT_LANGUAGE=(sin definir) en este entorno: no se usa)
+  · resume-ruff-tres-reglas: system cambio con los prompts de la 0.36.0 (frontera declarada)
+  · resume-ruff-docstrings: system cambio con los prompts de la 0.36.0 (frontera declarada)
+  · resume-ruff-un-solo-archivo: system cambio con los prompts de la 0.36.0 (frontera declarada)
+  · resume-ruff-cinco-reglas: system cambio con los prompts de la 0.36.0 (frontera declarada)
+  · resumen-md-2k: system cambio con los prompts de la 0.36.0 (frontera declarada)
+ok

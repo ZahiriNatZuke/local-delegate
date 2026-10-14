@@ -44,9 +44,21 @@ build = _load()
 # --- Lo versionado ------------------------------------------------------------------------------
 
 
+def _noticed_tools(notices: list[str], corpus: Path) -> set[str]:
+    cases = json.loads((corpus / "cases.json").read_text(encoding="utf-8"))["cases"]
+    tool_of = {c["id"]: c["tool"] for c in cases}
+    return {tool_of[n.split(":", 1)[0]] for n in notices}
+
+
 def test_versioned_corpus_still_mirrors_production():
-    # Si cambia un MAX_CHARS, el enrutado o un prompt, el corpus ya no mide lo que dice.
-    assert build.check_versioned(DESTINATION) == []
+    """Si cambia un MAX_CHARS, el enrutado o un prompt, el corpus ya no mide lo que dice. Desde la
+    0.36.0 (B2b-2) la orden de idioma de REQ-028 cambia a propósito el `system` de cuatro tools: eso
+    se dice como aviso (`PROMPT_BOUNDARIES`) y el resto sigue siendo error. Control: cambiar
+    `_translate_system` deja una diferencia de una tool fuera de la lista y falla `== []`."""
+    notices: list[str] = []
+    assert build.check_versioned(DESTINATION, notices=notices) == []
+    assert _noticed_tools(notices, DESTINATION) == set(build.PROMPT_BOUNDARIES["0.36.0"])
+    assert all("system" in n for n in notices)
 
 
 def test_split_is_the_protocol_one():
@@ -955,7 +967,8 @@ def test_frozen_commit_languages_match_the_frozen_cases():
     assert len(affinity_commits) == 40 and len(f2_commits) == 2  # que haya algo que comprobar
     assert build.AFFINITY_COMMIT_LANGUAGE == "es"
     assert all(c["system"].endswith(_ASKS_SPANISH) for c in affinity_commits)
-    assert build.F2_COMMIT_LANGUAGE == ""
+    # B2b-2: vacío ya es el idioma vigente; la regla del diff, con la que se congeló F2, es `diff`.
+    assert build.F2_COMMIT_LANGUAGE == "diff"
     assert all(_ASKS_DIFF_LANGUAGE in c["system"] for c in f2_commits)
 
 
@@ -1000,7 +1013,13 @@ def _full_history() -> bool:
 def test_affinity_check_is_ok_with_any_environment_language(monkeypatch, environment_language):
     """La comprobacion entera, como la corre `affinity --check`, sin la variable y con otra."""
     _set_environment_language(monkeypatch, environment_language)
-    assert build.check_versioned_affinity(build.AFFINITY_TARGET) == []
+    notices: list[str] = []
+    assert build.check_versioned_affinity(build.AFFINITY_TARGET, notices=notices) == []
+    # B2b-2: lint ×4 y summarize ×1 cambian a propósito (REQ-028); los 40 commits, no.
+    assert _noticed_tools(notices, build.AFFINITY_TARGET) == {
+        "local_lint_summary",
+        "local_summarize",
+    }
 
 
 # --- Lectura dual de lo congelado del corpus (ola A10b-4) -------------------------------------------

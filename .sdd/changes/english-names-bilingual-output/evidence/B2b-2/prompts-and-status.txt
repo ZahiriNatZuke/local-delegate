@@ -1,0 +1,42 @@
+=== LANG=es OUTPUT_LANGUAGE=None
+Idioma: es (variable; <tmp>\language.json)
+Idioma de respuesta del modelo: es (variable)
+Idioma:           es (variable; <tmp>\language.json)
+Respuesta:        es (variable)
+local_summarize: ...ras. Nada fuera del formato. Responde en español, aunque el contenido esté en otro idioma.
+local_lint_summary: ...ras. Nada fuera del formato. Responde en español, aunque el contenido esté en otro idioma.
+local_explain_code: ...ras. Nada fuera del formato. Responde en español, aunque el contenido esté en otro idioma.
+local_describe_image: ...ras. Nada fuera del formato. Responde en español, aunque el contenido esté en otro idioma.
+local_commit_msg: ...uera del formato. Escribe el mensaje de commit entero (primera línea y cuerpo) en español.
+=== LANG=en OUTPUT_LANGUAGE=None
+Language: en (variable; <tmp>\language.json)
+Model response language: en (variable)
+Language:         en (variable; <tmp>\language.json)
+Response:         en (variable)
+local_summarize: ...bras. Nada fuera del formato. Responde en inglés, aunque el contenido esté en otro idioma.
+local_lint_summary: ...bras. Nada fuera del formato. Responde en inglés, aunque el contenido esté en otro idioma.
+local_explain_code: ...bras. Nada fuera del formato. Responde en inglés, aunque el contenido esté en otro idioma.
+local_describe_image: ...bras. Nada fuera del formato. Responde en inglés, aunque el contenido esté en otro idioma.
+local_commit_msg: ...fuera del formato. Escribe el mensaje de commit entero (primera línea y cuerpo) en inglés.
+=== LANG=es OUTPUT_LANGUAGE='fr'
+Idioma: es (variable; <tmp>\language.json)
+Idioma de respuesta del modelo: fr (variable de salida)
+Idioma:           es (variable; <tmp>\language.json)
+Respuesta:        fr (variable de salida)
+local_summarize: ...ras. Nada fuera del formato. Responde en francés, aunque el contenido esté en otro idioma.
+local_lint_summary: ...ras. Nada fuera del formato. Responde en francés, aunque el contenido esté en otro idioma.
+local_explain_code: ...ras. Nada fuera del formato. Responde en francés, aunque el contenido esté en otro idioma.
+local_describe_image: ...ras. Nada fuera del formato. Responde en francés, aunque el contenido esté en otro idioma.
+local_commit_msg: ...uera del formato. Escribe el mensaje de commit entero (primera línea y cuerpo) en español.
+=== LANG=en OUTPUT_LANGUAGE='a\nb'
+Language: en (variable; <tmp>\language.json)
+Model response language: en (variable)
+  warning: `LOCAL_DELEGATE_OUTPUT_LANGUAGE` contains line breaks or control characters and is ignored.
+Language:         en (variable; <tmp>\language.json)
+Response:         en (variable)
+                  warning: `LOCAL_DELEGATE_OUTPUT_LANGUAGE` contains line breaks or control characters and is ignored.
+local_summarize: ...bras. Nada fuera del formato. Responde en inglés, aunque el contenido esté en otro idioma.
+local_lint_summary: ...bras. Nada fuera del formato. Responde en inglés, aunque el contenido esté en otro idioma.
+local_explain_code: ...bras. Nada fuera del formato. Responde en inglés, aunque el contenido esté en otro idioma.
+local_describe_image: ...bras. Nada fuera del formato. Responde en inglés, aunque el contenido esté en otro idioma.
+local_commit_msg: ...fuera del formato. Escribe el mensaje de commit entero (primera línea y cuerpo) en inglés.

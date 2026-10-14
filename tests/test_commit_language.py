@@ -18,7 +18,7 @@ import backend_mock
 import httpx2
 import pytest
 
-from local_delegate import config, server
+from local_delegate import config, i18n, server
 
 VARIABLE = "LOCAL_DELEGATE_COMMIT_LANGUAGE"
 DIFF_ORDER = "en el idioma predominante de los textos del diff"
@@ -89,10 +89,10 @@ def test_with_spanish_variable_prompt_asks_spanish(monkeypatch, tmp_path, style)
 
 
 @pytest.mark.parametrize("style", ["conventional", "plain"])
-def test_without_variable_prompt_asks_diff_language(monkeypatch, tmp_path, style):
-    """Control de que la suite corre limpia, y mutante «quitar la rama» (siempre se arma la orden
-    con nombre, o sea `en .` sin variable): dispara el primer assert."""
-    assert VARIABLE not in os.environ
+def test_the_diff_value_keeps_the_prompt_of_before(monkeypatch, tmp_path, style):
+    """B2b-2: la regla del diff queda solo como valor explícito, `diff`, con el prompt de antes
+    byte a byte. Mutante «quitar la rama»: sale «en diff.» y dispara el primer assert."""
+    monkeypatch.setenv(VARIABLE, "DIFF")  # sin distinguir mayúsculas
     views = _request(monkeypatch, tmp_path, diff=SMALL_DIFF, style=style)
 
     system = _system(views[0])
@@ -101,6 +101,36 @@ def test_without_variable_prompt_asks_diff_language(monkeypatch, tmp_path, style
         "en el idioma predominante de los textos del diff (comentarios, documentación y mensajes)."
     ) in system
     assert "en español" not in system
+
+
+@pytest.mark.parametrize(("lang", "name"), [("es", "español"), ("en", "inglés")])
+def test_without_variable_the_message_is_in_the_product_language(monkeypatch, tmp_path, lang, name):
+    """Enmienda del 2026-10-14 (decisión del usuario): sin la variable, el idioma vigente del
+    producto. Mutante «volver al predominante por defecto»: falla el `endswith`."""
+    assert VARIABLE not in os.environ
+    monkeypatch.setenv("LOCAL_DELEGATE_LANG", lang)
+    i18n.reset()
+    system = _system(_request(monkeypatch, tmp_path, diff=SMALL_DIFF)[0])
+    assert system.endswith(f"(primera línea y cuerpo) en {name}.")
+    assert DIFF_ORDER not in system
+
+
+def test_the_variable_wins_over_the_product_language(monkeypatch, tmp_path):
+    monkeypatch.setenv("LOCAL_DELEGATE_LANG", "en")
+    monkeypatch.setenv(VARIABLE, "fr")
+    i18n.reset()
+    system = _system(_request(monkeypatch, tmp_path, diff=SMALL_DIFF)[0])
+    assert system.endswith("en francés.")
+
+
+@pytest.mark.parametrize("output", ["fr", "português"])
+def test_the_output_language_does_not_reach_the_commit(monkeypatch, tmp_path, output):
+    """REQ-028: `LOCAL_DELEGATE_OUTPUT_LANGUAGE` no se aplica a `local_commit_msg`. Mutante
+    «aplicarla también al commit»: el prompt cambia y falla la igualdad."""
+    without = _system(_request(monkeypatch, tmp_path, diff=SMALL_DIFF)[0])
+    monkeypatch.setenv("LOCAL_DELEGATE_OUTPUT_LANGUAGE", output)
+    with_it = _system(_request(monkeypatch, tmp_path, diff=SMALL_DIFF)[0])
+    assert with_it == without
 
 
 def test_each_style_format_stays_in_place(monkeypatch, tmp_path):
@@ -154,8 +184,9 @@ def test_map_reduce_writes_in_requested_language_and_notes_lack_instruction(monk
     assert all("ni redactes ningún mensaje de commit todavía" in _system(v) for v in views[:-1])
 
 
-def test_map_reduce_without_variable_asks_diff_language_in_final_write(monkeypatch, tmp_path):
+def test_map_reduce_with_diff_asks_diff_language_in_final_write(monkeypatch, tmp_path):
     """Mutante «quitar la rama» en el camino del map-reduce: dispara este assert."""
+    monkeypatch.setenv(VARIABLE, "diff")
     views = _request(monkeypatch, tmp_path, diff=_big_diff())
 
     assert len(views) > 2

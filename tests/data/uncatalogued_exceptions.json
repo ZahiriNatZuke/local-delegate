@@ -567,6 +567,12 @@
       "text": "[local-delegate: input truncated — ",
       "kind": "contract_prefix",
       "reason": "marcador de entrada truncada de REQ-010: valor de máquina del contrato, igual en los dos idiomas"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": " Responde en {}, aunque el contenido esté en otro idioma.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: la orden de idioma de REQ-028 que va detrás de `_guard`; entra en la huella de afinidad y en los corpus congelados (`PROMPT_BOUNDARIES`) y no es texto de interfaz"
     }
   ]
 }

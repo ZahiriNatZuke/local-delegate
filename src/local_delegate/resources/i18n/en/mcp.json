@@ -122,6 +122,7 @@
   "mcp.status.models_none": "(none)",
   "mcp.status.origin.local": "local (this machine)",
   "mcp.status.origin.remote": "REMOTE",
+  "mcp.status.output_language.line": "Model response language: {value} ({source})",
   "mcp.status.pace.line": "Reference pace: {parts}",
   "mcp.status.pace.model": "{model} {speed} ({samples} samples)",
   "mcp.status.pace.no_reference": "no reference",

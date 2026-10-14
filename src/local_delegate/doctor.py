@@ -57,6 +57,11 @@ def language_lines() -> list[str]:
     lines.extend(i18n.t("doctor.language.warning", detail=detail) for detail in report.warnings)
     if report.follow_system:
         lines.append(i18n.t("doctor.language.follow_system", path=report.path))
+    # REQ-028 (issue #260): el idioma de respuesta del modelo, con la misma regla que las tools.
+    value, source, warning = i18n.response_language_lines()
+    lines.append(i18n.t("doctor.language.response_line", value=value, source=source))
+    if warning:
+        lines.append(i18n.t("doctor.language.warning", detail=warning))
     return lines
 
 
