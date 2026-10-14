@@ -24,7 +24,7 @@ from pathlib import Path
 
 import pytest
 
-from local_delegate import config, deprecations, legacy_names
+from local_delegate import config, deprecation_notices, deprecations, legacy_names
 from local_delegate.deprecations import DeprecatedName
 from local_delegate.resources.hooks import hook_common
 
@@ -109,10 +109,10 @@ def test_unreleased_alias_never_expires():
 
 
 def test_warning_names_old_new_and_removal_version():
-    assert deprecations.warning_text(ALIAS) == (
+    assert deprecation_notices.warning_text(ALIAS) == (
         "LD_OLD_TEST_ALIAS está obsoleto: usa LD_TEST_ALIAS (se retira en la 0.38.0)"
     )
-    retired_text = deprecations.warning_text(RETIRED)
+    retired_text = deprecation_notices.warning_text(RETIRED)
     assert "LD_RETIRED_TEST_VAR" in retired_text and "0.30.0" in retired_text
 
 
@@ -275,3 +275,19 @@ def test_bump_plans_deprecations_only_when_there_is_something_to_stamp(tmp_path)
 
     target.write_text(TEST_DEPRECATIONS.replace('"LD_B", "UNRELEASED"', '"LD_B", "0.34.0"'))
     assert target not in bump.plan("0.35.0", tmp_path)
+
+
+def test_deprecations_imports_nothing_from_the_package():
+    """`config` importa `deprecations` e `i18n` importa `config`: si `deprecations` importara `i18n`
+    (aunque fuera dentro de una función) habría un ciclo, y CodeQL lo marca (`py/cyclic-import`,
+    PR #311). Por eso la redacción del aviso vive en `deprecation_notices`."""
+    import ast
+
+    tree = ast.parse(Path(deprecations.__file__).read_text(encoding="utf-8"))
+    relative = [
+        node.module or "."
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom)
+        and (node.level or "local_delegate" in (node.module or ""))
+    ]
+    assert relative == []

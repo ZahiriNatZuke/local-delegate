@@ -27,6 +27,12 @@
       "text": "Basic realm=\"local-delegate\", charset=\"UTF-8\"",
       "kind": "machine_name",
       "reason": "valor de la cabecera WWW-Authenticate (RFC 7617); el navegador no lo muestra traducido"
+    },
+    {
+      "file": "src/local_delegate/cli.py",
+      "text": "sí",
+      "kind": "machine_name",
+      "reason": "respuesta aceptada a la pregunta [s/N] de install (entrada que escribe la persona, en los dos idiomas); no es salida"
     }
   ]
 }

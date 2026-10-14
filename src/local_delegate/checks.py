@@ -1725,13 +1725,13 @@ def _probe_deprecated_names(ctx: Context) -> Result:
     encendida cada evento lleva `deprecated_names`, y aquí se mira la cola de los últimos 7 días.
     """
     from . import config as config_module
-    from . import deprecations
+    from . import deprecation_notices, deprecations
 
     warnings: list[str] = []
     seen: list[deprecations.DeprecatedName] = []
 
     def _note(where: str, item: deprecations.DeprecatedName) -> None:
-        warnings.append(f"{where}: {deprecations.warning_text(item)}")
+        warnings.append(f"{where}: {deprecation_notices.warning_text(item)}")
         if item not in seen:
             seen.append(item)
 

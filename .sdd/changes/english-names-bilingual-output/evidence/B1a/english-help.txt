@@ -1,0 +1,304 @@
+=== local-delegate  --help
+usage: local-delegate [-h] [--version]
+                      {benchmark,check-llamaswap,init-llamaswap,llamaswap,doctor,serve,recompute-cost,test-window,install,update,uninstall}
+                      ...
+
+Installs, diagnoses and serves local-delegate. With no subcommand, this binary starts the stdio
+MCP server, which is how Claude Code, Codex and opencode launch it. `check-llamaswap` and `init-
+llamaswap` need the [llamaswap] extra.
+
+positional arguments:
+  {benchmark,check-llamaswap,init-llamaswap,llamaswap,doctor,serve,recompute-cost,test-window,install,update,uninstall}
+    benchmark           Ejecuta el corpus v2 de tareas reales contra un backend canary y escribe
+                        JSONL.
+    check-llamaswap     Checks the VRAM (and optionally RAM) budget of the groups in a
+                        config.yaml.
+    init-llamaswap      Generates/updates the groups of a llama-swap config.yaml with a VRAM/RAM
+                        guardrail.
+    llamaswap           Residency and TTL of the llama-swap models (needs the [llamaswap] extra).
+    doctor              Diagnoses the scaffolding (hooks, skill, memory, MCP), the daemon and the
+                        backend.
+    serve               Serves Streamable HTTP MCP (/mcp) and the dashboard (/) as a singleton
+                        daemon.
+    recompute-cost      Reads the Claude Code transcripts and leaves in the log directory the
+                        attribution backfill, the N aggregates, the price check and the quota
+                        points.
+    test-window         Marks test windows: the usage log rows that fall inside do not count in
+                        the panel, in local_status or in the cost.
+    install             Installs hooks, skill, memory and the MCP entry in Claude Code / Codex /
+                        opencode.
+    update              Updates the pin, completes whatever the scaffolding is missing and leaves
+                        the daemon up.
+    uninstall           Undoes what `local-delegate install` installed (only its own).
+
+options:
+  -h, --help            show this help message and exit
+  --version             prints the installed version and exits
+=== local-delegate test-window --help
+usage: local-delegate test-window [-h] {start,stop,add,list} ...
+
+positional arguments:
+  {start,stop,add,list}
+    start               opens a window that starts now and prints its id (keep it)
+    stop                closes window ID (with no ID, the only open one; if there are several, it
+                        fails)
+    add                 adds a closed window (ISO 8601; no zone = UTC)
+    list                lists the windows and how many log rows fall in each one
+
+options:
+  -h, --help            show this help message and exit
+=== local-delegate test-window start --help
+usage: local-delegate test-window start [-h] [--label LABEL]
+
+options:
+  -h, --help     show this help message and exit
+  --label LABEL  free label (no paths or content)
+=== local-delegate test-window stop --help
+usage: local-delegate test-window stop [-h] [id]
+
+positional arguments:
+  id          id printed by `start`
+
+options:
+  -h, --help  show this help message and exit
+=== local-delegate test-window add --help
+usage: local-delegate test-window add [-h] [--label LABEL] start end
+
+positional arguments:
+  start          start, e.g. 2026-10-08T01:20:05.255Z
+  end            end, after the start
+
+options:
+  -h, --help     show this help message and exit
+  --label LABEL  free label (no paths or content)
+=== local-delegate test-window list --help
+usage: local-delegate test-window list [-h] [--json]
+
+options:
+  -h, --help  show this help message and exit
+  --json      JSON output
+=== local-delegate recompute-cost --help
+usage: local-delegate recompute-cost [-h] [--reset-calibration {five_hour,seven_day}]
+                                     [--claude-dir CLAUDE_DIR]
+
+options:
+  -h, --help            show this help message and exit
+  --reset-calibration {five_hour,seven_day}
+                        the quota points of that type older than today stop counting
+  --claude-dir CLAUDE_DIR
+                        Claude Code directory (default: ~/.claude); read only
+=== local-delegate install --help
+usage: local-delegate install [-h] [--clients {auto,claude,codex,opencode}]
+                              [--target {claude,codex,opencode,all}] [--home HOME] [--dry-run]
+                              [--python PYTHON] [--no-hooks] [--no-skill] [--no-memory] [--no-mcp]
+                              [--agents] [--no-client-cli] [--enable-read-hook]
+                              [--mcp-mode {stdio,http}] [--base-url BASE_URL] [--api-key-env]
+                              [--web-token-env | --no-web-token-env] [--pin-version PIN_VERSION]
+                              [--force-mcp-codex]
+
+Installs the whole integration in the user's HOME: advisory hooks, the local-delegation skill, a
+managed block in CLAUDE.md/AGENTS.md and the MCP server entry. It is idempotent (blocks with
+markers, .bak backups) and is undone with `local-delegate uninstall`.
+
+options:
+  -h, --help            show this help message and exit
+  --clients {auto,claude,codex,opencode}
+                        client to configure (repeatable; default: auto = the installed ones)
+  --target {claude,codex,opencode,all}
+                        legacy, same as --clients; `all` forces the three even if they are not
+                        installed
+  --home HOME           alternative HOME (for tests)
+  --dry-run             describes the changes without writing
+  --python PYTHON       interpreter that runs the hooks (default: python3 / python on Windows)
+  --no-hooks            does not install the advisory hooks
+  --no-skill            does not install the local-delegation skill
+  --no-memory           does not touch the global CLAUDE.md / AGENTS.md
+  --no-mcp              does not register the MCP server in the client config
+  --agents              updates the ~/.claude/agents that already declare local_* tools (opt-in)
+  --no-client-cli       does not use the `claude` binary; edits ~/.claude.json directly
+  --enable-read-hook    registers and TURNS ON the experimental PreToolUse/Read hook (off by
+                        default)
+  --mcp-mode {stdio,http}
+                        stdio (uvx, default) or http (shared daemon at /mcp)
+  --base-url BASE_URL   LOCAL_DELEGATE_BASE_URL of the MCP entry (e.g. the remote backend of
+                        another machine)
+  --api-key-env         forwards LOCAL_DELEGATE_API_KEY from the environment (never writes the
+                        credential)
+  --web-token-env       with --mcp-mode http, authenticates against the daemon by referencing
+                        LOCAL_DELEGATE_WEB_TOKEN from the environment (never writes the
+                        credential). Without this flag or --no-web-token-env, the entry keeps the
+                        header it already had
+  --no-web-token-env    removes the authorization header from the MCP entry even if it had one
+  --pin-version PIN_VERSION
+                        pins the package version in the MCP entry (e.g. 0.11.0)
+  --force-mcp-codex     replaces a hand-written Codex entry without asking (leaves a .bak)
+=== local-delegate update --help
+usage: local-delegate update [-h] [--dry-run] [--home HOME] [--version VERSION]
+                             [--restart-backend] [--no-restart]
+
+Checks the real state of the machine with the same checks as `doctor`, updates the version pin
+wherever there is one, completes the missing configuration and ends by leaving the daemon up: it
+restarts it if it was running and starts it if not. The inference backend is not touched unless
+asked with --restart-backend.
+
+options:
+  -h, --help         show this help message and exit
+  --dry-run          describes the changes without writing
+  --home HOME        alternative HOME (for tests)
+  --version VERSION  version to pin (default: the latest one published on PyPI)
+  --restart-backend  also restarts llama-swap (NOT touched by default: it unloads the models from
+                     VRAM)
+  --no-restart       does not touch the daemon; only repairs and reports
+=== local-delegate uninstall --help
+usage: local-delegate uninstall [-h] [--clients {auto,claude,codex,opencode}]
+                                [--target {claude,codex,opencode,all}] [--home HOME] [--dry-run]
+                                [--python PYTHON] [--no-hooks] [--no-skill] [--no-memory]
+                                [--no-mcp] [--agents] [--no-client-cli]
+
+options:
+  -h, --help            show this help message and exit
+  --clients {auto,claude,codex,opencode}
+                        client to configure (repeatable; default: auto = the installed ones)
+  --target {claude,codex,opencode,all}
+                        legacy, same as --clients; `all` forces the three even if they are not
+                        installed
+  --home HOME           alternative HOME (for tests)
+  --dry-run             describes the changes without writing
+  --python PYTHON       interpreter that runs the hooks (default: python3 / python on Windows)
+  --no-hooks            does not install the advisory hooks
+  --no-skill            does not install the local-delegation skill
+  --no-memory           does not touch the global CLAUDE.md / AGENTS.md
+  --no-mcp              does not register the MCP server in the client config
+  --agents              updates the ~/.claude/agents that already declare local_* tools (opt-in)
+  --no-client-cli       does not use the `claude` binary; edits ~/.claude.json directly
+=== local-delegate check-llamaswap --help
+usage: local-delegate check-llamaswap [-h] --config CONFIG --vram-gb VRAM_GB
+                                      [--margin-gb MARGIN_GB] [--ram-gb RAM_GB]
+                                      [--ram-margin-gb RAM_MARGIN_GB] [--allow-ungrouped]
+
+options:
+  -h, --help            show this help message and exit
+  --config CONFIG       path to the llama-swap config.yaml
+  --vram-gb VRAM_GB     total GPU VRAM in GiB
+  --margin-gb MARGIN_GB
+                        VRAM margin reserved for the system (default 1.5)
+  --ram-gb RAM_GB       if given, also checks the total SYSTEM RAM (GiB) — optional, off by
+                        default
+  --ram-margin-gb RAM_MARGIN_GB
+                        RAM margin reserved for the OS/other apps (default 2.0, only with --ram-
+                        gb)
+  --allow-ungrouped     allows models outside the groups (they are deliberately left out of the
+                        budget)
+=== local-delegate init-llamaswap --help
+usage: local-delegate init-llamaswap [-h] --config CONFIG [--out OUT] [--resident RESIDENT]
+                                     [--swap SWAP] [--add-model ID=PATH[:VRAM_GB]]
+                                     [--server-exe SERVER_EXE] [--ttl-resident TTL_RESIDENT]
+                                     [--ttl-swap TTL_SWAP] --vram-gb VRAM_GB
+                                     [--margin-gb MARGIN_GB] [--ram-gb RAM_GB]
+                                     [--ram-margin-gb RAM_MARGIN_GB] [--store-path STORE_PATH]
+                                     [--force] [--dry-run] [--allow-ungrouped]
+
+options:
+  -h, --help            show this help message and exit
+  --config CONFIG       existing config.yaml to extend (if it does not exist, an empty one is
+                        used)
+  --out OUT             output path (default: the same --config)
+  --resident RESIDENT   OPT-IN residency: model ids (comma-separated) that stay loaded forever in
+                        a persistent group and hold VRAM; by default there is no resident
+  --swap SWAP           model ids (comma-separated) for the swap group (one at a time)
+  --add-model ID=PATH[:VRAM_GB]
+                        defines a minimal model entry if ID is not in --config yet (repeatable)
+  --server-exe SERVER_EXE
+                        executable used in the cmd generated for --add-model (default: llama-
+                        server)
+  --ttl-resident TTL_RESIDENT
+                        ttl (seconds) for the --resident models (default 0: with `persistent` and
+                        a TTL above 0 the model is unloaded anyway and there is no real residency)
+  --ttl-swap TTL_SWAP   ttl (seconds) for the --swap models
+  --vram-gb VRAM_GB     total GPU VRAM in GiB
+  --margin-gb MARGIN_GB
+                        VRAM margin reserved for the system (default 1.5)
+  --ram-gb RAM_GB       if given, also checks the total SYSTEM RAM (GiB) — optional, off by
+                        default
+  --ram-margin-gb RAM_MARGIN_GB
+                        RAM margin reserved for the OS/other apps (default 2.0, only with --ram-
+                        gb)
+  --store-path STORE_PATH
+                        path of the llama-swap SQLite metrics database (#898); keeps stats across
+                        restarts
+  --force               overwrites --out if it exists (leaves a <out>.<YYYYMMDD-HHMMSS>.bak copy)
+  --dry-run             prints the resulting YAML and writes nothing
+  --allow-ungrouped     allows keeping models outside the generated groups
+=== local-delegate llamaswap --help
+usage: local-delegate llamaswap [-h] {residency} ...
+
+positional arguments:
+  {residency}
+    residency  Shows or changes which model stays loaded and the TTLs.
+
+options:
+  -h, --help   show this help message and exit
+=== local-delegate llamaswap residency --help
+usage: local-delegate llamaswap residency [-h] [--config CONFIG]
+                                          [--none | --pin MODEL | --restore BAK]
+                                          [--ttl MODEL=SECONDS] [--group GROUP]
+                                          [--vram-gb VRAM_GB] [--reserve-gb RESERVE_GB]
+                                          [--vram-model ID=GiB] [--dry-run] [--now]
+
+With no options, shows the residency of the llama-swap config: each model with its group, the
+effective TTL and the verdict ("no resident (recommended)" or "resident: X"). Never prints keys or
+`cmd`.
+
+Effective TTL: in llama-swap (load.go) a missing `ttl` or -1 means `globalTTL`, which defaults to 0.
+So WITHOUT `globalTTL` OR `ttl`, EVERY MODEL HAS AN EFFECTIVE TTL OF 0: none is ever unloaded by
+TTL and all of them show up as resident. To leave them with no resident, `--none` then asks for
+`--ttl` for all of them.
+
+The config comes from --config; otherwise from LLAMASWAP_CONFIG; otherwise from the one the daemon
+uses. If none of those answers, "unknown" and no file is opened.
+
+Writing makes llama-swap (with -watch-config) reload in about 2 s, UNLOAD EVERY MODEL and CUT THE
+REQUESTS IN PROGRESS (from any client). That is why nothing is written while local-delegate
+delegations are in progress, requests are in flight in llama-swap or models are loaded, nor when
+that cannot be known (no daemon and no llama-swap credential in the shell): --now writes anyway.
+
+Before writing, it leaves a <config>.<YYYYMMDD-HHMMSS>.bak copy and replaces the file atomically.
+Afterwards it says what llama-swap did: reloaded; rejected (and the copy is restored, so the file
+matches what is running); not watching the file (it will apply on the next start); or down.
+
+options:
+  -h, --help            show this help message and exit
+  --config CONFIG       llama-swap config.yaml
+  --none                leaves the config with no resident: moves the persistent groups to the
+                        swap group and gives --ttl to the models with an effective TTL of 0
+  --pin MODEL           OPT-IN residency: the model moves to a persistent group (swap and
+                        exclusive false) with ttl 0 and holds VRAM permanently; refused if it does
+                        not fit
+  --restore BAK         goes back to a .bak copy, byte for byte
+  --ttl MODEL=SECONDS   changes the TTL (integer >= 1; 0 is --pin; -1 only with globalTTL > 0);
+                        repeatable
+  --group GROUP         target group for --none
+  --vram-gb VRAM_GB     GPU VRAM in GiB (--pin)
+  --reserve-gb RESERVE_GB
+                        VRAM left for the rest of the PC (default 2)
+  --vram-model ID=GiB   measured VRAM of a model (repeatable); without it, --pin is refused
+  --dry-run             prints only the lines that would change
+  --now                 writes even if it cannot be known whether delegations are in progress
+=== local-delegate doctor --help
+usage: local-delegate doctor [-h] [--config CONFIG] [--online] [--home HOME]
+
+options:
+  -h, --help       show this help message and exit
+  --config CONFIG  llama-swap config.yaml (to locate llama-server; default: LLAMASWAP_CONFIG)
+  --online         asks GitHub for the latest published release of each component
+  --home HOME      alternative HOME to diagnose (default: the user's); read only
+=== local-delegate serve --help
+usage: local-delegate serve [-h] [--host HOST] [--port PORT]
+                            [--log-level {critical,error,warning,info,debug}]
+
+options:
+  -h, --help            show this help message and exit
+  --host HOST           listening host (default: web host / 127.0.0.1)
+  --port PORT           single MCP+web port (default: 9393)
+  --log-level {critical,error,warning,info,debug}
+                        uvicorn log level (default: warning)

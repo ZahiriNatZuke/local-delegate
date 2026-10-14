@@ -1,0 +1,16 @@
+fix(ci): sin la lista de exclusión de versiones de Python, que nadie usaba (frente B, ola B1a)
+
+Segundo arreglo del PR #311, sobre 0bc3e17. CodeQL marcó
+PYTHON_WITHOUT_WHEELS como global sin usar (py/unused-global-variable):
+vacía, solo la leían los tests.
+
+- scripts/ci_gate.py y ci.yml: fuera la constante y sus comentarios;
+  todas las celdas de cli-python-matrix bloquean.
+- tests/test_ci_gate.py: fuera el helper y los dos tests del mecanismo;
+  siguen el de las celdas esperadas y el de los clasificadores, ahora
+  contra la matriz entera.
+- Si una versión futura sale sin wheels, la exclusión vuelve junto con su
+  uso real en ci_gate.py (plan D8).
+
+Suite: 2794 passed, 2 skipped (xdist); control positivo: sin la celda
+3.13 en EXPECTED_JOBS falla test_the_expected_jobs_are_exactly_those_of_ci_yml.

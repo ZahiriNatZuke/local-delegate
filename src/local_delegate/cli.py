@@ -19,12 +19,15 @@ del sistema (verificado en vivo: 8.37 GiB de archivo -> ~7.46 GB de RAM resident
 from __future__ import annotations
 
 import argparse
+import contextlib
 import shutil
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
-from . import benchmark, doctor
+from . import benchmark, doctor, i18n
 from . import llamaswap_config as lc
+from .i18n import t
 from .version import get_version
 
 # `agents` va al final y **no** entra por defecto: su flag es `--agents` (store_true),
@@ -64,22 +67,22 @@ def _resolve_clients(args: argparse.Namespace, home: Path) -> tuple[set[str], st
     clients = getattr(args, "clients", None)
     target = getattr(args, "target", None)
     if clients and target:
-        raise ValueError("--clients y --target no se combinan: usa uno de los dos")
+        raise ValueError(t("cli.install.clients_and_target"))
 
     if target:  # semántica histórica intacta: `all` fuerza los dos, existan o no
         chosen = set(_ALL_TARGETS) if "all" in target else set(target)
-        return chosen, f"por --target: {', '.join(sorted(chosen))}"
+        return chosen, t("cli.install.clients_by_target", clients=", ".join(sorted(chosen)))
 
     explicit = {c for c in (clients or []) if c != "auto"}
     if explicit:
         # Pedir un cliente por su nombre es una orden, no una sugerencia: se configura aunque no
         # esté instalado (caso legítimo, p. ej. preparar el HOME antes de instalar el cliente).
-        return explicit, f"por --clients: {', '.join(sorted(explicit))}"
+        return explicit, t("cli.install.clients_by_clients", clients=", ".join(sorted(explicit)))
 
     present = inst.present_targets(home)
-    return present, "deteccion automatica (--clients auto): " + (
-        ", ".join(sorted(present)) if present else "no se encontró ninguno"
-    )
+    if present:
+        return present, t("cli.install.clients_auto", clients=", ".join(sorted(present)))
+    return present, t("cli.install.clients_auto_none")
 
 
 def _install_options(args: argparse.Namespace, targets: set[str], skip_codex_mcp: bool = False):
@@ -133,27 +136,27 @@ def _codex_mcp_set_by_hand(results) -> str:
 def _decide_on_foreign_codex(detail: str, args: argparse.Namespace) -> bool:
     """True si hay que SALTAR la escritura de la entrada MCP de Codex."""
     if getattr(args, "force_mcp_codex", False):
-        print(f"Aviso: {detail}")
-        print("       --force-mcp-codex: se reemplaza (queda una copia .bak al lado).")
+        print(t("cli.install.foreign_codex.notice", detail=detail))
+        print(t("cli.install.foreign_codex.forced"))
         return False
     if args.dry_run:
-        print(f"Aviso: {detail}")
-        print("       En una ejecución real se pediría confirmación antes de reemplazarla.")
+        print(t("cli.install.foreign_codex.notice", detail=detail))
+        print(t("cli.install.foreign_codex.dry_run"))
         return False
     if not _has_terminal():
-        print(f"Aviso: {detail}")
-        print("       Sin terminal para preguntar: se conserva tal cual y no se toca.")
-        print("       Para reemplazarla sin preguntar: --force-mcp-codex")
+        print(t("cli.install.foreign_codex.notice", detail=detail))
+        print(t("cli.install.foreign_codex.no_terminal"))
+        print(t("cli.install.foreign_codex.how_to_force"))
         return True
-    print(f"Aviso: {detail}")
+    print(t("cli.install.foreign_codex.notice", detail=detail))
     try:
-        response = input("       ¿Reemplazarla por la entrada gestionada? [s/N]: ").strip().lower()
+        response = input(t("cli.install.foreign_codex.question")).strip().lower()
     except (EOFError, KeyboardInterrupt):
         print()
         response = ""
     if response in ("s", "si", "sí", "y", "yes"):
         return False
-    print("       Se conserva la entrada del usuario; el resto sí se instala.")
+    print(t("cli.install.foreign_codex.kept"))
     return True
 
 
@@ -173,10 +176,10 @@ def _scaffold_report(home: Path, dry_run: bool) -> None:
     )
     print()
     if dry_run:
-        print("Estado ACTUAL del andamiaje (no se escribió nada):")
+        print(t("cli.install.report.current_state"))
     else:
-        print("Estado del andamiaje después de escribir:")
-    print("Estados: [ OK ] a punto · [WARN] revisar · [FALT] falta · [ -- ] no se pudo comprobar")
+        print(t("cli.install.report.state_after"))
+    print(t("cli.install.report.status_legend"))
     for group in _SCAFFOLD_GROUPS:
         print()
         print(doctor._GROUP_HEADINGS[group])
@@ -191,20 +194,20 @@ def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
     try:
         targets, reason = _resolve_clients(args, home)
     except ValueError as exc:
-        print(f"error: {exc}", file=sys.stderr)
+        print(t("cli.error", detail=exc), file=sys.stderr)
         return 2
 
-    verb = "Desinstalando" if uninstall else "Instalando"
-    print(f"{verb} local-delegate en {home}")
-    print(f"clientes: {reason}")
+    print(t("cli.install.uninstalling" if uninstall else "cli.install.installing", home=home))
+    print(t("cli.install.clients", reason=reason))
 
     if not targets:
         # Con `auto` y ningún cliente, no hay nada que hacer y casi siempre significa un --home
         # equivocado. No es un error: no se escribe nada, se dice qué se buscó y se sigue.
         print()
-        print("No se encontró ningún cliente: se buscaron " + " y ".join(_CLIENT_DIR.values()))
-        print(f"bajo {home}. No se escribió nada.")
-        print("Si querías configurarlo igual:  --clients claude   (o codex, u opencode)")
+        joiner = f" {t('cli.and')} "
+        print(t("cli.install.no_client.searched", dirs=joiner.join(_CLIENT_DIR.values())))
+        print(t("cli.install.no_client.nothing_written", home=home))
+        print(t("cli.install.no_client.hint"))
         _scaffold_report(home, dry_run=True)
         return 0
 
@@ -220,19 +223,19 @@ def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
 
     opts = _install_options(args, targets, skip_codex_mcp=skip_codex_mcp)
     if not opts.components:
-        print("error: no queda ningún componente que instalar (todo desactivado)", file=sys.stderr)
+        print(t("cli.install.no_component"), file=sys.stderr)
         return 2
     actions = inst.plan_uninstall(opts) if uninstall else inst.plan_install(opts)
-    print(f"componentes: {', '.join(sorted(opts.components))}")
+    print(t("cli.install.components", components=", ".join(sorted(opts.components))))
     print()
     failures = inst.apply(actions, dry_run=args.dry_run)
     print()
     if args.dry_run:
-        print("--dry-run: no se escribió nada.")
+        print(t("cli.install.dry_run"))
         _scaffold_report(opts.home, dry_run=True)
         return 0
     if not uninstall and not failures:
-        print("Listo. Reinicia el cliente (Claude Code / Codex / opencode) para tomar los cambios.")
+        print(t("cli.install.done"))
         _warn_if_cli_not_on_path()
         _leave_daemon_up(opts)
     # El reporte va ANTES del código de salida, y también cuando algo falló: si una acción no
@@ -242,7 +245,7 @@ def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
     # cualquier script de instalación.
     _scaffold_report(opts.home, dry_run=False)
     if failures:
-        print(f"{failures} acción(es) fallaron.", file=sys.stderr)
+        print(t("cli.install.failures", n=failures), file=sys.stderr)
         return 1
     return 0
 
@@ -260,7 +263,7 @@ def _leave_daemon_up(opts) -> None:
         return
     update_opts = upd.Options(home=opts.home)
     if update_opts.simulated_home:
-        print("HOME simulado: no se toca el daemon de la máquina.")
+        print(t("cli.install.simulated_home"))
         return
     print()
     upd.restart_daemon(update_opts)
@@ -279,9 +282,9 @@ def _warn_if_cli_not_on_path() -> None:
     if shutil.which("local-delegate"):
         return
     print()
-    print("Aviso: el comando `local-delegate` no quedó en el PATH.")
-    print("       Pasa cuando se instala con `uvx`, que borra su entorno al terminar.")
-    print(f"       Para tenerlo siempre disponible:  {checks.CLI_HINT}")
+    print(t("cli.install.not_on_path.title"))
+    print(t("cli.install.not_on_path.why"))
+    print(t("cli.install.not_on_path.hint", hint=checks.CLI_HINT))
 
 
 def _update_options(args: argparse.Namespace):
@@ -308,11 +311,11 @@ def cmd_install(args: argparse.Namespace) -> int:
 
 def _warn_deprecated(old: str) -> None:
     """Aviso en `stderr` por un nombre viejo del CLI: nombra el nuevo y la versión de retirada."""
-    from . import deprecations
+    from . import deprecation_notices, deprecations
 
     entry = deprecations.find(old)
     if entry is not None:
-        print(f"aviso: {deprecations.warning_text(entry)}", file=sys.stderr)
+        print(t("cli.warning", detail=deprecation_notices.warning_text(entry)), file=sys.stderr)
 
 
 def _resolve_reset_calibration(args: argparse.Namespace) -> str | None:
@@ -327,9 +330,7 @@ def _resolve_reset_calibration(args: argparse.Namespace) -> str | None:
         return new
     _warn_deprecated("--reiniciar-calibracion")
     if new is not None and new != old:
-        raise ValueError(
-            "--reset-calibration y --reiniciar-calibracion no coinciden: usa solo --reset-calibration"
-        )
+        raise ValueError(t("cli.recompute_cost.reset_mismatch"))
     return old
 
 
@@ -340,13 +341,13 @@ def cmd_recompute_cost(args: argparse.Namespace) -> int:
     try:
         reset = _resolve_reset_calibration(args)
     except ValueError as exc:
-        print(f"error: {exc}", file=sys.stderr)
+        print(t("cli.error", detail=exc), file=sys.stderr)
         return 2
     claude_dir = Path(args.claude_dir) if args.claude_dir else Path.home() / ".claude"
     try:
         summary = recompute.run(claude_dir, config.LOG_DIR, reset=reset)
     except OSError as e:
-        print(f"recompute-cost: no se pudo escribir en el directorio de logs ({e.strerror}).")
+        print(t("cli.recompute_cost.cannot_write", reason=e.strerror))
         return 1
     print(recompute.summary_text(summary))
     return 0
@@ -402,14 +403,21 @@ def cmd_test_window(args: argparse.Namespace) -> int:
             return 0
         if action == "stop":
             w = tw.stop(log_dir, args.id)
-            print(f"{w.id} cerrada: {tw.format_instant(w.start)} a {tw.format_instant(w.end)}")
+            print(
+                t(
+                    "cli.test_window.stopped",
+                    id=w.id,
+                    start=tw.format_instant(w.start),
+                    end=tw.format_instant(w.end),
+                )
+            )
             return 0
         if action == "add":
             w, created = tw.add(log_dir, args.start, args.end, args.label or "")
             if created:
-                print(f"{w.id} añadida")
+                print(t("cli.test_window.added", id=w.id))
             else:
-                print(f"ya existía: {w.id} (no se añade otra)")
+                print(t("cli.test_window.already_there", id=w.id))
             return 0
     except tw.TestWindowError as e:
         print(f"test-window: {e}", file=sys.stderr)
@@ -427,44 +435,44 @@ def cmd_test_window(args: argparse.Namespace) -> int:
         print(json.dumps(data, ensure_ascii=False, indent=2))
         return 0
     if windows.error:
-        print(f"{tw.path_for(log_dir)} es ilegible: {windows.error}")
+        print(t("cli.test_window.unreadable", path=tw.path_for(log_dir), error=windows.error))
         return 0
     if not windows.windows:
-        print("sin ventanas de prueba")
+        print(t("cli.test_window.none"))
     for w in windows.windows:
-        end = tw.format_instant(w.end) if w.end is not None else "abierta"
+        end = tw.format_instant(w.end) if w.end is not None else t("cli.test_window.open")
         label = f"  {w.label}" if w.label else ""
-        print(f"{w.id}  {tw.format_instant(w.start)}  {end}  {rows.get(w.id, 0)} filas{label}")
+        print(
+            t(
+                "cli.test_window.row",
+                id=w.id,
+                start=tw.format_instant(w.start),
+                end=end,
+                rows=i18n.format_number(rows.get(w.id, 0)),
+                label=label,
+            )
+        )
     if windows.ignored:
-        print(f"entradas ignoradas por ilegibles: {windows.ignored}")
+        print(t("cli.test_window.ignored", n=windows.ignored))
     return 0
 
 
 def _add_test_window_parser(sub) -> None:
     tw_parser = sub.add_parser(
         "test-window",
-        help=(
-            "Marca ventanas de prueba: las filas del log de uso que caen dentro no cuentan en el "
-            "panel, en local_status ni en el coste."
-        ),
+        help=t("cli.help.test_window"),
     )
     twsub = tw_parser.add_subparsers(dest="test_window_command", required=True)
-    start = twsub.add_parser(
-        "start", help="abre una ventana que empieza ahora e imprime su id (guárdalo)"
-    )
-    start.add_argument("--label", default="", help="etiqueta libre (sin rutas ni contenido)")
-    stop = twsub.add_parser(
-        "stop", help="cierra la ventana ID (sin ID, la única abierta; si hay varias, falla)"
-    )
-    stop.add_argument("id", nargs="?", default=None, help="id que imprimió `start`")
-    add = twsub.add_parser("add", help="añade una ventana cerrada (ISO 8601; sin zona = UTC)")
-    add.add_argument("start", help="inicio, p. ej. 2026-10-08T01:20:05.255Z")
-    add.add_argument("end", help="fin, posterior al inicio")
-    add.add_argument("--label", default="", help="etiqueta libre (sin rutas ni contenido)")
-    lst = twsub.add_parser(
-        "list", help="lista las ventanas y cuántas filas del log caen en cada una"
-    )
-    lst.add_argument("--json", action="store_true", help="salida en JSON")
+    start = twsub.add_parser("start", help=t("cli.help.test_window.start"))
+    start.add_argument("--label", default="", help=t("cli.help.test_window.label"))
+    stop = twsub.add_parser("stop", help=t("cli.help.test_window.stop"))
+    stop.add_argument("id", nargs="?", default=None, help=t("cli.help.test_window.stop.id"))
+    add = twsub.add_parser("add", help=t("cli.help.test_window.add"))
+    add.add_argument("start", help=t("cli.help.test_window.add.start"))
+    add.add_argument("end", help=t("cli.help.test_window.add.end"))
+    add.add_argument("--label", default="", help=t("cli.help.test_window.label"))
+    lst = twsub.add_parser("list", help=t("cli.help.test_window.list"))
+    lst.add_argument("--json", action="store_true", help=t("cli.help.json"))
     tw_parser.set_defaults(func=cmd_test_window)
 
 
@@ -483,20 +491,41 @@ def _print_breakdown(
     budget = budget_gb - margin_gb
     print(f"--- {title} ---")
     print(
-        f"Presupuesto: {budget_gb:.2f} GiB - margen {margin_gb:.2f} GiB = {budget:.2f} GiB disponibles"
+        t(
+            "cli.budget.available",
+            budget=i18n.format_number(budget_gb, 2),
+            margin=i18n.format_number(margin_gb, 2),
+            available=i18n.format_number(budget, 2),
+        )
     )
     print()
     for gc in breakdown:
-        mode = "swap (1 a la vez)" if gc.swap else "todos juntos"
-        print(f"grupo '{gc.group}' [{mode}] -> {gc.contribution_gb:.2f} GiB")
+        mode = t("cli.budget.mode.swap" if gc.swap else "cli.budget.mode.together")
+        print(
+            t(
+                "cli.budget.group",
+                group=gc.group,
+                mode=mode,
+                gb=i18n.format_number(gc.contribution_gb, 2),
+            )
+        )
         for m in gc.members:
             est = estimates.get(m)
             if est is None or est.error:
-                print(f"    {m}: ERROR ({est.error if est else 'sin estimación'})")
+                error = est.error if est else t("cli.budget.no_estimate")
+                print(t("cli.budget.member_error", model=m, error=error))
             else:
-                print(f"    {m}: {est.gb:.2f} GiB [{est.method}] — {est.detail}")
+                print(
+                    t(
+                        "cli.budget.member",
+                        model=m,
+                        gb=i18n.format_number(est.gb, 2),
+                        method=est.method,
+                        detail=est.detail,
+                    )
+                )
     print()
-    print(f"Total peor caso ({title}): {total_gb:.2f} GiB")
+    print(t("cli.budget.worst_case", title=title, gb=i18n.format_number(total_gb, 2)))
 
 
 def _estimate_all(
@@ -511,7 +540,7 @@ def _estimate_all(
         entry = models.get(mid)
         if entry is None:
             estimates[mid] = lc.ResourceEstimate(
-                mid, 0.0, "error", "", error=f"modelo '{mid}' no está en 'models:'"
+                mid, 0.0, "error", "", error=t("cli.budget.model_not_in_models", model=mid)
             )
             continue
         estimates[mid] = estimator(mid, entry, override_gb=overrides.get(mid))
@@ -531,17 +560,10 @@ def _reject_ungrouped(groups: dict, models: dict, allow: bool) -> bool:
     ungrouped = _ungrouped_models(groups, models)
     if not ungrouped:
         return False
-    level = "aviso" if allow else "error"
-    print(
-        f"{level}: modelo(s) fuera de todos los groups: {', '.join(ungrouped)}",
-        file=sys.stderr,
-    )
+    detail = t("cli.budget.ungrouped", models=", ".join(ungrouped))
+    print(t("cli.warning" if allow else "cli.error", detail=detail), file=sys.stderr)
     if not allow:
-        print(
-            "el presupuesto quedaría incompleto; agrúpalos o usa --allow-ungrouped "
-            "si es deliberado",
-            file=sys.stderr,
-        )
+        print(t("cli.budget.ungrouped_hint"), file=sys.stderr)
     return not allow
 
 
@@ -565,14 +587,24 @@ def _check_budget(
     errored = sorted(m for m, e in estimates.items() if e.error)
     if errored:
         print()
-        print(f"error: no se pudo estimar {label} de: {', '.join(errored)}", file=sys.stderr)
+        print(
+            t("cli.budget.cannot_estimate", label=label, models=", ".join(errored)),
+            file=sys.stderr,
+        )
         return False, errored
     budget = budget_gb - margin_gb
     print()
     if total_gb > budget:
-        print(f"{label} NO CABE: {total_gb:.2f} GiB > {budget:.2f} GiB disponibles")
+        print(
+            t(
+                "cli.budget.does_not_fit",
+                label=label,
+                total=i18n.format_number(total_gb, 2),
+                available=i18n.format_number(budget, 2),
+            )
+        )
         return False, []
-    print(f"{label} OK: cabe con {budget - total_gb:.2f} GiB de margen extra")
+    print(t("cli.budget.fits", label=label, extra=i18n.format_number(budget - total_gb, 2)))
     return True, []
 
 
@@ -581,12 +613,12 @@ def cmd_check_llamaswap(args: argparse.Namespace) -> int:
     try:
         data = lc.load_config(config_path)
     except RuntimeError as e:
-        print(f"error: {e}", file=sys.stderr)
+        print(t("cli.error", detail=e), file=sys.stderr)
         return 2
 
     groups = data.get("groups")
     if not groups:
-        print(f"error: no hay 'groups:' en {config_path}, nada que validar", file=sys.stderr)
+        print(t("cli.check_llamaswap.no_groups", path=config_path), file=sys.stderr)
         return 2
 
     models = data.get("models", {})
@@ -612,9 +644,7 @@ def cmd_check_llamaswap(args: argparse.Namespace) -> int:
 
 def _parse_add_model(spec: str) -> tuple[str, str, float | None]:
     if "=" not in spec:
-        raise argparse.ArgumentTypeError(
-            f"formato inválido para --add-model: {spec!r} (esperado ID=RUTA[:VRAM_GB])"
-        )
+        raise argparse.ArgumentTypeError(t("cli.init_llamaswap.bad_add_model", spec=repr(spec)))
     model_id, rest = spec.split("=", 1)
     if ":" in rest:
         path_part, vram_part = rest.rsplit(":", 1)
@@ -629,12 +659,12 @@ def cmd_init_llamaswap(args: argparse.Namespace) -> int:
     resident = [m.strip() for m in args.resident.split(",") if m.strip()]
     swap = [m.strip() for m in args.swap.split(",") if m.strip()]
     if not resident and not swap:
-        print("error: hace falta al menos --resident o --swap", file=sys.stderr)
+        print(t("cli.init_llamaswap.needs_resident_or_swap"), file=sys.stderr)
         return 2
     overlap = set(resident) & set(swap)
     if overlap:
         print(
-            f"error: modelo(s) en --resident Y --swap a la vez: {', '.join(sorted(overlap))}",
+            t("cli.init_llamaswap.overlap", models=", ".join(sorted(overlap))),
             file=sys.stderr,
         )
         return 2
@@ -644,7 +674,7 @@ def cmd_init_llamaswap(args: argparse.Namespace) -> int:
     try:
         data = lc.load_config(config_path)
     except RuntimeError as e:
-        print(f"error: {e}", file=sys.stderr)
+        print(t("cli.error", detail=e), file=sys.stderr)
         return 2
     models = data.setdefault("models", {})
 
@@ -653,7 +683,7 @@ def cmd_init_llamaswap(args: argparse.Namespace) -> int:
         model_id, gguf_path, vram = _parse_add_model(spec)
         if model_id in models:
             print(
-                f"error: --add-model '{model_id}' ya existe en 'models:' de {config_path}",
+                t("cli.init_llamaswap.model_exists", model=model_id, path=config_path),
                 file=sys.stderr,
             )
             return 2
@@ -665,9 +695,7 @@ def cmd_init_llamaswap(args: argparse.Namespace) -> int:
 
     missing = sorted(m for m in resident + swap if m not in models)
     if missing:
-        print(
-            f"error: modelo(s) no encontrados en 'models:': {', '.join(missing)}", file=sys.stderr
-        )
+        print(t("cli.init_llamaswap.missing_models", models=", ".join(missing)), file=sys.stderr)
         return 2
 
     for m in resident:
@@ -686,7 +714,7 @@ def cmd_init_llamaswap(args: argparse.Namespace) -> int:
     if swap:
         groups["swap"] = {"swap": True, "exclusive": False, "members": swap}
     if _reject_ungrouped(groups, models, args.allow_ungrouped):
-        print("(nada se escribió)", file=sys.stderr)
+        print(t("cli.init_llamaswap.nothing_written"), file=sys.stderr)
         return 2
     data["groups"] = groups
 
@@ -699,7 +727,7 @@ def cmd_init_llamaswap(args: argparse.Namespace) -> int:
         "VRAM", groups, models, overrides, lc.estimate_model_vram, args.vram_gb, args.margin_gb
     )
     if vram_errors:
-        print("(nada se escribió)", file=sys.stderr)
+        print(t("cli.init_llamaswap.nothing_written"), file=sys.stderr)
         return 2
 
     ram_ok = True
@@ -709,17 +737,17 @@ def cmd_init_llamaswap(args: argparse.Namespace) -> int:
             "RAM", groups, models, overrides, lc.estimate_model_ram, args.ram_gb, args.ram_margin_gb
         )
         if ram_errors:
-            print("(nada se escribió)", file=sys.stderr)
+            print(t("cli.init_llamaswap.nothing_written"), file=sys.stderr)
             return 2
 
     if not (vram_ok and ram_ok):
         print()
-        print("no cabe — no se escribió nada")
+        print(t("cli.init_llamaswap.does_not_fit"))
         return 1
 
     if args.dry_run:
         print()
-        print("--dry-run: no se escribió nada. YAML resultante:")
+        print(t("cli.init_llamaswap.dry_run"))
         print()
         print(lc.dump_config_str(data))
         return 0
@@ -727,7 +755,7 @@ def cmd_init_llamaswap(args: argparse.Namespace) -> int:
     if out_path.exists() and not args.force:
         print()
         print(
-            f"error: {out_path} ya existe — usa --force para sobreescribir (se guarda un .bak)",
+            t("cli.init_llamaswap.out_exists", path=out_path),
             file=sys.stderr,
         )
         return 2
@@ -740,7 +768,7 @@ def cmd_init_llamaswap(args: argparse.Namespace) -> int:
         print(f"backup: {backup}")
 
     lc.dump_config(data, out_path)
-    print(f"escrito: {out_path}")
+    print(t("cli.written", path=out_path))
     return 0
 
 
@@ -750,29 +778,6 @@ def cmd_init_llamaswap(args: argparse.Namespace) -> int:
 # de cualquier cliente, modelos en `/running`): por el daemon, que tiene la key; si no responde,
 # directo con la key del shell; si tampoco, «no se sabe». Con `--now` se escribe igual. La vigía de
 # la recarga se abre ANTES de escribir y dice cuál de las cuatro salidas hubo.
-
-_RESIDENCY_HELP = """\
-Sin opciones, muestra la residencia de la config de llama-swap: cada modelo con su grupo, el TTL
-efectivo y el veredicto («sin residente (recomendado)» o «residente: X»). No imprime claves ni
-`cmd`.
-
-TTL efectivo: en llama-swap (load.go) un `ttl` ausente o -1 vale `globalTTL`, que por defecto es 0.
-Así que SIN `globalTTL` NI `ttl` TODOS LOS MODELOS TIENEN TTL EFECTIVO 0: no se descargan nunca por
-TTL y salen como residentes. Para dejarlos sin residente, `--none` pide entonces `--ttl` para
-todos.
-
-La config sale de --config; si no, de LLAMASWAP_CONFIG; si no, de la que usa el daemon. Si nada de
-eso responde, «no se sabe» y no se abre ningún fichero.
-
-Escribir hace que llama-swap (con -watch-config) recargue en unos 2 s, DESCARGUE TODOS LOS MODELOS
-y CORTE LAS PETICIONES EN CURSO (de cualquier cliente). Por eso no se escribe si hay delegaciones
-de local-delegate en curso, peticiones en vuelo en llama-swap o modelos cargados, ni si no se puede
-saber (sin daemon y sin la credencial de llama-swap en el shell): --now escribe igual.
-
-Antes deja una copia <config>.<AAAAMMDD-HHMMSS>.bak y reemplaza el fichero de forma atómica.
-Después dice qué hizo llama-swap: recargó; rechazó (y se restaura la copia, para que el fichero
-coincida con lo que corre); no vigila el fichero (se aplicará en el próximo arranque); o caído.
-"""
 
 
 def _daemon_target() -> tuple[str, int, dict[str, str]]:
@@ -828,7 +833,9 @@ def _pairs(values: list[str], option: str, kind) -> dict[str, float]:
                 raise ValueError
             pair_items[model.strip()] = kind(figure.strip().replace(",", "."))
         except ValueError:
-            raise ValueError(f"{option} {value!r}: el formato es MODEL=VALUE") from None
+            raise ValueError(
+                t("cli.residency.bad_pair", option=option, value=repr(value))
+            ) from None
     return pair_items
 
 
@@ -851,15 +858,15 @@ def _daemon_status():
             timeout=llamaswap_api.CLI_TO_DAEMON,
         )
     except httpx2.TimeoutException:
-        return None, "el daemon no contestó a tiempo"
+        return None, t("cli.daemon.timeout")
     except httpx2.HTTPError:
-        return None, "el daemon no responde"
+        return None, t("cli.daemon.no_answer")
     if response.status_code != 200:
-        return None, f"el daemon respondió {response.status_code}"
+        return None, t("cli.daemon.status_code", code=response.status_code)
     try:
         return llamaswap_api.Status.from_json(response.json()), ""
     except (ValueError, llamaswap_api.QueryError):
-        return None, "el daemon devolvió un estado que no se entiende"
+        return None, t("cli.daemon.bad_status")
 
 
 def _llamaswap_status(daemon_answer=None):
@@ -871,12 +878,12 @@ def _llamaswap_status(daemon_answer=None):
     if status is not None:
         return "daemon", status, ""
     if not config.API_KEY:
-        return "", None, f"{why}, y este shell no tiene la credencial de llama-swap"
+        return "", None, t("cli.residency.no_credential", why=why)
     status = llamaswap_api.query_status(
         llamaswap_api.local_backend(), own_delegations=len(server.inflight_snapshot())
     )
     if status.llamaswap == llamaswap_api.STATE_UNKNOWN:
-        return "", None, f"{why}, y llama-swap no lo dice: {status.detail}"
+        return "", None, t("cli.residency.llamaswap_does_not_say", why=why, detail=status.detail)
     return "direct", status, ""
 
 
@@ -904,7 +911,7 @@ def _daemon_watch(watch_id: str):
         if outcome in llamaswap_api.OUTCOME_TEXT:
             return outcome, str(data.get("line") or "")
         time.sleep(llamaswap_api.WATCH_POLL_S)
-    return llamaswap_api.UNRESOLVED, "el daemon no dio la salida de la vigía a tiempo"
+    return llamaswap_api.UNRESOLVED, t("cli.watch.late")
 
 
 def _open_watch(origin: str, why: str):
@@ -927,11 +934,15 @@ def _open_watch(origin: str, why: str):
             )
             data = response.json()
         except (httpx2.HTTPError, ValueError) as e:
-            return None, None, f"el daemon no abrió la vigía: {type(e).__name__}"
+            return None, None, t("cli.watch.daemon_did_not_open", reason=type(e).__name__)
         watch_id = data.get("id") if isinstance(data, dict) else None
         if response.status_code != 200 or not isinstance(watch_id, str):
             error = data.get("error") if isinstance(data, dict) else None
-            return None, None, f"el daemon no abrió la vigía: {error or response.status_code}"
+            return (
+                None,
+                None,
+                t("cli.watch.daemon_did_not_open", reason=error or response.status_code),
+            )
         # En el daemon, una vigía abandonada acaba sola («no vigila» a los 10 s, o lo que vea).
         return (lambda: _daemon_watch(watch_id)), (lambda: None), ""
     if origin == "direct":
@@ -939,7 +950,7 @@ def _open_watch(origin: str, why: str):
         try:
             watcher.open()
         except (llamaswap_api.QueryError, httpx2.HTTPError) as e:
-            return None, None, f"no se pudo abrir la vigía: {e or type(e).__name__}"
+            return None, None, t("cli.watch.could_not_open", reason=e or type(e).__name__)
         return (lambda: (watcher.wait(), watcher.line)), watcher.close, ""
     return None, None, why
 
@@ -962,18 +973,11 @@ def _report_outcome(outcome: str, line: str, path: Path, previous: bytes, status
 
     text = llamaswap_api.OUTCOME_TEXT[outcome]
     if outcome == llamaswap_api.RELOADED:
-        print(f"llama-swap {text} la config ({line})")
+        print(t("cli.outcome.reloaded", outcome=text, line=line))
         return 0
     if outcome == llamaswap_api.REJECTED:
-        print(
-            f"error: llama-swap {text} la config y sigue con la anterior. Su error: {line}",
-            file=sys.stderr,
-        )
-        print(
-            "aviso: se restaura la config que corre llama-swap; al restaurar, llama-swap vuelve a "
-            "recargar y corta las peticiones en curso",
-            file=sys.stderr,
-        )
+        print(t("cli.outcome.rejected", outcome=text, line=line), file=sys.stderr)
+        print(t("cli.outcome.restoring"), file=sys.stderr)
         # La segunda recarga también se vigila: se abre antes de restaurar, como la primera.
         wait_again, abandon_again, why_not = _open_watch(origin, "")
         try:
@@ -981,41 +985,32 @@ def _report_outcome(outcome: str, line: str, path: Path, previous: bytes, status
         except (residency.ResidencyError, OSError) as e:
             if abandon_again is not None:
                 abandon_again()
-            print(f"error: no se pudo restaurar la copia: {e}", file=sys.stderr)
+            print(t("cli.outcome.restore_failed", error=e), file=sys.stderr)
             return 1
-        print(
-            f"restaurada la config que corre llama-swap en {path}; la rechazada quedó en "
-            f"{rejected_copy}",
-            file=sys.stderr,
-        )
+        print(t("cli.outcome.restored", path=path, copy=rejected_copy), file=sys.stderr)
         if wait_again is None:
-            print(f"aviso: no se puede confirmar la recarga de la restaurada ({why_not})")
+            print(t("cli.outcome.restored_unconfirmed", reason=why_not))
             return 1
         outcome_again, line_again = wait_again()
         print(
-            f"recarga de la config restaurada: {llamaswap_api.OUTCOME_TEXT[outcome_again]} "
-            f"({line_again})",
+            t(
+                "cli.outcome.restored_reload",
+                outcome=llamaswap_api.OUTCOME_TEXT[outcome_again],
+                line=line_again,
+            ),
             file=sys.stderr,
         )
         return 1
     if outcome == llamaswap_api.NOT_WATCHING:
-        message = (
-            f"llama-swap {text} ({line}): el cambio se aplicará en el próximo arranque de "
-            "llama-swap"
-        )
+        message = t("cli.outcome.not_watching", outcome=text, line=line)
         if status is not None and status.autostart and not status.watch_config:
-            message += (
-                "; si llama-swap lo arrancó el daemon, le falta -watch-config "
-                "(LLAMASWAP_WATCH_CONFIG=1 en el lanzador del daemon)"
-            )
+            message += t("cli.outcome.not_watching_hint")
         print(message)
         return 0
     if outcome == llamaswap_api.DOWN:
-        print(
-            f"llama-swap {text}: no responde ({line}); el cambio se aplicará en el próximo arranque"
-        )
+        print(t("cli.outcome.down", outcome=text, line=line))
         return 0
-    print(f"aviso: recarga {text}: {line}")
+    print(t("cli.outcome.other", outcome=text, line=line))
     return 0
 
 
@@ -1038,20 +1033,11 @@ def _write_residency(
     else:
         reasons = llamaswap_api.refusals(status)
     if reasons and not args.now:
-        print(
-            f"error: {'; '.join(reasons)}: no se escribe. llama-swap recargaría la config, "
-            "descargaría todos los modelos y cortaría las peticiones en curso. Con --now se "
-            "escribe igual.",
-            file=sys.stderr,
-        )
+        print(t("cli.residency.refused", reasons="; ".join(reasons)), file=sys.stderr)
         return 2
     wait, abandon, why_no_watch = _open_watch(origin, why)
     if wait is None and not args.now:
-        print(
-            f"error: no se puede vigilar la recarga ({why_no_watch}): no se escribe a ciegas. "
-            "Con --now se escribe igual.",
-            file=sys.stderr,
-        )
+        print(t("cli.residency.cannot_watch", reason=why_no_watch), file=sys.stderr)
         return 2
     # Actualización perdida: si alguien cambió el fichero desde que se leyó, escribir pisaría su
     # cambio con una edición calculada sobre los bytes viejos. Se compara tras abrir la vigía.
@@ -1059,22 +1045,22 @@ def _write_residency(
     if current != original:
         if abandon is not None:
             abandon()
-        print(f"error: {residency.CHANGE_DURING_EDIT}", file=sys.stderr)
+        print(t("cli.error", detail=residency.CHANGE_DURING_EDIT), file=sys.stderr)
         return 2
-    print(
-        "aviso: llama-swap recargará la config en unos 2 s, descargará todos los modelos y cortará "
-        "las peticiones en curso"
-    )
+    print(t("cli.residency.about_to_reload"))
     copy = residency.dated_copy(path, current)
     residency.atomic_replace(path, new)
-    print(f"copia: {copy}")
-    print(f"escrito: {path}")
+    print(t("cli.copy", path=copy))
+    print(t("cli.written", path=path))
     if reasons:
-        print(f"aviso: escrito con --now: {'; '.join(reasons)}")
+        print(t("cli.residency.written_with_now", reasons="; ".join(reasons)))
     if wait is None:
-        print(f"aviso: no se puede confirmar la recarga ({why_no_watch})")
+        print(t("cli.residency.reload_unconfirmed", reason=why_no_watch))
         return 0
-    print(f"esperando a llama-swap (hasta {llamaswap_api.WATCH_TOTAL_S:g} s)...", flush=True)
+    print(
+        t("cli.residency.waiting", seconds=i18n.format_number(llamaswap_api.WATCH_TOTAL_S)),
+        flush=True,
+    )
     outcome, line = wait()
     return _report_outcome(outcome, line, path, current, status, origin)
 
@@ -1084,20 +1070,16 @@ def cmd_llamaswap_residency(args: argparse.Namespace) -> int:
 
     path, daemon_answer = _config_path(args)
     if path is None:
-        print(
-            "no se sabe qué config usa llama-swap: no hay --config, LLAMASWAP_CONFIG está vacía y "
-            "el daemon no responde. Pasa --config PATH.",
-            file=sys.stderr,
-        )
+        print(t("cli.residency.unknown_config"), file=sys.stderr)
         return 2
     try:
         ttls = {m: int(s) for m, s in _pairs(args.ttl, "--ttl", int).items()}
         model_vram = _pairs(args.vram_model, "--vram-model", float)
     except ValueError as e:
-        print(f"error: {e}", file=sys.stderr)
+        print(t("cli.error", detail=e), file=sys.stderr)
         return 2
     if (args.pin or args.restore) and ttls:
-        print("error: --ttl no se combina con --pin ni con --restore", file=sys.stderr)
+        print(t("cli.residency.ttl_with_pin_or_restore"), file=sys.stderr)
         return 2
     try:
         if args.restore:
@@ -1105,9 +1087,7 @@ def cmd_llamaswap_residency(args: argparse.Namespace) -> int:
             residency.validate_copy(copy)
             original = path.read_bytes()
             if args.dry_run:
-                print(
-                    f"--dry-run: no se escribe nada. Líneas que cambiarían al restaurar {args.restore}:"
-                )
+                print(t("cli.residency.dry_run_restore", path=args.restore))
                 print("\n".join(residency.hidden_diff(original, copy)))
                 return 0
             return _write_residency(args, path, copy, original, daemon_answer)
@@ -1116,7 +1096,7 @@ def cmd_llamaswap_residency(args: argparse.Namespace) -> int:
         if isinstance(snapshot, topology.NoTopology):
             detail = f": {snapshot.detail}" if snapshot.detail else ""
             print(
-                f"error: no se puede leer la residencia ({snapshot.reason}{detail})",
+                t("cli.residency.unreadable", reason=snapshot.reason, detail=detail),
                 file=sys.stderr,
             )
             return 2
@@ -1125,7 +1105,7 @@ def cmd_llamaswap_residency(args: argparse.Namespace) -> int:
             changes = residency.plan_none(loaded_one.data, snapshot, ttls, args.group)
         elif args.pin:
             if args.vram_gb is None:
-                print("error: --pin necesita --vram-gb (la VRAM de la GPU)", file=sys.stderr)
+                print(t("cli.residency.pin_needs_vram"), file=sys.stderr)
                 return 2
             changes, warning = residency.plan_pin(
                 loaded_one.data, snapshot, args.pin, args.vram_gb, args.reserve_gb, model_vram
@@ -1136,87 +1116,87 @@ def cmd_llamaswap_residency(args: argparse.Namespace) -> int:
             print(residency.view(snapshot, loaded_one.data).text())
             return 0
         if not changes:
-            print("nada que cambiar")
+            print(t("cli.residency.nothing_to_change"))
             return 0
         new, diff = residency.edit_with_diff(loaded_one.original, changes)
     except residency.ResidencyError as e:
-        print(f"error: {e}", file=sys.stderr)
+        print(t("cli.error", detail=e), file=sys.stderr)
         return 2
     except OSError as e:
-        print(f"error: {e}", file=sys.stderr)
+        print(t("cli.error", detail=e), file=sys.stderr)
         return 2
     if warning:
-        print(f"aviso: {warning}")
+        print(t("cli.warning", detail=warning))
     if args.dry_run:
-        print("--dry-run: no se escribe nada. Líneas que cambiarían:")
+        print(t("cli.residency.dry_run"))
         print("\n".join(diff))
         return 0
     try:
         return _write_residency(args, path, new, loaded_one.original, daemon_answer)
     except (residency.ResidencyError, OSError) as e:
-        print(f"error: {e}", file=sys.stderr)
+        print(t("cli.error", detail=e), file=sys.stderr)
         return 2
 
 
 def _add_llamaswap_parser(sub) -> None:
     llamaswap = sub.add_parser(
         "llamaswap",
-        help="Residencia y TTL de los modelos de llama-swap (pide el extra [llamaswap]).",
+        help=t("cli.help.llamaswap"),
     )
     lsub = llamaswap.add_subparsers(dest="llamaswap_command", required=True)
     res = lsub.add_parser(
         "residency",
-        help="Muestra o cambia qué modelo se queda cargado y los TTL.",
-        description=_RESIDENCY_HELP,
+        help=t("cli.help.llamaswap.residency"),
+        description=t("cli.help.llamaswap.residency._description"),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    res.add_argument("--config", default=None, help="config.yaml de llama-swap")
+    res.add_argument("--config", default=None, help=t("cli.help.llamaswap.residency.config"))
     action = res.add_mutually_exclusive_group()
     action.add_argument(
         "--none",
         action="store_true",
-        help="deja la config sin residente: mueve los grupos persistent al grupo swap y pone --ttl "
-        "a los modelos con TTL efectivo 0",
+        help=t("cli.help.llamaswap.residency.none"),
     )
     action.add_argument(
         "--pin",
         metavar="MODEL",
         default=None,
-        help="residencia OPT-IN: el modelo pasa a un grupo persistent (swap y exclusive false) con "
-        "ttl 0 y retiene VRAM de forma permanente; se niega si no cabe",
+        help=t("cli.help.llamaswap.residency.pin"),
     )
     action.add_argument(
-        "--restore", metavar="BAK", default=None, help="vuelve a una copia .bak, byte a byte"
+        "--restore", metavar="BAK", default=None, help=t("cli.help.llamaswap.residency.restore")
     )
     res.add_argument(
         "--ttl",
         action="append",
         default=[],
         metavar="MODEL=SECONDS",
-        help="cambia el TTL (entero >= 1; el 0 es --pin; -1 solo con globalTTL > 0); repetible",
+        help=t("cli.help.llamaswap.residency.ttl"),
     )
-    res.add_argument("--group", default=None, help="grupo destino de --none")
-    res.add_argument("--vram-gb", type=float, default=None, help="VRAM de la GPU en GiB (--pin)")
+    res.add_argument("--group", default=None, help=t("cli.help.llamaswap.residency.group"))
+    res.add_argument(
+        "--vram-gb", type=float, default=None, help=t("cli.help.llamaswap.residency.vram_gb")
+    )
     res.add_argument(
         "--reserve-gb",
         type=float,
         default=2.0,
-        help="VRAM que se deja al resto de la PC (default 2)",
+        help=t("cli.help.llamaswap.residency.reserve_gb"),
     )
     res.add_argument(
         "--vram-model",
         action="append",
         default=[],
         metavar="ID=GiB",
-        help="VRAM medida de un modelo (repetible); sin ella, --pin se niega",
+        help=t("cli.help.llamaswap.residency.vram_model"),
     )
     res.add_argument(
-        "--dry-run", action="store_true", help="imprime solo las líneas que cambiarían"
+        "--dry-run", action="store_true", help=t("cli.help.llamaswap.residency.dry_run")
     )
     res.add_argument(
         "--now",
         action="store_true",
-        help="escribe aunque no se sepa si hay delegaciones en curso",
+        help=t("cli.help.llamaswap.residency.now"),
     )
     res.set_defaults(func=cmd_llamaswap_residency)
 
@@ -1224,11 +1204,7 @@ def _add_llamaswap_parser(sub) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="local-delegate",
-        description=(
-            "Instala, diagnostica y sirve local-delegate. Sin subcomando, este binario arranca "
-            "el servidor MCP stdio, que es como lo lanzan Claude Code, Codex y opencode. "
-            "`check-llamaswap` e `init-llamaswap` piden el extra [llamaswap]."
-        ),
+        description=t("cli.help._description"),
     )
     # `local-delegate --version` salía con código 2 y un `usage`: el parser raíz exigía subcomando
     # y no exponía la bandera, así que la única forma de saber qué versión estaba instalada era
@@ -1243,7 +1219,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--version",
         action="version",
         version=f"local-delegate {get_version()}",
-        help="imprime la versión instalada y termina",
+        help=t("cli.help.version"),
     )
 
     sub = parser.add_subparsers(dest="command", required=True)
@@ -1252,111 +1228,109 @@ def build_parser() -> argparse.ArgumentParser:
 
     check = sub.add_parser(
         "check-llamaswap",
-        help="Valida el presupuesto de VRAM (y opcionalmente RAM) de los groups de un config.yaml.",
+        help=t("cli.help.check_llamaswap"),
     )
-    check.add_argument("--config", required=True, help="ruta al config.yaml de llama-swap")
-    check.add_argument("--vram-gb", required=True, type=float, help="VRAM total de la GPU en GiB")
+    check.add_argument("--config", required=True, help=t("cli.help.check_llamaswap.config"))
+    check.add_argument(
+        "--vram-gb", required=True, type=float, help=t("cli.help.llamaswap_budget.vram_gb")
+    )
     check.add_argument(
         "--margin-gb",
         type=float,
         default=1.5,
-        help="margen de VRAM reservado al sistema (default 1.5)",
+        help=t("cli.help.llamaswap_budget.margin_gb"),
     )
     check.add_argument(
         "--ram-gb",
         type=float,
         default=None,
-        help="si se pasa, también valida la RAM DE SISTEMA total (GiB) — opcional, off por default",
+        help=t("cli.help.llamaswap_budget.ram_gb"),
     )
     check.add_argument(
         "--ram-margin-gb",
         type=float,
         default=2.0,
-        help="margen de RAM reservado al SO/otras apps (default 2.0, solo aplica con --ram-gb)",
+        help=t("cli.help.llamaswap_budget.ram_margin_gb"),
     )
     check.add_argument(
         "--allow-ungrouped",
         action="store_true",
-        help="permite modelos fuera de groups (se excluyen deliberadamente del presupuesto)",
+        help=t("cli.help.check_llamaswap.allow_ungrouped"),
     )
     check.set_defaults(func=cmd_check_llamaswap)
 
     init = sub.add_parser(
         "init-llamaswap",
-        help="Genera/actualiza groups en un config.yaml de llama-swap con guardrail de VRAM/RAM.",
+        help=t("cli.help.init_llamaswap"),
     )
     init.add_argument(
         "--config",
         required=True,
-        help="config.yaml existente a aumentar (si no existe, se parte de uno vacío)",
+        help=t("cli.help.init_llamaswap.config"),
     )
-    init.add_argument("--out", help="ruta de salida (default: el mismo --config)")
+    init.add_argument("--out", help=t("cli.help.init_llamaswap.out"))
     init.add_argument(
         "--resident",
         default="",
-        help="residencia OPT-IN: ids de modelos (coma-separados) que se quedan cargados para "
-        "siempre en un grupo persistente y retienen VRAM; por defecto no hay residente",
+        help=t("cli.help.init_llamaswap.resident"),
     )
-    init.add_argument(
-        "--swap", default="", help="ids de modelos (coma-separados) para el grupo swap (1 a la vez)"
-    )
+    init.add_argument("--swap", default="", help=t("cli.help.init_llamaswap.swap"))
     init.add_argument(
         "--add-model",
         action="append",
-        metavar="ID=RUTA[:VRAM_GB]",
-        help="define una entrada mínima de modelo si ID no existe ya en --config (repetible)",
+        metavar=t("cli.help.init_llamaswap.add_model_metavar"),
+        help=t("cli.help.init_llamaswap.add_model"),
     )
     init.add_argument(
         "--server-exe",
         default="llama-server",
-        help="ejecutable usado en el cmd generado para --add-model (default: llama-server)",
+        help=t("cli.help.init_llamaswap.server_exe"),
     )
     init.add_argument(
         "--ttl-resident",
         type=int,
         default=0,
-        help="ttl (segundos) para modelos de --resident (default 0: con `persistent` y un TTL "
-        "mayor que 0 el modelo se descarga igual y no hay residencia de verdad)",
+        help=t("cli.help.init_llamaswap.ttl_resident"),
     )
     init.add_argument(
-        "--ttl-swap", type=int, default=300, help="ttl (segundos) para modelos de --swap"
+        "--ttl-swap", type=int, default=300, help=t("cli.help.init_llamaswap.ttl_swap")
     )
-    init.add_argument("--vram-gb", required=True, type=float, help="VRAM total de la GPU en GiB")
+    init.add_argument(
+        "--vram-gb", required=True, type=float, help=t("cli.help.llamaswap_budget.vram_gb")
+    )
     init.add_argument(
         "--margin-gb",
         type=float,
         default=1.5,
-        help="margen de VRAM reservado al sistema (default 1.5)",
+        help=t("cli.help.llamaswap_budget.margin_gb"),
     )
     init.add_argument(
         "--ram-gb",
         type=float,
         default=None,
-        help="si se pasa, también valida la RAM DE SISTEMA total (GiB) — opcional, off por default",
+        help=t("cli.help.llamaswap_budget.ram_gb"),
     )
     init.add_argument(
         "--ram-margin-gb",
         type=float,
         default=2.0,
-        help="margen de RAM reservado al SO/otras apps (default 2.0, solo aplica con --ram-gb)",
+        help=t("cli.help.llamaswap_budget.ram_margin_gb"),
     )
     init.add_argument(
         "--store-path",
         default=None,
-        help="ruta de la BD SQLite de métricas de llama-swap (#898); persiste stats entre reinicios",
+        help=t("cli.help.init_llamaswap.store_path"),
     )
     init.add_argument(
         "--force",
         action="store_true",
-        help="sobreescribe --out si ya existe (deja una copia <out>.<AAAAMMDD-HHMMSS>.bak)",
+        help=t("cli.help.init_llamaswap.force"),
     )
-    init.add_argument(
-        "--dry-run", action="store_true", help="imprime el YAML resultante, no escribe nada"
-    )
+    init.add_argument("--dry-run", action="store_true", help=t("cli.help.init_llamaswap.dry_run"))
     init.add_argument(
         "--allow-ungrouped",
         action="store_true",
-        help="permite conservar modelos fuera de los groups generados",
+        help=t("cli.help.init_llamaswap.allow_ungrouped"),
     )
     init.set_defaults(func=cmd_init_llamaswap)
 
@@ -1364,49 +1338,42 @@ def build_parser() -> argparse.ArgumentParser:
 
     doc = sub.add_parser(
         "doctor",
-        help="Diagnostica el andamiaje (hooks, skill, memoria, MCP), el daemon y el backend.",
+        help=t("cli.help.doctor"),
     )
     doc.add_argument(
         "--config",
         default=None,
-        help="config.yaml de llama-swap (para localizar llama-server; default: LLAMASWAP_CONFIG)",
+        help=t("cli.help.doctor.config"),
     )
     doc.add_argument(
         "--online",
         action="store_true",
-        help="consulta GitHub por la última release publicada de cada componente",
+        help=t("cli.help.doctor.online"),
     )
     doc.add_argument(
         "--home",
         default=None,
-        help="HOME alternativo para diagnosticar (default: el del usuario); solo se lee",
+        help=t("cli.help.doctor.home"),
     )
     doc.set_defaults(func=doctor.run_doctor)
 
     serve = sub.add_parser(
         "serve",
-        help="Sirve MCP Streamable HTTP (/mcp) y dashboard (/) como daemon singleton.",
+        help=t("cli.help.serve"),
     )
-    serve.add_argument(
-        "--host", default=None, help="host de escucha (default: web host / 127.0.0.1)"
-    )
-    serve.add_argument(
-        "--port", type=int, default=None, help="puerto único MCP+web (default: 9393)"
-    )
+    serve.add_argument("--host", default=None, help=t("cli.help.serve.host"))
+    serve.add_argument("--port", type=int, default=None, help=t("cli.help.serve.port"))
     serve.add_argument(
         "--log-level",
         choices=("critical", "error", "warning", "info", "debug"),
         default="warning",
-        help="nivel de log de uvicorn (default: warning)",
+        help=t("cli.help.serve.log_level"),
     )
     serve.set_defaults(func=cmd_serve)
 
     recalc = sub.add_parser(
         "recompute-cost",
-        help=(
-            "Lee los transcripts de Claude Code y deja en el directorio de logs el relleno de "
-            "atribución, los agregados de N, el cotejo de precios y los puntos de cuota."
-        ),
+        help=t("cli.help.recompute_cost"),
     )
     _add_recompute_cost_args(recalc)
     recalc.set_defaults(func=cmd_recompute_cost)
@@ -1432,7 +1399,7 @@ def _add_recompute_cost_args(p: argparse.ArgumentParser) -> None:
         "--reset-calibration",
         choices=("five_hour", "seven_day"),
         default=None,
-        help="los puntos de cuota de ese tipo anteriores a hoy dejan de contar",
+        help=t("cli.help.recompute_cost.reset_calibration"),
     )
     # Nombre viejo (REQ-001), oculto en la ayuda; `_resolve_reset_calibration` avisa al usarlo.
     p.add_argument(
@@ -1445,7 +1412,7 @@ def _add_recompute_cost_args(p: argparse.ArgumentParser) -> None:
     p.add_argument(
         "--claude-dir",
         default=None,
-        help="directorio de Claude Code (default: ~/.claude); solo se lee",
+        help=t("cli.help.recompute_cost.claude_dir"),
     )
 
 
@@ -1455,42 +1422,42 @@ def _add_common_install_args(p: argparse.ArgumentParser) -> None:
         action="append",
         choices=("auto", "claude", "codex", "opencode"),
         default=None,
-        help="cliente a configurar (repetible; default: auto = los que estén instalados)",
+        help=t("cli.help.install_common.clients"),
     )
     p.add_argument(
         "--target",
         action="append",
         choices=("claude", "codex", "opencode", "all"),
         default=None,
-        help="histórico, equivale a --clients; `all` fuerza los tres aunque no estén instalados",
+        help=t("cli.help.install_common.target"),
     )
-    p.add_argument("--home", default=None, help="HOME alternativo (para pruebas)")
-    p.add_argument("--dry-run", action="store_true", help="describe los cambios sin escribir")
+    p.add_argument("--home", default=None, help=t("cli.help.install_common.home"))
+    p.add_argument("--dry-run", action="store_true", help=t("cli.help.install_common.dry_run"))
     p.add_argument(
         "--python",
         default=None,
-        help="intérprete con el que se ejecutan los hooks (default: python3 / python en Windows)",
+        help=t("cli.help.install_common.python"),
     )
     p.add_argument(
-        "--no-hooks", dest="hooks", action="store_false", help="no instalar los hooks consultivos"
+        "--no-hooks", dest="hooks", action="store_false", help=t("cli.help.install_common.no_hooks")
     )
     p.add_argument(
         "--no-skill",
         dest="skill",
         action="store_false",
-        help="no instalar la skill local-delegation",
+        help=t("cli.help.install_common.no_skill"),
     )
     p.add_argument(
         "--no-memory",
         dest="memory",
         action="store_false",
-        help="no tocar CLAUDE.md / AGENTS.md globales",
+        help=t("cli.help.install_common.no_memory"),
     )
     p.add_argument(
         "--no-mcp",
         dest="mcp",
         action="store_false",
-        help="no registrar el servidor MCP en la config del cliente",
+        help=t("cli.help.install_common.no_mcp"),
     )
     # El único componente que se pide, en vez de excluirse: los subagentes son ficheros del
     # usuario, no andamiaje nuestro, así que tocarlos sin que lo pida sería el mismo error que
@@ -1499,12 +1466,12 @@ def _add_common_install_args(p: argparse.ArgumentParser) -> None:
         "--agents",
         dest="agents",
         action="store_true",
-        help="actualiza ~/.claude/agents que ya declaren tools local_* (opt-in)",
+        help=t("cli.help.install_common.agents"),
     )
     p.add_argument(
         "--no-client-cli",
         action="store_true",
-        help="no usar el binario `claude`; edita ~/.claude.json directamente",
+        help=t("cli.help.install_common.no_client_cli"),
     )
     p.set_defaults(hooks=True, skill=True, memory=True, mcp=True)
 
@@ -1512,35 +1479,30 @@ def _add_common_install_args(p: argparse.ArgumentParser) -> None:
 def _add_install_parsers(sub) -> None:
     install = sub.add_parser(
         "install",
-        help="Instala hooks, skill, memoria y la entrada MCP en Claude Code / Codex / opencode.",
-        description=(
-            "Instala la integración completa en el HOME del usuario: hooks consultivos, la "
-            "skill local-delegation, un bloque gestionado en CLAUDE.md/AGENTS.md y la entrada "
-            "del servidor MCP. Es idempotente (bloques con marcadores, backups .bak) y se "
-            "revierte con `local-delegate uninstall`."
-        ),
+        help=t("cli.help.install"),
+        description=t("cli.help.install._description"),
     )
     _add_common_install_args(install)
     install.add_argument(
         "--enable-read-hook",
         action="store_true",
-        help="registra y ENCIENDE el hook experimental PreToolUse/Read (apagado por defecto)",
+        help=t("cli.help.install.enable_read_hook"),
     )
     install.add_argument(
         "--mcp-mode",
         choices=("stdio", "http"),
         default="stdio",
-        help="stdio (uvx, default) o http (daemon compartido en /mcp)",
+        help=t("cli.help.install.mcp_mode"),
     )
     install.add_argument(
         "--base-url",
         default=None,
-        help="LOCAL_DELEGATE_BASE_URL de la entrada MCP (p. ej. el backend remoto de otra máquina)",
+        help=t("cli.help.install.base_url"),
     )
     install.add_argument(
         "--api-key-env",
         action="store_true",
-        help="reenvía LOCAL_DELEGATE_API_KEY desde el entorno (nunca escribe el secreto)",
+        help=t("cli.help.install.api_key_env"),
     )
     # Tres estados, y el de no pasar ninguno conserva la cabecera que ya tuviera cada cliente:
     # reinstalar sin el flag la borraba y dejaba al cliente en 401 contra un daemon con token.
@@ -1551,66 +1513,73 @@ def _add_install_parsers(sub) -> None:
         action="store_const",
         const=True,
         default=None,
-        help=(
-            "con --mcp-mode http, autentica contra el daemon referenciando "
-            "LOCAL_DELEGATE_WEB_TOKEN del entorno (nunca escribe el secreto). Sin este flag ni "
-            "--no-web-token-env, se conserva la cabecera que ya tuviera la entrada"
-        ),
+        help=t("cli.help.install.web_token_env"),
     )
     token.add_argument(
         "--no-web-token-env",
         dest="web_token_env",
         action="store_const",
         const=False,
-        help="quita la cabecera de autorización de la entrada MCP aunque ya la tuviera",
+        help=t("cli.help.install.no_web_token_env"),
     )
     install.add_argument(
         "--pin-version",
         default=None,
-        help="fija la versión del paquete en la entrada MCP (p. ej. 0.11.0)",
+        help=t("cli.help.install.pin_version"),
     )
     install.add_argument(
         "--force-mcp-codex",
         action="store_true",
-        help="reemplaza sin preguntar una entrada de Codex escrita a mano (deja .bak)",
+        help=t("cli.help.install.force_mcp_codex"),
     )
     install.set_defaults(func=cmd_install)
 
     upd = sub.add_parser(
         "update",
-        help="Actualiza el pin, completa lo que falte del andamiaje y deja el daemon arriba.",
-        description=(
-            "Revisa el estado real de la máquina con las mismas comprobaciones que `doctor`, "
-            "actualiza el pin de versión donde exista, completa la configuración que falte y "
-            "termina dejando el daemon arriba: lo reinicia si corría, lo levanta si no. El "
-            "backend de inferencia no se toca salvo que se pida con --restart-backend."
-        ),
+        help=t("cli.help.update"),
+        description=t("cli.help.update._description"),
     )
-    upd.add_argument("--dry-run", action="store_true", help="describe los cambios sin escribir")
-    upd.add_argument("--home", default=None, help="HOME alternativo (para pruebas)")
+    upd.add_argument("--dry-run", action="store_true", help=t("cli.help.install_common.dry_run"))
+    upd.add_argument("--home", default=None, help=t("cli.help.install_common.home"))
     upd.add_argument(
         "--version",
         default=None,
-        help="versión a fijar en el pin (default: la última publicada en PyPI)",
+        help=t("cli.help.update.version"),
     )
     upd.add_argument(
         "--restart-backend",
         action="store_true",
-        help="reinicia también llama-swap (por defecto NO se toca: descarga los modelos de VRAM)",
+        help=t("cli.help.update.restart_backend"),
     )
-    upd.add_argument(
-        "--no-restart", action="store_true", help="no toca el daemon; solo repara e informa"
-    )
+    upd.add_argument("--no-restart", action="store_true", help=t("cli.help.update.no_restart"))
     upd.set_defaults(func=cmd_update)
 
     uninstall = sub.add_parser(
         "uninstall",
-        help="Revierte lo que instaló `local-delegate install` (solo lo suyo).",
+        help=t("cli.help.uninstall"),
     )
     _add_common_install_args(uninstall)
     uninstall.set_defaults(func=cmd_uninstall)
 
 
+@contextlib.contextmanager
+def _argparse_in_language() -> Iterator[None]:
+    """El armazón de argparse («usage:», «options:», sus errores) en el idioma vigente (D8).
+
+    argparse busca `_` y `ngettext` en su propio módulo cada vez que los usa, así que basta con
+    cambiarlos ahí. Se devuelven a su sitio al salir, pase lo que pase: la suite corre en un
+    solo proceso y, sin restaurarlos, el argparse de los scripts y de otros tests quedaría en el
+    idioma del último `run()`, según el orden en que `xdist` reparta los tests.
+    """
+    saved = (argparse._, argparse.ngettext)
+    argparse._, argparse.ngettext = i18n.argparse_gettext, i18n.argparse_ngettext
+    try:
+        yield
+    finally:
+        argparse._, argparse.ngettext = saved
+
+
 def run(argv: list[str]) -> int:
-    args = build_parser().parse_args(argv)
-    return args.func(args)
+    with _argparse_in_language():
+        args = build_parser().parse_args(argv)
+        return args.func(args)

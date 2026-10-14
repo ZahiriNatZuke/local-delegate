@@ -29,7 +29,7 @@ from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from . import attribution, cost, legacy_names, pricing, quota, transcripts
+from . import attribution, cost, i18n, legacy_names, pricing, quota, transcripts
 
 OLD_FILE_NAME, FILE_NAME = legacy_names.COST_AGGREGATES_FILE_NAMES
 VERSION = 1
@@ -348,63 +348,97 @@ def run(
     }
 
 
-# Rótulos para la terminal: el resumen lleva valores de máquina y la prosa los dice en palabras.
+# Rótulos para la terminal: el resumen lleva valores de máquina y la prosa los dice en palabras. Cada
+# valor apunta a su clave del catálogo (`cli.json`); uno desconocido se muestra tal cual.
 #: Estado de la cuota (`quota.status`).
-_STATUS_LABEL = {"calibrated": "calibrada", "uncalibrated": "sin calibrar"}
+_STATUS_LABEL = {
+    "calibrated": "cli.recompute_cost.status.calibrated",
+    "uncalibrated": "cli.recompute_cost.status.uncalibrated",
+}
 #: Veredicto del cotejo.
-_VERDICT_LABEL = {"pass": "pasa", "fail": "falla"}
+_VERDICT_LABEL = {
+    "pass": "cli.recompute_cost.verdict.pass",
+    "fail": "cli.recompute_cost.verdict.fail",
+}
 #: Cruces de las líneas del log rellenadas (los rótulos de la 0.34.0).
 _MATCH_LABEL = {
-    "exact": "exacto",
-    "window": "ventana",
-    "ambiguous": "ambiguo",
-    "no_match": "sin_cruce",
+    "exact": "cli.recompute_cost.match.exact",
+    "window": "cli.recompute_cost.match.window",
+    "ambiguous": "cli.recompute_cost.match.ambiguous",
+    "no_match": "cli.recompute_cost.match.no_match",
 }
 #: Motivos de descarte de los puntos de cuota.
 _DISCARD_LABEL = {
-    "corrupt_line": "línea corrupta",
-    "out_of_range": "fuera de rango",
-    "small_delta": "variación pequeña",
-    "no_local_use": "sin uso local",
-    "contaminated": "contaminado",
-    "overlapping": "solapado",
-    "expired": "caducado",
-    "reset": "reinicio",
+    "corrupt_line": "cli.recompute_cost.discard.corrupt_line",
+    "out_of_range": "cli.recompute_cost.discard.out_of_range",
+    "small_delta": "cli.recompute_cost.discard.small_delta",
+    "no_local_use": "cli.recompute_cost.discard.no_local_use",
+    "contaminated": "cli.recompute_cost.discard.contaminated",
+    "overlapping": "cli.recompute_cost.discard.overlapping",
+    "expired": "cli.recompute_cost.discard.expired",
+    "reset": "cli.recompute_cost.discard.reset",
 }
+
+
+def _label(labels: dict[str, str], value) -> str:
+    """El rótulo de un valor de máquina en el idioma vigente; uno desconocido, tal cual."""
+    return i18n.t(labels[value]) if value in labels else str(value)
 
 
 def summary_text(r: dict) -> str:
     """El resumen para la terminal: conteos, nunca rutas."""
-    lines = [
-        f"Plazo de borrado de los transcripts: {r['cleanup_days']} días.",
-        f"Transcripts leídos: {r['transcripts']} (líneas ilegibles: {r['corrupt_lines']}).",
-        f"Líneas del log rellenadas: {r['backfilled_lines']} "
-        + (
-            "(" + ", ".join(f"{_MATCH_LABEL.get(k, k)}: {v}" for k, v in r["matches"].items()) + ")"
-            if r["matches"]
-            else "(ninguna)"
+    n = i18n.format_number
+    none = i18n.t("cli.recompute_cost.summary.none")
+    if r["matches"]:
+        matches = ", ".join(
+            i18n.t("cli.recompute_cost.summary.match", label=_label(_MATCH_LABEL, k), n=n(v))
+            for k, v in r["matches"].items()
         )
-        + ".",
-        f"Casos de N en los agregados: {r['n_cases']}.",
+        backfilled = i18n.t(
+            "cli.recompute_cost.summary.backfilled", n=n(r["backfilled_lines"]), matches=matches
+        )
+    else:
+        backfilled = i18n.t(
+            "cli.recompute_cost.summary.backfilled_none", n=n(r["backfilled_lines"])
+        )
+    lines = [
+        i18n.t("cli.recompute_cost.summary.cleanup", days=n(r["cleanup_days"])),
+        i18n.t(
+            "cli.recompute_cost.summary.transcripts",
+            n=n(r["transcripts"]),
+            corrupt=n(r["corrupt_lines"]),
+        ),
+        backfilled,
+        i18n.t("cli.recompute_cost.summary.n_cases", n=n(r["n_cases"])),
     ]
     c = r.get("check")
     if c:
-        verdict = c.get("verdict")
         lines.append(
-            f"Cotejo de precios ({c.get('table_version')}): "
-            f"{_VERDICT_LABEL.get(verdict, verdict)}; "
-            f"{c.get('judged')} filas juzgadas, {c.get('outside')} fuera, "
-            f"sin precio: {', '.join(c.get('unpriced') or []) or 'ninguno'}."
+            i18n.t(
+                "cli.recompute_cost.summary.check",
+                table=c.get("table_version"),
+                verdict=_label(_VERDICT_LABEL, c.get("verdict")),
+                judged=n(c.get("judged") or 0),
+                outside=n(c.get("outside") or 0),
+                unpriced=", ".join(c.get("unpriced") or []) or none,
+            )
         )
     else:
-        lines.append("Cotejo de precios: sin datos de coste en los transcripts.")
+        lines.append(i18n.t("cli.recompute_cost.summary.no_check"))
     for kind in quota.TYPES:
         d = r["discards"].get(kind) or {}
+        discards = ", ".join(
+            i18n.t("cli.recompute_cost.summary.discard", label=_label(_DISCARD_LABEL, k), n=n(v))
+            for k, v in d.items()
+        )
         lines.append(
-            f"Cuota {kind}: {_STATUS_LABEL.get(r['quota'][kind], r['quota'][kind])}; puntos: "
-            f"{r['points'].get('statusline:' + kind, 0)} del statusline, "
-            f"{r['points'].get('rejection:' + kind, 0)} de rechazo; descartes: "
-            + (", ".join(f"{_DISCARD_LABEL.get(k, k)} {v}" for k, v in d.items()) or "ninguno")
-            + "."
+            i18n.t(
+                "cli.recompute_cost.summary.quota",
+                kind=kind,
+                status=_label(_STATUS_LABEL, r["quota"][kind]),
+                statusline=n(r["points"].get("statusline:" + kind, 0)),
+                rejection=n(r["points"].get("rejection:" + kind, 0)),
+                discards=discards or none,
+            )
         )
     return "\n".join(lines)

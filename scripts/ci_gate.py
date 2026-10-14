@@ -96,6 +96,12 @@ EXPECTED_JOBS = (
     "install-smoke",
     # La suite entera con el sistema en español (REQ-043, ola B0a).
     "test-lang-es",
+    # Los tests del CLI en cada Python admitido (D8, ola B1a): todas las celdas bloquean.
+    "cli-python-matrix (3.11)",
+    "cli-python-matrix (3.12)",
+    "cli-python-matrix (3.13)",
+    "cli-python-matrix (3.14)",
+    "cli-python-matrix (3.15)",
 )
 
 # El plazo cubre COLA + EJECUCIÓN, que no es lo mismo que el `timeout-minutes` de un job: aquel

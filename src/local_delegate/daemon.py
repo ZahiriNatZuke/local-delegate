@@ -23,7 +23,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
 
-from . import autostart, config, server
+from . import autostart, config, i18n, server
 from .web import auth, metrics
 
 MCP_PATH = "/mcp"
@@ -261,31 +261,32 @@ def serve(host: str | None = None, port: int | None = None, log_level: str = "wa
     except Timeout:
         current = query_daemon(host, port)
         if current:
-            _console_print(f"local-delegate daemon ya está activo (pid={current['pid']})")
+            _console_print(i18n.t("cli.daemon.already_running", pid=current["pid"]))
             _console_print(current["mcp_url"])
             return 0
         other = registered_daemon()
         if other:
             _console_print(
-                f"local-delegate: ya hay un daemon de este usuario en "
-                f"{other['host']}:{other['port']} (pid={other['pid']}), y el lock es uno por usuario. "
-                f"No se puede levantar otro en el puerto {port}."
+                i18n.t(
+                    "cli.daemon.other_daemon",
+                    host=other["host"],
+                    port=other["port"],
+                    pid=other["pid"],
+                    wanted=port,
+                )
             )
             _console_print(other["mcp_url"])
             return 1
-        _console_print(
-            f"local-delegate: lock ocupado y no responde ningún daemon nuestro "
-            f"(ni en {host}:{port} ni donde dice {_state_path()})"
-        )
+        _console_print(i18n.t("cli.daemon.lock_busy", host=host, port=port, state=_state_path()))
         return 1
 
     try:
         if not _port_available(host, port):
             current = query_daemon(host, port)
             if current:
-                _console_print(f"local-delegate daemon ya está activo (pid={current['pid']})")
+                _console_print(i18n.t("cli.daemon.already_running", pid=current["pid"]))
                 return 0
-            _console_print(f"local-delegate: {host}:{port} está ocupado por otro proceso")
+            _console_print(i18n.t("cli.daemon.port_busy", host=host, port=port))
             return 1
 
         if config.AUTOSTART:

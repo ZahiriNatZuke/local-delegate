@@ -302,6 +302,18 @@ def test_the_expected_jobs_are_exactly_those_of_ci_yml():
     assert declared == set(ci_gate.EXPECTED_JOBS)
 
 
+def test_the_cli_matrix_starts_at_the_oldest_supported_python():
+    """La matriz cubre desde el `requires-python` del paquete (D8)."""
+    import tomllib
+
+    data = yaml.safe_load(CI_YML.read_text(encoding="utf-8"))
+    versions = data["jobs"]["cli-python-matrix"]["strategy"]["matrix"]["python"]
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    oldest = pyproject["project"]["requires-python"].removeprefix(">=")
+    assert versions[0] == oldest
+    assert versions == sorted(versions, key=lambda v: tuple(int(p) for p in v.split(".")))
+
+
 def test_the_gate_is_declared_in_ci_yml():
     assert ci_gate.GATE_NAME in _jobs_declared_in_ci()
 
@@ -358,3 +370,19 @@ def test_the_tests_step_has_its_own_limit_lower_than_the_jobs():
         f"el límite del paso ({limit}) tiene que ser menor que el del job "
         f"({TIMEOUT_JOB_TEST}) para llegar a actuar"
     )
+
+
+def test_the_classifiers_are_the_blocking_cells_of_the_matrix():
+    """`pyproject.toml` declara justo las versiones de la matriz del CLI, que bloquean todas (D8)."""
+    import tomllib
+
+    data = yaml.safe_load(CI_YML.read_text(encoding="utf-8"))
+    versions = data["jobs"]["cli-python-matrix"]["strategy"]["matrix"]["python"]
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    prefix = "Programming Language :: Python :: 3."
+    declared = {
+        c.removeprefix("Programming Language :: Python :: ")
+        for c in pyproject["project"]["classifiers"]
+        if c.startswith(prefix)
+    }
+    assert declared == set(versions)
