@@ -493,7 +493,7 @@ def ceiling_row(run: int, source: Path, result: dict[str, Any], log_dir: Path) -
         "retry_reason": None,
         # El payload de producción no manda semilla (REQ-041): no se inventa una.
         "seed": None,
-        "via": "produccion",
+        "via": "production",
         "pinned_env": {**CEILING_ENV, "LOCAL_DELEGATE_LOG_DIR": _no_profile(log_dir)},
         "thermal_state": None,
         "input_bytes": len(data),

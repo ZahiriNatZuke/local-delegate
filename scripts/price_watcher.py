@@ -137,7 +137,7 @@ class _PriceTableReader(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.seen_header = False
-        self.state = "buscando"  # buscando → tabla → hecho
+        self.state = "searching"  # searching → table → done
         self.rows: list[list[dict]] = []
         self._in_h2 = False
         self._h2_text: list[str] = []
@@ -148,14 +148,14 @@ class _PriceTableReader(HTMLParser):
         self._nested = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        if self.state == "hecho":
+        if self.state == "done":
             return
-        if self.state == "buscando":
+        if self.state == "searching":
             if tag == "h2":
                 self._in_h2 = True
                 self._h2_text = []
             elif tag == "table" and self.seen_header:
-                self.state = "tabla"
+                self.state = "table"
             return
         if tag == "table":
             self._nested += 1
@@ -172,19 +172,19 @@ class _PriceTableReader(HTMLParser):
             self._cell["labels"].append(label)
 
     def handle_endtag(self, tag: str) -> None:
-        if self.state == "buscando":
+        if self.state == "searching":
             if tag == "h2" and self._in_h2:
                 self._in_h2 = False
                 if _normalize("".join(self._h2_text)) == PRICES_HEADER:
                     self.seen_header = True
             return
-        if self.state != "tabla":
+        if self.state != "table":
             return
         if tag == "table":
             if self._nested:
                 self._nested -= 1
             else:
-                self.state = "hecho"
+                self.state = "done"
         elif tag == "sup":
             self._in_sup = max(0, self._in_sup - 1)
         elif tag == "a":
@@ -205,7 +205,7 @@ class _PriceTableReader(HTMLParser):
     def handle_data(self, data: str) -> None:
         if self._in_h2:
             self._h2_text.append(data)
-        elif self.state == "tabla" and self._cell is not None and not self._in_sup:
+        elif self.state == "table" and self._cell is not None and not self._in_sup:
             self._cell["text"].append(data)
             if self._in_link:
                 self._cell["link"].append(data)
@@ -252,7 +252,7 @@ def extract_price_table(html: str) -> dict:
     reader.close()
     if not reader.seen_header:
         raise WatcherError(f"no aparece la cabecera «{PRICES_HEADER}» en la página")
-    if reader.state == "buscando":
+    if reader.state == "searching":
         raise WatcherError(f"no hay tabla después de «{PRICES_HEADER}»")
 
     indices: dict[str, int] | None = None

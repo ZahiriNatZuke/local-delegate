@@ -78,7 +78,7 @@ def _opencode_entry(directory: Path) -> dict | None:
 
 
 def main() -> int:
-    home = Path(tempfile.mkdtemp(prefix="ld-e2e-")) / "casa"
+    home = Path(tempfile.mkdtemp(prefix="ld-e2e-")) / "home"
     # Los tres directorios de cliente se crean a mano: `install` configura los que **existen**, y
     # sin esto el paso probaría el camino de «no hay ningún cliente», que no es el que interesa.
     #

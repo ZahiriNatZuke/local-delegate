@@ -118,7 +118,7 @@ def measure(since: str | None, include_tests: bool = False) -> dict:
         if event.get("reason") == "bounded":
             bands_per_session[key] += 1
         else:
-            whole_per_session[key].add(event.get("reason") or "aviso")
+            whole_per_session[key].add(event.get("reason") or "suggested")
 
     bounded = [c for c, n in bands_per_session.items() if n]
     worth_delegating = [c for c in bounded if c in whole_per_session or bands_per_session[c] >= 3]

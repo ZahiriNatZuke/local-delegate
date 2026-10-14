@@ -1,0 +1,146 @@
+[pesado] plaza plaza-1 tomada tras 0s: bash /c/Users/Yohan/AppData/Local/Temp/claude/D--Projects-local-delegate/99a3bd70-675b-4b0c-8aca-af2fdb5b3582/scratchpad/a-close-5/mutants.sh
+==================================================================
+sha256 antes d1c42925e5bd
+mutado legacy_names.py: '"via": {"produccion": "production"},' -> '"via": {},' (sha256 e3f2e5b9935e)
+>       assert [r["via"] for r in records] == ["production"] * 3
+E       AssertionError: assert ['produccion'... 'produccion'] == ['production'... 'production']
+E         
+E         At index 0 diff: 'produccion' != 'production'
+E         Use -v to get more diff
+tests\test_analyze_benchmark.py:337: AssertionError
+>       assert [r["via"] for r in records] == ["production"] * 3
+E       AssertionError: assert ['produccion'... 'produccion'] == ['production'... 'production']
+E         
+E         At index 0 diff: 'produccion' != 'production'
+E         Use -v to get more diff
+tests\test_analyze_benchmark.py:337: AssertionError
+FAILED tests/test_analyze_benchmark.py::test_the_frozen_ceiling_rows_say_by_which_path_they_went_in_english[resultados]
+FAILED tests/test_analyze_benchmark.py::test_the_frozen_ceiling_rows_say_by_which_path_they_went_in_english[resultados-sin-idioma]
+2 failed in 0.40s
+restaurado legacy_names.py: sha256 d1c42925e5bd
+==================================================================
+sha256 antes d1c42925e5bd
+mutado legacy_names.py: '{"fallar": "fail", "excluir": "exclude"}' -> '{"fallar": "fail"}' (sha256 ae8d008a92ec)
+>       assert raw["seleccion"]["privacidad"] != corpus["selection"]["privacy"]  # sí es viejo
+E       AssertionError: assert 'excluir' != 'excluir'
+tests\test_corpus.py:985: AssertionError
+FAILED tests/test_corpus.py::test_frozen_affinity_corpus_is_read_with_the_new_keys
+1 failed in 0.33s
+restaurado legacy_names.py: sha256 d1c42925e5bd
+==================================================================
+sha256 antes d1c42925e5bd
+mutado legacy_names.py: '(lote 5).\n            "fecha": "date",' -> '(lote 5).' (sha256 068456afd9a7)
+>           assert all(set(c) == {"hash", "date", "chars"} for c in corpus["selection"][key]), key
+E           AssertionError: real
+E           assert False
+E            +  where False = all(<generator object test_frozen_affinity_corpus_is_read_with_the_new_keys.<locals>.<genexpr> at 0x0000020CA8C64F20>)
+tests\test_corpus.py:989: AssertionError
+FAILED tests/test_corpus.py::test_frozen_affinity_corpus_is_read_with_the_new_keys
+1 failed in 3.23s
+restaurado legacy_names.py: sha256 d1c42925e5bd
+==================================================================
+sha256 antes d1c42925e5bd
+mutado legacy_names.py: '"real-reescrito": "real-rewritten",' -> '' (sha256 239bea6c1e74)
+>       assert sorted(new) == ["real-rewritten"] * 3 + ["written"] * 6
+E       AssertionError: assert ['real-reescr...written', ...] == ['real-rewrit...written', ...]
+E         
+E         At index 0 diff: 'real-reescrito' != 'real-rewritten'
+E         Use -v to get more diff
+tests\test_corpus.py:1006: AssertionError
+>       assert same_zone["source_body"] == "real-rewritten"
+E       AssertionError: assert 'real-reescrito' == 'real-rewritten'
+E         
+E         - real-rewritten
+E         + real-reescrito
+tests\test_pair_sheet.py:811: AssertionError
+>       assert same_zone["source_body"] == "real-rewritten"
+E       AssertionError: assert 'real-reescrito' == 'real-rewritten'
+E         
+E         - real-rewritten
+E         + real-reescrito
+tests\test_pair_sheet.py:811: AssertionError
+>       assert same_zone["source_body"] == "real-rewritten"
+E       AssertionError: assert 'real-reescrito' == 'real-rewritten'
+E         
+E         - real-rewritten
+E         + real-reescrito
+tests\test_pair_sheet.py:811: AssertionError
+FAILED tests/test_corpus.py::test_frozen_trap_body_origins_are_read_in_english
+FAILED tests/test_pair_sheet.py::test_nine_versioned_traps_are_whole_sentences_with_any_pair[juego-1]
+FAILED tests/test_pair_sheet.py::test_nine_versioned_traps_are_whole_sentences_with_any_pair[juego-2]
+FAILED tests/test_pair_sheet.py::test_nine_versioned_traps_are_whole_sentences_with_any_pair[juego-3]
+4 failed in 0.35s
+restaurado legacy_names.py: sha256 d1c42925e5bd
+==================================================================
+sha256 antes d1c42925e5bd
+mutado legacy_names.py: '"redactado": "written",' -> '' (sha256 5d278300d2ed)
+>       assert sorted(new) == ["real-rewritten"] * 3 + ["written"] * 6
+E       AssertionError: assert ['real-rewrit...dactado', ...] == ['real-rewrit...written', ...]
+E         
+E         At index 3 diff: 'redactado' != 'written'
+E         Use -v to get more diff
+tests\test_corpus.py:1006: AssertionError
+FAILED tests/test_corpus.py::test_frozen_trap_body_origins_are_read_in_english
+1 failed in 0.33s
+restaurado legacy_names.py: sha256 d1c42925e5bd
+==================================================================
+sha256 antes 0c0ced450637
+mutado ci_gate.py: '**{_STATE_LABELS[v.state]}**' -> '**{v.state}**' (sha256 ca3537939b7a)
+>       assert "- `lint`: **bien** — terminó" in text
+E       AssertionError: assert '- `lint`: **bien** — terminó' in '### Gate\n\n- `lint`: **good** — terminó\n- `tests`: **bad** — falló\n- `install-smoke`: **wait** — todavía no aparece en el run\n\n'
+tests\test_ci_gate.py:224: AssertionError
+FAILED tests/test_ci_gate.py::test_the_job_summary_prints_each_state_in_spanish
+1 failed in 0.33s
+restaurado ci_gate.py: sha256 0c0ced450637
+==================================================================
+sha256 antes 5daa4b179038
+mutado measure_cooldown.py: "{_RESULT_LABELS[m['result']]}" -> "{m['result']}" (sha256 733f01ec6e18)
+        """El `main()` reventaba siempre con `AttributeError: ... 'exclude'` (evidencias/T0.md).
+>       assert "RESULTADO: no concluyente" in capsys.readouterr().out
+E       AssertionError: assert 'RESULTADO: no concluyente' in 'Ventana: 2030-01-01 a (ahora)  (2026-10-14 12:21 UTC)\n  quitado por --exclude: 0 filas, 0 episodios\n  quitado por v...on:              0  (R: None)\n  abiertos por timeout:    0\n  reentran en Tmax:        0\n\nRESULTADO: inconclusive\n'
+E        +  where 'Ventana: 2030-01-01 a (ahora)  (2026-10-14 12:21 UTC)\n  quitado por --exclude: 0 filas, 0 episodios\n  quitado por v...on:              0  (R: None)\n  abiertos por timeout:    0\n  reentran en Tmax:        0\n\nRESULTADO: inconclusive\n' = CaptureResult(out='Ventana: 2030-01-01 a (ahora)  (2026-10-14 12:21 UTC)\n  quitado por --exclude: 0 filas, 0 episodio...        0  (R: None)\n  abiertos por timeout:    0\n  reentran en Tmax:        0\n\nRESULTADO: inconclusive\n', err='').out
+E        +    where CaptureResult(out='Ventana: 2030-01-01 a (ahora)  (2026-10-14 12:21 UTC)\n  quitado por --exclude: 0 filas, 0 episodio...        0  (R: None)\n  abiertos por timeout:    0\n  reentran en Tmax:        0\n\nRESULTADO: inconclusive\n', err='') = readouterr()
+E        +      where readouterr = <_pytest.capture.CaptureFixture object at 0x000002A45F938FD0>.readouterr
+tests\test_measure_cooldown.py:378: AssertionError
+>       assert f"RESULTADO: {expected[measured]}\n" in new
+E       AssertionError: assert 'RESULTADO: se quedan\n' in 'Ventana: 2026-09-16 a (ahora)  (2026-10-14 12:21 UTC)\n  quitado por --exclude: 0 filas, 0 episodios\n  quitado por v... reentraron:              2  (R: 0.4)\n  abiertos por timeout:    0\n  reentran en Tmax:        0\n\nRESULTADO: keep\n'
+tests\test_measure_cooldown.py:467: AssertionError
+FAILED tests/test_measure_cooldown.py::test_real_main_exits_with_zero - Asser...
+FAILED tests/test_measure_cooldown.py::test_the_old_wrapper_prints_the_same_report_with_the_spanish_result
+2 failed in 0.24s
+restaurado measure_cooldown.py: sha256 5daa4b179038
+==================================================================
+sha256 antes 3b43dc0be917
+mutado pair_sheet.py: "{_VERDICT_LABELS[row['verdict']]}" -> "{row['verdict']}" (sha256 684cfdfbfb16)
+>       assert f"| {label} |" in row
+E       AssertionError: assert '| valida |' in '| case-a | 5 | 4 | 4 | 100% | valid | secret-l: 5 |'
+tests\test_pair_sheet.py:219: AssertionError
+>       assert f"| {label} |" in row
+E       AssertionError: assert '| no valida |' in '| case-a | 5 | 4 | 0 | 0% | invalid | empate: 5 |'
+tests\test_pair_sheet.py:219: AssertionError
+>       assert f"| {label} |" in row
+E       AssertionError: assert '| sin base |' in '| case-a | 3 | 1 | 0 | 0% | no_baseline | secret-l: 1, secret-s: 2 |'
+tests\test_pair_sheet.py:219: AssertionError
+FAILED tests/test_pair_sheet.py::test_the_unblind_table_prints_the_verdict_in_spanish[small0-large-valid-valida]
+FAILED tests/test_pair_sheet.py::test_the_unblind_table_prints_the_verdict_in_spanish[small1-=-invalid-no valida]
+FAILED tests/test_pair_sheet.py::test_the_unblind_table_prints_the_verdict_in_spanish[small2-A-no_baseline-sin base]
+3 failed in 0.28s
+restaurado pair_sheet.py: sha256 3b43dc0be917
+==================================================================
+sha256 antes a87233f39dd3
+mutado analyze_benchmark.py: "{_PAIRS_VERDICT_LABELS.get(role_pairs['verdict'], role_pairs['verdict'])}" -> "{role_pairs['verdict']}" (sha256 5aafe9017f00)
+>           assert f"empates 0 -> **{label}**" in report, label
+E           AssertionError: mejor
+E           assert 'empates 0 -> **mejor**' in '# Regla de decision de F2 (§6 y §7)\n\n## Tabla 1: por rol\n\n| Rol | Vigente | Candidato | Calidad v / c | Banda | L... | incumbent | 106092 |\n| long | candidate | 106092 |\n| long | incumbent | 106092 |\n| long | candidate | 106092 |\n'
+tests\test_analyze_benchmark.py:716: AssertionError
+FAILED tests/test_analyze_benchmark.py::test_the_pairs_decide_the_quality_of_an_open_text_role
+1 failed in 0.24s
+restaurado analyze_benchmark.py: sha256 a87233f39dd3
+==================================================================
+Mutante de la tabla de --privacy contra el --check del corpus (no lo ve: ningun commit de la ventana lleva datos privados, asi que fallar y excluir eligen lo mismo; lo ve el test de arriba):
+sha256 antes d1c42925e5bd
+mutado legacy_names.py: '{"fallar": "fail", "excluir": "exclude"}' -> '{"fallar": "fail"}' (sha256 ae8d008a92ec)
+idioma del mensaje de commit: es
+ok
+rc=0
+restaurado legacy_names.py: sha256 d1c42925e5bd

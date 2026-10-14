@@ -120,12 +120,12 @@ def test_agreement_counts_only_where_the_metric_prefers_and_a_human_tie_is_not_a
     # La persona elige siempre al grande: 4 de 4 donde la metrica prefiere. Valida.
     all_large, _ = pair_sheet.unblind(_fill_in(sheet, key, large), key)
     row = all_large["case-a"]
-    assert (row["metric_prefers"], row["agreements"], row["verdict"]) == (4, 4, "valida")
+    assert (row["metric_prefers"], row["agreements"], row["verdict"]) == (4, 4, "valid")
     assert row["human"] == {"secret-l": 5}
 
     # La persona ve empate en todo: la metrica afirma diferencias que nadie ve. No valida.
     ties, _ = pair_sheet.unblind(_fill_in(sheet, key, lambda _m: "="), key)
-    assert (ties["case-a"]["agreements"], ties["case-a"]["verdict"]) == (0, "no valida")
+    assert (ties["case-a"]["agreements"], ties["case-a"]["verdict"]) == (0, "invalid")
 
 
 def test_with_few_metric_preferences_there_is_no_basis_to_validate():
@@ -134,7 +134,7 @@ def test_with_few_metric_preferences_there_is_no_basis_to_validate():
     assert missing == []
     assert (result["case-a"]["metric_prefers"], result["case-a"]["verdict"]) == (
         1,
-        "sin base",
+        "no_baseline",
     )
 
 
@@ -186,6 +186,37 @@ def test_unblind_writes_the_json_for_decide_only_with_the_whole_sheet(tmp_path):
     assert not output.exists()
     assert unblind(_fill_in(sheet, key, lambda _m: "=")) == 0
     assert json.loads(output.read_text(encoding="utf-8"))["case-a"]["human"] == {"empate": 2}
+
+
+@pytest.mark.parametrize(
+    ("small", "choose", "verdict", "label"),
+    [
+        ([0.5] * 4 + [1.0], "large", "valid", "valida"),
+        ([0.5] * 4 + [1.0], "=", "invalid", "no valida"),
+        ([0.5, 1.0, 1.0], "A", "no_baseline", "sin base"),
+    ],
+)
+def test_the_unblind_table_prints_the_verdict_in_spanish(
+    tmp_path, capsys, small, choose, verdict, label
+):
+    """El veredicto es interno y sale así en `--json`; la tabla lo imprime con su rótulo, que sigue
+    en español hasta el frente B (cierre del frente A, lote 5).
+    Control: imprimir `row['verdict']` tal cual → sale `| valid |` y este test falla."""
+    sheet, key = _generate(_batch(small, [1.0] * len(small)))
+
+    def pick(meta):
+        if choose == "large":
+            return "A" if meta["A"]["label"] == "secret-l" else "B"
+        return choose
+
+    (tmp_path / "h.md").write_text(_fill_in(sheet, key, pick), encoding="utf-8")
+    (tmp_path / "c.json").write_text(json.dumps(key), encoding="utf-8")
+    output = tmp_path / "pairs.json"
+    argv = ["unblind", "--sheet", str(tmp_path / "h.md"), "--key", str(tmp_path / "c.json")]
+    assert pair_sheet.main([*argv, "--json", str(output)]) == 0
+    assert json.loads(output.read_text(encoding="utf-8"))["case-a"]["verdict"] == verdict
+    row = next(line for line in capsys.readouterr().out.splitlines() if line.startswith("| case-a"))
+    assert f"| {label} |" in row
 
 
 def test_generate_does_not_overwrite_an_existing_sheet(tmp_path):
@@ -345,7 +376,7 @@ def _side(key, num, who):
     return "A" if sides["A"] == who else "B"
 
 
-def _responses(key, *, c=0, v=0, ties=0, invents=0, traps="peor", complete=False):
+def _responses(key, *, c=0, v=0, ties=0, invents=0, traps="worse", complete=False):
     """Respuestas ya contestadas: `c` pares reales para el 26B, `v` para Qwen, `ties` en `=`,
     `invents` mensajes del 26B marcados como «inventa». El resto de pares reales queda sin contestar."""
     real = [n for n, p in sorted(key["pairs"].items()) if p["kind"] == "real"]
@@ -365,7 +396,7 @@ def _responses(key, *, c=0, v=0, ties=0, invents=0, traps="peor", complete=False
         trap_side = "A" if model_side == "B" else "B"
         responses[num] = {
             "made_up": {"A": "n", "B": "n"},
-            "preference": model_side if traps == "peor" else trap_side,
+            "preference": model_side if traps == "worse" else trap_side,
         }
     if complete:
         assert len(responses) == len(key["pairs"])
@@ -777,7 +808,7 @@ def test_nine_versioned_traps_are_whole_sentences_with_any_pair(case_set_item):
                 name,
             )
     same_zone = next(t for t in case_set_item["traps"] if t["kind"] == "same-zone")
-    assert same_zone["source_body"] == "real-reescrito"
+    assert same_zone["source_body"] == "real-rewritten"
 
 
 # --- Leer las respuestas ---------------------------------------------------------------------------
@@ -890,7 +921,7 @@ def test_early_stop(tmp_path):
     output = _stopped(tmp_path, c=5, invents=3, traps=None)
     assert output == "sigue"
     # Una hoja que no vale (la trampa preferida en las 3): tampoco se puede parar.
-    assert _stopped(tmp_path, c=5, invents=3, traps="mejor") == "sigue"
+    assert _stopped(tmp_path, c=5, invents=3, traps="better") == "sigue"
 
 
 def test_read_commit_partial_answers_one_word(tmp_path, capsys):

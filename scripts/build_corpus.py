@@ -1384,9 +1384,9 @@ def select_commits(
 ) -> Selection:
     """La regla escrita de REQ-040, aplicada por codigo. La lista de hashes sale de aqui, nunca a mano.
 
-    `excluir` son prefijos de hash que no se eligen (el caso que ya esta en el corpus de F2).
+    `exclude` son prefijos de hash que no se eligen (el caso que ya esta en el corpus de F2).
     `discard_if` recibe el diff normalizado y, si devuelve `True`, el commit no es candidato (el
-    modo `--privacy excluir`: un diff con datos privados no entra en el repo).
+    modo `--privacy exclude`: un diff con datos privados no entra en el repo).
     """
     sizes: dict[str, int | None] = {}
     last: list[Commit] = []
@@ -2335,13 +2335,13 @@ def build_traps(
                 origin = "real"
                 if commit.short in SAME_ZONE_BODIES:
                     body = list(SAME_ZONE_BODIES[commit.short])
-                    origin = "real-reescrito"
+                    origin = "real-rewritten"
                 elif len(body) < 5:
                     reserve = SAME_ZONE_RESERVES.get(commit.short)
                     if reserve is None:
                         raise ValueError(f"{commit.short}: falta el cuerpo de reserva")
                     body += reserve[: 5 - len(body)]
-                    origin = "real+redactado" if real["real_body"] else "redactado"
+                    origin = "real+written" if real["real_body"] else "written"
                 entry.update(
                     subject=real["subject"],
                     body=body,
@@ -2353,7 +2353,7 @@ def build_traps(
                 if text is None:
                     raise ValueError(f"{commit.short}: falta la trampa redactada ({kind})")
                 entry.update(
-                    subject=text["subject"], body=list(text["body"]), source_body="redactado"
+                    subject=text["subject"], body=list(text["body"]), source_body="written"
                 )
             if len(entry["subject"]) > 72:
                 raise ValueError(f"{commit.short}: el asunto de la trampa pasa de 72 caracteres")
@@ -2419,15 +2419,15 @@ def _write_json_lf(path: Path, data: Any) -> None:
 
 
 def build_affinity(
-    root: Path, target: Path, *, privacy: str = "fallar", write: bool = True
+    root: Path, target: Path, *, privacy: str = "fail", write: bool = True
 ) -> tuple[int, dict[str, Any]]:
     """Construye `benchmarks/afinidad-2026-10/`: `cases.json`, `traps.json` y `fuentes/`.
 
-    `privacy`: `fallar` (por defecto) para si algun texto lleva datos privados; `excluir` saca de
+    `privacy`: `fail` (por defecto) para si algun texto lleva datos privados; `exclude` saca de
     la seleccion los commits cuyo diff los lleva y sigue con el siguiente candidato de la misma
-    regla. Devuelve `(codigo, informe)`; con `escribir=False` no toca el disco.
+    regla. Devuelve `(codigo, informe)`; con `write=False` no toca el disco.
     """
-    discard = (lambda t: bool(private_data(t))) if privacy == "excluir" else None
+    discard = (lambda t: bool(private_data(t))) if privacy == "exclude" else None
     selection = select_commits(root, discard_if=discard)
     by_f2_id = {c.id: c for c in CASES}
     f2_sources = DESTINATION / "fuentes"
@@ -2562,7 +2562,7 @@ def build_affinity(
     if any(e["source_sha256"] in real_diffs for e in entries if e.get("sheet_role") == "trap"):
         errors.append("un caso trampa tiene el mismo diff que un caso real")
 
-    # El dato privado de un diff se ve antes de armar las trampas: en el modo `fallar` es el motivo.
+    # El dato privado de un diff se ve antes de armar las trampas: en el modo `fail` es el motivo.
     private_before = [
         f"dato privado en fuentes/{name}: {finding}"
         for name, data in sorted(sources.items())
@@ -2587,8 +2587,8 @@ def build_affinity(
             "step": selection.step,
             "privacy": privacy,
             "f2_case": {"id": F2_REAL_CASE, "commit": F2_COMMIT},
-            "real": [{"hash": c.hash, "fecha": c.date, "chars": c.chars} for c in selection.real],
-            "traps": [{"hash": c.hash, "fecha": c.date, "chars": c.chars} for c in selection.traps],
+            "real": [{"hash": c.hash, "date": c.date, "chars": c.chars} for c in selection.real],
+            "traps": [{"hash": c.hash, "date": c.date, "chars": c.chars} for c in selection.traps],
         },
         "cases": entries,
     }
@@ -2604,7 +2604,7 @@ def build_affinity(
     errors += [f"dato privado en {p}" for p in private_items]
 
     def group(e: dict[str, Any]) -> str:
-        return e.get("sheet_role") or ("nuevo" if e["discriminating"] else "regresion")
+        return e.get("sheet_role") or ("new" if e["discriminating"] else "regression")
 
     tmp_dir.cleanup()
     report = {
@@ -2674,8 +2674,8 @@ def main_affinity(argv: list[str]) -> int:
     parser.add_argument("--dest", type=Path, default=AFFINITY_TARGET)
     parser.add_argument(
         "--privacy",
-        choices=("fallar", "excluir"),
-        default="fallar",
+        choices=("fail", "exclude"),
+        default="fail",
         help="que hacer si un diff lleva datos privados: parar, o pasar al siguiente candidato",
     )
     parser.add_argument("--check", action="store_true", help="reconstruye y compara")

@@ -325,6 +325,18 @@ def test_an_old_row_with_the_spanish_truncated_outcome_is_read_in_english(tmp_pa
     assert case.qualities == [0.0]
 
 
+@pytest.mark.parametrize("folder", ["resultados", "resultados-sin-idioma"])
+def test_the_frozen_ceiling_rows_say_by_which_path_they_went_in_english(folder):
+    """Las filas congeladas del techo de `affinity_batch` dicen por dónde fueron con el valor
+    viejo; `read_jsonl` las da con el nuevo, el que escribe hoy (cierre del frente A, lote 5)."""
+    path = ROOT / "benchmarks" / "afinidad-2026-10" / folder / "techo-gemma4-26b-a4b.jsonl"
+    raw = [json.loads(line)["via"] for line in path.read_text(encoding="utf-8").splitlines()]
+    records = analyze.read_jsonl([path])
+    assert len(records) == len(raw) == 3
+    assert all(old != "production" for old in raw)  # sí es viejo
+    assert [r["via"] for r in records] == ["production"] * 3
+
+
 def _cp3_at_ceiling(role, reason_of_one="ceiling"):
     ids = analyze._role_cases(CORPUS, role, "quality")
     cases = {cid: {"reason": "ceiling"} for cid in ids}
@@ -653,11 +665,11 @@ def test_case_without_automatic_score_stays_out_of_the_rule_and_the_report_says_
 @pytest.mark.parametrize(
     ("candidate", "incumbent", "ties", "expected"),
     [
-        (15, 5, 0, "mejor"),  # P(X >= 15 | 20) = 0,021
-        (14, 6, 0, "empate"),  # 0,058: por encima de 0,05
-        (5, 15, 0, "peor"),
-        (9, 1, 10, "mejor"),  # los empates no cuentan: 9 de 10, 0,011
-        (0, 0, 20, "empate"),  # todo empate es un juicio, no falta de datos
+        (15, 5, 0, "better"),  # P(X >= 15 | 20) = 0,021
+        (14, 6, 0, "tie"),  # 0,058: por encima de 0,05
+        (5, 15, 0, "worse"),
+        (9, 1, 10, "better"),  # los empates no cuentan: 9 de 10, 0,011
+        (0, 0, 20, "tie"),  # todo empate es un juicio, no falta de datos
         (0, 0, 0, None),
     ],
 )
@@ -691,9 +703,17 @@ def test_the_pairs_decide_the_quality_of_an_open_text_role():
 
     wins = decide(_pairs(15, 5))
     assert (wins["verdict"], wins["criterion"]) == ("replace", "calidad")
-    assert wins["pairs"]["verdict"] == "mejor"
+    assert wins["pairs"]["verdict"] == "better"
     loses = decide(_pairs(5, 15))
     assert (loses["verdict"], loses["criterion"]) == ("no_replace", "calidad")
+    assert loses["pairs"]["verdict"] == "worse"
+    # El informe imprime el veredicto por pares con su rótulo en español (lote 5). Control:
+    # imprimirlo tal cual → sale `**better**` y esto falla.
+    tie = decide(_pairs(12, 8))
+    assert tie["pairs"]["verdict"] == "tie"
+    report = analyze.decision_report([wins, loses, tie], {"incumbent": v, "candidate": c}, REAL)
+    for label in ("mejor", "peor", "empate"):
+        assert f"empates 0 -> **{label}**" in report, label
     # Empate por pares y por formula: deciden los desempates (aqui, empate tambien en latencia).
     assert decide(_pairs(12, 8))["criterion"] == "empate"
 
@@ -720,7 +740,7 @@ def test_a_source_saying_worse_vetoes_the_other_saying_better():
     cp3 = {"admitted_cases": ["boilerplate-156"], "cases": {}}
     pairs = {"explicar-install-20k": {"human": {"candidate": 2, "incumbent": 18}}}
     d = analyze.decide_role("code", v, c, REAL, cp3, pairs=pairs)
-    assert d["pairs"]["verdict"] == "peor"
+    assert d["pairs"]["verdict"] == "worse"
     assert (d["verdict"], d["criterion"]) == ("no_replace", "calidad")
 
 

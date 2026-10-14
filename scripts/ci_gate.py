@@ -114,9 +114,13 @@ JOB_FAILURE = 1
 TIMEOUT_FAILURE = 2
 API_FAILURE = 3
 
-WAIT = "esperar"
-GOOD = "bien"
-BAD = "mal"
+WAIT = "wait"
+GOOD = "good"
+BAD = "bad"
+
+#: Cómo se imprime cada estado en el resumen del job: el texto de salida sigue en español hasta
+#: el frente B.
+_STATE_LABELS = {WAIT: "esperar", GOOD: "bien", BAD: "mal"}
 
 
 class ApiUnavailable(Exception):
@@ -228,7 +232,7 @@ def _report(title: str, results: dict[str, Verdict], write: Callable[[str], None
         with open(summary, "a", encoding="utf-8") as fh:
             fh.write(f"### {title}\n\n")
             for name, v in results.items():
-                fh.write(f"- `{name}`: **{v.state}** — {v.reason}\n")
+                fh.write(f"- `{name}`: **{_STATE_LABELS[v.state]}** — {v.reason}\n")
             if phantoms:
                 fh.write(f"\n> Job fantasma detectado: {', '.join(f'`{n}`' for n in phantoms)}\n")
             fh.write("\n")

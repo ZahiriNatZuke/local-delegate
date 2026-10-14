@@ -615,6 +615,118 @@ solo con REQ-010 y **0 palabras sin clasificar** (`evidence/A-close/detector.jso
 control de REQ-044 en verde (43 passed); **2609 tests recogidos**; suite **2607 passed, 2
 skipped**; ruff limpio.
 
+## A-close-5 — valores de una palabra que el detector no ve, y sus hermanos
+
+Mapping `waves/A-close-5-mapping.csv` (34 filas: 33 `value` y 1 `dict_key`, todas aplicadas, con su
+línea `# Fase 2`); análisis y preguntas en `waves/A-close-5.md` (decisiones 1–8 aprobadas según la
+recomendación). Rama `sdd/english-names-a-close-5`, encima de `61f8b21` (lote 4, mezclado en
+`main`). Sin commit: borrador en `waves/A-close-5-commit-msg.txt`. Evidencia en
+`evidence/A-close-5/`.
+
+### Qué se hizo
+
+- **Valores internos sin lectura dual** (nadie los relee de disco):
+  - estado del lector HTML de `price_watcher.py`: `buscando`/`tabla`/`hecho` →
+    `searching`/`table`/`done`;
+  - estados de `ci_gate.py`: `esperar`/`bien`/`mal` → `wait`/`good`/`bad`;
+  - `result` de `measure_cooldown.verdict`: `no concluyente`/`se quedan`/`cambiar` →
+    `inconclusive`/`keep`/`change` (decisión 2 para los de dos palabras); sale así en `--json`;
+  - veredicto por pares y automático de `analyze_benchmark` (`pairs_verdict`, `automatic`):
+    `mejor`/`peor`/`empate` → `better`/`worse`/`tie`, y el ganador de `_preferred`: `empate` → `tie`
+    (decisión 3). Se quedan en español la clave `empate` de `human` (`:376`, frente B) y el criterio
+    `empate` de `:698` (salida);
+  - `verdict` de `pair_sheet.unblind`: `valida`/`no valida`/`sin base` → `valid`/`invalid`/
+    `no_baseline`;
+  - carpeta `casa` → `home` de `check_install_e2e.py`, motivo por defecto `aviso` → `suggested` de
+    `measure_adoption.py`, grupos `nuevo`/`regresion` → `new`/`regression` de `by_tool` en
+    `build_corpus.py` (decisión 7) y el parámetro `traps="peor"|"mejor"` → `"worse"|"better"` del
+    helper `_responses` de `tests/test_pair_sheet.py` (decisión 8).
+- **Rótulos para que la salida no cambie** (decisión 1): `_RESULT_LABELS` en `measure_cooldown.py`
+  («RESULTADO:»), `_PAIRS_VERDICT_LABELS` en `analyze_benchmark.py` (la línea de la comparación por
+  pares del informe; con `.get`, porque un rol sin pares juzgados lleva `verdict` `None`),
+  `_VERDICT_LABELS` en `pair_sheet.py` (tabla de `unblind`) y `_STATE_LABELS` en `ci_gate.py` (el
+  resumen del job en `GITHUB_STEP_SUMMARY`, que imprimía `v.state`; ver desviaciones).
+- **Lectura dual** en `src/local_delegate/legacy_names.py` (regla 1):
+  - `benchmark_results.values.via`: `produccion` → `production` (lo escribe
+    `scripts/dev/affinity_batch.py`; 6 filas congeladas en `resultados*/techo-*.jsonl`);
+  - `affinity_corpus.values.privacy`: `fallar`/`excluir` → `fail`/`exclude` (decisión 4): `--privacy`
+    cambia sin alias y `check_versioned_affinity` le pasa a `build_affinity` el valor ya traducido;
+  - `affinity_corpus.keys`: `fecha` → `date` (decisión 6), y `normalize_affinity_corpus` normaliza
+    ahora también cada commit de `selection.real` y `selection.traps`;
+  - `affinity_traps.values.source_body`: `redactado`/`real+redactado`/`real-reescrito` →
+    `written`/`real+written`/`real-rewritten` (decisión 5); `build_traps` escribe los nuevos.
+  `affinity --check` del corpus de afinidad: **ok** antes y después (`evidence/A-close-5/
+  affinity-check-before.txt` y `-after.txt`), con `LOCAL_DELEGATE_COMMIT_LANGUAGE=es`, el idioma
+  con el que se construyó (sin la variable da 1 diferencia ya en `main`: los 40 `system` de los
+  casos de commit).
+- **Tests nuevos** (8 recogidos): `tests/test_ci_gate.py::test_the_job_summary_prints_each_state_in_spanish`,
+  `tests/test_measure_cooldown.py::test_the_old_wrapper_prints_the_same_report_with_the_spanish_result`
+  (REQ-046: el envoltorio `medir_enfriamiento.py` imprime el mismo texto que el nuevo),
+  `tests/test_analyze_benchmark.py::test_the_frozen_ceiling_rows_say_by_which_path_they_went_in_english[resultados]`
+  y `[resultados-sin-idioma]` (las filas congeladas reales, no una escrita a mano),
+  `tests/test_pair_sheet.py::test_the_unblind_table_prints_the_verdict_in_spanish` (3 casos) y
+  `tests/test_corpus.py::test_frozen_trap_body_origins_are_read_in_english`. Ampliados:
+  `test_frozen_affinity_corpus_is_read_with_the_new_keys` (`privacy` `exclude` y la clave `date` de
+  cada commit, comparando con el crudo sin escribir el literal viejo) y
+  `test_the_pairs_decide_the_quality_of_an_open_text_role` (`worse`, `tie` y los tres rótulos del
+  informe). `test_corpus.py:748/:753` y `test_pair_sheet.py:780` pasan al valor nuevo; el de
+  `test_pair_sheet.py` lee el `trampas.json` congelado normalizado.
+- `rename-exceptions.md`: fuera la fila `excluir | tests/test_corpus.py` y las tres de
+  `real-reescrito` (`scripts/build_corpus.py`, `tests/test_corpus.py`, `tests/test_pair_sheet.py`);
+  dentro 5 filas por los tests nuevos: `privacidad`, `trampas`, `juegos` y `cuerpo_origen` en
+  `tests/test_corpus.py` (lectura de formato viejo) y `resultados-sin-idioma` en
+  `tests/test_analyze_benchmark.py` (dato congelado).
+- Léxico: `redactado` a `es` y `they` a `en` (paso 7 de `scripts/data/spanish_lexicon.README.md`).
+- Prosa de `build_corpus.py` que citaba los valores o nombres viejos: `--privacy exclude` (`:1389`),
+  el modo `fail` (`:2565`), `exclude` (`:1387`, el parámetro ya se llamaba así) y `write=False`
+  (`:2428`).
+
+Cómo: un script de reemplazos con recuento exacto por fichero y todo o nada (scratchpad
+`a-close-5/edit5.py`, bytes UTF-8, sin tocar el EOL), revisado literal a literal contra el `grep`
+de cada valor; sin `make_mapping.py apply` y sin PyCharm (caído).
+
+### Verificación
+
+- EOL: los 19 ficheros tocados del repo siguen en LF (`git ls-files --eol`); modo sin cambios.
+- `--collect-only`: **2617** = 2609 + 8 tests nuevos (`evidence/A-close-5/collect.txt`).
+- Tests de los ficheros del lote: 425 passed (`evidence/A-close-5/targeted.txt`); la primera corrida
+  dio 1 fallo del test ampliado (`decision_report` necesita la configuración del vigente), que se
+  corrigió en el test.
+- Suite `-n 2 --dist loadgroup` con el cerrojo (Playwright incluido): **2615 passed, 2 skipped**, sin
+  fallos; solo los 2 `DeprecationWarning` de starlette/anyio (`evidence/A-close-5/pytest-full.log`).
+- `ruff check` y `ruff format --check`: limpios (`evidence/A-close-5/ruff.txt`).
+- Detector con la lista: hallazgos únicos 713 → **723**, todos en la lista; fuera de la lista **0** y
+  palabras sin clasificar **0** (antes de las filas nuevas y del léxico: 7 y 2)
+  (`evidence/A-close-5/detector.json`, resumen en `detector.txt`).
+- `tools/check_wave_records.py` sobre `waves/A-close.md`: OK (`evidence/A-close-5/wave-records.txt`).
+
+### Desviaciones
+
+1. `ci_gate.py:231` escribía `v.state` en el resumen del job y el mapping no lo vio: se aplicó la
+   decisión 1 (rótulo `_STATE_LABELS`) con su test y su mutante.
+2. Prosa de `build_corpus.py` fuera de las filas (cuatro líneas de docstring y comentario).
+3. El mutante de la tabla `privacy` no lo ve `affinity --check`: ningún commit de la ventana lleva
+   datos privados, así que `fallar` y `excluir` eligen los mismos commits y el corpus construido
+   coincide. Lo ve el test de `test_corpus.py` (abajo).
+4. 5 filas nuevas en `rename-exceptions.md` y 2 palabras en el léxico, por los tests nuevos.
+5. `plan.md` aparece modificado en el árbol de trabajo, pero no es de este lote: ya lo estaba y no
+   se tocó.
+
+| Control positivo del lote 5 | Mutante | Assert que disparó | Restaurado |
+| --- | --- | --- | --- |
+| `test_the_frozen_ceiling_rows_say_by_which_path_they_went_in_english` (los 2) | `benchmark_results.values.via` vacío | `test_analyze_benchmark.py:337` `['produccion', …] == ['production', …]`; 2 failed | desde copia; sha256 `d1c42925e5bd` antes y después |
+| `test_frozen_affinity_corpus_is_read_with_the_new_keys` | `privacy` sin `"excluir"` | `test_corpus.py:985` `'excluir' != 'excluir'`; 1 failed | ídem |
+| `test_frozen_affinity_corpus_is_read_with_the_new_keys` | `affinity_corpus.keys` sin `"fecha"` | `test_corpus.py:989` `assert all(set(c) == {"hash", "date", "chars"} …)` (`real`); 1 failed | ídem |
+| `test_frozen_trap_body_origins_are_read_in_english` y `test_nine_versioned_traps_are_whole_sentences_with_any_pair` (los 3) | `source_body` sin `"real-reescrito"` | `test_corpus.py:1006` (`'real-reescrito' != 'real-rewritten'`) y `test_pair_sheet.py:811`; 4 failed | ídem |
+| `test_frozen_trap_body_origins_are_read_in_english` | `source_body` sin `"redactado"` | `test_corpus.py:1006` (`'redactado' != 'written'`); 1 failed | ídem |
+| `test_the_job_summary_prints_each_state_in_spanish` | `ci_gate.py` escribe `v.state` | `test_ci_gate.py:224` (sale `**good**`); 1 failed | sha256 `0c0ced450637` antes y después |
+| `test_real_main_exits_with_zero` y `test_the_old_wrapper_prints_the_same_report_with_the_spanish_result` | `measure_cooldown.py` imprime `m['result']` | `test_measure_cooldown.py:378` (`RESULTADO: inconclusive`) y `:467` (`RESULTADO: keep`); 2 failed | sha256 `5daa4b179038` antes y después |
+| `test_the_unblind_table_prints_the_verdict_in_spanish` (los 3) | `pair_sheet.py` imprime `row['verdict']` | `test_pair_sheet.py:219` (`| valid |`, `| invalid |`, `| no_baseline |`); 3 failed | sha256 `3b43dc0be917` antes y después |
+| `test_the_pairs_decide_the_quality_of_an_open_text_role` | `analyze_benchmark.py` imprime `role_pairs['verdict']` | `test_analyze_benchmark.py:716` (`empates 0 -> **mejor**` no está); 1 failed | sha256 `a87233f39dd3` antes y después |
+
+Todos en `evidence/A-close-5/mutants.log` (scratchpad `a-close-5/mutants.sh` y `mutate.py`, que
+exige que el texto a mutar aparezca una vez).
+
 ## Controles positivos
 
 | Test | Mutante aplicado | Assert que disparó | Restaurado |
@@ -623,6 +735,7 @@ skipped**; ruff limpio.
 | `tests/test_dashboard_ui.py::test_no_table_shows_internal_keys` (lote 2; datos renombrados `odd_new_key`, `reason_that_does_not_exist`, `new_client`) | `src/local_delegate/web/metrics.py:1908`, el respaldo de rótulos sin quitar los `_` | `test_dashboard_ui.py:981` `assert not bad` con `['Odd_new_key', 'Reason_that_does_not_exist', 'New_client']` (`evidence/A-close-2/mutante.log`) | desde copia; sha256 `778ba0eb00f6` antes y después |
 | `tests/test_corpus.py::test_frozen_corpus_values_are_read_in_english`, `tests/test_analyze_benchmark.py::test_an_old_row_with_the_spanish_truncated_outcome_is_read_in_english` y `tests/test_pair_sheet.py::test_the_frozen_key_answers_and_rules_give_a_complete_judgement_in_the_new_format` (lote 3; lectura dual de los valores del corpus, del banco y de la hoja) | `src/local_delegate/legacy_names.py`, cinco mutantes: sin `"congelado"`, sin `"texto"`, `SHEET_TRAP_VALUES = {}`, sin `"techo"` en `SCORER_KIND_VALUES` y sin `"truncado"` en `benchmark_results.outcome` | `test_corpus.py:1019`, `:1020`, `:1029`, `:1032`, `:821`; `test_pair_sheet.py:1105`; `test_analyze_benchmark.py:323` (AssertionError) y `test_benchmark.py:653` (`ValueError` de `load_corpus`) (`evidence/A-close-3/mutants.log`) | desde copia; sha256 `0cdf12a06e93` antes y después |
 | `tests/test_detect_spanish_names.py::test_a_name_wildcard_sets_aside_every_name_of_its_file_and_only_of_its_file`, `test_declarations_with_commas_declare_every_name` y `tests/test_measure_slowness.py::test_help_prints_in_a_cp1252_console_without_doing_the_work` (lote 4; comodín, mayúsculas, comas del JS y `--help` en cp1252) | cuatro mutantes: `is_excepted` con `e.name == finding.name`; con `fnmatch` en vez de `fnmatchcase`; `_declarators` sin la rama de la coma; la `Σ` de vuelta en el docstring de `measure_slowness.py` | `test_detect_spanish_names.py:250` `assert sorted(...) == [...]` (con `==` sobran `leer_precios` y `fallo_conexion` del fichero exceptuado; con `fnmatch` falta `EMPATE`); `test_detect_spanish_names.py:174` `['uno', 'cinco', 'i', 'nueve'] == [...]` (AssertionError); `test_measure_slowness.py:458` `UnicodeEncodeError … 'Σ'`; 1 failed cada uno (`evidence/A-close-4/mutants.log`) | desde copia en memoria; sha256 `79b04772c89c` (`detect_spanish_names.py`) y `e86f7df17de1` (`measure_slowness.py`) antes y después |
+| `tests/test_analyze_benchmark.py::test_the_frozen_ceiling_rows_say_by_which_path_they_went_in_english`, `tests/test_corpus.py::test_frozen_affinity_corpus_is_read_with_the_new_keys`, `test_frozen_trap_body_origins_are_read_in_english`, `tests/test_ci_gate.py::test_the_job_summary_prints_each_state_in_spanish`, `tests/test_measure_cooldown.py::test_the_old_wrapper_prints_the_same_report_with_the_spanish_result`, `tests/test_pair_sheet.py::test_the_unblind_table_prints_the_verdict_in_spanish` y `tests/test_analyze_benchmark.py::test_the_pairs_decide_the_quality_of_an_open_text_role` (lote 5; lectura dual de `via`, `privacy`, `fecha` y `source_body`, y rótulos de salida) | nueve mutantes: cinco de `legacy_names.py` (sin `via`, sin `excluir`, sin la clave `fecha`, sin `real-reescrito`, sin `redactado`) y cuatro que imprimen el valor interno (`ci_gate`, `measure_cooldown`, `pair_sheet`, `analyze_benchmark`) | `test_analyze_benchmark.py:337`, `test_corpus.py:985`, `:989`, `:1006`, `test_pair_sheet.py:811`, `test_ci_gate.py:224`, `test_measure_cooldown.py:378` y `:467`, `test_pair_sheet.py:219`, `test_analyze_benchmark.py:716` (AssertionError) (`evidence/A-close-5/mutants.log`) | desde copia; sha256 `d1c42925e5bd` (`legacy_names.py`) y los de cada script antes y después |
 
 ## Llamadas `local_*` (sesión principal y cada agente)
 
@@ -639,6 +752,8 @@ skipped**; ruff limpio.
 | Agente A-close-4 | `local_lint_summary(path=evidence/A-close-4/pytest-full.log)` | resumen de la suite: 2607 passed, 2 skipped, solo los 2 `DeprecationWarning` de starlette/anyio; sirvió |
 | Agente A-close-4 | `local_classify` (0) | motivo: devuelve una etiqueta por llamada y eran 794 palabras; la lista se revisó a mano entera, que era lo que pedía el lote |
 | Agente A-close-4 | `local_commit_msg` (0) | motivo: el del lote 3 devolvió solo un asunto en inglés; el mensaje se escribió a mano en español |
+| Agente A-close-5 (fase 2) | `local_lint_summary(path=evidence/A-close-5/pytest-full.log)` | resumen de la suite: 2615 passed, 2 skipped, solo los 2 `DeprecationWarning` de starlette/anyio; sirvió |
+| Agente A-close-5 (fase 2) | `local_summarize`, `local_extract`, `local_explain_code`, `local_commit_msg` (0) | motivo: cada edición necesitaba el literal de unas pocas líneas (`sed -n`), el registro del lote 3 se leyó por franjas para copiar su formato, y el `local_commit_msg` del lote 3 devolvió solo un asunto en inglés: el mensaje se escribió a mano en español |
 
 ## Llamadas `mcp__pycharm__*`
 
@@ -651,3 +766,4 @@ skipped**; ruff limpio.
 | A-close-2 | (ninguna) | MCP de PyCharm caído (ECONNREFUSED) tras el reinicio | motivo: las 3 filas `pycharm` se hicieron a mano y la comprobación de problemas la cubren `py_compile`, ruff y la suite |
 | A-close-3 | (ninguna) | MCP de PyCharm caído (ECONNREFUSED) | motivo: 0 filas `pycharm`; la comprobación de problemas la cubren ruff y la suite |
 | A-close-4 | (ninguna) | MCP de PyCharm caído (ECONNREFUSED) | motivo: 0 renombres; la comprobación de problemas la cubren ruff y la suite |
+| A-close-5 | (ninguna) | MCP de PyCharm caído (ECONNREFUSED) | motivo: 0 filas `pycharm`; la comprobación de problemas la cubren ruff y la suite |

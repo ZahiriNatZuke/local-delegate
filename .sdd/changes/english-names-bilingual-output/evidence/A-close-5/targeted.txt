@@ -1,0 +1,8 @@
+[pesado] plaza plaza-1 tomada tras 0s: uv run pytest -q -p no:cacheprovider tests/test_ci_gate.py tests/test_measure_cooldown.py tests/test_analyze_benchmark.py tests/test_pair_sheet.py tests/test_corpus.py tests/test_price_watcher.py tests/test_measure_adoption.py tests/test_affinity_batch.py tests/test_deprecations.py tests/test_f1_conformance.py tests/test_affinity.py
+........................................................................ [ 16%]
+........................................................................ [ 33%]
+........................................................................ [ 50%]
+........................................................................ [ 67%]
+........................................................................ [ 84%]
+.................................................................        [100%]
+425 passed in 23.38s

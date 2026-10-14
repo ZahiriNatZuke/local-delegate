@@ -341,18 +341,18 @@ def _binomial_tail(successes: int, n: int) -> float:
 def pairs_verdict(candidate: int, incumbent: int, ties: int = 0) -> str | None:
     """Prueba de signos sobre los pares con eleccion; los empates no cuentan.
 
-    «mejor» si el candidato fue elegido tantas veces que por azar pasaria con probabilidad
-    <= PAIRS_ALPHA; «peor» si eso le pasa al vigente; si no, «empate». Con 20 pares sin empates hace
+    `better` si el candidato fue elegido tantas veces que por azar pasaria con probabilidad
+    <= PAIRS_ALPHA; `worse` si eso le pasa al vigente; si no, `tie`. Con 20 pares sin empates hace
     falta 15 a 5. Sin ningun par juzgado no hay veredicto.
     """
     n = candidate + incumbent
     if n == 0:
-        return "empate" if ties else None
+        return "tie" if ties else None
     if _binomial_tail(candidate, n) <= PAIRS_ALPHA:
-        return "mejor"
+        return "better"
     if _binomial_tail(incumbent, n) <= PAIRS_ALPHA:
-        return "peor"
-    return "empate"
+        return "worse"
+    return "tie"
 
 
 def pairs_for_role(
@@ -674,19 +674,19 @@ def decide_role(
             }
         )
         if difference > band + TOLERANCE:
-            automatic = "mejor"
+            automatic = "better"
         elif difference < -band - TOLERANCE:
-            automatic = "peor"
+            automatic = "worse"
         else:
-            automatic = "empate"
+            automatic = "tie"
 
-    # Quien gana por calidad: si alguna fuente dice «peor», pierde; si ninguna lo dice y alguna dice
-    # «mejor», gana. Si no, la precedencia de desempates de siempre.
+    # Quien gana por calidad: si alguna fuente dice `worse`, pierde; si ninguna lo dice y alguna dice
+    # `better`, gana. Si no, la precedencia de desempates de siempre.
     sources = [f for f in (automatic, role_pairs and role_pairs["verdict"]) if f]
     wins: bool
-    if "peor" in sources:
+    if "worse" in sources:
         wins, criterion = False, "calidad"
-    elif "mejor" in sources:
+    elif "better" in sources:
         wins, criterion = True, "calidad"
     elif has_ceiling and (ceiling_i is None or ceiling_c is None):
         wins, criterion = False, "techo sin medir"
@@ -774,6 +774,11 @@ def _fits_daily_use(vram_bytes: float | None, host_bytes: float | None) -> str:
     )
 
 
+#: Cómo se imprime el veredicto por pares en el informe: el texto de salida sigue en español
+#: hasta el frente B.
+_PAIRS_VERDICT_LABELS = {"better": "mejor", "worse": "peor", "tie": "empate"}
+
+
 def decision_report(
     decisions: list[dict[str, Any]], configs: dict[str, Config], corpus: dict[str, dict[str, Any]]
 ) -> str:
@@ -825,7 +830,7 @@ def decision_report(
             lines.append(
                 f"- comparacion por pares ({', '.join(role_pairs['cases'])}): candidato "
                 f"{role_pairs['candidate']}, vigente {role_pairs['incumbent']}, empates "
-                f"{role_pairs['ties']} -> **{role_pairs['verdict']}**"
+                f"{role_pairs['ties']} -> **{_PAIRS_VERDICT_LABELS.get(role_pairs['verdict'], role_pairs['verdict'])}**"
             )
         if d.get("weakly_decidable"):
             lines.append("- **debilmente decidible**: menos de dos casos en el agregado")
@@ -1467,11 +1472,11 @@ _PUBLISHED_ROW = {"messages": 0, "made_up": 0, "format": 0, "main_yes": 0, "spec
 
 
 def _preferred(pair: dict[str, Any]) -> str:
-    """Quien gano el par: el nombre del lado elegido, o `empate`."""
+    """Quien gano el par: el nombre del lado elegido, o `tie`."""
     choice = pair.get("preference")
     if choice is None:
         raise NoData(f"el par {pair.get('case')} no tiene preferencia")
-    return "empate" if choice == "=" else str(pair["sides"][choice])
+    return "tie" if choice == "=" else str(pair["sides"][choice])
 
 
 def evaluate_commit_cell(
@@ -1502,7 +1507,7 @@ def evaluate_commit_cell(
     worst = 0
     for p in traps:
         winner = _preferred(p)
-        worst += winner not in ("empate", "trap")
+        worst += winner not in ("tie", "trap")
     sheet = {
         "ok": worst >= MIN_TRAPS,
         "traps_flagged_as_worse": worst,
