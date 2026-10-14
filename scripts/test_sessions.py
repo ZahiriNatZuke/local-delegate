@@ -25,9 +25,11 @@ from pathlib import Path
 
 from local_delegate import legacy_names
 
-DEFAULT_OUTPUT = Path(__file__).parents[1] / "benchmarks" / "excluded-windows.json"
+DEFAULT_OUTPUT = (
+    Path(__file__).parents[1] / "benchmarks" / legacy_names.EXCLUDED_WINDOWS_FILE_NAMES[1]
+)
 #: El nombre de antes del fichero. Se lee si el nuevo aún no existe; nunca se escribe.
-LEGACY_OUTPUT_NAME = "ventanas-excluidas.json"
+LEGACY_OUTPUT_NAME = legacy_names.EXCLUDED_WINDOWS_FILE_NAMES[0]
 
 
 def sdk_sessions(projects: Path, day: str) -> list[dict]:
@@ -61,13 +63,7 @@ def _load(output: Path) -> dict:
     source = output if output.is_file() else output.with_name(LEGACY_OUTPUT_NAME)
     if not source.is_file():
         return {"sessions": [], "windows": []}
-    data = legacy_names.normalize(
-        "excluded_windows", json.loads(source.read_text(encoding="utf-8"))
-    )
-    for key in ("sessions", "windows"):
-        if isinstance(data.get(key), list):
-            data[key] = [legacy_names.normalize("excluded_windows", e) for e in data[key]]
-    return data
+    return legacy_names.normalize_excluded_windows(json.loads(source.read_text(encoding="utf-8")))
 
 
 def merge(output: Path, new_ones: list[dict], reason: str) -> dict:

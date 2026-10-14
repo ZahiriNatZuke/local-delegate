@@ -29,7 +29,7 @@ import tempfile
 
 TIMEOUT_S = 90
 
-PETICION = {
+REQUEST = {
     "jsonrpc": "2.0",
     "id": 1,
     "method": "initialize",
@@ -41,7 +41,7 @@ PETICION = {
 }
 
 
-def _entorno() -> dict:
+def _env() -> dict:
     env = dict(os.environ)
     # El dashboard pediría un puerto que en CI no interesa (y en local ya está ocupado por el daemon).
     env["LOCAL_DELEGATE_WEB"] = "0"
@@ -62,7 +62,7 @@ def main() -> int:
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                env=_entorno(),
+                env=_env(),
                 cwd=cwd,
                 text=True,
                 encoding="utf-8",
@@ -72,7 +72,7 @@ def main() -> int:
             return 4
 
         try:
-            salida, error = proc.communicate(json.dumps(PETICION) + "\n", timeout=TIMEOUT_S)
+            output, error = proc.communicate(json.dumps(REQUEST) + "\n", timeout=TIMEOUT_S)
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.communicate()
@@ -90,15 +90,15 @@ def main() -> int:
         print(error.strip()[-2000:])
         return 1
 
-    for linea in (salida or "").splitlines():
-        linea = linea.strip()
-        if not linea:
+    for line in (output or "").splitlines():
+        line = line.strip()
+        if not line:
             continue
         try:
-            mensaje = json.loads(linea)
+            message = json.loads(line)
         except json.JSONDecodeError:
             continue
-        info = mensaje.get("result", {}).get("serverInfo")
+        info = message.get("result", {}).get("serverInfo")
         if info:
             # Desde la migración al SDK 2.x el server declara su propia `version=`, así que esto
             # es la versión del paquete. Antes salía la del SDK, que no decía nada útil sobre qué
@@ -111,7 +111,7 @@ def main() -> int:
     print("FALLO: el proceso arrancó pero no devolvió un handshake válido.")
     print(f"returncode: {proc.returncode}")
     print("--- stdout ---")
-    print((salida or "(vacío)").strip()[:2000])
+    print((output or "(vacío)").strip()[:2000])
     print("--- stderr ---")
     print((error or "(vacío)").strip()[-2000:])
     return 2

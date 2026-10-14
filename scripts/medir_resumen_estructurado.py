@@ -14,7 +14,7 @@ de Claude:
 
 El emparejamiento es el de producción (`local_delegate.sections`): una sola fuente. Por eso los
 controles de `tests/test_medir_resumen_estructurado.py` llevan el resultado esperado escrito a
-mano. El banco de T5 (`experimento_adopcion.cobertura_de_titulos`) no se toca: su línea base se
+mano. El banco de T5 (`adoption_experiment.title_coverage`) no se toca: su línea base se
 midió con su normalización.
 
 Criterio (spec REQ-208, escrito antes de medir): pasa si en README, `Integration-install.md` y

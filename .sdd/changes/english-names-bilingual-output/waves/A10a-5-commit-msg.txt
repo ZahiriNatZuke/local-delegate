@@ -1,0 +1,34 @@
+refactor(rename): nombres en inglés en el experimento de adopción y en las comprobaciones de la instalación (ola A10a, lote 5)
+
+Renombra a inglés el script del experimento de adopción, con su test, y
+las dos comprobaciones de la instalación que corre el CI: 281 filas del
+mapping aprobado (waves/A10a-5-mapping.csv).
+
+- scripts/experimento_adopcion.py pasa a scripts/adoption_experiment.py,
+  con --bench, --repetitions, --seed, --cost-per-run, --resume, --pilot,
+  --variants, --sources, --yes y --report-only, y las claves de cada
+  corrida, del informe y del veredicto en inglés. Su test pasa a
+  tests/test_adoption_experiment.py.
+- Lectura dual (decisión 6): --report-only y --resume leen un
+  resultados.jsonl viejo con la tabla adoption_runs; las tareas
+  congeladas (tareas.json) y el MANIFEST.json de las copias fijas se leen
+  con adoption_tasks y sources_manifest.
+- Ventanas excluidas (decisión 7): _banco_claude.anotar_ventana parte de
+  benchmarks/excluded-windows.json o, si no existe, del congelado
+  ventanas-excluidas.json, y escribe solo el nuevo, igual que
+  test_sessions.py. Así quedan coherentes todos los que leen y escriben
+  ese fichero. Un test nuevo cubre los dos formatos (2575 recogidos).
+- scripts/check_install_e2e.py y check_install_handshake.py: constantes,
+  funciones y variables en inglés; el CI los llama por la misma ruta.
+
+Las claves que produce _banco_claude.analizar se quedan como están hasta
+A10a-6, que las renombra con su productor. Los datos de formato viejo
+que el test escribe a propósito y los ids del corpus congelado van a
+rename-exceptions.md.
+
+Fuera de los ficheros del lote, por consecuencia: anotar_ventana en
+_banco_claude.py, las tablas nuevas de legacy_names.py, test_sessions.py
+(usa el mismo ayudante) y una cita en medir_resumen_estructurado.py.
+
+Solo se renombra: ningún assert cambia de sentido y los textos en
+español que imprimen los scripts o afirman los tests no se tocan.
