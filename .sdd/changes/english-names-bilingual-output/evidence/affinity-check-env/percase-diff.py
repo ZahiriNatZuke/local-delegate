@@ -18,7 +18,7 @@ v = legacy_names.normalize_affinity_corpus(
 with tempfile.TemporaryDirectory() as t:
     t = Path(t)
     (t / "fuentes").mkdir()
-    code, rep = b.build_affinity(b.ROOT, t, privacy=v["selection"]["privacy"])
+    b.build_affinity(b.ROOT, t, privacy=v["selection"]["privacy"])
     n = legacy_names.normalize_affinity_corpus(
         json.loads((t / "cases.json").read_text(encoding="utf-8"))
     )
