@@ -1,0 +1,29 @@
+fix(affinity): la comprobación de los corpus congelados ya no depende del idioma de commit del entorno
+
+`build_corpus.py affinity --check` daba ok solo con
+LOCAL_DELEGATE_COMMIT_LANGUAGE=es; sin ella o con otro valor, 40
+diferencias, todas en el prompt de sistema de los casos de
+local_commit_msg. El --check del corpus F2 tenía el agujero al revés:
+2 diferencias con la variable puesta.
+
+Causa: PRESERVED_VARIABLES dejaba esa variable en el entorno durante la
+captura, y _commit_language_instruction() la lee al llamar.
+
+- intercepted_production y capture_case reciben el idioma del corpus
+  y fijan la variable a ese valor (vacío = sin variable); al salir la
+  dejan como estaba. Constantes AFFINITY_COMMIT_LANGUAGE = "es" y
+  F2_COMMIT_LANGUAGE = "", que casan con lo congelado.
+- main_affinity dice el idioma del corpus y avisa si el del entorno
+  es otro y no se usa.
+- Producción intacta: server.py y config.py sin tocar; el prompt de
+  local_commit_msg es el mismo.
+- Tests: la captura con el entorno sin variable, con es y con en; la
+  comprobación entera sin variable y con en; las constantes contra lo
+  congelado. El inventario de aislamiento exige la variable. El
+  mutante que vuelve a heredar el entorno hace fallar 6 por el assert
+  esperado.
+
+waves/affinity-check-env.md: verificación, causa, arreglo y mutante.
+
+2627 tests; suite 2625 passed, 2 skipped; ruff limpio. Detector con la
+lista: 0 fuera de la lista y 0 palabras sin clasificar.

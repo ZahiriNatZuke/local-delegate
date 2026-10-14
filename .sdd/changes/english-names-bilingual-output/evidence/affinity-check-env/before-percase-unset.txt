@@ -1,0 +1,2 @@
+[pesado] plaza plaza-1 tomada tras 0s: env -u LOCAL_DELEGATE_COMMIT_LANGUAGE uv run python C:/Users/Yohan/AppData/Local/Temp/claude/D--Projects-local-delegate/99a3bd70-675b-4b0c-8aca-af2fdb5b3582/scratchpad/affinity-env/diff_cases.py
+diferencias por (campo, tool): {('system', 'local_commit_msg'): 40} total: 40

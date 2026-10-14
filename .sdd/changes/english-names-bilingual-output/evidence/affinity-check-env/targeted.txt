@@ -1,0 +1,4 @@
+[pesado] plaza plaza-1 tomada tras 0s: uv run pytest -q tests/test_corpus.py tests/test_environment_isolation.py tests/test_commit_language.py -p no:cacheprovider
+........................................................................ [ 90%]
+........                                                                 [100%]
+80 passed in 25.32s

@@ -1,0 +1,2 @@
+[pesado] plaza plaza-1 tomada tras 0s: env -u LOCAL_DELEGATE_COMMIT_LANGUAGE uv run python scripts/build_corpus.py --check
+ok

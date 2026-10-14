@@ -1,0 +1,3 @@
+[pesado] plaza plaza-1 tomada tras 0s: env LOCAL_DELEGATE_COMMIT_LANGUAGE=es uv run python scripts/build_corpus.py affinity --check
+idioma del mensaje de commit: es
+ok
