@@ -27,19 +27,6 @@ _GROUP_HEADINGS: dict[str, str] = {
     "scaffold": "doctor.group.scaffold",
     "service": "doctor.group.service",
 }
-#: Orígenes del idioma (REQ-018) → su rótulo del catálogo común (B0a).
-_LANGUAGE_SOURCES = {
-    "variable": "common.language.source.variable",
-    "preference": "common.language.source.preference",
-    "system": "common.language.source.system",
-    "fallback": "common.language.source.fallback",
-}
-#: Avisos de la regla del idioma (`hook_common.resolve_language`) → su texto y su marcador.
-_LANGUAGE_WARNINGS = {
-    "invalid_variable": ("common.language.warning.invalid_variable", "value"),
-    "invalid_preference": ("common.language.warning.invalid_preference", "path"),
-    "unreadable_preference": ("common.language.warning.unreadable_preference", "path"),
-}
 
 
 def group_heading(group: str) -> str:
@@ -61,20 +48,15 @@ def status_legend() -> str:
 def language_lines() -> list[str]:
     """REQ-019 y D11: el idioma de este proceso, su origen y el `language.json`, sus avisos y,
     si lo guardado vino de la variable, cómo volver a seguir al sistema. Es cabecera y no un check:
-    no cambia el total de 25 ni el código de salida."""
-    current = i18n.current()
-    source = i18n.t(_LANGUAGE_SOURCES[current.source])
+    no cambia el total de 25 ni el código de salida. Los datos salen de `i18n.language_report`, el
+    mismo que usa `local_status` (B2a)."""
+    report = i18n.language_report()
     lines = [
-        i18n.t("doctor.language.line", lang=current.lang, source=source, path=current.pref_path)
+        i18n.t("doctor.language.line", lang=report.lang, source=report.source, path=report.path)
     ]
-    for code, detail in current.warnings:
-        if code in _LANGUAGE_WARNINGS:
-            text_key, field = _LANGUAGE_WARNINGS[code]
-            lines.append(
-                i18n.t("doctor.language.warning", detail=i18n.t(text_key, **{field: detail}))
-            )
-    if current.source == "preference" and current.stored_source == "variable":
-        lines.append(i18n.t("doctor.language.follow_system", path=current.pref_path))
+    lines.extend(i18n.t("doctor.language.warning", detail=detail) for detail in report.warnings)
+    if report.follow_system:
+        lines.append(i18n.t("doctor.language.follow_system", path=report.path))
     return lines
 
 

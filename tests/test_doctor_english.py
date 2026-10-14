@@ -30,13 +30,7 @@ SURFACES = ("doctor", "common")
 #: (fragmento → módulo que lo escribe). Se quitan de la salida inglesa antes de buscar palabras;
 #: `test_the_pending_fragments_still_live_in_their_modules` obliga a quitarlos de aquí en cuanto
 #: su ola los traduzca.
-PENDING_FRAGMENTS = {
-    "sin residente (no se sabe: ": "chains.py",  # B2
-    # B2: `chains.residents_text()` imprime el motivo de REQ-002 crudo (el valor de máquina de
-    # `topology.NO_CONFIG`); B1c le dio `topology.reason_text`, que es lo que B2 tiene que usar.
-    "sin LLAMASWAP_CONFIG": "topology.py",
-    "sin residente": "chains.py",  # B2
-}
+PENDING_FRAGMENTS: dict[str, str] = {}  # B2a tradujo los últimos (`chains.residents_text`)
 _WORD = re.compile(r"[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{3,}")
 _ACCENTS = re.compile(r"[áéíóúñÁÉÍÓÚÑ¿¡«»]")
 

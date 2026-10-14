@@ -494,10 +494,10 @@ def test_chat_appends_feedback_when_source_path(monkeypatch):
     text = server._chat(
         config.MODEL_MECHANICAL, "system", "user", max_tokens=8, chars_in=2000, source="path"
     )
-    assert "leído server-side: 2,000 chars" in text
+    assert "leído server-side: 2000 chars" in text
     # coste-api-y-cuota, REQ-035: tokens de CLAUDE, no los 500 `prompt_tokens` del modelo local.
     # `_chat` sin `path`, respaldo Opus 5.5: clase `otro`, c = 2,41 → 2000 × 100 // 241 = 829.
-    assert "2,000 chars ≈ 829 tokens de Claude que no entraron a tu contexto)" in text
+    assert "2000 chars ≈ 829 tokens de Claude que no entraron a tu contexto)" in text
     assert "500" not in text
 
 

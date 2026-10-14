@@ -33,7 +33,7 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
-from . import config, topology
+from . import config, i18n, topology
 
 TEXT_ROLES = ("mechanical", "long", "code")
 #: El paso de los modelos ya cargados (REQ-019). Se teclea: en inglés, como los roles.
@@ -163,12 +163,12 @@ def describe() -> list[str]:
 
     Solo habla de «residente» si la config tiene un modelo con TTL efectivo 0 (REQ-023).
     """
-    state = "encendido" if config.FALLBACK else "apagado"
-    lines = [f"Respaldo entre modelos: {state} (hasta {config.FALLBACK_MAX_HOPS} saltos)"]
+    key = "mcp.chains.fallback_on" if config.FALLBACK else "mcp.chains.fallback_off"
+    lines = [i18n.t(key, hops=config.FALLBACK_MAX_HOPS)]
     lines.append(f"  {residents_text()}")
     for role in TEXT_ROLES:
         chain = resolve(role)
-        target = " -> ".join(chain.steps) if chain.steps else "sin respaldo"
+        target = " -> ".join(chain.steps) if chain.steps else i18n.t("mcp.chains.no_fallback")
         lines.append(f"  {role}: {target}")
     return lines
 
@@ -176,13 +176,16 @@ def describe() -> list[str]:
 def residents_text() -> str:
     """«sin residente» o «residente: X», el mismo texto para `local_status` y `doctor`.
 
-    Sin foto de topología no se sabe, y se dice con el motivo de `NoTopology`, las mismas palabras
-    que el «Turno: no (<motivo>)» de `local_status` (REQ-002): «sin residente (no se sabe: matrix)».
+    Sin foto de topología no se sabe, y se dice con el motivo de `NoTopology` en el idioma vigente
+    (`topology.reason_text`), las mismas palabras que el «Turno: no (<motivo>)» de `local_status`
+    (REQ-002): «sin residente (no se sabe: matrix)».
     """
     snapshot = topology.snapshot()
     if not isinstance(snapshot, topology.Snapshot):
-        return f"sin residente (no se sabe: {snapshot.reason})"
+        return i18n.t(
+            "mcp.chains.no_resident_unknown", reason=topology.reason_text(snapshot.reason)
+        )
     models = snapshot.residents()
     if not models:
-        return "sin residente"
-    return f"residente: {', '.join(models)}"
+        return i18n.t("mcp.chains.no_resident")
+    return i18n.t("mcp.chains.residents", models=", ".join(models))

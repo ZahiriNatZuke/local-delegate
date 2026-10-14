@@ -175,7 +175,7 @@ def test_the_message_says_how_much_it_was_drafted_from(monkeypatch, tmp_path):
     diff = _large_diff()
     output, _seen = _run(monkeypatch, tmp_path, server.local_commit_msg, diff=diff)
     assert "30 archivos" in output
-    assert f"{len(diff):,} chars" in output
+    assert f"{len(diff)} chars" in output  # REQ-026: sin separador de miles
 
 
 def test_a_small_diff_still_makes_a_single_call(monkeypatch, tmp_path):

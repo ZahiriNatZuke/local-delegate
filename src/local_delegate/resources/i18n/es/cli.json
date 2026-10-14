@@ -641,6 +641,7 @@
   "cli.topology.reason.matrix": "matrix",
   "cli.topology.reason.no_config": "sin LLAMASWAP_CONFIG",
   "cli.topology.reason.no_pyyaml": "sin PyYAML",
+  "cli.topology.reason.remote_backend": "backend remoto",
   "cli.topology.reason.two_syntaxes": "dos sintaxis",
   "cli.topology.reason.unreadable": "ilegible",
   "cli.topology.repeated_alias": "alias repetido {alias} en el modelo {model}",

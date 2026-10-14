@@ -996,7 +996,11 @@ A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close
   prompts de sistema de los casos de commit (ya en `main` 61f8b21). Va antes de B0 porque B0
   toca `config.py` y el aislamiento del entorno de la suite, y B2b exige que el prompt de
   `local_commit_msg` quede idéntico: con una comprobación que depende de la máquina, esa garantía
-  no se puede medir. Primero se **verifica por ejecución** (con y sin la variable, en un entorno
+  no se puede medir. (Enmienda del 2026-10-14, decisión del usuario: el prompt de `commit_msg` **sí**
+  cambia en B2b-2 —idioma del producto por defecto, regla del diff solo con el valor explícito
+  `diff`— y en B2c —cuerpo obligatorio y topes—; lo que debe quedar idéntico es la recaptura con
+  `LOCAL_DELEGATE_COMMIT_LANGUAGE=diff`, y las diferencias de los corpus las declara
+  `PROMPT_BOUNDARIES`.) Primero se **verifica por ejecución** (con y sin la variable, en un entorno
   limpio) y se localiza la causa; el arreglo hace que la comprobación reconstruya el prompt con
   el idioma con que se congeló el corpus, sin leer la variable del usuario. Test con la variable
   puesta a otro valor y sin ella; mutante que vuelve a leer el entorno → falla. Origen: backlog
@@ -1260,6 +1264,46 @@ ficheros) y las dos mitades son independientes. B0a se mezcla antes que B0b; las
 Es **una sola ola**, la única dueña de `server.py` en el frente B, con dos lotes en serie (B2a y
 B2b), cada uno con su commit y su PR. Los dos salen en la **misma versión**.
 
+**Enmienda del 2026-10-14 (propuesta `waves/B2-proposal.md`, aprobada por la sesión principal y el
+usuario).** La ola se parte en **cinco PR en serie**, todos en la 0.36.0:
+**B2a → B2b-1 → B2b-2 → B2c → B2d**, seguidos del lote **B2-affinity** (re-evaluación de afinidad
+en vivo) **antes del PR de release**.
+
+- **B2a:** lo de «B2a» de abajo.
+- **B2b-1:** contrato `_local_delegate` y marcadores (REQ-010) y descripciones en inglés (REQ-027),
+  con `tools.json`, `test_tool_contract.py` y la wiki del contrato.
+- **B2b-2:** idioma de respuesta (REQ-028) con `i18n.response_language()` (en `i18n.py`, no en
+  `server.py`: `doctor` también la usa), la orden de idioma **detrás** de `_guard` (los prompts no se
+  traducen), `LOCAL_DELEGATE_OUTPUT_LANGUAGE`, el idioma por defecto de `commit_msg` (valor explícito
+  `diff` para la regla del diff), `package_version` y `measurement_boundaries.json` (REQ-041), y
+  `PROMPT_BOUNDARIES` versionada en `scripts/build_corpus.py`.
+- **B2c:** lo de «B2c» de abajo; `truncated`/`warning` de `_local_delegate` pasan a significar «salida
+  truncada en un trozo» (contrato y CHANGELOG).
+- **B2d:** `tests/fixtures/lang_sample/`, el arnés en proceso (`scripts/dev/lang_sample.py`) y las
+  muestras en vivo de D10, de `LOCAL_DELEGATE_OUTPUT_LANGUAGE` y de B2c en **una** ventana de prueba;
+  se vacía la sección «pendiente» de `rename-exceptions.md`. Si el llama-swap local pide credencial
+  fuera del daemon, se para y se pregunta antes de planificar ningún reinicio del daemon.
+- **B2-affinity:** al añadir la orden de idioma, la celda aprobada `local_lint_summary` pierde su
+  base (cambia su `prompt_sha256`). Se acepta durante el desarrollo; este lote re-evalúa la afinidad
+  en vivo con los prompts nuevos para que la 0.36.0 salga con la base nueva.
+- **Tests de corpus y afinidad** (`test_corpus.py` `check_versioned`, `check_versioned_affinity` y
+  `test_affinity.py` de la huella): se actualizan en el lote que los rompe (B2b-2 y B2c), con su
+  motivo, vía `PROMPT_BOUNDARIES` (aviso para `system`/`max_tokens` de las tools de la 0.36.0; error
+  para todo lo demás).
+- **Desviaciones de propiedad aprobadas** (cada una en el lote que la necesite y registrada):
+  `doctor.py`/`doctor.json`, `topology.py`, `scripts/measure_structured_summary.py`,
+  `scripts/build_corpus.py`, `matrix.py` y la wiki `Tools.md`/`Configuration.md`.
+- **Referencias de línea de `server.py` actualizadas** (las de abajo son de antes de A7):
+  `description` `:69-77`; `_truncation_prefix` `:475`; `_fallback_notice` `:1123`; respaldo
+  `:2204`; aviso de truncado `:2457` y `:2802`; reduce por defecto `:3000-3013`; prompts
+  `:3205-3357`; subclaves de `_local_delegate` `:3648-3667`; formato del commit `:3879-3887`;
+  `local_explain_code` `:4033` (su `_read_input` con tope en `:4052`).
+- **Juez de `LOCAL_DELEGATE_OUTPUT_LANGUAGE` en vivo (decisión 9):** no se amplía el detector a
+  francés. La muestra en vivo usa el idioma **contrario** al del producto (producto `es` + variable
+  `en`, y producto `en` + variable `es`), que el detector ya juzga, con el mismo criterio de ≥ 90 %
+  por tool. `fr` y `português` quedan solo en los tests unitarios con backend falso (captura del
+  prompt).
+
 - **Posee la ola entera:** `server.py`, `failures.py` (etiquetas, con `t_lang` para D6),
   `chains.py` (`describe`), `sections.py` (aviso), `questions.py` (textos de las preguntas al
   cliente; asignado por B0 el 2026-10-14), `resources/i18n/{es,en}/{mcp,tools}.json`,
@@ -1309,9 +1353,11 @@ B2b), cada uno con su commit y su PR. Los dos salen en la **misma versión**.
     vacía o no válida (`"a\nb"`, 41 caracteres) → prompt del idioma vigente y aviso;
     `local_commit_msg` idéntico con y sin ella. Mutantes: ignorar la variable (fallan los de
     «puesta»); aplicarla también a `commit_msg` (falla el de `commit_msg`); ponerla solo en el
-    paso de reducción (falla el del map-reduce). Muestra en vivo con `fr` en la misma ventana de
-    D10 (≥5 documentos por tool en `en`/`es`, ≥90 % en francés), en
-    `evidence/B2/lang-sample.json`. La wiki (`Configuration.md`) documenta la variable.
+    paso de reducción (falla el del map-reduce). Muestra en vivo en la misma ventana de D10 con la
+    variable puesta al idioma **contrario** al del producto (enmienda del 2026-10-14, decisión 9:
+    producto `es` + `en` y al revés; ≥5 documentos por tool, ≥90 % en el idioma de la variable,
+    juzgado con el detector de D10), en `evidence/B2/lang-sample.json`; `fr`/`português` solo en
+    tests unitarios. La wiki (`Configuration.md`) documenta la variable.
   - *recibos en inglés:* sin cadenas `es` del catálogo.
   - *números:* `20027`, no `20,027`.
   - *muestra en vivo de D10:* se guarda en `evidence/B2/lang-sample.json` con el id de la ventana.
@@ -1338,7 +1384,8 @@ Lote nacido el 2026-10-14 de la revisión `evidence/local-tools-review/report.md
   ese assert).
 - **Muestra en vivo:** en una ventana de prueba, `local_commit_msg` sobre los diffs de B0a y B1a
   (español con cuerpo) y `local_explain_code` sobre `cli.py` (menciona `doctor`, `benchmark` y
-  `llamaswap`), en `evidence/B2c/live.md`.
+  `llamaswap`), en `evidence/B2c/live.md`. (Enmienda del 2026-10-14: se corre en B2d, en la misma
+  ventana que la muestra de D10.)
 
 #### B3 — Hooks
 

@@ -35,7 +35,7 @@ from typing import Any, TypeVar
 import anyio
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import config
+from . import config, i18n
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ def ask(message: str, model: type[ModelT]) -> ModelT | None:
     # alto nivel, que solo llega a las tools que lo declaran en su firma. Desde aquí se va por la
     # sesión, que expone `elicit_form` con el esquema como dict y devuelve la respuesta en crudo,
     # así que la validación contra el modelo la hacemos nosotros.
-    schema = model.model_json_schema()
+    schema = _localized_schema(model)
 
     async def _with_timeout():
         # El plazo va AQUÍ, dentro de la corrutina que corre en el event loop. Ponerlo del lado
@@ -114,11 +114,11 @@ def ask(message: str, model: type[ModelT]) -> ModelT | None:
     try:
         result = anyio.from_thread.run(_with_timeout)
     except Exception:
-        logger.debug("no se pudo preguntar al cliente", exc_info=True)
+        logger.debug("could not ask the client", exc_info=True)
         return None
 
     if result is None:  # plazo agotado
-        logger.debug("el cliente no respondió en %ss", config.ASK_TIMEOUT)
+        logger.debug("the client did not answer within %ss", config.ASK_TIMEOUT)
         return None
     if getattr(result, "action", None) != "accept":  # decline o cancel
         return None
@@ -126,7 +126,7 @@ def ask(message: str, model: type[ModelT]) -> ModelT | None:
         return model.model_validate(result.content or {})
     except Exception:
         # Respondieron algo que no encaja con lo pedido: cuenta como no haber respondido.
-        logger.debug("la respuesta del cliente no valida contra el esquema", exc_info=True)
+        logger.debug("the client answer does not validate against the schema", exc_info=True)
         return None
 
 
@@ -137,22 +137,46 @@ def ask(message: str, model: type[ModelT]) -> ModelT | None:
 class StartBackend(BaseModel):
     """¿Arrancar el backend local que no responde?"""
 
-    model_config = ConfigDict(title="ArrancarBackend")
+    model_config = ConfigDict(title="StartBackend")
 
-    start: bool = Field(title="Arrancar")
+    start: bool = Field(title="start")
 
 
 class ChooseModel(BaseModel):
     """Cuál de los modelos del catálogo usar."""
 
-    model_config = ConfigDict(title="ElegirModelo")
+    model_config = ConfigDict(title="ChooseModel")
 
-    model: str = Field(title="Modelo")
+    model: str = Field(title="model")
 
 
 class ChooseFormat(BaseModel):
     """Qué formato de salida se espera."""
 
-    model_config = ConfigDict(title="ElegirFormato")
+    model_config = ConfigDict(title="ChooseFormat")
 
-    format: str = Field(title="Formato")
+    format: str = Field(title="format")
+
+
+#: Clave del catálogo de cada pregunta. Los títulos y la descripción del esquema los ve el cliente
+#: MCP, así que se redactan AL PREGUNTAR en el idioma vigente (B2a): fijarlos en la clase los dejaría
+#: en el idioma de la primera importación, y el docstring que Pydantic mete como `description`, en
+#: español siempre.
+_SCHEMA_TEXTS: dict[type[BaseModel], str] = {
+    StartBackend: "start_backend",
+    ChooseModel: "choose_model",
+    ChooseFormat: "choose_format",
+}
+
+
+def _localized_schema(model: type[BaseModel]) -> dict[str, Any]:
+    """El JSON Schema de la pregunta con su título, su descripción y el de su campo del catálogo."""
+    schema = model.model_json_schema()
+    key = _SCHEMA_TEXTS.get(model)
+    if key is None:
+        return schema
+    schema["title"] = i18n.t(f"mcp.question.{key}.title")
+    schema["description"] = i18n.t(f"mcp.question.{key}.description")
+    for prop in schema.get("properties", {}).values():
+        prop["title"] = i18n.t(f"mcp.question.{key}.field")
+    return schema
