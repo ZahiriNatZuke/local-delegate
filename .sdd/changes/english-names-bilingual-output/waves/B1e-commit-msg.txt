@@ -1,0 +1,18 @@
+test(i18n): el detector de idioma pasa su control independiente, 120 de 120 a 20 tokens (frente B, ola B1e)
+
+Cierre de B1e. El control congelado en cb90910 da 120 de 120 con
+min_tokens=20 y el margen de siempre (0,15), sin tocar las listas ni el
+detector. Con las listas invertidas da 0 de 120.
+
+- tests/test_detect_language.py: carga el control a 20 tokens, comprueba
+  el sha256 de cada frase y el de cada traducción literal, y exige como
+  mucho 2 fallos en 120. Dos controles positivos permanentes: las listas
+  invertidas y una frase alterada. El control a 8 tokens (fallido,
+  116/120) se queda como registro: solo se comprueba que no cambia.
+- evidence/B1e/measurement_20.json: resultado por frase y total.
+- waves/B1e.md: medición, tests, cuatro mutantes con el assert que
+  disparan, verificación, y el modelo de las traducciones (gemma3-4b,
+  rol mechanical) contrastado con el log de uso.
+
+Suite: 2853 passed, 2 skipped. ruff limpio. Detector de nombres: 0 fuera
+de la lista y 0 sin clasificar.

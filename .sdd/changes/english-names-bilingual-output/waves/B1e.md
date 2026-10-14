@@ -161,7 +161,11 @@ aplica la regla de entrada y escribe el control).
 `58ff9c6`. Cada frase inglesa lleva `source`/`line` y `origin_text`/`origin_sha256` de la frase
 española, `translation` (literal), `translation_sha256`, `text` (tras la limpieza; en las 60 es
 idéntico a `translation`), `sha256` y `order` (posición en la lista de candidatas).
-`local_translate` no informa del modelo ni del rol, y así consta en `translator`.
+`local_translate` no informa del modelo ni del rol, y así consta en `translator`. **Dato y
+verificación de la sesión principal** (tras `cb90910`): las 69 longitudes de
+`evidence/B1e/translations.json` coinciden exactamente con `chars_out` de las 69 filas de
+`local_translate` del log de uso (18:52–18:54Z), así que las traducciones no se reescribieron al
+copiarlas; el modelo fue **`gemma3-4b`** (rol `mechanical`).
 
 | Parte | Origen | Frases |
 | --- | --- | ---: |
@@ -181,3 +185,61 @@ idéntico a `translation`), `sha256` y `order` (posición en la lista de candida
 
 El commit de congelación (`B1e-freeze2-commit-msg.txt`) entra antes de cualquier corrida del
 detector sobre este fichero.
+
+## Medición del control a 20 tokens (sobre `cb90910`): PASA
+
+Detector sin tocar, `min_tokens=20`, `min_margin=0.15`. Resultado por frase en
+`evidence/B1e/measurement_20.json` (script de medición en el scratchpad).
+
+- **120 de 120 (100 %)**: 60/60 en español y 60/60 en inglés. Hacían falta 118.
+- Con las listas invertidas: **0 de 120**.
+- No hay fallos, así que el mutante «umbral a 0 fallos» no puede discriminar; en su lugar se usa
+  el umbral −1 (abajo).
+
+### Test (`tests/test_detect_language.py`, LF)
+
+- `test_the_b1_control_is_frozen`: 60 + 60 frases, el `sha256` de cada una coincide con
+  `source + "
+" + text`, como mucho 40 palabras y al menos 20 tokens, y el `translation_sha256`
+  de cada frase inglesa coincide con su traducción literal.
+- `test_an_altered_phrase_breaks_the_freeze` (control positivo permanente): cambiar una palabra
+  de una frase la delata por su sha256.
+- `test_the_detector_passes_the_b1_control`: con `min_tokens=20`, como mucho 2 fallos
+  (`MAX_FAILURES_B1`).
+- `test_with_the_lists_swapped_the_b1_control_fails` (control positivo permanente).
+- `test_the_failed_8_token_control_is_kept_unchanged`: el control a 8 tokens se queda como
+  registro. No es criterio: solo se comprueba que conserva sus 60 + 60 frases y sus sha256.
+- El control de B0b (20 + 20, no independiente) y sus tests siguen igual; el docstring del módulo
+  explica los tres.
+
+### Mutantes (en una copia temporal del test, ya borrada)
+
+| Mutante | Test que cae | Assert |
+| --- | --- | --- |
+| `MAX_FAILURES_B1 = -1` | `test_the_detector_passes_the_b1_control` | `assert 0 <= -1` |
+| `b1_failures` no cuenta ningún fallo | `test_with_the_lists_swapped_the_b1_control_fails` | `assert 0 > 2` |
+| `frozen_entry_errors` no compara el hash | `test_an_altered_phrase_breaks_the_freeze` | `assert 0 == 1` |
+| listas invertidas en el test principal | `test_the_detector_passes_the_b1_control` | `assert 120 <= 2` |
+
+Cada mutante tumba solo el test esperado, que queda en 1 fallado y 14 aprobados.
+
+### Verificación
+
+| Comprobación | Resultado |
+| --- | --- |
+| Suite entera (`pesado.sh`, `-n 4 --dist loadgroup`) | 2853 passed, 2 skipped (antes 2848: +5 tests); 4 avisos de `anyio` en `starlette/testclient.py`, de antes |
+| `ruff check .` y `ruff format --check .` | limpios (210 ficheros) |
+| Guardián de textos (`test_no_uncatalogued_text.py`, dentro de la suite) | verde |
+| Detector de nombres con `rename-exceptions.md`, al final | 0 fuera de la lista, 0 sin clasificar |
+
+## Llamadas `local_*` del agente de B1e
+
+| Tool | Para qué |
+| --- | --- |
+| `local_translate` ×69 | las traducciones del control a 20 tokens |
+| `local_lint_summary(path=…)` ×1 | resumen del log de la suite |
+
+Se hizo a mano: la selección, los recuentos, los hashes y la medición, porque son cálculos exactos
+y van en scripts; los fragmentos del plan y la propuesta, porque había que citarlos al pie de la
+letra; y la copia de cada traducción al fichero, porque la tool no guarda su salida en ningún
+sitio legible (la sesión principal la verificó contra `chars_out`).
