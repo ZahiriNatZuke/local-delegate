@@ -103,11 +103,11 @@ sección de su motivo.
 | humano | tests/test_analyze_benchmark.py | lectura de formato viejo (decisión 6 de A10): fila de `hoja_pares.py destapar --json` de antes, que `merge_unblinded_pairs` suma (ola A10b-2) |
 | celdas | tests/test_analyze_benchmark.py | lectura de formato viejo (decisión 6 de A10): celda del `veredicto.json` de antes, escrita a mano, con la que el test comprueba que el estado viejo se lee en inglés (ola A10b-3) |
 | estado | tests/test_analyze_benchmark.py | lectura de formato viejo (decisión 6 de A10): mismo test; clave vieja del estado de la celda (`aprobada`/`rechazada`/`sin base`), que el lector traduce a `state` (ola A10b-3) |
-| pares | tests/test_hoja_pares.py | lectura de formato viejo (decisión 6 de A10): control de que la `clave-1.json` congelada sigue con el formato viejo antes de leerla con `read_commit` (ola A10b-4) |
-| respuestas | tests/test_hoja_pares.py | lectura de formato viejo (decisión 6 de A10): control de que la `respuestas-1.json` congelada sigue con el formato viejo (ola A10b-4) |
-| respuestas-1.json | tests/test_hoja_pares.py | lectura de formato viejo (decisión 6 de A10): nombre de las respuestas congeladas de la hoja 1, que el test lee (ola A10b-4) |
-| clave-1.json | tests/test_hoja_pares.py | lectura de formato viejo (decisión 6 de A10): nombre de la clave congelada de la hoja 1, que el test lee (ola A10b-4) |
-| juegos | tests/test_hoja_pares.py | lectura de formato viejo (decisión 6 de A10): control de que el `trampas.json` congelado sigue con el formato viejo (ola A10b-4) |
+| pares | tests/test_pair_sheet.py | lectura de formato viejo (decisión 6 de A10): control de que la `clave-1.json` congelada sigue con el formato viejo antes de leerla con `read_commit` (ola A10b-4) |
+| respuestas | tests/test_pair_sheet.py | lectura de formato viejo (decisión 6 de A10): control de que la `respuestas-1.json` congelada sigue con el formato viejo (ola A10b-4) |
+| respuestas-1.json | tests/test_pair_sheet.py | lectura de formato viejo (decisión 6 de A10): nombre de las respuestas congeladas de la hoja 1, que el test lee (ola A10b-4) |
+| clave-1.json | tests/test_pair_sheet.py | lectura de formato viejo (decisión 6 de A10): nombre de la clave congelada de la hoja 1, que el test lee (ola A10b-4) |
+| juegos | tests/test_pair_sheet.py | lectura de formato viejo (decisión 6 de A10): control de que el `trampas.json` congelado sigue con el formato viejo (ola A10b-4) |
 | cobertura | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): señal vieja de `reference_signal` que el test exige en el `cases.json` congelado antes de comprobar que se lee en inglés (ola A10b-4) |
 | prohibido | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): mismo test: señal vieja del corpus congelado (ola A10b-4) |
 | json_valido | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): mismo test: señal vieja del corpus congelado (ola A10b-4) |
@@ -120,6 +120,8 @@ sección de su motivo.
 | procedencia | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): mismo test: el caso normalizado ya no la lleva (ola A10b-4) |
 | tipo | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): mismo test: el puntuador normalizado ya no la lleva (ola A10b-4) |
 | excluir | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): valor de `privacy` del corpus de afinidad congelado (lo escribió `--privacy excluir`) (ola A10b-4) |
+| trampas.json | tests/test_pair_sheet.py | lectura de formato viejo (decisión 6 de A10): el `trampas.json` congelado, que `REAL_SETS` lee normalizado y el test de formato viejo en crudo (ola A10b-6) |
+| reglas.json | tests/test_pair_sheet.py | lectura de formato viejo (decisión 6 de A10): el `reglas.json` congelado de la hoja 1, que `read_rules` sigue leyendo (ola A10b-4; fila añadida en A10b-6) |
 | calidad | tests/test_analyze_benchmark.py | lectura de formato viejo (decisión 6 de A10): valor viejo de `kind` del corpus y de los resultados congelados, escrito a mano en `_OLD_KINDS` para comprobar que los cargadores lo dan como `quality` (ola A10b-5) |
 | techo | tests/test_analyze_benchmark.py | lectura de formato viejo (decisión 6 de A10): mismo test; valor viejo de `kind` del sondeo de techo, que se lee como `ceiling` (ola A10b-5) |
 | huellas.json | tests/test_analyze_benchmark.py | lectura de formato viejo (decisión 6 de A10): `huellas.json` congelado, que `footprints_file` sigue leyendo si falta `footprints.json` (ola A10b-2; fila añadida en A10b-5) |
@@ -259,6 +261,23 @@ sección de su motivo.
 | resumen-md-10k | tests/test_analyze_benchmark.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-5) |
 | resumen-md-2k | tests/test_analyze_benchmark.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-5) |
 | techo-resumen-103k | tests/test_analyze_benchmark.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-5) |
+| catalogo-2026-09 | tests/test_corpus.py | dato congelado de corpus o caso: nombre de directorio de un corpus congelado en `benchmarks/` (no se reescribe) (ola A10b-6) |
+| afinidad-2026-10 | tests/test_corpus.py | dato congelado de corpus o caso: nombre de directorio de un corpus congelado en `benchmarks/` (no se reescribe) (ola A10b-6) |
+| afinidad-2026-10 | tests/test_pair_sheet.py | dato congelado de corpus o caso: nombre de directorio de un corpus congelado en `benchmarks/` (no se reescribe) (ola A10b-6) |
+| clasifica-bug-con-etiquetas-en-ingles | tests/test_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-6) |
+| clasificar-53 | tests/test_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-6) |
+| explicar-install-20k | tests/test_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-6) |
+| explicar-metrics-15k | tests/test_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-6) |
+| resumen-changelog-7k | tests/test_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-6) |
+| resumen-md-10k | tests/test_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-6) |
+| resumen-md-2k | tests/test_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-6) |
+| techo-resumen-106k | tests/test_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-6) |
+| techo-resumen-120k | tests/test_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-6) |
+| clasificar-53.txt | tests/test_corpus.py | dato congelado de corpus o caso: fichero de `fuentes/` de un corpus congelado en `benchmarks/` (no se reescribe) (ola A10b-6) |
+| resumen-md-2k.md | tests/test_corpus.py | dato congelado de corpus o caso: fichero de `fuentes/` de un corpus congelado en `benchmarks/` (no se reescribe) (ola A10b-6) |
+| real-reescrito | tests/test_corpus.py | dato congelado de corpus o caso: valor de `source_body` de la trampa de la misma zona en el `trampas.json` congelado (ola A10b-6) |
+| real-reescrito | tests/test_pair_sheet.py | dato congelado de corpus o caso: valor de `source_body` de la trampa de la misma zona en el `trampas.json` congelado (ola A10b-6) |
+| estado.json | tests/test_corpus.py | dato congelado de corpus o caso: identificador sacado del diff de un commit real del historial (`commit-diff-19k`), contenido del caso (ola A10b-6) |
 
 ## Entrada de interfaz escrita por una persona
 
@@ -269,6 +288,8 @@ sección de su motivo.
 | empate | scripts/pair_sheet.py | entrada de interfaz escrita por una persona; se traduce en el frente B con lectura de las dos formas: respuesta que la persona escribe en la hoja `.md`, y la elección que `unblind` imprime y escribe en su `--json` (ola A10b-4; sale de «Pendiente» en A10b-5) |
 | EMPATE | scripts/pair_sheet.py | entrada de interfaz escrita por una persona; se traduce en el frente B con lectura de las dos formas: la misma respuesta escrita en mayúsculas (ola A10b-4; sale de «Pendiente» en A10b-5) |
 | empate | tests/test_analyze_benchmark.py | entrada de interfaz escrita por una persona; se traduce en el frente B con lectura de las dos formas: la elección «empate» que `pair_sheet.py unblind --json` escribe en `human` y `pairs_for_role` suma; el test la escribe como la escribe `unblind` (ola A10b-5) |
+| empate | tests/test_pair_sheet.py | entrada de interfaz escrita por una persona; se traduce en el frente B con lectura de las dos formas: la elección «empate» que `unblind --json` escribe en `human` (ola A10b-6) |
+| Inventa | tests/test_pair_sheet.py | entrada de interfaz escrita por una persona; se traduce en el frente B con lectura de las dos formas: la etiqueta de la pregunta en la hoja `.md` que la persona contesta a mano (ola A10b-6) |
 
 ## Pendiente
 

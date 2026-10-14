@@ -289,7 +289,7 @@ def test_run_skips_already_written_and_continues(tmp_path, capsys):
 def test_ceiling_writes_rows_in_t4_format(tmp_path):
     cases = _synthetic_corpus(tmp_path / "corpus")
     fake = Fake()
-    batch.main(_argv(tmp_path, cases, "--only", "techo"), fake.env())
+    batch.main(_argv(tmp_path, cases, "--only", "ceiling"), fake.env())
 
     rows = [
         json.loads(line)

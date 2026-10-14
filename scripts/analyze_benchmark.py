@@ -422,7 +422,7 @@ def analyze_cp3(
                 case_band or 0.0
             ) + TOLERANCE
             at_ceiling = m_p == 1.0 and m_g == 1.0
-            reason = None if separates else ("techo" if at_ceiling else "no separa")
+            reason = None if separates else (CP3_CEILING if at_ceiling else "no separa")
             cases[cid] = {
                 "small": m_p,
                 "large": m_g,
@@ -440,7 +440,7 @@ def analyze_cp3(
             not entry_control
             and bool(ids)
             and not admitted
-            and all(c["reason"] == "techo" for c in cases.values())
+            and all(c["reason"] == CP3_CEILING for c in cases.values())
         )
         if entry_control:
             passes = bool(ids) and len(admitted) == len(ids)
@@ -613,7 +613,7 @@ def decide_role(
     # usuario (tarea 19): «al mismo resultado, nos quedamos con el mas rapido». La calidad se
     # compara igual con todos los casos de ESTA tanda —un candidato que ya no da 1,0 pierde por
     # calidad—, y dentro de la banda deciden los desempates de siempre: techo, luego velocidad.
-    all_at_ceiling = bool(ids) and not admitted and all(m == "techo" for m in discards.values())
+    all_at_ceiling = bool(ids) and not admitted and all(m == CP3_CEILING for m in discards.values())
     result["all_at_ceiling"] = all_at_ceiling
     quality_cases = admitted or (ids if all_at_ceiling else [])
     # P-15: los casos de texto abierto los decide la comparacion por pares a ciegas, no la formula.
@@ -820,7 +820,7 @@ def decision_report(
                 f"- casos en el agregado: {len(d['admitted_cases'])} ({', '.join(d['admitted_cases']) or 'ninguno'})"
             )
             for cid, reason in (d.get("discarded_cases") or {}).items():
-                lines.append(f"- fuera del agregado: {cid} ({reason})")
+                lines.append(f"- fuera del agregado: {cid} ({_cp3_reason_label(reason)})")
         if role_pairs := d.get("pairs"):
             lines.append(
                 f"- comparacion por pares ({', '.join(role_pairs['cases'])}): candidato "
@@ -903,6 +903,35 @@ def decision_report(
     return "\n".join(lines)
 
 
+#: El motivo de CP-3 para un caso en techo, tal como se guarda en `cp3.json` (antes `techo`; el
+#: viejo se lee traducido, `legacy_names`). Los mensajes lo siguen llamando «techo» (frente B).
+CP3_CEILING = "ceiling"
+_CP3_REASON_LABELS = {CP3_CEILING: "techo"}
+
+
+def _cp3_reason_label(reason: Any) -> Any:
+    return _CP3_REASON_LABELS.get(reason, reason)
+
+
+def read_cp3(paths: list[Path]) -> dict[str, Any]:
+    """Los roles de varios `cp3.json` (`analyze_benchmark cp3 --json`), con el motivo de cada caso
+    en el formato nuevo: un `cp3.json` de antes dice `techo`."""
+    per_role: dict[str, Any] = {}
+    for path in paths:
+        for role, data in json.loads(path.read_text(encoding="utf-8"))["roles"].items():
+            cases = data.get("cases")
+            if isinstance(cases, dict):
+                data = {
+                    **data,
+                    "cases": {
+                        cid: LEGACY_NAMES.normalize("cp3_case", c) if isinstance(c, dict) else c
+                        for cid, c in cases.items()
+                    },
+                }
+            per_role[role] = data
+    return per_role
+
+
 def cp3_report(result: dict[str, Any]) -> str:
     lines = [f"# CP-3: {result['small']} contra {result['large']}", ""]
     if result["entry_control"]:
@@ -941,7 +970,7 @@ def cp3_report(result: dict[str, Any]) -> str:
             lines.append(
                 f"| {cid} | {_fmt(case['small'])} | {_fmt(case['large'])} | "
                 f"{_fmt(case.get('difference'))} | {_fmt(case.get('band'))} | "
-                f"{'si' if case['separates'] else 'no'} | {case['reason'] or '—'} |"
+                f"{'si' if case['separates'] else 'no'} | {_cp3_reason_label(case['reason']) or '—'} |"
             )
         lines.append("")
     return "\n".join(lines)
@@ -1811,9 +1840,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             text = cp3_report(result)
         else:
-            cp3_per_role: dict[str, Any] = {}
-            for path in args.cp3:
-                cp3_per_role.update(json.loads(path.read_text(encoding="utf-8"))["roles"])
+            cp3_per_role = read_cp3(args.cp3)
             pairs = merge_unblinded_pairs(args.pairs)
             configs: dict[str, Config] = {}
             decisions = []
