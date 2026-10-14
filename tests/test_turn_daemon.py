@@ -459,10 +459,29 @@ def test_after_grant_entry_moves_from_turn_to_slot(with_topology, monkeypatch):
 
 
 def _two_that_clash(monkeypatch, tmp_path) -> list[dict]:
-    """El 26B y Qwen3.6 a la vez; cada llamada tarda 0,15 s."""
+    """El 26B y Qwen3.6 a la vez, y el choque forzado, no confiado al reloj.
 
-    def post_chat(_model, _payload):
-        time.sleep(0.15)
+    Antes cada llamada dormía 0,15 s y se esperaba que la segunda pidiera turno dentro de ese
+    margen. No siempre lo hacía: `_inflight_start` toma el `FileLock` de `inflight.json`, que
+    sondea cada 50 ms, y la segunda operación llegaba al turno ~50 ms tarde aquí y, en el runner
+    de macOS, a veces cuando la primera ya lo había soltado (medido: con el sondeo a 0,16 s, 20 de
+    20 sin espera). Ahora la llamada que llega primero al backend no termina hasta que la otra
+    está en la cola del turno (con turno) o también en el backend (sin turno), con tope de 5 s; y
+    después duerme 0,05 s, para que la espera de la que encola mida al menos eso.
+    """
+    in_backend: list[str] = []
+    lock = threading.Lock()
+
+    def other_is_waiting_or_here() -> bool:
+        with lock:
+            both_here = len(in_backend) >= 2
+        return both_here or bool(server._turn.snapshot().queue)
+
+    def post_chat(model, _payload):
+        with lock:
+            in_backend.append(model)
+        _wait(other_is_waiting_or_here, cap=5.0)
+        time.sleep(0.05)
         return _ok()
 
     monkeypatch.setattr(server, "_post_chat", post_chat)
