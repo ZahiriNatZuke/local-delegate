@@ -398,6 +398,9 @@ class LanguageResolution(NamedTuple):
     source: str  # "variable" | "preference" | "system" | "fallback"
     pref_path: Path  # el `language.json` consultado, exista o no (REQ-047)
     warnings: tuple[tuple[str, str], ...]  # (codigo, detalle)
+    # Con origen "preference": el origen que `install` guardo en `language.json` ("variable",
+    # "system" o "fallback"), o None si no lo guardo. `doctor` lo usa para el remedio de D11.
+    stored_source: str | None = None
 
 
 def parse_language(value: str | None) -> str | None:
@@ -435,7 +438,9 @@ def resolve_language(
         stored = data.get("lang") if isinstance(data, dict) else None
         lang = parse_language(stored) if isinstance(stored, str) else None
         if lang:
-            return LanguageResolution(lang, "preference", pref_path, tuple(warnings))
+            source = data.get("source")
+            stored = source if source in ("variable", "system", "fallback") else None
+            return LanguageResolution(lang, "preference", pref_path, tuple(warnings), stored)
         warnings.append(("invalid_preference", str(pref_path)))
 
     declared = _system_language(env, platform, ui_lang)

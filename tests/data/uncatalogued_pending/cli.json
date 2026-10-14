@@ -9,7 +9,6 @@
     "src/local_delegate/llamaswap_api.py",
     "src/local_delegate/llamaswap_config.py",
     "src/local_delegate/matrix.py",
-    "src/local_delegate/probes.py",
     "src/local_delegate/residency.py",
     "src/local_delegate/topology.py",
     "src/local_delegate/turn.py"

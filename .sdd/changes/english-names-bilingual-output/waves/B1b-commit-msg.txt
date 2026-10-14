@@ -1,0 +1,27 @@
+feat(i18n): doctor en español e inglés, con el idioma vigente en su cabecera (frente B, ola B1b)
+
+Segundo PR de B1 (waves/B1-proposal.md). doctor y sus 25 checks salen
+enteros en el idioma vigente; los ids y grupos no cambian.
+
+- resources/i18n/{es,en}/doctor.json: 224 claves (títulos de los checks,
+  estados, pistas, cabeceras, leyenda, resumen y detalles de cada probe).
+  [FALT] en español y [MISS] en inglés, también en la leyenda y el
+  resumen.
+- checks.py: Check.title traduce title_key; STATUS_LABEL guarda claves y
+  status_label() traduce; las pistas con prosa pasan a funciones; los
+  nombres de producto de los clientes salen del catálogo.
+- doctor.py: cabecera con el idioma, su origen y el language.json, sus
+  avisos y, si lo guardado vino de la variable, cómo volver a seguir al
+  sistema (D11). No es un check: siguen 25.
+- hook_common.LanguageResolution.stored_source: el origen guardado en
+  language.json.
+- probes.py, por el catálogo; el reporte de install usa la leyenda y las
+  cabeceras de doctor.
+- test_wiki compara con los títulos españoles del catálogo; el guardián
+  cierra la superficie doctor (CLOSED_SURFACES) y sale probes.py.
+- tests/test_doctor_english.py: doctor en los dos idiomas, sin palabras
+  del catálogo español ni tildes en inglés, origen del idioma, avisos,
+  remedio de D11 y stored_source.
+
+Suite: 2814 passed, 2 skipped con LANG en inglés y en español (xdist);
+8 controles positivos.

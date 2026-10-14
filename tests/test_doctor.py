@@ -265,10 +265,13 @@ def test_run_doctor_exit_0_when_everything_is_in_place(tmp_path, monkeypatch, ca
     # A6 (REQ-011): no hay `doctor --json`, así que el contrato de los ids y grupos nuevos se mira
     # en la salida de texto: los 25 checks, una línea cada uno, bajo el encabezado de su grupo.
     assert len(lines) == len(checks.CHECKS) == 25
-    headings = [*doctor._GROUP_HEADINGS.values(), doctor._versions_heading(False)]
+    headings = [*map(doctor.group_heading, doctor._GROUP_HEADINGS), doctor._versions_heading(False)]
     assert [h for h in headings if h in out] == headings
     for check in checks.CHECKS:
-        heading = doctor._GROUP_HEADINGS.get(check.group, doctor._versions_heading(False))
+        if check.group in doctor._GROUP_HEADINGS:
+            heading = doctor.group_heading(check.group)
+        else:
+            heading = doctor._versions_heading(False)
         section = out.split(heading, 1)[1].split("\n\n", 1)[0]
         assert f"] {check.title}:" in section, (check.id, check.group)
 

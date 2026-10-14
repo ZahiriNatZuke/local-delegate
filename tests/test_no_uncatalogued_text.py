@@ -43,6 +43,8 @@ SURFACE_OWNERS = {
     "panel": "B4",
     "install": "B5",
 }
+#: Superficies cuya ola ya vació su lista: su fichero de pendientes se borra (decisión 9 de B1).
+CLOSED_SURFACES = frozenset({"doctor"})
 #: Scripts del repo que entran en el alcance: sus rótulos los imprime B1 (A-close-5).
 SCRIPTS_IN_SCOPE = ("measure_cooldown.py", "pair_sheet.py", "analyze_benchmark.py")
 #: El escáner del panel (literales del JS y texto y atributos del HTML de `web/metrics.py`) lo
@@ -302,12 +304,15 @@ def test_no_uncatalogued_text_outside_pending():
 
 def test_the_pending_lists_are_well_formed():
     pending = load_pending()
-    assert set(pending) == set(SURFACE_OWNERS), sorted(pending)
+    assert set(pending) == set(SURFACE_OWNERS) - CLOSED_SURFACES, sorted(pending)
     seen: dict[str, str] = {}
     scope = set(files_in_scope())
     for surface, entry in pending.items():
         assert entry["surface"] == surface
         assert entry["owner"] == SURFACE_OWNERS[surface], surface
+        assert entry["files"], (
+            f"{surface}: lista vacía: bórrala y pon la superficie en CLOSED_SURFACES"
+        )
         assert entry["files"] == sorted(entry["files"]), f"{surface}: lista sin ordenar"
         for rel in entry["files"]:
             assert rel in scope, f"{surface}: {rel} no existe o no está en el alcance"

@@ -151,7 +151,6 @@
   "cli.install.not_on_path.why": "       Pasa cuando se instala con `uvx`, que borra su entorno al terminar.",
   "cli.install.report.current_state": "Estado ACTUAL del andamiaje (no se escribió nada):",
   "cli.install.report.state_after": "Estado del andamiaje después de escribir:",
-  "cli.install.report.status_legend": "Estados: [ OK ] a punto · [WARN] revisar · [FALT] falta · [ -- ] no se pudo comprobar",
   "cli.install.simulated_home": "HOME simulado: no se toca el daemon de la máquina.",
   "cli.install.uninstalling": "Desinstalando local-delegate en {home}",
   "cli.outcome.down": "llama-swap {outcome}: no responde ({line}); el cambio se aplicará en el próximo arranque",

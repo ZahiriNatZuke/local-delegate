@@ -42,6 +42,7 @@ from . import (
     config,
     cost,
     failures,
+    i18n,
     install,
     legacy_names,
     probes,
@@ -55,21 +56,56 @@ MISSING = "missing"  # falta y se puede arreglar
 WARN = "warn"  # está, pero no como debería
 UNKNOWN = "unknown"  # no se pudo comprobar (no aplica, sin permisos, sin datos)
 
-# Prefijos de la salida: los tres primeros son los que el doctor ya imprimía.
+# Prefijos de la salida, por su clave del catálogo: seis columnas en los dos idiomas.
 STATUS_LABEL: dict[str, str] = {
-    OK: "[ OK ]",
-    WARN: "[WARN]",
-    MISSING: "[FALT]",
-    UNKNOWN: "[ -- ]",
+    OK: "doctor.status.ok",
+    WARN: "doctor.status.warn",
+    MISSING: "doctor.status.missing",
+    UNKNOWN: "doctor.status.unknown",
 }
 
+
+def status_label(status: str) -> str:
+    """El prefijo de un estado (`[ OK ]`, `[WARN]`…) en el idioma vigente."""
+    return i18n.t(STATUS_LABEL[status])
+
+
 INSTALL_HINT = "local-delegate install"
-UPDATE_HOOKS_HINT = "local-delegate update  (repone los hooks sin tocar el resto)"
-SERVE_HINT = "local-delegate serve  (o arranca la tarea programada del daemon)"
-CLI_HINT = "uv tool install local-delegate-mcp  (deja `local-delegate` en el PATH)"
-RESTART_HINT = "reinicia el daemon para que sirva la versión instalada"
-CREDENTIAL_HINT = "local-delegate install --mcp-mode http  (el daemon sí tiene la credencial)"
-DAEMON_TOKEN_HINT = "local-delegate install --mcp-mode http --web-token-env"
+
+
+# Las pistas con prosa salen del catálogo al llamarlas: el idioma se resuelve en ejecución.
+def update_hooks_hint() -> str:
+    return i18n.t("doctor.hint.update_hooks")
+
+
+def serve_hint() -> str:
+    return i18n.t("doctor.hint.serve")
+
+
+def cli_hint() -> str:
+    return i18n.t("doctor.hint.cli")
+
+
+def restart_hint() -> str:
+    return i18n.t("doctor.hint.restart")
+
+
+def credential_hint() -> str:
+    return i18n.t("doctor.hint.credential")
+
+
+def daemon_token_hint() -> str:
+    return i18n.t("doctor.hint.daemon_token")
+
+
+def _client_name(client: str) -> str:
+    """El nombre de producto de un cliente (`claude`, `codex`, `opencode`), igual en los dos idiomas.
+
+    Sale del catálogo y no de un literal porque el guardián de textos (REQ-045) toma «Claude Code»
+    por prosa: es un nombre propio que se muestra a personas.
+    """
+    return i18n.t(f"doctor.client.{client}")
+
 
 # La variable a la que apunta una cabecera `Bearer`. Cubre las dos sintaxis que escribe `install`:
 # `${VAR}` en Claude Code y `{env:VAR}` en opencode. Codex no usa ninguna —da el nombre pelado en
@@ -107,9 +143,14 @@ class Check:
     """Un elemento del andamiaje que sabe comprobarse a sí mismo."""
 
     id: str
-    group: str  # cliente | andamiaje | servicio | backend
-    title: str
+    group: str  # environment | scaffold | service | backend
+    title_key: str  # clave del título en el catálogo (`doctor.check.<id>`)
     probe: Callable[[Context], Result]
+
+    @property
+    def title(self) -> str:
+        """El título en el idioma vigente (REQ-022); los ids y grupos no cambian con él."""
+        return i18n.t(self.title_key, skill=install.SKILL_NAME)
 
 
 # --- Colaboradores por defecto -----------------------------------------------
@@ -157,7 +198,7 @@ def _default_llamaswap_daemon():
 
 def NO_LLAMASWAP_DAEMON():
     """Colaborador para los tests: el daemon no contesta por llama-swap y no se sale a la red."""
-    return None, "sin daemon (test)"
+    return None, i18n.t("doctor.probe.test.no_llamaswap_daemon")
 
 
 def NO_TOKEN_PROBE(_host: str, _port: int) -> bool | None:
@@ -208,7 +249,7 @@ def _default_backend_models() -> failures.BackendView:
         # Daemon antiguo, sin causa: el texto de siempre. El daemon SÍ tiene credencial, así
         # que su «no disponible» es un diagnóstico de verdad y no una duda: no cabe el `unknown`.
         return failures.BackendView(
-            False, "no responde (según el daemon, que sí tiene credencial)", None, "daemon"
+            False, i18n.t("doctor.probe.backend.daemon_down_with_credential"), None, "daemon"
         )
     return probes.backend_probe()
 
@@ -225,7 +266,7 @@ def NO_KEY_PROBE() -> tuple[bool | None, str]:
     verdad y sería verde en CI —donde no hay backend— y otra cosa en la máquina de quien
     desarrolla. Va en **los dos** arneses, no en uno.
     """
-    return None, "no se prueba el backend en este comando"
+    return None, i18n.t("doctor.probe.test.no_key_probe")
 
 
 def _default_version_of(component: str, config_path: Path | None) -> tuple[str | None, str | None]:
@@ -256,7 +297,7 @@ def SKIP_PYPI() -> tuple[str | None, str | None]:
     Lo inyectan ``install`` (instalar unos hooks no es motivo para consultar PyPI) y ``update``
     (que ya pregunta por su cuenta, y dos consultas en el mismo comando serían una de más).
     """
-    return None, "no se consulta PyPI en este comando"
+    return None, i18n.t("doctor.probe.published.skip_pypi")
 
 
 def _default_clients_seen() -> tuple[list[dict], str | None]:
@@ -440,7 +481,7 @@ def read_text(path: Path) -> tuple[str | None, str | None]:
     except FileNotFoundError:
         return None, None
     except OSError as exc:
-        return None, f"no se pudo leer {path}: {exc.strerror or exc}"
+        return None, i18n.t("doctor.common.cannot_read", path=path, error=exc.strerror or exc)
 
 
 def read_json(path: Path) -> tuple[dict | None, str | None]:
@@ -451,8 +492,10 @@ def read_json(path: Path) -> tuple[dict | None, str | None]:
     try:
         data = json.loads(text)
     except ValueError as exc:
-        return None, f"{path} no es JSON válido ({exc.msg}); no se puede comprobar"
-    return (data, None) if isinstance(data, dict) else (None, f"{path} no contiene un objeto JSON")
+        return None, i18n.t("doctor.common.bad_json", path=path, error=exc.msg)
+    if isinstance(data, dict):
+        return data, None
+    return None, i18n.t("doctor.common.not_json_object", path=path)
 
 
 def _dir_entries(path: Path) -> tuple[list[str] | None, str | None]:
@@ -462,7 +505,7 @@ def _dir_entries(path: Path) -> tuple[list[str] | None, str | None]:
     try:
         return sorted(p.name for p in path.iterdir()), None
     except OSError as exc:
-        return None, f"no se pudo listar {path}: {exc.strerror or exc}"
+        return None, i18n.t("doctor.common.cannot_list", path=path, error=exc.strerror or exc)
 
 
 def _packaged_hooks() -> dict[str, Path]:
@@ -510,20 +553,21 @@ def _worst(statuses: list[str]) -> str:
 # que se detecta pero al que nadie le comprueba la memoria.
 def _client_dirs(ctx: Context) -> tuple[tuple[str, Path], ...]:
     return (
-        ("Claude Code", ctx.claude_dir),
-        ("Codex", ctx.codex_dir),
-        ("opencode", ctx.opencode_dir),
+        (_client_name("claude"), ctx.claude_dir),
+        (_client_name("codex"), ctx.codex_dir),
+        (_client_name("opencode"), ctx.opencode_dir),
     )
 
 
 def _probe_clients(ctx: Context) -> Result:
     present = [name for name, path in _client_dirs(ctx) if path.is_dir()]
     if not present:
-        return Result(UNKNOWN, f"no hay ~/.claude, ~/.codex ni ~/.config/opencode bajo {ctx.home}")
-    return Result(OK, "detectados: " + ", ".join(present))
+        return Result(UNKNOWN, i18n.t("doctor.probe.clients.none", home=ctx.home))
+    return Result(OK, i18n.t("doctor.probe.clients.found", clients=", ".join(present)))
 
 
-_UNNAMED = "(sin identificar)"
+# Las observaciones sin nombre se agrupan bajo una clave propia; el rótulo sale al describirlas.
+_UNNAMED = "\0unnamed"
 
 # Lo más antiguo que puede haber: una observación cuyo `ts` falte o no se pueda parsear pierde la
 # carrera de «la más reciente» en vez de tumbar el check por una línea mala.
@@ -563,12 +607,14 @@ def _describe(name: str, obs: dict) -> str:
     # la verdad — un falso positivo silencioso.
     can_ask = isinstance(caps, list) and "elicitation" in caps
 
-    parts = [name]
+    parts = [i18n.t("doctor.probe.clients_observed.unnamed") if name == _UNNAMED else name]
     if isinstance(version, str) and version:
         parts.append(version)
     util = isinstance(protocol, str) and protocol
     parts.append(f"[{protocol if util else '?'}]")
-    parts.append("elicitation" if can_ask else "sin elicitation")
+    parts.append(
+        "elicitation" if can_ask else i18n.t("doctor.probe.clients_observed.no_elicitation")
+    )
     return _cp1252(" ".join(parts))
 
 
@@ -589,7 +635,7 @@ def _probe_clients_observed(ctx: Context) -> Result:
     if reason is not None:
         return Result(UNKNOWN, reason)
     if not observations:
-        return Result(UNKNOWN, "todavía no ha hablado ningún cliente MCP con este local-delegate")
+        return Result(UNKNOWN, i18n.t("doctor.probe.clients_observed.none"))
 
     latest: dict[str, dict] = {}
     for obs in observations:
@@ -627,13 +673,11 @@ def _probe_cli(ctx: Context) -> Result:
     """
     found = shutil.which("local-delegate")
     if not found:
-        return Result(
-            MISSING,
-            "el comando `local-delegate` no está en el PATH (¿instalado con `uvx`, que es efímero?)",
-            CLI_HINT,
-        )
+        return Result(MISSING, i18n.t("doctor.probe.cli.missing"), cli_hint())
     installed = _installed_version()
-    return Result(OK, f"{found}{f' (versión {installed})' if installed else ''}")
+    if installed:
+        return Result(OK, i18n.t("doctor.probe.cli.found_version", path=found, version=installed))
+    return Result(OK, found)
 
 
 def _version_key(version: str) -> list[int]:
@@ -676,28 +720,41 @@ def _probe_published(ctx: Context) -> Result:
     """
     installed = _installed_version()
     if installed is None:
-        return Result(UNKNOWN, "no se pudo saber qué versión del paquete está instalada")
+        return Result(UNKNOWN, i18n.t("doctor.probe.published.unknown_installed"))
     latest, reason = ctx.latest_release()
     if latest is None:
-        return Result(UNKNOWN, f"instalada {installed}; {reason or 'PyPI no respondió'}")
+        reason = reason or i18n.t("doctor.probe.published.pypi_silent")
+        return Result(
+            UNKNOWN, i18n.t("doctor.probe.published.no_latest", installed=installed, reason=reason)
+        )
     order = _compare_versions(installed, latest)
     if order is None:
-        return Result(UNKNOWN, f"no se pudieron comparar '{installed}' y '{latest}'")
+        return Result(
+            UNKNOWN,
+            i18n.t("doctor.probe.published.cannot_compare", installed=installed, latest=latest),
+        )
     if order < 0:
         return Result(
             WARN,
-            f"instalada {installed}, publicada {latest}: la instalación está atrasada",
+            i18n.t("doctor.probe.published.behind", installed=installed, latest=latest),
             _upgrade_hint(),
         )
     if order > 0:
-        return Result(OK, f"instalada {installed}, por delante de la publicada {latest}")
-    return Result(OK, f"{installed} (la última publicada)")
+        return Result(
+            OK, i18n.t("doctor.probe.published.ahead", installed=installed, latest=latest)
+        )
+    return Result(OK, i18n.t("doctor.probe.published.latest", installed=installed))
 
 
 def _claude_absent(ctx: Context) -> Result | None:
     """``unknown`` compartido por los checks que solo aplican a Claude Code."""
     if not ctx.claude_dir.is_dir():
-        return Result(UNKNOWN, f"Claude Code no está instalado ({ctx.claude_dir} no existe)")
+        return Result(
+            UNKNOWN,
+            i18n.t(
+                "doctor.common.client_absent", client=_client_name("claude"), path=ctx.claude_dir
+            ),
+        )
     return None
 
 
@@ -708,13 +765,21 @@ def _probe_hook_files(ctx: Context) -> Result:
     if reason:
         return Result(UNKNOWN, reason)
     if entries is None:
-        return Result(MISSING, f"no existe {ctx.hooks_dir}", INSTALL_HINT)
+        return Result(
+            MISSING, i18n.t("doctor.common.does_not_exist", path=ctx.hooks_dir), INSTALL_HINT
+        )
     packaged = _packaged_hooks()
     expected = sorted(packaged) or [script for script, _event, _matcher in install._HOOK_EVENTS]
     missing = [name for name in expected if name not in entries]
     if missing:
         return Result(
-            WARN, f"faltan scripts en {ctx.hooks_dir}: {', '.join(missing)}", INSTALL_HINT
+            WARN,
+            i18n.t(
+                "doctor.probe.hook_files.missing_scripts",
+                path=ctx.hooks_dir,
+                scripts=", ".join(missing),
+            ),
+            INSTALL_HINT,
         )
     # Que estén no basta: hay que mirar que sean LOS DE ESTA VERSIÓN. Actualizar el paquete no
     # toca `~/.claude/hooks/`, y mirando solo los nombres unos hooks de la 0.27 pasaban por buenos
@@ -724,15 +789,20 @@ def _probe_hook_files(ctx: Context) -> Result:
     if stale:
         return Result(
             WARN,
-            f"scripts de otra versión en {ctx.hooks_dir}: {', '.join(stale)}",
-            UPDATE_HOOKS_HINT,
+            i18n.t("doctor.probe.hook_files.stale", path=ctx.hooks_dir, scripts=", ".join(stale)),
+            update_hooks_hint(),
         )
     # Se cuentan los `.py`, no las entradas del directorio: en cuanto los hooks se ejecutan una vez,
     # Python deja ahí un `__pycache__/` y el conteo decía «4 script(s)» donde hay 3. No es cosmético
     # —es JUSTO el número que se mira para confirmar que un script retirado desapareció—, y con un
     # directorio de más el check afirmaba lo contrario de lo que había pasado.
     scripts = [name for name in entries if name.endswith(".py")]
-    return Result(OK, f"{len(scripts)} script(s) en {ctx.hooks_dir}")
+    return Result(
+        OK,
+        i18n.t(
+            "doctor.probe.hook_files.ok", n=i18n.format_number(len(scripts)), path=ctx.hooks_dir
+        ),
+    )
 
 
 def _probe_hook_orphans(ctx: Context) -> Result:
@@ -754,14 +824,18 @@ def _probe_hook_orphans(ctx: Context) -> Result:
         return Result(UNKNOWN, reason)
     if entries is None:
         # No hay directorio de hooks: de esa ausencia ya se ocupa `scaffold.hook_files`.
-        return Result(OK, f"no existe {root}: nada que limpiar")
+        return Result(OK, i18n.t("doctor.probe.hook_orphans.no_dir", path=root))
     orphans = install.orphan_hook_scripts(ctx.claude_dir)
     if not orphans:
-        return Result(OK, f"ninguno suelto en {root}")
+        return Result(OK, i18n.t("doctor.probe.hook_orphans.none", path=root))
     return Result(
         WARN,
-        f"{len(orphans)} script(s) de una instalación anterior sueltos en {root} "
-        f"({', '.join(p.name for p in orphans)}); no se ejecutan, pero confunden",
+        i18n.t(
+            "doctor.probe.hook_orphans.found",
+            n=i18n.format_number(len(orphans)),
+            path=root,
+            scripts=", ".join(p.name for p in orphans),
+        ),
         INSTALL_HINT,
     )
 
@@ -774,10 +848,12 @@ def _probe_hook_settings(ctx: Context) -> Result:
     if reason:
         return Result(UNKNOWN, reason)
     if data is None:
-        return Result(MISSING, f"no existe {path}", INSTALL_HINT)
+        return Result(MISSING, i18n.t("doctor.common.does_not_exist", path=path), INSTALL_HINT)
     hooks = data.get("hooks")
     if not isinstance(hooks, dict):
-        return Result(MISSING, f"{path} no registra ningún hook", INSTALL_HINT)
+        return Result(
+            MISSING, i18n.t("doctor.probe.hook_settings.no_hooks", path=path), INSTALL_HINT
+        )
 
     # `_is_ours` es de install a propósito: un hook del usuario en otra ruta nunca debe
     # contarse como nuestro, y ese criterio ya está escrito (y probado) una vez.
@@ -796,7 +872,9 @@ def _probe_hook_settings(ctx: Context) -> Result:
                     if isinstance(hook.get("args"), list):
                         legacy += 1
     if not registered:
-        return Result(MISSING, f"ningún hook de local-delegate en {path}", INSTALL_HINT)
+        return Result(
+            MISSING, i18n.t("doctor.probe.hook_settings.none_ours", path=path), INSTALL_HINT
+        )
     if legacy:
         # El formato `{"command": "python", "args": [...]}` es el *exec form* del schema de
         # Claude Code y **sí se ejecuta** — verificado en vivo el 2026-07-29 y otra vez el
@@ -805,12 +883,22 @@ def _probe_hook_settings(ctx: Context) -> Result:
         # `warn` y no `missing` ni `ok`, y por eso el detalle dice que funcionan.
         return Result(
             WARN,
-            f"{legacy} de {len(registered)} vienen de una instalación anterior "
-            f"(formato 'args' y scripts fuera de {ctx.hooks_dir}); funcionan, pero reinstalar "
-            f"los deja como los pone la versión actual",
+            i18n.t(
+                "doctor.probe.hook_settings.legacy",
+                legacy=i18n.format_number(legacy),
+                total=i18n.format_number(len(registered)),
+                path=ctx.hooks_dir,
+            ),
             INSTALL_HINT,
         )
-    return Result(OK, f"{len(registered)} registrado(s): {', '.join(registered)}")
+    return Result(
+        OK,
+        i18n.t(
+            "doctor.probe.hook_settings.ok",
+            n=i18n.format_number(len(registered)),
+            hooks=", ".join(registered),
+        ),
+    )
 
 
 def _probe_skill(ctx: Context) -> Result:
@@ -830,8 +918,8 @@ def _probe_skill(ctx: Context) -> Result:
     puede no estar viendo.
     """
     subruta = {
-        "Claude Code": Path("skills") / install.SKILL_NAME,
-        "opencode": Path(install.OPENCODE_SKILL_SUBDIR) / install.SKILL_NAME,
+        _client_name("claude"): Path("skills") / install.SKILL_NAME,
+        _client_name("opencode"): Path(install.OPENCODE_SKILL_SUBDIR) / install.SKILL_NAME,
     }
     statuses: list[str] = []
     details: list[str] = []
@@ -841,7 +929,7 @@ def _probe_skill(ctx: Context) -> Result:
         if not client_dir.is_dir():
             # Igual que en `_probe_memory`: un cliente que no está en la máquina no arrastra el
             # estado del check. Solo si no aplica ninguno el resultado es `unknown`.
-            details.append(f"{label}: cliente no instalado")
+            details.append(i18n.t("doctor.common.client_not_installed", client=label))
             continue
         skill_dir = client_dir / subruta[label]
         entries, reason = _dir_entries(skill_dir)
@@ -850,13 +938,15 @@ def _probe_skill(ctx: Context) -> Result:
             details.append(f"{label}: {reason}")
         elif entries is None:
             statuses.append(MISSING)
-            details.append(f"{label}: no existe {skill_dir}")
+            details.append(
+                i18n.t("doctor.common.client_path_missing", client=label, path=skill_dir)
+            )
         elif "SKILL.md" not in entries:
             statuses.append(WARN)
-            details.append(f"{label}: {skill_dir} existe pero no tiene SKILL.md")
+            details.append(i18n.t("doctor.probe.skill.no_skill_md", client=label, path=skill_dir))
         else:
             statuses.append(OK)
-            details.append(f"{label}: instalada en {skill_dir}")
+            details.append(i18n.t("doctor.probe.skill.installed", client=label, path=skill_dir))
     status = _worst(statuses) if statuses else UNKNOWN
     return Result(status, " · ".join(details), INSTALL_HINT if is_warning(status) else "")
 
@@ -873,9 +963,9 @@ def _probe_memory(ctx: Context) -> Result:
     toca nada.
     """
     files = {
-        "Claude Code": "CLAUDE.md",
-        "Codex": "AGENTS.md",
-        "opencode": "AGENTS.md",
+        _client_name("claude"): "CLAUDE.md",
+        _client_name("codex"): "AGENTS.md",
+        _client_name("opencode"): "AGENTS.md",
     }
     targets = tuple((name, folder, folder / files[name]) for name, folder in _client_dirs(ctx))
     statuses: list[str] = []
@@ -884,7 +974,7 @@ def _probe_memory(ctx: Context) -> Result:
         if not client_dir.is_dir():
             # Un cliente que no está en la máquina no arrastra el estado del check: no falta
             # nada, simplemente no aplica. Solo si no aplica ninguno el resultado es `unknown`.
-            details.append(f"{label}: cliente no instalado")
+            details.append(i18n.t("doctor.common.client_not_installed", client=label))
             continue
         text, reason = read_text(path)
         if reason:
@@ -892,17 +982,17 @@ def _probe_memory(ctx: Context) -> Result:
             details.append(f"{label}: {reason}")
         elif text is None:
             statuses.append(MISSING)
-            details.append(f"{label}: no existe {path}")
+            details.append(i18n.t("doctor.common.client_path_missing", client=label, path=path))
         elif _has_block(text, install.MD_BEGIN, install.MD_END):
             if install.memory_block_is_current(text):
                 statuses.append(OK)
-                details.append(f"{label}: bloque al día en {path}")
+                details.append(i18n.t("doctor.probe.memory.current", client=label, path=path))
             else:
                 statuses.append(WARN)
-                details.append(f"{label}: bloque desfasado en {path}")
+                details.append(i18n.t("doctor.probe.memory.stale", client=label, path=path))
         else:
             statuses.append(MISSING)
-            details.append(f"{label}: sin bloque gestionado en {path}")
+            details.append(i18n.t("doctor.probe.memory.no_block", client=label, path=path))
     status = _worst(statuses) if statuses else UNKNOWN
     return Result(status, " · ".join(details), INSTALL_HINT if is_warning(status) else "")
 
@@ -950,54 +1040,71 @@ def _timeouts_text(timeouts: dict) -> str:
     Se enseña porque `install` y `update` lo conservan: así se ve, sin abrir el fichero, que el
     plazo que subiste sigue ahí.
     """
-    return f", plazo {install._describe_timeouts(timeouts)}" if timeouts else ""
+    if not timeouts:
+        return ""
+    return i18n.t("doctor.probe.mcp.timeout", timeouts=install._describe_timeouts(timeouts))
 
 
 def _probe_mcp_claude(ctx: Context) -> Result:
     path = ctx.home / ".claude.json"
     if not ctx.claude_dir.is_dir() and not path.exists():
-        return Result(UNKNOWN, f"Claude Code no está instalado ({ctx.claude_dir} no existe)")
+        return Result(
+            UNKNOWN,
+            i18n.t(
+                "doctor.common.client_absent", client=_client_name("claude"), path=ctx.claude_dir
+            ),
+        )
     data, reason = read_json(path)
     if reason:
         return Result(UNKNOWN, reason)
     if data is None:
-        return Result(MISSING, f"no existe {path}", INSTALL_HINT)
+        return Result(MISSING, i18n.t("doctor.common.does_not_exist", path=path), INSTALL_HINT)
     servers = data.get("mcpServers")
     entry = servers.get(install.SERVER_NAME) if isinstance(servers, dict) else None
     if not isinstance(entry, dict):
-        return Result(MISSING, f"'{install.SERVER_NAME}' no está en {path}", INSTALL_HINT)
+        return Result(
+            MISSING,
+            i18n.t("doctor.probe.mcp.not_in_file", server=install.SERVER_NAME, path=path),
+            INSTALL_HINT,
+        )
     kind = _entry_mode(entry)
     where = entry.get("url") or entry.get("command") or ""
     timeouts = _timeouts_text(_entry_timeouts(entry, "claude"))
-    return Result(OK, f"registrado en {path} ({kind}{' ' + str(where) if where else ''}{timeouts})")
+    details = f"{kind}{' ' + str(where) if where else ''}{timeouts}"
+    return Result(OK, i18n.t("doctor.probe.mcp.registered", path=path, details=details))
 
 
 def _probe_mcp_codex(ctx: Context) -> Result:
     if not ctx.codex_dir.is_dir():
-        return Result(UNKNOWN, f"Codex no está instalado ({ctx.codex_dir} no existe)")
+        return Result(
+            UNKNOWN,
+            i18n.t("doctor.common.client_absent", client=_client_name("codex"), path=ctx.codex_dir),
+        )
     path = ctx.codex_dir / "config.toml"
     text, reason = read_text(path)
     if reason:
         return Result(UNKNOWN, reason)
     if text is None:
-        return Result(MISSING, f"no existe {path}", INSTALL_HINT)
+        return Result(MISSING, i18n.t("doctor.common.does_not_exist", path=path), INSTALL_HINT)
     section = install._CODEX_SECTION_RE.search(text)
     if not section:
-        return Result(MISSING, f"sin [mcp_servers.{install.SERVER_NAME}] en {path}", INSTALL_HINT)
+        return Result(
+            MISSING,
+            i18n.t("doctor.probe.mcp_codex.no_section", server=install.SERVER_NAME, path=path),
+            INSTALL_HINT,
+        )
     kind = _codex_mode(section.group(0))
     kind += _timeouts_text(dict(install._CODEX_TIMEOUT_RE.findall(section.group(0))))
     if install.TOML_BEGIN not in text:
-        return Result(WARN, f"entrada {kind} en {path}, pero puesta a mano (sin marcadores)")
+        return Result(WARN, i18n.t("doctor.probe.mcp_codex.by_hand", details=kind, path=path))
     # El de apertura basta para saber que es nuestra. Si falta el de cierre es que otro programa
     # reescribió el fichero —así lo dejó el plugin de JetBrains—: Codex la carga igual, e `install`
     # la reescribe entera sin emparejar marcadores, así que no hay nada roto que avisar.
     if not _has_block(text, install.TOML_BEGIN, install.TOML_END):
         return Result(
-            OK,
-            f"bloque gestionado en {path} ({kind}); otro programa reescribió el fichero y se "
-            "llevó el marcador de cierre",
+            OK, i18n.t("doctor.probe.mcp_codex.closing_marker_lost", path=path, details=kind)
         )
-    return Result(OK, f"bloque gestionado en {path} ({kind})")
+    return Result(OK, i18n.t("doctor.probe.mcp_codex.managed", path=path, details=kind))
 
 
 def _opencode_mcp_entry(ctx: Context) -> tuple[dict | None, Path | None, str | None]:
@@ -1023,21 +1130,34 @@ def _opencode_mcp_entry(ctx: Context) -> tuple[dict | None, Path | None, str | N
 
 def _probe_mcp_opencode(ctx: Context) -> Result:
     if not ctx.opencode_dir.is_dir():
-        return Result(UNKNOWN, f"opencode no está instalado ({ctx.opencode_dir} no existe)")
+        return Result(
+            UNKNOWN,
+            i18n.t(
+                "doctor.common.client_absent",
+                client=_client_name("opencode"),
+                path=ctx.opencode_dir,
+            ),
+        )
     entry, path, reason = _opencode_mcp_entry(ctx)
     if entry is None:
         if reason:
             return Result(UNKNOWN, reason)
-        names = " ni ".join(install.OPENCODE_CONFIG_NAMES)
+        names = f" {i18n.t('doctor.nor')} ".join(install.OPENCODE_CONFIG_NAMES)
         return Result(
             MISSING,
-            f"'{install.SERVER_NAME}' no está en {names} de {ctx.opencode_dir}",
+            i18n.t(
+                "doctor.probe.mcp_opencode.not_in_files",
+                server=install.SERVER_NAME,
+                files=names,
+                path=ctx.opencode_dir,
+            ),
             INSTALL_HINT,
         )
     kind = str(entry.get("type") or "?")
     where = entry.get("url") or entry.get("command") or ""
     timeouts = _timeouts_text(_entry_timeouts(entry, "opencode"))
-    return Result(OK, f"registrado en {path} ({kind}{' ' + str(where) if where else ''}{timeouts})")
+    details = f"{kind}{' ' + str(where) if where else ''}{timeouts}"
+    return Result(OK, i18n.t("doctor.probe.mcp.registered", path=path, details=details))
 
 
 def _probe_mcp_credential(ctx: Context) -> Result:
@@ -1062,39 +1182,41 @@ def _probe_mcp_credential(ctx: Context) -> Result:
     if requires is None:
         return Result(UNKNOWN, reason)
     if not requires:
-        return Result(OK, "el backend no exige credencial: cualquier entrada MCP puede usarlo")
+        return Result(OK, i18n.t("doctor.probe.credential.open"))
     if config.API_KEY:
-        return Result(OK, "el backend exige credencial y LOCAL_DELEGATE_API_KEY está en el entorno")
+        return Result(OK, i18n.t("doctor.probe.credential.in_env"))
 
     entries: list[tuple[str, str]] = []
     entry = _claude_mcp_entry(ctx)
     if entry is not None:
-        entries.append(("Claude Code", _entry_mode(entry)))
+        entries.append((_client_name("claude"), _entry_mode(entry)))
     section = _codex_mcp_section(ctx)
     if section is not None:
-        entries.append(("Codex", _codex_mode(section)))
+        entries.append((_client_name("codex"), _codex_mode(section)))
     oc_entry, _path, _reason = _opencode_mcp_entry(ctx)
     if oc_entry is not None:
         # `remote` es el `http` de opencode y `local` su `stdio`: se normaliza aquí para que la
         # comparación de abajo —«¿habla por el daemon?»— siga siendo una sola, en vez de tener que
         # conocer el vocabulario de cada cliente.
-        entries.append(("opencode", "http" if oc_entry.get("type") == "remote" else "stdio"))
+        entries.append(
+            (_client_name("opencode"), "http" if oc_entry.get("type") == "remote" else "stdio")
+        )
     if not entries:
-        return Result(UNKNOWN, "el backend exige credencial, pero no hay entrada MCP que mirar")
+        return Result(UNKNOWN, i18n.t("doctor.probe.credential.no_entries"))
 
     # `--api-key-env` no salva a una entrada stdio aquí: reenvía `${LOCAL_DELEGATE_API_KEY}`, que
     # sale del mismo entorno que acabamos de ver vacío. Por eso el único arreglo que se ofrece es
     # el daemon, que tiene el secreto por otra vía.
     blind = [client for client, mode in entries if mode != "http"]
     if not blind:
-        return Result(OK, "el backend exige credencial y las entradas MCP van por el daemon (http)")
-    verb = "habla" if len(blind) == 1 else "hablan"
-    return Result(
-        WARN,
-        f"el backend exige credencial y {' y '.join(blind)} {verb} por stdio sin ella: "
-        "sus tools local_* responderán 401",
-        CREDENTIAL_HINT,
+        return Result(OK, i18n.t("doctor.probe.credential.via_daemon"))
+    key = (
+        "doctor.probe.credential.blind_one"
+        if len(blind) == 1
+        else "doctor.probe.credential.blind_many"
     )
+    clients = f" {i18n.t('doctor.and')} ".join(blind)
+    return Result(WARN, i18n.t(key, clients=clients), credential_hint())
 
 
 # --- Probes de servicios y backend --------------------------------------------
@@ -1152,40 +1274,39 @@ def _probe_mcp_daemon_auth(ctx: Context) -> Result:
     host, port = daemon_host_port()
     requires = ctx.daemon_needs_token(host, port)
     if requires is None:
-        return Result(UNKNOWN, f"no se pudo saber si {host}:{port} exige token")
+        return Result(UNKNOWN, i18n.t("doctor.probe.daemon_auth.unknown", host=host, port=port))
     if not requires:
-        return Result(OK, "el puerto del daemon no exige token: cualquier entrada MCP puede entrar")
+        return Result(OK, i18n.t("doctor.probe.daemon_auth.open"))
 
     entries: list[tuple] = []
     entry = _claude_mcp_entry(ctx)
     if entry is not None:
         header = (entry.get("headers") or {}).get("Authorization")
-        entries.append(_entry_auth("Claude Code", _entry_mode(entry), header))
+        entries.append(_entry_auth(_client_name("claude"), _entry_mode(entry), header))
     section = _codex_mcp_section(ctx)
     if section is not None:
         found = _CODEX_BEARER_RE.search(section)
         # Codex referencia la variable por nombre, sin `${...}`: se envuelve para que la
         # comprobación de «¿está en el entorno?» sea una sola para los tres clientes.
         token = "${" + found.group(1) + "}" if found else None
-        entries.append(_entry_auth("Codex", _codex_mode(section), token))
+        entries.append(_entry_auth(_client_name("codex"), _codex_mode(section), token))
     oc_entry, _path, _reason = _opencode_mcp_entry(ctx)
     if oc_entry is not None:
         header = (oc_entry.get("headers") or {}).get("Authorization")
         mode = "http" if oc_entry.get("type") == "remote" else "stdio"
-        entries.append(_entry_auth("opencode", mode, header))
+        entries.append(_entry_auth(_client_name("opencode"), mode, header))
 
     if not entries:
-        return Result(UNKNOWN, "el puerto exige token, pero no hay entrada MCP que mirar")
+        return Result(UNKNOWN, i18n.t("doctor.probe.daemon_auth.no_entries"))
 
     blind = [client for client, state in entries if state == "no_credential"]
     if blind:
-        verb = "entra" if len(blind) == 1 else "entran"
-        return Result(
-            WARN,
-            f"el puerto del daemon exige token y {' y '.join(blind)} {verb} por HTTP sin "
-            "cabecera de autorización: sus tools local_* responderán 401",
-            DAEMON_TOKEN_HINT,
+        many = len(blind) > 1
+        key = (
+            "doctor.probe.daemon_auth.blind_many" if many else "doctor.probe.daemon_auth.blind_one"
         )
+        clients = f" {i18n.t('doctor.and')} ".join(blind)
+        return Result(WARN, i18n.t(key, clients=clients), daemon_token_hint())
 
     # Segundo camino al mismo 401, y de fuerza distinta: la cabecera está pero la variable a la
     # que apunta puede expandir a vacío. El entorno de este proceso es un TESTIGO del que verá el
@@ -1197,14 +1318,16 @@ def _probe_mcp_daemon_auth(ctx: Context) -> Result:
         if state not in {"ok", "stdio", "no_credential"} and not os.environ.get(state)
     ]
     if suspicious:
-        detail = ", ".join(f"{client} usa {var}" for client, var in suspicious)
+        detail = ", ".join(
+            i18n.t("doctor.probe.daemon_auth.uses_variable", client=client, variable=var)
+            for client, var in suspicious
+        )
         return Result(
             WARN,
-            f"el puerto del daemon exige token y {detail}, que no está en el entorno de este "
-            "proceso: si el cliente tampoco la ve, sus tools local_* responderán 401",
-            DAEMON_TOKEN_HINT,
+            i18n.t("doctor.probe.daemon_auth.variable_not_in_env", detail=detail),
+            daemon_token_hint(),
         )
-    return Result(OK, "el puerto del daemon exige token y las entradas MCP lo referencian")
+    return Result(OK, i18n.t("doctor.probe.daemon_auth.ok"))
 
 
 # `${VAR}` es la única sintaxis que expande `mcp-remote` en sus cabeceras (medido en su fuente).
@@ -1245,46 +1368,43 @@ def _probe_desktop_auth(ctx: Context) -> Result:
     path = ctx.claude_desktop_config
     data, reason = read_json(path)
     if data is None:
-        return Result(UNKNOWN, reason or "Claude Desktop no está configurado en esta máquina")
+        return Result(UNKNOWN, reason or i18n.t("doctor.probe.desktop_auth.not_configured"))
     servers = data.get("mcpServers")
     entry = servers.get(install.SERVER_NAME) if isinstance(servers, dict) else None
     if not isinstance(entry, dict):
-        return Result(UNKNOWN, f"Claude Desktop no tiene entrada {install.SERVER_NAME}")
+        return Result(
+            UNKNOWN, i18n.t("doctor.probe.desktop_auth.no_entry", server=install.SERVER_NAME)
+        )
 
     url, header = _desktop_connection(entry)
     if url is None:
-        return Result(UNKNOWN, "Claude Desktop habla por stdio: no pasa por el puerto del daemon")
+        return Result(UNKNOWN, i18n.t("doctor.probe.desktop_auth.stdio"))
     host, port = daemon_host_port()
     try:
         target = urlsplit(url)
         target_port = target.port
     except ValueError:
-        return Result(UNKNOWN, "la URL de la entrada de Claude Desktop no se puede leer")
+        return Result(UNKNOWN, i18n.t("doctor.probe.desktop_auth.bad_url"))
     if target.hostname not in _LOCAL_HOSTS | {host} or target_port != port:
         # Probar su token contra NUESTRO puerto diría algo de un servidor al que no habla.
         return Result(
             UNKNOWN,
-            f"Claude Desktop apunta a {target.hostname}:{target_port}, no al daemon de "
-            f"{host}:{port}",
+            i18n.t(
+                "doctor.probe.desktop_auth.other_target",
+                target=f"{target.hostname}:{target_port}",
+                daemon=f"{host}:{port}",
+            ),
         )
 
     requires = ctx.daemon_needs_token(host, port)
     if requires is None:
-        return Result(UNKNOWN, f"no se pudo saber si {host}:{port} exige token")
+        return Result(UNKNOWN, i18n.t("doctor.probe.daemon_auth.unknown", host=host, port=port))
     if not requires:
-        return Result(OK, "el puerto del daemon no exige token: Claude Desktop puede entrar")
+        return Result(OK, i18n.t("doctor.probe.desktop_auth.open"))
 
-    fix = (
-        f"pon en el --header de su entrada en {path} el valor de {TOKEN_VAR} con el que arranca "
-        "el daemon, y reinicia Claude Desktop"
-    )
+    fix = i18n.t("doctor.probe.desktop_auth.fix", path=path, variable=TOKEN_VAR)
     if not header:
-        return Result(
-            WARN,
-            "el puerto del daemon exige token y Claude Desktop entra sin cabecera de autorización: "
-            "sus tools local_* responderán 401",
-            fix,
-        )
+        return Result(WARN, i18n.t("doctor.probe.desktop_auth.no_header"), fix)
     token = header.removeprefix("Bearer ").strip()
     reference = _MCP_REMOTE_VARIABLE.search(token)
     literal = reference is None
@@ -1296,8 +1416,7 @@ def _probe_desktop_auth(ctx: Context) -> Result:
         if not value:
             return Result(
                 WARN,
-                f"el puerto del daemon exige token y Claude Desktop usa {variable}, que no está en "
-                "el entorno de este proceso: si Claude Desktop tampoco la ve, responderá 401",
+                i18n.t("doctor.probe.desktop_auth.variable_not_in_env", variable=variable),
                 fix,
             )
         token = _MCP_REMOTE_VARIABLE.sub(value, token)
@@ -1309,16 +1428,15 @@ def _probe_desktop_auth(ctx: Context) -> Result:
 
     accepts = ctx.daemon_accepts_token(host, port, token)
     if accepts is None:
-        return Result(UNKNOWN, f"no se pudo probar el token de Claude Desktop contra {host}:{port}")
-    if not accepts:
         return Result(
-            WARN,
-            "el daemon rechaza el token que lleva Claude Desktop (401): se rotó el token del puerto "
-            "y su entrada, que install no toca, se quedó con el viejo",
-            fix,
+            UNKNOWN, i18n.t("doctor.probe.desktop_auth.cannot_test", host=host, port=port)
         )
-    form = "escrito literal en su configuración" if literal else "referenciado por variable"
-    return Result(OK, f"el daemon acepta el token de Claude Desktop ({form})")
+    if not accepts:
+        return Result(WARN, i18n.t("doctor.probe.desktop_auth.rejected"), fix)
+    form = i18n.t(
+        "doctor.probe.desktop_auth.literal" if literal else "doctor.probe.desktop_auth.by_variable"
+    )
+    return Result(OK, i18n.t("doctor.probe.desktop_auth.ok", form=form))
 
 
 def _probe_daemon(ctx: Context) -> Result:
@@ -1340,7 +1458,10 @@ def _probe_daemon(ctx: Context) -> Result:
                 # Sin poder ordenarlas, se avisa de la diferencia y NO se ofrece arreglo: cualquiera
                 # de los dos que se sugiriera podría ser el equivocado.
                 return Result(
-                    WARN, f"{detail} — la instalada es {installed} y no se pudieron comparar"
+                    WARN,
+                    i18n.t(
+                        "doctor.probe.daemon.cannot_compare", detail=detail, installed=installed
+                    ),
                 )
             if order < 0:
                 # El daemon es un proceso largo: sigue sirviendo el código con el que arrancó. Tras
@@ -1348,15 +1469,15 @@ def _probe_daemon(ctx: Context) -> Result:
                 # es «actualicé y el arreglo no está».
                 return Result(
                     WARN,
-                    f"{detail} — pero la versión instalada es {installed}: el daemon sirve la vieja",
-                    RESTART_HINT,
+                    i18n.t("doctor.probe.daemon.daemon_behind", detail=detail, installed=installed),
+                    restart_hint(),
                 )
             # Al revés: el daemon corre código más nuevo que el paquete instalado. Pasa con una
             # instalación editable mientras el CLI publicado va por detrás. Reiniciar el daemon no
             # cambiaría nada; lo que hay que subir es la instalación.
             return Result(
                 WARN,
-                f"{detail} — pero la versión instalada es {installed}: la instalación está atrasada",
+                i18n.t("doctor.probe.daemon.install_behind", detail=detail, installed=installed),
                 _upgrade_hint(),
             )
         return Result(OK, detail)
@@ -1368,17 +1489,17 @@ def _probe_daemon(ctx: Context) -> Result:
         if ctx.daemon_needs_token(host, port):
             return Result(
                 WARN,
-                f"nuestro daemon escucha en {host}:{port} pero este entorno no tiene su token",
-                f"exporta {TOKEN_VAR} con el mismo valor con el que arrancó el daemon",
+                i18n.t("doctor.probe.daemon.no_token", host=host, port=port),
+                i18n.t("doctor.probe.daemon.export_token", variable=TOKEN_VAR),
             )
-        return Result(WARN, f"alguien escucha en {host}:{port} pero no es nuestro daemon")
-    return Result(MISSING, f"nadie escucha en {host}:{port}", SERVE_HINT)
+        return Result(WARN, i18n.t("doctor.probe.daemon.foreign", host=host, port=port))
+    return Result(MISSING, i18n.t("doctor.probe.daemon.nobody", host=host, port=port), serve_hint())
 
 
 def _probe_backend_models(ctx: Context) -> Result:
     view = ctx.backend_models()
     if view.healthy:
-        return Result(OK, f"{config.BASE_URL}/models responde")
+        return Result(OK, i18n.t("doctor.probe.backend.answers", url=config.BASE_URL))
     # REQ-016: la severidad sale de la causa y de quién la vio, no de un prefijo del texto.
     hint = failures.hint(
         view.cause,
@@ -1386,7 +1507,7 @@ def _probe_backend_models(ctx: Context) -> Result:
         source=view.source,
         host=config.backend_host(),
     )
-    detail = f"{config.BASE_URL}/models: {view.detail or 'no responde'}"
+    detail = f"{config.BASE_URL}/models: {view.detail or i18n.t('doctor.probe.backend.no_answer')}"
     if view.cause == failures.ConnectionCause.CREDENTIAL.value and view.source == "direct":
         # El backend está vivo; lo que falta es la credencial en **esta** consola. Decir «caído»
         # mandaría a arrancar un servicio que ya corre. Si el 401 lo vio el daemon, que sí tiene
@@ -1405,7 +1526,10 @@ def _version_result(ctx: Context, component: str) -> Result:
     installed, reason = ctx.version_of(component, ctx.config_path)
     if installed is None and reason:
         recommended = probes.RECOMMENDED_VERSIONS[component]
-        return Result(UNKNOWN, f"no detectado (probada: {recommended}) — {reason}")
+        return Result(
+            UNKNOWN,
+            i18n.t("doctor.probe.version.not_detected", recommended=recommended, reason=reason),
+        )
     line, warn = probes._compare_line(component, installed, ctx.online)
     _prefix, _, text = line.partition("] ")
     detail = text.split(": ", 1)[1] if ": " in text else text
@@ -1422,7 +1546,8 @@ def _probe_llamaserver(ctx: Context) -> Result:
     return _version_result(ctx, "llama-server")
 
 
-RESIDENCY_HINT = "local-delegate llamaswap residency --none  (deja la config sin residente)"
+def residency_hint() -> str:
+    return i18n.t("doctor.probe.residency.hint")
 
 
 def _probe_residency(ctx: Context) -> Result:
@@ -1439,25 +1564,34 @@ def _probe_residency(ctx: Context) -> Result:
     """
     from . import residency, topology
 
-    path, source = ctx.config_path, "la config de este shell"
+    path, source = ctx.config_path, i18n.t("doctor.probe.residency.this_shell")
     if path is None:
         status, why = ctx.llamaswap_daemon()
         if status is None or not status.config_path:
-            reason = why or "no la dice"
+            reason = why or i18n.t("doctor.probe.residency.daemon_silent")
             return Result(
                 UNKNOWN,
-                f"{topology.NO_CONFIG} en este shell y el daemon no la da ({reason}): pasa "
-                "--config a doctor para revisarla",
+                i18n.t("doctor.probe.residency.no_config", reason=topology.NO_CONFIG, why=reason),
             )
-        path, source = Path(status.config_path), "la config del daemon"
+        path, source = Path(status.config_path), i18n.t("doctor.probe.residency.daemon_config")
     try:
         loaded = residency.load(path)
     except (residency.ResidencyError, OSError) as e:
-        return Result(UNKNOWN, f"no se puede leer {path} ({source}): {e}")
+        return Result(
+            UNKNOWN, i18n.t("doctor.probe.residency.cannot_read", path=path, source=source, error=e)
+        )
     photo = loaded.snapshot
     if isinstance(photo, topology.NoTopology):
         detail = f": {photo.detail}" if photo.detail else ""
-        return Result(UNKNOWN, f"no se puede leer la residencia ({photo.reason}{detail}; {source})")
+        return Result(
+            UNKNOWN,
+            i18n.t(
+                "doctor.probe.residency.unreadable",
+                reason=photo.reason,
+                detail=detail,
+                source=source,
+            ),
+        )
     return _with_stale_affinity(_residency_result(photo, loaded, source), photo)
 
 
@@ -1467,37 +1601,42 @@ def _residency_result(photo, loaded, source: str) -> Result:
 
     view = residency.view(photo, loaded.data)
     persistent = [
-        f"`{f.model}` (grupo `{f.group}`, TTL {f.ttl})"
+        i18n.t("doctor.probe.residency.persistent_entry", model=f.model, group=f.group, ttl=f.ttl)
         for f in view.rows
         if f.persistent and f.ttl > 0
     ]
     if persistent:
         return Result(
             WARN,
-            f"{view.verdict}; grupo persistent con TTL mayor que 0: {', '.join(persistent)}: "
-            f"`persistent` no lo mantiene cargado ({source})",
-            RESIDENCY_HINT,
+            i18n.t(
+                "doctor.probe.residency.persistent_ttl",
+                verdict=view.verdict,
+                models=", ".join(persistent),
+                source=source,
+            ),
+            residency_hint(),
         )
     if not view.residents:
-        return Result(OK, f"{view.verdict} ({source})")
+        return Result(OK, i18n.t("doctor.probe.residency.ok", verdict=view.verdict, source=source))
     try:
         figures = residency.vram_figures(loaded.data, view.residents, {})
         vram = "; ".join(
-            f"`{m}` retiene {residency._gib(figures[m])} GiB de VRAM" for m in view.residents
+            i18n.t(
+                "doctor.probe.residency.holds_vram", model=m, gb=i18n.format_number(figures[m], 2)
+            )
+            for m in view.residents
         )
     except residency.ResidencyError:
-        vram = "sin cifra fiable de la VRAM que retiene"
+        vram = i18n.t("doctor.probe.residency.no_vram_figure")
     return Result(
         OK,
-        f"{view.verdict} (residencia opt-in: {vram} de forma permanente; {source})",
-        RESIDENCY_HINT,
+        i18n.t("doctor.probe.residency.opt_in", verdict=view.verdict, vram=vram, source=source),
+        residency_hint(),
     )
 
 
-AFFINITY_HINT = (
-    "la afinidad no usa esas celdas hasta que se vuelvan a medir (benchmarks/afinidad-2026-10) "
-    "o la config vuelva a la huella medida"
-)
+def affinity_hint() -> str:
+    return i18n.t("doctor.probe.affinity.hint")
 
 
 def _is_file(path: object) -> bool:
@@ -1537,11 +1676,13 @@ def _stale_affinity_cells(photo) -> tuple[list[str], int]:
             continue
         changes: list[str] = []
         if configured != measured:
-            changes.append(f"otro GGUF bajo el id: {configured}")
+            changes.append(i18n.t("doctor.probe.affinity.other_gguf", path=configured))
         role = roles.get("code" if cell.tool == matrix.COMMIT_TOOL else "mechanical")
         if cell.compared_role != role:
             changes.append(
-                f"el modelo del rol es {role}, la celda se midió contra {cell.compared_role}"
+                i18n.t(
+                    "doctor.probe.affinity.other_role_model", role=role, measured=cell.compared_role
+                )
             )
         changes += [c for c in matrix.footprint_differences(cell, current) if c != "path"]
         if changes:
@@ -1556,14 +1697,13 @@ def _with_stale_affinity(result: Result, photo) -> Result:
     if not stale:
         if not elsewhere:
             return result
-        note = (
-            f"{result.detail}; afinidad inerte aquí: {elsewhere} celda(s) se midieron con GGUF "
-            "que no existen en esta máquina"
+        note = i18n.t(
+            "doctor.probe.affinity.inert", detail=result.detail, n=i18n.format_number(elsewhere)
         )
         return Result(result.status, note, result.fix_hint)
-    detail = f"{result.detail}; afinidad sin base: {'; '.join(stale)}"
+    detail = i18n.t("doctor.probe.affinity.stale", detail=result.detail, cells="; ".join(stale))
     if result.status == OK:
-        return Result(WARN, detail, AFFINITY_HINT)
+        return Result(WARN, detail, affinity_hint())
     return Result(result.status, detail, result.fix_hint)
 
 
@@ -1589,24 +1729,38 @@ def _probe_topology(ctx: Context) -> Result:
     status, why = ctx.llamaswap_daemon()
     if status is not None and status.turn_active is not None:
         if status.turn_active:
-            return Result(OK, f"turno activo según el daemon (choques: {status.turn_detail})")
+            return Result(
+                OK, i18n.t("doctor.probe.topology.active_daemon", clashes=status.turn_detail)
+            )
         detail = f": {status.turn_detail}" if status.turn_detail else ""
-        text = f"sin turno según el daemon: {status.turn_reason}{detail}"
+        text = i18n.t("doctor.probe.topology.none_daemon", reason=status.turn_reason, detail=detail)
         return Result(UNKNOWN if _no_turn_is_fine(status.turn_reason) else WARN, text)
-    source = f"según la config de este shell; el daemon: {why or 'no lo dice'}"
+    source = i18n.t(
+        "doctor.probe.topology.source", why=why or i18n.t("doctor.probe.topology.daemon_silent")
+    )
     if not server._backend_on_loopback():
         return Result(
             UNKNOWN,
-            f"sin turno: {server.NO_TURN_REMOTE_BACKEND} ({config.backend_host()}; {source})",
+            i18n.t(
+                "doctor.probe.topology.none_remote",
+                reason=server.NO_TURN_REMOTE_BACKEND,
+                host=config.backend_host(),
+                source=source,
+            ),
         )
     if ctx.config_path is None:
-        return Result(UNKNOWN, f"sin turno: {topology.NO_CONFIG} ({source})")
+        return Result(
+            UNKNOWN, i18n.t("doctor.probe.topology.none", reason=topology.NO_CONFIG, source=source)
+        )
     photo = topology.read(ctx.config_path)
     if isinstance(photo, topology.NoTopology):
         detail = f": {photo.detail}" if photo.detail else ""
-        text = f"sin turno: {photo.reason}{detail} ({source})"
+        text = i18n.t(
+            "doctor.probe.topology.none_detail", reason=photo.reason, detail=detail, source=source
+        )
         return Result(UNKNOWN if _no_turn_is_fine(photo.reason) else WARN, text)
-    return Result(OK, f"turno activo (choques: {server._clashes_by_groups(photo)}; {source})")
+    clashes = server._clashes_by_groups(photo)
+    return Result(OK, i18n.t("doctor.probe.topology.active", clashes=clashes, source=source))
 
 
 def _probe_fallback(ctx: Context) -> Result:
@@ -1625,30 +1779,38 @@ def _probe_fallback(ctx: Context) -> Result:
     details: list[str] = []
     fixes: list[str] = []
     warnings = [
-        f"LOCAL_DELEGATE_FALLBACK_{chain.role.upper()} nombra {', '.join(chain.ignored)}"
+        i18n.t(
+            "doctor.probe.fallback.names",
+            variable=f"LOCAL_DELEGATE_FALLBACK_{chain.role.upper()}",
+            names=", ".join(chain.ignored),
+        )
         for chain in resolved
         if chain.ignored
     ]
     if warnings:
-        details.append("; ".join(warnings) + ": no son roles ni modelos del catálogo, y se ignoran")
-        fixes.append(
-            f"usa roles (mechanical, long, code, {chains.LOADED}) o ids del catálogo de texto"
-        )
+        details.append(i18n.t("doctor.probe.fallback.ignored", warnings="; ".join(warnings)))
+        fixes.append(i18n.t("doctor.probe.fallback.use_roles", loaded=chains.LOADED))
     obsolete = [
-        f"LOCAL_DELEGATE_FALLBACK_{chain.role.upper()} usa {', '.join(chain.obsolete)}"
+        i18n.t(
+            "doctor.probe.fallback.uses",
+            variable=f"LOCAL_DELEGATE_FALLBACK_{chain.role.upper()}",
+            names=", ".join(chain.obsolete),
+        )
         for chain in resolved
         if chain.obsolete
     ]
     if obsolete:
         details.append(
-            "; ".join(obsolete) + f": nombre obsoleto del paso {chains.LOADED}, que sigue valiendo"
+            i18n.t(
+                "doctor.probe.fallback.obsolete", warnings="; ".join(obsolete), loaded=chains.LOADED
+            )
         )
-        fixes.append(f"renombra residente/resident a {chains.LOADED} en esas variables")
+        fixes.append(i18n.t("doctor.probe.fallback.rename", loaded=chains.LOADED))
     if details:
         return Result(WARN, " | ".join(details), "; ".join(fixes))
     if not config_module.FALLBACK:
-        return Result(OK, "respaldo apagado (LOCAL_DELEGATE_FALLBACK)")
-    return Result(OK, f"cadenas válidas; {chains.residents_text()}")
+        return Result(OK, i18n.t("doctor.probe.fallback.off"))
+    return Result(OK, i18n.t("doctor.probe.fallback.valid", residents=chains.residents_text()))
 
 
 #: Cuántos días de la cola de la telemetría de hooks mira `doctor` buscando nombres obsoletos.
@@ -1737,28 +1899,36 @@ def _probe_deprecated_names(ctx: Context) -> Result:
 
     for env_name, env_value in config_module.DEPRECATED_ENV_VALUES.items():
         if env_value is not None and (entry := deprecations.find(env_name)) is not None:
-            _note("en la shell", entry)
+            _note(i18n.t("doctor.probe.deprecated_names.in_shell"), entry)
 
     settings, _reason = read_json(ctx.claude_dir / "settings.json")
     env = settings.get("env") if settings else None
     if isinstance(env, dict):
         for entry in deprecations.env_vars():
             if entry.old in env:
-                _note("en el env de settings.json", entry)
+                _note(i18n.t("doctor.probe.deprecated_names.in_settings_env"), entry)
 
     for entry in deprecations.switch_files():
         if (ctx.claude_dir / entry.old).exists():
-            _note("en ~/.claude", entry)
+            _note(i18n.t("doctor.probe.deprecated_names.in_claude_dir"), entry)
 
     for name in sorted(deprecated_names_in_hook_telemetry(config_module.HOOK_TELEMETRY_LOG)):
         if (entry := deprecations.find(name)) is not None and entry not in seen:
-            _note(f"leído por los hooks (últimos {DEPRECATED_TAIL_DAYS} días)", entry)
+            _note(
+                i18n.t("doctor.probe.deprecated_names.read_by_hooks", days=DEPRECATED_TAIL_DAYS),
+                entry,
+            )
 
     if not warnings:
-        return Result(OK, "sin nombres obsoletos en uso")
-    hints = [f"quita {e.old}" if e.is_retired else f"renombra {e.old} a {e.new}" for e in seen]
+        return Result(OK, i18n.t("doctor.probe.deprecated_names.none"))
+    hints = [
+        i18n.t("doctor.probe.deprecated_names.remove", old=e.old)
+        if e.is_retired
+        else i18n.t("doctor.probe.deprecated_names.rename", old=e.old, new=e.new)
+        for e in seen
+    ]
     if any(e.old.endswith("_FAST") for e in seen):
-        hints.append("los roles vigentes son mechanical, long, code y vision")
+        hints.append(i18n.t("doctor.probe.deprecated_names.current_roles"))
     return Result(WARN, " | ".join(warnings), "; ".join(hints))
 
 
@@ -1810,9 +1980,13 @@ def _probe_cost(ctx: Context) -> Result:
         count, days = _oldest_pending(log_dir, now=now, period_days=period)
         if count:
             warnings.append(
-                f"{count} delegación(es) pendiente(s) de relleno, la más antigua de hace {days} "
-                f"días (Claude Code borra los transcripts a los {period}): lanza "
-                f"`{RECOMPUTE_HINT}` antes de que Claude Code borre sus transcripts"
+                i18n.t(
+                    "doctor.probe.cost.backfill_pending",
+                    n=i18n.format_number(count),
+                    days=i18n.format_number(days),
+                    period=i18n.format_number(period),
+                    command=RECOMPUTE_HINT,
+                )
             )
 
     aggregates = recompute.read_aggregates(log_dir) or {}
@@ -1825,26 +1999,29 @@ def _probe_cost(ctx: Context) -> Result:
         unpriced = [str(m) for m in check.get("unpriced") or []]
         parts = []
         if unpriced:
-            parts.append("modelos sin precio en la tabla: " + ", ".join(unpriced))
+            parts.append(i18n.t("doctor.probe.cost.unpriced", models=", ".join(unpriced)))
         if check.get("outside"):
-            parts.append(f"{check['outside']} fila(s) fuera de la banda")
-        warnings.append(
-            f"el último cotejo ({date}) no cuadra con lo que cobra Claude Code: "
-            + ("; ".join(parts) or "sin detalle")
-        )
+            parts.append(
+                i18n.t("doctor.probe.cost.outside", n=i18n.format_number(check["outside"]))
+            )
+        detail = "; ".join(parts) or i18n.t("doctor.probe.cost.no_detail")
+        warnings.append(i18n.t("doctor.probe.cost.check_failed", date=date, parts=detail))
 
     if warnings:
-        return Result(WARN, "; y ".join(warnings), RECOMPUTE_HINT)
+        return Result(WARN, i18n.t("doctor.probe.cost.and").join(warnings), RECOMPUTE_HINT)
     if check is not None and check.get("verdict") == "pass":
+        judged = check.get("judged")
         return Result(
             OK,
-            f"el último cotejo ({date}) cuadra: {check.get('judged', '?')} fila(s) juzgadas "
-            f"con la tabla de precios del {check.get('table_version') or '?'}",
+            i18n.t(
+                "doctor.probe.cost.check_passed",
+                date=date,
+                judged=i18n.format_number(judged) if isinstance(judged, int) else "?",
+                table=check.get("table_version") or "?",
+            ),
         )
     return Result(
-        UNKNOWN,
-        f"no hay cotejo guardado en {log_dir}: sin transcripts en esta máquina o "
-        f"`{RECOMPUTE_HINT}` nunca lanzado",
+        UNKNOWN, i18n.t("doctor.probe.cost.no_check", path=log_dir, command=RECOMPUTE_HINT)
     )
 
 
@@ -1862,29 +2039,46 @@ def _probe_test_windows(ctx: Context) -> Result:
     if windows.error:
         return Result(
             WARN,
-            f"{path} es ilegible ({windows.error}): no se aparta ninguna prueba por ventana",
-            "arréglalo a mano o bórralo; `local-delegate test-window list` dice qué ve",
+            i18n.t("doctor.probe.test_windows.unreadable", path=path, error=windows.error),
+            i18n.t("doctor.probe.test_windows.fix_unreadable"),
         )
     warnings: list[str] = []
     if windows.ignored:
-        warnings.append(f"{windows.ignored} entrada(s) ignorada(s) por ilegibles en {path}")
+        warnings.append(
+            i18n.t(
+                "doctor.probe.test_windows.ignored",
+                n=i18n.format_number(windows.ignored),
+                path=path,
+            )
+        )
     stale = windows.stale()
     for w in stale:
         warnings.append(
-            f"la ventana {w.id} lleva abierta desde {test_windows.format_instant(w.start)} "
-            f"(más de {test_windows.OPEN_WARN_HOURS} h)"
+            i18n.t(
+                "doctor.probe.test_windows.stale",
+                id=w.id,
+                start=test_windows.format_instant(w.start),
+                hours=i18n.format_number(test_windows.OPEN_WARN_HOURS, None),
+            )
         )
     if warnings:
-        hint = (
-            " · ".join(f"local-delegate test-window stop {w.id}" for w in stale)
-            or "corrige o borra las entradas en el fichero"
+        hint = " · ".join(f"local-delegate test-window stop {w.id}" for w in stale) or i18n.t(
+            "doctor.probe.test_windows.fix_entries"
         )
         return Result(WARN, "; ".join(warnings), hint)
     if not windows.windows:
-        return Result(OK, "sin ventanas")
+        return Result(OK, i18n.t("doctor.probe.test_windows.none"))
     open_count = len(windows.open_windows())
-    state = "ninguna abierta" if not open_count else f"{open_count} abierta(s)"
-    return Result(OK, f"{len(windows.windows)} ventanas, {state}")
+    if open_count:
+        state = i18n.t("doctor.probe.test_windows.open", n=i18n.format_number(open_count))
+    else:
+        state = i18n.t("doctor.probe.test_windows.none_open")
+    return Result(
+        OK,
+        i18n.t(
+            "doctor.probe.test_windows.ok", n=i18n.format_number(len(windows.windows)), state=state
+        ),
+    )
 
 
 # --- El registro --------------------------------------------------------------
@@ -1896,43 +2090,76 @@ def _probe_test_windows(ctx: Context) -> Result:
 # cinco contra `len(CHECKS)`, porque un comentario que miente sobre el propio registro es lo
 # que hace que alguien planifique sobre un dato falso.
 CHECKS: tuple[Check, ...] = (
-    Check("cli.path", "environment", "CLI local-delegate", _probe_cli),
-    Check("cli.published", "environment", "versión publicada", _probe_published),
-    Check("client.presence", "environment", "clientes", _probe_clients),
-    Check("client.observed", "environment", "clientes MCP observados", _probe_clients_observed),
-    Check("config.fallback", "environment", "cadenas de respaldo", _probe_fallback),
-    Check("config.deprecated_names", "environment", "nombres obsoletos", _probe_deprecated_names),
+    Check("cli.path", "environment", "doctor.check.cli.path", _probe_cli),
+    Check("cli.published", "environment", "doctor.check.cli.published", _probe_published),
+    Check("client.presence", "environment", "doctor.check.client.presence", _probe_clients),
+    Check(
+        "client.observed", "environment", "doctor.check.client.observed", _probe_clients_observed
+    ),
+    Check("config.fallback", "environment", "doctor.check.config.fallback", _probe_fallback),
+    Check(
+        "config.deprecated_names",
+        "environment",
+        "doctor.check.config.deprecated_names",
+        _probe_deprecated_names,
+    ),
     # En `environment`: lee ficheros locales del log y de `~/.claude`, no sale a la red.
-    Check("config.cost", "environment", "coste y relleno", _probe_cost),
-    Check("metrics.test_windows", "environment", "ventanas de prueba", _probe_test_windows),
-    Check("scaffold.hook_files", "scaffold", "hooks copiados", _probe_hook_files),
-    Check("scaffold.hook_orphans", "scaffold", "hooks huérfanos", _probe_hook_orphans),
-    Check("scaffold.hook_settings", "scaffold", "hooks registrados", _probe_hook_settings),
-    Check("scaffold.skill", "scaffold", f"skill {install.SKILL_NAME}", _probe_skill),
-    Check("scaffold.memory", "scaffold", "memoria global", _probe_memory),
-    Check("scaffold.mcp_claude", "scaffold", "MCP en Claude Code", _probe_mcp_claude),
-    Check("scaffold.mcp_codex", "scaffold", "MCP en Codex", _probe_mcp_codex),
-    Check("scaffold.mcp_opencode", "scaffold", "MCP en opencode", _probe_mcp_opencode),
-    Check("service.daemon", "service", "daemon", _probe_daemon),
-    Check("service.backend", "service", "backend", _probe_backend_models),
+    Check("config.cost", "environment", "doctor.check.config.cost", _probe_cost),
+    Check(
+        "metrics.test_windows",
+        "environment",
+        "doctor.check.metrics.test_windows",
+        _probe_test_windows,
+    ),
+    Check("scaffold.hook_files", "scaffold", "doctor.check.scaffold.hook_files", _probe_hook_files),
+    Check(
+        "scaffold.hook_orphans",
+        "scaffold",
+        "doctor.check.scaffold.hook_orphans",
+        _probe_hook_orphans,
+    ),
+    Check(
+        "scaffold.hook_settings",
+        "scaffold",
+        "doctor.check.scaffold.hook_settings",
+        _probe_hook_settings,
+    ),
+    Check("scaffold.skill", "scaffold", "doctor.check.scaffold.skill", _probe_skill),
+    Check("scaffold.memory", "scaffold", "doctor.check.scaffold.memory", _probe_memory),
+    Check("scaffold.mcp_claude", "scaffold", "doctor.check.scaffold.mcp_claude", _probe_mcp_claude),
+    Check("scaffold.mcp_codex", "scaffold", "doctor.check.scaffold.mcp_codex", _probe_mcp_codex),
+    Check(
+        "scaffold.mcp_opencode",
+        "scaffold",
+        "doctor.check.scaffold.mcp_opencode",
+        _probe_mcp_opencode,
+    ),
+    Check("service.daemon", "service", "doctor.check.service.daemon", _probe_daemon),
+    Check("service.backend", "service", "doctor.check.service.backend", _probe_backend_models),
     # En `service` y no en `scaffold` aunque lea las entradas MCP: sale a la red, y el grupo
     # `scaffold` no sale a la red por contrato — es lo que permite a `install` correr su reporte
     # sin tocar nada externo (ver `_SCAFFOLD_GROUPS` en cli.py). Además se lee junto al backend,
     # que es de lo que habla.
-    Check("service.credential", "service", "credencial del backend", _probe_mcp_credential),
+    Check(
+        "service.credential", "service", "doctor.check.service.credential", _probe_mcp_credential
+    ),
     # Misma razón que el de arriba para estar en `service`: pregunta al puerto. Y no es el
     # mismo check con otro nombre — aquel mira la puerta del backend y este la del daemon, que
     # se cierran por separado.
-    Check("service.daemon_auth", "service", "token del puerto del daemon", _probe_mcp_daemon_auth),
+    Check(
+        "service.daemon_auth", "service", "doctor.check.service.daemon_auth", _probe_mcp_daemon_auth
+    ),
     # Claude Desktop no está en el registro de clientes y aquel check es ciego para él. Aparte y
     # no dentro de aquel porque este sí prueba el token contra el puerto: el suyo va literal.
-    Check("service.desktop_auth", "service", "token de Claude Desktop", _probe_desktop_auth),
-    Check("backend.llamaswap", "backend", "llama-swap", _probe_llamaswap),
-    Check("backend.llamaserver", "backend", "llama-server", _probe_llamaserver),
+    Check(
+        "service.desktop_auth", "service", "doctor.check.service.desktop_auth", _probe_desktop_auth
+    ),
+    Check("backend.llamaswap", "backend", "doctor.check.backend.llamaswap", _probe_llamaswap),
+    Check("backend.llamaserver", "backend", "doctor.check.backend.llamaserver", _probe_llamaserver),
     # REQ-036: leen la config de llama-swap (`--config` de `doctor` o `LLAMASWAP_CONFIG`) y no
     # salen a la red.
-    Check("backend.residency", "backend", "residencia de llama-swap", _probe_residency),
-    Check("backend.topology", "backend", "turno del daemon", _probe_topology),
+    Check("backend.residency", "backend", "doctor.check.backend.residency", _probe_residency),
+    Check("backend.topology", "backend", "doctor.check.backend.topology", _probe_topology),
 )
 
 
@@ -1952,6 +2179,6 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
         try:
             result = check.probe(ctx)
         except Exception as exc:  # un check roto no debe impedir ver los otros veinticuatro
-            result = Result(UNKNOWN, f"la comprobación falló: {exc}")
+            result = Result(UNKNOWN, i18n.t("doctor.probe.failed", error=exc))
         results.append((check, result))
     return results
