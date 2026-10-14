@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pytest
 
-from local_delegate import benchmark, config, legacy_names
+from local_delegate import benchmark, config, legacy_names, server
 
 ROOT = Path(__file__).parents[1]
 DESTINATION = ROOT / "benchmarks" / "catalogo-2026-09"
@@ -58,7 +58,10 @@ def test_versioned_corpus_still_mirrors_production():
     notices: list[str] = []
     assert build.check_versioned(DESTINATION, notices=notices) == []
     assert _noticed_tools(notices, DESTINATION) == set(build.PROMPT_BOUNDARIES["0.36.0"])
-    assert all("system" in n for n in notices)
+    # B2c: el commit cambia también sus topes; el resto de tools, solo el `system`.
+    assert all("system" in n or "max_tokens" in n for n in notices), (
+        "una frontera declarada fuera de los campos del prompt"
+    )
 
 
 def test_split_is_the_protocol_one():
@@ -187,12 +190,24 @@ def test_single_call_rule_catches_the_14k_translate(tmp_path):
     assert len(errors) == 1 and "no cabe en una llamada, produccion hace" in errors[0]
 
 
-def test_whole_input_rule_catches_a_truncation(tmp_path):
-    # explain_code nunca trocea: trunca a MAX_CHARS del rol code y el modelo ve solo el principio.
+def test_whole_input_rule_catches_a_truncation(tmp_path, monkeypatch):
+    # Desde B2c ninguna tool de una llamada trunca la entrada: se reproduce el camino de antes de
+    # explain_code (truncar a MAX_CHARS del rol code, una llamada) para que la regla siga probada.
+    # (Con margen: el truncado añade su marca «[...contenido truncado...]» detrás.)
+    monkeypatch.setattr(server, "_NO_TRUNCATE", config.max_chars_for_role("code") - 100)
     data = b"x = 1  # prueba\n" * (config.max_chars_for_role("code") // 16 + 200)
     case = _case(tool="local_explain_code", role="code")
     errors = _errors(case, tmp_path, data, "large.py")
     assert errors == ["prueba: el modelo no ve la entrada entera (truncada)"]
+
+
+def test_explain_code_too_large_for_one_call_is_chunked(tmp_path):
+    # B2c: lo que no cabe en el rol code ya no se trunca, se trocea; un caso de calidad así deja de
+    # medir una sola llamada y la regla lo dice.
+    data = b"x = 1  # prueba\n" * (config.max_chars_for_role("code") // 16 + 200)
+    case = _case(tool="local_explain_code", role="code")
+    errors = _errors(case, tmp_path, data, "large.py")
+    assert len(errors) == 1 and errors[0].startswith("prueba: no cabe en una llamada"), errors
 
 
 def test_ceiling_probe_that_fits_in_one_call_probes_nothing(tmp_path):
@@ -1015,10 +1030,12 @@ def test_affinity_check_is_ok_with_any_environment_language(monkeypatch, environ
     _set_environment_language(monkeypatch, environment_language)
     notices: list[str] = []
     assert build.check_versioned_affinity(build.AFFINITY_TARGET, notices=notices) == []
-    # B2b-2: lint ×4 y summarize ×1 cambian a propósito (REQ-028); los 40 commits, no.
+    # B2b-2: lint ×4 y summarize ×1 cambian a propósito (REQ-028). B2c: los 40 commits también
+    # (cuerpo obligatorio y topes nuevos).
     assert _noticed_tools(notices, build.AFFINITY_TARGET) == {
         "local_lint_summary",
         "local_summarize",
+        "local_commit_msg",
     }
 
 

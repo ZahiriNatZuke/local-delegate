@@ -166,8 +166,9 @@ niveles si hace falta. Antes truncaban —de un log de CI enorme se resumía el 
 se descartaba en silencio, que es justo donde suelen estar los errores— y ahora se lee entero. Si
 algún trozo se corta por `max_tokens`, el resultado lo avisa y el log registra `finish_reason:
 length`.
-`local_extract` sigue truncando a propósito: fusionar el JSON de varios trozos no tiene una
-respuesta única y adivinarla sería peor que avisar.
+Desde la 0.36.0 también `local_commit_msg`, `local_explain_code` (por `def`/`class` de primer
+nivel, con el inventario de nombres en el paso final) y `local_extract` (un objeto parcial por
+trozo y un paso final con schema que los combina) leen la entrada entera.
 
 ## Configuración
 

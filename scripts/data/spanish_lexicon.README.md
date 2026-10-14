@@ -72,6 +72,11 @@ de diccionario.
    `redactado` a español (valor viejo de `source_body` que lee `legacy_names.py`) y `they` a
    inglés (nombre de un test nuevo).
 
+8. En el lote B2c (2026-10-14) el detector informó de 8 palabras sin clasificar, a mano, todas a
+   inglés: `decorator`, `decorators`, `definitions`, `defs`, `partials`, `room` y `shortcut`
+   (nombres del troceado de `local_explain_code`/`local_extract` y de sus tests) y `zzz` (el
+   marcador `ZZZ_marker` del test del fichero de 60 000 caracteres, que pide el plan).
+
 ## Heurísticas (no usan datos ajenos)
 
 En `detect_spanish_names.classify_word`, en este orden:

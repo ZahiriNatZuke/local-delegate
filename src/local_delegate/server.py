@@ -2363,22 +2363,36 @@ class _CurrentModel:
         #: El trozo en curso; `None` fuera de los trozos (la reducción de map-reduce).
         self.chunk: int | None = None
         self.hop: dict | None = None
+        #: El estado del schema JSON de la primera llamada que lo pidió (`local_extract` troceado).
+        self.json_schema: str | None = None
 
     def call(
-        self, system: str, user: str, max_tokens: int, temperature: float, *, size: int
+        self,
+        system: str,
+        user: str,
+        max_tokens: int,
+        temperature: float,
+        *,
+        size: int,
+        response_format: dict | None = None,
+        json_schema_fallback: bool = False,
     ) -> tuple[ChatResult, int, list[Attempt]]:
-        result, ms, _schema, attempts = _run_chat(
+        result, ms, schema, attempts = _run_chat(
             self.model,
             system,
             user,
             max_tokens,
             temperature,
+            response_format=response_format,
+            json_schema_fallback=json_schema_fallback,
             role=self.role,
             explicit=self.explicit,
             size=size,
             entry_id=self.entry_id,
             op=self.op,
         )
+        if self.json_schema is None:
+            self.json_schema = schema
         info = _fallback_info(self.model, result, attempts, self.affinity_tried)
         if info is not None:
             if self.hop is None:
@@ -2486,12 +2500,14 @@ def _chat(
     postprocess: Callable[[str, bool], str] | None = None,
     num_sections: int | None = None,
     focus: bool = False,
+    report: dict | None = None,
 ) -> str:
     """POST al endpoint. Devuelve solo texto y registra la llamada en USAGE_LOG.
 
     `role` habilita el respaldo de ese rol; `explicit` lo apaga para un modelo elegido por quien
     llama (REQ-005). Con `fallback`, el aviso de que respondió otro modelo se deja en ese dict en
-    vez de pegarlo al texto: lo usa quien parsea el resultado (REQ-007).
+    vez de pegarlo al texto: lo usa quien parsea el resultado (REQ-007). Con `report`, lo mismo
+    para el aviso de salida truncada: va a `report["truncated_out"]` y no al texto (B2c).
 
     `user` acepta un `str` (texto->texto) o una lista de bloques de contenido
     OpenAI-compatible (p. ej. `[{"type":"text",...},{"type":"image_url",...}]` para
@@ -2533,7 +2549,9 @@ def _chat(
     truncation_notice = f"\n\n{WARNING_MARKER}{i18n.t('mcp.warning.output_truncated')}]"
     # Con `write_to` el aviso viaja en el RECIBO, no dentro del archivo: lo que se escribe es lo
     # que generó el modelo y nada más.
-    if truncated_out and write_to is None:
+    if report is not None:
+        report["truncated_out"] = truncated_out
+    elif truncated_out and write_to is None:
         text += truncation_notice
     fallback_info = _fallback_info(model, result, attempts, op.affinity_tried)
     # La afinidad (T15) no es un respaldo ni lleva aviso: queda en el log (REQ-016).
@@ -2727,6 +2745,64 @@ def _format_inventory(files: list[tuple[str, int, int]], max_chars: int) -> str:
         for root, (n, added, removed) in by_root.items()
     )
     return f"{header} agrupados por directorio porque la lista completa no cabía\n{detail}"
+
+
+# --- Troceado de código por definiciones (local_explain_code, B2c) -----------------------------
+# Medido (revisión del 2026-10-14): con el truncado a 20 000 chars, la explicación de `cli.py` (32 %
+# leído) dio por completa una lista de subcomandos a la que faltaban `doctor`, `benchmark` y
+# `llamaswap`. Se trocea por definiciones de primer nivel, para que ninguna quede partida, y el
+# paso final recibe SIEMPRE el inventario de nombres, calculado aquí como el del diff.
+_TOP_LEVEL_START = re.compile(r"(?:@|async\s+def\s|def\s|class\s)")
+_TOP_LEVEL_NAME = re.compile(r"(?m)^(?:async\s+def|def|class)\s+(\w+)")
+
+
+def _split_by_top_level_defs(text: str) -> list[str]:
+    """Corta justo ANTES de cada `def`/`class` de primer nivel (columna 0).
+
+    Los decoradores se pegan a la definición que sigue (también los de varias líneas); lo
+    anterior a la primera definición es un trozo. Invariante: `"".join(...) == text`.
+    """
+    pieces: list[str] = []
+    current = ""
+    in_decorator = False
+    for line in text.splitlines(keepends=True):
+        if _TOP_LEVEL_START.match(line):
+            # Tras un decorador no se corta: la definición (o el siguiente decorador) va con él.
+            if not in_decorator and current:
+                pieces.append(current)
+                current = ""
+            in_decorator = line.startswith("@")
+        current += line
+    if current:
+        pieces.append(current)
+    return pieces
+
+
+def _code_pieces(text: str, budget: int) -> list[str] | None:
+    """Trozos de <= `budget` por definiciones de primer nivel; `None` si no hay ninguna."""
+    if not _TOP_LEVEL_NAME.search(text):
+        return None
+    chunks: list[str] = []
+    for chunk in _pack(_split_by_top_level_defs(text), budget):
+        chunks.extend(_chunk_text(chunk, budget) if len(chunk) > budget else [chunk])
+    return chunks
+
+
+def _format_names(names: list[str], max_chars: int) -> str:
+    """El inventario de definiciones de primer nivel, recortado con su cuenta si no cabe."""
+    if not names:
+        return ""
+    header = f"Definiciones de primer nivel del fichero ({len(names)} en total):"
+    shown: list[str] = []
+    used = len(header)
+    for name in names:
+        if used + len(name) + 2 > max_chars:
+            break
+        shown.append(name)
+        used += len(name) + 2
+    rest = len(names) - len(shown)
+    tail = f" y {rest} más" if rest else ""
+    return f"{header} {', '.join(shown)}{tail}"
 
 
 def _pack(pieces: list[str], max_chars: int) -> list[str]:
@@ -2999,6 +3075,10 @@ def _chat_map_reduce(
     postprocess: Callable[[str, bool], str] | None = None,
     num_sections: int | None = None,
     focus: bool = False,
+    response_format: dict | None = None,
+    json_schema_fallback: bool = False,
+    reduce_shortcut: Callable[[list[str]], str | None] | None = None,
+    report: dict | None = None,
 ) -> str:
     """Resume un documento que no cabe en el modelo: resume por trozos y luego los resúmenes.
 
@@ -3020,6 +3100,11 @@ def _chat_map_reduce(
     valen también para los subtrozos del reintento por desborde—. Con `reduce="concat"` no hay
     reduce por el modelo: los parciales ya están en su formato final y se unen en orden. Sin esos
     parámetros, el comportamiento es el de siempre, byte a byte.
+
+    **Salida que se parsea** (`local_extract` troceado, B2c): `response_format` va en cada paso;
+    `reduce_shortcut` puede dar el resultado sin llamar al modelo (devuelve `None` si no puede); y
+    con `report` no se pega nada al texto —ni el aviso de truncado, ni el de respaldo, ni el
+    ahorro, ni el recibo—: esos datos quedan en `report` para que quien parsea los recoloque.
     """
     budget = _map_budget(max_chars)
     if pieces is None:
@@ -3042,7 +3127,13 @@ def _chat_map_reduce(
     def _one(sys_prompt: str, user: str, max_tokens: int) -> str | None:
         nonlocal calls, latency_ms, tokens_in, tokens_out, failed, truncated_calls
         result, ms, attempts = current.call(
-            sys_prompt, user, max_tokens, temperature, size=len(user)
+            sys_prompt,
+            user,
+            max_tokens,
+            temperature,
+            size=len(user),
+            response_format=response_format,
+            json_schema_fallback=json_schema_fallback,
         )
         all_attempts.extend(attempts)
         calls += len(attempts)
@@ -3065,8 +3156,8 @@ def _chat_map_reduce(
     # con el que trabajar, y un parcial demasiado corto ya habría perdido lo que importa.
     #
     # `partial_max_words` existe porque hay reduces cuyo resultado es MUCHO más corto que su
-    # material: un mensaje de commit son ~90 palabras, pero el parte de los cinco archivos de un
-    # trozo no cabe en 90 y saldría cortado por `finish_reason=length`. Perder material en el map
+    # material: un mensaje de commit son ~250 palabras como mucho, pero el parte de los archivos de
+    # un trozo no cabe en eso y saldría cortado por `finish_reason=length`. Perder material en el map
     # es el mismo defecto que el truncado de la entrada, un nivel más adentro.
     partial_words = partial_max_words if partial_max_words is not None else max(80, max_words)
     custom_reduce = reduce_system
@@ -3159,6 +3250,10 @@ def _chat_map_reduce(
                 text = "\n\n".join(s.strip() for s in summaries)
             elif len(summaries) == 1 and custom_reduce is None:
                 text = summaries[0]
+            elif reduce_shortcut is not None and (shortcut := reduce_shortcut(summaries)):
+                # Los parciales ya dan el resultado sin juicio (un solo trozo trae datos): sin
+                # llamada extra.
+                text = shortcut
             else:
                 for _level in range(3):
                     joined = "\n\n".join(summaries)
@@ -3211,11 +3306,13 @@ def _chat_map_reduce(
         # el resumen perdía parte de un trozo sin que nadie lo supiera (revisión del plan, B6).
         if truncated_calls:
             finish_reason = "length"
-            notice = i18n.t(
-                "mcp.warning.output_truncated_calls", truncated=truncated_calls, calls=calls
-            )
-            text += f"\n\n{WARNING_MARKER}{notice}]"
-        text += current.notice(len(pieces) > 1)
+        if report is None:
+            if truncated_calls:
+                notice = i18n.t(
+                    "mcp.warning.output_truncated_calls", truncated=truncated_calls, calls=calls
+                )
+                text += f"\n\n{WARNING_MARKER}{notice}]"
+            text += current.notice(len(pieces) > 1)
 
     _log_event(
         tool=tool,
@@ -3236,9 +3333,23 @@ def _chat_map_reduce(
         chunks=calls,
         num_sections=num_sections,
         focus=focus,
+        json_schema=current.json_schema if response_format is not None else None,
         attempts=all_attempts,
         **current.log_fields(failed),
     )
+    if report is not None:
+        report.update(
+            truncated_calls=truncated_calls if ok else 0,
+            calls=calls,
+            pieces=len(pieces),
+            # Las claves del contrato de `fallback` (REQ-010), sin el trozo interno.
+            fallback=(
+                {k: v for k, v in current.hop.items() if k != "chunk"}
+                if current.hop is not None
+                else None
+            ),
+        )
+        return text
     if source == "path" and ok and config.FEEDBACK_ENABLED:
         event = cost.in_flight_row(tool=tool, source=source, path=path)
         text += _savings_feedback(len(content), "chars", event=event)
@@ -3294,6 +3405,12 @@ _LANGUAGE_NAMES: dict[str, str] = {
 #: El valor explícito de `LOCAL_DELEGATE_COMMIT_LANGUAGE` que conserva la regla de antes: el
 #: idioma predominante de los textos del diff.
 COMMIT_LANGUAGE_DIFF = "diff"
+
+# Topes de `local_commit_msg` desde B2c: el cuerpo obligatorio no cabe en los de antes (256 tokens
+# en la llamada única y 90 palabras en el paso final del troceado).
+_COMMIT_BODY_BULLETS = "2 a 6"
+COMMIT_MAX_TOKENS = 700
+COMMIT_REDUCE_MAX_WORDS = 250
 
 
 def _commit_language_instruction() -> str:
@@ -3690,6 +3807,31 @@ def local_classify(text: str, labels: list[str]) -> str:
     )
 
 
+#: Palabras de cada paso de `local_extract` troceado: `_tokens(224)` son los 512 de la llamada única.
+_EXTRACT_WORDS = 224
+
+
+def _extract_shortcut(partials: list[str]) -> str | None:
+    """El resultado de `local_extract` troceado sin llamar al modelo, si no hace falta juicio.
+
+    Si como mucho UN parcial trae algún valor no nulo, ese parcial ya es el objeto final (o el
+    primero, si ninguno trae nada). Con dos o más con datos decide el modelo (decisión 7 de B2).
+    """
+    objects: list[dict] = []
+    for partial in partials:
+        try:
+            data = json.loads(_strip_fences(partial))
+        except json.JSONDecodeError:
+            return None
+        if not isinstance(data, dict):
+            return None
+        objects.append(data)
+    with_values = [o for o in objects if any(v is not None for v in o.values())]
+    if len(with_values) > 1 or not objects:
+        return None
+    return json.dumps(with_values[0] if with_values else objects[0], ensure_ascii=False)
+
+
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_extract"]))
 def local_extract(
     fields: list[str],
@@ -3718,35 +3860,90 @@ def local_extract(
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
     role, model = _role_for_size(probe_len)
-    content, truncated_in, raw_len = _read_input(text, path, config.max_chars_for_role(role))
+    # Entera (B2c): lo que no cabe en una llamada se trocea en vez de truncarse.
+    content, _truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
+    max_chars = config.max_chars_for_role(role)
     key_list = ", ".join(f'"{f}"' for f in fields)
     system = _guard(f"un objeto JSON válido con exactamente estas claves: {{{key_list}}}")
-    user = f"Extrae los campos del siguiente contenido:\n\n{content}"
     use_schema = config.JSON_SCHEMA_MODE != "off"
+    response_format = _json_schema_payload(fields) if use_schema else None
+    json_schema_fallback = config.JSON_SCHEMA_MODE == "auto"
     fallback_info: dict = {}
-    result = _strip_fences(
-        _chat(
+    report: dict = {}
+    source = "path" if path else "inline"
+
+    def _build(piece: str) -> str:
+        return f"Extrae los campos del siguiente contenido:\n\n{piece}"
+
+    if len(content) > max_chars:
+        # SIN nada pegado al texto (`report`): esta tool parsea el resultado. El aviso de truncado,
+        # el respaldo y el ahorro bajan a `_local_delegate`.
+        raw = _chat_map_reduce(
+            model,
+            system + " Si un campo no aparece en este fragmento, ponlo a null.",
+            content,
+            _build,
+            max_chars=max_chars,
+            tool="local_extract",
+            role=role,
+            source=source,
+            max_words=_EXTRACT_WORDS,
+            partial_max_words=_EXTRACT_WORDS,
+            temperature=0.0,
+            reduce_system=system
+            + " Combina los objetos parciales: para cada clave, el valor que traigan; si "
+            "difieren, el más completo y específico; null si ninguno lo trae.",
+            build_reduce=lambda joined: (
+                "Estos son objetos JSON parciales y EN ORDEN extraídos de los fragmentos de un "
+                f"mismo documento. Devuelve un único objeto con las claves pedidas:\n\n{joined}"
+            ),
+            reduce_shortcut=_extract_shortcut,
+            raw_len=raw_len,
+            path=path,
+            response_format=response_format,
+            json_schema_fallback=json_schema_fallback,
+            report=report,
+        )
+        truncated_calls = report.get("truncated_calls", 0)
+        calls = report.get("calls", 0)
+        if report.get("fallback"):
+            fallback_info.update(report["fallback"])
+    else:
+        raw = _chat(
             model,
             system,
-            user,
+            _build(content),
             max_tokens=512,
             temperature=0.0,
             tool="local_extract",
             role=role,
             fallback=fallback_info,
             chars_in=len(content),
-            source="path" if path else "inline",
-            truncated_in=truncated_in,
+            source=source,
             raw_len=raw_len,
             path=path,
-            response_format=_json_schema_payload(fields) if use_schema else None,
-            json_schema_fallback=config.JSON_SCHEMA_MODE == "auto",
+            response_format=response_format,
+            json_schema_fallback=json_schema_fallback,
             # SIN la línea de ahorro pegada al texto: esta tool parsea el resultado, y ese sufijo
             # convertía un JSON perfecto en uno imparseable. El dato no se pierde, baja unas
             # líneas más abajo a `_local_delegate`, que es donde va lo que no son datos.
             feedback=False,
+            report=report,
         )
-    )
+        truncated_calls = 1 if report.get("truncated_out") else 0
+        calls = 1
+    result = _strip_fences(raw)
+
+    # `truncated`/`warning` significan desde B2c «salida truncada en un trozo» (REQ-010): la
+    # entrada ya no se trunca nunca.
+    truncation: dict = {}
+    if truncated_calls:
+        truncation = {
+            "truncated": True,
+            "warning": i18n.t(
+                "mcp.warning.output_truncated_calls", truncated=truncated_calls, calls=calls
+            ),
+        }
 
     try:
         data = json.loads(result)
@@ -3754,16 +3951,13 @@ def local_extract(
         # El modelo devolvió algo que no es JSON, o el backend falló y `result` trae el aviso de
         # error. Degradar con la carga cruda es mejor que lanzar: quien llama ve qué pasó en vez
         # de recibir una excepción de protocolo.
-        return {"_local_delegate": {"error": i18n.t("mcp.extract.not_json"), "raw": result}}
+        error = {"error": i18n.t("mcp.extract.not_json"), "raw": result}
+        return {"_local_delegate": {**error, **truncation}}
     if not isinstance(data, dict):
-        return {"_local_delegate": {"error": i18n.t("mcp.extract.not_object"), "raw": result}}
+        error = {"error": i18n.t("mcp.extract.not_object"), "raw": result}
+        return {"_local_delegate": {**error, **truncation}}
 
-    meta: dict = {}
-    if truncated_in:
-        meta["truncated"] = True
-        meta["warning"] = i18n.t(
-            "mcp.receipt.input_truncated", processed=_machine(len(content)), total=_machine(raw_len)
-        )
+    meta: dict = dict(truncation)
     if path and config.FEEDBACK_ENABLED:
         # Tokens de Claude de la fila en curso (REQ-035), no del modelo local.
         event = cost.in_flight_row(tool="local_extract", source="path", path=path)
@@ -3986,16 +4180,21 @@ def local_commit_msg(
     content, truncated_in, raw_len = _read_input(diff, path, _NO_TRUNCATE)
     if not content.strip():
         return ERROR_PREFIX + i18n.t("mcp.error.empty_diff")
+    # El cuerpo es OBLIGATORIO (B2c). Con «cuerpo opcional» y un tope de 256 tokens el modelo
+    # paraba solo tras la primera línea: medido el 2026-10-14, `chars_out` 53–66 en 8 de 10 filas,
+    # todas con `finish_reason=stop`.
     if style == "conventional":
         fmt = (
             "un mensaje de commit estilo Conventional Commits: primera línea "
-            "'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con "
-            "viñetas '- '"
+            "'tipo(scope): resumen' en imperativo y <=72 caracteres; una línea en blanco y un "
+            f"cuerpo OBLIGATORIO de {_COMMIT_BODY_BULLETS} viñetas '- ' que digan qué cambia y "
+            "para qué"
         )
     else:
         fmt = (
-            "un mensaje de commit: primera línea imperativa <=72 caracteres y cuerpo "
-            "opcional con viñetas"
+            "un mensaje de commit: primera línea imperativa <=72 caracteres; una línea en "
+            f"blanco y un cuerpo OBLIGATORIO de {_COMMIT_BODY_BULLETS} viñetas '- ' que digan "
+            "qué cambia y para qué"
         )
     # El idioma va solo donde se REDACTA el mensaje: este `system` es el de la llamada única y el
     # del reduce del map-reduce (`reduce_system=system`). El map y el reagrupado de partes usan
@@ -4052,7 +4251,8 @@ def local_commit_msg(
                 "cubrirlo entero ni estar todas bien. El resumen describe el comportamiento que "
                 "cambia y para qué, no el número de archivos ni los tests que lo acompañan, y "
                 "el scope es un ámbito lógico, nunca un nombre de fichero. Escribe el mensaje "
-                "de commit del cambio completo:\n\n"
+                "de commit del cambio completo, con su primera línea y un cuerpo de "
+                f"{_COMMIT_BODY_BULLETS} viñetas:\n\n"
                 f"{joined}"
             )
 
@@ -4065,7 +4265,7 @@ def local_commit_msg(
             tool="local_commit_msg",
             role="code",
             source="path" if path else "inline",
-            max_words=90,
+            max_words=COMMIT_REDUCE_MAX_WORDS,
             # Los partes son material intermedio y hay varios archivos por trozo: con el tope
             # del mensaje final saldrían cortados por `finish_reason=length`.
             partial_max_words=350,
@@ -4084,7 +4284,7 @@ def local_commit_msg(
         config.MODEL_CODE,
         system,
         user,
-        max_tokens=256,
+        max_tokens=COMMIT_MAX_TOKENS,
         temperature=0.2,
         tool="local_commit_msg",
         role="code",
@@ -4161,29 +4361,75 @@ def local_explain_code(
         path: Path to a code file (read server-side).
         question: Concrete question or focus (optional).
     """
-    content, truncated_in, raw_len = _read_input(code, path, config.max_chars_for_role("code"))
+    # Entera (B2c): antes se truncaba al tope del rol y la explicación daba por completo lo leído.
+    content, _truncated_in, raw_len = _read_input(code, path, _NO_TRUNCATE)
+    max_chars = config.max_chars_for_role("code")
     extra = f" Enfócate en: {question}." if question else ""
+    language = _response_language_clause()
     system = (
         _guard(
             f"una explicación clara en prosa de qué hace el código y cómo.{extra}", max_words=250
         )
-        + _response_language_clause()
+        + language
     )
-    user = f"Explica el siguiente código:\n\n{content}"
-    result = _chat(
+    source = "path" if path else "inline"
+
+    if len(content) > max_chars:
+        # No cabe: notas por definición en cada trozo y la explicación sobre las notas MÁS el
+        # inventario de nombres de primer nivel, con la pregunta y la orden de idioma (REQ-028).
+        budget = _map_budget(max_chars)
+        names = _format_names(_TOP_LEVEL_NAME.findall(content), int(budget * 0.25))
+        map_system = (
+            _guard(
+                "una viñeta por cada función o clase de este fragmento, empezando por su nombre "
+                "literal seguido de dos puntos y de qué hace. No expliques todavía el fichero "
+                "entero"
+            )
+            + language
+        )
+
+        def _build_map(piece: str) -> str:
+            return f"Toma notas de este fragmento de código:\n\n{piece}"
+
+        def _build_reduce(joined: str) -> str:
+            head = f"{names}\n\n" if names else ""
+            return (
+                f"{head}Estas son notas EN ORDEN sobre los fragmentos de un mismo fichero de "
+                "código. La lista de arriba es el inventario COMPLETO de sus definiciones de "
+                "primer nivel; las notas pueden no cubrirlo entero. Explica el fichero "
+                f"completo:\n\n{joined}"
+            )
+
+        return _chat_map_reduce(
+            config.MODEL_CODE,
+            map_system,
+            content,
+            _build_map,
+            max_chars=max_chars,
+            tool="local_explain_code",
+            role="code",
+            source=source,
+            max_words=250,
+            partial_max_words=350,
+            reduce_system=system,
+            build_reduce=_build_reduce,
+            raw_len=raw_len,
+            path=path,
+            pieces=_code_pieces(content, budget),
+        )
+
+    return _chat(
         config.MODEL_CODE,
         system,
-        user,
+        f"Explica el siguiente código:\n\n{content}",
         max_tokens=700,
         tool="local_explain_code",
         role="code",
         chars_in=len(content),
-        source="path" if path else "inline",
-        truncated_in=truncated_in,
+        source=source,
         raw_len=raw_len,
         path=path,
     )
-    return _truncation_prefix(content, truncated_in, raw_len) + result
 
 
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_describe_image"]))

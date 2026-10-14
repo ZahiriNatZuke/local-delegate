@@ -420,13 +420,13 @@
     },
     {
       "file": "src/local_delegate/server.py",
-      "text": "un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '",
+      "text": "un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; una línea en blanco y un cuerpo OBLIGATORIO de {} viñetas '- ' que digan qué cambia y para qué",
       "kind": "verbatim",
       "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
     },
     {
       "file": "src/local_delegate/server.py",
-      "text": "un mensaje de commit: primera línea imperativa <=72 caracteres y cuerpo opcional con viñetas",
+      "text": "un mensaje de commit: primera línea imperativa <=72 caracteres; una línea en blanco y un cuerpo OBLIGATORIO de {} viñetas '- ' que digan qué cambia y para qué",
       "kind": "verbatim",
       "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
     },
@@ -462,7 +462,7 @@
     },
     {
       "file": "src/local_delegate/server.py",
-      "text": "{}Estas son notas EN ORDEN sobre los archivos de un mismo cambio. La lista de arriba es el inventario COMPLETO del diff; las notas pueden no cubrirlo entero ni estar todas bien. El resumen describe el comportamiento que cambia y para qué, no el número de archivos ni los tests que lo acompañan, y el scope es un ámbito lógico, nunca un nombre de fichero. Escribe el mensaje de commit del cambio completo:\n\n{}",
+      "text": "{}Estas son notas EN ORDEN sobre los archivos de un mismo cambio. La lista de arriba es el inventario COMPLETO del diff; las notas pueden no cubrirlo entero ni estar todas bien. El resumen describe el comportamiento que cambia y para qué, no el número de archivos ni los tests que lo acompañan, y el scope es un ámbito lógico, nunca un nombre de fichero. Escribe el mensaje de commit del cambio completo, con su primera línea y un cuerpo de {} viñetas:\n\n{}",
       "kind": "verbatim",
       "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
     },
@@ -573,6 +573,48 @@
       "text": " Responde en {}, aunque el contenido esté en otro idioma.",
       "kind": "verbatim",
       "reason": "prompt del modelo local: la orden de idioma de REQ-028 que va detrás de `_guard`; entra en la huella de afinidad y en los corpus congelados (`PROMPT_BOUNDARIES`) y no es texto de interfaz"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": " y {} más",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen). B2c: cuerpo obligatorio del commit y troceado de `local_explain_code`/`local_extract`"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Extrae los campos del siguiente contenido:\n\n{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen). B2c: cuerpo obligatorio del commit y troceado de `local_explain_code`/`local_extract`"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": " Combina los objetos parciales: para cada clave, el valor que traigan; si difieren, el más completo y específico; null si ninguno lo trae.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen). B2c: cuerpo obligatorio del commit y troceado de `local_explain_code`/`local_extract`"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Estos son objetos JSON parciales y EN ORDEN extraídos de los fragmentos de un mismo documento. Devuelve un único objeto con las claves pedidas:\n\n{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen). B2c: cuerpo obligatorio del commit y troceado de `local_explain_code`/`local_extract`"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "una viñeta por cada función o clase de este fragmento, empezando por su nombre literal seguido de dos puntos y de qué hace. No expliques todavía el fichero entero",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen). B2c: cuerpo obligatorio del commit y troceado de `local_explain_code`/`local_extract`"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Toma notas de este fragmento de código:\n\n{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen). B2c: cuerpo obligatorio del commit y troceado de `local_explain_code`/`local_extract`"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "{}Estas son notas EN ORDEN sobre los fragmentos de un mismo fichero de código. La lista de arriba es el inventario COMPLETO de sus definiciones de primer nivel; las notas pueden no cubrirlo entero. Explica el fichero completo:\n\n{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen). B2c: cuerpo obligatorio del commit y troceado de `local_explain_code`/`local_extract`"
     }
   ]
 }

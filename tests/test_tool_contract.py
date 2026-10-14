@@ -125,7 +125,7 @@ def test_descriptions_have_no_spanish():
 # --- `_local_delegate` y marcadores (REQ-010) ---------------------------------------------------
 
 
-def _backend(monkeypatch, content: str, *, base: str) -> None:
+def _backend(monkeypatch, content: str, *, base: str, finish: str = "stop") -> None:
     monkeypatch.setattr(config, "BASE_URL", base)
     monkeypatch.setattr(config, "FEEDBACK_ENABLED", True)
     monkeypatch.setattr(config, "FALLBACK", False)
@@ -133,7 +133,7 @@ def _backend(monkeypatch, content: str, *, base: str) -> None:
         return_value=httpx2.Response(
             200,
             json={
-                "choices": [{"message": {"content": content}, "finish_reason": "stop"}],
+                "choices": [{"message": {"content": content}, "finish_reason": finish}],
                 "usage": {"prompt_tokens": 5, "completion_tokens": 5},
             },
         )
@@ -149,11 +149,12 @@ def _keys(value) -> set[str]:
 @pytest.mark.parametrize("lang", ["es", "en"])
 @backend_mock.mock
 def test_extract_meta_uses_the_new_keys(monkeypatch, tmp_path, lang):
-    """Entrada truncada leída de un `path`: `truncated`, `warning` y `read_server_side`.
-    Control: volver a `meta["truncado"]` deja una clave vieja y falla el «ninguna vieja»."""
+    """Salida truncada (B2c: en un trozo del troceado) leída de un `path`: `truncated`, `warning`
+    y `read_server_side`. Control: volver a `meta["truncado"]` deja una clave vieja y falla el
+    «ninguna vieja»."""
     monkeypatch.setenv("LOCAL_DELEGATE_LANG", lang)
     i18n.reset()
-    _backend(monkeypatch, '{"a": "1"}', base=f"http://contract-{lang}/v1")
+    _backend(monkeypatch, '{"a": "1"}', base=f"http://contract-{lang}/v1", finish="length")
     monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "mechanical", 500)
     source = tmp_path / "in.txt"
     source.write_text("a=1\n" * 400, encoding="utf-8")
