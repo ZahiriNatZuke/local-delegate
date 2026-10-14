@@ -1,0 +1,17 @@
+docs(sdd): control del detector a 8 tokens fallido (116/120) y regla del nuevo a 20 tokens (frente B, ola B1e)
+
+El control congelado en 8be7ef7 acierta 116 de 120 con min_tokens=8,
+por debajo del 98 %. Los 4 fallos son unknown y ninguno confunde un
+idioma con otro: con 8 tokens una sola palabra funcional da 0,125, por
+debajo del margen de 0,15, y hay rótulos del catálogo sin ninguna.
+
+- waves/B1e.md: control a 8 tokens registrado como FALLIDO, con la
+  tabla de fallos, el diagnóstico y la decisión del usuario.
+- evidence/B1e/measurement.json: resultado por frase y total.
+- plan.md (D10 y B1e): regla del control nuevo, fijada antes de
+  aplicarla. 60 + 60 frases de 20 tokens o más (el umbral de la
+  muestra de REQ-028), misma limpieza, fuentes y orden por sha256, sin
+  las 120 del fallido ni las 40 de B0b; se mide con min_tokens=20 y
+  exige como mucho 2 fallos en 120.
+
+No cambian las listas, el margen, el detector ni el control fallido.
