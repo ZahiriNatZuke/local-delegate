@@ -639,9 +639,11 @@ Hasta la 0.12.0 estas tools simplemente **truncaban** la entrada y avisaban: de 
 200 000 caracteres se resumía el principio y el resto se descartaba, que es justo donde suelen
 estar los errores que importan. Ahora se lee entero.
 
-`local_extract` sigue truncando a propósito: fusionar los objetos JSON de varios trozos no tiene
-una respuesta única (¿se queda el primer valor?, ¿se concatenan?, ¿qué pasa si se contradicen?) y
-adivinarla sería peor que avisar.
+`local_extract` truncaba a propósito hasta la 0.35: fusionar los objetos JSON de varios trozos no
+tiene una respuesta única (¿se queda el primer valor?, ¿se concatenan?, ¿qué pasa si se
+contradicen?). Desde la 0.36.0 lo decide el modelo en un paso final con schema, con los parciales
+delante; si solo un parcial trae datos, ese es el resultado sin llamada extra. `local_explain_code`
+también deja de truncar: map-reduce por definiciones de primer nivel.
 
 El estado en curso vive en `LOG_DIR/inflight.json` con lock y limpieza de PID: el daemon ve las
 llamadas de todas las sesiones que comparten el mismo usuario, incluso durante una migración en la

@@ -687,9 +687,17 @@ CORPUS_INTERFACE_LANGUAGE = "es"
 # del prompt (`system`, `max_tokens`) de las tools de la lista; cualquier otro campo, u otra tool,
 # sigue siendo un error. Los corpus NO se regeneran: sus respuestas se midieron con el prompt viejo.
 PROMPT_BOUNDARIES: dict[str, frozenset[str]] = {
-    # REQ-028: la orden de idioma de las cuatro tools de texto libre.
+    # REQ-028: la orden de idioma de las cuatro tools de texto libre. B2c: el cuerpo obligatorio
+    # de `local_commit_msg` cambia su `system` y sus topes (`max_tokens` 256 -> 700 en la llamada
+    # unica; 90 -> 250 palabras en el paso final del troceado).
     "0.36.0": frozenset(
-        {"local_summarize", "local_lint_summary", "local_explain_code", "local_describe_image"}
+        {
+            "local_summarize",
+            "local_lint_summary",
+            "local_explain_code",
+            "local_describe_image",
+            "local_commit_msg",
+        }
     ),
 }
 _PROMPT_BOUNDARY_FIELDS = frozenset({"system", "max_tokens"})

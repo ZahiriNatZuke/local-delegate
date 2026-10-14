@@ -6,6 +6,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Cambia
+
+- **`local_commit_msg` escribe siempre un cuerpo** de 2 a 6 viñetas que dicen qué cambia y para
+  qué, también en el paso final del map-reduce. Topes: 700 tokens en la llamada única (antes 256) y
+  250 palabras en el paso final (antes 90). Con «cuerpo opcional» el modelo paraba tras la primera
+  línea.
+- **`local_explain_code` y `local_extract` leen la entrada entera.** Lo que no cabe en el rol ya no
+  se trunca: `local_explain_code` hace map-reduce por `def`/`class` de primer nivel y lleva al paso
+  final la pregunta y el inventario de nombres; `local_extract` extrae por trozos y combina los
+  parciales con un paso final con schema (sin él si solo un parcial trae datos).
+- **Contrato de `local_extract` (incompatible):** `_local_delegate.truncated`/`warning` significan
+  ahora «salida truncada en un trozo» (alguna llamada acabó por `max_tokens`), no «entrada
+  truncada», que ya no ocurre.
+
 ## [0.35.0] - 2026-10-13
 
 Esta versión pasa a inglés los nombres de cara afuera: comandos, opciones, variables, el fichero

@@ -21,13 +21,13 @@ MCP**, no donde está el modelo. Ver [Backend remoto](Remote-backend.md).
 |---|---|---|---|
 | [`local_summarize`](#local_summarize) | Resume texto o archivo | mecánico / largo (auto) | **map-reduce** |
 | [`local_classify`](#local_classify) | Devuelve UNA etiqueta de una lista | mecánico | trunca |
-| [`local_extract`](#local_extract) | Extrae campos → objeto ya validado | mecánico / largo (auto) | trunca y **lo dice** |
+| [`local_extract`](#local_extract) | Extrae campos → objeto ya validado | mecánico / largo (auto) | **map-reduce** (con schema) |
 | [`local_boilerplate`](#local_boilerplate) | Genera código y lo **escribe en disco** | código | (la spec es corta) |
 | [`local_delegate`](#local_delegate) | Escape genérico texto→texto | mecánico, o el que pases | **trozo a trozo** |
 | [`local_lint_summary`](#local_lint_summary) | Resume salida de lint/tests/CI | mecánico / largo (auto) | **map-reduce** |
 | [`local_commit_msg`](#local_commit_msg) | Mensaje de commit desde un diff | código | **map-reduce** |
 | [`local_translate`](#local_translate) | Traduce texto o archivo | mecánico / largo (auto) | **trozo a trozo** |
-| [`local_explain_code`](#local_explain_code) | Explica código en prosa | código | trunca |
+| [`local_explain_code`](#local_explain_code) | Explica código en prosa | código | **map-reduce** (por definiciones) |
 | [`local_describe_image`](#local_describe_image) | Imagen → texto | visión | — |
 | [`local_status`](#local_status) | Diagnóstico de solo lectura | — | — |
 
@@ -105,6 +105,9 @@ Dos cosas que conviene saber y solo estaban en el código:
   delante del JSON, donde obligaba a limpiar la cadena antes de poder parsearla.
 - Pide al backend un JSON restringido por schema (`LOCAL_DELEGATE_JSON_SCHEMA=auto`); si el backend
   no lo soporta, reintenta en modo libre.
+- **Lee la entrada entera** (desde la 0.36.0). Si no cabe en el rol, extrae de cada trozo un objeto
+  parcial (`null` en lo que no aparece) y un paso final, también con schema, los combina. Si solo
+  un parcial trae datos, ese es el resultado y no hay paso final. Antes truncaba al tope del rol.
 - **Si respondió un modelo de respaldo**, lo dice en `_local_delegate.fallback` (qué modelo
   respondió, en lugar de cuál y por qué), nunca dentro de los campos pedidos.
 
@@ -183,6 +186,11 @@ pide el idioma vigente del producto (desde la 0.36.0; con `diff`, el idioma pred
 del diff, la regla de antes, que en repos bilingües elegía uno u otro). Antes no pedía ninguno y el modelo elegía:
 medido sobre 30 commits de un repo documentado en español, uno de los modelos escribió 17 en inglés.
 
+**Cuerpo.** Desde la 0.36.0 el mensaje lleva siempre un cuerpo de 2 a 6 viñetas que dicen qué
+cambia y para qué, también en el paso final del map-reduce. Topes: 700 tokens en la llamada única y
+250 palabras en el paso final. Antes el cuerpo era opcional, con 256 tokens y 90 palabras, y el
+modelo paraba tras la primera línea (medido: 53–66 caracteres en 8 de 10 llamadas).
+
 ## `local_translate`
 
 ```python
@@ -199,7 +207,12 @@ local_explain_code(code=None, path=None, question=None) -> str
 ```
 
 Explica código en prosa, con el modelo de código. Con `question` responde algo concreto en vez de
-dar la explicación general. Una llamada: si el archivo no cabe, se trunca.
+dar la explicación general. Si el archivo cabe en el rol de código, una llamada. Si no (desde la
+0.36.0; antes se truncaba), map-reduce: lo parte por `def`/`class` de primer nivel sin cortar
+ninguna definición (los decoradores van con la suya), toma notas por función en cada trozo y
+redacta la explicación sobre las notas, la `question` y el **inventario de nombres de primer
+nivel**, calculado en el servidor, para que no dé por completa una lista a la que le faltan
+piezas. Un fichero sin definiciones de ese tipo se parte por párrafos y líneas.
 
 ## `local_describe_image`
 

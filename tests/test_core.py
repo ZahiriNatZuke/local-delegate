@@ -293,20 +293,20 @@ def test_local_extract_returns_an_object_with_the_requested_keys(monkeypatch):
 
 @backend_mock.mock
 def test_local_extract_warns_about_truncation_without_breaking_the_keys(monkeypatch):
-    """El aviso iba delante del JSON como texto; ahora va aparte y no estorba al parseo."""
+    """El aviso iba delante del JSON como texto; ahora va aparte y no estorba al parseo. Desde
+    B2c `truncated` es la SALIDA truncada (la entrada ya no se trunca): sin la clave aparte, el
+    aviso de `_chat` iría pegado al JSON."""
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
-    # El tope que usa el modelo principal es el del ROL (F3, tarea 25), no el del modelo.
-    monkeypatch.setattr(config, "max_chars_for_role", lambda _rol: 10)
     backend_mock.post("http://test-backend/v1/chat/completions").mock(
         return_value=httpx2.Response(
             200,
-            json={"choices": [{"message": {"content": '{"a": 1}'}, "finish_reason": "stop"}]},
+            json={"choices": [{"message": {"content": '{"a": 1}'}, "finish_reason": "length"}]},
         )
     )
     data = server.local_extract(fields=["a"], text="x" * 500)
     assert data["a"] == 1
     assert data["_local_delegate"]["truncated"] is True
-    assert "500" in data["_local_delegate"]["warning"]
+    assert "max_tokens" in data["_local_delegate"]["warning"]
 
 
 @backend_mock.mock

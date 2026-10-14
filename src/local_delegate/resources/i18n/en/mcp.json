@@ -79,7 +79,6 @@
   "mcp.question.start_backend.title": "StartBackend",
   "mcp.receipt.chunked": "(processed in {calls} chunks by local-delegate)",
   "mcp.receipt.commit_scope": "(scope: {files} files, {chars} chars read in full)",
-  "mcp.receipt.input_truncated": "input truncated — processed {processed} of {total} chars",
   "mcp.receipt.input_truncated_counts": "processed {processed} of {total} chars",
   "mcp.receipt.map_reduce": "(summarized from {parts} parts in {calls} passes by local-delegate)",
   "mcp.receipt.read_server_side": "(read server-side: {amount} {unit} that did not enter your context)",

@@ -1,0 +1,24 @@
+feat(tools)!: el commit lleva cuerpo y explain_code y extract leen la entrada entera, con truncated como salida truncada en un trozo (frente B, ola B2c)
+
+Cuarto PR de B2 (plan.md «B2c»; revisión evidence/local-tools-review/).
+Causas medidas: «cuerpo opcional» con topes de 256 tokens y 90 palabras,
+y explain_code/extract truncando a 20 000 caracteres en una llamada.
+
+- local_commit_msg: cuerpo obligatorio de 2 a 6 viñetas en la llamada
+  única y en el paso final del troceado; topes 700 tokens y 250 palabras.
+- local_explain_code: entrada entera; si no cabe, map-reduce por
+  def/class de primer nivel (los decoradores con su definición), con la
+  pregunta, la orden de idioma y el inventario de nombres en el paso
+  final.
+- local_extract: entrada entera; si no cabe, un objeto parcial por trozo
+  con schema y un paso final con schema que los combina (sin él si solo
+  un parcial trae datos). Nada se pega al JSON: va a _local_delegate.
+- Contrato (incompatible): truncated/warning significan «salida truncada
+  en un trozo», también en la llamada única; sale mcp.receipt.input_truncated.
+- build_corpus: local_commit_msg entra en PROMPT_BOUNDARIES de la 0.36.0
+  (2 casos de F2 y 40 de afinidad, system y max_tokens).
+- CHANGELOG, README y wiki (Tools, Configuration, Savings-and-metrics).
+- Léxico del detector: 8 palabras inglesas nuevas del lote, a mano.
+
+Suite: 2927 passed, 2 skipped con LANG en inglés y en español (xdist);
+9 mutantes aplicados, los 13 tests que vigilan fallan.
