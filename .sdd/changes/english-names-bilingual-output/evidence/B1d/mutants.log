@@ -1,0 +1,128 @@
+## M1 el lector deja de aceptar «empate»
+scripts/pair_sheet.py
+tests/test_scripts_english.py::test_the_frozen_spanish_sheet_is_read_with_the_process_in_english
+exit=1
+sha256 restaurado=7922226ee1e55130250ace3fe413bf86635cab648a81dbf9563722b3767ba2da
+E           SystemExit: pair 04: the value 'empate' is not valid for preference (accepts A, B, =)
+FAILED tests/test_scripts_english.py::test_the_frozen_spanish_sheet_is_read_with_the_process_in_english
+1 failed in 0.33s
+
+## M2 unblind vuelve a escribir «empate» en human
+scripts/pair_sheet.py
+tests/test_pair_sheet.py::test_unblind_writes_the_json_for_decide_only_with_the_whole_sheet
+exit=1
+sha256 restaurado=7922226ee1e55130250ace3fe413bf86635cab648a81dbf9563722b3767ba2da
+E       AssertionError: assert {'empate': 2} == {'tie': 2}
+E         
+E         Left contains 1 more item:
+E         {'empate': 2}
+E         Right contains 1 more item:
+E         {'tie': 2}
+E         Use -v to get more diff
+FAILED tests/test_pair_sheet.py::test_unblind_writes_the_json_for_decide_only_with_the_whole_sheet
+
+## M3 analyze deja de leer «empate»
+scripts/analyze_benchmark.py
+tests/test_scripts_english.py::test_analyze_reads_tie_and_the_old_word
+exit=1
+sha256 restaurado=0dfdd0a08cf64d5bc0b6ff3e6b9b199fd343d2d3209a3a7f9917f5328e11bf4e
+E       assert (4, 1, 2) == (4, 1, 5)
+E         
+E         At index 2 diff: 2 != 5
+E         Use -v to get more diff
+FAILED tests/test_scripts_english.py::test_analyze_reads_tie_and_the_old_word
+1 failed in 0.56s
+
+## M4 el lector de la hoja .md solo entiende español
+scripts/pair_sheet.py
+tests/test_scripts_english.py::test_an_english_sheet_is_read_with_the_process_in_spanish
+exit=1
+sha256 restaurado=7922226ee1e55130250ace3fe413bf86635cab648a81dbf9563722b3767ba2da
+E       AssertionError: assert ['par 01: inv...1: inventa B'] == []
+E         
+E         Left contains 2 more items, first extra item: 'par 01: inventa A'
+E         Use -v to get more diff
+FAILED tests/test_scripts_english.py::test_an_english_sheet_is_read_with_the_process_in_spanish
+1 failed in 0.31s
+
+## M5 script_i18n con el idioma fijo
+scripts/script_i18n.py
+tests/test_scripts_english.py::test_script_i18n_gives_the_same_as_the_package
+exit=1
+sha256 restaurado=668e702f73956ed3778dc4bf0578107957c8496e2a9ef4b031a75dac4d280dc4
+E       AssertionError: assert 'es' == 'en'
+E         
+E         - en
+E         + es
+FAILED tests/test_scripts_english.py::test_script_i18n_gives_the_same_as_the_package[en]
+1 failed, 1 passed in 0.32s
+
+## M6 measure_cooldown sin separador de miles
+scripts/measure_cooldown.py
+tests/test_scripts_english.py::test_the_reports_in_english_have_no_spanish
+exit=1
+sha256 restaurado=18e422d3696a7739336ef11be6b9e6a38e7cf405f0e820bd6c37ed55db8f03e5
+E       AssertionError: assert 'Delegations:               20,027' in 'Window: (all) to (now)  (2026-10-14T18:28Z)\n  removed by --exclude: 0 rows, 0 episodes\n  test windows: not applied ...5 % of the delegations.\nN, T and Tmax do not change: a candidate is missing, and that is a question about the chains.'
+FAILED tests/test_scripts_english.py::test_the_reports_in_english_have_no_spanish
+1 failed in 0.30s
+
+## M7 un texto de pair_sheet.py fuera del catálogo
+scripts/pair_sheet.py
+tests/test_no_uncatalogued_text.py::test_no_uncatalogued_text_outside_pending
+exit=1
+sha256 restaurado=7922226ee1e55130250ace3fe413bf86635cab648a81dbf9563722b3767ba2da
+E       AssertionError: Texto para personas fuera del cat�logo (usa `i18n.t`, o a�ade una excepci�n con motivo si es un nombre de m�quina):
+E         scripts/pair_sheet.py:1291 [context] 'ok: hoja completa'
+E       assert ["scripts/pai...ja completa'"] == []
+E         
+E         Left contains one more item: "scripts/pair_sheet.py:1291 [context] 'ok: hoja completa'"
+E         Use -v to get more diff
+FAILED tests/test_no_uncatalogued_text.py::test_no_uncatalogued_text_outside_pending
+1 failed in 1.06s
+
+## M8 la página siempre en español
+scripts/pair_sheet.py
+tests/test_scripts_english.py::test_the_page_follows_the_language
+exit=1
+sha256 restaurado=7922226ee1e55130250ace3fe413bf86635cab648a81dbf9563722b3767ba2da
+E           AssertionError: lang="en"
+E           assert 'lang="en"' in '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,...nt.getElementById("aviso").textContent = T.downloaded_stop;\n  });\n  refresh();\n})();\n</script>\n</body>\n</html>\n'
+FAILED tests/test_scripts_english.py::test_the_page_follows_the_language[en-present0-absent0]
+1 failed in 0.32s
+
+## M9 _fmt vuelve al punto decimal fijo
+scripts/analyze_benchmark.py
+tests/test_scripts_english.py::test_the_same_reports_in_spanish_do_trip_the_detector
+exit=1
+sha256 restaurado=0dfdd0a08cf64d5bc0b6ff3e6b9b199fd343d2d3209a3a7f9917f5328e11bf4e
+E       AssertionError: assert '| x | 1,000 | 0,500 | -0,500 | 0,125 | si |' in '# CP-3: v contra c\n\nControl de entrada: pasa si todos los casos bajan con la entrada de control.\n\n## code: NO pas...--- | --- | --- | --- |\n| x | 1.000 | 0.500 | -0.500 | 0.125 | si | � |\n| y | 1.000 | 1.000 | � | � | no | techo |\n'
+FAILED tests/test_scripts_english.py::test_the_same_reports_in_spanish_do_trip_the_detector
+1 failed in 0.30s
+
+## M10 el título de CP-3 en español literal
+scripts/analyze_benchmark.py
+tests/test_scripts_english.py::test_the_reports_in_english_have_no_spanish
+exit=1
+sha256 restaurado=0dfdd0a08cf64d5bc0b6ff3e6b9b199fd343d2d3209a3a7f9917f5328e11bf4e
+E           AssertionError: cp3: ['contra']
+E             # CP-3: v contra c
+E             
+E             Input control: passes if every case drops with the control input.
+E             
+E             ## code: does NOT pass
+E             
+E             - band of the aggregate (mean of the per-case bands): 0.125
+
+## M11 los scripts sin el parche de argparse
+scripts/script_i18n.py
+tests/test_scripts_english.py::test_the_argparse_frame_of_the_scripts_follows_the_language
+exit=1
+sha256 restaurado=668e702f73956ed3778dc4bf0578107957c8496e2a9ef4b031a75dac4d280dc4
+E           AssertionError: usage: measure_cooldown.py read-commit [-h] --key KEY [--rules RULES]
+E                                                    (--answers ANSWERS | --md MD)
+E                                                    [--partial] [--output OUTPUT]
+E             
+E             options:
+E               -h, --help         show this help message and exit
+E               --key KEY
+E               --rules RULES

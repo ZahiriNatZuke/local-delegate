@@ -37,14 +37,26 @@ import sys
 from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).parent))
+from script_i18n import argparse_in_language, format_number, lang, t
+
 AGREEMENT_THRESHOLD = 0.8
 MIN_PREFERENCES = 3
-#: Cómo se imprime el veredicto de cada caso en la tabla de `unblind`: el texto de salida sigue
-#: en español hasta el frente B.
-_VERDICT_LABELS = {"valid": "valida", "invalid": "no valida", "no_baseline": "sin base"}
+#: El veredicto de cada caso en la tabla de `unblind`, en el idioma vigente.
+_VERDICT_KEYS = {
+    "valid": "cli.script.pair_sheet.verdict.valid",
+    "invalid": "cli.script.pair_sheet.verdict.invalid",
+    "no_baseline": "cli.script.pair_sheet.verdict.no_baseline",
+}
+#: Lo que `unblind --json` escribe en `human` cuando la persona elige «=»: valor de máquina. Una
+#: hoja destapada antes del frente B escribió `empate`; los lectores aceptan los dos para siempre.
+HUMAN_TIE = "tie"
+HUMAN_TIE_OLD = "empate"
 
-_PAIR_RE = re.compile(r"^## Par (\d+)\s*$")
-_CHOICE_RE = re.compile(r"^Mejor \(A/B/=\):[ \t]*(\S*)[ \t]*$")
+# La hoja sale en el idioma del proceso y el lector acepta las dos formas, sea cual sea el idioma:
+# una hoja contestada en español sigue valiendo con el proceso en inglés y al revés.
+_PAIR_RE = re.compile(r"^## (?:Par|Pair) (\d+)\s*$")
+_CHOICE_RE = re.compile(r"^(?:Mejor|Better) \(A/B/=\):[ \t]*(\S*)[ \t]*$")
 
 
 def _load_legacy_names() -> Any:
@@ -89,7 +101,7 @@ def _valid_runs(records: list[dict[str, Any]], label: str, case: str) -> dict[in
             continue
         if "response" not in r:
             raise ValueError(
-                f"{label}:{case} run {run} sin respuesta guardada (el runner necesita --save-responses)"
+                t("cli.script.pair_sheet.no_saved_response", label=label, case=case, run=run)
             )
         valid_ones[run] = r
     return valid_ones
@@ -113,14 +125,12 @@ def generate(
         for run in sorted(set(a) & set(b)):
             pairs.append((case, run, a[run], b[run]))
     if not pairs:
-        raise ValueError("ningun par valido: ¿etiquetas o casos equivocados?")
+        raise ValueError(t("cli.script.pair_sheet.no_valid_pair"))
     rng.shuffle(pairs)
     lines = [
-        "# Comparacion por pares, a ciegas",
+        t("cli.script.pair_sheet.p15.title"),
         "",
-        "En cada par, lee la tarea y las dos respuestas (abre la fuente si hace falta) y escribe detras",
-        "de «Mejor (A/B/=):» cual responde MEJOR a la tarea: A, B, o = si no ves diferencia real.",
-        "Juzga si es correcta y util para quien la pidio, no si nombra mas cosas. No abras la clave.",
+        *t("cli.script.pair_sheet.p15.intro").split("\n"),
         "",
     ]
     key: dict[str, Any] = {"seed": seed, "small": small, "large": large, "pairs": {}}
@@ -130,9 +140,13 @@ def generate(
         sides = [(small, reg_p), (large, reg_g)]
         rng.shuffle(sides)
         lines += [
-            f"## Par {pair}",
+            t("cli.script.pair_sheet.pair_heading", num=pair),
             "",
-            f"Tarea: `{meta.get('tool', '?')}` sobre `fuentes/{meta.get('source_file', '?')}`",
+            t(
+                "cli.script.pair_sheet.p15.task",
+                tool=meta.get("tool", "?"),
+                source=meta.get("source_file", "?"),
+            ),
             "",
             f"> {meta.get('system') or ''}",
             "",
@@ -140,8 +154,15 @@ def generate(
         for letter, (_label, reg) in zip("AB", sides, strict=True):
             response = str(reg["response"])
             fence = _fence(response)
-            lines += [f"### Respuesta {letter}", "", fence, response, fence, ""]
-        lines += ["Mejor (A/B/=): ", ""]
+            lines += [
+                t("cli.script.pair_sheet.p15.response", side=letter),
+                "",
+                fence,
+                response,
+                fence,
+                "",
+            ]
+        lines += [t("cli.script.pair_sheet.better") + " ", ""]
         key["pairs"][pair] = {
             "case": case,
             "run": run,
@@ -175,7 +196,9 @@ def read_choices(sheet: str) -> dict[str, str | None]:
             elif value in {"A", "B", "="}:
                 choices[current] = value
             else:
-                raise ValueError(f"par {current}: eleccion {m.group(1)!r} no es A, B ni =")
+                raise ValueError(
+                    t("cli.script.pair_sheet.bad_choice", pair=current, value=repr(m.group(1)))
+                )
             current = None
     return choices
 
@@ -184,9 +207,7 @@ def unblind(sheet: str, key: dict[str, Any]) -> tuple[dict[str, Any], list[str]]
     choices = read_choices(sheet)
     pairs = key["pairs"]
     if set(choices) != set(pairs):
-        raise ValueError(
-            "la hoja y la clave no tienen los mismos pares: ¿son de la misma generacion?"
-        )
+        raise ValueError(t("cli.script.pair_sheet.sheet_key_mismatch"))
     missing = sorted(pair for pair, choice in choices.items() if choice is None)
     per_case: dict[str, dict[str, Any]] = {}
     for pair, choice in sorted(choices.items()):
@@ -198,7 +219,7 @@ def unblind(sheet: str, key: dict[str, Any]) -> tuple[dict[str, Any], list[str]]
             {"pairs": 0, "metric_prefers": 0, "agreements": 0, "human": {}},
         )
         row["pairs"] += 1
-        human_winner = "empate" if choice == "=" else meta[choice]["label"]
+        human_winner = HUMAN_TIE if choice == "=" else meta[choice]["label"]
         row["human"][human_winner] = row["human"].get(human_winner, 0) + 1
         qa, qb = meta["A"]["quality"], meta["B"]["quality"]
         if qa == qb:
@@ -247,14 +268,37 @@ _VALUES = {
     "specific": ("s", "n"),
     "preference": ("A", "B", "="),
 }
-#: Como se nombra cada pregunta en lo que se imprime (frente B): el valor de maquina va en ingles.
-_QUESTION_LABELS = {
-    "made_up": "inventa",
-    "principal": "principal",
-    "specific": "especifico",
-    "preference": "preferencia",
+#: Como se nombra cada pregunta en lo que se imprime, en el idioma vigente; el valor de maquina va
+#: en ingles.
+_QUESTION_KEYS = {
+    "made_up": "cli.script.pair_sheet.question.made_up",
+    "principal": "cli.script.pair_sheet.question.principal",
+    "specific": "cli.script.pair_sheet.question.specific",
+    "preference": "cli.script.pair_sheet.question.preference",
 }
-_SYNONYMS_RESPONSE = {"si": "s", "sí": "s", "no": "n", "parcial": "p", "empate": "=", "": ""}
+#: Lo que la persona puede escribir en la hoja `.md`, en los dos idiomas, y su valor de maquina
+#: (`s`, `n`, `p`; los del JSON de la pagina, que no cambian).
+_SYNONYMS_RESPONSE = {
+    "si": "s",
+    "sí": "s",
+    "yes": "s",
+    "y": "s",
+    "no": "n",
+    "parcial": "p",
+    "partial": "p",
+    "": "",
+}
+#: Las formas de «empate» de la preferencia: `=` y la palabra en los dos idiomas.
+_TIE_WORDS = frozenset({"=", "empate", "tie"})
+
+
+def _question(question: str) -> str:
+    return t(_QUESTION_KEYS[question])
+
+
+def _shown_value(value: str) -> str:
+    """Un valor de maquina como lo escribe la persona en su idioma (`s` es `y` en ingles)."""
+    return t("cli.script.pair_sheet.value.yes_letter") if value == "s" else value
 
 
 def read_rules(path: Path) -> dict[str, Any]:
@@ -263,17 +307,14 @@ def read_rules(path: Path) -> dict[str, Any]:
     rules = LEGACY_NAMES.normalize_affinity_rules(json.loads(path.read_text(encoding="utf-8")))
     maximum = rules.get("max_made_up_26b")
     if not isinstance(maximum, int) or isinstance(maximum, bool) or maximum < 0:
-        raise SystemExit(f"{path.name}: max_made_up_26b tiene que ser un entero >= 0")
+        raise SystemExit(t("cli.script.pair_sheet.bad_max_made_up", file=path.name))
     optional_ones = rules.get("optional_questions")
     if not isinstance(optional_ones, list) or not set(optional_ones) <= set(
         POSSIBLE_OPTIONAL_QUESTIONS
     ):
-        raise SystemExit(
-            f"{path.name}: optional_questions solo admite 'principal' y 'specific'; "
-            "'inventa' y la preferencia no pueden ser opcionales"
-        )
+        raise SystemExit(t("cli.script.pair_sheet.bad_optional_questions", file=path.name))
     if not isinstance(rules.get("early_stop"), bool):
-        raise SystemExit(f"{path.name}: early_stop tiene que ser true o false")
+        raise SystemExit(t("cli.script.pair_sheet.bad_early_stop", file=path.name))
     return rules
 
 
@@ -407,7 +448,7 @@ def body_defects(message: str, pair: str | None = None) -> list[str]:
     for line in body:
         text = _line_text(line)
         if text[:1].islower():
-            defects.append(f"empieza en minuscula: {line.strip()!r}")
+            defects.append(t("cli.script.pair_sheet.defect.lowercase", line=repr(line.strip())))
         if _SENTENCE_END.search(text):
             continue
         words = re.findall(r"\w+", text)
@@ -416,18 +457,25 @@ def body_defects(message: str, pair: str | None = None) -> list[str]:
             or text.endswith((",", ";", ":", "-"))
             or (words and words[-1].lower() in _CUTOFF_WORDS)
         ):
-            defects.append(f"termina cortada: {line.strip()!r}")
+            defects.append(t("cli.script.pair_sheet.defect.cut", line=repr(line.strip())))
     if pair is not None and body:
         if uses_final_scoring(message) != signed:
             defects.append(
-                "la puntuacion final no es la de la pareja "
-                f"(la pareja {'cierra' if signed else 'no cierra'} con signo final)"
+                t(
+                    "cli.script.pair_sheet.defect.final_mark_closes"
+                    if signed
+                    else "cli.script.pair_sheet.defect.final_mark_open"
+                )
             )
         long, pair_length = mean_bullet_length(message), mean_bullet_length(pair)
         if pair_length and long > MAX_LENGTH_FACTOR * pair_length:
             defects.append(
-                f"viñeta media de {long:.0f} caracteres, mas de {MAX_LENGTH_FACTOR} veces "
-                f"los {pair_length:.0f} de la pareja"
+                t(
+                    "cli.script.pair_sheet.defect.too_long",
+                    length=f"{long:.0f}",
+                    factor=format_number(MAX_LENGTH_FACTOR, None),
+                    pair_length=f"{pair_length:.0f}",
+                )
             )
     return defects
 
@@ -537,7 +585,7 @@ def build_commit_sheet(
     traps = LEGACY_NAMES.normalize_affinity_traps(traps)
     sets = traps["sets"]
     if not 1 <= case_set_item <= len(sets):
-        raise SystemExit(f"las trampas no tienen el juego {case_set_item}")
+        raise SystemExit(t("cli.script.pair_sheet.no_trap_set", n=case_set_item))
 
     def diff_of(case_id: str) -> str:
         name = cases[case_id]["source_file"]
@@ -575,12 +623,16 @@ def build_commit_sheet(
         case_id = entry["case"]
         message = _message_of(records, model, case_id)
         if message is None:
-            raise SystemExit(f"la trampa de {case_id} no tiene mensaje del modelo elegido")
+            raise SystemExit(t("cli.script.pair_sheet.trap_without_message", case=case_id))
         trap_text = shaped_trap(entry, message)
         defects = body_defects(trap_text, message)
         if defects:
             raise SystemExit(
-                f"la trampa de {case_id} se reconoce por mal escrita: {'; '.join(defects)}"
+                t(
+                    "cli.script.pair_sheet.trap_badly_written",
+                    case=case_id,
+                    defects="; ".join(defects),
+                )
             )
         sides = [(TRAP, trap_text), (model, message)]
         if trap_side == "B":
@@ -622,9 +674,7 @@ def build_commit_sheet(
     for pair in pair_items:
         for text in (pair["diff"], pair["A"], pair["B"]):
             if text in seen_set:
-                raise SystemExit(
-                    f"par {pair['num']}: un diff o un mensaje aparece dos veces en la hoja"
-                )
+                raise SystemExit(t("cli.script.pair_sheet.repeated_text", pair=pair["num"]))
             seen_set.add(text)
     sheet = {
         "id": sheet_id(number, pair_items),
@@ -648,23 +698,24 @@ def build_commit_sheet(
 
 # --- Renderizado ------------------------------------------------------------------------------------
 
-_INSTRUCTIONS = [
-    (
-        "Inventa (si/no)",
-        "¿El mensaje dice algo que el diff no hace? Lo que el mensaje se deja fuera no se marca aquí, sino en «lo principal».",
-    ),
-    ("Lo principal (si/parcial/no)", "¿Nombra el cambio más importante del diff?"),
-    ("Específico (si/no)", "¿Se entiende sin abrir el diff?"),
-    ("Preferencia", "A, B o empate, después de marcar los dos mensajes."),
-]
+
+def _instructions() -> list[tuple[str, str]]:
+    """(nombre, explicacion) de cada pregunta de la hoja, en el idioma vigente."""
+    return [
+        (
+            t(f"cli.script.pair_sheet.instruction.{q}.name"),
+            t(f"cli.script.pair_sheet.instruction.{q}.text"),
+        )
+        for q in ("made_up", "principal", "specific", "preference")
+    ]
 
 
 def estimated_time(rules: dict[str, Any]) -> str:
     rules = LEGACY_NAMES.normalize_affinity_rules(rules)
     optional_ones = set(rules["optional_questions"])
     if {"principal", "specific"} <= optional_ones:
-        return "unos 45–60 minutos (solo «inventa» y la preferencia son obligatorias)"
-    return "entre 60 y 90 minutos"
+        return t("cli.script.pair_sheet.time.short")
+    return t("cli.script.pair_sheet.time.long")
 
 
 def _fence_for(text: str) -> str:
@@ -676,45 +727,60 @@ def render_md(sheet: dict[str, Any], rules: dict[str, Any]) -> str:
     rules = LEGACY_NAMES.normalize_affinity_rules(rules)
     optional_ones = set(rules["optional_questions"])
     lines = [
-        f"# Hoja {sheet['n']}: mensajes de commit, a ciegas",
+        t("cli.script.pair_sheet.sheet.title", n=sheet["n"]),
         "",
-        f"Hoja: {sheet['id']}",
+        t("cli.script.pair_sheet.sheet.id", id=sheet["id"]),
         "",
-        f"En cada par hay dos mensajes de commit para el mismo cambio. Tiempo estimado: {estimated_time(rules)}.",
-        "Puedes hacerlo en varias sentadas. Escribe la respuesta detrás de los dos puntos de cada línea.",
+        t("cli.script.pair_sheet.sheet.intro", time=estimated_time(rules)),
+        t("cli.script.pair_sheet.sheet.how"),
         "",
     ]
-    for name, text in _INSTRUCTIONS:
+    for name, text in _instructions():
         lines.append(f"- **{name}**: {text}")
     lines.append("")
+    optional = t("cli.script.pair_sheet.sheet.optional")
     for pair in sheet["pairs"]:
-        lines += [f"## Par {pair['num']}", ""]
-        lines.append(f"Diff: {pair['files']} ficheros, +{pair['more']} −{pair['fewer']}")
+        lines += [t("cli.script.pair_sheet.pair_heading", num=pair["num"]), ""]
+        lines.append(
+            t(
+                "cli.script.pair_sheet.sheet.diff",
+                files=format_number(pair["files"]),
+                more=pair["more"],
+                fewer=pair["fewer"],
+            )
+        )
         lines.append("")
         fence = _fence_for(pair["diff"])
         lines += [fence + "diff", pair["diff"].rstrip("\n"), fence, ""]
         for side in "AB":
             text = pair[side]
             fence = _fence_for(text)
-            lines += [f"### Mensaje {side}", "", fence, text.strip("\n"), fence, ""]
+            lines += [
+                t("cli.script.pair_sheet.sheet.message", side=side),
+                "",
+                fence,
+                text.strip("\n"),
+                fence,
+                "",
+            ]
         for side in "AB":
-            lines.append(f"Inventa {side} (s/n): ")
+            lines.append(t("cli.script.pair_sheet.line.made_up", side=side) + " ")
         for side in "AB":
-            mark = " [opcional]" if "principal" in optional_ones else ""
-            lines.append(f"Lo principal {side} (s/p/n):{mark} ")
+            mark = f" {optional}" if "principal" in optional_ones else ""
+            lines.append(t("cli.script.pair_sheet.line.principal", side=side) + f"{mark} ")
         for side in "AB":
-            mark = " [opcional]" if "specific" in optional_ones else ""
-            lines.append(f"Específico {side} (s/n):{mark} ")
-        lines += ["Mejor (A/B/=): ", ""]
+            mark = f" {optional}" if "specific" in optional_ones else ""
+            lines.append(t("cli.script.pair_sheet.line.specific", side=side) + f"{mark} ")
+        lines += [t("cli.script.pair_sheet.better") + " ", ""]
     return "\n".join(lines)
 
 
 _HTML_TEMPLATE = r"""<!DOCTYPE html>
-<html lang="es">
+<html lang="__LANG__">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hoja __N__: mensajes de commit, a ciegas</title>
+<title>__TITLE__</title>
 <style>
 body{font-family:system-ui,sans-serif;max-width:1100px;margin:0 auto;padding:1rem 1.5rem 6rem;color:#1b1b1b;line-height:1.45}
 header.bar{position:sticky;top:0;background:#fff;border-bottom:2px solid #ccc;padding:.5rem 0;z-index:5;display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
@@ -737,20 +803,21 @@ dl dt{font-weight:700}
 </style>
 </head>
 <body>
-<h1>Hoja __N__: mensajes de commit, a ciegas</h1>
-<p>En cada par hay dos mensajes de commit para el mismo cambio. Léelos tal como están, abre el diff si lo necesitas y contesta. Tiempo estimado: __TIME__. Puedes hacerlo en varias sentadas: tu progreso se guarda en este navegador.</p>
+<h1>__TITLE__</h1>
+<p>__INTRO__</p>
 <dl>__INSTRUCTIONS__</dl>
 <header class="bar">
-<span id="faltan">Faltan … respuestas</span>
-<button type="button" id="descargar">Descargar respuestas</button>
-<button type="button" id="parar">¿Puedo parar ya?</button>
+<span id="faltan">__MISSING_SOME__</span>
+<button type="button" id="descargar">__DOWNLOAD__</button>
+<button type="button" id="parar">__CAN_I_STOP__</button>
 <span id="aviso" role="status"></span>
 </header>
 <div id="pares"></div>
-<h2>Respuestas en texto</h2>
-<p>Si el navegador no deja descargar, copia este cuadro y pégalo en un mensaje.</p>
-<textarea id="copia" readonly aria-label="Respuestas en JSON"></textarea>
+<h2>__TEXT_ANSWERS__</h2>
+<p>__COPY_HINT__</p>
+<textarea id="copia" readonly aria-label="__JSON_LABEL__"></textarea>
 <script type="application/json" id="datos">__DATA__</script>
+<script type="application/json" id="textos">__TEXTS__</script>
 <script id="logica">
 const QUESTION_FIELDS = {
   made_up: ["s", "n"],
@@ -798,10 +865,12 @@ function exportar(state, data, partial) {
 <script id="interfaz">
 (function () {
   const data = JSON.parse(document.getElementById("datos").textContent);
+  const T = JSON.parse(document.getElementById("textos").textContent);
+  const fmt = (text, values) => text.replace(/\{(\w+)\}/g, (all, name) => (name in values ? values[name] : all));
   const key = "commit-sheet-" + data.id.slice(0, 16);
   let state = {};
   try { state = JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) { state = {}; }
-  const NAMES = { s: "sí", n: "no", p: "parcial" };
+  const NAMES = { s: T.yes, n: T.no, p: T.partial };
   const root = document.getElementById("pares");
   function radios(pair, field, values, labels) {
     const out = [];
@@ -816,13 +885,13 @@ function exportar(state, data, partial) {
   }
   function message(pair, side) {
     const opc = (q) => data.optional.includes(q);
-    const principal = question(pair, "principal", side, "¿Nombra el cambio más importante?");
-    const specific = question(pair, "specific", side, "¿Se entiende sin abrir el diff?");
+    const principal = question(pair, "principal", side, T.ask_principal);
+    const specific = question(pair, "specific", side, T.ask_specific);
     const extras = (opc("principal") || opc("specific"))
-      ? '<details class="optional_q"><summary>Si te apetece</summary>' + (opc("principal") ? principal : "") + (opc("specific") ? specific : "") + "</details>"
+      ? '<details class="optional_q"><summary>' + T.if_you_like + "</summary>" + (opc("principal") ? principal : "") + (opc("specific") ? specific : "") + "</details>"
       : "";
-    return '<div class="msg"><h3>Mensaje ' + side + "</h3><pre>" + esc(pair[side]) + "</pre>" +
-      question(pair, "made_up", side, "¿Dice algo que el diff no hace?") +
+    return '<div class="msg"><h3>' + fmt(T.message, { side }) + "</h3><pre>" + esc(pair[side]) + "</pre>" +
+      question(pair, "made_up", side, T.ask_made_up) +
       (opc("principal") ? "" : principal) + (opc("specific") ? "" : specific) + extras + "</div>";
   }
   function esc(t) { return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
@@ -830,11 +899,11 @@ function exportar(state, data, partial) {
     const sec = document.createElement("section");
     sec.className = "pair";
     sec.id = "par-" + pair.num;
-    sec.innerHTML = "<h2>Par " + pair.num + "</h2>" +
-      "<details><summary>Diff (" + pair.files + " ficheros, +" + pair.more + " −" + pair.fewer + ")</summary><pre class=\"diff\">" + esc(pair.diff) + "</pre></details>" +
+    sec.innerHTML = "<h2>" + fmt(T.pair, { num: pair.num }) + "</h2>" +
+      "<details><summary>" + fmt(T.diff, { files: pair.files, more: pair.more, fewer: pair.fewer }) + "</summary><pre class=\"diff\">" + esc(pair.diff) + "</pre></details>" +
       '<div class="messages">' + message(pair, "A") + message(pair, "B") + "</div>" +
-      '<fieldset class="pref" id="pref-' + pair.num + '"><legend>¿Cuál prefieres?</legend>' +
-      radios(pair, "preference", ["A", "B", "="], { A: "Mensaje A", B: "Mensaje B", "=": "Empate" }) + "</fieldset>";
+      '<fieldset class="pref" id="pref-' + pair.num + '"><legend>' + T.which + "</legend>" +
+      radios(pair, "preference", ["A", "B", "="], { A: fmt(T.message, { side: "A" }), B: fmt(T.message, { side: "B" }), "=": T.tie }) + "</fieldset>";
     root.appendChild(sec);
   }
   function refresh() {
@@ -850,7 +919,7 @@ function exportar(state, data, partial) {
       document.getElementById("par-" + pair.num).classList.toggle("complete", isMissing.length === 0);
     }
     const n = missing(state, data).length;
-    document.getElementById("faltan").textContent = n === 0 ? "No falta ninguna respuesta" : "Faltan " + n + " respuestas";
+    document.getElementById("faltan").textContent = n === 0 ? T.none_missing : fmt(T.missing, { n });
     document.getElementById("copia").value = JSON.stringify(exportar(state, data, n > 0), null, 1);
   }
   document.addEventListener("change", (ev) => {
@@ -872,11 +941,11 @@ function exportar(state, data, partial) {
   document.getElementById("descargar").addEventListener("click", () => {
     const n = missing(state, data).length;
     download("answers-" + data.n + ".json", exportar(state, data, n > 0));
-    document.getElementById("aviso").textContent = n > 0 ? "Descargadas con " + n + " respuestas sin contestar." : "Descargadas.";
+    document.getElementById("aviso").textContent = n > 0 ? fmt(T.downloaded_partial, { n }) : T.downloaded;
   });
   document.getElementById("parar").addEventListener("click", () => {
     download("answers-partial-" + data.n + ".json", exportar(state, data, true));
-    document.getElementById("aviso").textContent = "Descargado: pásalo para saber si puedes parar.";
+    document.getElementById("aviso").textContent = T.downloaded_stop;
   });
   refresh();
 })();
@@ -886,17 +955,60 @@ function exportar(state, data, partial) {
 """
 
 
+#: Los textos de la interfaz de la pagina que escribe el JavaScript (`T.<nombre>` en `interfaz`).
+_PAGE_TEXTS = (
+    "yes",
+    "no",
+    "partial",
+    "tie",
+    "ask_principal",
+    "ask_specific",
+    "ask_made_up",
+    "if_you_like",
+    "message",
+    "pair",
+    "diff",
+    "which",
+    "none_missing",
+    "missing",
+    "downloaded_partial",
+    "downloaded",
+    "downloaded_stop",
+)
+
+
+def _json_for_html(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False).replace("<", "\\u003c").replace(">", "\\u003e")
+
+
 def render_html(sheet: dict[str, Any], rules: dict[str, Any]) -> str:
-    data = json.dumps(sheet, ensure_ascii=False).replace("<", "\\u003c").replace(">", "\\u003e")
     instructions = "".join(
-        f"<dt>{html.escape(name)}</dt><dd>{html.escape(text)}</dd>" for name, text in _INSTRUCTIONS
+        f"<dt>{html.escape(name)}</dt><dd>{html.escape(text)}</dd>"
+        for name, text in _instructions()
     )
-    return (
-        _HTML_TEMPLATE.replace("__N__", str(sheet["n"]))
-        .replace("__TIME__", html.escape(estimated_time(rules)))
-        .replace("__INSTRUCTIONS__", instructions)
-        .replace("__DATA__", data)
-    )
+    texts = {name: t(f"cli.script.pair_sheet.page.{name}") for name in _PAGE_TEXTS}
+
+    def page(name: str, **values: object) -> str:
+        return html.escape(t(f"cli.script.pair_sheet.page.{name}", **values))
+
+    replacements = {
+        "__LANG__": lang(),
+        "__TITLE__": html.escape(t("cli.script.pair_sheet.sheet.title_plain", n=sheet["n"])),
+        "__INTRO__": page("intro", time=estimated_time(rules)),
+        "__MISSING_SOME__": page("missing_some"),
+        "__DOWNLOAD__": page("download"),
+        "__CAN_I_STOP__": page("can_i_stop"),
+        "__TEXT_ANSWERS__": page("text_answers"),
+        "__COPY_HINT__": page("copy_hint"),
+        "__JSON_LABEL__": page("json_label"),
+        "__INSTRUCTIONS__": instructions,
+        "__TEXTS__": _json_for_html(texts),
+        "__DATA__": _json_for_html(sheet),
+    }
+    page_html = _HTML_TEMPLATE
+    for marker, value in replacements.items():
+        page_html = page_html.replace(marker, value)
+    return page_html
 
 
 def write_sheet(
@@ -908,7 +1020,7 @@ def write_sheet(
 ) -> dict[str, Path]:
     """Escribe `sheet-<n>.html`, `sheet-<n>.md` y `key-<n>.json`; la clave en OTRA carpeta."""
     if sheet_dir.resolve() == key_dir.resolve():
-        raise SystemExit("la clave no puede ir en la carpeta de la hoja")
+        raise SystemExit(t("cli.script.pair_sheet.key_in_sheet_dir"))
     n = sheet["n"]
     paths = {
         "html": sheet_dir / f"sheet-{n}.html",
@@ -918,7 +1030,7 @@ def write_sheet(
     existing = [str(r) for r in paths.values() if r.exists()]
     if existing:
         # Regenerar sortea otra vez: una hoja ya contestada quedaria emparejada con otra clave.
-        raise SystemExit(f"ya existen {', '.join(existing)}; elige otro numero de hoja")
+        raise SystemExit(t("cli.script.pair_sheet.sheet_exists", paths=", ".join(existing)))
     sheet_dir.mkdir(parents=True, exist_ok=True)
     key_dir.mkdir(parents=True, exist_ok=True)
     paths["html"].write_text(render_html(sheet, rules), encoding="utf-8", newline="\n")
@@ -931,11 +1043,20 @@ def write_sheet(
 
 # --- Lectura de las respuestas ----------------------------------------------------------------------
 
-_MD_SHEET = re.compile(r"^Hoja:\s*([0-9a-f]{64})\s*$")
-_MD_INVENTS = re.compile(r"^Inventa ([AB]) \(s/n\):(?: \[opcional\])?[ \t]*(\S*)[ \t]*$")
-_MD_PRINCIPAL = re.compile(r"^Lo principal ([AB]) \(s/p/n\):(?: \[opcional\])?[ \t]*(\S*)[ \t]*$")
-_MD_SPECIFIC = re.compile(r"^Espec[ií]fico ([AB]) \(s/n\):(?: \[opcional\])?[ \t]*(\S*)[ \t]*$")
-_MD_BETTER = re.compile(r"^Mejor \(A/B/=\):[ \t]*(\S*)[ \t]*$")
+# Las lineas de la hoja `.md` en los dos idiomas: una hoja escrita en uno se lee con el proceso en
+# el otro (y la hoja congelada de `benchmarks/afinidad-2026-10/hoja/` es española para siempre).
+_OPTIONAL_MARK = r"(?: \[(?:opcional|optional)\])?"
+_MD_SHEET = re.compile(r"^(?:Hoja|Sheet):\s*([0-9a-f]{64})\s*$")
+_MD_INVENTS = re.compile(
+    rf"^(?:Inventa|Invents) ([AB]) \((?:s|y)/n\):{_OPTIONAL_MARK}[ \t]*(\S*)[ \t]*$"
+)
+_MD_PRINCIPAL = re.compile(
+    rf"^(?:Lo principal|Main point) ([AB]) \((?:s|y)/p/n\):{_OPTIONAL_MARK}[ \t]*(\S*)[ \t]*$"
+)
+_MD_SPECIFIC = re.compile(
+    rf"^(?:Espec[ií]fico|Specific) ([AB]) \((?:s|y)/n\):{_OPTIONAL_MARK}[ \t]*(\S*)[ \t]*$"
+)
+_MD_BETTER = _CHOICE_RE
 
 
 def md_answers(sheet_md: str) -> dict[str, Any]:
@@ -958,7 +1079,7 @@ def md_answers(sheet_md: str) -> dict[str, Any]:
             continue
         if m := _MD_SHEET.match(line):
             sha = m.group(1)
-        elif m := re.match(r"^## Par (\d+)\s*$", line):
+        elif m := _PAIR_RE.match(line):
             pair = m.group(1)
         elif pair is not None:
             current = responses.setdefault(pair, {})
@@ -979,16 +1100,20 @@ def _normal(value: Any, question: str, pair: str) -> str | None:
         return None
     text = str(value).strip()
     if question == "preference":
-        text = text.upper() if text.lower() not in ("empate", "=") else "="
-        text = {"EMPATE": "="}.get(text, text)
+        text = "=" if text.lower() in _TIE_WORDS else text.upper()
     else:
         text = _SYNONYMS_RESPONSE.get(text.lower(), text.lower())
     if text == "":
         return None
     if text not in _VALUES[question]:
         raise SystemExit(
-            f"par {pair}: el valor {value!r} no es valido para {_QUESTION_LABELS[question]} "
-            f"(admite {', '.join(_VALUES[question])})"
+            t(
+                "cli.script.pair_sheet.bad_value",
+                pair=pair,
+                value=repr(value),
+                question=_question(question),
+                allowed=", ".join(_shown_value(v) for v in _VALUES[question]),
+            )
         )
     return text
 
@@ -1010,14 +1135,12 @@ def read_commit(
     key = LEGACY_NAMES.normalize_commit_key(key)
     responses = LEGACY_NAMES.normalize_commit_answers(responses)
     if responses.get("sha256") != key["sha256"]:
-        raise SystemExit(
-            "las respuestas no son de esta hoja: el sha256 no coincide con el de la clave"
-        )
+        raise SystemExit(t("cli.script.pair_sheet.answers_other_sheet"))
     key_pairs = key["pairs"]
     unknown_ones = sorted(set(responses.get("answers", {})) - set(key_pairs))
     if unknown_ones:
         raise SystemExit(
-            f"las respuestas traen pares que la hoja no tiene: {', '.join(unknown_ones)}"
+            t("cli.script.pair_sheet.answers_unknown_pairs", pairs=", ".join(unknown_ones))
         )
     optional_ones = set(rules["optional_questions"])
     pairs_judgement: dict[str, Any] = {}
@@ -1032,13 +1155,23 @@ def read_commit(
             pair[question] = by_side
             if question not in optional_ones and not partial:
                 missing += [
-                    f"par {num}: {_QUESTION_LABELS[question]} {side}"
+                    t(
+                        "cli.script.pair_sheet.missing_answer",
+                        pair=num,
+                        question=f"{_question(question)} {side}",
+                    )
                     for side in "AB"
                     if by_side[side] is None
                 ]
         pair["preference"] = _normal(given.get("preference"), "preference", num)
         if pair["preference"] is None and not partial:
-            missing.append(f"par {num}: preferencia")
+            missing.append(
+                t(
+                    "cli.script.pair_sheet.missing_answer",
+                    pair=num,
+                    question=_question("preference"),
+                )
+            )
         pairs_judgement[num] = pair
     judgement = {
         "schema_version": 1,
@@ -1057,8 +1190,18 @@ def _winner(pair: dict[str, Any]) -> str:
     return "tie" if choice == "=" else str(pair["sides"][choice])
 
 
+#: Las dos respuestas de `can_stop`, como valores de maquina; `stop_text` las dice a la persona.
+CAN_STOP = "stop"
+GO_ON = "go_on"
+
+
+def stop_text(answer: str) -> str:
+    """«puedes parar» o «sigue» (`can stop` / `go on`), en el idioma vigente."""
+    return t(f"cli.script.pair_sheet.stop.{answer}")
+
+
 def can_stop(judgement: dict[str, Any], rules: dict[str, Any]) -> str:
-    """«puedes parar» o «sigue», y nada mas: ni hacia donde va el resultado ni quien va ganando.
+    """`CAN_STOP` o `GO_ON`, y nada mas: ni hacia donde va el resultado ni quien va ganando.
 
     Solo contesta «puedes parar» si las 3 trampas estan contestadas y la hoja vale (criterio 0) Y el
     desenlace ya no puede cambiar con los pares que faltan: el 26B ya pasa de `max_made_up_26b`, o
@@ -1067,13 +1210,13 @@ def can_stop(judgement: dict[str, Any], rules: dict[str, Any]) -> str:
     rules = LEGACY_NAMES.normalize_affinity_rules(rules)
     judgement = LEGACY_NAMES.normalize_commit_judgement(judgement)
     if not rules["early_stop"]:
-        return "sigue"
+        return GO_ON
     pair_items = judgement["pairs"].values()
     traps = [p for p in pair_items if p["kind"] == TRAP]
     if len(traps) < 3 or any(p["preference"] is None for p in traps):
-        return "sigue"
+        return GO_ON
     if sum(_winner(p) not in ("tie", TRAP) for p in traps) < 2:
-        return "sigue"
+        return GO_ON
     real = [p for p in pair_items if p["kind"] == "real"]
     model = judgement["label_26b"]
     invents = 0
@@ -1081,12 +1224,12 @@ def can_stop(judgement: dict[str, Any], rules: dict[str, Any]) -> str:
         side = "A" if p["sides"]["A"] == model else "B"
         invents += p["made_up"][side] == "s"
     if invents > int(rules["max_made_up_26b"]):
-        return "puedes parar"
+        return CAN_STOP
     answered = [p for p in real if p["preference"] is not None]
     c = sum(_winner(p) == model for p in answered)
     v = sum(_winner(p) == judgement["label_qwen"] for p in answered)
     unanswered = len(real) - len(answered)
-    return "puedes parar" if v - c > unanswered else "sigue"
+    return CAN_STOP if v - c > unanswered else GO_ON
 
 
 def _load_responses(args: argparse.Namespace) -> dict[str, Any]:
@@ -1115,10 +1258,15 @@ def run_generate_commit(args: argparse.Namespace) -> int:
     )
     paths = write_sheet(sheet, key, rules, args.sheet_dir, args.key_dir)
     print(
-        f"{len(sheet['pairs'])} pares en {paths['html']}; la clave ({paths['key'].parent}) no se abre"
+        t(
+            "cli.script.pair_sheet.generated_commit",
+            n=format_number(len(sheet["pairs"])),
+            path=paths["html"],
+            key_dir=paths["key"].parent,
+        )
     )
     if key["omitted"]:
-        print(f"omitidos por falta de mensaje: {', '.join(key['omitted'])}", file=sys.stderr)
+        print(t("cli.script.pair_sheet.omitted", cases=", ".join(key["omitted"])), file=sys.stderr)
     return 0
 
 
@@ -1127,10 +1275,10 @@ def run_read_commit(args: argparse.Namespace) -> int:
     key = json.loads(args.key.read_text(encoding="utf-8"))
     judgement, missing = read_commit(_load_responses(args), key, rules, partial=args.partial)
     if args.partial:
-        print(can_stop(judgement, rules))
+        print(stop_text(can_stop(judgement, rules)))
         return 0
     if missing:
-        print("Falta por contestar, y no se produce nada hasta completarlo:", file=sys.stderr)
+        print(t("cli.script.pair_sheet.missing_header"), file=sys.stderr)
         for line in missing:
             print(f"  - {line}", file=sys.stderr)
         return 1
@@ -1140,12 +1288,12 @@ def run_read_commit(args: argparse.Namespace) -> int:
             encoding="utf-8",
             newline="\n",
         )
-    print("ok: hoja completa")
+    print(t("cli.script.pair_sheet.complete"))
     return 0
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n", 1)[0])
+    parser = argparse.ArgumentParser(description=t("cli.script.pair_sheet.help._description"))
     sub = parser.add_subparsers(dest="mode", required=True)
     gen = sub.add_parser("generate")
     gen.add_argument("--sheet", type=Path, required=True)
@@ -1154,32 +1302,28 @@ def main(argv: list[str] | None = None) -> int:
     gen.add_argument("--small", required=True)
     gen.add_argument("--large", required=True)
     gen.add_argument("--case", action="append", required=True)
-    gen.add_argument("--seed", type=int, default=None, help="solo para pruebas")
+    gen.add_argument("--seed", type=int, default=None, help=_help("seed"))
     gen.add_argument("jsonl", nargs="+", type=Path)
-    gc = sub.add_parser("generate-commit", help="hoja a ciegas de local_commit_msg (REQ-042)")
+    gc = sub.add_parser("generate-commit", help=_help("generate_commit"))
     gc.add_argument("--cases", type=Path, default=AFFINITY_BASE / "cases.json")
     gc.add_argument("--traps", type=Path, default=_affinity_file(LEGACY_NAMES.TRAPS_FILE_NAMES))
     gc.add_argument("--rules", type=Path, default=_affinity_file(LEGACY_NAMES.RULES_FILE_NAMES))
-    gc.add_argument("--trap-set", type=int, default=1, help="juego de trampas (1 a 3)")
-    gc.add_argument("--number", type=int, default=1, help="numero de hoja")
-    gc.add_argument("--seed", type=int, default=None, help="solo para pruebas")
+    gc.add_argument("--trap-set", type=int, default=1, help=_help("trap_set"))
+    gc.add_argument("--number", type=int, default=1, help=_help("number"))
+    gc.add_argument("--seed", type=int, default=None, help=_help("seed"))
     gc.add_argument("--label-26b", default=MODEL_26B)
     gc.add_argument("--label-qwen", default=QWEN_MODEL)
     gc.add_argument("--sheet-dir", type=Path, default=AFFINITY_BASE / "sheet")
     gc.add_argument("--key-dir", type=Path, default=AFFINITY_BASE / "key")
-    gc.add_argument(
-        "jsonl", nargs="+", type=Path, help="resultados de la tanda con --save-responses"
-    )
-    lc = sub.add_parser("read-commit", help="valida las respuestas de la hoja de commit")
+    gc.add_argument("jsonl", nargs="+", type=Path, help=_help("jsonl"))
+    lc = sub.add_parser("read-commit", help=_help("read_commit"))
     lc.add_argument("--key", type=Path, required=True)
     lc.add_argument("--rules", type=Path, default=_affinity_file(LEGACY_NAMES.RULES_FILE_NAMES))
     origin = lc.add_mutually_exclusive_group(required=True)
-    origin.add_argument("--answers", type=Path, help="answers-<n>.json de la pagina")
-    origin.add_argument("--md", type=Path, help="la hoja .md contestada a mano")
-    lc.add_argument("--partial", action="store_true", help="solo contesta «puedes parar» o «sigue»")
-    lc.add_argument(
-        "--output", type=Path, default=None, help="juicio ya destapado, para el veredicto"
-    )
+    origin.add_argument("--answers", type=Path, help=_help("answers"))
+    origin.add_argument("--md", type=Path, help=_help("md"))
+    lc.add_argument("--partial", action="store_true", help=_help("partial"))
+    lc.add_argument("--output", type=Path, default=None, help=_help("output"))
     des = sub.add_parser("unblind")
     des.add_argument("--sheet", type=Path, required=True)
     des.add_argument("--key", type=Path, required=True)
@@ -1187,9 +1331,10 @@ def main(argv: list[str] | None = None) -> int:
         "--json",
         type=Path,
         default=None,
-        help="escribe el resultado por caso; es el --pairs de `analyze_benchmark.py decide`",
+        help=_help("json"),
     )
-    args = parser.parse_args(argv)
+    with argparse_in_language():
+        args = parser.parse_args(argv)
 
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
     if args.mode == "generate-commit":
@@ -1200,7 +1345,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.mode == "generate":
             if args.key.exists() or args.sheet.exists():
                 # Regenerar sortea otra vez: una hoja ya elegida quedaria emparejada con otra clave.
-                raise ValueError("la hoja o la clave ya existen; elige otras rutas")
+                raise ValueError(t("cli.script.pair_sheet.paths_exist"))
             data = json.loads(args.cases.read_text(encoding="utf-8"))
             corpus = {c["id"]: c for c in data["cases"]}
             seed = args.seed if args.seed is not None else secrets.randbits(32)
@@ -1211,35 +1356,56 @@ def main(argv: list[str] | None = None) -> int:
             args.key.write_text(
                 json.dumps(key, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
             )
-            print(f"{len(key['pairs'])} pares en {args.sheet}; la clave no se abre hasta elegir")
+            print(
+                t(
+                    "cli.script.pair_sheet.generated",
+                    n=format_number(len(key["pairs"])),
+                    path=args.sheet,
+                )
+            )
             return 0
         result, missing = unblind(
             args.sheet.read_text(encoding="utf-8"),
             json.loads(args.key.read_text(encoding="utf-8")),
         )
     except (OSError, ValueError, KeyError) as exc:
-        print(f"error: {exc}", file=sys.stderr)
+        print(t("cli.script.pair_sheet.error", detail=exc), file=sys.stderr)
         return 2
     if args.json and not missing:
         # Solo con la hoja entera: una decision sobre elecciones a medias parece una medida.
         args.json.write_text(
             json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
-    print(
-        "| Caso | Pares | Metrica prefiere | Acuerdos | Acuerdo | Veredicto | Elegido por la persona |"
-    )
+    print(t("cli.script.pair_sheet.unblind.header"))
     print("| --- | --- | --- | --- | --- | --- | --- |")
     for case, row in result.items():
-        agreement = "—" if row["agreement"] is None else f"{row['agreement']:.0%}"
-        human = ", ".join(f"{k}: {v}" for k, v in sorted(row["human"].items()))
+        agreement = (
+            "—" if row["agreement"] is None else f"{format_number(row['agreement'] * 100, 0)}%"
+        )
+        human = ", ".join(
+            f"{t('cli.script.pair_sheet.verdict.tie') if k in (HUMAN_TIE, HUMAN_TIE_OLD) else k}: {v}"
+            for k, v in sorted(row["human"].items())
+        )
         print(
             f"| {case} | {row['pairs']} | {row['metric_prefers']} | {row['agreements']} | "
-            f"{agreement} | {_VERDICT_LABELS[row['verdict']]} | {human} |"
+            f"{agreement} | {t(_VERDICT_KEYS[row['verdict']])} | {human} |"
         )
     if missing:
-        print(f"\nfaltan por elegir {len(missing)} pares: {', '.join(missing)}", file=sys.stderr)
+        print(
+            "\n"
+            + t(
+                "cli.script.pair_sheet.unblind.missing",
+                n=format_number(len(missing)),
+                pairs=", ".join(missing),
+            ),
+            file=sys.stderr,
+        )
         return 1
     return 0
+
+
+def _help(name: str) -> str:
+    return t(f"cli.script.pair_sheet.help.{name}")
 
 
 if __name__ == "__main__":

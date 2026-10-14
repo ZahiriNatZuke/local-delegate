@@ -1,0 +1,235 @@
+### measure_cooldown
+Window: (all) to (now)  (2026-10-14T18:29Z)
+  removed by --exclude: 0 rows, 0 episodes
+  test windows: not applied (--include-tests)
+
+Delegations:               20,027
+Failures that count (min.): 0  (minimum 10)
+Jumps per class:           {}
+Immediate failures:        0
+Diverted operations:       0
+
+Episodes:                  0  (minimum 5)
+  with a known outcome:    0
+  re-entered:              0  (R: 0.75)
+  opened by a timeout:     0
+  re-enter at Tmax:        0
+
+RESULT: change
+  rule 1: R > 60 %: the model was still broken when it expired -> T goes to 240 s
+  noted for the next window: rule 4: some episode reaches Tmax and re-enters again
+
+WARNING outside P-4: immediate failures exceed 5 % of the delegations.
+N, T and Tmax do not change: a candidate is missing, and that is a question about the chains.
+
+### cp3
+# CP-3: v against c
+
+Input control: passes if every case drops with the control input.
+
+## code: does NOT pass
+
+- band of the aggregate (mean of the per-case bands): 0.125
+- cases in the aggregate: 1 of 2
+- the aggregate separates: yes (1.000 against 0.500)
+- **the §7 rule cannot fire with this band**
+- no automatic score, the blind pairwise comparison decides: z
+
+| Case | Small | Large | Difference | Band | Separates | Reason |
+| --- | --- | --- | --- | --- | --- | --- |
+| x | 1.000 | 0.500 | -0.500 | 0.125 | yes | — |
+| y | 1.000 | 1.000 | — | — | no | ceiling |
+
+### verdict
+| Tool | Alternative | Compared with | State | Criteria not met |
+| --- | --- | --- | --- | --- |
+| local_commit_msg | a | r | no baseline (repeat the sheet) | valid_sheet |
+
+Commit cell, what is published and does not decide:
+
+| Model | Messages | invents = yes | Format (computed) | Main point = yes | Specific = yes |
+| --- | --- | --- | --- | --- | --- |
+| a | 1 | 1 | 1 | 1 | 1 |
+
+### stop
+you can stop
+
+### pair_sheet: hoja .md
+# Sheet 7: commit messages, blind
+
+Sheet: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+Each pair has two commit messages for the same change. Estimated time: between 60 and 90 minutes.
+You can do it in several sittings. Write the answer after the colon of each line.
+
+- **Invents (yes/no)**: Does the message say something the diff does not do? What the message leaves out is not marked here, but under "main point".
+- **Main point (yes/partial/no)**: Does it name the most important change of the diff?
+- **Specific (yes/no)**: Can it be understood without opening the diff?
+- **Preference**: A, B or tie, after marking both messages.
+
+## Pair 01
+
+Diff: 1 files, +2 −1
+
+```diff
+diff --git a/x b/x
+```
+
+### Message A
+
+```
+feat: x
+```
+
+### Message B
+
+```
+fix: y
+```
+
+Invents A (y/n): 
+Invents B (y/n): 
+Main point A (y/p/n): 
+Main point B (y/p/n): 
+Specific A (y/n): 
+Specific B (y/n): 
+Better (A/B/=): 
+
+### pair_sheet: página (cabecera y textos)
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sheet 7: commit messages, blind</title>
+
+</head>
+<body>
+<h1>Sheet 7: commit messages, blind</h1>
+<p>Each pair has two commit messages for the same change. Read them as they are, open the diff if you need it and answer. Estimated time: between 60 and 90 minutes. You can do it in several sittings: your progress is saved in this browser.</p>
+<dl><dt>Invents (yes/no)</dt><dd>Does the message say something the diff does not do? What the message leaves out is not marked here, but under &quot;main point&quot;.</dd><dt>Main point (yes/partial/no)</dt><dd>Does it name the most important change of the diff?</dd><dt>Specific (yes/no)</dt><dd>Can it be understood without opening the diff?</dd><dt>Preference</dt><dd>A, B or tie, after marking both messages.</dd></dl>
+<header class="bar">
+<span id="faltan">… answers missing</span>
+<button type="button" id="descargar">Download answers</button>
+<button type="button" id="parar">Can I stop now?</button>
+<span id="aviso" role="status"></span>
+</header>
+<div id="pares"></div>
+<h2>Answers as text</h2>
+<p>If the browser does not allow downloads, copy this box and paste it into a message.</p>
+<textarea id="copia" readonly aria-label="Answers in JSON"></textarea>
+{
+ "yes": "yes",
+ "no": "no",
+ "partial": "partial",
+ "tie": "Tie",
+ "ask_principal": "Does it name the most important change?",
+ "ask_specific": "Can it be understood without opening the diff?",
+ "ask_made_up": "Does it say something the diff does not do?",
+ "if_you_like": "If you feel like it",
+ "message": "Message {side}",
+ "pair": "Pair {num}",
+ "diff": "Diff ({files} files, +{more} −{fewer})",
+ "which": "Which one do you prefer?",
+ "none_missing": "No answer missing",
+ "missing": "{n} answers missing",
+ "downloaded_partial": "Downloaded with {n} answers still unanswered.",
+ "downloaded": "Downloaded.",
+ "downloaded_stop": "Downloaded: pass it on to know whether you can stop."
+}
+### pair_sheet --help
+usage: pytest [-h] {generate,generate-commit,read-commit,unblind} ...
+
+Blind pair sheet to validate the automatic scoring against human judgement
+(P-15).
+
+positional arguments:
+  {generate,generate-commit,read-commit,unblind}
+    generate-commit     blind sheet for local_commit_msg (REQ-042)
+    read-commit         validates the answers of the commit sheet
+
+options:
+  -h, --help            show this help message and exit
+
+### pair_sheet read-commit --help
+usage: pytest read-commit [-h] --key KEY [--rules RULES]
+                          (--answers ANSWERS | --md MD) [--partial]
+                          [--output OUTPUT]
+
+options:
+  -h, --help         show this help message and exit
+  --key KEY
+  --rules RULES
+  --answers ANSWERS  answers-<n>.json from the page
+  --md MD            the .md sheet answered by hand
+  --partial          only answers "you can stop" or "go on"
+  --output OUTPUT    judgement already unblinded, for the verdict
+
+### analyze_benchmark decide --help
+usage: pytest decide [-h] --cases CASES [--json JSON] [--output OUTPUT]
+                     [--cp3 CP3] --pair ROLE INCUMBENT CANDIDATE
+                     [--pairs PAIRS]
+                     [--shared-mib-threshold SHARED_MIB_THRESHOLD]
+                     jsonl [jsonl ...]
+
+positional arguments:
+  jsonl
+
+options:
+  -h, --help            show this help message and exit
+  --cases CASES         cases.json of the v2 corpus
+  --json JSON           also writes the result as JSON
+  --output OUTPUT       writes the report here instead of stdout
+  --cp3 CP3             JSON of `cp3` (repeatable)
+  --pair ROLE INCUMBENT CANDIDATE
+  --pairs PAIRS         JSON of `pair_sheet.py unblind --json` (repeatable,
+                        one per comparison)
+  --shared-mib-threshold SHARED_MIB_THRESHOLD
+                        Shared Usage growth tolerated before CP-1 is taken as
+                        broken (not calibrated: task 18)
+
+### analyze_benchmark affinity-verdict --help
+usage: pytest affinity-verdict [-h] [--cases CASES] [--rules RULES]
+                               [--footprints FOOTPRINTS]
+                               [--judgement JUDGEMENT]
+                               [--metrics-db METRICS_DB] [--mechanical-only]
+                               [--output OUTPUT] [--table TABLE]
+                               jsonl [jsonl ...]
+
+positional arguments:
+  jsonl                 results of the batch
+
+options:
+  -h, --help            show this help message and exit
+  --cases CASES
+  --rules RULES
+  --footprints FOOTPRINTS
+  --judgement JUDGEMENT
+                        output of `pair_sheet.py read-commit`
+  --metrics-db METRICS_DB
+                        a COPY of metrics.db
+  --mechanical-only     without the commit cell
+  --output OUTPUT       verdict.json
+  --table TABLE         Markdown table for verification.md
+
+### measure_cooldown --help
+usage: measure_cooldown.py [-h] [--since SINCE] [--until UNTIL]
+                           [--exclude EXCLUDE] [--tmax TMAX] [--json]
+                           [--include-tests]
+
+Applies the P-4 criterion: whether the cooldown numbers change, stay or it is not known.
+
+Usage:
+    uv run python scripts/measure_cooldown.py --since 2026-09-16
+    uv run python scripts/measure_cooldown.py --since 2026-09-16 --exclude 2026-09-16T10:00,2026-09-16T11:30
+    uv run python scripts/measure_cooldown.py --since 2026-09-16 --json
+
+options:
+  -h, --help         show this help message and exit
+  --since SINCE      ISO date; compared against the event's `ts`
+  --until UNTIL      ISO date, exclusive
+  --exclude EXCLUDE  START,END span to exclude
+  --tmax TMAX        Tmax in force during the window
+  --json             raw output
+  --include-tests    do not apply the windows of test-windows.json (those of
+                     --exclude still apply)

@@ -232,6 +232,26 @@ sección de su motivo.
 | congelado | tests/test_corpus.py | lectura de formato viejo (cierre del frente A, lote 3): valores viejos de `provenance` del corpus congelado, escritos a mano para comprobar que se leen como `frozen` y `reconstructed` (cierre del frente A, lote 4) |
 | reconstruido | tests/test_benchmark.py | lectura de formato viejo (cierre del frente A, lote 3): valores viejos de `provenance` del corpus congelado, escritos a mano para comprobar que se leen como `frozen` y `reconstructed` (cierre del frente A, lote 4) |
 | reconstruido | tests/test_corpus.py | lectura de formato viejo (cierre del frente A, lote 3): valores viejos de `provenance` del corpus congelado, escritos a mano para comprobar que se leen como `frozen` y `reconstructed` (cierre del frente A, lote 4) |
+| si | scripts/pair_sheet.py | lectura de formato viejo (ola B1d, decisión 7 de B1): la respuesta «si» que la persona escribe en la hoja `.md` española; `pair_sheet` la lee para siempre (`_SYNONYMS_RESPONSE`), junto a «yes»/«y» de la hoja inglesa |
+| parcial | scripts/pair_sheet.py | lectura de formato viejo (ola B1d, decisión 7 de B1): la respuesta «parcial» de la hoja `.md` española; se lee para siempre, junto a «partial» |
+| empate | scripts/pair_sheet.py | lectura de formato viejo (ola B1d, decisión 7 de B1): «empate» de la hoja `.md` española (`_TIE_WORDS`) y el `human` que `unblind --json` escribía antes; desde B1d se escribe `tie` (`HUMAN_TIE`) y `empate` se lee para siempre (`HUMAN_TIE_OLD`) |
+| EMPATE | scripts/pair_sheet.py | lectura de formato viejo (ola B1d, decisión 7 de B1): «empate» en mayúsculas en la hoja `.md` española; la preferencia se compara en minúsculas (`_TIE_WORDS`) |
+| empate | tests/test_analyze_benchmark.py | lectura de formato viejo (ola B1d, decisión 7 de B1): el `human` con `empate` que escribía `unblind --json` antes de B1d; `pairs_for_role` suma `tie` y `empate` para siempre |
+| empate | tests/test_pair_sheet.py | lectura de formato viejo (ola B1d, decisión 7 de B1): la elección «empate» de la hoja `.md` española que el test escribe a mano; `unblind --json` escribe ahora `tie` |
+| Inventa | tests/test_pair_sheet.py | lectura de formato viejo (ola B1d, decisión 7 de B1): la etiqueta «Inventa» de la hoja `.md` española que la persona contesta a mano; el lector acepta «Inventa» e «Invents» |
+| Inventa | tests/test_scripts_english.py | lectura de formato viejo (ola B1d): la etiqueta de la hoja `.md` congelada (`hoja-1.md`), que el test contesta a mano para comprobar que se lee con el proceso en inglés |
+| empate | tests/test_scripts_english.py | lectura de formato viejo (ola B1d): el `human` de `unblind --json` de antes de B1d, que `pairs_for_role` sigue sumando |
+| respuestas | tests/test_scripts_english.py | lectura de formato viejo (ola B1d): clave de la `respuestas-1.json` congelada que el test lee en crudo para rellenar la hoja |
+| preferencia | tests/test_scripts_english.py | lectura de formato viejo (ola B1d): clave de la `respuestas-1.json` congelada que el test lee en crudo para rellenar la hoja |
+| hoja-1.md | tests/test_scripts_english.py | lectura de formato viejo (ola B1d): la hoja congelada de la hoja 1, que el test lee |
+| clave-1.json | tests/test_scripts_english.py | lectura de formato viejo (ola B1d): la clave congelada de la hoja 1, que el test lee |
+| respuestas-1.json | tests/test_scripts_english.py | lectura de formato viejo (ola B1d): las respuestas congeladas de la hoja 1, que el test lee |
+| reglas.json | tests/test_scripts_english.py | lectura de formato viejo (ola B1d): el `reglas.json` congelado, que `read_rules` sigue leyendo |
+| afinidad-2026-10 | tests/test_scripts_english.py | lectura de formato viejo (ola B1d): directorio del corpus congelado en `benchmarks/` |
+| calidad | scripts/analyze_benchmark.py | lectura de formato viejo (ola B1d): valor de `criterion` en `decide --json` (contrato que el frente B no cambia); el informe lo dice con `_CRITERION_KEYS` en el idioma vigente |
+| techo | scripts/analyze_benchmark.py | lectura de formato viejo (ola B1d): valor de `criterion` en `decide --json` (contrato que el frente B no cambia); el informe lo dice con `_CRITERION_KEYS` en el idioma vigente |
+| velocidad | scripts/analyze_benchmark.py | lectura de formato viejo (ola B1d): valor de `criterion` en `decide --json` (contrato que el frente B no cambia); el informe lo dice con `_CRITERION_KEYS` en el idioma vigente |
+| empate | scripts/analyze_benchmark.py | lectura de formato viejo (ola B1d): valor de `criterion` en `decide --json` (contrato que el frente B no cambia); el informe lo dice con `_CRITERION_KEYS` en el idioma vigente; y el `human` de antes de B1d que `pairs_for_role` suma |
 
 ## Envoltorio de REQ-046
 
@@ -393,15 +413,11 @@ sección de su motivo.
 
 ## Entrada de interfaz escrita por una persona
 
+Vacía desde la ola B1d: `pair_sheet` escribe la hoja en el idioma del proceso y lee las dos
+formas, así que sus filas pasaron a «Lectura de formato viejo».
+
 | Nombre | Fichero | Motivo |
 | --- | --- | --- |
-| si | scripts/pair_sheet.py | entrada de interfaz escrita por una persona; se traduce en el frente B con lectura de las dos formas: respuesta que la persona escribe en la hoja `.md` (en español, como la hoja) (ola A10b-4; sale de «Pendiente» en A10b-5) |
-| parcial | scripts/pair_sheet.py | entrada de interfaz escrita por una persona; se traduce en el frente B con lectura de las dos formas: respuesta que la persona escribe en la hoja `.md` (ola A10b-4; sale de «Pendiente» en A10b-5) |
-| empate | scripts/pair_sheet.py | entrada de interfaz escrita por una persona; se traduce en el frente B con lectura de las dos formas: respuesta que la persona escribe en la hoja `.md`, y la elección que `unblind` imprime y escribe en su `--json` (ola A10b-4; sale de «Pendiente» en A10b-5) |
-| EMPATE | scripts/pair_sheet.py | entrada de interfaz escrita por una persona; se traduce en el frente B con lectura de las dos formas: la misma respuesta escrita en mayúsculas (ola A10b-4; sale de «Pendiente» en A10b-5) |
-| empate | tests/test_analyze_benchmark.py | entrada de interfaz escrita por una persona; se traduce en el frente B con lectura de las dos formas: la elección «empate» que `pair_sheet.py unblind --json` escribe en `human` y `pairs_for_role` suma; el test la escribe como la escribe `unblind` (ola A10b-5) |
-| empate | tests/test_pair_sheet.py | entrada de interfaz escrita por una persona; se traduce en el frente B con lectura de las dos formas: la elección «empate» que `unblind --json` escribe en `human` (ola A10b-6) |
-| Inventa | tests/test_pair_sheet.py | entrada de interfaz escrita por una persona; se traduce en el frente B con lectura de las dos formas: la etiqueta de la pregunta en la hoja `.md` que la persona contesta a mano (ola A10b-6) |
 
 ## Texto de salida que traduce el frente B
 

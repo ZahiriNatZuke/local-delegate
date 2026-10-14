@@ -1,0 +1,11 @@
+# Suite, LANG=en_US.UTF-8, -n 4 --dist loadgroup, bajo pesado.sh
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+2848 passed, 2 skipped, 4 warnings in 91.11s (0:01:31)
+
+# Suite, LANG=es_ES.UTF-8, igual
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+2848 passed, 2 skipped, 4 warnings in 89.28s (0:01:29)

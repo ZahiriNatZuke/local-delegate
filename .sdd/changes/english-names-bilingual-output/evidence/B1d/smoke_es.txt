@@ -1,0 +1,237 @@
+### measure_cooldown
+Ventana: (todo) a (ahora)  (2026-10-14T18:29Z)
+  quitado por --exclude: 0 filas, 0 episodios
+  ventanas de prueba: no aplicadas (--include-tests)
+
+Delegaciones:              20.027
+Fallos que cuentan (mín.): 0  (mínimo 10)
+Saltos por clase:          {}
+Fallos al momento:         0
+Operaciones desviadas:     0
+
+Episodios:                 0  (mínimo 5)
+  con desenlace conocido:  0
+  reentraron:              0  (R: 0,75)
+  abiertos por timeout:    0
+  reentran en Tmax:        0
+
+RESULTADO: cambiar
+  regla 1: R > 60 %: el modelo seguía roto al vencer -> T pasa a 240 s
+  anotada para la ventana siguiente: regla 4: algún episodio llega a Tmax y vuelve a reentrar
+
+AVISO fuera de P-4: los fallos al momento pasan del 5 % de las delegaciones.
+No cambia N, T ni Tmax: falta candidato, y eso es una pregunta sobre las cadenas.
+
+### cp3
+# CP-3: v contra c
+
+Control de entrada: pasa si todos los casos bajan con la entrada de control.
+
+## code: NO pasa
+
+- banda del agregado (media de las bandas por caso): 0,125
+- casos en el agregado: 1 de 2
+- el agregado separa: si (1,000 contra 0,500)
+- **la regla de §7 no puede disparar con esta banda**
+- sin puntuacion automatica, lo decide la comparacion por pares a ciegas: z
+
+| Caso | Pequeño | Grande | Diferencia | Banda | Separa | Motivo |
+| --- | --- | --- | --- | --- | --- | --- |
+| x | 1,000 | 0,500 | -0,500 | 0,125 | si | — |
+| y | 1,000 | 1,000 | — | — | no | techo |
+
+### verdict
+| Tool | Alternativo | Comparado con | Estado | Criterios que no se cumplen |
+| --- | --- | --- | --- | --- |
+| local_commit_msg | a | r | sin base (repetir hoja) | valid_sheet |
+
+Celda de commit, lo que se publica y no decide:
+
+| Modelo | Mensajes | inventa = sí | Formato (calculado) | Lo principal = sí | Específico = sí |
+| --- | --- | --- | --- | --- | --- |
+| a | 1 | 1 | 1 | 1 | 1 |
+
+### stop
+puedes parar
+
+### pair_sheet: hoja .md
+# Hoja 7: mensajes de commit, a ciegas
+
+Hoja: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+En cada par hay dos mensajes de commit para el mismo cambio. Tiempo estimado: entre 60 y 90 minutos.
+Puedes hacerlo en varias sentadas. Escribe la respuesta detrás de los dos puntos de cada línea.
+
+- **Inventa (si/no)**: ¿El mensaje dice algo que el diff no hace? Lo que el mensaje se deja fuera no se marca aquí, sino en «lo principal».
+- **Lo principal (si/parcial/no)**: ¿Nombra el cambio más importante del diff?
+- **Específico (si/no)**: ¿Se entiende sin abrir el diff?
+- **Preferencia**: A, B o empate, después de marcar los dos mensajes.
+
+## Par 01
+
+Diff: 1 ficheros, +2 −1
+
+```diff
+diff --git a/x b/x
+```
+
+### Mensaje A
+
+```
+feat: x
+```
+
+### Mensaje B
+
+```
+fix: y
+```
+
+Inventa A (s/n): 
+Inventa B (s/n): 
+Lo principal A (s/p/n): 
+Lo principal B (s/p/n): 
+Específico A (s/n): 
+Específico B (s/n): 
+Mejor (A/B/=): 
+
+### pair_sheet: página (cabecera y textos)
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hoja 7: mensajes de commit, a ciegas</title>
+
+</head>
+<body>
+<h1>Hoja 7: mensajes de commit, a ciegas</h1>
+<p>En cada par hay dos mensajes de commit para el mismo cambio. Léelos tal como están, abre el diff si lo necesitas y contesta. Tiempo estimado: entre 60 y 90 minutos. Puedes hacerlo en varias sentadas: tu progreso se guarda en este navegador.</p>
+<dl><dt>Inventa (si/no)</dt><dd>¿El mensaje dice algo que el diff no hace? Lo que el mensaje se deja fuera no se marca aquí, sino en «lo principal».</dd><dt>Lo principal (si/parcial/no)</dt><dd>¿Nombra el cambio más importante del diff?</dd><dt>Específico (si/no)</dt><dd>¿Se entiende sin abrir el diff?</dd><dt>Preferencia</dt><dd>A, B o empate, después de marcar los dos mensajes.</dd></dl>
+<header class="bar">
+<span id="faltan">Faltan … respuestas</span>
+<button type="button" id="descargar">Descargar respuestas</button>
+<button type="button" id="parar">¿Puedo parar ya?</button>
+<span id="aviso" role="status"></span>
+</header>
+<div id="pares"></div>
+<h2>Respuestas en texto</h2>
+<p>Si el navegador no deja descargar, copia este cuadro y pégalo en un mensaje.</p>
+<textarea id="copia" readonly aria-label="Respuestas en JSON"></textarea>
+{
+ "yes": "sí",
+ "no": "no",
+ "partial": "parcial",
+ "tie": "Empate",
+ "ask_principal": "¿Nombra el cambio más importante?",
+ "ask_specific": "¿Se entiende sin abrir el diff?",
+ "ask_made_up": "¿Dice algo que el diff no hace?",
+ "if_you_like": "Si te apetece",
+ "message": "Mensaje {side}",
+ "pair": "Par {num}",
+ "diff": "Diff ({files} ficheros, +{more} −{fewer})",
+ "which": "¿Cuál prefieres?",
+ "none_missing": "No falta ninguna respuesta",
+ "missing": "Faltan {n} respuestas",
+ "downloaded_partial": "Descargadas con {n} respuestas sin contestar.",
+ "downloaded": "Descargadas.",
+ "downloaded_stop": "Descargado: pásalo para saber si puedes parar."
+}
+### pair_sheet --help
+uso: measure_cooldown.py [-h]
+                         {generate,generate-commit,read-commit,unblind} ...
+
+Hoja por pares, a ciegas, para validar la puntuacion automatica contra juicio
+humano (P-15).
+
+positional arguments:
+  {generate,generate-commit,read-commit,unblind}
+    generate-commit     hoja a ciegas de local_commit_msg (REQ-042)
+    read-commit         valida las respuestas de la hoja de commit
+
+options:
+  -h, --help            show this help message and exit
+
+### pair_sheet read-commit --help
+uso: measure_cooldown.py read-commit [-h] --key KEY [--rules RULES]
+                                     (--answers ANSWERS | --md MD) [--partial]
+                                     [--output OUTPUT]
+
+options:
+  -h, --help         show this help message and exit
+  --key KEY
+  --rules RULES
+  --answers ANSWERS  answers-<n>.json de la pagina
+  --md MD            la hoja .md contestada a mano
+  --partial          solo contesta «puedes parar» o «sigue»
+  --output OUTPUT    juicio ya destapado, para el veredicto
+
+### analyze_benchmark decide --help
+uso: measure_cooldown.py decide [-h] --cases CASES [--json JSON]
+                                [--output OUTPUT] [--cp3 CP3] --pair ROLE
+                                INCUMBENT CANDIDATE [--pairs PAIRS]
+                                [--shared-mib-threshold SHARED_MIB_THRESHOLD]
+                                jsonl [jsonl ...]
+
+positional arguments:
+  jsonl
+
+options:
+  -h, --help            show this help message and exit
+  --cases CASES         cases.json del corpus v2
+  --json JSON           escribe también el resultado en JSON
+  --output OUTPUT       escribe el informe aquí en vez de stdout
+  --cp3 CP3             JSON de `cp3` (repetible)
+  --pair ROLE INCUMBENT CANDIDATE
+  --pairs PAIRS         JSON de `pair_sheet.py unblind --json` (repetible, uno
+                        por comparación)
+  --shared-mib-threshold SHARED_MIB_THRESHOLD
+                        crecimiento de Shared Usage tolerado antes de dar CP-1
+                        por caído (sin calibrar: tarea 18)
+
+### analyze_benchmark affinity-verdict --help
+uso: measure_cooldown.py affinity-verdict [-h] [--cases CASES] [--rules RULES]
+                                          [--footprints FOOTPRINTS]
+                                          [--judgement JUDGEMENT]
+                                          [--metrics-db METRICS_DB]
+                                          [--mechanical-only]
+                                          [--output OUTPUT] [--table TABLE]
+                                          jsonl [jsonl ...]
+
+positional arguments:
+  jsonl                 resultados de la tanda
+
+options:
+  -h, --help            show this help message and exit
+  --cases CASES
+  --rules RULES
+  --footprints FOOTPRINTS
+  --judgement JUDGEMENT
+                        salida de `pair_sheet.py read-commit`
+  --metrics-db METRICS_DB
+                        una COPIA de metrics.db
+  --mechanical-only     sin la celda de commit
+  --output OUTPUT       verdict.json
+  --table TABLE         tabla Markdown para verification.md
+
+### measure_cooldown --help
+uso: measure_cooldown.py [-h] [--since SINCE] [--until UNTIL]
+                         [--exclude EXCLUDE] [--tmax TMAX] [--json]
+                         [--include-tests]
+
+Aplica el criterio de P-4: si los números del enfriamiento se cambian, se quedan o no se sabe.
+
+Uso:
+    uv run python scripts/measure_cooldown.py --since 2026-09-16
+    uv run python scripts/measure_cooldown.py --since 2026-09-16 --exclude 2026-09-16T10:00,2026-09-16T11:30
+    uv run python scripts/measure_cooldown.py --since 2026-09-16 --json
+
+options:
+  -h, --help         show this help message and exit
+  --since SINCE      fecha ISO; se compara contra el `ts` del evento
+  --until UNTIL      fecha ISO, exclusiva
+  --exclude EXCLUDE  tramo INICIO,FIN a excluir
+  --tmax TMAX        Tmax vigente en la ventana
+  --json             salida cruda
+  --include-tests    no aplicar las ventanas de test-windows.json (las de
+                     --exclude siguen)
