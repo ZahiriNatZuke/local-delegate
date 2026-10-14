@@ -1,0 +1,47 @@
+$ uv run python scripts/measure_structured_summary.py --help
+usage: measure_structured_summary.py [-h] --label LABEL [--outputs OUTPUTS]
+
+Etapa 1 del SDD `resumen-por-secciones`: ¿sigue `local_summarize` la
+estructura? Sin cuota.
+
+options:
+  -h, --help         show this help message and exit
+  --label LABEL      p. ej. main o rama
+  --outputs OUTPUTS  dónde dejar las salidas (fuera del repo)
+
+$ uv run python scripts/build_site.py --help
+usage: build_site.py [-h] [--check] [--out OUT]
+
+Construye site/ para GitHub Pages.
+
+options:
+  -h, --help  show this help message and exit
+  --check     solo comprueba, no escribe
+  --out OUT   directorio de salida (default: D:\Projects\local-delegate\_site)
+
+$ uv run python scripts/release.py --help
+usage: release.py [-h] [--dry-run] version
+
+Crea la GitHub Release y dispara la publicación.
+
+positional arguments:
+  version     versión a publicar, en formato X.Y.Z
+
+options:
+  -h, --help  show this help message and exit
+  --dry-run   comprueba todo y enseña el plan, sin crear nada
+
+$ uv run python scripts/sync_wiki.py --help
+usage: sync_wiki.py [-h] [--check] [destination]
+
+Prepara `docs/wiki/` para publicarse como wiki nativa de GitHub. La wiki de
+GitHub sirve los `.md` **planos y en otro repositorio**: no hay `docs/`, ni
+`src/`, ni un árbol al que subir con `../`. Un enlace como
+`../recipes/ollama.md` se ve perfecto navegando el repo y es un **404** en la
+wiki publicada — la peor combinación, porque el fichero fuente parece
+correcto. Copiar tal cual no vale, entonces. Y cambiar los fuentes a URLs
+absolutas tampoco: `docs/wiki/` existe sobre todo para leerse **dentro del
+repo**, donde los enlaces relativos son lo correcto. Así que la conversión se
+hace aquí, al publicar: la fuente queda navegable y la wiki, enlazada. Medido
+el 2026-07-31: 18 enlaces en 6 páginas se rompían al publicar. Solo stdlib,
+

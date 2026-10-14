@@ -1,0 +1,19 @@
+## scripts/_claude_bench.py: output["read_ranges"] += 1 -> output["read_full"] = True
+hash 811e24faa7d1 -> 39a6742cecaf
+>       assert seen[key]
+E       assert 0
+1 failed, 2 passed in 0.25s
+restaurado 811e24faa7d1
+Traceback (most recent call last):
+  File "<string>", line 2, in <module>
+    import sys;p=sys.argv[1];s=open(p,encoding='utf-8',newline='').read();assert s.count(sys.argv[2])==1, 'no muta';open(p,'w',encoding='utf-8',newline='').write(s.replace(sys.argv[2],sys.argv[3]))
+                                                                                 ^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: no muta
+
+## (el intento anterior no mutó: el patrón no estaba y la guarda paró sin escribir) scripts/measure_structured_summary.py: "paired": paired -> paired + 1
+hash 138bd1187d6b -> a6fb09cdb409
+>       assert (r["paired"], r["with_content"], r["out_of_order"]) == (4, 4, 0)
+E       assert (5, 4, 0) == (4, 4, 0)
+E         
+E         At index 0 diff: 5 != 4
+restaurado 138bd1187d6b

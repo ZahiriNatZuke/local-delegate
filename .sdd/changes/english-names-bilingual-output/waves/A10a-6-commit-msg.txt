@@ -1,0 +1,35 @@
+refactor(rename): nombres en inglés en el banco de claude -p, la medición del resumen estructurado, el sitio, el release y la wiki (ola A10a, lote 6)
+
+Renombra a inglés el último lote de la subola A10a: 288 filas del
+mapping aprobado (waves/A10a-6-mapping.csv). Con él, A10a queda cerrada.
+
+- scripts/_banco_claude.py pasa a scripts/_claude_bench.py: funciones,
+  la clase Run (antes Corrida) con result/start/end/cost_usd, el kwarg
+  yes= de confirm y las claves que devuelve analyze (deferred_tools,
+  read_full, read_ranges, bash_dump, blocked, content_in_context,
+  local_with_path). En el entorno de las tandas usa LD_HOOK_READ_BLOCK y
+  LD_HOOK_READ_SWITCH_FILE.
+- scripts/adoption_experiment.py y su test leen esas claves nuevas; un
+  resultados.jsonl de antes se sigue leyendo con la tabla adoption_runs
+  de legacy_names.py, que suma las claves de analyze.
+- scripts/medir_resumen_estructurado.py pasa a
+  scripts/measure_structured_summary.py, con --label y --outputs, las
+  claves de las métricas y del veredicto en inglés y el informe en
+  results-<label>.json. Los resultados-*.json congelados de benchmarks/
+  no se renombran ni se reescriben. El test pasa a
+  tests/test_measure_structured_summary.py.
+- scripts/build_site.py, release.py y sync_wiki.py: constantes,
+  funciones y variables en inglés. Los workflows los llaman igual; el
+  posicional de sync_wiki.py pasa a destination.
+
+Fuera de los ficheros del lote, por consecuencia: lo que usan por
+importlib tests/test_site.py y tests/test_wiki.py, una cita en
+src/local_delegate/sections.py y el directorio congelado
+resumen-estructurado en rename-exceptions.md.
+
+Cierre de A10a: el barrido de los 6 mappings (1679 filas) no deja
+restos sin explicar, el detector da 0 hallazgos en los ficheros de la
+subola y se recogen 2575 tests.
+
+Solo se renombra: ningún assert cambia de sentido y los textos en
+español que imprimen los scripts o afirman los tests no se tocan.

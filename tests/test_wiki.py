@@ -137,7 +137,7 @@ def test_what_leaves_the_directory_becomes_an_absolute_url():
     `docs/wiki/` existe sobre todo para leerse dentro del repo, donde lo relativo es lo correcto.
     """
     for page in _pages():
-        converted, _ = sync_wiki.convertir(page.read_text(encoding="utf-8"))
+        converted, _ = sync_wiki.convert(page.read_text(encoding="utf-8"))
         outside = [e for e in _links(converted) if e.startswith("..")]
         assert not outside, f"{page.name}: enlaces que seguirían rotos en la wiki: {outside}"
 
@@ -159,7 +159,7 @@ def test_links_between_pages_are_NOT_converted():
         for dest in _links(page.read_text(encoding="utf-8")):
             if dest.split("#")[0] in siblings:
                 checked += 1
-                assert sync_wiki.convertir_destino(dest) is None, (
+                assert sync_wiki.convert_destination(dest) is None, (
                     f"{page.name}: '{dest}' es una página hermana y se convirtió a URL "
                     "absoluta; eso rompe la navegación interna de la wiki"
                 )
@@ -169,14 +169,14 @@ def test_links_between_pages_are_NOT_converted():
 
 def test_the_conversion_keeps_the_anchor():
     """Perder el `#seccion` manda al lector al principio de un documento largo, sin avisar."""
-    converted = sync_wiki.convertir_destino("../recipes/llama-swap-blackwell.md#descarga-de-vram")
+    converted = sync_wiki.convert_destination("../recipes/llama-swap-blackwell.md#descarga-de-vram")
     assert converted is not None
     assert converted.endswith("/docs/recipes/llama-swap-blackwell.md#descarga-de-vram")
 
 
 def test_external_urls_and_anchors_are_not_touched():
     for dest in ("https://pypi.org/", "http://127.0.0.1:9393/", "#seccion", "mailto:a@b.c"):
-        assert sync_wiki.convertir_destino(dest) is None
+        assert sync_wiki.convert_destination(dest) is None
 
 
 def test_a_link_that_leaves_the_repo_is_left_as_is():
@@ -185,7 +185,7 @@ def test_a_link_that_leaves_the_repo_is_left_as_is():
     Una URL de GitHub bien formada apuntando a nada es **peor** que un enlace relativo roto: la
     primera parece correcta en una revisión y la segunda salta a la vista.
     """
-    assert sync_wiki.convertir_destino("../../../fuera-del-repo.md") is None
+    assert sync_wiki.convert_destination("../../../fuera-del-repo.md") is None
 
 
 def test_links_between_pages_point_to_pages_that_exist():

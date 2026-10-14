@@ -121,6 +121,7 @@ sección de su motivo.
 | wiki-instalacion | scripts/adoption_experiment.py | dato congelado de corpus o caso: id de una tarea del corpus congelado (ola A10a-5) |
 | wiki-instalacion | tests/test_adoption_experiment.py | dato congelado de corpus o caso: id de una tarea del corpus congelado (ola A10a-5) |
 | experimento-adopcion | scripts/adoption_experiment.py | dato congelado de corpus o caso: etiqueta de las tandas ya anotadas en el fichero congelado de ventanas excluidas (ola A10a-5) |
+| resumen-estructurado | scripts/measure_structured_summary.py | dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (copias fijas, `MANIFEST.json` y resultados ya escritos) (ola A10a-6) |
 
 ## Pendiente
 

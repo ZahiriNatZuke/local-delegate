@@ -215,6 +215,13 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
             "hecho_en_respuesta": "fact_in_answer",
             "tools_locales": "local_tools",
             "intentos": "attempts",
+            # Lo que `_claude_bench.analyze` vio en el transcript (antes `_banco_claude.analizar`).
+            "tools_diferidas": "deferred_tools",
+            "read_completo": "read_full",
+            "read_franjas": "read_ranges",
+            "volcado_bash": "bash_dump",
+            "bloqueado": "blocked",
+            "contenido_en_contexto": "content_in_context",
         },
     },
 }
@@ -276,7 +283,7 @@ COST_AGGREGATES_FILE_NAMES: tuple[str, str] = ("coste-agregados.json", "cost-agg
 QUOTA_STATUSLINE_FILE_NAMES: tuple[str, str] = ("cuota-statusline.jsonl", "quota-statusline.jsonl")
 
 #: Las sesiones y ventanas que excluyen las mediciones de adopción (en `benchmarks/`), como
-#: `(viejo, nuevo)`. Lo escriben `scripts/test_sessions.py` y `_banco_claude.anotar_ventana`, solo el
+#: `(viejo, nuevo)`. Lo escriben `scripts/test_sessions.py` y `_claude_bench.note_window`, solo el
 #: nuevo; si no existe, parten del viejo, que está congelado y no se reescribe nunca.
 EXCLUDED_WINDOWS_FILE_NAMES: tuple[str, str] = ("ventanas-excluidas.json", "excluded-windows.json")
 

@@ -60,22 +60,22 @@ def test_the_page_carries_the_marker_and_no_literal_version():
 
 def test_the_build_replaces_the_marker_with_the_pyproject_version(build_site, tmp_path):
     dest = tmp_path / "_site"
-    written = build_site.construir(dest, "9.9.9")
+    written = build_site.build(dest, "9.9.9")
 
     assert written, "el build no tocó ningún fichero"
     output = (dest / "index.html").read_text(encoding="utf-8")
     assert 'var VERSION = "9.9.9"' in output
     assert "__LD_VERSION__" not in output
-    assert build_site.comprobar(dest) == []
+    assert build_site.check(dest) == []
 
 
 def test_the_check_fails_if_a_marker_remains(build_site, tmp_path):
     """Verificado al revés: con un marcador vivo, `comprobar` tiene que denunciarlo."""
     dest = tmp_path / "_site"
-    build_site.construir(dest, "9.9.9")
+    build_site.build(dest, "9.9.9")
     (dest / "colado.html").write_text("<p>__LD_VERSION__</p>", encoding="utf-8")
 
-    pending = build_site.comprobar(dest)
+    pending = build_site.check(dest)
     assert [r.name for r in pending] == ["colado.html"]
 
 
@@ -83,7 +83,7 @@ def test_the_declared_version_comes_from_the_pyproject(build_site):
     expected = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"][
         "version"
     ]
-    assert build_site.version_declarada() == expected
+    assert build_site.declared_version() == expected
 
 
 def test_the_page_is_a_complete_document_and_does_not_depend_on_the_network():
@@ -321,7 +321,7 @@ def test_the_sources_are_not_published_but_their_artifacts_are(build_site, tmp_p
     que alguien lo haya decidido.
     """
     dest = tmp_path / "_site"
-    build_site.construir(dest, "9.9.9")
+    build_site.build(dest, "9.9.9")
     published = {p.name for p in dest.rglob("*") if p.is_file()}
     assert not [p for p in published if p.endswith(".src.html")]
     assert {

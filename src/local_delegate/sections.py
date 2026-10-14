@@ -11,7 +11,7 @@ volvía a leer el fichero. Aquí vive todo lo que no le pedimos al modelo porque
 - **trocear** un documento largo por esas secciones, sin cortar dentro de una valla de código.
 
 Todo es puro (sin red ni disco): lo prueban `tests/test_structured_summary.py` y lo usa también
-`scripts/medir_resumen_estructurado.py`, que mide con estas mismas funciones.
+`scripts/measure_structured_summary.py`, que mide con estas mismas funciones.
 """
 
 from __future__ import annotations

@@ -22,50 +22,50 @@ import sys
 import tomllib
 from pathlib import Path
 
-RAIZ = Path(__file__).resolve().parent.parent
-ORIGEN = RAIZ / "site"
-DESTINO = RAIZ / "_site"
-MARCADOR = "__LD_VERSION__"
+ROOT = Path(__file__).resolve().parent.parent
+SOURCE_DIR = ROOT / "site"
+DESTINATION = ROOT / "_site"
+MARKER = "__LD_VERSION__"
 
 # Ficheros que viven en `site/` pero NO se publican: son la fuente revisable de un artefacto
 # (hoy, el HTML del que sale `og-image.png`), no una página del sitio. Es el mismo criterio por
 # el que se publica `site/` y no `docs/`: nada llega a una URL pública sin que se haya decidido.
-SUFIJO_FUENTE = ".src.html"
+SOURCE_SUFFIX = ".src.html"
 
 
-def version_declarada() -> str:
-    datos = tomllib.loads((RAIZ / "pyproject.toml").read_text(encoding="utf-8"))
-    return datos["project"]["version"]
+def declared_version() -> str:
+    data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    return data["project"]["version"]
 
 
-def construir(destino: Path, version: str) -> list[Path]:
+def build(dest: Path, version: str) -> list[Path]:
     """Copia `site/` sustituyendo el marcador. Devuelve los ficheros escritos."""
-    if destino.exists():
-        shutil.rmtree(destino)
-    shutil.copytree(ORIGEN, destino, ignore=shutil.ignore_patterns(f"*{SUFIJO_FUENTE}"))
+    if dest.exists():
+        shutil.rmtree(dest)
+    shutil.copytree(SOURCE_DIR, dest, ignore=shutil.ignore_patterns(f"*{SOURCE_SUFFIX}"))
 
-    escritos: list[Path] = []
-    for ruta in sorted(destino.rglob("*")):
+    written: list[Path] = []
+    for path in sorted(dest.rglob("*")):
         # `.webmanifest` es JSON con otra extensión. Entra en la lista aunque hoy no traiga el
         # marcador: si algún día lo trae, `comprobar()` lo vería pendiente y tumbaría el deploy.
-        sustituibles = {".html", ".css", ".js", ".json", ".webmanifest"}
-        if not ruta.is_file() or ruta.suffix.lower() not in sustituibles:
+        replaceable = {".html", ".css", ".js", ".json", ".webmanifest"}
+        if not path.is_file() or path.suffix.lower() not in replaceable:
             continue
-        texto = ruta.read_text(encoding="utf-8")
-        if MARCADOR in texto:
+        text = path.read_text(encoding="utf-8")
+        if MARKER in text:
             # newline="\n" a propósito: lo sirve un servidor web, no lo edita nadie, y en
             # Windows `write_text` a secas lo pasaría a CRLF.
-            ruta.write_text(texto.replace(MARCADOR, version), encoding="utf-8", newline="\n")
-            escritos.append(ruta)
-    return escritos
+            path.write_text(text.replace(MARKER, version), encoding="utf-8", newline="\n")
+            written.append(path)
+    return written
 
 
-def comprobar(destino: Path) -> list[Path]:
+def check(dest: Path) -> list[Path]:
     """Ficheros del build que TODAVÍA tienen el marcador: si hay alguno, el build miente."""
     return [
         r
-        for r in sorted(destino.rglob("*"))
-        if r.is_file() and MARCADOR in r.read_text(encoding="utf-8", errors="ignore")
+        for r in sorted(dest.rglob("*"))
+        if r.is_file() and MARKER in r.read_text(encoding="utf-8", errors="ignore")
     ]
 
 
@@ -73,31 +73,31 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Construye site/ para GitHub Pages.")
     parser.add_argument("--check", action="store_true", help="solo comprueba, no escribe")
     parser.add_argument(
-        "--out", default=str(DESTINO), help=f"directorio de salida (default: {DESTINO})"
+        "--out", default=str(DESTINATION), help=f"directorio de salida (default: {DESTINATION})"
     )
     args = parser.parse_args()
 
-    destino = Path(args.out)
-    version = version_declarada()
+    dest = Path(args.out)
+    version = declared_version()
 
     if args.check:
-        if not destino.exists():
-            print(f"error: no existe {destino}; construye antes", file=sys.stderr)
+        if not dest.exists():
+            print(f"error: no existe {dest}; construye antes", file=sys.stderr)
             return 1
-        pendientes = comprobar(destino)
-        if pendientes:
-            for r in pendientes:
-                print(f"error: {r} conserva {MARCADOR}", file=sys.stderr)
+        pending = check(dest)
+        if pending:
+            for r in pending:
+                print(f"error: {r} conserva {MARKER}", file=sys.stderr)
             return 1
-        print(f"OK: sin marcadores pendientes en {destino}")
+        print(f"OK: sin marcadores pendientes en {dest}")
         return 0
 
-    escritos = construir(destino, version)
-    print(f"site -> {destino} (versión {version})")
-    for r in escritos:
-        print(f"  {r.relative_to(destino)}: {MARCADOR} -> {version}")
-    if not escritos:
-        print(f"aviso: ningún fichero traía {MARCADOR}", file=sys.stderr)
+    written = build(dest, version)
+    print(f"site -> {dest} (versión {version})")
+    for r in written:
+        print(f"  {r.relative_to(dest)}: {MARKER} -> {version}")
+    if not written:
+        print(f"aviso: ningún fichero traía {MARKER}", file=sys.stderr)
     return 0
 
 
