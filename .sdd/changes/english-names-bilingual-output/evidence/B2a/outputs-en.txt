@@ -1,0 +1,90 @@
+the summary
+
+(read server-side: 480 chars ≈ 240 Claude tokens that did not enter your context)
+the summary
+
+(read server-side: 127500 chars ≈ 63750 Claude tokens that did not enter your context)
+
+(summarized from 4 parts in 5 passes by local-delegate)
+[local-delegate: input truncated — processed 48027 of 127500 chars]
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary
+
+(read server-side: 48027 chars ≈ 24013 Claude tokens that did not enter your context)
+
+(processed in 15 chunks by local-delegate)
+{"_local_delegate": {"error": "response is not parseable as JSON", "crudo": "the summary"}}
+[local-delegate error] the diff is empty: there is nothing to write about.
+[local-delegate error] invalid style: 'weird'. Valid: 'conventional', 'plain'.
+[local-delegate error] invalid chunk: 'maybe'. Valid: 'auto', 'on', 'off'.
+File not found: <tmp>\en\missing.md
+'target' must be an absolute path: the server does not share your working directory. Received: relative.py
+[local-delegate error] Unsupported image extension: '.bmp'. Valid: ['.gif', '.jpeg', '.jpg', '.png', '.webp']
+cut
+
+[local-delegate aviso: output truncated by max_tokens]
+[local-delegate error] could not connect to the backend: network failure with test-backend-3 (ConnectError)
+[local-delegate error] gemma3-4b answered 500: boom
+local-delegate v0.35.0
+Language: en (variable; <tmp>\language.json)
+
+Backend: http://test-backend-4/v1 — DOWN: network failure with test-backend-4 (ConnectError)
+  compute: REMOTE — test-backend-4
+
+Role catalog:
+  mechanical: gemma3-4b (max_chars=20000)
+  long: gemma4-26b-a4b (max_chars=48000)
+  code: qwen36-35b-a3b (max_chars=20000)
+  vision: gemma4-12b (max_image_mb=8)
+Fallback between models: off (up to 2 hops)
+  no resident (unknown: no LLAMASWAP_CONFIG)
+  mechanical: loaded -> gemma4-26b-a4b
+  long: loaded -> qwen36-35b-a3b
+  code: loaded -> gemma4-26b-a4b
+  maximum process concurrency: 2
+Turn: no (remote backend)
+Cooldown: on (3 failures in a row, 120 s, cap 900 s)
+  no model cooling down
+
+Log (current month): <tmp>\usage-202610.jsonl
+  events: 7 (25 backend calls) — context saved: ~87903 net tokens (gross ~88003)
+  Reference pace: no samples yet
+
+Metrics web: active (http://127.0.0.1:9393)
+
+VRAM (nvidia-smi): 4680 MiB / 16311 MiB used
+System RAM: 17.3 / 31.1 GiB used
+## One
+body text here
+
+## Two
+(not summarized)
+
+[local-delegate aviso: 1 sections not summarized because of the word limit or the model]

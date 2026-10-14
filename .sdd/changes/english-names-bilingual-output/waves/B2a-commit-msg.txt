@@ -1,0 +1,29 @@
+feat(i18n): salidas de las tools MCP y local_status en español e inglés, con las cifras sin separador de miles (frente B, ola B2a)
+
+Primer PR de B2 (waves/B2-proposal.md). Lo que devuelven las tools y
+local_status sale del catálogo en el idioma del proceso servidor; el
+contrato (_local_delegate, marcadores, nombres y parámetros) no cambia.
+
+- resources/i18n/{es,en}/mcp.json (nuevos): 147 claves por idioma
+  (errores tras el prefijo, errores de entrada, recibos, troceado,
+  avisos, local_status, causas de failures, cadenas, preguntas).
+- server.py: ERROR_PREFIX y marcadores con nombre (su forma cambia en
+  B2b-1); toda cifra de salida sin separador de miles y con punto
+  decimal (REQ-026); local_status con el idioma del proceso, su origen y
+  su language.json (REQ-019) y el motivo del turno traducido; el motivo
+  de respaldo por enfriamiento se escribe como valor de máquina cooldown.
+- failures: label, detail y hint aceptan language (D6, para el panel).
+- chains, sections y questions por el catálogo; el esquema de las
+  preguntas al cliente se redacta al preguntar; sections y
+  measure_structured_summary leen las dos formas de «(sin resumir)».
+- i18n.language_report: los mismos datos de idioma para doctor y
+  local_status.
+- Guardián: la superficie mcp queda cerrada; los prompts del modelo
+  local, las descripciones de tool y los textos que se comparan tal cual
+  quedan como excepciones verbatim con su motivo.
+- tests/test_mcp_english.py: humo en inglés de las salidas MCP, cifras,
+  cabecera de idioma, motivo del turno, failures por idioma y lectura
+  dual de la medición.
+
+Suite: 2880 passed, 2 skipped con LANG en inglés y en español (xdist);
+8 controles positivos.

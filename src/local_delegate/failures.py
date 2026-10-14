@@ -41,7 +41,7 @@ from typing import NamedTuple
 
 import httpx2
 
-from . import legacy_names
+from . import i18n, legacy_names
 
 
 class FailureClass(str, Enum):
@@ -294,7 +294,7 @@ def connection_cause(event: BaseException | int, *, loopback: bool) -> Connectio
     """
     if isinstance(event, int):
         if 200 <= event < 300:
-            raise ValueError(f"un {event} no es un fallo: no tiene causa que clasificar")
+            raise ValueError(f"not_a_failure: {event}")
         # Reglas 1 y 2 para un código suelto.
         if event in _CREDENTIAL_CODES:
             return ConnectionCause.CREDENTIAL
@@ -339,24 +339,15 @@ def connection_cause(event: BaseException | int, *, loopback: bool) -> Connectio
     return ConnectionCause.UNKNOWN
 
 
-_LABELS: dict[ConnectionCause, str] = {
-    ConnectionCause.DNS: "no resuelve",
-    ConnectionCause.REFUSED: "nadie escucha",
-    ConnectionCause.NO_ROUTE: "sin ruta",
-    ConnectionCause.CONNECT_TIMEOUT: "no contesta",
-    ConnectionCause.CREDENTIAL: "sin acceso",
-    ConnectionCause.HTTP_ERROR: "responde con error",
-    ConnectionCause.NO_RESPONSE: "no responde a tiempo",
-    ConnectionCause.INVALID_RESPONSE: "respuesta no válida",
-    ConnectionCause.INVALID_URL: "URL no válida",
-    ConnectionCause.TRANSPORT: "fallo de red",
-    ConnectionCause.UNKNOWN: "fallo inesperado",
-}
+def _text(language: str | None, key: str, /, **values: object) -> str:
+    """Un texto de la causa en `language` o, sin él, en el idioma del proceso (D6: el panel pasará
+    el idioma del visitante; `local_status`, `doctor` y `probes` usan el de su proceso)."""
+    return i18n.t_lang(language or i18n.lang(), key, **values)
 
 
-def label(cause: ConnectionCause | str) -> str:
+def label(cause: ConnectionCause | str, *, language: str | None = None) -> str:
     """La etiqueta corta de la causa (la del badge). Acepta el valor en texto, como llega del JSON."""
-    return _LABELS[ConnectionCause(cause)]
+    return _text(language, f"mcp.failure.label.{ConnectionCause(cause).value}")
 
 
 def detail(
@@ -366,6 +357,7 @@ def detail(
     status: int | None = None,
     endpoint: str | None = None,
     exception: BaseException | None = None,
+    language: str | None = None,
 ) -> str:
     """El texto largo de la causa (REQ-011), con el host, el código y el endpoint que se pasen.
 
@@ -377,42 +369,41 @@ def detail(
         status = exception.response.status_code
     type_suffix = f" ({type(exception).__name__})" if exception is not None else ""
     status_suffix = f" {status}" if status is not None else ""
-
-    if cause is ConnectionCause.DNS:
-        return f"no se resuelve el nombre {host} (¿VPN o DNS?)"
-    if cause is ConnectionCause.REFUSED:
-        return f"{host} rechaza la conexión: no hay nada escuchando en ese puerto"
-    if cause is ConnectionCause.NO_ROUTE:
-        return f"no hay ruta de red hacia {host}"
-    if cause is ConnectionCause.CONNECT_TIMEOUT:
-        return f"{host} no contesta a la conexión (ruta, cortafuegos o VPN)"
-    if cause is ConnectionCause.CREDENTIAL:
-        return f"{host} responde{status_suffix}: está arriba pero rechaza la credencial"
-    if cause is ConnectionCause.HTTP_ERROR:
-        if status is None:
-            return f"{host} responde con un error HTTP"
-        return f"{host} responde HTTP {status}"
-    if cause is ConnectionCause.NO_RESPONSE:
-        return f"{host} acepta la conexión pero no responde a tiempo"
-    if cause is ConnectionCause.INVALID_RESPONSE:
-        target = f" a {endpoint}" if endpoint else ""
-        return f"{host} responde{target}, pero con un cuerpo que no se entiende"
-    if cause is ConnectionCause.INVALID_URL:
-        # Sin host, como en la tabla de REQ-011: con la URL rota, el host puede no significar nada.
-        return f"la URL del backend no es válida{type_suffix}: revisa LOCAL_DELEGATE_BASE_URL"
-    if cause is ConnectionCause.TRANSPORT:
-        return f"fallo de red con {host}{type_suffix}"
-    return f"fallo inesperado al sondear {host}{type_suffix}"
+    key = f"mcp.failure.detail.{cause.value}"
+    if cause is ConnectionCause.HTTP_ERROR and status is not None:
+        key = "mcp.failure.detail.http_error_status"
+    if cause is ConnectionCause.INVALID_RESPONSE and endpoint:
+        key = "mcp.failure.detail.invalid_response_endpoint"
+    return _text(
+        language,
+        key,
+        host=host,
+        status=status,
+        status_suffix=status_suffix,
+        endpoint=endpoint,
+        type_suffix=type_suffix,
+    )
 
 
-def hint(cause: ConnectionCause | str | None, *, origin: str, source: str, host: str) -> str:
+def hint(
+    cause: ConnectionCause | str | None,
+    *,
+    origin: str,
+    source: str,
+    host: str,
+    language: str | None = None,
+) -> str:
     """Qué hacer ante la causa (tabla de REQ-016). Depende de quién la vio y de dónde corre el backend.
 
     `origin` es el de `config.backend_origin()`: solo `"local"` cuenta como local, así que un valor
     raro nunca manda a arrancar llama-swap aquí. `source` es la de `BackendView`. Una causa `None`
     (daemon antiguo que no la manda) o que este código no conoce da la pista genérica.
     """
-    generic = f"revisa el backend en {host}"
+    return _text(language, _hint_key(cause, origin=origin, source=source), host=host)
+
+
+def _hint_key(cause: ConnectionCause | str | None, *, origin: str, source: str) -> str:
+    generic = "mcp.failure.hint.generic"
     if cause is None:
         return generic
     try:
@@ -422,28 +413,19 @@ def hint(cause: ConnectionCause | str | None, *, origin: str, source: str, host:
     local = origin == "local"
 
     if cause is ConnectionCause.REFUSED:
-        if local:
-            return "arranca llama-swap (o revisa LOCAL_DELEGATE_BASE_URL)"
-        return f"arranca llama-swap en {host} o revisa el puerto"
+        return "mcp.failure.hint.start_llamaswap" if local else "mcp.failure.hint.start_remote"
     if cause is ConnectionCause.DNS:
-        if local:
-            return "revisa el nombre en LOCAL_DELEGATE_BASE_URL"
-        return (
-            "revisa el nombre en LOCAL_DELEGATE_BASE_URL"
-            " o usa la IP (p. ej. la 100.x de la tailnet)"
-        )
+        return "mcp.failure.hint.dns_local" if local else "mcp.failure.hint.dns_remote"
     if cause in (ConnectionCause.NO_ROUTE, ConnectionCause.CONNECT_TIMEOUT):
-        if local:
-            return "revisa LOCAL_DELEGATE_BASE_URL"
-        return f"revisa la red hacia {host} (VPN, cortafuegos, Tailscale)"
+        return "mcp.failure.hint.base_url" if local else "mcp.failure.hint.network"
     if cause is ConnectionCause.CREDENTIAL:
         if source == "daemon":
-            return "la clave del daemon no vale: revisa LOCAL_DELEGATE_API_KEY en su lanzador"
-        return "exporta LOCAL_DELEGATE_API_KEY en este entorno"
+            return "mcp.failure.hint.daemon_key"
+        return "mcp.failure.hint.export_key"
     if cause in (
         ConnectionCause.HTTP_ERROR,
         ConnectionCause.INVALID_RESPONSE,
         ConnectionCause.INVALID_URL,
     ):
-        return "revisa LOCAL_DELEGATE_BASE_URL"
+        return "mcp.failure.hint.base_url"
     return generic

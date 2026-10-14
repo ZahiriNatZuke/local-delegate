@@ -68,7 +68,11 @@ CALLS = [
     },
 ]
 
-_WARNING = re.compile(r"^\s*(\[local-delegate [^\]]*\]|\((leído server-side|resumido de) .*\))\s*$")
+# Los recibos en las dos formas (B2a): una salida guardada puede estar en cualquiera de los dos idiomas.
+_WARNING = re.compile(
+    r"^\s*(\[local-delegate [^\]]*\]"
+    r"|\((leído server-side|resumido de|read server-side|summarized from) .*\))\s*$"
+)
 
 
 # --- Métrica (pura) -------------------------------------------------------------------------------
@@ -84,7 +88,7 @@ def measure(output: str, expected: list[str], max_words: int) -> dict:
     for pos, (_k, line) in enumerate(order):
         end = order[pos + 1][1] if pos + 1 < len(order) else len(lines)
         body = "\n".join(x for x in lines[line + 1 : end] if not _WARNING.match(x)).strip()
-        if body == sections.NOT_SUMMARIZED:
+        if body in sections.NOT_SUMMARIZED_FORMS:
             completed += 1
         elif len(re.findall(r"\w+", body)) >= MIN_CONTENT:
             with_content += 1
@@ -93,7 +97,9 @@ def measure(output: str, expected: list[str], max_words: int) -> dict:
     words = sum(
         len(re.findall(r"\w+", x))
         for i, x in enumerate(lines)
-        if i not in headings and not _WARNING.match(x) and x.strip() != sections.NOT_SUMMARIZED
+        if i not in headings
+        and not _WARNING.match(x)
+        and x.strip() not in sections.NOT_SUMMARIZED_FORMS
     )
     coverage = paired / len(expected) if expected else 0.0
     return {
@@ -217,7 +223,7 @@ def execute(label: str, outputs: Path) -> int:
         (outputs / f"{call['id']}.md").write_text(text, encoding="utf-8")
         row = measure(text, expected, call["max_words"])
         row["subsections"] = subsection_coverage(text, subtitles)
-        row["introduction"] = sections.INTRODUCTION in expected
+        row["introduction"] = bool(sections.INTRODUCTION_FORMS & set(expected))
         event = _usage_event(path, since)
         row.update(
             {

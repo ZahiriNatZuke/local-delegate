@@ -353,7 +353,7 @@ def test_the_tagline_uses_claude_tokens(monkeypatch, tmp_path):
     doc.write_text("palabra " * 500, encoding="utf-8")
     assert len(doc.read_text(encoding="utf-8")) == 4000  # guarda del tamaño
     text = server.local_summarize(path=str(doc))
-    assert "≈ 2,000 tokens de Claude" in text
+    assert "≈ 2000 tokens de Claude" in text
     assert "9,999" not in text
     assert text.rstrip().endswith("que no entraron a tu contexto)")
 
@@ -397,4 +397,4 @@ def test_the_tagline_uses_the_note_model_if_already_present(monkeypatch, tmp_pat
     doc = tmp_path / "notes.md"
     doc.write_text("palabra " * 500, encoding="utf-8")
     text = server.local_summarize(path=str(doc))
-    assert "≈ 1,328 tokens de Claude" in text
+    assert "≈ 1328 tokens de Claude" in text

@@ -22,6 +22,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from itertools import pairwise
 
+from . import i18n
+
 # --- Detección -------------------------------------------------------------------------------------
 
 
@@ -228,7 +230,19 @@ def match_headings(output: str, expected: list[str], *, min_content: int = 3) ->
 
 # --- Completitud ---------------------------------------------------------------------------------
 
-NOT_SUMMARIZED = "(sin resumir)"
+
+def not_summarized() -> str:
+    """El texto que va bajo el título de una sección que el modelo no resumió, en el idioma vigente."""
+    return i18n.t("mcp.sections.not_summarized")
+
+
+#: Sus dos formas, para quien lee salidas ya escritas en cualquiera de los dos idiomas (REQ-033).
+NOT_SUMMARIZED_FORMS = frozenset(
+    i18n.t_lang(language, "mcp.sections.not_summarized") for language in i18n.LANGUAGES
+)
+
+#: El marcador de aviso de esta salida. Su forma cambia en B2b-1 (REQ-010), junto con la de `server`.
+WARNING_MARKER = "[local-delegate aviso: "
 
 
 @dataclass
@@ -251,9 +265,10 @@ def complete(output: str, expected: list[str], *, truncated: bool = False) -> Co
     text = "\n".join(lines)
     emp = match_headings(text, expected)
     insertions: dict[int, list[str]] = {}
+    placeholder = not_summarized()
     for k in emp.missing:
         next_line = min((line for e, line in emp.pairs.items() if e > k), default=len(lines))
-        insertions.setdefault(next_line, []).append(f"## {expected[k]}\n{NOT_SUMMARIZED}\n")
+        insertions.setdefault(next_line, []).append(f"## {expected[k]}\n{placeholder}\n")
     if insertions:
         new_lines: list[str] = []
         for index in range(len(lines) + 1):
@@ -265,12 +280,10 @@ def complete(output: str, expected: list[str], *, truncated: bool = False) -> Co
             if index < len(lines):
                 new_lines.append(lines[index])
         text = "\n".join(new_lines).rstrip("\n")
-    not_summarized = len(emp.missing) + len(emp.empty)
-    if not_summarized:
-        text += (
-            f"\n\n[local-delegate aviso: {not_summarized} secciones sin resumir por el límite de "
-            "palabras o del modelo]"
-        )
+    left_out = len(emp.missing) + len(emp.empty)
+    if left_out:
+        notice = i18n.t("mcp.warning.sections_not_summarized", n=left_out)
+        text += f"\n\n{WARNING_MARKER}{notice}]"
     return Completion(text, len(emp.missing), len(emp.empty), len(emp.out_of_order))
 
 
@@ -280,7 +293,16 @@ def complete(output: str, expected: list[str], *, truncated: bool = False) -> Co
 # esas partes (el modelo repartía el presupuesto a partes iguales y las `###` se quedaban fuera), y
 # el texto anterior al primer título —la introducción— no estaba en la lista. Claude releía ambas.
 
-INTRODUCTION = "Introducción"
+
+def introduction() -> str:
+    """El título de la sección sintética con el texto anterior al primer título, en el idioma vigente."""
+    return i18n.t("mcp.sections.introduction")
+
+
+#: Sus dos formas, para quien lee salidas o planes ya escritos (REQ-033).
+INTRODUCTION_FORMS = frozenset(
+    i18n.t_lang(language, "mcp.sections.introduction") for language in i18n.LANGUAGES
+)
 MIN_INTRO_WORDS = 20
 
 
@@ -318,7 +340,7 @@ def sections_for_summary(text: str, structure: Structure) -> list[Section]:
     sections_: list[Section] = []
     first = top_level[0].start
     if _words_outside_headings(text[:first]) >= MIN_INTRO_WORDS:
-        sections_.append(Section(INTRODUCTION, 0, first, synthetic=True))
+        sections_.append(Section(introduction(), 0, first, synthetic=True))
     for i, heading in enumerate(top_level):
         end = top_level[i + 1].start if i + 1 < len(top_level) else len(text)
         subs = tuple(

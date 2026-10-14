@@ -512,7 +512,7 @@ def test_forbidden_phrases(env, tmp_path, monkeypatch):
     )
     image_tail_note = server._savings_feedback(
         250000,
-        "bytes imagen",
+        "image_bytes",
         event=cost.in_flight_row(
             tool="local_describe_image", source="path", path="a.png", input_unit="bytes"
         ),

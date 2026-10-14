@@ -43,6 +43,7 @@ from . import (
     cooldown,
     cost,
     failures,
+    i18n,
     json_state,
     legacy_names,
     llamaswap_api,
@@ -62,6 +63,19 @@ from .version import get_version
 # el docstring de aquel: el `--version` del CLI necesitaba el mismo dato, y `cli` importando
 # `server` cerraba un ciclo (`server.main()` importa `cli` en cuanto hay argumentos).
 _get_version = get_version
+
+#: Prefijo de contrato de los errores (no se traduce, REQ-023).
+ERROR_PREFIX = "[local-delegate error] "
+#: Marcadores de aviso, respaldo y entrada truncada. Su forma cambia en B2b-1 (REQ-010); aquí
+#: solo se nombran para que ese cambio toque una línea y no cada sitio que los escribe.
+WARNING_MARKER = sections.WARNING_MARKER
+FALLBACK_MARKER = "[local-delegate respaldo: "
+INPUT_TRUNCATED_MARKER = "[local-delegate: "
+
+
+def _machine(value: float, decimals: int | None = 0) -> str:
+    """Una cifra de una salida MCP: sin separador de miles y con punto decimal (REQ-026)."""
+    return i18n.format_number(value, decimals, machine=True)
 
 
 # `version=` declara la versión **del paquete**. Sin ella el SDK reporta la suya propia en el
@@ -390,7 +404,7 @@ def _check_allowed_dir(path: str) -> None:
     resolved = Path(path).resolve()
     if not any(resolved.is_relative_to(root) for root in config.ALLOWED_DIRS):
         roots = "; ".join(str(r) for r in config.ALLOWED_DIRS)
-        raise ValueError(f"Ruta fuera de las raíces permitidas ({roots}): {path}")
+        raise ValueError(i18n.t("mcp.input.outside_allowed", roots=roots, path=path))
 
 
 def _validate_target(target: str, overwrite: bool) -> Path:
@@ -404,20 +418,15 @@ def _validate_target(target: str, overwrite: bool) -> Path:
     eligió. Y se niega a pisar lo que ya está salvo permiso explícito.
     """
     if not target or not target.strip():
-        raise ValueError("'target' es obligatorio: la ruta absoluta del archivo a escribir.")
+        raise ValueError(i18n.t("mcp.input.target_required"))
     p = Path(target)
     if not p.is_absolute():
-        raise ValueError(
-            "'target' debe ser una ruta absoluta: el servidor no comparte tu directorio de "
-            f"trabajo. Recibido: {target}"
-        )
+        raise ValueError(i18n.t("mcp.input.target_not_absolute", target=target))
     _check_allowed_dir(target)
     if p.is_dir():
-        raise ValueError(f"'target' es un directorio, no un archivo: {target}")
+        raise ValueError(i18n.t("mcp.input.target_is_dir", target=target))
     if p.exists() and not overwrite:
-        raise ValueError(
-            f"Ya existe un archivo ahí; pasa overwrite=True si quieres pisarlo: {target}"
-        )
+        raise ValueError(i18n.t("mcp.input.target_exists", target=target))
     return p
 
 
@@ -437,10 +446,15 @@ def _write_target(p: Path, content: str, *, event: dict) -> str:
     # operativo corra el daemon.
     with open(p, "w", encoding="utf-8", newline="\n") as fh:
         fh.write(content)
-    receipt = f"[escrito] {p}\n{content.count(chr(10)):,} líneas, {len(content):,} chars"
+    receipt = i18n.t(
+        "mcp.receipt.written",
+        path=p,
+        lines=_machine(content.count("\n")),
+        chars=_machine(len(content)),
+    )
     if config.FEEDBACK_ENABLED:
         tokens = claude_tokens(len(content), kind="output", event=event)
-        receipt += f" (≈{tokens:,} tokens de Claude que no entraron a tu contexto)"
+        receipt += i18n.t("mcp.receipt.written_tokens", tokens=_machine(tokens))
     return receipt
 
 
@@ -455,12 +469,12 @@ def _read_input(text: str | None, path: str | None, max_chars: int) -> tuple[str
         _check_allowed_dir(path)
         p = Path(path)
         if not p.is_file():
-            raise ValueError(f"No existe el archivo: {path}")
+            raise ValueError(i18n.t("mcp.input.missing_file", path=path))
         content = p.read_text(encoding="utf-8", errors="replace")
     elif text is not None:
         content = text
     else:
-        raise ValueError("Debes proporcionar 'text' o 'path'.")
+        raise ValueError(i18n.t("mcp.input.text_or_path"))
     raw_len = len(content)
     truncated = raw_len > max_chars
     if truncated:
@@ -472,7 +486,10 @@ def _truncation_prefix(content: str, truncated: bool, raw_len: int) -> str:
     """Aviso visible cuando _read_input truncó la entrada (antes era un truncado silencioso)."""
     if not truncated:
         return ""
-    return f"[local-delegate: entrada truncada — procesados {len(content)} de {raw_len} chars]\n"
+    notice = i18n.t(
+        "mcp.receipt.input_truncated", processed=_machine(len(content)), total=_machine(raw_len)
+    )
+    return f"{INPUT_TRUNCATED_MARKER}{notice}]\n"
 
 
 def _append_log_line(log_path: Path, line: str) -> None:
@@ -669,15 +686,19 @@ def _describe_pace() -> str:
     """REQ-027: la velocidad de referencia de cada modelo y cuántas muestras la forman."""
     rows = _pace_references().summary()
     if not rows:
-        return "Ritmo de referencia: sin muestras todavía"
+        return i18n.t("mcp.status.pace.none")
     parts = []
     for row in rows:
         median = row["median"]
         speed = (
-            f"{median:.1f}".replace(".", ",") + " tok/s" if median is not None else "sin referencia"
+            f"{_machine(median, 1)} tok/s"
+            if median is not None
+            else i18n.t("mcp.status.pace.no_reference")
         )
-        parts.append(f"{row['model']} {speed} ({row['samples']} muestras)")
-    return "Ritmo de referencia: " + "; ".join(parts)
+        parts.append(
+            i18n.t("mcp.status.pace.model", model=row["model"], speed=speed, samples=row["samples"])
+        )
+    return i18n.t("mcp.status.pace.line", parts="; ".join(parts))
 
 
 def _log_event(
@@ -900,9 +921,7 @@ def claude_tokens(amount: int, *, kind: str, event: dict) -> int:
     Los tokens del modelo LOCAL (`tokens_in`, `tokens_out`, coste local) no pasan por aquí.
     """
     if kind not in _CLAUDE_TOKEN_KINDS:
-        raise ValueError(
-            f"tipo de conversión desconocido: {kind!r} (válidos: {_CLAUDE_TOKEN_KINDS})"
-        )
+        raise ValueError(f"unknown_conversion_kind: {kind!r}; valid: {_CLAUDE_TOKEN_KINDS}")
     if kind == "image":
         return 0
     density = event.get("density")
@@ -1078,10 +1097,12 @@ def _cooldown_error(model: str, cooling: cooldown.ActiveCooldown) -> ChatResult:
     """REQ-009: el modelo está enfriándose y no queda candidato. Falla al momento, sin timeout."""
     until = datetime.fromtimestamp(cooling.until, UTC).strftime("%H:%M:%S UTC")
     return ChatResult(
-        text=(
-            f"[local-delegate error] {model} está en enfriamiento hasta las {until} (quedan "
-            f"{cooling.remaining_s:.0f} s) tras fallar varias veces seguidas, y no hay respaldo "
-            "disponible."
+        text=ERROR_PREFIX
+        + i18n.t(
+            "mcp.error.cooldown",
+            model=model,
+            until=until,
+            remaining=_machine(cooling.remaining_s),
         ),
         ok=False,
         error="cooldown",
@@ -1102,13 +1123,19 @@ def _fallback_info(
     if first.model in (model, affinity):
         reason, error_class = first.error, _class_value(first.error_class)
     else:
-        reason, error_class = "en enfriamiento", "cooldown"
+        # Valor de máquina, como los demás motivos (decisión 6 de B2): lo viejo, «en
+        # enfriamiento», se sigue mostrando tal cual si viene del log (REQ-033).
+        reason, error_class = COOLDOWN_REASON, "cooldown"
     return {
         "respondio": attempts[-1].model,
         "en_lugar_de": model,
         "motivo": reason,
         "clase": error_class,
     }
+
+
+#: El motivo de un salto por enfriamiento (`fallback_reason` del log desde la 0.36.0).
+COOLDOWN_REASON = "cooldown"
 
 
 def _class_value(error_class: str | None) -> str | None:
@@ -1119,10 +1146,16 @@ def _class_value(error_class: str | None) -> str | None:
 def _fallback_notice(info: dict, origin: str | None = None) -> str:
     """La línea de aviso, siempre DETRÁS del contenido y separada de él."""
     extra = f", {origin}" if origin else ""
-    return (
-        f"\n\n[local-delegate aviso: respondió {info['respondio']} en lugar de "
-        f"{info['en_lugar_de']} ({info['motivo']}){extra}]"
+    reason = info["motivo"]
+    if reason == COOLDOWN_REASON:
+        reason = i18n.t("mcp.fallback.reason.cooldown")
+    notice = i18n.t(
+        "mcp.warning.answered_instead",
+        answered=info["respondio"],
+        instead=info["en_lugar_de"],
+        reason=reason,
     )
+    return f"\n\n{WARNING_MARKER}{notice}{extra}]"
 
 
 def _body_failure(
@@ -1135,17 +1168,14 @@ def _body_failure(
     """
     if error_class is failures.FailureClass.CONFIGURATION:
         return ChatResult(
-            text=(
-                f"[local-delegate error] {model} agotó `max_tokens` razonando y no llegó a "
-                "responder. Súbelo, o desactiva el razonamiento de ese modelo."
-            ),
+            text=ERROR_PREFIX + i18n.t("mcp.error.max_tokens_reasoning", model=model),
             ok=False,
             error="config_max_tokens",
             error_class=error_class,
             timings=timings,
         )
     return ChatResult(
-        text=f"[local-delegate error] respuesta sin contenido utilizable de {model}.",
+        text=ERROR_PREFIX + i18n.t("mcp.error.empty_response", model=model),
         ok=False,
         error="bad_response",
         error_class=error_class,
@@ -1315,7 +1345,7 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                 # error de siempre.
                 if attempt == 1 and local and not config.AUTOSTART:
                     answer = questions.ask(
-                        f"El backend local no responde en {config.backend_host()}. ¿Lo arranco?",
+                        i18n.t("mcp.question.start_backend.message", host=config.backend_host()),
                         questions.StartBackend,
                     )
                     if answer is not None and answer.start and autostart.ensure_backend(wait=30):
@@ -1324,9 +1354,10 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                 # backend no está corriendo (con una VPN caída, lo está).
                 cause = failures.connection_cause(e, loopback=_backend_on_loopback())
                 return ChatResult(
-                    text=(
-                        "[local-delegate error] no se pudo conectar con el backend: "
-                        + failures.detail(cause, host=config.backend_host(), exception=e)
+                    text=ERROR_PREFIX
+                    + i18n.t(
+                        "mcp.error.connect",
+                        detail=failures.detail(cause, host=config.backend_host(), exception=e),
                     ),
                     ok=False,
                     error="connect_error",
@@ -1335,9 +1366,12 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                 )
             if isinstance(e, httpx2.HTTPStatusError):
                 return ChatResult(
-                    text=(
-                        f"[local-delegate error] {model} respondió {e.response.status_code}: "
-                        f"{e.response.text[:300]}"
+                    text=ERROR_PREFIX
+                    + i18n.t(
+                        "mcp.error.http_status",
+                        model=model,
+                        status=e.response.status_code,
+                        body=e.response.text[:300],
                     ),
                     ok=False,
                     error=f"http_{e.response.status_code}",
@@ -1347,23 +1381,25 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                 # El backend SÍ aceptó la conexión: lo más probable es que llama-swap esté
                 # montando el modelo. Arrancar otro backend no arregla nada aquí.
                 return ChatResult(
-                    text=(
-                        f"[local-delegate error] {model} no respondió en "
-                        f"{config.HTTP_TIMEOUT:.0f} s. Puede que el backend aún lo esté cargando."
+                    text=ERROR_PREFIX
+                    + i18n.t(
+                        "mcp.error.read_timeout",
+                        model=model,
+                        seconds=_machine(config.HTTP_TIMEOUT),
                     ),
                     ok=False,
                     error="read_timeout",
                     error_class=error_class,
                 )
             return ChatResult(
-                text=f"[local-delegate error] fallo de conexión al endpoint ({config.BASE_URL}): {e}",
+                text=ERROR_PREFIX + i18n.t("mcp.error.endpoint", url=config.BASE_URL, error=e),
                 ok=False,
                 error="http_error",
                 error_class=error_class,
             )
         except (KeyError, IndexError, ValueError) as e:
             return ChatResult(
-                text=f"[local-delegate error] respuesta inesperada de {model}: {e}",
+                text=ERROR_PREFIX + i18n.t("mcp.error.unexpected_response", model=model, error=e),
                 ok=False,
                 error="bad_response",
                 error_class=failures.FailureClass.MODEL,
@@ -1377,7 +1413,7 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
     # alcanzaba —control positivo—. Lo que antes prometía esa línea lo garantiza ahora
     # `tests/test_post_chat_paths.py`, que sí se ejecuta. Este `raise` deja escrito ese invariante
     # (y que la función nunca cae al final con un `None` implícito).
-    raise AssertionError("_post_chat: los dos intentos terminan siempre en un return")
+    raise AssertionError("_post_chat: unreachable")
 
 
 _THINK_RE = re.compile(r"<think(?:ing)?>.*?</think(?:ing)?>", re.IGNORECASE | re.DOTALL)
@@ -1401,8 +1437,9 @@ def _strip_think(s: str) -> str:
 # que les toque en vez de quitarse el modelo una a otra. El núcleo vive en `turn.py` y la
 # relación de choques en `topology.py`; aquí solo se conectan.
 
-#: Motivo de REQ-002 cuando el backend no es de loopback (la Mac contra la PC): sin turno.
-NO_TURN_REMOTE_BACKEND = "backend remoto"
+#: Motivo de REQ-002 cuando el backend no es de loopback (la Mac contra la PC): sin turno. El valor
+#: vive en `topology` para que `topology.reason_text` lo diga en el idioma vigente (B2a).
+NO_TURN_REMOTE_BACKEND = topology.REMOTE_BACKEND
 
 
 def _refresh_topology() -> None:
@@ -2051,7 +2088,7 @@ def _first(result: ChatResult | None) -> ChatResult:
     limpio en vez de un `AssertionError`."""
     if result is None:
         return ChatResult(
-            text="[local-delegate error] la operación se quedó sin modelo al elegir.",
+            text=ERROR_PREFIX + i18n.t("mcp.error.no_model_left"),
             ok=False,
             error="no_model",
         )
@@ -2201,7 +2238,10 @@ def _with_fallback(
     tried_list = ", ".join(f"{i.model} ({i.error})" for i in tried)
     return (
         ChatResult(
-            text=f"{base.text}\n[local-delegate respaldo: también fallaron {tried_list}]",
+            text=(
+                f"{base.text}\n{FALLBACK_MARKER}"
+                f"{i18n.t('mcp.fallback.also_failed', models=tried_list)}]"
+            ),
             ok=False,
             error=base.error,
             finish_reason=base.finish_reason,
@@ -2364,8 +2404,19 @@ class _CurrentModel:
         origin = None
         if multiple:
             chunk = self.hop["chunk"]
-            origin = f"desde el trozo {chunk}" if chunk is not None else "en la reducción"
+            origin = (
+                i18n.t("mcp.warning.origin.chunk", chunk=chunk)
+                if chunk is not None
+                else i18n.t("mcp.warning.origin.reduce")
+            )
         return _fallback_notice(self.hop, origin)
+
+
+#: Unidades de la línea de ahorro: código → clave del catálogo.
+_FEEDBACK_UNITS = {
+    "chars": "mcp.receipt.unit.chars",
+    "image_bytes": "mcp.receipt.unit.image_bytes",
+}
 
 
 def _savings_feedback(chars_in: int, label: str, *, event: dict) -> str:
@@ -2375,12 +2426,15 @@ def _savings_feedback(chars_in: int, label: str, *, event: dict) -> str:
     (`claude_tokens`, REQ-035), nunca el `tokens_in` del modelo local. Una imagen dice solo los
     bytes: sin dimensiones no hay forma de saber sus tokens de Claude (REQ-038).
     """
+    unit = i18n.t(_FEEDBACK_UNITS[label])
     if cost.is_image(event):
-        return f"\n\n(leído server-side: {chars_in:,} {label} que no entraron a tu contexto)"
+        return "\n\n" + i18n.t("mcp.receipt.read_server_side", amount=_machine(chars_in), unit=unit)
     tokens = claude_tokens(chars_in, kind="text", event=event)
-    return (
-        f"\n\n(leído server-side: {chars_in:,} {label} ≈ {tokens:,} tokens de Claude "
-        "que no entraron a tu contexto)"
+    return "\n\n" + i18n.t(
+        "mcp.receipt.read_server_side_tokens",
+        amount=_machine(chars_in),
+        unit=unit,
+        tokens=_machine(tokens),
     )
 
 
@@ -2454,7 +2508,7 @@ def _chat(
     # detrás de esos avisos (resumen-por-secciones, revisión del plan B3).
     if postprocess is not None and result.ok:
         text = postprocess(text, truncated_out)
-    truncation_notice = "\n\n[local-delegate aviso: salida truncada por max_tokens]"
+    truncation_notice = f"\n\n{WARNING_MARKER}{i18n.t('mcp.warning.output_truncated')}]"
     # Con `write_to` el aviso viaja en el RECIBO, no dentro del archivo: lo que se escribe es lo
     # que generó el modelo y nada más.
     if truncated_out and write_to is None:
@@ -2799,7 +2853,7 @@ def _chat_chunked(
         error = None
         finish_reason = "length" if truncated_out else "stop"
         if truncated_out:
-            text += "\n\n[local-delegate aviso: salida truncada por max_tokens]"
+            text += f"\n\n{WARNING_MARKER}{i18n.t('mcp.warning.output_truncated')}]"
         text += current.notice(len(chunks) > 1)
 
     _log_event(
@@ -2826,7 +2880,7 @@ def _chat_chunked(
         event = cost.in_flight_row(tool=tool, source=source, path=path)
         text += _savings_feedback(len(content), "chars", event=event)
     if ok and calls > 1 and config.FEEDBACK_ENABLED:
-        text += f"\n\n(procesado en {calls} trozos por local-delegate)"
+        text += "\n\n" + i18n.t("mcp.receipt.chunked", calls=calls)
     return text
 
 
@@ -3119,12 +3173,12 @@ def _chat_map_reduce(
             # Aquí el reintento adaptativo ya partió el trozo y siguió sin caber. El error crudo
             # del backend no dice ni que el problema es el tamaño ni qué se puede tocar, así que
             # se antepone lo accionable y se conserva detrás la respuesta original.
-            detail = failed.text.removeprefix("[local-delegate error] ")
-            text = (
-                f"[local-delegate error] el contenido no cabe en el contexto de {model}, ni "
-                f"partido en trozos de {config.CHUNK_MIN_CHARS} caracteres. Sube el contexto "
-                f"del backend para ese modelo, usa uno con contexto mayor, o pasa menos "
-                f"contenido de una vez. Respuesta del backend: {detail}"
+            detail = failed.text.removeprefix(ERROR_PREFIX)
+            text = ERROR_PREFIX + i18n.t(
+                "mcp.error.context_overflow",
+                model=model,
+                chunk=config.CHUNK_MIN_CHARS,
+                detail=detail,
             )
             error = "context_overflow"
     else:
@@ -3135,10 +3189,10 @@ def _chat_map_reduce(
         # el resumen perdía parte de un trozo sin que nadie lo supiera (revisión del plan, B6).
         if truncated_calls:
             finish_reason = "length"
-            text += (
-                f"\n\n[local-delegate aviso: salida truncada por max_tokens en {truncated_calls} de "
-                f"{calls} llamadas; puede faltar parte del contenido]"
+            notice = i18n.t(
+                "mcp.warning.output_truncated_calls", truncated=truncated_calls, calls=calls
             )
+            text += f"\n\n{WARNING_MARKER}{notice}]"
         text += current.notice(len(pieces) > 1)
 
     _log_event(
@@ -3167,7 +3221,7 @@ def _chat_map_reduce(
         event = cost.in_flight_row(tool=tool, source=source, path=path)
         text += _savings_feedback(len(content), "chars", event=event)
     if ok and calls > 1 and config.FEEDBACK_ENABLED:
-        text += f"\n\n(resumido de {len(pieces)} partes en {calls} pasadas por local-delegate)"
+        text += "\n\n" + i18n.t("mcp.receipt.map_reduce", parts=len(pieces), calls=calls)
     return text
 
 
@@ -3278,16 +3332,19 @@ def _validate_image_path(path: str) -> str:
     suffix = p.suffix.lower()
     if suffix not in _IMAGE_MIME:
         raise ValueError(
-            f"Extensión de imagen no soportada: '{suffix}'. Válidas: {sorted(_IMAGE_MIME)}"
+            i18n.t("mcp.input.image_extension", suffix=suffix, valid=sorted(_IMAGE_MIME))
         )
     if not p.is_file():
-        raise ValueError(f"No existe el archivo: {path}")
+        raise ValueError(i18n.t("mcp.input.missing_file", path=path))
     size = p.stat().st_size
     max_bytes = config.MAX_IMAGE_MB * 1024 * 1024
     if size > max_bytes:
         raise ValueError(
-            f"Imagen demasiado grande: {size / 1024 / 1024:.1f} MB "
-            f"(máximo {config.MAX_IMAGE_MB} MB)"
+            i18n.t(
+                "mcp.input.image_too_large",
+                size=_machine(size / 1024 / 1024, 1),
+                max=config.MAX_IMAGE_MB,
+            )
         )
     return _IMAGE_MIME[suffix]
 
@@ -3645,14 +3702,16 @@ def local_extract(
         # El modelo devolvió algo que no es JSON, o el backend falló y `result` trae el aviso de
         # error. Degradar con la carga cruda es mejor que lanzar: quien llama ve qué pasó en vez
         # de recibir una excepción de protocolo.
-        return {"_local_delegate": {"error": "respuesta no parseable como JSON", "crudo": result}}
+        return {"_local_delegate": {"error": i18n.t("mcp.extract.not_json"), "crudo": result}}
     if not isinstance(data, dict):
-        return {"_local_delegate": {"error": "la respuesta no es un objeto JSON", "crudo": result}}
+        return {"_local_delegate": {"error": i18n.t("mcp.extract.not_object"), "crudo": result}}
 
     meta: dict = {}
     if truncated_in:
         meta["truncado"] = True
-        meta["aviso"] = f"entrada truncada — procesados {len(content)} de {raw_len} chars"
+        meta["aviso"] = i18n.t(
+            "mcp.receipt.input_truncated", processed=_machine(len(content)), total=_machine(raw_len)
+        )
     if path and config.FEEDBACK_ENABLED:
         # Tokens de Claude de la fila en curso (REQ-035), no del modelo local.
         event = cost.in_flight_row(tool="local_extract", source="path", path=path)
@@ -3738,20 +3797,20 @@ def local_delegate(
         # devuelve el error de hoy tal cual y no se toca el backend.
         valid = sorted(config.ALLOWED_MODELS)
         model_answer = questions.ask(
-            f"El modelo '{chosen}' no está en el catálogo. ¿Cuál uso? Válidos: {', '.join(valid)}",
+            i18n.t("mcp.question.choose_model.message", model=chosen, valid=", ".join(valid)),
             questions.ChooseModel,
         )
         if model_answer is None or model_answer.model not in config.ALLOWED_MODELS:
-            return f"[local-delegate error] modelo inválido '{chosen}'. Válidos: {valid}"
+            return ERROR_PREFIX + i18n.t("mcp.error.invalid_model", model=chosen, valid=valid)
         chosen = model_answer.model
     if chunk not in {"auto", "on", "off"}:
-        return f"[local-delegate error] chunk inválido: '{chunk}'. Válidos: 'auto', 'on', 'off'."
+        return ERROR_PREFIX + i18n.t("mcp.error.invalid_chunk", chunk=chunk)
     if not output_format.strip():
         # El parámetro es obligatorio, así que nunca falta — pero nadie comprobaba que trajera algo,
         # y con la cadena vacía el guardrail se queda sin formato y el modelo improvisa. Si no hay
         # quien responda, se sigue como hasta ahora.
         format_answer = questions.ask(
-            "La delegación no dice en qué formato quieres la salida. ¿Cuál uso?",
+            i18n.t("mcp.question.choose_format.message"),
             questions.ChooseFormat,
         )
         if format_answer is not None and format_answer.format.strip():
@@ -3868,12 +3927,10 @@ def local_commit_msg(
         style: 'conventional' (Conventional Commits) o 'plain'.
     """
     if style not in {"conventional", "plain"}:
-        return (
-            f"[local-delegate error] style inválido: '{style}'. Válidos: 'conventional', 'plain'."
-        )
+        return ERROR_PREFIX + i18n.t("mcp.error.invalid_style", style=style)
     content, truncated_in, raw_len = _read_input(diff, path, _NO_TRUNCATE)
     if not content.strip():
-        return "[local-delegate error] el diff está vacío: no hay nada sobre lo que redactar."
+        return ERROR_PREFIX + i18n.t("mcp.error.empty_diff")
     if style == "conventional":
         fmt = (
             "un mensaje de commit estilo Conventional Commits: primera línea "
@@ -3962,9 +4019,9 @@ def local_commit_msg(
             raw_len=raw_len,
             path=path,
         )
-        if not commit_message.startswith("[local-delegate error]"):
-            commit_message += (
-                f"\n\n(alcance: {len(files)} archivos, {len(content):,} chars leídos enteros)"
+        if not commit_message.startswith(ERROR_PREFIX):
+            commit_message += "\n\n" + i18n.t(
+                "mcp.receipt.commit_scope", files=len(files), chars=_machine(len(content))
             )
         return commit_message
 
@@ -4096,7 +4153,7 @@ def local_describe_image(
     try:
         mime = _validate_image_path(path)
     except ValueError as e:
-        return f"[local-delegate error] {e}"
+        return f"{ERROR_PREFIX}{e}"
     raw_bytes = Path(path).read_bytes()
     raw_len = len(raw_bytes)
     b64 = base64.b64encode(raw_bytes).decode("ascii")
@@ -4117,7 +4174,7 @@ def local_describe_image(
         source="path",
         raw_len=raw_len,
         path=path,
-        feedback_label="bytes imagen",
+        feedback_label="image_bytes",
         input_unit="bytes",
     )
 
@@ -4151,10 +4208,10 @@ def _vram_info() -> str | None:
     used, total = parts
     try:
         free_mb = float(total.replace("MiB", "").strip()) - float(used.replace("MiB", "").strip())
-        warn = "  ADVERTENCIA: <2 GB libres" if free_mb < 2048 else ""
+        warn = i18n.t("mcp.status.low_memory") if free_mb < 2048 else ""
     except ValueError:
         warn = ""
-    return f"{used} / {total} usados{warn}"
+    return i18n.t("mcp.status.vram", used=used, total=total, warning=warn)
 
 
 def _ram_info() -> str | None:
@@ -4202,8 +4259,10 @@ def _ram_info() -> str | None:
     except Exception:
         return None
     used_gb = total_gb - free_gb
-    warn = "  ADVERTENCIA: <2 GB libres" if free_gb < 2 else ""
-    return f"{used_gb:.1f} / {total_gb:.1f} GiB usados{warn}"
+    warn = i18n.t("mcp.status.low_memory") if free_gb < 2 else ""
+    return i18n.t(
+        "mcp.status.ram", used=_machine(used_gb, 1), total=_machine(total_gb, 1), warning=warn
+    )
 
 
 def _llamaswap_groups() -> str | None:
@@ -4297,7 +4356,7 @@ def probe_backend() -> BackendState:
             # `ValueError` y no `TypeError` a propósito: es la regla 10 del clasificador
             # (`invalid_response`), la misma que un cuerpo que no es JSON (REQ-012).
             raise ValueError(  # noqa: TRY004
-                "el cuerpo de /models no es un objeto con una lista `data`"
+                "models_body_without_data_list"
             )
         models = [
             {"id": m.get("id", "?"), "status": _model_status_value(m)}
@@ -4355,33 +4414,42 @@ def _llamaswap_running() -> str | None:
         return None
     entries = data.get("running") if isinstance(data, dict) else None
     if not entries:
-        return "ningún modelo montado"
+        return i18n.t("mcp.status.running_none")
     parts = [
         f"{e.get('model', '?')} ({e.get('state', '?')})" for e in entries if isinstance(e, dict)
     ]
-    return ", ".join(parts) if parts else "ningún modelo montado"
+    return ", ".join(parts) if parts else i18n.t("mcp.status.running_none")
 
 
 def _describe_cooldown() -> list[str]:
     """REQ-013: los modelos enfriados, lo que les queda y cuántas veces seguidas han entrado."""
     if not config.COOLDOWN:
-        return ["Enfriamiento: apagado (LOCAL_DELEGATE_COOLDOWN=0)"]
+        return [i18n.t("mcp.status.cooldown.off")]
     lines = [
-        (
-            f"Enfriamiento: encendido ({config.COOLDOWN_FAILURES} fallos seguidos, "
-            f"{config.COOLDOWN_S:.0f} s, tope {config.COOLDOWN_MAX_S:.0f} s)"
+        i18n.t(
+            "mcp.status.cooldown.on",
+            failures=config.COOLDOWN_FAILURES,
+            seconds=_machine(config.COOLDOWN_S),
+            cap=_machine(config.COOLDOWN_MAX_S),
         )
     ]
     active = cooldown.from_config().active()
     if not active:
-        lines.append("  ningún modelo enfriado")
+        lines.append(i18n.t("mcp.status.cooldown.none"))
     for model, cooldown_entry in sorted(active.items()):
         times = (
-            "1 vez seguida"
+            i18n.t("mcp.status.cooldown.times_one")
             if cooldown_entry.reentries == 1
-            else f"{cooldown_entry.reentries} veces seguidas"
+            else i18n.t("mcp.status.cooldown.times_many", n=cooldown_entry.reentries)
         )
-        lines.append(f"  {model}: quedan {cooldown_entry.remaining_s:.0f} s, ha entrado {times}")
+        lines.append(
+            i18n.t(
+                "mcp.status.cooldown.model",
+                model=model,
+                remaining=_machine(cooldown_entry.remaining_s),
+                times=times,
+            )
+        )
     return lines
 
 
@@ -4396,25 +4464,31 @@ def _clashes_by_groups(snapshot: topology.Snapshot) -> str:
         if not group.members:
             continue
         flags = [
-            "swap" if group.swap else "sin swap",
-            "exclusivo" if group.exclusive else "no exclusivo",
+            i18n.t("mcp.status.group.swap" if group.swap else "mcp.status.group.no_swap"),
+            i18n.t(
+                "mcp.status.group.exclusive"
+                if group.exclusive
+                else "mcp.status.group.not_exclusive"
+            ),
         ]
         if group.persistent:
-            flags.append("persistente")
+            flags.append(i18n.t("mcp.status.group.persistent"))
         parts.append(f"{name} [{', '.join(flags)}]: {', '.join(group.members)}")
-    return " | ".join(parts) if parts else "ningún grupo"
+    return " | ".join(parts) if parts else i18n.t("mcp.status.group.none")
 
 
 def _describe_turn() -> str:
     """REQ-008 y REQ-002: si hay turno, qué choca, qué está en uso y cuántos esperan; si no, por qué."""
     snapshot = _topology()
     if not isinstance(snapshot, topology.Snapshot):
-        return f"Turno: no ({snapshot.reason})"
+        return i18n.t("mcp.status.turn.no", reason=topology.reason_text(snapshot.reason))
     state = _turn.snapshot()
-    in_use = ", ".join(_turn.in_use()) or "nada"
-    return (
-        f"Turno: sí (choques: {_clashes_by_groups(snapshot)}; en uso: {in_use}; "
-        f"esperan: {len(state.queue)})"
+    in_use = ", ".join(_turn.in_use()) or i18n.t("mcp.status.turn.nothing")
+    return i18n.t(
+        "mcp.status.turn.yes",
+        clashes=_clashes_by_groups(snapshot),
+        in_use=in_use,
+        waiting=len(state.queue),
     )
 
 
@@ -4431,12 +4505,12 @@ _CAUSES_WITH_RESPONSE = frozenset(
 def _backend_state_text(state: BackendState) -> str:
     """El estado de la línea `Backend:` de `local_status`, con el criterio del badge (REQ-015)."""
     if state.available:
-        return "arriba"
+        return i18n.t("mcp.status.backend.up")
     if state.cause == failures.ConnectionCause.CREDENTIAL.value:
-        return f"SIN ACCESO: {state.detail}"
+        return i18n.t("mcp.status.backend.no_access", detail=state.detail)
     if state.cause in _CAUSES_WITH_RESPONSE:
-        return f"RESPONDE CON ERROR: {state.detail}"
-    return f"CAÍDO: {state.detail}"
+        return i18n.t("mcp.status.backend.error", detail=state.detail)
+    return i18n.t("mcp.status.backend.down", detail=state.detail)
 
 
 @mcp.tool(annotations=_annotations("Diagnóstico del backend local"))
@@ -4446,24 +4520,32 @@ def local_status() -> str:
     Úsala para saber qué modelos locales hay disponibles y verificar que el backend está vivo
     antes de delegar en masa, o para diagnosticar por qué una tool local_* falló.
     """
-    lines: list[str] = [f"local-delegate v{_get_version()}", ""]
+    lines: list[str] = [f"local-delegate v{_get_version()}"]
+    lines.extend(_describe_language())
+    lines.append("")
 
     state = probe_backend()
     backend_up, models = state.available, state.models
-    origin = "local (esta máquina)" if config.backend_origin() == "local" else "REMOTO"
-    lines.append(f"Backend: {config.BASE_URL} — {_backend_state_text(state)}")
-    lines.append(f"  cómputo: {origin} — {config.backend_host()}")
+    origin = i18n.t(
+        "mcp.status.origin.local"
+        if config.backend_origin() == "local"
+        else "mcp.status.origin.remote"
+    )
+    lines.append(
+        i18n.t("mcp.status.backend.line", url=config.BASE_URL, state=_backend_state_text(state))
+    )
+    lines.append(i18n.t("mcp.status.compute", origin=origin, host=config.backend_host()))
     if backend_up:
         if models:
             shown = ", ".join(
                 f"{m['id']} ({m['status']})" if m["status"] else m["id"] for m in models
             )
         else:
-            shown = "(ninguno)"
-        lines.append(f"  modelos expuestos: {shown}")
+            shown = i18n.t("mcp.status.models_none")
+        lines.append(i18n.t("mcp.status.models", models=shown))
 
     lines.append("")
-    lines.append("Catálogo de roles:")
+    lines.append(i18n.t("mcp.status.roles"))
     for role, model in (
         ("mechanical", config.MODEL_MECHANICAL),
         ("long", config.MODEL_LONG),
@@ -4472,7 +4554,7 @@ def local_status() -> str:
         lines.append(f"  {role}: {model} (max_chars={config.max_chars_for_role(role)})")
     lines.append(f"  vision: {config.MODEL_VISION} (max_image_mb={config.MAX_IMAGE_MB})")
     lines.extend(chains.describe())
-    lines.append(f"  concurrencia máxima del proceso: {config.MAX_CONCURRENT_REQUESTS}")
+    lines.append(i18n.t("mcp.status.concurrency", n=config.MAX_CONCURRENT_REQUESTS))
     lines.append(_describe_turn())
     lines.extend(_describe_cooldown())
 
@@ -4511,18 +4593,26 @@ def local_status() -> str:
             saved_tokens += acc["saved"]
             net_tokens += acc["net"]
     lines.append("")
-    lines.append(f"Log (mes actual): {current_log}")
+    lines.append(i18n.t("mcp.status.log.path", path=current_log))
     lines.append(
-        f"  eventos: {n_events} ({backend_calls} llamadas al backend) — "
         # REQ-005: el neto (lo leído server-side menos lo devuelto al contexto), como el KPI del
         # panel, y el bruto entre paréntesis. Los fallos no suman a ninguno de los dos.
-        f"contexto conservado: ~{net_tokens} tokens netos (bruto ~{saved_tokens})"
-        + (f" ({n_tests} de pruebas fuera)" if n_tests else "")
+        i18n.t(
+            "mcp.status.log.events",
+            events=n_events,
+            calls=backend_calls,
+            net=net_tokens,
+            gross=saved_tokens,
+        )
+        + (i18n.t("mcp.status.log.tests_out", n=n_tests) if n_tests else "")
     )
     for window in test_windows.load(config.LOG_DIR).open_windows():
         lines.append(
-            f"  Ventana de prueba abierta: {window.id} desde "
-            f"{test_windows.format_instant(window.start)}"
+            i18n.t(
+                "mcp.status.test_window",
+                id=window.id,
+                start=test_windows.format_instant(window.start),
+            )
         )
     # REQ-027: la velocidad normal de cada modelo. Observar no rompe la tool (REQ-028): si no se
     # puede describir, el informe sale sin esa línea.
@@ -4533,33 +4623,50 @@ def local_status() -> str:
     if config.WEB_ENABLED:
         web_up = _port_listening(config.WEB_HOST, config.WEB_PORT)
         lines.append(
-            f"Web de métricas: {'activa' if web_up else 'inactiva'} "
-            f"(http://{config.WEB_HOST}:{config.WEB_PORT})"
+            i18n.t(
+                "mcp.status.web.line",
+                state=i18n.t("mcp.status.web.active" if web_up else "mcp.status.web.inactive"),
+                host=config.WEB_HOST,
+                port=config.WEB_PORT,
+            )
         )
     else:
-        lines.append("Web de métricas: deshabilitada (LOCAL_DELEGATE_WEB=0)")
+        lines.append(i18n.t("mcp.status.web.disabled"))
 
     vram = _vram_info()
     if vram:
         lines.append("")
-        lines.append(f"VRAM (nvidia-smi): {vram}")
+        lines.append(i18n.t("mcp.status.vram_line", info=vram))
 
     ram = _ram_info()
     if ram:
-        lines.append(f"RAM de sistema: {ram}")
+        lines.append(i18n.t("mcp.status.ram_line", info=ram))
 
     # REQ-013: `/running` solo si `/models` respondió. Con el backend inalcanzable, un plazo de
     # conexión y no dos.
     running = _llamaswap_running() if backend_up else None
     if running:
-        lines.append(f"llama-swap /running: {running}")
+        lines.append(i18n.t("mcp.status.running", running=running))
 
     groups = _llamaswap_groups()
     if groups:
-        lines.append(f"llama-swap groups activos (LLAMASWAP_CONFIG): {groups}")
+        lines.append(i18n.t("mcp.status.groups", groups=groups))
 
     lines.extend(_describe_deprecated_names())
     return "\n".join(lines)
+
+
+def _describe_language() -> list[str]:
+    """REQ-019: el idioma de ESTE proceso servidor (el daemon corre sin la shell del usuario), su
+    origen y el `language.json`, con sus avisos. Los mismos datos que la cabecera de `doctor`."""
+    report = i18n.language_report()
+    lines = [
+        i18n.t("mcp.status.language.line", lang=report.lang, source=report.source, path=report.path)
+    ]
+    lines.extend(i18n.t("mcp.status.language.warning", detail=d) for d in report.warnings)
+    if report.follow_system:
+        lines.append(i18n.t("mcp.status.language.follow_system", path=report.path))
+    return lines
 
 
 def _describe_deprecated_names() -> list[str]:
@@ -4573,7 +4680,7 @@ def _describe_deprecated_names() -> list[str]:
     entries = [e for e in map(deprecations.find, sorted(config.DEPRECATED_SEEN)) if e is not None]
     if not entries:
         return []
-    return ["", "Nombres obsoletos leídos por este proceso:"] + [
+    return ["", i18n.t("mcp.status.deprecated")] + [
         f"  {deprecation_notices.warning_text(e)}" for e in entries
     ]
 

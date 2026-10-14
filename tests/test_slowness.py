@@ -490,4 +490,4 @@ def test_local_status_shows_reference_and_samples(tmp_path, monkeypatch):
     text = server.local_status()
 
     assert "Ritmo de referencia" in text
-    assert "gemma4-26b-a4b 40,5 tok/s (20 muestras)" in text
+    assert "gemma4-26b-a4b 40.5 tok/s (20 muestras)" in text

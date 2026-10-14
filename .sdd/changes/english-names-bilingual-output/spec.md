@@ -414,13 +414,22 @@ El orden es obligatorio: el frente A antes que el B (brief, «Desired outcome»;
   ola posterior, entre ambas el panel muestra los resúmenes en inglés, y se acepta.
 - **REQ-028 — El modelo local responde en el idioma elegido.** `local_summarize`,
   `local_lint_summary`, `local_explain_code` y `local_describe_image` piden al modelo responder en el
-  idioma del proceso servidor, y lo hacen con independencia del idioma del documento. **No entran**,
-  y conservan su comportamiento actual: `local_commit_msg` (idioma predominante del diff, o el de
-  `LOCAL_DELEGATE_COMMIT_LANGUAGE` si está puesta: el idioma del commit lo decide el repo, no la
-  interfaz), `local_translate` (manda `target_lang`), `local_extract` y `local_classify` (devuelven
-  valores y etiquetas literales de la entrada), `local_boilerplate` (código) y `local_delegate` (el
-  prompt lo escribe quien llama). Lo comprueban un test de que el prompt de `local_commit_msg` no
-  cambia con el idioma vigente y una muestra en vivo dentro de una ventana de prueba: al menos 5
+  idioma del proceso servidor, y lo hacen con independencia del idioma del documento. **No entran**:
+  `local_commit_msg` (regla propia, abajo), `local_translate` (manda `target_lang`), `local_extract`
+  y `local_classify` (devuelven valores y etiquetas literales de la entrada), `local_boilerplate`
+  (código) y `local_delegate` (el prompt lo escribe quien llama).
+
+  **`local_commit_msg` (enmienda del 2026-10-14, decisión del usuario tras la revisión
+  `evidence/local-tools-review/report.md`):** el idioma del mensaje es, por orden,
+  `LOCAL_DELEGATE_COMMIT_LANGUAGE` si está puesta, y si no el **idioma vigente del producto**
+  (REQ-018/REQ-019). La regla anterior, «el idioma predominante de los textos del diff», queda solo
+  como valor explícito de la variable, `diff` (sin distinguir mayúsculas), que reproduce el prompt de
+  antes. Motivo: en repos bilingües el modelo elegía uno u otro idioma (reproducido). Lo comprueban
+  tests de prompt: sin la variable, con idioma vigente `es` el prompt pide español y con `en`
+  inglés; con la variable puesta manda ella; con `diff`, el prompt de antes; y el prompt de
+  `commit_msg` no cambia con `LOCAL_DELEGATE_OUTPUT_LANGUAGE`.
+
+  Lo comprueban, para las cuatro tools, tests de prompt y una muestra en vivo dentro de una ventana de prueba: al menos 5
   documentos por tool e idioma, todos en el otro idioma, y al menos el 90 % de las respuestas en el
   idioma vigente. El juez es un detector de idioma versionado (no el ojo), y la muestra se guarda en
   la verificación con el id de la ventana. El detector concreto y el conjunto de documentos los fija
@@ -434,16 +443,19 @@ El orden es obligatorio: el frente A antes que el B (brief, «Desired outcome»;
     de REQ-018/REQ-019. Vacía (el valor por defecto) = el comportamiento de arriba.
   - No cambia los textos de interfaz (recibos, errores, `local_status`, hooks, panel): esos siguen
     a `LOCAL_DELEGATE_LANG`. Tampoco cambia `local_commit_msg` (manda `COMMIT_LANGUAGE` o el idioma
-    del diff), `local_translate` (`target_lang`) ni las tools excluidas arriba.
+    vigente del producto, con `diff` para la regla del diff), `local_translate` (`target_lang`) ni
+    las tools excluidas arriba.
   - Valor válido: texto de 1 a 40 caracteres tras recortar espacios, sin saltos de línea ni
     caracteres de control. Un valor no válido se ignora (se sigue al idioma vigente) y se avisa.
   - En el troceado (map-reduce), la instrucción va en cada paso, no solo en el de reducción.
   - `doctor` y `local_status` muestran el idioma de respuesta efectivo y su origen («variable de
     salida» o el origen de REQ-019).
   - Se comprueba con tests del prompt por tool (la variable puesta aparece en el prompt; vacía o no
-    válida, el prompt es el del idioma vigente; `local_commit_msg` no cambia con ella) y una muestra
-    en vivo con `fr`: al menos 5 documentos por tool, en inglés o español, y al menos el 90 % de las
-    respuestas en francés según el mismo detector.
+    válida, el prompt es el del idioma vigente; `local_commit_msg` no cambia con ella; `fr` y
+    `português` como valores de prueba) y una muestra en vivo con la variable puesta al idioma
+    **contrario** al del producto (producto `es` + variable `en`, y al revés; enmienda del
+    2026-10-14: el detector solo juzga `es`/`en`): al menos 5 documentos por tool, y al menos el
+    90 % de las respuestas en el idioma de la variable según el mismo detector.
 - **REQ-029 — Skill, bloque gestionado y catálogo de los subagentes en el idioma vigente.** `install`
   genera en el idioma vigente de la sesión en que corre:
   - la skill (con el nombre de REQ-012) y el bloque gestionado de `CLAUDE.md`/`AGENTS.md`;

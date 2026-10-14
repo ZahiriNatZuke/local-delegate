@@ -1,0 +1,148 @@
+{
+ "unique_findings": 792,
+ "occurrences_by_category": {
+  "file_name": 1,
+  "identifier": 8,
+  "js_identifier": 2,
+  "js_string": 11,
+  "json_value": 64,
+  "string_key": 549,
+  "string_value": 522
+ },
+ "unique_findings_by_category": {
+  "file_name": 1,
+  "identifier": 8,
+  "js_identifier": 2,
+  "js_string": 9,
+  "json_value": 55,
+  "string_key": 384,
+  "string_value": 333
+ },
+ "unique_spanish_names": 393,
+ "outside_exceptions": 0,
+ "unclassified_words": {},
+ "files_with_findings": 65,
+ "top_files": [
+  [
+   "src/local_delegate/legacy_names.py",
+   294
+  ],
+  [
+   "scripts/build_corpus.py",
+   72
+  ],
+  [
+   "tests/test_analyze_benchmark.py",
+   39
+  ],
+  [
+   "tests/test_corpus.py",
+   37
+  ],
+  [
+   "src/local_delegate/resources/i18n/es/cli.json",
+   35
+  ],
+  [
+   "tests/test_recompute_legacy.py",
+   24
+  ],
+  [
+   "tests/test_measure_cooldown.py",
+   18
+  ],
+  [
+   "tests/test_detect_spanish_names.py",
+   16
+  ],
+  [
+   "src/local_delegate/server.py",
+   13
+  ],
+  [
+   "src/local_delegate/resources/i18n/es/mcp.json",
+   13
+  ],
+  [
+   "tests/test_adoption_experiment.py",
+   12
+  ],
+  [
+   "tests/test_benchmark.py",
+   11
+  ],
+  [
+   "tests/test_cli_renamed_names.py",
+   11
+  ],
+  [
+   "src/local_delegate/web/metrics.py",
+   11
+  ],
+  [
+   "src/local_delegate/resources/hooks/hook_common.py",
+   10
+  ],
+  [
+   "tests/test_fallback.py",
+   10
+  ],
+  [
+   "tests/test_metrics.py",
+   9
+  ],
+  [
+   "tests/test_scripts_english.py",
+   9
+  ],
+  [
+   "tests/test_pair_sheet.py",
+   8
+  ],
+  [
+   "src/local_delegate/deprecations.py",
+   7
+  ],
+  [
+   "tests/test_affinity.py",
+   7
+  ],
+  [
+   "tests/test_hook_legacy_names.py",
+   7
+  ],
+  [
+   "tests/test_measure_adoption.py",
+   7
+  ],
+  [
+   "tests/test_affinity_batch.py",
+   6
+  ],
+  [
+   "tests/test_cooldown.py",
+   6
+  ],
+  [
+   "scripts/analyze_benchmark.py",
+   6
+  ],
+  [
+   "tests/test_core.py",
+   5
+  ],
+  [
+   "tests/test_density.py",
+   5
+  ],
+  [
+   "tests/test_f1_conformance.py",
+   5
+  ],
+  [
+   "scripts/adoption_experiment.py",
+   5
+  ]
+ ],
+ "findings": []
+}

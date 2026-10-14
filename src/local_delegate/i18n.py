@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import functools
 import json
+from dataclasses import dataclass
 from importlib.resources import files
 
 from . import config
@@ -71,6 +72,53 @@ def t_lang(language: str, key: str, /, **values: object) -> str:
 def t(key: str, /, **values: object) -> str:
     """El texto de `key` en el idioma vigente del proceso."""
     return t_lang(lang(), key, **values)
+
+
+#: Orígenes del idioma (REQ-018) → su rótulo del catálogo común (B0a).
+_LANGUAGE_SOURCES = {
+    "variable": "common.language.source.variable",
+    "preference": "common.language.source.preference",
+    "system": "common.language.source.system",
+    "fallback": "common.language.source.fallback",
+}
+#: Avisos de la regla del idioma (`hook_common.resolve_language`) → su texto y su marcador.
+_LANGUAGE_WARNINGS = {
+    "invalid_variable": ("common.language.warning.invalid_variable", "value"),
+    "invalid_preference": ("common.language.warning.invalid_preference", "path"),
+    "unreadable_preference": ("common.language.warning.unreadable_preference", "path"),
+}
+
+
+@dataclass(frozen=True)
+class LanguageReport:
+    """El idioma de este proceso tal como lo cuentan `doctor` y `local_status` (REQ-019, D11).
+
+    Los datos son los mismos para las dos superficies; cada una los formatea con sus claves.
+    """
+
+    lang: str
+    source: str  # rótulo del origen, ya en el idioma vigente
+    path: str  # el `language.json` que se leyó o se leería
+    warnings: tuple[str, ...]  # avisos ya redactados
+    follow_system: bool  # lo guardado vino de la variable: decir cómo volver a seguir al sistema
+
+
+def language_report() -> LanguageReport:
+    resolution = current()
+    warnings = []
+    for code, detail in resolution.warnings:
+        if code in _LANGUAGE_WARNINGS:
+            text_key, field_name = _LANGUAGE_WARNINGS[code]
+            warnings.append(t(text_key, **{field_name: detail}))
+    return LanguageReport(
+        lang=resolution.lang,
+        source=t(_LANGUAGE_SOURCES[resolution.source]),
+        path=str(resolution.pref_path),
+        warnings=tuple(warnings),
+        follow_system=(
+            resolution.source == "preference" and resolution.stored_source == "variable"
+        ),
+    )
 
 
 #: Separadores de miles y decimal por idioma (REQ-026): `20.027` y `1,5` en español, `20,027` y

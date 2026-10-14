@@ -97,6 +97,9 @@ UNREADABLE = "ilegible"
 MATRIX = "matrix"
 TWO_SYNTAXES = "dos sintaxis"
 FAILS_LOAD_GO = "no cumple load.go"
+#: El de `server` cuando el backend no es de loopback (la Mac contra la PC): tampoco hay turno. Vive
+#: aquí para que `reason_text` lo diga igual desde `server` y desde `chains` (B2a).
+REMOTE_BACKEND = "backend remoto"
 _REASON_KEYS = {
     NO_CONFIG: "cli.topology.reason.no_config",
     NO_PYYAML: "cli.topology.reason.no_pyyaml",
@@ -104,6 +107,7 @@ _REASON_KEYS = {
     MATRIX: "cli.topology.reason.matrix",
     TWO_SYNTAXES: "cli.topology.reason.two_syntaxes",
     FAILS_LOAD_GO: "cli.topology.reason.fails_load_go",
+    REMOTE_BACKEND: "cli.topology.reason.remote_backend",
 }
 
 

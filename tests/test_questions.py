@@ -359,10 +359,29 @@ def test_a_decline_does_not_slip_through_as_acceptance():
     ids=["StartBackend", "ChooseModel", "ChooseFormat"],
 )
 def test_the_elicitation_schemas_keep_their_fields_and_visible_titles(form, expected):
-    """Lo que el cliente MCP enseña al usuario sale de `model_json_schema()`: los campos
-    (`start`, `model`, `format`) son los que lee el servidor, y los `title` son los textos en
-    español que conservó A8a-2 con `Field(title=…)` y `ConfigDict(title=…)` al renombrar las
-    clases. Control: sin `Field(title="Modelo")` el título visible pasa a «Model» y este test
-    falla; antes solo lo veía el cotejo de `evidence/A8a-2/schemas-check.txt`.
+    """Lo que el cliente MCP enseña al usuario es el esquema que manda `ask`
+    (`questions._localized_schema`): los campos (`start`, `model`, `format`) son los que lee el
+    servidor, y en español los `title` y la `description` son, byte a byte, los de antes de B2a.
+    Desde B2a salen del catálogo al preguntar, no de la clase. Control: quitar la sustitución del
+    título del campo deja el de la clase (`start`) y este test falla.
     """
-    assert form.model_json_schema() == expected
+    assert questions._localized_schema(form) == expected
+
+
+@pytest.mark.parametrize(
+    "form", [questions.StartBackend, questions.ChooseModel, questions.ChooseFormat]
+)
+def test_the_elicitation_schemas_follow_the_current_language(form, monkeypatch):
+    """B2a: en inglés, ni el título, ni la descripción, ni el campo traen el texto español."""
+    from local_delegate import i18n
+
+    spanish = questions._localized_schema(form)
+    monkeypatch.setenv("LOCAL_DELEGATE_LANG", "en")
+    i18n.reset()
+    english = questions._localized_schema(form)
+    assert english["title"] != spanish["title"]
+    assert english["description"] != spanish["description"]
+    (field_es,) = spanish["properties"].values()
+    (field_en,) = english["properties"].values()
+    assert field_en["title"] != field_es["title"]
+    assert english["required"] == spanish["required"]

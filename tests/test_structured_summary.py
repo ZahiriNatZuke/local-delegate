@@ -618,7 +618,7 @@ def test_daemon_summary_sections_carry_their_subsections():
 def test_the_introduction_goes_in_if_it_has_content():
     text = (SOURCES / "integration-install.md").read_text(encoding="utf-8")
     plan = sections.sections_for_summary(text, sections.detect(text))
-    assert plan[0].heading == sections.INTRODUCTION and plan[0].synthetic
+    assert plan[0].heading == sections.introduction() and plan[0].synthetic
     assert plan[0].start == 0 and plan[1].start == plan[0].end
     short = "# Título\n\nUna línea.\n\n## A\n\ntexto\n\n## B\n\ntexto\n"
     assert sections.sections_for_summary(short, sections.detect(short))[0].heading == "A"

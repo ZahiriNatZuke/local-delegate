@@ -201,6 +201,324 @@
       "text": "<!DOCTYPE html>\n<html lang=\"__LANG__\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>__TITLE__</title>\n<style>\nbody{font-family:system-ui,sans-serif;max-width:1100px;margin:0 auto;padding:1rem 1.5rem 6rem;color:#1b1b1b;line-height:1.45}\nheader.bar{position:sticky;top:0;background:#fff;border-bottom:2px solid #ccc;padding:.5rem 0;z-index:5;display:flex;gap:1rem;align-items:center;flex-wrap:wrap}\n#faltan{font-weight:700}\nbutton{font:inherit;padding:.4rem .8rem;cursor:pointer}\nsection.pair{border:1px solid #bbb;border-radius:6px;margin:1.5rem 0;padding:.5rem 1rem 1rem}\nsection.pair.complete{border-color:#2e7d32}\npre{font-family:ui-monospace,Consolas,monospace;font-size:.88rem;white-space:pre-wrap;word-break:break-word;background:#f6f6f6;border:1px solid #ddd;padding:.6rem;margin:.3rem 0}\npre.diff{max-height:28rem;overflow:auto;white-space:pre}\n.messages{display:grid;grid-template-columns:1fr 1fr;gap:1rem}\n@media (max-width:800px){.messages{grid-template-columns:1fr}}\nfieldset{border:1px solid #ccc;margin:.4rem 0;padding:.3rem .6rem}\nlegend{font-size:.9rem;color:#444}\nlabel{margin-right:1rem;white-space:nowrap}\nfieldset.pref{margin-top:.8rem;border-color:#555}\nfieldset.pref:disabled{opacity:.5}\ndetails.optional_q>summary{cursor:pointer;color:#555}\ntextarea{width:100%;height:7rem;font-family:ui-monospace,Consolas,monospace;font-size:.8rem}\ndl dt{font-weight:700}\n</style>\n</head>\n<body>\n<h1>__TITLE__</h1>\n<p>__INTRO__</p>\n<dl>__INSTRUCTIONS__</dl>\n<header class=\"bar\">\n<span id=\"faltan\">__MISSING_SOME__</span>\n<button type=\"button\" id=\"descargar\">__DOWNLOAD__</button>\n<button type=\"button\" id=\"parar\">__CAN_I_STOP__</button>\n<span id=\"aviso\" role=\"status\"></span>\n</header>\n<div id=\"pares\"></div>\n<h2>__TEXT_ANSWERS__</h2>\n<p>__COPY_HINT__</p>\n<textarea id=\"copia\" readonly aria-label=\"__JSON_LABEL__\"></textarea>\n<script type=\"application/json\" id=\"datos\">__DATA__</script>\n<script type=\"application/json\" id=\"textos\">__TEXTS__</script>\n<script id=\"logica\">\nconst QUESTION_FIELDS = {\n  made_up: [\"s\", \"n\"],\n  principal: [\"s\", \"p\", \"n\"],\n  specific: [\"s\", \"n\"],\n};\nfunction requiredFields(data) {\n  const fields = [\"made_up.A\", \"made_up.B\"];\n  for (const q of [\"principal\", \"specific\"]) {\n    if (!data.optional.includes(q)) fields.push(q + \".A\", q + \".B\");\n  }\n  fields.push(\"preference\");\n  return fields;\n}\nfunction missing(state, data) {\n  const isMissing = [];\n  for (const pair of data.pairs) {\n    const e = state[pair.num] || {};\n    for (const field of requiredFields(data)) {\n      if (!e[field]) isMissing.push([pair.num, field]);\n    }\n  }\n  return isMissing;\n}\nfunction exportar(state, data, partial) {\n  const answers = {};\n  for (const pair of data.pairs) {\n    const e = state[pair.num] || {};\n    const r = {};\n    for (const q of Object.keys(QUESTION_FIELDS)) {\n      for (const side of [\"A\", \"B\"]) {\n        const v = e[q + \".\" + side];\n        if (v) {\n          r[q] = r[q] || {};\n          r[q][side] = v;\n        }\n      }\n    }\n    if (e.preference) r.preference = e.preference;\n    if (Object.keys(r).length) answers[pair.num] = r;\n  }\n  return { sheet: data.n, sha256: data.id, partial: !!partial, answers };\n}\n</script>\n<script id=\"interfaz\">\n(function () {\n  const data = JSON.parse(document.getElementById(\"datos\").textContent);\n  const T = JSON.parse(document.getElementById(\"textos\").textContent);\n  const fmt = (text, values) => text.replace(/\\{(\\w+)\\}/g, (all, name) => (name in values ? values[name] : all));\n  const key = \"commit-sheet-\" + data.id.slice(0, 16);\n  let state = {};\n  try { state = JSON.parse(localStorage.getItem(key) || \"{}\"); } catch (e) { state = {}; }\n  const NAMES = { s: T.yes, n: T.no, p: T.partial };\n  const root = document.getElementById(\"pares\");\n  function radios(pair, field, values, labels) {\n    const out = [];\n    for (const v of values) {\n      const id = \"r-\" + pair.num + \"-\" + field + \"-\" + v;\n      out.push('<label for=\"' + id + '\"><input type=\"radio\" id=\"' + id + '\" name=\"' + pair.num + \"-\" + field + '\" value=\"' + v + '\" data-pair=\"' + pair.num + '\" data-field=\"' + field + '\"> ' + labels[v] + \"</label>\");\n    }\n    return out.join(\"\");\n  }\n  function question(pair, q, side, text) {\n    return '<fieldset><legend>' + text + \"</legend>\" + radios(pair, q + \".\" + side, QUESTION_FIELDS[q], NAMES) + \"</fieldset>\";\n  }\n  function message(pair, side) {\n    const opc = (q) => data.optional.includes(q);\n    const principal = question(pair, \"principal\", side, T.ask_principal);\n    const specific = question(pair, \"specific\", side, T.ask_specific);\n    const extras = (opc(\"principal\") || opc(\"specific\"))\n      ? '<details class=\"optional_q\"><summary>' + T.if_you_like + \"</summary>\" + (opc(\"principal\") ? principal : \"\") + (opc(\"specific\") ? specific : \"\") + \"</details>\"\n      : \"\";\n    return '<div class=\"msg\"><h3>' + fmt(T.message, { side }) + \"</h3><pre>\" + esc(pair[side]) + \"</pre>\" +\n      question(pair, \"made_up\", side, T.ask_made_up) +\n      (opc(\"principal\") ? \"\" : principal) + (opc(\"specific\") ? \"\" : specific) + extras + \"</div>\";\n  }\n  function esc(t) { return t.replace(/&/g, \"&amp;\").replace(/</g, \"&lt;\").replace(/>/g, \"&gt;\"); }\n  for (const pair of data.pairs) {\n    const sec = document.createElement(\"section\");\n    sec.className = \"pair\";\n    sec.id = \"par-\" + pair.num;\n    sec.innerHTML = \"<h2>\" + fmt(T.pair, { num: pair.num }) + \"</h2>\" +\n      \"<details><summary>\" + fmt(T.diff, { files: pair.files, more: pair.more, fewer: pair.fewer }) + \"</summary><pre class=\\\"diff\\\">\" + esc(pair.diff) + \"</pre></details>\" +\n      '<div class=\"messages\">' + message(pair, \"A\") + message(pair, \"B\") + \"</div>\" +\n      '<fieldset class=\"pref\" id=\"pref-' + pair.num + '\"><legend>' + T.which + \"</legend>\" +\n      radios(pair, \"preference\", [\"A\", \"B\", \"=\"], { A: fmt(T.message, { side: \"A\" }), B: fmt(T.message, { side: \"B\" }), \"=\": T.tie }) + \"</fieldset>\";\n    root.appendChild(sec);\n  }\n  function refresh() {\n    for (const input of document.querySelectorAll(\"input[type=radio]\")) {\n      const e = state[input.dataset.pair] || {};\n      input.checked = e[input.dataset.field] === input.value;\n    }\n    for (const pair of data.pairs) {\n      const e = state[pair.num] || {};\n      const listo = !!(e[\"made_up.A\"] && e[\"made_up.B\"]);\n      document.getElementById(\"pref-\" + pair.num).disabled = !listo;\n      const isMissing = missing({ [pair.num]: e }, { ...data, pairs: [pair] });\n      document.getElementById(\"par-\" + pair.num).classList.toggle(\"complete\", isMissing.length === 0);\n    }\n    const n = missing(state, data).length;\n    document.getElementById(\"faltan\").textContent = n === 0 ? T.none_missing : fmt(T.missing, { n });\n    document.getElementById(\"copia\").value = JSON.stringify(exportar(state, data, n > 0), null, 1);\n  }\n  document.addEventListener(\"change\", (ev) => {\n    const t = ev.target;\n    if (!t.dataset || !t.dataset.pair) return;\n    state[t.dataset.pair] = state[t.dataset.pair] || {};\n    state[t.dataset.pair][t.dataset.field] = t.value;\n    try { localStorage.setItem(key, JSON.stringify(state)); } catch (e) { /* sin almacenamiento: queda el cuadro de texto */ }\n    refresh();\n  });\n  function download(name, content) {\n    const a = document.createElement(\"a\");\n    a.href = URL.createObjectURL(new Blob([JSON.stringify(content, null, 1)], { type: \"application/json\" }));\n    a.download = name;\n    document.body.appendChild(a);\n    a.click();\n    a.remove();\n  }\n  document.getElementById(\"descargar\").addEventListener(\"click\", () => {\n    const n = missing(state, data).length;\n    download(\"answers-\" + data.n + \".json\", exportar(state, data, n > 0));\n    document.getElementById(\"aviso\").textContent = n > 0 ? fmt(T.downloaded_partial, { n }) : T.downloaded;\n  });\n  document.getElementById(\"parar\").addEventListener(\"click\", () => {\n    download(\"answers-partial-\" + data.n + \".json\", exportar(state, data, true));\n    document.getElementById(\"aviso\").textContent = T.downloaded_stop;\n  });\n  refresh();\n})();\n</script>\n</body>\n</html>\n",
       "kind": "verbatim",
       "reason": "plantilla HTML y JavaScript de la hoja de commit: los textos para la persona entran por marcadores (`__TITLE__`…) y por `T.<nombre>` desde el catálogo (`cli.script.pair_sheet.page.*`); lo que queda son etiquetas, CSS y código"
+    },
+    {
+      "file": "src/local_delegate/failures.py",
+      "text": "upstream command exited prematurely",
+      "kind": "verbatim",
+      "reason": "frase del cuerpo de error de llama-swap (v255) que `failures` busca tal cual para clasificar un fallo de capacidad"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Local Delegate",
+      "kind": "verbatim",
+      "reason": "descripción de la tool o del servidor que ve el cliente MCP: REQ-027 la quiere solo en inglés y fuera del catálogo, sin depender del idioma; B2b-1 la pasa a inglés"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Delega tareas mecánicas de texto e imagen a un modelo local por un endpoint compatible con OpenAI, para conservar cuota de la suscripción.",
+      "kind": "verbatim",
+      "reason": "descripción de la tool o del servidor que ve el cliente MCP: REQ-027 la quiere solo en inglés y fuera del catálogo, sin depender del idioma; B2b-1 la pasa a inglés"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "(raíz)",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "{} agrupados por directorio porque la lista completa no cabía\n{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "context window",
+      "kind": "verbatim",
+      "reason": "marca de desborde de contexto que se busca tal cual en el texto de error del backend (`_is_context_overflow`)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "prompt is too long",
+      "kind": "verbatim",
+      "reason": "marca de desborde de contexto que se busca tal cual en el texto de error del backend (`_is_context_overflow`)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "too long",
+      "kind": "verbatim",
+      "reason": "marca de desborde de contexto que se busca tal cual en el texto de error del backend (`_is_context_overflow`)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "too large",
+      "kind": "verbatim",
+      "reason": "marca de desborde de contexto que se busca tal cual en el texto de error del backend (`_is_context_overflow`)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "too many tokens",
+      "kind": "verbatim",
+      "reason": "marca de desborde de contexto que se busca tal cual en el texto de error del backend (`_is_context_overflow`)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "un ÚNICO resumen global en prosa clara, sin repetir ni enumerar los fragmentos",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Estos son resúmenes parciales y EN ORDEN de un mismo documento. Redacta un único resumen global:\n\n{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "español",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "inglés",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "francés",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "portugués",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "alemán",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Escribe el mensaje de commit entero (primera línea y cuerpo) en el idioma predominante de los textos del diff (comentarios, documentación y mensajes).",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Escribe el mensaje de commit entero (primera línea y cuerpo) en {}.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": " Máximo {} palabras.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: {}.{} Nada fuera del formato.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "un resumen de los problemas agrupados por archivo, con el conteo por tipo de error/regla y los más relevantes primero",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "la traducción fiel al {}, conservando el formato y sin comentarios",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "un resumen que sigue la estructura del documento: por cada sección de la lista, en ese orden, una línea '## ' con el título tal cual y debajo lo que dice, en las palabras que indica la lista; si la sección trae subsecciones, nombra cada una en negrita al empezar la frase que la resume",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": " Los títulos no cuentan en el límite de palabras; si no alcanzan para todas, deja solo el título en las últimas.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": " Prioriza este aspecto: «{}». Conserva literales los datos concretos que tengan que ver con él (cifras, nombres, decisiones).",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": " (el texto antes de la primera sección)",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "- {}{} (unas {} palabras)",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "El fragmento empieza a mitad de la sección «{}»: resume primero ese principio en 1 o 2 frases, sin línea de título; después, las secciones de la lista.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Secciones, en orden:\n{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Resume el siguiente contenido:\n\n{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "un resumen en prosa clara",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Este fragmento continúa la sección «{}». Resume solo este fragmento en 1 a 3 frases, sin línea de título:\n\n{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "un objeto JSON válido con exactamente estas claves: {{}}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Generar código boilerplate",
+      "kind": "verbatim",
+      "reason": "descripción de la tool o del servidor que ve el cliente MCP: REQ-027 la quiere solo en inglés y fuera del catálogo, sin depender del idioma; B2b-1 la pasa a inglés"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "solo código {} válido, sin explicaciones ni ```",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Delegar una tarea genérica",
+      "kind": "verbatim",
+      "reason": "descripción de la tool o del servidor que ve el cliente MCP: REQ-027 la quiere solo en inglés y fuera del catálogo, sin depender del idioma; B2b-1 la pasa a inglés"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "{}\n\nInput:\n{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Resume la siguiente salida de linter/tests:\n\n{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "un mensaje de commit: primera línea imperativa <=72 caracteres y cuerpo opcional con viñetas",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "una viñeta por archivo, empezando por su ruta literal seguida de dos puntos y de qué cambia en él y para qué. Describe los cambios; no repitas estas instrucciones ni redactes ningún mensaje de commit todavía",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Archivos de este fragmento: {}.\nUsa esas rutas literales, una viñeta por archivo.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Este fragmento CONTINÚA el archivo {} y no repite su cabecera. Escribe una sola viñeta, para {}.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Escribe una viñeta por archivo, con su ruta literal.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "{}\n\nDi qué cambia en este fragmento de diff:\n\n{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "{}Estas son notas EN ORDEN sobre los archivos de un mismo cambio. La lista de arriba es el inventario COMPLETO del diff; las notas pueden no cubrirlo entero ni estar todas bien. El resumen describe el comportamiento que cambia y para qué, no el número de archivos ni los tests que lo acompañan, y el scope es un ámbito lógico, nunca un nombre de fichero. Escribe el mensaje de commit del cambio completo:\n\n{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Explicar código",
+      "kind": "verbatim",
+      "reason": "descripción de la tool o del servidor que ve el cliente MCP: REQ-027 la quiere solo en inglés y fuera del catálogo, sin depender del idioma; B2b-1 la pasa a inglés"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": " Enfócate en: {}.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "una explicación clara en prosa de qué hace el código y cómo.{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Explica el siguiente código:\n\n{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Diagnóstico del backend local",
+      "kind": "verbatim",
+      "reason": "descripción de la tool o del servidor que ve el cliente MCP: REQ-027 la quiere solo en inglés y fuera del catálogo, sin depender del idioma; B2b-1 la pasa a inglés"
+    },
+    {
+      "file": "src/local_delegate/topology.py",
+      "text": "backend remoto",
+      "kind": "verbatim",
+      "reason": "motivo de REQ-002 (valor de máquina): viaja en `turn_reason` de `/api/llamaswap/status` y lo compara `checks._no_turn_is_fine` entre procesos; a la persona se le dice con `reason_text`"
     }
   ]
 }
