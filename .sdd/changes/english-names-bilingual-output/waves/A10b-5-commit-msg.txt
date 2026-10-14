@@ -1,0 +1,42 @@
+refactor(rename): test_analyze_benchmark en inglés y el tipo de caso del corpus en inglés (ola A10b, lote 5)
+
+Renombra a inglés tests/test_analisis_benchmark.py: las 293 filas del
+mapping aprobado (waves/A10b-5-mapping.csv), salvo 2 que se explican
+abajo.
+
+- El fichero pasa a tests/test_analyze_benchmark.py (git mv).
+- Funciones, constantes, parámetros, variables y nombres de test en
+  inglés; los homónimos, por AST en su función y en sus kwargs.
+- Las tandas sintéticas usan las etiquetas `incumbent`/`candidate`, y
+  los kwargs de `_record` pasan a `latency`, `discarded`, `variant`,
+  `response` y `thermal`.
+- Los casos sintéticos usan `scorer`; los ficheros temporales, `batch.jsonl`,
+  `sheet.md` y `key.json`.
+
+Por decisión de la sesión principal, el valor de `kind` del corpus pasa
+de `calidad`/`techo` a `quality`/`ceiling` con todos sus escritores y
+lectores:
+- escriben el valor nuevo build_corpus, el runner de benchmark.py (cada
+  fila de resultados) y la fila del techo de affinity_batch;
+- leen el valor nuevo analyze_benchmark, review_sheet, affinity_batch,
+  test_corpus y test_affinity_batch;
+- lo que se muestra sigue igual: los motivos de §6 dicen «calidad» y
+  «techo» (`_KIND_LABELS`), y el criterio de §7 no cambia.
+
+Lectura dual de lo congelado en benchmarks/, por legacy_names:
+- `CORPUS_KIND_VALUES` en benchmark_results, benchmark_corpus y
+  affinity_case;
+- `read_corpus` de analyze_benchmark y `load_cases` de affinity_batch
+  ahora normalizan el corpus.
+4 tests nuevos leen los resultados y los dos corpus congelados.
+
+rename-exceptions.md: las filas del test pasan al nombre nuevo, más las de
+formato viejo y datos congelados del lote. Hay un motivo nuevo, «entrada
+de interfaz escrita por una persona», al que pasan desde «Pendiente» las
+respuestas `si`, `parcial`, `empate` y `EMPATE` de pair_sheet. Se
+traducen en el frente B.
+
+Sin aplicar (discrepancias del mapping):
+- la elección `empate` que escribe `pair_sheet.py unblind` y suma
+  `pairs_for_role`, que es respuesta de la persona;
+- la clave de huella `ruta`, sin ola.

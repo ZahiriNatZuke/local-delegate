@@ -88,15 +88,19 @@ def print_out(text: str) -> None:
 
 
 def load_cases(path: Path) -> list[dict[str, Any]]:
-    return list(json.loads(path.read_text(encoding="utf-8"))["cases"])
+    """Los casos del corpus; el congelado, con su `kind` del formato viejo ya traducido."""
+    from local_delegate import legacy_names
+
+    cases = json.loads(path.read_text(encoding="utf-8"))["cases"]
+    return [legacy_names.normalize("benchmark_corpus", c) for c in cases]
 
 
 def is_mechanical(case: dict[str, Any]) -> bool:
-    return case["role"] == "mechanical" and case["kind"] != "techo"
+    return case["role"] == "mechanical" and case["kind"] != "ceiling"
 
 
 def is_commit(case: dict[str, Any]) -> bool:
-    return case["tool"] == TOOL_COMMIT and case["kind"] == "calidad"
+    return case["tool"] == TOOL_COMMIT and case["kind"] == "quality"
 
 
 def model_cases(cases: Sequence[dict[str, Any]], model: str) -> list[dict[str, Any]]:
@@ -108,7 +112,7 @@ def model_cases(cases: Sequence[dict[str, Any]], model: str) -> list[dict[str, A
 
 def ceiling_case(cases: Sequence[dict[str, Any]]) -> dict[str, Any]:
     for case in cases:
-        if case["id"] == CEILING_CASE and case["kind"] == "techo":
+        if case["id"] == CEILING_CASE and case["kind"] == "ceiling":
             return case
     raise SystemExit(f"error: el corpus no tiene el caso {CEILING_CASE}")
 
@@ -479,7 +483,7 @@ def ceiling_row(run: int, source: Path, result: dict[str, Any], log_dir: Path) -
         "model": CEILING_MODEL,
         "case": CEILING_CASE,
         "role": "code",
-        "kind": "techo",
+        "kind": "ceiling",
         "input_variant": None,
         "run": run,
         "attempt": 1,

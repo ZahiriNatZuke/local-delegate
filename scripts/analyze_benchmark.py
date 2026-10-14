@@ -102,11 +102,13 @@ def read_jsonl(paths: list[Path]) -> list[dict[str, Any]]:
 
 
 def read_corpus(path: Path) -> dict[str, dict[str, Any]]:
-    """Solo ids, rol y tipo: el analisis no toca las fuentes, las verifica el runner."""
+    """Solo ids, rol y tipo: el analisis no toca las fuentes, las verifica el runner. Un corpus
+    congelado en el formato viejo (`kind` `calidad`/`techo`) se lee traducido."""
     data = json.loads(path.read_text(encoding="utf-8"))
     if data.get("schema_version") != 2:
         raise ValueError(f"{path}: se esperaba un corpus schema_version 2")
-    return {c["id"]: c for c in data["cases"]}
+    cases = [LEGACY_NAMES.normalize("benchmark_corpus", c) for c in data["cases"]]
+    return {c["id"]: c for c in cases}
 
 
 @dataclass(frozen=True)
@@ -259,11 +261,20 @@ def _role_cases(corpus: dict[str, dict[str, Any]], role: str, kind: str) -> list
     ]
 
 
+#: Cómo nombran los mensajes cada tipo de caso (`kind`): el texto de salida sigue en español hasta
+#: el frente B.
+_KIND_LABELS = {"quality": "calidad", "ceiling": "techo"}
+
+
+def _kind_label(kind: Any) -> str:
+    return _KIND_LABELS.get(kind, str(kind))
+
+
 def _review_only(corpus: dict[str, dict[str, Any]], role: str) -> list[str]:
     return [
         cid
         for cid, c in corpus.items()
-        if c["role"] == role and c["kind"] == "calidad" and c.get("automatic_scoring") is False
+        if c["role"] == role and c["kind"] == "quality" and c.get("automatic_scoring") is False
     ]
 
 
@@ -391,7 +402,7 @@ def analyze_cp3(
         "roles": {},
     }
     for role in roles:
-        ids = _role_cases(corpus, role, "calidad")
+        ids = _role_cases(corpus, role, "quality")
         cases: dict[str, Any] = {}
         for cid in ids:
             m_p, m_g = _case(cfg_p, cid, corpus).median, _case(cfg_g, cid, corpus).median
@@ -488,23 +499,24 @@ def validate_batch(
             f"{len(discarded_ones)} de {len(runs)} corridas descartadas (mas de una de cada tres)"
         )
     for cfg in configs:
-        for cid in _role_cases(corpus, role, "calidad"):
+        for cid in _role_cases(corpus, role, "quality"):
             if not _case(cfg, cid, corpus).qualities:
                 reasons.append(f"{cfg.selector}: {cid} sin ninguna puntuacion valida")
     records = [r for cfg in configs for r in cfg.records if r.get("role") == role]
     # Por tipo de caso (§3.5, decision del usuario 2026-09-14): la calidad corre con el n_ctx del caso
     # mayor y los sondeos de techo en otra config con mas contexto, o medirian la ventana y no el
     # modelo. Lo que no vale es que vigente y candidato difieran DENTRO de un mismo tipo.
-    for kind in sorted({r.get("kind") for r in records}, key=str):
+    for kind in sorted({r.get("kind") for r in records}, key=_kind_label):
         of_type = [r for r in records if r.get("kind") == kind]
+        label = _kind_label(kind)
         for key, name in (("context_size", "n_ctx"), ("load_mode", "--load-mode")):
             values = {(r.get("variant") or {}).get(key) for r in of_type}
             if None in values:
                 # Sin declararlo no se puede comprobar, y un control que no puede fallar no es control.
-                reasons.append(f"{name} sin declarar en alguna corrida de {kind}")
+                reasons.append(f"{name} sin declarar en alguna corrida de {label}")
             elif len(values) > 1:
                 reasons.append(
-                    f"{name} distinto entre corridas de {kind}: {sorted(map(str, values))}"
+                    f"{name} distinto entre corridas de {label}: {sorted(map(str, values))}"
                 )
     for cfg in configs:
         own = [r for r in cfg.records if r.get("role") == role]
@@ -546,7 +558,7 @@ def _role_latency(
 
 def accepted_ceiling(config: Config, role: str, corpus: dict[str, dict[str, Any]]) -> int | None:
     """Mayor entrada aceptada en un caso del rol. None si falta un sondeo de techo del corpus."""
-    for cid in _role_cases(corpus, role, "techo"):
+    for cid in _role_cases(corpus, role, "ceiling"):
         if _case(config, cid, corpus).accepted is None:
             return None
     accepted = [
@@ -566,7 +578,7 @@ def decide_role(
     shared_threshold_bytes: int = 0,
     pairs: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    ids = _role_cases(corpus, role, "calidad")
+    ids = _role_cases(corpus, role, "quality")
     result: dict[str, Any] = {
         "role": role,
         "incumbent": str(incumbent.selector),
@@ -628,7 +640,7 @@ def decide_role(
         if all(_case(cfg, cid, corpus).latency_median is not None for cfg in (incumbent, candidate))
     ]
     (lat_v, lat_c), lat_band = _role_latency([incumbent, candidate], with_latency, corpus)
-    has_ceiling = bool(_role_cases(corpus, role, "techo"))
+    has_ceiling = bool(_role_cases(corpus, role, "ceiling"))
     ceiling_i, ceiling_c = (
         accepted_ceiling(incumbent, role, corpus),
         accepted_ceiling(candidate, role, corpus),
@@ -697,7 +709,7 @@ def decide_role(
                     blocks.append(f"{case.id}: corrida anulada ({run.discard_reason})")
                 elif run.outcome == "error":
                     blocks.append(f"{case.id}: error ({run.final.get('error')})")
-                elif run.outcome == "context_rejection" and case.kind == "calidad":
+                elif run.outcome == "context_rejection" and case.kind == "quality":
                     blocks.append(f"{case.id}: context_rejection en un caso de calidad")
         # Condicion 3: la latencia no empeora mas de un 50 %.
         if lat_v is None or lat_c is None:
@@ -738,7 +750,7 @@ def _peak(config: Config, role: str, path: tuple[str, ...]) -> Any:
     for r in config.records:
         # Solo calidad: el sondeo de techo corre con mas contexto y su KV inflaria la memoria de la
         # config que se decide (§3.5).
-        if r.get("role") != role or r.get("kind") != "calidad":
+        if r.get("role") != role or r.get("kind") != "quality":
             continue
         value: Any = r
         for key in path:
@@ -1055,12 +1067,12 @@ def rules_with_wrong_count(text: str, counts: dict[str, list[int]]) -> list[str]
 def score_affinity(
     case: dict[str, Any], text: str, record: dict[str, Any] | None = None
 ) -> dict[str, Any]:
-    """`{"calidad": 0..1, "formato": bool}` de una respuesta, con el puntuador DEL caso.
+    """`{"quality": 0..1, "format": bool}` de una respuesta, con el puntuador DEL caso.
 
     El puntuador sale de `cases.json` (`scorer`), con lo esperado calculado por el constructor del
-    corpus a partir de la fuente, no de lo que respondio un modelo. `formato` es lo que la tool
+    corpus a partir de la fuente, no de lo que respondio un modelo. `format` es lo que la tool
     prometio (una etiqueta, un objeto JSON con esas claves, la estructura Markdown, un limite de
-    palabras, un formato exacto); `calidad` es si ademas es correcto.
+    palabras, un formato exacto); `quality` es si ademas es correcto.
     """
     case = LEGACY_NAMES.normalize("affinity_case", case)
     spec = LEGACY_NAMES.normalize("affinity_scorer", case.get("scorer") or {})
@@ -1599,7 +1611,7 @@ def compute_verdict(
     models = production_config["models"]
     mechanical_role, long, code = models["mechanical"], models["long"], models["code"]
     cases = [
-        c for c in corpus.values() if c.get("kind") == "calidad" and c.get("sheet_role") != "trampa"
+        c for c in corpus.values() if c.get("kind") == "quality" and c.get("sheet_role") != "trampa"
     ]
     cells: list[dict[str, Any]] = []
     for tool in TOOLS_WITH_CELL:
