@@ -99,6 +99,23 @@ sección de su motivo.
 | humano | tests/test_analisis_benchmark.py | lectura de formato viejo (decisión 6 de A10): fila de `hoja_pares.py destapar --json` de antes, que `merge_unblinded_pairs` suma (ola A10b-2) |
 | celdas | tests/test_analisis_benchmark.py | lectura de formato viejo (decisión 6 de A10): celda del `veredicto.json` de antes, escrita a mano, con la que el test comprueba que el estado viejo se lee en inglés (ola A10b-3) |
 | estado | tests/test_analisis_benchmark.py | lectura de formato viejo (decisión 6 de A10): mismo test; clave vieja del estado de la celda (`aprobada`/`rechazada`/`sin base`), que el lector traduce a `state` (ola A10b-3) |
+| pares | tests/test_hoja_pares.py | lectura de formato viejo (decisión 6 de A10): control de que la `clave-1.json` congelada sigue con el formato viejo antes de leerla con `read_commit` (ola A10b-4) |
+| respuestas | tests/test_hoja_pares.py | lectura de formato viejo (decisión 6 de A10): control de que la `respuestas-1.json` congelada sigue con el formato viejo (ola A10b-4) |
+| respuestas-1.json | tests/test_hoja_pares.py | lectura de formato viejo (decisión 6 de A10): nombre de las respuestas congeladas de la hoja 1, que el test lee (ola A10b-4) |
+| clave-1.json | tests/test_hoja_pares.py | lectura de formato viejo (decisión 6 de A10): nombre de la clave congelada de la hoja 1, que el test lee (ola A10b-4) |
+| juegos | tests/test_hoja_pares.py | lectura de formato viejo (decisión 6 de A10): control de que el `trampas.json` congelado sigue con el formato viejo (ola A10b-4) |
+| cobertura | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): señal vieja de `reference_signal` que el test exige en el `cases.json` congelado antes de comprobar que se lee en inglés (ola A10b-4) |
+| prohibido | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): mismo test: señal vieja del corpus congelado (ola A10b-4) |
+| json_valido | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): mismo test: señal vieja del corpus congelado (ola A10b-4) |
+| json_campos | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): mismo test: señal vieja del corpus congelado (ola A10b-4) |
+| ejecucion | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): mismo test: señal vieja del corpus congelado (ola A10b-4) |
+| conteos | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): mismo test: señal vieja del corpus congelado (ola A10b-4) |
+| eventos_local | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): control de que el `conteos-log.json` congelado sigue con las claves viejas (ola A10b-4) |
+| seleccion | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): control de que el corpus de afinidad congelado sigue con las claves viejas (ola A10b-4) |
+| puntuador | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): mismo test: clave vieja de cada caso del corpus de afinidad congelado (ola A10b-4) |
+| procedencia | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): mismo test: el caso normalizado ya no la lleva (ola A10b-4) |
+| tipo | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): mismo test: el puntuador normalizado ya no la lleva (ola A10b-4) |
+| excluir | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): valor de `privacy` del corpus de afinidad congelado (lo escribió `--privacy excluir`) (ola A10b-4) |
 
 ## Envoltorio de REQ-046
 
@@ -152,8 +169,83 @@ sección de su motivo.
 | techo-resumen-103k | tests/test_benchmark.py | dato congelado de corpus o caso: id de un caso del corpus congelado (ola A10b-1) |
 | techo-commit-156k | scripts/analyze_benchmark.py | dato congelado de corpus o caso: id del caso de techo del corpus congelado; resultados, hojas y claves lo citan (ola A10b-1) |
 | techo-commit-156k | scripts/dev/affinity_batch.py | dato congelado de corpus o caso: id del caso de techo del corpus congelado (ola A10b-1) |
+| LD_HOOK_READ_BLOQUEAR | scripts/build_corpus.py | dato congelado de corpus o caso: término esperado de un caso congelado (el caso que resume la nota de la variable vieja) (ola A10b-4) |
+| a_favor | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| abstenciones | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| afinidad-2026-10 | scripts/build_corpus.py | dato congelado de corpus o caso: nombre de directorio de un corpus congelado en `benchmarks/` (no se reescribe) (ola A10b-4) |
+| afinidad-2026-10 | scripts/pair_sheet.py | dato congelado de corpus o caso: nombre de directorio de un corpus congelado en `benchmarks/` (no se reescribe) (ola A10b-4) |
+| asistentes | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| catalogo-2026-09 | scripts/build_corpus.py | dato congelado de corpus o caso: nombre de directorio de un corpus congelado en `benchmarks/` (no se reescribe) (ola A10b-4) |
+| clasifica-bug-con-etiquetas-en-ingles | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| clasifica-deportes | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| clasifica-economia | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| clasifica-idioma-aleman | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| clasifica-ironia | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| clasifica-lenguaje-de-programacion | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| clasifica-negacion-reenvio | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| clasifica-peticion-de-funcion | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| clasificar-53 | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| cliente | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| correo | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| delega-contar-palabras | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| delega-fecha-iso | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| delega-lista-a-csv | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| delega-mayusculas | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| delegar-56 | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| describir-dashboard | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| en_contra | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| explicar-install-20k | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| explicar-metrics-15k | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| extrae-acta-con-cifras | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| extrae-correo-sin-telefono | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| extrae-factura | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| extrae-linea-de-acceso-web | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| extrae-linea-de-log-con-numeros | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| extrae-producto-sin-existencias | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| extrae-reunion-sin-organizador | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| extrae-toml-sin-licencia | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| extraer-toml-2k | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| extraer-uvlock-48k | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| factura | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| fecha | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| hora | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| leer-cifras-dashboard | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| lugar | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| metodo | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| moneda | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| nivel | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| organizador | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| precio | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| real-reescrito | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| resume-ruff-cinco-reglas | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| resume-ruff-tres-reglas | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| resume-ruff-un-solo-archivo | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| resumen-changelog-7k | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| resumen-md-10k | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| resumen-md-2k | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| ruta | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| servicio | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| socios | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| talla | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| techo-commit-156k | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| techo-resumen-103k | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| telefono | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| traduce-guia-de-inicio | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| traduce-lista-de-version | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| traduce-registro-de-cambios | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| traduce-solucion-de-problemas | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| traducir-42 | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
+| latencia_ms | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| `nombre` | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
+| asunto | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado del caso `extrae-correo-sin-telefono` (contenido del documento en español que el modelo extrae); el `asunto` de las trampas sí pasa a `subject` (ola A10b-4) |
+| codigo | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado del caso `extrae-linea-de-acceso-web` (contenido del documento en español que el modelo extrae); el `codigo` del puntuador sí pasa a `code` (ola A10b-4) |
+| primer_paquete | scripts/build_corpus.py | dato congelado de corpus o caso: campo que el caso `extraer-uvlock-48k` pide extraer; va en su prompt congelado y en `expected_json_fields` del corpus (ola A10b-4) |
 
 ## Pendiente
 
 | Nombre | Fichero | Motivo |
 | --- | --- | --- |
+| si | scripts/pair_sheet.py | pendiente: respuesta que la persona escribe a mano en la hoja `.md` (en español, como la hoja); se decide con el frente B (ola A10b-4) |
+| parcial | scripts/pair_sheet.py | pendiente: respuesta que la persona escribe a mano en la hoja `.md` (en español, como la hoja); se decide con el frente B (ola A10b-4) |
+| empate | scripts/pair_sheet.py | pendiente: respuesta que la persona escribe a mano en la hoja `.md`, y lo que `unblind` imprime y escribe como elección de la persona; se decide con el frente B (ola A10b-4) |
+| EMPATE | scripts/pair_sheet.py | pendiente: la misma respuesta escrita en mayúsculas (ola A10b-4) |

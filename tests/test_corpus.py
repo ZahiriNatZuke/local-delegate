@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pytest
 
-from local_delegate import benchmark, config
+from local_delegate import benchmark, config, legacy_names
 
 RAIZ = Path(__file__).parents[1]
 DESTINO = RAIZ / "benchmarks" / "catalogo-2026-09"
@@ -29,11 +29,11 @@ DESTINO = RAIZ / "benchmarks" / "catalogo-2026-09"
 
 def _cargar():
     spec = importlib.util.spec_from_file_location(
-        "construir_corpus", RAIZ / "scripts" / "construir_corpus.py"
+        "build_corpus", RAIZ / "scripts" / "build_corpus.py"
     )
     assert spec and spec.loader
     modulo = importlib.util.module_from_spec(spec)
-    sys.modules["construir_corpus"] = modulo
+    sys.modules["build_corpus"] = modulo
     spec.loader.exec_module(modulo)
     return modulo
 
@@ -46,7 +46,7 @@ construir = _cargar()
 
 def test_corpus_versionado_sigue_reflejando_a_produccion():
     # Si cambia un MAX_CHARS, el enrutado o un prompt, el corpus ya no mide lo que dice.
-    assert construir.comprobar_versionado(DESTINO) == []
+    assert construir.check_versioned(DESTINO) == []
 
 
 def test_reparto_es_el_del_protocolo():
@@ -129,11 +129,11 @@ def _caso(**cambios):
         "kind": "calidad",
         "provenance": "inventado",
         "origin": "test",
-        "source": construir.texto_literal(""),
+        "source": construir.literal_text(""),
         "expected_terms": ("prueba",),
     }
     base.update(cambios)
-    return construir.Caso(**base)
+    return construir.Case(**base)
 
 
 def _errores(caso, tmp_path, datos: bytes, nombre="fuente.txt"):
@@ -141,8 +141,8 @@ def _errores(caso, tmp_path, datos: bytes, nombre="fuente.txt"):
     ruta.write_bytes(datos)
     unica = None
     if caso.kind == "techo":
-        unica = construir.capturar(caso, ruta, datos, no_chunking=True)
-    return construir.comprobar(caso, construir.capturar(caso, ruta, datos), datos, unica)
+        unica = construir.capture_case(caso, ruta, datos, no_chunking=True)
+    return construir.check(caso, construir.capture_case(caso, ruta, datos), datos, unica)
 
 
 def test_caso_bien_formado_no_da_errores(tmp_path):
@@ -193,10 +193,10 @@ def test_termino_esperado_que_no_esta_en_la_fuente_se_rechaza(tmp_path):
 
 
 def test_id_que_promete_un_tamano_que_la_fuente_no_tiene():
-    assert construir._comprobar_tamano_del_id("techo-resumen-120k", 106_092) != []
-    assert construir._comprobar_tamano_del_id("techo-resumen-106k", 105_800) == []
-    assert construir._comprobar_tamano_del_id("clasificar-53", 52) != []
-    assert construir._comprobar_tamano_del_id("clasificar-53", 53) == []
+    assert construir._check_id_size("techo-resumen-120k", 106_092) != []
+    assert construir._check_id_size("techo-resumen-106k", 105_800) == []
+    assert construir._check_id_size("clasificar-53", 52) != []
+    assert construir._check_id_size("clasificar-53", 53) == []
 
 
 def test_la_captura_no_escribe_en_el_log_de_uso_ni_llama_al_backend(tmp_path, monkeypatch):
@@ -238,16 +238,16 @@ def test_contar_log_descarta_rutas_de_fuera_del_repo_y_eventos_no_locales(tmp_pa
     lineas = [json.dumps(e) for e in eventos] + ["{no es json"]
     (log / "usage-202609.jsonl").write_text("\n".join(lineas) + "\n", encoding="utf-8")
 
-    conteos = construir.contar_log(log, raiz)
+    conteos = construir.count_log(log, raiz)
 
-    assert (conteos["eventos"], conteos["eventos_local"]) == (4, 3)
-    assert conteos["descartados_no_local"] == {"concurrency_test_resident": 1}
-    assert conteos["por_tool"]["local_summarize"]["n"] == 2
-    assert conteos["por_tool"]["local_summarize"]["chars_in_mediana"] == 200
-    assert conteos["por_modelo"] == {"gemma3-4b": 2, "llama31-8b": 1}
-    assert conteos["troceados"] == 1
-    assert conteos["fuentes_del_repo"] == {"docs/a.md": 1}
-    assert conteos["fuentes_fuera_del_repo"] == 1
+    assert (conteos["events"], conteos["local_events"]) == (4, 3)
+    assert conteos["discarded_not_local"] == {"concurrency_test_resident": 1}
+    assert conteos["by_tool"]["local_summarize"]["n"] == 2
+    assert conteos["by_tool"]["local_summarize"]["chars_in_median"] == 200
+    assert conteos["by_model"] == {"gemma3-4b": 2, "llama31-8b": 1}
+    assert conteos["chunked"] == 1
+    assert conteos["repo_sources"] == {"docs/a.md": 1}
+    assert conteos["sources_outside_repo"] == 1
     volcado = json.dumps(conteos)
     assert "nota-personal" not in volcado and "vault" not in volcado
 
@@ -263,7 +263,7 @@ def _parejas():
 def test_las_senales_de_texto_tienen_cada_una_su_pareja():
     parejas = _parejas()
     assert sorted(c.raw["reference_signal"] for c in parejas) == sorted(
-        construir.DIFERENCIAS_ESPERADAS
+        construir.EXPECTED_DIFFERENCES
     )
     assert all(c.kind == "calidad" for c in parejas)
 
@@ -279,12 +279,12 @@ def test_cada_pareja_versionada_difiere_solo_en_su_senal_y_mide_lo_mismo():
             raw["execution_checks"],
             raw["expected_counts"],
         )
-        ok = construir.senales(raw["reference_ok"], *argumentos)
-        malo = construir.senales(raw["reference_bad"], *argumentos)
+        ok = construir.signals(raw["reference_ok"], *argumentos)
+        malo = construir.signals(raw["reference_bad"], *argumentos)
         difieren = {nombre for nombre in ok if ok[nombre] != malo[nombre]}
-        assert difieren == construir.DIFERENCIAS_ESPERADAS[raw["reference_signal"]], caso.id
+        assert difieren == construir.EXPECTED_DIFFERENCES[raw["reference_signal"]], caso.id
         assert len(raw["reference_ok"]) == len(raw["reference_bad"]), caso.id
-        assert ok["cobertura"] and not ok["prohibido"], caso.id
+        assert ok["coverage"] and not ok["forbidden"], caso.id
 
 
 def test_pareja_que_difiere_en_dos_senales_se_rechaza():
@@ -293,26 +293,26 @@ def test_pareja_que_difiere_en_dos_senales_se_rechaza():
     caso = _caso(
         expected_terms=("0.27.0",),
         forbidden_terms=("0.24.0",),
-        reference=("prohibido", "Version 0.27.0 hoy", "Version 0.24.0 hoy"),
+        reference=("forbidden", "Version 0.27.0 hoy", "Version 0.24.0 hoy"),
     )
-    assert construir.comprobar_referencia(caso, ("0.27.0",)) == [
+    assert construir.check_reference(caso, ("0.27.0",)) == [
         (
-            "prueba: la pareja de prohibido difiere en ['cobertura', 'cobertura_literal', "
-            "'prohibido'], no en ['prohibido']"
+            "prueba: la pareja de forbidden difiere en ['coverage', 'forbidden', "
+            "'literal_coverage'], no en ['forbidden']"
         )
     ]
 
 
 def test_pareja_de_distinta_longitud_se_rechaza():
-    caso = _caso(expected_terms=("bug",), reference=("cobertura", "bug", "nada"))
-    assert construir.comprobar_referencia(caso, ("bug",)) == [
+    caso = _caso(expected_terms=("bug",), reference=("coverage", "bug", "nada"))
+    assert construir.check_reference(caso, ("bug",)) == [
         "prueba: la pareja no tiene la misma longitud (3 y 4)"
     ]
 
 
 def test_respuesta_buena_que_no_es_buena_se_rechaza():
-    caso = _caso(expected_terms=("bug",), reference=("cobertura", "nada", "bug."))
-    errores = construir.comprobar_referencia(caso, ("bug",))
+    caso = _caso(expected_terms=("bug",), reference=("coverage", "nada", "bug."))
+    errores = construir.check_reference(caso, ("bug",))
     assert len(errores) == 1 and "la respuesta buena no es buena" in errores[0]
 
 
@@ -320,7 +320,7 @@ def test_nfkd_solo_no_quita_el_acento_y_la_normalizacion_si():
     import unicodedata
 
     assert "computo" not in unicodedata.normalize("NFKD", "cómputo").casefold()
-    assert construir.plano("CÓMPUTO") == "computo"
+    assert construir.flat("CÓMPUTO") == "computo"
 
 
 def test_referencia_retocada_que_sigue_siendo_valida_la_caza_la_vigilancia(tmp_path):
@@ -335,9 +335,9 @@ def test_referencia_retocada_que_sigue_siendo_valida_la_caza_la_vigilancia(tmp_p
     caso["reference_ok"] = caso["reference_ok"].replace("Guía", "Guia", 1)
     ruta.write_text(json.dumps(datos, ensure_ascii=False), encoding="utf-8")
     raw = caso
-    ok = construir.senales(raw["reference_ok"], raw["expected_terms"], raw["forbidden_terms"], [])
-    assert ok["cobertura"], "el retoque tiene que dejar la pareja valida"
-    assert construir.comprobar_versionado(copia) == [
+    ok = construir.signals(raw["reference_ok"], raw["expected_terms"], raw["forbidden_terms"], [])
+    assert ok["coverage"], "el retoque tiene que dejar la pareja valida"
+    assert construir.check_versioned(copia) == [
         "resumen-md-2k: reference_ok ya no coincide con el constructor"
     ]
 
@@ -352,7 +352,7 @@ def test_reconstruir_no_recongela_una_fuente_desde_el_fichero_vivo(tmp_path):
     marcada = fuente.read_bytes() + b"<!-- congelado -->\n"
     fuente.write_bytes(marcada)
 
-    rc = construir.construir(RAIZ, copia, None)
+    rc = construir.build(RAIZ, copia, None)
 
     # La marca ANTES que el exit code: recongelando, la construccion puede fallar por otra regla
     # (el CHANGELOG vivo crece y cambia el tamano de su recorte), y el test caeria por eso en vez
@@ -381,13 +381,13 @@ def test_terminos_del_commit_salen_solo_de_su_primera_entrada_fixed():
         "+- `tampoco`\n"
         "diff --git a/x b/x\n"
     )
-    assert construir._identificadores_del_primer_arreglo(diff) == (
+    assert construir._first_fix_identifiers(diff) == (
         "inflight",
         "estado.json",
         "/api/estado",
         "snap",
     )
-    assert construir._identificadores_del_primer_arreglo("+### Added\n+- `x`\n") == ()
+    assert construir._first_fix_identifiers("+### Added\n+- `x`\n") == ()
 
 
 def test_terminos_del_changelog_salen_solo_de_los_titulares_en_negrita():
@@ -396,7 +396,7 @@ def test_terminos_del_changelog_salen_solo_de_los_titulares_en_negrita():
         "- **Retirados `viejo.py` y `f()`.** El cuerpo nombra `no_entra`.\n"
         "- Entrada sin titular en negrita: `tampoco`.\n"
     )
-    assert construir._identificadores_de_los_titulares(texto) == ("viejo.py", "f")
+    assert construir._headline_identifiers(texto) == ("viejo.py", "f")
 
 
 _RUFF = (
@@ -413,15 +413,15 @@ _RUFF = (
 def test_lint_se_recorta_en_archivos_enteros_y_nunca_a_medias():
     # a.py (3 lineas) cabe; b.py no cabe entero en el limite: no entra ni su primera linea.
     limite = len("".join(_RUFF.splitlines(keepends=True)[:4]))
-    assert construir.archivos_enteros(_RUFF, limite) == "".join(_RUFF.splitlines(keepends=True)[:3])
+    assert construir.whole_files(_RUFF, limite) == "".join(_RUFF.splitlines(keepends=True)[:3])
     # Con sitio para todo, el resumen de ruff no se cuela: va en su propio bloque, al final.
-    todo = construir.archivos_enteros(_RUFF, len(_RUFF) - len("Found 6 errors.\n"))
+    todo = construir.whole_files(_RUFF, len(_RUFF) - len("Found 6 errors.\n"))
     assert "Found" not in todo and todo.count("\n") == 6
 
 
 def test_conteos_validos_de_lint_son_total_archivos_y_cada_archivo():
     # T201: 3 en total, 2 archivos, 2 en a.py y 1 en b.py. CPY001: 2 en total, 2 archivos, 1 y 1.
-    assert construir._conteos_de_las_reglas(_RUFF) == {
+    assert construir._rule_counts(_RUFF) == {
         "T201": [1, 2, 3],
         "CPY001": [1, 2],
         "COM812": [1],
@@ -430,28 +430,28 @@ def test_conteos_validos_de_lint_son_total_archivos_y_cada_archivo():
 
 def test_oraculo_de_conteos_caza_el_conteo_inventado_del_segundo_piloto():
     conteos = {"T201": [1, 2, 3]}
-    assert construir._conteos_cuadran("- src/a.py: T201 (2)\n- src/b.py: T201 (1)", conteos)
-    assert not construir._conteos_cuadran("**T201 (Print):** 10 archivos (3 por archivo)", conteos)
+    assert construir._counts_add_up("- src/a.py: T201 (2)\n- src/b.py: T201 (1)", conteos)
+    assert not construir._counts_add_up("**T201 (Print):** 10 archivos (3 por archivo)", conteos)
     # Nombrarla sin conteo no cuadra, y el «1.» de una lista o el 201 del codigo no cuentan.
-    assert not construir._conteos_cuadran("T201 aparece mucho", conteos)
-    assert construir._conteos_cuadran("1. T201: 3", conteos)
+    assert not construir._counts_add_up("T201 aparece mucho", conteos)
+    assert construir._counts_add_up("1. T201: 3", conteos)
     # Cada numero es de la regla que tiene delante, y el punto de final de frase no lo anula: los
     # dos defectos de la primera version, que rompieron la pareja de referencia.
     dos = {"T201": [1, 2, 3], "COM812": [1]}
-    assert construir._conteos_cuadran("a.py: T201 (2), COM812 (1). b.py: T201 3.", dos)
-    assert not construir._conteos_cuadran("a.py: T201 (2), COM812 (2).", dos)
-    assert not construir._conteos_cuadran("Python 3.12: T201 3.5", conteos)
+    assert construir._counts_add_up("a.py: T201 (2), COM812 (1). b.py: T201 3.", dos)
+    assert not construir._counts_add_up("a.py: T201 (2), COM812 (2).", dos)
+    assert not construir._counts_add_up("Python 3.12: T201 3.5", conteos)
 
 
 def test_formato_pedido_sale_del_prompt_de_la_tool():
     resumen = (
         "Output EXACTO: un resumen en prosa clara. Máximo 150 palabras. Nada fuera del formato."
     )
-    assert construir.formato_pedido(resumen) == {"max_words": 150, "prose": True}
+    assert construir.requested_format(resumen) == {"max_words": 150, "prose": True}
     lint = "Output EXACTO: un resumen agrupado por archivo. Maximo 200 palabras."
-    assert construir.formato_pedido(lint) == {"max_words": 200}
-    assert construir.formato_pedido("Clasifica en una etiqueta.") == {}
-    assert construir.formato_pedido(None) == {}
+    assert construir.requested_format(lint) == {"max_words": 200}
+    assert construir.requested_format("Clasifica en una etiqueta.") == {}
+    assert construir.requested_format(None) == {}
 
 
 def test_los_casos_de_texto_abierto_los_deciden_los_pares():
@@ -474,8 +474,8 @@ def test_terminos_de_explicar_salen_del_docstring_del_modulo_y_no_de_una_funcion
         'Toca `~/.x/settings.json`, `dir/` y `--dry-run`.\n"""\n\n'
         'def f():\n    """GET /api/fuera y `otro.md`."""\n'
     )
-    assert construir._rutas_del_docstring(fuente) == ("/api/a", "/api/b")
-    assert construir._ficheros_y_flags_del_docstring(fuente) == ("settings.json", "--dry-run")
+    assert construir._docstring_paths(fuente) == ("/api/a", "/api/b")
+    assert construir._docstring_files_and_flags(fuente) == ("settings.json", "--dry-run")
 
 
 # =====================================================================================================
@@ -699,11 +699,11 @@ def test_same_zone_trap_subject_at_most_72_chars(tmp_path):
     assert construir._numstat(repo, case.hash)[0][1] == "grande.txt"
     zone = construir.same_zone_subject(repo, case, {case.hash}, before=CUTOFF)
     assert zone is not None
-    assert len(zone["asunto"]) <= 72
+    assert len(zone["subject"]) <= 72
     # Pasa al siguiente fichero mas cambiado, y le quita el « (#12)» del squash.
-    assert (zone["fichero"], zone["asunto"]) == ("chico.txt", "fix: asunto del segundo fichero")
+    assert (zone["file"], zone["subject"]) == ("chico.txt", "fix: asunto del segundo fichero")
     # El cuerpo real, sin firmas, sin enlaces de sesion y sin el asunto repetido.
-    assert zone["cuerpo_real"] == ["Primera linea del cuerpo.", "Segunda linea."]
+    assert zone["real_body"] == ["Primera linea del cuerpo.", "Segunda linea."]
     # Sin ningun candidato, no inventa ninguno.
     assert (
         construir.same_zone_subject(repo, case, {case.hash}, before=CUTOFF, max_subject=5) is None
@@ -723,8 +723,8 @@ def test_build_traps_gives_three_per_set_with_three_kinds(tmp_path, monkeypatch)
     assert len(sel.traps) == 9
     written = {
         c.short: {
-            "asunto": f"chore: redactada {c.short}",
-            "cuerpo": [f"linea {n}" for n in range(5)],
+            "subject": f"chore: redactada {c.short}",
+            "body": [f"linea {n}" for n in range(5)],
         }
         for k, c in enumerate(sel.traps)
         if k % 3 != 0
@@ -735,29 +735,29 @@ def test_build_traps_gives_three_per_set_with_three_kinds(tmp_path, monkeypatch)
     monkeypatch.setattr(construir, "WRITTEN_TRAPS", written)
     monkeypatch.setattr(construir, "SAME_ZONE_RESERVES", reserves)
     traps = construir.build_traps(repo, sel, before=CUTOFF)
-    assert [j["juego"] for j in traps["juegos"]] == [1, 2, 3]
+    assert [j["set"] for j in traps["sets"]] == [1, 2, 3]
     all_items = []
-    for case_set_item in traps["juegos"]:
-        assert [t["tipo"] for t in case_set_item["trampas"]] == [
-            "misma-zona",
-            "secundario",
-            "generico",
+    for case_set_item in traps["sets"]:
+        assert [t["kind"] for t in case_set_item["traps"]] == [
+            "same-zone",
+            "secondary",
+            "generic",
         ]
-        for t in case_set_item["trampas"]:
-            assert len(t["asunto"]) <= 72 and 1 <= len(t["cuerpo"]) <= 5
-            all_items.append(t["caso"])
+        for t in case_set_item["traps"]:
+            assert len(t["subject"]) <= 72 and 1 <= len(t["body"]) <= 5
+            all_items.append(t["case"])
     assert len(set(all_items)) == 9
     assert set(all_items) == {f"commit-trampa-{c.short}" for c in sel.traps}
     # La de la misma zona es el asunto REAL de otro commit del mismo fichero, fuera de la seleccion.
-    first_one = traps["juegos"][0]["trampas"][0]
-    assert first_one["asunto"].startswith("docs: zona ")
-    assert first_one["asunto_de"]["hash"] not in {c.hash for c in sel.real + sel.traps}
-    assert first_one["cuerpo_origen"] != "real-reescrito"
+    first_one = traps["sets"][0]["traps"][0]
+    assert first_one["subject"].startswith("docs: zona ")
+    assert first_one["subject_of"]["hash"] not in {c.hash for c in sel.real + sel.traps}
+    assert first_one["source_body"] != "real-reescrito"
     # Con el cuerpo reescrito a mano, ese cuerpo manda sobre las lineas reales (partidas a 80 columnas).
     monkeypatch.setattr(construir, "SAME_ZONE_BODIES", {sel.traps[0].short: ["Una frase entera."]})
-    rewritten = construir.build_traps(repo, sel, before=CUTOFF)["juegos"][0]["trampas"][0]
-    assert rewritten["cuerpo"] == ["Una frase entera."]
-    assert rewritten["cuerpo_origen"] == "real-reescrito"
+    rewritten = construir.build_traps(repo, sel, before=CUTOFF)["sets"][0]["traps"][0]
+    assert rewritten["body"] == ["Una frase entera."]
+    assert rewritten["source_body"] == "real-reescrito"
     # Si falta la trampa redactada de un caso, no se inventa: se para.
     monkeypatch.setattr(construir, "WRITTEN_TRAPS", {})
     with pytest.raises(ValueError, match="falta la trampa redactada"):
@@ -924,7 +924,7 @@ def _captured_commit_system(tmp_path) -> str:
 
     path = tmp_path / "chico.diff"
     path.write_text(_SMALL_DIFF, encoding="utf-8")
-    with construir.produccion_interceptada() as calls:
+    with construir.intercepted_production() as calls:
         server.local_commit_msg(path=str(path))
     assert len(calls) == 1
     return calls[0].system
@@ -944,3 +944,42 @@ def test_capture_without_variable_asks_diff_language(tmp_path):
     assert "LOCAL_DELEGATE_COMMIT_LANGUAGE" not in os.environ
     system = _captured_commit_system(tmp_path)
     assert "en el idioma predominante de los textos del diff" in system
+
+
+# --- Lectura dual de lo congelado del corpus (ola A10b-4) -------------------------------------------
+
+AFFINITY = RAIZ / "benchmarks" / "afinidad-2026-10"
+
+
+def test_frozen_reference_signals_are_read_in_english():
+    raw = json.loads((DESTINO / "cases.json").read_text(encoding="utf-8"))
+    old = {c["reference_signal"] for c in raw["cases"] if "reference_signal" in c}
+    # Control: el congelado sigue con las senales de antes.
+    assert {"cobertura", "prohibido", "json_valido", "json_campos", "ejecucion", "conteos"} <= old
+    assert {c.raw["reference_signal"] for c in _parejas()} == set(construir.EXPECTED_DIFFERENCES)
+
+
+def test_frozen_log_counts_are_read_with_the_new_keys():
+    old_name, new_name = legacy_names.LOG_COUNTS_FILE_NAMES
+    assert not (DESTINO / new_name).exists()
+    raw = json.loads((DESTINO / old_name).read_text(encoding="utf-8"))
+    assert "eventos_local" in raw
+    counts = legacy_names.normalize_log_counts(raw)
+    local = counts["local_events"]
+    assert local and sum(t["n"] for t in counts["by_tool"].values()) == local
+    assert sum(counts["by_model"].values()) == sum(counts["by_source"].values()) == local
+    assert all({"chars_in_median", "models"} <= set(t) for t in counts["by_tool"].values())
+    assert legacy_names.normalize_log_counts(counts) == counts
+
+
+def test_frozen_affinity_corpus_is_read_with_the_new_keys():
+    raw = json.loads((AFFINITY / "cases.json").read_text(encoding="utf-8"))
+    assert "seleccion" in raw and any("puntuador" in c for c in raw["cases"])
+    corpus = legacy_names.normalize_affinity_corpus(raw)
+    assert set(corpus["selection"]) >= {"rule", "deadline", "step", "privacy", "f2_case", "real"}
+    assert corpus["selection"]["traps"] and corpus["selection"]["privacy"] == "excluir"
+    for case in corpus["cases"]:
+        assert "scorer" in case and "puntuador" not in case, case["id"]
+        assert {"provenance", "origin"} <= set(case) and "procedencia" not in case, case["id"]
+        assert "kind" in case["scorer"] and "tipo" not in case["scorer"], case["id"]
+    assert legacy_names.normalize_affinity_corpus(corpus) == corpus

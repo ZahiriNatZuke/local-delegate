@@ -226,7 +226,7 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
     },
     # Cada fila de resultados de `local-delegate benchmark` y del techo de
     # `scripts/dev/affinity_batch.py` (`benchmarks/*/resultados*/*.jsonl`, congelados). Solo lo que
-    # leen sus cargadores (`analyze_benchmark`, `hoja_pares`, `review_sheet` y `affinity_batch`):
+    # leen sus cargadores (`analyze_benchmark`, `pair_sheet`, `review_sheet` y `affinity_batch`):
     # `procedencia` y `entorno_fijado` cambian de nombre al escribir, pero nadie los lee de vuelta.
     # `zero_by` va dentro de `score`: lo traduce `normalize_benchmark_result`.
     "benchmark_results": {
@@ -237,9 +237,20 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
         "values": {"zero_by": {"truncado_repetido": "truncated_repeated"}},
     },
     # Cada caso del corpus (`benchmarks/*/cases.json`, congelado) tal como lo lee
-    # `benchmark.load_corpus`.
+    # `benchmark.load_corpus`. La señal de la pareja de referencia la compara
+    # `build_corpus.check_versioned` con la que escribe hoy (ola A10b-4).
     "benchmark_corpus": {
-        "keys": {"procedencia": "provenance"},
+        "keys": {"procedencia": "provenance", "origen": "origin"},
+        "values": {
+            "reference_signal": {
+                "cobertura": "coverage",
+                "prohibido": "forbidden",
+                "json_valido": "json_valid",
+                "json_campos": "json_fields",
+                "ejecucion": "execution",
+                "conteos": "counts",
+            }
+        },
     },
     # `veredicto.json` de la evaluación de afinidad (congelado): solo lo que lee
     # `tests/test_affinity.py`. La misma tabla vale para el primer nivel y para cada celda.
@@ -258,9 +269,104 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
         },
     },
     # El corpus de afinidad (`benchmarks/afinidad-2026-10/cases.json`, congelado; lo escribe
-    # `construir_corpus`) tal como lo lee `analyze_benchmark`: de cada caso, solo estas dos claves…
+    # `build_corpus`) tal como lo lee `analyze_benchmark`: de cada caso, solo estas dos claves…
     "affinity_case": {
-        "keys": {"rol_en_hoja": "sheet_role", "discriminante": "discriminating"},
+        "keys": {
+            "rol_en_hoja": "sheet_role",
+            "discriminante": "discriminating",
+            "puntuador": "scorer",
+        },
+    },
+    # El primer nivel del corpus de afinidad y su `selection` (ola A10b-4), tal como los lee
+    # `build_corpus.check_versioned_affinity` (`normalize_affinity_corpus`).
+    "affinity_corpus": {
+        "keys": {
+            "seleccion": "selection",
+            "regla": "rule",
+            "fecha_limite": "deadline",
+            "paso": "step",
+            "privacidad": "privacy",
+            "caso_de_f2": "f2_case",
+            "reales": "real",
+            "trampas": "traps",
+        },
+    },
+    # `trampas.json` de la evaluación de afinidad (congelado; ahora `traps.json`), tal como lo
+    # leen `pair_sheet` (`build_commit_sheet`, `shaped_trap`) y `check_versioned_affinity`. La
+    # misma tabla vale para el primer nivel, cada juego, cada trampa y su `subject_of`
+    # (`normalize_affinity_traps`).
+    "affinity_traps": {
+        "keys": {
+            "regla_de_forma": "shape_rule",
+            "misma-zona": "same-zone",
+            "secundario": "secondary",
+            "generico": "generic",
+            "juegos": "sets",
+            "juego": "set",
+            "trampas": "traps",
+            "caso": "case",
+            "tipo": "kind",
+            "asunto": "subject",
+            "cuerpo": "body",
+            "cuerpo_origen": "source_body",
+            "asunto_de": "subject_of",
+            "fichero": "file",
+        },
+        "values": {
+            "kind": {"misma-zona": "same-zone", "secundario": "secondary", "generico": "generic"}
+        },
+    },
+    # La clave de la hoja de commits (`clave-<n>.json`, la de la hoja 1 congelada), tal como la
+    # lee `pair_sheet.read_commit`: el primer nivel y cada par (`normalize_commit_key`).
+    "commit_key": {
+        "keys": {
+            "hoja": "sheet",
+            "juego": "set",
+            "semilla": "seed",
+            "pares": "pairs",
+            "omitidos": "omitted",
+            "tipo": "kind",
+            "caso": "case",
+            "lados": "sides",
+            "trampa_tipo": "trap_kind",
+        },
+        "values": {
+            "trap_kind": {
+                "misma-zona": "same-zone",
+                "secundario": "secondary",
+                "generico": "generic",
+            }
+        },
+    },
+    # Las respuestas de la hoja de commits (`respuestas-<n>.json`, las de la hoja 1 congeladas,
+    # que descarga la página), tal como las lee `pair_sheet.read_commit`
+    # (`normalize_commit_answers`): el primer nivel y lo contestado en cada par.
+    "commit_answers": {
+        "keys": {
+            "hoja": "sheet",
+            "parcial": "partial",
+            "respuestas": "answers",
+            "inventa": "made_up",
+            "especifico": "specific",
+            "preferencia": "preference",
+        },
+    },
+    # Los conteos del log de uso del corpus (`conteos-log.json`, congelado; ahora
+    # `log-counts.json`): el primer nivel y cada tool de `by_tool` (`normalize_log_counts`).
+    "log_counts": {
+        "keys": {
+            "eventos": "events",
+            "eventos_local": "local_events",
+            "descartados_no_local": "discarded_not_local",
+            "por_tool": "by_tool",
+            "por_modelo": "by_model",
+            "por_source": "by_source",
+            "troceados": "chunked",
+            "fuentes_del_repo": "repo_sources",
+            "fuentes_fuera_del_repo": "sources_outside_repo",
+            "chars_in_mediana": "chars_in_median",
+            "modelos": "models",
+        },
     },
     # …y su puntuador (`puntuador`), que lee `analyze_benchmark.score_affinity`.
     "affinity_scorer": {
@@ -282,6 +388,7 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
     # La misma tabla vale para el primer nivel, `formato` y `sin_adornos`
     # (`normalize_affinity_rules`).
     "affinity_rules": {
+        # Los valores de `optional_questions` (una lista) los traduce `normalize_affinity_rules`.
         "keys": {
             "max_inventa_26b": "max_made_up_26b",
             "preguntas_opcionales": "optional_questions",
@@ -296,7 +403,7 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
             "frases_de_presentacion": "intro_phrases",
         },
     },
-    # El juicio del usuario sobre la hoja de commits (salida de `hoja_pares.py leer-commit`), que
+    # El juicio del usuario sobre la hoja de commits (salida de `pair_sheet.py read-commit`), que
     # lee `analyze_benchmark`: el primer nivel y cada par de `pares`
     # (`normalize_commit_judgement`).
     "commit_judgement": {
@@ -312,7 +419,7 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
             "caso": "case",
         },
     },
-    # Cada fila de `hoja_pares.py destapar --json`, que suma `analyze_benchmark decide --pairs`.
+    # Cada fila de `pair_sheet.py unblind --json`, que suma `analyze_benchmark decide --pairs`.
     "unblinded_pairs": {
         "keys": {"humano": "human"},
     },
@@ -393,8 +500,14 @@ FOOTPRINTS_FILE_NAMES: tuple[str, str] = ("huellas.json", "footprints.json")
 BATCH_WINDOWS_FILE_NAMES: tuple[str, str] = ("ventanas-tanda.json", "batch-windows.json")
 VERDICT_FILE_NAMES: tuple[str, str] = ("veredicto.json", "verdict.json")
 #: Las reglas de la evaluación de afinidad, como `(viejo, nuevo)`: las lee `analyze_benchmark`
-#: (y `hoja_pares`); el viejo, congelado, se lee si el nuevo no existe.
+#: (y `pair_sheet`); el viejo, congelado, se lee si el nuevo no existe.
 RULES_FILE_NAMES: tuple[str, str] = ("reglas.json", "rules.json")
+#: Las trampas de la evaluación de afinidad y los conteos del log del corpus, como `(viejo, nuevo)`:
+#: los escribe `build_corpus` (ola A10b-4); el viejo, congelado, se lee si el nuevo no existe.
+TRAPS_FILE_NAMES: tuple[str, str] = ("trampas.json", "traps.json")
+LOG_COUNTS_FILE_NAMES: tuple[str, str] = ("conteos-log.json", "log-counts.json")
+#: Las preguntas de la hoja de commits que `optional_questions` puede listar, en el formato viejo.
+OPTIONAL_QUESTION_VALUES: dict[str, str] = {"especifico": "specific"}
 
 #: Valores que el panel recibe de `/api/hooks` y que su diccionario de etiquetas tiene que entender
 #: también en el formato viejo (REQ-009). El servidor lo inyecta en el HTML: el JS no copia la tabla.
@@ -539,6 +652,9 @@ def normalize_affinity_rules(data: Mapping[str, Any]) -> dict[str, Any]:
     """Las reglas de afinidad en el formato nuevo: el primer nivel, `format` y `no_frills`. Unas
     reglas ya nuevas salen igual."""
     out = normalize("affinity_rules", data)
+    questions = out.get("optional_questions")
+    if isinstance(questions, list):
+        out["optional_questions"] = [new_value(OPTIONAL_QUESTION_VALUES, q) for q in questions]
     fmt = out.get("format")
     if isinstance(fmt, Mapping):
         fmt = normalize("affinity_rules", fmt)
@@ -556,5 +672,88 @@ def normalize_commit_judgement(data: Mapping[str, Any]) -> dict[str, Any]:
         out["pairs"] = {
             k: normalize("commit_judgement", p) if isinstance(p, Mapping) else p
             for k, p in out["pairs"].items()
+        }
+    return out
+
+
+def normalize_affinity_corpus(data: Mapping[str, Any]) -> dict[str, Any]:
+    """El corpus de afinidad en el formato nuevo: el primer nivel, `selection` y cada caso
+    (`benchmark_corpus` y `affinity_case`). Un corpus ya nuevo sale igual."""
+    out = normalize("affinity_corpus", data)
+    if isinstance(out.get("selection"), Mapping):
+        out["selection"] = normalize("affinity_corpus", out["selection"])
+    if isinstance(out.get("cases"), list):
+        out["cases"] = [
+            _normalize_affinity_case(c) if isinstance(c, Mapping) else c for c in out["cases"]
+        ]
+    return out
+
+
+def _normalize_affinity_case(case: Mapping[str, Any]) -> dict[str, Any]:
+    out = normalize("affinity_case", normalize("benchmark_corpus", case))
+    if isinstance(out.get("scorer"), Mapping):
+        out["scorer"] = normalize("affinity_scorer", out["scorer"])
+    return out
+
+
+def normalize_affinity_trap(trap: Mapping[str, Any]) -> dict[str, Any]:
+    """Una trampa en el formato nuevo, con su `subject_of`. Una ya nueva sale igual."""
+    out = normalize("affinity_traps", trap)
+    if isinstance(out.get("subject_of"), Mapping):
+        out["subject_of"] = normalize("affinity_traps", out["subject_of"])
+    return out
+
+
+def normalize_affinity_traps(data: Mapping[str, Any]) -> dict[str, Any]:
+    """`trampas.json` en el formato nuevo: el primer nivel, cada juego y cada trampa. Uno ya
+    nuevo sale igual."""
+    out = normalize("affinity_traps", data)
+    if isinstance(out.get("sets"), list):
+        sets = []
+        for item in out["sets"]:
+            if isinstance(item, Mapping):
+                item = normalize("affinity_traps", item)
+                if isinstance(item.get("traps"), list):
+                    item["traps"] = [
+                        normalize_affinity_trap(t) if isinstance(t, Mapping) else t
+                        for t in item["traps"]
+                    ]
+            sets.append(item)
+        out["sets"] = sets
+    return out
+
+
+def normalize_commit_key(data: Mapping[str, Any]) -> dict[str, Any]:
+    """La clave de la hoja de commits en el formato nuevo: el primer nivel y cada par de `pairs`.
+    Una clave ya nueva sale igual."""
+    out = normalize("commit_key", data)
+    if isinstance(out.get("pairs"), Mapping):
+        out["pairs"] = {
+            k: normalize("commit_key", p) if isinstance(p, Mapping) else p
+            for k, p in out["pairs"].items()
+        }
+    return out
+
+
+def normalize_commit_answers(data: Mapping[str, Any]) -> dict[str, Any]:
+    """Las respuestas de la hoja de commits en el formato nuevo: el primer nivel y lo contestado en
+    cada par de `answers`. Unas ya nuevas salen igual."""
+    out = normalize("commit_answers", data)
+    if isinstance(out.get("answers"), Mapping):
+        out["answers"] = {
+            k: normalize("commit_answers", a) if isinstance(a, Mapping) else a
+            for k, a in out["answers"].items()
+        }
+    return out
+
+
+def normalize_log_counts(data: Mapping[str, Any]) -> dict[str, Any]:
+    """Los conteos del log del corpus en el formato nuevo: el primer nivel y cada tool de
+    `by_tool`. Unos ya nuevos salen igual."""
+    out = normalize("log_counts", data)
+    if isinstance(out.get("by_tool"), Mapping):
+        out["by_tool"] = {
+            k: normalize("log_counts", t) if isinstance(t, Mapping) else t
+            for k, t in out["by_tool"].items()
         }
     return out

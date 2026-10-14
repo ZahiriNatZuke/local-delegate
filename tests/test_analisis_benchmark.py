@@ -1511,11 +1511,11 @@ def test_frozen_results_are_read_with_the_new_keys():
     old_rows = [json.loads(x) for x in FROZEN_RESULTS.read_text(encoding="utf-8").splitlines() if x]
     expected = sum(1 for r in old_rows if r.get("descartada"))
     assert expected > 0  # sin filas anuladas, el test no distinguiría nada
-    hoja_pares = _cargar("hoja_pares")
+    hoja_pares = _cargar("pair_sheet")
     for records in (
         analizar.read_jsonl([FROZEN_RESULTS]),
         hoja_revision._records([FROZEN_RESULTS]),
-        hoja_pares._registros([FROZEN_RESULTS]),
+        hoja_pares._records([FROZEN_RESULTS]),
     ):
         assert not any("descartada" in r or "descartada_motivo" in r for r in records)
         assert sum(1 for r in records if r["discarded"]) == expected

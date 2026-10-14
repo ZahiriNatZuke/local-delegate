@@ -13,16 +13,16 @@ La captura no toca el backend, no escribe en el log de uso real y corre sin las 
 `LOCAL_DELEGATE_*` del entorno, igual que la suite: un `MAX_CHARS` cambiado en tu shell no puede
 colarse en el corpus.
 
-El subcomando `afinidad` construye el corpus de la evaluacion de afinidad del SDD
+El subcomando `affinity` construye el corpus de la evaluacion de afinidad del SDD
 `daemon-reparte-el-backend` (REQ-040, `benchmarks/afinidad-2026-10/`): casos mecanicos con su
 puntuador, los 30 commits de la regla escrita, las trampas y el techo. Captura los prompts
 llamando a las tools reales con el backend interceptado; no carga ningun modelo.
 
 Uso:
 
-    uv run python scripts/construir_corpus.py afinidad     # corpus de afinidad (ver --help)
-    uv run python scripts/construir_corpus.py              # congela, captura, comprueba, escribe
-    uv run python scripts/construir_corpus.py --comprobar  # recaptura contra lo versionado
+    uv run python scripts/build_corpus.py affinity     # corpus de afinidad (ver --help)
+    uv run python scripts/build_corpus.py              # congela, captura, comprueba, escribe
+    uv run python scripts/build_corpus.py --check      # recaptura contra lo versionado
 """
 
 from __future__ import annotations
@@ -48,39 +48,39 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 
-from local_delegate import benchmark, config, server
+from local_delegate import benchmark, config, legacy_names, server
 
-RAIZ = Path(__file__).resolve().parents[1]
-DESTINO = RAIZ / "benchmarks" / "catalogo-2026-09"
-MARCADOR = "{CONTENIDO}"
+ROOT = Path(__file__).resolve().parents[1]
+DESTINATION = ROOT / "benchmarks" / "catalogo-2026-09"
+MARKER = "{CONTENIDO}"
 
-Fuente = Callable[[Path], bytes]
-Terminos = tuple[str, ...] | Callable[[str], tuple[str, ...]]
+Source = Callable[[Path], bytes]
+Terms = tuple[str, ...] | Callable[[str], tuple[str, ...]]
 
 
 # --- Fuentes -----------------------------------------------------------------------------------
 
 
-def normalizado(data: bytes) -> str:
+def normalized(data: bytes) -> str:
     """Lo que ve el modelo: `_read_input` lee con `read_text`, que convierte `\\r\\n` en `\\n`."""
     text = data.decode("utf-8", errors="replace")
     return text.replace("\r\n", "\n").replace("\r", "\n")
 
 
-def fichero(rel: str) -> Fuente:
+def file_source(rel: str) -> Source:
     return lambda root: (root / rel).read_bytes()
 
 
-def recorte_por_lineas(rel: str, limit: int, boundary: str | None = None) -> Fuente:
+def cut_by_lines(rel: str, limit: int, boundary: str | None = None) -> Source:
     """Lineas enteras hasta `limit` chars; con `boundary`, corta antes de una linea que case."""
 
     def generate(root: Path) -> bytes:
-        return cortar_lineas(normalizado((root / rel).read_bytes()), limit, boundary).encode()
+        return cut_lines(normalized((root / rel).read_bytes()), limit, boundary).encode()
 
     return generate
 
 
-def cortar_lineas(text: str, limit: int, boundary: str | None = None) -> str:
+def cut_lines(text: str, limit: int, boundary: str | None = None) -> str:
     lines = text.splitlines(keepends=True)
     accumulated = 0
     cut = 0
@@ -94,24 +94,24 @@ def cortar_lineas(text: str, limit: int, boundary: str | None = None) -> str:
     return "".join(lines[:cut])
 
 
-def recorte_exacto(rel: str, limit: int) -> Fuente:
+def exact_cut(rel: str, limit: int) -> Source:
     """Los primeros `limit` chars sin buscar frontera: lo que `_read_input` deja ver al modelo."""
-    return lambda root: normalizado((root / rel).read_bytes())[:limit].encode("utf-8")
+    return lambda root: normalized((root / rel).read_bytes())[:limit].encode("utf-8")
 
 
 def _git(root: Path, *args: str) -> bytes:
     return subprocess.run(["git", *args], cwd=root, capture_output=True, check=True).stdout
 
 
-def diff_de_commit(commit: str) -> Fuente:
+def commit_diff(commit: str) -> Source:
     return lambda root: _git(root, "show", "--format=", "--no-color", "--no-ext-diff", commit)
 
 
-def blob(commit: str, rel: str) -> Fuente:
+def blob(commit: str, rel: str) -> Source:
     return lambda root: _git(root, "show", f"{commit}:{rel}")
 
 
-def archivos_enteros(output: str, limit: int) -> str:
+def whole_files(output: str, limit: int) -> str:
     """Los avisos de ruff de los primeros archivos, ENTEROS, mientras quepan en `limit` chars.
 
     Un archivo cortado a medias daria conteos que la fuente no respalda. Lo que no es un aviso
@@ -131,7 +131,7 @@ def archivos_enteros(output: str, limit: int) -> str:
     return "".join(chosen)
 
 
-def salida_de_ruff_por_archivos(limit: int) -> Fuente:
+def ruff_output_by_file(limit: int) -> Source:
     def generate(root: Path) -> bytes:
         process = subprocess.run(
             [sys.executable, "-m", "ruff", "check", "--select", "ALL"]
@@ -144,31 +144,31 @@ def salida_de_ruff_por_archivos(limit: int) -> Fuente:
         )
         # ruff sale con 1 cuando encuentra algo, que es justo lo que se quiere. Las barras se
         # normalizan para que la salida no dependa del sistema en que se genero.
-        return archivos_enteros(process.stdout.replace("\\", "/"), limit).encode("utf-8")
+        return whole_files(process.stdout.replace("\\", "/"), limit).encode("utf-8")
 
     return generate
 
 
-def secciones_de_version(rel: str, since: str, until: str) -> Fuente:
+def version_sections(rel: str, since: str, until: str) -> Source:
     """Del `## [desde]` hasta antes de `## [hasta]`. Las secciones publicadas no cambian: el
     CHANGELOG solo crece por arriba, asi que el recorte es reproducible aunque el fichero no."""
 
     def generate(root: Path) -> bytes:
-        text = normalizado((root / rel).read_bytes())
+        text = normalized((root / rel).read_bytes())
         start = text.index(f"## [{since}]")
         return text[start : text.index(f"## [{until}]", start)].encode("utf-8")
 
     return generate
 
 
-def texto_literal(content: str) -> Fuente:
+def literal_text(content: str) -> Source:
     return lambda _root: content.encode("utf-8")
 
 
 # --- Terminos derivados de la fuente, no escritos a ojo -----------------------------------------
 
 
-def _primeros(pattern: str, n: int = 3, group: int = 1) -> Callable[[str], tuple[str, ...]]:
+def _first_ones(pattern: str, n: int = 3, group: int = 1) -> Callable[[str], tuple[str, ...]]:
     def derive(text: str) -> tuple[str, ...]:
         seen: list[str] = []
         for match in re.finditer(pattern, text, flags=re.MULTILINE):
@@ -182,7 +182,7 @@ def _primeros(pattern: str, n: int = 3, group: int = 1) -> Callable[[str], tuple
     return derive
 
 
-def _reglas_mas_frecuentes(text: str) -> tuple[str, ...]:
+def _most_frequent_rules(text: str) -> tuple[str, ...]:
     count = Counter(re.findall(r": ([A-Z]+[0-9]+) ", text))
     return tuple(rule for rule, _ in count.most_common(3))
 
@@ -190,17 +190,17 @@ def _reglas_mas_frecuentes(text: str) -> tuple[str, ...]:
 # Segundo piloto de CP-3: el 2B se invento los conteos de lint y la cobertura no lo veia. Para cada
 # regla que el caso pide nombrar, los numeros que la fuente respalda: el total, cuantos archivos la
 # tienen y lo que suma en cada archivo. Salen de las lineas de ruff, no de lo que dijo un modelo.
-def _conteos_de_las_reglas(text: str) -> dict[str, list[int]]:
+def _rule_counts(text: str) -> dict[str, list[int]]:
     per_rule: dict[str, Counter[str]] = {}
     for file, rule in re.findall(r"^(\S+?):\d+:\d+: ([A-Z]+[0-9]+) ", text, flags=re.MULTILINE):
         per_rule.setdefault(rule, Counter())[file] += 1
     return {
         rule: sorted({sum(per_rule[rule].values()), len(per_rule[rule]), *per_rule[rule].values()})
-        for rule in _reglas_mas_frecuentes(text)
+        for rule in _most_frequent_rules(text)
     }
 
 
-def formato_pedido(system: str | None) -> dict[str, Any]:
+def requested_format(system: str | None) -> dict[str, Any]:
     """Lo que la instruccion de la tool pide de forma comprobable: limite de palabras y prosa.
 
     P-15: el usuario descarto respuestas por salirse de las dos cosas, y la cobertura de terminos no
@@ -216,7 +216,7 @@ def formato_pedido(system: str | None) -> dict[str, Any]:
     return fmt
 
 
-def _docstring_del_modulo(text: str) -> str:
+def _module_docstring(text: str) -> str:
     parts = text.split('"""')
     return parts[1] if len(parts) > 2 else ""
 
@@ -225,12 +225,12 @@ def _docstring_del_modulo(text: str) -> str:
 # demostro: con los tres primeros `def` del fichero, dos explicaciones correctas sacaban 0. Lo que la
 # explicacion SI tiene que cubrir es lo que el modulo declara de si mismo en su docstring: sus rutas
 # o los ficheros y opciones que toca. Mas terminos, ademas, dan granularidad a la banda (P-12).
-def _rutas_del_docstring(text: str) -> tuple[str, ...]:
-    return tuple(dict.fromkeys(re.findall(r"GET (/api/\S+)", _docstring_del_modulo(text))))
+def _docstring_paths(text: str) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(re.findall(r"GET (/api/\S+)", _module_docstring(text))))
 
 
-def _ficheros_y_flags_del_docstring(text: str) -> tuple[str, ...]:
-    quoted = re.findall(r"`([^`]+)`", _docstring_del_modulo(text))
+def _docstring_files_and_flags(text: str) -> tuple[str, ...]:
+    quoted = re.findall(r"`([^`]+)`", _module_docstring(text))
     files = [re.sub(r".*/", "", t) for t in quoted if re.search(r"\.(json|md|bak)$", t)]
     flags = [t for t in quoted if t.startswith("--")]
     return tuple(dict.fromkeys(files + flags))
@@ -240,7 +240,7 @@ def _ficheros_y_flags_del_docstring(text: str) -> tuple[str, ...]:
 # primera entrada «Fixed» que anade al CHANGELOG. Con un unico termino (`inflight`), CP-3 dio 0 al
 # mensaje que nombraba el arreglo y al que solo nombraba el bump de version. Se quitan los privados
 # (`_x`) y los comandos con espacios; de una ruta a fichero se queda el nombre.
-def _identificadores_del_primer_arreglo(text: str) -> tuple[str, ...]:
+def _first_fix_identifiers(text: str) -> tuple[str, ...]:
     lines = text.splitlines()
     start = next((n for n, line in enumerate(lines) if line == "+### Fixed"), None)
     if start is None:
@@ -266,7 +266,7 @@ def _identificadores_del_primer_arreglo(text: str) -> tuple[str, ...]:
 # Un resumen de un changelog tiene que decir que cambio, y cada entrada lo resume en su titular en
 # negrita. Antes eran los numeros de version, que el prompt («resumen en prosa») no pide: CP-3 los
 # dio a 0 en los dos modelos, un suelo.
-def _identificadores_de_los_titulares(text: str) -> tuple[str, ...]:
+def _headline_identifiers(text: str) -> tuple[str, ...]:
     headlines = re.findall(r"^- \*\*(.+?)\*\*", text, flags=re.MULTILINE | re.DOTALL)
     return tuple(
         dict.fromkeys(
@@ -277,7 +277,7 @@ def _identificadores_de_los_titulares(text: str) -> tuple[str, ...]:
     )
 
 
-def _valores_toml(*keys: str) -> Callable[[str], tuple[str, ...]]:
+def _toml_values(*keys: str) -> Callable[[str], tuple[str, ...]]:
     def derive(text: str) -> tuple[str, ...]:
         values = []
         for key in keys:
@@ -293,18 +293,18 @@ def _valores_toml(*keys: str) -> Callable[[str], tuple[str, ...]]:
 
 
 @dataclass(frozen=True)
-class Caso:
+class Case:
     id: str
     tool: str
     role: str
     kind: str
     provenance: str
     origin: str
-    source: Fuente
+    source: Source
     extension: str = "txt"
     media_type: str = "texto"
     arguments: dict[str, Any] = field(default_factory=dict)
-    expected_terms: Terminos = ()
+    expected_terms: Terms = ()
     forbidden_terms: tuple[str, ...] = ()
     expected_json_fields: tuple[str, ...] = ()
     # Los terminos esperados tienen que estar en la fuente, salvo donde la salida no la copia:
@@ -338,20 +338,20 @@ _PARSE_DURATION = (
     "    return h * 3600 + mi * {MINUTO} + s\n"
 )
 
-CASOS: tuple[Caso, ...] = (
+CASES: tuple[Case, ...] = (
     # --- mechanical ---
-    Caso(
+    Case(
         "resumen-md-2k",
         "local_summarize",
         "mechanical",
         "calidad",
         "congelado",
         "CONTRIBUTING.md",
-        fichero("CONTRIBUTING.md"),
+        file_source("CONTRIBUTING.md"),
         extension="md",
         expected_terms=("pre-commit", "pull request"),
         reference=(
-            "cobertura",
+            "coverage",
             (
                 "Guía para contribuir: el entorno de desarrollo, cómo ejecutar el MCP en local, las "
                 "reglas del proyecto, cómo abrir un pull request y el uso de pre-commit."
@@ -362,7 +362,7 @@ CASOS: tuple[Caso, ...] = (
             ),
         ),
     ),
-    Caso(
+    Case(
         "extraer-toml-2k",
         "local_extract",
         "mechanical",
@@ -370,12 +370,12 @@ CASOS: tuple[Caso, ...] = (
         "congelado",
         "pyproject.toml, recortado en linea entera a 2 100 chars (entero pesa mas de 6 000 y "
         "produccion lo mandaria a long)",
-        recorte_por_lineas("pyproject.toml", 2100),
+        cut_by_lines("pyproject.toml", 2100),
         extension="toml",
         expected_json_fields=("name", "version", "requires-python", "license"),
-        expected_terms=_valores_toml("name", "version", "requires-python", "license"),
+        expected_terms=_toml_values("name", "version", "requires-python", "license"),
         reference=(
-            "json_valido",
+            "json_valid",
             (
                 '{"name": "local-delegate-mcp", "version": "0.27.0", "requires-python": ">=3.11", '
                 '"license": "MIT"}'
@@ -386,40 +386,40 @@ CASOS: tuple[Caso, ...] = (
             ),
         ),
     ),
-    Caso(
+    Case(
         "clasificar-53",
         "local_classify",
         "mechanical",
         "calidad",
         "reconstruido",
         "evento inline real de 53 chars; texto recreado con esa forma",
-        texto_literal("El dashboard dejó de cargar tras actualizar a 0.27.0."),
+        literal_text("El dashboard dejó de cargar tras actualizar a 0.27.0."),
         arguments={"labels": ["bug", "feature", "docs", "pregunta"]},
         expected_terms=("bug",),
         forbidden_terms=("feature", "docs", "pregunta"),
         terms_in_source=False,
     ),
-    Caso(
+    Case(
         "traducir-42",
         "local_translate",
         "mechanical",
         "calidad",
         "reconstruido",
         "evento inline real de 42 chars; texto recreado con esa forma",
-        texto_literal("Reinicia el daemon después de actualizarlo"),
+        literal_text("Reinicia el daemon después de actualizarlo"),
         arguments={"target_lang": "inglés"},
         expected_terms=("restart", "daemon", "updat"),
         forbidden_terms=("reinicia",),
         terms_in_source=False,
     ),
-    Caso(
+    Case(
         "delegar-56",
         "local_delegate",
         "mechanical",
         "calidad",
         "reconstruido",
         "evento inline real de 56 chars; texto recreado con esa forma",
-        texto_literal("tokens, latencia, modelo, errores, reintentos y el coste"),
+        literal_text("tokens, latencia, modelo, errores, reintentos y el coste"),
         arguments={
             "task": "Convierte esta enumeración en una lista con una viñeta por elemento.",
             "output_format": "lista Markdown con una viñeta '- ' por elemento",
@@ -427,21 +427,21 @@ CASOS: tuple[Caso, ...] = (
         expected_terms=("tokens", "latencia", "modelo", "errores", "reintentos", "coste"),
     ),
     # --- long ---
-    Caso(
+    Case(
         "resumen-md-10k",
         "local_summarize",
         "long",
         "calidad",
         "congelado",
         "docs/recipes/claude-code-hooks.md",
-        fichero("docs/recipes/claude-code-hooks.md"),
+        file_source("docs/recipes/claude-code-hooks.md"),
         extension="md",
         expected_terms=("UserPromptSubmit", "PreToolUse", "LD_HOOK_READ_BLOQUEAR"),
         # P-15: la cobertura de terminos no coincidio con el juicio humano (0 de 3, invertida). Lo
         # decide la comparacion por pares a ciegas; los terminos se quedan como dato.
         automatic_score=False,
     ),
-    Caso(
+    Case(
         # Tarea 19: sustituye a `resumen-changelog-43k`, cuyos terminos eran un suelo. Dos secciones
         # y no una: la 0.27.0 sola pesa 5 507 chars, bajo LONG_INPUT_CHARS, y produccion la
         # mandaria a mechanical. Son las mismas que abrian la fuente congelada anterior.
@@ -451,33 +451,33 @@ CASOS: tuple[Caso, ...] = (
         "calidad",
         "congelado",
         "CHANGELOG.md, secciones 0.27.0 y 0.26.0",
-        secciones_de_version("CHANGELOG.md", "0.27.0", "0.25.0"),
+        version_sections("CHANGELOG.md", "0.27.0", "0.25.0"),
         extension="md",
-        expected_terms=_identificadores_de_los_titulares,
+        expected_terms=_headline_identifiers,
         automatic_score=False,  # P-15: 3 de 4 contra el juicio humano; lo deciden los pares
     ),
-    Caso(
+    Case(
         "extraer-uvlock-48k",
         "local_extract",
         "long",
         "calidad",
         "congelado",
         "uv.lock, recortado a los 48 000 chars que `_read_input` deja ver al rol long",
-        recorte_exacto("uv.lock", 48000),
+        exact_cut("uv.lock", 48000),
         extension="lock",
         expected_json_fields=("version", "requires-python", "primer_paquete"),
         # `version = 1` no sirve de termino: un «1» aparece en cualquier respuesta.
         expected_terms=lambda text: (
-            _valores_toml("requires-python")(text)
-            + _primeros(r'^\[\[package\]\]\nname = "([^"]+)"', n=1)(text)
+            _toml_values("requires-python")(text)
+            + _first_ones(r'^\[\[package\]\]\nname = "([^"]+)"', n=1)(text)
         ),
         reference=(
-            "json_campos",
+            "json_fields",
             '{"version": 1, "requires-python": ">=3.11", "primer_paquete": "annotated-doc"}',
             '{"version": 1, "requires-python": ">=3.11", "paquete_primer": "annotated-doc"}',
         ),
     ),
-    Caso(
+    Case(
         # Segundo piloto de CP-3: `lint-33k` (14 archivos, 48 reglas) no cabia «agrupado por archivo»
         # en 200 palabras, y los dos modelos truncaban siempre. Archivos enteros hasta 9 000 chars:
         # sigue por encima de LONG_INPUT_CHARS, asi que produccion la manda a long.
@@ -488,9 +488,9 @@ CASOS: tuple[Caso, ...] = (
         "generado",
         "ruff check --select ALL --output-format concise --no-cache src/local_delegate, "
         "archivos enteros hasta 9 000 chars",
-        salida_de_ruff_por_archivos(9000),
-        expected_terms=_reglas_mas_frecuentes,
-        counts=_conteos_de_las_reglas,
+        ruff_output_by_file(9000),
+        expected_terms=_most_frequent_rules,
+        counts=_rule_counts,
         # Tercer piloto de CP-3: 0 en los dos modelos otra vez. El 2B se inventa los conteos y el 14B
         # los da bien pero lista TODO y trunca: el prompt de la tool no cabe con esta entrada, y eso
         # se arregla en la tool (F3). Lo juzga la revision a ciegas (decision del usuario).
@@ -498,59 +498,59 @@ CASOS: tuple[Caso, ...] = (
         # Pareja de CP-4 de conteos: las dos nombran las tres reglas; la mala cambia un 7 por un 9,
         # que no es ni el total, ni los archivos, ni lo de ningun archivo.
         reference=(
-            "conteos",
+            "counts",
             "COM812: 16 avisos en 2 archivos. TRY003: 8. D102: 7.",
             "COM812: 16 avisos en 2 archivos. TRY003: 8. D102: 9.",
         ),
     ),
     # --- code ---
-    Caso(
+    Case(
         "commit-diff-19k",
         "local_commit_msg",
         "code",
         "calidad",
         "congelado",
         "git show 4d644ae (fix(web): inflight multi-proceso)",
-        diff_de_commit("4d644ae"),
+        commit_diff("4d644ae"),
         extension="diff",
-        expected_terms=_identificadores_del_primer_arreglo,
+        expected_terms=_first_fix_identifiers,
         # Dos pilotos de CP-3 con 0 en los dos modelos: un asunto de <=72 chars rara vez lleva
         # identificadores y el cuerpo es opcional. Lo juzga la revision a ciegas (decision del
         # usuario, 2026-09-14); los terminos se quedan como dato.
         automatic_score=False,
     ),
-    Caso(
+    Case(
         "explicar-metrics-15k",
         "local_explain_code",
         "code",
         "calidad",
         "congelado",
         "src/local_delegate/web/metrics.py, recortado antes de un bloque de nivel superior",
-        recorte_por_lineas("src/local_delegate/web/metrics.py", 17000, _TOP_LEVEL_PY),
+        cut_by_lines("src/local_delegate/web/metrics.py", 17000, _TOP_LEVEL_PY),
         extension="py.txt",
-        expected_terms=_rutas_del_docstring,
+        expected_terms=_docstring_paths,
         automatic_score=False,  # P-15: sin base contra el juicio humano; lo deciden los pares
     ),
-    Caso(
+    Case(
         "explicar-install-20k",
         "local_explain_code",
         "code",
         "calidad",
         "congelado",
         "src/local_delegate/install.py, recortado a los 20 000 chars que ve el rol code",
-        recorte_exacto("src/local_delegate/install.py", 20000),
+        exact_cut("src/local_delegate/install.py", 20000),
         extension="py.txt",
-        expected_terms=_ficheros_y_flags_del_docstring,
+        expected_terms=_docstring_files_and_flags,
         automatic_score=False,  # P-15: 2 de 4 contra el juicio humano; lo deciden los pares
     ),
-    Caso(
+    Case(
         "boilerplate-156",
         "local_boilerplate",
         "code",
         "calidad",
         "reconstruido",
         "evento inline real de 156 chars; especificacion recreada con esa forma",
-        texto_literal(
+        literal_text(
             "Función parse_duration(texto) que convierta '1h30m', '45s' o '2m' en segundos "
             "(int) y lance ValueError si el formato no es válido. Con docstring y ejemplos."
         ),
@@ -567,20 +567,20 @@ CASOS: tuple[Caso, ...] = (
             {"expr": "parse_duration('5x')", "raises": "ValueError"},
         ),
         reference=(
-            "ejecucion",
+            "execution",
             _PARSE_DURATION.replace("{MINUTO}", "60"),
             _PARSE_DURATION.replace("{MINUTO}", "61"),
         ),
     ),
     # --- vision ---
-    Caso(
+    Case(
         "describir-dashboard",
         "local_describe_image",
         "vision",
         "calidad",
         "congelado",
         "docs/assets/dashboard.png",
-        fichero("docs/assets/dashboard.png"),
+        file_source("docs/assets/dashboard.png"),
         extension="png",
         media_type="imagen",
         # `computo` va SIN acento a proposito, y el panel dice «cómputo»: es el termino que solo
@@ -593,14 +593,14 @@ CASOS: tuple[Caso, ...] = (
         ),
         terms_in_source=False,
     ),
-    Caso(
+    Case(
         "leer-cifras-dashboard",
         "local_describe_image",
         "vision",
         "calidad",
         "inventado",
         "docs/assets/dashboard.png con una pregunta que no corresponde a ningun evento real",
-        fichero("docs/assets/dashboard.png"),
+        file_source("docs/assets/dashboard.png"),
         extension="png",
         media_type="imagen",
         arguments={
@@ -614,7 +614,7 @@ CASOS: tuple[Caso, ...] = (
         },
         expected_terms=("0.27.0", "29/8", "05:01"),
         reference=(
-            "prohibido",
+            "forbidden",
             "Versión 0.27.0 (la publicada); primera fila: 29/8 a las 05:01.",
             "Versión 0.27.0 (antes 0.24.0); primera fila: 29/8 a las 05:01.",
         ),
@@ -622,17 +622,17 @@ CASOS: tuple[Caso, ...] = (
         terms_in_source=False,
     ),
     # --- sondeos de techo: no puntuan calidad ---
-    Caso(
+    Case(
         "techo-resumen-103k",
         "local_summarize",
         "long",
         "techo",
         "congelado",
         "src/local_delegate/server.py entero",
-        fichero("src/local_delegate/server.py"),
+        file_source("src/local_delegate/server.py"),
         extension="py.txt",
     ),
-    Caso(
+    Case(
         "techo-commit-156k",
         "local_commit_msg",
         "code",
@@ -640,18 +640,18 @@ CASOS: tuple[Caso, ...] = (
         "reconstruido",
         "git show d7c3dcc: el diff de 164 585 chars del log ya no existe; este es el mayor del "
         "historial de ese orden",
-        diff_de_commit("d7c3dcc"),
+        commit_diff("d7c3dcc"),
         extension="diff",
     ),
 )
 
-CONTROLES = (
+CONTROLS = (
     {
         "id": "dashboard-bcbe39f",
         "para": ["describir-dashboard", "leer-cifras-dashboard"],
-        "procedencia": "congelado",
-        "origen": "git show bcbe39f:docs/assets/dashboard.png (0.24.0)",
-        "fuente": blob("bcbe39f", "docs/assets/dashboard.png"),
+        "provenance": "congelado",
+        "origin": "git show bcbe39f:docs/assets/dashboard.png (0.24.0)",
+        "source": blob("bcbe39f", "docs/assets/dashboard.png"),
         "extension": "png",
     },
 )
@@ -665,12 +665,12 @@ CONTROLES = (
 # el prompt con el idioma que tendra la maquina (`LOCAL_DELEGATE_COMMIT_LANGUAGE=es`), no el de un
 # entorno limpio. `config.commit_language()` lee al llamar, asi que no hace falta recargar `config`.
 # Con la variable puesta, el corpus que sale cambia: `main_affinity` imprime el idioma usado y
-# `afinidad --comprobar` tiene que correr con el mismo.
+# `affinity --check` tiene que correr con el mismo.
 PRESERVED_VARIABLES = frozenset({"LOCAL_DELEGATE_COMMIT_LANGUAGE"})
 
 
 @dataclass
-class Llamada:
+class Call:
     model: str
     system: str
     user: Any
@@ -680,9 +680,9 @@ class Llamada:
 
 
 @contextlib.contextmanager
-def produccion_interceptada() -> Iterator[list[Llamada]]:
+def intercepted_production() -> Iterator[list[Call]]:
     """Las tools reales, sin backend, sin log de uso y sin las variables del paquete."""
-    calls: list[Llamada] = []
+    calls: list[Call] = []
     saved = {
         n: os.environ[n]
         for n in config.ENVIRONMENT_VARIABLES
@@ -690,7 +690,7 @@ def produccion_interceptada() -> Iterator[list[Llamada]]:
     }
 
     def run_chat(model, system, user, max_tokens, temperature, *, response_format=None, **_):
-        calls.append(Llamada(model, system, user, max_tokens, temperature, response_format))
+        calls.append(Call(model, system, user, max_tokens, temperature, response_format))
         result = server.ChatResult(text="{}", ok=True, finish_reason="stop")
         return result, 0, None, [server.Attempt(model, True, None, None, 0)]
 
@@ -716,7 +716,7 @@ def produccion_interceptada() -> Iterator[list[Llamada]]:
             importlib.reload(config)
 
 
-def roles_de_produccion() -> dict[str, str]:
+def production_roles() -> dict[str, str]:
     return {
         config.MODEL_MECHANICAL: "mechanical",
         config.MODEL_LONG: "long",
@@ -725,7 +725,7 @@ def roles_de_produccion() -> dict[str, str]:
     }
 
 
-def invocar(case: Caso, path: Path, text: str, tmp: Path) -> None:
+def invoke(case: Case, path: Path, text: str, tmp: Path) -> None:
     args = case.arguments
     tool = case.tool
     if tool == "local_summarize":
@@ -748,34 +748,34 @@ def invocar(case: Caso, path: Path, text: str, tmp: Path) -> None:
         server.local_delegate(task=args["task"], input=text, output_format=args["output_format"])
     elif tool == "local_boilerplate":
         server.local_boilerplate(
-            spec=text, language=args["language"], target=str(tmp / "generado.txt")
+            spec=text, language=args["language"], target=str(tmp / "generated.txt")
         )
     else:
         raise ValueError(f"tool sin invocacion: {tool}")
 
 
 @dataclass
-class Captura:
-    calls: list[Llamada]
+class Capture:
+    calls: list[Call]
     role: str | None
     models: set[str]
     whole_input: bool
     user_template: str | None
 
 
-def capturar(case: Caso, path: Path, data: bytes, *, no_chunking: bool = False) -> Captura:
+def capture_case(case: Case, path: Path, data: bytes, *, no_chunking: bool = False) -> Capture:
     """Con `no_chunking`, la tool sigue la ruta de UNA llamada aunque la entrada no quepa: es el
     prompt que necesita un sondeo de techo, que mide justo la mayor llamada unica que acepta el
     modelo. Produccion no lo manda nunca asi; por eso se captura aparte."""
-    text = normalizado(data) if case.media_type == "texto" else ""
-    with produccion_interceptada() as calls, tempfile.TemporaryDirectory() as tmp:
+    text = normalized(data) if case.media_type == "texto" else ""
+    with intercepted_production() as calls, tempfile.TemporaryDirectory() as tmp:
         # Los dos topes: el del rol (modelo principal de cada tool) y el del modelo (respaldos).
         unlimited = mock.patch.multiple(
             config, max_chars_for=lambda _model: 2**31, max_chars_for_role=lambda _role: 2**31
         )
         with unlimited if no_chunking else contextlib.nullcontext():
-            invocar(case, path, text, Path(tmp))
-        roles = roles_de_produccion()
+            invoke(case, path, text, Path(tmp))
+        roles = production_roles()
     models = {call.model for call in calls}
     role = roles.get(calls[0].model) if calls else None
     whole_input = False
@@ -788,33 +788,33 @@ def capturar(case: Caso, path: Path, data: bytes, *, no_chunking: bool = False) 
             template = next(b["text"] for b in user if b.get("type") == "text")
         elif isinstance(user, str) and text and text in user:
             whole_input = True
-            template = user.replace(text, MARCADOR, 1)
-    return Captura(calls, role, models, whole_input, template)
+            template = user.replace(text, MARKER, 1)
+    return Capture(calls, role, models, whole_input, template)
 
 
-def terminos(case: Caso, text: str) -> tuple[str, ...]:
+def terms(case: Case, text: str) -> tuple[str, ...]:
     return case.expected_terms(text) if callable(case.expected_terms) else case.expected_terms
 
 
 # --- Parejas de referencia de CP-4 (tarea 15) ---------------------------------------------------
 
 # Las senales en que TIENE que diferir cada pareja, y ninguna mas. Si difiere en otra, CP-4 no podra
-# decir por que separo el puntuador. `cobertura_literal` es la cobertura sin normalizar: la pareja de
+# decir por que separo el puntuador. `literal_coverage` es la cobertura sin normalizar: la pareja de
 # Unicode es la unica donde NO cambia, porque su buena solo acierta quitando acentos, y un puntuador
-# literal puntuaria igual de mal las dos. `json_campos` acompana a `json_valido` por construccion:
+# literal puntuaria igual de mal las dos. `json_fields` acompana a `json_valid` por construccion:
 # sin JSON no hay campos que mirar.
-DIFERENCIAS_ESPERADAS: dict[str, set[str]] = {
-    "cobertura": {"cobertura", "cobertura_literal"},
-    "prohibido": {"prohibido"},
-    "json_valido": {"json_valido", "json_campos"},
-    "json_campos": {"json_campos"},
-    "unicode": {"cobertura"},
-    "ejecucion": {"ejecucion"},
-    "conteos": {"conteos"},
+EXPECTED_DIFFERENCES: dict[str, set[str]] = {
+    "coverage": {"coverage", "literal_coverage"},
+    "forbidden": {"forbidden"},
+    "json_valid": {"json_valid", "json_fields"},
+    "json_fields": {"json_fields"},
+    "unicode": {"coverage"},
+    "execution": {"execution"},
+    "counts": {"counts"},
 }
 
 
-def _enteros_sueltos(span: str) -> list[int]:
+def _loose_integers(span: str) -> list[int]:
     """Tiradas de digitos que no pegan a una letra, un digito o `_`, ni forman un decimal. Un punto
     de final de frase no las anula. Recorrido a mano, sin las expresiones del puntuador: es su
     oraculo."""
@@ -838,7 +838,7 @@ def _enteros_sueltos(span: str) -> list[int]:
     return integers
 
 
-def _tramos_por_regla(line: str) -> list[tuple[str, str]]:
+def _spans_per_rule(line: str) -> list[tuple[str, str]]:
     """(codigo, lo que le sigue hasta el siguiente codigo) de cada codigo de regla de la linea."""
     spans: list[tuple[str, str]] = []
     current: str | None = None
@@ -866,16 +866,16 @@ def _tramos_por_regla(line: str) -> list[tuple[str, str]]:
     return spans
 
 
-def _conteos_cuadran(text: str, counts: Mapping[str, Sequence[int]]) -> bool:
+def _counts_add_up(text: str, counts: Mapping[str, Sequence[int]]) -> bool:
     numbers: dict[str, list[int]] = {rule: [] for rule in counts}
     for line in text.split("\n"):
-        for rule, span in _tramos_por_regla(line):
+        for rule, span in _spans_per_rule(line):
             if rule in numbers:
-                numbers[rule] += _enteros_sueltos(span)
+                numbers[rule] += _loose_integers(span)
     return all(numbers[rule] and set(numbers[rule]) <= set(valid) for rule, valid in counts.items())
 
 
-def _ejecuta_bien(code: str, checks: Sequence[dict[str, Any]]) -> bool:
+def _runs_ok(code: str, checks: Sequence[dict[str, Any]]) -> bool:
     """El oraculo de la senal de ejecucion, en proceso y sin el arnes del puntuador: si los dos
     compartieran codigo compartirian tambien el error. Solo corre referencias escritas a mano."""
     space: dict[str, Any] = {"__name__": "referencia"}
@@ -896,7 +896,7 @@ def _ejecuta_bien(code: str, checks: Sequence[dict[str, Any]]) -> bool:
     return True
 
 
-def plano(text: str) -> str:
+def flat(text: str) -> str:
     """NFKD, sin marcas combinantes y casefold.
 
     NFKD solo NO basta: descompone la «ó» en «o» mas un acento suelto, y el acento sigue ahi.
@@ -905,7 +905,7 @@ def plano(text: str) -> str:
     return "".join(c for c in broken_down if not unicodedata.combining(c)).casefold()
 
 
-def senales(
+def signals(
     text: str,
     expected: Sequence[str],
     forbidden: Sequence[str],
@@ -921,23 +921,23 @@ def senales(
         obj = None
     valid = isinstance(obj, dict) if fields else None
     return {
-        "cobertura": all(plano(t) in plano(text) for t in expected),
-        "cobertura_literal": all(t.casefold() in text.casefold() for t in expected),
-        "prohibido": any(plano(t) in plano(text) for t in forbidden),
-        "json_valido": valid,
-        "json_campos": (set(fields) <= set(obj)) if valid else None,
-        "ejecucion": _ejecuta_bien(text, checks) if checks else None,
-        "conteos": _conteos_cuadran(text, counts) if counts else None,
+        "coverage": all(flat(t) in flat(text) for t in expected),
+        "literal_coverage": all(t.casefold() in text.casefold() for t in expected),
+        "forbidden": any(flat(t) in flat(text) for t in forbidden),
+        "json_valid": valid,
+        "json_fields": (set(fields) <= set(obj)) if valid else None,
+        "execution": _runs_ok(text, checks) if checks else None,
+        "counts": _counts_add_up(text, counts) if counts else None,
     }
 
 
-def comprobar_referencia(
-    case: Caso, expected: Sequence[str], counts: Mapping[str, Sequence[int]] | None = None
+def check_reference(
+    case: Case, expected: Sequence[str], counts: Mapping[str, Sequence[int]] | None = None
 ) -> list[str]:
     if case.reference is None:
         return []
     signal, good, bad_answer = case.reference
-    if signal not in DIFERENCIAS_ESPERADAS:
+    if signal not in EXPECTED_DIFFERENCES:
         return [f"{case.id}: senal de referencia desconocida {signal!r}"]
     errors: list[str] = []
     if len(good) != len(bad_answer):
@@ -945,32 +945,30 @@ def comprobar_referencia(
             f"{case.id}: la pareja no tiene la misma longitud ({len(good)} y {len(bad_answer)})"
         )
     arguments = (case.forbidden_terms, case.expected_json_fields, case.checks, counts)
-    ok = senales(good, expected, *arguments)
-    bad_signals = senales(bad_answer, expected, *arguments)
+    ok = signals(good, expected, *arguments)
+    bad_signals = signals(bad_answer, expected, *arguments)
     if (
-        not ok["cobertura"]
-        or ok["prohibido"]
+        not ok["coverage"]
+        or ok["forbidden"]
         or False
         in (
-            ok["json_valido"],
-            ok["json_campos"],
-            ok["ejecucion"],
-            ok["conteos"],
+            ok["json_valid"],
+            ok["json_fields"],
+            ok["execution"],
+            ok["counts"],
         )
     ):
         errors.append(f"{case.id}: la respuesta buena no es buena: {ok}")
     differ = {name for name in ok if ok[name] != bad_signals[name]}
-    if differ != DIFERENCIAS_ESPERADAS[signal]:
+    if differ != EXPECTED_DIFFERENCES[signal]:
         errors.append(
             f"{case.id}: la pareja de {signal} difiere en {sorted(differ)}, "
-            f"no en {sorted(DIFERENCIAS_ESPERADAS[signal])}"
+            f"no en {sorted(EXPECTED_DIFFERENCES[signal])}"
         )
     return errors
 
 
-def comprobar(
-    case: Caso, captured: Captura, data: bytes, single: Captura | None = None
-) -> list[str]:
+def check(case: Case, captured: Capture, data: bytes, single: Capture | None = None) -> list[str]:
     """Las reglas de §4.4, contra lo que hizo produccion. Cada una puede fallar."""
     errors: list[str] = []
     n = len(captured.calls)
@@ -996,23 +994,23 @@ def comprobar(
                 f"{case.id}: el sondeo no tiene un prompt de una llamada con la entrada entera"
             )
     if case.media_type == "texto":
-        text = normalizado(data)
-        expected = terminos(case, text)
+        text = normalized(data)
+        expected = terms(case, text)
         if case.kind == "calidad" and not expected:
             errors.append(f"{case.id}: sin terminos esperados no hay nada que puntuar")
         if case.terms_in_source:
             for term in expected:
                 if term.casefold() not in text.casefold():
                     errors.append(f"{case.id}: el termino {term!r} no esta en la fuente")
-        errors.extend(_comprobar_tamano_del_id(case.id, len(text)))
+        errors.extend(_check_id_size(case.id, len(text)))
     if case.reference is not None:
-        source = normalizado(data) if case.media_type == "texto" else ""
+        source = normalized(data) if case.media_type == "texto" else ""
         counts = case.counts(source) if case.counts else None
-        errors.extend(comprobar_referencia(case, terminos(case, source), counts))
+        errors.extend(check_reference(case, terms(case, source), counts))
     return errors
 
 
-def _comprobar_tamano_del_id(case_id: str, chars: int) -> list[str]:
+def _check_id_size(case_id: str, chars: int) -> list[str]:
     # Un id que promete un tamano que la fuente no tiene es el `techo-resumen-120k` que apuntaba a
     # un fichero de 106 000: se comprueba, no se confia.
     match = re.search(r"-(\d+)(k?)$", case_id)
@@ -1028,14 +1026,14 @@ def _comprobar_tamano_del_id(case_id: str, chars: int) -> list[str]:
     )
 
 
-def entrada_de_corpus(
-    case: Caso, name: str, data: bytes, captured: Captura, single: Captura | None = None
+def corpus_entry(
+    case: Case, name: str, data: bytes, captured: Capture, single: Capture | None = None
 ) -> dict[str, Any]:
     # El prompt: el de produccion en los casos de calidad; en un sondeo de techo, el de la ruta
     # de una llamada. `production` sigue contando las llamadas que produccion hizo de verdad.
     prompt = single if single is not None else captured
     call = prompt.calls[0]
-    text = normalizado(data) if case.media_type == "texto" else ""
+    text = normalized(data) if case.media_type == "texto" else ""
     quality = case.kind == "calidad"
     with_prompt = quality or single is not None
     return {
@@ -1043,8 +1041,8 @@ def entrada_de_corpus(
         "tool": case.tool,
         "role": case.role,
         "kind": case.kind,
-        "procedencia": case.provenance,
-        "origen": case.origin,
+        "provenance": case.provenance,
+        "origin": case.origin,
         "media_type": case.media_type,
         "source_file": name,
         "source_sha256": hashlib.sha256(data).hexdigest(),
@@ -1057,13 +1055,13 @@ def entrada_de_corpus(
         "temperature": call.temperature if with_prompt else None,
         "response_format": call.response_format if with_prompt else None,
         "reasoning_effort": None,
-        "expected_terms": list(terminos(case, text)) if quality else [],
+        "expected_terms": list(terms(case, text)) if quality else [],
         "forbidden_terms": list(case.forbidden_terms) if quality else [],
         "expected_json_fields": list(case.expected_json_fields) if quality else [],
         "execution_checks": list(case.checks) if quality else [],
         "expected_counts": case.counts(text) if quality and case.counts else {},
         "automatic_scoring": case.automatic_score if quality else None,
-        "expected_format": formato_pedido(call.system) if quality else {},
+        "expected_format": requested_format(call.system) if quality else {},
         **(
             {
                 "reference_signal": case.reference[0],
@@ -1079,7 +1077,7 @@ def entrada_de_corpus(
 # --- Conteos del log ----------------------------------------------------------------------------
 
 
-def contar_log(log_dir: Path, root: Path) -> dict[str, Any]:
+def count_log(log_dir: Path, root: Path) -> dict[str, Any]:
     """Conteos agregados de §4.2. Ninguna ruta de fuera del repo sale de aqui, ni siquiera como
     nombre: el log guarda rutas del vault y de otros proyectos del usuario."""
     events: list[dict[str, Any]] = []
@@ -1100,10 +1098,10 @@ def contar_log(log_dir: Path, root: Path) -> dict[str, Any]:
         median = statistics.median(chars)
         per_tool[tool] = {
             "n": len(from_tool),
-            "chars_in_mediana": int(median) if median == int(median) else median,
+            "chars_in_median": int(median) if median == int(median) else median,
             "chars_in_min": min(chars),
             "chars_in_max": max(chars),
-            "modelos": dict(Counter(e.get("model") for e in from_tool).most_common()),
+            "models": dict(Counter(e.get("model") for e in from_tool).most_common()),
         }
     from_repo: Counter[str] = Counter()
     outside = 0
@@ -1119,30 +1117,28 @@ def contar_log(log_dir: Path, root: Path) -> dict[str, Any]:
         else:
             outside += 1
     return {
-        "eventos": len(events),
-        "eventos_local": len(local),
-        "descartados_no_local": dict(
+        "events": len(events),
+        "local_events": len(local),
+        "discarded_not_local": dict(
             Counter(e.get("tool") for e in events if e not in local).most_common()
         ),
-        "por_tool": per_tool,
-        "por_modelo": dict(Counter(e.get("model") for e in local).most_common()),
-        "por_source": dict(Counter(e.get("source") for e in local).most_common()),
-        "troceados": sum(1 for e in local if int(e.get("chunks") or 1) > 1),
-        "fuentes_del_repo": dict(from_repo.most_common()),
-        "fuentes_fuera_del_repo": outside,
+        "by_tool": per_tool,
+        "by_model": dict(Counter(e.get("model") for e in local).most_common()),
+        "by_source": dict(Counter(e.get("source") for e in local).most_common()),
+        "chunked": sum(1 for e in local if int(e.get("chunks") or 1) > 1),
+        "repo_sources": dict(from_repo.most_common()),
+        "sources_outside_repo": outside,
     }
 
 
 # --- Construir y comprobar ----------------------------------------------------------------------
 
 
-def _escribir_json(path: Path, data: Any) -> None:
+def _write_json(path: Path, data: Any) -> None:
     path.write_bytes((json.dumps(data, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
 
 
-def _fuente_congelada(
-    sources: Path, name: str, generate: Fuente, root: Path, refresh: bool
-) -> bytes:
+def _frozen_source(sources: Path, name: str, generate: Source, root: Path, refresh: bool) -> bytes:
     """La copia congelada si ya existe; el fichero vivo solo si falta o se pide refrescar.
 
     Congelar sirve para que el corpus no cambie cuando cambia el repo: `CHANGELOG.md` crece en
@@ -1155,34 +1151,34 @@ def _fuente_congelada(
     return generate(root)
 
 
-def construir(
-    root: Path, dest: Path, log_dir: Path | None, *, refresh_sources: bool = False
-) -> int:
+def build(root: Path, dest: Path, log_dir: Path | None, *, refresh_sources: bool = False) -> int:
     sources = dest / "fuentes"
     sources.mkdir(parents=True, exist_ok=True)
     errors: list[str] = []
     cases: list[dict[str, Any]] = []
     expected: set[str] = set()
-    for case in CASOS:
-        data = _fuente_congelada(
+    for case in CASES:
+        data = _frozen_source(
             sources, f"{case.id}.{case.extension}", case.source, root, refresh_sources
         )
         name = f"{case.id}.{case.extension}"
         expected.add(name)
         (sources / name).write_bytes(data)
-        captured = capturar(case, sources / name, data)
+        captured = capture_case(case, sources / name, data)
         single = (
-            capturar(case, sources / name, data, no_chunking=True) if case.kind == "techo" else None
+            capture_case(case, sources / name, data, no_chunking=True)
+            if case.kind == "techo"
+            else None
         )
-        errors.extend(comprobar(case, captured, data, single))
+        errors.extend(check(case, captured, data, single))
         if captured.calls:
-            cases.append(entrada_de_corpus(case, name, data, captured, single))
+            cases.append(corpus_entry(case, name, data, captured, single))
     controls = []
-    for control in CONTROLES:
-        data = _fuente_congelada(
+    for control in CONTROLS:
+        data = _frozen_source(
             sources,
             f"{control['id']}.{control['extension']}",
-            control["fuente"],
+            control["source"],
             root,
             refresh_sources,
         )
@@ -1196,8 +1192,8 @@ def construir(
             {
                 "id": control["id"],
                 "para": control["para"],
-                "procedencia": control["procedencia"],
-                "origen": control["origen"],
+                "provenance": control["provenance"],
+                "origin": control["origin"],
                 "source_file": name,
                 "source_sha256": hashlib.sha256(data).hexdigest(),
                 "source_bytes": len(data),
@@ -1211,17 +1207,17 @@ def construir(
         for error in errors:
             print(f"  - {error}")
         return 1
-    _escribir_json(
+    _write_json(
         dest / "cases.json",
         {
             "schema_version": 2,
-            "production_config": configuracion_de_produccion(),
+            "production_config": production_config(),
             "controls": controls,
             "cases": cases,
         },
     )
     if log_dir is not None and log_dir.is_dir():
-        _escribir_json(dest / "conteos-log.json", contar_log(log_dir, root))
+        _write_json(dest / legacy_names.LOG_COUNTS_FILE_NAMES[1], count_log(log_dir, root))
     benchmark.load_corpus(dest / "cases.json")
     quality = sum(1 for c in cases if c["kind"] == "calidad")
     print(
@@ -1235,19 +1231,19 @@ def construir(
     return 0
 
 
-def configuracion_de_produccion() -> dict[str, Any]:
-    with produccion_interceptada():
+def production_config() -> dict[str, Any]:
+    with intercepted_production():
         return {
             "long_input_chars": config.LONG_INPUT_CHARS,
             "chunk_chars": config.CHUNK_CHARS,
-            "models": {role: model for model, role in roles_de_produccion().items()},
+            "models": {role: model for model, role in production_roles().items()},
             "max_chars": {
-                role: config.max_chars_for_role(role) for role in roles_de_produccion().values()
+                role: config.max_chars_for_role(role) for role in production_roles().values()
             },
         }
 
 
-_CAMPOS_VIGILADOS = (
+_WATCHED_FIELDS = (
     "production",
     "system",
     "user_template",
@@ -1266,11 +1262,11 @@ _CAMPOS_VIGILADOS = (
 )
 
 
-def comprobar_versionado(dest: Path) -> list[str]:
+def check_versioned(dest: Path) -> list[str]:
     """Recaptura cada caso versionado contra el codigo de hoy. Si produccion cambio de rol, de
     troceado o de prompt, el corpus ya no mide lo que dice y hay que regenerarlo."""
     corpus = benchmark.load_corpus(dest / "cases.json")
-    by_id = {case.id: case for case in CASOS}
+    by_id = {case.id: case for case in CASES}
     errors: list[str] = []
     if {c.id for c in corpus.cases} != set(by_id):
         errors.append("los ids versionados no coinciden con los casos del constructor")
@@ -1280,23 +1276,23 @@ def comprobar_versionado(dest: Path) -> list[str]:
             continue
         path = dest / "fuentes" / versioned.source_file
         data = path.read_bytes()
-        captured = capturar(case, path, data)
-        single = capturar(case, path, data, no_chunking=True) if case.kind == "techo" else None
-        errors.extend(comprobar(case, captured, data, single))
-        current = entrada_de_corpus(case, versioned.source_file, data, captured, single)
-        for field_name in _CAMPOS_VIGILADOS:
+        captured = capture_case(case, path, data)
+        single = capture_case(case, path, data, no_chunking=True) if case.kind == "techo" else None
+        errors.extend(check(case, captured, data, single))
+        current = corpus_entry(case, versioned.source_file, data, captured, single)
+        for field_name in _WATCHED_FIELDS:
             if current.get(field_name) != versioned.raw.get(field_name):
                 # Tambien lo que no sale de produccion: el corpus no se edita a mano, y una
                 # referencia retocada en el JSON dejaria de ser la que el constructor comprobo.
                 errors.append(f"{versioned.id}: {field_name} ya no coincide con el constructor")
-    if corpus.production_config != configuracion_de_produccion():
+    if corpus.production_config != production_config():
         errors.append("production_config ya no coincide con config.py")
     return errors
 
 
 # --- Corpus de afinidad (REQ-040): la seleccion de commits y las trampas --------------------------
 
-AFFINITY_TARGET = RAIZ / "benchmarks" / "afinidad-2026-10"
+AFFINITY_TARGET = ROOT / "benchmarks" / "afinidad-2026-10"
 DEADLINE = "2026-10-06"  # los commits son ANTERIORES a esta fecha (la del commiter, `%cs`)
 F2_COMMIT = "d7c3dcc"  # `commit-diff-19k`: ya esta en el corpus, no se elige otra vez
 N_NEW_REAL = 29  # 30 casos reales en total: `commit-diff-19k` mas estos
@@ -1363,7 +1359,7 @@ def _is_candidate(c: Commit, before: str) -> bool:
 
 
 def _normalized_diff(root: Path, h: str) -> str:
-    return normalizado(diff_de_commit(h)(root))
+    return normalized(commit_diff(h)(root))
 
 
 @dataclass(frozen=True)
@@ -1467,9 +1463,9 @@ def same_zone_subject(
                 continue
             return {
                 "hash": c.hash,
-                "fichero": file,
-                "asunto": subject,
-                "cuerpo_real": commit_body(root, c.hash),
+                "file": file,
+                "subject": subject,
+                "real_body": commit_body(root, c.hash),
             }
     return None
 
@@ -1526,7 +1522,7 @@ def analyzer() -> Any:
     if module is not None and hasattr(module, "score_affinity"):
         return module
     spec = importlib.util.spec_from_file_location(
-        "analyze_benchmark", RAIZ / "scripts" / "analyze_benchmark.py"
+        "analyze_benchmark", ROOT / "scripts" / "analyze_benchmark.py"
     )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -1557,7 +1553,7 @@ def _classifies(id_: str, text: str, tags: list[str], acceptable_ones: list[str]
         "texto escrito para el caso",
         text,
         "txt",
-        {"tipo": "classify", "etiquetas": tags, "aceptables": acceptable_ones},
+        {"kind": "classify", "labels": tags, "acceptable": acceptable_ones},
         acceptable_ones[0],
         bad_one,
         arguments={"labels": tags},
@@ -1574,7 +1570,7 @@ def _extracts(
         "texto escrito para el caso",
         text,
         ext,
-        {"tipo": "extract", "claves": list(keys), "esperado": expected},
+        {"kind": "extract", "keys": list(keys), "expected": expected},
         json.dumps(expected, ensure_ascii=False),
         json.dumps(bad_one, ensure_ascii=False),
         fields=keys,
@@ -1592,11 +1588,11 @@ def _translates(id_: str, text: str, good_one: str, bad_one: str):
         text,
         "md",
         {
-            "tipo": "translate",
-            "titulos": est["titles"],
-            "listas": est["lists"],
-            "bloques": est["blocks"],
-            "codigo": est["code"],
+            "kind": "translate",
+            "titles": est["titles"],
+            "lists": est["lists"],
+            "blocks": est["blocks"],
+            "code": est["code"],
         },
         good_one,
         bad_one,
@@ -1628,7 +1624,7 @@ def _resume_linter(id_: str, warnings, good_one: str, bad_one: str):
         "salida de ruff escrita para el caso (sin rutas reales)",
         _linter_output(warnings),
         "txt",
-        {"tipo": "lint", "conteos": _linter_counts(warnings), "max_words": 200},
+        {"kind": "lint", "counts": _linter_counts(warnings), "max_words": 200},
         good_one,
         bad_one,
         provenance="generado",
@@ -1642,14 +1638,14 @@ def _delegates(id_: str, task: str, entry: str, fmt: str, expected: str, regex: 
         "texto escrito para el caso",
         entry,
         "txt",
-        {"tipo": "delegate", "esperado": expected, "formato": regex},
+        {"kind": "delegate", "expected": expected, "format": regex},
         expected,
         bad_one,
         arguments={"task": task, "output_format": fmt},
     )
 
 
-_VALLA = "```"
+_FENCE = "```"
 
 
 def _md(*blocks: str) -> str:
@@ -1665,19 +1661,19 @@ _TRANSLATION_1_EN = _md(
     "- Run the check command.",
     "- Read the report.",
     "",
-    _VALLA + "bash",
+    _FENCE + "bash",
     "pip install demo-tool  # installs the CLI",
     "demo-tool check --strict",
-    _VALLA,
+    _FENCE,
     "",
     "## Configuration",
     "",
     "Set the timeout in seconds:",
     "",
-    _VALLA + "toml",
+    _FENCE + "toml",
     "[demo]",
     "timeout = 30  # seconds",
-    _VALLA,
+    _FENCE,
 )
 _TRANSLATION_1_ES = _md(
     "# Inicio rápido",
@@ -1688,19 +1684,19 @@ _TRANSLATION_1_ES = _md(
     "- Ejecuta el comando de comprobación.",
     "- Lee el informe.",
     "",
-    _VALLA + "bash",
+    _FENCE + "bash",
     "pip install demo-tool  # installs the CLI",
     "demo-tool check --strict",
-    _VALLA,
+    _FENCE,
     "",
     "## Configuración",
     "",
     "Define el tiempo de espera en segundos:",
     "",
-    _VALLA + "toml",
+    _FENCE + "toml",
     "[demo]",
     "timeout = 30  # seconds",
-    _VALLA,
+    _FENCE,
 )
 _TRANSLATION_2_EN = _md(
     "# Troubleshooting",
@@ -1711,12 +1707,12 @@ _TRANSLATION_2_EN = _md(
     "2. Delete the stale lock file.",
     "3. Start the service again.",
     "",
-    _VALLA + "python",
+    _FENCE + "python",
     "def is_free(port):",
     '    """Return True when nothing listens on the port."""',
     "    # try to bind and close at once",
     "    return True",
-    _VALLA,
+    _FENCE,
     "",
     "### Still failing?",
     "",
@@ -1731,12 +1727,12 @@ _TRANSLATION_2_ES = _md(
     "2. Borra el archivo de bloqueo obsoleto.",
     "3. Arranca el servicio otra vez.",
     "",
-    _VALLA + "python",
+    _FENCE + "python",
     "def is_free(port):",
     '    """Return True when nothing listens on the port."""',
     "    # try to bind and close at once",
     "    return True",
-    _VALLA,
+    _FENCE,
     "",
     "### ¿Sigue fallando?",
     "",
@@ -1756,10 +1752,10 @@ _TRANSLATION_3_EN = _md(
     "",
     "Example of the new flag:",
     "",
-    _VALLA,
+    _FENCE,
     "$ demo run --dry-run",
     "# nothing was written",
-    _VALLA,
+    _FENCE,
 )
 _TRANSLATION_3_ES = _md(
     "## Registro de cambios",
@@ -1775,10 +1771,10 @@ _TRANSLATION_3_ES = _md(
     "",
     "Ejemplo del nuevo indicador:",
     "",
-    _VALLA,
+    _FENCE,
     "$ demo run --dry-run",
     "# nothing was written",
-    _VALLA,
+    _FENCE,
 )
 _TRANSLATION_4_EN = _md(
     "# Release checklist",
@@ -1790,10 +1786,10 @@ _TRANSLATION_4_EN = _md(
     "  - in the changelog",
     "- Run the full test suite.",
     "",
-    _VALLA + "python",
+    _FENCE + "python",
     "# bump the version everywhere",
     "VERSION = '1.2.0'",
-    _VALLA,
+    _FENCE,
     "",
     "Then push the tag.",
 )
@@ -1807,10 +1803,10 @@ _TRANSLATION_4_ES = _md(
     "  - en el registro de cambios",
     "- Ejecuta toda la batería de pruebas.",
     "",
-    _VALLA + "python",
+    _FENCE + "python",
     "# bump the version everywhere",
     "VERSION = '1.2.0'",
-    _VALLA,
+    _FENCE,
     "",
     "Después, sube la etiqueta.",
 )
@@ -2151,11 +2147,11 @@ F2_REGRESSION = (
 )
 F2_REAL_CASE = "commit-diff-19k"
 F2_CEILING_CASE = "techo-commit-156k"
-TRAP_KINDS = ("misma-zona", "secundario", "generico")
+TRAP_KINDS = ("same-zone", "secondary", "generic")
 SETS = 3
 
 TRAP_RULES = {
-    "regla_de_forma": (
+    "shape_rule": (
         "Si el mensaje del modelo emparejado tiene cuerpo, la trampa lleva el asunto mas tantas "
         "lineas de su cuerpo como lineas de cuerpo tenga ese mensaje (como mucho 5); si no lo tiene, "
         "solo el asunto. La aplica `hoja_pares.py generar-commit` al armar el par. El cuerpo se "
@@ -2165,7 +2161,7 @@ TRAP_RULES = {
         "pareja. Idioma: español, el de la tool (su prompt esta en español) y el del historial del "
         "repo."
     ),
-    "misma-zona": (
+    "same-zone": (
         "El asunto REAL de otro commit, fuera de los 30 y de los 9, que toca el fichero mas cambiado "
         "del caso trampa; elegido por codigo entre los asuntos de 72 caracteres como mucho y con "
         "prefijo convencional (el mas reciente); si ese fichero no da ninguno, el siguiente fichero "
@@ -2174,14 +2170,14 @@ TRAP_RULES = {
         "el cuerpo de ese commit; si no hay cuerpo redactado a mano, las 5 primeras lineas reales y, "
         "si tiene menos de 5, lineas redactadas sobre lo secundario del diff."
     ),
-    "secundario": (
+    "secondary": (
         "Redactado a mano: un mensaje con buen formato que solo nombra un cambio SECUNDARIO del diff "
         "(aqui, el registro de un gate de una traza SDD, la entrada del CHANGELOG de una subida de "
         "version o una explicacion lateral de un documento, que acompañan al cambio principal pero "
         "no lo son). Cada linea del cuerpo se comprueba "
         "contra el diff: no dice nada falso, solo deja fuera lo principal."
     ),
-    "generico": (
+    "generic": (
         "Redactado a mano: un mensaje con buen formato (prefijo convencional, asunto corto) que no "
         "dice nada concreto del diff. El cuerpo repite vaguedades sin nombrar ficheros ni cambios."
     ),
@@ -2191,8 +2187,8 @@ TRAP_RULES = {
 WRITTEN_TRAPS: dict[str, dict[str, Any]] = {
     # --- secundario: un mensaje con buen formato que solo nombra un cambio secundario del diff ---
     "4f41311": {
-        "asunto": "docs(sdd): registra la aprobación de la conformidad de una traza",
-        "cuerpo": [
+        "subject": "docs(sdd): registra la aprobación de la conformidad de una traza",
+        "body": [
             "Actualiza el state.json de una traza SDD.",
             "Registra el gate de conformidad como aprobado.",
             "Anota que el CI del PR estaba en verde y que se mergeó.",
@@ -2201,8 +2197,8 @@ WRITTEN_TRAPS: dict[str, dict[str, Any]] = {
         ],
     },
     "b04a5e2": {
-        "asunto": "docs: añade la entrada 0.18.1 al CHANGELOG",
-        "cuerpo": [
+        "subject": "docs: añade la entrada 0.18.1 al CHANGELOG",
+        "body": [
             "Añade la sección 0.18.1 al CHANGELOG.",
             "Actualiza el enlace Unreleased y añade el de la 0.18.1.",
             "Fija la fecha de la entrada en 2026-07-31.",
@@ -2211,8 +2207,8 @@ WRITTEN_TRAPS: dict[str, dict[str, Any]] = {
         ],
     },
     "fa08d64": {
-        "asunto": "docs(sdd): precisa por qué subscriptions no aplica",
-        "cuerpo": [
+        "subject": "docs(sdd): precisa por qué subscriptions no aplica",
+        "body": [
             "Reescribe en research.md la explicación del descarte de subscriptions.",
             "Dice que esas notificaciones son sobre recursos y prompts.",
             "Anota que el servidor no expone ningún recurso ni prompt.",
@@ -2222,8 +2218,8 @@ WRITTEN_TRAPS: dict[str, dict[str, Any]] = {
     },
     # --- generico: buen formato, nada concreto ---
     "3b20fb3": {
-        "asunto": "chore: realiza tareas de mantenimiento",
-        "cuerpo": [
+        "subject": "chore: realiza tareas de mantenimiento",
+        "body": [
             "Actualiza varios archivos.",
             "Mejora algunos detalles.",
             "Ajusta el contenido existente.",
@@ -2232,8 +2228,8 @@ WRITTEN_TRAPS: dict[str, dict[str, Any]] = {
         ],
     },
     "7d0f4ac": {
-        "asunto": "docs: mejora la documentación",
-        "cuerpo": [
+        "subject": "docs: mejora la documentación",
+        "body": [
             "Realiza ajustes en varias partes.",
             "Corrige pequeños detalles.",
             "Actualiza el texto donde hacía falta.",
@@ -2242,8 +2238,8 @@ WRITTEN_TRAPS: dict[str, dict[str, Any]] = {
         ],
     },
     "6710a6b": {
-        "asunto": "fix: corrige varios problemas",
-        "cuerpo": [
+        "subject": "fix: corrige varios problemas",
+        "body": [
             "Corrige varios problemas.",
             "Resuelve algunos errores menores.",
             "Mejora la robustez general.",
@@ -2315,7 +2311,7 @@ SAME_ZONE_RESERVES: dict[str, list[str]] = {
 def build_traps(
     root: Path, selection: Selection, *, ref: str = "main", before: str = DEADLINE
 ) -> dict[str, Any]:
-    """`trampas.json`: una trampa por caso `trampa`, tres por juego y los tres tipos en cada juego."""
+    """`traps.json`: una trampa por caso `trampa`, tres por juego y los tres tipos en cada juego."""
     outside = {c.hash for c in selection.real + selection.traps}
     sets: list[dict[str, Any]] = []
     for case_set_item in range(SETS):
@@ -2325,15 +2321,15 @@ def build_traps(
             commit = selection.traps[k]
             kind = TRAP_KINDS[position]
             entry: dict[str, Any] = {
-                "caso": f"commit-trampa-{commit.short}",
+                "case": f"commit-trampa-{commit.short}",
                 "commit": commit.hash,
-                "tipo": kind,
+                "kind": kind,
             }
-            if kind == "misma-zona":
+            if kind == "same-zone":
                 real = same_zone_subject(root, commit, outside, ref=ref, before=before)
                 if real is None:
                     raise ValueError(f"{commit.short}: ningun asunto de la misma zona")
-                body = list(real["cuerpo_real"])
+                body = list(real["real_body"])
                 origin = "real"
                 if commit.short in SAME_ZONE_BODIES:
                     body = list(SAME_ZONE_BODIES[commit.short])
@@ -2343,31 +2339,31 @@ def build_traps(
                     if reserve is None:
                         raise ValueError(f"{commit.short}: falta el cuerpo de reserva")
                     body += reserve[: 5 - len(body)]
-                    origin = "real+redactado" if real["cuerpo_real"] else "redactado"
+                    origin = "real+redactado" if real["real_body"] else "redactado"
                 entry.update(
-                    asunto=real["asunto"],
-                    cuerpo=body,
-                    cuerpo_origen=origin,
-                    asunto_de={"hash": real["hash"], "fichero": real["fichero"]},
+                    subject=real["subject"],
+                    body=body,
+                    source_body=origin,
+                    subject_of={"hash": real["hash"], "file": real["file"]},
                 )
             else:
                 text = WRITTEN_TRAPS.get(commit.short)
                 if text is None:
                     raise ValueError(f"{commit.short}: falta la trampa redactada ({kind})")
                 entry.update(
-                    asunto=text["asunto"], cuerpo=list(text["cuerpo"]), cuerpo_origen="redactado"
+                    subject=text["subject"], body=list(text["body"]), source_body="redactado"
                 )
-            if len(entry["asunto"]) > 72:
+            if len(entry["subject"]) > 72:
                 raise ValueError(f"{commit.short}: el asunto de la trampa pasa de 72 caracteres")
             entries.append(entry)
-        sets.append({"juego": case_set_item + 1, "trampas": entries})
-    return {"schema_version": 1, **TRAP_RULES, "juegos": sets}
+        sets.append({"set": case_set_item + 1, "traps": entries})
+    return {"schema_version": 1, **TRAP_RULES, "sets": sets}
 
 
 # --- Construccion --------------------------------------------------------------------------------
 
 
-def check_affinity(case: Caso, capture: Captura) -> list[str]:
+def check_affinity(case: Case, capture: Capture) -> list[str]:
     """Las reglas de §4.4 que valen para un caso nuevo, contra lo que hizo produccion."""
     n = len(capture.calls)
     if n == 0:
@@ -2384,15 +2380,15 @@ def check_affinity(case: Caso, capture: Captura) -> list[str]:
     return errors
 
 
-def _corpus_case(c: MechanicalCase) -> Caso:
-    return Caso(
+def _corpus_case(c: MechanicalCase) -> Case:
+    return Case(
         c.id,
         c.tool,
         "mechanical",
         "calidad",
         c.provenance,
         c.origin,
-        texto_literal(c.text),
+        literal_text(c.text),
         extension=c.extension,
         arguments=c.arguments,
         expected_json_fields=c.fields,
@@ -2401,7 +2397,7 @@ def _corpus_case(c: MechanicalCase) -> Caso:
 
 def _clear_f2_scoring(entry: dict[str, Any]) -> None:
     """Los casos nuevos no se puntuan con los campos de F2 (terminos, campos, conteos): su puntuador
-    es `puntuador`, que el veredicto aplica sobre la respuesta guardada."""
+    es `scorer`, que el veredicto aplica sobre la respuesta guardada."""
     for key in ("expected_terms", "forbidden_terms", "expected_json_fields", "execution_checks"):
         entry[key] = []
     entry["expected_counts"] = {}
@@ -2409,9 +2405,9 @@ def _clear_f2_scoring(entry: dict[str, Any]) -> None:
 
 
 def _affinity_entry(
-    case: Caso, name: str, data: bytes, capture: Captura, single: Captura | None, **extra: Any
+    case: Case, name: str, data: bytes, capture: Capture, single: Capture | None, **extra: Any
 ) -> dict[str, Any]:
-    entry = entrada_de_corpus(case, name, data, capture, single)
+    entry = corpus_entry(case, name, data, capture, single)
     entry.update(extra)
     return entry
 
@@ -2423,16 +2419,16 @@ def _write_json_lf(path: Path, data: Any) -> None:
 def build_affinity(
     root: Path, target: Path, *, privacy: str = "fallar", write: bool = True
 ) -> tuple[int, dict[str, Any]]:
-    """Construye `benchmarks/afinidad-2026-10/`: `cases.json`, `trampas.json` y `fuentes/`.
+    """Construye `benchmarks/afinidad-2026-10/`: `cases.json`, `traps.json` y `fuentes/`.
 
-    `privacidad`: `fallar` (por defecto) para si algun texto lleva datos privados; `excluir` saca de
+    `privacy`: `fallar` (por defecto) para si algun texto lleva datos privados; `excluir` saca de
     la seleccion los commits cuyo diff los lleva y sigue con el siguiente candidato de la misma
     regla. Devuelve `(codigo, informe)`; con `escribir=False` no toca el disco.
     """
     discard = (lambda t: bool(private_data(t))) if privacy == "excluir" else None
     selection = select_commits(root, discard_if=discard)
-    by_f2_id = {c.id: c for c in CASOS}
-    f2_sources = DESTINO / "fuentes"
+    by_f2_id = {c.id: c for c in CASES}
+    f2_sources = DESTINATION / "fuentes"
     errors: list[str] = []
     entries: list[dict[str, Any]] = []
     sources: dict[str, bytes] = {}
@@ -2440,12 +2436,12 @@ def build_affinity(
     # Las tools leen la fuente de un fichero: se captura sobre una copia temporal, no sobre el destino.
     tmp_dir = tempfile.TemporaryDirectory()
 
-    def capture_and_check(case: Caso, data: bytes, name: str, *, ceiling: bool = False):
+    def capture_and_check(case: Case, data: bytes, name: str, *, ceiling: bool = False):
         sources[name] = data
         path = Path(tmp_dir.name) / name
         path.write_bytes(data)
-        capture = capturar(case, path, data)
-        single = capturar(case, path, data, no_chunking=True) if ceiling else None
+        capture = capture_case(case, path, data)
+        single = capture_case(case, path, data, no_chunking=True) if ceiling else None
         return capture, single
 
     # 1. Las cinco tools mecanicas: casos nuevos, con su puntuador y sus referencias.
@@ -2455,7 +2451,7 @@ def build_affinity(
         data = c.text.encode("utf-8")
         capture, _ = capture_and_check(case, data, name)
         errors.extend(check_affinity(case, capture))
-        spec = {"id": c.id, "puntuador": c.scorer}
+        spec = {"id": c.id, "scorer": c.scorer}
         ok, bad = score_fn(spec, c.reference_ok), score_fn(spec, c.reference_bad)
         if ok["quality"] != 1.0 or not ok["format"] or bad["quality"] >= 1.0:
             errors.append(f"{c.id}: las referencias no separan (ok={ok}, bad={bad})")
@@ -2467,22 +2463,22 @@ def build_affinity(
             data,
             capture,
             None,
-            discriminante=True,
-            rol_en_hoja=None,
-            puntuador=c.scorer,
+            discriminating=True,
+            sheet_role=None,
+            scorer=c.scorer,
             reference_ok=c.reference_ok,
             reference_bad=c.reference_bad,
         )
         _clear_f2_scoring(entry)
         limit = entry["expected_format"].get("max_words")
-        if c.scorer["tipo"] == "lint" and limit != c.scorer["max_words"]:
+        if c.scorer["kind"] == "lint" and limit != c.scorer["max_words"]:
             errors.append(
                 f"{c.id}: el prompt pide {limit} palabras y el puntuador {c.scorer['max_words']}"
             )
         entries.append(entry)
 
     # 2. Los commits: `commit-diff-19k` de F2, los 29 de la regla y los 9 trampa.
-    def commit_input(case: Caso, name: str, data: bytes, role: str, subject: str, **extra):
+    def commit_input(case: Case, name: str, data: bytes, role: str, subject: str, **extra):
         capture, _ = capture_and_check(case, data, name)
         errors.extend(check_affinity(case, capture))
         entry = _affinity_entry(
@@ -2491,9 +2487,9 @@ def build_affinity(
             data,
             capture,
             None,
-            discriminante=role == "real",
-            rol_en_hoja=role,
-            puntuador={"tipo": "hoja"},
+            discriminating=role == "real",
+            sheet_role=role,
+            scorer={"kind": "hoja"},
             reference_ok=subject,
             reference_bad="chore: actualiza archivos del proyecto",
             **extra,
@@ -2502,7 +2498,7 @@ def build_affinity(
         return entry
 
     case19 = by_f2_id[F2_REAL_CASE]
-    data19 = _fuente_congelada(
+    data19 = _frozen_source(
         f2_sources, f"{case19.id}.{case19.extension}", case19.source, root, False
     )
     subject19 = _git_text(root, "log", "-1", "--format=%s", F2_COMMIT).strip()
@@ -2519,14 +2515,14 @@ def build_affinity(
     for role, commits in (("real", selection.real), ("trampa", selection.traps)):
         for c in commits:
             id_ = f"commit-{c.short}" if role == "real" else f"commit-trampa-{c.short}"
-            case = Caso(
+            case = Case(
                 id_,
                 "local_commit_msg",
                 "code",
                 "calidad",
                 "congelado",
                 f"git show {c.short} (main, {c.date})",
-                diff_de_commit(c.hash),
+                commit_diff(c.hash),
                 extension="diff",
             )
             data = case.source(root)
@@ -2536,9 +2532,9 @@ def build_affinity(
     for id_ in (F2_CEILING_CASE, *F2_REGRESSION):
         case = by_f2_id[id_]
         name = f"{case.id}.{case.extension}"
-        data = _fuente_congelada(f2_sources, name, case.source, root, False)
+        data = _frozen_source(f2_sources, name, case.source, root, False)
         capture, single = capture_and_check(case, data, name, ceiling=case.kind == "techo")
-        errors.extend(comprobar(case, capture, data, single))
+        errors.extend(check(case, capture, data, single))
         kind = "techo" if case.kind == "techo" else "f2"
         entries.append(
             _affinity_entry(
@@ -2547,52 +2543,50 @@ def build_affinity(
                 data,
                 capture,
                 single,
-                discriminante=False,
-                rol_en_hoja=None,
-                puntuador={"tipo": kind},
+                discriminating=False,
+                sheet_role=None,
+                scorer={"kind": kind},
             )
         )
 
     ids = [e["id"] for e in entries]
     if len(ids) != len(set(ids)):
         errors.append("hay ids repetidos en el corpus")
-    real = {e["commit"] for e in entries if e.get("rol_en_hoja") == "real"}
-    traps_c = {e["commit"] for e in entries if e.get("rol_en_hoja") == "trampa"}
+    real = {e["commit"] for e in entries if e.get("sheet_role") == "real"}
+    traps_c = {e["commit"] for e in entries if e.get("sheet_role") == "trampa"}
     if real & traps_c:
         errors.append("un commit es a la vez caso real y caso trampa")
-    real_diffs = {e["source_sha256"] for e in entries if e.get("rol_en_hoja") == "real"}
-    if any(e["source_sha256"] in real_diffs for e in entries if e.get("rol_en_hoja") == "trampa"):
+    real_diffs = {e["source_sha256"] for e in entries if e.get("sheet_role") == "real"}
+    if any(e["source_sha256"] in real_diffs for e in entries if e.get("sheet_role") == "trampa"):
         errors.append("un caso trampa tiene el mismo diff que un caso real")
 
     # El dato privado de un diff se ve antes de armar las trampas: en el modo `fallar` es el motivo.
     private_before = [
         f"dato privado en fuentes/{name}: {finding}"
         for name, data in sorted(sources.items())
-        for finding in private_data(normalizado(data))
+        for finding in private_data(normalized(data))
     ]
     if private_before:
         return 1, {
-            "casos": len(entries),
-            "por_tool": {},
-            "errores": errors + private_before,
-            "paso": selection.step,
+            "cases": len(entries),
+            "by_tool": {},
+            "errors": errors + private_before,
+            "step": selection.step,
         }
     traps = build_traps(root, selection)
     corpus = {
         "schema_version": 2,
-        "production_config": configuracion_de_produccion(),
+        "production_config": production_config(),
         "controls": [],
-        "seleccion": {
-            "regla": SELECTION_RULE,
+        "selection": {
+            "rule": SELECTION_RULE,
             "ref": "main",
-            "fecha_limite": DEADLINE,
-            "paso": selection.step,
-            "privacidad": privacy,
-            "caso_de_f2": {"id": F2_REAL_CASE, "commit": F2_COMMIT},
-            "reales": [{"hash": c.hash, "fecha": c.date, "chars": c.chars} for c in selection.real],
-            "trampas": [
-                {"hash": c.hash, "fecha": c.date, "chars": c.chars} for c in selection.traps
-            ],
+            "deadline": DEADLINE,
+            "step": selection.step,
+            "privacy": privacy,
+            "f2_case": {"id": F2_REAL_CASE, "commit": F2_COMMIT},
+            "real": [{"hash": c.hash, "fecha": c.date, "chars": c.chars} for c in selection.real],
+            "traps": [{"hash": c.hash, "fecha": c.date, "chars": c.chars} for c in selection.traps],
         },
         "cases": entries,
     }
@@ -2600,22 +2594,22 @@ def build_affinity(
     # 4. Nada privado en lo que va al repo.
     private_items: list[str] = []
     for name, data in sorted(sources.items()):
-        private_items += [f"fuentes/{name}: {h}" for h in private_data(normalizado(data))]
-    for tag, content in (("cases.json", corpus), ("trampas.json", traps)):
+        private_items += [f"fuentes/{name}: {h}" for h in private_data(normalized(data))]
+    for tag, content in (("cases.json", corpus), (legacy_names.TRAPS_FILE_NAMES[1], traps)):
         private_items += [
             f"{tag}: {h}" for h in private_data(json.dumps(content, ensure_ascii=False))
         ]
     errors += [f"dato privado en {p}" for p in private_items]
 
     def group(e: dict[str, Any]) -> str:
-        return e.get("rol_en_hoja") or ("nuevo" if e["discriminante"] else "regresion")
+        return e.get("sheet_role") or ("nuevo" if e["discriminating"] else "regresion")
 
     tmp_dir.cleanup()
     report = {
-        "por_tool": dict(Counter(f"{e['tool']}:{group(e)}" for e in entries)),
-        "casos": len(entries),
-        "errores": errors,
-        "paso": selection.step,
+        "by_tool": dict(Counter(f"{e['tool']}:{group(e)}" for e in entries)),
+        "cases": len(entries),
+        "errors": errors,
+        "step": selection.step,
     }
     if errors:
         return 1, report
@@ -2629,26 +2623,43 @@ def build_affinity(
         # Las fuentes son bytes con su sha256: git no puede tocarles el fin de linea.
         (target / ".gitattributes").write_bytes(b"fuentes/** -text\n")
         _write_json_lf(target / "cases.json", corpus)
-        _write_json_lf(target / "trampas.json", traps)
+        _write_json_lf(target / legacy_names.TRAPS_FILE_NAMES[1], traps)
         benchmark.load_corpus(target / "cases.json")
     return 0, report
 
 
-def check_versioned_affinity(target: Path, root: Path = RAIZ) -> list[str]:
-    """Reconstruye el corpus en una carpeta temporal y lo compara con lo versionado."""
-    privacy = json.loads((target / "cases.json").read_text(encoding="utf-8"))["seleccion"][
-        "privacidad"
-    ]
+def _versioned(target: Path, names: tuple[str, str]) -> Path:
+    """El fichero nuevo si existe y, si no, el congelado con el nombre viejo."""
+    old_name, new_name = names
+    return target / new_name if (target / new_name).exists() else target / old_name
+
+
+def check_versioned_affinity(target: Path, root: Path = ROOT) -> list[str]:
+    """Reconstruye el corpus en una carpeta temporal y lo compara con lo versionado. Lo versionado
+    puede estar en el formato viejo (congelado, ola A10b-4): se compara ya normalizado."""
+    versioned_corpus = legacy_names.normalize_affinity_corpus(
+        json.loads((target / "cases.json").read_text(encoding="utf-8"))
+    )
+    privacy = versioned_corpus["selection"]["privacy"]
     with tempfile.TemporaryDirectory() as tmp:
         copy = Path(tmp)
         (copy / "fuentes").mkdir()
         code, report = build_affinity(root, copy, privacy=privacy)
         if code:
-            return list(report["errores"])
+            return list(report["errors"])
         differences = []
-        for name in ("cases.json", "trampas.json"):
-            if (copy / name).read_bytes() != (target / name).read_bytes():
-                differences.append(f"{name} ya no coincide con el constructor")
+        built_corpus = json.loads((copy / "cases.json").read_text(encoding="utf-8"))
+        if legacy_names.normalize_affinity_corpus(built_corpus) != versioned_corpus:
+            differences.append("cases.json ya no coincide con el constructor")
+        traps_name = legacy_names.TRAPS_FILE_NAMES[1]
+        built_traps = json.loads((copy / traps_name).read_text(encoding="utf-8"))
+        versioned_traps = json.loads(
+            _versioned(target, legacy_names.TRAPS_FILE_NAMES).read_text(encoding="utf-8")
+        )
+        if legacy_names.normalize_affinity_traps(
+            built_traps
+        ) != legacy_names.normalize_affinity_traps(versioned_traps):
+            differences.append(f"{traps_name} ya no coincide con el constructor")
         for source in sorted((copy / "fuentes").iterdir()):
             versioned = target / "fuentes" / source.name
             if not versioned.is_file() or versioned.read_bytes() != source.read_bytes():
@@ -2657,33 +2668,33 @@ def check_versioned_affinity(target: Path, root: Path = RAIZ) -> list[str]:
 
 
 def main_affinity(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="construir_corpus.py afinidad")
-    parser.add_argument("--destino", type=Path, default=AFFINITY_TARGET)
+    parser = argparse.ArgumentParser(prog="build_corpus.py affinity")
+    parser.add_argument("--dest", type=Path, default=AFFINITY_TARGET)
     parser.add_argument(
         "--privacy",
         choices=("fallar", "excluir"),
         default="fallar",
         help="que hacer si un diff lleva datos privados: parar, o pasar al siguiente candidato",
     )
-    parser.add_argument("--comprobar", action="store_true", help="reconstruye y compara")
+    parser.add_argument("--check", action="store_true", help="reconstruye y compara")
     parser.add_argument("--dry-run", action="store_true", help="no escribe nada, solo informa")
     args = parser.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
     # El idioma de los prompts de commit sale del entorno (REQ-044): se dice, para que un corpus
     # construido o comprobado sin la variable no pase por el de produccion sin que se note.
     print(f"idioma del mensaje de commit: {config.commit_language() or '(el del diff)'}")
-    if args.comprobar:
-        differences = check_versioned_affinity(args.destino)
+    if args.check:
+        differences = check_versioned_affinity(args.dest)
         for d in differences:
             print(f"  - {d}")
         print("ok" if not differences else f"{len(differences)} diferencias")
         return 1 if differences else 0
-    code, report = build_affinity(RAIZ, args.destino, privacy=args.privacy, write=not args.dry_run)
-    for line in report["errores"]:
+    code, report = build_affinity(ROOT, args.dest, privacy=args.privacy, write=not args.dry_run)
+    for line in report["errors"]:
         print(f"  - {line}")
     print(
         json.dumps(
-            {"casos": report["casos"], "por_tool": report["por_tool"]},
+            {"cases": report["cases"], "by_tool": report["by_tool"]},
             ensure_ascii=False,
             indent=2,
         )
@@ -2698,27 +2709,27 @@ def main(argv: list[str] | None = None) -> int:
     if arguments and arguments[0] == "affinity":
         return main_affinity(arguments[1:])
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0] if __doc__ else None)
-    parser.add_argument("--destino", type=Path, default=DESTINO)
+    parser.add_argument("--dest", type=Path, default=DESTINATION)
     parser.add_argument(
         "--log-dir",
         type=Path,
         default=Path(os.environ.get("LOCALAPPDATA", "")) / "local-delegate",
         help="carpeta con usage-*.jsonl; si no existe, no se regeneran los conteos",
     )
-    parser.add_argument("--comprobar", action="store_true", help="solo recaptura lo versionado")
+    parser.add_argument("--check", action="store_true", help="solo recaptura lo versionado")
     parser.add_argument(
         "--refresh-sources",
         action="store_true",
         help="vuelve a congelar las fuentes desde los ficheros vivos (cambia el corpus medido)",
     )
     args = parser.parse_args(argv)
-    if args.comprobar:
-        errors = comprobar_versionado(args.destino)
+    if args.check:
+        errors = check_versioned(args.dest)
         for error in errors:
             print(f"  - {error}")
         print("ok" if not errors else f"{len(errors)} diferencias")
         return 1 if errors else 0
-    return construir(RAIZ, args.destino, args.log_dir, refresh_sources=args.refresh_sources)
+    return build(ROOT, args.dest, args.log_dir, refresh_sources=args.refresh_sources)
 
 
 if __name__ == "__main__":
