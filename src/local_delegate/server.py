@@ -66,11 +66,11 @@ _get_version = get_version
 
 #: Prefijo de contrato de los errores (no se traduce, REQ-023).
 ERROR_PREFIX = "[local-delegate error] "
-#: Marcadores de aviso, respaldo y entrada truncada. Su forma cambia en B2b-1 (REQ-010); aquí
-#: solo se nombran para que ese cambio toque una línea y no cada sitio que los escribe.
+#: Marcadores de aviso, respaldo y entrada truncada (REQ-010, desde la 0.36.0): valores de
+#: máquina en inglés que no cambian con el idioma; el texto que va DETRÁS sí sale del catálogo.
 WARNING_MARKER = sections.WARNING_MARKER
-FALLBACK_MARKER = "[local-delegate respaldo: "
-INPUT_TRUNCATED_MARKER = "[local-delegate: "
+FALLBACK_MARKER = "[local-delegate fallback: "
+INPUT_TRUNCATED_MARKER = "[local-delegate: input truncated — "
 
 
 def _machine(value: float, decimals: int | None = 0) -> str:
@@ -80,13 +80,31 @@ def _machine(value: float, decimals: int | None = 0) -> str:
 
 # `version=` declara la versión **del paquete**. Sin ella el SDK reporta la suya propia en el
 # handshake `initialize`, de modo que un cliente no tenía forma de saber qué local-delegate corre.
+#: REQ-027: la descripción del servidor y los títulos de las tools solo en inglés, literales y
+#: fuera del catálogo: no dependen de `LOCAL_DELEGATE_LANG` (los ve el cliente MCP, que además
+#: los cachea por sesión).
+SERVER_DESCRIPTION = (
+    "Delegates mechanical text and image tasks to a local model through an "
+    "OpenAI-compatible endpoint, to save subscription quota."
+)
+TOOL_TITLES: dict[str, str] = {
+    "local_summarize": "Summarize text or file",
+    "local_classify": "Classify into one label",
+    "local_extract": "Extract fields as JSON",
+    "local_boilerplate": "Generate boilerplate code",
+    "local_delegate": "Delegate a generic task",
+    "local_lint_summary": "Summarize lint or test output",
+    "local_commit_msg": "Draft a commit message",
+    "local_translate": "Translate text or file",
+    "local_explain_code": "Explain code",
+    "local_describe_image": "Describe an image",
+    "local_status": "Local backend diagnostics",
+}
+
 mcp = MCPServer(
     "local-delegate",
     title="Local Delegate",
-    description=(
-        "Delega tareas mecánicas de texto e imagen a un modelo local por un endpoint "
-        "compatible con OpenAI, para conservar cuota de la suscripción."
-    ),
+    description=SERVER_DESCRIPTION,
     website_url="https://github.com/ZahiriNatZuke/local-delegate",
     version=_get_version(),
     # El SDK los aplica outermost-first, y el orden es deliberado: «observar primero, habilitar
@@ -486,10 +504,12 @@ def _truncation_prefix(content: str, truncated: bool, raw_len: int) -> str:
     """Aviso visible cuando _read_input truncó la entrada (antes era un truncado silencioso)."""
     if not truncated:
         return ""
-    notice = i18n.t(
-        "mcp.receipt.input_truncated", processed=_machine(len(content)), total=_machine(raw_len)
+    counts = i18n.t(
+        "mcp.receipt.input_truncated_counts",
+        processed=_machine(len(content)),
+        total=_machine(raw_len),
     )
-    return f"{INPUT_TRUNCATED_MARKER}{notice}]\n"
+    return f"{INPUT_TRUNCATED_MARKER}{counts}]\n"
 
 
 def _append_log_line(log_path: Path, line: str) -> None:
@@ -1127,10 +1147,10 @@ def _fallback_info(
         # enfriamiento», se sigue mostrando tal cual si viene del log (REQ-033).
         reason, error_class = COOLDOWN_REASON, "cooldown"
     return {
-        "respondio": attempts[-1].model,
-        "en_lugar_de": model,
-        "motivo": reason,
-        "clase": error_class,
+        "answered_by": attempts[-1].model,
+        "instead_of": model,
+        "reason": reason,
+        "class": error_class,
     }
 
 
@@ -1146,13 +1166,13 @@ def _class_value(error_class: str | None) -> str | None:
 def _fallback_notice(info: dict, origin: str | None = None) -> str:
     """La línea de aviso, siempre DETRÁS del contenido y separada de él."""
     extra = f", {origin}" if origin else ""
-    reason = info["motivo"]
+    reason = info["reason"]
     if reason == COOLDOWN_REASON:
         reason = i18n.t("mcp.fallback.reason.cooldown")
     notice = i18n.t(
         "mcp.warning.answered_instead",
-        answered=info["respondio"],
-        instead=info["en_lugar_de"],
+        answered=info["answered_by"],
+        instead=info["instead_of"],
         reason=reason,
     )
     return f"\n\n{WARNING_MARKER}{notice}{extra}]"
@@ -2360,8 +2380,8 @@ class _CurrentModel:
         info = _fallback_info(self.model, result, attempts, self.affinity_tried)
         if info is not None:
             if self.hop is None:
-                self.hop = {**info, "en_lugar_de": self.requested, "chunk": self.chunk}
-            self.model = info["respondio"]
+                self.hop = {**info, "instead_of": self.requested, "chunk": self.chunk}
+            self.model = info["answered_by"]
             self.role = None
         return result, ms, attempts
 
@@ -2390,8 +2410,8 @@ class _CurrentModel:
         }
         if self.hop is not None:
             fields["model_requested"] = self.requested
-            fields["fallback_reason"] = self.hop["motivo"]
-            fields["fallback_class"] = self.hop["clase"]
+            fields["fallback_reason"] = self.hop["reason"]
+            fields["fallback_class"] = self.hop["class"]
         elif self.affinity is not None:
             fields["model_requested"] = self.requested
         if self.op is not None:
@@ -2515,7 +2535,7 @@ def _chat(
         text += truncation_notice
     fallback_info = _fallback_info(model, result, attempts, op.affinity_tried)
     # La afinidad (T15) no es un respaldo ni lleva aviso: queda en el log (REQ-016).
-    served = fallback_info["respondio"] if fallback_info else (op.affinity or model)
+    served = fallback_info["answered_by"] if fallback_info else (op.affinity or model)
     fallback_notice = ""
     if fallback_info is not None:
         if fallback is not None:
@@ -2545,8 +2565,8 @@ def _chat(
         output_to_file=write_to is not None and result.ok,
         chunks=len(attempts),
         model_requested=model if fallback_info or op.affinity else None,
-        fallback_reason=fallback_info["motivo"] if fallback_info else None,
-        fallback_class=fallback_info["clase"] if fallback_info else None,
+        fallback_reason=fallback_info["reason"] if fallback_info else None,
+        fallback_class=fallback_info["class"] if fallback_info else None,
         error_class=None if result.ok else _class_value(result.error_class),
         num_sections=num_sections,
         focus=focus,
@@ -3518,29 +3538,29 @@ def _structured_summary(
 
 
 # --- Tools ------------------------------------------------------------------
-@mcp.tool(annotations=_annotations("Resumir texto o archivo"))
+@mcp.tool(annotations=_annotations(TOOL_TITLES["local_summarize"]))
 def local_summarize(
     text: str | None = None,
     path: str | None = None,
     max_words: int = 150,
     focus: str | None = None,
 ) -> str:
-    """PREFIERE esta tool en vez de leer el archivo con Read cuando el archivo es grande
-    (>200 líneas / >10 KB) y solo necesitas un resumen, no el contenido literal.
+    """PREFER this tool over reading the file with Read when the file is large
+    (>200 lines / >10 KB) and you only need a summary, not the literal content.
 
-    Resume texto o el contenido de un archivo con un modelo local, sin gastar contexto de Claude.
+    Summarizes text or the content of a file with a local model, without spending Claude's context.
 
-    Usa esto para resumir archivos/documentos grandes: pasa 'path' y el archivo se lee del lado
-    del servidor, de modo que el contenido completo NO entra al contexto de Claude (solo vuelve el
-    resumen corto). Alternativamente pasa 'text'. Enruta al modelo mecánico (entradas cortas) o al
-    modelo de contexto largo (documentos grandes) automáticamente.
+    Use it to summarize large files/documents: pass 'path' and the file is read server-side, so
+    the full content does NOT enter Claude's context (only the short summary comes back).
+    Alternatively pass 'text'. Routes automatically to the mechanical model (short inputs) or to
+    the long-context model (large documents).
 
     Args:
-        text: Texto a resumir (usa esto o 'path').
-        path: Ruta a un archivo cuyo contenido se resume (leído server-side).
-        max_words: Longitud máxima del resumen en palabras.
-        focus: Opcional. Qué te interesa del documento (p. ej. "cifras de configuración",
-            "riesgos"): el resumen lo prioriza y conserva literales sus datos concretos.
+        text: Text to summarize (use this or 'path').
+        path: Path to a file whose content is summarized (read server-side).
+        max_words: Maximum length of the summary in words.
+        focus: Optional. What you care about in the document (e.g. "configuration figures",
+            "risks"): the summary prioritizes it and keeps its concrete data verbatim.
     """
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
@@ -3611,15 +3631,15 @@ def local_summarize(
     return _truncation_prefix(content, truncated_in, raw_len) + result
 
 
-@mcp.tool(annotations=_annotations("Clasificar en una etiqueta"))
+@mcp.tool(annotations=_annotations(TOOL_TITLES["local_classify"]))
 def local_classify(text: str, labels: list[str]) -> str:
-    """Clasifica un texto en UNA de las etiquetas dadas, con un modelo local.
+    """Classifies a text into ONE of the given labels, with a local model.
 
-    Devuelve exactamente una etiqueta de la lista, sin texto adicional.
+    Returns exactly one label from the list, with no additional text.
 
     Args:
-        text: Texto a clasificar.
-        labels: Lista de etiquetas candidatas.
+        text: Text to classify.
+        labels: List of candidate labels.
     """
     label_list = ", ".join(labels)
     system = _guard(f"exactamente una de estas etiquetas: [{label_list}]", max_words=5)
@@ -3637,31 +3657,30 @@ def local_classify(text: str, labels: list[str]) -> str:
     )
 
 
-@mcp.tool(annotations=_annotations("Extraer campos como JSON"))
+@mcp.tool(annotations=_annotations(TOOL_TITLES["local_extract"]))
 def local_extract(
     fields: list[str],
     text: str | None = None,
     path: str | None = None,
 ) -> dict[str, Any]:
-    """PREFIERE esta tool en vez de leer el archivo con Read cuando el archivo es grande
-    (>200 líneas / >10 KB) y solo necesitas campos estructurados, no el contenido literal.
+    """PREFER this tool over reading the file with Read when the file is large
+    (>200 lines / >10 KB) and you only need structured fields, not the literal content.
 
-    Extrae campos estructurados de un texto/archivo como JSON, con un modelo local.
+    Extracts structured fields from a text/file as JSON, with a local model.
 
-    Pasa 'path' para leer el archivo server-side (no gasta contexto de Claude) o 'text'.
-    Devuelve un objeto con exactamente las claves pedidas, ya validado: quien llama no tiene que
-    parsear una cadena. Si la entrada hubo que truncarla, se añade además la clave reservada
-    `_local_delegate` con el aviso — antes ese aviso iba como texto delante del JSON, donde
-    obligaba a limpiar la cadena antes de poder parsearla. Enruta al modelo mecánico
-    (entradas cortas) o al de contexto largo (documentos grandes) automáticamente: el sondeo
-    de tamaño usa bytes del archivo para 'path' y caracteres para 'text' (~5-10% de diferencia
-    en UTF-8, aceptable). Por defecto pide al backend un JSON restringido por schema
-    (`LOCAL_DELEGATE_JSON_SCHEMA=auto`); si el backend no lo soporta, reintenta en modo libre.
+    Pass 'path' to read the file server-side (spends no Claude context) or 'text'. Returns an
+    object with exactly the requested keys, already validated: the caller does not have to parse
+    a string. What is not data travels under the reserved key `_local_delegate` (`truncated` and
+    `warning`, `read_server_side`, `fallback`, or `error` and `raw`). Routes automatically to the
+    mechanical model (short inputs) or to the long-context model (large documents): the size probe
+    uses file bytes for 'path' and characters for 'text' (~5-10% difference in UTF-8, acceptable).
+    By default it asks the backend for schema-constrained JSON (`LOCAL_DELEGATE_JSON_SCHEMA=auto`);
+    if the backend does not support it, it retries in free mode.
 
     Args:
-        fields: Nombres de los campos a extraer (claves del JSON).
-        text: Texto fuente (usa esto o 'path').
-        path: Ruta a un archivo fuente (leído server-side).
+        fields: Names of the fields to extract (JSON keys).
+        text: Source text (use this or 'path').
+        path: Path to a source file (read server-side).
     """
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
@@ -3702,44 +3721,45 @@ def local_extract(
         # El modelo devolvió algo que no es JSON, o el backend falló y `result` trae el aviso de
         # error. Degradar con la carga cruda es mejor que lanzar: quien llama ve qué pasó en vez
         # de recibir una excepción de protocolo.
-        return {"_local_delegate": {"error": i18n.t("mcp.extract.not_json"), "crudo": result}}
+        return {"_local_delegate": {"error": i18n.t("mcp.extract.not_json"), "raw": result}}
     if not isinstance(data, dict):
-        return {"_local_delegate": {"error": i18n.t("mcp.extract.not_object"), "crudo": result}}
+        return {"_local_delegate": {"error": i18n.t("mcp.extract.not_object"), "raw": result}}
 
     meta: dict = {}
     if truncated_in:
-        meta["truncado"] = True
-        meta["aviso"] = i18n.t(
+        meta["truncated"] = True
+        meta["warning"] = i18n.t(
             "mcp.receipt.input_truncated", processed=_machine(len(content)), total=_machine(raw_len)
         )
     if path and config.FEEDBACK_ENABLED:
         # Tokens de Claude de la fila en curso (REQ-035), no del modelo local.
         event = cost.in_flight_row(tool="local_extract", source="path", path=path)
-        meta["leido_server_side"] = {
+        meta["read_server_side"] = {
             "chars": len(content),
-            "tokens_aprox": claude_tokens(len(content), kind="text", event=event),
+            "approx_tokens": claude_tokens(len(content), kind="text", event=event),
         }
     if fallback_info:
         # Con el resto de metadatos, nunca dentro de los campos que el agente usa tal cual.
-        meta["respaldo"] = fallback_info
+        meta["fallback"] = fallback_info
     if meta:
         data["_local_delegate"] = meta
     return data
 
 
-@mcp.tool(annotations=_annotations("Generar código boilerplate", writes=True))
+@mcp.tool(annotations=_annotations(TOOL_TITLES["local_boilerplate"], writes=True))
 def local_boilerplate(spec: str, language: str, target: str, overwrite: bool = False) -> str:
-    """Genera código boilerplate a partir de una especificación, con un modelo local de código.
+    """Generates boilerplate code from a specification, with a local code model.
 
-    **Escribe el código en `target`** y devuelve solo un recibo de dos líneas (ruta, tamaño). El
-    código generado nunca entra a tu contexto: ahí está el ahorro, y por eso `target` no es
-    opcional. Para verlo, abre el archivo; para usarlo, ya está en su sitio.
+    **Writes the code to `target`** and returns only a two-line receipt (path, size). The generated
+    code never enters your context: that is where the saving is, and that is why `target` is not
+    optional. To see it, open the file; to use it, it is already in place.
 
     Args:
-        spec: Descripción de lo que debe generar el código.
-        language: Lenguaje de programación (p. ej. 'python', 'typescript').
-        target: Ruta ABSOLUTA del archivo a escribir. Los directorios que falten se crean.
-        overwrite: Pisar `target` si ya existe. Por defecto falla, y falla ANTES de generar nada.
+        spec: Description of what the code must do.
+        language: Programming language (e.g. 'python', 'typescript').
+        target: ABSOLUTE path of the file to write. Missing directories are created.
+        overwrite: Overwrite `target` if it already exists. By default it fails, and it fails
+            BEFORE generating anything.
     """
     target_path = _validate_target(target, overwrite)
     system = _guard(f"solo código {language} válido, sin explicaciones ni ```")
@@ -3759,7 +3779,7 @@ def local_boilerplate(spec: str, language: str, target: str, overwrite: bool = F
     )
 
 
-@mcp.tool(annotations=_annotations("Delegar una tarea genérica"))
+@mcp.tool(annotations=_annotations(TOOL_TITLES["local_delegate"]))
 def local_delegate(
     task: str,
     input: str,
@@ -3767,23 +3787,23 @@ def local_delegate(
     model: str | None = None,
     chunk: str = "auto",
 ) -> str:
-    """Tool genérica de escape: delega una tarea texto->texto a un modelo local.
+    """Generic escape tool: delegates a text->text task to a local model.
 
-    Úsala cuando ninguna tool específica encaje. Arma el prompt con guardrails y devuelve texto.
+    Use it when no specific tool fits. Builds the prompt with guardrails and returns text.
 
-    Con entradas largas parte el input por límites naturales (headers Markdown, párrafos),
-    aplica la MISMA tarea a cada trozo y concatena las salidas en orden. Eso es lo correcto
-    para transformar todo el texto (traducir, reescribir, reformatear) pero NO para tareas de
-    reducción sobre el conjunto (contar, elegir el máximo, un único resumen global): para esas
-    pasa `chunk='off'` o usa `local_summarize`.
+    With long inputs it splits the input at natural boundaries (Markdown headers, paragraphs),
+    applies the SAME task to each chunk and concatenates the outputs in order. That is right for
+    transforming the whole text (translate, rewrite, reformat) but NOT for reduction tasks over the
+    whole (counting, picking the maximum, a single global summary): for those pass `chunk='off'` or
+    use `local_summarize`.
 
     Args:
-        task: Instrucción de la tarea (una frase con formato de salida explícito).
-        input: Contenido sobre el que operar.
-        output_format: Formato exacto de salida esperado.
-        model: Modelo a usar; uno de los ids configurados en el catálogo. Por defecto el mecánico.
-        chunk: 'auto' (parte solo si el input es largo), 'on' (parte siempre que se pueda),
-            'off' (una sola llamada; el input largo puede volver truncado).
+        task: Task instruction (one sentence with an explicit output format).
+        input: Content to operate on.
+        output_format: Exact expected output format.
+        model: Model to use; one of the ids configured in the catalog. Defaults to the mechanical one.
+        chunk: 'auto' (splits only if the input is long), 'on' (splits whenever possible),
+            'off' (a single call; a long input may come back truncated).
     """
     chosen = model or config.MODEL_MECHANICAL
     # Un modelo pedido por quien llama —o elegido por una persona en la pregunta de abajo— no
@@ -3840,28 +3860,28 @@ def local_delegate(
     )
 
 
-@mcp.tool(annotations=_annotations("Resumir salida de lint o tests"))
+@mcp.tool(annotations=_annotations(TOOL_TITLES["local_lint_summary"]))
 def local_lint_summary(
     path: str | None = None,
     text: str | None = None,
     max_words: int = 200,
 ) -> str:
-    """PREFIERE esta tool en vez de leer el archivo con Read cuando el archivo es grande
-    (>200 líneas / >10 KB) y solo necesitas un resumen agrupado, no el contenido literal. Si
-    ejecutaste un comando cuya salida es larga, vuélcala a un archivo y pasa 'path'.
+    """PREFER this tool over reading the file with Read when the file is large
+    (>200 lines / >10 KB) and you only need a grouped summary, not the literal content. If you ran
+    a command with long output, dump it to a file and pass 'path'.
 
-    Resume salida de linters/tests/CI con un modelo local, sin gastar contexto de Claude.
+    Summarizes linter/test/CI output with a local model, without spending Claude's context.
 
-    Pensada para logs largos y ruidosos (ESLint, clippy, pytest, tsc, CI). Pasa 'path' y el
-    archivo se lee del lado del servidor, de modo que el log completo NO entra al contexto de
-    Claude: solo vuelve un resumen agrupado por archivo con el conteo por tipo de error/regla y
-    lo más importante primero. Alternativamente pasa 'text'. Enruta al modelo mecánico (corto) o
-    al de contexto largo (largo) automáticamente.
+    Meant for long, noisy logs (ESLint, clippy, pytest, tsc, CI). Pass 'path' and the file is read
+    server-side, so the full log does NOT enter Claude's context: only a summary grouped by file
+    comes back, with the count per error type/rule and the most important first. Alternatively
+    pass 'text'. Routes automatically to the mechanical model (short) or the long-context model
+    (long).
 
     Args:
-        path: Ruta al archivo de salida de lint/tests (leído server-side). Usa esto o 'text'.
-        text: Salida de lint/tests como texto.
-        max_words: Longitud máxima del resumen en palabras.
+        path: Path to the lint/test output file (read server-side). Use this or 'text'.
+        text: Lint/test output as text.
+        max_words: Maximum length of the summary in words.
     """
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
@@ -3906,25 +3926,25 @@ def local_lint_summary(
     return _truncation_prefix(content, truncated_in, raw_len) + result
 
 
-@mcp.tool(annotations=_annotations("Redactar mensaje de commit"))
+@mcp.tool(annotations=_annotations(TOOL_TITLES["local_commit_msg"]))
 def local_commit_msg(
     diff: str | None = None,
     path: str | None = None,
     style: str = "conventional",
 ) -> str:
-    """PREFIERE esta tool en vez de leer el archivo con Read cuando el archivo es grande
-    (>200 líneas / >10 KB) y solo necesitas un mensaje de commit, no el contenido literal.
+    """PREFER this tool over reading the file with Read when the file is large
+    (>200 lines / >10 KB) and you only need a commit message, not the literal content.
 
-    Redacta un mensaje de commit a partir de un diff, con un modelo local de código.
+    Drafts a commit message from a diff, with a local code model.
 
-    Pasa 'path' a un archivo de diff (p. ej. la salida de `git diff` volcada a fichero) y se lee
-    server-side, de modo que el diff completo NO entra al contexto de Claude. Alternativamente
-    pasa 'diff' como texto. Revisa SIEMPRE el mensaje antes de usarlo.
+    Pass 'path' to a diff file (e.g. the output of `git diff` dumped to a file) and it is read
+    server-side, so the full diff does NOT enter Claude's context. Alternatively pass 'diff' as
+    text. ALWAYS review the message before using it.
 
     Args:
-        diff: El diff como texto (usa esto o 'path').
-        path: Ruta a un archivo con el diff (leído server-side).
-        style: 'conventional' (Conventional Commits) o 'plain'.
+        diff: The diff as text (use this or 'path').
+        path: Path to a file with the diff (read server-side).
+        style: 'conventional' (Conventional Commits) or 'plain'.
     """
     if style not in {"conventional", "plain"}:
         return ERROR_PREFIX + i18n.t("mcp.error.invalid_style", style=style)
@@ -4042,29 +4062,29 @@ def local_commit_msg(
     return _truncation_prefix(content, truncated_in, raw_len) + result
 
 
-@mcp.tool(annotations=_annotations("Traducir texto o archivo"))
+@mcp.tool(annotations=_annotations(TOOL_TITLES["local_translate"]))
 def local_translate(
     target_lang: str,
     text: str | None = None,
     path: str | None = None,
 ) -> str:
-    """PREFIERE esta tool en vez de leer el archivo con Read cuando el archivo es grande
-    (>200 líneas / >10 KB) y solo necesitas la traducción, no el contenido literal.
+    """PREFER this tool over reading the file with Read when the file is large
+    (>200 lines / >10 KB) and you only need the translation, not the literal content.
 
-    Traduce texto o el contenido de un archivo con un modelo local, sin gastar contexto de Claude.
+    Translates text or the content of a file with a local model, without spending Claude's context.
 
-    Pasa 'path' para leer el archivo server-side (el original no entra al contexto de Claude) o
-    'text'. Conserva el formato del original y devuelve SOLO la traducción. Enruta al modelo
-    mecánico (corto) o al de contexto largo (largo) automáticamente.
+    Pass 'path' to read the file server-side (the original does not enter Claude's context) or
+    'text'. Keeps the format of the original and returns ONLY the translation. Routes
+    automatically to the mechanical model (short) or the long-context model (long).
 
-    Los documentos largos se parten por límites naturales (headers Markdown, párrafos) y cada
-    trozo se traduce en su propia llamada; el resultado vuelve completo y en orden, sin el
-    aviso de salida truncada.
+    Long documents are split at natural boundaries (Markdown headers, paragraphs) and each chunk
+    is translated in its own call; the result comes back complete and in order, without the
+    truncated-output warning.
 
     Args:
-        target_lang: Idioma destino (p. ej. 'español', 'inglés', 'francés').
-        text: Texto a traducir (usa esto o 'path').
-        path: Ruta a un archivo cuyo contenido se traduce (leído server-side).
+        target_lang: Target language (e.g. 'Spanish', 'English', 'French').
+        text: Text to translate (use this or 'path').
+        path: Path to a file whose content is translated (read server-side).
     """
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
@@ -4086,25 +4106,25 @@ def local_translate(
     return _truncation_prefix(content, truncated_in, raw_len) + result
 
 
-@mcp.tool(annotations=_annotations("Explicar código"))
+@mcp.tool(annotations=_annotations(TOOL_TITLES["local_explain_code"]))
 def local_explain_code(
     code: str | None = None,
     path: str | None = None,
     question: str | None = None,
 ) -> str:
-    """PREFIERE esta tool en vez de leer el archivo con Read cuando el archivo es grande
-    (>200 líneas / >10 KB) y solo necesitas una explicación, no el contenido literal.
+    """PREFER this tool over reading the file with Read when the file is large
+    (>200 lines / >10 KB) and you only need an explanation, not the literal content.
 
-    Explica en prosa qué hace un fragmento/archivo de código, con un modelo local de código.
+    Explains in prose what a code snippet/file does, with a local code model.
 
-    Pasa 'path' para leer el archivo server-side (el código completo NO entra al contexto de
-    Claude; solo vuelve la explicación) o 'code'. Opcionalmente enfoca la explicación con
-    'question'. Revisa la explicación: la genera un modelo local.
+    Pass 'path' to read the file server-side (the full code does NOT enter Claude's context; only
+    the explanation comes back) or 'code'. Optionally focus the explanation with 'question'.
+    Review the explanation: a local model writes it.
 
     Args:
-        code: Código a explicar (usa esto o 'path').
-        path: Ruta a un archivo de código (leído server-side).
-        question: Pregunta o foco concreto (opcional).
+        code: Code to explain (use this or 'path').
+        path: Path to a code file (read server-side).
+        question: Concrete question or focus (optional).
     """
     content, truncated_in, raw_len = _read_input(code, path, config.max_chars_for_role("code"))
     extra = f" Enfócate en: {question}." if question else ""
@@ -4128,27 +4148,27 @@ def local_explain_code(
     return _truncation_prefix(content, truncated_in, raw_len) + result
 
 
-@mcp.tool(annotations=_annotations("Describir una imagen"))
+@mcp.tool(annotations=_annotations(TOOL_TITLES["local_describe_image"]))
 def local_describe_image(
     path: str,
     question: str | None = None,
     max_words: int = 200,
 ) -> str:
-    """PREFIERE esta tool en vez de adjuntar o leer la imagen tú mismo cuando solo necesitas
-    una descripción, lectura de texto visible (OCR simple) o una respuesta puntual sobre una
-    imagen, no la imagen en sí en tu contexto.
+    """PREFER this tool over attaching or reading the image yourself when you only need a
+    description, the visible text (simple OCR) or a specific answer about an image, not the image
+    itself in your context.
 
-    Describe una imagen (o responde una pregunta sobre ella) con un modelo local de visión.
-    La imagen se lee del lado del servidor: NUNCA entra al contexto de Claude, solo vuelve la
-    respuesta en texto.
+    Describes an image (or answers a question about it) with a local vision model. The image is
+    read server-side: it NEVER enters Claude's context, only the text answer comes back.
 
-    Guardrail de alcance: SOLO imagen->texto (describir, leer texto visible, responder una
-    pregunta puntual sobre la imagen). Esta tool NUNCA genera ni edita imágenes.
+    Scope guardrail: ONLY image->text (describe, read visible text, answer a specific question
+    about the image). This tool NEVER generates or edits images.
 
     Args:
-        path: Ruta a la imagen (png/jpg/jpeg/webp/gif), leída server-side.
-        question: Pregunta o foco concreto sobre la imagen (opcional; por defecto la describe).
-        max_words: Longitud máxima de la respuesta en palabras.
+        path: Path to the image (png/jpg/jpeg/webp/gif), read server-side.
+        question: Concrete question or focus about the image (optional; by default it describes
+            it).
+        max_words: Maximum length of the answer in words.
     """
     try:
         mime = _validate_image_path(path)
@@ -4513,12 +4533,12 @@ def _backend_state_text(state: BackendState) -> str:
     return i18n.t("mcp.status.backend.down", detail=state.detail)
 
 
-@mcp.tool(annotations=_annotations("Diagnóstico del backend local"))
+@mcp.tool(annotations=_annotations(TOOL_TITLES["local_status"]))
 def local_status() -> str:
-    """Diagnóstico de solo lectura del backend local y el catálogo de modelos.
+    """Read-only diagnostics of the local backend and the model catalog.
 
-    Úsala para saber qué modelos locales hay disponibles y verificar que el backend está vivo
-    antes de delegar en masa, o para diagnosticar por qué una tool local_* falló.
+    Use it to find out which local models are available and to check that the backend is alive
+    before delegating in bulk, or to diagnose why a local_* tool failed.
     """
     lines: list[str] = [f"local-delegate v{_get_version()}"]
     lines.extend(_describe_language())

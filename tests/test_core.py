@@ -153,7 +153,7 @@ def test_chat_appends_visible_notice_on_truncation(monkeypatch):
         )
     )
     text = server._chat(config.MODEL_MECHANICAL, "system", "user", max_tokens=8)
-    assert "[local-delegate aviso: salida truncada por max_tokens]" in text
+    assert "[local-delegate warning: salida truncada por max_tokens]" in text
 
 
 @backend_mock.mock
@@ -265,7 +265,7 @@ def test_json_schema_on_propagates_400(monkeypatch):
     assert route.call_count == 1
     # El fallo del backend no puede quedar mudo por devolver un objeto: viaja bajo la clave
     # reservada, que es donde quien llama puede encontrarlo sin adivinar.
-    assert "[local-delegate error]" in data["_local_delegate"]["crudo"]
+    assert "[local-delegate error]" in data["_local_delegate"]["raw"]
 
 
 # --- salida estructurada de local_extract (REQ-008) -----------------------------------
@@ -305,8 +305,8 @@ def test_local_extract_warns_about_truncation_without_breaking_the_keys(monkeypa
     )
     data = server.local_extract(fields=["a"], text="x" * 500)
     assert data["a"] == 1
-    assert data["_local_delegate"]["truncado"] is True
-    assert "500" in data["_local_delegate"]["aviso"]
+    assert data["_local_delegate"]["truncated"] is True
+    assert "500" in data["_local_delegate"]["warning"]
 
 
 @backend_mock.mock
@@ -346,7 +346,7 @@ def test_local_extract_with_path_does_not_break_the_json_with_the_savings_line(
     assert data["port"] == "9393"
     assert "error" not in data.get("_local_delegate", {})
     # El dato de ahorro no se pierde: se recoloca donde no estorba al parseo.
-    assert data["_local_delegate"]["leido_server_side"]["chars"] > 0
+    assert data["_local_delegate"]["read_server_side"]["chars"] > 0
 
 
 @backend_mock.mock
@@ -359,7 +359,7 @@ def test_local_extract_degrades_if_the_response_is_not_json(monkeypatch):
         )
     )
     data = server.local_extract(fields=["a"], text="algo")
-    assert data["_local_delegate"]["crudo"] == "no soy JSON"
+    assert data["_local_delegate"]["raw"] == "no soy JSON"
 
 
 # --- F2: local_status ----------------------------------------------------------------

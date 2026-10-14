@@ -241,8 +241,9 @@ NOT_SUMMARIZED_FORMS = frozenset(
     i18n.t_lang(language, "mcp.sections.not_summarized") for language in i18n.LANGUAGES
 )
 
-#: El marcador de aviso de esta salida. Su forma cambia en B2b-1 (REQ-010), junto con la de `server`.
-WARNING_MARKER = "[local-delegate aviso: "
+#: El marcador de aviso (REQ-010, desde la 0.36.0; antes `[local-delegate aviso: `). Lo comparte
+#: `server`: valor de máquina que no cambia con el idioma.
+WARNING_MARKER = "[local-delegate warning: "
 
 
 @dataclass
@@ -282,7 +283,12 @@ def complete(output: str, expected: list[str], *, truncated: bool = False) -> Co
         text = "\n".join(new_lines).rstrip("\n")
     left_out = len(emp.missing) + len(emp.empty)
     if left_out:
-        notice = i18n.t("mcp.warning.sections_not_summarized", n=left_out)
+        key = (
+            "mcp.warning.sections_not_summarized_one"
+            if left_out == 1
+            else "mcp.warning.sections_not_summarized"
+        )
+        notice = i18n.t(key, n=left_out)
         text += f"\n\n{WARNING_MARKER}{notice}]"
     return Completion(text, len(emp.missing), len(emp.empty), len(emp.out_of_order))
 

@@ -493,7 +493,7 @@ def test_api_stats_opens_no_sockets(env, monkeypatch):
 
 def test_forbidden_phrases(env, tmp_path, monkeypatch):
     """REQ-045 sobre el HTML, la respuesta de `/api/stats`, los textos del panel y los tres
-    mensajes a Claude de T4 (coletilla, recibo de salida a fichero y `tokens_aprox`)."""
+    mensajes a Claude de T4 (coletilla, recibo de salida a fichero y `approx_tokens`)."""
     logs, _home = env
     now = _now()
     _write_log(
@@ -523,9 +523,9 @@ def test_forbidden_phrases(env, tmp_path, monkeypatch):
         event=cost.in_flight_row(tool="local_boilerplate", source="inline"),
     )
     extract_source = inspect.getsource(server.local_extract)
-    i = extract_source.index('meta["leido_server_side"]')
+    i = extract_source.index('meta["read_server_side"]')
     approx_tokens = extract_source[i : extract_source.index("}", i) + 1]
-    assert "tokens_aprox" in approx_tokens  # guarda: el recorte encontró el bloque
+    assert "approx_tokens" in approx_tokens  # guarda: el recorte encontró el bloque
     assert "tokens de Claude" in tail_note and "tokens de Claude" in receipt  # guarda
 
     surfaces = {
@@ -538,7 +538,7 @@ def test_forbidden_phrases(env, tmp_path, monkeypatch):
         "tail_note": tail_note,
         "image_tail_note": image_tail_note,
         "receipt": receipt,
-        "tokens_aprox": approx_tokens,
+        "approx_tokens": approx_tokens,
     }
     assert "cuota que no gastaste" not in html
     assert "ahorro de cuota" not in html.lower()

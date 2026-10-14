@@ -1,0 +1,13 @@
+{
+  "tools.local_boilerplate.summary": "Genera código boilerplate y lo escribe en un fichero; solo vuelve el recibo",
+  "tools.local_classify.summary": "Clasifica un texto en una de las etiquetas dadas",
+  "tools.local_commit_msg.summary": "Redacta un mensaje de commit a partir de un diff",
+  "tools.local_delegate.summary": "Tarea genérica texto→texto cuando ninguna otra tool encaja",
+  "tools.local_describe_image.summary": "Describe una imagen o responde una pregunta sobre ella",
+  "tools.local_explain_code.summary": "Explica en prosa qué hace un código",
+  "tools.local_extract.summary": "Extrae campos de un texto o fichero como JSON",
+  "tools.local_lint_summary.summary": "Resume la salida de linters, tests o CI",
+  "tools.local_status.summary": "Diagnóstico del backend local y del catálogo de modelos",
+  "tools.local_summarize.summary": "Resume un texto o fichero sin que entre al contexto",
+  "tools.local_translate.summary": "Traduce un texto o fichero"
+}

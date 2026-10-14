@@ -188,7 +188,7 @@ def test_empty_section_counts_in_the_warning():
     )
     done = sections.complete(output, EXPECTED_HEADINGS)
     assert (done.missing, done.empty) == (0, 1)
-    assert "[local-delegate aviso: 1 secciones sin resumir" in done.text
+    assert "[local-delegate warning: 1 sección sin resumir" in done.text
 
 
 def test_output_cut_in_the_middle_of_a_heading():
@@ -328,7 +328,7 @@ def test_with_headings_the_model_gets_the_list_and_the_server_completes(monkeypa
     # Completada en su sitio, y la coletilla de ahorro sigue siendo lo último.
     assert output.index("## Configuración") < output.index("## Uso")
     assert output.rstrip().endswith("que no entraron a tu contexto)")
-    assert output.index("secciones sin resumir") < output.index("(leído server-side")
+    assert output.index("sin resumir por el límite") < output.index("(leído server-side")
     event = _events(tmp_path)[0]
     assert event["sections"] == 3
     assert event["chars_out"] == len(output.split("\n\n(leído server-side")[0])
@@ -343,7 +343,7 @@ def test_cut_output_is_completed_and_keeps_the_warning(monkeypatch, tmp_path):
     output, _ = _call_summary(monkeypatch, tmp_path, _model, text=text)
     assert output.count("## Tres") == 1
     assert "## Tr\n" not in output
-    assert "[local-delegate aviso: salida truncada por max_tokens]" in output
+    assert "[local-delegate warning: salida truncada por max_tokens]" in output
     assert output.index("## Tres") < output.index("salida truncada")
 
 

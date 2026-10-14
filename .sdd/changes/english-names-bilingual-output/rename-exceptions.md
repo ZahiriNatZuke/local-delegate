@@ -252,6 +252,9 @@ sección de su motivo.
 | techo | scripts/analyze_benchmark.py | lectura de formato viejo (ola B1d): valor de `criterion` en `decide --json` (contrato que el frente B no cambia); el informe lo dice con `_CRITERION_KEYS` en el idioma vigente |
 | velocidad | scripts/analyze_benchmark.py | lectura de formato viejo (ola B1d): valor de `criterion` en `decide --json` (contrato que el frente B no cambia); el informe lo dice con `_CRITERION_KEYS` en el idioma vigente |
 | empate | scripts/analyze_benchmark.py | lectura de formato viejo (ola B1d): valor de `criterion` en `decide --json` (contrato que el frente B no cambia); el informe lo dice con `_CRITERION_KEYS` en el idioma vigente; y el `human` de antes de B1d que `pairs_for_role` suma |
+| leido_server_side | tests/test_tool_contract.py | lectura de formato viejo (ola B2b-1): nombre viejo de REQ-010 que el test de contrato exige que **no** salga en `_local_delegate` |
+| tokens_aprox | tests/test_tool_contract.py | lectura de formato viejo (ola B2b-1): nombre viejo de REQ-010 que el test de contrato exige que **no** salga en `_local_delegate` |
+| en_lugar_de | tests/test_tool_contract.py | lectura de formato viejo (ola B2b-1): nombre viejo de REQ-010 que el test de contrato exige que **no** salga en el respaldo |
 
 ## Envoltorio de REQ-046
 
@@ -447,26 +450,9 @@ y los códigos de idioma con los que se prueba la regla del idioma. Nacen en la 
 
 ## Pendiente
 
+Vacía desde la ola B2b-1 (2026-10-14): las subclaves de `_local_delegate` de REQ-010 pasaron a
+`truncated`, `warning`, `read_server_side.{chars, approx_tokens}`, `fallback.{answered_by,
+instead_of, reason, class}` y `raw`, y los tests a la forma nueva.
+
 | Nombre | Fichero | Motivo |
 | --- | --- | --- |
-| respaldo | src/local_delegate/server.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` que pasa a `fallback` (cierre del frente A, lote 4) |
-| respondio | src/local_delegate/server.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` que pasa a `fallback.answered_by` (cierre del frente A, lote 4) |
-| en_lugar_de | src/local_delegate/server.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` que pasa a `fallback.instead_of` (cierre del frente A, lote 4) |
-| motivo | src/local_delegate/server.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` que pasa a `fallback.reason` (cierre del frente A, lote 4) |
-| clase | src/local_delegate/server.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` que pasa a `fallback.class` (cierre del frente A, lote 4) |
-| truncado | src/local_delegate/server.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` que pasa a `truncated` (cierre del frente A, lote 4) |
-| aviso | src/local_delegate/server.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` que pasa a `warning` (cierre del frente A, lote 4) |
-| leido_server_side | src/local_delegate/server.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` que pasa a `read_server_side` (cierre del frente A, lote 4) |
-| tokens_aprox | src/local_delegate/server.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` que pasa a `read_server_side.approx_tokens` (cierre del frente A, lote 4) |
-| crudo | src/local_delegate/server.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` que pasa a `raw` (cierre del frente A, lote 4) |
-| crudo | tests/test_core.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate`; el test comprueba la salida de hoy (cierre del frente A, lote 4) |
-| truncado | tests/test_core.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate`; el test comprueba la salida de hoy (cierre del frente A, lote 4) |
-| aviso | tests/test_core.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate`; el test comprueba la salida de hoy (cierre del frente A, lote 4) |
-| leido_server_side | tests/test_core.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate`; el test comprueba la salida de hoy (cierre del frente A, lote 4) |
-| respaldo | tests/test_fallback.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` (`fallback.*`); el test comprueba la salida de hoy (cierre del frente A, lote 4) |
-| respondio | tests/test_fallback.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` (`fallback.*`); el test comprueba la salida de hoy (cierre del frente A, lote 4) |
-| en_lugar_de | tests/test_fallback.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` (`fallback.*`); el test comprueba la salida de hoy (cierre del frente A, lote 4) |
-| motivo | tests/test_fallback.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate` (`fallback.*`); el test comprueba la salida de hoy (cierre del frente A, lote 4) |
-| tokens_aprox | tests/test_density.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate`; el test comprueba la salida de hoy (cierre del frente A, lote 4) |
-| leido_server_side | tests/test_density.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate`; el test comprueba la salida de hoy (cierre del frente A, lote 4) |
-| tokens_aprox | tests/test_dashboard_cost.py | pendiente (REQ-010, sale en B2): subclave de `_local_delegate`; el test lee el bloque de `local_extract` para comprobar el texto (cierre del frente A, lote 4) |

@@ -1,0 +1,203 @@
+===  local_summarize | Summarize text or file
+PREFER this tool over reading the file with Read when the file is large
+    (>200 lines / >10 KB) and you only need a summary, not the literal content.
+
+    Summarizes text or the content of a file with a local model, without spending Claude's context.
+
+    Use it to summarize large files/documents: pass 'path' and the file is read server-side, so
+    the full content does NOT enter Claude's context (only the short summary comes back).
+    Alternatively pass 'text'. Routes automatically to the mechanical model (short inputs) or to
+    the long-context model (large documents).
+
+    Args:
+        text: Text to summarize (use this or 'path').
+        path: Path to a file whose content is summarized (read server-side).
+        max_words: Maximum length of the summary in words.
+        focus: Optional. What you care about in the document (e.g. "configuration figures",
+            "risks"): the summary prioritizes it and keeps its concrete data verbatim.
+    
+  - text : None
+  - path : None
+  - max_words : None
+  - focus : None
+===  local_classify | Classify into one label
+Classifies a text into ONE of the given labels, with a local model.
+
+    Returns exactly one label from the list, with no additional text.
+
+    Args:
+        text: Text to classify.
+        labels: List of candidate labels.
+    
+  - text : None
+  - labels : None
+===  local_extract | Extract fields as JSON
+PREFER this tool over reading the file with Read when the file is large
+    (>200 lines / >10 KB) and you only need structured fields, not the literal content.
+
+    Extracts structured fields from a text/file as JSON, with a local model.
+
+    Pass 'path' to read the file server-side (spends no Claude context) or 'text'. Returns an
+    object with exactly the requested keys, already validated: the caller does not have to parse
+    a string. What is not data travels under the reserved key `_local_delegate` (`truncated` and
+    `warning`, `read_server_side`, `fallback`, or `error` and `raw`). Routes automatically to the
+    mechanical model (short inputs) or to the long-context model (large documents): the size probe
+    uses file bytes for 'path' and characters for 'text' (~5-10% difference in UTF-8, acceptable).
+    By default it asks the backend for schema-constrained JSON (`LOCAL_DELEGATE_JSON_SCHEMA=auto`);
+    if the backend does not support it, it retries in free mode.
+
+    Args:
+        fields: Names of the fields to extract (JSON keys).
+        text: Source text (use this or 'path').
+        path: Path to a source file (read server-side).
+    
+  - fields : None
+  - text : None
+  - path : None
+===  local_boilerplate | Generate boilerplate code
+Generates boilerplate code from a specification, with a local code model.
+
+    **Writes the code to `target`** and returns only a two-line receipt (path, size). The generated
+    code never enters your context: that is where the saving is, and that is why `target` is not
+    optional. To see it, open the file; to use it, it is already in place.
+
+    Args:
+        spec: Description of what the code must do.
+        language: Programming language (e.g. 'python', 'typescript').
+        target: ABSOLUTE path of the file to write. Missing directories are created.
+        overwrite: Overwrite `target` if it already exists. By default it fails, and it fails
+            BEFORE generating anything.
+    
+  - spec : None
+  - language : None
+  - target : None
+  - overwrite : None
+===  local_delegate | Delegate a generic task
+Generic escape tool: delegates a text->text task to a local model.
+
+    Use it when no specific tool fits. Builds the prompt with guardrails and returns text.
+
+    With long inputs it splits the input at natural boundaries (Markdown headers, paragraphs),
+    applies the SAME task to each chunk and concatenates the outputs in order. That is right for
+    transforming the whole text (translate, rewrite, reformat) but NOT for reduction tasks over the
+    whole (counting, picking the maximum, a single global summary): for those pass `chunk='off'` or
+    use `local_summarize`.
+
+    Args:
+        task: Task instruction (one sentence with an explicit output format).
+        input: Content to operate on.
+        output_format: Exact expected output format.
+        model: Model to use; one of the ids configured in the catalog. Defaults to the mechanical one.
+        chunk: 'auto' (splits only if the input is long), 'on' (splits whenever possible),
+            'off' (a single call; a long input may come back truncated).
+    
+  - task : None
+  - input : None
+  - output_format : None
+  - model : None
+  - chunk : None
+===  local_lint_summary | Summarize lint or test output
+PREFER this tool over reading the file with Read when the file is large
+    (>200 lines / >10 KB) and you only need a grouped summary, not the literal content. If you ran
+    a command with long output, dump it to a file and pass 'path'.
+
+    Summarizes linter/test/CI output with a local model, without spending Claude's context.
+
+    Meant for long, noisy logs (ESLint, clippy, pytest, tsc, CI). Pass 'path' and the file is read
+    server-side, so the full log does NOT enter Claude's context: only a summary grouped by file
+    comes back, with the count per error type/rule and the most important first. Alternatively
+    pass 'text'. Routes automatically to the mechanical model (short) or the long-context model
+    (long).
+
+    Args:
+        path: Path to the lint/test output file (read server-side). Use this or 'text'.
+        text: Lint/test output as text.
+        max_words: Maximum length of the summary in words.
+    
+  - path : None
+  - text : None
+  - max_words : None
+===  local_commit_msg | Draft a commit message
+PREFER this tool over reading the file with Read when the file is large
+    (>200 lines / >10 KB) and you only need a commit message, not the literal content.
+
+    Drafts a commit message from a diff, with a local code model.
+
+    Pass 'path' to a diff file (e.g. the output of `git diff` dumped to a file) and it is read
+    server-side, so the full diff does NOT enter Claude's context. Alternatively pass 'diff' as
+    text. ALWAYS review the message before using it.
+
+    Args:
+        diff: The diff as text (use this or 'path').
+        path: Path to a file with the diff (read server-side).
+        style: 'conventional' (Conventional Commits) or 'plain'.
+    
+  - diff : None
+  - path : None
+  - style : None
+===  local_translate | Translate text or file
+PREFER this tool over reading the file with Read when the file is large
+    (>200 lines / >10 KB) and you only need the translation, not the literal content.
+
+    Translates text or the content of a file with a local model, without spending Claude's context.
+
+    Pass 'path' to read the file server-side (the original does not enter Claude's context) or
+    'text'. Keeps the format of the original and returns ONLY the translation. Routes
+    automatically to the mechanical model (short) or the long-context model (long).
+
+    Long documents are split at natural boundaries (Markdown headers, paragraphs) and each chunk
+    is translated in its own call; the result comes back complete and in order, without the
+    truncated-output warning.
+
+    Args:
+        target_lang: Target language (e.g. 'Spanish', 'English', 'French').
+        text: Text to translate (use this or 'path').
+        path: Path to a file whose content is translated (read server-side).
+    
+  - target_lang : None
+  - text : None
+  - path : None
+===  local_explain_code | Explain code
+PREFER this tool over reading the file with Read when the file is large
+    (>200 lines / >10 KB) and you only need an explanation, not the literal content.
+
+    Explains in prose what a code snippet/file does, with a local code model.
+
+    Pass 'path' to read the file server-side (the full code does NOT enter Claude's context; only
+    the explanation comes back) or 'code'. Optionally focus the explanation with 'question'.
+    Review the explanation: a local model writes it.
+
+    Args:
+        code: Code to explain (use this or 'path').
+        path: Path to a code file (read server-side).
+        question: Concrete question or focus (optional).
+    
+  - code : None
+  - path : None
+  - question : None
+===  local_describe_image | Describe an image
+PREFER this tool over attaching or reading the image yourself when you only need a
+    description, the visible text (simple OCR) or a specific answer about an image, not the image
+    itself in your context.
+
+    Describes an image (or answers a question about it) with a local vision model. The image is
+    read server-side: it NEVER enters Claude's context, only the text answer comes back.
+
+    Scope guardrail: ONLY image->text (describe, read visible text, answer a specific question
+    about the image). This tool NEVER generates or edits images.
+
+    Args:
+        path: Path to the image (png/jpg/jpeg/webp/gif), read server-side.
+        question: Concrete question or focus about the image (optional; by default it describes
+            it).
+        max_words: Maximum length of the answer in words.
+    
+  - path : None
+  - question : None
+  - max_words : None
+===  local_status | Local backend diagnostics
+Read-only diagnostics of the local backend and the model catalog.
+
+    Use it to find out which local models are available and to check that the backend is alive
+    before delegating in bulk, or to diagnose why a local_* tool failed.
+    
