@@ -1,0 +1,21 @@
+[pesado] plaza plaza-1 tomada tras 0s: D:\Projects\local-delegate\.venv\Scripts\python.exe -m pytest tests/test_price_watcher.py::test_a_changed_price_gives_that_diff -q -p no:cacheprovider
+F                                                                        [100%]
+================================== FAILURES ===================================
+____________________ test_a_changed_price_gives_that_diff _____________________
+
+    def test_a_changed_price_gives_that_diff():
+        v = _v()
+        html = _change_in_row(_prices_page(), "Claude Opus 5.5", "$0.20", f"${NEW:.2f}")
+        changes = v.compare(v.extract_price_table(html), PACKAGE)
+>       assert changes.prices == [("claude-opus-5-5", "cache_read", 0.20, NEW)]
+E       AssertionError: assert [('claude-fab...', 4, 4), ...] == [('claude-opu...d', 0.2, 0.3)]
+E         
+E         At index 0 diff: ('claude-fable-5-1', 'input', 10, 10) != ('claude-opus-5-5', 'cache_read', 0.2, 0.3)
+E         Left contains 63 more items, first extra item: ('claude-fable-5-1', 'w5m', 12.5, 12.5)
+E         Use -v to get more diff
+
+tests\test_price_watcher.py:182: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_price_watcher.py::test_a_changed_price_gives_that_diff - As...
+1 failed in 0.32s
+hash original 31b69df1c855e169 mutante c67132f7cf0c816a restaurado 31b69df1c855e169

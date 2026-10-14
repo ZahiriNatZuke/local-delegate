@@ -13,7 +13,7 @@ tanto se revisa en un PR) y lo que solo existe en los **ajustes de GitHub**.
 | `scripts/ci_gate.py` | el job `ci-gate`: da el veredicto del run mirando los **steps** de cada job, para que un job que GitHub deja sin cerrar no bloquee un merge |
 | `.github/workflows/codeql.yml` | análisis estático de seguridad (semanal + en cada PR) |
 | `.github/workflows/publish.yml` | publicación por OIDC/Trusted Publishing: **sin tokens en secrets**. `permissions: {}` global, ampliado solo en el job |
-| `.github/workflows/vigilante-precios.yml` | cada lunes compara la tabla oficial de precios y el artículo de límites de uso con los del repo, y abre un PR si cambian. **Único workflow con permisos de escritura** (ver [Vigilante de precios y límites](#vigilante-de-precios-y-límites)) |
+| `.github/workflows/price-watcher.yml` | cada lunes compara la tabla oficial de precios y el artículo de límites de uso con los del repo, y abre un PR si cambian. **Único workflow con permisos de escritura** (ver [Vigilante de precios y límites](#vigilante-de-precios-y-límites)) |
 | `.github/dependabot.yml` | PRs semanales de dependencias Python y de GitHub Actions |
 | `.github/CODEOWNERS` | asignación automática de revisión |
 | `SECURITY.md` | canal privado de reporte y superficie a tener en cuenta |
@@ -375,13 +375,13 @@ El equivalente a precio de API del panel (ver
 de precios que viaja **en el paquete** (`src/local_delegate/resources/data/prices.json`): el
 panel no usa la red para calcular. Una tabla así se queda vieja en silencio, y por eso hay un
 vigilante. Sigue el patrón de `vendor-audit.yml`: workflow propio con cron y un script de **solo
-stdlib** (`scripts/vigilante_precios.py`), sin instalar nada. Es el **único** sitio del proyecto
+stdlib** (`scripts/price_watcher.py`), sin instalar nada. Es el **único** sitio del proyecto
 que usa la red para esto.
 
 | Job | Qué mira | Qué hace si cambia |
 |---|---|---|
-| `precios` | la tabla «Model pricing» de la página oficial, contra `prices.json` | abre (o actualiza) **un** PR en la rama fija `vigilante/precios` con la tabla nueva y `consulted` = fecha del día. Lista los ids nuevos para revisarlos a mano (los deduce del nombre comercial, porque la página no trae ids); un modelo que desaparece de la página **no** se borra de la tabla, porque los transcripts viejos lo siguen necesitando: el PR lo dice |
-| `limites` | el texto del artículo de límites de uso, contra `.github/vigilante/limites-de-uso.txt` | abre un PR en `vigilante/limites` que actualiza ese texto: **el diff es el aviso**, y el cuerpo explica cómo reiniciar la calibración de la cuota (`local-delegate recompute-cost --reset-calibration …`) |
+| `prices` | la tabla «Model pricing» de la página oficial, contra `prices.json` | abre (o actualiza) **un** PR en la rama fija `vigilante/precios` con la tabla nueva y `consulted` = fecha del día. Lista los ids nuevos para revisarlos a mano (los deduce del nombre comercial, porque la página no trae ids); un modelo que desaparece de la página **no** se borra de la tabla, porque los transcripts viejos lo siguen necesitando: el PR lo dice |
+| `limits` | el texto del artículo de límites de uso, contra `.github/vigilante/limites-de-uso.txt` | abre un PR en `vigilante/limites` que actualiza ese texto: **el diff es el aviso**, y el cuerpo explica cómo reiniciar la calibración de la cuota (`local-delegate recompute-cost --reset-calibration …`) |
 
 **Falla en voz alta**, nunca como «sin cambios», si la página no responde, si no encuentra la
 cabecera de la tabla, si extrae menos de 5 filas o si un precio no se lee como número; en el de
@@ -416,8 +416,8 @@ Socket y GitGuardian no son checks requeridos y no bloquean. Se descartó una Gi
 personal guardados como secreto: para un PR que sale pocas veces al año, no compensan la superficie
 de seguridad que añaden.
 
-Con `workflow_dispatch` y la entrada `ensayo` se fuerza un diff inocuo en la rama
-`vigilante/ensayo`: una marca `_ensayo` con el id del run, que la carga de la tabla ignora (no se
+Con `workflow_dispatch` y la entrada `dry_run` se fuerza un diff inocuo en la rama
+`vigilante/ensayo`: una marca `_dry_run` con el id del run, que la carga de la tabla ignora (no se
 toca `consulted`, que es la fecha del último cambio real). El PR lleva «[ensayo]» en el título:
 sirve para probar el circuito entero en GitHub, y se cierra sin mezclar.
 

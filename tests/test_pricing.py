@@ -208,7 +208,7 @@ def test_loading_the_tables_opens_no_sockets(monkeypatch):
 
 
 def test_a_trial_mark_in_the_table_changes_nothing(monkeypatch):
-    """La tabla de un PR de ensayo del vigilante trae `_ensayo` (y siempre `_note`): no son datos.
+    """La tabla de un PR de ensayo del vigilante trae `_dry_run` (y siempre `_note`): no son datos.
 
     Se carga por el camino real (`load_prices`) una copia con marcas `_` añadidas y todo lo que
     lee la tabla tiene que dar lo mismo que con la limpia.
@@ -220,13 +220,13 @@ def test_a_trial_mark_in_the_table_changes_nothing(monkeypatch):
         table = read(name)
         if name != "prices.json":
             return table
-        return {"_ensayo": "PR de prueba del vigilante (run 1): no mezclar", **table, "_otra": 0}
+        return {"_dry_run": "PR de prueba del vigilante (run 1): no mezclar", **table, "_otra": 0}
 
     monkeypatch.setattr(pricing, "_read_table", with_marks)
     pricing.load_prices.cache_clear()
     try:
         marked = load_prices()
-        assert "_ensayo" in marked, "guarda: la carga pasó por la tabla con marcas"
+        assert "_dry_run" in marked, "guarda: la carga pasó por la tabla con marcas"
         assert {k: x for k, x in marked.items() if not k.startswith("_")} == {
             k: x for k, x in clean.items() if not k.startswith("_")
         }

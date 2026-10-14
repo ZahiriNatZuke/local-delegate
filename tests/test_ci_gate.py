@@ -58,30 +58,30 @@ COMPLETE_STEPS = [
 
 
 def test_job_finished_in_success_is_good():
-    v = ci_gate.veredicto_de_job(_job("lint", conclusion="success"))
-    assert v.estado == ci_gate.BIEN
-    assert not v.fantasma
+    v = ci_gate.job_verdict(_job("lint", conclusion="success"))
+    assert v.state == ci_gate.GOOD
+    assert not v.phantom
 
 
 def test_skipped_job_counts_as_good():
-    v = ci_gate.veredicto_de_job(_job("lint", conclusion="skipped"))
-    assert v.estado == ci_gate.BIEN
+    v = ci_gate.job_verdict(_job("lint", conclusion="skipped"))
+    assert v.state == ci_gate.GOOD
 
 
 @pytest.mark.parametrize("conclusion", ["failure", "cancelled", "timed_out", "action_required"])
 def test_any_conclusion_that_is_not_good_fails(conclusion):
-    v = ci_gate.veredicto_de_job(_job("lint", conclusion=conclusion))
-    assert v.estado == ci_gate.MAL
-    assert conclusion in v.motivo
+    v = ci_gate.job_verdict(_job("lint", conclusion=conclusion))
+    assert v.state == ci_gate.BAD
+    assert conclusion in v.reason
 
 
 def test_the_phantom_job_passes_by_its_steps():
     """El caso que motiva todo: `in_progress`, sin `completed_at`, y el runner llegó al final."""
-    v = ci_gate.veredicto_de_job(
+    v = ci_gate.job_verdict(
         _job("test (windows-latest)", status="in_progress", conclusion=None, steps=COMPLETE_STEPS)
     )
-    assert v.estado == ci_gate.BIEN
-    assert v.fantasma is True
+    assert v.state == ci_gate.GOOD
+    assert v.phantom is True
 
 
 def test_a_half_done_job_is_not_taken_as_good():
@@ -91,20 +91,20 @@ def test_a_half_done_job_is_not_taken_as_good():
     la mitad y los pasos que faltan todavía no aparecen en la API. Dar esto por bueno sería aprobar
     un job que aún puede fallar.
     """
-    v = ci_gate.veredicto_de_job(
+    v = ci_gate.job_verdict(
         _job(
             "test (windows-latest)",
             status="in_progress",
             steps=[_step("Set up job"), _step("Install uv")],
         )
     )
-    assert v.estado == ci_gate.ESPERAR
+    assert v.state == ci_gate.WAIT
 
 
 def test_a_failed_step_wins_over_the_complete_job():
     """El orden de las comprobaciones importa: cuando un step falla, GitHub cierra el job con su
     `Complete job` en success igualmente. Mirar el fantasma primero sería un falso verde."""
-    v = ci_gate.veredicto_de_job(
+    v = ci_gate.job_verdict(
         _job(
             "test (ubuntu-latest)",
             status="in_progress",
@@ -115,34 +115,34 @@ def test_a_failed_step_wins_over_the_complete_job():
             ],
         )
     )
-    assert v.estado == ci_gate.MAL
-    assert "Tests (pytest)" in v.motivo
+    assert v.state == ci_gate.BAD
+    assert "Tests (pytest)" in v.reason
 
 
 def test_unconcluded_steps_do_not_count_as_bad():
-    v = ci_gate.veredicto_de_job(
+    v = ci_gate.job_verdict(
         _job("lint", status="in_progress", steps=[_step("Set up job"), _step("Lint (ruff)", None)])
     )
-    assert v.estado == ci_gate.ESPERAR
+    assert v.state == ci_gate.WAIT
 
 
 def test_a_job_without_steps_is_waited_for():
-    v = ci_gate.veredicto_de_job(_job("lint", status="queued", steps=[]))
-    assert v.estado == ci_gate.ESPERAR
+    v = ci_gate.job_verdict(_job("lint", status="queued", steps=[]))
+    assert v.state == ci_gate.WAIT
 
 
 # --- La evaluación del run entero ----------------------------------------------------------
 
 
 def test_an_expected_job_missing_from_the_run_is_waited_for():
-    results = ci_gate.evaluar([_job("lint", conclusion="success")])
-    assert results["lint"].estado == ci_gate.BIEN
-    assert results["test (windows-latest)"].estado == ci_gate.ESPERAR
-    assert set(results) == set(ci_gate.JOBS_ESPERADOS)
+    results = ci_gate.evaluate([_job("lint", conclusion="success")])
+    assert results["lint"].state == ci_gate.GOOD
+    assert results["test (windows-latest)"].state == ci_gate.WAIT
+    assert set(results) == set(ci_gate.EXPECTED_JOBS)
 
 
 def test_the_gate_does_not_wait_for_itself():
-    assert ci_gate.NOMBRE_DEL_GATE not in ci_gate.JOBS_ESPERADOS
+    assert ci_gate.GATE_NAME not in ci_gate.EXPECTED_JOBS
 
 
 # --- El bucle de espera --------------------------------------------------------------------
@@ -162,20 +162,20 @@ class _Clock:
 
 
 def _all(conclusion: str = "success") -> list[dict]:
-    return [_job(n, conclusion=conclusion) for n in ci_gate.JOBS_ESPERADOS]
+    return [_job(n, conclusion=conclusion) for n in ci_gate.EXPECTED_JOBS]
 
 
 def _run(read, clock=None):
     clock = clock or _Clock()
     output: list[str] = []
-    code = ci_gate.esperar_veredicto(
+    code = ci_gate.wait_for_verdict(
         "owner/repo",
         "1",
         "token",
-        leer=read,
-        reloj=clock,
-        dormir=clock.sleep,
-        escribir=output.append,
+        read=read,
+        clock=clock,
+        sleep=clock.sleep,
+        write=output.append,
     )
     return code, "\n".join(output)
 
@@ -188,9 +188,7 @@ def test_complete_run_comes_out_green():
 
 def test_the_phantom_comes_out_green_and_is_named():
     jobs = [
-        _job(n, conclusion="success")
-        for n in ci_gate.JOBS_ESPERADOS
-        if n != "test (windows-latest)"
+        _job(n, conclusion="success") for n in ci_gate.EXPECTED_JOBS if n != "test (windows-latest)"
     ]
     jobs.append(
         _job("test (windows-latest)", status="in_progress", conclusion=None, steps=COMPLETE_STEPS)
@@ -205,31 +203,31 @@ def test_a_failure_cuts_without_waiting_for_the_rest():
     jobs = [_job("lint", conclusion="failure")]  # los demás ni aparecen
     clock = _Clock()
     code, output = _run(lambda *a: jobs, clock)
-    assert code == ci_gate.FALLO_JOB
+    assert code == ci_gate.JOB_FAILURE
     assert clock.t == 0.0, "no debe dormir ni una vez: el veredicto ya es definitivo"
     assert "lint" in output
 
 
 def test_a_job_that_never_appears_exhausts_the_timeout_and_fails():
-    jobs = [_job(n, conclusion="success") for n in ci_gate.JOBS_ESPERADOS if n != "install-smoke"]
+    jobs = [_job(n, conclusion="success") for n in ci_gate.EXPECTED_JOBS if n != "install-smoke"]
     code, output = _run(lambda *a: jobs)
-    assert code == ci_gate.FALLO_PLAZO
+    assert code == ci_gate.TIMEOUT_FAILURE
     assert "install-smoke" in output
 
 
 def test_if_the_api_cannot_be_read_the_gate_fails():
     def read(*_):
-        raise ci_gate.ApiNoDisponible("connection reset")
+        raise ci_gate.ApiUnavailable("connection reset")
 
     code, output = _run(read)
-    assert code == ci_gate.FALLO_API
+    assert code == ci_gate.API_FAILURE
     assert "connection reset" in output
 
 
 def test_waits_for_the_missing_ones_and_then_passes():
     """Un job tarda en aparecer: el gate espera y termina en verde cuando llega."""
     responses = [
-        [_job(n, status="queued", steps=[]) for n in ci_gate.JOBS_ESPERADOS],
+        [_job(n, status="queued", steps=[]) for n in ci_gate.EXPECTED_JOBS],
         _all(),
     ]
 
@@ -239,7 +237,7 @@ def test_waits_for_the_missing_ones_and_then_passes():
     clock = _Clock()
     code, _ = _run(read, clock)
     assert code == ci_gate.OK
-    assert clock.t == ci_gate.INTERVALO_S
+    assert clock.t == ci_gate.INTERVAL_S
 
 
 # --- REQ-004: la lista de esperados no puede ser una segunda fuente de verdad ---------------
@@ -282,12 +280,12 @@ def test_the_expected_jobs_are_exactly_those_of_ci_yml():
     job a `ci.yml` y olvidarlo aquí pasaría desapercibido, y el gate aprobaría un run sin haberlo
     mirado.
     """
-    declared = _jobs_declared_in_ci() - {ci_gate.NOMBRE_DEL_GATE}
-    assert declared == set(ci_gate.JOBS_ESPERADOS)
+    declared = _jobs_declared_in_ci() - {ci_gate.GATE_NAME}
+    assert declared == set(ci_gate.EXPECTED_JOBS)
 
 
 def test_the_gate_is_declared_in_ci_yml():
-    assert ci_gate.NOMBRE_DEL_GATE in _jobs_declared_in_ci()
+    assert ci_gate.GATE_NAME in _jobs_declared_in_ci()
 
 
 # --- Los números del cuelgue de Windows, atados a lo que declara `ci.yml` --------------------

@@ -1,0 +1,3 @@
+[pesado] plaza plaza-1 tomada tras 0s: D:\Projects\local-delegate\.venv\Scripts\python.exe -m pytest tests/test_price_watcher.py tests/test_ci_gate.py tests/test_pricing.py -q -p no:cacheprovider
+.......................................................................  [100%]
+71 passed in 5.20s
