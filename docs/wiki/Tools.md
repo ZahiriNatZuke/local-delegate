@@ -98,12 +98,14 @@ pediste — no una cadena que haya que parsear.
 
 Dos cosas que conviene saber y solo estaban en el código:
 
-- **Si hubo que truncar la entrada, lo dice en el propio objeto**, con la clave reservada
-  `_local_delegate`. Antes ese aviso iba como texto delante del JSON, donde obligaba a limpiar la
-  cadena antes de poder parsearla.
+- **Lo que no es dato va en el propio objeto**, bajo la clave reservada `_local_delegate`
+  (`truncated`/`warning` si una llamada acabó por `max_tokens`, `read_server_side`, `fallback`,
+  `error`/`raw`; contrato y tabla de nombres viejos en
+  [Configuration](Configuration.md#local_extract--json-con-schema)). Antes ese aviso iba como texto
+  delante del JSON, donde obligaba a limpiar la cadena antes de poder parsearla.
 - Pide al backend un JSON restringido por schema (`LOCAL_DELEGATE_JSON_SCHEMA=auto`); si el backend
   no lo soporta, reintenta en modo libre.
-- **Si respondió un modelo de respaldo**, lo dice en `_local_delegate.respaldo` (qué modelo
+- **Si respondió un modelo de respaldo**, lo dice en `_local_delegate.fallback` (qué modelo
   respondió, en lugar de cuál y por qué), nunca dentro de los campos pedidos.
 
 ## `local_boilerplate`

@@ -309,7 +309,7 @@ def test_brackets(tmp_path):
 
 def _approx_tokens_block() -> str:
     source = inspect.getsource(server.local_extract)
-    i = source.index('meta["leido_server_side"]')
+    i = source.index('meta["read_server_side"]')
     return source[i : source.index("}", i) + 1]
 
 
@@ -318,9 +318,9 @@ def test_no_chars_per_token_in_the_conversion():
         "claude_tokens": inspect.getsource(server.claude_tokens),
         "_savings_feedback": inspect.getsource(server._savings_feedback),
         "_write_target": inspect.getsource(server._write_target),
-        "tokens_aprox": _approx_tokens_block(),
+        "approx_tokens": _approx_tokens_block(),
     }
-    assert "tokens_aprox" in sources["tokens_aprox"]  # guarda: el recorte encontró el bloque
+    assert "approx_tokens" in sources["approx_tokens"]  # guarda: el recorte encontró el bloque
     for name, source in sources.items():
         assert "CHARS_PER_TOKEN" not in source, name
 
@@ -377,10 +377,10 @@ def test_extract_approx_tokens_are_claudes(monkeypatch, tmp_path):
     doc = tmp_path / "data.json"
     doc.write_text('{"a": "' + "b" * 3991 + '"}', encoding="utf-8")
     data = server.local_extract(fields=["titulo"], path=str(doc))
-    read_back = data.get("_local_delegate", {}).get("leido_server_side", {})
+    read_back = data.get("_local_delegate", {}).get("read_server_side", {})
     assert read_back.get("chars") == 4000
     # estructurado, formato `Read` sin medir → respaldo (2), sin numerar: 4000 × 100 // 188
-    assert read_back.get("tokens_aprox") == 2127
+    assert read_back.get("approx_tokens") == 2127
 
 
 @backend_mock.mock

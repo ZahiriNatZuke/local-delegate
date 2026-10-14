@@ -80,6 +80,7 @@
   "mcp.receipt.chunked": "(processed in {calls} chunks by local-delegate)",
   "mcp.receipt.commit_scope": "(scope: {files} files, {chars} chars read in full)",
   "mcp.receipt.input_truncated": "input truncated — processed {processed} of {total} chars",
+  "mcp.receipt.input_truncated_counts": "processed {processed} of {total} chars",
   "mcp.receipt.map_reduce": "(summarized from {parts} parts in {calls} passes by local-delegate)",
   "mcp.receipt.read_server_side": "(read server-side: {amount} {unit} that did not enter your context)",
   "mcp.receipt.read_server_side_tokens": "(read server-side: {amount} {unit} ≈ {tokens} Claude tokens that did not enter your context)",
@@ -145,5 +146,6 @@
   "mcp.warning.origin.reduce": "in the reduce step",
   "mcp.warning.output_truncated": "output truncated by max_tokens",
   "mcp.warning.output_truncated_calls": "output truncated by max_tokens in {truncated} of {calls} calls; part of the content may be missing",
-  "mcp.warning.sections_not_summarized": "{n} sections not summarized because of the word limit or the model"
+  "mcp.warning.sections_not_summarized": "{n} sections not summarized because of the word limit or the model",
+  "mcp.warning.sections_not_summarized_one": "1 section not summarized because of the word limit or the model"
 }

@@ -1,0 +1,94 @@
+the summary
+
+(leído server-side: 480 chars ≈ 240 tokens de Claude que no entraron a tu contexto)
+the summary
+
+(leído server-side: 127500 chars ≈ 63750 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)
+[local-delegate: input truncated — procesados 48027 de 127500 chars]
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary 
+
+the summary
+
+(leído server-side: 48027 chars ≈ 24013 tokens de Claude que no entraron a tu contexto)
+
+(procesado en 15 trozos por local-delegate)
+{"_local_delegate": {"error": "respuesta no parseable como JSON", "raw": "the summary"}}
+[local-delegate error] el diff está vacío: no hay nada sobre lo que redactar.
+[local-delegate error] style inválido: 'weird'. Válidos: 'conventional', 'plain'.
+[local-delegate error] chunk inválido: 'maybe'. Válidos: 'auto', 'on', 'off'.
+No existe el archivo: <tmp>\es\missing.md
+'target' debe ser una ruta absoluta: el servidor no comparte tu directorio de trabajo. Recibido: relative.py
+[local-delegate error] Extensión de imagen no soportada: '.bmp'. Válidas: ['.gif', '.jpeg', '.jpg', '.png', '.webp']
+cut
+
+[local-delegate warning: salida truncada por max_tokens]
+[local-delegate error] no se pudo conectar con el backend: fallo de red con test-backend-7 (ConnectError)
+[local-delegate error] gemma3-4b respondió 500: boom
+local-delegate v0.35.0
+Idioma: es (variable; <tmp>\language.json)
+
+Backend: http://test-backend-8/v1 — CAÍDO: fallo de red con test-backend-8 (ConnectError)
+  cómputo: REMOTO — test-backend-8
+
+Catálogo de roles:
+  mechanical: gemma3-4b (max_chars=20000)
+  long: gemma4-26b-a4b (max_chars=48000)
+  code: qwen36-35b-a3b (max_chars=20000)
+  vision: gemma4-12b (max_image_mb=8)
+Respaldo entre modelos: apagado (hasta 2 saltos)
+  sin residente (no se sabe: sin LLAMASWAP_CONFIG)
+  mechanical: loaded -> gemma4-26b-a4b
+  long: loaded -> qwen36-35b-a3b
+  code: loaded -> gemma4-26b-a4b
+  concurrencia máxima del proceso: 2
+Turno: no (backend remoto)
+Enfriamiento: encendido (3 fallos seguidos, 120 s, tope 900 s)
+  ningún modelo enfriado
+
+Log (mes actual): <tmp>\usage-202610.jsonl
+  eventos: 14 (50 llamadas al backend) — contexto conservado: ~175806 tokens netos (bruto ~176006)
+  Ritmo de referencia: sin muestras todavía
+
+Web de métricas: activa (http://127.0.0.1:9393)
+
+VRAM (nvidia-smi): 4959 MiB / 16311 MiB usados
+RAM de sistema: 18.4 / 31.1 GiB usados
+## One
+body text here
+
+## Two
+(sin resumir)
+
+[local-delegate warning: 1 sección sin resumir por el límite de palabras o del modelo]
+--- fallback ---
+{"answered_by": "gemma4-26b-a4b", "instead_of": "gemma3-4b", "reason": "timeout", "class": "model"}
+
+[local-delegate warning: respondió gemma4-26b-a4b en lugar de gemma3-4b (timeout), x]

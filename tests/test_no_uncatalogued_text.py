@@ -52,7 +52,13 @@ SCRIPTS_IN_SCOPE = ("measure_cooldown.py", "pair_sheet.py", "analyze_benchmark.p
 PANEL_SCANNER_IMPLEMENTED = False
 PANEL_FILE = "src/local_delegate/web/metrics.py"
 #: Prefijos de contrato que se quedan tal cual en cualquier idioma (i18n §1 c).
-CONTRACT_PREFIXES = ("[local-delegate error]",)
+#: Prefijo de error y marcadores de REQ-010 (B2b-1): valores de máquina del contrato de las tools MCP.
+CONTRACT_PREFIXES = (
+    "[local-delegate error]",
+    "[local-delegate warning: ",
+    "[local-delegate fallback: ",
+    "[local-delegate: input truncated — ",
+)
 EXCEPTION_KINDS = frozenset(
     {
         "contract_prefix",

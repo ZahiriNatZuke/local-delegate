@@ -1,0 +1,13 @@
+{
+  "tools.local_boilerplate.summary": "Generates boilerplate code and writes it to a file; only the receipt comes back",
+  "tools.local_classify.summary": "Classifies a text into one of the given labels",
+  "tools.local_commit_msg.summary": "Drafts a commit message from a diff",
+  "tools.local_delegate.summary": "Generic text→text task when no other tool fits",
+  "tools.local_describe_image.summary": "Describes an image or answers a question about it",
+  "tools.local_explain_code.summary": "Explains in prose what some code does",
+  "tools.local_extract.summary": "Extracts fields from a text or file as JSON",
+  "tools.local_lint_summary.summary": "Summarizes linter, test or CI output",
+  "tools.local_status.summary": "Diagnostics of the local backend and the model catalog",
+  "tools.local_summarize.summary": "Summarizes a text or file without it entering the context",
+  "tools.local_translate.summary": "Translates a text or file"
+}

@@ -1,0 +1,430 @@
+{
+  "local_boilerplate": {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false
+    },
+    "input_schema": {
+      "properties": {
+        "language": {
+          "title": "Language",
+          "type": "string"
+        },
+        "overwrite": {
+          "default": false,
+          "title": "Overwrite",
+          "type": "boolean"
+        },
+        "spec": {
+          "title": "Spec",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "spec",
+        "language",
+        "target"
+      ],
+      "title": "local_boilerplateArguments",
+      "type": "object"
+    }
+  },
+  "local_classify": {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "input_schema": {
+      "properties": {
+        "labels": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Labels",
+          "type": "array"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "labels"
+      ],
+      "title": "local_classifyArguments",
+      "type": "object"
+    }
+  },
+  "local_commit_msg": {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "input_schema": {
+      "properties": {
+        "diff": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Diff"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "style": {
+          "default": "conventional",
+          "title": "Style",
+          "type": "string"
+        }
+      },
+      "title": "local_commit_msgArguments",
+      "type": "object"
+    }
+  },
+  "local_delegate": {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "input_schema": {
+      "properties": {
+        "chunk": {
+          "default": "auto",
+          "title": "Chunk",
+          "type": "string"
+        },
+        "input": {
+          "title": "Input",
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        },
+        "output_format": {
+          "title": "Output Format",
+          "type": "string"
+        },
+        "task": {
+          "title": "Task",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task",
+        "input",
+        "output_format"
+      ],
+      "title": "local_delegateArguments",
+      "type": "object"
+    }
+  },
+  "local_describe_image": {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "input_schema": {
+      "properties": {
+        "max_words": {
+          "default": 200,
+          "title": "Max Words",
+          "type": "integer"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "question": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Question"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "local_describe_imageArguments",
+      "type": "object"
+    }
+  },
+  "local_explain_code": {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "input_schema": {
+      "properties": {
+        "code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Code"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "question": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Question"
+        }
+      },
+      "title": "local_explain_codeArguments",
+      "type": "object"
+    }
+  },
+  "local_extract": {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "input_schema": {
+      "properties": {
+        "fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fields",
+          "type": "array"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        }
+      },
+      "required": [
+        "fields"
+      ],
+      "title": "local_extractArguments",
+      "type": "object"
+    }
+  },
+  "local_lint_summary": {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "input_schema": {
+      "properties": {
+        "max_words": {
+          "default": 200,
+          "title": "Max Words",
+          "type": "integer"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        }
+      },
+      "title": "local_lint_summaryArguments",
+      "type": "object"
+    }
+  },
+  "local_status": {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "input_schema": {
+      "properties": {},
+      "title": "local_statusArguments",
+      "type": "object"
+    }
+  },
+  "local_summarize": {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "input_schema": {
+      "properties": {
+        "focus": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Focus"
+        },
+        "max_words": {
+          "default": 150,
+          "title": "Max Words",
+          "type": "integer"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        }
+      },
+      "title": "local_summarizeArguments",
+      "type": "object"
+    }
+  },
+  "local_translate": {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "input_schema": {
+      "properties": {
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "target_lang": {
+          "title": "Target Lang",
+          "type": "string"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        }
+      },
+      "required": [
+        "target_lang"
+      ],
+      "title": "local_translateArguments",
+      "type": "object"
+    }
+  }
+}

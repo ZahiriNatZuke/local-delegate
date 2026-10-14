@@ -554,9 +554,9 @@ def test_in_extract_the_warning_goes_in_the_metadata(reload_config, tmp_path):
     data = server.local_extract(fields=["a"], text="texto corto")
 
     assert data["a"] == 1
-    fallback = data["_local_delegate"]["respaldo"]
-    assert fallback["respondio"] == LONG and fallback["en_lugar_de"] == MECHANICAL
-    assert fallback["motivo"] == "http_500"
+    fallback = data["_local_delegate"]["fallback"]
+    assert fallback["answered_by"] == LONG and fallback["instead_of"] == MECHANICAL
+    assert fallback["reason"] == "http_500"
 
 
 @backend_mock.mock

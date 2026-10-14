@@ -1,0 +1,27 @@
+feat(i18n)!: contrato de las tools MCP y sus descripciones en inglés, iguales en los dos idiomas (frente B, ola B2b-1)
+
+Segundo PR de B2 (waves/B2-proposal.md). Cambio incompatible anunciado
+(REQ-010): solo se emite la forma nueva; sale en la 0.36.0 junto con
+las descripciones en inglés (REQ-027).
+
+- _local_delegate: truncated, warning, read_server_side.{chars,
+  approx_tokens}, fallback.{answered_by, instead_of, reason, class} y
+  raw; las claves internas del respaldo, igual.
+- Marcadores: [local-delegate warning: …], [local-delegate fallback: …]
+  y [local-delegate: input truncated — …]; [local-delegate error] no
+  cambia. El texto de detrás sigue el idioma del proceso.
+- Descripciones: los 11 docstrings, los títulos (TOOL_TITLES) y la
+  descripción del servidor (SERVER_DESCRIPTION) en inglés y literales;
+  nombres, parámetros y valores por defecto, los de la 0.35.
+- resources/i18n/{es,en}/tools.json (nuevos): el resumen de cada tool
+  para el panel (B4).
+- «1 section not summarized» / «1 sección sin resumir» en singular.
+- Wiki: contrato nuevo con la tabla vieja → nueva y el significado de
+  truncated/warning; rename-exceptions: la sección «pendiente» queda
+  vacía.
+- tests/test_tool_contract.py: listas de tools de un proceso en español
+  y de otro en inglés idénticas, instantánea de la 0.35 sin
+  descripciones, descripciones sin español, claves y marcadores nuevos.
+
+Suite: 2890 passed, 2 skipped con LANG en inglés y en español (xdist);
+7 controles positivos.

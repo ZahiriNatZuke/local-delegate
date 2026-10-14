@@ -27,10 +27,6 @@ ROOT = Path(__file__).parents[1]
 SURFACES = ("mcp", "common", "cli")
 _WORD = re.compile(r"[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{3,}")
 _ACCENTS = re.compile(r"[áéíóúñÁÉÍÓÚÑ¿¡«»]")
-#: Marcadores de contrato que aún llevan una palabra española: su forma la cambia B2b-1 (REQ-010),
-#: en la misma versión. Se quitan de la salida antes de buscar; `test_the_pending_markers_are_live`
-#: obliga a borrarlos de aquí en cuanto B2b-1 los cambie.
-PENDING_MARKERS = (server.WARNING_MARKER, server.FALLBACK_MARKER)
 
 
 def _catalog(lang: str, surface: str) -> dict[str, str]:
@@ -53,8 +49,6 @@ def _distinctive_spanish_words() -> set[str]:
 
 
 def _spanish_in(text: str, words: set[str]) -> list[str]:
-    for marker in PENDING_MARKERS:
-        text = text.replace(marker, "[")
     # Las rutas son datos, no texto.
     text = " ".join(token for token in text.split() if "/" not in token and "\\" not in token)
     return sorted({w for w in (m.lower() for m in _WORD.findall(text)) if w in words})
@@ -162,7 +156,9 @@ def test_tool_outputs_have_no_spanish_in_english(monkeypatch, tmp_path):
         "Language: en (variable;",
         "Role catalog:",
         "(not summarized)",
-        "sections not summarized",
+        "1 section not summarized",
+        "[local-delegate warning: output truncated by max_tokens]",
+        "[local-delegate: input truncated — processed ",
         "input truncated",
     ):
         assert expected in english, expected
@@ -170,13 +166,6 @@ def test_tool_outputs_have_no_spanish_in_english(monkeypatch, tmp_path):
     _set_language(monkeypatch, "es")
     spanish = _outputs(monkeypatch, tmp_path / "es")
     assert _spanish_in(spanish, words)
-
-
-def test_the_pending_markers_are_live():
-    """Mientras un marcador esté en `PENDING_MARKERS`, tiene que seguir en español; cuando B2b-1 lo
-    cambie, este test obliga a sacarlo de la lista (y la búsqueda vuelve a verlo)."""
-    for marker in PENDING_MARKERS:
-        assert re.search(r"aviso|respaldo", marker), marker
 
 
 @pytest.mark.parametrize("lang", ["es", "en"])

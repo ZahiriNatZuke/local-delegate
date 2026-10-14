@@ -212,13 +212,7 @@
       "file": "src/local_delegate/server.py",
       "text": "Local Delegate",
       "kind": "verbatim",
-      "reason": "descripción de la tool o del servidor que ve el cliente MCP: REQ-027 la quiere solo en inglés y fuera del catálogo, sin depender del idioma; B2b-1 la pasa a inglés"
-    },
-    {
-      "file": "src/local_delegate/server.py",
-      "text": "Delega tareas mecánicas de texto e imagen a un modelo local por un endpoint compatible con OpenAI, para conservar cuota de la suscripción.",
-      "kind": "verbatim",
-      "reason": "descripción de la tool o del servidor que ve el cliente MCP: REQ-027 la quiere solo en inglés y fuera del catálogo, sin depender del idioma; B2b-1 la pasa a inglés"
+      "reason": "título del servidor MCP: REQ-027 lo quiere solo en inglés, literal y fuera del catálogo (no depende del idioma)"
     },
     {
       "file": "src/local_delegate/server.py",
@@ -408,21 +402,9 @@
     },
     {
       "file": "src/local_delegate/server.py",
-      "text": "Generar código boilerplate",
-      "kind": "verbatim",
-      "reason": "descripción de la tool o del servidor que ve el cliente MCP: REQ-027 la quiere solo en inglés y fuera del catálogo, sin depender del idioma; B2b-1 la pasa a inglés"
-    },
-    {
-      "file": "src/local_delegate/server.py",
       "text": "solo código {} válido, sin explicaciones ni ```",
       "kind": "verbatim",
       "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
-    },
-    {
-      "file": "src/local_delegate/server.py",
-      "text": "Delegar una tarea genérica",
-      "kind": "verbatim",
-      "reason": "descripción de la tool o del servidor que ve el cliente MCP: REQ-027 la quiere solo en inglés y fuera del catálogo, sin depender del idioma; B2b-1 la pasa a inglés"
     },
     {
       "file": "src/local_delegate/server.py",
@@ -486,12 +468,6 @@
     },
     {
       "file": "src/local_delegate/server.py",
-      "text": "Explicar código",
-      "kind": "verbatim",
-      "reason": "descripción de la tool o del servidor que ve el cliente MCP: REQ-027 la quiere solo en inglés y fuera del catálogo, sin depender del idioma; B2b-1 la pasa a inglés"
-    },
-    {
-      "file": "src/local_delegate/server.py",
       "text": " Enfócate en: {}.",
       "kind": "verbatim",
       "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
@@ -509,16 +485,88 @@
       "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
     },
     {
-      "file": "src/local_delegate/server.py",
-      "text": "Diagnóstico del backend local",
-      "kind": "verbatim",
-      "reason": "descripción de la tool o del servidor que ve el cliente MCP: REQ-027 la quiere solo en inglés y fuera del catálogo, sin depender del idioma; B2b-1 la pasa a inglés"
-    },
-    {
       "file": "src/local_delegate/topology.py",
       "text": "backend remoto",
       "kind": "verbatim",
       "reason": "motivo de REQ-002 (valor de máquina): viaja en `turn_reason` de `/api/llamaswap/status` y lo compara `checks._no_turn_is_fine` entre procesos; a la persona se le dice con `reason_text`"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Delegates mechanical text and image tasks to a local model through an OpenAI-compatible endpoint, to save subscription quota.",
+      "kind": "verbatim",
+      "reason": "título o descripción que ve el cliente MCP: REQ-027 los quiere solo en inglés, literales y fuera del catálogo, sin depender de `LOCAL_DELEGATE_LANG` (el cliente los cachea por sesión)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Summarize text or file",
+      "kind": "verbatim",
+      "reason": "título o descripción que ve el cliente MCP: REQ-027 los quiere solo en inglés, literales y fuera del catálogo, sin depender de `LOCAL_DELEGATE_LANG` (el cliente los cachea por sesión)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Classify into one label",
+      "kind": "verbatim",
+      "reason": "título o descripción que ve el cliente MCP: REQ-027 los quiere solo en inglés, literales y fuera del catálogo, sin depender de `LOCAL_DELEGATE_LANG` (el cliente los cachea por sesión)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Extract fields as JSON",
+      "kind": "verbatim",
+      "reason": "título o descripción que ve el cliente MCP: REQ-027 los quiere solo en inglés, literales y fuera del catálogo, sin depender de `LOCAL_DELEGATE_LANG` (el cliente los cachea por sesión)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Generate boilerplate code",
+      "kind": "verbatim",
+      "reason": "título o descripción que ve el cliente MCP: REQ-027 los quiere solo en inglés, literales y fuera del catálogo, sin depender de `LOCAL_DELEGATE_LANG` (el cliente los cachea por sesión)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Delegate a generic task",
+      "kind": "verbatim",
+      "reason": "título o descripción que ve el cliente MCP: REQ-027 los quiere solo en inglés, literales y fuera del catálogo, sin depender de `LOCAL_DELEGATE_LANG` (el cliente los cachea por sesión)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Summarize lint or test output",
+      "kind": "verbatim",
+      "reason": "título o descripción que ve el cliente MCP: REQ-027 los quiere solo en inglés, literales y fuera del catálogo, sin depender de `LOCAL_DELEGATE_LANG` (el cliente los cachea por sesión)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Draft a commit message",
+      "kind": "verbatim",
+      "reason": "título o descripción que ve el cliente MCP: REQ-027 los quiere solo en inglés, literales y fuera del catálogo, sin depender de `LOCAL_DELEGATE_LANG` (el cliente los cachea por sesión)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Translate text or file",
+      "kind": "verbatim",
+      "reason": "título o descripción que ve el cliente MCP: REQ-027 los quiere solo en inglés, literales y fuera del catálogo, sin depender de `LOCAL_DELEGATE_LANG` (el cliente los cachea por sesión)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Explain code",
+      "kind": "verbatim",
+      "reason": "título o descripción que ve el cliente MCP: REQ-027 los quiere solo en inglés, literales y fuera del catálogo, sin depender de `LOCAL_DELEGATE_LANG` (el cliente los cachea por sesión)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Describe an image",
+      "kind": "verbatim",
+      "reason": "título o descripción que ve el cliente MCP: REQ-027 los quiere solo en inglés, literales y fuera del catálogo, sin depender de `LOCAL_DELEGATE_LANG` (el cliente los cachea por sesión)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Local backend diagnostics",
+      "kind": "verbatim",
+      "reason": "título o descripción que ve el cliente MCP: REQ-027 los quiere solo en inglés, literales y fuera del catálogo, sin depender de `LOCAL_DELEGATE_LANG` (el cliente los cachea por sesión)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "[local-delegate: input truncated — ",
+      "kind": "contract_prefix",
+      "reason": "marcador de entrada truncada de REQ-010: valor de máquina del contrato, igual en los dos idiomas"
     }
   ]
 }

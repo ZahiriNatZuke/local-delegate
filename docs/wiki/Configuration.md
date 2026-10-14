@@ -103,7 +103,7 @@ resumen por partes de un documento largo el respaldo no entra nunca**: los trozo
 una sola llamada sí puede saltar, si mide 20 000 caracteres o menos.
 
 La respuesta dice qué modelo respondió, en lugar de cuál y por qué, detrás del contenido; en
-`local_extract` va en `_local_delegate.respaldo` y en `local_boilerplate` en el recibo, nunca en el
+`local_extract` va en `_local_delegate.fallback` y en `local_boilerplate` en el recibo, nunca en el
 fichero. En un documento por trozos, el modelo cambia como mucho una vez: desde el trozo que saltó,
 el resto va directo al respaldo. Si fallan también los respaldos, vuelve el error del modelo pedido
 con una línea que lista lo que se probó.
@@ -223,22 +223,47 @@ valor declarado de su hilo, en ese orden.
 | `LOCAL_DELEGATE_JSON_SCHEMA` | `auto` | `auto` pide `response_format` con schema y cae a modo libre si el backend responde 400; `on` lo exige (propaga el error); `off` nunca lo pide |
 
 Desde la migración al SDK `mcp` 2.x, `local_extract` devuelve **un objeto validado**, no una cadena
-con JSON dentro: quien llama ya no tiene que parsearlo. Las claves son exactamente las pedidas,
-salvo dos casos que viajan bajo la clave reservada `_local_delegate` para no ensuciar el resto:
+con JSON dentro: quien llama ya no tiene que parsearlo. Las claves son exactamente las pedidas; lo
+que no es dato viaja bajo la clave reservada `_local_delegate` para no ensuciar el resto:
 
 ```jsonc
 // normal
-{ "host": "127.0.0.1", "puerto": "9393" }
+{ "host": "127.0.0.1", "port": "9393" }
 
-// entrada truncada — el aviso iba antes como texto DELANTE del JSON, y había que limpiarlo
-{ "host": "127.0.0.1", "_local_delegate": { "truncado": true, "aviso": "entrada truncada — …" } }
+// salida truncada en un trozo (`max_tokens`): puede faltar algún campo
+{ "host": "127.0.0.1", "_local_delegate": { "truncated": true, "warning": "…" } }
 
 // leída de un `path`: el dato de ahorro va aquí, NO pegado al texto (rompería el JSON)
-{ "host": "127.0.0.1", "_local_delegate": { "leido_server_side": { "chars": 2848, "tokens_aprox": 712 } } }
+{ "host": "127.0.0.1", "_local_delegate": { "read_server_side": { "chars": 2848, "approx_tokens": 712 } } }
+
+// respondió un modelo de respaldo
+{ "host": "127.0.0.1", "_local_delegate": { "fallback": { "answered_by": "…", "instead_of": "…", "reason": "http_500", "class": "model" } } }
 
 // el modelo no devolvió JSON, o el backend falló
-{ "_local_delegate": { "error": "respuesta no parseable como JSON", "crudo": "…" } }
+{ "_local_delegate": { "error": "response is not parseable as JSON", "raw": "…" } }
 ```
+
+**Contrato desde la 0.36.0 (REQ-010, cambio incompatible).** Las subclaves y los marcadores pasan a
+inglés y **no dependen del idioma** (`LOCAL_DELEGATE_LANG`); el texto que va dentro (`warning`,
+`error` y lo que sigue a un marcador) sí sale en el idioma del proceso servidor. Se emite solo la
+forma nueva:
+
+| Hasta la 0.35 | Desde la 0.36.0 |
+|---|---|
+| `truncado` | `truncated` |
+| `aviso` | `warning` |
+| `leido_server_side.{chars, tokens_aprox}` | `read_server_side.{chars, approx_tokens}` |
+| `respaldo.{respondio, en_lugar_de, motivo, clase}` | `fallback.{answered_by, instead_of, reason, class}` |
+| `crudo` | `raw` |
+| `[local-delegate aviso: …]` | `[local-delegate warning: …]` |
+| `[local-delegate respaldo: …]` | `[local-delegate fallback: …]` |
+| `[local-delegate: entrada truncada — …]` | `[local-delegate: input truncated — …]` |
+| `[local-delegate error]` | sin cambio |
+
+`truncated`/`warning` significan desde la 0.36.0 **«salida truncada en un trozo»**: `local_extract`
+lee la entrada entera y la trocea si no cabe, y las dos claves dicen que alguna llamada acabó por
+`max_tokens`, así que puede faltar algún campo. El motivo `reason` de un salto por enfriamiento es el
+valor de máquina `cooldown` (antes, «en enfriamiento»).
 
 > El tercer caso es el que corrige la 0.13.1. Hasta la 0.13.0, la línea de ahorro se anexaba al
 > texto también en esta tool, y como aquí el resultado **se parsea**, convertía un JSON perfecto en
