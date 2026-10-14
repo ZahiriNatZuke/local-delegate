@@ -33,7 +33,7 @@ import httpx2
 
 log = logging.getLogger("measure_ttl_race")
 
-MODEL = "m-carrera"
+MODEL = "m-race"
 QUERY_CAP_S = 1.0  # el tope de REQ-013 para cada consulta
 DEFAULT_MARGIN_S = 5.0  # LOCAL_DELEGATE_AFFINITY_MARGIN_S según REQ-013
 
@@ -96,22 +96,22 @@ def measure(decisions: int, concurrency: int, margin: float, directory: Path) ->
     calcs = [decided[m][1] for m in marks]
     p99 = percentile(windows, 99)
     return {
-        "decisiones": decisions,
-        "concurrencia": concurrency,
-        "ventana_s": {
+        "decisions": decisions,
+        "concurrency": concurrency,
+        "window_s": {
             "min": round(min(windows), 4),
-            "mediana": round(statistics.median(windows), 4),
+            "median": round(statistics.median(windows), 4),
             "p99": round(p99, 4),
             "max": round(max(windows), 4),
         },
-        "calculo_s": {
-            "mediana": round(statistics.median(calcs), 4),
+        "compute_s": {
+            "median": round(statistics.median(calcs), 4),
             "p99": round(percentile(calcs, 99), 4),
             "max": round(max(calcs), 4),
         },
-        "margen_s": margin,
-        "p99_mas_tope_s": round(p99 + QUERY_CAP_S, 4),
-        "cabe_en_el_margen": p99 + QUERY_CAP_S <= margin,
+        "margin_s": margin,
+        "p99_plus_cap_s": round(p99 + QUERY_CAP_S, 4),
+        "fits_in_margin": p99 + QUERY_CAP_S <= margin,
     }
 
 
@@ -145,11 +145,11 @@ def main() -> int:
         directory = args.directory or Path(tmp_dir)
         result = measure(args.decisions, args.concurrency, args.margin, directory)
     print(json.dumps(result, indent=2))
-    if not result["cabe_en_el_margen"]:
+    if not result["fits_in_margin"]:
         log.error(
             "p99 + %s s = %s s supera el margen de %s s: hay que subirlo antes de implementar",
             QUERY_CAP_S,
-            result["p99_mas_tope_s"],
+            result["p99_plus_cap_s"],
             args.margin,
         )
         return 1

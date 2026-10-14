@@ -1,0 +1,64 @@
+[pesado] plaza plaza-1 tomada tras 0s: D:\Projects\local-delegate\.venv\Scripts\python.exe -m pytest tests/test_measure_cooldown.py::test_the_documented_p4_command_still_works -q -p no:cacheprovider
+F                                                                        [100%]
+================================== FAILURES ===================================
+_________________ test_the_documented_p4_command_still_works __________________
+
+logs = <test_measure_cooldown.Logs object at 0x000002ED38ED1350>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002ED38F8A310>
+capsys = <_pytest.capture.CaptureFixture object at 0x000002ED3901B510>
+
+    def test_the_documented_p4_command_still_works(logs, monkeypatch, capsys):
+        """REQ-046: el comando de P-4 tal como está escrito (`--desde`) da el mismo informe que el nuevo.
+        Control: quitar `--desde` de `OLD_OPTIONS` \u2192 argparse sale con 2 y este test falla."""
+        _five_episodes(logs)
+        logs.measure()  # escribe los ficheros del escenario en LOG_DIR
+        argv = ["--since", "2026-09-16", "--exclude", "2026-09-21T00:00,2026-09-21T23:59:59", "--json"]
+        monkeypatch.setattr(sys, "argv", ["measure_cooldown.py", *argv])
+        assert measure_cooldown.main() == 0
+        new = json.loads(capsys.readouterr().out)
+        assert new["episodes"] > 0, "guarda: el escenario cuenta algo"
+        old_argv = [
+            "--desde",
+            "2026-09-16",
+            "--excluir",
+            "2026-09-21T00:00,2026-09-21T23:59:59",
+            "--json",
+        ]
+        monkeypatch.setattr(sys, "argv", ["medir_enfriamiento.py", *old_argv])
+>       assert _old_name_wrapper().main() == 0
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_measure_cooldown.py:443: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\medir_enfriamiento.py:44: in main
+    return _measure_cooldown().main()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts\measure_cooldown.py:258: in main
+    args = parser.parse_args()
+           ^^^^^^^^^^^^^^^^^^^
+C:\Users\Yohan\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\argparse.py:1877: in parse_args
+    self.error(msg % ' '.join(argv))
+C:\Users\Yohan\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\argparse.py:2640: in error
+    self.exit(2, _('%(prog)s: error: %(message)s\n') % args)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = ArgumentParser(prog='medir_enfriamiento.py', usage=None, description='Aplica el criterio de P-4: si los numeros del en...-since 2026-09-16 --json\n', formatter_class=<class 'argparse.HelpFormatter'>, conflict_handler='error', add_help=True)
+status = 2
+message = 'medir_enfriamiento.py: error: unrecognized arguments: --desde 2026-09-16\n'
+
+    def exit(self, status=0, message=None):
+        if message:
+            self._print_message(message, _sys.stderr)
+>       _sys.exit(status)
+E       SystemExit: 2
+
+C:\Users\Yohan\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\argparse.py:2627: SystemExit
+---------------------------- Captured stderr call -----------------------------
+usage: medir_enfriamiento.py [-h] [--since SINCE] [--until UNTIL]
+                             [--exclude EXCLUDE] [--tmax TMAX] [--json]
+                             [--include-tests]
+medir_enfriamiento.py: error: unrecognized arguments: --desde 2026-09-16
+=========================== short test summary info ===========================
+FAILED tests/test_measure_cooldown.py::test_the_documented_p4_command_still_works
+1 failed in 0.35s
+hash original dca6e8d8b498cdc4 mutante e6353fe35d769e1d restaurado dca6e8d8b498cdc4

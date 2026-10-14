@@ -42,11 +42,26 @@ sección de su motivo.
 | Nombre | Fichero | Motivo |
 | --- | --- | --- |
 | residente | src/local_delegate/chains.py | lectura de formato viejo (REQ-022): `_OBSOLETE_SYNONYMS` acepta `residente` (y `resident`) como sinónimo obsoleto del paso `loaded` en `LOCAL_DELEGATE_FALLBACK_<ROL>`, con aviso de `doctor`; hoy el detector no lo marca, la fila deja escrito por qué sigue (ola A8a-1, respuesta 4) |
+| modelo | tests/test_measure_cooldown.py | lectura de formato viejo (REQ-007): clave del registro viejo de enfriamiento y clase de error vieja que el test escribe a propósito para probar la lectura dual (ola A10a-3) |
+| evento | tests/test_measure_cooldown.py | lectura de formato viejo (REQ-007): clave del registro viejo de enfriamiento que el test escribe a propósito (ola A10a-3) |
+| clase | tests/test_measure_cooldown.py | lectura de formato viejo (REQ-007): clave del registro viejo de enfriamiento que el test escribe a propósito (ola A10a-3) |
+| espera_s | tests/test_measure_cooldown.py | lectura de formato viejo (REQ-007): clave del registro viejo de enfriamiento que el test escribe a propósito (ola A10a-3) |
+| tras_vencer | tests/test_measure_cooldown.py | lectura de formato viejo (REQ-007): clave del registro viejo de enfriamiento que el test escribe a propósito (ola A10a-3) |
+| entra | tests/test_measure_cooldown.py | lectura de formato viejo (REQ-007): valor de evento del registro viejo que el test escribe a propósito (ola A10a-3) |
+| limpia | tests/test_measure_cooldown.py | lectura de formato viejo (REQ-007): valor de evento del registro viejo que el test escribe a propósito (ola A10a-3) |
+| timeout_lectura | tests/test_measure_cooldown.py | lectura de formato viejo (REQ-007): clase de error vieja que el test escribe a propósito (ola A10a-3) |
+| capacidad_o_carga | tests/test_measure_cooldown.py | lectura de formato viejo (REQ-007): clase de error vieja que el test escribe a propósito (ola A10a-3) |
+| peticion | tests/test_measure_cooldown.py | lectura de formato viejo (REQ-007): clase de error vieja que el test escribe a propósito (ola A10a-3) |
+| enfriamiento | tests/test_measure_cooldown.py | lectura de formato viejo (REQ-007): clase de salto vieja que el test escribe a propósito (ola A10a-3) |
+| enfriamiento-eventos.jsonl | tests/test_measure_cooldown.py | lectura de formato viejo (REQ-007): nombre del fichero viejo de eventos, que el script sigue leyendo (ola A10a-3) |
 
 ## Envoltorio de REQ-046
 
 | Nombre | Fichero | Motivo |
 | --- | --- | --- |
+| medir_enfriamiento | scripts/medir_enfriamiento.py | envoltorio de REQ-046: nombre del script y opciones `--desde`/`--hasta`/`--excluir` del comando de P-4; se retira tras la medición de los 90 días (~2026-12-14, backlog 1.6) (ola A10a-3) |
+| medir_enfriamiento | tests/test_measure_cooldown.py | envoltorio de REQ-046: los dos tests que cargan el envoltorio; se retiran con él (ola A10a-3) |
+| medir_enfriamiento.py | tests/test_measure_cooldown.py | envoltorio de REQ-046: ruta del envoltorio en esos dos tests (ola A10a-3) |
 
 ## Dato de un tercero
 
@@ -72,6 +87,8 @@ sección de su motivo.
 | Nombre | Fichero | Motivo |
 | --- | --- | --- |
 | nonce-neutro | scripts/clean_watcher_fixtures.py | dato congelado de corpus o caso: valor neutro (`NEUTRAL_NONCE`) que el limpiador ya escribió en las copias de `tests/fixtures/vigilante/*.html`; cambiarlo obligaría a reescribir esas copias (ola A10a-1) |
+| catalogo-2026-09 | tests/test_resource_probe.py | dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10a-3) |
+| clasificar-53 | tests/test_resource_probe.py | dato congelado de corpus o caso: id de un caso del corpus congelado (ola A10a-3) |
 
 ## Pendiente
 

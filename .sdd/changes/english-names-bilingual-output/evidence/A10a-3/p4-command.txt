@@ -1,0 +1,26 @@
+# Corrida del comando P-4 documentado (REQ-046), ola A10a-3, 2026-10-13
+# Comando, sin cambios de nombre ni de opciones (ahora es el envoltorio scripts/medir_enfriamiento.py):
+#   uv run python scripts/medir_enfriamiento.py --desde 2026-09-15T19:26:41
+# Datos: los logs locales de esta PC. Solo recuentos: se omiten las líneas de las ventanas de prueba (etiquetas).
+# Comprobaciones: el comando nuevo (scripts/measure_cooldown.py --since 2026-09-15T19:26:41) da la misma salida
+# línea a línea salvo la hora de la corrida; el script de HEAD (antes de A10a-3) también, salvo la hora y el
+# rótulo «quitado por --excluir» → «--exclude» (diff vacío tras normalizar esas dos cosas).
+# Código de salida: 0 (envoltorio), 0 (nuevo), 0 (HEAD)
+
+Ventana: 2026-09-15T19:26:41 a (ahora)  (2026-10-14 00:37 UTC)
+  quitado por --exclude: 0 filas, 0 episodios
+  quitado por ventanas de prueba: 68 filas, 1 episodios
+
+Delegaciones:              311
+Fallos que cuentan (min.): 6  (minimo 10)
+Saltos por clase:          {}
+Fallos al momento:         0
+Operaciones desviadas:     0
+
+Episodios:                 0  (minimo 5)
+  con desenlace conocido:  0
+  reentraron:              0  (R: None)
+  abiertos por timeout:    0
+  reentran en Tmax:        0
+
+RESULTADO: no concluyente

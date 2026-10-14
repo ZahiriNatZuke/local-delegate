@@ -1,0 +1,36 @@
+refactor(rename): nombres en inglés en la medición P-4, la sonda de recursos y dos scripts de dev (ola A10a, lote 3)
+
+Renombra a inglés el script de la medición P-4 y la sonda de recursos,
+con sus tests, y dos scripts de desarrollo: 290 filas del mapping
+aprobado (waves/A10a-3-mapping.csv).
+
+- scripts/medir_enfriamiento.py pasa a scripts/measure_cooldown.py, con
+  las opciones --since, --until y --exclude, y las claves del informe
+  --json en inglés (episodes, counting_failures, result, rule…).
+  tests/test_medir_enfriamiento.py pasa a tests/test_measure_cooldown.py.
+- REQ-046: scripts/medir_enfriamiento.py vuelve como envoltorio que
+  traduce --desde, --hasta y --excluir y llama a measure_cooldown.main().
+  Así, el comando de P-4 escrito en los verification.md de
+  delegacion-precisa-y-fiable y daemon-reparte-el-backend sigue igual, y
+  da la misma salida que el script de antes. Dos tests nuevos lo prueban
+  (2574 tests recogidos: 2572 + 2). Las dos notas fechadas van en esos
+  verification.md y la retirada (~2026-12-14), en el backlog del proyecto.
+- scripts/sonda_recursos.py pasa a scripts/resource_probe.py; en su test,
+  las claves internas del programa hijo pasan a still/anonymous/mapped
+  (mapped.bin), y en bump_version.py la variable flujo pasa a stream.
+- scripts/dev/capture_icons.py y measure_ttl_race.py: constantes,
+  funciones y claves en inglés; la clave _acerca_de del manifiesto pasa
+  a _about, también en site/icons.json, regenerado con PNG idénticos.
+
+Las filas del registro viejo de enfriamiento que el test escribe a
+propósito se quedan en español y van a rename-exceptions.md (lectura de
+formato viejo), igual que el envoltorio y los datos del corpus congelado
+que cita test_resource_probe.py. Los valores de resultado («no
+concluyente», «se quedan», «cambiar») son texto de salida: van al frente B.
+
+Fuera de los ficheros del lote, por consecuencia: las citas por ruta en
+src/local_delegate/cooldown.py y legacy_names.py, y en tres páginas de
+docs/wiki/.
+
+Solo se renombra: ningún assert cambia de sentido y los textos en
+español que imprimen los scripts o afirman los tests no se tocan.

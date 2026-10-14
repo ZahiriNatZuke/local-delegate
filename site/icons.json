@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "_acerca_de": [
+  "_about": [
     "Manifiesto de los PNG de la marca. Es la FUENTE DE VERDAD de con qué",
     "favicon.svg se generaron.",
     "Lo escribe `scripts/dev/capture_icons.py` al capturar, NUNCA a mano: un",

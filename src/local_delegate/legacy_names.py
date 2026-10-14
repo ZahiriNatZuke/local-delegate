@@ -212,7 +212,7 @@ FILE_NAMES: dict[str, tuple[str, str]] = {
 }
 
 #: El registro de episodios de enfriamiento, como `(viejo, nuevo)`. Solo lo escribe el daemon y lo
-#: lee `scripts/medir_enfriamiento.py` (los dos ficheros, siempre): los hooks no lo copian.
+#: lee `scripts/measure_cooldown.py` (los dos ficheros, siempre): los hooks no lo copian.
 COOLDOWN_EVENTS_FILE_NAMES: tuple[str, str] = (
     "enfriamiento-eventos.jsonl",
     "cooldown-events.jsonl",

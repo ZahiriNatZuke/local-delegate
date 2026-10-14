@@ -1432,3 +1432,11 @@ tramos de version, que `medir_adopcion.py` ya distingue.
 
 Pendiente: el depscore de Socket del paquete publicado (el MCP de Socket respondio «No valid
 session» en tres intentos) y actualizar la Mac, que sigue en 0.27.0.
+
+## Nota del 2026-10-13 (`english-names-bilingual-output`, ola A10a, REQ-046)
+
+El script de la medición P-4 se llama ahora `scripts/measure_cooldown.py`, con `--since`, `--until`
+y `--exclude`. El comando de este documento (`scripts/medir_enfriamiento.py --desde …`, con
+`--hasta` y `--excluir`) sigue funcionando sin cambios: `scripts/medir_enfriamiento.py` queda como
+envoltorio que traduce las opciones viejas y llama a `measure_cooldown.main()`. El envoltorio se
+retira tras la medición de P-4 de los 90 días (~2026-12-14). Lo escrito arriba no se reescribe.

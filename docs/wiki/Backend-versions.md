@@ -170,7 +170,7 @@ VRAM reservada y solo la diferencia sigue a los expertos de un MoE que viven en 
 comparable entre corridas con el mismo `--load-mode`: con los pesos mapeados (`mmap`) el contador
 privado no los ve, por eso las mediciones del catálogo usan `--load-mode none`. Si `typeperf` arranca antes de que `llama-server` cree su contexto de
 GPU, su cabecera no trae el proceso: la sonda lo relanza con el mismo PID, como mucho cada 3 s. Para `llama-bench`, que no pasa por el runner, el mismo muestreo está
-en `scripts/sonda_recursos.py`.
+en `scripts/resource_probe.py`.
 
 - Localiza `llama-swap` vía `LLAMASWAP_EXE` (o el PATH) y `llama-server` desde el `cmd` del
   `config.yaml`. Funciona sin el extra `[llamaswap]`.
