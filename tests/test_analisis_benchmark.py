@@ -67,8 +67,8 @@ def _registro(label, case, run, calidad=1.0, **kw):
         "outcome": outcome,
         "error": kw.get("error"),
         "resources": {"vram_shared_bytes_first": shared[0], "vram_shared_bytes_peak": shared[1]},
-        "descartada": kw.get("descartada", False),
-        "descartada_motivo": "process_changed" if kw.get("descartada") else None,
+        "discarded": kw.get("descartada", False),
+        "discarded_reason": "process_changed" if kw.get("descartada") else None,
         "score": {"quality": calidad if outcome == "ok" else None}
         if meta["kind"] == "calidad" and outcome in ("ok", "truncado")
         else None,
@@ -195,16 +195,14 @@ def test_ninguno_mejora_es_un_resultado_y_no_un_error(tmp_path, capsys):
 def test_mas_rapido_pero_pierde_el_techo_manda_el_techo():
     d = _decidir(
         _tanda("vigente", "long", TERCIO)
-        + _tanda(
-            "candidato", "long", TERCIO, latencias=(500, 500, 550), techo="rechazo_por_contexto"
-        )
+        + _tanda("candidato", "long", TERCIO, latencias=(500, 500, 550), techo="context_rejection")
     )
     assert (d["veredicto"], d["criterio"]) == ("no_sustituye", "techo")
 
 
 def test_mas_lento_pero_aguanta_el_techo_que_el_vigente_no_gana_por_techo():
     d = _decidir(
-        _tanda("vigente", "long", TERCIO, techo="rechazo_por_contexto")
+        _tanda("vigente", "long", TERCIO, techo="context_rejection")
         + _tanda("candidato", "long", TERCIO, latencias=(1200, 1200, 1300))
     )
     assert (d["veredicto"], d["criterio"]) == ("sustituye", "techo")
@@ -213,7 +211,7 @@ def test_mas_lento_pero_aguanta_el_techo_que_el_vigente_no_gana_por_techo():
 def test_ganar_en_calidad_no_basta_si_pierde_el_sondeo_de_techo():
     d = _decidir(
         _tanda("vigente", "long", TERCIO)
-        + _tanda("candidato", "long", (1.0, 1.0, 1.0), techo="rechazo_por_contexto")
+        + _tanda("candidato", "long", (1.0, 1.0, 1.0), techo="context_rejection")
     )
     assert d["criterio"] == "calidad"
     assert d["veredicto"] == "no_sustituye"
@@ -262,11 +260,11 @@ def test_latencia_mas_de_un_cincuenta_por_ciento_peor_bloquea(factor, veredicto)
 def test_la_corrida_fria_no_entra_en_la_latencia():
     registros = _tanda("vigente", "long", TERCIO)
     registros[0].update(latency_ms=90000, thermal_state="cold")
-    caso = analizar.cargar_config(registros, analizar.Selector.parse("vigente")).casos[
+    caso = analizar.cargar_config(registros, analizar.Selector.parse("vigente")).cases[
         registros[0]["case"]
     ]
-    assert caso.latencias == [1000, 1100]
-    assert len(caso.calidades) == 3  # la calidad de la fria si cuenta
+    assert caso.latencies == [1000, 1100]
+    assert len(caso.qualities) == 3  # la calidad de la fria si cuenta
 
 
 def test_anulada_y_repetida_bien_cuenta_su_calidad_y_no_bloquea_al_candidato():
@@ -282,9 +280,9 @@ def test_anulada_y_repetida_bien_cuenta_su_calidad_y_no_bloquea_al_candidato():
     config = analizar.cargar_config(candidato, analizar.Selector.parse("candidato"))
     # Por numero de corrida, no por posicion: el analisis ordena por `ts`, y las corridas 2 y 3 de
     # `_tanda` se crearon antes. Con `corridas[0]` este assert miraba otra corrida y no probaba nada.
-    (corrida,) = [c for c in config.casos["lint-9k"].corridas if c.intentos[0]["run"] == 1]
-    assert len(corrida.intentos) == 2
-    assert (corrida.descartada, corrida.calidad) == (False, 1.0)
+    (corrida,) = [c for c in config.cases["lint-9k"].runs if c.attempts[0]["run"] == 1]
+    assert len(corrida.attempts) == 2
+    assert (corrida.discarded, corrida.quality) == (False, 1.0)
     d = _decidir(_tanda("vigente", "long", TERCIO) + candidato)
     assert d["veredicto"] == "sustituye"
 
@@ -294,20 +292,20 @@ def test_anulada_en_todos_sus_intentos_sigue_descartada():
         _registro("vigente", "lint-9k", 1, 1.0, descartada=True),
         _registro("vigente", "lint-9k", 1, 1.0, attempt=2, descartada=True),
     ]
-    caso = analizar.cargar_config(registros, analizar.Selector.parse("vigente")).casos["lint-9k"]
-    assert caso.corridas[0].descartada and caso.calidades == []
+    caso = analizar.cargar_config(registros, analizar.Selector.parse("vigente")).cases["lint-9k"]
+    assert caso.runs[0].discarded and caso.qualities == []
 
 
 def test_truncada_dos_veces_entra_con_calidad_cero_y_no_sale_del_agregado():
     primera = _registro("vigente", "lint-9k", 1, outcome="truncado")
     repetida = _registro("vigente", "lint-9k", 1, outcome="truncado", attempt=2)
-    repetida["score"] = {"quality": 0.0, "zero_by": "truncado_repetido", "truncated": True}
+    repetida["score"] = {"quality": 0.0, "zero_by": "truncated_repeated", "truncated": True}
     registros = [primera, repetida]
-    caso = analizar.cargar_config(registros, analizar.Selector.parse("vigente")).casos["lint-9k"]
-    assert caso.calidades == [0.0]
+    caso = analizar.cargar_config(registros, analizar.Selector.parse("vigente")).cases["lint-9k"]
+    assert caso.qualities == [0.0]
     # Control: la primera truncada, sola, sigue sin puntuar.
     sola = analizar.cargar_config(registros[:1], analizar.Selector.parse("vigente"))
-    assert sola.casos["lint-9k"].calidades == []
+    assert sola.cases["lint-9k"].qualities == []
 
 
 def _cp3_en_techo(rol, motivo_de_uno="techo"):
@@ -363,9 +361,9 @@ def test_truncada_y_repetida_es_una_sola_corrida_con_la_calidad_del_segundo_inte
         _registro("vigente", "lint-9k", 1, 0.6667, attempt=2),
         _registro("vigente", "lint-9k", 2, 1.0),
     ]
-    caso = analizar.cargar_config(registros, analizar.Selector.parse("vigente")).casos["lint-9k"]
-    assert len(caso.corridas) == 2
-    assert caso.calidades == [0.6667, 1.0]
+    caso = analizar.cargar_config(registros, analizar.Selector.parse("vigente")).cases["lint-9k"]
+    assert len(caso.runs) == 2
+    assert caso.qualities == [0.6667, 1.0]
 
 
 # --- §6: tanda no concluyente ---------------------------------------------------------------------
@@ -674,7 +672,7 @@ def test_los_pares_deciden_la_calidad_de_un_rol_de_texto_abierto():
     c = analizar.cargar_config(registros, analizar.Selector.parse("candidato"))
 
     def decidir(pares):
-        return analizar.decidir_rol("long", v, c, REAL, _CP3_LONG_REAL, pares=pares)
+        return analizar.decidir_rol("long", v, c, REAL, _CP3_LONG_REAL, pairs=pares)
 
     gana = decidir(_pares(15, 5))
     assert (gana["veredicto"], gana["criterio"]) == ("sustituye", "calidad")
@@ -704,7 +702,7 @@ def test_una_fuente_que_dice_peor_veta_a_la_otra_que_dice_mejor():
     c = analizar.cargar_config(registros, analizar.Selector.parse("candidato"))
     cp3 = {"casos_admitidos": ["boilerplate-156"], "casos": {}}
     pares = {"explicar-install-20k": {"humano": {"candidato": 2, "vigente": 18}}}
-    d = analizar.decidir_rol("code", v, c, REAL, cp3, pares=pares)
+    d = analizar.decidir_rol("code", v, c, REAL, cp3, pairs=pares)
     assert d["pares"]["veredicto"] == "peor"
     assert (d["veredicto"], d["criterio"]) == ("no_sustituye", "calidad")
 
@@ -888,7 +886,7 @@ def test_la_latencia_se_compara_solo_en_los_casos_que_los_dos_terminan():
     for r in registros:
         if r["case"] == "lint-9k":
             r["outcome"] = "truncado"
-            r["score"] = {"quality": 0.0, "zero_by": "truncado_repetido"}
+            r["score"] = {"quality": 0.0, "zero_by": "truncated_repeated"}
     d = _decidir(registros + _tanda("candidato", "long", (1.0, 1.0, 1.0)))
     assert d["latencia_ms"]["fuera"] == ["lint-9k"]
     assert d["latencia_ms"]["vigente"] is not None
@@ -1055,7 +1053,7 @@ def _r(label, case, text, *, run=1, outcome="ok", finish="stop", lat=1000, therm
         "finish_reason": finish,
         "latency_ms": lat,
         "thermal_state": thermal,
-        "descartada": False,
+        "discarded": False,
         "response": text,
         "response_chars": len(text),
         "score": None,
@@ -1166,7 +1164,7 @@ def test_missing_data_no_invented_verdict():
     with pytest.raises(analizar.NoData, match="falta la corrida 1 de gemma4-26b-a4b en c2"):
         _verdict(corpus, runs)
     corpus, runs = _mechanical()
-    runs[(ALT, "c1", 1)][-1]["descartada"] = True
+    runs[(ALT, "c1", 1)][-1]["discarded"] = True
     with pytest.raises(analizar.NoData, match="anulada"):
         _verdict(corpus, runs)
 
@@ -1177,7 +1175,7 @@ def test_row_cancelled_only_for_lack_of_samples_counts_in_cell(reason):
     se evalúa con ella. Este veredicto no juzga recursos."""
     corpus, runs = _mechanical()
     for tag in (ALT, ROLE):
-        runs[(tag, "c1", 1)][-1].update(descartada=True, descartada_motivo=reason)
+        runs[(tag, "c1", 1)][-1].update(discarded=True, discarded_reason=reason)
     cell = _celda(_verdict(corpus, runs))
     assert cell["estado"] == "aprobada", cell["criterios"]
     assert cell["criterios"]["fiabilidad"]["casos_que_fallan_solo_en_el_alternativo"] == []
@@ -1186,7 +1184,7 @@ def test_row_cancelled_only_for_lack_of_samples_counts_in_cell(reason):
 @pytest.mark.parametrize("reason", ["multiple_processes", "process_changed", None])
 def test_row_cancelled_by_process_still_not_counted(reason):
     corpus, runs = _mechanical()
-    runs[(ALT, "c1", 1)][-1].update(descartada=True, descartada_motivo=reason)
+    runs[(ALT, "c1", 1)][-1].update(discarded=True, discarded_reason=reason)
     with pytest.raises(analizar.NoData, match="anulada"):
         _verdict(corpus, runs)
 
@@ -1507,3 +1505,49 @@ def test_does_not_import_package(tmp_path):
     verdict = json.loads((tmp_path / "veredicto.json").read_text(encoding="utf-8"))
     assert {c["estado"] for c in verdict["celdas"]} == {"aprobada"}
     assert "aprobada" in proc.stdout
+
+
+# --- Lectura dual de los resultados congelados (ola A10b-1) ---------------------------------------
+
+FROZEN_RESULTS = RAIZ / "benchmarks" / "afinidad-2026-10" / "resultados" / "gemma3-4b.jsonl"
+
+
+def test_frozen_results_are_read_with_the_new_keys():
+    """Las filas congeladas dicen `descartada`; los tres cargadores las dan como `discarded`."""
+    old_rows = [json.loads(x) for x in FROZEN_RESULTS.read_text(encoding="utf-8").splitlines() if x]
+    expected = sum(1 for r in old_rows if r.get("descartada"))
+    assert expected > 0  # sin filas anuladas, el test no distinguiría nada
+    hoja_pares = _cargar("hoja_pares")
+    for records in (
+        analizar.leer_jsonl([FROZEN_RESULTS]),
+        hoja_revision._registros([FROZEN_RESULTS]),
+        hoja_pares._registros([FROZEN_RESULTS]),
+    ):
+        assert not any("descartada" in r or "descartada_motivo" in r for r in records)
+        assert sum(1 for r in records if r["discarded"]) == expected
+        assert {r["discarded_reason"] for r in records if r["discarded"]} == {"zero_vram_samples"}
+
+
+def test_old_outcome_and_zero_by_values_are_translated(tmp_path):
+    path = tmp_path / "old.jsonl"
+    rows = [
+        {"schema_version": 2, "outcome": "rechazo_por_contexto", "score": None},
+        {
+            "schema_version": 2,
+            "outcome": "truncado",
+            "score": {"quality": 0.0, "zero_by": "truncado_repetido"},
+        },
+    ]
+    path.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+    first, second = analizar.leer_jsonl([path])
+    assert first["outcome"] == "context_rejection"
+    assert second["score"]["zero_by"] == "truncated_repeated"
+
+
+def test_footprints_fall_back_to_the_frozen_file(tmp_path):
+    frozen = RAIZ / "benchmarks" / "afinidad-2026-10"
+    assert analizar.footprints_file(frozen / "footprints.json") == frozen / "huellas.json"
+    assert (frozen / "huellas.json").exists()
+    (tmp_path / "footprints.json").write_text("{}", encoding="utf-8")
+    assert analizar.footprints_file(tmp_path / "footprints.json") == tmp_path / "footprints.json"
+    assert analizar.footprints_file(tmp_path / "other.json") == tmp_path / "other.json"

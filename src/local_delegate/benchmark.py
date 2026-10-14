@@ -32,7 +32,7 @@ from typing import Any, Self
 
 import httpx2
 
-from . import config, failures
+from . import config, failures, legacy_names
 
 # El muestreo frecuente de /metrics no debe convertir el benchmark en un log de cada GET.
 logging.getLogger("httpx2").setLevel(logging.WARNING)
@@ -98,6 +98,7 @@ def load_corpus(path: Path) -> Corpus:
     cases: list[CorpusCase] = []
     seen: set[str] = set()
     for raw in data["cases"]:
+        raw = legacy_names.normalize("benchmark_corpus", raw)
         case_id = str(raw.get("id", "")).strip()
         if not case_id or case_id in seen:
             raise ValueError(f"id de caso vacio o duplicado: {case_id!r}")
@@ -105,7 +106,7 @@ def load_corpus(path: Path) -> Corpus:
         for field_name, allowed in (
             ("kind", _CORPUS_KINDS),
             ("role", _CORPUS_ROLES),
-            ("procedencia", _CORPUS_PROVENANCES),
+            ("provenance", _CORPUS_PROVENANCES),
             ("media_type", _CORPUS_MEDIA),
         ):
             if raw.get(field_name) not in allowed:
@@ -116,7 +117,7 @@ def load_corpus(path: Path) -> Corpus:
                 tool=str(raw["tool"]),
                 role=raw["role"],
                 kind=raw["kind"],
-                provenance=raw["procedencia"],
+                provenance=raw["provenance"],
                 media_type=raw["media_type"],
                 source_file=raw["source_file"],
                 source=_frozen_source(path.parent, raw),
@@ -177,10 +178,10 @@ EXEC_TIMEOUT_S = 10.0
 # que un `print` del codigo generado no puede fingir un resultado: se lee solo la ULTIMA linea.
 _HARNESS = r"""
 import json
-comprobaciones = json.load(open("comprobaciones.json", encoding="utf-8"))
+comprobaciones = json.load(open("checks.json", encoding="utf-8"))
 espacio = {"__name__": "generado"}
 try:
-    exec(compile(open("generado.py", encoding="utf-8").read(), "generado.py", "exec"), espacio)
+    exec(compile(open("generated.py", encoding="utf-8").read(), "generated.py", "exec"), espacio)
     cargado = True
 except BaseException:
     cargado = False
@@ -211,8 +212,8 @@ def run_execution_checks(code: str, checks: Sequence[dict[str, Any]]) -> list[bo
     failed = [False] * len(checks)
     env = {"SYSTEMROOT": os.environ["SYSTEMROOT"]} if "SYSTEMROOT" in os.environ else {}
     with tempfile.TemporaryDirectory(prefix="ld-exec-") as workdir:
-        Path(workdir, "generado.py").write_text(_strip_fences(code), encoding="utf-8")
-        Path(workdir, "comprobaciones.json").write_text(json.dumps(list(checks)), encoding="utf-8")
+        Path(workdir, "generated.py").write_text(_strip_fences(code), encoding="utf-8")
+        Path(workdir, "checks.json").write_text(json.dumps(list(checks)), encoding="utf-8")
         try:
             proc = subprocess.run(
                 [sys.executable, "-I", "-c", _HARNESS],
@@ -327,7 +328,12 @@ def score_output(
             # Ya se repitio con el doble de max_tokens y sigue sin terminar: no es un limite
             # nuestro, es el modelo. CP-3 (tarea 19) vio un bucle de «D102 (Docstrings)» salir
             # «sin puntuacion» y caer del agregado, que premia justo al que peor lo hizo.
-            return {**components, "quality": 0.0, "zero_by": "truncado_repetido", "truncated": True}
+            return {
+                **components,
+                "quality": 0.0,
+                "zero_by": "truncated_repeated",
+                "truncated": True,
+            }
         # La primera vez no es mala calidad: la respuesta no termino. El runner la repite con mas
         # max_tokens (§4.7 punto 3), y puntuarla aqui hundiria a un modelo por un limite nuestro.
         return {**components, "quality": None, "zero_by": None, "truncated": True}
@@ -1100,7 +1106,7 @@ def post_attempt(client: httpx2.Client, url: str, payload: dict[str, Any]) -> At
     body = response.text
     if response.status_code >= 400:
         outcome = (
-            "rechazo_por_contexto" if is_context_rejection(response.status_code, body) else "error"
+            "context_rejection" if is_context_rejection(response.status_code, body) else "error"
         )
         return Attempt(outcome, error=f"http_{response.status_code}", error_body=body.strip()[:500])
     try:
@@ -1281,7 +1287,7 @@ def run_benchmark(args: argparse.Namespace) -> int:
                             "case": case.id,
                             "role": case.role,
                             "kind": case.kind,
-                            "procedencia": case.provenance,
+                            "provenance": case.provenance,
                             "input_variant": args.input_control,
                             "run": run,
                             "attempt": attempt,
@@ -1307,8 +1313,8 @@ def run_benchmark(args: argparse.Namespace) -> int:
                             "resources": resource_summary,
                             # Anulada por la sonda: se repite hasta MAX_ANNUL_RETRIES veces.
                             # Distinto de rechazo y de mala calidad.
-                            "descartada": resource_summary["annul"] is not None,
-                            "descartada_motivo": resource_summary["annul"],
+                            "discarded": resource_summary["annul"] is not None,
+                            "discarded_reason": resource_summary["annul"],
                             "score": score_output(
                                 case.raw, result.text, result.finish_reason, repeated=doubled
                             )

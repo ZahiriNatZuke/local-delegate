@@ -81,6 +81,15 @@ sección de su motivo.
 | ficheros | tests/test_adoption_experiment.py | lectura de formato viejo: el `MANIFEST.json` del test copia el congelado de `benchmarks/resumen-estructurado/`, que `source_text` traduce con la tabla `sources_manifest` (ola A10a-5) |
 | origen | tests/test_adoption_experiment.py | lectura de formato viejo: mismo `MANIFEST.json` del test (ola A10a-5) |
 | resultados.jsonl | scripts/adoption_experiment.py | lectura de formato viejo: `--resume` sigue en el `resultados.jsonl` de una tanda empezada antes del renombrado; sus filas se leen con la tabla `adoption_runs` (ola A10a-5) |
+| descartada | tests/test_analisis_benchmark.py | lectura de formato viejo (decisión 6 de A10): el test nuevo cuenta las filas `descartada` del resultado congelado (`benchmarks/afinidad-2026-10/resultados/gemma3-4b.jsonl`) para comprobar que los tres cargadores las dan como `discarded` (ola A10b-1) |
+| descartada_motivo | tests/test_analisis_benchmark.py | lectura de formato viejo (decisión 6 de A10): mismo test; comprueba que no queda la clave vieja (ola A10b-1) |
+| rechazo_por_contexto | tests/test_analisis_benchmark.py | lectura de formato viejo (decisión 6 de A10): valor viejo de `outcome` que el test escribe a propósito para probar la traducción (ola A10b-1) |
+| truncado_repetido | tests/test_analisis_benchmark.py | lectura de formato viejo (decisión 6 de A10): valor viejo de `score.zero_by` que el test escribe a propósito (ola A10b-1) |
+| descartada | tests/test_affinity_batch.py | lectura de formato viejo (decisión 6 de A10): el test nuevo cuenta las filas `descartada` del resultado congelado para comprobar `_read_rows` (ola A10b-1) |
+| inicio_utc | tests/test_affinity_batch.py | lectura de formato viejo (decisión 6 de A10): clave de `ventanas-tanda.json` congelado que el test compara con la traducida (ola A10b-1) |
+| ventanas-tanda.json | tests/test_affinity_batch.py | lectura de formato viejo (decisión 6 de A10): nombre del fichero de ventanas de antes de `batch-windows.json`, del que parte `register_window` (ola A10b-1) |
+| huellas.json | tests/test_affinity_batch.py | lectura de formato viejo (decisión 6 de A10): nombre de las huellas de antes de `footprints.json`, con las que `write_footprints` compara una tanda empezada antes (ola A10b-1) |
+| procedencia | tests/test_benchmark.py | lectura de formato viejo (decisión 6 de A10): el test nuevo comprueba que el corpus congelado dice `procedencia` y `load_corpus` lo da como `provenance` (ola A10b-1) |
 
 ## Envoltorio de REQ-046
 
@@ -122,6 +131,18 @@ sección de su motivo.
 | wiki-instalacion | tests/test_adoption_experiment.py | dato congelado de corpus o caso: id de una tarea del corpus congelado (ola A10a-5) |
 | experimento-adopcion | scripts/adoption_experiment.py | dato congelado de corpus o caso: etiqueta de las tandas ya anotadas en el fichero congelado de ventanas excluidas (ola A10a-5) |
 | resumen-estructurado | scripts/measure_structured_summary.py | dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (copias fijas, `MANIFEST.json` y resultados ya escritos) (ola A10a-6) |
+| afinidad-2026-10 | scripts/analizar_benchmark.py | dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10b-1) |
+| afinidad-2026-10 | scripts/dev/affinity_batch.py | dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10b-1) |
+| afinidad-2026-10 | tests/test_affinity.py | dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10b-1) |
+| afinidad-2026-10 | tests/test_affinity_batch.py | dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10b-1) |
+| catalogo-2026-09 | tests/test_benchmark.py | dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10b-1) |
+| clasificar-53 | tests/test_benchmark.py | dato congelado de corpus o caso: id de un caso del corpus congelado (ola A10b-1) |
+| describir-dashboard | tests/test_benchmark.py | dato congelado de corpus o caso: id de un caso del corpus congelado (ola A10b-1) |
+| leer-cifras-dashboard | tests/test_benchmark.py | dato congelado de corpus o caso: id de un caso del corpus congelado (ola A10b-1) |
+| resumen-md-2k | tests/test_benchmark.py | dato congelado de corpus o caso: id de un caso del corpus congelado (ola A10b-1) |
+| techo-resumen-103k | tests/test_benchmark.py | dato congelado de corpus o caso: id de un caso del corpus congelado (ola A10b-1) |
+| techo-commit-156k | scripts/analizar_benchmark.py | dato congelado de corpus o caso: id del caso de techo del corpus congelado; resultados, hojas y claves lo citan (ola A10b-1) |
+| techo-commit-156k | scripts/dev/affinity_batch.py | dato congelado de corpus o caso: id del caso de techo del corpus congelado (ola A10b-1) |
 
 ## Pendiente
 

@@ -1,0 +1,24 @@
+# Controles positivos de A10b-1 (2026-10-13). Copias en scratchpad a10b/mut/.
+
+## 1. Escritor renombrado: src/local_delegate/benchmark.py
+sha256 antes:   9b42666b2667dc7685d1cc1aa30f7c397e938f68d74e19fe5d1fffb370384eac
+mutante: "discarded": resource_summary["annul"] is not None  ->  ... is None
+sha256 mutado:  ea226ef94942d6501c6ccbfa08ed1f5b9fd9d718cbd258f6976339039de69564
+pytest tests/test_benchmark.py -> 4 failed:
+  test_runner_scores_with_the_real_corpus_and_without_probe_does_not_make_up_thermal_state  E assert True is False   (record["discarded"] is False)
+  test_context_rejection_is_neither_bad_quality_nor_discarded                              E assert (None is None and True is False)
+  test_voided_run_is_repeated_with_the_same_tokens                                         E assert [False, True] == [True, False]
+  test_the_voided_run_is_repeated_at_most_twice                                            E assert False   (all(r["discarded"] ...))
+restaurado desde la copia: sha256 vuelve a 9b42666b...; los tests pasan
+
+## 2. Lectura dual: src/local_delegate/legacy_names.py sin el respaldo al formato viejo
+sha256 antes:   3382e6503da455604328b17879d40381353ae3503194376c52832ca79f613a65
+mutante: tablas vaciadas: benchmark_results.keys = {}, affinity_verdict sin "estado", batch_windows.keys = {}, benchmark_corpus.keys = {}
+sha256 mutado:  c29cde831572b33b21ebefe0c827883e5bcabec8a313009b4f5f130ffd98bbfe
+pytest test_analisis_benchmark/test_affinity/test_affinity_batch/test_benchmark -> fallan:
+  test_analisis_benchmark::test_frozen_results_are_read_with_the_new_keys          E assert not True  (quedan claves `descartada`)
+  test_affinity::test_matrix_cells_are_the_approved_cells_of_the_verdict           E KeyError: 'state'
+  test_affinity_batch::test_frozen_rows_are_read_with_the_new_keys                 E assert not True
+  test_affinity_batch::test_windows_start_from_the_frozen_file_when_the_new_one_does_not_exist  E KeyError: 'start_utc'
+  test_benchmark: 12 tests que cargan el corpus real (load_corpus valida `provenance` y el corpus dice `procedencia`)
+restaurado desde la copia: sha256 vuelve a 3382e650...; los tests pasan

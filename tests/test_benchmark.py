@@ -251,11 +251,11 @@ def test_an_infinite_loop_does_not_hang_the_runner(monkeypatch):
 
 
 def test_generated_code_sees_neither_the_environment_nor_the_operator_directory(monkeypatch):
-    monkeypatch.setenv("LD_SECRETO_DE_PRUEBA", "no-deberia-verse")
+    monkeypatch.setenv("LD_TEST_SECRET", "should-not-be-seen")
     monkeypatch.chdir(ROOT)
     raw = _raw(
         execution_checks=[
-            {"expr": "__import__('os').environ.get('LD_SECRETO_DE_PRUEBA')", "expected": None},
+            {"expr": "__import__('os').environ.get('LD_TEST_SECRET')", "expected": None},
             {"expr": "__import__('os').path.exists('pyproject.toml')", "expected": False},
             # Control positivo: el arnes si evalua, o las dos de arriba pasarian por no correr.
             {"expr": "1 + 1", "expected": 2},
@@ -285,7 +285,7 @@ def test_truncated_again_after_doubling_scores_zero():
     assert (first["quality"], first["zero_by"]) == (None, None)
     assert (repeated["quality"], repeated["zero_by"], repeated["truncated"]) == (
         0.0,
-        "truncado_repetido",
+        "truncated_repeated",
         True,
     )
 
@@ -454,7 +454,7 @@ def test_runner_scores_with_the_real_corpus_and_without_probe_does_not_make_up_t
     )
     assert record["score"]["quality"] == 1.0
     assert record["thermal_state"] is None
-    assert record["descartada"] is False
+    assert record["discarded"] is False
     # Sin declararlo, el analisis no puede comprobar §6 y declara el rol no concluyente.
     assert record["variant"]["load_mode"] is None
 
@@ -492,8 +492,8 @@ def test_context_rejection_is_neither_bad_quality_nor_discarded(tmp_path, monkey
         )
 
     rc, (record,) = _run(tmp_path, monkeypatch, overflow, "--case", "techo-resumen-103k")
-    assert record["outcome"] == "rechazo_por_contexto"
-    assert record["score"] is None and record["descartada"] is False
+    assert record["outcome"] == "context_rejection"
+    assert record["score"] is None and record["discarded"] is False
     assert "exceed_context_size_error" in record["error_body"]
     assert rc == 0
 
@@ -530,7 +530,7 @@ def test_truncated_twice_is_not_repeated_again_and_scores_zero(tmp_path, monkeyp
     _, records = _run(tmp_path, monkeypatch, handler, "--case", "clasificar-53")
     assert seen == [16, 32]
     assert records[1]["score"]["quality"] == 0.0
-    assert records[1]["score"]["zero_by"] == "truncado_repetido"
+    assert records[1]["score"]["zero_by"] == "truncated_repeated"
 
 
 class _VoidingProbe:
@@ -564,7 +564,7 @@ def test_voided_run_is_repeated_with_the_same_tokens(tmp_path, monkeypatch):
     _, records = _run(tmp_path, monkeypatch, handler, "--case", "clasificar-53")
     assert seen == [16, 16]
     assert [(r["run"], r["attempt"]) for r in records] == [(1, 1), (1, 2)]
-    assert [r["descartada"] for r in records] == [True, False]
+    assert [r["discarded"] for r in records] == [True, False]
     assert [r["retry_reason"] for r in records] == [None, "anulada"]
 
 
@@ -573,7 +573,7 @@ def test_the_voided_run_is_repeated_at_most_twice(tmp_path, monkeypatch):
     monkeypatch.setattr(benchmark, "ResourceSampler", _VoidingProbe)
     _, records = _run(tmp_path, monkeypatch, lambda _r: _response("bug"), "--case", "clasificar-53")
     assert len(records) == 1 + benchmark.MAX_ANNUL_RETRIES
-    assert all(r["descartada"] for r in records)
+    assert all(r["discarded"] for r in records)
 
 
 def test_empty_content_from_reasoning_is_configuration_and_is_not_repeated(tmp_path, monkeypatch):
@@ -641,3 +641,15 @@ def test_role_and_control_select_the_matching_cases(tmp_path, monkeypatch):
     assert sorted(r["case"] for r in records) == sorted(control["para"])
     assert {r["input_variant"] for r in records} == {control["id"]}
     assert {r["input_sha256"] for r in records} == {control["source_sha256"]}
+
+
+# --- Lectura dual del corpus congelado (ola A10b-1) -----------------------------------------------
+
+
+def test_frozen_corpus_old_provenance_key_is_read_as_the_new_one():
+    """El corpus versionado dice `procedencia`; `load_corpus` lo da como `provenance`."""
+    frozen = json.loads(CORPUS.read_text(encoding="utf-8"))["cases"]
+    assert frozen and all("procedencia" in c and "provenance" not in c for c in frozen)
+    cases = _corpus().cases
+    assert all("provenance" in c.raw and "procedencia" not in c.raw for c in cases)
+    assert [c.provenance for c in cases] == [c["procedencia"] for c in frozen]

@@ -9,6 +9,8 @@ OK    A10a.md
       · A10a-4-mapping.csv: 284 filas, 4 discrepancia(s)
       · A10a-5-mapping.csv: 281 filas, 5 discrepancia(s)
       · A10a-6-mapping.csv: 288 filas, 0 discrepancia(s)
+OK    A10b.md
+      · A10b-1-mapping.csv: 225 filas, 7 discrepancia(s)
 OK    A2.md
       · A2-mapping.csv: 156 filas, 9 discrepancia(s)
 OK    A3.md
@@ -55,4 +57,4 @@ OK    A9c.md
       · A9c-3-mapping.csv: 291 filas, 0 discrepancia(s)
       · A9c-4-mapping.csv: 197 filas, 0 discrepancia(s)
       · A9c-5-mapping.csv: 286 filas, 0 discrepancia(s)
-18/18 registro(s) cumplen los mínimos de §2.1
+19/19 registro(s) cumplen los mínimos de §2.1
