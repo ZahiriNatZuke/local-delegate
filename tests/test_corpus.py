@@ -745,12 +745,12 @@ def test_build_traps_gives_three_per_set_with_three_kinds(tmp_path, monkeypatch)
     first_one = traps["sets"][0]["traps"][0]
     assert first_one["subject"].startswith("docs: zona ")
     assert first_one["subject_of"]["hash"] not in {c.hash for c in sel.real + sel.traps}
-    assert first_one["source_body"] != "real-reescrito"
+    assert first_one["source_body"] != "real-rewritten"
     # Con el cuerpo reescrito a mano, ese cuerpo manda sobre las lineas reales (partidas a 80 columnas).
     monkeypatch.setattr(build, "SAME_ZONE_BODIES", {sel.traps[0].short: ["Una frase entera."]})
     rewritten = build.build_traps(repo, sel, before=CUTOFF)["sets"][0]["traps"][0]
     assert rewritten["body"] == ["Una frase entera."]
-    assert rewritten["source_body"] == "real-reescrito"
+    assert rewritten["source_body"] == "real-rewritten"
     # Si falta la trampa redactada de un caso, no se inventa: se para.
     monkeypatch.setattr(build, "WRITTEN_TRAPS", {})
     with pytest.raises(ValueError, match="falta la trampa redactada"):
@@ -981,12 +981,29 @@ def test_frozen_affinity_corpus_is_read_with_the_new_keys():
     assert "seleccion" in raw and any("puntuador" in c for c in raw["cases"])
     corpus = legacy_names.normalize_affinity_corpus(raw)
     assert set(corpus["selection"]) >= {"rule", "deadline", "step", "privacy", "f2_case", "real"}
-    assert corpus["selection"]["traps"] and corpus["selection"]["privacy"] == "excluir"
+    # El valor de `--privacy` y la clave de la fecha de cada commit salen en inglés (lote 5).
+    assert raw["seleccion"]["privacidad"] != corpus["selection"]["privacy"]  # sí es viejo
+    assert corpus["selection"]["traps"] and corpus["selection"]["privacy"] == "exclude"
+    for key, old_key in (("real", "reales"), ("traps", "trampas")):
+        assert all("date" not in c for c in raw["seleccion"][old_key])  # sí es viejo
+        assert all(set(c) == {"hash", "date", "chars"} for c in corpus["selection"][key]), key
     for case in corpus["cases"]:
         assert "scorer" in case and "puntuador" not in case, case["id"]
         assert {"provenance", "origin"} <= set(case) and "procedencia" not in case, case["id"]
         assert "kind" in case["scorer"] and "tipo" not in case["scorer"], case["id"]
     assert legacy_names.normalize_affinity_corpus(corpus) == corpus
+
+
+def test_frozen_trap_body_origins_are_read_in_english():
+    """`source_body` de cada trampa congelada: el valor viejo, leído con el que escribe hoy
+    `build_traps` (cierre del frente A, lote 5)."""
+    raw = json.loads((AFFINITY / legacy_names.TRAPS_FILE_NAMES[0]).read_text(encoding="utf-8"))
+    old = [t["cuerpo_origen"] for s in raw["juegos"] for t in s["trampas"]]
+    traps = legacy_names.normalize_affinity_traps(raw)
+    new = [t["source_body"] for s in traps["sets"] for t in s["traps"]]
+    assert len(new) == len(old) == 9
+    assert not set(old) & {"written", "real+written", "real-rewritten"}  # sí es viejo
+    assert sorted(new) == ["real-rewritten"] * 3 + ["written"] * 6
 
 
 # --- Valores del corpus en inglés y su lectura dual (cierre del frente A, lote 3) -------------------

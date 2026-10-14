@@ -139,24 +139,24 @@ def test_without_episodes_it_is_not_a_success_but_inconclusive(logs):
     """Una ventana sin enfriamientos no mide nada, y el script no puede leerla como «se quedan»."""
     measurement = logs.measure()
     assert measurement["episodes"] == 0
-    assert measurement["result"] == "no concluyente"
+    assert measurement["result"] == "inconclusive"
 
 
 def test_four_episodes_are_inconclusive_and_five_are_not(logs):
     logs.failures(10)
     for day in range(20, 24):
         logs.episode(day, model=f"m{day}")
-    assert logs.measure()["result"] == "no concluyente"
+    assert logs.measure()["result"] == "inconclusive"
     logs.episode(24, model="m24")
-    assert logs.measure()["result"] == "se quedan", "con el minimo exacto ya se concluye"
+    assert logs.measure()["result"] == "keep", "con el minimo exacto ya se concluye"
 
 
 def test_nine_failures_are_inconclusive_even_with_episodes(logs):
     _five_episodes(logs)
     logs.failures(9)
-    assert logs.measure()["result"] == "no concluyente"
+    assert logs.measure()["result"] == "inconclusive"
     logs.failures(1)
-    assert logs.measure()["result"] == "se quedan"
+    assert logs.measure()["result"] == "keep"
 
 
 def test_the_failures_that_count_are_the_table_ones_and_nothing_else(logs):
@@ -180,7 +180,7 @@ def test_rule_1_the_model_was_still_broken(logs):
     _five_episodes(logs, reentran=4)
     measurement = logs.measure()
     assert measurement["R"] == pytest.approx(0.8)
-    assert (measurement["result"], measurement["rule"]) == ("cambiar", 1)
+    assert (measurement["result"], measurement["rule"]) == ("change", 1)
 
 
 def test_rule_1_does_not_fire_with_r_at_60(logs):
@@ -188,7 +188,7 @@ def test_rule_1_does_not_fire_with_r_at_60(logs):
     _five_episodes(logs, reentran=3)
     measurement = logs.measure()
     assert measurement["R"] == pytest.approx(0.6)
-    assert measurement["result"] == "se quedan"
+    assert measurement["result"] == "keep"
 
 
 def test_rule_2_is_opened_by_timeouts(logs):
@@ -199,7 +199,7 @@ def test_rule_2_is_opened_by_timeouts(logs):
         logs.episode(day, model=f"m{day}", error_class=error_class, reentry_waits=waits)
     measurement = logs.measure()
     assert measurement["episodes_by_timeout"] == 3
-    assert (measurement["result"], measurement["rule"]) == ("cambiar", 2)
+    assert (measurement["result"], measurement["rule"]) == ("change", 2)
 
 
 def test_rule_2_fires_with_exactly_half(logs):
@@ -213,7 +213,7 @@ def test_rule_2_fires_with_exactly_half(logs):
     measurement = logs.measure()
     assert (measurement["episodes"], measurement["episodes_by_timeout"]) == (6, 3)
     assert measurement["R"] == pytest.approx(2 / 6, abs=1e-3), "R fuera de las reglas 1 y 3"
-    assert (measurement["result"], measurement["rule"]) == ("cambiar", 2)
+    assert (measurement["result"], measurement["rule"]) == ("change", 2)
 
 
 def test_rule_2_does_not_fire_with_two_of_five(logs):
@@ -222,7 +222,7 @@ def test_rule_2_does_not_fire_with_two_of_five(logs):
         error_class = "timeout_lectura" if day < 22 else "modelo"
         waits = (240.0,) if day < 22 else ()
         logs.episode(day, model=f"m{day}", error_class=error_class, reentry_waits=waits)
-    assert logs.measure()["result"] == "se quedan"
+    assert logs.measure()["result"] == "keep"
 
 
 def test_rule_3_cools_down_too_much(logs):
@@ -231,14 +231,14 @@ def test_rule_3_cools_down_too_much(logs):
     logs.diverted(15)
     measurement = logs.measure()
     assert measurement["R"] == 0
-    assert (measurement["result"], measurement["rule"]) == ("cambiar", 3)
+    assert (measurement["result"], measurement["rule"]) == ("change", 3)
 
 
 def test_rule_3_does_not_fire_with_fewer_than_three_diverted_on_average(logs):
     logs.failures(10)
     _five_episodes(logs, reentran=0)
     logs.diverted(14)
-    assert logs.measure()["result"] == "se quedan"
+    assert logs.measure()["result"] == "keep"
 
 
 def test_rule_4_reaches_tmax_and_reenters_again(logs):
@@ -248,7 +248,7 @@ def test_rule_4_reaches_tmax_and_reenters_again(logs):
         logs.episode(day, model=f"m{day}")
     measurement = logs.measure()
     assert measurement["episodes_reentering_at_tmax"] == 1
-    assert (measurement["result"], measurement["rule"]) == ("cambiar", 4)
+    assert (measurement["result"], measurement["rule"]) == ("change", 4)
 
 
 def test_rule_4_does_not_fire_if_it_reaches_tmax_and_recovers(logs):
@@ -256,7 +256,7 @@ def test_rule_4_does_not_fire_if_it_reaches_tmax_and_recovers(logs):
     logs.episode(20, model="roto", reentry_waits=(240.0, 480.0, 900.0))
     for day in range(21, 25):
         logs.episode(day, model=f"m{day}")
-    assert logs.measure()["result"] == "se quedan"
+    assert logs.measure()["result"] == "keep"
 
 
 def test_only_the_first_rule_applies_and_the_rest_are_noted(logs):
@@ -292,12 +292,12 @@ def test_the_excluded_span_removes_its_episodes_and_failures(logs):
     logs.failures(10, day=25)
     _five_episodes(logs)
     complete = logs.measure()
-    assert complete["result"] == "se quedan"
+    assert complete["result"] == "keep"
     span = ("2026-09-21T00:00", "2026-09-22T00:00")
     trimmed = logs.measure(excluded=[span])
     assert trimmed["episodes"] == 4
     assert trimmed["counting_failures"] == 10
-    assert trimmed["result"] == "no concluyente"
+    assert trimmed["result"] == "inconclusive"
 
 
 def test_what_precedes_the_window_does_not_count(logs):
@@ -442,6 +442,29 @@ def test_the_documented_p4_command_still_works(logs, monkeypatch, capsys):
     monkeypatch.setattr(sys, "argv", ["medir_enfriamiento.py", *old_argv])
     assert _old_name_wrapper().main() == 0
     assert json.loads(capsys.readouterr().out) == new
+
+
+def test_the_old_wrapper_prints_the_same_report_with_the_spanish_result(logs, monkeypatch, capsys):
+    """REQ-046: sin `--json`, el envoltorio viejo imprime el mismo informe que el nuevo, y el
+    resultado sale con su rótulo en español aunque el valor interno sea inglés (lote 5).
+    Control: imprimir `m['result']` tal cual → sale «RESULTADO: keep» y este test falla."""
+    logs.failures(10)
+    _five_episodes(logs)
+    logs.measure()  # escribe los ficheros del escenario en LOG_DIR
+    monkeypatch.setattr(sys, "argv", ["measure_cooldown.py", "--since", "2026-09-16", "--json"])
+    assert measure_cooldown.main() == 0
+    measured = json.loads(capsys.readouterr().out)
+    assert measured["episodes"] > 0, "guarda: el escenario cuenta algo"
+    measured = measured["result"]
+    assert measured != "inconclusive", "guarda: con los fallos minimos ya se concluye"
+    monkeypatch.setattr(sys, "argv", ["measure_cooldown.py", "--since", "2026-09-16"])
+    assert measure_cooldown.main() == 0
+    new = capsys.readouterr().out
+    monkeypatch.setattr(sys, "argv", ["medir_enfriamiento.py", "--desde", "2026-09-16"])
+    assert _old_name_wrapper().main() == 0
+    assert capsys.readouterr().out == new
+    expected = {"inconclusive": "no concluyente", "keep": "se quedan", "change": "cambiar"}
+    assert f"RESULTADO: {expected[measured]}\n" in new
 
 
 def test_p4_can_be_measured_again_with_the_file_window(logs):

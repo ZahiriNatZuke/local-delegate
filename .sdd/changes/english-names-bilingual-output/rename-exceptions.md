@@ -156,7 +156,6 @@ sección de su motivo.
 | puntuador | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): mismo test: clave vieja de cada caso del corpus de afinidad congelado (ola A10b-4) |
 | procedencia | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): mismo test: el caso normalizado ya no la lleva (ola A10b-4) |
 | tipo | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): mismo test: el puntuador normalizado ya no la lleva (ola A10b-4) |
-| excluir | tests/test_corpus.py | lectura de formato viejo (decisión 6 de A10): valor de `privacy` del corpus de afinidad congelado (lo escribió `--privacy excluir`) (ola A10b-4) |
 | trampas.json | tests/test_pair_sheet.py | lectura de formato viejo (decisión 6 de A10): el `trampas.json` congelado, que `REAL_SETS` lee normalizado y el test de formato viejo en crudo (ola A10b-6) |
 | reglas.json | tests/test_pair_sheet.py | lectura de formato viejo (decisión 6 de A10): el `reglas.json` congelado de la hoja 1, que `read_rules` sigue leyendo (ola A10b-4; fila añadida en A10b-6) |
 | calidad | tests/test_analyze_benchmark.py | lectura de formato viejo (decisión 6 de A10): valor viejo de `kind` del corpus y de los resultados congelados, escrito a mano en `_OLD_KINDS` para comprobar que los cargadores lo dan como `quality` (ola A10b-5) |
@@ -174,6 +173,10 @@ sección de su motivo.
 | rol_en_hoja | tests/test_corpus.py | lectura de formato viejo (cierre del frente A, lote 3): mismo test; clave vieja de `sheet_role` que el test lee en crudo del congelado |
 | techo | tests/test_corpus.py | lectura de formato viejo (cierre del frente A, lote 3): valor viejo de `scorer.kind` del corpus de afinidad congelado (`_OLD_SCORER_KINDS`); se lee como `ceiling` |
 | hoja | tests/test_corpus.py | lectura de formato viejo (cierre del frente A, lote 3): mismo test; se lee como `sheet` |
+| privacidad | tests/test_corpus.py | lectura de formato viejo (cierre del frente A, lote 5): clave vieja de `selection.privacy` del corpus de afinidad congelado; el test comprueba que su valor viejo sale traducido (`exclude`) |
+| trampas | tests/test_corpus.py | lectura de formato viejo (cierre del frente A, lote 5): clave vieja de `selection.traps` del corpus de afinidad y de cada juego del `trampas.json` congelados, que el test lee en crudo para comprobar que la fecha y el origen del cuerpo salen traducidos |
+| juegos | tests/test_corpus.py | lectura de formato viejo (cierre del frente A, lote 5): mismo test; clave vieja de `sets` del `trampas.json` congelado |
+| cuerpo_origen | tests/test_corpus.py | lectura de formato viejo (cierre del frente A, lote 5): mismo test; clave vieja de `source_body`, cuyo valor viejo sale como `written`/`real-rewritten` |
 | generado | tests/test_benchmark.py | lectura de formato viejo (cierre del frente A, lote 3): valor viejo de `provenance` del corpus congelado, escrito a mano para comprobar que `load_corpus` lo da como `generated` |
 | inventado | tests/test_benchmark.py | lectura de formato viejo (cierre del frente A, lote 3): mismo test; sale como `made_up` |
 | tipo | tests/test_pair_sheet.py | lectura de formato viejo (cierre del frente A, lote 3): clave vieja del par de `clave-1.json` congelado, que el test lee en crudo para comprobar que el par `trampa` sale como `trap` |
@@ -277,6 +280,7 @@ sección de su motivo.
 | afinidad-2026-10 | tests/test_affinity.py | dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10b-1) |
 | afinidad-2026-10 | tests/test_affinity_batch.py | dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10b-1) |
 | catalogo-2026-09 | tests/test_benchmark.py | dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10b-1) |
+| resultados-sin-idioma | tests/test_analyze_benchmark.py | dato congelado de corpus o caso: directorio de resultados congelado en `benchmarks/afinidad-2026-10/`; el test lee sus filas del techo con el `via` viejo (cierre del frente A, lote 5) |
 | clasificar-53 | tests/test_benchmark.py | dato congelado de corpus o caso: id de un caso del corpus congelado (ola A10b-1) |
 | describir-dashboard | tests/test_benchmark.py | dato congelado de corpus o caso: id de un caso del corpus congelado (ola A10b-1) |
 | leer-cifras-dashboard | tests/test_benchmark.py | dato congelado de corpus o caso: id de un caso del corpus congelado (ola A10b-1) |
@@ -331,7 +335,6 @@ sección de su motivo.
 | nivel | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
 | organizador | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
 | precio | scripts/build_corpus.py | dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4) |
-| real-reescrito | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
 | resume-ruff-cinco-reglas | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
 | resume-ruff-tres-reglas | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
 | resume-ruff-un-solo-archivo | scripts/build_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4) |
@@ -381,8 +384,6 @@ sección de su motivo.
 | techo-resumen-120k | tests/test_corpus.py | dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-6) |
 | clasificar-53.txt | tests/test_corpus.py | dato congelado de corpus o caso: fichero de `fuentes/` de un corpus congelado en `benchmarks/` (no se reescribe) (ola A10b-6) |
 | resumen-md-2k.md | tests/test_corpus.py | dato congelado de corpus o caso: fichero de `fuentes/` de un corpus congelado en `benchmarks/` (no se reescribe) (ola A10b-6) |
-| real-reescrito | tests/test_corpus.py | dato congelado de corpus o caso: valor de `source_body` de la trampa de la misma zona en el `trampas.json` congelado (ola A10b-6) |
-| real-reescrito | tests/test_pair_sheet.py | dato congelado de corpus o caso: valor de `source_body` de la trampa de la misma zona en el `trampas.json` congelado (ola A10b-6) |
 | clave-falsa | tests/test_residency.py | dato congelado de corpus o caso: marcador con que las copias congeladas de configs reales (`tests/fixtures/residency/*.yaml`) sustituyen las claves; el test comprueba la sustitución y no se reescriben las copias (cierre del frente A, lote 2) |
 | clave-falsa-1 | tests/test_residency.py | dato congelado de corpus o caso: la clave sustituida que llevan esas copias congeladas (cierre del frente A, lote 2) |
 | estado.json | tests/test_corpus.py | dato congelado de corpus o caso: identificador sacado del diff de un commit real del historial (`commit-diff-19k`), contenido del caso (ola A10b-6) |

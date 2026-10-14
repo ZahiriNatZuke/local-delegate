@@ -208,6 +208,24 @@ def test_a_failure_cuts_without_waiting_for_the_rest():
     assert "lint" in output
 
 
+def test_the_job_summary_prints_each_state_in_spanish(tmp_path, monkeypatch):
+    """El estado es interno (`good`/`bad`/`wait`); el resumen del job lo imprime con su rótulo, que
+    sigue en español hasta el frente B (cierre del frente A, lote 5).
+    Control: escribir `v.state` tal cual → sale `**good**` y este test falla."""
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    results = {
+        "lint": ci_gate.Verdict(ci_gate.GOOD, "terminó"),
+        "tests": ci_gate.Verdict(ci_gate.BAD, "falló"),
+        "install-smoke": ci_gate.Verdict(ci_gate.WAIT, "todavía no aparece en el run"),
+    }
+    ci_gate._report("Gate", results, lambda _line: None)
+    text = summary.read_text(encoding="utf-8")
+    assert "- `lint`: **bien** — terminó" in text
+    assert "- `tests`: **mal** — falló" in text
+    assert "- `install-smoke`: **esperar** — todavía no aparece en el run" in text
+
+
 def test_a_job_that_never_appears_exhausts_the_timeout_and_fails():
     jobs = [_job(n, conclusion="success") for n in ci_gate.EXPECTED_JOBS if n != "install-smoke"]
     code, output = _run(lambda *a: jobs)

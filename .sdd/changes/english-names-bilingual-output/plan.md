@@ -1058,6 +1058,8 @@ A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close
   `doctor`), 019 (`doctor` muestra el idioma, su origen, la ruta y el aviso) y el remedio de D11 en
   `doctor`.
 - **Posee:** `cli.py`, `doctor.py`, `checks.py`, `test_windows.py`, `benchmark.py` (mensajes),
+  `scripts/measure_cooldown.py`, `scripts/pair_sheet.py` y `scripts/analyze_benchmark.py` (sus
+  diccionarios de rótulos en español de A-close-5; asignados el 2026-10-14),
   `residency.py`, `topology.py`, `llamaswap_api.py`, `llamaswap_config.py`, `matrix.py`, `turn.py`
   y `daemon.py` (mensajes de consola), `resources/i18n/{es,en}/{cli,argparse,doctor}.json`,
   `tests/test_wiki.py`, los tests nuevos `tests/test_cli_english.py` (incluye

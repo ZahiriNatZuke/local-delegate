@@ -68,6 +68,10 @@ de diccionario.
    salen en el repo y se parecen igual a los sufijos `-mente` e `-idad`. La lista está en
    `.sdd/changes/english-names-bilingual-output/evidence/A-close-4/lexicon-classification.csv`.
 
+7. En el lote A-close-5 (2026-10-14) el detector informó de 2 palabras sin clasificar, a mano:
+   `redactado` a español (valor viejo de `source_body` que lee `legacy_names.py`) y `they` a
+   inglés (nombre de un test nuevo).
+
 ## Heurísticas (no usan datos ajenos)
 
 En `detect_spanish_names.classify_word`, en este orden:

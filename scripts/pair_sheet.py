@@ -39,6 +39,9 @@ from typing import Any
 
 AGREEMENT_THRESHOLD = 0.8
 MIN_PREFERENCES = 3
+#: Cómo se imprime el veredicto de cada caso en la tabla de `unblind`: el texto de salida sigue
+#: en español hasta el frente B.
+_VERDICT_LABELS = {"valid": "valida", "invalid": "no valida", "no_baseline": "sin base"}
 
 _PAIR_RE = re.compile(r"^## Par (\d+)\s*$")
 _CHOICE_RE = re.compile(r"^Mejor \(A/B/=\):[ \t]*(\S*)[ \t]*$")
@@ -208,11 +211,11 @@ def unblind(sheet: str, key: dict[str, Any]) -> tuple[dict[str, Any], list[str]]
         n = row["metric_prefers"]
         row["agreement"] = row["agreements"] / n if n else None
         if n < MIN_PREFERENCES:
-            row["verdict"] = "sin base"
+            row["verdict"] = "no_baseline"
         elif row["agreement"] >= AGREEMENT_THRESHOLD:
-            row["verdict"] = "valida"
+            row["verdict"] = "valid"
         else:
-            row["verdict"] = "no valida"
+            row["verdict"] = "invalid"
     return per_case, missing
 
 
@@ -1231,7 +1234,7 @@ def main(argv: list[str] | None = None) -> int:
         human = ", ".join(f"{k}: {v}" for k, v in sorted(row["human"].items()))
         print(
             f"| {case} | {row['pairs']} | {row['metric_prefers']} | {row['agreements']} | "
-            f"{agreement} | {row['verdict']} | {human} |"
+            f"{agreement} | {_VERDICT_LABELS[row['verdict']]} | {human} |"
         )
     if missing:
         print(f"\nfaltan por elegir {len(missing)} pares: {', '.join(missing)}", file=sys.stderr)

@@ -1,0 +1,39 @@
+refactor(rename): valores internos de una palabra en inglés, con rótulos de salida y lectura dual (cierre del frente A, lote 5)
+
+Aplica el mapping aprobado (waves/A-close-5-mapping.csv): sus 34 filas,
+en scripts/price_watcher.py, ci_gate.py, measure_cooldown.py,
+analyze_benchmark.py, pair_sheet.py, build_corpus.py,
+check_install_e2e.py, measure_adoption.py, dev/affinity_batch.py,
+src/local_delegate/legacy_names.py y sus tests. Son los valores internos
+de una palabra que el detector no ve, y sus hermanos de dos palabras.
+
+- Sin lectura dual (nadie los relee): estado del lector de
+  price_watcher (searching/table/done), estados de ci_gate
+  (wait/good/bad), result de measure_cooldown (inconclusive/keep/
+  change), veredictos de analyze_benchmark (better/worse/tie, también
+  en _preferred), verdict de pair_sheet unblind (valid/invalid/
+  no_baseline), carpeta home, motivo suggested, grupos new/regression
+  de by_tool y el parámetro traps del helper de test_pair_sheet.
+- La salida no cambia: _RESULT_LABELS, _PAIRS_VERDICT_LABELS,
+  _VERDICT_LABELS y _STATE_LABELS imprimen los rótulos en español. El
+  envoltorio medir_enfriamiento.py (REQ-046) da el mismo texto.
+- Lectura dual en legacy_names: via produccion -> production,
+  --privacy fallar/excluir -> fail/exclude (sin alias), la clave fecha
+  -> date de cada commit de selection.real y selection.traps, y
+  source_body redactado/real+redactado/real-reescrito -> written/
+  real+written/real-rewritten. affinity --check sigue en ok y los datos
+  congelados no se reescriben.
+- Se quedan en español la clave empate de human (frente B) y el
+  criterio empate de decide (salida).
+- 8 tests nuevos: los rótulos de cada script, las filas congeladas del
+  techo con el via viejo y el origen del cuerpo de las trampas
+  congeladas; dos ampliados. Nueve mutantes hacen fallar esos tests por
+  el assert esperado.
+- rename-exceptions.md: fuera la fila de excluir y las tres de
+  real-reescrito; dentro 5 de lectura de formato viejo y dato
+  congelado. Léxico: redactado (es) y they (en).
+
+waves/A-close.md: registro del lote 5.
+
+2617 tests; suite 2615 passed, 2 skipped; ruff limpio. Detector con la
+lista: 0 fuera de la lista y 0 palabras sin clasificar.

@@ -258,6 +258,8 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
         "values": {
             "outcome": {"rechazo_por_contexto": "context_rejection", "truncado": "truncated"},
             "kind": CORPUS_KIND_VALUES,
+            # Por dónde fue la fila del techo de `affinity_batch` (cierre del frente A, lote 5).
+            "via": {"produccion": "production"},
         },
     },
     "benchmark_score": {
@@ -328,7 +330,12 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
             "caso_de_f2": "f2_case",
             "reales": "real",
             "trampas": "traps",
+            # La de cada commit de `selection.real` y `selection.traps` (lote 5).
+            "fecha": "date",
         },
+        # Lo que hace `--privacy` con un dato privado (lote 5): `check_versioned_affinity` lo
+        # devuelve a `build_affinity` y compara lo construido con lo congelado.
+        "values": {"privacy": {"fallar": "fail", "excluir": "exclude"}},
     },
     # `trampas.json` de la evaluación de afinidad (congelado; ahora `traps.json`), tal como lo
     # leen `pair_sheet` (`build_commit_sheet`, `shaped_trap`) y `check_versioned_affinity`. La
@@ -352,7 +359,13 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
             "fichero": "file",
         },
         "values": {
-            "kind": {"misma-zona": "same-zone", "secundario": "secondary", "generico": "generic"}
+            "kind": {"misma-zona": "same-zone", "secundario": "secondary", "generico": "generic"},
+            # De dónde sale el cuerpo de cada trampa (lote 5).
+            "source_body": {
+                "redactado": "written",
+                "real+redactado": "real+written",
+                "real-reescrito": "real-rewritten",
+            },
         },
     },
     # La clave de la hoja de commits (`clave-<n>.json`, la de la hoja 1 congelada), tal como la
@@ -749,11 +762,19 @@ def _normalize_pair_sides(pair: dict[str, Any]) -> dict[str, Any]:
 
 
 def normalize_affinity_corpus(data: Mapping[str, Any]) -> dict[str, Any]:
-    """El corpus de afinidad en el formato nuevo: el primer nivel, `selection` y cada caso
-    (`benchmark_corpus` y `affinity_case`). Un corpus ya nuevo sale igual."""
+    """El corpus de afinidad en el formato nuevo: el primer nivel, `selection` (y cada commit de
+    `selection.real` y `selection.traps`) y cada caso (`benchmark_corpus` y `affinity_case`). Un
+    corpus ya nuevo sale igual."""
     out = normalize("affinity_corpus", data)
     if isinstance(out.get("selection"), Mapping):
-        out["selection"] = normalize("affinity_corpus", out["selection"])
+        selection = normalize("affinity_corpus", out["selection"])
+        for key in ("real", "traps"):
+            if isinstance(selection.get(key), list):
+                selection[key] = [
+                    normalize("affinity_corpus", c) if isinstance(c, Mapping) else c
+                    for c in selection[key]
+                ]
+        out["selection"] = selection
     if isinstance(out.get("cases"), list):
         out["cases"] = [
             _normalize_affinity_case(c) if isinstance(c, Mapping) else c for c in out["cases"]

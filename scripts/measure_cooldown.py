@@ -44,6 +44,10 @@ from local_delegate.cooldown import COUNTING_CLASSES, EVENTS_FILE, LEGACY_EVENTS
 MIN_EPISODES = 5
 MIN_FAILURES = 10
 
+#: Cómo se imprime cada resultado en «RESULTADO:»: el texto de salida sigue en español hasta el
+#: frente B (y el envoltorio `medir_enfriamiento.py` de REQ-046 tiene que dar la misma salida).
+_RESULT_LABELS = {"inconclusive": "no concluyente", "keep": "se quedan", "change": "cambiar"}
+
 CLASSES = {error_class.value for error_class in COUNTING_CLASSES}
 
 #: Las reglas en su orden de precedencia: se aplica solo la primera que se cumpla.
@@ -137,7 +141,7 @@ def episodes(events: list[dict], tmax_s: float) -> list[dict]:
 def verdict(measurement: dict) -> dict:
     n = measurement["episodes"]
     if n < MIN_EPISODES or measurement["counting_failures"] < MIN_FAILURES:
-        return {"result": "no concluyente", "rule": None, "noted": []}
+        return {"result": "inconclusive", "rule": None, "noted": []}
     r = measurement["R"]
     meets = {
         1: r is not None and r > 0.6,
@@ -147,8 +151,8 @@ def verdict(measurement: dict) -> dict:
     }
     met = [number for number in sorted(meets) if meets[number]]
     if not met:
-        return {"result": "se quedan", "rule": None, "noted": []}
-    return {"result": "cambiar", "rule": met[0], "noted": met[1:]}
+        return {"result": "keep", "rule": None, "noted": []}
+    return {"result": "change", "rule": met[0], "noted": met[1:]}
 
 
 def measure(
@@ -293,7 +297,7 @@ def main() -> int:
     print(f"  abiertos por timeout:    {m['episodes_by_timeout']}")
     print(f"  reentran en Tmax:        {m['episodes_reentering_at_tmax']}")
     print()
-    print(f"RESULTADO: {m['result']}")
+    print(f"RESULTADO: {_RESULT_LABELS[m['result']]}")
     if m["rule"] is not None:
         reason, change = RULES[m["rule"]]
         print(f"  regla {m['rule']}: {reason} -> {change}")
