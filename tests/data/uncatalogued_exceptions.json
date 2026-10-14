@@ -141,6 +141,66 @@
       "text": "shared usage",
       "kind": "verbatim",
       "reason": "nombre del contador de `typeperf` (`\\GPU Process Memory(...)\\Shared Usage`) en minúsculas, con el que se clasifican sus columnas; lo escribe Windows en inglés"
+    },
+    {
+      "file": "scripts/analyze_benchmark.py",
+      "text": "techo sin medir",
+      "kind": "verbatim",
+      "reason": "valor de máquina que `decide --json` escribe en `criterion` y que los tests y el JSON comparan; el informe lo dice con `_label(_CRITERION_KEYS, …)` en el idioma vigente"
+    },
+    {
+      "file": "scripts/analyze_benchmark.py",
+      "text": "no separa",
+      "kind": "verbatim",
+      "reason": "motivo de CP-3 como valor de máquina de `cp3.json` y del `discarded_cases` de `decide --json`; el informe lo dice con `_cp3_reason_label` en el idioma vigente"
+    },
+    {
+      "file": "scripts/analyze_benchmark.py",
+      "text": "sin puntuacion",
+      "kind": "verbatim",
+      "reason": "motivo de CP-3 como valor de máquina de `cp3.json` y del `discarded_cases` de `decide --json`; el informe lo dice con `_cp3_reason_label` en el idioma vigente"
+    },
+    {
+      "file": "scripts/analyze_benchmark.py",
+      "text": "sin dato de CP-3",
+      "kind": "verbatim",
+      "reason": "motivo de CP-3 como valor de máquina de `cp3.json` y del `discarded_cases` de `decide --json`; el informe lo dice con `_cp3_reason_label` en el idioma vigente"
+    },
+    {
+      "file": "scripts/analyze_benchmark.py",
+      "text": "repetir hoja",
+      "kind": "verbatim",
+      "reason": "valor que `affinity-verdict` guarda en `report` de `verdict.json` (contrato del fichero, no cambia con el idioma); la tabla lo dice con `_label(_REPORT_KEYS, …)`"
+    },
+    {
+      "file": "scripts/analyze_benchmark.py",
+      "text": "la tercera hoja tampoco vale: sin base",
+      "kind": "verbatim",
+      "reason": "valor que `affinity-verdict` guarda en `report` de `verdict.json` (contrato del fichero, no cambia con el idioma); la tabla lo dice con `_label(_REPORT_KEYS, …)`"
+    },
+    {
+      "file": "scripts/pair_sheet.py",
+      "text": "sí",
+      "kind": "machine_name",
+      "reason": "respuesta aceptada en la hoja `.md` que escribe la persona (lectura de las dos formas); no es salida"
+    },
+    {
+      "file": "scripts/pair_sheet.py",
+      "text": "(?<=[.!?])\\s+(?=[¿¡A-ZÁÉÍÓÚÑ])",
+      "kind": "machine_name",
+      "reason": "expresión regular del límite entre frases de un cuerpo de commit (incluye ¿, ¡ y las mayúsculas con tilde); no es salida"
+    },
+    {
+      "file": "scripts/pair_sheet.py",
+      "text": "^(?:Espec[ií]fico|Specific) ([AB]) \\((?:s|y)/n\\):{}[ \\t]*(\\S*)[ \\t]*$",
+      "kind": "machine_name",
+      "reason": "expresión regular que lee la línea «Específico»/«Specific» de la hoja `.md` en los dos idiomas; no es salida"
+    },
+    {
+      "file": "scripts/pair_sheet.py",
+      "text": "<!DOCTYPE html>\n<html lang=\"__LANG__\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>__TITLE__</title>\n<style>\nbody{font-family:system-ui,sans-serif;max-width:1100px;margin:0 auto;padding:1rem 1.5rem 6rem;color:#1b1b1b;line-height:1.45}\nheader.bar{position:sticky;top:0;background:#fff;border-bottom:2px solid #ccc;padding:.5rem 0;z-index:5;display:flex;gap:1rem;align-items:center;flex-wrap:wrap}\n#faltan{font-weight:700}\nbutton{font:inherit;padding:.4rem .8rem;cursor:pointer}\nsection.pair{border:1px solid #bbb;border-radius:6px;margin:1.5rem 0;padding:.5rem 1rem 1rem}\nsection.pair.complete{border-color:#2e7d32}\npre{font-family:ui-monospace,Consolas,monospace;font-size:.88rem;white-space:pre-wrap;word-break:break-word;background:#f6f6f6;border:1px solid #ddd;padding:.6rem;margin:.3rem 0}\npre.diff{max-height:28rem;overflow:auto;white-space:pre}\n.messages{display:grid;grid-template-columns:1fr 1fr;gap:1rem}\n@media (max-width:800px){.messages{grid-template-columns:1fr}}\nfieldset{border:1px solid #ccc;margin:.4rem 0;padding:.3rem .6rem}\nlegend{font-size:.9rem;color:#444}\nlabel{margin-right:1rem;white-space:nowrap}\nfieldset.pref{margin-top:.8rem;border-color:#555}\nfieldset.pref:disabled{opacity:.5}\ndetails.optional_q>summary{cursor:pointer;color:#555}\ntextarea{width:100%;height:7rem;font-family:ui-monospace,Consolas,monospace;font-size:.8rem}\ndl dt{font-weight:700}\n</style>\n</head>\n<body>\n<h1>__TITLE__</h1>\n<p>__INTRO__</p>\n<dl>__INSTRUCTIONS__</dl>\n<header class=\"bar\">\n<span id=\"faltan\">__MISSING_SOME__</span>\n<button type=\"button\" id=\"descargar\">__DOWNLOAD__</button>\n<button type=\"button\" id=\"parar\">__CAN_I_STOP__</button>\n<span id=\"aviso\" role=\"status\"></span>\n</header>\n<div id=\"pares\"></div>\n<h2>__TEXT_ANSWERS__</h2>\n<p>__COPY_HINT__</p>\n<textarea id=\"copia\" readonly aria-label=\"__JSON_LABEL__\"></textarea>\n<script type=\"application/json\" id=\"datos\">__DATA__</script>\n<script type=\"application/json\" id=\"textos\">__TEXTS__</script>\n<script id=\"logica\">\nconst QUESTION_FIELDS = {\n  made_up: [\"s\", \"n\"],\n  principal: [\"s\", \"p\", \"n\"],\n  specific: [\"s\", \"n\"],\n};\nfunction requiredFields(data) {\n  const fields = [\"made_up.A\", \"made_up.B\"];\n  for (const q of [\"principal\", \"specific\"]) {\n    if (!data.optional.includes(q)) fields.push(q + \".A\", q + \".B\");\n  }\n  fields.push(\"preference\");\n  return fields;\n}\nfunction missing(state, data) {\n  const isMissing = [];\n  for (const pair of data.pairs) {\n    const e = state[pair.num] || {};\n    for (const field of requiredFields(data)) {\n      if (!e[field]) isMissing.push([pair.num, field]);\n    }\n  }\n  return isMissing;\n}\nfunction exportar(state, data, partial) {\n  const answers = {};\n  for (const pair of data.pairs) {\n    const e = state[pair.num] || {};\n    const r = {};\n    for (const q of Object.keys(QUESTION_FIELDS)) {\n      for (const side of [\"A\", \"B\"]) {\n        const v = e[q + \".\" + side];\n        if (v) {\n          r[q] = r[q] || {};\n          r[q][side] = v;\n        }\n      }\n    }\n    if (e.preference) r.preference = e.preference;\n    if (Object.keys(r).length) answers[pair.num] = r;\n  }\n  return { sheet: data.n, sha256: data.id, partial: !!partial, answers };\n}\n</script>\n<script id=\"interfaz\">\n(function () {\n  const data = JSON.parse(document.getElementById(\"datos\").textContent);\n  const T = JSON.parse(document.getElementById(\"textos\").textContent);\n  const fmt = (text, values) => text.replace(/\\{(\\w+)\\}/g, (all, name) => (name in values ? values[name] : all));\n  const key = \"commit-sheet-\" + data.id.slice(0, 16);\n  let state = {};\n  try { state = JSON.parse(localStorage.getItem(key) || \"{}\"); } catch (e) { state = {}; }\n  const NAMES = { s: T.yes, n: T.no, p: T.partial };\n  const root = document.getElementById(\"pares\");\n  function radios(pair, field, values, labels) {\n    const out = [];\n    for (const v of values) {\n      const id = \"r-\" + pair.num + \"-\" + field + \"-\" + v;\n      out.push('<label for=\"' + id + '\"><input type=\"radio\" id=\"' + id + '\" name=\"' + pair.num + \"-\" + field + '\" value=\"' + v + '\" data-pair=\"' + pair.num + '\" data-field=\"' + field + '\"> ' + labels[v] + \"</label>\");\n    }\n    return out.join(\"\");\n  }\n  function question(pair, q, side, text) {\n    return '<fieldset><legend>' + text + \"</legend>\" + radios(pair, q + \".\" + side, QUESTION_FIELDS[q], NAMES) + \"</fieldset>\";\n  }\n  function message(pair, side) {\n    const opc = (q) => data.optional.includes(q);\n    const principal = question(pair, \"principal\", side, T.ask_principal);\n    const specific = question(pair, \"specific\", side, T.ask_specific);\n    const extras = (opc(\"principal\") || opc(\"specific\"))\n      ? '<details class=\"optional_q\"><summary>' + T.if_you_like + \"</summary>\" + (opc(\"principal\") ? principal : \"\") + (opc(\"specific\") ? specific : \"\") + \"</details>\"\n      : \"\";\n    return '<div class=\"msg\"><h3>' + fmt(T.message, { side }) + \"</h3><pre>\" + esc(pair[side]) + \"</pre>\" +\n      question(pair, \"made_up\", side, T.ask_made_up) +\n      (opc(\"principal\") ? \"\" : principal) + (opc(\"specific\") ? \"\" : specific) + extras + \"</div>\";\n  }\n  function esc(t) { return t.replace(/&/g, \"&amp;\").replace(/</g, \"&lt;\").replace(/>/g, \"&gt;\"); }\n  for (const pair of data.pairs) {\n    const sec = document.createElement(\"section\");\n    sec.className = \"pair\";\n    sec.id = \"par-\" + pair.num;\n    sec.innerHTML = \"<h2>\" + fmt(T.pair, { num: pair.num }) + \"</h2>\" +\n      \"<details><summary>\" + fmt(T.diff, { files: pair.files, more: pair.more, fewer: pair.fewer }) + \"</summary><pre class=\\\"diff\\\">\" + esc(pair.diff) + \"</pre></details>\" +\n      '<div class=\"messages\">' + message(pair, \"A\") + message(pair, \"B\") + \"</div>\" +\n      '<fieldset class=\"pref\" id=\"pref-' + pair.num + '\"><legend>' + T.which + \"</legend>\" +\n      radios(pair, \"preference\", [\"A\", \"B\", \"=\"], { A: fmt(T.message, { side: \"A\" }), B: fmt(T.message, { side: \"B\" }), \"=\": T.tie }) + \"</fieldset>\";\n    root.appendChild(sec);\n  }\n  function refresh() {\n    for (const input of document.querySelectorAll(\"input[type=radio]\")) {\n      const e = state[input.dataset.pair] || {};\n      input.checked = e[input.dataset.field] === input.value;\n    }\n    for (const pair of data.pairs) {\n      const e = state[pair.num] || {};\n      const listo = !!(e[\"made_up.A\"] && e[\"made_up.B\"]);\n      document.getElementById(\"pref-\" + pair.num).disabled = !listo;\n      const isMissing = missing({ [pair.num]: e }, { ...data, pairs: [pair] });\n      document.getElementById(\"par-\" + pair.num).classList.toggle(\"complete\", isMissing.length === 0);\n    }\n    const n = missing(state, data).length;\n    document.getElementById(\"faltan\").textContent = n === 0 ? T.none_missing : fmt(T.missing, { n });\n    document.getElementById(\"copia\").value = JSON.stringify(exportar(state, data, n > 0), null, 1);\n  }\n  document.addEventListener(\"change\", (ev) => {\n    const t = ev.target;\n    if (!t.dataset || !t.dataset.pair) return;\n    state[t.dataset.pair] = state[t.dataset.pair] || {};\n    state[t.dataset.pair][t.dataset.field] = t.value;\n    try { localStorage.setItem(key, JSON.stringify(state)); } catch (e) { /* sin almacenamiento: queda el cuadro de texto */ }\n    refresh();\n  });\n  function download(name, content) {\n    const a = document.createElement(\"a\");\n    a.href = URL.createObjectURL(new Blob([JSON.stringify(content, null, 1)], { type: \"application/json\" }));\n    a.download = name;\n    document.body.appendChild(a);\n    a.click();\n    a.remove();\n  }\n  document.getElementById(\"descargar\").addEventListener(\"click\", () => {\n    const n = missing(state, data).length;\n    download(\"answers-\" + data.n + \".json\", exportar(state, data, n > 0));\n    document.getElementById(\"aviso\").textContent = n > 0 ? fmt(T.downloaded_partial, { n }) : T.downloaded;\n  });\n  document.getElementById(\"parar\").addEventListener(\"click\", () => {\n    download(\"answers-partial-\" + data.n + \".json\", exportar(state, data, true));\n    document.getElementById(\"aviso\").textContent = T.downloaded_stop;\n  });\n  refresh();\n})();\n</script>\n</body>\n</html>\n",
+      "kind": "verbatim",
+      "reason": "plantilla HTML y JavaScript de la hoja de commit: los textos para la persona entran por marcadores (`__TITLE__`…) y por `T.<nombre>` desde el catálogo (`cli.script.pair_sheet.page.*`); lo que queda son etiquetas, CSS y código"
     }
   ]
 }

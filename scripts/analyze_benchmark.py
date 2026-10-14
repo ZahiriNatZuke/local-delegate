@@ -58,6 +58,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).parent))
+from script_i18n import argparse_in_language, format_number, t
+
+
+def _t(name: str, /, **values: object) -> str:
+    """Un texto de este programa (`cli.script.analyze_benchmark.<name>`), en el idioma vigente."""
+    return t(f"cli.script.analyze_benchmark.{name}", **values)
+
+
 # vision tiene dos casos sobre una imagen y fast sale de la tanda: ninguno presenta agregado (§7).
 ROLES_WITHOUT_AGGREGATE = frozenset({"vision", "fast"})
 MIN_DECIDABLE_CASES = 2
@@ -96,7 +105,7 @@ def read_jsonl(paths: list[Path]) -> list[dict[str, Any]]:
                 continue
             record = LEGACY_NAMES.normalize_benchmark_result(json.loads(line))
             if record.get("schema_version") != 2:
-                raise ValueError(f"{path}:{number}: se esperaba schema_version 2")
+                raise ValueError(_t("bad_result_schema", path=path, line=number))
             records.append(record)
     return records
 
@@ -106,7 +115,7 @@ def read_corpus(path: Path) -> dict[str, dict[str, Any]]:
     congelado en el formato viejo (`kind` `calidad`/`techo`) se lee traducido."""
     data = json.loads(path.read_text(encoding="utf-8"))
     if data.get("schema_version") != 2:
-        raise ValueError(f"{path}: se esperaba un corpus schema_version 2")
+        raise ValueError(_t("bad_corpus_schema", path=path))
     cases = [LEGACY_NAMES.normalize("benchmark_corpus", c) for c in data["cases"]]
     return {c["id"]: c for c in cases}
 
@@ -235,7 +244,7 @@ class Config:
 def load_config(records: list[dict[str, Any]], selector: Selector) -> Config:
     own = [r for r in records if selector.accepts(r)]
     if not own:
-        raise ValueError(f"no hay corridas de {selector}")
+        raise ValueError(_t("no_runs", selector=selector))
     cases: dict[str, Case] = {}
     # Estable: el orden del fichero desempata dos registros con el mismo ts.
     for record in sorted(own, key=lambda r: str(r.get("ts", ""))):
@@ -247,7 +256,7 @@ def load_config(records: list[dict[str, Any]], selector: Selector) -> Config:
         elif case.runs:
             case.runs[-1].attempts.append(record)
         else:
-            raise ValueError(f"{selector}: {record['case']} tiene un intento >1 sin el primero")
+            raise ValueError(_t("attempt_without_first", selector=selector, case=record["case"]))
     return Config(selector, own, cases)
 
 
@@ -261,13 +270,22 @@ def _role_cases(corpus: dict[str, dict[str, Any]], role: str, kind: str) -> list
     ]
 
 
-#: Cómo nombran los mensajes cada tipo de caso (`kind`): el texto de salida sigue en español hasta
-#: el frente B.
-_KIND_LABELS = {"quality": "calidad", "ceiling": "techo"}
+#: Cómo nombran los mensajes cada tipo de caso (`kind`), en el idioma vigente, y en qué orden salen
+#: (el de antes del frente B: calidad, luego techo).
+_KIND_KEYS = {
+    "quality": "cli.script.analyze_benchmark.kind.quality",
+    "ceiling": "cli.script.analyze_benchmark.kind.ceiling",
+}
+_KIND_ORDER = {"quality": 0, "ceiling": 1}
 
 
 def _kind_label(kind: Any) -> str:
-    return _KIND_LABELS.get(kind, str(kind))
+    key = _KIND_KEYS.get(kind)
+    return t(key) if key else str(kind)
+
+
+def _kind_order(kind: Any) -> tuple[int, str]:
+    return _KIND_ORDER.get(kind, len(_KIND_ORDER)), str(kind)
 
 
 def _review_only(corpus: dict[str, dict[str, Any]], role: str) -> list[str]:
@@ -373,9 +391,13 @@ def pairs_for_role(
         for who, label in (
             ("candidate", candidate),
             ("incumbent", incumbent),
-            ("ties", "empate"),
         )
     }
+    # La elección «=» se escribe `tie` desde el frente B; las hojas destapadas antes dicen `empate`,
+    # y se leen para siempre.
+    count["ties"] = sum(
+        int(pairs[cid]["human"].get(label, 0)) for cid in cases for label in ("tie", "empate")
+    )
     return {
         "cases": cases,
         **count,
@@ -480,6 +502,10 @@ def analyze_cp3(
 # --- §6: tanda no concluyente -------------------------------------------------------------------
 
 
+# Los motivos de §6 y §7 (`reasons`) salen también en el `--json` de `decide`: sus números van en
+# formato de máquina (punto decimal, sin separador de miles), y en español el texto es el de siempre.
+
+
 def validate_batch(
     incumbent: Config,
     candidate: Config,
@@ -496,27 +522,32 @@ def validate_batch(
     discarded_ones = [c for c in runs if c.discarded]
     if runs and len(discarded_ones) * 3 > len(runs):
         reasons.append(
-            f"{len(discarded_ones)} de {len(runs)} corridas descartadas (mas de una de cada tres)"
+            _t("reason.too_many_discarded", discarded=len(discarded_ones), runs=len(runs))
         )
     for cfg in configs:
         for cid in _role_cases(corpus, role, "quality"):
             if not _case(cfg, cid, corpus).qualities:
-                reasons.append(f"{cfg.selector}: {cid} sin ninguna puntuacion valida")
+                reasons.append(_t("reason.no_valid_score", selector=cfg.selector, case=cid))
     records = [r for cfg in configs for r in cfg.records if r.get("role") == role]
     # Por tipo de caso (§3.5, decision del usuario 2026-09-14): la calidad corre con el n_ctx del caso
     # mayor y los sondeos de techo en otra config con mas contexto, o medirian la ventana y no el
     # modelo. Lo que no vale es que vigente y candidato difieran DENTRO de un mismo tipo.
-    for kind in sorted({r.get("kind") for r in records}, key=_kind_label):
+    for kind in sorted({r.get("kind") for r in records}, key=_kind_order):
         of_type = [r for r in records if r.get("kind") == kind]
         label = _kind_label(kind)
         for key, name in (("context_size", "n_ctx"), ("load_mode", "--load-mode")):
             values = {(r.get("variant") or {}).get(key) for r in of_type}
             if None in values:
                 # Sin declararlo no se puede comprobar, y un control que no puede fallar no es control.
-                reasons.append(f"{name} sin declarar en alguna corrida de {label}")
+                reasons.append(_t("reason.undeclared", name=name, kind=label))
             elif len(values) > 1:
                 reasons.append(
-                    f"{name} distinto entre corridas de {label}: {sorted(map(str, values))}"
+                    _t(
+                        "reason.different",
+                        name=name,
+                        kind=label,
+                        values=sorted(map(str, values)),
+                    )
                 )
     for cfg in configs:
         own = [r for r in cfg.records if r.get("role") == role]
@@ -533,8 +564,13 @@ def validate_batch(
             if peak is not None and peak - base > shared_threshold_bytes:
                 # §3.2: no se cae la corrida, se cae CP-1 y todo el tramo desde el ultimo CP-1 verde.
                 reasons.append(
-                    f"{cfg.selector}: Shared Usage crecio {peak - base} bytes en {r['case']} "
-                    f"run={r.get('run')}: CP-1 dejo de valer, repetir el tramo"
+                    _t(
+                        "reason.shared_grew",
+                        selector=cfg.selector,
+                        bytes=peak - base,
+                        case=r["case"],
+                        run=r.get("run"),
+                    )
                 )
                 break
     return reasons
@@ -593,12 +629,10 @@ def decide_role(
         return {
             **result,
             "verdict": "no_aggregate",
-            "reasons": [
-                f"{role} no presenta agregado (§7): decide la tabla caso a caso y la revision"
-            ],
+            "reasons": [_t("reason.no_aggregate", role=role)],
         }
     if cp3 is None:
-        raise ValueError(f"{role}: falta el resultado de CP-3; sin el no hay casos admitidos")
+        raise ValueError(_t("no_cp3", role=role))
 
     admitted = [cid for cid in cp3.get("admitted_cases", []) if cid in ids]
     discards = {
@@ -626,7 +660,7 @@ def decide_role(
         return {
             **result,
             "verdict": "undecidable",
-            "reasons": ["ningun caso de CP-3 separa: el rol es indecidible con este corpus"],
+            "reasons": [_t("reason.undecidable")],
         }
 
     # Latencia de TODOS los casos de calidad: los de pares tambien corren y tardan.
@@ -706,31 +740,37 @@ def decide_role(
                 continue
             for run in case.runs:
                 if run.discarded:
-                    blocks.append(f"{case.id}: corrida anulada ({run.discard_reason})")
+                    blocks.append(_t("block.voided", case=case.id, reason=run.discard_reason))
                 elif run.outcome == "error":
-                    blocks.append(f"{case.id}: error ({run.final.get('error')})")
+                    blocks.append(_t("block.error", case=case.id, error=run.final.get("error")))
                 elif run.outcome == "context_rejection" and case.kind == "quality":
-                    blocks.append(f"{case.id}: context_rejection en un caso de calidad")
+                    blocks.append(_t("block.context_rejection", case=case.id))
         # Condicion 3: la latencia no empeora mas de un 50 %.
         if lat_v is None or lat_c is None:
-            blocks.append("latencia sin medir")
+            blocks.append(_t("block.latency_unmeasured"))
         elif lat_c > MAX_LATENCY * lat_v:
-            blocks.append(f"latencia {lat_c / lat_v:.2f}x la del vigente (maximo {MAX_LATENCY}x)")
+            blocks.append(
+                _t(
+                    "block.latency_worse",
+                    ratio=f"{lat_c / lat_v:.2f}",
+                    maximum=MAX_LATENCY,
+                )
+            )
         # Un rol con casos por pares no se cambia sin su comparacion: la formula no los ve.
         if pair_cases and role_pairs is None:
-            blocks.append("falta la comparacion por pares de " + ", ".join(pair_cases) + " (P-15)")
+            blocks.append(_t("block.pairs_missing", cases=", ".join(pair_cases)))
         # El sondeo de techo entra en la decision, no solo en la hoja.
         if has_ceiling and (ceiling_i is None or ceiling_c is None):
-            blocks.append("falta el sondeo de techo")
+            blocks.append(_t("block.ceiling_missing"))
         elif has_ceiling and ceiling_c < ceiling_i:  # type: ignore[operator]
-            blocks.append("el candidato no aguanta el sondeo de techo que el vigente si")
+            blocks.append(_t("block.ceiling_worse"))
     result["reasons"] = blocks
     if wins and not blocks:
         result["verdict"] = "replace"
     else:
         result["verdict"] = "no_replace"
         if not wins:
-            result["reasons"] = ["nadie mejora al vigente: el rol no se cambia (REQ-F2-6)"]
+            result["reasons"] = [_t("reason.nobody_better")]
     return result
 
 
@@ -738,11 +778,18 @@ def decide_role(
 
 
 def _fmt(value: Any, decimals: int = 3) -> str:
+    """Un número del informe con los separadores del idioma (REQ-026); `—` si no hay dato."""
     if value is None:
         return "—"
     if isinstance(value, float):
-        return f"{value:.{decimals}f}"
+        return format_number(value, decimals)
+    if isinstance(value, int) and not isinstance(value, bool):
+        return format_number(value)
     return str(value)
+
+
+def _yes_no(value: bool) -> str:
+    return _t("yes") if value else _t("no")
 
 
 def _peak(config: Config, role: str, path: tuple[str, ...]) -> Any:
@@ -769,28 +816,40 @@ DAILY_USE_RAM_BYTES = 24 * 1024**3
 def _fits_daily_use(vram_bytes: float | None, host_bytes: float | None) -> str:
     if vram_bytes is None or host_bytes is None:
         return "—"
-    return (
-        "si" if vram_bytes <= DAILY_USE_VRAM_BYTES and host_bytes <= DAILY_USE_RAM_BYTES else "no"
-    )
+    return _yes_no(vram_bytes <= DAILY_USE_VRAM_BYTES and host_bytes <= DAILY_USE_RAM_BYTES)
 
 
-#: Cómo se imprime el veredicto por pares en el informe: el texto de salida sigue en español
-#: hasta el frente B.
-_PAIRS_VERDICT_LABELS = {"better": "mejor", "worse": "peor", "tie": "empate"}
+#: Cómo se imprime el veredicto por pares en el informe, en el idioma vigente.
+_PAIRS_VERDICT_KEYS = {
+    "better": "cli.script.analyze_benchmark.pairs.better",
+    "worse": "cli.script.analyze_benchmark.pairs.worse",
+    "tie": "cli.script.analyze_benchmark.pairs.tie",
+}
+#: El criterio de §7 que decidió (`criterion` del JSON, valor de máquina que no cambia) y cómo se
+#: dice en el informe.
+_CRITERION_KEYS = {
+    "calidad": "cli.script.analyze_benchmark.criterion.quality",
+    "techo sin medir": "cli.script.analyze_benchmark.criterion.ceiling_unmeasured",
+    "techo": "cli.script.analyze_benchmark.criterion.ceiling",
+    "velocidad": "cli.script.analyze_benchmark.criterion.speed",
+    "empate": "cli.script.analyze_benchmark.criterion.tie",
+}
+
+
+def _label(keys: dict[str, str], value: Any) -> Any:
+    """Un valor de máquina dicho en el idioma vigente; uno desconocido, tal cual."""
+    key = keys.get(value) if isinstance(value, str) else None
+    return t(key) if key else value
 
 
 def decision_report(
     decisions: list[dict[str, Any]], configs: dict[str, Config], corpus: dict[str, dict[str, Any]]
 ) -> str:
-    lines = ["# Regla de decision de F2 (§6 y §7)", ""]
+    lines = [_t("report.title"), ""]
     lines += [
-        "## Tabla 1: por rol",
+        _t("report.table1"),
         "",
-        (
-            "| Rol | Vigente | Candidato | Calidad v / c | Banda | Latencia ms v / c | "
-            "RAM host pico c | RAM privada pico c | Working set pico c | VRAM dedicada pico c | "
-            "Shared pico c | Cabe uso diario c | Descartadas | Rechazos | Veredicto | Criterio |"
-        ),
+        _t("report.table1_header"),
         "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for d in decisions:
@@ -812,7 +871,7 @@ def decision_report(
             f"{_fits_daily_use(vram, host)} | "
             f"{sum(c.discarded for c in runs)} | "
             f"{sum(c.outcome == 'context_rejection' for c in runs)} | "
-            f"**{d['verdict']}** | {d.get('criterion', '—')} |"
+            f"**{d['verdict']}** | {_label(_CRITERION_KEYS, d.get('criterion', '—'))} |"
         )
     lines.append("")
     for d in decisions:
@@ -822,29 +881,37 @@ def decision_report(
             lines.append(f"- {reason}")
         if "admitted_cases" in d:
             lines.append(
-                f"- casos en el agregado: {len(d['admitted_cases'])} ({', '.join(d['admitted_cases']) or 'ninguno'})"
+                _t(
+                    "report.in_aggregate",
+                    n=len(d["admitted_cases"]),
+                    cases=", ".join(d["admitted_cases"]) or _t("none"),
+                )
             )
             for cid, reason in (d.get("discarded_cases") or {}).items():
-                lines.append(f"- fuera del agregado: {cid} ({_cp3_reason_label(reason)})")
+                lines.append(
+                    _t("report.out_of_aggregate", case=cid, reason=_cp3_reason_label(reason))
+                )
         if role_pairs := d.get("pairs"):
             lines.append(
-                f"- comparacion por pares ({', '.join(role_pairs['cases'])}): candidato "
-                f"{role_pairs['candidate']}, vigente {role_pairs['incumbent']}, empates "
-                f"{role_pairs['ties']} -> **{_PAIRS_VERDICT_LABELS.get(role_pairs['verdict'], role_pairs['verdict'])}**"
+                _t(
+                    "report.pairs",
+                    cases=", ".join(role_pairs["cases"]),
+                    candidate=role_pairs["candidate"],
+                    incumbent=role_pairs["incumbent"],
+                    ties=role_pairs["ties"],
+                    verdict=_label(_PAIRS_VERDICT_KEYS, role_pairs["verdict"]),
+                )
             )
         if d.get("weakly_decidable"):
-            lines.append("- **debilmente decidible**: menos de dos casos en el agregado")
+            lines.append(_t("report.weakly_decidable"))
         if d.get("can_fire") is False:
-            lines.append(
-                "- **la regla no puede disparar**: ni un candidato con calidad 1,0 superaria la banda; "
-                "«no se cambia» aqui no distingue nada"
-            )
+            lines.append(_t("report.cannot_fire"))
         lines.append("")
 
     lines += [
-        "## Tabla 2: caso a caso",
+        _t("report.table2"),
         "",
-        "| Rol | Caso | Modelo | Corridas (calidad, outcome) | Mediana | Dispersion | Latencia mediana |",
+        _t("report.table2_header"),
         "| --- | --- | --- | --- | --- | --- | --- |",
     ]
     for d in decisions:
@@ -854,15 +921,12 @@ def decision_report(
                 if meta["role"] != d["role"]:
                     continue
                 case = _case(cfg, cid, corpus)
-                runs = (
-                    ", ".join(
-                        f"{_fmt(c.quality, 2)} {c.outcome}"
-                        + (" descartada" if c.discarded else "")
-                        + (" fria" if c.cold else "")
-                        for c in case.runs
-                    )
-                    or "sin corridas"
-                )
+                runs = ", ".join(
+                    f"{_fmt(c.quality, 2)} {c.outcome}"
+                    + (f" {_t('run.discarded')}" if c.discarded else "")
+                    + (f" {_t('run.cold')}" if c.cold else "")
+                    for c in case.runs
+                ) or _t("run.none")
                 lines.append(
                     f"| {d['role']} | {cid} | {name} | {runs} | {_fmt(case.median)} | "
                     f"{_fmt(case.dispersion)} | {_fmt(case.latency_median, 0)} |"
@@ -870,9 +934,9 @@ def decision_report(
     lines.append("")
 
     lines += [
-        "## Tabla 3: entorno",
+        _t("report.table3"),
         "",
-        "| Modelo | n_ctx | --load-mode | -ncmoe | llama-server | llama-swap | Anuladas (motivo) |",
+        _t("report.table3_header"),
         "| --- | --- | --- | --- | --- | --- | --- |",
     ]
     for name, cfg in configs.items():
@@ -891,12 +955,12 @@ def decision_report(
                 f"{_fmt(v.get('llama_server_version'))} | {_fmt(v.get('llama_swap_version'))} | {'; '.join(voided) or '—'} |"
             )
     conclusive = all(d["verdict"] != "inconclusive" for d in decisions)
-    lines += ["", f"Tanda concluyente segun §6: **{'si' if conclusive else 'no'}**.", ""]
+    lines += ["", _t("report.conclusive", answer=_yes_no(conclusive)), ""]
 
     lines += [
-        "## Tabla 4: techo",
+        _t("report.table4"),
         "",
-        "| Rol | Modelo | Mayor entrada aceptada (bytes) |",
+        _t("report.table4_header"),
         "| --- | --- | --- |",
     ]
     for d in decisions:
@@ -909,13 +973,20 @@ def decision_report(
 
 
 #: El motivo de CP-3 para un caso en techo, tal como se guarda en `cp3.json` (antes `techo`; el
-#: viejo se lee traducido, `legacy_names`). Los mensajes lo siguen llamando «techo» (frente B).
+#: viejo se lee traducido, `legacy_names`).
 CP3_CEILING = "ceiling"
-_CP3_REASON_LABELS = {CP3_CEILING: "techo"}
+#: Los motivos de CP-3 son valores de máquina de `cp3.json` (no cambian); el informe los dice en el
+#: idioma vigente.
+_CP3_REASON_KEYS = {
+    CP3_CEILING: "cli.script.analyze_benchmark.cp3_reason.ceiling",
+    "no separa": "cli.script.analyze_benchmark.cp3_reason.does_not_separate",
+    "sin puntuacion": "cli.script.analyze_benchmark.cp3_reason.no_score",
+    "sin dato de CP-3": "cli.script.analyze_benchmark.cp3_reason.no_cp3_data",
+}
 
 
 def _cp3_reason_label(reason: Any) -> Any:
-    return _CP3_REASON_LABELS.get(reason, reason)
+    return _label(_CP3_REASON_KEYS, reason)
 
 
 def read_cp3(paths: list[Path]) -> dict[str, Any]:
@@ -938,44 +1009,44 @@ def read_cp3(paths: list[Path]) -> dict[str, Any]:
 
 
 def cp3_report(result: dict[str, Any]) -> str:
-    lines = [f"# CP-3: {result['small']} contra {result['large']}", ""]
+    lines = [_t("cp3.title", small=result["small"], large=result["large"]), ""]
     if result["entry_control"]:
-        lines += [
-            "Control de entrada: pasa si todos los casos bajan con la entrada de control.",
-            "",
-        ]
+        lines += [_t("cp3.entry_control"), ""]
     for role, data in result["roles"].items():
         aggregate = data["aggregate"]
-        state = "pasa" if data["passes"] else "NO pasa"
+        state = _t("cp3.passes") if data["passes"] else _t("cp3.fails")
         if data.get("tie_at_ceiling"):
-            state = "pasa por empate en techo (decide la velocidad, §7 punto 4)"
+            state = _t("cp3.tie_at_ceiling")
         lines += [
             f"## {role}: {state}",
             "",
-            f"- banda del agregado (media de las bandas por caso): {_fmt(data['band'])}",
-            f"- casos en el agregado: {len(data['admitted_cases'])} de {len(data['cases'])}",
-            (
-                f"- el agregado separa: {'si' if aggregate['separates'] else 'no'} "
-                f"({_fmt(aggregate['small'])} contra {_fmt(aggregate['large'])})"
+            _t("cp3.band", band=_fmt(data["band"])),
+            _t(
+                "cp3.in_aggregate",
+                admitted=len(data["admitted_cases"]),
+                total=len(data["cases"]),
+            ),
+            _t(
+                "cp3.aggregate_separates",
+                answer=_yes_no(aggregate["separates"]),
+                small=_fmt(aggregate["small"]),
+                large=_fmt(aggregate["large"]),
             ),
         ]
         if data["can_fire"] is False:
-            lines.append("- **la regla de §7 no puede disparar con esta banda**")
+            lines.append(_t("cp3.cannot_fire"))
         if data.get("review_only"):
-            lines.append(
-                "- sin puntuacion automatica, lo decide la comparacion por pares a ciegas: "
-                + ", ".join(data["review_only"])
-            )
+            lines.append(_t("cp3.review_only", cases=", ".join(data["review_only"])))
         lines += [
             "",
-            "| Caso | Pequeno | Grande | Diferencia | Banda | Separa | Motivo |",
+            _t("cp3.table_header"),
             "| --- | --- | --- | --- | --- | --- | --- |",
         ]
         for cid, case in data["cases"].items():
             lines.append(
                 f"| {cid} | {_fmt(case['small'])} | {_fmt(case['large'])} | "
                 f"{_fmt(case.get('difference'))} | {_fmt(case.get('band'))} | "
-                f"{'si' if case['separates'] else 'no'} | {_cp3_reason_label(case['reason']) or '—'} |"
+                f"{_yes_no(case['separates'])} | {_cp3_reason_label(case['reason']) or '—'} |"
             )
         lines.append("")
     return "\n".join(lines)
@@ -1158,7 +1229,7 @@ def score_affinity(
             "quality": float(quality) if quality is not None else 0.0,
             "format": True if fmt is None else bool(fmt),
         }
-    raise ValueError(f"{case.get('id')}: puntuador {kind!r} desconocido")
+    raise ValueError(_t("unknown_scorer", case=case.get("id"), kind=repr(kind)))
 
 
 # --- Reglas, huellas y resultados -----------------------------------------------------------------
@@ -1172,17 +1243,14 @@ def read_affinity_rules(path: Path) -> dict[str, Any]:
     rules = LEGACY_NAMES.normalize_affinity_rules(json.loads(path.read_text(encoding="utf-8")))
     maximum = rules.get("max_made_up_26b")
     if not isinstance(maximum, int) or isinstance(maximum, bool) or maximum < 0:
-        raise SystemExit(f"{path.name}: max_made_up_26b tiene que ser un entero >= 0")
+        raise SystemExit(t("cli.script.pair_sheet.bad_max_made_up", file=path.name))
     optional_ones = rules.get("optional_questions")
     if not isinstance(optional_ones, list) or not set(optional_ones) <= POSSIBLE_OPTIONAL_QUESTIONS:
-        raise SystemExit(
-            f"{path.name}: optional_questions solo admite 'principal' y 'specific'; "
-            "'inventa' y la preferencia no pueden ser opcionales"
-        )
+        raise SystemExit(t("cli.script.pair_sheet.bad_optional_questions", file=path.name))
     if not isinstance(rules.get("format"), dict):
-        raise SystemExit(f"{path.name}: falta la regla de formato")
+        raise SystemExit(_t("no_format_rule", file=path.name))
     if not isinstance(rules.get("early_stop"), bool):
-        raise SystemExit(f"{path.name}: early_stop tiene que ser true o false")
+        raise SystemExit(t("cli.script.pair_sheet.bad_early_stop", file=path.name))
     return rules
 
 
@@ -1274,14 +1342,14 @@ def result_of(
 ) -> Result:
     attempts = runs.get((label, case["id"], run))
     if not attempts:
-        raise NoData(f"falta la corrida {run} de {label} en {case['id']}")
+        raise NoData(_t("nodata.missing_run", run=run, label=label, case=case["id"]))
     final = attempts[-1]
     if _cancelled(final):
-        raise NoData(f"{label}:{case['id']} corrida {run}: anulada y sin repetir")
+        raise NoData(_t("nodata.voided_run", run=run, label=label, case=case["id"]))
     ok = final.get("outcome") == "ok"
     text = str(final.get("response") or "")
     if ok and "response" not in final:
-        raise NoData(f"{label}:{case['id']}: sin respuesta guardada (falta --save-responses)")
+        raise NoData(_t("nodata.no_response", label=label, case=case["id"]))
     if ok and score_fn:
         point = score_affinity(case, text, final)
     else:
@@ -1361,7 +1429,7 @@ def evaluate_mechanical_cell(
     cases = [LEGACY_NAMES.normalize("affinity_case", c) for c in cases]
     discriminating = [c for c in cases if c.get("discriminating")]
     if not discriminating:
-        raise NoData(f"{tool}: el corpus no trae casos discriminantes")
+        raise NoData(_t("nodata.no_discriminating", tool=tool))
     res = {
         (label, c["id"]): result_of(runs, label, c)
         for label in (alternative, role, weak)
@@ -1475,7 +1543,7 @@ def _preferred(pair: dict[str, Any]) -> str:
     """Quien gano el par: el nombre del lado elegido, o `tie`."""
     choice = pair.get("preference")
     if choice is None:
-        raise NoData(f"el par {pair.get('case')} no tiene preferencia")
+        raise NoData(_t("nodata.no_preference", case=pair.get("case")))
     return "tie" if choice == "=" else str(pair["sides"][choice])
 
 
@@ -1498,12 +1566,12 @@ def evaluate_commit_cell(
     judgement = LEGACY_NAMES.normalize_commit_judgement(judgement)
     rules = LEGACY_NAMES.normalize_affinity_rules(rules)
     if judgement.get("partial"):
-        raise NoData("el juicio es parcial: el veredicto necesita la hoja entera")
+        raise NoData(_t("nodata.partial"))
     pair_items = judgement["pairs"]
     traps = [p for p in pair_items.values() if p["kind"] == "trap"]
     real = [p for p in pair_items.values() if p["kind"] == "real"]
     if len(traps) != TRAPS_PER_SHEET:
-        raise NoData(f"la hoja tiene {len(traps)} pares trampa y se esperaban {TRAPS_PER_SHEET}")
+        raise NoData(_t("nodata.trap_count", n=len(traps), expected=TRAPS_PER_SHEET))
     worst = 0
     for p in traps:
         winner = _preferred(p)
@@ -1575,11 +1643,7 @@ def evaluate_commit_cell(
     report = None
     if not sheet["ok"]:
         state = "no_baseline"
-        report = (
-            "repetir hoja"
-            if int(judgement.get("set") or 1) < 3
-            else "la tercera hoja tampoco vale: sin base"
-        )
+        report = _REPORT_REPEAT if int(judgement.get("set") or 1) < 3 else _REPORT_THIRD
     elif invents["ok"] and preference["ok"] and behaviour["ok"]:
         state = "approved"
     else:
@@ -1623,7 +1687,7 @@ def _footprint(footprints: dict[str, Any], model: str, tool: str) -> dict[str, A
         # `huellas.json` congelado trae `ruta`/`tamano_bytes`: el veredicto sale con las nuevas.
         return dict(LEGACY_NAMES.normalize_footprint(dict(footprints[model][tool])))
     except (KeyError, TypeError) as exc:
-        raise NoData(f"footprints.json no trae la huella de {model} para {tool}") from exc
+        raise NoData(_t("nodata.no_footprint", model=model, tool=tool)) from exc
 
 
 def compute_verdict(
@@ -1662,9 +1726,7 @@ def compute_verdict(
             cells.append(cell)
     if not mechanical_only:
         if judgement is None:
-            raise NoData(
-                "falta el juicio del usuario (`read-commit --output`) para la celda de commit"
-            )
+            raise NoData(_t("nodata.no_judgement"))
         real = [c for c in cases if c["tool"] == TOOL_COMMIT and c.get("sheet_role") == "real"]
         ceiling = [c for c in corpus.values() if c["id"] == CEILING_CASE_ID]
         cell = evaluate_commit_cell(long, code, judgement, rules, real, runs, ceiling)
@@ -1680,28 +1742,40 @@ def compute_verdict(
 
 
 #: Como se lee el estado de una celda en la tabla: el `verdict.json` guarda el valor en ingles
-#: (`state`), la tabla es para leerla una persona y sigue en espanol (frente B).
-_STATE_LABELS = {"approved": "aprobada", "rejected": "rechazada", "no_baseline": "sin base"}
+#: (`state`); la tabla es para leerla una persona, en el idioma vigente.
+_STATE_KEYS = {
+    "approved": "cli.script.analyze_benchmark.state.approved",
+    "rejected": "cli.script.analyze_benchmark.state.rejected",
+    "no_baseline": "cli.script.analyze_benchmark.state.no_baseline",
+}
+#: El `report` de la celda de commit en `verdict.json` es un valor guardado (no cambia con el idioma);
+#: la tabla lo dice en el idioma vigente.
+_REPORT_REPEAT = "repetir hoja"
+_REPORT_THIRD = "la tercera hoja tampoco vale: sin base"
+_REPORT_KEYS = {
+    _REPORT_REPEAT: "cli.script.analyze_benchmark.report_value.repeat_sheet",
+    _REPORT_THIRD: "cli.script.analyze_benchmark.report_value.third_sheet",
+}
 
 
 def verdict_table(verdict: dict[str, Any]) -> str:
     """La tabla Markdown que se pega en `verification.md`."""
     lines = [
-        "| Tool | Alternativo | Comparado con | Estado | Criterios que no se cumplen |",
+        _t("verdict.header"),
         "| --- | --- | --- | --- | --- |",
     ]
     for cell in verdict["cells"]:
         fails = [name for name, c in cell["criteria"].items() if not c["ok"]]
-        extra = f" ({cell['report']})" if cell.get("report") else ""
+        extra = f" ({_label(_REPORT_KEYS, cell['report'])})" if cell.get("report") else ""
         lines.append(
             f"| {cell['tool']} | {cell['alternative']} | {cell['compared_role']} | "
-            f"{_STATE_LABELS.get(cell['state'], cell['state'])}{extra} | {', '.join(fails) or '—'} |"
+            f"{_label(_STATE_KEYS, cell['state'])}{extra} | {', '.join(fails) or '—'} |"
         )
     commit = next((c for c in verdict["cells"] if c["tool"] == TOOL_COMMIT), None)
     if commit:
-        lines += ["", "Celda de commit, lo que se publica y no decide:", ""]
+        lines += ["", _t("verdict.commit_published"), ""]
         lines += [
-            "| Modelo | Mensajes | inventa = si | Formato (calculado) | Lo principal = si | Especifico = si |",
+            _t("verdict.commit_header"),
             "| --- | --- | --- | --- | --- | --- |",
         ]
         for model, row in sorted(commit["published"].items()):
@@ -1716,7 +1790,7 @@ def run_verdict(args: argparse.Namespace) -> int:
     cases_path: Path = args.cases
     data = json.loads(cases_path.read_text(encoding="utf-8"))
     if data.get("schema_version") != 2:
-        raise ValueError(f"{cases_path}: se esperaba un corpus schema_version 2")
+        raise ValueError(_t("bad_corpus_schema", path=cases_path))
     corpus = {c["id"]: c for c in data["cases"]}
     rules_path = rules_file(args.rules)
     rules = read_affinity_rules(rules_path)
@@ -1725,7 +1799,7 @@ def run_verdict(args: argparse.Namespace) -> int:
     judgement = json.loads(args.judgement.read_text(encoding="utf-8")) if args.judgement else None
     mechanical_role = data["production_config"]["models"]["mechanical"]
     if args.metrics_db is None:
-        raise NoData("falta --metrics-db (una COPIA de metrics.db) para el criterio 6")
+        raise NoData(_t("nodata.no_metrics_db"))
     cold = median_cold_load(args.metrics_db, mechanical_role)
     verdict = compute_verdict(
         corpus,
@@ -1752,22 +1826,17 @@ def run_verdict(args: argparse.Namespace) -> int:
 
 
 def _verdict_parser(sub: argparse._SubParsersAction) -> None:
-    p = sub.add_parser(
-        "affinity-verdict",
-        help="aplica los criterios de aceptacion de las celdas (REQ-043) y escribe verdict.json",
-    )
+    p = sub.add_parser("affinity-verdict", help=_t("help.affinity_verdict"))
     base = Path(__file__).resolve().parents[1] / "benchmarks" / "afinidad-2026-10"
     p.add_argument("--cases", type=Path, default=base / "cases.json")
     p.add_argument("--rules", type=Path, default=base / LEGACY_NAMES.RULES_FILE_NAMES[1])
     p.add_argument("--footprints", type=Path, default=base / LEGACY_NAMES.FOOTPRINTS_FILE_NAMES[1])
-    p.add_argument(
-        "--judgement", type=Path, default=None, help="salida de `pair_sheet.py read-commit`"
-    )
-    p.add_argument("--metrics-db", type=Path, default=None, help="una COPIA de metrics.db")
-    p.add_argument("--mechanical-only", action="store_true", help="sin la celda de commit")
+    p.add_argument("--judgement", type=Path, default=None, help=_t("help.judgement"))
+    p.add_argument("--metrics-db", type=Path, default=None, help=_t("help.metrics_db"))
+    p.add_argument("--mechanical-only", action="store_true", help=_t("help.mechanical_only"))
     p.add_argument("--output", type=Path, default=None, help="verdict.json")
-    p.add_argument("--table", type=Path, default=None, help="tabla Markdown para verification.md")
-    p.add_argument("jsonl", nargs="+", type=Path, help="resultados de la tanda")
+    p.add_argument("--table", type=Path, default=None, help=_t("help.table"))
+    p.add_argument("jsonl", nargs="+", type=Path, help=_t("help.jsonl"))
 
 
 # --- CLI ----------------------------------------------------------------------------------------
@@ -1788,26 +1857,20 @@ def merge_unblinded_pairs(paths: list[Path]) -> dict[str, Any] | None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n", 1)[0])
+    parser = argparse.ArgumentParser(description=_t("help._description"))
     sub = parser.add_subparsers(dest="mode", required=True)
     _verdict_parser(sub)
     for name in ("cp3", "decide"):
         p = sub.add_parser(name)
-        p.add_argument("--cases", type=Path, required=True, help="cases.json del corpus v2")
-        p.add_argument(
-            "--json", type=Path, default=None, help="escribe tambien el resultado en JSON"
-        )
-        p.add_argument(
-            "--output", type=Path, default=None, help="escribe el informe aqui en vez de stdout"
-        )
+        p.add_argument("--cases", type=Path, required=True, help=_t("help.cases"))
+        p.add_argument("--json", type=Path, default=None, help=_t("help.json"))
+        p.add_argument("--output", type=Path, default=None, help=_t("help.output"))
         p.add_argument("jsonl", nargs="+", type=Path)
     cp3 = sub.choices["cp3"]
-    cp3.add_argument("--small", required=True, help="label, o label@control")
-    cp3.add_argument("--large", required=True, help="label, o label@control")
+    cp3.add_argument("--small", required=True, help=_t("help.selector"))
+    cp3.add_argument("--large", required=True, help=_t("help.selector"))
     decide = sub.choices["decide"]
-    decide.add_argument(
-        "--cp3", type=Path, action="append", default=[], help="JSON de `cp3` (repetible)"
-    )
+    decide.add_argument("--cp3", type=Path, action="append", default=[], help=_t("help.cp3"))
     decide.add_argument(
         "--pair",
         nargs=3,
@@ -1820,21 +1883,22 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         action="append",
         default=[],
-        help="JSON de `pair_sheet.py unblind --json` (repetible, uno por comparacion)",
+        help=_t("help.pairs"),
     )
     decide.add_argument(
         "--shared-mib-threshold",
         type=float,
         default=0.0,
-        help="crecimiento de Shared Usage tolerado antes de dar CP-1 por caido (sin calibrar: tarea 18)",
+        help=_t("help.shared_mib_threshold"),
     )
-    args = parser.parse_args(argv)
+    with argparse_in_language():
+        args = parser.parse_args(argv)
 
     if args.mode == "affinity-verdict":
         try:
             return run_verdict(args)
         except (OSError, ValueError, KeyError) as exc:  # `NoData` es un `ValueError`
-            print(f"error: {exc}", file=sys.stderr)
+            print(t("cli.script.pair_sheet.error", detail=exc), file=sys.stderr)
             return 2
 
     try:
@@ -1870,7 +1934,7 @@ def main(argv: list[str] | None = None) -> int:
             result = {"decisions": decisions}
             text = decision_report(decisions, configs, corpus)
     except (OSError, ValueError, KeyError) as exc:
-        print(f"error: {exc}", file=sys.stderr)
+        print(t("cli.script.pair_sheet.error", detail=exc), file=sys.stderr)
         return 2
 
     if args.json:

@@ -185,7 +185,9 @@ def test_unblind_writes_the_json_for_decide_only_with_the_whole_sheet(tmp_path):
     assert unblind(sheet.replace("Mejor (A/B/=): ", "Mejor (A/B/=): A", 1)) == 1
     assert not output.exists()
     assert unblind(_fill_in(sheet, key, lambda _m: "=")) == 0
-    assert json.loads(output.read_text(encoding="utf-8"))["case-a"]["human"] == {"empate": 2}
+    # La eleccion «=» se escribe como valor de maquina (`tie`); `empate` es la forma de antes del
+    # frente B, que `analyze_benchmark.pairs_for_role` sigue leyendo.
+    assert json.loads(output.read_text(encoding="utf-8"))["case-a"]["human"] == {"tie": 2}
 
 
 @pytest.mark.parametrize(
@@ -904,7 +906,7 @@ def test_invalid_values_and_unknown_pairs(tmp_path):
 def _stopped(tmp_path, **kw):
     _, key, rules, _ = _sheet(tmp_path)
     judgement, _ = pair_sheet.read_commit(_responses(key, **kw), key, rules, partial=True)
-    output = pair_sheet.can_stop(judgement, rules)
+    output = pair_sheet.stop_text(pair_sheet.can_stop(judgement, rules))
     assert not any(x in output for x in ("26B", "Qwen", "qwen", "aprob", L26, LQW)), output
     return output
 

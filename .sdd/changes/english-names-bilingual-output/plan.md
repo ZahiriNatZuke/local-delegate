@@ -947,7 +947,7 @@ nuevos o la documentación en ficheros que el agente que renombra no toca, siemp
 **Orden de mezcla (explícito):**
 
 ```
-A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close-5) → higiene de CodeQL → `affinity --check` sin entorno → B0 (B0a → B0b) → B1 → B2 (lotes B2a → B2b) → { B3 ∥ B4 } → B5 → [release 0.36.0]
+A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close-5) → higiene de CodeQL → `affinity --check` sin entorno → B0 (B0a → B0b) → B1 → B2 (lotes B2a → B2b → B2c) → { B3 ∥ B4 } → B5 → [release 0.36.0]
 ```
 
 - **Valores de una palabra (A-close-5, añadida el 2026-10-14), tras A-close-4.** El barrido de
@@ -1254,8 +1254,16 @@ B2b), cada uno con su commit y su PR. Los dos salen en la **misma versión**.
 - **Tests y su control positivo:**
   - *contrato:* `_local_delegate` con `truncated`/`warning`, y ninguna clave vieja.
   - *descripciones:* no cambian con `LOCAL_DELEGATE_LANG`. Mutante: pasarlas por `t()`.
-  - *prompts:* las 4 tools piden el idioma vigente; el prompt de `local_commit_msg` es idéntico con
-    `es` y con `en`. Mutante: añadir el idioma a `commit_msg`.
+  - *prompts:* las 4 tools piden el idioma vigente. **Enmienda del 2026-10-14 (decisión del
+    usuario, tras la revisión `evidence/local-tools-review/report.md`):** `local_commit_msg` ya no
+    usa «el idioma predominante del diff» por defecto, porque en repos bilingües el modelo elige
+    uno u otro (reproducido: el diff de B0a salió en inglés, el de B1a en español). Precedencia:
+    `LOCAL_DELEGATE_COMMIT_LANGUAGE` → idioma vigente del producto (`resolve_language`); la regla
+    del diff queda solo como valor explícito de la variable. `LOCAL_DELEGATE_OUTPUT_LANGUAGE` no se
+    aplica a `commit_msg`. Tests: sin la variable, con idioma vigente `es` el prompt pide español
+    y con `en` inglés; con la variable puesta, manda ella; con el valor explícito de la regla del
+    diff, el prompt de hoy. Mutante: volver al «predominante» por defecto (falla el de «sin la
+    variable»).
   - *idioma de respuesta en texto libre (enmienda de REQ-028 del 2026-10-14, issue #260):*
     `LOCAL_DELEGATE_OUTPUT_LANGUAGE` en `config.py` (lectura con validación: 1–40 caracteres, sin
     saltos ni control) y una sola función en `server.py` que resuelve el idioma de respuesta
@@ -1275,6 +1283,27 @@ B2b), cada uno con su commit y su PR. Los dos salen en la **misma versión**.
   - *fronteras:* el test de dos máquinas sobre `usage-*` (fila con `package_version` vieja y fecha
     posterior → tramo «antes»).
 - **Cierre de B2:** la sección «pendiente» de `rename-exceptions.md` queda vacía.
+
+#### B2c — Cuerpo de `local_commit_msg` y troceado de `local_explain_code`/`local_extract`
+
+Lote nacido el 2026-10-14 de la revisión `evidence/local-tools-review/report.md` (ventana de prueba
+`w-20261014T182701Z`). Va **en serie después de B2b** (mismo `server.py`) y sale en la 0.36.0.
+
+- **Cuerpo del commit:** hoy el formato dice «cuerpo opcional» (`server.py:3879-3887`) y los topes
+  son 256 tokens (una llamada) y 244 en el paso final del troceado (`max_words=90`); el modelo para
+  solo con 53–66 caracteres. Cambio: cuerpo obligatorio de 2–6 viñetas, también en el paso final,
+  y topes de ~700 tokens y `max_words≈250`. Tests con backend falso que capture prompt y tope.
+  Mutante: el formato y los topes de hoy (falla por el assert del cuerpo o del tope, no por otro).
+- **Troceado:** `local_explain_code` y `local_extract` truncan a 20 000 caracteres en una sola
+  llamada (`server.py:4033`); este mes, 10 de 24 llamadas de `explain_code` truncadas, y la
+  explicación de `cli.py` (32 % leído) dio por completa una lista a la que faltaban subcomandos.
+  Cambio: las dos pasan por `_chat_map_reduce`, partiendo por `def`/`class` de primer nivel en
+  `explain_code` y llevando la pregunta (o los campos) al paso final. Test: un fichero de ~60 000
+  caracteres con `def ZZZ_marker` al final llega al backend. Mutante: el camino de hoy (falla en
+  ese assert).
+- **Muestra en vivo:** en una ventana de prueba, `local_commit_msg` sobre los diffs de B0a y B1a
+  (español con cuerpo) y `local_explain_code` sobre `cli.py` (menciona `doctor`, `benchmark` y
+  `llamaswap`), en `evidence/B2c/live.md`.
 
 #### B3 — Hooks
 

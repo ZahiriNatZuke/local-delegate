@@ -57,9 +57,17 @@ def isolate_runtime_logs(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     monkeypatch.setenv("LOCAL_DELEGATE_LOG_DIR", str(tmp_path))
-    i18n.reset()
+    _reset_languages()
     yield
+    _reset_languages()
+
+
+def _reset_languages() -> None:
+    """El idioma cacheado del paquete y el de `scripts/script_i18n.py`, si algún test lo cargó."""
     i18n.reset()
+    script_i18n = sys.modules.get("script_i18n")
+    if script_i18n is not None:
+        script_i18n.reset()
 
 
 @pytest.fixture(autouse=True)

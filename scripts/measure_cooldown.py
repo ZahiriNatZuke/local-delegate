@@ -36,27 +36,39 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from measure_adoption import logs_dir, read, usage_logs
+from script_i18n import argparse_in_language
 
-from local_delegate import legacy_names, test_windows
+from local_delegate import i18n, legacy_names, test_windows
 from local_delegate.cooldown import COUNTING_CLASSES, EVENTS_FILE, LEGACY_EVENTS_FILE
 
 #: Por debajo de cualquiera de los dos, el resultado es «no concluyente» (criterio de P-4).
 MIN_EPISODES = 5
 MIN_FAILURES = 10
 
-#: Cómo se imprime cada resultado en «RESULTADO:»: el texto de salida sigue en español hasta el
-#: frente B (y el envoltorio `medir_enfriamiento.py` de REQ-046 tiene que dar la misma salida).
-_RESULT_LABELS = {"inconclusive": "no concluyente", "keep": "se quedan", "change": "cambiar"}
+#: Cómo se dice cada resultado en «RESULTADO:», en el idioma vigente (el envoltorio
+#: `medir_enfriamiento.py` de REQ-046 da la misma salida: llama a este `main`).
+_RESULT_KEYS = {
+    "inconclusive": "cli.script.measure_cooldown.result.inconclusive",
+    "keep": "cli.script.measure_cooldown.result.keep",
+    "change": "cli.script.measure_cooldown.result.change",
+}
 
 CLASSES = {error_class.value for error_class in COUNTING_CLASSES}
 
-#: Las reglas en su orden de precedencia: se aplica solo la primera que se cumpla.
+#: Las reglas en su orden de precedencia: se aplica solo la primera que se cumpla. Cada una es
+#: (motivo, cambio), como claves del catálogo (`rule_text`).
 RULES = {
-    1: ("R > 60 %: el modelo seguia roto al vencer", "T pasa a 240 s"),
-    2: ("la mitad o mas de los episodios los abre un timeout de lectura", "N pasa a 2"),
-    3: ("R < 20 % y 3 o mas operaciones desviadas por episodio", "T pasa a 60 s"),
-    4: ("algun episodio llega a Tmax y vuelve a reentrar", "Tmax pasa a 1800 s"),
+    1: ("cli.script.measure_cooldown.rule.1.reason", "cli.script.measure_cooldown.rule.1.change"),
+    2: ("cli.script.measure_cooldown.rule.2.reason", "cli.script.measure_cooldown.rule.2.change"),
+    3: ("cli.script.measure_cooldown.rule.3.reason", "cli.script.measure_cooldown.rule.3.change"),
+    4: ("cli.script.measure_cooldown.rule.4.reason", "cli.script.measure_cooldown.rule.4.change"),
 }
+
+
+def rule_text(number: int) -> tuple[str, str]:
+    """(motivo, cambio) de una regla, en el idioma vigente."""
+    reason, change = RULES[number]
+    return i18n.t(reason), i18n.t(change)
 
 
 def _ts(event: dict) -> str:
@@ -233,81 +245,106 @@ def measure(
 def _span(text: str) -> tuple[str, str]:
     start, _, end = text.partition(",")
     if not start or not end:
-        raise argparse.ArgumentTypeError("--exclude espera INICIO,FIN")
+        raise argparse.ArgumentTypeError(i18n.t("cli.script.measure_cooldown.exclude_format"))
     try:
         is_reversed = test_windows.parse_instant(start) > test_windows.parse_instant(end)
     except ValueError as exc:
-        raise argparse.ArgumentTypeError(f"--exclude: fecha ilegible ({exc})") from exc
+        raise argparse.ArgumentTypeError(
+            i18n.t("cli.script.measure_cooldown.exclude_unreadable", error=exc)
+        ) from exc
     if is_reversed:
-        raise argparse.ArgumentTypeError("--exclude: el inicio va antes que el fin")
+        raise argparse.ArgumentTypeError(i18n.t("cli.script.measure_cooldown.exclude_reversed"))
     return start, end
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--since", help="fecha ISO; se compara contra el `ts` del evento")
-    parser.add_argument("--until", help="fecha ISO, exclusiva")
-    parser.add_argument(
-        "--exclude", type=_span, action="append", default=[], help="tramo INICIO,FIN a excluir"
+    parser = argparse.ArgumentParser(
+        description=_t("help._description"), formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("--tmax", type=float, default=900.0, help="Tmax vigente en la ventana")
-    parser.add_argument("--json", action="store_true", help="salida cruda")
+    parser.add_argument("--since", help=_t("help.since"))
+    parser.add_argument("--until", help=_t("help.until"))
     parser.add_argument(
-        "--include-tests",
-        action="store_true",
-        help="no aplicar las ventanas de test-windows.json (las de --exclude siguen)",
+        "--exclude", type=_span, action="append", default=[], help=_t("help.exclude")
     )
-    args = parser.parse_args()
+    parser.add_argument("--tmax", type=float, default=900.0, help=_t("help.tmax"))
+    parser.add_argument("--json", action="store_true", help=_t("help.json"))
+    parser.add_argument("--include-tests", action="store_true", help=_t("help.include_tests"))
+    with argparse_in_language(i18n.argparse_gettext, i18n.argparse_ngettext):
+        args = parser.parse_args()
 
     m = measure(args.since, args.until, args.exclude, args.tmax, include_tests=args.include_tests)
     if args.json:
         print(json.dumps(m, ensure_ascii=False, indent=2))
         return 0
 
-    print(
-        f"Ventana: {m['window_since']} a {m['window_until']}  ({datetime.now(UTC):%Y-%m-%d %H:%M} UTC)"
-    )
-    for start, end in m["excluded"]:
-        print(f"  excluido: {start} a {end}")
+    print(report(m))
+    return 0
+
+
+def _t(key: str, /, **values: object) -> str:
+    return i18n.t(f"cli.script.measure_cooldown.{key}", **values)
+
+
+def _n(value: object) -> str:
+    """Un entero para la persona, con el separador de miles del idioma (REQ-026)."""
+    return i18n.format_number(value) if isinstance(value, int) else str(value)
+
+
+def report(m: dict) -> str:
+    """El informe para la persona, en el idioma vigente. Las fechas siguen en ISO 8601 UTC."""
+    # `(todo)` y `(ahora)` son los marcadores de «sin límite» del JSON (contrato): aquí se dicen.
+    since = _t("all") if m["window_since"] == "(todo)" else m["window_since"]
+    until = _t("now") if m["window_until"] == "(ahora)" else m["window_until"]
+    lines = [
+        _t("window", since=since, until=until, now=f"{datetime.now(UTC):%Y-%m-%dT%H:%MZ}"),
+        *(_t("excluded", start=start, end=end) for start, end in m["excluded"]),
+    ]
     by_hand, windows = m["excluded_manual"], m["excluded_tests"]
-    print(
-        f"  quitado por --exclude: {by_hand['usage_rows']} filas, {by_hand['episodes']} episodios"
+    lines.append(
+        _t("removed_by_exclude", rows=_n(by_hand["usage_rows"]), episodes=_n(by_hand["episodes"]))
     )
     if m["include_tests"]:
-        print("  ventanas de prueba: no aplicadas (--include-tests)")
+        lines.append(_t("test_windows_not_applied"))
     else:
-        print(
-            f"  quitado por ventanas de prueba: {windows['usage_rows']} filas, "
-            f"{windows['episodes']} episodios"
+        lines.append(
+            _t(
+                "removed_by_test_windows",
+                rows=_n(windows["usage_rows"]),
+                episodes=_n(windows["episodes"]),
+            )
         )
         for w in m["test_windows"]:
             if w["removed"]:
-                end = w["end"] or "abierta"
-                print(f"    {w['id']}  {w['start']} a {end}  {w['removed']}  {w['label']}")
-    print()
-    print(f"Delegaciones:              {m['delegations']}")
-    print(f"Fallos que cuentan (min.): {m['counting_failures']}  (minimo {MIN_FAILURES})")
-    print(f"Saltos por clase:          {m['jumps_per_class']}")
-    print(f"Fallos al momento:         {m['immediate_failures']}")
-    print(f"Operaciones desviadas:     {m['diverted_operations']}")
-    print()
-    print(f"Episodios:                 {m['episodes']}  (minimo {MIN_EPISODES})")
-    print(f"  con desenlace conocido:  {m['episodes_with_outcome']}")
-    print(f"  reentraron:              {m['episodes_that_reentered']}  (R: {m['R']})")
-    print(f"  abiertos por timeout:    {m['episodes_by_timeout']}")
-    print(f"  reentran en Tmax:        {m['episodes_reentering_at_tmax']}")
-    print()
-    print(f"RESULTADO: {_RESULT_LABELS[m['result']]}")
+                end = w["end"] or _t("open")
+                lines.append(
+                    f"    {w['id']}  {_t('span', start=w['start'], end=end)}  "
+                    f"{_n(w['removed'])}  {w['label']}"
+                )
+    r = "None" if m["R"] is None else i18n.format_number(m["R"], None)
+    lines += [
+        "",
+        _t("delegations", n=_n(m["delegations"])),
+        _t("counting_failures", n=_n(m["counting_failures"]), minimum=MIN_FAILURES),
+        _t("jumps_per_class", jumps=m["jumps_per_class"]),
+        _t("immediate_failures", n=_n(m["immediate_failures"])),
+        _t("diverted_operations", n=_n(m["diverted_operations"])),
+        "",
+        _t("episodes", n=_n(m["episodes"]), minimum=MIN_EPISODES),
+        _t("with_outcome", n=_n(m["episodes_with_outcome"])),
+        _t("reentered", n=_n(m["episodes_that_reentered"]), r=r),
+        _t("by_timeout", n=_n(m["episodes_by_timeout"])),
+        _t("reentering_at_tmax", n=_n(m["episodes_reentering_at_tmax"])),
+        "",
+        _t("result", result=i18n.t(_RESULT_KEYS[m["result"]])),
+    ]
     if m["rule"] is not None:
-        reason, change = RULES[m["rule"]]
-        print(f"  regla {m['rule']}: {reason} -> {change}")
+        reason, change = rule_text(m["rule"])
+        lines.append(_t("rule_applied", rule=m["rule"], reason=reason, change=change))
     for number in m["noted"]:
-        print(f"  anotada para la ventana siguiente: regla {number}: {RULES[number][0]}")
+        lines.append(_t("rule_noted", rule=number, reason=rule_text(number)[0]))
     if m["outside_p4_immediate_failures_over_5_pct"]:
-        print()
-        print("AVISO fuera de P-4: los fallos al momento pasan del 5 % de las delegaciones.")
-        print("No cambia N, T ni Tmax: falta candidato, y eso es una pregunta sobre las cadenas.")
-    return 0
+        lines += ["", _t("outside_p4_warning"), _t("outside_p4_note")]
+    return "\n".join(lines)
 
 
 if __name__ == "__main__":

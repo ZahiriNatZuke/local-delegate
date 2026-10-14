@@ -1,0 +1,28 @@
+feat(i18n): measure_cooldown, pair_sheet y analyze_benchmark en español e inglés, con la hoja leída en las dos formas (frente B, ola B1d)
+
+Cuarto PR de B1 (waves/B1-proposal.md). Los tres scripts sacan sus
+textos del catálogo en el idioma vigente; el --json no cambia.
+
+- resources/i18n/{es,en}/cli.json: 251 claves nuevas bajo cli.script.*
+  (informe de P-4, hojas .md y página de pair_sheet, informes de decide
+  y cp3, tabla del veredicto, errores y ayudas).
+- scripts/script_i18n.py (nuevo): el catálogo, la regla del idioma de
+  hook_common, format_number y el armazón de argparse para pair_sheet y
+  analyze_benchmark, que no importan el paquete.
+- pair_sheet: la hoja .md y la página salen en el idioma del proceso y
+  el lector acepta las dos formas (Par/Pair, Mejor/Better, Inventa/
+  Invents, si/yes, parcial/partial, empate/tie); unblind --json escribe
+  tie en human; can_stop devuelve un valor de máquina.
+- analyze_benchmark: suma tie y empate para siempre; números del informe
+  con los separadores del idioma; criterion, motivos de CP-3 y report
+  siguen como valores de máquina y el informe los dice traducidos.
+- measure_cooldown: informe por el catálogo, enteros con format_number y
+  la hora en ISO 8601 UTC; medir_enfriamiento.py sigue igual.
+- Guardián: la superficie cli queda cerrada y se borra su pendiente.
+- tests/test_scripts_english.py: script_i18n igual que el paquete, la
+  hoja congelada española leída con el proceso en inglés, una hoja
+  inglesa leída en español, la página, tie/empate, informes sin español
+  y el armazón de argparse.
+
+Suite: 2848 passed, 2 skipped con LANG en inglés y en español (xdist);
+11 controles positivos.
