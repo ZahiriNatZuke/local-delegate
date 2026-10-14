@@ -14,7 +14,9 @@ from __future__ import annotations
 
 import ipaddress
 import os
+import unicodedata
 from pathlib import Path
+from typing import NamedTuple
 from urllib.parse import urlsplit
 
 from platformdirs import user_data_dir
@@ -416,6 +418,41 @@ def commit_language() -> str:
     return _env("LOCAL_DELEGATE_COMMIT_LANGUAGE", "").strip()
 
 
+# --- Idioma de la interfaz (REQ-018/REQ-019) ------------------------------------------------------
+# La lee y la valida `hook_common.resolve_language`, la única implementación de la regla; aquí solo
+# se registra para que entre en `ENVIRONMENT_VARIABLES` y la suite la aísle (REQ-043).
+def language_variable() -> str:
+    return _env("LOCAL_DELEGATE_LANG", "")
+
+
+# --- Idioma de respuesta del modelo local (REQ-028, enmienda del 2026-10-14, issue #260) ---------
+# Fija SOLO el idioma en que `local_summarize`, `local_lint_summary`, `local_explain_code` y
+# `local_describe_image` piden responder; la usa `server.py` (B2b). Se lee al LLAMAR, como
+# `commit_language`. Vacía = seguir al idioma vigente. Un valor no válido se ignora y se avisa: el
+# aviso es un código (`problem`) y su texto está en el catálogo (`common.output_language.*`).
+OUTPUT_LANGUAGE_MAX_CHARS = 40
+# Control (`Cc`), formato invisible (`Cf`) y separadores de línea y párrafo (`Zl`, `Zp`).
+_OUTPUT_LANGUAGE_REJECTED_CATEGORIES = frozenset({"Cc", "Cf", "Zl", "Zp"})
+
+
+class OutputLanguage(NamedTuple):
+    value: str  # "" = sin poner o no válida: se sigue al idioma vigente
+    problem: str | None  # None | "control_chars" | "too_long"
+    raw: str  # el valor tal cual, para el aviso
+
+
+def output_language() -> OutputLanguage:
+    raw = _env("LOCAL_DELEGATE_OUTPUT_LANGUAGE", "")
+    value = raw.strip()
+    if not value:
+        return OutputLanguage("", None, raw)
+    if any(unicodedata.category(ch) in _OUTPUT_LANGUAGE_REJECTED_CATEGORIES for ch in value):
+        return OutputLanguage("", "control_chars", raw)
+    if len(value) > OUTPUT_LANGUAGE_MAX_CHARS:
+        return OutputLanguage("", "too_long", raw)
+    return OutputLanguage(value, None, raw)
+
+
 # Una lectura al importar, solo para que estos nombres entren en `ENVIRONMENT_VARIABLES`.
 for _reader in (
     llamaswap_config_path,
@@ -423,6 +460,8 @@ for _reader in (
     llamaswap_listen,
     llamaswap_watch_config,
     commit_language,
+    language_variable,
+    output_language,
 ):
     _reader()
 
