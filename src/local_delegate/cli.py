@@ -311,11 +311,11 @@ def cmd_install(args: argparse.Namespace) -> int:
 
 def _warn_deprecated(old: str) -> None:
     """Aviso en `stderr` por un nombre viejo del CLI: nombra el nuevo y la versión de retirada."""
-    from . import deprecations
+    from . import deprecation_notices, deprecations
 
     entry = deprecations.find(old)
     if entry is not None:
-        print(t("cli.warning", detail=deprecations.warning_text(entry)), file=sys.stderr)
+        print(t("cli.warning", detail=deprecation_notices.warning_text(entry)), file=sys.stderr)
 
 
 def _resolve_reset_calibration(args: argparse.Namespace) -> str | None:

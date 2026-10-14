@@ -1,0 +1,12 @@
+## F1 la coherencia no resta las celdas sin wheels
+E   AssertionError: assert {'cli-python-...l-smoke', ...} == {'cli-python-..., 'lint', ...}
+FAILED tests/test_ci_gate.py::test_the_exclusion_mechanism_takes_a_cell_out_of_the_expected_ones
+1 failed, 27 passed in 0.22s
+## F2 la celda 3.15 fuera de EXPECTED_JOBS
+E   AssertionError: assert {'cli-python-...l-smoke', ...} == {'cli-python-..., 'lint', ...}
+FAILED tests/test_ci_gate.py::test_the_expected_jobs_are_exactly_those_of_ci_yml
+1 failed, 27 passed in 2.99s
+## F3 la versión de eedbc36 de deprecations.py (import diferido de i18n)
+E   AssertionError: assert ['.', '.'] == []
+FAILED tests/test_deprecations.py::test_deprecations_imports_nothing_from_the_package
+1 failed in 0.19s

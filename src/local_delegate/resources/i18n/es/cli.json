@@ -24,7 +24,6 @@
   "cli.daemon.port_busy": "local-delegate: {host}:{port} está ocupado por otro proceso",
   "cli.daemon.status_code": "el daemon respondió {code}",
   "cli.daemon.timeout": "el daemon no contestó a tiempo",
-  "cli.deprecations.bad_version": "versión no válida: {version}",
   "cli.deprecations.deprecated": "{old} está obsoleto: usa {new} ({when})",
   "cli.deprecations.removed_in": "se retira en la {version}",
   "cli.deprecations.removed_later": "se retirará tres versiones menores después",

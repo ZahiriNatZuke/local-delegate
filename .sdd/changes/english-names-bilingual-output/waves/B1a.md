@@ -23,15 +23,16 @@ commit ni push: los hace la sesión principal.
 | `src/local_delegate/i18n.py` | LF | `format_number(value, decimals=0, *, language=None, machine=False)`: `20.027`/`1,5` en español, `20,027`/`1.5` en inglés; `decimals=None` como `:g`; `machine=True` sin separador de miles y con punto, para B2 (desviación registrada, decisión 3) |
 | `src/local_delegate/recompute.py` | LF | `summary_text` con frases enteras del catálogo y conteos con `format_number`; los cuatro diccionarios de rótulos apuntan a claves (`cli.recompute_cost.{status,verdict,match,discard}.*`) |
 | `src/local_delegate/test_windows.py` | LF | los 16 errores y motivos de ilegible por el catálogo |
-| `src/local_delegate/deprecations.py` | LF | `warning_text` y `parse_version` por el catálogo, con `import i18n` diferido (`config` importa este módulo e `i18n` importa `config`) |
+| `src/local_delegate/deprecations.py` | LF | sin texto ni imports del paquete: `warning_text` pasa a `deprecation_notices.py` y el `ValueError` de `parse_version` lleva solo el valor (arreglo del PR #311, ver «Arreglo tras el CI del PR #311») |
+| `src/local_delegate/deprecation_notices.py` (nuevo, arreglo del PR #311) | LF | `warning_text(entry)` por el catálogo; lo llaman `cli.py`, `checks.py`, `server.py` y `tests/test_deprecations.py` |
 | `src/local_delegate/daemon.py` | LF | los cuatro mensajes de consola (incluido «ya hay un daemon de este usuario», que el guardián no veía por ir en `_console_print`) |
 | `src/local_delegate/entrypoint.py` | CRLF | el aviso de terminal interactiva |
 | `tests/test_cli_english.py` (nuevo) | LF | 50 casos: msgid del argparse en ejecución, ayuda española sin armazón inglés (16 rutas), ayuda inglesa sin palabras distintivas del catálogo español ni tildes (15 rutas), restauración del parche (también tras un error), errores en los dos idiomas, humo en inglés de doce salidas con su guarda de camino, control positivo permanente en español, y números |
 | `tests/test_smoke.py` | CRLF | dos asserts pasan del armazón inglés al español («uso: local-delegate», «opción no válida»): la suite corre en español (REQ-043) |
 | `.github/workflows/ci.yml` | LF | trabajo `cli-python-matrix`: ubuntu, `python: ["3.11", "3.12", "3.13", "3.14", "3.15"]`, `fail-fast: false`, `uv sync --group dev`, sin Playwright, `test_cli_english.py` y `test_cli_renamed_names.py` |
-| `scripts/ci_gate.py` | LF | cuatro celdas en `EXPECTED_JOBS` (3.11–3.14) y `PYTHON_WITHOUT_WHEELS = {"3.15": …}` con fecha y motivo |
+| `scripts/ci_gate.py` | LF | las cinco celdas en `EXPECTED_JOBS` (3.11–3.15) y `PYTHON_WITHOUT_WHEELS` vacío (en el commit `eedbc36` tenía la 3.15; corregido en el arreglo del PR #311) |
 | `tests/test_ci_gate.py` | LF | la coherencia resta las celdas sin wheels; tres tests nuevos: toda exclusión es una celda viva con motivo y no está en los esperados; la matriz empieza en el `requires-python`; los clasificadores de `pyproject.toml` son las celdas que bloquean |
-| `pyproject.toml` | CRLF | clasificador 3.14 (decisión 8; 3.15 no, porque no se instala) |
+| `pyproject.toml` | CRLF | clasificadores 3.14 y 3.15 (decisión 8; la 3.15, en el arreglo del PR #311) |
 | `tests/data/uncatalogued_pending/cli.json` | LF | salen `cli.py`, `daemon.py`, `deprecations.py`, `entrypoint.py`, `recompute.py` y `test_windows.py` (cada uno tenía apariciones antes; ahora, cero) |
 | `tests/data/uncatalogued_exceptions.json` | LF | `sí` en `cli.py`, `machine_name`: es la respuesta que escribe la persona, no salida |
 | `rename-exceptions.md` | LF | sale la fila `sin_cruce` de `recompute.py`; entra `recalcular-coste` en `tests/test_cli_english.py` (alias, el humo prueba su aviso en inglés) |
@@ -81,7 +82,7 @@ en inglés.
 | Detector de nombres con `rename-exceptions.md` | 0 fuera de la lista, 0 sin clasificar | — |
 | Guardián, paridad, `test_ci_gate`, `test_detect_spanish_names`, `test_language` | 225 passed | — |
 
-**Python 3.15.** Salió el 2026-10-09 (python.org). En esta PC `uv` solo instala la 3.15.0a7, así que
+**Python 3.15 (texto del commit `eedbc36`, corregido abajo en «Arreglo tras el CI del PR #311»).** Salió el 2026-10-09 (python.org). En esta PC `uv` solo instala la 3.15.0a7, así que
 la comprobación local es con la alfa; el fallo es de instalación (sin wheel de dos dependencias
 del lock), que es el único caso que admite la política de D8. **Pendiente para el CI del PR:**
 confirmar en el log de la celda `cli-python-matrix (3.15)` que falla en «Sync deps» y no en un
@@ -118,7 +119,7 @@ subcomando no válido). Leídos enteros:
 - **`tests/test_smoke.py`** (fuera de la lista de B1a): dos asserts del armazón inglés pasan al
   español; consecuencia directa del parche.
 - **Léxico congelado:** 21 palabras inglesas nuevas, como en B0a y B0b.
-- **Clasificador 3.15:** no se añade aunque la matriz la corra, porque el paquete no se instala en
+- **Clasificador 3.15** (corregido en el arreglo del PR #311: sí se añade): no se añadía aunque la matriz la corra, porque el paquete no se instala en
   ella; lo exige `test_the_classifiers_are_the_blocking_cells_of_the_matrix`.
 - **`judged` y `outside` del cotejo:** con `None` se imprimía `None`; ahora `0`.
 
@@ -131,7 +132,48 @@ subcomando no válido). Leídos enteros:
   (`HELP_PATHS`); `llamaswap_api.OUTCOME_TEXT`, `residency.UNKNOWN` y
   `residency.CHANGE_DURING_EDIT`, que `cli.py` ya imprime a través del catálogo pero vienen en
   español de sus módulos; `est.detail`/`est.method` de `llamaswap_config`.
-- CI del PR: la celda 3.15 («Corridas»).
+- CI del PR: la celda 3.15 instaló y pasó; resuelto en el arreglo del PR #311.
+
+## Arreglo tras el CI del PR #311
+
+El PR #311 (commit `eedbc36`) pasó el CI entero pero quedó bloqueado por dos cosas, arregladas
+en un commit nuevo sobre la misma rama:
+
+1. **Ciclo de imports (CodeQL `py/cyclic-import`, `deprecations.py:159`).** `config` importa
+   `deprecations` e `i18n` importa `config`; el `from . import i18n` diferido de
+   `deprecations.warning_text` y de `parse_version` cerraba el ciclo, y CodeQL cuenta también los
+   imports dentro de funciones. La fila de CodeQL de los riesgos del plan ya pedía que
+   `deprecations.py` no importe nada del paquete. Arreglo: `warning_text` pasa a
+   `src/local_delegate/deprecation_notices.py` (importa `i18n` y `deprecations`, y nadie de los dos
+   la importa a ella); el `ValueError` de `parse_version`, que es un error de programación con
+   versiones constantes, lleva solo el valor, y sale la clave `cli.deprecations.bad_version`.
+   Grafo comprobado con un script que sigue todos los imports del paquete, también los de dentro
+   de funciones: ningún ciclo pasa por `i18n`, `config`, `deprecations`, `deprecation_notices`,
+   `cli`, `test_windows`, `recompute`, `daemon` ni `entrypoint`; control positivo: con el
+   `deprecations.py` de `eedbc36` encuentra `i18n → config → deprecations → i18n`. Test permanente
+   `test_deprecations_imports_nothing_from_the_package`.
+2. **La 3.15 sí instala y pasa en el CI.** La celda `cli-python-matrix (3.15)` dio success en
+   todos sus pasos, incluidos «Sync deps» y «CLI tests». La premisa de `PYTHON_WITHOUT_WHEELS` era
+   falsa: lo que se probó aquí fue la **3.15.0a7 en Windows**, que es lo único que instala `uv` en
+   esta PC, y no representa la 3.15.0 final en ubuntu. Arreglo: la 3.15 entra en `EXPECTED_JOBS` y
+   en los clasificadores; `PYTHON_WITHOUT_WHEELS` queda vacío como mecanismo de la política D8, con
+   un test que lo ejerce con una exclusión sintética
+   (`test_the_exclusion_mechanism_takes_a_cell_out_of_the_expected_ones`), y el comentario de
+   `ci_gate.py` dice que solo vale el log de la celda del CI. `evidence/B1a/uv-sync-3.15.txt` se
+   conserva como lo que es: el fallo de la alfa local.
+
+| Control positivo del arreglo | Test | Assert que dispara |
+| --- | --- | --- |
+| F1 la coherencia no resta las celdas sin wheels | `test_the_exclusion_mechanism_takes_a_cell_out_of_the_expected_ones` | `assert {'cli-python-…} == {'cli-python-…, 'lint', …}` |
+| F2 la celda 3.15 fuera de `EXPECTED_JOBS` | `test_the_expected_jobs_are_exactly_those_of_ci_yml` | `assert {'cli-python-…} == {…}` |
+| F3 el `deprecations.py` de `eedbc36` (import diferido de `i18n`) | `test_deprecations_imports_nothing_from_the_package` | `assert ['.', '.'] == []` |
+
+Corridas del arreglo: tests afectados (`test_ci_gate`, `test_deprecations`, `test_cli_english`,
+`test_cli_renamed_names`, guardián, paridad, detector) 207 passed; suite entera con
+`LANG=es_ES.UTF-8` y `-n 4 --dist loadgroup` bajo `pesado.sh`: **2796 passed, 2 skipped**; `ruff`
+limpio; detector de nombres 0 fuera de la lista y 0 sin clasificar (tres palabras inglesas más al
+léxico: `classifiers` y `wheels`, que ya estaban en `eedbc36` sin que el detector se volviera a
+pasar tras escribir esos tests, y `notices`). Log de los mutantes: `evidence/B1a/fix-mutants.txt`.
 
 ## Llamadas `local_*`
 

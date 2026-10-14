@@ -1189,6 +1189,14 @@ ficheros) y las dos mitades son independientes. B0a se mezcla antes que B0b; las
     `daemon.py`; `tests/test_cli_english.py` con `test_argparse_msgids_covered`; `cli-python-matrix`
     (3.11–3.15) en `ci.yml`, `ci_gate.py` (`PYTHON_WITHOUT_WHEELS`), `tests/test_ci_gate.py` y los
     clasificadores de `pyproject.toml`; la fila `sin_cruce` de `rename-exceptions.md`. ~216 textos.
+    **Arreglo en el PR #311 (2026-10-14):** (1) la redacción del aviso de nombres obsoletos pasa de
+    `deprecations.py` a `deprecation_notices.py` nuevo, porque el `import i18n` diferido de
+    `deprecations` cerraba el ciclo `config → deprecations → i18n → config` (alerta de CodeQL
+    `py/cyclic-import`; la fila de CodeQL de los riesgos ya pedía que `deprecations.py` no importe
+    nada del paquete) y un test lo vigila; (2) la 3.15 es bloqueante como las demás, con su
+    clasificador: su celda instaló y pasó en el CI. B1a la había dejado en `PYTHON_WITHOUT_WHEELS`
+    por una prueba local con la 3.15.0a7 en Windows, que no representa la final en ubuntu; la lista
+    queda vacía, con un test que ejerce el mecanismo, y solo vale el log de la celda del CI.
   - **B1b — `doctor`:** `resources/i18n/{es,en}/doctor.json`, `checks.py`, `doctor.py`, `probes.py`,
     la línea de idioma en la cabecera de `doctor` (no es un check), el campo `stored_source` de
     `LanguageResolution` (desviación: `hook_common.py`) y el remedio de D11, `tests/test_wiki.py`,

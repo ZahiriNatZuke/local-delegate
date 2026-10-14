@@ -4568,13 +4568,13 @@ def _describe_deprecated_names() -> list[str]:
     `doctor` mira la shell donde corre y el `env` de `settings.json`, pero no el entorno del daemon
     ni el del servidor por stdio: eso solo lo sabe el propio proceso, por `config.DEPRECATED_SEEN`.
     """
-    from . import deprecations
+    from . import deprecation_notices, deprecations
 
     entries = [e for e in map(deprecations.find, sorted(config.DEPRECATED_SEEN)) if e is not None]
     if not entries:
         return []
     return ["", "Nombres obsoletos leídos por este proceso:"] + [
-        f"  {deprecations.warning_text(e)}" for e in entries
+        f"  {deprecation_notices.warning_text(e)}" for e in entries
     ]
 
 

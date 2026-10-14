@@ -403,3 +403,22 @@ def test_the_classifiers_are_the_blocking_cells_of_the_matrix():
         if c.startswith(prefix)
     }
     assert declared == blocking
+
+
+def test_the_exclusion_mechanism_takes_a_cell_out_of_the_expected_ones(monkeypatch):
+    """`PYTHON_WITHOUT_WHEELS` está vacío hoy: este test ejerce el mecanismo con una exclusión
+    sintética, para que los dos tests de arriba no pasen solo en vacío (plan D8)."""
+    cell = "cli-python-matrix (3.15)"
+    monkeypatch.setattr(
+        ci_gate, "PYTHON_WITHOUT_WHEELS", {"3.15": "sin wheel (exclusión de prueba)"}
+    )
+    monkeypatch.setattr(
+        ci_gate, "EXPECTED_JOBS", tuple(job for job in ci_gate.EXPECTED_JOBS if job != cell)
+    )
+    test_the_expected_jobs_are_exactly_those_of_ci_yml()
+    test_every_version_without_wheels_is_a_cell_of_the_matrix_with_a_reason()
+
+    # Una versión excluida que sigue entre los esperados se rechaza.
+    monkeypatch.setattr(ci_gate, "EXPECTED_JOBS", (*ci_gate.EXPECTED_JOBS, cell))
+    with pytest.raises(AssertionError):
+        test_every_version_without_wheels_is_a_cell_of_the_matrix_with_a_reason()
