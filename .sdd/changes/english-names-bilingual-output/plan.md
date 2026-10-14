@@ -940,9 +940,20 @@ nuevos o la documentación en ficheros que el agente que renombra no toca, siemp
 **Orden de mezcla (explícito):**
 
 ```
-A10b → cierre del frente A (A-close-1…4) → higiene de CodeQL → B0 → B1 → B2 (lotes B2a → B2b) → { B3 ∥ B4 } → B5 → [release 0.36.0]
+A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close-5) → higiene de CodeQL → B0 → B1 → B2 (lotes B2a → B2b) → { B3 ∥ B4 } → B5 → [release 0.36.0]
 ```
 
+- **Valores de una palabra (A-close-5, añadida el 2026-10-14), tras A-close-4.** El barrido de
+  valores de una sola palabra de A-close-4 (`evidence/A-close-4/singleword-*.tsv`, que el detector
+  no ve: decisión 5) encontró 21 valores internos en español en `scripts/` (p. ej. `hecho`/`tabla`
+  en `price_watcher.py`, `esperar`/`bien`/`mal` en `ci_gate.py`, `cambiar` en
+  `measure_cooldown.py`, `mejor`/`peor` en `analyze_benchmark.py`, `produccion` en
+  `dev/affinity_batch.py`, `valida` en `pair_sheet.py`). Un lote con mapping aprobado, como los
+  anteriores: lectura dual solo si el valor se guarda y se relee (`produccion`, y `cambiar` si
+  procede), con test y mutante; lo que sea texto de salida queda para el frente B.
+- **Sección «Texto de salida que traduce el frente B» de `rename-exceptions.md`** (nace en
+  A-close-4): como «Pendiente», queda **vacía al cerrar el cambio**. Cada fila nombra la ola B que
+  la traduce (B1, B2 o B4), y esa ola borra sus filas en su PR.
 - **Higiene de CodeQL (añadida el 2026-10-14), entre el cierre del frente A y B0.** Un lote corto,
   con su PR, que deja en 0 las alertas abiertas de code scanning en `main` (16 al 2026-10-14).
   Va **antes** de B0 porque 6 de ellas están en `server.py`, que desde B2 tiene un solo dueño.
