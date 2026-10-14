@@ -1,0 +1,166 @@
+## G1 print("Hola") en un fichero no pendiente (config.py)
+fichero: src/local_delegate/config.py
+test: tests/test_no_uncatalogued_text.py::test_no_uncatalogued_text_outside_pending
+resultado: 1 failed in 3.42s
+E   AssertionError: Texto para personas fuera del cat�logo (usa `i18n.t`, o a�ade una excepci�n con motivo si es un nombre de m�quina):
+E     src/local_delegate/config.py:570 [context] 'Hola'
+E   assert ["src/local_d...text] 'Hola'"] == []
+E     
+E     Left contains one more item: "src/local_delegate/config.py:570 [context] 'Hola'"
+E     Use -v to get more diff
+
+## G2 etiqueta de una palabra en un raise (i18n.py)
+fichero: src/local_delegate/i18n.py
+test: tests/test_no_uncatalogued_text.py::test_no_uncatalogued_text_outside_pending
+resultado: 1 failed in 0.80s
+E   AssertionError: Texto para personas fuera del cat�logo (usa `i18n.t`, o a�ade una excepci�n con motivo si es un nombre de m�quina):
+E     src/local_delegate/i18n.py:39 [context] 'Latencia'
+E   assert ["src/local_d...] 'Latencia'"] == []
+E     
+E     Left contains one more item: "src/local_delegate/i18n.py:39 [context] 'Latencia'"
+E     Use -v to get more diff
+
+## G3 texto con tilde fuera de todo contexto (cost.py), solo la red por tildes
+NO APLICADO: el texto original aparece 2 veces
+
+## G4 excepción con prosa
+fichero: tests/data/uncatalogued_exceptions.json
+test: tests/test_no_uncatalogued_text.py::test_text_exceptions_are_live_and_machine_text
+resultado: 1 failed in 0.78s
+E   AssertionError: src/local_delegate/config.py: 'Hola mundo': es texto para personas, no una excepci�n
+E     src/local_delegate/config.py: 'Hola mundo': caducada, ya no aparece
+E   assert ['src/local_d...a no aparece'] == []
+E     
+E     Left contains 2 more items, first extra item: "src/local_delegate/config.py: 'Hola mundo': es texto para personas, no una excepci�n"
+E     Use -v to get more diff
+
+## G5 fichero con texto sacado de pendientes (entrypoint.py)
+fichero: tests/data/uncatalogued_pending/cli.json
+test: tests/test_no_uncatalogued_text.py::test_no_uncatalogued_text_outside_pending
+resultado: 1 failed in 0.76s
+E   AssertionError: Texto para personas fuera del cat�logo (usa `i18n.t`, o a�ade una excepci�n con motivo si es un nombre de m�quina):
+E     src/local_delegate/entrypoint.py:45 [context] 'local-delegate: sin subcomando, esto arranca el servidor MCP stdio y espera por stdin.\n               Si buscabas los comandos: local-delegate --help'
+E   assert ["src/local_d...gate --help'"] == []
+E     
+E     Left contains one more item: "src/local_delegate/entrypoint.py:45 [context] 'local-delegate: sin subcomando, esto arranca el servidor MCP stdio y espera por stdin.\\n               Si buscabas los comandos: local-delegate --help'"
+E     Use -v to get more diff
+
+## G6 pendiente sin texto (record_call.py)
+fichero: tests/data/uncatalogued_pending/hooks.json
+test: tests/test_no_uncatalogued_text.py::test_every_pending_file_is_seen_by_the_scanner
+resultado: 1 failed in 0.79s
+E   AssertionError: pendientes sin ninguna aparici�n: ['src/local_delegate/resources/hooks/record_call.py']
+E   assert ['src/local_d...cord_call.py'] == []
+E     
+E     Left contains one more item: 'src/local_delegate/resources/hooks/record_call.py'
+E     Use -v to get more diff
+FAILED tests/test_no_uncatalogued_text.py::test_every_pending_file_is_seen_by_the_scanner
+
+## G7 metrics.py sacado de pendientes sin escáner del panel
+fichero: tests/data/uncatalogued_pending/panel.json
+test: tests/test_no_uncatalogued_text.py::test_the_panel_stays_pending_until_its_scanner_exists
+resultado: 1 failed in 0.23s
+E   AssertionError: assert 'src/local_delegate/web/metrics.py' in ['src/local_delegate/attribution.py', 'src/local_delegate/quota.py', 'src/local_delegate/valuation.py']
+FAILED tests/test_no_uncatalogued_text.py::test_the_panel_stays_pending_until_its_scanner_exists
+
+## G8 fichero excluido que ya no existe
+fichero: tests/data/uncatalogued_exceptions.json
+test: tests/test_no_uncatalogued_text.py::test_file_exceptions_are_live_and_have_a_reason
+resultado: 1 failed in 0.21s
+E   AssertionError: scripts/medir_enfriamiento_viejo.py: ya no existe
+E   assert False
+E    +  where False = is_file()
+E    +    where is_file = (WindowsPath('D:/Projects/local-delegate') / 'scripts/medir_enfriamiento_viejo.py').is_file
+FAILED tests/test_no_uncatalogued_text.py::test_file_exceptions_are_live_and_have_a_reason
+
+## G9 el clasificador pierde el contexto return
+fichero: tests/test_no_uncatalogued_text.py
+test: tests/test_no_uncatalogued_text.py::test_text_in_an_output_context_is_caught
+resultado: 1 failed, 6 passed in 0.23s
+E   assert [] != []
+E    +  where [] = _texts('def f():\n    return f"{n} acciones fallaron"')
+FAILED tests/test_no_uncatalogued_text.py::test_text_in_an_output_context_is_caught[def f():\n    return f"{n} acciones fallaron"]
+
+## G10 legacy_names.py deja de estar excluido
+fichero: tests/data/uncatalogued_exceptions.json
+test: tests/test_no_uncatalogued_text.py::test_no_uncatalogued_text_outside_pending
+resultado: 1 failed in 0.81s
+E   AssertionError: Texto para personas fuera del cat�logo (usa `i18n.t`, o a�ade una excepci�n con motivo si es un nombre de m�quina):
+E     src/local_delegate/legacy_names.py:301 [context] 'sin base'
+E     src/local_delegate/legacy_names.py:507 [context] 'cota baja'
+E     src/local_delegate/legacy_names.py:508 [accent] 'solo comprobaci�n'
+E     src/local_delegate/legacy_names.py:508 [context] 'solo comprobaci�n'
+E     src/local_delegate/legacy_names.py:509 [context] 'cota baja si hubo uso en otras superficies'
+
+## G11 dueña equivocada en cli.json
+fichero: tests/data/uncatalogued_pending/cli.json
+test: tests/test_no_uncatalogued_text.py::test_the_pending_lists_are_well_formed
+resultado: 1 failed in 0.22s
+E   AssertionError: cli
+E   assert 'B2' == 'B1'
+E     
+E     - B1
+E     + B2
+FAILED tests/test_no_uncatalogued_text.py::test_the_pending_lists_are_well_formed
+
+## D1 listas de palabras funcionales invertidas
+fichero: scripts/data/function_words.json
+test: tests/test_detect_language.py::test_the_detector_passes_its_control
+resultado: 1 failed in 0.21s
+E   AssertionError: assert 0.0 >= 0.975
+E    +  where 0.0 = accuracy({'es': frozenset({'about', 'above', 'across', 'after', 'again', 'all', ...}), 'en': frozenset({'ah�', 'al', 'algo', 'alguna', 'algunas', 'algunos', ...})})
+E    +    where {'es': frozenset({'about', 'above', 'across', 'after', 'again', 'all', ...}), 'en': frozenset({'ah�', 'al', 'algo', 'alguna', 'algunas', 'algunos', ...})} = <function load_function_words>()
+E    +      where <function load_function_words> = detect_language.load_function_words
+FAILED tests/test_detect_language.py::test_the_detector_passes_its_control - ...
+
+## D2 sin «ambos» ni «casi» (la medida antes del ajuste)
+fichero: scripts/data/function_words.json
+test: tests/test_detect_language.py::test_the_detector_passes_its_control
+resultado: 1 failed in 0.21s
+E   AssertionError: assert 0.95 >= 0.975
+E    +  where 0.95 = accuracy({'es': frozenset({'ah�', 'al', 'algo', 'alguna', 'algunas', 'algunos', ...}), 'en': frozenset({'about', 'above', 'across', 'after', 'again', 'all', ...})})
+E    +    where {'es': frozenset({'ah�', 'al', 'algo', 'alguna', 'algunas', 'algunos', ...}), 'en': frozenset({'about', 'above', 'across', 'after', 'again', 'all', ...})} = <function load_function_words>()
+E    +      where <function load_function_words> = detect_language.load_function_words
+FAILED tests/test_detect_language.py::test_the_detector_passes_its_control - ...
+
+## D3 margen mínimo a 0
+fichero: scripts/detect_language.py
+test: tests/test_detect_language.py::test_a_small_margin_is_unknown
+resultado: 1 failed in 0.21s
+E   AssertionError: assert 0.041700000000000015 < 0.0
+E    +  where 0.041700000000000015 = abs((0.4167 - 0.375))
+E    +    where 0.4167 = Detection(lang='es', tokens=24, es_ratio=0.4167, en_ratio=0.375).es_ratio
+E    +    and   0.375 = Detection(lang='es', tokens=24, es_ratio=0.4167, en_ratio=0.375).en_ratio
+E    +  and   0.0 = detect_language.MIN_MARGIN
+FAILED tests/test_detect_language.py::test_a_small_margin_is_unknown - Assert...
+
+## D4 «a» en la lista inglesa (palabra compartida)
+fichero: scripts/data/function_words.json
+test: tests/test_detect_language.py::test_the_lists_are_disjoint_and_big_enough
+resultado: 1 failed in 0.21s
+E   AssertionError: assert not ({'a', 'come', 'era', 'me', 'no', 'os'} & (frozenset({'ah�', 'al', 'algo', 'alguna', 'algunas', 'algunos', ...}) | frozenset({'a', 'about', 'above', 'across', 'after', 'again', ...})))
+FAILED tests/test_detect_language.py::test_the_lists_are_disjoint_and_big_enough
+
+# Repeticiones
+
+## G3 texto con tilde fuera de todo contexto (cost.py), solo la red por tildes
+fichero: src/local_delegate/cost.py
+test: tests/test_no_uncatalogued_text.py::test_no_uncatalogued_text_outside_pending
+resultado: 1 failed in 0.77s
+E   AssertionError: Texto para personas fuera del cat�logo (usa `i18n.t`, o a�ade una excepci�n con motivo si es un nombre de m�quina):
+E     src/local_delegate/cost.py:21 [accent] 'ubicaci�n'
+E   assert ["src/local_d... 'ubicaci�n'"] == []
+E     
+E     Left contains one more item: "src/local_delegate/cost.py:21 [accent] 'ubicaci�n'"
+E     Use -v to get more diff
+
+(D3 repetido tras escribir el margen 0,15 en el test en vez de leerlo del módulo)
+## D3 margen mínimo a 0
+fichero: scripts/detect_language.py
+test: tests/test_detect_language.py::test_a_small_margin_is_unknown
+resultado: 1 failed in 0.22s
+E   AssertionError: assert 'es' == 'unknown'
+E     
+E     - unknown
+E     + es
+FAILED tests/test_detect_language.py::test_a_small_margin_is_unknown - Assert...

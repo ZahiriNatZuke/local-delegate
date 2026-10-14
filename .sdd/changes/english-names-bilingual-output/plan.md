@@ -337,8 +337,12 @@ compare periodos, entra por el mismo test.
 - **Su control:** 60 entradas españolas y 60 inglesas del catálogo de B0/B1 (las de 8 palabras o
   más) se clasifican con un acierto de al menos el 98 %, llamando al detector con
   `min_tokens=8` (con el umbral por defecto de 20, casi todas darían `unknown`; corregido el
-  2026-10-14). En B0b el control son 20 + 20 frases congeladas y las 60 + 60 son obligatorias
-  desde B1. Si se invierten las dos listas de
+  2026-10-14). En B0b el control son 20 + 20 frases congeladas con como mucho 1 fallo en 40
+  (≥ 97,5 %), y **no es independiente**: «ambos» y «casi» entraron en la lista española a la vista
+  de sus dos fallos (38/40 antes del ajuste; 0/40 con las listas invertidas). El control de verdad
+  es el de B1: 60 + 60 frases **nuevas**, congeladas antes de ver la lista, con ≥ 98 % (como mucho
+  2 fallos en 120); ahí ya no se ajustan las listas a la vista de los fallos, y si no llega, se
+  decide en B1. Si se invierten las dos listas de
   palabras funcionales, el control falla.
 - **Muestra:** `tests/fixtures/lang_sample/` **(plan)**, con 5 documentos por tool y por idioma de
   origen, sin datos de terceros:
@@ -1121,12 +1125,16 @@ ficheros) y las dos mitades son independientes. B0a se mezcla antes que B0b; las
     pendientes lo hace fallar, y una excepción con texto humano hace fallar su test. Cada fichero
     pendiente tiene que tener al menos una aparición: un pendiente que el escáner no ve no puede
     salir de la lista.
-  - *`detect_language`:* acierto ≥ 98 % sobre el control, llamando con `min_tokens=8` (las frases
-    tienen 8 palabras o más; el umbral por defecto de 20 rige para la muestra de REQ-028). En B0b
-    el control son 20 + 20 frases congeladas (español de `docs/wiki`; inglés del diccionario `en`
-    de `site/index.html`, el único inglés corrido del repo); desde B1 son obligatorias 60 + 60,
-    completadas con las entradas inglesas de ≥ 8 palabras de los catálogos. Con las dos listas
-    invertidas, el control falla.
+  - *`detect_language`:* control llamando con `min_tokens=8` (las frases tienen 8 palabras o más;
+    el umbral por defecto de 20 rige para la muestra de REQ-028). En B0b el control son 20 + 20
+    frases congeladas (español de `docs/wiki`; inglés del diccionario `en` de `site/index.html`, el
+    único inglés corrido del repo) con como mucho 1 fallo en 40 (≥ 97,5 %; aprobado el
+    2026-10-14). No es un control independiente: se midió 38/40 y se añadieron «ambos» y «casi» a
+    la lista española a la vista de los dos fallos (queda 39/40; 0/40 con las listas invertidas).
+    El control independiente es el de **B1**: 60 + 60 frases nuevas (entradas de ≥ 8 palabras de
+    los catálogos), congeladas antes de ver la lista, con ≥ 98 % (como mucho 2 fallos en 120); en
+    B1 ya no se ajustan las listas a la vista de los fallos, y si no llega, se decide en B1. Con
+    las dos listas invertidas, el control falla.
 - **Hecho cuando:** la lista de pendientes contiene todos los ficheros de salida y la suite está en
   verde.
 

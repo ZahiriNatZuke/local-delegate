@@ -1,0 +1,32 @@
+{
+  "files": [
+    {
+      "path": "scripts/medir_enfriamiento.py",
+      "reason": "envoltorio de compatibilidad de REQ-046 que se retira tras la medición P-4 (ventana abierta desde 2026-09-15): no se traduce, se borra"
+    },
+    {
+      "path": "src/local_delegate/legacy_names.py",
+      "reason": "tabla de nombres y valores VIEJOS que se leen de disco para siempre (lectura dual, REQ-005/REQ-006): sus literales en español son datos ya escritos, nunca salida"
+    }
+  ],
+  "texts": [
+    {
+      "file": "src/local_delegate/config.py",
+      "text": "Authorization",
+      "kind": "machine_name",
+      "reason": "nombre de cabecera HTTP"
+    },
+    {
+      "file": "src/local_delegate/config.py",
+      "text": "Bearer {}",
+      "kind": "machine_name",
+      "reason": "esquema de autenticación HTTP (RFC 6750) con el token"
+    },
+    {
+      "file": "src/local_delegate/web/auth.py",
+      "text": "Basic realm=\"local-delegate\", charset=\"UTF-8\"",
+      "kind": "machine_name",
+      "reason": "valor de la cabecera WWW-Authenticate (RFC 7617); el navegador no lo muestra traducido"
+    }
+  ]
+}
