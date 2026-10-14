@@ -359,6 +359,23 @@ compare periodos, entra por el mismo test.
   detector se mide con `min_tokens=20` y el margen de siempre (0,15): ≥ 98 % (como mucho 2 fallos
   en 120). Si una fuente no da lo que pide, se para y se decide la ampliación de fuentes antes de
   elegir nada.
+- **Ampliación de fuentes (decisión del usuario del 2026-10-14, fijada antes de traducir nada):**
+  los catálogos dan 26 españolas y 7 inglesas, así que:
+  - **Español (60):** los 26 elegibles del catálogo y 34 de la wiki, en orden de sha256 con la
+    regla de 20 tokens de arriba.
+  - **Inglés (60):** de las frases elegibles de la wiki (≥ 20 tokens, ≤ 40 palabras) que no estén
+    entre las 34 españolas, ni en el control fallido, ni en B0b, en orden de
+    `sha256("<source>\n<text>")`, se traducen **de una en una** con
+    `local_translate(text=…, target_lang="inglés")`. La traducción se guarda **tal cual, sin
+    editar**: si trae restos en español, es señal del control y no se limpia. Entra si, tras la
+    misma limpieza, tiene ≥ 20 tokens y ≤ 40 palabras; si no, se descarta y se pasa a la siguiente
+    en orden de sha256 (regla fija, no a juicio). Una llamada que falle con
+    `[local-delegate error]` se reintenta una vez; si vuelve a fallar, se descarta (anotado) y se
+    pasa a la siguiente. No se mira el resultado del detector en ningún momento antes de congelar.
+  - **Por frase inglesa se guarda:** frase española de origen (fichero y línea), sha256 del origen,
+    traducción literal, sha256 de la traducción y modelo o rol, si `local_translate` lo indica.
+  - **Límite conocido:** el inglés de este control es **traducción automática** de textos del
+    dominio del proyecto, no prosa escrita por personas.
 - **Muestra:** `tests/fixtures/lang_sample/` **(plan)**, con 5 documentos por tool y por idioma de
   origen, sin datos de terceros:
   - **`local_summarize`:** como textos en español, 5 extractos de `docs/wiki/` (2–6 kB cada uno);

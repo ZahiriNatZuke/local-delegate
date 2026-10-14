@@ -138,3 +138,46 @@ Aunque se quite la condición de claves distintas, los catálogos `en` tienen un
 `site/index.html` (diccionario `en`) da 2 frases elegibles, y README, CHANGELOG, CONTRIBUTING,
 SECURITY, CODE_OF_CONDUCT, plantillas, recetas y wiki están en español (REQ-040). Se para sin
 elegir nada; la ampliación de fuentes la decide la sesión principal.
+
+### Ampliación de fuentes (decisión del usuario del 2026-10-14, escrita antes de traducir)
+
+Regla completa en `plan.md` (D10). Español: los 26 del catálogo y 34 de la wiki. Inglés: frases
+elegibles de la wiki que no son de las 34, ni del control fallido, ni de B0b, traducidas de una en
+una con `local_translate` en orden de sha256 y guardadas sin editar; entra la que, limpia, tenga
+≥ 20 tokens y ≤ 40 palabras. **Límite conocido:** el inglés de este control es traducción
+automática de textos del dominio del proyecto, no prosa escrita por personas.
+
+## Selección y congelación (control a 20 tokens)
+
+**Quién y cómo:** el agente de B1e, el 2026-10-14, sobre la regla de `plan.md` (D10) ya
+commiteada en `24d99e9` (la ampliación a traducciones se escribió en el plan antes de la primera
+llamada a `local_translate`). No abrió `scripts/data/function_words.json` ni corrió el detector.
+Scripts del scratchpad, fuera del repo: `select_b1e_20_stage1.py` (sha256 `e3b3f065…494e797c`,
+españolas y lista ordenada de candidatas inglesas) y `freeze2.py` (sha256 `1ab219d5…9ea571`,
+aplica la regla de entrada y escribe el control).
+
+**Fichero congelado:** `tests/data/detect_language_control_b1_20.json` (LF), sha256
+`43e8ffe1f11293165b6431db853e4598fddb7a77f468e2b40d0fa720bea9fb34`, commit base de las fuentes
+`58ff9c6`. Cada frase inglesa lleva `source`/`line` y `origin_text`/`origin_sha256` de la frase
+española, `translation` (literal), `translation_sha256`, `text` (tras la limpieza; en las 60 es
+idéntico a `translation`), `sha256` y `order` (posición en la lista de candidatas).
+`local_translate` no informa del modelo ni del rol, y así consta en `translator`.
+
+| Parte | Origen | Frases |
+| --- | --- | ---: |
+| es, catálogo | los 26 elegibles de `es/cli.json` (20) + `es/doctor.json` (6) | 26 |
+| es, wiki | las 34 primeras por sha256 de 396 elegibles (sin control fallido ni B0b) | 34 |
+| en | candidatas 0–68 de las 362 restantes de la wiki, traducidas de una en una | 60 |
+
+- **Traducciones:** 69 llamadas, 0 errores. Se descartaron 8 por quedarse por debajo de 20
+  tokens o de 20 palabras (posiciones 0, 6, 14, 15, 30, 37, 45 y 59), y la 68 sobró porque ya
+  había 60. La salida literal de las 69 está en `evidence/B1e/translations.json`.
+- **Comprobado sin el detector:** las 120 tienen entre 20 y 40 palabras y al menos 20 tokens; los
+  sha256 cuadran; ninguna coincide con el control fallido ni con B0b; ninguna inglesa sale de una
+  de las 34 españolas.
+- **Límite conocido:** el inglés es traducción automática del dominio del proyecto, no prosa
+  escrita por personas. Se guardó sin editar, también con sus errores visibles (por ejemplo,
+  «call-swap» por llama-swap o «bullfight» por «corrida»).
+
+El commit de congelación (`B1e-freeze2-commit-msg.txt`) entra antes de cualquier corrida del
+detector sobre este fichero.

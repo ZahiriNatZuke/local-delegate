@@ -1,0 +1,20 @@
+test(i18n): control congelado de 60 + 60 frases a 20 tokens para el detector de idioma (frente B, ola B1e)
+
+Segundo control de B1e, con la regla de plan.md (D10) del 2026-10-14,
+congelado antes de correr el detector sobre él. Quien lo eligió no
+abrió la lista de palabras.
+
+- tests/data/detect_language_control_b1_20.json (nuevo): 26 valores de
+  es/cli.json + es/doctor.json y 34 frases de docs/wiki en español; 60
+  frases en inglés traducidas con local_translate desde otras frases de
+  la wiki, de una en una y en orden de sha256, guardadas sin editar con
+  su origen, su sha256 y el de la traducción.
+- Todas con al menos 20 tokens y 40 palabras como mucho, sin las 120
+  del control fallido a 8 tokens ni las 40 de B0b.
+- plan.md (D10): ampliación de fuentes con traducción automática,
+  escrita antes de traducir, y su límite conocido.
+- waves/B1e.md y evidence/B1e/translations.json: selección, descartes y
+  salida literal de las 69 llamadas.
+
+La medición (min_tokens=20, como mucho 2 fallos en 120) va en un
+commit posterior.

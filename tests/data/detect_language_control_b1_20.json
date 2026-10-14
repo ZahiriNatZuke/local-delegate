@@ -1,0 +1,1169 @@
+{
+ "_about": "Control independiente del detector de D10 (ola B1e), a 20 tokens, congelado en un commit propio ANTES de correr el detector sobre él; quien lo eligió no abrió scripts/data/function_words.json. Sustituye al control a 8 tokens (detect_language_control_b1.json, FALLIDO 116/120). Regla en plan.md (D10): misma limpieza y orden por sha256(\"<source>\n<text>\") que B1-proposal.md §5, ≥ 20 tokens [a-záéíóúüñ]+ y ≤ 40 palabras, sin las 120 del control fallido ni las 40 de B0b. es: los 26 elegibles de es/cli.json + es/doctor.json y las 34 primeras de docs/wiki. en: las siguientes frases elegibles de la wiki en orden de sha256, traducidas de una en una con local_translate(target_lang=\"inglés\") y guardadas sin editar (translation); entra la que tras la misma limpieza (text) tenga ≥ 20 tokens y ≤ 40 palabras. LÍMITE CONOCIDO: el inglés es traducción automática del dominio del proyecto, no prosa escrita por personas. Se mide con min_tokens=20 y margen 0,15; ≥ 98 % (como mucho 2 fallos en 120).",
+ "_base_commit": "24d99e96517c50b2025b8976e4157ea2639716f3",
+ "_rule": "plan.md D10 (2026-10-14) sobre B1-proposal.md §5",
+ "_stats": {
+  "es_catalog": 26,
+  "es_wiki": 34,
+  "wiki_eligible": 396,
+  "translations_requested": 69,
+  "translations_discarded": [
+   {
+    "order": 0,
+    "source": "docs/wiki/Savings-and-metrics.md",
+    "line": 422,
+    "words": 24,
+    "tokens": 14,
+    "reason": "fuera de 20 tokens / 40 palabras tras la limpieza"
+   },
+   {
+    "order": 6,
+    "source": "docs/wiki/Integration-install.md",
+    "line": 218,
+    "words": 15,
+    "tokens": 15,
+    "reason": "fuera de 20 tokens / 40 palabras tras la limpieza"
+   },
+   {
+    "order": 14,
+    "source": "docs/wiki/Savings-and-metrics.md",
+    "line": 349,
+    "words": 19,
+    "tokens": 21,
+    "reason": "fuera de 20 tokens / 40 palabras tras la limpieza"
+   },
+   {
+    "order": 15,
+    "source": "docs/wiki/Savings-and-metrics.md",
+    "line": 619,
+    "words": 19,
+    "tokens": 19,
+    "reason": "fuera de 20 tokens / 40 palabras tras la limpieza"
+   },
+   {
+    "order": 30,
+    "source": "docs/wiki/Savings-and-metrics.md",
+    "line": 413,
+    "words": 19,
+    "tokens": 18,
+    "reason": "fuera de 20 tokens / 40 palabras tras la limpieza"
+   },
+   {
+    "order": 37,
+    "source": "docs/wiki/Backend-versions.md",
+    "line": 92,
+    "words": 16,
+    "tokens": 16,
+    "reason": "fuera de 20 tokens / 40 palabras tras la limpieza"
+   },
+   {
+    "order": 45,
+    "source": "docs/wiki/Savings-and-metrics.md",
+    "line": 118,
+    "words": 18,
+    "tokens": 18,
+    "reason": "fuera de 20 tokens / 40 palabras tras la limpieza"
+   },
+   {
+    "order": 59,
+    "source": "docs/wiki/Daemon.md",
+    "line": 223,
+    "words": 18,
+    "tokens": 18,
+    "reason": "fuera de 20 tokens / 40 palabras tras la limpieza"
+   },
+   {
+    "order": 68,
+    "source": "docs/wiki/Savings-and-metrics.md",
+    "line": 50,
+    "reason": "sobrante: ya había 60"
+   }
+  ],
+  "translation_errors": 0,
+  "en_text_differs_from_translation": 0
+ },
+ "es": [
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.outcome.restoring",
+   "text": "aviso: se restaura la config que corre llama-swap; al restaurar, llama-swap vuelve a recargar y corta las peticiones en curso",
+   "sha256": "22fd05472782ce1c494d391705b9db988b0a52c711ff80da684f8e47ee360762"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.help.init_llamaswap.resident",
+   "text": "residencia OPT-IN: ids de modelos (coma-separados) que se quedan cargados para siempre en un grupo persistente y retienen VRAM; por defecto no hay residente",
+   "sha256": "29cc20ebeb23cbfc77b0da878f9ee7f7332a23955d79cd6b7f0c943611024e2d"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/doctor.json",
+   "key": "doctor.probe.daemon_auth.variable_not_in_env",
+   "text": "el puerto del daemon exige token y , que no está en el entorno de este proceso: si el cliente tampoco la ve, sus tools local_* responderán 401",
+   "sha256": "36106e78466901de4f19bd367d51ee95d688a114c54f2874d52b75a3b707108b"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.script.analyze_benchmark.report.cannot_fire",
+   "text": "- **la regla no puede disparar**: ni un candidato con calidad 1,0 superaría la banda; «no se cambia» aquí no distingue nada",
+   "sha256": "416ea10feb01b320d011bda15e47e6dcae97760251ea9583c49a58aeeb2e456a"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.residency.duplicate_key",
+   "text": "clave duplicada en las líneas y : llama-swap y PyYAML se quedan con la última; arréglalo a mano antes de editar",
+   "sha256": "457e83ac2cd55411c11324caf3e7450baedd9c4066a80e4b3b02de0ad4c932b6"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/doctor.json",
+   "key": "doctor.probe.affinity.hint",
+   "text": "la afinidad no usa esas celdas hasta que se vuelvan a medir o la config vuelva a la huella medida",
+   "sha256": "54c50af49b80ccce9fd4663e7599eee88f65bd1836c63bd54f35e65c5c2d3a58"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.residency.view.ttl_zero_explanation",
+   "text": "sin ni , el TTL efectivo es 0 (load.go: un ausente o -1 vale , que por defecto es 0): esos modelos no se descargan nunca por TTL y cuentan como residentes ( )",
+   "sha256": "6147be0243190950659d19f048288b3ae8a8bb6d8541fad62b583cb079e8ddcb"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.help.recompute_cost",
+   "text": "Lee los transcripts de Claude Code y deja en el directorio de logs el relleno de atribución, los agregados de N, el cotejo de precios y los puntos de cuota.",
+   "sha256": "690c0bcac761cd75c213bdd1f682c9dbd173ff9af97daa7cb71e2fe6a55f8c6e"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/doctor.json",
+   "key": "doctor.probe.desktop_auth.fix",
+   "text": "pon en el --header de su entrada en el valor de con el que arranca el daemon, y reinicia Claude Desktop",
+   "sha256": "6cc1963559aa10fa3aac284c09ab71132a1371db9e59b2367e1ebd0dfe80b30b"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.script.pair_sheet.page.intro",
+   "text": "En cada par hay dos mensajes de commit para el mismo cambio. Léelos tal como están, abre el diff si lo necesitas y contesta. Tiempo estimado: . Puedes hacerlo en varias sentadas: tu progreso se guarda en este navegador.",
+   "sha256": "814518c48c6ebde78097c7a80999923eb977f48f1a2fd8cb7ed7913a39010abd"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.script.measure_cooldown.help._description",
+   "text": "Aplica el criterio de P-4: si los números del enfriamiento se cambian, se quedan o no se sabe. Uso: uv run python --since 2026-09-16 uv run python --since 2026-09-16 --exclude 2026-09-16T10:00,2026-09-16T11:30 uv run python --since 2026-09-16 --json",
+   "sha256": "8289ea938673ce098cfde6db3c4ab6d98a5ddf0136802b46fbe3b74490ffde13"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.help.install._description",
+   "text": "Instala la integración completa en el HOME del usuario: hooks consultivos, la skill local-delegation, un bloque gestionado en y la entrada del servidor MCP. Es idempotente (bloques con marcadores, backups .bak) y se revierte con .",
+   "sha256": "8574e2792032d563da05fd61f57d927b36678ed2ed0b5aebbd60c9f345417e70"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.help.install.web_token_env",
+   "text": "con --mcp-mode http, autentica contra el daemon referenciando LOCAL_DELEGATE_WEB_TOKEN del entorno (nunca escribe el secreto). Sin este flag ni --no-web-token-env, se conserva la cabecera que ya tuviera la entrada",
+   "sha256": "85b5b8227124a977ac83b5d7dd22eb9cb478b90bb5b98469caa93bf03bb75c4e"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.residency.refused",
+   "text": "error: : no se escribe. llama-swap recargaría la config, descargaría todos los modelos y cortaría las peticiones en curso. Con --now se escribe igual.",
+   "sha256": "8d3ea3aa8f84fc0c66788d24199b1db419b6d7c2aacaf2487f5e52a22dca9e4b"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.daemon.other_daemon",
+   "text": "local-delegate: ya hay un daemon de este usuario en : (pid= ), y el lock es uno por usuario. No se puede levantar otro en el puerto .",
+   "sha256": "9a23fa38eaf632750675c77fc0233349ea6f3742a03eca51f0113d30d9a7f1d2"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.script.pair_sheet.instruction.made_up.text",
+   "text": "¿El mensaje dice algo que el diff no hace? Lo que el mensaje se deja fuera no se marca aquí, sino en «lo principal».",
+   "sha256": "9c68f0a62cb781f51d89d532ccabefb9bf7a4399c9574366d38fe5315822430c"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/doctor.json",
+   "key": "doctor.probe.desktop_auth.variable_not_in_env",
+   "text": "el puerto del daemon exige token y Claude Desktop usa , que no está en el entorno de este proceso: si Claude Desktop tampoco la ve, responderá 401",
+   "sha256": "9f1e054f0fe01cf0cca75834906107b9cf2afd3ef937ae85bdd01ecd4e3c0467"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.benchmark.gpu_luid_ambiguous",
+   "text": "error: no se pudo resolver el LUID de la GPU de forma inequívoca; pásalo con --gpu-luid (typeperf -qx \"GPU Adapter Memory\")",
+   "sha256": "a86c764e8cc2c1e089af02db46876015affea5e0b78ee2d820b25e04c7050994"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.help.llamaswap.residency.none",
+   "text": "deja la config sin residente: mueve los grupos persistent al grupo swap y pone --ttl a los modelos con TTL efectivo 0",
+   "sha256": "c08a11f4e951f4e262614069b87e13a90bb339f323ff99f6908cf14919ecb9fc"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.help.test_window",
+   "text": "Marca ventanas de prueba: las filas del log de uso que caen dentro no cuentan en el panel, en local_status ni en el coste.",
+   "sha256": "d78906265020189143617938e9469913920757fc9e3323afd52c8d7ad926387a"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.help.llamaswap.residency.pin",
+   "text": "residencia OPT-IN: el modelo pasa a un grupo persistent (swap y exclusive false) con ttl 0 y retiene VRAM de forma permanente; se niega si no cabe",
+   "sha256": "d7baecc9b2d516b767475dd449bf57dce02cc1f8aaf32058aadd091900d5acc9"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/doctor.json",
+   "key": "doctor.probe.cost.backfill_pending",
+   "text": "delegación(es) pendiente(s) de relleno, la más antigua de hace días (Claude Code borra los transcripts a los ): lanza antes de que Claude Code borre sus transcripts",
+   "sha256": "d81ff2fa71dfd9cb466d172a0c4061f5c33d4e199d7e45a5f00963d45610ea7a"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.help._description",
+   "text": "Instala, diagnostica y sirve local-delegate. Sin subcomando, este binario arranca el servidor MCP stdio, que es como lo lanzan Claude Code, Codex y opencode. e piden el extra [llamaswap].",
+   "sha256": "eea61e24d7afdf82ffc196a3d827fd8e384e1a26d46e034325145336d9337040"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.help.init_llamaswap.ttl_resident",
+   "text": "ttl (segundos) para modelos de --resident (default 0: con y un TTL mayor que 0 el modelo se descarga igual y no hay residencia de verdad)",
+   "sha256": "ef1aeb0152010fc131e2933edc50a67e3f8a17e71fbb80c03e2a86d3233f19d3"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/cli.json",
+   "key": "cli.residency.unknown_config",
+   "text": "no se sabe qué config usa llama-swap: no hay --config, LLAMASWAP_CONFIG está vacía y el daemon no responde. Pasa --config PATH.",
+   "sha256": "f190bac42eef3c62ce5918c28ee3b4559037640850e46f3cc07c143702705726"
+  },
+  {
+   "source": "src/local_delegate/resources/i18n/es/doctor.json",
+   "key": "doctor.probe.hook_settings.legacy",
+   "text": "de vienen de una instalación anterior (formato 'args' y scripts fuera de ); funcionan, pero reinstalar los deja como los pone la versión actual",
+   "sha256": "f5237c05706886ede309d869278e1c3d511ede351aa3c07402bffad1c122ac40"
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 266,
+   "text": "Quedan **fuera de la base**, contadas aparte con su número a la vista: las delegaciones que fallaron, las imágenes (ver Imágenes) y la salida escrita a fichero, cuyo contrafactual es salida generada y no lectura.",
+   "sha256": "095589eddeb3368d0d74a21b2098c3778daee489993ea336abca1981ba5e1a44"
+  },
+  {
+   "source": "docs/wiki/Publishing.md",
+   "line": 128,
+   "text": "**La wiki es un artefacto generado.** Editarla desde la web de GitHub sirve de poco: el siguiente push a sobrescribe la página, y una que se borre del repo desaparece de la wiki.",
+   "sha256": "0968b7b27adefa44c0a9a4349bcf983a22f437013afdda99069c0ccc95741a37"
+  },
+  {
+   "source": "docs/wiki/Integration-install.md",
+   "line": 53,
+   "text": "**Idempotente.** Los bloques de van entre marcadores y se reemplazan, nunca se duplican; los hooks se desregistran antes de volver a registrarse.",
+   "sha256": "0be369b462c74448be10aab8686b7c00185685de12d110d764ec16ee98f6a6b6"
+  },
+  {
+   "source": "docs/wiki/Architecture.md",
+   "line": 28,
+   "text": "**Texto→texto, sin tool-calling en el modelo local.** Los modelos locales NO usan function calling: el server construye el prompt completo y espera texto plano.",
+   "sha256": "0d3f2e77a178db9bd87bd1da6f3d66b5a6b2103e4f40f84a8021ea19cbb006bc"
+  },
+  {
+   "source": "docs/wiki/Troubleshooting.md",
+   "line": 35,
+   "text": "No es un fallo: el endpoint sirve Chart.js con , así que tras actualizar el paquete **el navegador sigue usando el de la caché hasta 24 h**.",
+   "sha256": "0f93f33141fd131ad1792b2b79897c8fd2556703839e0b30ae36bfc226641322"
+  },
+  {
+   "source": "docs/wiki/Backend-versions.md",
+   "line": 160,
+   "text": "Cada registro lleva un bloque con los picos y un campo : una corrida sin muestras, con dos vivos o con cambio de proceso a mitad **se repite** (hasta dos veces), no se publica vacía.",
+   "sha256": "114b76f1621baf22f4a936c93eb95563f143fb3ce10bf42570b276348a4fb5d4"
+  },
+  {
+   "source": "docs/wiki/Backend-versions.md",
+   "line": 160,
+   "text": "Solo es comparable entre corridas con el mismo : con los pesos mapeados ( ) el contador privado no los ve, por eso las mediciones del catálogo usan .",
+   "sha256": "1354d46d1b0a02c1643a5eb04241a8b8b6a29b5a1ad91d3a1c2ca3121dd8059a"
+  },
+  {
+   "source": "docs/wiki/Configuration.md",
+   "line": 310,
+   "text": ", , y **se avisan pero no se bloquean**: ahí se busca un valor exacto —un , la línea del error— y un resumen no sustituye a la lectura.",
+   "sha256": "1419525b548ac674d2818cf4ac5f33e7ce786b80896701d14a9aff9c95949076"
+  },
+  {
+   "source": "docs/wiki/Tools.md",
+   "line": 249,
+   "text": "Así, un resumen y un mensaje de commit lanzados a la vez ya no se desalojan el modelo el uno al otro: el segundo espera y luego carga el suyo.",
+   "sha256": "148688d9f0dd4088e2137fe4a266cb3d464950d65becd8d8f0b869a9268be8d4"
+  },
+  {
+   "source": "docs/wiki/Repo-hardening.md",
+   "line": 172,
+   "text": "Es el error más caro de este script: un check exigido que nadie publica —una errata, un job renombrado, una matriz que cambió— deja **todos** los PR esperando para siempre.",
+   "sha256": "150c7d8ba4d322e3fb58d883b5ef3b017e33c47c78214e68c80369075849c2e5"
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 349,
+   "text": "El bloque de cuota responde a «¿qué parte de una ventana de 5 h, o de la semanal, supone lo que delegué?».",
+   "sha256": "152c128bc5563267d9cb3d08de40af7172cf01c974379302622be28ab6ccef39"
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 539,
+   "text": "Cuando nada corre, el título pasa a **«Última delegación»** y enseña la última terminada; vuelve a «En curso» en cuanto hay una llamada viva.",
+   "sha256": "15674acbbec0e67a002c6b6f410b918cba92da7d7af47bdf26f6d7ef4381f2a2"
+  },
+  {
+   "source": "docs/wiki/Troubleshooting.md",
+   "line": 241,
+   "text": "No hay ningún todavía (se crea en la primera delegación tras arrancar el MCP), o apunta a otra ruta que la que lee la web.",
+   "sha256": "16db85b7c41afe5af8ad9e1ac0ade82f730690108b09218348cbc2c2687e001d"
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 75,
+   "text": "Con backend **local**, una llamada lenta lleva además (la RAM libre en ese momento, best-effort), porque la causa más común es que Windows haya echado parte del modelo de la VRAM.",
+   "sha256": "16dee71530e01311b3a8f187290c3b65eedbc42d17dc81ecb22078c963b8bb8b"
+  },
+  {
+   "source": "docs/wiki/Configuration.md",
+   "line": 113,
+   "text": "Si ese fichero no se puede leer, se sigue como si no hubiera enfriamiento: nunca bloquea ni hace fallar una delegación.",
+   "sha256": "171a9c5d8b9db9c1606a5d5693d2ae122b8eba0f85e6ab9e5d3e8dccf12505be"
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 566,
+   "text": "Un sondeo bueno lo devuelve a «conectado» al instante, y al reconectar el panel pide de nuevo el estado y las métricas del backend sin esperar al ciclo de 60 s.",
+   "sha256": "1816ff1be9dace68c1276235abe761b1a76e73893987a994be145b9878faf0fc"
+  },
+  {
+   "source": "docs/wiki/Architecture.md",
+   "line": 145,
+   "text": "**Turno.** Se pide **antes** que la plaza, y nunca con una plaza en la mano: así turno y plaza no se bloquean mutuamente.",
+   "sha256": "1950b9e57c72a4500fbfe369159d67d8b756d9bfd9a41abe8f53f0b43becb072"
+  },
+  {
+   "source": "docs/wiki/Configuration.md",
+   "line": 225,
+   "text": "Las claves son exactamente las pedidas, salvo dos casos que viajan bajo la clave reservada para no ensuciar el resto:",
+   "sha256": "19de499d71887de09e5a18b4d70325b7f1f27e13efd336d7db46c8cc28c232f4"
+  },
+  {
+   "source": "docs/wiki/Publishing.md",
+   "line": 8,
+   "text": "Que las cuatro coincidan lo comprueba en cada PR, y otra vez el job antes de publicar nada: olvidar el bump de solo se notaría cuando PyPI ya tiene la versión, y en PyPI no se puede sobreescribir.",
+   "sha256": "1a4ac8a725381f4c20821b35581827a06555bb5952d6670b63c4cf255f6bd57e"
+  },
+  {
+   "source": "docs/wiki/Configuration.md",
+   "line": 99,
+   "text": "**Un candidato que no admite la entrada se salta sin llamarlo**: su tope ( del rol que lo usa) tiene que cubrir lo que se va a enviar.",
+   "sha256": "1a9f24cb51d135acef9683b3185406a42289b2826624da2f7250baf2f136c4de"
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 100,
+   "text": "Se cuenta **una vez por delegación aunque se trocee** — lo que no entró a tu contexto es el documento, no el trabajo de la GPU.",
+   "sha256": "1b085f1e945fd03a3218ac41c4fd67e0de770686b36999f397dc5cfb1d197582"
+  },
+  {
+   "source": "docs/wiki/Configuration.md",
+   "line": 298,
+   "text": "Si un hook leyó un nombre viejo (una variable o el interruptor), su evento lo dice en , y lo avisa mirando los últimos 7 días del fichero.",
+   "sha256": "1b25202e8fb5fabf954ff448996f7fcd619abc2e2c25b3b9176da53c115fb313"
+  },
+  {
+   "source": "docs/wiki/Repo-hardening.md",
+   "line": 419,
+   "text": "El PR lleva «[ensayo]» en el título: sirve para probar el circuito entero en GitHub, y se cierra sin mezclar.",
+   "sha256": "1bd6e49175bc3a4cac4fb43d6935896343b883e5e8ca91ce4f83908f065311a0"
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 642,
+   "text": "sigue truncando a propósito: fusionar los objetos JSON de varios trozos no tiene una respuesta única (¿se queda el primer valor?, ¿se concatenan?, ¿qué pasa si se contradicen?) y adivinarla sería peor que avisar.",
+   "sha256": "1c07b56f0e25ed59b730572ec8debc2085f34de57134288402f332cd85ec599a"
+  },
+  {
+   "source": "docs/wiki/Tools.md",
+   "line": 249,
+   "text": "Dos modelos **chocan** si cargar uno desaloja al otro, con la misma regla que llama-swap (mismo grupo con , o uno y el otro no ).",
+   "sha256": "1cff24eca5f5a7e387323ee1d43ad236179f3fa138d94a64b24f3ba7e456dd8b"
+  },
+  {
+   "source": "docs/wiki/Repo-hardening.md",
+   "line": 419,
+   "text": "Con y la entrada se fuerza un diff inocuo en la rama : una marca con el id del run, que la carga de la tabla ignora (no se toca , que es la fecha del último cambio real).",
+   "sha256": "1da84384a09b3fd786e311a810bc9dd2a3250456ab31ec2fc0d41d88e7db8837"
+  },
+  {
+   "source": "docs/wiki/Troubleshooting.md",
+   "line": 211,
+   "text": "**Si no avanza nunca**: a los (600 s) sin ninguna llamada al backend en vuelo, la primera de la cola se concede forzada ( en el log).",
+   "sha256": "1eb8108e5a842769f53776c69f5930ece94a370e6c8004006167aeecacde56b1"
+  },
+  {
+   "source": "docs/wiki/Backend-versions.md",
+   "line": 152,
+   "text": "Esos casos se deciden con (empareja la corrida *i* de dos modelos, sortea el lado y guarda la clave aparte) y , que aplica una prueba de signos.",
+   "sha256": "1f58c3223ff9acdb477ee1f219117237eb8de69d05bad85cce538282215d96f5"
+  },
+  {
+   "source": "docs/wiki/Architecture.md",
+   "line": 77,
+   "text": "La premisa que lo justificaba era *«centralizar la telemetría, que hoy cada tool anota a mano»*, y **es falsa**: se invoca en **tres** sitios de — , y —, no en once.",
+   "sha256": "2016f0db78624c13de75935926f1daeea0e536b50e1d43999456e9fe4781a744"
+  },
+  {
+   "source": "docs/wiki/Troubleshooting.md",
+   "line": 71,
+   "text": "**Con un backend en otra máquina** el MCP no pregunta «¿Lo arranco?» ni intenta arrancarlo, tenga el valor que tenga: no puede arrancar nada fuera de esta máquina.",
+   "sha256": "20301c1ca92683086658e563f7db9ba79c22c80d95fdcef333f92f6f1a2b4936"
+  },
+  {
+   "source": "docs/wiki/Troubleshooting.md",
+   "line": 265,
+   "text": "(«no hay cotejo guardado») no es un error: es una máquina sin transcripts de Claude Code o en la que el comando no se ha lanzado.",
+   "sha256": "21e416885299f7ee4bdc125a90a8810544aa2967f70e5790175d0577539a8b13"
+  },
+  {
+   "source": "docs/wiki/Daemon.md",
+   "line": 161,
+   "text": "La cookie es y , que es lo que hace de protección CSRF: una página ajena no consigue que tu navegador la adjunte a un ni a un POST contra el puerto del daemon.",
+   "sha256": "2259866cd95d86c6d76384e33fb0391115f5dc4d962295f4272ac959ba29dce2"
+  },
+  {
+   "source": "docs/wiki/Repo-hardening.md",
+   "line": 40,
+   "text": "Se descartó por ejecución la causa que primero se sospecha en Windows —un proceso hijo huérfano reteniendo los handles del job—: la suite corrida en Windows no deja ni un proceso vivo.",
+   "sha256": "22967d1abfb74830a7f2a8497dac6be68141f1713d965c06b00a4ac871744fe7"
+  },
+  {
+   "source": "docs/wiki/Configuration.md",
+   "line": 292,
+   "text": "Que el modelo que haría el resumen esté **en enfriamiento**: el hook lee el mismo que el servidor (o , si el daemon es de una versión anterior) y, si ese modelo está parado, deja pasar la lectura.",
+   "sha256": "229c68819cc93598aabd1555fe2014de7b061c925fb88c56debd5175f83c4c6e"
+  }
+ ],
+ "en": [
+  {
+   "source": "docs/wiki/Repo-hardening.md",
+   "line": 256,
+   "origin_text": "**Un techo olvidado envejece en silencio.** no avisa: resuelve *dentro* del rango declarado, así que un techo viejo le parece correcto.",
+   "origin_sha256": "2350cb62d147e70f69019894c937973c469f95f42444db06309ce021d834f4ab",
+   "translation": "An forgotten roof ages in silence. It doesn’t warn: it resolves *within* the declared range, so an old roof seems correct.",
+   "text": "An forgotten roof ages in silence. It doesn’t warn: it resolves *within* the declared range, so an old roof seems correct.",
+   "sha256": "a66a62b4c953ee9b929bc432429919c24121ff0af8bb15ec72845b9151c80907",
+   "translation_sha256": "4954d23f8048f8234b4d059d5f2a6f0effd711484597cc859fbb9657bb5ec04e",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 1
+  },
+  {
+   "source": "docs/wiki/Daemon.md",
+   "line": 161,
+   "origin_text": "No lleva a propósito, porque el daemon habla HTTP plano incluso cuando el TLS lo pone un proxy delante ( ), y con se rompería el acceso directo por .",
+   "origin_sha256": "2436e70185e2c1082d4ab92212fd288c564d5358a6a1409c305f84cba3e05a1e",
+   "translation": "It doesn't intentionally bypass it, because the daemon speaks plain HTTP even when TLS puts a proxy in front of it ( ), and it would break direct access by .",
+   "text": "It doesn't intentionally bypass it, because the daemon speaks plain HTTP even when TLS puts a proxy in front of it ( ), and it would break direct access by .",
+   "sha256": "8089f986c40e85063c93ec0ecfd6e61b5bf3c97a7ff14e888b31852692c952b0",
+   "translation_sha256": "6a0265839c6f654566c99a90419b4e7286dd3e8149db651207f47c844b7699c4",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 2
+  },
+  {
+   "source": "docs/wiki/Integration-install.md",
+   "line": 174,
+   "origin_text": "Ese reporte es informativo: **no** cambia el exit code, porque tras un install correcto quedan avisos legítimos (el CLI fuera del PATH si se instaló con , o un cliente que no está).",
+   "origin_sha256": "259903b203fcda6a13f10fae75d0ed07ae0a9bb43dfdd217cab17836d2e3d51c",
+   "translation": "That report is informational: **no** changes the exit code, because after a correct install, there are legitimate warnings (the CLI outside the PATH if installed with , or a client that is not).",
+   "text": "That report is informational: **no** changes the exit code, because after a correct install, there are legitimate warnings (the CLI outside the PATH if installed with , or a client that is not).",
+   "sha256": "b674191c81da15331ed8a4aebe876a17547666540378c9b82370c8089e770bf1",
+   "translation_sha256": "0287bf60b89546925760e810b6b0a6f783edb2aa4e7db63e5c3073a2cff80a72",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 3
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 633,
+   "origin_text": "Por eso y hacen **map-reduce** cuando la entrada no cabe en el modelo: resumen cada parte (*map*) y luego resumen los resúmenes (*reduce*).",
+   "origin_sha256": "2606c71ec2cf27e9b29b06ca1f5ac7c445026e52e5d828b178d28caf4ddc1172",
+   "translation": "That's why they use **map-reduce** when the input doesn't fit into the model: summarize each part (*map*) and then summarize the summaries (*reduce*).",
+   "text": "That's why they use **map-reduce** when the input doesn't fit into the model: summarize each part (*map*) and then summarize the summaries (*reduce*).",
+   "sha256": "9ee4c33b970497f57e8dad7228aa848081d137d0b67f41c229fc11c7d9367c89",
+   "translation_sha256": "4c6973f6a41b700a754506ac0cadc49715177a13ea05804f5cbd4a85afa997ec",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 4
+  },
+  {
+   "source": "docs/wiki/Troubleshooting.md",
+   "line": 24,
+   "origin_text": "activa por su cuenta la protección contra *DNS rebinding* cuando el host es de loopback, y entonces **solo admite** , y : cualquier cliente que llegue por la IP de la LAN recibe 421.",
+   "origin_sha256": "26aa553ba67b3482dc8a45609c16c00caf92d5a77589dd442d77435fac7a1d5b",
+   "translation": "activate it yourself to protect against *DNS rebinding* when the host is loopback, and then **only accepts**, and: any client that arrives via the LAN IP receives 421.",
+   "text": "activate it yourself to protect against *DNS rebinding* when the host is loopback, and then **only accepts**, and: any client that arrives via the LAN IP receives 421.",
+   "sha256": "bfc359811b2e2e82f28dc0d2004694de46ebfba16ee0e8d42132f87e3b44e62b",
+   "translation_sha256": "591bb5ee9fe6a57bc9703fe5bcd2651a45b6a58ad4e50c4019447e4661055d69",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 5
+  },
+  {
+   "source": "docs/wiki/Repo-hardening.md",
+   "line": 123,
+   "origin_text": "Los otros cinco contextos siguen exigiéndose por su cuenta: si el gate tuviera un defecto, se desprotege un job, no todos.",
+   "origin_sha256": "27e6c7883847a8f0a3a8964b7d92c6a1ec08e8f4b0025995d99938ff86045120",
+   "translation": "The other five contexts continue to require themselves: if the gate had a defect, a job is unprotected, not all.",
+   "text": "The other five contexts continue to require themselves: if the gate had a defect, a job is unprotected, not all.",
+   "sha256": "3c6c6dcbd16d333ab7bab0680f2f1fea7371c2cea2e5663c66c2aea60e9c29aa",
+   "translation_sha256": "2b67fc21ab2ff0e4190b69f61c0d3e90d966e65e34046115289325ccb8e65ef4",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 7
+  },
+  {
+   "source": "docs/wiki/Repo-hardening.md",
+   "line": 431,
+   "origin_text": "Se dio por hecho que no se publicaba porque «el wheel no lo empaqueta», y era cierto; pero el sdist sí lo llevaba, con dentro: un instalador que bajaba cuatro de y los ejecutaba sin verificar hash ni firma.",
+   "origin_sha256": "2847d372802aa67a22e7263a5d091d460535ba34d94458a3a3fc6ba3827a29b7",
+   "translation": "It was assumed that it wouldn't be released because \"it wasn't packaged,\" and it was true; but the sdist did include it, with inside: an installer that downloaded four of y and executed them without verifying hashes or signatures.",
+   "text": "It was assumed that it wouldn't be released because \"it wasn't packaged,\" and it was true; but the sdist did include it, with inside: an installer that downloaded four of y and executed them without verifying hashes or signatures.",
+   "sha256": "350a192ee69e678aead906df1ccf651f8cb4973be1b685d83241b975d661132c",
+   "translation_sha256": "566385a56db46378a8e0cfdce7416c9d5e87a037fb0b27df58cee86624b4b6a7",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 8
+  },
+  {
+   "source": "docs/wiki/Configuration.md",
+   "line": 298,
+   "origin_text": "Hasta la versión anterior la clave se llamaba ( , , ), y el motivo de cada decisión, (hoy ); el panel y los scripts de medición leen los dos formatos, también mezclados en el mismo fichero.",
+   "origin_sha256": "287d4fa19aa9eb3c7422dbcfc0f638ec9a5596bbdf57d1d1b04b7e12e0dc9858",
+   "translation": "Until the previous version, the key was called ( , , ), and the reason for each decision, (today); the panel and measurement scripts read both formats, also mixed in the same file.",
+   "text": "Until the previous version, the key was called ( , , ), and the reason for each decision, (today); the panel and measurement scripts read both formats, also mixed in the same file.",
+   "sha256": "afb2d914ae4f88d9a1489be7b68dc5271b149d809f822f9417b05bbb8064abb6",
+   "translation_sha256": "cbbdaff195317edf932f2d23aaf4217476c0d68eb332a47547e0acd62f5c63dd",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 9
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 561,
+   "origin_text": "El del badge es el detalle de la causa (la tabla completa de causas y qué hacer con cada una está en Troubleshooting).",
+   "origin_sha256": "29378775e47a0e06533fa06667531b81e6415c7e0f23f01c7a4f58887754a3da",
+   "translation": "The badge is the cause detail (the complete table of causes and what to do with each one is in Troubleshooting).",
+   "text": "The badge is the cause detail (the complete table of causes and what to do with each one is in Troubleshooting).",
+   "sha256": "f5d79680ff6d9f62970028eeb971ad7cf5c053c40872c02c07a28e685a2d880d",
+   "translation_sha256": "340d540c0bcd792a6b66c7782d7afb32ed879120c8b68dcac31104aa7a061168",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 10
+  },
+  {
+   "source": "docs/wiki/Publishing.md",
+   "line": 113,
+   "origin_text": "Usa datos de ejemplo deterministas, así que no publica tu actividad real; el pie del README lo declara y ese pie es parte del trato.",
+   "origin_sha256": "29731ee72a42da6f2cac0a9d01a7431cf386c9f6a1d0782e6dc5ee7d3c94c712",
+   "translation": "Use deterministic example data, so do not publish your real activity; the README footer declares it and that footer is part of the agreement.",
+   "text": "Use deterministic example data, so do not publish your real activity; the README footer declares it and that footer is part of the agreement.",
+   "sha256": "2fbb40a080ce6e74a903127f9b3544354fab99e3b63d9209224f5ccb0c76e3df",
+   "translation_sha256": "02147ba21ff697f323a7ca3b46e890bd1c88382fc30adc1be9ce2901d3f51dd6",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 11
+  },
+  {
+   "source": "docs/wiki/Repo-hardening.md",
+   "line": 289,
+   "origin_text": "Se descubrió porque el CI de Windows lo cazó mientras Ubuntu y macOS pasaban en verde, y por eso hay un test que fija ese .",
+   "origin_sha256": "2afa7a33950a4fdc27ff9003d5711de4fbbf4d5570b1ca1820bc62d127db219d",
+   "translation": "It was discovered because the Windows CPU hunted it while Ubuntu and macOS were running green, and therefore there is a test that fixes that.",
+   "text": "It was discovered because the Windows CPU hunted it while Ubuntu and macOS were running green, and therefore there is a test that fixes that.",
+   "sha256": "f319c4a91b3b83e2f5727bd45c7acddf8351946aae7f125b446778b7edae9e71",
+   "translation_sha256": "6e7541f4169cf8668dd9c361c28ace3ee116f5416c719d40262cec4f1bcf64ad",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 12
+  },
+  {
+   "source": "docs/wiki/Daemon.md",
+   "line": 366,
+   "origin_text": "Donde no se miden RAM y VRAM (hoy, macOS) la fila **RAM VRAM** dice «—», y sin lista de procesos, la fila **Procesos** también.",
+   "origin_sha256": "2b8dcf14c2fda9a23975de880e90d586a084419f648e16249c5194a8bf25180a",
+   "translation": "Where RAM and VRAM are not measured (today, macOS) the row **RAM VRAM** says “—”, and without a list of processes, the row **Processes** also.",
+   "text": "Where RAM and VRAM are not measured (today, macOS) the row **RAM VRAM** says “—”, and without a list of processes, the row **Processes** also.",
+   "sha256": "8d8fb501d7701405f20075be066e1f02a732d3a0a12f07f4ec0425e958282ba6",
+   "translation_sha256": "db73b962d870fd37b6bee47e6a892444df44a089c831c7ca66f5955de3b3ff9f",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 13
+  },
+  {
+   "source": "docs/wiki/Integration-install.md",
+   "line": 148,
+   "origin_text": "**Fuera de los marcadores no se toca nada**, y si no se reconoce dónde va el bloque, no se inserta: no se adivina.",
+   "origin_sha256": "2e705b8ba54fa3eac7283a1ce0344ac1dce81abfefd51d1a4c0b09e58b8039f6",
+   "translation": "Outside the markers nothing is touched, and if the location of the block is not recognized, it is not inserted: it is not guessed.",
+   "text": "Outside the markers nothing is touched, and if the location of the block is not recognized, it is not inserted: it is not guessed.",
+   "sha256": "16047b23355235331b92109fdcc940dc4ca800634e9c4aa1bbd5eeff600a6060",
+   "translation_sha256": "6b66a6c924b2504f9308049232592ebd02849f62bfbd9253161fb51bf483cdd9",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 16
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 628,
+   "origin_text": "El chunking de arriba sirve para **transformar** —traducir, reescribir, reformatear—: cada trozo se corresponde con su parte del resultado, así que concatenar las salidas es correcto.",
+   "origin_sha256": "2e951f4b4c541d58eba62f6562cf0e462084aadb80766766bcd2add3b487b1f6",
+   "translation": "The chunking above serves to **transform**—translate, rewrite, reformat—: each piece corresponds to its part of the result, so concatenating the outputs is correct.",
+   "text": "The chunking above serves to **transform**—translate, rewrite, reformat—: each piece corresponds to its part of the result, so concatenating the outputs is correct.",
+   "sha256": "319c8292ea8d3b53b87ebd4f8e7cf1f0ec68cebdf7059074218c335b7d81fe65",
+   "translation_sha256": "50c7314a2f7edb077321fbd1c18e49b22872fa18b84c6e63c595bc2d4324812d",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 17
+  },
+  {
+   "source": "docs/wiki/Troubleshooting.md",
+   "line": 62,
+   "origin_text": "El badge rojo (con «caído») es para cuando no se llega al backend; el ámbar, para cuando **alguien contesta** pero la respuesta no sirve.",
+   "origin_sha256": "2faf134cdb3fb47171c158037f619f651b0d4903ce7fdfbabb7d7e7ca3ffdb86",
+   "translation": "The red badge (with “fallen”) is for when the backend is not reached; the amber, for when **someone answers** but the response is not useful.",
+   "text": "The red badge (with “fallen”) is for when the backend is not reached; the amber, for when **someone answers** but the response is not useful.",
+   "sha256": "f9ba3f783fe8e7fdd4b96dccdd72c358b39c294ca7adb95b285093158a6d3d90",
+   "translation_sha256": "855fb45de6b5315cc723418573fcea8945239a1576e31606f10d69a59fe4f07b",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 18
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 566,
+   "origin_text": "**Hacen falta dos sondeos fallidos seguidos para pasar a «caído».** Un fallo suelto tras uno bueno **conserva** lo que se pintaba —badge en verde, filas con su último estado y sin atenuar— y el del badge añade «último sondeo: …».",
+   "origin_sha256": "3095f912d9e9f3a7d4e1f156c671f640d8de6b532a193d7cc0e4a61c05ec8937",
+   "translation": "It takes two failed polls in a row to move to \"fallen\". A loose failure after a good one **preserves** what was being painted—badge in green, rows with their last state and unattenuated—and the badge adds \"last poll: ...\".",
+   "text": "It takes two failed polls in a row to move to \"fallen\". A loose failure after a good one **preserves** what was being painted—badge in green, rows with their last state and unattenuated—and the badge adds \"last poll: ...\".",
+   "sha256": "21ef520aed96de799220fba612d17c7738270e18ea3fd6fa91449b3b0b5b944e",
+   "translation_sha256": "7a5edbcec7cf927f02000efea0e95aae1ae6008070a766e6aa514fb24a1bfcd5",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 19
+  },
+  {
+   "source": "docs/wiki/Configuration.md",
+   "line": 305,
+   "origin_text": "Por ese camino solo deja un evento con : sin contarlas, una subida de las delegaciones no distinguiría «se delegó» de «se leyó por otro sitio».",
+   "origin_sha256": "316ae8fe69e285b0fc21db83609a91799cd44d3f3c52f37cff6c428a6a139a8c",
+   "translation": "That path leaves only an event with: without counting, a delegation increase would not distinguish \"delegated\" from \"read somewhere else.\"",
+   "text": "That path leaves only an event with: without counting, a delegation increase would not distinguish \"delegated\" from \"read somewhere else.\"",
+   "sha256": "974165264e2d37f784982c3af0930e463cd0ff19fb956cbeabd4c4c37c4d8a61",
+   "translation_sha256": "f19574535a11658561ecd892c1cebfd6d115695b1f427f0a03431b7038bf40ab",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 20
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 646,
+   "origin_text": "El estado en curso vive en con lock y limpieza de PID: el daemon ve las llamadas de todas las sesiones que comparten el mismo usuario, incluso durante una migración en la que todavía convivan clientes HTTP y procesos .",
+   "origin_sha256": "31c39d8649ced2a479849ab86b011dbfaf9da0b87743a71637d87b1fb34ac523",
+   "translation": "The current state lives in lock and PID cleanup: the daemon sees calls from all sessions that share the same user, even during a migration where both HTTP clients and processes still coexist.",
+   "text": "The current state lives in lock and PID cleanup: the daemon sees calls from all sessions that share the same user, even during a migration where both HTTP clients and processes still coexist.",
+   "sha256": "e5be82ed12bebcfe794d7f46973c84901bc6001ce6095b12d67cc73fceb9a447",
+   "translation_sha256": "0fc6b3d037a44432fd6e7a829b1eb40c05d1620ce71e2c1939036a71dc8e203d",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 21
+  },
+  {
+   "source": "docs/wiki/Publishing.md",
+   "line": 95,
+   "origin_text": "**Captura contra el repo, no contra el daemon**, que sirve la versión que tenga instalada y tras el bump ya no es la del árbol.",
+   "origin_sha256": "33a51fa82703d166ee7d7c8457d92b3b0b739295c64df578def2efb5c1eb7348",
+   "translation": "Capture against the repo, not against the daemon, serving the version that is installed and after the bump it’s no longer from the tree.",
+   "text": "Capture against the repo, not against the daemon, serving the version that is installed and after the bump it’s no longer from the tree.",
+   "sha256": "f723a1e3cd87b3854cf8ea05b3fa125ecceb2cb27c20ad9b4e355400b63cd190",
+   "translation_sha256": "fa20ab5582c9fbfee98628b74dfe11d6437a9d34c32a6ec72fc12903e48464fd",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 22
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 58,
+   "origin_text": "Los escribe el servidor a partir de la nota que deja el hook (antes ; ver Coste equivalente); sin nota, la línea no lleva ningún .",
+   "origin_sha256": "3416c4ab901714cc99ae131e744dcc0e52057b018cc1b71f216517a853254846",
+   "translation": "The server writes it from the note left by the hook (before ; see Equivalent Cost); without a note, the line carries no.",
+   "text": "The server writes it from the note left by the hook (before ; see Equivalent Cost); without a note, the line carries no.",
+   "sha256": "3d1c353a3b91d05285fb8c151dcd4da0dd0c342eb2865ba793518118fb0bf479",
+   "translation_sha256": "fe89a3a4cb96011d65fa05c1edb83e71c0f2b9b5a5430351d7257005df50e455",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 23
+  },
+  {
+   "source": "docs/wiki/Troubleshooting.md",
+   "line": 270,
+   "origin_text": "Si cambian los límites de uso (el vigilante abre un PR con el texto nuevo), descarta la calibración vieja con (o ).",
+   "origin_sha256": "344198295b2a5a26a3f29848298042144a956227dbd3fec35f612e9d4e610cfd",
+   "translation": "If the usage limits change (the guard opens a PR with the new text), discard the old calibration with (or).",
+   "text": "If the usage limits change (the guard opens a PR with the new text), discard the old calibration with (or).",
+   "sha256": "10989327a5b5187d7ce5176dd778874934adfe2b6ee2372e2f25f33f7e666fba",
+   "translation_sha256": "421c5131c5332de9b83dec638de8c1f086499ecb65364d2ecbd8070972570f62",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 24
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 90,
+   "origin_text": "(solo si ), , , , (versión del paquete) — todos opcionales; un dashboard viejo o un log legado sin estos campos se sigue leyendo sin romperse.",
+   "origin_sha256": "353fb5c6d72c63b3551588a26559c1a78f29231d2640c79b02bdf1c63c21be06",
+   "translation": "(only if ), , , , (package version) — all optional; an old dashboard or legacy log without these fields continues to read without breaking.",
+   "text": "(only if ), , , , (package version) — all optional; an old dashboard or legacy log without these fields continues to read without breaking.",
+   "sha256": "1ee5c7d06d21da57a6a78753de23f1c0b133f398f17620e466fe51964b207b39",
+   "translation_sha256": "53ef81bc44592d584ec761aae3f07a78ee7a334bfb4f49040b5ee8b9bd458da5",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 25
+  },
+  {
+   "source": "docs/wiki/Repo-hardening.md",
+   "line": 200,
+   "origin_text": "Quien instala desde PyPI **resuelve libre y para siempre**: el wheel publicado es inmutable, así que un major nuevo de una dependencia puede tumbar instalaciones de una versión que llevaba meses funcionando.",
+   "origin_sha256": "35511475112beb5fbf3802bc746fbe9e2e91de0a922289e0553a56e23a40b262",
+   "translation": "Whoever installs from PyPI **resolves permanently and freely**: the wheel published is immutable, so a new major version of a dependency can break installations of a version that had been working for months.",
+   "text": "Whoever installs from PyPI **resolves permanently and freely**: the wheel published is immutable, so a new major version of a dependency can break installations of a version that had been working for months.",
+   "sha256": "7b924c3c262634bb20c04eb0601d2585c0c041896383631195097461e4551cd8",
+   "translation_sha256": "99e17ff01b8ecaee64c5551bf24389cb01d3e32b294586edbd0488905d460c6c",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 26
+  },
+  {
+   "source": "docs/wiki/Configuration.md",
+   "line": 87,
+   "origin_text": "**Si no hay nada en , no salta** y vuelve el error de siempre: antes saltaba al modelo mecánico, que sin residente había que cargar (consecuencia aceptada).",
+   "origin_sha256": "358915f66f917d369d8b402797a79bed5ba73d80b6eabe9bcced684b19c3df12",
+   "translation": "If there is nothing in , it doesn't jump and the old error returns: it used to jump to the mechanical model, which without a resident had to be loaded (accepted consequence).",
+   "text": "If there is nothing in , it doesn't jump and the old error returns: it used to jump to the mechanical model, which without a resident had to be loaded (accepted consequence).",
+   "sha256": "115695f3a27c47956e521cadda319baa624100ccbf7b0035ec99c565617a8e99",
+   "translation_sha256": "4e9893f58d41bb466cff577cf2aaddabc725990b7ebe275664c7591d67255d61",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 27
+  },
+  {
+   "source": "docs/wiki/Architecture.md",
+   "line": 87,
+   "origin_text": "*Lo que sí serviría, y es otro problema:* un contrato transversal del borde —rechazar llamadas con el backend caído sin que cada tool lo compruebe, o un límite de uso—.",
+   "origin_sha256": "359f57d7c0989b8a23cec666720e6579b9f3b2bc75e15b2884318e1a8b480857",
+   "translation": "*What would help, and is a different problem:* a cross-border contract – reject calls with the backend down without each tool checking it, or a usage limit—",
+   "text": "*What would help, and is a different problem:* a cross-border contract – reject calls with the backend down without each tool checking it, or a usage limit—",
+   "sha256": "8baf75acce376fb7e22b76a6be2373a7de5ef984c9d1af8ff958b53a09657e2f",
+   "translation_sha256": "a01a76f72ff2a95214064c57063f1b6edd9bc5c4c3c796ed1d55926ee848bc08",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 28
+  },
+  {
+   "source": "docs/wiki/Integration-install.md",
+   "line": 168,
+   "origin_text": "Los se siguen leyendo en la Mac (que es lo que conserva el ahorro de contexto) y el dashboard marcará esas delegaciones como **cómputo remoto**.",
+   "origin_sha256": "35e8ac8ce847fb17fe24c43411c6fe0c9f31d079d235f0952464a64f58b35874",
+   "translation": "They continue to be read on the Mac (which is what preserves the context saving) and the dashboard will mark those delegations as **remote compute**.",
+   "text": "They continue to be read on the Mac (which is what preserves the context saving) and the dashboard will mark those delegations as **remote compute**.",
+   "sha256": "0ab775cfa87ddf4cbc9a72344a8e52cd69ec3a1b83a1f68951a1b55f945cc031",
+   "translation_sha256": "edaea06091b6534f862d9de801ee37b953192785537721f0a6db1c3654bed4eb",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 29
+  },
+  {
+   "source": "docs/wiki/Daemon.md",
+   "line": 207,
+   "origin_text": "El daemon se registra en el gestor de servicios del usuario de cada sistema, con estos **nombres canónicos** —los mismos que busca para reiniciarlo:",
+   "origin_sha256": "38103317cb829f9d6b717d5ae1d532901ae6aa6e762f13eb17f92023b2e92396",
+   "translation": "The daemon registers with the user's service manager on each system, with these canonical names —the same ones it searches for to restart it:",
+   "text": "The daemon registers with the user's service manager on each system, with these canonical names —the same ones it searches for to restart it:",
+   "sha256": "2389ba3e04115adcb56a4c9e3733328ed6396eebd5acc24cae8dba846545f83d",
+   "translation_sha256": "7d421bf28b94ce9b86ff1e8488b8f83d435196f8037fa53e94222ab912f050bd",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 31
+  },
+  {
+   "source": "docs/wiki/Repo-hardening.md",
+   "line": 218,
+   "origin_text": "**Su versionado tiene major real.** En la ruptura llega por *minor*, así que un es decorativo: da cobertura aparente sin cambiar nada.",
+   "origin_sha256": "38eefafd3c0829fd12f6da4d821c2bc3ff02b6979b5e2b6aa324a51ed5bf84b7",
+   "translation": "Its versioning has a real major. In the break it arrives by *minor*, so one is decorative: it gives apparent coverage without changing anything.",
+   "text": "Its versioning has a real major. In the break it arrives by *minor*, so one is decorative: it gives apparent coverage without changing anything.",
+   "sha256": "ce70c565de4c31ceea5b530693f2d691bf1c56cab73c320826f67464b0d82130",
+   "translation_sha256": "244cc569949b276b3a9793d81ed82dcadba114caa12ca47e5cb6da4ccfc161e8",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 32
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 529,
+   "origin_text": "La insignia del panel de backend («cómputo local» o «remoto») y la columna **Cómputo** de la tabla (con «Local», «Remoto» o «Sin dato») separan lo generado por el backend de esta máquina de lo generado por uno remoto.",
+   "origin_sha256": "3a93d4d26d071ddf468b67c9cce7dda3f5d72a947996919f8e262b49448a1a6c",
+   "translation": "The backend panel badge (“local” or “remote”) and the **Compute** column in the table (with “Local”, “Remote”, or “No data”) differentiate between what is generated by this machine’s backend and what is generated by a remote one.",
+   "text": "The backend panel badge (“local” or “remote”) and the **Compute** column in the table (with “Local”, “Remote”, or “No data”) differentiate between what is generated by this machine’s backend and what is generated by a remote one.",
+   "sha256": "78096e238e54435e04e9e5db507dedfedc747f45f982c0bb6813a14c8e49c836",
+   "translation_sha256": "2a79f23fda8184b245dd013fe7c30d643edb3bf9f72bd0801c6b7e936191d1b9",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 33
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 334,
+   "origin_text": "**Ni la carga de la tabla ni usan la red**: la tabla la mantiene al día el vigilante semanal, que abre un PR cuando cambia la página.",
+   "origin_sha256": "3b12e34131dd4d4649029bff1b05995ef5caf9faef29d308bb59703796f82784",
+   "translation": "**Neither the table load nor do they use the network**: the weekly vigilante keeps it up to date, opening a PR when the page changes.",
+   "text": "**Neither the table load nor do they use the network**: the weekly vigilante keeps it up to date, opening a PR when the page changes.",
+   "sha256": "d8f7576b73184ce1ee49a5d60ede58d1ef55177a487820bd44956d7592052085",
+   "translation_sha256": "1dc1485a5918c1eeaa6d7cf36b7a61db0af35414fb7c459fd7ce40b36a1e4c17",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 34
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 395,
+   "origin_text": "**Sin ninguna cifra de tokens de Claude**: el log guarda bytes, no dimensiones, y sin dimensiones no hay forma honesta de calcularla.",
+   "origin_sha256": "3b1b5b1da80ffd05bb12d89ec46aedd3769497295d2ffdaa92e559213ece7710",
+   "translation": "**Without any token count for Claude**: the log saves bytes, not dimensions, and without dimensions there’s no honest way to calculate it.",
+   "text": "**Without any token count for Claude**: the log saves bytes, not dimensions, and without dimensions there’s no honest way to calculate it.",
+   "sha256": "e3ecae6f3d837a8f0f6b31d403897140072d7d9c914059f87789c54ec217f5e2",
+   "translation_sha256": "6c468be1caa243f3fc3e0808f7f9858c6fe5111a3adc47a0c3106e81882f9c6f",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 35
+  },
+  {
+   "source": "docs/wiki/Configuration.md",
+   "line": 87,
+   "origin_text": "**Cuándo salta, y cuándo no.** Solo los fallos **del modelo** (un 5xx, una respuesta rota) pasan al siguiente de la cadena, y cada salto exige que el anterior fallara también por el modelo.",
+   "origin_sha256": "3bce52a6a859e14b265146718ffcd5730aba93e46fb0ec71d0d2f3e754732096",
+   "translation": "When it jumps, and when it doesn't. Only the failures **of the model** (a 5xx, a broken response) pass to the next in the chain, and each jump requires that the previous one also failed due to the model.",
+   "text": "When it jumps, and when it doesn't. Only the failures **of the model** (a 5xx, a broken response) pass to the next in the chain, and each jump requires that the previous one also failed due to the model.",
+   "sha256": "3a0c581cf4c18b1e432f8b44db17453ae19ad633ac779b6cd27b478f08a3b72a",
+   "translation_sha256": "d58dfb3a17e4da80a093f0cb2e1652a83c81c4c13b1d1113f6eab9b214280815",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 36
+  },
+  {
+   "source": "docs/wiki/Tools.md",
+   "line": 293,
+   "origin_text": "En **otra máquina**, donde las rutas de los GGUF medidos no existen, la afinidad queda **inerte** y lo dice en el detalle, sin .",
+   "origin_sha256": "3d055158ffa08037d035d56ce663389aee9cbef2b140424260c2439fe95b58e7",
+   "translation": "In **another machine**, where the measured GGUF routes do not exist, the affinity remains **inert**, and it states this in detail, without.",
+   "text": "In **another machine**, where the measured GGUF routes do not exist, the affinity remains **inert**, and it states this in detail, without.",
+   "sha256": "a2cd9b21eb79eff956bb9977a31274cc162f696fe062f027b02b206679c66ebd",
+   "translation_sha256": "7e20be2e781b915ec892e2272bd8fec7e50483d72e5ed21407282eea200acbb5",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 38
+  },
+  {
+   "source": "docs/wiki/Tools.md",
+   "line": 115,
+   "origin_text": "**Escribe el resultado en y devuelve solo un recibo** de dos líneas (ruta, tamaño y los tokens que no entraron al contexto).",
+   "origin_sha256": "3dec4e9340ffe4eb6d960dabd132f5972fbf9c7af0f1d79e720b7f419e5158fb",
+   "translation": "Write the result in y return only a receipt of two lines (path, size and the tokens that did not enter the context).",
+   "text": "Write the result in y return only a receipt of two lines (path, size and the tokens that did not enter the context).",
+   "sha256": "4951d2e538dfe4c6e531d120848ec4496afb90d042f554365ce30424b6a01517",
+   "translation_sha256": "22a7b4987216027cc89c88fbceebf29815c83571789dabe9b4eb791da1c844ea",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 39
+  },
+  {
+   "source": "docs/wiki/Repo-hardening.md",
+   "line": 360,
+   "origin_text": "Vale también para el usuario que actualice el paquete: verá los gráficos viejos hasta un día después, lo cual es inofensivo pero conviene saberlo antes de salir a buscar un bug que no existe.",
+   "origin_sha256": "3e1c73c1583e208056a14cf4b7aeb14dc81c89b4a368be6f359541078741385e",
+   "translation": "Okay also for the user who updates the package: they will see the old graphics until a day after, which is harmless but it is good to know before going out to look for a bug that doesn't exist.",
+   "text": "Okay also for the user who updates the package: they will see the old graphics until a day after, which is harmless but it is good to know before going out to look for a bug that doesn't exist.",
+   "sha256": "e1e0664a27ca1ed452e1d33e388690c573f09da3c52772324ed6dacf45e7e7c4",
+   "translation_sha256": "7df692e7b5967197fc8ea469cb00c6acec90c24a27cdbb171bb3a041dba0fecc",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 40
+  },
+  {
+   "source": "docs/wiki/Configuration.md",
+   "line": 212,
+   "origin_text": "El **plazo** con que se rellenan las delegaciones a posteriori no es una variable de local-delegate: es de , el plazo al que Claude Code borra los transcripts (30 días si no está puesto).",
+   "origin_sha256": "3e381634ddb92a61a52920253ba9479e12cfb723ea234ae35a0ead08c4a87ed9",
+   "translation": "The **deadline** with which delegations are filled afterwards is not a local-delegate variable: it is the deadline to which Claude Code deletes transcripts (30 days if not set).",
+   "text": "The **deadline** with which delegations are filled afterwards is not a local-delegate variable: it is the deadline to which Claude Code deletes transcripts (30 days if not set).",
+   "sha256": "7027073c8eb0ba76aa2f2fb8e74ed0f2a86f39725844fe97db65687fafe90648",
+   "translation_sha256": "eab64c7ebe72ac6f3275ef82819e6ca8624deff80c6aa9cbba522108452dd4fc",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 41
+  },
+  {
+   "source": "docs/wiki/Troubleshooting.md",
+   "line": 259,
+   "origin_text": "La tabla de precios del paquete no reproduce el coste que Claude Code calcula en sus transcripts: falta un modelo (los nombra) o algún precio no casa.",
+   "origin_sha256": "3e949d2b13f0b1e10a0a1ab3ce2e8e8107613f09fe3d47adcd451caa31e4f719",
+   "translation": "The pricing table for the package does not reflect the cost that Claude Code calculates in its transcripts: it's missing a model (they name it) or some price not in the house.",
+   "text": "The pricing table for the package does not reflect the cost that Claude Code calculates in its transcripts: it's missing a model (they name it) or some price not in the house.",
+   "sha256": "4e1eff739b8910247d8607822ca5508ffeb82357fe5892d66feaa94e6cf9cd86",
+   "translation_sha256": "22f737b0938b9d99e145ac955d23417eb6a4bd0aaa17f0f27246e2aa33209969",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 42
+  },
+  {
+   "source": "docs/wiki/Daemon.md",
+   "line": 111,
+   "origin_text": "Para que vea la recarga, llama-swap tiene que correr con : si lo arranca el daemon, pon en su lanzador (como en el ejemplo de Arranque).",
+   "origin_sha256": "3efb2a1478991d6c31998578ef96d5684f1167b76f585a7e73e722a98ca4240f",
+   "translation": "To see the recharge, call-swap needs to run with: if the daemon starts it, put it in its launcher (like in the example of Startup).",
+   "text": "To see the recharge, call-swap needs to run with: if the daemon starts it, put it in its launcher (like in the example of Startup).",
+   "sha256": "9919903652be18e1bcc2281f2e4a655f84c19588bd28226c2c3c0d98343092d4",
+   "translation_sha256": "7bea790f4b7bf3c6ddf31fa0f36627a88c94a455e100c64f3801323be1d9f717",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 43
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 700,
+   "origin_text": "Da el denominador por motivo y por camino, los bloqueos, cuántos acabaron en una delegación correlacionada, y cuántas delegaciones fueron espontáneas —esas no se las puede apuntar la regla—.",
+   "origin_sha256": "409d4dd191b4c7a4d9121d2dbcb6136e1683f3e833779510729fb87b3b8fb05c",
+   "translation": "State the denominator as reason and as a way, the blockades, how many ended in a correlated delegation, and how many delegations were spontaneous—those cannot be targeted by the rule.",
+   "text": "State the denominator as reason and as a way, the blockades, how many ended in a correlated delegation, and how many delegations were spontaneous—those cannot be targeted by the rule.",
+   "sha256": "885d2949d1f3cd7618007e75106b747c149b344da4ab531914c17901cc121596",
+   "translation_sha256": "3a792f9b8839034eb07211a85e276be599edc5930d5195dd1998a638e53037ad",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 44
+  },
+  {
+   "source": "docs/wiki/Backend-versions.md",
+   "line": 77,
+   "origin_text": "Detecta las versiones instaladas y avisa si conviene actualizar respecto a las probadas (además del andamiaje y el daemon, que se documentan en Instalación de la integración):",
+   "origin_sha256": "4370f08a40d7aaaafc9b3594cdcc62db8eb6b8aa26c0eb6d3e4123ec2e0aabf2",
+   "translation": "Detect installed versions and warn if it's advisable to update compared to the tested ones (in addition to the framework and daemon, which are documented in Integration Installation):",
+   "text": "Detect installed versions and warn if it's advisable to update compared to the tested ones (in addition to the framework and daemon, which are documented in Integration Installation):",
+   "sha256": "78952f0302fc687787ef856684653a415e65f0d781a971468bd6e7031edc3a2a",
+   "translation_sha256": "1780c27aa7f8d1ed77bc9241c943f30a2bcc0a49199a87d8d2f963e0fbea6125",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 46
+  },
+  {
+   "source": "docs/wiki/Daemon.md",
+   "line": 201,
+   "origin_text": "Si no la encuentra, lo dice con todas las letras —«nuestro daemon escucha en … pero este entorno no tiene su token»— en vez de acusar al puerto de estar ocupado por otro proceso.",
+   "origin_sha256": "43ca2097a7b8dc103d25cbe65f115ac898872488cdfa05a4c5d65a370f237d5f",
+   "translation": "If he doesn't find it, he states it in black and white – “our daemon listens on… but this environment does not have its token” – instead of accusing the port of being occupied by another process.",
+   "text": "If he doesn't find it, he states it in black and white – “our daemon listens on… but this environment does not have its token” – instead of accusing the port of being occupied by another process.",
+   "sha256": "ee81591cb6da9cf15e9e0f764c2b49a3b3b02b856c17523ee49a103151ff5e10",
+   "translation_sha256": "e24a1a40fe09c4cf7ff1f07bcc1d326e9687d3409e7844aa362141b62547c61a",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 47
+  },
+  {
+   "source": "docs/wiki/Daemon.md",
+   "line": 147,
+   "origin_text": "En la práctica el panel volvía a pedir el token al reabrir el navegador, y otra vez al entrar por en lugar de por .",
+   "origin_sha256": "43ff740c2841503f4010901b34cfd44efb75e6cb88caaacc2e81cf603a24b74c",
+   "translation": "In practice, the panel would ask for the token again upon reopening the browser, and again upon entering via instead of via .",
+   "text": "In practice, the panel would ask for the token again upon reopening the browser, and again upon entering via instead of via .",
+   "sha256": "ecaa75d773b545c24c7a21f76f0fa716d3801f22dcc12d60c83571dca53439b0",
+   "translation_sha256": "c11d255b691477558cb35cf7f3615f4cb374a8083527e76a302a5f29eef18d07",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 48
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 148,
+   "origin_text": "El log guarda bytes, no dimensiones, y sin dimensiones no hay forma de saber cuántos tokens le costaría a Claude.",
+   "origin_sha256": "4474d7565101cd5c16c53ed2f877117e66e8ef7a02a5943d515be05eabee2c5a",
+   "translation": "The log stores bytes, not dimensions, and without dimensions there's no way to know how many tokens it would cost Claude.",
+   "text": "The log stores bytes, not dimensions, and without dimensions there's no way to know how many tokens it would cost Claude.",
+   "sha256": "230e64488927a2564f2b8b1b4857c3e3ea1a094c909ff3766e5f13e07aada895",
+   "translation_sha256": "82f20d83ee46793c70733a1f0bd28a4a595e150516807e290d0e2bd1e6deb420",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 49
+  },
+  {
+   "source": "docs/wiki/Repo-hardening.md",
+   "line": 273,
+   "origin_text": "Hasta este cambio no había ni un hash registrado: modificar ese fichero no dejaba rastro, y un CVE publicado mañana no avisaba a nadie.",
+   "origin_sha256": "45e8de41318200009c68f7ab738c432418314d7c868cb40dbcd75f299be09d65",
+   "translation": "Up to this change, there was no hash registered: modifying that file left no trace, and a CVE published tomorrow wouldn't warn anyone.",
+   "text": "Up to this change, there was no hash registered: modifying that file left no trace, and a CVE published tomorrow wouldn't warn anyone.",
+   "sha256": "43fc3957bc4525e2117fa83d6015f6496cccd8eba6595209f5744b9be34338ac",
+   "translation_sha256": "09625064f4d41808b74df437c80a7c1a932a7970da997b5fa394d8e24ec700bb",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 50
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 206,
+   "origin_text": "**clase de contenido**, sin leer el texto: primero por la tool ( → log, → diff, → código) y si no por la extensión del ( → prosa; → código; → estructurado; → log; → diff; lo demás, );",
+   "origin_sha256": "47f840ca913a6de5319142ee905f47d67e0792eb378cd1d1aa8b85669b468152",
+   "translation": "content class, without reading the text: first by the tool ( → log, → diff, → code) and if not by the extension of ( → prose; → code; → structured; → log; → diff; the rest, );",
+   "text": "content class, without reading the text: first by the tool ( → log, → diff, → code) and if not by the extension of ( → prose; → code; → structured; → log; → diff; the rest, );",
+   "sha256": "86f14abcbeee40cbaac9c8aa1dae3139bd06d25790bb56c8f14cb6f9f71ad30a",
+   "translation_sha256": "eb5ccc930e97d84ccb29e23dd1f7043aa1cb164415bf8b7532100709e3f256b4",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 51
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 680,
+   "origin_text": "Las categorías y los motivos se enseñan con etiquetas en español («Lectura», «Shell», «Lectura acotada», «Pequeño», «Por otro MCP»…); en el log y en siguen siendo las claves internas ( , , , …).",
+   "origin_sha256": "4a9447a7aacbea105bc521573668b4be0d0941632917a073ac232106617dbe3b",
+   "translation": "The categories and reasons are taught with labels in Spanish (\"Reading\", \"Shell\", \"Limited Reading\", \"Small\", \"By another MCP\"…); in the log and in remain the internal keys ( , , , …).",
+   "text": "The categories and reasons are taught with labels in Spanish (\"Reading\", \"Shell\", \"Limited Reading\", \"Small\", \"By another MCP\"…); in the log and in remain the internal keys ( , , , …).",
+   "sha256": "12fc8014328997fdcb133bf045ee52ba145c6cf75e10487c7cfcc26cb1bac0b2",
+   "translation_sha256": "a4bb3bdbf1f744831c23c9185b84a6c85f39f910e2b7bb6eac6c8d35f6043518",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 52
+  },
+  {
+   "source": "docs/wiki/Configuration.md",
+   "line": 333,
+   "origin_text": "El viejo sigue apagando durante el mismo plazo; avisa si existe, y también si la telemetría de los hooks dice que lo leyeron.",
+   "origin_sha256": "4aea2ea7c382518cff32e993dc1b7a64687c3248d28288a1bd23477c7e31cef5",
+   "translation": "The old one keeps cutting out during the same period; notify if there is one, and also if the hook telemetry says they read it.",
+   "text": "The old one keeps cutting out during the same period; notify if there is one, and also if the hook telemetry says they read it.",
+   "sha256": "6c478f9f17bb0cadd031314188b1f02729546f570840dd6e52daaa1232cf33f6",
+   "translation_sha256": "c3cf2cec8357b0b01832c995f67474044c82aad07076d75fe045185020336fbb",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 53
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 383,
+   "origin_text": "**Reinicio a mano.** Cuando el vigilante avisa de que cambió el artículo de límites de uso, (o ) deja fuera los puntos anteriores de ese tipo.",
+   "origin_sha256": "4b15c45df6170f5bd5379084546774e308250469d7e674ba021ea2035a16d894",
+   "translation": "Manual reset. When the guard warns that the usage limit item has changed, (or) omit the preceding points of that type.",
+   "text": "Manual reset. When the guard warns that the usage limit item has changed, (or) omit the preceding points of that type.",
+   "sha256": "c57da9eac67e5286b71bd5b3d4eb2dab999e034be5f9e6d905dcc343d4814d27",
+   "translation_sha256": "f69a124f16bc619376e83bfe93264c021a8eb284594dafe8603776ce202890d6",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 54
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 67,
+   "origin_text": ": (mínimo 0): todo lo que no fue inferencia medida —turno, plaza, cola de llama-swap, carga del modelo— y también una llamada fallida sin (un timeout, un 500), que cuenta entera aquí.",
+   "origin_sha256": "4cc7c36ddc7a0ef666336fa78707c4a94a98008a1acd3926e4bb4a4c86e836a5",
+   "translation": ": (minimum 0): everything that wasn't measured inference —turn, plaza, llama-swap queue, model load— and also a failed call without (a timeout, a 500), which counts entirely here.",
+   "text": ": (minimum 0): everything that wasn't measured inference —turn, plaza, llama-swap queue, model load— and also a failed call without (a timeout, a 500), which counts entirely here.",
+   "sha256": "536ffdecee6596ec806b34635287af5abacd3085a73ab9dfe28ef99934636578",
+   "translation_sha256": "a07c9e4abb114e8794c4fc851241c3f9a7af00db5ce85a6dbf6756701120d23a",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 55
+  },
+  {
+   "source": "docs/wiki/Daemon.md",
+   "line": 86,
+   "origin_text": "Solo el daemon reparte: un proceso suelto o la Mac no piden turno, aunque sus peticiones en vuelo sí se ven al decidir la afinidad.",
+   "origin_sha256": "4cfc576136608ada4bbcbec92b1dcef905fe087e27161d9c2147606fd8efb361",
+   "translation": "Only the daemon distributes: a loose process or the Mac do not take turns, although their requests in flight are seen when deciding affinity.",
+   "text": "Only the daemon distributes: a loose process or the Mac do not take turns, although their requests in flight are seen when deciding affinity.",
+   "sha256": "cf05401db5a344c48e5c3d75603021b730627619aba67cf11a47c904eb56aa9c",
+   "translation_sha256": "6609da31287384f63628da0fcc2eede418d6cf29201ddccce3eba7a7657d8f39",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 56
+  },
+  {
+   "source": "docs/wiki/Repo-hardening.md",
+   "line": 312,
+   "origin_text": "**Límite conocido, no resuelto:** un aviso dentro de un job verde no lo lee nadie — es exactamente así como Chart.js llegó a estar dos minors atrasado sin que nadie se enterara.",
+   "origin_sha256": "4d3fe5097ffe0cef6208c41a602ecaaa268fcabab71ecbaefe119229a7235d52",
+   "translation": "Known limit, unresolved: a notice within a green job is never read – that’s exactly how Chart.js fell two minors behind without anyone noticing.",
+   "text": "Known limit, unresolved: a notice within a green job is never read – that’s exactly how Chart.js fell two minors behind without anyone noticing.",
+   "sha256": "b9508802c438bebd1e1b8bef01c295e1842a433be98c5c6d3b4a5850bac2aff6",
+   "translation_sha256": "9c2ccdf63f49e1ad0faafc5cb1c8a0531cb808ab26d787fe11fb101ff43fceb5",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 57
+  },
+  {
+   "source": "docs/wiki/Repo-hardening.md",
+   "line": 386,
+   "origin_text": "Un parseo vacío que pasara por «sin cambios» sería el peor resultado posible: el vigilante callado y la tabla vieja.",
+   "origin_sha256": "4d9884bd66c6808a8dca0aaebe1a0ee783355dd9cdb2f1d09a3ce9401e11ec91",
+   "translation": "An empty parse that passes by \"unchanged\" would be the worst possible outcome: the silent guardian and the old table.",
+   "text": "An empty parse that passes by \"unchanged\" would be the worst possible outcome: the silent guardian and the old table.",
+   "sha256": "a410be12271a52f2b2b5080735a94ac03734327a0fd22891f9d691cf7b01ff4c",
+   "translation_sha256": "b6ae4aae4e572f1b2cb7175c369dc09bf094e7659544945d23e1f0e00174296c",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 58
+  },
+  {
+   "source": "docs/wiki/Repo-hardening.md",
+   "line": 367,
+   "origin_text": "La comprobación diaria compara contra el **manifiesto**, no contra la red — si no, dependería de un servicio ajeno y dejaría de ser determinista.",
+   "origin_sha256": "4ec2814a8800c8d0f9be2f24e5f9f1c4fdd908d1f6f33a18b5a26affc5a20598",
+   "translation": "The daily check compares against the **manifest**, not the network — otherwise, it would depend on an external service and cease to be deterministic.",
+   "text": "The daily check compares against the **manifest**, not the network — otherwise, it would depend on an external service and cease to be deterministic.",
+   "sha256": "c089f409e9d544617699d532cd2761aec9be2fad1dd4e28af53dc4f437a938b6",
+   "translation_sha256": "ed9b2eeb9f9421ed13e27f5d70c073b6a5df01f3ea7aefb934e65bbff39159da",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 60
+  },
+  {
+   "source": "docs/wiki/Tools.md",
+   "line": 297,
+   "origin_text": "**Si falla el alternativo**, se prueba el modelo del rol y luego su cadena, también por un fallo de capacidad (la afinidad la eligió el daemon, no quien llama).",
+   "origin_sha256": "4f30c207e1b6df47915304bd3e9ef2c6a54bad80fdb5bf3cb1ad53f2df14f004",
+   "translation": "If the alternative fails, the role model is tested, and then its chain, also due to a capacity failure (the affinity was chosen by the daemon, not the caller).",
+   "text": "If the alternative fails, the role model is tested, and then its chain, also due to a capacity failure (the affinity was chosen by the daemon, not the caller).",
+   "sha256": "059d5ba253a4042a27ecb4c96847f263356e8d833867503910ed4410ffecd4a8",
+   "translation_sha256": "ab7643ccee2980d5d06c463376c80072c484835275d9f6b153568431093791c9",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 61
+  },
+  {
+   "source": "docs/wiki/Integration-install.md",
+   "line": 181,
+   "origin_text": "→ comprueba de una vez las veinticinco piezas (ver abajo), incluidos el daemon y el backend, que el reporte de no mira a propósito.",
+   "origin_sha256": "4f7e329f46d82cfe23c2976cd3c305f9a83430126c54f90bf6e31e805a9b77a9",
+   "translation": "→ verify once the twenty-five pieces (see below), including the daemon and the backend, that the no-look report intentionally doesn't look.",
+   "text": "→ verify once the twenty-five pieces (see below), including the daemon and the backend, that the no-look report intentionally doesn't look.",
+   "sha256": "528885a5a67f298cf92d71d1da17b5d0266e080d7d9483447ee9ae7ad0586ddc",
+   "translation_sha256": "5c135b634ef0ce26b298b4fc2409052f753ec6e77710f6f78c97de9052d59c12",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 62
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 100,
+   "origin_text": "El bruto es el contenido de entrada de las delegaciones con que **salieron bien**: lo leyó el MCP en tu máquina y **nunca entró a la ventana de contexto de Claude**.",
+   "origin_sha256": "4f84894020976d9a0ed82ae9531ae2bc13596124677aa280f615884629cf2cf1",
+   "translation": "The gross is the input for the delegations that went well: he read it by the MCP on your machine and it never entered Claude's context window.",
+   "text": "The gross is the input for the delegations that went well: he read it by the MCP on your machine and it never entered Claude's context window.",
+   "sha256": "0ea1cd88714a4ff51b98d0b3811e6a3bc06810877252036d0cdc284a650df4e3",
+   "translation_sha256": "77b75a5f1b5d14e3089970658a552706b3274654b0bc0f6ce8e9c08fb7c8fe9d",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 63
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 463,
+   "origin_text": "**Guarda el id que imprime y cierra con .** Puede haber varias ventanas abiertas a la vez (agentes en paralelo), y entonces sin id sale con código 2 y lista los ids abiertos.",
+   "origin_sha256": "503382809db934c89e02dedf92cb2b038a9024d4d8b2164c7049eff363ed3e78",
+   "translation": "Save the id that prints and close with . There may be multiple windows open at the same time (agents in parallel), and then without id it exits with code 2 and lists the open ids.",
+   "text": "Save the id that prints and close with . There may be multiple windows open at the same time (agents in parallel), and then without id it exits with code 2 and lists the open ids.",
+   "sha256": "f9a4bbae6e2e0f4e375d9aa848d9d04c37d19b0aa1b6a55afbc83befb75c59aa",
+   "translation_sha256": "8e60065ae67d952469babde190c584b2173d6eb8da95c29841aa2a9021af0c7d",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 64
+  },
+  {
+   "source": "docs/wiki/Savings-and-metrics.md",
+   "line": 422,
+   "origin_text": "Si solo existe el viejo, se lee traducido y la primera corrida siembra el nuevo desde él, una sola vez; el viejo no se toca.",
+   "origin_sha256": "51e819c6fbd1b6e9a7ce9a58b2edabca491a9c232d2db5bc76a0a56567623536",
+   "translation": "If only the old exists, it is read and the first bullfight sows the new from it, once only; the old is not touched.",
+   "text": "If only the old exists, it is read and the first bullfight sows the new from it, once only; the old is not touched.",
+   "sha256": "72bbb5c23745df87e89162042c317f8f62df567ffe82a773ae2615a7dcdac3cc",
+   "translation_sha256": "217b7cfff6c7dea87217c735f22bc1bfd8d47cddf7ac2ead849a4c652456fb5d",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 65
+  },
+  {
+   "source": "docs/wiki/Configuration.md",
+   "line": 105,
+   "origin_text": "En un documento por trozos, el modelo cambia como mucho una vez: desde el trozo que saltó, el resto va directo al respaldo.",
+   "origin_sha256": "532ea8249c47718a534d53fa45f5ee13a229fcc3766a0ac8003aa56c28518c53",
+   "translation": "In a piecemeal document, the model changes at most once: from the piece that skipped, the rest goes directly to the backup.",
+   "text": "In a piecemeal document, the model changes at most once: from the piece that skipped, the rest goes directly to the backup.",
+   "sha256": "85c92f4512fdf1f7594f1b813ba946262a2bbecb0936f03c5c69882669c4d661",
+   "translation_sha256": "bcb4d676ba58c09347081897ea7802916ef467f682424c4835121092e83cf17f",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 66
+  },
+  {
+   "source": "docs/wiki/Configuration.md",
+   "line": 87,
+   "origin_text": "Un modelo que **no se pudo cargar** (falta de memoria, error de carga) salta **solo a ** y sin segundo salto: saltar a otro modelo grande encadenaría swaps y OOM.",
+   "origin_sha256": "537076cd885a46f00c01bd20655d9f48105ae41d248c6409de14ab98f4e860ae",
+   "translation": "A model that **failed to load** (out of memory, loading error) jumps **only to** and without a second jump: switching to another large model would chain swaps and OOM.",
+   "text": "A model that **failed to load** (out of memory, loading error) jumps **only to** and without a second jump: switching to another large model would chain swaps and OOM.",
+   "sha256": "6a1845329c158c202a08193f1f3189b38ca6e43899d69097967bf8de98ed9f60",
+   "translation_sha256": "c819d999feebe515e3cd146310fd37151ad65daf10f18903fbaaefbd3cbdcda7",
+   "translator": "local_translate(target_lang=\"inglés\"); modelo y rol no indicados por la tool",
+   "order": 67
+  }
+ ]
+}
