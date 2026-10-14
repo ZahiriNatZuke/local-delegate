@@ -46,6 +46,11 @@ CONNECTION_CAUSE_VALUES: dict[str, str] = {
     "desconocida": "unknown",
 }
 
+#: El tipo de cada caso del corpus del benchmark (`kind`), tal como lo escriben `build_corpus` en
+#: `benchmarks/*/cases.json` y el runner en cada fila de resultados (ola A10b-5): los corpus y los
+#: resultados congelados dicen `calidad` y `techo`.
+CORPUS_KIND_VALUES: dict[str, str] = {"calidad": "quality", "techo": "ceiling"}
+
 FORMATS: dict[str, dict[str, dict[str, Any]]] = {
     # Log de uso (`usage-*.jsonl`).
     "usage": {
@@ -231,7 +236,10 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
     # `zero_by` va dentro de `score`: lo traduce `normalize_benchmark_result`.
     "benchmark_results": {
         "keys": {"descartada": "discarded", "descartada_motivo": "discarded_reason"},
-        "values": {"outcome": {"rechazo_por_contexto": "context_rejection"}},
+        "values": {
+            "outcome": {"rechazo_por_contexto": "context_rejection"},
+            "kind": CORPUS_KIND_VALUES,
+        },
     },
     "benchmark_score": {
         "values": {"zero_by": {"truncado_repetido": "truncated_repeated"}},
@@ -242,6 +250,7 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
     "benchmark_corpus": {
         "keys": {"procedencia": "provenance", "origen": "origin"},
         "values": {
+            "kind": CORPUS_KIND_VALUES,
             "reference_signal": {
                 "cobertura": "coverage",
                 "prohibido": "forbidden",
@@ -249,7 +258,7 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
                 "json_campos": "json_fields",
                 "ejecucion": "execution",
                 "conteos": "counts",
-            }
+            },
         },
     },
     # `veredicto.json` de la evaluación de afinidad (congelado): solo lo que lee
@@ -276,6 +285,9 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
             "discriminante": "discriminating",
             "puntuador": "scorer",
         },
+        # El tipo del caso (ola A10b-5): `analyze_benchmark` lo compara al elegir los casos de cada
+        # celda.
+        "values": {"kind": CORPUS_KIND_VALUES},
     },
     # El primer nivel del corpus de afinidad y su `selection` (ola A10b-4), tal como los lee
     # `build_corpus.check_versioned_affinity` (`normalize_affinity_corpus`).

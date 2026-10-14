@@ -344,7 +344,7 @@ CASES: tuple[Case, ...] = (
         "resumen-md-2k",
         "local_summarize",
         "mechanical",
-        "calidad",
+        "quality",
         "congelado",
         "CONTRIBUTING.md",
         file_source("CONTRIBUTING.md"),
@@ -366,7 +366,7 @@ CASES: tuple[Case, ...] = (
         "extraer-toml-2k",
         "local_extract",
         "mechanical",
-        "calidad",
+        "quality",
         "congelado",
         "pyproject.toml, recortado en linea entera a 2 100 chars (entero pesa mas de 6 000 y "
         "produccion lo mandaria a long)",
@@ -390,7 +390,7 @@ CASES: tuple[Case, ...] = (
         "clasificar-53",
         "local_classify",
         "mechanical",
-        "calidad",
+        "quality",
         "reconstruido",
         "evento inline real de 53 chars; texto recreado con esa forma",
         literal_text("El dashboard dejó de cargar tras actualizar a 0.27.0."),
@@ -403,7 +403,7 @@ CASES: tuple[Case, ...] = (
         "traducir-42",
         "local_translate",
         "mechanical",
-        "calidad",
+        "quality",
         "reconstruido",
         "evento inline real de 42 chars; texto recreado con esa forma",
         literal_text("Reinicia el daemon después de actualizarlo"),
@@ -416,7 +416,7 @@ CASES: tuple[Case, ...] = (
         "delegar-56",
         "local_delegate",
         "mechanical",
-        "calidad",
+        "quality",
         "reconstruido",
         "evento inline real de 56 chars; texto recreado con esa forma",
         literal_text("tokens, latencia, modelo, errores, reintentos y el coste"),
@@ -431,7 +431,7 @@ CASES: tuple[Case, ...] = (
         "resumen-md-10k",
         "local_summarize",
         "long",
-        "calidad",
+        "quality",
         "congelado",
         "docs/recipes/claude-code-hooks.md",
         file_source("docs/recipes/claude-code-hooks.md"),
@@ -448,7 +448,7 @@ CASES: tuple[Case, ...] = (
         "resumen-changelog-7k",
         "local_summarize",
         "long",
-        "calidad",
+        "quality",
         "congelado",
         "CHANGELOG.md, secciones 0.27.0 y 0.26.0",
         version_sections("CHANGELOG.md", "0.27.0", "0.25.0"),
@@ -460,7 +460,7 @@ CASES: tuple[Case, ...] = (
         "extraer-uvlock-48k",
         "local_extract",
         "long",
-        "calidad",
+        "quality",
         "congelado",
         "uv.lock, recortado a los 48 000 chars que `_read_input` deja ver al rol long",
         exact_cut("uv.lock", 48000),
@@ -484,7 +484,7 @@ CASES: tuple[Case, ...] = (
         "lint-9k",
         "local_lint_summary",
         "long",
-        "calidad",
+        "quality",
         "generado",
         "ruff check --select ALL --output-format concise --no-cache src/local_delegate, "
         "archivos enteros hasta 9 000 chars",
@@ -508,7 +508,7 @@ CASES: tuple[Case, ...] = (
         "commit-diff-19k",
         "local_commit_msg",
         "code",
-        "calidad",
+        "quality",
         "congelado",
         "git show 4d644ae (fix(web): inflight multi-proceso)",
         commit_diff("4d644ae"),
@@ -523,7 +523,7 @@ CASES: tuple[Case, ...] = (
         "explicar-metrics-15k",
         "local_explain_code",
         "code",
-        "calidad",
+        "quality",
         "congelado",
         "src/local_delegate/web/metrics.py, recortado antes de un bloque de nivel superior",
         cut_by_lines("src/local_delegate/web/metrics.py", 17000, _TOP_LEVEL_PY),
@@ -535,7 +535,7 @@ CASES: tuple[Case, ...] = (
         "explicar-install-20k",
         "local_explain_code",
         "code",
-        "calidad",
+        "quality",
         "congelado",
         "src/local_delegate/install.py, recortado a los 20 000 chars que ve el rol code",
         exact_cut("src/local_delegate/install.py", 20000),
@@ -547,7 +547,7 @@ CASES: tuple[Case, ...] = (
         "boilerplate-156",
         "local_boilerplate",
         "code",
-        "calidad",
+        "quality",
         "reconstruido",
         "evento inline real de 156 chars; especificacion recreada con esa forma",
         literal_text(
@@ -577,7 +577,7 @@ CASES: tuple[Case, ...] = (
         "describir-dashboard",
         "local_describe_image",
         "vision",
-        "calidad",
+        "quality",
         "congelado",
         "docs/assets/dashboard.png",
         file_source("docs/assets/dashboard.png"),
@@ -597,7 +597,7 @@ CASES: tuple[Case, ...] = (
         "leer-cifras-dashboard",
         "local_describe_image",
         "vision",
-        "calidad",
+        "quality",
         "inventado",
         "docs/assets/dashboard.png con una pregunta que no corresponde a ningun evento real",
         file_source("docs/assets/dashboard.png"),
@@ -626,7 +626,7 @@ CASES: tuple[Case, ...] = (
         "techo-resumen-103k",
         "local_summarize",
         "long",
-        "techo",
+        "ceiling",
         "congelado",
         "src/local_delegate/server.py entero",
         file_source("src/local_delegate/server.py"),
@@ -636,7 +636,7 @@ CASES: tuple[Case, ...] = (
         "techo-commit-156k",
         "local_commit_msg",
         "code",
-        "techo",
+        "ceiling",
         "reconstruido",
         "git show d7c3dcc: el diff de 164 585 chars del log ya no existe; este es el mayor del "
         "historial de ese orden",
@@ -981,12 +981,12 @@ def check(case: Case, captured: Capture, data: bytes, single: Capture | None = N
             f"{case.id}: declarado {case.role}, pero produccion eligio "
             f"{captured.calls[0].model} ({captured.role})"
         )
-    if case.kind == "calidad":
+    if case.kind == "quality":
         if n != 1:
             errors.append(f"{case.id}: no cabe en una llamada, produccion hace {n}")
         elif not captured.whole_input:
             errors.append(f"{case.id}: el modelo no ve la entrada entera (truncada)")
-    elif case.kind == "techo":
+    elif case.kind == "ceiling":
         if n == 1:
             errors.append(f"{case.id}: cabe en una llamada, asi que no sondea ningun techo")
         if single is None or len(single.calls) != 1 or not single.whole_input:
@@ -996,7 +996,7 @@ def check(case: Case, captured: Capture, data: bytes, single: Capture | None = N
     if case.media_type == "texto":
         text = normalized(data)
         expected = terms(case, text)
-        if case.kind == "calidad" and not expected:
+        if case.kind == "quality" and not expected:
             errors.append(f"{case.id}: sin terminos esperados no hay nada que puntuar")
         if case.terms_in_source:
             for term in expected:
@@ -1034,7 +1034,7 @@ def corpus_entry(
     prompt = single if single is not None else captured
     call = prompt.calls[0]
     text = normalized(data) if case.media_type == "texto" else ""
-    quality = case.kind == "calidad"
+    quality = case.kind == "quality"
     with_prompt = quality or single is not None
     return {
         "id": case.id,
@@ -1167,7 +1167,7 @@ def build(root: Path, dest: Path, log_dir: Path | None, *, refresh_sources: bool
         captured = capture_case(case, sources / name, data)
         single = (
             capture_case(case, sources / name, data, no_chunking=True)
-            if case.kind == "techo"
+            if case.kind == "ceiling"
             else None
         )
         errors.extend(check(case, captured, data, single))
@@ -1219,7 +1219,7 @@ def build(root: Path, dest: Path, log_dir: Path | None, *, refresh_sources: bool
     if log_dir is not None and log_dir.is_dir():
         _write_json(dest / legacy_names.LOG_COUNTS_FILE_NAMES[1], count_log(log_dir, root))
     benchmark.load_corpus(dest / "cases.json")
-    quality = sum(1 for c in cases if c["kind"] == "calidad")
+    quality = sum(1 for c in cases if c["kind"] == "quality")
     print(
         f"ok: {quality} casos de calidad, {len(cases) - quality} sondeos, {len(controls)} control"
     )
@@ -1277,7 +1277,9 @@ def check_versioned(dest: Path) -> list[str]:
         path = dest / "fuentes" / versioned.source_file
         data = path.read_bytes()
         captured = capture_case(case, path, data)
-        single = capture_case(case, path, data, no_chunking=True) if case.kind == "techo" else None
+        single = (
+            capture_case(case, path, data, no_chunking=True) if case.kind == "ceiling" else None
+        )
         errors.extend(check(case, captured, data, single))
         current = corpus_entry(case, versioned.source_file, data, captured, single)
         for field_name in _WATCHED_FIELDS:
@@ -2385,7 +2387,7 @@ def _corpus_case(c: MechanicalCase) -> Case:
         c.id,
         c.tool,
         "mechanical",
-        "calidad",
+        "quality",
         c.provenance,
         c.origin,
         literal_text(c.text),
@@ -2519,7 +2521,7 @@ def build_affinity(
                 id_,
                 "local_commit_msg",
                 "code",
-                "calidad",
+                "quality",
                 "congelado",
                 f"git show {c.short} (main, {c.date})",
                 commit_diff(c.hash),
@@ -2533,9 +2535,9 @@ def build_affinity(
         case = by_f2_id[id_]
         name = f"{case.id}.{case.extension}"
         data = _frozen_source(f2_sources, name, case.source, root, False)
-        capture, single = capture_and_check(case, data, name, ceiling=case.kind == "techo")
+        capture, single = capture_and_check(case, data, name, ceiling=case.kind == "ceiling")
         errors.extend(check(case, capture, data, single))
-        kind = "techo" if case.kind == "techo" else "f2"
+        kind = "techo" if case.kind == "ceiling" else "f2"
         entries.append(
             _affinity_entry(
                 case,

@@ -51,9 +51,9 @@ def test_corpus_versionado_sigue_reflejando_a_produccion():
 
 def test_reparto_es_el_del_protocolo():
     corpus = benchmark.load_corpus(DESTINO / "cases.json")
-    calidad = Counter(c.role for c in corpus.cases if c.kind == "calidad")
+    calidad = Counter(c.role for c in corpus.cases if c.kind == "quality")
     assert calidad == {"mechanical": 5, "long": 4, "code": 4, "vision": 2}
-    assert sorted(c.role for c in corpus.cases if c.kind == "techo") == ["code", "long"]
+    assert sorted(c.role for c in corpus.cases if c.kind == "ceiling") == ["code", "long"]
 
 
 def test_imagen_de_control_existe_y_no_es_la_del_caso():
@@ -126,7 +126,7 @@ def _caso(**cambios):
         "id": "prueba",
         "tool": "local_summarize",
         "role": "mechanical",
-        "kind": "calidad",
+        "kind": "quality",
         "provenance": "inventado",
         "origin": "test",
         "source": construir.literal_text(""),
@@ -140,7 +140,7 @@ def _errores(caso, tmp_path, datos: bytes, nombre="fuente.txt"):
     ruta = tmp_path / nombre
     ruta.write_bytes(datos)
     unica = None
-    if caso.kind == "techo":
+    if caso.kind == "ceiling":
         unica = construir.capture_case(caso, ruta, datos, no_chunking=True)
     return construir.check(caso, construir.capture_case(caso, ruta, datos), datos, unica)
 
@@ -181,7 +181,7 @@ def test_regla_de_entrada_entera_caza_un_truncado(tmp_path):
 
 
 def test_sondeo_de_techo_que_cabe_en_una_llamada_no_sondea_nada(tmp_path):
-    caso = _caso(kind="techo", expected_terms=())
+    caso = _caso(kind="ceiling", expected_terms=())
     errores = _errores(caso, tmp_path, b"corto\n" * 10)
     assert errores == ["prueba: cabe en una llamada, asi que no sondea ningun techo"]
 
@@ -265,7 +265,7 @@ def test_las_senales_de_texto_tienen_cada_una_su_pareja():
     assert sorted(c.raw["reference_signal"] for c in parejas) == sorted(
         construir.EXPECTED_DIFFERENCES
     )
-    assert all(c.kind == "calidad" for c in parejas)
+    assert all(c.kind == "quality" for c in parejas)
 
 
 def test_cada_pareja_versionada_difiere_solo_en_su_senal_y_mide_lo_mismo():

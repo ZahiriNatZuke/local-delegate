@@ -1,0 +1,44 @@
+## Mutante 1: legacy_names.py sin la traducción de kind en benchmark_results
+3ec9281f4584baf90c1f498075fbc2839eb3a4fbf5c6edca8a7c1be258557b25 *src/local_delegate/legacy_names.py
+242c322b575e8ed4fed92548298160ee17684fe7f76c56a2ea5a78a4469a7be1 *src/local_delegate/legacy_names.py
+E           AssertionError: assert {'calidad', 'techo'} == {'ceiling', 'quality'}
+E             
+E             Extra items in the left set:
+E             'calidad'
+E             'techo'
+E             Extra items in the right set:
+E             'ceiling'
+E             'quality'
+E             Use -v to get more diff
+FAILED tests/test_analyze_benchmark.py::test_frozen_result_kinds_are_read_in_english
+1 failed, 2 passed, 111 deselected in 3.07s
+restaurado:
+3ec9281f4584baf90c1f498075fbc2839eb3a4fbf5c6edca8a7c1be258557b25 *src/local_delegate/legacy_names.py
+3 passed, 111 deselected in 0.11s
+## Mutante 2: analyze_benchmark.py con _KIND_LABELS vacío
+62692c19ef388263860eb9cb89ba07bb7b621269d1fd0ba5224a475bf4171a8e *scripts/analyze_benchmark.py
+0bb0f731bfc080a870244cc53ad9ca9135354e94ccd7a52880c6651fe29c80d1 *scripts/analyze_benchmark.py
+E       assert ('inconclusiv...4', '8192']"]) == ('inconclusiv...4', '8192']"])
+E         
+E         At index 1 diff: ["n_ctx distinto entre corridas de ceiling: ['16384', '8192']", "n_ctx distinto entre corridas de quality: ['16384', '8192']"] != ["n_ctx distinto entre corridas de calidad: ['16384', '8192']", "n_ctx distinto entre corridas de techo: ['16384', '8192']"]
+E         Use -v to get more diff
+E       assert ('inconclusiv...p', 'none']"]) == ('inconclusiv...p', 'none']"])
+E         
+E         At index 1 diff: ["--load-mode distinto entre corridas de ceiling: ['mmap', 'none']", "--load-mode distinto entre corridas de quality: ['mmap', 'none']"] != ["--load-mode distinto entre corridas de calidad: ['mmap', 'none']", "--load-mode distinto entre corridas de techo: ['mmap', 'none']"]
+E         Use -v to get more diff
+E       AssertionError: assert ('inconclusiv... de quality']) == ('inconclusiv...da de techo'])
+E         
+E         At index 1 diff: ['--load-mode sin declarar en alguna corrida de ceiling', '--load-mode sin declarar en alguna corrida de quality'] != ['--load-mode sin declarar en alguna corrida de calidad', '--load-mode sin declarar en alguna corrida de techo']
+E         Use -v to get more diff
+E       assert ('inconclusiv...', '65536']"]) == ('inconclusiv...', '65536']"])
+E         
+E         At index 1 diff: ["n_ctx distinto entre corridas de ceiling: ['16384', '65536']"] != ["n_ctx distinto entre corridas de techo: ['16384', '65536']"]
+E         Use -v to get more diff
+FAILED tests/test_analyze_benchmark.py::test_different_or_undeclared_context_or_load_mode_are_not_conclusive[kw0-n_ctx distinto entre corridas de {}: ['16384', '8192']]
+FAILED tests/test_analyze_benchmark.py::test_different_or_undeclared_context_or_load_mode_are_not_conclusive[kw1---load-mode distinto entre corridas de {}: ['mmap', 'none']]
+FAILED tests/test_analyze_benchmark.py::test_different_or_undeclared_context_or_load_mode_are_not_conclusive[kw2---load-mode sin declarar en alguna corrida de {}]
+FAILED tests/test_analyze_benchmark.py::test_the_ceiling_n_ctx_has_to_match_between_incumbent_and_candidate
+4 failed, 110 deselected in 0.33s
+restaurado:
+62692c19ef388263860eb9cb89ba07bb7b621269d1fd0ba5224a475bf4171a8e *scripts/analyze_benchmark.py
+4 passed, 110 deselected in 0.09s

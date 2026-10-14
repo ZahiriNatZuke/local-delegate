@@ -48,7 +48,7 @@ _TRACKED_METRICS = {
 
 # --- Corpus v2: tareas reales con fuentes congeladas (protocolo-f2.md §4.6) ----------------------
 
-_CORPUS_KINDS = {"calidad", "techo"}
+_CORPUS_KINDS = {"quality", "ceiling"}
 _CORPUS_ROLES = {"mechanical", "long", "code", "vision"}
 _CORPUS_PROVENANCES = {"congelado", "generado", "reconstruido", "inventado"}
 _CORPUS_MEDIA = {"texto", "imagen"}
@@ -1264,7 +1264,7 @@ def run_benchmark(args: argparse.Namespace) -> int:
                             result = post_attempt(client, f"{base_url}/chat/completions", payload)
                         elapsed_ms = round((time.perf_counter() - started) * 1000)
                         resource_summary = resources.summary()
-                        scored = case.kind == "calidad" and result.outcome in ("ok", "truncado")
+                        scored = case.kind == "quality" and result.outcome in ("ok", "truncado")
                         record: dict[str, Any] = {
                             "schema_version": 2,
                             "ts": datetime.now(UTC).isoformat(),
@@ -1350,7 +1350,7 @@ def run_benchmark(args: argparse.Namespace) -> int:
                             continue
                         # Truncado se repite UNA vez con el doble de max_tokens (§4.7 punto 3); si
                         # vuelve a truncar, ya puntuo 0 arriba.
-                        if result.outcome == "truncado" and case.kind == "calidad" and not doubled:
+                        if result.outcome == "truncado" and case.kind == "quality" and not doubled:
                             doubled = True
                             attempt += 1
                             max_tokens *= 2

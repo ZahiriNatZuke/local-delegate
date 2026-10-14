@@ -35,7 +35,7 @@ batch = _load()
 CEILING_DIFF = b"diff --git a/x b/x\n+uno\n"
 
 
-def _case(id_, tool, role, kind="calidad", role_in_sheet=None, **extra):
+def _case(id_, tool, role, kind="quality", role_in_sheet=None, **extra):
     return {
         "id": id_,
         "tool": tool,
@@ -60,7 +60,7 @@ def _synthetic_corpus(folder: Path) -> Path:
             batch.CEILING_CASE,
             "local_commit_msg",
             "code",
-            kind="techo",
+            kind="ceiling",
             source_file="ceiling.diff",
             source_sha256=hashlib.sha256(CEILING_DIFF).hexdigest(),
         ),

@@ -62,7 +62,7 @@ def _reviewable(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     chosen = [
         r
         for r in records
-        if r.get("kind") == "calidad"
+        if r.get("kind") == "quality"
         and r.get("outcome") == "ok"
         and not r.get("discarded")
         and r.get("input_variant") is None
