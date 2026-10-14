@@ -13,8 +13,7 @@ Cuatro cosas:
   proceso y con `xdist`.
 - **Los números** con los separadores de cada idioma (REQ-026) y, en modo máquina, sin ellos.
 
-`benchmark` (B1c) todavía no pasa por el catálogo: su ayuda no entra aquí hasta esa ola, y la
-ayuda raíz, que la incluye, solo se comprueba en español.
+La ayuda de `benchmark` y la raíz entran desde B1c, que pasó `benchmark.py` por el catálogo.
 """
 
 from __future__ import annotations
@@ -31,8 +30,9 @@ import pytest
 
 from local_delegate import cli, i18n, recompute
 
-# Subcomandos cuya ayuda ya es de B1a. `benchmark` llega en B1c.
+# Todos los subcomandos con ayuda propia (B1a, y `benchmark` desde B1c).
 HELP_PATHS = (
+    ["benchmark"],
     ["test-window"],
     ["test-window", "start"],
     ["test-window", "stop"],
@@ -151,7 +151,7 @@ def test_help_in_spanish_has_no_english_frame(path, monkeypatch, capsys):
         assert frame not in out, f"armazón inglés en la ayuda española: {frame!r}"
 
 
-@pytest.mark.parametrize("path", HELP_PATHS, ids=lambda p: " ".join(p))
+@pytest.mark.parametrize("path", [[], *HELP_PATHS], ids=lambda p: " ".join(p) or "root")
 def test_help_in_english_has_no_spanish_catalog_text(path, monkeypatch, capsys):
     words = _distinctive_spanish_words()
     assert len(words) >= 100, "sin palabras distintivas el test no discrimina"

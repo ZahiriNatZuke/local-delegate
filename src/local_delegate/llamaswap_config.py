@@ -18,14 +18,21 @@ import struct
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import footprint
+from . import footprint, i18n
 
 try:
     import yaml
 except ImportError:  # pragma: no cover - depende del entorno de instalación
     yaml = None  # type: ignore[assignment]
 
-_EXTRA_INSTALL_MSG = 'pip install "local-delegate-mcp[llamaswap]"'
+#: El paquete con el extra que trae PyYAML; lo cita `extra_missing()` (y `residency`, `topology`).
+EXTRA_PACKAGE = "local-delegate-mcp[llamaswap]"
+
+
+def extra_missing() -> str:
+    """Qué hacer si falta PyYAML, en el idioma vigente."""
+    return i18n.t("cli.llamaswap_config.extra_missing", package=EXTRA_PACKAGE)
+
 
 # ¿Vale el estimador de VRAM (con `-ncmoe` y `--mmproj`) para decidir si cabe un residente
 # (`llamaswap residency --pin`, REQ-031)? Solo si sus cuatro estimaciones quedan entre -3 % y
@@ -43,7 +50,7 @@ NCMOE_ESTIMATOR_VALIDATED = False
 
 def _require_yaml() -> None:
     if yaml is None:
-        raise RuntimeError(_EXTRA_INSTALL_MSG)
+        raise RuntimeError(extra_missing())
 
 
 # --- Parser de metadatos GGUF (solo header, nunca los tensores de pesos) ----------------
@@ -279,6 +286,23 @@ class ResourceEstimate:
 VramEstimate = ResourceEstimate  # alias retrocompatible (nombre histórico de F7.1-F7.7)
 
 
+def _gb(value: float) -> str:
+    """GiB con dos decimales y los separadores del idioma (REQ-026): `8,37` o `8.37`."""
+    return i18n.format_number(value, 2)
+
+
+def _forced(override_gb: float) -> str:
+    return i18n.t("cli.llamaswap_config.forced", gb=_gb(override_gb))
+
+
+def _no_model_flag() -> str:
+    return i18n.t("cli.llamaswap_config.no_model_flag")
+
+
+def _file_not_found(path: Path) -> str:
+    return i18n.t("cli.llamaswap_config.file_not_found", path=path)
+
+
 def estimate_model_vram(
     model_id: str, model_entry: dict, override_gb: float | None = None
 ) -> VramEstimate:
@@ -289,14 +313,12 @@ def estimate_model_vram(
     cae a 'tamaño_archivo * 1.2' y lo marca como estimación gruesa en el campo 'method'.
     """
     if override_gb is not None:
-        return VramEstimate(
-            model_id, override_gb, "override", f"{override_gb:.2f} GiB (forzado por el usuario)"
-        )
+        return VramEstimate(model_id, override_gb, "override", _forced(override_gb))
 
     cmd = model_entry.get("cmd", "") if isinstance(model_entry, dict) else ""
     gguf_path = parse_model_gguf_path(cmd)
     if gguf_path is None:
-        return VramEstimate(model_id, 0.0, "error", "", error="no se encontró --model/-m en 'cmd'")
+        return VramEstimate(model_id, 0.0, "error", "", error=_no_model_flag())
     if not gguf_path.is_file():
         return VramEstimate(
             model_id,
@@ -304,7 +326,7 @@ def estimate_model_vram(
             "error",
             "",
             gguf_path=gguf_path,
-            error=f"archivo no encontrado: {gguf_path}",
+            error=_file_not_found(gguf_path),
         )
 
     flags = _parse_cmd_flags(cmd)
@@ -318,10 +340,12 @@ def estimate_model_vram(
     if n_cpu_moe:
         sizes = read_gguf_tensor_sizes(gguf_path)
         if sizes is None:
-            moe_note = f"; -ncmoe {n_cpu_moe} sin restar (tabla de tensores ilegible)"
+            moe_note = i18n.t("cli.llamaswap_config.moe_unreadable", n=n_cpu_moe)
         else:
             experts = compute_cpu_expert_bytes(sizes, n_cpu_moe)
-            moe_note = f"; -ncmoe {n_cpu_moe}: {experts / 1024**3:.2f} GiB de expertos en CPU"
+            moe_note = i18n.t(
+                "cli.llamaswap_config.moe_on_cpu", n=n_cpu_moe, gb=_gb(experts / 1024**3)
+            )
     mmproj_bytes = 0
     if footprint_flags.get("mmproj"):
         mmproj = Path(footprint_flags["mmproj"])
@@ -332,11 +356,11 @@ def estimate_model_vram(
                 "error",
                 "",
                 gguf_path=gguf_path,
-                error=f"mmproj no encontrado: {mmproj}",
+                error=i18n.t("cli.llamaswap_config.mmproj_not_found", path=mmproj),
             )
         mmproj_bytes = mmproj.stat().st_size
     mmproj_gb = mmproj_bytes / 1024**3
-    mm_note = f" + mmproj {mmproj_gb:.2f} GiB" if mmproj_bytes else ""
+    mm_note = i18n.t("cli.llamaswap_config.mmproj_note", gb=_gb(mmproj_gb)) if mmproj_bytes else ""
     size_gb = (gguf_path.stat().st_size - experts) / 1024**3
     ctx = int(flags["ctx_size"]) if flags.get("ctx_size", "").isdigit() else None
     arch_info = read_gguf_arch_info(gguf_path) if ctx else None
@@ -353,18 +377,23 @@ def estimate_model_vram(
             * (bytes_k + bytes_v)
         ) / 1024**3
         total = size_gb * 1.05 + kv_gb + mmproj_gb
-        detail = (
-            f"pesos {size_gb:.2f} GiB + KV {kv_gb:.2f} GiB{mm_note} "
-            f"(ctx={ctx}, capas={arch_info['n_layer']}, kv_heads={arch_info['n_head_kv']}, "
-            f"cache_k={flags.get('cache_type_k', 'f16')}, cache_v={flags.get('cache_type_v', 'f16')}"
-            f"{moe_note})"
+        detail = i18n.t(
+            "cli.llamaswap_config.detail_gguf",
+            weights=_gb(size_gb),
+            kv=_gb(kv_gb),
+            mmproj=mm_note,
+            ctx=ctx,
+            layers=arch_info["n_layer"],
+            kv_heads=arch_info["n_head_kv"],
+            cache_k=flags.get("cache_type_k", "f16"),
+            cache_v=flags.get("cache_type_v", "f16"),
+            moe=moe_note,
         )
         return VramEstimate(model_id, total, "gguf-metadata", detail, gguf_path=gguf_path, **extra)
 
     total = size_gb * 1.2 + mmproj_gb
-    detail = (
-        f"pesos {size_gb:.2f} GiB x1.2{mm_note} "
-        f"(estimación gruesa: sin metadatos GGUF o sin --ctx-size{moe_note})"
+    detail = i18n.t(
+        "cli.llamaswap_config.detail_flat", weights=_gb(size_gb), mmproj=mm_note, moe=moe_note
     )
     return VramEstimate(model_id, total, "flat-fallback", detail, gguf_path=gguf_path, **extra)
 
@@ -382,16 +411,12 @@ def estimate_model_ram(
     capas y el KV cache se quedan en CPU), y esta función no lo detecta ni lo compensa.
     """
     if override_gb is not None:
-        return ResourceEstimate(
-            model_id, override_gb, "override", f"{override_gb:.2f} GiB (forzado por el usuario)"
-        )
+        return ResourceEstimate(model_id, override_gb, "override", _forced(override_gb))
 
     cmd = model_entry.get("cmd", "") if isinstance(model_entry, dict) else ""
     gguf_path = parse_model_gguf_path(cmd)
     if gguf_path is None:
-        return ResourceEstimate(
-            model_id, 0.0, "error", "", error="no se encontró --model/-m en 'cmd'"
-        )
+        return ResourceEstimate(model_id, 0.0, "error", "", error=_no_model_flag())
     if not gguf_path.is_file():
         return ResourceEstimate(
             model_id,
@@ -399,11 +424,11 @@ def estimate_model_ram(
             "error",
             "",
             gguf_path=gguf_path,
-            error=f"archivo no encontrado: {gguf_path}",
+            error=_file_not_found(gguf_path),
         )
 
     size_gb = gguf_path.stat().st_size / 1024**3
-    detail = f"pesos {size_gb:.2f} GiB (mmap; asume offload completo a GPU, -ngl alto)"
+    detail = i18n.t("cli.llamaswap_config.detail_ram", weights=_gb(size_gb))
     return ResourceEstimate(model_id, size_gb, "weights-only", detail, gguf_path=gguf_path)
 
 

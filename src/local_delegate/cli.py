@@ -908,7 +908,7 @@ def _daemon_watch(watch_id: str):
         except (httpx2.HTTPError, ValueError):
             data = {}
         outcome = data.get("outcome") if isinstance(data, dict) else None
-        if outcome in llamaswap_api.OUTCOME_TEXT:
+        if outcome in llamaswap_api.OUTCOMES:
             return outcome, str(data.get("line") or "")
         time.sleep(llamaswap_api.WATCH_POLL_S)
     return llamaswap_api.UNRESOLVED, t("cli.watch.late")
@@ -971,7 +971,7 @@ def _report_outcome(outcome: str, line: str, path: Path, previous: bytes, status
     """El mensaje de cada una de las cuatro salidas de REQ-034 (y de «sin resolver»)."""
     from . import llamaswap_api, residency
 
-    text = llamaswap_api.OUTCOME_TEXT[outcome]
+    text = llamaswap_api.outcome_text(outcome)
     if outcome == llamaswap_api.RELOADED:
         print(t("cli.outcome.reloaded", outcome=text, line=line))
         return 0
@@ -995,7 +995,7 @@ def _report_outcome(outcome: str, line: str, path: Path, previous: bytes, status
         print(
             t(
                 "cli.outcome.restored_reload",
-                outcome=llamaswap_api.OUTCOME_TEXT[outcome_again],
+                outcome=llamaswap_api.outcome_text(outcome_again),
                 line=line_again,
             ),
             file=sys.stderr,
@@ -1029,7 +1029,7 @@ def _write_residency(
 
     origin, status, why = _llamaswap_status(daemon_answer)
     if status is None:
-        reasons = [f"{residency.UNKNOWN} ({why})"]
+        reasons = [t("cli.residency.unknown_delegations", why=why)]
     else:
         reasons = llamaswap_api.refusals(status)
     if reasons and not args.now:
@@ -1045,7 +1045,7 @@ def _write_residency(
     if current != original:
         if abandon is not None:
             abandon()
-        print(t("cli.error", detail=residency.CHANGE_DURING_EDIT), file=sys.stderr)
+        print(t("cli.error", detail=t("cli.residency.changed_during_edit")), file=sys.stderr)
         return 2
     print(t("cli.residency.about_to_reload"))
     copy = residency.dated_copy(path, current)
@@ -1096,7 +1096,11 @@ def cmd_llamaswap_residency(args: argparse.Namespace) -> int:
         if isinstance(snapshot, topology.NoTopology):
             detail = f": {snapshot.detail}" if snapshot.detail else ""
             print(
-                t("cli.residency.unreadable", reason=snapshot.reason, detail=detail),
+                t(
+                    "cli.residency.unreadable",
+                    reason=topology.reason_text(snapshot.reason),
+                    detail=detail,
+                ),
                 file=sys.stderr,
             )
             return 2

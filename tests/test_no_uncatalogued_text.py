@@ -54,8 +54,22 @@ PANEL_FILE = "src/local_delegate/web/metrics.py"
 #: Prefijos de contrato que se quedan tal cual en cualquier idioma (i18n §1 c).
 CONTRACT_PREFIXES = ("[local-delegate error]",)
 EXCEPTION_KINDS = frozenset(
-    {"contract_prefix", "json_dump", "path", "id", "machine_name", "format_only", "out_of_scope"}
+    {
+        "contract_prefix",
+        "json_dump",
+        "path",
+        "id",
+        "machine_name",
+        "format_only",
+        "out_of_scope",
+        "verbatim",
+    }
 )
+#: Clases cuyo texto puede ser prosa: el prefijo de contrato (solo los de `CONTRACT_PREFIXES`) y
+#: `verbatim`, el texto que se compara, se hashea o se ejecuta tal cual contra algo de fuera (el log
+#: de llama-swap, las entradas congeladas del corpus de afinidad, los contadores de `typeperf`, el
+#: código del arnés, un motivo que viaja entre procesos); traducirlo rompería esa comparación (B1c).
+PROSE_KINDS = frozenset({"contract_prefix", "verbatim"})
 
 # --- Clasificación de contextos -------------------------------------------------------------------
 
@@ -264,7 +278,7 @@ def exception_problems(entries: list[dict]) -> list[str]:
         if entry.get("kind") == "contract_prefix":
             if text not in CONTRACT_PREFIXES:
                 problems.append(f"{name}: no es un prefijo de contrato conocido")
-        elif _has_prose(text):
+        elif entry.get("kind") not in PROSE_KINDS and _has_prose(text):
             problems.append(f"{name}: es texto para personas, no una excepción")
     return problems
 
@@ -407,6 +421,17 @@ def test_an_exception_with_prose_is_rejected():
     entries = [{"file": "x.py", "text": "Hola mundo", "kind": "id", "reason": "porque sí"}]
     assert exception_problems(entries) == [
         "x.py: 'Hola mundo': es texto para personas, no una excepción"
+    ]
+
+
+def test_verbatim_text_may_be_prose_but_needs_a_reason():
+    entry = {"file": "x.py", "text": "reloading configuration", "kind": "verbatim", "reason": "r"}
+    assert exception_problems([entry]) == []
+    assert exception_problems([{**entry, "reason": " "}]) == [
+        "x.py: 'reloading configuration': sin motivo"
+    ]
+    assert exception_problems([{**entry, "kind": "machine_name"}]) == [
+        "x.py: 'reloading configuration': es texto para personas, no una excepción"
     ]
 
 

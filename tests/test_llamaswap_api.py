@@ -280,13 +280,13 @@ def test_watcher_reloaded_and_then_down(tmp_path: Path):
         watcher = llamaswap_api.Watcher(Backend(ls.url))
         watcher.open()
         ls.write_config(ls.config_text([FakeModel("m", ttl=3)]))
-        assert llamaswap_api.OUTCOME_TEXT[watcher.wait()] == "recargó"
+        assert llamaswap_api.outcome_text(watcher.wait()) == "recargó"
         assert "configuration reloaded" in watcher.line
 
         ls.stop()
         start = time.monotonic()
         down_watcher = llamaswap_api.Watcher(Backend(ls.url))
         down_watcher.open()
-        outcome_text = llamaswap_api.OUTCOME_TEXT[down_watcher.wait()]
+        outcome_text = llamaswap_api.outcome_text(down_watcher.wait())
     assert outcome_text == "caído"
     assert time.monotonic() - start < 5

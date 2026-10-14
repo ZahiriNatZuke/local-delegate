@@ -1,0 +1,30 @@
+feat(i18n): llama-swap y benchmark en español e inglés, con los GiB en el formato de cada idioma (frente B, ola B1c)
+
+Tercer PR de B1 (waves/B1-proposal.md). Lo que imprimen residency,
+topology, llamaswap_api, llamaswap_config, turn y benchmark sale en el
+idioma vigente; los valores de máquina no cambian.
+
+- resources/i18n/{es,en}/cli.json: 169 claves nuevas (vista y errores de
+  llamaswap residency, negativas y salidas de la vigía, errores del
+  lector de topología, detalle del estimador de VRAM, errores de turn y
+  de benchmark, y la ayuda de benchmark).
+- residency.py: _gib con format_number (coma en español, punto en
+  inglés); las frases por trozos pasan a entradas enteras; salen UNKNOWN,
+  CHANGE_DURING_EDIT y TTL_ZERO_EXPLANATION.
+- topology.reason_text() dice los motivos de REQ-002; los motivos siguen
+  siendo valores de máquina (viajan en turn_reason del daemon).
+- llamaswap_api: OUTCOMES y outcome_text() en lugar de OUTCOME_TEXT;
+  negativas en singular y plural. llamaswap_config: detalle con
+  format_number y extra_missing().
+- benchmark: errores y ayuda por el catálogo; el error del JSONL pasa a
+  valor de máquina (unexpected_response, null_content).
+- doctor y el CLI dicen los motivos con reason_text.
+- Guardián: clase de excepción verbatim para el texto que se compara,
+  se hashea o se ejecuta tal cual (log de llama-swap, corpus de
+  afinidad, typeperf, arnés); salen de los pendientes los siete módulos.
+- tests/test_llamaswap_english.py: salidas en los dos idiomas, GiB con
+  los separadores de cada uno, valores de máquina fijos y doctor con
+  reason_text; benchmark y la ayuda raíz entran en test_cli_english.
+
+Suite: 2834 passed, 2 skipped con LANG en inglés y en español (xdist);
+10 controles positivos.

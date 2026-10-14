@@ -35,7 +35,7 @@ from typing import Any
 
 import httpx2
 
-from . import config
+from . import config, i18n
 from .residency import CONFIG_PATH_FIELD
 
 # --- Salidas de la vigía (REQ-034) -----------------------------------------------------------
@@ -44,14 +44,21 @@ REJECTED = "rejected"
 NOT_WATCHING = "not_watching"
 DOWN = "down"
 UNRESOLVED = "unresolved"
-# Lo que se imprime a la persona. Los valores de arriba son los del JSON del daemon.
-OUTCOME_TEXT = {
-    RELOADED: "recargó",
-    REJECTED: "rechazó",
-    NOT_WATCHING: "no vigila el fichero",
-    DOWN: "caído",
-    UNRESOLVED: "sin resolver",
+# Los valores de arriba son los del JSON del daemon; `outcome_text` los dice a la persona.
+_OUTCOME_KEYS = {
+    RELOADED: "cli.llamaswap_api.outcome.reloaded",
+    REJECTED: "cli.llamaswap_api.outcome.rejected",
+    NOT_WATCHING: "cli.llamaswap_api.outcome.not_watching",
+    DOWN: "cli.llamaswap_api.outcome.down",
+    UNRESOLVED: "cli.llamaswap_api.outcome.unresolved",
 }
+OUTCOMES = frozenset(_OUTCOME_KEYS)
+
+
+def outcome_text(outcome: str) -> str:
+    """La salida de la vigía en palabras, en el idioma vigente («recargó», «reloaded»)."""
+    return i18n.t(_OUTCOME_KEYS[outcome])
+
 
 # --- Estado de llama-swap en una consulta ----------------------------------------------------
 STATE_OK = "ok"
@@ -119,9 +126,11 @@ def _caps(cap_s: float | None) -> tuple[float, float]:
 
 def _check(response: httpx2.Response, what: str) -> None:
     if response.status_code in (401, 403):
-        raise QueryError(f"llama-swap rechaza la credencial en {what} ({response.status_code})")
+        raise QueryError(
+            i18n.t("cli.llamaswap_api.credential_rejected", what=what, code=response.status_code)
+        )
     if not response.is_success:
-        raise QueryError(f"llama-swap respondió {response.status_code} en {what}")
+        raise QueryError(i18n.t("cli.llamaswap_api.answered", what=what, code=response.status_code))
 
 
 def running(backend: Backend, cap_s: float | None = None) -> list[dict[str, Any]]:
@@ -136,12 +145,12 @@ def running(backend: Backend, cap_s: float | None = None) -> list[dict[str, Any]
     try:
         data = r.json()
     except ValueError:
-        raise QueryError("/running no devolvió JSON") from None
+        raise QueryError(i18n.t("cli.llamaswap_api.not_json", what="/running")) from None
     entries = data.get("running") if isinstance(data, dict) else None
     if entries is None:
         entries = []  # «nada cargado»: v255 manda `null`
     if not isinstance(entries, list):
-        raise QueryError("/running no trae una lista")
+        raise QueryError(i18n.t("cli.llamaswap_api.running_not_list"))
     models: list[dict[str, Any]] = []
     for e in entries:
         if not isinstance(e, dict) or not isinstance(e.get("model"), str):
@@ -223,7 +232,7 @@ class _Stream:
                 return "".join(log), _count_by_model(data)
             if time.monotonic() > deadline:
                 break
-        raise QueryError(f"`/api/events` no mandó la foto `inflight` en {cap_s:g} s")
+        raise QueryError(_no_inflight(cap_s))
 
     def close(self) -> None:
         try:
@@ -244,7 +253,7 @@ def in_flight(
     try:
         return stream.initial_load(cap_s)[1]
     except httpx2.TimeoutException:
-        raise QueryError(f"`/api/events` no mandó la foto `inflight` en {cap_s:g} s") from None
+        raise QueryError(_no_inflight(cap_s)) from None
     finally:
         stream.close()
 
@@ -265,7 +274,9 @@ def activity(backend: Backend, model: str, cap_s: float | None = None) -> dict[s
     try:
         rows = r.json().get("data") or []
     except (ValueError, AttributeError):
-        raise QueryError("/api/metrics/activity no devolvió JSON") from None
+        raise QueryError(
+            i18n.t("cli.llamaswap_api.not_json", what="/api/metrics/activity")
+        ) from None
     row = rows[0] if rows and isinstance(rows[0], dict) else None
     if row is None:
         return None
@@ -317,7 +328,7 @@ class Status:
             STATE_DOWN,
             STATE_UNKNOWN,
         ):
-            raise QueryError("el daemon devolvió un estado que no se entiende")
+            raise QueryError(i18n.t("cli.llamaswap_api.daemon_status_garbled"))
         models = [m for m in data.get("models") or [] if isinstance(m, dict)]
         flights = {
             str(k): int(v)
@@ -362,15 +373,15 @@ def daemon_status(host: str, port: int, headers: Mapping[str, str]) -> tuple[Sta
             timeout=CLI_TO_DAEMON,
         )
     except httpx2.TimeoutException:
-        return None, "el daemon no contestó a tiempo"
+        return None, i18n.t("cli.llamaswap_api.daemon_timeout")
     except httpx2.HTTPError:
-        return None, "el daemon no responde"
+        return None, i18n.t("cli.llamaswap_api.daemon_down")
     if r.status_code != 200:
-        return None, f"el daemon respondió {r.status_code}"
+        return None, i18n.t("cli.llamaswap_api.daemon_answered", code=r.status_code)
     try:
         return Status.from_json(r.json()), ""
     except (ValueError, QueryError):
-        return None, "el daemon devolvió un estado que no se entiende"
+        return None, i18n.t("cli.llamaswap_api.daemon_status_garbled")
 
 
 def query_status(backend: Backend, own_delegations: int) -> Status:
@@ -384,12 +395,16 @@ def query_status(backend: Backend, own_delegations: int) -> Status:
         flights = in_flight(backend)
     except httpx2.ConnectError as e:
         return Status(
-            STATE_DOWN, f"llama-swap no responde en {backend.base} ({e})", [], {}, own_delegations
+            STATE_DOWN,
+            i18n.t("cli.llamaswap_api.down_at", base=backend.base, error=e),
+            [],
+            {},
+            own_delegations,
         )
     except httpx2.TimeoutException as e:
         return Status(
             STATE_UNKNOWN,
-            f"llama-swap no contestó a tiempo ({type(e).__name__})",
+            i18n.t("cli.llamaswap_api.timeout", error=type(e).__name__),
             own_delegations=own_delegations,
         )
     except (QueryError, httpx2.HTTPError) as e:
@@ -397,33 +412,36 @@ def query_status(backend: Backend, own_delegations: int) -> Status:
     return Status(STATE_OK, "", models, flights, own_delegations)
 
 
-def _plural(n: int, one: str, many: str) -> str:
-    return f"{n} {one if n == 1 else many}"
+def _no_inflight(cap_s: float) -> str:
+    return i18n.t("cli.llamaswap_api.no_inflight", seconds=i18n.format_number(cap_s, None))
 
 
 def refusals(status: Status) -> list[str]:
     """Por qué no se puede escribir ahora (REQ-034), en palabras; vacía si se puede."""
     reasons: list[str] = []
     if status.own_delegations:
-        reasons.append(
-            "hay "
-            + _plural(status.own_delegations, "delegación", "delegaciones")
-            + " de local-delegate en curso"
+        n = status.own_delegations
+        key = (
+            "cli.llamaswap_api.refusal.delegation"
+            if n == 1
+            else "cli.llamaswap_api.refusal.delegations"
         )
+        reasons.append(i18n.t(key, n=i18n.format_number(n)))
     if status.llamaswap == STATE_UNKNOWN:
-        reasons.append(f"no se sabe si hay peticiones en curso en llama-swap ({status.detail})")
+        reasons.append(i18n.t("cli.llamaswap_api.refusal.unknown", detail=status.detail))
     elif status.llamaswap == STATE_OK:
         total = sum(status.in_flight.values())
         if total:
             per_model = ", ".join(f"{m}: {n}" for m, n in sorted(status.in_flight.items()))
-            reasons.append(
-                "hay "
-                + _plural(total, "petición", "peticiones")
-                + f" en vuelo en llama-swap ({per_model})"
+            key = (
+                "cli.llamaswap_api.refusal.request"
+                if total == 1
+                else "cli.llamaswap_api.refusal.requests"
             )
+            reasons.append(i18n.t(key, n=i18n.format_number(total), per_model=per_model))
         loaded = [str(m.get("id")) for m in status.models]
         if loaded:
-            reasons.append(f"hay modelos cargados en llama-swap: {', '.join(loaded)}")
+            reasons.append(i18n.t("cli.llamaswap_api.refusal.loaded", models=", ".join(loaded)))
     return reasons
 
 
@@ -482,7 +500,7 @@ class Watcher:
         try:
             stream = _Stream(self.backend)
         except httpx2.ConnectError as e:
-            self.outcome, self.line = DOWN, f"llama-swap no responde ({e})"
+            self.outcome, self.line = DOWN, i18n.t("cli.llamaswap_api.down", error=e)
             return
         try:
             history, _ = stream.initial_load(CONNECT_S + READ_S)
@@ -556,7 +574,11 @@ class Watcher:
             and elapsed >= self.not_watching_after
         ):
             self.outcome = NOT_WATCHING
-            self.line = f"sin «{PHRASE_RELOADING}» en {self.not_watching_after:g} s"
+            self.line = i18n.t(
+                "cli.llamaswap_api.no_reloading_line",
+                phrase=PHRASE_RELOADING,
+                seconds=i18n.format_number(self.not_watching_after, None),
+            )
         return self.outcome is not None
 
     def wait(self) -> str:
@@ -569,10 +591,12 @@ class Watcher:
                 if elapsed >= self.total:
                     self.outcome = UNRESOLVED
                     self.line = (
-                        "se perdió parte del historial de llama-swap mientras recargaba; revisa "
-                        "el log de llama-swap"
+                        i18n.t("cli.llamaswap_api.history_lost")
                         if self._history_lost
-                        else f"llama-swap no terminó la recarga en {self.total:g} s"
+                        else i18n.t(
+                            "cli.llamaswap_api.reload_unfinished",
+                            seconds=i18n.format_number(self.total, None),
+                        )
                     )
                     break
                 if self._stream is None:
@@ -620,7 +644,9 @@ class WatchRegistry:
             self._forget_old(time.monotonic())
             alive = sum(1 for w, _ in self._watchers.values() if w.outcome is None)
             if alive + self._reserved >= self.max_watchers:
-                raise TooManyWatches(f"ya hay {alive + self._reserved} vigías abiertas")
+                raise TooManyWatches(
+                    i18n.t("cli.llamaswap_api.too_many_watches", n=alive + self._reserved)
+                )
             self._reserved += 1
         try:
             watcher = Watcher(backend)

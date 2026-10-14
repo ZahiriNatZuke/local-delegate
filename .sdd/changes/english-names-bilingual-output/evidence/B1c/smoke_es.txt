@@ -1,0 +1,143 @@
+### view
+modelo  grupo  swap  exclusive  persistent  TTL  mmproj  preload
+a       g      sí    no         no          0    no      no
+b       g      sí    no         no          0    no      no
+
+Veredicto: residente: a; residente: b
+Nota: sin `globalTTL` ni `ttl`, el TTL efectivo es 0 (load.go: un `ttl` ausente o -1 vale `globalTTL`, que por defecto es 0): esos modelos no se descargan nunca por TTL y cuentan como residentes (a, b).
+aviso: `a` tiene TTL efectivo 0 fuera de un grupo persistent: se queda cargado hasta que otro lo desaloje
+aviso: `b` tiene TTL efectivo 0 fuera de un grupo persistent: se queda cargado hasta que otro lo desaloje
+TTL efectivo: un `ttl` ausente o -1 vale `globalTTL` (0 si no está); TTL 0 = residente.
+
+### view_today
+modelo          grupo  swap  exclusive  persistent  TTL  mmproj  preload
+gemma3-4b       swap   sí    no         no          120  no      no
+qwen35-2b       swap   sí    no         no          120  no      no
+gemma4-26b-a4b  swap   sí    no         no          120  no      no
+qwen36-35b-a3b  swap   sí    no         no          120  no      no
+gemma4-12b      swap   sí    no         no          30   sí      no
+
+Veredicto: sin residente (recomendado)
+TTL efectivo: un `ttl` ausente o -1 vale `globalTTL` (0 si no está); TTL 0 = residente.
+
+### does_not_fit
+error: gemma4-26b-a4b no cabe como residente: 10,29 + 9,88 (peor caso del resto por grupos) = 20,17 GiB > 16,00 - 2,00 de reserva = 14,00 GiB; faltan 6,17 GiB
+
+### refusals
+hay 2 delegaciones de local-delegate en curso; hay 1 petición en vuelo en llama-swap (m: 1); hay modelos cargados en llama-swap: m
+
+### outcomes
+caído, no vigila el fichero, rechazó, recargó, sin resolver
+
+### topology
+modelo a: `ttl` debe ser un entero; miembro a repetido en el grupo g; miembro a en dos grupos: g y g; miembro z del grupo g no es ningun modelo
+
+### reasons
+sin LLAMASWAP_CONFIG, sin PyYAML, ilegible, matrix, dos sintaxis, no cumple load.go
+
+### estimate
+8,38 GiB (forzado por el usuario)
+
+### flow_style
+nodo en estilo flujo (`{…}` o `[…]`) en la línea 1: no se edita; escríbelo en estilo bloque
+
+### turn
+petición 'r1' sin conjunto aceptable
+
+### benchmark --help
+uso: local-delegate benchmark [-h] --model MODEL --label LABEL --cases CASES
+                              [--case CASE]
+                              [--role {mechanical,long,code,vision}]
+                              [--input-control INPUT_CONTROL] [--runs RUNS]
+                              [--seed SEED] [--quantization QUANTIZATION]
+                              [--context-size CONTEXT_SIZE]
+                              [--n-cpu-moe N_CPU_MOE] [--load-mode LOAD_MODE]
+                              [--llama-swap-version LLAMA_SWAP_VERSION]
+                              [--llama-server-version LLAMA_SERVER_VERSION]
+                              [--reasoning-effort {off,low,medium,high}]
+                              [--endpoint ENDPOINT] [--timeout TIMEOUT]
+                              [--sample-interval SAMPLE_INTERVAL]
+                              [--probe-process PROBE_PROCESS]
+                              [--gpu-luid GPU_LUID] --output OUTPUT [--append]
+                              [--save-responses]
+
+opciones:
+  -h, --help            muestra esta ayuda y sale
+  --model MODEL         id expuesto por el backend canary
+  --label LABEL         etiqueta de config, p. ej. gptoss-ncmoe12-c8k
+  --cases CASES         cases.json del corpus v2, p. ej.
+                        benchmarks/catalogo-2026-09/cases.json
+  --case CASE           id de caso a ejecutar (repetible)
+  --role {mechanical,long,code,vision}
+                        solo los casos de este rol (repetible)
+  --input-control INPUT_CONTROL
+                        sustituye la entrada por este control del corpus
+                        (CP-3), solo en sus casos
+  --runs RUNS           corridas por caso (por defecto, 5)
+  --seed SEED           semilla base: la corrida n usa seed + n - 1 (y la
+                        misma en sus reintentos)
+  --quantization QUANTIZATION
+  --context-size CONTEXT_SIZE
+  --n-cpu-moe N_CPU_MOE
+  --load-mode LOAD_MODE
+                        --load-mode de llama-server (p. ej. none); el análisis
+                        exige el mismo en vigente y candidato
+  --llama-swap-version LLAMA_SWAP_VERSION
+  --llama-server-version LLAMA_SERVER_VERSION
+  --reasoning-effort {off,low,medium,high}
+                        razonamiento del modelo; off apaga el pensamiento. El
+                        valor del caso manda
+  --endpoint ENDPOINT   BASE_URL con /v1; por defecto, LOCAL_DELEGATE_BASE_URL
+  --timeout TIMEOUT
+  --sample-interval SAMPLE_INTERVAL
+  --probe-process PROBE_PROCESS
+                        mide RAM y VRAM de este proceso por nombre, p. ej.
+                        llama-server.exe (solo Windows)
+  --gpu-luid GPU_LUID   LUID del adaptador para la VRAM (p. ej.
+                        0x00000000_0x0000F722); sin él, se resuelve contra
+                        nvidia-smi
+  --output OUTPUT       JSONL de salida
+  --append
+  --save-responses      guarda las respuestas completas; hacen falta para la
+                        revisión a ciegas
+
+### --help (root)
+uso: local-delegate [-h] [--version]
+                    {benchmark,check-llamaswap,init-llamaswap,llamaswap,doctor,serve,recompute-cost,test-window,install,update,uninstall}
+                    ...
+
+Instala, diagnostica y sirve local-delegate. Sin subcomando, este binario
+arranca el servidor MCP stdio, que es como lo lanzan Claude Code, Codex y
+opencode. `check-llamaswap` e `init-llamaswap` piden el extra [llamaswap].
+
+argumentos posicionales:
+  {benchmark,check-llamaswap,init-llamaswap,llamaswap,doctor,serve,recompute-cost,test-window,install,update,uninstall}
+    benchmark           Ejecuta el corpus v2 de tareas reales contra un
+                        backend canary y escribe JSONL.
+    check-llamaswap     Valida el presupuesto de VRAM (y opcionalmente RAM) de
+                        los groups de un config.yaml.
+    init-llamaswap      Genera/actualiza groups en un config.yaml de llama-
+                        swap con guardrail de VRAM/RAM.
+    llamaswap           Residencia y TTL de los modelos de llama-swap (pide el
+                        extra [llamaswap]).
+    doctor              Diagnostica el andamiaje (hooks, skill, memoria, MCP),
+                        el daemon y el backend.
+    serve               Sirve MCP Streamable HTTP (/mcp) y dashboard (/) como
+                        daemon singleton.
+    recompute-cost      Lee los transcripts de Claude Code y deja en el
+                        directorio de logs el relleno de atribución, los
+                        agregados de N, el cotejo de precios y los puntos de
+                        cuota.
+    test-window         Marca ventanas de prueba: las filas del log de uso que
+                        caen dentro no cuentan en el panel, en local_status ni
+                        en el coste.
+    install             Instala hooks, skill, memoria y la entrada MCP en
+                        Claude Code / Codex / opencode.
+    update              Actualiza el pin, completa lo que falte del andamiaje
+                        y deja el daemon arriba.
+    uninstall           Revierte lo que instaló `local-delegate install` (solo
+                        lo suyo).
+
+opciones:
+  -h, --help            muestra esta ayuda y sale
+  --version             imprime la versión instalada y termina
