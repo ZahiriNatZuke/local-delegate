@@ -344,6 +344,38 @@ compare periodos, entra por el mismo test.
   2 fallos en 120); ahí ya no se ajustan las listas a la vista de los fallos, y si no llega, se
   decide en B1. Si se invierten las dos listas de
   palabras funcionales, el control falla.
+- **Control B1 a 8 tokens: FALLIDO (116/120, 2026-10-14).** El de `8be7ef7`
+  (`tests/data/detect_language_control_b1.json`) se queda tal cual, como registro. Los 4 fallos son
+  `unknown`, con 0 confusiones de idioma: con 8 tokens una sola palabra funcional da 0,125 < 0,15, y
+  hay rótulos de catálogo sin ninguna. Límite conocido: el detector se abstiene en textos cortos.
+- **Regla del control nuevo (decisión del usuario del 2026-10-14, fijada antes de aplicarla):**
+  60 + 60 frases con **≥ 20 tokens** `[a-záéíóúüñ]+` (el umbral del uso real, el `min_tokens=20` de
+  la muestra de REQ-028) y, como en §5, como mucho 40 palabras separadas por espacios. Misma
+  limpieza, mismas fuentes (es: 30 de `es/cli.json` + `es/doctor.json` y 30 de `docs/wiki/*.md`;
+  en: 60 de `en/cli.json` + `en/doctor.json` de claves distintas de las 30 españolas), sin
+  duplicados y con el mismo orden por `sha256("<source>\n<text>")` de `B1-proposal.md` §5,
+  **excluyendo las 120 del control fallido y las 40 de B0b**. Se congela en
+  `tests/data/detect_language_control_b1_20.json`, en un commit propio y anterior a la corrida. El
+  detector se mide con `min_tokens=20` y el margen de siempre (0,15): ≥ 98 % (como mucho 2 fallos
+  en 120). Si una fuente no da lo que pide, se para y se decide la ampliación de fuentes antes de
+  elegir nada.
+- **Ampliación de fuentes (decisión del usuario del 2026-10-14, fijada antes de traducir nada):**
+  los catálogos dan 26 españolas y 7 inglesas, así que:
+  - **Español (60):** los 26 elegibles del catálogo y 34 de la wiki, en orden de sha256 con la
+    regla de 20 tokens de arriba.
+  - **Inglés (60):** de las frases elegibles de la wiki (≥ 20 tokens, ≤ 40 palabras) que no estén
+    entre las 34 españolas, ni en el control fallido, ni en B0b, en orden de
+    `sha256("<source>\n<text>")`, se traducen **de una en una** con
+    `local_translate(text=…, target_lang="inglés")`. La traducción se guarda **tal cual, sin
+    editar**: si trae restos en español, es señal del control y no se limpia. Entra si, tras la
+    misma limpieza, tiene ≥ 20 tokens y ≤ 40 palabras; si no, se descarta y se pasa a la siguiente
+    en orden de sha256 (regla fija, no a juicio). Una llamada que falle con
+    `[local-delegate error]` se reintenta una vez; si vuelve a fallar, se descarta (anotado) y se
+    pasa a la siguiente. No se mira el resultado del detector en ningún momento antes de congelar.
+  - **Por frase inglesa se guarda:** frase española de origen (fichero y línea), sha256 del origen,
+    traducción literal, sha256 de la traducción y modelo o rol, si `local_translate` lo indica.
+  - **Límite conocido:** el inglés de este control es **traducción automática** de textos del
+    dominio del proyecto, no prosa escrita por personas.
 - **Muestra:** `tests/fixtures/lang_sample/` **(plan)**, con 5 documentos por tool y por idioma de
   origen, sin datos de terceros:
   - **`local_summarize`:** como textos en español, 5 extractos de `docs/wiki/` (2–6 kB cada uno);
@@ -1215,7 +1247,10 @@ ficheros) y las dos mitades son independientes. B0a se mezcla antes que B0b; las
     escrito como `tie` y `empate` leído para siempre); filas de `pair_sheet` en `rename-exceptions.md`;
     borra `uncatalogued_pending/cli.json`. ~150 textos.
   - **B1e — control del detector:** 60 + 60 frases nuevas con la regla de `B1-proposal.md` §5,
-    congeladas en un commit anterior a la corrida; ≥ 98 %.
+    congeladas en un commit anterior a la corrida; ≥ 98 %. El primero, a 8 tokens (`8be7ef7`), salió
+    **FALLIDO** (116/120). El nuevo sigue la regla de D10 del 2026-10-14: ≥ 20 tokens, sin las 120
+    del fallido ni las 40 de B0b, medido con `min_tokens=20`, en
+    `tests/data/detect_language_control_b1_20.json`.
   - Formatos (REQ-026): coma decimal y punto de miles en español en la CLI; fechas en ISO 8601 UTC en
     los dos idiomas; las salidas MCP (B2) siguen sin separador de miles y con punto decimal.
   - Cada PR registra en su `waves/B1x.md` la revisión a mano del volcado inglés de su salida.

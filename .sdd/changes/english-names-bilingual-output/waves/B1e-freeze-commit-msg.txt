@@ -1,0 +1,19 @@
+test(i18n): control congelado de 60 + 60 frases para el detector de idioma (frente B, ola B1e)
+
+Primer paso de B1e (waves/B1-proposal.md §5): el control independiente
+del detector, elegido por regla mecánica y congelado antes de correr el
+detector sobre él. Quien lo eligió no abrió la lista de palabras.
+
+- tests/data/detect_language_control_b1.json (nuevo): 30 valores de
+  es/cli.json + es/doctor.json, 30 frases de docs/wiki y 60 valores de
+  en/cli.json + en/doctor.json de claves distintas a las españolas;
+  cada frase con su origen (clave o línea) y su sha256, la regla en
+  _about y el commit base 58ff9c6.
+- Elegibles: de 8 a 40 palabras y al menos 8 tokens tras quitar
+  marcadores, código, URL y rutas; sin duplicados ni frases de B0b;
+  orden por sha256("<source>\n<text>") y se toman las primeras.
+- waves/B1e.md: regla, lecturas fijadas antes de medir, recuentos y
+  comprobaciones hechas sin el detector.
+
+La medición (MIN_ACCURACY_B1 = 0.98 y control positivo con las listas
+invertidas) va en un commit posterior.
