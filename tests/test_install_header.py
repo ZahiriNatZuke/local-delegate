@@ -128,11 +128,11 @@ def test_without_flag_the_existing_header_is_kept(monkeypatch, tmp_path, client)
 @pytest.mark.parametrize("client", sorted(CLIENTS))
 def test_without_flag_another_variable_name_is_also_kept(monkeypatch, tmp_path, client):
     """Conservar es no cambiar lo que funcionaba, no sustituirlo por nuestra variable."""
-    home = _home_with(monkeypatch, tmp_path, client, "OTRA_VARIABLE")
+    home = _home_with(monkeypatch, tmp_path, client, "OTHER_VARIABLE")
 
     assert _install(home, client, "--mcp-mode", "http") == 0
 
-    assert CLIENTS[client][1](home) == "Bearer ${OTRA_VARIABLE}"
+    assert CLIENTS[client][1](home) == "Bearer ${OTHER_VARIABLE}"
 
 
 @pytest.mark.parametrize("client", sorted(CLIENTS))
@@ -194,7 +194,7 @@ def test_the_dry_run_says_it_keeps_it_and_prints_no_literal_token(monkeypatch, t
     el defecto, porque una cabecera borrada tampoco se imprime.
     """
     home = _home_with(monkeypatch, tmp_path, "claude", None)
-    secret = "s3cr3t-escrito-a-pelo"
+    secret = "s3cr3t-hardcoded"
     data = json.loads((home / ".claude.json").read_text(encoding="utf-8"))
     data["mcpServers"][inst.SERVER_NAME]["headers"] = {"Authorization": f"Bearer {secret}"}
     (home / ".claude.json").write_text(json.dumps(data), encoding="utf-8")

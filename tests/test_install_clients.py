@@ -57,7 +57,7 @@ def _codex_by_hand(home: Path) -> Path:
     path = codex / "config.toml"
     path.write_text(
         '[mcp_servers.otro]\ncommand = "ajeno"\n\n'
-        '[mcp_servers.local-delegate]\ncommand = "lo-puse-yo"\n',
+        '[mcp_servers.local-delegate]\ncommand = "i-put-it-there"\n',
         encoding="utf-8",
     )
     return path
@@ -313,7 +313,7 @@ def test_answering_yes_replaces_it(monkeypatch, tmp_path):
 
     text = config_toml.read_text(encoding="utf-8")
     assert inst.TOML_BEGIN in text
-    assert "lo-puse-yo" not in text
+    assert "i-put-it-there" not in text
     assert "[mcp_servers.otro]" in text, "la entrada ajena no se toca ni reemplazando"
 
 

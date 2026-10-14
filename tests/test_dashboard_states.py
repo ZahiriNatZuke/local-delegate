@@ -327,13 +327,13 @@ def test_the_local_wait_is_an_extension_point(tmp_path):
         [
             {
                 "sequence": [_with_running(QWEN_READY)],
-                "inflight": [{**IN_FLIGHT[0], "local_wait": "turno_grupo"}],
+                "inflight": [{**IN_FLIGHT[0], "local_wait": "group_turn"}],
             }
         ],
     )[0]
     txt, title = row["text"], row["title"]
     assert txt == "en cola local"
-    assert "turno_grupo" in title
+    assert "group_turn" in title
 
 
 def test_the_local_wait_requires_every_call(tmp_path):

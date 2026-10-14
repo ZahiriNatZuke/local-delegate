@@ -389,7 +389,7 @@ def test_without_drift_there_is_no_warning(monkeypatch):
     assert len(update.version_lines("0.18.0", None, from_user=False)) == 1
 
 
-@pytest.mark.parametrize("installed", [None, "sin-numeros"])
+@pytest.mark.parametrize("installed", [None, "no-numbers"])
 def test_with_nothing_to_compare_it_stays_quiet(monkeypatch, installed):
     """`unknown` no inventa: sin versión instalada utilizable, no hay aviso que dar."""
     monkeypatch.setattr(update.checks, "_installed_version", lambda: installed)

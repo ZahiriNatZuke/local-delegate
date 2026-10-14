@@ -49,7 +49,9 @@ def test_the_fast_role_has_no_cap_of_its_own(reload_config):
     reload_config()
     assert "fast" not in config.MAX_CHARS_BY_ROLE
     # Un rol que no existe cae en el default, como cualquier otro nombre desconocido.
-    assert config.max_chars_for_role("fast") == config.max_chars_for_role("no-existe-este-rol")
+    assert config.max_chars_for_role("fast") == config.max_chars_for_role(
+        "this-role-does-not-exist"
+    )
 
 
 def test_the_retired_role_model_leaves_the_catalog(reload_config):
@@ -131,7 +133,7 @@ def test_requesting_the_retired_model_gives_a_clear_error_and_does_not_touch_the
 def test_the_retired_model_is_not_valid_as_an_answer_to_the_question_either(monkeypatch, tmp_path):
     """El escape de `elicitation` no puede colar por la ventana lo que se retiró por la puerta."""
     monkeypatch.setattr(server.questions, "ask", _reply(RETIRED_MODEL))
-    result, seen = _delegate(monkeypatch, tmp_path, model="no-existe")
+    result, seen = _delegate(monkeypatch, tmp_path, model="missing")
 
     assert "modelo inválido" in result
     assert seen == []
@@ -148,7 +150,7 @@ def test_without_retired_role_variables_the_check_is_ok(reload_config, tmp_path)
 def test_each_retired_role_variable_is_warned_by_name(reload_config, tmp_path):
     """Una por una, y no «alguna»: el aviso tiene que decir cuál quitar."""
     for variable in RETIRED_VARIABLES:
-        reload_config(**{variable: "lo-que-sea"})
+        reload_config(**{variable: "whatever"})
         result = checks._probe_deprecated_names(checks.Context(home=tmp_path))
         assert result.status == checks.WARN, f"{variable} puesta no dio aviso"
         assert variable in result.detail
@@ -156,7 +158,7 @@ def test_each_retired_role_variable_is_warned_by_name(reload_config, tmp_path):
 
 
 def test_the_warning_names_them_all_when_all_three_are_there(reload_config, tmp_path):
-    reload_config(**dict.fromkeys(RETIRED_VARIABLES, "lo-que-sea"))
+    reload_config(**dict.fromkeys(RETIRED_VARIABLES, "whatever"))
     detail = checks._probe_deprecated_names(checks.Context(home=tmp_path)).detail
     assert all(v in detail for v in RETIRED_VARIABLES)
 
@@ -181,14 +183,14 @@ def test_retired_variable_in_settings_json_env_is_also_warned(reload_config, tmp
     claude = tmp_path / ".claude"
     claude.mkdir()
     (claude / "settings.json").write_text(
-        json.dumps({"env": {"LOCAL_DELEGATE_MAX_CHARS_FAST": "9000", "OTRA": "1"}}),
+        json.dumps({"env": {"LOCAL_DELEGATE_MAX_CHARS_FAST": "9000", "OTHER": "1"}}),
         encoding="utf-8",
     )
     result = checks._probe_deprecated_names(checks.Context(home=tmp_path))
     assert result.status == checks.WARN, "la variable del env de settings.json no dio aviso"
     assert "LOCAL_DELEGATE_MAX_CHARS_FAST" in result.detail
     assert "settings.json" in result.detail
-    assert "OTRA" not in result.detail
+    assert "OTHER" not in result.detail
 
 
 def test_retired_variables_come_from_the_single_registry(reload_config):

@@ -304,11 +304,86 @@ en `.sdd/`.
 
 - Lotes `A-close-2`, `A-close-3` y `A-close-4` (§4), con las respuestas de la sesión principal.
 
+## A-close-2 — datos de prueba propios de los tests
+
+Mapping `waves/A-close-2-mapping.csv` (268 filas: 266 aplicadas y 2 discrepancias), con su línea
+`# Fase 2`. Rama `sdd/english-names-a-close-2`, encima de `30b05f7` (lote 1, mezclado en `main`
+como `eafd3a2`). Sin commit: borrador en `waves/A-close-2-commit-msg.txt`. Evidencia en
+`evidence/A-close-2/`.
+
+### Interrupción y estado al retomar
+
+Un reinicio de la PC cortó el lote después de aplicar los reemplazos y los arreglos a mano, y antes
+de la verificación. Al retomar: 60 tests modificados, todos compilan (`py_compile`), conservan el EOL
+de `HEAD` (`git ls-files --eol`), terminan en salto de línea y el diff era de líneas sustituidas
+(431/431, sin truncados). El aplicador en seco daba 0 pendientes salvo las 3 apariciones que se
+dejaron a propósito (abajo). Lo que faltaba: verificación, mutante, mapping, registro y mensaje.
+
+### Qué se hizo
+
+- **Aplicador por tokens de cadena** (scratchpad `a-close/apply2.py`, `newline=""`): los nombres
+  con separador (`no-existe`, `toolu_calla.json`, `codigo-401`…) se cambian acotados dentro de
+  cualquier literal (cadena, bytes, f-string, docstring), de más largo a más corto; las palabras
+  sueltas (`otro`, `puerto`, `remoto`, `causa`…) solo cuando el literal es exactamente esa palabra,
+  para no tocar prosa ni textos del producto. 441 sustituciones en 60 ficheros.
+- **A mano** (`a-close/fix2.py`, `fix2b.py`):
+  - los kwargs `ajeno=`/`raro=`/`roto=` de `_agents_dir(tmp_path, **files)` en `test_agents.py`
+    pasan a `foreign=`/`odd=`/`broken=` (dan nombre al `.md` que el test lee), y `name: ajeno` del
+    agente de prueba, a `name: foreign`. Eran las 3 filas `pycharm`: el MCP de PyCharm estaba caído
+    (ECONNREFUSED) y `rename_refactoring` no renombra claves de `**kwargs`, así que pasan a
+    `search_edit` (anotado en la fila y en `# Fase 2`);
+  - contenido que el aplicador no ve como literal propio: las tablas TOML de `test_install.py`
+    (`[mcp_servers.otro]`→`other`, `[otra.cosa]`→`[another.thing]`,
+    `[projects.proyecto]`→`project`), el JSON del mock de `test_core.py` (`"puerto"`→`"port"`) y su
+    documento, las dos cadenas de `test_map_reduce.py` con un `\n` delante (`END-MARK`,
+    `ERROR-THAT-MATTERS`), `"coletilla de imagen"`→`"image_tail_note"`, y el token con sufijo de
+    `test_web_auth.py`;
+  - los rótulos que el panel deriva de las claves desconocidas renombradas (`test_dashboard_ui.py`:
+    «Odd new key», «Reason that does not exist», «New client»).
+- **Revertido**: el segundo elemento de `_REFUSALS["anchor"]` en `test_residency.py` vuelve a
+  `"ancla"`: es el texto de la negativa del producto («ancla `&c` en la línea…»), frente B.
+- **No aplicado (2 discrepancias)**: `clave-falsa` y `clave-falsa-1` en `test_residency.py`. Son el
+  marcador con que las copias congeladas de configs reales (`tests/fixtures/residency/*.yaml`)
+  sustituyen las claves, y el test comprueba esa sustitución. Van a «Dato congelado de corpus o
+  caso» de `rename-exceptions.md`. Los `fake-key-N` de `test_metrics`, `test_llamaswap_api` y
+  `test_residency_cli` son independientes de esos fixtures y sí se renombran.
+- `ruff format` en 5 tests cuyas líneas cambiaron de longitud.
+- Quedan sin tocar, a propósito: prosa en comentarios y docstrings (`otro`, `ajeno`, `etiqueta`…),
+  rutas de prueba dentro de cadenas sin fila en el mapping (`/otro/hook.py` en `test_checks.py`,
+  `C:/docs/notas.md`), y valores en ficheros fuera del lote que el detector no ve.
+
+### Verificación
+
+- `--collect-only`: **2603**, igual que tras el lote 1 (`evidence/A-close-2/collect.txt`).
+- Suite `-n auto --dist loadgroup` (Playwright incluido): **2601 passed, 2 skipped**
+  (`evidence/A-close-2/pytest-full.log`). La primera corrida dio 1 fallo en
+  `test_fake_llamaswap.py::test_a_ttl_counts_from_request_end`, el intermitente de tiempo ya
+  conocido (A9b/A9c): el lote solo cambió ids de `parametrize` y un nombre de modelo en ese fichero,
+  y el fichero pasó 3 veces seguidas solo (`evidence/A-close-2/pytest-full-1-intermitente.log`).
+- `ruff check` y `ruff format --check`: limpios (`evidence/A-close-2/ruff.txt`).
+- CodeQL (`scratchpad a10/codeql_like.py` y `codeql_more.py` sobre los 60 `.py` tocados): los
+  mismos hallazgos que en `HEAD` (`evidence/A-close-2/codeql-like.txt`).
+- Detector con la lista: fuera de la lista **731 → 462**; **0** hallazgos de las filas del lote
+  (`evidence/A-close-2/detector.json`). Palabras sin clasificar 777 → 783 (inglesas nuevas: para el
+  lote 4).
+
+### Desviaciones
+
+1. Las 3 filas `pycharm` se hicieron a mano (`search_edit`) por el MCP de PyCharm caído.
+2. 2 discrepancias (`clave-falsa`, `clave-falsa-1`) con fila nueva en `rename-exceptions.md`.
+3. Asserts de rótulos derivados (`test_dashboard_ui.py`) cambiados con los datos: es el mismo
+   control con el dato nuevo, no un cambio de sentido.
+
+| Control positivo del lote 2 | Mutante | Assert que disparó | Restaurado |
+| --- | --- | --- | --- |
+| `tests/test_dashboard_ui.py::test_no_table_shows_internal_keys` (datos renombrados `odd_new_key`, `reason_that_does_not_exist`, `new_client`) | `web/metrics.py:1908`, el respaldo de rótulos sin quitar los `_` (`.replace(/_/g, '_')`) | `test_dashboard_ui.py:981` `assert not bad` con `['Odd_new_key', 'Reason_that_does_not_exist', 'New_client']` (`evidence/A-close-2/mutante.log`) | desde copia; sha256 `778ba0eb00f6` antes y después |
+
 ## Controles positivos
 
 | Test | Mutante aplicado | Assert que disparó | Restaurado |
 | --- | --- | --- | --- |
 | `tests/test_affinity.py::test_matrix_cells_are_the_approved_cells_of_the_verdict`, `test_frozen_verdict_footprints_with_old_keys_are_read_with_the_new_ones` y `tests/test_analyze_benchmark.py::test_frozen_footprints_with_old_keys_reach_the_verdict_with_the_new_ones` (lote 1; lectura dual de la huella) | `src/local_delegate/legacy_names.py` con `FORMATS["footprint"]` sin `"ruta": "path"` | `test_affinity.py:518` `assert dict(cell.footprint) == footprints[...]` (AssertionError); `test_affinity.py:541` y `test_analyze_benchmark.py:1565` `KeyError: 'path'`; 3 failed, 156 passed (`evidence/A-close-1/mutant-footprint-dual.txt`) | desde copia; sha256 `ae60e98d…` antes y después |
+| `tests/test_dashboard_ui.py::test_no_table_shows_internal_keys` (lote 2; datos renombrados `odd_new_key`, `reason_that_does_not_exist`, `new_client`) | `src/local_delegate/web/metrics.py:1908`, el respaldo de rótulos sin quitar los `_` | `test_dashboard_ui.py:981` `assert not bad` con `['Odd_new_key', 'Reason_that_does_not_exist', 'New_client']` (`evidence/A-close-2/mutante.log`) | desde copia; sha256 `778ba0eb00f6` antes y después |
 
 ## Llamadas `local_*` (sesión principal y cada agente)
 
@@ -317,6 +392,7 @@ en `.sdd/`.
 | Agente A-close (fase 1) | `local_summarize(path=waves/A8a.md, A8b.md, A9a.md, A9b.md, A9c.md)` | pendientes para el cierre de cada registro; útiles (5) |
 | Agente A-close (fase 1) | `local_summarize(path=waves/A10a.md, A10b.md)` | agotaron los 300 s (7 en paralelo); sustituidas por `grep` de «Pendientes» y lectura de ese tramo |
 | Agente A-close-1 | `local_lint_summary(path=evidence/A-close-1/pytest-full.log)` | resumen de la suite: solo los 12 `DeprecationWarning` de starlette; sirvió |
+| Agente A-close-2 | `local_lint_summary(path=evidence/A-close-2/pytest-full-1-intermitente.log)` | resumen de la primera corrida: 1 fallo de `test_fake_llamaswap.py` (el intermitente de tiempo) y los avisos de starlette; sirvió |
 
 ## Llamadas `mcp__pycharm__*`
 
@@ -326,3 +402,4 @@ en `.sdd/`.
 | A-close-1 | `get_file_problems` | `src/local_delegate/legacy_names.py` (solo errores) | 0 errores |
 | A-close-1 | `get_file_problems` | `scripts/analyze_benchmark.py` (solo errores) | 0 errores |
 | A-close-1 | `get_file_problems` | `src/local_delegate/footprint.py` (solo errores) | 0 errores |
+| A-close-2 | (ninguna) | MCP de PyCharm caído (ECONNREFUSED) tras el reinicio | motivo: las 3 filas `pycharm` se hicieron a mano y la comprobación de problemas la cubren `py_compile`, ruff y la suite |

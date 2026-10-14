@@ -435,7 +435,7 @@ def test_the_model_chosen_in_the_question_counts_as_explicit(reload_config, tmp_
     monkeypatch.setattr(questions, "ask", lambda *a, **k: _Choice())
     requested = _backend({LONG: _ok(), MECHANICAL: _ok()})
 
-    server.local_delegate(task="t", input="x", output_format="texto", model="no-existe")
+    server.local_delegate(task="t", input="x", output_format="texto", model="missing")
 
     assert requested == [LONG]
 

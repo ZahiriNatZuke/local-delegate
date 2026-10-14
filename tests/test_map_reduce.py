@@ -85,17 +85,17 @@ def test_document_that_does_not_fit_is_summarized_in_parts_without_truncating(
 
 def test_the_last_stretch_of_the_document_reaches_the_model(monkeypatch, tmp_path):
     """El final es justo lo que se perdía al truncar; en un log de CI es lo que importa."""
-    text = _document(60, 2000) + "\n\n## FINAL\n\nMARCA-DEL-FINAL"
+    text = _document(60, 2000) + "\n\n## FINAL\n\nEND-MARK"
     _out, seen = _run(monkeypatch, tmp_path, server.local_summarize, text=text)
     sent = "\n".join(p["messages"][1]["content"] for p in seen)
-    assert "MARCA-DEL-FINAL" in sent
+    assert "END-MARK" in sent
 
 
 def test_lint_summary_also_processes_the_whole_log(monkeypatch, tmp_path):
-    text = _document(60, 2000) + "\n\nERROR-QUE-IMPORTA en el ultimo archivo"
+    text = _document(60, 2000) + "\n\nERROR-THAT-MATTERS en el ultimo archivo"
     _out, seen = _run(monkeypatch, tmp_path, server.local_lint_summary, text=text)
     sent = "\n".join(p["messages"][1]["content"] for p in seen)
-    assert "ERROR-QUE-IMPORTA" in sent
+    assert "ERROR-THAT-MATTERS" in sent
     assert _events(tmp_path)[0]["chars_in"] == len(text)
 
 
@@ -150,11 +150,11 @@ def test_the_last_file_of_the_diff_reaches_the_model(monkeypatch, tmp_path):
     """Lo que se perdía al truncar: `src/` va al final por orden alfabético de rutas."""
     diff = _large_diff() + (
         "diff --git a/zzz/ultimo.py b/zzz/ultimo.py\n--- a/zzz/ultimo.py\n+++ b/zzz/ultimo.py\n"
-        "@@ -1 +1 @@\n+MARCA-DEL-ULTIMO-ARCHIVO\n"
+        "@@ -1 +1 @@\n+LAST-FILE-MARK\n"
     )
     _output, seen = _run(monkeypatch, tmp_path, server.local_commit_msg, diff=diff)
     sent = "\n".join(p["messages"][1]["content"] for p in seen)
-    assert "MARCA-DEL-ULTIMO-ARCHIVO" in sent
+    assert "LAST-FILE-MARK" in sent
 
 
 def test_the_step_that_drafts_the_message_receives_the_full_inventory(monkeypatch, tmp_path):

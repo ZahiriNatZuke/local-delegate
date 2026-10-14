@@ -47,7 +47,7 @@ def _backend_local(monkeypatch):
 def test_writes_the_code_and_returns_only_the_receipt(tmp_path):
     code = "def suma(a, b):\n    return a + b\n"
     _reply(code)
-    dest = tmp_path / "suma.py"
+    dest = tmp_path / "sum.py"
 
     output = server.local_boilerplate("una función suma", "python", str(dest))
 
@@ -135,7 +135,7 @@ def test_relative_path_fails_without_spending_backend(tmp_path):
     path = _reply("no deberia generarse")
 
     with pytest.raises(ValueError, match="absoluta"):
-        server.local_boilerplate("lo que sea", "python", "relativo.py")
+        server.local_boilerplate("lo que sea", "python", "relative.py")
 
     assert path.call_count == 0  # control negativo: no se pagó inferencia
 
@@ -143,7 +143,7 @@ def test_relative_path_fails_without_spending_backend(tmp_path):
 @backend_mock.mock
 def test_does_not_overwrite_an_existing_file_nor_spend_backend(tmp_path):
     path = _reply("codigo nuevo")
-    dest = tmp_path / "ya.py"
+    dest = tmp_path / "already.py"
     dest.write_text("NO ME PISES\n", encoding="utf-8")
 
     with pytest.raises(ValueError, match="overwrite"):
@@ -156,7 +156,7 @@ def test_does_not_overwrite_an_existing_file_nor_spend_backend(tmp_path):
 @backend_mock.mock
 def test_overwrite_true_does_overwrite(tmp_path):
     _reply("codigo nuevo\n")
-    dest = tmp_path / "ya.py"
+    dest = tmp_path / "already.py"
     dest.write_text("viejo\n", encoding="utf-8")
 
     server.local_boilerplate("otra cosa", "python", str(dest), overwrite=True)
@@ -168,7 +168,7 @@ def test_overwrite_true_does_overwrite(tmp_path):
 def test_a_directory_as_target_is_not_mistaken_for_an_existing_file(tmp_path):
     """Sin la comprobación de `is_dir()` el error hablaría de un archivo que no existe."""
     _reply("x")
-    folder = tmp_path / "soy_carpeta"
+    folder = tmp_path / "i_am_a_folder"
     folder.mkdir()
 
     with pytest.raises(ValueError, match="directorio"):
@@ -201,7 +201,7 @@ def test_respects_the_allowed_roots(tmp_path, monkeypatch):
 @backend_mock.mock
 def test_a_backend_failure_leaves_no_file(tmp_path):
     _reply("", status=500)
-    dest = tmp_path / "roto.py"
+    dest = tmp_path / "broken.py"
 
     output = server.local_boilerplate("algo", "python", str(dest))
 

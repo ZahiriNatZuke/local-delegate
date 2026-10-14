@@ -343,11 +343,11 @@ class _SpySemaphore:
     def acquire(self, blocking: bool = True) -> bool:
         taken = self._s.acquire(blocking)
         if taken:
-            self._events.append("tomar_plaza")
+            self._events.append("take_slot")
         return taken
 
     def release(self) -> None:
-        self._events.append("soltar_plaza")
+        self._events.append("release_slot")
         self._s.release()
 
 
@@ -374,7 +374,7 @@ def test_hop_releases_slot_before_requesting_turn(with_topology, monkeypatch):
 
     hop = f"pedir_turno:{CODE}"
     assert hop in events, f"no hubo salto: {events} ({error!r})"
-    assert events.index("soltar_plaza") < events.index(hop)
+    assert events.index("release_slot") < events.index(hop)
 
 
 # --- El turno y la plaza se liberan con una excepción inesperada ------------------------------

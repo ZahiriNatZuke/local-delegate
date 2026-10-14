@@ -229,7 +229,7 @@ def test_invalid_model_with_answer_continues_with_the_chosen_one(monkeypatch, tm
     """REQ-003."""
     valid = min(config.ALLOWED_MODELS)
     monkeypatch.setattr(server.questions, "ask", _reply(valid))
-    result, seen = _delegate(monkeypatch, tmp_path, model="no-existe")
+    result, seen = _delegate(monkeypatch, tmp_path, model="missing")
     assert "modelo inválido" not in result
     assert len(seen) == 1 and seen[0]["model"] == valid
 
@@ -241,14 +241,14 @@ def test_invalid_model_without_answer_fails_now_without_touching_the_backend(mon
     bastaría: lo que hay que impedir es que una llamada mal formada acabe gastando GPU.
     """
     monkeypatch.setattr(server.questions, "ask", _no_answer)
-    result, seen = _delegate(monkeypatch, tmp_path, model="no-existe")
-    assert "modelo inválido 'no-existe'" in result
+    result, seen = _delegate(monkeypatch, tmp_path, model="missing")
+    assert "modelo inválido 'missing'" in result
     assert seen == [], "se llamó al backend con un modelo inválido"
 
 
 def test_an_answer_not_in_the_catalog_is_not_valid_either(monkeypatch, tmp_path):
-    monkeypatch.setattr(server.questions, "ask", _reply("tampoco-existe"))
-    result, seen = _delegate(monkeypatch, tmp_path, model="no-existe")
+    monkeypatch.setattr(server.questions, "ask", _reply("also-missing"))
+    result, seen = _delegate(monkeypatch, tmp_path, model="missing")
     assert "modelo inválido" in result
     assert seen == []
 
@@ -288,15 +288,15 @@ def test_the_questions_carry_no_paths_or_content(monkeypatch, tmp_path):
         messages.append(message)
 
     monkeypatch.setattr(server.questions, "ask", _spy)
-    _delegate(monkeypatch, tmp_path, model="no-existe", input="SECRETO-EN-EL-INPUT")
-    assert messages and all("SECRETO-EN-EL-INPUT" not in m for m in messages)
+    _delegate(monkeypatch, tmp_path, model="missing", input="SECRET-IN-THE-INPUT")
+    assert messages and all("SECRET-IN-THE-INPUT" not in m for m in messages)
     assert all(str(tmp_path) not in m for m in messages)
 
 
 class OptionalAnswer(BaseModel):
     """Todos los campos con default: valida incluso contra un cuerpo vacío."""
 
-    value: str = "por-defecto"
+    value: str = "default-value"
 
 
 def answer_optional() -> str:

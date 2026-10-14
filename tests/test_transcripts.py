@@ -14,7 +14,7 @@ from pathlib import Path
 from local_delegate import attribution, recompute, transcripts
 
 BASE = datetime(2026, 10, 1, 12, 0, tzinfo=UTC)
-SESSION = "sesion-sintetica-0001"
+SESSION = "synthetic-session-0001"
 OPUS = "claude-opus-5-5"
 PREFIX = transcripts.TOOL_PREFIX
 
@@ -278,13 +278,13 @@ def test_no_match_and_bench(tmp_path):
     write_jsonl(
         main_transcript(claude, project="C--Users-x-AppData-Local-Temp-banco"),
         [
-            request_entry(0, "m0", tool_use=("toolu_banco", "local_summarize", "x.md")),
-            result_entry(1, "toolu_banco"),
+            request_entry(0, "m0", tool_use=("toolu_bench", "local_summarize", "x.md")),
+            result_entry(1, "toolu_bench"),
         ],
     )
     rows = [
-        log_line(1, tool_use_id="toolu_banco"),
-        log_line(1, tool_use_id="toolu_no_esta"),
+        log_line(1, tool_use_id="toolu_bench"),
+        log_line(1, tool_use_id="toolu_missing"),
         log_line(5000, tool="local_translate"),
     ]
     e_bench, e_id, e = match_all(claude, rows)

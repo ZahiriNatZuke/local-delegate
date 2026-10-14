@@ -163,10 +163,10 @@ def test_none_also_disables_because_windows_does_not_keep_empty_variables(reload
 
 
 def test_an_unknown_model_is_ignored_and_reported(reload_config):
-    reload_config(LOCAL_DELEGATE_FALLBACK_CODE="long,modelo-que-no-existe")
+    reload_config(LOCAL_DELEGATE_FALLBACK_CODE="long,model-that-does-not-exist")
     chain = chains.resolve("code")
     assert chain.models == (LONG,)
-    assert chain.ignored == ("modelo-que-no-existe",)
+    assert chain.ignored == ("model-that-does-not-exist",)
 
 
 def test_duplicates_and_the_model_itself_are_removed(reload_config):
@@ -230,10 +230,10 @@ def test_nobody_outside_config_reads_llamaswap_from_the_environment():
 
 
 def test_doctor_warns_about_an_unknown_model_in_a_chain(reload_config, tmp_path):
-    reload_config(LOCAL_DELEGATE_FALLBACK_CODE="long,modelo-que-no-existe")
+    reload_config(LOCAL_DELEGATE_FALLBACK_CODE="long,model-that-does-not-exist")
     result = checks._probe_fallback(checks.Context(home=tmp_path))
     assert result.status == checks.WARN
-    assert "modelo-que-no-existe" in result.detail
+    assert "model-that-does-not-exist" in result.detail
     assert "LOCAL_DELEGATE_FALLBACK_CODE" in result.detail
 
 

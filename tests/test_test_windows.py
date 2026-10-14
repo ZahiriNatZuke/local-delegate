@@ -134,7 +134,7 @@ def test_unreadable_entries_are_ignored_on_their_own(tmp_path):
             "windows": [
                 good,
                 {"id": "w-2", "end": "2026-10-08T02:00:00Z"},  # falta start
-                {"id": "w-3", "start": "no-es-fecha", "end": None},
+                {"id": "w-3", "start": "not-a-date", "end": None},
                 {"id": "w-4", "start": "2026-10-08T03:00:00Z", "end": "2026-10-08T02:00:00Z"},
                 {**good},  # id repetido
             ],
@@ -219,7 +219,7 @@ def test_stop_of_a_closed_or_nonexistent_one_fails(tmp_path):
     with pytest.raises(tw.TestWindowError, match="ya estaba cerrada"):
         tw.stop(tmp_path, w.id)
     with pytest.raises(tw.TestWindowError, match="no existe"):
-        tw.stop(tmp_path, "w-nada")
+        tw.stop(tmp_path, "w-none")
     with pytest.raises(tw.TestWindowError, match="ninguna ventana abierta"):
         tw.stop(tmp_path)
 

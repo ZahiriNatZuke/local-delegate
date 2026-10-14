@@ -220,7 +220,7 @@ def test_a_trial_mark_in_the_table_changes_nothing(monkeypatch):
         table = read(name)
         if name != "prices.json":
             return table
-        return {"_dry_run": "PR de prueba del vigilante (run 1): no mezclar", **table, "_otra": 0}
+        return {"_dry_run": "PR de prueba del vigilante (run 1): no mezclar", **table, "_other": 0}
 
     monkeypatch.setattr(pricing, "_read_table", with_marks)
     pricing.load_prices.cache_clear()

@@ -73,10 +73,10 @@ def test_the_check_fails_if_a_marker_remains(build_site, tmp_path):
     """Verificado al revés: con un marcador vivo, `comprobar` tiene que denunciarlo."""
     dest = tmp_path / "_site"
     build_site.build(dest, "9.9.9")
-    (dest / "colado.html").write_text("<p>__LD_VERSION__</p>", encoding="utf-8")
+    (dest / "sneaked.html").write_text("<p>__LD_VERSION__</p>", encoding="utf-8")
 
     pending = build_site.check(dest)
-    assert [r.name for r in pending] == ["colado.html"]
+    assert [r.name for r in pending] == ["sneaked.html"]
 
 
 def test_the_declared_version_comes_from_the_pyproject(build_site):

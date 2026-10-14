@@ -613,7 +613,7 @@ def test_init_llamaswap_missing_model_id_errors(monkeypatch, tmp_path):
             "--config",
             str(config_path),
             "--resident",
-            "no-existe",
+            "missing",
             "--vram-gb",
             "16",
         ]

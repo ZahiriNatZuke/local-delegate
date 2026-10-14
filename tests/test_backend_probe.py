@@ -152,7 +152,7 @@ def test_the_saved_list_belongs_to_its_url(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "body", [[], {}, {"data": "no es una lista"}], ids=["lista", "sin-data", "data-texto"]
+    "body", [[], {}, {"data": "no es una lista"}], ids=["lista", "sin-data", "data-text"]
 )
 @backend_mock.mock
 def test_a_body_with_another_shape_is_an_invalid_response(remote, body):

@@ -79,7 +79,7 @@ def _events(count: int) -> str:
                     # El índice va en el nombre de la tool: así una fila de la página 2 es
                     # distinguible de una de la página 1 **por su texto**, que es lo que se compara.
                     "tool": f"local_tool_{n:03d}",
-                    "model": "modelo-de-prueba",
+                    "model": "test-model",
                     "source": "path",
                     "chars_in": 1000 + n,
                     "chars_out": 100 + n,
@@ -328,7 +328,7 @@ def _showcase_log() -> str:
     now = datetime.now(UTC)
     local_midnight = now.astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
     step = min(timedelta(seconds=30), (now - local_midnight) / 2)
-    common = {"model": "modelo-de-prueba", "source": "path", "backend": "local"}
+    common = {"model": "test-model", "source": "path", "backend": "local"}
     events = [
         {
             **common,
@@ -401,7 +401,7 @@ def measurements(tmp_path_factory):
             page.wait_for_function(
                 "() => document.getElementById('procTable').innerText.includes('Ningún proceso')"
             )
-            m["procesosVacia"] = page.evaluate(
+            m["processesEmpty"] = page.evaluate(
                 "() => getComputedStyle(document.querySelector('#procTable td')).fontFamily"
             )
             browser.close()
@@ -424,7 +424,7 @@ def test_the_daemon_chip_looks_like_its_twins(measurements):
 
 def test_the_empty_processes_row_looks_like_the_other_empties(measurements):
     """REQ-034 (c)."""
-    assert measurements["procesosVacia"] == measurements["empty"]
+    assert measurements["processesEmpty"] == measurements["empty"]
 
 
 def test_the_hooks_note_is_prose_in_Inter(measurements):
@@ -479,7 +479,7 @@ def test_latency_is_in_seconds(measurements):
 # que su `font-family` computado sea una de las dos pilas del panel (`--sans`, `--mono`). Compara la
 # pila declarada, no anchos: en el CI Linux la fuente web no carga, y medir anchos ahí miente.
 
-_PANEL_URL = "https://pc.ejemplo.ts.net:9393/"
+_PANEL_URL = "https://pc.example.ts.net:9393/"
 _SYSTEM_STATES = {
     # Windows con el backend en la misma máquina: medidores y procesos.
     "local": {
@@ -492,13 +492,13 @@ _SYSTEM_STATES = {
         "panel_url": "",
     },
     # Linux contra un backend remoto: la RAM de aquí sí se mide; los procesos del backend, no.
-    "remoto": {
+    "remote": {
         "ram": {"used_gb": 6.1, "total_gb": 15.5, "free_gb": 9.4, "pct": 39.4},
         "vram": None,
         "processes": [],
         "platform": "linux",
         "origin": "remote",
-        "host": "pc.ejemplo.ts.net:9292",
+        "host": "pc.example.ts.net:9292",
         "panel_url": _PANEL_URL,
     },
     # La Mac contra la PC: ni RAM ni VRAM ni procesos aquí.
@@ -508,7 +508,7 @@ _SYSTEM_STATES = {
         "processes": [],
         "platform": "darwin",
         "origin": "remote",
-        "host": "pc.ejemplo.ts.net:9292",
+        "host": "pc.example.ts.net:9292",
         "panel_url": _PANEL_URL,
     },
 }
@@ -591,7 +591,7 @@ def test_cards_only_use_the_panel_fonts(tmp_path, monkeypatch, state):
         link = m["link"]
         assert link is not None, "el host del backend tiene que ser un enlace"
         assert link["href"] == _PANEL_URL
-        assert link["text"] == "pc.ejemplo.ts.net"
+        assert link["text"] == "pc.example.ts.net"
         assert link["target"] == "_blank"
         assert "noopener" in link["rel"].split()
         assert "Procesos del backend".upper() not in [t.upper() for t in m["texts"]]
@@ -613,7 +613,7 @@ def _cost_and_image_log(tmp_path, monkeypatch) -> None:
     now = datetime.now(UTC)
     local_midnight = now.astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
     step = min(timedelta(seconds=30), (now - local_midnight) / 2)
-    common = {"ok": True, "client": "claude-code", "backend": "local", "model": "modelo-de-prueba"}
+    common = {"ok": True, "client": "claude-code", "backend": "local", "model": "test-model"}
     events = [
         {
             **common,
@@ -893,7 +893,7 @@ _RAW_HOOKS = {
         {"category": "shell", "suggested": 6, "total": 10},
         {"category": "extract", "suggested": 4, "total": 5},
         {"category": "sin categoría", "suggested": 0, "total": 10},
-        {"category": "clave_rara_nueva", "suggested": 2, "total": 5},
+        {"category": "odd_new_key", "suggested": 2, "total": 5},
     ],
     "by_event": [],
     "by_day": [],
@@ -905,7 +905,7 @@ _RAW_HOOKS = {
         {"reason": "code", "total": 5},
         {"reason": "pequeno", "total": 4},
         {"reason": "foreign_mcp", "total": 4},
-        {"reason": "motivo_que_no_existe", "total": 3},
+        {"reason": "reason_that_does_not_exist", "total": 3},
     ],
     "by_ext": [],
 }
@@ -934,7 +934,7 @@ def _raw_clients(path):
         {**row, "client": "claude-code"},
         {**row, "client": "codex-mcp-client"},
         {**row, "client": "unknown"},
-        {**row, "client": "cliente_nuevo"},
+        {**row, "client": "new_client"},
     ]
     path.fulfill(response=response, body=json.dumps(data))
 
@@ -995,9 +995,9 @@ def test_no_table_shows_internal_keys(tmp_path, monkeypatch):
     ):
         assert expected in cells, (expected, cells)
     # El respaldo: la clave desconocida, sin guiones bajos y con mayúscula.
-    assert "Clave rara nueva" in cells
-    assert "Motivo que no existe" in cells
-    assert "Cliente nuevo" in cells
+    assert "Odd new key" in cells
+    assert "Reason that does not exist" in cells
+    assert "New client" in cells
     assert thread == "Subagente"
     assert effort == "Sin dato"
 
@@ -1198,17 +1198,17 @@ def test_backend_and_in_flight_speak_spanish(tmp_path, monkeypatch):
     _cost_and_image_log(tmp_path, monkeypatch)
     backend = {
         "available": True,
-        "running": [{"model": "modelo-b", "state": "ready"}],
+        "running": [{"model": "model-b", "state": "ready"}],
         "running_ok": True,
         "models_stale": False,
-        "causa": None,
-        "etiqueta": None,
-        "detalle": None,
+        "cause": None,
+        "label": None,
+        "detail": None,
         "origin": "local",
         "host": "127.0.0.1:9292",
         "models": [
-            {"id": "modelo-a", "status": "unloaded"},
-            {"id": "modelo-b", "status": "loaded"},
+            {"id": "model-a", "status": "unloaded"},
+            {"id": "model-b", "status": "loaded"},
         ],
     }
     in_flight = {
@@ -1216,7 +1216,7 @@ def test_backend_and_in_flight_speak_spanish(tmp_path, monkeypatch):
             {
                 "id": "1:1",
                 "tool": "local_translate",
-                "model": "modelo-a",
+                "model": "model-a",
                 "source": "path",
                 "chars_in": 39110,
                 "backend": "local",
@@ -1344,7 +1344,7 @@ def test_the_tests_switch_requests_all_three_with_the_parameter(tmp_path, monkey
     test_window = {
         "ts": now.isoformat(timespec="seconds"),
         "tool": "local_extract",
-        "model": "modelo-de-prueba",
+        "model": "test-model",
         "source": "inline",
         "chars_in": 10,
         "chars_out": 5,

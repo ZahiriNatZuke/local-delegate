@@ -107,7 +107,7 @@ class RejectingServer:
         self.sock.listen(64)
         self.port = self.sock.getsockname()[1]
         self.accepted = 0
-        self._thread = threading.Thread(target=self._serve, daemon=True, name="daemon-cortado")
+        self._thread = threading.Thread(target=self._serve, daemon=True, name="daemon-cut")
         self._thread.start()
 
     def _serve(self) -> None:

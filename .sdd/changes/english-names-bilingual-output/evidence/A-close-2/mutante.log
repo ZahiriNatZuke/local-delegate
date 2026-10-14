@@ -1,0 +1,6 @@
+mutante: web/metrics.py:1908 ".replace(/_/g, ' ').trim();" -> ".replace(/_/g, '_').trim();"
+sha256 antes 778ba0eb00f6 mutado dbd6cbc4ff55 restaurado 778ba0eb00f6 (igual)
+E   AssertionError: ['Odd_new_key', 'Reason_that_does_not_exist', 'New_client']
+    assert not ['Odd_new_key', 'Reason_that_does_not_exist', 'New_client']
+D:\Projects\local-delegate\tests\test_dashboard_ui.py:981: AssertionError: ['Odd_new_key', 'Reason_that_does_not_exist', 'New_client']
+1 failed in 1.00s

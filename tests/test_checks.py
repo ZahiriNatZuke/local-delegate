@@ -318,7 +318,7 @@ def test_the_good_install_is_not_reported_as_orphan(tmp_path):
 
 def test_a_foreign_file_in_the_root_does_not_count_as_orphan(tmp_path):
     home = make_home(tmp_path)
-    _with_orphans(home, "hook_de_terceros.py", "telemetry.jsonl")
+    _with_orphans(home, "third_party_hook.py", "telemetry.jsonl")
     assert result_for("scaffold.hook_orphans", make_ctx(home)).status == checks.OK
 
 
@@ -409,7 +409,7 @@ def test_incomparable_daemon_versions_warn_without_offering_a_fix(tmp_path, monk
     monkeypatch.setattr(checks, "_installed_version", lambda: "0.18.0")
     ctx = make_ctx(
         make_home(tmp_path),
-        daemon_status=lambda host, port: {"version": "vete-a-saber", "pid": 42, "mcp_url": "u"},
+        daemon_status=lambda host, port: {"version": "who-knows", "pid": 42, "mcp_url": "u"},
     )
     result = result_for("service.daemon", ctx)
     assert result.status == checks.WARN
@@ -436,7 +436,7 @@ def test_run_all_survives_a_broken_probe(monkeypatch, tmp_path):
     def explodes(_ctx):
         raise RuntimeError("boom")
 
-    broken = checks.Check("test.roto", "cliente", "roto", explodes)
+    broken = checks.Check("test.broken", "cliente", "roto", explodes)
     monkeypatch.setattr(checks, "CHECKS", (broken,) + checks.CHECKS)
     results = dict(checks.run_all(make_ctx(make_home(tmp_path))))
     assert results[broken].status == checks.UNKNOWN
@@ -667,7 +667,7 @@ def test_claude_mcp_entry_reports_its_type(tmp_path):
 
 def test_claude_mcp_missing_entry(tmp_path):
     home = make_home(tmp_path)
-    (home / ".claude.json").write_text(json.dumps({"mcpServers": {"otro": {}}}), encoding="utf-8")
+    (home / ".claude.json").write_text(json.dumps({"mcpServers": {"other": {}}}), encoding="utf-8")
     result = result_for("scaffold.mcp_claude", make_ctx(home))
     assert result.status == checks.MISSING
     assert result.fix_hint == checks.INSTALL_HINT
@@ -717,7 +717,7 @@ def test_credential_warn_when_the_client_speaks_stdio_without_key(tmp_path, monk
 
 def test_credential_ok_if_the_key_is_in_the_environment(tmp_path, monkeypatch):
     """Con la variable cargada, la entrada stdio la hereda y el 401 no llega a pasar."""
-    monkeypatch.setattr(checks.config, "API_KEY", "secreto-de-mentira")
+    monkeypatch.setattr(checks.config, "API_KEY", "fake-secret")
     ctx = make_ctx(_with_stdio(make_home(tmp_path)), backend_needs_key=lambda: (True, ""))
     assert result_for("service.credential", ctx).status == checks.OK
 
@@ -780,7 +780,7 @@ def test_the_protected_port_is_not_mistaken_for_a_foreign_process(tmp_path, monk
 def test_the_token_diagnosis_does_not_print_the_secret(tmp_path, monkeypatch):
     """El arreglo nombra la variable; su valor no sale por pantalla ni por error."""
     monkeypatch.setattr(checks, "_port_taken", lambda host, port: True)
-    monkeypatch.setattr(checks.config, "WEB_TOKEN", "un-secreto-que-no-debe-salir")
+    monkeypatch.setattr(checks.config, "WEB_TOKEN", "a-secret-that-must-not-leak")
     ctx = make_ctx(
         make_home(tmp_path),
         daemon_status=lambda host, port: None,
@@ -788,8 +788,8 @@ def test_the_token_diagnosis_does_not_print_the_secret(tmp_path, monkeypatch):
     )
     result = result_for("service.daemon", ctx)
 
-    assert "un-secreto-que-no-debe-salir" not in result.detail
-    assert "un-secreto-que-no-debe-salir" not in (result.fix_hint or "")
+    assert "a-secret-that-must-not-leak" not in result.detail
+    assert "a-secret-that-must-not-leak" not in (result.fix_hint or "")
 
 
 def test_without_knowing_if_it_requires_a_token_the_usual_message_stays(tmp_path, monkeypatch):
@@ -1052,11 +1052,11 @@ def test_a_client_without_elicitation_is_still_ok(tmp_path):
     Un cliente sin `elicitation` es información, no un defecto: no hay comando del repo que lo
     arregle y marcarlo como aviso subiría el exit code de una máquina sana.
     """
-    silent = {**CODEX, "client": "cliente-mudo", "caps": []}
+    silent = {**CODEX, "client": "silent-client", "caps": []}
     result = result_for("client.observed", observing(tmp_path, [CLAUDE, silent]))
     assert result.status == checks.OK
     assert not checks.is_warning(result.status)
-    assert "cliente-mudo 0.146.0 [2025-06-18] sin elicitation" in result.detail
+    assert "silent-client 0.146.0 [2025-06-18] sin elicitation" in result.detail
     assert "claude-code 2.1.220 [2025-11-25] elicitation" in result.detail
 
 
@@ -1155,7 +1155,7 @@ def test_default_reads_the_registry_and_skips_what_is_unusable(tmp_path, monkeyp
 
 def test_default_creates_neither_the_directory_nor_the_file(tmp_path, monkeypatch):
     """`probe` nunca escribe, y eso incluye no materializar el sitio donde iría el registro."""
-    dest = tmp_path / "sin-crear"
+    dest = tmp_path / "not-created"
     monkeypatch.setattr(checks.config, "LOG_DIR", dest)
     checks._default_clients_seen()
     assert not dest.exists()
@@ -1250,7 +1250,7 @@ def _home_with_credential(tmp_path, monkeypatch):
         json.dumps({"$schema": install.OPENCODE_SCHEMA, "mcp": {install.SERVER_NAME: oc_entry}}),
         encoding="utf-8",
     )
-    monkeypatch.setenv("LOCAL_DELEGATE_WEB_TOKEN", "un-token-cualquiera")
+    monkeypatch.setenv("LOCAL_DELEGATE_WEB_TOKEN", "any-token")
     return home
 
 
@@ -1379,7 +1379,7 @@ def test_a_stdio_entry_does_not_count_as_blind(tmp_path, monkeypatch):
 # queda en 401 sin que nada lo diga: `service.daemon_auth` es ciego para él. Este check no escribe
 # (eso sería la fase B), solo convierte el fallo mudo en un aviso.
 
-_TOKEN_DESKTOP = "token-literal-de-desktop-que-no-debe-salir-nunca"
+_TOKEN_DESKTOP = "literal-desktop-token-that-must-never-leak"
 
 
 def _desktop_entry(header: str | None = f"Authorization: Bearer {_TOKEN_DESKTOP}"):
@@ -1388,7 +1388,7 @@ def _desktop_entry(header: str | None = f"Authorization: Bearer {_TOKEN_DESKTOP}
 
 def _with_desktop(home, entry=None, *, raw=None):
     """Claude Desktop con un servidor ajeno al lado, que es como está el fichero real."""
-    servers = {"otro-servidor": {"command": "uvx", "args": ["algo"]}}
+    servers = {"other-server": {"command": "uvx", "args": ["algo"]}}
     if entry is not None:
         servers[install.SERVER_NAME] = entry
     write_claude_desktop(home, servers, raw=raw)
@@ -1513,15 +1513,15 @@ def test_desktop_pointing_to_another_host_is_not_tested_against_the_local_daemon
 
 def test_desktop_with_referenced_variable_tests_its_value(tmp_path, monkeypatch):
     """`mcp-remote` expande `${VAR}` en las cabeceras: el valor sale de `env` de la entrada o del entorno."""
-    monkeypatch.setenv("TOKEN_DESKTOP_PRUEBA", "valor-del-entorno")
+    monkeypatch.setenv("TOKEN_DESKTOP_TEST", "value-from-env")
     calls: list[str] = []
     home = _with_desktop(
-        make_home(tmp_path), _desktop_entry(header="Authorization: Bearer ${TOKEN_DESKTOP_PRUEBA}")
+        make_home(tmp_path), _desktop_entry(header="Authorization: Bearer ${TOKEN_DESKTOP_TEST}")
     )
     result = result_for("service.desktop_auth", _desktop_ctx(home, calls=calls))
 
     assert result.status == checks.OK, result.detail
-    assert calls == ["valor-del-entorno"]
+    assert calls == ["value-from-env"]
 
 
 def test_desktop_with_bearer_inside_the_variable_tests_only_the_token(tmp_path, monkeypatch):
@@ -1532,25 +1532,25 @@ def test_desktop_with_bearer_inside_the_variable_tests_only_the_token(tmp_path, 
     """
     monkeypatch.delenv("AUTH_HEADER", raising=False)
     entry = _desktop_entry(header="Authorization:${AUTH_HEADER}")
-    entry["env"] = {"AUTH_HEADER": "Bearer token-bueno"}
+    entry["env"] = {"AUTH_HEADER": "Bearer good-token"}
     calls: list[str] = []
     home = _with_desktop(make_home(tmp_path), entry)
     result = result_for("service.desktop_auth", _desktop_ctx(home, calls=calls))
 
-    assert calls == ["token-bueno"]
+    assert calls == ["good-token"]
     assert result.status == checks.OK, result.detail
 
 
 def test_desktop_with_missing_variable_warns_as_suspicion(tmp_path, monkeypatch):
-    monkeypatch.delenv("TOKEN_DESKTOP_PRUEBA", raising=False)
+    monkeypatch.delenv("TOKEN_DESKTOP_TEST", raising=False)
     calls: list[str] = []
     home = _with_desktop(
-        make_home(tmp_path), _desktop_entry(header="Authorization: Bearer ${TOKEN_DESKTOP_PRUEBA}")
+        make_home(tmp_path), _desktop_entry(header="Authorization: Bearer ${TOKEN_DESKTOP_TEST}")
     )
     result = result_for("service.desktop_auth", _desktop_ctx(home, calls=calls))
 
     assert result.status == checks.WARN
-    assert "TOKEN_DESKTOP_PRUEBA" in result.detail
+    assert "TOKEN_DESKTOP_TEST" in result.detail
     assert calls == []
 
 
@@ -1601,7 +1601,7 @@ def test_the_hook_count_follows_the_real_scripts(tmp_path):
     hooks_dir = home / ".claude" / "hooks" / install.HOOKS_SUBDIR
     before = len([p for p in hooks_dir.iterdir() if p.suffix == ".py"])
 
-    (hooks_dir / "mi_hook_propio.py").write_text("# del usuario", encoding="utf-8")
+    (hooks_dir / "my_own_hook.py").write_text("# del usuario", encoding="utf-8")
 
     result = result_for("scaffold.hook_files", make_ctx(home))
     assert result.status == checks.OK

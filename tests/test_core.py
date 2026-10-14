@@ -278,15 +278,15 @@ def test_local_extract_returns_an_object_with_the_requested_keys(monkeypatch):
             json={
                 "choices": [
                     {
-                        "message": {"content": '{"host": "127.0.0.1", "puerto": "9393"}'},
+                        "message": {"content": '{"host": "127.0.0.1", "port": "9393"}'},
                         "finish_reason": "stop",
                     }
                 ]
             },
         )
     )
-    data = server.local_extract(fields=["host", "puerto"], text="algo")
-    assert data == {"host": "127.0.0.1", "puerto": "9393"}
+    data = server.local_extract(fields=["host", "port"], text="algo")
+    assert data == {"host": "127.0.0.1", "port": "9393"}
     # Sin truncamiento, exactamente las claves pedidas y ninguna más.
     assert "_local_delegate" not in data
 
@@ -324,15 +324,15 @@ def test_local_extract_with_path_does_not_break_the_json_with_the_savings_line(
     """
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     monkeypatch.setattr(config, "FEEDBACK_ENABLED", True)
-    source = tmp_path / "fuente.md"
-    source.write_text("host 127.0.0.1 puerto 9393\n" * 40, encoding="utf-8")
+    source = tmp_path / "source.md"
+    source.write_text("host 127.0.0.1 port 9393\n" * 40, encoding="utf-8")
     backend_mock.post("http://test-backend/v1/chat/completions").mock(
         return_value=httpx2.Response(
             200,
             json={
                 "choices": [
                     {
-                        "message": {"content": '{"host": "127.0.0.1", "puerto": "9393"}'},
+                        "message": {"content": '{"host": "127.0.0.1", "port": "9393"}'},
                         "finish_reason": "stop",
                     }
                 ]
@@ -340,10 +340,10 @@ def test_local_extract_with_path_does_not_break_the_json_with_the_savings_line(
         )
     )
 
-    data = server.local_extract(fields=["host", "puerto"], path=str(source))
+    data = server.local_extract(fields=["host", "port"], path=str(source))
 
     assert data["host"] == "127.0.0.1"
-    assert data["puerto"] == "9393"
+    assert data["port"] == "9393"
     assert "error" not in data.get("_local_delegate", {})
     # El dato de ahorro no se pierde: se recoloca donde no estorba al parseo.
     assert data["_local_delegate"]["leido_server_side"]["chars"] > 0
@@ -369,12 +369,12 @@ def test_local_status_reports_backend_up_and_models(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", False)
     backend_mock.get("http://test-backend/v1/models").mock(
-        return_value=httpx2.Response(200, json={"data": [{"id": "modelo-a"}]})
+        return_value=httpx2.Response(200, json={"data": [{"id": "model-a"}]})
     )
     backend_mock.get("http://test-backend/running").mock(return_value=httpx2.Response(404))
     text = server.local_status()
     assert "arriba" in text
-    assert "modelo-a" in text
+    assert "model-a" in text
 
 
 @backend_mock.mock
@@ -435,7 +435,7 @@ def test_llamaswap_groups_without_env_returns_none(monkeypatch):
 
 
 def test_llamaswap_groups_missing_file_returns_none(monkeypatch, tmp_path):
-    monkeypatch.setenv("LLAMASWAP_CONFIG", str(tmp_path / "no-existe.yaml"))
+    monkeypatch.setenv("LLAMASWAP_CONFIG", str(tmp_path / "missing.yaml"))
     assert server._llamaswap_groups() is None
 
 
@@ -641,7 +641,7 @@ def test_chat_applies_process_wide_concurrency_limit(tmp_path, monkeypatch):
 # --- F5: LOCAL_DELEGATE_ALLOWED_DIRS ----------------------------------------------------
 def test_allowed_dirs_empty_means_unrestricted(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "ALLOWED_DIRS", [])
-    f = tmp_path / "afuera.txt"
+    f = tmp_path / "outside.txt"
     f.write_text("hola", encoding="utf-8")
     content, _truncated, _raw_len = server._read_input(None, str(f), max_chars=100)
     assert content == "hola"
@@ -651,7 +651,7 @@ def test_allowed_dirs_accepts_path_inside_root(monkeypatch, tmp_path):
     root = tmp_path / "proyecto"
     root.mkdir()
     monkeypatch.setattr(config, "ALLOWED_DIRS", [root.resolve()])
-    f = root / "dentro.txt"
+    f = root / "inside.txt"
     f.write_text("hola", encoding="utf-8")
     content, _truncated, _raw_len = server._read_input(None, str(f), max_chars=100)
     assert content == "hola"
@@ -660,7 +660,7 @@ def test_allowed_dirs_accepts_path_inside_root(monkeypatch, tmp_path):
 def test_allowed_dirs_rejects_path_outside_roots(monkeypatch, tmp_path):
     root = tmp_path / "proyecto"
     root.mkdir()
-    outside = tmp_path / "otro" / "afuera.txt"
+    outside = tmp_path / "otro" / "outside.txt"
     outside.parent.mkdir()
     outside.write_text("hola", encoding="utf-8")
     monkeypatch.setattr(config, "ALLOWED_DIRS", [root.resolve()])
@@ -671,12 +671,12 @@ def test_allowed_dirs_rejects_path_outside_roots(monkeypatch, tmp_path):
 def test_allowed_dirs_resolves_relative_paths(monkeypatch, tmp_path):
     root = tmp_path / "proyecto"
     root.mkdir()
-    f = root / "sub" / "dentro.txt"
+    f = root / "sub" / "inside.txt"
     f.parent.mkdir()
     f.write_text("hola", encoding="utf-8")
     monkeypatch.setattr(config, "ALLOWED_DIRS", [root.resolve()])
     monkeypatch.chdir(root)
-    content, _truncated, _raw_len = server._read_input(None, "sub/dentro.txt", max_chars=100)
+    content, _truncated, _raw_len = server._read_input(None, "sub/inside.txt", max_chars=100)
     assert content == "hola"
 
 
@@ -746,12 +746,12 @@ def test_importing_the_package_does_not_pull_in_its_own_web_stack():
 # diff no cabe. Se calcula aquí y no se le pide al modelo porque es un conteo, no un juicio.
 def test_the_inventory_counts_lines_per_file():
     diff = (
-        "diff --git a/uno.py b/uno.py\n--- a/uno.py\n+++ b/uno.py\n"
+        "diff --git a/one.py b/one.py\n--- a/one.py\n+++ b/one.py\n"
         "@@ -1,2 +1,3 @@\n contexto\n-fuera\n+dentro\n+extra\n"
-        "diff --git a/dos.py b/dos.py\n--- a/dos.py\n+++ b/dos.py\n"
+        "diff --git a/two.py b/two.py\n--- a/two.py\n+++ b/two.py\n"
         "@@ -1 +1 @@\n-vieja\n+nueva\n"
     )
-    assert server._diff_inventory(diff) == [("uno.py", 2, 1), ("dos.py", 1, 1)]
+    assert server._diff_inventory(diff) == [("one.py", 2, 1), ("two.py", 1, 1)]
 
 
 def test_the_inventory_does_not_mistake_content_for_header():
@@ -761,23 +761,23 @@ def test_the_inventory_does_not_mistake_content_for_header():
     solo son cabecera antes del primer `@@` del archivo.
     """
     diff = (
-        "diff --git a/nota.md b/nota.md\ndeleted file mode 100644\n"
-        "--- a/nota.md\n+++ /dev/null\n@@ -1,2 +0,0 @@\n----\n-titulo\n"
+        "diff --git a/note.md b/note.md\ndeleted file mode 100644\n"
+        "--- a/note.md\n+++ /dev/null\n@@ -1,2 +0,0 @@\n----\n-titulo\n"
     )
-    assert server._diff_inventory(diff) == [("nota.md", 0, 2)]
+    assert server._diff_inventory(diff) == [("note.md", 0, 2)]
 
 
 def test_the_inventory_follows_the_rename_and_records_the_binary():
     renamed = (
-        "diff --git a/viejo.py b/nuevo.py\nsimilarity index 90%\n"
-        "rename from viejo.py\nrename to nuevo.py\n"
-        "--- a/viejo.py\n+++ b/nuevo.py\n@@ -1,2 +1,2 @@\n igual\n-quitada\n+puesta\n"
+        "diff --git a/viejo.py b/new.py\nsimilarity index 90%\n"
+        "rename from viejo.py\nrename to new.py\n"
+        "--- a/viejo.py\n+++ b/new.py\n@@ -1,2 +1,2 @@\n igual\n-quitada\n+puesta\n"
     )
     binary = (
         "diff --git a/img.png b/img.png\nindex 111..222 100644\n"
         "Binary files a/img.png and b/img.png differ\n"
     )
-    assert server._diff_inventory(renamed) == [("nuevo.py", 1, 1)]
+    assert server._diff_inventory(renamed) == [("new.py", 1, 1)]
     # El binario no aporta líneas pero sí forma parte del cambio: tiene que salir en el alcance.
     assert server._diff_inventory(binary) == [("img.png", 0, 0)]
 

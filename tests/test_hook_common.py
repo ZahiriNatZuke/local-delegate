@@ -114,7 +114,7 @@ def test_the_script_fingerprint_changes_when_the_script_changes(tmp_path):
 
     assert before and after and len(before) == 8
     assert before != after, "dos scripts distintos no pueden tener la misma huella"
-    assert common.version_de(str(tmp_path / "no-existe.py")) == ""
+    assert common.version_de(str(tmp_path / "missing.py")) == ""
 
 
 def test_the_context_says_which_script_ran_and_in_which_session():
@@ -135,7 +135,7 @@ def test_each_identifier_is_distinct():
 
 
 def _mark(tmp_path, ok: bool, age_s: float = 0.0):
-    file = tmp_path / "salud.json"
+    file = tmp_path / "health.json"
     file.write_text(json.dumps({"ts": time.time() - age_s, "ok": ok}), encoding="utf-8")
     return file
 
@@ -153,8 +153,10 @@ def test_a_fresh_mark_is_trusted_and_not_probed(monkeypatch, tmp_path):
     "prepare",
     [
         lambda tmp: _mark(tmp, ok=True, age_s=3600),
-        lambda tmp: tmp / "no-existe.json",
-        lambda tmp: (tmp / "rota.json", (tmp / "rota.json").write_text("{", encoding="utf-8"))[0],
+        lambda tmp: tmp / "missing.json",
+        lambda tmp: (tmp / "broken.json", (tmp / "broken.json").write_text("{", encoding="utf-8"))[
+            0
+        ],
         lambda tmp: (
             tmp / "sin-ts.json",
             (tmp / "sin-ts.json").write_text('{"ok": true}', encoding="utf-8"),
@@ -174,7 +176,7 @@ def test_an_unusable_mark_is_asked_again(monkeypatch, tmp_path, prepare):
 def test_the_probe_is_stored_so_it_is_not_repeated(monkeypatch, tmp_path):
     probes = []
     monkeypatch.setattr(common, "_probe", lambda t: probes.append(t) or True)
-    file = tmp_path / "salud.json"
+    file = tmp_path / "health.json"
 
     common.backend_available(marker=file)
     common.backend_available(marker=file)
@@ -186,7 +188,7 @@ def test_the_probe_is_stored_so_it_is_not_repeated(monkeypatch, tmp_path):
 def test_if_the_mark_cannot_be_written_it_still_answers(monkeypatch, tmp_path):
     """Sin caché se sondea más a menudo: es lento, no incorrecto."""
     monkeypatch.setattr(common, "_probe", lambda t: True)
-    unreachable = tmp_path / "no" / "existe" / "salud.json"
+    unreachable = tmp_path / "no" / "existe" / "health.json"
 
     assert common.backend_available(marker=unreachable) is True
 
@@ -194,12 +196,12 @@ def test_if_the_mark_cannot_be_written_it_still_answers(monkeypatch, tmp_path):
 def test_a_backend_that_is_not_there_gives_false_without_raising(monkeypatch, tmp_path):
     """Control positivo del sondeo de verdad: contra un puerto donde no hay nadie."""
     monkeypatch.setenv("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9/v1")
-    assert common.backend_available(marker=tmp_path / "salud.json", timeout_s=0.2) is False
+    assert common.backend_available(marker=tmp_path / "health.json", timeout_s=0.2) is False
 
 
 def test_an_invalid_url_does_not_raise_either(monkeypatch, tmp_path):
-    monkeypatch.setenv("LOCAL_DELEGATE_BASE_URL", "no-es-una-url")
-    assert common.backend_available(marker=tmp_path / "salud.json", timeout_s=0.2) is False
+    monkeypatch.setenv("LOCAL_DELEGATE_BASE_URL", "not-a-url")
+    assert common.backend_available(marker=tmp_path / "health.json", timeout_s=0.2) is False
 
 
 def test_a_401_means_the_backend_IS_there(monkeypatch, tmp_path):
@@ -220,7 +222,7 @@ def test_a_401_means_the_backend_IS_there(monkeypatch, tmp_path):
 
     monkeypatch.setattr(common.urllib.request, "urlopen", _raises_401)
 
-    assert common.backend_available(marker=tmp_path / "salud.json") is True
+    assert common.backend_available(marker=tmp_path / "health.json") is True
 
 
 def test_a_500_does_not_count_as_a_healthy_backend(monkeypatch, tmp_path):
@@ -237,7 +239,7 @@ def test_a_500_does_not_count_as_a_healthy_backend(monkeypatch, tmp_path):
 
     monkeypatch.setattr(common.urllib.request, "urlopen", lambda *a, **k: _Response())
 
-    assert common.backend_available(marker=tmp_path / "salud.json") is False
+    assert common.backend_available(marker=tmp_path / "health.json") is False
 
 
 def test_each_endpoint_has_its_own_health_mark(monkeypatch):

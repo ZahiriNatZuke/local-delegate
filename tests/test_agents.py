@@ -34,7 +34,7 @@ Texto que no se toca.
 """
 
 FOREIGN = """---
-name: ajeno
+name: foreign
 tools: Read, Write, Bash
 ---
 
@@ -119,9 +119,9 @@ def test_without_catalog_nothing_is_touched(tmp_path, monkeypatch):
     Se apunta a una ruta inexistente en vez de doblar la función que lee: así se ejercita el
     `except OSError` de verdad, no un doble que devuelve la lista vacía por su cuenta.
     """
-    assert agents.tool_catalog(tmp_path / "no-existe.md") == []
+    assert agents.tool_catalog(tmp_path / "missing.md") == []
 
-    monkeypatch.setattr(inst, "resources_dir", lambda: tmp_path / "sin-recursos")
+    monkeypatch.setattr(inst, "resources_dir", lambda: tmp_path / "no-resources")
     d = _agents_dir(tmp_path, delegador=DELEGATOR)
     before = snapshot(d)
     assert [a for a in inst.plan_install(_opts(tmp_path)) if a.kind == "agents"] == []
@@ -142,17 +142,19 @@ def test_an_agent_that_delegates_is_updated(tmp_path):
 
 def test_a_foreign_agent_stays_byte_for_byte_identical(tmp_path):
     """El que no declara nuestras tools no es nuestro, y no se toca ni para añadirle nada."""
-    d = _agents_dir(tmp_path, ajeno=FOREIGN)
+    d = _agents_dir(tmp_path, foreign=FOREIGN)
     before = snapshot(d)
     assert _install(tmp_path) == 0
     assert snapshot(d) == before
-    assert not (d / "ajeno.md.bak").exists(), "ni siquiera se hizo copia: no se abrió para escribir"
+    assert not (d / "foreign.md.bak").exists(), (
+        "ni siquiera se hizo copia: no se abrió para escribir"
+    )
 
 
 def test_without_a_recognizable_section_the_block_location_is_not_made_up(tmp_path):
-    d = _agents_dir(tmp_path, raro=NO_SECTION)
+    d = _agents_dir(tmp_path, odd=NO_SECTION)
     _install(tmp_path)
-    text = (d / "raro.md").read_text(encoding="utf-8")
+    text = (d / "odd.md").read_text(encoding="utf-8")
     assert agents.CATALOG_BEGIN not in text, "no debe insertar donde no sabe"
     assert "mcp__local-delegate__local_summarize" in text, "pero el `tools:` sí se completa"
 
@@ -161,9 +163,9 @@ def test_an_orphan_opening_marker_does_not_wipe_the_file(tmp_path):
     broken = DELEGATOR.replace(
         "## Otra sección", f"{agents.CATALOG_BEGIN}\nviejo\n\n## Otra sección"
     )
-    d = _agents_dir(tmp_path, roto=broken)
+    d = _agents_dir(tmp_path, broken=broken)
     _install(tmp_path)
-    text = (d / "roto.md").read_text(encoding="utf-8")
+    text = (d / "broken.md").read_text(encoding="utf-8")
     assert "Texto que no se toca." in text, "sin marcador de cierre no se reemplaza hasta el final"
 
 

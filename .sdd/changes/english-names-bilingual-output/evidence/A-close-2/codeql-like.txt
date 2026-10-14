@@ -1,0 +1,10 @@
+== ahora
+tests/fake_llama_server.py:134 empty-except (KeyboardInterrupt)
+tests/test_residency.py:804 empty-except (ResidencyError)
+tests/test_turn_daemon.py:660 side-effect-in-assert (walrus)
+tests/test_turn_daemon.py:119 catch-base-exception (BaseException)
+== HEAD
+tests/fake_llama_server.py:134 empty-except (KeyboardInterrupt)
+tests/test_residency.py:804 empty-except (ResidencyError)
+tests/test_turn_daemon.py:660 side-effect-in-assert (walrus)
+tests/test_turn_daemon.py:119 catch-base-exception (BaseException)

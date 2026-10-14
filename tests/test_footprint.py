@@ -124,7 +124,7 @@ def test_footprint_changes_with_prompt_size_and_path(tmp_path):
     assert footprint_mod.footprint(cfg, "dos") != base
     gguf.write_bytes(b"x" * 11)
     assert footprint_mod.footprint(cfg, "uno")["size_bytes"] == 11
-    another = tmp_path / "otro.gguf"
+    another = tmp_path / "other.gguf"
     another.write_bytes(b"x" * 11)
     assert footprint_mod.footprint(_cfg(f"llama-server --model {another}"), "uno")["path"] == str(
         another
