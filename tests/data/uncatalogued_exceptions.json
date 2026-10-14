@@ -45,6 +45,102 @@
       "text": "Authorization",
       "kind": "machine_name",
       "reason": "nombre de cabecera HTTP"
+    },
+    {
+      "file": "src/local_delegate/llamaswap_api.py",
+      "text": "reloading configuration",
+      "kind": "verbatim",
+      "reason": "frase del log del proxy de llama-swap (v255) que la vigía busca tal cual en `/api/events`; está en inglés porque la escribe llama-swap, y traducirla haría que la vigía no la encontrara nunca"
+    },
+    {
+      "file": "src/local_delegate/llamaswap_api.py",
+      "text": "configuration reloaded",
+      "kind": "verbatim",
+      "reason": "frase del log del proxy de llama-swap (v255) que la vigía busca tal cual en `/api/events`; está en inglés porque la escribe llama-swap, y traducirla haría que la vigía no la encontrara nunca"
+    },
+    {
+      "file": "src/local_delegate/llamaswap_api.py",
+      "text": "failed to reload config",
+      "kind": "verbatim",
+      "reason": "frase del log del proxy de llama-swap (v255) que la vigía busca tal cual en `/api/events`; está en inglés porque la escribe llama-swap, y traducirla haría que la vigía no la encontrara nunca"
+    },
+    {
+      "file": "src/local_delegate/llamaswap_api.py",
+      "text": "failed to build new server during reload",
+      "kind": "verbatim",
+      "reason": "frase del log del proxy de llama-swap (v255) que la vigía busca tal cual en `/api/events`; está en inglés porque la escribe llama-swap, y traducirla haría que la vigía no la encontrara nunca"
+    },
+    {
+      "file": "src/local_delegate/matrix.py",
+      "text": "español",
+      "kind": "verbatim",
+      "reason": "entrada congelada del corpus de la evaluación de afinidad (`benchmarks/afinidad-2026-10`): `server` reconstruye con ella los prompts cuyo sha256 es la huella de las celdas aprobadas; traducirla dejaría todas las celdas «sin base»"
+    },
+    {
+      "file": "src/local_delegate/matrix.py",
+      "text": "inglés",
+      "kind": "verbatim",
+      "reason": "entrada congelada del corpus de la evaluación de afinidad (`benchmarks/afinidad-2026-10`): `server` reconstruye con ella los prompts cuyo sha256 es la huella de las celdas aprobadas; traducirla dejaría todas las celdas «sin base»"
+    },
+    {
+      "file": "src/local_delegate/matrix.py",
+      "text": "Solo el texto en mayúsculas, en una línea",
+      "kind": "verbatim",
+      "reason": "entrada congelada del corpus de la evaluación de afinidad (`benchmarks/afinidad-2026-10`): `server` reconstruye con ella los prompts cuyo sha256 es la huella de las celdas aprobadas; traducirla dejaría todas las celdas «sin base»"
+    },
+    {
+      "file": "src/local_delegate/matrix.py",
+      "text": "Solo la fecha con el formato AAAA-MM-DD",
+      "kind": "verbatim",
+      "reason": "entrada congelada del corpus de la evaluación de afinidad (`benchmarks/afinidad-2026-10`): `server` reconstruye con ella los prompts cuyo sha256 es la huella de las celdas aprobadas; traducirla dejaría todas las celdas «sin base»"
+    },
+    {
+      "file": "src/local_delegate/matrix.py",
+      "text": "Solo un número entero, sin texto adicional",
+      "kind": "verbatim",
+      "reason": "entrada congelada del corpus de la evaluación de afinidad (`benchmarks/afinidad-2026-10`): `server` reconstruye con ella los prompts cuyo sha256 es la huella de las celdas aprobadas; traducirla dejaría todas las celdas «sin base»"
+    },
+    {
+      "file": "src/local_delegate/matrix.py",
+      "text": "Una sola línea con los valores separados por comas, sin espacios",
+      "kind": "verbatim",
+      "reason": "entrada congelada del corpus de la evaluación de afinidad (`benchmarks/afinidad-2026-10`): `server` reconstruye con ella los prompts cuyo sha256 es la huella de las celdas aprobadas; traducirla dejaría todas las celdas «sin base»"
+    },
+    {
+      "file": "src/local_delegate/matrix.py",
+      "text": "lista Markdown con una viñeta '- ' por elemento",
+      "kind": "verbatim",
+      "reason": "entrada congelada del corpus de la evaluación de afinidad (`benchmarks/afinidad-2026-10`): `server` reconstruye con ella los prompts cuyo sha256 es la huella de las celdas aprobadas; traducirla dejaría todas las celdas «sin base»"
+    },
+    {
+      "file": "src/local_delegate/topology.py",
+      "text": "dos sintaxis",
+      "kind": "verbatim",
+      "reason": "motivo de REQ-002 como valor de máquina: viaja en `turn_reason` de `GET /api/llamaswap/status` y `checks._no_turn_is_fine` lo compara entre procesos; a la persona se le dice con `topology.reason_text` (`cli.topology.reason.*`)"
+    },
+    {
+      "file": "src/local_delegate/topology.py",
+      "text": "no cumple load.go",
+      "kind": "verbatim",
+      "reason": "motivo de REQ-002 como valor de máquina: viaja en `turn_reason` de `GET /api/llamaswap/status` y `checks._no_turn_is_fine` lo compara entre procesos; a la persona se le dice con `topology.reason_text` (`cli.topology.reason.*`)"
+    },
+    {
+      "file": "src/local_delegate/benchmark.py",
+      "text": "\nimport json\ncomprobaciones = json.load(open(\"checks.json\", encoding=\"utf-8\"))\nespacio = {\"__name__\": \"generado\"}\ntry:\n    exec(compile(open(\"generated.py\", encoding=\"utf-8\").read(), \"generated.py\", \"exec\"), espacio)\n    cargado = True\nexcept BaseException:\n    cargado = False\nresultados = []\nfor c in comprobaciones:\n    ok = False\n    if cargado:\n        try:\n            valor = eval(c[\"expr\"], espacio)\n            ok = \"raises\" not in c and type(valor) is type(c[\"expected\"]) and valor == c[\"expected\"]\n        except BaseException as exc:\n            ok = type(exc).__name__ == c.get(\"raises\")\n    resultados.append(ok)\nprint(\"\\n\" + json.dumps(resultados))\n",
+      "kind": "verbatim",
+      "reason": "código Python del arnés que `benchmark` escribe y ejecuta en un directorio temporal para comprobar el código generado (protocolo-f2.md §4.7 punto 6); no es salida"
+    },
+    {
+      "file": "src/local_delegate/benchmark.py",
+      "text": "dedicated usage",
+      "kind": "verbatim",
+      "reason": "nombre del contador de `typeperf` (`\\GPU Process Memory(...)\\Dedicated Usage`) en minúsculas, con el que se clasifican sus columnas; lo escribe Windows en inglés"
+    },
+    {
+      "file": "src/local_delegate/benchmark.py",
+      "text": "shared usage",
+      "kind": "verbatim",
+      "reason": "nombre del contador de `typeperf` (`\\GPU Process Memory(...)\\Shared Usage`) en minúsculas, con el que se clasifican sus columnas; lo escribe Windows en inglés"
     }
   ]
 }

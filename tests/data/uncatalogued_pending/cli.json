@@ -4,13 +4,6 @@
   "files": [
     "scripts/analyze_benchmark.py",
     "scripts/measure_cooldown.py",
-    "scripts/pair_sheet.py",
-    "src/local_delegate/benchmark.py",
-    "src/local_delegate/llamaswap_api.py",
-    "src/local_delegate/llamaswap_config.py",
-    "src/local_delegate/matrix.py",
-    "src/local_delegate/residency.py",
-    "src/local_delegate/topology.py",
-    "src/local_delegate/turn.py"
+    "scripts/pair_sheet.py"
   ]
 }

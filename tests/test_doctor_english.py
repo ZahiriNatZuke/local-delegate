@@ -31,10 +31,10 @@ SURFACES = ("doctor", "common")
 #: `test_the_pending_fragments_still_live_in_their_modules` obliga a quitarlos de aquí en cuanto
 #: su ola los traduzca.
 PENDING_FRAGMENTS = {
-    "sin residente (recomendado)": "residency.py",  # B1c
-    "el daemon no responde": "llamaswap_api.py",  # B1c
-    "sin LLAMASWAP_CONFIG": "topology.py",  # B1c
     "sin residente (no se sabe: ": "chains.py",  # B2
+    # B2: `chains.residents_text()` imprime el motivo de REQ-002 crudo (el valor de máquina de
+    # `topology.NO_CONFIG`); B1c le dio `topology.reason_text`, que es lo que B2 tiene que usar.
+    "sin LLAMASWAP_CONFIG": "topology.py",
     "sin residente": "chains.py",  # B2
 }
 _WORD = re.compile(r"[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{3,}")
@@ -205,7 +205,7 @@ def test_resolve_language_reports_the_stored_source(stored, expected, tmp_path):
 
 
 def test_the_pending_fragments_still_live_in_their_modules():
-    """Cuando B1c o B2 traduzcan uno de estos textos, el literal sale de su módulo y esto falla."""
+    """Cuando B2 traduzca uno de estos textos, el literal sale de su módulo y esto falla."""
     package = Path(checks.__file__).parent
     for fragment, module in PENDING_FRAGMENTS.items():
         assert fragment in (package / module).read_text(encoding="utf-8"), (fragment, module)

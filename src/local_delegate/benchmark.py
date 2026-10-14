@@ -33,6 +33,7 @@ from typing import Any, Self
 import httpx2
 
 from . import config, failures, legacy_names
+from .i18n import t
 
 # El muestreo frecuente de /metrics no debe convertir el benchmark en un log de cada GET.
 logging.getLogger("httpx2").setLevel(logging.WARNING)
@@ -79,14 +80,14 @@ def _frozen_source(corpus_dir: Path, entry: dict[str, Any]) -> bytes:
     # Nunca una ruta viva: dos casos apuntaban a ficheros que el propio plan edita, y un hash
     # contra una ruta que cambia se invalida solo.
     if not name or Path(name).name != name:
-        raise ValueError(f"{entry.get('id')}: source_file tiene que ser un nombre en fuentes/")
+        raise ValueError(t("cli.benchmark.source_file_not_a_name", case=entry.get("id")))
     path = corpus_dir / "fuentes" / name
     if not path.is_file():
-        raise ValueError(f"{entry.get('id')}: falta fuentes/{name}")
+        raise ValueError(t("cli.benchmark.source_missing", case=entry.get("id"), name=name))
     data = path.read_bytes()
     if hashlib.sha256(data).hexdigest() != entry.get("source_sha256"):
         # Correr otro contenido con el mismo id daria numeros de un caso que no es el del JSONL.
-        raise ValueError(f"{entry.get('id')}: source_sha256 no cuadra con fuentes/{name}")
+        raise ValueError(t("cli.benchmark.source_sha256_mismatch", case=entry.get("id"), name=name))
     return data
 
 
@@ -94,14 +95,14 @@ def load_corpus(path: Path) -> Corpus:
     """Carga el corpus v2 y verifica el hash de cada fuente y de cada control antes de nada."""
     data = json.loads(path.read_text(encoding="utf-8"))
     if data.get("schema_version") != 2 or not isinstance(data.get("cases"), list):
-        raise ValueError("corpus invalido: se esperaba schema_version=2 y cases[]")
+        raise ValueError(t("cli.benchmark.invalid_corpus"))
     cases: list[CorpusCase] = []
     seen: set[str] = set()
     for raw in data["cases"]:
         raw = legacy_names.normalize("benchmark_corpus", raw)
         case_id = str(raw.get("id", "")).strip()
         if not case_id or case_id in seen:
-            raise ValueError(f"id de caso vacio o duplicado: {case_id!r}")
+            raise ValueError(t("cli.benchmark.bad_case_id", case=repr(case_id)))
         seen.add(case_id)
         for field_name, allowed in (
             ("kind", _CORPUS_KINDS),
@@ -110,7 +111,14 @@ def load_corpus(path: Path) -> Corpus:
             ("media_type", _CORPUS_MEDIA),
         ):
             if raw.get(field_name) not in allowed:
-                raise ValueError(f"{case_id}: {field_name}={raw.get(field_name)!r} no es valido")
+                raise ValueError(
+                    t(
+                        "cli.benchmark.invalid_field",
+                        case=case_id,
+                        field=field_name,
+                        value=repr(raw.get(field_name)),
+                    )
+                )
         cases.append(
             CorpusCase(
                 id=case_id,
@@ -972,14 +980,11 @@ def _build_probe(args: argparse.Namespace) -> ProcessProbe | None | int:
     if not args.probe_process:
         return None
     if not probe_supported():
-        print("error: --probe-process solo funciona en Windows (Toolhelp32, psapi y typeperf)")
+        print(t("cli.benchmark.probe_windows_only"))
         return 2
     luid = args.gpu_luid or resolve_gpu_luid()
     if not luid:
-        print(
-            "error: no se pudo resolver el LUID de la GPU de forma inequivoca; "
-            'pasalo con --gpu-luid (typeperf -qx "GPU Adapter Memory")'
-        )
+        print(t("cli.benchmark.gpu_luid_ambiguous"))
         return 2
     return ProcessProbe(args.probe_process, luid)
 
@@ -1098,6 +1103,11 @@ class Attempt:
     error_body: str | None = None
 
 
+def _unexpected(kind: str, body: str) -> Attempt:
+    """Respuesta sin la forma de OpenAI. `error` es un valor de máquina del JSONL, sin idioma."""
+    return Attempt("error", error=f"unexpected_response: {kind}", error_body=body[:500])
+
+
 def post_attempt(client: httpx2.Client, url: str, payload: dict[str, Any]) -> Attempt:
     try:
         response = client.post(url, json=payload)
@@ -1113,12 +1123,10 @@ def post_attempt(client: httpx2.Client, url: str, payload: dict[str, Any]) -> At
         data = response.json()
         choice = data["choices"][0]
         message = choice["message"]
-        if not isinstance(message, dict):
-            raise TypeError("message no es un objeto")
     except (ValueError, KeyError, IndexError, TypeError) as exc:
-        return Attempt(
-            "error", error=f"respuesta inesperada: {type(exc).__name__}", error_body=body[:500]
-        )
+        return _unexpected(type(exc).__name__, body)
+    if not isinstance(message, dict):
+        return _unexpected("TypeError", body)
     content = message.get("content")
     reasoning = str(message.get("reasoning_content") or "")
     finish = choice.get("finish_reason")
@@ -1131,7 +1139,7 @@ def post_attempt(client: httpx2.Client, url: str, payload: dict[str, Any]) -> At
     elif finish == "length":
         outcome = "truncated"
     elif not isinstance(content, str):
-        outcome, error = "error", "content nulo"
+        outcome, error = "error", "null_content"
     else:
         outcome = "ok"
     return Attempt(
@@ -1179,7 +1187,7 @@ def _select_cases(corpus: Corpus, args: argparse.Namespace) -> list[CorpusCase]:
     if args.case:
         unknown = set(args.case) - {case.id for case in cases}
         if unknown:
-            raise ValueError(f"casos desconocidos: {', '.join(sorted(unknown))}")
+            raise ValueError(t("cli.benchmark.unknown_cases", cases=", ".join(sorted(unknown))))
         cases = [case for case in cases if case.id in set(args.case)]
     if args.role:
         cases = [case for case in cases if case.role in set(args.role)]
@@ -1194,26 +1202,24 @@ def run_benchmark(args: argparse.Namespace) -> int:
     if args.input_control:
         control = next((c for c in corpus.controls if c["id"] == args.input_control), None)
         if control is None:
-            print(f"error: no hay control {args.input_control!r} en el corpus")
+            print(t("cli.benchmark.no_such_control", control=repr(args.input_control)))
             return 2
         # Ya verificado por hash en load_corpus. Solo aplica a los casos que el control declara.
         control_source = (corpus_path.parent / "fuentes" / control["source_file"]).read_bytes()
         cases = [case for case in cases if case.id in control["para"]]
     if not cases:
-        print("error: ningun caso seleccionado")
+        print(t("cli.benchmark.no_cases"))
         return 2
     without_prompt = [
         c.id for c in cases if not c.raw.get("system") or not c.raw.get("user_template")
     ]
     if without_prompt:
-        print(
-            f"error: casos sin prompt de una llamada ({', '.join(without_prompt)}): regenera el corpus"
-        )
+        print(t("cli.benchmark.cases_without_prompt", cases=", ".join(without_prompt)))
         return 2
 
     output = Path(args.output)
     if output.exists() and not args.append:
-        print(f"error: {output} ya existe; usa --append o elige otra ruta")
+        print(t("cli.benchmark.output_exists", path=output))
         return 2
 
     probe = _build_probe(args)
@@ -1366,25 +1372,23 @@ def run_benchmark(args: argparse.Namespace) -> int:
 def add_parser(sub: argparse._SubParsersAction) -> None:
     parser = sub.add_parser(
         "benchmark",
-        help="Ejecuta el corpus v2 de tareas reales contra un backend canary y escribe JSONL.",
+        help=t("cli.help.benchmark._help"),
     )
-    parser.add_argument("--model", required=True, help="id expuesto por el backend canary")
-    parser.add_argument(
-        "--label", required=True, help="etiqueta de config, p. ej. gptoss-ncmoe12-c8k"
-    )
+    parser.add_argument("--model", required=True, help=t("cli.help.benchmark.model"))
+    parser.add_argument("--label", required=True, help=t("cli.help.benchmark.label"))
     parser.add_argument(
         "--cases",
         required=True,
-        help="cases.json del corpus v2, p. ej. benchmarks/catalogo-2026-09/cases.json",
+        help=t("cli.help.benchmark.cases"),
     )
-    parser.add_argument("--case", action="append", help="id de caso a ejecutar (repetible)")
+    parser.add_argument("--case", action="append", help=t("cli.help.benchmark.case"))
     parser.add_argument(
-        "--role", action="append", choices=_ROLES, help="solo los casos de este rol (repetible)"
+        "--role", action="append", choices=_ROLES, help=t("cli.help.benchmark.role")
     )
     parser.add_argument(
         "--input-control",
         default=None,
-        help="sustituye la entrada por este control del corpus (CP-3), solo en sus casos",
+        help=t("cli.help.benchmark.input_control"),
     )
     parser.add_argument(
         "--runs",
@@ -1392,13 +1396,13 @@ def add_parser(sub: argparse._SubParsersAction) -> None:
         default=5,
         # 5 y no 3 desde el tercer piloto de CP-3: con temperatura de produccion, una corrida mala
         # movia la mediana de 3 y ponia la dispersion en su maximo.
-        help="corridas por caso (default 5)",
+        help=t("cli.help.benchmark.runs"),
     )
     parser.add_argument(
         "--seed",
         type=int,
         default=42,
-        help="semilla base: la corrida n usa seed + n - 1 (y la misma en sus reintentos)",
+        help=t("cli.help.benchmark.seed"),
     )
     parser.add_argument("--quantization", default=None)
     parser.add_argument("--context-size", type=int, default=None)
@@ -1406,7 +1410,7 @@ def add_parser(sub: argparse._SubParsersAction) -> None:
     parser.add_argument(
         "--load-mode",
         default=None,
-        help="--load-mode de llama-server (p. ej. none); el analisis exige el mismo en vigente y candidato",
+        help=t("cli.help.benchmark.load_mode"),
     )
     parser.add_argument("--llama-swap-version", default=None)
     parser.add_argument("--llama-server-version", default=None)
@@ -1414,30 +1418,27 @@ def add_parser(sub: argparse._SubParsersAction) -> None:
         "--reasoning-effort",
         choices=REASONING_EFFORTS,
         default=None,
-        help="razonamiento del modelo; off apaga el pensamiento. El valor del caso manda",
+        help=t("cli.help.benchmark.reasoning_effort"),
     )
-    parser.add_argument(
-        "--endpoint", default=None, help="BASE_URL /v1; default LOCAL_DELEGATE_BASE_URL"
-    )
+    parser.add_argument("--endpoint", default=None, help=t("cli.help.benchmark.endpoint"))
     parser.add_argument("--api-key", default=None, help=argparse.SUPPRESS)
     parser.add_argument("--timeout", type=float, default=300.0)
     parser.add_argument("--sample-interval", type=float, default=0.25)
     parser.add_argument(
         "--probe-process",
         default=None,
-        help="mide RAM y VRAM de este proceso por nombre, p. ej. llama-server.exe (solo Windows)",
+        help=t("cli.help.benchmark.probe_process"),
     )
     parser.add_argument(
         "--gpu-luid",
         default=None,
-        help="LUID del adaptador para la VRAM (p. ej. 0x00000000_0x0000F722); "
-        "sin el, se resuelve contra nvidia-smi",
+        help=t("cli.help.benchmark.gpu_luid"),
     )
-    parser.add_argument("--output", required=True, help="JSONL de salida")
+    parser.add_argument("--output", required=True, help=t("cli.help.benchmark.output"))
     parser.add_argument("--append", action="store_true")
     parser.add_argument(
         "--save-responses",
         action="store_true",
-        help="guarda las respuestas completas; hacen falta para la revision a ciegas",
+        help=t("cli.help.benchmark.save_responses"),
     )
     parser.set_defaults(func=run_benchmark)

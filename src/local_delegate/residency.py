@@ -49,8 +49,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from . import i18n, topology
 from . import llamaswap_config as lc
-from . import topology
 
 try:
     import yaml
@@ -58,20 +58,19 @@ except ImportError:  # pragma: no cover - depende del entorno de instalación
     yaml = None  # type: ignore[assignment]
 
 BOM = b"\xef\xbb\xbf"
-UNKNOWN = "no se sabe si hay delegaciones en curso"
 # Campo de `GET /api/llamaswap/status` (T13) con la ruta de la config que usa el daemon. Lo
 # escribe y lo lee `llamaswap_api.Status` (`to_json`/`from_json`), con esta misma constante.
 CONFIG_PATH_FIELD = "config_path"
-CHANGE_DURING_EDIT = "la config cambió mientras se editaba; vuelve a intentarlo"
 DEFAULT_RESERVE_GB = 2.0
 RESIDENT_GROUP = "resident"
 REPLACE_ATTEMPTS = 5
 REPLACE_WAIT_S = 0.2
-TTL_ZERO_EXPLANATION = (
-    "sin `globalTTL` ni `ttl`, el TTL efectivo es 0 (load.go: un `ttl` ausente o -1 vale "
-    "`globalTTL`, que por defecto es 0): esos modelos no se descargan nunca por TTL y cuentan "
-    "como residentes"
-)
+#: De qué se habla en un error de lectura de YAML (`error_yaml`): el texto, la config o la copia.
+_WHO_KEYS = {
+    "yaml": "cli.residency.who.yaml",
+    "config": "cli.residency.who.config",
+    "copy": "cli.residency.who.copy",
+}
 
 
 class ResidencyError(Exception):
@@ -121,7 +120,7 @@ Change = SetTTL | RemoveMember | AddMember | DeleteGroup | CreateGroup
 
 def _requires_yaml() -> None:
     if yaml is None:
-        raise ResidencyError(lc._EXTRA_INSTALL_MSG)
+        raise ResidencyError(lc.extra_missing())
 
 
 def _decode(original: bytes) -> tuple[str, bool]:
@@ -129,7 +128,7 @@ def _decode(original: bytes) -> tuple[str, bool]:
     try:
         return original[len(BOM) :].decode("utf-8") if bom else original.decode("utf-8"), bom
     except UnicodeDecodeError as e:
-        raise ResidencyError(f"la config no es UTF-8: {e}") from e
+        raise ResidencyError(i18n.t("cli.residency.not_utf8", error=e)) from e
 
 
 def _line(mark: Any) -> int:
@@ -138,31 +137,35 @@ def _line(mark: Any) -> int:
 
 def error_yaml(who: str, e: Exception) -> ResidencyError:
     """Solo el problema y la línea. `str(e)` de PyYAML cita el fragmento del fichero, y ese
-    fragmento puede ser una clave (una comilla sin cerrar en `apiKeys`, por ejemplo)."""
+    fragmento puede ser una clave (una comilla sin cerrar en `apiKeys`, por ejemplo).
+
+    `who` es `yaml`, `config` o `copy` (`_WHO_KEYS`): de qué se habla, en el idioma vigente.
+    """
     problem = getattr(e, "problem", None) or type(e).__name__
     mark = getattr(e, "problem_mark", None)
-    where = f" (línea {mark.line + 1})" if mark is not None else ""
-    return ResidencyError(f"{who} no se puede leer: {problem}{where}")
+    subject = i18n.t(_WHO_KEYS[who])
+    if mark is None:
+        return ResidencyError(i18n.t("cli.residency.unreadable_yaml", who=subject, problem=problem))
+    return ResidencyError(
+        i18n.t("cli.residency.unreadable_yaml_at", who=subject, problem=problem, line=mark.line + 1)
+    )
 
 
 def _no_flow_anchors_or_aliases(text: str) -> None:
     try:
         tokens = list(yaml.scan(text, Loader=yaml.SafeLoader))
     except yaml.YAMLError as e:
-        raise error_yaml("el YAML", e) from None
+        raise error_yaml("yaml", e) from None
     for token in tokens:
         if isinstance(token, (yaml.FlowMappingStartToken, yaml.FlowSequenceStartToken)):
-            raise ResidencyError(
-                f"nodo en estilo flujo (`{{…}}` o `[…]`) en la línea {_line(token.start_mark)}: "
-                "no se edita; escríbelo en estilo bloque"
-            )
+            raise ResidencyError(i18n.t("cli.residency.flow_style", line=_line(token.start_mark)))
         if isinstance(token, yaml.AnchorToken):
             raise ResidencyError(
-                f"ancla `&{token.value}` en la línea {_line(token.start_mark)}: no se edita"
+                i18n.t("cli.residency.anchor", name=token.value, line=_line(token.start_mark))
             )
         if isinstance(token, yaml.AliasToken):
             raise ResidencyError(
-                f"alias `*{token.value}` en la línea {_line(token.start_mark)}: no se edita"
+                i18n.t("cli.residency.alias", name=token.value, line=_line(token.start_mark))
             )
 
 
@@ -182,9 +185,7 @@ def _no_merges(root: Any) -> None:
         if isinstance(node, yaml.MappingNode):
             for key, _value in node.value:
                 if key.tag == "tag:yaml.org,2002:merge":
-                    raise ResidencyError(
-                        f"`<<:` (fusión de mapas) en la línea {_line(key.start_mark)}: no se edita"
-                    )
+                    raise ResidencyError(i18n.t("cli.residency.merge", line=_line(key.start_mark)))
 
 
 def _no_duplicate_keys(root: Any) -> None:
@@ -196,9 +197,12 @@ def _no_duplicate_keys(root: Any) -> None:
                     continue
                 if (key.tag, key.value) in views:
                     raise ResidencyError(
-                        f"clave duplicada `{key.value}` en las líneas "
-                        f"{views[(key.tag, key.value)]} y {_line(key.start_mark)}: llama-swap "
-                        "y PyYAML se quedan con la última; arréglalo a mano antes de editar"
+                        i18n.t(
+                            "cli.residency.duplicate_key",
+                            key=key.value,
+                            first=views[(key.tag, key.value)],
+                            second=_line(key.start_mark),
+                        )
                     )
                 views[(key.tag, key.value)] = _line(key.start_mark)
 
@@ -210,13 +214,15 @@ def _topology_refusal(data: Mapping[str, Any]) -> None:
     if not isinstance(read_one, topology.NoTopology):
         return
     if read_one.reason == topology.TWO_SYNTAXES:
-        raise ResidencyError(
-            "la config usa las dos sintaxis a la vez (`groups`/`matrix` arriba y `routing.router`): "
-            "llama-swap no la arrancaría"
-        )
+        raise ResidencyError(i18n.t("cli.residency.two_syntaxes"))
     if read_one.reason == topology.MATRIX:
-        raise ResidencyError("la config usa el router `matrix`: la residencia por grupos no aplica")
-    raise ResidencyError(f"la config no cumple load.go: {read_one.detail or read_one.reason}")
+        raise ResidencyError(i18n.t("cli.residency.matrix"))
+    raise ResidencyError(
+        i18n.t(
+            "cli.residency.config_fails_load_go",
+            detail=read_one.detail or topology.reason_text(read_one.reason),
+        )
+    )
 
 
 def _analyze(text: str) -> tuple[Any, dict[str, Any]]:
@@ -227,9 +233,9 @@ def _analyze(text: str) -> tuple[Any, dict[str, Any]]:
         root = yaml.compose(text, Loader=yaml.SafeLoader)
         data = yaml.safe_load(text)
     except yaml.YAMLError as e:
-        raise error_yaml("el YAML", e) from None
+        raise error_yaml("yaml", e) from None
     if root is None or not isinstance(root, yaml.MappingNode) or not isinstance(data, dict):
-        raise ResidencyError("la raíz del YAML no es un mapa")
+        raise ResidencyError(i18n.t("cli.residency.root_not_a_map"))
     _no_merges(root)
     _no_duplicate_keys(root)
     _topology_refusal(data)
@@ -353,7 +359,7 @@ Edit = tuple[int, int, str]
 def _edit_ttl(t: str, root: Any, c: SetTTL) -> list[Edit]:
     pair = _node_at(root, ("models", c.model))
     if pair is None or not isinstance(pair[1], yaml.MappingNode) or not pair[1].value:
-        raise ResidencyError(f"el modelo `{c.model}` no tiene un mapa en `models`")
+        raise ResidencyError(i18n.t("cli.residency.model_without_map", model=c.model))
     mapping = pair[1]
     ttl = _pair(mapping, "ttl")
     if ttl is not None:
@@ -367,7 +373,7 @@ def _edit_ttl(t: str, root: Any, c: SetTTL) -> list[Edit]:
 def _group_node(root: Any, data: Mapping[str, Any], group: str) -> tuple[Any, Any]:
     pair = _node_at(root, (*_groups_path(data), group))
     if pair is None:
-        raise ResidencyError(f"no existe el grupo `{group}`")
+        raise ResidencyError(i18n.t("cli.residency.no_such_group", group=group))
     return pair
 
 
@@ -375,7 +381,7 @@ def _node_members(root: Any, data: Mapping[str, Any], group: str) -> Any:
     _k, value = _group_node(root, data, group)
     pair = _pair(value, "members")
     if pair is None or not isinstance(pair[1], yaml.SequenceNode) or not pair[1].value:
-        raise ResidencyError(f"el grupo `{group}` no tiene una lista `members` en estilo bloque")
+        raise ResidencyError(i18n.t("cli.residency.group_without_members", group=group))
     return pair[1]
 
 
@@ -384,17 +390,17 @@ def _edit_remove(t: str, root: Any, data: Mapping[str, Any], c: RemoveMember) ->
         if isinstance(item, yaml.ScalarNode) and item.value == c.member:
             a = _line_start(t, item.start_mark.index)
             if not re.fullmatch(r"\s*-\s*", t[a : item.start_mark.index]):
-                raise ResidencyError(f"el miembro `{c.member}` no está solo en su línea")
+                raise ResidencyError(i18n.t("cli.residency.member_not_alone", member=c.member))
             a, b = _deletion_span(t, a, _after(t, item))
             return [(a, b, "")]
-    raise ResidencyError(f"`{c.member}` no es miembro del grupo `{c.group}`")
+    raise ResidencyError(i18n.t("cli.residency.not_a_member", member=c.member, group=c.group))
 
 
 def _edit_add(t: str, root: Any, data: Mapping[str, Any], c: AddMember) -> list[Edit]:
     last = _node_members(root, data, c.group).value[-1]
     prefix = t[_line_start(t, last.start_mark.index) : last.start_mark.index]
     if not re.fullmatch(r"\s*-\s*", prefix):
-        raise ResidencyError(f"el último miembro del grupo `{c.group}` no está solo en su línea")
+        raise ResidencyError(i18n.t("cli.residency.last_member_not_alone", group=c.group))
     pos = _after(t, last)
     line = prefix + _yaml_scalar(c.member, getattr(last, "style", None))
     return [(pos, pos, _line_block(t, pos, [line]))]
@@ -411,7 +417,7 @@ def _edit_create(t: str, root: Any, data: Mapping[str, Any], c: CreateGroup) -> 
     group_column, inner_column, dash = 2, 4, 0
     if pair is None:
         if _groups_path(data) != ("groups",):
-            raise ResidencyError("no hay bloque de grupos donde crear el nuevo")
+            raise ResidencyError(i18n.t("cli.residency.no_groups_block"))
         pos, header = len(t), ["groups:"]
         group_column, inner_column = 2, 4
     elif isinstance(pair[1], yaml.MappingNode) and pair[1].value:
@@ -429,7 +435,7 @@ def _edit_create(t: str, root: Any, data: Mapping[str, Any], c: CreateGroup) -> 
                     dash = len(t[start_ts : item.start_mark.index].split("-")[0]) - inner_column
         pos = _after(t, groups)
     else:
-        raise ResidencyError("el bloque de grupos está vacío o no es un mapa: créalo a mano")
+        raise ResidencyError(i18n.t("cli.residency.groups_block_empty"))
     inside = " " * inner_column
     lines = [
         *header,
@@ -478,26 +484,27 @@ def _autocomprobar(result: str, expected: dict[str, Any]) -> None:
     try:
         _analyze(result)
     except ResidencyError as e:
-        raise ResidencyError(f"la autocomprobación no cuadra: {e}") from e
+        raise ResidencyError(i18n.t("cli.residency.self_check_failed", error=e)) from e
     if yaml.safe_load(result) != expected:
-        raise ResidencyError(
-            "la autocomprobación no cuadra: el resultado no es el original más el cambio pedido; "
-            "no se escribe nada"
-        )
+        raise ResidencyError(i18n.t("cli.residency.self_check_mismatch"))
 
 
 def _describe(c: Change) -> str:
     if isinstance(c, SetTTL):
-        return f"`ttl` de {c.model}: {c.seconds}"
+        return i18n.t("cli.residency.change.ttl", model=c.model, seconds=c.seconds)
     if isinstance(c, RemoveMember):
-        return f"{c.member} sale del grupo `{c.group}`"
+        return i18n.t("cli.residency.change.leaves", member=c.member, group=c.group)
     if isinstance(c, AddMember):
-        return f"{c.member} entra en el grupo `{c.group}`"
+        return i18n.t("cli.residency.change.joins", member=c.member, group=c.group)
     if isinstance(c, DeleteGroup):
-        return f"se borra el grupo `{c.group}`"
-    return (
-        f"grupo nuevo `{c.group}` (persistent: {str(c.persistent).lower()}, swap: "
-        f"{str(c.swap).lower()}, exclusive: {str(c.exclusive).lower()}) con {', '.join(c.members)}"
+        return i18n.t("cli.residency.change.deleted", group=c.group)
+    return i18n.t(
+        "cli.residency.change.created",
+        group=c.group,
+        persistent=str(c.persistent).lower(),
+        swap=str(c.swap).lower(),
+        exclusive=str(c.exclusive).lower(),
+        members=", ".join(c.members),
     )
 
 
@@ -514,7 +521,7 @@ def edit_with_diff(original: bytes, changes: Sequence[Change]) -> tuple[bytes, l
     try:
         expected = _apply_to_data(data, changes)
     except (KeyError, ValueError, TypeError) as e:
-        raise ResidencyError(f"el cambio no encaja con la config: {e!r}") from e
+        raise ResidencyError(i18n.t("cli.residency.change_does_not_fit", error=repr(e))) from e
     edits: list[Edit] = []
     reasons: list[str] = []
     for c in changes:
@@ -679,7 +686,7 @@ def load(path: Path) -> Loaded:
     try:
         data = yaml.safe_load(text)
     except yaml.YAMLError as e:
-        raise error_yaml("la config", e) from None
+        raise error_yaml("config", e) from None
     if data is None:
         data = {}
     snapshot = topology.interpret(data, str(path), 1)
@@ -708,12 +715,21 @@ class View:
     @property
     def verdict(self) -> str:
         if not self.residents:
-            return "sin residente (recomendado)"
-        return "; ".join(f"residente: {m}" for m in self.residents)
+            return i18n.t("cli.residency.view.no_resident")
+        return "; ".join(i18n.t("cli.residency.view.resident", model=m) for m in self.residents)
 
     def text(self) -> str:
-        yes = {True: "sí", False: "no"}
-        cab = ("modelo", "grupo", "swap", "exclusive", "persistent", "TTL", "mmproj", "preload")
+        yes = {True: i18n.t("cli.residency.view.yes"), False: i18n.t("cli.residency.view.no")}
+        cab = (
+            i18n.t("cli.residency.view.model"),
+            i18n.t("cli.residency.view.group"),
+            "swap",
+            "exclusive",
+            "persistent",
+            "TTL",
+            "mmproj",
+            "preload",
+        )
         rows = [cab] + [
             (
                 f.model,
@@ -729,13 +745,11 @@ class View:
         ]
         widths = [max(len(row[i]) for row in rows) for i in range(len(cab))]
         lines = ["  ".join(c.ljust(widths[i]) for i, c in enumerate(row)).rstrip() for row in rows]
-        lines += ["", f"Veredicto: {self.verdict}"]
+        lines += ["", i18n.t("cli.residency.view.verdict", verdict=self.verdict)]
         if self.explanation:
-            lines.append(f"Nota: {self.explanation}.")
-        lines += [f"aviso: {a}" for a in self.warnings]
-        lines.append(
-            "TTL efectivo: un `ttl` ausente o -1 vale `globalTTL` (0 si no está); TTL 0 = residente."
-        )
+            lines.append(i18n.t("cli.residency.view.note", note=self.explanation))
+        lines += [i18n.t("cli.residency.view.warning", warning=a) for a in self.warnings]
+        lines.append(i18n.t("cli.residency.view.ttl_legend"))
         return "\n".join(lines)
 
 
@@ -762,14 +776,10 @@ def view(snapshot: topology.Snapshot, data: Mapping[str, Any]) -> View:
         )
         if cfg.persistent and ttl > 0:
             warnings.append(
-                f"el grupo `{g}` es persistent pero `{m}` tiene TTL efectivo {ttl}: "
-                "`persistent` no lo mantiene cargado"
+                i18n.t("cli.residency.view.persistent_with_ttl", group=g, model=m, ttl=ttl)
             )
         if ttl == 0 and not cfg.persistent:
-            warnings.append(
-                f"`{m}` tiene TTL efectivo 0 fuera de un grupo persistent: se queda cargado hasta "
-                "que otro lo desaloje"
-            )
+            warnings.append(i18n.t("cli.residency.view.ttl_zero_outside", model=m))
     cfg_models = data.get("models") or {}
     no_ttl = [
         m
@@ -778,7 +788,7 @@ def view(snapshot: topology.Snapshot, data: Mapping[str, Any]) -> View:
     ]
     explanation = ""
     if no_ttl and not data.get("globalTTL"):
-        explanation = f"{TTL_ZERO_EXPLANATION} ({', '.join(no_ttl)})"
+        explanation = i18n.t("cli.residency.view.ttl_zero_explanation", models=", ".join(no_ttl))
     return View(rows, snapshot.residents(), warnings, explanation)
 
 
@@ -796,17 +806,13 @@ def validate_ttls(
     global_ttl = data.get("globalTTL", 0) or 0
     for model, seconds in ttls.items():
         if snapshot.resolve(model) != model:
-            raise ResidencyError(f"`{model}` no es un id de modelo de la config")
+            raise ResidencyError(i18n.t("cli.residency.not_a_model_id", model=model))
         if seconds == 0:
-            raise ResidencyError(
-                f"--ttl {model}=0 es residencia (no se descarga nunca): usa --pin {model}"
-            )
+            raise ResidencyError(i18n.t("cli.residency.ttl_zero_is_pin", model=model))
         if seconds == -1 and not (isinstance(global_ttl, int) and global_ttl > 0):
-            raise ResidencyError(
-                f"--ttl {model}=-1 vale `globalTTL`, que aquí es 0 (residencia): pon un TTL >= 1"
-            )
+            raise ResidencyError(i18n.t("cli.residency.ttl_minus_one", model=model))
         if seconds < -1:
-            raise ResidencyError(f"--ttl {model}={seconds}: el TTL es un entero >= 1")
+            raise ResidencyError(i18n.t("cli.residency.ttl_too_low", model=model, seconds=seconds))
 
 
 def plan_ttl(
@@ -837,16 +843,14 @@ def plan_none(
     if residents:
         suggested = _suggested_ttl(snapshot)
         if suggested is None:
-            hint = (
-                "no queda ningún TTL distinto de 0 que sugerir (sin `globalTTL` ni `ttl`, todos los "
-                "modelos tienen TTL efectivo 0): pasa --ttl MODEL=SECONDS para cada uno"
-            )
+            hint = i18n.t("cli.residency.none_no_suggestion")
         else:
-            hint = "sugerencia: " + " ".join(f"--ttl {m}={suggested}" for m in residents)
-            hint += " (el TTL más frecuente entre los demás modelos sin --mmproj)"
+            hint = i18n.t(
+                "cli.residency.none_suggestion",
+                options=" ".join(f"--ttl {m}={suggested}" for m in residents),
+            )
         raise ResidencyError(
-            f"--none necesita --ttl para los modelos con TTL efectivo 0: {', '.join(residents)}; "
-            + hint
+            i18n.t("cli.residency.none_needs_ttl", models=", ".join(residents), hint=hint)
         )
     persistent_ones = [
         g for g, cfg in snapshot.groups.items() if g != topology.DEFAULT_GROUP and cfg.persistent
@@ -872,21 +876,28 @@ def _target_group(
     if group is not None:
         if group not in valid:
             raise ResidencyError(
-                f"--group {group}: no es un grupo de la config que no sea persistent "
-                f"(válidos: {', '.join(valid) or 'ninguno'})"
+                i18n.t(
+                    "cli.residency.bad_target_group",
+                    group=group,
+                    valid=", ".join(valid) or i18n.t("cli.residency.none_of_them"),
+                )
             )
         return group
     with_swap = [g for g in valid if snapshot.groups[g].swap]
     if len(with_swap) != 1:
         raise ResidencyError(
-            "--none mueve los miembros de los grupos persistent al único grupo con `swap: true`, "
-            f"y hay {len(with_swap)} ({', '.join(with_swap) or 'ninguno'}): elige uno con --group"
+            i18n.t(
+                "cli.residency.ambiguous_target_group",
+                n=len(with_swap),
+                groups=", ".join(with_swap) or i18n.t("cli.residency.none_of_them"),
+            )
         )
     return with_swap[0]
 
 
 def _gib(value: float) -> str:
-    return f"{value:.2f}".replace(".", ",")
+    """GiB con dos decimales y los separadores del idioma (REQ-026): `8,37` o `8.37`."""
+    return i18n.format_number(value, 2)
 
 
 def vram_figures(
@@ -906,13 +917,17 @@ def vram_figures(
     missing = [m for m in models if m not in figures]
     if missing:
         reason = (
-            "el estimador no da cifra para ellos"
+            i18n.t("cli.residency.estimator_without_figure")
             if lc.NCMOE_ESTIMATOR_VALIDATED
-            else "el estimador de VRAM no pasó su control con los modelos medidos"
+            else i18n.t("cli.residency.estimator_not_validated")
         )
         raise ResidencyError(
-            f"no hay cifra fiable de VRAM para: {', '.join(missing)} ({reason}); pásala con "
-            + " ".join(f"--vram-model {m}=GiB" for m in missing)
+            i18n.t(
+                "cli.residency.no_vram_figure",
+                models=", ".join(missing),
+                reason=reason,
+                options=" ".join(f"--vram-model {m}=GiB" for m in missing),
+            )
         )
     return figures
 
@@ -933,7 +948,7 @@ def plan_pin(
     """
     real = snapshot.resolve(model)
     if real is None:
-        raise ResidencyError(f"`{model}` no es un modelo de la config")
+        raise ResidencyError(i18n.t("cli.residency.not_a_model", model=model))
     current = snapshot.group(real) or topology.DEFAULT_GROUP
     cfg = snapshot.groups[current]
     already_in_resident_group = (
@@ -960,19 +975,35 @@ def plan_pin(
     if needs > available:
         addends = [_gib(figures[real])]
         if residents:
-            addends.append(f"{_gib(residents_sum)} (residentes que ya hay: {', '.join(residents)})")
-        addends.append(f"{_gib(worst_rest)} (peor caso del resto por grupos)")
+            addends.append(
+                i18n.t(
+                    "cli.residency.addend_residents",
+                    gb=_gib(residents_sum),
+                    models=", ".join(residents),
+                )
+            )
+        addends.append(i18n.t("cli.residency.addend_rest", gb=_gib(worst_rest)))
         raise ResidencyError(
-            f"{real} no cabe como residente: {' + '.join(addends)} = {_gib(needs)} GiB > "
-            f"{_gib(vram_gb)} - {_gib(reserve_gb)} de reserva = {_gib(available)} GiB; "
-            f"faltan {_gib(needs - available)} GiB"
+            i18n.t(
+                "cli.residency.does_not_fit",
+                model=real,
+                addends=" + ".join(addends),
+                needs=_gib(needs),
+                vram=_gib(vram_gb),
+                reserve=_gib(reserve_gb),
+                available=_gib(available),
+                missing=_gib(needs - available),
+            )
         )
-    margin_warning = f"queda {_gib(available - needs)} GiB de margen en el peor caso"
+    margin_warning = i18n.t("cli.residency.margin", gb=_gib(available - needs))
     if already_in_resident_group:
         # Ya está en un grupo como el que se crearía: basta con el TTL (diff mínimo).
-        warning = (
-            f"{real} ocupará {_gib(figures[real])} GiB de VRAM de forma permanente (grupo "
-            f"`{current}`, persistent y ttl 0); {margin_warning}"
+        warning = i18n.t(
+            "cli.residency.pinned_warning",
+            model=real,
+            gb=_gib(figures[real]),
+            group=current,
+            margin=margin_warning,
         )
         return [SetTTL(real, 0)], warning
     changes: list[Change] = []
@@ -989,9 +1020,12 @@ def plan_pin(
     changes.append(CreateGroup(name, True, False, False, (real,)))
     if _written_ttl(data, real) != 0:
         changes.append(SetTTL(real, 0))
-    warning = (
-        f"{real} ocupará {_gib(figures[real])} GiB de VRAM de forma permanente (grupo `{name}`, "
-        f"persistent y ttl 0); {margin_warning}"
+    warning = i18n.t(
+        "cli.residency.pinned_warning",
+        model=real,
+        gb=_gib(figures[real]),
+        group=name,
+        margin=margin_warning,
     )
     return changes, warning
 
@@ -1055,8 +1089,7 @@ def atomic_replace(path: Path, data: bytes) -> None:
                 if attempt + 1 < REPLACE_ATTEMPTS:
                     _sleep(REPLACE_WAIT_S)
         raise ResidencyError(
-            f"no se pudo reemplazar {path} tras {REPLACE_ATTEMPTS} intentos ({last}): "
-            "el original queda intacto"
+            i18n.t("cli.residency.replace_failed", path=path, attempts=REPLACE_ATTEMPTS, error=last)
         )
     except BaseException:
         # Limpieza del temporal antes de relanzar: si ya no existe (lo movió `os.replace`, o no
@@ -1073,7 +1106,12 @@ def validate_copy(content: bytes) -> None:
     try:
         data = yaml.safe_load(text)
     except yaml.YAMLError as e:
-        raise error_yaml("la copia", e) from None
+        raise error_yaml("copy", e) from None
     read_one = topology.interpret(data, "", 1)
     if isinstance(read_one, topology.NoTopology) and read_one.reason != topology.MATRIX:
-        raise ResidencyError(f"la copia no cumple load.go: {read_one.detail or read_one.reason}")
+        raise ResidencyError(
+            i18n.t(
+                "cli.residency.copy_fails_load_go",
+                detail=read_one.detail or topology.reason_text(read_one.reason),
+            )
+        )

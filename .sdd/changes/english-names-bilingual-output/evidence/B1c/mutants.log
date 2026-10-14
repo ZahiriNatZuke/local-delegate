@@ -1,0 +1,125 @@
+## N1 error de topología en español literal
+src/local_delegate/topology.py
+tests/test_llamaswap_english.py::test_the_b1c_outputs_in_english_have_no_spanish
+exit=1
+sha256 restaurado=60e53c2adcb7a075ae2a21963b1a5ad0a9bc9e1107b21cbd84295cb429aad0f5
+E           AssertionError: topology: ['del', 'grupo', 'miembro', 'modelo', 'ningun']
+E             model a: `ttl` must be an integer; member a repeated in group g; member a in two groups: g and g; miembro z del grupo g no es ningun modelo
+E           assert not ['del', 'grupo', 'miembro', 'modelo', 'ningun']
+E            +  where ['del', 'grupo', 'miembro', 'modelo', 'ningun'] = _spanish_in('model a: `ttl` must be an integer; member a repeated in group g; member a in two groups: g and g; miembro z del grupo g no es ningun modelo', {'aaaammdd', 'abierta', 'abiertas', 'abre', 'abrir', 'abri�', ...})
+FAILED tests/test_llamaswap_english.py::test_the_b1c_outputs_in_english_have_no_spanish
+1 failed in 0.25s
+
+## N2 `_gib` con la coma fija de antes
+src/local_delegate/residency.py
+tests/test_llamaswap_english.py::test_gib_use_the_language_separators
+exit=1
+sha256 restaurado=126bb84ad4a4c7ab34dfc9b9e730f4dbd860dd2558f507636a448e368a727d44
+E       AssertionError: assert '8,38 GiB' == '8.38 GiB'
+E         
+E         - 8.38 GiB
+E         ?  ^
+E         + 8,38 GiB
+E         ?  ^
+FAILED tests/test_llamaswap_english.py::test_gib_use_the_language_separators[en-8.38 GiB]
+1 failed, 1 passed in 3.00s
+
+## N3 `reason_text` devuelve el valor de máquina
+src/local_delegate/topology.py
+tests/test_llamaswap_english.py::test_reason_text_says_the_reason_in_the_language
+exit=1
+sha256 restaurado=60e53c2adcb7a075ae2a21963b1a5ad0a9bc9e1107b21cbd84295cb429aad0f5
+E       AssertionError: assert 'sin LLAMASWAP_CONFIG' == 'no LLAMASWAP_CONFIG'
+E         
+E         - no LLAMASWAP_CONFIG
+E         ?  -
+E         + sin LLAMASWAP_CONFIG
+E         ? ++
+FAILED tests/test_llamaswap_english.py::test_reason_text_says_the_reason_in_the_language[en-no LLAMASWAP_CONFIG-otro motivo]
+1 failed, 1 passed in 3.02s
+
+## N4 el valor de máquina del motivo traducido
+src/local_delegate/topology.py
+tests/test_llamaswap_english.py::test_machine_values_do_not_change_with_the_language
+exit=1
+sha256 restaurado=60e53c2adcb7a075ae2a21963b1a5ad0a9bc9e1107b21cbd84295cb429aad0f5
+E       AssertionError: assert 'no LLAMASWAP_CONFIG' == 'sin LLAMASWAP_CONFIG'
+E         
+E         - sin LLAMASWAP_CONFIG
+E         ? --
+E         + no LLAMASWAP_CONFIG
+E         ?  +
+FAILED tests/test_llamaswap_english.py::test_machine_values_do_not_change_with_the_language[es]
+1 failed in 0.22s
+
+## N5 `doctor` imprime el motivo crudo
+src/local_delegate/checks.py
+tests/test_llamaswap_english.py::test_doctor_says_the_reason_in_english
+exit=1
+sha256 restaurado=507e0ccc3069aaf8fa8cfb7ce0124a9430d2cbb8d1d3c98ff605783f80e310b0
+E       assert 'no turn: no LLAMASWAP_CONFIG (according to' in "local-delegate doctor � diagnosis of the scaffolding, the services and the local backend\n\nLLAMASWAP_EXE:    (not se...l's config; the daemon: the daemon does not respond)\n\nResult: all set (scaffolding, services and tested versions).\n"
+FAILED tests/test_llamaswap_english.py::test_doctor_says_the_reason_in_english
+1 failed in 0.48s
+
+## N6 un texto de residency.py fuera del catálogo
+src/local_delegate/residency.py
+tests/test_no_uncatalogued_text.py::test_no_uncatalogued_text_outside_pending
+exit=1
+sha256 restaurado=126bb84ad4a4c7ab34dfc9b9e730f4dbd860dd2558f507636a448e368a727d44
+E       AssertionError: Texto para personas fuera del cat�logo (usa `i18n.t`, o a�ade una excepci�n con motivo si es un nombre de m�quina):
+E         src/local_delegate/residency.py:420 [context] 'no hay bloque de grupos donde crear el nuevo'
+E       assert ["src/local_d...ar el nuevo'"] == []
+E         
+E         Left contains one more item: "src/local_delegate/residency.py:420 [context] 'no hay bloque de grupos donde crear el nuevo'"
+E         Use -v to get more diff
+FAILED tests/test_no_uncatalogued_text.py::test_no_uncatalogued_text_outside_pending
+1 failed in 0.82s
+
+## N7 la clase `verbatim` ya no admite prosa
+tests/test_no_uncatalogued_text.py
+tests/test_no_uncatalogued_text.py::test_text_exceptions_are_live_and_machine_text
+exit=1
+sha256 restaurado=914c8dffdfc7e22aaafd0f06b1d51baf5b3a6d3c299ab15f6097ba6394782197
+E       AssertionError: src/local_delegate/llamaswap_api.py: 'reloading configuration': es texto para personas, no una excepci�n
+E         src/local_delegate/llamaswap_api.py: 'configuration reloaded': es texto para personas, no una excepci�n
+E         src/local_delegate/llamaswap_api.py: 'failed to reload config': es texto para personas, no una excepci�n
+E         src/local_delegate/llamaswap_api.py: 'failed to build new server during reload': es texto para personas, no una excepci�n
+E         src/local_delegate/matrix.py: 'Solo el texto en may�sculas, en una l�nea': es texto para personas, no una excepci�n
+E         src/local_delegate/matrix.py: 'Solo la fecha con el formato AAAA-MM-DD': es texto para personas, no una excepci�n
+E         src/local_delegate/matrix.py: 'Solo un n�mero entero, sin texto adicional': es texto para personas, no una excepci�n
+E         src/local_delegate/matrix.py: 'Una sola l�nea con los valores separados por comas, sin espacios': es texto para personas, no una excepci�n
+
+## N8 una ayuda de `benchmark` en español literal
+src/local_delegate/benchmark.py
+tests/test_cli_english.py::test_help_in_english_has_no_spanish_catalog_text
+exit=1
+sha256 restaurado=094a8b7a60c368db4cfb67299f49776f1b2c043808286e3910cedf3b1996dc0d
+E       AssertionError: texto espa�ol en la ayuda inglesa: ['salida']
+E       assert not ['salida']
+E        +  where ['salida'] = _spanish_in('usage: local-delegate benchmark [-h] --model MODEL --label LABEL --cases CASES\n                                [--ca...TPUT       JSONL de salida\n  --append\n  --save-responses      save the full responses; the blind review needs them\n', {'aaaammdd', 'abierta', 'abiertas', 'abre', 'abrir', 'abri�', ...})
+FAILED tests/test_cli_english.py::test_help_in_english_has_no_spanish_catalog_text[benchmark]
+1 failed, 1 passed in 0.26s
+
+## N9 la salida de la vigía, cruda
+src/local_delegate/llamaswap_api.py
+tests/test_llamaswap_english.py::test_outcome_text_in_both_languages
+exit=1
+sha256 restaurado=5b4a559c4ddb14db0846916b05b9adda06e630949c396d2aa026146df1526e76
+E       AssertionError: assert 'reloaded' == 'recarg�'
+E         
+E         - recarg�
+E         + reloaded
+FAILED tests/test_llamaswap_english.py::test_outcome_text_in_both_languages[es-recarg\xf3]
+1 failed in 0.22s
+
+## N10 el error del JSONL vuelve a ir en español
+src/local_delegate/benchmark.py
+tests/test_llamaswap_english.py::test_benchmark_writes_machine_errors_in_the_jsonl
+exit=1
+sha256 restaurado=094a8b7a60c368db4cfb67299f49776f1b2c043808286e3910cedf3b1996dc0d
+E       AssertionError: assert 'respuesta in...da: TypeError' == 'unexpected_r...se: TypeError'
+E         
+E         - unexpected_response: TypeError
+E         + respuesta inesperada: TypeError
+FAILED tests/test_llamaswap_english.py::test_benchmark_writes_machine_errors_in_the_jsonl
+1 failed in 0.22s

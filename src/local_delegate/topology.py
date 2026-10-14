@@ -77,7 +77,8 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any
 
-from . import config, footprint
+from . import config, footprint, i18n
+from . import llamaswap_config as lc
 
 try:
     import yaml
@@ -87,13 +88,29 @@ except ImportError:  # pragma: no cover - depende del entorno de instalacion
 DEFAULT_GROUP = "(default)"
 DEFAULT_TTL = -1  # MODEL_CONFIG_DEFAULT_TTL de v255: «usa globalTTL»
 
-# Motivos de REQ-002 por los que no hay turno.
+# Motivos de REQ-002 por los que no hay turno. Son valores de máquina: viajan en `turn_reason`
+# de `GET /api/llamaswap/status` y se comparan entre procesos (`checks._no_turn_is_fine`), así que
+# no cambian con el idioma; a la persona se le dicen con `reason_text`.
 NO_CONFIG = "sin LLAMASWAP_CONFIG"
 NO_PYYAML = "sin PyYAML"
 UNREADABLE = "ilegible"
 MATRIX = "matrix"
 TWO_SYNTAXES = "dos sintaxis"
 FAILS_LOAD_GO = "no cumple load.go"
+_REASON_KEYS = {
+    NO_CONFIG: "cli.topology.reason.no_config",
+    NO_PYYAML: "cli.topology.reason.no_pyyaml",
+    UNREADABLE: "cli.topology.reason.unreadable",
+    MATRIX: "cli.topology.reason.matrix",
+    TWO_SYNTAXES: "cli.topology.reason.two_syntaxes",
+    FAILS_LOAD_GO: "cli.topology.reason.fails_load_go",
+}
+
+
+def reason_text(reason: str) -> str:
+    """Un motivo de REQ-002 en el idioma vigente; uno que no es de este módulo, tal cual."""
+    key = _REASON_KEYS.get(reason)
+    return i18n.t(key) if key else reason
 
 
 @dataclass(frozen=True)
@@ -142,62 +159,62 @@ def _shape_errors(data: Mapping[str, Any]) -> list[str]:
     errors: list[str] = []
     models = data.get("models")
     if not _is_map(models):
-        return ["`models` no es un mapa"]
+        return [i18n.t("cli.topology.not_a_map", name="models")]
     for mid, cfg in (models or {}).items():
         if not _is_map(cfg):
-            errors.append(f"modelo {mid}: no es un mapa")
+            errors.append(i18n.t("cli.topology.model_not_a_map", model=mid))
             continue
         cfg = cfg or {}
         if not _is_list(cfg.get("aliases")):
-            errors.append(f"modelo {mid}: `aliases` no es una lista")
+            errors.append(i18n.t("cli.topology.model_aliases_not_a_list", model=mid))
         elif any(not _is_scalar(a) for a in cfg.get("aliases") or []):
-            errors.append(f"modelo {mid}: un alias no es un texto")
+            errors.append(i18n.t("cli.topology.model_alias_not_text", model=mid))
         if cfg.get("cmd") is not None and not _is_scalar(cfg.get("cmd")):
-            errors.append(f"modelo {mid}: `cmd` no es un texto")
+            errors.append(i18n.t("cli.topology.model_cmd_not_text", model=mid))
     group_blocks = [("groups", data.get("groups"))]
     routing = data.get("routing")
     if not _is_map(routing):
-        errors.append("`routing` no es un mapa")
+        errors.append(i18n.t("cli.topology.not_a_map", name="routing"))
     else:
         router = (routing or {}).get("router")
         if not _is_map(router):
-            errors.append("`routing.router` no es un mapa")
+            errors.append(i18n.t("cli.topology.not_a_map", name="routing.router"))
         else:
             router = router or {}
             if router.get("use") is not None and not isinstance(router.get("use"), str):
-                errors.append("`routing.router.use` no es un texto")
+                errors.append(i18n.t("cli.topology.not_text", name="routing.router.use"))
             adjustments = router.get("settings")
             if not _is_map(adjustments):
-                errors.append("`routing.router.settings` no es un mapa")
+                errors.append(i18n.t("cli.topology.not_a_map", name="routing.router.settings"))
             else:
                 groups = (adjustments or {}).get("groups")
                 group_blocks.append(("routing.router.settings.groups", groups))
     for name, groups in group_blocks:
         if not _is_map(groups):
-            errors.append(f"`{name}` no es un mapa")
+            errors.append(i18n.t("cli.topology.not_a_map", name=name))
             continue
         for gid, gcfg in (groups or {}).items():
             if not _is_map(gcfg):
-                errors.append(f"grupo {gid}: no es un mapa")
+                errors.append(i18n.t("cli.topology.group_not_a_map", group=gid))
                 continue
             members = (gcfg or {}).get("members")
             if not _is_list(members):
-                errors.append(f"grupo {gid}: `members` no es una lista")
+                errors.append(i18n.t("cli.topology.group_members_not_a_list", group=gid))
             elif any(not _is_scalar(m) for m in members or []):
-                errors.append(f"grupo {gid}: un miembro no es un texto")
+                errors.append(i18n.t("cli.topology.group_member_not_text", group=gid))
     hooks = data.get("hooks")
     if not _is_map(hooks):
-        errors.append("`hooks` no es un mapa")
+        errors.append(i18n.t("cli.topology.not_a_map", name="hooks"))
     else:
         startup = (hooks or {}).get("on_startup")
         if not _is_map(startup):
-            errors.append("`hooks.on_startup` no es un mapa")
+            errors.append(i18n.t("cli.topology.not_a_map", name="hooks.on_startup"))
         else:
             preload = (startup or {}).get("preload")
             if not _is_list(preload):
-                errors.append("`hooks.on_startup.preload` no es una lista")
+                errors.append(i18n.t("cli.topology.not_a_list", name="hooks.on_startup.preload"))
             elif any(not _is_scalar(p) for p in preload or []):
-                errors.append("`hooks.on_startup.preload`: un elemento no es un texto")
+                errors.append(i18n.t("cli.topology.preload_item_not_text"))
     return errors
 
 
@@ -246,47 +263,47 @@ def validate_like_load_go(data: Any) -> list[str]:
     miembro existe (id o alias), no se repite en su grupo y esta en un solo grupo.
     """
     if not isinstance(data, Mapping):
-        return ["la raiz del YAML no es un mapa"]
+        return [i18n.t("cli.topology.root_not_a_map")]
     errors: list[str] = []
     models = data.get("models") or {}
     if not isinstance(models, Mapping):
-        return ["`models` no es un mapa"]
+        return [i18n.t("cli.topology.not_a_map", name="models")]
     shape = _shape_errors(data)
     if shape:
         return shape
     above, in_routing = _syntax(data)
     if above and in_routing:
-        errors.append("usa a la vez `groups`/`matrix` de arriba y `routing.router`")
+        errors.append(i18n.t("cli.topology.both_syntaxes"))
     router = ((data.get("routing") or {}).get("router")) or {}
     use = router.get("use") or ""
     if not above and use not in ("", "group", "matrix"):
-        errors.append(f"`routing.router.use` desconocido: {use!r} (validos: group, matrix)")
+        errors.append(i18n.t("cli.topology.unknown_router", use=repr(use)))
     if not above and use == "matrix" and (router.get("settings") or {}).get("matrix") is None:
-        errors.append("`routing.router.use` es matrix pero no hay `routing.router.settings.matrix`")
+        errors.append(i18n.t("cli.topology.matrix_without_settings"))
     global_ttl = data.get("globalTTL", 0)
     if not _is_int(global_ttl) or global_ttl < 0:
-        errors.append("`globalTTL` debe ser un entero >= 0")
+        errors.append(i18n.t("cli.topology.bad_global_ttl"))
         global_ttl = 0
     seen_aliases: dict[str, str] = {}
     for mid, cfg in models.items():
         cfg = cfg or {}
         if not isinstance(cfg, Mapping):
-            errors.append(f"modelo {mid}: no es un mapa")
+            errors.append(i18n.t("cli.topology.model_not_a_map", model=mid))
             continue
         ttl = cfg.get("ttl", DEFAULT_TTL)
         if not _is_int(ttl):
-            errors.append(f"modelo {mid}: `ttl` debe ser un entero")
+            errors.append(i18n.t("cli.topology.model_ttl_not_int", model=mid))
         elif (global_ttl if ttl == DEFAULT_TTL else ttl) < 0:
-            errors.append(f"modelo {mid}: TTL no valido {ttl}")
+            errors.append(i18n.t("cli.topology.model_bad_ttl", model=mid, ttl=ttl))
         for name in cfg.get("aliases") or []:
             if name in seen_aliases:
-                errors.append(f"alias repetido {name} en el modelo {mid}")
+                errors.append(i18n.t("cli.topology.repeated_alias", alias=name, model=mid))
             seen_aliases[name] = str(mid)
     if _uses_matrix(data):
         return errors
     groups = _raw_groups(data)
     if not isinstance(groups, Mapping):
-        return [*errors, "`groups` no es un mapa"]
+        return [*errors, i18n.t("cli.topology.not_a_map", name="groups")]
     member_use: dict[str, str] = {}
     for gid, gcfg in groups.items():
         members = (gcfg or {}).get("members") or []
@@ -294,13 +311,20 @@ def validate_like_load_go(data: Any) -> list[str]:
         for member in members:
             member = str(member)
             if member in in_group:
-                errors.append(f"miembro {member} repetido en el grupo {gid}")
+                errors.append(i18n.t("cli.topology.repeated_member", member=member, group=gid))
             in_group.add(member)
             if member in member_use:
-                errors.append(f"miembro {member} en dos grupos: {member_use[member]} y {gid}")
+                errors.append(
+                    i18n.t(
+                        "cli.topology.member_in_two_groups",
+                        member=member,
+                        first=member_use[member],
+                        second=gid,
+                    )
+                )
             member_use[member] = str(gid)
             if member not in models and member not in seen_aliases:
-                errors.append(f"miembro {member} del grupo {gid} no es ningun modelo")
+                errors.append(i18n.t("cli.topology.member_not_a_model", member=member, group=gid))
     return errors
 
 
@@ -444,7 +468,7 @@ def _read(path: str | os.PathLike[str], version: int) -> tuple[Snapshot | NoTopo
     p. ej. una violacion de comparticion en Windows): ese no se debe cachear (REQ-033)."""
     global _reads
     if yaml is None:
-        return NoTopology(NO_PYYAML, 'pip install "local-delegate-mcp[llamaswap]"'), False
+        return NoTopology(NO_PYYAML, lc.extra_missing()), False
     _reads += 1
     try:
         with Path(path).open(encoding="utf-8-sig") as f:
@@ -460,15 +484,15 @@ def _interpret(data: Any, path: str, version: int) -> Snapshot | NoTopology:
     if data is None:
         data = {}
     if not isinstance(data, Mapping):
-        return NoTopology(UNREADABLE, "la raiz del YAML no es un mapa")
+        return NoTopology(UNREADABLE, i18n.t("cli.topology.root_not_a_map"))
     shape = _shape_errors(data)
     if shape:
         return NoTopology(FAILS_LOAD_GO, "; ".join(shape))
     above, in_routing = _syntax(data)
     if above and in_routing:
-        return NoTopology(TWO_SYNTAXES, "`groups`/`matrix` arriba y `routing.router` a la vez")
+        return NoTopology(TWO_SYNTAXES, i18n.t("cli.topology.two_syntaxes_detail"))
     if _uses_matrix(data):
-        return NoTopology(MATRIX, "el router `matrix` no se reparte por grupos")
+        return NoTopology(MATRIX, i18n.t("cli.topology.matrix_detail"))
     errors = validate_like_load_go(data)
     if errors:
         return NoTopology(FAILS_LOAD_GO, "; ".join(errors))
@@ -504,7 +528,7 @@ def snapshot() -> Snapshot | NoTopology:
     if not path:
         return NoTopology(NO_CONFIG)
     if yaml is None:
-        return NoTopology(NO_PYYAML, 'pip install "local-delegate-mcp[llamaswap]"')
+        return NoTopology(NO_PYYAML, lc.extra_missing())
     path = str(Path(path).expanduser())
     try:
         st = os.stat(path)

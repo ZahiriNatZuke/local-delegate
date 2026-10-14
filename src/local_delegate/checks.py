@@ -1571,7 +1571,11 @@ def _probe_residency(ctx: Context) -> Result:
             reason = why or i18n.t("doctor.probe.residency.daemon_silent")
             return Result(
                 UNKNOWN,
-                i18n.t("doctor.probe.residency.no_config", reason=topology.NO_CONFIG, why=reason),
+                i18n.t(
+                    "doctor.probe.residency.no_config",
+                    reason=topology.reason_text(topology.NO_CONFIG),
+                    why=reason,
+                ),
             )
         path, source = Path(status.config_path), i18n.t("doctor.probe.residency.daemon_config")
     try:
@@ -1587,7 +1591,7 @@ def _probe_residency(ctx: Context) -> Result:
             UNKNOWN,
             i18n.t(
                 "doctor.probe.residency.unreadable",
-                reason=photo.reason,
+                reason=topology.reason_text(photo.reason),
                 detail=detail,
                 source=source,
             ),
@@ -1733,7 +1737,11 @@ def _probe_topology(ctx: Context) -> Result:
                 OK, i18n.t("doctor.probe.topology.active_daemon", clashes=status.turn_detail)
             )
         detail = f": {status.turn_detail}" if status.turn_detail else ""
-        text = i18n.t("doctor.probe.topology.none_daemon", reason=status.turn_reason, detail=detail)
+        text = i18n.t(
+            "doctor.probe.topology.none_daemon",
+            reason=topology.reason_text(status.turn_reason),
+            detail=detail,
+        )
         return Result(UNKNOWN if _no_turn_is_fine(status.turn_reason) else WARN, text)
     source = i18n.t(
         "doctor.probe.topology.source", why=why or i18n.t("doctor.probe.topology.daemon_silent")
@@ -1750,13 +1758,21 @@ def _probe_topology(ctx: Context) -> Result:
         )
     if ctx.config_path is None:
         return Result(
-            UNKNOWN, i18n.t("doctor.probe.topology.none", reason=topology.NO_CONFIG, source=source)
+            UNKNOWN,
+            i18n.t(
+                "doctor.probe.topology.none",
+                reason=topology.reason_text(topology.NO_CONFIG),
+                source=source,
+            ),
         )
     photo = topology.read(ctx.config_path)
     if isinstance(photo, topology.NoTopology):
         detail = f": {photo.detail}" if photo.detail else ""
         text = i18n.t(
-            "doctor.probe.topology.none_detail", reason=photo.reason, detail=detail, source=source
+            "doctor.probe.topology.none_detail",
+            reason=topology.reason_text(photo.reason),
+            detail=detail,
+            source=source,
         )
         return Result(UNKNOWN if _no_turn_is_fine(photo.reason) else WARN, text)
     clashes = server._clashes_by_groups(photo)

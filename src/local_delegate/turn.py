@@ -21,6 +21,8 @@ from collections.abc import Callable, Generator, Iterable, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
 
+from .i18n import t
+
 Clashes = Callable[[str, str], bool]
 OnWait = Callable[[int, tuple[str, ...]], None]
 
@@ -55,7 +57,7 @@ class PendingRequest:
         object.__setattr__(self, "direct", frozenset(self.direct))
         object.__setattr__(self, "chain_order", tuple(self.chain_order))
         if not self.A:
-            raise ValueError(f"petición {self.id!r} sin conjunto aceptable")
+            raise ValueError(t("cli.turn.no_acceptable_set", request=repr(self.id)))
 
     def is_direct(self, model: str) -> bool:
         return model == self.role or model in self.direct
@@ -260,7 +262,7 @@ def reduce(state: State, op_id: str, model: str) -> State:
     if own is None:
         raise KeyError(op_id)
     if model not in own.reserve:
-        raise ValueError(f"{model!r} no está en la reserva de {op_id!r}")
+        raise ValueError(t("cli.turn.not_in_reserve", model=repr(model), op=repr(op_id)))
     new = replace(own, reserve=frozenset({model}))
     return replace(state, actives=tuple(new if a.id == op_id else a for a in state.actives))
 
@@ -278,7 +280,7 @@ def choose(
     if own is None:
         raise KeyError(op_id)
     if not own.reserve.intersection(candidates):
-        raise ValueError(f"ningún candidato está en la reserva de {op_id!r}")
+        raise ValueError(t("cli.turn.no_candidate_in_reserve", op=repr(op_id)))
     fits = compatible_when_choosing(state, op_id, clashes)
     for model in candidates:
         if model in fits:
@@ -325,7 +327,7 @@ def has_slot() -> bool:
 def _check_without_slot() -> None:
     # Lanza a mano y no con `assert`: con `python -O` el aserto desaparecería.
     if has_slot():
-        raise AssertionError("orden de adquisición: se pidió turno con una plaza en la mano")
+        raise AssertionError(t("cli.turn.slot_in_hand"))
 
 
 # --------------------------------------------------------------------------------------------
@@ -508,7 +510,7 @@ class Turn:
         _check_without_slot()
         with self._cond:
             if self._busy(request.id):
-                raise ValueError(f"la operación {request.id!r} ya está en el turno")
+                raise ValueError(t("cli.turn.already_in_turn", op=repr(request.id)))
             self._state = replace(
                 self._state, queue=(*self._state.queue, Wait(request, self._clock()))
             )

@@ -1228,6 +1228,9 @@ B2b), cada uno con su commit y su PR. Los dos salen en la **misma versión**.
 - **Posee la ola entera:** `server.py`, `failures.py` (etiquetas, con `t_lang` para D6),
   `chains.py` (`describe`), `sections.py` (aviso), `questions.py` (textos de las preguntas al
   cliente; asignado por B0 el 2026-10-14), `resources/i18n/{es,en}/{mcp,tools}.json`,
+  y el uso de `topology.reason_text()` en `chains.py` y `server.py` (hallazgo de B1c del
+  2026-10-14: hoy imprimen crudo el motivo de REQ-002, un valor de máquina en español; al
+  hacerlo, B2 saca «sin LLAMASWAP_CONFIG» de `PENDING_FRAGMENTS`),
   `tests/data/uncatalogued_pending/mcp.json`, los tests nuevos `tests/test_mcp_english.py` y
   `tests/test_tool_contract.py`, `scripts/data/measurement_boundaries.json` (nace),
   `docs/wiki/Configuration.md` (solo `:221-234`, el contrato, y la entrada de `LOCAL_DELEGATE_OUTPUT_LANGUAGE`), `tests/fixtures/lang_sample/` (D10)
