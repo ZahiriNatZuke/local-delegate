@@ -1,0 +1,12 @@
+FAILED tests/test_affinity.py::test_matrix_cells_are_the_approved_cells_of_the_verdict
+FAILED tests/test_affinity.py::test_frozen_verdict_footprints_with_old_keys_are_read_with_the_new_ones
+FAILED tests/test_analyze_benchmark.py::test_frozen_footprints_with_old_keys_reach_the_verdict_with_the_new_ones
+3 failed, 156 passed in 2.38s
+--- asserts:
+E   AssertionError: assert {'flags': {'c...: 13597177568} == {'flags': {'c...: 13597177568}
+D:\Projects\local-delegate\tests\test_affinity.py:518: AssertionError: assert {'flags': {'c...: 13597177568} == {'flags': {'c...: 13597177568}
+E   KeyError: 'path'
+D:\Projects\local-delegate\tests\test_affinity.py:541: KeyError: 'path'
+E   KeyError: 'path'
+D:\Projects\local-delegate\tests\test_analyze_benchmark.py:1565: KeyError: 'path'
+hash restaurado: ae60e98dfe2bdc64a826abf456b47a09fd477c7efaa6cb785e77c0a8c270a35f (igual al de antes)

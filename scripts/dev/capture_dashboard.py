@@ -326,7 +326,7 @@ SEED_AND_MOCK = """({DENSITY, PRICES_CHECKED}) => {
          tokens_saved: 88240, tokens_net: 81520, tokens_in: 101300, tokens_generated: 6120},
         {client: 'codex-mcp-client', calls: 31, backend_calls: 38,
          tokens_saved: 24880, tokens_net: 22950, tokens_in: 29010, tokens_generated: 2410},
-        {client: 'desconocido', calls: 15, backend_calls: 18,
+        {client: 'unknown', calls: 15, backend_calls: 18,
          tokens_saved: 7180, tokens_net: 6640, tokens_in: 8640, tokens_generated: 690},
       ],
       // Las tres tarjetas de coste-api-y-cuota se esconden si falta su clave: sin ellas la

@@ -27,7 +27,7 @@ Reglas de lectura de los datos:
   de uso si: lo escribe el daemon de la PC. Las filas sin llamada de log son «no-PC» (Mac u otro
   cliente directo).
 - Un evento agrupa las filas de las llamadas al backend de una misma operacion del log (troceado,
-  reintentos). Su `tok_s` es Σ tokens de salida / Σ ms de generacion, como en REQ-024; los ms de
+  reintentos). Su `tok_s` es suma de tokens de salida / suma de ms de generacion, como en REQ-024; los ms de
   generacion de una fila son `output_tokens / tokens_per_second`. Una fila no-PC es un evento por si
   sola.
 - Entrada de un evento: el mayor `input_tokens + cache_tokens` de sus filas (la lentitud de la

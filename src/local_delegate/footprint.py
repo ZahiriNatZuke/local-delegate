@@ -26,7 +26,7 @@ from typing import Any
 
 # Cada clave de la salida, con todas las formas con que llega al `cmd`.
 _SHAPES: dict[str, tuple[str, ...]] = {
-    "modelo": ("-m", "--model"),
+    "model": ("-m", "--model"),
     "n_cpu_moe": ("-ncmoe", "--n-cpu-moe"),
     "ctx_size": ("-c", "--ctx-size"),
     "cache_type_k": ("-ctk", "--cache-type-k"),
@@ -133,10 +133,10 @@ def _size(path: str | None) -> int | None:
 def footprint(model_cfg: Mapping[str, Any], system_prompt: str) -> dict[str, Any]:
     """La huella de un modelo de la config de llama-swap (su entrada, con `cmd`) y de una tool."""
     flags = cmd_flags(model_cfg.get("cmd") or "")
-    path = flags.pop("modelo")
+    path = flags.pop("model")
     return {
-        "ruta": path,
-        "tamano_bytes": _size(path),
+        "path": path,
+        "size_bytes": _size(path),
         "flags": flags,
         "prompt_sha256": hashlib.sha256(system_prompt.encode("utf-8")).hexdigest(),
     }

@@ -270,6 +270,7 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
             "rol_comparado": "compared_role",
             "estado": "state",
             "huella": "footprint",
+            "huella_rol": "role_footprint",
         },
         # El estado de cada celda (ola A10b-3): `tests/test_affinity.py` saca de él las celdas
         # aprobadas que tiene que haber en `matrix.CELLS`.
@@ -277,6 +278,11 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
             "state": {"aprobada": "approved", "rechazada": "rejected", "sin base": "no_baseline"}
         },
     },
+    # La huella de un modelo (`footprint.footprint`), tal como la guardan los congelados de
+    # `benchmarks/afinidad-2026-10/` (`huellas.json` y `footprint`/`role_footprint` de cada celda de
+    # `veredicto*.json`). La comparan `matrix.footprint_differences` y `tests/test_affinity.py`
+    # (cierre del frente A, lote 1).
+    "footprint": {"keys": {"ruta": "path", "tamano_bytes": "size_bytes"}},
     # El corpus de afinidad (`benchmarks/afinidad-2026-10/cases.json`, congelado; lo escribe
     # `build_corpus`) tal como lo lee `analyze_benchmark`: de cada caso, solo estas dos claves…
     "affinity_case": {
@@ -658,9 +664,25 @@ def normalize_affinity_verdict(data: Mapping[str, Any]) -> dict[str, Any]:
     out = normalize("affinity_verdict", data)
     if isinstance(out.get("cells"), list):
         out["cells"] = [
-            normalize("affinity_verdict", c) if isinstance(c, Mapping) else c for c in out["cells"]
+            _normalize_verdict_cell(c) if isinstance(c, Mapping) else c for c in out["cells"]
         ]
     return out
+
+
+def _normalize_verdict_cell(cell: Mapping[str, Any]) -> dict[str, Any]:
+    out = normalize("affinity_verdict", cell)
+    for key in ("footprint", "role_footprint"):
+        if key in out:
+            out[key] = normalize_footprint(out[key])
+    return out
+
+
+def normalize_footprint(footprint: Any) -> Any:
+    """Una huella (`footprint.footprint`) con las claves nuevas (`path`, `size_bytes`); la de un
+    congelado viejo (`ruta`, `tamano_bytes`) sale traducida y una que no es un mapa, tal cual."""
+    if isinstance(footprint, Mapping):
+        return normalize("footprint", footprint)
+    return footprint
 
 
 def normalize_affinity_rules(data: Mapping[str, Any]) -> dict[str, Any]:

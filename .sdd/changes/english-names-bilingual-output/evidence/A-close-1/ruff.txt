@@ -1,0 +1,4 @@
+[pesado] plaza plaza-1 tomada tras 0s: D:\Projects\local-delegate\.venv\Scripts\ruff.exe check .
+All checks passed!
+[pesado] plaza plaza-1 tomada tras 0s: D:\Projects\local-delegate\.venv\Scripts\ruff.exe format --check .
+197 files already formatted

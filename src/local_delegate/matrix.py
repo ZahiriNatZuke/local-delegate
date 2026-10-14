@@ -61,8 +61,8 @@ def _gemma_26b(prompt_sha256: str) -> dict[str, Any]:
             "reasoning": "off",
         },
         "prompt_sha256": prompt_sha256,
-        "ruta": "D:\\Projects\\llms\\models\\gemma4-26b-a4b\\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf",
-        "tamano_bytes": 13597177568,
+        "path": "D:\\Projects\\llms\\models\\gemma4-26b-a4b\\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf",
+        "size_bytes": 13597177568,
     }
 
 
@@ -78,8 +78,8 @@ def _qwen_36(prompt_sha256: str) -> dict[str, Any]:
             "reasoning": "off",
         },
         "prompt_sha256": prompt_sha256,
-        "ruta": "D:\\Projects\\llms\\models\\qwen36-35b-a3b\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf",
-        "tamano_bytes": 17730509792,
+        "path": "D:\\Projects\\llms\\models\\qwen36-35b-a3b\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf",
+        "size_bytes": 17730509792,
     }
 
 
@@ -155,7 +155,7 @@ def current_footprint(model_cfg: Mapping[str, Any], prompt: str) -> dict[str, An
 def footprint_differences(cell: Cell, current: Mapping[str, Any]) -> list[str]:
     """Qué cambió entre la huella de la celda y la vigente (vacío si coinciden)."""
     differences: list[str] = []
-    for key in ("ruta", "tamano_bytes", "prompt_sha256"):
+    for key in ("path", "size_bytes", "prompt_sha256"):
         if cell.footprint.get(key) != current.get(key):
             differences.append(key)
     old_flags = cell.footprint.get("flags") or {}

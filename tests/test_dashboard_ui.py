@@ -933,7 +933,7 @@ def _raw_clients(path):
     data["by_client"] = [
         {**row, "client": "claude-code"},
         {**row, "client": "codex-mcp-client"},
-        {**row, "client": "desconocido"},
+        {**row, "client": "unknown"},
         {**row, "client": "cliente_nuevo"},
     ]
     path.fulfill(response=response, body=json.dumps(data))

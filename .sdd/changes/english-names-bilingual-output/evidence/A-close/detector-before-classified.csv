@@ -1,0 +1,743 @@
+class,category,file,line,name,why
+a,string_key,src/local_delegate/checks.py,1534,ruta,renombrar
+b,string_value,src/local_delegate/cli.py,357,recalcular-coste,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_value,src/local_delegate/config.py,247,LD_HOOK_READ_BLOQUEAR,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_value,src/local_delegate/config.py,253,LD_HOOK_READ_INTERRUPTOR,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_value,src/local_delegate/config.py,308,LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_value,src/local_delegate/config.py,470,LOCAL_DELEGATE_COSTE_RESPALDO,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_value,src/local_delegate/deprecations.py,58,recalcular-coste,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_value,src/local_delegate/deprecations.py,61,LD_HOOK_READ_BLOQUEAR,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_value,src/local_delegate/deprecations.py,65,LD_HOOK_READ_INTERRUPTOR,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_value,src/local_delegate/deprecations.py,72,LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_value,src/local_delegate/deprecations.py,77,LOCAL_DELEGATE_COSTE_RESPALDO,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_value,src/local_delegate/deprecations.py,82,local-delegate-bloqueo-apagado,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_value,src/local_delegate/deprecations.py,90,enfriamiento.json,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+a,string_key,src/local_delegate/footprint.py,29,modelo,renombrar
+a,string_key,src/local_delegate/footprint.py,138,ruta,renombrar
+a,string_key,src/local_delegate/footprint.py,139,tamano_bytes,renombrar
+a,string_value,src/local_delegate/footprint.py,139,tamano_bytes,renombrar
+b,string_key,src/local_delegate/legacy_names.py,27,peticion,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,28,capacidad_o_carga,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,29,timeout_lectura,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,30,configuracion,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,31,modelo,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,32,sin_clasificar,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,33,enfriamiento,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,38,rechazada,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,39,sin_ruta,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,40,timeout_conexion,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,41,credencial,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,42,sin_respuesta,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,43,respuesta_invalida,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,44,url_invalida,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,45,transporte,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,46,desconocida,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,52,calidad,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,52,techo,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,451,linea_corrupta,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,452,fuera_de_rango,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,453,delta_pequeno,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,454,sin_uso_local,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,455,contaminado,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,456,solapado,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,457,caducado,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,458,reinicio,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,525,especifico,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,534,aviso,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,58,bloqueo_id,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,59,secciones,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,60,fallo_conexion,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,72,motivo,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,73,bloqueo,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,74,camino,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,75,rutas,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,76,oferta,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,103,fallos,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,104,espera_s,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,105,hasta,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,113,evento,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,114,clase,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,115,tras_vencer,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,128,cruce,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,129,banco,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,147,generado,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,148,plazo_dias,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,149,cotejo,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,150,n_por_mes,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,151,puntos,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,152,descartes,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,153,reinicios,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,154,fuentes,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,160,fecha,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,161,version_tabla,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,162,juzgadas,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,163,fuera,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,164,sin_precio,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,165,veredicto,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,173,fuente,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,174,tipo,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,175,inicio,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,176,fin,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,177,marcas,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,178,peticiones_sin_precio,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,187,sesiones,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,188,ventanas,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,192,tanda,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,199,tareas,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,201,comando,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,202,estilo,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,203,nombre,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,209,ficheros,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,209,origen,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,214,tarea,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,216,valida,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,217,correcta,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,218,coste_usd,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,219,cobertura_titulos,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,220,hecho_en_respuesta,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,221,tools_locales,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,222,intentos,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,224,tools_diferidas,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,225,read_completo,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,226,read_franjas,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,227,volcado_bash,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,228,bloqueado,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,229,contenido_en_contexto,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,238,descartada,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,238,descartada_motivo,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,251,procedencia,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,268,celdas,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,269,alternativo,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,270,rol_comparado,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,271,estado,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,272,huella,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,284,rol_en_hoja,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,285,discriminante,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,296,seleccion,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,297,regla,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,298,fecha_limite,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,299,paso,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,300,privacidad,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,301,caso_de_f2,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,302,reales,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,303,trampas,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,312,regla_de_forma,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,313,misma-zona,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,314,secundario,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,315,generico,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,316,juegos,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,317,juego,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,319,caso,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,321,asunto,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,322,cuerpo,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,323,cuerpo_origen,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,324,asunto_de,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,325,fichero,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,335,hoja,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,337,semilla,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,338,pares,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,339,omitidos,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,342,lados,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,343,trampa_tipo,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,359,parcial,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,360,respuestas,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,361,inventa,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,363,preferencia,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,370,eventos,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,371,eventos_local,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,372,descartados_no_local,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,374,por_modelo,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,376,troceados,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,377,fuentes_del_repo,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,378,fuentes_fuera_del_repo,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,379,chars_in_mediana,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,380,modelos,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,387,aceptables,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,388,etiquetas,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,389,claves,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,390,esperado,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,391,titulos,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,392,listas,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,393,bloques,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,394,codigo,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,395,conteos,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,396,formato,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,405,max_inventa_26b,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,406,preguntas_opcionales,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,408,parada_anticipada,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,409,primera_linea_max,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,410,prefijo,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,411,sin_adornos,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,412,vallas_de_codigo,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,413,comillas_envolventes,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,414,encabezados_markdown,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,415,frases_de_presentacion,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,439,humano,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,444,inicio_utc,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,444,fin_utc,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,444,solo,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,80,acotada,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,82,pequeno,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,83,backend_ausente,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,84,modelo_enfriado,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,85,prosa_grande,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,86,no_es_volcado,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,87,sin_fichero,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,88,no_es_prosa,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,89,bloqueo_apagado,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,90,mcp_ajeno,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,93,encendido,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,94,apagado_fichero,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,95,apagado_variable,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,120,entra,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,120,limpia,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,134,exacto,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,135,ventana,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,137,ambiguo,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,138,sin_cruce,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,167,pasa,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,167,falla,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,180,rechazo,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,240,rechazo_por_contexto,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,245,truncado_repetido,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,255,cobertura,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,256,prohibido,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,257,json_valido,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,258,json_campos,lectura de formato viejo (tablas de legacy_names)
+b,string_key,src/local_delegate/legacy_names.py,259,ejecucion,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,28,capacidad_o_carga,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,29,timeout_lectura,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,32,sin_clasificar,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,39,sin_ruta,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,40,timeout_conexion,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,42,sin_respuesta,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,43,respuesta_invalida,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,44,url_invalida,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,58,bloqueo_id,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,60,fallo_conexion,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,83,backend_ausente,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,84,modelo_enfriado,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,85,prosa_grande,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,86,no_es_volcado,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,87,sin_fichero,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,88,no_es_prosa,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,89,bloqueo_apagado,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,90,mcp_ajeno,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,94,apagado_fichero,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,95,apagado_variable,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,104,espera_s,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,115,tras_vencer,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,138,sin_cruce,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,148,plazo_dias,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,150,n_por_mes,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,161,version_tabla,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,164,sin_precio,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,178,peticiones_sin_precio,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,218,coste_usd,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,219,cobertura_titulos,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,220,hecho_en_respuesta,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,221,tools_locales,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,224,tools_diferidas,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,225,read_completo,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,226,read_franjas,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,227,volcado_bash,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,229,contenido_en_contexto,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,238,descartada_motivo,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,240,rechazo_por_contexto,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,245,truncado_repetido,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,257,json_valido,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,258,json_campos,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,270,rol_comparado,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,284,rol_en_hoja,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,298,fecha_limite,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,301,caso_de_f2,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,312,regla_de_forma,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,313,misma-zona,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,323,cuerpo_origen,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,324,asunto_de,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,343,trampa_tipo,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,371,eventos_local,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,372,descartados_no_local,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,374,por_modelo,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,377,fuentes_del_repo,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,378,fuentes_fuera_del_repo,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,379,chars_in_mediana,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,405,max_inventa_26b,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,406,preguntas_opcionales,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,408,parada_anticipada,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,409,primera_linea_max,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,411,sin_adornos,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,412,vallas_de_codigo,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,413,comillas_envolventes,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,414,encabezados_markdown,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,415,frases_de_presentacion,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,444,inicio_utc,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,444,fin_utc,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,451,linea_corrupta,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,452,fuera_de_rango,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,453,delta_pequeno,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,454,sin_uso_local,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,474,local-delegate-bloqueo-apagado,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,475,local-delegate-bloqueos.jsonl,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,476,local-delegate-llamadas,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,480,enfriamiento.json,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,486,enfriamiento-eventos.jsonl,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,498,coste-agregados.json,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,502,cuota-statusline.jsonl,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,507,ventanas-excluidas.json,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,514,huellas.json,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,515,ventanas-tanda.json,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,516,veredicto.json,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,519,reglas.json,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,522,trampas.json,lectura de formato viejo (tablas de legacy_names)
+b,string_value,src/local_delegate/legacy_names.py,523,conteos-log.json,lectura de formato viejo (tablas de legacy_names)
+a,string_key,src/local_delegate/matrix.py,64,ruta,renombrar
+a,string_key,src/local_delegate/matrix.py,65,tamano_bytes,renombrar
+a,string_value,src/local_delegate/matrix.py,65,tamano_bytes,renombrar
+d,string_value,src/local_delegate/recompute.py,361,sin_cruce,texto que se muestra (frente B)
+b,string_key,src/local_delegate/resources/hooks/hook_common.py,183,fallos,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_key,src/local_delegate/resources/hooks/hook_common.py,184,espera_s,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_key,src/local_delegate/resources/hooks/hook_common.py,185,hasta,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_value,src/local_delegate/resources/hooks/hook_common.py,171,local-delegate-bloqueo-apagado,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_value,src/local_delegate/resources/hooks/hook_common.py,172,local-delegate-bloqueos.jsonl,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_value,src/local_delegate/resources/hooks/hook_common.py,173,local-delegate-llamadas,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_value,src/local_delegate/resources/hooks/hook_common.py,177,enfriamiento.json,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_value,src/local_delegate/resources/hooks/hook_common.py,184,espera_s,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_value,src/local_delegate/resources/hooks/hook_common.py,286,LD_HOOK_READ_BLOQUEAR,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_value,src/local_delegate/resources/hooks/hook_common.py,287,LD_HOOK_READ_INTERRUPTOR,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b-pending,string_key,src/local_delegate/server.py,1101,respondio,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+b-pending,string_key,src/local_delegate/server.py,1102,en_lugar_de,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+b-pending,string_key,src/local_delegate/server.py,1103,motivo,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+b-pending,string_key,src/local_delegate/server.py,1104,clase,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+b-pending,string_key,src/local_delegate/server.py,3639,truncado,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+b-pending,string_key,src/local_delegate/server.py,3640,aviso,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+b-pending,string_key,src/local_delegate/server.py,3644,leido_server_side,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+b-pending,string_key,src/local_delegate/server.py,3646,tokens_aprox,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+b-pending,string_key,src/local_delegate/server.py,3650,respaldo,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+a,string_key,src/local_delegate/server.py,2351,trozo,renombrar
+b-pending,string_key,src/local_delegate/server.py,3635,crudo,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+b-pending,string_value,src/local_delegate/server.py,1102,en_lugar_de,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+b-pending,string_value,src/local_delegate/server.py,3644,leido_server_side,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+b-pending,string_value,src/local_delegate/server.py,3646,tokens_aprox,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+b,string_value,src/local_delegate/valuation.py,74,n_por_mes,lectura de formato viejo: `legacy_names.read_key` de coste-agregados.json
+b,string_value,src/local_delegate/valuation.py,162,plazo_dias,lectura de formato viejo: `legacy_names.read_key` de coste-agregados.json
+a,string_value,tests/conftest.py,110,daemon-cortado,renombrar
+a,string_value,tests/fake_llama_server.py,102,chatcmpl-falso,renombrar
+a,string_key,tests/test_affinity.py,369,ruta,renombrar
+a,identifier,tests/test_agents.py,145,ajeno,renombrar
+a,identifier,tests/test_agents.py,153,raro,renombrar
+a,identifier,tests/test_agents.py,164,roto,renombrar
+a,string_value,tests/test_agents.py,122,no-existe.md,renombrar
+a,string_value,tests/test_agents.py,124,sin-recursos,renombrar
+a,string_value,tests/test_agents.py,149,ajeno.md.bak,renombrar
+a,string_value,tests/test_agents.py,155,raro.md,renombrar
+a,string_value,tests/test_agents.py,166,roto.md,renombrar
+a,string_key,tests/test_analyze_benchmark.py,1076,ruta,renombrar
+b,string_key,tests/test_attribution.py,676,cruce,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_key,tests/test_attribution.py,676,banco,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_key,tests/test_attribution.py,669,entradas,lectura de formato viejo: el test escribe a propósito el formato viejo
+a,string_key,tests/test_attribution.py,372,relleno,renombrar
+a,string_value,tests/test_attribution.py,68,sesion-sintetica,renombrar
+a,string_value,tests/test_attribution.py,125,toolu_ida,renombrar
+a,string_value,tests/test_attribution.py,144,stdin_roto,renombrar
+a,string_value,tests/test_attribution.py,144,id_malo,renombrar
+a,string_value,tests/test_attribution.py,153,toolu_calla,renombrar
+a,string_value,tests/test_attribution.py,164,toolu_calla.json,renombrar
+a,string_value,tests/test_attribution.py,205,toolu_medias.json,renombrar
+a,string_value,tests/test_attribution.py,209,toolu_medias,renombrar
+a,string_value,tests/test_attribution.py,219,toolu_vieja,renombrar
+a,string_value,tests/test_attribution.py,220,toolu_vieja.json,renombrar
+a,string_value,tests/test_attribution.py,223,toolu_nueva,renombrar
+a,string_value,tests/test_attribution.py,225,toolu_nueva.json,renombrar
+a,string_value,tests/test_attribution.py,238,toolu_otro,renombrar
+a,string_value,tests/test_attribution.py,278,toolu_fuera,renombrar
+a,string_value,tests/test_attribution.py,291,toolu_otra,renombrar
+a,string_value,tests/test_attribution.py,294,toolu_carrera,renombrar
+a,string_value,tests/test_attribution.py,374,toolu_lejos,renombrar
+a,string_value,tests/test_attribution.py,392,toolu_lento,renombrar
+a,string_value,tests/test_attribution.py,453,sesion-marcador-7f3a,renombrar
+a,string_value,tests/test_attribution.py,488,toolu_roto,renombrar
+b,string_value,tests/test_attribution.py,679,sin_cruce,lectura de formato viejo: el test escribe a propósito el formato viejo
+a,string_value,tests/test_backend_probe.py,155,data-texto,renombrar
+a,string_value,tests/test_boilerplate_output.py,50,suma.py,renombrar
+a,string_value,tests/test_boilerplate_output.py,138,relativo.py,renombrar
+a,string_value,tests/test_boilerplate_output.py,146,ya.py,renombrar
+a,string_value,tests/test_boilerplate_output.py,171,soy_carpeta,renombrar
+a,string_value,tests/test_boilerplate_output.py,204,roto.py,renombrar
+a,string_value,tests/test_bump_version.py,135,no-soy-una-version,renombrar
+a,string_value,tests/test_chains.py,169,modelo-que-no-existe,renombrar
+c,identifier,tests/test_checks.py,1342,test_header_present_but_variable_absent_warns_as_suspicion,falso positivo: palabra inglesa (suspicion por el sufijo -cion; meter; locale de-DE)
+c,identifier,tests/test_checks.py,1544,test_desktop_with_missing_variable_warns_as_suspicion,falso positivo: palabra inglesa (suspicion por el sufijo -cion; meter; locale de-DE)
+a,string_key,tests/test_checks.py,1391,otro-servidor,renombrar
+b,string_key,tests/test_checks.py,923,causa,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_key,tests/test_checks.py,924,detalle,lectura de formato viejo: el test escribe a propósito el formato viejo
+a,string_key,tests/test_checks.py,670,otro,renombrar
+a,string_value,tests/test_checks.py,321,hook_de_terceros.py,renombrar
+a,string_value,tests/test_checks.py,412,vete-a-saber,renombrar
+a,string_value,tests/test_checks.py,439,test.roto,renombrar
+a,string_value,tests/test_checks.py,720,secreto-de-mentira,renombrar
+a,string_value,tests/test_checks.py,783,un-secreto-que-no-debe-salir,renombrar
+a,string_value,tests/test_checks.py,1055,cliente-mudo,renombrar
+a,string_value,tests/test_checks.py,1158,sin-crear,renombrar
+a,string_value,tests/test_checks.py,1253,un-token-cualquiera,renombrar
+a,string_value,tests/test_checks.py,1382,token-literal-de-desktop-que-no-debe-salir-nunca,renombrar
+a,string_value,tests/test_checks.py,1391,otro-servidor,renombrar
+a,string_value,tests/test_checks.py,1516,TOKEN_DESKTOP_PRUEBA,renombrar
+a,string_value,tests/test_checks.py,1516,valor-del-entorno,renombrar
+a,string_value,tests/test_checks.py,1540,token-bueno,renombrar
+a,string_value,tests/test_checks.py,1604,mi_hook_propio.py,renombrar
+b,string_key,tests/test_cli_renamed_names.py,155,LD_HOOK_READ_BLOQUEAR,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_key,tests/test_cli_renamed_names.py,156,LD_HOOK_READ_INTERRUPTOR,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_key,tests/test_cli_renamed_names.py,157,LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_key,tests/test_cli_renamed_names.py,158,LOCAL_DELEGATE_COSTE_RESPALDO,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,identifier,tests/test_cli_renamed_names.py,270,LOCAL_DELEGATE_COSTE_RESPALDO,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_value,tests/test_cli_renamed_names.py,26,LD_HOOK_READ_BLOQUEAR,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_value,tests/test_cli_renamed_names.py,27,LD_HOOK_READ_INTERRUPTOR,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_value,tests/test_cli_renamed_names.py,28,LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_value,tests/test_cli_renamed_names.py,29,LOCAL_DELEGATE_COSTE_RESPALDO,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_value,tests/test_cli_renamed_names.py,61,recalcular-coste,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_value,tests/test_cli_renamed_names.py,125,reiniciar-calibracion,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+a,string_value,tests/test_cli_renamed_names.py,156,viejo.flag,renombrar
+a,string_value,tests/test_cli_renamed_names.py,169,nuevo.flag,renombrar
+a,string_value,tests/test_cli_renamed_names.py,232,no-existe,renombrar
+a,string_value,tests/test_cli_renamed_names.py,246,apagado.flag,renombrar
+a,string_value,tests/test_clients.py,142,cliente-prueba,renombrar
+a,string_value,tests/test_clients.py,233,cliente-a,renombrar
+a,string_value,tests/test_clients.py,234,cliente-b,renombrar
+a,string_value,tests/test_clients.py,457,toolu_prueba,renombrar
+a,string_value,tests/test_connection_cause.py,64,gaierror-en-loopback-sigue-siendo-dns,renombrar
+a,string_value,tests/test_connection_cause.py,70,econnrefused-es-rechazada,renombrar
+a,string_value,tests/test_connection_cause.py,76,enetunreach-es-sin-ruta,renombrar
+a,string_value,tests/test_connection_cause.py,82,ehostunreach-es-sin-ruta,renombrar
+a,string_value,tests/test_connection_cause.py,88,winsock-10051-es-sin-ruta,renombrar
+a,string_value,tests/test_connection_cause.py,94,winsock-10065-es-sin-ruta,renombrar
+a,string_value,tests/test_connection_cause.py,100,connect-timeout-en-loopback-es-rechazada,renombrar
+a,string_value,tests/test_connection_cause.py,106,connect-timeout-remoto-es-timeout-conexion,renombrar
+a,string_value,tests/test_connection_cause.py,112,caso-de-la-mac-etimedout-remoto,renombrar
+a,string_value,tests/test_connection_cause.py,118,caso-de-la-mac-etimedout-en-loopback,renombrar
+a,string_value,tests/test_connection_cause.py,127,json-roto,renombrar
+a,string_value,tests/test_connection_cause.py,148,codigo-401,renombrar
+a,string_value,tests/test_connection_cause.py,149,codigo-403,renombrar
+a,string_value,tests/test_connection_cause.py,150,codigo-404,renombrar
+a,string_value,tests/test_connection_cause.py,151,codigo-500,renombrar
+a,string_value,tests/test_connection_cause.py,157,propia-que-envuelve-connect-timeout,renombrar
+a,string_value,tests/test_connection_cause.py,301,causa_del_futuro,renombrar
+a,string_value,tests/test_connection_cause.py,398,no_existe,renombrar
+b,string_key,tests/test_cooldown.py,413,hasta,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_key,tests/test_cooldown.py,418,fallos,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_key,tests/test_cooldown.py,418,espera_s,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_value,tests/test_cooldown.py,378,enfriamiento.json,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_value,tests/test_cooldown.py,412,espera_s,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_value,tests/test_cooldown.py,463,enfriamiento-eventos.jsonl,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b-pending,string_key,tests/test_core.py,268,crudo,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+a,string_key,tests/test_core.py,289,puerto,renombrar
+b-pending,string_key,tests/test_core.py,308,truncado,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+b-pending,string_key,tests/test_core.py,309,aviso,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+b-pending,string_key,tests/test_core.py,349,leido_server_side,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+a,string_value,tests/test_core.py,327,fuente.md,renombrar
+b-pending,string_value,tests/test_core.py,349,leido_server_side,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+a,string_value,tests/test_core.py,372,modelo-a,renombrar
+a,string_value,tests/test_core.py,438,no-existe.yaml,renombrar
+a,string_value,tests/test_core.py,644,afuera.txt,renombrar
+a,string_value,tests/test_core.py,654,dentro.txt,renombrar
+a,string_value,tests/test_core.py,754,uno.py,renombrar
+a,string_value,tests/test_core.py,754,dos.py,renombrar
+a,string_value,tests/test_core.py,767,nota.md,renombrar
+a,string_value,tests/test_core.py,780,nuevo.py,renombrar
+a,string_value,tests/test_correlation.py,23,bloqueos.jsonl,renombrar
+a,string_value,tests/test_correlation.py,26,viejo.jsonl,renombrar
+a,string_value,tests/test_correlation.py,32,informe.md,renombrar
+a,string_value,tests/test_correlation.py,44,otro.md,renombrar
+a,string_value,tests/test_correlation.py,54,id-largo-1234,renombrar
+a,string_value,tests/test_correlation.py,89,secreto-del-cliente.md,renombrar
+a,string_value,tests/test_correlation.py,93,secreto-del-cliente,renombrar
+a,string_value,tests/test_correlation.py,163,nadie-me-bloqueo.md,renombrar
+a,string_value,tests/test_cost_doctor.py,28,sesion.jsonl,renombrar
+a,string_value,tests/test_cost_doctor.py,53,notas.md,renombrar
+a,string_value,tests/test_cost_doctor.py,95,log-corto,renombrar
+a,string_value,tests/test_daemon.py,79,el-token-del-puerto,renombrar
+a,string_value,tests/test_daemon.py,207,el-token-del-entorno,renombrar
+a,string_value,tests/test_daemon.py,211,el-del-cliente,renombrar
+a,string_key,tests/test_dashboard_cost.py,538,coletilla,renombrar
+a,string_key,tests/test_dashboard_cost.py,540,recibo,renombrar
+b-pending,string_key,tests/test_dashboard_cost.py,541,tokens_aprox,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+a,string_value,tests/test_dashboard_cost.py,183,textos.mjs,renombrar
+a,string_value,tests/test_dashboard_cost.py,317,un_mes,renombrar
+a,string_value,tests/test_dashboard_cost.py,392,sesion.jsonl,renombrar
+b,string_value,tests/test_dashboard_cost.py,393,cuota-statusline.jsonl,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+a,string_value,tests/test_dashboard_cost.py,521,salida.py,renombrar
+b-pending,string_value,tests/test_dashboard_cost.py,528,tokens_aprox,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+a,string_value,tests/test_dashboard_cost.py,612,celdas.mjs,renombrar
+a,string_value,tests/test_dashboard_js.py,68,prueba.mjs,renombrar
+a,string_value,tests/test_dashboard_states.py,330,turno_grupo,renombrar
+c,identifier,tests/test_dashboard_ui.py,735,test_the_calibrated_quota_appears_as_a_meter,falso positivo: palabra inglesa (suspicion por el sufijo -cion; meter; locale de-DE)
+a,string_key,tests/test_dashboard_ui.py,495,remoto,renombrar
+a,string_key,tests/test_dashboard_ui.py,1204,causa,renombrar
+a,string_key,tests/test_dashboard_ui.py,1205,etiqueta,renombrar
+a,string_key,tests/test_dashboard_ui.py,1206,detalle,renombrar
+a,string_key,tests/test_dashboard_ui.py,427,procesosVacia,renombrar
+a,string_value,tests/test_dashboard_ui.py,82,modelo-de-prueba,renombrar
+a,string_value,tests/test_dashboard_ui.py,594,pc.ejemplo.ts.net,renombrar
+a,string_value,tests/test_dashboard_ui.py,896,clave_rara_nueva,renombrar
+a,string_value,tests/test_dashboard_ui.py,908,motivo_que_no_existe,renombrar
+a,string_value,tests/test_dashboard_ui.py,937,cliente_nuevo,renombrar
+a,string_value,tests/test_dashboard_ui.py,1201,modelo-b,renombrar
+a,string_value,tests/test_dashboard_ui.py,1210,modelo-a,renombrar
+a,string_value,tests/test_delegation_connection.py,194,punto.png,renombrar
+a,string_value,tests/test_delegation_connection.py,200,troceada-map-reduce,renombrar
+a,string_value,tests/test_delegation_connection.py,200,troceada-por-trozos,renombrar
+b-pending,string_key,tests/test_density.py,321,tokens_aprox,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+b-pending,string_key,tests/test_density.py,380,leido_server_side,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+a,string_value,tests/test_density.py,60,casos.json,renombrar
+b,string_value,tests/test_density.py,164,LOCAL_DELEGATE_COSTE_RESPALDO,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b-pending,string_value,tests/test_density.py,321,tokens_aprox,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+a,string_value,tests/test_density.py,352,notas.md,renombrar
+a,string_value,tests/test_density.py,366,salida.py,renombrar
+a,string_value,tests/test_density.py,377,datos.json,renombrar
+b-pending,string_value,tests/test_density.py,380,leido_server_side,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+b,string_key,tests/test_deprecations.py,210,bloqueo_id,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_key,tests/test_deprecations.py,219,motivo,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_key,tests/test_deprecations.py,219,pequeno,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_value,tests/test_deprecations.py,210,bloqueo_id,lectura de formato viejo: el test escribe a propósito el formato viejo
+c,string_value,tests/test_detect_spanish_names.py,43,bloqueo_id,"fila `* | tests/test_detect_spanish_names.py` ya existe, pero `is_excepted` compara el nombre literal y no acepta `*` (fallo del detector)"
+c,string_value,tests/test_detect_spanish_names.py,43,fallo_conexion,"fila `* | tests/test_detect_spanish_names.py` ya existe, pero `is_excepted` compara el nombre literal y no acepta `*` (fallo del detector)"
+c,string_value,tests/test_detect_spanish_names.py,43,recalcular_coste,"fila `* | tests/test_detect_spanish_names.py` ya existe, pero `is_excepted` compara el nombre literal y no acepta `*` (fallo del detector)"
+c,string_value,tests/test_detect_spanish_names.py,44,VARIABLES_DE_ENTORNO,"fila `* | tests/test_detect_spanish_names.py` ya existe, pero `is_excepted` compara el nombre literal y no acepta `*` (fallo del detector)"
+c,string_value,tests/test_detect_spanish_names.py,44,reiniciar_calibracion,"fila `* | tests/test_detect_spanish_names.py` ya existe, pero `is_excepted` compara el nombre literal y no acepta `*` (fallo del detector)"
+c,string_value,tests/test_detect_spanish_names.py,45,HOOK_READ_INTERRUPTOR,"fila `* | tests/test_detect_spanish_names.py` ya existe, pero `is_excepted` compara el nombre literal y no acepta `*` (fallo del detector)"
+c,string_value,tests/test_detect_spanish_names.py,45,rol_retirado,"fila `* | tests/test_detect_spanish_names.py` ya existe, pero `is_excepted` compara el nombre literal y no acepta `*` (fallo del detector)"
+c,string_value,tests/test_detect_spanish_names.py,45,config.coste,"fila `* | tests/test_detect_spanish_names.py` ya existe, pero `is_excepted` compara el nombre literal y no acepta `*` (fallo del detector)"
+c,string_value,tests/test_detect_spanish_names.py,46,local-delegate-bloqueo-apagado,"fila `* | tests/test_detect_spanish_names.py` ya existe, pero `is_excepted` compara el nombre literal y no acepta `*` (fallo del detector)"
+c,string_value,tests/test_detect_spanish_names.py,46,respaldo_invalido,"fila `* | tests/test_detect_spanish_names.py` ya existe, pero `is_excepted` compara el nombre literal y no acepta `*` (fallo del detector)"
+c,string_value,tests/test_detect_spanish_names.py,46,leido_server_side,"fila `* | tests/test_detect_spanish_names.py` ya existe, pero `is_excepted` compara el nombre literal y no acepta `*` (fallo del detector)"
+c,string_value,tests/test_detect_spanish_names.py,133,de_la,"fila `* | tests/test_detect_spanish_names.py` ya existe, pero `is_excepted` compara el nombre literal y no acepta `*` (fallo del detector)"
+c,string_value,tests/test_detect_spanish_names.py,175,recalcular-coste,"fila `* | tests/test_detect_spanish_names.py` ya existe, pero `is_excepted` compara el nombre literal y no acepta `*` (fallo del detector)"
+c,string_value,tests/test_detect_spanish_names.py,201,cuota.py,"fila `* | tests/test_detect_spanish_names.py` ya existe, pero `is_excepted` compara el nombre literal y no acepta `*` (fallo del detector)"
+c,string_value,tests/test_detect_spanish_names.py,205,datos.json,"fila `* | tests/test_detect_spanish_names.py` ya existe, pero `is_excepted` compara el nombre literal y no acepta `*` (fallo del detector)"
+c,string_value,tests/test_detect_spanish_names.py,209,leer_precios,"fila `* | tests/test_detect_spanish_names.py` ya existe, pero `is_excepted` compara el nombre literal y no acepta `*` (fallo del detector)"
+a,string_value,tests/test_doctor.py,21,sin-numero,renombrar
+a,string_value,tests/test_doctor.py,109,no-es-fecha,renombrar
+b,string_value,tests/test_environment_isolation.py,178,LD_HOOK_READ_BLOQUEAR,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_key,tests/test_f1_conformance.py,91,fallos,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_key,tests/test_f1_conformance.py,92,espera_s,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_key,tests/test_f1_conformance.py,93,hasta,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+a,string_value,tests/test_f1_conformance.py,51,telemetria.jsonl,renombrar
+a,string_value,tests/test_f1_conformance.py,55,bloqueo-apagado,renombrar
+a,string_value,tests/test_f1_conformance.py,79,informe.md,renombrar
+b,string_value,tests/test_f1_conformance.py,87,enfriamiento.json,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_value,tests/test_f1_conformance.py,92,espera_s,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+a,string_value,tests/test_f1_conformance.py,199,mi-largo,renombrar
+a,string_value,tests/test_fake_llamaswap.py,85,m-otro,renombrar
+a,string_value,tests/test_fake_llamaswap.py,116,yaml_roto,renombrar
+a,string_value,tests/test_fake_llamaswap.py,116,modelo_sin_cmd,renombrar
+a,string_value,tests/test_fake_llamaswap.py,150,cambia_el_modelo,renombrar
+a,string_value,tests/test_fake_llamaswap.py,150,cambio_ajeno,renombrar
+b-pending,string_key,tests/test_fallback.py,557,respaldo,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+b,string_key,tests/test_fallback.py,215,fallos,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_key,tests/test_fallback.py,215,espera_s,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_key,tests/test_fallback.py,215,hasta,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b-pending,string_key,tests/test_fallback.py,559,motivo,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+b-pending,string_key,tests/test_fallback.py,558,respondio,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+b-pending,string_key,tests/test_fallback.py,558,en_lugar_de,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+b,string_value,tests/test_fallback.py,71,enfriamiento.json,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_value,tests/test_fallback.py,215,espera_s,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+a,string_value,tests/test_fallback.py,438,no-existe,renombrar
+b-pending,string_value,tests/test_fallback.py,558,en_lugar_de,"pendiente REQ-010 (subclaves/marcadores de `_local_delegate`, salen en B2)"
+b,string_key,tests/test_fallback_observability.py,171,fallos,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_key,tests/test_fallback_observability.py,171,espera_s,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_key,tests/test_fallback_observability.py,171,hasta,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_value,tests/test_fallback_observability.py,171,espera_s,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+a,string_key,tests/test_fast_role_retired.py,184,OTRA,renombrar
+a,string_value,tests/test_fast_role_retired.py,52,no-existe-este-rol,renombrar
+a,string_value,tests/test_fast_role_retired.py,134,no-existe,renombrar
+a,string_value,tests/test_fast_role_retired.py,151,lo-que-sea,renombrar
+b,string_value,tests/test_fast_role_retired.py,172,config.rol_retirado,lectura de formato viejo: el test comprueba que el id retirado de la 0.34 (REQ-003) ya no sale
+a,string_key,tests/test_footprint.py,45,modelo,renombrar
+a,string_key,tests/test_footprint.py,126,tamano_bytes,renombrar
+a,string_key,tests/test_footprint.py,129,ruta,renombrar
+a,string_value,tests/test_footprint.py,112,tamano_bytes,renombrar
+a,string_value,tests/test_footprint.py,127,otro.gguf,renombrar
+a,string_value,tests/test_hook_common.py,117,no-existe.py,renombrar
+a,string_value,tests/test_hook_common.py,138,salud.json,renombrar
+a,string_value,tests/test_hook_common.py,156,no-existe.json,renombrar
+a,string_value,tests/test_hook_common.py,157,rota.json,renombrar
+a,string_value,tests/test_hook_common.py,201,no-es-una-url,renombrar
+b,string_key,tests/test_hook_legacy_names.py,197,LD_HOOK_READ_BLOQUEAR,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_value,tests/test_hook_legacy_names.py,48,LD_HOOK_READ_INTERRUPTOR,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,string_value,tests/test_hook_legacy_names.py,49,LD_HOOK_READ_BLOQUEAR,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+a,string_value,tests/test_hook_legacy_names.py,79,informe.md,renombrar
+b,string_value,tests/test_hook_legacy_names.py,80,local-delegate-bloqueos.jsonl,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_value,tests/test_hook_legacy_names.py,107,local-delegate-llamadas,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_value,tests/test_hook_legacy_names.py,109,toolu_viejo,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_value,tests/test_hook_legacy_names.py,110,toolu_viejo.json,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+a,string_value,tests/test_hook_legacy_names.py,114,toolu_nuevo,renombrar
+a,string_value,tests/test_hook_legacy_names.py,115,toolu_nuevo.json,renombrar
+a,string_value,tests/test_hook_recipes.py,178,servicio.ts,renombrar
+a,string_value,tests/test_hook_recipes.py,186,informe.md,renombrar
+a,string_value,tests/test_hook_recipes.py,202,notas.md,renombrar
+a,string_value,tests/test_hook_recipes.py,244,componente.tsx,renombrar
+a,string_value,tests/test_hook_recipes.py,266,cliente-confidencial,renombrar
+a,string_value,tests/test_hook_recipes.py,268,informe-secreto.md,renombrar
+a,string_value,tests/test_hook_recipes.py,380,servicio.py,renombrar
+a,string_value,tests/test_hook_recipes.py,441,telemetria.jsonl,renombrar
+a,string_value,tests/test_hook_recipes.py,474,el-informe-del-cliente.md,renombrar
+a,string_value,tests/test_hook_recipes.py,486,el-informe-del-cliente,renombrar
+a,string_value,tests/test_hook_recipes.py,494,uno.md,renombrar
+a,string_value,tests/test_hook_recipes.py,494,dos.md,renombrar
+a,string_value,tests/test_hook_recipes.py,527,no-existe,renombrar
+a,string_value,tests/test_hook_shell.py,48,informe.md,renombrar
+a,string_value,tests/test_hook_shell.py,131,notas.md,renombrar
+a,string_value,tests/test_hook_shell.py,154,telemetria.jsonl,renombrar
+a,string_value,tests/test_hook_shell_absolute_path.py,60,no-existe,renombrar
+a,string_value,tests/test_hook_shell_absolute_path.py,90,informe.md,renombrar
+b,string_key,tests/test_hooks_telemetry_api.py,504,mcp_ajeno,lectura de formato viejo: el test escribe a propósito el formato viejo
+a,string_value,tests/test_hooks_telemetry_api.py,152,no-existe.jsonl,renombrar
+a,string_value,tests/test_hooks_telemetry_api.py,265,casos.json,renombrar
+b,string_value,tests/test_hooks_telemetry_api.py,454,mcp_ajeno,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_value,tests/test_hooks_telemetry_api.py,454,prosa_grande,lectura de formato viejo: el test escribe a propósito el formato viejo
+a,string_value,tests/test_hooks_telemetry_api.py,490,etiquetas.mjs,renombrar
+b,identifier,tests/test_install.py,160,test_install_over_a_034_retires_anotar_llamada_and_registers_record_call,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+b,identifier,tests/test_install.py,176,test_a_hand_made_copy_of_anotar_llamada_is_also_retired,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+a,string_key,tests/test_install.py,410,otro,renombrar
+a,string_key,tests/test_install.py,414,cosa,renombrar
+a,string_key,tests/test_install.py,751,proyecto,renombrar
+a,string_key,tests/test_install.py,414,otra,renombrar
+b,string_value,tests/test_install.py,152,anotar_llamada.py,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+a,string_value,tests/test_install.py,238,grande.txt,renombrar
+a,string_value,tests/test_install.py,547,hook_de_terceros.py,renombrar
+a,string_value,tests/test_install.py,549,algo.pyc,renombrar
+a,string_value,tests/test_install.py,690,informe.md,renombrar
+a,string_value,tests/test_install_clients.py,316,lo-puse-yo,renombrar
+a,string_value,tests/test_install_header.py,131,OTRA_VARIABLE,renombrar
+a,string_value,tests/test_install_header.py,197,s3cr3t-escrito-a-pelo,renombrar
+a,string_key,tests/test_install_opencode.py,190,otro,renombrar
+a,string_key,tests/test_install_opencode.py,285,ajeno,renombrar
+a,string_value,tests/test_install_opencode.py,101,secreto-de-mentira,renombrar
+a,string_value,tests/test_install_opencode.py,109,token-de-mentira,renombrar
+a,string_key,tests/test_llamaswap_api.py,200,viva,renombrar
+a,string_value,tests/test_llamaswap_api.py,66,clave-falsa-1,renombrar
+a,string_value,tests/test_llamaswap_api.py,90,clave-falsa-2,renombrar
+a,string_value,tests/test_llamaswap_api.py,120,clave-falsa-3,renombrar
+a,string_value,tests/test_llamaswap_api.py,190,no-existe,renombrar
+a,string_value,tests/test_llamaswap_config.py,616,no-existe,renombrar
+a,string_value,tests/test_map_reduce.py,91,MARCA-DEL-FINAL,renombrar
+a,string_value,tests/test_map_reduce.py,98,ERROR-QUE-IMPORTA,renombrar
+a,string_value,tests/test_map_reduce.py,157,MARCA-DEL-ULTIMO-ARCHIVO,renombrar
+a,string_key,tests/test_metrics.py,1620,desconocido,renombrar
+d,string_key,tests/test_metrics.py,1846,pruebas,"valor de `excluded_by_reason` (hermano de «no es Claude», con espacios): rótulo que se muestra; frente B, junto con attribution.TEST_CLIENTS"
+b,identifier,tests/test_metrics.py,1522,bloqueo_id,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,identifier,tests/test_metrics.py,1522,secciones,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,identifier,tests/test_metrics.py,1528,fallo_conexion,lectura de formato viejo: el test escribe a propósito el formato viejo
+a,string_value,tests/test_metrics.py,421,no-existe.invalid,renombrar
+b,string_value,tests/test_metrics.py,1013,backend_ausente,lectura de formato viejo: el test escribe a propósito el formato viejo
+a,string_value,tests/test_metrics.py,1229,claude-desconocido-9,renombrar
+a,string_value,tests/test_metrics.py,1273,casos.json,renombrar
+a,string_value,tests/test_metrics.py,1275,paridad.mjs,renombrar
+b,string_value,tests/test_metrics.py,1522,b-viejo,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_value,tests/test_metrics.py,1531,timeout_lectura,lectura de formato viejo: el test escribe a propósito el formato viejo
+a,string_value,tests/test_metrics.py,1535,b-nuevo,renombrar
+b,string_value,tests/test_metrics.py,1558,bloqueo_id,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_value,tests/test_metrics.py,1558,fallo_conexion,lectura de formato viejo: el test escribe a propósito el formato viejo
+a,string_value,tests/test_metrics.py,1685,clave-falsa-1,renombrar
+a,string_value,tests/test_metrics.py,1686,clave-falsa-2,renombrar
+a,string_value,tests/test_metrics.py,1724,clave-falsa-3,renombrar
+a,string_value,tests/test_pace.py,19,modelo-a,renombrar
+a,string_value,tests/test_pace.py,190,otro-modelo,renombrar
+a,string_value,tests/test_pace.py,260,no-existe,renombrar
+a,string_key,tests/test_pricing.py,223,_otra,renombrar
+a,string_value,tests/test_pricing.py,223,_otra,renombrar
+a,string_value,tests/test_questions.py,232,no-existe,renombrar
+a,string_value,tests/test_questions.py,250,tampoco-existe,renombrar
+a,string_value,tests/test_questions.py,291,SECRETO-EN-EL-INPUT,renombrar
+a,string_value,tests/test_questions.py,299,por-defecto,renombrar
+a,string_value,tests/test_recompute.py,34,sesion-sintetica-0001,renombrar
+a,string_value,tests/test_recompute.py,55,MARCADORA-7f3a,renombrar
+a,string_value,tests/test_recompute.py,56,sesion-marcadora-9c41,renombrar
+a,string_value,tests/test_recompute.py,57,toolu_privado01,renombrar
+b,string_value,tests/test_recompute.py,91,cuota-statusline.jsonl,lectura/escritura doble de formato viejo (REQ-007/012: fichero o claves de la 0.34)
+b,string_key,tests/test_recompute_legacy.py,35,fuente,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_key,tests/test_recompute_legacy.py,36,marcas,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_key,tests/test_recompute_legacy.py,84,generado,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_key,tests/test_recompute_legacy.py,85,plazo_dias,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_key,tests/test_recompute_legacy.py,86,cotejo,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_key,tests/test_recompute_legacy.py,94,n_por_mes,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_key,tests/test_recompute_legacy.py,95,puntos,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_key,tests/test_recompute_legacy.py,96,descartes,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_key,tests/test_recompute_legacy.py,97,reinicios,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_key,tests/test_recompute_legacy.py,98,fuentes,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_key,tests/test_recompute_legacy.py,87,fecha,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_key,tests/test_recompute_legacy.py,88,version_tabla,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_key,tests/test_recompute_legacy.py,89,juzgadas,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_key,tests/test_recompute_legacy.py,90,fuera,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_key,tests/test_recompute_legacy.py,91,sin_precio,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_key,tests/test_recompute_legacy.py,92,veredicto,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_key,tests/test_recompute_legacy.py,96,delta_pequeno,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_value,tests/test_recompute_legacy.py,85,plazo_dias,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_value,tests/test_recompute_legacy.py,88,version_tabla,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_value,tests/test_recompute_legacy.py,91,sin_precio,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_value,tests/test_recompute_legacy.py,94,n_por_mes,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_value,tests/test_recompute_legacy.py,96,delta_pequeno,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_value,tests/test_recompute_legacy.py,259,s-vieja,lectura de formato viejo: el test escribe a propósito el formato viejo
+b,string_value,tests/test_recompute_legacy.py,260,s-nueva,lectura de formato viejo: el test escribe a propósito el formato viejo
+a,string_key,tests/test_residency.py,416,flujo,renombrar
+a,string_key,tests/test_residency.py,420,ancla,renombrar
+a,string_key,tests/test_residency.py,426,duplicadas,renombrar
+a,string_key,tests/test_residency.py,728,residente,renombrar
+a,string_value,tests/test_residency.py,143,clave-falsa-1,renombrar
+a,string_value,tests/test_residency.py,557,clave-falsa,renombrar
+a,string_value,tests/test_residency.py,835,mala.bak,renombrar
+a,string_value,tests/test_residency.py,845,copia.bak,renombrar
+a,string_value,tests/test_residency.py,1046,clave-secreta-sin-cerrar,renombrar
+a,string_value,tests/test_residency_cli.py,51,clave-falsa-1,renombrar
+a,string_value,tests/test_role_caps.py,74,"FIN-DEL-TEXTO
+",renombrar
+a,string_value,tests/test_site.py,76,colado.html,renombrar
+b,string_key,tests/test_structured_summary.py,40,ficheros,dato congelado de corpus o caso (benchmarks/resumen-estructurado)
+b,string_value,tests/test_structured_summary.py,31,resumen-estructurado,dato congelado de corpus o caso (benchmarks/resumen-estructurado)
+b,string_value,tests/test_structured_summary.py,665,LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO,"alias de compatibilidad (REQ-001/002/012), retirada en 0.38.0 (ola R)"
+a,string_value,tests/test_test_windows.py,137,no-es-fecha,renombrar
+a,string_value,tests/test_test_windows.py,222,w-nada,renombrar
+a,string_value,tests/test_test_windows_cli.py,51,w-nada,renombrar
+a,string_value,tests/test_topology.py,296,menos_uno,renombrar
+a,string_value,tests/test_topology.py,354,no-existe.yaml,renombrar
+a,string_value,tests/test_topology.py,370,routing_es_texto,renombrar
+a,string_value,tests/test_topology.py,371,router_es_texto,renombrar
+a,string_value,tests/test_topology.py,372,settings_es_numero,renombrar
+a,string_value,tests/test_topology.py,373,use_es_lista,renombrar
+a,string_value,tests/test_topology.py,374,groups_es_lista,renombrar
+a,string_value,tests/test_topology.py,375,grupo_es_lista,renombrar
+a,string_value,tests/test_topology.py,377,grupo_es_lista_en_routing,renombrar
+a,string_value,tests/test_topology.py,381,members_es_numero,renombrar
+a,string_value,tests/test_topology.py,382,members_es_texto,renombrar
+a,string_value,tests/test_topology.py,383,miembro_es_mapa,renombrar
+a,string_value,tests/test_topology.py,384,hooks_es_lista,renombrar
+a,string_value,tests/test_topology.py,385,on_startup_es_lista,renombrar
+a,string_value,tests/test_topology.py,386,preload_es_texto,renombrar
+a,string_value,tests/test_topology.py,409,aliases_es_numero,renombrar
+a,string_value,tests/test_topology.py,409,alias_es_lista,renombrar
+a,string_value,tests/test_topology.py,409,cmd_es_lista,renombrar
+a,string_value,tests/test_transcripts.py,17,sesion-sintetica-0001,renombrar
+a,string_value,tests/test_transcripts.py,281,toolu_banco,renombrar
+a,string_value,tests/test_transcripts.py,287,toolu_no_esta,renombrar
+a,string_value,tests/test_turn_daemon.py,346,tomar_plaza,renombrar
+a,string_value,tests/test_turn_daemon.py,350,soltar_plaza,renombrar
+a,string_value,tests/test_update.py,392,sin-numeros,renombrar
+d,string_key,tests/test_valuation.py,263,pruebas,"valor de `excluded_by_reason` (hermano de «no es Claude», con espacios): rótulo que se muestra; frente B, junto con attribution.TEST_CLIENTS"
+a,string_value,tests/test_valuation.py,169,claude-nadie-9,renombrar
+a,string_value,tests/test_vendor.py,111,intruso.min.js,renombrar
+a,string_value,tests/test_vision.py,50,no-existe.png,renombrar
+a,string_value,tests/test_vision.py,56,no-es-imagen.txt,renombrar
+a,string_value,tests/test_web_auth.py,24,el-token-bueno,renombrar
+a,string_value,tests/test_web_auth.py,134,quien-sea,renombrar
+a,string_value,tests/test_web_auth.py,204,otro-token,renombrar
+a,string_value,tests/test_web_auth.py,217,no-es-una-sesion,renombrar
+c,js_string,src/local_delegate/web/metrics.py,1729,de-DE,falso positivo: palabra inglesa (suspicion por el sufijo -cion; meter; locale de-DE)
+a,js_key,src/local_delegate/web/metrics.py,1897,desconocido,renombrar
+d,js_string,src/local_delegate/web/metrics.py,2310,montado,texto que se muestra (frente B)
+d,js_string,src/local_delegate/web/metrics.py,2360,cargando,texto que se muestra (frente B)
+d,js_string,src/local_delegate/web/metrics.py,2360,descargando,texto que se muestra (frente B)
+d,js_string,src/local_delegate/web/metrics.py,2362,procesando,texto que se muestra (frente B)
+d,js_string,src/local_delegate/web/metrics.py,2476,remoto,texto que se muestra (frente B)
+d,js_string,src/local_delegate/web/metrics.py,2706,llamada,texto que se muestra (frente B)
+d,js_string,src/local_delegate/web/metrics.py,2717,fallo,texto que se muestra (frente B)
+d,js_string,src/local_delegate/web/metrics.py,2860,Remoto,texto que se muestra (frente B)

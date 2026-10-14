@@ -1,0 +1,28 @@
+refactor(rename): claves de huella con lectura dual, cliente unknown, grupo resident y clave chunk (cierre del frente A, lote 1)
+
+Aplica las 19 filas del mapping aprobado (waves/A-close-1-mapping.csv).
+
+- Huella de un modelo: `ruta`/`tamano_bytes` pasan a `path`/`size_bytes`
+  y la clave `modelo` de `cmd_flags`, a `model`. `footprint.py`,
+  `matrix.CELLS`, `footprint_differences` y el doctor de afinidad usan las
+  nuevas.
+- Lectura dual en legacy_names: `FORMATS["footprint"]`,
+  `normalize_footprint()` y `normalize_affinity_verdict`, que ahora
+  normaliza `footprint` y `role_footprint` de cada celda (con
+  `huella_rol` -> `role_footprint`). `analyze_benchmark` normaliza lo que
+  lee de `huellas.json`. Los congelados de benchmarks/ no se reescriben.
+  2 tests nuevos leen el `veredicto.json` y el `huellas.json` reales.
+- El cliente por defecto del panel, `desconocido`, pasa a `unknown` en
+  /api/stats, en la clave de `LABELS.client`, en la captura y en los
+  tests. El texto visible sigue «Desconocido».
+- `residency` propone el grupo `resident` en vez de `residente`: el
+  mismo nombre que ya tienen las configs reales de los fixtures.
+- La clave interna `trozo` del salto de respaldo pasa a `chunk`.
+- `measure_slowness.py --help` ya no revienta en una consola cp1252: la
+  `Σ` del docstring pasa a «suma de».
+
+rename-exceptions.md: 4 filas de formato viejo por los tests nuevos.
+waves/A-close.md: inventario del cierre del frente A (fase 1) y
+registro del lote 1.
+
+2603 tests (2601 + 2); suite 2601 passed, 2 skipped; ruff limpio.

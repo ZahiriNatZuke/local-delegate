@@ -1,0 +1,34 @@
+== ahora
+src/local_delegate/residency.py:607 unused-local? new en _edits_diff
+src/local_delegate/residency.py:868 unused-local? cfg en _target_group
+src/local_delegate/residency.py:1063 empty-except (FileNotFoundError)
+src/local_delegate/server.py:1249 mixed-returns? _post_chat (False)
+src/local_delegate/server.py:221 empty-except (OSError)
+src/local_delegate/server.py:875 empty-except (OSError)
+src/local_delegate/server.py:1409 empty-except (Exception)
+src/local_delegate/server.py:4515 empty-except (Exception)
+src/local_delegate/server.py:4599 empty-except ((ValueError, OSError))
+src/local_delegate/server.py:761 empty-except (Exception)
+src/local_delegate/server.py:864 empty-except (Exception)
+src/local_delegate/server.py:594 empty-except (Exception)
+src/local_delegate/server.py:873 empty-except (Exception)
+src/local_delegate/web/metrics.py:868 empty-except (Exception)
+tests/test_affinity.py:210 catch-base-exception (BaseException)
+tests/test_residency.py:804 empty-except (ResidencyError)
+== HEAD
+src/local_delegate/residency.py:607 unused-local? new en _edits_diff
+src/local_delegate/residency.py:868 unused-local? cfg en _target_group
+src/local_delegate/residency.py:1063 empty-except (FileNotFoundError)
+src/local_delegate/server.py:1249 mixed-returns? _post_chat (False)
+src/local_delegate/server.py:221 empty-except (OSError)
+src/local_delegate/server.py:875 empty-except (OSError)
+src/local_delegate/server.py:1409 empty-except (Exception)
+src/local_delegate/server.py:4515 empty-except (Exception)
+src/local_delegate/server.py:4599 empty-except ((ValueError, OSError))
+src/local_delegate/server.py:761 empty-except (Exception)
+src/local_delegate/server.py:864 empty-except (Exception)
+src/local_delegate/server.py:594 empty-except (Exception)
+src/local_delegate/server.py:873 empty-except (Exception)
+src/local_delegate/web/metrics.py:868 empty-except (Exception)
+tests/test_affinity.py:210 catch-base-exception (BaseException)
+tests/test_residency.py:804 empty-except (ResidencyError)
