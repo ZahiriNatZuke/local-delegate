@@ -1089,7 +1089,7 @@ def _celda(v, alternative=ALT, tool="local_classify"):
 def test_mechanical_cell_all_in_order_approved():
     corpus, runs = _mechanical()
     cell = _celda(_verdict(corpus, runs))
-    assert cell["state"] == "aprobada", cell["criteria"]
+    assert cell["state"] == "approved", cell["criteria"]
     assert all(c["ok"] for c in cell["criteria"].values())
     assert cell["compared_role"] == ROLE
 
@@ -1102,14 +1102,14 @@ def test_mechanical_criterion_1_fails_and_2_baseless_never_rejected():
     assert not cell["criteria"]["discriminates"]["ok"]
     assert not cell["criteria"]["quality"]["ok"]
     state = cell["state"]
-    assert state == "sin base", "falla el 1 y el 2: tiene que ser sin base, nunca rechazada"
+    assert state == "no_baseline", "falla el 1 y el 2: tiene que ser sin base, nunca rechazada"
 
 
 def test_mechanical_nobody_fails_corpus_does_not_discriminate():
     corpus, runs = _mechanical(role=("a", "a", "a", "a"), weak=("a", "a", "a", "a"))
     cell = _celda(_verdict(corpus, runs))
     assert cell["criteria"]["discriminates"]["cases_where_role_or_weak_fail"] == []
-    assert cell["state"] == "sin base"
+    assert cell["state"] == "no_baseline"
 
 
 @pytest.mark.parametrize(
@@ -1127,7 +1127,7 @@ def test_each_mechanical_criterion_can_reject_a_cell(key, kwargs):
     corpus, runs = _mechanical(**kwargs, **extra)
     cell = _celda(_verdict(corpus, runs))
     assert not cell["criteria"][key]["ok"], cell["criteria"][key]
-    assert cell["state"] == "rechazada"
+    assert cell["state"] == "rejected"
 
 
 def test_latency_allows_role_cold_load():
@@ -1149,7 +1149,7 @@ def test_regression_cases_count_in_2_but_not_in_1():
     cell = _celda(_verdict(corpus, analizar.group_runs(records)))
     assert cell["criteria"]["discriminates"]["ok"] is True  # la regresion no entra en el 1
     assert cell["criteria"]["quality"]["worse_cases"] == ["c9"]  # y si en el 2
-    assert cell["state"] == "rechazada"
+    assert cell["state"] == "rejected"
 
 
 def test_missing_data_no_invented_verdict():
@@ -1171,7 +1171,7 @@ def test_row_cancelled_only_for_lack_of_samples_counts_in_cell(reason):
     for tag in (ALT, ROLE):
         runs[(tag, "c1", 1)][-1].update(discarded=True, discarded_reason=reason)
     cell = _celda(_verdict(corpus, runs))
-    assert cell["state"] == "aprobada", cell["criteria"]
+    assert cell["state"] == "approved", cell["criteria"]
     assert cell["criteria"]["reliability"]["cases_failing_only_in_alternative"] == []
 
 
@@ -1364,13 +1364,13 @@ def _commit_cell(judgement, runs=None, rules=REGLAS, **kw):
 
 def test_commit_approved_if_sheet_valid_and_all_pass():
     cell = _commit_cell(_verdict_cell())
-    assert cell["state"] == "aprobada", cell["criteria"]
+    assert cell["state"] == "approved", cell["criteria"]
     assert cell["criteria"]["preference"] == {"ok": True, "c": 15, "v": 10, "ties": 5}
 
 
 @pytest.mark.parametrize(
     ("maximum", "invents", "state"),
-    [(2, 2, "aprobada"), (2, 3, "rechazada"), (1, 2, "rechazada"), (1, 1, "aprobada")],
+    [(2, 2, "approved"), (2, 3, "rejected"), (1, 2, "rejected"), (1, 1, "approved")],
 )
 def test_commit_invents_read_from_rules_json(maximum, invents, state):
     rules = {**REGLAS, "max_made_up_26b": maximum}
@@ -1383,9 +1383,9 @@ def test_commit_invents_read_from_rules_json(maximum, invents, state):
 def test_commit_c_equal_v_does_not_lose_and_ties_do_not_count():
     cell = _commit_cell(_verdict_cell(c=12, v=12))
     assert cell["criteria"]["preference"] == {"ok": True, "c": 12, "v": 12, "ties": 6}
-    assert cell["state"] == "aprobada"
+    assert cell["state"] == "approved"
     cell = _commit_cell(_verdict_cell(c=11, v=12))
-    assert cell["state"] == "rechazada"
+    assert cell["state"] == "rejected"
 
 
 def test_commit_invents_on_real_message_of_trap_pair_not_counted_for_1():
@@ -1398,10 +1398,10 @@ def test_commit_one_of_three_traps_marked_worse_is_baseless_and_repeat_sheet():
     cell = _commit_cell(_verdict_cell(worse_traps=1))
     assert cell["criteria"]["valid_sheet"]["traps_flagged_as_worse"] == 1
     state = cell["state"]
-    assert state == "sin base"
+    assert state == "no_baseline"
     assert "repetir hoja" in cell["report"]
     # Con dos de tres la hoja vale.
-    assert _commit_cell(_verdict_cell(worse_traps=2))["state"] == "aprobada"
+    assert _commit_cell(_verdict_cell(worse_traps=2))["state"] == "approved"
     # La tercera hoja que no vale ya no dice «repetir».
     assert "repetir" not in _commit_cell(_verdict_cell(worse_traps=0, case_set_item=3))["report"]
 
@@ -1411,16 +1411,16 @@ def test_commit_ceiling_or_26b_only_failure_rejects_even_if_sheet_wins():
         _verdict_cell(c=30, v=0), ceiling_fails_on=2
     )  # 3a: una de las tres corridas falla
     assert cell["criteria"]["behaviour"]["ceiling_3_of_3"] is False
-    assert cell["state"] == "rechazada"
+    assert cell["state"] == "rejected"
     cell = _commit_cell(
         _verdict_cell(c=30, v=0), alt_fails_on={4}
     )  # 3b: `length` en el 26B, no en Qwen
     assert cell["criteria"]["behaviour"]["cases_failing_only_in_alternative"] == ["k4"]
     state = cell["state"]
-    assert state == "rechazada"
+    assert state == "rejected"
     # Si Qwen tambien falla en ese caso, no cuenta contra el 26B.
     cell = _commit_cell(_verdict_cell(c=30, v=0), alt_fails_on={4}, qwen_fails_on={4})
-    assert cell["state"] == "aprobada"
+    assert cell["state"] == "approved"
 
 
 def test_commit_partial_judgement_gives_no_verdict():
@@ -1443,7 +1443,7 @@ def test_format_computed_by_program_and_state_unchanged():
     # No decide: dos corridas, una con formato impecable y otra con vallas, dan el mismo estado.
     clean = _commit_cell(_verdict_cell(), alt_text={i: "feat: ok" for i in range(N_REAL)})
     dirty = _commit_cell(_verdict_cell(), alt_text={i: "```\nfeat: ok\n```" for i in range(N_REAL)})
-    assert clean["state"] == dirty["state"] == "aprobada"
+    assert clean["state"] == dirty["state"] == "approved"
     assert clean["published"][ALT]["format"] == 30
     assert dirty["published"][ALT]["format"] == 0
 
@@ -1497,7 +1497,7 @@ def test_does_not_import_package(tmp_path):
     )
     assert proc.returncode == 0, proc.stderr
     verdict = json.loads((tmp_path / "verdict-mechanical.json").read_text(encoding="utf-8"))
-    assert {c["state"] for c in verdict["cells"]} == {"aprobada"}
+    assert {c["state"] for c in verdict["cells"]} == {"approved"}
     assert "aprobada" in proc.stdout
 
 
@@ -1594,6 +1594,10 @@ def test_the_written_verdict_closes_the_cycle_and_the_frozen_one_is_still_read(t
     frozen = _read_verdict(tmp_path)
     for cell in frozen["cells"]:
         assert {"tool", "alternative", "compared_role", "state", "footprint"} <= set(cell)
+    # El estado se guarda y se relee (ola A10b-3): en inglés al escribir; el congelado, traducido.
+    states = {"approved", "rejected", "no_baseline"}
+    assert {c["state"] for c in written["cells"]} <= states
+    assert {c["state"] for c in frozen["cells"]} == {"approved", "rejected"}
 
 
 # Los nombres de antes, escritos a mano: si salieran de la tabla de `legacy_names`, una tabla vacía
@@ -1624,6 +1628,17 @@ def test_an_old_format_judgement_gives_the_same_commit_cell():
     old["pares"] = {k: _old_keys("commit_judgement", p) for k, p in new["pairs"].items()}
     assert "pares" in old and "tipo" in old["pares"]["01"] and "lados" in old["pares"]["01"]
     assert _commit_cell(old) == _commit_cell(new)
+
+
+@pytest.mark.parametrize(
+    ("old", "new"),
+    [("aprobada", "approved"), ("rechazada", "rejected"), ("sin base", "no_baseline")],
+)
+def test_an_old_format_cell_state_is_read_in_english(old, new):
+    # Escritos a mano (ola A10b-3): el `veredicto.json` congelado solo tiene los dos primeros.
+    read = legacy_names.normalize_affinity_verdict({"celdas": [{"tool": "t", "estado": old}]})
+    assert read["cells"] == [{"tool": "t", "state": new}]
+    assert legacy_names.normalize_affinity_verdict(read) == read
 
 
 def test_the_frozen_rules_are_read_with_the_new_keys():

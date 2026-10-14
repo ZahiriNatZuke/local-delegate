@@ -504,7 +504,7 @@ def test_matrix_cells_are_the_approved_cells_of_the_verdict():
     verdict_approved_cells = {
         (c["tool"], c["alternative"], c["compared_role"])
         for c in verdict["cells"]
-        if c["state"] == "aprobada"
+        if c["state"] == "approved"
     }
     code_cells = {(c.tool, c.alternative, c.compared_role) for c in matrix.CELLS}
 
@@ -512,7 +512,7 @@ def test_matrix_cells_are_the_approved_cells_of_the_verdict():
     footprints = {
         (c["tool"], c["alternative"], c["compared_role"]): c["footprint"]
         for c in verdict["cells"]
-        if c["state"] == "aprobada"
+        if c["state"] == "approved"
     }
     for cell in matrix.CELLS:
         assert dict(cell.footprint) == footprints[(cell.tool, cell.alternative, cell.compared_role)]

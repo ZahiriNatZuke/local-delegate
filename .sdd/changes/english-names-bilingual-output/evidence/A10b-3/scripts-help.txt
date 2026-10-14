@@ -1,0 +1,35 @@
+usage: analyze_benchmark.py decide [-h] --cases CASES [--json JSON]
+                                   [--output OUTPUT] [--cp3 CP3] --pair ROLE
+                                   INCUMBENT CANDIDATE [--pairs PAIRS]
+                                   [--shared-mib-threshold SHARED_MIB_THRESHOLD]
+                                   jsonl [jsonl ...]
+
+positional arguments:
+  jsonl
+
+options:
+  -h, --help            show this help message and exit
+  --cases CASES         cases.json del corpus v2
+  --json JSON           escribe tambien el resultado en JSON
+  --output OUTPUT       escribe el informe aqui en vez de stdout
+  --cp3 CP3             JSON de `cp3` (repetible)
+  --pair ROLE INCUMBENT CANDIDATE
+  --pairs PAIRS         JSON de `hoja_pares.py destapar --json` (repetible,
+                        uno por comparacion)
+  --shared-mib-threshold SHARED_MIB_THRESHOLD
+                        crecimiento de Shared Usage tolerado antes de dar CP-1
+                        por caido (sin calibrar: tarea 18)
+usage: construir_corpus.py [-h] [--destino DESTINO] [--log-dir LOG_DIR]
+                           [--comprobar] [--refresh-sources]
+
+Congela las fuentes y construye el corpus v2 de la tanda de F2 (tarea 14 del
+SDD).
+
+options:
+  -h, --help         show this help message and exit
+  --destino DESTINO
+  --log-dir LOG_DIR  carpeta con usage-*.jsonl; si no existe, no se regeneran
+                     los conteos
+  --comprobar        solo recaptura lo versionado
+  --refresh-sources  vuelve a congelar las fuentes desde los ficheros vivos
+                     (cambia el corpus medido)

@@ -127,9 +127,9 @@ def _caso(**cambios):
         "tool": "local_summarize",
         "role": "mechanical",
         "kind": "calidad",
-        "procedencia": "inventado",
-        "origen": "test",
-        "fuente": construir.texto_literal(""),
+        "provenance": "inventado",
+        "origin": "test",
+        "source": construir.texto_literal(""),
         "expected_terms": ("prueba",),
     }
     base.update(cambios)
@@ -141,7 +141,7 @@ def _errores(caso, tmp_path, datos: bytes, nombre="fuente.txt"):
     ruta.write_bytes(datos)
     unica = None
     if caso.kind == "techo":
-        unica = construir.capturar(caso, ruta, datos, sin_troceo=True)
+        unica = construir.capturar(caso, ruta, datos, no_chunking=True)
     return construir.comprobar(caso, construir.capturar(caso, ruta, datos), datos, unica)
 
 
@@ -165,8 +165,8 @@ def test_regla_de_una_llamada_caza_el_traducir_14k(tmp_path):
     caso = _caso(
         tool="local_translate",
         role="long",
-        argumentos={"target_lang": "inglés"},
-        terminos_en_fuente=False,
+        arguments={"target_lang": "inglés"},
+        terms_in_source=False,
     )
     errores = _errores(caso, tmp_path, texto.encode())
     assert len(errores) == 1 and "no cabe en una llamada, produccion hace" in errores[0]
@@ -293,7 +293,7 @@ def test_pareja_que_difiere_en_dos_senales_se_rechaza():
     caso = _caso(
         expected_terms=("0.27.0",),
         forbidden_terms=("0.24.0",),
-        referencia=("prohibido", "Version 0.27.0 hoy", "Version 0.24.0 hoy"),
+        reference=("prohibido", "Version 0.27.0 hoy", "Version 0.24.0 hoy"),
     )
     assert construir.comprobar_referencia(caso, ("0.27.0",)) == [
         (
@@ -304,14 +304,14 @@ def test_pareja_que_difiere_en_dos_senales_se_rechaza():
 
 
 def test_pareja_de_distinta_longitud_se_rechaza():
-    caso = _caso(expected_terms=("bug",), referencia=("cobertura", "bug", "nada"))
+    caso = _caso(expected_terms=("bug",), reference=("cobertura", "bug", "nada"))
     assert construir.comprobar_referencia(caso, ("bug",)) == [
         "prueba: la pareja no tiene la misma longitud (3 y 4)"
     ]
 
 
 def test_respuesta_buena_que_no_es_buena_se_rechaza():
-    caso = _caso(expected_terms=("bug",), referencia=("cobertura", "nada", "bug."))
+    caso = _caso(expected_terms=("bug",), reference=("cobertura", "nada", "bug."))
     errores = construir.comprobar_referencia(caso, ("bug",))
     assert len(errores) == 1 and "la respuesta buena no es buena" in errores[0]
 

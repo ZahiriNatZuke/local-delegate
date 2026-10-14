@@ -251,6 +251,11 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
             "estado": "state",
             "huella": "footprint",
         },
+        # El estado de cada celda (ola A10b-3): `tests/test_affinity.py` saca de él las celdas
+        # aprobadas que tiene que haber en `matrix.CELLS`.
+        "values": {
+            "state": {"aprobada": "approved", "rechazada": "rejected", "sin base": "no_baseline"}
+        },
     },
     # El corpus de afinidad (`benchmarks/afinidad-2026-10/cases.json`, congelado; lo escribe
     # `construir_corpus`) tal como lo lee `analyze_benchmark`: de cada caso, solo estas dos claves…

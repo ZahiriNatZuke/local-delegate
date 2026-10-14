@@ -61,82 +61,82 @@ Terminos = tuple[str, ...] | Callable[[str], tuple[str, ...]]
 # --- Fuentes -----------------------------------------------------------------------------------
 
 
-def normalizado(datos: bytes) -> str:
+def normalizado(data: bytes) -> str:
     """Lo que ve el modelo: `_read_input` lee con `read_text`, que convierte `\\r\\n` en `\\n`."""
-    texto = datos.decode("utf-8", errors="replace")
-    return texto.replace("\r\n", "\n").replace("\r", "\n")
+    text = data.decode("utf-8", errors="replace")
+    return text.replace("\r\n", "\n").replace("\r", "\n")
 
 
 def fichero(rel: str) -> Fuente:
-    return lambda raiz: (raiz / rel).read_bytes()
+    return lambda root: (root / rel).read_bytes()
 
 
-def recorte_por_lineas(rel: str, limite: int, frontera: str | None = None) -> Fuente:
-    """Lineas enteras hasta `limite` chars; con `frontera`, corta antes de una linea que case."""
+def recorte_por_lineas(rel: str, limit: int, boundary: str | None = None) -> Fuente:
+    """Lineas enteras hasta `limit` chars; con `boundary`, corta antes de una linea que case."""
 
-    def generar(raiz: Path) -> bytes:
-        return cortar_lineas(normalizado((raiz / rel).read_bytes()), limite, frontera).encode()
+    def generate(root: Path) -> bytes:
+        return cortar_lineas(normalizado((root / rel).read_bytes()), limit, boundary).encode()
 
-    return generar
+    return generate
 
 
-def cortar_lineas(texto: str, limite: int, frontera: str | None = None) -> str:
-    lineas = texto.splitlines(keepends=True)
-    acumulado = 0
-    corte = 0
-    for indice, linea in enumerate(lineas):
-        if acumulado + len(linea) > limite:
+def cortar_lineas(text: str, limit: int, boundary: str | None = None) -> str:
+    lines = text.splitlines(keepends=True)
+    accumulated = 0
+    cut = 0
+    for index, line in enumerate(lines):
+        if accumulated + len(line) > limit:
             break
-        acumulado += len(linea)
-        siguiente = lineas[indice + 1] if indice + 1 < len(lineas) else ""
-        if frontera is None or re.match(frontera, siguiente):
-            corte = indice + 1
-    return "".join(lineas[:corte])
+        accumulated += len(line)
+        next_one = lines[index + 1] if index + 1 < len(lines) else ""
+        if boundary is None or re.match(boundary, next_one):
+            cut = index + 1
+    return "".join(lines[:cut])
 
 
-def recorte_exacto(rel: str, limite: int) -> Fuente:
-    """Los primeros `limite` chars sin buscar frontera: lo que `_read_input` deja ver al modelo."""
-    return lambda raiz: normalizado((raiz / rel).read_bytes())[:limite].encode("utf-8")
+def recorte_exacto(rel: str, limit: int) -> Fuente:
+    """Los primeros `limit` chars sin buscar frontera: lo que `_read_input` deja ver al modelo."""
+    return lambda root: normalizado((root / rel).read_bytes())[:limit].encode("utf-8")
 
 
-def _git(raiz: Path, *args: str) -> bytes:
-    return subprocess.run(["git", *args], cwd=raiz, capture_output=True, check=True).stdout
+def _git(root: Path, *args: str) -> bytes:
+    return subprocess.run(["git", *args], cwd=root, capture_output=True, check=True).stdout
 
 
 def diff_de_commit(commit: str) -> Fuente:
-    return lambda raiz: _git(raiz, "show", "--format=", "--no-color", "--no-ext-diff", commit)
+    return lambda root: _git(root, "show", "--format=", "--no-color", "--no-ext-diff", commit)
 
 
 def blob(commit: str, rel: str) -> Fuente:
-    return lambda raiz: _git(raiz, "show", f"{commit}:{rel}")
+    return lambda root: _git(root, "show", f"{commit}:{rel}")
 
 
-def archivos_enteros(salida: str, limite: int) -> str:
-    """Los avisos de ruff de los primeros archivos, ENTEROS, mientras quepan en `limite` chars.
+def archivos_enteros(output: str, limit: int) -> str:
+    """Los avisos de ruff de los primeros archivos, ENTEROS, mientras quepan en `limit` chars.
 
     Un archivo cortado a medias daria conteos que la fuente no respalda. Lo que no es un aviso
     (`Found N errors.`) queda en su propio bloque, al final, y no se alcanza.
     """
-    bloques: dict[str, list[str]] = {}
-    for linea in salida.splitlines(keepends=True):
-        bloques.setdefault(linea.split(":", 1)[0], []).append(linea)
-    elegidas: list[str] = []
-    acumulado = 0
-    for lineas in bloques.values():
-        tamano = sum(len(linea) for linea in lineas)
-        if acumulado + tamano > limite:
+    blocks: dict[str, list[str]] = {}
+    for line in output.splitlines(keepends=True):
+        blocks.setdefault(line.split(":", 1)[0], []).append(line)
+    chosen: list[str] = []
+    accumulated = 0
+    for lines in blocks.values():
+        size = sum(len(line) for line in lines)
+        if accumulated + size > limit:
             break
-        elegidas += lineas
-        acumulado += tamano
-    return "".join(elegidas)
+        chosen += lines
+        accumulated += size
+    return "".join(chosen)
 
 
-def salida_de_ruff_por_archivos(limite: int) -> Fuente:
-    def generar(raiz: Path) -> bytes:
-        proceso = subprocess.run(
+def salida_de_ruff_por_archivos(limit: int) -> Fuente:
+    def generate(root: Path) -> bytes:
+        process = subprocess.run(
             [sys.executable, "-m", "ruff", "check", "--select", "ALL"]
             + ["--output-format", "concise", "--no-cache", "src/local_delegate"],
-            cwd=raiz,
+            cwd=root,
             capture_output=True,
             text=True,
             encoding="utf-8",
@@ -144,63 +144,59 @@ def salida_de_ruff_por_archivos(limite: int) -> Fuente:
         )
         # ruff sale con 1 cuando encuentra algo, que es justo lo que se quiere. Las barras se
         # normalizan para que la salida no dependa del sistema en que se genero.
-        return archivos_enteros(proceso.stdout.replace("\\", "/"), limite).encode("utf-8")
+        return archivos_enteros(process.stdout.replace("\\", "/"), limit).encode("utf-8")
 
-    return generar
+    return generate
 
 
-def secciones_de_version(rel: str, desde: str, hasta: str) -> Fuente:
+def secciones_de_version(rel: str, since: str, until: str) -> Fuente:
     """Del `## [desde]` hasta antes de `## [hasta]`. Las secciones publicadas no cambian: el
     CHANGELOG solo crece por arriba, asi que el recorte es reproducible aunque el fichero no."""
 
-    def generar(raiz: Path) -> bytes:
-        texto = normalizado((raiz / rel).read_bytes())
-        inicio = texto.index(f"## [{desde}]")
-        return texto[inicio : texto.index(f"## [{hasta}]", inicio)].encode("utf-8")
+    def generate(root: Path) -> bytes:
+        text = normalizado((root / rel).read_bytes())
+        start = text.index(f"## [{since}]")
+        return text[start : text.index(f"## [{until}]", start)].encode("utf-8")
 
-    return generar
+    return generate
 
 
-def texto_literal(contenido: str) -> Fuente:
-    return lambda _raiz: contenido.encode("utf-8")
+def texto_literal(content: str) -> Fuente:
+    return lambda _root: content.encode("utf-8")
 
 
 # --- Terminos derivados de la fuente, no escritos a ojo -----------------------------------------
 
 
-def _primeros(patron: str, n: int = 3, grupo: int = 1) -> Callable[[str], tuple[str, ...]]:
-    def derivar(texto: str) -> tuple[str, ...]:
-        vistos: list[str] = []
-        for match in re.finditer(patron, texto, flags=re.MULTILINE):
-            valor = match.group(grupo)
-            if valor not in vistos:
-                vistos.append(valor)
-            if len(vistos) == n:
+def _primeros(pattern: str, n: int = 3, group: int = 1) -> Callable[[str], tuple[str, ...]]:
+    def derive(text: str) -> tuple[str, ...]:
+        seen: list[str] = []
+        for match in re.finditer(pattern, text, flags=re.MULTILINE):
+            value = match.group(group)
+            if value not in seen:
+                seen.append(value)
+            if len(seen) == n:
                 break
-        return tuple(vistos)
+        return tuple(seen)
 
-    return derivar
+    return derive
 
 
-def _reglas_mas_frecuentes(texto: str) -> tuple[str, ...]:
-    conteo = Counter(re.findall(r": ([A-Z]+[0-9]+) ", texto))
-    return tuple(regla for regla, _ in conteo.most_common(3))
+def _reglas_mas_frecuentes(text: str) -> tuple[str, ...]:
+    count = Counter(re.findall(r": ([A-Z]+[0-9]+) ", text))
+    return tuple(rule for rule, _ in count.most_common(3))
 
 
 # Segundo piloto de CP-3: el 2B se invento los conteos de lint y la cobertura no lo veia. Para cada
 # regla que el caso pide nombrar, los numeros que la fuente respalda: el total, cuantos archivos la
 # tienen y lo que suma en cada archivo. Salen de las lineas de ruff, no de lo que dijo un modelo.
-def _conteos_de_las_reglas(texto: str) -> dict[str, list[int]]:
-    por_regla: dict[str, Counter[str]] = {}
-    for archivo, regla in re.findall(
-        r"^(\S+?):\d+:\d+: ([A-Z]+[0-9]+) ", texto, flags=re.MULTILINE
-    ):
-        por_regla.setdefault(regla, Counter())[archivo] += 1
+def _conteos_de_las_reglas(text: str) -> dict[str, list[int]]:
+    per_rule: dict[str, Counter[str]] = {}
+    for file, rule in re.findall(r"^(\S+?):\d+:\d+: ([A-Z]+[0-9]+) ", text, flags=re.MULTILINE):
+        per_rule.setdefault(rule, Counter())[file] += 1
     return {
-        regla: sorted(
-            {sum(por_regla[regla].values()), len(por_regla[regla]), *por_regla[regla].values()}
-        )
-        for regla in _reglas_mas_frecuentes(texto)
+        rule: sorted({sum(per_rule[rule].values()), len(per_rule[rule]), *per_rule[rule].values()})
+        for rule in _reglas_mas_frecuentes(text)
     }
 
 
@@ -212,85 +208,85 @@ def formato_pedido(system: str | None) -> dict[str, Any]:
     """
     if not system:
         return {}
-    formato: dict[str, Any] = {}
-    if limite := re.search(r"M[aá]ximo (\d+) palabras", system):
-        formato["max_words"] = int(limite.group(1))
+    fmt: dict[str, Any] = {}
+    if limit := re.search(r"M[aá]ximo (\d+) palabras", system):
+        fmt["max_words"] = int(limit.group(1))
     if re.search(r"\bprosa\b", system):
-        formato["prose"] = True
-    return formato
+        fmt["prose"] = True
+    return fmt
 
 
-def _docstring_del_modulo(texto: str) -> str:
-    partes = texto.split('"""')
-    return partes[1] if len(partes) > 2 else ""
+def _docstring_del_modulo(text: str) -> str:
+    parts = text.split('"""')
+    return parts[1] if len(parts) > 2 else ""
 
 
 # «Explica que hace el codigo y como» no pide nombrar helpers privados, y CP-3 (tarea 19) lo
 # demostro: con los tres primeros `def` del fichero, dos explicaciones correctas sacaban 0. Lo que la
 # explicacion SI tiene que cubrir es lo que el modulo declara de si mismo en su docstring: sus rutas
 # o los ficheros y opciones que toca. Mas terminos, ademas, dan granularidad a la banda (P-12).
-def _rutas_del_docstring(texto: str) -> tuple[str, ...]:
-    return tuple(dict.fromkeys(re.findall(r"GET (/api/\S+)", _docstring_del_modulo(texto))))
+def _rutas_del_docstring(text: str) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(re.findall(r"GET (/api/\S+)", _docstring_del_modulo(text))))
 
 
-def _ficheros_y_flags_del_docstring(texto: str) -> tuple[str, ...]:
-    entre_comillas = re.findall(r"`([^`]+)`", _docstring_del_modulo(texto))
-    ficheros = [re.sub(r".*/", "", t) for t in entre_comillas if re.search(r"\.(json|md|bak)$", t)]
-    flags = [t for t in entre_comillas if t.startswith("--")]
-    return tuple(dict.fromkeys(ficheros + flags))
+def _ficheros_y_flags_del_docstring(text: str) -> tuple[str, ...]:
+    quoted = re.findall(r"`([^`]+)`", _docstring_del_modulo(text))
+    files = [re.sub(r".*/", "", t) for t in quoted if re.search(r"\.(json|md|bak)$", t)]
+    flags = [t for t in quoted if t.startswith("--")]
+    return tuple(dict.fromkeys(files + flags))
 
 
 # Un mensaje de commit tiene que nombrar el cambio, y el diff trae como lo nombro su autor: la
 # primera entrada «Fixed» que anade al CHANGELOG. Con un unico termino (`inflight`), CP-3 dio 0 al
 # mensaje que nombraba el arreglo y al que solo nombraba el bump de version. Se quitan los privados
 # (`_x`) y los comandos con espacios; de una ruta a fichero se queda el nombre.
-def _identificadores_del_primer_arreglo(texto: str) -> tuple[str, ...]:
-    lineas = texto.splitlines()
-    inicio = next((n for n, linea in enumerate(lineas) if linea == "+### Fixed"), None)
-    if inicio is None:
+def _identificadores_del_primer_arreglo(text: str) -> tuple[str, ...]:
+    lines = text.splitlines()
+    start = next((n for n, line in enumerate(lines) if line == "+### Fixed"), None)
+    if start is None:
         return ()
-    entrada: list[str] = []
-    for linea in lineas[inicio + 1 :]:
-        if not linea.startswith("+"):
+    entry: list[str] = []
+    for line in lines[start + 1 :]:
+        if not line.startswith("+"):
             break
-        cuerpo = linea[1:]
-        if cuerpo.startswith("#") or (cuerpo.startswith("- ") and entrada):
+        body = line[1:]
+        if body.startswith("#") or (body.startswith("- ") and entry):
             break
-        if cuerpo.startswith("- ") or entrada:
-            entrada.append(cuerpo)
-    limpios = []
-    for termino in re.findall(r"`([^`]+)`", " ".join(entrada)):
-        if " " in termino or termino.startswith("_"):
+        if body.startswith("- ") or entry:
+            entry.append(body)
+    clean = []
+    for term in re.findall(r"`([^`]+)`", " ".join(entry)):
+        if " " in term or term.startswith("_"):
             continue
-        ultimo = termino.rsplit("/", 1)[-1]
-        limpios.append((ultimo if "." in ultimo else termino).removesuffix("()"))
-    return tuple(dict.fromkeys(limpios))
+        last = term.rsplit("/", 1)[-1]
+        clean.append((last if "." in last else term).removesuffix("()"))
+    return tuple(dict.fromkeys(clean))
 
 
 # Un resumen de un changelog tiene que decir que cambio, y cada entrada lo resume en su titular en
 # negrita. Antes eran los numeros de version, que el prompt («resumen en prosa») no pide: CP-3 los
 # dio a 0 en los dos modelos, un suelo.
-def _identificadores_de_los_titulares(texto: str) -> tuple[str, ...]:
-    titulares = re.findall(r"^- \*\*(.+?)\*\*", texto, flags=re.MULTILINE | re.DOTALL)
+def _identificadores_de_los_titulares(text: str) -> tuple[str, ...]:
+    headlines = re.findall(r"^- \*\*(.+?)\*\*", text, flags=re.MULTILINE | re.DOTALL)
     return tuple(
         dict.fromkeys(
-            termino.removesuffix("()")
-            for titular in titulares
-            for termino in re.findall(r"`([^`]+)`", titular)
+            term.removesuffix("()")
+            for headline in headlines
+            for term in re.findall(r"`([^`]+)`", headline)
         )
     )
 
 
-def _valores_toml(*claves: str) -> Callable[[str], tuple[str, ...]]:
-    def derivar(texto: str) -> tuple[str, ...]:
-        valores = []
-        for clave in claves:
-            match = re.search(rf'^{re.escape(clave)} = "?([^"\n]+)"?$', texto, flags=re.MULTILINE)
+def _valores_toml(*keys: str) -> Callable[[str], tuple[str, ...]]:
+    def derive(text: str) -> tuple[str, ...]:
+        values = []
+        for key in keys:
+            match = re.search(rf'^{re.escape(key)} = "?([^"\n]+)"?$', text, flags=re.MULTILINE)
             if match:
-                valores.append(match.group(1))
-        return tuple(valores)
+                values.append(match.group(1))
+        return tuple(values)
 
-    return derivar
+    return derive
 
 
 # --- Casos (protocolo-f2.md §4.4) -----------------------------------------------------------------
@@ -302,27 +298,27 @@ class Caso:
     tool: str
     role: str
     kind: str
-    procedencia: str
-    origen: str
-    fuente: Fuente
+    provenance: str
+    origin: str
+    source: Fuente
     extension: str = "txt"
     media_type: str = "texto"
-    argumentos: dict[str, Any] = field(default_factory=dict)
+    arguments: dict[str, Any] = field(default_factory=dict)
     expected_terms: Terminos = ()
     forbidden_terms: tuple[str, ...] = ()
     expected_json_fields: tuple[str, ...] = ()
     # Los terminos esperados tienen que estar en la fuente, salvo donde la salida no la copia:
     # una traduccion, una etiqueta elegida o lo que se ve en una imagen.
-    terminos_en_fuente: bool = True
+    terms_in_source: bool = True
     # Pareja de referencia de CP-4: (senal, respuesta buena, respuesta mala). Solo en seis casos.
-    referencia: tuple[str, str, str] | None = None
+    reference: tuple[str, str, str] | None = None
     # Comprobaciones que el puntuador EJECUTA sobre el codigo generado: {"expr", "expected"} o
     # {"expr", "raises"}. Salen de la especificacion del caso, no de lo que devolvio un modelo.
-    comprobaciones: tuple[dict[str, Any], ...] = ()
+    checks: tuple[dict[str, Any], ...] = ()
     # Conteos que el puntuador comprueba contra la fuente, derivados de ella: {regla: validos}.
-    conteos: Callable[[str], dict[str, list[int]]] | None = None
+    counts: Callable[[str], dict[str, list[int]]] | None = None
     # False: la regla de §7 no lo cuenta y lo juzga solo la revision a ciegas (§4.8).
-    puntuacion_automatica: bool = True
+    automatic_score: bool = True
 
 
 _TOP_LEVEL_PY = r"^(?:def |class |async def |@)"
@@ -354,7 +350,7 @@ CASOS: tuple[Caso, ...] = (
         fichero("CONTRIBUTING.md"),
         extension="md",
         expected_terms=("pre-commit", "pull request"),
-        referencia=(
+        reference=(
             "cobertura",
             (
                 "Guía para contribuir: el entorno de desarrollo, cómo ejecutar el MCP en local, las "
@@ -378,7 +374,7 @@ CASOS: tuple[Caso, ...] = (
         extension="toml",
         expected_json_fields=("name", "version", "requires-python", "license"),
         expected_terms=_valores_toml("name", "version", "requires-python", "license"),
-        referencia=(
+        reference=(
             "json_valido",
             (
                 '{"name": "local-delegate-mcp", "version": "0.27.0", "requires-python": ">=3.11", '
@@ -398,10 +394,10 @@ CASOS: tuple[Caso, ...] = (
         "reconstruido",
         "evento inline real de 53 chars; texto recreado con esa forma",
         texto_literal("El dashboard dejó de cargar tras actualizar a 0.27.0."),
-        argumentos={"labels": ["bug", "feature", "docs", "pregunta"]},
+        arguments={"labels": ["bug", "feature", "docs", "pregunta"]},
         expected_terms=("bug",),
         forbidden_terms=("feature", "docs", "pregunta"),
-        terminos_en_fuente=False,
+        terms_in_source=False,
     ),
     Caso(
         "traducir-42",
@@ -411,10 +407,10 @@ CASOS: tuple[Caso, ...] = (
         "reconstruido",
         "evento inline real de 42 chars; texto recreado con esa forma",
         texto_literal("Reinicia el daemon después de actualizarlo"),
-        argumentos={"target_lang": "inglés"},
+        arguments={"target_lang": "inglés"},
         expected_terms=("restart", "daemon", "updat"),
         forbidden_terms=("reinicia",),
-        terminos_en_fuente=False,
+        terms_in_source=False,
     ),
     Caso(
         "delegar-56",
@@ -424,7 +420,7 @@ CASOS: tuple[Caso, ...] = (
         "reconstruido",
         "evento inline real de 56 chars; texto recreado con esa forma",
         texto_literal("tokens, latencia, modelo, errores, reintentos y el coste"),
-        argumentos={
+        arguments={
             "task": "Convierte esta enumeración en una lista con una viñeta por elemento.",
             "output_format": "lista Markdown con una viñeta '- ' por elemento",
         },
@@ -443,7 +439,7 @@ CASOS: tuple[Caso, ...] = (
         expected_terms=("UserPromptSubmit", "PreToolUse", "LD_HOOK_READ_BLOQUEAR"),
         # P-15: la cobertura de terminos no coincidio con el juicio humano (0 de 3, invertida). Lo
         # decide la comparacion por pares a ciegas; los terminos se quedan como dato.
-        puntuacion_automatica=False,
+        automatic_score=False,
     ),
     Caso(
         # Tarea 19: sustituye a `resumen-changelog-43k`, cuyos terminos eran un suelo. Dos secciones
@@ -458,7 +454,7 @@ CASOS: tuple[Caso, ...] = (
         secciones_de_version("CHANGELOG.md", "0.27.0", "0.25.0"),
         extension="md",
         expected_terms=_identificadores_de_los_titulares,
-        puntuacion_automatica=False,  # P-15: 3 de 4 contra el juicio humano; lo deciden los pares
+        automatic_score=False,  # P-15: 3 de 4 contra el juicio humano; lo deciden los pares
     ),
     Caso(
         "extraer-uvlock-48k",
@@ -471,11 +467,11 @@ CASOS: tuple[Caso, ...] = (
         extension="lock",
         expected_json_fields=("version", "requires-python", "primer_paquete"),
         # `version = 1` no sirve de termino: un «1» aparece en cualquier respuesta.
-        expected_terms=lambda texto: (
-            _valores_toml("requires-python")(texto)
-            + _primeros(r'^\[\[package\]\]\nname = "([^"]+)"', n=1)(texto)
+        expected_terms=lambda text: (
+            _valores_toml("requires-python")(text)
+            + _primeros(r'^\[\[package\]\]\nname = "([^"]+)"', n=1)(text)
         ),
-        referencia=(
+        reference=(
             "json_campos",
             '{"version": 1, "requires-python": ">=3.11", "primer_paquete": "annotated-doc"}',
             '{"version": 1, "requires-python": ">=3.11", "paquete_primer": "annotated-doc"}',
@@ -494,14 +490,14 @@ CASOS: tuple[Caso, ...] = (
         "archivos enteros hasta 9 000 chars",
         salida_de_ruff_por_archivos(9000),
         expected_terms=_reglas_mas_frecuentes,
-        conteos=_conteos_de_las_reglas,
+        counts=_conteos_de_las_reglas,
         # Tercer piloto de CP-3: 0 en los dos modelos otra vez. El 2B se inventa los conteos y el 14B
         # los da bien pero lista TODO y trunca: el prompt de la tool no cabe con esta entrada, y eso
         # se arregla en la tool (F3). Lo juzga la revision a ciegas (decision del usuario).
-        puntuacion_automatica=False,
+        automatic_score=False,
         # Pareja de CP-4 de conteos: las dos nombran las tres reglas; la mala cambia un 7 por un 9,
         # que no es ni el total, ni los archivos, ni lo de ningun archivo.
-        referencia=(
+        reference=(
             "conteos",
             "COM812: 16 avisos en 2 archivos. TRY003: 8. D102: 7.",
             "COM812: 16 avisos en 2 archivos. TRY003: 8. D102: 9.",
@@ -521,7 +517,7 @@ CASOS: tuple[Caso, ...] = (
         # Dos pilotos de CP-3 con 0 en los dos modelos: un asunto de <=72 chars rara vez lleva
         # identificadores y el cuerpo es opcional. Lo juzga la revision a ciegas (decision del
         # usuario, 2026-09-14); los terminos se quedan como dato.
-        puntuacion_automatica=False,
+        automatic_score=False,
     ),
     Caso(
         "explicar-metrics-15k",
@@ -533,7 +529,7 @@ CASOS: tuple[Caso, ...] = (
         recorte_por_lineas("src/local_delegate/web/metrics.py", 17000, _TOP_LEVEL_PY),
         extension="py.txt",
         expected_terms=_rutas_del_docstring,
-        puntuacion_automatica=False,  # P-15: sin base contra el juicio humano; lo deciden los pares
+        automatic_score=False,  # P-15: sin base contra el juicio humano; lo deciden los pares
     ),
     Caso(
         "explicar-install-20k",
@@ -545,7 +541,7 @@ CASOS: tuple[Caso, ...] = (
         recorte_exacto("src/local_delegate/install.py", 20000),
         extension="py.txt",
         expected_terms=_ficheros_y_flags_del_docstring,
-        puntuacion_automatica=False,  # P-15: 2 de 4 contra el juicio humano; lo deciden los pares
+        automatic_score=False,  # P-15: 2 de 4 contra el juicio humano; lo deciden los pares
     ),
     Caso(
         "boilerplate-156",
@@ -558,19 +554,19 @@ CASOS: tuple[Caso, ...] = (
             "Función parse_duration(texto) que convierta '1h30m', '45s' o '2m' en segundos "
             "(int) y lance ValueError si el formato no es válido. Con docstring y ejemplos."
         ),
-        argumentos={"language": "python"},
+        arguments={"language": "python"},
         expected_terms=("parse_duration", "ValueError"),
         # CP-3 (tarea 19) dio 1,0 por terminos a dos funciones rotas. Una por ejemplo de la
         # especificacion (y `expected` exige el tipo: pide un int) y dos formatos invalidos, que
         # la especificacion dice que lanzan ValueError.
-        comprobaciones=(
+        checks=(
             {"expr": "parse_duration('1h30m')", "expected": 5400},
             {"expr": "parse_duration('45s')", "expected": 45},
             {"expr": "parse_duration('2m')", "expected": 120},
             {"expr": "parse_duration('abc')", "raises": "ValueError"},
             {"expr": "parse_duration('5x')", "raises": "ValueError"},
         ),
-        referencia=(
+        reference=(
             "ejecucion",
             _PARSE_DURATION.replace("{MINUTO}", "60"),
             _PARSE_DURATION.replace("{MINUTO}", "61"),
@@ -590,12 +586,12 @@ CASOS: tuple[Caso, ...] = (
         # `computo` va SIN acento a proposito, y el panel dice «cómputo»: es el termino que solo
         # casa si el puntuador normaliza. Sin el, la pareja de Unicode de CP-4 no tendria donde caer.
         expected_terms=("delegaciones", "backend", "ahorro", "computo"),
-        referencia=(
+        reference=(
             "unicode",
             "Panel de ahorro con el estado del backend, las delegaciones y dónde corrió el cómputo.",
             "Panel de ahorro con el estado del backend, las delegaciones y dónde corrió el cálculo.",
         ),
-        terminos_en_fuente=False,
+        terms_in_source=False,
     ),
     Caso(
         "leer-cifras-dashboard",
@@ -607,7 +603,7 @@ CASOS: tuple[Caso, ...] = (
         fichero("docs/assets/dashboard.png"),
         extension="png",
         media_type="imagen",
-        argumentos={
+        arguments={
             # Las seis cifras grandes del panel son IDENTICAS en esta imagen y en la de control
             # (datos de demostracion fijos): preguntar por ellas no podria bajar con la imagen
             # equivocada. Se pregunta por lo que si cambia entre las dos.
@@ -617,13 +613,13 @@ CASOS: tuple[Caso, ...] = (
             )
         },
         expected_terms=("0.27.0", "29/8", "05:01"),
-        referencia=(
+        reference=(
             "prohibido",
             "Versión 0.27.0 (la publicada); primera fila: 29/8 a las 05:01.",
             "Versión 0.27.0 (antes 0.24.0); primera fila: 29/8 a las 05:01.",
         ),
         forbidden_terms=("0.24.0", "24/7", "23:12"),
-        terminos_en_fuente=False,
+        terms_in_source=False,
     ),
     # --- sondeos de techo: no puntuan calidad ---
     Caso(
@@ -686,24 +682,24 @@ class Llamada:
 @contextlib.contextmanager
 def produccion_interceptada() -> Iterator[list[Llamada]]:
     """Las tools reales, sin backend, sin log de uso y sin las variables del paquete."""
-    llamadas: list[Llamada] = []
-    guardado = {
+    calls: list[Llamada] = []
+    saved = {
         n: os.environ[n]
         for n in config.ENVIRONMENT_VARIABLES
         if n in os.environ and n not in PRESERVED_VARIABLES
     }
 
     def run_chat(model, system, user, max_tokens, temperature, *, response_format=None, **_):
-        llamadas.append(Llamada(model, system, user, max_tokens, temperature, response_format))
-        resultado = server.ChatResult(text="{}", ok=True, finish_reason="stop")
-        return resultado, 0, None, [server.Attempt(model, True, None, None, 0)]
+        calls.append(Llamada(model, system, user, max_tokens, temperature, response_format))
+        result = server.ChatResult(text="{}", ok=True, finish_reason="stop")
+        return result, 0, None, [server.Attempt(model, True, None, None, 0)]
 
     try:
         # Solo se recarga si habia algo que quitar: dentro de la suite el entorno ya viene limpio,
         # y recargar desharia el LOG_DIR temporal de conftest y apuntaria al log real.
-        for nombre in guardado:
-            del os.environ[nombre]
-        if guardado:
+        for name in saved:
+            del os.environ[name]
+        if saved:
             importlib.reload(config)
         with (
             mock.patch.object(server, "_run_chat", run_chat),
@@ -711,12 +707,12 @@ def produccion_interceptada() -> Iterator[list[Llamada]]:
             mock.patch.object(server, "_inflight_start", lambda **_: 0),
             mock.patch.object(server, "_inflight_end", lambda *_: None),
             # Un LOCAL_DELEGATE_ALLOWED_DIRS del usuario no debe impedir leer las fuentes.
-            mock.patch.object(server, "_check_allowed_dir", lambda _ruta: None),
+            mock.patch.object(server, "_check_allowed_dir", lambda _path: None),
         ):
-            yield llamadas
+            yield calls
     finally:
-        os.environ.update(guardado)
-        if guardado:
+        os.environ.update(saved)
+        if saved:
             importlib.reload(config)
 
 
@@ -729,30 +725,30 @@ def roles_de_produccion() -> dict[str, str]:
     }
 
 
-def invocar(caso: Caso, ruta: Path, texto: str, tmp: Path) -> None:
-    args = caso.argumentos
-    tool = caso.tool
+def invocar(case: Caso, path: Path, text: str, tmp: Path) -> None:
+    args = case.arguments
+    tool = case.tool
     if tool == "local_summarize":
-        server.local_summarize(path=str(ruta))
+        server.local_summarize(path=str(path))
     elif tool == "local_extract":
-        server.local_extract(fields=list(caso.expected_json_fields), path=str(ruta))
+        server.local_extract(fields=list(case.expected_json_fields), path=str(path))
     elif tool == "local_lint_summary":
-        server.local_lint_summary(path=str(ruta))
+        server.local_lint_summary(path=str(path))
     elif tool == "local_commit_msg":
-        server.local_commit_msg(path=str(ruta))
+        server.local_commit_msg(path=str(path))
     elif tool == "local_explain_code":
-        server.local_explain_code(path=str(ruta))
+        server.local_explain_code(path=str(path))
     elif tool == "local_describe_image":
-        server.local_describe_image(path=str(ruta), question=args.get("question"))
+        server.local_describe_image(path=str(path), question=args.get("question"))
     elif tool == "local_classify":
-        server.local_classify(text=texto, labels=args["labels"])
+        server.local_classify(text=text, labels=args["labels"])
     elif tool == "local_translate":
-        server.local_translate(target_lang=args["target_lang"], text=texto)
+        server.local_translate(target_lang=args["target_lang"], text=text)
     elif tool == "local_delegate":
-        server.local_delegate(task=args["task"], input=texto, output_format=args["output_format"])
+        server.local_delegate(task=args["task"], input=text, output_format=args["output_format"])
     elif tool == "local_boilerplate":
         server.local_boilerplate(
-            spec=texto, language=args["language"], target=str(tmp / "generado.txt")
+            spec=text, language=args["language"], target=str(tmp / "generado.txt")
         )
     else:
         raise ValueError(f"tool sin invocacion: {tool}")
@@ -760,44 +756,44 @@ def invocar(caso: Caso, ruta: Path, texto: str, tmp: Path) -> None:
 
 @dataclass
 class Captura:
-    llamadas: list[Llamada]
+    calls: list[Llamada]
     role: str | None
-    modelos: set[str]
-    entrada_entera: bool
+    models: set[str]
+    whole_input: bool
     user_template: str | None
 
 
-def capturar(caso: Caso, ruta: Path, datos: bytes, *, sin_troceo: bool = False) -> Captura:
-    """Con `sin_troceo`, la tool sigue la ruta de UNA llamada aunque la entrada no quepa: es el
+def capturar(case: Caso, path: Path, data: bytes, *, no_chunking: bool = False) -> Captura:
+    """Con `no_chunking`, la tool sigue la ruta de UNA llamada aunque la entrada no quepa: es el
     prompt que necesita un sondeo de techo, que mide justo la mayor llamada unica que acepta el
     modelo. Produccion no lo manda nunca asi; por eso se captura aparte."""
-    texto = normalizado(datos) if caso.media_type == "texto" else ""
-    with produccion_interceptada() as llamadas, tempfile.TemporaryDirectory() as tmp:
+    text = normalizado(data) if case.media_type == "texto" else ""
+    with produccion_interceptada() as calls, tempfile.TemporaryDirectory() as tmp:
         # Los dos topes: el del rol (modelo principal de cada tool) y el del modelo (respaldos).
-        sin_limite = mock.patch.multiple(
-            config, max_chars_for=lambda _modelo: 2**31, max_chars_for_role=lambda _rol: 2**31
+        unlimited = mock.patch.multiple(
+            config, max_chars_for=lambda _model: 2**31, max_chars_for_role=lambda _role: 2**31
         )
-        with sin_limite if sin_troceo else contextlib.nullcontext():
-            invocar(caso, ruta, texto, Path(tmp))
+        with unlimited if no_chunking else contextlib.nullcontext():
+            invocar(case, path, text, Path(tmp))
         roles = roles_de_produccion()
-    modelos = {llamada.model for llamada in llamadas}
-    role = roles.get(llamadas[0].model) if llamadas else None
-    entrada_entera = False
-    plantilla = None
-    if len(llamadas) == 1:
-        user = llamadas[0].user
-        if caso.media_type == "imagen" and isinstance(user, list):
-            imagen = base64.b64encode(datos).decode("ascii")
-            entrada_entera = any(imagen in json.dumps(bloque) for bloque in user)
-            plantilla = next(b["text"] for b in user if b.get("type") == "text")
-        elif isinstance(user, str) and texto and texto in user:
-            entrada_entera = True
-            plantilla = user.replace(texto, MARCADOR, 1)
-    return Captura(llamadas, role, modelos, entrada_entera, plantilla)
+    models = {call.model for call in calls}
+    role = roles.get(calls[0].model) if calls else None
+    whole_input = False
+    template = None
+    if len(calls) == 1:
+        user = calls[0].user
+        if case.media_type == "imagen" and isinstance(user, list):
+            image = base64.b64encode(data).decode("ascii")
+            whole_input = any(image in json.dumps(block) for block in user)
+            template = next(b["text"] for b in user if b.get("type") == "text")
+        elif isinstance(user, str) and text and text in user:
+            whole_input = True
+            template = user.replace(text, MARCADOR, 1)
+    return Captura(calls, role, models, whole_input, template)
 
 
-def terminos(caso: Caso, texto: str) -> tuple[str, ...]:
-    return caso.expected_terms(texto) if callable(caso.expected_terms) else caso.expected_terms
+def terminos(case: Caso, text: str) -> tuple[str, ...]:
+    return case.expected_terms(text) if callable(case.expected_terms) else case.expected_terms
 
 
 # --- Parejas de referencia de CP-4 (tarea 15) ---------------------------------------------------
@@ -818,141 +814,139 @@ DIFERENCIAS_ESPERADAS: dict[str, set[str]] = {
 }
 
 
-def _enteros_sueltos(tramo: str) -> list[int]:
+def _enteros_sueltos(span: str) -> list[int]:
     """Tiradas de digitos que no pegan a una letra, un digito o `_`, ni forman un decimal. Un punto
     de final de frase no las anula. Recorrido a mano, sin las expresiones del puntuador: es su
     oraculo."""
-    enteros: list[int] = []
+    integers: list[int] = []
     i = 0
-    while i < len(tramo):
-        if not tramo[i].isdigit():
+    while i < len(span):
+        if not span[i].isdigit():
             i += 1
             continue
         j = i
-        while j < len(tramo) and tramo[j].isdigit():
+        while j < len(span) and span[j].isdigit():
             j += 1
-        antes = tramo[i - 1] if i else " "
-        despues = tramo[j] if j < len(tramo) else " "
-        decimal = despues == "." and j + 1 < len(tramo) and tramo[j + 1].isdigit()
-        if not (antes.isalnum() or antes in "._") and not (
-            despues.isalnum() or despues == "_" or decimal
+        before = span[i - 1] if i else " "
+        after = span[j] if j < len(span) else " "
+        decimal = after == "." and j + 1 < len(span) and span[j + 1].isdigit()
+        if not (before.isalnum() or before in "._") and not (
+            after.isalnum() or after == "_" or decimal
         ):
-            enteros.append(int(tramo[i:j]))
+            integers.append(int(span[i:j]))
         i = j
-    return enteros
+    return integers
 
 
-def _tramos_por_regla(linea: str) -> list[tuple[str, str]]:
+def _tramos_por_regla(line: str) -> list[tuple[str, str]]:
     """(codigo, lo que le sigue hasta el siguiente codigo) de cada codigo de regla de la linea."""
-    tramos: list[tuple[str, str]] = []
-    actual: str | None = None
-    trozo: list[str] = []
+    spans: list[tuple[str, str]] = []
+    current: str | None = None
+    chunk: list[str] = []
     i = 0
-    while i < len(linea):
-        if linea[i].isupper() and (i == 0 or not linea[i - 1].isalnum()):
-            letras = i
-            while letras < len(linea) and linea[letras].isupper():
-                letras += 1
-            fin = letras
-            while fin < len(linea) and linea[fin].isdigit():
-                fin += 1
-            if fin > letras and (fin == len(linea) or not linea[fin].isalnum()):
-                if actual is not None:
-                    tramos.append((actual, "".join(trozo)))
-                actual, trozo = linea[i:fin], []
-                i = fin
+    while i < len(line):
+        if line[i].isupper() and (i == 0 or not line[i - 1].isalnum()):
+            letters = i
+            while letters < len(line) and line[letters].isupper():
+                letters += 1
+            end = letters
+            while end < len(line) and line[end].isdigit():
+                end += 1
+            if end > letters and (end == len(line) or not line[end].isalnum()):
+                if current is not None:
+                    spans.append((current, "".join(chunk)))
+                current, chunk = line[i:end], []
+                i = end
                 continue
-        if actual is not None:
-            trozo.append(linea[i])
+        if current is not None:
+            chunk.append(line[i])
         i += 1
-    if actual is not None:
-        tramos.append((actual, "".join(trozo)))
-    return tramos
+    if current is not None:
+        spans.append((current, "".join(chunk)))
+    return spans
 
 
-def _conteos_cuadran(texto: str, conteos: Mapping[str, Sequence[int]]) -> bool:
-    numeros: dict[str, list[int]] = {regla: [] for regla in conteos}
-    for linea in texto.split("\n"):
-        for regla, tramo in _tramos_por_regla(linea):
-            if regla in numeros:
-                numeros[regla] += _enteros_sueltos(tramo)
-    return all(
-        numeros[regla] and set(numeros[regla]) <= set(validos) for regla, validos in conteos.items()
-    )
+def _conteos_cuadran(text: str, counts: Mapping[str, Sequence[int]]) -> bool:
+    numbers: dict[str, list[int]] = {rule: [] for rule in counts}
+    for line in text.split("\n"):
+        for rule, span in _tramos_por_regla(line):
+            if rule in numbers:
+                numbers[rule] += _enteros_sueltos(span)
+    return all(numbers[rule] and set(numbers[rule]) <= set(valid) for rule, valid in counts.items())
 
 
-def _ejecuta_bien(codigo: str, comprobaciones: Sequence[dict[str, Any]]) -> bool:
+def _ejecuta_bien(code: str, checks: Sequence[dict[str, Any]]) -> bool:
     """El oraculo de la senal de ejecucion, en proceso y sin el arnes del puntuador: si los dos
     compartieran codigo compartirian tambien el error. Solo corre referencias escritas a mano."""
-    espacio: dict[str, Any] = {"__name__": "referencia"}
+    space: dict[str, Any] = {"__name__": "referencia"}
     try:
-        exec(compile(codigo, "referencia", "exec"), espacio)  # noqa: S102 - referencia propia
+        exec(compile(code, "referencia", "exec"), space)  # noqa: S102 - referencia propia
     except Exception:
         return False
-    for comprobacion in comprobaciones:
+    for check_result in checks:
         try:
-            valor = eval(comprobacion["expr"], espacio)
+            value = eval(check_result["expr"], space)
         except Exception as exc:
-            if type(exc).__name__ != comprobacion.get("raises"):
+            if type(exc).__name__ != check_result.get("raises"):
                 return False
             continue
-        esperado = comprobacion.get("expected")
-        if "raises" in comprobacion or type(valor) is not type(esperado) or valor != esperado:
+        expected = check_result.get("expected")
+        if "raises" in check_result or type(value) is not type(expected) or value != expected:
             return False
     return True
 
 
-def plano(texto: str) -> str:
+def plano(text: str) -> str:
     """NFKD, sin marcas combinantes y casefold.
 
     NFKD solo NO basta: descompone la «ó» en «o» mas un acento suelto, y el acento sigue ahi.
     """
-    descompuesto = unicodedata.normalize("NFKD", texto)
-    return "".join(c for c in descompuesto if not unicodedata.combining(c)).casefold()
+    broken_down = unicodedata.normalize("NFKD", text)
+    return "".join(c for c in broken_down if not unicodedata.combining(c)).casefold()
 
 
 def senales(
-    texto: str,
-    esperados: Sequence[str],
-    prohibidos: Sequence[str],
-    campos: Sequence[str],
-    comprobaciones: Sequence[dict[str, Any]] = (),
-    conteos: Mapping[str, Sequence[int]] | None = None,
+    text: str,
+    expected: Sequence[str],
+    forbidden: Sequence[str],
+    fields: Sequence[str],
+    checks: Sequence[dict[str, Any]] = (),
+    counts: Mapping[str, Sequence[int]] | None = None,
 ) -> dict[str, bool | None]:
     """Oraculo de CP-4. Independiente del puntuador de la tarea 16 a proposito: es contra lo que
     ese puntuador se valida, y si compartieran codigo compartirian tambien el error."""
     try:
-        objeto = json.loads(texto.strip())
+        obj = json.loads(text.strip())
     except ValueError:
-        objeto = None
-    valido = isinstance(objeto, dict) if campos else None
+        obj = None
+    valid = isinstance(obj, dict) if fields else None
     return {
-        "cobertura": all(plano(t) in plano(texto) for t in esperados),
-        "cobertura_literal": all(t.casefold() in texto.casefold() for t in esperados),
-        "prohibido": any(plano(t) in plano(texto) for t in prohibidos),
-        "json_valido": valido,
-        "json_campos": (set(campos) <= set(objeto)) if valido else None,
-        "ejecucion": _ejecuta_bien(texto, comprobaciones) if comprobaciones else None,
-        "conteos": _conteos_cuadran(texto, conteos) if conteos else None,
+        "cobertura": all(plano(t) in plano(text) for t in expected),
+        "cobertura_literal": all(t.casefold() in text.casefold() for t in expected),
+        "prohibido": any(plano(t) in plano(text) for t in forbidden),
+        "json_valido": valid,
+        "json_campos": (set(fields) <= set(obj)) if valid else None,
+        "ejecucion": _ejecuta_bien(text, checks) if checks else None,
+        "conteos": _conteos_cuadran(text, counts) if counts else None,
     }
 
 
 def comprobar_referencia(
-    caso: Caso, esperados: Sequence[str], conteos: Mapping[str, Sequence[int]] | None = None
+    case: Caso, expected: Sequence[str], counts: Mapping[str, Sequence[int]] | None = None
 ) -> list[str]:
-    if caso.referencia is None:
+    if case.reference is None:
         return []
-    senal, buena, mala = caso.referencia
-    if senal not in DIFERENCIAS_ESPERADAS:
-        return [f"{caso.id}: senal de referencia desconocida {senal!r}"]
-    errores: list[str] = []
-    if len(buena) != len(mala):
-        errores.append(
-            f"{caso.id}: la pareja no tiene la misma longitud ({len(buena)} y {len(mala)})"
+    signal, good, bad_answer = case.reference
+    if signal not in DIFERENCIAS_ESPERADAS:
+        return [f"{case.id}: senal de referencia desconocida {signal!r}"]
+    errors: list[str] = []
+    if len(good) != len(bad_answer):
+        errors.append(
+            f"{case.id}: la pareja no tiene la misma longitud ({len(good)} y {len(bad_answer)})"
         )
-    argumentos = (caso.forbidden_terms, caso.expected_json_fields, caso.comprobaciones, conteos)
-    ok = senales(buena, esperados, *argumentos)
-    malo = senales(mala, esperados, *argumentos)
+    arguments = (case.forbidden_terms, case.expected_json_fields, case.checks, counts)
+    ok = senales(good, expected, *arguments)
+    bad_signals = senales(bad_answer, expected, *arguments)
     if (
         not ok["cobertura"]
         or ok["prohibido"]
@@ -964,58 +958,58 @@ def comprobar_referencia(
             ok["conteos"],
         )
     ):
-        errores.append(f"{caso.id}: la respuesta buena no es buena: {ok}")
-    difieren = {nombre for nombre in ok if ok[nombre] != malo[nombre]}
-    if difieren != DIFERENCIAS_ESPERADAS[senal]:
-        errores.append(
-            f"{caso.id}: la pareja de {senal} difiere en {sorted(difieren)}, "
-            f"no en {sorted(DIFERENCIAS_ESPERADAS[senal])}"
+        errors.append(f"{case.id}: la respuesta buena no es buena: {ok}")
+    differ = {name for name in ok if ok[name] != bad_signals[name]}
+    if differ != DIFERENCIAS_ESPERADAS[signal]:
+        errors.append(
+            f"{case.id}: la pareja de {signal} difiere en {sorted(differ)}, "
+            f"no en {sorted(DIFERENCIAS_ESPERADAS[signal])}"
         )
-    return errores
+    return errors
 
 
 def comprobar(
-    caso: Caso, captura: Captura, datos: bytes, unica: Captura | None = None
+    case: Caso, captured: Captura, data: bytes, single: Captura | None = None
 ) -> list[str]:
     """Las reglas de §4.4, contra lo que hizo produccion. Cada una puede fallar."""
-    errores: list[str] = []
-    n = len(captura.llamadas)
+    errors: list[str] = []
+    n = len(captured.calls)
     if n == 0:
-        return [f"{caso.id}: la tool no llamo al backend"]
-    if len(captura.modelos) > 1:
-        errores.append(f"{caso.id}: produccion uso varios modelos {sorted(captura.modelos)}")
-    if captura.role != caso.role:
-        errores.append(
-            f"{caso.id}: declarado {caso.role}, pero produccion eligio "
-            f"{captura.llamadas[0].model} ({captura.role})"
+        return [f"{case.id}: la tool no llamo al backend"]
+    if len(captured.models) > 1:
+        errors.append(f"{case.id}: produccion uso varios modelos {sorted(captured.models)}")
+    if captured.role != case.role:
+        errors.append(
+            f"{case.id}: declarado {case.role}, pero produccion eligio "
+            f"{captured.calls[0].model} ({captured.role})"
         )
-    if caso.kind == "calidad":
+    if case.kind == "calidad":
         if n != 1:
-            errores.append(f"{caso.id}: no cabe en una llamada, produccion hace {n}")
-        elif not captura.entrada_entera:
-            errores.append(f"{caso.id}: el modelo no ve la entrada entera (truncada)")
-    elif caso.kind == "techo":
+            errors.append(f"{case.id}: no cabe en una llamada, produccion hace {n}")
+        elif not captured.whole_input:
+            errors.append(f"{case.id}: el modelo no ve la entrada entera (truncada)")
+    elif case.kind == "techo":
         if n == 1:
-            errores.append(f"{caso.id}: cabe en una llamada, asi que no sondea ningun techo")
-        if unica is None or len(unica.llamadas) != 1 or not unica.entrada_entera:
-            errores.append(
-                f"{caso.id}: el sondeo no tiene un prompt de una llamada con la entrada entera"
+            errors.append(f"{case.id}: cabe en una llamada, asi que no sondea ningun techo")
+        if single is None or len(single.calls) != 1 or not single.whole_input:
+            errors.append(
+                f"{case.id}: el sondeo no tiene un prompt de una llamada con la entrada entera"
             )
-    if caso.media_type == "texto":
-        texto = normalizado(datos)
-        esperados = terminos(caso, texto)
-        if caso.kind == "calidad" and not esperados:
-            errores.append(f"{caso.id}: sin terminos esperados no hay nada que puntuar")
-        if caso.terminos_en_fuente:
-            for termino in esperados:
-                if termino.casefold() not in texto.casefold():
-                    errores.append(f"{caso.id}: el termino {termino!r} no esta en la fuente")
-        errores.extend(_comprobar_tamano_del_id(caso.id, len(texto)))
-    if caso.referencia is not None:
-        fuente = normalizado(datos) if caso.media_type == "texto" else ""
-        conteos = caso.conteos(fuente) if caso.conteos else None
-        errores.extend(comprobar_referencia(caso, terminos(caso, fuente), conteos))
-    return errores
+    if case.media_type == "texto":
+        text = normalizado(data)
+        expected = terminos(case, text)
+        if case.kind == "calidad" and not expected:
+            errors.append(f"{case.id}: sin terminos esperados no hay nada que puntuar")
+        if case.terms_in_source:
+            for term in expected:
+                if term.casefold() not in text.casefold():
+                    errors.append(f"{case.id}: el termino {term!r} no esta en la fuente")
+        errors.extend(_comprobar_tamano_del_id(case.id, len(text)))
+    if case.reference is not None:
+        source = normalizado(data) if case.media_type == "texto" else ""
+        counts = case.counts(source) if case.counts else None
+        errors.extend(comprobar_referencia(case, terminos(case, source), counts))
+    return errors
 
 
 def _comprobar_tamano_del_id(case_id: str, chars: int) -> list[str]:
@@ -1024,59 +1018,59 @@ def _comprobar_tamano_del_id(case_id: str, chars: int) -> list[str]:
     match = re.search(r"-(\d+)(k?)$", case_id)
     if not match:
         return []
-    numero = int(match.group(1))
+    number = int(match.group(1))
     if match.group(2):
-        ok = round(chars / 1000) == numero
+        ok = round(chars / 1000) == number
     else:
-        ok = chars == numero
+        ok = chars == number
     return (
         [] if ok else [f"{case_id}: el id promete {match.group(0)[1:]} y la fuente tiene {chars}"]
     )
 
 
 def entrada_de_corpus(
-    caso: Caso, nombre: str, datos: bytes, captura: Captura, unica: Captura | None = None
+    case: Caso, name: str, data: bytes, captured: Captura, single: Captura | None = None
 ) -> dict[str, Any]:
     # El prompt: el de produccion en los casos de calidad; en un sondeo de techo, el de la ruta
     # de una llamada. `production` sigue contando las llamadas que produccion hizo de verdad.
-    prompt = unica if unica is not None else captura
-    llamada = prompt.llamadas[0]
-    texto = normalizado(datos) if caso.media_type == "texto" else ""
-    calidad = caso.kind == "calidad"
-    con_prompt = calidad or unica is not None
+    prompt = single if single is not None else captured
+    call = prompt.calls[0]
+    text = normalizado(data) if case.media_type == "texto" else ""
+    quality = case.kind == "calidad"
+    with_prompt = quality or single is not None
     return {
-        "id": caso.id,
-        "tool": caso.tool,
-        "role": caso.role,
-        "kind": caso.kind,
-        "procedencia": caso.procedencia,
-        "origen": caso.origen,
-        "media_type": caso.media_type,
-        "source_file": nombre,
-        "source_sha256": hashlib.sha256(datos).hexdigest(),
-        "source_bytes": len(datos),
-        "source_chars": len(texto) if texto else None,
-        "production": {"model": captura.llamadas[0].model, "calls": len(captura.llamadas)},
-        "system": llamada.system if con_prompt else None,
-        "user_template": prompt.user_template if con_prompt else None,
-        "max_tokens": llamada.max_tokens if con_prompt else None,
-        "temperature": llamada.temperature if con_prompt else None,
-        "response_format": llamada.response_format if con_prompt else None,
+        "id": case.id,
+        "tool": case.tool,
+        "role": case.role,
+        "kind": case.kind,
+        "procedencia": case.provenance,
+        "origen": case.origin,
+        "media_type": case.media_type,
+        "source_file": name,
+        "source_sha256": hashlib.sha256(data).hexdigest(),
+        "source_bytes": len(data),
+        "source_chars": len(text) if text else None,
+        "production": {"model": captured.calls[0].model, "calls": len(captured.calls)},
+        "system": call.system if with_prompt else None,
+        "user_template": prompt.user_template if with_prompt else None,
+        "max_tokens": call.max_tokens if with_prompt else None,
+        "temperature": call.temperature if with_prompt else None,
+        "response_format": call.response_format if with_prompt else None,
         "reasoning_effort": None,
-        "expected_terms": list(terminos(caso, texto)) if calidad else [],
-        "forbidden_terms": list(caso.forbidden_terms) if calidad else [],
-        "expected_json_fields": list(caso.expected_json_fields) if calidad else [],
-        "execution_checks": list(caso.comprobaciones) if calidad else [],
-        "expected_counts": caso.conteos(texto) if calidad and caso.conteos else {},
-        "automatic_scoring": caso.puntuacion_automatica if calidad else None,
-        "expected_format": formato_pedido(llamada.system) if calidad else {},
+        "expected_terms": list(terminos(case, text)) if quality else [],
+        "forbidden_terms": list(case.forbidden_terms) if quality else [],
+        "expected_json_fields": list(case.expected_json_fields) if quality else [],
+        "execution_checks": list(case.checks) if quality else [],
+        "expected_counts": case.counts(text) if quality and case.counts else {},
+        "automatic_scoring": case.automatic_score if quality else None,
+        "expected_format": formato_pedido(call.system) if quality else {},
         **(
             {
-                "reference_signal": caso.referencia[0],
-                "reference_ok": caso.referencia[1],
-                "reference_bad": caso.referencia[2],
+                "reference_signal": case.reference[0],
+                "reference_ok": case.reference[1],
+                "reference_bad": case.reference[2],
             }
-            if caso.referencia
+            if case.reference
             else {}
         ),
     }
@@ -1085,69 +1079,69 @@ def entrada_de_corpus(
 # --- Conteos del log ----------------------------------------------------------------------------
 
 
-def contar_log(log_dir: Path, raiz: Path) -> dict[str, Any]:
+def contar_log(log_dir: Path, root: Path) -> dict[str, Any]:
     """Conteos agregados de §4.2. Ninguna ruta de fuera del repo sale de aqui, ni siquiera como
     nombre: el log guarda rutas del vault y de otros proyectos del usuario."""
-    eventos: list[dict[str, Any]] = []
-    for ruta in sorted(log_dir.glob("usage-*.jsonl")):
-        for linea in ruta.read_text(encoding="utf-8").splitlines():
+    events: list[dict[str, Any]] = []
+    for path in sorted(log_dir.glob("usage-*.jsonl")):
+        for line in path.read_text(encoding="utf-8").splitlines():
             try:
-                evento = json.loads(linea)
+                event = json.loads(line)
             except ValueError:
                 continue
-            if isinstance(evento, dict):
-                eventos.append(evento)
-    locales = [e for e in eventos if str(e.get("tool", "")).startswith("local_")]
-    raiz_norm = os.path.normcase(os.path.abspath(raiz)) + os.sep
-    por_tool: dict[str, Any] = {}
-    for tool in sorted({e["tool"] for e in locales}):
-        del_tool = [e for e in locales if e["tool"] == tool]
-        chars = [int(e.get("chars_in") or 0) for e in del_tool]
-        mediana = statistics.median(chars)
-        por_tool[tool] = {
-            "n": len(del_tool),
-            "chars_in_mediana": int(mediana) if mediana == int(mediana) else mediana,
+            if isinstance(event, dict):
+                events.append(event)
+    local = [e for e in events if str(e.get("tool", "")).startswith("local_")]
+    root_norm = os.path.normcase(os.path.abspath(root)) + os.sep
+    per_tool: dict[str, Any] = {}
+    for tool in sorted({e["tool"] for e in local}):
+        from_tool = [e for e in local if e["tool"] == tool]
+        chars = [int(e.get("chars_in") or 0) for e in from_tool]
+        median = statistics.median(chars)
+        per_tool[tool] = {
+            "n": len(from_tool),
+            "chars_in_mediana": int(median) if median == int(median) else median,
             "chars_in_min": min(chars),
             "chars_in_max": max(chars),
-            "modelos": dict(Counter(e.get("model") for e in del_tool).most_common()),
+            "modelos": dict(Counter(e.get("model") for e in from_tool).most_common()),
         }
-    del_repo: Counter[str] = Counter()
-    fuera = 0
-    for evento in locales:
-        ruta = evento.get("path")
-        if not ruta:
+    from_repo: Counter[str] = Counter()
+    outside = 0
+    for event in local:
+        path = event.get("path")
+        if not path:
             continue
-        absoluta = os.path.normcase(os.path.abspath(ruta))
-        if absoluta.startswith(raiz_norm):
+        absolute = os.path.normcase(os.path.abspath(path))
+        if absolute.startswith(root_norm):
             # normcase solo para comparar: el nombre se guarda con sus mayusculas.
-            relativa = os.path.relpath(os.path.abspath(ruta), os.path.abspath(raiz))
-            del_repo[relativa.replace("\\", "/")] += 1
+            relative = os.path.relpath(os.path.abspath(path), os.path.abspath(root))
+            from_repo[relative.replace("\\", "/")] += 1
         else:
-            fuera += 1
+            outside += 1
     return {
-        "eventos": len(eventos),
-        "eventos_local": len(locales),
+        "eventos": len(events),
+        "eventos_local": len(local),
         "descartados_no_local": dict(
-            Counter(e.get("tool") for e in eventos if e not in locales).most_common()
+            Counter(e.get("tool") for e in events if e not in local).most_common()
         ),
-        "por_tool": por_tool,
-        "por_modelo": dict(Counter(e.get("model") for e in locales).most_common()),
-        "por_source": dict(Counter(e.get("source") for e in locales).most_common()),
-        "troceados": sum(1 for e in locales if int(e.get("chunks") or 1) > 1),
-        "fuentes_del_repo": dict(del_repo.most_common()),
-        "fuentes_fuera_del_repo": fuera,
+        "por_tool": per_tool,
+        "por_modelo": dict(Counter(e.get("model") for e in local).most_common()),
+        "por_source": dict(Counter(e.get("source") for e in local).most_common()),
+        "troceados": sum(1 for e in local if int(e.get("chunks") or 1) > 1),
+        "fuentes_del_repo": dict(from_repo.most_common()),
+        "fuentes_fuera_del_repo": outside,
     }
 
 
 # --- Construir y comprobar ----------------------------------------------------------------------
 
 
-def _escribir_json(ruta: Path, datos: Any) -> None:
-    ruta.write_bytes((json.dumps(datos, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
+def _escribir_json(path: Path, data: Any) -> None:
+    path.write_bytes((json.dumps(data, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
 
 
 def _fuente_congelada(
-    fuentes: Path, nombre: str, generar: Fuente, raiz: Path, refrescar: bool
+    sources: Path, name: str, generate: Fuente, root: Path, refresh: bool
 ) -> bytes:
     """La copia congelada si ya existe; el fichero vivo solo si falta o se pide refrescar.
 
@@ -1155,90 +1149,88 @@ def _fuente_congelada(
     cada release y `lint-33k` sale de pasar ruff por `src/`. Regenerar para anadir un campo no
     puede recongelar de paso, o el contenido medido cambia sin que nadie lo decida.
     """
-    ruta = fuentes / nombre
-    if ruta.is_file() and not refrescar:
-        return ruta.read_bytes()
-    return generar(raiz)
+    path = sources / name
+    if path.is_file() and not refresh:
+        return path.read_bytes()
+    return generate(root)
 
 
 def construir(
-    raiz: Path, destino: Path, log_dir: Path | None, *, refrescar_fuentes: bool = False
+    root: Path, dest: Path, log_dir: Path | None, *, refresh_sources: bool = False
 ) -> int:
-    fuentes = destino / "fuentes"
-    fuentes.mkdir(parents=True, exist_ok=True)
-    errores: list[str] = []
-    casos: list[dict[str, Any]] = []
-    esperados: set[str] = set()
-    for caso in CASOS:
-        datos = _fuente_congelada(
-            fuentes, f"{caso.id}.{caso.extension}", caso.fuente, raiz, refrescar_fuentes
+    sources = dest / "fuentes"
+    sources.mkdir(parents=True, exist_ok=True)
+    errors: list[str] = []
+    cases: list[dict[str, Any]] = []
+    expected: set[str] = set()
+    for case in CASOS:
+        data = _fuente_congelada(
+            sources, f"{case.id}.{case.extension}", case.source, root, refresh_sources
         )
-        nombre = f"{caso.id}.{caso.extension}"
-        esperados.add(nombre)
-        (fuentes / nombre).write_bytes(datos)
-        captura = capturar(caso, fuentes / nombre, datos)
-        unica = (
-            capturar(caso, fuentes / nombre, datos, sin_troceo=True)
-            if caso.kind == "techo"
-            else None
+        name = f"{case.id}.{case.extension}"
+        expected.add(name)
+        (sources / name).write_bytes(data)
+        captured = capturar(case, sources / name, data)
+        single = (
+            capturar(case, sources / name, data, no_chunking=True) if case.kind == "techo" else None
         )
-        errores.extend(comprobar(caso, captura, datos, unica))
-        if captura.llamadas:
-            casos.append(entrada_de_corpus(caso, nombre, datos, captura, unica))
-    controles = []
+        errors.extend(comprobar(case, captured, data, single))
+        if captured.calls:
+            cases.append(entrada_de_corpus(case, name, data, captured, single))
+    controls = []
     for control in CONTROLES:
-        datos = _fuente_congelada(
-            fuentes,
+        data = _fuente_congelada(
+            sources,
             f"{control['id']}.{control['extension']}",
             control["fuente"],
-            raiz,
-            refrescar_fuentes,
+            root,
+            refresh_sources,
         )
-        nombre = f"{control['id']}.{control['extension']}"
-        esperados.add(nombre)
-        (fuentes / nombre).write_bytes(datos)
-        casos_de_control = [c for c in casos if c["id"] in control["para"]]
-        if any(c["source_sha256"] == hashlib.sha256(datos).hexdigest() for c in casos_de_control):
-            errores.append(f"{control['id']}: la imagen de control es la misma que la del caso")
-        controles.append(
+        name = f"{control['id']}.{control['extension']}"
+        expected.add(name)
+        (sources / name).write_bytes(data)
+        control_cases = [c for c in cases if c["id"] in control["para"]]
+        if any(c["source_sha256"] == hashlib.sha256(data).hexdigest() for c in control_cases):
+            errors.append(f"{control['id']}: la imagen de control es la misma que la del caso")
+        controls.append(
             {
                 "id": control["id"],
                 "para": control["para"],
                 "procedencia": control["procedencia"],
                 "origen": control["origen"],
-                "source_file": nombre,
-                "source_sha256": hashlib.sha256(datos).hexdigest(),
-                "source_bytes": len(datos),
+                "source_file": name,
+                "source_sha256": hashlib.sha256(data).hexdigest(),
+                "source_bytes": len(data),
             }
         )
-    for sobrante in fuentes.iterdir():
-        if sobrante.name not in esperados:
-            sobrante.unlink()
-    if errores:
+    for surplus in sources.iterdir():
+        if surplus.name not in expected:
+            surplus.unlink()
+    if errors:
         print("El corpus NO se escribe. Reglas que no se cumplen:")
-        for error in errores:
+        for error in errors:
             print(f"  - {error}")
         return 1
     _escribir_json(
-        destino / "cases.json",
+        dest / "cases.json",
         {
             "schema_version": 2,
             "production_config": configuracion_de_produccion(),
-            "controls": controles,
-            "cases": casos,
+            "controls": controls,
+            "cases": cases,
         },
     )
     if log_dir is not None and log_dir.is_dir():
-        _escribir_json(destino / "conteos-log.json", contar_log(log_dir, raiz))
-    benchmark.load_corpus(destino / "cases.json")
-    calidad = sum(1 for c in casos if c["kind"] == "calidad")
+        _escribir_json(dest / "conteos-log.json", contar_log(log_dir, root))
+    benchmark.load_corpus(dest / "cases.json")
+    quality = sum(1 for c in cases if c["kind"] == "calidad")
     print(
-        f"ok: {calidad} casos de calidad, {len(casos) - calidad} sondeos, {len(controles)} control"
+        f"ok: {quality} casos de calidad, {len(cases) - quality} sondeos, {len(controls)} control"
     )
-    for caso in casos:
+    for case in cases:
         print(
-            f"  {caso['id']:<24} {caso['role']:<10} llamadas={caso['production']['calls']:<3} "
-            f"chars={caso['source_chars']} bytes={caso['source_bytes']}"
+            f"  {case['id']:<24} {case['role']:<10} llamadas={case['production']['calls']:<3} "
+            f"chars={case['source_chars']} bytes={case['source_bytes']}"
         )
     return 0
 
@@ -1248,9 +1240,9 @@ def configuracion_de_produccion() -> dict[str, Any]:
         return {
             "long_input_chars": config.LONG_INPUT_CHARS,
             "chunk_chars": config.CHUNK_CHARS,
-            "models": {rol: modelo for modelo, rol in roles_de_produccion().items()},
+            "models": {role: model for model, role in roles_de_produccion().items()},
             "max_chars": {
-                rol: config.max_chars_for_role(rol) for rol in roles_de_produccion().values()
+                role: config.max_chars_for_role(role) for role in roles_de_produccion().values()
             },
         }
 
@@ -1274,32 +1266,32 @@ _CAMPOS_VIGILADOS = (
 )
 
 
-def comprobar_versionado(destino: Path) -> list[str]:
+def comprobar_versionado(dest: Path) -> list[str]:
     """Recaptura cada caso versionado contra el codigo de hoy. Si produccion cambio de rol, de
     troceado o de prompt, el corpus ya no mide lo que dice y hay que regenerarlo."""
-    corpus = benchmark.load_corpus(destino / "cases.json")
-    por_id = {caso.id: caso for caso in CASOS}
-    errores: list[str] = []
-    if {c.id for c in corpus.cases} != set(por_id):
-        errores.append("los ids versionados no coinciden con los casos del constructor")
-    for versionado in corpus.cases:
-        caso = por_id.get(versionado.id)
-        if caso is None:
+    corpus = benchmark.load_corpus(dest / "cases.json")
+    by_id = {case.id: case for case in CASOS}
+    errors: list[str] = []
+    if {c.id for c in corpus.cases} != set(by_id):
+        errors.append("los ids versionados no coinciden con los casos del constructor")
+    for versioned in corpus.cases:
+        case = by_id.get(versioned.id)
+        if case is None:
             continue
-        ruta = destino / "fuentes" / versionado.source_file
-        datos = ruta.read_bytes()
-        captura = capturar(caso, ruta, datos)
-        unica = capturar(caso, ruta, datos, sin_troceo=True) if caso.kind == "techo" else None
-        errores.extend(comprobar(caso, captura, datos, unica))
-        actual = entrada_de_corpus(caso, versionado.source_file, datos, captura, unica)
-        for campo in _CAMPOS_VIGILADOS:
-            if actual.get(campo) != versionado.raw.get(campo):
+        path = dest / "fuentes" / versioned.source_file
+        data = path.read_bytes()
+        captured = capturar(case, path, data)
+        single = capturar(case, path, data, no_chunking=True) if case.kind == "techo" else None
+        errors.extend(comprobar(case, captured, data, single))
+        current = entrada_de_corpus(case, versioned.source_file, data, captured, single)
+        for field_name in _CAMPOS_VIGILADOS:
+            if current.get(field_name) != versioned.raw.get(field_name):
                 # Tambien lo que no sale de produccion: el corpus no se edita a mano, y una
                 # referencia retocada en el JSON dejaria de ser la que el constructor comprobo.
-                errores.append(f"{versionado.id}: {campo} ya no coincide con el constructor")
+                errors.append(f"{versioned.id}: {field_name} ya no coincide con el constructor")
     if corpus.production_config != configuracion_de_produccion():
-        errores.append("production_config ya no coincide con config.py")
-    return errores
+        errors.append("production_config ya no coincide con config.py")
+    return errors
 
 
 # --- Corpus de afinidad (REQ-040): la seleccion de commits y las trampas --------------------------
@@ -1508,8 +1500,8 @@ _ALLOWED_EMAIL = re.compile(r"@(?:example\.(?:org|com|net)|users\.noreply\.githu
 def private_data(text: str) -> list[str]:
     """Lo que parece un dato privado en un texto que va al repo: `tipo: coincidencia`."""
     findings: list[str] = []
-    for kind, patron in _PRIVATE_PATTERNS.items():
-        for m in patron.finditer(text):
+    for kind, pattern in _PRIVATE_PATTERNS.items():
+        for m in pattern.finditer(text):
             value = m.group(0)
             if kind == "ip" and (_ALLOWED_IP.match(value) or max(map(int, value.split("."))) > 255):
                 continue
@@ -2377,17 +2369,17 @@ def build_traps(
 
 def check_affinity(case: Caso, capture: Captura) -> list[str]:
     """Las reglas de §4.4 que valen para un caso nuevo, contra lo que hizo produccion."""
-    n = len(capture.llamadas)
+    n = len(capture.calls)
     if n == 0:
         return [f"{case.id}: la tool no llamo al backend"]
     errors = []
-    if len(capture.modelos) > 1:
-        errors.append(f"{case.id}: produccion uso varios modelos {sorted(capture.modelos)}")
+    if len(capture.models) > 1:
+        errors.append(f"{case.id}: produccion uso varios modelos {sorted(capture.models)}")
     if capture.role != case.role:
         errors.append(f"{case.id}: declarado {case.role}, pero produccion eligio {capture.role}")
     if n != 1:
         errors.append(f"{case.id}: no cabe en una llamada, produccion hace {n}")
-    elif not capture.entrada_entera:
+    elif not capture.whole_input:
         errors.append(f"{case.id}: el modelo no ve la entrada entera (truncada)")
     return errors
 
@@ -2402,7 +2394,7 @@ def _corpus_case(c: MechanicalCase) -> Caso:
         c.origin,
         texto_literal(c.text),
         extension=c.extension,
-        argumentos=c.arguments,
+        arguments=c.arguments,
         expected_json_fields=c.fields,
     )
 
@@ -2453,7 +2445,7 @@ def build_affinity(
         path = Path(tmp_dir.name) / name
         path.write_bytes(data)
         capture = capturar(case, path, data)
-        single = capturar(case, path, data, sin_troceo=True) if ceiling else None
+        single = capturar(case, path, data, no_chunking=True) if ceiling else None
         return capture, single
 
     # 1. Las cinco tools mecanicas: casos nuevos, con su puntuador y sus referencias.
@@ -2467,7 +2459,7 @@ def build_affinity(
         ok, bad = score_fn(spec, c.reference_ok), score_fn(spec, c.reference_bad)
         if ok["quality"] != 1.0 or not ok["format"] or bad["quality"] >= 1.0:
             errors.append(f"{c.id}: las referencias no separan (ok={ok}, bad={bad})")
-        if not capture.llamadas:
+        if not capture.calls:
             continue
         entry = _affinity_entry(
             case,
@@ -2511,7 +2503,7 @@ def build_affinity(
 
     case19 = by_f2_id[F2_REAL_CASE]
     data19 = _fuente_congelada(
-        f2_sources, f"{case19.id}.{case19.extension}", case19.fuente, root, False
+        f2_sources, f"{case19.id}.{case19.extension}", case19.source, root, False
     )
     subject19 = _git_text(root, "log", "-1", "--format=%s", F2_COMMIT).strip()
     entries.append(
@@ -2537,14 +2529,14 @@ def build_affinity(
                 diff_de_commit(c.hash),
                 extension="diff",
             )
-            data = case.fuente(root)
+            data = case.source(root)
             entries.append(commit_input(case, f"{id_}.diff", data, role, c.subject, commit=c.hash))
 
     # 3. El techo y los cinco casos mecanicos de F2, como regresion (no discriminantes).
     for id_ in (F2_CEILING_CASE, *F2_REGRESSION):
         case = by_f2_id[id_]
         name = f"{case.id}.{case.extension}"
-        data = _fuente_congelada(f2_sources, name, case.fuente, root, False)
+        data = _fuente_congelada(f2_sources, name, case.source, root, False)
         capture, single = capture_and_check(case, data, name, ceiling=case.kind == "techo")
         errors.extend(comprobar(case, capture, data, single))
         kind = "techo" if case.kind == "techo" else "f2"
@@ -2702,9 +2694,9 @@ def main_affinity(argv: list[str]) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    argumentos = sys.argv[1:] if argv is None else argv
-    if argumentos and argumentos[0] == "affinity":
-        return main_affinity(argumentos[1:])
+    arguments = sys.argv[1:] if argv is None else argv
+    if arguments and arguments[0] == "affinity":
+        return main_affinity(arguments[1:])
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0] if __doc__ else None)
     parser.add_argument("--destino", type=Path, default=DESTINO)
     parser.add_argument(
@@ -2721,12 +2713,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     if args.comprobar:
-        errores = comprobar_versionado(args.destino)
-        for error in errores:
+        errors = comprobar_versionado(args.destino)
+        for error in errors:
             print(f"  - {error}")
-        print("ok" if not errores else f"{len(errores)} diferencias")
-        return 1 if errores else 0
-    return construir(RAIZ, args.destino, args.log_dir, refrescar_fuentes=args.refresh_sources)
+        print("ok" if not errors else f"{len(errors)} diferencias")
+        return 1 if errors else 0
+    return construir(RAIZ, args.destino, args.log_dir, refresh_sources=args.refresh_sources)
 
 
 if __name__ == "__main__":

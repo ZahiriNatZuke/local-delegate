@@ -1,0 +1,30 @@
+refactor(rename): nombres en inglés en construir_corpus y el estado de celda del veredicto de afinidad (ola A10b, lote 3)
+
+Renombra a inglés los identificadores locales de scripts/construir_corpus.py:
+las 227 filas del mapping aprobado (waves/A10b-3-mapping.csv), con
+funciones anidadas, parámetros, variables y los campos de las dataclasses
+Caso y Captura (provenance, origin, source, arguments, checks, counts,
+reference, automatic_score, calls, models, whole_input…).
+
+- `campo` pasa a `field_name` y no a `field`, que tapaba
+  `dataclasses.field` (ruff F402). Es la única discrepancia del mapping.
+- Por consecuencia, sin fila: los kwargs de Caso en tests/test_corpus.py y
+  los parámetros de las lambdas (las `Fuente` y los dobles de producción).
+- analyze_benchmark: `--umbral-shared-mib` pasa a `--shared-mib-threshold`
+  (sin alias) y los metavar de `decide --pair` a ROLE INCUMBENT CANDIDATE.
+- El estado de celda que escribe `affinity-verdict` se guarda y se relee,
+  así que pasa a approved/rejected/no_baseline. La tabla Markdown, que
+  lee una persona, sigue mostrando aprobada/rechazada/sin base.
+
+Lectura dual: legacy_names.affinity_verdict traduce los valores viejos de
+`state`, como los trae el veredicto.json congelado que lee
+tests/test_affinity.py. 3 tests nuevos prueban cada valor viejo, y el test
+del ciclo exige estados nuevos al escribir y traducidos al leer el
+congelado.
+
+`replace`/`undecidable` (lote 2) no llevan lectura dual: ningún fichero
+versionado trae sus valores viejos.
+
+Solo se renombra: el corpus que escribe construir_corpus no cambia (sus
+claves son explícitas y van en el lote 4) y los textos en español que
+imprimen los scripts tampoco (frente B).
