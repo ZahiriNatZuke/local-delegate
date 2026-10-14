@@ -57,6 +57,17 @@ de diccionario.
    nuevos de la propia ola (`horizonte`, `sellado`, `overdue`, `removal`…). Se clasificaron a
    mano, sin `wordfreq`: 29 español y 56 inglés.
 
+6. Al cerrar el frente A (2026-10-14, lote A-close-4), tras los renombres de las olas A1–A10 y
+   del cierre, el detector informó de 794 palabras sin clasificar: las inglesas nuevas de los
+   nombres renombrados (`attribution`, `voided`, `wildcard`…) y tres españolas, los valores viejos
+   que lee `legacy_names.py` (`aprobada`, `congelado`, `reconstruido`). Se clasificaron a mano,
+   una a una y sin `wordfreq`: 3 español y 791 inglés. Además `suspicion` pasó a `en` (el falso
+   positivo del sufijo `-cion`, que ya sale en el repo). Dentro de las 791 están `comment` e
+   `identity`, que eran palabras reservadas pero salen en el repo (y por eso quedaban sin
+   clasificar para siempre): entraron en `en` y se cambiaron en `reserved_words.json` por `ornament` y `serenity`, que no
+   salen en el repo y se parecen igual a los sufijos `-mente` e `-idad`. La lista está en
+   `.sdd/changes/english-names-bilingual-output/evidence/A-close-4/lexicon-classification.csv`.
+
 ## Heurísticas (no usan datos ajenos)
 
 En `detect_spanish_names.classify_word`, en este orden:

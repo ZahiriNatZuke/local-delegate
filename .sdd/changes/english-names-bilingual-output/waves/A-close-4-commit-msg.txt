@@ -1,0 +1,35 @@
+refactor(rename): comodín del detector, comas del JS, léxico y excepciones del cierre (cierre del frente A, lote 4)
+
+Último lote del cierre del frente A (waves/A-close.md §4, punto 4). No
+renombra nada: arregla el detector de REQ-016, clasifica el léxico y
+completa rename-exceptions.md hasta dejar el detector a 0.
+
+- detect_spanish_names.is_excepted compara el nombre con fnmatchcase:
+  la fila «* | fichero» aparta por fin todo su fichero (antes usaba ==
+  y no apartaba nada) y el nombre distingue mayúsculas también en
+  Windows.
+- js_declared_names sigue las declaraciones tras cada coma de su nivel
+  (const a = 1, b = 2; let {x}, [y] = z; for (let i = 0, j = 1; ...)).
+- Test de --help de measure_slowness.py en una consola cp1252, que
+  comprueba además que no copia ni mide nada.
+- Léxico: las 794 palabras sin clasificar tras los lotes 1-3, a mano:
+  3 español (aprobada, congelado, reconstruido) y 791 inglés;
+  suspicion pasa a inglés. comment e identity salen en el repo: entran
+  en el léxico y se cambian en reserved_words.json por ornament y
+  serenity.
+- rename-exceptions.md: 120 filas (alias con retirada en la 0.38.0,
+  lectura de formato viejo, dato congelado, dato de un tercero, palabra
+  inglesa y «Pendiente» solo con REQ-010) y la sección nueva «Texto de
+  salida que traduce el frente B» (decisión 1), que tiene que quedar
+  vacía al cerrar el cambio.
+- verification.md: la ceguera del detector a los valores de una
+  palabra queda como limitación conocida; el barrido complementario,
+  clasificado, va en evidence/A-close-4/.
+- Cuatro mutantes (==, fnmatch, sin la rama de la coma, la Σ de
+  vuelta) hacen fallar los 3 tests nuevos por el assert esperado.
+
+waves/A-close.md: registro del lote 4 y cierre del frente A.
+
+2609 tests; suite 2607 passed, 2 skipped; ruff limpio. Detector: 0
+fuera de la lista, «Pendiente» solo REQ-010, 0 palabras sin
+clasificar; tests de REQ-044: 43 passed.

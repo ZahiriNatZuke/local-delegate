@@ -161,6 +161,22 @@ def test_function_and_arrow_parameters():
     assert {"fmt", "n", "decimales", "g", "uno", "dos", "tres"} <= declared
 
 
+def test_declarations_with_commas_declare_every_name():
+    """`const a = 1, b = 2` declara los dos: antes solo se veía el primero (cierre del frente A)."""
+    src = (
+        "const uno = f(a, b), {dos, tres} = obj, [cuatro] = arr;\n"
+        "let cinco, seis = {k: 1, j: 2},\n    siete = (x, y) => x;\n"
+        "for (let i = 0, ocho = 1; i < 2; i++) {}\n"
+        "var nueve = 1\ng(diez, once)\n"
+    )
+    declared = [n for n, _l in det.js_declared_names(det.tokenize_js(src))]
+    expected = ["uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "i", "ocho", "nueve"]
+    assert [n for n in declared if n in expected] == expected
+    # Ni las comas de una llamada ni las de un literal declaran nada, ni lo que sigue a una
+    # declaración sin `;` en la línea siguiente.
+    assert not {"a", "b", "k", "j", "diez", "once"} & set(declared)
+
+
 # --- Lista de excepciones (REQ-016) -------------------------------------------
 def test_exception_list_sets_aside_only_its_name_and_file(tmp_path):
     exceptions = tmp_path / "rename-exceptions.md"
@@ -213,3 +229,26 @@ def test_detector_walks_a_tree_and_sees_each_category(tmp_path):
         ("json_key", "familia"),
         ("file_name", "cuota"),
     } <= names
+
+
+def test_a_name_wildcard_sets_aside_every_name_of_its_file_and_only_of_its_file():
+    """La fila `* | fichero` aparta todo el fichero; antes el nombre se comparaba con `==` y la
+    fila `*` no apartaba nada (cierre del frente A). El nombre distingue mayúsculas."""
+    entries = [
+        det.ExceptionEntry("*", "tests/test_detect_spanish_names.py", "datos del detector", "x"),
+        det.ExceptionEntry("empate", "scripts/pair_sheet.py", "entrada escrita a mano", "x"),
+    ]
+    scan = det.Scan()
+    scan.add("identifier", "tests/test_detect_spanish_names.py", 1, "leer_precios")
+    scan.add("string_value", "tests/test_detect_spanish_names.py", 2, "fallo_conexion")
+    scan.add("identifier", "tests/test_other.py", 1, "leer_precios")
+    scan.add("string_key", "scripts/pair_sheet.py", 1, "empate")
+    scan.add("string_key", "scripts/pair_sheet.py", 2, "EMPATE")
+    scan.add("string_key", "scripts/pair_sheet.py", 3, "motivo")
+    report = det.analyse(scan, LEXICON, entries)
+    assert report["unique_findings"] == 6
+    assert sorted((f["file"], f["name"]) for f in report["findings"]) == [
+        ("scripts/pair_sheet.py", "EMPATE"),
+        ("scripts/pair_sheet.py", "motivo"),
+        ("tests/test_other.py", "leer_precios"),
+    ]

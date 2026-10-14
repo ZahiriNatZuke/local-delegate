@@ -479,6 +479,142 @@ de cada valor; sin `make_mapping.py apply` y sin PyCharm (caído).
 
 Todos en `evidence/A-close-3/mutants.log` (scratchpad `a-close-3/mutants.sh`).
 
+## A-close-4 — detector y léxico: comodín, comas del JS, `--help`, léxico y excepciones
+
+Sin mapping: el lote no renombra nada (§4, punto 4). Rama `sdd/english-names-a-close-4`, encima de
+`c1c78dd` (lote 3, mezclado en `main`). Sin commit: borrador en `waves/A-close-4-commit-msg.txt`.
+Evidencia en `evidence/A-close-4/`; la corrida final, en `evidence/A-close/detector.json`.
+
+### Qué se hizo
+
+- **(i) Comodín del nombre** (§2.1, hallazgo 1): `is_excepted` compara el nombre con
+  `fnmatchcase` (antes `==`), así que la fila `* | tests/test_detect_spanish_names.py` aparta por
+  fin sus 16 hallazgos y las filas `* | legacy_names.py`, `test_*anotar_llamada*`… funcionan. Se
+  usa `fnmatchcase` y no `fnmatch` porque en Windows `fnmatch` iguala mayúsculas y `EMPATE` y
+  `empate` son filas distintas. Test nuevo:
+  `tests/test_detect_spanish_names.py::test_a_name_wildcard_sets_aside_every_name_of_its_file_and_only_of_its_file`
+  (una fila `*` aparta todo su fichero y nada de otro; una fila con nombre no aparta otro nombre
+  ni el mismo en mayúsculas).
+- **(ii) Comas en declaraciones JS** (§2.1, hallazgo 4; pendiente de A8b): `js_declared_names` usa
+  la función nueva `_declarators`, que sigue la declaración tras cada coma de su nivel
+  (`const a = 1, b = 2`, `let {x}, [y] = z`, `for (let i = 0, j = 1; …)`) y acaba en el `;` de su
+  nivel, en un cierre que baja del nivel o, sin `;`, en un salto de línea que no deja la expresión
+  a medias. Test nuevo: `test_declarations_with_commas_declare_every_name` (con la guarda de que
+  las comas de una llamada, de un literal y de la línea siguiente a una declaración sin `;` no
+  declaran nada). En el panel aparecen los nombres que antes no veía (`cal`, `frac`…): ninguno es
+  español (los `js_identifier` siguen en 2, los dos ya en la lista).
+- **(iii) `--help` de `scripts/measure_slowness.py`**: la `Σ` ya la quitó el lote 1; faltaba el
+  test. `tests/test_measure_slowness.py::test_help_prints_in_a_cp1252_console_without_doing_the_work`
+  llama a `main(["--help"])` con `sys.stdout` en cp1252 estricto y con `copy_metrics` y `measure`
+  cambiadas por funciones que fallan si se llaman: sale con rc 0, imprime la ayuda y no hace el
+  trabajo. No se lanzó el script con `--help` a mano.
+- **(iv) Léxico**: `--dump-words` después de los lotes 1–3 (3672 palabras,
+  `evidence/A-close-4/words.json`) y las **794** sin clasificar, a mano una a una
+  (`evidence/A-close-4/lexicon-classification.csv`): **3 español** (`aprobada`, `congelado`,
+  `reconstruido`, los valores viejos que lee `legacy_names.py`) y **791 inglés** (los nombres
+  nuevos de los renombres, como `attribution`, `voided`, `wildcard`, `declarators`, y abreviaturas
+  como `cal`, `frac`, `errnos`, `whoami`). `suspicion` entra en `en` y quita los 2 falsos
+  positivos del sufijo `-cion` (`tests/test_checks.py`). `spanish_lexicon.README.md` gana el paso 6
+  con este procedimiento.
+- **(v) `comment` e `identity`** (decisión 3): salen en el repo, así que entran en `en` (dentro de
+  las 791) y en `scripts/data/reserved_words.json` se cambian por `ornament` y `serenity`, que no
+  salen en el repo (comprobado contra el volcado de palabras) y se parecen igual a los sufijos
+  `-mente` e `-idad`. `test_no_reserved_word_is_in_the_lexicon` y los dos tests de heurísticas
+  pasan con ellas.
+- **(vi) `rename-exceptions.md`**: 120 filas nuevas (una por nombre y fichero, porque el detector
+  compara nombre a nombre), todas con su motivo y «(cierre del frente A, lote 4)»:
+  - «Alias de compatibilidad» (32): las variables, el subcomando, la opción, el fichero que apaga el
+    bloqueo y la escritura doble de `enfriamiento.json` de §5, con su versión de retirada (0.38.0,
+    ola R: `introduced` 0.35.0 en `deprecations.DEPRECATED_NAMES`), y `anotar_llamada.py` y
+    `test_*anotar_llamada*` en `tests/test_install.py` (permanentes);
+  - «Lectura de formato viejo» (51): las de §5 (`*` en `legacy_names.py`, que cubre también las 5
+    claves de las tablas que añadió el lote 3, `inventado`, `texto`, `imagen`, `trampa` y
+    `truncado`, y `aprobada`, `congelado` y `reconstruido`; `*` en `test_recompute_legacy.py` y
+    `test_deprecations.py`; las claves del enfriamiento, los registros viejos de los hooks, el
+    statusline, los tests de métricas, telemetría, atribución y checks, y las de `valuation.py`),
+    más las que esperaban este lote: `celdas`, `huella` y `huella_rol` de
+    `tests/test_affinity.py` (lote 1: el test lee el `veredicto.json` congelado en crudo) y
+    `congelado` y `reconstruido` de `tests/test_benchmark.py` y `tests/test_corpus.py` (lote 3: las
+    tablas escritas a mano, que hasta este lote eran palabras sin clasificar);
+  - «Dato congelado de corpus o caso» (2): `resumen-estructurado` y `ficheros` de
+    `tests/test_structured_summary.py`;
+  - «Dato de un tercero» (1): `de-DE` de `web/metrics.py`;
+  - «Palabra inglesa que el léxico toma por española» (2):
+    `test_the_calibrated_quota_appears_as_a_meter` y `nobody-blocked-me.md`
+    (`tests/test_correlation.py`: «me» es el pronombre inglés);
+  - **sección nueva «Texto de salida que traduce el frente B»** (11, decisión 1), con su motivo en
+    la cabecera del fichero y la regla de que tiene que estar vacía al cerrar el cambio, igual que
+    «Pendiente»: los 8 rótulos del JS del panel (B4), `sin_cruce` de `recompute._MATCH_LABEL` (B1)
+    y `pruebas` en `tests/test_metrics.py` y `tests/test_valuation.py` (B4; B2 para
+    `local_status`);
+  - «Pendiente» (21): solo las subclaves de REQ-010 (`respaldo`, `respondio`, `en_lugar_de`,
+    `motivo`, `clase`, `truncado`, `aviso`, `leido_server_side`, `tokens_aprox`, `crudo`) en
+    `server.py` y en los tests que comprueban la salida de hoy.
+  - La cabecera dice ahora que el nombre de la fila también admite comodines y distingue
+    mayúsculas.
+  Comprobado con el propio detector: **las 120 filas nuevas apartan al menos un hallazgo cada una**.
+  De las 356 filas de la lista, 16 de olas anteriores no apartan ninguno (valores de una palabra u
+  opciones con `--` que el detector no ve, como `--desde` o `residente` de `chains.py`, y la fila
+  `* | scripts/data/*`, cuyos `.json` no se escanean); se dejan, porque documentan excepciones
+  reales.
+- **Barrido de una palabra** (decisión 5): no se amplió el detector. El barrido por AST de `src/` y
+  `scripts/` se rehízo tras los lotes 1–3 y se clasificó línea a línea por reglas revisadas a mano
+  (`evidence/A-close-4/singleword-src.tsv`, 254; `singleword-scripts.tsv`, 191; leyenda en
+  `singleword-classes.tsv`; scratchpad `a-close-4/singleword.py` y `classify_singleword.py`).
+  `src/`: 172 formato viejo, 59 texto de salida, 16 pendientes de REQ-010, 3 de terceros, 2 datos
+  congelados y 2 entradas de una persona. `scripts/`: 99 contenido de casos de `build_corpus.py`,
+  26 texto de salida, 20 entradas de una persona, 15 datos congelados, 8 palabras del idioma, 2
+  formato viejo y **21 valores internos** (pregunta abierta abajo). Registrado como limitación
+  conocida de REQ-016 en `verification.md` (no se tocaron `spec.md` ni `plan.md`).
+
+### Verificación
+
+- EOL: los 9 ficheros tocados del repo siguen en LF (`git ls-files --eol`); modo sin cambios.
+- `--collect-only`: **2609** = 2606 + 3 tests nuevos (`evidence/A-close-4/collect.txt`).
+- Suite `-n 2 --dist loadgroup` con el cerrojo (Playwright incluido): **2607 passed, 2 skipped**,
+  sin fallos ni intermitentes; solo los 2 `DeprecationWarning` de starlette/anyio
+  (`evidence/A-close-4/pytest-full.log`).
+- `ruff check` y `ruff format --check`: limpios tras `ruff format` de `detect_spanish_names.py`
+  (`evidence/A-close-4/ruff.txt`).
+- Tests de control de REQ-044 (`tests/test_detect_spanish_names.py`): **43 passed** (41 + 2
+  nuevos) (`evidence/A-close-4/req044-tests.txt`).
+- Detector con la lista: fuera de la lista **467 → 451** (comodín) **→ 456** (las 3 palabras
+  españolas nuevas del léxico; `suspicion` resta 2) **→ 0** (excepciones); palabras sin clasificar
+  **785 → 794** (las del código nuevo del lote) **→ 0**; 713 hallazgos únicos, todos en la lista;
+  «Pendiente» solo con REQ-010 (`evidence/A-close/detector.json`, copia en
+  `evidence/A-close-4/detector.json`, resumen en `detector.txt`).
+- `tools/check_wave_records.py` sobre `waves/A-close.md`: OK
+  (`evidence/A-close-4/wave-records.txt`).
+
+### Desviaciones
+
+1. Sección nueva «Texto de salida que traduce el frente B» en `rename-exceptions.md`, por la
+   decisión 1; `spec.md` (REQ-016) no la nombra entre sus motivos y no se tocó: la enmienda vive en
+   la cabecera de `rename-exceptions.md`, como las anteriores.
+2. `verification.md` gana la limitación conocida del detector (decisión 5).
+3. `(iii)` no cambió código: solo el test (el arreglo era del lote 1).
+4. 5 filas más de las que pedía §5: `celdas`, `huella`, `huella_rol` (lote 1) y `congelado`,
+   `reconstruido` en dos tests (lote 3), que el detector no informaba hasta clasificar el léxico.
+
+### Pregunta abierta (con recomendación)
+
+**21 valores internos en español de `scripts/` que el detector no ve** (una palabra, sin
+separador), clase `valor-interno` de `singleword-scripts.tsv`: el estado del analizador de
+`price_watcher.py` (`hecho`, `tabla`), los estados de `ci_gate.py` (`esperar`, `bien`, `mal`), el
+`result` `cambiar` de `measure_cooldown.py` (sale en su `--json`), el veredicto automático
+`mejor`/`peor` de `analyze_benchmark.py`, el `via` `produccion` de `scripts/dev/affinity_batch.py`
+(se guarda en los resultados), el `verdict` `valida` de `pair_sheet.py`, el `aviso` por defecto de
+`measure_adoption.py`, las etiquetas `desconocido`/`completada` del canario de macOS y la carpeta
+`casa` de `check_install_e2e.py`. No son de ninguna fila de §5 ni de los lotes 1–3 y el frente A
+se cierra con lo que ve el detector (decisión 5). *Recomendación:* una ola corta tras el cierre,
+antes de B0, con mapping, regla 1 (lectura dual) solo para `produccion` y `cambiar` si un lector
+los relee, y sin lectura dual para el resto, que no se persiste; no bloquea el cierre de REQ-016.
+
+**Cierre del frente A:** detector de REQ-016 con la lista a **0 fuera de la lista**, «Pendiente»
+solo con REQ-010 y **0 palabras sin clasificar** (`evidence/A-close/detector.json`); tests de
+control de REQ-044 en verde (43 passed); **2609 tests recogidos**; suite **2607 passed, 2
+skipped**; ruff limpio.
+
 ## Controles positivos
 
 | Test | Mutante aplicado | Assert que disparó | Restaurado |
@@ -486,6 +622,7 @@ Todos en `evidence/A-close-3/mutants.log` (scratchpad `a-close-3/mutants.sh`).
 | `tests/test_affinity.py::test_matrix_cells_are_the_approved_cells_of_the_verdict`, `test_frozen_verdict_footprints_with_old_keys_are_read_with_the_new_ones` y `tests/test_analyze_benchmark.py::test_frozen_footprints_with_old_keys_reach_the_verdict_with_the_new_ones` (lote 1; lectura dual de la huella) | `src/local_delegate/legacy_names.py` con `FORMATS["footprint"]` sin `"ruta": "path"` | `test_affinity.py:518` `assert dict(cell.footprint) == footprints[...]` (AssertionError); `test_affinity.py:541` y `test_analyze_benchmark.py:1565` `KeyError: 'path'`; 3 failed, 156 passed (`evidence/A-close-1/mutant-footprint-dual.txt`) | desde copia; sha256 `ae60e98d…` antes y después |
 | `tests/test_dashboard_ui.py::test_no_table_shows_internal_keys` (lote 2; datos renombrados `odd_new_key`, `reason_that_does_not_exist`, `new_client`) | `src/local_delegate/web/metrics.py:1908`, el respaldo de rótulos sin quitar los `_` | `test_dashboard_ui.py:981` `assert not bad` con `['Odd_new_key', 'Reason_that_does_not_exist', 'New_client']` (`evidence/A-close-2/mutante.log`) | desde copia; sha256 `778ba0eb00f6` antes y después |
 | `tests/test_corpus.py::test_frozen_corpus_values_are_read_in_english`, `tests/test_analyze_benchmark.py::test_an_old_row_with_the_spanish_truncated_outcome_is_read_in_english` y `tests/test_pair_sheet.py::test_the_frozen_key_answers_and_rules_give_a_complete_judgement_in_the_new_format` (lote 3; lectura dual de los valores del corpus, del banco y de la hoja) | `src/local_delegate/legacy_names.py`, cinco mutantes: sin `"congelado"`, sin `"texto"`, `SHEET_TRAP_VALUES = {}`, sin `"techo"` en `SCORER_KIND_VALUES` y sin `"truncado"` en `benchmark_results.outcome` | `test_corpus.py:1019`, `:1020`, `:1029`, `:1032`, `:821`; `test_pair_sheet.py:1105`; `test_analyze_benchmark.py:323` (AssertionError) y `test_benchmark.py:653` (`ValueError` de `load_corpus`) (`evidence/A-close-3/mutants.log`) | desde copia; sha256 `0cdf12a06e93` antes y después |
+| `tests/test_detect_spanish_names.py::test_a_name_wildcard_sets_aside_every_name_of_its_file_and_only_of_its_file`, `test_declarations_with_commas_declare_every_name` y `tests/test_measure_slowness.py::test_help_prints_in_a_cp1252_console_without_doing_the_work` (lote 4; comodín, mayúsculas, comas del JS y `--help` en cp1252) | cuatro mutantes: `is_excepted` con `e.name == finding.name`; con `fnmatch` en vez de `fnmatchcase`; `_declarators` sin la rama de la coma; la `Σ` de vuelta en el docstring de `measure_slowness.py` | `test_detect_spanish_names.py:250` `assert sorted(...) == [...]` (con `==` sobran `leer_precios` y `fallo_conexion` del fichero exceptuado; con `fnmatch` falta `EMPATE`); `test_detect_spanish_names.py:174` `['uno', 'cinco', 'i', 'nueve'] == [...]` (AssertionError); `test_measure_slowness.py:458` `UnicodeEncodeError … 'Σ'`; 1 failed cada uno (`evidence/A-close-4/mutants.log`) | desde copia en memoria; sha256 `79b04772c89c` (`detect_spanish_names.py`) y `e86f7df17de1` (`measure_slowness.py`) antes y después |
 
 ## Llamadas `local_*` (sesión principal y cada agente)
 
@@ -498,6 +635,10 @@ Todos en `evidence/A-close-3/mutants.log` (scratchpad `a-close-3/mutants.sh`).
 | Agente A-close-3 | `local_summarize(path=waves/A-close.md)` | ponerse al día del cierre (formato de los lotes, comando del detector); sirvió |
 | Agente A-close-3 | `local_lint_summary(path=evidence/A-close-3/pytest-full.log)` (2) | resumen de las dos corridas de la suite: 2604 passed, 2 skipped y solo los 2 `DeprecationWarning` de starlette/anyio; sirvió |
 | Agente A-close-3 | `local_commit_msg(path=scratchpad a-close-3/lote3.diff)` | borrador del mensaje: devolvió solo un asunto en inglés; el mensaje se escribió a mano en español |
+| Agente A-close-4 | `local_summarize(path=waves/A-close.md)` | ponerse al día del cierre (estructura, lotes, pendientes); sirvió para ubicar las secciones, que luego se leyeron por franjas |
+| Agente A-close-4 | `local_lint_summary(path=evidence/A-close-4/pytest-full.log)` | resumen de la suite: 2607 passed, 2 skipped, solo los 2 `DeprecationWarning` de starlette/anyio; sirvió |
+| Agente A-close-4 | `local_classify` (0) | motivo: devuelve una etiqueta por llamada y eran 794 palabras; la lista se revisó a mano entera, que era lo que pedía el lote |
+| Agente A-close-4 | `local_commit_msg` (0) | motivo: el del lote 3 devolvió solo un asunto en inglés; el mensaje se escribió a mano en español |
 
 ## Llamadas `mcp__pycharm__*`
 
@@ -509,3 +650,4 @@ Todos en `evidence/A-close-3/mutants.log` (scratchpad `a-close-3/mutants.sh`).
 | A-close-1 | `get_file_problems` | `src/local_delegate/footprint.py` (solo errores) | 0 errores |
 | A-close-2 | (ninguna) | MCP de PyCharm caído (ECONNREFUSED) tras el reinicio | motivo: las 3 filas `pycharm` se hicieron a mano y la comprobación de problemas la cubren `py_compile`, ruff y la suite |
 | A-close-3 | (ninguna) | MCP de PyCharm caído (ECONNREFUSED) | motivo: 0 filas `pycharm`; la comprobación de problemas la cubren ruff y la suite |
+| A-close-4 | (ninguna) | MCP de PyCharm caído (ECONNREFUSED) | motivo: 0 renombres; la comprobación de problemas la cubren ruff y la suite |
