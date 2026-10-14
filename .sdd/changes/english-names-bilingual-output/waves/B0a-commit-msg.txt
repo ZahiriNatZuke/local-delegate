@@ -1,0 +1,45 @@
+feat(i18n): regla única del idioma, catálogo común, paridad y corrida de la suite en español (frente B, ola B0a)
+
+Primera mitad de B0, partida el 2026-10-14 (waves/B0-proposal.md). Base
+de idioma del frente B, sin cambiar todavía ningún texto de salida.
+
+- hook_common.resolve_language: la única implementación de REQ-018
+  (variable LOCAL_DELEGATE_LANG, language.json del directorio de datos,
+  sistema y reserva en inglés). En POSIX, LC_ALL > LC_MESSAGES > LANG y
+  LANGUAGE solo con el locale declarado; C, C.UTF-8 y C.utf8 no declaran.
+  En Windows, el idioma de la interfaz (GetUserDefaultUILanguage), nunca
+  LANG ni el formato regional. Avisos como códigos, sin prosa. HOOK_TEXTS
+  nace vacío (lo llena B3).
+- i18n.py: idioma del proceso cacheado con config.LOG_DIR, catálogo JSON
+  por superficie (t, t_lang; si falta una traducción, la española) y
+  argparse_gettext/argparse_ngettext para B1.
+- resources/i18n/{es,en}/common.json: orígenes del idioma y avisos de
+  las dos variables, para doctor (B1) y local_status (B2b).
+- config.py: registra LOCAL_DELEGATE_LANG y añade output_language(), que
+  lee y valida LOCAL_DELEGATE_OUTPUT_LANGUAGE (enmienda de REQ-028, issue
+  #260): 1 a 40 caracteres, sin control, formato ni saltos de línea.
+- conftest.py: la suite corre con LOCAL_DELEGATE_LANG=es y
+  LOCAL_DELEGATE_LOG_DIR=<tmp> (REQ-043), y fixtures browser_locale y
+  new_page para el panel (B4).
+- test_environment_isolation.py: las dos variables fijadas se admiten y
+  se comprueba su valor; el escáner de hooks ve el entorno inyectado; y
+  nadie fuera de resolve_language lee LANG, LC_*, LANGUAGE o la API de
+  idioma de Windows.
+- Tests nuevos: test_language.py (los nueve casos de REQ-018 con idioma
+  y origen, gramática, i18n, output_language y REQ-043) y
+  test_i18n_parity.py (marcadores, identificadores, superficies, ASCII
+  de los hooks y claves usadas). 25 mutantes, uno por paso de la
+  precedencia y por guarda, disparan el assert esperado.
+- CI: trabajo test-lang-es (la suite entera con LANG=es_ES.UTF-8 en
+  ubuntu, Playwright incluido) y su entrada en EXPECTED_JOBS de ci_gate.
+- rename-exceptions.md: sección «Catálogo de textos (frente B)» con el
+  catálogo español y los códigos de idioma de los tests. Léxico: 22
+  palabras en inglés y reserva (es).
+- plan.md: B0 partida en B0a y B0b, mutantes corregidos, min_tokens=8 en
+  D10, imports de i18n.py y ocho módulos asignados a B1, B2 y B4.
+
+waves/B0a.md: registro de la ola, con evidence/B0a/.
+
+2706 tests; suite 2704 passed, 2 skipped con LANG=en_US.UTF-8 y con
+LANG=es_ES.UTF-8; ruff limpio. Detector con la lista: 0 fuera de la lista
+y 0 palabras sin clasificar.

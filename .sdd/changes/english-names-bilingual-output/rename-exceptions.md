@@ -418,6 +418,17 @@ sección de su motivo.
 | pruebas | tests/test_metrics.py | texto de salida que traduce el frente B (B4; B2 para `local_status`): motivo de `excluded_by_reason` («pruebas», hermano de «no es Claude») que muestran `/api/stats` y el panel; el test comprueba el texto de hoy (cierre del frente A, lote 4) |
 | pruebas | tests/test_valuation.py | texto de salida que traduce el frente B (B4; B2 para `local_status`): motivo de `excluded_by_reason` («pruebas», hermano de «no es Claude») que muestran `/api/stats` y el panel; el test comprueba el texto de hoy (cierre del frente A, lote 4) |
 
+## Catálogo de textos (frente B)
+
+Valores que el detector toma por nombres y que no lo son: el texto de salida del catálogo español
+y los códigos de idioma con los que se prueba la regla del idioma. Nacen en la ola B0a.
+
+| Nombre | Fichero | Motivo |
+| --- | --- | --- |
+| * | src/local_delegate/resources/i18n/es/*.json | texto de salida del catálogo español (REQ-030): el detector toma por término de máquina los valores de una sola palabra («preferencia», «sistema»), que son rótulos para personas con su par en `en/` (ola B0a) |
+| es[-_]* | tests/conftest.py | código de idioma (`es-ES`, BCP 47) del `locale` del navegador de los tests del panel (REQ-043), no un nombre en español (ola B0a) |
+| es[-_]* | tests/test_language.py | códigos de idioma (`es-ES`, `es_ES`, `es_ES.UTF-8`) que son la entrada de los casos de la regla del idioma (REQ-018), no nombres en español (ola B0a) |
+
 ## Pendiente
 
 | Nombre | Fichero | Motivo |

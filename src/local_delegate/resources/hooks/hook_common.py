@@ -22,8 +22,10 @@ import time
 import urllib.error
 import urllib.request
 import uuid
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import NamedTuple
 
 
 def enabled() -> bool:
@@ -367,6 +369,117 @@ def log_dir() -> Path:
         return Path.home() / "Library" / "Application Support" / "local-delegate"
     base = os.environ.get("XDG_DATA_HOME", "").strip()
     return (Path(base) if base else Path.home() / ".local" / "share") / "local-delegate"
+
+
+# --- Idioma de la salida (REQ-018, REQ-019, REQ-047; plan D7) ------------------------------------
+#
+# La regla vive UNA sola vez y aqui: el paquete importa este modulo e `install` lo copia con los
+# hooks, que no pueden importar el paquete. El guardian de aislamiento falla si `LANG`, `LC_*`,
+# `LANGUAGE` o la API de idioma de Windows aparecen fuera de las tres funciones de abajo.
+#
+# Los avisos salen como codigos `(codigo, detalle)`, sin prosa: el texto lo pone quien los muestra
+# (`doctor`, `local_status`) desde el catalogo, en el idioma que corresponda.
+
+LANGUAGES = ("es", "en")
+LANGUAGE_PREFERENCE_FILE = "language.json"
+LANGUAGE_GRAMMAR = re.compile(r"^(es|en)([-_]([A-Za-z]{2}|[0-9]{3}))?$", re.IGNORECASE)
+# Locales que no declaran idioma, tras quitar `.codificacion` y `@modificador` (`C.UTF-8`, `C.utf8`).
+UNDECLARED_LOCALE_NAMES = frozenset({"", "c", "posix"})
+_SPANISH = re.compile(r"^es(?![a-z])", re.IGNORECASE)
+# Idioma primario de un LANGID de Windows (los 10 bits bajos), por si `windows_locale` no lo trae.
+_WINDOWS_PRIMARY_LANGUAGES = {0x0A: "es", 0x09: "en"}
+
+# Textos de los hooks (REQ-030/031), en ASCII. Los llena B3; el guardian de paridad ya los cubre.
+HOOK_TEXTS: dict[str, dict[str, str]] = {"es": {}, "en": {}}
+
+
+class LanguageResolution(NamedTuple):
+    lang: str  # "es" | "en"
+    source: str  # "variable" | "preference" | "system" | "fallback"
+    pref_path: Path  # el `language.json` consultado, exista o no (REQ-047)
+    warnings: tuple[tuple[str, str], ...]  # (codigo, detalle)
+
+
+def parse_language(value: str | None) -> str | None:
+    """Un valor de REQ-019 (`es`, `en_US`, `es-419`...) como `es`/`en`; `None` si no es valido."""
+    if value is None:
+        return None
+    match = LANGUAGE_GRAMMAR.match(value.strip())
+    return match.group(1).lower() if match else None
+
+
+def resolve_language(
+    data_dir: Path,
+    env: Mapping[str, str] = os.environ,
+    platform: str = sys.platform,
+    ui_lang: str | None = None,
+) -> LanguageResolution:
+    """El idioma vigente del proceso: variable, preferencia, sistema y reserva, en ese orden."""
+    pref_path = Path(data_dir) / LANGUAGE_PREFERENCE_FILE
+    warnings: list[tuple[str, str]] = []
+
+    raw = env.get("LOCAL_DELEGATE_LANG", "")
+    if raw.strip():
+        lang = parse_language(raw)
+        if lang:
+            return LanguageResolution(lang, "variable", pref_path, tuple(warnings))
+        warnings.append(("invalid_variable", raw))
+
+    try:
+        data = json.loads(pref_path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        pass
+    except (OSError, ValueError):
+        warnings.append(("unreadable_preference", str(pref_path)))
+    else:
+        stored = data.get("lang") if isinstance(data, dict) else None
+        lang = parse_language(stored) if isinstance(stored, str) else None
+        if lang:
+            return LanguageResolution(lang, "preference", pref_path, tuple(warnings))
+        warnings.append(("invalid_preference", str(pref_path)))
+
+    declared = _system_language(env, platform, ui_lang)
+    if declared is None:
+        return LanguageResolution("en", "fallback", pref_path, tuple(warnings))
+    lang = "es" if _SPANISH.match(declared) else "en"
+    return LanguageResolution(lang, "system", pref_path, tuple(warnings))
+
+
+def _system_language(env: Mapping[str, str], platform: str, ui_lang: str | None) -> str | None:
+    """Paso 3 de REQ-018: lo que declara el sistema, o `None` si no declara nada o falla."""
+    if platform == "win32":
+        # En Windows manda el idioma de la INTERFAZ; `LANG` y `LC_*` los ponen Git Bash y MSYS.
+        return ui_lang if ui_lang is not None else _windows_ui_language()
+    effective = ""
+    for name in ("LC_ALL", "LC_MESSAGES", "LANG"):
+        effective = env.get(name, "").strip()
+        if effective:
+            break
+    base = effective.split(".", 1)[0].split("@", 1)[0].strip().lower()
+    if base in UNDECLARED_LOCALE_NAMES:
+        return None
+    for item in env.get("LANGUAGE", "").split(":"):
+        if item.strip():
+            return item.strip()
+    return effective
+
+
+def _windows_ui_language(kernel32: object = None) -> str | None:
+    """Idioma de la interfaz de Windows (`GetUserDefaultUILanguage`), nunca el formato regional.
+
+    `kernel32` solo existe para que los tests inyecten uno falso. Cualquier fallo da `None`.
+    """
+    try:
+        import locale
+
+        if kernel32 is None:
+            import ctypes
+
+            kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        langid = int(kernel32.GetUserDefaultUILanguage())  # type: ignore[attr-defined]
+        return locale.windows_locale.get(langid) or _WINDOWS_PRIMARY_LANGUAGES.get(langid & 0x3FF)
+    except Exception:
+        return None
 
 
 def summary_model(size: int) -> str:

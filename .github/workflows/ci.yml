@@ -178,6 +178,47 @@ jobs:
         timeout-minutes: 3
         run: uv run python scripts/check_install_e2e.py
 
+  # REQ-043: la suite no depende del idioma de la máquina. La corrida «en inglés» ya la da el
+  # `test` de ubuntu (`LANG=C.UTF-8`); esta es la otra, con el sistema en español. Va una sola
+  # vez, en ubuntu y con Python 3.11, porque es la suite ENTERA y es el coste grande: incluye el
+  # panel con Playwright, que REQ-043 nombra expresamente y que con `CI=true` no puede saltarse.
+  # En Windows `LANG` no decide el idioma (REQ-018 mira la interfaz), así que solo Linux discrimina.
+  test-lang-es:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      LANG: es_ES.UTF-8
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.11"
+
+      # Sin el locale generado, Python cae en `C` y el trabajo correría «en español» solo de nombre.
+      - name: Generate the Spanish locale
+        run: sudo locale-gen es_ES.UTF-8
+
+      - name: Sync deps (with the ui group)
+        run: uv sync --group dev --group ui
+
+      - name: Install browser for the dashboard UI tests
+        run: uv run playwright install --with-deps chromium
+
+      # Guarda de «esto llegó a comprobar algo»: si el runner pisara `LANG` o pusiera `LC_ALL` o
+      # `LC_MESSAGES` (que ganan a `LANG`), el trabajo saldría en verde sin estar en español.
+      - name: Check the job really runs in Spanish
+        run: >-
+          python3 -c "import os;
+          assert os.environ['LANG'] == 'es_ES.UTF-8', os.environ.get('LANG');
+          assert not os.environ.get('LC_ALL'), os.environ.get('LC_ALL');
+          assert not os.environ.get('LC_MESSAGES'), os.environ.get('LC_MESSAGES')"
+
+      - name: Tests (pytest, LANG=es_ES.UTF-8)
+        timeout-minutes: 10
+        run: uv run pytest -q -n auto --dist loadgroup
+
   # El único job que NO usa `uv.lock`, y esa es exactamente su razón de ser.
   #
   # Los demás jobs instalan desde el lock, que fija versiones conocidas y buenas. Eso los protege

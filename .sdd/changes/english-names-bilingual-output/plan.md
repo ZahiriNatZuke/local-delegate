@@ -335,7 +335,10 @@ compare periodos, entra por el mismo test.
   `scripts/data/function_words.json`) y responde `es`, `en` o `unknown` (si hay menos de 20 tokens
   o un margen menor de 0,15).
 - **Su control:** 60 entradas españolas y 60 inglesas del catálogo de B0/B1 (las de 8 palabras o
-  más) se clasifican con un acierto de al menos el 98 %. Si se invierten las dos listas de
+  más) se clasifican con un acierto de al menos el 98 %, llamando al detector con
+  `min_tokens=8` (con el umbral por defecto de 20, casi todas darían `unknown`; corregido el
+  2026-10-14). En B0b el control son 20 + 20 frases congeladas y las 60 + 60 son obligatorias
+  desde B1. Si se invierten las dos listas de
   palabras funcionales, el control falla.
 - **Muestra:** `tests/fixtures/lang_sample/` **(plan)**, con 5 documentos por tool y por idioma de
   origen, sin datos de terceros:
@@ -940,7 +943,7 @@ nuevos o la documentación en ficheros que el agente que renombra no toca, siemp
 **Orden de mezcla (explícito):**
 
 ```
-A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close-5) → higiene de CodeQL → `affinity --check` sin entorno → B0 → B1 → B2 (lotes B2a → B2b) → { B3 ∥ B4 } → B5 → [release 0.36.0]
+A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close-5) → higiene de CodeQL → `affinity --check` sin entorno → B0 (B0a → B0b) → B1 → B2 (lotes B2a → B2b) → { B3 ∥ B4 } → B5 → [release 0.36.0]
 ```
 
 - **Valores de una palabra (A-close-5, añadida el 2026-10-14), tras A-close-4.** El barrido de
@@ -1017,50 +1020,115 @@ A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close
     que es de B5, y `test_wiki.py`, que es de B1.
 - Las olas B no usan `rename_refactoring`, así que no ocupan PyCharm, salvo para buscar.
 
-#### B0 — Base de idioma, catálogo y guardianes
+#### B0 — Base de idioma, catálogo y guardianes (en dos PR: B0a y B0b)
 
-- **REQ:** 018 (entera), 019 (gramática y aviso; la presentación va en B1 y B2), 047 (lectura),
-  030, 031, 045 (nace con su lista de pendientes), 043 (fixtures de variable, directorio de datos
-  y `locale` de Playwright).
+Partida el 2026-10-14 tras la propuesta de la fase 1 (`waves/B0-proposal.md`, «Decisiones
+aprobadas»): el tamaño real dobla la estimación inicial (~700 nuevas, < 60 modificadas en 4
+ficheros) y las dos mitades son independientes. B0a se mezcla antes que B0b; las dos, antes de B1.
+
+- **REQ:** en **B0a**, 018 (entera), 019 (gramática y aviso; la presentación va en B1 y B2), 047
+  (lectura), 030, 031 y 043 (fixtures de variable, directorio de datos y `locale` de Playwright);
+  en **B0b**, 045 (nace con su lista de pendientes) y el detector de D10.
+- **Imports de `i18n.py`:** stdlib, `config` (por `config.LOG_DIR`, D7) y `hook_common`. No hay
+  ciclo: `config` no importa `i18n`, y lo que `config` devuelve sobre el idioma son códigos, no
+  textos.
+- La clave `package_version` de las filas de uso pasa a B2 (lote B2b), que es la dueña de
+  `server.py`. Sale en la misma versión 0.36.0, así que la frontera no cambia.
+
+##### B0a — Base de idioma, catálogo, paridad, fixtures y `test-lang-es`
+
 - **Posee:**
-  - nuevos: `src/local_delegate/i18n.py` (incluye `argparse_gettext`/`argparse_ngettext` de D8),
-    `src/local_delegate/resources/i18n/{es,en}/common.json`, `tests/test_language.py`,
-    `tests/test_i18n_parity.py`, `tests/test_no_uncatalogued_text.py`,
-    `tests/data/uncatalogued_pending/` (un fichero por superficie, con todos los ficheros de salida
-    de i18n §1; cada ola B solo vacía el suyo), `tests/data/uncatalogued_exceptions.json`
-    (excepciones con motivo), `scripts/detect_language.py`, `scripts/data/function_words.json`,
-    y `tests/test_detect_language.py` (D10, que adelanta su control);
-  - CI: `.github/workflows/ci.yml` (añade el trabajo `test-lang-es`, la suite entera con
-    `LANG=es_ES.UTF-8` en ubuntu y Python 3.11) y `scripts/ci_gate.py` (añade ese trabajo a los
-    esperados, con el nombre que le haya dado A10 a `JOBS_ESPERADOS`). Ese trabajo solo ejecuta
-    tests que ya existen cuando se mezcla B0;
-  - existentes: `resources/hooks/hook_common.py` (`resolve_language` y `HOOK_TEXTS` vacío),
-    `config.py` (`LOCAL_DELEGATE_LANG` y, por la enmienda de REQ-028 del 2026-10-14, `LOCAL_DELEGATE_OUTPUT_LANGUAGE` con su validación, en `VARIABLES_DE_ENTORNO`), `tests/conftest.py` (fixtures
-    automáticos `LOCAL_DELEGATE_LANG=es` y `LOCAL_DELEGATE_LOG_DIR=<tmp>`, y el fixture común de
-    `locale` de Playwright con `es-ES` por defecto, que B4 usa) y el guardián de aislamiento
-    (`tests/test_aislamiento_entorno.py`, con el nombre que le dé A9a; se amplía según D7).
-  - La clave `package_version` de las filas de uso pasa a B2 (lote B2b), que es la dueña de
-    `server.py`. Sale en la misma versión 0.36.0, así que la frontera no cambia.
-- **Tamaño:** unas 700 líneas nuevas; las modificaciones, por debajo de 60 líneas en 4 ficheros.
-- **Tests y su control positivo:**
-  - Los nueve casos de REQ-018, uno por paso de la precedencia, con el entorno, la preferencia y
-    `ui_lang` inyectados. Mutante: se intercambian los pasos 2 y 3; fallan «preferencia `es` con
-    el sistema en inglés → es» y «`LOCAL_DELEGATE_LANG=en` con preferencia `es` → en».
-  - *implementación única:* un AST busca funciones que lean `LANG` o llamen a
-    `GetUserDefaultUILanguage` fuera de `hook_common.resolve_language`. Mutante: una segunda
-    lectura de `LANG` en `cli.py`.
-  - *REQ-043 a:* con `LOCALAPPDATA`/`HOME` falsos que contienen `language.json` con `en`, un test
-    que espera `es` sigue en verde.
+  - nuevos: `src/local_delegate/i18n.py` (incluye `argparse_gettext`/`argparse_ngettext` de D8;
+    el parche en `cli.py` es de B1), `src/local_delegate/resources/i18n/{es,en}/common.json`,
+    `tests/test_language.py` y `tests/test_i18n_parity.py`; y una sección nueva, «Catálogo de
+    textos (frente B)», en `rename-exceptions.md`, con una fila comodín para
+    `src/local_delegate/resources/i18n/es/*.json` (el detector de nombres del frente A toma por
+    términos de máquina los valores de una palabra del catálogo español) y dos para los códigos
+    de idioma de los tests (`es-ES`, `es_ES.UTF-8`); va en B0a porque el catálogo nace aquí y el
+    detector tiene que seguir a 0 entre las dos mezclas. Las palabras nuevas de B0a entran en
+    `scripts/data/spanish_lexicon.json` (22 en inglés y `reserva` en español);
+  - existentes: `resources/hooks/hook_common.py` (`resolve_language` con sus dos piezas privadas
+    `_system_language` y `_windows_ui_language`, y `HOOK_TEXTS` vacío), `config.py` (registro de
+    `LOCAL_DELEGATE_LANG` y, por la enmienda de REQ-028 del 2026-10-14, `output_language()`, que
+    lee y valida `LOCAL_DELEGATE_OUTPUT_LANGUAGE`; las dos en `ENVIRONMENT_VARIABLES`),
+    `tests/conftest.py` (`LOCAL_DELEGATE_LANG=es` y `LOCAL_DELEGATE_LOG_DIR=<tmp>` automáticos, y el
+    fixture común de `locale` de Playwright con `es-ES` por defecto, que B4 usa) y
+    `tests/test_environment_isolation.py` (se amplía según D7, y se arregla
+    `test_the_suite_runs_without_package_variables_defined`, que con los fixtures nuevos fallaría
+    porque exige que ninguna variable del inventario esté definida);
+  - CI: `.github/workflows/ci.yml` (trabajo `test-lang-es`: la suite entera, Playwright incluido,
+    con `LANG=es_ES.UTF-8` en ubuntu y Python 3.11, con `locale-gen` y una guarda de entorno) y
+    `scripts/ci_gate.py` (`test-lang-es` en `EXPECTED_JOBS`). Ese trabajo solo ejecuta tests que ya
+    existen cuando se mezcla B0a. En B0a discrimina poco (el fixture fija `es`); su poder real
+    llega con los asserts en español de B1.
+  - Decisiones de la regla (aprobadas el 2026-10-14): `LOCAL_DELEGATE_LANG` vacía o solo espacios
+    = no puesta, sin aviso; `C.utf8` y variantes cuentan como «no declarado» (se normaliza quitando
+    codificación y modificador); «empieza por `es`» es `^es(?![a-z])`, sin distinguir mayúsculas;
+    en `LOCAL_DELEGATE_OUTPUT_LANGUAGE` se rechazan también los caracteres de formato (`Cf`).
+- **Tamaño:** unas 650 líneas nuevas; unas 275 añadidas o modificadas en 6 ficheros existentes
+  (`hook_common.py` ~120, `test_environment_isolation.py` ~65, `config.py` ~30, `conftest.py`
+  ~30, `ci.yml` ~30, `ci_gate.py` 2).
+- **Tests y su control positivo (un mutante por paso de la precedencia):**
+  - Los nueve casos de REQ-018, con el entorno, la preferencia y `ui_lang`/`kernel32` inyectados;
+    se afirma el idioma **y** el origen. Mutantes: intercambiar los pasos 1 y 2 tumba
+    «`LOCAL_DELEGATE_LANG=en` con preferencia `es` → en»; intercambiar los pasos 2 y 3 tumba
+    «preferencia `es` con el sistema en inglés → es»; ignorar `LANGUAGE` tumba `es:en`; honrarlo
+    con el locale no declarado tumba `LANGUAGE=es` con `LANG=C`; leer `LANG` antes que `LC_ALL`
+    tumba su caso; sacar `C` de los no declarados tumba el origen de `C.UTF-8`; consultar el
+    formato regional en Windows tumba «interfaz `en-US`, formato `es-ES`»; leer `LANG` en Windows
+    tumba «`LANG=en_US.UTF-8` e interfaz `es-ES`»; aceptar `fr` o no avisar tumba el último.
+    (Corrige la versión anterior, que atribuía dos casos al intercambio de los pasos 2 y 3: el de
+    la variable lo decide el paso 1.)
+  - *implementación única:* el guardián de aislamiento busca por AST las constantes `LANG`,
+    `LANGUAGE` y `LC_*` y los atributos `GetUserDefaultUILanguage`, `getlocale`,
+    `getdefaultlocale` y `windows_locale` fuera de la lista blanca de `hook_common.py`
+    (`resolve_language`, `_system_language`, `_windows_ui_language`). Mutante: una lectura de
+    `LANG` en `cli.py`.
+  - *REQ-043 a:* con `LOCALAPPDATA`/`HOME`/`XDG_DATA_HOME` falsos que contienen `language.json`
+    con `en`, un test que espera `es` sigue en verde.
   - *REQ-043 b:* sin el fixture de `LOCAL_DELEGATE_LOG_DIR`, ese montaje hace fallar un test de
     hook lanzado como subproceso. Se registra quitando el fixture en una corrida acotada.
+  - *fixture de aislamiento:* fijar en el fixture un idioma distinto del que espera el guardián
+    lo hace fallar.
   - *paridad:* borrar una traducción, cambiar `{n}` o cambiar un identificador entre comillas
-    invertidas la hace fallar; cubre también `HOOK_TEXTS`.
-  - *`test_no_uncatalogued_text`:* `print("Hola")` en un fichero que no está en la lista de
-    pendientes lo hace fallar, y una excepción con texto humano hace fallar su test.
-  - *`detect_language`:* acierto ≥ 98 % sobre el control (que usará el catálogo de B1 cuando
-    exista; en B0, sobre 60 + 60 frases de `docs/wiki` y del propio `en/common.json` inicial).
+    invertidas la hace fallar; cubre también `HOOK_TEXTS` (con la regla de solo ASCII).
 - **Hecho cuando:** suite en verde con `LANG=en_US.UTF-8` y con `LANG=es_ES.UTF-8` (en Windows no
-  discrimina: ver la sección 4.2), y la lista de pendientes contiene todos los ficheros de salida.
+  discrimina: ver la sección 4.2).
+
+##### B0b — Guardián de textos fuera del catálogo y detector de idioma
+
+- **Posee:** los nuevos `tests/test_no_uncatalogued_text.py`, `tests/data/uncatalogued_pending/`
+  (un fichero por superficie: `cli`, `doctor`, `mcp`, `hooks`, `panel` e `install`; cada ola B
+  solo vacía el suyo), `tests/data/uncatalogued_exceptions.json` (excepciones con motivo;
+  `scripts/medir_enfriamiento.py` entra aquí como envoltorio de REQ-046, que se retira tras P-4),
+  `scripts/detect_language.py`, `scripts/data/function_words.json`,
+  `tests/data/detect_language_control.json` y `tests/test_detect_language.py` (D10, que adelanta
+  su control).
+- **Alcance del guardián:** `src/local_delegate/**` (sin `vendor/`) y los tres scripts de B1
+  (`measure_cooldown.py`, `pair_sheet.py` y `analyze_benchmark.py`). Contextos: sumideros
+  (`print`, `write`, `exit`, `error`, `warn`, `emit`, `deny`, `append`/`extend`), `raise`,
+  argumentos con nombre de texto, `return` y constantes de rótulos (`*_LABEL(S)`, `*_TEXT(S)`…).
+  Con una red complementaria por tildes en los ficheros no pendientes.
+- **Ficheros sin dueña que se asignan:** `recompute.py`, `probes.py`, `deprecations.py` y
+  `entrypoint.py` a B1 (`cli.json`); `questions.py` a B2 (`mcp.json`); `quota.py`, `valuation.py`
+  y `attribution.py` a B4 (`panel.json`).
+- **Escáner del panel:** lo escribe B4 (dueña de `metrics.py`). B0b deja una guarda que impide
+  sacar `web/metrics.py` de pendientes mientras ese escáner no exista.
+- **Tamaño:** unas 900 líneas nuevas (de ellas ~300 de la lista de palabras funcionales y ~130 de
+  datos de control).
+- **Tests y su control positivo:**
+  - *`test_no_uncatalogued_text`:* `print("Hola")` en un fichero que no está en la lista de
+    pendientes lo hace fallar, y una excepción con texto humano hace fallar su test. Cada fichero
+    pendiente tiene que tener al menos una aparición: un pendiente que el escáner no ve no puede
+    salir de la lista.
+  - *`detect_language`:* acierto ≥ 98 % sobre el control, llamando con `min_tokens=8` (las frases
+    tienen 8 palabras o más; el umbral por defecto de 20 rige para la muestra de REQ-028). En B0b
+    el control son 20 + 20 frases congeladas (español de `docs/wiki`; inglés del diccionario `en`
+    de `site/index.html`, el único inglés corrido del repo); desde B1 son obligatorias 60 + 60,
+    completadas con las entradas inglesas de ≥ 8 palabras de los catálogos. Con las dos listas
+    invertidas, el control falla.
+- **Hecho cuando:** la lista de pendientes contiene todos los ficheros de salida y la suite está en
+  verde.
 
 #### B1 — CLI, `doctor`, `test-window`, `benchmark` y llama-swap
 
@@ -1072,7 +1140,9 @@ A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close
   `scripts/measure_cooldown.py`, `scripts/pair_sheet.py` y `scripts/analyze_benchmark.py` (sus
   diccionarios de rótulos en español de A-close-5; asignados el 2026-10-14),
   `residency.py`, `topology.py`, `llamaswap_api.py`, `llamaswap_config.py`, `matrix.py`, `turn.py`
-  y `daemon.py` (mensajes de consola), `resources/i18n/{es,en}/{cli,argparse,doctor}.json`,
+  y `daemon.py` (mensajes de consola), `recompute.py`, `probes.py`, `deprecations.py` y
+  `entrypoint.py` (sus mensajes; asignados por B0 el 2026-10-14),
+  `resources/i18n/{es,en}/{cli,argparse,doctor}.json`,
   `tests/test_wiki.py`, los tests nuevos `tests/test_cli_english.py` (incluye
   `test_argparse_msgids_covered`, D8) y `tests/test_doctor_english.py`; en CI, `ci.yml` y
   `scripts/ci_gate.py`, después de B0 y para añadir el trabajo `cli-python-matrix` junto con el
@@ -1106,7 +1176,8 @@ Es **una sola ola**, la única dueña de `server.py` en el frente B, con dos lot
 B2b), cada uno con su commit y su PR. Los dos salen en la **misma versión**.
 
 - **Posee la ola entera:** `server.py`, `failures.py` (etiquetas, con `t_lang` para D6),
-  `chains.py` (`describe`), `sections.py` (aviso), `resources/i18n/{es,en}/{mcp,tools}.json`,
+  `chains.py` (`describe`), `sections.py` (aviso), `questions.py` (textos de las preguntas al
+  cliente; asignado por B0 el 2026-10-14), `resources/i18n/{es,en}/{mcp,tools}.json`,
   `tests/data/uncatalogued_pending/mcp.json`, los tests nuevos `tests/test_mcp_english.py` y
   `tests/test_tool_contract.py`, `scripts/data/measurement_boundaries.json` (nace),
   `docs/wiki/Configuration.md` (solo `:221-234`, el contrato, y la entrada de `LOCAL_DELEGATE_OUTPUT_LANGUAGE`), `tests/fixtures/lang_sample/` (D10)
@@ -1179,7 +1250,10 @@ B2b), cada uno con su commit y su PR. Los dos salen en la **misma versión**.
   los dos idiomas), 033 (prosa tal cual), 034 (humo del panel) y 043 (fixture de `locale` de
   Playwright).
 - **Posee:** `web/metrics.py` (HTML, JS, inyección de los dos catálogos `panel.*` y `?lang=` de
-  D6), `resources/i18n/{es,en}/panel.json`, `tests/data/uncatalogued_pending/panel.json`,
+  D6), `quota.py`, `valuation.py` y `attribution.py` (textos que llegan al panel por
+  `/api/stats`; asignados por B0 el 2026-10-14), el escáner del panel del guardián de REQ-045
+  (`tests/test_no_uncatalogued_text.py`, solo esa función), `resources/i18n/{es,en}/panel.json`,
+  `tests/data/uncatalogued_pending/panel.json`,
   `tests/test_dashboard_ui.py` (usa el fixture de `locale` de B0 y parametriza por idioma),
   `tests/test_dashboard_js.py` y `tests/test_metrics.py` (`?lang=`). No toca `conftest.py`, que es
   de B0.
@@ -1410,7 +1484,7 @@ meter nada de las olas a medio hacer.
 | 015 | `pytest --collect-only -q` antes de A0 y al final | `evidence/A0/collect.txt` y `evidence/A-close/collect.txt` |
 | 016 | `python scripts/detect_spanish_names.py --json` al cerrar A y al cerrar el cambio | `evidence/A-close/detector.json` y `evidence/close/detector.json` |
 | 017 | suite completa; pasada en vivo de las 11 tools en una ventana de prueba con la 0.35.0 candidata y con la 0.36.0 candidata | `evidence/live-035/tools.md` y `evidence/live-036/tools.md`, con los ids de ventana |
-| 018 | `tests/test_language.py` (9 casos + implementación única) | log; mutante en `waves/B0.md` |
+| 018 | `tests/test_language.py` (9 casos + implementación única) | log; mutante en `waves/B0a.md` |
 | 019 | tests de la gramática y del aviso; `doctor` y `local_status` | log; salida en vivo |
 | 020 | Playwright: selector, persistencia, valor inicial y dos visitantes | log de Playwright |
 | 021 | `test_cli_english.py` (`--help` es/en sin mezcla) | log; `evidence/B1/help-es.txt` y `help-en.txt` |
@@ -1435,7 +1509,7 @@ meter nada de las olas a medio hacer.
 | 040 | diff de CHANGELOG, README y wiki en los PR de release 0.35.0 y 0.36.0 | enlaces a los PR |
 | 041 | fichero de fronteras; test de hash actual; test de dos máquinas (`usage` y telemetría) | log |
 | 042 | comparación de EOL sobre todo el diff, con los renombres seguidos (regla 6) | `evidence/<ola>/eol-check.txt` |
-| 043 | doble corrida es/en; controles sin el fixture de variable, sin el de `locale` y con un `language.json` falso | `evidence/B0/pytest-en.log` y `pytest-es.log`; CI (ubuntu, `LANG=C.UTF-8`) |
+| 043 | doble corrida es/en; controles sin el fixture de variable, sin el de `locale` y con un `language.json` falso | `evidence/B0a/pytest-en.log` y `pytest-es.log`; CI (ubuntu, `LANG=C.UTF-8`) |
 | 044 | tests del detector; auditoría del léxico | `evidence/A0/lexicon-audit.csv` (semilla y error) |
 | 045 | guardián con la lista de pendientes vacía al cerrar B; test de excepciones | log; `tests/data/uncatalogued_pending/*.json` vacíos |
 | 046 | comando de P-4 documentado, ejecutado tras A4 y tras A10a | `evidence/A4/` y `evidence/A10a/p4-command.txt`; notas fechadas y entrada del backlog |
@@ -1500,7 +1574,7 @@ paridad, `uv tool install`, `uv sync`, build y capturas. Nunca dos a la vez en t
 | **La Mac con el formato viejo** escribe `usage`, telemetría y `enfriamiento-eventos` en español durante meses | Lectura dual para siempre (REQ-006); escenario de la Mac como test con los ficheros mezclados; la frontera por versión y hash (REQ-041) evita que sus filas caigan en el tramo equivocado. La Mac la actualiza el usuario: tras la 0.35.0 se le recuerda que `update` repone los hooks. |
 | **P-4 abierta** hasta ~2026-12-14 | `medir_enfriamiento.py` lee los dos formatos desde A3 (valores) y A4 (ficheros), en el mismo PR que los cambia. El comando documentado se ejecuta y se guarda en A3, A4 y A10a; el envoltorio de REQ-046 vive hasta cerrar P-4 y su retirada queda en el backlog. Recordatorio para el informe: lo esperable de P-4 es «no concluyente». |
 | **Hooks nuevos con daemon viejo** (y al revés) | Los hooks nuevos leen los dos ficheros de enfriamiento; el daemon nuevo escribe los dos (excepción) y lee los temporales con los dos nombres; `update` reinicia el daemon. |
-| **CodeQL** (ciclos de import aunque sean diferidos, `ctypes`, parche de argparse, cookie) | `i18n.py` solo importa stdlib y `hook_common`; `legacy_names.py` y `deprecations.py` no importan nada del paquete. Los avisos se arreglan, no se descartan. Se mira `gh pr checks`, no `gh run list`. |
+| **CodeQL** (ciclos de import aunque sean diferidos, `ctypes`, parche de argparse, cookie) | `i18n.py` solo importa stdlib, `config` (para `config.LOG_DIR`) y `hook_common`, y `config` no importa `i18n`; `legacy_names.py` y `deprecations.py` no importan nada del paquete. Los avisos se arreglan, no se descartan. Se mira `gh pr checks`, no `gh run list`. |
 | **Ola A5 demasiado grande para revisar** | Partición prevista (A5a/b/c, y A5b-1/A5b-2 si pasa de 2 500 referencias). |
 | **Traducciones de `local_translate` que rompen `{}` o identificadores** (225 cadenas con identificadores embebidos) | Revisión humana de cada lote, más el guardián de paridad de REQ-031 (marcadores e identificadores entre comillas invertidas iguales). |
 | **El guardián de REQ-045 se esquiva clasificando de menos** | La lista de contextos se declara en el guardián, cada excepción lleva su motivo y un test de que ninguna excepción contiene prosa. |
@@ -1566,7 +1640,7 @@ paridad, `uv tool install`, `uv sync`, build y capturas. Nunca dos a la vez en t
 | 042 | todas | `eol-check.txt` sobre todo el diff, con los renombres seguidos |
 | 043 | B0 (fixtures, incluido el de `locale`; B4 lo usa) | doble corrida; trabajo `test-lang-es` de `ci.yml`, vigilado por `ci-gate`; controles |
 | 044 | A0 | detector, léxico y auditoría |
-| 045 | B0 (nace) → B1–B5 (se vacía) | lista de pendientes vacía |
+| 045 | B0b (nace) → B1–B5 (se vacía) | lista de pendientes vacía |
 | 046 | A4, A10a | comando de P-4; nota fechada; backlog |
 | 047 | B0 (lectura), B5 (escritura) | tests con origen; en vivo |
 
@@ -1598,7 +1672,7 @@ Son 47 de 47.
 10. **Armazón de argparse (REQ-021).** Parche de `argparse._`/`ngettext` en el proceso del CLI,
     con los msgid sacados del argparse en ejecución y CI en todas las versiones de Python (D8).
 11. **Cuándo se mezcla B respecto de A (REQ-035).** Tras A10b, todas. B0 se desarrolla antes y se
-    rebasa. Orden: B0 → B1 → B2 → (B3 ∥ B4) → B5 (sección 1.4).
+    rebasa. Orden: B0a → B0b → B1 → B2 → (B3 ∥ B4) → B5 (sección 1.4).
 
 ---
 

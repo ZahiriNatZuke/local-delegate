@@ -1,0 +1,248 @@
+## M1 pasos 1↔2 (la preferencia gana a la variable)
+fichero: src/local_delegate/resources/hooks/hook_common.py
+test: tests/test_language.py::test_case_8_the_variable_wins_over_the_preference
+resultado: 1 failed in 2.95s
+E   AssertionError: assert ('es', 'preference') == ('en', 'variable')
+E     
+E     At index 0 diff: 'es' != 'en'
+E     Use -v to get more diff
+FAILED tests/test_language.py::test_case_8_the_variable_wins_over_the_preference
+
+## M2 pasos 2↔3 (el sistema gana a la preferencia)
+fichero: src/local_delegate/resources/hooks/hook_common.py
+test: tests/test_language.py::test_case_7_the_preference_wins_over_the_system
+resultado: 1 failed in 3.03s
+E   AssertionError: assert ('en', 'system') == ('es', 'preference')
+E     
+E     At index 0 diff: 'en' != 'es'
+E     Use -v to get more diff
+FAILED tests/test_language.py::test_case_7_the_preference_wins_over_the_system
+
+## M3 se ignora LANGUAGE
+fichero: src/local_delegate/resources/hooks/hook_common.py
+test: tests/test_language.py::test_case_1_language_list_wins_over_a_declared_lang
+resultado: 1 failed in 0.24s
+E   AssertionError: assert ('en', 'system') == ('es', 'system')
+E     
+E     At index 0 diff: 'en' != 'es'
+E     Use -v to get more diff
+FAILED tests/test_language.py::test_case_1_language_list_wins_over_a_declared_lang
+
+## M4 LANGUAGE manda aunque el locale no esté declarado
+fichero: src/local_delegate/resources/hooks/hook_common.py
+test: tests/test_language.py::test_case_2_language_list_is_ignored_when_the_locale_is_undeclared
+resultado: 1 failed in 0.22s
+E   AssertionError: assert ('es', 'system') == ('en', 'fallback')
+E     
+E     At index 0 diff: 'es' != 'en'
+E     Use -v to get more diff
+FAILED tests/test_language.py::test_case_2_language_list_is_ignored_when_the_locale_is_undeclared
+
+## M5 LANG antes que LC_ALL
+fichero: src/local_delegate/resources/hooks/hook_common.py
+test: tests/test_language.py::test_case_3_lc_all_wins_over_lang
+resultado: 1 failed in 0.22s
+E   AssertionError: assert ('es', 'system') == ('en', 'system')
+E     
+E     At index 0 diff: 'es' != 'en'
+E     Use -v to get more diff
+FAILED tests/test_language.py::test_case_3_lc_all_wins_over_lang - AssertionE...
+
+## M6 C fuera de los no declarados
+fichero: src/local_delegate/resources/hooks/hook_common.py
+test: tests/test_language.py::test_case_4_c_utf8_counts_as_undeclared
+resultado: 3 failed, 1 passed in 0.23s
+E   AssertionError: assert ('en', 'system') == ('en', 'fallback')
+E     
+E     At index 1 diff: 'system' != 'fallback'
+E     Use -v to get more diff
+E   AssertionError: assert ('en', 'system') == ('en', 'fallback')
+E     
+E     At index 1 diff: 'system' != 'fallback'
+E     Use -v to get more diff
+
+## M7 Windows mira el formato regional
+fichero: src/local_delegate/resources/hooks/hook_common.py
+test: tests/test_language.py::test_case_5_windows_uses_the_interface_not_the_regional_format
+resultado: 1 failed in 0.21s
+E   AssertionError: assert 'es_ES' == 'en_US'
+E     
+E     - en_US
+E     + es_ES
+FAILED tests/test_language.py::test_case_5_windows_uses_the_interface_not_the_regional_format
+
+## M8 Windows lee LANG
+fichero: src/local_delegate/resources/hooks/hook_common.py
+test: tests/test_language.py::test_case_6_windows_ignores_lang_from_git_bash
+resultado: 1 failed in 0.21s
+E   AssertionError: assert ('en', 'system') == ('es', 'system')
+E     
+E     At index 0 diff: 'en' != 'es'
+E     Use -v to get more diff
+FAILED tests/test_language.py::test_case_6_windows_ignores_lang_from_git_bash
+
+## M9 variable no válida tomada como inglés
+fichero: src/local_delegate/resources/hooks/hook_common.py
+test: tests/test_language.py::test_case_9_an_invalid_variable_is_ignored_with_a_warning
+resultado: 1 failed in 0.21s
+E   AssertionError: assert ('en', 'variable') == ('es', 'system')
+E     
+E     At index 0 diff: 'en' != 'es'
+E     Use -v to get more diff
+FAILED tests/test_language.py::test_case_9_an_invalid_variable_is_ignored_with_a_warning
+
+## M10 gramática sin región numérica
+fichero: src/local_delegate/resources/hooks/hook_common.py
+test: tests/test_language.py::test_the_grammar_of_the_variable
+resultado: 1 failed, 13 passed in 0.24s
+E   AssertionError: assert None == 'es'
+E    +  where None = <function parse_language>('es-419')
+E    +    where <function parse_language> = hook_common.parse_language
+FAILED tests/test_language.py::test_the_grammar_of_the_variable[es-419-es] - ...
+
+## M11 «empieza por es» literal
+fichero: src/local_delegate/resources/hooks/hook_common.py
+test: tests/test_language.py::test_estonian_does_not_start_with_es
+resultado: 1 failed in 0.21s
+E   AssertionError: assert ('es', 'system') == ('en', 'system')
+E     
+E     At index 0 diff: 'es' != 'en'
+E     Use -v to get more diff
+FAILED tests/test_language.py::test_estonian_does_not_start_with_es - Asserti...
+
+## M12 current() con el directorio del hook
+fichero: src/local_delegate/i18n.py
+test: tests/test_language.py::test_current_reads_the_preference_of_config_log_dir
+resultado: 1 failed in 0.21s
+E   AssertionError: assert ('es', 'system') == ('en', 'preference')
+E     
+E     At index 0 diff: 'es' != 'en'
+E     Use -v to get more diff
+FAILED tests/test_language.py::test_current_reads_the_preference_of_config_log_dir
+
+## M13 reset() no olvida el idioma
+fichero: src/local_delegate/i18n.py
+test: tests/test_language.py::test_current_is_cached_until_reset
+resultado: 1 failed in 0.21s
+E   AssertionError: assert 'es' == 'en'
+E     
+E     - en
+E     + es
+FAILED tests/test_language.py::test_current_is_cached_until_reset - Assertion...
+
+## M14 ngettext siempre en singular
+fichero: src/local_delegate/i18n.py
+test: tests/test_language.py::test_argparse_ngettext_picks_the_form_by_n
+resultado: 1 failed in 0.21s
+E   AssertionError: assert 'un argumento' == 'varios argumentos'
+E     
+E     - varios argumentos
+E     + un argumento
+FAILED tests/test_language.py::test_argparse_ngettext_picks_the_form_by_n - A...
+
+## M15 OUTPUT_LANGUAGE admite 41
+fichero: src/local_delegate/config.py
+test: tests/test_language.py::test_output_language_is_validated
+resultado: 1 failed, 10 passed in 0.23s
+E   AssertionError: assert ('xxxxxxxxxxx...xxxxxx', None) == ('', 'too_long')
+E     
+E     At index 0 diff: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' != ''
+E     Use -v to get more diff
+FAILED tests/test_language.py::test_output_language_is_validated[xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx--too_long]
+
+## M16 OUTPUT_LANGUAGE admite Cf
+fichero: src/local_delegate/config.py
+test: tests/test_language.py::test_output_language_is_validated
+resultado: 1 failed, 10 passed in 0.24s
+E   AssertionError: assert ('fr\u200b', None) == ('', 'control_chars')
+E     
+E     At index 0 diff: 'fr\u200b' != ''
+E     Use -v to get more diff
+FAILED tests/test_language.py::test_output_language_is_validated[fr\u200b--control_chars]
+
+## M17 sin registro de LOCAL_DELEGATE_LANG
+fichero: src/local_delegate/config.py
+test: tests/test_environment_isolation.py::test_the_variable_inventory_is_not_empty
+resultado: 1 failed in 0.21s
+E   AssertionError: assert 'LOCAL_DELEGATE_LANG' in frozenset({'LD_HOOK_ENABLED', 'LD_HOOK_READ_BLOCK', 'LD_HOOK_READ_BLOQUEAR', 'LD_HOOK_READ_ENABLED', 'LD_HOOK_READ_INTERRUPTOR', 'LD_HOOK_READ_STRONG_KB', ...})
+E    +  where frozenset({'LD_HOOK_ENABLED', 'LD_HOOK_READ_BLOCK', 'LD_HOOK_READ_BLOQUEAR', 'LD_HOOK_READ_ENABLED', 'LD_HOOK_READ_INTERRUPTOR', 'LD_HOOK_READ_STRONG_KB', ...}) = config.ENVIRONMENT_VARIABLES
+FAILED tests/test_environment_isolation.py::test_the_variable_inventory_is_not_empty
+
+## M18 el fixture fija otro idioma
+fichero: tests/conftest.py
+test: tests/test_environment_isolation.py::test_the_suite_runs_without_package_variables_defined
+resultado: 1 failed in 0.21s
+E   AssertionError: assert {'LOCAL_DELEG..._without_pa0'} == {'LOCAL_DELEG..._without_pa0'}
+E     
+E     Omitting 1 identical items, use -vv to show
+E     Differing items:
+E     {'LOCAL_DELEGATE_LANG': 'en'} != {'LOCAL_DELEGATE_LANG': 'es'}
+E     Use -v to get more diff
+FAILED tests/test_environment_isolation.py::test_the_suite_runs_without_package_variables_defined
+
+## M19 segunda lectura de LANG en cli.py
+NO APLICADO: el texto original aparece 0 veces
+
+## M20 sin LOCAL_DELEGATE_LOG_DIR en el fixture (REQ-043 b)
+fichero: tests/conftest.py
+test: tests/test_language.py::test_a_hook_subprocess_uses_the_suite_data_dir
+resultado: 1 failed in 0.31s
+E   AssertionError: assert 'en' == 'es'
+E     
+E     - es
+E     + en
+FAILED tests/test_language.py::test_a_hook_subprocess_uses_the_suite_data_dir
+
+## M21 traducción borrada en en/common.json
+fichero: src/local_delegate/resources/i18n/en/common.json
+test: tests/test_i18n_parity.py::test_each_surface_has_parity
+resultado: 1 failed in 0.21s
+E   AssertionError: common.language.source.system: falta en en
+E   assert ['common.lang... falta en en'] == []
+E     
+E     Left contains one more item: 'common.language.source.system: falta en en'
+E     Use -v to get more diff
+FAILED tests/test_i18n_parity.py::test_each_surface_has_parity[common] - Asse...
+
+## M22 new_page sin locale
+fichero: tests/conftest.py
+test: tests/test_language.py::test_new_page_uses_spanish_by_default
+resultado: 1 failed in 0.21s
+E   AssertionError: assert {'viewport': ...height': 600}} == {'locale': 'e...height': 600}}
+E     
+E     Omitting 1 identical items, use -vv to show
+E     Right contains 1 more item:
+E     {'locale': 'es-ES'}
+E     Use -v to get more diff
+FAILED tests/test_language.py::test_new_page_uses_spanish_by_default - Assert...
+
+## M23 el escáner de hooks no ve env.get
+fichero: tests/test_environment_isolation.py
+test: tests/test_environment_isolation.py::test_every_variable_the_hooks_read_is_declared_in_config
+resultado: 1 failed in 0.22s
+E   AssertionError: {'hook_common.py': {'LD_HOOK_ENABLED', 'LD_HOOK_READ_BLOCK', 'LD_HOOK_READ_BLOQUEAR', 'LD_HOOK_READ_INTERRUPTOR', 'LD_...ABLED', 'LD_HOOK_READ_STRONG_KB', 'LD_HOOK_READ_SUGGEST_KB'}, 'suggest_delegate_shell.py': {'LD_HOOK_READ_SUGGEST_KB'}}
+E   assert 'LOCAL_DELEGATE_LANG' in {'LD_HOOK_ENABLED', 'LD_HOOK_READ_BLOCK', 'LD_HOOK_READ_BLOQUEAR', 'LD_HOOK_READ_INTERRUPTOR', 'LD_HOOK_READ_SWITCH_FILE', 'LD_HOOK_TELEMETRY_LOG', ...}
+E    +  where {'LD_HOOK_ENABLED', 'LD_HOOK_READ_BLOCK', 'LD_HOOK_READ_BLOQUEAR', 'LD_HOOK_READ_INTERRUPTOR', 'LD_HOOK_READ_SWITCH_FILE', 'LD_HOOK_TELEMETRY_LOG', ...} = <built-in method get of dict object>('hook_common.py', set())
+E    +    where <built-in method get of dict object> = {'hook_common.py': {'LD_HOOK_ENABLED', 'LD_HOOK_READ_BLOCK', 'LD_HOOK_READ_BLOQUEAR', 'LD_HOOK_READ_INTERRUPTOR', 'LD_...ABLED', 'LD_HOOK_READ_STRONG_KB', 'LD_HOOK_READ_SUGGEST_KB'}, 'suggest_delegate_shell.py': {'LD_HOOK_READ_SUGGEST_KB'}}.get
+E    +    and   set() = set()
+FAILED tests/test_environment_isolation.py::test_every_variable_the_hooks_read_is_declared_in_config
+
+## M24 test-lang-es en ci.yml y no en el gate
+fichero: scripts/ci_gate.py
+test: tests/test_ci_gate.py::test_the_expected_jobs_are_exactly_those_of_ci_yml
+resultado: 1 failed in 0.22s
+E   AssertionError: assert {'install-smo...latest)', ...} == {'install-smo...dows-latest)'}
+E     
+E     Extra items in the left set:
+E     'test-lang-es'
+E     Use -v to get more diff
+FAILED tests/test_ci_gate.py::test_the_expected_jobs_are_exactly_those_of_ci_yml
+
+## M19 segunda lectura de LANG en cli.py
+resultado: 1 failed in 0.49s
+E   AssertionError: Lecturas del idioma del sistema fuera de `hook_common.resolve_language`: ['cli.py:23 LANG']. Usa `i18n.current()` (paquete) o `hook_common.resolve_language` (hooks).
+E   assert ['cli.py:23 LANG'] == []
+E     
+E     Left contains one more item: 'cli.py:23 LANG'
+E     Use -v to get more diff
+FAILED tests/test_environment_isolation.py::test_only_resolve_language_reads_the_system_language

@@ -13,7 +13,11 @@ from pathlib import Path
 
 import pytest
 
-from local_delegate import config, install
+from local_delegate import config, i18n, install
+
+#: Idioma con el que corre la suite (REQ-043): los asserts en español valen en cualquier máquina.
+#: Los tests de inglés y los de detección lo sobrescriben con su `monkeypatch`.
+SUITE_LANGUAGE = "es"
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -34,6 +38,9 @@ def env_without_package_variables():
     with pytest.MonkeyPatch.context() as mp:
         for name in config.ENVIRONMENT_VARIABLES:
             mp.delenv(name, raising=False)
+        # La única que se fija en vez de quitarse: sin ella, el idioma saldría del sistema de quien
+        # corre la suite (REQ-043).
+        mp.setenv("LOCAL_DELEGATE_LANG", SUITE_LANGUAGE)
         importlib.reload(config)
         yield
     importlib.reload(config)  # deja el proceso como estaba para lo que venga después
@@ -41,9 +48,18 @@ def env_without_package_variables():
 
 @pytest.fixture(autouse=True)
 def isolate_runtime_logs(tmp_path, monkeypatch):
-    """Evita que mocks de tests contaminen los logs reales del usuario."""
+    """Evita que mocks de tests contaminen los logs reales del usuario.
+
+    También en el entorno (REQ-043 b): los hooks lanzados como subproceso resuelven su directorio
+    de datos por su cuenta (`hook_common.log_dir`), y sin la variable leerían el `language.json`
+    real del usuario. Y se olvida el idioma cacheado, que depende de `config.LOG_DIR`.
+    """
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    monkeypatch.setenv("LOCAL_DELEGATE_LOG_DIR", str(tmp_path))
+    i18n.reset()
+    yield
+    i18n.reset()
 
 
 @pytest.fixture(autouse=True)
@@ -153,6 +169,24 @@ def real_daemon_down(request, monkeypatch, _rejecting_server):
     monkeypatch.setattr(
         "local_delegate.checks._llamaswap_daemon_destination", lambda: ("127.0.0.1", port, {})
     )
+
+
+@pytest.fixture
+def browser_locale() -> str:
+    """`locale` del navegador de los tests del panel (REQ-043): el panel elige idioma por el
+    navegador (REQ-020), no por la variable. Los tests de inglés lo sobrescriben con `en-US`."""
+    return "es-ES"
+
+
+@pytest.fixture
+def new_page(browser_locale):
+    """`browser.new_page(...)` con el `locale` del fixture de arriba, salvo que se pase otro."""
+
+    def make(browser, **kwargs):
+        kwargs.setdefault("locale", browser_locale)
+        return browser.new_page(**kwargs)
+
+    return make
 
 
 @pytest.fixture

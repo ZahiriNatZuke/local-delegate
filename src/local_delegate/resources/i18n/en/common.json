@@ -1,0 +1,12 @@
+{
+  "common.language.source.variable": "variable",
+  "common.language.source.preference": "preference",
+  "common.language.source.system": "system",
+  "common.language.source.fallback": "fallback",
+  "common.language.warning.invalid_variable": "`LOCAL_DELEGATE_LANG` is set to \"{value}\", which is not valid: use `es` or `en`, with or without a region.",
+  "common.language.warning.invalid_preference": "The preference file {path} has no valid language and is ignored.",
+  "common.language.warning.unreadable_preference": "The preference file {path} could not be read and is ignored.",
+  "common.output_language.source.output_variable": "output variable",
+  "common.output_language.warning.control_chars": "`LOCAL_DELEGATE_OUTPUT_LANGUAGE` contains line breaks or control characters and is ignored.",
+  "common.output_language.warning.too_long": "`LOCAL_DELEGATE_OUTPUT_LANGUAGE` is longer than {max} characters and is ignored."
+}

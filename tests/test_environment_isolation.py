@@ -10,7 +10,10 @@ from __future__ import annotations
 
 import ast
 import os
+import re
 from pathlib import Path
+
+from conftest import SUITE_LANGUAGE
 
 from local_delegate import config
 
@@ -29,15 +32,32 @@ def test_the_variable_inventory_is_not_empty():
     # de `config.py`. Si faltara, la suite heredaria el idioma de commit de la maquina y los tests
     # del prompt de `local_commit_msg` y de los corpus pasarian o fallarian segun quien los corra.
     assert "LOCAL_DELEGATE_COMMIT_LANGUAGE" in config.ENVIRONMENT_VARIABLES
+    # Las dos del idioma (REQ-019, REQ-028): la primera la lee `hook_common.resolve_language` con el
+    # entorno inyectado, y la segunda se lee al llamar. Sin registro, la suite heredaria el idioma
+    # de quien la corre.
+    assert "LOCAL_DELEGATE_LANG" in config.ENVIRONMENT_VARIABLES
+    assert "LOCAL_DELEGATE_OUTPUT_LANGUAGE" in config.ENVIRONMENT_VARIABLES
 
 
-def test_the_suite_runs_without_package_variables_defined():
-    """Ninguna variable que lea `config` puede estar definida mientras corre la suite."""
-    defined = sorted(n for n in config.ENVIRONMENT_VARIABLES if n in os.environ)
+#: Las que la suite fija a propósito en vez de quitarlas (REQ-043), con el valor que deben tener.
+def _pinned_by_the_suite(tmp_path: Path) -> dict[str, str]:
+    return {"LOCAL_DELEGATE_LANG": SUITE_LANGUAGE, "LOCAL_DELEGATE_LOG_DIR": str(tmp_path)}
+
+
+def test_the_suite_runs_without_package_variables_defined(tmp_path):
+    """Ninguna variable que lea `config` puede estar definida mientras corre la suite...
+
+    ...salvo las que la propia suite fija (REQ-043): el idioma, para que los asserts en español
+    valgan en cualquier máquina, y el directorio de datos, para que un hook lanzado como subproceso
+    no lea el `language.json` real del usuario. Esas tienen que valer exactamente lo fijado.
+    """
+    pinned = _pinned_by_the_suite(tmp_path)
+    defined = sorted(n for n in config.ENVIRONMENT_VARIABLES if n in os.environ and n not in pinned)
     assert defined == [], (
         f"El entorno de esta máquina se está colando en la suite: {defined}. "
         "La fixture `env_without_package_variables` de conftest.py debería haberlas quitado."
     )
+    assert {n: os.environ.get(n) for n in pinned} == pinned
 
 
 def _call_name(node: ast.Call) -> str | None:
@@ -75,7 +95,12 @@ def _variables_read_by_hooks(with_alias: bool = True) -> dict[str, set[str]]:
                     and target.attr == "environ"
                 )
                 is_getenv = node.func.attr == "getenv"
-                if (is_environ_get or is_getenv) and node.args:
+                # `env.get("LOCAL_DELEGATE_LANG")` de `resolve_language`, que recibe el entorno
+                # inyectado: solo cuenta con nuestro prefijo, que filtra los `.get` de otra cosa.
+                is_injected_env_get = (
+                    node.func.attr == "get" and isinstance(target, ast.Name) and target.id == "env"
+                )
+                if (is_environ_get or is_getenv or is_injected_env_get) and node.args:
                     first = node.args[0]
                     if isinstance(first, ast.Constant) and isinstance(first.value, str):
                         names.add(first.value)
@@ -112,6 +137,8 @@ def test_every_variable_the_hooks_read_is_declared_in_config():
     # umbral baja de 3 a 2 al retirarse `output_stats.py`, que era el tercer fichero que leía
     # variables propias; sigue cazando un escáner que devuelva vacío o casi.
     assert len(per_file) >= 2, f"el escáner no encontró casi nada: {per_file}"
+    # Y ve la variable de idioma, que `resolve_language` lee del entorno INYECTADO (`env.get`).
+    assert "LOCAL_DELEGATE_LANG" in per_file.get("hook_common.py", set()), per_file
 
     undeclared = {
         f"{file}:{name}"
@@ -190,3 +217,65 @@ def test_hooks_read_renamed_names_only_through_env_alias():
         if name in renamed
     }
     assert direct == set(), f"lectura directa de un nombre renombrado: {sorted(direct)}"
+
+
+# --- REQ-018 y plan D7: el idioma del sistema se lee en UN solo sitio ------------------------------
+
+#: Las únicas funciones que pueden mirar el idioma del sistema: la regla y sus dos piezas.
+_LANGUAGE_WHITELIST = {
+    "hook_common.py": {"resolve_language", "_system_language", "_windows_ui_language"}
+}
+_SYSTEM_LANGUAGE_VARIABLES = re.compile(r"^(LANG|LANGUAGE|LC_[A-Z]+)$")
+_SYSTEM_LANGUAGE_APIS = {
+    "GetUserDefaultUILanguage",
+    "getlocale",
+    "getdefaultlocale",
+    "windows_locale",
+}
+
+
+def _system_language_reads(root: Path) -> list[tuple[str, str, int, bool]]:
+    """(fichero, qué, línea, dentro de la lista blanca) de cada lectura del idioma del sistema."""
+    found = []
+    for file in sorted(root.rglob("*.py")):
+        if "vendor" in file.parts or "__pycache__" in file.parts:
+            continue
+        tree = ast.parse(file.read_text(encoding="utf-8"))
+        allowed = _LANGUAGE_WHITELIST.get(file.name, set())
+        inside: dict[int, bool] = {}
+        for func in ast.walk(tree):
+            if isinstance(func, ast.FunctionDef | ast.AsyncFunctionDef) and func.name in allowed:
+                for child in ast.walk(func):
+                    inside[id(child)] = True
+        for node in ast.walk(tree):
+            what = None
+            if (
+                isinstance(node, ast.Constant)
+                and isinstance(node.value, str)
+                and _SYSTEM_LANGUAGE_VARIABLES.match(node.value)
+            ):
+                what = node.value
+            elif isinstance(node, ast.Attribute) and node.attr in _SYSTEM_LANGUAGE_APIS:
+                what = node.attr
+            if what:
+                rel = file.relative_to(root).as_posix()
+                found.append((rel, what, node.lineno, inside.get(id(node), False)))
+    return found
+
+
+def test_only_resolve_language_reads_the_system_language():
+    """Ningún código del paquete ni de los hooks lee `LANG`, `LC_*`, `LANGUAGE` o la API de idioma
+    de Windows fuera de `hook_common.resolve_language` y sus dos piezas.
+
+    Una segunda lectura sería una segunda regla: el CLI y el daemon podrían discrepar del hook, y
+    en Windows `LANG` lo pone Git Bash (`en_US.UTF-8`) aunque la interfaz esté en español.
+    """
+    reads = _system_language_reads(Path(config.__file__).parent)
+    # Control: el escáner ve las lecturas legítimas; si no viera ninguna, pasaría en vacío.
+    whitelisted = {what for _file, what, _line, ok in reads if ok}
+    assert {"LANG", "LC_ALL", "LANGUAGE", "GetUserDefaultUILanguage"} <= whitelisted, whitelisted
+    outside = [f"{file}:{line} {what}" for file, what, line, ok in reads if not ok]
+    assert outside == [], (
+        f"Lecturas del idioma del sistema fuera de `hook_common.resolve_language`: {outside}. "
+        "Usa `i18n.current()` (paquete) o `hook_common.resolve_language` (hooks)."
+    )

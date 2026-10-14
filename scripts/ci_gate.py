@@ -94,6 +94,8 @@ EXPECTED_JOBS = (
     "test (macos-latest)",
     "secrets",
     "install-smoke",
+    # La suite entera con el sistema en español (REQ-043, ola B0a).
+    "test-lang-es",
 )
 
 # El plazo cubre COLA + EJECUCIÓN, que no es lo mismo que el `timeout-minutes` de un job: aquel
