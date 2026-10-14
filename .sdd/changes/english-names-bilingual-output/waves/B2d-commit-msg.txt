@@ -1,0 +1,14 @@
+docs(sdd): muestras en vivo de B2d con el commit en español, explain_code sin doctor ni benchmark y la muestra de idioma bloqueada (frente B, ola B2d)
+
+Quinto PR de B2 (plan.md «B2d»). Solo evidencia y registro: sin cambios
+de código ni de prompts. Ventana de prueba w-20261014T215251Z.
+
+- local_commit_msg sobre los diffs de B0a y B1a: español según el
+  detector, con 5 y 6 viñetas. Cumple.
+- local_explain_code sobre cli.py: lee la entrada entera (4 trozos) y
+  nombra llamaswap, pero omite doctor y benchmark. No cumple; la causa
+  está en el map-reduce, no en la lectura.
+- Muestra de idioma de respuesta (REQ-028, decisión 9): bloqueada. El
+  llama-swap local pide clave fuera del daemon y la decisión 5 manda
+  parar y preguntar. lang-sample.json queda con status blocked.
+- Registro en waves/B2d.md y salidas literales en evidence/B2d/live.md.
