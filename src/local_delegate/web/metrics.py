@@ -39,6 +39,7 @@ de /api/backend, una lectura de estado sin efectos).
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import socket
@@ -76,6 +77,16 @@ MAX_EVENTS = 5000  # tope de eventos servidos al cliente
 _MONTH_FILE_RE = re.compile(r"^usage-(\d{6})\.jsonl$")
 
 app = FastAPI(title="local-delegate metrics")
+logger = logging.getLogger(__name__)
+
+# Lo que ve el navegador cuando no se abre una vigía: un texto fijo por familia de fallo. El
+# detalle de la excepción va al log del daemon, nunca a la respuesta (CodeQL
+# py/stack-trace-exposure).
+WATCH_LIMIT = "el daemon ya tiene abiertas todas las vigías que admite; inténtalo en unos segundos"
+WATCH_REJECTED = "llama-swap contestó, pero no dejó abrir la vigía (detalle en el log del daemon)"
+WATCH_UNREACHABLE = (
+    "no se pudo hablar con llama-swap para abrir la vigía (detalle en el log del daemon)"
+)
 
 # {ruta: (mtime, size, filas)} — releer un archivo solo si cambió desde la última lectura.
 _FILE_CACHE: dict[str, tuple[float, int, list[dict]]] = {}
@@ -961,7 +972,14 @@ def llamaswap_watch_open():
     try:
         wid = llamaswap_api.watches.open(llamaswap_api.local_backend())
     except (llamaswap_api.QueryError, httpx2.HTTPError) as e:
-        return JSONResponse({"error": str(e) or type(e).__name__}, status_code=502)
+        logger.warning("no se abrió la vigía de llama-swap: %r", e)
+        if isinstance(e, llamaswap_api.TooManyWatches):
+            message = WATCH_LIMIT
+        elif isinstance(e, llamaswap_api.QueryError):
+            message = WATCH_REJECTED
+        else:
+            message = WATCH_UNREACHABLE
+        return JSONResponse({"error": message}, status_code=502)
     return JSONResponse({"id": wid})
 
 

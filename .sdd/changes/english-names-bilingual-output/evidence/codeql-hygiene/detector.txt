@@ -1,0 +1,10 @@
+[pesado] plaza plaza-1 tomada tras 0s: .venv/Scripts/python.exe scripts/detect_spanish_names.py --exceptions .sdd/changes/english-names-bilingual-output/rename-exceptions.md --json .sdd/changes/english-names-bilingual-output/evidence/codeql-hygiene/detector.json
+nombres en español (únicos por categoría y fichero): 723
+  file_name: 1
+  identifier: 8
+  js_identifier: 2
+  js_string: 9
+  string_key: 379
+  string_value: 324
+fuera de la lista de excepciones: 0
+palabras sin clasificar: 0

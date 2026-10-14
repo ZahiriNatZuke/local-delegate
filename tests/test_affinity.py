@@ -201,13 +201,13 @@ class _Thread(threading.Thread):
         super().__init__(daemon=True)
         self._call = (function, args, kwargs)
         self.result: object = None
-        self.error: BaseException | None = None
+        self.error: Exception | None = None
 
     def run(self) -> None:
         function, args, kwargs = self._call
         try:
             self.result = function(*args, **kwargs)
-        except BaseException as e:  # el test lo mira
+        except Exception as e:  # el test lo mira
             self.error = e
 
 
@@ -452,7 +452,7 @@ def test_reserve_shrinks_and_queue_is_rechecked_end_to_end(affinity, monkeypatch
         "_turn",
         turn.Turn(lambda _a, _b: False, tick=5.0, on_tick=server._refresh_topology),
     )
-    monkeypatch.setattr(server, "_turn_version", None)
+    monkeypatch.setattr(server._turn_version, "value", None)
     w2_granted = threading.Event()
     seen: dict[str, bool] = {}
 

@@ -17,7 +17,7 @@ import httpx2
 import pytest
 from fastapi.testclient import TestClient
 
-from local_delegate import config, cost, failures, legacy_names, server
+from local_delegate import config, cost, failures, legacy_names, llamaswap_api, server
 from local_delegate.web import metrics
 
 
@@ -1754,7 +1754,36 @@ def test_llamaswap_watch_that_cannot_open_is_502(monkeypatch):
     r = TestClient(metrics.app).post("/api/llamaswap/watch")
 
     assert r.status_code == 502
-    assert "401" in r.json()["error"]
+    assert r.json() == {"error": metrics.WATCH_REJECTED}
+
+
+@pytest.mark.parametrize(
+    ("failure", "message"),
+    [
+        (llamaswap_api.QueryError, metrics.WATCH_REJECTED),
+        (llamaswap_api.TooManyWatches, metrics.WATCH_LIMIT),
+        (httpx2.ConnectError, metrics.WATCH_UNREACHABLE),
+    ],
+    ids=["query_error", "too_many_watches", "http_error"],
+)
+def test_llamaswap_watch_502_does_not_expose_the_exception(monkeypatch, caplog, failure, message):
+    """CodeQL py/stack-trace-exposure: el texto de la excepción va al log del daemon, no al
+    navegador. El texto lleva un marcador único para que la comprobación no dependa de qué dice
+    cada excepción de verdad."""
+    marker = "internal-detail-7f3a9c"
+
+    def fails(_backend):
+        raise failure(marker)
+
+    monkeypatch.setattr(llamaswap_api.watches, "open", fails)
+
+    with caplog.at_level("WARNING", logger=metrics.logger.name):
+        r = TestClient(metrics.app).post("/api/llamaswap/watch")
+
+    assert r.status_code == 502
+    assert marker not in r.text
+    assert r.json() == {"error": message}
+    assert marker in caplog.text, "guarda: el detalle sí llegó al log"
 
 
 # --- Las pruebas fuera de las métricas (test-windows-out-of-metrics, T4) -------------------------

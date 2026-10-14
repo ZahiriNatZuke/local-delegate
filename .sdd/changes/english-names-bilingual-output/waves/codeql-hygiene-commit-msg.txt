@@ -1,0 +1,32 @@
+fix(codeql): las 16 alertas abiertas de code scanning, arregladas en el código (higiene de CodeQL)
+
+Deja en 0 las alertas abiertas de main (dc971f4) sin descartar ninguna,
+como pide el plan §1.4. Sin cambio de comportamiento salvo el texto del
+502 de la vigía.
+
+- py/stack-trace-exposure (web/metrics.py): POST /api/llamaswap/watch
+  ya no devuelve str(e). Responde un texto fijo por familia
+  (WATCH_LIMIT, WATCH_REJECTED, WATCH_UNREACHABLE) y el detalle va a
+  logger.warning. Nueva TooManyWatches(QueryError) en llamaswap_api
+  para que el CLI siga diciendo que es el tope de vigías. No hay otro
+  endpoint con la excepción en la respuesta.
+- py/empty-except (6): suppress con el mismo tipo que antes y su motivo
+  en server.py (3), residency.py, hook_common.py (solo stdlib) y
+  tests/fake_llama_server.py.
+- py/unused-global-variable (4): la caché de topology, la siembra de
+  _pace_references y _turn_version pasan a un pequeño objeto de estado
+  (_Cache, _PaceCache, _TurnVersion) en vez de global.
+- py/mixed-returns (server.py): _post_chat acaba con un raise
+  AssertionError en el final inalcanzable, sin None implícito.
+- py/catch-base-exception (3): los hilos de test_turn,
+  test_turn_daemon y test_affinity atrapan Exception.
+- py/import-and-import-from: test_slowness usa backend_mock.<función>.
+- Tests: nuevo test_llamaswap_watch_502_does_not_expose_the_exception
+  (3 casos); ajustados el del 401 y test_residency_cli. El mutante que
+  vuelve a str(e) hace fallar los 4 por el assert esperado.
+- Léxico del detector: caplog y expose (en).
+
+waves/codeql-hygiene.md: tabla alerta -> cambio -> por qué no cambia.
+
+2620 tests; suite 2618 passed, 2 skipped; ruff limpio. Detector con la
+lista: 0 fuera de la lista y 0 palabras sin clasificar.

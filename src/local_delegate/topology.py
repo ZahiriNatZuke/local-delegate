@@ -476,8 +476,20 @@ def _interpret(data: Any, path: str, version: int) -> Snapshot | NoTopology:
 
 
 _lock = threading.Lock()
-_cache: tuple[tuple[str, int, int], Snapshot | NoTopology] | None = None
-_version = 0
+
+
+@dataclass
+class _Cache:
+    """La ultima foto leida con su clave (ruta, mtime, tamano), y la version que lleva.
+
+    `version` solo sube: `_forget()` vacia la foto pero no la reinicia.
+    """
+
+    entry: tuple[tuple[str, int, int], Snapshot | NoTopology] | None = None
+    version: int = 0
+
+
+_cache = _Cache()
 
 
 def snapshot() -> Snapshot | NoTopology:
@@ -488,7 +500,6 @@ def snapshot() -> Snapshot | NoTopology:
     lo vuelve a intentar aunque la `mtime` no haya cambiado. Un YAML mal escrito si se cachea:
     no cambia hasta que cambie el fichero.
     """
-    global _cache, _version
     path = config.llamaswap_config_path()
     if not path:
         return NoTopology(NO_CONFIG)
@@ -501,21 +512,20 @@ def snapshot() -> Snapshot | NoTopology:
         return NoTopology(UNREADABLE, f"{type(e).__name__}: {e}")
     key = (path, st.st_mtime_ns, st.st_size)
     with _lock:
-        if _cache is not None and _cache[0] == key:
-            return _cache[1]
-        result, transient = _read(path, _version + 1)
+        if _cache.entry is not None and _cache.entry[0] == key:
+            return _cache.entry[1]
+        result, transient = _read(path, _cache.version + 1)
         if transient:
             return result
-        _version += 1
-        _cache = (key, result)
+        _cache.version += 1
+        _cache.entry = (key, result)
         return result
 
 
 def _forget() -> None:
     """Vacia la cache de `snapshot()` (para los tests)."""
-    global _cache
     with _lock:
-        _cache = None
+        _cache.entry = None
 
 
 # Nombres públicos de las mismas funciones, para `residency` (T11), que edita la config con las

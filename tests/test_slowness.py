@@ -18,7 +18,6 @@ from pathlib import Path
 import backend_mock
 import httpx2
 import pytest
-from backend_mock import chat_response, llama_timings
 from test_fallback import CODE, LONG, _failure, _text
 
 from local_delegate import config, pace, server
@@ -102,12 +101,16 @@ def free_ram(monkeypatch):
 
 def _slow_answer(clock: _Clock | None = None, wait_s: float = 47.0):
     """El backend: espera `wait_s` (reloj inyectado), luego genera 150 tokens en 10 s (15 tok/s)."""
-    timings = llama_timings(prompt_n=2500, prompt_ms=500.0, predicted_n=150, predicted_ms=10_000.0)
+    timings = backend_mock.llama_timings(
+        prompt_n=2500, prompt_ms=500.0, predicted_n=150, predicted_ms=10_000.0
+    )
 
     def respond(_request):
         if clock is not None:
             clock.offset_s += wait_s + 10.5
-        return chat_response("resumen", timings=timings, tokens_in=2500, tokens_out=150)
+        return backend_mock.chat_response(
+            "resumen", timings=timings, tokens_in=2500, tokens_out=150
+        )
 
     backend_mock.post(URL).mock(side_effect=respond)
 
@@ -162,7 +165,7 @@ def test_without_timings_no_slowness_field(reload_config, tmp_path, free_ram):
     """Mutante (b): poner 0 cuando no hay `timings` → falla `assert "tok_s" not in line`."""
     reload_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
     _seed_log(tmp_path)
-    backend_mock.post(URL).mock(return_value=chat_response("resumen", tokens_out=150))
+    backend_mock.post(URL).mock(return_value=backend_mock.chat_response("resumen", tokens_out=150))
 
     server.local_summarize(text=_text(10_000))
 
@@ -178,7 +181,7 @@ def test_incomplete_timings_omit_what_depends_on_them(reload_config, tmp_path):
     reload_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
     timings = {"prompt_n": 1000, "prompt_ms": 500.0, "predicted_n": 150}
     backend_mock.post(URL).mock(
-        return_value=chat_response("resumen", timings=timings, tokens_out=150)
+        return_value=backend_mock.chat_response("resumen", timings=timings, tokens_out=150)
     )
 
     server.local_summarize(text=_text(10_000))
@@ -219,8 +222,12 @@ def test_chunked_operation_sums_every_real_call_including_a_hop(reload_config, t
     uno): 120 + 3 × 60 = 300.
     """
     reload_config()
-    long_ok = chat_response("uno", timings=llama_timings(prompt_ms=20.0, predicted_ms=100.0))
-    code_ok = chat_response("otro", timings=llama_timings(prompt_ms=10.0, predicted_ms=50.0))
+    long_ok = backend_mock.chat_response(
+        "uno", timings=backend_mock.llama_timings(prompt_ms=20.0, predicted_ms=100.0)
+    )
+    code_ok = backend_mock.chat_response(
+        "otro", timings=backend_mock.llama_timings(prompt_ms=10.0, predicted_ms=50.0)
+    )
     requested: list[str] = []
     long_answers = [long_ok, _failure(500)]
 
@@ -253,10 +260,12 @@ def test_a_useless_200_counts_its_inference(reload_config, tmp_path):
         200,
         json={
             "choices": [{"message": {"content": None}, "finish_reason": "stop"}],
-            "timings": llama_timings(prompt_ms=40.0, predicted_ms=60.0),
+            "timings": backend_mock.llama_timings(prompt_ms=40.0, predicted_ms=60.0),
         },
     )
-    code_ok = chat_response("resumen", timings=llama_timings(prompt_ms=10.0, predicted_ms=40.0))
+    code_ok = backend_mock.chat_response(
+        "resumen", timings=backend_mock.llama_timings(prompt_ms=10.0, predicted_ms=40.0)
+    )
 
     def respond(request):
         return useless if json.loads(request.content)["model"] == LONG else code_ok
@@ -280,14 +289,14 @@ def _useless_long_then_fast_code() -> list[str]:
         200,
         json={
             "choices": [{"message": {"content": None}, "finish_reason": "stop"}],
-            "timings": llama_timings(
+            "timings": backend_mock.llama_timings(
                 prompt_n=2500, prompt_ms=500.0, predicted_n=4096, predicted_ms=102_400.0
             ),
         },
     )
-    code_ok = chat_response(
+    code_ok = backend_mock.chat_response(
         "resumen",
-        timings=llama_timings(
+        timings=backend_mock.llama_timings(
             prompt_n=2500, prompt_ms=250.0, predicted_n=200, predicted_ms=2_000.0
         ),
         tokens_in=2500,
@@ -351,14 +360,14 @@ def test_chunked_hop_at_the_end_measures_only_the_answering_model(
     """
     reload_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
     _seed_log(tmp_path, model=CODE, speeds=(99.0, 101.0))
-    long_ok = chat_response(
+    long_ok = backend_mock.chat_response(
         "uno",
-        timings=llama_timings(prompt_ms=100.0, predicted_n=400, predicted_ms=10_000.0),
+        timings=backend_mock.llama_timings(prompt_ms=100.0, predicted_n=400, predicted_ms=10_000.0),
         tokens_out=400,
     )
-    code_ok = chat_response(
+    code_ok = backend_mock.chat_response(
         "otro",
-        timings=llama_timings(prompt_ms=50.0, predicted_n=200, predicted_ms=2_000.0),
+        timings=backend_mock.llama_timings(prompt_ms=50.0, predicted_n=200, predicted_ms=2_000.0),
         tokens_out=200,
     )
     long_answers = [long_ok, long_ok, long_ok, _failure(500)]

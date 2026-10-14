@@ -11,6 +11,7 @@ tamaño y banda. El log se activa con ``LD_HOOK_TELEMETRY_LOG``.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import os
@@ -254,12 +255,12 @@ def backend_available(*, ttl_s: float = 60.0, timeout_s: float = 0.3, marker: Pa
     """
     marker_file = marker or _health_path()
     now = time.time()
-    try:
+    # Una marca ausente, ilegible, corrupta o con campos raros no se interpreta: se ignora y se
+    # vuelve a sondear (son exactamente las excepciones que puede dar leerla y parsearla).
+    with contextlib.suppress(OSError, ValueError, KeyError, TypeError):
         data = json.loads(marker_file.read_text(encoding="utf-8"))
         if now - float(data["ts"]) < ttl_s:
             return bool(data["ok"])
-    except (OSError, ValueError, KeyError, TypeError):
-        pass
 
     available = _probe(timeout_s)
     try:

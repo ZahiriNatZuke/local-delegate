@@ -110,13 +110,13 @@ class _Thread(threading.Thread):
         super().__init__(name=name, daemon=True)
         self._call = (function, args, kwargs)
         self.result: object = None
-        self.error: BaseException | None = None
+        self.error: Exception | None = None
 
     def run(self) -> None:
         function, args, kwargs = self._call
         try:
             self.result = function(*args, **kwargs)
-        except BaseException as e:  # el test lo mira; un hilo no puede propagarlo
+        except Exception as e:  # el test lo mira; un hilo no puede propagarlo
             self.error = e
 
 
