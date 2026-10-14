@@ -1,0 +1,4 @@
+[pesado] plaza plaza-1 tomada tras 0s: env -u LOCAL_DELEGATE_COMMIT_LANGUAGE uv run python scripts/build_corpus.py affinity --check
+idioma del mensaje de commit del corpus: es
+  (LOCAL_DELEGATE_COMMIT_LANGUAGE=(sin definir) en este entorno: no se usa)
+ok

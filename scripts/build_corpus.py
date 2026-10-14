@@ -660,13 +660,19 @@ CONTROLS = (
 # --- Captura contra el codigo de produccion -----------------------------------------------------
 
 
-# Lo que la captura NO quita del entorno: el idioma del mensaje de commit (REQ-044) es parte del prompt
-# de produccion de `local_commit_msg`, y los casos de commit del corpus de afinidad tienen que llevar
-# el prompt con el idioma que tendra la maquina (`LOCAL_DELEGATE_COMMIT_LANGUAGE=es`), no el de un
-# entorno limpio. `config.commit_language()` lee al llamar, asi que no hace falta recargar `config`.
-# Con la variable puesta, el corpus que sale cambia: `main_affinity` imprime el idioma usado y
-# `affinity --check` tiene que correr con el mismo.
-PRESERVED_VARIABLES = frozenset({"LOCAL_DELEGATE_COMMIT_LANGUAGE"})
+# El idioma del mensaje de commit (REQ-044) es parte del prompt de produccion de `local_commit_msg`,
+# y `config.commit_language()` lo lee de `LOCAL_DELEGATE_COMMIT_LANGUAGE` al llamar. La captura NO
+# hereda esa variable del entorno de quien la corre: la fija al idioma con que se congelo cada
+# corpus. Antes se conservaba la del usuario, y `affinity --check` daba ok solo en una maquina con
+# `=es` puesta; sin ella, 40 diferencias en los prompts de sistema de los casos de commit (y el
+# `--check` del corpus F2, al reves: 2 diferencias CON la variable). Ninguno de los dos corpus
+# guarda el idioma, asi que va aqui, una constante por corpus. Cambiarla cambia el corpus medido.
+COMMIT_LANGUAGE_VARIABLE = "LOCAL_DELEGATE_COMMIT_LANGUAGE"
+# `benchmarks/catalogo-2026-09/`: congelado antes de REQ-044, sin variable (vacio = el idioma del
+# diff).
+F2_COMMIT_LANGUAGE = ""
+# `benchmarks/afinidad-2026-10/`: congelado con `es`, el idioma que tiene la PC en produccion.
+AFFINITY_COMMIT_LANGUAGE = "es"
 
 
 @dataclass
@@ -680,14 +686,20 @@ class Call:
 
 
 @contextlib.contextmanager
-def intercepted_production() -> Iterator[list[Call]]:
-    """Las tools reales, sin backend, sin log de uso y sin las variables del paquete."""
+def intercepted_production(commit_language: str = F2_COMMIT_LANGUAGE) -> Iterator[list[Call]]:
+    """Las tools reales, sin backend, sin log de uso y sin las variables del paquete.
+
+    `commit_language` es el idioma del corpus que se captura, no el del entorno: la variable del
+    idioma se fija a ese valor (vacio = sin variable) y se deja como estaba al salir.
+    """
     calls: list[Call] = []
     saved = {
         n: os.environ[n]
         for n in config.ENVIRONMENT_VARIABLES
-        if n in os.environ and n not in PRESERVED_VARIABLES
+        if n in os.environ and n != COMMIT_LANGUAGE_VARIABLE
     }
+    # Aparte de `saved`: se lee al llamar, asi que fijarla no obliga a recargar `config`.
+    saved_language = os.environ.get(COMMIT_LANGUAGE_VARIABLE)
 
     def run_chat(model, system, user, max_tokens, temperature, *, response_format=None, **_):
         calls.append(Call(model, system, user, max_tokens, temperature, response_format))
@@ -699,6 +711,10 @@ def intercepted_production() -> Iterator[list[Call]]:
         # y recargar desharia el LOG_DIR temporal de conftest y apuntaria al log real.
         for name in saved:
             del os.environ[name]
+        if commit_language:
+            os.environ[COMMIT_LANGUAGE_VARIABLE] = commit_language
+        else:
+            os.environ.pop(COMMIT_LANGUAGE_VARIABLE, None)
         if saved:
             importlib.reload(config)
         with (
@@ -712,6 +728,10 @@ def intercepted_production() -> Iterator[list[Call]]:
             yield calls
     finally:
         os.environ.update(saved)
+        if saved_language is None:
+            os.environ.pop(COMMIT_LANGUAGE_VARIABLE, None)
+        else:
+            os.environ[COMMIT_LANGUAGE_VARIABLE] = saved_language
         if saved:
             importlib.reload(config)
 
@@ -763,12 +783,20 @@ class Capture:
     user_template: str | None
 
 
-def capture_case(case: Case, path: Path, data: bytes, *, no_chunking: bool = False) -> Capture:
+def capture_case(
+    case: Case,
+    path: Path,
+    data: bytes,
+    *,
+    no_chunking: bool = False,
+    commit_language: str = F2_COMMIT_LANGUAGE,
+) -> Capture:
     """Con `no_chunking`, la tool sigue la ruta de UNA llamada aunque la entrada no quepa: es el
     prompt que necesita un sondeo de techo, que mide justo la mayor llamada unica que acepta el
-    modelo. Produccion no lo manda nunca asi; por eso se captura aparte."""
+    modelo. Produccion no lo manda nunca asi; por eso se captura aparte. `commit_language` es el
+    idioma con que se congelo el corpus (ver `AFFINITY_COMMIT_LANGUAGE`)."""
     text = normalized(data) if case.media_type == "text" else ""
-    with intercepted_production() as calls, tempfile.TemporaryDirectory() as tmp:
+    with intercepted_production(commit_language) as calls, tempfile.TemporaryDirectory() as tmp:
         # Los dos topes: el del rol (modelo principal de cada tool) y el del modelo (respaldos).
         unlimited = mock.patch.multiple(
             config, max_chars_for=lambda _model: 2**31, max_chars_for_role=lambda _role: 2**31
@@ -2442,8 +2470,13 @@ def build_affinity(
         sources[name] = data
         path = Path(tmp_dir.name) / name
         path.write_bytes(data)
-        capture = capture_case(case, path, data)
-        single = capture_case(case, path, data, no_chunking=True) if ceiling else None
+        language = AFFINITY_COMMIT_LANGUAGE
+        capture = capture_case(case, path, data, commit_language=language)
+        single = (
+            capture_case(case, path, data, no_chunking=True, commit_language=language)
+            if ceiling
+            else None
+        )
         return capture, single
 
     # 1. Las cinco tools mecanicas: casos nuevos, con su puntuador y sus referencias.
@@ -2682,9 +2715,15 @@ def main_affinity(argv: list[str]) -> int:
     parser.add_argument("--dry-run", action="store_true", help="no escribe nada, solo informa")
     args = parser.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
-    # El idioma de los prompts de commit sale del entorno (REQ-044): se dice, para que un corpus
-    # construido o comprobado sin la variable no pase por el de produccion sin que se note.
-    print(f"idioma del mensaje de commit: {config.commit_language() or '(el del diff)'}")
+    # El idioma de los prompts de commit es el del corpus, no el del entorno (REQ-044): se dice,
+    # y se avisa si la variable de quien lo corre es otra, porque no cuenta.
+    print(f"idioma del mensaje de commit del corpus: {AFFINITY_COMMIT_LANGUAGE}")
+    environment_language = os.environ.get(COMMIT_LANGUAGE_VARIABLE, "").strip()
+    if environment_language != AFFINITY_COMMIT_LANGUAGE:
+        print(
+            f"  ({COMMIT_LANGUAGE_VARIABLE}={environment_language or '(sin definir)'} en este "
+            "entorno: no se usa)"
+        )
     if args.check:
         differences = check_versioned_affinity(args.dest)
         for d in differences:

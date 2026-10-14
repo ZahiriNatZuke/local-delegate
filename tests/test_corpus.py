@@ -916,38 +916,91 @@ def test_nothing_private_goes_to_repo(affinity):
         assert build.private_data(text) == [], file.name
 
 
-# --- El idioma del mensaje de commit entra en el prompt capturado (REQ-044) -----------------------
-# Los casos de commit del corpus de afinidad llevan el prompt de produccion. Con
-# `LOCAL_DELEGATE_COMMIT_LANGUAGE=es`, que es lo que tendra la PC, ese prompt tiene que pedir espanol.
-# La captura quita las variables del paquete del entorno, y esta es la excepcion.
+# --- El idioma del mensaje de commit es el del corpus, no el del entorno (REQ-044) ----------------
+# Los casos de commit llevan el prompt de produccion, que incluye la orden de idioma de
+# `LOCAL_DELEGATE_COMMIT_LANGUAGE`. Cada corpus se congelo con un idioma (`AFFINITY_COMMIT_LANGUAGE`,
+# `F2_COMMIT_LANGUAGE`) y la captura lo FIJA: antes conservaba la variable de quien la corria, y
+# `affinity --check` daba ok solo con `=es` puesta (40 diferencias sin ella). Los tests ponen la
+# variable a mano porque la suite corre sin ella (conftest): sin esto el agujero no se veria nunca.
 _SMALL_DIFF = "diff --git a/uno.py b/uno.py\n--- a/uno.py\n+++ b/uno.py\n@@ -1 +1 @@\n-a\n+b\n"
+_ASKS_SPANISH = "(primera línea y cuerpo) en español."
+_ASKS_DIFF_LANGUAGE = "en el idioma predominante de los textos del diff"
+_ENVIRONMENT_LANGUAGES = pytest.mark.parametrize("environment_language", [None, "es", "en"])
 
 
-def _captured_commit_system(tmp_path) -> str:
+def _captured_commit_system(tmp_path, commit_language: str) -> str:
     from local_delegate import server
 
     path = tmp_path / "small.diff"
     path.write_text(_SMALL_DIFF, encoding="utf-8")
-    with build.intercepted_production() as calls:
+    with build.intercepted_production(commit_language) as calls:
         server.local_commit_msg(path=str(path))
     assert len(calls) == 1
     return calls[0].system
 
 
-def test_capture_keeps_machine_commit_language(tmp_path, monkeypatch):
-    """Mutante: vaciar `PRESERVED_VARIABLES`. La captura borra la variable y el assert de
-    `en español.` falla: el corpus se habria construido con el prompt de un entorno limpio."""
-    monkeypatch.setenv("LOCAL_DELEGATE_COMMIT_LANGUAGE", "es")
-    system = _captured_commit_system(tmp_path)
-    assert "(primera línea y cuerpo) en español." in system
-    assert os.environ["LOCAL_DELEGATE_COMMIT_LANGUAGE"] == "es"  # y la deja como estaba
+def _set_environment_language(monkeypatch, value: str | None) -> None:
+    if value is None:
+        monkeypatch.delenv(build.COMMIT_LANGUAGE_VARIABLE, raising=False)
+    else:
+        monkeypatch.setenv(build.COMMIT_LANGUAGE_VARIABLE, value)
 
 
-def test_capture_without_variable_asks_diff_language(tmp_path):
-    """Control del anterior: sin la variable, la captura sale con la otra orden."""
-    assert "LOCAL_DELEGATE_COMMIT_LANGUAGE" not in os.environ
-    system = _captured_commit_system(tmp_path)
-    assert "en el idioma predominante de los textos del diff" in system
+def test_frozen_commit_languages_match_the_frozen_cases():
+    """Las constantes dicen con que idioma se congelo cada corpus; aqui se mira en lo congelado."""
+    affinity = json.loads((build.AFFINITY_TARGET / "cases.json").read_text(encoding="utf-8"))
+    f2 = json.loads((DESTINATION / "cases.json").read_text(encoding="utf-8"))
+    affinity_commits = [c for c in affinity["cases"] if c["tool"] == "local_commit_msg"]
+    f2_commits = [c for c in f2["cases"] if c["tool"] == "local_commit_msg"]
+    assert len(affinity_commits) == 40 and len(f2_commits) == 2  # que haya algo que comprobar
+    assert build.AFFINITY_COMMIT_LANGUAGE == "es"
+    assert all(c["system"].endswith(_ASKS_SPANISH) for c in affinity_commits)
+    assert build.F2_COMMIT_LANGUAGE == ""
+    assert all(_ASKS_DIFF_LANGUAGE in c["system"] for c in f2_commits)
+
+
+@_ENVIRONMENT_LANGUAGES
+def test_affinity_capture_ignores_the_environment_language(
+    tmp_path, monkeypatch, environment_language
+):
+    """Mutante: que `intercepted_production` vuelva a dejar la variable del usuario. Con `None` o
+    `en`, el prompt sale con otra orden y falla el assert de `en español.`"""
+    _set_environment_language(monkeypatch, environment_language)
+    system = _captured_commit_system(tmp_path, build.AFFINITY_COMMIT_LANGUAGE)
+    assert system.endswith(_ASKS_SPANISH)
+    # Y la deja como estaba.
+    assert os.environ.get(build.COMMIT_LANGUAGE_VARIABLE) == environment_language
+
+
+@_ENVIRONMENT_LANGUAGES
+def test_f2_capture_ignores_the_environment_language(tmp_path, monkeypatch, environment_language):
+    """El corpus F2 se congelo sin variable: con `es` en el entorno, su `--check` daba 2
+    diferencias. Control del anterior: el mismo mecanismo con el otro idioma."""
+    _set_environment_language(monkeypatch, environment_language)
+    system = _captured_commit_system(tmp_path, build.F2_COMMIT_LANGUAGE)
+    assert _ASKS_DIFF_LANGUAGE in system
+    assert os.environ.get(build.COMMIT_LANGUAGE_VARIABLE) == environment_language
+
+
+def _full_history() -> bool:
+    """`select_commits` lee `main` entero; el checkout superficial del CI no lo tiene."""
+
+    def git(*args: str) -> str:
+        done = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True)
+        return done.stdout.strip() if done.returncode == 0 else ""
+
+    return (
+        bool(git("rev-parse", "--verify", "main"))
+        and git("rev-parse", "--is-shallow-repository") == "false"
+    )
+
+
+@pytest.mark.skipif(not _full_history(), reason="sin el historial de `main` (checkout superficial)")
+@pytest.mark.parametrize("environment_language", [None, "en"])
+def test_affinity_check_is_ok_with_any_environment_language(monkeypatch, environment_language):
+    """La comprobacion entera, como la corre `affinity --check`, sin la variable y con otra."""
+    _set_environment_language(monkeypatch, environment_language)
+    assert build.check_versioned_affinity(build.AFFINITY_TARGET) == []
 
 
 # --- Lectura dual de lo congelado del corpus (ola A10b-4) -------------------------------------------

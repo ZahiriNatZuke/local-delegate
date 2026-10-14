@@ -25,6 +25,10 @@ def test_the_variable_inventory_is_not_empty():
     # Dos que tienen que estar sí o sí: la que causó el defecto y la de la telemetría de hooks.
     assert "LOCAL_DELEGATE_WEB_TOKEN" in config.ENVIRONMENT_VARIABLES
     assert "LD_HOOK_TELEMETRY_LOG" in config.ENVIRONMENT_VARIABLES
+    # Y una que se lee al llamar, no al importar: entra en el inventario por la lectura de arranque
+    # de `config.py`. Si faltara, la suite heredaria el idioma de commit de la maquina y los tests
+    # del prompt de `local_commit_msg` y de los corpus pasarian o fallarian segun quien los corra.
+    assert "LOCAL_DELEGATE_COMMIT_LANGUAGE" in config.ENVIRONMENT_VARIABLES
 
 
 def test_the_suite_runs_without_package_variables_defined():

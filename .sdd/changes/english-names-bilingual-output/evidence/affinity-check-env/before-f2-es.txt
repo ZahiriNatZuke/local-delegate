@@ -1,0 +1,4 @@
+[pesado] plaza plaza-1 tomada tras 1s: env LOCAL_DELEGATE_COMMIT_LANGUAGE=es uv run python scripts/build_corpus.py --check
+  - commit-diff-19k: system ya no coincide con el constructor
+  - techo-commit-156k: system ya no coincide con el constructor
+2 diferencias

@@ -1,0 +1,4 @@
+[pesado] plaza plaza-1 tomada tras 0s: env LOCAL_DELEGATE_COMMIT_LANGUAGE=en uv run python scripts/build_corpus.py affinity --check
+idioma del mensaje de commit: en
+  - cases.json ya no coincide con el constructor
+1 diferencias

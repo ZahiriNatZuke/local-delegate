@@ -1,0 +1,124 @@
+sha256 antes:
+8a7e9e5500aa10bde0bd3163993b9d62329e4ac5b75aa5c28758d07beffe6e31 *scripts/build_corpus.py
+mutante: se quita el bloque que fija LOCAL_DELEGATE_COMMIT_LANGUAGE en intercepted_production (vuelve a leer el entorno)
+60:+        pass  # MUTANTE: la captura vuelve a dejar la variable del entorno de quien la corre
+[pesado] plaza plaza-1 tomada tras 0s: uv run pytest -q tests/test_corpus.py -k language -p no:cacheprovider -rf
+.F.F.FFFF                                                                [100%]
+================================== FAILURES ===================================
+________ test_affinity_capture_ignores_the_environment_language[None] _________
+
+tmp_path = WindowsPath('C:/Users/Yohan/AppData/Local/Temp/pytest-of-Yohan/pytest-1645/test_affinity_capture_ignores_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000026DC76BC390>
+environment_language = None
+
+    @_ENVIRONMENT_LANGUAGES
+    def test_affinity_capture_ignores_the_environment_language(
+        tmp_path, monkeypatch, environment_language
+    ):
+        """Mutante: que `intercepted_production` vuelva a dejar la variable del usuario. Con `None` o
+        `en`, el prompt sale con otra orden y falla el assert de `en español.`"""
+        _set_environment_language(monkeypatch, environment_language)
+        system = _captured_commit_system(tmp_path, build.AFFINITY_COMMIT_LANGUAGE)
+>       assert system.endswith(_ASKS_SPANISH)
+E       AssertionError: assert False
+E        +  where False = <built-in method endswith of str object at 0x0000026DC77EE6F0>('(primera línea y cuerpo) en español.')
+E        +    where <built-in method endswith of str object at 0x0000026DC77EE6F0> = 'Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit es...ero (primera línea y cuerpo) en el idioma predominante de los textos del diff (comentarios, documentación y mensajes).'.endswith
+
+tests\test_corpus.py:970: AssertionError
+_________ test_affinity_capture_ignores_the_environment_language[en] __________
+
+tmp_path = WindowsPath('C:/Users/Yohan/AppData/Local/Temp/pytest-of-Yohan/pytest-1645/test_affinity_capture_ignores_2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000026DC7E0C710>
+environment_language = 'en'
+
+    @_ENVIRONMENT_LANGUAGES
+    def test_affinity_capture_ignores_the_environment_language(
+        tmp_path, monkeypatch, environment_language
+    ):
+        """Mutante: que `intercepted_production` vuelva a dejar la variable del usuario. Con `None` o
+        `en`, el prompt sale con otra orden y falla el assert de `en español.`"""
+        _set_environment_language(monkeypatch, environment_language)
+        system = _captured_commit_system(tmp_path, build.AFFINITY_COMMIT_LANGUAGE)
+>       assert system.endswith(_ASKS_SPANISH)
+E       assert False
+E        +  where False = <built-in method endswith of str object at 0x0000026DC78F89F0>('(primera línea y cuerpo) en español.')
+E        +    where <built-in method endswith of str object at 0x0000026DC78F89F0> = "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit es...onal con viñetas '- '. Nada fuera del formato. Escribe el mensaje de commit entero (primera línea y cuerpo) en inglés.".endswith
+
+tests\test_corpus.py:970: AssertionError
+____________ test_f2_capture_ignores_the_environment_language[es] _____________
+
+tmp_path = WindowsPath('C:/Users/Yohan/AppData/Local/Temp/pytest-of-Yohan/pytest-1645/test_f2_capture_ignores_the_en1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000026DC79CEF10>
+environment_language = 'es'
+
+    @_ENVIRONMENT_LANGUAGES
+    def test_f2_capture_ignores_the_environment_language(tmp_path, monkeypatch, environment_language):
+        """El corpus F2 se congelo sin variable: con `es` en el entorno, su `--check` daba 2
+        diferencias. Control del anterior: el mismo mecanismo con el otro idioma."""
+        _set_environment_language(monkeypatch, environment_language)
+        system = _captured_commit_system(tmp_path, build.F2_COMMIT_LANGUAGE)
+>       assert _ASKS_DIFF_LANGUAGE in system
+E       assert 'en el idioma predominante de los textos del diff' in "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit es...nal con viñetas '- '. Nada fuera del formato. Escribe el mensaje de commit entero (primera línea y cuerpo) en español."
+
+tests\test_corpus.py:981: AssertionError
+____________ test_f2_capture_ignores_the_environment_language[en] _____________
+
+tmp_path = WindowsPath('C:/Users/Yohan/AppData/Local/Temp/pytest-of-Yohan/pytest-1645/test_f2_capture_ignores_the_en2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000026DC7E230D0>
+environment_language = 'en'
+
+    @_ENVIRONMENT_LANGUAGES
+    def test_f2_capture_ignores_the_environment_language(tmp_path, monkeypatch, environment_language):
+        """El corpus F2 se congelo sin variable: con `es` en el entorno, su `--check` daba 2
+        diferencias. Control del anterior: el mismo mecanismo con el otro idioma."""
+        _set_environment_language(monkeypatch, environment_language)
+        system = _captured_commit_system(tmp_path, build.F2_COMMIT_LANGUAGE)
+>       assert _ASKS_DIFF_LANGUAGE in system
+E       assert 'en el idioma predominante de los textos del diff' in "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit es...onal con viñetas '- '. Nada fuera del formato. Escribe el mensaje de commit entero (primera línea y cuerpo) en inglés."
+
+tests\test_corpus.py:981: AssertionError
+______ test_affinity_check_is_ok_whatever_the_environment_language[None] ______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000026DC7D4BC50>
+environment_language = None
+
+    @pytest.mark.skipif(not _full_history(), reason="sin el historial de `main` (checkout superficial)")
+    @pytest.mark.parametrize("environment_language", [None, "en"])
+    def test_affinity_check_is_ok_whatever_the_environment_language(monkeypatch, environment_language):
+        """La comprobacion entera, como la corre `affinity --check`, sin la variable y con otra."""
+        _set_environment_language(monkeypatch, environment_language)
+>       assert build.check_versioned_affinity(build.AFFINITY_TARGET) == []
+E       AssertionError: assert ['cases.json ... constructor'] == []
+E         
+E         Left contains one more item: 'cases.json ya no coincide con el constructor'
+E         Use -v to get more diff
+
+tests\test_corpus.py:1002: AssertionError
+_______ test_affinity_check_is_ok_whatever_the_environment_language[en] _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000026DC7E36390>
+environment_language = 'en'
+
+    @pytest.mark.skipif(not _full_history(), reason="sin el historial de `main` (checkout superficial)")
+    @pytest.mark.parametrize("environment_language", [None, "en"])
+    def test_affinity_check_is_ok_whatever_the_environment_language(monkeypatch, environment_language):
+        """La comprobacion entera, como la corre `affinity --check`, sin la variable y con otra."""
+        _set_environment_language(monkeypatch, environment_language)
+>       assert build.check_versioned_affinity(build.AFFINITY_TARGET) == []
+E       AssertionError: assert ['cases.json ... constructor'] == []
+E         
+E         Left contains one more item: 'cases.json ya no coincide con el constructor'
+E         Use -v to get more diff
+
+tests\test_corpus.py:1002: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_corpus.py::test_affinity_capture_ignores_the_environment_language[None]
+FAILED tests/test_corpus.py::test_affinity_capture_ignores_the_environment_language[en]
+FAILED tests/test_corpus.py::test_f2_capture_ignores_the_environment_language[es]
+FAILED tests/test_corpus.py::test_f2_capture_ignores_the_environment_language[en]
+FAILED tests/test_corpus.py::test_affinity_check_is_ok_whatever_the_environment_language[None]
+FAILED tests/test_corpus.py::test_affinity_check_is_ok_whatever_the_environment_language[en]
+6 failed, 3 passed, 51 deselected in 13.35s
+exit=1
+sha256 tras restaurar:
+8a7e9e5500aa10bde0bd3163993b9d62329e4ac5b75aa5c28758d07beffe6e31 *scripts/build_corpus.py

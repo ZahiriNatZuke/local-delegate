@@ -940,7 +940,7 @@ nuevos o la documentación en ficheros que el agente que renombra no toca, siemp
 **Orden de mezcla (explícito):**
 
 ```
-A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close-5) → higiene de CodeQL → B0 → B1 → B2 (lotes B2a → B2b) → { B3 ∥ B4 } → B5 → [release 0.36.0]
+A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close-5) → higiene de CodeQL → `affinity --check` sin entorno → B0 → B1 → B2 (lotes B2a → B2b) → { B3 ∥ B4 } → B5 → [release 0.36.0]
 ```
 
 - **Valores de una palabra (A-close-5, añadida el 2026-10-14), tras A-close-4.** El barrido de
@@ -951,6 +951,17 @@ A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close
   `dev/affinity_batch.py`, `valida` en `pair_sheet.py`). Un lote con mapping aprobado, como los
   anteriores: lectura dual solo si el valor se guarda y se relee (`produccion`, y `cambiar` si
   procede), con test y mutante; lo que sea texto de salida queda para el frente B.
+- **`affinity --check` sin depender del entorno (añadido el 2026-10-14), tras la higiene de
+  CodeQL y antes de B0.** El agente de A-close-5 vio que la comprobación del corpus de afinidad
+  da ok solo con `LOCAL_DELEGATE_COMMIT_LANGUAGE=es` puesta; sin ella, 40 diferencias en los
+  prompts de sistema de los casos de commit (ya en `main` 61f8b21). Va antes de B0 porque B0
+  toca `config.py` y el aislamiento del entorno de la suite, y B2b exige que el prompt de
+  `local_commit_msg` quede idéntico: con una comprobación que depende de la máquina, esa garantía
+  no se puede medir. Primero se **verifica por ejecución** (con y sin la variable, en un entorno
+  limpio) y se localiza la causa; el arreglo hace que la comprobación reconstruya el prompt con
+  el idioma con que se congeló el corpus, sin leer la variable del usuario. Test con la variable
+  puesta a otro valor y sin ella; mutante que vuelve a leer el entorno → falla. Origen: backlog
+  del vault §1.7.
 - **Sección «Texto de salida que traduce el frente B» de `rename-exceptions.md`** (nace en
   A-close-4): como «Pendiente», queda **vacía al cerrar el cambio**. Cada fila nombra la ola B que
   la traduce (B1, B2 o B4), y esa ola borra sus filas en su PR.
