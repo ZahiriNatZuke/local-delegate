@@ -42,7 +42,7 @@ def _reg(label, caso, run, calidad, respuesta=None, **kw):
         "run": run,
         "attempt": kw.get("attempt", 1),
         "input_variant": kw.get("variante"),
-        "descartada": kw.get("descartada", False),
+        "discarded": kw.get("descartada", False),
         "score": {"quality": calidad},
     }
     if respuesta is not None or kw.get("con_respuesta", True):
@@ -267,7 +267,7 @@ def _registro(label, case, text):
         "run": 1,
         "attempt": 1,
         "outcome": "ok",
-        "descartada": False,
+        "discarded": False,
         "response": text,
     }
 

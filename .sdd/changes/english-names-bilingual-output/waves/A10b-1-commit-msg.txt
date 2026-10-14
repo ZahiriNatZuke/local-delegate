@@ -1,0 +1,38 @@
+refactor(rename): nombres en inglés en analizar_benchmark, la tanda de afinidad y las filas del benchmark (ola A10b, lote 1)
+
+Renombra a inglés los identificadores de scripts/analizar_benchmark.py,
+la tanda de afinidad (scripts/dev/affinity_batch.py) y las claves que
+escribe el benchmark, con sus tests: 218 de las 225 filas del mapping
+aprobado (waves/A10b-1-mapping.csv).
+
+- analizar_benchmark.py: métodos y campos de Corrida, Caso, Config y
+  Selector (discarded, quality, runs, cases, records, variant…), los
+  parámetros rol/pares/casos/resultado y las variables locales.
+- benchmark.py escribe `provenance`, `discarded`, `discarded_reason`,
+  el outcome `context_rejection` y `zero_by: truncated_repeated`; el
+  arnés de ejecución usa generated.py y checks.json.
+- affinity_batch.py: fila del techo (`pinned_env`), JSON del subproceso
+  (`text`), carpetas affinity-batch/ceiling-usage, resultados del techo
+  en ceiling-<modelo>.jsonl, ventanas en batch-windows.json
+  (start_utc/end_utc/only) y huellas en footprints.json.
+
+Lectura dual de lo congelado en benchmarks/, por legacy_names (tablas
+benchmark_results, benchmark_score, benchmark_corpus, affinity_verdict
+y batch_windows, y tres pares de nombres de fichero): se escribe el
+nombre nuevo y se leen los dos. analizar_benchmark, hoja_pares y
+hoja_revision cargan legacy_names.py por ruta, sin importar el paquete.
+7 tests nuevos cargan los resultados, el corpus, las ventanas y las
+huellas reales en el formato viejo.
+
+Fuera de los ficheros del lote, por consecuencia (el escritor cambia
+aquí): los lectores de analizar_benchmark, hoja_pares y hoja_revision,
+fixtures de test_analisis_benchmark y test_hoja_pares, la tabla de
+outcome de docs/wiki/Backend-versions.md y 21 filas de
+rename-exceptions.md.
+
+No se aplican 7 filas: los 6 valores de `reference_signal` del corpus
+pasan a A10b-4 con su escritor (construir_corpus los vigila en
+comprobar_versionado) y la clave de huella `ruta` sigue sin ola.
+
+Solo se renombra: ningún assert cambia de sentido y los textos en
+español que imprimen los scripts no cambian (frente B).

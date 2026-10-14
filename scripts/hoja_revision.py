@@ -21,6 +21,7 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import random
 import re
@@ -34,12 +35,26 @@ _ITEM_RE = re.compile(r"^## Item (\d+)\s*$")
 _NOTA_RE = re.compile(r"^Puntuacion \(0/1/2\):[ \t]*(\S*)[ \t]*$")
 
 
+def _load_legacy_names() -> Any:
+    """`src/local_delegate/legacy_names.py`, cargado por ruta: solo usa la biblioteca estandar, y
+    asi este programa lee las filas viejas con la misma tabla que el paquete sin importarlo."""
+    path = Path(__file__).resolve().parents[1] / "src" / "local_delegate" / "legacy_names.py"
+    spec = importlib.util.spec_from_file_location("_legacy_names", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+LEGACY_NAMES = _load_legacy_names()
+
+
 def _registros(rutas: list[Path]) -> list[dict[str, Any]]:
     registros = []
     for ruta in rutas:
         for linea in ruta.read_text(encoding="utf-8").splitlines():
             if linea.strip():
-                registros.append(json.loads(linea))
+                registros.append(LEGACY_NAMES.normalize_benchmark_result(json.loads(linea)))
     return registros
 
 
@@ -49,7 +64,7 @@ def _revisables(registros: list[dict[str, Any]]) -> list[dict[str, Any]]:
         for r in registros
         if r.get("kind") == "calidad"
         and r.get("outcome") == "ok"
-        and not r.get("descartada")
+        and not r.get("discarded")
         and r.get("input_variant") is None
     ]
     sin_respuesta = sorted(

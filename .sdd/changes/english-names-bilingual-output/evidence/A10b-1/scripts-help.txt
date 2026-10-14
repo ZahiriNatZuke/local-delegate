@@ -1,0 +1,58 @@
+usage: affinity_batch.py [-h] [--cases CASES] [--results RESULTS]
+                         [--footprints FOOTPRINTS] [--windows WINDOWS]
+                         [--config-llamaswap CONFIG_LLAMASWAP]
+                         [--work-dir WORK_DIR]
+                         [--only {gemma3-4b,qwen35-2b,gemma4-26b-a4b,qwen36-35b-a3b,techo}]
+                         [--dry] [--seed SEED] [--endpoint ENDPOINT]
+                         [--timeout TIMEOUT]
+                         [--ceiling-timeout CEILING_TIMEOUT]
+                         [--probe-process PROBE_PROCESS] [--no-probe]
+                         [--retry-errors] [--redo-footprints]
+
+Tanda de afinidad con modelos reales (SDD daemon-reparte-el-backend, T5).
+
+options:
+  -h, --help            show this help message and exit
+  --cases CASES
+  --results RESULTS
+  --footprints FOOTPRINTS
+  --windows WINDOWS
+  --config-llamaswap CONFIG_LLAMASWAP
+  --work-dir WORK_DIR   calentamientos (se descartan) y log de uso del techo
+  --only {gemma3-4b,qwen35-2b,gemma4-26b-a4b,qwen36-35b-a3b,techo}
+                        solo este modelo, o `techo` (repetible)
+  --dry                 imprime el plan y no llama a nada
+  --seed SEED
+  --endpoint ENDPOINT   BASE_URL /v1; por defecto la del entorno
+  --timeout TIMEOUT     por petición, en segundos
+  --ceiling-timeout CEILING_TIMEOUT
+                        por corrida del techo
+  --probe-process PROBE_PROCESS
+  --no-probe            no mide RAM/VRAM (solo para ensayos sin GPU)
+  --retry-errors
+  --redo-footprints
+usage: analizar_benchmark.py affinity-verdict [-h] [--cases CASES]
+                                              [--rules RULES]
+                                              [--footprints FOOTPRINTS]
+                                              [--judgement JUDGEMENT]
+                                              [--metrics-db METRICS_DB]
+                                              [--mechanical-only]
+                                              [--salida SALIDA]
+                                              [--table TABLE]
+                                              jsonl [jsonl ...]
+
+positional arguments:
+  jsonl                 resultados de la tanda
+
+options:
+  -h, --help            show this help message and exit
+  --cases CASES
+  --rules RULES
+  --footprints FOOTPRINTS
+  --judgement JUDGEMENT
+                        salida de `hoja_pares.py leer-commit`
+  --metrics-db METRICS_DB
+                        una COPIA de metrics.db
+  --mechanical-only     sin la celda de commit
+  --salida SALIDA       veredicto.json
+  --table TABLE         tabla Markdown para verification.md

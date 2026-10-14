@@ -114,6 +114,8 @@ def ceiling_case(cases: Sequence[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _read_rows(path: Path) -> list[dict[str, Any]]:
+    from local_delegate import legacy_names
+
     rows: list[dict[str, Any]] = []
     for line in path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
@@ -123,7 +125,7 @@ def _read_rows(path: Path) -> list[dict[str, Any]]:
         except ValueError:
             continue  # una línea cortada por un apagón: la corrida se repite
         if isinstance(row, dict) and {"label", "case", "run"} <= row.keys():
-            rows.append(row)
+            rows.append(legacy_names.normalize_benchmark_result(row))
     return rows
 
 
@@ -143,7 +145,7 @@ def done_runs(folder: Path, *, retry_errors: bool = False) -> set[Key]:
                 last_ones[(str(row["label"]), str(row["case"]), int(row["run"]))] = row
     done: set[Key] = set()
     for key, row in last_ones.items():
-        if row.get("descartada") and row.get("descartada_motivo") not in RESOURCE_ONLY_REASONS:
+        if row.get("discarded") and row.get("discarded_reason") not in RESOURCE_ONLY_REASONS:
             continue
         if retry_errors and row.get("outcome") == "error":
             continue
@@ -264,14 +266,19 @@ def compute_footprints(cases: list[dict[str, Any]], args: argparse.Namespace) ->
 def write_footprints(path: Path, computed: dict[str, Any], *, redo: bool) -> tuple[bool, str]:
     """Escribe `footprints.json`. Si ya existe y es distinta, NO la pisa: una tanda reanudada con otra
     config mezclaría dos modelos bajo el mismo nombre. Devuelve (ok, mensaje)."""
+    from local_delegate import legacy_names
+
     text = json.dumps(computed, indent=2, ensure_ascii=False, sort_keys=True) + "\n"
-    if path.exists() and not redo:
-        if json.loads(path.read_text(encoding="utf-8")) == computed:
-            return True, f"huellas: {path.name} ya existe y coincide"
+    # Una tanda empezada antes del renombrado tiene `huellas.json`: se compara con esa.
+    old_name, new_name = legacy_names.FOOTPRINTS_FILE_NAMES
+    existing = path.with_name(old_name) if path.name == new_name and not path.exists() else path
+    if existing.exists() and not redo:
+        if json.loads(existing.read_text(encoding="utf-8")) == computed:
+            return True, f"huellas: {existing.name} ya existe y coincide"
         return (
             False,
             (
-                f"las huellas de ahora no coinciden con {path.name}: la config o los prompts "
+                f"las huellas de ahora no coinciden con {existing.name}: la config o los prompts "
                 "cambiaron desde que empezó la tanda. Si es a propósito, usa --redo-footprints"
             ),
         )
@@ -381,8 +388,8 @@ def check_warmup(path: Path, *, with_probe: bool) -> str | None:
     if not with_probe:
         return None
     resources = last_one.get("resources") or {}
-    if last_one.get("descartada"):
-        return f"la sonda anuló el calentamiento ({last_one.get('descartada_motivo')})"
+    if last_one.get("discarded"):
+        return f"la sonda anuló el calentamiento ({last_one.get('discarded_reason')})"
     if not resources.get("enabled") or not resources.get("pids"):
         return "la sonda (--probe-process) no vio ningun proceso llama-server: las filas saldrían sin RAM/VRAM"
     return None
@@ -408,13 +415,13 @@ def one_ceiling_run(source: Path) -> int:
         text = f"[local-delegate error] {type(exc).__name__}: {exc}"
     ms = round((time.perf_counter() - start_ts) * 1000)
     # ASCII puro: el contrato no depende de la codificación de la tubería.
-    print_out(CEILING_MARK + json.dumps({"texto": text, "latency_ms": ms}))
+    print_out(CEILING_MARK + json.dumps({"text": text, "latency_ms": ms}))
     return 0
 
 
 def run_ceiling(run: int, source: Path, args: argparse.Namespace) -> dict[str, Any]:
     """Una corrida del techo por el camino de producción; devuelve la fila (formato de T4)."""
-    log_dir = args.work_dir / "techo-usage"
+    log_dir = args.work_dir / "ceiling-usage"
     log_dir.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ)
     env.pop("LOCAL_DELEGATE_LOG", None)  # un log explícito ganaría a LOG_DIR
@@ -447,7 +454,7 @@ def run_ceiling(run: int, source: Path, args: argparse.Namespace) -> dict[str, A
             print_out(f"  [techo {run}] {line}")
     if result is None:
         result = {
-            "texto": f"[local-delegate error] el subproceso del techo terminó con {process.returncode} sin resultado",
+            "text": f"[local-delegate error] el subproceso del techo terminó con {process.returncode} sin resultado",
             "latency_ms": None,
         }
     return ceiling_row(run, source, result, log_dir)
@@ -462,7 +469,7 @@ def _no_profile(path: Path) -> str:
 
 
 def ceiling_row(run: int, source: Path, result: dict[str, Any], log_dir: Path) -> dict[str, Any]:
-    text = str(result["texto"])
+    text = str(result["text"])
     failure = text.startswith("[local-delegate error]") or not text.strip()
     data = source.read_bytes()
     return {
@@ -480,7 +487,7 @@ def ceiling_row(run: int, source: Path, result: dict[str, Any], log_dir: Path) -
         # El payload de producción no manda semilla (REQ-041): no se inventa una.
         "seed": None,
         "via": "produccion",
-        "entorno_fijado": {**CEILING_ENV, "LOCAL_DELEGATE_LOG_DIR": _no_profile(log_dir)},
+        "pinned_env": {**CEILING_ENV, "LOCAL_DELEGATE_LOG_DIR": _no_profile(log_dir)},
         "thermal_state": None,
         "input_bytes": len(data),
         "input_sha256": hashlib.sha256(data).hexdigest(),
@@ -488,8 +495,8 @@ def ceiling_row(run: int, source: Path, result: dict[str, Any], log_dir: Path) -
         "outcome": "error" if failure else "ok",
         "ok": not failure,
         "error": text[:300] if failure else None,
-        "descartada": False,
-        "descartada_motivo": None,
+        "discarded": False,
+        "discarded_reason": None,
         "score": None,
         "response": text,
         "response_chars": len(text),
@@ -510,10 +517,19 @@ def ceiling_source(cases_: Sequence[dict[str, Any]], cases: Path) -> Path:
 
 
 def register_window(path: Path, entry: dict[str, Any], *, close: bool) -> None:
-    """`ventanas-tanda.json`: una entrada por lanzamiento (las reanudaciones suman la suya)."""
+    """`batch-windows.json`: una entrada por lanzamiento (las reanudaciones suman la suya). Si no
+    existe y está al lado la de antes del renombrado (`ventanas-tanda.json`, congelada), parte de
+    ella con sus entradas traducidas; la vieja no se toca."""
+    from local_delegate import legacy_names
+
     windows: list[dict[str, Any]] = []
-    if path.exists():
-        windows = json.loads(path.read_text(encoding="utf-8"))
+    old_name, new_name = legacy_names.BATCH_WINDOWS_FILE_NAMES
+    source = path.with_name(old_name) if path.name == new_name and not path.exists() else path
+    if source.exists():
+        windows = [
+            legacy_names.normalize("batch_windows", w)
+            for w in json.loads(source.read_text(encoding="utf-8"))
+        ]
     if close and windows:
         windows[-1].update(entry)
     else:
@@ -568,7 +584,7 @@ def execute(args: argparse.Namespace, env: Environment) -> int:
     print_out(f"VENTANA inicio_utc={start_ts.isoformat()}")
     register_window(
         args.windows,
-        {"inicio_utc": start_ts.isoformat(), "fin_utc": None, "solo": list(args.only or [])},
+        {"start_utc": start_ts.isoformat(), "end_utc": None, "only": list(args.only or [])},
         close=False,
     )
     code = 0
@@ -596,7 +612,7 @@ def execute(args: argparse.Namespace, env: Environment) -> int:
     finally:
         end = now_utc()
         print_out(f"VENTANA fin_utc={end.isoformat()}")
-        register_window(args.windows, {"fin_utc": end.isoformat()}, close=True)
+        register_window(args.windows, {"end_utc": end.isoformat()}, close=True)
 
 
 def _model_stage(
@@ -633,7 +649,7 @@ def _ceiling_stage(
     if reason:
         print_out(f"[techo] ERROR: {reason}")
         return 3
-    output = args.results / f"techo-{stage.model}.jsonl"
+    output = args.results / f"ceiling-{stage.model}.jsonl"
     _ensure_final_newline(output)
     code = 0
     for run in stage.pending_runs:
@@ -651,13 +667,13 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--cases", type=Path, default=FOLDER / "cases.json")
     parser.add_argument("--results", type=Path, default=FOLDER / "resultados")
-    parser.add_argument("--footprints", type=Path, default=FOLDER / "huellas.json")
-    parser.add_argument("--windows", type=Path, default=FOLDER / "ventanas-tanda.json")
+    parser.add_argument("--footprints", type=Path, default=FOLDER / "footprints.json")
+    parser.add_argument("--windows", type=Path, default=FOLDER / "batch-windows.json")
     parser.add_argument("--config-llamaswap", type=Path, default=CONFIG_LLAMASWAP)
     parser.add_argument(
         "--work-dir",
         type=Path,
-        default=Path(tempfile.gettempdir()) / "tanda-afinidad",
+        default=Path(tempfile.gettempdir()) / "affinity-batch",
         help="calentamientos (se descartan) y log de uso del techo",
     )
     parser.add_argument(

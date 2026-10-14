@@ -123,14 +123,14 @@ Cada registro trae un `outcome`, y no todo lo que no es `ok` es mala calidad:
 | `outcome` | Qué significa | ¿Puntúa? |
 | --- | --- | --- |
 | `ok` | respuesta completa | sí |
-| `truncado` | se cortó por `max_tokens`; se repite **una vez** con el doble, y si vuelve a cortarse puntúa **0** (`zero_by: truncado_repetido`) | la primera vez no; la repetida, 0 |
-| `rechazo_por_contexto` | el prompt no cabe en el contexto del modelo (`exceed_context_size_error`) | no |
+| `truncado` | se cortó por `max_tokens`; se repite **una vez** con el doble, y si vuelve a cortarse puntúa **0** (`zero_by: truncated_repeated`) | la primera vez no; la repetida, 0 |
+| `context_rejection` | el prompt no cabe en el contexto del modelo (`exceed_context_size_error`) | no |
 | `configuracion` | gastó el presupuesto pensando y no contestó | no |
 | `error` | cualquier otro fallo; el exit code pasa a `1` | no |
 
 La puntuación normaliza antes de comparar (una tilde no resta cobertura), pone la calidad a 0 si
 aparece un término prohibido y guarda en `zero_by` **qué componente** la hundió. Aparte va
-`descartada`: la sonda anuló la corrida, y el runner **la repite** con los mismos `max_tokens`
+`discarded`: la sonda anuló la corrida, y el runner **la repite** con los mismos `max_tokens`
 hasta dos veces. Cada intento lleva `retry_reason` (`anulada` o `truncado`) y el análisis juzga la
 corrida por el último. `thermal_state` es `cold` solo en la primera petición tras cambiar el proceso
 de `llama-server`, y `null` sin sonda.

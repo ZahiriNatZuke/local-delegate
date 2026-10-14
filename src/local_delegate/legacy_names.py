@@ -224,6 +224,39 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
             "contenido_en_contexto": "content_in_context",
         },
     },
+    # Cada fila de resultados de `local-delegate benchmark` y del techo de
+    # `scripts/dev/affinity_batch.py` (`benchmarks/*/resultados*/*.jsonl`, congelados). Solo lo que
+    # leen sus cargadores (`analizar_benchmark`, `hoja_pares`, `hoja_revision` y `affinity_batch`):
+    # `procedencia` y `entorno_fijado` cambian de nombre al escribir, pero nadie los lee de vuelta.
+    # `zero_by` va dentro de `score`: lo traduce `normalize_benchmark_result`.
+    "benchmark_results": {
+        "keys": {"descartada": "discarded", "descartada_motivo": "discarded_reason"},
+        "values": {"outcome": {"rechazo_por_contexto": "context_rejection"}},
+    },
+    "benchmark_score": {
+        "values": {"zero_by": {"truncado_repetido": "truncated_repeated"}},
+    },
+    # Cada caso del corpus (`benchmarks/*/cases.json`, congelado) tal como lo lee
+    # `benchmark.load_corpus`.
+    "benchmark_corpus": {
+        "keys": {"procedencia": "provenance"},
+    },
+    # `veredicto.json` de la evaluación de afinidad (congelado): solo lo que lee
+    # `tests/test_affinity.py`. La misma tabla vale para el primer nivel y para cada celda.
+    "affinity_verdict": {
+        "keys": {
+            "celdas": "cells",
+            "alternativo": "alternative",
+            "rol_comparado": "compared_role",
+            "estado": "state",
+            "huella": "footprint",
+        },
+    },
+    # Cada entrada de las ventanas de la tanda de afinidad (`batch-windows.json`; antes
+    # `ventanas-tanda.json`, congelado).
+    "batch_windows": {
+        "keys": {"inicio_utc": "start_utc", "fin_utc": "end_utc", "solo": "only"},
+    },
 }
 
 #: Motivos de descarte de la cuota: las claves de `discards[<tipo>]` (y los dos que añade
@@ -286,6 +319,15 @@ QUOTA_STATUSLINE_FILE_NAMES: tuple[str, str] = ("cuota-statusline.jsonl", "quota
 #: `(viejo, nuevo)`. Lo escriben `scripts/test_sessions.py` y `_claude_bench.note_window`, solo el
 #: nuevo; si no existe, parten del viejo, que está congelado y no se reescribe nunca.
 EXCLUDED_WINDOWS_FILE_NAMES: tuple[str, str] = ("ventanas-excluidas.json", "excluded-windows.json")
+
+#: Ficheros de la tanda de afinidad (`benchmarks/afinidad-2026-10/`), como `(viejo, nuevo)`. Se
+#: escribe solo el nuevo; si no existe, se lee el viejo, que está congelado y no se reescribe.
+#: Las huellas las escribe `scripts/dev/affinity_batch.py` y las lee `analizar_benchmark`; las
+#: ventanas, `affinity_batch`; el veredicto lo escribe `analizar_benchmark` y lo lee
+#: `tests/test_affinity.py`.
+FOOTPRINTS_FILE_NAMES: tuple[str, str] = ("huellas.json", "footprints.json")
+BATCH_WINDOWS_FILE_NAMES: tuple[str, str] = ("ventanas-tanda.json", "batch-windows.json")
+VERDICT_FILE_NAMES: tuple[str, str] = ("veredicto.json", "verdict.json")
 
 #: Valores que el panel recibe de `/api/hooks` y que su diccionario de etiquetas tiene que entender
 #: también en el formato viejo (REQ-009). El servidor lo inyecta en el HTML: el JS no copia la tabla.
@@ -402,4 +444,25 @@ def normalize_cost_aggregates(data: Mapping[str, Any]) -> dict[str, Any]:
             )
             for kind, by_reason in discards.items()
         }
+    return out
+
+
+def normalize_benchmark_result(row: Mapping[str, Any]) -> dict[str, Any]:
+    """Una fila de resultados del benchmark en el formato nuevo, con el `zero_by` de su `score`
+    ya traducido. Una fila ya nueva sale igual."""
+    out = normalize("benchmark_results", row)
+    score = out.get("score")
+    if isinstance(score, Mapping):
+        out["score"] = normalize("benchmark_score", score)
+    return out
+
+
+def normalize_affinity_verdict(data: Mapping[str, Any]) -> dict[str, Any]:
+    """`veredicto.json` en el formato nuevo: el primer nivel y cada entrada de `cells`. Un fichero
+    ya nuevo sale igual."""
+    out = normalize("affinity_verdict", data)
+    if isinstance(out.get("cells"), list):
+        out["cells"] = [
+            normalize("affinity_verdict", c) if isinstance(c, Mapping) else c for c in out["cells"]
+        ]
     return out

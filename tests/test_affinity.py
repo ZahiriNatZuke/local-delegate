@@ -24,7 +24,7 @@ import backend_mock
 import httpx2
 import pytest
 
-from local_delegate import chains, checks, config, footprint, matrix, server, turn
+from local_delegate import chains, checks, config, footprint, legacy_names, matrix, server, turn
 from local_delegate.turn import PendingRequest
 
 BASE = "http://127.0.0.1:9292/v1"
@@ -33,7 +33,7 @@ LLAMASWAP = "http://127.0.0.1:9292"
 MECH = "gemma3-4b"
 LONG = "gemma4-26b-a4b"
 CODE = "qwen36-35b-a3b"
-VERDICT = Path(__file__).parent.parent / "benchmarks" / "afinidad-2026-10" / "veredicto.json"
+VERDICT_DIR = Path(__file__).parent.parent / "benchmarks" / "afinidad-2026-10"
 CAP_S = 3.0
 
 _FLAGS = {
@@ -364,7 +364,7 @@ def test_doctor_quiet_when_footprint_matches(affinity, tmp_path):
 
 def test_doctor_other_machine_is_ok_and_says_affinity_is_inert(affinity, tmp_path, monkeypatch):
     """Celdas medidas en otra máquina (su GGUF no existe aquí): sin `[WARN]`, pero lo dice."""
-    elsewhere = tmp_path / "no-existe" / "gemma-4-26B.gguf"
+    elsewhere = tmp_path / "does-not-exist" / "gemma-4-26B.gguf"
     cells = tuple(
         matrix.Cell(c.tool, c.alternative, c.compared_role, {**c.footprint, "ruta": str(elsewhere)})
         for c in matrix.CELLS
@@ -377,7 +377,7 @@ def test_doctor_other_machine_is_ok_and_says_affinity_is_inert(affinity, tmp_pat
 
 def test_doctor_warns_with_another_gguf_under_the_id_here(affinity, tmp_path):
     """Otra cuantización del 26B en esta misma máquina, bajo el mismo id: `[WARN]` (REQ-010)."""
-    other = tmp_path / "gemma-4-26B-otra-cuantizacion.gguf"
+    other = tmp_path / "gemma-4-26B-other-quantization.gguf"
     other.write_bytes(b"y" * 40)
     path = _write_config(tmp_path, gguf_26b=other)
     result = checks._probe_residency(checks.Context(home=tmp_path, config_path=path))
@@ -391,12 +391,12 @@ def test_doctor_warns_when_the_mechanical_role_changes_by_variable(affinity, tmp
     original = config.models_by_role
 
     def other_roles():
-        return {**original(), "mechanical": "otro-4b"}
+        return {**original(), "mechanical": "other-4b"}
 
     monkeypatch.setattr(config, "models_by_role", other_roles)
     result = checks._probe_residency(checks.Context(home=tmp_path, config_path=affinity))
     assert result.status == checks.WARN
-    assert "el modelo del rol es otro-4b" in result.detail
+    assert "el modelo del rol es other-4b" in result.detail
 
 
 # --- Escenarios del turno de punta a punta (los mutantes de T8 en la integración) -------------
@@ -486,23 +486,33 @@ def test_reserve_shrinks_and_queue_is_rechecked_end_to_end(affinity, monkeypatch
     assert w2_entered_while_w1_calls is True
 
 
-# --- `matrix` = `veredicto.json` (REQ-043) ----------------------------------------------------
+# --- `matrix` = `verdict.json` (REQ-043) ----------------------------------------------------
+
+
+def _verdict() -> dict:
+    """El veredicto que aprobó las celdas, con las claves en el formato nuevo: `verdict.json` si
+    se rehízo después del renombrado y, si no, el congelado (`veredicto.json`)."""
+    old_name, new_name = legacy_names.VERDICT_FILE_NAMES
+    path = VERDICT_DIR / new_name
+    if not path.exists():
+        path = VERDICT_DIR / old_name
+    return legacy_names.normalize_affinity_verdict(json.loads(path.read_text(encoding="utf-8")))
 
 
 def test_matrix_cells_are_the_approved_cells_of_the_verdict():
-    verdict = json.loads(VERDICT.read_text(encoding="utf-8"))
+    verdict = _verdict()
     verdict_approved_cells = {
-        (c["tool"], c["alternativo"], c["rol_comparado"])
-        for c in verdict["celdas"]
-        if c["estado"] == "aprobada"
+        (c["tool"], c["alternative"], c["compared_role"])
+        for c in verdict["cells"]
+        if c["state"] == "aprobada"
     }
     code_cells = {(c.tool, c.alternative, c.compared_role) for c in matrix.CELLS}
 
     assert code_cells == verdict_approved_cells
     footprints = {
-        (c["tool"], c["alternativo"], c["rol_comparado"]): c["huella"]
-        for c in verdict["celdas"]
-        if c["estado"] == "aprobada"
+        (c["tool"], c["alternative"], c["compared_role"]): c["footprint"]
+        for c in verdict["cells"]
+        if c["state"] == "aprobada"
     }
     for cell in matrix.CELLS:
         assert dict(cell.footprint) == footprints[(cell.tool, cell.alternative, cell.compared_role)]
@@ -716,7 +726,7 @@ def test_direction_guard():
     )
     assert matrix.allowed_direction(matrix.Cell("local_commit_msg", LONG, CODE, fp), "code", roles)
     # Otro modelo en el rol mecánico (por variable): la celda medida contra el 4B ya no vale.
-    other = {**roles, "mechanical": "otro-4b"}
+    other = {**roles, "mechanical": "other-4b"}
     assert not matrix.allowed_direction(
         matrix.Cell("local_translate", LONG, MECH, fp), "mechanical", other
     )

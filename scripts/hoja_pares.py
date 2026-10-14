@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import html
+import importlib.util
 import json
 import random
 import re
@@ -43,12 +44,26 @@ _PAR_RE = re.compile(r"^## Par (\d+)\s*$")
 _ELECCION_RE = re.compile(r"^Mejor \(A/B/=\):[ \t]*(\S*)[ \t]*$")
 
 
+def _load_legacy_names() -> Any:
+    """`src/local_delegate/legacy_names.py`, cargado por ruta: solo usa la biblioteca estandar, y
+    asi este programa lee las filas viejas con la misma tabla que el paquete sin importarlo."""
+    path = Path(__file__).resolve().parents[1] / "src" / "local_delegate" / "legacy_names.py"
+    spec = importlib.util.spec_from_file_location("_legacy_names", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+LEGACY_NAMES = _load_legacy_names()
+
+
 def _registros(rutas: list[Path]) -> list[dict[str, Any]]:
     registros = []
     for ruta in rutas:
         for linea in ruta.read_text(encoding="utf-8").splitlines():
             if linea.strip():
-                registros.append(json.loads(linea))
+                registros.append(LEGACY_NAMES.normalize_benchmark_result(json.loads(linea)))
     return registros
 
 
@@ -69,7 +84,7 @@ def _corridas_validas(
     validas = {}
     for run, r in ultimos.items():
         calidad = (r.get("score") or {}).get("quality")
-        if r.get("descartada") or calidad is None:
+        if r.get("discarded") or calidad is None:
             continue
         if "response" not in r:
             raise ValueError(
@@ -459,7 +474,7 @@ def _message_of(records: list[dict[str, Any]], label: str, case: str) -> str | N
     for r in records:
         if r.get("label") == label and r.get("case") == case and int(r.get("run", 1)) == 1:
             last = r
-    if last is None or last.get("descartada") or last.get("outcome") != "ok":
+    if last is None or last.get("discarded") or last.get("outcome") != "ok":
         return None
     text = last.get("response")
     if not isinstance(text, str) or not text.strip():

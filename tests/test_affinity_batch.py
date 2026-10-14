@@ -41,7 +41,7 @@ def _case(id_, tool, role, kind="calidad", role_in_sheet=None, **extra):
         "tool": tool,
         "role": role,
         "kind": kind,
-        "rol_en_hoja": role_in_sheet,
+        "sheet_role": role_in_sheet,
         "system": f"sistema de {tool}",
         **extra,
     }
@@ -50,7 +50,7 @@ def _case(id_, tool, role, kind="calidad", role_in_sheet=None, **extra):
 def _synthetic_corpus(folder: Path) -> Path:
     """Dos mecánicas, un commit real, una trampa y el techo: 2 + 2 + 3 peticiones por modelo."""
     (folder / "fuentes").mkdir(parents=True)
-    (folder / "fuentes" / "techo.diff").write_bytes(CEILING_DIFF)
+    (folder / "fuentes" / "ceiling.diff").write_bytes(CEILING_DIFF)
     cases = [
         _case("m1", "local_classify", "mechanical"),
         _case("m2", "local_extract", "mechanical"),
@@ -61,7 +61,7 @@ def _synthetic_corpus(folder: Path) -> Path:
             "local_commit_msg",
             "code",
             kind="techo",
-            source_file="techo.diff",
+            source_file="ceiling.diff",
             source_sha256=hashlib.sha256(CEILING_DIFF).hexdigest(),
         ),
     ]
@@ -76,7 +76,7 @@ def _row(label, case, run=1, **extra):
         "case": case,
         "run": run,
         "outcome": "ok",
-        "descartada": False,
+        "discarded": False,
         **extra,
     }
 
@@ -103,7 +103,7 @@ class Fake:
 
         def ceiling(run, source, args):
             self.ceiling.append(run)
-            return batch.ceiling_row(run, source, {"texto": "feat: x", "latency_ms": 7}, Path("."))
+            return batch.ceiling_row(run, source, {"text": "feat: x", "latency_ms": 7}, Path("."))
 
         return batch.Environment(
             footprints=lambda cases, args: {"m": {"t": {"prompt_sha256": "a"}}},
@@ -127,9 +127,9 @@ def _argv(tmp_path: Path, cases: Path, *extra: str) -> list[str]:
         "--results",
         str(tmp_path / "resultados"),
         "--footprints",
-        str(tmp_path / "huellas.json"),
+        str(tmp_path / "footprints.json"),
         "--windows",
-        str(tmp_path / "ventanas.json"),
+        str(tmp_path / "windows.json"),
         "--work-dir",
         str(tmp_path / "trabajo"),
         "--no-probe",
@@ -166,8 +166,8 @@ def test_dry_counts_by_model_and_writes_nothing(tmp_path, capsys):
     assert "gemma4-26b-a4b: 4 peticiones" in output
     assert "qwen36-35b-a3b: 4 peticiones" in output
     assert "total: 15 peticiones" in output
-    assert not (tmp_path / "huellas.json").exists()
-    assert not (tmp_path / "ventanas.json").exists()
+    assert not (tmp_path / "footprints.json").exists()
+    assert not (tmp_path / "windows.json").exists()
     assert not (tmp_path / "resultados").exists()
     assert not (tmp_path / "trabajo").exists()
 
@@ -191,7 +191,7 @@ def test_resume_counts_already_written(tmp_path, capsys):
     results = tmp_path / "resultados"
     _write(results / "gemma3-4b.jsonl", [_row("gemma3-4b", "m1")])
     _write(
-        results / "techo-gemma4-26b-a4b.jsonl",
+        results / "ceiling-gemma4-26b-a4b.jsonl",
         [_row("gemma4-26b-a4b", batch.CEILING_CASE, run=1)],
     )
 
@@ -212,7 +212,7 @@ def test_cancelled_or_cut_run_is_repeated(tmp_path):
     (results / "m.jsonl").write_text(
         json.dumps(_row("m", "a"))
         + "\n"
-        + json.dumps(_row("m", "b", descartada=True, outcome="error"))
+        + json.dumps(_row("m", "b", discarded=True, outcome="error"))
         + "\n"
         + '{"label": "m", "case": "c", "run"',  # línea cortada por un apagón
         encoding="utf-8",
@@ -226,10 +226,10 @@ def test_run_cancelled_only_for_lack_of_samples_not_repeated(tmp_path):
     _write(
         results / "m.jsonl",
         [
-            _row("m", "a", descartada=True, descartada_motivo="zero_vram_samples"),
-            _row("m", "b", descartada=True, descartada_motivo="zero_ram_samples"),
-            _row("m", "c", descartada=True, descartada_motivo="multiple_processes"),
-            _row("m", "d", descartada=True, descartada_motivo="process_changed"),
+            _row("m", "a", discarded=True, discarded_reason="zero_vram_samples"),
+            _row("m", "b", discarded=True, discarded_reason="zero_ram_samples"),
+            _row("m", "c", discarded=True, discarded_reason="multiple_processes"),
+            _row("m", "d", discarded=True, discarded_reason="process_changed"),
         ],
     )
 
@@ -253,7 +253,7 @@ def test_run_skips_already_written_and_continues(tmp_path, capsys):
     results = tmp_path / "resultados"
     _write(results / "gemma3-4b.jsonl", [_row("gemma3-4b", "m1")])
     _write(
-        results / "techo-gemma4-26b-a4b.jsonl",
+        results / "ceiling-gemma4-26b-a4b.jsonl",
         [_row("gemma4-26b-a4b", batch.CEILING_CASE, run=1)],
     )
     fake = Fake()
@@ -293,7 +293,7 @@ def test_ceiling_writes_rows_in_t4_format(tmp_path):
 
     rows = [
         json.loads(line)
-        for line in (tmp_path / "resultados" / "techo-gemma4-26b-a4b.jsonl")
+        for line in (tmp_path / "resultados" / "ceiling-gemma4-26b-a4b.jsonl")
         .read_text(encoding="utf-8")
         .splitlines()
     ]
@@ -304,22 +304,22 @@ def test_ceiling_writes_rows_in_t4_format(tmp_path):
 
 
 def test_ceiling_row_lacks_user_folder(tmp_path, monkeypatch):
-    home = tmp_path / "Perfil-De-Alguien"
+    home = tmp_path / "Someones-Profile"
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
-    log_dir = home / "AppData" / "Local" / "Temp" / "tanda-afinidad" / "techo-usage"
+    log_dir = home / "AppData" / "Local" / "Temp" / "affinity-batch" / "ceiling-usage"
     log_dir.mkdir(parents=True)
 
-    row = batch.ceiling_row(1, Path(__file__), {"texto": "feat: x", "latency_ms": 3}, log_dir)
+    row = batch.ceiling_row(1, Path(__file__), {"text": "feat: x", "latency_ms": 3}, log_dir)
 
-    assert "Perfil-De-Alguien" not in json.dumps(row)
-    assert row["entorno_fijado"]["LOCAL_DELEGATE_LOG_DIR"] == (
-        "~/AppData/Local/Temp/tanda-afinidad/techo-usage"
+    assert "Someones-Profile" not in json.dumps(row)
+    assert row["pinned_env"]["LOCAL_DELEGATE_LOG_DIR"] == (
+        "~/AppData/Local/Temp/affinity-batch/ceiling-usage"
     )
 
 
 def test_ceiling_returning_error_is_not_ok():
     row = batch.ceiling_row(
-        1, Path(__file__), {"texto": "[local-delegate error] se cayó", "latency_ms": 3}, Path(".")
+        1, Path(__file__), {"text": "[local-delegate error] se cayó", "latency_ms": 3}, Path(".")
     )
     assert row["outcome"] == "error"
     assert row["ok"] is False
@@ -330,14 +330,14 @@ def test_ceiling_returning_error_is_not_ok():
 
 def test_different_footprints_stop_batch_without_overwriting_previous(tmp_path, capsys):
     cases = _synthetic_corpus(tmp_path / "corpus")
-    (tmp_path / "huellas.json").write_text(json.dumps({"viejas": 1}), encoding="utf-8")
+    (tmp_path / "footprints.json").write_text(json.dumps({"old_ones": 1}), encoding="utf-8")
     fake = Fake()
 
     rc = batch.main(_argv(tmp_path, cases), fake.env())
 
     assert rc == 4
     assert fake.benchmark == []
-    assert json.loads((tmp_path / "huellas.json").read_text(encoding="utf-8")) == {"viejas": 1}
+    assert json.loads((tmp_path / "footprints.json").read_text(encoding="utf-8")) == {"old_ones": 1}
     assert "--redo-footprints" in capsys.readouterr().out
 
 
@@ -348,29 +348,29 @@ def test_window_recorded_at_start_and_end(tmp_path, capsys):
 
     assert "VENTANA inicio_utc=" in output
     assert "VENTANA fin_utc=" in output
-    windows = json.loads((tmp_path / "ventanas.json").read_text(encoding="utf-8"))
+    windows = json.loads((tmp_path / "windows.json").read_text(encoding="utf-8"))
     assert len(windows) == 1
-    assert windows[0]["inicio_utc"] and windows[0]["fin_utc"]
+    assert windows[0]["start_utc"] and windows[0]["end_utc"]
 
 
 def test_env_not_leaked_in_output_or_argv(tmp_path, monkeypatch, capsys):
-    monkeypatch.setenv("LOCAL_DELEGATE_API_KEY", "clave-de-prueba-que-no-debe-salir")
+    monkeypatch.setenv("LOCAL_DELEGATE_API_KEY", "test-key-that-must-not-leak")
     cases = _synthetic_corpus(tmp_path / "corpus")
     fake = Fake()
     batch.main(_argv(tmp_path, cases), fake.env())
     batch.main(["--dry", *_argv(tmp_path, cases)])
     output = capsys.readouterr()
 
-    assert "clave-de-prueba" not in output.out + output.err
+    assert "test-key" not in output.out + output.err
 
     args = batch.parse_args(_argv(tmp_path, cases))
     argv = batch.benchmark_argv("gemma3-4b", ["m1"], tmp_path / "o.jsonl", args, {})
     assert "--api-key" not in argv
-    assert "clave-de-prueba" not in " ".join(argv)
+    assert "test-key" not in " ".join(argv)
 
 
 def test_warmup_unseen_by_probe_stops_batch(tmp_path):
-    output = tmp_path / "calentamiento.jsonl"
+    output = tmp_path / "warmup.jsonl"
     _write(output, [_row("m", "a", resources={"enabled": True, "pids": []})])
     assert "no vio ningun proceso" in batch.check_warmup(output, with_probe=True)
     assert batch.check_warmup(output, with_probe=False) is None
@@ -404,3 +404,44 @@ def test_benchmark_argv_carries_production_flags(tmp_path):
     assert value("--load-mode") == "mmap"
     assert "--save-responses" in argv
     assert argv.count("--case") == 2
+
+
+# --- Lectura dual de la tanda congelada (ola A10b-1) ----------------------------------------------
+
+FROZEN = ROOT / "benchmarks" / "afinidad-2026-10"
+
+
+def test_frozen_rows_are_read_with_the_new_keys():
+    path = FROZEN / "resultados" / "gemma3-4b.jsonl"
+    old_rows = [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x]
+    expected = sum(1 for r in old_rows if r.get("descartada"))
+    assert expected > 0  # sin filas anuladas, el test no distinguiría nada
+    rows = batch._read_rows(path)
+    assert not any("descartada" in r for r in rows)
+    assert sum(1 for r in rows if r["discarded"]) == expected
+
+
+def test_windows_start_from_the_frozen_file_when_the_new_one_does_not_exist(tmp_path):
+    frozen = (FROZEN / "ventanas-tanda.json").read_bytes()
+    old = tmp_path / "ventanas-tanda.json"
+    old.write_bytes(frozen)
+    new = tmp_path / "batch-windows.json"
+
+    batch.register_window(new, {"start_utc": "t", "end_utc": None, "only": []}, close=False)
+
+    old_windows = json.loads(frozen)
+    windows = json.loads(new.read_text(encoding="utf-8"))
+    assert len(windows) == len(old_windows) + 1
+    assert [w["start_utc"] for w in windows[:-1]] == [w["inicio_utc"] for w in old_windows]
+    assert all(set(w) == {"start_utc", "end_utc", "only"} for w in windows)
+    assert old.read_bytes() == frozen  # la congelada no se toca
+
+
+def test_footprints_of_a_batch_started_before_the_rename_are_compared(tmp_path):
+    (tmp_path / "huellas.json").write_text(json.dumps({"old_ones": 1}), encoding="utf-8")
+    new = tmp_path / "footprints.json"
+
+    ok, message = batch.write_footprints(new, {"new_ones": 1}, redo=False)
+    assert not ok and "huellas.json" in message
+    assert not new.exists()
+    assert batch.write_footprints(new, {"old_ones": 1}, redo=False)[0]
