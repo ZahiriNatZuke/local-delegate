@@ -200,7 +200,7 @@ def test_cli_missing_from_path_is_reported_with_the_command_that_fixes_it(tmp_pa
     monkeypatch.setattr(checks.shutil, "which", lambda name: None)
     result = result_for("cli.path", make_ctx(make_home(tmp_path)))
     assert result.status == checks.MISSING
-    assert result.fix_hint == checks.CLI_HINT
+    assert result.fix_hint == checks.cli_hint()
     assert "uvx" in result.detail
 
 
@@ -368,7 +368,7 @@ def test_daemon_running_an_older_version_is_warn(tmp_path, monkeypatch):
     result = result_for("service.daemon", ctx)
     assert result.status == checks.WARN
     assert "0.13.1" in result.detail and "0.14.0" in result.detail
-    assert result.fix_hint == checks.RESTART_HINT
+    assert result.fix_hint == checks.restart_hint()
 
 
 def test_daemon_newer_than_installed_says_update_not_restart(tmp_path, monkeypatch):
@@ -389,7 +389,7 @@ def test_daemon_newer_than_installed_says_update_not_restart(tmp_path, monkeypat
     assert "la instalación está atrasada" in result.detail
     assert "el daemon sirve la vieja" not in result.detail
     assert result.fix_hint == "uv tool upgrade local-delegate-mcp"
-    assert result.fix_hint != checks.RESTART_HINT
+    assert result.fix_hint != checks.restart_hint()
 
 
 def test_daemon_versions_are_compared_as_numbers_not_as_text(tmp_path, monkeypatch):
@@ -400,7 +400,7 @@ def test_daemon_versions_are_compared_as_numbers_not_as_text(tmp_path, monkeypat
         daemon_status=lambda host, port: {"version": "0.9.0", "pid": 42, "mcp_url": "u"},
     )
     result = result_for("service.daemon", ctx)
-    assert result.fix_hint == checks.RESTART_HINT
+    assert result.fix_hint == checks.restart_hint()
     assert "el daemon sirve la vieja" in result.detail
 
 
@@ -712,7 +712,7 @@ def test_credential_warn_when_the_client_speaks_stdio_without_key(tmp_path, monk
     result = result_for("service.credential", ctx)
     assert result.status == checks.WARN
     assert "Claude Code" in result.detail and "401" in result.detail
-    assert result.fix_hint == checks.CREDENTIAL_HINT
+    assert result.fix_hint == checks.credential_hint()
 
 
 def test_credential_ok_if_the_key_is_in_the_environment(tmp_path, monkeypatch):
@@ -744,7 +744,7 @@ def test_daemon_down_is_missing_with_hint(tmp_path, monkeypatch):
     ctx = make_ctx(make_home(tmp_path), daemon_status=lambda host, port: None)
     result = result_for("service.daemon", ctx)
     assert result.status == checks.MISSING
-    assert result.fix_hint == checks.SERVE_HINT
+    assert result.fix_hint == checks.serve_hint()
 
 
 def test_port_taken_by_another_process_is_warn_not_missing(tmp_path, monkeypatch):
@@ -1623,7 +1623,7 @@ def test_hooks_from_another_version_are_warn(tmp_path):
     assert result.status == checks.WARN
     assert "otra versión" in result.detail
     assert script in result.detail
-    assert result.fix_hint == checks.UPDATE_HOOKS_HINT
+    assert result.fix_hint == checks.update_hooks_hint()
 
 
 def test_a_packaged_script_is_missing_even_if_not_registered(tmp_path):

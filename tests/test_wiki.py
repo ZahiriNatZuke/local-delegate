@@ -27,7 +27,7 @@ WORKFLOW = ROOT / ".github" / "workflows" / "wiki.yml"
 
 # La tabla del doctor de `Integration-install.md` se compara contra el registro real de
 # comprobaciones, así que este módulo importa `checks`. Los grupos son la primera columna.
-from local_delegate import checks
+from local_delegate import checks, i18n, install
 
 _TABLE_GROUPS = {"Entorno", "Andamiaje", "Servicios", "Backend"}
 _TOOL_COUNT_WORDS = {10: "diez", 11: "once", 12: "doce", 13: "trece", 14: "catorce"}
@@ -228,7 +228,9 @@ def test_the_doctor_table_lists_every_check():
     check y no documentarlo pone la wiki en rojo en el mismo PR que lo introduce.
     """
     wiki_titles = [title for _group, title in _check_table_rows()]
-    code_titles = [c.title for c in checks.CHECKS]
+    # La wiki sigue en español (REQ-032): se compara con los títulos ESPAÑOLES del catálogo, sea
+    # cual sea el idioma de la máquina que corre la suite.
+    code_titles = [i18n.t_lang("es", c.title_key, skill=install.SKILL_NAME) for c in checks.CHECKS]
 
     missing = [t for t in code_titles if t not in wiki_titles]
     surplus = [t for t in wiki_titles if t not in code_titles]

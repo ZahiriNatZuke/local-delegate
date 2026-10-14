@@ -1,0 +1,51 @@
+local-delegate doctor — diagnosis of the scaffolding, the services and the local backend
+
+LLAMASWAP_EXE:    (not set; llama-swap is looked up on the PATH)
+LLAMASWAP_CONFIG: (not set)
+Backend BASE_URL: http://127.0.0.1:9292/v1 — up
+HOME:             <TMP>\False\en\home
+Language:         en (variable; D:\Projects\local-delegate\tests\_sin_logs\language.json)
+
+States: [ OK ] ready · [WARN] review · [MISS] missing · [ -- ] could not be checked
+
+Environment (the CLI and the clients):
+  [ OK ] local-delegate CLI: /usr/local/bin/local-delegate (version 0.35.0)
+  [ OK ] published version: 0.35.0 (the latest published)
+  [ OK ] clients: found: Claude Code, Codex, opencode
+  [ -- ] observed MCP clients: no MCP client has talked to this local-delegate yet
+  [ OK ] fallback chains: valid chains; sin residente (no se sabe: sin LLAMASWAP_CONFIG)
+  [ OK ] deprecated names: no deprecated names in use
+  [ -- ] cost and backfill: no saved check in D:\Projects\local-delegate\tests\_sin_logs: no transcripts on this machine or `local-delegate recompute-cost` never run
+  [ OK ] test windows: no windows
+
+Scaffolding (hooks, skill, memory and MCP entries):
+  [MISS] copied hooks: <TMP>\False\en\home\.claude\hooks\local-delegate does not exist
+         fix it with: local-delegate install
+  [ OK ] orphan hooks: <TMP>\False\en\home\.claude\hooks does not exist: nothing to clean
+  [MISS] registered hooks: <TMP>\False\en\home\.claude\settings.json does not exist
+         fix it with: local-delegate install
+  [MISS] skill local-delegation: Claude Code: <TMP>\False\en\home\.claude\skills\local-delegation does not exist · opencode: <TMP>\False\en\home\.config\opencode\skill\local-delegation does not exist
+         fix it with: local-delegate install
+  [MISS] global memory: Claude Code: <TMP>\False\en\home\.claude\CLAUDE.md does not exist · Codex: <TMP>\False\en\home\.codex\AGENTS.md does not exist · opencode: <TMP>\False\en\home\.config\opencode\AGENTS.md does not exist
+         fix it with: local-delegate install
+  [MISS] MCP in Claude Code: <TMP>\False\en\home\.claude.json does not exist
+         fix it with: local-delegate install
+  [MISS] MCP in Codex: <TMP>\False\en\home\.codex\config.toml does not exist
+         fix it with: local-delegate install
+  [MISS] MCP in opencode: 'local-delegate' is in neither opencode.json nor opencode.jsonc of <TMP>\False\en\home\.config\opencode
+         fix it with: local-delegate install
+
+Services:
+  [ OK ] daemon: local-delegate 0.35.0 · pid 42 · http://127.0.0.1:9393/mcp
+  [ OK ] backend: http://127.0.0.1:9292/v1/models answers
+  [ OK ] backend credential: the backend does not require a credential: any MCP entry can use it
+  [ OK ] daemon port token: the daemon port does not require a token: any MCP entry can come in
+  [ -- ] Claude Desktop token: Claude Desktop is not configured on this machine
+
+Versions (installed vs tested; use --online to compare with GitHub):
+  [ OK ] llama-swap: v255 (= tested)
+  [ OK ] llama-server: b10909 (= tested)
+  [ -- ] llama-swap residency: sin LLAMASWAP_CONFIG in this shell and the daemon does not give it (el daemon no responde): pass --config to doctor to check it
+  [ -- ] daemon turn: no turn: sin LLAMASWAP_CONFIG (according to this shell's config; the daemon: el daemon no responde)
+
+Result: 7 warning(s) — check [MISS] and [WARN] above.

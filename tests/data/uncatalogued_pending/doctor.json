@@ -1,8 +1,0 @@
-{
-  "surface": "doctor",
-  "owner": "B1",
-  "files": [
-    "src/local_delegate/checks.py",
-    "src/local_delegate/doctor.py"
-  ]
-}

@@ -179,10 +179,10 @@ def _scaffold_report(home: Path, dry_run: bool) -> None:
         print(t("cli.install.report.current_state"))
     else:
         print(t("cli.install.report.state_after"))
-    print(t("cli.install.report.status_legend"))
+    print(doctor.status_legend())
     for group in _SCAFFOLD_GROUPS:
         print()
-        print(doctor._GROUP_HEADINGS[group])
+        print(doctor.group_heading(group))
         doctor._print_group(group, results)
 
 
@@ -284,7 +284,7 @@ def _warn_if_cli_not_on_path() -> None:
     print()
     print(t("cli.install.not_on_path.title"))
     print(t("cli.install.not_on_path.why"))
-    print(t("cli.install.not_on_path.hint", hint=checks.CLI_HINT))
+    print(t("cli.install.not_on_path.hint", hint=checks.cli_hint()))
 
 
 def _update_options(args: argparse.Namespace):

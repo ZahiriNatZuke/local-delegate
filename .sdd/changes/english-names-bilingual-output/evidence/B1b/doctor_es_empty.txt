@@ -1,0 +1,51 @@
+local-delegate doctor — diagnóstico del andamiaje, los servicios y el backend local
+
+LLAMASWAP_EXE:    (no seteado; se busca llama-swap en el PATH)
+LLAMASWAP_CONFIG: (no seteado)
+Backend BASE_URL: http://127.0.0.1:9292/v1 — arriba
+HOME:             <TMP>\False\es\home
+Idioma:           es (variable; D:\Projects\local-delegate\tests\_sin_logs\language.json)
+
+Estados: [ OK ] a punto · [WARN] revisar · [FALT] falta · [ -- ] no se pudo comprobar
+
+Entorno (el CLI y los clientes):
+  [ OK ] CLI local-delegate: /usr/local/bin/local-delegate (versión 0.35.0)
+  [ OK ] versión publicada: 0.35.0 (la última publicada)
+  [ OK ] clientes: detectados: Claude Code, Codex, opencode
+  [ -- ] clientes MCP observados: todavía no ha hablado ningún cliente MCP con este local-delegate
+  [ OK ] cadenas de respaldo: cadenas válidas; sin residente (no se sabe: sin LLAMASWAP_CONFIG)
+  [ OK ] nombres obsoletos: sin nombres obsoletos en uso
+  [ -- ] coste y relleno: no hay cotejo guardado en D:\Projects\local-delegate\tests\_sin_logs: sin transcripts en esta máquina o `local-delegate recompute-cost` nunca lanzado
+  [ OK ] ventanas de prueba: sin ventanas
+
+Andamiaje (hooks, skill, memoria y entradas MCP):
+  [FALT] hooks copiados: no existe <TMP>\False\es\home\.claude\hooks\local-delegate
+         arréglalo con: local-delegate install
+  [ OK ] hooks huérfanos: no existe <TMP>\False\es\home\.claude\hooks: nada que limpiar
+  [FALT] hooks registrados: no existe <TMP>\False\es\home\.claude\settings.json
+         arréglalo con: local-delegate install
+  [FALT] skill local-delegation: Claude Code: no existe <TMP>\False\es\home\.claude\skills\local-delegation · opencode: no existe <TMP>\False\es\home\.config\opencode\skill\local-delegation
+         arréglalo con: local-delegate install
+  [FALT] memoria global: Claude Code: no existe <TMP>\False\es\home\.claude\CLAUDE.md · Codex: no existe <TMP>\False\es\home\.codex\AGENTS.md · opencode: no existe <TMP>\False\es\home\.config\opencode\AGENTS.md
+         arréglalo con: local-delegate install
+  [FALT] MCP en Claude Code: no existe <TMP>\False\es\home\.claude.json
+         arréglalo con: local-delegate install
+  [FALT] MCP en Codex: no existe <TMP>\False\es\home\.codex\config.toml
+         arréglalo con: local-delegate install
+  [FALT] MCP en opencode: 'local-delegate' no está en opencode.json ni opencode.jsonc de <TMP>\False\es\home\.config\opencode
+         arréglalo con: local-delegate install
+
+Servicios:
+  [ OK ] daemon: local-delegate 0.35.0 · pid 42 · http://127.0.0.1:9393/mcp
+  [ OK ] backend: http://127.0.0.1:9292/v1/models responde
+  [ OK ] credencial del backend: el backend no exige credencial: cualquier entrada MCP puede usarlo
+  [ OK ] token del puerto del daemon: el puerto del daemon no exige token: cualquier entrada MCP puede entrar
+  [ -- ] token de Claude Desktop: Claude Desktop no está configurado en esta máquina
+
+Versiones (instalada vs probada; usa --online para comparar con GitHub):
+  [ OK ] llama-swap: v255 (= probada)
+  [ OK ] llama-server: b10909 (= probada)
+  [ -- ] residencia de llama-swap: sin LLAMASWAP_CONFIG en este shell y el daemon no la da (el daemon no responde): pasa --config a doctor para revisarla
+  [ -- ] turno del daemon: sin turno: sin LLAMASWAP_CONFIG (según la config de este shell; el daemon: el daemon no responde)
+
+Resultado: 7 aviso(s) — revisa [FALT] y [WARN] arriba.

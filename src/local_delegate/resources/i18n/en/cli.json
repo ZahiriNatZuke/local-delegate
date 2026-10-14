@@ -151,7 +151,6 @@
   "cli.install.not_on_path.why": "       It happens when installing with `uvx`, which deletes its environment when it finishes.",
   "cli.install.report.current_state": "CURRENT state of the scaffolding (nothing was written):",
   "cli.install.report.state_after": "State of the scaffolding after writing:",
-  "cli.install.report.status_legend": "States: [ OK ] ready · [WARN] review · [FALT] missing · [ -- ] could not be checked",
   "cli.install.simulated_home": "Simulated HOME: the machine's daemon is not touched.",
   "cli.install.uninstalling": "Uninstalling local-delegate in {home}",
   "cli.outcome.down": "llama-swap {outcome}: it does not answer ({line}); the change will apply on the next start",

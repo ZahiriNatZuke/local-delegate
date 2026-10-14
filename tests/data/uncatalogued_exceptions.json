@@ -33,6 +33,18 @@
       "text": "sí",
       "kind": "machine_name",
       "reason": "respuesta aceptada a la pregunta [s/N] de install (entrada que escribe la persona, en los dos idiomas); no es salida"
+    },
+    {
+      "file": "src/local_delegate/checks.py",
+      "text": "Claude",
+      "kind": "path",
+      "reason": "segmento de ruta del directorio de configuración de Claude Desktop (`Application Support/Claude`, `AppData/Roaming/Claude`)"
+    },
+    {
+      "file": "src/local_delegate/checks.py",
+      "text": "Authorization",
+      "kind": "machine_name",
+      "reason": "nombre de cabecera HTTP"
     }
   ]
 }

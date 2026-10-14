@@ -17,32 +17,80 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from . import checks, config, probes
+from . import checks, config, i18n, probes
 
 # Encabezado de cada grupo del registro. El de `backend` se arma aparte porque su texto
 # depende de --online, y es el que el usuario ya leía antes de que el doctor viera el resto.
+#: Cabeceras de grupo, por su clave del catálogo (los ids de grupo no cambian con el idioma).
 _GROUP_HEADINGS: dict[str, str] = {
-    "environment": "Entorno (el CLI y los clientes):",
-    "scaffold": "Andamiaje (hooks, skill, memoria y entradas MCP):",
-    "service": "Servicios:",
+    "environment": "doctor.group.environment",
+    "scaffold": "doctor.group.scaffold",
+    "service": "doctor.group.service",
+}
+#: Orígenes del idioma (REQ-018) → su rótulo del catálogo común (B0a).
+_LANGUAGE_SOURCES = {
+    "variable": "common.language.source.variable",
+    "preference": "common.language.source.preference",
+    "system": "common.language.source.system",
+    "fallback": "common.language.source.fallback",
+}
+#: Avisos de la regla del idioma (`hook_common.resolve_language`) → su texto y su marcador.
+_LANGUAGE_WARNINGS = {
+    "invalid_variable": ("common.language.warning.invalid_variable", "value"),
+    "invalid_preference": ("common.language.warning.invalid_preference", "path"),
+    "unreadable_preference": ("common.language.warning.unreadable_preference", "path"),
 }
 
 
+def group_heading(group: str) -> str:
+    """La cabecera de un grupo de checks en el idioma vigente (la usa también `install`)."""
+    return i18n.t(_GROUP_HEADINGS[group])
+
+
+def status_legend() -> str:
+    """La leyenda de estados, armada con los mismos rótulos que las líneas de los checks."""
+    return i18n.t(
+        "doctor.legend",
+        ok=checks.status_label(checks.OK),
+        warn=checks.status_label(checks.WARN),
+        missing=checks.status_label(checks.MISSING),
+        unknown=checks.status_label(checks.UNKNOWN),
+    )
+
+
+def language_lines() -> list[str]:
+    """REQ-019 y D11: el idioma de este proceso, su origen y el `language.json`, sus avisos y,
+    si lo guardado vino de la variable, cómo volver a seguir al sistema. Es cabecera y no un check:
+    no cambia el total de 25 ni el código de salida."""
+    current = i18n.current()
+    source = i18n.t(_LANGUAGE_SOURCES[current.source])
+    lines = [
+        i18n.t("doctor.language.line", lang=current.lang, source=source, path=current.pref_path)
+    ]
+    for code, detail in current.warnings:
+        if code in _LANGUAGE_WARNINGS:
+            text_key, field = _LANGUAGE_WARNINGS[code]
+            lines.append(
+                i18n.t("doctor.language.warning", detail=i18n.t(text_key, **{field: detail}))
+            )
+    if current.source == "preference" and current.stored_source == "variable":
+        lines.append(i18n.t("doctor.language.follow_system", path=current.pref_path))
+    return lines
+
+
 def _versions_heading(online: bool) -> str:
-    if online:
-        return "Versiones (instalada vs probada; consultando GitHub por la última)…"
-    return "Versiones (instalada vs probada; usa --online para comparar con GitHub):"
+    return i18n.t("doctor.header.versions_online" if online else "doctor.header.versions_offline")
 
 
 def _print_group(group: str, results: list[tuple[checks.Check, checks.Result]]) -> None:
     for check, result in results:
         if check.group != group:
             continue
-        print(f"  {checks.STATUS_LABEL[result.status]} {check.title}: {result.detail}")
+        print(f"  {checks.status_label(result.status)} {check.title}: {result.detail}")
         if result.fix_hint and checks.is_warning(result.status):
             # Sin caracteres fuera de cp1252: la consola de Windows revienta con una flecha
             # «→» y el diagnóstico moriría justo cuando más falta hace (algo está mal).
-            print(f"         arréglalo con: {result.fix_hint}")
+            print(i18n.t("doctor.fix_with", hint=result.fix_hint))
 
 
 def run_doctor(args: argparse.Namespace) -> int:
@@ -64,7 +112,7 @@ def run_doctor(args: argparse.Namespace) -> int:
     )
     by_id = {check.id: result for check, result in results}
 
-    print("local-delegate doctor — diagnóstico del andamiaje, los servicios y el backend local")
+    print(i18n.t("doctor.title"))
     print()
 
     # Entorno
@@ -72,20 +120,24 @@ def run_doctor(args: argparse.Namespace) -> int:
     backend_status = by_id["service.backend"].status
     # `unknown` aquí es el 401/403: el backend está arriba y falta la credencial. Llamarlo
     # CAÍDO manda a arrancar algo que ya corre.
-    backend_word = {
-        checks.OK: "arriba",
-        checks.UNKNOWN: "arriba (rechaza la credencial de este entorno)",
-    }.get(backend_status, "CAÍDO")
-    print(f"LLAMASWAP_EXE:    {exe or '(no seteado; se busca llama-swap en el PATH)'}")
-    print(f"LLAMASWAP_CONFIG: {config_path or '(no seteado)'}")
-    print(f"Backend BASE_URL: {config.BASE_URL} — {backend_word}")
+    backend_word = i18n.t(
+        {
+            checks.OK: "doctor.backend.up",
+            checks.UNKNOWN: "doctor.backend.up_rejects_credential",
+        }.get(backend_status, "doctor.backend.down")
+    )
+    print(f"LLAMASWAP_EXE:    {exe or i18n.t('doctor.env.llamaswap_exe_unset')}")
+    print(f"LLAMASWAP_CONFIG: {config_path or i18n.t('doctor.env.unset')}")
+    print(i18n.t("doctor.env.backend", url=config.BASE_URL, state=backend_word))
     print(f"HOME:             {home}")
+    for line in language_lines():
+        print(line)
     print()
-    print("Estados: [ OK ] a punto · [WARN] revisar · [FALT] falta · [ -- ] no se pudo comprobar")
+    print(status_legend())
     print()
 
-    for group, heading in _GROUP_HEADINGS.items():
-        print(heading)
+    for group in _GROUP_HEADINGS:
+        print(group_heading(group))
         _print_group(group, results)
         print()
 
@@ -94,13 +146,12 @@ def run_doctor(args: argparse.Namespace) -> int:
 
     if online:
         print()
-        print("Issues abiertos con señales de riesgo (revisión manual antes de canary):")
+        print(i18n.t("doctor.issues.heading"))
         for component in ("llama-swap", "llama-server"):
             issues = probes.recent_relevant_issues(component)
             if not issues:
-                print(
-                    f"  [ -- ] {component}: ninguno detectado en los 30 actualizados más recientes"
-                )
+                unknown = checks.status_label(checks.UNKNOWN)
+                print(i18n.t("doctor.issues.none", status=unknown, component=component))
                 continue
             for issue in issues:
                 print(f"  [HOLD] {component} #{issue['number']}: {issue['title']} · {issue['url']}")
@@ -108,7 +159,14 @@ def run_doctor(args: argparse.Namespace) -> int:
     warnings = sum(1 for _check, result in results if checks.is_warning(result.status))
     print()
     if warnings:
-        print(f"Resultado: {warnings} aviso(s) — revisa [FALT] y [WARN] arriba.")
+        print(
+            i18n.t(
+                "doctor.summary.warnings",
+                n=i18n.format_number(warnings),
+                missing=checks.status_label(checks.MISSING),
+                warn=checks.status_label(checks.WARN),
+            )
+        )
         return 1
-    print("Resultado: todo a punto (andamiaje, servicios y versiones probadas).")
+    print(i18n.t("doctor.summary.ok"))
     return 0

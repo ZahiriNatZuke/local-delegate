@@ -1,0 +1,65 @@
+## N1 [MISS] en inglés vuelve a ser [FALT]
+fichero: src/local_delegate/resources/i18n/en/doctor.json sha256 antes c7182b41f4d3 después c7182b41f4d3
+tests: tests/test_doctor_english.py::test_the_missing_label_is_translated
+resultado: [pesado] plaza plaza-1 tomada tras 0s: D:/Projects/local-delegate/.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -x --tb=line tests/test_doctor_english.py::test_the_missing_label_is_translated
+E   assert ('[MISS]' in "local-delegate doctor — diagnosis of the scaffolding, the services and the local backend\n\nLLAMASWAP_EXE:    (not se... to this shell's config; the daemon: el daemon no responde)\n\nResult: 7 warning(s) — check [FALT] and [WARN] above.\n")
+D:\Projects\local-delegate\tests\test_doctor_english.py:109: assert ('[MISS]' in "local-delegate doctor — diagnosis of the scaffolding, the services and the local backend\n\nLLAMASWAP_EXE:    (not se... to this shell's config; the daemon: el daemon no responde)\n\nResult: 7 warning(s) — check [FALT] and [WARN] above.\n")
+FAILED tests/test_doctor_english.py::test_the_missing_label_is_translated - a...
+
+## N2 doctor sin la línea del idioma
+fichero: src/local_delegate/doctor.py sha256 antes bd6b34b87c36 después bd6b34b87c36
+tests: tests/test_doctor_english.py::test_doctor_in_english_has_no_spanish
+resultado: [pesado] plaza plaza-1 tomada tras 0s: D:/Projects/local-delegate/.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -x --tb=line tests/test_doctor_english.py::test_doctor_in_english_has_no_spanish
+E   assert ('Language:' in "local-delegate doctor — diagnosis of the scaffolding, the services and the local backend\n\nLLAMASWAP_EXE:    (not se...s shell's config; the daemon: el daemon no responde)\n\nResult: all set (scaffolding, services and tested versions).\n")
+D:\Projects\local-delegate\tests\test_doctor_english.py:96: assert ('Language:' in "local-delegate doctor — diagnosis of the scaffolding, the services and the local backend\n\nLLAMASWAP_EXE:    (not se...s shell's config; the daemon: el daemon no responde)\n\nResult: all set (scaffolding, services and tested versions).\n")
+FAILED tests/test_doctor_english.py::test_doctor_in_english_has_no_spanish[complete-home]
+
+## N3 remedio de D11 con la condición al revés
+fichero: src/local_delegate/doctor.py sha256 antes bd6b34b87c36 después bd6b34b87c36
+tests: tests/test_doctor_english.py::test_d11_remedy_when_the_stored_language_came_from_the_variable tests/test_doctor_english.py::test_no_d11_remedy_otherwise
+resultado: [pesado] plaza plaza-1 tomada tras 0s: D:/Projects/local-delegate/.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -x --tb=line tests/test_doctor_english.py::test_d11_remedy_when_the_stored_language_came_from_the_variable tests/test_doctor_english.py::test_no_d11_remedy_otherwise
+E   AssertionError: assert 'para volver a seguir al sistema, borra `~\\AppData\\Local\\Temp\\pytest-of-USER\\pytest-1745\\test_d11_remedy_when_the_store0\\language.json` y ejecuta `local-delegate install`' in 'Idioma:           es (preferencia; ~\\AppData\\Local\\Temp\\pytest-of-USER\\pytest-1745\\test_d11_remedy_when_the_store0\\language.json)'
+D:\Projects\local-delegate\tests\test_doctor_english.py:175: AssertionError: assert 'para volver a seguir al sistema, borra `~\\AppData\\Local\\Temp\\pytest-of-USER\\pytest-1745\\test_d11_remedy_when_the_store0\\language.json` y ejecuta `local-delegate install`' in 'Idioma:           es (preferencia; ~\\AppData\\Local\\Temp\\pytest-of-USER\\pytest-1745\\test_d11_remedy_when_the_store0\\language.json)'
+FAILED tests/test_doctor_english.py::test_d11_remedy_when_the_stored_language_came_from_the_variable
+
+## N4 resolve_language no informa el origen guardado
+fichero: src/local_delegate/resources/hooks/hook_common.py sha256 antes 0861628ab9f3 después 0861628ab9f3
+tests: tests/test_doctor_english.py::test_resolve_language_reports_the_stored_source
+resultado: [pesado] plaza plaza-1 tomada tras 0s: D:/Projects/local-delegate/.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -x --tb=line tests/test_doctor_english.py::test_resolve_language_reports_the_stored_source
+E   AssertionError: assert None == 'variable'
+D:\Projects\local-delegate\tests\test_doctor_english.py:204: AssertionError: assert None == 'variable'
+FAILED tests/test_doctor_english.py::test_resolve_language_reports_the_stored_source[stored0-variable]
+
+## N5 un título de es/doctor.json cambiado sin su fila de la wiki
+fichero: src/local_delegate/resources/i18n/es/doctor.json sha256 antes 87ffa3ddcc73 después 87ffa3ddcc73
+tests: tests/test_wiki.py::test_the_doctor_table_lists_every_check
+resultado: [pesado] plaza plaza-1 tomada tras 0s: D:/Projects/local-delegate/.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -x --tb=line tests/test_wiki.py::test_the_doctor_table_lists_every_check
+E   AssertionError: comprobaciones sin fila en la wiki: ['versión publicada X']
+    assert not ['versión publicada X']
+D:\Projects\local-delegate\tests\test_wiki.py:237: AssertionError: comprobaciones sin fila en la wiki: ['versión publicada X']
+FAILED tests/test_wiki.py::test_the_doctor_table_lists_every_check - Assertio...
+
+## N6 un detalle de probe en español literal
+fichero: src/local_delegate/checks.py sha256 antes 89dd746feb35 después 89dd746feb35
+tests: tests/test_doctor_english.py::test_doctor_in_english_has_no_spanish tests/test_no_uncatalogued_text.py::test_no_uncatalogued_text_outside_pending
+resultado: [pesado] plaza plaza-1 tomada tras 0s: D:/Projects/local-delegate/.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -x --tb=line tests/test_doctor_english.py::test_doctor_in_english_has_no_spanish tests/test_no_uncatalogued_text.py::test_no_uncatalogued_text_outside_pending
+E   AssertionError: ['hay', 'prueba', 'ventanas']
+    assert not ['hay', 'prueba', 'ventanas']
+D:\Projects\local-delegate\tests\test_doctor_english.py:99: AssertionError: ['hay', 'prueba', 'ventanas']
+FAILED tests/test_doctor_english.py::test_doctor_in_english_has_no_spanish[complete-home]
+
+## N7 el origen del idioma siempre «variable»
+fichero: src/local_delegate/doctor.py sha256 antes bd6b34b87c36 después bd6b34b87c36
+tests: tests/test_doctor_english.py::test_doctor_shows_the_preference_and_its_path
+resultado: [pesado] plaza plaza-1 tomada tras 0s: D:/Projects/local-delegate/.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -x --tb=line tests/test_doctor_english.py::test_doctor_shows_the_preference_and_its_path
+E   AssertionError: assert False
+D:\Projects\local-delegate\tests\test_doctor_english.py:157: AssertionError: assert False
+FAILED tests/test_doctor_english.py::test_doctor_shows_the_preference_and_its_path
+
+## N8 Check.title devuelve la clave sin traducir
+fichero: src/local_delegate/checks.py sha256 antes 89dd746feb35 después 89dd746feb35
+tests: tests/test_doctor_english.py::test_the_ids_and_order_do_not_change_with_the_language
+resultado: [pesado] plaza plaza-1 tomada tras 0s: D:/Projects/local-delegate/.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -x --tb=line tests/test_doctor_english.py::test_the_ids_and_order_do_not_change_with_the_language
+E   AssertionError: assert ['doctor.check.cli.path', 'doctor.check.cli.published', 'doctor.check.client.presence', 'doctor.check.client.observed', 'doctor.check.config.fallback', 'doctor.check.config.deprecated_names', ...] != ['doctor.check.cli.path', 'doctor.check.cli.published', 'doctor.check.client.presence', 'doctor.check.client.observed', 'doctor.check.config.fallback', 'doctor.check.config.deprecated_names', ...]
+D:\Projects\local-delegate\tests\test_doctor_english.py:120: AssertionError: assert ['doctor.check.cli.path', 'doctor.check.cli.published', 'doctor.check.client.presence', 'doctor.check.client.observed', 'doctor.check.config.fallback', 'doctor.check.config.deprecated_names', ...] != ['doctor.check.cli.path', 'doctor.check.cli.published', 'doctor.check.client.presence', 'doctor.check.client.observed', 'doctor.check.config.fallback', 'doctor.check.config.deprecated_names', ...]
+FAILED tests/test_doctor_english.py::test_the_ids_and_order_do_not_change_with_the_language

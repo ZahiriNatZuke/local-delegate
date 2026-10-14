@@ -48,7 +48,8 @@ def catalog(language: str) -> dict[str, str]:
         return merged
     for entry in sorted(folder.iterdir(), key=lambda item: item.name):
         if entry.name.endswith(".json"):
-            merged.update(json.loads(entry.read_text(encoding="utf-8")))
+            # `read_bytes` y no `read_text`: un test que dobla `Path.read_text` no rompe el catálogo.
+            merged.update(json.loads(entry.read_bytes().decode("utf-8")))
     return merged
 
 

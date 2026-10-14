@@ -22,7 +22,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-from . import autostart, config, failures
+from . import autostart, config, failures, i18n
 
 # --- Fuente de verdad de versiones probadas ----------------------------------------------
 # Versiones del backend verificadas en vivo con esta release de local-delegate. La doc
@@ -107,21 +107,21 @@ def detect_llamaserver_version(config_path: Path | None) -> tuple[str | None, st
     config, sin ruta en el cmd, binario ausente…) para que el doctor lo muestre.
     """
     if not config_path:
-        return None, "no hay --config ni LLAMASWAP_CONFIG (no se puede localizar llama-server)"
+        return None, i18n.t("doctor.probe.version.no_config")
     if not config_path.is_file():
-        return None, f"config no encontrado: {config_path}"
+        return None, i18n.t("doctor.probe.version.config_not_found", path=config_path)
     exe = _llamaserver_exe_from_config(config_path)
     if not exe:
-        return None, "no se encontró la ruta de llama-server en los 'cmd' del config"
+        return None, i18n.t("doctor.probe.version.no_exe")
     text = _run_version(exe)
     if not text:
-        return None, f"no se pudo ejecutar {exe} --version"
+        return None, i18n.t("doctor.probe.version.cannot_run", exe=exe)
     # Dos formatos: el viejo `version: 9925 (ed8c26150)` y, desde que llama.cpp numera en semver,
     # `version: 0.4.0-dev (build 10909, commit ...)`. Con el primero solo, el segundo daba "b0" sin
     # avisar. El viejo exige el paréntesis tras el número para que un semver no cuele.
     m = re.search(r"\bbuild\s+(\d+)", text) or re.search(r"version:\s*(\d+)\s*\(", text)
     if not m:
-        return None, f"salida de --version inesperada de {exe}"
+        return None, i18n.t("doctor.probe.version.unexpected_output", exe=exe)
     return f"b{m.group(1)}", None
 
 
@@ -228,31 +228,33 @@ def _compare_line(component: str, installed: str | None, online: bool) -> tuple[
         if lat_n is not None and rec_n is not None and lat_n > rec_n:
             age = _release_age_days(release.get("published_at", "")) if release else None
             if age is None:
-                gate = "edad desconocida; revisar antes del canary"
+                gate = i18n.t("doctor.probe.version.age_unknown")
             elif age < MIN_RELEASE_SOAK_DAYS:
-                gate = f"HOLD: {age}d de {MIN_RELEASE_SOAK_DAYS}d mínimos"
+                gate = i18n.t("doctor.probe.version.hold", age=age, minimum=MIN_RELEASE_SOAK_DAYS)
             else:
-                gate = f"{age}d; candidata a canary, no a promoción directa"
-            extra = f" · última en GitHub: {latest} (más nueva; {gate})"
+                gate = i18n.t("doctor.probe.version.candidate", age=age)
+            extra = i18n.t("doctor.probe.version.latest_newer", latest=latest, gate=gate)
         else:
-            extra = f" · última en GitHub: {latest}"
+            extra = i18n.t("doctor.probe.version.latest", latest=latest)
 
     if installed is None:
-        return f"[ -- ] {component}: no detectado (probada: {recommended}){extra}", False
+        # El prefijo `[..] componente:` es de máquina: `checks._version_result` lo quita.
+        text = i18n.t(
+            "doctor.probe.version.not_detected_line", recommended=recommended, extra=extra
+        )
+        return f"[ -- ] {component}: {text}", False
     if inst_n is not None and rec_n is not None and inst_n < rec_n:
-        return (
-            (
-                f"[WARN] {component}: {installed} instalada < {recommended} probada — "
-                f"considera actualizar{extra}"
-            ),
-            True,
+        text = i18n.t(
+            "doctor.probe.version.older", installed=installed, recommended=recommended, extra=extra
         )
+        return f"[WARN] {component}: {text}", True
     if inst_n is not None and rec_n is not None and inst_n > rec_n:
-        return (
-            f"[ OK ] {component}: {installed} (más nueva que la probada {recommended}){extra}",
-            False,
+        text = i18n.t(
+            "doctor.probe.version.newer", installed=installed, recommended=recommended, extra=extra
         )
-    return f"[ OK ] {component}: {installed} (= probada){extra}", False
+        return f"[ OK ] {component}: {text}", False
+    text = i18n.t("doctor.probe.version.tested", installed=installed, extra=extra)
+    return f"[ OK ] {component}: {text}", False
 
 
 def _backend_up() -> bool:
@@ -308,11 +310,11 @@ def backend_requires_key() -> tuple[bool | None, str]:
         with httpx2.Client(timeout=2.0) as c:
             response = c.get(f"{config.BASE_URL}/models")
     except Exception as exc:
-        return None, f"no se pudo preguntar al backend ({type(exc).__name__})"
+        return None, i18n.t("doctor.probe.backend_key.cannot_ask", error=type(exc).__name__)
     if response.status_code in (401, 403):
         return True, ""
     if response.is_success:
         return False, ""
     # Ni 2xx ni 401/403: el backend contesta otra cosa. Eso no dice nada sobre la credencial, y
     # decidirlo por descarte sería inventar el dato que falta.
-    return None, f"el backend responde HTTP {response.status_code}"
+    return None, i18n.t("doctor.probe.backend_key.http", code=response.status_code)
