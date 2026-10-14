@@ -1157,7 +1157,7 @@ def main(argv: list[str] | None = None) -> int:
         "--json",
         type=Path,
         default=None,
-        help="escribe el resultado por caso; es el --pares de `analizar_benchmark.py decidir`",
+        help="escribe el resultado por caso; es el --pairs de `analyze_benchmark.py decide`",
     )
     args = parser.parse_args(argv)
 

@@ -153,7 +153,7 @@ dato: no entra en la calidad. En `lint-9k` los conteos se comprueban contra la s
 mensaje de commit y el resumen de lint— llevan `automatic_scoring: false`: una comparación por
 pares a ciegas mostró que la cobertura de términos coincidía con el juicio humano en 6 de 13 pares.
 Esos casos se deciden con `scripts/hoja_pares.py` (empareja la corrida *i* de dos modelos, sortea el
-lado y guarda la clave aparte) y `scripts/analizar_benchmark.py decidir --pares`, que aplica una
+lado y guarda la clave aparte) y `scripts/analyze_benchmark.py decide --pairs`, que aplica una
 prueba de signos. Las métricas objetivas —ejecución, JSON y campos, cifras de una imagen— siguen
 decidiendo donde las hay.
 

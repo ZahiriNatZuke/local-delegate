@@ -66,7 +66,7 @@ CEILING_ENV = {
 
 # Anulaciones de la sonda que solo dejan la fila sin medida de RAM o VRAM (la petición acabó antes de
 # que muestreara): la respuesta vale y la corrida no se repite. La misma lista que usa
-# `veredicto-afinidad` en `scripts/analizar_benchmark.py`.
+# `affinity-verdict` en `scripts/analyze_benchmark.py`.
 RESOURCE_ONLY_REASONS = frozenset({"zero_vram_samples", "zero_ram_samples"})
 
 Key = tuple[str, str, int]

@@ -1,0 +1,36 @@
+refactor(rename): nombres en inglés en analyze_benchmark, la hoja de revisión y el veredicto de afinidad (ola A10b, lote 2)
+
+Renombra a inglés las cadenas, funciones y constantes de
+scripts/analizar_benchmark.py y scripts/hoja_revision.py, con sus tests:
+las 207 filas del mapping aprobado (waves/A10b-2-mapping.csv).
+
+- scripts/analizar_benchmark.py pasa a scripts/analyze_benchmark.py y
+  scripts/hoja_revision.py a scripts/review_sheet.py (git mv).
+- CLI sin alias: `decide`, `--output`, `--small`, `--large`, `--pair` y
+  `--pairs` en analyze_benchmark; `generate`, `unblind`, `--sheet`,
+  `--key` y `--seed` en review_sheet.
+- El veredicto de afinidad se escribe en el formato nuevo: verdict.json
+  (o verdict-mechanical.json), con cells/rules/mechanical_only y las
+  celdas en inglés (alternative, compared_role, state, criteria,
+  footprint…). Su lector, tests/test_affinity.py, ya entendía los dos.
+- Los resultados de cp3 y decide, en inglés (verdict, reasons,
+  admitted_cases, band…), con `replace`/`no_replace`, `inconclusive`,
+  `no_aggregate` y `undecidable`.
+
+Lectura dual de lo que estos programas leen y escriben otros o está
+congelado en benchmarks/, por legacy_names (tablas affinity_case,
+affinity_scorer, affinity_rules, commit_judgement y unblinded_pairs, y
+RULES_FILE_NAMES): el corpus de afinidad y su puntuador, reglas.json,
+el juicio de `hoja_pares leer-commit` y los pares de `destapar --json`.
+6 tests nuevos prueban el ciclo escribir → leer del veredicto, que el
+veredicto.json congelado se sigue leyendo, y el formato viejo de cada
+entrada.
+
+Fuera de los ficheros del lote, por consecuencia: construir_corpus
+(carga del módulo por su ruta nueva y claves de su puntuador),
+test_analisis_benchmark, test_corpus, citas en hoja_pares,
+affinity_batch, legacy_names y docs/wiki/Backend-versions.md, y
+rename-exceptions.md.
+
+Solo se renombra: ningún assert cambia de sentido y los textos en
+español que imprimen los scripts no cambian (frente B).
