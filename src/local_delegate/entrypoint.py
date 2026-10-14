@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import sys
 
-from . import autostart, config, server
+from . import autostart, config, i18n, server
 
 
 def _interactive_terminal_warning() -> None:
@@ -41,11 +41,7 @@ def _interactive_terminal_warning() -> None:
         return  # bajo un host MCP stdin puede estar cerrado o no ser un fichero de verdad
     if not interactive:
         return
-    print(
-        "local-delegate: sin subcomando, esto arranca el servidor MCP stdio y espera por stdin.\n"
-        "               Si buscabas los comandos: local-delegate --help",
-        file=sys.stderr,
-    )
+    print(i18n.t("cli.entrypoint.interactive"), file=sys.stderr)
 
 
 def main() -> None:

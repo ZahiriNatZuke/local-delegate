@@ -6,17 +6,11 @@
     "scripts/measure_cooldown.py",
     "scripts/pair_sheet.py",
     "src/local_delegate/benchmark.py",
-    "src/local_delegate/cli.py",
-    "src/local_delegate/daemon.py",
-    "src/local_delegate/deprecations.py",
-    "src/local_delegate/entrypoint.py",
     "src/local_delegate/llamaswap_api.py",
     "src/local_delegate/llamaswap_config.py",
     "src/local_delegate/matrix.py",
     "src/local_delegate/probes.py",
-    "src/local_delegate/recompute.py",
     "src/local_delegate/residency.py",
-    "src/local_delegate/test_windows.py",
     "src/local_delegate/topology.py",
     "src/local_delegate/turn.py"
   ]

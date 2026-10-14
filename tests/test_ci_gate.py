@@ -298,8 +298,33 @@ def test_the_expected_jobs_are_exactly_those_of_ci_yml():
     job a `ci.yml` y olvidarlo aquí pasaría desapercibido, y el gate aprobaría un run sin haberlo
     mirado.
     """
-    declared = _jobs_declared_in_ci() - {ci_gate.GATE_NAME}
+    declared = _jobs_declared_in_ci() - {ci_gate.GATE_NAME} - _cells_without_wheels()
     assert declared == set(ci_gate.EXPECTED_JOBS)
+
+
+def _cells_without_wheels() -> set[str]:
+    return {f"cli-python-matrix ({version})" for version in ci_gate.PYTHON_WITHOUT_WHEELS}
+
+
+def test_every_version_without_wheels_is_a_cell_of_the_matrix_with_a_reason():
+    """Una exclusión caducada (la versión ya no está en la matriz) o sin motivo no vale (plan D8)."""
+    declared = _jobs_declared_in_ci()
+    for version, reason in ci_gate.PYTHON_WITHOUT_WHEELS.items():
+        assert f"cli-python-matrix ({version})" in declared, version
+        assert reason.strip(), version
+    assert not _cells_without_wheels() & set(ci_gate.EXPECTED_JOBS)
+
+
+def test_the_cli_matrix_starts_at_the_oldest_supported_python():
+    """La matriz cubre desde el `requires-python` del paquete (D8)."""
+    import tomllib
+
+    data = yaml.safe_load(CI_YML.read_text(encoding="utf-8"))
+    versions = data["jobs"]["cli-python-matrix"]["strategy"]["matrix"]["python"]
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    oldest = pyproject["project"]["requires-python"].removeprefix(">=")
+    assert versions[0] == oldest
+    assert versions == sorted(versions, key=lambda v: tuple(int(p) for p in v.split(".")))
 
 
 def test_the_gate_is_declared_in_ci_yml():
@@ -358,3 +383,23 @@ def test_the_tests_step_has_its_own_limit_lower_than_the_jobs():
         f"el límite del paso ({limit}) tiene que ser menor que el del job "
         f"({TIMEOUT_JOB_TEST}) para llegar a actuar"
     )
+
+
+def test_the_classifiers_are_the_blocking_cells_of_the_matrix():
+    """`pyproject.toml` declara justo las versiones que el CI prueba y bloquean (D8, ola B1a).
+
+    Una versión de `PYTHON_WITHOUT_WHEELS` no se declara: el paquete no se instala en ella.
+    """
+    import tomllib
+
+    data = yaml.safe_load(CI_YML.read_text(encoding="utf-8"))
+    versions = data["jobs"]["cli-python-matrix"]["strategy"]["matrix"]["python"]
+    blocking = {v for v in versions if v not in ci_gate.PYTHON_WITHOUT_WHEELS}
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    prefix = "Programming Language :: Python :: 3."
+    declared = {
+        c.removeprefix("Programming Language :: Python :: ")
+        for c in pyproject["project"]["classifiers"]
+        if c.startswith(prefix)
+    }
+    assert declared == blocking

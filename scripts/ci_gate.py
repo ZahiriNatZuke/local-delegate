@@ -96,7 +96,24 @@ EXPECTED_JOBS = (
     "install-smoke",
     # La suite entera con el sistema en español (REQ-043, ola B0a).
     "test-lang-es",
+    # Los tests del CLI en cada Python admitido (D8, ola B1a). Las versiones de
+    # `PYTHON_WITHOUT_WHEELS` corren pero no figuran aquí.
+    "cli-python-matrix (3.11)",
+    "cli-python-matrix (3.12)",
+    "cli-python-matrix (3.13)",
+    "cli-python-matrix (3.14)",
 )
+
+# Versiones de la matriz `cli-python-matrix` que corren sin bloquear: alguna dependencia no tiene
+# todavía wheel para ellas y su celda falla al INSTALAR, no en un test (plan D8). Versión → fecha y
+# motivo. Una versión sale de aquí en cuanto `uv sync` funciona con ella; un test que falla nunca se
+# tapa así.
+PYTHON_WITHOUT_WHEELS = {
+    "3.15": (
+        "2026-10-14: 3.15.0 salió el 2026-10-09 y `pyyaml` 6.0.3 y `pydantic-core` 2.46.4 del lock "
+        "no tienen wheel cp315: `uv sync` intenta compilarlos y falla en la instalación"
+    ),
+}
 
 # El plazo cubre COLA + EJECUCIÓN, que no es lo mismo que el `timeout-minutes` de un job: aquel
 # corre solo sobre la ejecución. Un `install-smoke` que espere runner 5 min y ejecute 10 suma 15, y

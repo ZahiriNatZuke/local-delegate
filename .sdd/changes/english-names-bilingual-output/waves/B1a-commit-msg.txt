@@ -1,0 +1,34 @@
+feat(i18n): el CLI en español e inglés, con su armazón de argparse y la matriz de Python (frente B, ola B1a)
+
+Primer PR de B1, partida en cinco el 2026-10-14 (waves/B1-proposal.md).
+Todo cli.py pasa por el catálogo, también la ayuda y los errores que
+redacta argparse.
+
+- resources/i18n/{es,en}/cli.json: 241 claves (ayudas, install, update y
+  uninstall de cli.py, test-window, recompute-cost, presupuesto y
+  residencia de llama-swap, daemon, avisos de alias y el aviso de
+  terminal de entrypoint).
+- resources/i18n/{es,en}/argparse.json: los 45 msgid de argparse de
+  Python 3.11 a 3.15 (unión).
+- cli.py: _argparse_in_language() pone argparse._ y argparse.ngettext
+  alrededor de run() y los devuelve en finally, para que la suite, que
+  corre en un solo proceso, no herede el idioma. La pregunta [s/N] acepta
+  también y/yes y en inglés dice [y/N].
+- i18n.format_number: 20.027 y 1,5 en español, 20,027 y 1.5 en inglés;
+  con machine=True, sin separador de miles y con punto (para las salidas
+  MCP de B2).
+- recompute.py, test_windows.py, deprecations.py, daemon.py y
+  entrypoint.py: sus mensajes, por el catálogo; los conteos del resumen
+  de recompute-cost, con format_number.
+- CI: trabajo cli-python-matrix (3.11 a 3.15) con los tests del CLI;
+  ci_gate.py espera las celdas 3.11 a 3.14 y deja la 3.15 en
+  PYTHON_WITHOUT_WHEELS (pyyaml y pydantic-core del lock no tienen wheel
+  cp315). test_ci_gate.py ata la matriz a los esperados, a
+  requires-python y a los clasificadores (se añade 3.14).
+- tests/test_cli_english.py: msgid del argparse en ejecución, ayuda sin
+  armazón inglés en español, ayuda y salidas en inglés sin palabras del
+  catálogo español ni tildes, restauración del parche y números.
+- Salen seis ficheros de uncatalogued_pending/cli.json.
+
+Suite: 2794 passed, 2 skipped con LANG en inglés y en español (xdist);
+tests del CLI en verde en Python 3.11 a 3.14; 12 controles positivos.

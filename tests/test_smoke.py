@@ -119,7 +119,8 @@ def test_help_prints_the_help_and_does_not_start_the_server(monkeypatch, capsys)
 
     monkeypatch.setattr(srv.mcp, "run", _do_not_start)
     assert _run_main(monkeypatch, ["--help"]) == 0
-    assert "usage" in capsys.readouterr().out.lower()
+    # La suite corre en español (REQ-043): el armazón de argparse sale traducido (D8, ola B1a).
+    assert "uso: local-delegate" in capsys.readouterr().out
 
 
 def test_version_prints_the_version_and_does_not_start_the_server(monkeypatch, capsys):
@@ -152,7 +153,7 @@ def test_unknown_subcommand_fails_instead_of_hanging(monkeypatch, capsys):
 
     monkeypatch.setattr(srv.mcp, "run", _do_not_start)
     assert _run_main(monkeypatch, ["doctro"]) == 2
-    assert "invalid choice" in capsys.readouterr().err
+    assert "opción no válida" in capsys.readouterr().err
 
 
 def test_without_arguments_it_still_starts_the_mcp_server(monkeypatch):

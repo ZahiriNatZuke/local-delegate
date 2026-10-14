@@ -95,7 +95,9 @@ def parse_version(version: str) -> tuple[int, int, int]:
     """`0.34.0` → `(0, 34, 0)`. Ignora sufijos de pre-release (`0.35.0rc1` → `(0, 35, 0)`)."""
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)", version)
     if not match:
-        raise ValueError(f"versión no válida: {version!r}")
+        from . import i18n  # diferido: `config` importa este módulo e `i18n` importa `config`
+
+        raise ValueError(i18n.t("cli.deprecations.bad_version", version=repr(version)))
     major, minor, patch = (int(g) for g in match.groups())
     return major, minor, patch
 
@@ -154,11 +156,16 @@ def find(old: str) -> DeprecatedName | None:
 
 def warning_text(entry: DeprecatedName) -> str:
     """El aviso de un nombre obsoleto: nombra el viejo, el nuevo y la versión de retirada."""
+    from . import i18n  # diferido: `config` importa este módulo e `i18n` importa `config`
+
     if entry.is_retired:
-        return f"{entry.old} ya no tiene efecto desde la {entry.introduced}"
+        return i18n.t("cli.deprecations.retired", old=entry.old, version=entry.introduced)
     removal = removal_version(entry)
-    when = f"se retira en la {removal}" if removal else "se retirará tres versiones menores después"
-    return f"{entry.old} está obsoleto: usa {entry.new} ({when})"
+    if removal:
+        when = i18n.t("cli.deprecations.removed_in", version=removal)
+    else:
+        when = i18n.t("cli.deprecations.removed_later")
+    return i18n.t("cli.deprecations.deprecated", old=entry.old, new=entry.new, when=when)
 
 
 def _looks_env(name: str) -> bool:

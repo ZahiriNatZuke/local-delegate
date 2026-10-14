@@ -28,6 +28,8 @@ from typing import Self
 
 from filelock import FileLock, Timeout
 
+from . import i18n
+
 FILE_NAME = "test-windows.json"
 LOCK_NAME = "test-windows.lock"
 VERSION = 1
@@ -53,7 +55,7 @@ def parse_instant(text: object) -> datetime:
     elif isinstance(text, str) and text.strip():
         dt = datetime.fromisoformat(text.strip())
     else:
-        raise ValueError(f"fecha ilegible: {text!r}")
+        raise ValueError(i18n.t("cli.test_window.error.bad_date", value=repr(text)))
     return dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt.astimezone(UTC)
 
 
@@ -196,18 +198,24 @@ def _read_raw(path: Path) -> tuple[list | None, str | None, bool]:
     except FileNotFoundError:
         return [], None, False
     except OSError as exc:
-        return None, f"no se puede leer: {exc.__class__.__name__}", True
+        return (
+            None,
+            i18n.t("cli.test_window.error.unreadable_file", error=exc.__class__.__name__),
+            True,
+        )
     try:
         data = json.loads(text)
     except ValueError as exc:
-        return None, f"JSON roto (línea {getattr(exc, 'lineno', '?')})", True
+        line = getattr(exc, "lineno", "?")
+        return None, i18n.t("cli.test_window.error.broken_json", line=line), True
     if not isinstance(data, dict):
-        return None, "no es un objeto JSON", True
+        return None, i18n.t("cli.test_window.error.not_object"), True
     if data.get("version") != VERSION:
-        return None, f"versión desconocida: {data.get('version')!r}", True
+        version = repr(data.get("version"))
+        return None, i18n.t("cli.test_window.error.unknown_version", version=version), True
     entries = data.get("windows")
     if not isinstance(entries, list):
-        return None, "falta la lista «windows»", True
+        return None, i18n.t("cli.test_window.error.no_windows_list"), True
     return entries, None, True
 
 
@@ -249,7 +257,9 @@ def load(log_dir: Path) -> Windows:
         _CACHE[key] = (st.st_mtime_ns, st.st_size, result)
         return result
     except Exception as exc:  # observar nunca rompe una tool ni el panel
-        return Windows(error=f"error inesperado: {exc.__class__.__name__}")
+        return Windows(
+            error=i18n.t("cli.test_window.error.unexpected", error=exc.__class__.__name__)
+        )
 
 
 # --- Escritura -----------------------------------------------------------------------------------
@@ -288,14 +298,17 @@ class _Locked:
             self.lock.acquire()
         except Timeout as exc:
             raise TestWindowError(
-                f"otro proceso tiene ocupado {self.log_dir / LOCK_NAME} desde hace más de "
-                f"{self.lock_timeout:g} s; vuelve a intentarlo"
+                i18n.t(
+                    "cli.test_window.error.lock_busy",
+                    path=self.log_dir / LOCK_NAME,
+                    seconds=i18n.format_number(self.lock_timeout, None),
+                )
             ) from exc
         entries, error, _exists = _read_raw(self.path)
         if entries is None:
             self.lock.release()
             raise TestWindowError(
-                f"{self.path} es ilegible ({error}); no se toca. Arréglalo a mano o bórralo"
+                i18n.t("cli.test_window.error.file_unreadable", path=self.path, error=error)
             )
         self.entries = entries
         return self
@@ -348,28 +361,31 @@ def stop(
         if window_id is None:
             open_windows = [w for w in f.windows() if w.is_open]
             if not open_windows:
-                raise TestWindowError("no hay ninguna ventana abierta")
+                raise TestWindowError(i18n.t("cli.test_window.error.none_open"))
             if len(open_windows) > 1:
                 ids = ", ".join(w.id for w in open_windows)
                 raise TestWindowError(
-                    f"hay {len(open_windows)} ventanas abiertas ({ids}); di cuál con "
-                    "`local-delegate test-window stop <id>`"
+                    i18n.t("cli.test_window.error.several_open", n=len(open_windows), ids=ids)
                 )
             window_id = open_windows[0].id
         for i, entry in enumerate(f.entries):
             if isinstance(entry, dict) and entry.get("id") == window_id:
                 w = _window_from(entry)
                 if w is None:
-                    raise TestWindowError(f"la ventana {window_id} está mal escrita en el fichero")
+                    raise TestWindowError(i18n.t("cli.test_window.error.malformed", id=window_id))
                 if not w.is_open:
-                    raise TestWindowError(f"la ventana {window_id} ya estaba cerrada")
+                    raise TestWindowError(
+                        i18n.t("cli.test_window.error.already_closed", id=window_id)
+                    )
                 if now < w.start:
-                    raise TestWindowError(f"la ventana {window_id} empieza después de ahora")
+                    raise TestWindowError(
+                        i18n.t("cli.test_window.error.starts_later", id=window_id)
+                    )
                 closed = Window(w.id, w.start, now, w.label, w.created_at)
                 f.entries[i] = {**entry, "end": format_instant(now)}
                 _write(f.path, f.entries)
                 return closed
-        raise TestWindowError(f"no existe la ventana {window_id}")
+        raise TestWindowError(i18n.t("cli.test_window.error.not_found", id=window_id))
 
 
 def add(
@@ -387,9 +403,9 @@ def add(
         # Al milisegundo, que es lo que se guarda: así un `add` repetido se reconoce como tal.
         s, e = (_floor_ms(parse_instant(x)) for x in (start_at, end_at))
     except (ValueError, TypeError) as exc:
-        raise TestWindowError(f"fecha ilegible: {exc}") from exc
+        raise TestWindowError(i18n.t("cli.test_window.error.bad_date", value=exc)) from exc
     if s >= e:
-        raise TestWindowError("el inicio tiene que ser anterior al fin")
+        raise TestWindowError(i18n.t("cli.test_window.error.start_after_end"))
     now = _floor_ms(now if now is not None else _now())
     with _Locked(log_dir, lock_timeout) as f:
         for w in f.windows():

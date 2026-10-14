@@ -1,0 +1,95 @@
+## M1 borrar argparse.usage del catálogo inglés
+fichero: src/local_delegate/resources/i18n/en/argparse.json sha256 antes 69d44a2f2532 después 69d44a2f2532
+tests: tests/test_cli_english.py::test_argparse_msgids_covered
+resultado: [pesado] plaza plaza-1 tomada tras 0s: D:/Projects/local-delegate/.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -x --tb=line tests/test_cli_english.py::test_argparse_msgids_covered
+E   AssertionError: msgid de argparse sin clave en argparse.json: ['usage: ']
+    assert not ['usage: ']
+D:\Projects\local-delegate\tests\test_cli_english.py:136: AssertionError: msgid de argparse sin clave en argparse.json: ['usage: ']
+FAILED tests/test_cli_english.py::test_argparse_msgids_covered - AssertionErr...
+
+## M2 run() sin el parche de argparse
+fichero: src/local_delegate/cli.py sha256 antes 0226287d3ca6 después 0226287d3ca6
+tests: tests/test_cli_english.py::test_help_in_spanish_has_no_english_frame
+resultado: [pesado] plaza plaza-1 tomada tras 1s: D:/Projects/local-delegate/.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -x --tb=line tests/test_cli_english.py::test_help_in_spanish_has_no_english_frame
+E   AssertionError: assert 'uso: local-delegate' in 'usage: local-delegate [-h] [--version]\n                      {benchmark,check-llamaswap,init-llamaswap,llamaswap,doc...h, --help            show this help message and exit\n  --version             imprime la versión instalada y termina\n'
+D:\Projects\local-delegate\tests\test_cli_english.py:149: AssertionError: assert 'uso: local-delegate' in 'usage: local-delegate [-h] [--version]\n                      {benchmark,check-llamaswap,init-llamaswap,llamaswap,doc...h, --help            show this help message and exit\n  --version             imprime la versión instalada y termina\n'
+FAILED tests/test_cli_english.py::test_help_in_spanish_has_no_english_frame[root]
+
+## M3 el parche no se restaura
+fichero: src/local_delegate/cli.py sha256 antes 0226287d3ca6 después 0226287d3ca6
+tests: tests/test_cli_english.py::test_the_patch_is_restored tests/test_cli_english.py::test_the_patch_is_restored_after_an_error
+resultado: [pesado] plaza plaza-1 tomada tras 0s: D:/Projects/local-delegate/.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -x --tb=line tests/test_cli_english.py::test_the_patch_is_restored tests/test_cli_english.py::test_the_patch_is_restored_after_an_error
+E   assert <function argparse_gettext at 0x000001D8F17D2E80> is <function gettext at 0x000001D8EED6ACA0>
+D:\Projects\local-delegate\tests\test_cli_english.py:175: assert <function argparse_gettext at 0x000001D8F17D2E80> is <function gettext at 0x000001D8EED6ACA0>
+FAILED tests/test_cli_english.py::test_the_patch_is_restored - assert <functi...
+
+## M4 una ayuda sin catálogo
+fichero: src/local_delegate/cli.py sha256 antes 0226287d3ca6 después 0226287d3ca6
+tests: tests/test_cli_english.py::test_help_in_english_has_no_spanish_catalog_text tests/test_no_uncatalogued_text.py::test_no_uncatalogued_text_outside_pending
+resultado: [pesado] plaza plaza-1 tomada tras 0s: D:/Projects/local-delegate/.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -x --tb=line tests/test_cli_english.py::test_help_in_english_has_no_spanish_catalog_text tests/test_no_uncatalogued_text.py::test_no_uncatalogued_text_outside_pending
+E   AssertionError: texto español en la ayuda inglesa: ['abre', 'ahora', 'empieza', 'imprime', 'que', 'una', 'ventana']
+    assert not ['abre', 'ahora', 'empieza', 'imprime', 'que', 'una', ...]
+D:\Projects\local-delegate\tests\test_cli_english.py:162: AssertionError: texto español en la ayuda inglesa: ['abre', 'ahora', 'empieza', 'imprime', 'que', 'una', 'ventana']
+FAILED tests/test_cli_english.py::test_help_in_english_has_no_spanish_catalog_text[test-window]
+
+## M5 separadores españoles cambiados por los ingleses
+fichero: src/local_delegate/i18n.py sha256 antes fb4fb421a026 después fb4fb421a026
+tests: tests/test_cli_english.py::test_number_format tests/test_cli_english.py::test_a_real_cli_output_uses_the_language_separators
+resultado: [pesado] plaza plaza-1 tomada tras 0s: D:/Projects/local-delegate/.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -x --tb=line tests/test_cli_english.py::test_number_format tests/test_cli_english.py::test_a_real_cli_output_uses_the_language_separators
+E   AssertionError: assert '20,027' == '20.027'
+D:\Projects\local-delegate\tests\test_cli_english.py:278: AssertionError: assert '20,027' == '20.027'
+FAILED tests/test_cli_english.py::test_number_format[es-20027-0-20.027] - Ass...
+
+## M6 el modo máquina se ignora
+fichero: src/local_delegate/i18n.py sha256 antes fb4fb421a026 después fb4fb421a026
+tests: tests/test_cli_english.py::test_machine_numbers_have_no_separators_in_any_language
+resultado: [pesado] plaza plaza-1 tomada tras 0s: D:/Projects/local-delegate/.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -x --tb=line tests/test_cli_english.py::test_machine_numbers_have_no_separators_in_any_language
+E   AssertionError: assert '20.027,5' == '20027.5'
+D:\Projects\local-delegate\tests\test_cli_english.py:284: AssertionError: assert '20.027,5' == '20027.5'
+FAILED tests/test_cli_english.py::test_machine_numbers_have_no_separators_in_any_language[es]
+
+## M7 el resumen de recompute-cost sin format_number
+fichero: src/local_delegate/recompute.py sha256 antes 38f7fa8e61e3 después 38f7fa8e61e3
+tests: tests/test_cli_english.py::test_a_real_cli_output_uses_the_language_separators
+resultado: [pesado] plaza plaza-1 tomada tras 0s: D:/Projects/local-delegate/.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -x --tb=line tests/test_cli_english.py::test_a_real_cli_output_uses_the_language_separators
+E   AssertionError: assert ': 20.027 (' in 'Plazo de borrado de los transcripts: 30 días.\nTranscripts leídos: 20027 (líneas ilegibles: 0).\nLíneas del log relle... rechazo; descartes: ninguno.\nCuota seven_day: calibrada; puntos: 0 del statusline, 0 de rechazo; descartes: ninguno.'
+D:\Projects\local-delegate\tests\test_cli_english.py:303: AssertionError: assert ': 20.027 (' in 'Plazo de borrado de los transcripts: 30 días.\nTranscripts leídos: 20027 (líneas ilegibles: 0).\nLíneas del log relle... rechazo; descartes: ninguno.\nCuota seven_day: calibrada; puntos: 0 del statusline, 0 de rechazo; descartes: ninguno.'
+FAILED tests/test_cli_english.py::test_a_real_cli_output_uses_the_language_separators[es-20.027]
+
+## M8 una salida de test-window sin catálogo
+fichero: src/local_delegate/cli.py sha256 antes 0226287d3ca6 después 0226287d3ca6
+tests: tests/test_cli_english.py::test_smoke_in_english tests/test_no_uncatalogued_text.py::test_no_uncatalogued_text_outside_pending
+resultado: [pesado] plaza plaza-1 tomada tras 0s: D:/Projects/local-delegate/.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -x --tb=line tests/test_cli_english.py::test_smoke_in_english tests/test_no_uncatalogued_text.py::test_no_uncatalogued_text_outside_pending
+E   AssertionError: assert ('added' in 'w-20261001T000000Z añadida\n')
+D:\Projects\local-delegate\tests\test_cli_english.py:240: AssertionError: assert ('added' in 'w-20261001T000000Z añadida\n')
+FAILED tests/test_cli_english.py::test_smoke_in_english - AssertionError: ass...
+
+## M9 versión en la matriz sin su celda esperada
+fichero: .github/workflows/ci.yml sha256 antes 3769d90b393c después 3769d90b393c
+tests: tests/test_ci_gate.py::test_the_expected_jobs_are_exactly_those_of_ci_yml tests/test_ci_gate.py::test_the_classifiers_are_the_blocking_cells_of_the_matrix
+resultado: [pesado] plaza plaza-1 tomada tras 0s: D:/Projects/local-delegate/.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -x --tb=line tests/test_ci_gate.py::test_the_expected_jobs_are_exactly_those_of_ci_yml tests/test_ci_gate.py::test_the_classifiers_are_the_blocking_cells_of_the_matrix
+E   AssertionError: assert {'cli-python-...l-smoke', ...} == {'cli-python-..., 'lint', ...}
+D:\Projects\local-delegate\tests\test_ci_gate.py:302: AssertionError: assert {'cli-python-...l-smoke', ...} == {'cli-python-..., 'lint', ...}
+FAILED tests/test_ci_gate.py::test_the_expected_jobs_are_exactly_those_of_ci_yml
+
+## M10 print("Hola") en cli.py
+fichero: src/local_delegate/cli.py sha256 antes 0226287d3ca6 después 0226287d3ca6
+tests: tests/test_no_uncatalogued_text.py::test_no_uncatalogued_text_outside_pending
+resultado: [pesado] plaza plaza-1 tomada tras 0s: D:/Projects/local-delegate/.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -x --tb=line tests/test_no_uncatalogued_text.py::test_no_uncatalogued_text_outside_pending
+E   AssertionError: Texto para personas fuera del catálogo (usa `i18n.t`, o añade una excepción con motivo si es un nombre de máquina):
+    assert ["src/local_d...text] 'Hola'"] == []
+D:\Projects\local-delegate\tests\test_no_uncatalogued_text.py:297: AssertionError: Texto para personas fuera del catálogo (usa `i18n.t`, o añade una excepción con motivo si es un nombre de máquina):
+FAILED tests/test_no_uncatalogued_text.py::test_no_uncatalogued_text_outside_pending
+
+## M8b un valor de una palabra sin catálogo (el guardián no lo ve)
+fichero: src/local_delegate/cli.py sha256 antes 0226287d3ca6 después 0226287d3ca6
+tests: tests/test_no_uncatalogued_text.py::test_no_uncatalogued_text_outside_pending tests/test_cli_english.py::test_smoke_in_english
+resultado: [pesado] plaza plaza-1 tomada tras 0s: D:/Projects/local-delegate/.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -x --tb=line tests/test_no_uncatalogued_text.py::test_no_uncatalogued_text_outside_pending tests/test_cli_english.py::test_smoke_in_english
+E   AssertionError: list: ['abierta']
+    assert not ['abierta']
+D:\Projects\local-delegate\tests\test_cli_english.py:248: AssertionError: list: ['abierta']
+FAILED tests/test_cli_english.py::test_smoke_in_english - AssertionError: lis...
+## Mutante M3 (el parche no se restaura) con la suite entera y xdist (-n 4 --dist loadgroup)
+FAILED tests/test_cli_english.py::test_the_patch_is_restored_after_an_error
+FAILED tests/test_cli_english.py::test_the_patch_is_restored - assert <functi...
+2 failed, 2792 passed, 2 skipped, 4 warnings in 83.66s (0:01:23)

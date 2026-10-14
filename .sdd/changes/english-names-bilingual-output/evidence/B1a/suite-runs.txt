@@ -1,0 +1,7 @@
+LANG=en_US.UTF-8: 2794 passed, 2 skipped, 4 warnings in 99.69s (0:01:39)
+LANG=es_ES.UTF-8: 2794 passed, 2 skipped, 4 warnings in 82.71s (0:01:22)
+comando: pytest -q -n 4 --dist loadgroup -p no:cacheprovider (bajo pesado.sh)
+Python 3.12, tests/test_cli_english.py + tests/test_cli_renamed_names.py: 71 passed in 3.92s
+Python 3.13, tests/test_cli_english.py + tests/test_cli_renamed_names.py: 71 passed in 6.48s
+Python 3.14, tests/test_cli_english.py + tests/test_cli_renamed_names.py: 71 passed in 3.91s
+Python 3.11 (.venv), mismos ficheros: incluidos en la suite

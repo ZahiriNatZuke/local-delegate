@@ -1178,6 +1178,34 @@ ficheros) y las dos mitades son independientes. B0a se mezcla antes que B0b; las
     `es/doctor.json` sin cambiar su fila; falla.
   - *`doctor`* muestra «variable», «preferencia», «sistema» o «reserva» con la ruta.
 
+- **Partición aprobada (2026-10-14, `waves/B1-proposal.md` §3 y «Decisiones aprobadas»):** cinco
+  PR mezclados en serie, B1a → B1b → B1c → B1d → B1e. Tamaño **medido** con el escáner del guardián
+  de B0b: 728 textos únicos (578 del paquete y 150 de los tres scripts, que el tamaño de arriba no
+  contaba) más ~45 msgid de argparse.
+  - **B1a — armazón del CLI:** `resources/i18n/{es,en}/{cli,argparse}.json`, el parche de argparse
+    en `cli.py` (restaurado al salir de `run()`), `i18n.format_number` (desviación registrada:
+    `i18n.py` es de B0), **todo** `cli.py` (incluidos los 57 textos de `install`/`update`/`uninstall`
+    que viven en él), `deprecations.py`, `entrypoint.py`, `test_windows.py`, `recompute.py` y
+    `daemon.py`; `tests/test_cli_english.py` con `test_argparse_msgids_covered`; `cli-python-matrix`
+    (3.11–3.15) en `ci.yml`, `ci_gate.py` (`PYTHON_WITHOUT_WHEELS`), `tests/test_ci_gate.py` y los
+    clasificadores de `pyproject.toml`; la fila `sin_cruce` de `rename-exceptions.md`. ~216 textos.
+  - **B1b — `doctor`:** `resources/i18n/{es,en}/doctor.json`, `checks.py`, `doctor.py`, `probes.py`,
+    la línea de idioma en la cabecera de `doctor` (no es un check), el campo `stored_source` de
+    `LanguageResolution` (desviación: `hook_common.py`) y el remedio de D11, `tests/test_wiki.py`,
+    `tests/test_doctor_english.py`; borra `uncatalogued_pending/doctor.json` y el guardián pasa a
+    exigir solo los pendientes de las olas abiertas. ~181 textos.
+  - **B1c — llama-swap y `benchmark`:** `residency.py`, `topology.py`, `llamaswap_api.py`,
+    `llamaswap_config.py`, `matrix.py`, `turn.py`, `benchmark.py`. ~181 textos.
+  - **B1d — scripts:** `measure_cooldown.py`, `analyze_benchmark.py` y `pair_sheet.py` (claves
+    `cli.script.*` en `cli.json`; hoja en el idioma del proceso, lector de las dos formas, `human`
+    escrito como `tie` y `empate` leído para siempre); filas de `pair_sheet` en `rename-exceptions.md`;
+    borra `uncatalogued_pending/cli.json`. ~150 textos.
+  - **B1e — control del detector:** 60 + 60 frases nuevas con la regla de `B1-proposal.md` §5,
+    congeladas en un commit anterior a la corrida; ≥ 98 %.
+  - Formatos (REQ-026): coma decimal y punto de miles en español en la CLI; fechas en ISO 8601 UTC en
+    los dos idiomas; las salidas MCP (B2) siguen sin separador de miles y con punto decimal.
+  - Cada PR registra en su `waves/B1x.md` la revisión a mano del volcado inglés de su salida.
+
 #### B2 — Salidas MCP, `local_status`, contrato, descripciones y prompts
 
 Es **una sola ola**, la única dueña de `server.py` en el frente B, con dos lotes en serie (B2a y
@@ -1285,7 +1313,8 @@ B2b), cada uno con su commit y su PR. Los dos salen en la **misma versión**.
 #### B5 — `install`, skill, bloques y preferencia
 
 - **REQ:** 029, 047 (escritura por `install`/`update` y borrado por `uninstall`), 021 (mensajes de
-  `install`, `update` y `uninstall`), 034 (humo de `install`), 040 (precedencia en la wiki y D11)
+  `install`, `update` y `uninstall` que no viven en `cli.py`: los de `cli.py` los traduce B1a,
+  decisión del 2026-10-14), 034 (humo de `install`), 040 (precedencia en la wiki y D11)
   y 012 (resto: catálogo de subagentes).
 - **Posee:** `install.py` (entero en el frente B: mensajes, escritura de `language.json`, elección
   del idioma de la skill y del bloque, y `uninstall`), `update.py` (entero en el frente B: mensajes

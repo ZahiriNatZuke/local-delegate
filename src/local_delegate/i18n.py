@@ -72,6 +72,27 @@ def t(key: str, /, **values: object) -> str:
     return t_lang(lang(), key, **values)
 
 
+#: Separadores de miles y decimal por idioma (REQ-026): `20.027` y `1,5` en español, `20,027` y
+#: `1.5` en inglés.
+_SEPARATORS = {"es": (".", ","), "en": (",", ".")}
+
+
+def format_number(
+    value: float, decimals: int | None = 0, *, language: str | None = None, machine: bool = False
+) -> str:
+    """Un número para una persona, con los separadores del idioma (REQ-026).
+
+    `decimals=None` deja los decimales que hagan falta (como `:g`). Con `machine=True` sale sin
+    separador de miles y con punto decimal, sea cual sea el idioma: es el formato de las salidas
+    que lee un modelo (REQ-026, ola B2) y de todo lo que se escribe en un fichero.
+    """
+    if machine:
+        return f"{value:g}" if decimals is None else f"{value:.{decimals}f}"
+    text = f"{value:,g}" if decimals is None else f"{value:,.{decimals}f}"
+    thousands, point = _SEPARATORS.get(language or lang(), _SEPARATORS["en"])
+    return text.replace(",", "\0").replace(".", point).replace("\0", thousands)
+
+
 @functools.cache
 def _argparse_index() -> dict[str, str]:
     """msgid inglés de argparse → su clave `argparse.*` del catálogo."""

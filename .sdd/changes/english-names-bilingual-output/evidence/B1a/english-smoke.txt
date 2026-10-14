@@ -1,0 +1,63 @@
+=== local-delegate test-window start --label smoke
+w-<ID>
+(exit 0)
+=== local-delegate test-window list
+w-<ID>  <TS>  open  0 rows  smoke
+(exit 0)
+=== local-delegate test-window stop
+w-<ID> closed: <TS> to <TS>
+(exit 0)
+=== local-delegate test-window stop
+test-window: there is no open window
+(exit 2)
+=== local-delegate test-window add <TS> <TS>
+w-<ID> added
+(exit 0)
+=== local-delegate test-window add <TS> <TS>
+already there: w-<ID> (no other one is added)
+(exit 0)
+=== local-delegate test-window add <TS> <TS>
+test-window: the start has to be before the end
+(exit 2)
+=== local-delegate test-window list
+w-<ID>  <TS>  <TS>  0 rows
+w-<ID>  <TS>  <TS>  0 rows  smoke
+(exit 0)
+=== local-delegate recompute-cost --claude-dir <TMP>/claude
+Transcript deletion period: 30 days.
+Transcripts read: 0 (unreadable lines: 0).
+Log lines backfilled: 0 (none).
+N cases in the aggregates: 0.
+Price check: no cost data in the transcripts.
+Quota five_hour: not calibrated; points: 0 from the statusline, 0 from rejections; discarded: none.
+Quota seven_day: not calibrated; points: 0 from the statusline, 0 from rejections; discarded: none.
+(exit 0)
+=== local-delegate recalcular-coste --claude-dir <TMP>/claude
+warning: recalcular-coste is deprecated: use recompute-cost (it is removed in 0.38.0)
+Transcript deletion period: 30 days.
+Transcripts read: 0 (unreadable lines: 0).
+Log lines backfilled: 0 (none).
+N cases in the aggregates: 0.
+Price check: no cost data in the transcripts.
+Quota five_hour: not calibrated; points: 0 from the statusline, 0 from rejections; discarded: none.
+Quota seven_day: not calibrated; points: 0 from the statusline, 0 from rejections; discarded: none.
+(exit 0)
+=== local-delegate init-llamaswap --config x.yaml --vram-gb 8
+error: at least --resident or --swap is needed
+(exit 2)
+=== local-delegate check-llamaswap --config <TMP>/none.yaml --vram-gb 8
+error: there is no 'groups:' in <TMP>\none.yaml, nothing to validate
+(exit 2)
+=== local-delegate install --clients claude --target codex --home <TMP>/home
+error: --clients and --target cannot be combined: use one of them
+(exit 2)
+=== local-delegate doctor --bogus
+usage: local-delegate [-h] [--version]
+                      {benchmark,check-llamaswap,init-llamaswap,llamaswap,doctor,serve,recompute-cost,test-window,install,update,uninstall}
+                      ...
+local-delegate: error: unrecognized arguments: --bogus
+(exit 2)
+=== local-delegate test-window bogus
+usage: local-delegate test-window [-h] {start,stop,add,list} ...
+local-delegate test-window: error: argument test_window_command: invalid choice: 'bogus' (choose from 'start', 'stop', 'add', 'list')
+(exit 2)
