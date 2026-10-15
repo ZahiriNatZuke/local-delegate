@@ -1,0 +1,282 @@
+{
+  "frozen_at": "2026-10-15T17:50:50+00:00",
+  "frozen_before_any_measurement_call": true,
+  "frozen_before_the_prose_judge_and_the_lint_label_fix": true,
+  "purpose": "Third control set for the language order of local_summarize and local_lint_summary (B2d-fix, after the live probes X and Y). Chosen by the rules below, before writing the prose-only judge and before any code change; not chosen by looking at responses. Distinct from set 1 (evidence/B2d/lang-sample-docs.json) and set 2 (evidence/B2d-fix/lang-sample-docs-2.json).",
+  "judge": "scripts/judge_response_language.py (prose only, with not_judgeable), written after this set was frozen; the detector inside it is scripts/detect_language.py detect(min_tokens=20, min_margin=0.15), unchanged. For comparison the old rule is also applied: detect() on the literal response minus the product's wrapper lines.",
+  "criterion": ">= 90% in the requested language among the judgeable responses per tool and batch, 0 in the opposite language; not_judgeable reported apart (it is not a pass)",
+  "rules": {
+    "local_summarize": {
+      "many_headings": "a document has many headings when sections.markdown_headings() finds >= 12",
+      "es_pool": "git-tracked *.md outside .sdd/ and benchmarks/, 6 000-30 000 bytes, detector on the input = es, with Markdown structure (sections.detect), not in sets 1-2, sorted by path; es_many = the first 2 with many headings, es_other = the first 3 of the rest with fewer than 12",
+      "en_pool": ".venv/Lib/site-packages/*.dist-info/METADATA, 4 000-30 000 bytes (set 2 used 6 000: only 4 unused METADATA were left above it), detector on the input = en, with Markdown structure, not in sets 1-2, sorted by path; en_many = the first 2 with many headings, en_other = the first 3 of the rest with fewer than 12"
+    },
+    "local_lint_summary": {
+      "short_log": "fewer than 1 000 characters after removing the lock wrapper line",
+      "es_pool": "Spanish outputs of the product (message catalog es). Tracked: git-tracked *.txt under evidence/B*/ whose name contains 'check', 'mutant' or 'doctor', detector on the input = es, >= 100 tokens, not in sets 1-2, a file whose content without the lock line repeats an earlier one dropped, sorted by path, first 2. Generated on 2026-10-15 with product language es: 'check-llamaswap --vram-gb 8' on tests/fixtures/residency/*.yaml sorted by name, first 2 (short), and 'doctor --home <new empty directory>'. The detector on these generated inputs is recorded, not required: they are dominated by names and paths and give unknown, but every sentence in them comes from the es catalog. Order: [short0, tracked0, doctor, short1, tracked1], so each batch gets one short Spanish log",
+      "en_pool": "5 real tool outputs generated on 2026-10-15, in this fixed order: biome lint (nest-template-project), ruff concise on the first scripts/*.py by path with a short output (build_site.py), pytest -v -rA, ruff concise on the next one (clean_watcher_fixtures.py), tsc (angular-template-project); first line of the lock wrapper removed; command in each entry; the detector on the input is recorded, not required (the two short ruff logs give unknown: rule codes and paths). No eslint is installed in any project on this machine, so biome stands for the JS linter"
+    },
+    "split": "summarize: batch 1 = es_many[0], es_other[0:2], en_many[0], en_other[0]; batch 2 = en_many[1], en_other[1:3], es_many[1], es_other[2]. lint: batch 1 = es_pool[0:3] + en_pool[0:2]; batch 2 = en_pool[2:5] + es_pool[3:5]. Mixed input language with the majority opposite to the requested one; per batch 2 documents with many headings in summarize and 2 short logs in lint",
+    "copies": "every document is a byte copy under evidence/B2d-fix/docs-3/ (marked -text in .gitattributes) so it cannot change under the measurement"
+  },
+  "batch_1": {
+    "product": "es",
+    "output_language": "en",
+    "env": "LOCAL_DELEGATE_OUTPUT_LANGUAGE=en, product language es",
+    "tools": {
+      "local_summarize": [
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-doc-docs_recipes_claude-code-hooks.md",
+          "source": "docs/recipes/claude-code-hooks.md",
+          "bytes": 13082,
+          "chars": 12899,
+          "sha256": "439ac36e277919bdc50842c48eba921650c6893da542295666cba9c4f9d7519d",
+          "input_language": "es",
+          "detector_on_input": "es",
+          "detector_tokens_on_input": 2000,
+          "markdown_headings": 13,
+          "many_headings": true
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-doc-docs_recipes_llama-swap-groups.md",
+          "source": "docs/recipes/llama-swap-groups.md",
+          "bytes": 15161,
+          "chars": 14978,
+          "sha256": "28b1419b2814990f04b2ffc6cc2d2714e80cefd7f4d90eeff1316e1d65150d74",
+          "input_language": "es",
+          "detector_on_input": "es",
+          "detector_tokens_on_input": 2359,
+          "markdown_headings": 11,
+          "many_headings": false
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-doc-docs_recipes_remote-backend.md",
+          "source": "docs/recipes/remote-backend.md",
+          "bytes": 11525,
+          "chars": 11477,
+          "sha256": "388182f8232edeaf9c8583870c9a8b0a78d61b3694e892c4365bce69c875559f",
+          "input_language": "es",
+          "detector_on_input": "es",
+          "detector_tokens_on_input": 1734,
+          "markdown_headings": 9,
+          "many_headings": false
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-doc-pycparser-3.0.METADATA.md",
+          "source": "site-packages/pycparser-3.0.dist-info/METADATA",
+          "bytes": 8229,
+          "chars": 8229,
+          "sha256": "f547a60b0ab54cc2f242213d1f87960ad80df7dd5dfeb98d17a444d48bfb6b93",
+          "input_language": "en",
+          "detector_on_input": "en",
+          "detector_tokens_on_input": 1190,
+          "markdown_headings": 19,
+          "many_headings": true
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-doc-distlib-0.4.3.METADATA.md",
+          "source": "site-packages/distlib-0.4.3.dist-info/METADATA",
+          "bytes": 5317,
+          "chars": 5317,
+          "sha256": "6c988f8c23faa0ef8734f6863b32976d65f5851333161e8a8df3d80fc57e080d",
+          "input_language": "en",
+          "detector_on_input": "en",
+          "detector_tokens_on_input": 689,
+          "markdown_headings": 5,
+          "many_headings": false
+        }
+      ],
+      "local_lint_summary": [
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-check-llamaswap-pre-b10909.txt",
+          "source": "generated 2026-10-15",
+          "bytes": 757,
+          "chars": 757,
+          "sha256": "e2d30b729c1ad2543d089764b55759c33b4063c046e0555dda4f121caa5321e7",
+          "input_language": "es",
+          "detector_on_input": "unknown",
+          "detector_tokens_on_input": 118,
+          "short_log": true,
+          "command": "local-delegate: local-delegate check-llamaswap --config tests/fixtures/residency/pre-b10909-20260915.yaml --vram-gb 8 (product es)"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-B2c_corpus-f2-check.txt",
+          "source": ".sdd/changes/english-names-bilingual-output/evidence/B2c/corpus-f2-check.txt",
+          "bytes": 1245,
+          "chars": 1245,
+          "sha256": "e55c52f2c40404391ce087ca987dffa411a9d8f5b63fc386a885ed753731705d",
+          "input_language": "es",
+          "detector_on_input": "es",
+          "detector_tokens_on_input": 172,
+          "short_log": false
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-doctor-empty-home.txt",
+          "source": "generated 2026-10-15",
+          "bytes": 5465,
+          "chars": 5427,
+          "sha256": "367ab3af2a166576928e52c12605bcee7940be5f582f6c2eacefe49d4cc7e161",
+          "input_language": "es",
+          "detector_on_input": "unknown",
+          "detector_tokens_on_input": 721,
+          "short_log": false,
+          "command": "local-delegate: local-delegate doctor --home <new empty directory> (product es)"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-biome-lint-nest.txt",
+          "source": "generated 2026-10-15",
+          "bytes": 23622,
+          "chars": 22235,
+          "sha256": "3af20fa5cfba9f2dedb4f8a5653f382acfaf93477085774587aa694b7da994a2",
+          "input_language": "en",
+          "detector_on_input": "en",
+          "detector_tokens_on_input": 2542,
+          "short_log": false,
+          "command": "nest-template-project: biome lint --colors=off --max-diagnostics=25 --only=style --only=nursery --only=complexity --only=suspicious src"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-ruff-concise-build-site.txt",
+          "source": "generated 2026-10-15",
+          "bytes": 968,
+          "chars": 968,
+          "sha256": "0e539a8a8a7eafac0f94a6dc56173a2d3ef2636c737467d63bea2ea43c6519e9",
+          "input_language": "en",
+          "detector_on_input": "unknown",
+          "detector_tokens_on_input": 137,
+          "short_log": true,
+          "command": "local-delegate: ruff check --select ALL --no-cache --output-format=concise scripts/build_site.py"
+        }
+      ]
+    }
+  },
+  "batch_2": {
+    "product": "en",
+    "output_language": "es",
+    "env": "LOCAL_DELEGATE_LANG=en (product en) and LOCAL_DELEGATE_OUTPUT_LANGUAGE=es",
+    "tools": {
+      "local_summarize": [
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-doc-pywin32-312.METADATA.md",
+          "source": "site-packages/pywin32-312.dist-info/METADATA",
+          "bytes": 11168,
+          "chars": 11168,
+          "sha256": "77f53e90408dd3bdcf5f73a20d6548504313dee2ad34f8b3794b2202583a84b1",
+          "input_language": "en",
+          "detector_on_input": "en",
+          "detector_tokens_on_input": 1624,
+          "markdown_headings": 14,
+          "many_headings": true
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-doc-identify-2.6.19.METADATA.md",
+          "source": "site-packages/identify-2.6.19.dist-info/METADATA",
+          "bytes": 4373,
+          "chars": 4373,
+          "sha256": "6bd3f4b6084b3aa9bbfdd4631b2edffdc2908b396dfc2971891d0356bccb4965",
+          "input_language": "en",
+          "detector_on_input": "en",
+          "detector_tokens_on_input": 619,
+          "markdown_headings": 9,
+          "many_headings": false
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-doc-python_discovery-1.6.1.METADATA.md",
+          "source": "site-packages/python_discovery-1.6.1.dist-info/METADATA",
+          "bytes": 5132,
+          "chars": 5130,
+          "sha256": "fd4e94258896c927fd6e5354988c7b307a0f16b6a25abd5d0b646fcf5cc9fea8",
+          "input_language": "en",
+          "detector_on_input": "en",
+          "detector_tokens_on_input": 643,
+          "markdown_headings": 4,
+          "many_headings": false
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-doc-docs_wiki_Configuration.md",
+          "source": "docs/wiki/Configuration.md",
+          "bytes": 28376,
+          "chars": 28034,
+          "sha256": "fcb6ed942a2f265633aa452b2bd684d68d3373bfdcaabe1cca5627392a125ddf",
+          "input_language": "es",
+          "detector_on_input": "es",
+          "detector_tokens_on_input": 4347,
+          "markdown_headings": 16,
+          "many_headings": true
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-doc-src_local_delegate_resources_skills_local-delegation_SKILL.md",
+          "source": "src/local_delegate/resources/skills/local-delegation/SKILL.md",
+          "bytes": 6017,
+          "chars": 5884,
+          "sha256": "fc1f2a7d00f35b2bf4a587be1f60ed71338e4c434b5d77cc773c0e7f38ff9a9c",
+          "input_language": "es",
+          "detector_on_input": "es",
+          "detector_tokens_on_input": 850,
+          "markdown_headings": 9,
+          "many_headings": false
+        }
+      ],
+      "local_lint_summary": [
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-pytest-chunking-density.txt",
+          "source": "generated 2026-10-15",
+          "bytes": 11139,
+          "chars": 11139,
+          "sha256": "0fa7d99e62af9ba251cc42f12c808445ac1f62573169ba778796cfbbc451b6f4",
+          "input_language": "en",
+          "detector_on_input": "en",
+          "detector_tokens_on_input": 1661,
+          "short_log": false,
+          "command": "local-delegate: pytest -p no:xdist -p no:cacheprovider -v -rA --tb=short tests/test_chunking.py tests/test_density.py"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-ruff-concise-clean-watcher.txt",
+          "source": "generated 2026-10-15",
+          "bytes": 958,
+          "chars": 958,
+          "sha256": "5a73a08070f3573b78cc4b31bfcccecf06b7d6d4045de1af4b9a82a173a7525f",
+          "input_language": "en",
+          "detector_on_input": "unknown",
+          "detector_tokens_on_input": 130,
+          "short_log": true,
+          "command": "local-delegate: ruff check --select ALL --no-cache --output-format=concise scripts/clean_watcher_fixtures.py"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-tsc-angular.txt",
+          "source": "generated 2026-10-15",
+          "bytes": 1444,
+          "chars": 1444,
+          "sha256": "292208ba99d5044fa0a927eb14c70d7b5d369553ec52d9ffffc642314e76a63a",
+          "input_language": "en",
+          "detector_on_input": "en",
+          "detector_tokens_on_input": 176,
+          "short_log": false,
+          "command": "angular-template-project: tsc --noEmit -p tsconfig.app.json --pretty false --noUnusedLocals --noUnusedParameters --exactOptionalPropertyTypes"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-check-llamaswap-pre-no-resident.txt",
+          "source": "generated 2026-10-15",
+          "bytes": 741,
+          "chars": 741,
+          "sha256": "1adc07d48a6a2b687f2b76e7a5197281456f8323471f31b42040debbae800482",
+          "input_language": "es",
+          "detector_on_input": "unknown",
+          "detector_tokens_on_input": 122,
+          "short_log": true,
+          "command": "local-delegate: local-delegate check-llamaswap --config tests/fixtures/residency/pre-no-resident-20261006.yaml --vram-gb 8 (product es)"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-B2d-fix_corpus-affinity-check.txt",
+          "source": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/corpus-affinity-check.txt",
+          "bytes": 7872,
+          "chars": 7787,
+          "sha256": "8c261db94aaaa22a75abe82729c777865dbbcf34a64cdde565f09170a46304f0",
+          "input_language": "es",
+          "detector_on_input": "es",
+          "detector_tokens_on_input": 1111,
+          "short_log": false
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,47 @@
+local-delegate doctor — diagnóstico del andamiaje, los servicios y el backend local
+
+LLAMASWAP_EXE:    D:\Projects\llms\llama-swap-v255\llama-swap.exe
+LLAMASWAP_CONFIG: D:\Projects\llms\llama-swap\config.yaml
+Backend BASE_URL: http://127.0.0.1:9292/v1 — arriba
+HOME:             C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\b47a4f74-62fa-4576-8167-65006174a3a9\scratchpad\s3\logs\emptyhome
+Idioma:           es (sistema; C:\Users\Yohan\AppData\Local\local-delegate\language.json)
+Respuesta:        es (sistema)
+
+Estados: [ OK ] a punto · [WARN] revisar · [FALT] falta · [ -- ] no se pudo comprobar
+
+Entorno (el CLI y los clientes):
+  [ OK ] CLI local-delegate: C:\Users\Yohan\.local\bin\local-delegate.EXE (versión 0.35.0)
+  [ OK ] versión publicada: 0.35.0 (la última publicada)
+  [ -- ] clientes: no hay ~/.claude, ~/.codex ni ~/.config/opencode bajo C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\b47a4f74-62fa-4576-8167-65006174a3a9\scratchpad\s3\logs\emptyhome
+  [ OK ] clientes MCP observados: claude-ai 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.1.37) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.13.5) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.8.2) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.8.5) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.8.6) 0.1.0 [2025-11-25] sin elicitation; claude-code 2.1.300 [2026-07-28] elicitation; codex-mcp-client 0.160.0 [2025-06-18] elicitation; local-agent-mode-local-delegate 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.1.37) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.13.5) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.8.2) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.8.5) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.8.6) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.8.7) 1.0.0 [2025-11-25] sin elicitation; mcp 0.1.0 [2025-11-25] sin elicitation; mcp-remote-fallback-test 0.0.0 [2025-11-25] sin elicitation
+  [ OK ] cadenas de respaldo: cadenas válidas; sin residente
+  [WARN] nombres obsoletos: leído por los hooks (últimos 7 días): LD_HOOK_READ_BLOQUEAR está obsoleto: usa LD_HOOK_READ_BLOCK (se retira en la 0.38.0)
+         arréglalo con: renombra LD_HOOK_READ_BLOQUEAR a LD_HOOK_READ_BLOCK
+  [ OK ] coste y relleno: el último cotejo (2026-10-13T12:39:20+00:00) cuadra: 159 fila(s) juzgadas con la tabla de precios del 2026-10-06
+  [ OK ] ventanas de prueba: 67 ventanas, ninguna abierta
+
+Andamiaje (hooks, skill, memoria y entradas MCP):
+  [ -- ] hooks copiados: Claude Code no está instalado (C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\b47a4f74-62fa-4576-8167-65006174a3a9\scratchpad\s3\logs\emptyhome\.claude no existe)
+  [ -- ] hooks huérfanos: Claude Code no está instalado (C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\b47a4f74-62fa-4576-8167-65006174a3a9\scratchpad\s3\logs\emptyhome\.claude no existe)
+  [ -- ] hooks registrados: Claude Code no está instalado (C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\b47a4f74-62fa-4576-8167-65006174a3a9\scratchpad\s3\logs\emptyhome\.claude no existe)
+  [ -- ] skill local-delegation: Claude Code: cliente no instalado · opencode: cliente no instalado
+  [ -- ] memoria global: Claude Code: cliente no instalado · Codex: cliente no instalado · opencode: cliente no instalado
+  [ -- ] MCP en Claude Code: Claude Code no está instalado (C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\b47a4f74-62fa-4576-8167-65006174a3a9\scratchpad\s3\logs\emptyhome\.claude no existe)
+  [ -- ] MCP en Codex: Codex no está instalado (C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\b47a4f74-62fa-4576-8167-65006174a3a9\scratchpad\s3\logs\emptyhome\.codex no existe)
+  [ -- ] MCP en opencode: opencode no está instalado (C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\b47a4f74-62fa-4576-8167-65006174a3a9\scratchpad\s3\logs\emptyhome\.config\opencode no existe)
+
+Servicios:
+  [ OK ] daemon: local-delegate 0.35.0 · pid 31432 · http://127.0.0.1:9393/mcp
+  [ OK ] backend: http://127.0.0.1:9292/v1/models responde
+  [ -- ] credencial del backend: el backend exige credencial, pero no hay entrada MCP que mirar
+  [ -- ] token del puerto del daemon: el puerto exige token, pero no hay entrada MCP que mirar
+  [ -- ] token de Claude Desktop: Claude Desktop no está configurado en esta máquina
+
+Versiones (instalada vs probada; usa --online para comparar con GitHub):
+  [ OK ] llama-swap: v255 (= probada)
+  [ OK ] llama-server: b10909 (= probada)
+  [WARN] residencia de llama-swap: sin residente (recomendado) (la config de este shell); afinidad sin base: `local_lint_summary` → `gemma4-26b-a4b` (prompt_sha256)
+         arréglalo con: la afinidad no usa esas celdas hasta que se vuelvan a medir (benchmarks/afinidad-2026-10) o la config vuelva a la huella medida
+  [ OK ] turno del daemon: turno activo según el daemon (choques: swap [swap, no exclusivo]: gemma3-4b, gemma4-26b-a4b, qwen36-35b-a3b, qwen35-2b, gemma4-12b)
+
+Resultado: 2 aviso(s) — revisa [FALT] y [WARN] arriba.

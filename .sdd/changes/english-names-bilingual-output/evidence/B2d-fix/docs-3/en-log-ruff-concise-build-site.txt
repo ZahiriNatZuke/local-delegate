@@ -1,0 +1,14 @@
+warning: `incorrect-blank-line-before-class` (D203) and `blank-line-before-class` (D211) are incompatible. Ignoring `incorrect-blank-line-before-class`.
+warning: `multi-line-summary-first-line` (D212) and `multi-line-summary-second-line` (D213) are incompatible. Ignoring `multi-line-summary-second-line`.
+scripts\build_site.py:1:1: CPY001 Missing copyright notice at top of file
+scripts\build_site.py:36:5: D103 Missing docstring in public function
+scripts\build_site.py:72:5: D103 Missing docstring in public function
+scripts\build_site.py:76:97: COM812 [*] Trailing comma missing
+scripts\build_site.py:85:13: T201 `print` found
+scripts\build_site.py:90:17: T201 `print` found
+scripts\build_site.py:92:9: T201 `print` found
+scripts\build_site.py:96:5: T201 `print` found
+scripts\build_site.py:98:9: T201 `print` found
+scripts\build_site.py:100:9: T201 `print` found
+Found 10 errors.
+[*] 1 fixable with `--fix` (6 unsafe fixes available with `--fix --unsafe-fixes`).

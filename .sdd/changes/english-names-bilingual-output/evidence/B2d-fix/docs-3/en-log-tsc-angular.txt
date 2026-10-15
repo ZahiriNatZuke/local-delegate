@@ -1,0 +1,9 @@
+src/app/features/auth/pages/login.page.ts(52,24): error TS2345: Argument of type '{ returnUrl: string | undefined; email: string; password: string; rememberMe: boolean; }' is not assignable to parameter of type '{ email: string; password: string; rememberMe: boolean; returnUrl?: string; } | Observable<{ email: string; password: string; rememberMe: boolean; returnUrl?: string; }> | (() => { email: string; password: string; rememberMe: boolean; returnUrl?: string; })'.
+  Type '{ returnUrl: string | undefined; email: string; password: string; rememberMe: boolean; }' is not assignable to type '{ email: string; password: string; rememberMe: boolean; returnUrl?: string; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Types of property 'returnUrl' are incompatible.
+      Type 'string | undefined' is not assignable to type 'string'.
+        Type 'undefined' is not assignable to type 'string'.
+src/app/features/home/components/tech-stack.component.ts(127,5): error TS2375: Type '{ name: string; docs: string; version: string | undefined; }' is not assignable to type 'StackItem' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'version' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.

@@ -1,0 +1,14 @@
+error: no se pudo estimar VRAM de: gemma3-4b, gemma4-12b, gemma4-26b-a4b, qwen35-2b, qwen36-35b-a3b
+--- VRAM ---
+Presupuesto: 8,00 GiB - margen 1,50 GiB = 6,50 GiB disponibles
+
+grupo 'resident' [todos juntos] -> 0,00 GiB
+    gemma3-4b: ERROR (archivo no encontrado: MODELOS\gemma-3-4b-it-Q4_K_M.gguf)
+grupo 'swap' [swap (1 a la vez)] -> 0,00 GiB
+    gemma4-26b-a4b: ERROR (archivo no encontrado: MODELOS\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf)
+    qwen36-35b-a3b: ERROR (archivo no encontrado: MODELOS\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf)
+    qwen35-2b: ERROR (archivo no encontrado: MODELOS\Qwen3.5-2B-UD-Q8_K_XL.gguf)
+    gemma4-12b: ERROR (archivo no encontrado: MODELOS\gemma-4-12b-it-Q4_K_M.gguf)
+
+Total peor caso (VRAM): 0,00 GiB
+

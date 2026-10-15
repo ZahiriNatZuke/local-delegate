@@ -1,0 +1,14 @@
+error: no se pudo estimar VRAM de: gemma3-4b, llama31-8b, qwen25-coder-14b, qwen3-vl-8b, qwen35-2b
+--- VRAM ---
+Presupuesto: 8,00 GiB - margen 1,50 GiB = 6,50 GiB disponibles
+
+grupo 'resident' [todos juntos] -> 0,00 GiB
+    gemma3-4b: ERROR (archivo no encontrado: MODELOS\gemma-3-4b-it-Q4_K_M.gguf)
+grupo 'swap' [swap (1 a la vez)] -> 0,00 GiB
+    llama31-8b: ERROR (archivo no encontrado: MODELOS\Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf)
+    qwen25-coder-14b: ERROR (archivo no encontrado: MODELOS\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf)
+    qwen35-2b: ERROR (archivo no encontrado: MODELOS\Qwen3.5-2B-UD-Q8_K_XL.gguf)
+    qwen3-vl-8b: ERROR (archivo no encontrado: MODELOS\Qwen3VL-8B-Instruct-Q4_K_M.gguf)
+
+Total peor caso (VRAM): 0,00 GiB
+

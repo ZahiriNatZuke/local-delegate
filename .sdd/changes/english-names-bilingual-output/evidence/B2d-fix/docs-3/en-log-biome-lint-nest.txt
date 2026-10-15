@@ -1,0 +1,545 @@
+src\app\core\decorators\log-audit.decorator.ts:3:8 lint/style/useConsistentTypeDefinitions  FIXABLE  ━━━━━━━━━━
+
+  i Use of the type detected.
+  
+     1 │ import { SetMetadata } from '@nestjs/common';
+     2 │ 
+   > 3 │ export type AuditMetadata = {
+       │        ^^^^^^^^^^^^^^^^^^^^^^
+   > 4 │ 	action: string;
+   > 5 │ 	entityType: string;
+   > 6 │ 	entityIdParam?: string;
+   > 7 │ 	omitBody?: boolean;
+   > 8 │ };
+       │ ^^
+     9 │ 
+    10 │ export const AUDIT_METADATA_KEY = 'audit:meta';
+  
+  i The codebase should use a consistent coding style for the definition of types. This improves the readability and consistency.
+  
+  i Unsafe fix: Use interface.
+  
+     1  1 │   import { SetMetadata } from '@nestjs/common';
+     2  2 │   
+     3    │ - export·type·AuditMetadata·=·{
+        3 │ + export·interface·AuditMetadata·{
+     4  4 │   	action: string;
+     5  5 │   	entityType: string;
+     6  6 │   	entityIdParam?: string;
+     7  7 │   	omitBody?: boolean;
+     8    │ - };
+        8 │ + }
+     9  9 │   
+    10 10 │   export const AUDIT_METADATA_KEY = 'audit:meta';
+  
+
+src\app\core\decorators\log-audit.decorator.ts:12:14 lint/nursery/useReactFunctionComponentDefinition ━━━━━━━━━━
+
+  i The React component LogAudit is defined as an arrow function.
+  
+    10 │ export const AUDIT_METADATA_KEY = 'audit:meta';
+    11 │ 
+  > 12 │ export const LogAudit = (meta: AuditMetadata) =>
+       │              ^^^^^^^^
+    13 │ 	SetMetadata(AUDIT_METADATA_KEY, meta);
+    14 │ 
+  
+  i Mixing component definition styles makes component declarations harder to scan.
+  
+  i Rewrite this component as a function declaration or configure `namedComponents` to allow an arrow function.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+src\app\core\decorators\throttle.decorator.ts:12:14 lint/nursery/useReactFunctionComponentDefinition ━━━━━━━━━━
+
+  i The React component StrictThrottle is defined as an arrow function.
+  
+    10 │  * 5 requests per minute
+    11 │  */
+  > 12 │ export const StrictThrottle = () =>
+       │              ^^^^^^^^^^^^^^
+    13 │ 	NestThrottle({ default: { limit: 5, ttl: 60000 } });
+    14 │ 
+  
+  i Mixing component definition styles makes component declarations harder to scan.
+  
+  i Rewrite this component as a function declaration or configure `namedComponents` to allow an arrow function.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+src\app\core\decorators\throttle.decorator.ts:13:43 lint/style/useNumericSeparators  FIXABLE  ━━━━━━━━━━
+
+  i Long numeric literal lacks separators.
+  
+    11 │  */
+    12 │ export const StrictThrottle = () =>
+  > 13 │ 	NestThrottle({ default: { limit: 5, ttl: 60000 } });
+       │ 	                                         ^^^^^
+    14 │ 
+    15 │ /**
+  
+  i Adding separators helps improve readability and clarity for long numbers.
+  
+  i Safe fix: Add numeric separators.
+  
+    11 11 │    */
+    12 12 │   export const StrictThrottle = () =>
+    13    │ - → NestThrottle({·default:·{·limit:·5,·ttl:·60000·}·});
+       13 │ + → NestThrottle({·default:·{·limit:·5,·ttl:·60_000·}·});
+    14 14 │   
+    15 15 │   /**
+  
+
+src\app\core\decorators\throttle.decorator.ts:19:14 lint/nursery/useReactFunctionComponentDefinition ━━━━━━━━━━
+
+  i The React component ModerateThrottle is defined as an arrow function.
+  
+    17 │  * 3 requests per 5 minutes
+    18 │  */
+  > 19 │ export const ModerateThrottle = () =>
+       │              ^^^^^^^^^^^^^^^^
+    20 │ 	NestThrottle({ default: { limit: 3, ttl: 300000 } });
+    21 │ 
+  
+  i Mixing component definition styles makes component declarations harder to scan.
+  
+  i Rewrite this component as a function declaration or configure `namedComponents` to allow an arrow function.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+src\app\core\decorators\throttle.decorator.ts:20:43 lint/style/useNumericSeparators  FIXABLE  ━━━━━━━━━━
+
+  i Long numeric literal lacks separators.
+  
+    18 │  */
+    19 │ export const ModerateThrottle = () =>
+  > 20 │ 	NestThrottle({ default: { limit: 3, ttl: 300000 } });
+       │ 	                                         ^^^^^^
+    21 │ 
+    22 │ /**
+  
+  i Adding separators helps improve readability and clarity for long numbers.
+  
+  i Safe fix: Add numeric separators.
+  
+    18 18 │    */
+    19 19 │   export const ModerateThrottle = () =>
+    20    │ - → NestThrottle({·default:·{·limit:·3,·ttl:·300000·}·});
+       20 │ + → NestThrottle({·default:·{·limit:·3,·ttl:·300_000·}·});
+    21 21 │   
+    22 22 │   /**
+  
+
+src\app\core\decorators\throttle.decorator.ts:26:14 lint/nursery/useReactFunctionComponentDefinition ━━━━━━━━━━
+
+  i The React component LenientThrottle is defined as an arrow function.
+  
+    24 │  * 100 requests per minute
+    25 │  */
+  > 26 │ export const LenientThrottle = () =>
+       │              ^^^^^^^^^^^^^^^
+    27 │ 	NestThrottle({ default: { limit: 100, ttl: 60000 } });
+    28 │ 
+  
+  i Mixing component definition styles makes component declarations harder to scan.
+  
+  i Rewrite this component as a function declaration or configure `namedComponents` to allow an arrow function.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+src\app\core\decorators\throttle.decorator.ts:27:45 lint/style/useNumericSeparators  FIXABLE  ━━━━━━━━━━
+
+  i Long numeric literal lacks separators.
+  
+    25 │  */
+    26 │ export const LenientThrottle = () =>
+  > 27 │ 	NestThrottle({ default: { limit: 100, ttl: 60000 } });
+       │ 	                                           ^^^^^
+    28 │ 
+    29 │ /**
+  
+  i Adding separators helps improve readability and clarity for long numbers.
+  
+  i Safe fix: Add numeric separators.
+  
+    25 25 │    */
+    26 26 │   export const LenientThrottle = () =>
+    27    │ - → NestThrottle({·default:·{·limit:·100,·ttl:·60000·}·});
+       27 │ + → NestThrottle({·default:·{·limit:·100,·ttl:·60_000·}·});
+    28 28 │   
+    29 29 │   /**
+  
+
+src\app\core\decorators\throttle.decorator.ts:32:14 lint/nursery/useReactFunctionComponentDefinition ━━━━━━━━━━
+
+  i The React component SkipThrottle is defined as an arrow function.
+  
+    30 │  * Skip rate limiting (use with caution)
+    31 │  */
+  > 32 │ export const SkipThrottle = () =>
+       │              ^^^^^^^^^^^^
+    33 │ 	NestThrottle({ default: { limit: 0, ttl: 0 } });
+    34 │ 
+  
+  i Mixing component definition styles makes component declarations harder to scan.
+  
+  i Rewrite this component as a function declaration or configure `namedComponents` to allow an arrow function.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+src\app\core\filters\http-exception.filter.ts:21:4 lint/style/noTernary ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Unexpected ternary operator.
+  
+    20 │ 		const error =
+  > 21 │ 			typeof response === 'string'
+       │ 			^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  > 22 │ 				? { message: exceptionResponse }
+  > 23 │ 				: (exceptionResponse as object);
+       │ 				^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    24 │ 
+    25 │ 		response.status(status).send({
+  
+  i Ternary operators can lead to unclear code. Use if-else statement instead.
+  
+
+src\app\core\decorators\app-controller.decorator.ts:5:8 lint/nursery/useExplicitReturnType ━━━━━━━━━━
+
+  ! Missing return type on function.
+  
+    3 │ import { ApiBearerAuth, ApiSecurity, ApiTags } from '@nestjs/swagger';
+    4 │ 
+  > 5 │ export function AppController(route: string) {
+      │        ^^^^^^^^^^^^^^^^^^^^^^
+    6 │ 	const apiTag = route
+    7 │ 		.split('-')
+  
+  i Declaring the return type makes the code self-documented and can speed up TypeScript type checking.
+  
+  i Add a return type to the function.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/2017 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+src\app\core\decorators\log-audit.decorator.ts:12:25 lint/nursery/useExplicitReturnType ━━━━━━━━━━━━
+
+  ! Missing return type on function.
+  
+    10 │ export const AUDIT_METADATA_KEY = 'audit:meta';
+    11 │ 
+  > 12 │ export const LogAudit = (meta: AuditMetadata) =>
+       │                         ^^^^^^^^^^^^^^^^^^^^^^^^
+  > 13 │ 	SetMetadata(AUDIT_METADATA_KEY, meta);
+       │ 	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    14 │ 
+  
+  i Declaring the return type makes the code self-documented and can speed up TypeScript type checking.
+  
+  i Add a return type to the function.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/2017 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+src\app\core\decorators\throttle.decorator.ts:12:31 lint/nursery/useExplicitReturnType ━━━━━━━━━━━━━
+
+  ! Missing return type on function.
+  
+    10 │  * 5 requests per minute
+    11 │  */
+  > 12 │ export const StrictThrottle = () =>
+       │                               ^^^^^
+  > 13 │ 	NestThrottle({ default: { limit: 5, ttl: 60000 } });
+       │ 	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    14 │ 
+    15 │ /**
+  
+  i Declaring the return type makes the code self-documented and can speed up TypeScript type checking.
+  
+  i Add a return type to the function.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/2017 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+src\app\core\decorators\throttle.decorator.ts:19:33 lint/nursery/useExplicitReturnType ━━━━━━━━━━━━━
+
+  ! Missing return type on function.
+  
+    17 │  * 3 requests per 5 minutes
+    18 │  */
+  > 19 │ export const ModerateThrottle = () =>
+       │                                 ^^^^^
+  > 20 │ 	NestThrottle({ default: { limit: 3, ttl: 300000 } });
+       │ 	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    21 │ 
+    22 │ /**
+  
+  i Declaring the return type makes the code self-documented and can speed up TypeScript type checking.
+  
+  i Add a return type to the function.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/2017 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+src\app\core\decorators\throttle.decorator.ts:26:32 lint/nursery/useExplicitReturnType ━━━━━━━━━━━━━
+
+  ! Missing return type on function.
+  
+    24 │  * 100 requests per minute
+    25 │  */
+  > 26 │ export const LenientThrottle = () =>
+       │                                ^^^^^
+  > 27 │ 	NestThrottle({ default: { limit: 100, ttl: 60000 } });
+       │ 	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    28 │ 
+    29 │ /**
+  
+  i Declaring the return type makes the code self-documented and can speed up TypeScript type checking.
+  
+  i Add a return type to the function.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/2017 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+src\app\core\decorators\throttle.decorator.ts:32:29 lint/nursery/useExplicitReturnType ━━━━━━━━━━━━━
+
+  ! Missing return type on function.
+  
+    30 │  * Skip rate limiting (use with caution)
+    31 │  */
+  > 32 │ export const SkipThrottle = () =>
+       │                             ^^^^^
+  > 33 │ 	NestThrottle({ default: { limit: 0, ttl: 0 } });
+       │ 	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    34 │ 
+  
+  i Declaring the return type makes the code self-documented and can speed up TypeScript type checking.
+  
+  i Add a return type to the function.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/2017 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+src\app\core\filters\http-exception.filter.ts:13:2 lint/nursery/useExplicitReturnType ━━━━━━━━━━━━━━
+
+  ! Missing return type on function.
+  
+    11 │ 	implements ExceptionFilter
+    12 │ {
+  > 13 │ 	catch(exception: T, host: ArgumentsHost) {
+       │ 	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  > 14 │ 		const ctx = host.switchToHttp();
+        ...
+  > 30 │ 		});
+  > 31 │ 	}
+       │ 	^
+    32 │ }
+    33 │ 
+  
+  i Declaring the return type makes the code self-documented and can speed up TypeScript type checking.
+  
+  i Add a return type to the function.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/2017 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+src\app\core\filters\http-exception.filter.ts:13:2 lint/nursery/useThisInClassMethods ━━━━━━━━━━━━━━
+
+  ! Expected this to be used by class method catch.
+  
+    11 │ 	implements ExceptionFilter
+    12 │ {
+  > 13 │ 	catch(exception: T, host: ArgumentsHost) {
+       │ 	^^^^^
+    14 │ 		const ctx = host.switchToHttp();
+    15 │ 		const response = ctx.getResponse<FastifyReply>();
+  
+  i Adding functions as class members can be a convenient way to organize code related to a class, but when those functions do not use instance state, it can be misleading to readers. Consider whether static or a module-level function would better communicate the intent of this code.
+  
+  i If this member does not depend on instance state, make it static or move it outside the class.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+src\app\core\decorators\app-controller.decorator.ts:5:8 lint/nursery/useExplicitType ━━━━━━━━━━━━━━━
+
+  × Missing return type on function.
+  
+    3 │ import { ApiBearerAuth, ApiSecurity, ApiTags } from '@nestjs/swagger';
+    4 │ 
+  > 5 │ export function AppController(route: string) {
+      │        ^^^^^^^^^^^^^^^^^^^^^^
+    6 │ 	const apiTag = route
+    7 │ 		.split('-')
+  
+  i Declaring the type makes the code self-documented and can speed up TypeScript type checking.
+  
+  i Add a return type to the function.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/2017 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+src\app\core\decorators\log-audit.decorator.ts:12:25 lint/nursery/useExplicitType ━━━━━━━━━━━━━━━━━━
+
+  × Missing return type on function.
+  
+    10 │ export const AUDIT_METADATA_KEY = 'audit:meta';
+    11 │ 
+  > 12 │ export const LogAudit = (meta: AuditMetadata) =>
+       │                         ^^^^^^^^^^^^^^^^^^^^^^^^
+  > 13 │ 	SetMetadata(AUDIT_METADATA_KEY, meta);
+       │ 	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    14 │ 
+  
+  i Declaring the type makes the code self-documented and can speed up TypeScript type checking.
+  
+  i Add a return type to the function.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/2017 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+src\app\core\decorators\throttle.decorator.ts:12:31 lint/nursery/useExplicitType ━━━━━━━━━━━━━━━━━━━
+
+  × Missing return type on function.
+  
+    10 │  * 5 requests per minute
+    11 │  */
+  > 12 │ export const StrictThrottle = () =>
+       │                               ^^^^^
+  > 13 │ 	NestThrottle({ default: { limit: 5, ttl: 60000 } });
+       │ 	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    14 │ 
+    15 │ /**
+  
+  i Declaring the type makes the code self-documented and can speed up TypeScript type checking.
+  
+  i Add a return type to the function.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/2017 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+src\app\core\decorators\throttle.decorator.ts:19:33 lint/nursery/useExplicitType ━━━━━━━━━━━━━━━━━━━
+
+  × Missing return type on function.
+  
+    17 │  * 3 requests per 5 minutes
+    18 │  */
+  > 19 │ export const ModerateThrottle = () =>
+       │                                 ^^^^^
+  > 20 │ 	NestThrottle({ default: { limit: 3, ttl: 300000 } });
+       │ 	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    21 │ 
+    22 │ /**
+  
+  i Declaring the type makes the code self-documented and can speed up TypeScript type checking.
+  
+  i Add a return type to the function.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/2017 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+src\app\core\decorators\throttle.decorator.ts:26:32 lint/nursery/useExplicitType ━━━━━━━━━━━━━━━━━━━
+
+  × Missing return type on function.
+  
+    24 │  * 100 requests per minute
+    25 │  */
+  > 26 │ export const LenientThrottle = () =>
+       │                                ^^^^^
+  > 27 │ 	NestThrottle({ default: { limit: 100, ttl: 60000 } });
+       │ 	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    28 │ 
+    29 │ /**
+  
+  i Declaring the type makes the code self-documented and can speed up TypeScript type checking.
+  
+  i Add a return type to the function.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/2017 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+src\app\core\decorators\throttle.decorator.ts:32:29 lint/nursery/useExplicitType ━━━━━━━━━━━━━━━━━━━
+
+  × Missing return type on function.
+  
+    30 │  * Skip rate limiting (use with caution)
+    31 │  */
+  > 32 │ export const SkipThrottle = () =>
+       │                             ^^^^^
+  > 33 │ 	NestThrottle({ default: { limit: 0, ttl: 0 } });
+       │ 	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    34 │ 
+  
+  i Declaring the type makes the code self-documented and can speed up TypeScript type checking.
+  
+  i Add a return type to the function.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/2017 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+src\app\core\filters\http-exception.filter.ts:13:2 lint/nursery/useExplicitType ━━━━━━━━━━━━━━━━━━━━
+
+  × Missing return type on member.
+  
+    11 │ 	implements ExceptionFilter
+    12 │ {
+  > 13 │ 	catch(exception: T, host: ArgumentsHost) {
+       │ 	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  > 14 │ 		const ctx = host.switchToHttp();
+        ...
+  > 30 │ 		});
+  > 31 │ 	}
+       │ 	^
+    32 │ }
+    33 │ 
+  
+  i Declaring the type makes the code self-documented and can speed up TypeScript type checking.
+  
+  i Add a return type to the member.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/2017 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+The number of diagnostics exceeds the limit allowed. Use --max-diagnostics to increase it.
+Diagnostics not shown: 1304.
+Checked 144 files in 2s. No fixes applied.
+Found 125 errors.
+Found 551 warnings.
+Found 653 infos.
+lint ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Some errors were emitted while running checks.
+  
+
