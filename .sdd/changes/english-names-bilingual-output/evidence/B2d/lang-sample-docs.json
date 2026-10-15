@@ -1,0 +1,258 @@
+{
+  "frozen_at": "2026-10-14T22:14:23+00:00",
+  "frozen_before_any_measurement_call": true,
+  "judge": "scripts/detect_language.py detect(min_tokens=20, min_margin=0.15)",
+  "rules": {
+    "local_summarize": {
+      "batch_1": "docs/wiki/*.md, 5 000-20 000 bytes, detector on the input = es, sorted by path, first 5",
+      "batch_2": ".venv/Lib/site-packages/*.dist-info/METADATA, 5 000-20 000 bytes, detector on the input = en, sorted by path, first 5"
+    },
+    "local_lint_summary": {
+      "batch_1": "git-tracked or untracked-not-ignored *.txt/*.log under .sdd/changes/english-names-bilingual-output/evidence/ whose name contains 'mutant' or 'check', detector on the input = es, >= 100 tokens, sorted by path, first 5 (they are pytest/check outputs annotated in Spanish; the repo has no pure Spanish linter log)",
+      "batch_2": "git-tracked files under benchmarks/*/fuentes/ whose name contains 'lint' or 'ruff' (real ruff/linter outputs in English), sorted by path: exactly 5"
+    },
+    "local_explain_code": {
+      "batch_1": "git-tracked *.py (outside .sdd/), 3 000-20 000 bytes, detector on the input = es (Spanish docstrings/comments/strings), sorted by path, first 5",
+      "batch_2": ".venv/Lib/site-packages/**/*.py, 3 000-20 000 bytes, detector on the input = en, sorted by path, first 5"
+    },
+    "local_describe_image": {
+      "both": "git-tracked png/jpg/jpeg/webp/gif >= 20 000 bytes, sorted by path, deduplicated by sha256 (first occurrence kept); first 5 = batch 1, next 5 = batch 2. The repo has 10 unique ones. Their visible text is mostly Spanish UI in both batches: for this tool the input language is not controlled, only the requested output language."
+    }
+  },
+  "explain_code_question": {
+    "batch_1": "¿Qué hace este fichero y cuáles son sus partes principales?",
+    "batch_2": "What does this file do and what are its main parts?",
+    "why": "fixed and neutral in content, written in the documents' language (opposite to the requested one) so the question cannot help the model answer in the requested language"
+  },
+  "describe_image_question": null,
+  "batch_1": {
+    "product": "es",
+    "output_language": "en",
+    "documents_language": "es",
+    "tools": {
+      "local_summarize": [
+        {
+          "path": "docs/wiki/Architecture.md",
+          "bytes": 13517,
+          "sha256": "45b24656f8ded36bec430d055f5c797b01ef504d5de963615ea76fba6d8f9f2e"
+        },
+        {
+          "path": "docs/wiki/Backend-versions.md",
+          "bytes": 12985,
+          "sha256": "fac7ae129c7926119939d935edb1643a8c49d38208d95e7c5a302372ac28bdc0"
+        },
+        {
+          "path": "docs/wiki/Daemon.md",
+          "bytes": 17604,
+          "sha256": "5ad2c5ad4b3879d1b81086279abf63886ca0a71dadc357afa0bde4bf0836b9be"
+        },
+        {
+          "path": "docs/wiki/Publishing.md",
+          "bytes": 8852,
+          "sha256": "ab81f38524d083a71f66c28d85a8573bb6e0a8f5e785a34921068d38f9fc6573"
+        },
+        {
+          "path": "docs/wiki/Remote-backend.md",
+          "bytes": 9740,
+          "sha256": "2c60eb54c630e4aeb5ddbd8777b5983888aac4e3d04bc1753c5379b69b7fdd4b"
+        }
+      ],
+      "local_lint_summary": [
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/A5c/mutants.txt",
+          "bytes": 2178,
+          "sha256": "4c6cff8b1c2a9e1e0d472ac74bcd9bab434c16e2a3579911587d1f1ca57166a3"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/A7a/strings-check.txt",
+          "bytes": 870,
+          "sha256": "98ee6f939f016e475738d44d0d3ef37dcdd51467e76913568816eb842c24feb8"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/A7b/mutants.txt",
+          "bytes": 2062,
+          "sha256": "8ecb631c9dec5abcf96a3f4265ed29cf71e0823357214e1cb896a1fdf8916cec"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/A8a-1/mutants.txt",
+          "bytes": 1726,
+          "sha256": "6932cdce7f85b5451be37007756e234d5f764f5c3b906c20f8a2f79986c99915"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/A8a-2/mutants.txt",
+          "bytes": 1969,
+          "sha256": "0f34f1d6e6750f878f291341cce72c34fcf2a9b207a20f4ec4e895f83ebdadd0"
+        }
+      ],
+      "local_explain_code": [
+        {
+          "path": "scripts/build_site.py",
+          "bytes": 4078,
+          "sha256": "c34ca6ef728aa9027b94a3b34e3323578445e51150e6cf24f057355709bcb6d6"
+        },
+        {
+          "path": "scripts/bump_version.py",
+          "bytes": 12283,
+          "sha256": "8a6dd4f05b2acf555869c8dea82e9a4d56631f918bf5af7e3af7ab7c1543e13c"
+        },
+        {
+          "path": "scripts/check_install_e2e.py",
+          "bytes": 6881,
+          "sha256": "be659db7cc62ca15041eb9be37562d94feb23ac83c5851161bd95a047da72b2e"
+        },
+        {
+          "path": "scripts/check_install_handshake.py",
+          "bytes": 4664,
+          "sha256": "c572feb9d325b250963135109a33f16f8c8ad98cd2e9f96324496633058741ec"
+        },
+        {
+          "path": "scripts/ci_gate.py",
+          "bytes": 12520,
+          "sha256": "aa18933a9f4d1320ac1f6ab047a615d78732f8dd2560ba84fe76cef19876bf09"
+        }
+      ],
+      "local_describe_image": [
+        {
+          "path": ".sdd/changes/daemon-reparte-el-backend/evidencias/T4-hoja-sintetica.png",
+          "bytes": 28429,
+          "sha256": "378cdb7686006ef297dcba34a75a149377bc0dc52ea70227bca96cc4092d5441"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/A-close-1/clients-dark.png",
+          "bytes": 20939,
+          "sha256": "8f140e6811dad4835a065a7c02e929d3a6011d4588eaa6cec0706b9ae6927a4a"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/A-close-1/clients-light.png",
+          "bytes": 21034,
+          "sha256": "87a382b8f714b3ce6531cd3b76d5a93c42b3b9f25b6db660b4163d8c419b511d"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/live-035/panel-claro.png",
+          "bytes": 556636,
+          "sha256": "c5862233776608daba4173a061822347471cf22c51cc3b06324b4647e9054064"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/live-035/panel-coste-claro.png",
+          "bytes": 315831,
+          "sha256": "40ed59830add21cd7ced336a28b2db562c560a4b2d522c88bbe5eddda2f1a905"
+        }
+      ]
+    }
+  },
+  "batch_2": {
+    "product": "en",
+    "output_language": "es",
+    "documents_language": "en",
+    "tools": {
+      "local_summarize": [
+        {
+          "path": ".venv/Lib/site-packages/annotated_doc-0.0.4.dist-info/METADATA",
+          "bytes": 6566,
+          "sha256": "22b9b9289b9adf7758daa28a02327e3a129a5415487f01467a3fdd49edd9d535"
+        },
+        {
+          "path": ".venv/Lib/site-packages/annotated_types-0.7.0.dist-info/METADATA",
+          "bytes": 15046,
+          "sha256": "ee5b6ac64b09274c026051813484025939564067801f485115d9cadc207cf791"
+        },
+        {
+          "path": ".venv/Lib/site-packages/attrs-26.1.0.dist-info/METADATA",
+          "bytes": 8754,
+          "sha256": "4cd40e690f23bf37cbcad34efd6758e062df1df07c86833f7e3ce95bf1fa38cc"
+        },
+        {
+          "path": ".venv/Lib/site-packages/cfgv-3.5.0.dist-info/METADATA",
+          "bytes": 8858,
+          "sha256": "ae126b80e15f39d0feff7368cefea2ea6478fdcedcde52918d0f58b668e19137"
+        },
+        {
+          "path": ".venv/Lib/site-packages/colorama-0.4.6.dist-info/METADATA",
+          "bytes": 17158,
+          "sha256": "7baed29eb50c3b29bdb33ff84e3177bf1bc05784f7685ecdcaa4471c7dd810cc"
+        }
+      ],
+      "local_lint_summary": [
+        {
+          "path": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-cinco-reglas.txt",
+          "bytes": 784,
+          "sha256": "0809f67c265b1bed3ef6bcec7b6beba41fc4cd61a328cfe9f90986ce870c889c"
+        },
+        {
+          "path": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-docstrings.txt",
+          "bytes": 626,
+          "sha256": "b110b57cb1159eec9243dcedb0ecdbc2e38f79d44b3891bc64fbd192659c3538"
+        },
+        {
+          "path": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-tres-reglas.txt",
+          "bytes": 340,
+          "sha256": "ec0b6183c8ca06cac255bdf11c914291473771ddd2df55b2ecbda2767bd49270"
+        },
+        {
+          "path": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-un-solo-archivo.txt",
+          "bytes": 438,
+          "sha256": "7666debfbc2ca5df842cb29520580e7711e8c44dfcda60b9d8188d9715d1db3e"
+        },
+        {
+          "path": "benchmarks/catalogo-2026-09/fuentes/lint-9k.txt",
+          "bytes": 8590,
+          "sha256": "9c7295b2b49627aff832ce808789be7993522cd72c8f947fb06f19664723801f"
+        }
+      ],
+      "local_explain_code": [
+        {
+          "path": ".venv/Lib/site-packages/_pytest/_argcomplete.py",
+          "bytes": 3776,
+          "sha256": "821d299daebaa782d56f60fc493e39ebc586c6f7489c64f8de6eac95886a36a5"
+        },
+        {
+          "path": ".venv/Lib/site-packages/_pytest/_io/saferepr.py",
+          "bytes": 4920,
+          "sha256": "c4634e463e01eb613fc52d909f6f44e4aa682e0c3ad2ad3d6fe0286d6f1c7aa8"
+        },
+        {
+          "path": ".venv/Lib/site-packages/_pytest/_io/terminalwriter.py",
+          "bytes": 8994,
+          "sha256": "2b4a41d697c0beb281585011292a1b438c168b4a5d9a205a19bddafeffc00234"
+        },
+        {
+          "path": ".venv/Lib/site-packages/_pytest/assertion/__init__.py",
+          "bytes": 8081,
+          "sha256": "2a69087174fab92dd88352b60b546d879fb93411a6c0996384a0f84a07071ac7"
+        },
+        {
+          "path": ".venv/Lib/site-packages/_pytest/assertion/_compare_any.py",
+          "bytes": 4959,
+          "sha256": "96db744e2023ecb555cf3f03d7e9a6eafc8cfe250f28eff55cd8239793d894c2"
+        }
+      ],
+      "local_describe_image": [
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/live-035/panel-coste-oscuro.png",
+          "bytes": 315877,
+          "sha256": "04cb4d3fa71c8d689d422ae1581a0856605203e2bceb77868adce42b23cd243a"
+        },
+        {
+          "path": "benchmarks/catalogo-2026-09/fuentes/dashboard-bcbe39f.png",
+          "bytes": 670197,
+          "sha256": "1f421a75c6d889edf44ac593fcdad315aa8ce2fb1098da50488860ca0049bd13"
+        },
+        {
+          "path": "benchmarks/catalogo-2026-09/fuentes/describir-dashboard.png",
+          "bytes": 718456,
+          "sha256": "fa6f9f4ce80dd90d52889c915ee6fc02f0a05a41435e7f58d68b9d548d37758a"
+        },
+        {
+          "path": "docs/assets/dashboard.png",
+          "bytes": 808323,
+          "sha256": "d1a9c0745d137a2a42f3222e662543fada83cdd054bf5a7e538a568d6ee22248"
+        },
+        {
+          "path": "site/og-image.png",
+          "bytes": 47072,
+          "sha256": "9b7517ed7e92f4adf2b9c07a3a5f07815e760938d66d6d6b29bd6d4676b0c71e"
+        }
+      ]
+    }
+  }
+}

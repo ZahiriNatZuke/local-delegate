@@ -1,0 +1,302 @@
+# Recipe: MCP local en la Mac, modelos remotos en la PC
+
+La topología recomendada mantiene `local-delegate` junto al cliente que posee los archivos y
+solo mueve la inferencia OpenAI-compatible por la red:
+
+```text
+Codex/Claude en Mac -> local-delegate stdio en Mac -> red privada -> llama-swap en PC -> GPU
+                            |
+                            +-- abre /Users/... localmente
+```
+
+Esto preserva la ventaja de `local_summarize(path=...)`: la Mac abre el archivo y envía su
+contenido al backend. Si el MCP entero corriera en la PC, un `path=/Users/...` se intentaría abrir
+en Windows y fallaría. Tampoco hace falta un protocolo MCP-a-MCP adicional.
+
+## 1. Publicar el loopback dentro del tailnet
+
+El flujo validado conserva llama-swap y el dashboard en `127.0.0.1`; Tailscale Serve publica ambos
+solo dentro del tailnet y termina HTTPS. En una terminal administrativa de la PC:
+
+```powershell
+tailscale serve --bg --https=9292 http://127.0.0.1:9292
+tailscale serve --bg --https=9393 http://127.0.0.1:9393
+tailscale serve status
+```
+
+`--bg` persiste la configuración tras reinicios de Windows/Tailscale. No uses Funnel ni abras los
+puertos en el router. Limita además el flujo Mac -> PC en la policy del tailnet:
+
+```json
+{
+  "src": ["<MAC_TAILSCALE_IP>"],
+  "dst": ["<PC_TAILSCALE_IP>"],
+  "ip": ["tcp:9292", "tcp:9393"]
+}
+```
+
+Si `curl` intenta conectar desde la IP Wi-Fi/LAN en vez de la IP Tailscale, el peer no recibió la
+ruta: revisa el grant, reinicia Tailscale en la Mac y confirma `tailscale ping <PC_TAILSCALE_IP>`.
+Si la ruta funciona pero MagicDNS no resuelve, activa DNS de Tailscale antes de configurar el MCP.
+
+### Autenticación de llama-swap
+
+Activa las `apiKeys` nativas sin persistir el secreto en YAML:
+
+```yaml
+apiKeys:
+  - "${env.LOCAL_DELEGATE_REMOTE_API_KEY}"
+```
+
+Define `LOCAL_DELEGATE_REMOTE_API_KEY` solamente en el entorno del proceso de llama-swap. Para un
+arranque persistente en Windows, guarda el valor como `SecureString` exportado con `Export-Clixml`
+(DPAPI del usuario) y usa un launcher de la tarea programada que lo importe, lo exponga solo al
+entorno del proceso y arranque `local-delegate serve`. Ese launcher también define
+`LOCAL_DELEGATE_API_KEY`, porque el daemon local consume el mismo backend autenticado. Conserva un
+backup del YAML y de la acción anterior de la tarea para rollback.
+
+> ⚠️ Ese launcher mete `powershell.exe` en la cadena de arranque y, en una tarea *AtLogOn*, eso
+> hace aparecer una ventana de consola al iniciar sesión. `-WindowStyle Hidden` **no** la evita en
+> Windows 11, porque Windows Terminal ignora la petición de ocultar al recibir la consola.
+> Registra la acción envuelta en `conhost --headless`; el procedimiento y el porqué están en
+> [Daemon → Windows sin ventana visible](../wiki/Daemon.md).
+
+En la Mac, el mismo valor se entrega al MCP como `LOCAL_DELEGATE_API_KEY`; guárdalo en Keychain:
+
+```bash
+security add-generic-password -U -a "$USER" -s local-delegate-remote -w
+export LOCAL_DELEGATE_API_KEY="$(security find-generic-password \
+  -a "$USER" -s local-delegate-remote -w)"
+```
+
+No escribas el valor en YAML, Git, logs ni configuración MCP compartida. La sintaxis de llama-swap
+mantiene el default sin auth solo cuando `apiKeys` está ausente o vacío.
+
+Canary desde la Mac, antes de registrar el MCP:
+
+```bash
+curl --fail --max-time 5 https://<PC_MAGICDNS>:9292/v1/models
+```
+
+Si el endpoint exige token:
+
+```bash
+curl --fail --max-time 5 \
+  -H "Authorization: Bearer $LOCAL_DELEGATE_API_KEY" \
+  https://<PC_MAGICDNS>:9292/v1/models
+```
+
+## 2. Mantener el MCP local en la Mac
+
+### Elegir exactamente que revision se prueba
+
+`uvx local-delegate-mcp` instala la ultima version publicada en PyPI. Por tanto, los cambios que
+solo existen sin commit en la PC **no pueden aparecer en la Mac**. Para probar antes de publicar:
+
+1. crea un commit de canary y subelo a una rama;
+2. copia su SHA completo;
+3. fija `uvx` a ese commit con `--from`.
+
+```text
+uvx --from git+https://github.com/ZahiriNatZuke/local-delegate.git@<COMMIT_SHA> local-delegate-mcp
+```
+
+Esto no publica una release y evita que un cambio posterior en la rama altere la prueba. Despues
+de aprobar el canary se crea la version nueva, se publica en PyPI y se vuelve al comando estable.
+Para el rollout aprobado de 0.11.0 ya no uses el SHA de canary:
+
+```text
+uvx --from local-delegate-mcp==0.11.0 local-delegate-mcp
+```
+
+En la configuracion MCP estable, reemplaza los argumentos del bloque de canary por:
+
+```json
+"args": ["--from", "local-delegate-mcp==0.11.0", "local-delegate-mcp"]
+```
+
+En la entrada `local-delegate` del cliente MCP conserva `command: uvx` y añade este entorno:
+
+```json
+{
+  "mcpServers": {
+    "local-delegate": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "local-delegate-mcp==0.11.0",
+        "local-delegate-mcp"
+      ],
+      "env": {
+        "LOCAL_DELEGATE_BASE_URL": "https://<PC_MAGICDNS>:9292/v1",
+        "LOCAL_DELEGATE_AUTOSTART": "0"
+      }
+    }
+  }
+}
+```
+
+Añade `LOCAL_DELEGATE_API_KEY` mediante el almacén de secretos o entorno del cliente solo cuando
+el endpoint lo exija. El auto-arranque debe quedar en `0`: la Mac no puede ni debe iniciar el
+llama-swap de Windows.
+
+Para no repetir los `export`, registra una carga idempotente desde Keychain en `~/.zshrc`. Este
+bloque escribe la URL y el comando de lectura, nunca el valor de la key:
+
+```bash
+export LOCAL_DELEGATE_BASE_URL="https://<PC_MAGICDNS>:9292/v1"
+touch "$HOME/.zshrc"
+python3 - <<'PY'
+import os
+import re
+from pathlib import Path
+
+path = Path.home() / ".zshrc"
+text = path.read_text() if path.exists() else ""
+text = re.sub(
+    r"(?ms)^# local-delegate remote begin\n.*?^# local-delegate remote end\n?",
+    "",
+    text,
+)
+base_url = os.environ["LOCAL_DELEGATE_BASE_URL"]
+block = f'''# local-delegate remote begin
+export LOCAL_DELEGATE_BASE_URL="{base_url}"
+export LOCAL_DELEGATE_AUTOSTART="0"
+export LOCAL_DELEGATE_API_KEY="$(security find-generic-password -a \"$USER\" -s local-delegate-remote -w 2>/dev/null)"
+# local-delegate remote end
+'''
+path.write_text(text.rstrip() + "\n\n" + block)
+PY
+source "$HOME/.zshrc"
+```
+
+En Claude Code, la forma menos ambigua de registrar el canary a nivel de usuario es guardar un
+placeholder, no el secreto. Las comillas simples hacen que el shell no expanda la variable al
+crear la entrada:
+
+```bash
+claude mcp remove local-delegate 2>/dev/null || true
+claude mcp add-json --scope user local-delegate '{
+  "type": "stdio",
+  "command": "uvx",
+  "args": [
+    "--refresh",
+    "--from",
+    "git+https://github.com/ZahiriNatZuke/local-delegate.git@<COMMIT_SHA>",
+    "local-delegate-mcp"
+  ],
+  "env": {
+    "LOCAL_DELEGATE_BASE_URL": "https://<PC_MAGICDNS>:9292/v1",
+    "LOCAL_DELEGATE_AUTOSTART": "0",
+    "LOCAL_DELEGATE_API_KEY": "${LOCAL_DELEGATE_API_KEY}"
+  }
+}'
+claude mcp get local-delegate
+```
+
+En Codex, conserva el resto de la configuración y reemplaza solo este MCP. `env_vars` reenvía la
+key heredada desde Keychain sin persistirla en TOML:
+
+```bash
+mkdir -p "$HOME/.codex"
+python3 - <<'PY'
+import json
+import os
+import re
+from pathlib import Path
+
+path = Path.home() / ".codex" / "config.toml"
+text = path.read_text() if path.exists() else ""
+pattern = r"(?ms)^\[mcp_servers\.local-delegate(?:\.[^]]+)?\]\n.*?(?=^\[|\Z)"
+text = re.sub(pattern, "", text).rstrip()
+base_url = json.dumps(os.environ["LOCAL_DELEGATE_BASE_URL"])
+block = f'''[mcp_servers.local-delegate]
+command = "uvx"
+args = ["--from", "local-delegate-mcp==0.11.0", "local-delegate-mcp"]
+env_vars = ["LOCAL_DELEGATE_API_KEY"]
+
+[mcp_servers.local-delegate.env]
+LOCAL_DELEGATE_BASE_URL = {base_url}
+LOCAL_DELEGATE_AUTOSTART = "0"
+'''
+path.write_text((text + "\n\n" if text else "") + block)
+PY
+codex mcp list
+```
+
+Codex CLI hereda la key al abrir una terminal nueva. La app iniciada desde el Dock no hereda
+`~/.zshrc`; para ese caso instala el LaunchAgent documentado en la
+[Wiki de backend remoto](../wiki/Remote-backend.md). El agente lee Keychain al iniciar sesión y
+solo coloca la key en el entorno de `launchd`, no en TOML ni en el plist.
+
+Antes de iniciar Claude Code desde esa terminal, carga el token desde Keychain al entorno. Este
+ejemplo asume que ya existe un item `local-delegate-remote`; no muestra el valor:
+
+```bash
+export LOCAL_DELEGATE_API_KEY="$(security find-generic-password \
+  -a "$USER" -s local-delegate-remote -w)"
+claude
+```
+
+Si el backend no usa auth, elimina por completo la entrada `LOCAL_DELEGATE_API_KEY`. Si la Mac esta
+administrada y no permite Keychain/variables o bloquea MCP personales, hay que coordinarlo con la
+politica del equipo; no se debe pegar el token en el repo ni en un `.mcp.json` compartido.
+
+### Canary automatizado desde la Mac
+
+El script del repo levanta el MCP real por stdio, negocia MCP, lista tools, hace 20 inferencias,
+procesa un archivo temporal exclusivo de la Mac, envia pares concurrentes y reinicia el proceso
+para comprobar reconexion:
+
+```bash
+export LOCAL_DELEGATE_BASE_URL=https://<PC_MAGICDNS>:9292/v1
+export LOCAL_DELEGATE_API_KEY="$(security find-generic-password \
+  -a "$USER" -s local-delegate-remote -w)"
+python3 scripts/macos_mcp_canary.py \
+  --package-source git+https://github.com/ZahiriNatZuke/local-delegate.git@<COMMIT_SHA> \
+  --expect-auth
+```
+
+El script no imprime el token. Debe terminar con JSON `"status": "PASS"`, `20` llamadas, dos
+arranques, concurrencia `2` y `mac_only_path: PASS`. Ejecutalo desde un checkout del mismo commit;
+el codigo instalado y el script quedan asi amarrados a la misma revision.
+
+Para automatizar tambien preflight, descarga y checkout, usa el wrapper con el SHA completo:
+
+```bash
+./scripts/run_macos_remote_canary.sh \
+  <COMMIT_SHA> \
+  https://<PC_MAGICDNS>:9292/v1
+```
+
+La primera pasada puede validar conectividad aunque el canary aun no tenga auth. Para el gate final,
+añade `--expect-auth`; si `LOCAL_DELEGATE_API_KEY` no esta cargada, el wrapper la pide sin mostrarla
+ni guardarla. Verifica el endpoint, confirma que el commit existe en GitHub, crea un checkout
+temporal y corre el canary de 20 llamadas desde esa revision exacta.
+
+### Resultado validado (2026-07-23)
+
+La pasada autenticada completó 20/20 inferencias, dos arranques, concurrencia 2 y un path temporal
+exclusivo de macOS. `/v1/models` devolvió 401 sin key y 200 con key; p95 observado: 2.983 s. Esta
+medición confirma el circuito, pero no es un benchmark de overhead contra LAN/loopback.
+
+Después de reiniciar el cliente, ejecuta `local_status` y dos canaries:
+
+1. `local_classify` con un texto pequeño, para validar red, modelo y respuesta.
+2. `local_summarize(path=...)` con un archivo temporal de la Mac, para confirmar que `path` se
+   resuelve del lado correcto.
+
+## Alternativa: MCP remoto completo
+
+`local-delegate serve --host <PC_PRIVATE_IP>` puede publicar `/mcp` desde la PC. Es útil para
+operaciones que reciben `text`, pero no es el default recomendado: los paths son del filesystem de
+Windows, centraliza logs en la PC y expone otra superficie HTTP que hay que autenticar. Úsalo solo
+si los archivos también viven en la PC o el cliente envía texto explícitamente.
+
+## Criterio de aceptación
+
+- `/v1/models` responde desde la Mac sin exponer el puerto públicamente.
+- `local_status` no imprime ni registra el token.
+- clasificación pequeña y resumen por `path` completan correctamente.
+- al cortar la red, el fallo es rápido y claro; no intenta autoarrancar nada en la Mac.
+- al volver a `http://127.0.0.1:9292/v1`, el flujo local sigue funcionando sin cambiar código.

@@ -282,8 +282,15 @@ def _document(tmp_path, text: str) -> Path:
 
 
 # Copiado LITERAL del prompt de `main` (95a65ee): el camino sin títulos no puede cambiar, salvo
-# la orden de idioma de REQ-028 que la 0.36.0 pone DETRÁS (B2b-2; la suite corre en español).
-LANGUAGE_ORDER = " Responde en español, aunque el contenido esté en otro idioma."
+# la orden de idioma de REQ-028 que la 0.36.0 pone DETRÁS (B2b-2, endurecida en B2d; la suite corre
+# en español).
+LANGUAGE_ORDER = (
+    " Escribe toda la respuesta en español, aunque el contenido esté en otro idioma: redacta "
+    "en español cada frase, también la descripción de cada error o regla, con frases "
+    "completas y sin copiar frases del contenido. Solo se quedan tal cual los títulos que se "
+    "piden literales, las rutas, el código, los identificadores y los códigos de regla o de "
+    "error."
+)
 MAIN_GUARD = (
     "Responde directo desde el input. NO uses herramientas, NO busques en internet. "
     "Output EXACTO: un resumen en prosa clara. Máximo 150 palabras. Nada fuera del formato."

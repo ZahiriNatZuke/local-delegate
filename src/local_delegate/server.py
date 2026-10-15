@@ -3452,6 +3452,56 @@ def _response_language_clause() -> str:
     return f" Responde en {name}, aunque el contenido esté en otro idioma."
 
 
+def _written_language_clause() -> str:
+    """The hardened language order of `local_summarize` and `local_lint_summary` (REQ-028, B2d).
+
+    Same place and same rule as `_response_language_clause`, which explain_code and describe_image
+    keep (10/10 in the live sample). Here the plain order gave 34/40 over the four tools, with
+    summarize 8/10 and lint_summary 6/10, and none of the failures was in the opposite language:
+    they were mixed. The model translated the frame and kept fragments of the input as they were
+    ("Múltiples `if` statements", "Restoration successful."), writing noun phrases instead of
+    sentences. So the order now says what is written in the requested language (every
+    sentence, also the description of each error or rule, in full sentences and not copied from
+    the input) and the only things that stay verbatim (requested headings, paths, code,
+    identifiers and rule or error codes).
+    """
+    name = _language_name(i18n.response_language().value)
+    return _written_language_head(name) + (
+        " Solo se quedan tal cual los títulos que se piden literales, las rutas, el código, los "
+        "identificadores y los códigos de regla o de error."
+    )
+
+
+def _written_language_head(name: str) -> str:
+    """What both hardened orders share: every sentence is written in `name`, not copied."""
+    return (
+        f" Escribe toda la respuesta en {name}, aunque el contenido esté en otro idioma: redacta "
+        f"en {name} cada frase, también la descripción de cada error o regla, con frases "
+        "completas y sin copiar frases del contenido."
+    )
+
+
+def _lint_language_clause() -> str:
+    """The language order of `local_lint_summary`: the hardened one, plus its labels (B2d-fix).
+
+    In the live probe X (`evidence/B2d-fix/live-probe-X.json`) the model wrote its sentences in
+    English but copied 5-8 bold labels and check names of the Spanish `doctor` report as they were
+    ("Cadenas de respaldo", "Coste y relleno", "Servicios"), which the plain hardened order allowed:
+    it said nothing about labels, and it listed "the headings asked for verbatim", which a lint
+    summary does not have and the model could take for its labels. So here the labels, section
+    names and check names are named explicitly as text to write in the requested language, and
+    the verbatim list is only paths, code, identifiers and rule or error codes. `local_summarize`
+    keeps `_written_language_clause`: its `##` headings must stay verbatim.
+    """
+    name = _language_name(i18n.response_language().value)
+    return _written_language_head(name) + (
+        f" También van en {name} las etiquetas en negrita, los nombres de sección y los nombres "
+        "de cada chequeo o prueba: tradúcelos aunque en el contenido aparezcan en otro idioma. "
+        "Solo se quedan tal cual las rutas, el código, los identificadores y los códigos de regla "
+        "o de error."
+    )
+
+
 def _guard(output_format: str, max_words: int | None = None) -> str:
     limit = f" Máximo {max_words} palabras." if max_words else ""
     return (
@@ -3470,7 +3520,7 @@ def _lint_system(max_words: int) -> str:
             "error/regla y los más relevantes primero",
             max_words,
         )
-        + _response_language_clause()
+        + _lint_language_clause()
     )
 
 
@@ -3717,7 +3767,7 @@ def local_summarize(
     clean_focus = sections.sanitize_focus(focus)
     # La orden de idioma (REQ-028) va con el enfoque: así llega al map, al reduce y a cada trozo
     # del resumen estructurado, que la reciben por `extra`/`reduce_extra`.
-    extra = _focus_clause(clean_focus) + _response_language_clause()
+    extra = _focus_clause(clean_focus) + _written_language_clause()
     # Solo con el modelo largo: el mecánico (4B, entradas cortas) se saltó la «Introducción» en la
     # etapa 1 de la v3 (0,86), y el criterio escrito antes de medir era limitarlo al rol `long`.
     structured = config.STRUCTURED_SUMMARY and role == "long"
@@ -4135,7 +4185,7 @@ def local_lint_summary(
             raw_len=raw_len,
             path=path,
             # El reduce por defecto (y el reagrupado) no usan `system`: la orden va también aquí.
-            reduce_extra=_response_language_clause(),
+            reduce_extra=_lint_language_clause(),
         )
 
     user = _build(content)

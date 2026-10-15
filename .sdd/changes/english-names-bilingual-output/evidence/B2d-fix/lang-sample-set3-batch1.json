@@ -1,0 +1,785 @@
+{
+ "status": "set_3_batch_1_done",
+ "measured_at": "2026-10-15",
+ "code": "branch sdd/english-names-b2d at 32d8612, installed in the daemon (local_status: local-delegate v0.35.0)",
+ "method": "Each tool called once, in series, through the live MCP daemon with path=<absolute path> and default arguments (max_words default, no focus). Responses saved literally (scratchpad c3t1/*.txt, copied here as response_literal); their length without the product's wrapper line matches chars_out of the usage-log row in all 10. Scored offline with the prose-only judge and, for comparison, the old rule.",
+ "combination": {
+  "product": "es",
+  "output_language": "en",
+  "window_id": "w-20261015T181256Z",
+  "local_status": "Idioma: es (sistema; ...language.json) / Idioma de respuesta del modelo: en (variable de salida); backend arriba; ventana w-20261015T181256Z abierta"
+ },
+ "set": {
+  "file": "evidence/B2d-fix/lang-sample-docs-3.json",
+  "sha256": "fcf3b4462b193739a00ff3acf633aba365b9e50c8a021d76fd37b14cf3d68593",
+  "sha256_verified": true,
+  "documents_sha256_verified": "20/20 (both batches)",
+  "part": "batch_1"
+ },
+ "judge": {
+  "script": "scripts/judge_response_language.py",
+  "commit": "32d8612",
+  "sha256": "c212c71eeecea65151cc10fd0e4a3adf4ab923f3692aa8c209841d723dc953a0",
+  "call": "judge(response, document, 'en') with the document read as the server reads it (utf-8, errors='replace')"
+ },
+ "old_rule": "detect(min_tokens=20, min_margin=0.15) on the literal response minus the product's wrapper lines (scratchpad score_b1.py rule)",
+ "criterion": ">= 90% requested among the judgeable responses per tool and batch, 0 in the opposite language; not_judgeable reported apart",
+ "summary": {
+  "local_summarize": {
+   "judge_new": {
+    "samples": 5,
+    "judgeable": 5,
+    "requested": 5,
+    "opposite": 0,
+    "unknown": 0,
+    "not_judgeable": 0,
+    "pct_requested_of_judgeable": 100.0,
+    "meets_criterion": true
+   },
+   "judge_old": {
+    "samples": 5,
+    "judgeable": 5,
+    "requested": 5,
+    "opposite": 0,
+    "unknown": 0,
+    "not_judgeable": 0,
+    "pct_requested_of_judgeable": 100.0,
+    "meets_criterion": true
+   },
+   "duplicate_sections_same_title": 1,
+   "spanish_bold_labels_copied": 5,
+   "spanish_headings_copied": 15
+  },
+  "local_lint_summary": {
+   "judge_new": {
+    "samples": 5,
+    "judgeable": 5,
+    "requested": 5,
+    "opposite": 0,
+    "unknown": 0,
+    "not_judgeable": 0,
+    "pct_requested_of_judgeable": 100.0,
+    "meets_criterion": true
+   },
+   "judge_old": {
+    "samples": 5,
+    "judgeable": 5,
+    "requested": 5,
+    "opposite": 0,
+    "unknown": 0,
+    "not_judgeable": 0,
+    "pct_requested_of_judgeable": 100.0,
+    "meets_criterion": true
+   },
+   "spanish_bold_labels_copied": 0
+  }
+ },
+ "observations": [
+  "All 10 responses are judged 'requested' (en) by both judges; none not_judgeable, unknown or opposite. The new judge always has a larger margin than the old one (it removes paths, codes and copied headings).",
+  "No truncation and no chunking recorded in the usage log (fields absent) for any of the 10 calls; finish_reason stop.",
+  "local_summarize keeps the document's Spanish headings verbatim (by design of the structured summary; R2 removes them before judging): 4 + 7 + 4 = 15 Spanish headings in the three es documents.",
+  "local_summarize copies Spanish bold sub-labels from the document in 2 of 3 es documents (1 in claude-code-hooks, 4 in remote-backend); they are judged as prose and still the responses pass.",
+  "local_summarize on pycparser (en) repeats the title 'Introduction': the product's leading Introduction plus the document's own 'Introduction' section (duplicate_sections_same_title = ['introduction']).",
+  "local_lint_summary: 0 Spanish bold labels copied in the 5 responses (the 3 es logs included); labels written in English (e.g. 'VRAM Memory Issues Summary', 'Summary of Issues by File').",
+  "Content quality is not measured here, but noted: the doctor and corpus-f2 lint summaries contain invented counts/claims (e.g. 'Missing MCP Credentials (2)', 'scripts/build_corpus.py' as file).",
+  "Input es-log-B2c_corpus-f2-check.txt is not valid UTF-8 (cp1252 bullets); the model got U+FFFD replacements.",
+  "Models: gemma4-26b-a4b for the 4 longer summarize inputs and the biome log (22 235 chars); gemma3-4b for distlib (5 317 chars) and the 4 short logs."
+ ],
+ "samples": [
+  {
+   "set": "3",
+   "batch": 1,
+   "window_id": "w-20261015T181256Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-doc-docs_recipes_claude-code-hooks.md",
+   "input_language": "es",
+   "document_sha256": "439ac36e277919bdc50842c48eba921650c6893da542295666cba9c4f9d7519d",
+   "document_sha256_frozen": "439ac36e277919bdc50842c48eba921650c6893da542295666cba9c4f9d7519d",
+   "document_unchanged": true,
+   "response_file": "s3_01.txt",
+   "response_sha256": "68eff014730047e4cd0f4c6735048d2c5187850cef6d2c8d73f43de6f315f07e",
+   "response_literal": "## Introduction\nThis document describes the recommended Claude Code hooks for suggesting task delegation.\n\n## Hooks\n**`suggest_delegate_prompt.py` — `UserPromptSubmit`** Detects explicit mechanical intentions like summarizing or translating, providing short reminders without overriding final decisions.\n**`suggest_delegate_read.py` — `PreToolUse`, matcher `Read`** An experimental hook, disabled by default, that suggests or blocks reading large files based on configurable size thresholds.\n**`suggest_delegate_shell.py` — `PreToolUse`, matcher `Bash|PowerShell`** Monitors simple file dumping commands to suggest delegation, recording all executed commands.\n**`record_call.py` — `PreToolUse`, matcher `mcp__local-delegate__.*`** Always installed, this script logs delegation details for cost and metric analysis without affecting user prompts.\n**`suggest_lint_summary.py`** This script was retired on 2026-09-08 due to extremely low accuracy.\n\n## Instalación\nInstall scripts using `local-delegate install`, which copies files to `~/.claude/hooks/local-delegate/` and updates settings.\n\n## Configuración\nConfigure behavior using environment variables like `LD_HOOK_ENABLED` and `LD_HOOK_READ_SUGGEST_KB` to manage suggestions and telemetry.\n\n## Verificación manual\nVerify installation by testing prompts, file sizes, and ensuring retired hooks do not trigger.\n\n## Piloto A/B\nCompare sessions using `LD_HOOK_ENABLED` to measure adoption and false positive rates.\n**Resultado del piloto de 2026-07-23** Active hooks improved adoption from 83.3% to 100%, though the Read hook required further iteration.\n\n(leído server-side: 12899 chars ≈ 6449 tokens de Claude que no entraron a tu contexto)",
+   "usage_log": {
+    "ts": "2026-10-15T18:26:49+00:00",
+    "model": "gemma4-26b-a4b",
+    "chars_in": 12899,
+    "chars_out": 1601,
+    "truncated": null,
+    "chunks": null,
+    "finish_reason": "stop"
+   },
+   "chars_out_check": {
+    "len_without_wrapper": 1601,
+    "chars_out": 1601,
+    "match": true
+   },
+   "judge_new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 150,
+    "es_ratio": 0.0133,
+    "en_ratio": 0.26,
+    "margin": 0.2467
+   },
+   "judged_text": "## Introduction\nThis document describes the recommended Claude Code hooks for suggesting task delegation.\n\n** — ** Detects explicit mechanical intentions like summarizing or translating, providing short reminders without overriding final decisions.\n** — , matcher ** An experimental hook, disabled by default, that suggests or blocks reading large files based on configurable size thresholds.\n** — , matcher ** Monitors simple file dumping commands to suggest delegation, recording all executed commands.\n** — , matcher ** Always installed, this script logs delegation details for cost and metric analysis without affecting user prompts.\n** ** This script was retired on due to extremely low accuracy.\n\nInstall scripts using , which copies files to and updates settings.\n\nConfigure behavior using environment variables like and to manage suggestions and telemetry.\n\nVerify installation by testing prompts, file sizes, and ensuring retired hooks do not trigger.\n\nCompare sessions using to measure adoption and false positive rates.\n**Resultado del piloto de Active hooks improved adoption from to though the Read hook required further iteration.",
+   "judge_old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 205,
+    "es_ratio": 0.0098,
+    "en_ratio": 0.1902,
+    "margin": 0.1804
+   },
+   "judged_text_old": "## Introduction\nThis document describes the recommended Claude Code hooks for suggesting task delegation.\n\n## Hooks\n**`suggest_delegate_prompt.py` — `UserPromptSubmit`** Detects explicit mechanical intentions like summarizing or translating, providing short reminders without overriding final decisions.\n**`suggest_delegate_read.py` — `PreToolUse`, matcher `Read`** An experimental hook, disabled by default, that suggests or blocks reading large files based on configurable size thresholds.\n**`suggest_delegate_shell.py` — `PreToolUse`, matcher `Bash|PowerShell`** Monitors simple file dumping commands to suggest delegation, recording all executed commands.\n**`record_call.py` — `PreToolUse`, matcher `mcp__local-delegate__.*`** Always installed, this script logs delegation details for cost and metric analysis without affecting user prompts.\n**`suggest_lint_summary.py`** This script was retired on 2026-09-08 due to extremely low accuracy.\n\n## Instalación\nInstall scripts using `local-delegate install`, which copies files to `~/.claude/hooks/local-delegate/` and updates settings.\n\n## Configuración\nConfigure behavior using environment variables like `LD_HOOK_ENABLED` and `LD_HOOK_READ_SUGGEST_KB` to manage suggestions and telemetry.\n\n## Verificación manual\nVerify installation by testing prompts, file sizes, and ensuring retired hooks do not trigger.\n\n## Piloto A/B\nCompare sessions using `LD_HOOK_ENABLED` to measure adoption and false positive rates.\n**Resultado del piloto de 2026-07-23** Active hooks improved adoption from 83.3% to 100%, though the Read hook required further iteration.",
+   "bold_labels": [
+    "`suggest_delegate_prompt.py` — `UserPromptSubmit`",
+    "`suggest_delegate_read.py` — `PreToolUse`, matcher `Read`",
+    "`suggest_delegate_shell.py` — `PreToolUse`, matcher `Bash|PowerShell`",
+    "`record_call.py` — `PreToolUse`, matcher `mcp__local-delegate__.*`",
+    "`suggest_lint_summary.py`",
+    "Resultado del piloto de 2026-07-23"
+   ],
+   "spanish_bold_labels_copied": [
+    "Resultado del piloto de 2026-07-23"
+   ],
+   "headings": [
+    "Introduction",
+    "Hooks",
+    "Instalación",
+    "Configuración",
+    "Verificación manual",
+    "Piloto A/B"
+   ],
+   "duplicate_sections_same_title": [],
+   "spanish_bold_labels_copied_reviewed": [
+    "Resultado del piloto de 2026-07-23"
+   ],
+   "spanish_bold_labels_copied_count": 1,
+   "spanish_headings_copied_count": 4
+  },
+  {
+   "set": "3",
+   "batch": 1,
+   "window_id": "w-20261015T181256Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-doc-docs_recipes_llama-swap-groups.md",
+   "input_language": "es",
+   "document_sha256": "28b1419b2814990f04b2ffc6cc2d2714e80cefd7f4d90eeff1316e1d65150d74",
+   "document_sha256_frozen": "28b1419b2814990f04b2ffc6cc2d2714e80cefd7f4d90eeff1316e1d65150d74",
+   "document_unchanged": true,
+   "response_file": "s3_02.txt",
+   "response_sha256": "6c01047087cff37bc13cbf1d786b9499b250b3cda05fb764c0f9ac8aff558073",
+   "response_literal": "## Introduction\nLlama-swap runs one model at a time by default, but groups allow models to rotate or coexist.\n\n## Instalación\nRequires the optional `[llamaswap]` extra to install `pyyaml` via pip or uv.\n\n## Semántica de `groups` (verificada contra el código real de llama-swap)\n**groups** uses a legacy mechanism where `swap: true` enables rotation and `persistent: true` allows opt-in residency. **ttl** is a per-model or global setting, not a group key. **exclusive** determines if loading a group unloads others.\n\n## Presupuesto de VRAM\n**check-llamaswap** calculates the worst-case VRAM usage by summing groups, using the heaviest member for swap groups. It uses conservative estimations based on GGUF metadata or file size.\n\n## Presupuesto de RAM de sistema (opcional, `--ram-gb`)\n**RAM** estimation uses weights-only logic, as `llama-server` maps GGUF files into system memory via mmap.\n\n## Los comandos\n**check-llamaswap** validates if the current configuration fits within the specified VRAM and RAM limits.\n**init-llamaswap** generates or updates the `groups` section in an existing configuration file.\n**llamaswap residency** views or modifies which models remain loaded in memory.\n\n## Ritual de aplicación (recomendado, manual)\nFollow a manual process of backing up, dry-running, applying, restarting, and verifying memory usage.\n\n## Por qué el paquete no hace esto solo\nIncorrect configurations can cause OOM or thrashing, so the package requires explicit user authorization.\n\n(leído server-side: 14978 chars ≈ 7489 tokens de Claude que no entraron a tu contexto)",
+   "usage_log": {
+    "ts": "2026-10-15T18:27:10+00:00",
+    "model": "gemma4-26b-a4b",
+    "chars_in": 14978,
+    "chars_out": 1487,
+    "truncated": null,
+    "chunks": null,
+    "finish_reason": "stop"
+   },
+   "chars_out_check": {
+    "len_without_wrapper": 1487,
+    "chars_out": 1487,
+    "match": true
+   },
+   "judge_new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 157,
+    "es_ratio": 0.0,
+    "en_ratio": 0.3057,
+    "margin": 0.3057
+   },
+   "judged_text": "## Introduction\nLlama-swap runs one model at a time by default, but groups allow models to rotate or coexist.\n\nRequires the optional extra to install via pip or uv.\n\n**groups** uses a legacy mechanism where enables rotation and allows residency. **ttl** is a or global setting, not a group key. **exclusive** determines if loading a group unloads others.\n\ncalculates the VRAM usage by summing groups, using the heaviest member for swap groups. It uses conservative estimations based on GGUF metadata or file size.\n\n**RAM** estimation uses logic, as maps GGUF files into system memory via mmap.\n\nvalidates if the current configuration fits within the specified VRAM and RAM limits.\ngenerates or updates the section in an existing configuration file.\n**llamaswap residency** views or modifies which models remain loaded in memory.\n\nFollow a manual process of backing up, applying, restarting, and verifying memory usage.\n\nIncorrect configurations can cause OOM or thrashing, so the package requires explicit user authorization.",
+   "judge_old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 220,
+    "es_ratio": 0.0682,
+    "en_ratio": 0.2318,
+    "margin": 0.1636
+   },
+   "judged_text_old": "## Introduction\nLlama-swap runs one model at a time by default, but groups allow models to rotate or coexist.\n\n## Instalación\nRequires the optional `[llamaswap]` extra to install `pyyaml` via pip or uv.\n\n## Semántica de `groups` (verificada contra el código real de llama-swap)\n**groups** uses a legacy mechanism where `swap: true` enables rotation and `persistent: true` allows opt-in residency. **ttl** is a per-model or global setting, not a group key. **exclusive** determines if loading a group unloads others.\n\n## Presupuesto de VRAM\n**check-llamaswap** calculates the worst-case VRAM usage by summing groups, using the heaviest member for swap groups. It uses conservative estimations based on GGUF metadata or file size.\n\n## Presupuesto de RAM de sistema (opcional, `--ram-gb`)\n**RAM** estimation uses weights-only logic, as `llama-server` maps GGUF files into system memory via mmap.\n\n## Los comandos\n**check-llamaswap** validates if the current configuration fits within the specified VRAM and RAM limits.\n**init-llamaswap** generates or updates the `groups` section in an existing configuration file.\n**llamaswap residency** views or modifies which models remain loaded in memory.\n\n## Ritual de aplicación (recomendado, manual)\nFollow a manual process of backing up, dry-running, applying, restarting, and verifying memory usage.\n\n## Por qué el paquete no hace esto solo\nIncorrect configurations can cause OOM or thrashing, so the package requires explicit user authorization.",
+   "bold_labels": [
+    "groups",
+    "ttl",
+    "exclusive",
+    "check-llamaswap",
+    "RAM",
+    "check-llamaswap",
+    "init-llamaswap",
+    "llamaswap residency"
+   ],
+   "spanish_bold_labels_copied": [],
+   "headings": [
+    "Introduction",
+    "Instalación",
+    "Semántica de `groups` (verificada contra el código real de llama-swap)",
+    "Presupuesto de VRAM",
+    "Presupuesto de RAM de sistema (opcional, `--ram-gb`)",
+    "Los comandos",
+    "Ritual de aplicación (recomendado, manual)",
+    "Por qué el paquete no hace esto solo"
+   ],
+   "duplicate_sections_same_title": [],
+   "spanish_bold_labels_copied_reviewed": [],
+   "spanish_bold_labels_copied_count": 0,
+   "spanish_headings_copied_count": 7
+  },
+  {
+   "set": "3",
+   "batch": 1,
+   "window_id": "w-20261015T181256Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-doc-docs_recipes_remote-backend.md",
+   "input_language": "es",
+   "document_sha256": "388182f8232edeaf9c8583870c9a8b0a78d61b3694e892c4365bce69c875559f",
+   "document_sha256_frozen": "388182f8232edeaf9c8583870c9a8b0a78d61b3694e892c4365bce69c875559f",
+   "document_unchanged": true,
+   "response_file": "s3_03.txt",
+   "response_sha256": "8a3dbd3a54f3085a092eeb8b42e175d787c2acea9c698652728b87dcacd14f40",
+   "response_literal": "## Introduction\nThe recommended topology keeps the local delegate near the client files, moving only the OpenAI-compatible inference through the network.\n\n## 1. Publicar el loopback dentro del tailnet\nTailscale Serve publishes the llama-swap and dashboard within the tailnet using HTTPS, avoiding router port opening.\n**Autenticación de llama-swap** Use native `apiKeys` by defining `LOCAL_DELEGATE_REMOTE_API_KEY` in the llama-swap environment. On Windows, use a launcher to export the key as a `SecureString`, and on Mac, store it in Keychain to avoid writing secrets in YAML or logs.\n\n## 2. Mantener el MCP local en la Mac\n**Elegir exactamente que revision se prueba** Use `uvx --from` with a specific Git commit SHA to test unreleased changes on the Mac without publishing to PyPI. Once approved, transition to a stable versioned release in the MCP configuration.\n**Canary automatizado desde la Mac** Run a Python script that performs 20 inferences, tests concurrency, and validates macOS-specific paths. Use a wrapper script with the full SHA to automate the entire preflight and testing process.\n**Resultado validado (2026-07-23)** The authenticated test passed 20/20 inferences and confirmed that paths resolve correctly on the Mac side.\n\n## Alternativa: MCP remoto completo\nRunning the full MCP on the PC is an option for text-only operations but is not recommended due to filesystem and security implications.\n\n## Criterio de aceptación\nThe setup must ensure secure access, no token leakage, successful path resolution, and graceful failure handling.\n\n(leído server-side: 11477 chars ≈ 5738 tokens de Claude que no entraron a tu contexto)",
+   "usage_log": {
+    "ts": "2026-10-15T18:27:28+00:00",
+    "model": "gemma4-26b-a4b",
+    "chars_in": 11477,
+    "chars_out": 1559,
+    "truncated": null,
+    "chunks": null,
+    "finish_reason": "stop"
+   },
+   "chars_out_check": {
+    "len_without_wrapper": 1559,
+    "chars_out": 1559,
+    "match": true
+   },
+   "judge_new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 192,
+    "es_ratio": 0.026,
+    "en_ratio": 0.3385,
+    "margin": 0.3125
+   },
+   "judged_text": "## Introduction\nThe recommended topology keeps the local delegate near the client files, moving only the inference through the network.\n\nTailscale Serve publishes the and dashboard within the tailnet using HTTPS, avoiding router port opening.\n**Autenticación de Use native by defining in the environment. On Windows, use a launcher to export the key as a , and on Mac, store it in Keychain to avoid writing secrets in YAML or logs.\n\n**Elegir exactamente que revision se prueba** Use with a specific Git commit SHA to test unreleased changes on the Mac without publishing to Once approved, transition to a stable versioned release in the MCP configuration.\n**Canary automatizado desde la Mac** Run a Python script that performs inferences, tests concurrency, and validates paths. Use a wrapper script with the full SHA to automate the entire preflight and testing process.\n**Resultado validado The authenticated test passed inferences and confirmed that paths resolve correctly on the Mac side.\n\nRunning the full MCP on the PC is an option for operations but is not recommended due to filesystem and security implications.\n\nThe setup must ensure secure access, no token leakage, successful path resolution, and graceful failure handling.",
+   "judge_old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 234,
+    "es_ratio": 0.047,
+    "en_ratio": 0.2863,
+    "margin": 0.2393
+   },
+   "judged_text_old": "## Introduction\nThe recommended topology keeps the local delegate near the client files, moving only the OpenAI-compatible inference through the network.\n\n## 1. Publicar el loopback dentro del tailnet\nTailscale Serve publishes the llama-swap and dashboard within the tailnet using HTTPS, avoiding router port opening.\n**Autenticación de llama-swap** Use native `apiKeys` by defining `LOCAL_DELEGATE_REMOTE_API_KEY` in the llama-swap environment. On Windows, use a launcher to export the key as a `SecureString`, and on Mac, store it in Keychain to avoid writing secrets in YAML or logs.\n\n## 2. Mantener el MCP local en la Mac\n**Elegir exactamente que revision se prueba** Use `uvx --from` with a specific Git commit SHA to test unreleased changes on the Mac without publishing to PyPI. Once approved, transition to a stable versioned release in the MCP configuration.\n**Canary automatizado desde la Mac** Run a Python script that performs 20 inferences, tests concurrency, and validates macOS-specific paths. Use a wrapper script with the full SHA to automate the entire preflight and testing process.\n**Resultado validado (2026-07-23)** The authenticated test passed 20/20 inferences and confirmed that paths resolve correctly on the Mac side.\n\n## Alternativa: MCP remoto completo\nRunning the full MCP on the PC is an option for text-only operations but is not recommended due to filesystem and security implications.\n\n## Criterio de aceptación\nThe setup must ensure secure access, no token leakage, successful path resolution, and graceful failure handling.",
+   "bold_labels": [
+    "Autenticación de llama-swap",
+    "Elegir exactamente que revision se prueba",
+    "Canary automatizado desde la Mac",
+    "Resultado validado (2026-07-23)"
+   ],
+   "spanish_bold_labels_copied": [
+    "Autenticación de llama-swap",
+    "Elegir exactamente que revision se prueba",
+    "Canary automatizado desde la Mac"
+   ],
+   "headings": [
+    "Introduction",
+    "1. Publicar el loopback dentro del tailnet",
+    "2. Mantener el MCP local en la Mac",
+    "Alternativa: MCP remoto completo",
+    "Criterio de aceptación"
+   ],
+   "duplicate_sections_same_title": [],
+   "spanish_bold_labels_copied_reviewed": [
+    "Autenticación de llama-swap",
+    "Elegir exactamente que revision se prueba",
+    "Canary automatizado desde la Mac",
+    "Resultado validado (2026-07-23)"
+   ],
+   "spanish_bold_labels_copied_count": 4,
+   "spanish_headings_copied_count": 4
+  },
+  {
+   "set": "3",
+   "batch": 1,
+   "window_id": "w-20261015T181256Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-doc-pycparser-3.0.METADATA.md",
+   "input_language": "en",
+   "document_sha256": "f547a60b0ab54cc2f242213d1f87960ad80df7dd5dfeb98d17a444d48bfb6b93",
+   "document_sha256_frozen": "f547a60b0ab54cc2f242213d1f87960ad80df7dd5dfeb98d17a444d48bfb6b93",
+   "document_unchanged": true,
+   "response_file": "s3_04.txt",
+   "response_sha256": "c5bff0ba3bbf6d1b5a8722ad7c97ca176ac6eee36d2fb23c3b4ef67077d25435",
+   "response_literal": "## Introduction\nThis document provides information about a C parser written in pure Python.\n\n## pycparser v3.00\nA Python-based C language parser.\n\n## Introduction\n**What is pycparser?** It is a pure Python C parser module. **What is it good for?** It serves various purposes like obfuscation or static analysis. **Which version of C does pycparser support?** It targets C99 and some C11 features. **What grammar does pycparser follow?** It adheres to the C99 standard. **How is pycparser licensed?** It uses a BSD license. **Contact details** Users can report issues via GitHub.\n\n## Installing\n**Prerequisites** It requires modern Python on various platforms. **Installation process** Use `pip install pycparser`.\n\n## Using\n**Interaction with the C preprocessor** The tool requires preprocessed code via `cpp`. **What about the standard C library headers?** It uses minimal fake headers for efficiency. **Basic usage** Users can find guidance in the `examples/` directory. **Advanced usage** Documentation is available in `pycparser/c_parser.py` and `pycparser/_c_ast.cfg`.\n\n## Modifying\nUsers must regenerate AST nodes using `_ast_gen.py` after changing `_c_ast.cfg`.\n\n## Package contents\nThe package includes source code, tests, examples, and configuration files.\n\n## Contributors\nContributors are tracked via GitHub or listed in the `CONTRIBUTORS` file.\n\n(leído server-side: 8229 chars ≈ 4114 tokens de Claude que no entraron a tu contexto)",
+   "usage_log": {
+    "ts": "2026-10-15T18:27:45+00:00",
+    "model": "gemma4-26b-a4b",
+    "chars_in": 8229,
+    "chars_out": 1356,
+    "truncated": null,
+    "chunks": null,
+    "finish_reason": "stop"
+   },
+   "chars_out_check": {
+    "len_without_wrapper": 1356,
+    "chars_out": 1356,
+    "match": true
+   },
+   "judge_new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 160,
+    "es_ratio": 0.0,
+    "en_ratio": 0.3688,
+    "margin": 0.3688
+   },
+   "judged_text": "This document provides information about a C parser written in pure Python.\n\nA Python-based C language parser.\n\n**What is pycparser?** It is a pure Python C parser module. **What is it good for?** It serves various purposes like obfuscation or static analysis. **Which version of C does pycparser support?** It targets and some features. **What grammar does pycparser follow?** It adheres to the standard. **How is pycparser licensed?** It uses a BSD license. **Contact details** Users can report issues via\n\n**Prerequisites** It requires modern Python on various platforms. **Installation process** Use .\n\n**Interaction with the C preprocessor** The tool requires preprocessed code via . **What about the standard C library headers?** It uses minimal fake headers for efficiency. **Basic usage** Users can find guidance in the directory. **Advanced usage** Documentation is available in and .\n\nUsers must regenerate AST nodes using after changing .\n\nThe package includes source code, tests, examples, and configuration files.\n\nContributors are tracked via or listed in the file.",
+   "judge_old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 195,
+    "es_ratio": 0.0,
+    "en_ratio": 0.3026,
+    "margin": 0.3026
+   },
+   "judged_text_old": "## Introduction\nThis document provides information about a C parser written in pure Python.\n\n## pycparser v3.00\nA Python-based C language parser.\n\n## Introduction\n**What is pycparser?** It is a pure Python C parser module. **What is it good for?** It serves various purposes like obfuscation or static analysis. **Which version of C does pycparser support?** It targets C99 and some C11 features. **What grammar does pycparser follow?** It adheres to the C99 standard. **How is pycparser licensed?** It uses a BSD license. **Contact details** Users can report issues via GitHub.\n\n## Installing\n**Prerequisites** It requires modern Python on various platforms. **Installation process** Use `pip install pycparser`.\n\n## Using\n**Interaction with the C preprocessor** The tool requires preprocessed code via `cpp`. **What about the standard C library headers?** It uses minimal fake headers for efficiency. **Basic usage** Users can find guidance in the `examples/` directory. **Advanced usage** Documentation is available in `pycparser/c_parser.py` and `pycparser/_c_ast.cfg`.\n\n## Modifying\nUsers must regenerate AST nodes using `_ast_gen.py` after changing `_c_ast.cfg`.\n\n## Package contents\nThe package includes source code, tests, examples, and configuration files.\n\n## Contributors\nContributors are tracked via GitHub or listed in the `CONTRIBUTORS` file.",
+   "bold_labels": [
+    "What is pycparser?",
+    "What is it good for?",
+    "Which version of C does pycparser support?",
+    "What grammar does pycparser follow?",
+    "How is pycparser licensed?",
+    "Contact details",
+    "Prerequisites",
+    "Installation process",
+    "Interaction with the C preprocessor",
+    "What about the standard C library headers?",
+    "Basic usage",
+    "Advanced usage"
+   ],
+   "spanish_bold_labels_copied": [],
+   "headings": [
+    "Introduction",
+    "pycparser v3.00",
+    "Introduction",
+    "Installing",
+    "Using",
+    "Modifying",
+    "Package contents",
+    "Contributors"
+   ],
+   "duplicate_sections_same_title": [
+    "introduction"
+   ],
+   "spanish_bold_labels_copied_reviewed": [],
+   "spanish_bold_labels_copied_count": 0,
+   "spanish_headings_copied_count": 0
+  },
+  {
+   "set": "3",
+   "batch": 1,
+   "window_id": "w-20261015T181256Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-doc-distlib-0.4.3.METADATA.md",
+   "input_language": "en",
+   "document_sha256": "6c988f8c23faa0ef8734f6863b32976d65f5851333161e8a8df3d80fc57e080d",
+   "document_sha256_frozen": "6c988f8c23faa0ef8734f6863b32976d65f5851333161e8a8df3d80fc57e080d",
+   "document_unchanged": true,
+   "response_file": "s3_05.txt",
+   "response_sha256": "08d1ea23e0b287e68c04d9bf4cf6706e38de6b5abda52c88bcdf5610e0fc8107",
+   "response_literal": "Distlib is a Python library designed for packaging and distribution utilities. Version 0.4.3, developed by Vinay Sajip, is a stable distribution tool intended as a foundation for other packaging tools. It supports Python versions 2.7 through 3.14. The library offers several key packages, including `distlib.database` for managing installed distributions, `distlib.index` for index operations, `distlib.metadata` for distribution metadata, and `distlib.wheel` for working with Wheel format binary distributions.  It also includes features like environment markers, manifest handling, locator services, resource access, script installation, version specification, and enhanced globbing.  Distlib has undergone extensive testing on Windows, Ubuntu, and macOS, and is utilized by projects like `pip` and `caniusepython3`. The project has transitioned to Git and GitHub, though some issue references may be outdated. It adheres to the PyPA Code of Conduct.\n\n(leído server-side: 5317 chars ≈ 2658 tokens de Claude que no entraron a tu contexto)",
+   "usage_log": {
+    "ts": "2026-10-15T18:27:57+00:00",
+    "model": "gemma3-4b",
+    "chars_in": 5317,
+    "chars_out": 952,
+    "truncated": null,
+    "chunks": null,
+    "finish_reason": "stop"
+   },
+   "chars_out_check": {
+    "len_without_wrapper": 952,
+    "chars_out": 952,
+    "match": true
+   },
+   "judge_new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 116,
+    "es_ratio": 0.0,
+    "en_ratio": 0.3534,
+    "margin": 0.3534
+   },
+   "judged_text": "Distlib is a Python library designed for packaging and distribution utilities. Version developed by Vinay Sajip, is a stable distribution tool intended as a foundation for other packaging tools. It supports Python versions through The library offers several key packages, including for managing installed distributions, for index operations, for distribution metadata, and for working with Wheel format binary distributions. It also includes features like environment markers, manifest handling, locator services, resource access, script installation, version specification, and enhanced globbing. Distlib has undergone extensive testing on Windows, Ubuntu, and and is utilized by projects like and . The project has transitioned to Git and though some issue references may be outdated. It adheres to the Code of Conduct.",
+   "judge_old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 129,
+    "es_ratio": 0.0,
+    "en_ratio": 0.3178,
+    "margin": 0.3178
+   },
+   "judged_text_old": "Distlib is a Python library designed for packaging and distribution utilities. Version 0.4.3, developed by Vinay Sajip, is a stable distribution tool intended as a foundation for other packaging tools. It supports Python versions 2.7 through 3.14. The library offers several key packages, including `distlib.database` for managing installed distributions, `distlib.index` for index operations, `distlib.metadata` for distribution metadata, and `distlib.wheel` for working with Wheel format binary distributions.  It also includes features like environment markers, manifest handling, locator services, resource access, script installation, version specification, and enhanced globbing.  Distlib has undergone extensive testing on Windows, Ubuntu, and macOS, and is utilized by projects like `pip` and `caniusepython3`. The project has transitioned to Git and GitHub, though some issue references may be outdated. It adheres to the PyPA Code of Conduct.",
+   "bold_labels": [],
+   "spanish_bold_labels_copied": [],
+   "headings": [],
+   "duplicate_sections_same_title": [],
+   "spanish_bold_labels_copied_reviewed": [],
+   "spanish_bold_labels_copied_count": 0,
+   "spanish_headings_copied_count": 0
+  },
+  {
+   "set": "3",
+   "batch": 1,
+   "window_id": "w-20261015T181256Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-check-llamaswap-pre-b10909.txt",
+   "input_language": "es",
+   "document_sha256": "e2d30b729c1ad2543d089764b55759c33b4063c046e0555dda4f121caa5321e7",
+   "document_sha256_frozen": "e2d30b729c1ad2543d089764b55759c33b4063c046e0555dda4f121caa5321e7",
+   "document_unchanged": true,
+   "response_file": "l3_01.txt",
+   "response_sha256": "d705d30e413bee72149eb565d6baa0da1ae8d415d2b5a91c9cdeaf3bd95326c5",
+   "response_literal": "Here's a summary of the issues, grouped by file and categorized by error type, prioritizing the most relevant:\n\n**VRAM Memory Issues Summary**\n\nThe primary issue involves **file not found errors** related to model files. Specifically, the following models failed to load due to missing GGUF files:\n\n*   **gemma3-4b:** (MODELOS\\gemma-3-4b-it-Q4_K_M.gguf) - Error.\n*   **llama31-8b:** (MODELOS\\Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf) - Error.\n*   **qwen25-coder-14b:** (MODELOS\\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf) - Error.\n*   **qwen35-2b:** (MODELOS\\Qwen3.5-2B-UD-Q8_K_XL.gguf) - Error.\n*   **qwen3-vl-8b:** (MODELOS\\Qwen3VL-8B-Instruct-Q4_K_M.gguf) - Error.\n\nThese errors indicate a problem with the specified model file paths, preventing the models from being loaded and utilized.  The VRAM estimation resulted in 0 GiB available, likely due to these missing files.\n\n(leído server-side: 743 chars ≈ 386 tokens de Claude que no entraron a tu contexto)",
+   "usage_log": {
+    "ts": "2026-10-15T18:28:05+00:00",
+    "model": "gemma3-4b",
+    "chars_in": 743,
+    "chars_out": 870,
+    "truncated": null,
+    "chunks": null,
+    "finish_reason": "stop"
+   },
+   "chars_out_check": {
+    "len_without_wrapper": 870,
+    "chars_out": 870,
+    "match": true
+   },
+   "judge_new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 83,
+    "es_ratio": 0.0,
+    "en_ratio": 0.3012,
+    "margin": 0.3012
+   },
+   "judged_text": "Here's a summary of the issues, grouped by file and categorized by error type, prioritizing the most relevant:\n\n**VRAM Memory Issues Summary**\n\nThe primary issue involves **file not found errors** related to model files. Specifically, the following models failed to load due to missing GGUF files:\n\n* - Error.\n* - Error.\n* - Error.\n* - Error.\n* - Error.\n\nThese errors indicate a problem with the specified model file paths, preventing the models from being loaded and utilized. The VRAM estimation resulted in available, likely due to these missing files.",
+   "judge_old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 139,
+    "es_ratio": 0.0,
+    "en_ratio": 0.1871,
+    "margin": 0.1871
+   },
+   "judged_text_old": "Here's a summary of the issues, grouped by file and categorized by error type, prioritizing the most relevant:\n\n**VRAM Memory Issues Summary**\n\nThe primary issue involves **file not found errors** related to model files. Specifically, the following models failed to load due to missing GGUF files:\n\n*   **gemma3-4b:** (MODELOS\\gemma-3-4b-it-Q4_K_M.gguf) - Error.\n*   **llama31-8b:** (MODELOS\\Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf) - Error.\n*   **qwen25-coder-14b:** (MODELOS\\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf) - Error.\n*   **qwen35-2b:** (MODELOS\\Qwen3.5-2B-UD-Q8_K_XL.gguf) - Error.\n*   **qwen3-vl-8b:** (MODELOS\\Qwen3VL-8B-Instruct-Q4_K_M.gguf) - Error.\n\nThese errors indicate a problem with the specified model file paths, preventing the models from being loaded and utilized.  The VRAM estimation resulted in 0 GiB available, likely due to these missing files.",
+   "bold_labels": [
+    "VRAM Memory Issues Summary",
+    "file not found errors",
+    "gemma3-4b:",
+    "llama31-8b:",
+    "qwen25-coder-14b:",
+    "qwen35-2b:",
+    "qwen3-vl-8b:"
+   ],
+   "spanish_bold_labels_copied": [],
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "spanish_bold_labels_copied_reviewed": [],
+   "spanish_bold_labels_copied_count": 0
+  },
+  {
+   "set": "3",
+   "batch": 1,
+   "window_id": "w-20261015T181256Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-B2c_corpus-f2-check.txt",
+   "input_language": "es",
+   "document_sha256": "e55c52f2c40404391ce087ca987dffa411a9d8f5b63fc386a885ed753731705d",
+   "document_sha256_frozen": "e55c52f2c40404391ce087ca987dffa411a9d8f5b63fc386a885ed753731705d",
+   "document_unchanged": true,
+   "response_file": "l3_02.txt",
+   "response_sha256": "4d095e924b5a95664a8fd4cc82a9c0a0c3939e80ea168c59fd261f110ef40b89",
+   "response_literal": "**Summary of Issues by File**\n\n**scripts/build_corpus.py**\n\n*   **System Changes (Prompts Update - 0.36.0):** 6 occurrences – This category encompasses changes related to prompt modifications introduced in version 0.36.0, impacting the system’s behavior.\n*   **max_tokens Changes (Prompts Update - 0.36.0):** 2 occurrences – These relate to adjustments concerning the maximum token length allowed within the prompts, also stemming from the 0.36.0 update.\n\n**Overall Issues:**\n\nThe primary issue identified is the widespread impact of changes related to the prompt update from version 0.36.0 across multiple files and checks. The system changes, particularly concerning prompt modifications, are the most frequent, highlighting a significant area of concern.\n\n(leído server-side: 1231 chars ≈ 641 tokens de Claude que no entraron a tu contexto)",
+   "usage_log": {
+    "ts": "2026-10-15T18:28:13+00:00",
+    "model": "gemma3-4b",
+    "chars_in": 1231,
+    "chars_out": 757,
+    "truncated": null,
+    "chunks": null,
+    "finish_reason": "stop"
+   },
+   "chars_out_check": {
+    "len_without_wrapper": 757,
+    "chars_out": 757,
+    "match": true
+   },
+   "judge_new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 89,
+    "es_ratio": 0.0,
+    "en_ratio": 0.3146,
+    "margin": 0.3146
+   },
+   "judged_text": "**Summary of Issues by File**\n\n\n\n* **System Changes (Prompts Update - occurrences – This category encompasses changes related to prompt modifications introduced in version impacting the system’s behavior.\n* Changes (Prompts Update - occurrences – These relate to adjustments concerning the maximum token length allowed within the prompts, also stemming from the update.\n\n**Overall Issues:**\n\nThe primary issue identified is the widespread impact of changes related to the prompt update from version across multiple files and checks. The system changes, particularly concerning prompt modifications, are the most frequent, highlighting a significant area of concern.",
+   "judge_old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 95,
+    "es_ratio": 0.0,
+    "en_ratio": 0.2947,
+    "margin": 0.2947
+   },
+   "judged_text_old": "**Summary of Issues by File**\n\n**scripts/build_corpus.py**\n\n*   **System Changes (Prompts Update - 0.36.0):** 6 occurrences – This category encompasses changes related to prompt modifications introduced in version 0.36.0, impacting the system’s behavior.\n*   **max_tokens Changes (Prompts Update - 0.36.0):** 2 occurrences – These relate to adjustments concerning the maximum token length allowed within the prompts, also stemming from the 0.36.0 update.\n\n**Overall Issues:**\n\nThe primary issue identified is the widespread impact of changes related to the prompt update from version 0.36.0 across multiple files and checks. The system changes, particularly concerning prompt modifications, are the most frequent, highlighting a significant area of concern.",
+   "bold_labels": [
+    "Summary of Issues by File",
+    "scripts/build_corpus.py",
+    "System Changes (Prompts Update - 0.36.0):",
+    "max_tokens Changes (Prompts Update - 0.36.0):",
+    "Overall Issues:"
+   ],
+   "spanish_bold_labels_copied": [],
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "spanish_bold_labels_copied_reviewed": [],
+   "spanish_bold_labels_copied_count": 0,
+   "document_note": "not valid UTF-8 (13 bytes > 0x7F, cp1252 bullets '·'); the server reads it with errors='replace', and the judge here too (only R2 uses the document)"
+  },
+  {
+   "set": "3",
+   "batch": 1,
+   "window_id": "w-20261015T181256Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-doctor-empty-home.txt",
+   "input_language": "es",
+   "document_sha256": "367ab3af2a166576928e52c12605bcee7940be5f582f6c2eacefe49d4cc7e161",
+   "document_sha256_frozen": "367ab3af2a166576928e52c12605bcee7940be5f582f6c2eacefe49d4cc7e161",
+   "document_unchanged": true,
+   "response_file": "l3_03.txt",
+   "response_sha256": "7dcb98ab16bb14e1e35af427aa554291b0617168051233ab6d6f4f91f4970591",
+   "response_literal": "Here's a summary of the issues, grouped by file, with error/rule counts and relevance prioritized:\n\n**Local-Delegate (0.35.0)**\n\n*   **Warnings (2):**\n    *   `LD_HOOK_READ_BLOQUEAR` obsolescence (1):  The hook `LD_HOOK_READ_BLOQUEAR` is outdated and should be renamed to `LD_HOOK_READ_BLOCK` before version 0.38.0.\n    *   Missing Claude Code client (1): The Claude Code client is not installed, impacting hook functionality and MCP integration.\n*   **General (1):**  Lack of resident memory for llama-swap (1):  The llama-swap configuration lacks a resident memory setting, which is recommended for optimal performance.\n\n**Backend (http://127.0.0.1:9292/v1)**\n\n*   **Potential Issues (2):**\n    *   Missing MCP Credentials (2): The backend requires MCP credentials, but no relevant MCP entry is found, potentially hindering functionality.\n    *   Token Requirement (2): The port requires a token, but no relevant MCP entry is found, potentially hindering functionality.\n\n**Versions**\n\n*   **Warning (1):**  Missing llama-swap affinity (1): The llama-swap version is installed, but the affinity is not configured, potentially impacting performance.\n\n**MCP Clients**\n\n*   Multiple clients observed, but no active MCP elicitation detected.  This suggests a potential configuration issue or lack of MCP usage.\n\n(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)",
+   "usage_log": {
+    "ts": "2026-10-15T18:28:21+00:00",
+    "model": "gemma3-4b",
+    "chars_in": 5380,
+    "chars_out": 1307,
+    "truncated": null,
+    "chunks": null,
+    "finish_reason": "stop"
+   },
+   "chars_out_check": {
+    "len_without_wrapper": 1307,
+    "chars_out": 1307,
+    "match": true
+   },
+   "judge_new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 143,
+    "es_ratio": 0.0,
+    "en_ratio": 0.2727,
+    "margin": 0.2727
+   },
+   "judged_text": "Here's a summary of the issues, grouped by file, with counts and relevance prioritized:\n\n**Local-Delegate\n\n* **Warnings\n* obsolescence The hook is outdated and should be renamed to before version\n* Missing Claude Code client The Claude Code client is not installed, impacting hook functionality and MCP integration.\n* **General Lack of resident memory for The configuration lacks a resident memory setting, which is recommended for optimal performance.\n\n**Backend ( )**\n\n* **Potential Issues\n* Missing MCP Credentials The backend requires MCP credentials, but no relevant MCP entry is found, potentially hindering functionality.\n* Token Requirement The port requires a token, but no relevant MCP entry is found, potentially hindering functionality.\n\n**Versions**\n\n* **Warning Missing affinity The version is installed, but the affinity is not configured, potentially impacting performance.\n\n**MCP Clients**\n\n* Multiple clients observed, but no active MCP elicitation detected. This suggests a potential configuration issue or lack of MCP usage.",
+   "judge_old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 167,
+    "es_ratio": 0.0,
+    "en_ratio": 0.2335,
+    "margin": 0.2335
+   },
+   "judged_text_old": "Here's a summary of the issues, grouped by file, with error/rule counts and relevance prioritized:\n\n**Local-Delegate (0.35.0)**\n\n*   **Warnings (2):**\n    *   `LD_HOOK_READ_BLOQUEAR` obsolescence (1):  The hook `LD_HOOK_READ_BLOQUEAR` is outdated and should be renamed to `LD_HOOK_READ_BLOCK` before version 0.38.0.\n    *   Missing Claude Code client (1): The Claude Code client is not installed, impacting hook functionality and MCP integration.\n*   **General (1):**  Lack of resident memory for llama-swap (1):  The llama-swap configuration lacks a resident memory setting, which is recommended for optimal performance.\n\n**Backend (http://127.0.0.1:9292/v1)**\n\n*   **Potential Issues (2):**\n    *   Missing MCP Credentials (2): The backend requires MCP credentials, but no relevant MCP entry is found, potentially hindering functionality.\n    *   Token Requirement (2): The port requires a token, but no relevant MCP entry is found, potentially hindering functionality.\n\n**Versions**\n\n*   **Warning (1):**  Missing llama-swap affinity (1): The llama-swap version is installed, but the affinity is not configured, potentially impacting performance.\n\n**MCP Clients**\n\n*   Multiple clients observed, but no active MCP elicitation detected.  This suggests a potential configuration issue or lack of MCP usage.",
+   "bold_labels": [
+    "Local-Delegate (0.35.0)",
+    "Warnings (2):",
+    "General (1):",
+    "Backend (http://127.0.0.1:9292/v1)",
+    "Potential Issues (2):",
+    "Versions",
+    "Warning (1):",
+    "MCP Clients"
+   ],
+   "spanish_bold_labels_copied": [],
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "spanish_bold_labels_copied_reviewed": [],
+   "spanish_bold_labels_copied_count": 0
+  },
+  {
+   "set": "3",
+   "batch": 1,
+   "window_id": "w-20261015T181256Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-biome-lint-nest.txt",
+   "input_language": "en",
+   "document_sha256": "3af20fa5cfba9f2dedb4f8a5653f382acfaf93477085774587aa694b7da994a2",
+   "document_sha256_frozen": "3af20fa5cfba9f2dedb4f8a5653f382acfaf93477085774587aa694b7da994a2",
+   "document_unchanged": true,
+   "response_file": "l3_04.txt",
+   "response_sha256": "2d6207e15023be1a4e4e21b06975ef1a2a98def425a3af74ffca01c0b7ba3856",
+   "response_literal": "**src\\app\\core\\decorators\\app-controller.decorator.ts**\n* **UseExplicitReturnType** (1): The function is missing a declared return type.\n* **UseExplicitType** (1): The function lacks an explicit return type.\n\n**src\\app\\core\\decorators\\log-audit.decorator.ts**\n* **UseConsistentTypeDefinitions** (1): The code uses a type definition instead of an interface.\n* **UseReactFunctionComponentDefinition** (1): The component is defined using an arrow function.\n* **UseExplicitReturnType** (1): The function is missing a declared return type.\n* **UseExplicitType** (1): The function lacks an explicit return type.\n\n**src\\app\\core\\decorators\\throttle.decorator.ts**\n* **UseReactFunctionComponentDefinition** (5): Multiple components are defined as arrow functions.\n* **UseNumericSeparators** (3): Long numeric literals are missing separators for better readability.\n* **UseExplicitReturnType** (5): Several functions are missing declared return types.\n* **UseExplicitType** (5): Multiple functions lack explicit return types.\n\n**src\\app\\core\\filters\\http-exception.filter.ts**\n* **NoTernary** (1): An unexpected ternary operator was used instead of an if-else statement.\n* **UseExplicitReturnType** (1): The class method is missing a declared return type.\n* **UseThisInClassMethods** (1): The class method does not utilize the instance state.\n* **UseExplicitType** (1): The class member lacks an explicit return type.\n\n(leído server-side: 22235 chars ≈ 11580 tokens de Claude que no entraron a tu contexto)",
+   "usage_log": {
+    "ts": "2026-10-15T18:28:52+00:00",
+    "model": "gemma4-26b-a4b",
+    "chars_in": 22235,
+    "chars_out": 1408,
+    "truncated": null,
+    "chunks": null,
+    "finish_reason": "stop"
+   },
+   "chars_out_check": {
+    "len_without_wrapper": 1408,
+    "chars_out": 1408,
+    "match": true
+   },
+   "judge_new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 113,
+    "es_ratio": 0.0,
+    "en_ratio": 0.292,
+    "margin": 0.292
+   },
+   "judged_text": "* The function is missing a declared return type.\n* The function lacks an explicit return type.\n\n\n* The code uses a type definition instead of an interface.\n* The component is defined using an arrow function.\n* The function is missing a declared return type.\n* The function lacks an explicit return type.\n\n\n* Multiple components are defined as arrow functions.\n* Long numeric literals are missing separators for better readability.\n* Several functions are missing declared return types.\n* Multiple functions lack explicit return types.\n\n\n* An unexpected ternary operator was used instead of an statement.\n* The class method is missing a declared return type.\n* The class method does not utilize the instance state.\n* The class member lacks an explicit return type.",
+   "judge_old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 160,
+    "es_ratio": 0.0,
+    "en_ratio": 0.2125,
+    "margin": 0.2125
+   },
+   "judged_text_old": "**src\\app\\core\\decorators\\app-controller.decorator.ts**\n* **UseExplicitReturnType** (1): The function is missing a declared return type.\n* **UseExplicitType** (1): The function lacks an explicit return type.\n\n**src\\app\\core\\decorators\\log-audit.decorator.ts**\n* **UseConsistentTypeDefinitions** (1): The code uses a type definition instead of an interface.\n* **UseReactFunctionComponentDefinition** (1): The component is defined using an arrow function.\n* **UseExplicitReturnType** (1): The function is missing a declared return type.\n* **UseExplicitType** (1): The function lacks an explicit return type.\n\n**src\\app\\core\\decorators\\throttle.decorator.ts**\n* **UseReactFunctionComponentDefinition** (5): Multiple components are defined as arrow functions.\n* **UseNumericSeparators** (3): Long numeric literals are missing separators for better readability.\n* **UseExplicitReturnType** (5): Several functions are missing declared return types.\n* **UseExplicitType** (5): Multiple functions lack explicit return types.\n\n**src\\app\\core\\filters\\http-exception.filter.ts**\n* **NoTernary** (1): An unexpected ternary operator was used instead of an if-else statement.\n* **UseExplicitReturnType** (1): The class method is missing a declared return type.\n* **UseThisInClassMethods** (1): The class method does not utilize the instance state.\n* **UseExplicitType** (1): The class member lacks an explicit return type.",
+   "bold_labels": [
+    "src\\app\\core\\decorators\\app-controller.decorator.ts",
+    "UseExplicitReturnType",
+    "UseExplicitType",
+    "src\\app\\core\\decorators\\log-audit.decorator.ts",
+    "UseConsistentTypeDefinitions",
+    "UseReactFunctionComponentDefinition",
+    "UseExplicitReturnType",
+    "UseExplicitType",
+    "src\\app\\core\\decorators\\throttle.decorator.ts",
+    "UseReactFunctionComponentDefinition",
+    "UseNumericSeparators",
+    "UseExplicitReturnType",
+    "UseExplicitType",
+    "src\\app\\core\\filters\\http-exception.filter.ts",
+    "NoTernary",
+    "UseExplicitReturnType",
+    "UseThisInClassMethods",
+    "UseExplicitType"
+   ],
+   "spanish_bold_labels_copied": [],
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "spanish_bold_labels_copied_reviewed": [],
+   "spanish_bold_labels_copied_count": 0
+  },
+  {
+   "set": "3",
+   "batch": 1,
+   "window_id": "w-20261015T181256Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-ruff-concise-build-site.txt",
+   "input_language": "en",
+   "document_sha256": "0e539a8a8a7eafac0f94a6dc56173a2d3ef2636c737467d63bea2ea43c6519e9",
+   "document_sha256_frozen": "0e539a8a8a7eafac0f94a6dc56173a2d3ef2636c737467d63bea2ea43c6519e9",
+   "document_unchanged": true,
+   "response_file": "l3_05.txt",
+   "response_sha256": "5be35365e9dcf734d4d235b6669a8693c72dbeb1f9c4671e8f3756f43413b6ce",
+   "response_literal": "**Summary of Issues by File**\n\n**scripts\\build_site.py:**\n\nThis file contains 10 identified issues. There is one **Copyright Notice** violation (CPY001) at the beginning of the file.  Additionally, there are three **Missing Docstring** violations (D103) located at lines 36, 72, and 76.  Furthermore, the file exhibits seven **Print Statement** violations (T201) at lines 85, 90, 92, 96, 98, 100, and 103.  A **Trailing Comma** violation (COM812) is present at line 76.  The warnings regarding incompatible checks (D203 and D211) have been ignored.  The incompatibility between D212 and D213 has also been disregarded.\n\n(leído server-side: 968 chars ≈ 504 tokens de Claude que no entraron a tu contexto)",
+   "usage_log": {
+    "ts": "2026-10-15T18:29:04+00:00",
+    "model": "gemma3-4b",
+    "chars_in": 968,
+    "chars_out": 618,
+    "truncated": null,
+    "chunks": null,
+    "finish_reason": "stop"
+   },
+   "chars_out_check": {
+    "len_without_wrapper": 618,
+    "chars_out": 618,
+    "match": true
+   },
+   "judge_new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 69,
+    "es_ratio": 0.0,
+    "en_ratio": 0.4203,
+    "margin": 0.4203
+   },
+   "judged_text": "**Summary of Issues by File**\n\n\n\nThis file contains identified issues. There is one **Copyright Notice** violation at the beginning of the file. Additionally, there are three **Missing Docstring** violations located at lines and Furthermore, the file exhibits seven **Print Statement** violations at lines and A **Trailing Comma** violation is present at line The warnings regarding incompatible checks and have been ignored. The incompatibility between and has also been disregarded.",
+   "judge_old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 81,
+    "es_ratio": 0.0,
+    "en_ratio": 0.358,
+    "margin": 0.358
+   },
+   "judged_text_old": "**Summary of Issues by File**\n\n**scripts\\build_site.py:**\n\nThis file contains 10 identified issues. There is one **Copyright Notice** violation (CPY001) at the beginning of the file.  Additionally, there are three **Missing Docstring** violations (D103) located at lines 36, 72, and 76.  Furthermore, the file exhibits seven **Print Statement** violations (T201) at lines 85, 90, 92, 96, 98, 100, and 103.  A **Trailing Comma** violation (COM812) is present at line 76.  The warnings regarding incompatible checks (D203 and D211) have been ignored.  The incompatibility between D212 and D213 has also been disregarded.",
+   "bold_labels": [
+    "Summary of Issues by File",
+    "scripts\\build_site.py:",
+    "Copyright Notice",
+    "Missing Docstring",
+    "Print Statement",
+    "Trailing Comma"
+   ],
+   "spanish_bold_labels_copied": [],
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "spanish_bold_labels_copied_reviewed": [],
+   "spanish_bold_labels_copied_count": 0
+  }
+ ]
+}

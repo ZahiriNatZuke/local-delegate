@@ -1,0 +1,440 @@
+{
+ "status": "done",
+ "measured_at": "2026-10-15",
+ "probe": "configuration X (same as batch 1: product es, LOCAL_DELEGATE_OUTPUT_LANGUAGE=en, normal long-input threshold; short logs route to gemma3-4b)",
+ "code": "branch sdd/english-names-b2d at 14da61d (installed daemon reports local-delegate v0.35.0); no code, daemon or launcher change during the probe",
+ "window_id": "w-20261015T172837Z",
+ "local_status": "Backend http://127.0.0.1:9292/v1 up; Idioma: es (sistema); Idioma de respuesta del modelo: en (variable de salida); test window w-20261015T172837Z open since 2026-10-15T17:28:37.948Z",
+ "method": "local_lint_summary(path=<absolute path>) with default arguments (max_words=200), three times per document, in series, through the live MCP daemon (6 calls, 2026-10-15T17:30:52Z-17:31:04Z). Responses saved literally; usage row matched by tool+path+order; scored offline with scratchpad score_px.py (copy of score_b1.py).",
+ "judge": "scripts/detect_language.py detect(min_tokens=20, min_margin=0.15), unchanged; requested language: en",
+ "judged_text_rule": "same as lang-sample-batch1.json: literal response minus wrapper lines '(leído server-side: ...)' / '(read server-side: ...)', '[local-delegate warning: ...]' and '(sin resumir)' / '(not summarized)'",
+ "label_rule": {
+  "labels": "bold spans **...** (trailing colon stripped) plus line-start 'Label:' outside bold",
+  "spanish_labels_copied": "label containing a Spanish word from a fixed list (andamiaje, cadenas, clientes, copiados, coste, credencial, diagnóstico, entorno, estados, huérfanos, idioma, memoria, nombres, obsoletos, prueba, registrados, relleno, respaldo, resultado, servicios, ventanas, versiones) AND appearing verbatim (case-insensitive) in the source document",
+  "spanish_labels_any": "label containing a word from that list, verbatim in the source or not (e.g. 'Memoria MCP', 'Windows de prueba')"
+ },
+ "variation_note": "the three repetitions of each document have distinct response sha256: repeating does measure variation here (no fixed seed effect observed)",
+ "usage_log_note": "usage rows carry no response_sha256 field; chars_out equals the literal response length minus the final '(leído server-side...)' line in all 6 calls",
+ "summary": {
+  "es-log-B1b_doctor_es_complete.txt": {
+   "pass_en": 0,
+   "unknown": 3,
+   "es": 0,
+   "spanish_labels_copied": [
+    5,
+    5,
+    8
+   ],
+   "truncated": 0,
+   "model": "gemma3-4b",
+   "distinct_sha": true
+  },
+  "es-log-B1b_doctor_es_empty.txt": {
+   "pass_en": 1,
+   "unknown": 2,
+   "es": 0,
+   "spanish_labels_copied": [
+    0,
+    0,
+    0
+   ],
+   "truncated": 0,
+   "model": "gemma3-4b",
+   "distinct_sha": true
+  },
+  "total": "1/6 recognized as en, 5/6 unknown (margin below 0.15), 0/6 es; all finish_reason=stop"
+ },
+ "observations": [
+  "complete: every repetition copies the Spanish section labels of the doctor output into bold labels (5, 5 and 8 verbatim; 6, 6 and 9 counting partial ones), which lifts es_ratio to ~0.02-0.025 and drops the margin to 0.034-0.111. Same failure as batch 1 (margin 0.0979).",
+  "empty: no Spanish labels copied (labels rewritten in English: Hooks, Skills, Memory, MCP Configuration...); es_ratio 0.0, but en_ratio 0.138-0.166 sits at the threshold, so 2 of 3 fall just below the 0.15 margin. Batch 1 got 0.134. The failure here is the detector's English-ratio on terse technical text, not Spanish leakage.",
+  "variation between repetitions is real (distinct sha256, chars_out 729/780/972 and 1053/1160/1061), and complete_3 changes structure (adds Andamiaje/Servicios/Versiones sub-sections) with more copied labels and the lowest margin."
+ ],
+ "samples": [
+  {
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_complete.txt",
+   "repetition": 1,
+   "document_sha256": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+   "document_sha256_frozen": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+   "document_unchanged": true,
+   "response_sha256": "ae5ffbfb9fc80856fc97b06c3c37b7717ad5129ac3cab779ae761a83550fca7d",
+   "response_literal": "local-delegate doctor report:\n\n*   **LLAMASWAP_EXE:** (Warning) Not set; requires llama-swap in PATH.\n*   **LLAMASWAP_CONFIG:** (Warning) Not set.\n*   **Clientes:** (OK) Detected: Claude Code, Codex, opencode. No MCP clients observed.\n*   **Cadenas de respaldo:** (OK) Valid chains, no resident chains.\n*   **Coste y relleno:** (Warning) No saved comparisons found; no transcripts available.\n*   **Hooks:** (OK) 5 copied scripts, 2 registered hooks.\n*   **Skills:** (OK) Claude Code and opencode skills installed.\n*   **Memoria MCP:** (OK) MCPs registered and managed in respective files.\n*   **Servicios:** (OK) Daemon and backend running.\n*   **Versiones:** (Warning) llama-swap version is tested, but configuration is missing.\n\n(leído server-side: 3122 chars ≈ 1626 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "local-delegate doctor report:\n\n*   **LLAMASWAP_EXE:** (Warning) Not set; requires llama-swap in PATH.\n*   **LLAMASWAP_CONFIG:** (Warning) Not set.\n*   **Clientes:** (OK) Detected: Claude Code, Codex, opencode. No MCP clients observed.\n*   **Cadenas de respaldo:** (OK) Valid chains, no resident chains.\n*   **Coste y relleno:** (Warning) No saved comparisons found; no transcripts available.\n*   **Hooks:** (OK) 5 copied scripts, 2 registered hooks.\n*   **Skills:** (OK) Claude Code and opencode skills installed.\n*   **Memoria MCP:** (OK) MCPs registered and managed in respective files.\n*   **Servicios:** (OK) Daemon and backend running.\n*   **Versiones:** (Warning) llama-swap version is tested, but configuration is missing.",
+   "usage_row": {
+    "ts": "2026-10-15T17:30:52+00:00",
+    "model": "gemma3-4b",
+    "chars_in": 3122,
+    "chars_out": 729,
+    "tokens_in": 1156,
+    "tokens_out": 209,
+    "finish_reason": "stop",
+    "ok": true,
+    "latency_ms": 5257
+   },
+   "usage_row_has_response_sha256": false,
+   "truncated": false,
+   "length_check": {
+    "literal_len": 816,
+    "len_without_read_line": 729,
+    "chars_out": 729,
+    "match": true
+   },
+   "detector": {
+    "lang": "unknown",
+    "tokens": 91,
+    "es_ratio": 0.022,
+    "en_ratio": 0.1099,
+    "margin": 0.0879
+   },
+   "verdict": "fail_unknown",
+   "labels": [
+    "LLAMASWAP_EXE",
+    "LLAMASWAP_CONFIG",
+    "Clientes",
+    "Cadenas de respaldo",
+    "Coste y relleno",
+    "Hooks",
+    "Skills",
+    "Memoria MCP",
+    "Servicios",
+    "Versiones",
+    "local-delegate doctor report",
+    "(leído server-side"
+   ],
+   "spanish_labels_copied": [
+    "Clientes",
+    "Cadenas de respaldo",
+    "Coste y relleno",
+    "Servicios",
+    "Versiones"
+   ],
+   "spanish_labels_copied_count": 5,
+   "sha_distinct_from_other_repetitions": true,
+   "spanish_labels_any": [
+    "Clientes",
+    "Cadenas de respaldo",
+    "Coste y relleno",
+    "Memoria MCP",
+    "Servicios",
+    "Versiones"
+   ],
+   "spanish_labels_any_count": 6
+  },
+  {
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_complete.txt",
+   "repetition": 2,
+   "document_sha256": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+   "document_sha256_frozen": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+   "document_unchanged": true,
+   "response_sha256": "d758c0094f9ae2e3836424b017cf0d67fa51dad11d892fe98ef19c337fe7d299",
+   "response_literal": "local-delegate doctor report:\n\n*   **LLAMASWAP_EXE:** (Warning) Not set; requires llama-swap in PATH.\n*   **LLAMASWAP_CONFIG:** (Warning) Not set.\n*   **Clientes:** (OK) Detected: Claude Code, Codex, opencode. No MCP clients observed.\n*   **Cadenas de respaldo:** (OK) Valid chains, no resident chains.\n*   **Coste y relleno:** (Warning) No saved comparisons found; no transcripts available.\n*   **Hooks:** (OK) 5 copied scripts, 2 registered hooks.\n*   **Skills:** (OK) Claude Code and opencode skills installed.\n*   **Memoria MCP:** (OK) MCPs registered and managed in respective files.\n*   **Servicios:** (OK) Daemon and backend running.\n*   **Versiones:** (Warning) llama-swap version is tested, but no LLAMASWAP_CONFIG is present.  Daemon does not provide this configuration.\n\n(leído server-side: 3122 chars ≈ 1626 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "local-delegate doctor report:\n\n*   **LLAMASWAP_EXE:** (Warning) Not set; requires llama-swap in PATH.\n*   **LLAMASWAP_CONFIG:** (Warning) Not set.\n*   **Clientes:** (OK) Detected: Claude Code, Codex, opencode. No MCP clients observed.\n*   **Cadenas de respaldo:** (OK) Valid chains, no resident chains.\n*   **Coste y relleno:** (Warning) No saved comparisons found; no transcripts available.\n*   **Hooks:** (OK) 5 copied scripts, 2 registered hooks.\n*   **Skills:** (OK) Claude Code and opencode skills installed.\n*   **Memoria MCP:** (OK) MCPs registered and managed in respective files.\n*   **Servicios:** (OK) Daemon and backend running.\n*   **Versiones:** (Warning) llama-swap version is tested, but no LLAMASWAP_CONFIG is present.  Daemon does not provide this configuration.",
+   "usage_row": {
+    "ts": "2026-10-15T17:30:57+00:00",
+    "model": "gemma3-4b",
+    "chars_in": 3122,
+    "chars_out": 780,
+    "tokens_in": 1156,
+    "tokens_out": 223,
+    "finish_reason": "stop",
+    "ok": true,
+    "latency_ms": 2248
+   },
+   "usage_row_has_response_sha256": false,
+   "truncated": false,
+   "length_check": {
+    "literal_len": 867,
+    "len_without_read_line": 780,
+    "chars_out": 780,
+    "match": true
+   },
+   "detector": {
+    "lang": "unknown",
+    "tokens": 99,
+    "es_ratio": 0.0202,
+    "en_ratio": 0.1313,
+    "margin": 0.1111
+   },
+   "verdict": "fail_unknown",
+   "labels": [
+    "LLAMASWAP_EXE",
+    "LLAMASWAP_CONFIG",
+    "Clientes",
+    "Cadenas de respaldo",
+    "Coste y relleno",
+    "Hooks",
+    "Skills",
+    "Memoria MCP",
+    "Servicios",
+    "Versiones",
+    "local-delegate doctor report",
+    "(leído server-side"
+   ],
+   "spanish_labels_copied": [
+    "Clientes",
+    "Cadenas de respaldo",
+    "Coste y relleno",
+    "Servicios",
+    "Versiones"
+   ],
+   "spanish_labels_copied_count": 5,
+   "sha_distinct_from_other_repetitions": true,
+   "spanish_labels_any": [
+    "Clientes",
+    "Cadenas de respaldo",
+    "Coste y relleno",
+    "Memoria MCP",
+    "Servicios",
+    "Versiones"
+   ],
+   "spanish_labels_any_count": 6
+  },
+  {
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_complete.txt",
+   "repetition": 3,
+   "document_sha256": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+   "document_sha256_frozen": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+   "document_unchanged": true,
+   "response_sha256": "91807e2e981299ce75035ba80d9f6c2a135d430100cab22366f4ad24ac669c34",
+   "response_literal": "local-delegate doctor report:\n\n**LLAMASWAP_EXE:** Missing (needs llama-swap in PATH). [Warning]\n**LLAMASWAP_CONFIG:** Missing. [Warning]\n**Backend BASE_URL:** Verified. [OK]\n**Clientes:** Detected (Claude Code, Codex, opencode). [OK]\n**Cadenas de respaldo:** Valid, no resident. [OK]\n**Coste y relleno:** No comparison found. [Warning]\n**Windows de prueba:** None. [OK]\n\n**Andamiaje:**\n*   Hooks: 5 copied, 2 registered. [OK]\n*   Skills: Local-delegation installed for Claude Code, Codex, opencode. [OK]\n*   Memoria: Global memory blocks up-to-date. [OK]\n*   MCPs: Registered for Claude Code, Codex, opencode. [OK]\n\n**Servicios:**\n*   Daemon: Running. [OK]\n*   Backend: Responding. [OK]\n*   Credencial: No credential required. [OK]\n*   Token: Claude Desktop not configured. [Warning]\n\n**Versiones:**\n*   llama-swap: Verified. [OK]\n*   llama-server: Verified. [OK]\n*   LLAMASWAP_CONFIG: Missing, requires `--config` for review. [Warning]\n*   Daemon Turn: No turn. [Warning]\n\n(leído server-side: 3122 chars ≈ 1626 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "local-delegate doctor report:\n\n**LLAMASWAP_EXE:** Missing (needs llama-swap in PATH). [Warning]\n**LLAMASWAP_CONFIG:** Missing. [Warning]\n**Backend BASE_URL:** Verified. [OK]\n**Clientes:** Detected (Claude Code, Codex, opencode). [OK]\n**Cadenas de respaldo:** Valid, no resident. [OK]\n**Coste y relleno:** No comparison found. [Warning]\n**Windows de prueba:** None. [OK]\n\n**Andamiaje:**\n*   Hooks: 5 copied, 2 registered. [OK]\n*   Skills: Local-delegation installed for Claude Code, Codex, opencode. [OK]\n*   Memoria: Global memory blocks up-to-date. [OK]\n*   MCPs: Registered for Claude Code, Codex, opencode. [OK]\n\n**Servicios:**\n*   Daemon: Running. [OK]\n*   Backend: Responding. [OK]\n*   Credencial: No credential required. [OK]\n*   Token: Claude Desktop not configured. [Warning]\n\n**Versiones:**\n*   llama-swap: Verified. [OK]\n*   llama-server: Verified. [OK]\n*   LLAMASWAP_CONFIG: Missing, requires `--config` for review. [Warning]\n*   Daemon Turn: No turn. [Warning]",
+   "usage_row": {
+    "ts": "2026-10-15T17:30:59+00:00",
+    "model": "gemma3-4b",
+    "chars_in": 3122,
+    "chars_out": 972,
+    "tokens_in": 1156,
+    "tokens_out": 311,
+    "finish_reason": "stop",
+    "ok": true,
+    "latency_ms": 3647
+   },
+   "usage_row_has_response_sha256": false,
+   "truncated": false,
+   "length_check": {
+    "literal_len": 1059,
+    "len_without_read_line": 972,
+    "chars_out": 972,
+    "match": true
+   },
+   "detector": {
+    "lang": "unknown",
+    "tokens": 119,
+    "es_ratio": 0.0252,
+    "en_ratio": 0.0588,
+    "margin": 0.0336
+   },
+   "verdict": "fail_unknown",
+   "labels": [
+    "LLAMASWAP_EXE",
+    "LLAMASWAP_CONFIG",
+    "Backend BASE_URL",
+    "Clientes",
+    "Cadenas de respaldo",
+    "Coste y relleno",
+    "Windows de prueba",
+    "Andamiaje",
+    "Servicios",
+    "Versiones",
+    "local-delegate doctor report",
+    "Hooks",
+    "Skills",
+    "Memoria",
+    "MCPs",
+    "Daemon",
+    "Backend",
+    "Credencial",
+    "Token",
+    "llama-swap",
+    "llama-server",
+    "Daemon Turn",
+    "(leído server-side"
+   ],
+   "spanish_labels_copied": [
+    "Clientes",
+    "Cadenas de respaldo",
+    "Coste y relleno",
+    "Andamiaje",
+    "Servicios",
+    "Versiones",
+    "Memoria",
+    "Credencial"
+   ],
+   "spanish_labels_copied_count": 8,
+   "sha_distinct_from_other_repetitions": true,
+   "spanish_labels_any": [
+    "Clientes",
+    "Cadenas de respaldo",
+    "Coste y relleno",
+    "Windows de prueba",
+    "Andamiaje",
+    "Servicios",
+    "Versiones",
+    "Memoria",
+    "Credencial"
+   ],
+   "spanish_labels_any_count": 9
+  },
+  {
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_empty.txt",
+   "repetition": 1,
+   "document_sha256": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+   "document_sha256_frozen": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+   "document_unchanged": true,
+   "response_sha256": "1b242e565d7dcfe0a0cf320112febe6e14b870ab1fc2e40660e17e69ef050935",
+   "response_literal": "Local Delegate Doctor Summary:\n\n**llama-swap.exe:** Missing configuration (LLAMASWAP_CONFIG not set). Requires `local-delegate install`. (1 Warning)\n**Backend BASE_URL:**  URL configured as http://127.0.0.1:9292/v1. (1 Warning)\n**Hooks:** Missing hooks in `.claude/hooks` and `.claude/settings.json`. Requires `local-delegate install`. (3 Failures)\n**Skills:** Missing Claude Code, opencode, and Codex skills located in specified directories. Requires `local-delegate install`. (3 Failures)\n**Memory:** Missing Claude Code, Codex, and opencode agent memory files. Requires `local-delegate install`. (3 Failures)\n**MCP Configuration:** Missing MCP configuration files in `.claude.json`, `.codex/config.toml`, and `.config/opencode`. Requires `local-delegate install`. (3 Failures)\n**Daemon:** Running as local-delegate 0.35.0 on port 9393. (1 OK)\n**Versions:** llama-swap and llama-server versions are up-to-date. (1 OK)\n**Configuration:** Missing LLAMASWAP_CONFIG, leading to issues with daemon and swap residency. Requires `--config` flag. (2 Warnings)\n\n(leído server-side: 3377 chars ≈ 1758 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "Local Delegate Doctor Summary:\n\n**llama-swap.exe:** Missing configuration (LLAMASWAP_CONFIG not set). Requires `local-delegate install`. (1 Warning)\n**Backend BASE_URL:**  URL configured as http://127.0.0.1:9292/v1. (1 Warning)\n**Hooks:** Missing hooks in `.claude/hooks` and `.claude/settings.json`. Requires `local-delegate install`. (3 Failures)\n**Skills:** Missing Claude Code, opencode, and Codex skills located in specified directories. Requires `local-delegate install`. (3 Failures)\n**Memory:** Missing Claude Code, Codex, and opencode agent memory files. Requires `local-delegate install`. (3 Failures)\n**MCP Configuration:** Missing MCP configuration files in `.claude.json`, `.codex/config.toml`, and `.config/opencode`. Requires `local-delegate install`. (3 Failures)\n**Daemon:** Running as local-delegate 0.35.0 on port 9393. (1 OK)\n**Versions:** llama-swap and llama-server versions are up-to-date. (1 OK)\n**Configuration:** Missing LLAMASWAP_CONFIG, leading to issues with daemon and swap residency. Requires `--config` flag. (2 Warnings)",
+   "usage_row": {
+    "ts": "2026-10-15T17:31:01+00:00",
+    "model": "gemma3-4b",
+    "chars_in": 3377,
+    "chars_out": 1053,
+    "tokens_in": 1217,
+    "tokens_out": 293,
+    "finish_reason": "stop",
+    "ok": true,
+    "latency_ms": 4745
+   },
+   "usage_row_has_response_sha256": false,
+   "truncated": false,
+   "length_check": {
+    "literal_len": 1140,
+    "len_without_read_line": 1053,
+    "chars_out": 1053,
+    "match": true
+   },
+   "detector": {
+    "lang": "unknown",
+    "tokens": 130,
+    "es_ratio": 0.0,
+    "en_ratio": 0.1385,
+    "margin": 0.1385
+   },
+   "verdict": "fail_unknown",
+   "labels": [
+    "llama-swap.exe",
+    "Backend BASE_URL",
+    "Hooks",
+    "Skills",
+    "Memory",
+    "MCP Configuration",
+    "Daemon",
+    "Versions",
+    "Configuration",
+    "Local Delegate Doctor Summary",
+    "(leído server-side"
+   ],
+   "spanish_labels_copied": [],
+   "spanish_labels_copied_count": 0,
+   "sha_distinct_from_other_repetitions": true,
+   "spanish_labels_any": [],
+   "spanish_labels_any_count": 0
+  },
+  {
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_empty.txt",
+   "repetition": 2,
+   "document_sha256": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+   "document_sha256_frozen": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+   "document_unchanged": true,
+   "response_sha256": "bb910a6635cd6631fdc9dd70f596788ff18c8f717a3aca03ca415842e93c16c3",
+   "response_literal": "Local Delegate Doctor Summary\n\n**llama-swap.exe:** Missing configuration (LLAMASWAP_CONFIG not set). Requires installation with `local-delegate install`. (1 issue)\n**Backend (BASE_URL):**  The backend URL is correctly configured at http://127.0.0.1:9292/v1. (1 issue)\n**Hooks:** Missing hooks in `.claude/hooks` and `.claude/settings.json`. Requires installation with `local-delegate install`. (3 issues)\n**Skills:** Missing Claude Code and opencode skills in specified directories. Requires installation with `local-delegate install`. (2 issues)\n**Memory:** Missing Claude Code, Codex, and opencode agent memory files. Requires installation with `local-delegate install`. (3 issues)\n**MCP Configuration:** Missing MCP configuration files in `.claude.json`, `.codex/config.toml`, and `opencode.json/jsonc`. Requires installation with `local-delegate install`. (3 issues)\n**Daemon & Token:** Daemon running at http://127.0.0.1:9393/mcp. No token requirements for daemon or Claude Desktop. (2 issues)\n**Version Check:** llama-swap and llama-server versions are up-to-date.  Missing LLAMASWAP_CONFIG configuration is preventing proper daemon operation. (2 issues)\n\n(leído server-side: 3377 chars ≈ 1758 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "Local Delegate Doctor Summary\n\n**llama-swap.exe:** Missing configuration (LLAMASWAP_CONFIG not set). Requires installation with `local-delegate install`. (1 issue)\n**Backend (BASE_URL):**  The backend URL is correctly configured at http://127.0.0.1:9292/v1. (1 issue)\n**Hooks:** Missing hooks in `.claude/hooks` and `.claude/settings.json`. Requires installation with `local-delegate install`. (3 issues)\n**Skills:** Missing Claude Code and opencode skills in specified directories. Requires installation with `local-delegate install`. (2 issues)\n**Memory:** Missing Claude Code, Codex, and opencode agent memory files. Requires installation with `local-delegate install`. (3 issues)\n**MCP Configuration:** Missing MCP configuration files in `.claude.json`, `.codex/config.toml`, and `opencode.json/jsonc`. Requires installation with `local-delegate install`. (3 issues)\n**Daemon & Token:** Daemon running at http://127.0.0.1:9393/mcp. No token requirements for daemon or Claude Desktop. (2 issues)\n**Version Check:** llama-swap and llama-server versions are up-to-date.  Missing LLAMASWAP_CONFIG configuration is preventing proper daemon operation. (2 issues)",
+   "usage_row": {
+    "ts": "2026-10-15T17:31:03+00:00",
+    "model": "gemma3-4b",
+    "chars_in": 3377,
+    "chars_out": 1160,
+    "tokens_in": 1217,
+    "tokens_out": 302,
+    "finish_reason": "stop",
+    "ok": true,
+    "latency_ms": 5779
+   },
+   "usage_row_has_response_sha256": false,
+   "truncated": false,
+   "length_check": {
+    "literal_len": 1247,
+    "len_without_read_line": 1160,
+    "chars_out": 1160,
+    "match": true
+   },
+   "detector": {
+    "lang": "en",
+    "tokens": 145,
+    "es_ratio": 0.0,
+    "en_ratio": 0.1655,
+    "margin": 0.1655
+   },
+   "verdict": "pass",
+   "labels": [
+    "llama-swap.exe",
+    "Backend (BASE_URL)",
+    "Hooks",
+    "Skills",
+    "Memory",
+    "MCP Configuration",
+    "Daemon & Token",
+    "Version Check",
+    "(leído server-side"
+   ],
+   "spanish_labels_copied": [],
+   "spanish_labels_copied_count": 0,
+   "sha_distinct_from_other_repetitions": true,
+   "spanish_labels_any": [],
+   "spanish_labels_any_count": 0
+  },
+  {
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_empty.txt",
+   "repetition": 3,
+   "document_sha256": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+   "document_sha256_frozen": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+   "document_unchanged": true,
+   "response_sha256": "8491b6d6e559230db0220b1b7cc7d679c2681efa5fa4ffe3435ba60e8eefb336",
+   "response_literal": "Local Delegate Doctor Summary:\n\n**llama-swap.exe:** Missing configuration (LLAMASWAP_CONFIG not set). Requires `local-delegate install`. (1 Warning)\n**Backend (BASE_URL):**  The backend URL is configured as http://127.0.0.1:9292/v1.  Needs verification with `--config` for configuration issues. (1 Warning)\n**Hooks:** Missing hooks in `.claude/hooks` and `.claude/settings.json`. Requires `local-delegate install`. (3 Failures)\n**Skills:** Missing Claude Code, opencode, and Codex skills located in specified directories. Requires `local-delegate install`. (3 Failures)\n**Memory:** Missing Claude Code, Codex, and opencode agent memory files. Requires `local-delegate install`. (3 Failures)\n**MCP Configuration:** Missing MCP configuration files in `.claude.json`, `.codex/config.toml`, and `opencode.json` directories. Requires `local-delegate install`. (3 Failures)\n**Versions:** Llama-swap version is confirmed, but the Llama-swap configuration is missing. (1 Warning)\n**Client Detection:** Claude Code, Codex, and opencode clients are detected. (0 Warnings)\n\n(leído server-side: 3377 chars ≈ 1758 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "Local Delegate Doctor Summary:\n\n**llama-swap.exe:** Missing configuration (LLAMASWAP_CONFIG not set). Requires `local-delegate install`. (1 Warning)\n**Backend (BASE_URL):**  The backend URL is configured as http://127.0.0.1:9292/v1.  Needs verification with `--config` for configuration issues. (1 Warning)\n**Hooks:** Missing hooks in `.claude/hooks` and `.claude/settings.json`. Requires `local-delegate install`. (3 Failures)\n**Skills:** Missing Claude Code, opencode, and Codex skills located in specified directories. Requires `local-delegate install`. (3 Failures)\n**Memory:** Missing Claude Code, Codex, and opencode agent memory files. Requires `local-delegate install`. (3 Failures)\n**MCP Configuration:** Missing MCP configuration files in `.claude.json`, `.codex/config.toml`, and `opencode.json` directories. Requires `local-delegate install`. (3 Failures)\n**Versions:** Llama-swap version is confirmed, but the Llama-swap configuration is missing. (1 Warning)\n**Client Detection:** Claude Code, Codex, and opencode clients are detected. (0 Warnings)",
+   "usage_row": {
+    "ts": "2026-10-15T17:31:04+00:00",
+    "model": "gemma3-4b",
+    "chars_in": 3377,
+    "chars_out": 1061,
+    "tokens_in": 1217,
+    "tokens_out": 275,
+    "finish_reason": "stop",
+    "ok": true,
+    "latency_ms": 5970
+   },
+   "usage_row_has_response_sha256": false,
+   "truncated": false,
+   "length_check": {
+    "literal_len": 1148,
+    "len_without_read_line": 1061,
+    "chars_out": 1061,
+    "match": true
+   },
+   "detector": {
+    "lang": "unknown",
+    "tokens": 130,
+    "es_ratio": 0.0,
+    "en_ratio": 0.1462,
+    "margin": 0.1462
+   },
+   "verdict": "fail_unknown",
+   "labels": [
+    "llama-swap.exe",
+    "Backend (BASE_URL)",
+    "Hooks",
+    "Skills",
+    "Memory",
+    "MCP Configuration",
+    "Versions",
+    "Client Detection",
+    "Local Delegate Doctor Summary",
+    "(leído server-side"
+   ],
+   "spanish_labels_copied": [],
+   "spanish_labels_copied_count": 0,
+   "sha_distinct_from_other_repetitions": true,
+   "spanish_labels_any": [],
+   "spanish_labels_any_count": 0
+  }
+ ]
+}

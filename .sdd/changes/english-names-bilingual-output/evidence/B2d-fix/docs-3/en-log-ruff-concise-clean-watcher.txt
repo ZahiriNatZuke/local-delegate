@@ -1,0 +1,11 @@
+warning: `incorrect-blank-line-before-class` (D203) and `blank-line-before-class` (D211) are incompatible. Ignoring `incorrect-blank-line-before-class`.
+warning: `multi-line-summary-first-line` (D212) and `multi-line-summary-second-line` (D213) are incompatible. Ignoring `multi-line-summary-second-line`.
+scripts\clean_watcher_fixtures.py:1:1: CPY001 Missing copyright notice at top of file
+scripts\clean_watcher_fixtures.py:7:101: E501 Line too long (105 > 100)
+scripts\clean_watcher_fixtures.py:14:101: E501 Line too long (106 > 100)
+scripts\clean_watcher_fixtures.py:71:5: D103 Missing docstring in public function
+scripts\clean_watcher_fixtures.py:76:30: PLR2004 Magic value used in comparison, consider replacing `16` with a constant variable
+scripts\clean_watcher_fixtures.py:83:5: D103 Missing docstring in public function
+scripts\clean_watcher_fixtures.py:90:9: T201 `print` found
+Found 7 errors.
+1 unsafe fix available with `--fix --unsafe-fixes`.

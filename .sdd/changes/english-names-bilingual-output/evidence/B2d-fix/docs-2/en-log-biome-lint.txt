@@ -1,0 +1,459 @@
+apps\api\package.json:21:5 lint/nursery/noRestrictedDependencies ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Use of the restricted dependency express detected.
+  
+    19 │     "@nestjs/swagger": "^11.4.5",
+    20 │     "@validador-cp/core": "workspace:*",
+  > 21 │     "express": "^5.2.1",
+       │     ^^^^^^^^^
+    22 │     "nestjs-pino": "^4.6.1",
+    23 │     "nestjs-zod": "^5.4.0",
+  
+  i The dependency might be old, not actively maintained, or there's a native alternative.
+  
+  i The following replacements are suggested:
+    - Replace with the alternative: h3.
+    - Replace with the alternative: @tinyhttp/app.
+    - Replace with the alternative: hono.
+    - Replace with the alternative: elysia.
+  
+  i Read more: https://e18e.dev/docs/replacements/express
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+apps\api\src\config\env.schema.ts:10:52 lint/style/noMagicNumbers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Magic number detected. Extract it to a constant with a meaningful name.
+  
+     8 │ export const envSchema = z.object({
+     9 │   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  > 10 │   PORT: z.coerce.number().int().positive().default(3000),
+       │                                                    ^^^^
+    11 │   DB_PATH: z
+    12 │     .string()
+  
+  i Code is more readable and refactoring easier when special numbers are declared as constants as it makes their meaning explicit.
+  
+
+apps\api\src\config\env.schema.ts:9:3 lint/style/useNamingConvention ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i This object property name should be in camelCase.
+  
+     7 │  */
+     8 │ export const envSchema = z.object({
+   > 9 │   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+       │   ^^^^^^^^
+    10 │   PORT: z.coerce.number().int().positive().default(3000),
+    11 │   DB_PATH: z
+  
+
+apps\api\src\config\env.schema.ts:10:3 lint/style/useNamingConvention ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i This object property name should be in camelCase.
+  
+     8 │ export const envSchema = z.object({
+     9 │   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  > 10 │   PORT: z.coerce.number().int().positive().default(3000),
+       │   ^^^^
+    11 │   DB_PATH: z
+    12 │     .string()
+  
+
+apps\api\src\config\env.schema.ts:11:3 lint/style/useNamingConvention ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i This object property name should be in camelCase.
+  
+     9 │   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+    10 │   PORT: z.coerce.number().int().positive().default(3000),
+  > 11 │   DB_PATH: z
+       │   ^^^^^^^
+    12 │     .string()
+    13 │     .min(1)
+  
+
+apps\api\src\config\env.schema.ts:16:3 lint/style/useNamingConvention ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i This object property name should be in camelCase.
+  
+    14 │     .optional()
+    15 │     .transform((v) => v ?? defaultDbPath()),
+  > 16 │   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent']).default('info'),
+       │   ^^^^^^^^^
+    17 │   // Angular dev server (Sesión 5). Al ser un servicio 100% local de 1 usuario,
+    18 │   // no hace falta una lista de orígenes: basta con acotarlo al puerto esperado.
+  
+
+apps\api\src\config\env.schema.ts:19:3 lint/style/useNamingConvention ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i This object property name should be in camelCase.
+  
+    17 │   // Angular dev server (Sesión 5). Al ser un servicio 100% local de 1 usuario,
+    18 │   // no hace falta una lista de orígenes: basta con acotarlo al puerto esperado.
+  > 19 │   CORS_ORIGIN: z.string().min(1).default('http://localhost:4200'),
+       │   ^^^^^^^^^^^
+    20 │   NOMINATIM_USER_AGENT: z
+    21 │     .string()
+  
+
+apps\api\src\config\env.schema.ts:20:3 lint/style/useNamingConvention ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i This object property name should be in camelCase.
+  
+    18 │   // no hace falta una lista de orígenes: basta con acotarlo al puerto esperado.
+    19 │   CORS_ORIGIN: z.string().min(1).default('http://localhost:4200'),
+  > 20 │   NOMINATIM_USER_AGENT: z
+       │   ^^^^^^^^^^^^^^^^^^^^
+    21 │     .string()
+    22 │     .min(1)
+  
+
+apps\api\src\geocode\dto\geocode.dto.ts:1:1 lint/style/noExcessiveClassesPerFile ━━━━━━━━━━━━━━━━━━━
+
+  i File exceeds the maximum of 1 class, found 2 classes.
+  
+   > 1 │ import { createZodDto } from 'nestjs-zod';
+       │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   > 2 │ import { z } from 'zod';
+   > 3 │ 
+   > 4 │ const geocodeRequestSchema = z.object({
+        ...
+  > 23 │ export class GeocodeRequestDto extends createZodDto(geocodeRequestSchema) {}
+  > 24 │ export class GeocodeResponseDto extends createZodDto(geocodeResponseSchema) {}
+  > 25 │ export type GeocodeHit = z.infer<typeof geocodeHitSchema>;
+       │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    26 │ 
+  
+  i Files containing multiple classes can often result in a less navigable and poorly structured codebase. Extract the excessive classes into a separate file.
+  
+
+apps\api\src\geocode\dto\geocode.dto.ts:5:25 lint/style/noMagicNumbers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Magic number detected. Extract it to a constant with a meaningful name.
+  
+    4 │ const geocodeRequestSchema = z.object({
+  > 5 │   calle: z.string().max(500).optional(),
+      │                         ^^^
+    6 │   municipio: z.string().max(300),
+    7 │   estado: z.string().max(300),
+  
+  i Code is more readable and refactoring easier when special numbers are declared as constants as it makes their meaning explicit.
+  
+
+apps\api\src\geocode\dto\geocode.dto.ts:6:29 lint/style/noMagicNumbers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Magic number detected. Extract it to a constant with a meaningful name.
+  
+    4 │ const geocodeRequestSchema = z.object({
+    5 │   calle: z.string().max(500).optional(),
+  > 6 │   municipio: z.string().max(300),
+      │                             ^^^
+    7 │   estado: z.string().max(300),
+    8 │   cp: z.string().max(20),
+  
+  i Code is more readable and refactoring easier when special numbers are declared as constants as it makes their meaning explicit.
+  
+
+apps\api\src\geocode\dto\geocode.dto.ts:7:26 lint/style/noMagicNumbers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Magic number detected. Extract it to a constant with a meaningful name.
+  
+    5 │   calle: z.string().max(500).optional(),
+    6 │   municipio: z.string().max(300),
+  > 7 │   estado: z.string().max(300),
+      │                          ^^^
+    8 │   cp: z.string().max(20),
+    9 │ });
+  
+  i Code is more readable and refactoring easier when special numbers are declared as constants as it makes their meaning explicit.
+  
+
+apps\api\src\geocode\dto\geocode.dto.ts:8:22 lint/style/noMagicNumbers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Magic number detected. Extract it to a constant with a meaningful name.
+  
+     6 │   municipio: z.string().max(300),
+     7 │   estado: z.string().max(300),
+   > 8 │   cp: z.string().max(20),
+       │                      ^^
+     9 │ });
+    10 │ 
+  
+  i Code is more readable and refactoring easier when special numbers are declared as constants as it makes their meaning explicit.
+  
+
+apps\api\src\validate\dto\validate.dto.ts:1:1 lint/style/noExcessiveClassesPerFile ━━━━━━━━━━━━━━━━━
+
+  i File exceeds the maximum of 1 class, found 2 classes.
+  
+   > 1 │ import { createZodDto } from 'nestjs-zod';
+       │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   > 2 │ import { z } from 'zod';
+   > 3 │ 
+   > 4 │ const rowIdSchema = z.union([z.string(), z.number()]);
+        ...
+  > 50 │ export class ValidateResponseDto extends createZodDto(validateResponseSchema) {}
+  > 51 │ export type AddressRowWithId = z.infer<typeof addressRowSchema>;
+  > 52 │ export type ValidationResultWithId = z.infer<typeof validationResultSchema>;
+       │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    53 │ 
+  
+  i Files containing multiple classes can often result in a less navigable and poorly structured codebase. Extract the excessive classes into a separate file.
+  
+
+apps\api\src\validate\dto\validate.dto.ts:14:22 lint/style/noMagicNumbers ━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Magic number detected. Extract it to a constant with a meaningful name.
+  
+    12 │ const addressRowSchema = z.object({
+    13 │   id: rowIdSchema.optional(),
+  > 14 │   cp: z.string().max(20),
+       │                      ^^
+    15 │   estado: z.string().max(300),
+    16 │   municipio: z.string().max(300),
+  
+  i Code is more readable and refactoring easier when special numbers are declared as constants as it makes their meaning explicit.
+  
+
+apps\api\src\validate\dto\validate.dto.ts:15:26 lint/style/noMagicNumbers ━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Magic number detected. Extract it to a constant with a meaningful name.
+  
+    13 │   id: rowIdSchema.optional(),
+    14 │   cp: z.string().max(20),
+  > 15 │   estado: z.string().max(300),
+       │                          ^^^
+    16 │   municipio: z.string().max(300),
+    17 │   colonia: z.string().max(300),
+  
+  i Code is more readable and refactoring easier when special numbers are declared as constants as it makes their meaning explicit.
+  
+
+apps\api\src\validate\dto\validate.dto.ts:16:29 lint/style/noMagicNumbers ━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Magic number detected. Extract it to a constant with a meaningful name.
+  
+    14 │   cp: z.string().max(20),
+    15 │   estado: z.string().max(300),
+  > 16 │   municipio: z.string().max(300),
+       │                             ^^^
+    17 │   colonia: z.string().max(300),
+    18 │ });
+  
+  i Code is more readable and refactoring easier when special numbers are declared as constants as it makes their meaning explicit.
+  
+
+apps\api\src\validate\dto\validate.dto.ts:17:27 lint/style/noMagicNumbers ━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Magic number detected. Extract it to a constant with a meaningful name.
+  
+    15 │   estado: z.string().max(300),
+    16 │   municipio: z.string().max(300),
+  > 17 │   colonia: z.string().max(300),
+       │                           ^^^
+    18 │ });
+    19 │ 
+  
+  i Code is more readable and refactoring easier when special numbers are declared as constants as it makes their meaning explicit.
+  
+
+apps\api\src\validate\dto\validate.dto.ts:25:46 lint/style/noMagicNumbers ━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Magic number detected. Extract it to a constant with a meaningful name.
+  
+    23 │  */
+    24 │ const validateRequestSchema = z.object({
+  > 25 │   rows: z.array(addressRowSchema).min(1).max(1000),
+       │                                              ^^^^
+    26 │ });
+    27 │ 
+  
+  i Code is more readable and refactoring easier when special numbers are declared as constants as it makes their meaning explicit.
+  
+
+apps\api\src\validate\dto\validate.dto.ts:31:3 lint/style/useNamingConvention ━━━━━━━━━━━━━━━━━━━━━━
+
+  i This object property name should be in camelCase.
+  
+    29 │   id: rowIdSchema.optional(),
+    30 │   valid: z.enum(['yes', 'typo', 'no']),
+  > 31 │   issue_type: z.enum([
+       │   ^^^^^^^^^^
+    32 │     'OK',
+    33 │     'COLONIA_TYPO',
+  
+
+apps\api\src\validate\dto\validate.dto.ts:39:3 lint/style/useNamingConvention ━━━━━━━━━━━━━━━━━━━━━━
+
+  i This object property name should be in camelCase.
+  
+    37 │   ]),
+    38 │   confidence: z.number(),
+  > 39 │   suggested_cp: z.string(),
+       │   ^^^^^^^^^^^^
+    40 │   suggested_colonia: z.string(),
+    41 │   suggested_municipio: z.string(),
+  
+
+apps\api\src\validate\dto\validate.dto.ts:40:3 lint/style/useNamingConvention ━━━━━━━━━━━━━━━━━━━━━━
+
+  i This object property name should be in camelCase.
+  
+    38 │   confidence: z.number(),
+    39 │   suggested_cp: z.string(),
+  > 40 │   suggested_colonia: z.string(),
+       │   ^^^^^^^^^^^^^^^^^
+    41 │   suggested_municipio: z.string(),
+    42 │   notes: z.string().optional(),
+  
+
+apps\api\src\validate\dto\validate.dto.ts:41:3 lint/style/useNamingConvention ━━━━━━━━━━━━━━━━━━━━━━
+
+  i This object property name should be in camelCase.
+  
+    39 │   suggested_cp: z.string(),
+    40 │   suggested_colonia: z.string(),
+  > 41 │   suggested_municipio: z.string(),
+       │   ^^^^^^^^^^^^^^^^^^^
+    42 │   notes: z.string().optional(),
+    43 │ });
+  
+
+apps\api\src\config\repo-root.ts:14:5 lint/style/useBlockStatements  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Block statements are preferred in this position.
+  
+    12 │   let dir = from;
+    13 │   for (;;) {
+  > 14 │     if (fs.existsSync(path.join(dir, 'pnpm-workspace.yaml'))) return dir;
+       │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    15 │     const parent = path.dirname(dir);
+    16 │     if (parent === dir) return process.cwd(); // sin marcador: mejor esfuerzo
+  
+  i Unsafe fix: Wrap the statement with a `JsBlockStatement`
+  
+    14 │ ····if·(fs.existsSync(path.join(dir,·'pnpm-workspace.yaml')))·{·return·dir;·}
+       │                                                               ++           ++
+
+apps\api\src\config\repo-root.ts:16:5 lint/style/useBlockStatements  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Block statements are preferred in this position.
+  
+    14 │     if (fs.existsSync(path.join(dir, 'pnpm-workspace.yaml'))) return dir;
+    15 │     const parent = path.dirname(dir);
+  > 16 │     if (parent === dir) return process.cwd(); // sin marcador: mejor esfuerzo
+       │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    17 │     dir = parent;
+    18 │   }
+  
+  i Unsafe fix: Wrap the statement with a `JsBlockStatement`
+  
+    14 14 │       if (fs.existsSync(path.join(dir, 'pnpm-workspace.yaml'))) return dir;
+    15 15 │       const parent = path.dirname(dir);
+    16    │ - ····if·(parent·===·dir)·return·process.cwd();·//·sin·marcador:·mejor·esfuerzo
+       16 │ + ····if·(parent·===·dir)·{·return·process.cwd();·//·sin·marcador:·mejor·esfuerzo
+       17 │ + }
+    17 18 │       dir = parent;
+    18 19 │     }
+  
+
+apps\api\src\geocode\geocode.controller.ts:9:15 lint/style/noParameterProperties ━━━━━━━━━━━━━━━━━━━
+
+  ! Use a more explicit class property instead of a parameter property.
+  
+     7 │ @Controller('geocode')
+     8 │ export class GeocodeController {
+   > 9 │   constructor(private readonly service: GeocodeService) {}
+       │               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    10 │ 
+    11 │   @Post('row')
+  
+  i Parameter properties are less explicit than other ways of declaring and initializing class properties.
+  
+
+apps\api\src\geocode\geocode.controller.ts:3:8 lint/style/useImportType  FIXABLE  ━━━━━━━━━━━━━━━━━━
+
+  ! Some named imports are only used as types.
+  
+    1 │ import { Body, Controller, Post } from '@nestjs/common';
+    2 │ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+  > 3 │ import { GeocodeRequestDto, GeocodeResponseDto } from './dto/geocode.dto.ts';
+      │        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    4 │ import { GeocodeService } from './geocode.service.ts';
+    5 │ 
+  
+  i This import is only used as a type.
+  
+    1 │ import { Body, Controller, Post } from '@nestjs/common';
+    2 │ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+  > 3 │ import { GeocodeRequestDto, GeocodeResponseDto } from './dto/geocode.dto.ts';
+      │          ^^^^^^^^^^^^^^^^^
+    4 │ import { GeocodeService } from './geocode.service.ts';
+    5 │ 
+  
+  i Importing the types with import type ensures that they are removed by the compilers and avoids loading unnecessary modules.
+  
+  i Safe fix: Add inline type keywords.
+  
+    3 │ import·{·type·GeocodeRequestDto,·GeocodeResponseDto·}·from·'./dto/geocode.dto.ts';
+      │          +++++                                                                    
+
+apps\api\src\geocode\geocode.controller.ts:4:8 lint/style/useImportType  FIXABLE  ━━━━━━━━━━━━━━━━━━
+
+  ! All these imports are only used as types.
+  
+    2 │ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+    3 │ import { GeocodeRequestDto, GeocodeResponseDto } from './dto/geocode.dto.ts';
+  > 4 │ import { GeocodeService } from './geocode.service.ts';
+      │        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    5 │ 
+    6 │ @ApiTags('geocode')
+  
+  i Importing the types with import type ensures that they are removed by the compilers and avoids loading unnecessary modules.
+  
+  i Safe fix: Use import type.
+  
+    4 │ import·type·{·GeocodeService·}·from·'./geocode.service.ts';
+      │        +++++                                               
+
+apps\api\src\validate\validate.controller.ts:9:15 lint/style/noParameterProperties ━━━━━━━━━━━━━━━━━
+
+  ! Use a more explicit class property instead of a parameter property.
+  
+     7 │ @Controller('validate')
+     8 │ export class ValidateController {
+   > 9 │   constructor(private readonly service: ValidateService) {}
+       │               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    10 │ 
+    11 │   @Post()
+  
+  i Parameter properties are less explicit than other ways of declaring and initializing class properties.
+  
+
+packages\core\vitest.config.ts:3:8 lint/style/noDefaultExport ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Avoid default exports.
+  
+    1 │ import { defineConfig } from 'vitest/config';
+    2 │ 
+  > 3 │ export default defineConfig({
+      │        ^^^^^^^
+    4 │   test: {
+    5 │     include: ['tests/**/*.test.ts'],
+  
+  i Default exports cannot be easily discovered inside an editor and don't encourage the use of consistent names through a code base.
+  
+  i Use a named export instead.
+  
+
+The number of diagnostics exceeds the limit allowed. Use --max-diagnostics to increase it.
+Diagnostics not shown: 216.
+Checked 39 files in 1199ms. No fixes applied.
+Found 3 errors.
+Found 51 warnings.
+Found 192 infos.
+lint ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Some errors were emitted while running checks.
+  
+

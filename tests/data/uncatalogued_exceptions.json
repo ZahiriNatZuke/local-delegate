@@ -576,6 +576,24 @@
     },
     {
       "file": "src/local_delegate/server.py",
+      "text": " Escribe toda la respuesta en {}, aunque el contenido esté en otro idioma: redacta en {} cada frase, también la descripción de cada error o regla, con frases completas y sin copiar frases del contenido.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: la orden de idioma de REQ-028 endurecida (la cabeza común de `local_summarize` y `local_lint_summary`, B2d); entra en la huella de afinidad y en los corpus congelados (`PROMPT_BOUNDARIES`) y no es texto de interfaz"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": " Solo se quedan tal cual los títulos que se piden literales, las rutas, el código, los identificadores y los códigos de regla o de error.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: la orden de idioma de REQ-028 endurecida (el cierre de `local_summarize`, B2d); entra en la huella de afinidad y en los corpus congelados (`PROMPT_BOUNDARIES`) y no es texto de interfaz"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": " También van en {} las etiquetas en negrita, los nombres de sección y los nombres de cada chequeo o prueba: tradúcelos aunque en el contenido aparezcan en otro idioma. Solo se quedan tal cual las rutas, el código, los identificadores y los códigos de regla o de error.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: la orden de idioma de REQ-028 endurecida (el cierre de `local_lint_summary` con sus etiquetas, B2d-fix); entra en la huella de afinidad y en los corpus congelados (`PROMPT_BOUNDARIES`) y no es texto de interfaz"
+    },
+    {
+      "file": "src/local_delegate/server.py",
       "text": " y {} más",
       "kind": "verbatim",
       "reason": "prompt del modelo local: entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen). B2c: cuerpo obligatorio del commit y troceado de `local_explain_code`/`local_extract`"

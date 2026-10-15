@@ -1,0 +1,207 @@
+{
+  "frozen_at": "2026-10-15T14:47:21+00:00",
+  "frozen_before_any_measurement_call": true,
+  "purpose": "Second control set for the hardened language order of local_summarize and local_lint_summary (B2d-fix). Chosen by the rules below, not by looking at the failures of set 1; the detector and its threshold are unchanged.",
+  "judge": "scripts/detect_language.py detect(min_tokens=20, min_margin=0.15)",
+  "judged_text_rule": "same as evidence/B2/lang-sample.json: literal response minus the product's own wrapper lines ('(leído server-side: ...)' / '(read server-side: ...)', '[local-delegate warning: ...]' and '(sin resumir)' / '(not summarized)')",
+  "criterion": ">= 90% recognized in the requested language per tool and batch (5+5), and 0 in the opposite language",
+  "rules": {
+    "local_summarize": {
+      "es_pool": "git-tracked *.md outside .sdd/ and benchmarks/, 6 000-30 000 bytes, detector on the input = es, with Markdown structure (sections.detect), not in set 1, sorted by path, first 5",
+      "en_pool": ".venv/Lib/site-packages/*.dist-info/METADATA, 6 000-30 000 bytes, detector on the input = en, with Markdown structure, not in set 1, sorted by path, first 5"
+    },
+    "local_lint_summary": {
+      "es_pool": "git-tracked *.txt under evidence/B*/ whose name contains 'check', 'mutant' or 'doctor', detector on the input = es, >= 100 tokens, sorted by path, first 5 (diagnostic/check outputs written in Spanish; there is no Spanish linter)",
+      "en_pool": "5 real tool outputs generated on 2026-10-15 (biome lint, pytest, ruff concise, ruff full, tsc), in that fixed order; the first line of the lock wrapper removed; command in each entry"
+    },
+    "split": "batch 1 takes es_pool[0:3] + en_pool[0:2]; batch 2 takes en_pool[2:5] + es_pool[3:5]: mixed input language, the majority opposite to the requested one",
+    "copies": "every document is a byte copy under evidence/B2d-fix/docs-2/ so it cannot change under the measurement (README and .venv do)"
+  },
+  "batch_1": {
+    "product": "es",
+    "output_language": "en",
+    "env": "LOCAL_DELEGATE_OUTPUT_LANGUAGE=en, product language es",
+    "tools": {
+      "local_summarize": [
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-README.md",
+          "source": "README.md",
+          "bytes": 25047,
+          "sha256": "2b9224499011139e14b4e8de2c7779dc90a99320e87f434fd1263807aad29a7c",
+          "input_language": "es",
+          "detector_on_input": "es"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_Investigacion-empaquetado-publicacion-MCP.md",
+          "source": "docs/Investigacion-empaquetado-publicacion-MCP.md",
+          "bytes": 17238,
+          "sha256": "e8967de91b7f660847fdce9ac9b7ce443223989cf7625b4e13ae9dfa72ddf422",
+          "input_language": "es",
+          "detector_on_input": "es"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_plans_plan-f6-vision.md",
+          "source": "docs/plans/plan-f6-vision.md",
+          "bytes": 10353,
+          "sha256": "83e4a6cd3a44ca41ebf6327e4d003c4f097882992e85482a4451ec32ab74b5c2",
+          "input_language": "es",
+          "detector_on_input": "es"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-doc-fastapi-0.143.0.METADATA.md",
+          "source": "site-packages/fastapi-0.143.0.dist-info/METADATA",
+          "bytes": 26788,
+          "sha256": "1bfa2ecf35ea529d68e56c195c5a4cee7864335d24bcc4a76cf40d7a71edc6e9",
+          "input_language": "en",
+          "detector_on_input": "en"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-doc-httpcore2-2.13.1.METADATA.md",
+          "source": "site-packages/httpcore2-2.13.1.dist-info/METADATA",
+          "bytes": 26537,
+          "sha256": "37a0ea0674e98b7c3a1f99c17d9bb5457de27a0f93c8b6560c9d17d525139abb",
+          "input_language": "en",
+          "detector_on_input": "en"
+        }
+      ],
+      "local_lint_summary": [
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_complete.txt",
+          "source": ".sdd/changes/english-names-bilingual-output/evidence/B1b/doctor_es_complete.txt",
+          "bytes": 3149,
+          "sha256": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+          "input_language": "es",
+          "detector_on_input": "es"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_empty.txt",
+          "source": ".sdd/changes/english-names-bilingual-output/evidence/B1b/doctor_es_empty.txt",
+          "bytes": 3411,
+          "sha256": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+          "input_language": "es",
+          "detector_on_input": "es"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B2b-2_corpus-affinity-check.txt",
+          "source": ".sdd/changes/english-names-bilingual-output/evidence/B2b-2/corpus-affinity-check.txt",
+          "bytes": 698,
+          "sha256": "bf9da67e5c973b9a8dba61ffb345673c5828f734d96ac8595309a7dd8c5d5caa",
+          "input_language": "es",
+          "detector_on_input": "es"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-biome-lint.txt",
+          "source": "generated 2026-10-15",
+          "bytes": 20251,
+          "sha256": "071dd4473f52d3136e2fa336c275589614f40e6821965d6ba3aeef210ffc1ba8",
+          "input_language": "en",
+          "detector_on_input": "en",
+          "command": "validate-mexican-postal-codes: biome 2.5.3 lint --max-diagnostics=30 --colors=off --only=style --only=nursery --only=complexity packages apps/cli apps/api"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-pytest.txt",
+          "source": "generated 2026-10-15",
+          "bytes": 15723,
+          "sha256": "475392a64a7d58a336de6e841b54de8dfaf650b7336de343add1f207ba404dd0",
+          "input_language": "en",
+          "detector_on_input": "en",
+          "command": "local-delegate: pytest -p no:xdist -p no:cacheprovider -v -rA --tb=short tests/test_detect_language.py tests/test_corpus.py"
+        }
+      ]
+    }
+  },
+  "batch_2": {
+    "product": "en",
+    "output_language": "es",
+    "env": "LOCAL_DELEGATE_LANG=en (product en) and LOCAL_DELEGATE_OUTPUT_LANGUAGE=es",
+    "tools": {
+      "local_summarize": [
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-doc-httpx2-2.13.1.METADATA.md",
+          "source": "site-packages/httpx2-2.13.1.dist-info/METADATA",
+          "bytes": 9799,
+          "sha256": "b75b03a003b5593e000907cf7239fcc3f688b8f17db4ecff883d11221ea988fc",
+          "input_language": "en",
+          "detector_on_input": "en"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-doc-idna-3.18.METADATA.md",
+          "source": "site-packages/idna-3.18.dist-info/METADATA",
+          "bytes": 6119,
+          "sha256": "46dfe6e5ac462d0f680ecd9abcf66e829b6a2334824b4d9e3979b31135caf281",
+          "input_language": "en",
+          "detector_on_input": "en"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-doc-nodeenv-1.10.0.METADATA.md",
+          "source": "site-packages/nodeenv-1.10.0.dist-info/METADATA",
+          "bytes": 24430,
+          "sha256": "a8424896a12fd1be10526834176fc754cd296c900f40da655fb2e03c1b7eb921",
+          "input_language": "en",
+          "detector_on_input": "en"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_plans_plan-f7-groups.md",
+          "source": "docs/plans/plan-f7-groups.md",
+          "bytes": 20825,
+          "sha256": "84f1ccc03abb200808aaf4831d1cf6acb6c829dc39a1d8b097b9b846713dc100",
+          "input_language": "es",
+          "detector_on_input": "es"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_plans_plan-v0.2-mejoras.md",
+          "source": "docs/plans/plan-v0.2-mejoras.md",
+          "bytes": 21573,
+          "sha256": "e977e0af6b5efe027946f1652da9dfbd77a4603661f9e4d223a4191a3ee58b75",
+          "input_language": "es",
+          "detector_on_input": "es"
+        }
+      ],
+      "local_lint_summary": [
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-ruff-concise.txt",
+          "source": "generated 2026-10-15",
+          "bytes": 2630,
+          "sha256": "1b45f1d58d013abcffaf2a48def98c192a598f5a5990eb3cadf9a92d55780645",
+          "input_language": "en",
+          "detector_on_input": "unknown",
+          "command": "local-delegate: ruff check --select ALL --no-cache --output-format=concise src/local_delegate/sections.py"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-ruff-full.txt",
+          "source": "generated 2026-10-15",
+          "bytes": 1990,
+          "sha256": "44dd6142f1e761a2f5b82ef176a934983cc2d9f16b7257f2791caa66cb1df7d0",
+          "input_language": "en",
+          "detector_on_input": "unknown",
+          "command": "local-delegate: ruff check --select ALL --no-cache --output-format=full scripts/detect_language.py"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-tsc.txt",
+          "source": "generated 2026-10-15",
+          "bytes": 1657,
+          "sha256": "2705c2d9eac77e04a707594093594fc412b8a2f25e8bb2d5cd8ea5df205e7fcf",
+          "input_language": "en",
+          "detector_on_input": "en",
+          "command": "agent-shift: tsc --noEmit -p tsconfig.json --pretty false --lib es2017 --noImplicitAny --strictNullChecks"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B2b-2_corpus-f2-check.txt",
+          "source": ".sdd/changes/english-names-bilingual-output/evidence/B2b-2/corpus-f2-check.txt",
+          "bytes": 898,
+          "sha256": "dc1b5eec0dae6a49a59960071988f2f1e18ca2187724fd36ab3c4737f9ce1b34",
+          "input_language": "es",
+          "detector_on_input": "es"
+        },
+        {
+          "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B2c_corpus-affinity-check.txt",
+          "source": ".sdd/changes/english-names-bilingual-output/evidence/B2c/corpus-affinity-check.txt",
+          "bytes": 7872,
+          "sha256": "8c261db94aaaa22a75abe82729c777865dbbcf34a64cdde565f09170a46304f0",
+          "input_language": "es",
+          "detector_on_input": "es"
+        }
+      ]
+    }
+  }
+}

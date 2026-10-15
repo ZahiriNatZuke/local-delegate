@@ -1,0 +1,928 @@
+{
+ "status": "batch_1_done",
+ "measured_at": "2026-10-15",
+ "code": "branch sdd/english-names-b2d at 71846c1, installed in the daemon (local_status: local-delegate v0.35.0)",
+ "method": "Each tool called once, in series, through the live MCP daemon with path=<absolute path> and default arguments (max_words default, no focus). Responses saved literally; scored offline.",
+ "combination": {
+  "product": "es",
+  "output_language": "en",
+  "window_id": "w-20261015T150634Z",
+  "env": "LOCAL_DELEGATE_STRUCTURED_SUMMARY=1, LOCAL_DELEGATE_OUTPUT_LANGUAGE=en, product language es",
+  "local_status": "Idioma: es (sistema; ...language.json) / Idioma de respuesta del modelo: en (variable de salida)"
+ },
+ "sets": {
+  "2": {
+   "file": "evidence/B2d-fix/lang-sample-docs-2.json",
+   "sha256": "a7b333a448731b4574d2e58e34a4466267ffc78211d914faa1846d1486543a22",
+   "sha256_verified": true,
+   "part": "batch_1"
+  },
+  "1": {
+   "file": "evidence/B2d/lang-sample-docs.json",
+   "part": "batch_1"
+  }
+ },
+ "judge": "scripts/detect_language.py detect(min_tokens=20, min_margin=0.15)",
+ "judged_text_rule": "literal response minus the product's own wrapper lines: '(leído server-side: ...)' / '(read server-side: ...)', '[local-delegate warning: ...]' and '(sin resumir)' / '(not summarized)'. Everything else, including section headings copied from the document, is judged.",
+ "duplicate_rule": "local_summarize only: a section title (Markdown heading, case-insensitive) appearing twice, or the same section under a title in both languages (e.g. 'Introducción' + 'Introduction'); the second was checked by reading the heading list of every response (stored per sample).",
+ "criterion": ">= 90% recognized in the requested language per tool and batch, 0 in the opposite language, and 0 duplicated sections",
+ "baseline": {
+  "file": "evidence/B2/lang-sample.json",
+  "batch_1_set_1": {
+   "local_summarize": "4/5",
+   "local_lint_summary": "3/5"
+  },
+  "both_batches_set_1": {
+   "local_summarize": "8/10",
+   "local_lint_summary": "6/10"
+  }
+ },
+ "summary_batch_1": {
+  "set_2": {
+   "local_summarize": {
+    "samples": 5,
+    "judgeable": 5,
+    "in_requested_language": 3,
+    "in_opposite_language": 0,
+    "unknown": 2,
+    "pct": 60.0,
+    "duplicate_sections": 0,
+    "meets_criterion": false
+   },
+   "local_lint_summary": {
+    "samples": 5,
+    "judgeable": 5,
+    "in_requested_language": 3,
+    "in_opposite_language": 0,
+    "unknown": 2,
+    "pct": 60.0,
+    "duplicate_sections": null,
+    "meets_criterion": false
+   }
+  },
+  "set_1": {
+   "local_summarize": {
+    "samples": 5,
+    "judgeable": 5,
+    "in_requested_language": 4,
+    "in_opposite_language": 0,
+    "unknown": 1,
+    "pct": 80.0,
+    "duplicate_sections": 0,
+    "meets_criterion": false
+   },
+   "local_lint_summary": {
+    "samples": 5,
+    "judgeable": 5,
+    "in_requested_language": 5,
+    "in_opposite_language": 0,
+    "unknown": 0,
+    "pct": 100.0,
+    "duplicate_sections": null,
+    "meets_criterion": true
+   }
+  }
+ },
+ "failures": [
+  {
+   "set": "2",
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_Investigacion-empaquetado-publicacion-MCP.md",
+   "fail_kind": "detector_unknown_low_margin",
+   "tokens": 331,
+   "es_ratio": 0.0725,
+   "en_ratio": 0.1662,
+   "margin": 0.0937
+  },
+  {
+   "set": "2",
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_plans_plan-f6-vision.md",
+   "fail_kind": "detector_unknown_low_margin",
+   "tokens": 254,
+   "es_ratio": 0.0984,
+   "en_ratio": 0.1457,
+   "margin": 0.0473
+  },
+  {
+   "set": "2",
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_complete.txt",
+   "fail_kind": "detector_unknown_low_margin",
+   "tokens": 92,
+   "es_ratio": 0.0217,
+   "en_ratio": 0.1196,
+   "margin": 0.0979
+  },
+  {
+   "set": "2",
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_empty.txt",
+   "fail_kind": "detector_unknown_low_margin",
+   "tokens": 179,
+   "es_ratio": 0.0168,
+   "en_ratio": 0.1508,
+   "margin": 0.134
+  },
+  {
+   "set": "1",
+   "tool": "local_summarize",
+   "document": "docs/wiki/Daemon.md",
+   "fail_kind": "detector_unknown_low_margin",
+   "tokens": 205,
+   "es_ratio": 0.0878,
+   "en_ratio": 0.2098,
+   "margin": 0.122
+  }
+ ],
+ "wrong_language_responses": 0,
+ "observations": [
+  "No response is in Spanish; every failure is detector 'unknown' by low margin (English prose, en_ratio > es_ratio).",
+  "local_summarize keeps the document's Spanish section headings and bold sub-labels verbatim; they count in the judged text and pull the margin under 0.15.",
+  "local_lint_summary on the doctor reports copies the Spanish check labels ('Clientes', 'Cadenas de respaldo', 'Coste y relleno', 'Memoria MCP'...) in terse bullet lines with few function words.",
+  "No duplicated section in any summarize response; the product-added 'Introduction' never coexists with an 'Introducción' heading."
+ ],
+ "samples": [
+  {
+   "set": "2",
+   "batch": 1,
+   "window_id": "w-20261015T150634Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-README.md",
+   "document_sha256": "2b9224499011139e14b4e8de2c7779dc90a99320e87f434fd1263807aad29a7c",
+   "document_sha256_frozen": "2b9224499011139e14b4e8de2c7779dc90a99320e87f434fd1263807aad29a7c",
+   "document_unchanged": true,
+   "response_sha256": "ded35196e3462579a6bd672b41ba4e77dcc149496ccc8ef09fa271ea3f91e687",
+   "response_literal": "## Introduction\nThis tool delegates mechanical text tasks to local LLMs.\n\n## Demo\nThe dashboard monitors backend status, resource usage, and savings.\n\n## ¿Por qué?\nIt saves subscription quota by processing large files locally.\n\n## Instalación rápida\nUsers can use `uvx` for isolated execution or run `local-delegate install` to configure the entire integration automatically.\n\n## Requisitos\nRequires **Python 3.11+** and an **OpenAI-compatible endpoint**.\n\n## Tools\n**The tools** allow server-side file reading to prevent large contexts from reaching Claude. **Long documents** are handled via chunking or map-reduce.\n\n## Configuración\nSettings are managed via environment variables, covering endpoints, models, and timeouts.\n\n## La métrica de ahorro\nThe system tracks conserved context and local costs through a dashboard. **Tests** are excluded from these metrics.\n\n## Alcance / no-objetivos\nIt only performs text/image-to-text tasks and avoids local tool-calling or audio.\n\n## Integración con el cliente: hooks, skill y memoria\n**The integration** installs MCP entries, hooks, skills, and memory files. **Hooks** are specific to Claude Code.\n\n## Groups de llama-swap (opcional)\nUsers can manage model pools and VRAM/RAM residency using specific CLI commands.\n\n## Enlaces\nLinks to the Wiki, Recipes, and License.\n\n(leído server-side: 24381 chars ≈ 12190 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "## Introduction\nThis tool delegates mechanical text tasks to local LLMs.\n\n## Demo\nThe dashboard monitors backend status, resource usage, and savings.\n\n## ¿Por qué?\nIt saves subscription quota by processing large files locally.\n\n## Instalación rápida\nUsers can use `uvx` for isolated execution or run `local-delegate install` to configure the entire integration automatically.\n\n## Requisitos\nRequires **Python 3.11+** and an **OpenAI-compatible endpoint**.\n\n## Tools\n**The tools** allow server-side file reading to prevent large contexts from reaching Claude. **Long documents** are handled via chunking or map-reduce.\n\n## Configuración\nSettings are managed via environment variables, covering endpoints, models, and timeouts.\n\n## La métrica de ahorro\nThe system tracks conserved context and local costs through a dashboard. **Tests** are excluded from these metrics.\n\n## Alcance / no-objetivos\nIt only performs text/image-to-text tasks and avoids local tool-calling or audio.\n\n## Integración con el cliente: hooks, skill y memoria\n**The integration** installs MCP entries, hooks, skills, and memory files. **Hooks** are specific to Claude Code.\n\n## Groups de llama-swap (opcional)\nUsers can manage model pools and VRAM/RAM residency using specific CLI commands.\n\n## Enlaces\nLinks to the Wiki, Recipes, and License.",
+   "detector": {
+    "lang": "en",
+    "tokens": 184,
+    "es_ratio": 0.0435,
+    "en_ratio": 0.2337,
+    "margin": 0.1902
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "en",
+    "tokens": 197,
+    "es_ratio": 0.0558,
+    "en_ratio": 0.2183
+   },
+   "headings": [
+    "Introduction",
+    "Demo",
+    "¿Por qué?",
+    "Instalación rápida",
+    "Requisitos",
+    "Tools",
+    "Configuración",
+    "La métrica de ahorro",
+    "Alcance / no-objetivos",
+    "Integración con el cliente: hooks, skill y memoria",
+    "Groups de llama-swap (opcional)",
+    "Enlaces"
+   ],
+   "duplicate_sections_same_title": [],
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "2",
+   "batch": 1,
+   "window_id": "w-20261015T150634Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_Investigacion-empaquetado-publicacion-MCP.md",
+   "document_sha256": "e8967de91b7f660847fdce9ac9b7ce443223989cf7625b4e13ae9dfa72ddf422",
+   "document_sha256_frozen": "e8967de91b7f660847fdce9ac9b7ce443223989cf7625b4e13ae9dfa72ddf422",
+   "document_unchanged": true,
+   "response_sha256": "f65c67b7cff0fb5f93f94417d074d22e181ce033090ba32ea8fdf06fab4d832c",
+   "response_literal": "## Introduction\nThe project status involves a functional MCP with tools and metrics, currently in a local, uncommitted state.\n\n## 1. Resumen ejecutivo (TL;DR)\nThe project is publishable if decoupled from local environments, using PyPI and the official MCP registry.\n\n## 2. El reto real: desacoplar antes de publicar\nDecoupling requires replacing hardcoded paths with environment variables, making model catalogs configurable, and making specific integrations optional.\n\n## 2.bis — Estrategia de directorio limpio (greenfield)\nA new directory is created to avoid breaking the current working setup during the migration process.\n\n## 3. Parte A — Empaquetar el MCP para publicar\n**3.1. Panorama de distribución** compares different channels like PyPI, the official MCP registry, npm, Docker, and DXT.\n**3.2. Recomendación y por qué** suggests using PyPI and the official registry via `uvx` for zero-installation benefits.\n**3.3. Refactor mínimo para que sea genérico** involves implementing a `src/` layout, using `pyproject.toml`, and externalizing all configurations.\n**3.4. `server.json` (registro oficial MCP)** defines the official metadata schema required for registry discovery.\n**3.5. Flujo de publicación (paso a paso)** outlines the process from building with `uv` to publishing via `mcp-publisher`.\n**3.6. Versionado y releases** mandates using SemVer and matching versions between the package and the registry.\n\n## 4. Parte B — Repo de GitHub (README + wiki + seguridad)\n**4.1. Estructura propuesta** details a clean repository layout including source code, tests, and documentation.\n**4.2. README (qué va aquí vs qué va a la wiki)** distinguishes between quick-start instructions and long-form documentation.\n**4.3. Wiki (páginas propuestas)** lists essential topics like architecture, configuration, and specific backend recipes.\n**4.4. Seguridad — NO exponer secretos (crítico)** emphasizes using templates and `.gitignore` to prevent leaking credentials.\n**4.5. Licencia y comunidad** suggests using permissive licenses and establishing contribution guidelines.\n**4.6. CI/CD (GitHub Actions)** proposes automated testing and secure publishing using OIDC.\n\n## 5. Riesgos y decisiones abiertas (para ti)\nKey decisions include package scope, personal integration handling, naming, and licensing.\n\n## 6. Plan de ejecución por fases (checklist)\nThe plan moves from creating a clean directory to porting logic, setting up the repo, publishing, and polishing.\n\n## 7. Fuentes\nLists official MCP documentation, registry requirements, and repository best practices.\n\n(leído server-side: 16843 chars ≈ 8421 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "## Introduction\nThe project status involves a functional MCP with tools and metrics, currently in a local, uncommitted state.\n\n## 1. Resumen ejecutivo (TL;DR)\nThe project is publishable if decoupled from local environments, using PyPI and the official MCP registry.\n\n## 2. El reto real: desacoplar antes de publicar\nDecoupling requires replacing hardcoded paths with environment variables, making model catalogs configurable, and making specific integrations optional.\n\n## 2.bis — Estrategia de directorio limpio (greenfield)\nA new directory is created to avoid breaking the current working setup during the migration process.\n\n## 3. Parte A — Empaquetar el MCP para publicar\n**3.1. Panorama de distribución** compares different channels like PyPI, the official MCP registry, npm, Docker, and DXT.\n**3.2. Recomendación y por qué** suggests using PyPI and the official registry via `uvx` for zero-installation benefits.\n**3.3. Refactor mínimo para que sea genérico** involves implementing a `src/` layout, using `pyproject.toml`, and externalizing all configurations.\n**3.4. `server.json` (registro oficial MCP)** defines the official metadata schema required for registry discovery.\n**3.5. Flujo de publicación (paso a paso)** outlines the process from building with `uv` to publishing via `mcp-publisher`.\n**3.6. Versionado y releases** mandates using SemVer and matching versions between the package and the registry.\n\n## 4. Parte B — Repo de GitHub (README + wiki + seguridad)\n**4.1. Estructura propuesta** details a clean repository layout including source code, tests, and documentation.\n**4.2. README (qué va aquí vs qué va a la wiki)** distinguishes between quick-start instructions and long-form documentation.\n**4.3. Wiki (páginas propuestas)** lists essential topics like architecture, configuration, and specific backend recipes.\n**4.4. Seguridad — NO exponer secretos (crítico)** emphasizes using templates and `.gitignore` to prevent leaking credentials.\n**4.5. Licencia y comunidad** suggests using permissive licenses and establishing contribution guidelines.\n**4.6. CI/CD (GitHub Actions)** proposes automated testing and secure publishing using OIDC.\n\n## 5. Riesgos y decisiones abiertas (para ti)\nKey decisions include package scope, personal integration handling, naming, and licensing.\n\n## 6. Plan de ejecución por fases (checklist)\nThe plan moves from creating a clean directory to porting logic, setting up the repo, publishing, and polishing.\n\n## 7. Fuentes\nLists official MCP documentation, registry requirements, and repository best practices.",
+   "detector": {
+    "lang": "unknown",
+    "tokens": 331,
+    "es_ratio": 0.0725,
+    "en_ratio": 0.1662,
+    "margin": 0.0937
+   },
+   "verdict": "fail_unknown",
+   "fail_kind": "detector_unknown_low_margin",
+   "detector_on_literal_with_wrappers": {
+    "lang": "unknown",
+    "tokens": 344,
+    "es_ratio": 0.0785,
+    "en_ratio": 0.1599
+   },
+   "headings": [
+    "Introduction",
+    "1. Resumen ejecutivo (TL;DR)",
+    "2. El reto real: desacoplar antes de publicar",
+    "2.bis — Estrategia de directorio limpio (greenfield)",
+    "3. Parte A — Empaquetar el MCP para publicar",
+    "4. Parte B — Repo de GitHub (README + wiki + seguridad)",
+    "5. Riesgos y decisiones abiertas (para ti)",
+    "6. Plan de ejecución por fases (checklist)",
+    "7. Fuentes"
+   ],
+   "duplicate_sections_same_title": [],
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "2",
+   "batch": 1,
+   "window_id": "w-20261015T150634Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_plans_plan-f6-vision.md",
+   "document_sha256": "83e4a6cd3a44ca41ebf6327e4d003c4f097882992e85482a4451ec32ab74b5c2",
+   "document_sha256_frozen": "83e4a6cd3a44ca41ebf6327e4d003c4f097882992e85482a4451ec32ab74b5c2",
+   "document_unchanged": true,
+   "response_sha256": "61e513f649921d201674a7930963098cddeac5d2887fd5dafbd7fb4366b81d03",
+   "response_literal": "## Introduction\nThis plan focuses exclusively on implementing local vision capabilities (F6).\n\n## Paso 0 — Verificación contra el entorno real (hecha antes de escribir este plan)\n**Candidatos de modelo (tamaños confirmados en Hugging Face, jul-2026)** The Qwen3-VL-8B-Instruct model is selected as the primary candidate due to its size and compatibility. **Discrepancia con el enunciado de la sesión** The role ID will remain `qwen3-vl-8b` to maintain consistency with the existing catalog. **Advertencia (a documentar en la recipe)** Multimodal support in llama.cpp is considered experimental, requiring version pinning and caution during upgrades.\n\n## Fases de implementación\n**F6.1 — `config.py`** Define vision model and maximum image size environment variables. **F6.2 — `server.py`: tool `local_describe_image`** Implements the image description tool with strict path, extension, and size validations. **F6.3 — Recipe `docs/recipes/llama-swap-vision.md`** Provides documentation with specific model configurations and version warnings. **F6.4 — Actualizaciones colaterales** Updates tests, status commands, documentation, and agent skills. **F6.5 — Tests (`tests/test_core.py` o nuevo `tests/test_vision.py`)** Validates multimodal payloads and error handling using mock data.\n\n## Cambios en TU máquina (fuera del repo — requieren tu OK explícito antes de ejecutarlos)\nRequires explicit permission for downloading large model files, backing up configurations, and modifying local YAML files.\n\n## Criterios de aceptación F6\nSuccess requires passing all tests, updating documentation, verifying the vision role, and performing manual VRAM and functional validation.\n\n## Discrepancias plan-maestro vs. código real (a anotar también en `plan-v0.2-mejoras.md` al cerrar)\nNo discrepancies have been detected in the relevant existing code.\n\n(leído server-side: 10197 chars ≈ 5098 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "## Introduction\nThis plan focuses exclusively on implementing local vision capabilities (F6).\n\n## Paso 0 — Verificación contra el entorno real (hecha antes de escribir este plan)\n**Candidatos de modelo (tamaños confirmados en Hugging Face, jul-2026)** The Qwen3-VL-8B-Instruct model is selected as the primary candidate due to its size and compatibility. **Discrepancia con el enunciado de la sesión** The role ID will remain `qwen3-vl-8b` to maintain consistency with the existing catalog. **Advertencia (a documentar en la recipe)** Multimodal support in llama.cpp is considered experimental, requiring version pinning and caution during upgrades.\n\n## Fases de implementación\n**F6.1 — `config.py`** Define vision model and maximum image size environment variables. **F6.2 — `server.py`: tool `local_describe_image`** Implements the image description tool with strict path, extension, and size validations. **F6.3 — Recipe `docs/recipes/llama-swap-vision.md`** Provides documentation with specific model configurations and version warnings. **F6.4 — Actualizaciones colaterales** Updates tests, status commands, documentation, and agent skills. **F6.5 — Tests (`tests/test_core.py` o nuevo `tests/test_vision.py`)** Validates multimodal payloads and error handling using mock data.\n\n## Cambios en TU máquina (fuera del repo — requieren tu OK explícito antes de ejecutarlos)\nRequires explicit permission for downloading large model files, backing up configurations, and modifying local YAML files.\n\n## Criterios de aceptación F6\nSuccess requires passing all tests, updating documentation, verifying the vision role, and performing manual VRAM and functional validation.\n\n## Discrepancias plan-maestro vs. código real (a anotar también en `plan-v0.2-mejoras.md` al cerrar)\nNo discrepancies have been detected in the relevant existing code.",
+   "detector": {
+    "lang": "unknown",
+    "tokens": 254,
+    "es_ratio": 0.0984,
+    "en_ratio": 0.1457,
+    "margin": 0.0473
+   },
+   "verdict": "fail_unknown",
+   "fail_kind": "detector_unknown_low_margin",
+   "detector_on_literal_with_wrappers": {
+    "lang": "unknown",
+    "tokens": 267,
+    "es_ratio": 0.1049,
+    "en_ratio": 0.1386
+   },
+   "headings": [
+    "Introduction",
+    "Paso 0 — Verificación contra el entorno real (hecha antes de escribir este plan)",
+    "Fases de implementación",
+    "Cambios en TU máquina (fuera del repo — requieren tu OK explícito antes de ejecutarlos)",
+    "Criterios de aceptación F6",
+    "Discrepancias plan-maestro vs. código real (a anotar también en `plan-v0.2-mejoras.md` al cerrar)"
+   ],
+   "duplicate_sections_same_title": [],
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "2",
+   "batch": 1,
+   "window_id": "w-20261015T150634Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-doc-fastapi-0.143.0.METADATA.md",
+   "document_sha256": "1bfa2ecf35ea529d68e56c195c5a4cee7864335d24bcc4a76cf40d7a71edc6e9",
+   "document_sha256_frozen": "1bfa2ecf35ea529d68e56c195c5a4cee7864335d24bcc4a76cf40d7a71edc6e9",
+   "document_unchanged": true,
+   "response_sha256": "4eae2d45c8325972312c94e85c361a44afb3121c0d947362898ec7ad617db6b4",
+   "response_literal": "## Introduction\nFastAPI is a modern, high-performance web framework for building APIs with Python using standard type hints.\n\n## Sponsors\n**Keystone Sponsor** is FastAPI Cloud. **Gold Sponsors** include several companies like BlockBee and Railway. **Silver Sponsors** include Databento and Svix.\n\n## Opinions\nVarious industry leaders from Microsoft, Uber, Netflix, and Cisco praise the framework's design and scalability.\n\n## FastAPI mini documentary\nA short documentary about FastAPI was released at the end of 2025.\n\n## **Typer**, the FastAPI of CLIs\nTyper is a sibling library designed for building command-line interfaces.\n\n## Requirements\nThe framework relies on Starlette for web functionality and Pydantic for data handling.\n\n## Installation\nUsers can install it using `uv add \"fastapi[standard]\"` or via `pip`.\n\n## Example\n**Create it** involves writing a `main.py` file. **Run it** uses `uv run fastapi dev`. **Check it** by visiting the local URL. **Interactive API docs** are available via Swagger UI. **Alternative API docs** are provided by ReDoc.\n\n## Example upgrade\n**Interactive API docs upgrade** shows updated documentation with new bodies. **Alternative API docs upgrade** reflects changes in ReDoc. **Recap** explains how type declarations provide validation and conversion. **Deploy your app (optional)** can be done via FastAPI Cloud.\n\n## Performance\nIt is ranked as one of the fastest Python frameworks in benchmarks.\n\n## Dependencies\n**`standard` Dependencies** include tools like `uvicorn` and `email-validator`. **Without `standard` Dependencies** refers to a minimal installation. **Without `fastapi-cloud-cli`** allows excluding the cloud tool. **Additional Optional Dependencies** include `pydantic-settings` and `orjson`.\n\n## License\nThe project is licensed under the MIT license.\n\n(leído server-side: 26569 chars ≈ 13284 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "## Introduction\nFastAPI is a modern, high-performance web framework for building APIs with Python using standard type hints.\n\n## Sponsors\n**Keystone Sponsor** is FastAPI Cloud. **Gold Sponsors** include several companies like BlockBee and Railway. **Silver Sponsors** include Databento and Svix.\n\n## Opinions\nVarious industry leaders from Microsoft, Uber, Netflix, and Cisco praise the framework's design and scalability.\n\n## FastAPI mini documentary\nA short documentary about FastAPI was released at the end of 2025.\n\n## **Typer**, the FastAPI of CLIs\nTyper is a sibling library designed for building command-line interfaces.\n\n## Requirements\nThe framework relies on Starlette for web functionality and Pydantic for data handling.\n\n## Installation\nUsers can install it using `uv add \"fastapi[standard]\"` or via `pip`.\n\n## Example\n**Create it** involves writing a `main.py` file. **Run it** uses `uv run fastapi dev`. **Check it** by visiting the local URL. **Interactive API docs** are available via Swagger UI. **Alternative API docs** are provided by ReDoc.\n\n## Example upgrade\n**Interactive API docs upgrade** shows updated documentation with new bodies. **Alternative API docs upgrade** reflects changes in ReDoc. **Recap** explains how type declarations provide validation and conversion. **Deploy your app (optional)** can be done via FastAPI Cloud.\n\n## Performance\nIt is ranked as one of the fastest Python frameworks in benchmarks.\n\n## Dependencies\n**`standard` Dependencies** include tools like `uvicorn` and `email-validator`. **Without `standard` Dependencies** refers to a minimal installation. **Without `fastapi-cloud-cli`** allows excluding the cloud tool. **Additional Optional Dependencies** include `pydantic-settings` and `orjson`.\n\n## License\nThe project is licensed under the MIT license.",
+   "detector": {
+    "lang": "en",
+    "tokens": 247,
+    "es_ratio": 0.0,
+    "en_ratio": 0.2672,
+    "margin": 0.2672
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "en",
+    "tokens": 260,
+    "es_ratio": 0.0115,
+    "en_ratio": 0.2538
+   },
+   "headings": [
+    "Introduction",
+    "Sponsors",
+    "Opinions",
+    "FastAPI mini documentary",
+    "**Typer**, the FastAPI of CLIs",
+    "Requirements",
+    "Installation",
+    "Example",
+    "Example upgrade",
+    "Performance",
+    "Dependencies",
+    "License"
+   ],
+   "duplicate_sections_same_title": [],
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "2",
+   "batch": 1,
+   "window_id": "w-20261015T150634Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-doc-httpcore2-2.13.1.METADATA.md",
+   "document_sha256": "37a0ea0674e98b7c3a1f99c17d9bb5457de27a0f93c8b6560c9d17d525139abb",
+   "document_sha256_frozen": "37a0ea0674e98b7c3a1f99c17d9bb5457de27a0f93c8b6560c9d17d525139abb",
+   "document_unchanged": true,
+   "response_sha256": "d3be0d32e9b6c98bb4663cf09ff200815e70b0d1fefc5fb3666f760730ff5f45",
+   "response_literal": "## Introduction\nThis package provides a minimal, low-level HTTP client designed to perform a single task: sending HTTP requests.\n\n## HTTPCore 2\n**Installation** Users can install the package via pip, with optional extras for various features. **Sending requests** The library offers a top-level function and connection pooling for making requests. **Motivation** It aims to provide a reusable low-level library with a clear interface split. **Dependencies** It relies on h11 and truststore, with optional dependencies like anyio and trio. **Versioning** The project follows SEMVER guidelines.\n\n## Changelog\n\n[local-delegate warning: 1 sección sin resumir por el límite de palabras o del modelo]\n\n[local-delegate warning: salida truncada por max_tokens]\n\n(leído server-side: 26534 chars ≈ 13267 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "## Introduction\nThis package provides a minimal, low-level HTTP client designed to perform a single task: sending HTTP requests.\n\n## HTTPCore 2\n**Installation** Users can install the package via pip, with optional extras for various features. **Sending requests** The library offers a top-level function and connection pooling for making requests. **Motivation** It aims to provide a reusable low-level library with a clear interface split. **Dependencies** It relies on h11 and truststore, with optional dependencies like anyio and trio. **Versioning** The project follows SEMVER guidelines.\n\n## Changelog",
+   "detector": {
+    "lang": "en",
+    "tokens": 85,
+    "es_ratio": 0.0,
+    "en_ratio": 0.2353,
+    "margin": 0.2353
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "unknown",
+    "tokens": 120,
+    "es_ratio": 0.0833,
+    "en_ratio": 0.1667
+   },
+   "headings": [
+    "Introduction",
+    "HTTPCore 2",
+    "Changelog"
+   ],
+   "duplicate_sections_same_title": [],
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "2",
+   "batch": 1,
+   "window_id": "w-20261015T150634Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_complete.txt",
+   "document_sha256": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+   "document_sha256_frozen": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+   "document_unchanged": true,
+   "response_sha256": "f6a9b6e7907201b7ac210d28fcb665cc60ef5be5bf3bac0709947040ec7f1362",
+   "response_literal": "local-delegate doctor report:\n\n*   **LLAMASWAP_EXE:** (Warning) Not set; requires llama-swap in PATH.\n*   **LLAMASWAP_CONFIG:** (Warning) Not set.\n*   **Clientes:** (OK) Detected: Claude Code, Codex, opencode. No MCP clients observed.\n*   **Cadenas de respaldo:** (OK) Valid chains, no resident chains.\n*   **Coste y relleno:** (Warning) No saved comparisons found; no transcripts available.\n*   **Hooks:** (OK) 5 copied scripts, 2 registered hooks.\n*   **Skills:** (OK) Claude Code and opencode skills installed.\n*   **Memoria MCP:** (OK) MCPs registered and managed in respective files.\n*   **Servicios:** (OK) Daemon and backend running.\n*   **Versiones:** (Warning) llama-swap version is tested, but residency is not configured.\n\n(leído server-side: 3122 chars ≈ 1626 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "local-delegate doctor report:\n\n*   **LLAMASWAP_EXE:** (Warning) Not set; requires llama-swap in PATH.\n*   **LLAMASWAP_CONFIG:** (Warning) Not set.\n*   **Clientes:** (OK) Detected: Claude Code, Codex, opencode. No MCP clients observed.\n*   **Cadenas de respaldo:** (OK) Valid chains, no resident chains.\n*   **Coste y relleno:** (Warning) No saved comparisons found; no transcripts available.\n*   **Hooks:** (OK) 5 copied scripts, 2 registered hooks.\n*   **Skills:** (OK) Claude Code and opencode skills installed.\n*   **Memoria MCP:** (OK) MCPs registered and managed in respective files.\n*   **Servicios:** (OK) Daemon and backend running.\n*   **Versiones:** (Warning) llama-swap version is tested, but residency is not configured.",
+   "detector": {
+    "lang": "unknown",
+    "tokens": 92,
+    "es_ratio": 0.0217,
+    "en_ratio": 0.1196,
+    "margin": 0.0979
+   },
+   "verdict": "fail_unknown",
+   "fail_kind": "detector_unknown_low_margin",
+   "detector_on_literal_with_wrappers": {
+    "lang": "unknown",
+    "tokens": 105,
+    "es_ratio": 0.0476,
+    "en_ratio": 0.1048
+   },
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "2",
+   "batch": 1,
+   "window_id": "w-20261015T150634Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_empty.txt",
+   "document_sha256": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+   "document_sha256_frozen": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+   "document_unchanged": true,
+   "response_sha256": "eeb67bbdc5670c2ae7841f4764c3136a2a96813d57a09a5f1ca868a3bff53a21",
+   "response_literal": "Local Delegate Doctor Summary:\n\n**llama-swap.exe:** No configured (requires llama-swap in PATH).\n**LLAMASWAP_CONFIG:** Not set.\n**Backend BASE_URL:** http://127.0.0.1:9292/v1 – OK.\n**Clientes:** Detected Claude Code, Codex, opencode – OK.\n**Cadenas de respaldo:** Valid chains – OK.\n**Coste y relleno:** No comparison found – OK.\n**Hooks:** Missing hooks in .claude/hooks and .claude/settings.json – Requires `local-delegate install`. (2 errors)\n**Skills:** Missing Claude Code, opencode and Codex skills – Requires `local-delegate install`. (3 errors)\n**Memoria Global:** Missing Claude Code, Codex and opencode agents – Requires `local-delegate install`. (3 errors)\n**MCP Configuration:** Missing MCP configuration files in .claude.json, .codex/config.toml and .config/opencode – Requires `local-delegate install`. (3 errors)\n**Daemon:** Running – OK.\n**Versiones:** llama-swap and llama-server versions are up-to-date – OK.\n**Token de Claude Desktop:** Not configured – OK.\n\nTotal Warnings: 7.  The primary issues involve missing configuration files and hooks, requiring a `local-delegate install` to resolve.  Specifically, the absence of LLAMASWAP_CONFIG and associated configuration files for Claude Code, Codex, and opencode is a critical concern.  Review the flagged files and execute the installation command to address these problems.\n\n(leído server-side: 3377 chars ≈ 1758 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "Local Delegate Doctor Summary:\n\n**llama-swap.exe:** No configured (requires llama-swap in PATH).\n**LLAMASWAP_CONFIG:** Not set.\n**Backend BASE_URL:** http://127.0.0.1:9292/v1 – OK.\n**Clientes:** Detected Claude Code, Codex, opencode – OK.\n**Cadenas de respaldo:** Valid chains – OK.\n**Coste y relleno:** No comparison found – OK.\n**Hooks:** Missing hooks in .claude/hooks and .claude/settings.json – Requires `local-delegate install`. (2 errors)\n**Skills:** Missing Claude Code, opencode and Codex skills – Requires `local-delegate install`. (3 errors)\n**Memoria Global:** Missing Claude Code, Codex and opencode agents – Requires `local-delegate install`. (3 errors)\n**MCP Configuration:** Missing MCP configuration files in .claude.json, .codex/config.toml and .config/opencode – Requires `local-delegate install`. (3 errors)\n**Daemon:** Running – OK.\n**Versiones:** llama-swap and llama-server versions are up-to-date – OK.\n**Token de Claude Desktop:** Not configured – OK.\n\nTotal Warnings: 7.  The primary issues involve missing configuration files and hooks, requiring a `local-delegate install` to resolve.  Specifically, the absence of LLAMASWAP_CONFIG and associated configuration files for Claude Code, Codex, and opencode is a critical concern.  Review the flagged files and execute the installation command to address these problems.",
+   "detector": {
+    "lang": "unknown",
+    "tokens": 179,
+    "es_ratio": 0.0168,
+    "en_ratio": 0.1508,
+    "margin": 0.134
+   },
+   "verdict": "fail_unknown",
+   "fail_kind": "detector_unknown_low_margin",
+   "detector_on_literal_with_wrappers": {
+    "lang": "unknown",
+    "tokens": 192,
+    "es_ratio": 0.0312,
+    "en_ratio": 0.1406
+   },
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "2",
+   "batch": 1,
+   "window_id": "w-20261015T150634Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B2b-2_corpus-affinity-check.txt",
+   "document_sha256": "bf9da67e5c973b9a8dba61ffb345673c5828f734d96ac8595309a7dd8c5d5caa",
+   "document_sha256_frozen": "bf9da67e5c973b9a8dba61ffb345673c5828f734d96ac8595309a7dd8c5d5caa",
+   "document_unchanged": true,
+   "response_sha256": "19425978d0dc4f7904bbbe90d69fce9b6e0c9d4bc834cad8f6857976cc20f977",
+   "response_literal": "**scripts/build_corpus.py**\n\n*   **Ruff Rule Changes (4):**\n    *   `resume-ruff-tres-reglas`:  Change with prompts from 0.36.0 (declared frontier).\n    *   `resume-ruff-docstrings`: Change with prompts from 0.36.0 (declared frontier).\n    *   `resume-ruff-un-solo-archivo`: Change with prompts from 0.36.0 (declared frontier).\n    *   `resume-ruff-cinco-reglas`: Change with prompts from 0.36.0 (declared frontier).\n*   **Markdown Summary Changes (1):**\n    *   `resumen-md-2k`: Change with prompts from 0.36.0 (declared frontier).\n\n**uv run --frozen**\n\n*   **Language Definition (1):**\n    *   `LOCAL_DELEGATE_COMMIT_LANGUAGE`: Not defined in this environment (not used).\n\n(leído server-side: 685 chars ≈ 356 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "**scripts/build_corpus.py**\n\n*   **Ruff Rule Changes (4):**\n    *   `resume-ruff-tres-reglas`:  Change with prompts from 0.36.0 (declared frontier).\n    *   `resume-ruff-docstrings`: Change with prompts from 0.36.0 (declared frontier).\n    *   `resume-ruff-un-solo-archivo`: Change with prompts from 0.36.0 (declared frontier).\n    *   `resume-ruff-cinco-reglas`: Change with prompts from 0.36.0 (declared frontier).\n*   **Markdown Summary Changes (1):**\n    *   `resumen-md-2k`: Change with prompts from 0.36.0 (declared frontier).\n\n**uv run --frozen**\n\n*   **Language Definition (1):**\n    *   `LOCAL_DELEGATE_COMMIT_LANGUAGE`: Not defined in this environment (not used).",
+   "detector": {
+    "lang": "en",
+    "tokens": 75,
+    "es_ratio": 0.0267,
+    "en_ratio": 0.2,
+    "margin": 0.1733
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "unknown",
+    "tokens": 88,
+    "es_ratio": 0.0568,
+    "en_ratio": 0.1705
+   },
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "2",
+   "batch": 1,
+   "window_id": "w-20261015T150634Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-biome-lint.txt",
+   "document_sha256": "071dd4473f52d3136e2fa336c275589614f40e6821965d6ba3aeef210ffc1ba8",
+   "document_sha256_frozen": "071dd4473f52d3136e2fa336c275589614f40e6821965d6ba3aeef210ffc1ba8",
+   "document_unchanged": true,
+   "response_sha256": "c3ff0e37618748ae75b5ca1364ad2b547586076f73290857f3aef690d8e78fd0",
+   "response_literal": "### apps\\api\\package.json\n- lint/nursery/noRestrictedDependencies (1): The restricted dependency `express` was detected and should be replaced with alternatives like `h3`, `hono`, or `elysia`.\n\n### apps\\api\\src\\config\\env.schema.ts\n- lint/style/useNamingConvention (6): Multiple object properties (e.g., `NODE_ENV`, `PORT`, `DB_PATH`, `LOG_LEVEL`, `CORS_ORIGIN`, `NOMINATIM_USER_AGENT`) must use camelCase.\n- lint/style/noMagicNumbers (1): A magic number was detected in the `PORT` default value.\n\n### apps\\api\\src\\geocode\\dto\\geocode.dto.ts\n- lint/style/noMagicNumbers (4): Several magic numbers were found in string length constraints (e.g., 500, 300, 20).\n- lint/style/noExcessiveClassesPerFile (1): The file contains more than one class.\n\n### apps\\api\\src\\validate\\dto\\validate.dto.ts\n- lint/style/noMagicNumbers (5): Multiple magic numbers were detected in schema constraints (e.g., 20, 300, 1000).\n- lint/style/useNamingConvention (4): Property names (e.g., `issue_type`, `suggested_cp`, `suggested_colonia`, `suggested_municipio`) should be in camelCase.\n- lint/style/noExcessiveClassesPerFile (1): The file exceeds the maximum limit of one class.\n\n### apps\\api\\src\\config\\repo-root.ts\n- lint/style/useBlockStatements (2): Block statements are preferred for `if` statements instead of single-line returns.\n\n### apps\\api\\src\\geocode\\geocode.controller.ts\n- lint/style/noParameterProperties (1): Use explicit class properties instead of parameter properties in the constructor.\n- lint/style/useImportType (2): Certain imports are only used as types and should use `import type`.\n\n### apps\\api\\src\\validate\\validate.controller.ts\n- lint/style/noParameterProperties (1\n\n[local-delegate warning: salida truncada por max_tokens]\n\n(leído server-side: 18043 chars ≈ 9397 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "### apps\\api\\package.json\n- lint/nursery/noRestrictedDependencies (1): The restricted dependency `express` was detected and should be replaced with alternatives like `h3`, `hono`, or `elysia`.\n\n### apps\\api\\src\\config\\env.schema.ts\n- lint/style/useNamingConvention (6): Multiple object properties (e.g., `NODE_ENV`, `PORT`, `DB_PATH`, `LOG_LEVEL`, `CORS_ORIGIN`, `NOMINATIM_USER_AGENT`) must use camelCase.\n- lint/style/noMagicNumbers (1): A magic number was detected in the `PORT` default value.\n\n### apps\\api\\src\\geocode\\dto\\geocode.dto.ts\n- lint/style/noMagicNumbers (4): Several magic numbers were found in string length constraints (e.g., 500, 300, 20).\n- lint/style/noExcessiveClassesPerFile (1): The file contains more than one class.\n\n### apps\\api\\src\\validate\\dto\\validate.dto.ts\n- lint/style/noMagicNumbers (5): Multiple magic numbers were detected in schema constraints (e.g., 20, 300, 1000).\n- lint/style/useNamingConvention (4): Property names (e.g., `issue_type`, `suggested_cp`, `suggested_colonia`, `suggested_municipio`) should be in camelCase.\n- lint/style/noExcessiveClassesPerFile (1): The file exceeds the maximum limit of one class.\n\n### apps\\api\\src\\config\\repo-root.ts\n- lint/style/useBlockStatements (2): Block statements are preferred for `if` statements instead of single-line returns.\n\n### apps\\api\\src\\geocode\\geocode.controller.ts\n- lint/style/noParameterProperties (1): Use explicit class properties instead of parameter properties in the constructor.\n- lint/style/useImportType (2): Certain imports are only used as types and should use `import type`.\n\n### apps\\api\\src\\validate\\validate.controller.ts\n- lint/style/noParameterProperties (1",
+   "detector": {
+    "lang": "en",
+    "tokens": 219,
+    "es_ratio": 0.0183,
+    "en_ratio": 0.1963,
+    "margin": 0.178
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "unknown",
+    "tokens": 240,
+    "es_ratio": 0.0333,
+    "en_ratio": 0.1792
+   },
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "2",
+   "batch": 1,
+   "window_id": "w-20261015T150634Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-pytest.txt",
+   "document_sha256": "475392a64a7d58a336de6e841b54de8dfaf650b7336de343add1f207ba404dd0",
+   "document_sha256_frozen": "475392a64a7d58a336de6e841b54de8dfaf650b7336de343add1f207ba404dd0",
+   "document_unchanged": true,
+   "response_sha256": "89285d106e815bbb84d7dd30e597098247eb83fb954612e874b388f4ca2e53c0",
+   "response_literal": "No issues were found in the provided output. All 76 tests passed successfully.\n\n**tests/test_detect_language.py**\n* PASSED: 15\n\n**tests/test_corpus.py**\n* PASSED: 61\n\n**Summary of results:**\n* Total passed: 76\n\n(leído server-side: 15540 chars ≈ 8093 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "No issues were found in the provided output. All 76 tests passed successfully.\n\n**tests/test_detect_language.py**\n* PASSED: 15\n\n**tests/test_corpus.py**\n* PASSED: 61\n\n**Summary of results:**\n* Total passed: 76",
+   "detector": {
+    "lang": "en",
+    "tokens": 28,
+    "es_ratio": 0.0,
+    "en_ratio": 0.1786,
+    "margin": 0.1786
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "unknown",
+    "tokens": 41,
+    "es_ratio": 0.0732,
+    "en_ratio": 0.122
+   },
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "1",
+   "batch": 1,
+   "window_id": "w-20261015T150634Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_summarize",
+   "document": "docs/wiki/Architecture.md",
+   "document_sha256": "45b24656f8ded36bec430d055f5c797b01ef504d5de963615ea76fba6d8f9f2e",
+   "document_sha256_frozen": "45b24656f8ded36bec430d055f5c797b01ef504d5de963615ea76fba6d8f9f2e",
+   "document_unchanged": true,
+   "response_sha256": "a4654104fff4f481ae7c60c062109cedb905a26c5fcea7d263290b59f076fe06",
+   "response_literal": "## Visión general\nThe `local-delegate` is an MCP server acting as a singleton daemon that routes requests to OpenAI-compatible endpoints and provides a web dashboard.\n\n## Decisiones de diseño\nThe system assumes a generic OpenAI-compatible backend, uses text-only outputs with system guardrails, and optimizes context usage by processing files locally. It also uses JSONL for telemetry instead of OpenTelemetry.\n\n## Qué se usa del SDK `mcp` 2.x, y qué no\n**Se usa** includes `ServerMiddleware` for observing clients and request context, and `elicitation` for user queries.\n**Descartado: `extension` / `intercept_tool_call` (SEP-2133)** This was rejected because telemetry is already centralized at the backend call level.\n**Descartado: `caching` (SEP-2549)** This was discarded as it does not reduce backend inference costs.\n**Descartado: `subscriptions` (SEP-2575)** This is unnecessary because the server does not expose MCP resources or prompts.\n**`auth` va partido en dos, y la distinción importa** OAuth2 is discarded, but `middleware/bearer_auth` is kept for potential external exposure.\n**Nota sobre la revisión del protocolo** The implementation targets versions actually negotiated by clients rather than the latest protocol versions.\n\n## Turno, afinidad y lentitud\nThe daemon manages request turns to avoid model conflicts, uses affinity to select already loaded models, and monitors inference speed against reference medians.\n\n## Módulos\n**`server.py`** manages tools and guardrails. **`clients.py`** tracks MCP clients. **`questions.py`** handles user elicitation. **`config.py`** manages settings. **`autostart.py`** handles backend startup. **`daemon.py`** runs the ASGI server. **`web/metrics.py`** provides the dashboard. **`failures.py`** classifies backend errors. **`chains.py`** manages fallback chains. **`topology.py`** analyzes model conflicts. **`turn.py`** implements the turn logic. **`matrix.py`** handles affinity selection. **`footprint.py`** tracks model resource usage. **`pace.py`** monitors inference speed. **`llamaswap_api.py`** interfaces with the backend. **`llamaswap_config.py`** estimates memory usage. **`residency.py`** manages model residency. **`cooldown.py`** handles model cooldowns. **`resources/vendor/`** contains Chart.js.\n\n(leído server-side: 13258 chars ≈ 6629 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "## Visión general\nThe `local-delegate` is an MCP server acting as a singleton daemon that routes requests to OpenAI-compatible endpoints and provides a web dashboard.\n\n## Decisiones de diseño\nThe system assumes a generic OpenAI-compatible backend, uses text-only outputs with system guardrails, and optimizes context usage by processing files locally. It also uses JSONL for telemetry instead of OpenTelemetry.\n\n## Qué se usa del SDK `mcp` 2.x, y qué no\n**Se usa** includes `ServerMiddleware` for observing clients and request context, and `elicitation` for user queries.\n**Descartado: `extension` / `intercept_tool_call` (SEP-2133)** This was rejected because telemetry is already centralized at the backend call level.\n**Descartado: `caching` (SEP-2549)** This was discarded as it does not reduce backend inference costs.\n**Descartado: `subscriptions` (SEP-2575)** This is unnecessary because the server does not expose MCP resources or prompts.\n**`auth` va partido en dos, y la distinción importa** OAuth2 is discarded, but `middleware/bearer_auth` is kept for potential external exposure.\n**Nota sobre la revisión del protocolo** The implementation targets versions actually negotiated by clients rather than the latest protocol versions.\n\n## Turno, afinidad y lentitud\nThe daemon manages request turns to avoid model conflicts, uses affinity to select already loaded models, and monitors inference speed against reference medians.\n\n## Módulos\n**`server.py`** manages tools and guardrails. **`clients.py`** tracks MCP clients. **`questions.py`** handles user elicitation. **`config.py`** manages settings. **`autostart.py`** handles backend startup. **`daemon.py`** runs the ASGI server. **`web/metrics.py`** provides the dashboard. **`failures.py`** classifies backend errors. **`chains.py`** manages fallback chains. **`topology.py`** analyzes model conflicts. **`turn.py`** implements the turn logic. **`matrix.py`** handles affinity selection. **`footprint.py`** tracks model resource usage. **`pace.py`** monitors inference speed. **`llamaswap_api.py`** interfaces with the backend. **`llamaswap_config.py`** estimates memory usage. **`residency.py`** manages model residency. **`cooldown.py`** handles model cooldowns. **`resources/vendor/`** contains Chart.js.",
+   "detector": {
+    "lang": "en",
+    "tokens": 307,
+    "es_ratio": 0.0456,
+    "en_ratio": 0.202,
+    "margin": 0.1564
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "unknown",
+    "tokens": 320,
+    "es_ratio": 0.0531,
+    "en_ratio": 0.1938
+   },
+   "headings": [
+    "Visión general",
+    "Decisiones de diseño",
+    "Qué se usa del SDK `mcp` 2.x, y qué no",
+    "Turno, afinidad y lentitud",
+    "Módulos"
+   ],
+   "duplicate_sections_same_title": [],
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "1",
+   "batch": 1,
+   "window_id": "w-20261015T150634Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_summarize",
+   "document": "docs/wiki/Backend-versions.md",
+   "document_sha256": "fac7ae129c7926119939d935edb1643a8c49d38208d95e7c5a302372ac28bdc0",
+   "document_sha256_frozen": "fac7ae129c7926119939d935edb1643a8c49d38208d95e7c5a302372ac28bdc0",
+   "document_unchanged": true,
+   "response_sha256": "a553c8d19928c02b12427ac2683d81e7d151f31c21b383142c93107de5727ed4",
+   "response_literal": "## Introduction\nThis page serves as a tested reference for versions and folder layouts used to verify each release.\n\n## Versiones probadas\n**Qué se usa de llama-swap v255 y de llama-server** The system relies on specific versions to manage turn-taking, affinity, and residency. It reads configurations like groups and TTL from `config.yaml`, monitors model states via `GET /running`, tracks inflight requests through `GET /api/events`, and uses `GET /api/metrics/activity` for TTL tracking. It also monitors configuration changes via `-watch-config` and uses `llama-server` timings for inference metrics.\n\n## Workspace de referencia\nThe workspace is a self-contained root directory containing `llama-swap`, `llama-swap-v255`, `llamacpp-b10909`, and a `models` folder, linked via specific environment variables.\n\n## Chequear tu instalación: `local-delegate doctor`\nThis command detects installed versions and suggests updates. Using `--online` compares installations against GitHub releases, applying a 7-day holding period for new releases and checking for recent critical issues.\n\n## Medir un canary: `local-delegate benchmark`\n**benchmark** This tool runs real tasks against candidate backends to ensure performance parity. It records results in JSONL, including quantization and context details. **outcomes** Results are categorized into `ok`, `truncado` (retried once), `context_rejection`, `configuracion`, or `error`. **execution_checks** Certain cases execute generated code in a controlled environment to measure coverage and success ratios. **scoring** While objective metrics are automated, open-text tasks use manual pair-wise comparisons. **resources** On Windows, it tracks private RAM and VRAM usage per process.\n\n## Métricas persistentes del backend (#898)\n**store.path** To ensure activity metrics survive restarts, users must define a SQLite database path in the `config.yaml` using the `store.path` setting.\n\n(leído server-side: 12780 chars ≈ 6390 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "## Introduction\nThis page serves as a tested reference for versions and folder layouts used to verify each release.\n\n## Versiones probadas\n**Qué se usa de llama-swap v255 y de llama-server** The system relies on specific versions to manage turn-taking, affinity, and residency. It reads configurations like groups and TTL from `config.yaml`, monitors model states via `GET /running`, tracks inflight requests through `GET /api/events`, and uses `GET /api/metrics/activity` for TTL tracking. It also monitors configuration changes via `-watch-config` and uses `llama-server` timings for inference metrics.\n\n## Workspace de referencia\nThe workspace is a self-contained root directory containing `llama-swap`, `llama-swap-v255`, `llamacpp-b10909`, and a `models` folder, linked via specific environment variables.\n\n## Chequear tu instalación: `local-delegate doctor`\nThis command detects installed versions and suggests updates. Using `--online` compares installations against GitHub releases, applying a 7-day holding period for new releases and checking for recent critical issues.\n\n## Medir un canary: `local-delegate benchmark`\n**benchmark** This tool runs real tasks against candidate backends to ensure performance parity. It records results in JSONL, including quantization and context details. **outcomes** Results are categorized into `ok`, `truncado` (retried once), `context_rejection`, `configuracion`, or `error`. **execution_checks** Certain cases execute generated code in a controlled environment to measure coverage and success ratios. **scoring** While objective metrics are automated, open-text tasks use manual pair-wise comparisons. **resources** On Windows, it tracks private RAM and VRAM usage per process.\n\n## Métricas persistentes del backend (#898)\n**store.path** To ensure activity metrics survive restarts, users must define a SQLite database path in the `config.yaml` using the `store.path` setting.",
+   "detector": {
+    "lang": "en",
+    "tokens": 269,
+    "es_ratio": 0.0335,
+    "en_ratio": 0.2305,
+    "margin": 0.197
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "en",
+    "tokens": 282,
+    "es_ratio": 0.0426,
+    "en_ratio": 0.2199
+   },
+   "headings": [
+    "Introduction",
+    "Versiones probadas",
+    "Workspace de referencia",
+    "Chequear tu instalación: `local-delegate doctor`",
+    "Medir un canary: `local-delegate benchmark`",
+    "Métricas persistentes del backend (#898)"
+   ],
+   "duplicate_sections_same_title": [],
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "1",
+   "batch": 1,
+   "window_id": "w-20261015T150634Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_summarize",
+   "document": "docs/wiki/Daemon.md",
+   "document_sha256": "5ad2c5ad4b3879d1b81086279abf63886ca0a71dadc357afa0bde4bf0836b9be",
+   "document_sha256_frozen": "5ad2c5ad4b3879d1b81086279abf63886ca0a71dadc357afa0bde4bf0836b9be",
+   "document_unchanged": true,
+   "response_sha256": "c93ad63d32c2030eb3ed47ece7f59784860d2ac84aeda37b29950c6752ebb921",
+   "response_literal": "## Por qué existe\nThe `stdio` transport requires one process per client, making the dashboard ephemeral.\n\n## Arranque\nRun `uvx local-delegate-mcp serve` to start the daemon with specific HTTP and state defaults.\n\n## Clientes\nConfigure Codex, Claude Code, and opencode to point to the same daemon URL.\n\n## llama-swap visto desde el daemon\n**Turno.** The daemon manages model contention by distributing turns among conflicting models. **Endpoints para el CLI y `doctor`.** The daemon provides API endpoints for status, configuration watching, and llama-swap residency.\n\n## Autenticación del puerto\nThe port is open by default but requires a `LOCAL_DELEGATE_WEB_TOKEN` if exposed via a proxy.\n**La sesión del navegador** The daemon uses HMAC-SHA256 signed cookies for long-term browser sessions.\n**Que los clientes sigan funcionando** Clients use environment variables to avoid storing tokens in configuration files.\n\n## Inicio de sesión y rollback\nThe daemon registers with system service managers using specific canonical names.\n**Windows sin ventana visible** Use `conhost --headless` to prevent console windows when using authenticated launchers.\n**macOS: LaunchAgent** Use a `.plist` file in `LaunchAgents` to manage the daemon.\n**Linux: `systemd --user`** Use a user-level service unit in `systemd`.\n**Qué significa «DAEMON MCP» en el dashboard** This badge identifies the single shared server process.\n\n(leído server-side: 17383 chars ≈ 8691 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "## Por qué existe\nThe `stdio` transport requires one process per client, making the dashboard ephemeral.\n\n## Arranque\nRun `uvx local-delegate-mcp serve` to start the daemon with specific HTTP and state defaults.\n\n## Clientes\nConfigure Codex, Claude Code, and opencode to point to the same daemon URL.\n\n## llama-swap visto desde el daemon\n**Turno.** The daemon manages model contention by distributing turns among conflicting models. **Endpoints para el CLI y `doctor`.** The daemon provides API endpoints for status, configuration watching, and llama-swap residency.\n\n## Autenticación del puerto\nThe port is open by default but requires a `LOCAL_DELEGATE_WEB_TOKEN` if exposed via a proxy.\n**La sesión del navegador** The daemon uses HMAC-SHA256 signed cookies for long-term browser sessions.\n**Que los clientes sigan funcionando** Clients use environment variables to avoid storing tokens in configuration files.\n\n## Inicio de sesión y rollback\nThe daemon registers with system service managers using specific canonical names.\n**Windows sin ventana visible** Use `conhost --headless` to prevent console windows when using authenticated launchers.\n**macOS: LaunchAgent** Use a `.plist` file in `LaunchAgents` to manage the daemon.\n**Linux: `systemd --user`** Use a user-level service unit in `systemd`.\n**Qué significa «DAEMON MCP» en el dashboard** This badge identifies the single shared server process.",
+   "detector": {
+    "lang": "unknown",
+    "tokens": 205,
+    "es_ratio": 0.0878,
+    "en_ratio": 0.2098,
+    "margin": 0.122
+   },
+   "verdict": "fail_unknown",
+   "fail_kind": "detector_unknown_low_margin",
+   "detector_on_literal_with_wrappers": {
+    "lang": "unknown",
+    "tokens": 218,
+    "es_ratio": 0.0963,
+    "en_ratio": 0.1972
+   },
+   "headings": [
+    "Por qué existe",
+    "Arranque",
+    "Clientes",
+    "llama-swap visto desde el daemon",
+    "Autenticación del puerto",
+    "Inicio de sesión y rollback"
+   ],
+   "duplicate_sections_same_title": [],
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "1",
+   "batch": 1,
+   "window_id": "w-20261015T150634Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_summarize",
+   "document": "docs/wiki/Publishing.md",
+   "document_sha256": "ab81f38524d083a71f66c28d85a8573bb6e0a8f5e785a34921068d38f9fc6573",
+   "document_sha256_frozen": "ab81f38524d083a71f66c28d85a8573bb6e0a8f5e785a34921068d38f9fc6573",
+   "document_unchanged": true,
+   "response_sha256": "92ae7bebc8440bf1b51b189759749051ba46bf6bed1377d592cc1929945f1baa",
+   "response_literal": "## Versionado\nThe project follows SemVer, requiring version bumps in `pyproject.toml`, `uv.lock`, both `server.json` versions, `CHANGELOG.md`, and a `vX.Y.Z` tag.\n\n## Un tag publica en los dos sitios\nThe `publish.yml` workflow triggers on `v*` tags, executing three sequential jobs: `check-version`, `pypi` via OIDC, and `mcp-registry`. PyPI and the MCP registry use passwordless authentication. The registry publication follows PyPI to ensure the package and its README are available. Users must first configure a trusted publisher on PyPI. Releases are managed by running `scripts/bump_version.py` followed by a PR process. Finally, `scripts/release.py` executes the full release.\n\n## `scripts/release.py`\nThis script automates building, creating a GitHub Release with changelog notes, attaching artifacts, and creating the tag. **It aborts** if versioning is inconsistent, if the user is not on `main`, or if the release already exists. **Regarding verification**, users should account for potential caching delays in PyPI indices. **README capture** must be regenerated after a bump to update version badges. **The wiki** is automatically synchronized via `wiki.yml` from `docs/wiki/`, meaning it is a generated artifact where links are rewritten to absolute URLs.\n\n## Registro oficial MCP\nThe `mcp-registry` job in `publish.yml` handles this automatically. **Manual publication** can be done using `mcp-publisher` if necessary. The registry validates the PyPI README for a specific `mcp-name` and requires the `server.json` description to be 100 characters or fewer.\n\n## CI\nThe `ci.yml` workflow runs on every push or PR. **The lint job** checks locks, formatting, and scripts. **The test job** runs `pytest` across Ubuntu, Windows, and macOS. **The install-smoke job** verifies installation via a fresh wheel build. **The secrets job** uses gitleaks. Additionally, `codeql.yml` performs static analysis, and `vendor-audit.yml` monitors JavaScript dependencies.\n\n(leído server-side: 8731 chars ≈ 4365 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "## Versionado\nThe project follows SemVer, requiring version bumps in `pyproject.toml`, `uv.lock`, both `server.json` versions, `CHANGELOG.md`, and a `vX.Y.Z` tag.\n\n## Un tag publica en los dos sitios\nThe `publish.yml` workflow triggers on `v*` tags, executing three sequential jobs: `check-version`, `pypi` via OIDC, and `mcp-registry`. PyPI and the MCP registry use passwordless authentication. The registry publication follows PyPI to ensure the package and its README are available. Users must first configure a trusted publisher on PyPI. Releases are managed by running `scripts/bump_version.py` followed by a PR process. Finally, `scripts/release.py` executes the full release.\n\n## `scripts/release.py`\nThis script automates building, creating a GitHub Release with changelog notes, attaching artifacts, and creating the tag. **It aborts** if versioning is inconsistent, if the user is not on `main`, or if the release already exists. **Regarding verification**, users should account for potential caching delays in PyPI indices. **README capture** must be regenerated after a bump to update version badges. **The wiki** is automatically synchronized via `wiki.yml` from `docs/wiki/`, meaning it is a generated artifact where links are rewritten to absolute URLs.\n\n## Registro oficial MCP\nThe `mcp-registry` job in `publish.yml` handles this automatically. **Manual publication** can be done using `mcp-publisher` if necessary. The registry validates the PyPI README for a specific `mcp-name` and requires the `server.json` description to be 100 characters or fewer.\n\n## CI\nThe `ci.yml` workflow runs on every push or PR. **The lint job** checks locks, formatting, and scripts. **The test job** runs `pytest` across Ubuntu, Windows, and macOS. **The install-smoke job** verifies installation via a fresh wheel build. **The secrets job** uses gitleaks. Additionally, `codeql.yml` performs static analysis, and `vendor-audit.yml` monitors JavaScript dependencies.",
+   "detector": {
+    "lang": "en",
+    "tokens": 295,
+    "es_ratio": 0.0136,
+    "en_ratio": 0.2847,
+    "margin": 0.2711
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "en",
+    "tokens": 308,
+    "es_ratio": 0.0227,
+    "en_ratio": 0.2727
+   },
+   "headings": [
+    "Versionado",
+    "Un tag publica en los dos sitios",
+    "`scripts/release.py`",
+    "Registro oficial MCP",
+    "CI"
+   ],
+   "duplicate_sections_same_title": [],
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "1",
+   "batch": 1,
+   "window_id": "w-20261015T150634Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_summarize",
+   "document": "docs/wiki/Remote-backend.md",
+   "document_sha256": "2c60eb54c630e4aeb5ddbd8777b5983888aac4e3d04bc1753c5379b69b7fdd4b",
+   "document_sha256_frozen": "2c60eb54c630e4aeb5ddbd8777b5983888aac4e3d04bc1753c5379b69b7fdd4b",
+   "document_unchanged": true,
+   "response_sha256": "54cb68644f02206ed4eb54dfc543c1cfef5474393180b804e4bf7fdee3db26ae",
+   "response_literal": "## Introduction\nThis document describes the recommended configuration for running MCP on a Mac while sending inference to a PC.\n\n## Requisitos ya listos en la PC\n**llama-swap** must listen on loopback with environment variable API keys. **Tailscale Serve** must publish ports 9292 and 9393 within the tailnet. **The policy** must allow Mac access to these ports. **The Mac** must have the same key saved in the `local-delegate-remote` Keychain service.\n\n## Carga automática desde Keychain\nThis process stores the URL and secure Keychain reading in `~/.zshrc` to avoid plain text keys.\n\n## Actualizar la Mac tras una release\n**The CLI** uses `local-delegate update` to change pins and ensure the daemon is running. **Claude Code hooks** are automatically replaced if they do not match the installed package. **The backend** remains untouched unless `--restart-backend` is specified. **The CLI itself** must be updated manually via `uv tool upgrade local-delegate-mcp` because the tool cannot update its own environment.\n\n## Claude Code en la Mac\nThe configuration pins the current version and uses environment variables to expand the Keychain key during the session.\n\n## Codex en la Mac\n**The configuration** replaces the `local-delegate` entry in `~/.codex/config.toml` while preserving other settings. **The GUI** requires a LaunchAgent to load the Keychain key into the environment upon login.\n\n## Verificación\n**The user** should run `local_status`, `local_classify`, and `local_summarize` to confirm functionality. **The dashboard** displays the backend status, such as \"conectado\" or error messages regarding MagicDNS, connectivity, or access.\n\n(leído server-side: 9638 chars ≈ 4819 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "## Introduction\nThis document describes the recommended configuration for running MCP on a Mac while sending inference to a PC.\n\n## Requisitos ya listos en la PC\n**llama-swap** must listen on loopback with environment variable API keys. **Tailscale Serve** must publish ports 9292 and 9393 within the tailnet. **The policy** must allow Mac access to these ports. **The Mac** must have the same key saved in the `local-delegate-remote` Keychain service.\n\n## Carga automática desde Keychain\nThis process stores the URL and secure Keychain reading in `~/.zshrc` to avoid plain text keys.\n\n## Actualizar la Mac tras una release\n**The CLI** uses `local-delegate update` to change pins and ensure the daemon is running. **Claude Code hooks** are automatically replaced if they do not match the installed package. **The backend** remains untouched unless `--restart-backend` is specified. **The CLI itself** must be updated manually via `uv tool upgrade local-delegate-mcp` because the tool cannot update its own environment.\n\n## Claude Code en la Mac\nThe configuration pins the current version and uses environment variables to expand the Keychain key during the session.\n\n## Codex en la Mac\n**The configuration** replaces the `local-delegate` entry in `~/.codex/config.toml` while preserving other settings. **The GUI** requires a LaunchAgent to load the Keychain key into the environment upon login.\n\n## Verificación\n**The user** should run `local_status`, `local_classify`, and `local_summarize` to confirm functionality. **The dashboard** displays the backend status, such as \"conectado\" or error messages regarding MagicDNS, connectivity, or access.",
+   "detector": {
+    "lang": "en",
+    "tokens": 244,
+    "es_ratio": 0.0451,
+    "en_ratio": 0.332,
+    "margin": 0.2869
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "en",
+    "tokens": 257,
+    "es_ratio": 0.0545,
+    "en_ratio": 0.3152
+   },
+   "headings": [
+    "Introduction",
+    "Requisitos ya listos en la PC",
+    "Carga automática desde Keychain",
+    "Actualizar la Mac tras una release",
+    "Claude Code en la Mac",
+    "Codex en la Mac",
+    "Verificación"
+   ],
+   "duplicate_sections_same_title": [],
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "1",
+   "batch": 1,
+   "window_id": "w-20261015T150634Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/A5c/mutants.txt",
+   "document_sha256": "4c6cff8b1c2a9e1e0d472ac74bcd9bab434c16e2a3579911587d1f1ca57166a3",
+   "document_sha256_frozen": "4c6cff8b1c2a9e1e0d472ac74bcd9bab434c16e2a3579911587d1f1ca57166a3",
+   "document_unchanged": true,
+   "response_sha256": "d972be4cbcf7b32bbc2599f73110ba61c6073b91176ccc262b048a9ae253c2c3",
+   "response_literal": "**Summary of Issues by File**\n\n**1. prices.json and vigilante**\n\n*   **Key Issues:** 2 KeyError (tests/test_vigilante.py) and 2 KeyError (pricing._judge) related to missing 'input' key.\n*   **Details:**  The schema of the pricing table expects 'input', but the data contains 'entrada'. This discrepancy causes failures in tests and the vigilante component.  The issue is resolved by restoring the original file.\n\n**2. metrics.py (FAMILIA)**\n\n*   **Key Issue:** 1 AssertionError (tests/test_panel_coste.py) due to a string comparison mismatch.\n*   **Details:** The expected string 'familia de tokenizador (nueva 2, anterior 1)' is not present in the actual string, leading to a test failure. The issue is corrected by restoring the file.\n\n**3. metrics.py (acct)**\n\n*   **Key Issue:** 1 AssertionError (tests/test_metrics.py) due to a numerical mismatch.\n*   **Details:** The assertion `0 == 179` fails because the density value differs between Python and JavaScript. The issue is resolved by restoring the file.\n\n(leído server-side: 2153 chars ≈ 1121 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "**Summary of Issues by File**\n\n**1. prices.json and vigilante**\n\n*   **Key Issues:** 2 KeyError (tests/test_vigilante.py) and 2 KeyError (pricing._judge) related to missing 'input' key.\n*   **Details:**  The schema of the pricing table expects 'input', but the data contains 'entrada'. This discrepancy causes failures in tests and the vigilante component.  The issue is resolved by restoring the original file.\n\n**2. metrics.py (FAMILIA)**\n\n*   **Key Issue:** 1 AssertionError (tests/test_panel_coste.py) due to a string comparison mismatch.\n*   **Details:** The expected string 'familia de tokenizador (nueva 2, anterior 1)' is not present in the actual string, leading to a test failure. The issue is corrected by restoring the file.\n\n**3. metrics.py (acct)**\n\n*   **Key Issue:** 1 AssertionError (tests/test_metrics.py) due to a numerical mismatch.\n*   **Details:** The assertion `0 == 179` fails because the density value differs between Python and JavaScript. The issue is resolved by restoring the file.",
+   "detector": {
+    "lang": "en",
+    "tokens": 140,
+    "es_ratio": 0.0071,
+    "en_ratio": 0.2786,
+    "margin": 0.2715
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "en",
+    "tokens": 153,
+    "es_ratio": 0.0261,
+    "en_ratio": 0.2549
+   },
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "1",
+   "batch": 1,
+   "window_id": "w-20261015T150634Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/A7a/strings-check.txt",
+   "document_sha256": "98ee6f939f016e475738d44d0d3ef37dcdd51467e76913568816eb842c24feb8",
+   "document_sha256_frozen": "98ee6f939f016e475738d44d0d3ef37dcdd51467e76913568816eb842c24feb8",
+   "document_unchanged": true,
+   "response_sha256": "050aef45cc38604a7d852cd98ae59ca7750616c8752fcb2b748792ba08d790d0",
+   "response_literal": "**src/**\n\n*   **aviso:** 10 (Aviso: Before 10, After 10)\n*   **respaldo:** 1 (Respaldo: Before 1, After 1)\n*   **truncado:** 15 (Truncado: Before 15, After 15)\n*   **\\_local\\_delegate:** 22 (\\_local\\_delegate: Before 22, After 22)\n\n**tests/**\n\n*   **aviso:** 105 (Aviso: 105)\n*   **respaldo:** 72 (Respaldo: 72)\n*   **truncado:** 30 (Truncado: 30)\n*   **\\_local\\_delegate:** 17 (\\_local\\_delegate: 17)\n\n**server.py**\n\n*   **respaldo:** 1 (Docstring change: `respaldo` → `fallback` in _chat docstring)\n\n**General Notes:**\n\nThe primary issue involves changes to the \"respaldo\" marker, specifically the replacement of \"_con\\_respaldo\" with \"_with\\_fallback\" across multiple files.  Several docstrings were updated to reflect this change.  The remaining errors are related to the presence of the literal marker in both source and test files, with no changes detected.\n\n(leído server-side: 846 chars ≈ 440 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "**src/**\n\n*   **aviso:** 10 (Aviso: Before 10, After 10)\n*   **respaldo:** 1 (Respaldo: Before 1, After 1)\n*   **truncado:** 15 (Truncado: Before 15, After 15)\n*   **\\_local\\_delegate:** 22 (\\_local\\_delegate: Before 22, After 22)\n\n**tests/**\n\n*   **aviso:** 105 (Aviso: 105)\n*   **respaldo:** 72 (Respaldo: 72)\n*   **truncado:** 30 (Truncado: 30)\n*   **\\_local\\_delegate:** 17 (\\_local\\_delegate: 17)\n\n**server.py**\n\n*   **respaldo:** 1 (Docstring change: `respaldo` → `fallback` in _chat docstring)\n\n**General Notes:**\n\nThe primary issue involves changes to the \"respaldo\" marker, specifically the replacement of \"_con\\_respaldo\" with \"_with\\_fallback\" across multiple files.  Several docstrings were updated to reflect this change.  The remaining errors are related to the presence of the literal marker in both source and test files, with no changes detected.",
+   "detector": {
+    "lang": "en",
+    "tokens": 93,
+    "es_ratio": 0.0108,
+    "en_ratio": 0.3226,
+    "margin": 0.3118
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "en",
+    "tokens": 106,
+    "es_ratio": 0.0377,
+    "en_ratio": 0.283
+   },
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "1",
+   "batch": 1,
+   "window_id": "w-20261015T150634Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/A7b/mutants.txt",
+   "document_sha256": "8ecb631c9dec5abcf96a3f4265ed29cf71e0823357214e1cb896a1fdf8916cec",
+   "document_sha256_frozen": "8ecb631c9dec5abcf96a3f4265ed29cf71e0823357214e1cb896a1fdf8916cec",
+   "document_unchanged": true,
+   "response_sha256": "f4c262df96be6b3ee22d07dbc80e2d2314ef3e082c4b423e7b0ae9fa7f119d08",
+   "response_literal": "**Linting & Testing Summary**\n\n**tools/make_mapping.py (1 issue)**\n\n*   One `ValueError` due to missing `_find_function` array. The test `tools/tests/test_make_mapping.py::test_a_nested_function_inside_compound_statements_is_found` failed due to this issue. The error occurred in `_local_edits` (make_mapping.py:477) and was related to a previous phase 1 failure. Restored with sha256 f42a0930ec83.\n\n**tests/test_turn_daemon.py (1 issue)**\n\n*   One `RuntimeError` due to a `TypeError` in thread X, caused by an outdated keyword argument. The assertion `:603: assert x_stuck.wait(2)` failed. The manual edit at line 597 (ren.py not seeing) was necessary. Restored with sha256 3a589cbed4c2.\n\n**src/local_delegate/server.py (1 issue)**\n\n*   One `AttributeError` due to incorrect `BackendState.cause` field return. The test `tests/test_sondeo_backend.py` triggered this error, accessing `.cause` in multiple assertions. The change in server.py, along with related modifications in web/metrics.py and tests, required a manual edit. Restored with sha256 08f6a3106429.\n\n**Overall:** 43 tests passed after restoration.\n\n(leído server-side: 2040 chars ≈ 1062 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "**Linting & Testing Summary**\n\n**tools/make_mapping.py (1 issue)**\n\n*   One `ValueError` due to missing `_find_function` array. The test `tools/tests/test_make_mapping.py::test_a_nested_function_inside_compound_statements_is_found` failed due to this issue. The error occurred in `_local_edits` (make_mapping.py:477) and was related to a previous phase 1 failure. Restored with sha256 f42a0930ec83.\n\n**tests/test_turn_daemon.py (1 issue)**\n\n*   One `RuntimeError` due to a `TypeError` in thread X, caused by an outdated keyword argument. The assertion `:603: assert x_stuck.wait(2)` failed. The manual edit at line 597 (ren.py not seeing) was necessary. Restored with sha256 3a589cbed4c2.\n\n**src/local_delegate/server.py (1 issue)**\n\n*   One `AttributeError` due to incorrect `BackendState.cause` field return. The test `tests/test_sondeo_backend.py` triggered this error, accessing `.cause` in multiple assertions. The change in server.py, along with related modifications in web/metrics.py and tests, required a manual edit. Restored with sha256 08f6a3106429.\n\n**Overall:** 43 tests passed after restoration.",
+   "detector": {
+    "lang": "en",
+    "tokens": 165,
+    "es_ratio": 0.0,
+    "en_ratio": 0.2364,
+    "margin": 0.2364
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "en",
+    "tokens": 178,
+    "es_ratio": 0.0169,
+    "en_ratio": 0.2191
+   },
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "1",
+   "batch": 1,
+   "window_id": "w-20261015T150634Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/A8a-1/mutants.txt",
+   "document_sha256": "6932cdce7f85b5451be37007756e234d5f764f5c3b906c20f8a2f79986c99915",
+   "document_sha256_frozen": "6932cdce7f85b5451be37007756e234d5f764f5c3b906c20f8a2f79986c99915",
+   "document_unchanged": true,
+   "response_sha256": "e9f14ee2d429524432d507f541e0ce0e13589dcb1986526bbce5704a7839874f",
+   "response_literal": "**Summary of Issues by File**\n\n**checks.py:**\n*   TypeError: `_oldest_pending()` received ‘plazo_dias’ argument (1).\n*   Return value \"no\\_credential\" changed to \"sin\\_credencial\" (1).\n\n**chains.py:**\n*   AttributeError: ‘Chain’ object lacks ‘steps’ attribute (1).\n\n**Overall:**\n*   Total Errors: 2\n*   Total Rules/Exceptions: 3\n*   Relevant Issues: The `_oldest_pending` function received an unexpected keyword argument, leading to a TypeError. The change in return value from \"no\\_credential\" to \"sin\\_credencial\" caused a test failure due to the lack of differentiation between branches. The absence of the 'steps' attribute in the Chain object resulted in a test failure.\n\n(leído server-side: 1710 chars ≈ 890 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "**Summary of Issues by File**\n\n**checks.py:**\n*   TypeError: `_oldest_pending()` received ‘plazo_dias’ argument (1).\n*   Return value \"no\\_credential\" changed to \"sin\\_credencial\" (1).\n\n**chains.py:**\n*   AttributeError: ‘Chain’ object lacks ‘steps’ attribute (1).\n\n**Overall:**\n*   Total Errors: 2\n*   Total Rules/Exceptions: 3\n*   Relevant Issues: The `_oldest_pending` function received an unexpected keyword argument, leading to a TypeError. The change in return value from \"no\\_credential\" to \"sin\\_credencial\" caused a test failure due to the lack of differentiation between branches. The absence of the 'steps' attribute in the Chain object resulted in a test failure.",
+   "detector": {
+    "lang": "en",
+    "tokens": 89,
+    "es_ratio": 0.0225,
+    "en_ratio": 0.2247,
+    "margin": 0.2022
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "unknown",
+    "tokens": 102,
+    "es_ratio": 0.049,
+    "en_ratio": 0.1961
+   },
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "1",
+   "batch": 1,
+   "window_id": "w-20261015T150634Z",
+   "combination": {
+    "product": "es",
+    "output_language": "en"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/A8a-2/mutants.txt",
+   "document_sha256": "0f34f1d6e6750f878f291341cce72c34fcf2a9b207a20f4ec4e895f83ebdadd0",
+   "document_sha256_frozen": "0f34f1d6e6750f878f291341cce72c34fcf2a9b207a20f4ec4e895f83ebdadd0",
+   "document_unchanged": true,
+   "response_sha256": "7d8a2e8f0d1d269e2547840ab18552aa876c0ce092c8240d233843850b348604",
+   "response_literal": "**Summary of Issues by File**\n\n**tests/test_aislamiento_entorno.py:** 1 failed assertion (AssertionError) related to the `_leer` variable and its exclusion from the inventory. The guardian is correctly filtering registered doors.\n\n**tests/test_post_chat_caminos.py:** 1 failed test due to an `AttributeError` accessing `arrancar` instead of `start` in the `answer` object.  The sha256 was restored.\n\n**tests/test_web_auth.py:** 1 failed test due to an `AttributeError` accessing `duration` instead of `duracion` in the `PortToken` object. The sha256 was restored.\n\n**questions.py:** 1 schema discrepancy identified during `model_json_schema()` validation. The title \"Modelo\" should be \"Model\" to match the schema definition. No test suite checks this aspect. The sha256 was restored.\n\n(leído server-side: 1944 chars ≈ 1012 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "**Summary of Issues by File**\n\n**tests/test_aislamiento_entorno.py:** 1 failed assertion (AssertionError) related to the `_leer` variable and its exclusion from the inventory. The guardian is correctly filtering registered doors.\n\n**tests/test_post_chat_caminos.py:** 1 failed test due to an `AttributeError` accessing `arrancar` instead of `start` in the `answer` object.  The sha256 was restored.\n\n**tests/test_web_auth.py:** 1 failed test due to an `AttributeError` accessing `duration` instead of `duracion` in the `PortToken` object. The sha256 was restored.\n\n**questions.py:** 1 schema discrepancy identified during `model_json_schema()` validation. The title \"Modelo\" should be \"Model\" to match the schema definition. No test suite checks this aspect. The sha256 was restored.",
+   "detector": {
+    "lang": "en",
+    "tokens": 111,
+    "es_ratio": 0.0,
+    "en_ratio": 0.2973,
+    "margin": 0.2973
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "en",
+    "tokens": 124,
+    "es_ratio": 0.0242,
+    "en_ratio": 0.2661
+   },
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "unsummarized_section_placeholders": 0
+  }
+ ]
+}

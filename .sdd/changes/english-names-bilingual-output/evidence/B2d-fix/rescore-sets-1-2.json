@@ -1,0 +1,1852 @@
+{
+ "status": "retrospective",
+ "validates_nothing": true,
+ "note": "Retrospective rescore of responses ALREADY measured (sets 1-2 in batches 1-2, live probes X and Y) with the prose-only judge, written after looking at those failures. It does not validate the judge nor the language order: that is the job of control set 3 (lang-sample-docs-3.json), frozen before the judge, and of the human review sample.",
+ "rescored_at": "2026-10-15T17:56:48+00:00",
+ "judge": {
+  "script": "scripts/judge_response_language.py",
+  "commit": "6d29ceb",
+  "sha256": "c212c71eeecea65151cc10fd0e4a3adf4ab923f3692aa8c209841d723dc953a0",
+  "rules": "evidence/B2d-fix/judge-rules.md"
+ },
+ "old_rule": "detect(min_tokens=20, min_margin=0.15) on the literal response minus the product's wrapper lines (pass -> requested, fail_opposite -> opposite, fail_unknown -> unknown)",
+ "requested": {
+  "batch1": "en",
+  "batch2": "es",
+  "probeX": "en",
+  "probeY": "en"
+ },
+ "summary": {
+  "local_lint_summary | batch1 | set 1": {
+   "n": 5,
+   "old": {
+    "requested": 5
+   },
+   "new": {
+    "requested": 5
+   }
+  },
+  "local_lint_summary | batch1 | set 2": {
+   "n": 5,
+   "old": {
+    "unknown": 2,
+    "requested": 3
+   },
+   "new": {
+    "unknown": 1,
+    "requested": 3,
+    "not_judgeable": 1
+   }
+  },
+  "local_lint_summary | batch2 | set 1": {
+   "n": 5,
+   "old": {
+    "unknown": 1,
+    "requested": 4
+   },
+   "new": {
+    "not_judgeable": 1,
+    "requested": 4
+   }
+  },
+  "local_lint_summary | batch2 | set 2": {
+   "n": 5,
+   "old": {
+    "requested": 5
+   },
+   "new": {
+    "requested": 5
+   }
+  },
+  "local_lint_summary | probeX": {
+   "n": 6,
+   "old": {
+    "unknown": 5,
+    "requested": 1
+   },
+   "new": {
+    "unknown": 3,
+    "requested": 3
+   }
+  },
+  "local_lint_summary | probeY": {
+   "n": 6,
+   "old": {
+    "requested": 3,
+    "unknown": 3
+   },
+   "new": {
+    "requested": 5,
+    "unknown": 1
+   }
+  },
+  "local_summarize | batch1 | set 1": {
+   "n": 5,
+   "old": {
+    "requested": 4,
+    "unknown": 1
+   },
+   "new": {
+    "requested": 5
+   }
+  },
+  "local_summarize | batch1 | set 2": {
+   "n": 5,
+   "old": {
+    "requested": 3,
+    "unknown": 2
+   },
+   "new": {
+    "requested": 5
+   }
+  },
+  "local_summarize | batch2 | set 1": {
+   "n": 5,
+   "old": {
+    "requested": 5
+   },
+   "new": {
+    "requested": 5
+   }
+  },
+  "local_summarize | batch2 | set 2": {
+   "n": 5,
+   "old": {
+    "requested": 5
+   },
+   "new": {
+    "requested": 5
+   }
+  },
+  "local_summarize | probeY": {
+   "n": 3,
+   "old": {
+    "requested": 3
+   },
+   "new": {
+    "requested": 3
+   }
+  }
+ },
+ "totals": {
+  "n": 55,
+  "old": {
+   "requested": 41,
+   "unknown": 14
+  },
+  "new": {
+   "requested": 48,
+   "unknown": 5,
+   "not_judgeable": 2
+  },
+  "changed": 10,
+  "documents_changed_since_measured": 0
+ },
+ "rows": [
+  {
+   "id": "batch1-01",
+   "source": "batch1",
+   "file": "evidence/B2d-fix/lang-sample-batch1.json",
+   "sample_index": 1,
+   "set": "2",
+   "batch": 1,
+   "repetition": null,
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-README.md",
+   "document_sha256_now": "2b9224499011139e14b4e8de2c7779dc90a99320e87f434fd1263807aad29a7c",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "ded35196e3462579a6bd672b41ba4e77dcc149496ccc8ef09fa271ea3f91e687",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 184,
+    "margin": 0.1902
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 137,
+    "es_ratio": 0.0,
+    "en_ratio": 0.3066,
+    "margin": 0.3066
+   },
+   "changed": false,
+   "judged_text_new": "## Introduction\nThis tool delegates mechanical text tasks to local LLMs.\n\nThe dashboard monitors backend status, resource usage, and savings.\n\nIt saves subscription quota by processing large files locally.\n\nUsers can use for isolated execution or run to configure the entire integration automatically.\n\nRequires **Python and an endpoint**.\n\n**The tools** allow file reading to prevent large contexts from reaching Claude. **Long documents** are handled via chunking or\n\nSettings are managed via environment variables, covering endpoints, models, and timeouts.\n\nThe system tracks conserved context and local costs through a dashboard. **Tests** are excluded from these metrics.\n\nIt only performs tasks and avoids local or audio.\n\n**The integration** installs MCP entries, hooks, skills, and memory files. **Hooks** are specific to Claude Code.\n\nUsers can manage model pools and residency using specific CLI commands.\n\nLinks to the Wiki, Recipes, and License."
+  },
+  {
+   "id": "batch1-02",
+   "source": "batch1",
+   "file": "evidence/B2d-fix/lang-sample-batch1.json",
+   "sample_index": 2,
+   "set": "2",
+   "batch": 1,
+   "repetition": null,
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_Investigacion-empaquetado-publicacion-MCP.md",
+   "document_sha256_now": "e8967de91b7f660847fdce9ac9b7ce443223989cf7625b4e13ae9dfa72ddf422",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "f65c67b7cff0fb5f93f94417d074d22e181ce033090ba32ea8fdf06fab4d832c",
+   "old": {
+    "verdict": "unknown",
+    "lang": "unknown",
+    "tokens": 331,
+    "margin": 0.0937
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 263,
+    "es_ratio": 0.0494,
+    "en_ratio": 0.2091,
+    "margin": 0.1597
+   },
+   "changed": true,
+   "judged_text_new": "## Introduction\nThe project status involves a functional MCP with tools and metrics, currently in a local, uncommitted state.\n\nThe project is publishable if decoupled from local environments, using and the official MCP registry.\n\nDecoupling requires replacing hardcoded paths with environment variables, making model catalogs configurable, and making specific integrations optional.\n\nA new directory is created to avoid breaking the current working setup during the migration process.\n\nPanorama de distribución** compares different channels like the official MCP registry, npm, Docker, and DXT.\nRecomendación y por qué** suggests using and the official registry via for benefits.\nRefactor mínimo para que sea genérico** involves implementing a layout, using , and externalizing all configurations.\n(registro oficial MCP)** defines the official metadata schema required for registry discovery.\nFlujo de publicación (paso a paso)** outlines the process from building with to publishing via .\nVersionado y releases** mandates using and matching versions between the package and the registry.\n\nEstructura propuesta** details a clean repository layout including source code, tests, and documentation.\nREADME (qué va aquí vs qué va a la wiki)** distinguishes between instructions and documentation.\nWiki (páginas propuestas)** lists essential topics like architecture, configuration, and specific backend recipes.\nSeguridad — NO exponer secretos (crítico)** emphasizes using templates and to prevent leaking credentials.\nLicencia y comunidad** suggests using permissive licenses and establishing contribution guidelines.\nActions)** proposes automated testing and secure publishing using OIDC.\n\nKey decisions include package scope, personal integration handling, naming, and licensing.\n\nThe plan moves from creating a clean directory to porting logic, setting up the repo, publishing, and polishing.\n\nLists official MCP documentation, registry requirements, and repository best practices."
+  },
+  {
+   "id": "batch1-03",
+   "source": "batch1",
+   "file": "evidence/B2d-fix/lang-sample-batch1.json",
+   "sample_index": 3,
+   "set": "2",
+   "batch": 1,
+   "repetition": null,
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_plans_plan-f6-vision.md",
+   "document_sha256_now": "83e4a6cd3a44ca41ebf6327e4d003c4f097882992e85482a4451ec32ab74b5c2",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "61e513f649921d201674a7930963098cddeac5d2887fd5dafbd7fb4366b81d03",
+   "old": {
+    "verdict": "unknown",
+    "lang": "unknown",
+    "tokens": 254,
+    "margin": 0.0473
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 168,
+    "es_ratio": 0.0536,
+    "en_ratio": 0.2202,
+    "margin": 0.1666
+   },
+   "changed": true,
+   "judged_text_new": "## Introduction\nThis plan focuses exclusively on implementing local vision capabilities\n\n**Candidatos de modelo (tamaños confirmados en Hugging Face, The model is selected as the primary candidate due to its size and compatibility. **Discrepancia con el enunciado de la sesión** The role ID will remain to maintain consistency with the existing catalog. **Advertencia (a documentar en la recipe)** Multimodal support in is considered experimental, requiring version pinning and caution during upgrades.\n\n— ** Define vision model and maximum image size environment variables. — : tool ** Implements the image description tool with strict path, extension, and size validations. — Recipe ** Provides documentation with specific model configurations and version warnings. — Actualizaciones colaterales** Updates tests, status commands, documentation, and agent skills. — Tests ( o nuevo )** Validates multimodal payloads and error handling using mock data.\n\nRequires explicit permission for downloading large model files, backing up configurations, and modifying local YAML files.\n\nSuccess requires passing all tests, updating documentation, verifying the vision role, and performing manual VRAM and functional validation.\n\nNo discrepancies have been detected in the relevant existing code."
+  },
+  {
+   "id": "batch1-04",
+   "source": "batch1",
+   "file": "evidence/B2d-fix/lang-sample-batch1.json",
+   "sample_index": 4,
+   "set": "2",
+   "batch": 1,
+   "repetition": null,
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-doc-fastapi-0.143.0.METADATA.md",
+   "document_sha256_now": "1bfa2ecf35ea529d68e56c195c5a4cee7864335d24bcc4a76cf40d7a71edc6e9",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "4eae2d45c8325972312c94e85c361a44afb3121c0d947362898ec7ad617db6b4",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 247,
+    "margin": 0.2672
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 196,
+    "es_ratio": 0.0,
+    "en_ratio": 0.3265,
+    "margin": 0.3265
+   },
+   "changed": false,
+   "judged_text_new": "## Introduction\nis a modern, web framework for building APIs with Python using standard type hints.\n\n**Keystone Sponsor** is Cloud. **Gold Sponsors** include several companies like and Railway. **Silver Sponsors** include Databento and Svix.\n\nVarious industry leaders from Microsoft, Uber, Netflix, and Cisco praise the framework's design and scalability.\n\nA short documentary about was released at the end of\n\nTyper is a sibling library designed for building interfaces.\n\nThe framework relies on Starlette for web functionality and Pydantic for data handling.\n\nUsers can install it using or via .\n\n**Create it** involves writing a file. **Run it** uses . **Check it** by visiting the local URL. **Interactive API docs** are available via Swagger UI. **Alternative API docs** are provided by\n\n**Interactive API docs upgrade** shows updated documentation with new bodies. **Alternative API docs upgrade** reflects changes in **Recap** explains how type declarations provide validation and conversion. **Deploy your app (optional)** can be done via Cloud.\n\nIt is ranked as one of the fastest Python frameworks in benchmarks.\n\n** Dependencies** include tools like and . **Without Dependencies** refers to a minimal installation. **Without ** allows excluding the cloud tool. **Additional Optional Dependencies** include and .\n\nThe project is licensed under the MIT license."
+  },
+  {
+   "id": "batch1-05",
+   "source": "batch1",
+   "file": "evidence/B2d-fix/lang-sample-batch1.json",
+   "sample_index": 5,
+   "set": "2",
+   "batch": 1,
+   "repetition": null,
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-doc-httpcore2-2.13.1.METADATA.md",
+   "document_sha256_now": "37a0ea0674e98b7c3a1f99c17d9bb5457de27a0f93c8b6560c9d17d525139abb",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "d3be0d32e9b6c98bb4663cf09ff200815e70b0d1fefc5fb3666f760730ff5f45",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 85,
+    "margin": 0.2353
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 76,
+    "es_ratio": 0.0,
+    "en_ratio": 0.2632,
+    "margin": 0.2632
+   },
+   "changed": false,
+   "judged_text_new": "## Introduction\nThis package provides a minimal, HTTP client designed to perform a single task: sending HTTP requests.\n\n**Installation** Users can install the package via pip, with optional extras for various features. **Sending requests** The library offers a function and connection pooling for making requests. **Motivation** It aims to provide a reusable library with a clear interface split. **Dependencies** It relies on and truststore, with optional dependencies like anyio and trio. **Versioning** The project follows SEMVER guidelines."
+  },
+  {
+   "id": "batch1-06",
+   "source": "batch1",
+   "file": "evidence/B2d-fix/lang-sample-batch1.json",
+   "sample_index": 6,
+   "set": "2",
+   "batch": 1,
+   "repetition": null,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_complete.txt",
+   "document_sha256_now": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "f6a9b6e7907201b7ac210d28fcb665cc60ef5be5bf3bac0709947040ec7f1362",
+   "old": {
+    "verdict": "unknown",
+    "lang": "unknown",
+    "tokens": 92,
+    "margin": 0.0979
+   },
+   "new": {
+    "verdict": "unknown",
+    "lang": "unknown",
+    "tokens": 82,
+    "es_ratio": 0.0244,
+    "en_ratio": 0.1341,
+    "margin": 0.1097
+   },
+   "changed": false,
+   "judged_text_new": "doctor report:\n\n* (Warning) Not set; requires in PATH.\n* (Warning) Not set.\n* **Clientes:** (OK) Detected: Claude Code, Codex, opencode. No MCP clients observed.\n* **Cadenas de respaldo:** (OK) Valid chains, no resident chains.\n* **Coste y relleno:** (Warning) No saved comparisons found; no transcripts available.\n* **Hooks:** (OK) copied scripts, registered hooks.\n* **Skills:** (OK) Claude Code and opencode skills installed.\n* **Memoria MCP:** (OK) MCPs registered and managed in respective files.\n* **Servicios:** (OK) Daemon and backend running.\n* **Versiones:** (Warning) version is tested, but residency is not configured."
+  },
+  {
+   "id": "batch1-07",
+   "source": "batch1",
+   "file": "evidence/B2d-fix/lang-sample-batch1.json",
+   "sample_index": 7,
+   "set": "2",
+   "batch": 1,
+   "repetition": null,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_empty.txt",
+   "document_sha256_now": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "eeb67bbdc5670c2ae7841f4764c3136a2a96813d57a09a5f1ca868a3bff53a21",
+   "old": {
+    "verdict": "unknown",
+    "lang": "unknown",
+    "tokens": 179,
+    "margin": 0.134
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 132,
+    "es_ratio": 0.0227,
+    "en_ratio": 0.1894,
+    "margin": 0.1667
+   },
+   "changed": true,
+   "judged_text_new": "Local Delegate Doctor Summary:\n\nNo configured (requires in PATH).\nNot set.\n**Backend – OK.\n**Clientes:** Detected Claude Code, Codex, opencode – OK.\n**Cadenas de respaldo:** Valid chains – OK.\n**Coste y relleno:** No comparison found – OK.\n**Hooks:** Missing hooks in and – Requires . errors)\n**Skills:** Missing Claude Code, opencode and Codex skills – Requires . errors)\n**Memoria Global:** Missing Claude Code, Codex and opencode agents – Requires . errors)\n**MCP Configuration:** Missing MCP configuration files in and – Requires . errors)\n**Daemon:** Running – OK.\n**Versiones:** and versions are – OK.\n**Token de Claude Desktop:** Not configured – OK.\n\nTotal Warnings: The primary issues involve missing configuration files and hooks, requiring a to resolve. Specifically, the absence of and associated configuration files for Claude Code, Codex, and opencode is a critical concern. Review the flagged files and execute the installation command to address these problems."
+  },
+  {
+   "id": "batch1-08",
+   "source": "batch1",
+   "file": "evidence/B2d-fix/lang-sample-batch1.json",
+   "sample_index": 8,
+   "set": "2",
+   "batch": 1,
+   "repetition": null,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B2b-2_corpus-affinity-check.txt",
+   "document_sha256_now": "bf9da67e5c973b9a8dba61ffb345673c5828f734d96ac8595309a7dd8c5d5caa",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "19425978d0dc4f7904bbbe90d69fce9b6e0c9d4bc834cad8f6857976cc20f977",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 75,
+    "margin": 0.1733
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 47,
+    "es_ratio": 0.0,
+    "en_ratio": 0.3191,
+    "margin": 0.3191
+   },
+   "changed": false,
+   "judged_text_new": "* **Ruff Rule Changes\n* : Change with prompts from (declared frontier).\n* : Change with prompts from (declared frontier).\n* : Change with prompts from (declared frontier).\n* : Change with prompts from (declared frontier).\n* **Markdown Summary Changes\n* : Change with prompts from (declared frontier).\n\n**uv run\n\n* **Language Definition\n* : Not defined in this environment (not used)."
+  },
+  {
+   "id": "batch1-09",
+   "source": "batch1",
+   "file": "evidence/B2d-fix/lang-sample-batch1.json",
+   "sample_index": 9,
+   "set": "2",
+   "batch": 1,
+   "repetition": null,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-biome-lint.txt",
+   "document_sha256_now": "071dd4473f52d3136e2fa336c275589614f40e6821965d6ba3aeef210ffc1ba8",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "c3ff0e37618748ae75b5ca1364ad2b547586076f73290857f3aef690d8e78fd0",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 219,
+    "margin": 0.178
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 95,
+    "es_ratio": 0.0,
+    "en_ratio": 0.4421,
+    "margin": 0.4421
+   },
+   "changed": false,
+   "judged_text_new": "###\n- The restricted dependency was detected and should be replaced with alternatives like , , or .\n\n###\n- Multiple object properties , , , , , ) must use\n- A magic number was detected in the default value.\n\n###\n- Several magic numbers were found in string length constraints\n- The file contains more than one class.\n\n###\n- Multiple magic numbers were detected in schema constraints\n- Property names , , , ) should be in\n- The file exceeds the maximum limit of one class.\n\n###\n- Block statements are preferred for statements instead of returns.\n\n###\n- Use explicit class properties instead of parameter properties in the constructor.\n- Certain imports are only used as types and should use .\n\n###\n-"
+  },
+  {
+   "id": "batch1-10",
+   "source": "batch1",
+   "file": "evidence/B2d-fix/lang-sample-batch1.json",
+   "sample_index": 10,
+   "set": "2",
+   "batch": 1,
+   "repetition": null,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-pytest.txt",
+   "document_sha256_now": "475392a64a7d58a336de6e841b54de8dfaf650b7336de343add1f207ba404dd0",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "89285d106e815bbb84d7dd30e597098247eb83fb954612e874b388f4ca2e53c0",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 28,
+    "margin": 0.1786
+   },
+   "new": {
+    "verdict": "not_judgeable",
+    "lang": "not_judged",
+    "tokens": 19,
+    "es_ratio": 0.0,
+    "en_ratio": 0.2632,
+    "margin": 0.2632
+   },
+   "changed": true,
+   "judged_text_new": "No issues were found in the provided output. All tests passed successfully.\n\n\n* PASSED:\n\n\n* PASSED:\n\n**Summary of results:**\n* Total passed:"
+  },
+  {
+   "id": "batch1-11",
+   "source": "batch1",
+   "file": "evidence/B2d-fix/lang-sample-batch1.json",
+   "sample_index": 11,
+   "set": "1",
+   "batch": 1,
+   "repetition": null,
+   "tool": "local_summarize",
+   "document": "docs/wiki/Architecture.md",
+   "document_sha256_now": "45b24656f8ded36bec430d055f5c797b01ef504d5de963615ea76fba6d8f9f2e",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "a4654104fff4f481ae7c60c062109cedb905a26c5fcea7d263290b59f076fe06",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 307,
+    "margin": 0.1564
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 219,
+    "es_ratio": 0.032,
+    "en_ratio": 0.2785,
+    "margin": 0.2465
+   },
+   "changed": false,
+   "judged_text_new": "The is an MCP server acting as a singleton daemon that routes requests to endpoints and provides a web dashboard.\n\nThe system assumes a generic backend, uses outputs with system guardrails, and optimizes context usage by processing files locally. It also uses JSONL for telemetry instead of\n\n**Se usa** includes for observing clients and request context, and for user queries.\n**Descartado: This was rejected because telemetry is already centralized at the backend call level.\n**Descartado: This was discarded as it does not reduce backend inference costs.\n**Descartado: This is unnecessary because the server does not expose MCP resources or prompts.\n** va partido en dos, y la distinción importa** is discarded, but is kept for potential external exposure.\n**Nota sobre la revisión del protocolo** The implementation targets versions actually negotiated by clients rather than the latest protocol versions.\n\nThe daemon manages request turns to avoid model conflicts, uses affinity to select already loaded models, and monitors inference speed against reference medians.\n\n** ** manages tools and guardrails. ** ** tracks MCP clients. ** ** handles user elicitation. ** ** manages settings. ** ** handles backend startup. ** ** runs the ASGI server. ** ** provides the dashboard. ** ** classifies backend errors. ** ** manages fallback chains. ** ** analyzes model conflicts. ** ** implements the turn logic. ** ** handles affinity selection. ** ** tracks model resource usage. ** ** monitors inference speed. ** ** interfaces with the backend. ** ** estimates memory usage. ** ** manages model residency. ** ** handles model cooldowns. ** ** contains"
+  },
+  {
+   "id": "batch1-12",
+   "source": "batch1",
+   "file": "evidence/B2d-fix/lang-sample-batch1.json",
+   "sample_index": 12,
+   "set": "1",
+   "batch": 1,
+   "repetition": null,
+   "tool": "local_summarize",
+   "document": "docs/wiki/Backend-versions.md",
+   "document_sha256_now": "fac7ae129c7926119939d935edb1643a8c49d38208d95e7c5a302372ac28bdc0",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "a553c8d19928c02b12427ac2683d81e7d151f31c21b383142c93107de5727ed4",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 269,
+    "margin": 0.197
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 195,
+    "es_ratio": 0.0256,
+    "en_ratio": 0.3026,
+    "margin": 0.277
+   },
+   "changed": false,
+   "judged_text_new": "## Introduction\nThis page serves as a tested reference for versions and folder layouts used to verify each release.\n\n**Qué se usa de y de The system relies on specific versions to manage affinity, and residency. It reads configurations like groups and TTL from , monitors model states via , tracks inflight requests through , and uses for TTL tracking. It also monitors configuration changes via and uses timings for inference metrics.\n\nThe workspace is a root directory containing , , , and a folder, linked via specific environment variables.\n\nThis command detects installed versions and suggests updates. Using compares installations against releases, applying a holding period for new releases and checking for recent critical issues.\n\n**benchmark** This tool runs real tasks against candidate backends to ensure performance parity. It records results in JSONL, including quantization and context details. **outcomes** Results are categorized into , (retried once), , , or . Certain cases execute generated code in a controlled environment to measure coverage and success ratios. **scoring** While objective metrics are automated, tasks use manual comparisons. **resources** On Windows, it tracks private RAM and VRAM usage per process.\n\nTo ensure activity metrics survive restarts, users must define a SQLite database path in the using the setting."
+  },
+  {
+   "id": "batch1-13",
+   "source": "batch1",
+   "file": "evidence/B2d-fix/lang-sample-batch1.json",
+   "sample_index": 13,
+   "set": "1",
+   "batch": 1,
+   "repetition": null,
+   "tool": "local_summarize",
+   "document": "docs/wiki/Daemon.md",
+   "document_sha256_now": "5ad2c5ad4b3879d1b81086279abf63886ca0a71dadc357afa0bde4bf0836b9be",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "c93ad63d32c2030eb3ed47ece7f59784860d2ac84aeda37b29950c6752ebb921",
+   "old": {
+    "verdict": "unknown",
+    "lang": "unknown",
+    "tokens": 205,
+    "margin": 0.122
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 158,
+    "es_ratio": 0.0696,
+    "en_ratio": 0.2722,
+    "margin": 0.2026
+   },
+   "changed": true,
+   "judged_text_new": "The transport requires one process per client, making the dashboard ephemeral.\n\nRun to start the daemon with specific HTTP and state defaults.\n\nConfigure Codex, Claude Code, and opencode to point to the same daemon URL.\n\n**Turno.** The daemon manages model contention by distributing turns among conflicting models. **Endpoints para el CLI y .** The daemon provides API endpoints for status, configuration watching, and residency.\n\nThe port is open by default but requires a if exposed via a proxy.\n**La sesión del navegador** The daemon uses signed cookies for browser sessions.\n**Que los clientes sigan funcionando** Clients use environment variables to avoid storing tokens in configuration files.\n\nThe daemon registers with system service managers using specific canonical names.\n**Windows sin ventana visible** Use to prevent console windows when using authenticated launchers.\nUse a file in to manage the daemon.\n**Linux: ** Use a service unit in .\n**Qué significa «DAEMON MCP» en el dashboard** This badge identifies the single shared server process."
+  },
+  {
+   "id": "batch1-14",
+   "source": "batch1",
+   "file": "evidence/B2d-fix/lang-sample-batch1.json",
+   "sample_index": 14,
+   "set": "1",
+   "batch": 1,
+   "repetition": null,
+   "tool": "local_summarize",
+   "document": "docs/wiki/Publishing.md",
+   "document_sha256_now": "ab81f38524d083a71f66c28d85a8573bb6e0a8f5e785a34921068d38f9fc6573",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "92ae7bebc8440bf1b51b189759749051ba46bf6bed1377d592cc1929945f1baa",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 295,
+    "margin": 0.2711
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 220,
+    "es_ratio": 0.0,
+    "en_ratio": 0.3818,
+    "margin": 0.3818
+   },
+   "changed": false,
+   "judged_text_new": "The project follows requiring version bumps in , , both versions, , and a tag.\n\nThe workflow triggers on tags, executing three sequential jobs: , via OIDC, and . and the MCP registry use passwordless authentication. The registry publication follows to ensure the package and its README are available. Users must first configure a trusted publisher on Releases are managed by running followed by a PR process. Finally, executes the full release.\n\nThis script automates building, creating a Release with changelog notes, attaching artifacts, and creating the tag. **It aborts** if versioning is inconsistent, if the user is not on , or if the release already exists. **Regarding verification**, users should account for potential caching delays in indices. **README capture** must be regenerated after a bump to update version badges. **The wiki** is automatically synchronized via from , meaning it is a generated artifact where links are rewritten to absolute URLs.\n\nThe job in handles this automatically. **Manual publication** can be done using if necessary. The registry validates the README for a specific and requires the description to be characters or fewer.\n\nThe workflow runs on every push or PR. **The lint job** checks locks, formatting, and scripts. **The test job** runs across Ubuntu, Windows, and **The job** verifies installation via a fresh wheel build. **The secrets job** uses gitleaks. Additionally, performs static analysis, and monitors dependencies."
+  },
+  {
+   "id": "batch1-15",
+   "source": "batch1",
+   "file": "evidence/B2d-fix/lang-sample-batch1.json",
+   "sample_index": 15,
+   "set": "1",
+   "batch": 1,
+   "repetition": null,
+   "tool": "local_summarize",
+   "document": "docs/wiki/Remote-backend.md",
+   "document_sha256_now": "2c60eb54c630e4aeb5ddbd8777b5983888aac4e3d04bc1753c5379b69b7fdd4b",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "54cb68644f02206ed4eb54dfc543c1cfef5474393180b804e4bf7fdee3db26ae",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 244,
+    "margin": 0.2869
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 188,
+    "es_ratio": 0.0,
+    "en_ratio": 0.4309,
+    "margin": 0.4309
+   },
+   "changed": false,
+   "judged_text_new": "## Introduction\nThis document describes the recommended configuration for running MCP on a Mac while sending inference to a PC.\n\nmust listen on loopback with environment variable API keys. **Tailscale Serve** must publish ports and within the tailnet. **The policy** must allow Mac access to these ports. **The Mac** must have the same key saved in the Keychain service.\n\nThis process stores the URL and secure Keychain reading in to avoid plain text keys.\n\n**The CLI** uses to change pins and ensure the daemon is running. **Claude Code hooks** are automatically replaced if they do not match the installed package. **The backend** remains untouched unless is specified. **The CLI itself** must be updated manually via because the tool cannot update its own environment.\n\nThe configuration pins the current version and uses environment variables to expand the Keychain key during the session.\n\n**The configuration** replaces the entry in while preserving other settings. **The GUI** requires a to load the Keychain key into the environment upon login.\n\n**The user** should run , , and to confirm functionality. **The dashboard** displays the backend status, such as \"conectado\" or error messages regarding connectivity, or access."
+  },
+  {
+   "id": "batch1-16",
+   "source": "batch1",
+   "file": "evidence/B2d-fix/lang-sample-batch1.json",
+   "sample_index": 16,
+   "set": "1",
+   "batch": 1,
+   "repetition": null,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/A5c/mutants.txt",
+   "document_sha256_now": "4c6cff8b1c2a9e1e0d472ac74bcd9bab434c16e2a3579911587d1f1ca57166a3",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "d972be4cbcf7b32bbc2599f73110ba61c6073b91176ccc262b048a9ae253c2c3",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 140,
+    "margin": 0.2715
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 114,
+    "es_ratio": 0.0088,
+    "en_ratio": 0.3421,
+    "margin": 0.3333
+   },
+   "changed": false,
+   "judged_text_new": "**Summary of Issues by File**\n\nand vigilante**\n\n* **Key Issues:** and related to missing 'input' key.\n* **Details:** The schema of the pricing table expects 'input', but the data contains 'entrada'. This discrepancy causes failures in tests and the vigilante component. The issue is resolved by restoring the original file.\n\n(FAMILIA)**\n\n* **Key Issue:** due to a string comparison mismatch.\n* **Details:** The expected string 'familia de tokenizador (nueva anterior is not present in the actual string, leading to a test failure. The issue is corrected by restoring the file.\n\n(acct)**\n\n* **Key Issue:** due to a numerical mismatch.\n* **Details:** The assertion fails because the density value differs between Python and The issue is resolved by restoring the file."
+  },
+  {
+   "id": "batch1-17",
+   "source": "batch1",
+   "file": "evidence/B2d-fix/lang-sample-batch1.json",
+   "sample_index": 17,
+   "set": "1",
+   "batch": 1,
+   "repetition": null,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/A7a/strings-check.txt",
+   "document_sha256_now": "98ee6f939f016e475738d44d0d3ef37dcdd51467e76913568816eb842c24feb8",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "050aef45cc38604a7d852cd98ae59ca7750616c8752fcb2b748792ba08d790d0",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 93,
+    "margin": 0.3118
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 74,
+    "es_ratio": 0.0,
+    "en_ratio": 0.3919,
+    "margin": 0.3919
+   },
+   "changed": false,
+   "judged_text_new": "* **aviso:** (Aviso: Before After\n* **respaldo:** (Respaldo: Before After\n* **truncado:** (Truncado: Before After\n* Before After\n\n\n\n* **aviso:** (Aviso:\n* **respaldo:** (Respaldo:\n* **truncado:** (Truncado:\n*\n\n\n\n* **respaldo:** (Docstring change: → in docstring)\n\n**General Notes:**\n\nThe primary issue involves changes to the \"respaldo\" marker, specifically the replacement of with across multiple files. Several docstrings were updated to reflect this change. The remaining errors are related to the presence of the literal marker in both source and test files, with no changes detected."
+  },
+  {
+   "id": "batch1-18",
+   "source": "batch1",
+   "file": "evidence/B2d-fix/lang-sample-batch1.json",
+   "sample_index": 18,
+   "set": "1",
+   "batch": 1,
+   "repetition": null,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/A7b/mutants.txt",
+   "document_sha256_now": "8ecb631c9dec5abcf96a3f4265ed29cf71e0823357214e1cb896a1fdf8916cec",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "f4c262df96be6b3ee22d07dbc80e2d2314ef3e082c4b423e7b0ae9fa7f119d08",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 165,
+    "margin": 0.2364
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 95,
+    "es_ratio": 0.0,
+    "en_ratio": 0.3684,
+    "margin": 0.3684
+   },
+   "changed": false,
+   "judged_text_new": "**Linting & Testing Summary**\n\nissue)**\n\n* One due to missing array. The test failed due to this issue. The error occurred in and was related to a previous phase failure. Restored with\n\nissue)**\n\n* One due to a in thread X, caused by an outdated keyword argument. The assertion failed. The manual edit at line not seeing) was necessary. Restored with\n\nissue)**\n\n* One due to incorrect field return. The test triggered this error, accessing in multiple assertions. The change in along with related modifications in and tests, required a manual edit. Restored with\n\n**Overall:** tests passed after restoration."
+  },
+  {
+   "id": "batch1-19",
+   "source": "batch1",
+   "file": "evidence/B2d-fix/lang-sample-batch1.json",
+   "sample_index": 19,
+   "set": "1",
+   "batch": 1,
+   "repetition": null,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/A8a-1/mutants.txt",
+   "document_sha256_now": "6932cdce7f85b5451be37007756e234d5f764f5c3b906c20f8a2f79986c99915",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "e9f14ee2d429524432d507f541e0ce0e13589dcb1986526bbce5704a7839874f",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 89,
+    "margin": 0.2022
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 66,
+    "es_ratio": 0.0,
+    "en_ratio": 0.303,
+    "margin": 0.303
+   },
+   "changed": false,
+   "judged_text_new": "**Summary of Issues by File**\n\n\n* received argument\n* Return value changed to\n\n\n* ‘Chain’ object lacks ‘steps’ attribute\n\n**Overall:**\n* Total Errors:\n* Total\n* Relevant Issues: The function received an unexpected keyword argument, leading to a The change in return value from to caused a test failure due to the lack of differentiation between branches. The absence of the 'steps' attribute in the Chain object resulted in a test failure."
+  },
+  {
+   "id": "batch1-20",
+   "source": "batch1",
+   "file": "evidence/B2d-fix/lang-sample-batch1.json",
+   "sample_index": 20,
+   "set": "1",
+   "batch": 1,
+   "repetition": null,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/A8a-2/mutants.txt",
+   "document_sha256_now": "0f34f1d6e6750f878f291341cce72c34fcf2a9b207a20f4ec4e895f83ebdadd0",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "7d8a2e8f0d1d269e2547840ab18552aa876c0ce092c8240d233843850b348604",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 111,
+    "margin": 0.2973
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 77,
+    "es_ratio": 0.0,
+    "en_ratio": 0.4286,
+    "margin": 0.4286
+   },
+   "changed": false,
+   "judged_text_new": "**Summary of Issues by File**\n\nfailed assertion related to the variable and its exclusion from the inventory. The guardian is correctly filtering registered doors.\n\nfailed test due to an accessing instead of in the object. The was restored.\n\nfailed test due to an accessing instead of in the object. The was restored.\n\nschema discrepancy identified during validation. The title \"Modelo\" should be \"Model\" to match the schema definition. No test suite checks this aspect. The was restored."
+  },
+  {
+   "id": "batch2-01",
+   "source": "batch2",
+   "file": "evidence/B2d-fix/lang-sample-batch2.json",
+   "sample_index": 1,
+   "set": "2",
+   "batch": 2,
+   "repetition": null,
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-doc-httpx2-2.13.1.METADATA.md",
+   "document_sha256_now": "b75b03a003b5593e000907cf7239fcc3f688b8f17db4ecff883d11221ea988fc",
+   "document_same_as_measured": true,
+   "requested": "es",
+   "response_sha256": "d27ed50c77242fde595e45eb892869496e65682a72e6bb2bccbae28515865f74",
+   "old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 164,
+    "margin": 0.3659
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 136,
+    "es_ratio": 0.4485,
+    "en_ratio": 0.0,
+    "margin": 0.4485
+   },
+   "changed": false,
+   "judged_text_new": "## Introducción\nes una biblioteca de cliente HTTP completa para Python que ofrece una interfaz de línea de comandos integrada, soporte para y además de APIs tanto síncronas como asíncronas. Es la continuación del trabajo iniciado por la comunidad de HTTPX.\n\nOfrece una API compatible con requests, soporte para interfaz síncrona y asíncrona, y herramientas de línea de comandos.\n\nSe puede instalar mediante el comando .\n\nLa documentación del proyecto está disponible en el sitio web oficial de Pydantic.\n\nPermite la instrumentación de peticiones para obtener trazas y tiempos utilizando la plataforma de observabilidad Logfire.\n\nLos interesados pueden consultar la guía de contribución para empezar a colaborar.\n\nEl proyecto requiere , , e , con opciones adicionales para SOCKS, CLI, brotli y zstd.\n\n\n**Fixed**\n* Se corrigió el cálculo de al pasar archivos.\n* Se solucionó el cierre del hilo de mantenimiento de"
+  },
+  {
+   "id": "batch2-02",
+   "source": "batch2",
+   "file": "evidence/B2d-fix/lang-sample-batch2.json",
+   "sample_index": 2,
+   "set": "2",
+   "batch": 2,
+   "repetition": null,
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-doc-idna-3.18.METADATA.md",
+   "document_sha256_now": "46dfe6e5ac462d0f680ecd9abcf66e829b6a2334824b4d9e3979b31135caf281",
+   "document_same_as_measured": true,
+   "requested": "es",
+   "response_sha256": "2acee687726c33a378bc982eda839d54d511d7e10beba9e3502fdae97949d3ca",
+   "old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 149,
+    "margin": 0.3289
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 129,
+    "es_ratio": 0.3798,
+    "en_ratio": 0.0,
+    "margin": 0.3798
+   },
+   "changed": false,
+   "judged_text_new": "## Introducción\nEsta librería ofrece soporte para IDNA y el procesamiento de compatibilidad de Unicode. Supera a la implementación estándar de la biblioteca de Python al cubrir más alfabetos y restringir dominios con riesgos de seguridad conocidos.\n\nEl paquete se instala mediante Las funciones y convierten nombres de dominio entre formatos ASCII y Unicode.\n**Compatibility Mapping (UTS La librería permite normalizar entradas de usuario mediante mapeo para facilitar la conversión IDNA.\n\nTodos los errores heredan de . Las excepciones específicas son , e .\n\nPermite convertir dominios desde la terminal como módulo o script. Soporta codificación y decodificación automática, aplicando por defecto el mapeo UTS\n\n**Version support** Requiere Python o superior. **Emoji** No se admiten debido a prohibiciones técnicas y riesgos de seguridad. **Regenerating lookup tables** Las tablas se generan con el script ."
+  },
+  {
+   "id": "batch2-03",
+   "source": "batch2",
+   "file": "evidence/B2d-fix/lang-sample-batch2.json",
+   "sample_index": 3,
+   "set": "2",
+   "batch": 2,
+   "repetition": null,
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-doc-nodeenv-1.10.0.METADATA.md",
+   "document_sha256_now": "a8424896a12fd1be10526834176fc754cd296c900f40da655fb2e03c1b7eb921",
+   "document_same_as_measured": true,
+   "requested": "es",
+   "response_sha256": "51a84f3b5cf06f5841df010b60a7e52f264904aaa1c18499ab7502bf2359c2ae",
+   "old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 670,
+    "margin": 0.2597
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 611,
+    "es_ratio": 0.2946,
+    "en_ratio": 0.0033,
+    "margin": 0.2913
+   },
+   "changed": false,
+   "judged_text_new": "## Introducción\nEste documento presenta metadatos sobre nodeenv, una herramienta para construir entornos virtuales de\n\n**Install** Puede realizarse de forma global mediante pip o dpkg, y de forma local dentro de un virtualenv o desde **Dependency** Requiere python, make y tail para la herramienta, y para **Usage** Permite crear, activar, verificar versiones y desactivar entornos, con opciones avanzadas para versiones específicas, compilación desde código fuente, uso de espejos o integración con entornos de Python. **Command Line Options** Incluye parámetros para versiones de node y npm, listas de versiones, integración con virtualenv, archivos de requisitos, prompts personalizados, forzado de instalación, actualizaciones, opciones de instalación (prebuilt, source, mirror), limpieza, opciones de compilación (jobs, make, ssl, debug, profile) y otras como verbosidad o archivos de configuración. **Configuration** Permite definir valores predeterminados mediante un archivo de estilo INI llamado . **Alternatives** Se mencionan nave, nvm y virtualenv como otras opciones de aislamiento.\n\nLa licencia es BSD.\n\n**Version Corrige errores en Windows, y soporte para fish. **Version Añade soporte para Python Conda y fish, además de corregir enlaces simbólicos y codificación. **Version Añade soporte para Cygwin y usa por defecto. **Version Corrige copia de directorios. **Version Corrige espacios en rutas. **Version Corrige **Version Mejora soporte en Windows y corrige errores con caracteres no ASCII. **Version Añade soporte para Windows. **Version Establece como predeterminado y añade soporte para ARM y la opción . **Version Usa HTTPS para **Version Mejora identificación de **Version Permite personalizado. **Version Corrige errores con caracteres no ASCII, Unicode y archivos de requisitos. **Version Corrige el comando freeze. **Version Corrige error de tipo en . **Version Elimina dependencias de herramientas de sistema. **Version Corrige comprobación de herramientas en Python **Version Añade comprobaciones de herramientas instaladas. **Version Cambia dependencia de lxml por HTMLParser y añade integración con **Version Añade soporte para y corrige versión estable en Python **Version Restringe sobrescritura de prefijo por .npmrc. **Version Añade compatibilidad con Python opción y mejora reglas de dpkg. **Version Añade soporte para archivos de configuración, detección de virtualenv y enlaces simbólicos. **Version Elimina **Version Mejora el comando freeze y la búsqueda de nodejs del sistema. **Version Añade soporte para Python **Version Corrige npm en Mac OS X y uso de node del sistema. **Version Corrige bucle infinito con node del sistema. **Version Mejora el script shim y añade el nombre node. **Version Añade el script shim. **Version Corrige la instalación preconstruida. **Version Corrige el uso del node del sistema. **Version Añade soporte para Python y paquetes preconstruidos. **Version Añade la opción y corrige redirección de **Version Corrige errores en freeze. **Version Añade la opción . **Version Añade soporte inicial para Python opción y uso de node del sistema. **Version Corrige nombres de paquetes en freeze. **Version Evita cargar fuente si ya existe. **Version Añade compatibilidad con Python **Version Corrige el comando . **Version Cambia lógica de npm y mejora compilación en paralelo. **Version Mejora comparación de versiones y el prompt. **Version Añade integración con virtualenv y opción . **Version Usa HTTPS. **Version Mejora lógica de instalación para versiones candidatas. **Version Mejora la opción . **Version Elimina rutas hardcoded en el script de activación. **Version Corrige metavars y uso de npm install -g. **Version Añade documentación en ruso. **Version Añade dependencias al README. **Version Añade compatibilidad con virtualenv. **Version Corrige detección de URL de descarga. **Version Actualiza URL de tar y elimina métodos de notificación. **Version Exporta la variable **Version Mejora el comando freeze y la instalación global de npm. **Version Corrige mensajes de diagnóstico y salida de freeze. **Version Añade opción y mejora freeze. **Version Añade opción . **Version Añade y corrige instalación vía **Version Mejoras internas y refactorización de logs. **Version Establece el nombre de la carpeta como prompt por defecto. **Version Renombra nve a nodeenv."
+  },
+  {
+   "id": "batch2-04",
+   "source": "batch2",
+   "file": "evidence/B2d-fix/lang-sample-batch2.json",
+   "sample_index": 4,
+   "set": "2",
+   "batch": 2,
+   "repetition": null,
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_plans_plan-f7-groups.md",
+   "document_sha256_now": "84f1ccc03abb200808aaf4831d1cf6acb6c829dc39a1d8b097b9b846713dc100",
+   "document_same_as_measured": true,
+   "requested": "es",
+   "response_sha256": "b32786420da43b45c35ebe6fdae082b28617f1ea25da3d0cc14aca77199be958",
+   "old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 261,
+    "margin": 0.3295
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 200,
+    "es_ratio": 0.395,
+    "en_ratio": 0.0,
+    "margin": 0.395
+   },
+   "changed": false,
+   "judged_text_new": "## Introducción\nPlan para integrar la capacidad de grupos en\n\n**Discrepancia importante encontrada**: se detectó que es la alternativa moderna, pero sigue vigente en el esquema como opción simple. **Semántica exacta de (schema, no memoria)**: se define la estructura de claves para , , y , aclarando que pertenece a los modelos. **Ya cubierto por (nada que hacer en las funciones de visibilidad de VRAM ya existen.\n\n— **: nuevo módulo con estimación precisa de VRAM mediante metadatos GGUF y gestión de archivos YAML. — CLI **: herramienta para validar si los modelos caben en el presupuesto de memoria. — CLI **: comando para configurar grupos y TTL de forma segura. — Visibilidad runtime**: mejora opcional de reportes. — Tests**: validación de lógica y errores. — Dispatcher de CLI nuevo )**: integración de comandos. — Extra opcional + release**: documentación y dependencias. — Ritual de aplicación personal (aparte, con tu OK explícito en cada paso)**: ejecución controlada.\n\nCumplimiento de tests, estabilidad sin extras y validación de comandos.\n\nExtensión para estimar y proteger la memoria RAM del sistema.\n\nLista de tareas completadas desde la hasta la\n\n**Estimador de VRAM se cambió el factor plano por un cálculo basado en metadatos GGUF. **Helper de test con archivos \"dispersos\" (sparse)**: se optó por mockear archivos para evitar llenar el disco."
+  },
+  {
+   "id": "batch2-05",
+   "source": "batch2",
+   "file": "evidence/B2d-fix/lang-sample-batch2.json",
+   "sample_index": 5,
+   "set": "2",
+   "batch": 2,
+   "repetition": null,
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_plans_plan-v0.2-mejoras.md",
+   "document_sha256_now": "e977e0af6b5efe027946f1652da9dfbd77a4603661f9e4d223a4191a3ee58b75",
+   "document_same_as_measured": true,
+   "requested": "es",
+   "response_sha256": "fd60250051770933abbe208951f5e63c13711289e91ba354414be84aa22eee15",
+   "old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 747,
+    "margin": 0.2865
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 532,
+    "es_ratio": 0.3722,
+    "en_ratio": 0.0,
+    "margin": 0.3722
+   },
+   "changed": false,
+   "judged_text_new": "## Introducción\nPlan de implementación para la versión de\n\nSeguir fases ordenadas, mantener compatibilidad, priorizar código real y realizar tests.\n\nEliminar fallos silenciosos y mejorar el registro de datos reales.\nImplementa una función para manejar variables de entorno flotantes con valores por defecto.\nResultado estructurado de Sustituye el retorno de texto por un dataclass con metadatos.\nusa el struct y avisa de truncado de salida** Notifica al usuario si la respuesta fue recortada por límites de tokens.\nTruncado de entrada visible Informa cuando el contenido de entrada ha sido recortado antes de procesarse.\nElimina bloques de pensamiento de modelos razonadores para limpiar la salida.\nLog enriquecido )** Añade tokens, errores y versiones al registro de eventos.\nEnrutado consistente en ** Unifica el criterio de selección de modelos según el tamaño de entrada.\nValidación de en ** Asegura que el estilo de mensaje sea válido o devuelva error.\nCliente httpx Utiliza un cliente persistente para mejorar la eficiencia de las peticiones.\nTests de nuevo)** Incluye pruebas para todas las nuevas funcionalidades de fiabilidad.\n\nMejora de diagnóstico y soporte de esquemas JSON.\nTool Proporciona información sobre el backend, roles activos y estado del log.\nen ** Permite solicitar salidas con esquemas JSON específicos para mayor precisión.\n\nOptimizar la interacción para fomentar el uso de herramientas locales.\nDocstrings que compiten contra Read Instruye explícitamente a la IA para preferir herramientas locales en archivos grandes.\nLínea de feedback de ahorro )** Muestra cuántos tokens se han ahorrado al usar procesamiento local.\nglobal ( ) — backup antes de editar** Reorganiza las instrucciones para priorizar la delegación local.\nSkill ( )** Define capacidades y disparadores para el uso de herramientas.\nPermisos ( )** Configura permisos automáticos para las herramientas del MCP.\nRecipe de hooks ( + )** Implementa sugerencias automáticas cuando se detectan archivos grandes o salidas largas.\nAutomatiza la actualización de los agentes con el nuevo catálogo de herramientas.\n\nGestión avanzada de métricas y visibilidad de procesos.\nRotación mensual Organiza los registros en archivos mensuales para facilitar la gestión.\nLoader por rango — apunte del usuario integrado** Permite cargar métricas de periodos específicos de forma eficiente.\nUI: selector de rango (HTML embebido en Añade controles visuales para filtrar datos por fechas.\nInflight — visibilidad de delegaciones en curso (apunte del usuario)** Muestra en tiempo real las tareas que se están procesando.\nTests Verifica la rotación de logs y la carga de datos.\n\nProtección de archivos, acceso concurrente y lanzamiento.\n** Restringe el acceso a directorios específicos mediante variables de entorno.\nLock de escritura del log** Implementa bloqueos para evitar corrupción de datos en accesos simultáneos.\nRelease Preparación del paquete y documentación para la nueva versión.\n\nAñade capacidades de procesamiento de imágenes a texto.\n\nIntegración de gestión de grupos de modelos.\nMódulo (nuevo, opcional como )** Gestiona la configuración y estimación de memoria VRAM.\nCLI ** Valida si la configuración de modelos cabe en la memoria disponible.\nCLI ** Genera configuraciones automáticas para la gestión de modelos.\nVisibilidad runtime** Integra el estado de la VRAM en el diagnóstico del sistema.\nAplicación personal (el ritual de validación sigue siendo manual)** Proceso de prueba para asegurar estabilidad sin errores de memoria.\n**Doc** Documentación sobre el uso de grupos y gestión de VRAM.\n\nLista de tareas completadas para cada fase del proyecto.\n\nLos hooks no se instalaron automáticamente por restricciones de seguridad."
+  },
+  {
+   "id": "batch2-06",
+   "source": "batch2",
+   "file": "evidence/B2d-fix/lang-sample-batch2.json",
+   "sample_index": 6,
+   "set": "2",
+   "batch": 2,
+   "repetition": null,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-ruff-concise.txt",
+   "document_sha256_now": "1b45f1d58d013abcffaf2a48def98c192a598f5a5990eb3cadf9a92d55780645",
+   "document_same_as_measured": true,
+   "requested": "es",
+   "response_sha256": "e07014d5d6c269deac74385c382833e53110160fd67e19b4de2ec9dabe2ce16f",
+   "old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 101,
+    "margin": 0.2376
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 75,
+    "es_ratio": 0.3067,
+    "en_ratio": 0.0,
+    "margin": 0.3067
+   },
+   "changed": false,
+   "judged_text_new": "**Archivo:\n\n* **Docstrings:** - Falta documentación en clases y métodos públicos.\n* **Long Lines:** - Líneas que exceden el límite de caracteres.\n* **Docstrings Ambiguas:** - Caracteres ambiguos en docstrings (EN DASH, MULTIPLICATION SIGN).\n* **Complejidad de Expresiones:** - Expresiones complejas que podrían simplificarse.\n* **Importaciones:** - Importación de no incluida en bloque de\n* **Copyright Notice:** - Falta aviso de copyright en el archivo.\n* **Magic Values:** - Uso de valores mágicos en comparaciones.\n* **Asuntos de estilo:** - Incompatibilidad de reglas de estilo.\n\nSe identificaron un total de problemas."
+  },
+  {
+   "id": "batch2-07",
+   "source": "batch2",
+   "file": "evidence/B2d-fix/lang-sample-batch2.json",
+   "sample_index": 7,
+   "set": "2",
+   "batch": 2,
+   "repetition": null,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-ruff-full.txt",
+   "document_sha256_now": "44dd6142f1e761a2f5b82ef176a934983cc2d9f16b7257f2791caa66cb1df7d0",
+   "document_same_as_measured": true,
+   "requested": "es",
+   "response_sha256": "4f663e85bd145ae1f1a01a3cec8126d3100e3f68525dd5aac1598e915d845c8a",
+   "old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 104,
+    "margin": 0.2981
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 69,
+    "es_ratio": 0.4783,
+    "en_ratio": 0.0,
+    "margin": 0.4783
+   },
+   "changed": false,
+   "judged_text_new": "* (Docstring Missing en Clase):** error en la clase (línea\n* (Docstring Missing en Función):** errores en las funciones (línea (línea y (línea\n* (Uso de ):** error en la línea relacionado con la impresión de resultados.\n* (Falta de Aviso de Copyright):** error en la parte superior del archivo.\n\nSe ignoraron las incompatibilidades entre las reglas y , así como entre y . Se recomienda eliminar el uso de para mejorar la seguridad del código."
+  },
+  {
+   "id": "batch2-08",
+   "source": "batch2",
+   "file": "evidence/B2d-fix/lang-sample-batch2.json",
+   "sample_index": 8,
+   "set": "2",
+   "batch": 2,
+   "repetition": null,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-tsc.txt",
+   "document_sha256_now": "2705c2d9eac77e04a707594093594fc412b8a2f25e8bb2d5cd8ea5df205e7fcf",
+   "document_same_as_measured": true,
+   "requested": "es",
+   "response_sha256": "8070641fb6dd9f65bf0b32b92b8409c2abd0bdf3c6e679f69c7941f521057bd9",
+   "old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 140,
+    "margin": 0.1571
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 88,
+    "es_ratio": 0.2727,
+    "en_ratio": 0.0227,
+    "margin": 0.25
+   },
+   "changed": false,
+   "judged_text_new": "**Resumen de Problemas por Archivo**\n\n\n* Error Se esperaba argumentos, pero se recibieron problema).\n\n\n* Error Propiedad no existe en el tipo problema).\n\n\n* Error Propiedad 'at' no existe en el tipo 'string[]' problemas).\n\n\n* Error Propiedad 'at' no existe en el tipo 'string[]' problema).\n\n\n* Error Propiedad no existe en el tipo problema).\n\n\n* Error Propiedad no existe en el tipo 'string' problema).\n\n\n* Error Propiedad 'Segmenter' no existe en el tipo 'typeof Intl' problema).\n\n\n* Error Este miembro no puede tener el modificador 'override' porque no está declarado en la clase base 'Error' problema)."
+  },
+  {
+   "id": "batch2-09",
+   "source": "batch2",
+   "file": "evidence/B2d-fix/lang-sample-batch2.json",
+   "sample_index": 9,
+   "set": "2",
+   "batch": 2,
+   "repetition": null,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B2b-2_corpus-f2-check.txt",
+   "document_sha256_now": "dc1b5eec0dae6a49a59960071988f2f1e18ca2187724fd36ab3c4737f9ce1b34",
+   "document_same_as_measured": true,
+   "requested": "es",
+   "response_sha256": "a3df2e7453fb534f76ed4271c324cb9ab70e3e241e1502f0254fa5ae69ef9da6",
+   "old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 65,
+    "margin": 0.3692
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 61,
+    "es_ratio": 0.3934,
+    "en_ratio": 0.0,
+    "margin": 0.3934
+   },
+   "changed": false,
+   "judged_text_new": "**Resumen de Problemas por Archivo**\n\n\n\n* Lint: regla encontrada (sistema: cambio con los prompts de la frontera declarada). Este cambio afecta a múltiples archivos relacionados con la gestión de prompts.\n* Resumen: archivos relacionados con cambios en prompts de la versión indicando una actualización del sistema.\n* Otros: archivos con cambios relacionados con prompts, posiblemente indicando una modificación en la lógica de la aplicación."
+  },
+  {
+   "id": "batch2-10",
+   "source": "batch2",
+   "file": "evidence/B2d-fix/lang-sample-batch2.json",
+   "sample_index": 10,
+   "set": "2",
+   "batch": 2,
+   "repetition": null,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B2c_corpus-affinity-check.txt",
+   "document_sha256_now": "8c261db94aaaa22a75abe82729c777865dbbcf34a64cdde565f09170a46304f0",
+   "document_same_as_measured": true,
+   "requested": "es",
+   "response_sha256": "e0729a586ed2298e4c2dab695110776779fb81dd57e2016daa1c58f639bd74cd",
+   "old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 162,
+    "margin": 0.284
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 85,
+    "es_ratio": 0.4235,
+    "en_ratio": 0.0,
+    "margin": 0.4235
+   },
+   "changed": false,
+   "judged_text_new": "* system: error debido a cambios en los prompts de la versión\n\n\n* system: error debido a cambios en los prompts de la versión\n\n\n* system: error debido a cambios en los prompts de la versión\n\n\n* system: error debido a cambios en los prompts de la versión\n\n\n* error por cambios en los prompts de la versión\n* system: error por cambios en los prompts de la versión\n\n**commits varios ccddeea,\n* errores por cambios en los prompts de la versión\n* system: errores por cambios en los prompts de la versión\n\n("
+  },
+  {
+   "id": "batch2-11",
+   "source": "batch2",
+   "file": "evidence/B2d-fix/lang-sample-batch2.json",
+   "sample_index": 11,
+   "set": "1",
+   "batch": 2,
+   "repetition": null,
+   "tool": "local_summarize",
+   "document": ".venv/Lib/site-packages/annotated_doc-0.0.4.dist-info/METADATA",
+   "document_sha256_now": "22b9b9289b9adf7758daa28a02327e3a129a5415487f01467a3fdd49edd9d535",
+   "document_same_as_measured": true,
+   "requested": "es",
+   "response_sha256": "9056d11ef3efd07d28d8959d06ea2cf9e5844b0f1b2a6129dd5c81b29e8fdab1",
+   "old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 160,
+    "margin": 0.3
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 132,
+    "es_ratio": 0.4242,
+    "en_ratio": 0.0,
+    "margin": 0.4242
+   },
+   "changed": false,
+   "judged_text_new": "## Introducción\nEsta herramienta permite documentar parámetros, atributos de clase, tipos de retorno y variables de forma integrada utilizando .\n\nSe puede instalar mediante o usando .\n\n**Doc** debe importarse para pasar una cadena literal con la descripción de un elemento específico.\n\nEs utilizado por proyectos como Typer, SQLModel y Asyncer.\n\nNo se recomienda si se prefieren formatos como Sphinx o Google, si el equipo ya domina otros estilos, o si se prefiere separar la documentación del código.\n\nOfrece sintaxis de Python pura, soporte de editores, facilidad de renderizado, evita duplicidad de información, previene inconsistencias, permite acceso en tiempo de ejecución y mejora la accesibilidad para IA.\n\nEl autor intentó incluir esto en la biblioteca estándar mediante PEP pero tras la oposición, se decidió crear esta biblioteca externa.\n\nEl proyecto cuenta con la licencia MIT."
+  },
+  {
+   "id": "batch2-12",
+   "source": "batch2",
+   "file": "evidence/B2d-fix/lang-sample-batch2.json",
+   "sample_index": 12,
+   "set": "1",
+   "batch": 2,
+   "repetition": null,
+   "tool": "local_summarize",
+   "document": ".venv/Lib/site-packages/annotated_types-0.7.0.dist-info/METADATA",
+   "document_sha256_now": "ee5b6ac64b09274c026051813484025939564067801f485115d9cadc207cf791",
+   "document_same_as_measured": true,
+   "requested": "es",
+   "response_sha256": "1ccbfe975efc8673b62082625c1d3108def0d12748e22868527ec55e37c57db1",
+   "old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 195,
+    "margin": 0.3385
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 176,
+    "es_ratio": 0.3807,
+    "en_ratio": 0.0057,
+    "margin": 0.375
+   },
+   "changed": false,
+   "judged_text_new": "## Introducción\nEste paquete ofrece objetos de metadatos para representar restricciones comunes, como límites en valores escalares o tamaños de colecciones, además de marcadores para comprobaciones en tiempo de ejecución.\n\nSe instala mediante el comando .\n\nMuestra el uso de con , y .\n\nLos usuarios deben evitar combinaciones inválidas de metadatos.\n**Gt, Ge, Lt, Le** Definen límites inclusivos o exclusivos para valores ordenables.\n**Interval** Permite establecer un límite superior e inferior en un solo objeto.\nIndica que un valor debe ser múltiplo de un número según semántica de Python o JSONschema.\nLen** Controlan la longitud de objetos que soportan la función .\n**Timezone** Expresa las zonas horarias permitidas para objetos de tiempo.\n**Unit** Indica la unidad de medida de un valor numérico.\n**Predicate** Permite usar funciones arbitrarias para validaciones en tiempo de ejecución.\n**Doc** Añade información de documentación para análisis estático.\n**Integrating downstream types with ** Permite a las librerías agrupar metadatos para reducir la verbosidad.\n**Consuming metadata** Las librerías pueden usar los metadatos para validación, esquemas o datos de ejemplo.\n\nCreado en para facilitar anotaciones informativas mediante un diseño minimalista."
+  },
+  {
+   "id": "batch2-13",
+   "source": "batch2",
+   "file": "evidence/B2d-fix/lang-sample-batch2.json",
+   "sample_index": 13,
+   "set": "1",
+   "batch": 2,
+   "repetition": null,
+   "tool": "local_summarize",
+   "document": ".venv/Lib/site-packages/attrs-26.1.0.dist-info/METADATA",
+   "document_sha256_now": "4cd40e690f23bf37cbcad34efd6758e062df1df07c86833f7e3ce95bf1fa38cc",
+   "document_same_as_measured": true,
+   "requested": "es",
+   "response_sha256": "59329328e1da4bf0bead8b03d6cc5df88f19ffbce0c02ff730cf5884e87e2003",
+   "old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 204,
+    "margin": 0.3235
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 179,
+    "es_ratio": 0.3855,
+    "en_ratio": 0.0112,
+    "margin": 0.3743
+   },
+   "changed": false,
+   "judged_text_new": "## Introducción\nEste paquete de Python busca devolver la alegría de escribir clases al evitar la implementación tediosa de protocolos de objetos, permitiendo crear software conciso y correcto sin afectar el rendimiento.\n\nEl proyecto requiere el apoyo de patrocinadores para su mantenimiento sostenible, destacando especialmente a aquellos que contribuyen en el nivel de *The Organization* o superior.\n\nEl paquete ofrece un decorador de clase y un método declarativo para definir atributos, proporcionando automáticamente métodos de igualdad, inicializadores y representaciones legibles.\n**Hate Type Annotations!?** Las anotaciones de tipo son opcionales, permitiendo usar en su lugar.\n\nAunque recuerda a , es más flexible al permitir un manejo especial de arreglos de mayor personalización en la inicialización y mejor depuración.\n\nContiene enlaces a la documentación, código fuente y guía de contribución.\n***attrs* for Enterprise** Está disponible mediante la suscripción de Tidelift para ofrecer soporte comercial y mantenimiento profesional.\n\n**Backwards-incompatible Changes** Los alias de campos se resuelven antes de llamar a .\n**Changes** Se corrigieron anotaciones de validadores, se permitió anidar el gestor de contexto , se añadió en clases congeladas y se permiten instancias en ."
+  },
+  {
+   "id": "batch2-14",
+   "source": "batch2",
+   "file": "evidence/B2d-fix/lang-sample-batch2.json",
+   "sample_index": 14,
+   "set": "1",
+   "batch": 2,
+   "repetition": null,
+   "tool": "local_summarize",
+   "document": ".venv/Lib/site-packages/cfgv-3.5.0.dist-info/METADATA",
+   "document_sha256_now": "ae126b80e15f39d0feff7368cefea2ea6478fdcedcde52918d0f58b668e19137",
+   "document_same_as_measured": true,
+   "requested": "es",
+   "response_sha256": "988c689a02fe1e4f884e19beba5b18544207e3565e4b9bc6a83def98a41861e0",
+   "old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 455,
+    "margin": 0.2351
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 310,
+    "es_ratio": 0.3839,
+    "en_ratio": 0.0129,
+    "margin": 0.371
+   },
+   "changed": false,
+   "judged_text_new": "## Introducción\nEsta herramienta permite validar configuraciones y generar mensajes de error legibles para los usuarios.\n\nSe instala mediante el comando .\n\nMuestra ejemplos de errores de configuración, como un error de tipo al escribir un booleano.\n\n** ** Valida un valor contra un esquema.\n** ** Devuelve un valor con los valores por defecto aplicados.\n** ** Devuelve un valor sin los valores por defecto.\n** ** Carga un archivo usando una estrategia específica.\n\nLos esquemas validan contenedores mediante estructuras como mapas o arreglos.\n**writing your own schema container** Permite crear contenedores personalizados con una interfaz específica.\n** ** Crea un mapa básico para el esquema.\n** ** Permite anidar mapas dentro de arreglos.\n** ** Crea un mapeo homogéneo con tipos de clave y valores específicos.\n\nSe usan para validar pares dentro de un mapa.\n**writing your own validator** Permite definir validadores personalizados con métodos de chequeo y valores por defecto.\n** ** Exige la presencia de una clave con una función de chequeo.\n** ** Exige una clave utilizando un esquema recursivo.\n** ** Valida una clave si está presente y gestiona valores por defecto.\n** ** Valida una clave opcional usando un esquema recursivo.\n** ** Valida una clave opcional sin gestionar valores por defecto.\n** ** Valida una clave basándose en una condición de otra clave.\n** ** Combina validación condicional con opciones y valores por defecto.\n** ** Realiza validación condicional utilizando esquemas recursivos.\n** ** Restringe un mapa a solo las claves permitidas.\n\nAyudan en las comparaciones de igualdad para validaciones.\n** ** Verifica que un valor no sea igual a otro.\n** ** Comprueba si un valor está contenido en una lista.\n** ** Comprueba si un valor no está en una lista.\n\nFunciones integradas para realizar validaciones específicas.\n** ** Una función que no realiza ninguna acción.\n** ** Verifica que un valor sea de un tipo determinado.\n** ** Comprueba si el valor pertenece a un conjunto de opciones.\n** ** Valida que un valor sea una expresión regular válida.\n** ** Verifica que una secuencia cumpla con una validación interna.\n** ** Ejecuta múltiples funciones de chequeo sobre un mismo valor."
+  },
+  {
+   "id": "batch2-15",
+   "source": "batch2",
+   "file": "evidence/B2d-fix/lang-sample-batch2.json",
+   "sample_index": 15,
+   "set": "1",
+   "batch": 2,
+   "repetition": null,
+   "tool": "local_summarize",
+   "document": ".venv/Lib/site-packages/colorama-0.4.6.dist-info/METADATA",
+   "document_sha256_now": "7baed29eb50c3b29bdb33ff84e3177bf1bc05784f7685ecdcaa4471c7dd810cc",
+   "document_same_as_measured": true,
+   "requested": "es",
+   "response_sha256": "3aba89dec25ea69d35bb9e30348721ab019e27c81b3b452258d6f7cde532e309",
+   "old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 186,
+    "margin": 0.3118
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 154,
+    "es_ratio": 0.3831,
+    "en_ratio": 0.0,
+    "margin": 0.3831
+   },
+   "changed": false,
+   "judged_text_new": "## Introducción\nEsta herramienta permite que las secuencias de escape ANSI funcionen en la terminal de MS Windows.\n\nSe puede instalar mediante o usando .\n\n**Funcionamiento** Colorama permite el uso de colores y posicionamiento del cursor en Windows envolviendo la salida estándar. **API** Ofrece una interfaz multiplataforma sencilla para imprimir texto coloreado en Python.\n\n**Initialisation** Se puede usar para habilitar el soporte en Windows o para una interfaz con más funciones. **Colored Output** Permite imprimir colores usando constantes como , y . **Cursor Positioning** Soporta códigos ANSI para mover el cursor. **Init Keyword Args** La función acepta argumentos como , , y . **Recognised ANSI Sequences** Convierte secuencias específicas de color, brillo, cursor y limpieza de pantalla.\n\nEl autor ha probado el software en varios sistemas, aunque algunas secuencias ANSI válidas no se reconocen.\n\nEl proyecto tiene una licencia BSD\n\nEl soporte profesional está disponible mediante la suscripción de Tidelift.\n\nSe agradece a diversos colaboradores por sus correcciones, parches y sugerencias."
+  },
+  {
+   "id": "batch2-16",
+   "source": "batch2",
+   "file": "evidence/B2d-fix/lang-sample-batch2.json",
+   "sample_index": 16,
+   "set": "1",
+   "batch": 2,
+   "repetition": null,
+   "tool": "local_lint_summary",
+   "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-cinco-reglas.txt",
+   "document_sha256_now": "0809f67c265b1bed3ef6bcec7b6beba41fc4cd61a328cfe9f90986ce870c889c",
+   "document_same_as_measured": true,
+   "requested": "es",
+   "response_sha256": "8cff69b3779d695919dd92e42a6762e14976822fdf7c7e53642f3ff320bd9c49",
+   "old": {
+    "verdict": "unknown",
+    "lang": "unknown",
+    "tokens": 37,
+    "margin": 0.0811
+   },
+   "new": {
+    "verdict": "not_judgeable",
+    "lang": "not_judged",
+    "tokens": 18,
+    "es_ratio": 0.1667,
+    "en_ratio": 0.0,
+    "margin": 0.1667
+   },
+   "changed": true,
+   "judged_text_new": "**Resumen de Problemas por Archivo**\n\n\n* Importes:\n* Tipos de anotación:\n\n\n* Importes:\n* s anidados:\n\n\n* Importes:\n* s anidados:\n* Asignaciones previas a :"
+  },
+  {
+   "id": "batch2-17",
+   "source": "batch2",
+   "file": "evidence/B2d-fix/lang-sample-batch2.json",
+   "sample_index": 17,
+   "set": "1",
+   "batch": 2,
+   "repetition": null,
+   "tool": "local_lint_summary",
+   "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-docstrings.txt",
+   "document_sha256_now": "b110b57cb1159eec9243dcedb0ecdbc2e38f79d44b3891bc64fbd192659c3538",
+   "document_same_as_measured": true,
+   "requested": "es",
+   "response_sha256": "5754a7774349e75df89b088534ff62620ecb624c070521dcfeccfc21b487b072",
+   "old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 133,
+    "margin": 0.2255
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 108,
+    "es_ratio": 0.3519,
+    "en_ratio": 0.0741,
+    "margin": 0.2778
+   },
+   "changed": false,
+   "judged_text_new": "**Resumen de Problemas:**\n\n\n* Missing docstring in public module\n* Missing docstring in public function\n* Do not use mutable data structures for argument defaults\n\n\n* Missing docstring in public module\n* Missing docstring in public function\n\n\n* found\n\n**Resumen General:**\n\nSe identificaron problemas relacionados con la falta de documentación en módulos y funciones públicas. El archivo presenta un mayor número de instancias de la regla indicando el uso de la función . Se recomienda revisar y agregar docstrings a todas las funciones y módulos que carecen de ellas, priorizando aquellos con la regla . También se debe prestar atención al uso de estructuras de datos mutables en los argumentos por defecto, como se detectó en ."
+  },
+  {
+   "id": "batch2-18",
+   "source": "batch2",
+   "file": "evidence/B2d-fix/lang-sample-batch2.json",
+   "sample_index": 18,
+   "set": "1",
+   "batch": 2,
+   "repetition": null,
+   "tool": "local_lint_summary",
+   "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-tres-reglas.txt",
+   "document_sha256_now": "ec0b6183c8ca06cac255bdf11c914291473771ddd2df55b2ecbda2767bd49270",
+   "document_same_as_measured": true,
+   "requested": "es",
+   "response_sha256": "eb60adce3ae68eb6103ae4f05eae55ce8ff4f7a14f13b595c15c0f84fa6ca155",
+   "old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 104,
+    "margin": 0.2404
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 82,
+    "es_ratio": 0.3415,
+    "en_ratio": 0.0732,
+    "margin": 0.2683
+   },
+   "changed": false,
+   "judged_text_new": "**Resumen de Problemas:**\n\n\n\n* Line too long Líneas excesivamente largas en las líneas y\n* imported but unused La importación del módulo no se utiliza en el archivo.\n\n\n\n* imported but unused La importación del módulo no se utiliza en el archivo.\n* imported but unused La importación del módulo no se utiliza en el archivo.\n* Line too long Línea excesivamente larga en la línea\n* Trailing whitespace Presencia de espacios en blanco al final de la línea\n\n\n\n* Line too long Línea excesivamente larga en la línea"
+  },
+  {
+   "id": "batch2-19",
+   "source": "batch2",
+   "file": "evidence/B2d-fix/lang-sample-batch2.json",
+   "sample_index": 19,
+   "set": "1",
+   "batch": 2,
+   "repetition": null,
+   "tool": "local_lint_summary",
+   "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-un-solo-archivo.txt",
+   "document_sha256_now": "7666debfbc2ca5df842cb29520580e7711e8c44dfcda60b9d8188d9715d1db3e",
+   "document_same_as_measured": true,
+   "requested": "es",
+   "response_sha256": "fcace8562f75f0ce8f746efe9cf11d742e416598a1efb45d363969d7c9cf73c2",
+   "old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 72,
+    "margin": 0.3889
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 65,
+    "es_ratio": 0.3846,
+    "en_ratio": 0.0,
+    "margin": 0.3846
+   },
+   "changed": false,
+   "judged_text_new": "**Resumen de Problemas:**\n\n\n\n* **Importaciones:** errores de tipo indicando que las importaciones de módulos se encuentran ubicadas dentro del cuerpo del archivo y no en la parte superior.\n* **Longitud de Línea:** errores de tipo señalando líneas excesivamente largas, específicamente en las líneas y\n* **Comparación con None:** error de tipo relacionado con una comparación directa con , sugiriendo el uso de una verificación explícita para manejar valores nulos."
+  },
+  {
+   "id": "batch2-20",
+   "source": "batch2",
+   "file": "evidence/B2d-fix/lang-sample-batch2.json",
+   "sample_index": 20,
+   "set": "1",
+   "batch": 2,
+   "repetition": null,
+   "tool": "local_lint_summary",
+   "document": "benchmarks/catalogo-2026-09/fuentes/lint-9k.txt",
+   "document_sha256_now": "9c7295b2b49627aff832ce808789be7993522cd72c8f947fb06f19664723801f",
+   "document_same_as_measured": true,
+   "requested": "es",
+   "response_sha256": "91ab62a0bdf063374aa2d1ad0cea75b5bd61a24e3de14421e1ea3dc9521eaced",
+   "old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 215,
+    "margin": 0.2465
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 156,
+    "es_ratio": 0.3397,
+    "en_ratio": 0.0,
+    "margin": 0.3397
+   },
+   "changed": false,
+   "judged_text_new": "* Falta el aviso de derechos de autor:\n\n\n* Falta el aviso de derechos de autor:\n\n\n* Falta el aviso de derechos de autor:\n* Mover importación de librería estándar a un bloque de comprobación de tipos:\n* Falta coma final:\n* La primera línea del docstring debe usar el modo imperativo:\n* Uso de valor mágico en comparación:\n\n\n* Falta el aviso de derechos de autor:\n* La primera línea del docstring debe usar el modo imperativo:\n* Llamada a : verificar ejecución de entrada no confiable:\n\n\n* Falta coma final:\n* Falta docstring en clase pública:\n* Falta docstring en método público:\n* Falta docstring en función pública:\n* Falta docstring en método mágico:\n* Falta docstring en :\n* Evitar especificar mensajes largos fuera de la clase de excepción:\n* La excepción no debe usar un literal\n* La excepción no debe usar un literal de cadena:\n* Se encontró :\n* Uso de valor mágico en comparación:\n* El debe estar en el nivel superior del archivo:\n* Llamada a : verificar ejecución de entrada no confiable:\n* sin argumento"
+  },
+  {
+   "id": "probeX-01",
+   "source": "probeX",
+   "file": "evidence/B2d-fix/live-probe-X.json",
+   "sample_index": 1,
+   "set": null,
+   "batch": null,
+   "repetition": 1,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_complete.txt",
+   "document_sha256_now": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "ae5ffbfb9fc80856fc97b06c3c37b7717ad5129ac3cab779ae761a83550fca7d",
+   "old": {
+    "verdict": "unknown",
+    "lang": "unknown",
+    "tokens": 91,
+    "margin": 0.0879
+   },
+   "new": {
+    "verdict": "unknown",
+    "lang": "unknown",
+    "tokens": 81,
+    "es_ratio": 0.0247,
+    "en_ratio": 0.1235,
+    "margin": 0.0988
+   },
+   "changed": false,
+   "judged_text_new": "doctor report:\n\n* (Warning) Not set; requires in PATH.\n* (Warning) Not set.\n* **Clientes:** (OK) Detected: Claude Code, Codex, opencode. No MCP clients observed.\n* **Cadenas de respaldo:** (OK) Valid chains, no resident chains.\n* **Coste y relleno:** (Warning) No saved comparisons found; no transcripts available.\n* **Hooks:** (OK) copied scripts, registered hooks.\n* **Skills:** (OK) Claude Code and opencode skills installed.\n* **Memoria MCP:** (OK) MCPs registered and managed in respective files.\n* **Servicios:** (OK) Daemon and backend running.\n* **Versiones:** (Warning) version is tested, but configuration is missing."
+  },
+  {
+   "id": "probeX-02",
+   "source": "probeX",
+   "file": "evidence/B2d-fix/live-probe-X.json",
+   "sample_index": 2,
+   "set": null,
+   "batch": null,
+   "repetition": 2,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_complete.txt",
+   "document_sha256_now": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "d758c0094f9ae2e3836424b017cf0d67fa51dad11d892fe98ef19c337fe7d299",
+   "old": {
+    "verdict": "unknown",
+    "lang": "unknown",
+    "tokens": 99,
+    "margin": 0.1111
+   },
+   "new": {
+    "verdict": "unknown",
+    "lang": "unknown",
+    "tokens": 87,
+    "es_ratio": 0.023,
+    "en_ratio": 0.1494,
+    "margin": 0.1264
+   },
+   "changed": false,
+   "judged_text_new": "doctor report:\n\n* (Warning) Not set; requires in PATH.\n* (Warning) Not set.\n* **Clientes:** (OK) Detected: Claude Code, Codex, opencode. No MCP clients observed.\n* **Cadenas de respaldo:** (OK) Valid chains, no resident chains.\n* **Coste y relleno:** (Warning) No saved comparisons found; no transcripts available.\n* **Hooks:** (OK) copied scripts, registered hooks.\n* **Skills:** (OK) Claude Code and opencode skills installed.\n* **Memoria MCP:** (OK) MCPs registered and managed in respective files.\n* **Servicios:** (OK) Daemon and backend running.\n* **Versiones:** (Warning) version is tested, but no is present. Daemon does not provide this configuration."
+  },
+  {
+   "id": "probeX-03",
+   "source": "probeX",
+   "file": "evidence/B2d-fix/live-probe-X.json",
+   "sample_index": 3,
+   "set": null,
+   "batch": null,
+   "repetition": 3,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_complete.txt",
+   "document_sha256_now": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "91807e2e981299ce75035ba80d9f6c2a135d430100cab22366f4ad24ac669c34",
+   "old": {
+    "verdict": "unknown",
+    "lang": "unknown",
+    "tokens": 119,
+    "margin": 0.0336
+   },
+   "new": {
+    "verdict": "unknown",
+    "lang": "unknown",
+    "tokens": 99,
+    "es_ratio": 0.0303,
+    "en_ratio": 0.0505,
+    "margin": 0.0202
+   },
+   "changed": false,
+   "judged_text_new": "doctor report:\n\nMissing (needs in PATH). [Warning]\nMissing. [Warning]\n**Backend Verified. [OK]\n**Clientes:** Detected (Claude Code, Codex, opencode). [OK]\n**Cadenas de respaldo:** Valid, no resident. [OK]\n**Coste y relleno:** No comparison found. [Warning]\n**Windows de prueba:** None. [OK]\n\n**Andamiaje:**\n* Hooks: copied, registered. [OK]\n* Skills: Local-delegation installed for Claude Code, Codex, opencode. [OK]\n* Memoria: Global memory blocks [OK]\n* MCPs: Registered for Claude Code, Codex, opencode. [OK]\n\n**Servicios:**\n* Daemon: Running. [OK]\n* Backend: Responding. [OK]\n* Credencial: No credential required. [OK]\n* Token: Claude Desktop not configured. [Warning]\n\n**Versiones:**\n* Verified. [OK]\n* Verified. [OK]\n* Missing, requires for review. [Warning]\n* Daemon Turn: No turn. [Warning]"
+  },
+  {
+   "id": "probeX-04",
+   "source": "probeX",
+   "file": "evidence/B2d-fix/live-probe-X.json",
+   "sample_index": 4,
+   "set": null,
+   "batch": null,
+   "repetition": 1,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_empty.txt",
+   "document_sha256_now": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "1b242e565d7dcfe0a0cf320112febe6e14b870ab1fc2e40660e17e69ef050935",
+   "old": {
+    "verdict": "unknown",
+    "lang": "unknown",
+    "tokens": 130,
+    "margin": 0.1385
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 82,
+    "es_ratio": 0.0,
+    "en_ratio": 0.1951,
+    "margin": 0.1951
+   },
+   "changed": true,
+   "judged_text_new": "Local Delegate Doctor Summary:\n\nMissing configuration not set). Requires . Warning)\n**Backend URL configured as Warning)\n**Hooks:** Missing hooks in and . Requires . Failures)\n**Skills:** Missing Claude Code, opencode, and Codex skills located in specified directories. Requires . Failures)\n**Memory:** Missing Claude Code, Codex, and opencode agent memory files. Requires . Failures)\n**MCP Configuration:** Missing MCP configuration files in , , and . Requires . Failures)\n**Daemon:** Running as on port OK)\n**Versions:** and versions are OK)\n**Configuration:** Missing leading to issues with daemon and swap residency. Requires flag. Warnings)"
+  },
+  {
+   "id": "probeX-05",
+   "source": "probeX",
+   "file": "evidence/B2d-fix/live-probe-X.json",
+   "sample_index": 5,
+   "set": null,
+   "batch": null,
+   "repetition": 2,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_empty.txt",
+   "document_sha256_now": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "bb910a6635cd6631fdc9dd70f596788ff18c8f717a3aca03ca415842e93c16c3",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 145,
+    "margin": 0.1655
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 97,
+    "es_ratio": 0.0,
+    "en_ratio": 0.2268,
+    "margin": 0.2268
+   },
+   "changed": false,
+   "judged_text_new": "Local Delegate Doctor Summary\n\nMissing configuration not set). Requires installation with . issue)\n**Backend The backend URL is correctly configured at issue)\n**Hooks:** Missing hooks in and . Requires installation with . issues)\n**Skills:** Missing Claude Code and opencode skills in specified directories. Requires installation with . issues)\n**Memory:** Missing Claude Code, Codex, and opencode agent memory files. Requires installation with . issues)\n**MCP Configuration:** Missing MCP configuration files in , , and . Requires installation with . issues)\n**Daemon & Token:** Daemon running at No token requirements for daemon or Claude Desktop. issues)\n**Version Check:** and versions are Missing configuration is preventing proper daemon operation. issues)"
+  },
+  {
+   "id": "probeX-06",
+   "source": "probeX",
+   "file": "evidence/B2d-fix/live-probe-X.json",
+   "sample_index": 6,
+   "set": null,
+   "batch": null,
+   "repetition": 3,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_empty.txt",
+   "document_sha256_now": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "8491b6d6e559230db0220b1b7cc7d679c2681efa5fa4ffe3435ba60e8eefb336",
+   "old": {
+    "verdict": "unknown",
+    "lang": "unknown",
+    "tokens": 130,
+    "margin": 0.1462
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 93,
+    "es_ratio": 0.0,
+    "en_ratio": 0.2043,
+    "margin": 0.2043
+   },
+   "changed": true,
+   "judged_text_new": "Local Delegate Doctor Summary:\n\nMissing configuration not set). Requires . Warning)\n**Backend The backend URL is configured as Needs verification with for configuration issues. Warning)\n**Hooks:** Missing hooks in and . Requires . Failures)\n**Skills:** Missing Claude Code, opencode, and Codex skills located in specified directories. Requires . Failures)\n**Memory:** Missing Claude Code, Codex, and opencode agent memory files. Requires . Failures)\n**MCP Configuration:** Missing MCP configuration files in , , and directories. Requires . Failures)\n**Versions:** Llama-swap version is confirmed, but the Llama-swap configuration is missing. Warning)\n**Client Detection:** Claude Code, Codex, and opencode clients are detected. Warnings)"
+  },
+  {
+   "id": "probeY-01",
+   "source": "probeY",
+   "file": "evidence/B2d-fix/live-probe-Y.json",
+   "sample_index": 1,
+   "set": null,
+   "batch": null,
+   "repetition": 1,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_complete.txt",
+   "document_sha256_now": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "bbb15855ab1435f583fd6bbb47503873e6de7fc8ee8eef413e5c5c9acea73ade",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 133,
+    "margin": 0.1805
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 119,
+    "es_ratio": 0.0,
+    "en_ratio": 0.2017,
+    "margin": 0.2017
+   },
+   "changed": false,
+   "judged_text_new": "No issues were found in the provided output. All checked components, including the CLI, scaffolding, services, and versions, returned an [ OK ] status.\n\nSummary of findings:\n\n**Environment**\n- [ OK ] CLI and version:\n- [ OK ] Clients: Claude Code, Codex, opencode\n- [ ] MCP clients: No communication observed\n- [ OK ] Fallback strings: Valid\n- [ ] Cost and padding: No transcripts available\n\n**Scaffolding**\n- [ OK ] Hooks: Copied, and registered\n- [ OK ] Skills: Installed for Claude Code and opencode\n- [ OK ] Global memory: Up to date for all clients\n- [ OK ] MCP registration: Configured for Claude Code, Codex, and opencode\n\n**Services**\n- [ OK ] Daemon: Running (pid\n- [ OK ] Backend: Responding\n- [ OK ] Credentials: No authentication required for backend or daemon\n- [ ] Claude Desktop: Not configured\n\n**Versions**\n- [ OK ]\n- [ OK ]\n- [ ] residency: Unknown due to missing\n- [ ] Daemon turn: Unknown due to missing"
+  },
+  {
+   "id": "probeY-02",
+   "source": "probeY",
+   "file": "evidence/B2d-fix/live-probe-Y.json",
+   "sample_index": 2,
+   "set": null,
+   "batch": null,
+   "repetition": 2,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_complete.txt",
+   "document_sha256_now": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "340df22a995aff5564febb951f1aa62eafafc1292bcf0a4ef78e8cb849ce082e",
+   "old": {
+    "verdict": "unknown",
+    "lang": "unknown",
+    "tokens": 82,
+    "margin": 0.0731
+   },
+   "new": {
+    "verdict": "unknown",
+    "lang": "unknown",
+    "tokens": 74,
+    "es_ratio": 0.0676,
+    "en_ratio": 0.1486,
+    "margin": 0.081
+   },
+   "changed": false,
+   "judged_text_new": "No issues were found in the provided output. All checked components, including the CLI, scaffolding, services, and versions, returned an [ OK ] status.\n\nSummary of unverified items:\n- Entorno (el CLI y los clientes):\n- [ ] unverified MCP client communication status.\n- [ ] unverified cost and padding comparison due to missing transcripts.\n- Servicios:\n- [ ] unverified Claude Desktop configuration status.\n- Versiones (instalada vs probada; usa para comparar con\n- [ ] unverified residency status due to missing\n- [ ] unverified daemon turn status.\n\nTotal unverified items:\nTotal"
+  },
+  {
+   "id": "probeY-03",
+   "source": "probeY",
+   "file": "evidence/B2d-fix/live-probe-Y.json",
+   "sample_index": 3,
+   "set": null,
+   "batch": null,
+   "repetition": 3,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_complete.txt",
+   "document_sha256_now": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "ace3b788b5d9047261fb5bc3a8ffc9c20d2b7f77abc5dd5032f84002b5f8c8f9",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 177,
+    "margin": 0.1582
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 163,
+    "es_ratio": 0.0,
+    "en_ratio": 0.1718,
+    "margin": 0.1718
+   },
+   "changed": false,
+   "judged_text_new": "No issues were found in the provided diagnostic output. All checked components, including the CLI, scaffolding, services, and versions, returned an [ OK ] status.\n\nSummary of findings:\n\n**Environment**\n- [ OK ] CLI version\n- [ OK ] Published version:\n- [ OK ] Clients: Claude Code, Codex, and opencode detected.\n- [ OK ] Backup strings: valid.\n- [ OK ] Obsolete names: none in use.\n- [ OK ] Test windows: none.\n- [ ] MCP clients observed: no communication recorded yet.\n- [ ] Cost and padding: no transcripts available for comparison.\n\n**Scaffolding**\n- [ OK ] Copied hooks: scripts found.\n- [ OK ] Orphan hooks: none found.\n- [ OK ] Registered hooks: hooks registered.\n- [ OK ] Local-delegation skill: installed for Claude Code and opencode.\n- [ OK ] Global memory: up to date for Claude Code, Codex, and opencode.\n- [ OK ] MCP in Claude Code: registered.\n- [ OK ] MCP in Codex: block managed.\n- [ OK ] MCP in opencode: registered.\n\n**Services**\n- [ OK ] Daemon: running version\n- [ OK ] Backend: responding.\n- [ OK ] Backend credentials: not required.\n- [ OK ] Daemon port token: not required.\n- [ ] Claude Desktop token: not configured.\n\n**Versions**\n- [ OK ]\n- [ OK ]\n- [ ] residency: unknown due to missing\n- [ ] Daemon turn: unknown due to missing"
+  },
+  {
+   "id": "probeY-04",
+   "source": "probeY",
+   "file": "evidence/B2d-fix/live-probe-Y.json",
+   "sample_index": 4,
+   "set": null,
+   "batch": null,
+   "repetition": 1,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_empty.txt",
+   "document_sha256_now": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "1b7f30c27da96fb49ff1b790e7a72dfdab8b9b558a8ca3e05f84cbe5c3df61d6",
+   "old": {
+    "verdict": "unknown",
+    "lang": "unknown",
+    "tokens": 107,
+    "margin": 0.0841
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 55,
+    "es_ratio": 0.0,
+    "en_ratio": 0.2364,
+    "margin": 0.2364
+   },
+   "changed": true,
+   "judged_text_new": "Scaffolding:\n- [FALT] missing components:\n- Missing hooks in .\n- Missing registered hooks in .\n- Missing skill for Claude Code in .\n- Missing skill for opencode in .\n- Missing global memory files: , (Codex), and (opencode).\n- Missing MCP configuration files: and .\n- Missing entry in opencode configuration files.\n\nEnvironment:\n- [WARN] configuration warning: and are not set.\n\nSummary of issues:\n- Missing components:\n- Configuration warnings:"
+  },
+  {
+   "id": "probeY-05",
+   "source": "probeY",
+   "file": "evidence/B2d-fix/live-probe-Y.json",
+   "sample_index": 5,
+   "set": null,
+   "batch": null,
+   "repetition": 2,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_empty.txt",
+   "document_sha256_now": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "3f113051d21d5f3d3e48d45c2253961a5bf8ed61f470b938ab5ac2f5cfea35f0",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 153,
+    "margin": 0.2353
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 111,
+    "es_ratio": 0.0,
+    "en_ratio": 0.3514,
+    "margin": 0.3514
+   },
+   "changed": false,
+   "judged_text_new": "Scaffolding:\n- [FALT] missing components:\n- Hooks: hooks are not copied to .\n- Settings: is missing from .\n- Skills: skill is missing for Claude Code and opencode.\n- Global Memory: , , and opencode's files are missing.\n- MCP Configuration: and are not found for Claude Code and Codex.\n- Opencode MCP: is not registered in the opencode configuration files.\n\nEnvironment:\n- [ ] unverified items:\n- MCP clients: No communication has been observed from MCP clients.\n- Cost and padding: No transcripts or cost comparisons are available in .\n\nServices:\n- [ ] unverified item:\n- Claude Desktop: The application is not configured on this machine.\n\nVersions:\n- [ ] unverified items:\n- residency: The configuration is unavailable due to missing .\n- Daemon turn: Information is unavailable because the daemon is not responding."
+  },
+  {
+   "id": "probeY-06",
+   "source": "probeY",
+   "file": "evidence/B2d-fix/live-probe-Y.json",
+   "sample_index": 6,
+   "set": null,
+   "batch": null,
+   "repetition": 3,
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_empty.txt",
+   "document_sha256_now": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "f733d64b2d1418c382fd934052ecce35b7b326831933ab48b446890e719bfb9c",
+   "old": {
+    "verdict": "unknown",
+    "lang": "unknown",
+    "tokens": 90,
+    "margin": 0.1222
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 59,
+    "es_ratio": 0.0,
+    "en_ratio": 0.2203,
+    "margin": 0.2203
+   },
+   "changed": true,
+   "judged_text_new": "Scaffolding:\n- [FALT] missing components:\n- Missing hooks in .\n- Missing settings file at .\n- Missing skill for Claude Code and opencode.\n- Missing global memory files for Claude Code, Codex, and opencode.\n- Missing MCP configuration for Claude Code ( ) and Codex ( ).\n- Missing entry in opencode configuration files.\n\nEnvironment:\n- [WARN] configuration issue:\n- and are not set.\n\nSummary of issues:\n- Missing components [FALT]:\n- Configuration warnings [WARN]:"
+  },
+  {
+   "id": "probeY-07",
+   "source": "probeY",
+   "file": "evidence/B2d-fix/live-probe-Y.json",
+   "sample_index": 7,
+   "set": null,
+   "batch": null,
+   "repetition": 1,
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_Investigacion-empaquetado-publicacion-MCP.md",
+   "document_sha256_now": "e8967de91b7f660847fdce9ac9b7ce443223989cf7625b4e13ae9dfa72ddf422",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "3b1b6bcb7867fe3a92518cef7a16fbb1456ab6a617a85205f44f20ea51a5e366",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 135,
+    "margin": 0.2963
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 119,
+    "es_ratio": 0.0,
+    "en_ratio": 0.3361,
+    "margin": 0.3361
+   },
+   "changed": false,
+   "judged_text_new": "The research outlines a strategy to transform the MCP from a personal, hardcoded setup into a professional, publishable Python package. The core objective is to decouple the tool from specific local paths and hardware, turning it into a generic client for any endpoint.\n\nThe recommended distribution method is via executable through , and registered in the official MCP registry. To achieve this, the project must undergo a \"greenfield\" refactor in a new directory, , to avoid breaking the current working installation. Key technical changes include replacing hardcoded paths with environment variables, making the autostart optional, and moving personal integrations (like the to a documentation \"recipes\" section. Security is prioritized by using and templates to prevent leaking secrets from Claude configuration files."
+  },
+  {
+   "id": "probeY-08",
+   "source": "probeY",
+   "file": "evidence/B2d-fix/live-probe-Y.json",
+   "sample_index": 8,
+   "set": null,
+   "batch": null,
+   "repetition": 1,
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_plans_plan-f6-vision.md",
+   "document_sha256_now": "83e4a6cd3a44ca41ebf6327e4d003c4f097882992e85482a4451ec32ab74b5c2",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "7f4da1e581ba5d2529095d57cbb07189d2ce9c0b878905e1c4bb42ecad19faad",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 135,
+    "margin": 0.2222
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 95,
+    "es_ratio": 0.0,
+    "en_ratio": 0.3053,
+    "margin": 0.3053
+   },
+   "changed": false,
+   "judged_text_new": "This document outlines \"Plan a technical strategy to implement local capabilities using . The plan selects the model quantization) due to its efficiency, fitting within a GB target on an RTX Ti.\n\nImplementation involves several phases:\n**Configuration**: Adding and to .\n**Server Development**: Creating the tool in , which handles encoding and multimodal payloads while enforcing security via directory and file size checks.\n**Documentation**: Writing a new recipe in and updating the and .\n**Testing**: Implementing rigorous tests in to validate payloads, error handling, and usage logs.\n\nThe plan concludes with manual verification steps and a version bump to ."
+  },
+  {
+   "id": "probeY-09",
+   "source": "probeY",
+   "file": "evidence/B2d-fix/live-probe-Y.json",
+   "sample_index": 9,
+   "set": null,
+   "batch": null,
+   "repetition": 1,
+   "tool": "local_summarize",
+   "document": "docs/wiki/Daemon.md",
+   "document_sha256_now": "5ad2c5ad4b3879d1b81086279abf63886ca0a71dadc357afa0bde4bf0836b9be",
+   "document_same_as_measured": true,
+   "requested": "en",
+   "response_sha256": "acbf25178c30466efc290e7b8ce3ada71a2b5f1fbe75afedf05d39a4a2dd3455",
+   "old": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 191,
+    "margin": 0.3037
+   },
+   "new": {
+    "verdict": "requested",
+    "lang": "en",
+    "tokens": 142,
+    "es_ratio": 0.0,
+    "en_ratio": 0.4014,
+    "margin": 0.4014
+   },
+   "changed": false,
+   "judged_text_new": "# Shared Daemon\n\n## Why it exists\n\nThe MCP transport requires a process per client, which causes the embedded dashboard to die when the process holding port terminates. solves this by maintaining a single persistent process per user that serves both MCP Streamable HTTP and the dashboard.\n\n## Startup\n\n\nDefaults include MCP at , the dashboard at , and status at . Users can configure , , and . Backend environment variables must belong to the daemon process.\n\n## Clients\n\nClients like Codex, Claude Code, and opencode should all be configured against the same URL. The daemon manages global backpressure via .\n\n## seen from the daemon\n\nThe daemon manages model \"turns\" if a local is used, preventing VRAM conflicts. It provides several endpoints for the CLI and , such as and .\n\n## Port Authentication\n\nBy default, the port is open on loopback. To secure it, define . The daemon supports , , and for browser sessions.\n\n## Browser Session"
+  }
+ ]
+}

@@ -1,0 +1,744 @@
+{
+ "status": "done",
+ "measured_at": "2026-10-15",
+ "probe": "configuration Y: product es, LOCAL_DELEGATE_OUTPUT_LANGUAGE=en, LOCAL_DELEGATE_LONG_INPUT_CHARS=1000 (everything over 1000 chars goes to the long model, gemma4-26b-a4b), LOCAL_DELEGATE_STRUCTURED_SUMMARY=0 (prose summary)",
+ "code": "branch sdd/english-names-b2d at 14da61d (installed daemon reports local-delegate v0.35.0); no code, daemon, install or launcher change during the probe",
+ "window_id": "w-20261015T173246Z",
+ "local_status": "Backend http://127.0.0.1:9292/v1 up; Idioma: es (sistema); Idioma de respuesta del modelo: en (variable de salida); test window w-20261015T173246Z open since 2026-10-15T17:32:46.318Z. local_status does not print LONG_INPUT_CHARS nor STRUCTURED_SUMMARY: the routing (all 9 rows model=gemma4-26b-a4b, inputs 3122-17383 chars) confirms the threshold; the prose shape of the summaries (no fixed section template) is consistent with structured summary off.",
+ "method": "In series through the live MCP daemon, default arguments: local_lint_summary(path=...) three times on each doctor log (6 calls, 17:34:39Z-17:35:48Z) and local_summarize(path=...) once on each of the three batch-1 failures (3 calls, 17:36:03Z-17:36:37Z). No second repetition of the summaries: none failed. Responses saved literally in scratchpad py/; usage row matched by tool+path+order; lint scored with scratchpad score_py.py (score_px.py with only the response folder, time filter and output name changed); summaries with score_py_sum.py (same detector, judged-text and label rules, plus markdown headings as labels).",
+ "judge": "scripts/detect_language.py detect(min_tokens=20, min_margin=0.15), unchanged; requested language: en",
+ "judged_text_rule": "same as lang-sample-batch1.json: literal response minus wrapper lines '(leído server-side: ...)' / '(read server-side: ...)', '[local-delegate warning: ...]' and '(sin resumir)' / '(not summarized)'",
+ "label_rule": {
+  "labels": "bold spans **...** (trailing colon stripped) plus line-start 'Label:' outside bold",
+  "spanish_labels_copied": "label containing a Spanish word from a fixed list (andamiaje, cadenas, clientes, copiados, coste, credencial, diagnóstico, entorno, estados, huérfanos, idioma, memoria, nombres, obsoletos, prueba, registrados, relleno, respaldo, resultado, servicios, ventanas, versiones) AND appearing verbatim (case-insensitive) in the source document",
+  "spanish_labels_any": "label containing a word from that list, verbatim in the source or not (e.g. 'Memoria MCP', 'Windows de prueba')"
+ },
+ "usage_log_note": "usage rows carry no chunks field for any of the 9 calls (no chunking: inputs below the long model's max_chars 48000); chars_out equals the literal response length minus the final '(leído server-side...)' line in all 9 calls",
+ "variation_note": "the three repetitions of each lint document have distinct response sha256",
+ "summary": {
+  "local_lint_summary": {
+   "es-log-B1b_doctor_es_complete.txt": {
+    "pass_en": 2,
+    "unknown": 1,
+    "es": 0,
+    "margins": [
+     0.1805,
+     0.0731,
+     0.1582
+    ],
+    "spanish_labels_copied": [
+     0,
+     2,
+     0
+    ],
+    "truncated": 0,
+    "model": [
+     "gemma4-26b-a4b"
+    ],
+    "distinct_sha": true,
+    "config_x": {
+     "margins": [
+      0.0879,
+      0.1111,
+      0.0336
+     ],
+     "spanish_labels_copied": [
+      5,
+      5,
+      8
+     ],
+     "pass_en": 0,
+     "model": "gemma3-4b"
+    }
+   },
+   "es-log-B1b_doctor_es_empty.txt": {
+    "pass_en": 1,
+    "unknown": 2,
+    "es": 0,
+    "margins": [
+     0.0841,
+     0.2353,
+     0.1222
+    ],
+    "spanish_labels_copied": [
+     0,
+     0,
+     0
+    ],
+    "truncated": 0,
+    "model": [
+     "gemma4-26b-a4b"
+    ],
+    "distinct_sha": true,
+    "config_x": {
+     "margins": [
+      0.1385,
+      0.1655,
+      0.1462
+     ],
+     "spanish_labels_copied": [
+      0,
+      0,
+      0
+     ],
+     "pass_en": 1,
+     "model": "gemma3-4b"
+    }
+   },
+   "total": "3/6 recognized as en (config X: 1/6), 3/6 unknown, 0/6 es; all finish_reason=stop; all on gemma4-26b-a4b"
+  },
+  "local_summarize": {
+   ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_Investigacion-empaquetado-publicacion-MCP.md": {
+    "model": "gemma4-26b-a4b",
+    "verdict": "pass",
+    "margin": 0.2963,
+    "spanish_headings_or_labels_copied": 0,
+    "headings_verbatim_from_source": 0,
+    "truncated": false,
+    "finish_reason": "stop",
+    "chunked": false,
+    "batch_1_margin": 0.0937,
+    "batch_1_verdict": "fail_unknown"
+   },
+   ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_plans_plan-f6-vision.md": {
+    "model": "gemma4-26b-a4b",
+    "verdict": "pass",
+    "margin": 0.2222,
+    "spanish_headings_or_labels_copied": 0,
+    "headings_verbatim_from_source": 0,
+    "truncated": false,
+    "finish_reason": "stop",
+    "chunked": false,
+    "batch_1_margin": 0.0473,
+    "batch_1_verdict": "fail_unknown"
+   },
+   "docs/wiki/Daemon.md": {
+    "model": "gemma4-26b-a4b",
+    "verdict": "pass",
+    "margin": 0.3037,
+    "spanish_headings_or_labels_copied": 0,
+    "headings_verbatim_from_source": 0,
+    "truncated": true,
+    "finish_reason": "length",
+    "chunked": false,
+    "batch_1_margin": 0.122,
+    "batch_1_verdict": "fail_unknown"
+   },
+   "total": "3/3 recognized as en (batch 1: 0/3); 0 Spanish headings copied; Daemon.md truncated by max_tokens (finish_reason=length, warning line in the response)"
+  }
+ },
+ "observations": [
+  "lint, complete: the long model stops copying the Spanish section labels in 2 of 3 repetitions (0, 2, 0 copied vs 5, 5, 8 with gemma3-4b) and those two pass (margins 0.181 and 0.158). Repetition 2 copies 'Entorno (el CLI y los clientes)' and 'Servicios' verbatim as list labels and fails (margin 0.073), so the model change reduces the leak but does not remove it.",
+  "lint, complete: content quality regresses on another axis: all three responses open with 'No issues were found ... all returned [ OK ]' although the log has [ -- ] items (repetition 2 even counts them as 5 unverified).",
+  "lint, empty: no Spanish labels in any repetition (same as X), yet 2 of 3 still fail (margins 0.084 and 0.122 vs X 0.139/0.166/0.146). The Spanish-side tokens come from the path segment '\\es\\' in '<TMP>\\False\\es\\home' (counted as the Spanish function word 'es') and the '[FALT]' tags are copied; the rest is terse English. The model does not change this failure: it is the detector on short technical text plus path noise.",
+  "summarize: the three batch-1 failures pass on gemma4-26b-a4b with prose output (margins 0.296 / 0.222 / 0.304 vs 0.094 / 0.047 / 0.122). Batch 1 copied the Spanish section titles verbatim (e.g. 'Resumen ejecutivo', 'Fases de implementación', 'Por qué existe'); here plan-f6 and empaquetado have no Spanish heading, and Daemon.md keeps the document's section structure but translates every heading ('Why it exists', 'Startup', 'Clients', 'Port Authentication', 'Browser Session').",
+  "summarize, Daemon.md: truncated at 364 output tokens (finish_reason=length, '[local-delegate warning: salida truncada por max_tokens]'), with the last heading 'Browser Session' left empty: following the document's sections in prose with the default max_words=150 overruns the budget."
+ ],
+ "samples": [
+  {
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_complete.txt",
+   "repetition": 1,
+   "document_sha256": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+   "document_sha256_frozen": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+   "document_unchanged": true,
+   "response_sha256": "bbb15855ab1435f583fd6bbb47503873e6de7fc8ee8eef413e5c5c9acea73ade",
+   "response_literal": "No issues were found in the provided output. All checked components, including the CLI, scaffolding, services, and versions, returned an [ OK ] status.\n\nSummary of findings:\n\n**Environment**\n- [ OK ] CLI and version: 0.35.0\n- [ OK ] Clients: Claude Code, Codex, opencode\n- [ -- ] MCP clients: No communication observed\n- [ OK ] Fallback strings: Valid\n- [ -- ] Cost and padding: No transcripts available\n\n**Scaffolding**\n- [ OK ] Hooks: Copied, orphan-free, and registered\n- [ OK ] Skills: Installed for Claude Code and opencode\n- [ OK ] Global memory: Up to date for all clients\n- [ OK ] MCP registration: Configured for Claude Code, Codex, and opencode\n\n**Services**\n- [ OK ] Daemon: Running (pid 42)\n- [ OK ] Backend: Responding\n- [ OK ] Credentials: No authentication required for backend or daemon\n- [ -- ] Claude Desktop: Not configured\n\n**Versions**\n- [ OK ] llama-swap: v255\n- [ OK ] llama-server: b10909\n- [ -- ] llama-swap residency: Unknown due to missing LLAMASWAP_CONFIG\n- [ -- ] Daemon turn: Unknown due to missing LLAMASWAP_CONFIG\n\n(leído server-side: 3122 chars ≈ 1626 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "No issues were found in the provided output. All checked components, including the CLI, scaffolding, services, and versions, returned an [ OK ] status.\n\nSummary of findings:\n\n**Environment**\n- [ OK ] CLI and version: 0.35.0\n- [ OK ] Clients: Claude Code, Codex, opencode\n- [ -- ] MCP clients: No communication observed\n- [ OK ] Fallback strings: Valid\n- [ -- ] Cost and padding: No transcripts available\n\n**Scaffolding**\n- [ OK ] Hooks: Copied, orphan-free, and registered\n- [ OK ] Skills: Installed for Claude Code and opencode\n- [ OK ] Global memory: Up to date for all clients\n- [ OK ] MCP registration: Configured for Claude Code, Codex, and opencode\n\n**Services**\n- [ OK ] Daemon: Running (pid 42)\n- [ OK ] Backend: Responding\n- [ OK ] Credentials: No authentication required for backend or daemon\n- [ -- ] Claude Desktop: Not configured\n\n**Versions**\n- [ OK ] llama-swap: v255\n- [ OK ] llama-server: b10909\n- [ -- ] llama-swap residency: Unknown due to missing LLAMASWAP_CONFIG\n- [ -- ] Daemon turn: Unknown due to missing LLAMASWAP_CONFIG",
+   "usage_row": {
+    "ts": "2026-10-15T17:34:39+00:00",
+    "model": "gemma4-26b-a4b",
+    "chars_in": 3122,
+    "chars_out": 1045,
+    "tokens_in": 1164,
+    "tokens_out": 296,
+    "finish_reason": "stop",
+    "ok": true,
+    "latency_ms": 18416
+   },
+   "usage_row_has_response_sha256": false,
+   "truncated": false,
+   "length_check": {
+    "literal_len": 1132,
+    "len_without_read_line": 1045,
+    "chars_out": 1045,
+    "match": true
+   },
+   "detector": {
+    "lang": "en",
+    "tokens": 133,
+    "es_ratio": 0.0,
+    "en_ratio": 0.1805,
+    "margin": 0.1805
+   },
+   "verdict": "pass",
+   "labels": [
+    "Environment",
+    "Scaffolding",
+    "Services",
+    "Versions",
+    "Summary of findings",
+    "[ OK ] CLI and version",
+    "[ OK ] Clients",
+    "[ -- ] MCP clients",
+    "[ OK ] Fallback strings",
+    "[ -- ] Cost and padding",
+    "[ OK ] Hooks",
+    "[ OK ] Skills",
+    "[ OK ] Global memory",
+    "[ OK ] MCP registration",
+    "[ OK ] Daemon",
+    "[ OK ] Backend",
+    "[ OK ] Credentials",
+    "[ -- ] Claude Desktop",
+    "[ OK ] llama-swap",
+    "[ OK ] llama-server",
+    "[ -- ] llama-swap residency",
+    "[ -- ] Daemon turn",
+    "(leído server-side"
+   ],
+   "spanish_labels_copied": [],
+   "spanish_labels_copied_count": 0,
+   "sha_distinct_from_other_repetitions": true,
+   "config_x_same_repetition": {
+    "model": "gemma3-4b",
+    "margin": 0.0879,
+    "verdict": "fail_unknown",
+    "spanish_labels_copied_count": 5,
+    "chars_out": 729
+   },
+   "tool": "local_lint_summary"
+  },
+  {
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_complete.txt",
+   "repetition": 2,
+   "document_sha256": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+   "document_sha256_frozen": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+   "document_unchanged": true,
+   "response_sha256": "340df22a995aff5564febb951f1aa62eafafc1292bcf0a4ef78e8cb849ce082e",
+   "response_literal": "No issues were found in the provided output. All checked components, including the CLI, scaffolding, services, and versions, returned an [ OK ] status.\n\nSummary of unverified items:\n- Entorno (el CLI y los clientes):\n  - [ -- ] 1 unverified MCP client communication status.\n  - [ -- ] 1 unverified cost and padding comparison due to missing transcripts.\n- Servicios:\n  - [ -- ] 1 unverified Claude Desktop configuration status.\n- Versiones (instalada vs probada; usa --online para comparar con GitHub):\n  - [ -- ] 1 unverified llama-swap residency status due to missing LLAMASWAP_CONFIG.\n  - [ -- ] 1 unverified daemon turn status.\n\nTotal unverified items: 5.\nTotal errors/warnings: 0.\n\n(leído server-side: 3122 chars ≈ 1626 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "No issues were found in the provided output. All checked components, including the CLI, scaffolding, services, and versions, returned an [ OK ] status.\n\nSummary of unverified items:\n- Entorno (el CLI y los clientes):\n  - [ -- ] 1 unverified MCP client communication status.\n  - [ -- ] 1 unverified cost and padding comparison due to missing transcripts.\n- Servicios:\n  - [ -- ] 1 unverified Claude Desktop configuration status.\n- Versiones (instalada vs probada; usa --online para comparar con GitHub):\n  - [ -- ] 1 unverified llama-swap residency status due to missing LLAMASWAP_CONFIG.\n  - [ -- ] 1 unverified daemon turn status.\n\nTotal unverified items: 5.\nTotal errors/warnings: 0.",
+   "usage_row": {
+    "ts": "2026-10-15T17:34:53+00:00",
+    "model": "gemma4-26b-a4b",
+    "chars_in": 3122,
+    "chars_out": 685,
+    "tokens_in": 1164,
+    "tokens_out": 180,
+    "finish_reason": "stop",
+    "ok": true,
+    "latency_ms": 4284
+   },
+   "usage_row_has_response_sha256": false,
+   "truncated": false,
+   "length_check": {
+    "literal_len": 772,
+    "len_without_read_line": 685,
+    "chars_out": 685,
+    "match": true
+   },
+   "detector": {
+    "lang": "unknown",
+    "tokens": 82,
+    "es_ratio": 0.061,
+    "en_ratio": 0.1341,
+    "margin": 0.0731
+   },
+   "verdict": "fail_unknown",
+   "labels": [
+    "Summary of unverified items",
+    "Entorno (el CLI y los clientes)",
+    "Servicios",
+    "Total unverified items",
+    "Total errors/warnings",
+    "(leído server-side"
+   ],
+   "spanish_labels_copied": [
+    "Entorno (el CLI y los clientes)",
+    "Servicios"
+   ],
+   "spanish_labels_copied_count": 2,
+   "sha_distinct_from_other_repetitions": true,
+   "config_x_same_repetition": {
+    "model": "gemma3-4b",
+    "margin": 0.1111,
+    "verdict": "fail_unknown",
+    "spanish_labels_copied_count": 5,
+    "chars_out": 780
+   },
+   "tool": "local_lint_summary"
+  },
+  {
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_complete.txt",
+   "repetition": 3,
+   "document_sha256": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+   "document_sha256_frozen": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d",
+   "document_unchanged": true,
+   "response_sha256": "ace3b788b5d9047261fb5bc3a8ffc9c20d2b7f77abc5dd5032f84002b5f8c8f9",
+   "response_literal": "No issues were found in the provided diagnostic output. All checked components, including the CLI, scaffolding, services, and versions, returned an [ OK ] status.\n\nSummary of findings:\n\n**Environment**\n- [ OK ] CLI local-delegate: version 0.35.0.\n- [ OK ] Published version: 0.35.0.\n- [ OK ] Clients: Claude Code, Codex, and opencode detected.\n- [ OK ] Backup strings: valid.\n- [ OK ] Obsolete names: none in use.\n- [ OK ] Test windows: none.\n- [ -- ] MCP clients observed: no communication recorded yet.\n- [ -- ] Cost and padding: no transcripts available for comparison.\n\n**Scaffolding**\n- [ OK ] Copied hooks: 5 scripts found.\n- [ OK ] Orphan hooks: none found.\n- [ OK ] Registered hooks: 2 hooks registered.\n- [ OK ] Local-delegation skill: installed for Claude Code and opencode.\n- [ OK ] Global memory: up to date for Claude Code, Codex, and opencode.\n- [ OK ] MCP in Claude Code: registered.\n- [ OK ] MCP in Codex: block managed.\n- [ OK ] MCP in opencode: registered.\n\n**Services**\n- [ OK ] Daemon: running version 0.35.0.\n- [ OK ] Backend: responding.\n- [ OK ] Backend credentials: not required.\n- [ OK ] Daemon port token: not required.\n- [ -- ] Claude Desktop token: not configured.\n\n**Versions**\n- [ OK ] llama-swap: v255.\n- [ OK ] llama-server: b10909.\n- [ -- ] llama-swap residency: unknown due to missing LLAMASWAP_CONFIG.\n- [ -- ] Daemon turn: unknown due to missing LLAMASWAP_CONFIG.\n\n(leído server-side: 3122 chars ≈ 1626 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "No issues were found in the provided diagnostic output. All checked components, including the CLI, scaffolding, services, and versions, returned an [ OK ] status.\n\nSummary of findings:\n\n**Environment**\n- [ OK ] CLI local-delegate: version 0.35.0.\n- [ OK ] Published version: 0.35.0.\n- [ OK ] Clients: Claude Code, Codex, and opencode detected.\n- [ OK ] Backup strings: valid.\n- [ OK ] Obsolete names: none in use.\n- [ OK ] Test windows: none.\n- [ -- ] MCP clients observed: no communication recorded yet.\n- [ -- ] Cost and padding: no transcripts available for comparison.\n\n**Scaffolding**\n- [ OK ] Copied hooks: 5 scripts found.\n- [ OK ] Orphan hooks: none found.\n- [ OK ] Registered hooks: 2 hooks registered.\n- [ OK ] Local-delegation skill: installed for Claude Code and opencode.\n- [ OK ] Global memory: up to date for Claude Code, Codex, and opencode.\n- [ OK ] MCP in Claude Code: registered.\n- [ OK ] MCP in Codex: block managed.\n- [ OK ] MCP in opencode: registered.\n\n**Services**\n- [ OK ] Daemon: running version 0.35.0.\n- [ OK ] Backend: responding.\n- [ OK ] Backend credentials: not required.\n- [ OK ] Daemon port token: not required.\n- [ -- ] Claude Desktop token: not configured.\n\n**Versions**\n- [ OK ] llama-swap: v255.\n- [ OK ] llama-server: b10909.\n- [ -- ] llama-swap residency: unknown due to missing LLAMASWAP_CONFIG.\n- [ -- ] Daemon turn: unknown due to missing LLAMASWAP_CONFIG.",
+   "usage_row": {
+    "ts": "2026-10-15T17:35:08+00:00",
+    "model": "gemma4-26b-a4b",
+    "chars_in": 3122,
+    "chars_out": 1399,
+    "tokens_in": 1164,
+    "tokens_out": 417,
+    "finish_reason": "stop",
+    "ok": true,
+    "latency_ms": 9840
+   },
+   "usage_row_has_response_sha256": false,
+   "truncated": false,
+   "length_check": {
+    "literal_len": 1486,
+    "len_without_read_line": 1399,
+    "chars_out": 1399,
+    "match": true
+   },
+   "detector": {
+    "lang": "en",
+    "tokens": 177,
+    "es_ratio": 0.0,
+    "en_ratio": 0.1582,
+    "margin": 0.1582
+   },
+   "verdict": "pass",
+   "labels": [
+    "Environment",
+    "Scaffolding",
+    "Services",
+    "Versions",
+    "Summary of findings",
+    "[ OK ] CLI local-delegate",
+    "[ OK ] Published version",
+    "[ OK ] Clients",
+    "[ OK ] Backup strings",
+    "[ OK ] Obsolete names",
+    "[ OK ] Test windows",
+    "[ -- ] MCP clients observed",
+    "[ -- ] Cost and padding",
+    "[ OK ] Copied hooks",
+    "[ OK ] Orphan hooks",
+    "[ OK ] Registered hooks",
+    "[ OK ] Local-delegation skill",
+    "[ OK ] Global memory",
+    "[ OK ] MCP in Claude Code",
+    "[ OK ] MCP in Codex",
+    "[ OK ] MCP in opencode",
+    "[ OK ] Daemon",
+    "[ OK ] Backend",
+    "[ OK ] Backend credentials",
+    "[ OK ] Daemon port token",
+    "[ -- ] Claude Desktop token",
+    "[ OK ] llama-swap",
+    "[ OK ] llama-server",
+    "[ -- ] llama-swap residency",
+    "[ -- ] Daemon turn",
+    "(leído server-side"
+   ],
+   "spanish_labels_copied": [],
+   "spanish_labels_copied_count": 0,
+   "sha_distinct_from_other_repetitions": true,
+   "config_x_same_repetition": {
+    "model": "gemma3-4b",
+    "margin": 0.0336,
+    "verdict": "fail_unknown",
+    "spanish_labels_copied_count": 8,
+    "chars_out": 972
+   },
+   "tool": "local_lint_summary"
+  },
+  {
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_empty.txt",
+   "repetition": 1,
+   "document_sha256": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+   "document_sha256_frozen": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+   "document_unchanged": true,
+   "response_sha256": "1b7f30c27da96fb49ff1b790e7a72dfdab8b9b558a8ca3e05f84cbe5c3df61d6",
+   "response_literal": "Scaffolding:\n- [FALT] 7 missing components:\n    - Missing hooks in `<TMP>\\False\\es\\home\\.claude\\hooks\\local-delegate`.\n    - Missing registered hooks in `<TMP>\\False\\es\\home\\.claude\\settings.json`.\n    - Missing local-delegation skill for Claude Code in `<TMP>\\False\\es\\home\\.claude\\skills\\local-delegation`.\n    - Missing local-delegation skill for opencode in `<TMP>\\False\\es\\home\\.config\\opencode\\skill\\local-delegation`.\n    - Missing global memory files: `CLAUDE.md`, `AGENTS.md` (Codex), and `AGENTS.md` (opencode).\n    - Missing MCP configuration files: `claude.json` and `config.toml`.\n    - Missing 'local-delegate' entry in opencode configuration files.\n\nEnvironment:\n- [WARN] 1 configuration warning: `LLAMASWAP_EXE` and `LLAMASWAP_CONFIG` are not set.\n\nSummary of issues:\n- Missing components: 7\n- Configuration warnings: 1\n\n(leído server-side: 3377 chars ≈ 1758 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "Scaffolding:\n- [FALT] 7 missing components:\n    - Missing hooks in `<TMP>\\False\\es\\home\\.claude\\hooks\\local-delegate`.\n    - Missing registered hooks in `<TMP>\\False\\es\\home\\.claude\\settings.json`.\n    - Missing local-delegation skill for Claude Code in `<TMP>\\False\\es\\home\\.claude\\skills\\local-delegation`.\n    - Missing local-delegation skill for opencode in `<TMP>\\False\\es\\home\\.config\\opencode\\skill\\local-delegation`.\n    - Missing global memory files: `CLAUDE.md`, `AGENTS.md` (Codex), and `AGENTS.md` (opencode).\n    - Missing MCP configuration files: `claude.json` and `config.toml`.\n    - Missing 'local-delegate' entry in opencode configuration files.\n\nEnvironment:\n- [WARN] 1 configuration warning: `LLAMASWAP_EXE` and `LLAMASWAP_CONFIG` are not set.\n\nSummary of issues:\n- Missing components: 7\n- Configuration warnings: 1",
+   "usage_row": {
+    "ts": "2026-10-15T17:35:23+00:00",
+    "model": "gemma4-26b-a4b",
+    "chars_in": 3377,
+    "chars_out": 835,
+    "tokens_in": 1225,
+    "tokens_out": 256,
+    "finish_reason": "stop",
+    "ok": true,
+    "latency_ms": 7573
+   },
+   "usage_row_has_response_sha256": false,
+   "truncated": false,
+   "length_check": {
+    "literal_len": 922,
+    "len_without_read_line": 835,
+    "chars_out": 835,
+    "match": true
+   },
+   "detector": {
+    "lang": "unknown",
+    "tokens": 107,
+    "es_ratio": 0.0374,
+    "en_ratio": 0.1215,
+    "margin": 0.0841
+   },
+   "verdict": "fail_unknown",
+   "labels": [
+    "Scaffolding",
+    "[FALT] 7 missing components",
+    "Missing global memory files",
+    "Missing MCP configuration files",
+    "Environment",
+    "[WARN] 1 configuration warning",
+    "Summary of issues",
+    "Missing components",
+    "Configuration warnings",
+    "(leído server-side"
+   ],
+   "spanish_labels_copied": [],
+   "spanish_labels_copied_count": 0,
+   "sha_distinct_from_other_repetitions": true,
+   "config_x_same_repetition": {
+    "model": "gemma3-4b",
+    "margin": 0.1385,
+    "verdict": "fail_unknown",
+    "spanish_labels_copied_count": 0,
+    "chars_out": 1053
+   },
+   "tool": "local_lint_summary"
+  },
+  {
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_empty.txt",
+   "repetition": 2,
+   "document_sha256": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+   "document_sha256_frozen": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+   "document_unchanged": true,
+   "response_sha256": "3f113051d21d5f3d3e48d45c2253961a5bf8ed61f470b938ab5ac2f5cfea35f0",
+   "response_literal": "Scaffolding:\n- [FALT] 7 missing components:\n    - Hooks: `local-delegate` hooks are not copied to `<TMP>\\False\\es\\home\\.claude\\hooks\\local-delegate`.\n    - Settings: `settings.json` is missing from `<TMP>\\False\\es\\home\\.claude`.\n    - Skills: `local-delegation` skill is missing for Claude Code and opencode.\n    - Global Memory: `CLAUDE.md`, `AGENTS.md`, and opencode's `AGENTS.md` files are missing.\n    - MCP Configuration: `claude.json` and `config.toml` are not found for Claude Code and Codex.\n    - Opencode MCP: `local-delegate` is not registered in the opencode configuration files.\n\nEnvironment:\n- [ -- ] 2 unverified items:\n    - MCP clients: No communication has been observed from MCP clients.\n    - Cost and padding: No transcripts or cost comparisons are available in `D:\\Projects\\local-delegate\\tests\\_sin_logs`.\n\nServices:\n- [ -- ] 1 unverified item:\n    - Claude Desktop: The application is not configured on this machine.\n\nVersions:\n- [ -- ] 2 unverified items:\n    - llama-swap residency: The configuration is unavailable due to missing `LLAMASWAP_CONFIG`.\n    - Daemon turn: Information is unavailable because the daemon is not responding.\n\n(leído server-side: 3377 chars ≈ 1758 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "Scaffolding:\n- [FALT] 7 missing components:\n    - Hooks: `local-delegate` hooks are not copied to `<TMP>\\False\\es\\home\\.claude\\hooks\\local-delegate`.\n    - Settings: `settings.json` is missing from `<TMP>\\False\\es\\home\\.claude`.\n    - Skills: `local-delegation` skill is missing for Claude Code and opencode.\n    - Global Memory: `CLAUDE.md`, `AGENTS.md`, and opencode's `AGENTS.md` files are missing.\n    - MCP Configuration: `claude.json` and `config.toml` are not found for Claude Code and Codex.\n    - Opencode MCP: `local-delegate` is not registered in the opencode configuration files.\n\nEnvironment:\n- [ -- ] 2 unverified items:\n    - MCP clients: No communication has been observed from MCP clients.\n    - Cost and padding: No transcripts or cost comparisons are available in `D:\\Projects\\local-delegate\\tests\\_sin_logs`.\n\nServices:\n- [ -- ] 1 unverified item:\n    - Claude Desktop: The application is not configured on this machine.\n\nVersions:\n- [ -- ] 2 unverified items:\n    - llama-swap residency: The configuration is unavailable due to missing `LLAMASWAP_CONFIG`.\n    - Daemon turn: Information is unavailable because the daemon is not responding.",
+   "usage_row": {
+    "ts": "2026-10-15T17:35:37+00:00",
+    "model": "gemma4-26b-a4b",
+    "chars_in": 3377,
+    "chars_out": 1160,
+    "tokens_in": 1225,
+    "tokens_out": 320,
+    "finish_reason": "stop",
+    "ok": true,
+    "latency_ms": 7759
+   },
+   "usage_row_has_response_sha256": false,
+   "truncated": false,
+   "length_check": {
+    "literal_len": 1247,
+    "len_without_read_line": 1160,
+    "chars_out": 1160,
+    "match": true
+   },
+   "detector": {
+    "lang": "en",
+    "tokens": 153,
+    "es_ratio": 0.0196,
+    "en_ratio": 0.2549,
+    "margin": 0.2353
+   },
+   "verdict": "pass",
+   "labels": [
+    "Scaffolding",
+    "[FALT] 7 missing components",
+    "Hooks",
+    "Settings",
+    "Skills",
+    "Global Memory",
+    "MCP Configuration",
+    "Opencode MCP",
+    "Environment",
+    "[ -- ] 2 unverified items",
+    "MCP clients",
+    "Cost and padding",
+    "Services",
+    "[ -- ] 1 unverified item",
+    "Claude Desktop",
+    "Versions",
+    "[ -- ] 2 unverified items",
+    "llama-swap residency",
+    "Daemon turn",
+    "(leído server-side"
+   ],
+   "spanish_labels_copied": [],
+   "spanish_labels_copied_count": 0,
+   "sha_distinct_from_other_repetitions": true,
+   "config_x_same_repetition": {
+    "model": "gemma3-4b",
+    "margin": 0.1655,
+    "verdict": "pass",
+    "spanish_labels_copied_count": 0,
+    "chars_out": 1160
+   },
+   "tool": "local_lint_summary"
+  },
+  {
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_empty.txt",
+   "repetition": 3,
+   "document_sha256": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+   "document_sha256_frozen": "f74258447dd0e0e96b51b3eefc70f4b9dc7b081188f89405ff659cd0c87831fa",
+   "document_unchanged": true,
+   "response_sha256": "f733d64b2d1418c382fd934052ecce35b7b326831933ab48b446890e719bfb9c",
+   "response_literal": "Scaffolding:\n- [FALT] 7 missing components:\n    - Missing hooks in `<TMP>\\False\\es\\home\\.claude\\hooks\\local-delegate`.\n    - Missing settings file at `<TMP>\\False\\es\\home\\.claude\\settings.json`.\n    - Missing local-delegation skill for Claude Code and opencode.\n    - Missing global memory files (CLAUDE.md, AGENTS.md) for Claude Code, Codex, and opencode.\n    - Missing MCP configuration for Claude Code (`.claude.json`) and Codex (`config.toml`).\n    - Missing 'local-delegate' entry in opencode configuration files.\n\nEnvironment:\n- [WARN] 1 configuration issue:\n    - LLAMASWAP_EXE and LLAMASWAP_CONFIG are not set.\n\nSummary of issues:\n- Missing components [FALT]: 7\n- Configuration warnings [WARN]: 1\n\n(leído server-side: 3377 chars ≈ 1758 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "Scaffolding:\n- [FALT] 7 missing components:\n    - Missing hooks in `<TMP>\\False\\es\\home\\.claude\\hooks\\local-delegate`.\n    - Missing settings file at `<TMP>\\False\\es\\home\\.claude\\settings.json`.\n    - Missing local-delegation skill for Claude Code and opencode.\n    - Missing global memory files (CLAUDE.md, AGENTS.md) for Claude Code, Codex, and opencode.\n    - Missing MCP configuration for Claude Code (`.claude.json`) and Codex (`config.toml`).\n    - Missing 'local-delegate' entry in opencode configuration files.\n\nEnvironment:\n- [WARN] 1 configuration issue:\n    - LLAMASWAP_EXE and LLAMASWAP_CONFIG are not set.\n\nSummary of issues:\n- Missing components [FALT]: 7\n- Configuration warnings [WARN]: 1",
+   "usage_row": {
+    "ts": "2026-10-15T17:35:48+00:00",
+    "model": "gemma4-26b-a4b",
+    "chars_in": 3377,
+    "chars_out": 704,
+    "tokens_in": 1225,
+    "tokens_out": 206,
+    "finish_reason": "stop",
+    "ok": true,
+    "latency_ms": 4932
+   },
+   "usage_row_has_response_sha256": false,
+   "truncated": false,
+   "length_check": {
+    "literal_len": 791,
+    "len_without_read_line": 704,
+    "chars_out": 704,
+    "match": true
+   },
+   "detector": {
+    "lang": "unknown",
+    "tokens": 90,
+    "es_ratio": 0.0222,
+    "en_ratio": 0.1444,
+    "margin": 0.1222
+   },
+   "verdict": "fail_unknown",
+   "labels": [
+    "Scaffolding",
+    "[FALT] 7 missing components",
+    "Environment",
+    "[WARN] 1 configuration issue",
+    "Summary of issues",
+    "Missing components [FALT]",
+    "Configuration warnings [WARN]",
+    "(leído server-side"
+   ],
+   "spanish_labels_copied": [],
+   "spanish_labels_copied_count": 0,
+   "sha_distinct_from_other_repetitions": true,
+   "config_x_same_repetition": {
+    "model": "gemma3-4b",
+    "margin": 0.1462,
+    "verdict": "fail_unknown",
+    "spanish_labels_copied_count": 0,
+    "chars_out": 1061
+   },
+   "tool": "local_lint_summary"
+  },
+  {
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_Investigacion-empaquetado-publicacion-MCP.md",
+   "repetition": 1,
+   "document_sha256": "e8967de91b7f660847fdce9ac9b7ce443223989cf7625b4e13ae9dfa72ddf422",
+   "document_sha256_frozen": "e8967de91b7f660847fdce9ac9b7ce443223989cf7625b4e13ae9dfa72ddf422",
+   "document_unchanged": true,
+   "response_sha256": "3b1b6bcb7867fe3a92518cef7a16fbb1456ab6a617a85205f44f20ea51a5e366",
+   "response_literal": "The research outlines a strategy to transform the `local-delegate` MCP from a personal, hardcoded setup into a professional, publishable Python package. The core objective is to decouple the tool from specific local paths and hardware, turning it into a generic client for any OpenAI-compatible endpoint.\n\nThe recommended distribution method is via PyPI, executable through `uvx`, and registered in the official MCP registry. To achieve this, the project must undergo a \"greenfield\" refactor in a new directory, `D:\\Projects\\local-delegate`, to avoid breaking the current working installation. Key technical changes include replacing hardcoded `D:\\` paths with environment variables, making the `llama-swap` autostart optional, and moving personal integrations (like the 27 sub-agents) to a documentation \"recipes\" section. Security is prioritized by using `.gitignore` and templates to prevent leaking secrets from Claude configuration files.\n\n(leído server-side: 16843 chars ≈ 8421 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "The research outlines a strategy to transform the `local-delegate` MCP from a personal, hardcoded setup into a professional, publishable Python package. The core objective is to decouple the tool from specific local paths and hardware, turning it into a generic client for any OpenAI-compatible endpoint.\n\nThe recommended distribution method is via PyPI, executable through `uvx`, and registered in the official MCP registry. To achieve this, the project must undergo a \"greenfield\" refactor in a new directory, `D:\\Projects\\local-delegate`, to avoid breaking the current working installation. Key technical changes include replacing hardcoded `D:\\` paths with environment variables, making the `llama-swap` autostart optional, and moving personal integrations (like the 27 sub-agents) to a documentation \"recipes\" section. Security is prioritized by using `.gitignore` and templates to prevent leaking secrets from Claude configuration files.",
+   "usage_row": {
+    "ts": "2026-10-15T17:36:03+00:00",
+    "model": "gemma4-26b-a4b",
+    "chars_in": 16843,
+    "chars_out": 943,
+    "tokens_in": 5243,
+    "tokens_out": 189,
+    "finish_reason": "stop",
+    "truncated_out": null,
+    "chunks": null,
+    "ok": true,
+    "latency_ms": 9779
+   },
+   "chunked": false,
+   "truncated": false,
+   "length_check": {
+    "literal_len": 1031,
+    "len_without_read_line": 943,
+    "chars_out": 943,
+    "match": true
+   },
+   "detector": {
+    "lang": "en",
+    "tokens": 135,
+    "es_ratio": 0.0,
+    "en_ratio": 0.2963,
+    "margin": 0.2963
+   },
+   "verdict": "pass",
+   "headings": [],
+   "labels": [
+    "(leído server-side"
+   ],
+   "spanish_labels_copied": [],
+   "spanish_labels_copied_count": 0,
+   "headings_verbatim_from_source": [],
+   "batch_1": {
+    "margin": 0.0937,
+    "verdict": "fail_unknown",
+    "headings": [
+     "Introduction",
+     "1. Resumen ejecutivo (TL;DR)",
+     "2. El reto real: desacoplar antes de publicar",
+     "2.bis — Estrategia de directorio limpio (greenfield)",
+     "3. Parte A — Empaquetar el MCP para publicar",
+     "4. Parte B — Repo de GitHub (README + wiki + seguridad)",
+     "5. Riesgos y decisiones abiertas (para ti)",
+     "6. Plan de ejecución por fases (checklist)",
+     "7. Fuentes"
+    ]
+   },
+   "sha_distinct_from_other_repetitions": true,
+   "tool": "local_summarize"
+  },
+  {
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_plans_plan-f6-vision.md",
+   "repetition": 1,
+   "document_sha256": "83e4a6cd3a44ca41ebf6327e4d003c4f097882992e85482a4451ec32ab74b5c2",
+   "document_sha256_frozen": "83e4a6cd3a44ca41ebf6327e4d003c4f097882992e85482a4451ec32ab74b5c2",
+   "document_unchanged": true,
+   "response_sha256": "7f4da1e581ba5d2529095d57cbb07189d2ce9c0b878905e1c4bb42ecad19faad",
+   "response_literal": "This document outlines \"Plan F6,\" a technical strategy to implement local image-to-text capabilities using `llama-server`. The plan selects the `Qwen3-VL-8B-Instruct` model (Q4_K_M quantization) due to its efficiency, fitting within a 6 GB target on an RTX 5060 Ti.\n\nImplementation involves several phases:\n1. **Configuration**: Adding `MODEL_VISION` and `MAX_IMAGE_MB` to `config.py`.\n2. **Server Development**: Creating the `local_describe_image` tool in `server.py`, which handles base64 encoding and multimodal payloads while enforcing security via directory and file size checks.\n3. **Documentation**: Writing a new recipe in `docs/recipes/llama-swap-vision.md` and updating the `README.md` and `CHANGELOG.md`.\n4. **Testing**: Implementing rigorous tests in `tests/test_vision.py` to validate payloads, error handling, and usage logs.\n\nThe plan concludes with manual verification steps and a version bump to `0.3.0`.\n\n(leído server-side: 10197 chars ≈ 5098 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "This document outlines \"Plan F6,\" a technical strategy to implement local image-to-text capabilities using `llama-server`. The plan selects the `Qwen3-VL-8B-Instruct` model (Q4_K_M quantization) due to its efficiency, fitting within a 6 GB target on an RTX 5060 Ti.\n\nImplementation involves several phases:\n1. **Configuration**: Adding `MODEL_VISION` and `MAX_IMAGE_MB` to `config.py`.\n2. **Server Development**: Creating the `local_describe_image` tool in `server.py`, which handles base64 encoding and multimodal payloads while enforcing security via directory and file size checks.\n3. **Documentation**: Writing a new recipe in `docs/recipes/llama-swap-vision.md` and updating the `README.md` and `CHANGELOG.md`.\n4. **Testing**: Implementing rigorous tests in `tests/test_vision.py` to validate payloads, error handling, and usage logs.\n\nThe plan concludes with manual verification steps and a version bump to `0.3.0`.",
+   "usage_row": {
+    "ts": "2026-10-15T17:36:18+00:00",
+    "model": "gemma4-26b-a4b",
+    "chars_in": 10197,
+    "chars_out": 921,
+    "tokens_in": 3535,
+    "tokens_out": 239,
+    "finish_reason": "stop",
+    "truncated_out": null,
+    "chunks": null,
+    "ok": true,
+    "latency_ms": 9081
+   },
+   "chunked": false,
+   "truncated": false,
+   "length_check": {
+    "literal_len": 1009,
+    "len_without_read_line": 921,
+    "chars_out": 921,
+    "match": true
+   },
+   "detector": {
+    "lang": "en",
+    "tokens": 135,
+    "es_ratio": 0.0,
+    "en_ratio": 0.2222,
+    "margin": 0.2222
+   },
+   "verdict": "pass",
+   "headings": [],
+   "labels": [
+    "Configuration",
+    "Server Development",
+    "Documentation",
+    "Testing",
+    "Implementation involves several phases",
+    "(leído server-side"
+   ],
+   "spanish_labels_copied": [],
+   "spanish_labels_copied_count": 0,
+   "headings_verbatim_from_source": [],
+   "batch_1": {
+    "margin": 0.0473,
+    "verdict": "fail_unknown",
+    "headings": [
+     "Introduction",
+     "Paso 0 — Verificación contra el entorno real (hecha antes de escribir este plan)",
+     "Fases de implementación",
+     "Cambios en TU máquina (fuera del repo — requieren tu OK explícito antes de ejecutarlos)",
+     "Criterios de aceptación F6",
+     "Discrepancias plan-maestro vs. código real (a anotar también en `plan-v0.2-mejoras.md` al cerrar)"
+    ]
+   },
+   "sha_distinct_from_other_repetitions": true,
+   "tool": "local_summarize"
+  },
+  {
+   "document": "docs/wiki/Daemon.md",
+   "repetition": 1,
+   "document_sha256": "5ad2c5ad4b3879d1b81086279abf63886ca0a71dadc357afa0bde4bf0836b9be",
+   "document_sha256_frozen": "5ad2c5ad4b3879d1b81086279abf63886ca0a71dadc357afa0bde4bf0836b9be",
+   "document_unchanged": true,
+   "response_sha256": "acbf25178c30466efc290e7b8ce3ada71a2b5f1fbe75afedf05d39a4a2dd3455",
+   "response_literal": "# Shared Daemon\n\n## Why it exists\n\nThe `stdio` MCP transport requires a process per client, which causes the embedded dashboard to die when the process holding port `9393` terminates. `local-delegate serve` solves this by maintaining a single persistent process per user that serves both MCP Streamable HTTP and the dashboard.\n\n## Startup\n\n```powershell\nuvx local-delegate-mcp serve\n```\n\nDefaults include MCP at `http://127.0.0.1:9393/mcp`, the dashboard at `http://127.0.0.1:9393/`, and status at `http://127.0.0.1:9393/api/daemon`. Users can configure `--host`, `--port`, and `--log-level`. Backend environment variables must belong to the daemon process.\n\n## Clients\n\nClients like Codex, Claude Code, and opencode should all be configured against the same URL. The daemon manages global backpressure via `LOCAL_DELEGATE_MAX_CONCURRENT_REQUESTS`.\n\n## llama-swap seen from the daemon\n\nThe daemon manages model \"turns\" if a local `llama-swap` is used, preventing VRAM conflicts. It provides several endpoints for the CLI and `doctor`, such as `GET /api/llamaswap/status` and `POST /api/llamaswap/watch`.\n\n## Port Authentication\n\nBy default, the port is open on loopback. To secure it, define `LOCAL_DELEGATE_WEB_TOKEN`. The daemon supports `Authorization: Bearer`, `Authorization: Basic`, and `Cookie: ld_session=…` for browser sessions.\n\n## Browser Session\n\n[local-delegate warning: salida truncada por max_tokens]\n\n(leído server-side: 17383 chars ≈ 8691 tokens de Claude que no entraron a tu contexto)",
+   "judged_text": "# Shared Daemon\n\n## Why it exists\n\nThe `stdio` MCP transport requires a process per client, which causes the embedded dashboard to die when the process holding port `9393` terminates. `local-delegate serve` solves this by maintaining a single persistent process per user that serves both MCP Streamable HTTP and the dashboard.\n\n## Startup\n\n```powershell\nuvx local-delegate-mcp serve\n```\n\nDefaults include MCP at `http://127.0.0.1:9393/mcp`, the dashboard at `http://127.0.0.1:9393/`, and status at `http://127.0.0.1:9393/api/daemon`. Users can configure `--host`, `--port`, and `--log-level`. Backend environment variables must belong to the daemon process.\n\n## Clients\n\nClients like Codex, Claude Code, and opencode should all be configured against the same URL. The daemon manages global backpressure via `LOCAL_DELEGATE_MAX_CONCURRENT_REQUESTS`.\n\n## llama-swap seen from the daemon\n\nThe daemon manages model \"turns\" if a local `llama-swap` is used, preventing VRAM conflicts. It provides several endpoints for the CLI and `doctor`, such as `GET /api/llamaswap/status` and `POST /api/llamaswap/watch`.\n\n## Port Authentication\n\nBy default, the port is open on loopback. To secure it, define `LOCAL_DELEGATE_WEB_TOKEN`. The daemon supports `Authorization: Bearer`, `Authorization: Basic`, and `Cookie: ld_session=…` for browser sessions.\n\n## Browser Session",
+   "usage_row": {
+    "ts": "2026-10-15T17:36:37+00:00",
+    "model": "gemma4-26b-a4b",
+    "chars_in": 17383,
+    "chars_out": 1415,
+    "tokens_in": 5186,
+    "tokens_out": 364,
+    "finish_reason": "length",
+    "truncated_out": true,
+    "chunks": null,
+    "ok": true,
+    "latency_ms": 13287
+   },
+   "chunked": false,
+   "truncated": true,
+   "length_check": {
+    "literal_len": 1503,
+    "len_without_read_line": 1415,
+    "chars_out": 1415,
+    "match": true
+   },
+   "detector": {
+    "lang": "en",
+    "tokens": 191,
+    "es_ratio": 0.0,
+    "en_ratio": 0.3037,
+    "margin": 0.3037
+   },
+   "verdict": "pass",
+   "headings": [
+    "Shared Daemon",
+    "Why it exists",
+    "Startup",
+    "Clients",
+    "llama-swap seen from the daemon",
+    "Port Authentication",
+    "Browser Session"
+   ],
+   "labels": [
+    "Shared Daemon",
+    "Why it exists",
+    "Startup",
+    "Clients",
+    "llama-swap seen from the daemon",
+    "Port Authentication",
+    "Browser Session",
+    "[local-delegate warning",
+    "(leído server-side"
+   ],
+   "spanish_labels_copied": [],
+   "spanish_labels_copied_count": 0,
+   "headings_verbatim_from_source": [],
+   "batch_1": {
+    "margin": 0.122,
+    "verdict": "fail_unknown",
+    "headings": [
+     "Por qué existe",
+     "Arranque",
+     "Clientes",
+     "llama-swap visto desde el daemon",
+     "Autenticación del puerto",
+     "Inicio de sesión y rollback"
+    ]
+   },
+   "sha_distinct_from_other_repetitions": true,
+   "tool": "local_summarize"
+  }
+ ]
+}

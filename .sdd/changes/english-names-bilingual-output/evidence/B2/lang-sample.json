@@ -1,0 +1,1370 @@
+{
+  "status": "both_batches_done",
+  "previous_attempt": {
+    "window_id": "w-20261014T215251Z",
+    "status": "blocked",
+    "reason": "in-process harness got 401 from llama-swap without the key; replaced by measuring through the live MCP"
+  },
+  "method": "Each tool called through the live MCP daemon (which holds the backend key) with path=<document>. Documents frozen beforehand in evidence/B2d/lang-sample-docs.json.",
+  "criterion": "detect_language (min_tokens=20, min_margin=0.15) >= 90% in the requested language per tool and combination",
+  "judged_text_rule": "literal response minus the product's own wrapper lines, which are in the product language by design (REQ-028 covers the model text): '(leído server-side: ...)', '[local-delegate warning: ...]' and '(sin resumir)'. Everything else, including section headings copied from the document, is judged. The detector on the literal response with wrappers is kept too.",
+  "combinations": [
+    {
+      "product": "es",
+      "output_language": "en",
+      "window_id": "w-20261014T221424Z",
+      "window": "2026-10-14T22:14:24.349Z to 2026-10-14T22:19:21.727Z",
+      "rows_in_window": 20,
+      "local_status": "Idioma: es (sistema; ...language.json) / Idioma de respuesta del modelo: en (variable de salida)",
+      "documents_language": "es"
+    },
+    {
+      "product": "en",
+      "output_language": "es",
+      "window_id": "w-20261014T222250Z",
+      "window": "2026-10-14T22:22:50.726Z to 2026-10-14T22:31:11.095Z",
+      "rows_in_window": 21,
+      "local_status": "Language: en (variable; ...language.json) / Model response language: es (output variable)",
+      "documents_language": "en",
+      "explain_code_question": "What does this file do and what are its main parts?"
+    }
+  ],
+  "explain_code_question": {
+    "batch_1": "¿Qué hace este fichero y cuáles son sus partes principales?",
+    "batch_2": "What does this file do and what are its main parts?"
+  },
+  "summary_batch_1": {
+    "by_tool": {
+      "local_summarize": {
+        "samples": 5,
+        "judgeable": 5,
+        "in_requested_language": 4,
+        "pct": 80.0,
+        "meets_90": false
+      },
+      "local_lint_summary": {
+        "samples": 5,
+        "judgeable": 5,
+        "in_requested_language": 3,
+        "pct": 60.0,
+        "meets_90": false
+      },
+      "local_explain_code": {
+        "samples": 5,
+        "judgeable": 5,
+        "in_requested_language": 5,
+        "pct": 100.0,
+        "meets_90": true
+      },
+      "local_describe_image": {
+        "samples": 5,
+        "judgeable": 5,
+        "in_requested_language": 5,
+        "pct": 100.0,
+        "meets_90": true
+      }
+    },
+    "total": {
+      "samples": 20,
+      "judgeable": 20,
+      "in_requested_language": 17,
+      "pct": 85.0,
+      "meets_90": false
+    },
+    "unjudgeable": [],
+    "failures": [
+      {
+        "tool": "local_summarize",
+        "document": "docs/wiki/Backend-versions.md",
+        "fail_kind": "detector_unknown_low_margin",
+        "tokens": 201,
+        "es_ratio": 0.0448,
+        "en_ratio": 0.1841,
+        "margin": 0.1393
+      },
+      {
+        "tool": "local_lint_summary",
+        "document": ".sdd/changes/english-names-bilingual-output/evidence/A5c/mutants.txt",
+        "fail_kind": "detector_unknown_low_margin",
+        "tokens": 60,
+        "es_ratio": 0.0167,
+        "en_ratio": 0.05,
+        "margin": 0.0333
+      },
+      {
+        "tool": "local_lint_summary",
+        "document": ".sdd/changes/english-names-bilingual-output/evidence/A7b/mutants.txt",
+        "fail_kind": "detector_unknown_low_margin",
+        "tokens": 91,
+        "es_ratio": 0.0,
+        "en_ratio": 0.1429,
+        "margin": 0.1429
+      }
+    ],
+    "wrong_language_responses": 0
+  },
+  "samples": [
+    {
+      "window_id": "w-20261014T221424Z",
+      "combination": {
+        "product": "es",
+        "output_language": "en"
+      },
+      "tool": "local_summarize",
+      "document": "docs/wiki/Architecture.md",
+      "document_sha256": "45b24656f8ded36bec430d055f5c797b01ef504d5de963615ea76fba6d8f9f2e",
+      "response_literal": "## Overview\n`local-delegate` is an MCP server providing 11 tools that route text/image requests to OpenAI-compatible endpoints via Streamable HTTP.\n\n## Design decisions\nThe system uses a generic client for any OpenAI-compatible URL, avoids local model tool-calling by using server-side prompts, and implements server-side path reading to save context. It uses JSONL for telemetry instead of OpenTelemetry.\n\n## What is used from the `mcp` 2.x SDK, and what is not\n**Used:** **ServerMiddleware** for client observation and context, and **elicitation** for user queries.\n**Discarded: `extension` / `intercept_tool_call` (SEP-2133):** Rejected because telemetry is already centralized where real costs are measured.\n**Discarded: `caching` (SEP-2549):** Provides no benefit for backend inference costs.\n**Discarded: `subscriptions` (SEP-2575):** The server exposes no resources or prompts to notify.\n**`auth` is split in two, and the distinction matters:** OAuth2 is discarded, but lightweight bearer authentication is kept for potential external exposure.\n**Note on protocol revision:** Negotiated versions vary across clients, making the latest protocol version unreliable for implementation.\n\n## Turn, affinity and slowness\n**Turn** manages request queues to avoid conflicts; **affinity** selects already-loaded models to optimize performance; **slowness** tracks inference timing versus reference medians.\n\n## Modules\n**server.py** handles tools and guardrails. **clients.py** observes MCP clients. **questions.py** manages elicitation. **config.py** manages settings. **autostart.py** handles backend startup. **daemon.py** runs the ASGI singleton. **web/metrics.py** provides the dashboard. **failures.py** classifies backend errors. **chains.py** manages fallback chains. **topology.py** analyzes model conflicts. **turn.py** implements queue logic. **matrix.py** handles affinity selection. **footprint.py** tracks model footprints. **pace.py** monitors token speed. **llamaswap_api.py** interfaces with the backend. **llamaswap_config.py** estimates memory. **residency.py** manages model residency. **cooldown.py** handles model cooldowns. **resources/vendor/** serves Chart.js.\n\n## Visión general\n(sin resumir)\n\n## Decisiones de diseño\n(sin resumir)\n\n## Qué se usa del SDK `mcp` 2.x, y qué no\n(sin resumir)\n\n## Turno, afinidad y lentitud\n(sin resumir)\n\n## Módulos\n(sin resumir)\n\n[local-delegate warning: 5 secciones sin resumir por el límite de palabras o del modelo]\n\n(leído server-side: 13258 chars ≈ 6629 tokens de Claude que no entraron a tu contexto)",
+      "judged_text": "## Overview\n`local-delegate` is an MCP server providing 11 tools that route text/image requests to OpenAI-compatible endpoints via Streamable HTTP.\n\n## Design decisions\nThe system uses a generic client for any OpenAI-compatible URL, avoids local model tool-calling by using server-side prompts, and implements server-side path reading to save context. It uses JSONL for telemetry instead of OpenTelemetry.\n\n## What is used from the `mcp` 2.x SDK, and what is not\n**Used:** **ServerMiddleware** for client observation and context, and **elicitation** for user queries.\n**Discarded: `extension` / `intercept_tool_call` (SEP-2133):** Rejected because telemetry is already centralized where real costs are measured.\n**Discarded: `caching` (SEP-2549):** Provides no benefit for backend inference costs.\n**Discarded: `subscriptions` (SEP-2575):** The server exposes no resources or prompts to notify.\n**`auth` is split in two, and the distinction matters:** OAuth2 is discarded, but lightweight bearer authentication is kept for potential external exposure.\n**Note on protocol revision:** Negotiated versions vary across clients, making the latest protocol version unreliable for implementation.\n\n## Turn, affinity and slowness\n**Turn** manages request queues to avoid conflicts; **affinity** selects already-loaded models to optimize performance; **slowness** tracks inference timing versus reference medians.\n\n## Modules\n**server.py** handles tools and guardrails. **clients.py** observes MCP clients. **questions.py** manages elicitation. **config.py** manages settings. **autostart.py** handles backend startup. **daemon.py** runs the ASGI singleton. **web/metrics.py** provides the dashboard. **failures.py** classifies backend errors. **chains.py** manages fallback chains. **topology.py** analyzes model conflicts. **turn.py** implements queue logic. **matrix.py** handles affinity selection. **footprint.py** tracks model footprints. **pace.py** monitors token speed. **llamaswap_api.py** interfaces with the backend. **llamaswap_config.py** estimates memory. **residency.py** manages model residency. **cooldown.py** handles model cooldowns. **resources/vendor/** serves Chart.js.\n\n## Visión general\n\n## Decisiones de diseño\n\n## Qué se usa del SDK `mcp` 2.x, y qué no\n\n## Turno, afinidad y lentitud\n\n## Módulos",
+      "detector": {
+        "lang": "en",
+        "tokens": 308,
+        "es_ratio": 0.0227,
+        "en_ratio": 0.1948
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "unknown",
+        "tokens": 345,
+        "es_ratio": 0.0609,
+        "en_ratio": 0.1739
+      },
+      "unsummarized_section_placeholders": 5,
+      "batch": 1
+    },
+    {
+      "window_id": "w-20261014T221424Z",
+      "combination": {
+        "product": "es",
+        "output_language": "en"
+      },
+      "tool": "local_summarize",
+      "document": "docs/wiki/Backend-versions.md",
+      "document_sha256": "fac7ae129c7926119939d935edb1643a8c49d38208d95e7c5a302372ac28bdc0",
+      "response_literal": "## Introduction\n`local-delegate` is a generic client for OpenAI-compatible endpoints that does not fix versions.\n\n## Introducción\n(sin resumir)\n\n## Versiones probadas\n**Qué se usa de llama-swap v255 y de llama-server**: **llama-swap v255** provides turn and affinity logic via `config.yaml`, `GET /running`, `GET /api/events`, and `GET /api/metrics/activity`. **llama-server** provides inference timings used for `inference_ms`, `wait_ms`, `tok_s`, and `prefill_tok_s`.\n\n## Workspace de referencia\nEverything is contained under a single root directory, including `llama-swap`, `llamacpp`, `models`, and environment variables.\n\n## Chequear tu instalación: `local-delegate doctor`\nDetects installed versions and suggests updates. Using `--online` compares against GitHub releases and checks for recent issues.\n\n## Medir un canary: `local-delegate benchmark`\nRuns real tasks against a candidate backend to ensure performance parity. It records results in JSONL, including quantization and context. **Outcomes** classify responses as `ok`, `truncated`, `context_rejection`, `configuracion`, or `error`. **Execution checks** run generated code in a restricted environment. **Scoring** uses objective metrics or manual pair-wise comparison for open text. **Resource monitoring** on Windows tracks private RAM and VRAM via process names.\n\n## Métricas persistentes del backend (#898)\n**llama-swap** can persist activity metrics in SQLite using `store.path` in `config.yaml` to survive restarts.\n\n[local-delegate warning: 1 sección sin resumir por el límite de palabras o del modelo]\n\n(leído server-side: 12780 chars ≈ 6390 tokens de Claude que no entraron a tu contexto)",
+      "judged_text": "## Introduction\n`local-delegate` is a generic client for OpenAI-compatible endpoints that does not fix versions.\n\n## Introducción\n\n## Versiones probadas\n**Qué se usa de llama-swap v255 y de llama-server**: **llama-swap v255** provides turn and affinity logic via `config.yaml`, `GET /running`, `GET /api/events`, and `GET /api/metrics/activity`. **llama-server** provides inference timings used for `inference_ms`, `wait_ms`, `tok_s`, and `prefill_tok_s`.\n\n## Workspace de referencia\nEverything is contained under a single root directory, including `llama-swap`, `llamacpp`, `models`, and environment variables.\n\n## Chequear tu instalación: `local-delegate doctor`\nDetects installed versions and suggests updates. Using `--online` compares against GitHub releases and checks for recent issues.\n\n## Medir un canary: `local-delegate benchmark`\nRuns real tasks against a candidate backend to ensure performance parity. It records results in JSONL, including quantization and context. **Outcomes** classify responses as `ok`, `truncated`, `context_rejection`, `configuracion`, or `error`. **Execution checks** run generated code in a restricted environment. **Scoring** uses objective metrics or manual pair-wise comparison for open text. **Resource monitoring** on Windows tracks private RAM and VRAM via process names.\n\n## Métricas persistentes del backend (#898)\n**llama-swap** can persist activity metrics in SQLite using `store.path` in `config.yaml` to survive restarts.",
+      "detector": {
+        "lang": "unknown",
+        "tokens": 201,
+        "es_ratio": 0.0448,
+        "en_ratio": 0.1841
+      },
+      "verdict": "fail",
+      "detector_on_literal_with_wrappers": {
+        "lang": "unknown",
+        "tokens": 230,
+        "es_ratio": 0.0826,
+        "en_ratio": 0.1609
+      },
+      "unsummarized_section_placeholders": 1,
+      "fail_kind": "detector_unknown_low_margin",
+      "batch": 1
+    },
+    {
+      "window_id": "w-20261014T221424Z",
+      "combination": {
+        "product": "es",
+        "output_language": "en"
+      },
+      "tool": "local_summarize",
+      "document": "docs/wiki/Daemon.md",
+      "document_sha256": "5ad2c5ad4b3879d1b81086279abf63886ca0a71dadc357afa0bde4bf0836b9be",
+      "response_literal": "## Why it exists\nTo prevent the ephemeral lifecycle of `stdio` processes from killing the dashboard and MCP service.\n\n## Startup\nRun `uvx local-delegate-mcp serve` with optional environment variables for backend configuration and autostart.\n\n## Clients\nConfigure Codex, Claude Code, or opencode to point to the same daemon URL for shared MCP access.\n\n## llama-swap seen from the daemon\n**Turn.** The daemon manages model access by distributing turns among conflicting models in a group. **Endpoints for CLI and doctor.** Provides API endpoints for status, config watching, and llama-swap residency via the daemon.\n\n## Port authentication\n**The browser session.** Uses HMAC-SHA256 signed cookies for persistent, secure authentication without a login screen. **Keeping clients working.** Uses environment variables to ensure clients like Claude Code or Codex can authenticate via Bearer tokens.\n\n## Login and rollback\nThe daemon registers with system service managers using canonical names for automatic restarts. **Windows without visible window.** Uses `conhost --headless` to prevent console windows when using authenticated launchers. **macOS: LaunchAgent.** Uses a `.plist` file in `LaunchAgents` for persistent background execution. **Linux: `systemd --user`.** Uses a user-level service unit. **What «DAEMON MCP» means in the dashboard.** Identifies the single shared server process in the backend table.\n\n## Por qué existe\n(sin resumir)\n\n## Arranque\n(sin resumir)\n\n## Clientes\n(sin resumir)\n\n## llama-swap visto desde el daemon\n(sin resumir)\n\n## Autenticación del puerto\n(sin resumir)\n\n## Inicio de sesión y rollback\n(sin resumir)\n\n[local-delegate warning: 6 secciones sin resumir por el límite de palabras o del modelo]\n\n(leído server-side: 17383 chars ≈ 8691 tokens de Claude que no entraron a tu contexto)",
+      "judged_text": "## Why it exists\nTo prevent the ephemeral lifecycle of `stdio` processes from killing the dashboard and MCP service.\n\n## Startup\nRun `uvx local-delegate-mcp serve` with optional environment variables for backend configuration and autostart.\n\n## Clients\nConfigure Codex, Claude Code, or opencode to point to the same daemon URL for shared MCP access.\n\n## llama-swap seen from the daemon\n**Turn.** The daemon manages model access by distributing turns among conflicting models in a group. **Endpoints for CLI and doctor.** Provides API endpoints for status, config watching, and llama-swap residency via the daemon.\n\n## Port authentication\n**The browser session.** Uses HMAC-SHA256 signed cookies for persistent, secure authentication without a login screen. **Keeping clients working.** Uses environment variables to ensure clients like Claude Code or Codex can authenticate via Bearer tokens.\n\n## Login and rollback\nThe daemon registers with system service managers using canonical names for automatic restarts. **Windows without visible window.** Uses `conhost --headless` to prevent console windows when using authenticated launchers. **macOS: LaunchAgent.** Uses a `.plist` file in `LaunchAgents` for persistent background execution. **Linux: `systemd --user`.** Uses a user-level service unit. **What «DAEMON MCP» means in the dashboard.** Identifies the single shared server process in the backend table.\n\n## Por qué existe\n\n## Arranque\n\n## Clientes\n\n## llama-swap visto desde el daemon\n\n## Autenticación del puerto\n\n## Inicio de sesión y rollback",
+      "detector": {
+        "lang": "en",
+        "tokens": 217,
+        "es_ratio": 0.0323,
+        "en_ratio": 0.2581
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "unknown",
+        "tokens": 256,
+        "es_ratio": 0.0859,
+        "en_ratio": 0.2188
+      },
+      "unsummarized_section_placeholders": 6,
+      "batch": 1
+    },
+    {
+      "window_id": "w-20261014T221424Z",
+      "combination": {
+        "product": "es",
+        "output_language": "en"
+      },
+      "tool": "local_summarize",
+      "document": "docs/wiki/Publishing.md",
+      "document_sha256": "ab81f38524d083a71f66c28d85a8573bb6e0a8f5e785a34921068d38f9fc6573",
+      "response_literal": "## Versioning\nSemVer used. Each release bumps `pyproject.toml`, `uv.lock`, both `server.json` versions, `CHANGELOG.md`, and a `vX.Y.Z` tag.\n\n## One tag publishes to both sites\n`publish.yml` triggers on `v*` tags, chaining `check-version`, `pypi` (via OIDC), and `mcp-registry` jobs. PyPI uses Trusted Publishing, while the MCP registry validates the namespace against the same token. The registry follows PyPI to ensure the package and its README exist.\n\n## Versionado\n(sin resumir)\n\n## Un tag publica en los dos sitios\n(sin resumir)\n\n## `scripts/release.py`\n**Functionality**: A single command to build, create a GitHub Release with changelog notes, attach artifacts, and create the tag. **Safety**: It aborts if versions mismatch, if not on `main`, or if the release already exists. **Maintenance**: It requires regenerating the README dashboard capture to avoid version mismatch in PRs. **Wiki**: The native wiki is automatically synchronized via workflows, treating it as a generated artifact with rewritten links.\n\n## Official MCP Registry\nThe `mcp-registry` job handles publication automatically. Manual publication requires `mcp-publisher`. It verifies the PyPI README contains the `mcp-name` and ensures the `server.json` description is $\\le$ 100 characters.\n\n## Registro oficial MCP\n(sin resumir)\n\n## CI\n`ci.yml` runs on every push/PR, including **linting**, **testing** across Ubuntu, Windows, and macOS, **smoke installation** to catch dependency breaks, and **secret scanning**. Additional workflows include **static analysis** (CodeQL) and **vendor auditing** for JavaScript integrity and CVEs.\n\n[local-delegate warning: 3 secciones sin resumir por el límite de palabras o del modelo]\n\n(leído server-side: 8731 chars ≈ 4365 tokens de Claude que no entraron a tu contexto)",
+      "judged_text": "## Versioning\nSemVer used. Each release bumps `pyproject.toml`, `uv.lock`, both `server.json` versions, `CHANGELOG.md`, and a `vX.Y.Z` tag.\n\n## One tag publishes to both sites\n`publish.yml` triggers on `v*` tags, chaining `check-version`, `pypi` (via OIDC), and `mcp-registry` jobs. PyPI uses Trusted Publishing, while the MCP registry validates the namespace against the same token. The registry follows PyPI to ensure the package and its README exist.\n\n## Versionado\n\n## Un tag publica en los dos sitios\n\n## `scripts/release.py`\n**Functionality**: A single command to build, create a GitHub Release with changelog notes, attach artifacts, and create the tag. **Safety**: It aborts if versions mismatch, if not on `main`, or if the release already exists. **Maintenance**: It requires regenerating the README dashboard capture to avoid version mismatch in PRs. **Wiki**: The native wiki is automatically synchronized via workflows, treating it as a generated artifact with rewritten links.\n\n## Official MCP Registry\nThe `mcp-registry` job handles publication automatically. Manual publication requires `mcp-publisher`. It verifies the PyPI README contains the `mcp-name` and ensures the `server.json` description is $\\le$ 100 characters.\n\n## Registro oficial MCP\n\n## CI\n`ci.yml` runs on every push/PR, including **linting**, **testing** across Ubuntu, Windows, and macOS, **smoke installation** to catch dependency breaks, and **secret scanning**. Additional workflows include **static analysis** (CodeQL) and **vendor auditing** for JavaScript integrity and CVEs.",
+      "detector": {
+        "lang": "en",
+        "tokens": 224,
+        "es_ratio": 0.0223,
+        "en_ratio": 0.2679
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "en",
+        "tokens": 257,
+        "es_ratio": 0.0661,
+        "en_ratio": 0.2335
+      },
+      "unsummarized_section_placeholders": 3,
+      "batch": 1
+    },
+    {
+      "window_id": "w-20261014T221424Z",
+      "combination": {
+        "product": "es",
+        "output_language": "en"
+      },
+      "tool": "local_summarize",
+      "document": "docs/wiki/Remote-backend.md",
+      "document_sha256": "2c60eb54c630e4aeb5ddbd8777b5983888aac4e3d04bc1753c5379b69b7fdd4b",
+      "response_literal": "## Introduction\nRecommended configuration runs MCP on Mac, sending inference to PC's llama-swap.\n\n## Introducción\n(sin resumir)\n\n## Requisitos ya listos en la PC\n**llama-swap** listens on loopback, requires apiKeys, uses Tailscale Serve for private access, and requires the Mac to have the same Keychain key.\n\n## Carga automática desde Keychain\n**~/.zshrc** stores the URL and secure Keychain reading to avoid plain text keys.\n\n## Actualizar la Mac tras una release\n**local-delegate update** applies changes, updates pins, and manages Claude Code hooks. **uv tool upgrade** is required separately to update the CLI itself.\n\n## Claude Code en la Mac\n**Version pinning** ensures stability, while the API key is expanded from Keychain during the session.\n\n## Codex en la Mac\n**config.toml** is updated to include the local-delegate entry. **LaunchAgent** is used to provide environment variables to the Codex GUI.\n\n## Verificación\n**Testing** involves running `local_status`, `local_classify`, `local_summarize`, and checking the dashboard to confirm remote computation status.\n\n[local-delegate warning: 1 sección sin resumir por el límite de palabras o del modelo]\n\n(leído server-side: 9638 chars ≈ 4819 tokens de Claude que no entraron a tu contexto)",
+      "judged_text": "## Introduction\nRecommended configuration runs MCP on Mac, sending inference to PC's llama-swap.\n\n## Introducción\n\n## Requisitos ya listos en la PC\n**llama-swap** listens on loopback, requires apiKeys, uses Tailscale Serve for private access, and requires the Mac to have the same Keychain key.\n\n## Carga automática desde Keychain\n**~/.zshrc** stores the URL and secure Keychain reading to avoid plain text keys.\n\n## Actualizar la Mac tras una release\n**local-delegate update** applies changes, updates pins, and manages Claude Code hooks. **uv tool upgrade** is required separately to update the CLI itself.\n\n## Claude Code en la Mac\n**Version pinning** ensures stability, while the API key is expanded from Keychain during the session.\n\n## Codex en la Mac\n**config.toml** is updated to include the local-delegate entry. **LaunchAgent** is used to provide environment variables to the Codex GUI.\n\n## Verificación\n**Testing** involves running `local_status`, `local_classify`, `local_summarize`, and checking the dashboard to confirm remote computation status.",
+      "detector": {
+        "lang": "en",
+        "tokens": 154,
+        "es_ratio": 0.0714,
+        "en_ratio": 0.2273
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "unknown",
+        "tokens": 183,
+        "es_ratio": 0.1148,
+        "en_ratio": 0.1913
+      },
+      "unsummarized_section_placeholders": 1,
+      "batch": 1
+    },
+    {
+      "window_id": "w-20261014T221424Z",
+      "combination": {
+        "product": "es",
+        "output_language": "en"
+      },
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/A5c/mutants.txt",
+      "document_sha256": "4c6cff8b1c2a9e1e0d472ac74bcd9bab434c16e2a3579911587d1f1ca57166a3",
+      "response_literal": "**Linting & Testing Summary**\n\n**1. prices.json & Vigilante (5 Errors)**\n\n*   Key inconsistencies: `\"claude-opus-5-5\"` vs. `\"entrada\"` (2 errors)\n*   KeyError: `'input'` in `vigilante_precios.py` (2 errors) – impacting table comparisons.\n*   Restoration successful.\n\n**2. Family Labels (1 Error)**\n\n*   Key inconsistency: `FAMILIA` vs. `nueva` (1 error)\n*   AssertionError related to family name mismatch.\n*   Restoration successful.\n\n**3. Accounting Parity (1 Error)**\n\n*   JS vs. Python discrepancy: `e.density` (1 error)\n*   AssertionError related to numerical comparison.\n*   Restoration successful.\n\n(leído server-side: 2153 chars ≈ 1121 tokens de Claude que no entraron a tu contexto)",
+      "judged_text": "**Linting & Testing Summary**\n\n**1. prices.json & Vigilante (5 Errors)**\n\n*   Key inconsistencies: `\"claude-opus-5-5\"` vs. `\"entrada\"` (2 errors)\n*   KeyError: `'input'` in `vigilante_precios.py` (2 errors) – impacting table comparisons.\n*   Restoration successful.\n\n**2. Family Labels (1 Error)**\n\n*   Key inconsistency: `FAMILIA` vs. `nueva` (1 error)\n*   AssertionError related to family name mismatch.\n*   Restoration successful.\n\n**3. Accounting Parity (1 Error)**\n\n*   JS vs. Python discrepancy: `e.density` (1 error)\n*   AssertionError related to numerical comparison.\n*   Restoration successful.",
+      "detector": {
+        "lang": "unknown",
+        "tokens": 60,
+        "es_ratio": 0.0167,
+        "en_ratio": 0.05
+      },
+      "verdict": "fail",
+      "detector_on_literal_with_wrappers": {
+        "lang": "unknown",
+        "tokens": 73,
+        "es_ratio": 0.0548,
+        "en_ratio": 0.0411
+      },
+      "unsummarized_section_placeholders": 0,
+      "fail_kind": "detector_unknown_low_margin",
+      "batch": 1
+    },
+    {
+      "window_id": "w-20261014T221424Z",
+      "combination": {
+        "product": "es",
+        "output_language": "en"
+      },
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/A7a/strings-check.txt",
+      "document_sha256": "98ee6f939f016e475738d44d0d3ef37dcdd51467e76913568816eb842c24feb8",
+      "response_literal": "**Summary of Issues by File**\n\n**src/**\n\n*   **aviso:** 10 (Warning) - 105 occurrences\n*   **respaldo:** 1 (Warning) - 78 occurrences\n*   **truncado:** 15 (Warning) - 30 occurrences\n*   **_local_delegate:** 22 (Warning) - 17 occurrences\n\n**tests/**\n\n*   **respaldo:** 2 (Warning) - 72 occurrences (Monkeypatch related changes in multiple tests)\n*   **aviso:** 2 (Warning) - 105 occurrences\n*   **truncado:** 2 (Warning) - 30 occurrences\n*   **_local_delegate:** 1 (Warning) - 17 occurrences\n\n**Key Issues:**\n\nThe most prevalent issues involve the \"respaldo\" and \"aviso\" markers, particularly within the `tests/` directory, with significant changes related to monkeypatching and docstring updates. \"truncado\" also appears frequently in `src/`.\n\n(leído server-side: 846 chars ≈ 440 tokens de Claude que no entraron a tu contexto)",
+      "judged_text": "**Summary of Issues by File**\n\n**src/**\n\n*   **aviso:** 10 (Warning) - 105 occurrences\n*   **respaldo:** 1 (Warning) - 78 occurrences\n*   **truncado:** 15 (Warning) - 30 occurrences\n*   **_local_delegate:** 22 (Warning) - 17 occurrences\n\n**tests/**\n\n*   **respaldo:** 2 (Warning) - 72 occurrences (Monkeypatch related changes in multiple tests)\n*   **aviso:** 2 (Warning) - 105 occurrences\n*   **truncado:** 2 (Warning) - 30 occurrences\n*   **_local_delegate:** 1 (Warning) - 17 occurrences\n\n**Key Issues:**\n\nThe most prevalent issues involve the \"respaldo\" and \"aviso\" markers, particularly within the `tests/` directory, with significant changes related to monkeypatching and docstring updates. \"truncado\" also appears frequently in `src/`.",
+      "detector": {
+        "lang": "en",
+        "tokens": 71,
+        "es_ratio": 0.0,
+        "en_ratio": 0.1972
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "unknown",
+        "tokens": 84,
+        "es_ratio": 0.0357,
+        "en_ratio": 0.1667
+      },
+      "unsummarized_section_placeholders": 0,
+      "batch": 1
+    },
+    {
+      "window_id": "w-20261014T221424Z",
+      "combination": {
+        "product": "es",
+        "output_language": "en"
+      },
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/A7b/mutants.txt",
+      "document_sha256": "8ecb631c9dec5abcf96a3f4265ed29cf71e0823357214e1cb896a1fdf8916cec",
+      "response_literal": "**Linting & Testing Summary**\n\n**tools/make_mapping.py (1 failed):**  A conditional statement error (`elif False:`) introduced a `ValueError` during testing, replicating a previous issue.  Restored via sha256.\n\n**tests/test_turn_daemon.py (1 failed):** Threading issues due to outdated arguments (`role=\"long\"`) caused a `TypeError` and `RuntimeError`. Manual edit required, restored via sha256.\n\n**src/local_delegate/server.py (1 failed):**  A dataclass field naming discrepancy (`BackendState.cause` vs. `causa`) resulted in an `AttributeError` across multiple tests.  Restored via sha256.\n\n**Overall:**  Following restoration, 43 tests passed. The issues primarily stemmed from outdated code and threading inconsistencies.\n\n(leído server-side: 2040 chars ≈ 1062 tokens de Claude que no entraron a tu contexto)",
+      "judged_text": "**Linting & Testing Summary**\n\n**tools/make_mapping.py (1 failed):**  A conditional statement error (`elif False:`) introduced a `ValueError` during testing, replicating a previous issue.  Restored via sha256.\n\n**tests/test_turn_daemon.py (1 failed):** Threading issues due to outdated arguments (`role=\"long\"`) caused a `TypeError` and `RuntimeError`. Manual edit required, restored via sha256.\n\n**src/local_delegate/server.py (1 failed):**  A dataclass field naming discrepancy (`BackendState.cause` vs. `causa`) resulted in an `AttributeError` across multiple tests.  Restored via sha256.\n\n**Overall:**  Following restoration, 43 tests passed. The issues primarily stemmed from outdated code and threading inconsistencies.",
+      "detector": {
+        "lang": "unknown",
+        "tokens": 91,
+        "es_ratio": 0.0,
+        "en_ratio": 0.1429
+      },
+      "verdict": "fail",
+      "detector_on_literal_with_wrappers": {
+        "lang": "unknown",
+        "tokens": 104,
+        "es_ratio": 0.0288,
+        "en_ratio": 0.125
+      },
+      "unsummarized_section_placeholders": 0,
+      "fail_kind": "detector_unknown_low_margin",
+      "batch": 1
+    },
+    {
+      "window_id": "w-20261014T221424Z",
+      "combination": {
+        "product": "es",
+        "output_language": "en"
+      },
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/A8a-1/mutants.txt",
+      "document_sha256": "6932cdce7f85b5451be37007756e234d5f764f5c3b906c20f8a2f79986c99915",
+      "response_literal": "**Linting & Testing Summary**\n\n**checks.py:** 2 errors (1 type).  One related to handling HTTP requests without headers (\"sin_credencial\") and another with the `_oldest_pending` function argument (\"plazo_dias\").  SHA256 hashes remained consistent.\n\n**chains.py:** 1 error (1 type).  AttributeError due to incorrect field name (\"steps\" instead of \"pasos\"). SHA256 hashes remained consistent.\n\n**test_checks.py & test_coste_doctor.py:** 1 error (1 type).  TypeError in `_probe` function due to unexpected keyword argument (\"plazo_dias\"). SHA256 hashes remained consistent.\n\nTotal errors: 3.  The \"no_credential\" issue and the `_oldest_pending` error are highlighted as relevant due to their impact on function behavior.\n\n(leído server-side: 1710 chars ≈ 890 tokens de Claude que no entraron a tu contexto)",
+      "judged_text": "**Linting & Testing Summary**\n\n**checks.py:** 2 errors (1 type).  One related to handling HTTP requests without headers (\"sin_credencial\") and another with the `_oldest_pending` function argument (\"plazo_dias\").  SHA256 hashes remained consistent.\n\n**chains.py:** 1 error (1 type).  AttributeError due to incorrect field name (\"steps\" instead of \"pasos\"). SHA256 hashes remained consistent.\n\n**test_checks.py & test_coste_doctor.py:** 1 error (1 type).  TypeError in `_probe` function due to unexpected keyword argument (\"plazo_dias\"). SHA256 hashes remained consistent.\n\nTotal errors: 3.  The \"no_credential\" issue and the `_oldest_pending` error are highlighted as relevant due to their impact on function behavior.",
+      "detector": {
+        "lang": "en",
+        "tokens": 95,
+        "es_ratio": 0.0105,
+        "en_ratio": 0.2
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "unknown",
+        "tokens": 108,
+        "es_ratio": 0.037,
+        "en_ratio": 0.1759
+      },
+      "unsummarized_section_placeholders": 0,
+      "batch": 1
+    },
+    {
+      "window_id": "w-20261014T221424Z",
+      "combination": {
+        "product": "es",
+        "output_language": "en"
+      },
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/A8a-2/mutants.txt",
+      "document_sha256": "0f34f1d6e6750f878f291341cce72c34fcf2a9b207a20f4ec4e895f83ebdadd0",
+      "response_literal": "**Linting & Testing Summary**\n\n**tests/test_aislamiento_entorno.py:** 1 Failure (AssertionError) – Related to environment isolation guard, specifically handling of `_read`.\n\n**tests/test_post_chat_caminos.py:** 1 Failure (AttributeError) –  Issue with `answer.arrancar` instead of `answer.start` in a test path.\n\n**tests/test_web_auth.py:** 1 Failure (AttributeError) –  `PortToken` object lacks `duration` attribute.\n\n**questions.py:** 1 Issue (Schema Mismatch) – Missing `Field` annotation for `model` in the JSON schema definition, impacting schema validation.\n\n**Overall:**  A total of 3 failures across 4 files. The most critical issues relate to attribute name discrepancies and schema validation errors.\n\n(leído server-side: 1944 chars ≈ 1012 tokens de Claude que no entraron a tu contexto)",
+      "judged_text": "**Linting & Testing Summary**\n\n**tests/test_aislamiento_entorno.py:** 1 Failure (AssertionError) – Related to environment isolation guard, specifically handling of `_read`.\n\n**tests/test_post_chat_caminos.py:** 1 Failure (AttributeError) –  Issue with `answer.arrancar` instead of `answer.start` in a test path.\n\n**tests/test_web_auth.py:** 1 Failure (AttributeError) –  `PortToken` object lacks `duration` attribute.\n\n**questions.py:** 1 Issue (Schema Mismatch) – Missing `Field` annotation for `model` in the JSON schema definition, impacting schema validation.\n\n**Overall:**  A total of 3 failures across 4 files. The most critical issues relate to attribute name discrepancies and schema validation errors.",
+      "detector": {
+        "lang": "en",
+        "tokens": 89,
+        "es_ratio": 0.0,
+        "en_ratio": 0.1573
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "unknown",
+        "tokens": 102,
+        "es_ratio": 0.0294,
+        "en_ratio": 0.1373
+      },
+      "unsummarized_section_placeholders": 0,
+      "batch": 1
+    },
+    {
+      "window_id": "w-20261014T221424Z",
+      "combination": {
+        "product": "es",
+        "output_language": "en"
+      },
+      "tool": "local_explain_code",
+      "document": "scripts/build_site.py",
+      "document_sha256": "c34ca6ef728aa9027b94a3b34e3323578445e51150e6cf24f057355709bcb6d6",
+      "response_literal": "This Python script automates the preparation of a static website for GitHub Pages deployment by injecting the current project version into the generated files. Its primary purpose is to eliminate manual version management, ensuring consistency with the version declared in `pyproject.toml`.\n\nThe script operates in two main modes: build and check. In build mode, it copies the `site/` source directory to a `_site/` destination, excluding files with the `.src.html` suffix, which are considered source artifacts rather than public pages. It then iterates through all files in the destination directory, specifically targeting HTML, CSS, JavaScript, JSON, and webmanifest files. For each file containing the placeholder marker `__LD_VERSION__`, it replaces the marker with the actual version string extracted from `pyproject.toml` using the `tomllib` standard library module. This ensures that the version displayed in the landing page’s hero section and terminal output matches the project’s official version.\n\nIn check mode, the script verifies that no files in the destination directory still contain the `__LD_VERSION__` marker. If any are found, it indicates a failed or incomplete build, returning an error code to prevent deploying inconsistent content. The script uses only standard library modules to avoid dependency overhead during CI/CD workflows. It also handles line endings explicitly to ensure compatibility with web servers. By centralizing version control in `pyproject.toml` and automating its injection, the script reduces human error and maintains synchronization across multiple configuration files like `server.json` and `uv.lock`.\n\n(leído server-side: 4053 chars ≈ 1996 tokens de Claude que no entraron a tu contexto)",
+      "judged_text": "This Python script automates the preparation of a static website for GitHub Pages deployment by injecting the current project version into the generated files. Its primary purpose is to eliminate manual version management, ensuring consistency with the version declared in `pyproject.toml`.\n\nThe script operates in two main modes: build and check. In build mode, it copies the `site/` source directory to a `_site/` destination, excluding files with the `.src.html` suffix, which are considered source artifacts rather than public pages. It then iterates through all files in the destination directory, specifically targeting HTML, CSS, JavaScript, JSON, and webmanifest files. For each file containing the placeholder marker `__LD_VERSION__`, it replaces the marker with the actual version string extracted from `pyproject.toml` using the `tomllib` standard library module. This ensures that the version displayed in the landing page’s hero section and terminal output matches the project’s official version.\n\nIn check mode, the script verifies that no files in the destination directory still contain the `__LD_VERSION__` marker. If any are found, it indicates a failed or incomplete build, returning an error code to prevent deploying inconsistent content. The script uses only standard library modules to avoid dependency overhead during CI/CD workflows. It also handles line endings explicitly to ensure compatibility with web servers. By centralizing version control in `pyproject.toml` and automating its injection, the script reduces human error and maintains synchronization across multiple configuration files like `server.json` and `uv.lock`.",
+      "detector": {
+        "lang": "en",
+        "tokens": 245,
+        "es_ratio": 0.0,
+        "en_ratio": 0.3306
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "en",
+        "tokens": 258,
+        "es_ratio": 0.0116,
+        "en_ratio": 0.314
+      },
+      "unsummarized_section_placeholders": 0,
+      "batch": 1
+    },
+    {
+      "window_id": "w-20261014T221424Z",
+      "combination": {
+        "product": "es",
+        "output_language": "en"
+      },
+      "tool": "local_explain_code",
+      "document": "scripts/bump_version.py",
+      "document_sha256": "8a6dd4f05b2acf555869c8dea82e9a4d56631f918bf5af7e3af7ab7c1543e13c",
+      "response_literal": "This script automates the synchronization of the package version across four distinct locations within the repository: `pyproject.toml`, `server.json` (which contains two version fields), and `uv.lock`. It also updates deprecation entries marked as `UNRELEASED` in `src/local_delegate/deprecations.py`. The primary goal is to prevent human error during releases, where manually updating these files often leads to inconsistencies, such as mismatched lock file versions.\n\nThe tool operates in three modes. The `--check` flag verifies if all four locations currently hold the same version, exiting with an error code if they do not. The `--dry-run` mode displays the planned changes without modifying any files, allowing users to preview the updates. The default mode applies the new version string to all relevant files. It uses regular expressions to precisely target version strings in `pyproject.toml` and `server.json`, ensuring that only the version values are altered while preserving the original file formatting and line endings. After updating the text files, it validates the changes by re-parsing the JSON and TOML structures to ensure no unintended modifications occurred. Finally, it regenerates the `uv.lock` file using the `uv` package manager to reflect the new editable package version. The script also includes a warning if the `CHANGELOG.md` lacks an entry for the new version, serving as a reminder for documentation completeness.\n\n(leído server-side: 12193 chars ≈ 6006 tokens de Claude que no entraron a tu contexto)",
+      "judged_text": "This script automates the synchronization of the package version across four distinct locations within the repository: `pyproject.toml`, `server.json` (which contains two version fields), and `uv.lock`. It also updates deprecation entries marked as `UNRELEASED` in `src/local_delegate/deprecations.py`. The primary goal is to prevent human error during releases, where manually updating these files often leads to inconsistencies, such as mismatched lock file versions.\n\nThe tool operates in three modes. The `--check` flag verifies if all four locations currently hold the same version, exiting with an error code if they do not. The `--dry-run` mode displays the planned changes without modifying any files, allowing users to preview the updates. The default mode applies the new version string to all relevant files. It uses regular expressions to precisely target version strings in `pyproject.toml` and `server.json`, ensuring that only the version values are altered while preserving the original file formatting and line endings. After updating the text files, it validates the changes by re-parsing the JSON and TOML structures to ensure no unintended modifications occurred. Finally, it regenerates the `uv.lock` file using the `uv` package manager to reflect the new editable package version. The script also includes a warning if the `CHANGELOG.md` lacks an entry for the new version, serving as a reminder for documentation completeness.",
+      "detector": {
+        "lang": "en",
+        "tokens": 223,
+        "es_ratio": 0.0,
+        "en_ratio": 0.3543
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "en",
+        "tokens": 236,
+        "es_ratio": 0.0127,
+        "en_ratio": 0.3347
+      },
+      "unsummarized_section_placeholders": 0,
+      "batch": 1
+    },
+    {
+      "window_id": "w-20261014T221424Z",
+      "combination": {
+        "product": "es",
+        "output_language": "en"
+      },
+      "tool": "local_explain_code",
+      "document": "scripts/check_install_e2e.py",
+      "document_sha256": "be659db7cc62ca15041eb9be37562d94feb23ac83c5851161bd95a047da72b2e",
+      "response_literal": "This Python script is an end-to-end integration test for the `local-delegate` installer and uninstaller commands. Its primary purpose is to verify that the installation process correctly sets up hooks, skills, and configuration files across different platforms (Linux, macOS, Windows) without requiring actual system modifications.\n\nThe script creates a temporary directory to simulate a user's home environment. It first runs the installer in `--dry-run` mode to ensure no files are written to disk, validating the safety of the preview mode. Then, it executes the actual installation twice to test idempotency, ensuring that running the install command multiple times does not duplicate configurations or cause errors.\n\nKey verification steps include checking for the presence of specific hook scripts, skill files, and memory blocks in the configuration files of supported clients like Claude Code, Codex, and Opencode. It also validates that the correct number of hooks is registered in the settings JSON. Finally, it runs the uninstall command to confirm that all installed components are cleanly removed, ensuring the process is fully reversible. The test uses Python’s `subprocess` to invoke the command-line interface, ensuring the test exercises the actual parser and execution logic rather than just internal functions. This approach guarantees that the installer behaves correctly as a standalone tool, handling platform-specific path resolutions and configuration formats accurately.\n\n(leído server-side: 6825 chars ≈ 3362 tokens de Claude que no entraron a tu contexto)",
+      "judged_text": "This Python script is an end-to-end integration test for the `local-delegate` installer and uninstaller commands. Its primary purpose is to verify that the installation process correctly sets up hooks, skills, and configuration files across different platforms (Linux, macOS, Windows) without requiring actual system modifications.\n\nThe script creates a temporary directory to simulate a user's home environment. It first runs the installer in `--dry-run` mode to ensure no files are written to disk, validating the safety of the preview mode. Then, it executes the actual installation twice to test idempotency, ensuring that running the install command multiple times does not duplicate configurations or cause errors.\n\nKey verification steps include checking for the presence of specific hook scripts, skill files, and memory blocks in the configuration files of supported clients like Claude Code, Codex, and Opencode. It also validates that the correct number of hooks is registered in the settings JSON. Finally, it runs the uninstall command to confirm that all installed components are cleanly removed, ensuring the process is fully reversible. The test uses Python’s `subprocess` to invoke the command-line interface, ensuring the test exercises the actual parser and execution logic rather than just internal functions. This approach guarantees that the installer behaves correctly as a standalone tool, handling platform-specific path resolutions and configuration formats accurately.",
+      "detector": {
+        "lang": "en",
+        "tokens": 223,
+        "es_ratio": 0.0,
+        "en_ratio": 0.3363
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "en",
+        "tokens": 236,
+        "es_ratio": 0.0127,
+        "en_ratio": 0.3178
+      },
+      "unsummarized_section_placeholders": 0,
+      "batch": 1
+    },
+    {
+      "window_id": "w-20261014T221424Z",
+      "combination": {
+        "product": "es",
+        "output_language": "en"
+      },
+      "tool": "local_explain_code",
+      "document": "scripts/check_install_handshake.py",
+      "document_sha256": "c572feb9d325b250963135109a33f16f8c8ad98cd2e9f96324496633058741ec",
+      "response_literal": "This script validates that the installed `local-delegate-mcp` package starts correctly and responds to an MCP handshake, independent of the locked dependencies used in CI. It addresses a specific issue where a major SDK update broke imports in fresh environments, a problem hidden by the CI's locked dependency resolution.\n\nThe script operates by launching the `local_delegate` module as a subprocess in a temporary directory to ensure it imports the installed package rather than local source files. It configures a custom environment to disable web servers and auto-start features, pointing to a non-existent backend URL to ensure the handshake test does not depend on external services.\n\nThe script sends a JSON-RPC `initialize` request via stdin and waits for a response within a 90-second timeout. It distinguishes between different failure modes using specific exit codes: exit code 1 indicates an import error (signaling a dependency regression), code 2 means the server started but failed to return a valid handshake, code 3 signifies a timeout, and code 4 denotes a failure to launch the process. If successful, it extracts and prints the server version from the response, confirming the package is functional and correctly installed. This check serves as a critical safeguard against breaking changes in dependencies that might otherwise go unnoticed by the standard CI pipeline.\n\n(leído server-side: 4619 chars ≈ 2275 tokens de Claude que no entraron a tu contexto)",
+      "judged_text": "This script validates that the installed `local-delegate-mcp` package starts correctly and responds to an MCP handshake, independent of the locked dependencies used in CI. It addresses a specific issue where a major SDK update broke imports in fresh environments, a problem hidden by the CI's locked dependency resolution.\n\nThe script operates by launching the `local_delegate` module as a subprocess in a temporary directory to ensure it imports the installed package rather than local source files. It configures a custom environment to disable web servers and auto-start features, pointing to a non-existent backend URL to ensure the handshake test does not depend on external services.\n\nThe script sends a JSON-RPC `initialize` request via stdin and waits for a response within a 90-second timeout. It distinguishes between different failure modes using specific exit codes: exit code 1 indicates an import error (signaling a dependency regression), code 2 means the server started but failed to return a valid handshake, code 3 signifies a timeout, and code 4 denotes a failure to launch the process. If successful, it extracts and prints the server version from the response, confirming the package is functional and correctly installed. This check serves as a critical safeguard against breaking changes in dependencies that might otherwise go unnoticed by the standard CI pipeline.",
+      "detector": {
+        "lang": "en",
+        "tokens": 216,
+        "es_ratio": 0.0,
+        "en_ratio": 0.2917
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "en",
+        "tokens": 229,
+        "es_ratio": 0.0131,
+        "en_ratio": 0.2751
+      },
+      "unsummarized_section_placeholders": 0,
+      "batch": 1
+    },
+    {
+      "window_id": "w-20261014T221424Z",
+      "combination": {
+        "product": "es",
+        "output_language": "en"
+      },
+      "tool": "local_explain_code",
+      "document": "scripts/ci_gate.py",
+      "document_sha256": "aa18933a9f4d1320ac1f6ab047a615d78732f8dd2560ba84fe76cef19876bf09",
+      "response_literal": "This Python script acts as a CI gate for GitHub Actions, specifically designed to bypass a known GitHub runner bug where jobs remain in an `in_progress` state despite all steps completing successfully. Instead of relying on the job's overall status, which can hang indefinitely, the script inspects the individual steps of each job. It considers a job successful if its conclusion is `success` or `skipped`, or if it is a \"phantom\" job where the final step is named \"Complete job\" and succeeded, even if the job itself hasn't closed.\n\nThe script defines a hardcoded tuple of `EXPECTED_JOBS` to ensure it only checks relevant workflows, avoiding false positives from previous run attempts. It queries the GitHub API with retries to fetch job data. The core logic, `job_verdict`, evaluates each job: it immediately fails if any step failed; it marks as good if the job is closed with a positive conclusion; it identifies \"phantom\" jobs by checking the last step's name and status; and it waits otherwise.\n\nThe main loop polls the API every 10 seconds until all expected jobs reach a final verdict (good or bad) or a timeout (25 minutes) is reached. It returns specific exit codes: 0 for all good, 1 for any failure, 2 for timeout, or 3 for API errors. The script also supports writing a summary to `GITHUB_STEP_SUMMARY` for better visibility in the CI interface. This approach ensures merge gates are not blocked by GitHub's internal delays, providing a faster and more reliable check than standard workflow statuses.\n\n(leído server-side: 12419 chars ≈ 6117 tokens de Claude que no entraron a tu contexto)",
+      "judged_text": "This Python script acts as a CI gate for GitHub Actions, specifically designed to bypass a known GitHub runner bug where jobs remain in an `in_progress` state despite all steps completing successfully. Instead of relying on the job's overall status, which can hang indefinitely, the script inspects the individual steps of each job. It considers a job successful if its conclusion is `success` or `skipped`, or if it is a \"phantom\" job where the final step is named \"Complete job\" and succeeded, even if the job itself hasn't closed.\n\nThe script defines a hardcoded tuple of `EXPECTED_JOBS` to ensure it only checks relevant workflows, avoiding false positives from previous run attempts. It queries the GitHub API with retries to fetch job data. The core logic, `job_verdict`, evaluates each job: it immediately fails if any step failed; it marks as good if the job is closed with a positive conclusion; it identifies \"phantom\" jobs by checking the last step's name and status; and it waits otherwise.\n\nThe main loop polls the API every 10 seconds until all expected jobs reach a final verdict (good or bad) or a timeout (25 minutes) is reached. It returns specific exit codes: 0 for all good, 1 for any failure, 2 for timeout, or 3 for API errors. The script also supports writing a summary to `GITHUB_STEP_SUMMARY` for better visibility in the CI interface. This approach ensures merge gates are not blocked by GitHub's internal delays, providing a faster and more reliable check than standard workflow statuses.",
+      "detector": {
+        "lang": "en",
+        "tokens": 255,
+        "es_ratio": 0.0,
+        "en_ratio": 0.3529
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "en",
+        "tokens": 268,
+        "es_ratio": 0.0112,
+        "en_ratio": 0.3358
+      },
+      "unsummarized_section_placeholders": 0,
+      "batch": 1
+    },
+    {
+      "window_id": "w-20261014T221424Z",
+      "combination": {
+        "product": "es",
+        "output_language": "en"
+      },
+      "tool": "local_describe_image",
+      "document": ".sdd/changes/daemon-reparte-el-backend/evidencias/T4-hoja-sintetica.png",
+      "document_sha256": "378cdb7686006ef297dcba34a75a149377bc0dc52ea70227bca96cc4092d5441",
+      "response_literal": "The image shows a web interface designed for a crowdsourced data labeling or software testing task, likely related to evaluating commit messages or code diffs. The interface is in Spanish and displays two distinct comparison blocks labeled \"Par 05\" and \"Par 06.\"\n\nEach block presents two options, \"Mensaje A\" and \"Mensaje B,\" which contain technical commit messages. For example, in Par 05, Message A refers to a \"fix(zona-30)\" while Message B refers to a \"fix(hooks).\" Below each message, there is a question asking if the user notices anything the diff doesn't do, with radio buttons for \"sí\" (yes) or \"no.\" There is also a \"Si te apetece\" (If you feel like it) expandable section. At the bottom of each pair, a final question asks \"¿Cuál prefieres?\" (Which do you prefer?), offering choices between Message A, Message B, or a tie (\"Empate\"). At the top, a status bar indicates that 84 responses are remaining, along with buttons to download responses or check if the user can stop.\n\n(leído server-side: 28429 bytes imagen que no entraron a tu contexto)",
+      "judged_text": "The image shows a web interface designed for a crowdsourced data labeling or software testing task, likely related to evaluating commit messages or code diffs. The interface is in Spanish and displays two distinct comparison blocks labeled \"Par 05\" and \"Par 06.\"\n\nEach block presents two options, \"Mensaje A\" and \"Mensaje B,\" which contain technical commit messages. For example, in Par 05, Message A refers to a \"fix(zona-30)\" while Message B refers to a \"fix(hooks).\" Below each message, there is a question asking if the user notices anything the diff doesn't do, with radio buttons for \"sí\" (yes) or \"no.\" There is also a \"Si te apetece\" (If you feel like it) expandable section. At the bottom of each pair, a final question asks \"¿Cuál prefieres?\" (Which do you prefer?), offering choices between Message A, Message B, or a tie (\"Empate\"). At the top, a status bar indicates that 84 responses are remaining, along with buttons to download responses or check if the user can stop.",
+      "detector": {
+        "lang": "en",
+        "tokens": 165,
+        "es_ratio": 0.0182,
+        "en_ratio": 0.3394
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "en",
+        "tokens": 176,
+        "es_ratio": 0.0284,
+        "en_ratio": 0.3182
+      },
+      "unsummarized_section_placeholders": 0,
+      "batch": 1
+    },
+    {
+      "window_id": "w-20261014T221424Z",
+      "combination": {
+        "product": "es",
+        "output_language": "en"
+      },
+      "tool": "local_describe_image",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/A-close-1/clients-dark.png",
+      "document_sha256": "8f140e6811dad4835a065a7c02e929d3a6011d4588eaa6cec0706b9ae6927a4a",
+      "response_literal": "The image shows a dark-themed data table titled \"Quién delegó\" (Who delegated), which displays information about two clients. The table is organized into five columns: \"CLIENTE\" (Client), \"DELEGACIONES\" (Delegations), \"LLAMADAS AL BACKEND\" (Backend Calls), \"TOKENS NETOS\" (Net Tokens), and \"REPARTO\" (Distribution).\n\nThe first row identifies the client as \"Claude Code,\" which shows 4 delegations, 4 backend calls, 1,480 net tokens, and a distribution of 66.7%. The second row lists the client as \"Desconocido\" (Unknown), showing 2 delegations, 2 backend calls, 740 net tokens, and a distribution of 33.3%. In the top right corner, a small note indicates \"2 clientes\" (2 clients). The interface uses a modern, minimalist aesthetic with light blue and white text against a dark navy background.\n\n(leído server-side: 20939 bytes imagen que no entraron a tu contexto)",
+      "judged_text": "The image shows a dark-themed data table titled \"Quién delegó\" (Who delegated), which displays information about two clients. The table is organized into five columns: \"CLIENTE\" (Client), \"DELEGACIONES\" (Delegations), \"LLAMADAS AL BACKEND\" (Backend Calls), \"TOKENS NETOS\" (Net Tokens), and \"REPARTO\" (Distribution).\n\nThe first row identifies the client as \"Claude Code,\" which shows 4 delegations, 4 backend calls, 1,480 net tokens, and a distribution of 66.7%. The second row lists the client as \"Desconocido\" (Unknown), showing 2 delegations, 2 backend calls, 740 net tokens, and a distribution of 33.3%. In the top right corner, a small note indicates \"2 clientes\" (2 clients). The interface uses a modern, minimalist aesthetic with light blue and white text against a dark navy background.",
+      "detector": {
+        "lang": "en",
+        "tokens": 110,
+        "es_ratio": 0.0091,
+        "en_ratio": 0.2273
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "en",
+        "tokens": 121,
+        "es_ratio": 0.0248,
+        "en_ratio": 0.2066
+      },
+      "unsummarized_section_placeholders": 0,
+      "batch": 1
+    },
+    {
+      "window_id": "w-20261014T221424Z",
+      "combination": {
+        "product": "es",
+        "output_language": "en"
+      },
+      "tool": "local_describe_image",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/A-close-1/clients-light.png",
+      "document_sha256": "87a382b8f714b3ce6531cd3b76d5a93c42b3b9f25b6db660b4163d8c419b511d",
+      "response_literal": "The image shows a technical dashboard or data table titled \"Quién delegó\" (Who delegated), which lists information regarding two clients. The interface features a clean, minimalist design with a white background and blue accents.\n\nThe table is organized into five columns: \"CLIENTE\" (Client), \"DELEGACIONES\" (Delegations), \"LLAMADAS AL BACKEND\" (Backend Calls), \"TOKENS NETOS\" (Net Tokens), and \"REPARTO\" (Distribution).\n\nThe first row identifies the client as \"Claude Code,\" showing 4 delegations, 4 backend calls, 1,480 net tokens, and a distribution of 66.7%. The second row lists a client as \"Desconocido\" (Unknown), with 2 delegations, 2 backend calls, 740 net tokens, and a distribution of 33.3%. In the top right corner, a small label indicates \"2 clientes\" (2 clients). The overall layout is structured and professional, typical of a monitoring or analytics tool.\n\n(leído server-side: 21034 bytes imagen que no entraron a tu contexto)",
+      "judged_text": "The image shows a technical dashboard or data table titled \"Quién delegó\" (Who delegated), which lists information regarding two clients. The interface features a clean, minimalist design with a white background and blue accents.\n\nThe table is organized into five columns: \"CLIENTE\" (Client), \"DELEGACIONES\" (Delegations), \"LLAMADAS AL BACKEND\" (Backend Calls), \"TOKENS NETOS\" (Net Tokens), and \"REPARTO\" (Distribution).\n\nThe first row identifies the client as \"Claude Code,\" showing 4 delegations, 4 backend calls, 1,480 net tokens, and a distribution of 66.7%. The second row lists a client as \"Desconocido\" (Unknown), with 2 delegations, 2 backend calls, 740 net tokens, and a distribution of 33.3%. In the top right corner, a small label indicates \"2 clientes\" (2 clients). The overall layout is structured and professional, typical of a monitoring or analytics tool.",
+      "detector": {
+        "lang": "en",
+        "tokens": 120,
+        "es_ratio": 0.0083,
+        "en_ratio": 0.2333
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "en",
+        "tokens": 131,
+        "es_ratio": 0.0229,
+        "en_ratio": 0.2137
+      },
+      "unsummarized_section_placeholders": 0,
+      "batch": 1
+    },
+    {
+      "window_id": "w-20261014T221424Z",
+      "combination": {
+        "product": "es",
+        "output_language": "en"
+      },
+      "tool": "local_describe_image",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/live-035/panel-claro.png",
+      "document_sha256": "c5862233776608daba4173a061822347471cf22c51cc3b06324b4647e9054064",
+      "response_literal": "This image shows a complex technical dashboard for a software tool called \"local delegate,\" which appears to be a system for managing local AI model computations and token usage. The interface features a dark theme with a high density of data visualizations, including bar charts, line graphs, and circular progress indicators.\n\nThe top section displays backend status, listing various models like \"qwen\" and \"llama,\" along with system metrics such as RAM usage (41%), GPU load (3%), and VRAM. Key performance indicators are highlighted in large cards, showing metrics like \"Contexto Conservado\" (133,967 tokens), \"Delegaciones\" (6), and \"Latencia\" (59.3 s).\n\nThe middle section includes a cost comparison table, showing an estimated price of $1.74 compared to a $6.67 base rate. Below this, several charts visualize \"Ahorro de contexto\" (context savings) and \"Ahorro por herramienta\" (savings per tool). The bottom half of the dashboard features a detailed \"Actividad reciente\" table listing specific tool calls, model types, and latency times, followed by a summary of client delegations and hook suggestions.\n\n(leído server-side: 556636 bytes imagen que no entraron a tu contexto)",
+      "judged_text": "This image shows a complex technical dashboard for a software tool called \"local delegate,\" which appears to be a system for managing local AI model computations and token usage. The interface features a dark theme with a high density of data visualizations, including bar charts, line graphs, and circular progress indicators.\n\nThe top section displays backend status, listing various models like \"qwen\" and \"llama,\" along with system metrics such as RAM usage (41%), GPU load (3%), and VRAM. Key performance indicators are highlighted in large cards, showing metrics like \"Contexto Conservado\" (133,967 tokens), \"Delegaciones\" (6), and \"Latencia\" (59.3 s).\n\nThe middle section includes a cost comparison table, showing an estimated price of $1.74 compared to a $6.67 base rate. Below this, several charts visualize \"Ahorro de contexto\" (context savings) and \"Ahorro por herramienta\" (savings per tool). The bottom half of the dashboard features a detailed \"Actividad reciente\" table listing specific tool calls, model types, and latency times, followed by a summary of client delegations and hook suggestions.",
+      "detector": {
+        "lang": "en",
+        "tokens": 160,
+        "es_ratio": 0.0125,
+        "en_ratio": 0.2375
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "en",
+        "tokens": 171,
+        "es_ratio": 0.0234,
+        "en_ratio": 0.2222
+      },
+      "unsummarized_section_placeholders": 0,
+      "batch": 1
+    },
+    {
+      "window_id": "w-20261014T221424Z",
+      "combination": {
+        "product": "es",
+        "output_language": "en"
+      },
+      "tool": "local_describe_image",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/live-035/panel-coste-claro.png",
+      "document_sha256": "40ed59830add21cd7ced336a28b2db562c560a4b2d522c88bbe5eddda2f1a905",
+      "response_literal": "The image shows a dark-themed software interface, likely a dashboard or a technical monitoring tool, with a prominent modal window centered in the foreground. The modal is titled \"Coste, cuota e imágenes\" and contains detailed technical information in Spanish regarding API price equivalents, subscription quotas, and image data. It features several sections with orange and blue highlights, listing specific metrics such as \"Equivalente estimado a precio de API,\" \"Cuota de la suscripción,\" and \"Imágenes.\"\n\nBehind the modal, the main dashboard displays various data points, including green and white text, numbers, and small icons. The layout suggests a complex data management system, possibly related to AI model usage or cloud computing costs. The overall aesthetic is professional and data-heavy, utilizing a high-contrast color palette of dark gray, black, and vibrant accents to highlight key information. A small \"x\" button in the top right corner of the modal allows for closing the window.\n\n(leído server-side: 315831 bytes imagen que no entraron a tu contexto)",
+      "judged_text": "The image shows a dark-themed software interface, likely a dashboard or a technical monitoring tool, with a prominent modal window centered in the foreground. The modal is titled \"Coste, cuota e imágenes\" and contains detailed technical information in Spanish regarding API price equivalents, subscription quotas, and image data. It features several sections with orange and blue highlights, listing specific metrics such as \"Equivalente estimado a precio de API,\" \"Cuota de la suscripción,\" and \"Imágenes.\"\n\nBehind the modal, the main dashboard displays various data points, including green and white text, numbers, and small icons. The layout suggests a complex data management system, possibly related to AI model usage or cloud computing costs. The overall aesthetic is professional and data-heavy, utilizing a high-contrast color palette of dark gray, black, and vibrant accents to highlight key information. A small \"x\" button in the top right corner of the modal allows for closing the window.",
+      "detector": {
+        "lang": "en",
+        "tokens": 154,
+        "es_ratio": 0.026,
+        "en_ratio": 0.2338
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "en",
+        "tokens": 165,
+        "es_ratio": 0.0364,
+        "en_ratio": 0.2182
+      },
+      "unsummarized_section_placeholders": 0,
+      "batch": 1
+    },
+    {
+      "batch": 2,
+      "window_id": "w-20261014T222250Z",
+      "combination": {
+        "product": "en",
+        "output_language": "es"
+      },
+      "tool": "local_summarize",
+      "document": ".venv/Lib/site-packages/annotated_doc-0.0.4.dist-info/METADATA",
+      "document_sha256": "22b9b9289b9adf7758daa28a02327e3a129a5415487f01467a3fdd49edd9d535",
+      "response_literal": "## Introduction\nDocumenta parámetros, atributos de clase, tipos de retorno y variables de forma integrada utilizando `Annotated`.\n\n## Installation\nInstalación mediante `pip install annotated-doc` o usando `uv add annotated-doc`.\n\n## Usage\nImporta `Doc` y pasa un literal con la documentación para el elemento específico.\n\n## Who Uses This\nDiseñado para FastAPI, Typer, SQLModel y Asyncer, soportado por griffe-typingdoc.\n\n## Reasons not to use `annotated-doc`\nSi prefieres formatos existentes como Sphinx o Google, o si tu equipo prefiere separar la documentación del código.\n\n## Reasons to use `annotated-doc`\nUsa sintaxis de Python pura, facilita la edición y el renderizado mediante AST. Evita duplicación de información e inconsistencias al renombrar o eliminar elementos. Permite acceso en tiempo de ejecución, formaliza documentación de alias de tipos y mejora la accesibilidad para herramientas de IA.\n\n## History\nOriginalmente propuesto para la librería estándar (PEP 727), pero tras recibir oposición, se desarrolló como una librería de terceros.\n\n## License\nLicencia MIT.\n\n[local-delegate warning: 1 section not summarized because of the word limit or the model]\n\n(read server-side: 6564 chars ≈ 2723 Claude tokens that did not enter your context)",
+      "judged_text": "## Introduction\nDocumenta parámetros, atributos de clase, tipos de retorno y variables de forma integrada utilizando `Annotated`.\n\n## Installation\nInstalación mediante `pip install annotated-doc` o usando `uv add annotated-doc`.\n\n## Usage\nImporta `Doc` y pasa un literal con la documentación para el elemento específico.\n\n## Who Uses This\nDiseñado para FastAPI, Typer, SQLModel y Asyncer, soportado por griffe-typingdoc.\n\n## Reasons not to use `annotated-doc`\nSi prefieres formatos existentes como Sphinx o Google, o si tu equipo prefiere separar la documentación del código.\n\n## Reasons to use `annotated-doc`\nUsa sintaxis de Python pura, facilita la edición y el renderizado mediante AST. Evita duplicación de información e inconsistencias al renombrar o eliminar elementos. Permite acceso en tiempo de ejecución, formaliza documentación de alias de tipos y mejora la accesibilidad para herramientas de IA.\n\n## History\nOriginalmente propuesto para la librería estándar (PEP 727), pero tras recibir oposición, se desarrolló como una librería de terceros.\n\n## License\nLicencia MIT.",
+      "detector": {
+        "lang": "es",
+        "tokens": 152,
+        "es_ratio": 0.3158,
+        "en_ratio": 0.0526
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "es",
+        "tokens": 178,
+        "es_ratio": 0.2697,
+        "en_ratio": 0.1011
+      },
+      "unsummarized_section_placeholders": 0
+    },
+    {
+      "batch": 2,
+      "window_id": "w-20261014T222250Z",
+      "combination": {
+        "product": "en",
+        "output_language": "es"
+      },
+      "tool": "local_summarize",
+      "document": ".venv/Lib/site-packages/annotated_types-0.7.0.dist-info/METADATA",
+      "document_sha256": "ee5b6ac64b09274c026051813484025939564067801f485115d9cadc207cf791",
+      "response_literal": "## Introduction\nProporciona objetos de metadatos para representar restricciones comunes, como límites en valores escalares y tamaños de colecciones, usando `typing.Annotated`.\n\n## Install\n`pip install annotated-types`\n\n## Examples\nUso de `Annotated` con `Gt`, `Len` y `Predicate`.\n\n## Documentation\n**Gt, Ge, Lt, Le** Expresan límites inclusivos o exclusivos para valores ordenables.\n**Interval** Define un rango con límites superiores e inferiores.\n**MultipleOf** Indica que un valor debe ser múltiplo de otro.\n**MinLen, MaxLen, Len** Controlan la longitud de objetos que soportan `len()`.\n**Timezone** Especifica zonas horarias permitidas para objetos de tiempo.\n**Unit** Expresa la unidad de medida de un valor numérico.\n**Predicate** Permite usar funciones arbitrarias para validaciones en tiempo de ejecución.\n**Doc** Añade información de documentación estática.\n**Integrating downstream types with `GroupedMetadata`** Permite agrupar metadatos para reducir la verbosidad.\n**Consuming metadata** Los implementadores deciden cómo usar los metadatos para validación o esquemas.\n\n## Design & History\nDiseñado en PyCon 2022 para ofrecer anotaciones informativas y minimalistas.\n\n(read server-side: 15046 chars ≈ 6243 Claude tokens that did not enter your context)",
+      "judged_text": "## Introduction\nProporciona objetos de metadatos para representar restricciones comunes, como límites en valores escalares y tamaños de colecciones, usando `typing.Annotated`.\n\n## Install\n`pip install annotated-types`\n\n## Examples\nUso de `Annotated` con `Gt`, `Len` y `Predicate`.\n\n## Documentation\n**Gt, Ge, Lt, Le** Expresan límites inclusivos o exclusivos para valores ordenables.\n**Interval** Define un rango con límites superiores e inferiores.\n**MultipleOf** Indica que un valor debe ser múltiplo de otro.\n**MinLen, MaxLen, Len** Controlan la longitud de objetos que soportan `len()`.\n**Timezone** Especifica zonas horarias permitidas para objetos de tiempo.\n**Unit** Expresa la unidad de medida de un valor numérico.\n**Predicate** Permite usar funciones arbitrarias para validaciones en tiempo de ejecución.\n**Doc** Añade información de documentación estática.\n**Integrating downstream types with `GroupedMetadata`** Permite agrupar metadatos para reducir la verbosidad.\n**Consuming metadata** Los implementadores deciden cómo usar los metadatos para validación o esquemas.\n\n## Design & History\nDiseñado en PyCon 2022 para ofrecer anotaciones informativas y minimalistas.",
+      "detector": {
+        "lang": "es",
+        "tokens": 150,
+        "es_ratio": 0.2933,
+        "en_ratio": 0.0067
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "es",
+        "tokens": 162,
+        "es_ratio": 0.2716,
+        "en_ratio": 0.0309
+      },
+      "unsummarized_section_placeholders": 0
+    },
+    {
+      "batch": 2,
+      "window_id": "w-20261014T222250Z",
+      "combination": {
+        "product": "en",
+        "output_language": "es"
+      },
+      "tool": "local_summarize",
+      "document": ".venv/Lib/site-packages/attrs-26.1.0.dist-info/METADATA",
+      "document_sha256": "4cd40e690f23bf37cbcad34efd6758e062df1df07c86833f7e3ce95bf1fa38cc",
+      "response_literal": "## Introduction\n*attrs* es un paquete de Python que facilita la escritura de clases concisas y correctas, liberando al programador de la implementación tediosa de protocolos de objetos.\n\n## Sponsors\nEl proyecto cuenta con el apoyo de diversos patrocinadores, especialmente aquellos en el nivel *The Organization* o superior, para asegurar su mantenimiento sostenible.\n\n## Example\nProporciona un decorador de clase para definir atributos de forma declarativa, generando automáticamente métodos como `__repr__`, igualdad e inicializadores sin penalización de rendimiento.\n**Hate Type Annotations!?** Los tipos son opcionales; se pueden usar `attrs.field()` en su lugar.\n\n## Data Classes\nEs más flexible que `dataclasses`, permitiendo manejo especial de arrays de NumPy, mayor personalización en la inicialización y mejor depuración.\n\n## Project Information\nIncluye enlaces a documentación, código fuente, PyPI y soporte.\n***attrs* for Enterprise** Disponible mediante la suscripción de Tidelift para soporte comercial.\n\n## Release Information\n**Backwards-incompatible Changes** Los alias de campos se resuelven antes de llamar a `field_transformer`.\n**Changes** Mejoras en validadores, soporte para contextos anidados y mayor flexibilidad en clases congeladas e instancias.\n\n(read server-side: 8750 chars ≈ 3630 Claude tokens that did not enter your context)",
+      "judged_text": "## Introduction\n*attrs* es un paquete de Python que facilita la escritura de clases concisas y correctas, liberando al programador de la implementación tediosa de protocolos de objetos.\n\n## Sponsors\nEl proyecto cuenta con el apoyo de diversos patrocinadores, especialmente aquellos en el nivel *The Organization* o superior, para asegurar su mantenimiento sostenible.\n\n## Example\nProporciona un decorador de clase para definir atributos de forma declarativa, generando automáticamente métodos como `__repr__`, igualdad e inicializadores sin penalización de rendimiento.\n**Hate Type Annotations!?** Los tipos son opcionales; se pueden usar `attrs.field()` en su lugar.\n\n## Data Classes\nEs más flexible que `dataclasses`, permitiendo manejo especial de arrays de NumPy, mayor personalización en la inicialización y mejor depuración.\n\n## Project Information\nIncluye enlaces a documentación, código fuente, PyPI y soporte.\n***attrs* for Enterprise** Disponible mediante la suscripción de Tidelift para soporte comercial.\n\n## Release Information\n**Backwards-incompatible Changes** Los alias de campos se resuelven antes de llamar a `field_transformer`.\n**Changes** Mejoras en validadores, soporte para contextos anidados y mayor flexibilidad en clases congeladas e instancias.",
+      "detector": {
+        "lang": "es",
+        "tokens": 168,
+        "es_ratio": 0.3512,
+        "en_ratio": 0.0119
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "es",
+        "tokens": 180,
+        "es_ratio": 0.3278,
+        "en_ratio": 0.0333
+      },
+      "unsummarized_section_placeholders": 0
+    },
+    {
+      "batch": 2,
+      "window_id": "w-20261014T222250Z",
+      "combination": {
+        "product": "en",
+        "output_language": "es"
+      },
+      "tool": "local_summarize",
+      "document": ".venv/Lib/site-packages/cfgv-3.5.0.dist-info/METADATA",
+      "document_sha256": "ae126b80e15f39d0feff7368cefea2ea6478fdcedcde52918d0f58b668e19137",
+      "response_literal": "## Introduction\nValida configuraciones y produce mensajes de error legibles para humanos.\n\n## Installation\nInstalación mediante el comando `pip install cfgv`.\n\n## Sample error messages\nEjemplos visuales de errores de validación, como errores tipográficos en archivos de configuración.\n\n## API\n**`cfgv.validate(value, schema)`** Valida un esquema. **`cfgv.apply_defaults(value, schema)`** Aplica valores por defecto. **`cfgv.remove_defaults(value, schema)`** Elimina valores por defecto. **`cfgv.load_from_filename(filename, schema, load_strategy, exc_tp=ValidationError)`** Carga archivos con una estrategia.\n\n## Making a schema\n**writing your own schema container** Permite crear contenedores personalizados. **`Map(object_name, id_key, *items)`** Bloque básico para esquemas. **`Array(of, allow_empty=True)`** Anida mapas en arreglos. **`KeyValueMap(object_name, key_check_fn, value_schema)`** Representa mapeos homogéneos.\n\n## Validator objects\n**writing your own validator** Permite crear validadores personalizados. **`Required(key, check_fn)`** Asegura presencia de clave. **`RequiredRecurse(key, schema)`** Usa un esquema. **`Optional(key, check_fn, default)`** Clave opcional con valor por defecto. **`OptionalRecurse(key, schema, default)`** Opcional con esquema. **`OptionalNoDefault(key, check_fn)`** Opcional sin valores por defecto. **`Conditional(key, check_fn, condition_key, condition_value, ensure_absent=False)`** Validación condicional. **`ConditionalOptional(key, check_fn, default, condition_key, condition_value, ensure_absent=False)`** Condicional y opcional. **`ConditionalRecurse(key, schema, condition_key, condition_value, ensure_absent=True)`** Condicional con esquema. **`NoAdditionalKeys(keys)`** Restringe claves permitidas.\n\n## Equality helpers\n**`Not(val)`** Verifica desigualdad. **`In(*values)`** Verifica pertenencia. **`NotIn(*values)`** Verifica no pertenencia.\n\n## Check functions\n**`check_any(_)`** No hace nada. **`check_type(tp, typename=None)`** Verifica tipos. **`check_one_of(possible)`** Verifica pertenencia a opciones. **`check_regex(v)`** Verifica expresiones regulares. **`check_array(inner_check)`** Verifica elementos en secuencias. **`check_and(*fns)`** Ejecuta múltiples comprobaciones.\n\n(read server-side: 8858 chars ≈ 3675 Claude tokens that did not enter your context)",
+      "judged_text": "## Introduction\nValida configuraciones y produce mensajes de error legibles para humanos.\n\n## Installation\nInstalación mediante el comando `pip install cfgv`.\n\n## Sample error messages\nEjemplos visuales de errores de validación, como errores tipográficos en archivos de configuración.\n\n## API\n**`cfgv.validate(value, schema)`** Valida un esquema. **`cfgv.apply_defaults(value, schema)`** Aplica valores por defecto. **`cfgv.remove_defaults(value, schema)`** Elimina valores por defecto. **`cfgv.load_from_filename(filename, schema, load_strategy, exc_tp=ValidationError)`** Carga archivos con una estrategia.\n\n## Making a schema\n**writing your own schema container** Permite crear contenedores personalizados. **`Map(object_name, id_key, *items)`** Bloque básico para esquemas. **`Array(of, allow_empty=True)`** Anida mapas en arreglos. **`KeyValueMap(object_name, key_check_fn, value_schema)`** Representa mapeos homogéneos.\n\n## Validator objects\n**writing your own validator** Permite crear validadores personalizados. **`Required(key, check_fn)`** Asegura presencia de clave. **`RequiredRecurse(key, schema)`** Usa un esquema. **`Optional(key, check_fn, default)`** Clave opcional con valor por defecto. **`OptionalRecurse(key, schema, default)`** Opcional con esquema. **`OptionalNoDefault(key, check_fn)`** Opcional sin valores por defecto. **`Conditional(key, check_fn, condition_key, condition_value, ensure_absent=False)`** Validación condicional. **`ConditionalOptional(key, check_fn, default, condition_key, condition_value, ensure_absent=False)`** Condicional y opcional. **`ConditionalRecurse(key, schema, condition_key, condition_value, ensure_absent=True)`** Condicional con esquema. **`NoAdditionalKeys(keys)`** Restringe claves permitidas.\n\n## Equality helpers\n**`Not(val)`** Verifica desigualdad. **`In(*values)`** Verifica pertenencia. **`NotIn(*values)`** Verifica no pertenencia.\n\n## Check functions\n**`check_any(_)`** No hace nada. **`check_type(tp, typename=None)`** Verifica tipos. **`check_one_of(possible)`** Verifica pertenencia a opciones. **`check_regex(v)`** Verifica expresiones regulares. **`check_array(inner_check)`** Verifica elementos en secuencias. **`check_and(*fns)`** Ejecuta múltiples comprobaciones.",
+      "detector": {
+        "lang": "unknown",
+        "tokens": 273,
+        "es_ratio": 0.1062,
+        "en_ratio": 0.044
+      },
+      "verdict": "fail",
+      "detector_on_literal_with_wrappers": {
+        "lang": "unknown",
+        "tokens": 285,
+        "es_ratio": 0.1018,
+        "en_ratio": 0.0561
+      },
+      "unsummarized_section_placeholders": 0,
+      "fail_kind": "detector_unknown_low_margin"
+    },
+    {
+      "batch": 2,
+      "window_id": "w-20261014T222250Z",
+      "combination": {
+        "product": "en",
+        "output_language": "es"
+      },
+      "tool": "local_summarize",
+      "document": ".venv/Lib/site-packages/colorama-0.4.6.dist-info/METADATA",
+      "document_sha256": "7baed29eb50c3b29bdb33ff84e3177bf1bc05784f7685ecdcaa4471c7dd810cc",
+      "response_literal": "## Introduction\nHace que las secuencias de caracteres de escape ANSI funcionen en MS Windows para texto coloreado y posicionamiento del cursor.\n\n## Installation\nSe instala mediante pip o conda sin requerimientos adicionales.\n\n## Description\n**Windows** permite usar secuencias ANSI envolviendo stdout. **API** proporciona una interfaz multiplataforma sencilla para imprimir texto coloreado en Python.\n\n## Usage\n**Inicialización** permite usar `just_fix_windows_console` o `init` para habilitar soporte ANSI. **Salida coloreada** utiliza constantes como Fore, Back y Style. **Posicionamiento del cursor** soporta códigos ANSI para moverlo. **Argumentos de init** permite configurar autoreset, strip, convert y wrap. **Secuencias ANSI reconocidas** incluye colores, brillo, posicionamiento, limpieza de pantalla y línea.\n\n## Status & Known Problems\nProbado en Windows, Ubuntu y OS X; algunas secuencias ANSI no se reconocen.\n\n## License\nLicencia BSD 3-Clause.\n\n## Professional support\nDisponible mediante la suscripción de Tidelift.\n\n## Thanks\nVer el CHANGELOG para agradecimientos detallados a diversos colaboradores.\n\n(read server-side: 17152 chars ≈ 7117 Claude tokens that did not enter your context)",
+      "judged_text": "## Introduction\nHace que las secuencias de caracteres de escape ANSI funcionen en MS Windows para texto coloreado y posicionamiento del cursor.\n\n## Installation\nSe instala mediante pip o conda sin requerimientos adicionales.\n\n## Description\n**Windows** permite usar secuencias ANSI envolviendo stdout. **API** proporciona una interfaz multiplataforma sencilla para imprimir texto coloreado en Python.\n\n## Usage\n**Inicialización** permite usar `just_fix_windows_console` o `init` para habilitar soporte ANSI. **Salida coloreada** utiliza constantes como Fore, Back y Style. **Posicionamiento del cursor** soporta códigos ANSI para moverlo. **Argumentos de init** permite configurar autoreset, strip, convert y wrap. **Secuencias ANSI reconocidas** incluye colores, brillo, posicionamiento, limpieza de pantalla y línea.\n\n## Status & Known Problems\nProbado en Windows, Ubuntu y OS X; algunas secuencias ANSI no se reconocen.\n\n## License\nLicencia BSD 3-Clause.\n\n## Professional support\nDisponible mediante la suscripción de Tidelift.\n\n## Thanks\nVer el CHANGELOG para agradecimientos detallados a diversos colaboradores.",
+      "detector": {
+        "lang": "es",
+        "tokens": 142,
+        "es_ratio": 0.2465,
+        "en_ratio": 0.007
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "es",
+        "tokens": 154,
+        "es_ratio": 0.2273,
+        "en_ratio": 0.0325
+      },
+      "unsummarized_section_placeholders": 0
+    },
+    {
+      "batch": 2,
+      "window_id": "w-20261014T222250Z",
+      "combination": {
+        "product": "en",
+        "output_language": "es"
+      },
+      "tool": "local_lint_summary",
+      "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-cinco-reglas.txt",
+      "document_sha256": "0809f67c265b1bed3ef6bcec7b6beba41fc4cd61a328cfe9f90986ce870c889c",
+      "response_literal": "**Resumen de Problemas:**\n\n**lib/io.py:** 2 problemas.\n*   I001: Importación desordenada (2)\n*   UP006: Uso incorrecto de anotaciones de tipo (3)\n\n**lib/net.py:** 3 problemas.\n*   SIM102: Múltiples `if` statements (3)\n*   RET504: Asignación innecesaria antes de `return` (1)\n\n**lib/db.py:** 3 problemas.\n*   SIM102: Múltiples `if` statements (2)\n*   UP006: Uso incorrecto de anotaciones de tipo (1)\n*   RET504: Asignación innecesaria antes de `return` (1)\n\n(read server-side: 784 chars ≈ 408 Claude tokens that did not enter your context)",
+      "judged_text": "**Resumen de Problemas:**\n\n**lib/io.py:** 2 problemas.\n*   I001: Importación desordenada (2)\n*   UP006: Uso incorrecto de anotaciones de tipo (3)\n\n**lib/net.py:** 3 problemas.\n*   SIM102: Múltiples `if` statements (3)\n*   RET504: Asignación innecesaria antes de `return` (1)\n\n**lib/db.py:** 3 problemas.\n*   SIM102: Múltiples `if` statements (2)\n*   UP006: Uso incorrecto de anotaciones de tipo (1)\n*   RET504: Asignación innecesaria antes de `return` (1)",
+      "detector": {
+        "lang": "unknown",
+        "tokens": 52,
+        "es_ratio": 0.1731,
+        "en_ratio": 0.0962
+      },
+      "verdict": "fail",
+      "detector_on_literal_with_wrappers": {
+        "lang": "unknown",
+        "tokens": 64,
+        "es_ratio": 0.1406,
+        "en_ratio": 0.1406
+      },
+      "unsummarized_section_placeholders": 0,
+      "fail_kind": "detector_unknown_low_margin"
+    },
+    {
+      "batch": 2,
+      "window_id": "w-20261014T222250Z",
+      "combination": {
+        "product": "en",
+        "output_language": "es"
+      },
+      "tool": "local_lint_summary",
+      "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-docstrings.txt",
+      "document_sha256": "b110b57cb1159eec9243dcedb0ecdbc2e38f79d44b3891bc64fbd192659c3538",
+      "response_literal": "**Resumen de Problemas:**\n\n**src/a.py:**\n*   D100: 2 (Docstrings faltantes en módulos y funciones)\n*   B006: 1 (Uso de estructuras de datos mutables en argumentos por defecto)\n*   D103: 3 (Docstrings faltantes en funciones)\n\n**src/b.py:**\n*   D100: 2 (Docstrings faltantes en módulos y funciones)\n*   D103: 4 (Docstrings faltantes en funciones)\n\n**src/c.py:**\n*   T201: 3 (Uso de la función `print`)\n\nLos problemas más frecuentes son la falta de docstrings en módulos, funciones y, en particular, en el archivo `b.py`.  Además, se detectó el uso de la función `print` en el archivo `c.py`.  Se recomienda revisar y agregar docstrings a todas las funciones y módulos, y evitar el uso de `print` en la medida de lo posible.\n\n(read server-side: 626 chars ≈ 326 Claude tokens that did not enter your context)",
+      "judged_text": "**Resumen de Problemas:**\n\n**src/a.py:**\n*   D100: 2 (Docstrings faltantes en módulos y funciones)\n*   B006: 1 (Uso de estructuras de datos mutables en argumentos por defecto)\n*   D103: 3 (Docstrings faltantes en funciones)\n\n**src/b.py:**\n*   D100: 2 (Docstrings faltantes en módulos y funciones)\n*   D103: 4 (Docstrings faltantes en funciones)\n\n**src/c.py:**\n*   T201: 3 (Uso de la función `print`)\n\nLos problemas más frecuentes son la falta de docstrings en módulos, funciones y, en particular, en el archivo `b.py`.  Además, se detectó el uso de la función `print` en el archivo `c.py`.  Se recomienda revisar y agregar docstrings a todas las funciones y módulos, y evitar el uso de `print` en la medida de lo posible.",
+      "detector": {
+        "lang": "es",
+        "tokens": 111,
+        "es_ratio": 0.3694,
+        "en_ratio": 0.0
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "es",
+        "tokens": 123,
+        "es_ratio": 0.3333,
+        "en_ratio": 0.0325
+      },
+      "unsummarized_section_placeholders": 0
+    },
+    {
+      "batch": 2,
+      "window_id": "w-20261014T222250Z",
+      "combination": {
+        "product": "en",
+        "output_language": "es"
+      },
+      "tool": "local_lint_summary",
+      "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-tres-reglas.txt",
+      "document_sha256": "ec0b6183c8ca06cac255bdf11c914291473771ddd2df55b2ecbda2767bd49270",
+      "response_literal": "**Resumen de Problemas:**\n\n**app/main.py (2 problemas):**\n*   E501 (2): Líneas demasiado largas en las líneas 12 y 40.\n\n**app/util.py (3 problemas):**\n*   F401 (3): Importaciones no utilizadas de `os`, `sys` y `re`.\n*   E501 (1): Línea demasiado larga en la línea 55.\n*   W291 (1): Espacio en blanco al final en la línea 70.\n\n**app/cli.py (1 problema):**\n*   E501 (1): Línea demasiado larga en la línea 21.\n\n(read server-side: 340 chars ≈ 177 Claude tokens that did not enter your context)",
+      "judged_text": "**Resumen de Problemas:**\n\n**app/main.py (2 problemas):**\n*   E501 (2): Líneas demasiado largas en las líneas 12 y 40.\n\n**app/util.py (3 problemas):**\n*   F401 (3): Importaciones no utilizadas de `os`, `sys` y `re`.\n*   E501 (1): Línea demasiado larga en la línea 55.\n*   W291 (1): Espacio en blanco al final en la línea 70.\n\n**app/cli.py (1 problema):**\n*   E501 (1): Línea demasiado larga en la línea 21.",
+      "detector": {
+        "lang": "es",
+        "tokens": 55,
+        "es_ratio": 0.3091,
+        "en_ratio": 0.0
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "es",
+        "tokens": 67,
+        "es_ratio": 0.2537,
+        "en_ratio": 0.0597
+      },
+      "unsummarized_section_placeholders": 0
+    },
+    {
+      "batch": 2,
+      "window_id": "w-20261014T222250Z",
+      "combination": {
+        "product": "en",
+        "output_language": "es"
+      },
+      "tool": "local_lint_summary",
+      "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-un-solo-archivo.txt",
+      "document_sha256": "7666debfbc2ca5df842cb29520580e7711e8c44dfcda60b9d8188d9715d1db3e",
+      "response_literal": "**Resumen de Problemas:**\n\n**tools/gen.py:**\n\n*   **E402 (Importación de Módulo):** 4 errores. Importaciones de módulos al nivel superior del archivo no están ubicadas en la parte superior del archivo.\n*   **E501 (Línea Demasiado Larga):** 3 errores. Líneas que exceden el límite de longitud permitido.\n*   **E711 (Comparación con None):** 1 error.  Uso incorrecto de la comparación con `None`, recomendado `cond is None`.\n\nEl archivo `tools/gen.py` presenta una alta concentración de errores relacionados con importaciones de módulos y líneas excesivamente largas. Se recomienda revisar la ubicación de las importaciones y acortar las líneas problemáticas para mejorar la legibilidad y el cumplimiento de las normas de estilo.\n\n(read server-side: 438 chars ≈ 228 Claude tokens that did not enter your context)",
+      "judged_text": "**Resumen de Problemas:**\n\n**tools/gen.py:**\n\n*   **E402 (Importación de Módulo):** 4 errores. Importaciones de módulos al nivel superior del archivo no están ubicadas en la parte superior del archivo.\n*   **E501 (Línea Demasiado Larga):** 3 errores. Líneas que exceden el límite de longitud permitido.\n*   **E711 (Comparación con None):** 1 error.  Uso incorrecto de la comparación con `None`, recomendado `cond is None`.\n\nEl archivo `tools/gen.py` presenta una alta concentración de errores relacionados con importaciones de módulos y líneas excesivamente largas. Se recomienda revisar la ubicación de las importaciones y acortar las líneas problemáticas para mejorar la legibilidad y el cumplimiento de las normas de estilo.",
+      "detector": {
+        "lang": "es",
+        "tokens": 102,
+        "es_ratio": 0.3725,
+        "en_ratio": 0.0098
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "es",
+        "tokens": 114,
+        "es_ratio": 0.3333,
+        "en_ratio": 0.0439
+      },
+      "unsummarized_section_placeholders": 0
+    },
+    {
+      "batch": 2,
+      "window_id": "w-20261014T222250Z",
+      "combination": {
+        "product": "en",
+        "output_language": "es"
+      },
+      "tool": "local_lint_summary",
+      "document": "benchmarks/catalogo-2026-09/fuentes/lint-9k.txt",
+      "document_sha256": "9c7295b2b49627aff832ce808789be7993522cd72c8f947fb06f19664723801f",
+      "response_literal": "**Resumen de errores por archivo:**\n\n**src/local_delegate/benchmark.py** (Más relevante)\n*   **Docstrings (D):** 31 (Faltan en clases, métodos, funciones y `__init__`).\n*   **Formato/Estilo (COM, E, T, RUF):** 16 (Comas faltantes, líneas largas, uso de `print`, orden de `None`).\n*   **Excepciones (TRY, EM):** 15 (Mensajes largos y uso de f-strings/literales en excepciones).\n*   **Complejidad/Lógica (PLR, C901, FBT, PLC):** 10 (Funciones muy complejas, demasiados argumentos/ramas, imports mal ubicados).\n*   **Otros:** 4 (Seguridad `subprocess`, valores mágicos, etc.).\n\n**src/local_delegate/agents.py**\n*   **Docstrings (D):** 1 (Modo imperativo).\n*   **Copyright (CPY):** 1.\n*   **Otros:** 4 (Importaciones, comas, valores mágicos).\n\n**src/local_delegate/autostart.py**\n*   **Docstrings (D):** 1 (Modo imperativo).\n*   **Seguridad (S603):** 1 (`subprocess`).\n*   **Copyright (CPY):** 1.\n\n**Otros archivos (`__init__.py`, `__main__.py`)**\n*   **Copyright (CPY):** 2.\n\n**Totales destacados:**\n*   **D (Docstrings):** 33\n*   **COM (Comas):** 13\n*   **TRY/EM (Excepciones):** 15\n*   **CPY (Copyright):** 5\n\n(read server-side: 8589 chars ≈ 4473 Claude tokens that did not enter your context)",
+      "judged_text": "**Resumen de errores por archivo:**\n\n**src/local_delegate/benchmark.py** (Más relevante)\n*   **Docstrings (D):** 31 (Faltan en clases, métodos, funciones y `__init__`).\n*   **Formato/Estilo (COM, E, T, RUF):** 16 (Comas faltantes, líneas largas, uso de `print`, orden de `None`).\n*   **Excepciones (TRY, EM):** 15 (Mensajes largos y uso de f-strings/literales en excepciones).\n*   **Complejidad/Lógica (PLR, C901, FBT, PLC):** 10 (Funciones muy complejas, demasiados argumentos/ramas, imports mal ubicados).\n*   **Otros:** 4 (Seguridad `subprocess`, valores mágicos, etc.).\n\n**src/local_delegate/agents.py**\n*   **Docstrings (D):** 1 (Modo imperativo).\n*   **Copyright (CPY):** 1.\n*   **Otros:** 4 (Importaciones, comas, valores mágicos).\n\n**src/local_delegate/autostart.py**\n*   **Docstrings (D):** 1 (Modo imperativo).\n*   **Seguridad (S603):** 1 (`subprocess`).\n*   **Copyright (CPY):** 1.\n\n**Otros archivos (`__init__.py`, `__main__.py`)**\n*   **Copyright (CPY):** 2.\n\n**Totales destacados:**\n*   **D (Docstrings):** 33\n*   **COM (Comas):** 13\n*   **TRY/EM (Excepciones):** 15\n*   **CPY (Copyright):** 5",
+      "detector": {
+        "lang": "unknown",
+        "tokens": 120,
+        "es_ratio": 0.125,
+        "en_ratio": 0.0
+      },
+      "verdict": "fail",
+      "detector_on_literal_with_wrappers": {
+        "lang": "unknown",
+        "tokens": 132,
+        "es_ratio": 0.1136,
+        "en_ratio": 0.0303
+      },
+      "unsummarized_section_placeholders": 0,
+      "fail_kind": "detector_unknown_low_margin"
+    },
+    {
+      "batch": 2,
+      "window_id": "w-20261014T222250Z",
+      "combination": {
+        "product": "en",
+        "output_language": "es"
+      },
+      "tool": "local_explain_code",
+      "document": ".venv/Lib/site-packages/_pytest/_argcomplete.py",
+      "document_sha256": "821d299daebaa782d56f60fc493e39ebc586c6f7489c64f8de6eac95886a36a5",
+      "response_literal": "Este archivo implementa soporte para la finalización de comandos (completado automático) en scripts de Python que utilizan `argparse`, integrándose específicamente con la herramienta `argcomplete` para el shell Bash.\n\nSu función principal es permitir que los usuarios presionen la tecla Tab para completar nombres de archivos, directorios y argumentos de línea de comandos automáticamente. El código se divide en dos partes clave dependiendo del entorno de ejecución.\n\nPrimero, define la clase `FastFilesCompleter`, una función optimizada para completar rutas de archivos y directorios. Utiliza `glob` para buscar coincidencias y añade automáticamente una barra diagonal `/` a los directorios, imitando el comportamiento nativo de Bash. Esta clase se expone como `filescompleter`, la cual puede asignarse a argumentos posicionales en `argparse` para mejorar la experiencia del usuario.\n\nSegundo, gestiona la integración con `argcomplete`. Si la variable de entorno `_ARGCOMPLETE` está activa (indicando que el script está siendo ejecutado por el mecanismo de completado de Bash), importa `argcomplete` y configura el analizador de argumentos mediante la función `try_argcomplete`. Esta función inyecta la lógica de completado en el parser de `argparse`. Si la variable no está activa (ejecución normal), `try_argcomplete` es una función vacía y `filescompleter` es `None`, asegurando que el código no dependa de `argcomplete` para su funcionamiento estándar, sino solo para la mejora de la interfaz de línea de comandos.\n\n(read server-side: 3776 chars ≈ 1860 Claude tokens that did not enter your context)",
+      "judged_text": "Este archivo implementa soporte para la finalización de comandos (completado automático) en scripts de Python que utilizan `argparse`, integrándose específicamente con la herramienta `argcomplete` para el shell Bash.\n\nSu función principal es permitir que los usuarios presionen la tecla Tab para completar nombres de archivos, directorios y argumentos de línea de comandos automáticamente. El código se divide en dos partes clave dependiendo del entorno de ejecución.\n\nPrimero, define la clase `FastFilesCompleter`, una función optimizada para completar rutas de archivos y directorios. Utiliza `glob` para buscar coincidencias y añade automáticamente una barra diagonal `/` a los directorios, imitando el comportamiento nativo de Bash. Esta clase se expone como `filescompleter`, la cual puede asignarse a argumentos posicionales en `argparse` para mejorar la experiencia del usuario.\n\nSegundo, gestiona la integración con `argcomplete`. Si la variable de entorno `_ARGCOMPLETE` está activa (indicando que el script está siendo ejecutado por el mecanismo de completado de Bash), importa `argcomplete` y configura el analizador de argumentos mediante la función `try_argcomplete`. Esta función inyecta la lógica de completado en el parser de `argparse`. Si la variable no está activa (ejecución normal), `try_argcomplete` es una función vacía y `filescompleter` es `None`, asegurando que el código no dependa de `argcomplete` para su funcionamiento estándar, sino solo para la mejora de la interfaz de línea de comandos.",
+      "detector": {
+        "lang": "es",
+        "tokens": 217,
+        "es_ratio": 0.424,
+        "en_ratio": 0.0
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "es",
+        "tokens": 229,
+        "es_ratio": 0.4017,
+        "en_ratio": 0.0175
+      },
+      "unsummarized_section_placeholders": 0
+    },
+    {
+      "batch": 2,
+      "window_id": "w-20261014T222250Z",
+      "combination": {
+        "product": "en",
+        "output_language": "es"
+      },
+      "tool": "local_explain_code",
+      "document": ".venv/Lib/site-packages/_pytest/_io/saferepr.py",
+      "document_sha256": "c4634e463e01eb613fc52d909f6f44e4aa682e0c3ad2ad3d6fe0286d6f1c7aa8",
+      "response_literal": "Este archivo implementa utilidades para generar representaciones de texto seguras y controladas de objetos en Python, evitando que fallos en las funciones `__repr__` rompan la ejecución o generen salidas infinitas.\n\nEl componente principal es la clase `SafeRepr`, que hereda de `reprlib.Repr`. Su función principal es envolver las llamadas a `repr()` o `ascii()` dentro de bloques `try-except`. Si la representación del objeto lanza una excepción (distinta de interrupciones del sistema), captura el error y devuelve una cadena descriptiva en lugar de propagar la falla. Además, gestiona el tamaño de la salida: si se especifica un `maxsize`, utiliza la función auxiliar `_ellipsize` para truncar el texto en el medio, insertando \"...\" y manteniendo los extremos visibles, asegurando así que la salida no exceda el límite deseado.\n\nTambién sobrescribe métodos específicos como `repr_dict` para mantener el orden de inserción de los diccionarios (en lugar de ordenarlos alfabéticamente como hace la biblioteca estándar) y aplicar el truncamiento.\n\nFinalmente, el módulo expone tres funciones de conveniencia:\n1. `safeformat`: Usa `pprint` para un formato bonito, capturando excepciones si falla.\n2. `saferepr`: La función principal que usa `SafeRepr` para generar una cadena limitada en tamaño (por defecto 240 caracteres) y segura.\n3. `saferepr_unlimited`: Similar a `saferepr` pero sin límite de tamaño, útil cuando se necesita la representación completa sin truncamiento.\n\nEn resumen, el código garantiza que las representaciones de objetos sean robustas, legibles y nunca interrumpan el flujo del programa debido a errores en la lógica de representación de los objetos mismos.\n\n(read server-side: 4920 chars ≈ 2423 Claude tokens that did not enter your context)",
+      "judged_text": "Este archivo implementa utilidades para generar representaciones de texto seguras y controladas de objetos en Python, evitando que fallos en las funciones `__repr__` rompan la ejecución o generen salidas infinitas.\n\nEl componente principal es la clase `SafeRepr`, que hereda de `reprlib.Repr`. Su función principal es envolver las llamadas a `repr()` o `ascii()` dentro de bloques `try-except`. Si la representación del objeto lanza una excepción (distinta de interrupciones del sistema), captura el error y devuelve una cadena descriptiva en lugar de propagar la falla. Además, gestiona el tamaño de la salida: si se especifica un `maxsize`, utiliza la función auxiliar `_ellipsize` para truncar el texto en el medio, insertando \"...\" y manteniendo los extremos visibles, asegurando así que la salida no exceda el límite deseado.\n\nTambién sobrescribe métodos específicos como `repr_dict` para mantener el orden de inserción de los diccionarios (en lugar de ordenarlos alfabéticamente como hace la biblioteca estándar) y aplicar el truncamiento.\n\nFinalmente, el módulo expone tres funciones de conveniencia:\n1. `safeformat`: Usa `pprint` para un formato bonito, capturando excepciones si falla.\n2. `saferepr`: La función principal que usa `SafeRepr` para generar una cadena limitada en tamaño (por defecto 240 caracteres) y segura.\n3. `saferepr_unlimited`: Similar a `saferepr` pero sin límite de tamaño, útil cuando se necesita la representación completa sin truncamiento.\n\nEn resumen, el código garantiza que las representaciones de objetos sean robustas, legibles y nunca interrumpan el flujo del programa debido a errores en la lógica de representación de los objetos mismos.",
+      "detector": {
+        "lang": "es",
+        "tokens": 244,
+        "es_ratio": 0.3975,
+        "en_ratio": 0.0
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "es",
+        "tokens": 256,
+        "es_ratio": 0.3789,
+        "en_ratio": 0.0156
+      },
+      "unsummarized_section_placeholders": 0
+    },
+    {
+      "batch": 2,
+      "window_id": "w-20261014T222250Z",
+      "combination": {
+        "product": "en",
+        "output_language": "es"
+      },
+      "tool": "local_explain_code",
+      "document": ".venv/Lib/site-packages/_pytest/_io/terminalwriter.py",
+      "document_sha256": "2b4a41d697c0beb281585011292a1b438c168b4a5d9a205a19bddafeffc00234",
+      "response_literal": "Este archivo define funciones auxiliares y una clase principal, `TerminalWriter`, diseñadas para gestionar la escritura formateada en terminales y archivos, con énfasis en el soporte de colores y resaltado de sintaxis.\n\nLa clase `TerminalWriter` es el núcleo del módulo. En su inicialización, determina si el flujo de salida es una terminal interactiva (`isatty`) y si debe habilitar el marcado de colores (`hasmarkup`), verificando variables de entorno como `PY_COLORS` o `NO_COLOR`. En sistemas Windows, intenta integrar `colorama` para asegurar la compatibilidad de colores ANSI.\n\nLa clase ofrece varios métodos clave:\n1.  **`markup`**: Envuelve textos en secuencias de escape ANSI para aplicar estilos (negrita, colores, etc.) basándose en una tabla interna de códigos.\n2.  **`sep` y `line`**: Generan separadores visuales centrados o líneas simples, calculando automáticamente el ancho necesario para ajustarse al tamaño de la terminal (`fullwidth`).\n3.  **`write` y `write_raw`**: Manejan la escritura real de texto, actualizando el seguimiento del ancho de la línea actual y manejando errores de codificación Unicode.\n4.  **Resaltado de sintaxis**: Los métodos privados `_highlight`, `_get_pygments_lexer` y `_get_pygments_formatter` integran la librería `Pygments`. Permiten colorear bloques de código Python o diffs directamente en la terminal, respetando temas configurados mediante variables de entorno (`PYTEST_THEME`).\n\nAdemás, se incluyen funciones de utilidad como `get_terminal_width` para obtener el ancho de la consola con valores de respaldo seguros, y `should_do_markup` para decidir lógicamente cuándo usar colores. El código está diseñado para ser robusto, manejando diferencias entre plataformas (especialmente Windows) y configuraciones de entorno variables.\n\n(read server-side: 8994 chars ≈ 4430 Claude tokens that did not enter your context)",
+      "judged_text": "Este archivo define funciones auxiliares y una clase principal, `TerminalWriter`, diseñadas para gestionar la escritura formateada en terminales y archivos, con énfasis en el soporte de colores y resaltado de sintaxis.\n\nLa clase `TerminalWriter` es el núcleo del módulo. En su inicialización, determina si el flujo de salida es una terminal interactiva (`isatty`) y si debe habilitar el marcado de colores (`hasmarkup`), verificando variables de entorno como `PY_COLORS` o `NO_COLOR`. En sistemas Windows, intenta integrar `colorama` para asegurar la compatibilidad de colores ANSI.\n\nLa clase ofrece varios métodos clave:\n1.  **`markup`**: Envuelve textos en secuencias de escape ANSI para aplicar estilos (negrita, colores, etc.) basándose en una tabla interna de códigos.\n2.  **`sep` y `line`**: Generan separadores visuales centrados o líneas simples, calculando automáticamente el ancho necesario para ajustarse al tamaño de la terminal (`fullwidth`).\n3.  **`write` y `write_raw`**: Manejan la escritura real de texto, actualizando el seguimiento del ancho de la línea actual y manejando errores de codificación Unicode.\n4.  **Resaltado de sintaxis**: Los métodos privados `_highlight`, `_get_pygments_lexer` y `_get_pygments_formatter` integran la librería `Pygments`. Permiten colorear bloques de código Python o diffs directamente en la terminal, respetando temas configurados mediante variables de entorno (`PYTEST_THEME`).\n\nAdemás, se incluyen funciones de utilidad como `get_terminal_width` para obtener el ancho de la consola con valores de respaldo seguros, y `should_do_markup` para decidir lógicamente cuándo usar colores. El código está diseñado para ser robusto, manejando diferencias entre plataformas (especialmente Windows) y configuraciones de entorno variables.",
+      "detector": {
+        "lang": "es",
+        "tokens": 249,
+        "es_ratio": 0.3534,
+        "en_ratio": 0.0201
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "es",
+        "tokens": 261,
+        "es_ratio": 0.3372,
+        "en_ratio": 0.0345
+      },
+      "unsummarized_section_placeholders": 0
+    },
+    {
+      "batch": 2,
+      "window_id": "w-20261014T222250Z",
+      "combination": {
+        "product": "en",
+        "output_language": "es"
+      },
+      "tool": "local_explain_code",
+      "document": ".venv/Lib/site-packages/_pytest/assertion/__init__.py",
+      "document_sha256": "2a69087174fab92dd88352b60b546d879fb93411a6c0996384a0f84a07071ac7",
+      "response_literal": "Este archivo, `assertion.py`, es el núcleo del sistema de depuración de aserciones de pytest. Su función principal es proporcionar explicaciones detalladas y legibles cuando una aserción falla, mejorando la experiencia de desarrollo al mostrar qué valores compararon y por qué fallaron.\n\nEl código se estructura en varias partes clave. Primero, gestiona la configuración mediante `pytest_addoption`, permitiendo al usuario elegir entre el modo \"rewrite\" (predeterminado, que reescribe las aserciones para capturar información interna) o \"plain\" (sin depuración). También define opciones para controlar el truncamiento de salidas largas y el estilo de los difs de texto.\n\nEn segundo lugar, implementa el mecanismo de reescritura de código. La función `register_assert_rewrite` permite a los plugins marcar módulos para que sus aserciones sean transformadas al importarse, facilitando la captura de variables locales. Esto se logra insertando un gancho de importación (`AssertionRewritingHook`) en `sys.meta_path` mediante `install_importhook`, lo que intercepta la importación de módulos de prueba para modificar su bytecode.\n\nFinalmente, gestiona la ejecución de las pruebas. El gancho `pytest_runtest_protocol` configura hooks temporales (`pytest_assertrepr_compare` y `pytest_assertion_pass`) que se activan durante la ejecución de cada prueba. Cuando una comparación falla, `pytest_assertrepr_compare` genera una explicación detallada (como diferencias de strings o listas) utilizando utilidades de truncamiento y resaltado, asegurando que la salida sea clara pero no abrumadora. Al finalizar la prueba, restaura el estado original para evitar efectos secundarios.\n\n(read server-side: 8081 chars ≈ 3980 Claude tokens that did not enter your context)",
+      "judged_text": "Este archivo, `assertion.py`, es el núcleo del sistema de depuración de aserciones de pytest. Su función principal es proporcionar explicaciones detalladas y legibles cuando una aserción falla, mejorando la experiencia de desarrollo al mostrar qué valores compararon y por qué fallaron.\n\nEl código se estructura en varias partes clave. Primero, gestiona la configuración mediante `pytest_addoption`, permitiendo al usuario elegir entre el modo \"rewrite\" (predeterminado, que reescribe las aserciones para capturar información interna) o \"plain\" (sin depuración). También define opciones para controlar el truncamiento de salidas largas y el estilo de los difs de texto.\n\nEn segundo lugar, implementa el mecanismo de reescritura de código. La función `register_assert_rewrite` permite a los plugins marcar módulos para que sus aserciones sean transformadas al importarse, facilitando la captura de variables locales. Esto se logra insertando un gancho de importación (`AssertionRewritingHook`) en `sys.meta_path` mediante `install_importhook`, lo que intercepta la importación de módulos de prueba para modificar su bytecode.\n\nFinalmente, gestiona la ejecución de las pruebas. El gancho `pytest_runtest_protocol` configura hooks temporales (`pytest_assertrepr_compare` y `pytest_assertion_pass`) que se activan durante la ejecución de cada prueba. Cuando una comparación falla, `pytest_assertrepr_compare` genera una explicación detallada (como diferencias de strings o listas) utilizando utilidades de truncamiento y resaltado, asegurando que la salida sea clara pero no abrumadora. Al finalizar la prueba, restaura el estado original para evitar efectos secundarios.",
+      "detector": {
+        "lang": "es",
+        "tokens": 235,
+        "es_ratio": 0.3915,
+        "en_ratio": 0.0
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "es",
+        "tokens": 247,
+        "es_ratio": 0.3725,
+        "en_ratio": 0.0162
+      },
+      "unsummarized_section_placeholders": 0
+    },
+    {
+      "batch": 2,
+      "window_id": "w-20261014T222250Z",
+      "combination": {
+        "product": "en",
+        "output_language": "es"
+      },
+      "tool": "local_explain_code",
+      "document": ".venv/Lib/site-packages/_pytest/assertion/_compare_any.py",
+      "document_sha256": "96db744e2023ecb555cf3f03d7e9a6eafc8cfe250f28eff55cd8239793d894c2",
+      "response_literal": "Este archivo implementa la lógica central para generar explicaciones detalladas de fallos en aserciones de igualdad dentro del framework de pruebas pytest. Su función principal es comparar dos objetos (`left` y `right`) y producir un iterador de líneas de texto que explican por qué no son iguales, facilitando la depuración.\n\nEl código se estructura en dos funciones clave. La función `_compare_eq_any` actúa como un despachador inteligente. Primero, verifica si ambos operandos son textos para usar una comparación específica. Luego, maneja casos especiales como objetos de aproximación (`ApproxBase`). Si los tipos coinciden y son estructuras de datos compuestas (dataclasses, attrs, namedtuples), delega en `_compare_eq_cls`. Para otros tipos, utiliza funciones especializadas para secuencias, conjuntos o mapeos. Finalmente, si ambos son iterables genéricos, aplica una comparación iterable estándar.\n\nLa función `_compare_eq_cls` se encarga específicamente de comparar instancias de clases estructuradas. Verifica que tengan una igualdad por defecto y extrae los nombres de los campos relevantes (ignorando aquellos configurados para no compararse). Agrupa los campos en \"iguales\" y \"diferentes\". Dependiendo del nivel de verbosidad, puede omitir los campos idénticos o listarlos. Para cada campo diferente, imprime el nombre del atributo y sus valores representados, y luego llama recursivamente a `_compare_eq_any` para profundizar en la comparación de los valores de esos campos, permitiendo una exploración jerárquica de las diferencias. El uso de generadores (`yield`) permite un procesamiento eficiente de la salida, permitiendo truncar el resultado sin materializar todo el diff en memoria.\n\n(read server-side: 4959 chars ≈ 2442 Claude tokens that did not enter your context)",
+      "judged_text": "Este archivo implementa la lógica central para generar explicaciones detalladas de fallos en aserciones de igualdad dentro del framework de pruebas pytest. Su función principal es comparar dos objetos (`left` y `right`) y producir un iterador de líneas de texto que explican por qué no son iguales, facilitando la depuración.\n\nEl código se estructura en dos funciones clave. La función `_compare_eq_any` actúa como un despachador inteligente. Primero, verifica si ambos operandos son textos para usar una comparación específica. Luego, maneja casos especiales como objetos de aproximación (`ApproxBase`). Si los tipos coinciden y son estructuras de datos compuestas (dataclasses, attrs, namedtuples), delega en `_compare_eq_cls`. Para otros tipos, utiliza funciones especializadas para secuencias, conjuntos o mapeos. Finalmente, si ambos son iterables genéricos, aplica una comparación iterable estándar.\n\nLa función `_compare_eq_cls` se encarga específicamente de comparar instancias de clases estructuradas. Verifica que tengan una igualdad por defecto y extrae los nombres de los campos relevantes (ignorando aquellos configurados para no compararse). Agrupa los campos en \"iguales\" y \"diferentes\". Dependiendo del nivel de verbosidad, puede omitir los campos idénticos o listarlos. Para cada campo diferente, imprime el nombre del atributo y sus valores representados, y luego llama recursivamente a `_compare_eq_any` para profundizar en la comparación de los valores de esos campos, permitiendo una exploración jerárquica de las diferencias. El uso de generadores (`yield`) permite un procesamiento eficiente de la salida, permitiendo truncar el resultado sin materializar todo el diff en memoria.",
+      "detector": {
+        "lang": "es",
+        "tokens": 245,
+        "es_ratio": 0.3959,
+        "en_ratio": 0.0082
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "es",
+        "tokens": 257,
+        "es_ratio": 0.3774,
+        "en_ratio": 0.0233
+      },
+      "unsummarized_section_placeholders": 0
+    },
+    {
+      "batch": 2,
+      "window_id": "w-20261014T222250Z",
+      "combination": {
+        "product": "en",
+        "output_language": "es"
+      },
+      "tool": "local_describe_image",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/live-035/panel-coste-oscuro.png",
+      "document_sha256": "04cb4d3fa71c8d689d422ae1581a0856605203e2bceb77868adce42b23cd243a",
+      "response_literal": "La imagen muestra una captura de pantalla de una interfaz de usuario con un tema oscuro, donde destaca una ventana emergente central titulada \"Coste, quota e imágenes\". El texto dentro de esta ventana está en un idioma que parece ser una mezcla de español y catalán, detallando métricas técnicas sobre el uso de una API, incluyendo un \"Equivalente estimado a precio de API\" que oscila entre $0,67 y ~$1,74.\n\nLa información se divide en tres secciones principales: \"EQUIVALENTE A PRECIO DE API\", \"CUOTA DE LA SUSCRIPCIÓN\" e \"IMÁGENES\". Se mencionan detalles específicos como el uso de modelos (Opus 5.5), densidades de tokenización, ventanas de tiempo de 5 horas y estadísticas de archivos leídos. El fondo de la interfaz muestra gráficos y datos numéricos en verde y blanco, sugiriendo un panel de control de analítica o gestión de recursos de inteligencia artificial. La composición es densa en texto y datos, con un diseño limpio y profesional.\n\n(read server-side: 315877 image bytes that did not enter your context)",
+      "judged_text": "La imagen muestra una captura de pantalla de una interfaz de usuario con un tema oscuro, donde destaca una ventana emergente central titulada \"Coste, quota e imágenes\". El texto dentro de esta ventana está en un idioma que parece ser una mezcla de español y catalán, detallando métricas técnicas sobre el uso de una API, incluyendo un \"Equivalente estimado a precio de API\" que oscila entre $0,67 y ~$1,74.\n\nLa información se divide en tres secciones principales: \"EQUIVALENTE A PRECIO DE API\", \"CUOTA DE LA SUSCRIPCIÓN\" e \"IMÁGENES\". Se mencionan detalles específicos como el uso de modelos (Opus 5.5), densidades de tokenización, ventanas de tiempo de 5 horas y estadísticas de archivos leídos. El fondo de la interfaz muestra gráficos y datos numéricos en verde y blanco, sugiriendo un panel de control de analítica o gestión de recursos de inteligencia artificial. La composición es densa en texto y datos, con un diseño limpio y profesional.",
+      "detector": {
+        "lang": "es",
+        "tokens": 151,
+        "es_ratio": 0.4371,
+        "en_ratio": 0.0
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "es",
+        "tokens": 162,
+        "es_ratio": 0.4074,
+        "en_ratio": 0.0247
+      },
+      "unsummarized_section_placeholders": 0
+    },
+    {
+      "batch": 2,
+      "window_id": "w-20261014T222250Z",
+      "combination": {
+        "product": "en",
+        "output_language": "es"
+      },
+      "tool": "local_describe_image",
+      "document": "benchmarks/catalogo-2026-09/fuentes/dashboard-bcbe39f.png",
+      "document_sha256": "1f421a75c6d889edf44ac593fcdad315aa8ce2fb1098da50488860ca0049bd13",
+      "response_literal": "Esta imagen muestra un panel de control de software llamado \"local delegate\", diseñado para monitorear el rendimiento de modelos de lenguaje de inteligencia artificial ejecutados localmente. La interfaz utiliza un tema oscuro con acentos en colores neón como verde, azul y amarillo.\n\nEn la parte superior, se detallan el estado del \"Backend\" con modelos como gemma3-4b y llama31-8b, junto con el uso del sistema, mostrando el consumo de RAM y VRAM. Debajo, una serie de tarjetas estadísticas resaltan métricas clave como \"Contexto Conservado\" (1.847.125 tok), \"Delegaciones\" (390), \"Generado en Local\" y \"Latencia Media\".\n\nLa sección central incluye gráficos de barras y líneas que muestran el ahorro de contexto en el tiempo y por herramienta, además de gráficos circulares que indican el origen del input y la ubicación del cómputo. En la parte inferior, una tabla de \"Actividad reciente\" registra las últimas llamadas realizadas, detallando la herramienta, el modelo y la latencia. Finalmente, una tabla de \"Sugerencias de los hooks\" resume categorías como bash, lint y summarize con sus respectivas tasas de éxito.\n\n(read server-side: 670197 image bytes that did not enter your context)",
+      "judged_text": "Esta imagen muestra un panel de control de software llamado \"local delegate\", diseñado para monitorear el rendimiento de modelos de lenguaje de inteligencia artificial ejecutados localmente. La interfaz utiliza un tema oscuro con acentos en colores neón como verde, azul y amarillo.\n\nEn la parte superior, se detallan el estado del \"Backend\" con modelos como gemma3-4b y llama31-8b, junto con el uso del sistema, mostrando el consumo de RAM y VRAM. Debajo, una serie de tarjetas estadísticas resaltan métricas clave como \"Contexto Conservado\" (1.847.125 tok), \"Delegaciones\" (390), \"Generado en Local\" y \"Latencia Media\".\n\nLa sección central incluye gráficos de barras y líneas que muestran el ahorro de contexto en el tiempo y por herramienta, además de gráficos circulares que indican el origen del input y la ubicación del cómputo. En la parte inferior, una tabla de \"Actividad reciente\" registra las últimas llamadas realizadas, detallando la herramienta, el modelo y la latencia. Finalmente, una tabla de \"Sugerencias de los hooks\" resume categorías como bash, lint y summarize con sus respectivas tasas de éxito.",
+      "detector": {
+        "lang": "es",
+        "tokens": 172,
+        "es_ratio": 0.4012,
+        "en_ratio": 0.0
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "es",
+        "tokens": 183,
+        "es_ratio": 0.377,
+        "en_ratio": 0.0219
+      },
+      "unsummarized_section_placeholders": 0
+    },
+    {
+      "batch": 2,
+      "window_id": "w-20261014T222250Z",
+      "combination": {
+        "product": "en",
+        "output_language": "es"
+      },
+      "tool": "local_describe_image",
+      "document": "benchmarks/catalogo-2026-09/fuentes/describir-dashboard.png",
+      "document_sha256": "fa6f9f4ce80dd90d52889c915ee6fc02f0a05a41435e7f58d68b9d548d37758a",
+      "response_literal": "Esta imagen muestra un panel de control (dashboard) de una aplicación llamada \"local delegate\", diseñada para monitorear el rendimiento de modelos de lenguaje (LLM) ejecutados localmente. La interfaz utiliza un tema oscuro con gráficos de barras, circulares y tablas de datos detalladas.\n\nEn la parte superior, se observa el estado del \"Backend\", listando modelos como gemma3-4b y llama31-8b, junto con métricas de rendimiento como tokens por segundo y latencia. A la derecha, se muestra el estado del sistema, incluyendo el uso de RAM y VRAM.\n\nEl cuerpo central presenta indicadores clave (KPIs) como \"Contexto Conservado\" (1.8 millones de tokens), \"Delegaciones\" (390) y \"Latencia Media\" (5048 ms). Debajo, hay gráficos de series temporales sobre el ahorro de contexto y gráficos de barras que comparan el ahorro por herramienta.\n\nLa sección inferior incluye una tabla de \"Actividad reciente\" con registros de llamadas, una tabla de \"Quién delegó\" por cliente y una sección final de \"Sugerencias de los hooks\" con estadísticas de categorías como bash, lint y summarize. El diseño es técnico, denso en información y orientado al análisis de datos.\n\n(read server-side: 718456 image bytes that did not enter your context)",
+      "judged_text": "Esta imagen muestra un panel de control (dashboard) de una aplicación llamada \"local delegate\", diseñada para monitorear el rendimiento de modelos de lenguaje (LLM) ejecutados localmente. La interfaz utiliza un tema oscuro con gráficos de barras, circulares y tablas de datos detalladas.\n\nEn la parte superior, se observa el estado del \"Backend\", listando modelos como gemma3-4b y llama31-8b, junto con métricas de rendimiento como tokens por segundo y latencia. A la derecha, se muestra el estado del sistema, incluyendo el uso de RAM y VRAM.\n\nEl cuerpo central presenta indicadores clave (KPIs) como \"Contexto Conservado\" (1.8 millones de tokens), \"Delegaciones\" (390) y \"Latencia Media\" (5048 ms). Debajo, hay gráficos de series temporales sobre el ahorro de contexto y gráficos de barras que comparan el ahorro por herramienta.\n\nLa sección inferior incluye una tabla de \"Actividad reciente\" con registros de llamadas, una tabla de \"Quién delegó\" por cliente y una sección final de \"Sugerencias de los hooks\" con estadísticas de categorías como bash, lint y summarize. El diseño es técnico, denso en información y orientado al análisis de datos.",
+      "detector": {
+        "lang": "es",
+        "tokens": 177,
+        "es_ratio": 0.4011,
+        "en_ratio": 0.0
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "es",
+        "tokens": 188,
+        "es_ratio": 0.3777,
+        "en_ratio": 0.0213
+      },
+      "unsummarized_section_placeholders": 0
+    },
+    {
+      "batch": 2,
+      "window_id": "w-20261014T222250Z",
+      "combination": {
+        "product": "en",
+        "output_language": "es"
+      },
+      "tool": "local_describe_image",
+      "document": "docs/assets/dashboard.png",
+      "document_sha256": "d1a9c0745d137a2a42f3222e662543fada83cdd054bf5a7e538a568d6ee22248",
+      "response_literal": "Esta imagen muestra un panel de control de software llamado \"local delegate\", diseñado para monitorear el rendimiento de modelos de lenguaje locales y el ahorro de costos en comparación con APIs externas. La interfaz utiliza un diseño oscuro con tarjetas informativas que detallan métricas de backend, uso del sistema (RAM, GPU, VRAM) y estadísticas de procesamiento de tokens.\n\nEn la parte superior, se listan modelos activos como qwen y gemma. El centro destaca cifras clave: \"Contexto Conservado\" de más de 3 millones de tokens, \"Delegaciones\" de 390 y un \"Coste Local\" de 1.8 millones de tokens. Una sección importante calcula el \"Equivalente a precio de API\", estimando un ahorro significativo.\n\nLa mitad inferior incluye gráficos de barras y líneas que muestran el ahorro de contexto en el tiempo, el ahorro por herramienta y la distribución de llamadas por modelo. Finalmente, una tabla de \"Actividad reciente\" registra operaciones específicas con marcas de tiempo, tipos de entrada y latencia, mientras que la base muestra estadísticas de clientes y sugerencias de \"hooks\".\n\n(read server-side: 808323 image bytes that did not enter your context)",
+      "judged_text": "Esta imagen muestra un panel de control de software llamado \"local delegate\", diseñado para monitorear el rendimiento de modelos de lenguaje locales y el ahorro de costos en comparación con APIs externas. La interfaz utiliza un diseño oscuro con tarjetas informativas que detallan métricas de backend, uso del sistema (RAM, GPU, VRAM) y estadísticas de procesamiento de tokens.\n\nEn la parte superior, se listan modelos activos como qwen y gemma. El centro destaca cifras clave: \"Contexto Conservado\" de más de 3 millones de tokens, \"Delegaciones\" de 390 y un \"Coste Local\" de 1.8 millones de tokens. Una sección importante calcula el \"Equivalente a precio de API\", estimando un ahorro significativo.\n\nLa mitad inferior incluye gráficos de barras y líneas que muestran el ahorro de contexto en el tiempo, el ahorro por herramienta y la distribución de llamadas por modelo. Finalmente, una tabla de \"Actividad reciente\" registra operaciones específicas con marcas de tiempo, tipos de entrada y latencia, mientras que la base muestra estadísticas de clientes y sugerencias de \"hooks\".",
+      "detector": {
+        "lang": "es",
+        "tokens": 166,
+        "es_ratio": 0.4036,
+        "en_ratio": 0.0
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "es",
+        "tokens": 177,
+        "es_ratio": 0.3785,
+        "en_ratio": 0.0226
+      },
+      "unsummarized_section_placeholders": 0
+    },
+    {
+      "batch": 2,
+      "window_id": "w-20261014T222250Z",
+      "combination": {
+        "product": "en",
+        "output_language": "es"
+      },
+      "tool": "local_describe_image",
+      "document": "site/og-image.png",
+      "document_sha256": "9b7517ed7e92f4adf2b9c07a3a5f07815e760938d66d6d6b29bd6d4676b0c71e",
+      "response_literal": "La imagen es un gráfico promocional de color azul oscuro con una cuadrícula sutil de fondo. En la esquina superior izquierda, aparece el logotipo de un terminal con el texto \"local-delegate\". El mensaje central, escrito en letras blancas grandes, dice: \"Lo mecánico no tiene por qué ir a la nube\", subrayado con una línea verde neón. Debajo, se lee \"Servidor MCP\", seguido de \"modelo local\" y \"tu cuota intacta\".\n\nEn la parte derecha, hay una ilustración esquemática que muestra una línea vertical verde neón con un círculo en el centro. De este círculo sale una línea diagonal hacia la derecha que termina en un punto etiquetado como \"nube (cuota)\". Debajo de la línea vertical, el texto indica \"tu máquina\" y enumera acciones como \"resumir\", \"clasificar\", \"extraer\" y \"commit\". En la parte inferior izquierda, se muestra la URL \"zahirinatzuke.github.io/local-delegate\". El diseño es minimalista y tecnológico, enfatizando la ejecución de procesos locales frente a los servicios en la nube.\n\n(read server-side: 47072 image bytes that did not enter your context)",
+      "judged_text": "La imagen es un gráfico promocional de color azul oscuro con una cuadrícula sutil de fondo. En la esquina superior izquierda, aparece el logotipo de un terminal con el texto \"local-delegate\". El mensaje central, escrito en letras blancas grandes, dice: \"Lo mecánico no tiene por qué ir a la nube\", subrayado con una línea verde neón. Debajo, se lee \"Servidor MCP\", seguido de \"modelo local\" y \"tu cuota intacta\".\n\nEn la parte derecha, hay una ilustración esquemática que muestra una línea vertical verde neón con un círculo en el centro. De este círculo sale una línea diagonal hacia la derecha que termina en un punto etiquetado como \"nube (cuota)\". Debajo de la línea vertical, el texto indica \"tu máquina\" y enumera acciones como \"resumir\", \"clasificar\", \"extraer\" y \"commit\". En la parte inferior izquierda, se muestra la URL \"zahirinatzuke.github.io/local-delegate\". El diseño es minimalista y tecnológico, enfatizando la ejecución de procesos locales frente a los servicios en la nube.",
+      "detector": {
+        "lang": "es",
+        "tokens": 162,
+        "es_ratio": 0.4012,
+        "en_ratio": 0.0
+      },
+      "verdict": "pass",
+      "detector_on_literal_with_wrappers": {
+        "lang": "es",
+        "tokens": 173,
+        "es_ratio": 0.3757,
+        "en_ratio": 0.0231
+      },
+      "unsummarized_section_placeholders": 0
+    }
+  ],
+  "summary_batch_2": {
+    "by_tool": {
+      "local_summarize": {
+        "samples": 5,
+        "judgeable": 5,
+        "in_requested_language": 4,
+        "pct": 80.0,
+        "meets_90": false
+      },
+      "local_lint_summary": {
+        "samples": 5,
+        "judgeable": 5,
+        "in_requested_language": 3,
+        "pct": 60.0,
+        "meets_90": false
+      },
+      "local_explain_code": {
+        "samples": 5,
+        "judgeable": 5,
+        "in_requested_language": 5,
+        "pct": 100.0,
+        "meets_90": true
+      },
+      "local_describe_image": {
+        "samples": 5,
+        "judgeable": 5,
+        "in_requested_language": 5,
+        "pct": 100.0,
+        "meets_90": true
+      }
+    },
+    "total": {
+      "samples": 20,
+      "judgeable": 20,
+      "in_requested_language": 17,
+      "pct": 85.0,
+      "meets_90": false
+    },
+    "unjudgeable": [],
+    "failures": [
+      {
+        "tool": "local_summarize",
+        "document": ".venv/Lib/site-packages/cfgv-3.5.0.dist-info/METADATA",
+        "fail_kind": "detector_unknown_low_margin",
+        "tokens": 273,
+        "es_ratio": 0.1062,
+        "en_ratio": 0.044
+      },
+      {
+        "tool": "local_lint_summary",
+        "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-cinco-reglas.txt",
+        "fail_kind": "detector_unknown_low_margin",
+        "tokens": 52,
+        "es_ratio": 0.1731,
+        "en_ratio": 0.0962
+      },
+      {
+        "tool": "local_lint_summary",
+        "document": "benchmarks/catalogo-2026-09/fuentes/lint-9k.txt",
+        "fail_kind": "detector_unknown_low_margin",
+        "tokens": 120,
+        "es_ratio": 0.125,
+        "en_ratio": 0.0
+      }
+    ],
+    "wrong_language_responses": 0
+  },
+  "summary_both_batches": {
+    "by_tool": {
+      "local_summarize": {
+        "samples": 10,
+        "judgeable": 10,
+        "in_requested_language": 8,
+        "pct": 80.0,
+        "meets_90": false
+      },
+      "local_lint_summary": {
+        "samples": 10,
+        "judgeable": 10,
+        "in_requested_language": 6,
+        "pct": 60.0,
+        "meets_90": false
+      },
+      "local_explain_code": {
+        "samples": 10,
+        "judgeable": 10,
+        "in_requested_language": 10,
+        "pct": 100.0,
+        "meets_90": true
+      },
+      "local_describe_image": {
+        "samples": 10,
+        "judgeable": 10,
+        "in_requested_language": 10,
+        "pct": 100.0,
+        "meets_90": true
+      }
+    },
+    "total": {
+      "samples": 40,
+      "judgeable": 40,
+      "in_requested_language": 34,
+      "pct": 85.0,
+      "meets_90": false
+    },
+    "unjudgeable": [],
+    "failures": [
+      {
+        "tool": "local_summarize",
+        "document": "docs/wiki/Backend-versions.md",
+        "fail_kind": "detector_unknown_low_margin",
+        "tokens": 201,
+        "es_ratio": 0.0448,
+        "en_ratio": 0.1841
+      },
+      {
+        "tool": "local_lint_summary",
+        "document": ".sdd/changes/english-names-bilingual-output/evidence/A5c/mutants.txt",
+        "fail_kind": "detector_unknown_low_margin",
+        "tokens": 60,
+        "es_ratio": 0.0167,
+        "en_ratio": 0.05
+      },
+      {
+        "tool": "local_lint_summary",
+        "document": ".sdd/changes/english-names-bilingual-output/evidence/A7b/mutants.txt",
+        "fail_kind": "detector_unknown_low_margin",
+        "tokens": 91,
+        "es_ratio": 0.0,
+        "en_ratio": 0.1429
+      },
+      {
+        "tool": "local_summarize",
+        "document": ".venv/Lib/site-packages/cfgv-3.5.0.dist-info/METADATA",
+        "fail_kind": "detector_unknown_low_margin",
+        "tokens": 273,
+        "es_ratio": 0.1062,
+        "en_ratio": 0.044
+      },
+      {
+        "tool": "local_lint_summary",
+        "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-cinco-reglas.txt",
+        "fail_kind": "detector_unknown_low_margin",
+        "tokens": 52,
+        "es_ratio": 0.1731,
+        "en_ratio": 0.0962
+      },
+      {
+        "tool": "local_lint_summary",
+        "document": "benchmarks/catalogo-2026-09/fuentes/lint-9k.txt",
+        "fail_kind": "detector_unknown_low_margin",
+        "tokens": 120,
+        "es_ratio": 0.125,
+        "en_ratio": 0.0
+      }
+    ],
+    "wrong_language_responses": 0
+  },
+  "commit_msg_check_batch_2": {
+    "window_id": "w-20261014T222250Z",
+    "combination": {
+      "product": "en",
+      "output_language": "es"
+    },
+    "diff": "git diff 3492ba5 2167b9d (B1a), sha256 e2d26a47ddc61e07b7509cec935467daa699cf08407ec80d59946cf066f0fb6e, same file as evidence/B2d/live.md §2",
+    "expected": "product language (en), not affected by LOCAL_DELEGATE_OUTPUT_LANGUAGE",
+    "response_literal": "feat(i18n): add English CLI output and bilingual test suite\n\n- Introduce English translations for argparse and CLI messages\n- Add smoke tests to verify English output and base functionality\n- Update existing tests to expect default Spanish strings\n- Ensure i18n integration does not break original English behavior\n- Add configuration for bilingual output in CI and local environments\n\n(read server-side: 266314 chars ≈ 119961 Claude tokens that did not enter your context)\n\n(summarized from 24 parts in 27 passes by local-delegate)\n\n(scope: 41 files, 266314 chars read in full)",
+    "judged_text": "feat(i18n): add English CLI output and bilingual test suite\n\n- Introduce English translations for argparse and CLI messages\n- Add smoke tests to verify English output and base functionality\n- Update existing tests to expect default Spanish strings\n- Ensure i18n integration does not break original English behavior\n- Add configuration for bilingual output in CI and local environments",
+    "detector": {
+      "lang": "en",
+      "tokens": 57,
+      "es_ratio": 0.0,
+      "en_ratio": 0.2281
+    },
+    "body_bullets": 5
+  }
+}

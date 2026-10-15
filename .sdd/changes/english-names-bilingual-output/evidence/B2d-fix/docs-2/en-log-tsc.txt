@@ -1,0 +1,10 @@
+src/adapters/claude-json.ts(294,124): error TS2554: Expected 0-1 arguments, but got 2.
+src/adapters/codex/index.ts(1031,20): error TS2550: Property 'hasOwn' does not exist on type 'ObjectConstructor'. Do you need to change your target library? Try changing the 'lib' compiler option to 'es2022' or later.
+src/cli/commands/export.ts(575,56): error TS2550: Property 'at' does not exist on type 'string[]'. Do you need to change your target library? Try changing the 'lib' compiler option to 'es2022' or later.
+src/cli/commands/export.ts(844,85): error TS2550: Property 'at' does not exist on type 'string[]'. Do you need to change your target library? Try changing the 'lib' compiler option to 'es2022' or later.
+src/cli/commands/import.ts(450,74): error TS2550: Property 'at' does not exist on type 'string[]'. Do you need to change your target library? Try changing the 'lib' compiler option to 'es2022' or later.
+src/cli/index.ts(185,25): error TS2550: Property 'hasOwn' does not exist on type 'ObjectConstructor'. Do you need to change your target library? Try changing the 'lib' compiler option to 'es2022' or later.
+src/cli/ui/style.ts(80,26): error TS2550: Property 'replaceAll' does not exist on type 'string'. Do you need to change your target library? Try changing the 'lib' compiler option to 'es2021' or later.
+src/cli/ui/width.ts(127,28): error TS2339: Property 'Segmenter' does not exist on type 'typeof Intl'.
+src/io/fs/atomic.ts(260,21): error TS4113: This member cannot have an 'override' modifier because it is not declared in the base class 'Error'.
+src/io/vault/index.ts(153,71): error TS2554: Expected 0-1 arguments, but got 2.

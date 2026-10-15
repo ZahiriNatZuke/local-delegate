@@ -1,0 +1,125 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.15, pytest-9.1.1, pluggy-1.6.0 -- D:\Projects\local-delegate\.venv\Scripts\python.exe
+rootdir: D:\Projects\local-delegate
+configfile: pyproject.toml
+plugins: anyio-4.15.1, platformdirs-4.12.4, xdist-3.8.0
+collecting ... collected 57 items
+
+tests/test_chunking.py::test_chunk_text_preserves_the_document_exactly PASSED [  1%]
+tests/test_chunking.py::test_chunk_text_respects_the_size_limit PASSED   [  3%]
+tests/test_chunking.py::test_chunk_text_cuts_on_markdown_headers_first PASSED [  5%]
+tests/test_chunking.py::test_chunk_text_falls_back_to_paragraphs_then_lines PASSED [  7%]
+tests/test_chunking.py::test_chunk_text_hard_splits_when_there_is_no_natural_boundary PASSED [  8%]
+tests/test_chunking.py::test_short_text_is_a_single_chunk PASSED         [ 10%]
+tests/test_chunking.py::test_reattach_separator_keeps_paragraph_and_line_seams PASSED [ 12%]
+tests/test_chunking.py::test_long_document_is_translated_in_several_calls_and_comes_back_whole PASSED [ 14%]
+tests/test_chunking.py::test_chunked_call_logs_one_event_with_the_chunk_count PASSED [ 15%]
+tests/test_chunking.py::test_short_translation_still_uses_a_single_call_without_chunks_field PASSED [ 17%]
+tests/test_chunking.py::test_backend_error_in_a_chunk_aborts_and_reports PASSED [ 19%]
+tests/test_chunking.py::test_local_delegate_chunk_off_does_a_single_call PASSED [ 21%]
+tests/test_chunking.py::test_local_delegate_rejects_an_invalid_chunk_mode PASSED [ 22%]
+tests/test_chunking.py::test_backend_origin_classifies_by_host[http://127.0.0.1:9292/v1-local] PASSED [ 24%]
+tests/test_chunking.py::test_backend_origin_classifies_by_host[http://localhost:11434/v1-local] PASSED [ 26%]
+tests/test_chunking.py::test_backend_origin_classifies_by_host[http://[::1]:9292/v1-local] PASSED [ 28%]
+tests/test_chunking.py::test_backend_origin_classifies_by_host[https://pc.tailnet.ts.net:9292/v1-remote] PASSED [ 29%]
+tests/test_chunking.py::test_backend_origin_classifies_by_host[http://192.168.1.50:9292/v1-remote] PASSED [ 31%]
+tests/test_chunking.py::test_backend_host_drops_scheme_and_path PASSED   [ 33%]
+tests/test_chunking.py::test_remote_panel_url_leads_to_the_backend_machine_panel[https://pc.ts.net:9292/v1-https://pc.ts.net:9393/] PASSED [ 35%]
+tests/test_chunking.py::test_remote_panel_url_leads_to_the_backend_machine_panel[http://192.168.1.50:9292/v1-http://192.168.1.50:9393/] PASSED [ 36%]
+tests/test_chunking.py::test_remote_panel_url_leads_to_the_backend_machine_panel[http://[fd7a::2]:9292/v1-http://[fd7a::2]:9393/] PASSED [ 38%]
+tests/test_chunking.py::test_remote_panel_url_leads_to_the_backend_machine_panel[http://127.0.0.1:9292/v1-] PASSED [ 40%]
+tests/test_chunking.py::test_backend_origin_override_beats_the_heuristic[local] PASSED [ 42%]
+tests/test_chunking.py::test_backend_origin_override_beats_the_heuristic[remote] PASSED [ 43%]
+tests/test_chunking.py::test_backend_origin_falls_back_to_the_heuristic_if_the_override_is_unusable[auto] PASSED [ 45%]
+tests/test_chunking.py::test_backend_origin_falls_back_to_the_heuristic_if_the_override_is_unusable[] PASSED [ 47%]
+tests/test_chunking.py::test_backend_origin_falls_back_to_the_heuristic_if_the_override_is_unusable[AUTO] PASSED [ 49%]
+tests/test_chunking.py::test_backend_origin_falls_back_to_the_heuristic_if_the_override_is_unusable[s\xed] PASSED [ 50%]
+tests/test_chunking.py::test_backend_origin_falls_back_to_the_heuristic_if_the_override_is_unusable[1] PASSED [ 52%]
+tests/test_chunking.py::test_log_records_where_the_inference_ran PASSED  [ 54%]
+tests/test_chunking.py::test_inflight_reports_chunk_progress PASSED      [ 56%]
+tests/test_chunking.py::test_inflight_snapshot_does_not_rewrite_the_file_when_nothing_changed PASSED [ 57%]
+tests/test_chunking.py::test_inflight_temp_file_is_per_process PASSED    [ 59%]
+tests/test_chunking.py::test_inflight_prunes_entries_of_dead_processes PASSED [ 61%]
+tests/test_chunking.py::test_diff_is_split_only_at_file_boundaries PASSED [ 63%]
+tests/test_chunking.py::test_splitting_a_diff_neither_loses_nor_invents_anything PASSED [ 64%]
+tests/test_chunking.py::test_a_file_larger_than_the_budget_is_subdivided_without_losing_content PASSED [ 66%]
+tests/test_chunking.py::test_a_markdown_with_an_embedded_diff_is_still_split_by_headers PASSED [ 68%]
+tests/test_chunking.py::test_a_git_diff_is_not_cut_at_the_file_headers PASSED [ 70%]
+tests/test_chunking.py::test_a_non_git_diff_is_split_at_the_classic_header PASSED [ 71%]
+tests/test_density.py::test_without_density_both_give_zero PASSED        [ 73%]
+tests/test_density.py::test_the_same_py_with_haiku_gives_fewer_tokens PASSED [ 75%]
+tests/test_density.py::test_the_tool_wins_over_the_extension PASSED      [ 77%]
+tests/test_density.py::test_the_returned_and_output_columns PASSED       [ 78%]
+tests/test_density.py::test_fallback_by_variable PASSED                  [ 80%]
+tests/test_density.py::test_the_fallback_variable_is_read_through_the_registered_door PASSED [ 82%]
+tests/test_density.py::test_family_marks PASSED                          [ 84%]
+tests/test_density.py::test_an_image_does_not_subtract_from_the_net PASSED [ 85%]
+tests/test_density.py::test_the_merge_respects_the_order PASSED          [ 87%]
+tests/test_density.py::test_the_merge_does_not_touch_the_cache PASSED    [ 89%]
+tests/test_density.py::test_brackets PASSED                              [ 91%]
+tests/test_density.py::test_no_chars_per_token_in_the_conversion PASSED  [ 92%]
+tests/test_density.py::test_the_tagline_uses_claude_tokens PASSED        [ 94%]
+tests/test_density.py::test_the_output_receipt_uses_claude_tokens PASSED [ 96%]
+tests/test_density.py::test_extract_approx_tokens_are_claudes PASSED     [ 98%]
+tests/test_density.py::test_the_tagline_uses_the_note_model_if_already_present PASSED [100%]
+
+=================================== PASSES ====================================
+=========================== short test summary info ===========================
+PASSED tests/test_chunking.py::test_chunk_text_preserves_the_document_exactly
+PASSED tests/test_chunking.py::test_chunk_text_respects_the_size_limit
+PASSED tests/test_chunking.py::test_chunk_text_cuts_on_markdown_headers_first
+PASSED tests/test_chunking.py::test_chunk_text_falls_back_to_paragraphs_then_lines
+PASSED tests/test_chunking.py::test_chunk_text_hard_splits_when_there_is_no_natural_boundary
+PASSED tests/test_chunking.py::test_short_text_is_a_single_chunk
+PASSED tests/test_chunking.py::test_reattach_separator_keeps_paragraph_and_line_seams
+PASSED tests/test_chunking.py::test_long_document_is_translated_in_several_calls_and_comes_back_whole
+PASSED tests/test_chunking.py::test_chunked_call_logs_one_event_with_the_chunk_count
+PASSED tests/test_chunking.py::test_short_translation_still_uses_a_single_call_without_chunks_field
+PASSED tests/test_chunking.py::test_backend_error_in_a_chunk_aborts_and_reports
+PASSED tests/test_chunking.py::test_local_delegate_chunk_off_does_a_single_call
+PASSED tests/test_chunking.py::test_local_delegate_rejects_an_invalid_chunk_mode
+PASSED tests/test_chunking.py::test_backend_origin_classifies_by_host[http://127.0.0.1:9292/v1-local]
+PASSED tests/test_chunking.py::test_backend_origin_classifies_by_host[http://localhost:11434/v1-local]
+PASSED tests/test_chunking.py::test_backend_origin_classifies_by_host[http://[::1]:9292/v1-local]
+PASSED tests/test_chunking.py::test_backend_origin_classifies_by_host[https://pc.tailnet.ts.net:9292/v1-remote]
+PASSED tests/test_chunking.py::test_backend_origin_classifies_by_host[http://192.168.1.50:9292/v1-remote]
+PASSED tests/test_chunking.py::test_backend_host_drops_scheme_and_path
+PASSED tests/test_chunking.py::test_remote_panel_url_leads_to_the_backend_machine_panel[https://pc.ts.net:9292/v1-https://pc.ts.net:9393/]
+PASSED tests/test_chunking.py::test_remote_panel_url_leads_to_the_backend_machine_panel[http://192.168.1.50:9292/v1-http://192.168.1.50:9393/]
+PASSED tests/test_chunking.py::test_remote_panel_url_leads_to_the_backend_machine_panel[http://[fd7a::2]:9292/v1-http://[fd7a::2]:9393/]
+PASSED tests/test_chunking.py::test_remote_panel_url_leads_to_the_backend_machine_panel[http://127.0.0.1:9292/v1-]
+PASSED tests/test_chunking.py::test_backend_origin_override_beats_the_heuristic[local]
+PASSED tests/test_chunking.py::test_backend_origin_override_beats_the_heuristic[remote]
+PASSED tests/test_chunking.py::test_backend_origin_falls_back_to_the_heuristic_if_the_override_is_unusable[auto]
+PASSED tests/test_chunking.py::test_backend_origin_falls_back_to_the_heuristic_if_the_override_is_unusable[]
+PASSED tests/test_chunking.py::test_backend_origin_falls_back_to_the_heuristic_if_the_override_is_unusable[AUTO]
+PASSED tests/test_chunking.py::test_backend_origin_falls_back_to_the_heuristic_if_the_override_is_unusable[s\xed]
+PASSED tests/test_chunking.py::test_backend_origin_falls_back_to_the_heuristic_if_the_override_is_unusable[1]
+PASSED tests/test_chunking.py::test_log_records_where_the_inference_ran
+PASSED tests/test_chunking.py::test_inflight_reports_chunk_progress
+PASSED tests/test_chunking.py::test_inflight_snapshot_does_not_rewrite_the_file_when_nothing_changed
+PASSED tests/test_chunking.py::test_inflight_temp_file_is_per_process
+PASSED tests/test_chunking.py::test_inflight_prunes_entries_of_dead_processes
+PASSED tests/test_chunking.py::test_diff_is_split_only_at_file_boundaries
+PASSED tests/test_chunking.py::test_splitting_a_diff_neither_loses_nor_invents_anything
+PASSED tests/test_chunking.py::test_a_file_larger_than_the_budget_is_subdivided_without_losing_content
+PASSED tests/test_chunking.py::test_a_markdown_with_an_embedded_diff_is_still_split_by_headers
+PASSED tests/test_chunking.py::test_a_git_diff_is_not_cut_at_the_file_headers
+PASSED tests/test_chunking.py::test_a_non_git_diff_is_split_at_the_classic_header
+PASSED tests/test_density.py::test_without_density_both_give_zero
+PASSED tests/test_density.py::test_the_same_py_with_haiku_gives_fewer_tokens
+PASSED tests/test_density.py::test_the_tool_wins_over_the_extension
+PASSED tests/test_density.py::test_the_returned_and_output_columns
+PASSED tests/test_density.py::test_fallback_by_variable
+PASSED tests/test_density.py::test_the_fallback_variable_is_read_through_the_registered_door
+PASSED tests/test_density.py::test_family_marks
+PASSED tests/test_density.py::test_an_image_does_not_subtract_from_the_net
+PASSED tests/test_density.py::test_the_merge_respects_the_order
+PASSED tests/test_density.py::test_the_merge_does_not_touch_the_cache
+PASSED tests/test_density.py::test_brackets
+PASSED tests/test_density.py::test_no_chars_per_token_in_the_conversion
+PASSED tests/test_density.py::test_the_tagline_uses_claude_tokens
+PASSED tests/test_density.py::test_the_output_receipt_uses_claude_tokens
+PASSED tests/test_density.py::test_extract_approx_tokens_are_claudes
+PASSED tests/test_density.py::test_the_tagline_uses_the_note_model_if_already_present
+============================= 57 passed in 0.75s ==============================

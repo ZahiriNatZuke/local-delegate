@@ -19,6 +19,23 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - **Contrato de `local_extract` (incompatible):** `_local_delegate.truncated`/`warning` significan
   ahora «salida truncada en un trozo» (alguna llamada acabó por `max_tokens`), no «entrada
   truncada», que ya no ocurre.
+- **La orden de idioma de `local_summarize` y `local_lint_summary` es más precisa:** pide redactar
+  cada frase en el idioma de respuesta, con frases completas y sin copiar frases de la entrada, y
+  dice qué se queda tal cual (títulos pedidos literales, rutas, código, identificadores y códigos
+  de regla o de error). En la muestra en vivo las respuestas fallidas no estaban en el otro idioma
+  sino mezcladas, con fragmentos de la entrada sin traducir.
+- **`local_lint_summary` traduce también sus etiquetas:** la orden de idioma dice que las etiquetas
+  en negrita, los nombres de sección y los de cada chequeo o prueba van en el idioma de respuesta;
+  solo se quedan tal cual las rutas, el código, los identificadores y los códigos de regla o de
+  error. En una prueba en vivo el modelo copiaba en español 5 a 8 etiquetas del informe de
+  `doctor` al resumir en inglés. `local_summarize` no cambia: sus títulos siguen literales.
+
+### Corrige
+
+- **El resumen por secciones ya no duplica una sección cuando el modelo traduce su título.** La
+  «Introducción» sintética sale en el idioma de respuesta (no en el del producto), y si el modelo
+  escribe un título en otro idioma en su sitio, el servidor lo reconoce y le devuelve la forma del
+  documento en vez de añadirlo otra vez como «(sin resumir)».
 
 ## [0.35.0] - 2026-10-13
 

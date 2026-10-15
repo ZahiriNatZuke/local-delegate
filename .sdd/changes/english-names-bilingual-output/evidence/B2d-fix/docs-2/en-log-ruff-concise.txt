@@ -1,0 +1,30 @@
+warning: `incorrect-blank-line-before-class` (D203) and `blank-line-before-class` (D211) are incompatible. Ignoring `incorrect-blank-line-before-class`.
+warning: `multi-line-summary-first-line` (D212) and `multi-line-summary-second-line` (D213) are incompatible. Ignoring `multi-line-summary-second-line`.
+src\local_delegate\sections.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\sections.py:4:4: RUF002 Docstring contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\sections.py:21:29: TC003 Move standard library import `collections.abc.Callable` into a type-checking block
+src\local_delegate\sections.py:27:101: E501 Line too long (101 > 100)
+src\local_delegate\sections.py:31:7: D101 Missing docstring in public class
+src\local_delegate\sections.py:38:7: D101 Missing docstring in public class
+src\local_delegate\sections.py:43:9: D102 Missing docstring in public method
+src\local_delegate\sections.py:55:5: D301 Use `r"""` if any backslashes in a docstring
+src\local_delegate\sections.py:65:5: D400 First line should end with a period
+src\local_delegate\sections.py:75:5: C901 `markdown_headings` is too complex (11 > 10)
+src\local_delegate\sections.py:131:29: PLR2004 Magic value used in comparison, consider replacing `2` with a constant variable
+src\local_delegate\sections.py:181:5: C901 `match_headings` is too complex (12 > 10)
+src\local_delegate\sections.py:181:5: PLR0912 Too many branches (14 > 12)
+src\local_delegate\sections.py:235:101: E501 Line too long (103 > 100)
+src\local_delegate\sections.py:250:7: D101 Missing docstring in public class
+src\local_delegate\sections.py:258:101: E501 Line too long (102 > 100)
+src\local_delegate\sections.py:260:101: E501 Line too long (101 > 100)
+src\local_delegate\sections.py:304:101: E501 Line too long (105 > 100)
+src\local_delegate\sections.py:316:7: D101 Missing docstring in public class
+src\local_delegate\sections.py:324:9: D102 Missing docstring in public method
+src\local_delegate\sections.py:364:59: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\sections.py:379:7: D101 Missing docstring in public class
+src\local_delegate\sections.py:387:9: D102 Missing docstring in public method
+src\local_delegate\sections.py:397:5: PLR0913 Too many arguments in function definition (6 > 5)
+src\local_delegate\sections.py:406:5: D205 1 blank line required between summary line and description
+src\local_delegate\sections.py:406:101: E501 Line too long (101 > 100)
+Found 26 errors.
+2 unsafe fixes available with `--fix --unsafe-fixes`.

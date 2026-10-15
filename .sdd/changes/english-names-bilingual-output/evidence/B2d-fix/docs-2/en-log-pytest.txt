@@ -1,0 +1,183 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.15, pytest-9.1.1, pluggy-1.6.0 -- D:\Projects\local-delegate\.venv\Scripts\python.exe
+rootdir: D:\Projects\local-delegate
+configfile: pyproject.toml
+plugins: anyio-4.15.1, platformdirs-4.12.4, xdist-3.8.0
+collecting ... collected 76 items
+
+tests/test_detect_language.py::test_the_control_is_the_frozen_20_plus_20 PASSED [  1%]
+tests/test_detect_language.py::test_the_detector_passes_its_control PASSED [  2%]
+tests/test_detect_language.py::test_with_the_lists_swapped_the_control_fails PASSED [  3%]
+tests/test_detect_language.py::test_the_b1_control_is_frozen PASSED      [  5%]
+tests/test_detect_language.py::test_an_altered_phrase_breaks_the_freeze PASSED [  6%]
+tests/test_detect_language.py::test_the_detector_passes_the_b1_control PASSED [  7%]
+tests/test_detect_language.py::test_with_the_lists_swapped_the_b1_control_fails PASSED [  9%]
+tests/test_detect_language.py::test_the_failed_8_token_control_is_kept_unchanged PASSED [ 10%]
+tests/test_detect_language.py::test_the_lists_are_disjoint_and_big_enough PASSED [ 11%]
+tests/test_detect_language.py::test_too_few_tokens_is_unknown PASSED     [ 13%]
+tests/test_detect_language.py::test_a_small_margin_is_unknown PASSED     [ 14%]
+tests/test_detect_language.py::test_detect_decides_by_function_words[Esta es una prueba del detector, que cuenta las palabras funcionales de cada idioma Esta es una prueba del detector, que cuenta las palabras funcionales de cada idioma -es] PASSED [ 15%]
+tests/test_detect_language.py::test_detect_decides_by_function_words[This is a test of the detector, which counts the function words of each language This is a test of the detector, which counts the function words of each language -en] PASSED [ 17%]
+tests/test_detect_language.py::test_detect_decides_by_function_words[-unknown] PASSED [ 18%]
+tests/test_detect_language.py::test_the_command_prints_one_json_line_per_file PASSED [ 19%]
+tests/test_corpus.py::test_versioned_corpus_still_mirrors_production PASSED [ 21%]
+tests/test_corpus.py::test_split_is_the_protocol_one PASSED              [ 22%]
+tests/test_corpus.py::test_control_image_exists_and_is_not_the_case_one PASSED [ 23%]
+tests/test_corpus.py::test_no_user_path_reaches_the_versioned_corpus PASSED [ 25%]
+tests/test_corpus.py::test_versioned_counts_add_up PASSED                [ 26%]
+tests/test_corpus.py::test_mismatching_hash_makes_the_load_fail PASSED   [ 27%]
+tests/test_corpus.py::test_the_control_hash_is_verified_too PASSED       [ 28%]
+tests/test_corpus.py::test_a_live_path_in_source_file_is_rejected PASSED [ 30%]
+tests/test_corpus.py::test_well_formed_case_gives_no_errors PASSED       [ 31%]
+tests/test_corpus.py::test_role_rule_catches_a_file_production_sends_to_another_role PASSED [ 32%]
+tests/test_corpus.py::test_single_call_rule_catches_the_14k_translate PASSED [ 34%]
+tests/test_corpus.py::test_whole_input_rule_catches_a_truncation PASSED  [ 35%]
+tests/test_corpus.py::test_explain_code_too_large_for_one_call_is_chunked PASSED [ 36%]
+tests/test_corpus.py::test_ceiling_probe_that_fits_in_one_call_probes_nothing PASSED [ 38%]
+tests/test_corpus.py::test_expected_term_missing_from_the_source_is_rejected PASSED [ 39%]
+tests/test_corpus.py::test_id_promising_a_size_the_source_does_not_have PASSED [ 40%]
+tests/test_corpus.py::test_the_capture_does_not_write_to_the_usage_log_nor_call_the_backend PASSED [ 42%]
+tests/test_corpus.py::test_count_log_drops_paths_outside_the_repo_and_non_local_events PASSED [ 43%]
+tests/test_corpus.py::test_each_text_signal_has_its_pair PASSED          [ 44%]
+tests/test_corpus.py::test_each_versioned_pair_differs_only_in_its_signal_and_measures_the_same PASSED [ 46%]
+tests/test_corpus.py::test_pair_differing_in_two_signals_is_rejected PASSED [ 47%]
+tests/test_corpus.py::test_pair_of_different_length_is_rejected PASSED   [ 48%]
+tests/test_corpus.py::test_good_answer_that_is_not_good_is_rejected PASSED [ 50%]
+tests/test_corpus.py::test_nfkd_alone_does_not_remove_the_accent_and_normalisation_does PASSED [ 51%]
+tests/test_corpus.py::test_retouched_reference_that_is_still_valid_is_caught_by_the_watch PASSED [ 52%]
+tests/test_corpus.py::test_rebuild_does_not_refreeze_a_source_from_the_live_file PASSED [ 53%]
+tests/test_corpus.py::test_commit_terms_come_only_from_its_first_fixed_entry PASSED [ 55%]
+tests/test_corpus.py::test_changelog_terms_come_only_from_the_bold_headlines PASSED [ 56%]
+tests/test_corpus.py::test_lint_is_cut_at_whole_files_and_never_halfway PASSED [ 57%]
+tests/test_corpus.py::test_valid_lint_counts_are_total_files_and_each_file PASSED [ 59%]
+tests/test_corpus.py::test_count_oracle_catches_the_made_up_count_of_the_second_pilot PASSED [ 60%]
+tests/test_corpus.py::test_requested_format_comes_from_the_tool_prompt PASSED [ 61%]
+tests/test_corpus.py::test_open_text_cases_are_decided_by_the_pairs PASSED [ 63%]
+tests/test_corpus.py::test_explain_terms_come_from_the_module_docstring_not_from_a_function PASSED [ 64%]
+tests/test_corpus.py::test_rule_picks_expected_in_order_and_next_as_trap PASSED [ 65%]
+tests/test_corpus.py::test_no_trap_matches_real_case PASSED              [ 67%]
+tests/test_corpus.py::test_rule_widens_if_window_lacks_commits PASSED    [ 68%]
+tests/test_corpus.py::test_case_already_in_f2_and_private_diffs_not_chosen PASSED [ 69%]
+tests/test_corpus.py::test_same_zone_trap_subject_at_most_72_chars PASSED [ 71%]
+tests/test_corpus.py::test_build_traps_gives_three_per_set_with_three_kinds PASSED [ 72%]
+tests/test_corpus.py::test_private_data_detects_private_and_lets_harmless_pass PASSED [ 73%]
+tests/test_corpus.py::test_affinity_corpus_has_spec_size PASSED          [ 75%]
+tests/test_corpus.py::test_each_mechanical_case_discriminates_with_its_scorer PASSED [ 76%]
+tests/test_corpus.py::test_corpus_declares_what_spec_requires PASSED     [ 77%]
+tests/test_corpus.py::test_traps_match_no_real_case_and_do_not_repeat PASSED [ 78%]
+tests/test_corpus.py::test_nothing_private_goes_to_repo PASSED           [ 80%]
+tests/test_corpus.py::test_frozen_commit_languages_match_the_frozen_cases PASSED [ 81%]
+tests/test_corpus.py::test_affinity_capture_ignores_the_environment_language[None] PASSED [ 82%]
+tests/test_corpus.py::test_affinity_capture_ignores_the_environment_language[es] PASSED [ 84%]
+tests/test_corpus.py::test_affinity_capture_ignores_the_environment_language[en] PASSED [ 85%]
+tests/test_corpus.py::test_f2_capture_ignores_the_environment_language[None] PASSED [ 86%]
+tests/test_corpus.py::test_f2_capture_ignores_the_environment_language[es] PASSED [ 88%]
+tests/test_corpus.py::test_f2_capture_ignores_the_environment_language[en] PASSED [ 89%]
+tests/test_corpus.py::test_affinity_check_is_ok_with_any_environment_language[None] PASSED [ 90%]
+tests/test_corpus.py::test_affinity_check_is_ok_with_any_environment_language[en] PASSED [ 92%]
+tests/test_corpus.py::test_frozen_reference_signals_are_read_in_english PASSED [ 93%]
+tests/test_corpus.py::test_frozen_log_counts_are_read_with_the_new_keys PASSED [ 94%]
+tests/test_corpus.py::test_frozen_affinity_corpus_is_read_with_the_new_keys PASSED [ 96%]
+tests/test_corpus.py::test_frozen_trap_body_origins_are_read_in_english PASSED [ 97%]
+tests/test_corpus.py::test_frozen_corpus_values_are_read_in_english[catalogo-2026-09] PASSED [ 98%]
+tests/test_corpus.py::test_frozen_corpus_values_are_read_in_english[afinidad-2026-10] PASSED [100%]
+
+=================================== PASSES ====================================
+_________ test_rebuild_does_not_refreeze_a_source_from_the_live_file __________
+---------------------------- Captured stdout call -----------------------------
+ok: 15 casos de calidad, 2 sondeos, 1 control
+  resumen-md-2k            mechanical llamadas=1   chars=2029 bytes=2055
+  extraer-toml-2k          mechanical llamadas=1   chars=2056 bytes=2075
+  clasificar-53            mechanical llamadas=1   chars=53 bytes=54
+  traducir-42              mechanical llamadas=1   chars=42 bytes=43
+  delegar-56               mechanical llamadas=1   chars=56 bytes=56
+  resumen-md-10k           long       llamadas=1   chars=10331 bytes=10480
+  resumen-changelog-7k     long       llamadas=1   chars=6952 bytes=7069
+  extraer-uvlock-48k       long       llamadas=1   chars=48000 bytes=48000
+  lint-9k                  long       llamadas=1   chars=8589 bytes=8590
+  commit-diff-19k          code       llamadas=1   chars=19041 bytes=19089
+  explicar-metrics-15k     code       llamadas=1   chars=15400 bytes=15468
+  explicar-install-20k     code       llamadas=1   chars=20000 bytes=20171
+  boilerplate-156          code       llamadas=1   chars=156 bytes=158
+  describir-dashboard      vision     llamadas=1   chars=None bytes=718456
+  leer-cifras-dashboard    vision     llamadas=1   chars=None bytes=718456
+  techo-resumen-103k       long       llamadas=5   chars=102987 bytes=106092
+  techo-commit-156k        code       llamadas=13  chars=155713 bytes=157873
+=========================== short test summary info ===========================
+PASSED tests/test_detect_language.py::test_the_control_is_the_frozen_20_plus_20
+PASSED tests/test_detect_language.py::test_the_detector_passes_its_control
+PASSED tests/test_detect_language.py::test_with_the_lists_swapped_the_control_fails
+PASSED tests/test_detect_language.py::test_the_b1_control_is_frozen
+PASSED tests/test_detect_language.py::test_an_altered_phrase_breaks_the_freeze
+PASSED tests/test_detect_language.py::test_the_detector_passes_the_b1_control
+PASSED tests/test_detect_language.py::test_with_the_lists_swapped_the_b1_control_fails
+PASSED tests/test_detect_language.py::test_the_failed_8_token_control_is_kept_unchanged
+PASSED tests/test_detect_language.py::test_the_lists_are_disjoint_and_big_enough
+PASSED tests/test_detect_language.py::test_too_few_tokens_is_unknown
+PASSED tests/test_detect_language.py::test_a_small_margin_is_unknown
+PASSED tests/test_detect_language.py::test_detect_decides_by_function_words[Esta es una prueba del detector, que cuenta las palabras funcionales de cada idioma Esta es una prueba del detector, que cuenta las palabras funcionales de cada idioma -es]
+PASSED tests/test_detect_language.py::test_detect_decides_by_function_words[This is a test of the detector, which counts the function words of each language This is a test of the detector, which counts the function words of each language -en]
+PASSED tests/test_detect_language.py::test_detect_decides_by_function_words[-unknown]
+PASSED tests/test_detect_language.py::test_the_command_prints_one_json_line_per_file
+PASSED tests/test_corpus.py::test_versioned_corpus_still_mirrors_production
+PASSED tests/test_corpus.py::test_split_is_the_protocol_one
+PASSED tests/test_corpus.py::test_control_image_exists_and_is_not_the_case_one
+PASSED tests/test_corpus.py::test_no_user_path_reaches_the_versioned_corpus
+PASSED tests/test_corpus.py::test_versioned_counts_add_up
+PASSED tests/test_corpus.py::test_mismatching_hash_makes_the_load_fail
+PASSED tests/test_corpus.py::test_the_control_hash_is_verified_too
+PASSED tests/test_corpus.py::test_a_live_path_in_source_file_is_rejected
+PASSED tests/test_corpus.py::test_well_formed_case_gives_no_errors
+PASSED tests/test_corpus.py::test_role_rule_catches_a_file_production_sends_to_another_role
+PASSED tests/test_corpus.py::test_single_call_rule_catches_the_14k_translate
+PASSED tests/test_corpus.py::test_whole_input_rule_catches_a_truncation
+PASSED tests/test_corpus.py::test_explain_code_too_large_for_one_call_is_chunked
+PASSED tests/test_corpus.py::test_ceiling_probe_that_fits_in_one_call_probes_nothing
+PASSED tests/test_corpus.py::test_expected_term_missing_from_the_source_is_rejected
+PASSED tests/test_corpus.py::test_id_promising_a_size_the_source_does_not_have
+PASSED tests/test_corpus.py::test_the_capture_does_not_write_to_the_usage_log_nor_call_the_backend
+PASSED tests/test_corpus.py::test_count_log_drops_paths_outside_the_repo_and_non_local_events
+PASSED tests/test_corpus.py::test_each_text_signal_has_its_pair
+PASSED tests/test_corpus.py::test_each_versioned_pair_differs_only_in_its_signal_and_measures_the_same
+PASSED tests/test_corpus.py::test_pair_differing_in_two_signals_is_rejected
+PASSED tests/test_corpus.py::test_pair_of_different_length_is_rejected
+PASSED tests/test_corpus.py::test_good_answer_that_is_not_good_is_rejected
+PASSED tests/test_corpus.py::test_nfkd_alone_does_not_remove_the_accent_and_normalisation_does
+PASSED tests/test_corpus.py::test_retouched_reference_that_is_still_valid_is_caught_by_the_watch
+PASSED tests/test_corpus.py::test_rebuild_does_not_refreeze_a_source_from_the_live_file
+PASSED tests/test_corpus.py::test_commit_terms_come_only_from_its_first_fixed_entry
+PASSED tests/test_corpus.py::test_changelog_terms_come_only_from_the_bold_headlines
+PASSED tests/test_corpus.py::test_lint_is_cut_at_whole_files_and_never_halfway
+PASSED tests/test_corpus.py::test_valid_lint_counts_are_total_files_and_each_file
+PASSED tests/test_corpus.py::test_count_oracle_catches_the_made_up_count_of_the_second_pilot
+PASSED tests/test_corpus.py::test_requested_format_comes_from_the_tool_prompt
+PASSED tests/test_corpus.py::test_open_text_cases_are_decided_by_the_pairs
+PASSED tests/test_corpus.py::test_explain_terms_come_from_the_module_docstring_not_from_a_function
+PASSED tests/test_corpus.py::test_rule_picks_expected_in_order_and_next_as_trap
+PASSED tests/test_corpus.py::test_no_trap_matches_real_case
+PASSED tests/test_corpus.py::test_rule_widens_if_window_lacks_commits
+PASSED tests/test_corpus.py::test_case_already_in_f2_and_private_diffs_not_chosen
+PASSED tests/test_corpus.py::test_same_zone_trap_subject_at_most_72_chars
+PASSED tests/test_corpus.py::test_build_traps_gives_three_per_set_with_three_kinds
+PASSED tests/test_corpus.py::test_private_data_detects_private_and_lets_harmless_pass
+PASSED tests/test_corpus.py::test_affinity_corpus_has_spec_size
+PASSED tests/test_corpus.py::test_each_mechanical_case_discriminates_with_its_scorer
+PASSED tests/test_corpus.py::test_corpus_declares_what_spec_requires
+PASSED tests/test_corpus.py::test_traps_match_no_real_case_and_do_not_repeat
+PASSED tests/test_corpus.py::test_nothing_private_goes_to_repo
+PASSED tests/test_corpus.py::test_frozen_commit_languages_match_the_frozen_cases
+PASSED tests/test_corpus.py::test_affinity_capture_ignores_the_environment_language[None]
+PASSED tests/test_corpus.py::test_affinity_capture_ignores_the_environment_language[es]
+PASSED tests/test_corpus.py::test_affinity_capture_ignores_the_environment_language[en]
+PASSED tests/test_corpus.py::test_f2_capture_ignores_the_environment_language[None]
+PASSED tests/test_corpus.py::test_f2_capture_ignores_the_environment_language[es]
+PASSED tests/test_corpus.py::test_f2_capture_ignores_the_environment_language[en]
+PASSED tests/test_corpus.py::test_affinity_check_is_ok_with_any_environment_language[None]
+PASSED tests/test_corpus.py::test_affinity_check_is_ok_with_any_environment_language[en]
+PASSED tests/test_corpus.py::test_frozen_reference_signals_are_read_in_english
+PASSED tests/test_corpus.py::test_frozen_log_counts_are_read_with_the_new_keys
+PASSED tests/test_corpus.py::test_frozen_affinity_corpus_is_read_with_the_new_keys
+PASSED tests/test_corpus.py::test_frozen_trap_body_origins_are_read_in_english
+PASSED tests/test_corpus.py::test_frozen_corpus_values_are_read_in_english[catalogo-2026-09]
+PASSED tests/test_corpus.py::test_frozen_corpus_values_are_read_in_english[afinidad-2026-10]
+============================= 76 passed in 30.35s =============================
