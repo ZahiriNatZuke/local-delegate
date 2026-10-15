@@ -1,0 +1,1390 @@
+{
+ "status": "batch_2_done",
+ "measured_at": "2026-10-15",
+ "code": "branch sdd/english-names-b2d at 71846c1, installed in the daemon (local_status: local-delegate v0.35.0)",
+ "method": "Each tool called once, in series, through the live MCP daemon with path=<absolute path> and default arguments (max_words default, no focus). Responses saved literally; scored offline. Every saved copy checked against the daemon usage log (chars_out) before scoring.",
+ "combination": {
+  "product": "en",
+  "output_language": "es",
+  "window_id": "w-20261015T152547Z",
+  "env": "LOCAL_DELEGATE_STRUCTURED_SUMMARY=1, LOCAL_DELEGATE_LANG=en, LOCAL_DELEGATE_OUTPUT_LANGUAGE=es",
+  "local_status": "Language: en (variable; ...language.json) / Model response language: es (output variable)"
+ },
+ "sets": {
+  "2": {
+   "file": "evidence/B2d-fix/lang-sample-docs-2.json",
+   "sha256": "a7b333a448731b4574d2e58e34a4466267ffc78211d914faa1846d1486543a22",
+   "sha256_verified": true,
+   "part": "batch_2"
+  },
+  "1": {
+   "file": "evidence/B2d/lang-sample-docs.json",
+   "part": "batch_2"
+  }
+ },
+ "judge": "scripts/detect_language.py detect(min_tokens=20, min_margin=0.15)",
+ "judged_text_rule": "literal response minus the product's own wrapper lines: '(leído server-side: ...)' / '(read server-side: ...)', '[local-delegate warning: ...]' and '(sin resumir)' / '(not summarized)'. Everything else, including section headings copied from the document, is judged.",
+ "duplicate_rule": "local_summarize only: a section title (Markdown heading, case-insensitive) appearing twice, or the same section under a title in both languages (e.g. 'Introducción' + 'Introduction'); the second was checked by reading the heading list of every response (stored per sample).",
+ "criterion": ">= 90% recognized in the requested language per tool and batch, 0 in the opposite language, and 0 duplicated sections",
+ "baseline": {
+  "file": "evidence/B2/lang-sample.json",
+  "batch_2_set_1": {
+   "local_summarize": "4/5",
+   "local_lint_summary": "3/5"
+  },
+  "both_batches_set_1": {
+   "local_summarize": "8/10",
+   "local_lint_summary": "6/10"
+  }
+ },
+ "summary_batch_2": {
+  "set_2": {
+   "local_summarize": {
+    "samples": 5,
+    "judgeable": 5,
+    "in_requested_language": 5,
+    "in_opposite_language": 0,
+    "unknown": 0,
+    "pct": 100.0,
+    "duplicate_sections": 0,
+    "meets_criterion": true
+   },
+   "local_lint_summary": {
+    "samples": 5,
+    "judgeable": 5,
+    "in_requested_language": 5,
+    "in_opposite_language": 0,
+    "unknown": 0,
+    "pct": 100.0,
+    "duplicate_sections": null,
+    "meets_criterion": true
+   }
+  },
+  "set_1": {
+   "local_summarize": {
+    "samples": 5,
+    "judgeable": 5,
+    "in_requested_language": 5,
+    "in_opposite_language": 0,
+    "unknown": 0,
+    "pct": 100.0,
+    "duplicate_sections": 0,
+    "meets_criterion": true
+   },
+   "local_lint_summary": {
+    "samples": 5,
+    "judgeable": 5,
+    "in_requested_language": 4,
+    "in_opposite_language": 0,
+    "unknown": 1,
+    "pct": 80.0,
+    "duplicate_sections": null,
+    "meets_criterion": false
+   }
+  }
+ },
+ "failures": [
+  {
+   "set": "1",
+   "tool": "local_lint_summary",
+   "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-cinco-reglas.txt",
+   "fail_kind": "detector_unknown_low_margin",
+   "tokens": 37,
+   "es_ratio": 0.0811,
+   "en_ratio": 0.1622,
+   "margin": 0.0811
+  }
+ ],
+ "wrong_language_responses": 0,
+ "copy_check": {
+  "rule": "len(saved response) minus the trailing '\n\n(read server-side: ...)' line == chars_out of the matching row (same tool and path, after the window start) in %LOCALAPPDATA%/local-delegate/usage-202610.jsonl; chars_out is len(text) before the server-side line is appended (src/local_delegate/server.py _log_event calls).",
+  "batch_2": {
+   "responses": 20,
+   "match": 20,
+   "rows": [
+    {
+     "file": "s2_01.txt",
+     "len_literal": 1382,
+     "len_without_read_server_side_line": 1297,
+     "log_chars_out": 1297
+    },
+    {
+     "file": "s2_02.txt",
+     "len_literal": 1199,
+     "len_without_read_server_side_line": 1114,
+     "log_chars_out": 1114
+    },
+    {
+     "file": "s2_03.txt",
+     "len_literal": 5371,
+     "len_without_read_server_side_line": 5284,
+     "log_chars_out": 5284
+    },
+    {
+     "file": "s2_04.txt",
+     "len_literal": 1934,
+     "len_without_read_server_side_line": 1847,
+     "log_chars_out": 1847
+    },
+    {
+     "file": "s2_05.txt",
+     "len_literal": 5324,
+     "len_without_read_server_side_line": 5237,
+     "log_chars_out": 5237
+    },
+    {
+     "file": "l2_01.txt",
+     "len_literal": 937,
+     "len_without_read_server_side_line": 852,
+     "log_chars_out": 852
+    },
+    {
+     "file": "l2_02.txt",
+     "len_literal": 818,
+     "len_without_read_server_side_line": 733,
+     "log_chars_out": 733
+    },
+    {
+     "file": "l2_03.txt",
+     "len_literal": 1090,
+     "len_without_read_server_side_line": 1006,
+     "log_chars_out": 1006
+    },
+    {
+     "file": "l2_04.txt",
+     "len_literal": 582,
+     "len_without_read_server_side_line": 499,
+     "log_chars_out": 499
+    },
+    {
+     "file": "l2_05.txt",
+     "len_literal": 1173,
+     "len_without_read_server_side_line": 1088,
+     "log_chars_out": 1088
+    },
+    {
+     "file": "s1_01.txt",
+     "len_literal": 1186,
+     "len_without_read_server_side_line": 1101,
+     "log_chars_out": 1101
+    },
+    {
+     "file": "s1_02.txt",
+     "len_literal": 1538,
+     "len_without_read_server_side_line": 1452,
+     "log_chars_out": 1452
+    },
+    {
+     "file": "s1_03.txt",
+     "len_literal": 1596,
+     "len_without_read_server_side_line": 1511,
+     "log_chars_out": 1511
+    },
+    {
+     "file": "s1_04.txt",
+     "len_literal": 3341,
+     "len_without_read_server_side_line": 3256,
+     "log_chars_out": 3256
+    },
+    {
+     "file": "s1_05.txt",
+     "len_literal": 1472,
+     "len_without_read_server_side_line": 1386,
+     "log_chars_out": 1386
+    },
+    {
+     "file": "l1_01.txt",
+     "len_literal": 381,
+     "len_without_read_server_side_line": 298,
+     "log_chars_out": 298
+    },
+    {
+     "file": "l1_02.txt",
+     "len_literal": 975,
+     "len_without_read_server_side_line": 892,
+     "log_chars_out": 892
+    },
+    {
+     "file": "l1_03.txt",
+     "len_literal": 773,
+     "len_without_read_server_side_line": 690,
+     "log_chars_out": 690
+    },
+    {
+     "file": "l1_04.txt",
+     "len_literal": 611,
+     "len_without_read_server_side_line": 528,
+     "log_chars_out": 528
+    },
+    {
+     "file": "l1_05.txt",
+     "len_literal": 1607,
+     "len_without_read_server_side_line": 1522,
+     "log_chars_out": 1522
+    }
+   ]
+  },
+  "batch_1_recheck": {
+   "responses": 20,
+   "match": 20,
+   "rows": [
+    {
+     "file": "s2_01.txt",
+     "len_literal": 1403,
+     "len_without_read_server_side_line": 1314,
+     "log_chars_out": 1314
+    },
+    {
+     "file": "s2_02.txt",
+     "len_literal": 2656,
+     "len_without_read_server_side_line": 2568,
+     "log_chars_out": 2568
+    },
+    {
+     "file": "s2_03.txt",
+     "len_literal": 1926,
+     "len_without_read_server_side_line": 1838,
+     "log_chars_out": 1838
+    },
+    {
+     "file": "s2_04.txt",
+     "len_literal": 1899,
+     "len_without_read_server_side_line": 1810,
+     "log_chars_out": 1810
+    },
+    {
+     "file": "s2_05.txt",
+     "len_literal": 841,
+     "len_without_read_server_side_line": 752,
+     "log_chars_out": 752
+    },
+    {
+     "file": "l2_01.txt",
+     "len_literal": 819,
+     "len_without_read_server_side_line": 732,
+     "log_chars_out": 732
+    },
+    {
+     "file": "l2_02.txt",
+     "len_literal": 1431,
+     "len_without_read_server_side_line": 1344,
+     "log_chars_out": 1344
+    },
+    {
+     "file": "l2_03.txt",
+     "len_literal": 758,
+     "len_without_read_server_side_line": 673,
+     "log_chars_out": 673
+    },
+    {
+     "file": "l2_04.txt",
+     "len_literal": 1817,
+     "len_without_read_server_side_line": 1729,
+     "log_chars_out": 1729
+    },
+    {
+     "file": "l2_05.txt",
+     "len_literal": 297,
+     "len_without_read_server_side_line": 209,
+     "log_chars_out": 209
+    },
+    {
+     "file": "s1_01.txt",
+     "len_literal": 2359,
+     "len_without_read_server_side_line": 2271,
+     "log_chars_out": 2271
+    },
+    {
+     "file": "s1_02.txt",
+     "len_literal": 2013,
+     "len_without_read_server_side_line": 1925,
+     "log_chars_out": 1925
+    },
+    {
+     "file": "s1_03.txt",
+     "len_literal": 1493,
+     "len_without_read_server_side_line": 1405,
+     "log_chars_out": 1405
+    },
+    {
+     "file": "s1_04.txt",
+     "len_literal": 2053,
+     "len_without_read_server_side_line": 1966,
+     "log_chars_out": 1966
+    },
+    {
+     "file": "s1_05.txt",
+     "len_literal": 1735,
+     "len_without_read_server_side_line": 1648,
+     "log_chars_out": 1648
+    },
+    {
+     "file": "l1_01.txt",
+     "len_literal": 1097,
+     "len_without_read_server_side_line": 1010,
+     "log_chars_out": 1010
+    },
+    {
+     "file": "l1_02.txt",
+     "len_literal": 948,
+     "len_without_read_server_side_line": 863,
+     "log_chars_out": 863
+    },
+    {
+     "file": "l1_03.txt",
+     "len_literal": 1197,
+     "len_without_read_server_side_line": 1110,
+     "log_chars_out": 1110
+    },
+    {
+     "file": "l1_04.txt",
+     "len_literal": 761,
+     "len_without_read_server_side_line": 675,
+     "log_chars_out": 675
+    },
+    {
+     "file": "l1_05.txt",
+     "len_literal": 870,
+     "len_without_read_server_side_line": 783,
+     "log_chars_out": 783
+    }
+   ]
+  }
+ },
+ "diagnostic_unofficial": {
+  "rule": "detector rerun on judged_text with Markdown '#' headings and '**...**' labels removed; not part of the verdict",
+  "rows": [
+   {
+    "set": "2",
+    "tool": "local_summarize",
+    "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-doc-httpx2-2.13.1.METADATA.md",
+    "official": "es",
+    "stripped": {
+     "lang": "es",
+     "tokens": 149,
+     "es_ratio": 0.4094,
+     "en_ratio": 0.0
+    }
+   },
+   {
+    "set": "2",
+    "tool": "local_summarize",
+    "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-doc-idna-3.18.METADATA.md",
+    "official": "es",
+    "stripped": {
+     "lang": "es",
+     "tokens": 132,
+     "es_ratio": 0.3712,
+     "en_ratio": 0.0
+    }
+   },
+   {
+    "set": "2",
+    "tool": "local_summarize",
+    "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-doc-nodeenv-1.10.0.METADATA.md",
+    "official": "es",
+    "stripped": {
+     "lang": "es",
+     "tokens": 591,
+     "es_ratio": 0.3046,
+     "en_ratio": 0.0102
+    }
+   },
+   {
+    "set": "2",
+    "tool": "local_summarize",
+    "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_plans_plan-f7-groups.md",
+    "official": "es",
+    "stripped": {
+     "lang": "es",
+     "tokens": 160,
+     "es_ratio": 0.4,
+     "en_ratio": 0.0
+    }
+   },
+   {
+    "set": "2",
+    "tool": "local_summarize",
+    "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_plans_plan-v0.2-mejoras.md",
+    "official": "es",
+    "stripped": {
+     "lang": "es",
+     "tokens": 432,
+     "es_ratio": 0.3866,
+     "en_ratio": 0.0
+    }
+   },
+   {
+    "set": "2",
+    "tool": "local_lint_summary",
+    "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-ruff-concise.txt",
+    "official": "es",
+    "stripped": {
+     "lang": "es",
+     "tokens": 79,
+     "es_ratio": 0.2785,
+     "en_ratio": 0.0
+    }
+   },
+   {
+    "set": "2",
+    "tool": "local_lint_summary",
+    "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-ruff-full.txt",
+    "official": "es",
+    "stripped": {
+     "lang": "es",
+     "tokens": 80,
+     "es_ratio": 0.35,
+     "en_ratio": 0.025
+    }
+   },
+   {
+    "set": "2",
+    "tool": "local_lint_summary",
+    "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-tsc.txt",
+    "official": "es",
+    "stripped": {
+     "lang": "es",
+     "tokens": 96,
+     "es_ratio": 0.2292,
+     "en_ratio": 0.0208
+    }
+   },
+   {
+    "set": "2",
+    "tool": "local_lint_summary",
+    "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B2b-2_corpus-f2-check.txt",
+    "official": "es",
+    "stripped": {
+     "lang": "es",
+     "tokens": 56,
+     "es_ratio": 0.3929,
+     "en_ratio": 0.0
+    }
+   },
+   {
+    "set": "2",
+    "tool": "local_lint_summary",
+    "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B2c_corpus-affinity-check.txt",
+    "official": "es",
+    "stripped": {
+     "lang": "es",
+     "tokens": 88,
+     "es_ratio": 0.4091,
+     "en_ratio": 0.0
+    }
+   },
+   {
+    "set": "1",
+    "tool": "local_summarize",
+    "document": ".venv/Lib/site-packages/annotated_doc-0.0.4.dist-info/METADATA",
+    "official": "es",
+    "stripped": {
+     "lang": "es",
+     "tokens": 140,
+     "es_ratio": 0.4,
+     "en_ratio": 0.0
+    }
+   },
+   {
+    "set": "1",
+    "tool": "local_summarize",
+    "document": ".venv/Lib/site-packages/annotated_types-0.7.0.dist-info/METADATA",
+    "official": "es",
+    "stripped": {
+     "lang": "es",
+     "tokens": 169,
+     "es_ratio": 0.3905,
+     "en_ratio": 0.0
+    }
+   },
+   {
+    "set": "1",
+    "tool": "local_summarize",
+    "document": ".venv/Lib/site-packages/attrs-26.1.0.dist-info/METADATA",
+    "official": "es",
+    "stripped": {
+     "lang": "es",
+     "tokens": 188,
+     "es_ratio": 0.367,
+     "en_ratio": 0.016
+    }
+   },
+   {
+    "set": "1",
+    "tool": "local_summarize",
+    "document": ".venv/Lib/site-packages/cfgv-3.5.0.dist-info/METADATA",
+    "official": "es",
+    "stripped": {
+     "lang": "es",
+     "tokens": 318,
+     "es_ratio": 0.3742,
+     "en_ratio": 0.0063
+    }
+   },
+   {
+    "set": "1",
+    "tool": "local_summarize",
+    "document": ".venv/Lib/site-packages/colorama-0.4.6.dist-info/METADATA",
+    "official": "es",
+    "stripped": {
+     "lang": "es",
+     "tokens": 162,
+     "es_ratio": 0.3642,
+     "en_ratio": 0.0062
+    }
+   },
+   {
+    "set": "1",
+    "tool": "local_lint_summary",
+    "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-cinco-reglas.txt",
+    "official": "unknown",
+    "stripped": {
+     "lang": "en",
+     "tokens": 23,
+     "es_ratio": 0.0435,
+     "en_ratio": 0.2609
+    }
+   },
+   {
+    "set": "1",
+    "tool": "local_lint_summary",
+    "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-docstrings.txt",
+    "official": "es",
+    "stripped": {
+     "lang": "es",
+     "tokens": 119,
+     "es_ratio": 0.3109,
+     "en_ratio": 0.0672
+    }
+   },
+   {
+    "set": "1",
+    "tool": "local_lint_summary",
+    "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-tres-reglas.txt",
+    "official": "es",
+    "stripped": {
+     "lang": "es",
+     "tokens": 92,
+     "es_ratio": 0.3261,
+     "en_ratio": 0.0652
+    }
+   },
+   {
+    "set": "1",
+    "tool": "local_lint_summary",
+    "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-un-solo-archivo.txt",
+    "official": "es",
+    "stripped": {
+     "lang": "es",
+     "tokens": 59,
+     "es_ratio": 0.4237,
+     "en_ratio": 0.0
+    }
+   },
+   {
+    "set": "1",
+    "tool": "local_lint_summary",
+    "document": "benchmarks/catalogo-2026-09/fuentes/lint-9k.txt",
+    "official": "es",
+    "stripped": {
+     "lang": "es",
+     "tokens": 190,
+     "es_ratio": 0.2789,
+     "en_ratio": 0.0
+    }
+   }
+  ]
+ },
+ "observations": [
+  "19/20 in Spanish; no response in English (0 in the opposite language).",
+  "The only failure (set 1, local_lint_summary, resume-ruff-cinco-reglas.txt) is a 37-token Spanish response whose English function-word hits come from rule codes and code keywords: 'I001' -> 'i' (x3), 'UP006' -> 'up', '`if`s anidados' -> 'if' (x2), against 'de', 'por', 'de'. Not copied headings or labels: removing headings and bold labels makes it worse (en, 23 tokens).",
+  "local_summarize keeps the document's English section headings and bold sub-labels verbatim (Installation, Usage, Version x.y.z...); with Spanish prose around them the margin stays >= 0.23 in every response.",
+  "The product-added first section is 'Introducción' in every summarize response; no 'Introduction' heading coexists with it, and no heading repeats. No duplicated section.",
+  "Two local_lint_summary responses hit max_tokens (es-log-B2c_corpus-affinity-check.txt and lint-9k.txt, routed to gemma4-26b-a4b, finish_reason length); the truncation warning is a wrapper line and is not judged.",
+  "httpx2 summary carries an empty '## Release Information' heading followed by the '[local-delegate warning: 1 section not summarized ...]' line."
+ ],
+ "samples": [
+  {
+   "set": "2",
+   "batch": 2,
+   "window_id": "w-20261015T152547Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-doc-httpx2-2.13.1.METADATA.md",
+   "document_sha256": "b75b03a003b5593e000907cf7239fcc3f688b8f17db4ecff883d11221ea988fc",
+   "document_sha256_frozen": "b75b03a003b5593e000907cf7239fcc3f688b8f17db4ecff883d11221ea988fc",
+   "document_unchanged": true,
+   "response_sha256": "d27ed50c77242fde595e45eb892869496e65682a72e6bb2bccbae28515865f74",
+   "response_literal": "## Introducción\nHTTPX2 es una biblioteca de cliente HTTP completa para Python que ofrece una interfaz de línea de comandos integrada, soporte para HTTP/1.1 y HTTP/2, además de APIs tanto síncronas como asíncronas. Es la continuación del trabajo iniciado por la comunidad de HTTPX.\n\n## Features\nOfrece una API compatible con requests, soporte para HTTP/2, interfaz síncrona y asíncrona, y herramientas de línea de comandos.\n\n## Installation\nSe puede instalar mediante el comando `pip install httpx2`.\n\n## Documentation\nLa documentación del proyecto está disponible en el sitio web oficial de Pydantic.\n\n## Observability with Pydantic Logfire\nPermite la instrumentación de peticiones para obtener trazas y tiempos utilizando la plataforma de observabilidad Logfire.\n\n## Contribute\nLos interesados pueden consultar la guía de contribución para empezar a colaborar.\n\n## Dependencies\nEl proyecto requiere `httpcore2`, `anyio`, `truststore` e `idna`, con opciones adicionales para HTTP/2, SOCKS, CLI, brotli y zstd.\n\n## Release Information\n\n## 2.13.1 (September 23rd, 2026)\n**Fixed**\n* Se corrigió el cálculo de `Content-Length` al pasar archivos.\n* Se solucionó el cierre del hilo de mantenimiento de WebSocket.\n\n[local-delegate warning: 1 section not summarized because of the word limit or the model]\n\n(read server-side: 9793 chars ≈ 4896 Claude tokens that did not enter your context)",
+   "judged_text": "## Introducción\nHTTPX2 es una biblioteca de cliente HTTP completa para Python que ofrece una interfaz de línea de comandos integrada, soporte para HTTP/1.1 y HTTP/2, además de APIs tanto síncronas como asíncronas. Es la continuación del trabajo iniciado por la comunidad de HTTPX.\n\n## Features\nOfrece una API compatible con requests, soporte para HTTP/2, interfaz síncrona y asíncrona, y herramientas de línea de comandos.\n\n## Installation\nSe puede instalar mediante el comando `pip install httpx2`.\n\n## Documentation\nLa documentación del proyecto está disponible en el sitio web oficial de Pydantic.\n\n## Observability with Pydantic Logfire\nPermite la instrumentación de peticiones para obtener trazas y tiempos utilizando la plataforma de observabilidad Logfire.\n\n## Contribute\nLos interesados pueden consultar la guía de contribución para empezar a colaborar.\n\n## Dependencies\nEl proyecto requiere `httpcore2`, `anyio`, `truststore` e `idna`, con opciones adicionales para HTTP/2, SOCKS, CLI, brotli y zstd.\n\n## Release Information\n\n## 2.13.1 (September 23rd, 2026)\n**Fixed**\n* Se corrigió el cálculo de `Content-Length` al pasar archivos.\n* Se solucionó el cierre del hilo de mantenimiento de WebSocket.",
+   "detector": {
+    "lang": "es",
+    "tokens": 164,
+    "es_ratio": 0.372,
+    "en_ratio": 0.0061,
+    "margin": 0.3659
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "es",
+    "tokens": 190,
+    "es_ratio": 0.3211,
+    "en_ratio": 0.0579
+   },
+   "headings": [
+    "Introducción",
+    "Features",
+    "Installation",
+    "Documentation",
+    "Observability with Pydantic Logfire",
+    "Contribute",
+    "Dependencies",
+    "Release Information",
+    "2.13.1 (September 23rd, 2026)"
+   ],
+   "duplicate_sections_same_title": [],
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "2",
+   "batch": 2,
+   "window_id": "w-20261015T152547Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-doc-idna-3.18.METADATA.md",
+   "document_sha256": "46dfe6e5ac462d0f680ecd9abcf66e829b6a2334824b4d9e3979b31135caf281",
+   "document_sha256_frozen": "46dfe6e5ac462d0f680ecd9abcf66e829b6a2334824b4d9e3979b31135caf281",
+   "document_unchanged": true,
+   "response_sha256": "2acee687726c33a378bc982eda839d54d511d7e10beba9e3502fdae97949d3ca",
+   "response_literal": "## Introducción\nEsta librería ofrece soporte para IDNA y el procesamiento de compatibilidad de Unicode. Supera a la implementación estándar de la biblioteca de Python al cubrir más alfabetos y restringir dominios con riesgos de seguridad conocidos.\n\n## Usage\nEl paquete se instala mediante PyPI. Las funciones `encode` y `decode` convierten nombres de dominio entre formatos ASCII y Unicode.\n**Compatibility Mapping (UTS #46)** La librería permite normalizar entradas de usuario mediante mapeo para facilitar la conversión IDNA.\n\n## Exceptions\nTodos los errores heredan de `idna.IDNAError`. Las excepciones específicas son `idna.IDNABidiError`, `idna.InvalidCodepoint` e `idna.InvalidCodepointContext`.\n\n## Command-line tool\nPermite convertir dominios desde la terminal como módulo o script. Soporta codificación y decodificación automática, aplicando por defecto el mapeo UTS #46.\n\n## Additional Notes\n**Version support** Requiere Python 3.9 o superior. **Emoji** No se admiten debido a prohibiciones técnicas y riesgos de seguridad. **Regenerating lookup tables** Las tablas se generan con el script `idna-data`.\n\n(read server-side: 6054 chars ≈ 3027 Claude tokens that did not enter your context)",
+   "judged_text": "## Introducción\nEsta librería ofrece soporte para IDNA y el procesamiento de compatibilidad de Unicode. Supera a la implementación estándar de la biblioteca de Python al cubrir más alfabetos y restringir dominios con riesgos de seguridad conocidos.\n\n## Usage\nEl paquete se instala mediante PyPI. Las funciones `encode` y `decode` convierten nombres de dominio entre formatos ASCII y Unicode.\n**Compatibility Mapping (UTS #46)** La librería permite normalizar entradas de usuario mediante mapeo para facilitar la conversión IDNA.\n\n## Exceptions\nTodos los errores heredan de `idna.IDNAError`. Las excepciones específicas son `idna.IDNABidiError`, `idna.InvalidCodepoint` e `idna.InvalidCodepointContext`.\n\n## Command-line tool\nPermite convertir dominios desde la terminal como módulo o script. Soporta codificación y decodificación automática, aplicando por defecto el mapeo UTS #46.\n\n## Additional Notes\n**Version support** Requiere Python 3.9 o superior. **Emoji** No se admiten debido a prohibiciones técnicas y riesgos de seguridad. **Regenerating lookup tables** Las tablas se generan con el script `idna-data`.",
+   "detector": {
+    "lang": "es",
+    "tokens": 149,
+    "es_ratio": 0.3289,
+    "en_ratio": 0.0,
+    "margin": 0.3289
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "es",
+    "tokens": 161,
+    "es_ratio": 0.3043,
+    "en_ratio": 0.0248
+   },
+   "headings": [
+    "Introducción",
+    "Usage",
+    "Exceptions",
+    "Command-line tool",
+    "Additional Notes"
+   ],
+   "duplicate_sections_same_title": [],
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "2",
+   "batch": 2,
+   "window_id": "w-20261015T152547Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-doc-nodeenv-1.10.0.METADATA.md",
+   "document_sha256": "a8424896a12fd1be10526834176fc754cd296c900f40da655fb2e03c1b7eb921",
+   "document_sha256_frozen": "a8424896a12fd1be10526834176fc754cd296c900f40da655fb2e03c1b7eb921",
+   "document_unchanged": true,
+   "response_sha256": "51a84f3b5cf06f5841df010b60a7e52f264904aaa1c18499ab7502bf2359c2ae",
+   "response_literal": "## Introducción\nEste documento presenta metadatos sobre nodeenv, una herramienta para construir entornos virtuales de Node.js.\n\n## Node.js virtual environment\n**Install** Puede realizarse de forma global mediante easy_install, pip o dpkg, y de forma local dentro de un virtualenv o desde GitHub. **Dependency** Requiere python, make y tail para la herramienta, y libssl-dev para Node.js. **Usage** Permite crear, activar, verificar versiones y desactivar entornos, con opciones avanzadas para versiones específicas, compilación desde código fuente, uso de espejos o integración con entornos de Python. **Command Line Options** Incluye parámetros para versiones de node y npm, listas de versiones, integración con virtualenv, archivos de requisitos, prompts personalizados, forzado de instalación, actualizaciones, opciones de instalación (prebuilt, source, mirror), limpieza, opciones de compilación (jobs, make, ssl, debug, profile) y otras como verbosidad o archivos de configuración. **Configuration** Permite definir valores predeterminados mediante un archivo de estilo INI llamado `~/.nodeenvrc`. **Alternatives** Se mencionan nave, nvm y virtualenv como otras opciones de aislamiento.\n\n## LICENSE\nLa licencia es BSD.\n\n## Nodeenv changelog\n**Version 1.3.1** Corrige errores en Windows, arm64 y soporte para fish. **Version 1.3.0** Añade soporte para Python 3.6, Conda y fish, además de corregir enlaces simbólicos y codificación. **Version 1.2.0** Añade soporte para Cygwin y usa tox.ini por defecto. **Version 1.1.4** Corrige copia de directorios. **Version 1.1.3** Corrige espacios en rutas. **Version 1.1.2** Corrige MANIFEST.in. **Version 1.1.1** Mejora soporte en Windows y corrige errores con caracteres no ASCII. **Version 1.1.0** Añade soporte para Windows. **Version 1.0.0** Establece `--prebuilt` como predeterminado y añade soporte para ARM y la opción `--source`. **Version 0.13.6** Usa HTTPS para nodejs.org. **Version 0.13.5** Mejora identificación de user-agent. **Version 0.13.4** Permite user-agent personalizado. **Version 0.13.3** Corrige errores con caracteres no ASCII, Unicode y archivos de requisitos. **Version 0.13.2** Corrige el comando freeze. **Version 0.13.1** Corrige error de tipo en `--list`. **Version 0.13.0** Elimina dependencias de herramientas de sistema. **Version 0.12.3** Corrige comprobación de herramientas en Python 3. **Version 0.12.2** Añade comprobaciones de herramientas instaladas. **Version 0.12.1** Cambia dependencia de lxml por HTMLParser y añade integración con travis-ci. **Version 0.12.0** Añade soporte para io.js y corrige versión estable en Python 3. **Version 0.11.1** Restringe sobrescritura de prefijo por .npmrc. **Version 0.11.0** Añade compatibilidad con Python 3, opción `--config-file` y mejora reglas de dpkg. **Version 0.10.0** Añade soporte para archivos de configuración, detección de virtualenv y enlaces simbólicos. **Version 0.9.6** Elimina os.symlink. **Version 0.9.5** Mejora el comando freeze y la búsqueda de nodejs del sistema. **Version 0.9.4** Añade soporte para Python 2.6. **Version 0.9.3** Corrige npm en Mac OS X y uso de node del sistema. **Version 0.9.2** Corrige bucle infinito con node del sistema. **Version 0.9.1** Mejora el script shim y añade el nombre node. **Version 0.9.0** Añade el script shim. **Version 0.8.2** Corrige la instalación preconstruida. **Version 0.8.1** Corrige el uso del node del sistema. **Version 0.8.0** Añade soporte para Python 3 y paquetes preconstruidos. **Version 0.7.3** Añade la opción `--update` y corrige redirección de npm.js. **Version 0.7.2** Corrige errores en freeze. **Version 0.7.1** Añade la opción `--make`. **Version 0.7.0** Añade soporte inicial para Python 3, opción `--force` y uso de node del sistema. **Version 0.6.6** Corrige nombres de paquetes en freeze. **Version 0.6.5** Evita cargar fuente si ya existe. **Version 0.6.4** Añade compatibilidad con Python 3. **Version 0.6.3** Corrige el comando `-p`. **Version 0.6.2** Cambia lógica de npm y mejora compilación en paralelo. **Version 0.6.1** Mejora comparación de versiones y el prompt. **Version 0.6.0** Añade integración con virtualenv y opción `--clean-src`. **Version 0.5.3** Usa HTTPS. **Version 0.5.2** Mejora lógica de instalación para versiones candidatas. **Version 0.5.1** Mejora la opción `--without-npm`. **Version 0.5.0** Elimina rutas hardcoded en el script de activación. **Version 0.4.3** Corrige metavars y uso de npm install -g. **Version 0.4.2** Añade documentación en ruso. **Version 0.4.1** Añade dependencias al README. **Version 0.4.0** Añade compatibilidad con virtualenv. **Version 0.3.10** Corrige detección de URL de descarga. **Version 0.3.9** Actualiza URL de tar y elimina métodos de notificación. **Version 0.3.8** Exporta la variable NODE_PATH. **Version 0.3.7** Mejora el comando freeze y la instalación global de npm. **Version 0.3.6** Corrige mensajes de diagnóstico y salida de freeze. **Version 0.3.5** Añade opción `--npm` y mejora freeze. **Version 0.3.4** Añade opción `--no-npm-clean`. **Version 0.3.3** Añade MANIFEST.in y corrige instalación vía easy_install. **Version 0.3.2** Mejoras internas y refactorización de logs. **Version 0.3.1** Establece el nombre de la carpeta como prompt por defecto. **Version 0.3.0** Renombra nve a nodeenv.\n\n(read server-side: 24430 chars ≈ 12215 Claude tokens that did not enter your context)",
+   "judged_text": "## Introducción\nEste documento presenta metadatos sobre nodeenv, una herramienta para construir entornos virtuales de Node.js.\n\n## Node.js virtual environment\n**Install** Puede realizarse de forma global mediante easy_install, pip o dpkg, y de forma local dentro de un virtualenv o desde GitHub. **Dependency** Requiere python, make y tail para la herramienta, y libssl-dev para Node.js. **Usage** Permite crear, activar, verificar versiones y desactivar entornos, con opciones avanzadas para versiones específicas, compilación desde código fuente, uso de espejos o integración con entornos de Python. **Command Line Options** Incluye parámetros para versiones de node y npm, listas de versiones, integración con virtualenv, archivos de requisitos, prompts personalizados, forzado de instalación, actualizaciones, opciones de instalación (prebuilt, source, mirror), limpieza, opciones de compilación (jobs, make, ssl, debug, profile) y otras como verbosidad o archivos de configuración. **Configuration** Permite definir valores predeterminados mediante un archivo de estilo INI llamado `~/.nodeenvrc`. **Alternatives** Se mencionan nave, nvm y virtualenv como otras opciones de aislamiento.\n\n## LICENSE\nLa licencia es BSD.\n\n## Nodeenv changelog\n**Version 1.3.1** Corrige errores en Windows, arm64 y soporte para fish. **Version 1.3.0** Añade soporte para Python 3.6, Conda y fish, además de corregir enlaces simbólicos y codificación. **Version 1.2.0** Añade soporte para Cygwin y usa tox.ini por defecto. **Version 1.1.4** Corrige copia de directorios. **Version 1.1.3** Corrige espacios en rutas. **Version 1.1.2** Corrige MANIFEST.in. **Version 1.1.1** Mejora soporte en Windows y corrige errores con caracteres no ASCII. **Version 1.1.0** Añade soporte para Windows. **Version 1.0.0** Establece `--prebuilt` como predeterminado y añade soporte para ARM y la opción `--source`. **Version 0.13.6** Usa HTTPS para nodejs.org. **Version 0.13.5** Mejora identificación de user-agent. **Version 0.13.4** Permite user-agent personalizado. **Version 0.13.3** Corrige errores con caracteres no ASCII, Unicode y archivos de requisitos. **Version 0.13.2** Corrige el comando freeze. **Version 0.13.1** Corrige error de tipo en `--list`. **Version 0.13.0** Elimina dependencias de herramientas de sistema. **Version 0.12.3** Corrige comprobación de herramientas en Python 3. **Version 0.12.2** Añade comprobaciones de herramientas instaladas. **Version 0.12.1** Cambia dependencia de lxml por HTMLParser y añade integración con travis-ci. **Version 0.12.0** Añade soporte para io.js y corrige versión estable en Python 3. **Version 0.11.1** Restringe sobrescritura de prefijo por .npmrc. **Version 0.11.0** Añade compatibilidad con Python 3, opción `--config-file` y mejora reglas de dpkg. **Version 0.10.0** Añade soporte para archivos de configuración, detección de virtualenv y enlaces simbólicos. **Version 0.9.6** Elimina os.symlink. **Version 0.9.5** Mejora el comando freeze y la búsqueda de nodejs del sistema. **Version 0.9.4** Añade soporte para Python 2.6. **Version 0.9.3** Corrige npm en Mac OS X y uso de node del sistema. **Version 0.9.2** Corrige bucle infinito con node del sistema. **Version 0.9.1** Mejora el script shim y añade el nombre node. **Version 0.9.0** Añade el script shim. **Version 0.8.2** Corrige la instalación preconstruida. **Version 0.8.1** Corrige el uso del node del sistema. **Version 0.8.0** Añade soporte para Python 3 y paquetes preconstruidos. **Version 0.7.3** Añade la opción `--update` y corrige redirección de npm.js. **Version 0.7.2** Corrige errores en freeze. **Version 0.7.1** Añade la opción `--make`. **Version 0.7.0** Añade soporte inicial para Python 3, opción `--force` y uso de node del sistema. **Version 0.6.6** Corrige nombres de paquetes en freeze. **Version 0.6.5** Evita cargar fuente si ya existe. **Version 0.6.4** Añade compatibilidad con Python 3. **Version 0.6.3** Corrige el comando `-p`. **Version 0.6.2** Cambia lógica de npm y mejora compilación en paralelo. **Version 0.6.1** Mejora comparación de versiones y el prompt. **Version 0.6.0** Añade integración con virtualenv y opción `--clean-src`. **Version 0.5.3** Usa HTTPS. **Version 0.5.2** Mejora lógica de instalación para versiones candidatas. **Version 0.5.1** Mejora la opción `--without-npm`. **Version 0.5.0** Elimina rutas hardcoded en el script de activación. **Version 0.4.3** Corrige metavars y uso de npm install -g. **Version 0.4.2** Añade documentación en ruso. **Version 0.4.1** Añade dependencias al README. **Version 0.4.0** Añade compatibilidad con virtualenv. **Version 0.3.10** Corrige detección de URL de descarga. **Version 0.3.9** Actualiza URL de tar y elimina métodos de notificación. **Version 0.3.8** Exporta la variable NODE_PATH. **Version 0.3.7** Mejora el comando freeze y la instalación global de npm. **Version 0.3.6** Corrige mensajes de diagnóstico y salida de freeze. **Version 0.3.5** Añade opción `--npm` y mejora freeze. **Version 0.3.4** Añade opción `--no-npm-clean`. **Version 0.3.3** Añade MANIFEST.in y corrige instalación vía easy_install. **Version 0.3.2** Mejoras internas y refactorización de logs. **Version 0.3.1** Establece el nombre de la carpeta como prompt por defecto. **Version 0.3.0** Renombra nve a nodeenv.",
+   "detector": {
+    "lang": "es",
+    "tokens": 670,
+    "es_ratio": 0.2687,
+    "en_ratio": 0.009,
+    "margin": 0.2597
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "es",
+    "tokens": 682,
+    "es_ratio": 0.2639,
+    "en_ratio": 0.0147
+   },
+   "headings": [
+    "Introducción",
+    "Node.js virtual environment",
+    "LICENSE",
+    "Nodeenv changelog"
+   ],
+   "duplicate_sections_same_title": [],
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "2",
+   "batch": 2,
+   "window_id": "w-20261015T152547Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_plans_plan-f7-groups.md",
+   "document_sha256": "84f1ccc03abb200808aaf4831d1cf6acb6c829dc39a1d8b097b9b846713dc100",
+   "document_sha256_frozen": "84f1ccc03abb200808aaf4831d1cf6acb6c829dc39a1d8b097b9b846713dc100",
+   "document_unchanged": true,
+   "response_sha256": "b32786420da43b45c35ebe6fdae082b28617f1ea25da3d0cc14aca77199be958",
+   "response_literal": "## Introducción\nPlan para integrar la capacidad de grupos en llama-swap.\n\n## Paso 0 — Verificación (hecha, 2026-07-09)\n**Discrepancia importante encontrada**: se detectó que `matrix` es la alternativa moderna, pero `groups` sigue vigente en el esquema como opción simple. **Semántica exacta de `groups` (schema, no memoria)**: se define la estructura de claves para `swap`, `exclusive`, `persistent` y `members`, aclarando que `ttl` pertenece a los modelos. **Ya cubierto por F2/F4 (nada que hacer en F7.4)**: las funciones de visibilidad de VRAM ya existen.\n\n## Fases\n**F7.1 — `llamaswap_config.py`**: nuevo módulo con estimación precisa de VRAM mediante metadatos GGUF y gestión de archivos YAML. **F7.2 — CLI `check-llamaswap`**: herramienta para validar si los modelos caben en el presupuesto de memoria. **F7.3 — CLI `init-llamaswap`**: comando para configurar grupos y TTL de forma segura. **F7.4 — Visibilidad runtime**: mejora opcional de reportes. **F7.5 — Tests**: validación de lógica y errores. **F7.6 — Dispatcher de CLI (server.py / nuevo `cli.py`)**: integración de comandos. **F7.7 — Extra opcional + release**: documentación y dependencias. **F7.8 — Ritual de aplicación personal (aparte, con tu OK explícito en cada paso)**: ejecución controlada.\n\n## Criterio de aceptación F7\nCumplimiento de tests, estabilidad sin extras y validación de comandos.\n\n## F7.9 — Guardrail de RAM de sistema (extensión, iniciativa del usuario durante F7.8)\nExtensión para estimar y proteger la memoria RAM del sistema.\n\n## Checklist\nLista de tareas completadas desde la F7.1 hasta la F7.9.\n\n## Discrepancias encontradas durante la ejecución\n**Estimador de VRAM (F7.1)**: se cambió el factor plano por un cálculo basado en metadatos GGUF. **Helper de test con archivos \"dispersos\" (sparse)**: se optó por mockear archivos para evitar llenar el disco.\n\n(read server-side: 20543 chars ≈ 10271 Claude tokens that did not enter your context)",
+   "judged_text": "## Introducción\nPlan para integrar la capacidad de grupos en llama-swap.\n\n## Paso 0 — Verificación (hecha, 2026-07-09)\n**Discrepancia importante encontrada**: se detectó que `matrix` es la alternativa moderna, pero `groups` sigue vigente en el esquema como opción simple. **Semántica exacta de `groups` (schema, no memoria)**: se define la estructura de claves para `swap`, `exclusive`, `persistent` y `members`, aclarando que `ttl` pertenece a los modelos. **Ya cubierto por F2/F4 (nada que hacer en F7.4)**: las funciones de visibilidad de VRAM ya existen.\n\n## Fases\n**F7.1 — `llamaswap_config.py`**: nuevo módulo con estimación precisa de VRAM mediante metadatos GGUF y gestión de archivos YAML. **F7.2 — CLI `check-llamaswap`**: herramienta para validar si los modelos caben en el presupuesto de memoria. **F7.3 — CLI `init-llamaswap`**: comando para configurar grupos y TTL de forma segura. **F7.4 — Visibilidad runtime**: mejora opcional de reportes. **F7.5 — Tests**: validación de lógica y errores. **F7.6 — Dispatcher de CLI (server.py / nuevo `cli.py`)**: integración de comandos. **F7.7 — Extra opcional + release**: documentación y dependencias. **F7.8 — Ritual de aplicación personal (aparte, con tu OK explícito en cada paso)**: ejecución controlada.\n\n## Criterio de aceptación F7\nCumplimiento de tests, estabilidad sin extras y validación de comandos.\n\n## F7.9 — Guardrail de RAM de sistema (extensión, iniciativa del usuario durante F7.8)\nExtensión para estimar y proteger la memoria RAM del sistema.\n\n## Checklist\nLista de tareas completadas desde la F7.1 hasta la F7.9.\n\n## Discrepancias encontradas durante la ejecución\n**Estimador de VRAM (F7.1)**: se cambió el factor plano por un cálculo basado en metadatos GGUF. **Helper de test con archivos \"dispersos\" (sparse)**: se optó por mockear archivos para evitar llenar el disco.",
+   "detector": {
+    "lang": "es",
+    "tokens": 261,
+    "es_ratio": 0.3295,
+    "en_ratio": 0.0,
+    "margin": 0.3295
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "es",
+    "tokens": 273,
+    "es_ratio": 0.315,
+    "en_ratio": 0.0147
+   },
+   "headings": [
+    "Introducción",
+    "Paso 0 — Verificación (hecha, 2026-07-09)",
+    "Fases",
+    "Criterio de aceptación F7",
+    "F7.9 — Guardrail de RAM de sistema (extensión, iniciativa del usuario durante F7.8)",
+    "Checklist",
+    "Discrepancias encontradas durante la ejecución"
+   ],
+   "duplicate_sections_same_title": [],
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "2",
+   "batch": 2,
+   "window_id": "w-20261015T152547Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-doc-docs_plans_plan-v0.2-mejoras.md",
+   "document_sha256": "e977e0af6b5efe027946f1652da9dfbd77a4603661f9e4d223a4191a3ee58b75",
+   "document_sha256_frozen": "e977e0af6b5efe027946f1652da9dfbd77a4603661f9e4d223a4191a3ee58b75",
+   "document_unchanged": true,
+   "response_sha256": "fd60250051770933abbe208951f5e63c13711289e91ba354414be84aa22eee15",
+   "response_literal": "## Introducción\nPlan de implementación para la versión 0.2 de local-delegate.\n\n## Reglas para el ejecutor\nSeguir fases ordenadas, mantener compatibilidad, priorizar código real y realizar tests.\n\n## F1 — Fiabilidad del núcleo\nEliminar fallos silenciosos y mejorar el registro de datos reales.\n**F1.1 `_env_float` (config.py)** Implementa una función para manejar variables de entorno flotantes con valores por defecto.\n**F1.2 Resultado estructurado de `_post_chat` (server.py)** Sustituye el retorno de texto por un dataclass con metadatos.\n**F1.3 `_chat` usa el struct y avisa de truncado de salida** Notifica al usuario si la respuesta fue recortada por límites de tokens.\n**F1.4 Truncado de entrada visible (server.py)** Informa cuando el contenido de entrada ha sido recortado antes de procesarse.\n**F1.5 `_strip_think` (server.py)** Elimina bloques de pensamiento de modelos razonadores para limpiar la salida.\n**F1.6 Log enriquecido (server.py `_log_event`)** Añade tokens, errores y versiones al registro de eventos.\n**F1.7 Enrutado consistente en `local_extract`** Unifica el criterio de selección de modelos según el tamaño de entrada.\n**F1.8 Validación de `style` en `local_commit_msg`** Asegura que el estilo de mensaje sea válido o devuelva error.\n**F1.9 Cliente httpx module-level** Utiliza un cliente persistente para mejorar la eficiencia de las peticiones.\n**F1.10 Tests de F1 (tests/test_core.py nuevo)** Incluye pruebas para todas las nuevas funcionalidades de fiabilidad.\n\n## F2 — `local_status` + JSON garantizado\nMejora de diagnóstico y soporte de esquemas JSON.\n**F2.1 Tool `local_status()` (server.py)** Proporciona información sobre el backend, roles activos y estado del log.\n**F2.2 `response_format` json_schema en `local_extract`** Permite solicitar salidas con esquemas JSON específicos para mayor precisión.\n\n## F3 — Awareness (que Claude delegue más, sin forzar)\nOptimizar la interacción para fomentar el uso de herramientas locales.\n**F3.1 Docstrings que compiten contra Read (server.py)** Instruye explícitamente a la IA para preferir herramientas locales en archivos grandes.\n**F3.2 Línea de feedback de ahorro (server.py `_chat`)** Muestra cuántos tokens se han ahorrado al usar procesamiento local.\n**F3.3 CLAUDE.md global (`~/.claude/CLAUDE.md`) — backup antes de editar** Reorganiza las instrucciones para priorizar la delegación local.\n**F3.4 Skill `delegacion-local` (`~/.claude/skills/delegacion-local/SKILL.md`)** Define capacidades y disparadores para el uso de herramientas.\n**F3.5 Permisos pre-aprobados (`~/.claude/settings.json`)** Configura permisos automáticos para las herramientas del MCP.\n**F3.6 Recipe de hooks (`docs/recipes/claude-code-hooks.md` + `docs/recipes/hooks/`)** Implementa sugerencias automáticas cuando se detectan archivos grandes o salidas largas.\n**F3.7 `update_agents.py` v2 (docs/recipes/update_agents.py)** Automatiza la actualización de los agentes con el nuevo catálogo de herramientas.\n\n## F4 — Log por rango + rotación + dashboard con inflight\nGestión avanzada de métricas y visibilidad de procesos.\n**F4.1 Rotación mensual (server.py)** Organiza los registros en archivos mensuales para facilitar la gestión.\n**F4.2 Loader por rango (web/metrics.py) — apunte del usuario integrado** Permite cargar métricas de periodos específicos de forma eficiente.\n**F4.3 UI: selector de rango (HTML embebido en metrics.py)** Añade controles visuales para filtrar datos por fechas.\n**F4.4 Inflight — visibilidad de delegaciones en curso (apunte del usuario)** Muestra en tiempo real las tareas que se están procesando.\n**F4.5 Tests F4** Verifica la rotación de logs y la carga de datos.\n\n## F5 — Seguridad + concurrencia + release\nProtección de archivos, acceso concurrente y lanzamiento.\n**F5.1 `LOCAL_DELEGATE_ALLOWED_DIRS`** Restringe el acceso a directorios específicos mediante variables de entorno.\n**F5.2 Lock de escritura del log** Implementa bloqueos para evitar corrupción de datos en accesos simultáneos.\n**F5.3 Release 0.2.0** Preparación del paquete y documentación para la nueva versión.\n\n## F6 — Visión local (sesión aparte, tras validar v0.2)\nAñade capacidades de procesamiento de imágenes a texto.\n\n## F7 — Groups de llama-swap COMO CAPACIDAD DEL PAQUETE (sesión aparte, opt-in, desactivado por defecto)\nIntegración de gestión de grupos de modelos.\n**F7.1 Módulo `llamaswap_config.py` (nuevo, opcional como `autostart.py`)** Gestiona la configuración y estimación de memoria VRAM.\n**F7.2 CLI `local-delegate check-llamaswap --config <path> --vram-gb <N>`** Valida si la configuración de modelos cabe en la memoria disponible.\n**F7.3 CLI `local-delegate init-llamaswap`** Genera configuraciones automáticas para la gestión de modelos.\n**F7.4 Visibilidad runtime** Integra el estado de la VRAM en el diagnóstico del sistema.\n**F7.5 Aplicación personal (el ritual de validación sigue siendo manual)** Proceso de prueba para asegurar estabilidad sin errores de memoria.\n**Doc** Documentación sobre el uso de grupos y gestión de VRAM.\n\n## Checklist de fases (marcar al completar)\nLista de tareas completadas para cada fase del proyecto.\n\n## Discrepancias encontradas durante la ejecución\nLos hooks no se instalaron automáticamente por restricciones de seguridad.\n\n(read server-side: 21282 chars ≈ 10641 Claude tokens that did not enter your context)",
+   "judged_text": "## Introducción\nPlan de implementación para la versión 0.2 de local-delegate.\n\n## Reglas para el ejecutor\nSeguir fases ordenadas, mantener compatibilidad, priorizar código real y realizar tests.\n\n## F1 — Fiabilidad del núcleo\nEliminar fallos silenciosos y mejorar el registro de datos reales.\n**F1.1 `_env_float` (config.py)** Implementa una función para manejar variables de entorno flotantes con valores por defecto.\n**F1.2 Resultado estructurado de `_post_chat` (server.py)** Sustituye el retorno de texto por un dataclass con metadatos.\n**F1.3 `_chat` usa el struct y avisa de truncado de salida** Notifica al usuario si la respuesta fue recortada por límites de tokens.\n**F1.4 Truncado de entrada visible (server.py)** Informa cuando el contenido de entrada ha sido recortado antes de procesarse.\n**F1.5 `_strip_think` (server.py)** Elimina bloques de pensamiento de modelos razonadores para limpiar la salida.\n**F1.6 Log enriquecido (server.py `_log_event`)** Añade tokens, errores y versiones al registro de eventos.\n**F1.7 Enrutado consistente en `local_extract`** Unifica el criterio de selección de modelos según el tamaño de entrada.\n**F1.8 Validación de `style` en `local_commit_msg`** Asegura que el estilo de mensaje sea válido o devuelva error.\n**F1.9 Cliente httpx module-level** Utiliza un cliente persistente para mejorar la eficiencia de las peticiones.\n**F1.10 Tests de F1 (tests/test_core.py nuevo)** Incluye pruebas para todas las nuevas funcionalidades de fiabilidad.\n\n## F2 — `local_status` + JSON garantizado\nMejora de diagnóstico y soporte de esquemas JSON.\n**F2.1 Tool `local_status()` (server.py)** Proporciona información sobre el backend, roles activos y estado del log.\n**F2.2 `response_format` json_schema en `local_extract`** Permite solicitar salidas con esquemas JSON específicos para mayor precisión.\n\n## F3 — Awareness (que Claude delegue más, sin forzar)\nOptimizar la interacción para fomentar el uso de herramientas locales.\n**F3.1 Docstrings que compiten contra Read (server.py)** Instruye explícitamente a la IA para preferir herramientas locales en archivos grandes.\n**F3.2 Línea de feedback de ahorro (server.py `_chat`)** Muestra cuántos tokens se han ahorrado al usar procesamiento local.\n**F3.3 CLAUDE.md global (`~/.claude/CLAUDE.md`) — backup antes de editar** Reorganiza las instrucciones para priorizar la delegación local.\n**F3.4 Skill `delegacion-local` (`~/.claude/skills/delegacion-local/SKILL.md`)** Define capacidades y disparadores para el uso de herramientas.\n**F3.5 Permisos pre-aprobados (`~/.claude/settings.json`)** Configura permisos automáticos para las herramientas del MCP.\n**F3.6 Recipe de hooks (`docs/recipes/claude-code-hooks.md` + `docs/recipes/hooks/`)** Implementa sugerencias automáticas cuando se detectan archivos grandes o salidas largas.\n**F3.7 `update_agents.py` v2 (docs/recipes/update_agents.py)** Automatiza la actualización de los agentes con el nuevo catálogo de herramientas.\n\n## F4 — Log por rango + rotación + dashboard con inflight\nGestión avanzada de métricas y visibilidad de procesos.\n**F4.1 Rotación mensual (server.py)** Organiza los registros en archivos mensuales para facilitar la gestión.\n**F4.2 Loader por rango (web/metrics.py) — apunte del usuario integrado** Permite cargar métricas de periodos específicos de forma eficiente.\n**F4.3 UI: selector de rango (HTML embebido en metrics.py)** Añade controles visuales para filtrar datos por fechas.\n**F4.4 Inflight — visibilidad de delegaciones en curso (apunte del usuario)** Muestra en tiempo real las tareas que se están procesando.\n**F4.5 Tests F4** Verifica la rotación de logs y la carga de datos.\n\n## F5 — Seguridad + concurrencia + release\nProtección de archivos, acceso concurrente y lanzamiento.\n**F5.1 `LOCAL_DELEGATE_ALLOWED_DIRS`** Restringe el acceso a directorios específicos mediante variables de entorno.\n**F5.2 Lock de escritura del log** Implementa bloqueos para evitar corrupción de datos en accesos simultáneos.\n**F5.3 Release 0.2.0** Preparación del paquete y documentación para la nueva versión.\n\n## F6 — Visión local (sesión aparte, tras validar v0.2)\nAñade capacidades de procesamiento de imágenes a texto.\n\n## F7 — Groups de llama-swap COMO CAPACIDAD DEL PAQUETE (sesión aparte, opt-in, desactivado por defecto)\nIntegración de gestión de grupos de modelos.\n**F7.1 Módulo `llamaswap_config.py` (nuevo, opcional como `autostart.py`)** Gestiona la configuración y estimación de memoria VRAM.\n**F7.2 CLI `local-delegate check-llamaswap --config <path> --vram-gb <N>`** Valida si la configuración de modelos cabe en la memoria disponible.\n**F7.3 CLI `local-delegate init-llamaswap`** Genera configuraciones automáticas para la gestión de modelos.\n**F7.4 Visibilidad runtime** Integra el estado de la VRAM en el diagnóstico del sistema.\n**F7.5 Aplicación personal (el ritual de validación sigue siendo manual)** Proceso de prueba para asegurar estabilidad sin errores de memoria.\n**Doc** Documentación sobre el uso de grupos y gestión de VRAM.\n\n## Checklist de fases (marcar al completar)\nLista de tareas completadas para cada fase del proyecto.\n\n## Discrepancias encontradas durante la ejecución\nLos hooks no se instalaron automáticamente por restricciones de seguridad.",
+   "detector": {
+    "lang": "es",
+    "tokens": 747,
+    "es_ratio": 0.2878,
+    "en_ratio": 0.0013,
+    "margin": 0.2865
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "es",
+    "tokens": 759,
+    "es_ratio": 0.2833,
+    "en_ratio": 0.0066
+   },
+   "headings": [
+    "Introducción",
+    "Reglas para el ejecutor",
+    "F1 — Fiabilidad del núcleo",
+    "F2 — `local_status` + JSON garantizado",
+    "F3 — Awareness (que Claude delegue más, sin forzar)",
+    "F4 — Log por rango + rotación + dashboard con inflight",
+    "F5 — Seguridad + concurrencia + release",
+    "F6 — Visión local (sesión aparte, tras validar v0.2)",
+    "F7 — Groups de llama-swap COMO CAPACIDAD DEL PAQUETE (sesión aparte, opt-in, desactivado por defecto)",
+    "Checklist de fases (marcar al completar)",
+    "Discrepancias encontradas durante la ejecución"
+   ],
+   "duplicate_sections_same_title": [],
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "2",
+   "batch": 2,
+   "window_id": "w-20261015T152547Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-ruff-concise.txt",
+   "document_sha256": "1b45f1d58d013abcffaf2a48def98c192a598f5a5990eb3cadf9a92d55780645",
+   "document_sha256_frozen": "1b45f1d58d013abcffaf2a48def98c192a598f5a5990eb3cadf9a92d55780645",
+   "document_unchanged": true,
+   "response_sha256": "e07014d5d6c269deac74385c382833e53110160fd67e19b4de2ec9dabe2ce16f",
+   "response_literal": "**Archivo: src\\local_delegate\\sections.py**\n\n*   **Docstrings:** 9 (D101, D102, D301, D400, D205) - Falta documentación en clases y métodos públicos.\n*   **Long Lines:** 6 (E501) - Líneas que exceden el límite de 100 caracteres.\n*   **Docstrings Ambiguas:** 2 (RUF002) - Caracteres ambiguos en docstrings (EN DASH, MULTIPLICATION SIGN).\n*   **Complejidad de Expresiones:** 2 (C901, PLR0912) - Expresiones complejas que podrían simplificarse.\n*   **Importaciones:** 1 (TC003) - Importación de `collections.abc.Callable` no incluida en bloque de type-checking.\n*   **Copyright Notice:** 1 (CPY001) - Falta aviso de copyright en el archivo.\n*   **Magic Values:** 1 (PLR2004) - Uso de valores mágicos en comparaciones.\n*   **Asuntos de estilo:** 1 (D203, D211, D212, D213) - Incompatibilidad de reglas de estilo.\n\nSe identificaron un total de 26 problemas.\n\n(read server-side: 2627 chars ≈ 1368 Claude tokens that did not enter your context)",
+   "judged_text": "**Archivo: src\\local_delegate\\sections.py**\n\n*   **Docstrings:** 9 (D101, D102, D301, D400, D205) - Falta documentación en clases y métodos públicos.\n*   **Long Lines:** 6 (E501) - Líneas que exceden el límite de 100 caracteres.\n*   **Docstrings Ambiguas:** 2 (RUF002) - Caracteres ambiguos en docstrings (EN DASH, MULTIPLICATION SIGN).\n*   **Complejidad de Expresiones:** 2 (C901, PLR0912) - Expresiones complejas que podrían simplificarse.\n*   **Importaciones:** 1 (TC003) - Importación de `collections.abc.Callable` no incluida en bloque de type-checking.\n*   **Copyright Notice:** 1 (CPY001) - Falta aviso de copyright en el archivo.\n*   **Magic Values:** 1 (PLR2004) - Uso de valores mágicos en comparaciones.\n*   **Asuntos de estilo:** 1 (D203, D211, D212, D213) - Incompatibilidad de reglas de estilo.\n\nSe identificaron un total de 26 problemas.",
+   "detector": {
+    "lang": "es",
+    "tokens": 101,
+    "es_ratio": 0.2376,
+    "en_ratio": 0.0,
+    "margin": 0.2376
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "es",
+    "tokens": 113,
+    "es_ratio": 0.2124,
+    "en_ratio": 0.0354
+   },
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "2",
+   "batch": 2,
+   "window_id": "w-20261015T152547Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-ruff-full.txt",
+   "document_sha256": "44dd6142f1e761a2f5b82ef176a934983cc2d9f16b7257f2791caa66cb1df7d0",
+   "document_sha256_frozen": "44dd6142f1e761a2f5b82ef176a934983cc2d9f16b7257f2791caa66cb1df7d0",
+   "document_unchanged": true,
+   "response_sha256": "4f663e85bd145ae1f1a01a3cec8126d3100e3f68525dd5aac1598e915d845c8a",
+   "response_literal": "**scripts/detect_language.py**\n\n*   **D101 (Docstring Missing en Clase):** 1 error en la clase `Detection` (línea 35).\n*   **D103 (Docstring Missing en Función):** 3 errores en las funciones `load_function_words` (línea 42), `detect` (línea 47) y `main` (línea 67).\n*   **T201 (Uso de `print`):** 1 error en la línea 81, relacionado con la impresión de resultados.\n*   **CPY001 (Falta de Aviso de Copyright):** 1 error en la parte superior del archivo.\n\nSe ignoraron las incompatibilidades entre las reglas `incorrect-blank-line-before-class` y `blank-line-before-class`, así como entre `multi-line-summary-first-line` y `multi-line-summary-second-line`. Se recomienda eliminar el uso de `print` para mejorar la seguridad del código.\n\n(read server-side: 1990 chars ≈ 1036 Claude tokens that did not enter your context)",
+   "judged_text": "**scripts/detect_language.py**\n\n*   **D101 (Docstring Missing en Clase):** 1 error en la clase `Detection` (línea 35).\n*   **D103 (Docstring Missing en Función):** 3 errores en las funciones `load_function_words` (línea 42), `detect` (línea 47) y `main` (línea 67).\n*   **T201 (Uso de `print`):** 1 error en la línea 81, relacionado con la impresión de resultados.\n*   **CPY001 (Falta de Aviso de Copyright):** 1 error en la parte superior del archivo.\n\nSe ignoraron las incompatibilidades entre las reglas `incorrect-blank-line-before-class` y `blank-line-before-class`, así como entre `multi-line-summary-first-line` y `multi-line-summary-second-line`. Se recomienda eliminar el uso de `print` para mejorar la seguridad del código.",
+   "detector": {
+    "lang": "es",
+    "tokens": 104,
+    "es_ratio": 0.3173,
+    "en_ratio": 0.0192,
+    "margin": 0.2981
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "es",
+    "tokens": 116,
+    "es_ratio": 0.2845,
+    "en_ratio": 0.0517
+   },
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "2",
+   "batch": 2,
+   "window_id": "w-20261015T152547Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-tsc.txt",
+   "document_sha256": "2705c2d9eac77e04a707594093594fc412b8a2f25e8bb2d5cd8ea5df205e7fcf",
+   "document_sha256_frozen": "2705c2d9eac77e04a707594093594fc412b8a2f25e8bb2d5cd8ea5df205e7fcf",
+   "document_unchanged": true,
+   "response_sha256": "8070641fb6dd9f65bf0b32b92b8409c2abd0bdf3c6e679f69c7941f521057bd9",
+   "response_literal": "**Resumen de Problemas por Archivo**\n\n**src/adapters/claude-json.ts:**\n*   Error TS2554: Se esperaba 0-1 argumentos, pero se recibieron 2 (1 problema).\n\n**src/adapters/codex/index.ts:**\n*   Error TS2550: Propiedad 'hasOwn' no existe en el tipo 'ObjectConstructor'. (1 problema).\n\n**src/cli/commands/export.ts:**\n*   Error TS2550: Propiedad 'at' no existe en el tipo 'string[]' (2 problemas).\n\n**src/cli/commands/import.ts:**\n*   Error TS2550: Propiedad 'at' no existe en el tipo 'string[]' (1 problema).\n\n**src/cli/index.ts:**\n*   Error TS2550: Propiedad 'hasOwn' no existe en el tipo 'ObjectConstructor' (1 problema).\n\n**src/cli/ui/style.ts:**\n*   Error TS2550: Propiedad 'replaceAll' no existe en el tipo 'string' (1 problema).\n\n**src/cli/ui/width.ts:**\n*   Error TS2339: Propiedad 'Segmenter' no existe en el tipo 'typeof Intl' (1 problema).\n\n**src/io/fs/atomic.ts:**\n*   Error TS4113: Este miembro no puede tener el modificador 'override' porque no está declarado en la clase base 'Error' (1 problema).\n\n(read server-side: 1647 chars ≈ 857 Claude tokens that did not enter your context)",
+   "judged_text": "**Resumen de Problemas por Archivo**\n\n**src/adapters/claude-json.ts:**\n*   Error TS2554: Se esperaba 0-1 argumentos, pero se recibieron 2 (1 problema).\n\n**src/adapters/codex/index.ts:**\n*   Error TS2550: Propiedad 'hasOwn' no existe en el tipo 'ObjectConstructor'. (1 problema).\n\n**src/cli/commands/export.ts:**\n*   Error TS2550: Propiedad 'at' no existe en el tipo 'string[]' (2 problemas).\n\n**src/cli/commands/import.ts:**\n*   Error TS2550: Propiedad 'at' no existe en el tipo 'string[]' (1 problema).\n\n**src/cli/index.ts:**\n*   Error TS2550: Propiedad 'hasOwn' no existe en el tipo 'ObjectConstructor' (1 problema).\n\n**src/cli/ui/style.ts:**\n*   Error TS2550: Propiedad 'replaceAll' no existe en el tipo 'string' (1 problema).\n\n**src/cli/ui/width.ts:**\n*   Error TS2339: Propiedad 'Segmenter' no existe en el tipo 'typeof Intl' (1 problema).\n\n**src/io/fs/atomic.ts:**\n*   Error TS4113: Este miembro no puede tener el modificador 'override' porque no está declarado en la clase base 'Error' (1 problema).",
+   "detector": {
+    "lang": "es",
+    "tokens": 140,
+    "es_ratio": 0.1714,
+    "en_ratio": 0.0143,
+    "margin": 0.1571
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "unknown",
+    "tokens": 152,
+    "es_ratio": 0.1579,
+    "en_ratio": 0.0395
+   },
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "2",
+   "batch": 2,
+   "window_id": "w-20261015T152547Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B2b-2_corpus-f2-check.txt",
+   "document_sha256": "dc1b5eec0dae6a49a59960071988f2f1e18ca2187724fd36ab3c4737f9ce1b34",
+   "document_sha256_frozen": "dc1b5eec0dae6a49a59960071988f2f1e18ca2187724fd36ab3c4737f9ce1b34",
+   "document_unchanged": true,
+   "response_sha256": "a3df2e7453fb534f76ed4271c324cb9ab70e3e241e1502f0254fa5ae69ef9da6",
+   "response_literal": "**Resumen de Problemas por Archivo**\n\n**scripts/build_corpus.py:**\n\n*   Lint: 1 regla encontrada (sistema: cambio con los prompts de la 0.36.0, frontera declarada).  Este cambio afecta a múltiples archivos relacionados con la gestión de prompts.\n*   Resumen: 7 archivos relacionados con cambios en prompts de la versión 0.36.0, indicando una actualización del sistema.\n*   Otros: 6 archivos con cambios relacionados con prompts, posiblemente indicando una modificación en la lógica de la aplicación.\n\n(read server-side: 879 chars ≈ 457 Claude tokens that did not enter your context)",
+   "judged_text": "**Resumen de Problemas por Archivo**\n\n**scripts/build_corpus.py:**\n\n*   Lint: 1 regla encontrada (sistema: cambio con los prompts de la 0.36.0, frontera declarada).  Este cambio afecta a múltiples archivos relacionados con la gestión de prompts.\n*   Resumen: 7 archivos relacionados con cambios en prompts de la versión 0.36.0, indicando una actualización del sistema.\n*   Otros: 6 archivos con cambios relacionados con prompts, posiblemente indicando una modificación en la lógica de la aplicación.",
+   "detector": {
+    "lang": "es",
+    "tokens": 65,
+    "es_ratio": 0.3692,
+    "en_ratio": 0.0,
+    "margin": 0.3692
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "es",
+    "tokens": 77,
+    "es_ratio": 0.3117,
+    "en_ratio": 0.0519
+   },
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "2",
+   "batch": 2,
+   "window_id": "w-20261015T152547Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B2c_corpus-affinity-check.txt",
+   "document_sha256": "8c261db94aaaa22a75abe82729c777865dbbcf34a64cdde565f09170a46304f0",
+   "document_sha256_frozen": "8c261db94aaaa22a75abe82729c777865dbbcf34a64cdde565f09170a46304f0",
+   "document_unchanged": true,
+   "response_sha256": "e0729a586ed2298e4c2dab695110776779fb81dd57e2016daa1c58f639bd74cd",
+   "response_literal": "**resumen-ruff-tres-reglas**\n*   system: 1 error debido a cambios en los prompts de la versión 0.36.0.\n\n**resumen-ruff-docstrings**\n*   system: 1 error debido a cambios en los prompts de la versión 0.36.0.\n\n**resumen-ruff-un-solo-archivo**\n*   system: 1 error debido a cambios en los prompts de la versión 0.36.0.\n\n**resumen-ruff-cinco-reglas**\n*   system: 1 error debido a cambios en los prompts de la versión 0.36.0.\n\n**commit-diff-19k**\n*   max_tokens: 1 error por cambios en los prompts de la versión 0.36.0.\n*   system: 1 error por cambios en los prompts de la versión 0.36.0.\n\n**commits varios (9eb197b, c2312cd, 64311f5, 2c602eb, e34c102, 4ef1ba0, ad79697, 8b061ec, 71f2a41, e428c07, b2545e9, a4502a7, 8610c74, eb35363, daddf39, f7c8d6e, 11c65b5, 67eb74a, 4e9035a, 1dd97a3, 56f588d, bcbe39f, 53c9dcb, e7deb0d, ccddeea, 2fbfe93, 6a7959e, 67e585f, 4aa2141)**\n*   max_tokens: 29 errores por cambios en los prompts de la versión 0.36.0.\n*   system: 29 errores por cambios en los prompts de la versión 0.36.0.\n\n**commit-trampa (\n\n[local-delegate warning: output truncated by max_tokens]\n\n(read server-side: 7699 chars ≈ 4009 Claude tokens that did not enter your context)",
+   "judged_text": "**resumen-ruff-tres-reglas**\n*   system: 1 error debido a cambios en los prompts de la versión 0.36.0.\n\n**resumen-ruff-docstrings**\n*   system: 1 error debido a cambios en los prompts de la versión 0.36.0.\n\n**resumen-ruff-un-solo-archivo**\n*   system: 1 error debido a cambios en los prompts de la versión 0.36.0.\n\n**resumen-ruff-cinco-reglas**\n*   system: 1 error debido a cambios en los prompts de la versión 0.36.0.\n\n**commit-diff-19k**\n*   max_tokens: 1 error por cambios en los prompts de la versión 0.36.0.\n*   system: 1 error por cambios en los prompts de la versión 0.36.0.\n\n**commits varios (9eb197b, c2312cd, 64311f5, 2c602eb, e34c102, 4ef1ba0, ad79697, 8b061ec, 71f2a41, e428c07, b2545e9, a4502a7, 8610c74, eb35363, daddf39, f7c8d6e, 11c65b5, 67eb74a, 4e9035a, 1dd97a3, 56f588d, bcbe39f, 53c9dcb, e7deb0d, ccddeea, 2fbfe93, 6a7959e, 67e585f, 4aa2141)**\n*   max_tokens: 29 errores por cambios en los prompts de la versión 0.36.0.\n*   system: 29 errores por cambios en los prompts de la versión 0.36.0.\n\n**commit-trampa (",
+   "detector": {
+    "lang": "es",
+    "tokens": 162,
+    "es_ratio": 0.284,
+    "en_ratio": 0.0,
+    "margin": 0.284
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "es",
+    "tokens": 182,
+    "es_ratio": 0.2527,
+    "en_ratio": 0.0275
+   },
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "1",
+   "batch": 2,
+   "window_id": "w-20261015T152547Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_summarize",
+   "document": ".venv/Lib/site-packages/annotated_doc-0.0.4.dist-info/METADATA",
+   "document_sha256": "22b9b9289b9adf7758daa28a02327e3a129a5415487f01467a3fdd49edd9d535",
+   "document_sha256_frozen": "22b9b9289b9adf7758daa28a02327e3a129a5415487f01467a3fdd49edd9d535",
+   "document_unchanged": true,
+   "response_sha256": "9056d11ef3efd07d28d8959d06ea2cf9e5844b0f1b2a6129dd5c81b29e8fdab1",
+   "response_literal": "## Introducción\nEsta herramienta permite documentar parámetros, atributos de clase, tipos de retorno y variables de forma integrada utilizando `Annotated`.\n\n## Installation\nSe puede instalar mediante `pip install annotated-doc` o usando `uv add annotated-doc`.\n\n## Usage\n**Doc** debe importarse para pasar una cadena literal con la descripción de un elemento específico.\n\n## Who Uses This\nEs utilizado por proyectos como FastAPI, Typer, SQLModel y Asyncer.\n\n## Reasons not to use `annotated-doc`\nNo se recomienda si se prefieren formatos como Sphinx o Google, si el equipo ya domina otros estilos, o si se prefiere separar la documentación del código.\n\n## Reasons to use `annotated-doc`\nOfrece sintaxis de Python pura, soporte de editores, facilidad de renderizado, evita duplicidad de información, previene inconsistencias, permite acceso en tiempo de ejecución y mejora la accesibilidad para IA.\n\n## History\nEl autor intentó incluir esto en la biblioteca estándar mediante PEP 727, pero tras la oposición, se decidió crear esta biblioteca externa.\n\n## License\nEl proyecto cuenta con la licencia MIT.\n\n(read server-side: 6564 chars ≈ 2723 Claude tokens that did not enter your context)",
+   "judged_text": "## Introducción\nEsta herramienta permite documentar parámetros, atributos de clase, tipos de retorno y variables de forma integrada utilizando `Annotated`.\n\n## Installation\nSe puede instalar mediante `pip install annotated-doc` o usando `uv add annotated-doc`.\n\n## Usage\n**Doc** debe importarse para pasar una cadena literal con la descripción de un elemento específico.\n\n## Who Uses This\nEs utilizado por proyectos como FastAPI, Typer, SQLModel y Asyncer.\n\n## Reasons not to use `annotated-doc`\nNo se recomienda si se prefieren formatos como Sphinx o Google, si el equipo ya domina otros estilos, o si se prefiere separar la documentación del código.\n\n## Reasons to use `annotated-doc`\nOfrece sintaxis de Python pura, soporte de editores, facilidad de renderizado, evita duplicidad de información, previene inconsistencias, permite acceso en tiempo de ejecución y mejora la accesibilidad para IA.\n\n## History\nEl autor intentó incluir esto en la biblioteca estándar mediante PEP 727, pero tras la oposición, se decidió crear esta biblioteca externa.\n\n## License\nEl proyecto cuenta con la licencia MIT.",
+   "detector": {
+    "lang": "es",
+    "tokens": 160,
+    "es_ratio": 0.35,
+    "en_ratio": 0.05,
+    "margin": 0.3
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "es",
+    "tokens": 172,
+    "es_ratio": 0.3256,
+    "en_ratio": 0.0698
+   },
+   "headings": [
+    "Introducción",
+    "Installation",
+    "Usage",
+    "Who Uses This",
+    "Reasons not to use `annotated-doc`",
+    "Reasons to use `annotated-doc`",
+    "History",
+    "License"
+   ],
+   "duplicate_sections_same_title": [],
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "1",
+   "batch": 2,
+   "window_id": "w-20261015T152547Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_summarize",
+   "document": ".venv/Lib/site-packages/annotated_types-0.7.0.dist-info/METADATA",
+   "document_sha256": "ee5b6ac64b09274c026051813484025939564067801f485115d9cadc207cf791",
+   "document_sha256_frozen": "ee5b6ac64b09274c026051813484025939564067801f485115d9cadc207cf791",
+   "document_unchanged": true,
+   "response_sha256": "1ccbfe975efc8673b62082625c1d3108def0d12748e22868527ec55e37c57db1",
+   "response_literal": "## Introducción\nEste paquete ofrece objetos de metadatos para representar restricciones comunes, como límites en valores escalares o tamaños de colecciones, además de marcadores para comprobaciones en tiempo de ejecución.\n\n## Install\nSe instala mediante el comando `pip install annotated-types`.\n\n## Examples\nMuestra el uso de `Annotated` con `Gt`, `Len` y `Predicate`.\n\n## Documentation\nLos usuarios deben evitar combinaciones inválidas de metadatos.\n**Gt, Ge, Lt, Le** Definen límites inclusivos o exclusivos para valores ordenables.\n**Interval** Permite establecer un límite superior e inferior en un solo objeto.\n**MultipleOf** Indica que un valor debe ser múltiplo de un número según semántica de Python o JSONschema.\n**MinLen, MaxLen, Len** Controlan la longitud de objetos que soportan la función `len()`.\n**Timezone** Expresa las zonas horarias permitidas para objetos de tiempo.\n**Unit** Indica la unidad de medida de un valor numérico.\n**Predicate** Permite usar funciones arbitrarias para validaciones en tiempo de ejecución.\n**Doc** Añade información de documentación para análisis estático.\n**Integrating downstream types with `GroupedMetadata`** Permite a las librerías agrupar metadatos para reducir la verbosidad.\n**Consuming metadata** Las librerías pueden usar los metadatos para validación, esquemas o datos de ejemplo.\n\n## Design & History\nCreado en PyCon 2022 para facilitar anotaciones informativas mediante un diseño minimalista.\n\n(read server-side: 15046 chars ≈ 6243 Claude tokens that did not enter your context)",
+   "judged_text": "## Introducción\nEste paquete ofrece objetos de metadatos para representar restricciones comunes, como límites en valores escalares o tamaños de colecciones, además de marcadores para comprobaciones en tiempo de ejecución.\n\n## Install\nSe instala mediante el comando `pip install annotated-types`.\n\n## Examples\nMuestra el uso de `Annotated` con `Gt`, `Len` y `Predicate`.\n\n## Documentation\nLos usuarios deben evitar combinaciones inválidas de metadatos.\n**Gt, Ge, Lt, Le** Definen límites inclusivos o exclusivos para valores ordenables.\n**Interval** Permite establecer un límite superior e inferior en un solo objeto.\n**MultipleOf** Indica que un valor debe ser múltiplo de un número según semántica de Python o JSONschema.\n**MinLen, MaxLen, Len** Controlan la longitud de objetos que soportan la función `len()`.\n**Timezone** Expresa las zonas horarias permitidas para objetos de tiempo.\n**Unit** Indica la unidad de medida de un valor numérico.\n**Predicate** Permite usar funciones arbitrarias para validaciones en tiempo de ejecución.\n**Doc** Añade información de documentación para análisis estático.\n**Integrating downstream types with `GroupedMetadata`** Permite a las librerías agrupar metadatos para reducir la verbosidad.\n**Consuming metadata** Las librerías pueden usar los metadatos para validación, esquemas o datos de ejemplo.\n\n## Design & History\nCreado en PyCon 2022 para facilitar anotaciones informativas mediante un diseño minimalista.",
+   "detector": {
+    "lang": "es",
+    "tokens": 195,
+    "es_ratio": 0.3436,
+    "en_ratio": 0.0051,
+    "margin": 0.3385
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "es",
+    "tokens": 207,
+    "es_ratio": 0.3237,
+    "en_ratio": 0.0242
+   },
+   "headings": [
+    "Introducción",
+    "Install",
+    "Examples",
+    "Documentation",
+    "Design & History"
+   ],
+   "duplicate_sections_same_title": [],
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "1",
+   "batch": 2,
+   "window_id": "w-20261015T152547Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_summarize",
+   "document": ".venv/Lib/site-packages/attrs-26.1.0.dist-info/METADATA",
+   "document_sha256": "4cd40e690f23bf37cbcad34efd6758e062df1df07c86833f7e3ce95bf1fa38cc",
+   "document_sha256_frozen": "4cd40e690f23bf37cbcad34efd6758e062df1df07c86833f7e3ce95bf1fa38cc",
+   "document_unchanged": true,
+   "response_sha256": "59329328e1da4bf0bead8b03d6cc5df88f19ffbce0c02ff730cf5884e87e2003",
+   "response_literal": "## Introducción\nEste paquete de Python busca devolver la alegría de escribir clases al evitar la implementación tediosa de protocolos de objetos, permitiendo crear software conciso y correcto sin afectar el rendimiento.\n\n## Sponsors\nEl proyecto requiere el apoyo de patrocinadores para su mantenimiento sostenible, destacando especialmente a aquellos que contribuyen en el nivel de *The Organization* o superior.\n\n## Example\nEl paquete ofrece un decorador de clase y un método declarativo para definir atributos, proporcionando automáticamente métodos de igualdad, inicializadores y representaciones legibles.\n**Hate Type Annotations!?** Las anotaciones de tipo son opcionales, permitiendo usar `attrs.field()` en su lugar.\n\n## Data Classes\nAunque recuerda a `dataclasses`, es más flexible al permitir un manejo especial de arreglos de NumPy, mayor personalización en la inicialización y mejor depuración.\n\n## Project Information\nContiene enlaces a la documentación, código fuente y guía de contribución.\n***attrs* for Enterprise** Está disponible mediante la suscripción de Tidelift para ofrecer soporte comercial y mantenimiento profesional.\n\n## Release Information\n**Backwards-incompatible Changes** Los alias de campos se resuelven antes de llamar a `field_transformer`.\n**Changes** Se corrigieron anotaciones de validadores, se permitió anidar el gestor de contexto `attrs.validators.disabled()`, se añadió `on_setattr=attrs.setters.NO_OP` en clases congeladas y se permiten instancias en `attrs.fields()`.\n\n(read server-side: 8750 chars ≈ 3630 Claude tokens that did not enter your context)",
+   "judged_text": "## Introducción\nEste paquete de Python busca devolver la alegría de escribir clases al evitar la implementación tediosa de protocolos de objetos, permitiendo crear software conciso y correcto sin afectar el rendimiento.\n\n## Sponsors\nEl proyecto requiere el apoyo de patrocinadores para su mantenimiento sostenible, destacando especialmente a aquellos que contribuyen en el nivel de *The Organization* o superior.\n\n## Example\nEl paquete ofrece un decorador de clase y un método declarativo para definir atributos, proporcionando automáticamente métodos de igualdad, inicializadores y representaciones legibles.\n**Hate Type Annotations!?** Las anotaciones de tipo son opcionales, permitiendo usar `attrs.field()` en su lugar.\n\n## Data Classes\nAunque recuerda a `dataclasses`, es más flexible al permitir un manejo especial de arreglos de NumPy, mayor personalización en la inicialización y mejor depuración.\n\n## Project Information\nContiene enlaces a la documentación, código fuente y guía de contribución.\n***attrs* for Enterprise** Está disponible mediante la suscripción de Tidelift para ofrecer soporte comercial y mantenimiento profesional.\n\n## Release Information\n**Backwards-incompatible Changes** Los alias de campos se resuelven antes de llamar a `field_transformer`.\n**Changes** Se corrigieron anotaciones de validadores, se permitió anidar el gestor de contexto `attrs.validators.disabled()`, se añadió `on_setattr=attrs.setters.NO_OP` en clases congeladas y se permiten instancias en `attrs.fields()`.",
+   "detector": {
+    "lang": "es",
+    "tokens": 204,
+    "es_ratio": 0.3382,
+    "en_ratio": 0.0147,
+    "margin": 0.3235
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "es",
+    "tokens": 216,
+    "es_ratio": 0.3194,
+    "en_ratio": 0.0324
+   },
+   "headings": [
+    "Introducción",
+    "Sponsors",
+    "Example",
+    "Data Classes",
+    "Project Information",
+    "Release Information"
+   ],
+   "duplicate_sections_same_title": [],
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "1",
+   "batch": 2,
+   "window_id": "w-20261015T152547Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_summarize",
+   "document": ".venv/Lib/site-packages/cfgv-3.5.0.dist-info/METADATA",
+   "document_sha256": "ae126b80e15f39d0feff7368cefea2ea6478fdcedcde52918d0f58b668e19137",
+   "document_sha256_frozen": "ae126b80e15f39d0feff7368cefea2ea6478fdcedcde52918d0f58b668e19137",
+   "document_unchanged": true,
+   "response_sha256": "988c689a02fe1e4f884e19beba5b18544207e3565e4b9bc6a83def98a41861e0",
+   "response_literal": "## Introducción\nEsta herramienta permite validar configuraciones y generar mensajes de error legibles para los usuarios.\n\n## Installation\nSe instala mediante el comando `pip install cfgv`.\n\n## Sample error messages\nMuestra ejemplos de errores de configuración, como un error de tipo al escribir un booleano.\n\n## API\n**`cfgv.validate(value, schema)`** Valida un valor contra un esquema.\n**`cfgv.apply_defaults(value, schema)`** Devuelve un valor con los valores por defecto aplicados.\n**`cfgv.remove_defaults(value, schema)`** Devuelve un valor sin los valores por defecto.\n**`cfgv.load_from_filename(filename, schema, load_strategy, exc_tp=ValidationError)`** Carga un archivo usando una estrategia específica.\n\n## Making a schema\nLos esquemas validan contenedores mediante estructuras como mapas o arreglos.\n**writing your own schema container** Permite crear contenedores personalizados con una interfaz específica.\n**`Map(object_name, id_key, *items)`** Crea un mapa básico para el esquema.\n**`Array(of, allow_empty=True)`** Permite anidar mapas dentro de arreglos.\n**`KeyValueMap(object_name, key_check_fn, value_schema)`** Crea un mapeo homogéneo con tipos de clave y valores específicos.\n\n## Validator objects\nSe usan para validar pares clave-valor dentro de un mapa.\n**writing your own validator** Permite definir validadores personalizados con métodos de chequeo y valores por defecto.\n**`Required(key, check_fn)`** Exige la presencia de una clave con una función de chequeo.\n**`RequiredRecurse(key, schema)`** Exige una clave utilizando un esquema recursivo.\n**`Optional(key, check_fn, default)`** Valida una clave si está presente y gestiona valores por defecto.\n**`OptionalRecurse(key, schema, default)`** Valida una clave opcional usando un esquema recursivo.\n**`OptionalNoDefault(key, check_fn)`** Valida una clave opcional sin gestionar valores por defecto.\n**`Conditional(key, check_fn, condition_key, condition_value, ensure_absent=False)`** Valida una clave basándose en una condición de otra clave.\n**`ConditionalOptional(key, check_fn, default, condition_key, condition_value, ensure_absent=False)`** Combina validación condicional con opciones y valores por defecto.\n**`ConditionalRecurse(key, schema, condition_key, condition_value, ensure_absent=True)`** Realiza validación condicional utilizando esquemas recursivos.\n**`NoAdditionalKeys(keys)`** Restringe un mapa a solo las claves permitidas.\n\n## Equality helpers\nAyudan en las comparaciones de igualdad para validaciones.\n**`Not(val)`** Verifica que un valor no sea igual a otro.\n**`In(*values)`** Comprueba si un valor está contenido en una lista.\n**`NotIn(*values)`** Comprueba si un valor no está en una lista.\n\n## Check functions\nFunciones integradas para realizar validaciones específicas.\n**`check_any(_)`** Una función que no realiza ninguna acción.\n**`check_type(tp, typename=None)`** Verifica que un valor sea de un tipo determinado.\n**`check_one_of(possible)`** Comprueba si el valor pertenece a un conjunto de opciones.\n**`check_regex(v)`** Valida que un valor sea una expresión regular válida.\n**`check_array(inner_check)`** Verifica que una secuencia cumpla con una validación interna.\n**`check_and(*fns)`** Ejecuta múltiples funciones de chequeo sobre un mismo valor.\n\n(read server-side: 8858 chars ≈ 3675 Claude tokens that did not enter your context)",
+   "judged_text": "## Introducción\nEsta herramienta permite validar configuraciones y generar mensajes de error legibles para los usuarios.\n\n## Installation\nSe instala mediante el comando `pip install cfgv`.\n\n## Sample error messages\nMuestra ejemplos de errores de configuración, como un error de tipo al escribir un booleano.\n\n## API\n**`cfgv.validate(value, schema)`** Valida un valor contra un esquema.\n**`cfgv.apply_defaults(value, schema)`** Devuelve un valor con los valores por defecto aplicados.\n**`cfgv.remove_defaults(value, schema)`** Devuelve un valor sin los valores por defecto.\n**`cfgv.load_from_filename(filename, schema, load_strategy, exc_tp=ValidationError)`** Carga un archivo usando una estrategia específica.\n\n## Making a schema\nLos esquemas validan contenedores mediante estructuras como mapas o arreglos.\n**writing your own schema container** Permite crear contenedores personalizados con una interfaz específica.\n**`Map(object_name, id_key, *items)`** Crea un mapa básico para el esquema.\n**`Array(of, allow_empty=True)`** Permite anidar mapas dentro de arreglos.\n**`KeyValueMap(object_name, key_check_fn, value_schema)`** Crea un mapeo homogéneo con tipos de clave y valores específicos.\n\n## Validator objects\nSe usan para validar pares clave-valor dentro de un mapa.\n**writing your own validator** Permite definir validadores personalizados con métodos de chequeo y valores por defecto.\n**`Required(key, check_fn)`** Exige la presencia de una clave con una función de chequeo.\n**`RequiredRecurse(key, schema)`** Exige una clave utilizando un esquema recursivo.\n**`Optional(key, check_fn, default)`** Valida una clave si está presente y gestiona valores por defecto.\n**`OptionalRecurse(key, schema, default)`** Valida una clave opcional usando un esquema recursivo.\n**`OptionalNoDefault(key, check_fn)`** Valida una clave opcional sin gestionar valores por defecto.\n**`Conditional(key, check_fn, condition_key, condition_value, ensure_absent=False)`** Valida una clave basándose en una condición de otra clave.\n**`ConditionalOptional(key, check_fn, default, condition_key, condition_value, ensure_absent=False)`** Combina validación condicional con opciones y valores por defecto.\n**`ConditionalRecurse(key, schema, condition_key, condition_value, ensure_absent=True)`** Realiza validación condicional utilizando esquemas recursivos.\n**`NoAdditionalKeys(keys)`** Restringe un mapa a solo las claves permitidas.\n\n## Equality helpers\nAyudan en las comparaciones de igualdad para validaciones.\n**`Not(val)`** Verifica que un valor no sea igual a otro.\n**`In(*values)`** Comprueba si un valor está contenido en una lista.\n**`NotIn(*values)`** Comprueba si un valor no está en una lista.\n\n## Check functions\nFunciones integradas para realizar validaciones específicas.\n**`check_any(_)`** Una función que no realiza ninguna acción.\n**`check_type(tp, typename=None)`** Verifica que un valor sea de un tipo determinado.\n**`check_one_of(possible)`** Comprueba si el valor pertenece a un conjunto de opciones.\n**`check_regex(v)`** Valida que un valor sea una expresión regular válida.\n**`check_array(inner_check)`** Verifica que una secuencia cumpla con una validación interna.\n**`check_and(*fns)`** Ejecuta múltiples funciones de chequeo sobre un mismo valor.",
+   "detector": {
+    "lang": "es",
+    "tokens": 455,
+    "es_ratio": 0.2615,
+    "en_ratio": 0.0264,
+    "margin": 0.2351
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "es",
+    "tokens": 467,
+    "es_ratio": 0.2548,
+    "en_ratio": 0.0343
+   },
+   "headings": [
+    "Introducción",
+    "Installation",
+    "Sample error messages",
+    "API",
+    "Making a schema",
+    "Validator objects",
+    "Equality helpers",
+    "Check functions"
+   ],
+   "duplicate_sections_same_title": [],
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "1",
+   "batch": 2,
+   "window_id": "w-20261015T152547Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_summarize",
+   "document": ".venv/Lib/site-packages/colorama-0.4.6.dist-info/METADATA",
+   "document_sha256": "7baed29eb50c3b29bdb33ff84e3177bf1bc05784f7685ecdcaa4471c7dd810cc",
+   "document_sha256_frozen": "7baed29eb50c3b29bdb33ff84e3177bf1bc05784f7685ecdcaa4471c7dd810cc",
+   "document_unchanged": true,
+   "response_sha256": "3aba89dec25ea69d35bb9e30348721ab019e27c81b3b452258d6f7cde532e309",
+   "response_literal": "## Introducción\nEsta herramienta permite que las secuencias de escape ANSI funcionen en la terminal de MS Windows.\n\n## Installation\nSe puede instalar mediante `pip install colorama` o usando `conda install -c anaconda colorama`.\n\n## Description\n**Funcionamiento** Colorama permite el uso de colores y posicionamiento del cursor en Windows envolviendo la salida estándar. **API** Ofrece una interfaz multiplataforma sencilla para imprimir texto coloreado en Python.\n\n## Usage\n**Initialisation** Se puede usar `just_fix_windows_console()` para habilitar el soporte en Windows o `init()` para una interfaz con más funciones. **Colored Output** Permite imprimir colores usando constantes como `Fore`, `Back` y `Style`. **Cursor Positioning** Soporta códigos ANSI para mover el cursor. **Init Keyword Args** La función `init()` acepta argumentos como `autoreset`, `strip`, `convert` y `wrap`. **Recognised ANSI Sequences** Convierte secuencias específicas de color, brillo, cursor y limpieza de pantalla.\n\n## Status & Known Problems\nEl autor ha probado el software en varios sistemas, aunque algunas secuencias ANSI válidas no se reconocen.\n\n## License\nEl proyecto tiene una licencia BSD 3-Clause.\n\n## Professional support\nEl soporte profesional está disponible mediante la suscripción de Tidelift.\n\n## Thanks\nSe agradece a diversos colaboradores por sus correcciones, parches y sugerencias.\n\n(read server-side: 17152 chars ≈ 7117 Claude tokens that did not enter your context)",
+   "judged_text": "## Introducción\nEsta herramienta permite que las secuencias de escape ANSI funcionen en la terminal de MS Windows.\n\n## Installation\nSe puede instalar mediante `pip install colorama` o usando `conda install -c anaconda colorama`.\n\n## Description\n**Funcionamiento** Colorama permite el uso de colores y posicionamiento del cursor en Windows envolviendo la salida estándar. **API** Ofrece una interfaz multiplataforma sencilla para imprimir texto coloreado en Python.\n\n## Usage\n**Initialisation** Se puede usar `just_fix_windows_console()` para habilitar el soporte en Windows o `init()` para una interfaz con más funciones. **Colored Output** Permite imprimir colores usando constantes como `Fore`, `Back` y `Style`. **Cursor Positioning** Soporta códigos ANSI para mover el cursor. **Init Keyword Args** La función `init()` acepta argumentos como `autoreset`, `strip`, `convert` y `wrap`. **Recognised ANSI Sequences** Convierte secuencias específicas de color, brillo, cursor y limpieza de pantalla.\n\n## Status & Known Problems\nEl autor ha probado el software en varios sistemas, aunque algunas secuencias ANSI válidas no se reconocen.\n\n## License\nEl proyecto tiene una licencia BSD 3-Clause.\n\n## Professional support\nEl soporte profesional está disponible mediante la suscripción de Tidelift.\n\n## Thanks\nSe agradece a diversos colaboradores por sus correcciones, parches y sugerencias.",
+   "detector": {
+    "lang": "es",
+    "tokens": 186,
+    "es_ratio": 0.3172,
+    "en_ratio": 0.0054,
+    "margin": 0.3118
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "es",
+    "tokens": 198,
+    "es_ratio": 0.298,
+    "en_ratio": 0.0253
+   },
+   "headings": [
+    "Introducción",
+    "Installation",
+    "Description",
+    "Usage",
+    "Status & Known Problems",
+    "License",
+    "Professional support",
+    "Thanks"
+   ],
+   "duplicate_sections_same_title": [],
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "1",
+   "batch": 2,
+   "window_id": "w-20261015T152547Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_lint_summary",
+   "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-cinco-reglas.txt",
+   "document_sha256": "0809f67c265b1bed3ef6bcec7b6beba41fc4cd61a328cfe9f90986ce870c889c",
+   "document_sha256_frozen": "0809f67c265b1bed3ef6bcec7b6beba41fc4cd61a328cfe9f90986ce870c889c",
+   "document_unchanged": true,
+   "response_sha256": "8cff69b3779d695919dd92e42a6762e14976822fdf7c7e53642f3ff320bd9c49",
+   "response_literal": "**Resumen de Problemas por Archivo**\n\n**lib/io.py:**\n*   Importes: 2 (I001)\n*   Tipos de anotación: 3 (UP006)\n\n**lib/net.py:**\n*   Importes: 1 (I001)\n*   `if`s anidados: 3 (SIM102)\n\n**lib/db.py:**\n*   Importes: 1 (I001)\n*   `if`s anidados: 2 (SIM102)\n*   Asignaciones previas a `return`: 2 (RET504)\n\n(read server-side: 784 chars ≈ 408 Claude tokens that did not enter your context)",
+   "judged_text": "**Resumen de Problemas por Archivo**\n\n**lib/io.py:**\n*   Importes: 2 (I001)\n*   Tipos de anotación: 3 (UP006)\n\n**lib/net.py:**\n*   Importes: 1 (I001)\n*   `if`s anidados: 3 (SIM102)\n\n**lib/db.py:**\n*   Importes: 1 (I001)\n*   `if`s anidados: 2 (SIM102)\n*   Asignaciones previas a `return`: 2 (RET504)",
+   "detector": {
+    "lang": "unknown",
+    "tokens": 37,
+    "es_ratio": 0.0811,
+    "en_ratio": 0.1622,
+    "margin": 0.0811
+   },
+   "verdict": "fail_unknown",
+   "fail_kind": "detector_unknown_low_margin",
+   "detector_on_literal_with_wrappers": {
+    "lang": "unknown",
+    "tokens": 49,
+    "es_ratio": 0.0612,
+    "en_ratio": 0.2041
+   },
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "1",
+   "batch": 2,
+   "window_id": "w-20261015T152547Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_lint_summary",
+   "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-docstrings.txt",
+   "document_sha256": "b110b57cb1159eec9243dcedb0ecdbc2e38f79d44b3891bc64fbd192659c3538",
+   "document_sha256_frozen": "b110b57cb1159eec9243dcedb0ecdbc2e38f79d44b3891bc64fbd192659c3538",
+   "document_unchanged": true,
+   "response_sha256": "5754a7774349e75df89b088534ff62620ecb624c070521dcfeccfc21b487b072",
+   "response_literal": "**Resumen de Problemas:**\n\n**src/a.py:**\n*   D100: Missing docstring in public module (2)\n*   D103: Missing docstring in public function (3)\n*   B006: Do not use mutable data structures for argument defaults (1)\n\n**src/b.py:**\n*   D100: Missing docstring in public module (1)\n*   D103: Missing docstring in public function (4)\n\n**src/c.py:**\n*   T201: `print` found (3)\n\n**Resumen General:**\n\nSe identificaron problemas relacionados con la falta de documentación en módulos y funciones públicas.  El archivo `src/c.py` presenta un mayor número de instancias de la regla `T201` indicando el uso de la función `print`.  Se recomienda revisar y agregar docstrings a todas las funciones y módulos que carecen de ellas, priorizando aquellos con la regla `D103`.  También se debe prestar atención al uso de estructuras de datos mutables en los argumentos por defecto, como se detectó en `src/a.py`.\n\n(read server-side: 626 chars ≈ 326 Claude tokens that did not enter your context)",
+   "judged_text": "**Resumen de Problemas:**\n\n**src/a.py:**\n*   D100: Missing docstring in public module (2)\n*   D103: Missing docstring in public function (3)\n*   B006: Do not use mutable data structures for argument defaults (1)\n\n**src/b.py:**\n*   D100: Missing docstring in public module (1)\n*   D103: Missing docstring in public function (4)\n\n**src/c.py:**\n*   T201: `print` found (3)\n\n**Resumen General:**\n\nSe identificaron problemas relacionados con la falta de documentación en módulos y funciones públicas.  El archivo `src/c.py` presenta un mayor número de instancias de la regla `T201` indicando el uso de la función `print`.  Se recomienda revisar y agregar docstrings a todas las funciones y módulos que carecen de ellas, priorizando aquellos con la regla `D103`.  También se debe prestar atención al uso de estructuras de datos mutables en los argumentos por defecto, como se detectó en `src/a.py`.",
+   "detector": {
+    "lang": "es",
+    "tokens": 133,
+    "es_ratio": 0.2857,
+    "en_ratio": 0.0602,
+    "margin": 0.2255
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "es",
+    "tokens": 145,
+    "es_ratio": 0.2621,
+    "en_ratio": 0.0828
+   },
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "1",
+   "batch": 2,
+   "window_id": "w-20261015T152547Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_lint_summary",
+   "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-tres-reglas.txt",
+   "document_sha256": "ec0b6183c8ca06cac255bdf11c914291473771ddd2df55b2ecbda2767bd49270",
+   "document_sha256_frozen": "ec0b6183c8ca06cac255bdf11c914291473771ddd2df55b2ecbda2767bd49270",
+   "document_unchanged": true,
+   "response_sha256": "eb60adce3ae68eb6103ae4f05eae55ce8ff4f7a14f13b595c15c0f84fa6ca155",
+   "response_literal": "**Resumen de Problemas:**\n\n**app/main.py:**\n\n*   E501 Line too long (2): Líneas excesivamente largas en las líneas 12 y 40.\n*   F401 `os` imported but unused (1): La importación del módulo `os` no se utiliza en el archivo.\n\n**app/util.py:**\n\n*   F401 `sys` imported but unused (1): La importación del módulo `sys` no se utiliza en el archivo.\n*   F401 `re` imported but unused (1): La importación del módulo `re` no se utiliza en el archivo.\n*   E501 Line too long (1): Línea excesivamente larga en la línea 55.\n*   W291 Trailing whitespace (1): Presencia de espacios en blanco al final de la línea 70.\n\n**app/cli.py:**\n\n*   E501 Line too long (1): Línea excesivamente larga en la línea 21.\n\n(read server-side: 340 chars ≈ 177 Claude tokens that did not enter your context)",
+   "judged_text": "**Resumen de Problemas:**\n\n**app/main.py:**\n\n*   E501 Line too long (2): Líneas excesivamente largas en las líneas 12 y 40.\n*   F401 `os` imported but unused (1): La importación del módulo `os` no se utiliza en el archivo.\n\n**app/util.py:**\n\n*   F401 `sys` imported but unused (1): La importación del módulo `sys` no se utiliza en el archivo.\n*   F401 `re` imported but unused (1): La importación del módulo `re` no se utiliza en el archivo.\n*   E501 Line too long (1): Línea excesivamente larga en la línea 55.\n*   W291 Trailing whitespace (1): Presencia de espacios en blanco al final de la línea 70.\n\n**app/cli.py:**\n\n*   E501 Line too long (1): Línea excesivamente larga en la línea 21.",
+   "detector": {
+    "lang": "es",
+    "tokens": 104,
+    "es_ratio": 0.2981,
+    "en_ratio": 0.0577,
+    "margin": 0.2404
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "es",
+    "tokens": 116,
+    "es_ratio": 0.2672,
+    "en_ratio": 0.0862
+   },
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "1",
+   "batch": 2,
+   "window_id": "w-20261015T152547Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_lint_summary",
+   "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-un-solo-archivo.txt",
+   "document_sha256": "7666debfbc2ca5df842cb29520580e7711e8c44dfcda60b9d8188d9715d1db3e",
+   "document_sha256_frozen": "7666debfbc2ca5df842cb29520580e7711e8c44dfcda60b9d8188d9715d1db3e",
+   "document_unchanged": true,
+   "response_sha256": "fcace8562f75f0ce8f746efe9cf11d742e416598a1efb45d363969d7c9cf73c2",
+   "response_literal": "**Resumen de Problemas:**\n\n**tools/gen.py:**\n\n*   **Importaciones:** 4 errores de tipo E402, indicando que las importaciones de módulos se encuentran ubicadas dentro del cuerpo del archivo y no en la parte superior.\n*   **Longitud de Línea:** 3 errores de tipo E501, señalando líneas excesivamente largas, específicamente en las líneas 20, 31 y 32.\n*   **Comparación con None:** 1 error de tipo E711, relacionado con una comparación directa con `None`, sugiriendo el uso de una verificación explícita para manejar valores nulos.\n\n(read server-side: 438 chars ≈ 228 Claude tokens that did not enter your context)",
+   "judged_text": "**Resumen de Problemas:**\n\n**tools/gen.py:**\n\n*   **Importaciones:** 4 errores de tipo E402, indicando que las importaciones de módulos se encuentran ubicadas dentro del cuerpo del archivo y no en la parte superior.\n*   **Longitud de Línea:** 3 errores de tipo E501, señalando líneas excesivamente largas, específicamente en las líneas 20, 31 y 32.\n*   **Comparación con None:** 1 error de tipo E711, relacionado con una comparación directa con `None`, sugiriendo el uso de una verificación explícita para manejar valores nulos.",
+   "detector": {
+    "lang": "es",
+    "tokens": 72,
+    "es_ratio": 0.3889,
+    "en_ratio": 0.0,
+    "margin": 0.3889
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "es",
+    "tokens": 84,
+    "es_ratio": 0.3333,
+    "en_ratio": 0.0476
+   },
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "unsummarized_section_placeholders": 0
+  },
+  {
+   "set": "1",
+   "batch": 2,
+   "window_id": "w-20261015T152547Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_lint_summary",
+   "document": "benchmarks/catalogo-2026-09/fuentes/lint-9k.txt",
+   "document_sha256": "9c7295b2b49627aff832ce808789be7993522cd72c8f947fb06f19664723801f",
+   "document_sha256_frozen": "9c7295b2b49627aff832ce808789be7993522cd72c8f947fb06f19664723801f",
+   "document_unchanged": true,
+   "response_sha256": "91ab62a0bdf063374aa2d1ad0cea75b5bd61a24e3de14421e1ea3dc9521eaced",
+   "response_literal": "**src/local_delegate/__init__.py**\n* CPY001 Falta el aviso de derechos de autor: 1\n\n**src/local_delegate/__main__.py**\n* CPY001 Falta el aviso de derechos de autor: 1\n\n**src/local_delegate/agents.py**\n* CPY001 Falta el aviso de derechos de autor: 1\n* TC003 Mover importación de librería estándar a un bloque de comprobación de tipos: 1\n* COM812 Falta coma final: 1\n* D401 La primera línea del docstring debe usar el modo imperativo: 1\n* PLR2004 Uso de valor mágico en comparación: 1\n\n**src/local_delegate/autostart.py**\n* CPY001 Falta el aviso de derechos de autor: 1\n* D401 La primera línea del docstring debe usar el modo imperativo: 1\n* S603 Llamada a `subprocess`: verificar ejecución de entrada no confiable: 1\n\n**src/local_delegate/benchmark.py**\n* COM812 Falta coma final: 12\n* D101 Falta docstring en clase pública: 3\n* D102 Falta docstring en método público: 8\n* D103 Falta docstring en función pública: 4\n* D105 Falta docstring en método mágico: 4\n* D107 Falta docstring en `__init__`: 5\n* TRY003 Evitar especificar mensajes largos fuera de la clase de excepción: 7\n* EM102 La excepción no debe usar un literal f-string: 6\n* EM101 La excepción no debe usar un literal de cadena: 2\n* T201 Se encontró `print`: 7\n* PLR2004 Uso de valor mágico en comparación: 3\n* PLC0415 El `import` debe estar en el nivel superior del archivo: 2\n* S603 Llamada a `subprocess`: verificar ejecución de entrada no confiable: 1\n* PLW1510 `subprocess.run` sin argumento `check`\n\n[local-delegate warning: output truncated by max_tokens]\n\n(read server-side: 8589 chars ≈ 4473 Claude tokens that did not enter your context)",
+   "judged_text": "**src/local_delegate/__init__.py**\n* CPY001 Falta el aviso de derechos de autor: 1\n\n**src/local_delegate/__main__.py**\n* CPY001 Falta el aviso de derechos de autor: 1\n\n**src/local_delegate/agents.py**\n* CPY001 Falta el aviso de derechos de autor: 1\n* TC003 Mover importación de librería estándar a un bloque de comprobación de tipos: 1\n* COM812 Falta coma final: 1\n* D401 La primera línea del docstring debe usar el modo imperativo: 1\n* PLR2004 Uso de valor mágico en comparación: 1\n\n**src/local_delegate/autostart.py**\n* CPY001 Falta el aviso de derechos de autor: 1\n* D401 La primera línea del docstring debe usar el modo imperativo: 1\n* S603 Llamada a `subprocess`: verificar ejecución de entrada no confiable: 1\n\n**src/local_delegate/benchmark.py**\n* COM812 Falta coma final: 12\n* D101 Falta docstring en clase pública: 3\n* D102 Falta docstring en método público: 8\n* D103 Falta docstring en función pública: 4\n* D105 Falta docstring en método mágico: 4\n* D107 Falta docstring en `__init__`: 5\n* TRY003 Evitar especificar mensajes largos fuera de la clase de excepción: 7\n* EM102 La excepción no debe usar un literal f-string: 6\n* EM101 La excepción no debe usar un literal de cadena: 2\n* T201 Se encontró `print`: 7\n* PLR2004 Uso de valor mágico en comparación: 3\n* PLC0415 El `import` debe estar en el nivel superior del archivo: 2\n* S603 Llamada a `subprocess`: verificar ejecución de entrada no confiable: 1\n* PLW1510 `subprocess.run` sin argumento `check`",
+   "detector": {
+    "lang": "es",
+    "tokens": 215,
+    "es_ratio": 0.2465,
+    "en_ratio": 0.0,
+    "margin": 0.2465
+   },
+   "verdict": "pass",
+   "fail_kind": null,
+   "detector_on_literal_with_wrappers": {
+    "lang": "es",
+    "tokens": 235,
+    "es_ratio": 0.2255,
+    "en_ratio": 0.0213
+   },
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "unsummarized_section_placeholders": 0
+  }
+ ]
+}
