@@ -1,0 +1,114 @@
+{
+  "local_summarize|gemma4-26b-a4b": {
+    "calls": 144,
+    "length": 4,
+    "chunked": 16,
+    "raw_gt_out": 0,
+    "pct_length": 2.8
+  },
+  "local_boilerplate|qwen36-35b-a3b": {
+    "calls": 6,
+    "length": 0,
+    "chunked": 0,
+    "raw_gt_out": 0,
+    "pct_length": 0.0
+  },
+  "local_commit_msg|qwen36-35b-a3b": {
+    "calls": 51,
+    "length": 1,
+    "chunked": 36,
+    "raw_gt_out": 0,
+    "pct_length": 2.0
+  },
+  "local_lint_summary|gemma4-26b-a4b": {
+    "calls": 22,
+    "length": 3,
+    "chunked": 9,
+    "raw_gt_out": 0,
+    "pct_length": 13.6
+  },
+  "local_extract|gemma4-26b-a4b": {
+    "calls": 17,
+    "length": 2,
+    "chunked": 0,
+    "raw_gt_out": 0,
+    "pct_length": 11.8
+  },
+  "local_lint_summary|gemma3-4b": {
+    "calls": 77,
+    "length": 0,
+    "chunked": 0,
+    "raw_gt_out": 0,
+    "pct_length": 0.0
+  },
+  "local_explain_code|qwen36-35b-a3b": {
+    "calls": 35,
+    "length": 0,
+    "chunked": 1,
+    "raw_gt_out": 0,
+    "pct_length": 0.0
+  },
+  "local_extract|gemma3-4b": {
+    "calls": 7,
+    "length": 0,
+    "chunked": 0,
+    "raw_gt_out": 0,
+    "pct_length": 0.0
+  },
+  "local_summarize|gemma3-4b": {
+    "calls": 12,
+    "length": 0,
+    "chunked": 0,
+    "raw_gt_out": 0,
+    "pct_length": 0.0
+  },
+  "local_describe_image|gemma4-12b": {
+    "calls": 14,
+    "length": 0,
+    "chunked": 0,
+    "raw_gt_out": 0,
+    "pct_length": 0.0
+  },
+  "local_delegate|gemma4-26b-a4b": {
+    "calls": 1,
+    "length": 0,
+    "chunked": 0,
+    "raw_gt_out": 0,
+    "pct_length": 0.0
+  },
+  "local_classify|gemma3-4b": {
+    "calls": 1,
+    "length": 0,
+    "chunked": 0,
+    "raw_gt_out": 0,
+    "pct_length": 0.0
+  },
+  "local_delegate|gemma3-4b": {
+    "calls": 1,
+    "length": 0,
+    "chunked": 0,
+    "raw_gt_out": 0,
+    "pct_length": 0.0
+  },
+  "local_translate|qwen36-35b-a3b": {
+    "calls": 1,
+    "length": 0,
+    "chunked": 0,
+    "raw_gt_out": 0,
+    "pct_length": 0.0
+  },
+  "local_translate|gemma3-4b": {
+    "calls": 81,
+    "length": 0,
+    "chunked": 4,
+    "raw_gt_out": 0,
+    "pct_length": 0.0
+  },
+  "local_translate|gemma4-26b-a4b": {
+    "calls": 3,
+    "length": 0,
+    "chunked": 3,
+    "raw_gt_out": 0,
+    "pct_length": 0.0
+  }
+}

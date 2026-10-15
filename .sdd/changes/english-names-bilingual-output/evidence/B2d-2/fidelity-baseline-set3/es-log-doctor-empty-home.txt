@@ -1,0 +1,24 @@
+Here's a summary of the issues, grouped by file, with error/rule counts and relevance prioritized:
+
+**Local-Delegate (0.35.0)**
+
+*   **Warnings (2):**
+    *   `LD_HOOK_READ_BLOQUEAR` obsolescence (1):  The hook `LD_HOOK_READ_BLOQUEAR` is outdated and should be renamed to `LD_HOOK_READ_BLOCK` before version 0.38.0.
+    *   Missing Claude Code client (1): The Claude Code client is not installed, impacting hook functionality and MCP integration.
+*   **General (1):**  Lack of resident memory for llama-swap (1):  The llama-swap configuration lacks a resident memory setting, which is recommended for optimal performance.
+
+**Backend (http://127.0.0.1:9292/v1)**
+
+*   **Potential Issues (2):**
+    *   Missing MCP Credentials (2): The backend requires MCP credentials, but no relevant MCP entry is found, potentially hindering functionality.
+    *   Token Requirement (2): The port requires a token, but no relevant MCP entry is found, potentially hindering functionality.
+
+**Versions**
+
+*   **Warning (1):**  Missing llama-swap affinity (1): The llama-swap version is installed, but the affinity is not configured, potentially impacting performance.
+
+**MCP Clients**
+
+*   Multiple clients observed, but no active MCP elicitation detected.  This suggests a potential configuration issue or lack of MCP usage.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

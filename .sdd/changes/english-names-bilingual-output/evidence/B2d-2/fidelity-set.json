@@ -1,0 +1,416 @@
+{
+  "frozen_at": "2026-10-15",
+  "frozen_before_any_measurement_call": true,
+  "counter": "scripts/score_lint_fidelity.py (count_inventions: invented numbers, invented files, repeated sentences of 5+ words)",
+  "baseline": {
+    "answers": "evidence/B2d-2/fidelity-baseline-set3/ (literal answers of set 3, code 32d8612, lint cap 2w+96 = 496)",
+    "score": "evidence/B2d-2/fidelity-baseline-set3.json",
+    "invented_numbers": 7,
+    "invented_files": 0,
+    "repeated_sentences": 2,
+    "total": 9
+  },
+  "criterion": {
+    "threshold_total": 0,
+    "never_worse_than": 9,
+    "note": "0 invented figures or files and 0 repeated sentences over the 10 logs; a total above 9 (the baseline) is a regression. Misattributions (a real file presented as a file with errors) are not seen by the counter and go to the manual column of live.md."
+  },
+  "logs": [
+    {
+      "id": "es-log-check-llamaswap-pre-b10909",
+      "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-check-llamaswap-pre-b10909.txt",
+      "sha256": "e2d30b729c1ad2543d089764b55759c33b4063c046e0555dda4f121caa5321e7",
+      "numbers": [
+        "0",
+        "1",
+        "1.5",
+        "3",
+        "3.1",
+        "6.5",
+        "8"
+      ],
+      "derived_counts": [
+        0,
+        11
+      ],
+      "files": [],
+      "extra_allowed_numbers": []
+    },
+    {
+      "id": "es-log-B2c_corpus-f2-check",
+      "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-B2c_corpus-f2-check.txt",
+      "sha256": "e55c52f2c40404391ce087ca987dffa411a9d8f5b63fc386a885ed753731705d",
+      "numbers": [
+        "0.36.0",
+        "1"
+      ],
+      "derived_counts": [
+        1,
+        2,
+        9,
+        15
+      ],
+      "files": [
+        "scripts/build_corpus.py"
+      ],
+      "extra_allowed_numbers": []
+    },
+    {
+      "id": "es-log-doctor-empty-home",
+      "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-doctor-empty-home.txt",
+      "sha256": "367ab3af2a166576928e52c12605bcee7940be5f582f6c2eacefe49d4cc7e161",
+      "numbers": [
+        "0.0.0",
+        "0.1.0",
+        "0.1.37",
+        "0.13.5",
+        "0.160.0",
+        "0.35.0",
+        "0.38.0",
+        "0.8.2",
+        "0.8.5",
+        "0.8.6",
+        "0.8.7",
+        "00",
+        "06",
+        "07",
+        "1.0.0",
+        "10",
+        "11",
+        "127.0.0.1",
+        "159",
+        "18",
+        "2",
+        "2.1.300",
+        "20",
+        "2025",
+        "2026",
+        "25",
+        "28",
+        "31432",
+        "39",
+        "4576",
+        "67",
+        "7",
+        "8167",
+        "9292",
+        "9393"
+      ],
+      "derived_counts": [
+        1,
+        2,
+        4,
+        5,
+        6,
+        7,
+        11,
+        12,
+        13,
+        40
+      ],
+      "files": [
+        "projects/llms/llama-swap-v255/llama-swap.exe",
+        "projects/llms/llama-swap/config.yaml",
+        "users/yohan/.local/bin/local-delegate.exe",
+        "users/yohan/appdata/local/local-delegate/language.json"
+      ],
+      "extra_allowed_numbers": []
+    },
+    {
+      "id": "en-log-biome-lint-nest",
+      "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-biome-lint-nest.txt",
+      "sha256": "3af20fa5cfba9f2dedb4f8a5653f382acfaf93477085774587aa694b7da994a2",
+      "numbers": [
+        "0",
+        "1",
+        "10",
+        "100",
+        "11",
+        "12",
+        "125",
+        "13",
+        "1304",
+        "14",
+        "144",
+        "15",
+        "17",
+        "18",
+        "19",
+        "2",
+        "20",
+        "2017",
+        "21",
+        "22",
+        "23",
+        "24",
+        "25",
+        "26",
+        "27",
+        "28",
+        "29",
+        "3",
+        "30",
+        "300000",
+        "31",
+        "32",
+        "33",
+        "34",
+        "4",
+        "43",
+        "45",
+        "5",
+        "551",
+        "6",
+        "60000",
+        "653",
+        "7",
+        "8",
+        "9"
+      ],
+      "derived_counts": [
+        1,
+        2,
+        4,
+        5,
+        13,
+        14,
+        15,
+        20,
+        25,
+        355
+      ],
+      "files": [
+        "src/app/core/decorators/app-controller.decorator.ts",
+        "src/app/core/decorators/log-audit.decorator.ts",
+        "src/app/core/decorators/throttle.decorator.ts",
+        "src/app/core/filters/http-exception.filter.ts"
+      ],
+      "extra_allowed_numbers": []
+    },
+    {
+      "id": "en-log-ruff-concise-build-site",
+      "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-ruff-concise-build-site.txt",
+      "sha256": "0e539a8a8a7eafac0f94a6dc56173a2d3ef2636c737467d63bea2ea43c6519e9",
+      "numbers": [
+        "1",
+        "10",
+        "100",
+        "13",
+        "17",
+        "36",
+        "5",
+        "6",
+        "72",
+        "76",
+        "85",
+        "9",
+        "90",
+        "92",
+        "96",
+        "97",
+        "98"
+      ],
+      "derived_counts": [
+        1,
+        2,
+        6,
+        10,
+        13,
+        14
+      ],
+      "files": [
+        "scripts/build_site.py"
+      ],
+      "extra_allowed_numbers": []
+    },
+    {
+      "id": "en-log-pytest-chunking-density",
+      "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-pytest-chunking-density.txt",
+      "sha256": "0fa7d99e62af9ba251cc42f12c808445ac1f62573169ba778796cfbbc451b6f4",
+      "numbers": [
+        "0",
+        "1",
+        "1.6.0",
+        "10",
+        "100",
+        "11434",
+        "12",
+        "127.0.0.1",
+        "14",
+        "15",
+        "17",
+        "19",
+        "192.168.1.50",
+        "2",
+        "21",
+        "22",
+        "24",
+        "26",
+        "28",
+        "29",
+        "3",
+        "3.11.15",
+        "3.8.0",
+        "31",
+        "33",
+        "35",
+        "36",
+        "38",
+        "4.12.4",
+        "4.15.1",
+        "40",
+        "42",
+        "43",
+        "45",
+        "47",
+        "49",
+        "5",
+        "50",
+        "52",
+        "54",
+        "56",
+        "57",
+        "59",
+        "61",
+        "63",
+        "64",
+        "66",
+        "68",
+        "7",
+        "70",
+        "71",
+        "73",
+        "75",
+        "77",
+        "78",
+        "8",
+        "80",
+        "82",
+        "84",
+        "85",
+        "87",
+        "89",
+        "9.1.1",
+        "91",
+        "92",
+        "9292",
+        "9393",
+        "94",
+        "96",
+        "98"
+      ],
+      "derived_counts": [
+        1,
+        2,
+        4,
+        6,
+        32,
+        82,
+        116,
+        123
+      ],
+      "files": [
+        "pc.tailnet.ts",
+        "pc.ts",
+        "projects/local-delegate/.venv/scripts/python.exe",
+        "pyproject.toml",
+        "tests/test_chunking.py",
+        "tests/test_density.py"
+      ],
+      "extra_allowed_numbers": []
+    },
+    {
+      "id": "en-log-ruff-concise-clean-watcher",
+      "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-ruff-concise-clean-watcher.txt",
+      "sha256": "5a73a08070f3573b78cc4b31bfcccecf06b7d6d4045de1af4b9a82a173a7525f",
+      "numbers": [
+        "1",
+        "100",
+        "101",
+        "105",
+        "106",
+        "14",
+        "16",
+        "30",
+        "5",
+        "7",
+        "71",
+        "76",
+        "83",
+        "9",
+        "90"
+      ],
+      "derived_counts": [
+        1,
+        2,
+        7,
+        11,
+        14
+      ],
+      "files": [
+        "scripts/clean_watcher_fixtures.py"
+      ],
+      "extra_allowed_numbers": []
+    },
+    {
+      "id": "en-log-tsc-angular",
+      "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-tsc-angular.txt",
+      "sha256": "292208ba99d5044fa0a927eb14c70d7b5d369553ec52d9ffffc642314e76a63a",
+      "numbers": [
+        "127.5",
+        "52.24"
+      ],
+      "derived_counts": [
+        1,
+        2,
+        5,
+        9
+      ],
+      "files": [
+        "src/app/features/auth/pages/login.page.ts",
+        "src/app/features/home/components/tech-stack.component.ts"
+      ],
+      "extra_allowed_numbers": []
+    },
+    {
+      "id": "es-log-check-llamaswap-pre-no-resident",
+      "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-check-llamaswap-pre-no-resident.txt",
+      "sha256": "1adc07d48a6a2b687f2b76e7a5197281456f8323471f31b42040debbae800482",
+      "numbers": [
+        "0",
+        "1",
+        "1.5",
+        "3",
+        "4",
+        "6.5",
+        "8"
+      ],
+      "derived_counts": [
+        0,
+        11
+      ],
+      "files": [],
+      "extra_allowed_numbers": []
+    },
+    {
+      "id": "es-log-B2d-fix_corpus-affinity-check",
+      "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-B2d-fix_corpus-affinity-check.txt",
+      "sha256": "8c261db94aaaa22a75abe82729c777865dbbcf34a64cdde565f09170a46304f0",
+      "numbers": [
+        "0.36.0",
+        "1"
+      ],
+      "derived_counts": [
+        1,
+        2,
+        9,
+        18,
+        89
+      ],
+      "files": [
+        "scripts/build_corpus.py"
+      ],
+      "extra_allowed_numbers": []
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "local_summarize|gemma3-4b": {
+    "calls": 5,
+    "length": 0,
+    "chunked": 0,
+    "raw_gt_out": 0,
+    "pct_length": 0.0
+  },
+  "local_lint_summary|gemma3-4b": {
+    "calls": 30,
+    "length": 0,
+    "chunked": 0,
+    "raw_gt_out": 0,
+    "pct_length": 0.0
+  },
+  "local_commit_msg|qwen36-35b-a3b": {
+    "calls": 2,
+    "length": 0,
+    "chunked": 0,
+    "raw_gt_out": 0,
+    "pct_length": 0.0
+  },
+  "local_summarize|gemma4-26b-a4b": {
+    "calls": 34,
+    "length": 2,
+    "chunked": 1,
+    "raw_gt_out": 0,
+    "pct_length": 5.9
+  },
+  "local_lint_summary|gemma4-26b-a4b": {
+    "calls": 15,
+    "length": 4,
+    "chunked": 0,
+    "raw_gt_out": 0,
+    "pct_length": 26.7
+  }
+}

@@ -1,0 +1,7 @@
+**Summary of Issues by File**
+
+**scripts\build_site.py:**
+
+This file contains 10 identified issues. There is one **Copyright Notice** violation (CPY001) at the beginning of the file.  Additionally, there are three **Missing Docstring** violations (D103) located at lines 36, 72, and 76.  Furthermore, the file exhibits seven **Print Statement** violations (T201) at lines 85, 90, 92, 96, 98, 100, and 103.  A **Trailing Comma** violation (COM812) is present at line 76.  The warnings regarding incompatible checks (D203 and D211) have been ignored.  The incompatibility between D212 and D213 has also been disregarded.
+
+(leído server-side: 968 chars ≈ 504 tokens de Claude que no entraron a tu contexto)
