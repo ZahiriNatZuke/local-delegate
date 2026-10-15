@@ -730,6 +730,7 @@ def _log_event(
     chars_out: int,
     latency_ms: int,
     ok: bool,
+    chars_out_raw: int | None = None,
     error: str | None = None,
     finish_reason: str | None = None,
     tokens_in: int | None = None,
@@ -838,6 +839,13 @@ def _log_event(
             rec["truncated_out"] = True
         if raw_len is not None:
             rec["raw_len"] = int(raw_len)
+        # What the model generated, in characters, BEFORE the post-processing (`_strip_think`,
+        # `sections.complete`) and the notices; summed over the calls of a chunked operation.
+        # Never the text (the usage log keeps no content). Without it httpcore2 (B2d-2) could not
+        # be diagnosed: ~2000 tokens generated and 752 chars delivered, with no way to tell
+        # whether they went in the cut, in degenerate whitespace or in hidden reasoning.
+        if chars_out_raw is not None:
+            rec["chars_out_raw"] = int(chars_out_raw)
         if source == "path" and path is not None:
             rec["path"] = path
             # Si esta lectura viene de un bloqueo del hook, el evento se queda con su
@@ -2570,6 +2578,7 @@ def _chat(
         source=source,
         chars_in=chars_in,
         chars_out=len(text),
+        chars_out_raw=len(result.text) if result.ok else None,
         latency_ms=latency_ms,
         ok=result.ok,
         error=result.error,
@@ -3128,8 +3137,10 @@ def _chat_map_reduce(
     op = _OperationTurn(entry_id, model, tool, role_name=role, explicit=explicit)
     current = _CurrentModel(model, role, explicit, entry_id, op)
 
+    raw_chars = 0  # what the model generated, before `_strip_think` and the post-processing
+
     def _one(sys_prompt: str, user: str, max_tokens: int) -> str | None:
-        nonlocal calls, latency_ms, tokens_in, tokens_out, failed, truncated_calls
+        nonlocal calls, latency_ms, tokens_in, tokens_out, failed, truncated_calls, raw_chars
         result, ms, attempts = current.call(
             sys_prompt,
             user,
@@ -3149,6 +3160,7 @@ def _chat_map_reduce(
         if not result.ok:
             failed = result
             return None
+        raw_chars += len(result.text)
         if result.finish_reason == "length":
             truncated_calls += 1
         return _strip_think(result.text)
@@ -3326,6 +3338,7 @@ def _chat_map_reduce(
         source=source,
         chars_in=len(content),
         chars_out=len(text),
+        chars_out_raw=raw_chars if ok else None,
         latency_ms=latency_ms,
         ok=ok,
         error=error,

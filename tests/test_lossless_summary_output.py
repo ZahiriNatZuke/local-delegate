@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from test_structured_summary import _call_summary, _prompt_list
+from test_structured_summary import _call_summary, _events, _prompt_list
 
 from local_delegate import config, i18n, sections, server
 
@@ -216,6 +216,42 @@ def test_without_truncation_a_last_heading_is_kept():
     output = "## Intro\nTexto de la introducción breve.\n\n## Changelog"
     done = sections.complete(output, ["Intro", "Changelog"], truncated=False)
     assert done.text.startswith(output)
+
+
+# --- 4. The raw length of the model output in the usage log -------------------------------------
+
+THINK = "<think>" + "razono sobre el documento " * 100 + "</think>\n"
+
+
+def test_the_log_keeps_the_raw_length_before_the_post_processing(monkeypatch, tmp_path):
+    """Mutant "log the length after the post-processing": the `==` with the raw length fails
+    (201, the processed text, against 2656 generated)."""
+    answer = THINK + "## Uno\nTexto uno dos tres cuatro.\n\n## Do"
+
+    def _model(_payload, _n):
+        return answer, "length"
+
+    text = "# Doc\n\n## Uno\n\nPrimera parte del texto.\n\n## Dos\n\nSegunda parte del texto.\n"
+    _out, _seen = _call_summary(monkeypatch, tmp_path, _model, text=text)
+    (row,) = [e for e in _events(tmp_path) if e["tool"] == "local_summarize"]
+    assert row["chars_out_raw"] == len(answer)
+    assert row["chars_out_raw"] > row["chars_out"], row
+
+
+def test_the_chunked_log_sums_the_raw_length_of_every_call(monkeypatch, tmp_path):
+    """Mutant "no `raw_chars` in `_one`": the field is 0 and the `==` fails."""
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "mechanical", 1200)
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 1200)
+
+    def _model(_payload, _n):
+        return THINK + "Un resumen parcial.", "stop"
+
+    _out, seen = _call_summary(
+        monkeypatch, tmp_path, _model, structured=False, text="Una frase de prueba. " * 200
+    )
+    assert len(seen) > 2  # guard: it really chunked
+    (row,) = [e for e in _events(tmp_path) if e["tool"] == "local_summarize"]
+    assert row["chars_out_raw"] == len(seen) * len(THINK + "Un resumen parcial.")
 
 
 # --- 5. One introduction ------------------------------------------------------------------------
