@@ -980,7 +980,7 @@ nuevos o la documentación en ficheros que el agente que renombra no toca, siemp
 **Orden de mezcla (explícito):**
 
 ```
-A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close-5) → higiene de CodeQL → `affinity --check` sin entorno → B0 (B0a → B0b) → B1 → B2 (lotes B2a → B2b → B2c) → { B3 ∥ B4 } → B5 → [release 0.36.0]
+A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close-5) → higiene de CodeQL → `affinity --check` sin entorno → B0 (B0a → B0b) → B1 → B2 (lotes B2a → B2b → B2c → B2d → B2d-2 → B2e → B2-affinity) → { B3 ∥ B4 } → B5 → [release 0.36.0]
 ```
 
 - **Valores de una palabra (A-close-5, añadida el 2026-10-14), tras A-close-4.** El barrido de
@@ -1284,6 +1284,9 @@ en vivo) **antes del PR de release**.
   muestras en vivo de D10, de `LOCAL_DELEGATE_OUTPUT_LANGUAGE` y de B2c en **una** ventana de prueba;
   se vacía la sección «pendiente» de `rename-exceptions.md`. Si el llama-swap local pide credencial
   fuera del daemon, se para y se pregunta antes de planificar ningún reinicio del daemon.
+- **B2d-2 (enmienda del 2026-10-15):** lo de «B2d-2» de abajo; salida de `local_summarize` y
+  `local_lint_summary` sin pérdidas (tope de lint, secciones vacías, corte por tope y largo crudo en
+  el log). Va entre B2d y B2e.
 - **B2-affinity:** al añadir la orden de idioma, la celda aprobada `local_lint_summary` pierde su
   base (cambia su `prompt_sha256`). Se acepta durante el desarrollo; este lote re-evalúa la afinidad
   en vivo con los prompts nuevos para que la 0.36.0 salga con la base nueva.
@@ -1387,6 +1390,65 @@ Lote nacido el 2026-10-14 de la revisión `evidence/local-tools-review/report.md
   (español con cuerpo) y `local_explain_code` sobre `cli.py` (menciona `doctor`, `benchmark` y
   `llamaswap`), en `evidence/B2c/live.md`. (Enmienda del 2026-10-14: se corre en B2d, en la misma
   ventana que la muestra de D10.)
+
+#### B2d-2 — Salida de `local_summarize` y `local_lint_summary` sin pérdidas
+
+Lote nacido el 2026-10-15 de la investigación `evidence/B2d-fix/chunking-model-investigation.md`
+(§2 «Presupuesto de salida» y §4), con sus tests fallando hoy en
+`evidence/B2d-fix/investigation-tests/test_chunking_language_investigation.py` (B1 y B2). Va **en
+serie después de B2d y antes de B2e** (mismo `server.py` y `sections.py`, dueña B2) y sale en la
+0.36.0. Ninguno de los cuatro puntos es de idioma: la salida se corta o se pierde, y eso ensucia
+cualquier medición de idioma posterior.
+
+**Fuera de este lote:** la decisión de cómo juzgar el idioma (solo la prosa, sin títulos `#` ni
+negritas exigidos literales, o el texto entero) **sigue en B2d**, pendiente de la prueba en vivo en
+curso (§6 de la investigación).
+
+- **Tope de salida de `local_lint_summary`.** La llamada directa pide `2·max_words+96 = 496` tokens
+  (`server.py:4168`) y cada parcial del troceado y el reduce `2·w+64 = 464` (`_tokens`,
+  `server.py:3152-3153`). Con la orden de idioma endurecida (`71846c1`), `gemma4-26b-a4b` en lint
+  pasó de 3 de 22 truncadas a 3 de 4, todas paradas justo en 496.
+  - *Cambio:* dimensionar los dos topes (directo y por trozo) con medición, no a ojo.
+  - *Medición antes/después:* % de llamadas con `finish_reason="length"` en lint, por modelo, con
+    los mismos documentos de `lang-sample-docs-2.json` y del conjunto 1, en una ventana de prueba;
+    el troceado forzado con `LOCAL_DELEGATE_MAX_CHARS_LONG=8000` sobre `en-log-biome-lint.txt` y
+    `lint-9k.txt`, comprobando `chunks > 1` en el log antes de juzgar. En `evidence/B2d-2/live.md`.
+  - *Hecho cuando:* 0 truncadas de `gemma4` en lint con los documentos de la muestra (o el % que se
+    fije con la medición de antes, nunca por encima del 3/22 previo al endurecimiento).
+  - *Test:* backend falso que captura `max_tokens` del camino directo y de cada paso del troceado.
+    Mutante: los topes de hoy (falla el assert del tope, no otro).
+- **Sección vacía en el documento avisada como «no resumida».** `complete` cuenta como `empty` una
+  sección cuyo cuerpo tiene menos de `min_content` palabras (`sections.py:276-282`, `:345-353`) sin
+  mirar si el original ya estaba vacío (caso `## Release Information` de httpx2, seguido directamente
+  de `## 2.13.1`), y añade «1 section not summarized». Además, `allocate_by_size` mide el tramo con
+  el título incluido y le pide ~23 palabras a una sección sin contenido, lo que invita a inventar.
+  - *Cambio:* una sección vacía en el original ni se avisa ni recibe presupuesto de palabras.
+  - *Test:* `test_B1_a_section_empty_in_the_document_is_not_reported_as_not_summarized` pasa a verde
+    y entra en `tests/`, más uno de `allocate_by_size` (0 palabras para el tramo sin cuerpo).
+    Mutante: volver a medir el tramo con el título / a contar como `empty` sin mirar el original
+    (falla el assert del aviso o del presupuesto).
+- **El corte por tope puede borrar una sección entera.** Con `truncated=True`, `complete` quita la
+  última línea si «parece título» (`sections.py:318-319`), sin mirar su largo: una línea larga que
+  empieza por `#` con el cuerpo pegado se pierde entera. Caso probable de httpcore2 en la tanda 1
+  (`max_tokens=2112` agotados, 752 chars entregados y `## Changelog` vacío).
+  - *Cambio:* solo se quita la última línea si es de verdad un título cortado (largo de título, sin
+    cuerpo detrás), no cualquier línea que empiece por `#`.
+  - *Test:* `test_B2_truncation_drops_a_whole_long_last_line_that_starts_with_hash` pasa a verde y
+    entra en `tests/`, con un caso de control de un título corto cortado que sí se quita. Mutante:
+    la condición de hoy (falla el assert de la línea larga, no el del título corto).
+- **Largo de la salida cruda del modelo en el log.** Hoy no se registra, y por eso httpcore2 no se
+  puede diagnosticar (§4.2 de la investigación: ~2 000 tokens perdidos sin saber si por el corte,
+  por espacios degenerados o por razonamiento oculto).
+  - *Cambio:* `_log_event` (`server.py:724`) guarda el largo en caracteres de la salida del modelo
+    **antes** del post-proceso (`_strip_think` y `complete`), junto al `chars_out` de hoy. Campo
+    nuevo en inglés (regla del frente A), sin el texto crudo (privacidad del log de uso).
+  - *Test:* backend falso cuya respuesta pierde texto en `complete`; la fila del log tiene el largo
+    crudo mayor que `chars_out`. Mutante: registrar el largo después del post-proceso (falla).
+  - *En vivo:* repetir httpcore2 en la ventana de la medición del primer punto y explicar el caso
+    con el campo nuevo, en `evidence/B2d-2/live.md`.
+- **Cierre del lote:** suite completa en `es` y en `en`, `ruff`, corpus y afinidad como en B2c (los
+  topes de lint cambian el `max_tokens` del corpus: frontera en `PROMPT_BOUNDARIES` con su motivo),
+  CHANGELOG, y registro en `waves/B2d-2.md` con las llamadas `local_*`.
 
 #### B3 — Hooks
 

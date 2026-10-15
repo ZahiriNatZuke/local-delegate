@@ -186,3 +186,5 @@ de antes, una ventana de prueba por tanda (`local-delegate test-window start --l
 `python`: el diagnóstico depende de palabras concretas de la respuesta y un resumen no las conserva.
 `server.py` y `sections.py` se leyeron por tramos con `sed`/`grep`: había que editar líneas exactas.
 El idioma de los documentos de entrada lo dio el detector (programa, no modelo).
+
+**Lote nuevo (2026-10-15):** el tope de salida de lint, la sección vacía avisada como «no resumida», el corte por tope que borra una sección y el largo crudo de la salida en el log pasan al lote B2d-2 (`plan.md`, §1.4, «B2d-2»), entre B2d y B2e. La decisión de cómo juzgar el idioma (solo prosa o texto entero) se queda en B2d, pendiente de la prueba en vivo en curso.
