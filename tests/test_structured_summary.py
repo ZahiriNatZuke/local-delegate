@@ -287,9 +287,10 @@ def _document(tmp_path, text: str) -> Path:
 LANGUAGE_ORDER = (
     " Escribe toda la respuesta en español, aunque el contenido esté en otro idioma: redacta "
     "en español cada frase, también la descripción de cada error o regla, con frases "
-    "completas y sin copiar frases del contenido. Solo se quedan tal cual los títulos que se "
-    "piden literales, las rutas, el código, los identificadores y los códigos de regla o de "
-    "error."
+    "completas y sin copiar frases del contenido. También van en español las etiquetas en "
+    "negrita, también las que nombran una subsección: tradúcelas aunque en el contenido aparezcan "
+    "en otro idioma. Solo se quedan tal cual los títulos de las líneas '## ' que se piden "
+    "literales, las rutas, el código, los identificadores y los códigos de regla o de error."
 )
 MAIN_GUARD = (
     "Responde directo desde el input. NO uses herramientas, NO busques en internet. "
@@ -415,6 +416,9 @@ def test_focus_reaches_the_reduce_in_prose(monkeypatch, tmp_path):
 # --- T4: documentos largos por secciones ----------------------------------------------------------
 
 
+EMPTY_IN_DOCUMENT = " (vacía en el documento: solo el título)"
+
+
 def _prompt_list(user: str) -> list[tuple[str, int, list[str]]]:
     """(título, palabras, subsecciones) de cada entrada de la lista que recibe el modelo."""
     if "Secciones, en orden:\n" not in user:
@@ -424,6 +428,9 @@ def _prompt_list(user: str) -> list[tuple[str, int, list[str]]]:
     for line in block.split("\n"):
         if line.startswith("  - "):
             entries[-1][2].append(line[4:])
+            continue
+        if line.endswith(EMPTY_IN_DOCUMENT):  # B2d-2: an empty section is asked for no words
+            entries.append((line[2:].removesuffix(EMPTY_IN_DOCUMENT), 0, []))
             continue
         body, words = line[2:].rsplit(" (unas ", 1)
         title = body.removesuffix(" (el texto antes de la primera sección)")

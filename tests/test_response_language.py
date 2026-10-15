@@ -34,11 +34,14 @@ def _order(name: str) -> str:
 
 
 def _hardened_order(name: str) -> str:
-    """The order of summarize and lint_summary since B2d (`tests/test_language_hardening.py`)."""
+    """The order of summarize since B2d (`tests/test_language_hardening.py`), with the rule of the
+    bold labels that B2d-2 added."""
     return (
         f" Escribe toda la respuesta en {name}, aunque el contenido esté en otro idioma: redacta "
         f"en {name} cada frase, también la descripción de cada error o regla, con frases "
-        "completas y sin copiar frases del contenido. Solo se quedan tal cual los títulos que se "
+        f"completas y sin copiar frases del contenido. También van en {name} las etiquetas en "
+        "negrita, también las que nombran una subsección: tradúcelas aunque en el contenido "
+        "aparezcan en otro idioma. Solo se quedan tal cual los títulos de las líneas '## ' que se "
         "piden literales, las rutas, el código, los identificadores y los códigos de regla o de "
         "error."
     )

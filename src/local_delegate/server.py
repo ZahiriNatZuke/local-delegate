@@ -730,6 +730,7 @@ def _log_event(
     chars_out: int,
     latency_ms: int,
     ok: bool,
+    chars_out_raw: int | None = None,
     error: str | None = None,
     finish_reason: str | None = None,
     tokens_in: int | None = None,
@@ -838,6 +839,13 @@ def _log_event(
             rec["truncated_out"] = True
         if raw_len is not None:
             rec["raw_len"] = int(raw_len)
+        # What the model generated, in characters, BEFORE the post-processing (`_strip_think`,
+        # `sections.complete`) and the notices; summed over the calls of a chunked operation.
+        # Never the text (the usage log keeps no content). Without it httpcore2 (B2d-2) could not
+        # be diagnosed: ~2000 tokens generated and 752 chars delivered, with no way to tell
+        # whether they went in the cut, in degenerate whitespace or in hidden reasoning.
+        if chars_out_raw is not None:
+            rec["chars_out_raw"] = int(chars_out_raw)
         if source == "path" and path is not None:
             rec["path"] = path
             # Si esta lectura viene de un bloqueo del hook, el evento se queda con su
@@ -2570,6 +2578,7 @@ def _chat(
         source=source,
         chars_in=chars_in,
         chars_out=len(text),
+        chars_out_raw=len(result.text) if result.ok else None,
         latency_ms=latency_ms,
         ok=result.ok,
         error=result.error,
@@ -3079,6 +3088,7 @@ def _chat_map_reduce(
     json_schema_fallback: bool = False,
     reduce_shortcut: Callable[[list[str]], str | None] | None = None,
     report: dict | None = None,
+    max_tokens_for: Callable[[int], int] | None = None,
 ) -> str:
     """Resume un documento que no cabe en el modelo: resume por trozos y luego los resúmenes.
 
@@ -3105,6 +3115,9 @@ def _chat_map_reduce(
     `reduce_shortcut` puede dar el resultado sin llamar al modelo (devuelve `None` si no puede); y
     con `report` no se pega nada al texto —ni el aviso de truncado, ni el de respaldo, ni el
     ahorro, ni el recibo—: esos datos quedan en `report` para que quien parsea los recoloque.
+
+    `max_tokens_for(words)` replaces the shared `2·w+64` cap of every step (map, regroup and
+    reduce) for a tool that needs its own (lint, B2d-2).
     """
     budget = _map_budget(max_chars)
     if pieces is None:
@@ -3124,8 +3137,10 @@ def _chat_map_reduce(
     op = _OperationTurn(entry_id, model, tool, role_name=role, explicit=explicit)
     current = _CurrentModel(model, role, explicit, entry_id, op)
 
+    raw_chars = 0  # what the model generated, before `_strip_think` and the post-processing
+
     def _one(sys_prompt: str, user: str, max_tokens: int) -> str | None:
-        nonlocal calls, latency_ms, tokens_in, tokens_out, failed, truncated_calls
+        nonlocal calls, latency_ms, tokens_in, tokens_out, failed, truncated_calls, raw_chars
         result, ms, attempts = current.call(
             sys_prompt,
             user,
@@ -3145,11 +3160,14 @@ def _chat_map_reduce(
         if not result.ok:
             failed = result
             return None
+        raw_chars += len(result.text)
         if result.finish_reason == "length":
             truncated_calls += 1
         return _strip_think(result.text)
 
     def _tokens(words: int) -> int:
+        if max_tokens_for is not None:
+            return max_tokens_for(words)
         return int(words * 2) + 64
 
     # Cada parcial se deja algo más largo que el resumen final: el reduce necesita material
@@ -3320,6 +3338,7 @@ def _chat_map_reduce(
         source=source,
         chars_in=len(content),
         chars_out=len(text),
+        chars_out_raw=raw_chars if ok else None,
         latency_ms=latency_ms,
         ok=ok,
         error=error,
@@ -3464,11 +3483,19 @@ def _written_language_clause() -> str:
     sentence, also the description of each error or rule, in full sentences and not copied from
     the input) and the only things that stay verbatim (requested headings, paths, code,
     identifiers and rule or error codes).
+
+    B2d-2: the order also names the bold labels, as `_lint_language_clause` does since B2d-fix. In
+    set 3 the model copied the document's subheadings as `**…**` labels in the other language (5
+    in batch 1 and 4 in batch 2): the order listed "the headings asked for verbatim" as what stays
+    as it is, and the model took the labels of the subsections for them. Only the `## ` lines of
+    the list are asked for verbatim; the labels are text to write in the requested language.
     """
     name = _language_name(i18n.response_language().value)
     return _written_language_head(name) + (
-        " Solo se quedan tal cual los títulos que se piden literales, las rutas, el código, los "
-        "identificadores y los códigos de regla o de error."
+        f" También van en {name} las etiquetas en negrita, también las que nombran una "
+        "subsección: tradúcelas aunque en el contenido aparezcan en otro idioma. Solo se quedan "
+        "tal cual los títulos de las líneas '## ' que se piden literales, las rutas, el código, "
+        "los identificadores y los códigos de regla o de error."
     )
 
 
@@ -3508,6 +3535,27 @@ def _guard(output_format: str, max_words: int | None = None) -> str:
         "Responde directo desde el input. NO uses herramientas, NO busques en internet. "
         f"Output EXACTO: {output_format}.{limit} Nada fuera del formato."
     )
+
+
+# Output caps of `local_lint_summary` (B2d-2). Before: `2·w+96` in the single call (496 tokens for
+# the default 200 words) and the shared `2·w+64` of the chunking. With the hardened language order
+# (71846c1) `gemma4-26b-a4b` went from 3 of 22 truncated lint answers to 3 of 4, all stopped at
+# exactly 496: a lint summary carries paths, codes and counts, which cost more tokens per word
+# than prose. PROVISIONAL values, to be confirmed by the live measurement of
+# `evidence/B2d-2/live-plan.md` (0 truncated gemma4 lint answers on the sample).
+LINT_TOKENS_PER_WORD = 3
+LINT_TOKENS_BASE = 128
+LINT_CHUNK_TOKENS_BASE = 96
+
+
+def _lint_max_tokens(words: int) -> int:
+    """The cap of the single `local_lint_summary` call for `words` words."""
+    return int(words * LINT_TOKENS_PER_WORD) + LINT_TOKENS_BASE
+
+
+def _lint_chunk_max_tokens(words: int) -> int:
+    """The cap of each step of the chunked `local_lint_summary` (map, regroup and reduce)."""
+    return int(words * LINT_TOKENS_PER_WORD) + LINT_CHUNK_TOKENS_BASE
 
 
 def _lint_system(max_words: int) -> str:
@@ -3608,12 +3656,16 @@ def _structured_system(max_words: int, extra: str) -> str:
 def _section_list(sections_, max_words: int) -> str:
     """Una línea por sección con sus palabras, y sus subsecciones anidadas debajo."""
     allocation = sections.allocate_by_size(
-        [s.size for s in sections_], max_words, minimum=_MIN_WORDS_PER_SECTION
+        [s.content_size for s in sections_], max_words, minimum=_MIN_WORDS_PER_SECTION
     )
     lines = []
     for section, words in zip(sections_, allocation, strict=True):
         note = " (el texto antes de la primera sección)" if section.synthetic else ""
-        lines.append(f"- {section.heading}{note} (unas {words} palabras)")
+        if section.empty:
+            # B2d-2: no words for a section with nothing under it, so nothing is invented.
+            lines.append(f"- {section.heading} (vacía en el documento: solo el título)")
+        else:
+            lines.append(f"- {section.heading}{note} (unas {words} palabras)")
         lines.extend(f"  - {sub}" for sub in section.subheadings)
     return "\n".join(lines)
 
@@ -3663,9 +3715,12 @@ def _structured_summary(
 ) -> str:
     plan = sections.sections_for_summary(content, structure)
     headings = [s.heading for s in plan]
+    empty_in_document = frozenset(i for i, s in enumerate(plan) if s.empty)
 
     def _complete(text: str, truncated: bool) -> str:
-        return sections.complete(text, headings, truncated=truncated).text
+        return sections.complete(
+            text, headings, truncated=truncated, empty_in_document=empty_in_document
+        ).text
 
     max_chars = config.max_chars_for_role(role)
     if len(content) <= max_chars:
@@ -4186,6 +4241,7 @@ def local_lint_summary(
             path=path,
             # El reduce por defecto (y el reagrupado) no usan `system`: la orden va también aquí.
             reduce_extra=_lint_language_clause(),
+            max_tokens_for=_lint_chunk_max_tokens,
         )
 
     user = _build(content)
@@ -4193,7 +4249,7 @@ def local_lint_summary(
         model,
         system,
         user,
-        max_tokens=int(max_words * 2) + 96,
+        max_tokens=_lint_max_tokens(max_words),
         tool="local_lint_summary",
         role=role,
         chars_in=len(content),

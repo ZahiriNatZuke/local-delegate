@@ -1,0 +1,122 @@
+{
+  "rows": [
+    {
+      "batch": "lang-sample-set3-batch1.json",
+      "document": "es-doc-docs_recipes_claude-code-hooks.md",
+      "rule_now": [
+        "Resultado del piloto de 2026-07-23"
+      ],
+      "rule_then": [
+        "Resultado del piloto de 2026-07-23"
+      ],
+      "reviewed": [
+        "Resultado del piloto de 2026-07-23"
+      ],
+      "introductions": 1
+    },
+    {
+      "batch": "lang-sample-set3-batch1.json",
+      "document": "es-doc-docs_recipes_llama-swap-groups.md",
+      "rule_now": [
+        "llamaswap residency"
+      ],
+      "rule_then": [],
+      "reviewed": [],
+      "introductions": 1
+    },
+    {
+      "batch": "lang-sample-set3-batch1.json",
+      "document": "es-doc-docs_recipes_remote-backend.md",
+      "rule_now": [
+        "Autenticación de llama-swap",
+        "Elegir exactamente que revision se prueba",
+        "Canary automatizado desde la Mac",
+        "Resultado validado (2026-07-23)"
+      ],
+      "rule_then": [
+        "Autenticación de llama-swap",
+        "Elegir exactamente que revision se prueba",
+        "Canary automatizado desde la Mac"
+      ],
+      "reviewed": [
+        "Autenticación de llama-swap",
+        "Elegir exactamente que revision se prueba",
+        "Canary automatizado desde la Mac",
+        "Resultado validado (2026-07-23)"
+      ],
+      "introductions": 1
+    },
+    {
+      "batch": "lang-sample-set3-batch1.json",
+      "document": "en-doc-pycparser-3.0.METADATA.md",
+      "rule_now": [],
+      "rule_then": [],
+      "reviewed": [],
+      "introductions": 2
+    },
+    {
+      "batch": "lang-sample-set3-batch1.json",
+      "document": "en-doc-distlib-0.4.3.METADATA.md",
+      "rule_now": [],
+      "rule_then": [],
+      "reviewed": [],
+      "introductions": 0
+    },
+    {
+      "batch": "lang-sample-set3-batch2.json",
+      "document": "en-doc-pywin32-312.METADATA.md",
+      "rule_now": [
+        "Installing globally",
+        "Installing for MingGW/msys2",
+        "Running as a Windows Service",
+        "Older Manual Release Process"
+      ],
+      "rule_then": [
+        "Installing for MingGW/msys2",
+        "Running as a Windows Service"
+      ],
+      "reviewed": [
+        "Installing globally",
+        "Installing for MingGW/msys2",
+        "Running as a Windows Service",
+        "Older Manual Release Process"
+      ],
+      "introductions": 1
+    },
+    {
+      "batch": "lang-sample-set3-batch2.json",
+      "document": "en-doc-identify-2.6.19.METADATA.md",
+      "rule_now": [],
+      "rule_then": [],
+      "reviewed": [],
+      "introductions": 0
+    },
+    {
+      "batch": "lang-sample-set3-batch2.json",
+      "document": "en-doc-python_discovery-1.6.1.METADATA.md",
+      "rule_now": [],
+      "rule_then": [],
+      "reviewed": [],
+      "introductions": 0
+    },
+    {
+      "batch": "lang-sample-set3-batch2.json",
+      "document": "es-doc-docs_wiki_Configuration.md",
+      "rule_now": [],
+      "rule_then": [],
+      "reviewed": [],
+      "introductions": 1
+    },
+    {
+      "batch": "lang-sample-set3-batch2.json",
+      "document": "es-doc-src_local_delegate_resources_skills_local-delegation_SKILL.md",
+      "rule_now": [],
+      "rule_then": [],
+      "reviewed": [],
+      "introductions": 1
+    }
+  ],
+  "rule_now": 10,
+  "rule_then": 6,
+  "reviewed": 9
+}

@@ -1,0 +1,16 @@
+[pesado] plaza plaza-1 tomada tras 1s: uv run --frozen python scripts/build_corpus.py --check
+  · resumen-md-2k: system cambio con los prompts de la 0.36.0 (frontera declarada)
+  · resumen-md-10k: system cambio con los prompts de la 0.36.0 (frontera declarada)
+  · resumen-changelog-7k: system cambio con los prompts de la 0.36.0 (frontera declarada)
+  · lint-9k: system cambio con los prompts de la 0.36.0 (frontera declarada)
+  · lint-9k: max_tokens cambio con los prompts de la 0.36.0 (frontera declarada)
+  · commit-diff-19k: system cambio con los prompts de la 0.36.0 (frontera declarada)
+  · commit-diff-19k: max_tokens cambio con los prompts de la 0.36.0 (frontera declarada)
+  · explicar-metrics-15k: system cambio con los prompts de la 0.36.0 (frontera declarada)
+  · explicar-install-20k: system cambio con los prompts de la 0.36.0 (frontera declarada)
+  · describir-dashboard: system cambio con los prompts de la 0.36.0 (frontera declarada)
+  · leer-cifras-dashboard: system cambio con los prompts de la 0.36.0 (frontera declarada)
+  · techo-resumen-103k: system cambio con los prompts de la 0.36.0 (frontera declarada)
+  · techo-commit-156k: system cambio con los prompts de la 0.36.0 (frontera declarada)
+  · techo-commit-156k: max_tokens cambio con los prompts de la 0.36.0 (frontera declarada)
+ok

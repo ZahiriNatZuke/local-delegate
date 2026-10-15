@@ -1,0 +1,23 @@
+**Summary of Issues by File**
+
+**1. prices.json and vigilant**
+
+*   **Key Issues:** 3 errors (2 assertions, 1 KeyError)
+    *   **Schema Mismatch:** 1 assertion failure due to leftover key "entrada" in the table schema, causing discrepancies during comparison.
+    *   **KeyError in Vigilant:** 1 KeyError related to 'input' when the vigilant compares table fields, originating from tests/test_vigilante.py.
+    *   **KeyError in Pricing Judge:** 1 KeyError in pricing._judge due to 'input' missing.
+*   **Restoration:** Successful restoration of the prices.json file.
+
+**2. Family Labels in Panel (FAMILIA)**
+
+*   **Key Issue:** 1 assertion failure.
+    *   **Label Key Mismatch:** Assertion failure due to the old key "nueva" being used instead of "nueva" in family labels, leading to a mismatch in the expected string.
+*   **Restoration:** Successful restoration of the metrics.py file.
+
+**3. Python ↔ JS Parity of Accounting (acct)**
+
+*   **Key Issue:** 1 assertion failure.
+    *   **Density Difference:** Assertion failure due to a difference in the 'density' field between Python and JavaScript code.
+*   **Restoration:** Successful restoration of the metrics.py file.
+
+(leído server-side: 2153 chars ≈ 1121 tokens de Claude que no entraron a tu contexto)

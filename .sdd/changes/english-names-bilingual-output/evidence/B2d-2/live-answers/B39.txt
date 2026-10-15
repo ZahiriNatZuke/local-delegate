@@ -1,0 +1,47 @@
+## Introducción
+Todo se configura mediante variables de entorno.
+
+## Endpoint
+Define la URL, clave, origen del cómputo, tiempo de espera y concurrencia.
+
+## Catálogo de modelos (roles)
+Configura los modelos para tareas mecánicas, documentos largos, código y visión.
+
+## Respaldo entre modelos
+Permite saltar a otros roles o modelos cargados ante fallos.
+
+## Enfriamiento por modelo
+Gestiona la suspensión temporal de modelos tras fallos consecutivos.
+
+## Turno, afinidad y lentitud
+Optimiza el uso del backend mediante turnos, afinidad y detección de lentitud.
+
+## Daemon y web de métricas
+Configura el servidor web, host, puerto, fuentes y seguridad por token.
+
+## Log de uso
+Controla el directorio de registros, archivos específicos y retroalimentación.
+
+## Coste equivalente
+Establece el modelo de referencia para valorar delegaciones sin modelo asignado.
+
+## `local_extract` — JSON con schema
+**Contrato desde la 0.36.0 (REQ-010, cambio incompatible).** Devuelve objetos validados con claves en inglés para errores, advertencias y respaldos.
+
+## Seguridad — raíces permitidas
+Limita el acceso a directorios mediante una lista de rutas permitidas.
+
+## Hooks de lectura (opt-in, solo Claude Code)
+Mecanismo para sugerir o bloquear lecturas de archivos grandes.
+**El bloqueo**
+Permite rechazar lecturas mediante variables o archivos de desactivación.
+
+## Nombres viejos de variables (alias con aviso)
+Variables que cambiaron a inglés y mantendrán compatibilidad temporal.
+**Nombres en disco que cambiaron**
+Ficheros de registro y caché que han sido renombrados.
+
+## Auto-arranque de llama-swap (opt-in)
+Intenta iniciar el servicio si el endpoint no responde.
+
+(read server-side: 28034 chars ≈ 14017 Claude tokens that did not enter your context)

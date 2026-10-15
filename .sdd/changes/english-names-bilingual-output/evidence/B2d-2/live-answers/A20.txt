@@ -1,0 +1,11 @@
+**Distlib Overview**
+
+**Metadata:** The `distlib` package version 0.4.3 provides distribution utilities for Python software. It’s designed as a foundation for third-party packaging tools. The project is maintained on GitHub and has comprehensive documentation available online.
+
+**Key Features:** Distlib includes several packages, such as `distlib.database` for managing installed distributions, `distlib.index` for index operations, `distlib.metadata` for distribution metadata, and `distlib.wheel` for working with Wheel format binary distributions. It also offers features like environment markers, manifest handling, locator services, resource access, script installation, version specification, and enhanced globbing.
+
+**Compatibility:** Distlib supports Python versions 2.7 and later, including Pypy, and operates on various platforms like Linux, Windows, and macOS. The project is stable, with a robust test suite and is utilized by projects like `pip` and `caniusepython3`. The project has undergone a migration to Git and GitHub, though some references in issue trackers might be outdated.
+
+**Community:** The project adheres to the PyPA Code of Conduct, ensuring a respectful and collaborative environment for contributors and users.
+
+(leído server-side: 5317 chars ≈ 2658 tokens de Claude que no entraron a tu contexto)

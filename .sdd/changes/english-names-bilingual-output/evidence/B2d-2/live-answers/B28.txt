@@ -1,0 +1,14 @@
+**Resumen de Problemas por Archivo**
+
+**src/adapters/claude-json.ts:** 1 error TS2554 (Argumentos incorrectos).
+**src/adapters/codex/index.ts:** 1 error TS2550 (Propiedad 'hasOwn' no existente).
+**src/cli/commands/export.ts:** 2 errores TS2550 (Propiedad 'at' no existente).
+**src/cli/commands/import.ts:** 1 error TS2550 (Propiedad 'at' no existente).
+**src/cli/index.ts:** 1 error TS2550 (Propiedad 'hasOwn' no existente).
+**src/cli/ui/style.ts:** 1 error TS2550 (Propiedad 'replaceAll' no existente).
+**src/cli/ui/width.ts:** 1 error TS2339 (Propiedad 'Segmenter' no existente).
+**src/io/fs/atomic.ts:** 1 error TS4113 (Modificador 'override' no permitido).
+
+Los errores más frecuentes se relacionan con la falta de propiedades en tipos de datos, específicamente la propiedad 'at' y 'hasOwn', indicando posiblemente una necesidad de actualizar la versión del compilador o la biblioteca utilizada.  También se detectó un error de argumentos incorrectos en `claude-json.ts`.  Un error específico en `ui/width.ts` sugiere un problema con la implementación de la funcionalidad de segmentación de cadenas. Finalmente, el error en `fs/atomic.ts` indica una incompatibilidad con el modificador 'override'.
+
+(read server-side: 1647 chars ≈ 857 Claude tokens that did not enter your context)

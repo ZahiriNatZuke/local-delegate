@@ -1,0 +1,11 @@
+**Resumen de Problemas**
+
+**src/app/features/auth/pages/login.page.ts:**
+
+*   **Error TypeScript (TS2345):**  Se detecta un error de tipo al asignar un objeto con una propiedad `returnUrl` opcional (tipo `string | undefined`) a un parámetro que espera una propiedad `returnUrl` obligatoria (tipo `string`).  El problema radica en la posibilidad de que `returnUrl` sea `undefined`. Se recomienda especificar `undefined` en los tipos para evitar la incompatibilidad.  (1 error)
+
+**src/app/features/home/components/tech-stack.component.ts:**
+
+*   **Error TypeScript (TS2375):**  Se identifica un error de tipo al asignar un objeto con una propiedad `version` opcional (tipo `string | undefined`) a un tipo `StackItem` que espera una propiedad `version` obligatoria (tipo `string`).  Similar al anterior, la propiedad `version` puede ser `undefined`. Se sugiere agregar `undefined` a los tipos para resolver la incompatibilidad. (1 error)
+
+(read server-side: 1435 chars ≈ 747 Claude tokens that did not enter your context)

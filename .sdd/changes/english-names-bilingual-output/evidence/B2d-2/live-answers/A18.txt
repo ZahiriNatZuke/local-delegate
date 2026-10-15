@@ -1,0 +1,19 @@
+## Introduction
+The recommended topology keeps the local delegate near the client to preserve file path advantages.
+
+## 1. Publicar el loopback dentro del tailnet
+Use Tailscale Serve to publish the loopback via HTTPS within the tailnet, restricting traffic through specific policies.
+**Llama-swap authentication** Use native API keys stored in the environment or Keychain, avoiding plain text in configuration files.
+
+## 2. Mantener el MCP local en la Mac
+**Choosing exactly which revision to test** Use `uvx` with the `--from` flag and a specific Git SHA to test unreleased changes before PyPI publication.
+**Automated canary from the Mac** Run a Python script that performs inferences, validates concurrency, and checks macOS-specific path resolution.
+**Validated result (2026-07-23)** The authenticated test passed 20/20 inferences with successful path handling and verified authentication endpoints.
+
+## Alternativa: MCP remoto completo
+Running the full MCP on the PC is an option for text-only operations but lacks local path advantages.
+
+## Criterio de aceptación
+Successful model access, secure token handling, correct path summarization, and graceful network failure.
+
+(leído server-side: 11477 chars ≈ 5738 tokens de Claude que no entraron a tu contexto)

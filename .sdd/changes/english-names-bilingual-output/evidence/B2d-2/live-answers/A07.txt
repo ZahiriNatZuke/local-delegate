@@ -1,0 +1,36 @@
+Local Delegate Doctor Summary:
+
+**File: LLAMASWAP_EXE**
+- Issue Type: Missing Configuration (1) - No LLAMASWAP_EXE or LLAMASWAP_CONFIG is set. Requires installation with `local-delegate install`.
+
+**File: Backend BASE_URL**
+- Issue Type: OK
+
+**File: HOME**
+- Issue Type: Missing Files (6) - Missing hooks, skill, memory, and MCP configuration files in various directories. Requires installation with `local-delegate install`. Specifically: Claude Code, Codex, and opencode directories.
+
+**File: CLI Local Delegate**
+- Issue Type: OK
+
+**File: Chains Backup**
+- Issue Type: Missing Configuration (1) - Lacks LLAMASWAP_CONFIG, preventing proper operation.
+
+**File: Obsolete Names**
+- Issue Type: OK
+
+**File: Cost and Padding**
+- Issue Type: Missing Data (1) - No cost/padding checks found, requiring `local-delegate recompute-cost` execution.
+
+**File: Test Windows**
+- Issue Type: OK
+
+**File: Framework (Hooks, Skill, Memory, MCP Inputs)**
+- Issue Type: Missing Files (6) - Missing hooks, skill, memory, and MCP configuration files in various directories. Requires installation with `local-delegate install`. Specifically: Claude Code, Codex, and opencode directories.
+
+**File: Services**
+- Issue Type: OK
+
+**File: Versions**
+- Issue Type: Missing Configuration (2) - Lacks LLAMASWAP_CONFIG, preventing accurate version comparison. Requires `--config` flag for doctor. No daemon turn.
+
+(leído server-side: 3377 chars ≈ 1758 tokens de Claude que no entraron a tu contexto)

@@ -1,0 +1,94 @@
+{
+  "rows": [
+    {
+      "id": "es-log-check-llamaswap-pre-b10909",
+      "invented_numbers": [],
+      "invented_files": [],
+      "repeated_sentences": [],
+      "total": 0
+    },
+    {
+      "id": "es-log-B2c_corpus-f2-check",
+      "invented_numbers": [
+        "6"
+      ],
+      "invented_files": [],
+      "repeated_sentences": [],
+      "total": 1
+    },
+    {
+      "id": "es-log-doctor-empty-home",
+      "invented_numbers": [],
+      "invented_files": [],
+      "repeated_sentences": [],
+      "total": 0
+    },
+    {
+      "id": "en-log-biome-lint-nest",
+      "invented_numbers": [],
+      "invented_files": [],
+      "repeated_sentences": [
+        "useexplicitreturntype 1 the function is missing a declared return type",
+        "useexplicittype 1 the function lacks an explicit return type"
+      ],
+      "total": 2
+    },
+    {
+      "id": "en-log-ruff-concise-build-site",
+      "invented_numbers": [
+        "103"
+      ],
+      "invented_files": [],
+      "repeated_sentences": [],
+      "total": 1
+    },
+    {
+      "id": "en-log-pytest-chunking-density",
+      "invented_numbers": [
+        "44",
+        "13"
+      ],
+      "invented_files": [],
+      "repeated_sentences": [],
+      "total": 2
+    },
+    {
+      "id": "en-log-ruff-concise-clean-watcher",
+      "invented_numbers": [
+        "3"
+      ],
+      "invented_files": [],
+      "repeated_sentences": [],
+      "total": 1
+    },
+    {
+      "id": "en-log-tsc-angular",
+      "invented_numbers": [],
+      "invented_files": [],
+      "repeated_sentences": [],
+      "total": 0
+    },
+    {
+      "id": "es-log-check-llamaswap-pre-no-resident",
+      "invented_numbers": [],
+      "invented_files": [],
+      "repeated_sentences": [],
+      "total": 0
+    },
+    {
+      "id": "es-log-B2d-fix_corpus-affinity-check",
+      "invented_numbers": [
+        "4",
+        "72"
+      ],
+      "invented_files": [],
+      "repeated_sentences": [],
+      "total": 2
+    }
+  ],
+  "answers": 10,
+  "invented_numbers": 7,
+  "invented_files": 0,
+  "repeated_sentences": 2,
+  "total": 9
+}

@@ -1,0 +1,25 @@
+## Introduction
+Llama-swap runs one model at a time by default, but groups allow models to share or coexist.
+
+## Instalación
+Install the optional `[llamaswap]` extra using `pip` or `uv` to include the `pyyaml` dependency.
+
+## Semántica de `groups` (verificada contra el código real de llama-swap)
+**Groups** manage model concurrency via `swap` or `resident` settings. **Residency opt-in** requires `persistent: true` and `ttl: 0` to keep a model loaded.
+
+## Presupuesto de VRAM
+**VRAM budget** is calculated by summing the heaviest members of swap groups and all members of non-swap groups to prevent OOM.
+
+## Presupuesto de RAM de sistema (opcional, `--ram-gb`)
+**System RAM budget** is optional; it estimates memory usage based on file weights to avoid system instability.
+
+## Los comandos
+**`check-llamaswap`** validates existing configurations. **`init-llamaswap`** generates or updates groups. **`llamaswap residency`** views or modifies loaded models.
+
+## Ritual de aplicación (recomendado, manual)
+Follow a manual process: backup, dry-run, apply, restart, verify memory usage, and rollback if necessary.
+
+## Por qué el paquete no hace esto solo
+Automated changes could cause OOM or thrashing, so users must explicitly approve all configuration modifications.
+
+(leído server-side: 14978 chars ≈ 7489 tokens de Claude que no entraron a tu contexto)

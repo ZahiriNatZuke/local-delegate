@@ -1,0 +1,19 @@
+**Resumen de pruebas**
+
+**tests/test_chunking.py**
+* **Pruebas superadas**: 43
+    * Todas las pruebas de fragmentación de texto, límites de tamaño, encabezados de Markdown y gestión de archivos difusos se completaron con éxito.
+    * Se validó correctamente la clasificación de origen del servidor, la gestión de URLs remotas y la lógica de archivos temporales por proceso.
+    * Las pruebas de heurística de origen y manejo de errores en fragmentos también pasaron satisfactoriamente.
+
+**tests/test_density.py**
+* **Pruebas superadas**: 14
+    * Se verificó con éxito el cálculo de densidad, la gestión de tokens de Claude y la prioridad de herramientas sobre extensiones.
+    * Las pruebas de columnas de salida, variables de respaldo, marcas de familia y manejo de imágenes fueron exitosas.
+    * El orden de fusión y el uso de caché también cumplieron con los requisitos.
+
+**Totales**
+* **Pruebas superadas**: 57
+* **Pruebas fallidas**: 0
+
+(read server-side: 11014 chars ≈ 5736 Claude tokens that did not enter your context)

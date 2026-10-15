@@ -582,9 +582,15 @@
     },
     {
       "file": "src/local_delegate/server.py",
-      "text": " Solo se quedan tal cual los títulos que se piden literales, las rutas, el código, los identificadores y los códigos de regla o de error.",
+      "text": " También van en {} las etiquetas en negrita, también las que nombran una subsección: tradúcelas aunque en el contenido aparezcan en otro idioma. Solo se quedan tal cual los títulos de las líneas '## ' que se piden literales, las rutas, el código, los identificadores y los códigos de regla o de error.",
       "kind": "verbatim",
-      "reason": "prompt del modelo local: la orden de idioma de REQ-028 endurecida (el cierre de `local_summarize`, B2d); entra en la huella de afinidad y en los corpus congelados (`PROMPT_BOUNDARIES`) y no es texto de interfaz"
+      "reason": "prompt del modelo local: la orden de idioma de REQ-028 endurecida (el cierre de `local_summarize`, B2d, con sus etiquetas en negrita desde B2d-2); entra en la huella de afinidad y en los corpus congelados (`PROMPT_BOUNDARIES`) y no es texto de interfaz"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "- {} (vacía en el documento: solo el título)",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: la línea de una sección vacía en el documento en la lista del resumen estructurado (B2d-2); entra en la huella de afinidad y en los corpus congelados, que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028"
     },
     {
       "file": "src/local_delegate/server.py",

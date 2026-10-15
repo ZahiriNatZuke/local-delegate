@@ -1,0 +1,109 @@
+[pesado] plaza plaza-1 tomada tras 0s: uv run --frozen pytest -q -n 4
+bringing up nodes...
+bringing up nodes...
+
+........................................................................ [  2%]
+........................................................................ [  4%]
+.........................................s.............................. [  7%]
+........................................................................ [  9%]
+........................................................................ [ 11%]
+........................................................................ [ 14%]
+........................................................................ [ 16%]
+........................................................................ [ 19%]
+........................................................................ [ 21%]
+........................................................................ [ 23%]
+........................................................................ [ 26%]
+........................................................................ [ 28%]
+........................................................................ [ 31%]
+........................................................................ [ 33%]
+........................................................................ [ 35%]
+........................................................................ [ 38%]
+........................................................................ [ 40%]
+........................................................................ [ 43%]
+........................................................................ [ 45%]
+........................................................................ [ 47%]
+........................................................................ [ 50%]
+........................................................................ [ 52%]
+........................................................................ [ 54%]
+........................................................................ [ 57%]
+........................................................................ [ 59%]
+........................................................................ [ 62%]
+........................................................................ [ 64%]
+........................................................................ [ 66%]
+........................................................................ [ 69%]
+........................................................................ [ 71%]
+........................................................................ [ 74%]
+........................................................................ [ 76%]
+........................................................................ [ 78%]
+........................................................................ [ 81%]
+........................................................................ [ 83%]
+...............................................................s........ [ 86%]
+........................................................................ [ 88%]
+........................................................................ [ 90%]
+........................................................................ [ 93%]
+........................................................................ [ 95%]
+...................F.................................................... [ 98%]
+...........................................................              [100%]
+================================== FAILURES ===================================
+__________ test_a_script_with_a_shebang_is_marked_executable_in_git ___________
+[gw0] win32 -- Python 3.11.15 D:\Projects\local-delegate\.venv\Scripts\python.exe
+
+    def test_a_script_with_a_shebang_is_marked_executable_in_git():
+        """`ruff` caza esto (EXE001), pero **solo en Linux**: en Windows no existe el bit de ejecución.
+    
+        O sea que el lint local pasa en verde y el CI falla, que es la peor forma de enterarse. Pasó
+        con `sync_wiki.py` en este mismo change. El test lo comprueba leyendo el **modo que git tiene
+        registrado**, que sí es el mismo dato en los tres sistemas.
+    
+        Mira `scripts/` **y los hooks**: el 2026-09-12 volvió a pasar por partida doble y este test
+        solo vio uno de los dos, porque el otro estaba en `resources/hooks/`. Y hay una segunda mitad
+        de la lección: un fichero **sin añadir a git todavía no aparece en `ls-files`**, así que la
+        suite puede pasar en verde con el defecto ya escrito y delatarlo solo después del primer
+        `git add`. Corre este test otra vez después de añadir ficheros nuevos.
+        """
+        import subprocess
+    
+        output = subprocess.run(
+            ["git", "ls-files", "-s", "--", "scripts/*.py", "src/local_delegate/resources/hooks/*.py"],
+            cwd=ROOT,
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        if output.returncode != 0:
+            import pytest
+    
+            pytest.skip("no hay git disponible para leer los modos")
+    
+        mismatched = []
+        for line in output.stdout.splitlines():
+            mode, _rest = line.split(" ", 1)
+            path = ROOT / line.split("\t", 1)[1]
+            if not path.exists():
+                continue
+            has_shebang = path.read_bytes().startswith(b"#!")
+            marked = mode == "100755"
+            if has_shebang != marked:
+                what = "lleva shebang y no está marcado" if has_shebang else "está marcado sin shebang"
+                mismatched.append(f"{path.name} ({what})")
+    
+>       assert not mismatched, (
+            "scripts con shebang y bit de ejecución descuadrados; ruff lo marcaría como EXE001 "
+            f"en el CI (Linux) pero no en Windows: {mismatched}"
+        )
+E       AssertionError: scripts con shebang y bit de ejecución descuadrados; ruff lo marcaría como EXE001 en el CI (Linux) pero no en Windows: ['score_lint_fidelity.py (lleva shebang y no está marcado)']
+E       assert not ['score_lint_fidelity.py (lleva shebang y no está marcado)']
+
+tests\test_wiki.py:101: AssertionError
+============================== warnings summary ===============================
+.venv\Lib\site-packages\starlette\testclient.py:53
+.venv\Lib\site-packages\starlette\testclient.py:53
+.venv\Lib\site-packages\starlette\testclient.py:53
+.venv\Lib\site-packages\starlette\testclient.py:53
+  D:\Projects\local-delegate\.venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_wiki.py::test_a_script_with_a_shebang_is_marked_executable_in_git
+1 failed, 3008 passed, 2 skipped, 4 warnings in 105.82s (0:01:45)

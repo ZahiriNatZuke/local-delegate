@@ -1,0 +1,19 @@
+**Summary of Issues by File**
+
+**src/**
+
+*   **Local Delegate (Warning):** 10 occurrences. This issue involves warnings related to the "local-delegate" marker, with 10 warnings before and 10 after the change.
+*   **Respaldo (Warning):** 1 occurrence.  This pertains to a single warning concerning the "respaldo" marker, with 1 warning before and 1 after the change.
+*   **Truncado (Warning):** 15 occurrences. This relates to warnings about the "truncado" marker, with 15 warnings before and 15 after the change.
+*   **\_local\_delegate (Warning):** 22 occurrences. This issue involves warnings related to the "\_local\_delegate" marker, with 22 warnings before and 22 after the change.
+
+**tests/**
+
+*   **Respaldo (Warning):** 2 occurrences.  Specifically, there are two warnings related to monkeypatching and docstring changes involving the "respaldo" marker. The changes include renaming `_con_respaldo` to `_with_fallback` in `test_affinity.py` and `test_cadenas.py`, and modifications to docstrings referencing `respaldo` to `fallback` in `server.py`.
+*   **Truncado (Warning):** 2 occurrences. This issue involves two warnings related to the "truncado" marker.
+*   **Avviso (Warning):** 2 occurrences. This issue involves two warnings related to the "avviso" marker.
+*   **\_local\_delegate (Warning):** 2 occurrences. This issue involves two warnings related to the "\_local\_delegate" marker.
+
+Total Warnings: 105 (src) + 72 (tests) + 30 (tests) + 17 (tests) = 234
+
+(leído server-side: 846 chars ≈ 440 tokens de Claude que no entraron a tu contexto)

@@ -1,0 +1,35 @@
+Este es el archivo de lectura para las extensiones de Python para Win32, que permiten acceder a diversas APIs de Windows, incluyendo el soporte para COM.
+
+## Introducción
+(not summarized)
+
+## Docs
+Existe una versión en línea del archivo de ayuda, aunque parte del contenido es antiguo. Se pueden obtener pistas de tipo mediante `types-pywin32`.
+
+## Support
+Se pueden reportar errores mediante problemas en GitHub. Para soporte general, use las discusiones en la categoría de preguntas o la lista de correo.
+
+## Binaries
+Los lanzamientos binarios ya no cuentan con soporte oficial.
+
+## Installing via PIP
+Se recomienda usar pip para la instalación. **Instalando globalmente** se pueden instalar objetos COM o servicios mediante un script de post-instalación. **Instalando para MingGW/msys2** se sugiere usar los parches de la comunidad mediante `pacman`. **Corriendo como un Windows Service** requiere una instalación global con privilegios elevados y acceso adecuado a Python.
+
+## Troubleshooting
+Ante errores de punto de entrada, se debe ejecutar el script de post-instalación o eliminar copias conflictivas de DLLs en el sistema.
+
+## Building from source
+Requiere instalar Visual Studio 2019 y seguir las instrucciones de entorno y construcción.
+
+## Release process
+El proceso actual utiliza artefactos de GitHub Actions para generar lanzamientos. **Proceso de lanzamiento manual anterior** era el método utilizado antes de la versión 307.
+
+## Versioning
+Utiliza un esquema de numeración incremental donde los cambios pueden romper la interfaz.
+
+## Licenses
+El código contiene diversas licencias; los archivos en el árbol de fuentes son la referencia oficial.
+
+[local-delegate warning: 1 section not summarized because of the word limit or the model]
+
+(read server-side: 10907 chars ≈ 5453 Claude tokens that did not enter your context)

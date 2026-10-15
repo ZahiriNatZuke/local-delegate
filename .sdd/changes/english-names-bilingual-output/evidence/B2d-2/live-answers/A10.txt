@@ -1,0 +1,17 @@
+**Test Summary**
+
+**tests/test_detect_language.py**
+* **Passed**: 15 tests.
+    * All language detection logic tests, including function word analysis and control stability, were successful.
+
+**tests/test_corpus.py**
+* **Passed**: 61 tests.
+    * All corpus validation tests, including versioning, hash verification, rule enforcement, and environment language independence, were successful.
+
+**Total Results**
+* **Total Passed**: 76 tests.
+* **Total Failed**: 0 tests.
+
+**Note**: One test, `test_rebuild_does_not_refreeze_a_source_from_the_live_file`, produced standard output during execution, but it still passed successfully.
+
+(leído server-side: 15540 chars ≈ 8093 tokens de Claude que no entraron a tu contexto)

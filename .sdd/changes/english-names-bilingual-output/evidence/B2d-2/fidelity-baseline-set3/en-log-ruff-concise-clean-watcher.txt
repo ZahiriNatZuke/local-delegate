@@ -1,0 +1,17 @@
+**Resumen de Problemas por Archivo**
+
+**scripts\clean_watcher_fixtures.py:**
+
+*   **Errores de Estilo:**
+    *   E501: Línea demasiado larga (3 ocurrencias). Se detectaron tres líneas que exceden el límite de 100 caracteres.
+    *   T201: Uso de `print`. Se encontró la instrucción `print` en la línea 90.
+*   **Errores de Documentación:**
+    *   D103: Falta de documentación en funciones públicas (2 ocurrencias). Se identificaron dos funciones públicas que carecen de documentación adecuada.
+    *   PLR2004: Uso de valor mágico en comparación. Se encontró un valor mágico `16` en la línea 76, sugiriendo el uso de una constante.
+*   **Problemas de Compatibilidad:**
+    *   Ignorados: `incorrect-blank-line-before-class` (D203) e `blank-line-before-class` (D211) debido a incompatibilidad.
+    *   Ignorados: `multi-line-summary-first-line` (D212) e `multi-line-summary-second-line` (D213) debido a incompatibilidad.
+*   **Otros:**
+    *   CPY001: Falta de aviso de copyright en la parte superior del archivo.
+
+(read server-side: 958 chars ≈ 498 Claude tokens that did not enter your context)

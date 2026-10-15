@@ -30,6 +30,10 @@ con saltos pudo contaminarla un swap.
 - `source`: **`path`** = el input se leyó *server-side* (no entró al contexto de Claude) ·
   **`inline`** = el texto ya viajó por tu contexto.
 - `chars_in` / `chars_out`: tamaño de entrada procesada / salida generada.
+- `chars_out_raw` (desde la 0.36.0): caracteres que generó el modelo **antes** del post-proceso
+  (quitar el razonamiento `<think>`, completar las secciones del resumen) y de los avisos; en una
+  operación troceada, la suma de todas sus llamadas. Sirve para ver cuánto se perdió entre lo
+  generado y lo devuelto. Nunca guarda el texto.
 - `tokens_in` / `tokens_out`: tokens reales que reportó el backend (`usage.prompt_tokens` /
   `usage.completion_tokens`), cuando los da. Si faltan, el dashboard estima con `chars/4`.
 - `finish_reason`: `choices[0].finish_reason` del backend (p. ej. `"length"` si la salida se

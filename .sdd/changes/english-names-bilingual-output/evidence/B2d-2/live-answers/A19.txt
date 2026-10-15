@@ -1,0 +1,22 @@
+## pycparser v3.00
+A pure Python C language parser.
+
+## Introduction
+**What is pycparser?** It is a Python-based C parser module. **What is it good for?** It serves various purposes like obfuscation or static analysis. **Which version of C does pycparser support?** It supports C99 and some C11 features. **What grammar does pycparser follow?** It follows the C99 standard grammar. **How is pycparser licensed?** It uses a BSD license. **Contact details** Users can report issues via GitHub.
+
+## Installing
+**Prerequisites** It requires modern Python on various platforms. **Installation process** Use `pip install pycparser`.
+
+## Using
+**Interaction with the C preprocessor** The tool requires preprocessed code and can interact with `cpp`. **What about the standard C library headers?** It provides minimal fake headers in `utils/fake_libc_include` for efficiency. **Basic usage** Users can find guidance in the `examples` directory. **Advanced usage** Documentation is available in `pycparser/c_parser.py` and `pycparser/_c_ast.cfg`.
+
+## Modifying
+Users must regenerate AST nodes using `_ast_gen.py` if modifying `_c_ast.cfg`.
+
+## Package contents
+The package includes metadata, source code, examples, tests, and utility files.
+
+## Contributors
+Contributors are listed in the `CONTRIBUTORS` file or tracked on GitHub.
+
+(leído server-side: 8229 chars ≈ 4114 tokens de Claude que no entraron a tu contexto)

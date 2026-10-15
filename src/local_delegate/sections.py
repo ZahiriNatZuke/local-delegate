@@ -309,14 +309,41 @@ class Completion:
     out_of_order: int
 
 
-def complete(output: str, expected: list[str], *, truncated: bool = False) -> Completion:
+def _is_cut_heading(line: str, expected: list[str]) -> bool:
+    """Is this last line of a truncated output a heading cut in the middle? (B2d-2)
+
+    Only if it is a heading line no longer than the longest expected heading: a cut heading cannot
+    be longer than a whole one. Before, any line that started with `#` was dropped, and a model
+    that wrote the body of a section on the same line as a `###` lost the whole body (the probable
+    httpcore2 case of set 3: 2112 tokens generated, 752 chars delivered, `## Changelog` empty).
+    """
+    found = heading_lines(line)
+    if not found:
+        return False
+    longest = max((len(normalize_heading(e)) for e in expected), default=0)
+    return len(found[0][1]) <= longest
+
+
+def complete(
+    output: str,
+    expected: list[str],
+    *,
+    truncated: bool = False,
+    empty_in_document: frozenset[int] = frozenset(),
+) -> Completion:
     """Inserta en su sitio los títulos que el modelo no puso, y avisa de cuántos quedaron sin resumir.
 
-    Con `truncated` (la salida acabó por `length`), una última línea de título es un título a medias:
-    se quita antes de emparejar, y el título entero vuelve a entrar como faltante.
+    Con `truncated` (la salida acabó por `length`), una última línea que es un título a medias
+    (`_is_cut_heading`) se quita antes de emparejar, y el título entero vuelve a entrar como
+    faltante.
+
+    `empty_in_document` are the indices of the expected sections that have no content in the
+    document itself (B2d-2, httpx2: `## Release Information` followed directly by `## 2.13.1`).
+    The model does well leaving them empty, so they are not reported as not summarized; if the
+    model left one out, its heading goes back without the "not summarized" placeholder.
     """
     lines = output.rstrip("\n").split("\n")
-    if truncated and lines and heading_lines(lines[-1]):
+    if truncated and lines and _is_cut_heading(lines[-1], expected):
         lines = lines[:-1]
     text = "\n".join(lines)
     emp = match_headings(text, expected, positional=True)
@@ -329,7 +356,8 @@ def complete(output: str, expected: list[str], *, truncated: bool = False) -> Co
     placeholder = not_summarized()
     for k in emp.missing:
         next_line = min((line for e, line in emp.pairs.items() if e > k), default=len(lines))
-        insertions.setdefault(next_line, []).append(f"## {expected[k]}\n{placeholder}\n")
+        body = "" if k in empty_in_document else f"\n{placeholder}"
+        insertions.setdefault(next_line, []).append(f"## {expected[k]}{body}\n")
     if insertions:
         new_lines: list[str] = []
         for index in range(len(lines) + 1):
@@ -343,7 +371,9 @@ def complete(output: str, expected: list[str], *, truncated: bool = False) -> Co
         text = "\n".join(new_lines).rstrip("\n")
     elif emp.translated:
         text = "\n".join(lines)
-    left_out = len(emp.missing) + len(emp.empty)
+    missing = [k for k in emp.missing if k not in empty_in_document]
+    empty = [k for k in emp.empty if k not in empty_in_document]
+    left_out = len(missing) + len(empty)
     if left_out:
         key = (
             "mcp.warning.sections_not_summarized_one"
@@ -352,7 +382,7 @@ def complete(output: str, expected: list[str], *, truncated: bool = False) -> Co
         )
         notice = i18n.t(key, n=left_out)
         text += f"\n\n{WARNING_MARKER}{notice}]"
-    return Completion(text, len(emp.missing), len(emp.empty), len(emp.out_of_order))
+    return Completion(text, len(missing), len(empty), len(emp.out_of_order))
 
 
 # --- Secciones del resumen (v3: subsecciones, introducción y tamaño) -----------------------------
@@ -391,14 +421,48 @@ class Section:
     end: int
     subheadings: tuple[str, ...] = ()
     synthetic: bool = False  # la «Introducción»: no es un título del documento
+    # Characters of the section WITHOUT its own heading line (B2d-2); None: not measured, `size`.
+    body_size: int | None = None
 
     @property
     def size(self) -> int:
         return self.end - self.start
 
+    @property
+    def content_size(self) -> int:
+        """What the word budget is shared by: the body, without the heading (B2d-2).
+
+        Measured with the heading, a section with nothing under it (httpx2's `## Release
+        Information`) was asked for ~23 words, which invites the model to invent them.
+        """
+        return self.size if self.body_size is None else self.body_size
+
+    @property
+    def empty(self) -> bool:
+        """The section has no content in the document itself."""
+        return self.body_size == 0
+
 
 def _words_outside_headings(text: str) -> int:
     return sum(_words(line) for _pos, line in _lines(text) if not _ATX.match(line))
+
+
+def _body_size(text: str, start: int, end: int) -> int:
+    """Characters of the span `[start, end)` after its heading line(s); 0 if it has no words.
+
+    The heading is one line (ATX) or two (setext: the text and its underline). Subheadings do not
+    count as content: a section that only holds headings has nothing to summarize of its own.
+    """
+    span = text[start:end]
+    lines = span.splitlines(keepends=True)
+    skip = 1 if lines and _ATX.match(lines[0].rstrip("\r\n")) else 2
+    body = "".join(lines[skip:])
+    return len(body.strip()) if _words_outside_headings(body) else 0
+
+
+def _is_introduction(heading: str) -> bool:
+    """Is this document heading the one the product adds, in either language? (B2d-2)"""
+    return normalize_heading(heading) in {normalize_heading(f) for f in INTRODUCTION_FORMS}
 
 
 def sections_for_summary(text: str, structure: Structure) -> list[Section]:
@@ -417,7 +481,10 @@ def sections_for_summary(text: str, structure: Structure) -> list[Section]:
     are_topics = len(set(next_level)) * 2 >= len(next_level)
     sections_: list[Section] = []
     first = top_level[0].start
-    if _words_outside_headings(text[:first]) >= MIN_INTRO_WORDS:
+    # B2d-2: a document with its own "Introduction" (pycparser, set 3) got the product's one too,
+    # and the summary came out with that section twice. Its own one is enough.
+    own_introduction = any(_is_introduction(t.text) for t in top_level)
+    if not own_introduction and _words_outside_headings(text[:first]) >= MIN_INTRO_WORDS:
         sections_.append(Section(introduction(), 0, first, synthetic=True))
     for i, heading in enumerate(top_level):
         end = top_level[i + 1].start if i + 1 < len(top_level) else len(text)
@@ -426,7 +493,8 @@ def sections_for_summary(text: str, structure: Structure) -> list[Section]:
             for t in all_headings
             if are_topics and t.level == structure.level + 1 and heading.start < t.start < end
         )
-        sections_.append(Section(heading.text, heading.start, end, subs))
+        body = _body_size(text, heading.start, end)
+        sections_.append(Section(heading.text, heading.start, end, subs, body_size=body))
     return sections_
 
 
@@ -434,14 +502,16 @@ def allocate_by_size(sizes: list[int], total: int, *, minimum: int) -> list[int]
     """Reparte `total` en proporción a `sizes`, sin pasar nunca de `total`.
 
     El mínimo solo se aplica si cabe para todos (`minimum × n ≤ total`); si no, el reparto es
-    proporcional puro (y al menos 1 a cada uno).
+    proporcional puro (y al menos 1 a cada uno). A size of 0 (a section with no content in the
+    document, B2d-2) gets 0 words and does not count for the minimum.
     """
     if not sizes:
         return []
     size_sum = sum(sizes) or 1
-    base = minimum if minimum * len(sizes) <= total else 0
-    remainder = total - base * len(sizes)
-    return [max(1, base + (remainder * t) // size_sum) for t in sizes]
+    sized = sum(1 for t in sizes if t > 0)
+    base = minimum if minimum * sized <= total else 0
+    remainder = total - base * sized
+    return [max(1, base + (remainder * t) // size_sum) if t > 0 else 0 for t in sizes]
 
 
 # --- Troceado por secciones ----------------------------------------------------------------------

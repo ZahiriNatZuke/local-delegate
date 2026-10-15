@@ -1,0 +1,12 @@
+**Summary of Issues by File**
+
+**checks.py:**
+- **TypeError:** `_oldest_pending()` received an unexpected keyword argument 'plazo_dias' (1 failed).  The mutation introduced this error during the test `test_comando_nunca_lanzado_y_pendientes_de_21_dias`. The SHA256 hash was restored.
+
+**chains.py:**
+- **AttributeError:**  Accessing `Chain.steps` resulted in an AttributeError (1 failed). The test `test_las_cadenas_por_defecto_son_las_de_la_spec` failed due to the absence of the `steps` attribute. The SHA256 hash was restored.
+
+**pytest tests/test_checks.py tests/test_doctor.py:**
+- **Warning:**  Handling HTTP requests without headers led to a "sin_credencial" return value (163 passed, 1 skipped). The mutation introduced a problematic branch in the code, triggering a warning and a 401 error. No regression detected. SHA256 hash was restored.
+
+(leído server-side: 1710 chars ≈ 890 tokens de Claude que no entraron a tu contexto)

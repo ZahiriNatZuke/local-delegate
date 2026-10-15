@@ -1,0 +1,30 @@
+{
+  "local_lint_summary|gemma3-4b": {
+    "calls": 23,
+    "length": 0,
+    "chunked": 0,
+    "raw_gt_out": 0,
+    "pct_length": 0.0
+  },
+  "local_lint_summary|gemma4-26b-a4b": {
+    "calls": 9,
+    "length": 0,
+    "chunked": 2,
+    "raw_gt_out": 2,
+    "pct_length": 0.0
+  },
+  "local_summarize|gemma4-26b-a4b": {
+    "calls": 9,
+    "length": 1,
+    "chunked": 0,
+    "raw_gt_out": 0,
+    "pct_length": 11.1
+  },
+  "local_summarize|gemma3-4b": {
+    "calls": 3,
+    "length": 1,
+    "chunked": 0,
+    "raw_gt_out": 0,
+    "pct_length": 33.3
+  }
+}

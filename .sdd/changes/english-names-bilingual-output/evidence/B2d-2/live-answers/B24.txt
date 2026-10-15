@@ -1,0 +1,11 @@
+**Resumen de Problemas por Archivo**
+
+**Archivo: tools/gen.py**
+
+Este archivo presenta los siguientes problemas:
+
+*   **Importaciones:** Se identificaron cinco errores de tipo **E402 – Module level import not at top of file**.  Estos errores indican que las declaraciones de importación se encuentran fuera del encabezado del archivo, lo cual es una práctica no recomendada.
+*   **Longitud de Línea:** Se encontraron tres errores de tipo **E501 – Line too long**. Las líneas 20, 31 y 32 exceden el límite de longitud permitido, afectando la legibilidad del código.
+*   **Comparaciones:** Se detectó un error de tipo **E711 – Comparison to `None` should be `cond is None`**.  La comparación directa con `None` debe ser reemplazada por una verificación explícita de si la variable es `None`.
+
+(read server-side: 438 chars ≈ 228 Claude tokens that did not enter your context)

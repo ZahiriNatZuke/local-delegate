@@ -28,7 +28,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   en negrita, los nombres de sección y los de cada chequeo o prueba van en el idioma de respuesta;
   solo se quedan tal cual las rutas, el código, los identificadores y los códigos de regla o de
   error. En una prueba en vivo el modelo copiaba en español 5 a 8 etiquetas del informe de
-  `doctor` al resumir en inglés. `local_summarize` no cambia: sus títulos siguen literales.
+  `doctor` al resumir en inglés.
+- **`local_summarize` traduce también sus etiquetas en negrita**, también las que nombran una
+  subsección; solo los títulos `## ` de las secciones siguen literales. En la muestra en vivo copiaba
+  5 y 4 subtítulos del documento como etiquetas en el otro idioma.
+- **Topes de salida de `local_lint_summary` más altos:** 3 tokens por palabra más 128 en la llamada
+  única (antes 2 más 96: 496 tokens para 200 palabras) y 3 más 96 en cada paso del troceado (antes
+  2 más 64). Con la orden de idioma endurecida, `gemma4-26b-a4b` cortaba 3 de 4 resúmenes de lint
+  justo en 496. Valores provisionales hasta la medición en vivo.
+- **El log de uso guarda `chars_out_raw`:** los caracteres que generó el modelo antes del
+  post-proceso, para saber cuánto se perdió entre lo generado y lo devuelto. Sin el texto.
 
 ### Corrige
 
@@ -36,6 +45,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   «Introducción» sintética sale en el idioma de respuesta (no en el del producto), y si el modelo
   escribe un título en otro idioma en su sitio, el servidor lo reconoce y le devuelve la forma del
   documento en vez de añadirlo otra vez como «(sin resumir)».
+- **Una sección vacía en el propio documento ya no se avisa como «sin resumir»** y no se le piden
+  palabras (el presupuesto se reparte por el cuerpo de cada sección, sin su título): pedírselas
+  invitaba al modelo a inventar.
+- **El corte por `max_tokens` ya no borra una sección entera:** solo se quita la última línea si es
+  un título cortado (no más largo que el título más largo esperado), no cualquier línea que empiece
+  por `#`.
+- **Un documento con su propia «Introduction»/«Introducción» ya no sale con esa sección dos
+  veces:** el producto no añade la suya.
 
 ## [0.35.0] - 2026-10-13
 

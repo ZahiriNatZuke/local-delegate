@@ -1,0 +1,28 @@
+## Introduction
+HTTPX2 is a comprehensive Python HTTP client library. It provides an integrated command-line interface, supports both HTTP/1.1 and HTTP/2 protocols, and offers both synchronous and asynchronous APIs. Pydantic is managing this project to ensure reliable maintenance and security updates.
+
+## Features
+The library offers a requests-compatible API, CLI, HTTP/2 support, async capabilities, and full type annotations.
+
+## Installation
+Users can install the package via pip using `pip install httpx2`.
+
+## Documentation
+The project documentation, including guides and API references, is hosted at https://pydantic.dev/docs/httpx2/.
+
+## Observability with Pydantic Logfire
+The library integrates with Pydantic Logfire for easy request instrumentation and observability.
+
+## Contribute
+Interested contributors should consult the contributing guide to get started.
+
+## Dependencies
+The project depends on `httpcore2`, `anyio`, `truststore`, and `idna`, with various optional extras like `h2` or `socksio`.
+
+## Release Information
+
+## 2.13.1 (September 23rd, 2026)
+**Fixed**
+The update corrects `Content-Length` calculations for file content and ensures the synchronous WebSocket keepalive thread shuts down cleanly.
+
+(leído server-side: 9793 chars ≈ 4896 tokens de Claude que no entraron a tu contexto)

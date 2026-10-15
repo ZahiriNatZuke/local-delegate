@@ -980,7 +980,7 @@ nuevos o la documentación en ficheros que el agente que renombra no toca, siemp
 **Orden de mezcla (explícito):**
 
 ```
-A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close-5) → higiene de CodeQL → `affinity --check` sin entorno → B0 (B0a → B0b) → B1 → B2 (lotes B2a → B2b → B2c → B2d → B2d-2 → B2e → B2-affinity) → { B3 ∥ B4 } → B5 → [release 0.36.0]
+A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close-5) → higiene de CodeQL → `affinity --check` sin entorno → B0 (B0a → B0b) → B1 → B2 (lotes B2a → B2b → B2c → B2d → B2d-2 → B2d-3 → B2e → B2-affinity) → { B3 ∥ B4 } → B5 → [release 0.36.0]
 ```
 
 - **Valores de una palabra (A-close-5, añadida el 2026-10-14), tras A-close-4.** El barrido de
@@ -1497,6 +1497,34 @@ juez que no lee ficheros cp1252.
 - **Cierre del lote:** suite completa en `es` y en `en`, `ruff`, corpus y afinidad como en B2c (los
   topes de lint cambian el `max_tokens` del corpus: frontera en `PROMPT_BOUNDARIES` con su motivo),
   CHANGELOG, y registro en `waves/B2d-2.md` con las llamadas `local_*`.
+
+#### B2d-3 — `local_lint_summary` sin cifras inventadas
+
+Lote nacido el 2026-10-15 de la medición en vivo de B2d-2 (`evidence/B2d-2/live.md`, punto 6): con
+el tope nuevo, `fidelity_total` subió de 9 a 12 en los 10 logs del conjunto 3. Revisado a mano
+(A13, `doctor` con el home vacío): las cifras son reales, recuentos por elemento («Claude Code
+Client (3)») que el log no trae. El prompt de lint pide «la cantidad por tipo de error/regla» y el
+modelo la inventa cuando el log no tiene cifras. Va **en serie después de B2d-2 y antes de B2e**
+(mismo `server.py`) y sale en la 0.36.0.
+
+- **Cambio, en dos pasos medidos con el mismo conjunto** (`evidence/B2d-2/fidelity-set.json`, sin
+  tocarlo):
+  1. *Prompt:* la cantidad solo cuando el log la da o cuando se cuentan líneas que el log repite; si
+     no, sin número. Se mide.
+  2. *Si el paso 1 no llega a 0:* el programa revisa la salida contra el log con la lógica de
+     `scripts/score_lint_fidelity.py` (sin duplicarla: se mueve a `src/` y el script la importa) y
+     quita los recuentos entre paréntesis que el log no respalda. Se mide otra vez.
+- *Test:* por paso, con un log sin cifras y un modelo simulado que devuelve «(3)»; mutante que quita
+  la regla o la revisión, y comprobar qué assert salta. Control: un log con cifras reales conserva
+  las suyas.
+- *Medición:* `score_live.py answers` sobre los 10 logs del conjunto 3, en `es` y en `en` (tandas A y
+  B de `manifest.json`, solo lint), en ventanas de prueba. *Hecho cuando* `fidelity_total` = 0, y
+  nunca por encima de 9; las cifras reales del control siguen ahí. El tope de lint no se vuelve a
+  tocar (0 cortadas en B2d-2): si una respuesta sale cortada, se anota y no se juzga la fidelidad
+  con ella.
+- **Cierre del lote:** suite en `es` y en `en`, `ruff`, corpus y afinidad (el prompt de lint cambia:
+  frontera en `PROMPT_BOUNDARIES`), CHANGELOG, y registro en `waves/B2d-3.md` con las llamadas
+  `local_*`.
 
 #### B3 — Hooks
 

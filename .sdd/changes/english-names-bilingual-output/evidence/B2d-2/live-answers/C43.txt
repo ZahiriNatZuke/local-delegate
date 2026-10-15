@@ -1,0 +1,7 @@
+The technical audit of the project reveals several architectural and stylistic inconsistencies across the API and core packages. Regarding dependencies, the use of `express` is flagged as restricted, with suggestions to migrate to modern alternatives like `h3`, `hono`, or `elysia`. Code quality issues include the frequent use of magic numbers in configuration files, DTOs, and Zod schemas, which should be replaced by named constants. Naming convention violations are prevalent, specifically the failure to use `camelCase` for various object properties in environment schemas and validation DTOs.
+
+Structural concerns include files containing excessive classes, which may hinder navigability, and the use of default exports in configuration files. In terms of syntax and best practices, the report identifies missing block statements in conditional returns, the need to use `import type` for type-only imports, and the improper use of parameter properties in constructors. Finally, the project requires improvements in code explicitness and consistency to align with established development standards.
+
+(leído server-side: 18043 chars ≈ 9397 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 3 partes en 4 pasadas por local-delegate)

@@ -1,0 +1,24 @@
+**Resumen de pruebas**
+
+**tests/test_chunking.py**
+* **Pruebas superadas**: 44
+    * Verificación de la integridad del documento al fragmentar texto.
+    * Respeto de los límites de tamaño y cortes en encabezados de Markdown.
+    * Manejo de límites de fragmentación mediante párrafos o líneas.
+    * Validación de la clasificación de origen del servidor según el host.
+    * Comprobación de la gestión de archivos temporales y procesos en vuelo.
+    * Procesamiento de diferencias de archivos (diffs) de Git y otros formatos.
+
+**tests/test_density.py**
+* **Pruebas superadas**: 13
+    * Validación de cálculos de densidad y conteo de tokens.
+    * Comprobación de la jerarquía entre herramientas y extensiones.
+    * Verificación de variables de respaldo y orden de fusión de datos.
+    * Pruebas de manejo de imágenes y caracteres especiales en la conversión.
+    * Validación del uso de tokens específicos de modelos como Claude.
+
+**Totales**
+* **Pruebas superadas**: 57
+* **Pruebas fallidas**: 0
+
+(read server-side: 11014 chars ≈ 5736 Claude tokens that did not enter your context)

@@ -1,0 +1,11 @@
+**Summary of Issues by File**
+
+**tests/test_aislamiento_entorno.py:** 1 failed assertion related to the `_leer` variable. The assertion checks if the expected list of skipped readings is empty, indicating a potential issue with the environment isolation guard.
+
+**tests/test_post_chat_caminos.py:** 1 failure due to an `AttributeError` when accessing `answer.arrancar`. The test expects a function named `arrancar` on the `answer` object, which is not present.
+
+**tests/test_web_auth.py:** 1 failure due to an `AttributeError` when accessing `PortToken.duration`. The test attempts to access a `duration` attribute on a `PortToken` object, which does not exist.
+
+**questions.py:**  A schema validation issue was identified during the `model_json_schema()` check. The title "Modelo" is inconsistently labeled as "Model" in the JSON schema, requiring a correction to ensure schema consistency. No tests specifically validate this schema.
+
+(leído server-side: 1944 chars ≈ 1012 tokens de Claude que no entraron a tu contexto)

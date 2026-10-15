@@ -1,0 +1,15 @@
+Here's a summary of the issues, grouped by file and categorized by error type, prioritizing the most relevant:
+
+**VRAM Memory Issues Summary**
+
+The primary issue involves **file not found errors** related to model files. Specifically, the following models failed to load due to missing GGUF files:
+
+*   **gemma3-4b:** (MODELOS\gemma-3-4b-it-Q4_K_M.gguf) - Error.
+*   **llama31-8b:** (MODELOS\Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf) - Error.
+*   **qwen25-coder-14b:** (MODELOS\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf) - Error.
+*   **qwen35-2b:** (MODELOS\Qwen3.5-2B-UD-Q8_K_XL.gguf) - Error.
+*   **qwen3-vl-8b:** (MODELOS\Qwen3VL-8B-Instruct-Q4_K_M.gguf) - Error.
+
+These errors indicate a problem with the specified model file paths, preventing the models from being loaded and utilized.  The VRAM estimation resulted in 0 GiB available, likely due to these missing files.
+
+(leído server-side: 743 chars ≈ 386 tokens de Claude que no entraron a tu contexto)

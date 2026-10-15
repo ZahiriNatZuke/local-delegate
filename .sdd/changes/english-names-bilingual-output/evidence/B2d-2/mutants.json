@@ -1,0 +1,232 @@
+[
+ {
+  "mutant": "1a lint single cap of today",
+  "file": "src/local_delegate/server.py",
+  "results": [
+   {
+    "test": "test_the_single_lint_call_asks_for_the_new_cap",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert call[\"max_tokens\"] == 200 * server.LINT_TOKENS_PER_WORD + server.LINT_TOKENS_BASE",
+     "E       assert 496 == ((200 * 3) + 128)",
+     "E        +  where 3 = server.LINT_TOKENS_PER_WORD",
+     "E        +  and   128 = server.LINT_TOKENS_BASE"
+    ]
+   }
+  ]
+ },
+ {
+  "mutant": "1b lint chunk without its own cap",
+  "file": "src/local_delegate/server.py",
+  "results": [
+   {
+    "test": "test_every_step_of_the_chunked_lint_asks_for_the_new_cap",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert [c[\"max_tokens\"] for c in captured] == [expected] * len(captured)",
+     "E       assert [464, 464, 464, 464, 464, 464] == [696, 696, 696, 696, 696, 696]",
+     "E",
+     "E         At index 0 diff: 464 != 696"
+    ]
+   },
+   {
+    "test": "test_the_other_tools_keep_the_shared_chunk_cap",
+    "failed": 0,
+    "rc": 0,
+    "fires": []
+   }
+  ]
+ },
+ {
+  "mutant": "2a complete counts empty without looking at the document",
+  "file": "src/local_delegate/sections.py",
+  "results": [
+   {
+    "test": "test_a_section_empty_in_the_document_is_not_reported_as_not_summarized",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert sections.WARNING_MARKER not in out, out",
+     "E       AssertionError: ## Features",
+     "E         Ofrece muchas utilidades para el uso diario.",
+     "E"
+    ]
+   },
+   {
+    "test": "test_a_section_with_content_left_empty_is_still_reported",
+    "failed": 0,
+    "rc": 0,
+    "fires": []
+   }
+  ]
+ },
+ {
+  "mutant": "2b span measured with the heading",
+  "file": "src/local_delegate/sections.py",
+  "results": [
+   {
+    "test": "test_the_words_follow_the_body_not_the_heading",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert listing[0][1] == listing[1][1], listing",
+     "E       AssertionError: [('Corto', 58, []), ('Un título muy largo que ocupa mucho más que el cuerpo de otras secciones Un título muy largo que...ás que el cuerpo de otras secciones Un título muy largo que ocupa mucho más que el cuerpo de otras secciones', 91, [])]",
+     "E       assert 58 == 91"
+    ]
+   }
+  ]
+ },
+ {
+  "mutant": "2c old allocate_by_size",
+  "file": "src/local_delegate/sections.py",
+  "results": [
+   {
+    "test": "test_allocate_by_size_gives_0_words_to_a_span_without_body",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert sections.allocate_by_size([300, 0, 300], 100, minimum=8) == [50, 0, 50]",
+     "E       assert [50, 8, 50] == [50, 0, 50]",
+     "E",
+     "E         At index 1 diff: 8 != 0"
+    ]
+   }
+  ]
+ },
+ {
+  "mutant": "3 truncation condition of today",
+  "file": "src/local_delegate/sections.py",
+  "results": [
+   {
+    "test": "test_truncation_keeps_a_long_last_line_that_starts_with_hash",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert \"se corrige un fallo\" in done.text, done.text",
+     "E       AssertionError: ## Intro",
+     "E         Texto de la introducción breve.",
+     "E"
+    ]
+   },
+   {
+    "test": "test_truncation_still_drops_a_short_cut_heading",
+    "failed": 0,
+    "rc": 0,
+    "fires": []
+   }
+  ]
+ },
+ {
+  "mutant": "4a raw length after the post-processing",
+  "file": "src/local_delegate/server.py",
+  "results": [
+   {
+    "test": "test_the_log_keeps_the_raw_length_before_the_post_processing",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert row[\"chars_out_raw\"] == len(answer)",
+     "E       AssertionError: assert 201 == 2656",
+     "E        +  where 2656 = len('<think>razono sobre el documento razono sobre el documento razono sobre el documento razono sobre el documento razono...el documento razono sobre el documento razono sobre el documento </think>\\n## Uno\\nTexto uno dos tres cuatro.\\n\\n## Do')"
+    ]
+   }
+  ]
+ },
+ {
+  "mutant": "4b map-reduce does not add the raw length",
+  "file": "src/local_delegate/server.py",
+  "results": [
+   {
+    "test": "test_the_chunked_log_sums_the_raw_length_of_every_call",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert row[\"chars_out_raw\"] == len(seen) * len(THINK + \"Un resumen parcial.\")",
+     "E       assert 0 == (6 * 2635)",
+     "E        +  where 6 = len([{'model': 'gemma4-26b-a4b', 'messages': [{'role': 'system', 'content': \"Responde directo desde el input. NO uses herr....\\n\\nUn resumen parcial.\\n\\nUn resumen parcial.\\n\\nUn resumen parcial.'}], 'max_tokens': 364, 'temperature': 0.2, ...}])",
+     "E        +  and   2635 = len(('<think>razono sobre el documento razono sobre el documento razono sobre el documento razono sobre el documento razono...nto razono sobre el documento razono sobre el documento razono sobre el documento razono sobre el documento </think>\\n' + 'Un resumen parcial.'))"
+    ]
+   }
+  ]
+ },
+ {
+  "mutant": "5 always add the introduction",
+  "file": "src/local_delegate/sections.py",
+  "results": [
+   {
+    "test": "test_a_document_with_its_own_introduction_gets_only_one",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert _introductions(out) == 1, out",
+     "E       AssertionError: ## Introduction",
+     "E         Texto del resumen de la sección.",
+     "E"
+    ]
+   },
+   {
+    "test": "test_a_document_without_it_still_gets_the_products",
+    "failed": 0,
+    "rc": 0,
+    "fires": []
+   }
+  ]
+ },
+ {
+  "mutant": "6 the counter does not look at the log",
+  "file": "scripts/score_lint_fidelity.py",
+  "results": [
+   {
+    "test": "test_the_counter_finds_an_invented_number_file_and_repetition",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert result[\"invented_files\"] == [\"src/config.py\"]",
+     "E       AssertionError: assert [] == ['src/config.py']",
+     "E",
+     "E         Right contains one more item: 'src/config.py'"
+    ]
+   },
+   {
+    "test": "test_a_faithful_answer_scores_0",
+    "failed": 0,
+    "rc": 0,
+    "fires": []
+   }
+  ]
+ },
+ {
+  "mutant": "7 summarize order without the labels rule",
+  "file": "src/local_delegate/server.py",
+  "results": [
+   {
+    "test": "test_the_summarize_order_names_the_bold_labels",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert (",
+     "E       AssertionError:  NO uses herramientas, NO busques en internet. Output EXACTO: un resumen en prosa clara. Máximo 150 palabras. Nada fuera del formato. Escribe toda la respuesta en inglés, aunque el contenido esté en otro idioma: redacta en inglés cada frase, también la descripción de cada error o regla, con frases completas y sin copiar frases del contenido. Solo se quedan tal cual los títulos de las líneas '## ' que se piden literales, las rutas, el código, los identificadores y los códigos de regla o de error.",
+     "E       assert ' También van en inglés las etiquetas en negrita, también las que nombran una subsección: tradúcelas aunque en el contenido aparezcan en otro idioma.' in \"Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen en prosa cla... las líneas '## ' que se piden literales, las rutas, el código, los identificadores y los códigos de regla o de error.\""
+    ]
+   }
+  ]
+ },
+ {
+  "mutant": "8 judge in strict UTF-8 again",
+  "file": "scripts/judge_response_language.py",
+  "results": [
+   {
+    "test": "test_the_judge_reads_a_cp1252_document_without_an_exception",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       out = subprocess.run(",
+     ">               raise CalledProcessError(retcode, process.args,",
+     "E               subprocess.CalledProcessError: Command '['D:\\\\Projects\\\\local-delegate\\\\.venv\\\\Scripts\\\\python.exe', 'D:\\\\Projects\\\\local-delegate\\\\scripts\\\\judge_response_language.py', '--document', 'C:\\\\Users\\\\Yohan\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Yohan\\\\pytest-2077\\\\test_the_judge_reads_a_cp1252_0\\\\doc.txt', '--requested', 'en', 'C:\\\\Users\\\\Yohan\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Yohan\\\\pytest-2077\\\\test_the_judge_reads_a_cp1252_0\\\\answer.txt']' returned non-zero exit status 1."
+    ]
+   }
+  ]
+ }
+]
