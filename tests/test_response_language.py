@@ -44,11 +44,24 @@ def _hardened_order(name: str) -> str:
     )
 
 
-_HARDENED = frozenset({"local_summarize", "local_lint_summary"})
+def _lint_order(name: str) -> str:
+    """The order of lint_summary since B2d-fix: the hardened head plus its labels."""
+    return (
+        f" Escribe toda la respuesta en {name}, aunque el contenido esté en otro idioma: redacta "
+        f"en {name} cada frase, también la descripción de cada error o regla, con frases "
+        f"completas y sin copiar frases del contenido. También van en {name} las etiquetas en "
+        "negrita, los nombres de sección y los nombres de cada chequeo o prueba: tradúcelos "
+        "aunque en el contenido aparezcan en otro idioma. Solo se quedan tal cual las rutas, el "
+        "código, los identificadores y los códigos de regla o de error."
+    )
 
 
 def _order_for(tool: str, name: str) -> str:
-    return _hardened_order(name) if tool in _HARDENED else _order(name)
+    if tool == "local_summarize":
+        return _hardened_order(name)
+    if tool == "local_lint_summary":
+        return _lint_order(name)
+    return _order(name)
 
 
 @pytest.fixture
@@ -137,7 +150,8 @@ def test_the_order_is_in_every_step_of_the_chunking(monkeypatch, captured, call)
     monkeypatch.setattr(config, "STRUCTURED_SUMMARY", True)
     call()
     assert len(captured) > 2  # guarda: de verdad troceó y redujo
-    assert all(c["system"].endswith(_hardened_order("francés")) for c in captured), [
+    tool = "local_lint_summary" if call is _lint_in_chunks else "local_summarize"
+    assert all(c["system"].endswith(_order_for(tool, "francés")) for c in captured), [
         c["system"][-60:] for c in captured
     ]
 

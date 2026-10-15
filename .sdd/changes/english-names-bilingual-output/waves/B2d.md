@@ -188,3 +188,137 @@ de antes, una ventana de prueba por tanda (`local-delegate test-window start --l
 El idioma de los documentos de entrada lo dio el detector (programa, no modelo).
 
 **Lote nuevo (2026-10-15):** el tope de salida de lint, la sección vacía avisada como «no resumida», el corte por tope que borra una sección y el largo crudo de la salida en el log pasan al lote B2d-2 (`plan.md`, §1.4, «B2d-2»), entre B2d y B2e. La decisión de cómo juzgar el idioma (solo prosa o texto entero) se queda en B2d, pendiente de la prueba en vivo en curso.
+
+## Juez de prosa y etiquetas (B2d-fix, 2026-10-15)
+
+Tras las pruebas en vivo X e Y (`evidence/B2d-fix/live-probe-X.json`, `live-probe-Y.json`): el
+modelo de lint corto copiaba en español 5 a 8 etiquetas en negrita del informe de `doctor`, y el
+juez de texto entero mezclaba lo que el formato obliga a copiar (títulos, rutas, `I001`/`UP006`)
+con lo que el modelo redacta. Tres pasos, en este orden y cada uno con su commit firmado. Esta parte
+NO mide en vivo ni reinstala el daemon.
+
+### 1. Conjunto de control 3 (fijado antes de todo)
+
+`evidence/B2d-fix/lang-sample-docs-3.json` (sha256
+`fcf3b4462b193739a00ff3acf633aba365b9e50c8a021d76fd37b14cf3d68593`), commit `b3e9d08`, antes de
+escribir el juez y de tocar código. 20 documentos distintos de los conjuntos 1 y 2, copias byte a
+byte en `evidence/B2d-fix/docs-3/` (marcadas `-text` en `.gitattributes`), con las reglas escritas
+en el JSON. Por tanda: 2 documentos con muchos títulos (≥ 12) en summarize y 2 logs cortos
+(< 1 000 caracteres) en lint. Lint en español: dos `--check` de corpus ya versionados, un `doctor
+--home <vacío>` y dos `check-llamaswap` cortos generados hoy; en inglés, salidas reales de hoy
+(biome, dos ruff concisos cortos, pytest, tsc; no hay eslint instalado en ningún proyecto).
+Desviaciones respecto al conjunto 2, escritas en el JSON: los METADATA en inglés bajan a 4 000
+bytes (por encima de 6 000 solo quedaban 4 sin usar) y el detector sobre la entrada se anota sin
+exigirlo en los logs generados (los cortos dan `unknown`: son nombres, rutas y códigos).
+
+### 2. Juez «solo prosa» (fijado antes de puntuar)
+
+`scripts/judge_response_language.py`, commit `6d29ceb` (sha256 del script
+`c212c71eeecea65151cc10fd0e4a3adf4ab923f3692aa8c209841d723dc953a0`). Reglas en su docstring y en
+`evidence/B2d-fix/judge-rules.md`: quita solo las líneas del producto, los títulos `#` que coinciden
+(normalizados) con un título del documento original, el código, las URLs, las rutas, los nombres de
+regla en kebab-case, los identificadores y todo trozo con dígitos (números y códigos como `E501`);
+NO quita las etiquetas en negrita. Con menos de 20 tokens del detector, `not_judgeable`; si no, el
+detector sin tocar da `requested`/`opposite`/`unknown`. 23 tests sintéticos
+(`tests/test_judge_response_language.py`) y un mutante por regla, aplicados de verdad
+(`judge-mutants.md`): cada uno hace fallar solo el test de su regla, en `result.tokens == LIMIT - 1`.
+El primer pase mostró una regla muerta (los códigos con dígitos ya caían por la de números) y se
+quitó.
+
+**Re-puntuado retrospectivo** (`evidence/B2d-fix/rescore-sets-1-2.json`, commit `4840ed9`): las 55
+respuestas ya medidas, con el juez escrito después de ver esos fallos. NO valida nada por sí mismo.
+
+| Tool | Tanda / prueba | n | Antes (pedido / unknown) | Después (pedido / unknown / no juzgable) |
+|---|---|---|---|---|
+| summarize | tanda 1 (conj. 1+2) | 10 | 7 / 3 | 10 / 0 / 0 |
+| summarize | tanda 2 (conj. 1+2) | 10 | 10 / 0 | 10 / 0 / 0 |
+| lint_summary | tanda 1 (conj. 1+2) | 10 | 8 / 2 | 8 / 1 / 1 |
+| lint_summary | tanda 2 (conj. 1+2) | 10 | 9 / 1 | 9 / 0 / 1 |
+| lint_summary | prueba X | 6 | 1 / 5 | 3 / 3 / 0 |
+| lint_summary | prueba Y | 6 | 3 / 3 | 5 / 1 / 0 |
+| summarize | prueba Y | 3 | 3 / 0 | 3 / 0 / 0 |
+
+Ninguna en el idioma contrario, ni antes ni después. Cambian 10: los tres `unknown` de summarize
+pasan a pedido (los títulos copiados del documento ya no cuentan), cinco `doctor` vacíos de lint
+pasan a pedido, y dos lint pasan a no juzgable (el pytest del conjunto 2, que antes aprobaba con 28
+tokens y ahora tiene 19 de prosa, y un ruff del conjunto 1). Los `doctor` completos de X siguen
+`unknown`: son justo los de las etiquetas copiadas, que el juez no perdona.
+
+**Muestra para revisión humana:** `evidence/B2d-fix/human-review-sample.md`, 12 respuestas (6 de las
+10 que cambian y 6 de las 45 que no, `random.Random(20261015)`), con los dos veredictos y una
+casilla vacía «¿está en el idioma pedido?». La rellena el usuario.
+
+### 3. `local_lint_summary`: las etiquetas también en el idioma pedido
+
+- `src/local_delegate/server.py:3484` `_lint_language_clause()`: la cabeza endurecida de siempre
+  (`_written_language_head`, `:3475`) más «También van en X las etiquetas en negrita, los nombres de
+  sección y los nombres de cada chequeo o prueba: tradúcelos aunque en el contenido aparezcan en otro
+  idioma. Solo se quedan tal cual las rutas, el código, los identificadores y los códigos de regla o
+  de error.». Ya no dice «los títulos que se piden literales», que lint no tiene y el modelo podía
+  tomar por sus etiquetas. Va en `_lint_system` (`:3523`, que llega a la llamada única y a cada
+  trozo del map) y en el `reduce_extra` (`:4188`).
+- `local_summarize` no cambia: `_written_language_clause()` (`:3455`) da el mismo texto byte a byte
+  (`test_the_summarize_order_does_not_change` lo compara con el de `71846c1`).
+- Tests: `tests/test_language_hardening.py` (`_assert_lint_labels`, el test nuevo de map y reduce en
+  las dos tandas con guardas de «de verdad troceó» y «el último paso reduce», y el de summarize sin
+  cambio) y `tests/test_response_language.py` (`_lint_order`).
+- Mutantes (`evidence/B2d-fix/lint-labels/mutants.md`, aplicados por bytes sobre el CRLF y
+  restaurados por sha256): L1 lint con la orden de summarize → 14 fallos; L2 solo el reduce → 5,
+  solo en los de troceado; L3 sin la frase de etiquetas → 14. En los tres salta el primer `in` de
+  `_assert_lint_labels` (`test_language_hardening.py:78`).
+- Corpus: `evidence/B2d-fix/lint-labels/corpus-f2-check.txt` y `corpus-affinity-check.txt`, los dos
+  `ok` (solo las fronteras declaradas de `system` y `max_tokens` de la 0.36.0).
+- `CHANGELOG.md` (`[Unreleased]`, «Cambia»): una entrada.
+- Suites: `evidence/B2d-fix/lint-labels/suite-es.txt` (`LANG=es_ES.UTF-8`) y `suite-en.txt`
+  (`LANG=en_US.UTF-8`): **2976 passed, 2 skipped** en las dos, solo los 2 `DeprecationWarning` de
+  starlette. `ruff check .` y `ruff format --check .` limpios (`lint-labels/ruff.txt`). La primera
+  corrida dio 3 fallos esperables y arreglados aquí: el guardián de textos (la excepción de la orden
+  endurecida se parte en tres: cabeza común, cierre de summarize y cierre de lint, en
+  `tests/data/uncatalogued_exceptions.json`) y `test_wiki` (el juez lleva shebang y le faltaba el
+  bit de ejecución en git: `git update-index --chmod=+x`, en este commit).
+
+### Medición en vivo del conjunto 3 (la hace la sesión principal)
+
+Instalar la rama en el daemon (`uv tool install --force --reinstall --no-cache ".[llamaswap]"` y
+reinicio), con `LOCAL_DELEGATE_STRUCTURED_SUMMARY` encendida como en las mediciones anteriores. Una
+ventana de prueba por tanda (`local-delegate test-window start --label «B2d-fix conjunto 3 tanda
+N»`, guardar el id, `stop <id>` al acabar). Cada tool con `path=<ruta absoluta>` y los valores por
+defecto (`max_words`, sin `focus`), de una en una; guardar cada respuesta literal en un fichero.
+
+- **Tanda 1** (producto `es`, `LOCAL_DELEGATE_OUTPUT_LANGUAGE=en`), bajo
+  `evidence/B2d-fix/docs-3/`:
+  - `local_summarize`: `es-doc-docs_recipes_claude-code-hooks.md`,
+    `es-doc-docs_recipes_llama-swap-groups.md`, `es-doc-docs_recipes_remote-backend.md`,
+    `en-doc-pycparser-3.0.METADATA.md`, `en-doc-distlib-0.4.3.METADATA.md`.
+  - `local_lint_summary`: `es-log-check-llamaswap-pre-b10909.txt`,
+    `es-log-B2c_corpus-f2-check.txt`, `es-log-doctor-empty-home.txt`,
+    `en-log-biome-lint-nest.txt`, `en-log-ruff-concise-build-site.txt`.
+- **Tanda 2** (`LOCAL_DELEGATE_LANG=en`, `LOCAL_DELEGATE_OUTPUT_LANGUAGE=es`):
+  - `local_summarize`: `en-doc-pywin32-312.METADATA.md`, `en-doc-identify-2.6.19.METADATA.md`,
+    `en-doc-python_discovery-1.6.1.METADATA.md`, `es-doc-docs_wiki_Configuration.md`,
+    `es-doc-src_local_delegate_resources_skills_local-delegation_SKILL.md`.
+  - `local_lint_summary`: `en-log-pytest-chunking-density.txt`,
+    `en-log-ruff-concise-clean-watcher.txt`, `en-log-tsc-angular.txt`,
+    `es-log-check-llamaswap-pre-no-resident.txt`, `es-log-B2d-fix_corpus-affinity-check.txt`.
+- **Juez:** por respuesta, `python scripts/judge_response_language.py --document
+  evidence/B2d-fix/docs-3/<doc> --requested en|es <respuesta>` (o `judge()` desde Python para
+  guardar también `judged_text`); comprobar antes que el sha256 de cada documento sigue siendo el
+  del JSON. Anotar al lado el juez de antes (respuesta menos líneas del producto, `detect(20,
+  0.15)`) para comparar.
+- **Criterio** (escrito en el JSON): ≥ 90 % en el idioma pedido entre las juzgables, por tool y
+  tanda, y 0 en el contrario; `not_judgeable` aparte, no cuenta como aprobado. Además, para lint,
+  contar las etiquetas `**…**` copiadas del documento en el otro idioma (la regla de etiquetas de
+  `live-probe-X.json`). El juicio humano de `human-review-sample.md` dice si el juez merece
+  confianza antes de darle valor a este número.
+
+### Llamadas `local_*`
+
+| # | Llamada | Para qué | Resultado |
+|---|---|---|---|
+| 1 | `local_commit_msg(path=<diff del arreglo de lint>)` | borrador del commit del arreglo | borrador revisado y reescrito a mano |
+| 2 | `local_lint_summary(path=lint-labels/suite-es.txt)` (primera corrida) | resumir los 3 fallos | guardián de textos (3 textos nuevos, 1 excepción caducada) y bit de ejecución del juez |
+
+**Pasos hechos a mano y por qué:** la elección de los documentos del conjunto 3 la hizo un script
+(reglas, tamaños, títulos, detector), no un modelo. El juez, sus tests y los mutantes son código que
+había que escribir exacto. Los textos de `server.py` y de los tests se editaron por tramos con
+Python para respetar el CRLF de `server.py`. Las respuestas se re-puntuaron con el juez (programa).

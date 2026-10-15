@@ -3466,12 +3466,39 @@ def _written_language_clause() -> str:
     identifiers and rule or error codes).
     """
     name = _language_name(i18n.response_language().value)
+    return _written_language_head(name) + (
+        " Solo se quedan tal cual los títulos que se piden literales, las rutas, el código, los "
+        "identificadores y los códigos de regla o de error."
+    )
+
+
+def _written_language_head(name: str) -> str:
+    """What both hardened orders share: every sentence is written in `name`, not copied."""
     return (
         f" Escribe toda la respuesta en {name}, aunque el contenido esté en otro idioma: redacta "
         f"en {name} cada frase, también la descripción de cada error o regla, con frases "
-        "completas y sin copiar frases del contenido. Solo se quedan tal cual los títulos que se "
-        "piden literales, las rutas, el código, los identificadores y los códigos de regla o de "
-        "error."
+        "completas y sin copiar frases del contenido."
+    )
+
+
+def _lint_language_clause() -> str:
+    """The language order of `local_lint_summary`: the hardened one, plus its labels (B2d-fix).
+
+    In the live probe X (`evidence/B2d-fix/live-probe-X.json`) the model wrote its sentences in
+    English but copied 5-8 bold labels and check names of the Spanish `doctor` report as they were
+    ("Cadenas de respaldo", "Coste y relleno", "Servicios"), which the plain hardened order allowed:
+    it said nothing about labels, and it listed "the headings asked for verbatim", which a lint
+    summary does not have and the model could take for its labels. So here the labels, section
+    names and check names are named explicitly as text to write in the requested language, and
+    the verbatim list is only paths, code, identifiers and rule or error codes. `local_summarize`
+    keeps `_written_language_clause`: its `##` headings must stay verbatim.
+    """
+    name = _language_name(i18n.response_language().value)
+    return _written_language_head(name) + (
+        f" También van en {name} las etiquetas en negrita, los nombres de sección y los nombres "
+        "de cada chequeo o prueba: tradúcelos aunque en el contenido aparezcan en otro idioma. "
+        "Solo se quedan tal cual las rutas, el código, los identificadores y los códigos de regla "
+        "o de error."
     )
 
 
@@ -3493,7 +3520,7 @@ def _lint_system(max_words: int) -> str:
             "error/regla y los más relevantes primero",
             max_words,
         )
-        + _written_language_clause()
+        + _lint_language_clause()
     )
 
 
@@ -4158,7 +4185,7 @@ def local_lint_summary(
             raw_len=raw_len,
             path=path,
             # El reduce por defecto (y el reagrupado) no usan `system`: la orden va también aquí.
-            reduce_extra=_written_language_clause(),
+            reduce_extra=_lint_language_clause(),
         )
 
     user = _build(content)

@@ -59,14 +59,37 @@ def _languages(monkeypatch, product: str, output: str | None) -> None:
     i18n.reset()
 
 
-def _assert_hardened(system: str, name: str) -> None:
+def _assert_hardened(system: str, name: str, tool: str = "local_summarize") -> None:
     assert f" Escribe toda la respuesta en {name}, aunque el contenido esté en otro idioma" in (
         system
     ), system[-400:]
     assert f"redacta en {name} cada frase" in system, system[-400:]
     assert "con frases completas y sin copiar frases del contenido" in system, system[-400:]
-    assert "Solo se quedan tal cual los títulos que se piden literales" in system, system[-400:]
     assert " Responde en " not in system, "the plain order stayed next to the hardened one"
+    if tool == "local_lint_summary":
+        _assert_lint_labels(system, name)
+    else:
+        assert "Solo se quedan tal cual los títulos que se piden literales" in system, system[-400:]
+        assert "etiquetas en negrita" not in system, "the lint order leaked into summarize"
+
+
+def _assert_lint_labels(system: str, name: str) -> None:
+    """B2d-fix: lint names its labels as text to write in `name`; nothing about literal headings."""
+    assert (
+        f" También van en {name} las etiquetas en negrita, los nombres de sección y los nombres "
+        "de cada chequeo o prueba: tradúcelos aunque en el contenido aparezcan en otro idioma."
+    ) in system, system[-500:]
+    assert (
+        " Solo se quedan tal cual las rutas, el código, los identificadores y los códigos de "
+        "regla o de error."
+    ) in system, system[-500:]
+    assert "títulos que se piden literales" not in system, system[-500:]
+
+
+def _clause(tool: str) -> str:
+    if tool == "local_lint_summary":
+        return server._lint_language_clause()
+    return server._written_language_clause()
 
 
 def _single(tool: str):
@@ -96,8 +119,8 @@ def test_summarize_and_lint_ask_for_full_sentences_in_the_requested_language(
     _languages(monkeypatch, product, output)
     _single(tool)()
     (call,) = captured
-    _assert_hardened(call["system"], name)
-    assert call["system"].endswith(server._written_language_clause())
+    _assert_hardened(call["system"], name, tool)
+    assert call["system"].endswith(_clause(tool))
 
 
 @pytest.mark.parametrize(("product", "output", "name"), BATCHES)
@@ -111,8 +134,47 @@ def test_the_hardened_order_is_in_every_step_of_the_chunking(
     monkeypatch.setattr(config, "STRUCTURED_SUMMARY", True)
     call()
     assert len(captured) > 2  # guard: it really chunked
+    tool = "local_lint_summary" if call is _lint_in_chunks else "local_summarize"
     for step in captured:
-        _assert_hardened(step["system"], name)
+        _assert_hardened(step["system"], name, tool)
+
+
+@pytest.mark.parametrize(("product", "output", "name"), BATCHES)
+def test_lint_labels_go_in_the_requested_language_in_map_and_reduce(
+    monkeypatch, captured, product, output, name
+):
+    """B2d-fix: probe X copied 5-8 Spanish bold labels of `doctor`; the order now names them.
+
+    Mutant "lint keeps the summarize order": `_assert_lint_labels` fails at its first `in`, in
+    the single call and in every map and reduce step.
+    """
+    _languages(monkeypatch, product, output)
+    server.local_lint_summary(text="**Servicios:** [ OK ] daemon")
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "mechanical", 1200)
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 1200)
+    _lint_in_chunks()
+    single, *steps = captured
+    assert len(steps) > 2  # guard: map and reduce really ran
+    assert "Resume la siguiente salida" not in steps[-1]["user"]  # guard: the last one reduces
+    for call in [single, *steps]:
+        _assert_lint_labels(call["system"], name)
+
+
+SUMMARIZE_ORDER_BEFORE = (
+    " Escribe toda la respuesta en inglés, aunque el contenido esté en otro idioma: redacta en "
+    "inglés cada frase, también la descripción de cada error o regla, con frases completas y sin "
+    "copiar frases del contenido. Solo se quedan tal cual los títulos que se piden literales, las "
+    "rutas, el código, los identificadores y los códigos de regla o de error."
+)
+
+
+def test_the_summarize_order_does_not_change(monkeypatch, captured):
+    """Its `##` headings must stay verbatim: the text is the one of commit 71846c1, byte by byte."""
+    _languages(monkeypatch, "es", "en")
+    server.local_summarize(text="Un texto corto para resumir.")
+    (call,) = captured
+    assert server._written_language_clause() == SUMMARIZE_ORDER_BEFORE
+    assert call["system"].endswith(SUMMARIZE_ORDER_BEFORE)
 
 
 def test_explain_code_and_describe_image_keep_the_plain_order(monkeypatch, captured, tmp_path):

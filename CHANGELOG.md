@@ -24,6 +24,11 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   dice qué se queda tal cual (títulos pedidos literales, rutas, código, identificadores y códigos
   de regla o de error). En la muestra en vivo las respuestas fallidas no estaban en el otro idioma
   sino mezcladas, con fragmentos de la entrada sin traducir.
+- **`local_lint_summary` traduce también sus etiquetas:** la orden de idioma dice que las etiquetas
+  en negrita, los nombres de sección y los de cada chequeo o prueba van en el idioma de respuesta;
+  solo se quedan tal cual las rutas, el código, los identificadores y los códigos de regla o de
+  error. En una prueba en vivo el modelo copiaba en español 5 a 8 etiquetas del informe de
+  `doctor` al resumir en inglés. `local_summarize` no cambia: sus títulos siguen literales.
 
 ### Corrige
 
