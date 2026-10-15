@@ -178,10 +178,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--document", type=Path, required=True, help="documento original")
     parser.add_argument("--requested", choices=LANGUAGES, required=True, help="idioma pedido")
     args = parser.parse_args(argv)
-    document = args.document.read_text(encoding="utf-8")
+    # As the server reads (`server._read_input`): a cp1252 log such as
+    # `docs-3/es-log-B2c_corpus-f2-check.txt` gets U+FFFD, not a UnicodeDecodeError (B2d-2).
+    document = args.document.read_text(encoding="utf-8", errors="replace")
     words = detect_language.load_function_words()
     for path in args.responses:
-        result = judge(path.read_text(encoding="utf-8"), document, args.requested, words=words)
+        response = path.read_text(encoding="utf-8", errors="replace")
+        result = judge(response, document, args.requested, words=words)
         row = {"path": str(path), **result._asdict()}
         row.pop("judged_text")
         print(json.dumps(row, ensure_ascii=False))

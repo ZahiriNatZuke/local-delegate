@@ -19,6 +19,8 @@ The backend is faked (`_run_chat` or the HTTP mock): no network.
 from __future__ import annotations
 
 import importlib.util
+import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -292,6 +294,67 @@ def test_a_document_without_it_still_gets_the_products(monkeypatch, tmp_path, pr
     assert _introductions(out) == 1, out
 
 
+# --- 6. The fidelity counter of the lint answers ------------------------------------------------
+
+LOG = (
+    "src/app.py:3:1: E501 Line too long (120 > 100)\n"
+    "src/app.py:9:1: E501 Line too long (130 > 100)\n"
+    "src/util.py:2:5: F401 `os` imported but unused\n"
+    "Found 3 errors.\n"
+)
+FAITHFUL = (
+    "**src/app.py**: 2 E501 (lines 3 and 9).\n**src/util.py**: 1 F401.\nIn total, 3 errors.\n\n"
+    "(read server-side: 140 chars ≈ 70 Claude tokens that did not enter your context)"
+)
+INVENTED = (
+    "**src/app.py**: 2 E501.\n**src/config.py**: 17 errors of configuration.\n"
+    "In total, 72 errors were found in the run.\nIn total, 72 errors were found in the run."
+)
+
+
+def test_the_counter_finds_an_invented_number_file_and_repetition():
+    """Positive control. Mutant "the counter that does not look at the log" (`log_facts` of the
+    answer instead of the log): every figure is "supported" and this `==` on the files fails."""
+    fidelity = _load_script("score_lint_fidelity")
+    result = fidelity.count_inventions(INVENTED, LOG)
+    assert result["invented_files"] == ["src/config.py"]
+    assert sorted(set(result["invented_numbers"])) == ["17", "72"]
+    assert len(result["repeated_sentences"]) == 1
+
+
+def test_a_faithful_answer_scores_0():
+    """Negative control: copied numbers, counts the log supports and the product's receipt."""
+    fidelity = _load_script("score_lint_fidelity")
+    result = fidelity.count_inventions(FAITHFUL, LOG)
+    assert result == {
+        "invented_numbers": [],
+        "invented_files": [],
+        "repeated_sentences": [],
+        "total": 0,
+    }
+
+
+def test_spanish_decimals_are_the_same_figure():
+    fidelity = _load_script("score_lint_fidelity")
+    log = "Presupuesto: 8,00 GiB - margen 1,50 GiB = 6,50 GiB disponibles\n"
+    assert fidelity.count_inventions("8 GiB, 1.5 de margen y 6.5 libres.", log)["total"] == 0
+
+
+def test_the_frozen_set_is_scored_against_unchanged_logs(tmp_path):
+    fidelity = _load_script("score_lint_fidelity")
+    log = tmp_path / "ruff.txt"
+    log.write_text(LOG, encoding="utf-8")
+    answers = tmp_path / "answers"
+    answers.mkdir()
+    (answers / "ruff.txt").write_text(INVENTED, encoding="utf-8")
+    frozen = fidelity.build([log], tmp_path)
+    assert frozen["logs"][0]["path"] == "ruff.txt"
+    scored = fidelity.score(frozen, answers, tmp_path)
+    assert scored["total"] == 5  # 17, 72 twice, src/config.py and one repeated sentence
+    log.write_text(LOG + "x\n", encoding="utf-8")  # the log changed after freezing
+    assert fidelity.score(frozen, answers, tmp_path)["rows"][0]["error"] == "log_changed"
+
+
 # --- 7. The bold labels of local_summarize ------------------------------------------------------
 
 
@@ -311,3 +374,37 @@ def test_the_summarize_order_names_the_bold_labels(monkeypatch, captured, produc
         "Solo se quedan tal cual los títulos de las líneas '## ' que se piden literales"
         in (call["system"])
     )
+
+
+# --- 8. The judge reads like the server ---------------------------------------------------------
+
+
+def test_the_judge_reads_a_cp1252_document_without_an_exception(tmp_path):
+    """Mutant "UTF-8 strict again": the subprocess ends with UnicodeDecodeError (check=True)."""
+    doc = tmp_path / "doc.txt"
+    doc.write_bytes("Después del café, el daemon arrancó bien.\n".encode("cp1252"))
+    assert b"\xe9" in doc.read_bytes()  # `é` in cp1252: a lone byte, invalid in UTF-8
+    with pytest.raises(UnicodeDecodeError):
+        doc.read_bytes().decode("utf-8")  # guard: the document really is not UTF-8
+    answer = tmp_path / "answer.txt"
+    answer.write_bytes(
+        b"The summary of this log is written in plain words and it says that the daemon "
+        b"started well and that the session of tests ended without any error at all.\n"
+    )
+    out = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "judge_response_language.py"),
+            "--document",
+            str(doc),
+            "--requested",
+            "en",
+            str(answer),
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=True,
+    ).stdout.splitlines()
+    (row,) = [json.loads(line) for line in out]
+    assert row["verdict"] == "requested"
