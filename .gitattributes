@@ -25,3 +25,6 @@ benchmarks/resumen-estructurado/fuentes/** -text
 
 # Copias de las configs de llama-swap para T11: el fin de línea (LF, CRLF o mezclado) es lo que se prueba.
 tests/fixtures/residency/** -text
+
+# Conjunto de control 2 de B2d-fix: su sha256 va en lang-sample-docs-2.json y se mide byte a byte.
+.sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/** -text

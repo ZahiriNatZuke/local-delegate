@@ -1,0 +1,60 @@
+warning: `incorrect-blank-line-before-class` (D203) and `blank-line-before-class` (D211) are incompatible. Ignoring `incorrect-blank-line-before-class`.
+warning: `multi-line-summary-first-line` (D212) and `multi-line-summary-second-line` (D213) are incompatible. Ignoring `multi-line-summary-second-line`.
+CPY001 Missing copyright notice at top of file
+--> scripts\detect_language.py:1:1
+
+D101 Missing docstring in public class
+  --> scripts\detect_language.py:35:7
+   |
+35 | class Detection(NamedTuple):
+   |       ^^^^^^^^^
+36 |     lang: str  # "es" | "en" | "unknown"
+37 |     tokens: int
+   |
+
+D103 Missing docstring in public function
+  --> scripts\detect_language.py:42:5
+   |
+42 | def load_function_words(path: Path = FUNCTION_WORDS_PATH) -> dict[str, frozenset[str]]:
+   |     ^^^^^^^^^^^^^^^^^^^
+43 |     data = json.loads(path.read_text(encoding="utf-8"))
+44 |     return {"es": frozenset(data["es"]), "en": frozenset(data["en"])}
+   |
+
+D103 Missing docstring in public function
+  --> scripts\detect_language.py:47:5
+   |
+47 | def detect(
+   |     ^^^^^^
+48 |     text: str,
+49 |     *,
+   |
+
+D103 Missing docstring in public function
+  --> scripts\detect_language.py:67:5
+   |
+67 | def main(argv: list[str] | None = None) -> int:
+   |     ^^^^
+68 |     parser = argparse.ArgumentParser(description="Detector de idioma de D10 (es, en o unknown).")
+69 |     parser.add_argument("paths", nargs="+", type=Path, help="ficheros de texto a clasificar")
+   |
+
+T201 `print` found
+  --> scripts\detect_language.py:81:9
+   |
+79 |             words=words,
+80 |         )
+81 |         print(json.dumps({"path": str(path), **result._asdict()}, ensure_ascii=False))
+   |         ^^^^^
+82 |     return 0
+   |
+help: Remove `print`
+   |
+80 |         )
+   -         print(json.dumps({"path": str(path), **result._asdict()}, ensure_ascii=False))
+81 |     return 0
+   |
+note: This is an unsafe fix and may change runtime behavior
+
+Found 6 errors.
+1 unsafe fix available with `--fix --unsafe-fixes`.
