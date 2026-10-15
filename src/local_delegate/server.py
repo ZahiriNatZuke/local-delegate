@@ -3608,12 +3608,16 @@ def _structured_system(max_words: int, extra: str) -> str:
 def _section_list(sections_, max_words: int) -> str:
     """Una línea por sección con sus palabras, y sus subsecciones anidadas debajo."""
     allocation = sections.allocate_by_size(
-        [s.size for s in sections_], max_words, minimum=_MIN_WORDS_PER_SECTION
+        [s.content_size for s in sections_], max_words, minimum=_MIN_WORDS_PER_SECTION
     )
     lines = []
     for section, words in zip(sections_, allocation, strict=True):
         note = " (el texto antes de la primera sección)" if section.synthetic else ""
-        lines.append(f"- {section.heading}{note} (unas {words} palabras)")
+        if section.empty:
+            # B2d-2: no words for a section with nothing under it, so nothing is invented.
+            lines.append(f"- {section.heading} (vacía en el documento: solo el título)")
+        else:
+            lines.append(f"- {section.heading}{note} (unas {words} palabras)")
         lines.extend(f"  - {sub}" for sub in section.subheadings)
     return "\n".join(lines)
 
@@ -3663,9 +3667,12 @@ def _structured_summary(
 ) -> str:
     plan = sections.sections_for_summary(content, structure)
     headings = [s.heading for s in plan]
+    empty_in_document = frozenset(i for i, s in enumerate(plan) if s.empty)
 
     def _complete(text: str, truncated: bool) -> str:
-        return sections.complete(text, headings, truncated=truncated).text
+        return sections.complete(
+            text, headings, truncated=truncated, empty_in_document=empty_in_document
+        ).text
 
     max_chars = config.max_chars_for_role(role)
     if len(content) <= max_chars:

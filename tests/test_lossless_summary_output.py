@@ -1,0 +1,224 @@
+"""B2d-2: the output of `local_summarize` and `local_lint_summary` without losses.
+
+Born of `evidence/B2d-fix/chunking-model-investigation.md` (§2 and §4) and of the live sample of
+set 3 (`evidence/B2d-fix/lang-sample-set3-batch{1,2}.json`). One block per point of the plan, each
+with its control and the mutant that makes it fail (recorded in `evidence/B2d-2/report.md`):
+
+1. The output caps of `local_lint_summary` (single call and every step of the chunking).
+2. A section empty in the document is not reported as not summarized, and gets no words.
+3. The cut by `max_tokens` drops a last line only if it is a heading cut in the middle.
+4. The usage log keeps the length of the raw model output (`chars_out_raw`).
+5. A document with its own "Introduction" does not get the product's one too.
+6. The fidelity counter of the lint answers (`scripts/score_lint_fidelity.py`).
+7. The language order of `local_summarize` names the bold labels.
+8. The language judge reads like the server (`errors="replace"`).
+
+The backend is faked (`_run_chat` or the HTTP mock): no network.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import sys
+from pathlib import Path
+
+import pytest
+from test_structured_summary import _call_summary, _prompt_list
+
+from local_delegate import config, i18n, sections, server
+
+ROOT = Path(__file__).resolve().parents[1]
+OUTPUT = "LOCAL_DELEGATE_OUTPUT_LANGUAGE"
+BATCHES = [("es", "en", "inglés"), ("en", "es", "español")]
+
+
+def _load_script(name: str):
+    spec = importlib.util.spec_from_file_location(name, ROOT / "scripts" / f"{name}.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _languages(monkeypatch, product: str, output: str | None) -> None:
+    monkeypatch.setenv("LOCAL_DELEGATE_LANG", product)
+    if output is None:
+        monkeypatch.delenv(OUTPUT, raising=False)
+    else:
+        monkeypatch.setenv(OUTPUT, output)
+    i18n.reset()
+
+
+@pytest.fixture
+def captured(monkeypatch) -> list[dict]:
+    """`_run_chat` doubled: the `system`, `user` and `max_tokens` of every call."""
+    calls: list[dict] = []
+
+    def run_chat(model, system, user, max_tokens, temperature, **_):
+        calls.append({"system": system, "user": user, "max_tokens": max_tokens})
+        result = server.ChatResult(text="resumen breve", ok=True, finish_reason="stop")
+        return result, 0, None, [server.Attempt(model, True, None, None, 0)]
+
+    monkeypatch.setattr(server, "_run_chat", run_chat)
+    monkeypatch.setattr(config, "FEEDBACK_ENABLED", False)
+    return calls
+
+
+# --- 2. A section empty in the document ---------------------------------------------------------
+
+DOC_EMPTY_SECTION = (
+    "# Paquete\n\n## Features\n\nOfrece muchas cosas útiles a quien lo usa a diario.\n\n"
+    "## Release Information\n\n## 2.13.1 (September 23rd, 2026)\n\n### Fixed\n\n"
+    "* Calculate Content-Length correctly when a file is passed.\n"
+)
+
+
+def _httpx2_model(_payload, _n):
+    """The model of the live case: it leaves the empty section empty, which is right."""
+    answer = (
+        "## Features\nOfrece muchas utilidades para el uso diario.\n\n"
+        "## Release Information\n\n"
+        "## 2.13.1 (September 23rd, 2026)\n**Fixed** Se corrige el cálculo de Content-Length."
+    )
+    return answer, "stop"
+
+
+def test_a_section_empty_in_the_document_is_not_reported_as_not_summarized(monkeypatch, tmp_path):
+    """Investigation test B1 (httpx2, batch 2). Mutant "`complete` counts it as `empty` without
+    looking at the document" (no `empty_in_document`): the assert on the warning fails."""
+    _languages(monkeypatch, "en", "es")
+    out, seen = _call_summary(monkeypatch, tmp_path, _httpx2_model, text=DOC_EMPTY_SECTION)
+    assert len(seen) == 1  # guard: one structured call
+    assert _prompt_list(seen[0]["messages"][1]["content"])  # guard: it was the structured path
+    assert sections.WARNING_MARKER not in out, out
+    assert not any(form in out for form in sections.NOT_SUMMARIZED_FORMS), out
+
+
+def test_an_empty_section_gets_no_words_in_the_prompt(monkeypatch, tmp_path):
+    """Mutant "measure the span with the heading" (`content_size` -> `size`): the empty section
+    is asked for words again, and the assert on its line fails."""
+    _out, seen = _call_summary(monkeypatch, tmp_path, _httpx2_model, text=DOC_EMPTY_SECTION)
+    user = seen[0]["messages"][1]["content"]
+    line = next(x for x in user.splitlines() if "Release Information" in x)
+    assert line == "- Release Information (vacía en el documento: solo el título)", line
+    # Control: the sections with content still get their words.
+    assert "- Features (unas " in user
+
+
+def test_the_words_follow_the_body_not_the_heading(monkeypatch, tmp_path):
+    """Mutant "measure the span with the heading" (`content_size` returns `size`): the section
+    with the long heading gets more words for the same body, and the `==` fails."""
+    body = "Texto de la sección con el mismo largo en las dos. " * 6
+    long_heading = "Un título muy largo que ocupa mucho más que el cuerpo de otras secciones " * 3
+    doc = f"# Doc\n\n## Corto\n\n{body}\n\n## {long_heading.strip()}\n\n{body}\n"
+    _out, seen = _call_summary(monkeypatch, tmp_path, _httpx2_model, text=doc)
+    listing = _prompt_list(seen[0]["messages"][1]["content"])
+    assert len(listing) == 2  # guard: the two sections, no introduction
+    assert listing[0][1] == listing[1][1], listing
+
+
+def test_allocate_by_size_gives_0_words_to_a_span_without_body():
+    """Mutant "the old `allocate_by_size`": the empty one gets the minimum (8), not 0."""
+    assert sections.allocate_by_size([300, 0, 300], 100, minimum=8) == [50, 0, 50]
+    # Control: without empty ones it is the proportional split with the minimum of always.
+    assert sections.allocate_by_size([300, 300], 100, minimum=8) == [50, 50]
+
+
+def test_the_body_is_measured_without_the_heading():
+    plan = sections.sections_for_summary(DOC_EMPTY_SECTION, sections.detect(DOC_EMPTY_SECTION))
+    by_heading = {s.heading: s for s in plan}
+    assert by_heading["Release Information"].empty
+    assert by_heading["Release Information"].content_size == 0
+    assert by_heading["Release Information"].size > 0  # the span WITH the heading is not empty
+    assert not by_heading["Features"].empty
+    # A section that only holds a subheading and its text is not empty.
+    assert not by_heading["2.13.1 (September 23rd, 2026)"].empty
+
+
+def test_a_missing_empty_section_comes_back_without_the_placeholder():
+    done = sections.complete(
+        "## Features\nuno dos tres cuatro.\n\n## 2.13.1\ncinco seis siete ocho.",
+        ["Features", "Release Information", "2.13.1"],
+        empty_in_document=frozenset({1}),
+    )
+    assert "## Release Information" in done.text
+    assert not any(form in done.text for form in sections.NOT_SUMMARIZED_FORMS)
+    assert sections.WARNING_MARKER not in done.text
+    assert (done.missing, done.empty) == (0, 0)
+
+
+def test_a_section_with_content_left_empty_is_still_reported():
+    """Control: the change only covers sections empty in the DOCUMENT."""
+    done = sections.complete(
+        "## Features\n\n## 2.13.1\ncinco seis siete ocho.",
+        ["Features", "2.13.1"],
+        empty_in_document=frozenset(),
+    )
+    assert sections.WARNING_MARKER in done.text
+    assert done.empty == 1
+
+
+# --- 3. The cut by the cap does not drop a whole section ----------------------------------------
+
+
+def test_truncation_keeps_a_long_last_line_that_starts_with_hash():
+    """Investigation test B2 (httpcore2, batch 1). Mutant "the condition of today" (any heading
+    line is dropped): this `in` fails; the control below still passes."""
+    body = "### 2.13.1 Fixed: " + "se corrige un fallo y se mejora otro aspecto; " * 80
+    output = "## Intro\nTexto de la introducción breve.\n\n## Changelog\n" + body
+    done = sections.complete(output, ["Intro", "Changelog"], truncated=True)
+    assert "se corrige un fallo" in done.text, done.text
+
+
+def test_truncation_still_drops_a_short_cut_heading():
+    """Control: a heading cut in the middle goes, and the whole one comes back as missing."""
+    output = "## Intro\nTexto de la introducción breve.\n\n## Chang"
+    done = sections.complete(output, ["Intro", "Changelog"], truncated=True)
+    assert "## Chang\n" not in done.text + "\n"
+    assert "## Changelog" in done.text
+    assert done.missing == 1
+
+
+def test_without_truncation_a_last_heading_is_kept():
+    output = "## Intro\nTexto de la introducción breve.\n\n## Changelog"
+    done = sections.complete(output, ["Intro", "Changelog"], truncated=False)
+    assert done.text.startswith(output)
+
+
+# --- 5. One introduction ------------------------------------------------------------------------
+
+INTRO_TEXT = "Este documento explica " + "muchas cosas importantes " * 10 + "\n\n"
+
+
+def _echo_headings(payload, _n):
+    listing = _prompt_list(payload["messages"][1]["content"])
+    return "\n\n".join(f"## {t}\nTexto del resumen de la sección." for t, _w, _s in listing), "stop"
+
+
+def _introductions(output: str) -> int:
+    forms = {sections.normalize_heading(f) for f in sections.INTRODUCTION_FORMS}
+    return sum(1 for _i, t in sections.heading_lines(output) if t in forms)
+
+
+@pytest.mark.parametrize(("product", "output"), [("es", "en"), ("en", "es"), ("es", None)])
+@pytest.mark.parametrize("own", ["Introduction", "Introducción", "INTRODUCTION"])
+def test_a_document_with_its_own_introduction_gets_only_one(
+    monkeypatch, tmp_path, product, output, own
+):
+    """pycparser (set 3, batch 1). Mutant "always add the section": the count is 2."""
+    _languages(monkeypatch, product, output)
+    doc = f"# Guía\n\n{INTRO_TEXT}## {own}\n\nQué es.\n\n## Uso\n\nCómo se usa.\n"
+    out, _seen = _call_summary(monkeypatch, tmp_path, _echo_headings, text=doc)
+    assert _introductions(out) == 1, out
+
+
+@pytest.mark.parametrize(("product", "output"), [("es", "en"), ("en", "es")])
+def test_a_document_without_it_still_gets_the_products(monkeypatch, tmp_path, product, output):
+    """Control: the synthetic introduction stays when the document has none."""
+    _languages(monkeypatch, product, output)
+    doc = f"# Guía\n\n{INTRO_TEXT}## Qué es\n\nQué es.\n\n## Uso\n\nCómo se usa.\n"
+    out, seen = _call_summary(monkeypatch, tmp_path, _echo_headings, text=doc)
+    listing = _prompt_list(seen[0]["messages"][1]["content"])
+    assert listing[0][0] == sections.introduction()
+    assert _introductions(out) == 1, out

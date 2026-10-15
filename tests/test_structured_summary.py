@@ -415,6 +415,9 @@ def test_focus_reaches_the_reduce_in_prose(monkeypatch, tmp_path):
 # --- T4: documentos largos por secciones ----------------------------------------------------------
 
 
+EMPTY_IN_DOCUMENT = " (vacía en el documento: solo el título)"
+
+
 def _prompt_list(user: str) -> list[tuple[str, int, list[str]]]:
     """(título, palabras, subsecciones) de cada entrada de la lista que recibe el modelo."""
     if "Secciones, en orden:\n" not in user:
@@ -424,6 +427,9 @@ def _prompt_list(user: str) -> list[tuple[str, int, list[str]]]:
     for line in block.split("\n"):
         if line.startswith("  - "):
             entries[-1][2].append(line[4:])
+            continue
+        if line.endswith(EMPTY_IN_DOCUMENT):  # B2d-2: an empty section is asked for no words
+            entries.append((line[2:].removesuffix(EMPTY_IN_DOCUMENT), 0, []))
             continue
         body, words = line[2:].rsplit(" (unas ", 1)
         title = body.removesuffix(" (el texto antes de la primera sección)")
