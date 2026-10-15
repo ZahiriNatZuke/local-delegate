@@ -172,13 +172,62 @@ class Matching:
     missing: list[int] = field(default_factory=list)
     out_of_order: list[int] = field(default_factory=list)
     empty: list[int] = field(default_factory=list)
+    # Expected index -> line index of a heading the model wrote in another language (also in
+    # `pairs`). Only filled with `positional=True` (B2d-fix).
+    translated: dict[int, int] = field(default_factory=dict)
 
 
 def _words(text: str) -> int:
     return len(re.findall(r"\w+", text))
 
 
-def match_headings(output: str, expected: list[str], *, min_content: int = 3) -> Matching:
+_ATX_LEVEL = re.compile(r"^\s{0,3}(#{1,6})\s")
+
+
+def _pair_translated(output: str, expected: list[str], result: Matching) -> None:
+    """Pairs a missing heading with the one the model wrote in its slot in another language.
+
+    The prompt asks for every heading verbatim, but with a response language different from the
+    document's the model sometimes translates one ("Introducción" -> "Introduction"). Text
+    matching then sees an expected heading missing and an unknown one, and `complete` inserted the
+    expected one again: the section came out twice, once summarized and once "(not summarized)"
+    (live sample of B2d). The rescue is positional and narrow, so a heading the model invented is
+    not taken for a section: between the same two paired neighbours there must be exactly ONE
+    missing expected heading and exactly ONE unpaired ATX line, at the level of the paired ones
+    (2 when nothing paired), that matches no expected heading. Bold lines never count.
+    """
+    lines = output.split("\n")
+    normalized = [normalize_heading(e) for e in expected]
+    level_of: dict[int, int] = {}
+    for index, line in enumerate(lines):
+        m = _ATX_LEVEL.match(line)
+        if m:
+            level_of[index] = len(m.group(1))
+    paired_levels = {level_of[line] for line in result.pairs.values() if line in level_of}
+    levels = paired_levels or {2}
+    used = set(result.pairs.values())
+    free = [
+        (index, text)
+        for index, text in heading_lines(output)
+        if index not in used
+        and level_of.get(index) in levels
+        and not any(_matches(n, text) for n in normalized)
+    ]
+    for k in list(result.missing):
+        before = max((line for e, line in result.pairs.items() if e < k), default=-1)
+        after = min((line for e, line in result.pairs.items() if e > k), default=len(lines))
+        low = max((e for e in result.pairs if e < k), default=-1)
+        high = min((e for e in result.pairs if e > k), default=len(expected))
+        missing_here = [e for e in result.missing if low < e < high]
+        candidates = [index for index, _text in free if before < index < after]
+        if missing_here == [k] and len(candidates) == 1:
+            result.pairs[k] = result.translated[k] = candidates[0]
+            result.missing.remove(k)
+
+
+def match_headings(
+    output: str, expected: list[str], *, min_content: int = 3, positional: bool = False
+) -> Matching:
     """Subsecuencia común más larga entre los títulos esperados y las líneas de título.
 
     Uno a uno y en orden: un título duplicado necesita dos apariciones, y una mención en la prosa
@@ -186,6 +235,10 @@ def match_headings(output: str, expected: list[str], *, min_content: int = 3) ->
     orden** (existe, pero no donde tocaba); si no aparece en ninguna, **falta**. Una sección
     emparejada es **vacía** si tiene menos de `min_content` palabras hasta la siguiente
     línea emparejada: los subtítulos y negritas que el modelo pone dentro cuentan como contenido.
+
+    With `positional=True` (what `complete` uses) a missing heading is also paired with the one
+    the model translated in its slot (`_pair_translated`). The measurement script keeps the
+    default: it measures text matching, as when its baseline was frozen.
     """
     normalized = [normalize_heading(e) for e in expected]
     candidates = heading_lines(output)
@@ -218,6 +271,8 @@ def match_headings(output: str, expected: list[str], *, min_content: int = 3) ->
             result.out_of_order.append(k)
         else:
             result.missing.append(k)
+    if positional:
+        _pair_translated(output, expected, result)
     lines = output.split("\n")
     order = sorted(result.pairs.items(), key=lambda par: par[1])
     for pos, (k, line) in enumerate(order):
@@ -264,7 +319,12 @@ def complete(output: str, expected: list[str], *, truncated: bool = False) -> Co
     if truncated and lines and heading_lines(lines[-1]):
         lines = lines[:-1]
     text = "\n".join(lines)
-    emp = match_headings(text, expected)
+    emp = match_headings(text, expected, positional=True)
+    # A heading the model translated goes back to the document's wording, so it can be searched
+    # in the document; its level (the `#`s) is kept.
+    for k, index in emp.translated.items():
+        hashes = _ATX_LEVEL.match(lines[index])
+        lines[index] = f"{hashes.group(1) if hashes else '##'} {expected[k]}"
     insertions: dict[int, list[str]] = {}
     placeholder = not_summarized()
     for k in emp.missing:
@@ -281,6 +341,8 @@ def complete(output: str, expected: list[str], *, truncated: bool = False) -> Co
             if index < len(lines):
                 new_lines.append(lines[index])
         text = "\n".join(new_lines).rstrip("\n")
+    elif emp.translated:
+        text = "\n".join(lines)
     left_out = len(emp.missing) + len(emp.empty)
     if left_out:
         key = (
@@ -301,7 +363,17 @@ def complete(output: str, expected: list[str], *, truncated: bool = False) -> Co
 
 
 def introduction() -> str:
-    """El título de la sección sintética con el texto anterior al primer título, en el idioma vigente."""
+    """El título de la sección sintética con el texto anterior al primer título.
+
+    It is a heading the MODEL writes, not one of the document's, so it goes in the response
+    language (REQ-028) when the catalog has it, and in the product language otherwise. In the
+    B2d live sample it went in the product language ("Introducción") while the model was told to
+    answer in English: it wrote "Introduction" and the server added "Introducción" again as not
+    summarized.
+    """
+    response = i18n.response_language().value.lower().replace("_", "-").split("-")[0]
+    if response in i18n.LANGUAGES:
+        return i18n.t_lang(response, "mcp.sections.introduction")
     return i18n.t("mcp.sections.introduction")
 
 

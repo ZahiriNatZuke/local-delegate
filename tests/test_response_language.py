@@ -33,6 +33,24 @@ def _order(name: str) -> str:
     return f" Responde en {name}, aunque el contenido esté en otro idioma."
 
 
+def _hardened_order(name: str) -> str:
+    """The order of summarize and lint_summary since B2d (`tests/test_language_hardening.py`)."""
+    return (
+        f" Escribe toda la respuesta en {name}, aunque el contenido esté en otro idioma: redacta "
+        f"en {name} cada frase, también la descripción de cada error o regla, con frases "
+        "completas y sin copiar frases del contenido. Solo se quedan tal cual los títulos que se "
+        "piden literales, las rutas, el código, los identificadores y los códigos de regla o de "
+        "error."
+    )
+
+
+_HARDENED = frozenset({"local_summarize", "local_lint_summary"})
+
+
+def _order_for(tool: str, name: str) -> str:
+    return _hardened_order(name) if tool in _HARDENED else _order(name)
+
+
 @pytest.fixture
 def captured(monkeypatch) -> list[dict]:
     """Los `system` y `user` de cada llamada al backend, sin red ni log."""
@@ -68,7 +86,7 @@ def test_the_output_variable_reaches_the_four_tools(monkeypatch, tmp_path, captu
         captured.clear()
         call()
         assert len(captured) == 1, tool
-        assert captured[0]["system"].endswith(_order(name)), tool
+        assert captured[0]["system"].endswith(_order_for(tool, name)), tool
 
 
 @pytest.mark.parametrize(("lang", "name"), [("es", "español"), ("en", "inglés")])
@@ -80,7 +98,7 @@ def test_without_the_variable_the_order_follows_the_current_language(
     for tool, call in _single_calls(tmp_path).items():
         captured.clear()
         call()
-        assert captured[0]["system"].endswith(_order(name)), tool
+        assert captured[0]["system"].endswith(_order_for(tool, name)), tool
 
 
 @pytest.mark.parametrize("invalid", ["a\nb", "x" * 41, "   "])
@@ -91,7 +109,7 @@ def test_an_invalid_variable_falls_back_to_the_current_language(
     for tool, call in _single_calls(tmp_path).items():
         captured.clear()
         call()
-        assert captured[0]["system"].endswith(_order("español")), tool
+        assert captured[0]["system"].endswith(_order_for(tool, "español")), tool
 
 
 def _summarize_in_chunks():
@@ -119,7 +137,7 @@ def test_the_order_is_in_every_step_of_the_chunking(monkeypatch, captured, call)
     monkeypatch.setattr(config, "STRUCTURED_SUMMARY", True)
     call()
     assert len(captured) > 2  # guarda: de verdad troceó y redujo
-    assert all(c["system"].endswith(_order("francés")) for c in captured), [
+    assert all(c["system"].endswith(_hardened_order("francés")) for c in captured), [
         c["system"][-60:] for c in captured
     ]
 
@@ -131,7 +149,10 @@ def test_the_other_tools_do_not_get_the_order(monkeypatch, captured):
     server.local_classify(text="hola", labels=["a", "b"])
     server.local_extract(fields=["a"], text="a=1")
     server.local_delegate(task="t", input="i", output_format="f")
-    assert captured and all("Responde en francés" not in c["system"] for c in captured)
+    assert captured and all(
+        "Responde en francés" not in c["system"] and "Escribe toda la respuesta" not in c["system"]
+        for c in captured
+    )
 
 
 # --- local_status y doctor ------------------------------------------------------------------------
