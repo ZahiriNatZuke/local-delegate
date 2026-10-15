@@ -234,7 +234,7 @@ def test_the_log_keeps_the_raw_length_before_the_post_processing(monkeypatch, tm
         return answer, "length"
 
     text = "# Doc\n\n## Uno\n\nPrimera parte del texto.\n\n## Dos\n\nSegunda parte del texto.\n"
-    _out, _seen = _call_summary(monkeypatch, tmp_path, _model, text=text)
+    _call_summary(monkeypatch, tmp_path, _model, text=text)
     (row,) = [e for e in _events(tmp_path) if e["tool"] == "local_summarize"]
     assert row["chars_out_raw"] == len(answer)
     assert row["chars_out_raw"] > row["chars_out"], row
