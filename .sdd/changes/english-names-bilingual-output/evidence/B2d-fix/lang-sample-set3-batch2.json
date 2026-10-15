@@ -1,0 +1,770 @@
+{
+ "status": "set_3_batch_2_done",
+ "measured_at": "2026-10-15",
+ "code": "branch sdd/english-names-b2d at 32d8612, installed in the daemon (local_status: local-delegate v0.35.0)",
+ "method": "Each tool called once, in series, through the live MCP daemon with path=<absolute path> and default arguments (max_words default, no focus). Responses saved literally (scratchpad c3t2/*.txt, copied here as response_literal); their length without the product's wrapper lines matches chars_out of the usage-log row in 9 of 10, and in the 10th once the truncation warning line (counted in chars_out) is added back. Scored offline with the prose-only judge and, for comparison, the old rule.",
+ "combination": {
+  "product": "en",
+  "output_language": "es",
+  "window_id": "w-20261015T183107Z",
+  "local_status": "Language: en (variable; ...language.json) / Model response language: es (output variable); backend up; open test window w-20261015T183107Z"
+ },
+ "set": {
+  "file": "evidence/B2d-fix/lang-sample-docs-3.json",
+  "sha256": "fcf3b4462b193739a00ff3acf633aba365b9e50c8a021d76fd37b14cf3d68593",
+  "sha256_verified": true,
+  "documents_sha256_verified": "10/10 (batch 2)",
+  "part": "batch_2"
+ },
+ "judge": {
+  "script": "scripts/judge_response_language.py",
+  "commit": "32d8612",
+  "call": "judge(response, document, 'es') with the document read as the server reads it (utf-8, errors='replace'; the 10 batch-2 documents are valid UTF-8)"
+ },
+ "old_rule": "detect(min_tokens=20, min_margin=0.15) on the literal response minus the product's wrapper lines (scratchpad score_b1.py rule)",
+ "criterion": ">= 90% requested among the judgeable responses per tool and batch, 0 in the opposite language; not_judgeable reported apart",
+ "summary": {
+  "local_summarize": {
+   "judge_new": {
+    "samples": 5,
+    "judgeable": 5,
+    "requested": 5,
+    "opposite": 0,
+    "unknown": 0,
+    "not_judgeable": 0,
+    "pct_requested_of_judgeable": 100.0,
+    "meets_criterion": true
+   },
+   "judge_old": {
+    "samples": 5,
+    "judgeable": 5,
+    "requested": 5,
+    "opposite": 0,
+    "unknown": 0,
+    "not_judgeable": 0,
+    "pct_requested_of_judgeable": 100.0,
+    "meets_criterion": true
+   },
+   "duplicate_sections_same_title": 0,
+   "english_bold_labels_copied": 4,
+   "english_headings_copied": 9
+  },
+  "local_lint_summary": {
+   "judge_new": {
+    "samples": 5,
+    "judgeable": 5,
+    "requested": 5,
+    "opposite": 0,
+    "unknown": 0,
+    "not_judgeable": 0,
+    "pct_requested_of_judgeable": 100.0,
+    "meets_criterion": true
+   },
+   "judge_old": {
+    "samples": 5,
+    "judgeable": 5,
+    "requested": 5,
+    "opposite": 0,
+    "unknown": 0,
+    "not_judgeable": 0,
+    "pct_requested_of_judgeable": 100.0,
+    "meets_criterion": true
+   },
+   "english_bold_labels_copied": 0
+  }
+ },
+ "observations": [
+  "All 10 responses are judged 'requested' (es) by both judges; none not_judgeable, unknown or opposite. The new judge has a larger margin than the old one in all 10.",
+  "local_summarize keeps the English headings of pywin32 verbatim (9 H2: Docs, Support, Binaries, Installing via PIP, Troubleshooting, Building from source, Release process, Versioning, Licenses) and copies its 4 English H3 headings as bold sub-labels; the response still passes (margin 0.42). The product's own heading 'Introducción' is in Spanish in the three structured summaries.",
+  "No summarize response repeats a section title (no 'Introducción' duplicated by a document section).",
+  "local_summarize on identify and python_discovery (short, gemma3-4b) returned plain prose, without headings.",
+  "local_lint_summary: 0 English bold labels copied; all labels written in Spanish ('Resumen de pruebas', 'Pruebas superadas', 'Resumen de Problemas por Archivo', 'Errores de Estilo', ...).",
+  "local_lint_summary on es-log-B2d-fix_corpus-affinity-check.txt hit max_tokens (finish_reason length, truncated_out true, tokens_out 496): the model listed ~30 commit hashes and was cut mid-list; the product added its truncation warning. Its content is also invented ('4 errores', '72 errores', 'scripts/build_corpus.py' as file, the same sentence repeated).",
+  "No chunking recorded in the usage log for any of the 10 calls.",
+  "Models: gemma4-26b-a4b for pywin32, Configuration, SKILL, the pytest log and the corpus-affinity log; gemma3-4b for identify, python_discovery and the ruff, tsc and check-llamaswap logs."
+ ],
+ "samples": [
+  {
+   "set": "3",
+   "batch": 2,
+   "window_id": "w-20261015T183107Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-doc-pywin32-312.METADATA.md",
+   "input_language": "en",
+   "document_sha256": "77f53e90408dd3bdcf5f73a20d6548504313dee2ad34f8b3794b2202583a84b1",
+   "document_sha256_frozen": "77f53e90408dd3bdcf5f73a20d6548504313dee2ad34f8b3794b2202583a84b1",
+   "document_unchanged": true,
+   "response_file": "s3_01.txt",
+   "response_sha256": "72aac69d7f4a0921b6d71cf7cd2df94d3ee68368e21872122258f4c083cb5004",
+   "response_literal": "## Introducción\nEste documento es el manual de las extensiones de Python para Win32, las cuales permiten acceder a diversas APIs de Windows, incluyendo el soporte para COM.\n\n## Docs\nExiste una versión en línea del archivo de ayuda, aunque parte del contenido es antiguo. Se pueden obtener sugerencias de tipos mediante `types-pywin32`.\n\n## Support\nSe pueden reportar errores mediante problemas en GitHub. Para soporte general, se deben usar las discusiones de la comunidad o la lista de correo.\n\n## Binaries\nLos lanzamientos de archivos binarios ya no cuentan con soporte oficial.\n\n## Installing via PIP\nSe recomienda realizar la instalación utilizando el comando `python -m pip install --upgrade pywin32`.\n**Installing globally** Se puede ejecutar el script de post-instalación para configurar objetos COM o servicios fuera de entornos virtuales.\n**Installing for MingGW/msys2** Se sugiere utilizar el gestor de paquetes `pacman` para instalar los parches específicos de este entorno.\n**Running as a Windows Service** Es necesario realizar una instalación global con privilegios elevados y asegurar el acceso a las librerías DLL.\n\n## Troubleshooting\nSi aparecen errores de punto de entrada, se debe ejecutar el script de post-instalación o eliminar copias conflictivas de las librerías DLL en el sistema.\n\n## Building from source\nSe requiere instalar Visual Studio 2019 y seguir las instrucciones de configuración y compilación proporcionadas.\n\n## Release process\nEl proceso actual se basa en los artefactos generados por las acciones de GitHub, siguiendo una lista de verificación para actualizar archivos y subir paquetes.\n**Older Manual Release Process** Este era el método anterior basado en entornos de desarrollo locales, utilizado hasta la versión 306.\n\n## Versioning\nSe emplea un esquema de numeración incremental donde cada aumento puede representar cambios que rompan la interfaz.\n\n## Licenses\nEl proyecto contiene código con diversas licencias; los archivos de licencia en el árbol de código son la referencia oficial.\n\n(read server-side: 10907 chars ≈ 5453 Claude tokens that did not enter your context)",
+   "usage_log": {
+    "ts": "2026-10-15T18:32:46+00:00",
+    "model": "gemma4-26b-a4b",
+    "chars_in": 10907,
+    "chars_out": 2030,
+    "truncated": null,
+    "truncated_out": null,
+    "tokens_out": 421,
+    "chunks": null,
+    "finish_reason": "stop"
+   },
+   "chars_out_check": {
+    "len_without_wrapper": 2030,
+    "chars_out": 2030,
+    "match": true
+   },
+   "judge_new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 269,
+    "es_ratio": 0.4238,
+    "en_ratio": 0.0074,
+    "margin": 0.4164
+   },
+   "judged_text": "## Introducción\nEste documento es el manual de las extensiones de Python para las cuales permiten acceder a diversas APIs de Windows, incluyendo el soporte para COM.\n\nExiste una versión en línea del archivo de ayuda, aunque parte del contenido es antiguo. Se pueden obtener sugerencias de tipos mediante .\n\nSe pueden reportar errores mediante problemas en Para soporte general, se deben usar las discusiones de la comunidad o la lista de correo.\n\nLos lanzamientos de archivos binarios ya no cuentan con soporte oficial.\n\nSe recomienda realizar la instalación utilizando el comando .\n**Installing globally** Se puede ejecutar el script de post-instalación para configurar objetos COM o servicios fuera de entornos virtuales.\n**Installing for Se sugiere utilizar el gestor de paquetes para instalar los parches específicos de este entorno.\n**Running as a Windows Service** Es necesario realizar una instalación global con privilegios elevados y asegurar el acceso a las librerías DLL.\n\nSi aparecen errores de punto de entrada, se debe ejecutar el script de post-instalación o eliminar copias conflictivas de las librerías DLL en el sistema.\n\nSe requiere instalar Visual Studio y seguir las instrucciones de configuración y compilación proporcionadas.\n\nEl proceso actual se basa en los artefactos generados por las acciones de siguiendo una lista de verificación para actualizar archivos y subir paquetes.\n**Older Manual Release Process** Este era el método anterior basado en entornos de desarrollo locales, utilizado hasta la versión\n\nSe emplea un esquema de numeración incremental donde cada aumento puede representar cambios que rompan la interfaz.\n\nEl proyecto contiene código con diversas licencias; los archivos de licencia en el árbol de código son la referencia oficial.",
+   "judge_old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 297,
+    "es_ratio": 0.3838,
+    "en_ratio": 0.0135,
+    "margin": 0.3703
+   },
+   "judged_text_old": "## Introducción\nEste documento es el manual de las extensiones de Python para Win32, las cuales permiten acceder a diversas APIs de Windows, incluyendo el soporte para COM.\n\n## Docs\nExiste una versión en línea del archivo de ayuda, aunque parte del contenido es antiguo. Se pueden obtener sugerencias de tipos mediante `types-pywin32`.\n\n## Support\nSe pueden reportar errores mediante problemas en GitHub. Para soporte general, se deben usar las discusiones de la comunidad o la lista de correo.\n\n## Binaries\nLos lanzamientos de archivos binarios ya no cuentan con soporte oficial.\n\n## Installing via PIP\nSe recomienda realizar la instalación utilizando el comando `python -m pip install --upgrade pywin32`.\n**Installing globally** Se puede ejecutar el script de post-instalación para configurar objetos COM o servicios fuera de entornos virtuales.\n**Installing for MingGW/msys2** Se sugiere utilizar el gestor de paquetes `pacman` para instalar los parches específicos de este entorno.\n**Running as a Windows Service** Es necesario realizar una instalación global con privilegios elevados y asegurar el acceso a las librerías DLL.\n\n## Troubleshooting\nSi aparecen errores de punto de entrada, se debe ejecutar el script de post-instalación o eliminar copias conflictivas de las librerías DLL en el sistema.\n\n## Building from source\nSe requiere instalar Visual Studio 2019 y seguir las instrucciones de configuración y compilación proporcionadas.\n\n## Release process\nEl proceso actual se basa en los artefactos generados por las acciones de GitHub, siguiendo una lista de verificación para actualizar archivos y subir paquetes.\n**Older Manual Release Process** Este era el método anterior basado en entornos de desarrollo locales, utilizado hasta la versión 306.\n\n## Versioning\nSe emplea un esquema de numeración incremental donde cada aumento puede representar cambios que rompan la interfaz.\n\n## Licenses\nEl proyecto contiene código con diversas licencias; los archivos de licencia en el árbol de código son la referencia oficial.",
+   "bold_labels": [
+    "Installing globally",
+    "Installing for MingGW/msys2",
+    "Running as a Windows Service",
+    "Older Manual Release Process"
+   ],
+   "english_bold_labels_copied": [
+    "Installing for MingGW/msys2",
+    "Running as a Windows Service"
+   ],
+   "headings": [
+    "Introducción",
+    "Docs",
+    "Support",
+    "Binaries",
+    "Installing via PIP",
+    "Troubleshooting",
+    "Building from source",
+    "Release process",
+    "Versioning",
+    "Licenses"
+   ],
+   "duplicate_sections_same_title": [],
+   "english_bold_labels_copied_reviewed": [
+    "Installing globally",
+    "Installing for MingGW/msys2",
+    "Running as a Windows Service",
+    "Older Manual Release Process"
+   ],
+   "english_bold_labels_copied_count": 4,
+   "english_headings_copied_count": 9
+  },
+  {
+   "set": "3",
+   "batch": 2,
+   "window_id": "w-20261015T183107Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-doc-identify-2.6.19.METADATA.md",
+   "input_language": "en",
+   "document_sha256": "6bd3f4b6084b3aa9bbfdd4631b2edffdc2908b396dfc2971891d0356bccb4965",
+   "document_sha256_frozen": "6bd3f4b6084b3aa9bbfdd4631b2edffdc2908b396dfc2971891d0356bccb4965",
+   "document_unchanged": true,
+   "response_file": "s3_02.txt",
+   "response_sha256": "dbe5205a0788e4369aa2ee4782c1f3b66afbb627a5dbd02f7d70a8e210bc06de",
+   "response_literal": "El paquete “identify” es una biblioteca de Python para la identificación de archivos. Su versión actual es 2.6.19. Proporciona una forma de determinar las características de un archivo, como su tipo (archivo, enlace simbólico, directorio), si es ejecutable y su lenguaje de programación.\n\nLa instalación se realiza con `pip install identify`.  Ofrece funciones para obtener etiquetas de un archivo en disco, a partir del nombre del archivo o del intérprete utilizado.  También incluye una interfaz de línea de comandos (`identify-cli`) para facilitar su uso.\n\nAdemás, la biblioteca incluye una funcionalidad para identificar el tipo de licencia de un archivo, basada en el gem “licensee” y utilizando datos de “choosealicense.com”.  El proceso de identificación de la licencia implica la eliminación de la línea de copyright, la normalización del espacio en blanco y la comparación con coincidencias exactas y con editores de distancia.  La función `license_id` devuelve un ID SPDX.  El funcionamiento interno de `tags_from_path` implica la verificación del tipo de archivo, la determinación de la ejecutable, el reconocimiento de extensiones y la lectura de los primeros bytes para determinar si es binario o texto.\n\n(read server-side: 4373 chars ≈ 2186 Claude tokens that did not enter your context)",
+   "usage_log": {
+    "ts": "2026-10-15T18:33:02+00:00",
+    "model": "gemma3-4b",
+    "chars_in": 4373,
+    "chars_out": 1216,
+    "truncated": null,
+    "truncated_out": null,
+    "tokens_out": 256,
+    "chunks": null,
+    "finish_reason": "stop"
+   },
+   "chars_out_check": {
+    "len_without_wrapper": 1216,
+    "chars_out": 1216,
+    "match": true
+   },
+   "judge_new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 175,
+    "es_ratio": 0.4914,
+    "en_ratio": 0.0,
+    "margin": 0.4914
+   },
+   "judged_text": "El paquete “identify” es una biblioteca de Python para la identificación de archivos. Su versión actual es Proporciona una forma de determinar las características de un archivo, como su tipo (archivo, enlace simbólico, directorio), si es ejecutable y su lenguaje de programación.\n\nLa instalación se realiza con . Ofrece funciones para obtener etiquetas de un archivo en disco, a partir del nombre del archivo o del intérprete utilizado. También incluye una interfaz de línea de comandos ( ) para facilitar su uso.\n\nAdemás, la biblioteca incluye una funcionalidad para identificar el tipo de licencia de un archivo, basada en el gem “licensee” y utilizando datos de El proceso de identificación de la licencia implica la eliminación de la línea de copyright, la normalización del espacio en blanco y la comparación con coincidencias exactas y con editores de distancia. La función devuelve un ID SPDX. El funcionamiento interno de implica la verificación del tipo de archivo, la determinación de la ejecutable, el reconocimiento de extensiones y la lectura de los primeros bytes para determinar si es binario o texto.",
+   "judge_old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 187,
+    "es_ratio": 0.4599,
+    "en_ratio": 0.0053,
+    "margin": 0.4546
+   },
+   "judged_text_old": "El paquete “identify” es una biblioteca de Python para la identificación de archivos. Su versión actual es 2.6.19. Proporciona una forma de determinar las características de un archivo, como su tipo (archivo, enlace simbólico, directorio), si es ejecutable y su lenguaje de programación.\n\nLa instalación se realiza con `pip install identify`.  Ofrece funciones para obtener etiquetas de un archivo en disco, a partir del nombre del archivo o del intérprete utilizado.  También incluye una interfaz de línea de comandos (`identify-cli`) para facilitar su uso.\n\nAdemás, la biblioteca incluye una funcionalidad para identificar el tipo de licencia de un archivo, basada en el gem “licensee” y utilizando datos de “choosealicense.com”.  El proceso de identificación de la licencia implica la eliminación de la línea de copyright, la normalización del espacio en blanco y la comparación con coincidencias exactas y con editores de distancia.  La función `license_id` devuelve un ID SPDX.  El funcionamiento interno de `tags_from_path` implica la verificación del tipo de archivo, la determinación de la ejecutable, el reconocimiento de extensiones y la lectura de los primeros bytes para determinar si es binario o texto.",
+   "bold_labels": [],
+   "english_bold_labels_copied": [],
+   "headings": [],
+   "duplicate_sections_same_title": [],
+   "english_bold_labels_copied_reviewed": [],
+   "english_bold_labels_copied_count": 0,
+   "english_headings_copied_count": 0
+  },
+  {
+   "set": "3",
+   "batch": 2,
+   "window_id": "w-20261015T183107Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-doc-python_discovery-1.6.1.METADATA.md",
+   "input_language": "en",
+   "document_sha256": "fd4e94258896c927fd6e5354988c7b307a0f16b6a25abd5d0b646fcf5cc9fea8",
+   "document_sha256_frozen": "fd4e94258896c927fd6e5354988c7b307a0f16b6a25abd5d0b646fcf5cc9fea8",
+   "document_unchanged": true,
+   "response_file": "s3_03.txt",
+   "response_sha256": "00bf23100bb52bfdaf214e9511ed477bf67b30be292bcaebf73de4dcf63e50be",
+   "response_literal": "El paquete `python-discovery` es una biblioteca para identificar los intérpretes de Python instalados en un sistema.  Su versión es 1.6.1 y está diseñado para encontrar múltiples versiones de Python, provenientes de sistemas, herramientas como `pyenv` o `mise`, o el registro de Windows.  La biblioteca permite buscar un intérprete específico, como `python3.12`, y proporciona información detallada sobre la coincidencia encontrada, incluyendo la ruta ejecutable, la implementación (por ejemplo, CPython) y la versión.  El resultado se guarda en caché en disco para búsquedas posteriores.  La biblioteca soporta Python 3.8 o superior y puede detectar versiones desde Python 3.6.  Se incluye un ejemplo de uso con la función `get_interpreter()` que acepta especificaciones de versiones, rutas absolutas o prefijos de implementación.  La documentación completa se encuentra en python-discovery.readthedocs.io.  El proyecto está licenciado bajo la Licencia MIT.\n\n(read server-side: 5130 chars ≈ 2565 Claude tokens that did not enter your context)",
+   "usage_log": {
+    "ts": "2026-10-15T18:33:10+00:00",
+    "model": "gemma3-4b",
+    "chars_in": 5130,
+    "chars_out": 958,
+    "truncated": null,
+    "truncated_out": null,
+    "tokens_out": 207,
+    "chunks": null,
+    "finish_reason": "stop"
+   },
+   "chars_out_check": {
+    "len_without_wrapper": 958,
+    "chars_out": 958,
+    "match": true
+   },
+   "judge_new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 123,
+    "es_ratio": 0.4634,
+    "en_ratio": 0.0,
+    "margin": 0.4634
+   },
+   "judged_text": "El paquete es una biblioteca para identificar los intérpretes de Python instalados en un sistema. Su versión es y está diseñado para encontrar múltiples versiones de Python, provenientes de sistemas, herramientas como o , o el registro de Windows. La biblioteca permite buscar un intérprete específico, como , y proporciona información detallada sobre la coincidencia encontrada, incluyendo la ruta ejecutable, la implementación (por ejemplo, CPython) y la versión. El resultado se guarda en caché en disco para búsquedas posteriores. La biblioteca soporta Python o superior y puede detectar versiones desde Python Se incluye un ejemplo de uso con la función que acepta especificaciones de versiones, rutas absolutas o prefijos de implementación. La documentación completa se encuentra en El proyecto está licenciado bajo la Licencia MIT.",
+   "judge_old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 134,
+    "es_ratio": 0.4254,
+    "en_ratio": 0.0075,
+    "margin": 0.4179
+   },
+   "judged_text_old": "El paquete `python-discovery` es una biblioteca para identificar los intérpretes de Python instalados en un sistema.  Su versión es 1.6.1 y está diseñado para encontrar múltiples versiones de Python, provenientes de sistemas, herramientas como `pyenv` o `mise`, o el registro de Windows.  La biblioteca permite buscar un intérprete específico, como `python3.12`, y proporciona información detallada sobre la coincidencia encontrada, incluyendo la ruta ejecutable, la implementación (por ejemplo, CPython) y la versión.  El resultado se guarda en caché en disco para búsquedas posteriores.  La biblioteca soporta Python 3.8 o superior y puede detectar versiones desde Python 3.6.  Se incluye un ejemplo de uso con la función `get_interpreter()` que acepta especificaciones de versiones, rutas absolutas o prefijos de implementación.  La documentación completa se encuentra en python-discovery.readthedocs.io.  El proyecto está licenciado bajo la Licencia MIT.",
+   "bold_labels": [],
+   "english_bold_labels_copied": [],
+   "headings": [],
+   "duplicate_sections_same_title": [],
+   "english_bold_labels_copied_reviewed": [],
+   "english_bold_labels_copied_count": 0,
+   "english_headings_copied_count": 0
+  },
+  {
+   "set": "3",
+   "batch": 2,
+   "window_id": "w-20261015T183107Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-doc-docs_wiki_Configuration.md",
+   "input_language": "es",
+   "document_sha256": "fcb6ed942a2f265633aa452b2bd684d68d3373bfdcaabe1cca5627392a125ddf",
+   "document_sha256_frozen": "fcb6ed942a2f265633aa452b2bd684d68d3373bfdcaabe1cca5627392a125ddf",
+   "document_unchanged": true,
+   "response_file": "s3_04.txt",
+   "response_sha256": "bf5e4cdb3a0930da3d0ac656b1353cd9d406761c3067490099a233188f97f318",
+   "response_literal": "## Introducción\nTodo se configura mediante variables de entorno.\n\n## Endpoint\nDefine la URL, clave, origen del cómputo, tiempo de espera y concurrencia.\n\n## Catálogo de modelos (roles)\nConfigura los modelos para tareas mecánicas, documentos largos, código y visión.\n\n## Respaldo entre modelos\nPermite saltar a otros roles o modelos cargados ante fallos.\n\n## Enfriamiento por modelo\nGestiona la suspensión temporal de modelos tras fallos consecutivos.\n\n## Turno, afinidad y lentitud\nOptimiza el uso de modelos cargados y detecta lentitud.\n\n## Daemon y web de métricas\nConfigura el servidor web, host, puerto, fuentes y autenticación.\n\n## Log de uso\nControla el directorio de registros y la rotación mensual.\n\n## Coste equivalente\nEstablece el modelo de referencia para valorar delegaciones sin identificar.\n\n## `local_extract` — JSON con schema\n**Contrato desde la 0.36.0 (REQ-010, cambio incompatible).** Devuelve objetos validados con claves en inglés para errores, advertencias y respaldos.\n\n## Seguridad — raíces permitidas\nDefine directorios permitidos para evitar accesos no autorizados.\n\n## Hooks de lectura (opt-in, solo Claude Code)\nMecanismo para sugerir o bloquear lecturas de archivos grandes.\n**El bloqueo**\nPermite rechazar lecturas mediante variables o archivos específicos.\n\n## Nombres viejos de variables (alias con aviso)\n**Nombres en disco que cambiaron**\nAlgunos archivos y scripts han cambiado su nomenclatura oficial.\n\n## Auto-arranque de llama-swap (opt-in)\nIntenta iniciar el servicio si el endpoint no responde.\n\n(read server-side: 28034 chars ≈ 14017 Claude tokens that did not enter your context)",
+   "usage_log": {
+    "ts": "2026-10-15T18:33:44+00:00",
+    "model": "gemma4-26b-a4b",
+    "chars_in": 28034,
+    "chars_out": 1535,
+    "truncated": null,
+    "truncated_out": null,
+    "tokens_out": 376,
+    "chunks": null,
+    "finish_reason": "stop"
+   },
+   "chars_out_check": {
+    "len_without_wrapper": 1535,
+    "chars_out": 1535,
+    "match": true
+   },
+   "judge_new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 154,
+    "es_ratio": 0.3377,
+    "en_ratio": 0.0,
+    "margin": 0.3377
+   },
+   "judged_text": "## Introducción\nTodo se configura mediante variables de entorno.\n\nDefine la URL, clave, origen del cómputo, tiempo de espera y concurrencia.\n\nConfigura los modelos para tareas mecánicas, documentos largos, código y visión.\n\nPermite saltar a otros roles o modelos cargados ante fallos.\n\nGestiona la suspensión temporal de modelos tras fallos consecutivos.\n\nOptimiza el uso de modelos cargados y detecta lentitud.\n\nConfigura el servidor web, host, puerto, fuentes y autenticación.\n\nControla el directorio de registros y la rotación mensual.\n\nEstablece el modelo de referencia para valorar delegaciones sin identificar.\n\n**Contrato desde la cambio incompatible).** Devuelve objetos validados con claves en inglés para errores, advertencias y respaldos.\n\nDefine directorios permitidos para evitar accesos no autorizados.\n\nMecanismo para sugerir o bloquear lecturas de archivos grandes.\n**El bloqueo**\nPermite rechazar lecturas mediante variables o archivos específicos.\n\n**Nombres en disco que cambiaron**\nAlgunos archivos y scripts han cambiado su nomenclatura oficial.\n\nIntenta iniciar el servicio si el endpoint no responde.",
+   "judge_old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 210,
+    "es_ratio": 0.3095,
+    "en_ratio": 0.0095,
+    "margin": 0.3
+   },
+   "judged_text_old": "## Introducción\nTodo se configura mediante variables de entorno.\n\n## Endpoint\nDefine la URL, clave, origen del cómputo, tiempo de espera y concurrencia.\n\n## Catálogo de modelos (roles)\nConfigura los modelos para tareas mecánicas, documentos largos, código y visión.\n\n## Respaldo entre modelos\nPermite saltar a otros roles o modelos cargados ante fallos.\n\n## Enfriamiento por modelo\nGestiona la suspensión temporal de modelos tras fallos consecutivos.\n\n## Turno, afinidad y lentitud\nOptimiza el uso de modelos cargados y detecta lentitud.\n\n## Daemon y web de métricas\nConfigura el servidor web, host, puerto, fuentes y autenticación.\n\n## Log de uso\nControla el directorio de registros y la rotación mensual.\n\n## Coste equivalente\nEstablece el modelo de referencia para valorar delegaciones sin identificar.\n\n## `local_extract` — JSON con schema\n**Contrato desde la 0.36.0 (REQ-010, cambio incompatible).** Devuelve objetos validados con claves en inglés para errores, advertencias y respaldos.\n\n## Seguridad — raíces permitidas\nDefine directorios permitidos para evitar accesos no autorizados.\n\n## Hooks de lectura (opt-in, solo Claude Code)\nMecanismo para sugerir o bloquear lecturas de archivos grandes.\n**El bloqueo**\nPermite rechazar lecturas mediante variables o archivos específicos.\n\n## Nombres viejos de variables (alias con aviso)\n**Nombres en disco que cambiaron**\nAlgunos archivos y scripts han cambiado su nomenclatura oficial.\n\n## Auto-arranque de llama-swap (opt-in)\nIntenta iniciar el servicio si el endpoint no responde.",
+   "bold_labels": [
+    "Contrato desde la 0.36.0 (REQ-010, cambio incompatible).",
+    "El bloqueo",
+    "Nombres en disco que cambiaron"
+   ],
+   "english_bold_labels_copied": [],
+   "headings": [
+    "Introducción",
+    "Endpoint",
+    "Catálogo de modelos (roles)",
+    "Respaldo entre modelos",
+    "Enfriamiento por modelo",
+    "Turno, afinidad y lentitud",
+    "Daemon y web de métricas",
+    "Log de uso",
+    "Coste equivalente",
+    "`local_extract` — JSON con schema",
+    "Seguridad — raíces permitidas",
+    "Hooks de lectura (opt-in, solo Claude Code)",
+    "Nombres viejos de variables (alias con aviso)",
+    "Auto-arranque de llama-swap (opt-in)"
+   ],
+   "duplicate_sections_same_title": [],
+   "english_bold_labels_copied_reviewed": [],
+   "english_bold_labels_copied_count": 0,
+   "english_headings_copied_count": 0
+  },
+  {
+   "set": "3",
+   "batch": 2,
+   "window_id": "w-20261015T183107Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_summarize",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-doc-src_local_delegate_resources_skills_local-delegation_SKILL.md",
+   "input_language": "es",
+   "document_sha256": "fc1f2a7d00f35b2bf4a587be1f60ed71338e4c434b5d77cc773c0e7f38ff9a9c",
+   "document_sha256_frozen": "fc1f2a7d00f35b2bf4a587be1f60ed71338e4c434b5d77cc773c0e7f38ff9a9c",
+   "document_unchanged": true,
+   "response_file": "s3_05.txt",
+   "response_sha256": "7183542dd7cca7e9c674e926260a09a656489ed3f5598075b88bdea63ae3371d",
+   "response_literal": "## Introducción\nEste documento detalla cómo usar el servidor MCP `local-delegate` para delegar tareas mecánicas a modelos locales y ahorrar cuota.\n\n## Regla de oro\nSi una tarea se describe con una frase y formato explícito, usa una herramienta `local_*`.\n\n## El mayor ahorro: `path` en vez de `text`\n**`path`** evita cargar archivos grandes en el contexto, procesándolos directamente en el servidor para recibir solo resultados breves.\n\n## El coste de no delegar\nNo delegar archivos grandes consume miles de tokens innecesarios, mientras que usar herramientas locales reduce drásticamente ese gasto.\n\n## Catálogo de tools\nEl catálogo incluye herramientas para resumir, clasificar, extraer datos, generar código repetitivo, traducir, explicar código, describir imágenes y diagnosticar el sistema.\n\n## Documentos largos\n**`local_translate`** y **`local_delegate`** procesan textos extensos dividiéndolos en fragmentos para evitar truncamientos y devolver el contenido completo.\n\n## Cuándo SÍ delegar (ejemplos)\nSe debe delegar en tareas como resumir archivos, clasificar mensajes, extraer datos estructurados, generar código base, traducir textos o describir imágenes.\n\n## Cuándo NO delegar\nNo delegues tareas de arquitectura, diseño complejo, investigación multi-fuente o cualquier proceso que requiera criterio humano y no solo formato.\n\n## Notas\nLas herramientas devuelven texto y pueden fallar si el backend no responde. El dashboard permite monitorizar el ahorro y el estado.\n\n(read server-side: 5884 chars ≈ 2942 Claude tokens that did not enter your context)",
+   "usage_log": {
+    "ts": "2026-10-15T18:34:01+00:00",
+    "model": "gemma4-26b-a4b",
+    "chars_in": 5884,
+    "chars_out": 1478,
+    "truncated": null,
+    "truncated_out": null,
+    "tokens_out": 329,
+    "chunks": null,
+    "finish_reason": "stop"
+   },
+   "chars_out_check": {
+    "len_without_wrapper": 1478,
+    "chars_out": 1478,
+    "match": true
+   },
+   "judge_new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 165,
+    "es_ratio": 0.303,
+    "en_ratio": 0.0,
+    "margin": 0.303
+   },
+   "judged_text": "## Introducción\nEste documento detalla cómo usar el servidor MCP para delegar tareas mecánicas a modelos locales y ahorrar cuota.\n\nSi una tarea se describe con una frase y formato explícito, usa una herramienta .\n\n** ** evita cargar archivos grandes en el contexto, procesándolos directamente en el servidor para recibir solo resultados breves.\n\nNo delegar archivos grandes consume miles de tokens innecesarios, mientras que usar herramientas locales reduce drásticamente ese gasto.\n\nEl catálogo incluye herramientas para resumir, clasificar, extraer datos, generar código repetitivo, traducir, explicar código, describir imágenes y diagnosticar el sistema.\n\n** ** y ** ** procesan textos extensos dividiéndolos en fragmentos para evitar truncamientos y devolver el contenido completo.\n\nSe debe delegar en tareas como resumir archivos, clasificar mensajes, extraer datos estructurados, generar código base, traducir textos o describir imágenes.\n\nNo delegues tareas de arquitectura, diseño complejo, investigación o cualquier proceso que requiera criterio humano y no solo formato.\n\nLas herramientas devuelven texto y pueden fallar si el backend no responde. El dashboard permite monitorizar el ahorro y el estado.",
+   "judge_old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 204,
+    "es_ratio": 0.2941,
+    "en_ratio": 0.0,
+    "margin": 0.2941
+   },
+   "judged_text_old": "## Introducción\nEste documento detalla cómo usar el servidor MCP `local-delegate` para delegar tareas mecánicas a modelos locales y ahorrar cuota.\n\n## Regla de oro\nSi una tarea se describe con una frase y formato explícito, usa una herramienta `local_*`.\n\n## El mayor ahorro: `path` en vez de `text`\n**`path`** evita cargar archivos grandes en el contexto, procesándolos directamente en el servidor para recibir solo resultados breves.\n\n## El coste de no delegar\nNo delegar archivos grandes consume miles de tokens innecesarios, mientras que usar herramientas locales reduce drásticamente ese gasto.\n\n## Catálogo de tools\nEl catálogo incluye herramientas para resumir, clasificar, extraer datos, generar código repetitivo, traducir, explicar código, describir imágenes y diagnosticar el sistema.\n\n## Documentos largos\n**`local_translate`** y **`local_delegate`** procesan textos extensos dividiéndolos en fragmentos para evitar truncamientos y devolver el contenido completo.\n\n## Cuándo SÍ delegar (ejemplos)\nSe debe delegar en tareas como resumir archivos, clasificar mensajes, extraer datos estructurados, generar código base, traducir textos o describir imágenes.\n\n## Cuándo NO delegar\nNo delegues tareas de arquitectura, diseño complejo, investigación multi-fuente o cualquier proceso que requiera criterio humano y no solo formato.\n\n## Notas\nLas herramientas devuelven texto y pueden fallar si el backend no responde. El dashboard permite monitorizar el ahorro y el estado.",
+   "bold_labels": [
+    "`path`",
+    "`local_translate`",
+    "`local_delegate`"
+   ],
+   "english_bold_labels_copied": [],
+   "headings": [
+    "Introducción",
+    "Regla de oro",
+    "El mayor ahorro: `path` en vez de `text`",
+    "El coste de no delegar",
+    "Catálogo de tools",
+    "Documentos largos",
+    "Cuándo SÍ delegar (ejemplos)",
+    "Cuándo NO delegar",
+    "Notas"
+   ],
+   "duplicate_sections_same_title": [],
+   "english_bold_labels_copied_reviewed": [],
+   "english_bold_labels_copied_count": 0,
+   "english_headings_copied_count": 0
+  },
+  {
+   "set": "3",
+   "batch": 2,
+   "window_id": "w-20261015T183107Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-pytest-chunking-density.txt",
+   "input_language": "en",
+   "document_sha256": "0fa7d99e62af9ba251cc42f12c808445ac1f62573169ba778796cfbbc451b6f4",
+   "document_sha256_frozen": "0fa7d99e62af9ba251cc42f12c808445ac1f62573169ba778796cfbbc451b6f4",
+   "document_unchanged": true,
+   "response_file": "l3_01.txt",
+   "response_sha256": "7553a4f17c010cfb4ad6a1561c3156e7ce0b5e8d6da5d32ec3b5c947bd893766",
+   "response_literal": "**Resumen de pruebas**\n\n**tests/test_chunking.py**\n* **Pruebas superadas**: 44\n    * Verificación de la integridad del documento al fragmentar texto.\n    * Respeto de los límites de tamaño y cortes en encabezados de Markdown.\n    * Manejo de límites de fragmentación mediante párrafos o líneas.\n    * Validación de la clasificación de origen del servidor según el host.\n    * Comprobación de la gestión de archivos temporales y procesos en vuelo.\n    * Procesamiento de diferencias de archivos (diffs) de Git y otros formatos.\n\n**tests/test_density.py**\n* **Pruebas superadas**: 13\n    * Validación de cálculos de densidad y conteo de tokens.\n    * Comprobación de la jerarquía entre herramientas y extensiones.\n    * Verificación de variables de respaldo y orden de fusión de datos.\n    * Pruebas de manejo de imágenes y caracteres especiales en la conversión.\n    * Validación del uso de tokens específicos de modelos como Claude.\n\n**Totales**\n* **Pruebas superadas**: 57\n* **Pruebas fallidas**: 0\n\n(read server-side: 11014 chars ≈ 5736 Claude tokens that did not enter your context)",
+   "usage_log": {
+    "ts": "2026-10-15T18:34:18+00:00",
+    "model": "gemma4-26b-a4b",
+    "chars_in": 11014,
+    "chars_out": 999,
+    "truncated": null,
+    "truncated_out": null,
+    "tokens_out": 259,
+    "chunks": null,
+    "finish_reason": "stop"
+   },
+   "chars_out_check": {
+    "len_without_wrapper": 999,
+    "chars_out": 999,
+    "match": true
+   },
+   "judge_new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 124,
+    "es_ratio": 0.4274,
+    "en_ratio": 0.0,
+    "margin": 0.4274
+   },
+   "judged_text": "**Resumen de pruebas**\n\n\n* **Pruebas superadas**:\n* Verificación de la integridad del documento al fragmentar texto.\n* Respeto de los límites de tamaño y cortes en encabezados de Markdown.\n* Manejo de límites de fragmentación mediante párrafos o líneas.\n* Validación de la clasificación de origen del servidor según el host.\n* Comprobación de la gestión de archivos temporales y procesos en vuelo.\n* Procesamiento de diferencias de archivos (diffs) de Git y otros formatos.\n\n\n* **Pruebas superadas**:\n* Validación de cálculos de densidad y conteo de tokens.\n* Comprobación de la jerarquía entre herramientas y extensiones.\n* Verificación de variables de respaldo y orden de fusión de datos.\n* Pruebas de manejo de imágenes y caracteres especiales en la conversión.\n* Validación del uso de tokens específicos de modelos como Claude.\n\n**Totales**\n* **Pruebas superadas**:\n* **Pruebas fallidas**:",
+   "judge_old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 132,
+    "es_ratio": 0.4015,
+    "en_ratio": 0.0,
+    "margin": 0.4015
+   },
+   "judged_text_old": "**Resumen de pruebas**\n\n**tests/test_chunking.py**\n* **Pruebas superadas**: 44\n    * Verificación de la integridad del documento al fragmentar texto.\n    * Respeto de los límites de tamaño y cortes en encabezados de Markdown.\n    * Manejo de límites de fragmentación mediante párrafos o líneas.\n    * Validación de la clasificación de origen del servidor según el host.\n    * Comprobación de la gestión de archivos temporales y procesos en vuelo.\n    * Procesamiento de diferencias de archivos (diffs) de Git y otros formatos.\n\n**tests/test_density.py**\n* **Pruebas superadas**: 13\n    * Validación de cálculos de densidad y conteo de tokens.\n    * Comprobación de la jerarquía entre herramientas y extensiones.\n    * Verificación de variables de respaldo y orden de fusión de datos.\n    * Pruebas de manejo de imágenes y caracteres especiales en la conversión.\n    * Validación del uso de tokens específicos de modelos como Claude.\n\n**Totales**\n* **Pruebas superadas**: 57\n* **Pruebas fallidas**: 0",
+   "bold_labels": [
+    "Resumen de pruebas",
+    "tests/test_chunking.py",
+    "Pruebas superadas",
+    "tests/test_density.py",
+    "Pruebas superadas",
+    "Totales",
+    "Pruebas superadas",
+    "Pruebas fallidas"
+   ],
+   "english_bold_labels_copied": [],
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "english_bold_labels_copied_reviewed": [],
+   "english_bold_labels_copied_count": 0
+  },
+  {
+   "set": "3",
+   "batch": 2,
+   "window_id": "w-20261015T183107Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-ruff-concise-clean-watcher.txt",
+   "input_language": "en",
+   "document_sha256": "5a73a08070f3573b78cc4b31bfcccecf06b7d6d4045de1af4b9a82a173a7525f",
+   "document_sha256_frozen": "5a73a08070f3573b78cc4b31bfcccecf06b7d6d4045de1af4b9a82a173a7525f",
+   "document_unchanged": true,
+   "response_file": "l3_02.txt",
+   "response_sha256": "cc48ff87b03d1146b1f0214ff19bdbbdb4a2bd26b8366d649bceb817b4f89744",
+   "response_literal": "**Resumen de Problemas por Archivo**\n\n**scripts\\clean_watcher_fixtures.py:**\n\n*   **Errores de Estilo:**\n    *   E501: Línea demasiado larga (3 ocurrencias). Se detectaron tres líneas que exceden el límite de 100 caracteres.\n    *   T201: Uso de `print`. Se encontró la instrucción `print` en la línea 90.\n*   **Errores de Documentación:**\n    *   D103: Falta de documentación en funciones públicas (2 ocurrencias). Se identificaron dos funciones públicas que carecen de documentación adecuada.\n    *   PLR2004: Uso de valor mágico en comparación. Se encontró un valor mágico `16` en la línea 76, sugiriendo el uso de una constante.\n*   **Problemas de Compatibilidad:**\n    *   Ignorados: `incorrect-blank-line-before-class` (D203) e `blank-line-before-class` (D211) debido a incompatibilidad.\n    *   Ignorados: `multi-line-summary-first-line` (D212) e `multi-line-summary-second-line` (D213) debido a incompatibilidad.\n*   **Otros:**\n    *   CPY001: Falta de aviso de copyright en la parte superior del archivo.\n\n(read server-side: 958 chars ≈ 498 Claude tokens that did not enter your context)",
+   "usage_log": {
+    "ts": "2026-10-15T18:34:31+00:00",
+    "model": "gemma3-4b",
+    "chars_in": 958,
+    "chars_out": 1013,
+    "truncated": null,
+    "truncated_out": null,
+    "tokens_out": 316,
+    "chunks": null,
+    "finish_reason": "stop"
+   },
+   "chars_out_check": {
+    "len_without_wrapper": 1013,
+    "chars_out": 1013,
+    "match": true
+   },
+   "judge_new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 96,
+    "es_ratio": 0.375,
+    "en_ratio": 0.0,
+    "margin": 0.375
+   },
+   "judged_text": "**Resumen de Problemas por Archivo**\n\n\n\n* **Errores de Estilo:**\n* Línea demasiado larga ocurrencias). Se detectaron tres líneas que exceden el límite de caracteres.\n* Uso de . Se encontró la instrucción en la línea\n* **Errores de Documentación:**\n* Falta de documentación en funciones públicas ocurrencias). Se identificaron dos funciones públicas que carecen de documentación adecuada.\n* Uso de valor mágico en comparación. Se encontró un valor mágico en la línea sugiriendo el uso de una constante.\n* **Problemas de Compatibilidad:**\n* Ignorados: e debido a incompatibilidad.\n* Ignorados: e debido a incompatibilidad.\n* **Otros:**\n* Falta de aviso de copyright en la parte superior del archivo.",
+   "judge_old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 131,
+    "es_ratio": 0.2824,
+    "en_ratio": 0.0153,
+    "margin": 0.2671
+   },
+   "judged_text_old": "**Resumen de Problemas por Archivo**\n\n**scripts\\clean_watcher_fixtures.py:**\n\n*   **Errores de Estilo:**\n    *   E501: Línea demasiado larga (3 ocurrencias). Se detectaron tres líneas que exceden el límite de 100 caracteres.\n    *   T201: Uso de `print`. Se encontró la instrucción `print` en la línea 90.\n*   **Errores de Documentación:**\n    *   D103: Falta de documentación en funciones públicas (2 ocurrencias). Se identificaron dos funciones públicas que carecen de documentación adecuada.\n    *   PLR2004: Uso de valor mágico en comparación. Se encontró un valor mágico `16` en la línea 76, sugiriendo el uso de una constante.\n*   **Problemas de Compatibilidad:**\n    *   Ignorados: `incorrect-blank-line-before-class` (D203) e `blank-line-before-class` (D211) debido a incompatibilidad.\n    *   Ignorados: `multi-line-summary-first-line` (D212) e `multi-line-summary-second-line` (D213) debido a incompatibilidad.\n*   **Otros:**\n    *   CPY001: Falta de aviso de copyright en la parte superior del archivo.",
+   "bold_labels": [
+    "Resumen de Problemas por Archivo",
+    "scripts\\clean_watcher_fixtures.py:",
+    "Errores de Estilo:",
+    "Errores de Documentación:",
+    "Problemas de Compatibilidad:",
+    "Otros:"
+   ],
+   "english_bold_labels_copied": [],
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "english_bold_labels_copied_reviewed": [],
+   "english_bold_labels_copied_count": 0
+  },
+  {
+   "set": "3",
+   "batch": 2,
+   "window_id": "w-20261015T183107Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-tsc-angular.txt",
+   "input_language": "en",
+   "document_sha256": "292208ba99d5044fa0a927eb14c70d7b5d369553ec52d9ffffc642314e76a63a",
+   "document_sha256_frozen": "292208ba99d5044fa0a927eb14c70d7b5d369553ec52d9ffffc642314e76a63a",
+   "document_unchanged": true,
+   "response_file": "l3_03.txt",
+   "response_sha256": "8ca05a3f8d613b4a97cc59f10d9809254413df9e4769f327575784fbc0278ac0",
+   "response_literal": "**Resumen de Problemas**\n\n**src/app/features/auth/pages/login.page.ts:**\n\n*   **Error TypeScript (TS2345):**  Se detecta un error de tipo al asignar un objeto con una propiedad `returnUrl` opcional (tipo `string | undefined`) a un parámetro que espera una propiedad `returnUrl` obligatoria (tipo `string`).  El problema radica en la posibilidad de que `returnUrl` sea `undefined`. Se recomienda especificar `undefined` en los tipos para evitar la incompatibilidad.  (1 error)\n\n**src/app/features/home/components/tech-stack.component.ts:**\n\n*   **Error TypeScript (TS2375):**  Se identifica un error de tipo al asignar un objeto con una propiedad `version` opcional (tipo `string | undefined`) a un tipo `StackItem` que espera una propiedad `version` obligatoria (tipo `string`).  Similar al anterior, la propiedad `version` puede ser `undefined`. Se sugiere agregar `undefined` a los tipos para resolver la incompatibilidad. (1 error)\n\n(read server-side: 1435 chars ≈ 747 Claude tokens that did not enter your context)",
+   "usage_log": {
+    "ts": "2026-10-15T18:34:40+00:00",
+    "model": "gemma3-4b",
+    "chars_in": 1435,
+    "chars_out": 934,
+    "truncated": null,
+    "truncated_out": null,
+    "tokens_out": 238,
+    "chunks": null,
+    "finish_reason": "stop"
+   },
+   "chars_out_check": {
+    "len_without_wrapper": 934,
+    "chars_out": 934,
+    "match": true
+   },
+   "judge_new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 91,
+    "es_ratio": 0.4286,
+    "en_ratio": 0.0,
+    "margin": 0.4286
+   },
+   "judged_text": "**Resumen de Problemas**\n\n\n\n* **Error Se detecta un error de tipo al asignar un objeto con una propiedad opcional (tipo ) a un parámetro que espera una propiedad obligatoria (tipo ). El problema radica en la posibilidad de que sea . Se recomienda especificar en los tipos para evitar la incompatibilidad. error)\n\n\n\n* **Error Se identifica un error de tipo al asignar un objeto con una propiedad opcional (tipo ) a un tipo que espera una propiedad obligatoria (tipo ). Similar al anterior, la propiedad puede ser . Se sugiere agregar a los tipos para resolver la incompatibilidad. error)",
+   "judge_old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 129,
+    "es_ratio": 0.3023,
+    "en_ratio": 0.0,
+    "margin": 0.3023
+   },
+   "judged_text_old": "**Resumen de Problemas**\n\n**src/app/features/auth/pages/login.page.ts:**\n\n*   **Error TypeScript (TS2345):**  Se detecta un error de tipo al asignar un objeto con una propiedad `returnUrl` opcional (tipo `string | undefined`) a un parámetro que espera una propiedad `returnUrl` obligatoria (tipo `string`).  El problema radica en la posibilidad de que `returnUrl` sea `undefined`. Se recomienda especificar `undefined` en los tipos para evitar la incompatibilidad.  (1 error)\n\n**src/app/features/home/components/tech-stack.component.ts:**\n\n*   **Error TypeScript (TS2375):**  Se identifica un error de tipo al asignar un objeto con una propiedad `version` opcional (tipo `string | undefined`) a un tipo `StackItem` que espera una propiedad `version` obligatoria (tipo `string`).  Similar al anterior, la propiedad `version` puede ser `undefined`. Se sugiere agregar `undefined` a los tipos para resolver la incompatibilidad. (1 error)",
+   "bold_labels": [
+    "Resumen de Problemas",
+    "src/app/features/auth/pages/login.page.ts:",
+    "Error TypeScript (TS2345):",
+    "src/app/features/home/components/tech-stack.component.ts:",
+    "Error TypeScript (TS2375):"
+   ],
+   "english_bold_labels_copied": [],
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "english_bold_labels_copied_reviewed": [],
+   "english_bold_labels_copied_count": 0
+  },
+  {
+   "set": "3",
+   "batch": 2,
+   "window_id": "w-20261015T183107Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-check-llamaswap-pre-no-resident.txt",
+   "input_language": "es",
+   "document_sha256": "1adc07d48a6a2b687f2b76e7a5197281456f8323471f31b42040debbae800482",
+   "document_sha256_frozen": "1adc07d48a6a2b687f2b76e7a5197281456f8323471f31b42040debbae800482",
+   "document_unchanged": true,
+   "response_file": "l3_04.txt",
+   "response_sha256": "2f0bfb38f5ab75b2994e2626bea1d8616d8f023ce0412dea9aa2486eb3e25447",
+   "response_literal": "Resumen de Problemas por Archivo:\n\n**VRAM**: Se identificaron errores al no poder estimar la VRAM para varios modelos. El presupuesto asignado es de 8 GiB, con un margen de 1.5 GiB disponibles, resultando en 6.5 GiB.\n\n**Grupo 'resident'**: Se encontraron errores al intentar cargar los archivos para gemma3-4b (archivo no encontrado: MODELOS\\gemma-3-4b-it-Q4_K_M.gguf), gemma4-26b-a4b (archivo no encontrado: MODELOS\\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf) y gemma4-12b (archivo no encontrado: MODELOS\\gemma-4-12b-it-Q4_K_M.gguf).\n\n**Grupo 'swap'**:  Se reportaron errores al cargar los archivos para qwen36-35b-a3b (archivo no encontrado: MODELOS\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf), qwen35-2b (archivo no encontrado: MODELOS\\Qwen3.5-2B-UD-Q8_K_XL.gguf).  En total, se encontraron 4 errores de archivo no encontrado.\n\n(read server-side: 727 chars ≈ 378 Claude tokens that did not enter your context)",
+   "usage_log": {
+    "ts": "2026-10-15T18:34:48+00:00",
+    "model": "gemma3-4b",
+    "chars_in": 727,
+    "chars_out": 808,
+    "truncated": null,
+    "truncated_out": null,
+    "tokens_out": 307,
+    "chunks": null,
+    "finish_reason": "stop"
+   },
+   "chars_out_check": {
+    "len_without_wrapper": 808,
+    "chars_out": 808,
+    "match": true
+   },
+   "judge_new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 76,
+    "es_ratio": 0.3289,
+    "en_ratio": 0.0,
+    "margin": 0.3289
+   },
+   "judged_text": "Resumen de Problemas por Archivo:\n\n**VRAM**: Se identificaron errores al no poder estimar la VRAM para varios modelos. El presupuesto asignado es de con un margen de disponibles, resultando en\n\n**Grupo 'resident'**: Se encontraron errores al intentar cargar los archivos para (archivo no encontrado: (archivo no encontrado: y (archivo no encontrado:\n\n**Grupo 'swap'**: Se reportaron errores al cargar los archivos para (archivo no encontrado: (archivo no encontrado: En total, se encontraron errores de archivo no encontrado.",
+   "judge_old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 136,
+    "es_ratio": 0.1838,
+    "en_ratio": 0.0221,
+    "margin": 0.1617
+   },
+   "judged_text_old": "Resumen de Problemas por Archivo:\n\n**VRAM**: Se identificaron errores al no poder estimar la VRAM para varios modelos. El presupuesto asignado es de 8 GiB, con un margen de 1.5 GiB disponibles, resultando en 6.5 GiB.\n\n**Grupo 'resident'**: Se encontraron errores al intentar cargar los archivos para gemma3-4b (archivo no encontrado: MODELOS\\gemma-3-4b-it-Q4_K_M.gguf), gemma4-26b-a4b (archivo no encontrado: MODELOS\\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf) y gemma4-12b (archivo no encontrado: MODELOS\\gemma-4-12b-it-Q4_K_M.gguf).\n\n**Grupo 'swap'**:  Se reportaron errores al cargar los archivos para qwen36-35b-a3b (archivo no encontrado: MODELOS\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf), qwen35-2b (archivo no encontrado: MODELOS\\Qwen3.5-2B-UD-Q8_K_XL.gguf).  En total, se encontraron 4 errores de archivo no encontrado.",
+   "bold_labels": [
+    "VRAM",
+    "Grupo 'resident'",
+    "Grupo 'swap'"
+   ],
+   "english_bold_labels_copied": [],
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "english_bold_labels_copied_reviewed": [],
+   "english_bold_labels_copied_count": 0
+  },
+  {
+   "set": "3",
+   "batch": 2,
+   "window_id": "w-20261015T183107Z",
+   "combination": {
+    "product": "en",
+    "output_language": "es"
+   },
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-B2d-fix_corpus-affinity-check.txt",
+   "input_language": "es",
+   "document_sha256": "8c261db94aaaa22a75abe82729c777865dbbcf34a64cdde565f09170a46304f0",
+   "document_sha256_frozen": "8c261db94aaaa22a75abe82729c777865dbbcf34a64cdde565f09170a46304f0",
+   "document_unchanged": true,
+   "response_file": "l3_05.txt",
+   "response_sha256": "350ec4eb930f03dacf5c7145d18db2ecccbe27fa1a880f18e77768652095d392",
+   "response_literal": "**Resumen de errores**\n\n**scripts/build_corpus.py**\n\n*   **Resumen de Ruff** (4 errores):\n    *   **Tres reglas**: El sistema cambió con los prompts de la versión 0.36.0.\n    *   **Docstrings**: El sistema cambió con los prompts de la versión 0.36.0.\n    *   **Un solo archivo**: El sistema cambió con los prompts de la versión 0.36.0.\n    *   **Cinco reglas**: El sistema cambió con los prompts de la versión 0.36.0.\n\n*   **Diferencia de commits** (72 errores):\n    *   **Diferencia de commit 19k**: Los parámetros de tokens máximos y el sistema cambiaron con los prompts de la versión 0.36.0.\n    *   **Varios commits (9eb197b, c2312cd, 64311f5, 2c602eb, e34c102, 4ef1ba0, ad79697, 8b061ec, 71f2a41, e428c07, b2545e9, a4502a7, 8610c74, eb35363, daddf39, f7c8d6e, 11c65b5, 67eb74a, 4e9035a, 1dd97a3, 56f588d, bcbe39f, 53c9dcb, e7deb0d, ccddeea, 2fbfe93, 6a7959e, 67e585f, 4aa2141)**: Los parámetros de tokens máximos y el sistema cambiaron con los prompts de la versión 0.36.0.\n    *   **Commits trampa (1314b0b, 4f41311, 3b20fb3, 6d442e7, b04a5e\n\n[local-delegate warning: output truncated by max_tokens]\n\n(read server-side: 7699 chars ≈ 4009 Claude tokens that did not enter your context)",
+   "usage_log": {
+    "ts": "2026-10-15T18:35:19+00:00",
+    "model": "gemma4-26b-a4b",
+    "chars_in": 7699,
+    "chars_out": 1105,
+    "truncated": null,
+    "truncated_out": true,
+    "tokens_out": 496,
+    "chunks": null,
+    "finish_reason": "length"
+   },
+   "chars_out_check": {
+    "len_without_wrapper": 1047,
+    "chars_out": 1105,
+    "match": false,
+    "len_including_truncation_warning": 1105,
+    "match_including_truncation_warning": true,
+    "note": "chars_out counts the product's truncation warning line ('\n\n' + warning); the judges drop it"
+   },
+   "judge_new": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 93,
+    "es_ratio": 0.4516,
+    "en_ratio": 0.0,
+    "margin": 0.4516
+   },
+   "judged_text": "**Resumen de errores**\n\n\n\n* **Resumen de Ruff** errores):\n* **Tres reglas**: El sistema cambió con los prompts de la versión\n* **Docstrings**: El sistema cambió con los prompts de la versión\n* **Un solo archivo**: El sistema cambió con los prompts de la versión\n* **Cinco reglas**: El sistema cambió con los prompts de la versión\n\n* **Diferencia de commits** errores):\n* **Diferencia de commit Los parámetros de tokens máximos y el sistema cambiaron con los prompts de la versión\n* **Varios commits ccddeea, Los parámetros de tokens máximos y el sistema cambiaron con los prompts de la versión\n* **Commits trampa",
+   "judge_old": {
+    "verdict": "requested",
+    "lang": "es",
+    "tokens": 160,
+    "es_ratio": 0.325,
+    "en_ratio": 0.0,
+    "margin": 0.325
+   },
+   "judged_text_old": "**Resumen de errores**\n\n**scripts/build_corpus.py**\n\n*   **Resumen de Ruff** (4 errores):\n    *   **Tres reglas**: El sistema cambió con los prompts de la versión 0.36.0.\n    *   **Docstrings**: El sistema cambió con los prompts de la versión 0.36.0.\n    *   **Un solo archivo**: El sistema cambió con los prompts de la versión 0.36.0.\n    *   **Cinco reglas**: El sistema cambió con los prompts de la versión 0.36.0.\n\n*   **Diferencia de commits** (72 errores):\n    *   **Diferencia de commit 19k**: Los parámetros de tokens máximos y el sistema cambiaron con los prompts de la versión 0.36.0.\n    *   **Varios commits (9eb197b, c2312cd, 64311f5, 2c602eb, e34c102, 4ef1ba0, ad79697, 8b061ec, 71f2a41, e428c07, b2545e9, a4502a7, 8610c74, eb35363, daddf39, f7c8d6e, 11c65b5, 67eb74a, 4e9035a, 1dd97a3, 56f588d, bcbe39f, 53c9dcb, e7deb0d, ccddeea, 2fbfe93, 6a7959e, 67e585f, 4aa2141)**: Los parámetros de tokens máximos y el sistema cambiaron con los prompts de la versión 0.36.0.\n    *   **Commits trampa (1314b0b, 4f41311, 3b20fb3, 6d442e7, b04a5e",
+   "bold_labels": [
+    "Resumen de errores",
+    "scripts/build_corpus.py",
+    "Resumen de Ruff",
+    "Tres reglas",
+    "Docstrings",
+    "Un solo archivo",
+    "Cinco reglas",
+    "Diferencia de commits",
+    "Diferencia de commit 19k",
+    "Varios commits (9eb197b, c2312cd, 64311f5, 2c602eb, e34c102, 4ef1ba0, ad79697, 8b061ec, 71f2a41, e428c07, b2545e9, a4502a7, 8610c74, eb35363, daddf39, f7c8d6e, 11c65b5, 67eb74a, 4e9035a, 1dd97a3, 56f588d, bcbe39f, 53c9dcb, e7deb0d, ccddeea, 2fbfe93, 6a7959e, 67e585f, 4aa2141)"
+   ],
+   "english_bold_labels_copied": [],
+   "headings": null,
+   "duplicate_sections_same_title": null,
+   "english_bold_labels_copied_reviewed": [],
+   "english_bold_labels_copied_count": 0
+  }
+ ]
+}

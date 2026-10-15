@@ -59,9 +59,9 @@ Lists official MCP documentation, registry requirements, and repository best pra
 (leído server-side: 16843 chars ≈ 8421 tokens de Claude que no entraron a tu contexto)
 ~~~~~
 
-**¿Está en el idioma pedido?** ☐ sí ☐ no
+**¿Está en el idioma pedido?** ☒ sí ☐ no
 
-Notas:
+Notas: Toda la prosa en inglés. Lo que queda en español son los títulos de sección del documento, copiados tal cual (las etiquetas en negrita también son títulos del documento).
 
 ## 2. batch1-10 (cambia de veredicto)
 
@@ -87,9 +87,9 @@ No issues were found in the provided output. All 76 tests passed successfully.
 (leído server-side: 15540 chars ≈ 8093 tokens de Claude que no entraron a tu contexto)
 ~~~~~
 
-**¿Está en el idioma pedido?** ☐ sí ☐ no
+**¿Está en el idioma pedido?** ☒ sí ☐ no
 
-Notas:
+Notas: Todo en inglés. Es corta: el «no juzgable» del juez nuevo es una abstención razonable, no un error.
 
 ## 3. batch2-16 (cambia de veredicto)
 
@@ -119,9 +119,9 @@ Respuesta literal:
 (read server-side: 784 chars ≈ 408 Claude tokens that did not enter your context)
 ~~~~~
 
-**¿Está en el idioma pedido?** ☐ sí ☐ no
+**¿Está en el idioma pedido?** ☒ sí ☐ no
 
-Notas:
+Notas: Todo lo redactado en español («Importes» es un calco, lo correcto sería «Importaciones», pero el idioma es el pedido). Ojo aparte: la línea final del producto sale en inglés cuando se pidió español.
 
 ## 4. probeX-06 (cambia de veredicto)
 
@@ -147,9 +147,9 @@ Local Delegate Doctor Summary:
 (leído server-side: 3377 chars ≈ 1758 tokens de Claude que no entraron a tu contexto)
 ~~~~~
 
-**¿Está en el idioma pedido?** ☐ sí ☐ no
+**¿Está en el idioma pedido?** ☒ sí ☐ no
 
-Notas:
+Notas: Todo en inglés.
 
 ## 5. probeY-04 (cambia de veredicto)
 
@@ -181,9 +181,9 @@ Summary of issues:
 (leído server-side: 3377 chars ≈ 1758 tokens de Claude que no entraron a tu contexto)
 ~~~~~
 
-**¿Está en el idioma pedido?** ☐ sí ☐ no
+**¿Está en el idioma pedido?** ☒ sí ☐ no
 
-Notas:
+Notas: Todo en inglés; «[FALT]» es una marca copiada del log. El modelo tradujo los nombres de sección («Scaffolding», «Environment»).
 
 ## 6. probeY-06 (cambia de veredicto)
 
@@ -215,9 +215,9 @@ Summary of issues:
 (leído server-side: 3377 chars ≈ 1758 tokens de Claude que no entraron a tu contexto)
 ~~~~~
 
-**¿Está en el idioma pedido?** ☐ sí ☐ no
+**¿Está en el idioma pedido?** ☒ sí ☐ no
 
-Notas:
+Notas: Todo en inglés; mismo caso que la anterior.
 
 ## 7. batch1-04 (al azar, no cambia)
 
@@ -268,9 +268,9 @@ The project is licensed under the MIT license.
 (leído server-side: 26569 chars ≈ 13284 tokens de Claude que no entraron a tu contexto)
 ~~~~~
 
-**¿Está en el idioma pedido?** ☐ sí ☐ no
+**¿Está en el idioma pedido?** ☒ sí ☐ no
 
-Notas:
+Notas: Todo en inglés (documento en inglés y respuesta en inglés).
 
 ## 8. batch1-18 (al azar, no cambia)
 
@@ -301,9 +301,9 @@ Respuesta literal:
 (leído server-side: 2040 chars ≈ 1062 tokens de Claude que no entraron a tu contexto)
 ~~~~~
 
-**¿Está en el idioma pedido?** ☐ sí ☐ no
+**¿Está en el idioma pedido?** ☒ sí ☐ no
 
-Notas:
+Notas: Todo en inglés. (La fidelidad al contenido es dudosa, pero eso no es lo que se mide aquí).
 
 ## 9. batch2-11 (al azar, no cambia)
 
@@ -342,9 +342,9 @@ El proyecto cuenta con la licencia MIT.
 (read server-side: 6564 chars ≈ 2723 Claude tokens that did not enter your context)
 ~~~~~
 
-**¿Está en el idioma pedido?** ☐ sí ☐ no
+**¿Está en el idioma pedido?** ☒ sí ☐ no
 
-Notas:
+Notas: Prosa en español. Los encabezados en inglés («Installation», «Usage»…) son títulos del documento copiados; solo «Introducción» la escribe el modelo y está en español.
 
 ## 10. batch2-13 (al azar, no cambia)
 
@@ -380,9 +380,9 @@ Contiene enlaces a la documentación, código fuente y guía de contribución.
 (read server-side: 8750 chars ≈ 3630 Claude tokens that did not enter your context)
 ~~~~~
 
-**¿Está en el idioma pedido?** ☐ sí ☐ no
+**¿Está en el idioma pedido?** ☒ sí ☐ no
 
-Notas:
+Notas: Prosa en español; títulos de sección y etiquetas en negrita («Hate Type Annotations!?», «Backwards-incompatible Changes») son títulos del documento copiados.
 
 ## 11. batch2-20 (al azar, no cambia)
 
@@ -433,9 +433,9 @@ Respuesta literal:
 (read server-side: 8589 chars ≈ 4473 Claude tokens that did not enter your context)
 ~~~~~
 
-**¿Está en el idioma pedido?** ☐ sí ☐ no
+**¿Está en el idioma pedido?** ☒ sí ☐ no
 
-Notas:
+Notas: Descripciones de las reglas en español; los códigos de regla y rutas no cuentan. Truncada por max_tokens, pero eso no afecta al idioma.
 
 ## 12. probeY-02 (al azar, no cambia)
 
@@ -465,6 +465,6 @@ Total errors/warnings: 0.
 (leído server-side: 3122 chars ≈ 1626 tokens de Claude que no entraron a tu contexto)
 ~~~~~
 
-**¿Está en el idioma pedido?** ☐ sí ☐ no
+**¿Está en el idioma pedido?** ☒ sí ☐ no
 
-Notas:
+Notas: Caso límite. La prosa está en inglés, pero los nombres de sección («Entorno (el CLI y los clientes)», «Servicios», «Versiones (…)») salen en español, copiados del log. Por la regla del fichero (títulos copiados no cuentan) es «sí»; un lector que pidió inglés lo vería mezclado, y en probeY-04/06 el modelo sí los tradujo. El «no se sabe» del juez es defendible.
