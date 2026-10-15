@@ -1,0 +1,329 @@
+{
+  "rows": [
+    {
+      "id": "A01",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/A5c/mutants.txt"
+    },
+    {
+      "id": "A02",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/A7a/strings-check.txt"
+    },
+    {
+      "id": "A03",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/A7b/mutants.txt"
+    },
+    {
+      "id": "A04",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/A8a-1/mutants.txt"
+    },
+    {
+      "id": "A05",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/A8a-2/mutants.txt"
+    },
+    {
+      "id": "A06",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_complete.txt"
+    },
+    {
+      "id": "A07",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_empty.txt"
+    },
+    {
+      "id": "A08",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B2b-2_corpus-affinity-check.txt"
+    },
+    {
+      "id": "A09",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-biome-lint.txt"
+    },
+    {
+      "id": "A10",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-pytest.txt"
+    },
+    {
+      "id": "A11",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-check-llamaswap-pre-b10909.txt",
+      "fidelity": {
+        "invented_numbers": [],
+        "invented_files": [],
+        "repeated_sentences": [],
+        "total": 0
+      }
+    },
+    {
+      "id": "A12",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-B2c_corpus-f2-check.txt",
+      "fidelity": {
+        "invented_numbers": [
+          "6"
+        ],
+        "invented_files": [],
+        "repeated_sentences": [],
+        "total": 1
+      }
+    },
+    {
+      "id": "A13",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-doctor-empty-home.txt",
+      "fidelity": {
+        "invented_numbers": [
+          "0",
+          "3",
+          "3",
+          "3",
+          "3"
+        ],
+        "invented_files": [],
+        "repeated_sentences": [],
+        "total": 5
+      }
+    },
+    {
+      "id": "A14",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-biome-lint-nest.txt",
+      "fidelity": {
+        "invented_numbers": [],
+        "invented_files": [],
+        "repeated_sentences": [],
+        "total": 0
+      }
+    },
+    {
+      "id": "A15",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-ruff-concise-build-site.txt",
+      "fidelity": {
+        "invented_numbers": [
+          "102"
+        ],
+        "invented_files": [],
+        "repeated_sentences": [],
+        "total": 1
+      }
+    },
+    {
+      "id": "A16",
+      "tool": "local_summarize",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-doc-docs_recipes_claude-code-hooks.md",
+      "copied_labels": [],
+      "introductions": 1
+    },
+    {
+      "id": "A17",
+      "tool": "local_summarize",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-doc-docs_recipes_llama-swap-groups.md",
+      "copied_labels": [],
+      "introductions": 1
+    },
+    {
+      "id": "A18",
+      "tool": "local_summarize",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-doc-docs_recipes_remote-backend.md",
+      "copied_labels": [],
+      "introductions": 1
+    },
+    {
+      "id": "A19",
+      "tool": "local_summarize",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-doc-pycparser-3.0.METADATA.md",
+      "copied_labels": [],
+      "introductions": 1
+    },
+    {
+      "id": "A20",
+      "tool": "local_summarize",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-doc-distlib-0.4.3.METADATA.md",
+      "copied_labels": [],
+      "introductions": 0
+    },
+    {
+      "id": "B21",
+      "tool": "local_lint_summary",
+      "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-cinco-reglas.txt"
+    },
+    {
+      "id": "B22",
+      "tool": "local_lint_summary",
+      "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-docstrings.txt"
+    },
+    {
+      "id": "B23",
+      "tool": "local_lint_summary",
+      "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-tres-reglas.txt"
+    },
+    {
+      "id": "B24",
+      "tool": "local_lint_summary",
+      "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-un-solo-archivo.txt"
+    },
+    {
+      "id": "B25",
+      "tool": "local_lint_summary",
+      "document": "benchmarks/catalogo-2026-09/fuentes/lint-9k.txt"
+    },
+    {
+      "id": "B26",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-ruff-concise.txt"
+    },
+    {
+      "id": "B27",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-ruff-full.txt"
+    },
+    {
+      "id": "B28",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-tsc.txt"
+    },
+    {
+      "id": "B29",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B2b-2_corpus-f2-check.txt"
+    },
+    {
+      "id": "B30",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B2c_corpus-affinity-check.txt"
+    },
+    {
+      "id": "B31",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-pytest-chunking-density.txt",
+      "fidelity": {
+        "invented_numbers": [],
+        "invented_files": [],
+        "repeated_sentences": [],
+        "total": 0
+      }
+    },
+    {
+      "id": "B32",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-ruff-concise-clean-watcher.txt",
+      "fidelity": {
+        "invented_numbers": [],
+        "invented_files": [],
+        "repeated_sentences": [],
+        "total": 0
+      }
+    },
+    {
+      "id": "B33",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-tsc-angular.txt",
+      "fidelity": {
+        "invented_numbers": [],
+        "invented_files": [],
+        "repeated_sentences": [
+          "el conteo de este tipo de error es 1"
+        ],
+        "total": 1
+      }
+    },
+    {
+      "id": "B34",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-check-llamaswap-pre-no-resident.txt",
+      "fidelity": {
+        "invented_numbers": [],
+        "invented_files": [],
+        "repeated_sentences": [],
+        "total": 0
+      }
+    },
+    {
+      "id": "B35",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-B2d-fix_corpus-affinity-check.txt",
+      "fidelity": {
+        "invented_numbers": [
+          "76",
+          "35",
+          "41",
+          "4"
+        ],
+        "invented_files": [],
+        "repeated_sentences": [],
+        "total": 4
+      }
+    },
+    {
+      "id": "B36",
+      "tool": "local_summarize",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-doc-pywin32-312.METADATA.md",
+      "copied_labels": [],
+      "introductions": 1
+    },
+    {
+      "id": "B37",
+      "tool": "local_summarize",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-doc-identify-2.6.19.METADATA.md",
+      "copied_labels": [],
+      "introductions": 0
+    },
+    {
+      "id": "B38",
+      "tool": "local_summarize",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-doc-python_discovery-1.6.1.METADATA.md",
+      "copied_labels": [],
+      "introductions": 0
+    },
+    {
+      "id": "B39",
+      "tool": "local_summarize",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-doc-docs_wiki_Configuration.md",
+      "copied_labels": [],
+      "introductions": 1
+    },
+    {
+      "id": "B40",
+      "tool": "local_summarize",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-doc-src_local_delegate_resources_skills_local-delegation_SKILL.md",
+      "copied_labels": [],
+      "introductions": 1
+    },
+    {
+      "id": "A41",
+      "tool": "local_summarize",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-doc-httpcore2-2.13.1.METADATA.md",
+      "copied_labels": [],
+      "introductions": 1
+    },
+    {
+      "id": "A42",
+      "tool": "local_summarize",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-doc-httpx2-2.13.1.METADATA.md",
+      "copied_labels": [],
+      "introductions": 1
+    },
+    {
+      "id": "C43",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-biome-lint.txt"
+    },
+    {
+      "id": "C44",
+      "tool": "local_lint_summary",
+      "document": "benchmarks/catalogo-2026-09/fuentes/lint-9k.txt"
+    }
+  ],
+  "copied_labels": 0,
+  "duplicate_introductions": 0,
+  "fidelity_total": 12,
+  "fidelity_answers": 10
+}

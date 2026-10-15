@@ -1,0 +1,24 @@
+**Resumen de errores de linter**
+
+**src/local_delegate/benchmark.py**
+* **Faltan docstrings (22):** Incluye clases públicas, métodos, funciones y métodos mágicos.
+* **Comas finales faltantes (14):** Error COM812.
+* **Manejo de excepciones (12):** Mensajes largos fuera de la clase (TRY003), uso de literales de cadena o f-strings en excepciones (EM101, EM102) y abstracción de errores (TRY301).
+* **Uso de print (7):** Error T201.
+* **Valores mágicos (3):** Uso de constantes sin asignar (PLR2004).
+* **Complejidad y estructura (5):** Función demasiado compleja (C901), demasiadas ramas (PLR0912), demasiadas sentencias (PLR0915), demasiados argumentos (PLR0913) e importaciones fuera de nivel (PLC0415).
+* **Otros (6):** Líneas demasiado largas (E501), falta de docstring en `__init__` (D107), falta de docstring en función pública (D103), valores booleanos posicionales (FBT003), unión de tipos incorrecta (RUF036) y formato de docstring (D205, D209, D301).
+
+**src/local_delegate/agents.py**
+* **Faltan avisos de copyright (1):** CPY001.
+* **Docstrings (1):** Primera línea debe ser imperativa (D401).
+* **Otros (3):** Importación de librería estándar en bloque de tipos (TC003), coma final faltante (COM812) y valor mágico (PLR2004).
+
+**src/local_delegate/autostart.py**
+* **Faltan avisos de copyright (1):** CPY001.
+* **Otros (2):** Docstring no imperativo (D401) y llamada a `subprocess` insegura (S603).
+
+**Otros archivos**
+* **src/local_delegate/__init__.py y __main__.py:** Falta aviso de copyright (CPY001).
+
+(read server-side: 8589 chars ≈ 4473 Claude tokens that did not enter your context)

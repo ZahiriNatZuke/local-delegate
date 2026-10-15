@@ -1,0 +1,25 @@
+## Introduction
+This document describes the Claude Code hooks designed to suggest delegating tasks to local tools.
+
+## Hooks
+**`suggest_delegate_prompt.py` — `UserPromptSubmit`** detects explicit mechanical intentions like summarizing or translating, while ignoring architectural or security tasks.
+**`suggest_delegate_read.py` — `PreToolUse`, matcher `Read`** is disabled by default and suggests or blocks reading large files based on configurable size thresholds.
+**`suggest_delegate_shell.py` — `PreToolUse`, matcher `Bash|PowerShell`** handles reading files via shell commands and is installed using the same flag as the read hook.
+**`record_call.py` — `PreToolUse`, matcher `mcp__local-delegate__.*`** always records delegation details for cost analysis without providing suggestions or blocking.
+**`suggest_lint_summary.py`** was removed on 2026-09-08 due to extremely low accuracy.
+
+## Instalación
+Scripts are installed using `local-delegate install`, which copies files to `~/.claude/hooks/local-delegate/` and updates settings.
+
+## Configuración
+Users can manage behavior via environment variables like `LD_HOOK_ENABLED` and `LD_HOOK_READ_ENABLED` to control suggestions and telemetry.
+
+## Verificación manual
+Verify functionality by prompting for summaries, testing file size thresholds, and ensuring retired hooks do not trigger.
+
+## Piloto A/B
+Compare sessions using `LD_HOOK_ENABLED=0` and `1` to measure adoption and false positives.
+**Resultado del piloto de 2023-07-23**
+The pilot showed improved adoption with active hooks, though the read hook required further iteration due to false positives.
+
+(leído server-side: 12899 chars ≈ 6449 tokens de Claude que no entraron a tu contexto)

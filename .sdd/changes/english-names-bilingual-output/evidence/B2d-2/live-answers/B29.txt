@@ -1,0 +1,8 @@
+**Resumen de Problemas por Archivo:**
+
+El archivo `scripts/build_corpus.py` presenta los siguientes problemas, agrupados por tipo y relevancia:
+
+*   **Lint (9k):** Se identificaron 1 regla de estilo o formato no cumplida.
+*   **Cambio de Sistema (6):** Se detectaron 6 cambios relacionados con la actualización de los prompts a la versión 0.36.0, incluyendo modificaciones en `resumen-md-2k`, `resumen-md-10k`, `resumen-changelog-7k`, `lint-9k`, `explicar-metrics-15k`, `explicar-install-20k`, `describir-dashboard`, `leer-cifras-dashboard` y `techo-resumen-103k`.  Estos cambios se describen como una "frontera declarada".
+
+(read server-side: 879 chars ≈ 457 Claude tokens that did not enter your context)

@@ -1,0 +1,39 @@
+Here’s a summary of the issues, grouped by file, with error/rule counts and relevance prioritized:
+
+**Local Delegate - Diagnostics**
+
+*   **LLAMASWAP_EXE:** Missing (Needs `llama-swap` in PATH). (Warning)
+*   **LLAMASWAP_CONFIG:** Missing. (Warning) – Requires configuration for proper operation.
+*   **Backend URL:** Valid. (OK)
+*   **MCP Clients:** No MCP clients have communicated with this local-delegate instance. (Warning) – Indicates potential communication issues.
+
+**Environment (CLI & Clients)**
+
+*   **CLI Version:** Valid. (OK)
+*   **Published Version:** Valid. (OK)
+*   **MCP Backup Chains:** Valid, but lacks resident data due to missing LLAMASWAP_CONFIG. (Warning) –  Lack of configuration impacts backup chain functionality.
+
+**Andamiaje (Hooks, Skills, Memory, MCP)**
+
+*   **Hooks:** No orphaned hooks. (OK) – Hooks are properly managed.
+*   **Skills:** Claude Code and opencode skills are installed. (OK)
+*   **Memory:** Global memory is up-to-date for Claude Code, Codex, and opencode. (OK)
+*   **MCP in Claude Code:** Registered. (OK)
+*   **MCP in Codex:** Managed. (OK)
+*   **MCP in opencode:** Registered. (OK)
+
+**Services**
+
+*   **Daemon:** Running correctly. (OK)
+*   **Backend:** Responding. (OK)
+*   **Backend Credentials:** No credentials required. (OK)
+*   **Daemon Token:** No token required. (OK)
+*   **Claude Desktop Token:** Not configured. (Warning) –  Requires configuration for desktop integration.
+
+**Versions**
+
+*   **llama-swap:** Version 255 (OK)
+*   **llama-server:** Version b10909 (OK)
+*   **llama-swap Residence:** Requires LLAMASWAP_CONFIG (Warning) – Configuration is missing, impacting functionality.
+
+(leído server-side: 3122 chars ≈ 1626 tokens de Claude que no entraron a tu contexto)

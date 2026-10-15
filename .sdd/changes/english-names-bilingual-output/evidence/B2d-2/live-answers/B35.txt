@@ -1,0 +1,17 @@
+**Resumen de errores**
+
+**scripts/build_corpus.py**
+
+*   **Cambios en prompts de la versión 0.36.0 (frontera declarada):** 76 errores.
+    *   **Máximo de tokens:** 35 incidencias donde el valor de `max_tokens` ha cambiado.
+    *   **Sistema:** 41 incidencias donde el mensaje de `system` ha cambiado.
+
+**Resumen de reglas de Ruff**
+
+*   **Cambios en prompts de la versión 0.36.0 (frontera declarada):** 4 errores.
+    *   **Resumen de tres reglas de Ruff:** 1 incidencia.
+    *   **Resumen de docstrings de Ruff:** 1 incidencia.
+    *   **Resumen de un solo archivo de Ruff:** 1 incidencia.
+    *   **Resumen de cinco reglas de Ruff:** 1 incidencia.
+
+(read server-side: 7699 chars ≈ 4009 Claude tokens that did not enter your context)

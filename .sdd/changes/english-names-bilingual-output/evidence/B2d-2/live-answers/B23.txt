@@ -1,0 +1,18 @@
+**Resumen de Problemas:**
+
+**app/main.py:**
+
+*   **E501 Linea demasiado larga:** 2 ocurrencias (líneas 12 y 40).
+*   **F401 Importación no utilizada:** 3 ocurrencias (líneas 7, 9 y 105).
+
+**app/util.py:**
+
+*   **E501 Linea demasiado larga:** 1 ocurrencia (línea 55).
+*   **F401 Importación no utilizada:** 3 ocurrencias (líneas 3, 5 y 70).
+*   **W291 Espacio en blanco al final:** 1 ocurrencia (línea 70).
+
+**app/cli.py:**
+
+*   **E501 Linea demasiado larga:** 1 ocurrencia (línea 21).
+
+(read server-side: 340 chars ≈ 177 Claude tokens that did not enter your context)

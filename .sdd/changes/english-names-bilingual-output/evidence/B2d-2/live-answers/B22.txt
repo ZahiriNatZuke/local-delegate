@@ -1,0 +1,17 @@
+**Resumen de Problemas por Archivo:**
+
+**src/a.py:**
+*   D100: 2 (Faltan *docstrings* en módulos públicos)
+*   D103: 3 (Faltan *docstrings* en funciones públicas)
+*   B006: 1 (No se deben usar estructuras de datos mutables para valores predeterminados de argumentos)
+
+**src/b.py:**
+*   D100: 2 (Faltan *docstrings* en módulos públicos)
+*   D103: 4 (Faltan *docstrings* en funciones públicas)
+
+**src/c.py:**
+*   T201: 3 (Se encontró la instrucción `print`)
+
+Los problemas más frecuentes son la falta de *docstrings* en funciones públicas de los archivos `b.py` y `c.py`, con un total de 9 errores de este tipo.  También se detectó el uso de la instrucción `print` en `c.py`, lo cual es una posible señal de que se podría mejorar la legibilidad del código.  Finalmente, el archivo `a.py` presenta un problema relacionado con el uso de estructuras de datos mutables para valores predeterminados de argumentos.
+
+(read server-side: 626 chars ≈ 326 Claude tokens that did not enter your context)

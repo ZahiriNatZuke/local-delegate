@@ -1,0 +1,18 @@
+**Resumen de Problemas por Archivo**
+
+**lib/io.py:**
+*   **I001 Import block:** 2 problemas. Se detectaron dos errores relacionados con el desorden y el formato del bloque de importaciones.
+*   **UP006 Type Annotation:** 3 problemas. Se identificaron tres casos donde se utiliza `Dict` en lugar de `dict` en las anotaciones de tipo.
+
+**lib/net.py:**
+*   **I001 Import block:** 1 problema. Se encontró un error en el bloque de importaciones.
+*   **SIM102 Uso de `if`:** 3 problemas. Se detectaron tres instancias donde se podrían simplificar las estructuras `if` utilizando una única sentencia.
+*   **RET504 Asignación innecesaria:** 1 problema. Se identificó una asignación innecesaria antes de la sentencia `return`.
+
+**lib/db.py:**
+*   **I001 Import block:** 1 problema. Se detectó un error en el bloque de importaciones.
+*   **SIM102 Uso de `if`:** 2 problemas. Se encontraron dos casos donde se podrían simplificar las estructuras `if` utilizando una única sentencia.
+*   **UP006 Type Annotation:** 2 problemas. Se identificaron dos casos donde se utiliza `List` en lugar de `list` en las anotaciones de tipo.
+*   **RET504 Asignación innecesaria:** 1 problema. Se detectó una asignación innecesaria antes de la sentencia `return`.
+
+(read server-side: 784 chars ≈ 408 Claude tokens that did not enter your context)

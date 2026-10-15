@@ -1,0 +1,30 @@
+**apps\api\package.json**
+* **Restricted Dependencies**: 1 (Use of the restricted dependency `express` detected).
+
+**apps\api\src\config\env.schema.ts**
+* **Naming Convention**: 6 (Object property names should be in `camelCase`).
+* **Magic Numbers**: 1 (Magic number detected in `PORT` default value).
+
+**apps\api\src\geocode\dto\geocode.dto.ts**
+* **Magic Numbers**: 4 (Magic numbers detected in string length constraints).
+* **Excessive Classes Per File**: 1 (File contains more than the allowed 1 class).
+
+**apps\api\src\validate\dto\validate.dto.ts**
+* **Naming Convention**: 4 (Object property names should be in `camelCase`).
+* **Magic Numbers**: 5 (Magic numbers detected in string lengths and array limits).
+* **Excessive Classes Per File**: 1 (File contains more than the allowed 1 class).
+
+**apps\api\src\config\repo-root.ts**
+* **Block Statements**: 2 (Block statements are preferred for `if` statements).
+
+**apps\api\src\geocode\geocode.controller.ts**
+* **Parameter Properties**: 1 (Use explicit class properties instead of parameter properties).
+* **Import Type**: 2 (Named imports are only used as types).
+
+**apps\api\src\validate\validate.controller.ts**
+* **Parameter Properties**: 1 (Use explicit class properties instead of parameter properties).
+
+**packages\core\vitest.config.ts**
+* **Default Export**: 1 (Avoid using default exports).
+
+(leído server-side: 18043 chars ≈ 9397 tokens de Claude que no entraron a tu contexto)

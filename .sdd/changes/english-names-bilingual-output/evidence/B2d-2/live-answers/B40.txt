@@ -1,0 +1,28 @@
+## Introducción
+Este documento establece las reglas para delegar tareas mecánicas a modelos locales mediante herramientas MCP, optimizando así el uso de la suscripción.
+
+## Regla de oro
+Si la tarea se describe con una frase y formato explícito, usa una herramienta.
+
+## El mayor ahorro: `path` en vez de `text`
+Usar la ruta del archivo evita que el contenido completo consuma tokens de tu contexto.
+
+## El coste de no delegar
+No delegar archivos grandes desperdicia miles de tokens de contexto innecesariamente.
+
+## Catálogo de tools
+Incluye herramientas para resumir, clasificar, extraer datos, generar código repetitivo, traducir, explicar código, describir imágenes, resumir errores de sistema y gestionar mensajes de commit.
+
+## Documentos largos
+**Traducción y delegación** procesan textos extensos dividiéndolos en fragmentos para evitar truncamientos.
+
+## Cuándo SÍ delegar (ejemplos)
+Se debe delegar en tareas de resumen, clasificación, extracción de datos, generación de estructuras de código, traducción, descripción de imágenes o diagnósticos de estado.
+
+## Cuándo NO delegar
+No delegues arquitectura, decisiones complejas, investigación de múltiples fuentes o código crítico que requiera criterio humano.
+
+## Notas
+Las herramientas solo devuelven texto. Los errores indican fallos en el backend y el panel de control permite monitorizar el ahorro.
+
+(read server-side: 5884 chars ≈ 2942 Claude tokens that did not enter your context)

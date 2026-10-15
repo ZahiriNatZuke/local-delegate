@@ -1,0 +1,14 @@
+**Resumen de Problemas por Archivo**
+
+**src\local_delegate\sections.py:**
+
+*   **Errores de Documentación:** 7 (D101, D102, D205, D301, D400, C901, PLR2004) – Falta de documentación en clases y métodos públicos.
+*   **Complejidad de Expresiones:** 2 (C901, PLR0912) – Expresiones complejas que exceden el límite de longitud.
+*   **Docstrings Ambiguos:** 2 (RUF002, RUF002) – Docstrings con caracteres ambiguos que necesitan ser reemplazados.
+*   **Longitud de Línea:** 5 (E501) – Líneas que superan el límite de longitud permitido.
+*   **Importaciones:** 1 (TC003) – Importación de bibliotecas estándar que debería estar en un bloque de control de tipos.
+*   **Formato de Docstrings:** 1 (D301) – Uso de `r"""` no recomendado para docstrings con backslashes.
+
+**Total de Errores:** 26.
+
+(read server-side: 2627 chars ≈ 1368 Claude tokens that did not enter your context)

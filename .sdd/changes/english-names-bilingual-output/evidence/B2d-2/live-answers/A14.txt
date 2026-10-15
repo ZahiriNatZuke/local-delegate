@@ -1,0 +1,23 @@
+**src\app\core\decorators\app-controller.decorator.ts**
+* **UseExplicitReturnType** (1): The function is missing a declared return type.
+* **UseExplicitType** (1): The function lacks an explicit return type definition.
+
+**src\app\core\decorators\log-audit.decorator.ts**
+* **UseConsistentTypeDefinitions** (1): The code uses a type definition instead of an interface.
+* **UseReactFunctionComponentDefinition** (1): The component is defined using an arrow function instead of a function declaration.
+* **UseExplicitReturnType** (1): The function lacks a declared return type.
+* **UseExplicitType** (1): The function is missing an explicit return type.
+
+**src\app\core\decorators\throttle.decorator.ts**
+* **UseReactFunctionComponentDefinition** (5): Multiple components are defined as arrow functions.
+* **UseNumericSeparators** (3): Long numeric literals are missing separators for better readability.
+* **UseExplicitReturnType** (5): Several functions are missing declared return types.
+* **UseExplicitType** (5): Multiple functions lack explicit return type definitions.
+
+**src\app\core\filters\http-exception.filter.ts**
+* **NoTernary** (1): An unexpected ternary operator was used instead of an if-else statement.
+* **UseExplicitReturnType** (1): The class method is missing a return type.
+* **UseThisInClassMethods** (1): The method does not utilize the class instance state.
+* **UseExplicitType** (1): The class member lacks an explicit return type.
+
+(leído server-side: 22235 chars ≈ 11580 tokens de Claude que no entraron a tu contexto)

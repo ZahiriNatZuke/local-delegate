@@ -1,0 +1,20 @@
+**Resumen de Problemas por Archivo**
+
+**scripts/detect_language.py**
+
+*   **D101:** Falta documentación en clase pública (1 error).
+    *   Ubicación: Línea 35.
+*   **D103:** Falta documentación en función pública (3 errores).
+    *   Ubicación: Línea 42.
+    *   Ubicación: Línea 47.
+    *   Ubicación: Línea 67.
+*   **T201:** Se encontró la instrucción `print` (1 error).
+    *   Ubicación: Línea 81.
+    *   Recomendación: Eliminar la instrucción `print`.
+
+**Otros Problemas**
+
+*   **CPY001:** Falta aviso de copyright en la parte superior del archivo.
+*   Incompatibilidad entre las reglas `incorrect-blank-line-before-class` y `blank-line-before-class`. Se ignoró la regla `multi-line-summary-second-line` debido a incompatibilidad con `multi-line-summary-first-line`.
+
+(read server-side: 1990 chars ≈ 1036 Claude tokens that did not enter your context)

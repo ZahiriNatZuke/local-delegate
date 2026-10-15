@@ -1,0 +1,13 @@
+Here's a summary of the issues grouped by file, with error/rule counts and relevance prioritized, within the specified word limit:
+
+**Build Corpus Script (scripts/build_corpus.py)**
+
+*   **Resume-Ruff-Tres-Reglas:** 1 - This rule identifies issues related to changes in prompts introduced by the 0.36.0 release, specifically concerning system changes.
+*   **Resume-Ruff-Docstrings:** 1 - This rule flags problems associated with changes in prompts from the 0.36.0 release, focusing on system modifications.
+*   **Resume-Ruff-Un-Solo-Archivo:** 1 - This rule detects issues stemming from prompt changes in the 0.36.0 release, related to system modifications.
+*   **Resume-Ruff-Cinco-Reglas:** 1 - This rule identifies problems originating from prompt changes in the 0.36.0 release, concerning system modifications.
+*   **Resumen-Md-2k:** 1 - This rule highlights issues resulting from prompt changes in the 0.36.0 release, related to system modifications.
+
+**Overall:** The primary issues stem from changes in prompts introduced with the 0.36.0 release, impacting system modifications across multiple Ruff rules.
+
+(leído server-side: 685 chars ≈ 356 tokens de Claude que no entraron a tu contexto)

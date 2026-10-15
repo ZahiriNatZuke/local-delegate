@@ -1,0 +1,11 @@
+**Summary of Issues by File**
+
+**tools/make_mapping.py:** 1 failed test. The issue stems from a conditional statement (`elif False:`) replacing an `_find_function` array. This resulted in a `ValueError` during test execution (`tools/tests/test_make_mapping.py::test_a_nested_function_inside_compound_statements_is_found`), mirroring a previous phase 1 error. The fix involved restoring the original code with sha256 f42a0930ec83.
+
+**tests/test_turn_daemon.py:** 1 failed test. A thread management issue (`_Thread(...)`) caused a `RuntimeError` due to an outdated keyword argument, leading to thread termination. Manual edits were required to correct the code at line 597, restoring sha256 3a589cbed4c2.
+
+**src/local_delegate/server.py:** 1 failed test. An `AttributeError` occurred due to incorrect access to the `BackendState.cause` field. This was a shared issue across server.py, web/metrics.py, and tests, requiring a coordinated change. The restoration involved sha256 08f6a3106429.
+
+**Overall:** Following the restoration of the files, a total of 43 tests passed.
+
+(leído server-side: 2040 chars ≈ 1062 tokens de Claude que no entraron a tu contexto)
