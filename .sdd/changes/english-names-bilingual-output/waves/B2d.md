@@ -322,3 +322,16 @@ defecto (`max_words`, sin `focus`), de una en una; guardar cada respuesta litera
 (reglas, tamaños, títulos, detector), no un modelo. El juez, sus tests y los mutantes son código que
 había que escribir exacto. Los textos de `server.py` y de los tests se editaron por tramos con
 Python para respetar el CRLF de `server.py`. Las respuestas se re-puntuaron con el juez (programa).
+
+## Resultado
+
+- **Conjunto 3 en vivo:** `local_summarize` 10/10 y `local_lint_summary` 10/10 en el idioma pedido
+  entre las juzgables, 0 en el contrario (`evidence/B2d-fix/lang-sample-set3-batch1.json` y
+  `lang-sample-set3-batch2.json`).
+- **Revisión humana:** 9/10 juzgables con el juez nuevo, frente a 6/12 con el de antes
+  (`evidence/B2d-fix/human-review-result.md`).
+- **Control negativo:** 20/20 `opposite` (`evidence/B2d-fix/judge-negative-control.json`).
+- **Decisión:** se juzga solo la prosa (`scripts/judge_response_language.py`, reglas en
+  `evidence/B2d-fix/judge-rules.md`).
+- **Pendientes:** sección repetida, contenido inventado en lint, etiquetas copiadas en summarize y
+  lectura cp1252 del juez pasan a B2d-2 (`plan.md`, sección «B2d-2»).

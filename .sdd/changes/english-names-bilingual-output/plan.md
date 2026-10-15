@@ -1286,7 +1286,8 @@ en vivo) **antes del PR de release**.
   fuera del daemon, se para y se pregunta antes de planificar ningún reinicio del daemon.
 - **B2d-2 (enmienda del 2026-10-15):** lo de «B2d-2» de abajo; salida de `local_summarize` y
   `local_lint_summary` sin pérdidas (tope de lint, secciones vacías, corte por tope y largo crudo en
-  el log). Va entre B2d y B2e.
+  el log; ampliado con sección repetida, contenido inventado en lint, etiquetas copiadas en
+  summarize y lectura cp1252 del juez). Va entre B2d y B2e.
 - **B2-affinity:** al añadir la orden de idioma, la celda aprobada `local_lint_summary` pierde su
   base (cambia su `prompt_sha256`). Se acepta durante el desarrollo; este lote re-evalúa la afinidad
   en vivo con los prompts nuevos para que la 0.36.0 salga con la base nueva.
@@ -1397,12 +1398,14 @@ Lote nacido el 2026-10-15 de la investigación `evidence/B2d-fix/chunking-model-
 (§2 «Presupuesto de salida» y §4), con sus tests fallando hoy en
 `evidence/B2d-fix/investigation-tests/test_chunking_language_investigation.py` (B1 y B2). Va **en
 serie después de B2d y antes de B2e** (mismo `server.py` y `sections.py`, dueña B2) y sale en la
-0.36.0. Ninguno de los cuatro puntos es de idioma: la salida se corta o se pierde, y eso ensucia
-cualquier medición de idioma posterior.
+0.36.0. Los cuatro primeros puntos no son de idioma: la salida se corta o se pierde, y eso ensucia
+cualquier medición de idioma posterior. Los cuatro siguientes (ampliación del 2026-10-15) salieron
+de la medición en vivo del conjunto 3 (`evidence/B2d-fix/lang-sample-set3-batch1.json` y
+`lang-sample-set3-batch2.json`): secciones repetidas, contenido inventado, etiquetas copiadas y el
+juez que no lee ficheros cp1252.
 
-**Fuera de este lote:** la decisión de cómo juzgar el idioma (solo la prosa, sin títulos `#` ni
-negritas exigidos literales, o el texto entero) **sigue en B2d**, pendiente de la prueba en vivo en
-curso (§6 de la investigación).
+**Fuera de este lote:** la decisión de cómo juzgar el idioma se tomó en B2d: se juzga solo la prosa
+(`scripts/judge_response_language.py`, reglas en `evidence/B2d-fix/judge-rules.md`).
 
 - **Tope de salida de `local_lint_summary`.** La llamada directa pide `2·max_words+96 = 496` tokens
   (`server.py:4168`) y cada parcial del troceado y el reduce `2·w+64 = 464` (`_tokens`,
@@ -1446,6 +1449,51 @@ curso (§6 de la investigación).
     crudo mayor que `chars_out`. Mutante: registrar el largo después del post-proceso (falla).
   - *En vivo:* repetir httpcore2 en la ventana de la medición del primer punto y explicar el caso
     con el campo nuevo, en `evidence/B2d-2/live.md`.
+- **Sección repetida en `local_summarize`.** La sección «Introduction»/«Introducción» que añade el
+  producto se duplica cuando el documento ya trae una sección con ese nombre (pycparser, tanda 1 del
+  conjunto 3).
+  - *Cambio:* si el documento ya tiene una sección con el nombre de la que añade el producto (en
+    cualquiera de los dos idiomas, sin distinguir mayúsculas), no se añade otra; el resumen sale con
+    una sola.
+  - *Test:* documento con `## Introduction` propia; la respuesta (backend falso) tiene exactamente
+    una sección de introducción, en `es` y en `en`. Caso de control: documento sin esa sección
+    sigue recibiendo la del producto. Mutante: añadir siempre la sección (falla el assert del
+    recuento, no el del control).
+  - *En vivo:* repetir pycparser en la ventana de la medición del tope, en `evidence/B2d-2/live.md`.
+- **Contenido inventado en `local_lint_summary`.** En el conjunto 3 aparecen cifras y afirmaciones
+  que no están en el log: «Missing MCP Credentials (2)», «4 errores» o «72 errores» sin respaldo,
+  `scripts/build_corpus.py` presentado como fichero con errores, frases repetidas y ~30 hashes
+  listados en `corpus-affinity-check`, que además se cortó en 496 tokens.
+  - *Cambio:* a decidir con la medición, no a ojo (prompt con «solo lo que está en el log», recuentos
+    calculados por el programa cuando el formato lo permite, o ambos). Va **ligado al punto del
+    tope**: parte de lo inventado (repeticiones, listas de hashes) aparece al llegar al tope, así que
+    se mide después de dimensionarlo, y se mide de nuevo si el tope cambia.
+  - *Medición de fidelidad:* un conjunto de logs **fijado antes de medir** (en
+    `evidence/B2d-2/fidelity-set.json`, con el sha256 de cada log y, por log, las cifras y ficheros
+    que sí contiene), que incluya `corpus-affinity-check.txt` y los logs del conjunto 3 con
+    invenciones. Se cuenta, por respuesta, cada cifra o fichero que no está en el log y las frases
+    repetidas; antes y después, en una ventana de prueba, en `evidence/B2d-2/live.md`.
+  - *Hecho cuando:* 0 cifras ni ficheros inventados y 0 frases repetidas en el conjunto fijado (o el
+    umbral que se escriba en el JSON antes de medir, nunca peor que la medición de antes).
+  - *Test:* el contador de invenciones con un control positivo (una respuesta con una cifra y un
+    fichero inventados que detecta) y uno negativo (una fiel que deja en 0). Mutante: el contador
+    que no mira el log (falla el control positivo).
+- **Etiquetas copiadas en `local_summarize`.** Copia subtítulos del documento como etiquetas
+  `**…**` en el otro idioma (5 en la tanda 1 y 4 en la tanda 2 del conjunto 3). No tumba el juez de
+  prosa, pero va contra la orden de idioma.
+  - *Cambio:* la orden de idioma de `local_summarize` cubre también las etiquetas, como se hizo en
+    B2d con `local_lint_summary` (§3 de «Juez de prosa y etiquetas» en `waves/B2d.md`).
+  - *Test:* el prompt de `local_summarize` en `es` y en `en` lleva la regla de etiquetas (backend
+    falso que captura el `system`). Mutante: quitar la regla (falla el assert de la regla, no otro).
+  - *Medición:* contar las etiquetas copiadas en el otro idioma (la regla de `live-probe-X.json`)
+    con los documentos del conjunto 3; *hecho cuando* 0, en `evidence/B2d-2/live.md`.
+- **El juez lee el documento en UTF-8 estricto.** `scripts/judge_response_language.py`
+  (`:181` y `:184`) usa `read_text(encoding="utf-8")` y falla con ficheros cp1252 (por ejemplo
+  `evidence/B2d-fix/docs-3/es-log-B2c_corpus-f2-check.txt`), mientras el servidor lee con
+  `errors="replace"` (`server.py:491`).
+  - *Cambio:* el juez lee el documento y las respuestas como el servidor, con `errors="replace"`.
+  - *Test:* documento con bytes cp1252 (por ejemplo `0xE9`) que el juez procesa sin excepción y
+    con veredicto. Mutante: volver a UTF-8 estricto (falla con `UnicodeDecodeError` en ese test).
 - **Cierre del lote:** suite completa en `es` y en `en`, `ruff`, corpus y afinidad como en B2c (los
   topes de lint cambian el `max_tokens` del corpus: frontera en `PROMPT_BOUNDARIES` con su motivo),
   CHANGELOG, y registro en `waves/B2d-2.md` con las llamadas `local_*`.
