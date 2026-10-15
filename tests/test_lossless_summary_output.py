@@ -290,3 +290,24 @@ def test_a_document_without_it_still_gets_the_products(monkeypatch, tmp_path, pr
     listing = _prompt_list(seen[0]["messages"][1]["content"])
     assert listing[0][0] == sections.introduction()
     assert _introductions(out) == 1, out
+
+
+# --- 7. The bold labels of local_summarize ------------------------------------------------------
+
+
+@pytest.mark.parametrize(("product", "output", "name"), BATCHES)
+def test_the_summarize_order_names_the_bold_labels(monkeypatch, captured, product, output, name):
+    """Set 3 copied 5 + 4 subheadings as `**…**` labels in the other language. Mutant "without
+    the rule": the first `in` fails; the rest of the hardened order is checked by
+    `test_language_hardening.py`."""
+    _languages(monkeypatch, product, output)
+    server.local_summarize(text="Un texto corto para resumir.")
+    (call,) = captured
+    assert (
+        f" También van en {name} las etiquetas en negrita, también las que nombran una "
+        "subsección: tradúcelas aunque en el contenido aparezcan en otro idioma."
+    ) in call["system"], call["system"][-500:]
+    assert (
+        "Solo se quedan tal cual los títulos de las líneas '## ' que se piden literales"
+        in (call["system"])
+    )

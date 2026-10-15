@@ -3483,11 +3483,19 @@ def _written_language_clause() -> str:
     sentence, also the description of each error or rule, in full sentences and not copied from
     the input) and the only things that stay verbatim (requested headings, paths, code,
     identifiers and rule or error codes).
+
+    B2d-2: the order also names the bold labels, as `_lint_language_clause` does since B2d-fix. In
+    set 3 the model copied the document's subheadings as `**…**` labels in the other language (5
+    in batch 1 and 4 in batch 2): the order listed "the headings asked for verbatim" as what stays
+    as it is, and the model took the labels of the subsections for them. Only the `## ` lines of
+    the list are asked for verbatim; the labels are text to write in the requested language.
     """
     name = _language_name(i18n.response_language().value)
     return _written_language_head(name) + (
-        " Solo se quedan tal cual los títulos que se piden literales, las rutas, el código, los "
-        "identificadores y los códigos de regla o de error."
+        f" También van en {name} las etiquetas en negrita, también las que nombran una "
+        "subsección: tradúcelas aunque en el contenido aparezcan en otro idioma. Solo se quedan "
+        "tal cual los títulos de las líneas '## ' que se piden literales, las rutas, el código, "
+        "los identificadores y los códigos de regla o de error."
     )
 
 

@@ -69,8 +69,12 @@ def _assert_hardened(system: str, name: str, tool: str = "local_summarize") -> N
     if tool == "local_lint_summary":
         _assert_lint_labels(system, name)
     else:
-        assert "Solo se quedan tal cual los títulos que se piden literales" in system, system[-400:]
-        assert "etiquetas en negrita" not in system, "the lint order leaked into summarize"
+        assert (
+            "Solo se quedan tal cual los títulos de las líneas '## ' que se piden literales"
+        ) in system, system[-400:]
+        # B2d-2: summarize names its bold labels too, but not lint's sections and checks.
+        assert "las etiquetas en negrita, también las que nombran una subsección" in system
+        assert "nombres de cada chequeo o prueba" not in system, "the lint order leaked"
 
 
 def _assert_lint_labels(system: str, name: str) -> None:
@@ -163,13 +167,16 @@ def test_lint_labels_go_in_the_requested_language_in_map_and_reduce(
 SUMMARIZE_ORDER_BEFORE = (
     " Escribe toda la respuesta en inglés, aunque el contenido esté en otro idioma: redacta en "
     "inglés cada frase, también la descripción de cada error o regla, con frases completas y sin "
-    "copiar frases del contenido. Solo se quedan tal cual los títulos que se piden literales, las "
-    "rutas, el código, los identificadores y los códigos de regla o de error."
+    "copiar frases del contenido. También van en inglés las etiquetas en negrita, también las que "
+    "nombran una subsección: tradúcelas aunque en el contenido aparezcan en otro idioma. Solo se "
+    "quedan tal cual los títulos de las líneas '## ' que se piden literales, las rutas, el código, "
+    "los identificadores y los códigos de regla o de error."
 )
 
 
 def test_the_summarize_order_does_not_change(monkeypatch, captured):
-    """Its `##` headings must stay verbatim: the text is the one of commit 71846c1, byte by byte."""
+    """Its `##` headings must stay verbatim: the text of commit 71846c1, byte by byte, plus the
+    rule of the bold labels that B2d-2 added (set 3 copied 5 + 4 subheadings as labels)."""
     _languages(monkeypatch, "es", "en")
     server.local_summarize(text="Un texto corto para resumir.")
     (call,) = captured

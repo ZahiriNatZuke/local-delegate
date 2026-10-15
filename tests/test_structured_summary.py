@@ -287,9 +287,10 @@ def _document(tmp_path, text: str) -> Path:
 LANGUAGE_ORDER = (
     " Escribe toda la respuesta en español, aunque el contenido esté en otro idioma: redacta "
     "en español cada frase, también la descripción de cada error o regla, con frases "
-    "completas y sin copiar frases del contenido. Solo se quedan tal cual los títulos que se "
-    "piden literales, las rutas, el código, los identificadores y los códigos de regla o de "
-    "error."
+    "completas y sin copiar frases del contenido. También van en español las etiquetas en "
+    "negrita, también las que nombran una subsección: tradúcelas aunque en el contenido aparezcan "
+    "en otro idioma. Solo se quedan tal cual los títulos de las líneas '## ' que se piden "
+    "literales, las rutas, el código, los identificadores y los códigos de regla o de error."
 )
 MAIN_GUARD = (
     "Responde directo desde el input. NO uses herramientas, NO busques en internet. "
