@@ -3079,6 +3079,7 @@ def _chat_map_reduce(
     json_schema_fallback: bool = False,
     reduce_shortcut: Callable[[list[str]], str | None] | None = None,
     report: dict | None = None,
+    max_tokens_for: Callable[[int], int] | None = None,
 ) -> str:
     """Resume un documento que no cabe en el modelo: resume por trozos y luego los resúmenes.
 
@@ -3105,6 +3106,9 @@ def _chat_map_reduce(
     `reduce_shortcut` puede dar el resultado sin llamar al modelo (devuelve `None` si no puede); y
     con `report` no se pega nada al texto —ni el aviso de truncado, ni el de respaldo, ni el
     ahorro, ni el recibo—: esos datos quedan en `report` para que quien parsea los recoloque.
+
+    `max_tokens_for(words)` replaces the shared `2·w+64` cap of every step (map, regroup and
+    reduce) for a tool that needs its own (lint, B2d-2).
     """
     budget = _map_budget(max_chars)
     if pieces is None:
@@ -3150,6 +3154,8 @@ def _chat_map_reduce(
         return _strip_think(result.text)
 
     def _tokens(words: int) -> int:
+        if max_tokens_for is not None:
+            return max_tokens_for(words)
         return int(words * 2) + 64
 
     # Cada parcial se deja algo más largo que el resumen final: el reduce necesita material
@@ -3508,6 +3514,27 @@ def _guard(output_format: str, max_words: int | None = None) -> str:
         "Responde directo desde el input. NO uses herramientas, NO busques en internet. "
         f"Output EXACTO: {output_format}.{limit} Nada fuera del formato."
     )
+
+
+# Output caps of `local_lint_summary` (B2d-2). Before: `2·w+96` in the single call (496 tokens for
+# the default 200 words) and the shared `2·w+64` of the chunking. With the hardened language order
+# (71846c1) `gemma4-26b-a4b` went from 3 of 22 truncated lint answers to 3 of 4, all stopped at
+# exactly 496: a lint summary carries paths, codes and counts, which cost more tokens per word
+# than prose. PROVISIONAL values, to be confirmed by the live measurement of
+# `evidence/B2d-2/live-plan.md` (0 truncated gemma4 lint answers on the sample).
+LINT_TOKENS_PER_WORD = 3
+LINT_TOKENS_BASE = 128
+LINT_CHUNK_TOKENS_BASE = 96
+
+
+def _lint_max_tokens(words: int) -> int:
+    """The cap of the single `local_lint_summary` call for `words` words."""
+    return int(words * LINT_TOKENS_PER_WORD) + LINT_TOKENS_BASE
+
+
+def _lint_chunk_max_tokens(words: int) -> int:
+    """The cap of each step of the chunked `local_lint_summary` (map, regroup and reduce)."""
+    return int(words * LINT_TOKENS_PER_WORD) + LINT_CHUNK_TOKENS_BASE
 
 
 def _lint_system(max_words: int) -> str:
@@ -4193,6 +4220,7 @@ def local_lint_summary(
             path=path,
             # El reduce por defecto (y el reagrupado) no usan `system`: la orden va también aquí.
             reduce_extra=_lint_language_clause(),
+            max_tokens_for=_lint_chunk_max_tokens,
         )
 
     user = _build(content)
@@ -4200,7 +4228,7 @@ def local_lint_summary(
         model,
         system,
         user,
-        max_tokens=int(max_words * 2) + 96,
+        max_tokens=_lint_max_tokens(max_words),
         tool="local_lint_summary",
         role=role,
         chars_in=len(content),

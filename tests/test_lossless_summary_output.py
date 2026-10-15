@@ -65,6 +65,38 @@ def captured(monkeypatch) -> list[dict]:
     return calls
 
 
+# --- 1. The output caps of local_lint_summary ---------------------------------------------------
+
+
+def test_the_single_lint_call_asks_for_the_new_cap(captured):
+    """Mutant "the cap of today" (`2·w+96`): the `==` fails with 496 for 200 words."""
+    server.local_lint_summary(text="src/x.py:1:1: E501 Line too long")
+    (call,) = captured
+    assert call["max_tokens"] == 200 * server.LINT_TOKENS_PER_WORD + server.LINT_TOKENS_BASE
+    assert call["max_tokens"] > 496  # guard: the cap that truncated gemma4 in 3 of 4 answers
+
+
+def test_every_step_of_the_chunked_lint_asks_for_the_new_cap(monkeypatch, captured):
+    """Mutant "no `max_tokens_for` for lint" (the shared `2·w+64`): every step has 464."""
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "mechanical", 1200)
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 1200)
+    server.local_lint_summary(text="tests/x.py:1: E1 fallo de prueba\n" * 120)
+    assert len(captured) > 2  # guard: map and reduce really ran
+    assert "Resume la siguiente salida" not in captured[-1]["user"]  # guard: the last one reduces
+    expected = 200 * server.LINT_TOKENS_PER_WORD + server.LINT_CHUNK_TOKENS_BASE
+    assert [c["max_tokens"] for c in captured] == [expected] * len(captured)
+
+
+def test_the_other_tools_keep_the_shared_chunk_cap(monkeypatch, captured):
+    """Control: the lint cap does not leak into the chunking of `local_summarize`."""
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "mechanical", 1200)
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 1200)
+    monkeypatch.setattr(config, "STRUCTURED_SUMMARY", False)
+    server.local_summarize(text="Un párrafo de prueba que se repite. " * 120)
+    assert len(captured) > 2
+    assert {c["max_tokens"] for c in captured} == {150 * 2 + 64}
+
+
 # --- 2. A section empty in the document ---------------------------------------------------------
 
 DOC_EMPTY_SECTION = (
