@@ -1,0 +1,25 @@
+Here's a summary of the issues, grouped by file and with relevant details:
+
+**Local-Delegate (0.35.0)**
+
+*   **Warnings:** 2
+    *   `LD_HOOK_READ_BLOQUEAR` is deprecated: Rename it to `LD_HOOK_READ_BLOCK` (to be fixed in version 0.38.0).
+    *   No resident affinity: The affinity configuration is not using the specified cells, requiring either benchmark updates or configuration changes.
+*   **Missing Components:** Claude Code and Codex clients are not installed, impacting hook and MCP functionality.
+
+**Backend (http://127.0.0.1:9292/v1)**
+
+*   **Operational:** The backend responds successfully.
+*   **Security:** The backend requires a credential and token, but no MCP entry is present for verification.
+
+**MCP Clients**
+
+*   Several MCP clients are present (claude-ai, claude-code, local-agent-mode-local-delegate, mcp, mcp-remote-fallback-test). All are reported as “no elicitation”.
+
+**Versions**
+
+*   **llama-swap:** Version 255 (tested)
+*   **llama-server:** Version b10909 (tested)
+*   **Affinity:** No resident affinity is configured, requiring adjustments to benchmarks or configuration.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

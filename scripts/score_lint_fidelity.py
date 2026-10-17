@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
-"""Fidelity counter for `local_lint_summary` answers (front B, wave B2d-2).
+"""Fidelity counter for `local_lint_summary` answers (front B, waves B2d-2 and B2d-3).
 
 In set 3 of the B2d live sample the lint summaries carried figures and claims that are not in the
 log ("Missing MCP Credentials (2)", "4 errores", "72 errores"), repeated sentences, and a list of
 ~30 hashes in `corpus-affinity-check`. This script counts, per answer and against ITS log:
 
 - **invented numbers**: a number of the answer that is not in the log and is not a count the log
-  supports (see `log_facts`);
+  supports (see `log_facts`). Since B2d-3 a number written in words from zero to twenty, in English
+  or Spanish ("eight", "ocho"), is a number too and follows the same rule: it is supported when its
+  figure is (8 written in the log, or 8 lines with the same code). Left out on purpose: "one",
+  "un", "una", "uno" (articles more often than counts) and "once" (eleven in Spanish, "one time"
+  in English). The live answer of B2d-3 that said "eight instances of the print statement (T201)"
+  over a log with 6 T201 went unseen before;
 - **invented files**: a file name or path of the answer that does not appear in the log;
-- **repeated sentences**: a sentence (5 words or more, normalized) that appears again.
+- **repeated sentences**: a sentence (5 words or more, normalized) that appears again under the
+  same heading. The same bullet under two different file headings (`**a.ts**`, `**b.ts**`) is the
+  same rule in two files, not a repetition (B2d-3, answer A14); under the same heading, or with no
+  heading at all, it counts.
 
 It looks at the log, never at the answer alone: a counter that does not look at the log cannot
 tell an invented figure from a copied one (the mutant of `tests/test_score_lint_fidelity.py`).
@@ -52,8 +60,30 @@ FILE = re.compile(
 CODE = re.compile(r"\b[A-Z]{1,5}\d{2,5}\b|\b[a-z]+(?:[/-][a-z]+){1,4}\b")
 #: A status mark of a report (`[ OK ]`, `[WARN]`, `[FALT]`, `[ -- ]`).
 STATUS = re.compile(r"\[[^\]\n]{1,6}\]")
-SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
+SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
 MIN_SENTENCE_WORDS = 5
+#: A heading line of the answer: Markdown `#` or a line that is all bold (`**src/a.ts**`, `**X**:`).
+HEADING = re.compile(r"\s*(?:#{1,6}\s+\S.*|\*\*[^*\n]+\*\*\s*:?|__[^_\n]+__\s*:?)\s*")
+#: Numbers in words from zero to twenty (B2d-3), without "one"/"un"/"una"/"uno" and "once".
+NUMBER_WORDS: dict[str, int] = {
+    "zero": 0, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
+    "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14,
+    "fifteen": 15, "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20,
+    "cero": 0, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6, "siete": 7, "ocho": 8,
+    "nueve": 9, "diez": 10, "doce": 12, "trece": 13, "catorce": 14, "quince": 15,
+    "dieciséis": 16, "dieciseis": 16, "diecisiete": 17, "dieciocho": 18, "diecinueve": 19,
+    "veinte": 20,
+}  # fmt: skip
+#: A number word on its own: not inside an identifier or a kebab name (`two-pass`, `no_two`).
+NUMBER_WORD = re.compile(
+    r"(?<![\w-])(" + "|".join(sorted(NUMBER_WORDS, key=len, reverse=True)) + r")(?![\w-])",
+    re.IGNORECASE,
+)
+#: The same words in the log, where a kebab or snake name may carry them (`resume-ruff-tres-reglas`).
+LOG_NUMBER_WORD = re.compile(
+    r"(?<![^\W_])(" + "|".join(sorted(NUMBER_WORDS, key=len, reverse=True)) + r")(?![^\W_])",
+    re.IGNORECASE,
+)
 
 
 def _norm_path(text: str) -> str:
@@ -82,6 +112,9 @@ def log_facts(log: str) -> dict:
     lines. `extra_allowed_numbers` in the frozen set is for what a person reviews by hand.
     """
     numbers = {_norm_number(n) for n in NUMBER.findall(log)}
+    # A number word of the log writes its figure too, also inside a name (`resume-ruff-tres-reglas`
+    # turned "Tres reglas" in a live answer of B2d-3): "tres" or "3" in the answer is supported.
+    numbers |= {str(NUMBER_WORDS[w.lower()]) for w in LOG_NUMBER_WORD.findall(log)}
     files = Counter(_norm_path(f) for f in FILE.findall(log))
     codes = Counter(CODE.findall(log))
     statuses = Counter(s.strip("[] ").upper() for s in STATUS.findall(log))
@@ -106,19 +139,41 @@ def count_inventions(answer: str, log: str, extra_allowed: tuple[str, ...] = ())
     allowed = set(facts["numbers"]) | {str(n) for n in facts["derived_counts"]}
     allowed |= {_norm_number(n) for n in extra_allowed}
     invented_numbers = [n for n in NUMBER.findall(without_files) if _norm_number(n) not in allowed]
-    invented_files = [f for f in FILE.findall(text) if _norm_path(f) not in log_norm]
-    sentences = [
-        " ".join(re.findall(r"\w+", s.lower()))
-        for s in SENTENCE_SPLIT.split(text)
-        if len(re.findall(r"\w+", s)) >= MIN_SENTENCE_WORDS
+    invented_numbers += [
+        w for w in NUMBER_WORD.findall(without_files) if str(NUMBER_WORDS[w.lower()]) not in allowed
     ]
-    repeated = [s for s, n in Counter(sentences).items() for _ in range(n - 1)]
+    invented_files = [f for f in FILE.findall(text) if _norm_path(f) not in log_norm]
+    repeated = [s for (_h, s), n in Counter(_sentences(text)).items() for _ in range(n - 1)]
     return {
         "invented_numbers": invented_numbers,
         "invented_files": invented_files,
         "repeated_sentences": repeated,
         "total": len(invented_numbers) + len(invented_files) + len(repeated),
     }
+
+
+def _words(text: str) -> list[str]:
+    return re.findall(r"\w+", text.lower())
+
+
+def _sentences(text: str) -> list[tuple[str | None, str]]:
+    """(heading, sentence) of every sentence with 5+ words; a heading line is its own sentence.
+
+    A heading long enough to be a sentence is keyed without a heading, so a whole block repeated
+    with its heading still counts.
+    """
+    out: list[tuple[str | None, str]] = []
+    heading: str | None = None
+    for line in text.splitlines():
+        if HEADING.fullmatch(line):
+            heading = " ".join(_words(line))
+            if len(_words(line)) >= MIN_SENTENCE_WORDS:
+                out.append((None, heading))
+            continue
+        for sentence in SENTENCE_SPLIT.split(line):
+            if len(_words(sentence)) >= MIN_SENTENCE_WORDS:
+                out.append((heading, " ".join(_words(sentence))))
+    return out
 
 
 def _sha256(path: Path) -> str:

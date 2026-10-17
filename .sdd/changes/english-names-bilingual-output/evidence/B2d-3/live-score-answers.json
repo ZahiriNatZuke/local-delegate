@@ -1,0 +1,132 @@
+{
+  "rows": [
+    {
+      "id": "A11",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-check-llamaswap-pre-b10909.txt",
+      "fidelity": {
+        "invented_numbers": [
+          "2.5",
+          "3.5"
+        ],
+        "invented_files": [],
+        "repeated_sentences": [],
+        "total": 2
+      }
+    },
+    {
+      "id": "A12",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-B2c_corpus-f2-check.txt",
+      "fidelity": {
+        "invented_numbers": [],
+        "invented_files": [],
+        "repeated_sentences": [],
+        "total": 0
+      }
+    },
+    {
+      "id": "A13",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-doctor-empty-home.txt",
+      "fidelity": {
+        "invented_numbers": [
+          "255"
+        ],
+        "invented_files": [],
+        "repeated_sentences": [],
+        "total": 1
+      }
+    },
+    {
+      "id": "A14",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-biome-lint-nest.txt",
+      "fidelity": {
+        "invented_numbers": [],
+        "invented_files": [],
+        "repeated_sentences": [
+          "lint nursery useexplicitreturntype 1 issue regarding a missing return type",
+          "lint nursery useexplicitreturntype 1 issue regarding a missing return type",
+          "lint nursery useexplicittype 1 issue regarding a missing return type"
+        ],
+        "total": 3
+      }
+    },
+    {
+      "id": "A15",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-ruff-concise-build-site.txt",
+      "fidelity": {
+        "invented_numbers": [
+          "102"
+        ],
+        "invented_files": [],
+        "repeated_sentences": [],
+        "total": 1
+      }
+    },
+    {
+      "id": "B31",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-pytest-chunking-density.txt",
+      "fidelity": {
+        "invented_numbers": [],
+        "invented_files": [],
+        "repeated_sentences": [],
+        "total": 0
+      }
+    },
+    {
+      "id": "B32",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-ruff-concise-clean-watcher.txt",
+      "fidelity": {
+        "invented_numbers": [],
+        "invented_files": [],
+        "repeated_sentences": [],
+        "total": 0
+      }
+    },
+    {
+      "id": "B33",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-tsc-angular.txt",
+      "fidelity": {
+        "invented_numbers": [
+          "52",
+          "127"
+        ],
+        "invented_files": [],
+        "repeated_sentences": [],
+        "total": 2
+      }
+    },
+    {
+      "id": "B34",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-check-llamaswap-pre-no-resident.txt",
+      "fidelity": {
+        "invented_numbers": [],
+        "invented_files": [],
+        "repeated_sentences": [],
+        "total": 0
+      }
+    },
+    {
+      "id": "B35",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-B2d-fix_corpus-affinity-check.txt",
+      "fidelity": {
+        "invented_numbers": [],
+        "invented_files": [],
+        "repeated_sentences": [],
+        "total": 0
+      }
+    }
+  ],
+  "copied_labels": 0,
+  "duplicate_introductions": 0,
+  "fidelity_total": 9,
+  "fidelity_answers": 10
+}

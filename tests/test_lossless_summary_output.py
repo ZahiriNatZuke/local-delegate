@@ -340,6 +340,61 @@ def test_spanish_decimals_are_the_same_figure():
     assert fidelity.count_inventions("8 GiB, 1.5 de margen y 6.5 libres.", log)["total"] == 0
 
 
+# B2d-3: a log where 1 and 3 are not supported (2 files, 2 codes, 2 lines each, 4 lines in all).
+TWO_BY_TWO = (
+    "a.py:2:4: E501 Line too long\n"
+    "a.py:4:2: W291 Trailing whitespace\n"
+    "b.py:2:4: E501 Line too long\n"
+    "b.py:4:2: W291 Trailing whitespace\n"
+)
+
+
+def test_numbers_in_words_follow_the_rule_of_the_figures():
+    """B2d-3, answer A15: "eight instances of (T201)" over a log with 6 went unseen. Mutant
+    "without the words" (`invented_numbers +=` of `NUMBER_WORD` out): both `==` get []."""
+    fidelity = _load_script("score_lint_fidelity")
+    english = "Two files: two E501 and three W291, four lines; a two-pass check."
+    assert fidelity.count_inventions(english, TWO_BY_TWO)["invented_numbers"] == ["three"]
+    spanish = "Dos ficheros con dos E501 y tres W291; cuatro líneas en total."
+    assert fidelity.count_inventions(spanish, TWO_BY_TWO)["invented_numbers"] == ["tres"]
+
+
+def test_articles_and_once_are_not_counted_as_numbers():
+    """ "one"/"un"/"una"/"uno" and "once" stay out on purpose (articles, "one time"). Guard: the
+    log does not support 1 or 11, so these words WOULD count if they were in the list (mutant
+    `"one": 1` in `NUMBER_WORDS`: the `== ["seven", "eleven"]` fails)."""
+    fidelity = _load_script("score_lint_fidelity")
+    answer = "One file, un fichero, una regla, uno solo; once again. Seven or eleven?"
+    assert fidelity.count_inventions(answer, TWO_BY_TWO)["invented_numbers"] == ["Seven", "eleven"]
+
+
+def test_a_number_word_of_the_log_supports_the_answer():
+    """B2d-3, answer B35: `resume-ruff-tres-reglas` in the log became "Tres reglas". The word is
+    in the log, so it is supported; "cuatro" is not (guard: the rule still bites)."""
+    fidelity = _load_script("score_lint_fidelity")
+    log = "  · resume-ruff-tres-reglas: system cambió (frontera declarada)\n"
+    assert fidelity.count_inventions("**Tres reglas**: cambió.", log)["invented_numbers"] == []
+    assert fidelity.count_inventions("Cuatro reglas: cambió.", log)["invented_numbers"] == [
+        "Cuatro"
+    ]
+
+
+BULLET = "* **E501**: 1 issue about a line that is too long."
+
+
+def test_the_same_bullet_under_two_file_headings_is_not_a_repetition():
+    """B2d-3, answer A14: the same rule in two files. Mutant "key without the heading" (the
+    Counter over the sentence alone): the first `== []` gets one repetition."""
+    fidelity = _load_script("score_lint_fidelity")
+    two_files = f"**a.py**\n{BULLET}\n\n**b.py**\n{BULLET}\n"
+    assert fidelity.count_inventions(two_files, TWO_BY_TWO)["repeated_sentences"] == []
+    # Control: under the same heading, or a whole block repeated with its heading, it counts.
+    same_file = f"**a.py**\n{BULLET}\n{BULLET}\n"
+    assert len(fidelity.count_inventions(same_file, TWO_BY_TWO)["repeated_sentences"]) == 1
+    block = f"**a.py**\n{BULLET}\n**a.py**\n{BULLET}\n"
+    assert len(fidelity.count_inventions(block, TWO_BY_TWO)["repeated_sentences"]) == 1
+
+
 def test_the_frozen_set_is_scored_against_unchanged_logs(tmp_path):
     fidelity = _load_script("score_lint_fidelity")
     log = tmp_path / "ruff.txt"

@@ -13,6 +13,9 @@ tested is the prompt sent, not what a real model does with it (that is the live 
 
 from __future__ import annotations
 
+import importlib.util
+from pathlib import Path
+
 import pytest
 
 from local_delegate import config, i18n, server
@@ -121,3 +124,44 @@ def test_control_a_log_with_real_figures_keeps_them(monkeypatch, captured, produ
     assert "con la cantidad por tipo de error/regla cuando se pueda saber" in call["system"]
     assert "la que el contenido escribe (una línea de total o un recuento)" in call["system"]
     assert "la que cuentas tú con las líneas que el contenido repite" in call["system"]
+
+
+# --- The control of the live measurement (`evidence/B2d-3/check_controls.py`) -------------------
+
+CONTROLS_SCRIPT = (
+    Path(__file__).resolve().parents[1]
+    / ".sdd/changes/english-names-bilingual-output/evidence/B2d-3/check_controls.py"
+)
+
+
+def _controls():
+    spec = importlib.util.spec_from_file_location("b2d3_check_controls", CONTROLS_SCRIPT)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_control_takes_a_figure_that_ends_the_sentence():
+    """B31 of the step 1 said "Pruebas superadas: 57." and came out as not kept. Mutant "the
+    regex of before" (lookahead without a digit or a dot): the first assert fails."""
+    controls = _controls()
+    assert controls.kept("Pruebas superadas: 57.", "57")
+    assert controls.kept("57 passed in 3.2s", "57")
+    assert not controls.kept("ratio 0.57 of the run", "57")
+    assert not controls.kept("157 passed", "57")
+    assert not controls.kept("57.3 seconds", "57")
+
+
+def test_the_control_reads_the_repetitions_of_a_version(tmp_path):
+    """`<id>-r<k>.txt`: a case is kept in a version when the majority of its repetitions keep it."""
+    controls = _controls()
+    for rep, text in (("1", "Pruebas superadas: 57."), ("2", "ratio 0.57"), ("3", "57 passed")):
+        (tmp_path / f"B31-r{rep}.txt").write_text(text, encoding="utf-8")
+    (tmp_path / "B32-r1.txt").write_text("Found 17 errors.", encoding="utf-8")
+    result = controls.check_version(tmp_path)
+    rows = {r["id"]: r for r in result["rows"]}
+    assert (rows["B31"]["kept_reps"], rows["B31"]["runs"], rows["B31"]["ok"]) == (2, 3, True)
+    assert (rows["B32"]["kept_reps"], rows["B32"]["ok"]) == (0, False)
+    assert rows["A15"]["missing_answer"]
+    assert result["cases_kept"] == ["B31"]

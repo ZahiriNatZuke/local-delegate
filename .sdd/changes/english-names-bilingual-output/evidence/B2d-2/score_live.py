@@ -106,13 +106,18 @@ def log_summary(rows: list[dict]) -> dict:
     }
 
 
-def score_answers(manifest: dict) -> dict:
+def score_answers(manifest: dict, answer_for=None) -> dict:
+    """`answer_for(call)` gives the answer file (default: the manifest's `answer`); a call whose
+    file does not exist is left out (a folder of repetitions may hold only one window)."""
     fidelity = _fidelity()
     frozen = json.loads(_read(HERE / "fidelity-set.json"))
     by_path = {entry["path"]: entry for entry in frozen["logs"]}
     rows = []
     for call in manifest["calls"]:
-        answer = _read(ROOT / call["answer"])
+        path = answer_for(call) if answer_for else ROOT / call["answer"]
+        if answer_for and not path.is_file():
+            continue
+        answer = _read(path)
         document = _read(ROOT / call["document"])
         row = {"id": call["id"], "tool": call["tool"], "document": call["document"]}
         if call["tool"] == "local_summarize":
@@ -124,6 +129,12 @@ def score_answers(manifest: dict) -> dict:
             if entry is not None:
                 extra = tuple(entry.get("extra_allowed_numbers", ()))
                 row["fidelity"] = fidelity.count_inventions(answer, document, extra)
+                # B2d-3: the invented counts in parentheses ("Claude Code Client (3)"), apart.
+                row["parenthesized_invented"] = [
+                    n
+                    for n in row["fidelity"]["invented_numbers"]
+                    if re.search(rf"\(\s*{re.escape(n)}\s*\)", answer)
+                ]
         rows.append(row)
     summ = [r for r in rows if r["tool"] == "local_summarize"]
     lint = [r for r in rows if "fidelity" in r]
@@ -133,6 +144,50 @@ def score_answers(manifest: dict) -> dict:
         "duplicate_introductions": sum(1 for r in summ if r["introductions"] > 1),
         "fidelity_total": sum(r["fidelity"]["total"] for r in lint),
         "fidelity_answers": len(lint),
+        "parenthesized_invented": sum(len(r["parenthesized_invented"]) for r in lint),
+    }
+
+
+REP_NAME = re.compile(r"(?P<id>[A-Z]\d+)-r(?P<rep>\d+)\.txt")
+
+
+def score_repetitions(manifest: dict, folder: Path) -> dict:
+    """B2d-3: `answers` over a folder of `<id>-r<k>.txt` (`run_live.py --answers-dir`).
+
+    Per repetition the same output as `answers`; on top, the mean of `fidelity_total`, the totals
+    per call and repetition, and how many calls gave the same text in every repetition (with the
+    temperature of lint, 0.2, repetitions that are all equal would not measure noise: check it).
+    """
+    reps = sorted(
+        {int(m["rep"]) for p in folder.glob("*.txt") if (m := REP_NAME.fullmatch(p.name))}
+    )
+    by_rep = {}
+    for rep in reps:
+        by_rep[f"r{rep}"] = score_answers(
+            manifest, lambda call, rep=rep: folder / f"{call['id']}-r{rep}.txt"
+        )
+    per_call: dict = defaultdict(dict)
+    texts: dict = defaultdict(set)
+    for name, scored in by_rep.items():
+        for row in scored["rows"]:
+            if "fidelity" in row:
+                per_call[row["id"]][name] = row["fidelity"]["total"]
+        for call in manifest["calls"]:
+            path = folder / f"{call['id']}-{name}.txt"
+            if path.is_file():
+                texts[call["id"]].add(path.read_bytes())
+    totals = [scored["fidelity_total"] for scored in by_rep.values()]
+    return {
+        "folder": str(folder),
+        "repetitions": len(reps),
+        "fidelity_totals": totals,
+        "fidelity_total_mean": round(sum(totals) / len(totals), 2) if totals else None,
+        "parenthesized_invented": [s["parenthesized_invented"] for s in by_rep.values()],
+        "per_call": dict(per_call),
+        "identical_in_every_repetition": sorted(
+            i for i, seen in texts.items() if len(seen) == 1 and len(reps) > 1
+        ),
+        "by_repetition": by_rep,
     }
 
 
@@ -184,6 +239,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--answer", type=Path, required=True)
     p = sub.add_parser("answers")
     p.add_argument("--manifest", type=Path, required=True)
+    p.add_argument(
+        "--answers-dir", type=Path, help="folder of <id>-r<k>.txt (B2d-3): mean and per repetition"
+    )
     sub.add_parser("control-set3")
     args = parser.parse_args(argv)
     if args.command == "log":
@@ -194,6 +252,8 @@ def main(argv: list[str] | None = None) -> int:
         )
     elif args.command == "intro":
         result = introductions(_read(args.answer))
+    elif args.command == "answers" and args.answers_dir:
+        result = score_repetitions(json.loads(_read(args.manifest)), args.answers_dir.resolve())
     elif args.command == "answers":
         result = score_answers(json.loads(_read(args.manifest)))
     else:

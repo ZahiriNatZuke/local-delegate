@@ -1525,6 +1525,50 @@ modelo la inventa cuando el log no tiene cifras. Va **en serie después de B2d-2
 - **Cierre del lote:** suite en `es` y en `en`, `ruff`, corpus y afinidad (el prompt de lint cambia:
   frontera en `PROMPT_BOUNDARIES`), CHANGELOG, y registro en `waves/B2d-3.md` con las llamadas
   `local_*`.
+- **Resultado del paso 1 (2026-10-17, `8999bce`, n=1, ventanas `w-20261017T145849Z` y
+  `w-20261017T145949Z`; `evidence/B2d-3/live.md`):** `fidelity_total` = 9 (B2d-2: 12; base de
+  entonces: 9). Los recuentos entre paréntesis por elemento, lo que se buscaba, desaparecieron (A13
+  tenía «3, 3, 3, 3» en B2d-2; ahora 0 inventados entre paréntesis en las 10). Quedan A11 2.5/3.5,
+  A13 255, A15 «102» (el log acaba en la línea 100) y B33 52/127; A14 da 3 frases repetidas que son
+  la misma regla en ficheros distintos (falso positivo del contador). **No se puede concluir con
+  n=1:** comparado con B2d-2 en los mismos logs, A11 pasa de 0 a 2, A14 de 0 a 3, B35 de 4 a 0 y A13
+  de 5 a 1. Y la medición tenía tres fallos:
+  1. El contador no veía cifras escritas en palabras: A15 dice «eight instances of … (T201)» y el
+     log trae 6 T201, y «three … (D103)» sobre 2 D103 tampoco salía.
+  2. `check_controls.py` rechazaba «57.» al final de frase (`(?![\d.])`): B31 «Pruebas superadas:
+     57.» salía como no conservada. Corregido, B2d-2 conserva A15 «10», B31 «57» y B32 «7»; el paso 1
+     solo B31. **A15 y B32 perdieron la línea de total** («Found 10 errors.», «Found 7 errors.»);
+     B32 da recuentos por tipo que suman 7, pero no el total. A14 no conservaba sus totales ni en
+     B2d-2: ese caso no distingue.
+  3. Una sola corrida por log, con la temperatura de lint (0.2), es ruido.
+- **Cambio de método (decidido por el usuario el 2026-10-17), ANTES de seguir:** control corregido,
+  contador que cuenta también las cifras de cero a veinte en palabras (inglés y español, sin
+  «one/un/una/uno» ni «once»; con respaldo si su cifra lo tiene, también si el log la escribe en
+  palabras) y que no cuenta como repetida una frase bajo dos encabezados de fichero distintos, y **3
+  repeticiones por log**. Se miden con ese método tres versiones: base (`main` = `7a17941`), paso 1
+  (`8999bce`) y paso 1b. Procedimiento: `evidence/B2d-3/measure.md`. Las respuestas n=1 del paso 1
+  (`evidence/B2d-3/live-answers/`) quedan de referencia y no cuentan para el criterio.
+- **Paso 2 (revisión por programa de los recuentos entre paréntesis): EN ESPERA.** El paso 1 no dejó
+  ninguno que quitar. Se reabre solo si la medición nueva vuelve a dar recuentos entre paréntesis
+  inventados.
+- **Paso 1b, nuevo (2026-10-17):** si el contenido trae una línea de total («Found 10 errors.», «57
+  passed»), el resumen la copia tal cual, en `_lint_count_clause()` (llamada única y reduce del
+  troceado). No cambia la regla contra los recuentos inventados. Test con mutante en
+  `tests/test_lint_count_rule.py`. Motivo: el control del paso 1 perdió los totales de A15 y B32.
+- **Criterio de hecho revisado, fijado ANTES de medir (2026-10-17).** Con el método nuevo, 3
+  repeticiones de las tandas A y B (10 logs × 3 = 30 respuestas por versión), contador nuevo; el
+  «paso final» es la versión que se publica (1b, o 1 si 1b empeora):
+  - *Fidelidad:* media de `fidelity_total` sobre las 3 repeticiones del paso final **≤ la media de la
+    base** y **≤ 4,0** (tendente a 0: la mitad de 8, el menor total n=1 visto con el contador nuevo,
+    el del paso 1).
+  - *Paréntesis:* `parenthesized_invented` = **0** en las 3 repeticiones del paso final.
+  - *Control:* los casos conservados del paso final (un caso se conserva si 2 de sus 3 repeticiones
+    conservan una cifra real) incluyen **todos** los que conserva la base. Si la base no conserva
+    A14, A14 no distingue: se anota y no se juzga.
+  - Las respuestas cortadas (`finish_reason=length`) se anotan y no se juzgan. Si
+    `identical_in_every_repetition` recoge las 10 llamadas de una versión, sus repeticiones no miden
+    ruido: se anota y se mira por qué antes de concluir.
+  - Si ningún paso cumple, se reabre el paso 2.
 
 #### B3 — Hooks
 
