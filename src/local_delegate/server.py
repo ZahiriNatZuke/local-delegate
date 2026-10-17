@@ -3567,12 +3567,19 @@ def _lint_count_clause() -> str:
     (3)") that the log does not carry. A count now comes only from the log: the one it writes (a
     total line or a written count) or the one obtained by counting lines it repeats; otherwise no
     number at all.
+
+    Step 1b (2026-10-17): a total line of the log ("Found 10 errors.", "57 passed") is copied as
+    it is. In the live measurement of step 1 the answers of `ruff` lost theirs ("Found 10
+    errors.", "Found 7 errors."; `evidence/B2d-3/live.md`). The examples carry no figures, so
+    that the model has none to copy from the prompt; with no total line, no total.
     """
     return (
         " La cantidad sale solo del contenido: la que el contenido escribe (una línea de total o "
         "un recuento) o la que cuentas tú con las líneas que el contenido repite. Si el contenido "
         "no la da y no se puede contar, no pongas ningún número: nada de recuentos entre "
-        "paréntesis."
+        "paréntesis. Si el contenido trae una línea de total (la que dice cuántos errores, "
+        "avisos o tests hay, como «Found … errors.» o «… passed»), cópiala tal cual, con sus "
+        "cifras; si no la trae, no inventes ninguna."
     )
 
 

@@ -600,9 +600,9 @@
     },
     {
       "file": "src/local_delegate/server.py",
-      "text": " La cantidad sale solo del contenido: la que el contenido escribe (una línea de total o un recuento) o la que cuentas tú con las líneas que el contenido repite. Si el contenido no la da y no se puede contar, no pongas ningún número: nada de recuentos entre paréntesis.",
+      "text": " La cantidad sale solo del contenido: la que el contenido escribe (una línea de total o un recuento) o la que cuentas tú con las líneas que el contenido repite. Si el contenido no la da y no se puede contar, no pongas ningún número: nada de recuentos entre paréntesis. Si el contenido trae una línea de total (la que dice cuántos errores, avisos o tests hay, como «Found … errors.» o «… passed»), cópiala tal cual, con sus cifras; si no la trae, no inventes ninguna.",
       "kind": "verbatim",
-      "reason": "prompt del modelo local: la regla de la cantidad de `local_lint_summary` (B2d-3), en la llamada única y en el reduce; entra en la huella de afinidad y en los corpus congelados (`PROMPT_BOUNDARIES`) y no es texto de interfaz"
+      "reason": "prompt del modelo local: la regla de la cantidad de `local_lint_summary` (B2d-3; la línea de total, paso 1b), en la llamada única y en el reduce; entra en la huella de afinidad y en los corpus congelados (`PROMPT_BOUNDARIES`) y no es texto de interfaz"
     },
     {
       "file": "src/local_delegate/server.py",

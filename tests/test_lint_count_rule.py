@@ -4,7 +4,8 @@ In the live measurement of B2d-2 (`evidence/B2d-2/live.md`, point 6) `fidelity_t
 to 12 over the 10 logs of set 3: per-item counts in parentheses ("Claude Code Client (3)") that the
 log does not carry. The format asked for "the count per error type/rule" with no condition. The
 prompt now says where a count may come from (`server._lint_count_clause`), in the single call and
-in every step of the chunking, in both languages of the product.
+in every step of the chunking, in both languages of the product. Step 1b: a total line of the log
+("Found 10 errors.") is copied as it is; the live measurement of step 1 lost them.
 
 The prompts are captured with a fake backend (`_run_chat` doubled), with no network: what is
 tested is the prompt sent, not what a real model does with it (that is the live measurement of
@@ -45,6 +46,12 @@ RULE_NO_NUMBER = (
     "entre paréntesis."
 )
 OLD_FORMAT = "con el conteo por tipo de error/regla y los más relevantes primero"
+#: Step 1b: the total line of the log, copied as it is.
+RULE_TOTAL_LINE = (
+    " Si el contenido trae una línea de total (la que dice cuántos errores, avisos o tests hay, "
+    "como «Found … errors.» o «… passed»), cópiala tal cual, con sus cifras; si no la trae, no "
+    "inventes ninguna."
+)
 
 
 @pytest.fixture
@@ -124,6 +131,38 @@ def test_control_a_log_with_real_figures_keeps_them(monkeypatch, captured, produ
     assert "con la cantidad por tipo de error/regla cuando se pueda saber" in call["system"]
     assert "la que el contenido escribe (una línea de total o un recuento)" in call["system"]
     assert "la que cuentas tú con las líneas que el contenido repite" in call["system"]
+
+
+# --- Step 1b: the total line of the log is copied as it is --------------------------------------
+
+
+@pytest.mark.parametrize(("product", "output"), BATCHES)
+@pytest.mark.parametrize("chunked", [False, True], ids=["single", "chunked"])
+def test_the_total_line_is_copied_as_it_is(monkeypatch, captured, product, output, chunked):
+    """In the live measurement of step 1 the `ruff` answers lost "Found 10 errors." and "Found 7
+    errors." (`evidence/B2d-3/live.md`). Mutant "without the sentence of step 1b": fails at
+    `RULE_TOTAL_LINE in system`, in the single call and in every step of the chunking; the rule
+    against invented counts still holds (`_assert_count_rule`)."""
+    _languages(monkeypatch, product, output)
+    if chunked:
+        monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "mechanical", 1200)
+        monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 1200)
+    server.local_lint_summary(text=LOG_WITH_FIGURES * (40 if chunked else 1))
+    assert len(captured) > 2 if chunked else len(captured) == 1  # guard: the path asked for
+    for step in captured:
+        assert RULE_TOTAL_LINE in step["system"], step["system"][-700:]
+        _assert_count_rule(step["system"])
+        # The language order still closes the prompt, after the total line.
+        assert step["system"].index(RULE_TOTAL_LINE) < step["system"].rindex(
+            server._lint_language_clause()
+        )
+
+
+def test_the_total_line_rule_gives_the_model_no_figure_to_copy():
+    """The examples of the rule carry no digit: a "Found 10 errors." in the prompt would be a
+    figure the model could copy into a log that has none."""
+    assert RULE_TOTAL_LINE in server._lint_count_clause()
+    assert not any(ch.isdigit() for ch in server._lint_count_clause())
 
 
 # --- The control of the live measurement (`evidence/B2d-3/check_controls.py`) -------------------
