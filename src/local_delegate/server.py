@@ -3558,16 +3558,36 @@ def _lint_chunk_max_tokens(words: int) -> int:
     return int(words * LINT_TOKENS_PER_WORD) + LINT_CHUNK_TOKENS_BASE
 
 
+def _lint_count_clause() -> str:
+    """The count rule of `local_lint_summary` (B2d-3), in the single call and in the reduce.
+
+    The format asked for "the count per error type/rule" with no condition, and when the log had
+    no figures the model made them up: in the live measurement of B2d-2 `fidelity_total` went from
+    9 to 12 over the 10 logs of set 3, with per-item counts in parentheses ("Claude Code Client
+    (3)") that the log does not carry. A count now comes only from the log: the one it writes (a
+    total line or a written count) or the one obtained by counting lines it repeats; otherwise no
+    number at all.
+    """
+    return (
+        " La cantidad sale solo del contenido: la que el contenido escribe (una línea de total o "
+        "un recuento) o la que cuentas tú con las líneas que el contenido repite. Si el contenido "
+        "no la da y no se puede contar, no pongas ningún número: nada de recuentos entre "
+        "paréntesis."
+    )
+
+
 def _lint_system(max_words: int) -> str:
     """El prompt de sistema de `local_lint_summary`. También entra en la huella (T15): con la orden
     de idioma de REQ-028 la huella deja de ser la medida y la celda de afinidad de lint queda «sin
-    base» hasta el lote B2-affinity, que la vuelve a medir."""
+    base» hasta el lote B2-affinity, que la vuelve a medir. B2d-3: la cantidad, solo cuando se
+    puede saber (`_lint_count_clause`)."""
     return (
         _guard(
-            "un resumen de los problemas agrupados por archivo, con el conteo por tipo de "
-            "error/regla y los más relevantes primero",
+            "un resumen de los problemas agrupados por archivo, con la cantidad por tipo de "
+            "error/regla cuando se pueda saber y los más relevantes primero",
             max_words,
         )
+        + _lint_count_clause()
         + _lint_language_clause()
     )
 
@@ -4240,7 +4260,7 @@ def local_lint_summary(
             raw_len=raw_len,
             path=path,
             # El reduce por defecto (y el reagrupado) no usan `system`: la orden va también aquí.
-            reduce_extra=_lint_language_clause(),
+            reduce_extra=_lint_count_clause() + _lint_language_clause(),
             max_tokens_for=_lint_chunk_max_tokens,
         )
 

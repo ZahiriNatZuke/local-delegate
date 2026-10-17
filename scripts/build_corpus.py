@@ -692,6 +692,8 @@ PROMPT_BOUNDARIES: dict[str, frozenset[str]] = {
     # unica; 90 -> 250 palabras en el paso final del troceado). B2d-2: los topes de
     # `local_lint_summary` (`max_tokens` 2w+96 -> 3w+128 en la llamada unica y 2w+64 -> 3w+96 en
     # cada paso del troceado): con la orden endurecida gemma4 cortaba 3 de 4 respuestas en 496.
+    # B2d-3: el `system` de `local_lint_summary` (y su reduce) pide la cantidad solo cuando el log
+    # la da o se cuenta con sus lineas: el modelo inventaba recuentos entre parentesis.
     "0.36.0": frozenset(
         {
             "local_summarize",
