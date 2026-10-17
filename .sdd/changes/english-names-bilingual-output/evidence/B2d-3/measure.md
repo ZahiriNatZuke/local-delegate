@@ -1,4 +1,4 @@
-# B2d-3: medición en vivo de la regla de la cantidad (método de 2026-10-17, sin ejecutar)
+# B2d-3: medición en vivo de la regla de la cantidad (método de 2026-10-17; base, 1 y 1b medidos; 1c pendiente)
 
 Fijada el 2026-10-17, ANTES de las llamadas con este método. La ejecuta la sesión principal: hay
 que reinstalar el daemon con cada versión, y eso tira el MCP de la sesión (pedir `/mcp`).
@@ -94,3 +94,45 @@ El «paso final» es la versión que se publica: 1b, o 1 si 1b empeora.
 - Si ningún paso cumple, se reabre el paso 2 del plan (revisión por programa).
 - La revisión a mano de atribuciones (cifra o fichero real puesto donde no va), que el contador no
   ve, va en la columna manual de `live.md`, como en B2d-2.
+
+Resultado (2026-10-17, en `live.md`): el paso 1b cumple los tres criterios (media 3,67; paréntesis
+0, 0, 0; controles A14, A15, B31 y B32 ⊇ A15, B31 y B32 de la base), pero B35 sale cortado en las 3
+repeticiones (`gemma4-26b-a4b`, `finish_reason=length`): repite el mismo texto por cada elemento.
+
+## Paso 1c (fijado el 2026-10-17, ANTES de medirlo)
+
+Decisión del usuario: probar un paso 1c que mantiene la regla del total del 1b y añade que los
+elementos con el mismo problema vayan en una sola línea que los nombre juntos, en vez de repetir el
+mismo texto por cada uno. Commit: el del paso 1c en la rama `sdd/english-names-b2d-3` (el último).
+
+| Versión | Commit | Carpeta |
+|---|---|---|
+| paso 1c | el commit del paso 1c (rama `sdd/english-names-b2d-3`) | `runs/step1c/` |
+
+Mismos pasos que arriba con `V` = `step1c` (etiquetas `"B2d-3 step1c tanda A es + output en (lint,
+conjunto 3, 3 rep.)"` y `"B2d-3 step1c tanda B en + output es (lint, conjunto 3, 3 rep.)"`):
+
+```
+uv run python $E/B2d-2/run_live.py --window A --manifest $E/B2d-3/manifest.json --answers-dir $E/B2d-3/runs/step1c --repeat 3
+uv run python $E/B2d-2/run_live.py --window B --manifest $E/B2d-3/manifest.json --answers-dir $E/B2d-3/runs/step1c --repeat 3
+```
+
+Recuento, desde la rama:
+
+```
+uv run python $E/B2d-2/score_live.py answers --manifest $E/B2d-3/manifest.json --answers-dir $E/B2d-3/runs/step1c > $E/B2d-3/runs/step1c/score-answers.json
+uv run python $E/B2d-3/check_controls.py --answers-dir base=$E/B2d-3/runs/base --answers-dir step1=$E/B2d-3/runs/step1 --answers-dir step1b=$E/B2d-3/runs/step1b --answers-dir step1c=$E/B2d-3/runs/step1c > $E/B2d-3/runs/controls-1c.json
+uv run python $E/B2d-2/score_live.py log --usage-log "<log de uso del daemon>" --since <inicio A-r1 de step1c> --until <fin B-r3 de step1c> > $E/B2d-3/runs/score-log-1c.json
+```
+
+(`controls.json` y `score-log.json` de las tres primeras versiones no se sobrescriben.)
+
+**Criterio del 1c.** Se adopta si cumple los mismos tres criterios que el 1b **y** no corta nada:
+
+- *Fidelidad:* `fidelity_total_mean` ≤ 11,67 (la base) y ≤ 4,0.
+- *Paréntesis:* `parenthesized_invented` = 0 en las 3 repeticiones.
+- *Control:* `cases_kept` incluye A15, B31 y B32 (los de la base).
+- *Cortadas:* **0** respuestas con `finish_reason=length` en las 30 llamadas.
+
+Si no cumple alguno, **se queda el 1b** (se revierte el commit del 1c) y el corte de B35 se anota
+como deuda. `identical_in_every_repetition` se anota como en las demás versiones.

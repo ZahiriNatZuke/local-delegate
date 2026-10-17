@@ -1,0 +1,12 @@
+**Summary of Issues by File**
+
+**scripts/build_corpus.py**
+
+*   **System Changes (Prompts Update 0.36.0):** 6 occurrences – This category encompasses changes related to the system's prompt handling, likely impacting the generated text.
+*   **max\_tokens Changes (Prompts Update 0.36.0):** 2 occurrences – These represent modifications to the maximum token limit, potentially affecting output length.
+
+**Overall Issues:**
+
+The primary issue identified is a system change associated with the prompt update from version 0.36.0, affecting multiple files.  The `max_tokens` parameter also experienced changes during this update.  These changes are consistently linked to the prompt update, suggesting a coordinated modification across the codebase.
+
+(leído server-side: 1231 chars ≈ 641 tokens de Claude que no entraron a tu contexto)

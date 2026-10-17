@@ -1,0 +1,5 @@
+El informe identifica problemas relacionados con la falta de archivos de modelo. El error principal se centra en la imposibilidad de estimar la VRAM para varios modelos, incluyendo gemma3-4b, gemma4-12b, gemma4-26b-a4b, qwen35-2b, y qwen36-35b-a3b.
+
+Dentro del grupo 'resident', se reporta un error específico para gemma3-4b debido a la no localización del archivo MODELOS\gemma-3-4b-it-Q4_K_M.gguf.  Asimismo, se detecta un error para gemma4-26b-a4b, qwen36-35b-a3b, qwen35-2b y gemma4-12b, todos relacionados con la ausencia del archivo correspondiente en la carpeta MODELOS.  El total de errores por archivo no encontrado es de cuatro.  La cantidad de GiB disponibles para el uso de la VRAM es de 6,50 GiB.
+
+(read server-side: 727 chars ≈ 378 Claude tokens that did not enter your context)

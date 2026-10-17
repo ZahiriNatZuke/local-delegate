@@ -1,0 +1,17 @@
+Here's a summary of the issues, grouped by file and categorized by error type, prioritizing the most relevant:
+
+**VRAM Memory Issues**
+
+Several files were encountered with errors related to VRAM estimation and file not found. The total VRAM available was 6.50 GiB, with a budget of 8 GiB.
+
+**Model File Errors:**
+
+*   **gemma3-4b:** ERROR (archivo no encontrado: MODELOS\gemma-3-4b-it-Q4_K_M.gguf) – Indicates a missing model file.
+*   **llama31-8b:** ERROR (archivo no encontrado: MODELOS\Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf) – Indicates a missing model file.
+*   **qwen25-coder-14b:** ERROR (archivo no encontrado: MODELOS\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf) – Indicates a missing model file.
+*   **qwen35-2b:** ERROR (archivo no encontrado: MODELOS\Qwen3.5-2B-UD-Q8_K_XL.gguf) – Indicates a missing model file.
+*   **qwen3-vl-8b:** ERROR (archivo no encontrado: MODELOS\Qwen3VL-8B-Instruct-Q4_K_M.gguf) – Indicates a missing model file.
+
+These errors suggest potential issues with the specified model file paths, requiring verification and correction.
+
+(leído server-side: 743 chars ≈ 386 tokens de Claude que no entraron a tu contexto)

@@ -1,0 +1,26 @@
+Here’s a summary of the issues, grouped by file and with relevant details:
+
+**Local-Delegate (0.35.0)**
+
+*   **Warnings:** 2
+    *   `LD_HOOK_READ_BLOQUEAR` is deprecated: Rename it to `LD_HOOK_READ_BLOCK` (to be fixed).
+    *   No resident affinity: Recommended to use a base affinity (to be fixed).
+*   **Missing Components:** Claude Code and Opencode clients are not installed, impacting hook functionality and MCP integration.
+*   **MCP Clients:** Several Claude AI and Claude Code clients are present, but without elicitation.
+
+**Backend (http://127.0.0.1:9292/v1)**
+
+*   **Operational:** The backend responds successfully.
+*   **Authentication:** The backend requires a credential or token, but no MCP entry is found to provide it.
+
+**Versions**
+
+*   **llama-swap:** Version 255 (tested) - No issues.
+*   **llama-server:** Version b10909 (tested) - No issues.
+*   **Affinity:** The affinity is set to `gemma4-26b-a4b` but not yet utilized, requiring further benchmarking or configuration updates.
+
+**General**
+
+*   No critical errors were found. The primary concerns relate to missing client installations and potential configuration adjustments for affinity and authentication.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

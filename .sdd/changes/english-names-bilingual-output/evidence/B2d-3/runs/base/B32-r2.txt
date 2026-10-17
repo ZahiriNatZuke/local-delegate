@@ -1,0 +1,17 @@
+**Resumen de Problemas por Archivo**
+
+**scripts\clean_watcher_fixtures.py:**
+
+*   **Problemas de Estilo:**
+    *   E501: Línea demasiado larga (3 errores): Se detectaron tres líneas que exceden el límite de 100 caracteres.
+    *   T201: Uso de `print` (1 error): Se encontró la instrucción `print` en el código.
+    *   PLR2004: Uso de valor mágico (1 error): Se identificó el uso de la constante `16` sin una variable constante asociada.
+*   **Documentación:**
+    *   D103: Falta de documentación (2 errores):  Dos funciones públicas carecen de la documentación necesaria (docstring).
+*   **Problemas de Compatibilidad:**
+    *   Ignorados: `incorrect-blank-line-before-class` (D203) y `blank-line-before-class` (D211) debido a incompatibilidad.
+    *   Ignorados: `multi-line-summary-first-line` (D212) y `multi-line-summary-second-line` (D213) debido a incompatibilidad.
+
+**Total de Errores Detectados:** 7.
+
+(read server-side: 958 chars ≈ 498 Claude tokens that did not enter your context)

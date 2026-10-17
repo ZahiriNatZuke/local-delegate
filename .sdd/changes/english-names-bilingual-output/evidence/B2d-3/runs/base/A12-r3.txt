@@ -1,0 +1,10 @@
+**Summary of Issues by File**
+
+**scripts/build_corpus.py**
+
+*   **System Changes (Prompts Update - 0.36.0):** 6 occurrences across various checks (resumen-md-2k, resumen-md-10k, resumen-changelog-7k, lint-9k, commit-diff-19k, explicar-metrics-15k, explicar-install-20k, describir-dashboard, leer-cifras-dashboard, techo-resumen-103k, techo-commit-156k). This indicates a widespread impact due to changes in the system prompts.
+*   **max_tokens Change (Prompts Update - 0.36.0):** 2 occurrences (commit-diff-19k, techo-commit-156k). This highlights a specific adjustment related to the maximum token length.
+
+The primary concern is the systemic changes introduced by the 0.36.0 prompts update, affecting multiple components of the script. The `max_tokens` adjustments are secondary, but still relevant to the overall prompt modifications.
+
+(leído server-side: 1231 chars ≈ 641 tokens de Claude que no entraron a tu contexto)

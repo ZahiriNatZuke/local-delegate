@@ -1569,6 +1569,32 @@ modelo la inventa cuando el log no tiene cifras. Va **en serie después de B2d-2
     `identical_in_every_repetition` recoge las 10 llamadas de una versión, sus repeticiones no miden
     ruido: se anota y se mira por qué antes de concluir.
   - Si ningún paso cumple, se reabre el paso 2.
+- **Resultado del método nuevo (2026-10-17, medido por la sesión principal; `evidence/B2d-3/live.md`
+  y `runs/`):** base `7a17941`, paso 1 `8999bce` y paso 1b `20faa5e`, 30 respuestas cada una, 0
+  errores, ventanas cerradas.
+
+  | Versión | `fidelity_totals` | Media | Sin B35 | `parenthesized_invented` | Controles (2 de 3) | Cortadas |
+  |---|---|---|---|---|---|---|
+  | base | 9, 20, 6 | 11,67 | 8,67 | 0, 11, 0 | A15, B31, B32 | 0 |
+  | paso 1 | 6, 7, 6 | 6,33 | 6,33 | 0, 0, 0 | B31, B32 | 0 |
+  | paso 1b | 2, 5, 4 | 3,67 | 3,67 | 0, 0, 0 | A14, A15, B31, B32 | 3 |
+
+  El paso 1b **cumple los tres criterios** (y conserva además A14, que la base no). **Regresión que
+  el criterio no veía:** B35 (`B2d-fix/docs-3/es-log-B2d-fix_corpus-affinity-check.txt`, 89 líneas,
+  sin línea de total, `gemma4-26b-a4b`) sale cortado por `max_tokens` en las 3 repeticiones del 1b
+  (`finish_reason=length`, `chars_out` ~1700–1790); en la base y en el paso 1, ninguna vez. El
+  modelo repite el mismo texto en un bloque por cada «commit-trampa-…» y «techo-commit-…» hasta
+  agotar el tope. `identical_in_every_repetition` del 1b = `['A15']`. Log de uso: `gemma3-4b` 63
+  llamadas y 0 cortadas, `gemma4-26b-a4b` 27 y 3.
+- **Paso 1c (decidido por el usuario el 2026-10-17), criterio fijado ANTES de medir:** mantiene la
+  regla del total del 1b y añade, en `_lint_count_clause()`, que los elementos con el mismo problema
+  vayan en una sola línea que los nombre juntos (sin número si el log no da la cifra), en vez de
+  repetir el mismo texto por cada uno. Test con mutante en `tests/test_lint_count_rule.py`. Se
+  **adopta** si cumple los tres criterios del 1b (media ≤ 11,67 y ≤ 4,0; `parenthesized_invented` = 0
+  en las 3 repeticiones; controles ⊇ A15, B31 y B32) **y** tiene **0 cortadas** en las 30 llamadas.
+  Si no, **se queda el 1b** (se revierte el commit del 1c) y el corte de B35 se anota como deuda.
+  Comandos en `evidence/B2d-3/measure.md` (`--answers-dir $E/B2d-3/runs/step1c --repeat 3`, tandas
+  A y B).
 
 #### B3 — Hooks
 

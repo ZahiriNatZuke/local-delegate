@@ -1,0 +1,41 @@
+Here's a summary of the issues, grouped by file, with counts by error/rule type, prioritizing the most relevant:
+
+**Local-Delegate (0.35.0)**
+
+*   **Warnings (2):**
+    *   Obsolete Hook Name (1): “LD\_HOOK\_READ\_BLOQUEAR” is deprecated; rename to “LD\_HOOK\_READ\_BLOCK” (0).
+    *   Missing Resident Affinity (1):  Recommended absence of resident affinity; current configuration uses “gemma4-26b-a4b” (0).
+*   **Missing Components (2):**
+    *   Claude Code Client (0):  Client not installed.
+    *   Opencode Client (0): Client not installed.
+
+**Backend (http://127.0.0.1:9292/v1)**
+
+*   **Potential Issues (2):**
+    *   Missing Backend Credentials (0): Backend requires credentials, but no MCP entry to check.
+    *   Missing Daemon Token (0): Daemon requires token, but no MCP entry to check.
+
+**Versions**
+
+*   **Warning (1):**
+    *   Missing Resident Llama-Swap (1): No resident Llama-Swap detected, recommended absence.
+
+**MCP Clients**
+
+*   **Various Clients (8):**
+    *   claude-ai (6): No elicitation observed (6).
+    *   claude-code (1): Elicitation observed (1).
+    *   local-agent-mode-local-delegate (4): No elicitation observed (4).
+    *   mcp (1): No elicitation observed (1).
+    *   mcp-remote-fallback-test (1): No elicitation observed (1).
+
+**Hooks & Skills**
+
+*   **Hooks (3):**
+    *   Claude Code (0): Client not installed.
+    *   Hooks (0): Claude Code not installed.
+    *   Registered Hooks (0): Claude Code not installed.
+
+This summary highlights the key areas needing attention, primarily related to missing client installations and configuration issues with affinity settings.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

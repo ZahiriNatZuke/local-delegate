@@ -1,0 +1,20 @@
+**Resumen de errores**
+
+**scripts/build_corpus.py**
+
+*   **Resumen de Ruff** (4 errores):
+    *   **Tres reglas**: El sistema cambió con los prompts de la versión 0.36.0.
+    *   **Docstrings**: El sistema cambió con los prompts de la versión 0.36.0.
+    *   **Un solo archivo**: El sistema cambió con los prompts de la versión 0.36.0.
+    *   **Cinco reglas**: El sistema cambió con los prompts de la versión 0.36.0.
+
+*   **Diferencia de commits** (72 errores):
+    *   **Diferencia de commit 19k**: Los parámetros de tokens máximos y el sistema cambiaron con los prompts de la versión 0.36.0.
+    *   **Varios commits (9eb197b, c2312cd, 64311f5, 2c602eb, e34c102, 4ef1ba0, ad79697, 8b061ec, 71f2a41, e428c07, b2545e9, a4502a7, 8610c74, eb35363, daddf39, f7c8d6e, 11c65b5, 67eb74a, 4e9035a, 1dd97a3, 56f588d, bcbe39f, 53c9dcb, e7deb0d, ccddeea, 2fbfe93, 6a7959e, 67e585f, 4aa2141)**: Los valores de tokens máximos y el sistema sufrieron cambios debido a los prompts de la versión 0.36.0.
+    *   **Commits trampa (1314b0b, 4f41311, 3b20fb3, 6d442e7, b04a5e2, 7d0f4ac, 9d2c242, fa08d64, 6710a6b)**: Se detectaron cambios en tokens máximos y en el sistema por la nueva versión de prompts.
+    *   **Techo de commit 156k**: Los parámetros de tokens máximos y el sistema cambiaron con la versión 0.36.0.
+
+*   **Resumen de Markdown 2k** (1 error):
+    *   **Sistema**: El sistema cambió con los prompts de la versión 0.36.0.
+
+(read server-side: 7699 chars ≈ 4009 Claude tokens that did not enter your context)

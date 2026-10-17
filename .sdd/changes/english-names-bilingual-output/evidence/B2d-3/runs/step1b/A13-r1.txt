@@ -1,0 +1,19 @@
+Here's a summary of the issues, grouped by file and with relevant details:
+
+**Local-Delegate Doctor**
+
+*   **llama-swap.exe:** No issues found.
+*   **config.yaml:** No issues found.
+*   **Backend URL:** No issues found.
+*   **Hooks (Claude Code, opencode, local-agent-mode):** Missing Claude Code, opencode, and local-agent-mode clients.  This results in hooks being unavailable and no MCP data for these services.
+*   **MCP Clients:** Several MCP clients are present (claude-ai, claude-code, codex-mcp-client, local-agent-mode), but they are all reported as “sin elicitation” (without elicitation).
+*   **Obsolete Hook:** The hook `LD_HOOK_READ_BLOQUEAR` is obsolete and should be renamed to `LD_HOOK_READ_BLOCK`.
+*   **Cost and Padding:** The last check matches the price table from 2026-10-06.
+*   **Test Windows:** No test windows are open.
+*   **Affinidad:** The affinity is not using the specified cells, requiring review or a new benchmark.
+
+**Overall:**
+
+There are 2 warnings. The primary concern is the absence of the Claude Code, opencode, and local-agent-mode clients, which prevents proper hook functionality and MCP data collection. Additionally, the obsolete hook needs to be addressed.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

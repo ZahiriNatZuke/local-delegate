@@ -1,0 +1,13 @@
+**Summary of Issues by File**
+
+The provided output indicates several issues related to a system change involving prompt updates from version 0.36.0, characterized as a “frontera declarada” (declared frontier).
+
+**scripts/build_corpus.py:**
+
+*   **Linting:** 9,000 issues detected. These relate to the system change with the prompts.
+*   **Max Tokens:** 2 issues detected, also linked to the prompt update.
+*   **Other Checks:** Several other checks, including `resumen-md-2k`, `resumen-md-10k`, `resumen-changelog-7k`, `commit-diff-19k`, `explicar-metrics-15k`, `explicar-install-20k`, `describir-dashboard`, `leer-cifras-dashboard`, `techo-resumen-103k`, and `techo-commit-156k` were executed.
+
+The output confirms that all checks passed.
+
+(leído server-side: 1231 chars ≈ 641 tokens de Claude que no entraron a tu contexto)

@@ -1,0 +1,11 @@
+**Resumen de Problemas**
+
+**Archivo: src/app/features/auth/pages/login.page.ts**
+
+*   **Error de Tipo (TS2345):**  Se detecta un error de tipo al asignar un objeto con una propiedad `returnUrl` opcional a un parámetro que espera una cadena de texto. La propiedad `returnUrl` puede ser `string | undefined`, pero el parámetro espera un `string`. Se sugiere agregar `undefined` a los tipos de las propiedades del parámetro para resolver la incompatibilidad. (1 problema)
+
+**Archivo: src/app/features/home/components/tech-stack.component.ts**
+
+*   **Error de Tipo (TS2375):** Se identifica un error de tipo al asignar un objeto con una propiedad `version` opcional a un tipo `StackItem`. La propiedad `version` puede ser `string | undefined`, pero el tipo `StackItem` espera un `string`. Se recomienda agregar `undefined` a los tipos de las propiedades del tipo `StackItem` para solucionar la incompatibilidad. (1 problema)
+
+(read server-side: 1435 chars ≈ 747 Claude tokens that did not enter your context)

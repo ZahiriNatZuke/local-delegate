@@ -1,0 +1,17 @@
+**Resumen de la ejecución de pruebas**
+
+No se detectaron errores; todas las pruebas fueron exitosas.
+
+**tests/test_chunking.py**
+* **Pruebas superadas**: 43
+* **Descripción**: Se validó la integridad de la fragmentación de texto, el respeto a los límites de tamaño, el manejo de encabezados de Markdown, la gestión de errores en el backend, la clasificación de orígenes por host y la correcta división de archivos y diferencias (*diffs*).
+
+**tests/test_density.py**
+* **Pruebas superadas**: 14
+* **Descripción**: Se verificó el cálculo de densidad, la gestión de tokens para diferentes modelos, la prioridad de herramientas sobre extensiones, el manejo de variables de respaldo (*fallback*), el tratamiento de imágenes y la consistencia en la fusión de datos y caché.
+
+**Totales**
+* **Pruebas superadas**: 57
+* **Pruebas fallidas**: 0
+
+(read server-side: 11014 chars ≈ 5736 Claude tokens that did not enter your context)

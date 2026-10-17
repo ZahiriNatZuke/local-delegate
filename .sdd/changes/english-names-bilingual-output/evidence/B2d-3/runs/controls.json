@@ -1,0 +1,372 @@
+{
+  "versions": {
+    "base": {
+      "rows": [
+        {
+          "id": "A14",
+          "figures": [
+            "125",
+            "551",
+            "653"
+          ],
+          "reps": [
+            {
+              "rep": "1",
+              "kept": []
+            },
+            {
+              "rep": "2",
+              "kept": []
+            },
+            {
+              "rep": "3",
+              "kept": []
+            }
+          ],
+          "kept_reps": 0,
+          "runs": 3,
+          "ok": false
+        },
+        {
+          "id": "A15",
+          "figures": [
+            "10"
+          ],
+          "reps": [
+            {
+              "rep": "1",
+              "kept": [
+                "10"
+              ]
+            },
+            {
+              "rep": "2",
+              "kept": [
+                "10"
+              ]
+            },
+            {
+              "rep": "3",
+              "kept": [
+                "10"
+              ]
+            }
+          ],
+          "kept_reps": 3,
+          "runs": 3,
+          "ok": true
+        },
+        {
+          "id": "B31",
+          "figures": [
+            "57"
+          ],
+          "reps": [
+            {
+              "rep": "1",
+              "kept": [
+                "57"
+              ]
+            },
+            {
+              "rep": "2",
+              "kept": [
+                "57"
+              ]
+            },
+            {
+              "rep": "3",
+              "kept": [
+                "57"
+              ]
+            }
+          ],
+          "kept_reps": 3,
+          "runs": 3,
+          "ok": true
+        },
+        {
+          "id": "B32",
+          "figures": [
+            "7"
+          ],
+          "reps": [
+            {
+              "rep": "1",
+              "kept": [
+                "7"
+              ]
+            },
+            {
+              "rep": "2",
+              "kept": [
+                "7"
+              ]
+            },
+            {
+              "rep": "3",
+              "kept": [
+                "7"
+              ]
+            }
+          ],
+          "kept_reps": 3,
+          "runs": 3,
+          "ok": true
+        }
+      ],
+      "cases_kept": [
+        "A15",
+        "B31",
+        "B32"
+      ],
+      "controls_ok": false
+    },
+    "step1": {
+      "rows": [
+        {
+          "id": "A14",
+          "figures": [
+            "125",
+            "551",
+            "653"
+          ],
+          "reps": [
+            {
+              "rep": "1",
+              "kept": []
+            },
+            {
+              "rep": "2",
+              "kept": []
+            },
+            {
+              "rep": "3",
+              "kept": []
+            }
+          ],
+          "kept_reps": 0,
+          "runs": 3,
+          "ok": false
+        },
+        {
+          "id": "A15",
+          "figures": [
+            "10"
+          ],
+          "reps": [
+            {
+              "rep": "1",
+              "kept": []
+            },
+            {
+              "rep": "2",
+              "kept": []
+            },
+            {
+              "rep": "3",
+              "kept": []
+            }
+          ],
+          "kept_reps": 0,
+          "runs": 3,
+          "ok": false
+        },
+        {
+          "id": "B31",
+          "figures": [
+            "57"
+          ],
+          "reps": [
+            {
+              "rep": "1",
+              "kept": [
+                "57"
+              ]
+            },
+            {
+              "rep": "2",
+              "kept": [
+                "57"
+              ]
+            },
+            {
+              "rep": "3",
+              "kept": [
+                "57"
+              ]
+            }
+          ],
+          "kept_reps": 3,
+          "runs": 3,
+          "ok": true
+        },
+        {
+          "id": "B32",
+          "figures": [
+            "7"
+          ],
+          "reps": [
+            {
+              "rep": "1",
+              "kept": []
+            },
+            {
+              "rep": "2",
+              "kept": [
+                "7"
+              ]
+            },
+            {
+              "rep": "3",
+              "kept": [
+                "7"
+              ]
+            }
+          ],
+          "kept_reps": 2,
+          "runs": 3,
+          "ok": true
+        }
+      ],
+      "cases_kept": [
+        "B31",
+        "B32"
+      ],
+      "controls_ok": false
+    },
+    "step1b": {
+      "rows": [
+        {
+          "id": "A14",
+          "figures": [
+            "125",
+            "551",
+            "653"
+          ],
+          "reps": [
+            {
+              "rep": "1",
+              "kept": [
+                "125",
+                "551",
+                "653"
+              ]
+            },
+            {
+              "rep": "2",
+              "kept": [
+                "125",
+                "551",
+                "653"
+              ]
+            },
+            {
+              "rep": "3",
+              "kept": [
+                "125",
+                "551",
+                "653"
+              ]
+            }
+          ],
+          "kept_reps": 3,
+          "runs": 3,
+          "ok": true
+        },
+        {
+          "id": "A15",
+          "figures": [
+            "10"
+          ],
+          "reps": [
+            {
+              "rep": "1",
+              "kept": [
+                "10"
+              ]
+            },
+            {
+              "rep": "2",
+              "kept": [
+                "10"
+              ]
+            },
+            {
+              "rep": "3",
+              "kept": [
+                "10"
+              ]
+            }
+          ],
+          "kept_reps": 3,
+          "runs": 3,
+          "ok": true
+        },
+        {
+          "id": "B31",
+          "figures": [
+            "57"
+          ],
+          "reps": [
+            {
+              "rep": "1",
+              "kept": [
+                "57"
+              ]
+            },
+            {
+              "rep": "2",
+              "kept": [
+                "57"
+              ]
+            },
+            {
+              "rep": "3",
+              "kept": [
+                "57"
+              ]
+            }
+          ],
+          "kept_reps": 3,
+          "runs": 3,
+          "ok": true
+        },
+        {
+          "id": "B32",
+          "figures": [
+            "7"
+          ],
+          "reps": [
+            {
+              "rep": "1",
+              "kept": [
+                "7"
+              ]
+            },
+            {
+              "rep": "2",
+              "kept": []
+            },
+            {
+              "rep": "3",
+              "kept": [
+                "7"
+              ]
+            }
+          ],
+          "kept_reps": 2,
+          "runs": 3,
+          "ok": true
+        }
+      ],
+      "cases_kept": [
+        "A14",
+        "A15",
+        "B31",
+        "B32"
+      ],
+      "controls_ok": true
+    }
+  }
+}
