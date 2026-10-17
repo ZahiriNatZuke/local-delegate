@@ -7,6 +7,10 @@ answers never go through a Claude context. Start and end timestamps (UTC) go to 
 The daemon token is read from the user variable `LOCAL_DELEGATE_WEB_TOKEN` and never printed.
 
     uv run python run_live.py --window A
+    uv run python run_live.py --window A --manifest ../B2d-3/manifest.json
+
+`--manifest` points to another frozen manifest with the same format (B2d-3 measures only the lint
+answers of set 3); `live-runs.json` goes next to the manifest used.
 """
 
 import argparse
@@ -33,12 +37,12 @@ async def _call(session, tool: str, path: Path) -> tuple[str, bool]:
     return "".join(getattr(c, "text", "") for c in res.content), bool(res.is_error)
 
 
-async def run(window: str) -> int:
+async def run(window: str, manifest_path: Path = HERE / "manifest.json") -> int:
     import httpx2
     from mcp import ClientSession
     from mcp.client.streamable_http import streamable_http_client
 
-    manifest = json.loads((HERE / "manifest.json").read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     calls = [c for c in manifest["calls"] if c["window"] == window]
     for c in calls:
         doc = ROOT / c["document"]
@@ -63,7 +67,7 @@ async def run(window: str) -> int:
                 fh.write(text)
             errors += is_error
             print(f"{c['id']} {c['tool']} chars={len(text)} error={is_error}", flush=True)
-    runs_path = HERE / "live-runs.json"
+    runs_path = manifest_path.parent / "live-runs.json"
     runs = json.loads(runs_path.read_text(encoding="utf-8")) if runs_path.exists() else {}
     runs[window] = {"started": started, "finished": _now(), "calls": len(calls), "errors": errors}
     runs_path.write_text(json.dumps(runs, indent=2) + "\n", encoding="utf-8", newline="\n")
@@ -73,7 +77,9 @@ async def run(window: str) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--window", required=True, choices=["A", "B", "C"])
-    return asyncio.run(run(parser.parse_args().window))
+    parser.add_argument("--manifest", type=Path, default=HERE / "manifest.json")
+    args = parser.parse_args()
+    return asyncio.run(run(args.window, args.manifest.resolve()))
 
 
 if __name__ == "__main__":

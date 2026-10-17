@@ -1,0 +1,134 @@
+{
+  "frozen_at": "2026-10-17",
+  "frozen_before_any_measurement_call": true,
+  "derived_from": ".sdd/changes/english-names-bilingual-output/evidence/B2d-2/manifest.json (calls A11-A15 and B31-B35, same documents and sha256)",
+  "windows": {
+    "A": {
+      "env": {
+        "LOCAL_DELEGATE_OUTPUT_LANGUAGE": "en"
+      },
+      "product": "es",
+      "label": "B2d-3 tanda A es + output en (solo lint, conjunto 3)"
+    },
+    "B": {
+      "env": {
+        "LOCAL_DELEGATE_LANG": "en",
+        "LOCAL_DELEGATE_OUTPUT_LANGUAGE": "es"
+      },
+      "product": "en",
+      "label": "B2d-3 tanda B en + output es (solo lint, conjunto 3)"
+    }
+  },
+  "calls": [
+    {
+      "id": "A11",
+      "window": "A",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-check-llamaswap-pre-b10909.txt",
+      "document_sha256": "e2d30b729c1ad2543d089764b55759c33b4063c046e0555dda4f121caa5321e7",
+      "input_language": "es",
+      "requested": "en",
+      "answer": ".sdd/changes/english-names-bilingual-output/evidence/B2d-3/live-answers/A11.txt",
+      "purpose": "set 3: fidelity (count rule, B2d-3)"
+    },
+    {
+      "id": "A12",
+      "window": "A",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-B2c_corpus-f2-check.txt",
+      "document_sha256": "e55c52f2c40404391ce087ca987dffa411a9d8f5b63fc386a885ed753731705d",
+      "input_language": "es",
+      "requested": "en",
+      "answer": ".sdd/changes/english-names-bilingual-output/evidence/B2d-3/live-answers/A12.txt",
+      "purpose": "set 3: fidelity (count rule, B2d-3)"
+    },
+    {
+      "id": "A13",
+      "window": "A",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-doctor-empty-home.txt",
+      "document_sha256": "367ab3af2a166576928e52c12605bcee7940be5f582f6c2eacefe49d4cc7e161",
+      "input_language": "es",
+      "requested": "en",
+      "answer": ".sdd/changes/english-names-bilingual-output/evidence/B2d-3/live-answers/A13.txt",
+      "purpose": "set 3: fidelity (count rule, B2d-3)"
+    },
+    {
+      "id": "A14",
+      "window": "A",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-biome-lint-nest.txt",
+      "document_sha256": "3af20fa5cfba9f2dedb4f8a5653f382acfaf93477085774587aa694b7da994a2",
+      "input_language": "en",
+      "requested": "en",
+      "answer": ".sdd/changes/english-names-bilingual-output/evidence/B2d-3/live-answers/A14.txt",
+      "purpose": "set 3: fidelity (count rule, B2d-3)"
+    },
+    {
+      "id": "A15",
+      "window": "A",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-ruff-concise-build-site.txt",
+      "document_sha256": "0e539a8a8a7eafac0f94a6dc56173a2d3ef2636c737467d63bea2ea43c6519e9",
+      "input_language": "en",
+      "requested": "en",
+      "answer": ".sdd/changes/english-names-bilingual-output/evidence/B2d-3/live-answers/A15.txt",
+      "purpose": "set 3: fidelity (count rule, B2d-3)"
+    },
+    {
+      "id": "B31",
+      "window": "B",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-pytest-chunking-density.txt",
+      "document_sha256": "0fa7d99e62af9ba251cc42f12c808445ac1f62573169ba778796cfbbc451b6f4",
+      "input_language": "en",
+      "requested": "es",
+      "answer": ".sdd/changes/english-names-bilingual-output/evidence/B2d-3/live-answers/B31.txt",
+      "purpose": "set 3: fidelity (count rule, B2d-3)"
+    },
+    {
+      "id": "B32",
+      "window": "B",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-ruff-concise-clean-watcher.txt",
+      "document_sha256": "5a73a08070f3573b78cc4b31bfcccecf06b7d6d4045de1af4b9a82a173a7525f",
+      "input_language": "en",
+      "requested": "es",
+      "answer": ".sdd/changes/english-names-bilingual-output/evidence/B2d-3/live-answers/B32.txt",
+      "purpose": "set 3: fidelity (count rule, B2d-3)"
+    },
+    {
+      "id": "B33",
+      "window": "B",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-tsc-angular.txt",
+      "document_sha256": "292208ba99d5044fa0a927eb14c70d7b5d369553ec52d9ffffc642314e76a63a",
+      "input_language": "en",
+      "requested": "es",
+      "answer": ".sdd/changes/english-names-bilingual-output/evidence/B2d-3/live-answers/B33.txt",
+      "purpose": "set 3: fidelity (count rule, B2d-3)"
+    },
+    {
+      "id": "B34",
+      "window": "B",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-check-llamaswap-pre-no-resident.txt",
+      "document_sha256": "1adc07d48a6a2b687f2b76e7a5197281456f8323471f31b42040debbae800482",
+      "input_language": "es",
+      "requested": "es",
+      "answer": ".sdd/changes/english-names-bilingual-output/evidence/B2d-3/live-answers/B34.txt",
+      "purpose": "set 3: fidelity (count rule, B2d-3)"
+    },
+    {
+      "id": "B35",
+      "window": "B",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-B2d-fix_corpus-affinity-check.txt",
+      "document_sha256": "8c261db94aaaa22a75abe82729c777865dbbcf34a64cdde565f09170a46304f0",
+      "input_language": "es",
+      "requested": "es",
+      "answer": ".sdd/changes/english-names-bilingual-output/evidence/B2d-3/live-answers/B35.txt",
+      "purpose": "set 3: fidelity (count rule, B2d-3)"
+    }
+  ]
+}
