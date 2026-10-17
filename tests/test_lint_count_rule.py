@@ -5,7 +5,9 @@ to 12 over the 10 logs of set 3: per-item counts in parentheses ("Claude Code Cl
 log does not carry. The format asked for "the count per error type/rule" with no condition. The
 prompt now says where a count may come from (`server._lint_count_clause`), in the single call and
 in every step of the chunking, in both languages of the product. Step 1b: a total line of the log
-("Found 10 errors.") is copied as it is; the live measurement of step 1 lost them.
+("Found 10 errors.") is copied as it is; the live measurement of step 1 lost them. Step 1c: items
+with the same problem go in one line; in the live measurement of step 1b a log with no total line
+came out cut by `max_tokens`, one block per item with the same sentence.
 
 The prompts are captured with a fake backend (`_run_chat` doubled), with no network: what is
 tested is the prompt sent, not what a real model does with it (that is the live measurement of
@@ -51,6 +53,12 @@ RULE_TOTAL_LINE = (
     " Si el contenido trae una línea de total (la que dice cuántos errores, avisos o tests hay, "
     "como «Found … errors.» o «… passed»), cópiala tal cual, con sus cifras; si no la trae, no "
     "inventes ninguna."
+)
+#: Step 1c: items with the same problem, in one line that names them together.
+RULE_GROUPING = (
+    " Si varios elementos tienen el mismo problema, aunque sean de archivos distintos, ponlos en "
+    "una sola línea que los nombre juntos, en vez de repetir el mismo texto por cada uno; si el "
+    "contenido no dice cuántos son, nómbralos sin poner número."
 )
 
 
@@ -163,6 +171,51 @@ def test_the_total_line_rule_gives_the_model_no_figure_to_copy():
     figure the model could copy into a log that has none."""
     assert RULE_TOTAL_LINE in server._lint_count_clause()
     assert not any(ch.isdigit() for ch in server._lint_count_clause())
+
+
+# --- Step 1c: items with the same problem go in one line -----------------------------------------
+
+#: A log with no total line and the same problem in several items, like B35 of set 3.
+LOG_SAME_PROBLEM = "".join(
+    f"commit-trampa-{name}: system cambio con los prompts de la 0.36.0\n"
+    for name in ("uno", "dos", "tres", "cuatro", "cinco", "seis")
+)
+
+
+@pytest.mark.parametrize(("product", "output"), BATCHES)
+@pytest.mark.parametrize("chunked", [False, True], ids=["single", "chunked"])
+def test_items_with_the_same_problem_go_in_one_line(
+    monkeypatch, captured, product, output, chunked
+):
+    """In the live measurement of step 1b, B35 (no total line) came out cut by `max_tokens` in its
+    3 repetitions: one block per item, all with the same sentence (`evidence/B2d-3/live.md`).
+    Mutant "without the sentence of step 1c": fails at `RULE_GROUPING in step["system"]`, in the
+    single call and in every step of the chunking; the rules of step 1 and 1b still hold."""
+    _languages(monkeypatch, product, output)
+    if chunked:
+        monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "mechanical", 1200)
+        monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 1200)
+    server.local_lint_summary(text=LOG_SAME_PROBLEM * (20 if chunked else 1))
+    assert len(captured) > 2 if chunked else len(captured) == 1  # guard: the path asked for
+    for step in captured:
+        system = step["system"]
+        assert RULE_GROUPING in system, system[-900:]
+        assert RULE_TOTAL_LINE in system
+        _assert_count_rule(system)
+        # After the total line and before the language order, which still closes the prompt.
+        assert system.index(RULE_TOTAL_LINE) < system.index(RULE_GROUPING)
+        assert system.index(RULE_GROUPING) < system.rindex(server._lint_language_clause())
+
+
+def test_the_grouping_rule_does_not_clash_with_the_count_rule():
+    """With no figure in the log the grouped items carry no number: the grouping must not ask for
+    "how many" when the log does not say it. Mutant "without the sentence of step 1c": fails at
+    `RULE_GROUPING in clause`; the rule against counts in parentheses stays, with no digit."""
+    clause = server._lint_count_clause()
+    assert RULE_GROUPING in clause
+    assert "si el contenido no dice cuántos son, nómbralos sin poner número" in clause
+    assert RULE_NO_NUMBER in clause
+    assert not any(ch.isdigit() for ch in clause)
 
 
 # --- The control of the live measurement (`evidence/B2d-3/check_controls.py`) -------------------

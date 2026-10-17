@@ -3572,6 +3572,12 @@ def _lint_count_clause() -> str:
     it is. In the live measurement of step 1 the answers of `ruff` lost theirs ("Found 10
     errors.", "Found 7 errors."; `evidence/B2d-3/live.md`). The examples carry no figures, so
     that the model has none to copy from the prompt; with no total line, no total.
+
+    Step 1c (2026-10-17): items with the same problem go in one line that names them together,
+    instead of the same text once per item. In the live measurement of step 1b, B35 (a log with
+    no total line, 89 lines) came out cut by `max_tokens` in its 3 repetitions: one block per
+    item, all with the same sentence. With no figure in the log, the items are named with no
+    number, so the grouping does not clash with the count rule.
     """
     return (
         " La cantidad sale solo del contenido: la que el contenido escribe (una línea de total o "
@@ -3579,7 +3585,10 @@ def _lint_count_clause() -> str:
         "no la da y no se puede contar, no pongas ningún número: nada de recuentos entre "
         "paréntesis. Si el contenido trae una línea de total (la que dice cuántos errores, "
         "avisos o tests hay, como «Found … errors.» o «… passed»), cópiala tal cual, con sus "
-        "cifras; si no la trae, no inventes ninguna."
+        "cifras; si no la trae, no inventes ninguna. Si varios elementos tienen el mismo "
+        "problema, aunque sean de archivos distintos, ponlos en una sola línea que los nombre "
+        "juntos, en vez de repetir el mismo texto por cada uno; si el contenido no dice cuántos "
+        "son, nómbralos sin poner número."
     )
 
 
