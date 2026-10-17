@@ -1622,6 +1622,21 @@ B2d-3** y saldría en la 0.36.0, así que no va al backlog.
 - **Cambio candidato (se decide antes de medir):** limitar cuántos elementos iguales se nombran
   («… y N más», con N contado del log, no por el modelo), o resumir por tipo de problema sin listar
   los elementos. El tope de lint no se toca (regla de B2d-2/B2d-3).
+- **Decisión (2026-10-17, ANTES de medir): compactado por programa, no regla de prompt.**
+  `local_lint_summary` pasa el log por `server.compact_repeated_lines()` antes de decidir si trocea:
+  un bloque denso (miembros a ≤ 3 líneas uno de otro) de **10 o más** líneas iguales salvo **un**
+  token se queda con sus 3 primeras líneas en su sitio y una línea «… y N líneas más como las
+  anteriores», con N contado por el programa. Nunca agrupan una línea con ruta o posición de
+  fichero (un log de lint por fichero llega entero), una línea de menos de 3 tokens ni un token que
+  sea solo una cifra. La regla de la cantidad (`_lint_count_clause()`, también en `reduce_extra`)
+  añade una frase: nombrar solo los que aparecen y escribir «y N más» con ese número. Por qué: el
+  1c demostró que una orden de agrupar no basta (el modelo la obedece a medias); si el modelo no ve
+  los 80 elementos, no los puede enumerar, y N no depende de que cuente bien. En el conjunto 3 solo
+  compacta B35 (45 y 40 → 3 + marcador cada bloque; 89 → 12 líneas) y A12 (11 → 3 + marcador);
+  A11, A13–A15 y B31–B34 llegan intactos. `scripts/score_lint_fidelity.py` acepta como cifra del
+  log el tamaño de cada bloque compactado y su N (los cuenta el programa del mismo log; el test
+  los comprueba contra una cuenta propia), y la base y el 1b se **re-cuentan** con ese mismo
+  contador antes de comparar. Medición: `evidence/B2d-4/measure.md`.
 - *Test:* con un log sintético de decenas de elementos con el mismo problema; mutante que quita la
   regla y comprobar qué assert salta. Si N lo calcula el programa, test de N contra el log.
 - *Medición:* el método de B2d-3 (`evidence/B2d-3/measure.md`: tandas A y B, 3 repeticiones,

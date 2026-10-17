@@ -15,6 +15,7 @@ tested is the prompt sent, not what a real model does with it (that is the live 
 from __future__ import annotations
 
 import importlib.util
+import re
 from pathlib import Path
 
 import pytest
@@ -69,6 +70,20 @@ def captured(monkeypatch) -> list[dict]:
     return calls
 
 
+def _tag(n: int) -> str:
+    """A name with no digit for the `n`-th copy (`aa`, `ab`, …): a figure would be a count."""
+    letters = "abcdefghijklmnopqrstuvwxyz"
+    return letters[n // 26 % 26] + letters[n % 26]
+
+
+def _spread(log: str, copies: int) -> str:
+    """`copies` copies of `log`, each line under its own file: long enough to chunk, and B2d-4 does
+    not compact it (a line with a file location never groups), as `log * copies` would."""
+    return "".join(
+        f"pkg-{_tag(n)}/run.log: {line}\n" for n in range(copies) for line in log.splitlines()
+    )
+
+
 def _languages(monkeypatch, product: str, output: str) -> None:
     monkeypatch.setenv("LOCAL_DELEGATE_LANG", product)
     monkeypatch.setenv(OUTPUT, output)
@@ -107,7 +122,7 @@ def test_the_count_rule_is_in_every_step_of_the_chunking(monkeypatch, captured, 
     _languages(monkeypatch, product, output)
     monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "mechanical", 1200)
     monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 1200)
-    server.local_lint_summary(text=LOG_WITHOUT_FIGURES * 40)
+    server.local_lint_summary(text=_spread(LOG_WITHOUT_FIGURES, 40))
     assert len(captured) > 2  # guard: it really chunked
     assert "Resume la siguiente salida" not in captured[-1]["user"]  # guard: the last one reduces
     for step in captured:
@@ -204,3 +219,135 @@ def test_the_control_reads_the_repetitions_of_a_version(tmp_path):
     assert (rows["B32"]["kept_reps"], rows["B32"]["ok"]) == (0, False)
     assert rows["A15"]["missing_answer"]
     assert result["cases_kept"] == ["B31"]
+
+
+# --- B2d-4: a dense block of lines with the same problem is compacted by the program -----------
+
+#: The sentence of the count rule that tells the model what to do with the compacted block.
+RULE_MORE = (
+    " Si el contenido dice «… y N líneas más como las anteriores», nombra solo los elementos que "
+    "aparecen y escribe «y N más» con ese mismo número: no añadas los que no aparecen."
+)
+#: How many equal items the synthetic log carries (B35 had 45 and 40).
+MANY = 60
+
+
+def _many_equal_items(copies: int = MANY) -> tuple[str, list[str]]:
+    """A log like B35: a header, `copies` items with the same problem, and an `ok` line."""
+    names = [f"item-{_tag(n)}" for n in range(copies)]
+    body = "".join(
+        f"  · {name}: system cambio con los prompts (frontera declarada)\n" for name in names
+    )
+    return f"idioma del corpus: es\n{body}ok\n", names
+
+
+@pytest.mark.parametrize(("product", "output"), BATCHES)
+def test_many_equal_items_reach_the_model_compacted(monkeypatch, captured, product, output):
+    """B35 was cut by `max_tokens` in the 3 repetitions of step 1b: the model named the 80-odd
+    `commit-…` items one by one. Mutant "`local_lint_summary` without `compact_repeated_lines`":
+    fails at the first assert (the marker with the program's N is not in the prompt sent)."""
+    _languages(monkeypatch, product, output)
+    log, names = _many_equal_items()
+    server.local_lint_summary(text=log)
+    (call,) = captured
+    more = MANY - server.LINT_REPEAT_KEEP
+    assert f"… y {more} líneas más como las anteriores" in call["user"], call["user"][-400:]
+    kept = [name for name in names if f"{name}:" in call["user"]]
+    assert kept == names[: server.LINT_REPEAT_KEEP]  # the first ones, in their place
+    assert "idioma del corpus: es" in call["user"] and call["user"].rstrip().endswith("ok")
+    assert RULE_MORE in call["system"], call["system"][-700:]
+    _assert_count_rule(call["system"])
+
+
+@pytest.mark.parametrize(("product", "output"), BATCHES)
+def test_the_more_rule_is_in_every_step_of_the_chunking(monkeypatch, captured, product, output):
+    """The block is compacted before the size check, and the sentence that says what to do with
+    it also goes in `reduce_extra`. Mutant "the sentence out of `_lint_count_clause`": fails at
+    `RULE_MORE` in the first step; the marker still reaches a map step."""
+    _languages(monkeypatch, product, output)
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "mechanical", 1200)
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 1200)
+    log, _names = _many_equal_items()
+    server.local_lint_summary(text=_spread(LOG_WITH_FIGURES, 20) + log)
+    assert len(captured) > 2  # guard: it really chunked
+    assert "Resume la siguiente salida" not in captured[-1]["user"]  # guard: the last one reduces
+    for step in captured:
+        assert RULE_MORE in step["system"], step["system"][-700:]
+    more = MANY - server.LINT_REPEAT_KEEP
+    assert any(f"… y {more} líneas más" in step["user"] for step in captured[:-1])
+
+
+def test_the_more_rule_gives_the_model_no_figure_to_copy():
+    """The sentence names N with a letter: the whole clause still carries no digit."""
+    assert RULE_MORE in server._lint_count_clause()
+    assert not any(ch.isdigit() for ch in server._lint_count_clause())
+
+
+EVIDENCE = (
+    Path(__file__).resolve().parents[1] / ".sdd/changes/english-names-bilingual-output/evidence"
+)
+DOCS_3 = EVIDENCE / "B2d-fix/docs-3"
+
+
+def _log(name: str) -> str:
+    content, _truncated, _raw = server._read_input(None, str(DOCS_3 / name), server._NO_TRUNCATE)
+    return content
+
+
+def test_n_is_counted_from_the_log_of_b35():
+    """N against the log, counted here by a regex of its own, not by the function under test."""
+    log = _log("es-log-B2d-fix_corpus-affinity-check.txt")
+    system_lines = len(re.findall(r"^  \S+ \S+: system cambio ", log, re.MULTILINE))
+    max_tokens_lines = len(re.findall(r"^  \S+ \S+: max_tokens cambio ", log, re.MULTILINE))
+    assert (system_lines, max_tokens_lines) == (45, 40)  # guard: the log is the one of B35
+    compacted, groups = server.compact_repeated_lines(log)
+    assert groups == sorted([system_lines, max_tokens_lines])
+    keep = server.LINT_REPEAT_KEEP
+    assert f"… y {system_lines - keep} líneas más como las anteriores" in compacted
+    assert f"… y {max_tokens_lines - keep} líneas más como las anteriores" in compacted
+    assert len(compacted.splitlines()) == len(log.splitlines()) - (85 - 2 * keep) + 2
+    # The lines out of the blocks stay, in order.
+    assert compacted.splitlines()[0] == log.splitlines()[0]
+    assert compacted.splitlines()[-1] == "ok"
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "en-log-biome-lint-nest.txt",  # A14: the same hint under each diagnostic, far apart
+        "en-log-ruff-concise-build-site.txt",  # A15: the same rule in many files
+        "es-log-check-llamaswap-pre-b10909.txt",  # A11
+        "es-log-doctor-empty-home.txt",  # A13
+    ],
+)
+def test_control_logs_without_a_dense_block_reach_the_model_untouched(name):
+    """Control: the compaction does not touch a lint log by file nor the cases of the control of
+    the live measurement. A rule that compacted every repeated line would pass the tests above and
+    fail here (A14 repeats its hints 13 to 20 times)."""
+    log = _log(name)
+    assert server.compact_repeated_lines(log) == (log, [])
+
+
+def test_control_the_same_rule_in_many_files_is_not_compacted():
+    """Forty E501 in forty files: every file and line reaches the model."""
+    log = "".join(f"src/m_{_tag(n)}.py:1:1: E501 Line too long (120 > 88)\n" for n in range(40))
+    assert server.compact_repeated_lines(log) == (log, [])
+    tied = "".join(f"  → {_tag(n)}: falla igual\n" for n in range(9))
+    assert server.compact_repeated_lines(tied) == (tied, [])  # under LINT_REPEAT_MIN
+
+
+def test_the_fidelity_counter_allows_the_programs_n_and_no_other():
+    """The counter of the live measurement accepts the N the tool wrote in the prompt (and the
+    block size) as a count the log supports, and still flags a made-up one."""
+    spec = importlib.util.spec_from_file_location(
+        "score_lint_fidelity",
+        Path(__file__).resolve().parents[1] / "scripts/score_lint_fidelity.py",
+    )
+    assert spec is not None and spec.loader is not None
+    scorer = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(scorer)
+    log, _names = _many_equal_items()
+    more = MANY - server.LINT_REPEAT_KEEP
+    assert scorer.count_inventions(f"item-aa, item-ab, item-ac y {more} más.", log)["total"] == 0
+    assert scorer.count_inventions(f"Los {MANY} elementos fallan igual.", log)["total"] == 0
+    assert scorer.count_inventions(f"item-aa y {more + 4} más.", log)["total"] == 1

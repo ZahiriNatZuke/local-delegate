@@ -3580,7 +3580,92 @@ def _lint_count_clause() -> str:
         "paréntesis. Si el contenido trae una línea de total (la que dice cuántos errores, "
         "avisos o tests hay, como «Found … errors.» o «… passed»), cópiala tal cual, con sus "
         "cifras; si no la trae, no inventes ninguna."
+        " Si el contenido dice «… y N líneas más como las anteriores», nombra solo los elementos "
+        "que aparecen y escribe «y N más» con ese mismo número: no añadas los que no aparecen."
     )
+
+
+# B2d-4: lines with the same problem are compacted BEFORE the model sees them. With the count rule
+# of B2d-3 (step 1b) the 89-line `corpus affinity --check` log (B35) was cut by `max_tokens` in
+# the 3 repetitions: the model named one by one the 80-odd `commit-…` items with the same message,
+# and the step 1c rule ("one line that names them together") named them all in one line and was
+# cut too. A prompt rule depends on the model obeying it; here the program does it and counts N
+# itself, so the model cannot list what it does not see nor make up how many there are.
+#: A group of lines this large (equal but for one token) is compacted.
+LINT_REPEAT_MIN = 10
+#: How many lines of a compacted group reach the model, in their place in the log.
+LINT_REPEAT_KEEP = 3
+#: Members of a group further apart than this many lines start another group.
+LINT_REPEAT_GAP = 3
+#: A token with a path or a file location: a line that has one never groups (a lint log with the
+#: same rule in many files, or many times in one file, keeps every diagnostic).
+_LOCATION_TOKEN = re.compile(r"[/\\]|\.[A-Za-z]{1,5}(?::\d+)*:?$|:\d+")
+#: A token that is only a figure: never the one that changes either (figures are what the count
+#: rule and the control of the live measurement protect).
+_FIGURE_TOKEN = re.compile(r"[\d.,:;%()<>=+~-]+")
+
+
+def _repeat_keys(tokens: list[str]) -> list[tuple[str, ...]]:
+    """The templates of a line: the line with ONE token masked, for each token that may change."""
+    if any(_LOCATION_TOKEN.search(token) for token in tokens):
+        return []  # a diagnostic tied to a place in a file is never compacted
+    keys = []
+    for i, token in enumerate(tokens):
+        if _FIGURE_TOKEN.fullmatch(token):
+            continue
+        keys.append((str(i), *tokens[:i], "\0", *tokens[i + 1 :]))
+    return keys
+
+
+def compact_repeated_lines(text: str) -> tuple[str, list[int]]:
+    """Compact the groups of lines that are equal but for one token (`local_lint_summary`, B2d-4).
+
+    A dense block (members at most `LINT_REPEAT_GAP` lines apart) of `LINT_REPEAT_MIN` lines or
+    more keeps its first `LINT_REPEAT_KEEP` lines where they are, and after the last of them a
+    line says how many more there are, counted here. Lines with
+    fewer than three tokens never group (a list of bare hashes is not "the same problem"), nor a
+    line with a path or a file location, and a bare figure is never the token that changes. Returns the text and the sizes
+    of the compacted groups (for the tests and the fidelity counter).
+    """
+    lines = text.splitlines()
+    split = [line.split() for line in lines]
+    keys = [_repeat_keys(tokens) if len(tokens) >= 3 else [] for tokens in split]
+    counts: dict[tuple[str, ...], int] = {}
+    for line_keys in keys:
+        for key in set(line_keys):
+            counts[key] = counts.get(key, 0) + 1
+    # Each line goes to its largest template (ties: the first token that may change).
+    chosen = [max(k, key=lambda key: counts[key]) if k else None for k in keys]
+    positions: dict[tuple[str, ...], list[int]] = {}
+    for index, key in enumerate(chosen):
+        if key is not None:
+            positions.setdefault(key, []).append(index)
+    # A group is a dense block (B35: two templates interleaved line by line), not lines that come
+    # back far apart: the same hint repeated under each diagnostic of a Biome log stays as it is.
+    blocks: list[list[int]] = []
+    for members in positions.values():
+        block = [members[0]]
+        for index in members[1:]:
+            if index - block[-1] > LINT_REPEAT_GAP:
+                blocks.append(block)
+                block = []
+            block.append(index)
+        blocks.append(block)
+    blocks = [block for block in blocks if len(block) >= LINT_REPEAT_MIN]
+    if not blocks:
+        return text, []
+    dropped = {index for block in blocks for index in block[LINT_REPEAT_KEEP:]}
+    markers = {block[LINT_REPEAT_KEEP - 1]: len(block) - LINT_REPEAT_KEEP for block in blocks}
+    out: list[str] = []
+    for index, line in enumerate(lines):
+        if index in dropped:
+            continue
+        out.append(line)
+        if index in markers:
+            indent = line[: len(line) - len(line.lstrip())]
+            out.append(f"{indent}… y {markers[index]} líneas más como las anteriores")
+    tail = "\n" if text.endswith("\n") else ""
+    return "\n".join(out) + tail, sorted(len(block) for block in blocks)
 
 
 def _lint_system(max_words: int) -> str:
@@ -4246,6 +4331,8 @@ def local_lint_summary(
     probe_len = Path(path).stat().st_size if probe else len(text or "")
     role, model = _role_for_size(probe_len)
     content, truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
+    # B2d-4: the program, not the model, compacts the lines with the same problem and counts them.
+    content, _groups = compact_repeated_lines(content)
     system = _lint_system(max_words)
 
     def _build(piece: str) -> str:

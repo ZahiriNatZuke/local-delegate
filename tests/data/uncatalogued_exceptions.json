@@ -600,9 +600,15 @@
     },
     {
       "file": "src/local_delegate/server.py",
-      "text": " La cantidad sale solo del contenido: la que el contenido escribe (una línea de total o un recuento) o la que cuentas tú con las líneas que el contenido repite. Si el contenido no la da y no se puede contar, no pongas ningún número: nada de recuentos entre paréntesis. Si el contenido trae una línea de total (la que dice cuántos errores, avisos o tests hay, como «Found … errors.» o «… passed»), cópiala tal cual, con sus cifras; si no la trae, no inventes ninguna.",
+      "text": " La cantidad sale solo del contenido: la que el contenido escribe (una línea de total o un recuento) o la que cuentas tú con las líneas que el contenido repite. Si el contenido no la da y no se puede contar, no pongas ningún número: nada de recuentos entre paréntesis. Si el contenido trae una línea de total (la que dice cuántos errores, avisos o tests hay, como «Found … errors.» o «… passed»), cópiala tal cual, con sus cifras; si no la trae, no inventes ninguna. Si el contenido dice «… y N líneas más como las anteriores», nombra solo los elementos que aparecen y escribe «y N más» con ese mismo número: no añadas los que no aparecen.",
       "kind": "verbatim",
-      "reason": "prompt del modelo local: la regla de la cantidad de `local_lint_summary` (B2d-3; la línea de total, paso 1b), en la llamada única y en el reduce; entra en la huella de afinidad y en los corpus congelados (`PROMPT_BOUNDARIES`) y no es texto de interfaz"
+      "reason": "prompt del modelo local: la regla de la cantidad de `local_lint_summary` (B2d-3; la línea de total, paso 1b; el «y N más» del bloque compactado, B2d-4), en la llamada única y en el reduce; entra en la huella de afinidad y en los corpus congelados (`PROMPT_BOUNDARIES`) y no es texto de interfaz"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "{}… y {} líneas más como las anteriores",
+      "kind": "verbatim",
+      "reason": "entrada del modelo local, no texto de interfaz: la línea con la que `compact_repeated_lines` (B2d-4) sustituye un bloque de líneas con el mismo problema en el log que recibe `local_lint_summary`; la regla de la cantidad la nombra literal"
     },
     {
       "file": "src/local_delegate/server.py",

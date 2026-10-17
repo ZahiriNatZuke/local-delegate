@@ -44,6 +44,8 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+from local_delegate.server import LINT_REPEAT_KEEP, compact_repeated_lines
+
 #: The product's own lines around an answer (receipts, notices): not the model's content.
 PRODUCT_LINE = re.compile(
     r"^\s*(\(.*(server-side|local-delegate).*\)|\[local-delegate (warning|fallback): .*\])\s*$"
@@ -108,8 +110,9 @@ def log_facts(log: str) -> dict:
 
     A summary that says "3 E501" over a log with three E501 lines is faithful even though "3" is
     not written in the log, so the counts the log supports are allowed too: occurrences of each
-    file, code and status mark, lines that name a file, distinct files and codes, and non-empty
-    lines. `extra_allowed_numbers` in the frozen set is for what a person reviews by hand.
+    file, code and status mark, lines that name a file, distinct files and codes, non-empty
+    lines, and the size of each block that `local_lint_summary` compacts and its "N more"
+    (B2d-4). `extra_allowed_numbers` in the frozen set is for what a person reviews by hand.
     """
     numbers = {_norm_number(n) for n in NUMBER.findall(log)}
     # A number word of the log writes its figure too, also inside a name (`resume-ruff-tres-reglas`
@@ -122,6 +125,11 @@ def log_facts(log: str) -> dict:
     with_file = sum(1 for line in lines if FILE.search(line))
     derived = {len(lines), with_file, len(files), len(codes)}
     derived |= set(files.values()) | set(codes.values()) | set(statuses.values())
+    # B2d-4: the tool compacts a dense block of lines equal but for one token and tells the model
+    # how many more there are ("… y N líneas más"); that N and the block size are counted by the
+    # program from this same log (`tests/test_lint_count_rule.py` checks them against the log).
+    for size in compact_repeated_lines(log)[1]:
+        derived |= {size, size - LINT_REPEAT_KEEP}
     return {
         "numbers": sorted(numbers),
         "derived_counts": sorted(derived),
