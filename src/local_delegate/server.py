@@ -3572,6 +3572,11 @@ def _lint_count_clause() -> str:
     it is. In the live measurement of step 1 the answers of `ruff` lost theirs ("Found 10
     errors.", "Found 7 errors."; `evidence/B2d-3/live.md`). The examples carry no figures, so
     that the model has none to copy from the prompt; with no total line, no total.
+
+    B2d-4 (second round, 2026-10-17): no sentence of its own for the compacted block. The marker
+    of `compact_repeated_lines` writes both figures ("y N más", "M en total"), so it is a count the
+    content writes, which this rule already covers. With a sentence of its own, in the first round
+    the model of A12 counted the lines it saw instead of copying N (`evidence/B2d-4/live.md`).
     """
     return (
         " La cantidad sale solo del contenido: la que el contenido escribe (una línea de total o "
@@ -3580,8 +3585,6 @@ def _lint_count_clause() -> str:
         "paréntesis. Si el contenido trae una línea de total (la que dice cuántos errores, "
         "avisos o tests hay, como «Found … errors.» o «… passed»), cópiala tal cual, con sus "
         "cifras; si no la trae, no inventes ninguna."
-        " Si el contenido dice «… y N líneas más como las anteriores», nombra solo los elementos "
-        "que aparecen y escribe «y N más» con ese mismo número: no añadas los que no aparecen."
     )
 
 
@@ -3622,7 +3625,7 @@ def compact_repeated_lines(text: str) -> tuple[str, list[int]]:
 
     A dense block (members at most `LINT_REPEAT_GAP` lines apart) of `LINT_REPEAT_MIN` lines or
     more keeps its first `LINT_REPEAT_KEEP` lines where they are, and after the last of them a
-    line says how many more there are, counted here. Lines with
+    line says how many more there are and how many in all, counted here. Lines with
     fewer than three tokens never group (a list of bare hashes is not "the same problem"), nor a
     line with a path or a file location, and a bare figure is never the token that changes. Returns the text and the sizes
     of the compacted groups (for the tests and the fidelity counter).
@@ -3655,7 +3658,9 @@ def compact_repeated_lines(text: str) -> tuple[str, list[int]]:
     if not blocks:
         return text, []
     dropped = {index for block in blocks for index in block[LINT_REPEAT_KEEP:]}
-    markers = {block[LINT_REPEAT_KEEP - 1]: len(block) - LINT_REPEAT_KEEP for block in blocks}
+    # The marker gives both figures, counted here: how many more and how many in all. With only N
+    # (first round of B2d-4) the model of A12 counted the lines it saw ("6 instances") instead.
+    markers = {block[LINT_REPEAT_KEEP - 1]: len(block) for block in blocks}
     out: list[str] = []
     for index, line in enumerate(lines):
         if index in dropped:
@@ -3663,7 +3668,9 @@ def compact_repeated_lines(text: str) -> tuple[str, list[int]]:
         out.append(line)
         if index in markers:
             indent = line[: len(line) - len(line.lstrip())]
-            out.append(f"{indent}… y {markers[index]} líneas más como las anteriores")
+            size = markers[index]
+            more = size - LINT_REPEAT_KEEP
+            out.append(f"{indent}… y {more} líneas más como las anteriores ({size} en total)")
     tail = "\n" if text.endswith("\n") else ""
     return "\n".join(out) + tail, sorted(len(block) for block in blocks)
 

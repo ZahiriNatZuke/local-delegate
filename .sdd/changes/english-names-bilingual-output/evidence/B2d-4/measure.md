@@ -60,3 +60,35 @@ Para tener una base del mismo día, el paso 1b de `main` (`5a5a7c0`) se re-midi�
 sesión con el mismo método (instalado desde `D:/Projects/ld-wt-b2d4-main`; tag `main-remeasure`,
 carpeta `runs/main-remeasure/`). No cambia el criterio fijado arriba; se anota al lado.
 Resultado y veredicto: `live.md`.
+
+## Segunda ronda (fijada el 2026-10-17, ANTES de medir)
+
+Decisión del usuario (`../../plan.md`, B2d-4, «Segunda ronda»): el marcador lleva también el total
+del bloque («… y N líneas más como las anteriores (M en total)») y `_lint_count_clause()` vuelve a
+la regla del 1b. Mismo método de arriba (conjunto 3, tandas A y B, 3 repeticiones, ventanas de
+prueba), con **las dos versiones medidas en la misma sesión**, una detrás de otra:
+
+| Versión | Commit | Instalada desde | Tag / carpeta |
+|---|---|---|---|
+| `main` (1b) | `5a5a7c0` | árbol aparte `D:/Projects/ld-wt-b2d4-main` (se borra al acabar) | `runs/round2-main/` |
+| nueva (2.ª ronda) | el commit del cambio en `sdd/english-names-b2d-4` | la rama | `runs/round2-new/` |
+
+Pasos: para cada versión, `b2d4-measure.ps1 -Step stop`, instalar desde la tool Bash
+(`bash ~/.claude/scripts/pesado.sh uv tool install --force --reinstall --no-cache ".[llamaswap]"`
+en su carpeta), `-Step A -Tag <tag>` y `-Step B -Tag <tag>`. Al final, `-Step restore` (huella
+`c96f022a…`) y el daemon con el código final de la rama.
+
+Recuento: `score_live.py answers` sobre cada carpeta con el contador **nuevo** (el que reconoce
+los tests por fichero de pytest; validado en `counter-validation.md`) y también con el **viejo**
+(`score_lint_fidelity_before.py`); `check_controls.py` para los controles; `score_live.py log`
+sobre el log de uso, con el intervalo de las ventanas de cada versión, para las cortadas.
+
+### Criterio de hecho de la segunda ronda
+
+- **Cortadas:** 0 de 30 en la versión nueva.
+- **Fidelidad:** `fidelity_total_mean` de la nueva **no peor que la de `main` de esta sesión**
+  (contador nuevo; se anota también con el viejo) y ≤ 11,67.
+- **Paréntesis:** `parenthesized_invented` = 0 en las 3 repeticiones.
+- **Control:** `cases_kept` ⊇ A15, B31 y B32.
+
+Si no cumple, no se adopta: se conserva la evidencia y se anota el veredicto en `live.md`.

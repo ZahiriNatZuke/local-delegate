@@ -1648,12 +1648,31 @@ B2d-3** y saldría en la 0.36.0, así que no va al backlog.
   (media 5,33, también > 4,0), B32 1/3 y otra vez **3 cortadas** (B35). Siguiente candidato
   propuesto en `live.md`: el marcador con el total del bloque, sin la frase nueva en la regla, y
   medir contra el 1b re-medido el mismo día revisando el umbral de 4,0.
+- **Segunda ronda (decisión del usuario, 2026-10-17, ANTES de medir):**
+  1. *Cambio:* el marcador lleva también el total del bloque, «… y 8 líneas más como las
+     anteriores (11 en total)», las dos cifras contadas por el programa; y **se quita la frase
+     nueva** de `_lint_count_clause()`, que vuelve a ser la regla del 1b palabra por palabra (el
+     marcador ya es «una cifra que el contenido escribe»).
+  2. *Criterio, cambiado:* el «≤ 4,0» fijo se sustituye por **«media no peor que la de `main`
+     medida en la misma sesión con el mismo método»**. Motivo: el 3,67 del 1b salió de una sola
+     sesión, y el propio `main` (1b) re-medido hoy da 5,33 (> 4,0); la variación entre sesiones es
+     del tamaño del margen, así que un umbral fijo mide la sesión y no el cambio. Lo demás se
+     mantiene: **0 cortadas en 30**, media ≤ 11,67, `parenthesized_invented` = 0 en las 3
+     repeticiones y controles ⊇ A15, B31 y B32.
+  3. *Contador:* `scripts/score_lint_fidelity.py` reconoce como cifras del log los tests
+     distintos por fichero de un log de pytest (B31 nombra cada test dos veces: los «41» y «16»
+     reales contaban como inventados). Validado contra revisión a mano antes de aplicarlo:
+     `evidence/B2d-4/counter-validation.md`. Se reportan las cifras con los dos contadores.
+  4. *Medición:* en la misma sesión, `main` (árbol aparte) y la versión nueva, tandas A y B,
+     `--repeat 3`, tags nuevos (`round2-main`, `round2-new`). Método: `evidence/B2d-4/measure.md`,
+     sección «Segunda ronda».
 - *Test:* con un log sintético de decenas de elementos con el mismo problema; mutante que quita la
   regla y comprobar qué assert salta. Si N lo calcula el programa, test de N contra el log.
 - *Medición:* el método de B2d-3 (`evidence/B2d-3/measure.md`: tandas A y B, 3 repeticiones,
   ventanas de prueba). *Hecho cuando* tiene **0 cortadas en 30** y además cumple los tres criterios
-  del 1b contra la base (media ≤ 11,67 y ≤ 4,0, `parenthesized_invented` = 0, controles ⊇ A15, B31 y
-  B32).
+  del 1b contra la base (media ≤ 11,67 y, desde la segunda ronda del 2026-10-17, **no peor que la
+  de `main` medida en la misma sesión** en lugar de ≤ 4,0; `parenthesized_invented` = 0, controles
+  ⊇ A15, B31 y B32).
 - **Cierre del lote:** suite en `es` y en `en`, `ruff`, corpus y afinidad, CHANGELOG, y registro en
   `waves/B2d-4.md` con las llamadas `local_*`.
 

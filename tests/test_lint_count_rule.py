@@ -223,13 +223,16 @@ def test_the_control_reads_the_repetitions_of_a_version(tmp_path):
 
 # --- B2d-4: a dense block of lines with the same problem is compacted by the program -----------
 
-#: The sentence of the count rule that tells the model what to do with the compacted block.
-RULE_MORE = (
-    " Si el contenido dice «… y N líneas más como las anteriores», nombra solo los elementos que "
-    "aparecen y escribe «y N más» con ese mismo número: no añadas los que no aparecen."
-)
+#: The first round of B2d-4 had a sentence of its own in the count rule about the marker; the
+#: second round takes it out (the model of A12 counted the lines it saw instead of copying N).
+MARKER_WORDS = "líneas más como las anteriores"
 #: How many equal items the synthetic log carries (B35 had 45 and 40).
 MANY = 60
+
+
+def _marker(more: int, size: int) -> str:
+    """The marker of a compacted block, with the two figures the program counts."""
+    return f"… y {more} {MARKER_WORDS} ({size} en total)"
 
 
 def _many_equal_items(copies: int = MANY) -> tuple[str, list[str]]:
@@ -245,25 +248,27 @@ def _many_equal_items(copies: int = MANY) -> tuple[str, list[str]]:
 def test_many_equal_items_reach_the_model_compacted(monkeypatch, captured, product, output):
     """B35 was cut by `max_tokens` in the 3 repetitions of step 1b: the model named the 80-odd
     `commit-…` items one by one. Mutant "`local_lint_summary` without `compact_repeated_lines`":
-    fails at the first assert (the marker with the program's N is not in the prompt sent)."""
+    fails at the first assert (the marker with the program's N is not in the prompt sent). Mutant
+    "the marker without the total": the same assert fails (the `(60 en total)` is missing)."""
     _languages(monkeypatch, product, output)
     log, names = _many_equal_items()
     server.local_lint_summary(text=log)
     (call,) = captured
     more = MANY - server.LINT_REPEAT_KEEP
-    assert f"… y {more} líneas más como las anteriores" in call["user"], call["user"][-400:]
+    assert _marker(more, MANY) in call["user"], call["user"][-400:]
     kept = [name for name in names if f"{name}:" in call["user"]]
     assert kept == names[: server.LINT_REPEAT_KEEP]  # the first ones, in their place
     assert "idioma del corpus: es" in call["user"] and call["user"].rstrip().endswith("ok")
-    assert RULE_MORE in call["system"], call["system"][-700:]
+    assert MARKER_WORDS not in call["system"], call["system"][-700:]
     _assert_count_rule(call["system"])
 
 
 @pytest.mark.parametrize(("product", "output"), BATCHES)
-def test_the_more_rule_is_in_every_step_of_the_chunking(monkeypatch, captured, product, output):
-    """The block is compacted before the size check, and the sentence that says what to do with
-    it also goes in `reduce_extra`. Mutant "the sentence out of `_lint_count_clause`": fails at
-    `RULE_MORE` in the first step; the marker still reaches a map step."""
+def test_the_marker_reaches_a_step_of_the_chunking(monkeypatch, captured, product, output):
+    """The block is compacted before the size check, so the marker with both figures reaches a
+    map step, and every step keeps the count rule of step 1b and nothing about the marker.
+    Mutant "the sentence of the first round back in `_lint_count_clause`": fails at
+    `MARKER_WORDS not in` in the first step."""
     _languages(monkeypatch, product, output)
     monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "mechanical", 1200)
     monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 1200)
@@ -272,15 +277,20 @@ def test_the_more_rule_is_in_every_step_of_the_chunking(monkeypatch, captured, p
     assert len(captured) > 2  # guard: it really chunked
     assert "Resume la siguiente salida" not in captured[-1]["user"]  # guard: the last one reduces
     for step in captured:
-        assert RULE_MORE in step["system"], step["system"][-700:]
+        assert MARKER_WORDS not in step["system"], step["system"][-700:]
+        assert RULE_TOTAL_LINE in step["system"], step["system"][-700:]
+        _assert_count_rule(step["system"])
     more = MANY - server.LINT_REPEAT_KEEP
-    assert any(f"… y {more} líneas más" in step["user"] for step in captured[:-1])
+    assert any(_marker(more, MANY) in step["user"] for step in captured[:-1])
 
 
-def test_the_more_rule_gives_the_model_no_figure_to_copy():
-    """The sentence names N with a letter: the whole clause still carries no digit."""
-    assert RULE_MORE in server._lint_count_clause()
-    assert not any(ch.isdigit() for ch in server._lint_count_clause())
+def test_the_count_rule_is_the_one_of_step_1b():
+    """Second round of B2d-4: the count rule goes back to step 1b, word for word (the marker is a
+    count the content writes). Mutant "the sentence of the first round back": the `==` fails."""
+    assert server._lint_count_clause() == RULE_SOURCE + (
+        " la que el contenido escribe (una línea de total o un recuento) o la que cuentas tú con "
+        "las líneas que el contenido repite. " + RULE_NO_NUMBER + RULE_TOTAL_LINE
+    )
 
 
 EVIDENCE = (
@@ -303,8 +313,8 @@ def test_n_is_counted_from_the_log_of_b35():
     compacted, groups = server.compact_repeated_lines(log)
     assert groups == sorted([system_lines, max_tokens_lines])
     keep = server.LINT_REPEAT_KEEP
-    assert f"… y {system_lines - keep} líneas más como las anteriores" in compacted
-    assert f"… y {max_tokens_lines - keep} líneas más como las anteriores" in compacted
+    assert _marker(system_lines - keep, system_lines) in compacted
+    assert _marker(max_tokens_lines - keep, max_tokens_lines) in compacted
     assert len(compacted.splitlines()) == len(log.splitlines()) - (85 - 2 * keep) + 2
     # The lines out of the blocks stay, in order.
     assert compacted.splitlines()[0] == log.splitlines()[0]
@@ -351,3 +361,6 @@ def test_the_fidelity_counter_allows_the_programs_n_and_no_other():
     assert scorer.count_inventions(f"item-aa, item-ab, item-ac y {more} más.", log)["total"] == 0
     assert scorer.count_inventions(f"Los {MANY} elementos fallan igual.", log)["total"] == 0
     assert scorer.count_inventions(f"item-aa y {more + 4} más.", log)["total"] == 1
+    assert (
+        scorer.count_inventions(f"item-aa y {more} más ({MANY + 1} en total).", log)["total"] == 1
+    )

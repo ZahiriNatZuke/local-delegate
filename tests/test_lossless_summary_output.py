@@ -395,6 +395,36 @@ def test_the_same_bullet_under_two_file_headings_is_not_a_repetition():
     assert len(fidelity.count_inventions(block, TWO_BY_TWO)["repeated_sentences"]) == 1
 
 
+#: A pytest `-rA` log: each test named twice (progress line and short summary), 3 + 2 tests.
+PYTEST_RA = (
+    "tests/test_a.py::test_alpha PASSED [ 20%]\n"
+    "tests/test_a.py::test_beta[x-1] PASSED [ 40%]\n"
+    "tests/test_a.py::test_beta[y-2] PASSED [ 60%]\n"
+    "tests/test_b.py::test_gamma PASSED [ 80%]\n"
+    "tests/test_b.py::test_delta PASSED [100%]\n"
+    "PASSED tests/test_a.py::test_alpha\n"
+    "PASSED tests/test_a.py::test_beta[x-1]\n"
+    "PASSED tests/test_a.py::test_beta[y-2]\n"
+    "PASSED tests/test_b.py::test_gamma\n"
+    "PASSED tests/test_b.py::test_delta\n"
+    "==== 5 passed in 0.10s ====\n"
+)
+
+
+def test_the_tests_per_file_of_a_pytest_log_are_supported():
+    """B2d-4, answer B31: "41" and "16" tests per file were real (they add up to the 57 of the
+    total) and counted as invented, because the log names each test twice (82 and 32 lines).
+    Mutant "without `PYTEST_NODE`" (the `nodes` block out of `log_facts`): the first `== []`
+    gets ["3"]. Control: a count that is neither per file nor the total still counts."""
+    fidelity = _load_script("score_lint_fidelity")
+    answer = "**tests/test_a.py**: 3 passed.\n**tests/test_b.py**: 2 passed.\n5 passed in 0.10s"
+    assert fidelity.count_inventions(answer, PYTEST_RA)["invented_numbers"] == []
+    assert fidelity.count_inventions("tests/test_a.py: 8 passed.", PYTEST_RA)[
+        "invented_numbers"
+    ] == ["8"]
+    assert fidelity.count_inventions("7 tests in all.", PYTEST_RA)["invented_numbers"] == ["7"]
+
+
 def test_the_frozen_set_is_scored_against_unchanged_logs(tmp_path):
     fidelity = _load_script("score_lint_fidelity")
     log = tmp_path / "ruff.txt"

@@ -60,6 +60,8 @@ FILE = re.compile(
 )
 #: A rule or error code (`E501`, `TS2345`, `PLR2004`) or a kebab/slash rule name.
 CODE = re.compile(r"\b[A-Z]{1,5}\d{2,5}\b|\b[a-z]+(?:[/-][a-z]+){1,4}\b")
+#: A pytest node id (`tests/test_x.py::test_name[param]`): its file and the rest of the id.
+PYTEST_NODE = re.compile(r"((?:[\w.~-]+[/\\])*[\w.-]+\.py)::(\S+)")
 #: A status mark of a report (`[ OK ]`, `[WARN]`, `[FALT]`, `[ -- ]`).
 STATUS = re.compile(r"\[[^\]\n]{1,6}\]")
 SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
@@ -111,8 +113,10 @@ def log_facts(log: str) -> dict:
     A summary that says "3 E501" over a log with three E501 lines is faithful even though "3" is
     not written in the log, so the counts the log supports are allowed too: occurrences of each
     file, code and status mark, lines that name a file, distinct files and codes, non-empty
-    lines, and the size of each block that `local_lint_summary` compacts and its "N more"
-    (B2d-4). `extra_allowed_numbers` in the frozen set is for what a person reviews by hand.
+    lines, the size of each block that `local_lint_summary` compacts and its "N more"
+    (B2d-4), and the number of distinct pytest tests of each file and in all (B2d-4: a `-rA` log
+    names each test twice, so "41 tests in test_chunking.py" is not the count of its lines).
+    `extra_allowed_numbers` in the frozen set is for what a person reviews by hand.
     """
     numbers = {_norm_number(n) for n in NUMBER.findall(log)}
     # A number word of the log writes its figure too, also inside a name (`resume-ruff-tres-reglas`
@@ -130,6 +134,10 @@ def log_facts(log: str) -> dict:
     # program from this same log (`tests/test_lint_count_rule.py` checks them against the log).
     for size in compact_repeated_lines(log)[1]:
         derived |= {size, size - LINT_REPEAT_KEEP}
+    # B2d-4: tests per file of a pytest log, each test once however many times the log names it.
+    nodes = {(_norm_path(f), test) for f, test in PYTEST_NODE.findall(log)}
+    if nodes:
+        derived |= set(Counter(f for f, _test in nodes).values()) | {len(nodes)}
     return {
         "numbers": sorted(numbers),
         "derived_counts": sorted(derived),
