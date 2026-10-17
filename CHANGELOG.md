@@ -50,8 +50,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   paso final del troceado.
 - **`local_lint_summary` ya no se corta con logs de muchos elementos iguales.** Un bloque seguido de
   10 o más líneas iguales salvo un nombre llega al modelo con sus 3 primeras líneas y «… y N líneas
-  más como las anteriores», con N contado por el programa; el resumen nombra los que ve y escribe
-  «y N más». Antes, un log de 89 líneas con más de 80 elementos con el mismo aviso agotaba el tope
+  más como las anteriores (M en total)», con las dos cifras contadas por el programa, que el
+  resumen copia como cualquier otra cifra del log. Antes, un log de 89 líneas con más de 80 elementos con el mismo aviso agotaba el tope
   de salida enumerándolos uno a uno. Las líneas con ruta o posición de fichero nunca se agrupan: un
   log de lint por fichero llega entero.
 

@@ -1666,6 +1666,16 @@ B2d-3** y saldría en la 0.36.0, así que no va al backlog.
   4. *Medición:* en la misma sesión, `main` (árbol aparte) y la versión nueva, tandas A y B,
      `--repeat 3`, tags nuevos (`round2-main`, `round2-new`). Método: `evidence/B2d-4/measure.md`,
      sección «Segunda ronda».
+- **Resultado de la segunda ronda (2026-10-17, `6408477`; `evidence/B2d-4/live.md`, «Segunda
+  ronda»):** nueva: **0 cortadas de 30**, `fidelity_totals` 11, 6, 7 (media **8,0**; contador
+  viejo 10,0), `parenthesized_invented` 0, 0, 0, controles A14, A15, B31 y B32 3/3. `main` en la
+  misma sesión: 6, 6, 5 (media **5,67**; viejo 6,33), **2 cortadas** (B35), B32 2/3. **No cumple
+  «no peor que `main`»: no se adopta** (los commits quedan en la rama a la espera del usuario).
+  Dentro: 8 de las 10 llamadas mandan el mismo prompt en las dos versiones, y en ellas la nueva
+  suma 22 y `main` 13 (A13 sola: 16 frente a 6), ruido mayor que toda la diferencia; en las 2 que
+  el cambio toca (A12, B35), nueva 2 (un falso positivo del contador) y `main` 4 más 2 cortes.
+  Propuesta en `live.md`: criterio sobre las llamadas cuyo prompt cambia, con las demás como
+  control de ruido, o más repeticiones.
 - *Test:* con un log sintético de decenas de elementos con el mismo problema; mutante que quita la
   regla y comprobar qué assert salta. Si N lo calcula el programa, test de N contra el log.
 - *Medición:* el método de B2d-3 (`evidence/B2d-3/measure.md`: tandas A y B, 3 repeticiones,

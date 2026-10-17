@@ -1,0 +1,33 @@
+**Resumen de problemas**
+
+**resume-ruff-tres-reglas**
+*   **Cambio en el sistema**: El sistema cambió con los prompts de la versión 0.36.0.
+
+**resume-ruff-docstrings**
+*   **Cambio en el sistema**: El sistema cambió con los prompts de la versión 0.36.0.
+
+**resume-ruff-un-solo-archivo**
+*   **Cambio en el sistema**: El sistema cambió con los prompts de la versión 0.36.0.
+
+**resume-ruff-cinco-reglas**
+*   **Cambio en el sistema**: El sistema cambió con los prompts de la versión 0.36.0.
+
+**commit-diff-19k**
+*   **Cambio en max_tokens**: El valor de max_tokens cambió con los prompts de la versión 0.36.0.
+*   **Cambio en el sistema**: El sistema cambió con los prompts de la versión 0.36.0.
+
+**Varios commits (9eb197b, c2312cd, 64311f5, 2c602eb, e34c102, 4ef1ba0, ad79697, 8b061ec, 71f2a41, e428c07, b2545e9, a4502a7, 8610c74, eb35363, daddf39, f7c8d6e, 11c65b5, 67eb74a, 4e9035a, 1dd97a3, 56f588d, bcbe39f, 53c9dcb, e7deb0d, ccddeea, 2fbfe93, 6a7959e, 67e585f, 4aa2141)**
+*   **Cambio en max_tokens**: El valor de max_tokens cambió con los prompts de la versión 0.36.0.
+*   **Cambio en el sistema**: El sistema cambió con los prompts de la versión 0.36.0.
+
+**Commits trampa (1314b0b, 4f41311, 3b20fb3, 6d442e7, b04a5e2, 7d0f4ac, 9d2c242, fa08d64, 6710a6b)**
+*   **Cambio en max_tokens**: El valor de max_tokens cambió con los prompts de la versión 0.36.0.
+*   **Cambio en el sistema**: El sistema cambió con los prompts de la versión 0.36.0.
+
+**techo-commit-156k**
+*   **Cambio en max_tokens**: El valor de max_tokens cambió con los prompts de la versión 0.36.0.
+*   **Cambio en el sistema**: El sistema cambió con los prompts de la versión 0.36.0
+
+[local-delegate warning: output truncated by max_tokens]
+
+(read server-side: 7699 chars ≈ 4009 Claude tokens that did not enter your context)

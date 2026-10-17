@@ -1,0 +1,12 @@
+**Resumen de Problemas:**
+
+**scripts\clean_watcher_fixtures.py:**
+
+*   **Errores:** 4 (E501: Línea demasiado larga, D103: Falta documentación en función pública)
+*   **Advertencias:** 2 (Incompatibilidad de reglas D203 y D211, Incompatibilidad de reglas D212 y D213)
+*   **Otros:** 1 (CPY001: Falta aviso de copyright)
+*   **Reglas:** E501, D103, T201, D203, D211, D212, D213, CPY001.
+
+**Total de errores:** 4.
+
+(read server-side: 958 chars ≈ 498 Claude tokens that did not enter your context)

@@ -1,0 +1,21 @@
+**Summary of Issues by File**
+
+The provided output indicates several issues related to a system change involving prompt updates from version 0.36.0, affecting multiple files.
+
+**scripts/build_corpus.py:**
+-   `lint`: 9000 issues related to the system change with prompts.
+-   `max_tokens`: 1 issue concerning the `max_tokens` change with prompts.
+
+**Other Files:**
+-   `resumen-md-2k`, `resumen-md-10k`, `resumen-changelog-7k`: 3 issues related to the system change with prompts.
+-   `commit-diff-19k`: 2 issues related to the system change with prompts.
+-   `explain-metrics-15k`: 1 issue related to the system change with prompts.
+-   `explain-install-20k`: 1 issue related to the system change with prompts.
+-   `describir-dashboard`: 1 issue related to the system change with prompts.
+-   `leer-cifras-dashboard`: 1 issue related to the system change with prompts.
+-   `techo-resumen-103k`: 1 issue related to the system change with prompts.
+-   `techo-commit-156k`: 2 issues related to the system change with prompts.
+
+The primary concern appears to be the widespread impact of the prompt update across various files and associated checks.
+
+(leído server-side: 1231 chars ≈ 641 tokens de Claude que no entraron a tu contexto)

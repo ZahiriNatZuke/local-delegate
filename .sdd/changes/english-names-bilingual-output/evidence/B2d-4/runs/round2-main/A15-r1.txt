@@ -1,0 +1,17 @@
+**Summary of Issues**
+
+**scripts\build_site.py:**
+
+*   **CPY001:** Missing copyright notice at the top of the file (1 issue).
+*   **D103:** Missing docstring in public function (2 issues).
+*   **T201:** `print` found (6 issues).
+*   **COM812:** Trailing comma missing (1 issue).
+
+**Warnings:**
+
+*   `incorrect-blank-line-before-class` (D203) and `blank-line-before-class` (D211) are incompatible. (1 warning, ignored).
+*   `multi-line-summary-first-line` (D212) and `multi-line-summary-second-line` (D213) are incompatible. (1 warning, ignored).
+
+**Total Errors:** 10.
+
+(leído server-side: 968 chars ≈ 504 tokens de Claude que no entraron a tu contexto)

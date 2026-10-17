@@ -1,0 +1,68 @@
+**Local Delegate Doctor Summary**
+
+**File: LLAMASWAP_EXE**
+
+*   No errors found.
+
+**File: LLAMASWAP_CONFIG**
+
+*   No errors found.
+
+**File: Backend**
+
+*   No errors found.
+
+**File: HOME**
+
+*   No errors found.
+
+**File: Idioma**
+
+*   No errors found.
+
+**File: Respuesta**
+
+*   No errors found.
+
+**File: Estados**
+
+*   Warnings: 1 (LD\_HOOK\_READ\_BLOQUEAR is obsolete, needs renaming to LD\_HOOK\_READ\_BLOCK).
+*   Missing: 0.
+
+**File: Entorno (CLI and Clients)**
+
+*   No errors found.
+
+**File: Cadenas de respaldo**
+
+*   No errors found.
+
+**File: Coste y relleno**
+
+*   No errors found.
+
+**File: Ventanas de prueba**
+
+*   No errors found.
+
+**File: Andamiaje (Hooks, Skill, Memoria y MCP)**
+
+*   Hooks: 0 (Claude Code not installed).
+*   Hooks: 0 (Claude Code not installed).
+*   Hooks: 0 (Claude Code not installed).
+*   Skill: 0 (Claude Code client not installed, opencode client not installed).
+*   Memoria: 0 (Claude Code client not installed, Codex client not installed, opencode client not installed).
+*   MCP: 0 (Claude Code client not installed, Codex client not installed, opencode client not installed).
+
+**File: Servicios**
+
+*   Daemon: 1 (local-delegate 0.35.0).
+*   Backend: 1 (http://127.0.0.1:9292/v1/models responds).
+
+**File: Versiones**
+
+*   llama-swap: 1 (tested).
+*   llama-server: 1 (tested).
+*   Warning: 1 (affinity configuration not using specified cells).
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

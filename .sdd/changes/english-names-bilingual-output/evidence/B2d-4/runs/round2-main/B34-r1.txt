@@ -1,0 +1,5 @@
+Resumen de Problemas:
+
+El análisis revela errores relacionados con la localización de archivos de modelo. Se identificaron problemas con los siguientes modelos: gemma3-4b, gemma4-26b-a4b, qwen36-35b-a3b, qwen35-2b y gemma4-12b.  Cada uno de estos modelos presenta un error de tipo “archivo no encontrado”, específicamente, el archivo correspondiente no se encuentra en la ruta especificada (MODELOS\… .gguf).  El grupo ‘resident’ tiene un consumo total de 0,00 GiB y el grupo ‘swap’ también 0,00 GiB.  No se pudo estimar la VRAM disponible.  El peor caso registrado es de 0,00 GiB.
+
+(read server-side: 727 chars ≈ 378 Claude tokens that did not enter your context)

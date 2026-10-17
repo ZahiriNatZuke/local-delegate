@@ -1,0 +1,38 @@
+{
+  "A-r1": {
+    "started": "2026-10-17T22:50:08Z",
+    "finished": "2026-10-17T22:50:57Z",
+    "calls": 5,
+    "errors": 0
+  },
+  "A-r2": {
+    "started": "2026-10-17T22:50:57Z",
+    "finished": "2026-10-17T22:51:37Z",
+    "calls": 5,
+    "errors": 0
+  },
+  "A-r3": {
+    "started": "2026-10-17T22:51:37Z",
+    "finished": "2026-10-17T22:52:19Z",
+    "calls": 5,
+    "errors": 0
+  },
+  "B-r1": {
+    "started": "2026-10-17T22:52:40Z",
+    "finished": "2026-10-17T22:53:36Z",
+    "calls": 5,
+    "errors": 0
+  },
+  "B-r2": {
+    "started": "2026-10-17T22:53:36Z",
+    "finished": "2026-10-17T22:54:23Z",
+    "calls": 5,
+    "errors": 0
+  },
+  "B-r3": {
+    "started": "2026-10-17T22:54:23Z",
+    "finished": "2026-10-17T22:55:11Z",
+    "calls": 5,
+    "errors": 0
+  }
+}
