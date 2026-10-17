@@ -1,0 +1,18 @@
+Here's a summary of the issues grouped by file, with relevant details:
+
+**Model Loading Errors**
+
+*   **gemma3-4b:** ERROR (file not found: MODELOS\gemma-3-4b-it-Q4\_K\_M.gguf)
+*   **llama31-8b:** ERROR (file not found: MODELOS\Meta-Llama-3.1-8B-Instruct-Q4\_K\_M.gguf)
+*   **qwen25-coder-14b:** ERROR (file not found: MODELOS\Qwen2.5-Coder-14B-Instruct-Q4\_K\_M.gguf)
+*   **qwen35-2b:** ERROR (file not found: MODELOS\Qwen3.5-2B-UD-Q8\_K\_XL.gguf)
+*   **qwen3-vl-8b:** ERROR (file not found: MODELOS\Qwen3VL-8B-Instruct-Q4\_K\_M.gguf)
+
+**VRAM Allocation**
+
+*   **resident group:** 0.00 GiB
+*   **swap group:** 0.00 GiB
+
+**Total Worst Case (VRAM):** 0.00 GiB
+
+(leído server-side: 743 chars ≈ 386 tokens de Claude que no entraron a tu contexto)

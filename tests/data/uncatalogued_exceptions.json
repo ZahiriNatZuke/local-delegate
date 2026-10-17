@@ -606,6 +606,12 @@
     },
     {
       "file": "src/local_delegate/server.py",
+      "text": "{}… y {} líneas más como las anteriores ({} en total)",
+      "kind": "verbatim",
+      "reason": "entrada del modelo local, no texto de interfaz: la línea con la que `compact_repeated_lines` (B2d-4) sustituye un bloque de líneas con el mismo problema en el log que recibe `local_lint_summary`, con las dos cifras contadas por el programa"
+    },
+    {
+      "file": "src/local_delegate/server.py",
       "text": " y {} más",
       "kind": "verbatim",
       "reason": "prompt del modelo local: entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen). B2c: cuerpo obligatorio del commit y troceado de `local_explain_code`/`local_extract`"

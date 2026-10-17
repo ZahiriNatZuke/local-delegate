@@ -1,0 +1,12 @@
+**Local Delegate Doctor Summary**
+
+**File Issues:**
+
+*   **Warnings:** 2 (LD\_HOOK\_READ\_BLOQUEAR is deprecated: use LD\_HOOK\_READ\_BLOCK - to be fixed)
+*   **Missing:** 1 (Residency of llama-swap: no resident (recommended))
+
+**Key Findings:**
+
+The local delegate doctor identified two warnings and one missing element. The primary warning relates to an obsolete hook name, requiring renaming for future versions. Additionally, the residency of the llama-swap model is not configured, which is recommended. The backend is operational, and the daemon is running. Claude Code and Codex clients are not installed, impacting some checks related to MCP (Multi-Client Protocol) functionality. There are several MCP clients observed, but no Claude Desktop configuration is present. The versions of llama-swap and llama-server are confirmed.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

@@ -1622,12 +1622,73 @@ B2d-3** y saldría en la 0.36.0, así que no va al backlog.
 - **Cambio candidato (se decide antes de medir):** limitar cuántos elementos iguales se nombran
   («… y N más», con N contado del log, no por el modelo), o resumir por tipo de problema sin listar
   los elementos. El tope de lint no se toca (regla de B2d-2/B2d-3).
+- **Decisión (2026-10-17, ANTES de medir): compactado por programa, no regla de prompt.**
+  `local_lint_summary` pasa el log por `server.compact_repeated_lines()` antes de decidir si trocea:
+  un bloque denso (miembros a ≤ 3 líneas uno de otro) de **10 o más** líneas iguales salvo **un**
+  token se queda con sus 3 primeras líneas en su sitio y una línea «… y N líneas más como las
+  anteriores», con N contado por el programa. Nunca agrupan una línea con ruta o posición de
+  fichero (un log de lint por fichero llega entero), una línea de menos de 3 tokens ni un token que
+  sea solo una cifra. La regla de la cantidad (`_lint_count_clause()`, también en `reduce_extra`)
+  añade una frase: nombrar solo los que aparecen y escribir «y N más» con ese número. Por qué: el
+  1c demostró que una orden de agrupar no basta (el modelo la obedece a medias); si el modelo no ve
+  los 80 elementos, no los puede enumerar, y N no depende de que cuente bien. En el conjunto 3 solo
+  compacta B35 (45 y 40 → 3 + marcador cada bloque; 89 → 12 líneas) y A12 (11 → 3 + marcador);
+  A11, A13–A15 y B31–B34 llegan intactos. `scripts/score_lint_fidelity.py` acepta como cifra del
+  log el tamaño de cada bloque compactado y su N (los cuenta el programa del mismo log; el test
+  los comprueba contra una cuenta propia), y la base y el 1b se **re-cuentan** con ese mismo
+  contador antes de comparar. Medición: `evidence/B2d-4/measure.md`.
+- **Resultado (2026-10-17, `ea5b27a`; ventanas `w-20261017T221618Z` y `w-20261017T221834Z`;
+  `evidence/B2d-4/live.md`):** **0 cortadas de 30** (B35 ya no se corta), `parenthesized_invented`
+  0, 0, 0, controles A14, A15, B31 y B32 (3/3 cada uno), pero `fidelity_totals` 20, 5, 5 (media
+  **10,0**: > 4,0). **No cumple el criterio; no se adopta tal cual** (el commit queda en la rama a la
+  espera de la decisión del usuario). De los 30 puntos, 13 son un caso intacto (A13 r1, «0 issues»
+  ×13) y 6 son cifras reales que el contador no ve (B31: 41 y 16 tests por fichero); la regresión
+  propia del cambio es A12 (1, 2, 2: el modelo cuenta las líneas que ve). El 1b de `main`
+  re-medido en la misma sesión (ventanas `w-20261017T222234Z` y `w-20261017T222436Z`) da 5, 5, 6
+  (media 5,33, también > 4,0), B32 1/3 y otra vez **3 cortadas** (B35). Siguiente candidato
+  propuesto en `live.md`: el marcador con el total del bloque, sin la frase nueva en la regla, y
+  medir contra el 1b re-medido el mismo día revisando el umbral de 4,0.
+- **Segunda ronda (decisión del usuario, 2026-10-17, ANTES de medir):**
+  1. *Cambio:* el marcador lleva también el total del bloque, «… y 8 líneas más como las
+     anteriores (11 en total)», las dos cifras contadas por el programa; y **se quita la frase
+     nueva** de `_lint_count_clause()`, que vuelve a ser la regla del 1b palabra por palabra (el
+     marcador ya es «una cifra que el contenido escribe»).
+  2. *Criterio, cambiado:* el «≤ 4,0» fijo se sustituye por **«media no peor que la de `main`
+     medida en la misma sesión con el mismo método»**. Motivo: el 3,67 del 1b salió de una sola
+     sesión, y el propio `main` (1b) re-medido hoy da 5,33 (> 4,0); la variación entre sesiones es
+     del tamaño del margen, así que un umbral fijo mide la sesión y no el cambio. Lo demás se
+     mantiene: **0 cortadas en 30**, media ≤ 11,67, `parenthesized_invented` = 0 en las 3
+     repeticiones y controles ⊇ A15, B31 y B32.
+  3. *Contador:* `scripts/score_lint_fidelity.py` reconoce como cifras del log los tests
+     distintos por fichero de un log de pytest (B31 nombra cada test dos veces: los «41» y «16»
+     reales contaban como inventados). Validado contra revisión a mano antes de aplicarlo:
+     `evidence/B2d-4/counter-validation.md`. Se reportan las cifras con los dos contadores.
+  4. *Medición:* en la misma sesión, `main` (árbol aparte) y la versión nueva, tandas A y B,
+     `--repeat 3`, tags nuevos (`round2-main`, `round2-new`). Método: `evidence/B2d-4/measure.md`,
+     sección «Segunda ronda».
+- **Resultado de la segunda ronda (2026-10-17, `6408477`; `evidence/B2d-4/live.md`, «Segunda
+  ronda»):** nueva: **0 cortadas de 30**, `fidelity_totals` 11, 6, 7 (media **8,0**; contador
+  viejo 10,0), `parenthesized_invented` 0, 0, 0, controles A14, A15, B31 y B32 3/3. `main` en la
+  misma sesión: 6, 6, 5 (media **5,67**; viejo 6,33), **2 cortadas** (B35), B32 2/3. **No cumple
+  «no peor que `main`»: no se adopta** (los commits quedan en la rama a la espera del usuario).
+  Dentro: 8 de las 10 llamadas mandan el mismo prompt en las dos versiones, y en ellas la nueva
+  suma 22 y `main` 13 (A13 sola: 16 frente a 6), ruido mayor que toda la diferencia; en las 2 que
+  el cambio toca (A12, B35), nueva 2 (un falso positivo del contador) y `main` 4 más 2 cortes.
+  Propuesta en `live.md`: criterio sobre las llamadas cuyo prompt cambia, con las demás como
+  control de ruido, o más repeticiones.
+- **Decisión del usuario (2026-10-17): se adopta la segunda ronda (`6408477`).** Se le presentaron
+  tres salidas (fijar antes de medir un criterio sobre las llamadas cuyo prompt cambia y medir otra
+  vez, adoptar ya, o subir a `--repeat 10`) y eligió adoptar ya, con la evidencia actual: 0 cortes
+  frente a 2 de `main`, y mejor en las 2 llamadas que el cambio toca. Riesgo asumido y anotado: el
+  reparto «llamadas tocadas / no tocadas» se miró después de ver los números. Queda para B2e el
+  falso positivo del contador con el guion bajo escapado en Markdown (`build\_corpus.py`).
 - *Test:* con un log sintético de decenas de elementos con el mismo problema; mutante que quita la
   regla y comprobar qué assert salta. Si N lo calcula el programa, test de N contra el log.
 - *Medición:* el método de B2d-3 (`evidence/B2d-3/measure.md`: tandas A y B, 3 repeticiones,
   ventanas de prueba). *Hecho cuando* tiene **0 cortadas en 30** y además cumple los tres criterios
-  del 1b contra la base (media ≤ 11,67 y ≤ 4,0, `parenthesized_invented` = 0, controles ⊇ A15, B31 y
-  B32).
+  del 1b contra la base (media ≤ 11,67 y, desde la segunda ronda del 2026-10-17, **no peor que la
+  de `main` medida en la misma sesión** en lugar de ≤ 4,0; `parenthesized_invented` = 0, controles
+  ⊇ A15, B31 y B32).
 - **Cierre del lote:** suite en `es` y en `en`, `ruff`, corpus y afinidad, CHANGELOG, y registro en
   `waves/B2d-4.md` con las llamadas `local_*`.
 

@@ -1,0 +1,198 @@
+{
+  "rows": [
+    {
+      "answer": "B2d-4/runs/compact/B31-r1.txt",
+      "figure": "41",
+      "by_hand": "log",
+      "why": "41 tests distintos de test_chunking.py",
+      "before": "invented",
+      "before_agrees": false,
+      "after": "log",
+      "after_agrees": true
+    },
+    {
+      "answer": "B2d-4/runs/compact/B31-r1.txt",
+      "figure": "16",
+      "by_hand": "log",
+      "why": "16 tests distintos de test_density.py",
+      "before": "invented",
+      "before_agrees": false,
+      "after": "log",
+      "after_agrees": true
+    },
+    {
+      "answer": "B2d-3/runs/step1/B31-r1.txt",
+      "figure": "41",
+      "by_hand": "log",
+      "why": "ídem",
+      "before": "invented",
+      "before_agrees": false,
+      "after": "log",
+      "after_agrees": true
+    },
+    {
+      "answer": "B2d-3/runs/step1/B31-r1.txt",
+      "figure": "16",
+      "by_hand": "log",
+      "why": "ídem",
+      "before": "invented",
+      "before_agrees": false,
+      "after": "log",
+      "after_agrees": true
+    },
+    {
+      "answer": "B2d-3/runs/base/B31-r1.txt",
+      "figure": "44",
+      "by_hand": "invented",
+      "why": "test_chunking.py tiene 41",
+      "before": "invented",
+      "before_agrees": true,
+      "after": "invented",
+      "after_agrees": true
+    },
+    {
+      "answer": "B2d-3/runs/base/B31-r1.txt",
+      "figure": "13",
+      "by_hand": "invented",
+      "why": "test_density.py tiene 16",
+      "before": "invented",
+      "before_agrees": true,
+      "after": "invented",
+      "after_agrees": true
+    },
+    {
+      "answer": "B2d-4/runs/compact/B31-r2.txt",
+      "figure": "57",
+      "by_hand": "log",
+      "why": "línea de total «57 passed»",
+      "before": "log",
+      "before_agrees": true,
+      "after": "log",
+      "after_agrees": true
+    },
+    {
+      "answer": "B2d-4/runs/compact/A12-r2.txt",
+      "figure": "6",
+      "by_hand": "invented",
+      "why": "«6 instances»: 11 líneas system y 2 max_tokens",
+      "before": "invented",
+      "before_agrees": true,
+      "after": "invented",
+      "after_agrees": true
+    },
+    {
+      "answer": "B2d-3/runs/step1/A15-r1.txt",
+      "figure": "three",
+      "by_hand": "invented",
+      "why": "el log tiene 2 D103",
+      "before": "invented",
+      "before_agrees": true,
+      "after": "invented",
+      "after_agrees": true
+    },
+    {
+      "answer": "B2d-3/runs/step1/A15-r1.txt",
+      "figure": "36",
+      "by_hand": "log",
+      "why": "línea 36 del D103",
+      "before": "log",
+      "before_agrees": true,
+      "after": "log",
+      "after_agrees": true
+    },
+    {
+      "answer": "B2d-3/runs/step1/A15-r1.txt",
+      "figure": "nine",
+      "by_hand": "invented",
+      "why": "el log tiene 6 T201",
+      "before": "log",
+      "before_agrees": false,
+      "after": "log",
+      "after_agrees": false
+    },
+    {
+      "answer": "B2d-3/runs/base/B35-r1.txt",
+      "figure": "4",
+      "by_hand": "invented",
+      "why": "«Resumen de Ruff (4 errores)»: el log no lo da",
+      "before": "invented",
+      "before_agrees": true,
+      "after": "invented",
+      "after_agrees": true
+    },
+    {
+      "answer": "B2d-3/runs/base/B35-r1.txt",
+      "figure": "72",
+      "by_hand": "invented",
+      "why": "los bloques son de 45 y 40 (85 de 89 líneas)",
+      "before": "invented",
+      "before_agrees": true,
+      "after": "invented",
+      "after_agrees": true
+    },
+    {
+      "answer": "B2d-4/runs/main-remeasure/A12-r1.txt",
+      "figure": "19,000",
+      "by_hand": "invented",
+      "why": "«19,000 lines»: el log tiene 15",
+      "before": "invented",
+      "before_agrees": true,
+      "after": "invented",
+      "after_agrees": true
+    },
+    {
+      "answer": "B2d-4/runs/compact/A13-r1.txt",
+      "figure": "0",
+      "by_hand": "invented",
+      "why": "«0 issues»: el log no escribe ningún 0",
+      "before": "invented",
+      "before_agrees": true,
+      "after": "invented",
+      "after_agrees": true
+    },
+    {
+      "answer": "B2d-3/runs/step1/B33-r1.txt",
+      "figure": "52",
+      "by_hand": "log",
+      "why": "posición `login.page.ts(52,24)`",
+      "before": "invented",
+      "before_agrees": false,
+      "after": "invented",
+      "after_agrees": false
+    },
+    {
+      "answer": "B2d-3/runs/step1/B33-r1.txt",
+      "figure": "127",
+      "by_hand": "log",
+      "why": "posición `tech-stack.component.ts(127,5)`",
+      "before": "invented",
+      "before_agrees": false,
+      "after": "invented",
+      "after_agrees": false
+    },
+    {
+      "answer": "B2d-3/runs/step1/A13-r2.txt",
+      "figure": "255",
+      "by_hand": "log",
+      "why": "«llama-swap: v255»",
+      "before": "invented",
+      "before_agrees": false,
+      "after": "invented",
+      "after_agrees": false
+    }
+  ],
+  "summary": {
+    "before": {
+      "agree": 10,
+      "rows": 18,
+      "negative_control_still_invented": 8,
+      "negative_control_rows": 9
+    },
+    "after": {
+      "agree": 14,
+      "rows": 18,
+      "negative_control_still_invented": 8,
+      "negative_control_rows": 9
+    }
+  }
+}

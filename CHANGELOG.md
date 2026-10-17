@@ -48,6 +48,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   número. Y si el log trae una línea de total («Found 10 errors.», «57 passed»), el resumen la copia
   tal cual: con la primera regla, los resúmenes de `ruff` la perdían. Va en la llamada única y en el
   paso final del troceado.
+- **`local_lint_summary` ya no se corta con logs de muchos elementos iguales.** Un bloque seguido de
+  10 o más líneas iguales salvo un nombre llega al modelo con sus 3 primeras líneas y «… y N líneas
+  más como las anteriores (M en total)», con las dos cifras contadas por el programa, que el
+  resumen copia como cualquier otra cifra del log. Antes, un log de 89 líneas con más de 80 elementos con el mismo aviso agotaba el tope
+  de salida enumerándolos uno a uno. Las líneas con ruta o posición de fichero nunca se agrupan: un
+  log de lint por fichero llega entero.
 
 - **El resumen por secciones ya no duplica una sección cuando el modelo traduce su título.** La
   «Introducción» sintética sale en el idioma de respuesta (no en el del producto), y si el modelo

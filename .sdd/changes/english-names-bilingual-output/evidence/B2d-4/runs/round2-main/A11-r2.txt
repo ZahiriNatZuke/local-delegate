@@ -1,0 +1,5 @@
+**Summary of Errors by File**
+
+The analysis identified several errors related to model file locations. Specifically, there were errors for the following models: gemma3-4b, llama31-8b, qwen25-coder-14b, qwen35-2b, and qwen3-vl-8b. Each of these models encountered an error indicating that the corresponding file was not found. The errors are categorized within the 'resident' and 'swap' groups. The 'resident' group includes gemma3-4b, while the 'swap' group contains llama31-8b, qwen25-coder-14b, qwen35-2b, and qwen3-vl-8b.  All of these errors are categorized as ERROR and relate to file not found issues. The total VRAM usage across all models is 0.00 GiB in the worst-case scenario.
+
+(leído server-side: 743 chars ≈ 386 tokens de Claude que no entraron a tu contexto)

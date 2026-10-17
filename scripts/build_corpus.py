@@ -693,7 +693,9 @@ PROMPT_BOUNDARIES: dict[str, frozenset[str]] = {
     # `local_lint_summary` (`max_tokens` 2w+96 -> 3w+128 en la llamada unica y 2w+64 -> 3w+96 en
     # cada paso del troceado): con la orden endurecida gemma4 cortaba 3 de 4 respuestas en 496.
     # B2d-3: el `system` de `local_lint_summary` (y su reduce) pide la cantidad solo cuando el log
-    # la da o se cuenta con sus lineas: el modelo inventaba recuentos entre parentesis.
+    # la da o se cuenta con sus lineas: el modelo inventaba recuentos entre parentesis. B2d-4: el
+    # log llega con los bloques de lineas iguales compactados ("... y N lineas mas") y la regla
+    # dice que hacer con ese N: B35 se cortaba por `max_tokens` enumerando 80 elementos.
     "0.36.0": frozenset(
         {
             "local_summarize",

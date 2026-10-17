@@ -1,0 +1,23 @@
+**Local Delegate Doctor Summary**
+
+**File-Based Issue Breakdown:**
+
+*   **LLAMASWAP_EXE:** No errors found.
+*   **LLAMASWAP_CONFIG:** No errors found.
+*   **Backend:** No errors found.
+*   **Hooks:** 2 warnings: “LD\_HOOK\_READ\_BLOQUEAR” is deprecated and should be renamed to “LD\_HOOK\_READ\_BLOCK” (7 days old).
+*   **Memory:** 3 issues: Claude Code and Codex clients are not installed.
+*   **MCP:** No errors found.
+*   **Versions:** 1 warning: “Residencia de llama-swap” is not resident (recommended).
+
+**Error/Rule Counts:**
+
+*   **Warnings:** 2
+*   **Missing Clients:** 3 (Claude Code, Codex, opencode)
+*   **Deprecated Hook:** 1
+
+**Key Issues:**
+
+The primary concerns are the deprecated hook and the absence of the Claude Code, Codex, and opencode clients. Addressing the hook deprecation is recommended. Installing the missing client software is also advised to ensure full functionality.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

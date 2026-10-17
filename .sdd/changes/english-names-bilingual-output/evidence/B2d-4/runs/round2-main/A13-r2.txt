@@ -1,0 +1,27 @@
+**Local Delegate Doctor Summary**
+
+**File-Based Issue Breakdown:**
+
+*   **LLAMASWAP_EXE:** No issues found.
+*   **LLAMASWAP_CONFIG:** No issues found.
+*   **Backend:** No issues found.
+*   **Hooks:** 3 hooks are missing (Claude Code, opencode, and local-delegate).
+*   **MCP Clients:** 7 MCP clients are present, with no elicitation observed.
+*   **Strings:** Valid strings detected, no resident strings found.
+*   **Cost & Padding:** The last check matches the price table from 2026-10-06.
+*   **Test Windows:** 67 test windows, none open.
+*   **Local Delegation Skill:** Claude Code and opencode clients are not installed.
+*   **Memory:** Claude Code, Codex, and opencode clients are not installed.
+*   **MCP in Claude Code/Codex/opencode:** These clients are not installed.
+*   **Daemon:** Local-delegate 0.35.0 is running.
+*   **Backend Credentials/Tokens:** The backend requires credentials and tokens, but no MCP entries are present.
+*   **Claude Desktop:** Claude Desktop is not configured.
+*   **Versions:** llama-swap v255 and llama-server b10909 are tested.
+*   **Llama-Swap Affinity:** No base affinity is used, recommended to use benchmarks/affinity-2026-10.
+
+**Error/Rule Counts:**
+
+*   **Warnings:** 2 (LD\_HOOK\_READ\_BLOQUEAR obsolescence and affinity configuration)
+*   **Missing Hooks:** 3 (Claude Code, opencode, local-delegate)
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

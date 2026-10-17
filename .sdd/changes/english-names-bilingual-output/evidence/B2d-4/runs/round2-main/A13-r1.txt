@@ -1,0 +1,17 @@
+**Local Delegate Doctor Summary**
+
+**File-Based Issue Breakdown:**
+
+*   **LLAMASWAP_EXE:** No errors found.
+*   **LLAMASWAP_CONFIG:** No errors found.
+*   **Backend:** No errors found.
+*   **Hooks:** 3 warnings: LD\_HOOK\_READ\_BLOQUEAR is deprecated (needs renaming to LD\_HOOK\_READ\_BLOCK).  Claude Code client not installed (resulting in missing hooks and skill dependencies).
+*   **MCP Clients:** 9 clients observed, all without elicitation.
+*   **MCP Backend:** No credential or token requirements detected.
+*   **Claude Desktop:** Claude Desktop not configured.
+*   **Versions:** llama-swap and llama-server versions are confirmed. 1 warning regarding the affinity configuration.
+*   **Memory:** No issues detected.
+
+**Total Warnings:** 3. The system reports 2 warnings and 1 error.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

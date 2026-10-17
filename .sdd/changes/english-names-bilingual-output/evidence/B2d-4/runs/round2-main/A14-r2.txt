@@ -1,0 +1,27 @@
+**src\app\core\decorators\app-controller.decorator.ts**
+* **lint/nursery/useExplicitReturnType**: 1 error regarding a missing return type on a function.
+* **lint/nursery/useExplicitType**: 1 error regarding a missing return type on a function.
+
+**src\app\core\decorators\log-audit.decorator.ts**
+* **lint/style/useConsistentTypeDefinitions**: 1 info regarding the use of type instead of interface.
+* **lint/nursery/useReactFunctionComponentDefinition**: 1 info regarding the use of an arrow function for a component.
+* **lint/nursery/useExplicitReturnType**: 1 warning regarding a missing return type on a function.
+* **lint/nursery/useExplicitType**: 1 error regarding a missing return type on a function.
+
+**src\app\core\decorators\throttle.decorator.ts**
+* **lint/nursery/useReactFunctionComponentDefinition**: 5 infos regarding the use of arrow functions for components.
+* **lint/style/useNumericSeparators**: 3 fixable warnings regarding long numeric literals lacking separators.
+* **lint/nursery/useExplicitReturnType**: 5 warnings regarding missing return types on functions.
+* **lint/nursery/useExplicitType**: 5 errors regarding missing return types on functions.
+
+**src\app\core\filters\http-exception.filter.ts**
+* **lint/style/noTernary**: 1 info regarding an unexpected ternary operator.
+* **lint/nursery/useExplicitReturnType**: 1 warning regarding a missing return type on a function.
+* **lint/nursery/useThisInClassMethods**: 1 warning regarding the expected use of `this` in a class method.
+* **lint/nursery/useExplicitType**: 1 error regarding a missing return type on a member.
+
+Found 125 errors.
+Found 551 warnings.
+Found 653 infos.
+
+(leído server-side: 22235 chars ≈ 11580 tokens de Claude que no entraron a tu contexto)

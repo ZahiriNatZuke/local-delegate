@@ -1,0 +1,15 @@
+**Resumen de Problemas:**
+
+**src/app/features/auth/pages/login.page.ts:**
+
+*   Error TS2345: Problema con la asignación de tipos en la línea 52, columna 24. El tipo de argumento no coincide con el tipo del parámetro. Se requiere considerar el tipo `undefined` para las propiedades opcionales.
+    *   Tipo de error: Incompatibilidad de tipos.
+    *   Cantidad: 1
+
+**src/app/features/home/components/tech-stack.component.ts:**
+
+*   Error TS2375: Problema con la asignación de tipos en la línea 127, columna 5. El tipo de argumento no coincide con el tipo de la propiedad `version`. Se requiere considerar el tipo `undefined` para las propiedades opcionales.
+    *   Tipo de error: Incompatibilidad de tipos.
+    *   Cantidad: 1
+
+(read server-side: 1435 chars ≈ 747 Claude tokens that did not enter your context)

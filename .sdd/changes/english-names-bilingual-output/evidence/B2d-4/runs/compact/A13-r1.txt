@@ -1,0 +1,45 @@
+**Local Delegate Doctor Summary**
+
+**File Issues:**
+
+*   **LLAMASWAP_EXE:** 0 issues
+*   **LLAMASWAP_CONFIG:** 0 issues
+*   **Backend BASE_URL:** 0 issues
+*   **Idioma:** 0 issues
+*   **Respuesta:** 0 issues
+
+**CLI and Clients:**
+
+*   **CLI local-delegate:** 0 issues
+*   **MCP Clients:** 7 clients observed (claude-ai, claude-ai (via mcp-remote), codex-mcp-client, local-agent-mode-local-delegate, local-agent-mode-local-delegate (via mcp-remote), mcp, mcp-remote-fallback-test) – no issues.
+*   **Backups Chains:** 1 valid chain – no issues.
+*   **Obsolete Names:** 1 warning – LD\_HOOK\_READ\_BLOQUEAR is obsolete.
+*   **Cost and Padding:** 159 rows judged – no issues.
+*   **Test Windows:** 67 windows – no issues.
+
+**Orchestration (Hooks, Skill, Memory & MCP):**
+
+*   **Hooks Copied:** 0 issues (Claude Code not installed)
+*   **Orphaned Hooks:** 0 issues (Claude Code not installed)
+*   **Registered Hooks:** 0 issues (Claude Code not installed)
+*   **Local Delegation Skill:** 2 clients not installed (Claude Code, opencode)
+*   **Global Memory:** 2 clients not installed (Claude Code, Codex, opencode)
+*   **MCP in Claude Code:** 0 issues (Claude Code not installed)
+*   **MCP in Codex:** 0 issues (Codex not installed)
+*   **MCP in opencode:** 0 issues (opencode not installed)
+
+**Services:**
+
+*   **Daemon:** 1 active daemon – no issues.
+*   **Backend:** 1 backend responding – no issues.
+*   **Backend Credential:** 1 – backend requires credential, no MCP entry to check.
+*   **Daemon Token:** 1 – daemon requires token, no MCP entry to check.
+*   **Claude Desktop Token:** 0 – Claude Desktop not configured.
+
+**Versions:**
+
+*   **llama-swap:** 1 version (v255) – no issues.
+*   **llama-server:** 1 version (b10909) – no issues.
+*   **Affinity:** 1 warning – affinity not using those cells until benchmarks are re-measured.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)
