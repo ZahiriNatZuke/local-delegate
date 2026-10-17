@@ -1,0 +1,35 @@
+**Resumen de pruebas**
+
+**tests/test_chunking.py**
+* **Pruebas superadas**: 41
+    * Verificación de preservación exacta del documento.
+    * Respeto al límite de tamaño.
+    * División en encabezados de Markdown.
+    * Uso de párrafos y líneas como alternativa.
+    * División forzada ante falta de límites naturales.
+    * Gestión de textos cortos y reajuste de separadores.
+    * Traducción de documentos largos en varias llamadas.
+    * Registro de eventos y manejo de errores en fragmentos.
+    * Clasificación de origen del backend por host y esquemas.
+    * Gestión de URLs de paneles remotos.
+    * Sobrescritura de heurísticas de origen.
+    * Registro de inferencia y progreso de fragmentos en curso.
+    * Gestión de archivos temporales y procesos muertos.
+    * División de diferencias (diffs) en límites de archivo.
+    * Subdivisión de archivos que exceden el presupuesto.
+    * Manejo de Markdown con diferencias embebidas y diferencias de Git.
+
+**tests/test_density.py**
+* **Pruebas superadas**: 16
+    * Cálculo de densidad y comparación de tokens.
+    * Prioridad de herramientas sobre extensiones.
+    * Gestión de columnas de salida y variables de respaldo.
+    * Marcado de familias y manejo de imágenes.
+    * Respeto al orden en la fusión y gestión de caché.
+    * Uso de tokens de Claude en etiquetas y recibos.
+    * Extracción de tokens aproximados.
+
+**Resultado final**
+57 passed in 0.75s
+
+(read server-side: 11014 chars ≈ 5736 Claude tokens that did not enter your context)

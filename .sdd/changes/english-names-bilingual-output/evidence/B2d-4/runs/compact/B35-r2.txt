@@ -1,0 +1,14 @@
+**Resumen de problemas**
+
+**scripts/build_corpus.py**
+
+*   **Resumen de tres reglas de ruff**: El sistema cambió con los prompts de la versión 0.36.0.
+*   **Resumen de docstrings de ruff**: El sistema cambió con los prompts de la versión 0.36.0.
+*   **Resumen de un solo archivo de ruff**: El sistema cambió con los prompts de la versión 0.36.0 y 42 más.
+*   **Diferencia de commit 19k**: El parámetro max_tokens cambió con los prompts de la versión 0.36.0.
+*   **Commit 9eb197b**: El parámetro max_tokens cambió con los prompts de la versión 0.36.0.
+*   **Commit c2312cd**: El parámetro max_tokens cambió con los prompts de la versión 0.36.0 y 37 más.
+
+ok
+
+(read server-side: 853 chars ≈ 444 Claude tokens that did not enter your context)

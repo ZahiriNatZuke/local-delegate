@@ -1,0 +1,12 @@
+**Local Delegate Doctor Summary**
+
+**File Issues:**
+
+*   **Warnings:** 2 (LD\_HOOK\_READ\_BLOQUEAR is deprecated, and affinity is not using base measurements).
+*   **Missing:** Claude Code client and opencode client are not installed.
+
+**Details:**
+
+The local delegate doctor found 2 warnings. The first relates to an obsolete hook name (`LD_HOOK_READ_BLOQUEAR`) and suggests renaming it to `LD_HOOK_READ_BLOCK` before version 0.38.0. The second warning concerns the affinity settings, indicating that the base measurements are not being utilized. There are no missing items detected. The daemon is running correctly at `http://127.0.0.1:9393/mcp` and the backend is responding at `http://127.0.0.1:9292/v1`. Claude Desktop is not configured. The tested versions of llama-swap and llama-server are up to date.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

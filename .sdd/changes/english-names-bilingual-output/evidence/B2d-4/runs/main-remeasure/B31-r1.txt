@@ -1,0 +1,12 @@
+**Resumen de pruebas**
+
+**tests/test_chunking.py**
+*   Todas las pruebas de fragmentación de texto, gestión de límites de tamaño, división por encabezados de Markdown, manejo de errores en el backend, clasificación de origen por host y gestión de archivos temporales han pasado correctamente.
+
+**tests/test_density.py**
+*   Todas las pruebas de densidad, incluyendo el cálculo de tokens, la gestión de columnas de salida, el uso de variables de respaldo, el manejo de imágenes y la integración con modelos como Claude, han pasado correctamente.
+
+**Resultados totales**
+57 passed in 0.75s
+
+(read server-side: 11014 chars ≈ 5736 Claude tokens that did not enter your context)

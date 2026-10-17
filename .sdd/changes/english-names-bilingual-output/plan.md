@@ -1637,6 +1637,17 @@ B2d-3** y saldría en la 0.36.0, así que no va al backlog.
   log el tamaño de cada bloque compactado y su N (los cuenta el programa del mismo log; el test
   los comprueba contra una cuenta propia), y la base y el 1b se **re-cuentan** con ese mismo
   contador antes de comparar. Medición: `evidence/B2d-4/measure.md`.
+- **Resultado (2026-10-17, `ea5b27a`; ventanas `w-20261017T221618Z` y `w-20261017T221834Z`;
+  `evidence/B2d-4/live.md`):** **0 cortadas de 30** (B35 ya no se corta), `parenthesized_invented`
+  0, 0, 0, controles A14, A15, B31 y B32 (3/3 cada uno), pero `fidelity_totals` 20, 5, 5 (media
+  **10,0**: > 4,0). **No cumple el criterio; no se adopta tal cual** (el commit queda en la rama a la
+  espera de la decisión del usuario). De los 30 puntos, 13 son un caso intacto (A13 r1, «0 issues»
+  ×13) y 6 son cifras reales que el contador no ve (B31: 41 y 16 tests por fichero); la regresión
+  propia del cambio es A12 (1, 2, 2: el modelo cuenta las líneas que ve). El 1b de `main`
+  re-medido en la misma sesión (ventanas `w-20261017T222234Z` y `w-20261017T222436Z`) da 5, 5, 6
+  (media 5,33, también > 4,0), B32 1/3 y otra vez **3 cortadas** (B35). Siguiente candidato
+  propuesto en `live.md`: el marcador con el total del bloque, sin la frase nueva en la regla, y
+  medir contra el 1b re-medido el mismo día revisando el umbral de 4,0.
 - *Test:* con un log sintético de decenas de elementos con el mismo problema; mutante que quita la
   regla y comprobar qué assert salta. Si N lo calcula el programa, test de N contra el log.
 - *Medición:* el método de B2d-3 (`evidence/B2d-3/measure.md`: tandas A y B, 3 repeticiones,

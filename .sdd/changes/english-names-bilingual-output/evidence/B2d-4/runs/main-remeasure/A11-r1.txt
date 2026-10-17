@@ -1,0 +1,5 @@
+**Summary of Errors by File**
+
+The output indicates several errors related to file locations for specific models. Specifically, there are errors for the following models: gemma3-4b, llama31-8b, qwen25-coder-14b, qwen35-2b, and qwen3-vl-8b. Each of these models resulted in an error due to the file not being found, with the specific file paths listed as `MODELOS\gemma-3-4b-it-Q4_K_M.gguf`, `MODELOS\Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf`, `MODELOS\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf`, `MODELOS\Qwen3.5-2B-UD-Q8_K_XL.gguf`, and `MODELOS\Qwen3VL-8B-Instruct-Q4_K_M.gguf`, respectively. These errors are grouped under the 'resident' and 'swap' groups, suggesting potential issues with model loading or configuration. The total worst-case VRAM usage is 0 GiB.
+
+(leído server-side: 743 chars ≈ 386 tokens de Claude que no entraron a tu contexto)

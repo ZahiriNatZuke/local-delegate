@@ -53,3 +53,10 @@ compactado), sin llamadas nuevas: así las tres versiones se miden con la misma 
 
 Si no cumple, no se adopta: se conserva la evidencia, se anota el veredicto en `live.md` y se
 propone el siguiente candidato.
+
+## Añadido durante la medición
+
+Para tener una base del mismo día, el paso 1b de `main` (`5a5a7c0`) se re-midió en la misma
+sesión con el mismo método (instalado desde `D:/Projects/ld-wt-b2d4-main`; tag `main-remeasure`,
+carpeta `runs/main-remeasure/`). No cambia el criterio fijado arriba; se anota al lado.
+Resultado y veredicto: `live.md`.

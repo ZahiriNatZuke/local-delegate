@@ -1,0 +1,19 @@
+**Resumen de Problemas:**
+
+**scripts\clean_watcher_fixtures.py:**
+
+*   CPY001: Falta aviso de copyright al inicio del archivo (1)
+*   D103: Falta documentación en funciones públicas (2)
+*   E501: Líneas demasiado largas (2)
+*   T201: Uso de la instrucción `print` (1)
+*   PLR2004: Uso de valor mágico `16` en comparación, considerar reemplazarlo con una variable constante (1)
+*   y más (1)
+
+**Incompatibilidades:**
+
+*   warning: `incorrect-blank-line-before-class` (D203) y `blank-line-before-class` (D211) son incompatibles.
+*   warning: `multi-line-summary-first-line` (D212) y `multi-line-summary-second-line` (D213) son incompatibles.
+
+**Total de Errores:** 7
+
+(read server-side: 958 chars ≈ 498 Claude tokens that did not enter your context)

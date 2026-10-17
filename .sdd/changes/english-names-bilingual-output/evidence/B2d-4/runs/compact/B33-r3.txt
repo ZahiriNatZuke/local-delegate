@@ -1,0 +1,18 @@
+**Resumen de Problemas:**
+
+**src/app/features/auth/pages/login.page.ts**
+
+*   Error TS2345: Argumento de tipo '{ returnUrl: string | undefined; email: string; password: string; rememberMe: boolean; }' no es asignable al parámetro de tipo '{ email: string; password: string; rememberMe: boolean; returnUrl?: string; } | Observable<{ email: string; password: string; rememberMe: boolean; returnUrl?: string; }> | (() => { email: string; password: string; rememberMe: boolean; returnUrl?: string; })'.
+    *   Tipo '{ returnUrl: string | undefined; email: string; password: string; rememberMe: boolean; }' no es asignable al tipo '{ email: string; password: string; rememberMe: boolean; returnUrl?: string; }' con 'exactOptionalPropertyTypes: true'.
+    *   Tipos de la propiedad 'returnUrl' son incompatibles.
+        *   Tipo 'string | undefined' no es asignable al tipo 'string'.
+            *   Tipo 'undefined' no es asignable al tipo 'string'.
+
+**src/app/features/home/components/tech-stack.component.ts**
+
+*   Error TS2375: Tipo '{ name: string; docs: string; version: string | undefined; }' no es asignable al tipo 'StackItem' con 'exactOptionalPropertyTypes: true'. Considerar añadir 'undefined' a los tipos de las propiedades objetivo.
+    *   Tipos de la propiedad 'version' son incompatibles.
+        *   Tipo 'string | undefined' no es asignable al tipo 'string'.
+            *   Tipo 'undefined' no es asignable al tipo 'string'.
+
+(read server-side: 1435 chars ≈ 747 Claude tokens that did not enter your context)

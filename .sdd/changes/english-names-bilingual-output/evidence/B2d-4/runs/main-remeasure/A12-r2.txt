@@ -1,0 +1,22 @@
+**Summary of Issues by File**
+
+**scripts/build_corpus.py:**
+
+*   **Linting:** 9,000 issues related to a system change with prompts from version 0.36.0, specifically concerning a declared frontier.
+*   **Max Tokens:** 2 issues related to a system change with prompts from version 0.36.0, focusing on the `max_tokens` parameter.
+
+**Other Files:**
+
+*   **resumen-md-2k:** 1 issue related to a system change with prompts from version 0.36.0, a declared frontier.
+*   **resumen-md-10k:** 1 issue related to a system change with prompts from version 0.36.0, a declared frontier.
+*   **resumen-changelog-7k:** 1 issue related to a system change with prompts from version 0.36.0, a declared frontier.
+*   **lint-9k:** 1 issue related to a system change with prompts from version 0.36.0, a declared frontier.
+*   **commit-diff-19k:** 2 issues related to a system change with prompts from version 0.36.0, a declared frontier.
+*   **explain-metrics-15k:** 1 issue related to a system change with prompts from version 0.36.0, a declared frontier.
+*   **explain-install-20k:** 1 issue related to a system change with prompts from version 0.36.0, a declared frontier.
+*   **describir-dashboard:** 1 issue related to a system change with prompts from version 0.36.0, a declared frontier.
+*   **leer-cifras-dashboard:** 1 issue related to a system change with prompts from version 0.36.0, a declared frontier.
+*   **techo-resumen-103k:** 1 issue related to a system change with prompts from version 0.36.0, a declared frontier.
+*   **techo-commit-156k:** 2 issues related to a system change with prompts from version 0.36.0, a declared frontier.
+
+(leído server-side: 1231 chars ≈ 641 tokens de Claude que no entraron a tu contexto)
