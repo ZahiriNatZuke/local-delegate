@@ -1,0 +1,3 @@
+El análisis revela problemas relacionados con la ubicación de archivos de modelo. Se identificaron errores al no poder estimar la VRAM para varios modelos, incluyendo gemma3-4b, gemma4-12b, gemma4-26b-a4b, qwen35-2b, y qwen36-35b-a3b.  Estos errores se manifiestan como "archivo no encontrado" para los archivos de modelo correspondientes, ubicados en la carpeta MODELOS.  El grupo 'resident' presenta 0,00 GiB de uso, y el grupo 'swap' también 0,00 GiB.  En resumen, se encontraron 5 errores de archivo no encontrado, todos relacionados con la falta de los archivos de modelo especificados.
+
+(read server-side: 727 chars ≈ 378 Claude tokens that did not enter your context)

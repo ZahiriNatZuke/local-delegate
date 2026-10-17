@@ -1,0 +1,26 @@
+**Local Delegate Doctor Summary**
+
+**File Issues:**
+
+*   **LLAMASWAP_EXE:** No issues found.
+*   **LLAMASWAP\_CONFIG:** No issues found.
+*   **Backend:** No issues found.
+*   **Names Obsolete:** 1 warning – LD\_HOOK\_READ\_BLOQUEAR is outdated; rename it to LD\_HOOK\_READ\_BLOCK.
+*   **Cost and Padding:** 1 ok – Last check matches the price table.
+*   **Test Windows:** 67 ok – No tests are open.
+*   **Hooks:** 3 warnings – Claude Code is not installed, leading to missing hooks, skills, and MCP configurations.
+*   **MCP Configurations:** 3 warnings – Claude Code, Codex, and opencode clients are not installed, preventing MCP configurations.
+
+**Client Observations:**
+
+*   Multiple Claude AI and Claude Code clients are present, but without elicitation.
+*   Local-agent-mode-local-delegate clients are present, also without elicitation.
+*   mcp and mcp-remote clients are present, also without elicitation.
+
+**Version Analysis:**
+
+*   llama-swap version 255 is confirmed.
+*   llama-server version b10909 is confirmed.
+*   The affinity configuration is not using the specified model, requiring review.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

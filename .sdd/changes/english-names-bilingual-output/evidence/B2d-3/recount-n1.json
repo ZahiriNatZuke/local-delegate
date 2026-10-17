@@ -1,0 +1,302 @@
+{
+  "note": "n=1; old counter = scripts/score_lint_fidelity.py at acd2980, new = this commit; control old = (?![\\d.]), new = (?!\\d)(?!\\.\\d)",
+  "versions": {
+    "B2d-2 (main 7a17941)": {
+      "rows": [
+        {
+          "id": "A11",
+          "old_total": 0,
+          "new_total": 0,
+          "new": {
+            "invented_numbers": [],
+            "invented_files": [],
+            "repeated_sentences": [],
+            "total": 0
+          }
+        },
+        {
+          "id": "A12",
+          "old_total": 1,
+          "new_total": 1,
+          "new": {
+            "invented_numbers": [
+              "6"
+            ],
+            "invented_files": [],
+            "repeated_sentences": [],
+            "total": 1
+          }
+        },
+        {
+          "id": "A13",
+          "old_total": 5,
+          "new_total": 5,
+          "new": {
+            "invented_numbers": [
+              "0",
+              "3",
+              "3",
+              "3",
+              "3"
+            ],
+            "invented_files": [],
+            "repeated_sentences": [],
+            "total": 5
+          }
+        },
+        {
+          "id": "A14",
+          "old_total": 0,
+          "new_total": 0,
+          "new": {
+            "invented_numbers": [],
+            "invented_files": [],
+            "repeated_sentences": [],
+            "total": 0
+          },
+          "control_old": [],
+          "control_new": []
+        },
+        {
+          "id": "A15",
+          "old_total": 1,
+          "new_total": 3,
+          "new": {
+            "invented_numbers": [
+              "102",
+              "three",
+              "seven"
+            ],
+            "invented_files": [],
+            "repeated_sentences": [],
+            "total": 3
+          },
+          "control_old": [
+            "10"
+          ],
+          "control_new": [
+            "10"
+          ]
+        },
+        {
+          "id": "B31",
+          "old_total": 0,
+          "new_total": 0,
+          "new": {
+            "invented_numbers": [],
+            "invented_files": [],
+            "repeated_sentences": [],
+            "total": 0
+          },
+          "control_old": [
+            "57"
+          ],
+          "control_new": [
+            "57"
+          ]
+        },
+        {
+          "id": "B32",
+          "old_total": 0,
+          "new_total": 0,
+          "new": {
+            "invented_numbers": [],
+            "invented_files": [],
+            "repeated_sentences": [],
+            "total": 0
+          },
+          "control_old": [],
+          "control_new": [
+            "7"
+          ]
+        },
+        {
+          "id": "B33",
+          "old_total": 1,
+          "new_total": 0,
+          "new": {
+            "invented_numbers": [],
+            "invented_files": [],
+            "repeated_sentences": [],
+            "total": 0
+          }
+        },
+        {
+          "id": "B34",
+          "old_total": 0,
+          "new_total": 0,
+          "new": {
+            "invented_numbers": [],
+            "invented_files": [],
+            "repeated_sentences": [],
+            "total": 0
+          }
+        },
+        {
+          "id": "B35",
+          "old_total": 4,
+          "new_total": 4,
+          "new": {
+            "invented_numbers": [
+              "76",
+              "35",
+              "41",
+              "4"
+            ],
+            "invented_files": [],
+            "repeated_sentences": [],
+            "total": 4
+          }
+        }
+      ],
+      "old_total": 12,
+      "new_total": 13,
+      "control_cases_new": [
+        "A15",
+        "B31",
+        "B32"
+      ]
+    },
+    "step1 (8999bce)": {
+      "rows": [
+        {
+          "id": "A11",
+          "old_total": 2,
+          "new_total": 2,
+          "new": {
+            "invented_numbers": [
+              "2.5",
+              "3.5"
+            ],
+            "invented_files": [],
+            "repeated_sentences": [],
+            "total": 2
+          }
+        },
+        {
+          "id": "A12",
+          "old_total": 0,
+          "new_total": 0,
+          "new": {
+            "invented_numbers": [],
+            "invented_files": [],
+            "repeated_sentences": [],
+            "total": 0
+          }
+        },
+        {
+          "id": "A13",
+          "old_total": 1,
+          "new_total": 1,
+          "new": {
+            "invented_numbers": [
+              "255"
+            ],
+            "invented_files": [],
+            "repeated_sentences": [],
+            "total": 1
+          }
+        },
+        {
+          "id": "A14",
+          "old_total": 3,
+          "new_total": 0,
+          "new": {
+            "invented_numbers": [],
+            "invented_files": [],
+            "repeated_sentences": [],
+            "total": 0
+          },
+          "control_old": [],
+          "control_new": []
+        },
+        {
+          "id": "A15",
+          "old_total": 1,
+          "new_total": 3,
+          "new": {
+            "invented_numbers": [
+              "102",
+              "three",
+              "eight"
+            ],
+            "invented_files": [],
+            "repeated_sentences": [],
+            "total": 3
+          },
+          "control_old": [],
+          "control_new": []
+        },
+        {
+          "id": "B31",
+          "old_total": 0,
+          "new_total": 0,
+          "new": {
+            "invented_numbers": [],
+            "invented_files": [],
+            "repeated_sentences": [],
+            "total": 0
+          },
+          "control_old": [],
+          "control_new": [
+            "57"
+          ]
+        },
+        {
+          "id": "B32",
+          "old_total": 0,
+          "new_total": 0,
+          "new": {
+            "invented_numbers": [],
+            "invented_files": [],
+            "repeated_sentences": [],
+            "total": 0
+          },
+          "control_old": [],
+          "control_new": []
+        },
+        {
+          "id": "B33",
+          "old_total": 2,
+          "new_total": 2,
+          "new": {
+            "invented_numbers": [
+              "52",
+              "127"
+            ],
+            "invented_files": [],
+            "repeated_sentences": [],
+            "total": 2
+          }
+        },
+        {
+          "id": "B34",
+          "old_total": 0,
+          "new_total": 0,
+          "new": {
+            "invented_numbers": [],
+            "invented_files": [],
+            "repeated_sentences": [],
+            "total": 0
+          }
+        },
+        {
+          "id": "B35",
+          "old_total": 0,
+          "new_total": 0,
+          "new": {
+            "invented_numbers": [],
+            "invented_files": [],
+            "repeated_sentences": [],
+            "total": 0
+          }
+        }
+      ],
+      "old_total": 9,
+      "new_total": 8,
+      "control_cases_new": [
+        "B31"
+      ]
+    }
+  }
+}

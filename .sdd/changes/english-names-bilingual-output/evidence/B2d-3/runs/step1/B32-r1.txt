@@ -1,0 +1,13 @@
+**Resumen de Problemas por Archivo:**
+
+**scripts\clean_watcher_fixtures.py**
+
+*   **Problemas de Documentación:** 2 problemas de falta de documentación (D103) en funciones públicas.
+*   **Problemas de Longitud de Línea:** 2 líneas que exceden el límite de 100 caracteres (E501).
+*   **Problemas de Copyright:** 1 problema de falta de aviso de copyright (CPY001).
+*   **Problemas de Constantes:** 1 problema relacionado con el uso de valores mágicos (PLR2004).
+*   **Uso de `print`:** 1 problema por el uso de la función `print`.
+
+Se ignoraron las incompatibilidades entre las reglas `incorrect-blank-line-before-class` y `blank-line-before-class`, así como las incompatibilidades entre `multi-line-summary-first-line` y `multi-line-summary-second-line`.
+
+(read server-side: 958 chars ≈ 498 Claude tokens that did not enter your context)

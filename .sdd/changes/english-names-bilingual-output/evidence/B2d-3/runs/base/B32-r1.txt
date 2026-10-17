@@ -1,0 +1,15 @@
+**Resumen de Problemas por Archivo**
+
+**scripts\clean_watcher_fixtures.py:**
+
+*   **Copyright:** 1 (CPY001) - Falta aviso de copyright al inicio del archivo.
+*   **Long Lines:** 2 (E501) - Dos líneas superan el límite de 100 caracteres (líneas 7 y 14).
+*   **Docstrings:** 2 (D103) - Dos funciones públicas carecen de documentación.
+*   **Magic Value:** 1 (PLR2004) - Se utiliza un valor mágico (16) en una comparación, sugiriéndose el uso de una constante.
+*   **Print Statement:** 1 (T201) - Se detecta el uso de la instrucción `print`.
+
+**Incompatibilidades:**
+
+*   Se ignoraron las advertencias incompatibles `incorrect-blank-line-before-class` (D203) y `blank-line-before-class` (D211), así como `multi-line-summary-first-line` (D212) y `multi-line-summary-second-line` (D213).  Se han considerado incompatibles y se han ignorado.
+
+(read server-side: 958 chars ≈ 498 Claude tokens that did not enter your context)

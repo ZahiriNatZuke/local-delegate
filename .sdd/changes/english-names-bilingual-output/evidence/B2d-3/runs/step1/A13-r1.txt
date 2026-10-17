@@ -1,0 +1,23 @@
+**Local Delegate Summary**
+
+**Errors/Warnings:**
+
+*   **Obsolete Hook Name:** 1 (LD\_HOOK\_READ\_BLOQUEAR is deprecated, should be renamed to LD\_HOOK\_READ\_BLOCK).
+*   **Missing Claude Code Client:** 1 (Claude Code client not installed).
+*   **Missing Codex Client:** 1 (Codex client not installed).
+*   **Missing Opcode Client:** 1 (Opcode client not installed).
+*   **Missing MCP in Claude Code:** 1 (Claude Code client not installed).
+*   **Missing MCP in Codex:** 1 (Codex client not installed).
+*   **Missing MCP in Opcode:** 1 (Opcode client not installed).
+*   **Affinidad without base:** 1 (The affinity does not use those cells until they are measured again (benchmarks/affinity-2026-10) or the config returns to the measured footprint).
+
+**File-Specific Issues:**
+
+*   **LLAMASWAP\_EXE:** No specific errors reported.
+*   **LLAMASWAP\_CONFIG:** No specific errors reported.
+*   **CLI local-delegate:** 1 (Obsolete hook name).
+*   **MCP Clients:** 7 (Various MCP clients present, but no elicitation observed).
+*   **Backend:** 3 (Backend requires credentials and token, but no MCP input exists).
+*   **Versions:** 2 (llama-swap and llama-server versions are confirmed, affinity needs review).
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

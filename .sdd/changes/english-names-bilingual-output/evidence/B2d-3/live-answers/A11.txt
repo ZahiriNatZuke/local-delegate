@@ -1,0 +1,15 @@
+Here's a summary of the issues grouped by file, with error/rule counts where available, prioritizing the most relevant:
+
+**VRAM Issues:**
+
+Several files were encountered with errors due to missing model files. Specifically, the following models failed to load:
+
+*   **gemma3-4b:** (archivo no encontrado: MODELOS\gemma-3-4b-it-Q4_K_M.gguf) – This model’s GGUF file was not located.
+*   **llama31-8b:** (archivo no encontrado: MODELOS\Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf) – The specified Llama 3.1 model’s GGUF file was missing.
+*   **qwen25-coder-14b:** (archivo no encontrado: MODELOS\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf) – The Qwen 2.5 Coder model’s GGUF file was not found.
+*   **qwen35-2b:** (archivo no encontrado: MODELOS\Qwen3.5-2B-UD-Q8_K_XL.gguf) – The Qwen 3.5 model’s GGUF file was absent.
+*   **qwen3-vl-8b:** (archivo no encontrado: MODELOS\Qwen3VL-8B-Instruct-Q4_K_M.gguf) – The Qwen 3 VL model’s GGUF file was not located.
+
+These errors resulted in a total of 0 GiB of VRAM being utilized in the worst-case scenario.
+
+(leído server-side: 743 chars ≈ 386 tokens de Claude que no entraron a tu contexto)

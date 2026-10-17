@@ -1,0 +1,12 @@
+**Summary of Issues by File**
+
+The following summarizes the identified issues, grouped by file, prioritizing the most relevant findings.
+
+**scripts/build_corpus.py**
+
+*   **Linting:** 9,000 issues related to a system change with prompts introduced in version 0.36.0, specifically concerning a declared frontier.
+*   **Max Tokens:** 2 issues related to a change in the `max_tokens` parameter, also linked to the 0.36.0 prompt update and the declared frontier.
+
+Other files, such as `resumen-md-2k`, `resumen-md-10k`, `resumen-changelog-7k`, `commit-diff-19k`, `explain-metrics-15k`, `explain-install-20k`, `describir-dashboard`, `leer-cifras-dashboard`, `techo-resumen-103k`, and `techo-commit-156k` all report system changes with prompts from version 0.36.0, related to a declared frontier.
+
+(leído server-side: 1231 chars ≈ 641 tokens de Claude que no entraron a tu contexto)

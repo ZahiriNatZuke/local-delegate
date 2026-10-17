@@ -1,0 +1,5 @@
+**Summary of Issues by File**
+
+The primary issue identified across multiple files is a system change related to prompt updates introduced in version 0.36.0, affecting several files including `resumen-md-2k`, `resumen-md-10k`, `resumen-changelog-7k`, `lint-9k`, `commit-diff-19k`, `explain-metrics-15k`, `explain-install-20k`, `describir-dashboard`, `leer-cifras-dashboard`, `techo-resumen-103k` and `techo-commit-156k`.  Specifically, there are two instances of `max_tokens` changes associated with this prompt update.  The `commit-diff-19k` file contains two occurrences of this specific change.  These changes represent a significant alteration to the system's behavior concerning prompt handling.  No specific error counts are available for individual checks or rules within these files.
+
+(leído server-side: 1231 chars ≈ 641 tokens de Claude que no entraron a tu contexto)

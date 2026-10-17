@@ -1,0 +1,15 @@
+Here's a summary of the issues grouped by file, with relevant details:
+
+**VRAM Estimation Errors**
+
+Several model files were not found, leading to VRAM estimation errors. Specifically, the following models encountered issues:
+
+*   **gemma3-4b:** ERROR (archivo no encontrado: MODELOS\gemma-3-4b-it-Q4_K_M.gguf)
+*   **llama31-8b:** ERROR (archivo no encontrado: MODELOS\Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf)
+*   **qwen25-coder-14b:** ERROR (archivo no encontrado: MODELOS\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf)
+*   **qwen35-2b:** ERROR (archivo no encontrado: MODELOS\Qwen3.5-2B-UD-Q8_K_XL.gguf)
+*   **qwen3-vl-8b:** ERROR (archivo no encontrado: MODELOS\Qwen3VL-8B-Instruct-Q4_K_M.gguf)
+
+These errors resulted in a total of zero GiB of VRAM being estimated in the worst-case scenario.
+
+(leído server-side: 743 chars ≈ 386 tokens de Claude que no entraron a tu contexto)

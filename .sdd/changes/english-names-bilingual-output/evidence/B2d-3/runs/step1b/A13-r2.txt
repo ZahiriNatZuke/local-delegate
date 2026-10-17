@@ -1,0 +1,24 @@
+**Local Delegate Doctor Summary**
+
+**File-Based Issue Breakdown:**
+
+*   **LLAMASWAP_EXE:** No issues found.
+*   **LLAMASWAP_CONFIG:** No issues found.
+*   **Backend:** No issues found.
+*   **Hooks:** 3 hooks are missing (Claude Code, opencode, and local-agent-mode-local-delegate).
+*   **MCP Clients:** 7 MCP clients are present (claude-ai, claude-ai via mcp-remote, codex-mcp-client, local-agent-mode-local-delegate via mcp-remote, local-agent-mode-local-delegate via mcp-remote, local-agent-mode-local-delegate via mcp-remote, mcp, mcp-remote-fallback-test).
+*   **Strings:** Valid strings found.
+*   **Cost & Padding:** 159 rows checked against the price table of 2026-10-06.
+*   **Test Windows:** 67 windows, none open.
+*   **Versions:** llama-swap v255 and llama-server b10909 are up to date.
+
+**Warnings:**
+
+*   **Obsolete Hook Name:** LD\_HOOK\_READ\_BLOQUEAR is deprecated; rename it to LD\_HOOK\_READ\_BLOCK (expected removal in version 0.38.0). (1)
+*   **Missing Affinity:** The affinity is not using the specified cells until they are re-measured (benchmarks/afinidad-2026-10) or the configuration is reverted to the measured footprint. (1)
+
+**Overall:**
+
+The local delegate doctor identified 2 warnings. The primary concerns are the missing Claude Code, opencode, and local-agent-mode-local-delegate clients, which are preventing the hooks from being properly installed. Additionally, an obsolete hook name and a missing affinity configuration need to be addressed.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

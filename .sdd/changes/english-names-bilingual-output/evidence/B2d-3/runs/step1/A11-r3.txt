@@ -1,0 +1,15 @@
+Here's a summary of the issues, grouped by file and with relevant details:
+
+**Model Loading Errors**
+
+The primary issue involves errors related to the absence of model files. Specifically, there are instances where the specified model files were not located.
+
+*   **gemma3-4b:**  An error occurred due to the file not being found: MODELOS\gemma-3-4b-it-Q4_K_M.gguf.
+*   **llama31-8b:** An error occurred due to the file not being found: MODELOS\Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf.
+*   **qwen25-coder-14b:** An error occurred due to the file not being found: MODELOS\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf.
+*   **qwen35-2b:** An error occurred due to the file not being found: MODELOS\Qwen3.5-2B-UD-Q8_K_XL.gguf.
+*   **qwen3-vl-8b:** An error occurred due to the file not being found: MODELOS\Qwen3VL-8B-Instruct-Q4_K_M.gguf.
+
+These errors indicate a problem with the location or availability of the specified model files, preventing the intended models from being loaded.
+
+(leído server-side: 743 chars ≈ 386 tokens de Claude que no entraron a tu contexto)

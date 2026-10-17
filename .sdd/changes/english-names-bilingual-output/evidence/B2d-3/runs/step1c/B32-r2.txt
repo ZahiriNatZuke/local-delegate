@@ -1,0 +1,12 @@
+**Resumen de Problemas por Archivo:**
+
+**scripts\clean_watcher_fixtures.py:**
+
+*   **Errores de Documentación:** Dos funciones públicas carecen de la documentación necesaria (D103), un total de dos.
+*   **Violaciones de Longitud de Línea:** Tres líneas son demasiado largas (E501), con un total de tres líneas que exceden el límite de 100 caracteres.
+*   **Uso de Valores Mágicos:** Una línea utiliza un valor mágico (T201) que debería ser reemplazado por una constante.
+*   **Falta de Aviso de Copyright:** El archivo carece de un aviso de copyright en la parte superior (CPY001).
+*   **Incompatibilidad de Reglas:** Se ignoraron dos reglas incompatibles: `incorrect-blank-line-before-class` (D203) y `blank-line-before-class` (D211).
+*   **Incompatibilidad de Resúmenes Multilínea:** Se ignoró `multi-line-summary-second-line` (D213) debido a la incompatibilidad con `multi-line-summary-first-line` (D212).
+
+(read server-side: 958 chars ≈ 498 Claude tokens that did not enter your context)

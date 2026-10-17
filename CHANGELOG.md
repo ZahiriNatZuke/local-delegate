@@ -41,6 +41,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corrige
 
+- **`local_lint_summary` ya no pide cantidades que el log no da.** El formato pedía «el conteo por
+  tipo de error/regla» sin condición, y en logs sin cifras el modelo las inventaba («Claude Code
+  Client (3)»): en la medición en vivo, 12 fallos de fidelidad en 10 logs (9 antes). Ahora la
+  cantidad sale solo de una cifra que el log escribe o de contar las líneas que repite; si no, sin
+  número. Y si el log trae una línea de total («Found 10 errors.», «57 passed»), el resumen la copia
+  tal cual: con la primera regla, los resúmenes de `ruff` la perdían. Va en la llamada única y en el
+  paso final del troceado.
+
 - **El resumen por secciones ya no duplica una sección cuando el modelo traduce su título.** La
   «Introducción» sintética sale en el idioma de respuesta (no en el del producto), y si el modelo
   escribe un título en otro idioma en su sitio, el servidor lo reconoce y le devuelve la forma del

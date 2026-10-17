@@ -980,7 +980,7 @@ nuevos o la documentación en ficheros que el agente que renombra no toca, siemp
 **Orden de mezcla (explícito):**
 
 ```
-A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close-5) → higiene de CodeQL → `affinity --check` sin entorno → B0 (B0a → B0b) → B1 → B2 (lotes B2a → B2b → B2c → B2d → B2d-2 → B2d-3 → B2e → B2-affinity) → { B3 ∥ B4 } → B5 → [release 0.36.0]
+A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close-5) → higiene de CodeQL → `affinity --check` sin entorno → B0 (B0a → B0b) → B1 → B2 (lotes B2a → B2b → B2c → B2d → B2d-2 → B2d-3 → B2d-4 → B2e → B2-affinity) → { B3 ∥ B4 } → B5 → [release 0.36.0]
 ```
 
 - **Valores de una palabra (A-close-5, añadida el 2026-10-14), tras A-close-4.** El barrido de
@@ -1525,6 +1525,111 @@ modelo la inventa cuando el log no tiene cifras. Va **en serie después de B2d-2
 - **Cierre del lote:** suite en `es` y en `en`, `ruff`, corpus y afinidad (el prompt de lint cambia:
   frontera en `PROMPT_BOUNDARIES`), CHANGELOG, y registro en `waves/B2d-3.md` con las llamadas
   `local_*`.
+- **Resultado del paso 1 (2026-10-17, `8999bce`, n=1, ventanas `w-20261017T145849Z` y
+  `w-20261017T145949Z`; `evidence/B2d-3/live.md`):** `fidelity_total` = 9 (B2d-2: 12; base de
+  entonces: 9). Los recuentos entre paréntesis por elemento, lo que se buscaba, desaparecieron (A13
+  tenía «3, 3, 3, 3» en B2d-2; ahora 0 inventados entre paréntesis en las 10). Quedan A11 2.5/3.5,
+  A13 255, A15 «102» (el log acaba en la línea 100) y B33 52/127; A14 da 3 frases repetidas que son
+  la misma regla en ficheros distintos (falso positivo del contador). **No se puede concluir con
+  n=1:** comparado con B2d-2 en los mismos logs, A11 pasa de 0 a 2, A14 de 0 a 3, B35 de 4 a 0 y A13
+  de 5 a 1. Y la medición tenía tres fallos:
+  1. El contador no veía cifras escritas en palabras: A15 dice «eight instances of … (T201)» y el
+     log trae 6 T201, y «three … (D103)» sobre 2 D103 tampoco salía.
+  2. `check_controls.py` rechazaba «57.» al final de frase (`(?![\d.])`): B31 «Pruebas superadas:
+     57.» salía como no conservada. Corregido, B2d-2 conserva A15 «10», B31 «57» y B32 «7»; el paso 1
+     solo B31. **A15 y B32 perdieron la línea de total** («Found 10 errors.», «Found 7 errors.»);
+     B32 da recuentos por tipo que suman 7, pero no el total. A14 no conservaba sus totales ni en
+     B2d-2: ese caso no distingue.
+  3. Una sola corrida por log, con la temperatura de lint (0.2), es ruido.
+- **Cambio de método (decidido por el usuario el 2026-10-17), ANTES de seguir:** control corregido,
+  contador que cuenta también las cifras de cero a veinte en palabras (inglés y español, sin
+  «one/un/una/uno» ni «once»; con respaldo si su cifra lo tiene, también si el log la escribe en
+  palabras) y que no cuenta como repetida una frase bajo dos encabezados de fichero distintos, y **3
+  repeticiones por log**. Se miden con ese método tres versiones: base (`main` = `7a17941`), paso 1
+  (`8999bce`) y paso 1b. Procedimiento: `evidence/B2d-3/measure.md`. Las respuestas n=1 del paso 1
+  (`evidence/B2d-3/live-answers/`) quedan de referencia y no cuentan para el criterio.
+- **Paso 2 (revisión por programa de los recuentos entre paréntesis): EN ESPERA.** El paso 1 no dejó
+  ninguno que quitar. Se reabre solo si la medición nueva vuelve a dar recuentos entre paréntesis
+  inventados.
+- **Paso 1b, nuevo (2026-10-17):** si el contenido trae una línea de total («Found 10 errors.», «57
+  passed»), el resumen la copia tal cual, en `_lint_count_clause()` (llamada única y reduce del
+  troceado). No cambia la regla contra los recuentos inventados. Test con mutante en
+  `tests/test_lint_count_rule.py`. Motivo: el control del paso 1 perdió los totales de A15 y B32.
+- **Criterio de hecho revisado, fijado ANTES de medir (2026-10-17).** Con el método nuevo, 3
+  repeticiones de las tandas A y B (10 logs × 3 = 30 respuestas por versión), contador nuevo; el
+  «paso final» es la versión que se publica (1b, o 1 si 1b empeora):
+  - *Fidelidad:* media de `fidelity_total` sobre las 3 repeticiones del paso final **≤ la media de la
+    base** y **≤ 4,0** (tendente a 0: la mitad de 8, el menor total n=1 visto con el contador nuevo,
+    el del paso 1).
+  - *Paréntesis:* `parenthesized_invented` = **0** en las 3 repeticiones del paso final.
+  - *Control:* los casos conservados del paso final (un caso se conserva si 2 de sus 3 repeticiones
+    conservan una cifra real) incluyen **todos** los que conserva la base. Si la base no conserva
+    A14, A14 no distingue: se anota y no se juzga.
+  - Las respuestas cortadas (`finish_reason=length`) se anotan y no se juzgan. Si
+    `identical_in_every_repetition` recoge las 10 llamadas de una versión, sus repeticiones no miden
+    ruido: se anota y se mira por qué antes de concluir.
+  - Si ningún paso cumple, se reabre el paso 2.
+- **Resultado del método nuevo (2026-10-17, medido por la sesión principal; `evidence/B2d-3/live.md`
+  y `runs/`):** base `7a17941`, paso 1 `8999bce` y paso 1b `20faa5e`, 30 respuestas cada una, 0
+  errores, ventanas cerradas.
+
+  | Versión | `fidelity_totals` | Media | Sin B35 | `parenthesized_invented` | Controles (2 de 3) | Cortadas |
+  |---|---|---|---|---|---|---|
+  | base | 9, 20, 6 | 11,67 | 8,67 | 0, 11, 0 | A15, B31, B32 | 0 |
+  | paso 1 | 6, 7, 6 | 6,33 | 6,33 | 0, 0, 0 | B31, B32 | 0 |
+  | paso 1b | 2, 5, 4 | 3,67 | 3,67 | 0, 0, 0 | A14, A15, B31, B32 | 3 |
+
+  El paso 1b **cumple los tres criterios** (y conserva además A14, que la base no). **Regresión que
+  el criterio no veía:** B35 (`B2d-fix/docs-3/es-log-B2d-fix_corpus-affinity-check.txt`, 89 líneas,
+  sin línea de total, `gemma4-26b-a4b`) sale cortado por `max_tokens` en las 3 repeticiones del 1b
+  (`finish_reason=length`, `chars_out` ~1700–1790); en la base y en el paso 1, ninguna vez. El
+  modelo repite el mismo texto en un bloque por cada «commit-trampa-…» y «techo-commit-…» hasta
+  agotar el tope. `identical_in_every_repetition` del 1b = `['A15']`. Log de uso: `gemma3-4b` 63
+  llamadas y 0 cortadas, `gemma4-26b-a4b` 27 y 3.
+- **Paso 1c (decidido por el usuario el 2026-10-17), criterio fijado ANTES de medir:** mantiene la
+  regla del total del 1b y añade, en `_lint_count_clause()`, que los elementos con el mismo problema
+  vayan en una sola línea que los nombre juntos (sin número si el log no da la cifra), en vez de
+  repetir el mismo texto por cada uno. Test con mutante en `tests/test_lint_count_rule.py`. Se
+  **adopta** si cumple los tres criterios del 1b (media ≤ 11,67 y ≤ 4,0; `parenthesized_invented` = 0
+  en las 3 repeticiones; controles ⊇ A15, B31 y B32) **y** tiene **0 cortadas** en las 30 llamadas.
+  Si no, **se queda el 1b** (se revierte el commit del 1c) y el corte de B35 se anota como deuda.
+  Comandos en `evidence/B2d-3/measure.md` (`--answers-dir $E/B2d-3/runs/step1c --repeat 3`, tandas
+  A y B).
+- **Resultado del paso 1c (2026-10-17, `d12f5af`, medido por la sesión principal; ventanas
+  `w-20261017T160612Z` y `w-20261017T160828Z`; `evidence/B2d-3/live.md` y `runs/step1c/`):**
+  `fidelity_totals` 1, 7, 1 (media **3,0**; 1b: 3,67), `parenthesized_invented` 0, 0, 0,
+  `identical_in_every_repetition` = `[]`, controles A14 3/3, A15 2/3, B31 3/3 y B32 2/3. Pero
+  **3 cortadas de 30**, otra vez B35 (`gemma4-26b-a4b`, `chars_out` ~1420): ahora agrupa, pero en
+  una sola línea nombra los más de 80 elementos `commit-…` del log hasta agotar el tope.
+  **Veredicto: el 1c no se adopta** (falla «0 cortadas»). **Se queda el 1b**: el commit del 1c se
+  revierte (`src/` y `tests/` como en `20faa5e`) y su evidencia se conserva. El corte de B35 pasa al
+  lote **B2d-4**, el siguiente en el orden.
+
+#### B2d-4 — `local_lint_summary` no se corta con logs de muchos elementos iguales
+
+Lote nacido el 2026-10-17 de la medición del paso 1c de B2d-3 (`evidence/B2d-3/live.md`). Con la
+regla del 1b, B35 (`B2d-fix/docs-3/es-log-B2d-fix_corpus-affinity-check.txt`, 89 líneas, sin línea
+de total, `gemma4-26b-a4b`) sale cortado por `max_tokens` en las 3 repeticiones: enumera uno a uno
+decenas de elementos con el mismo problema; con el 1c los agrupa, pero los nombra todos en una
+línea y también se corta. En la base y en el paso 1, ninguna vez. Es una **regresión que trae
+B2d-3** y saldría en la 0.36.0, así que no va al backlog.
+
+- **Sitio en el orden: en serie después de B2d-3 y antes de B2e** (mismo `server.py` y la misma
+  `_lint_count_clause()`). No se mete dentro de B2e: B2e trata la pérdida al combinar los trozos, y
+  B35 no se trocea (0 troceadas en `runs/score-log-1c.json`); el corte está en la llamada única.
+  Pero el cambio tiene que valer también en el `reduce_extra` del troceado, como las reglas del 1 y
+  el 1b.
+- **Cambio candidato (se decide antes de medir):** limitar cuántos elementos iguales se nombran
+  («… y N más», con N contado del log, no por el modelo), o resumir por tipo de problema sin listar
+  los elementos. El tope de lint no se toca (regla de B2d-2/B2d-3).
+- *Test:* con un log sintético de decenas de elementos con el mismo problema; mutante que quita la
+  regla y comprobar qué assert salta. Si N lo calcula el programa, test de N contra el log.
+- *Medición:* el método de B2d-3 (`evidence/B2d-3/measure.md`: tandas A y B, 3 repeticiones,
+  ventanas de prueba). *Hecho cuando* tiene **0 cortadas en 30** y además cumple los tres criterios
+  del 1b contra la base (media ≤ 11,67 y ≤ 4,0, `parenthesized_invented` = 0, controles ⊇ A15, B31 y
+  B32).
+- **Cierre del lote:** suite en `es` y en `en`, `ruff`, corpus y afinidad, CHANGELOG, y registro en
+  `waves/B2d-4.md` con las llamadas `local_*`.
 
 #### B3 — Hooks
 

@@ -1,0 +1,22 @@
+**src\app\core\decorators\log-audit.decorator.ts**
+* **lint/nursery/useExplicitType**: 1 error regarding missing return types on functions.
+* **lint/nursery/useReactFunctionComponentDefinition**: 1 warning about using arrow functions for component definitions.
+* **lint/style/useConsistentTypeDefinitions**: 1 warning about inconsistent type definition styles.
+
+**src\app\core\decorators\throttle.decorator.ts**
+* **lint/nursery/useExplicitType**: 5 errors regarding missing return types on functions.
+* **lint/nursery/useReactFunctionComponentDefinition**: 4 warnings about using arrow functions for component definitions.
+* **lint/style/useNumericSeparators**: 3 warnings about missing separators in long numeric literals.
+* **lint/nursery/useExplicitReturnType**: 5 warnings regarding missing return types on functions.
+
+**src\app\core\decorators\app-controller.decorator.ts**
+* **lint/nursery/useExplicitType**: 1 error regarding missing return types on functions.
+* **lint/nursery/useExplicitReturnType**: 1 warning regarding missing return types on functions.
+
+**src\app\core\filters\http-exception.filter.ts**
+* **lint/nursery/useExplicitType**: 1 error regarding missing return types on members.
+* **lint/nursery/useExplicitReturnType**: 1 warning regarding missing return types on functions.
+* **lint/nursery/useThisInClassMethods**: 1 warning about not using the instance state in a class method.
+* **lint/style/noTernary**: 1 warning about the use of unexpected ternary operators.
+
+(leído server-side: 22235 chars ≈ 11580 tokens de Claude que no entraron a tu contexto)

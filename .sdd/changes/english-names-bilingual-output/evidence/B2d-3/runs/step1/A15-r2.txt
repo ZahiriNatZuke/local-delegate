@@ -1,0 +1,7 @@
+**Summary of Issues by File**
+
+**scripts\build_site.py:**
+
+This file contains several issues. There is one **Missing copyright notice** (CPY001) at the top of the file. Additionally, there are three **Missing docstring in public function** (D103) warnings located on lines 36, 72, and 76.  Furthermore, the file includes six instances of the **`print` statement** (T201) on lines 85, 90, 92, 96, 98, and 100. Finally, there is one **Trailing comma missing** (COM812) on line 76.  The warnings regarding incompatible rules (D203 and D211) have been ignored.
+
+(leído server-side: 968 chars ≈ 504 tokens de Claude que no entraron a tu contexto)

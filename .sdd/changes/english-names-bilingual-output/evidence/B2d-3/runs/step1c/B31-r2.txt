@@ -1,0 +1,12 @@
+**Resumen de pruebas**
+
+**tests/test_chunking.py**
+* Todas las pruebas de fragmentación de texto, clasificación de origen del backend, gestión de URLs remotas, sobrescritura de heurísticas, registros de inferencia, progreso de procesos en curso y división de diferencias pasaron correctamente.
+
+**tests/test_density.py**
+* Todas las pruebas de cálculo de densidad, comparación de tokens, gestión de variables de respaldo, marcas de familia, manejo de imágenes, orden de fusión, caché y uso de tokens de Claude pasaron correctamente.
+
+**Resultados totales**
+57 passed in 0.75s
+
+(read server-side: 11014 chars ≈ 5736 Claude tokens that did not enter your context)

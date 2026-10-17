@@ -1,0 +1,19 @@
+**Resumen de pruebas**
+
+**tests/test_chunking.py**
+* **Pruebas superadas**: 44
+    * Se verificó la integridad de documentos, el respeto a límites de tamaño y la división mediante encabezados de Markdown.
+    * Se validó el comportamiento ante errores del servidor, la clasificación de orígenes por host y la gestión de URLs remotas.
+    * Se comprobó la división de archivos grandes, la gestión de procesos en vuelo y el tratamiento de diferencias de Git.
+
+**tests/test_density.py**
+* **Pruebas superadas**: 13
+    * Se validó el cálculo de densidad sin valores, la comparación de tokens entre modelos y la prioridad de herramientas sobre extensiones.
+    * Se verificó el manejo de columnas de salida, variables de respaldo, marcas de familia y el impacto de imágenes.
+    * Se comprobó la integridad de la fusión de datos, el uso de caché y la precisión de tokens en etiquetas y recibos.
+
+**Totales**
+* **Pruebas superadas**: 57
+* **Pruebas fallidas**: 0
+
+(read server-side: 11014 chars ≈ 5736 Claude tokens that did not enter your context)

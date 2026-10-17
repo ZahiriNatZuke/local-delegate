@@ -1,0 +1,12 @@
+**Resumen de pruebas**
+
+**tests/test_chunking.py**
+* **Pruebas superadas**: 40 pruebas relacionadas con la división de texto, gestión de límites de tamaño, manejo de encabezados de Markdown, clasificación de origen del backend, URLs de paneles remotos, reglas de sobrescritura de heurísticas, registros de inferencia, progreso de procesos en curso y división de diferencias de archivos.
+
+**tests/test_density.py**
+* **Pruebas superadas**: 17 pruebas relacionadas con el cálculo de densidad, comparación de tokens entre modelos, prioridad de herramientas sobre extensiones, gestión de columnas de salida, variables de respaldo, marcas de familia, manejo de imágenes, orden de fusión, uso de caché y extracción de tokens de Claude.
+
+**Resultados totales**
+57 passed in 0.75s
+
+(read server-side: 11014 chars ≈ 5736 Claude tokens that did not enter your context)

@@ -1,0 +1,14 @@
+**Resumen de Problemas por Archivo**
+
+**scripts\clean_watcher_fixtures.py:**
+
+*   **Errores de Documentación:** 2 errores de falta de documentación (D103) en funciones públicas.
+*   **Violaciones de Longitud de Línea:** 2 líneas que exceden el límite de 100 caracteres (E501).
+*   **Problema de Copyright:** 1 falta de aviso de copyright en la parte superior del archivo (CPY001).
+*   **Problema de Resumen Multilínea:** 1 incompatibilidad entre reglas (D203 y D211) ignorada.
+*   **Problema de Valor Mágico:** 1 uso de valor mágico (PLR2004) en comparación.
+*   **Uso de `print`:** 1 instancia de la función `print`.
+
+**Total de Errores Detectados:** 7.
+
+(read server-side: 958 chars ≈ 498 Claude tokens that did not enter your context)

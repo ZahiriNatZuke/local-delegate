@@ -1,0 +1,17 @@
+Here's a summary of the issues grouped by file, with error/rule counts where available, prioritizing the most relevant:
+
+**Model Loading Errors**
+
+The primary issue involves file not found errors when attempting to load specific models. 
+
+*   **gemma3-4b:** ERROR (archivo no encontrado: MODELOS\gemma-3-4b-it-Q4_K_M.gguf) –  This model file is missing.
+*   **llama31-8b:** ERROR (archivo no encontrado: MODELOS\Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf) – This model file is missing.
+*   **qwen25-coder-14b:** ERROR (archivo no encontrado: MODELOS\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf) – This model file is missing.
+*   **qwen35-2b:** ERROR (archivo no encontrado: MODELOS\Qwen3.5-2B-UD-Q8_K_XL.gguf) – This model file is missing.
+*   **qwen3-vl-8b:** ERROR (archivo no encontrado: MODELOS\Qwen3VL-8B-Instruct-Q4_K_M.gguf) – This model file is missing.
+
+**VRAM Allocation**
+
+The VRAM allocation estimates show a sufficient margin (6.50 GiB available) despite the missing model files. The "resident" and "swap" groups have 0 GiB allocated.
+
+(leído server-side: 743 chars ≈ 386 tokens de Claude que no entraron a tu contexto)

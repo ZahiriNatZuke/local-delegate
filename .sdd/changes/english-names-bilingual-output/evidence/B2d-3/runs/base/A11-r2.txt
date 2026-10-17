@@ -1,0 +1,15 @@
+Here's a summary of the issues, grouped by file, with error/rule counts and relevance prioritized:
+
+**VRAM Memory Issues Summary**
+
+The primary issue involves **file not found errors** related to model files. Specifically, there are errors for:
+
+*   **gemma3-4b:** (MODELOS\gemma-3-4b-it-Q4_K_M.gguf) –  An error occurred while attempting to locate this model file.
+*   **llama31-8b:** (MODELOS\Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf) –  Similar to gemma3-4b, this model file was not found.
+*   **qwen25-coder-14b:** (MODELOS\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf) –  This model file is missing.
+*   **qwen35-2b:** (MODELOS\Qwen3.5-2B-UD-Q8_K_XL.gguf) –  The specified model file was not located.
+*   **qwen3-vl-8b:** (MODELOS\Qwen3VL-8B-Instruct-Q4_K_M.gguf) –  This model file is absent from the specified directory.
+
+These errors indicate potential problems with the model file paths or the availability of the specified model files. The **VRAM** calculation shows no actual memory usage, only the available margin.
+
+(leído server-side: 743 chars ≈ 386 tokens de Claude que no entraron a tu contexto)

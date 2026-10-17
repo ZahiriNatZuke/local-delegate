@@ -1,0 +1,11 @@
+**Resumen de Problemas:**
+
+**src/app/features/auth/pages/login.page.ts:**
+
+Existe un error de tipo en la línea 52. El problema radica en la asignación de parámetros al componente `login.page.ts`. Se detecta una incompatibilidad entre el tipo de dato proporcionado para el parámetro `returnUrl` y el tipo esperado. El tipo `string | undefined` no es compatible con `string`. Se sugiere agregar `undefined` a los tipos de las propiedades del componente objetivo.
+
+**src/app/features/home/components/tech-stack.component.ts:**
+
+Se identifica un error de tipo en la línea 127. El tipo de dato para el parámetro `name`, `docs` y `version` no coincide con el tipo `StackItem`.  La propiedad `version` tiene el tipo `string | undefined`, lo cual no es compatible con `string`. Se recomienda agregar `undefined` a los tipos de las propiedades del componente objetivo.
+
+(read server-side: 1435 chars ≈ 747 Claude tokens that did not enter your context)

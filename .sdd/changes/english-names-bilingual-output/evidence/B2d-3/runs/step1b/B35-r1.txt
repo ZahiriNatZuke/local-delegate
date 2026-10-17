@@ -1,0 +1,32 @@
+**Resumen de problemas**
+
+**resume-ruff-tres-reglas**
+*   **System**: El sistema cambió con los prompts de la versión 0.36.0.
+
+**resume-ruff-docstrings**
+*   **System**: El sistema cambió con los prompts de la versión 0.36.0.
+
+**resume-ruff-un-solo-archivo**
+*   **System**: El sistema cambió con los prompts de la versión 0.36.0.
+
+**resume-ruff-cinco-reglas**
+*   **System**: El sistema cambió con los prompts de la versión 0.36.0.
+
+**commit-diff-19k**
+*   **Max_tokens**: El valor de tokens máximos cambió con los prompts de la versión 0.36.0.
+*   **System**: El sistema cambió con los prompts de la versión 0.36.0.
+
+**Varios commits (commit-9eb197b, commit-c2312cd, commit-64311f5, commit-2c602eb, commit-e34c102, commit-4ef1ba0, commit-ad79697, commit-8b061ec, commit-71f2a41, commit-e428c07, commit-b2545e9, commit-a4502a7, commit-8610c74, commit-eb35363, commit-daddf39, commit-f7c8d6e, commit-11c65b5, commit-67eb74a, commit-4e9035a, commit-1dd97a3, commit-56f588d, commit-bcbe39f, commit-53c9dcb, commit-e7deb0d, commit-ccddeea, commit-2fbfe93, commit-6a7959e, commit-67e585f, commit-4aa2141)**
+*   **Max_tokens**: El valor de tokens máximos cambió con los prompts de la versión 0.36.0.
+*   **System**: El sistema cambió con los prompts de la versión 0.36.0.
+
+**Commits de trampa (commit-trampa-1314b0b, commit-trampa-4f41311, commit-trampa-3b20fb3, commit-trampa-6d442e7, commit-trampa-b04a5e2, commit-trampa-7d0f4ac, commit-trampa-9d2c242, commit-trampa-fa08d64, commit-trampa-6710a6b)**
+*   **Max_tokens**: El valor de tokens máximos cambió con los prompts de la versión 0.36.0.
+*   **System**: El sistema cambió con los prompts de la versión 0.36.0.
+
+**techo-commit-156k**
+*   **Max_tokens**: El valor de tokens máximos
+
+[local-delegate warning: output truncated by max_tokens]
+
+(read server-side: 7699 chars ≈ 4009 Claude tokens that did not enter your context)

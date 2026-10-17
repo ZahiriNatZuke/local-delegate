@@ -1,0 +1,28 @@
+Here's a summary of the issues, grouped by file and prioritized by relevance:
+
+**Local-Delegate (0.35.0)**
+
+*   **Hooks (2 Warnings):**  `LD_HOOK_READ_BLOQUEAR` is deprecated and should be renamed to `LD_HOOK_READ_BLOCK`. This is due to an upcoming change (0.38.0).
+*   **Claude Code/Codex/Opencode (3 Issues):**  Claude Code, Codex, and Opencode clients are not installed. This impacts MCP functionality and skill availability.
+
+**Backend (http://127.0.0.1:9292/v1)**
+
+*   **Credential/Token Requirements (2 Issues):** The backend requires a credential or token, but no MCP entries are present for verification.
+
+**LLAMASWAP_EXE (D:\Projects\llms\llama-swap-v255\llama-swap.exe)**
+
+*   **Llama-Swap Version (1 OK):** Version 255 is confirmed as the tested version.
+
+**Llama-Server (b10909)**
+
+*   **Llama-Swap Residency (1 Warning):**  The residency configuration lacks a base affinity, potentially leading to suboptimal performance.  It recommends using benchmarks or reconfiguring the affinity.
+
+**MCP Clients (Various Versions)**
+
+*   **Missing Clients (Multiple Warnings):** Several MCP clients (claude-ai, claude-code, local-agent-mode) are not installed, impacting MCP functionality.
+
+**General**
+
+*   **No Resident (1 Warning):**  The Llama-Swap residency is not resident, which is recommended.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

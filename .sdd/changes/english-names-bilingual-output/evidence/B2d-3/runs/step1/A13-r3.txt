@@ -1,0 +1,31 @@
+Here’s a summary of the issues, grouped by file and with relevant details:
+
+**Local-Delegate (0.35.0)**
+
+*   **Hooks:** Missing Claude Code client (2 instances).
+*   **Skill:** Local delegation skill missing Claude Code and opencode clients.
+*   **Memory:** Claude Code, Codex, and opencode clients are not installed.
+*   **MCP:** No MCP found for Claude Code, Codex, or opencode.
+*   **Obsolete Hook:** LD\_HOOK\_READ\_BLOQUEAR is deprecated, requiring renaming to LD\_HOOK\_READ\_BLOCK.
+
+**Backend (http://127.0.0.1:9292/v1)**
+
+*   **Credential/Token:** The backend requires a credential or token, but no MCP entry is present for verification.
+
+**Versions**
+
+*   **llama-swap:** Version 255 is confirmed.
+*   **llama-server:** Version b10909 is confirmed.
+*   **Affinidad:** The affinity configuration is not using the specified model, requiring review and potential adjustment.
+
+**Clients**
+
+*   **Claude Code:** Client not installed.
+*   **Codex:** Client not installed.
+*   **opencode:** Client not installed.
+
+**Overall**
+
+There are 2 warnings related to missing clients and configuration issues. Addressing the obsolete hook and ensuring all required client installations are complete are recommended.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

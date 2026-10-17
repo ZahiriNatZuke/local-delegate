@@ -1,0 +1,26 @@
+**Resumen de errores**
+
+**scripts/build_corpus.py**
+
+*   **Resumen de reglas de Ruff** (4 errores):
+    *   **Resumen de Ruff tres reglas**: El sistema cambió con los prompts de la versión 0.36.0.
+    *   **Resumen de Ruff docstrings**: El sistema cambió con los prompts de la versión 0.36.0.
+    *   **Resumen de Ruff un solo archivo**: El sistema cambió con los prompts de la versión 0.36.0.
+    *   **Resumen de Ruff cinco reglas**: El sistema cambió con los prompts de la versión 0.36.0.
+
+*   **Diferencia de commit 19k** (2 errores):
+    *   **Máximo de tokens**: El valor cambió con los prompts de la versión 0.36.0.
+    *   **Sistema**: El sistema cambió con los prompts de la versión 0.36.0.
+
+*   **Varios commits** (64 errores):
+    *   **Máximo de tokens**: Se detectaron cambios en el límite de tokens debido a la versión 0.36.0 en múltiples identificadores de commit (incluyendo `commit-9eb197b`, `commit-c2312cd`, `commit-trampa-1314b0b`, entre otros).
+    *   **Sistema**: Se detectaron cambios en el sistema debido a la versión 0.36.0 en múltiples identificadores de commit.
+
+*   **Techo de commit 156k** (2 errores):
+    *   **Máximo de tokens**: El valor cambió con los prompts de la versión 0.36.0.
+    *   **Sistema**: El sistema cambió con los prompts de la versión 0.36.0.
+
+*   **Resumen de MD 2k** (1 error):
+    *   **Sistema**: El sistema cambió con los prompts de la versión 0.36.0.
+
+(read server-side: 7699 chars ≈ 4009 Claude tokens that did not enter your context)

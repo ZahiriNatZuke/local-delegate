@@ -1,0 +1,72 @@
+{
+  "rows": [
+    {
+      "id": "A14",
+      "figures": [
+        "125",
+        "551",
+        "653"
+      ],
+      "reps": [
+        {
+          "rep": "1",
+          "kept": []
+        }
+      ],
+      "kept_reps": 0,
+      "runs": 1,
+      "ok": false
+    },
+    {
+      "id": "A15",
+      "figures": [
+        "10"
+      ],
+      "reps": [
+        {
+          "rep": "1",
+          "kept": []
+        }
+      ],
+      "kept_reps": 0,
+      "runs": 1,
+      "ok": false
+    },
+    {
+      "id": "B31",
+      "figures": [
+        "57"
+      ],
+      "reps": [
+        {
+          "rep": "1",
+          "kept": [
+            "57"
+          ]
+        }
+      ],
+      "kept_reps": 1,
+      "runs": 1,
+      "ok": true
+    },
+    {
+      "id": "B32",
+      "figures": [
+        "7"
+      ],
+      "reps": [
+        {
+          "rep": "1",
+          "kept": []
+        }
+      ],
+      "kept_reps": 0,
+      "runs": 1,
+      "ok": false
+    }
+  ],
+  "cases_kept": [
+    "B31"
+  ],
+  "controls_ok": false
+}

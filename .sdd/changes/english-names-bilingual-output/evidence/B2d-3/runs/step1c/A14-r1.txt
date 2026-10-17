@@ -1,0 +1,27 @@
+**src\app\core\decorators\app-controller.decorator.ts**
+* **lint/nursery/useExplicitReturnType**: Missing return type on function.
+* **lint/nursery/useExplicitType**: Missing return type on function.
+
+**src\app\core\decorators\log-audit.decorator.ts**
+* **lint/nursery/useReactFunctionComponentDefinition**: React component defined as an arrow function.
+* **lint/nursery/useExplicitReturnType**: Missing return type on function.
+* **lint/nursery/useExplicitType**: Missing return type on function.
+* **lint/style/useConsistentTypeDefinitions**: Use of the type detected.
+
+**src\app\core\decorators\throttle.decorator.ts**
+* **lint/nursery/useReactFunctionComponentDefinition**: React components defined as arrow functions.
+* **lint/nursery/useExplicitReturnType**: Missing return type on functions.
+* **lint/nursery/useExplicitType**: Missing return type on functions.
+* **lint/style/useNumericSeparators**: Long numeric literal lacks separators.
+
+**src\app\core\filters\http-exception.filter.ts**
+* **lint/nursery/useExplicitType**: Missing return type on member and function.
+* **lint/nursery/useExplicitReturnType**: Missing return type on function.
+* **lint/nursery/useThisInClassMethods**: Expected this to be used by class method.
+* **lint/style/noTernary**: Unexpected ternary operator.
+
+Found 125 errors.
+Found 551 warnings.
+Found 653 infos.
+
+(leído server-side: 22235 chars ≈ 11580 tokens de Claude que no entraron a tu contexto)

@@ -1,0 +1,3 @@
+El análisis revela problemas relacionados con la ubicación de archivos de modelo. Se identificaron errores al no poder estimar la VRAM para varios modelos, incluyendo gemma3-4b, gemma4-12b, gemma4-26b-a4b, qwen35-2b, y qwen36-35b-a3b.  Específicamente, se reporta que los archivos correspondientes a estos modelos no fueron encontrados en la ruta `MODELOS`.  El grupo 'resident' presenta un error para gemma3-4b, mientras que el grupo 'swap' registra errores para gemma4-26b-a4b, qwen36-35b-a3b, qwen35-2b y gemma4-12b, todos debido a la ausencia de los archivos indicados.  El peor caso registrado es de 0,00 GiB de VRAM utilizada.
+
+(read server-side: 727 chars ≈ 378 Claude tokens that did not enter your context)
