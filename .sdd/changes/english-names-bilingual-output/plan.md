@@ -1676,6 +1676,12 @@ B2d-3** y saldría en la 0.36.0, así que no va al backlog.
   el cambio toca (A12, B35), nueva 2 (un falso positivo del contador) y `main` 4 más 2 cortes.
   Propuesta en `live.md`: criterio sobre las llamadas cuyo prompt cambia, con las demás como
   control de ruido, o más repeticiones.
+- **Decisión del usuario (2026-10-17): se adopta la segunda ronda (`6408477`).** Se le presentaron
+  tres salidas (fijar antes de medir un criterio sobre las llamadas cuyo prompt cambia y medir otra
+  vez, adoptar ya, o subir a `--repeat 10`) y eligió adoptar ya, con la evidencia actual: 0 cortes
+  frente a 2 de `main`, y mejor en las 2 llamadas que el cambio toca. Riesgo asumido y anotado: el
+  reparto «llamadas tocadas / no tocadas» se miró después de ver los números. Queda para B2e el
+  falso positivo del contador con el guion bajo escapado en Markdown (`build\_corpus.py`).
 - *Test:* con un log sintético de decenas de elementos con el mismo problema; mutante que quita la
   regla y comprobar qué assert salta. Si N lo calcula el programa, test de N contra el log.
 - *Medición:* el método de B2d-3 (`evidence/B2d-3/measure.md`: tandas A y B, 3 repeticiones,
