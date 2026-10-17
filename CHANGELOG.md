@@ -46,10 +46,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   Client (3)»): en la medición en vivo, 12 fallos de fidelidad en 10 logs (9 antes). Ahora la
   cantidad sale solo de una cifra que el log escribe o de contar las líneas que repite; si no, sin
   número. Y si el log trae una línea de total («Found 10 errors.», «57 passed»), el resumen la copia
-  tal cual: con la primera regla, los resúmenes de `ruff` la perdían. Los elementos con el mismo
-  problema van en una sola línea que los nombra juntos, en vez de repetir el mismo texto por cada
-  uno: en un log sin línea de total, la respuesta se cortaba por el tope al enumerarlos uno a uno.
-  Va en la llamada única y en el paso final del troceado.
+  tal cual: con la primera regla, los resúmenes de `ruff` la perdían. Va en la llamada única y en el
+  paso final del troceado.
 
 - **El resumen por secciones ya no duplica una sección cuando el modelo traduce su título.** La
   «Introducción» sintética sale en el idioma de respuesta (no en el del producto), y si el modelo
