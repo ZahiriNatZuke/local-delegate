@@ -1,0 +1,49 @@
+[pesado] plaza plaza-1 tomada tras 0s: .venv/Scripts/python.exe -m pytest -p no:cacheprovider -q -s --rootdir C:/Users/Yohan/AppData/Local/Temp/claude/D--Projects-local-delegate/9d9ecade-e04b-4a3b-bd28-ea018a806ed3/scratchpad/b2e_probe C:/Users/Yohan/AppData/Local/Temp/claude/D--Projects-local-delegate/9d9ecade-e04b-4a3b-bd28-ea018a806ed3/scratchpad/b2e_probe/test_b2e_probe.py .sdd/changes/english-names-bilingual-output/evidence/B2d-fix/investigation-tests/test_chunking_language_investigation.py
+
+REDUCE SYSTEM: Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un ÚNICO resumen global en prosa clara, sin repetir ni enumerar los fragmentos. Máximo 200 palabras. Nada fuera del formato. La cantidad sale solo del contenido: la que el contenido escribe (una línea de to
+F
+REDUCE max_tokens: 564 map: 764
+F..........línea del plan: ['- Release Information (vacía en el documento: solo el título)', '## Release Information']
+..
+================================== FAILURES ===================================
+___________________ test_lint_reduce_keeps_the_lint_format ____________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000296F5487210>
+captured = [{'system': 'Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen ...N de un mismo documento. Redacta un único resumen global:\n\n- nota\n\n- nota\n\n- nota\n\n- nota', 'max_tokens': 696}]
+
+    def test_lint_reduce_keeps_the_lint_format(monkeypatch, captured):
+        """Loss 1: the reduce of the chunked lint asks for prose that does not enumerate."""
+        monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "mechanical", 1200)
+        monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 1200)
+        server.local_lint_summary(text=_ruff_log(12, 6))
+        assert len(captured) > 2
+        reduce_step = captured[-1]
+        assert "Resume la siguiente salida" not in reduce_step["user"]
+        print("\nREDUCE SYSTEM:", reduce_step["system"][:300])
+>       assert "agrupados por archivo" in reduce_step["system"]
+E       AssertionError: assert 'agrupados por archivo' in 'Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un ÚNICO resumen global...n en otro idioma. Solo se quedan tal cual las rutas, el código, los identificadores y los códigos de regla o de error.'
+
+C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b2e_probe\test_b2e_probe.py:47: AssertionError
+_______ test_explain_reduce_inventory_names_the_registered_subcommands ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000296F5486D50>
+captured = [{'system': 'Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: una viñeta ...r("cmd-zz12", help="h")\n    sub.add_parser("cmd-zz13", help="h")\n    other.add_parser(sub)', 'max_tokens': 764}, ...]
+
+    def test_explain_reduce_inventory_names_the_registered_subcommands(monkeypatch, captured):
+        """Loss 2: the reduce inventory lists only top-level def/class, not what a def registers."""
+        code = _cli_like(14, 220)
+        assert len(code) > config.max_chars_for_role("code")
+        server.local_explain_code(code=code)
+        assert len(captured) > 2
+        reduce_user = captured[-1]["user"]
+        assert "build_parser" in reduce_user  # guard: the inventory is there
+        print("\nREDUCE max_tokens:", captured[-1]["max_tokens"], "map:", captured[0]["max_tokens"])
+>       assert all(f"cmd-zz{i}" in reduce_user for i in range(14))
+E       assert False
+E        +  where False = all(<generator object test_explain_reduce_inventory_names_the_registered_subcommands.<locals>.<genexpr> at 0x00000296F7E2BAE0>)
+
+C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b2e_probe\test_b2e_probe.py:69: AssertionError
+=========================== short test summary info ===========================
+FAILED C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b2e_probe\test_b2e_probe.py::test_lint_reduce_keeps_the_lint_format
+FAILED C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b2e_probe\test_b2e_probe.py::test_explain_reduce_inventory_names_the_registered_subcommands
+2 failed, 12 passed in 2.22s

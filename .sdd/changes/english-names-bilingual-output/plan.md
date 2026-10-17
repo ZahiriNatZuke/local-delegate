@@ -1692,6 +1692,141 @@ B2d-3** y saldría en la 0.36.0, así que no va al backlog.
 - **Cierre del lote:** suite en `es` y en `en`, `ruff`, corpus y afinidad, CHANGELOG, y registro en
   `waves/B2d-4.md` con las llamadas `local_*`.
 
+#### B2e — Lo que se pierde al combinar los trozos (`local_explain_code` y `local_lint_summary`)
+
+Lote decidido por el usuario el 2026-10-14 en la muestra en vivo de B2d (commit `4d81646`:
+«local_explain_code sobre cli.py: lee la entrada entera, pero al trocear pierde los subcomandos
+doctor y benchmark (va al lote B2e)»; `evidence/B2d/live.md` §3 y `waves/B2d.md`; vault
+`jornada-2026-10-14-noche-frente-b-hasta-b2d.md`: «lote B2e con medición»). Investigación previa,
+con las sondas y su salida: `evidence/B2e/research.md`. Sale en la 0.36.0 y no va al backlog porque
+el troceado de `explain_code` lo trae B2c (que sale en la 0.36.0) y porque el lint troceado se
+publicaría con la misma pérdida que aquí se demuestra.
+
+- **Sitio en el orden: en serie después de B2d-4 y antes de B2-affinity** (mismo `server.py`; los
+  prompts del reduce de lint y de `explain_code` cambian, y B2-affinity tiene que medir la
+  afinidad con los prompts que se publican).
+- **Posee:** en `src/local_delegate/server.py`, `local_explain_code` (`:4572-4659`, su rama
+  troceada `:4604-4646` y el inventario `:4608`), `_TOP_LEVEL_NAME` y `_format_names`
+  (`:2765` y `:2800-2815`), la rama troceada de `local_lint_summary` (`:4348-4366`) y, si hace
+  falta, el reduce por defecto de `_chat_map_reduce` (`:3181-3204`) y su registro (`:3125-3166`);
+  `_log_event` (`:724`) solo para el campo de pasos. `scripts/score_lint_fidelity.py` (`:54-105`,
+  `NUMBER`, `FILE`, `_norm_path`, `model_text`). Tests nuevos en `tests/` (nombres a fijar en la
+  propuesta). Evidencia en `evidence/B2e/`.
+- **Ya resuelto, no entra:** lo que dejó la investigación del troceado
+  (`evidence/B2d-fix/chunking-model-investigation.md`): sus 12 tests
+  (`investigation-tests/test_chunking_language_investigation.py`) pasan hoy en `main`, B1 y B2
+  incluidos (los cerró B2d-2).
+
+**Pérdidas (las tres comprobadas en `main` = `e0bcf97` con `evidence/B2e/probes/`):**
+
+1. **`local_explain_code` pierde lo que una función registra.** El map pide «una viñeta por cada
+   función o clase» y el inventario del reduce solo lista `def`/`class` de primer nivel
+   (`_TOP_LEVEL_NAME`), así que los 16 subcomandos que `build_parser` registra con
+   `add_parser("…")` (y `benchmark`, registrado como `benchmark.add_parser(sub)`, sin el literal)
+   dependen de que el modelo los copie dos veces: en la nota de un trozo de 12 343 caracteres y en
+   un reduce de 250 palabras (564 tokens) para un fichero de 58 875. Sonda: `cli.py` da 4 trozos,
+   `build_parser` cae entero en el 4.º y el inventario no trae ni `doctor` ni `benchmark`; con un
+   fichero sintético que registra 14 subcomandos, ninguno llega al prompt del reduce
+   (`test_explain_reduce_inventory_names_the_registered_subcommands` falla). En vivo, una sola
+   llamada (B2d): faltan `doctor` y `benchmark`.
+   - *Cambio candidato, por programa:* el inventario del reduce añade los **nombres registrados**,
+     calculados con `ast` para Python: primer argumento literal de las llamadas `*.add_parser(…)`
+     (y de las que el test fije, sin abrir la lista a ojo), con la función que los registra
+     («`build_parser` registra: doctor, serve, …»), y para `X.add_parser(sub)` sin literal, «lo
+     registra el módulo `X`». Si `ast` no puede leer el fichero, el inventario de hoy. Dentro del
+     mismo tope de inventario (`budget * 0.25`).
+   - *Diagnóstico, ANTES del cambio:* el log de uso registra por cada paso del troceado su tipo
+     (map, reagrupado, reduce), `chars_out` y `finish_reason`, sin el texto (campo nuevo en
+     inglés, como `chars_out_raw` de B2d-2). Sin esto no se sabe si el reduce de 564 tokens se
+     corta o si la nota del trozo 4 ya los había perdido. El tope del reduce de `explain_code`
+     (250 palabras) **solo** se toca si ese campo muestra cortes.
+   - *Test:* el de la sonda entra en `tests/` (14 subcomandos en el prompt del reduce), más
+     `X.add_parser(sub)` → «módulo `X`», y control: un fichero sin registros da el inventario de
+     hoy byte a byte. Mutante: el inventario de hoy (falla el assert de los subcomandos, no el
+     guardián de que hubo reduce). Campo de pasos: backend falso con 4 trozos; la fila lleva 5
+     pasos con su tipo. Mutante: un solo paso (falla).
+2. **`local_lint_summary` troceado pierde el formato de la tool.** El reduce y el reagrupado usan
+   el reduce por defecto, «un ÚNICO resumen global en prosa clara, sin repetir ni enumerar los
+   fragmentos» (`server.py:3185-3191`), más la regla de la cantidad y la del idioma: el formato de
+   lint («agrupados por archivo, con la cantidad por tipo de error/regla… los más relevantes
+   primero», `_lint_system`, `:3678`) no llega al paso que produce el resultado. En vivo (B2d-2,
+   tanda C, `LOCAL_DELEGATE_MAX_CHARS_LONG=8000`): `C43.txt` y `C44.txt` son dos párrafos de prosa
+   sin un solo código de regla, recuento ni fichero en formato de lista, cuando la llamada única de
+   esos mismos logs (`A09`, `A14`, `B25`) agrupa por fichero con códigos y cifras. Sonda:
+   `test_lint_reduce_keeps_the_lint_format` falla. **Ampliación de B2e del 2026-10-17:** es otra
+   pérdida al combinar, en la misma función, y la medición de B2e trocea lint de todos modos.
+   - *Cambio candidato:* `local_lint_summary` pasa su propio reduce: el formato de `_lint_system`
+     con la regla de la cantidad y la de idioma, y un `build_reduce` que dice que son resúmenes
+     parciales EN ORDEN del mismo log y que un fichero que aparece en varios va en una sola
+     entrada. Con reduce propio, el reagrupado usa el `system` del map (el de lint), como ya hace
+     `_chat_map_reduce` (`:3204`). Parte por programa: un inventario de los ficheros y códigos de
+     regla del log, sacado con las mismas expresiones que `score_lint_fidelity.py` (`FILE`,
+     `CODE`, movidas a `src/` y el script las importa, sin duplicarlas), delante de los parciales y
+     **sin recuentos** (para no darle al modelo cifras que el log no escribe).
+   - *Test:* backend falso con troceado forzado (tope 1 200): el `system` del último paso lleva
+     «agrupados por archivo» y no «sin repetir ni enumerar», en `es` y en `en`, y el prompt del
+     reduce trae el inventario; la llamada única sigue igual byte a byte (control). Mutante: el
+     reduce por defecto (falla el assert del formato, no el guardián «troceó de verdad»).
+3. **El contador de fidelidad se equivoca en cuatro casos** (`evidence/B2d-4/counter-validation.md`,
+   reproducidos con `probes/probe_counter.py`). Entran en B2e porque B2e mide lint troceado con
+   este contador, y en logs de `ruff`/`tsc` de muchos ficheros esos casos son frecuentes:
+   - `build\_corpus.py` (guion bajo escapado en Markdown) cuenta como fichero inventado frente a
+     `build_corpus.py` del log (**decisión del 2026-10-17**). Cambio: `model_text` quita los
+     escapes de Markdown (`\_`, `\*`, `\-`, `` \` ``) antes de buscar.
+   - Posición de `tsc` `(52,24)` leída como el número `52,24`: el «52» real cuenta como inventado.
+     Cambio: en el log, `(N,M)` detrás de un fichero da dos cifras.
+   - Versión `v255`: el `(?<![\w.])` de `NUMBER` no la ve. Cambio: en el log, una `v` delante de
+     la cifra no la oculta.
+   - «nine» T201 (demasiado laxo) pasa por un `:9:` de columna. Cambio: una cifra en palabras solo
+     la respalda una cifra que el log no escribe como línea o columna (`:N:`, `(N,M)`). Es el más
+     arriesgado de los cuatro: si la validación lo desmiente, se queda como límite conocido.
+   - *Validación ANTES de medir (regla de B2d-4):* contra una revisión a mano de **cifras nuevas**,
+     no las 18 de `counter-validation.md` (≥ 12, de las respuestas troceadas de la base de B2e y de
+     `C43`/`C44`), con los dos contadores; se aplica solo si no suelta ninguna inventada. Cada caso
+     con su test y su mutante en el test del contador.
+
+**Medición.** Lección de B2d-4: con `--repeat 3`, la media del corpus entero no separa el efecto
+del cambio del ruido del modelo (8 llamadas de prompt idéntico dieron 22 frente a 13). Así que:
+
+- *Conjunto fijado ANTES de medir* en `evidence/B2e/chunking-set.json` (sha256 y, por entrada, la
+  verdad calculada por programa), con copias en `evidence/B2e/docs/` marcadas `-text`:
+  - **Lint que trocea en producción**, sin tocar topes (más de 48 000 caracteres, rol `long`):
+    L1, `ruff check --select ALL --output-format concise src/` de `main`; L2, un log de CI con un
+    `uv.lock` dentro (denso: ejercita el reintento por desborde; memoria «si mides troceado, usa
+    datos con un lockfile dentro»); L3, una salida de `pytest --collect-only` de `evidence/*/collect.txt`
+    (~208 000, 6 trozos).
+  - **Lint con troceado forzado** (`LOCAL_DELEGATE_MAX_CHARS_LONG=8000`), comparables con B2d-2:
+    L4 = `en-log-biome-lint.txt` y L5 = `lint-9k.txt` (los de `C43`/`C44`).
+  - **`explain_code`** (trocea por encima de 20 000): E1 `cli.py` (verdad: los 16 nombres de
+    `add_parser("…")` más `benchmark`), E2 `benchmark.py` (60 029, sus 2 registros) y E3
+    `checks.py` (98 710, sin registros: control del inventario de primer nivel).
+  - Antes de juzgar una entrada, el log de uso tiene que dar `chunks > 1`; si no, no se juzga.
+- *Métricas por respuesta, por programa:* lint, cuántos de los 10 códigos de regla y de los 10
+  ficheros más frecuentes del log nombra (calculados del log), `fidelity_total` con el contador
+  corregido y corte (`finish_reason=length`); `explain_code`, la fracción de nombres registrados y
+  de nombres de primer nivel que nombra.
+- *Control de ruido:* las 10 llamadas únicas del conjunto 3 (`evidence/B2d-2/fidelity-set.json`,
+  tandas A y B), cuyo prompt B2e no cambia: `same_prompt_check.py` (ampliado en `evidence/B2e/`
+  para comparar también cada paso de las troceadas) tiene que darlas idénticas entre versiones, y
+  su diferencia entre `main` y la rama mide el ruido de la sesión.
+- *Versiones:* `main` (árbol aparte en `D:/Projects/ld-wt-*`) y la rama, en la misma sesión, con
+  el mismo método y `--repeat 3`, con `run_live.py` (las respuestas no pasan por el contexto) y
+  ventanas de prueba.
+- **Hecho cuando** (fijado aquí, antes de medir; las cifras de las llamadas que el cambio toca):
+  - E1 nombra `doctor` y `benchmark` en las 3 repeticiones, y la media de nombres registrados de
+    E1 y E2 es ≥ 0,9 y mayor que la de `main`; E3 (control) no baja de la de `main`.
+  - L1–L5: media de códigos nombrados ≥ 7 de 10 y de ficheros ≥ 7 de 10 (en la base de B2d-2, C43
+    y C44 dan 0 códigos), y por encima de `main`; `fidelity_total` medio no peor que `main`;
+    **0 cortadas** en las 15 llamadas.
+  - Control: los prompts del control son idénticos; si la diferencia de `fidelity_total` entre
+    versiones en el control es mayor que la mejora en las llamadas tocadas, la sesión no decide y
+    se repite con `--repeat 5`, sin cambiar el criterio.
+  - Si el campo de pasos muestra cortes del reduce de `explain_code`, se anota y se decide el tope
+    con el usuario antes de medir otra vez.
+- **Cierre del lote:** suite completa en `es` y en `en`, `ruff`, corpus y afinidad (cambian los
+  prompts del reduce de lint y de `explain_code`: frontera en `PROMPT_BOUNDARIES` con su motivo),
+  CHANGELOG, y registro en `waves/B2e.md` con las llamadas `local_*`.
+
 #### B3 — Hooks
 
 - **REQ:** 024, 041 (conjunto de hashes y lectura en `measure_adoption.py`) y 034 (humo de hooks).
