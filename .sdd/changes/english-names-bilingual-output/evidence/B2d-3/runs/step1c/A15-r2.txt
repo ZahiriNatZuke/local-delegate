@@ -1,0 +1,15 @@
+**Summary of Issues**
+
+**scripts\build_site.py:**
+
+This file contains several issues. There is a missing copyright notice at the top (CPY001). Additionally, there are three instances of missing docstrings in public functions (D103) located at lines 36, 72, and 76. Furthermore, there are nine occurrences of the `print` statement (T201) found at lines 85, 90, 92, 96, and 98. Finally, a trailing comma is missing at line 76 (COM812).
+
+**Incompatibilities:**
+
+Warnings regarding incompatible rules `incorrect-blank-line-before-class` (D203) and `blank-line-before-class` (D211), and `multi-line-summary-first-line` (D212) and `multi-line-summary-second-line` (D213) were ignored.
+
+**Total Errors:**
+
+Found 10 errors.
+
+(leído server-side: 968 chars ≈ 504 tokens de Claude que no entraron a tu contexto)

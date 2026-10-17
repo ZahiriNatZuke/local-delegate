@@ -92,6 +92,40 @@ valor de tokens máximos cambió con los prompts de la versión 0.36.0.»), hast
   agrupar en una sola línea los elementos con el mismo problema. Criterio en `measure.md` y en
   `plan.md`, fijado antes de medir.
 
+## Paso 1c, 3 repeticiones (2026-10-17): NO se adopta
+
+Lo midió la sesión principal con el mismo procedimiento (`measure.md`, «Paso 1c») sobre el commit
+del paso 1c (`d12f5af`), 30 llamadas, 0 errores. Ventanas `w-20261017T160612Z` (tanda A) y
+`w-20261017T160828Z` (tanda B), cerradas; lanzador del daemon restaurado. Respuestas en
+`runs/step1c/`, recuento en `runs/step1c/score-answers.json`, control en `runs/controls-1c.json` (con
+la base, el 1 y el 1b) y log de uso en `runs/score-log-1c.json`.
+
+| Versión | `fidelity_totals` (r1, r2, r3) | Media | `parenthesized_invented` | Controles conservados (2 de 3) | Cortadas |
+|---|---|---|---|---|---|
+| paso 1b (referencia) | 2, 5, 4 | 3,67 | 0, 0, 0 | A14, A15, B31, B32 | 3 (B35 ×3) |
+| paso 1c | 1, 7, 1 | **3,0** | **0, 0, 0** | A14 3/3, A15 2/3, B31 3/3, B32 2/3 | **3 (B35 ×3)** |
+
+- Llamadas no nulas (r1/r2/r3): A12 0/1/0, A13 1/3/1, A15 0/1/0, B32 0/2/0; las demás 0/0/0 y B35
+  cortada (no se juzga). `identical_in_every_repetition` = `[]`.
+- Log de uso: `gemma3-4b` 21 llamadas y 0 cortadas; `gemma4-26b-a4b` 9 llamadas y **3 cortadas**
+  (33,3 %), las tres de B35 (`es-log-B2d-fix_corpus-affinity-check.txt`), a las 16:09:28, 16:10:18 y
+  16:11:07 UTC, con `chars_out` ~1420. Ninguna troceada.
+- Qué hace B35 ahora: agrupa, como pedía la regla, pero en una sola línea nombra uno a uno los más de
+  80 elementos `commit-…` del log hasta agotar el tope. La salida es más corta que en el 1b (~1420
+  frente a ~1700–1790 chars) y aun así no cabe.
+
+### Veredicto
+
+Con el criterio fijado antes de medir (los tres del 1b **y** 0 cortadas en 30), **el 1c no se
+adopta**: cumple fidelidad (3,0 ≤ 4,0 y ≤ 11,67), paréntesis (0) y control (incluye A15, B31 y B32,
+además de A14), pero corta 3 de 30. **Se queda el 1b**: el código del 1c se revierte (commit
+`revert(i18n)` en la rama; `src/` y `tests/` quedan como en `20faa5e`) y su evidencia se conserva.
+
+**Pendiente, al plan (lote B2d-4):** un log con decenas de elementos del mismo tipo agota el tope de
+`gemma4-26b-a4b`, tanto si los enumera uno a uno (1b) como si los nombra todos juntos (1c). La salida
+probable es limitar cuántos se nombran («y N más», con N contado del log) o resumir por tipo. Es otro
+cambio y no va en esta ola.
+
 ## Referencia: paso 1, n=1 (2026-10-17)
 
 Código del paso 1 (`8999bce`) instalado en el daemon; las 10 llamadas de lint del conjunto 3 con

@@ -1,0 +1,23 @@
+**Local Delegate Doctor Summary**
+
+**File Issues:**
+
+*   **LLAMASWAP_EXE:** No issues found.
+*   **LLAMASWAP\_CONFIG:** No issues found.
+*   **Backend:** No issues found.
+*   **Clientes:** 8 clientes MCP observados (claude-ai, codex-mcp-client, local-agent-mode-local-delegate, mcp, mcp-remote-fallback-test).
+*   **Cadenas de respaldo:** Cadenas válidas; sin residente.
+*   **Nombres obsoletos:** Leído por los hooks (últimos 7 días): LD\_HOOK\_READ\_BLOQUEAR está obsoleto: usa LD\_HOOK\_READ\_BLOCK (se retira en la 0.38.0).
+*   **Coste y relleno:** El último cotejo cuadra.
+*   **Ventanas de prueba:** 67 ventanas, ninguna abierta.
+*   **Hooks:** Claude Code no está instalado.
+*   **Skill local-delegation:** Claude Code y opencode clientes no instalados.
+*   **Memoria global:** Claude Code y opencode clientes no instalados.
+*   **MCP en Claude Code/Codex/opencode:** Los clientes no están instalados.
+*   **Servicios:** Daemon y backend funcionan correctamente.
+*   **Versiones:** llama-swap y llama-server están instaladas y probadas.
+*   **Afinidad:** Sin residente (recomendado).
+
+**Total Warnings:** 2
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

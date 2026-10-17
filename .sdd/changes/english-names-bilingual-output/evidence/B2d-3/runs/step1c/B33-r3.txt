@@ -1,0 +1,7 @@
+**Resumen de Problemas**
+
+**src/app/features/auth/pages/login.page.ts:** Se encontró un error de tipo. El argumento asignado a la función no coincide con el tipo esperado del parámetro `returnUrl`. Se requiere especificar `undefined` en los tipos de las propiedades del parámetro de destino.
+
+**src/app/features/home/components/tech-stack.component.ts:** Se identificó un error de tipo. El tipo de dato del objeto asignado no es compatible con el tipo `StackItem`. Se recomienda agregar `undefined` a los tipos de las propiedades del tipo de destino.
+
+(read server-side: 1435 chars ≈ 747 Claude tokens that did not enter your context)

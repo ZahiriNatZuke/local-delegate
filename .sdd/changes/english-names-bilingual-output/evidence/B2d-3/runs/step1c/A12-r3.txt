@@ -1,0 +1,11 @@
+**Summary of Issues by File**
+
+**scripts/build_corpus.py:**
+
+There are multiple issues related to a system change with prompts introduced in version 0.36.0, including a declared frontier. Specifically, there are concerns about `max_tokens` changes alongside this prompt update. The file also contains issues related to `explain-metrics`, `explain-install`, `describir-dashboard`, `leer-cifras-dashboard`, `techo-resumen` and `techo-commit`.
+
+**resumen-md-2k, resumen-md-10k, resumen-changelog-7k, lint-9k, commit-diff-19k:**
+
+These files exhibit a system change with prompts due to the 0.36.0 update, characterized by a declared frontier. The issues encompass modifications to `max_tokens`.
+
+(leído server-side: 1231 chars ≈ 641 tokens de Claude que no entraron a tu contexto)

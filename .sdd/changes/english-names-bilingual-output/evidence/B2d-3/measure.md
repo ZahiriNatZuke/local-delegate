@@ -1,4 +1,4 @@
-# B2d-3: medición en vivo de la regla de la cantidad (método de 2026-10-17; base, 1 y 1b medidos; 1c pendiente)
+# B2d-3: medición en vivo de la regla de la cantidad (método de 2026-10-17; base, 1, 1b y 1c medidos; se queda el 1b)
 
 Fijada el 2026-10-17, ANTES de las llamadas con este método. La ejecuta la sesión principal: hay
 que reinstalar el daemon con cada versión, y eso tira el MCP de la sesión (pedir `/mcp`).
@@ -136,3 +136,15 @@ uv run python $E/B2d-2/score_live.py log --usage-log "<log de uso del daemon>" -
 
 Si no cumple alguno, **se queda el 1b** (se revierte el commit del 1c) y el corte de B35 se anota
 como deuda. `identical_in_every_repetition` se anota como en las demás versiones.
+
+**Resultado (2026-10-17, `d12f5af`, ventanas `w-20261017T160612Z` y `w-20261017T160828Z`):**
+
+| Criterio | Paso 1c | ¿Cumple? |
+|---|---|---|
+| Fidelidad | `fidelity_totals` 1, 7, 1; media 3,0 | sí |
+| Paréntesis | 0, 0, 0 | sí |
+| Control | A14 3/3, A15 2/3, B31 3/3, B32 2/3 | sí |
+| Cortadas | **3 de 30** (B35 ×3, `gemma4-26b-a4b`, `chars_out` ~1420) | **no** |
+
+`identical_in_every_repetition` = `[]`. **El 1c no se adopta; se queda el 1b** y el commit del 1c se
+revierte. El corte de B35 pasa al plan como lote B2d-4 (`../../plan.md`). Detalle en `live.md`.

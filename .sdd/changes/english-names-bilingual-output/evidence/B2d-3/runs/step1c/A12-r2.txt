@@ -1,0 +1,23 @@
+Here’s a summary of the issues grouped by file, prioritizing the most relevant:
+
+**scripts/build_corpus.py**
+
+*   System change with prompts from 0.36.0 (declared frontier): Found 11 instances.
+*   Max tokens change with prompts from 0.36.0 (declared frontier): Found 2 instances.
+
+**Other files:**
+
+*   **resumen-md-2k**: System change with prompts from 0.36.0 (declared frontier).
+*   **resumen-md-10k**: System change with prompts from 0.36.0 (declared frontier).
+*   **resumen-changelog-7k**: System change with prompts from 0.36.0 (declared frontier).
+*   **lint-9k**: System change with prompts from 0.36.0 (declared frontier).
+*   **commit-diff-19k**: System change with prompts from 0.36.0 (declared frontier).
+*   **commit-diff-19k**: Max tokens change with prompts from 0.36.0 (declared frontier).
+*   **explicar-metrics-15k**: System change with prompts from 0.36.0 (declared frontier).
+*   **explicar-install-20k**: System change with prompts from 0.36.0 (declared frontier).
+*   **describir-dashboard**: System change with prompts from 0.36.0 (declared frontier).
+*   **leer-cifras-dashboard**: System change with prompts from 0.36.0 (declared frontier).
+*   **techo-resumen-103k**: System change with prompts from 0.36.0 (declared frontier).
+*   **techo-commit-156k**: System change with prompts from 0.36.0 (declared frontier).
+
+(leído server-side: 1231 chars ≈ 641 tokens de Claude que no entraron a tu contexto)

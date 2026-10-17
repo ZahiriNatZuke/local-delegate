@@ -1,0 +1,16 @@
+Resumen de problemas agrupados por archivo:
+
+**VRAM**: Se detectaron errores al no poder estimar la VRAM para varios modelos. El presupuesto disponible es de 6,50 GiB.
+
+**Errores de archivo no encontrado**:
+*   gemma3-4b: ERROR (archivo no encontrado: MODELOS\gemma-3-4b-it-Q4_K_M.gguf)
+*   gemma4-26b-a4b: ERROR (archivo no encontrado: MODELOS\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf)
+*   qwen36-35b-a3b: ERROR (archivo no encontrado: MODELOS\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf)
+*   qwen35-2b: ERROR (archivo no encontrado: MODELOS\Qwen3.5-2B-UD-Q8_K_XL.gguf)
+*   gemma4-12b: ERROR (archivo no encontrado: MODELOS\gemma-4-12b-it-Q4_K_M.gguf)
+
+**Grupos**:
+*   grupo 'resident' [todos juntos]: 0,00 GiB
+*   grupo 'swap' [swap (1 a la vez)]: 0,00 GiB
+
+(read server-side: 727 chars ≈ 378 Claude tokens that did not enter your context)

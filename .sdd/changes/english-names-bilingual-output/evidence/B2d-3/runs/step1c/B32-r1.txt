@@ -1,0 +1,20 @@
+**Resumen de Problemas:**
+
+**scripts\clean_watcher_fixtures.py:**
+
+*   Missing copyright notice at top of file (1)
+*   Line too long (2)
+*   Missing docstring in public function (2)
+*   Magic value used in comparison, consider replacing `16` with a constant variable (1)
+*   `print` found (1)
+
+**Incompatibilidades:**
+
+*   `incorrect-blank-line-before-class` (D203) y `blank-line-before-class` (D211) son incompatibles.
+*   `multi-line-summary-first-line` (D212) y `multi-line-summary-second-line` (D213) son incompatibles.
+
+**Total de Errores:**
+
+Found 7 errors.
+
+(read server-side: 958 chars ≈ 498 Claude tokens that did not enter your context)

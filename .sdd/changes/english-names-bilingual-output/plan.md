@@ -980,7 +980,7 @@ nuevos o la documentación en ficheros que el agente que renombra no toca, siemp
 **Orden de mezcla (explícito):**
 
 ```
-A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close-5) → higiene de CodeQL → `affinity --check` sin entorno → B0 (B0a → B0b) → B1 → B2 (lotes B2a → B2b → B2c → B2d → B2d-2 → B2d-3 → B2e → B2-affinity) → { B3 ∥ B4 } → B5 → [release 0.36.0]
+A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close-5) → higiene de CodeQL → `affinity --check` sin entorno → B0 (B0a → B0b) → B1 → B2 (lotes B2a → B2b → B2c → B2d → B2d-2 → B2d-3 → B2d-4 → B2e → B2-affinity) → { B3 ∥ B4 } → B5 → [release 0.36.0]
 ```
 
 - **Valores de una palabra (A-close-5, añadida el 2026-10-14), tras A-close-4.** El barrido de
@@ -1595,6 +1595,41 @@ modelo la inventa cuando el log no tiene cifras. Va **en serie después de B2d-2
   Si no, **se queda el 1b** (se revierte el commit del 1c) y el corte de B35 se anota como deuda.
   Comandos en `evidence/B2d-3/measure.md` (`--answers-dir $E/B2d-3/runs/step1c --repeat 3`, tandas
   A y B).
+- **Resultado del paso 1c (2026-10-17, `d12f5af`, medido por la sesión principal; ventanas
+  `w-20261017T160612Z` y `w-20261017T160828Z`; `evidence/B2d-3/live.md` y `runs/step1c/`):**
+  `fidelity_totals` 1, 7, 1 (media **3,0**; 1b: 3,67), `parenthesized_invented` 0, 0, 0,
+  `identical_in_every_repetition` = `[]`, controles A14 3/3, A15 2/3, B31 3/3 y B32 2/3. Pero
+  **3 cortadas de 30**, otra vez B35 (`gemma4-26b-a4b`, `chars_out` ~1420): ahora agrupa, pero en
+  una sola línea nombra los más de 80 elementos `commit-…` del log hasta agotar el tope.
+  **Veredicto: el 1c no se adopta** (falla «0 cortadas»). **Se queda el 1b**: el commit del 1c se
+  revierte (`src/` y `tests/` como en `20faa5e`) y su evidencia se conserva. El corte de B35 pasa al
+  lote **B2d-4**, el siguiente en el orden.
+
+#### B2d-4 — `local_lint_summary` no se corta con logs de muchos elementos iguales
+
+Lote nacido el 2026-10-17 de la medición del paso 1c de B2d-3 (`evidence/B2d-3/live.md`). Con la
+regla del 1b, B35 (`B2d-fix/docs-3/es-log-B2d-fix_corpus-affinity-check.txt`, 89 líneas, sin línea
+de total, `gemma4-26b-a4b`) sale cortado por `max_tokens` en las 3 repeticiones: enumera uno a uno
+decenas de elementos con el mismo problema; con el 1c los agrupa, pero los nombra todos en una
+línea y también se corta. En la base y en el paso 1, ninguna vez. Es una **regresión que trae
+B2d-3** y saldría en la 0.36.0, así que no va al backlog.
+
+- **Sitio en el orden: en serie después de B2d-3 y antes de B2e** (mismo `server.py` y la misma
+  `_lint_count_clause()`). No se mete dentro de B2e: B2e trata la pérdida al combinar los trozos, y
+  B35 no se trocea (0 troceadas en `runs/score-log-1c.json`); el corte está en la llamada única.
+  Pero el cambio tiene que valer también en el `reduce_extra` del troceado, como las reglas del 1 y
+  el 1b.
+- **Cambio candidato (se decide antes de medir):** limitar cuántos elementos iguales se nombran
+  («… y N más», con N contado del log, no por el modelo), o resumir por tipo de problema sin listar
+  los elementos. El tope de lint no se toca (regla de B2d-2/B2d-3).
+- *Test:* con un log sintético de decenas de elementos con el mismo problema; mutante que quita la
+  regla y comprobar qué assert salta. Si N lo calcula el programa, test de N contra el log.
+- *Medición:* el método de B2d-3 (`evidence/B2d-3/measure.md`: tandas A y B, 3 repeticiones,
+  ventanas de prueba). *Hecho cuando* tiene **0 cortadas en 30** y además cumple los tres criterios
+  del 1b contra la base (media ≤ 11,67 y ≤ 4,0, `parenthesized_invented` = 0, controles ⊇ A15, B31 y
+  B32).
+- **Cierre del lote:** suite en `es` y en `en`, `ruff`, corpus y afinidad, CHANGELOG, y registro en
+  `waves/B2d-4.md` con las llamadas `local_*`.
 
 #### B3 — Hooks
 
