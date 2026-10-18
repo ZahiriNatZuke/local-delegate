@@ -1,0 +1,11 @@
+El código define un módulo de verificación de sistema (`checks.py`) que centraliza la evaluación del estado de diversos componentes de software mediante sondas no invasivas. Establece cuatro estados fundamentales: `OK` (correcto), `MISSING` (ausente), `WARN` (advertencia) y `UNKNOWN` (desconocible), utilizando un diccionario de etiquetas para su presentación internacionalizada.
+
+La arquitectura se basa en dos estructuras de datos principales: `Result`, un dataclass inmutable que encapsula el estado, detalles y sugerencias de reparación; y `Check`, que define cada prueba con un identificador, grupo, título y la función sonda correspondiente. Las sondas son funciones privadas (prefijadas con `_`) que interrogan el entorno sin modificar el disco, verificando aspectos como la disponibilidad de clientes (Claude, Codex), la configuración de hooks, la conexión con el daemon local, la autenticación MCP y la presencia de modelos de backend.
+
+El módulo gestiona la lógica de versiones comparando cadenas y consultando PyPI con tiempos de espera específicos. También maneja la detección de configuraciones de escritorio, afinidad de procesos y topología de red. Incluye utilidades para leer archivos de texto y JSON, analizar entradas de directorios y detectar obsolescencias en nombres de hooks. Finalmente, expone una función `run_all` que ejecuta todas las definidas, permitiendo una auditoría completa del entorno de desarrollo o ejecución, asegurando que las dependencias y configuraciones críticas estén presentes y operativas antes de proceder con tareas principales.
+
+[local-delegate warning: salida truncada por max_tokens en 2 de 9 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 98017 chars ≈ 48284 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 9 pasadas por local-delegate)

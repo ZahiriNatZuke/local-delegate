@@ -1,0 +1,76 @@
+**Resumen de pruebas por archivo**
+
+**tests/test_analyze_benchmark.py**
+* 85 pruebas de análisis de rendimiento, incluyendo criterios de calidad, latencia, pruebas de significancia, manejo de datos truncados y validación de formatos JSON.
+
+**tests/test_checks.py**
+* 57 pruebas de diagnóstico, incluyendo validación de IDs de registro, versiones instaladas, estado del demonio, credenciales y conectividad del backend.
+
+**tests/test_clients.py**
+* Valida la gestión de capacidades de clientes, rotación de registros, firmas de identidad y la visibilidad de herramientas para los clientes.
+
+**tests/test_connection_cause.py**
+* Verifica la clasificación de errores de conexión, códigos de estado HTTP y la generación de sugerencias ante fallos de red.
+
+**tests/test_core.py**
+* Incluye pruebas sobre lectura de archivos, limpieza de bloques de pensamiento, esquemas JSON, estado local del sistema y gestión de inventarios.
+
+**tests/test_dashboard_ui.py**
+* 33 pruebas sobre paginación, fuentes, tipografía, temas y visualización de datos en el panel.
+
+**tests/test_detect_spanish_names.py**
+* 45 pruebas sobre la detección de nombres en español y heurísticas de lenguaje.
+
+**tests/test_failures.py**
+* 45 pruebas sobre clasificación de errores HTTP, tiempos de espera y estados de autoinicio.
+
+**tests/test_fallback.py**
+* 37 pruebas sobre mecanismos de recuperación, saltos entre modelos y enfriamiento.
+
+**tests/test_hook_shell.py**
+* 31 pruebas sobre el bloqueo de comandos de shell para volcado de documentos.
+
+**tests/test_hook_recipes.py**
+* 31 pruebas sobre recetas de ganchos para prompts, lectura de archivos y telemetría.
+
+**tests/test_install.py**
+* 46 pruebas sobre el proceso de instalación, gestión de recursos, comandos de shell, manejo de rutas en Windows, configuración de bloques y desinstalación.
+
+**tests/test_install_opencode.py**
+* 33 pruebas sobre la configuración de directorios, manejo de archivos JSON/JSONC, comentarios y esquemas de configuración.
+
+**tests/test_llamaswap_config.py**
+* 45 pruebas sobre la carga de configuración, estimación de memoria VRAM/RAM, validación de archivos GGUF y gestión de grupos de modelos.
+
+**tests/test_metrics.py**
+* 73 pruebas sobre métricas de la API, estadísticas de uso, contabilidad de tokens, paneles de control y seguridad de endpoints.
+
+**tests/test_measure_cooldown.py**
+* 31 pruebas sobre las reglas de enfriamiento, gestión de errores y generación de informes.
+
+**tests/test_measure_slowness.py**
+* 31 pruebas sobre la medición de lentitud, ventanas de tiempo, umbrales de tokens y códigos de parada.
+
+**tests/test_pace.py**
+* 31 pruebas sobre el ritmo de ejecución, ventanas de referencia y manejo de entradas de datos anómalas.
+
+**tests/test_update.py**
+* 73 pruebas que cubren la detección de instalaciones, reparaciones de servicios, gestión de ganchos, actualizaciones de versiones y mecanismos de reinicio del demonio.
+
+**tests/test_web_auth.py**
+* 37 pruebas de seguridad web, incluyendo validación de encabezados, tokens Bearer, autenticación básica y gestión de sesiones mediante cookies.
+
+**Resumen de advertencias**
+
+**.venv\Lib\site-packages\starlette\testclient.py**
+* **Advertencia de depreciación**: El alias `anyio.abc.BlockingPortal` está obsoleto y debe sustituirse por `anyio.from_thread.BlockingPortal`.
+
+2617 tests collected in 0.74s
+
+Sin mencionar (del log, no los nombra el resumen): tests/test_residency.py, tests/test_topology.py, tests/test_corpus.py, tests/test_structured_summary.py
+
+[local-delegate warning: salida truncada por max_tokens en 2 de 8 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 206985 chars ≈ 107804 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 8 pasadas por local-delegate)

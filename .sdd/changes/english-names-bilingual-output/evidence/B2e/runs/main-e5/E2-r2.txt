@@ -1,0 +1,11 @@
+Este script implementa un sistema integral de benchmarking para evaluar modelos de lenguaje, centrado en la precisión lógica y el consumo de recursos. En primer lugar, gestiona la integridad y carga de un corpus de pruebas mediante estructuras inmutables (`CorpusCase`, `Corpus`) y validación de hashes. Para evaluar las respuestas del modelo, utiliza múltiples estrategias: análisis de texto para extraer conteos de reglas, ejecución segura de código Python generado en procesos aislados y verificación de formato JSON.
+
+Paralelamente, el código incluye un sofisticado monitoreo de recursos, especialmente optimizado para entornos Windows. Utiliza APIs nativas (`psapi`, `kernel32`) y herramientas del sistema (`typeperf`, `nvidia-smi`) para rastrear en tiempo real el uso de memoria RAM y VRAM de los procesos. Clases como `ProcessProbe` y `ResourceSampler` gestionan la recolección asíncrona de estas métricas, permitiendo detectar picos de uso y anomalías térmicas o de rendimiento durante la ejecución.
+
+La orquestación principal se realiza a través de `run_benchmark`, que coordina la carga de casos, la configuración de la conexión a la API y la ejecución de los intentos (`Attempt`). Cada intento registra no solo el resultado textual y el estado HTTP, sino también el consumo de recursos y posibles errores de contexto. Finalmente, `add_parser` configura la interfaz de línea de comandos, permitiendo a los usuarios seleccionar casos específicos y ejecutar el benchmark de manera controlada y reproducible.
+
+[local-delegate warning: salida truncada por max_tokens en 1 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 59966 chars ≈ 29539 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

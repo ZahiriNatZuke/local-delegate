@@ -1,0 +1,11 @@
+Este documento presenta un resumen exhaustivo de la ejecución de 2617 pruebas distribuidas en múltiples archivos de test. El conjunto de pruebas abarca desde la validación de experimentos de adopción, afinidad y procesamiento por lotes, hasta la evaluación de agentes, análisis de rendimiento, métricas de latencia y atribución de datos. Se incluyen verificaciones críticas de infraestructura como el inicio automático, sondeo de backend, gestión de versiones, salida de código, cadenas de ejecución y diagnósticos de conectividad y seguridad.
+
+Asimismo, se cubren aspectos de la interfaz de usuario y paneles de control, incluyendo la lógica de JavaScript, estados del modelo y localización. El alcance se extiende a la gestión de instalaciones, configuración de clientes, procesos de actualización, mecanismos de respaldo (fallback), telemetría y seguridad web mediante autenticación de sesiones y tokens. También se validan funciones de procesamiento de texto, división de fragmentos (chunking), gestión de recursos (RAM/VRAM), cálculo de costes, cuotas, visión artificial y la integridad del corpus de datos. Finalmente, se reporta una advertencia de depreciación en la librería Starlette relacionada con el alias de AnyIO.
+
+2617 tests collected in 0.74s
+
+[local-delegate warning: salida truncada por max_tokens en 2 de 8 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 206985 chars ≈ 107804 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 8 pasadas por local-delegate)

@@ -1,0 +1,11 @@
+El código implementa un sistema integral de benchmarking para evaluar modelos de lenguaje, abarcando desde la gestión de datos hasta la medición precisa de recursos de hardware. Comienza definiendo estructuras de datos inmutables como `CorpusCase` y `Corpus` para organizar los casos de prueba, junto con utilidades como `_frozen_source` y `load_corpus` para validar y cargar el corpus desde archivos JSON, asegurando la integridad mediante hashes SHA-256. Incluye funciones de preprocesamiento de texto como `normalize_for_match` y `parse_prometheus_metrics` para estandarizar entradas y analizar métricas de rendimiento.
+
+La lógica de evaluación se centra en `run_execution_checks` y `score_output`, que ejecutan código generado en entornos aislados y califican las respuestas basándose en cobertura, validez JSON y conteos de reglas. Un componente crítico es la monitorización de recursos en Windows, gestionada por `ResourceSampler` y `ProcessProbe`. Estas clases orquestan lecturas de memoria RAM y VRAM mediante `TypeperfStream`, que interactúa con `typeperf` y APIs de Windows (`_win32_api`, `list_processes`) para rastrear procesos específicos y sus usos de GPU, resolviendo identificadores únicos (LUID) mediante `resolve_gpu_luid`.
+
+Finalmente, la ejecución se coordina en `run_benchmark`, que itúa sobre los casos filtrados por `_select_cases`, realiza llamadas a la API inferencial a través de `post_attempt` y gestiona el estado térmico del servidor con `ThermalTracker`. La integración con la línea de comandos se logra mediante `add_parser`, que configura el subcomando "benchmark", permitiendo a los usuarios ejecutar pruebas completas con configuraciones específicas de razonamiento (`reasoning_kwargs`) y validación de contexto (`is_context_rejection`).
+
+[local-delegate warning: salida truncada por max_tokens en 1 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 59966 chars ≈ 29539 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

@@ -1,0 +1,11 @@
+El archivo `checks.py` es un módulo de diagnóstico que centraliza veinticinco comprobaciones no invasivas para evaluar el estado del entorno de software. Define cuatro estados constantes (`OK`, `MISSING`, `WARN`, `UNKNOWN`) y un diccionario `STATUS_LABEL` para mapearlos a etiquetas internacionales, facilitando la presentación de mensajes como `[ OK ]` mediante la función `status_label`.
+
+El núcleo del sistema se basa en dos clases de datos inmutables: `Check`, que define cada prueba con su ID, grupo y función sonda, y `Result`, que almacena el estado, detalle y sugerencia de reparación. Las sondas, como `_probe_daemon` o `_probe_clients`, verifican aspectos específicos (daemon, clientes, hooks, MCP, topología) sin modificar el sistema. Se incluyen utilidades para leer archivos, comparar versiones, gestionar tokens Bearer y consultar servicios externos como PyPI o llamaswap con tiempos de espera controlados.
+
+La función `run_all` ejecuta secuencialmente las veinticinco comprobaciones definidas en la tupla `CHECKS`, permitiendo filtrar por grupos. Captura excepciones para evitar que un fallo bloquee el diagnóstico completo, devolviendo una lista de resultados. También proporciona pistas de texto para acciones comunes (actualizar hooks, reiniciar servicio, credenciales) resueltas desde catálogos de internacionalización. El módulo asegura robustez mediante importaciones diferidas y validaciones de estado, permitiendo identificar rápidamente problemas de configuración, permisos o componentes faltantes en el entorno del usuario.
+
+[local-delegate warning: salida truncada por max_tokens en 3 de 10 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 98017 chars ≈ 48284 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 10 pasadas por local-delegate)

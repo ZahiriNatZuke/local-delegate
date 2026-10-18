@@ -1,0 +1,9 @@
+El código define una herramienta de línea de comandos completa para gestionar la instalación, actualización y desinstalación de clientes MCP, así como para monitorizar y configurar el daemon `llamaswap`. La función `run` actúa como punto de entrada, orquestando la ejecución mediante `build_parser`, que configura `argparse` para registrar subcomandos como `serve`, `install`, `update`, `uninstall`, `check-llamaswap`, `init-llamaswap`, `recompute-cost` (y su alias oculto `recalcular-coste`), `test-window` y `llamaswap residency`.
+
+Para la gestión de clientes, `_resolve_clients` valida la configuración, `_install_options` y `_update_options` construyen los parámetros necesarios, y `_run_install` orquesta el proceso real, apoyado por `_scaffold_report` para mostrar el estado y `_leave_daemon_up` para mantener el daemon activo. Se incluyen utilidades como `_has_terminal`, `_codex_mcp_set_by_hand` y `_decide_on_foreign_codex` para manejar interacciones y configuraciones específicas de Codex.
+
+La gestión de `llamaswap` implica validar presupuestos con `_check_budget`, `_estimate_all` y `_print_breakdown`, e inicializar configuraciones con `cmd_init_llamaswap`. La comunicación con el daemon se maneja mediante `_daemon_target`, `_daemon_url`, `_daemon_status` y `_llamaswap_status`. Para operaciones de residencia, se usan `_open_watch`, `_daemon_watch` y `_write_residency`, gestionando errores con `_restore_after_rejection` y `_report_outcome`. Finalmente, `_argparse_in_language` asegura que los mensajes de ayuda y errores se muestren en el idioma correcto, mientras `_warn_deprecated` y `_warn_if_cli_not_on_path` proporcionan retroalimentación al usuario sobre obsolescencias o configuraciones del sistema.
+
+(leído server-side: 58875 chars ≈ 29002 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)

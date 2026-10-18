@@ -1,0 +1,5 @@
+Resumen de Problemas:
+
+El análisis detectó errores relacionados con la ubicación de archivos de modelo. El grupo ‘resident’ presenta problemas con gemma3-4b, gemma4-26b-a4b, qwen36-35b-a3b y gemma4-12b, donde los archivos correspondientes no fueron encontrados.  Específicamente, se reporta un error para gemma3-4b (archivo no encontrado: MODELOS\gemma-3-4b-it-Q4_K_M.gguf), gemma4-26b-a4b (archivo no encontrado: MODELOS\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf), qwen36-35b-a3b (archivo no encontrado: MODELOS\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf) y qwen35-2b (archivo no encontrado: MODELOS\Qwen3.5-2B-UD-Q8_K_XL.gguf).  El grupo ‘swap’ también muestra errores similares.  El **Total peor caso (VRAM)** es de 0,00 GiB.
+
+(read server-side: 727 chars ≈ 378 Claude tokens that did not enter your context)

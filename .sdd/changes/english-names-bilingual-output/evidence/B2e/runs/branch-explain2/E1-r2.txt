@@ -1,0 +1,11 @@
+El código define una interfaz de línea de comandos (CLI) modular para gestionar un sistema de inferencia de LLM, probablemente llamado "LlamaSwap" o similar. La estructura central es `build_parser`, que configura `argparse` para registrar todos los subcomandos, incluyendo `benchmark`, `serve`, `doctor`, `install`, `update`, `uninstall`, `recompute-cost` (con su alias oculto `recalcular-coste`), `test-window` y el grupo `llamaswap` (con `check-llamaswap`, `init-llamaswap` y `residency`). La función `run` actúa como punto de entrada, inicializando el contexto de internacionalización mediante `_argparse_in_language` y ejecutando la lógica correspondiente.
+
+La gestión de instalación y actualización se orquesta mediante `_run_install`, `_install_options` y `_update_options`, apoyadas por `_resolve_clients` y `_decide_on_foreign_codex` para configurar clientes MCP y manejar la integración con Codex. El módulo incluye utilidades de sistema como `_has_terminal`, `_warn_if_cli_not_on_path` y `_scaffold_report`.
+
+La funcionalidad específica de LlamaSwap es extensa: `cmd_check_llamaswap` y `cmd_init_llamaswap` validan presupuestos de recursos (`_check_budget`, `_estimate_all`, `_print_breakdown`) y gestionan la configuración. El estado del daemon se monitorea con `_daemon_status`, `_llamaswap_status` y `_daemon_target`. La escritura de configuración es segura y atómica, utilizando `_open_watch`, `_daemon_watch` y `_restore_after_rejection` para evitar inconsistencias, finalizando con `_write_residency` y `_report_outcome`. También se manejan ventanas de prueba con `cmd_test_window` y `_count_rows_by_window`. Finalmente, `_warn_deprecated` gestiona la transición de comandos antiguos, asegurando compatibilidad hacia atrás mientras se ocultan funcionalidades obsoletas mediante `_Hidden_COMMANDS`.
+
+Sin mencionar (los registra el fichero, no los nombra la explicación): start, stop, add, list
+
+(leído server-side: 58875 chars ≈ 29002 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)

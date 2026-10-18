@@ -1,0 +1,200 @@
+Aquí tienes el resumen de las pruebas ejecutadas, agrupadas por archivo:
+
+**tests/test_update.py**
+* 75 pruebas sobre detección de instalaciones, reparación de ganchos, actualización de servicios, gestión de versiones y archivos de configuración.
+
+**tests/test_metrics.py**
+* 68 pruebas sobre métricas del sistema, paneles de control, contabilidad de tokens, estadísticas de uso y seguridad de endpoints.
+
+**tests/test_install.py**
+* 46 pruebas sobre el proceso de instalación, gestión de recursos, comandos de shell, rutas en Windows y migración de configuraciones.
+
+**tests/test_failures.py**
+* 45 pruebas de clasificación de errores HTTP, tiempos de espera y gestión de reanudación automática.
+
+**tests/test_llamaswap_config.py**
+* 45 pruebas sobre carga de configuración, estimación de memoria, validación de archivos GGUF y gestión de grupos de modelos.
+
+**tests/test_detect_spanish_names.py**
+* 44 pruebas de detección de nombres en español, heurísticas de palabras reservadas y falsos positivos.
+
+**tests/test_web_auth.py**
+* 37 pruebas de seguridad web, validación de encabezados, tokens Bearer, autenticación básica y gestión de sesiones.
+
+**tests/test_fallback.py**
+* 36 pruebas de mecanismos de recuperación, saltos entre modelos, enfriamiento y observabilidad de fallos.
+
+**tests/test_dashboard_ui.py**
+* 33 pruebas de interfaz de usuario, incluyendo paginación, temas, tarjetas de KPI y localización.
+
+**tests/test_install_opencode.py**
+* 33 pruebas sobre configuración de directorios, manejo de archivos JSON/JSONC y desinstalación de habilidades.
+
+**tests/test_measure_cooldown.py**
+* 31 pruebas sobre reglas de enfriamiento, manejo de fallos y generación de informes.
+
+**tests/test_measure_slowness.py**
+* 31 pruebas sobre medición de lentitud, ventanas de tiempo, umbrales de tokens y códigos de parada.
+
+**tests/test_pace.py**
+* 31 pruebas sobre el ritmo de ejecución, manejo de entradas inválidas y siembra de datos.
+
+**tests/test_dashboard_states.py**
+* 30 pruebas sobre estados del modelo, fallos de conexión, esperas locales y visualización de actividad.
+
+**tests/test_install_clients.py**
+* 28 pruebas sobre configuración de clientes, detección de directorios y comportamiento de la terminal.
+
+**tests/test_doctor.py**
+* 26 pruebas de la herramienta de diagnóstico, versiones de LlamaServer y estado del demonio.
+
+**tests/test_deprecations.py**
+* 24 pruebas de validación de nombres obsoletos, registros de depreciación y consistencia de cambios.
+
+**tests/test_install_timeouts.py**
+* 23 pruebas sobre la persistencia de tiempos de espera en diferentes clientes y modos.
+
+**tests/test_vendor.py**
+* 21 pruebas de integridad de archivos, validación de manifiestos, detección de vulnerabilidades y versiones.
+
+**tests/test_hook_legacy_names.py**
+* 17 pruebas de compatibilidad con nombres antiguos de ganchos y advertencias.
+
+**tests/test_chunking.py**
+* Pruebas sobre división de texto, límites de tamaño, encabezados Markdown y gestión de archivos diff.
+
+**tests/test_clients.py**
+* Pruebas sobre capacidades de clientes, registro de identidades, rotación de registros y firmas.
+
+**tests/test_connection_cause.py**
+* Pruebas de clasificación de errores de conexión, causas de fallos de red y credenciales.
+
+**tests/test_cooldown.py**
+* Pruebas sobre el enfriamiento de modelos, persistencia de datos y gestión de episodios.
+
+**tests/test_core.py**
+* Pruebas de variables de entorno, limpieza de texto, esquemas JSON, estado de backends y concurrencia.
+
+**tests/test_corpus.py**
+* Pruebas de integridad del corpus, reglas de roles, detección de datos privados y términos de cambios.
+
+**tests/test_correlation.py**
+* Pruebas sobre la correlación de bloques, persistencia de notas y archivos dañados.
+
+**tests/test_cost_doctor.py**
+* Comprobación de gestión de advertencias por plazos de comandos y validación de datos.
+
+**tests/test_ctrl_c.py**
+* Verificación del manejo de interrupciones de usuario en diferentes entornos.
+
+**tests/test_daemon.py**
+* Pruebas sobre autenticación del demonio, gestión de tokens, puertos, bloqueos e inicio de servicio.
+
+**tests/test_dashboard_cost.py**
+* Validación de estadísticas de la API, cuotas de costes y visualización en el panel.
+
+**tests/test_dashboard_js.py**
+* 5 pruebas de construcción de consultas y manejo de ventanas.
+
+**tests/test_delegation_connection.py**
+* 14 pruebas sobre tiempos de espera, delegación remota/local y errores de conexión.
+
+**tests/test_density.py**
+* 16 pruebas sobre cálculo de densidad, tokens de Claude y gestión de fallos.
+
+**tests/test_environment_isolation.py**
+* 5 pruebas de aislamiento de variables de entorno y configuración.
+
+**tests/test_f1_conformance.py**
+* 15 pruebas de conformidad con el protocolo, enfriamiento de modelos y registros.
+
+**tests/test_failure_captures.py**
+* 9 pruebas de captura de errores por capacidad, carga y tiempos de espera.
+
+**tests/test_failures_integration.py**
+* 9 pruebas de integración de fallos, incluyendo errores de conexión y contenido vacío.
+
+**tests/test_fake_llamaswap.py**
+* 12 pruebas de simulación de LlamaSwap, recarga de configuración y procesos.
+
+**tests/test_fallback_observability.py**
+* 9 pruebas de registro de logs y estados de recuperación.
+
+**tests/test_fast_role_retired.py**
+* 14 pruebas sobre la retirada del rol rápido y advertencias en el catálogo.
+
+**tests/test_footprint.py**
+* 8 pruebas de huella digital de configuración y tamaños de prompt.
+
+**tests/test_hook_common.py**
+* 16 pruebas de comportamiento común de ganchos, bloqueos y salud del backend.
+
+**tests/test_hooks_telemetry_api.py**
+* 5 pruebas de telemetría y agrupación de lecturas por extensión.
+
+**tests/test_load_probe.py**
+* 15 pruebas sobre detección del estado de carga de modelos y tiempos de espera.
+
+**tests/test_map_reduce.py**
+* 18 pruebas sobre procesamiento de documentos largos, fragmentación y errores de backend.
+
+**tests/test_measure_adoption.py**
+* 16 pruebas sobre medición de adopción, delegación de tareas y registros.
+
+**tests/test_measure_structured_summary.py**
+* 10 pruebas sobre validación de resúmenes estructurados y cobertura de secciones.
+
+**tests/test_pair_sheet.py**
+* Verificación de reglas de generación de hojas, validación de mensajes, claves y formatos.
+
+**tests/test_post_chat_paths.py**
+* Pruebas de rutas de chat con diversos códigos de estado y errores de conexión.
+
+**tests/test_price_watcher.py**
+* Validación de seguimiento de precios, cambios en modelos y gestión de cambios en GitHub.
+
+**tests/test_pricing.py**
+* Pruebas de normalización de fechas, búsqueda de precios y carga de tablas.
+
+**tests/test_questions.py**
+* Verificación de capacidades de preguntas, manejo de sesiones y esquemas de elicitación.
+
+**tests/test_quota.py**
+* Pruebas de cálculo de cuotas, sesiones paralelas y gestión de puntos.
+
+**tests/test_recompute.py**
+* Validación de procesos de recomputación, agregados y persistencia de datos.
+
+**tests/test_recompute_legacy.py**
+* Pruebas de compatibilidad entre archivos antiguos y nuevos formatos de agregados.
+
+**tests/test_release_metadata.py**
+* Verificación de versiones de metadatos y cumplimiento de límites de descripción.
+
+**tests/test_residency.py**
+* Pruebas sobre residencia de modelos, detección de claves sensibles y gestión de configuraciones.
+
+**tests/test_residency_cli.py**
+* Pruebas de la interfaz de línea de comandos para la gestión de la residencia y el demonio.
+
+**tests/test_resource_probe.py**
+* Validación de sondeo de recursos, gestión de procesos y medición de memoria.
+
+**tests/test_role_caps.py**
+* Pruebas de capacidades de roles y fragmentación de contenido largo.
+
+**tests/test_site.py**
+* Verificación de la integridad del sitio web, metadatos sociales, iconos y versiones.
+
+**tests/test_slowness.py**
+* Pruebas de medición de lentitud, tiempos de respuesta y gestión de eventos.
+
+**tests
+
+Sin mencionar (del log, no los nombra el resumen): tests/test_checks.py, tests/test_analyze_benchmark.py, tests/test_topology.py, tests/test_structured_summary.py
+
+[local-delegate warning: salida truncada por max_tokens en 3 de 8 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 206985 chars ≈ 107804 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 8 pasadas por local-delegate)

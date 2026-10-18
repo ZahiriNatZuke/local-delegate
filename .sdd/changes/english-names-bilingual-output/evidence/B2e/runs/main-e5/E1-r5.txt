@@ -1,0 +1,9 @@
+Este fichero implementa la interfaz de línea de comandos (CLI) y la orquestación principal para una herramienta de gestión de sistemas de inferencia de IA, probablemente centrada en LlamaSwap y optimización de recursos. La estructura se basa en `argparse`, donde `build_parser` configura todos los subcomandos y `run` actúa como punto de entrada, gestionando el contexto de internacionalización.
+
+Las funcionalidades se dividen en varias áreas clave. Primero, gestiona la instalación y actualización del software mediante `cmd_install`, `cmd_update` y `cmd_uninstall`, las cuales delegan en `_run_install` para orquestar la planificación y aplicación de cambios, incluyendo la configuración de clientes y advertencias sobre el PATH del sistema. Segundo, maneja la interacción con un daemon HTTP singleton para el dashboard y la comunicación MCP, arrancado por `cmd_serve` y consultado mediante funciones como `_daemon_status` y `_daemon_url`.
+
+Tercero, integra profundamente con LlamaSwap. Los comandos `cmd_init_llamaswap`, `cmd_check_llamaswap` y `cmd_llamaswap_residency` permiten inicializar configuraciones, validar presupuestos de VRAM/RAM contra modelos agrupados o no, y gestionar la residencia de modelos con mecanismos de vigilancia (`_open_watch`, `_daemon_watch`) y restauración ante fallos. Finalmente, incluye utilidades de diagnóstico y mantenimiento, como el recálculo de costes de API (`cmd_recompute_cost`), la gestión de ventanas de prueba (`cmd_test_window`) y la validación de entornos (`_has_terminal`, `_scaffold_report`). El código prioriza la robustez mediante validaciones estrictas, manejo de errores y retrocompatibilidad con comandos obsoletos.
+
+(leído server-side: 58875 chars ≈ 29002 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)

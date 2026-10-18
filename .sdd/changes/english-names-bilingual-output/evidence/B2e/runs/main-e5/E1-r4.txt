@@ -1,0 +1,9 @@
+Este fichero implementa la interfaz de línea de comandos (CLI) y la orquestación principal para una herramienta de gestión de modelos de lenguaje, probablemente enfocada en inferencia local y optimización de recursos. La estructura se basa en el módulo `argparse` para definir un conjunto diverso de subcomandos, organizados mediante funciones auxiliares como `build_parser`, `_add_install_parsers` y `_add_llamaswap_parser`.
+
+Las funcionalidades principales se dividen en varias áreas. Primero, gestiona el ciclo de vida del software mediante `cmd_install`, `cmd_uninstall`, `cmd_update` y `cmd_serve`, que orquestan la instalación, desinstalación, actualización y arranque de un daemon HTTP singleton. Segundo, se centra en la configuración y validación de recursos, con comandos como `cmd_check_llamaswap` y `cmd_recompute_cost`, que verifican presupuestos de VRAM/RAM, calculan costes de API y validan la compatibilidad de modelos, rechazando aquellos que no están agrupados correctamente o exceden los límites. Tercero, maneja la interacción con un daemon de fondo (LlamaSwap) mediante funciones como `_daemon_status`, `_open_watch` y `cmd_llamaswap_residency`, permitiendo iniciar vigilancia, verificar estados y escribir configuraciones de residencia de modelos de forma segura y atómica.
+
+Además, el código incluye utilidades de soporte como `_has_terminal` para detectar entornos interactivos, `_warn_deprecated` para gestionar la obsolescencia de comandos, y `_argparse_in_language` para asegurar que los mensajes de ayuda y errores se muestren en el idioma correcto del sistema. La función `run` actúa como punto de entrada, analizando los argumentos y despachando la ejecución al comando correspondiente, asegurando una gestión robusta de errores, configuraciones y estados del sistema.
+
+(leído server-side: 58875 chars ≈ 29002 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)

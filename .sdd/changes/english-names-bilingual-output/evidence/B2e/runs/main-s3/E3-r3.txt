@@ -1,0 +1,11 @@
+El código define un módulo de verificación de integridad y estado del sistema, diseñado para evaluar la configuración de diversos componentes de software sin realizar modificaciones. Centraliza veinticinco comprobaciones mediante sondas inofensivas que consultan el entorno actual. Establece un conjunto de estados estándar (OK, MISSING, WARN, UNKNOWN) y utiliza un diccionario de internacionalización para presentar etiquetas de estado legibles y pistas de reparación contextuales en el idioma del usuario.
+
+La arquitectura se basa en clases de datos inmutables: `Result` almacena el resultado de cada sonda (estado, detalle y sugerencia), mientras que `Check` define la estructura de cada verificación, vinculando un identificador único a una función sonda específica. El módulo incluye utilidades internas para el manejo de archivos, lectura de JSON, comparación de versiones y detección de procesos o puertos en uso.
+
+Se integran sondas específicas para validar la presencia y configuración de clientes como Claude, Codex y OpenCode, verificando sus modos de entrada, configuraciones MCP (Model Context Protocol) y autenticación. También evalúa la conectividad y estado de daemons locales, servicios de backend, modelos de IA y actualizaciones de PyPI. La lógica maneja excepciones de permisos o datos faltantes asignando el estado UNKNOWN, asegurando que la ausencia de información no cause fallos críticos. Finalmente, expone una función `run_all` para ejecutar todas las comprobaciones y determinar el estado global del sistema, proporcionando una visión completa de la salud y configuración del entorno de desarrollo.
+
+[local-delegate warning: salida truncada por max_tokens en 3 de 9 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 98017 chars ≈ 48284 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 9 pasadas por local-delegate)

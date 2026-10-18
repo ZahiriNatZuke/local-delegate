@@ -1,0 +1,9 @@
+El código implementa un sistema de benchmarking integral para evaluar modelos de lenguaje, centrado en la medición precisa de recursos y la ejecución controlada de casos de prueba. Gestiona la carga y validación de un corpus de datos mediante `load_corpus` y `Corpus`, asegurando la integridad de las fuentes con `_frozen_source`. Para cada caso (`CorpusCase`), orquesta la ejecución mediante `run_benchmark`, que utiliza `build_payload` y `post_attempt` para interactuar con la API del modelo, gestionando errores como el rechazo de contexto con `is_context_rejection` y capturando resultados en `Attempt`.
+
+Un componente clave es el monitoreo de recursos en tiempo real. En Windows, utiliza APIs nativas (`_win32_api`, `list_processes`, `read_process_memory`) y herramientas de sistema (`typeperf`, `nvidia-smi`) a través de clases como `ProcessProbe` y `TypeperfStream` para rastrear memoria RAM y VRAM (`VramReading`, `ResourceSample`). `ResourceSampler` y `MetricsSampler` coordinan la recolección sincrónica y asíncrona de estas métricas, incluyendo el uso de Prometheus para métricas de servidor. La calidad de las respuestas se evalúa con `score_output`, que verifica validez JSON, ejecución de código y conteos de reglas. Además, gestiona la configuración de razonamiento con `effective_reasoning` y el estado térmico del servidor con `ThermalTracker`. Finalmente, `add_parser` integra esta funcionalidad en una interfaz de línea de comandos, permitiendo filtrar casos con `_select_cases` y ejecutar el benchmark completo de manera estructurada y segura.
+
+[local-delegate warning: salida truncada por max_tokens en 1 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 59966 chars ≈ 29539 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

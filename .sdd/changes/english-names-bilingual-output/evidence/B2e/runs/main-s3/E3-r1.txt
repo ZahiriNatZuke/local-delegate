@@ -1,0 +1,11 @@
+El módulo `checks.py` centraliza la lógica de verificación del estado del sistema, definiendo veinticinco comprobaciones específicas mediante sondas (probes) que son de solo lectura y no modifican el entorno. Establece cuatro estados fundamentales mediante constantes de cadena: `OK` para configuraciones correctas, `MISSING` para elementos ausentes, `WARN` para configuraciones incorrectas o advertencias, y `UNKNOWN` cuando no se puede determinar el estado debido a permisos o falta de datos.
+
+La estructura del código se basa en dos clases de datos inmutables principales: `Result`, que almacena el estado, un detalle legible y una pista de reparación, y `Check`, que define cada elemento del andamiaje con su ID, grupo, título y la función sonda asociada. Para la presentación, utiliza un diccionario `STATUS_LABEL` que mapea estos estados a claves de internacionalización, permitiendo que funciones como `status_label`, `update_hooks_hint`, `serve_hint` y otras similares devuelvan mensajes formateados y traducidos al idioma actual.
+
+El núcleo funcional reside en una serie de funciones privadas (prefijadas con `_`) que actúan como sondas específicas. Estas incluyen la verificación del estado del daemon (`_default_daemon_status`), la gestión de tokens y autenticación (`_default_daemon_needs_token`, `_probe_mcp_daemon_auth`), la detección de clientes como Claude o Codex (`_probe_cli`, `_claude_absent`), y la comprobación de servicios externos como LlamaSwap o la residencia del sistema. También maneja la comparación de versiones (`_compare_versions`), la lectura de archivos y configuraciones (`read_json`, `_probe_hook_files`), y la detección de conflictos o elementos obsoletos. Finalmente, expone una función `run_all` que orquesta la ejecución de todas las definiciones de primer nivel listadas, consolidando los resultados para proporcionar un diagnóstico completo del entorno.
+
+[local-delegate warning: salida truncada por max_tokens en 2 de 9 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 98017 chars ≈ 48284 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 9 pasadas por local-delegate)

@@ -1,0 +1,13 @@
+**Resumen de Problemas:**
+
+**scripts\clean_watcher_fixtures.py:**
+
+*   **Errores de Documentación:** 2 (D103) – Falta la documentación en funciones públicas.
+*   **Violaciones de Longitud de Línea:** 2 (E501) – Líneas excesivamente largas (105 y 106 caracteres).
+*   **Problema de Valor Mágico:** 1 (PLR2004) – Uso de valor mágico `16` en comparación, sugiriendo el uso de una constante.
+*   **Uso de `print`:** 1 (T201) – Presencia de la función `print`.
+*   **Incompatibilidad de Reglas:** 2 –  Incompatibilidad entre las reglas `incorrect-blank-line-before-class` (D203) y `blank-line-before-class` (D211), y entre `multi-line-summary-first-line` (D212) y `multi-line-summary-second-line` (D213).
+
+**Total de Errores:** 7.
+
+(read server-side: 958 chars ≈ 498 Claude tokens that did not enter your context)

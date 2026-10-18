@@ -1,0 +1,9 @@
+El código define una herramienta de línea de comandos modular para gestionar entornos de IA, centrada en la instalación, configuración y monitoreo de servicios como LlamaSwap y MCP. La estructura principal se orquesta mediante `build_parser`, que configura el analizador de argumentos y registra subcomandos clave: `serve` (gestionado por `cmd_serve` para iniciar el daemon), `install`, `update` y `uninstall` (configurados por `_add_install_parsers` y ejecutados por `cmd_install`, `cmd_update`, `cmd_uninstall`), `recompute-cost` (con `cmd_recompute_cost` y su alias legado `cmd_recompute_cost_legacy`), `test-window` (para gestionar ventanas de tiempo en logs), `check-llamaswap` y `init-llamaswap` (para verificar presupuestos de VRAM/RAM e inicializar configuraciones), y `llamaswap residency` (para gestionar cambios de residencia de modelos).
+
+Las funciones auxiliares gestionan la lógica interna: `_run_install` orquesta la instalación, mientras que `_resolve_clients` y `_install_options` procesan argumentos. Para LlamaSwap, `_daemon_target`, `_daemon_url` y `_daemon_status` facilitan la comunicación HTTP con el daemon, apoyados por `_open_watch` y `_daemon_watch` para operaciones asíncronas. La gestión de configuración incluye `_config_path`, `_write_residency` y `_restore_after_rejection` para asegurar la integridad de los archivos. También se incluyen utilidades como `_has_terminal`, `_warn_deprecated` para compatibilidad, `_argparse_in_language` para internacionalización y `_pairs` para parseo de datos. La función `run` actúa como punto de entrada, ejecutando la lógica correspondiente al subcomando seleccionado dentro del contexto de i18n.
+
+Sin mencionar (los registra el fichero, no los nombra la explicación): start, stop, add, list, doctor, recalcular-coste, benchmark
+
+(leído server-side: 58875 chars ≈ 29002 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)

@@ -60,14 +60,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   idioma) y, delante de los parciales, la lista de ficheros y códigos del log entero, sacada por
   programa y sin recuentos. Si el resumen deja fuera alguno de los 10 ficheros o los 10 códigos más
   nombrados, el programa añade una línea «Sin mencionar: …» con ellos. La llamada única no cambia.
+  El paso final (y el reagrupado) tiene su propio tope de salida, el triple del de cada trozo
+  (2 088 tokens para 200 palabras, antes 696); la llamada única y los trozos conservan los suyos.
   En la medición en vivo de logs de 9 000 a 208 000 caracteres, el resumen pasó de nombrar 0 de 10
-  códigos y 1 de 10 ficheros a 3 y 5 (y, con la línea añadida, a todos). Borrador: los logs de 6
-  trozos o más siguen cortándose en el paso final con los topes de hoy, y los recuentos por
-  fichero traen más cifras inventadas que la prosa de antes; queda por decidir antes de publicar.
+  códigos y 1 de 10 ficheros a unos 6 y 7 por sí solo (y, con la línea añadida, a todos). Límite
+  conocido: en logs de 6 trozos o más el resumen sigue cortándose (en el paso final y en los
+  trozos), tarda un 25 % más, y en logs sin recuentos (`pytest --collect-only`) escribe recuentos
+  por fichero que el log no da.
 - **`local_explain_code` troceado no pierde lo que una función registra.** El inventario del paso
   final añade los nombres que registra cada función (`sub.add_parser("doctor")`, calculados con
-  `ast`), dentro del mismo tope; sin registros, el inventario de antes, byte a byte. Pendiente de
-  la medición en vivo.
+  `ast`), dentro del mismo tope; sin registros, el inventario de antes, byte a byte. Si la
+  explicación deja fuera alguno, el programa añade una línea «Sin mencionar: …» con ellos. En la
+  medición en vivo (`cli.py` y `benchmark.py`, 5 repeticiones), la explicación nombra todos los
+  subcomandos registrados (antes, 44 de cada 100; el modelo solo, 80), `doctor` y `benchmark`
+  incluidos.
 - **El log de uso registra cada paso de una operación troceada** (`steps`: tipo, `chars_out` y
   `finish_reason`, sin el texto). `LOCAL_DELEGATE_DUMP_CHUNK_NOTES=<dir>` (apagado por defecto)
   vuelca el texto de cada paso a un JSON local, solo para medir.

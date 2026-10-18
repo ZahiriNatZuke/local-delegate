@@ -10,7 +10,7 @@
     "fires": [
      ">       assert all(f\"cmd-zz{i}\" in reduce_user for i in range(14))",
      "E       assert False",
-     "E        +  where False = all(<generator object test_the_explain_reduce_inventory_names_the_registered_subcommands.<locals>.<genexpr> at 0x0000024CFB146960>)"
+     "E        +  where False = all(<generator object test_the_explain_reduce_inventory_names_the_registered_subcommands.<locals>.<genexpr> at 0x0000022A92E398C0>)"
     ]
    }
   ]
@@ -154,6 +154,47 @@
    },
    {
     "test": "test_the_chunked_lint_answer_lists_what_it_does_not_mention[en-Not mentioned]",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       (line,) = [ln for ln in out.splitlines() if ln.startswith(label)]",
+     "E       ValueError: not enough values to unpack (expected 1, got 0)"
+    ]
+   }
+  ]
+ },
+ {
+  "mutant": "10 lint final cap: the old cap (2026-10-18)",
+  "file": "src/local_delegate/server.py",
+  "results": [
+   {
+    "test": "test_only_the_final_steps_of_the_chunked_lint_get_the_larger_cap",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert caps[\"reduce\"] == {server._lint_final_max_tokens(200)} == {2088}",
+     "E       assert {696} == {2088}",
+     "E",
+     "E         Extra items in the left set:"
+    ]
+   }
+  ]
+ },
+ {
+  "mutant": "11 explain fallback: no 'not mentioned' line (2026-10-18)",
+  "file": "src/local_delegate/server.py",
+  "results": [
+   {
+    "test": "test_the_chunked_explanation_lists_the_registered_names_it_omits[es-Sin mencionar (los registra el fichero]",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       (line,) = [ln for ln in out.splitlines() if ln.startswith(label)]",
+     "E       ValueError: not enough values to unpack (expected 1, got 0)"
+    ]
+   },
+   {
+    "test": "test_the_chunked_explanation_lists_the_registered_names_it_omits[en-Not mentioned (registered by]",
     "failed": 1,
     "rc": 1,
     "fires": [

@@ -1,0 +1,189 @@
+Aquí tienes el resumen de las pruebas ejecutadas, agrupadas por archivo:
+
+**tests/test_adoption_experiment.py**
+* Se ejecutaron 34 pruebas sobre experimentos de adopción, validando planes, cobertura de títulos, tareas y reportes.
+
+**tests/test_affinity.py**
+* Se ejecutaron 48 pruebas sobre afinidad de modelos, incluyendo carga, colas, cambios de rol, memoria y capacidad.
+
+**tests/test_affinity_batch.py**
+* Se ejecutaron 17 pruebas sobre procesos por lotes, cubriendo peticiones, errores, escritura de archivos y límites.
+
+**tests/test_agents.py**
+* Se ejecutaron 15 pruebas sobre gestión de agentes, validando catálogos, actualizaciones, ejecución en seco y herramientas.
+
+**tests/test_analyze_benchmark.py**
+* Se ejecutaron 85 pruebas sobre análisis de rendimiento, comparando calidad, latencia, significancia, datos truncados y JSON.
+
+**tests/test_attribution.py**
+* Se ejecutaron 33 pruebas sobre atribución de eventos, validando servidores de hooks, modelos, memoria y relleno de datos.
+
+**tests/test_autostart.py**
+* Se ejecutaron 2 pruebas sobre configuración de inicio automático.
+
+**tests/test_backend_probe.py**
+* Se ejecutaron 14 pruebas sobre la sonda del servidor, incluyendo estados de acceso, tiempos y respuestas.
+
+**tests/test_benchmark.py**
+* Se ejecutaron 36 pruebas sobre métricas de rendimiento, cubriendo Prometheus, código generado, visión y ejecuciones truncadas.
+
+**tests/test_boilerplate_output.py**
+* Se ejecutaron 18 pruebas sobre generación de archivos, incluyendo directorios, rutas relativas y ahorro de datos.
+
+**tests/test_bump_version.py**
+* Se ejecutaron 8 pruebas sobre actualización de versiones en archivos de configuración.
+
+**tests/test_capture.py**
+* Se ejecutaron 4 pruebas sobre captura de pantalla y generación de manifiestos.
+
+**tests/test_chains.py**
+* Se ejecutaron 26 pruebas sobre cadenas de ejecución, validando configuraciones, saltos de capacidad y variables.
+
+**tests/test_checks.py**
+* Se ejecutaron 62 pruebas de diagnóstico sobre instalaciones, versiones, credenciales, puertos y estado del backend. También incluye detección de versiones, validación de clientes, autenticación, configuración, topología y nombres obsoletos.
+
+**tests/test_chunking.py**
+* Incluye pruebas sobre división de texto, límites de tamaño, encabezados Markdown, archivos diff y orígenes de backend.
+
+**tests/test_ci_gate.py**
+* Verifica trabajos de integración continua, errores, tiempos de espera y resúmenes de trabajos.
+
+**tests/test_cli_renamed_names.py**
+* Comprueba compatibilidad de comandos antiguos, nuevos nombres en la interfaz de línea de comandos y variables de configuración.
+
+**tests/test_clients.py**
+* Pruebas sobre capacidades de clientes, rotación de registros, firmas de identidad y uso de herramientas.
+
+**tests/test_commit_language.py**
+* Valida la detección de idiomas en prompts y traducciones de código.
+
+**tests/test_connection_cause.py**
+* Verifica la clasificación de errores de conexión, fallos de red e interpretación de códigos HTTP.
+
+**tests/test_cooldown.py**
+* Pruebas sobre el sistema de enfriamiento de modelos, persistencia de datos y gestión de episodios.
+
+**tests/test_core.py**
+* Incluye validación de variables de entorno, limpieza de texto, esquemas JSON, logs y concurrencia.
+
+**tests/test_corpus.py**
+* Verifica la integridad del corpus, reglas de validación, detección de datos privados y versiones.
+
+**tests/test_correlation.py**
+* Pruebas sobre correlación de bloques de texto y gestión de notas.
+
+**tests/test_cost_doctor.py**
+* Comprueba la gestión de advertencias por plazos de comandos y validaciones cruzadas.
+
+**tests/test_ctrl_c.py**
+* Verifica el manejo de interrupciones de usuario en diversos entornos.
+
+**tests/test_daemon.py**
+* Pruebas sobre autenticación del demonio, gestión de tokens, estados del servidor y cierres limpios.
+
+**tests/test_dashboard_cost.py**
+* Valida estadísticas de la API, cuotas de coste y visualización en el panel.
+
+**tests/test_dashboard_js.py**
+* Incluye 5 pruebas sobre lógica de JavaScript para consultas, ventanas, fechas, agrupaciones, formatos y gráficos.
+
+**tests/test_dashboard_states.py**
+* Se ejecutaron 30 pruebas sobre estados del modelo, fallos, latencia y comportamiento de la interfaz.
+
+**tests/test_dashboard_ui.py**
+* Se ejecutaron 35 pruebas sobre paginación, tipografía, diseño de tarjetas y localización al español.
+
+**tests/test_delegation_connection.py**
+* Se ejecutaron 14 pruebas sobre tiempos de espera, errores y delegación local o remota.
+
+**tests/test_density.py**
+* Se ejecutaron 16 pruebas sobre cálculo de densidad de tokens y gestión de fallos por variable.
+
+**tests/test_deprecations.py**
+* Se ejecutaron 24 pruebas sobre gestión de nombres obsoletos, registros y versiones de expiración.
+
+**tests/test_detect_spanish_names.py**
+* Se ejecutaron 44 pruebas sobre detección de nombres en español, heurísticas y falsos positivos.
+
+**tests/test_doctor.py**
+* Se ejecutaron 26 pruebas sobre la herramienta de diagnóstico, versiones de servidor y estado del demonio.
+
+**tests/test_environment_isolation.py**
+* Se ejecutaron 5 pruebas sobre aislamiento de variables de entorno y configuración.
+
+**tests/test_f1_conformance.py**
+* Se ejecutaron 15 pruebas sobre conformidad con el protocolo y bloqueo por enfriamiento.
+
+**tests/test_failure_captures.py**
+* Se ejecutaron 11 pruebas sobre captura de errores de capacidad y carga.
+
+**tests/test_failures.py**
+* Se ejecutaron 45 pruebas sobre clasificación de errores HTTP, tiempos de espera y autoinicio.
+
+**tests/test_failures_integration.py**
+* Se ejecutaron 9 pruebas sobre integración de errores y respuestas de red.
+
+**tests/test_fake_llamaswap.py**
+* Se ejecutaron 12 pruebas sobre el comportamiento del simulador de servidor.
+
+**tests/test_fallback.py**
+* Se ejecutaron 36 pruebas sobre lógica de saltos entre modelos y gestión de enfriamiento.
+
+**tests/test_fallback_observability.py**
+* Se ejecutaron 9 pruebas sobre observabilidad y registro de causas de saltos.
+
+**tests/test_fast_role_retired.py**
+* Se ejecutaron 14 pruebas sobre la retirada del rol rápido del catálogo.
+
+**tests/test_footprint.py**
+* Se ejecutaron 8 pruebas sobre lectura de configuraciones y huellas de ejecución.
+
+**tests/test_hook_common.py**
+* Se ejecutaron 16 pruebas sobre gestión de bloqueos, marcas de salud y contextos.
+
+**tests/test_hook_legacy_names.py**
+* Se ejecutaron 17 pruebas sobre compatibilidad con nombres antiguos de hooks.
+
+**tests/test_hook_recipes.py**
+* Se ejecutaron 31 pruebas sobre recetas de hooks para prompts, archivos y telemetría.
+
+**tests/test_hook_shell.py**
+* Se ejecutaron 31 pruebas sobre el bloqueo de comandos.
+
+**tests/test_hooks_telemetry_api.py**
+* Se ejecutaron 5 pruebas de telemetría y agrupación de lecturas.
+
+**tests/test_install.py**
+* Se ejecutaron 46 pruebas sobre instalación, recursos, comandos de shell, rutas en Windows, idempotencia y migraciones.
+
+**tests/test_install_clients.py**
+* Se ejecutaron 28 pruebas sobre configuración de clientes, directorios, rutas de inicio y terminal.
+
+**tests/test_install_header.py**
+* Se ejecutaron 18 pruebas sobre gestión de encabezados, tokens web y banderas.
+
+**tests/test_install_opencode.py**
+* Se ejecutaron 33 pruebas sobre configuración de directorios, archivos JSON/JSONC, comentarios, esquemas y desinstalación.
+
+**tests/test_install_timeouts.py**
+* Se ejecutaron 23 pruebas sobre persistencia de tiempos de espera en clientes y modos de ejecución.
+
+**tests/test_llamaswap_api.py**
+* Se ejecutaron 14 pruebas sobre estado de ejecución, modelos en vuelo, registros y observadores.
+
+**tests/test_llamaswap_config.py**
+* Se ejecutaron 45 pruebas sobre carga de configuración, memoria VRAM/RAM, archivos GGUF y grupos de modelos.
+
+**tests/test_load_probe.py**
+* Se ejecutaron 15 pruebas sobre detección de carga de modelos y tiempos de espera.
+
+**tests/test_map_reduce.py**
+* Se ejecutaron 18 pruebas sobre procesamiento de documentos largos, fragmentación, desbordamientos y reintentos
+
+Sin mencionar (del log, no los nombra el resumen): tests/test_metrics.py, tests/test_update.py, tests/test_residency.py, tests/test_topology.py, tests/test_structured_summary.py
+
+[local-delegate warning: salida truncada por max_tokens en 3 de 8 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 206985 chars ≈ 107804 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 8 pasadas por local-delegate)

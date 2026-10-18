@@ -1,0 +1,17 @@
+Este documento presenta un resumen exhaustivo de las pruebas de software ejecutadas, cubriendo una amplia gama de funcionalidades que van desde la gestión de experimentos de adopción, afinidad y procesamiento por lotes, hasta la ejecución de agentes, análisis de rendimiento y atribución. El conjunto de pruebas valida componentes críticos como el inicio automático, el sondeo del backend, la salida de código, la actualización de versiones, la captura de pantalla, las cadenas de comandos y los diagnósticos del sistema.
+
+Se incluyen verificaciones detalladas sobre la división de texto, la integración continua, la compatibilidad de la interfaz de línea de comandos, la gestión de clientes, la detección de idiomas, la estabilidad de las conexiones y la lógica de enfriamiento de modelos. Asimismo, se testea el núcleo del sistema, la integridad del corpus, la correlación de datos, el control de costes, el funcionamiento del demonio, la visualización en el panel de control y la interfaz de usuario. El alcance se extiende a la instalación de recursos, la configuración de modelos, el procesamiento de documentos largos, la medición de métricas, la seguridad web, la visión artificial y la sincronización de wikis.
+
+**Resumen de advertencias**
+
+**.venv\Lib\site-packages\starlette\testclient.py**
+
+* **Advertencia de depreciación**: El alias `anyio.abc.BlockingPortal` está obsoleto y debe sustituirse por `anyio.from_thread.BlockingPortal`.
+
+2617 tests collected in 0.74s
+
+[local-delegate warning: salida truncada por max_tokens en 2 de 8 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 206985 chars ≈ 107804 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 8 pasadas por local-delegate)

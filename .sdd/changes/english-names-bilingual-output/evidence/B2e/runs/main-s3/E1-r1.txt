@@ -1,0 +1,9 @@
+El código implementa una herramienta de línea de comandos (CLI) en Python para gestionar la instalación, actualización y desinstalación de modelos de lenguaje, con un enfoque especial en la integración con LlamaSwap y la gestión de recursos. La estructura se basa en `argparse`, donde `build_parser` configura los subcomandos principales (como `serve`, `install`, `update`, `uninstall`, `check-llamaswap`, `init-llamaswap`, `recompute-cost` y `test-window`), gestionando también alias obsoletos y contexto de internacionalización.
+
+La lógica de instalación y desinstalación está orquestada por `_run_install`, que coordina la configuración de clientes, validación de opciones y ejecución de tareas, notificando al usuario sobre el estado del sistema y posibles advertencias (como la falta del CLI en el PATH). El comando `serve` inicia un daemon singleton HTTP para proporcionar un dashboard y gestionar la comunicación con el backend.
+
+Para LlamaSwap, el script valida configuraciones de presupuesto (`_check_budget`, `_estimate_all`), gestiona la residencia de modelos (`cmd_llamaswap_residency`) y maneja la interacción con el daemon mediante funciones de utilidad como `_daemon_status`, `_open_watch` y `_daemon_watch`. También incluye herramientas de diagnóstico como `cmd_recompute_cost` para recalcular costes de API y `cmd_test_window` para analizar logs de uso agrupados por ventanas de tiempo. El archivo asegura la integridad de las configuraciones mediante restauraciones atómicas y validaciones estrictas de argumentos y recursos.
+
+(leído server-side: 58875 chars ≈ 29002 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)

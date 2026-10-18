@@ -1,0 +1,9 @@
+Este módulo Python actúa como el núcleo de una herramienta de línea de comandos (CLI) para gestionar la instalación, actualización y desinstalación de modelos de lenguaje, con un enfoque especial en la integración con `llama-swap` y la gestión de recursos. La estructura se basa en `argparse`, donde `build_parser` configura la jerarquía de comandos, utilizando `_argparse_in_language` para asegurar que los mensajes se muestren en el idioma correcto.
+
+Los comandos principales (`cmd_install`, `cmd_update`, `cmd_uninstall`, `cmd_serve`) orquestan las operaciones de sistema, validando argumentos mediante funciones como `_resolve_clients` y `_install_options`. El módulo incluye lógica de mantenimiento, como `cmd_recompute_cost` para recalcar costes de API y `_warn_deprecated` para gestionar la obsolescencia de comandos.
+
+Una parte significativa del código se dedica a la interacción con el daemon de `llama-swap`. Funciones como `_daemon_status`, `_daemon_url` y `_open_watch` manejan la comunicación HTTP y la vigilancia de procesos. Los comandos `cmd_init_llamaswap` y `cmd_llamaswap_residency` permiten configurar y ajustar la residencia de modelos en memoria, validando presupuestos de VRAM/RAM mediante `_check_budget` y `_estimate_all`. También incluye utilidades para pruebas de ventanas de tiempo (`cmd_test_window`) y diagnóstico (`_scaffold_report`). La función `run` sirve como punto de entrada, coordinando el análisis de argumentos y la ejecución de la acción correspondiente, devolviendo el código de salida adecuado.
+
+(leído server-side: 58875 chars ≈ 29002 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)

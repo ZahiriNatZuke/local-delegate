@@ -1,0 +1,121 @@
+### Resumen de problemas por archivo
+
+**src\local_delegate\web\metrics.py**
+* **Línea demasiado larga (E501)**: 165
+* **Cadena contiene símbolo ambiguo (RUF001)**: 14
+* **Falta anotación de tipo de retorno para función pública (ANN201)**: 16
+* **Acceso a miembro privado (SLF001)**: 10
+* **Falta coma final (COM812)**: 7
+* **Falta docstring en función pública (D103)**: 4
+* **Se requiere una línea en blanco entre resumen y descripción (D205)**: 3
+* **Las comillas de cierre de docstring multilínea deben estar en una línea separada (D209)**: 3
+* **Captura de excepción ciega (BLE001)**: 3
+* **Uso de la sentencia global desaconsejado (PLW0603)**: 2
+* **Uso de try-except-pass detectado (S110)**: 1
+* **Uso de contextlib.suppress en lugar de try-except-pass (SIM105)**: 1
+* **Importación debería estar en el nivel superior del archivo (PLC0415)**: 1
+* **Considerar mover esta sentencia a un bloque else (TRY300)**: 1
+* **Se encontró print (T201)**: 1
+
+**src\local_delegate\server.py**
+* **Coma final faltante**: 16
+* **Falta anotación de tipo para argumento de función**: 11
+* **Demasiados argumentos en definición de función**: 8
+* **Línea de docstring requiere una línea en blanco entre resumen y descripción**: 8
+* **Falta línea en blanco después de la última sección ("Args")**: 8
+* **Argumento posicional de tipo booleano en definición de función**: 6
+* **Línea demasiado larga**: 5
+* **Complejidad excesiva**: 5
+* **Las comillas de cierre de docstrings multilínea deben estar en una línea separada**: 4
+* **Uso de valor mágico en comparación**: 4
+* **Demasiadas sentencias**: 3
+* **Uso de `r"""` si hay barras invertidas en un docstring**: 3
+* **Demasiadas ramificaciones**: 2
+* **Demasiados valores booleanos posicionales en llamada a función**: 2
+* **Otros**: Uso de `assert`, caracteres ambiguos, importación en nivel superior, uso de `open()` en lugar de `Path.open()`, captura de excepción ciega, capitalización de `TODO` incorrecta, error en nombre de excepción, uso de `global` y uso de `list.extend`.
+
+**src\local_delegate\web\sysinfo.py**
+* **subprocess.run sin argumento check explícito (PLW1510)**: 4
+* **Inicio de proceso con ruta de ejecutable parcial (S607)**: 4
+* **open() debería ser reemplazado por Path.open() (PTH123)**: 3
+* **Captura de excepción ciega (BLE001)**: 3
+* **Valor mágico usado en comparación (PLR2004)**: 3
+* **La primera palabra del docstring debería estar capitalizada (D403)**: 3
+* **Falta coma final (COM812)**: 2
+* **Uso de la sentencia global desaconsejado (PLW0603)**: 2
+* **Falta aviso de copyright al inicio del archivo (CPY001)**: 1
+* **Importación debería estar en el nivel superior del archivo (PLC0415)**: 1
+* **Uso de Path.iterdir() en lugar de la alternativa actual (PTH208)**: 1
+* **Llamada a subprocess: verificar ejecución de entrada no confiable (S603)**: 1
+
+**src\local_delegate\cli.py**
+* **Se encontraron instrucciones `print` (T201)**: 10
+* **Falta coma final (COM812)**: 8
+* **Falta anotación de tipo en el argumento `sub` (ANN001)**: 2
+* **Falta docstring en función pública (D103)**: 2
+
+**src\local_delegate\topology.py**
+* **Expresiones de tipo dinámico (typing.Any) no permitidas (ANN401)**: 7
+* **Sobrescritura de variable de bucle `for` (PLW2901)**: 5
+* **Falta docstring en método público (D103)**: 2
+* **Complejidad excesiva**: 2
+* **Demasiadas ramificaciones**: 2
+* **Demasiadas sentencias**: 1
+* **Otros**: Falta aviso de copyright, falta línea en blanco en docstring, uso de `global` y uso de `os.stat()` en lugar de `Path.stat()`.
+
+**src\local_delegate\test_windows.py**
+* **Coma final faltante (COM812)**: 8
+* **Falta docstring en clase, método o función pública (D103)**: 6
+* **Línea demasiado larga (E501)**: 2
+* **Demasiados argumentos en definición de función (PLR0913)**: 1
+* **Otros**: Falta aviso de copyright, demasiadas sentencias de retorno, captura de excepción ciega, uso de `os.replace()`/`os.unlink()` en lugar de `Path`, y uso de `contextlib.suppress`.
+
+**src\local_delegate\transcripts.py**
+* **Línea en blanco requerida entre resumen y descripción (D205)**: 4
+* **Comillas de cierre de docstrings multilínea en línea incorrecta (D209)**: 4
+* **Caracteres ambiguos en docstring (RUF003)**: 3
+* **Otros**: Falta aviso de copyright, falta docstring en clase/función, complejidad excesiva, demasiados argumentos y falta anotación de tipo de retorno.
+
+**src\local_delegate\quota.py**
+* **Requerir línea en blanco en docstring (D205)**: 5
+* **Comillas de cierre de docstring multilínea en línea separada (D209)**: 5
+* **Docstring con caracteres ambiguos (RUF002)**: 4
+* **Otros**: CPY001, TC003, D103, COM812, PLR2004, C901, PLR0912.
+
+**src\local_delegate\clients.py**
+* **Expresiones con tipado dinámico (typing.Any) no permitidas (ANN401)**: 6
+* **Falta coma final (COM812)**: 3
+* **No capturar excepciones ciegas (BLE001)**: 2
+* **Se detectó `try`-`except`-`pass` (S110)**: 2
+* **Se requiere una línea en blanco entre el resumen y la descripción (D205)**: 1
+* **Las comillas de cierre de docstrings multilínea deben estar en una línea separada (D209)**: 1
+* **Falta aviso de copyright al inicio del archivo (CPY001)**: 1
+* **Mover importación de la librería estándar `pathlib.Path` a un bloque de comprobación de tipos (TC003)**: 1
+* **`os.replace()` debe ser reemplazado por `Path.replace()` (PTH105)**: 1
+
+**src\local_delegate\config.py**
+* **Valor booleano posicional en llamada a función (FBT003)**: 7
+* **Falta docstring en función pública (D103)**: 6
+* **Línea demasiado larga (E501)**: 2
+* **Argumento posicional de tipo booleano en definición de función (FBT001)**: 2
+* **Falta coma final (COM812)**: 3
+* **Falta docstring en clase pública (D101)**: 1
+
+**src\local_delegate\pace.py**
+* **Expresiones con tipado dinámico no permitidas (ANN401)**: 11
+* **Captura de excepciones ciegas (BLE001)**: 7
+* **Falta de coma final (COM812)**: 3
+* **Valor booleano posicional en llamada a función (FBT003)**: 1
+* **Mover sentencia a un bloque else (TRY300)**: 1
+
+**src\local_delegate\recompute.py**
+* **Falta de coma final (COM812)**: 6
+* **Docstring con formato incorrecto (D205, D209)**
+
+Sin mencionar (del log, no los nombra el resumen): src/local_delegate/checks.py, src/local_delegate/residency.py, src/local_delegate/install.py, src/local_delegate/benchmark.py, src/local_delegate/resources/hooks/hook_common.py, src/local_delegate/legacy_names.py
+
+[local-delegate warning: salida truncada por max_tokens en 5 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 179890 chars ≈ 93692 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

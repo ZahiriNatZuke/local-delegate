@@ -1,0 +1,11 @@
+El código define un módulo de verificación de integridad y estado del sistema, diseñado para evaluar el entorno de ejecución sin realizar modificaciones (modo solo lectura). Centraliza veinticinco comprobaciones mediante sondas que determinan el estado de componentes clave como daemons, backends, clientes CLI y hooks.
+
+El sistema utiliza un conjunto de estados estandarizados (`OK`, `MISSING`, `WARN`, `UNKNOWN`) mapeados a etiquetas legibles mediante `status_label`. Cada comprobación devuelve un objeto `Result` inmutable que contiene el estado, un detalle descriptivo y una pista de reparación contextual (como comandos de instalación o reinicio), gestionadas por funciones específicas como `update_hooks_hint` o `cli_hint`.
+
+La arquitectura se basa en clases `Check` que definen la estructura de cada prueba y funciones privadas (`_probe_*`) que realizan las consultas reales. Estas sondas verifican la disponibilidad de servicios (daemon, llama-swap), la validez de credenciales (tokens, claves API), la consistencia de versiones y la configuración de MCP (Model Context Protocol) para entornos como Claude, Codex u OpenCode. Además, incluye utilidades para el manejo de archivos, lectura de JSON/JSONL, comparación de versiones y detección de orígenes o configuraciones obsoletas. El módulo también proporciona funciones de ayuda para pruebas unitarias (`NO_LLAMASWAP_DAEMON`, `NO_TOKEN_PROBE`) que simulan fallos específicos, asegurando la robustez de las verificaciones. En resumen, actúa como un diagnóstico completo del entorno, proporcionando retroalimentación inmediata al usuario sobre posibles problemas de configuración o dependencias faltantes.
+
+[local-delegate warning: salida truncada por max_tokens en 2 de 9 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 98017 chars ≈ 48284 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 9 pasadas por local-delegate)

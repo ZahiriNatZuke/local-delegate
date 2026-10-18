@@ -1,0 +1,13 @@
+El código define un módulo de verificación de integridad y diagnóstico para un sistema, probablemente un entorno de desarrollo o servicio daemonizado. Su propósito central es ejecutar un conjunto de sondas no invasivas que evalúan el estado de diversos componentes sin modificar el sistema.
+
+La estructura se basa en clases de datos inmutables: `Check` representa cada elemento a verificar (con ID, grupo y función sonda), mientras que `Result` almacena el resultado de la ejecución, incluyendo el estado (`OK`, `MISSING`, `WARN`, `UNKNOWN`), detalles y posibles pistas de reparación. Los estados se mapean a etiquetas legibles mediante diccionarios de internacionalización, permitiendo una salida clara y localizada.
+
+El módulo incluye constantes para comandos de reparación genéricos y funciones específicas que obtienen instrucciones contextualizadas (como actualizar hooks, iniciar servicios o gestionar credenciales) desde catálogos de traducción. También maneja la lógica de versiones, comparando versiones instaladas con las publicadas en PyPI, y verifica la presencia de clientes MCP, hooks, configuraciones de seguridad (tokens, autenticación) y topología de red.
+
+Funciones auxiliares privadas gestionan detalles técnicos como el análisis de expresiones regulares para tokens, la lectura de archivos JSON/JSONL, la detección de puertos ocupados y la verificación de la residencia del daemon. El flujo general implica iterar sobre una lista de `Check`, ejecutar sus sondas correspondientes, recopilar los `Result` y determinar el estado global, considerando advertencias pero ignorando estados desconocidos para la toma de decisiones críticas. Esto permite un diagnóstico rápido y preciso del entorno, facilitando la resolución automática o manual de problemas.
+
+[local-delegate warning: salida truncada por max_tokens en 2 de 9 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 98017 chars ≈ 48284 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 9 pasadas por local-delegate)

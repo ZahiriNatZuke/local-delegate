@@ -1,0 +1,11 @@
+El código corresponde a `checks.py`, un módulo centralizado para la validación del entorno de "andamiaje" (scaffolding). Su propósito principal es ejecutar una serie de sondas de solo lectura que verifican la presencia y configuración correcta de componentes críticos, como daemons, clientes CLI, hooks y modelos de backend. Para mantener la integridad del diagnóstico, el sistema utiliza un conjunto de constantes de estado (`OK`, `MISSING`, `WARN`, `UNKNOWN`) que categorizan los resultados, evitando confusiones entre la ausencia de un componente y su estado desconocido.
+
+La arquitectura se basa en clases de datos inmutables: `Result` almacena el estado, detalles y sugerencias de reparación, mientras que `Check` define la estructura de cada prueba, incluyendo su identificación, grupo y la función sonda asociada. El módulo gestiona la internacionalización mediante funciones como `status_label` y `_client_name`, que mapean estados y nombres a claves de traducción, asegurando que las salidas sean legibles en el idioma vigente.
+
+Las sondas implementadas cubren una amplia gama de verificaciones: desde la conectividad del daemon y la validez de tokens de autenticación, hasta la detección de versiones instaladas, conflictos de puertos y la existencia de archivos de configuración o ganchos obsoletos. Se incluyen utilidades privadas para el manejo de versiones, lectura de archivos JSON/JSONL y comparación de tiempos de espera, optimizadas para no ralentizar el proceso de diagnóstico. Finalmente, la función `run_all` orquesta la ejecución de todas las comprobaciones definidas, proporcionando un informe completo del estado de salud del sistema.
+
+[local-delegate warning: salida truncada por max_tokens en 3 de 9 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 98017 chars ≈ 48284 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 9 pasadas por local-delegate)

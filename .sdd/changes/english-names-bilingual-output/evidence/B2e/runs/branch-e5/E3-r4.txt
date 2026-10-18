@@ -1,0 +1,13 @@
+El código define un módulo de verificación del sistema (`checks.py`) diseñado para evaluar el estado de veinticinco componentes críticos de manera segura y no destructiva. Su propósito principal es generar un informe de estado preciso sin modificar el entorno del usuario.
+
+El núcleo del sistema se basa en dos estructuras de datos inmutables: `Result`, que almacena el estado (OK, MISSING, WARN, UNKNOWN), un mensaje descriptivo y sugerencias de reparación; y `Check`, que define cada elemento a verificar mediante su ID, grupo y la función de sondeo (`probe`) asociada. Las constantes de estado (`OK`, `MISSING`, etc.) y el diccionario `STATUS_LABEL` permiten una presentación estandarizada y traducida de los resultados.
+
+El módulo implementa múltiples funciones de sondeo privadas (prefijadas con `_`), como `_probe_daemon`, `_probe_clients` o `_probe_mcp_*`, que consultan la disponibilidad de servicios, configuraciones de CLI, tokens de autenticación y versiones de software. Estas funciones son de solo lectura, asegurando que no alteren la configuración del sistema. Además, incluye utilidades para el manejo de versiones (`_compare_versions`), lectura de archivos (`read_json`, `read_text`) y gestión de contextos.
+
+Finalmente, expone una función `run_all` que ejecuta todas las comprobaciones definidas, agregando sus resultados para proporcionar una visión completa de la salud del sistema, facilitando la detección de problemas de configuración o dependencias faltantes mediante pistas de ayuda traducidas (`*_hint`).
+
+[local-delegate warning: salida truncada por max_tokens en 2 de 9 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 98017 chars ≈ 48284 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 9 pasadas por local-delegate)

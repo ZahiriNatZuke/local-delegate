@@ -1,0 +1,13 @@
+Este código implementa un sistema de benchmarking integral para evaluar modelos de lenguaje, con un enfoque específico en la medición precisa de recursos de hardware en entornos Windows. La arquitectura se divide en tres bloques principales: gestión de datos, monitoreo de recursos y ejecución de pruebas.
+
+En primer lugar, gestiona el corpus de evaluación mediante clases como `Corpus` y `CorpusCase`, asegurando la integridad de los datos mediante verificación de hashes SHA-256. Incluye utilidades para analizar métricas Prometheus, normalizar texto para comparaciones y validar la calidad de las respuestas generadas mediante puntuaciones basadas en cobertura, validez JSON y conteo de reglas.
+
+El núcleo técnico reside en la sonda de recursos (`ResourceSampler` y `ProcessProbe`), diseñada para capturar el uso de memoria VRAM y RAM en tiempo real. Utiliza herramientas nativas de Windows como `typeperf` y APIs de `psapi` para leer el consumo de memoria de procesos específicos, resolviendo automáticamente la correspondencia entre procesos y adaptadores GPU mediante identificadores LUID. Este componente maneja la concurrencia mediante hilos para evitar interferencias y gestiona reconexiones automáticas si el PID del proceso cambia.
+
+Finalmente, orquesta la ejecución del benchmark (`run_benchmark`). Este módulo carga los casos, configura el cliente de API, gestiona el estado térmico del servidor para evitar sesgos y ejecuta las llamadas en un bucle controlado. La línea de comandos se configura mediante `add_parser`, permitiendo filtrar casos y especificar parámetros de ejecución, mientras que los resultados se almacenan en formato JSONL para su posterior análisis.
+
+[local-delegate warning: salida truncada por max_tokens en 1 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 59966 chars ≈ 29539 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

@@ -1,0 +1,11 @@
+El código define una herramienta de línea de comandos modular para gestionar la instalación, actualización y desinstalación de modelos de lenguaje, así como la configuración de un daemon LlamaSwap y la monitorización de costes. La función `run` actúa como punto de entrada, utilizando `build_parser` para estructurar los argumentos mediante `argparse`, apoyándose en `_argparse_in_language` para la localización. Los subcomandos principales incluyen `serve` (`cmd_serve`), que inicia un daemon MCP HTTP; `install`, `update` y `uninstall`, orquestados por `_run_install` y configurados por `_add_install_parsers`, con validaciones de clientes (`_resolve_clients`) y opciones (`_install_options`, `_update_options`).
+
+Para la gestión de recursos, `cmd_check_llamaswap` y `cmd_init_llamaswap` verifican presupuestos de VRAM/RAM (`_check_budget`, `_print_breakdown`) y gestionan la configuración del daemon mediante `_daemon_status`, `_daemon_url` y `_daemon_path`. La residencia de modelos se maneja en `cmd_llamaswap_residency`, que coordina la escritura segura (`_write_residency`) y la restauración ante rechazos (`_restore_after_rejection`). También se incluye `cmd_recompute_cost` para recalcar costes de API, con un alias legado `cmd_recompute_cost_legacy`.
+
+Funciones auxiliares como `_has_terminal`, `_codex_mcp_set_by_hand` y `_decide_on_foreign_codex` gestionan la interacción con el entorno y configuraciones externas. El sistema de ventanas de prueba (`cmd_test_window`, `_count_rows_by_window`) analiza logs JSONL. Finalmente, `_warn_deprecated` y `_Hidden_COMMANDS` manejan la compatibilidad hacia atrás, asegurando una transición suave para los usuarios mientras se mantiene la integridad del sistema.
+
+Sin mencionar (los registra el fichero, no los nombra la explicación): test-window, start, stop, add, list, llamaswap, residency, check-llamaswap, init-llamaswap, doctor, recompute-cost, recalcular-coste, benchmark
+
+(leído server-side: 58875 chars ≈ 29002 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)

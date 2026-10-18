@@ -1,0 +1,13 @@
+Este script implementa un sistema de benchmarking integral para evaluar modelos de lenguaje, centrado en la precisión técnica y el monitoreo de recursos del sistema. La arquitectura se divide en tres pilares: gestión de datos, evaluación de respuestas y telemetría de hardware.
+
+En primer lugar, gestiona el corpus de pruebas mediante clases inmutables (`CorpusCase`, `Corpus`) que aseguran la integridad de los datos mediante verificación de hashes SHA-256. Incluye utilidades robustas para el análisis de texto, como la normalización Unicode para comparaciones precisas y la extracción de JSON válido, incluso desde formatos sucios. La evaluación de las respuestas del modelo (`score_output`) es multifacética, verificando no solo la cobertura de términos y la validez sintáctica, sino también la ejecución segura de código generado en procesos aislados y la validación de conteos específicos.
+
+En segundo lugar, el código integra una sonda de recursos de alto rendimiento diseñada específicamente para entornos Windows. Utiliza APIs nativas (`ctypes`, `psapi`) y herramientas del sistema (`typeperf`, `nvidia-smi`) para monitorizar en tiempo real el uso de memoria RAM y VRAM de los procesos. Implementa una gestión sofisticada de hilos y flujos (`TypeperfStream`, `ResourceSampler`) para muestrear métricas sin bloquear la ejecución principal, resolviendo dinámicamente identificadores de GPU (LUID) y manejando cambios de PID para evitar datos sesgados.
+
+Finalmente, orquesta el ciclo de vida del benchmark (`run_benchmark`), gestionando las interacciones con la API del modelo, manejando errores de contexto y reintentos, y configurando la interfaz de línea de comandos para una ejecución flexible y reproducible.
+
+[local-delegate warning: salida truncada por max_tokens en 1 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 59966 chars ≈ 29539 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

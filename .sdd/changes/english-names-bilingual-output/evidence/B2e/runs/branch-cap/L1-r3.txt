@@ -1,0 +1,130 @@
+**Resumen de problemas por archivo**
+
+**src/local_delegate/web/metrics.py**
+* **Línea demasiado larga (E501)**: 176
+* **Falta anotación de tipo de retorno para función pública (ANN201)**: 16
+* **Cadena con símbolo ambiguo (RUF001)**: 13
+* **Acceso a miembro privado (SLF001)**: 9
+* **Coma final faltante (COM812)**: 7
+* **Falta docstring en función pública (D103)**: 4
+* **Faltan comillas de cierre en docstring multilínea (D209)**: 3
+* **Se requiere una línea en blanco entre resumen y descripción (D205)**: 3
+* **Captura de excepción ciega (BLE001)**: 3
+* **Uso de la sentencia global desaconsejado (PLW0603)**: 2
+* **Detectado try-except-pass (S110)**: 1
+* **Usar contextlib.suppress en lugar de try-except-pass (SIM105)**: 1
+* **Importación debería estar en el nivel superior del archivo (PLC0415)**: 1
+* **Considerar mover esta sentencia a un bloque else (TRY300)**: 1
+* **Se encontró print (T201)**: 1
+
+**src/local_delegate/server.py**
+* **Coma final faltante**: 16
+* **Falta anotación de tipo para argumento de función**: 11
+* **Demasiados argumentos en definición de función**: 8
+* **Línea de docstring requiere una línea en blanco entre resumen y descripción**: 8
+* **Docstring debe usar modo imperativo**: 8
+* **Falta línea en blanco tras la última sección ("Args")**: 8
+* **Argumento posicional de tipo booleano en definición de función**: 6
+* **Complejidad excesiva**: 5
+* **Línea demasiado larga**: 5
+* **Las comillas de cierre de docstrings multilínea deben estar en una línea separada**: 4
+* **Uso de valores mágicos en comparaciones**: 4
+* **Demasiadas sentencias**: 3
+* **Uso de r""" si hay barras invertidas en un docstring**: 3
+* **Demasiadas ramificaciones**: 2
+* **Otros**: Uso de `assert`, importación en nivel superior, uso de `open()` en lugar de `Path.open()`, captura de excepción ciega, uso de variables globales, y comentarios con caracteres ambiguos.
+
+**src/local_delegate/web/sysinfo.py**
+* **subprocess.run sin argumento check explícito (PLW1510)**: 4
+* **Inicio de proceso con ruta de ejecutable parcial (S607)**: 4
+* **open() debería ser reemplazado por Path.open() (PTH123)**: 3
+* **Captura de excepción ciega (BLE001)**: 3
+* **Valor mágico usado en comparación (PLR2004)**: 3
+* **La primera palabra del docstring debería ser capitalizada (D403)**: 3
+* **Coma final faltante (COM812)**: 2
+* **Uso de la sentencia global desaconsejado (PLW0603)**: 2
+* **Falta aviso de copyright al inicio del archivo (CPY001)**: 1
+* **Importación debería estar en el nivel superior del archivo (PLC0415)**: 1
+* **Usar pathlib.Path.iterdir() en su lugar (PTH208)**: 1
+* **Llamada a subprocess: verificar ejecución de entrada no confiable (S603)**: 1
+
+**src/local_delegate/benchmark.py**
+* **Se encontró print**: 7
+* **Falta coma final**: 7
+* **Falta cadena de documentación en método público**: 6
+* **Falta cadena de documentación en __init__**: 4
+* **Falta cadena de documentación en clase pública**: 3
+* **Falta cadena de documentación en función pública**: 3
+* **Importación debe estar en el nivel superior del archivo**: 2
+* **Función demasiado compleja**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Falta cadena de documentación en método mágico**: 2
+* **Valor mágico usado en comparación**: 2
+* **Llamada a subprocess: comprobar ejecución de entrada no confiable**: 1
+* **subprocess.run sin argumento check explícito**: 1
+* **Usar r""" si hay barras invertidas en la cadena de documentación**: 1
+* **None no está al final de la unión de tipos**: 1
+* **Variable de buelo for sobrescrita por objetivo de asignación**: 1
+* **Importación de librería estándar debe moverse a un bloque de comprobación de tipos**: 3
+
+**src/local_delegate/cli.py**
+* **Se encontraron instrucciones print (T201)**: 10
+* **Falta coma final (COM812)**: 8
+* **Falta anotación de tipo en el argumento sub (ANN001)**: 2
+* **Falta docstring en función pública (D103)**: 2
+
+**src/local_delegate/clients.py**
+* **Expresiones con tipado dinámico (typing.Any) no permitidas (ANN401)**: 6
+* **Falta coma final (COM812)**: 3
+* **No capturar excepciones ciegas (BLE001)**: 2
+* **Se detectó try-except-pass, considere registrar la excepción (S110)**: 2
+* **Se requiere una línea en blanco entre el resumen y la descripción (D205)**: 1
+* **Las comillas de cierre de docstrings multilínea deben estar en una línea separada (D209)**: 1
+* **Falta aviso de copyright al inicio del archivo (CPY001)**: 1
+* **Mover importación de la biblioteca estándar a un bloque de comprobación de tipos (TC003)**: 1
+* **Reemplazar os.replace() por Path.replace() (PTH105)**: 1
+
+**src/local_delegate/config.py**
+* **Valor booleano posicional en llamada a función (FBT003)**: 7
+* **Falta docstring en función pública (D103)**: 6
+* **Argumento posicional de tipo booleano en definición de función (FBT001)**: 2
+* **Línea demasiado larga (E501)**: 2
+* **Falta coma final (COM812)**: 3
+* **Falta docstring en clase pública (D101)**: 1
+
+**src/local_delegate/cooldown.py**
+* **Se requiere una línea en blanco entre el resumen y la descripción (D205)**: 3
+* **Las comillas de cierre de docstrings multilínea deben estar en una línea separada (D209)**: 3
+* **Usar contextlib.suppress(OSError) en lugar de try-except-pass (SIM105)**: 2
+* **Falta aviso de copyright al inicio del archivo (CPY001)**: 1
+* **Mover importación de la biblioteca estándar a un bloque de comprobación de tipos (TC003)**: 1
+* **Línea demasiado larga (E501)**: 1
+* **Falta docstring en clase pública (D101)**: 1
+* **Demasiados argumentos en la definición de la función (PLR0913)**: 1
+* **Falta docstring en __init__ (D107)**: 1
+* **Falta coma final (COM812)**: 1
+
+**src/local_delegate/pace.py**
+* **Expresiones con tipado dinámico no permitidas (ANN401)**: 11
+* **Captura de excepciones ciegas (BLE001)**: 7
+* **Falta de coma final (COM812)**: 3
+* **Valor booleano posicional en llamada a función (FBT003)**: 1
+* **Mover sentencia a un bloque else (TRY300)**: 1
+
+**src/local_delegate/pricing.py**
+* **Comentario o docstring con caracteres ambiguos (RUF003, RUF002)**: 2
+* **Falta aviso de copyright (CPY001)**: 1
+* **Línea demasiado larga (E501)**: 1
+
+**src/local_delegate/probes.py**
+* **Falta de coma final (COM812)**: 4
+* **Importación debe estar en el nivel superior (PLC0415)**: 4
+* **Acceso a miembro privado (SL
+
+Sin mencionar (del log, no los nombra el resumen): src/local_delegate/checks.py, src/local_delegate/residency.py, src/local_delegate/install.py, src/local_delegate/resources/hooks/hook_common.py, src/local_delegate/legacy_names.py
+
+[local-delegate warning: salida truncada por max_tokens en 5 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 179890 chars ≈ 93692 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

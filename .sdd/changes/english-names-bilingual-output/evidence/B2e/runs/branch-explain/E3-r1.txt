@@ -1,0 +1,11 @@
+Este módulo actúa como el núcleo de verificación del andamiaje de software, centralizando veinticinco comprobaciones no invasivas que sondan el estado del sistema sin modificarlo. Define cuatro estados fundamentales mediante constantes de cadena: `OK` (correcto), `MISSING` (falta y reparable), `WARN` (presente pero mal configurado) y `UNKNOWN` (indeterminado por permisos o datos). Utiliza un diccionario de etiquetas para internacionalizar estos estados, permitiendo que la función `status_label` devuelva prefijos formateados como `[ OK ]` en el idioma del sistema.
+
+La estructura de datos se basa en clases inmutables: `Result` almacena el estado, detalle y pista de reparación de cada sonda, mientras que `Check` define los elementos del andamiaje, incluyendo su ID, grupo y la función sonda asociada. El código gestiona la lógica de autenticación y tokens mediante expresiones regulares para cabeceras Bearer y constantes de entorno específicas. Incluye funciones auxiliares para obtener nombres de clientes, verificar puertos ocupados y leer archivos JSON o de texto.
+
+Además, el módulo integra sondas específicas para demonios (daemon), modelos de backend, actualizaciones de PyPI y configuraciones de MCP (Model Context Protocol) para entornos como Claude, Codex y OpenCode. Proporciona pistas de reparación traducidas para acciones comunes como instalar, actualizar ganchos, iniciar servicios o gestionar credenciales. La función principal `run_all` ejecuta todas las comprobaciones, evaluando la topología, la afinidad y los tiempos de espera, para determinar si el sistema está listo o requiere intervención, utilizando también utilidades para comparar versiones y detectar obsolescencia.
+
+[local-delegate warning: salida truncada por max_tokens en 2 de 9 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 98017 chars ≈ 48284 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 9 pasadas por local-delegate)

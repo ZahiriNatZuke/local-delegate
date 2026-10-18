@@ -1,0 +1,11 @@
+Este módulo actúa como el núcleo de verificación del andamiaje del sistema, centralizando veinticinco comprobaciones no destructivas que determinan el estado operativo de diversos componentes sin modificar el entorno. Define cuatro estados fundamentales mediante constantes de cadena: `OK` para configuraciones correctas, `MISSING` para elementos ausentes, `WARN` para configuraciones subóptimas y `UNKNOWN` cuando la verificación falla por permisos o datos insuficientes, evitando así falsos negativos.
+
+La lógica se estructura en torno a dos clases de datos inmutables: `Check`, que define la identidad y la función de sonda de cada elemento, y `Result`, que almacena el estado obtenido junto con detalles legibles y pistas de reparación. El sistema utiliza un diccionario de mapeo (`STATUS_LABEL`) para internacionalizar los prefijos de estado, facilitando la presentación al usuario mediante funciones auxiliares como `status_label`.
+
+Las sondas específicas (`_probe_*`) consultan el estado de servicios críticos como el daemon principal, el servicio `llamaswap`, modelos de backend y clientes instalados. Estas funciones verifican conectividad, autenticación por token y versiones, utilizando tiempos de espera configurables para evitar bloqueos. Además, el módulo gestiona la detección de ganchos (hooks), configuraciones MCP para entornos como Claude, Codex u OpenCode, y la residencia del sistema. Proporciona pistas de reparación traducidas (`*_hint`) para guiar al usuario en la resolución de problemas, como actualizar hooks, reiniciar servicios o gestionar credenciales. La función principal `run_all` orquesta la ejecución de todas las comprobaciones, agregando los resultados para ofrecer una visión completa y precisa del estado de salud del andamiaje.
+
+[local-delegate warning: salida truncada por max_tokens en 2 de 9 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 98017 chars ≈ 48284 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 9 pasadas por local-delegate)

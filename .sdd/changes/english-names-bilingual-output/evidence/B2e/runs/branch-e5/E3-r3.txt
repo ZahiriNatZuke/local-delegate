@@ -1,0 +1,11 @@
+Este módulo actúa como el núcleo de diagnóstico del andamiaje, centralizando veinticinco comprobaciones no destructivas que verifican el estado del sistema sin modificarlo. Define constantes de estado clave (`OK`, `MISSING`, `WARN`, `UNKNOWN`) y un diccionario de mapeo (`STATUS_LABEL`) para traducir estos estados a etiquetas visuales formateadas (ej. `[ OK ]`) mediante la función `status_label`.
+
+La estructura se basa en dos clases de datos inmutables: `Result`, que encapsula el estado, detalle y pista de reparación de cada sonda, y `Check`, que define la identidad del elemento verificado (ID, grupo, título) y su función sonda asociada. Las funciones de ayuda (`update_hooks_hint`, `serve_hint`, etc.) obtienen instrucciones de reparación específicas desde un catálogo de internacionalización, asegurando que los mensajes sean localizados y útiles para el usuario.
+
+El código incluye utilidades privadas para la gestión de clientes MCP, como `_client_name` para nombres traducidos y `_probe_clients` para detectar instancias. También maneja la verificación de versiones comparando claves semánticas, consultando PyPI con tiempos de espera optimizados y detectando actualizaciones disponibles. La lógica de autenticación y conexión se aborda mediante sondas específicas para tokens, credenciales y configuraciones de daemon (host/puerto), utilizando expresiones regulares para analizar cabeceras Bearer. Además, verifica la presencia de hooks, configuraciones de MCP para entornos como Claude, Codex y OpenCode, y la topología de red, devolviendo resultados estructurados que permiten al sistema determinar si necesita intervención manual o si opera correctamente.
+
+[local-delegate warning: salida truncada por max_tokens en 3 de 9 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 98017 chars ≈ 48284 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 9 pasadas por local-delegate)

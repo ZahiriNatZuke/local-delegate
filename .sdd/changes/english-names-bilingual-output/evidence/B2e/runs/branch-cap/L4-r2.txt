@@ -1,0 +1,38 @@
+**apps/api/package.json**
+* **Uso de dependencias restringidas**: 1 error de `lint/nursery/noRestrictedDependencies` por el uso de `express`.
+
+**apps/api/src/config/env.schema.ts**
+* **Uso de convenciones de nomenclatura**: 6 errores de `lint/style/useNamingConvention` en propiedades de objetos.
+* **Números mágicos**: 1 error de `lint/style/noMagicNumbers`.
+
+**apps/api/src/geocode/dto/geocode.dto.ts**
+* **Números mágicos**: 5 errores de `lint/style/noMagicNumbers`.
+* **Exceso de clases por archivo**: 1 error de `lint/style/noExcessiveClassesPerFile`.
+
+**apps/api/src/validate/dto/validate.dto.ts**
+* **Números mágicos**: 6 errores de `lint/style/noMagicNumbers`.
+* **Uso de convenciones de nomenclatura**: 4 errores de `lint/style/useNamingConvention`.
+* **Exceso de clases por archivo**: 1 error de `lint/style/noExcessiveClassesPerFile`.
+
+**apps/api/src/config/repo-root.ts**
+* **Uso de sentencias de bloque**: 3 avisos de `lint/style/useBlockStatements`.
+
+**apps/api/src/geocode/geocode.controller.ts**
+* **Uso de tipo de importación**: 2 avisos de `lint/style/useImportType`.
+* **Propiedades de parámetro**: 1 aviso de `lint/style/noParameterProperties`.
+
+**apps/api/src/validate/validate.controller.ts**
+* **Propiedades de parámetro**: 1 aviso de `lint/style/noParameterProperties`.
+
+**packages/core/vitest.config.ts**
+* **Sin exportación por defecto**: 1 aviso de `lint/style/noDefaultExport`.
+
+Found 3 errors.
+Found 51 warnings.
+Found 192 infos.
+
+Sin mencionar (del log, no los nombra el resumen): pnpm-workspace.yaml, ./geocode.service.ts
+
+(leído server-side: 18043 chars ≈ 9397 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 3 partes en 4 pasadas por local-delegate)

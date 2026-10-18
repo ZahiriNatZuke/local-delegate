@@ -1895,6 +1895,25 @@ del cambio del ruido del modelo (8 llamadas de prompt idéntico dieron 22 frente
     también se cortan 2–5 de los `map` (mismo campo `steps`), cuyo tope no se toca: es esperable que
     L1–L3 sigan contando como cortadas aunque el paso final ya no lo esté. Se informa de los dos
     recuentos (paso final y cualquier paso) con el criterio sin cambiar.
+- **Resultado de la tanda del 2026-10-18 (`evidence/B2e/live.md`, misma sesión para `main` y la
+  rama):**
+  - *`explain_code`: LLEGA con el candidato 1, medido con `--repeat 5`.* Con ×3, E3 (prompt
+    idéntico en las dos versiones: sin registros) dio 0,029 frente a 0,077 de `main`; se aplicó la
+    regla de ruido del criterio (repetir con `--repeat 5` sin cambiarlo). ×5: E1 nombra `doctor` y
+    `benchmark` en 5 de 5 (`main` 0 de 5), registrados de E1 y E2 1,00 (`main` 0,44), E3 0,062
+    (`main` 0,055). La cobertura la da la línea del programa; el modelo solo, 0,80. No hizo falta
+    un segundo candidato.
+  - *Lint con el tope nuevo: NO llega.* Códigos y ficheros 1,00 (por la línea; el modelo solo,
+    0,57 y 0,65), fidelidad 1,40 por respuesta (`main` 0,00), 9 de 15 cortadas (paso final: 7 de
+    15; los `map` de L1–L3, 2–5 por llamada). Control A+B: 12 frente a 5 invenciones, menos que el
+    efecto (+21).
+  - **Límite conocido (lint troceado):** en logs de 6 trozos o más el formato de lint no cabe ni en
+    el paso final (6 000–8 000 caracteres y aún en `length`) ni en los `map`, y en logs sin
+    recuentos (`pytest --collect-only`) el modelo escribe recuentos por fichero inventados (18 de
+    las 21 invenciones). **Versión adoptada:** la de la rama (`742341f`), tope incluido: nombra lo
+    que `main` no nombra, no cambia la llamada única ni el control, y el paso final se corta menos
+    que con 696; a cambio, ~+25 % de latencia en L1–L3. Nota de mejora futura en el backlog del
+    vault (§1.8).
 - **Cierre del lote:** suite completa en `es` y en `en`, `ruff`, corpus y afinidad (cambian los
   prompts del reduce de lint y de `explain_code`: frontera en `PROMPT_BOUNDARIES` con su motivo),
   CHANGELOG, y registro en `waves/B2e.md` con las llamadas `local_*`.

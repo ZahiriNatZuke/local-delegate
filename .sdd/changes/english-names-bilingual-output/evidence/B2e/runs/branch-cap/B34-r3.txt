@@ -1,0 +1,13 @@
+Resumen de Problemas:
+
+El análisis detectó errores relacionados con la ubicación de archivos de modelo. Se identificaron los siguientes problemas:
+
+**MODELOS\gemma-3-4b-it-Q4_K_M.gguf**: Archivo no encontrado para gemma3-4b.
+**MODELOS\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf**: Archivo no encontrado para gemma4-26b-a4b.
+**MODELOS\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf**: Archivo no encontrado para qwen36-35b-a3b.
+**MODELOS\Qwen3.5-2B-UD-Q8_K_XL.gguf**: Archivo no encontrado para qwen35-2b.
+**MODELOS\gemma-4-12b-it-Q4_K_M.gguf**: Archivo no encontrado para gemma4-12b.
+
+Estos errores se agrupan bajo los grupos 'resident' y 'swap', indicando problemas con la disponibilidad de los archivos de modelo especificados. No se reportaron errores en la estimación de VRAM. El peor caso registrado es de 0,00 GiB.
+
+(read server-side: 727 chars ≈ 378 Claude tokens that did not enter your context)

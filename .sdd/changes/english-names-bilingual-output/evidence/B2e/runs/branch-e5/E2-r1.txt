@@ -1,0 +1,11 @@
+El código implementa un sistema de benchmarking integral para evaluar modelos de lenguaje, gestionando desde la carga de datos hasta la monitorización de recursos del sistema. Comienza definiendo estructuras de datos inmutables como `CorpusCase` y `Corpus` para organizar los casos de prueba, junto con utilidades de validación como `_frozen_source` y `load_corpus` que aseguran la integridad de los archivos mediante hashes SHA-256. El procesamiento de texto incluye `normalize_for_match` para comparaciones precisas y `parse_prometheus_metrics` para analizar métricas de rendimiento.
+
+La ejecución de código generado se maneja de forma segura mediante `run_execution_checks`, mientras que la calidad de las respuestas se evalúa con `score_output`, considerando cobertura, validez JSON y conteos de reglas. Para la monitorización de hardware, el código integra APIs de Windows (`_win32_api`, `list_processes`) y herramientas de sistema (`typeperf`, `nvidia-smi`) a través de clases como `ProcessProbe` y `TypeperfStream`. Estas gestionan el flujo de datos de VRAM y memoria RAM en tiempo real, utilizando `ResourceSampler` para muestrear recursos sin bloquear la ejecución principal.
+
+La interacción con el servidor de inferencia se orquesta mediante `post_attempt` y la clase `Attempt`, que capturan resultados y errores, incluyendo detección de rechazos por contexto (`is_context_rejection`) y seguimiento térmico (`ThermalTracker`). Finalmente, `run_benchmark` coordina todo el proceso, seleccionando casos con `_select_cases` y registrando resultados. La integración con la línea de comandos se realiza mediante `add_parser`, configurando el subcomando "benchmark" para facilitar su ejecución.
+
+[local-delegate warning: salida truncada por max_tokens en 1 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 59966 chars ≈ 29539 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

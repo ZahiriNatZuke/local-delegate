@@ -1,0 +1,11 @@
+Este módulo actúa como el núcleo de diagnóstico y validación del entorno, centralizando veinticinco comprobaciones no invasivas que verifican la integridad del andamiaje sin modificar el sistema. Define constantes de estado (`OK`, `MISSING`, `WARN`, `UNKNOWN`) y una estructura de datos inmutable `Result` para encapsular el estado, detalles y sugerencias de reparación de cada sonda.
+
+La lógica se organiza en dos bloques principales: utilidades de internacionalización y sondas específicas. Las funciones de utilidad, como `status_label` y las distintas `_hint` (para instalación, actualización, reinicio, credenciales, etc.), generan mensajes traducidos al idioma del usuario, facilitando la resolución de problemas. También gestiona la identificación de clientes y la comparación de versiones mediante `_compare_versions` y `_version_key`.
+
+El segundo bloque implementa las sondas reales (`_probe_*`) que inspectan el entorno. Estas verifican la presencia y configuración de componentes críticos: el daemon local y sus tokens, la conectividad con servicios externos como LlamaSwap y LlamaServer, la configuración de MCP (Model Context Protocol) para clientes como Claude, Codex y OpenCode, y la autenticación asociada. Además, evalúa la residencia del software, la afinidad de red, los costos operativos y la existencia de ganchos (hooks) obsoletos o huérfanos. La función `run_all` orquesta la ejecución de todas estas verificaciones, devolviendo un estado global que indica si el sistema está listo, requiere intervención o presenta advertencias, permitiendo una validación rápida y precisa del entorno de ejecución.
+
+[local-delegate warning: salida truncada por max_tokens en 3 de 9 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 98017 chars ≈ 48284 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 9 pasadas por local-delegate)

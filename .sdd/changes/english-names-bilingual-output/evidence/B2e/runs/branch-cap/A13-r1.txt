@@ -1,0 +1,73 @@
+**Local Delegate Doctor Summary**
+
+**File: LLAMASWAP_EXE**
+
+*   No errors found.
+
+**File: LLAMASWAP_CONFIG**
+
+*   No errors found.
+
+**File: Backend**
+
+*   No errors found.
+
+**File: HOME**
+
+*   No errors found.
+
+**File: Language**
+
+*   No errors found.
+
+**File: Response**
+
+*   No errors found.
+
+**File: CLI Local Delegate**
+
+*   1 warning: LD\_HOOK\_READ\_BLOQUEAR is deprecated; use LD\_HOOK\_READ\_BLOCK (to be removed in 0.38.0).
+
+**File: MCP Clients**
+
+*   Multiple warnings regarding MCP clients (claude-ai, claude-code, local-agent-mode-local-delegate, mcp, mcp-remote-fallback-test). No specific errors detected.
+
+**File: Backups**
+
+*   No issues found.
+
+**File: Cost and Padding**
+
+*   No issues found.
+
+**File: Test Windows**
+
+*   No issues found.
+
+**File: Delegate Hooks**
+
+*   2 warnings: Claude Code is not installed, leading to missing hooks, skills, and MCP configurations.
+
+**File: Delegate Skills**
+
+*   No issues found.
+
+**File: Delegate Memory**
+
+*   No issues found.
+
+**File: MCP in Delegate**
+
+*   No issues found.
+
+**File: Services**
+
+*   1 warning: Backend requires credentials but no MCP entry to check.
+*   1 warning: Daemon requires token but no MCP entry to check.
+*   1 warning: Claude Desktop is not configured.
+
+**File: Versions**
+
+*   1 warning: Llama-swap residency is not resident (recommended).
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

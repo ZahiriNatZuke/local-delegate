@@ -1,0 +1,11 @@
+Este módulo actúa como el núcleo de diagnóstico y validación del sistema, centralizando veinticinco comprobaciones no invasivas que verifican el estado del entorno sin modificarlo. Define una jerarquía de estados mediante constantes (`OK`, `MISSING`, `WARN`, `UNKNOWN`) y una clase `Result` inmutable que encapsula el estado, detalles y sugerencias de reparación. Cada verificación se estructura como un objeto `Check`, que asocia un identificador, un grupo y una función sonda específica.
+
+El código gestiona la internacionalización a través de diccionarios de mapeo y funciones auxiliares (`status_label`, `*_hint`) que formatean mensajes y pistas de solución dinámicamente según el idioma del usuario. Incluye utilidades privadas para la manipulación de texto, fechas, versiones y archivos, así como para la lectura segura de configuraciones JSON y de texto.
+
+Las sondas principales evalúan la presencia y configuración de componentes críticos: el daemon, backends de modelos, clientes CLI (como Claude o Codex), hooks de actualización, memoria y habilidades. También verifica aspectos de seguridad y red, como tokens, credenciales, puertos ocupados y autenticación MCP. Además, realiza diagnósticos de red y conectividad, consultando PyPI para versiones, probando la residencia del sistema y la afinidad de topología. El módulo finaliza exponiendo una función `run_all` que ejecuta todas las verificaciones, permitiendo una visión integral del estado de salud del andamiaje del software.
+
+[local-delegate warning: salida truncada por max_tokens en 2 de 9 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 98017 chars ≈ 48284 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 9 pasadas por local-delegate)

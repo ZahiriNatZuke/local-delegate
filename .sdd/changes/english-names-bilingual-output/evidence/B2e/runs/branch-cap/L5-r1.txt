@@ -1,0 +1,59 @@
+**Resumen de problemas por archivo**
+
+**src/local_delegate/benchmark.py**
+* **Problemas más relevantes**
+    * **Complejidad excesiva**: La función `run_benchmark` presenta demasiada complejidad, demasiadas ramificaciones y un número excesivo de sentencias.
+    * **Documentación faltante**: Se detectaron varios métodos y funciones públicas sin cadenas de documentación, incluyendo el método `__init__`.
+    * **Manejo de excepciones**: Existen errores relacionados con el uso de mensajes largos fuera de la clase de excepción, el uso de literales de cadena o f-strings en excepciones y la necesidad de abstraer el lanzamiento de excepciones en una función interna.
+* **Otros errores**
+    * **Uso de print**: Se encontraron múltiples instancias de la función `print`.
+    * **Formato de código**: Faltan comas finales en varias líneas y se excedió la longitud máxima permitida en algunas líneas.
+    * **Valores mágicos**: Se utiliza un valor constante sin asignar en una comparación.
+* Falta cadena de documentación en método público: 7
+* Falta coma final: 6
+* Evitar especificar mensajes largos fuera de la clase de excepción: 6
+* La excepción no debe usar un literal de cadena f-string, asigne primero a una variable: 5
+* Falta cadena de documentación en `__init__`: 4
+* Falta cadena de documentación en método mágico: 4
+* Falta cadena de documentación en clase pública: 3
+* Mover importación de la biblioteca estándar a un bloque de comprobación de tipos: 2
+* La importación debe estar en el nivel más alto del archivo: 2
+* Uso de valor mágico en comparación: 2
+* Falta cadena de documentación en función pública: 2
+* Demasiados argumentos en la definición de la función: 2
+* Se encontró `print`: 2
+* La excepción no debe usar un literal de cadena, asigne primero a una variable: 1
+* Uso de valor mágico en comparación: 1
+* Llamada a `subprocess`: comprobar la ejecución de entrada no confiable: 1
+* `subprocess.run` sin argumento `check` explícito: 1
+* Usar `r"""` si hay barras invertidas en una cadena de documentación: 1
+* Valor booleano posicional en llamada a función: 1
+* `None` no está al final de la unión de tipos: 1
+* Se requiere una línea en blanco entre la línea de resumen y la descripción: 1
+* Las comillas de cierre de la cadena de documentación multilínea deben estar en una línea separada: 1
+* Línea demasiado larga: 1
+* Falta aviso de derechos de autor: 1
+
+**src/local_delegate/agents.py**
+* Falta aviso de derechos de autor: 1
+* Mover importación de la biblioteca estándar a un bloque de comprobación de tipos: 1
+* Falta coma final: 1
+* La primera línea de la cadena de documentación debe estar en modo imperativo: 1
+* Uso de valor mágico en comparación: 1
+
+**src/local_delegate/autostart.py**
+* Falta aviso de derechos de autor: 1
+* La primera línea de la cadena de documentación debe estar en modo imperativo: 1
+* Llamada a `subprocess`: comprobar la ejecución de entrada no confiable: 1
+
+**src/local_delegate/__init__.py**
+* Falta aviso de derechos de autor: 1
+
+**src/local_delegate/__main__.py**
+* Falta aviso de derechos de autor: 1
+
+Sin mencionar (del log, no los nombra el resumen): COM812, TRY003, D102, T201, EM102, CPY001, D107, PLR2004, D101, D105
+
+(leído server-side: 8589 chars ≈ 4473 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 2 partes en 3 pasadas por local-delegate)
