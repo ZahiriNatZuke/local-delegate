@@ -1,0 +1,11 @@
+This Python module implements a sophisticated system for parsing, analyzing, and summarizing structured documents, likely in a machine translation or content generation pipeline. It begins by defining core data structures: `Heading` and `Structure` represent document hierarchy, while `Section` and `Chunk` model content blocks for processing.
+
+The parsing logic distinguishes between Markdown (ATX/setext) and model-generated outputs. `markdown_headings` extracts standard Markdown headings, while `heading_lines` and `match_headings` align model outputs with expected structures using longest common subsequence algorithms and fuzzy matching via `normalize_heading` and `_matches`. The `detect` function identifies the dominant structural level.
+
+A key feature is the handling of incomplete or missing content. The `complete` function reconstructs truncated outputs by inserting missing headings and appending localized "not summarized" warnings (`NOT_SUMMARIZED_FORMS`) for skipped sections. It intelligently pairs missing headings with translated ones using `_pair_translated`.
+
+For summarization, the module calculates section sizes (`_body_size`, `_words_outside_headings`) and allocates word budgets proportionally via `allocate_by_size` and `allocate_words`. The `chunks_by_sections` function splits the document into manageable `Chunk` objects, ensuring sections are not arbitrarily broken unless they exceed limits. `split_chunk` recursively handles oversized chunks. Finally, `sanitize_focus` cleans input prompts by removing control characters and limiting length. The system also supports a synthetic "Introduction" section, managed by `_is_introduction` and `introduction`. Overall, it ensures coherent, structurally aware document processing and summarization.
+
+(read server-side: 26835 chars ≈ 13219 Claude tokens that did not enter your context)
+
+(summarized from 2 parts in 3 passes by local-delegate)

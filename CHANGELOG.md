@@ -6,8 +6,73 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-10-18
+
+Esta versión hace que todo `local-delegate` hable **en español o en inglés**: el CLI y su `--help`,
+`doctor`, `install`/`update`/`uninstall`, las salidas y los avisos de las tools MCP,
+`local_status`, los hooks, la skill, el bloque de memoria, el catálogo de los subagentes y el panel
+(este, por visitante). El modelo local responde en el mismo idioma. Por dentro, termina de pasar a
+inglés los nombres del código (olas A7–A10, sin cambio de funcionamiento).
+
+### Cómo se elige el idioma
+
+`LOCAL_DELEGATE_LANG` (`es` o `en`), si no la preferencia guardada en `language.json` (la escriben
+`install` y `update`), si no el idioma de la interfaz del sistema (en Windows, el de la interfaz y
+no el formato regional), y si no inglés. `doctor` y `local_status` dicen el idioma vigente, su
+origen y la ruta de `language.json`. Detalle en la wiki: [Idioma](docs/wiki/Language.md).
+
+### Lo que rompe y cómo actualizar
+
+- **El idioma por defecto cambia.** Hasta la 0.35 todo salía en español; desde la 0.36.0 sigue al
+  sistema, así que con el sistema en inglés se pasa a ver inglés. Para elegir español:
+  `LOCAL_DELEGATE_LANG=es local-delegate install` (o `update`), que lo guarda en `language.json`
+  para el daemon y los hooks. Para volver a seguir al sistema: borra `language.json` y ejecuta
+  `local-delegate install`. El daemon resuelve el idioma al arrancar: `install` y `update` lo
+  reinician.
+- **Contrato de las tools MCP en inglés (incompatible).** Las subclaves de `_local_delegate` y los
+  marcadores de aviso, respaldo y entrada truncada pasan a inglés y ya no dependen del idioma; solo
+  se emite la forma nueva:
+
+  | Hasta la 0.35 | Desde la 0.36.0 |
+  | --- | --- |
+  | `truncado` | `truncated` |
+  | `aviso` | `warning` |
+  | `leido_server_side.{chars, tokens_aprox}` | `read_server_side.{chars, approx_tokens}` |
+  | `respaldo.{respondio, en_lugar_de, motivo, clase}` | `fallback.{answered_by, instead_of, reason, class}` |
+  | `crudo` | `raw` |
+  | `[local-delegate aviso: …]` | `[local-delegate warning: …]` |
+  | `[local-delegate respaldo: …]` | `[local-delegate fallback: …]` |
+  | `[local-delegate: entrada truncada — …]` | `[local-delegate: input truncated — …]` |
+  | `[local-delegate error]` | sin cambio |
+
+  `truncated`/`warning` significan ahora «salida truncada en un trozo» (`local_extract` ya lee la
+  entrada entera). El `reason` de un salto por enfriamiento es `cooldown`. Tabla también en
+  [Configuration](docs/wiki/Configuration.md).
+- **Las descripciones de las tools están en inglés** (docstrings, títulos y la descripción del
+  servidor), iguales con cualquier idioma; nombres y parámetros no cambian. El cliente MCP cachea la
+  lista de tools por sesión: reconecta (`/mcp`) para ver las nuevas. Para las mediciones de
+  adopción, este cambio es una frontera de tramo: se separa por la versión (`v`) de cada fila y por
+  la huella de cada hook, no por fecha.
+- **`local_commit_msg` escribe en el idioma del producto** (antes, en el predominante del diff) y
+  siempre con cuerpo. `LOCAL_DELEGATE_COMMIT_LANGUAGE=diff` devuelve la regla de antes.
+- **Las cifras de las salidas MCP van sin separador de miles** y con punto decimal en los dos
+  idiomas («197789», no «197,789»).
+- **En inglés, `doctor` e `install` marcan lo que falta con `[MISS]`** (en español sigue `[FALT]`).
+
 ### Añade
 
+- **El CLI, `doctor`, llama-swap y `benchmark` en español o en inglés.** Todo `cli.py`, también la
+  ayuda y los errores de `argparse`, pasa por el catálogo; los números de la terminal llevan el
+  formato de cada idioma (coma decimal en español). `doctor` muestra en su cabecera el idioma, su
+  origen, la ruta de `language.json` y cómo volver a seguir al sistema. `measure_cooldown.py`,
+  `pair_sheet.py` y `analyze_benchmark.py` siguen la misma regla; `pair_sheet` lee para siempre las
+  hojas con `empate`.
+- **Las salidas de las tools MCP y `local_status` en español o en inglés:** errores, recibos de
+  lectura, avisos del troceado y el estado, con el idioma de respuesta efectivo y su origen.
+- **El modelo local responde en el idioma elegido.** `local_summarize`, `local_lint_summary`,
+  `local_explain_code` y `local_describe_image` llevan una orden de idioma, también en cada paso del
+  troceado. `LOCAL_DELEGATE_OUTPUT_LANGUAGE` (validada) pide otro idioma de respuesta (`fr`, `pt`…)
+  sin cambiar la interfaz (issue #260).
 - **`install`, `update` y `uninstall` en español o en inglés, y la preferencia de idioma.**
   `install` y `update` guardan el idioma de la sesión en que corren en `language.json` (en el
   directorio de datos) con su origen, para que el daemon y los hooks, que no ven tu shell, hablen
@@ -148,6 +213,25 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   por `#`.
 - **Un documento con su propia «Introduction»/«Introducción» ya no sale con esa sección dos
   veces:** el producto no añade la suya.
+
+### Interno
+
+- **Nombres del código en inglés** (olas A7–A10 y cierre del frente A): `server.py`, `checks.py`, el
+  resto de `src/`, el JS del panel, los tests, los scripts de medición y sus datos, con lectura
+  dual de los valores y ficheros viejos. El detector de nombres en español queda en 0. Sin cambio
+  de funcionamiento.
+- **Guardianes del idioma:** un catálogo por idioma y superficie con paridad de claves y
+  marcadores, un guardián que exige que cada texto de salida venga del catálogo, un detector de
+  idioma y la suite entera también con `LANG=es_ES.UTF-8` en el CI (`test-lang-es`), más los tests
+  del CLI en Python 3.11–3.14.
+- **CodeQL a 0 alertas**, arregladas en el código; la suite del CI corre en paralelo con
+  `pytest-xdist`.
+- **La captura del README sale en español.** Desde que el panel sigue al idioma del navegador,
+  `capture_dashboard.py` (Chromium sin `locale`, `en-US`) la generaba en inglés; ahora fija
+  `es-ES` y el manifiesto guarda el idioma de la página, que comprueba `tests/test_capture.py`.
+- **El detector de nombres en español corre en la suite:** 0 fuera de la lista de excepciones del
+  cambio, para que un nombre nuevo no espere al cierre para verse.
+- Dependencias: `mcp` 2.3.0, `fastapi` 0.143.0, `httpx2` 2.13.1, `platformdirs` 4.12.4 y `ruff`.
 
 ## [0.35.0] - 2026-10-13
 

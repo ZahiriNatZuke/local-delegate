@@ -1,0 +1,11 @@
+language.json: {"lang": "en", "source": "variable"}
+LD_HOOK_READ_BLOCK: 1
+Read             sh         rc=0 ascii=True decision=deny
+    This file is 51 KB and it is prose. Pass it to a local tool with `path="~\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-b
+Read             powershell rc=0 ascii=True decision=deny
+    This file is 51 KB and it is prose. Pass it to a local tool with `path="~\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-b
+UserPromptSubmit sh         rc=0 ascii=True decision=-
+    Mechanical task detected (summarize). Before reading large content, consider the specific local_* tool with path. Keep in Claude any part that needs judgment, s
+UserPromptSubmit powershell rc=0 ascii=True decision=-
+    Mechanical task detected (summarize). Before reading large content, consider the specific local_* tool with path. Keep in Claude any part that needs judgment, s
+RESULT: OK

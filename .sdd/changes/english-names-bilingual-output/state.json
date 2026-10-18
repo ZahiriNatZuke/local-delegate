@@ -5,7 +5,7 @@
   "mode": "standard",
   "status": "implementing",
   "createdAt": "2026-10-12T13:28:15.262Z",
-  "updatedAt": "2026-10-12T15:28:01.337Z",
+  "updatedAt": "2026-10-18T14:30:00.000Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -96,6 +96,11 @@
       "to": "implementing",
       "at": "2026-10-12T15:28:01.337Z",
       "reason": "Plan gate approved; user OK to start wave A0"
+    },
+    {
+      "type": "note",
+      "at": "2026-10-18T14:30:00.000Z",
+      "reason": "Rama release/0.36.0 (desde main c61206d): version 0.36.0 con bump_version.py --boundaries; pasada en vivo de la 0.36.0 candidata (plan 4.3) en las ventanas w-20261018T132615Z (en) y w-20261018T134632Z (es), ambas cerradas: 11/11 tools sin error en los dos idiomas, muestra D10 12/12 en el idioma pedido, doctor y local_status con el mismo idioma, origen y ruta (REQ-047), install real en en y luego es, hooks instalados en sh y PowerShell, panel con es-ES y en-US. Detector REQ-016 a 0 al cerrar (23 hallazgos nuevos apartados con motivo, guardian nuevo en la suite); sin pendientes de REQ-045. Arreglo: captura del README en espanol. Evidencia: evidence/live-036/, evidence/close/, verification.md. Gates quality/conformance/memory pendientes del PR de release."
     }
   ]
 }

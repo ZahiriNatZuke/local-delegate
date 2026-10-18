@@ -85,6 +85,15 @@ def test_the_screenshot_shows_the_current_project_version():
     )
 
 
+def test_the_screenshot_is_in_the_language_of_the_readme():
+    """Desde la 0.36.0 el panel sigue al idioma del navegador, y Chromium sin `locale` dice
+    `en-US`: la captura salía en inglés en un README en español. El manifiesto guarda el
+    `<html lang>` de la página capturada."""
+    assert _manifest().get("lang") == "es", (
+        "la captura del README (en español) no se generó con el panel en español.\n" + REGENERATE
+    )
+
+
 def test_the_screenshot_does_not_publish_real_data_through_an_unmocked_endpoint():
     """Todo `/api/*` que la página pide o está mockeado, o está en la lista de los que pasan.
 

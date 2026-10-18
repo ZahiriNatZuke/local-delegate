@@ -1,0 +1,26 @@
+## Por qué existe
+Evita que el ciclo de vida de los procesos cliente afecte al dashboard y al puerto.
+
+## Arranque
+Se inicia con `uvx local-delegate-mcp serve`, configurando puertos y estados mediante variables de entorno.
+
+## Clientes
+Configura Codex, Claude Code u opencode para usar la misma URL del daemon, gestionando peticiones concurrentes.
+
+## llama-swap visto desde el daemon
+**Turno.** Gestiona la espera de modelos en conflicto mediante grupos de configuración y tiempos de espera.
+**Endpoints para el CLI y `doctor`.** Proporciona información de estado, recarga de configuración y telemetría mediante una API protegida.
+
+## Autenticación del puerto
+El puerto es abierto por defecto, pero se recomienda protegerlo con `LOCAL_DELEGATE_WEB_TOKEN`.
+**La sesión del navegador.** Utiliza cookies firmadas con HMAC-SHA256 para mantener la sesión activa un año.
+**Que los clientes sigan funcionando.** Los clientes usan variables de entorno para enviar el token sin escribirlo en archivos.
+
+## Inicio de sesión y rollback
+El daemon se registra en los gestores de servicios del sistema operativo.
+**Windows sin ventana visible.** Requiere el uso de `conhost --headless` para evitar ventanas de consola persistentes.
+**macOS: LaunchAgent.** Se gestiona mediante archivos `.plist` en el directorio de agentes de lanzamiento.
+**Linux: `systemd --user`.** Utiliza unidades de servicio de usuario para la persistencia y gestión.
+**Qué significa «DAEMON MCP» en el dashboard.** Identifica el proceso servidor único que gestiona las conexiones compartidas.
+
+(leído server-side: 17383 chars ≈ 8691 tokens de Claude que no entraron a tu contexto)

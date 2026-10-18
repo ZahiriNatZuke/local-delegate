@@ -285,6 +285,10 @@ sección de su motivo.
 | quotaMeter | src/local_delegate/web/metrics.py | «meter» = medidor (inglés): nombre nuevo de `medidorCuota` en A8b, mismo falso positivo que `meterHTML` |
 | test_the_calibrated_quota_appears_as_a_meter | tests/test_dashboard_ui.py | «meter» = medidor (inglés), mismo caso que `meterHTML` (cierre del frente A, lote 4) |
 | nobody-blocked-me.md | tests/test_correlation.py | «me» es el pronombre inglés; el léxico lo tiene como el pronombre español (cierre del frente A, lote 4) |
+| me | tests/test_metrics.py | «me» es el pronombre inglés: el pid del propio proceso del test de «Procesos del backend» (B4); mismo falso positivo que `nobody-blocked-me.md` (cierre del cambio, release 0.36.0) |
+| *quota.meter.* | src/local_delegate/web/metrics.py | «meter» = medidor (inglés): claves del catálogo del medidor de cuota que pinta `quotaMeter` (B4); mismo falso positivo que `meterHTML` (cierre del cambio, release 0.36.0) |
+| *quota.meter.* | src/local_delegate/resources/i18n/en/panel.json | «meter» = medidor (inglés): las mismas claves en el catálogo inglés (B4) (cierre del cambio, release 0.36.0) |
+| _BOTH_LOCALES | tests/test_dashboard_ui.py | «locales» es el plural inglés de *locale* (los dos `locale` del navegador de los tests del panel, B4); el léxico lo lee como el adjetivo español (cierre del cambio, release 0.36.0) |
 
 ## Dato congelado de corpus o caso
 
@@ -424,18 +428,13 @@ formas, así que sus filas pasaron a «Lectura de formato viejo».
 
 ## Texto de salida que traduce el frente B
 
+Vacía desde el cierre del cambio (release 0.36.0, 2026-10-18): los rótulos del JS del panel
+(`montado`, `cargando`, `descargando`, `procesando`, `remoto`, `llamada`, `fallo`) viven en el
+catálogo `panel.*` desde B4, y el motivo `pruebas` de `excluded_by_reason` es el valor de máquina
+`tests` desde B4. El detector ya no los encuentra fuera de `resources/i18n/es/`.
+
 | Nombre | Fichero | Motivo |
 | --- | --- | --- |
-| montado | src/local_delegate/web/metrics.py | texto de salida que traduce el frente B (B4): rótulo del JS del panel (cierre del frente A, lote 4) |
-| cargando | src/local_delegate/web/metrics.py | texto de salida que traduce el frente B (B4): rótulo del JS del panel (cierre del frente A, lote 4) |
-| descargando | src/local_delegate/web/metrics.py | texto de salida que traduce el frente B (B4): rótulo del JS del panel (cierre del frente A, lote 4) |
-| procesando | src/local_delegate/web/metrics.py | texto de salida que traduce el frente B (B4): rótulo del JS del panel (cierre del frente A, lote 4) |
-| remoto | src/local_delegate/web/metrics.py | texto de salida que traduce el frente B (B4): rótulo del JS del panel (cierre del frente A, lote 4) |
-| Remoto | src/local_delegate/web/metrics.py | texto de salida que traduce el frente B (B4): rótulo del JS del panel (cierre del frente A, lote 4) |
-| llamada | src/local_delegate/web/metrics.py | texto de salida que traduce el frente B (B4): rótulo del JS del panel (cierre del frente A, lote 4) |
-| fallo | src/local_delegate/web/metrics.py | texto de salida que traduce el frente B (B4): rótulo del JS del panel (cierre del frente A, lote 4) |
-| pruebas | tests/test_metrics.py | texto de salida que traduce el frente B (B4; B2 para `local_status`): motivo de `excluded_by_reason` («pruebas», hermano de «no es Claude») que muestran `/api/stats` y el panel; el test comprueba el texto de hoy (cierre del frente A, lote 4) |
-| pruebas | tests/test_valuation.py | texto de salida que traduce el frente B (B4; B2 para `local_status`): motivo de `excluded_by_reason` («pruebas», hermano de «no es Claude») que muestran `/api/stats` y el panel; el test comprueba el texto de hoy (cierre del frente A, lote 4) |
 
 ## Catálogo de textos (frente B)
 
@@ -447,6 +446,20 @@ y los códigos de idioma con los que se prueba la regla del idioma. Nacen en la 
 | * | src/local_delegate/resources/i18n/es/*.json | texto de salida del catálogo español (REQ-030): el detector toma por término de máquina los valores de una sola palabra («preferencia», «sistema»), que son rótulos para personas con su par en `en/` (ola B0a) |
 | es[-_]* | tests/conftest.py | código de idioma (`es-ES`, BCP 47) del `locale` del navegador de los tests del panel (REQ-043), no un nombre en español (ola B0a) |
 | es[-_]* | tests/test_language.py | códigos de idioma (`es-ES`, `es_ES`, `es_ES.UTF-8`) que son la entrada de los casos de la regla del idioma (REQ-018), no nombres en español (ola B0a) |
+| es[-_]* | tests/test_dashboard_js.py | código de idioma (`es-ES`) del idioma del navegador con que se prueba la elección del idioma del panel (REQ-020, B4), no un nombre en español (cierre del cambio, release 0.36.0) |
+| es[-_]* | tests/test_dashboard_ui.py | código de idioma (`es-ES`) del `locale` del navegador de los tests del panel en los dos idiomas (REQ-020, B4) (cierre del cambio, release 0.36.0) |
+| es[-_]* | scripts/dev/capture_dashboard.py | código de idioma (`es-ES`) del `locale` con que se genera la captura del README, que está en español (cierre del cambio, release 0.36.0) |
+| es[-_]* | tests/test_install_language.py | código de idioma (`es_ES.UTF-8`) del sistema simulado con que se prueba la preferencia de `install` (REQ-047, B5) (cierre del cambio, release 0.36.0) |
+| cero | scripts/score_lint_fidelity.py | numeral español que el medidor reconoce en las respuestas en español para contar cifras inventadas (B2d-3): es el texto que se busca, no un nombre (cierre del cambio, release 0.36.0) |
+| dos | scripts/score_lint_fidelity.py | ídem, numeral español de `NUMBER_WORDS` (B2d-3) |
+| tres | scripts/score_lint_fidelity.py | ídem, numeral español de `NUMBER_WORDS` (B2d-3) |
+| cuatro | scripts/score_lint_fidelity.py | ídem, numeral español de `NUMBER_WORDS` (B2d-3) |
+| cinco | scripts/score_lint_fidelity.py | ídem, numeral español de `NUMBER_WORDS` (B2d-3) |
+| siete | scripts/score_lint_fidelity.py | ídem, numeral español de `NUMBER_WORDS` (B2d-3) |
+| ocho | scripts/score_lint_fidelity.py | ídem, numeral español de `NUMBER_WORDS` (B2d-3) |
+| nueve | scripts/score_lint_fidelity.py | ídem, numeral español de `NUMBER_WORDS` (B2d-3) |
+| doce | scripts/score_lint_fidelity.py | ídem, numeral español de `NUMBER_WORDS` (B2d-3) |
+| veinte | scripts/score_lint_fidelity.py | ídem, numeral español de `NUMBER_WORDS` (B2d-3) |
 
 ## Pendiente
 

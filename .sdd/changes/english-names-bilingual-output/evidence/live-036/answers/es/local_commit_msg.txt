@@ -1,0 +1,9 @@
+feat(server): ajusta prompts y tokens para rol 'long' en B2f
+
+- Introduce factor de tokens doble para el rol 'long' en llamadas únicas
+- Mueve lógica de inventario al prompt usuario cuando se usa rol 'long'
+- Extrae función `_lint_not_mentioned` para reutilizar en postprocesamiento
+- Aplica postprocesamiento condicional solo si el rol es 'long'
+- Mantiene comportamiento original para roles distintos a 'long'
+
+(leído server-side: 4834 chars ≈ 2177 tokens de Claude que no entraron a tu contexto)

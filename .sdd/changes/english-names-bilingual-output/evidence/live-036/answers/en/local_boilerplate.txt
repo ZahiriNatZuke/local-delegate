@@ -1,0 +1,2 @@
+[written] ~\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\inputs\model_price_en.py
+10 lines, 295 chars (≈122 Claude tokens that did not enter your context)

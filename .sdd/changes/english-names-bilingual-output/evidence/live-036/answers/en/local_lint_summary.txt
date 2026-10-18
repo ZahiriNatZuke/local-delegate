@@ -1,0 +1,22 @@
+**src/local_delegate/sections.py**
+
+**Errors**
+* **D101**: 5 missing docstrings in public classes.
+* **D102**: 3 missing docstrings in public methods.
+* **D400**: 3 docstrings where the first line should end with a period.
+* **D415**: 2 docstrings where the first line should end with a period, question mark, or exclamation point.
+* **E501**: 4 lines that are too long.
+* **C901**: 3 functions that are too complex.
+* **RUF002**: 2 docstrings containing ambiguous characters (EN DASH or MULTIPLICATION SIGN).
+* **PLR0912**: 1 function with too many branches.
+* **PLR0913**: 1 function with too many arguments.
+* **PLR2004**: 1 magic value used in comparison.
+* **TC003**: 1 standard library import that should be moved into a type-checking block.
+* **D301**: 1 docstring that should use a raw string.
+* **D205**: 1 missing blank line between summary and description.
+* **CPY001**: 1 missing copyright notice.
+* **COM812**: 1 missing trailing comma.
+
+Found 30 errors.
+
+(read server-side: 14237 chars ≈ 7415 Claude tokens that did not enter your context)

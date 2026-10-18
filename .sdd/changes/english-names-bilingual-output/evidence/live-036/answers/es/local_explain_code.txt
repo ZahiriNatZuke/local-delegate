@@ -1,0 +1,9 @@
+Este módulo gestiona el procesamiento estructurado de documentos Markdown para su resumen, asegurando la integridad jerárquica y la distribución precisa del presupuesto de palabras. En primer lugar, define clases de datos (`Heading`, `Structure`, `Section`, `Chunk`) para representar títulos, secciones y fragmentos de texto, manteniendo metadatos como niveles jerárquicos, posiciones y tamaños.
+
+La lógica central comienza con la detección y normalización de encabezados mediante funciones como `normalize_heading` y `heading_lines`, que estandarizan los títulos para facilitar comparaciones. Se emplea `match_headings` para alinear los títulos generados por un modelo con la estructura esperada, identificando omisiones, duplicados o desórdenes. La función `complete` corrige estos errores insertando títulos faltantes y gestionando secciones vacías o truncadas, devolviendo un objeto `Completion` con el texto final y advertencias.
+
+Posteriormente, el sistema analiza la estructura del documento para generar una lista ordenada de `Section` mediante `sections_for_summary`, distinguiendo la introducción sintética de las secciones temáticas. Calcula el tamaño real del contenido excluyendo los encabezados con `_body_size`. Finalmente, el módulo distribuye un presupuesto de palabras entre las secciones usando `allocate_by_size` y divide el texto en `Chunk`s mediante `chunks_by_sections` y `split_chunk`. Estas funciones respetan los límites de las secciones y evitan cortes indebidos en código o subtítulos, asegurando que cada fragmento se ajuste al límite asignado. Además, `sanitize_focus` prepara el contexto del prompt limpiando caracteres innecesarios. En conjunto, el código orquesta la extracción, validación y partición inteligente de contenido para un resumen fiel y estructurado.
+
+(leído server-side: 26835 chars ≈ 13219 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 2 partes en 3 pasadas por local-delegate)

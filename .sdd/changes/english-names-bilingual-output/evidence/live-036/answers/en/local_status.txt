@@ -1,0 +1,35 @@
+local-delegate v0.36.0
+Language: en (preference; ~\AppData\Local\local-delegate\language.json)
+  to follow the system again, delete `~\AppData\Local\local-delegate\language.json` and run `local-delegate install`
+Model response language: en (preference)
+
+Backend: http://127.0.0.1:9292/v1 — up
+  compute: local (this machine) — 127.0.0.1:9292
+  exposed models: gemma3-4b (unloaded), gemma4-12b (unloaded), gemma4-26b-a4b (unloaded), qwen35-2b (unloaded), qwen36-35b-a3b (unloaded)
+
+Role catalog:
+  mechanical: gemma3-4b (max_chars=20000)
+  long: gemma4-26b-a4b (max_chars=48000)
+  code: qwen36-35b-a3b (max_chars=20000)
+  vision: gemma4-12b (max_image_mb=8)
+Fallback between models: on (up to 2 hops)
+  no resident
+  mechanical: loaded -> gemma4-26b-a4b
+  long: loaded -> qwen36-35b-a3b
+  code: loaded -> gemma4-26b-a4b
+  maximum process concurrency: 2
+Turn: yes (clashes: swap [swap, not exclusive]: gemma3-4b, gemma4-26b-a4b, qwen36-35b-a3b, qwen35-2b, gemma4-12b; in use: nothing; waiting: 0)
+Cooldown: on (3 failures in a row, 120 s, cap 900 s)
+  no model cooling down
+
+Log (current month): ~\AppData\Local\local-delegate\usage-202610.jsonl
+  events: 434 (805 backend calls) — context saved: ~4211664 net tokens (gross ~4458985) (1331 test events left out)
+  Open test window: w-20261018T132615Z since 2026-10-18T13:26:15.045Z
+  Reference pace: gemma3-4b 124.9 tok/s (50 samples); gemma4-12b 46.6 tok/s (12 samples); gemma4-26b-a4b 43.5 tok/s (50 samples); qwen35-2b 127.3 tok/s (50 samples); qwen36-35b-a3b 49.4 tok/s (50 samples)
+
+Metrics web: active (http://127.0.0.1:9393)
+
+VRAM (nvidia-smi): 2029 MiB / 16311 MiB used
+System RAM: 15.2 / 31.1 GiB used
+llama-swap /running: no model loaded
+active llama-swap groups (LLAMASWAP_CONFIG): swap

@@ -210,6 +210,21 @@ def test_change_exception_list_exists_and_parses():
     assert all(e.reason.strip() for e in entries), "toda excepción lleva su motivo"
 
 
+def test_repo_has_no_spanish_name_outside_the_exception_list():
+    """REQ-016 al cerrar el cambio: el detector sobre el árbol da 0 fuera de la lista.
+
+    Sin este test, los nombres nuevos de B2d-3 a B5 (23) solo se vieron al cerrar la 0.36.0. Un
+    nombre nuevo en español, o un falso positivo del léxico, se resuelve aquí: renombrándolo o
+    con su fila y su motivo en `rename-exceptions.md`.
+    """
+    path = ROOT / ".sdd" / "changes" / "english-names-bilingual-output" / "rename-exceptions.md"
+    if not path.is_file():
+        pytest.skip("la carpeta del cambio no está en este árbol")
+    report = det.analyse(det.collect(ROOT), LEXICON, det.load_exceptions(path))
+    outside = [f"{f['file']}:{f['line']} {f['name']!r}" for f in report["findings"]]
+    assert report["outside_exceptions"] == 0, "\n".join(outside)
+
+
 def test_detector_walks_a_tree_and_sees_each_category(tmp_path):
     """Un no-resultado no vale si la búsqueda no podía encontrar nada: árbol sembrado a mano."""
     pkg = tmp_path / "src" / "local_delegate"

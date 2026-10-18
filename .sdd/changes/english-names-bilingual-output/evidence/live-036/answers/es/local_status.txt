@@ -1,0 +1,35 @@
+local-delegate v0.36.0
+Idioma: es (preferencia; ~\AppData\Local\local-delegate\language.json)
+  para volver a seguir al sistema, borra `~\AppData\Local\local-delegate\language.json` y ejecuta `local-delegate install`
+Idioma de respuesta del modelo: es (preferencia)
+
+Backend: http://127.0.0.1:9292/v1 — arriba
+  cómputo: local (esta máquina) — 127.0.0.1:9292
+  modelos expuestos: gemma3-4b (unloaded), gemma4-12b (unloaded), gemma4-26b-a4b (unloaded), qwen35-2b (unloaded), qwen36-35b-a3b (unloaded)
+
+Catálogo de roles:
+  mechanical: gemma3-4b (max_chars=20000)
+  long: gemma4-26b-a4b (max_chars=48000)
+  code: qwen36-35b-a3b (max_chars=20000)
+  vision: gemma4-12b (max_image_mb=8)
+Respaldo entre modelos: encendido (hasta 2 saltos)
+  sin residente
+  mechanical: loaded -> gemma4-26b-a4b
+  long: loaded -> qwen36-35b-a3b
+  code: loaded -> gemma4-26b-a4b
+  concurrencia máxima del proceso: 2
+Turno: sí (choques: swap [swap, no exclusivo]: gemma3-4b, gemma4-26b-a4b, qwen36-35b-a3b, qwen35-2b, gemma4-12b; en uso: nada; esperan: 0)
+Enfriamiento: encendido (3 fallos seguidos, 120 s, tope 900 s)
+  ningún modelo enfriado
+
+Log (mes actual): ~\AppData\Local\local-delegate\usage-202610.jsonl
+  eventos: 434 (805 llamadas al backend) — contexto conservado: ~4211664 tokens netos (bruto ~4458985) (1341 de pruebas fuera)
+  Ventana de prueba abierta: w-20261018T134632Z desde 2026-10-18T13:46:32.892Z
+  Ritmo de referencia: gemma3-4b 124.7 tok/s (50 muestras); gemma4-12b 46.4 tok/s (13 muestras); gemma4-26b-a4b 43.5 tok/s (50 muestras); qwen35-2b 127.3 tok/s (50 muestras); qwen36-35b-a3b 49.3 tok/s (50 muestras)
+
+Web de métricas: activa (http://127.0.0.1:9393)
+
+VRAM (nvidia-smi): 1625 MiB / 16311 MiB usados
+RAM de sistema: 12.7 / 31.1 GiB usados
+llama-swap /running: ningún modelo montado
+llama-swap groups activos (LLAMASWAP_CONFIG): swap

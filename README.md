@@ -107,6 +107,12 @@ roto; `schtasks /End` no basta porque el lanzador está desacoplado, así que pa
 `pythonw` del daemon, instala y vuelve a lanzarlo. Después, `local-delegate update` repone hooks,
 skill y el bloque de `CLAUDE.md`/`AGENTS.md` si quedaron desfasados.
 
+> **La 0.36.0 habla en español o en inglés y sigue al idioma del sistema.** Con el sistema en
+> inglés pasarás a ver inglés: para quedarte en español, `LOCAL_DELEGATE_LANG=es local-delegate
+> install` (o `update`). Las claves de `_local_delegate` y los marcadores de las tools pasan a
+> inglés (cambio incompatible); la tabla está en el [CHANGELOG](./CHANGELOG.md) y en
+> [Idioma](./docs/wiki/Language.md).
+
 > **La 0.35.0 renombra comandos, variables, la skill y ficheros de datos a inglés.** Los nombres
 > viejos siguen funcionando con aviso hasta la 0.37.x y se retiran en la 0.38.0; volver a una
 > versión anterior no está soportado. La tabla completa está en el [CHANGELOG](./CHANGELOG.md).

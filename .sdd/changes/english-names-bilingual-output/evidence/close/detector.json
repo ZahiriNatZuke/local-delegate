@@ -1,0 +1,262 @@
+{
+ "unique_findings": 849,
+ "occurrences_by_category": {
+  "file_name": 1,
+  "identifier": 10,
+  "js_identifier": 2,
+  "js_string": 5,
+  "json_key": 8,
+  "json_value": 139,
+  "string_key": 521,
+  "string_value": 521
+ },
+ "unique_findings_by_category": {
+  "file_name": 1,
+  "identifier": 10,
+  "js_identifier": 2,
+  "js_string": 5,
+  "json_key": 8,
+  "json_value": 120,
+  "string_key": 371,
+  "string_value": 332
+ },
+ "unique_spanish_names": 452,
+ "outside_exceptions": 0,
+ "unclassified_words": {
+  "articles": "tests/test_lossless_summary_output.py:366",
+  "asserts": "tests/test_dashboard_ui.py:1682",
+  "ast": "tests/test_combining_chunks.py:160",
+  "attr": "tests/test_no_uncatalogued_text.py:282",
+  "attributes": "tests/test_hook_boundaries.py:97",
+  "batches": "tests/test_language_hardening.py:36",
+  "biome": "tests/test_lint_count_rule.py:327",
+  "brace": "tests/test_no_uncatalogued_text.py:360",
+  "braces": "tests/test_hook_texts.py:102",
+  "camel": "scripts/judge_response_language.py:76",
+  "catorce": "scripts/score_lint_fidelity.py:74",
+  "checking": "src/local_delegate/web/metrics.py:2371",
+  "classification": "src/local_delegate/resources/i18n/en/panel.json:0",
+  "cols": "src/local_delegate/web/metrics.py:2981",
+  "compacted": "tests/test_lint_count_rule.py:248",
+  "concise": "tests/test_lint_count_rule.py:328",
+  "counterfactual": "src/local_delegate/web/metrics.py:2118",
+  "deletes": "tests/test_install_language.py:131",
+  "deleting": "tests/test_install_language.py:184",
+  "dense": "tests/test_lint_count_rule.py:333",
+  "detectors": "tests/test_judge_response_language.py:98",
+  "diecinueve": "scripts/score_lint_fidelity.py:75",
+  "dieciocho": "scripts/score_lint_fidelity.py:75",
+  "dieciseis": "scripts/score_lint_fidelity.py:75",
+  "diecisiete": "scripts/score_lint_fidelity.py:75",
+  "diez": "scripts/score_lint_fidelity.py:74",
+  "docs": "tests/test_lint_count_rule.py:299",
+  "dotted": "scripts/judge_response_language.py:77",
+  "eighteen": "scripts/score_lint_fidelity.py:72",
+  "eliminada": "src/local_delegate/resources/i18n/es/install.json:0",
+  "eliminado": "src/local_delegate/resources/i18n/es/install.json:0",
+  "estimado": "src/local_delegate/resources/i18n/es/panel.json:0",
+  "estimados": "src/local_delegate/resources/i18n/es/panel.json:0",
+  "evidence": "tests/test_lint_count_rule.py:296",
+  "facts": "scripts/score_lint_fidelity.py:116",
+  "faithful": "tests/test_lossless_summary_output.py:329",
+  "features": "tests/test_lossless_summary_output.py:172",
+  "fidelity": "tests/test_combining_chunks.py:42",
+  "fifteen": "scripts/score_lint_fidelity.py:72",
+  "filler": "tests/test_combining_chunks.py:78",
+  "fourteen": "scripts/score_lint_fidelity.py:71",
+  "frag": "tests/test_dashboard_ui.py:1495",
+  "frequency": "src/local_delegate/lint_patterns.py:34",
+  "hardened": "tests/test_language_hardening.py:62",
+  "hashed": "tests/test_hook_boundaries.py:55",
+  "https": "src/local_delegate/web/sysinfo.py:190",
+  "insertado": "src/local_delegate/resources/i18n/es/install.json:0",
+  "inserted": "src/local_delegate/resources/i18n/en/install.json:0",
+  "introductions": "tests/test_lossless_summary_output.py:273",
+  "inventions": "scripts/score_lint_fidelity.py:163",
+  "judgeable": "tests/test_judge_response_language.py:129",
+  "kebab": "tests/test_judge_response_language.py:204",
+  "langs": "src/local_delegate/web/metrics.py:1758",
+  "listo": "src/local_delegate/resources/i18n/es/panel.json:0",
+  "literally": "tests/test_judge_response_language.py:174",
+  "llamaswaps": "tests/test_metrics.py:2105",
+  "machines": "tests/test_hook_boundaries.py:174",
+  "markup": "tests/test_no_uncatalogued_text.py:416",
+  "mentioned": "src/local_delegate/lint_patterns.py:83",
+  "nav": "src/local_delegate/web/metrics.py:1759",
+  "nest": "tests/test_lint_count_rule.py:327",
+  "nineteen": "scripts/score_lint_fidelity.py:72",
+  "opposite": "tests/test_judge_response_language.py:112",
+  "overwritable": "src/local_delegate/install.py:1031",
+  "preceders": "tests/test_no_uncatalogued_text.py:285",
+  "processing": "tests/test_lossless_summary_output.py:232",
+  "products": "tests/test_lossless_summary_output.py:291",
+  "programs": "tests/test_lint_count_rule.py:349",
+  "pytest": "tests/test_lossless_summary_output.py:418",
+  "querying": "src/local_delegate/web/metrics.py:2471",
+  "quince": "scripts/score_lint_fidelity.py:74",
+  "reemplazado": "src/local_delegate/resources/i18n/es/install.json:0",
+  "reevaluation": "tests/test_affinity.py:587",
+  "regeneration": "tests/test_hook_boundaries.py:122",
+  "registering": "src/local_delegate/server.py:2838",
+  "registrations": "src/local_delegate/server.py:4880",
+  "reinstalled": "tests/test_install_language.py:239",
+  "repaint": "src/local_delegate/web/metrics.py:3062",
+  "repetition": "tests/test_lossless_summary_output.py:319",
+  "replacing": "tests/test_hook_boundaries.py:122",
+  "reps": "tests/test_lint_count_rule.py:218",
+  "rereads": "src/local_delegate/web/metrics.py:2102",
+  "rescue": "tests/test_language_hardening.py:276",
+  "rescued": "tests/test_language_hardening.py:286",
+  "rewords": "tests/test_metrics.py:2050",
+  "rewrites": "tests/test_install_language.py:343",
+  "sampled": "tests/test_metrics.py:2152",
+  "scanned": "tests/test_no_uncatalogued_text.py:708",
+  "seis": "scripts/score_lint_fidelity.py:73",
+  "seventeen": "scripts/score_lint_fidelity.py:72",
+  "six": "scripts/score_lint_fidelity.py:70",
+  "sixteen": "scripts/score_lint_fidelity.py:72",
+  "sized": "src/local_delegate/sections.py:511",
+  "stamping": "tests/test_hook_boundaries.py:57",
+  "static": "src/local_delegate/web/metrics.py:3051",
+  "storage": "tests/test_dashboard_ui.py:1707",
+  "subtitle": "src/local_delegate/resources/i18n/en/panel.json:0",
+  "superseded": "tests/test_affinity.py:526",
+  "supersedes": "tests/test_affinity.py:526",
+  "thirteen": "scripts/score_lint_fidelity.py:71",
+  "tied": "tests/test_lint_count_rule.py:345",
+  "trece": "scripts/score_lint_fidelity.py:74",
+  "tsc": "tests/test_combining_chunks.py:393",
+  "underscore": "tests/test_combining_chunks.py:381",
+  "unloading": "src/local_delegate/web/metrics.py:2475",
+  "unpinned": "src/local_delegate/update.py:424",
+  "verdicts": "scripts/judge_response_language.py:65",
+  "visitor": "tests/test_metrics.py:1973",
+  "visitors": "tests/test_dashboard_ui.py:1643",
+  "weigh": "tests/test_judge_response_language.py:149",
+  "wording": "tests/test_language_hardening.py:262"
+ },
+ "files_with_findings": 69,
+ "top_files": [
+  [
+   "src/local_delegate/legacy_names.py",
+   294
+  ],
+  [
+   "scripts/build_corpus.py",
+   72
+  ],
+  [
+   "src/local_delegate/resources/i18n/es/panel.json",
+   69
+  ],
+  [
+   "tests/test_analyze_benchmark.py",
+   39
+  ],
+  [
+   "tests/test_corpus.py",
+   37
+  ],
+  [
+   "src/local_delegate/resources/i18n/es/cli.json",
+   35
+  ],
+  [
+   "tests/test_recompute_legacy.py",
+   24
+  ],
+  [
+   "tests/test_measure_cooldown.py",
+   18
+  ],
+  [
+   "tests/test_detect_spanish_names.py",
+   16
+  ],
+  [
+   "src/local_delegate/resources/i18n/es/mcp.json",
+   13
+  ],
+  [
+   "tests/test_adoption_experiment.py",
+   12
+  ],
+  [
+   "tests/test_benchmark.py",
+   11
+  ],
+  [
+   "tests/test_cli_renamed_names.py",
+   11
+  ],
+  [
+   "src/local_delegate/resources/hooks/hook_common.py",
+   10
+  ],
+  [
+   "scripts/score_lint_fidelity.py",
+   10
+  ],
+  [
+   "tests/test_metrics.py",
+   9
+  ],
+  [
+   "tests/test_scripts_english.py",
+   9
+  ],
+  [
+   "tests/test_pair_sheet.py",
+   8
+  ],
+  [
+   "src/local_delegate/deprecations.py",
+   7
+  ],
+  [
+   "tests/test_affinity.py",
+   7
+  ],
+  [
+   "tests/test_hook_legacy_names.py",
+   7
+  ],
+  [
+   "tests/test_measure_adoption.py",
+   7
+  ],
+  [
+   "src/local_delegate/web/metrics.py",
+   7
+  ],
+  [
+   "tests/test_affinity_batch.py",
+   6
+  ],
+  [
+   "tests/test_cooldown.py",
+   6
+  ],
+  [
+   "scripts/analyze_benchmark.py",
+   6
+  ],
+  [
+   "tests/test_f1_conformance.py",
+   5
+  ],
+  [
+   "tests/test_fallback.py",
+   5
+  ],
+  [
+   "scripts/adoption_experiment.py",
+   5
+  ],
+  [
+   "src/local_delegate/config.py",
+   4
+  ]
+ ],
+ "findings": []
+}

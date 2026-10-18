@@ -1,0 +1,60 @@
+Instalando local-delegate en ~
+clientes: deteccion automatica (--clients auto): claude, codex, opencode
+componentes: agents, hooks, mcp, memory, skill
+
+[language] ~\AppData\Local\local-delegate\language.json — guarda el idioma es (origen: variable)
+    escrito en ~\AppData\Local\local-delegate\language.json
+[copy] ~\.claude\hooks\local-delegate — scripts de hooks consultivos
+    copiado -> ~\.claude\hooks\local-delegate
+[settings] ~\.claude\settings.json — registra 5 hook(s): UserPromptSubmit, PreToolUse/mcp__local-delegate__.*, PreToolUse/Read, PreToolUse/mcp__.+__(read_[a-z_]*|get_file_contents), PreToolUse/Bash|PowerShell
+    5 hook(s) registrados (retiradas 5 entrada(s) previa(s))
+[copy] ~\.claude\skills\local-delegation — skill local-delegation (es)
+    copiado -> ~\.claude\skills\local-delegation
+[copy] ~\.config\opencode\skill\local-delegation — skill local-delegation (opencode, es)
+    copiado -> ~\.config\opencode\skill\local-delegation
+[agents] ~\.claude\agents — actualiza 27 subagente(s): ai-integration-orchestrator.md (+0 tools, catálogo reemplazado), angular-code-reviewer.md (+0 tools, catálogo reemplazado), angular-component-architect.md (+0 tools, catálogo reemplazado), angular-orchestrator.md (+0 tools, catálogo reemplazado), angular-routing-specialist.md (+0 tools, catálogo reemplazado), angular-services-signals.md (+0 tools, catálogo reemplazado), angular-testing-specialist.md (+0 tools, catálogo reemplazado), bash-scripting-specialist.md (+0 tools, catálogo reemplazado), browser-js-specialist.md (+0 tools, catálogo reemplazado), cicd-pipeline-specialist.md (+0 tools, catálogo reemplazado), devops-orchestrator.md (+0 tools, catálogo reemplazado), docker-compose-specialist.md (+0 tools, catálogo reemplazado), docker-image-specialist.md (+0 tools, catálogo reemplazado), n8n-api-specialist.md (+0 tools, catálogo reemplazado), n8n-orchestrator.md (+0 tools, catálogo reemplazado), n8n-workflow-specialist.md (+0 tools, catálogo reemplazado), nestjs-database-specialist.md (+0 tools, catálogo reemplazado), nestjs-module-architect.md (+0 tools, catálogo reemplazado), nestjs-orchestrator.md (+0 tools, catálogo reemplazado), nestjs-platform-specialist.md (+0 tools, catálogo reemplazado), nestjs-testing-specialist.md (+0 tools, catálogo reemplazado), nodejs-scripting-specialist.md (+0 tools, catálogo reemplazado), powershell-scripting-specialist.md (+0 tools, catálogo reemplazado), python-scripting-specialist.md (+0 tools, catálogo reemplazado), scripting-orchestrator.md (+0 tools, catálogo reemplazado), seo-content-specialist.md (+0 tools, catálogo reemplazado), strapi-architect.md (+0 tools, catálogo reemplazado)
+    actualizados 27: ai-integration-orchestrator.md, angular-code-reviewer.md, angular-component-architect.md, angular-orchestrator.md, angular-routing-specialist.md, angular-services-signals.md, angular-testing-specialist.md, bash-scripting-specialist.md, browser-js-specialist.md, cicd-pipeline-specialist.md, devops-orchestrator.md, docker-compose-specialist.md, docker-image-specialist.md, n8n-api-specialist.md, n8n-orchestrator.md, n8n-workflow-specialist.md, nestjs-database-specialist.md, nestjs-module-architect.md, nestjs-orchestrator.md, nestjs-platform-specialist.md, nestjs-testing-specialist.md, nodejs-scripting-specialist.md, powershell-scripting-specialist.md, python-scripting-specialist.md, scripting-orchestrator.md, seo-content-specialist.md, strapi-architect.md
+[markdown] ~\.claude\CLAUDE.md — bloque de regla de delegación (es)
+    bloque gestionado actualizado
+[markdown] ~\.codex\AGENTS.md — bloque de regla de delegación (es)
+    bloque gestionado actualizado
+[markdown] ~\.config\opencode\AGENTS.md — bloque de regla de delegación (es)
+    bloque gestionado actualizado
+[mcp] claude — registra el servidor MCP 'local-delegate' (http)
+    registrado con `claude mcp add-json --scope user`
+[toml] ~\.codex\config.toml — registra el servidor MCP 'local-delegate' (http)
+    entrada [mcp_servers.local-delegate] actualizada
+[mcp] opencode — registra el servidor MCP 'local-delegate' (http)
+    escrito en ~\.config\opencode\opencode.jsonc
+
+Listo. Reinicia el cliente (Claude Code / Codex / opencode) para tomar los cambios.
+
+Reiniciando el daemon (pid 54200) por tarea programada LocalDelegateDaemon…
+    el servicio paró pero el pid 54200 sigue sirviendo (launcher
+    desacoplado): se le manda la señal al proceso confirmado.
+    daemon 0.36.0 arriba · pid 42728
+    el backend de inferencia no se ha tocado: los modelos siguen en VRAM.
+
+Estado del andamiaje después de escribir:
+Estados: [ OK ] a punto · [WARN] revisar · [FALT] falta · [ -- ] no se pudo comprobar
+
+Entorno (el CLI y los clientes):
+  [ OK ] CLI local-delegate: ~\.local\bin\local-delegate.EXE (versión 0.36.0)
+  [ -- ] versión publicada: instalada 0.36.0; no se consulta PyPI en este comando
+  [ OK ] clientes: detectados: Claude Code, Codex, opencode
+  [ OK ] clientes MCP observados: claude-ai 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.1.37) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.13.5) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.8.2) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.8.5) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.8.6) 0.1.0 [2025-11-25] sin elicitation; claude-code 2.1.302 [2026-07-28] elicitation; codex-mcp-client 0.160.0 [2025-06-18] elicitation; local-agent-mode-local-delegate 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.1.37) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.13.5) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.8.2) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.8.5) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.8.6) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.8.7) 1.0.0 [2025-11-25] sin elicitation; mcp 0.1.0 [2025-11-25] sin elicitation; mcp-remote-fallback-test 0.0.0 [2025-11-25] sin elicitation
+  [ OK ] cadenas de respaldo: cadenas válidas; sin residente
+  [WARN] nombres obsoletos: leído por los hooks (últimos 7 días): LD_HOOK_READ_BLOQUEAR está obsoleto: usa LD_HOOK_READ_BLOCK (se retira en la 0.38.0)
+         arréglalo con: renombra LD_HOOK_READ_BLOQUEAR a LD_HOOK_READ_BLOCK
+  [ OK ] coste y relleno: el último cotejo (2026-10-13T12:39:20+00:00) cuadra: 159 fila(s) juzgadas con la tabla de precios del 2026-10-06
+  [ OK ] ventanas de prueba: 157 ventanas, ninguna abierta
+
+Andamiaje (hooks, skill, memoria y entradas MCP):
+  [ OK ] hooks copiados: 5 script(s) en ~\.claude\hooks\local-delegate
+  [ OK ] hooks huérfanos: ninguno suelto en ~\.claude\hooks
+  [ OK ] hooks registrados: 5 registrado(s): PreToolUse/mcp__local-delegate__.*, PreToolUse/Read, PreToolUse/mcp__.+__(read_[a-z_]*|get_file_contents), PreToolUse/Bash|PowerShell, UserPromptSubmit
+  [ OK ] skill local-delegation: Claude Code: instalada en ~\.claude\skills\local-delegation · opencode: instalada en ~\.config\opencode\skill\local-delegation
+  [ OK ] memoria global: Claude Code: bloque al día en ~\.claude\CLAUDE.md · Codex: bloque al día en ~\.codex\AGENTS.md · opencode: bloque al día en ~\.config\opencode\AGENTS.md
+  [ OK ] MCP en Claude Code: registrado en ~\.claude.json (http http://127.0.0.1:9393/mcp)
+  [ OK ] MCP en Codex: bloque gestionado en ~\.codex\config.toml (http)
+  [ OK ] MCP en opencode: registrado en ~\.config\opencode\opencode.jsonc (remote http://127.0.0.1:9393/mcp)

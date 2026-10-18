@@ -1,0 +1,45 @@
+## Why it exists
+The `stdio` transport requires one process per client, whereas this daemon provides a single persistent process for multiple users.
+
+## Startup
+Run `uvx local-delegate-mcp serve` to start the service with default MCP and dashboard URLs on port 9393.
+
+## Clients
+Configure Codex, Claude Code, or opencode to connect to the same daemon URL to share the persistent process.
+
+## llama-swap seen from the daemon
+**Turn.** The daemon manages model contention by distributing backend access via turns when using a local `llama-swap` configuration. **Endpoints for CLI and doctor.** The daemon provides secure API endpoints for checking status, watching configurations, and managing residency.
+
+## Port authentication
+The port is open by default but should be secured with `LOCAL_DELEGATE_WEB_TOKEN` when using proxies.
+**The browser session.** The daemon uses HMAC-SHA256 signed cookies to provide long-term, secure authentication for web browsers.
+**Keeping clients working.** Clients use environment variables to pass tokens securely without writing them to configuration files.
+
+## Login and rollback
+The daemon registers with system service managers using specific canonical names for automatic startup.
+**Windows without visible window.** Use `conhost --headless` to prevent console windows from appearing when running authenticated launchers.
+**macOS: LaunchAgent.** Use a `.plist` file in `LaunchAgents` to manage the daemon via `launchctl`.
+**Linux: `systemd --user`.** Create a `local-delegate.service` unit in the user systemd directory.
+**What "DAEMON MCP" means in the dashboard.** This label identifies the single shared server process in the backend processes table.
+
+## Por qué existe
+(not summarized)
+
+## Arranque
+(not summarized)
+
+## Clientes
+(not summarized)
+
+## llama-swap visto desde el daemon
+(not summarized)
+
+## Autenticación del puerto
+(not summarized)
+
+## Inicio de sesión y rollback
+(not summarized)
+
+[local-delegate warning: 6 sections not summarized because of the word limit or the model]
+
+(read server-side: 17383 chars ≈ 8691 Claude tokens that did not enter your context)
