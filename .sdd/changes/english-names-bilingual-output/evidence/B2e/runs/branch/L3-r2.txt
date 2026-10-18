@@ -1,0 +1,55 @@
+**Resumen de pruebas por archivo**
+
+**tests/test_analyze_benchmark.py**
+* 88 pruebas sobre análisis de rendimiento, incluyendo comparaciones de calidad y latencia, reglas de techo, validación de archivos JSON, pruebas de significancia y manejo de datos truncados o inválidos.
+
+**tests/test_metrics.py**
+* 65 pruebas sobre la disponibilidad del backend, estadísticas de uso, contabilidad de tokens, visualización de tableros y seguridad de endpoints.
+
+**tests/test_checks.py**
+* 61 pruebas de diagnóstico, incluyendo validación de versiones, detección de huérfanos, estado del daemon, credenciales y conectividad con el backend.
+
+**tests/test_affinity.py**
+* 48 pruebas sobre la afinidad de modelos, cubriendo casos de carga, gestión de colas, uso de roles, errores de capacidad y comportamiento del doctor ante cambios de huella.
+
+**tests/test_install.py**
+* 46 pruebas sobre la existencia de recursos, escritura de hooks, manejo de rutas en Windows, idempotencia, desinstalación y migración de entradas heredadas.
+
+**tests/test_llamaswap_config.py**
+* 45 pruebas sobre la carga de configuración, estimación de memoria VRAM y RAM, validación de archivos GGUF y gestión de grupos de modelos.
+
+**tests/test_adoption_experiment.py**
+* 34 pruebas relacionadas con experimentos de adopción, incluyendo validaciones de tareas, costos, reproducibilidad de planes y manejo de archivos de contenido.
+
+**tests/test_benchmark.py**
+* 35 pruebas sobre métricas de rendimiento, cubriendo métricas de Prometheus, manejo de errores de JSON, casos de visión y gestión de ejecuciones truncadas.
+
+**tests/test_attribution.py**
+* 33 pruebas sobre atribución, validando el servidor de hooks, resolución de subagentes, gestión de notas y persistencia de datos.
+
+**tests/test_install_opencode.py**
+* 33 pruebas sobre la detección de directorios mediante XDG, manejo de comentarios en archivos JSONC, sintaxis de claves y procesos de actualización o desinstalación.
+
+**tests/test_measure_slowness.py**
+* 32 pruebas sobre la medición de lentitud mediante medianas, gestión de ventanas de eventos, límites de tramos y códigos de salida.
+
+**tests/test_measure_cooldown.py**
+* 31 pruebas sobre reglas de enfriamiento, manejo de episodios, reportes de fallos y compatibilidad con formatos de registro antiguos y nuevos.
+
+**tests/test_pace.py**
+* 31 pruebas sobre el cálculo de ritmo, manejo de entradas inválidas o extrañas.
+
+**tests/test_install_clients.py**
+* 27 pruebas sobre la simulación de directorios de inicio, configuración de clientes, comportamiento de comandos de desinstalación y reportes de estado.
+
+**tests/test_chains.py**
+* 26 pruebas sobre cadenas de ejecución, validando configuraciones, saltos entre modelos y disponibilidad de miembros cargados.
+
+**tests/test_install_timeouts.py**
+*
+
+[local-delegate warning: salida truncada por max_tokens en 4 de 8 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 206985 chars ≈ 107804 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 8 pasadas por local-delegate)

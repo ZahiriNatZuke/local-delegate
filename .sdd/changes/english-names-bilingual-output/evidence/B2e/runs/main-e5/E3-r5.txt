@@ -1,0 +1,11 @@
+El código implementa un módulo de verificación de integridad y estado del sistema, diseñado para evaluar el entorno de ejecución de una aplicación, probablemente relacionada con asistentes de IA o servicios locales. Su función principal es ejecutar una serie de "sondas" (checks) de solo lectura para determinar si los componentes necesarios están instalados, configurados correctamente y operativos.
+
+El sistema define cuatro estados posibles mediante constantes de cadena: `OK` (todo correcto), `MISSING` (faltan componentes), `WARN` (configuración subóptima) y `UNKNOWN` (imposible verificar). Estos estados se mapean a etiquetas localizadas para la interfaz de usuario. La estructura central utiliza clases de datos inmutables: `Result` para almacenar el estado, detalle y sugerencias de solución de cada prueba, y `Check` para definir la identidad, grupo y la función sonda específica de cada verificación.
+
+El módulo contiene múltiples funciones de sonda que interrogan diversos subsistemas. Esto incluye la verificación del estado de un daemon local (consultando host y puerto), la validación de tokens de autenticación y la detección de servicios como `llamaswap`. También evalúa la configuración del backend, la presencia de modelos, la versión instalada frente a la última disponible en PyPI, y la existencia de hooks o configuraciones específicas para clientes como Claude, Codex u OpenCode. Además, gestiona la internacionalización de mensajes de ayuda y pistas de solución (como comandos de instalación o reinicio). El diseño permite extender las comprobaciones y simular fallos para pruebas unitarias, asegurando que el entorno cumpla con los requisitos mínimos antes de operar.
+
+[local-delegate warning: salida truncada por max_tokens en 3 de 9 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 98017 chars ≈ 48284 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 9 pasadas por local-delegate)

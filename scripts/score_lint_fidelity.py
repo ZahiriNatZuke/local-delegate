@@ -44,6 +44,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+from local_delegate import lint_patterns
 from local_delegate.server import LINT_REPEAT_KEEP, compact_repeated_lines
 
 #: The product's own lines around an answer (receipts, notices): not the model's content.
@@ -52,14 +53,10 @@ PRODUCT_LINE = re.compile(
 )
 #: A number: an integer, a decimal or a dotted version, not glued to letters (`E501` is a code).
 NUMBER = re.compile(r"(?<![\w.])\d+(?:[.,]\d+)*(?![\w])")
-#: A file name or path with a known extension.
-FILE = re.compile(
-    r"(?:[\w.~-]+[/\\])*[\w.-]+\.(?:py|pyi|ts|tsx|js|jsx|mjs|cjs|json|jsonl|md|txt|toml|ya?ml|"
-    r"ps1|sh|cfg|ini|lock|html|css|scss|rs|go|java|exe|log|spec\.ts)\b",
-    re.IGNORECASE,
-)
-#: A rule or error code (`E501`, `TS2345`, `PLR2004`) or a kebab/slash rule name.
-CODE = re.compile(r"\b[A-Z]{1,5}\d{2,5}\b|\b[a-z]+(?:[/-][a-z]+){1,4}\b")
+#: A file name or path with a known extension, and a rule or error code: the same expressions
+#: `local_lint_summary` builds its chunked inventory with (B2e), imported so they cannot drift.
+FILE = lint_patterns.FILE
+CODE = lint_patterns.CODE
 #: A pytest node id (`tests/test_x.py::test_name[param]`): its file and the rest of the id.
 PYTEST_NODE = re.compile(r"((?:[\w.~-]+[/\\])*[\w.-]+\.py)::(\S+)")
 #: A status mark of a report (`[ OK ]`, `[WARN]`, `[FALT]`, `[ -- ]`).
@@ -90,8 +87,16 @@ LOG_NUMBER_WORD = re.compile(
 )
 
 
-def _norm_path(text: str) -> str:
-    return text.replace("\\", "/").lower()
+_norm_path = lint_patterns.norm_path
+#: A Markdown escape (`build\_corpus.py`, B2e): the model writes it, the reader sees `_`.
+MARKDOWN_ESCAPE = re.compile(r"\\([_*`-])")
+#: A `tsc` position behind a file (`login.page.ts(52,24)`, B2e): two figures, not `52,24`.
+TSC_POSITION = re.compile(r"(?<=[\w.])\((\d+),(\d+)\)")
+#: A version (`v255`, B2e): the `v` glued to the figure hides it from `NUMBER`.
+VERSION = re.compile(r"(?<![\w.])v(\d+(?:\.\d+)*)(?![\w])")
+#: A line or column of the log (`a.py:3:9:`, `x.py:12:`, `(52,24)`), B2e: a figure written only
+#: as a position does not back a number in words ("nine T201" over `a.py:3:9: T201`).
+POSITION = re.compile(r"(?<=[\w.)]):\d+(?::\d+)?(?=:|\s|$)|(?<=[\w.])\(\d+,\d+\)", re.MULTILINE)
 
 
 def _norm_number(text: str) -> str:
@@ -103,8 +108,9 @@ def _norm_number(text: str) -> str:
 
 
 def model_text(answer: str) -> str:
-    """The answer without the product's own lines."""
-    return "\n".join(line for line in answer.splitlines() if not PRODUCT_LINE.match(line))
+    """The answer without the product's own lines and without Markdown escapes (B2e)."""
+    text = "\n".join(line for line in answer.splitlines() if not PRODUCT_LINE.match(line))
+    return MARKDOWN_ESCAPE.sub(r"\1", text)
 
 
 def log_facts(log: str) -> dict:
@@ -119,9 +125,17 @@ def log_facts(log: str) -> dict:
     `extra_allowed_numbers` in the frozen set is for what a person reviews by hand.
     """
     numbers = {_norm_number(n) for n in NUMBER.findall(log)}
+    # B2e: `(52,24)` of `tsc` is a line and a column, and `v255` is the figure 255.
+    numbers |= {n for pair in TSC_POSITION.findall(log) for n in pair}
+    numbers |= {_norm_number(n) for n in VERSION.findall(log)}
+    # B2e: the figures a number in words may lean on, without the ones written only as a position.
+    word_numbers = {_norm_number(n) for n in NUMBER.findall(POSITION.sub(" ", log))}
+    word_numbers |= {_norm_number(n) for n in VERSION.findall(log)}
     # A number word of the log writes its figure too, also inside a name (`resume-ruff-tres-reglas`
     # turned "Tres reglas" in a live answer of B2d-3): "tres" or "3" in the answer is supported.
-    numbers |= {str(NUMBER_WORDS[w.lower()]) for w in LOG_NUMBER_WORD.findall(log)}
+    in_words = {str(NUMBER_WORDS[w.lower()]) for w in LOG_NUMBER_WORD.findall(log)}
+    numbers |= in_words
+    word_numbers |= in_words
     files = Counter(_norm_path(f) for f in FILE.findall(log))
     codes = Counter(CODE.findall(log))
     statuses = Counter(s.strip("[] ").upper() for s in STATUS.findall(log))
@@ -141,6 +155,7 @@ def log_facts(log: str) -> dict:
     return {
         "numbers": sorted(numbers),
         "derived_counts": sorted(derived),
+        "word_numbers": sorted(word_numbers),
         "files": sorted(files),
     }
 
@@ -155,8 +170,13 @@ def count_inventions(answer: str, log: str, extra_allowed: tuple[str, ...] = ())
     allowed = set(facts["numbers"]) | {str(n) for n in facts["derived_counts"]}
     allowed |= {_norm_number(n) for n in extra_allowed}
     invented_numbers = [n for n in NUMBER.findall(without_files) if _norm_number(n) not in allowed]
+    # B2e: a number in words leans only on a figure the log does not write as a line or column.
+    word_allowed = set(facts["word_numbers"]) | {str(n) for n in facts["derived_counts"]}
+    word_allowed |= {_norm_number(n) for n in extra_allowed}
     invented_numbers += [
-        w for w in NUMBER_WORD.findall(without_files) if str(NUMBER_WORDS[w.lower()]) not in allowed
+        w
+        for w in NUMBER_WORD.findall(without_files)
+        if str(NUMBER_WORDS[w.lower()]) not in word_allowed
     ]
     invented_files = [f for f in FILE.findall(text) if _norm_path(f) not in log_norm]
     repeated = [s for (_h, s), n in Counter(_sentences(text)).items() for _ in range(n - 1)]

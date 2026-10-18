@@ -1,0 +1,11 @@
+El código implementa un sistema integral de benchmarking para evaluar modelos de lenguaje, centrado en la medición precisa de recursos de hardware y la ejecución segura de casos de prueba. Comienza definiendo estructuras de datos inmutables como `CorpusCase` y `Corpus` para gestionar los casos de prueba y sus metadatos, junto con utilidades de validación como `_frozen_source` y `load_corpus` que aseguran la integridad de los datos mediante hashes SHA-256. Incluye funciones de procesamiento de texto y métricas, como `parse_prometheus_metrics` para analizar datos de monitoreo, `normalize_for_match` para estandarizar comparaciones de texto, y `_json_object` para extraer estructuras JSON válidas.
+
+La evaluación de la calidad de las respuestas se realiza mediante `run_execution_checks` para ejecutar código generado de forma segura, `check_counts` para validar reglas específicas y `score_output` para calcular una puntuación final basada en cobertura, validez y ejecución. Un componente crítico es el monitoreo de recursos: utiliza APIs de Windows (`_win32_api`, `list_processes`, `read_process_memory`) y herramientas del sistema (`typeperf`, `nvidia-smi`) a través de funciones como `resolve_gpu_luid` y `choose_gpu_luid` para identificar adaptadores GPU. Clases como `TypeperfStream`, `ProcessProbe` y `ResourceSampler` gestionan la recolección asíncrona y sincronizada de métricas de VRAM y memoria, mientras `summarize_resources` analiza estos datos para detectar anomalías.
+
+La orquestación de la prueba se encarga `run_benchmark`, que carga el corpus, filtra casos con `_select_cases` y ejecuta las llamadas a la API mediante `post_attempt`, gestionando errores y contextos con `is_context_rejection` y `Attempt`. Finalmente, `ThermalTracker` monitorea cambios térmicos indirectos y `add_parser` configura la interfaz de línea de comandos para el subcomando "benchmark", permitiendo la ejecución completa y configurable del sistema.
+
+[local-delegate warning: salida truncada por max_tokens en 1 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 59966 chars ≈ 29539 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

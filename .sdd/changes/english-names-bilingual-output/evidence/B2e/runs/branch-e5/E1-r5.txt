@@ -1,0 +1,13 @@
+El código implementa una herramienta de línea de comandos modular para gestionar la instalación, actualización y desinstalación de modelos de IA, así como el monitoreo y configuración de un daemon llamado llama-swap. La estructura centraliza la gestión de argumentos mediante `build_parser`, que registra subcomandos principales como `serve`, `install`, `update`, `uninstall`, `recompute-cost` (y su alias oculto `recalcular-coste`), `check-llamaswap`, `init-llamaswap`, `doctor` y `test-window`.
+
+Para la gestión de modelos, funciones como `_install_options`, `_update_options` y `_run_install` orquestan la lógica de despliegue, validando clientes con `_resolve_clients` y generando reportes con `_scaffold_report`. La herramienta advierte sobre configuraciones obsoletas mediante `_warn_deprecated` y `_warn_if_cli_not_on_path`.
+
+En cuanto a llama-swap, el código gestiona la interacción con su daemon singleton mediante `_daemon_target`, `_daemon_url` y `_daemon_status`. Comandos como `cmd_check_llamaswap` y `cmd_init_llamaswap` validan presupuestos de VRAM/RAM usando `_check_budget` y `_estimate_all`, mientras que `cmd_llamaswap_residency` maneja la residencia de modelos, utilizando `_write_residency` y `_restore_after_rejection` para asegurar la integridad de la configuración. El subcomando `test-window` permite gestionar ventanas de tiempo para pruebas de uso.
+
+La ejecución se inicia en `run`, que utiliza `_argparse_in_language` para localizar mensajes. Funciones auxiliares como `_has_terminal`, `_codex_mcp_set_by_hand` y `_decide_on_foreign_codex` gestionan la interacción con el usuario y configuraciones externas de MCP. El sistema también incluye utilidades como `_pairs` para parsear claves y `_count_rows_by_window` para analizar logs, asegurando una gestión robusta y transparente de los recursos y configuraciones del sistema.
+
+Sin mencionar (los registra el fichero, no los nombra la explicación): start, stop, add, list, llamaswap, residency, benchmark
+
+(leído server-side: 58875 chars ≈ 29002 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)

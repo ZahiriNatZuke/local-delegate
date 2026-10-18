@@ -1,0 +1,13 @@
+Este módulo implementa un sistema integral de benchmarking para evaluar respuestas de modelos de lenguaje, con un enfoque especial en la monitorización de recursos de hardware en Windows. La arquitectura se divide en tres capas principales: gestión de datos, instrumentación de hardware y ejecución de pruebas.
+
+En primer lugar, gestiona el corpus de pruebas mediante clases inmutables (`CorpusCase`, `Corpus`) que validan la integridad de las fuentes mediante hashes SHA-256. Incluye utilidades para analizar métricas Prometheus, normalizar texto para comparaciones precisas y ejecutar código generado de forma segura en subprocesos aislados. El sistema de puntuación (`score_output`) evalúa la calidad de las respuestas verificando cobertura, formato JSON, conteos numéricos y ejecución de código.
+
+En segundo lugar, proporciona una instrumentación profunda de recursos de Windows. Utiliza APIs nativas (`kernel32`, `psapi`) y herramientas de línea de comandos (`typeperf`, `nvidia-smi`) para rastrear el uso de memoria privada y VRAM de procesos específicos. Clases como `ProcessProbe` y `ResourceSampler` gestionan la recolección asíncrona de datos, resolviendo identificadores únicos de GPU (LUID) y manejando cambios dinámicos en los PID, generando estadísticas resumidas de picos y tendencias.
+
+Finalmente, orquesta la ejecución del benchmark. La función `run_benchmark` coordina la carga de casos, la configuración del cliente HTTP y el manejo de intentos (`Attempt`), incluyendo detección de rechazos por contexto y seguimiento térmico del servidor. La interfaz de línea de comandos (`add_parser`) permite filtrar casos y ejecutar la evaluación completa, almacenando los resultados detallados en formato JSONL.
+
+[local-delegate warning: salida truncada por max_tokens en 1 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 59966 chars ≈ 29539 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

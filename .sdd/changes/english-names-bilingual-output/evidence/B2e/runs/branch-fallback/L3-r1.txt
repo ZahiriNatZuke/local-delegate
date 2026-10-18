@@ -1,0 +1,56 @@
+Aquí tienes el resumen de las pruebas ejecutadas, agrupadas por archivo:
+
+**tests/test_adoption_experiment.py**
+* Se ejecutaron 34 pruebas sobre experimentos de adopción, incluyendo validaciones de tareas, costos, planes de ejecución y reportes de resumen.
+
+**tests/test_affinity.py**
+* Se ejecutaron 48 pruebas sobre la afinidad de modelos, cubriendo carga, gestión de colas, cambios de rol, uso de memoria y fallos de capacidad.
+
+**tests/test_affinity_batch.py**
+* Se ejecutaron 17 pruebas sobre procesos por lotes, incluyendo conteo de peticiones, gestión de errores, escritura de archivos y límites de ejecución.
+
+**tests/test_agents.py**
+* Se ejecutaron 15 pruebas sobre la gestión de agentes, validando catálogos, estados de bloqueo, reemplazo de bloques y ejecución en seco.
+
+**tests/test_analyze_benchmark.py**
+* Se ejecutaron 85 pruebas sobre análisis de rendimiento, cubriendo criterios de calidad, latencia, comparaciones estadísticas, gestión de archivos congelados y validación de reglas.
+
+**tests/test_attribution.py**
+* Se ejecutaron 33 pruebas sobre atribución de eventos, validando el servidor de ganchos, resolución de modelos, gestión de notas y procesos de relleno de datos.
+
+**tests/test_autostart.py**
+* Se ejecutaron 2 pruebas sobre la configuración de inicio automático.
+
+**tests/test_backend_probe.py**
+* Se ejecutaron 13 pruebas sobre la sonda del backend, validando estados de acceso, tiempos de espera y formatos de respuesta.
+
+**tests/test_benchmark.py**
+* Se ejecutaron 36 pruebas sobre métricas de rendimiento, incluyendo análisis de JSON, manejo de bucles infinitos, casos de visión y gestión de estados térmicos.
+
+**tests/test_boilerplate_output.py**
+* Se ejecutaron 19 pruebas sobre la generación de archivos de salida, validando directorios, rutas relativas y contabilidad de ahorros.
+
+**tests/test_bump_version.py**
+* Se ejecutaron 8 pruebas sobre la actualización de versiones en archivos de configuración.
+
+**tests/test_capture.py**
+* Se ejecutaron 4 pruebas sobre la captura de pantallas y generación de manifiestos.
+
+**tests/test_chains.py**
+* Se ejecutaron 26 pruebas sobre cadenas de ejecución, validando configuraciones, saltos entre modelos y disponibilidad de recursos.
+
+**tests/test_checks.py**
+* Se ejecutaron 58 pruebas de diagnóstico, cubriendo versiones instaladas, detección de huérfanos, credenciales, estado del demonio y conectividad del backend. También incluye pruebas sobre detección de versiones, validación de clientes, autenticación de demonios, configuración de escritorio, gestión de ganchos, residencia, topología, ventanas y nombres obsoletos.
+
+**tests/test_chunking.py**
+* Pruebas sobre la división de texto, respeto de límites de tamaño, manejo de encabezados Markdown, gestión de errores en el backend, clasificación de origen de backend y procesamiento de diferencias.
+
+**tests/test
+
+Sin mencionar (del log, no los nombra el resumen): tests/test_metrics.py, tests/test_update.py, tests/test_residency.py, tests/test_core.py, tests/test_connection_cause.py, tests/test_topology.py, tests/test_corpus.py, tests/test_structured_summary.py
+
+[local-delegate warning: salida truncada por max_tokens en 4 de 8 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 206985 chars ≈ 107804 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 8 pasadas por local-delegate)

@@ -1,0 +1,9 @@
+Este módulo actúa como el núcleo de diagnóstico del andamiaje, centralizando veinticinco comprobaciones no destructivas para evaluar el estado del sistema. Define constantes de estado (`OK`, `MISSING`, `WARN`, `UNKNOWN`) y una estructura de datos inmutable `Result` que encapsula el estado, detalles y pistas de reparación. Cada verificación se modela mediante la clase `Check`, que asocia un identificador, grupo y una función sonda específica.
+
+El código gestiona la internacionalización mediante un diccionario de mapeo y funciones auxiliares que devuelven prefijos formateados (ej. `[ OK ]`) y pistas contextuales traducidas para instalación, reinicio o gestión de credenciales. Incluye utilidades privadas para leer archivos, analizar JSONL, comparar versiones y detectar configuraciones específicas de clientes MCP (como Codex o Claude) y daemons. Las sondas verifican la presencia de componentes, la validez de tokens, la disponibilidad de puertos y la configuración de modelos backend, utilizando tiempos de espera optimizados para no ralentizar el diagnóstico. El flujo principal ejecuta todas las verificaciones mediante `run_all`, agregando los resultados para proporcionar un informe completo del estado del entorno, permitiendo identificar rápidamente componentes faltantes, mal configurados o desconocidos, facilitando así la resolución automática o manual de problemas.
+
+[local-delegate warning: salida truncada por max_tokens en 2 de 9 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 98017 chars ≈ 48284 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 9 pasadas por local-delegate)

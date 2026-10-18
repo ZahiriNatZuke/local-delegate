@@ -191,6 +191,7 @@ cámbialos por los de tu backend.
 | `LOCAL_DELEGATE_MODEL_CODE` | `qwen36-35b-a3b` | Modelo para código |
 | `LOCAL_DELEGATE_MODEL_VISION` | `gemma4-12b` | Modelo de visión para `local_describe_image` |
 | `LOCAL_DELEGATE_MAX_IMAGE_MB` | `8` | Tope de tamaño de imagen para `local_describe_image` |
+| `LOCAL_DELEGATE_DUMP_CHUNK_NOTES` | *(vacío: apagado)* | Carpeta local donde cada operación troceada deja la salida de cada paso; solo para medir, nunca sale de la máquina |
 | `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | Umbral mecánico↔largo |
 | `LOCAL_DELEGATE_CHUNK_CHARS` | `3500` | Tamaño de trozo al partir documentos largos (`local_translate`, `local_delegate`) |
 | `LOCAL_DELEGATE_CHUNK_MAX_TOKENS` | `2048` | Techo de `max_tokens` por trozo |

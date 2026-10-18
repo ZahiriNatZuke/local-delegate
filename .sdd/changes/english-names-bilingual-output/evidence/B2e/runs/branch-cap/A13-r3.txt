@@ -1,0 +1,19 @@
+**Local Delegate Doctor Summary**
+
+**File-Based Issue Breakdown:**
+
+*   **LLAMASWAP_EXE:** No errors found.
+*   **LLAMASWAP_CONFIG:** No errors found.
+*   **Hooks (Andamiaje):** 3 warnings:
+    *   LD\_HOOK\_READ\_BLOQUEAR is deprecated: Use LD\_HOOK\_READ\_BLOCK (to be removed in 0.38.0). (2 warnings)
+    *   Claude Code client not installed (2 warnings).
+*   **MCP Clients:** 16 clients observed, all without elicitation.
+*   **Backend Services:** 2 warnings:
+    *   Backend requires credential, but no MCP entry to check.
+    *   Daemon requires token, but no MCP entry to check.
+*   **Versions:** 1 warning:
+    *   No resident (recommended) affinity configuration.
+
+**Total Warnings:** 5.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

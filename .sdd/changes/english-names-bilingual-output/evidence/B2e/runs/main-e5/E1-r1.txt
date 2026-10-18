@@ -1,0 +1,9 @@
+Este fichero implementa la interfaz de línea de comandos (CLI) y la orquestación principal para una herramienta de gestión de modelos de lenguaje local, probablemente centrada en la integración con Llama.cpp y servicios como LlamaSwap. La estructura se basa en un analizador de argumentos (`build_parser`) que organiza múltiples subcomandos: `serve` para iniciar un daemon HTTP, `install`/`uninstall`/`update` para gestionar dependencias y configuraciones, y `recompute-cost` para ajustar estimaciones de uso.
+
+Una parte significativa del código se dedica a la gestión de recursos y validación. Funciones como `_check_budget`, `_estimate_all` y `_print_breakdown` analizan el consumo de VRAM y RAM, asegurando que los modelos seleccionados sean compatibles con el hardware disponible y rechazando aquellos no agrupados si es necesario. También incluye utilidades para el diagnóstico (`_has_terminal`, `_scaffold_report`) y la gestión de configuraciones específicas de Codex y LlamaSwap.
+
+Además, el módulo maneja la comunicación con un daemon en segundo plano mediante funciones HTTP (`_daemon_status`, `_daemon_url`) y mecanismos de sincronización como `_open_watch` y `_daemon_watch`. Esto permite operaciones atómicas y seguras, como la actualización de la configuración de residencia de modelos (`cmd_llamaswap_residency`), que verifica conflictos, escribe cambios y espera confirmación. El código también prioriza la experiencia del usuario mediante avisos de depreciación, soporte multilingüe (`_argparse_in_language`) y manejo robusto de errores, asegurando que las operaciones críticas puedan revertirse automáticamente si fallan (`_restore_after_rejection`). En resumen, actúa como el punto de entrada unificado que traduce las intenciones del usuario en acciones técnicas coordinadas con el sistema y el daemon.
+
+(leído server-side: 58875 chars ≈ 29002 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)

@@ -1,0 +1,31 @@
+**Resumen de problemas por archivo**
+
+**scripts/_claude_bench.py**
+* **Complejidad y estructura**: 1 error de complejidad excesiva en `analyze`, 1 de demasiadas ramas en `analyze`, 1 de demasiados argumentos en definición de función y 1 de demasiados argumentos posicionales.
+* **Documentación y estilo**: 2 errores de falta de línea en blanco entre resumen y descripción, 1 de comillas de cierre de docstring en línea nueva, 2 de importaciones fuera del nivel superior y 1 de falta de anotación de tipo para `content`.
+* **Seguridad y excepciones**: 1 llamada a `subprocess` con entrada no confiable, 2 de evitar mensajes largos fuera de la clase de excepción, 1 de no usar f-strings en excepciones y 1 de no usar literales de cadena en excepciones.
+* **Otros**: 1 de paquete de espacio de nombres implícito, 1 de aviso de copyright faltante, 1 de nombre de excepción incorrecto, 2 de reemplazo de `os.path.abspath()` por `Path.resolve()`, 4 de falta de coma final, 1 de uso de `print` y 1 variable de bucle sobrescrita.
+
+**scripts/adoption_experiment.py**
+* **Documentación**: 4 de falta de docstring en funciones públicas, 1 de uso de `r"""` en docstrings con barras invertidas y 2 de falta de punto o signo de puntuación al final de la primera línea.
+* **Estilo y formato**: 4 de falta de coma final, 4 de líneas demasiado largas y 1 de línea requerida entre resumen y descripción.
+* **Seguridad y lógica**: 1 llamada a `subprocess` con entrada no confiable, 2 de generadores pseudoaleatorios no aptos para criptografía, 1 de valor mágico en comparación y 1 de complejidad excesiva en `execute` con demasiadas ramas y sentencias.
+* **Otros**: 1 de aviso de copyright faltante, 1 de falta de línea en blanco en docstring y 1 de uso de `print`.
+
+**scripts/analyze_benchmark.py**
+* **Documentación**: 18 de falta de docstring en métodos o clases públicas, 4 de falta de línea en blanco en docstring, 2 de comillas de cierre en línea nueva y 1 de falta de docstring en clase pública.
+* **Tipado y anotaciones**: 7 de expresiones con tipado dinámico (`typing.Any`) no permitidas y 1 de falta de anotación de tipo para `corpus`.
+* **Estilo y formato**: 15 de falta de coma final y 11 de líneas demasiado largas.
+* **Complejidad y lógica**: 3 de complejidad excesiva en funciones, 1 de demasiados argumentos en definición de función, 1 de demasiados argumentos posicionales, 1 de demasiadas ramas, 1 de demasiadas sentencias y 1 de demasiadas sentencias de retorno.
+* **Seguridad y otros**: 2 de uso de `assert`, 1 de uso de valor mágico en comparación y 1 de uso.
+
+**scripts/build_corpus.py**
+* **
+
+Sin mencionar (del log, no los nombra el resumen): scripts/pair_sheet.py, scripts/price_watcher.py, scripts/dev/affinity_batch.py, scripts/macos_mcp_canary.py, scripts/detect_spanish_names.py, scripts/measure_adoption.py, scripts/bump_version.py, COM812, T201, E501, D103, TRY003, EM102, D205, D209, CPY001, PLR2004
+
+[local-delegate warning: salida truncada por max_tokens en 4 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 154297 chars ≈ 80363 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

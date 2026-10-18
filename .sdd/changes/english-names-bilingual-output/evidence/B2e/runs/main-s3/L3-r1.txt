@@ -1,0 +1,17 @@
+Este resumen global detalla la ejecución de un conjunto exhaustivo de pruebas de software que cubren diversas áreas funcionales del sistema. Se han validado experimentos de adopción, afinidad de modelos, procesamiento por lotes, capacidades de agentes y análisis de rendimiento mediante comparaciones de calidad y latencia. La suite incluye pruebas de atribución, inicio automático, sondeo de backend, métricas de rendimiento, generación de código base, actualizaciones de versión, captura de pantallas, cadenas de procesos y diagnósticos de sistema.
+
+Asimismo, se han verificado procesos de fragmentación de texto, integración continua, compatibilidad de la interfaz de línea de comandos, gestión de clientes, detección de idiomas, clasificación de errores de conexión, mecanismos de enfriamiento de modelos, funciones núcleo, integridad del corpus, correlación de texto, costos, gestión del demonio, paneles de control con lógica de JavaScript, estados de la interfaz de usuario, localización, errores de delegación, densidad de tokens, gestión de nombres obsoletos, detección de nombres en español, aislamiento de entornos, conformidad de protocolos, captura de fallos, integración de errores, simuladores de intercambio de modelos, observabilidad, gestión de ganchos, procesos de instalación, configuración de clientes y Opencode, gestión de tiempos de espera, APIs de intercambio de modelos, configuración de memoria, fragmentación de documentos, medición de adopción, lentitud, resúmenes estructurados, métricas del sistema, ritmo de ejecución, hojas de comparación, rutas de chat, monitoreo de precios, gestión de preguntas, cuotas, recomputación de datos, metadatos de lanzamiento, residencia de datos, monitoreo de recursos, capacidades de roles, verificación de sitios web, pruebas de humo, gestión de turnos, actualizaciones de servicios, valoraciones, integridad de proveedores, procesamiento de visión, seguridad web y sincronización de wikis.
+
+**Resumen de advertencias**
+
+**.venv\Lib\site-packages\starlette\testclient.py**
+
+* **Advertencia de depreciación**: El alias `anyio.abc.BlockingPortal` está obsoleto y debe sustituirse por `anyio.from_thread.BlockingPortal`.
+
+2617 tests collected in 0.74s
+
+[local-delegate warning: salida truncada por max_tokens en 3 de 8 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 206985 chars ≈ 107804 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 8 pasadas por local-delegate)

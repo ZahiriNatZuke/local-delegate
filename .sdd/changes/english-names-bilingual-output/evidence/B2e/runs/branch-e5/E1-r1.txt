@@ -1,0 +1,13 @@
+El código define una interfaz de línea de comandos (CLI) completa para gestionar un sistema de benchmarks y configuración de modelos de lenguaje, utilizando `argparse` para el análisis de argumentos. La función `build_parser` orquesta la estructura, registrando subcomandos principales a través de `_add_install_parsers` (install, update, uninstall), `_add_test_window_parser` (test-window con start, stop, add, list), `_add_llamaswap_parser` (llamaswap con residency) y `cmd_serve` (serve). También gestiona `check-llamaswap`, `init-llamaswap`, `doctor`, `recompute-cost` y `recalcular-coste`.
+
+La ejecución principal se inicia en `run`, que configura el idioma mediante `_argparse_in_language` y delega en las funciones de comando correspondientes. Para la instalación y actualización, se utilizan `_install_options`, `_update_options` y `_run_install`, coordinando clientes con `_resolve_clients` y opciones de Codex con `_codex_mcp_set_by_hand` y `_decide_on_foreign_codex`. Se incluyen utilidades como `_has_terminal`, `_warn_if_cli_not_on_path` y `_warn_deprecated`.
+
+El módulo maneja el cálculo de costes con `cmd_recompute_cost` y `cmd_recompute_cost_legacy`, y la validación de ventanas con `cmd_test_window` y `_count_rows_by_window`. La gestión de recursos y presupuestos se realiza mediante `_estimate_all`, `_ungrouped_models`, `_reject_ungrouped`, `_check_budget` y `_print_breakdown`, invocadas por `cmd_check_llamaswap`.
+
+Finalmente, la integración con el daemon `llamaswap` se logra mediante `cmd_init_llamaswap` y `cmd_llamaswap_residency`. Estas funciones utilizan `_daemon_target`, `_daemon_url`, `_daemon_path`, `_config_path` y `_pairs` para configurar la conexión. La monitorización y actualización de configuración se gestionan con `_daemon_status`, `_llamaswap_status`, `_daemon_watch`, `_open_watch`, `_restore_after_rejection`, `_report_outcome` y `_write_residency`, asegurando la consistencia del estado del sistema.
+
+Sin mencionar (los registra el fichero, no los nombra la explicación): benchmark
+
+(leído server-side: 58875 chars ≈ 29002 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)

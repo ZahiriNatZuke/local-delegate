@@ -1,0 +1,21 @@
+**Local Delegate Doctor Summary**
+
+**File-Based Issue Breakdown:**
+
+*   **LLAMASWAP_EXE:** No errors found.
+*   **LLAMASWAP_CONFIG:** No errors found.
+*   **Hooks (Andamiaje):** 3 warnings:
+    *   `LD_HOOK_READ_BLOQUEAR` is deprecated and should be renamed to `LD_HOOK_READ_BLOCK` (7 days old).
+    *   No Claude Code or Codex clients are installed, leading to missing hooks and skill data.
+    *   No MCP clients are installed for Claude Code, Codex, or opencode.
+*   **Memoria (Andamiaje):** No errors found.
+*   **Servicios:** 3 OK statuses.
+*   **Versiones:** 1 warning:
+    *   The local-delegate residency is not using the specified base model (`gemma4-26b-a4b`), which is recommended.
+
+**Error/Rule Counts:**
+
+*   **Warnings:** 3
+*   **Otros:** 0 (No errors were found)
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

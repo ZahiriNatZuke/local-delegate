@@ -1,0 +1,11 @@
+El análisis de los archivos revela múltiples incidencias de estilo, estructura y dependencias. En el archivo `apps\api\package.json`, se detectó el uso de la dependencia restringida `express`, sugiriendo su reemplazo por alternativas como `h3`, `@tinyhttp/app`, `hono` o `elysia`. Respecto a la configuración y esquemas, como en `apps\api\src\config\env.schema.ts`, se identificaron errores de convención de nombres que exigen el uso de `camelCase` y la presencia de números mágicos que deben convertirse en constantes.
+
+En los objetos de transferencia de datos, específicamente en `apps\api\src\geocode\dto\geocode.dto.ts` y `apps\api\src\validate\dto\validate.dto.ts`, se reportan problemas por exceso de clases en un mismo archivo, múltiples instancias de números mágicos en validaciones y el incumplimiento de la convención de nombres. Por otro lado, en `apps\api\src\config\repo-root.ts` se señalaron errores y avisos relacionados con el uso de sentencias de bloque. Los controladores en `apps\api\src\geocode\geocode.controller.ts` y `apps\api\src\validate\validate.controller.ts` presentan avisos sobre el uso de propiedades de parámetro y tipos de importación. Finalmente, en `packages\core\vitest.config.ts` se recomienda evitar las exportaciones por defecto.
+
+Found 3 errors.
+Found 51 warnings.
+Found 192 infos.
+
+(leído server-side: 18043 chars ≈ 9397 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 3 partes en 4 pasadas por local-delegate)

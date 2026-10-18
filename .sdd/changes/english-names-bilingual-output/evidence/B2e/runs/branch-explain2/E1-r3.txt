@@ -1,0 +1,15 @@
+El código define una herramienta CLI completa para gestionar un entorno de inferencia de LLMs, probablemente centrado en `llama.cpp` y `llama-swap`. La estructura se basa en `build_parser` y `run`, que orquestan el análisis de argumentos y la ejecución de subcomandos, utilizando `_argparse_in_language` para internacionalización.
+
+Los comandos principales se agrupan en categorías. La instalación y mantenimiento se manejan con `cmd_install`, `cmd_update` y `cmd_uninstall`, orquestados por `_run_install` y configurados por `_add_install_parsers`. Estos gestionan opciones de clientes, MCP y validaciones como `_resolve_clients` o `_warn_if_cli_not_on_path`.
+
+La gestión de recursos y costos incluye `cmd_recompute_cost` (y su alias oculto `cmd_recompute_cost_legacy`) para ajustar presupuestos, y `cmd_check_llamaswap` junto con `_check_budget` y `_estimate_all` para verificar si los modelos caben en la VRAM/RAM disponible, usando `_print_breakdown` para mostrar detalles.
+
+La integración con `llama-swap` es extensa: `cmd_init_llamaswap` configura la conexión, mientras que `cmd_llamaswap_residency` gestiona la residencia de modelos en memoria. Esto implica funciones auxiliares como `_daemon_target`, `_daemon_url`, `_daemon_status` y `_open_watch` para comunicarse con el daemon HTTP, manejar vigilancia (`_daemon_watch`) y aplicar cambios atómicos con `_write_residency` y `_restore_after_rejection`.
+
+También incluye `cmd_serve` para iniciar un daemon MCP y dashboard, y `cmd_test_window` para analizar logs de uso mediante `_count_rows_by_window`. Utilidades como `_has_terminal`, `_codex_mcp_set_by_hand` y `_pairs` apoyan estas operaciones. El conjunto permite instalar, actualizar, verificar recursos, gestionar residencias de modelos y servir interfaces, todo bajo una arquitectura modular de parsers y comandos.
+
+Sin mencionar (los registra el fichero, no los nombra la explicación): test-window, start, stop, add, list, llamaswap, residency, check-llamaswap, init-llamaswap, doctor, serve, recompute-cost, recalcular-coste, benchmark, install, update, uninstall
+
+(leído server-side: 58875 chars ≈ 29002 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)

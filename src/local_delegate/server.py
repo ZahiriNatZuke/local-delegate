@@ -12,6 +12,7 @@ input grande NUNCA entre al contexto de Claude.
 
 from __future__ import annotations
 
+import ast
 import base64
 import json
 import os
@@ -46,6 +47,7 @@ from . import (
     i18n,
     json_state,
     legacy_names,
+    lint_patterns,
     llamaswap_api,
     matrix,
     pace,
@@ -758,6 +760,7 @@ def _log_event(
     affinity_dropped: str | None = None,
     affinity_dropped_class: str | None = None,
     attempts: Sequence[Attempt] = (),
+    steps: Sequence[dict] | None = None,
 ) -> None:
     """Escribe una línea JSONL en el log activo (rotado por mes o fijo). Nunca rompe una tool.
 
@@ -846,6 +849,18 @@ def _log_event(
         # whether they went in the cut, in degenerate whitespace or in hidden reasoning.
         if chars_out_raw is not None:
             rec["chars_out_raw"] = int(chars_out_raw)
+        # B2e: each step of a chunked operation (map, regroup, reduce) with what it generated and
+        # why it stopped, never its text. Without it a summary that lost something could not tell
+        # whether a chunk note had already dropped it or whether the reduce was cut.
+        if steps:
+            rec["steps"] = [
+                {
+                    "kind": str(s["kind"]),
+                    "chars_out": int(s["chars_out"]),
+                    "finish_reason": s.get("finish_reason"),
+                }
+                for s in steps
+            ]
         if source == "path" and path is not None:
             rec["path"] = path
             # Si esta lectura viene de un bloqueo del hook, el evento se queda con su
@@ -2814,6 +2829,81 @@ def _format_names(names: list[str], max_chars: int) -> str:
     return f"{header} {', '.join(shown)}{tail}"
 
 
+# B2e: lo que una función REGISTRA no es una definición de primer nivel. Medido en vivo (B2d) y con
+# la sonda de `evidence/B2e/probes/`: `cli.py` da 4 trozos, `build_parser` registra 16 subcomandos
+# con `add_parser("…")` (y `benchmark` con `benchmark.add_parser(sub)`, sin el literal), y la
+# explicación final perdió `doctor` y `benchmark` porque dependían de que el modelo los copiara dos
+# veces, en la nota del trozo y en el reduce. Se calculan aquí con `ast`, como el inventario.
+#: Las llamadas que registran un nombre con su primer argumento (`sub.add_parser("doctor")`).
+_REGISTERING_CALLS = ("add_parser",)
+
+
+def _registered_names(text: str) -> list[tuple[str | None, list[str], list[str]]]:
+    """(función, nombres literales, módulos) de cada función que registra algo, en orden.
+
+    `nombres` son los primeros argumentos literales de `X.add_parser("…")`; `módulos`, la `X` de
+    `X.add_parser(sub)` sin literal (el módulo registra lo suyo). La función es la más interna que
+    contiene la llamada (`None` en el nivel del módulo). `[]` si `ast` no puede leer el fichero.
+    """
+    try:
+        tree = ast.parse(text)
+    except (SyntaxError, ValueError):
+        return []
+    found: dict[str | None, tuple[list[str], list[str]]] = {}
+
+    def _visit(node: ast.AST, owner: str | None) -> None:
+        for child in ast.iter_child_nodes(node):
+            inner = owner
+            if isinstance(child, ast.FunctionDef | ast.AsyncFunctionDef):
+                inner = child.name
+            elif (
+                isinstance(child, ast.Call)
+                and isinstance(child.func, ast.Attribute)
+                and child.func.attr in _REGISTERING_CALLS
+                and child.args
+            ):
+                first = child.args[0]
+                names, modules = found.setdefault(owner, ([], []))
+                if isinstance(first, ast.Constant) and isinstance(first.value, str):
+                    if first.value not in names:
+                        names.append(first.value)
+                elif isinstance(child.func.value, ast.Name) and child.func.value.id not in modules:
+                    modules.append(child.func.value.id)
+            _visit(child, inner)
+
+    _visit(tree, None)
+    return [(owner, names, modules) for owner, (names, modules) in found.items()]
+
+
+def _format_registered(
+    registered: list[tuple[str | None, list[str], list[str]]], max_chars: int
+) -> str:
+    """El inventario de lo que registra cada función, recortado con su cuenta si no cabe."""
+    if not registered:
+        return ""
+    header = "Nombres que registran las funciones del fichero (llamadas a add_parser):"
+    lines = [header]
+    used = len(header)
+    for owner, names, modules in registered:
+        label = f"- {owner}" if owner else "- nivel del módulo"
+        parts = list(names) + [f"lo que registra el módulo `{m}`" for m in modules]
+        shown: list[str] = []
+        line_used = len(label) + 2
+        for part in parts:
+            # Sitio para la cola « y N más», que también cuenta.
+            if used + line_used + len(part) + 2 + len(" y 9999 más") > max_chars:
+                break
+            shown.append(part)
+            line_used += len(part) + 2
+        if not shown:
+            break
+        rest = len(parts) - len(shown)
+        tail = f" y {rest} más" if rest else ""
+        lines.append(f"{label}: {', '.join(shown)}{tail}")
+        used += line_used + 1
+    return "\n".join(lines) if len(lines) > 1 else ""
+
+
 def _pack(pieces: list[str], max_chars: int) -> list[str]:
     """Agrupa piezas consecutivas en trozos de <= max_chars (sin partir ninguna pieza)."""
     packed: list[str] = []
@@ -3055,6 +3145,27 @@ def _map_budget(max_chars: int) -> int:
     return max(config.CHUNK_MIN_CHARS, int(max_chars * 0.8))
 
 
+def _dump_chunk_notes(
+    folder: str, tool: str, entry_id: int, steps: list[dict], texts: list[str]
+) -> None:
+    """B2e: the output of every step of a chunked operation, to a LOCAL file, for a measurement.
+
+    Only with `LOCAL_DELEGATE_DUMP_CHUNK_NOTES=<dir>` (off by default). It writes to the disk of
+    this machine and nothing else: the usage log keeps the steps without their text. Best effort,
+    like the log: a folder that cannot be written never breaks the tool.
+    """
+    # Best effort, like the usage log: a folder that cannot be written never breaks the tool.
+    with suppress(OSError, ValueError):
+        stamp = _utcnow().strftime("%Y%m%dT%H%M%S%fZ")
+        target = Path(folder) / f"{tool}-{stamp}-{entry_id}.json"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        data = {
+            "tool": tool,
+            "steps": [dict(step, text=text) for step, text in zip(steps, texts, strict=False)],
+        }
+        target.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def _chat_map_reduce(
     model: str,
     system: str,
@@ -3089,6 +3200,7 @@ def _chat_map_reduce(
     reduce_shortcut: Callable[[list[str]], str | None] | None = None,
     report: dict | None = None,
     max_tokens_for: Callable[[int], int] | None = None,
+    final_max_tokens_for: Callable[[int], int] | None = None,
 ) -> str:
     """Resume un documento que no cabe en el modelo: resume por trozos y luego los resúmenes.
 
@@ -3117,7 +3229,9 @@ def _chat_map_reduce(
     ahorro, ni el recibo—: esos datos quedan en `report` para que quien parsea los recoloque.
 
     `max_tokens_for(words)` replaces the shared `2·w+64` cap of every step (map, regroup and
-    reduce) for a tool that needs its own (lint, B2d-2).
+    reduce) for a tool that needs its own (lint, B2d-2). `final_max_tokens_for(words)`, when
+    given, replaces it only in the steps that combine partials (reduce and regroup): the map keeps
+    `max_tokens_for` (lint, B2e).
     """
     budget = _map_budget(max_chars)
     if pieces is None:
@@ -3138,8 +3252,13 @@ def _chat_map_reduce(
     current = _CurrentModel(model, role, explicit, entry_id, op)
 
     raw_chars = 0  # what the model generated, before `_strip_think` and the post-processing
+    # B2e: one entry per step (map, regroup, reduce) for the usage log, without the text; the text
+    # goes only to the local dump of `LOCAL_DELEGATE_DUMP_CHUNK_NOTES` when it is on.
+    steps: list[dict] = []
+    step_texts: list[str] = []
+    dump_dir = config.dump_chunk_notes_dir()
 
-    def _one(sys_prompt: str, user: str, max_tokens: int) -> str | None:
+    def _one(sys_prompt: str, user: str, max_tokens: int, kind: str = "map") -> str | None:
         nonlocal calls, latency_ms, tokens_in, tokens_out, failed, truncated_calls, raw_chars
         result, ms, attempts = current.call(
             sys_prompt,
@@ -3157,6 +3276,15 @@ def _chat_map_reduce(
             tokens_in = (tokens_in or 0) + result.tokens_in
         if result.tokens_out is not None:
             tokens_out = (tokens_out or 0) + result.tokens_out
+        steps.append(
+            {
+                "kind": kind,
+                "chars_out": len(result.text) if result.ok else 0,
+                "finish_reason": result.finish_reason,
+            }
+        )
+        if dump_dir:
+            step_texts.append(result.text if result.ok else "")
         if not result.ok:
             failed = result
             return None
@@ -3169,6 +3297,11 @@ def _chat_map_reduce(
         if max_tokens_for is not None:
             return max_tokens_for(words)
         return int(words * 2) + 64
+
+    def _final_tokens(words: int) -> int:
+        if final_max_tokens_for is not None:
+            return final_max_tokens_for(words)
+        return _tokens(words)
 
     # Cada parcial se deja algo más largo que el resumen final: el reduce necesita material
     # con el que trabajar, y un parcial demasiado corto ya habría perdido lo que importa.
@@ -3280,14 +3413,17 @@ def _chat_map_reduce(
                     # llevar delante material fijo (el inventario del diff, p. ej.), y medir sin
                     # él desbordaría el contexto justo en la llamada que produce el resultado.
                     if len(prompt) <= budget:
-                        out = _one(reduce_system, prompt, _tokens(max_words))
+                        out = _one(reduce_system, prompt, _final_tokens(max_words), "reduce")
                         text = out or ""
                         break
                     # Ni los parciales caben: se reducen por grupos y se repite.
                     grouped: list[str] = []
                     for group in _chunk_text(joined, budget):
                         out = _one(
-                            regroup_system, build_user(group.strip()), _tokens(partial_words)
+                            regroup_system,
+                            build_user(group.strip()),
+                            _final_tokens(partial_words),
+                            "regroup",
                         )
                         if out is None:
                             break
@@ -3354,8 +3490,11 @@ def _chat_map_reduce(
         focus=focus,
         json_schema=current.json_schema if response_format is not None else None,
         attempts=all_attempts,
+        steps=steps,
         **current.log_fields(failed),
     )
+    if dump_dir:
+        _dump_chunk_notes(dump_dir, tool, entry_id, steps, step_texts)
     if report is not None:
         report.update(
             truncated_calls=truncated_calls if ok else 0,
@@ -3554,8 +3693,24 @@ def _lint_max_tokens(words: int) -> int:
 
 
 def _lint_chunk_max_tokens(words: int) -> int:
-    """The cap of each step of the chunked `local_lint_summary` (map, regroup and reduce)."""
+    """The cap of each map step of the chunked `local_lint_summary`."""
     return int(words * LINT_TOKENS_PER_WORD) + LINT_CHUNK_TOKENS_BASE
+
+
+# B2e (user decision of 2026-10-18): the cap of the FINAL steps of the chunked lint (reduce and
+# regroup) is three times the map cap: 2 088 tokens for the default 200 words, against 696
+# before. With 696 the final step of the logs of 6 and 8 chunks (L1-L3) ended in `length` in the
+# 18 calls of the branch, at 2 023-2 850 characters (~4 per token): the lint format asks for one
+# entry per file, and those logs name 40-109 files, so ~60-70 characters per entry needs
+# ~1 800-2 050 tokens for the longest. The single call keeps its caps (`_lint_max_tokens`), and
+# the map keeps `_lint_chunk_max_tokens`. With the reduce prompt within `_map_budget` (38 400
+# characters for `long`), prompt plus output stays under the 38 400 tokens of `gemma4-26b-a4b`.
+LINT_FINAL_TOKENS_FACTOR = 3
+
+
+def _lint_final_max_tokens(words: int) -> int:
+    """The cap of the steps that combine partials (reduce and regroup) of the chunked lint."""
+    return LINT_FINAL_TOKENS_FACTOR * _lint_chunk_max_tokens(words)
 
 
 def _lint_count_clause() -> str:
@@ -3673,6 +3828,45 @@ def compact_repeated_lines(text: str) -> tuple[str, list[int]]:
             out.append(f"{indent}… y {more} líneas más como las anteriores ({size} en total)")
     tail = "\n" if text.endswith("\n") else ""
     return "\n".join(out) + tail, sorted(len(block) for block in blocks)
+
+
+def _lint_inventory_line(header: str, items: list[str], max_chars: int) -> str:
+    """Una línea del inventario del lint troceado, recortada SIN cifras («y otros»)."""
+    if not items:
+        return ""
+    shown: list[str] = []
+    used = len(header) + len(" y otros")
+    for item in items:
+        if used + len(item) + 2 > max_chars:
+            break
+        shown.append(item)
+        used += len(item) + 2
+    if not shown:
+        return ""
+    tail = " y otros" if len(shown) < len(items) else ""
+    return f"{header} {', '.join(shown)}{tail}"
+
+
+def _lint_inventory(log: str, max_chars: int) -> str:
+    """B2e: los ficheros y códigos de regla del log, calculados por programa, sin recuentos.
+
+    En el lint troceado el reduce solo veía los parciales, y en vivo (B2d-2, tanda C) devolvió dos
+    párrafos de prosa sin un código ni un fichero. Las expresiones son las del contador de
+    fidelidad (`lint_patterns`); los más nombrados van primero y no se dice cuántos: una cifra que
+    el log no escribe es justo lo que la regla de la cantidad prohíbe.
+    """
+    half = max_chars // 2
+    files = _lint_inventory_line(
+        "Ficheros que nombra el log (los más nombrados primero):",
+        lint_patterns.files_by_frequency(log),
+        half,
+    )
+    codes = _lint_inventory_line(
+        "Códigos de regla o error que nombra el log (los más frecuentes primero):",
+        lint_patterns.codes_by_frequency(log),
+        max_chars - len(files) - 1,
+    )
+    return "\n".join(line for line in (files, codes) if line)
 
 
 def _lint_system(max_words: int) -> str:
@@ -4338,6 +4532,7 @@ def local_lint_summary(
     probe_len = Path(path).stat().st_size if probe else len(text or "")
     role, model = _role_for_size(probe_len)
     content, truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
+    log = content
     # B2d-4: the program, not the model, compacts the lines with the same problem and counts them.
     content, _groups = compact_repeated_lines(content)
     system = _lint_system(max_words)
@@ -4348,6 +4543,31 @@ def local_lint_summary(
     if len(content) > config.max_chars_for_role(role):
         # Un log de CI es justo el caso donde truncar duele: los errores interesantes suelen
         # estar al final, y era exactamente lo que se descartaba.
+        # B2e: el paso final lleva el formato de la tool (`system`, con la regla de la cantidad y
+        # la del idioma) y no el reduce por defecto, que pedía prosa «sin enumerar»; con reduce
+        # propio el reagrupado usa también el `system` de lint. Delante de los parciales, el
+        # inventario de ficheros y códigos del log entero, por programa y sin recuentos.
+        inventory = _lint_inventory(log, int(_map_budget(config.max_chars_for_role(role)) * 0.25))
+
+        def _build_reduce(joined: str) -> str:
+            head = f"{inventory}\n\n" if inventory else ""
+            return (
+                f"{head}Estos son resúmenes parciales y EN ORDEN de un mismo log de linter/tests. "
+                "La lista de arriba sale del log entero; los parciales pueden no cubrirla. Un "
+                "fichero que aparece en varios parciales va en una sola entrada. Redacta un único "
+                f"resumen de todo el log:\n\n{joined}"
+            )
+
+        def _add_not_mentioned(answer: str, _truncated: bool) -> str:
+            # B2e, respaldo decidido por el usuario el 2026-10-17 (la primera medición no llegó):
+            # lo del inventario que el resumen no nombra lo añade el programa, en una línea y sin
+            # cifras, para que el lector sepa qué ficheros y reglas del log quedaron fuera.
+            missing = lint_patterns.not_mentioned(answer, log)
+            if not missing:
+                return answer
+            line = i18n.t("mcp.lint.not_mentioned", items=", ".join(missing))
+            return f"{answer.rstrip()}\n\n{line}"
+
         return _chat_map_reduce(
             model,
             system,
@@ -4360,9 +4580,11 @@ def local_lint_summary(
             max_words=max_words,
             raw_len=raw_len,
             path=path,
-            # El reduce por defecto (y el reagrupado) no usan `system`: la orden va también aquí.
-            reduce_extra=_lint_count_clause() + _lint_language_clause(),
+            reduce_system=system,
+            build_reduce=_build_reduce,
             max_tokens_for=_lint_chunk_max_tokens,
+            final_max_tokens_for=_lint_final_max_tokens,
+            postprocess=_add_not_mentioned,
         )
 
     user = _build(content)
@@ -4605,7 +4827,15 @@ def local_explain_code(
         # No cabe: notas por definición en cada trozo y la explicación sobre las notas MÁS el
         # inventario de nombres de primer nivel, con la pregunta y la orden de idioma (REQ-028).
         budget = _map_budget(max_chars)
-        names = _format_names(_TOP_LEVEL_NAME.findall(content), int(budget * 0.25))
+        # B2e: lo registrado va primero dentro del mismo tope; sin registros, el inventario de
+        # siempre, byte a byte.
+        inventory_cap = int(budget * 0.25)
+        registrations = _registered_names(content)
+        registered = _format_registered(registrations, inventory_cap)
+        names_cap = inventory_cap - len(registered) - 2 if registered else inventory_cap
+        names = _format_names(_TOP_LEVEL_NAME.findall(content), names_cap)
+        if registered:
+            names = f"{names}\n{registered}" if names else registered
         map_system = (
             _guard(
                 "una viñeta por cada función o clase de este fragmento, empezando por su nombre "
@@ -4620,12 +4850,31 @@ def local_explain_code(
 
         def _build_reduce(joined: str) -> str:
             head = f"{names}\n\n" if names else ""
+            also = (
+                " y de los nombres que registran sus funciones; nómbralos todos en la explicación"
+                if registered
+                else ""
+            )
             return (
                 f"{head}Estas son notas EN ORDEN sobre los fragmentos de un mismo fichero de "
                 "código. La lista de arriba es el inventario COMPLETO de sus definiciones de "
-                "primer nivel; las notas pueden no cubrirlo entero. Explica el fichero "
+                f"primer nivel{also}; las notas pueden no cubrirlo entero. Explica el fichero "
                 f"completo:\n\n{joined}"
             )
+
+        registered_items = [
+            item for _o, found, modules in registrations for item in found + modules
+        ]
+
+        def _add_not_mentioned(answer: str, _truncated: bool) -> str:
+            # B2e, the fallback of decision 3 of 2026-10-17 (the explain round of 2026-10-18 did
+            # not reach): what the file registers and the explanation does not name is added by
+            # the program, in one line, as in the chunked lint. Without registrations, nothing.
+            missing = [n for n in registered_items if not lint_patterns.mentions(n, answer)]
+            if not missing:
+                return answer
+            line = i18n.t("mcp.explain.not_mentioned", items=", ".join(missing))
+            return f"{answer.rstrip()}\n\n{line}"
 
         return _chat_map_reduce(
             config.MODEL_CODE,
@@ -4643,6 +4892,7 @@ def local_explain_code(
             raw_len=raw_len,
             path=path,
             pieces=_code_pieces(content, budget),
+            postprocess=_add_not_mentioned,
         )
 
     return _chat(

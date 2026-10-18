@@ -1,0 +1,459 @@
+{
+ "runs": "D:\\Projects\\local-delegate\\.sdd\\changes\\english-names-bilingual-output\\evidence\\B2e\\runs\\branch-explain",
+ "counter": "new",
+ "rows": [
+  {
+   "id": "E1",
+   "rep": 1,
+   "chunks": 5,
+   "finish_reason": "stop",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 2278,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2515,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2059,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 1572,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 1723,
+     "finish_reason": "stop"
+    }
+   ],
+   "judged": true,
+   "registered": 0.6470588235294118,
+   "registered_missing": [
+    "start",
+    "stop",
+    "add",
+    "list",
+    "doctor",
+    "benchmark"
+   ],
+   "top_level": 0.5510204081632653,
+   "doctor_and_benchmark": false
+  },
+  {
+   "id": "E1",
+   "rep": 2,
+   "chunks": 5,
+   "finish_reason": "stop",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 1966,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2426,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2108,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 1665,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 1704,
+     "finish_reason": "stop"
+    }
+   ],
+   "judged": true,
+   "registered": 0.5882352941176471,
+   "registered_missing": [
+    "start",
+    "stop",
+    "add",
+    "list",
+    "doctor",
+    "recalcular-coste",
+    "benchmark"
+   ],
+   "top_level": 0.5306122448979592,
+   "doctor_and_benchmark": false
+  },
+  {
+   "id": "E1",
+   "rep": 3,
+   "chunks": 5,
+   "finish_reason": "stop",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 2157,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2461,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2088,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 1515,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 1587,
+     "finish_reason": "stop"
+    }
+   ],
+   "judged": true,
+   "registered": 0.6470588235294118,
+   "registered_missing": [
+    "start",
+    "stop",
+    "add",
+    "list",
+    "recalcular-coste",
+    "benchmark"
+   ],
+   "top_level": 0.4897959183673469,
+   "doctor_and_benchmark": false
+  },
+  {
+   "id": "E2",
+   "rep": 1,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 1411,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2709,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 3278,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 993,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 198,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 1704,
+     "finish_reason": "stop"
+    }
+   ],
+   "judged": true,
+   "registered": 1.0,
+   "registered_missing": [],
+   "top_level": 0.6097560975609756
+  },
+  {
+   "id": "E2",
+   "rep": 2,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 1894,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 3358,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 3383,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 1076,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 141,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 1469,
+     "finish_reason": "stop"
+    }
+   ],
+   "judged": true,
+   "registered": 1.0,
+   "registered_missing": [],
+   "top_level": 0.5853658536585366
+  },
+  {
+   "id": "E2",
+   "rep": 3,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 1664,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2716,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 3356,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 1068,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 200,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 1863,
+     "finish_reason": "stop"
+    }
+   ],
+   "judged": true,
+   "registered": 1.0,
+   "registered_missing": [],
+   "top_level": 0.5365853658536586
+  },
+  {
+   "id": "E3",
+   "rep": 1,
+   "chunks": 9,
+   "finish_reason": "length",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 3328,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 3377,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2535,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2059,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 1738,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 1425,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 534,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "regroup",
+     "chars_out": 3328,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 1701,
+     "finish_reason": "stop"
+    }
+   ],
+   "judged": true,
+   "registered": null,
+   "registered_missing": [],
+   "top_level": 0.054945054945054944
+  },
+  {
+   "id": "E3",
+   "rep": 2,
+   "chunks": 9,
+   "finish_reason": "length",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 3094,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 3300,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2594,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2450,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2142,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 1097,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 534,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "regroup",
+     "chars_out": 3094,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 1577,
+     "finish_reason": "stop"
+    }
+   ],
+   "judged": true,
+   "registered": null,
+   "registered_missing": [],
+   "top_level": 0.03296703296703297
+  },
+  {
+   "id": "E3",
+   "rep": 3,
+   "chunks": 9,
+   "finish_reason": "length",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 3409,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 3083,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2455,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2370,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2254,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 1248,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 504,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "regroup",
+     "chars_out": 3409,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 1491,
+     "finish_reason": "stop"
+    }
+   ],
+   "judged": true,
+   "registered": null,
+   "registered_missing": [],
+   "top_level": 0.04395604395604396
+  }
+ ],
+ "summary": {
+  "lint_codes_mean": null,
+  "lint_files_mean": null,
+  "lint_fidelity_mean": null,
+  "lint_cut": 0,
+  "lint_calls": 0,
+  "not_judged": [],
+  "E1_doctor_and_benchmark": [
+   false,
+   false,
+   false
+  ],
+  "E1_E2_registered_mean": 0.8137,
+  "E3_top_level_mean": 0.044,
+  "explain_top_level_mean": 0.3817,
+  "control_fidelity_total": 0,
+  "control_cut": 0,
+  "control_calls": 0,
+  "explain_cut": 6
+ }
+}

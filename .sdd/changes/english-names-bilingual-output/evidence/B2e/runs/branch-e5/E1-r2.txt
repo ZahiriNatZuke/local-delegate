@@ -1,0 +1,11 @@
+El código define una interfaz de línea de comandos (CLI) completa para gestionar un entorno de desarrollo y despliegue de modelos de lenguaje, estructurada en torno a la función `run` que orquesta la ejecución. El núcleo es `build_parser`, que configura el analizador de argumentos y registra los subcomandos principales: `benchmark` (a través de `_add_install_parsers` para `install`, `update`, `uninstall`), `serve`, `recompute-cost` (y su alias oculto `cmd_recompute_cost_legacy`), `check-llamaswap`, `init-llamaswap`, `doctor` y `llamaswap residency`.
+
+La gestión de instalación y actualización se centraliza en `_run_install`, invocada por `cmd_install` y `cmd_uninstall`, apoyada por `_install_options` y `_update_options` para configurar parámetros como clientes (`_resolve_clients`) y rutas MCP (`_codex_mcp_set_by_hand`, `_decide_on_foreign_codex`). El comando `serve` inicia un daemon HTTP mediante `cmd_serve`, mientras que `cmd_update` y `cmd_recompute_cost` manejan actualizaciones y recálculos de costes, con utilidades como `_warn_deprecated` para legacy.
+
+La integración con LlamaSwap es extensa: `cmd_check_llamaswap` valida presupuestos (`_check_budget`, `_print_breakdown`, `_estimate_all`) y rechaza modelos no agrupados (`_reject_ungrouped`, `_ungrouped_models`). `cmd_init_llamaswap` configura el daemon, mientras que `cmd_llamaswap_residency` gestiona cambios de residencia mediante `_write_residency` y `_restore_after_rejection`. Funciones auxiliares como `_daemon_status`, `_daemon_url`, `_daemon_watch` y `_open_watch` facilitan la comunicación asíncrona con el daemon. Finalmente, `_has_terminal`, `_scaffold_report` y `_argparse_in_language` mejoran la experiencia de usuario, asegurando compatibilidad con terminales, reportes claros y localización adecuada.
+
+Sin mencionar (los registra el fichero, no los nombra la explicación): test-window, start, stop, add, list, recalcular-coste
+
+(leído server-side: 58875 chars ≈ 29002 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)

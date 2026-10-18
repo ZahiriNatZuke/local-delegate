@@ -1,0 +1,37 @@
+**Resumen de problemas por archivo**
+
+**scripts\_claude\_bench.py**
+* **Complejidad y estructura**: 1 función demasiado compleja, 1 exceso de ramas, 1 exceso de argumentos y 1 exceso de sentencias.
+* **Documentación y tipos**: 1 error de anotación de tipo faltante, 1 error de paquete de espacio de nombres implícito, 2 errores de formato en docstrings y 1 aviso de falta de aviso de derechos de autor.
+* **Seguridad y excepciones**: 1 llamada a `subprocess` insegura, 2 errores al especificar mensajes largos fuera de la clase de excepción, 1 error por uso de f-string en excepciones y 1 error por nombre de excepción incorrecto.
+* **Otros**: 2 errores de importación en nivel superior, 4 faltas de coma final, 1 uso de `print`, 1 reemplazo de `os.path.abspath` por `Path.resolve` y 1 error de nombre de excepción.
+
+**scripts\adoption\_experiment.py**
+* **Documentación**: 4 funciones públicas sin docstring, 2 errores de formato en docstrings y 1 error de formato en docstring de una clase.
+* **Seguridad y tipos**: 1 llamada a `subprocess` insegura y 2 avisos de generadores pseudoaleatorios no aptos para criptografía.
+* **Estilo y complejidad**: 5 líneas demasiado largas, 5 faltas de coma final, 3 usos de `print`, 1 error de valor mágico y 1 función demasiado compleja con exceso de ramas y sentencias.
+
+**scripts\analyze\_benchmark.py**
+* **Documentación**: 22 métodos o funciones públicas sin docstring, 2 clases sin docstring, 4 errores de formato en docstrings y 1 error de formato en docstring de clase.
+* **Tipado**: 7 errores de expresiones con tipado dinámico (`typing.Any`) y 1 error de anotación de tipo faltante.
+* **Complejidad y estilo**: 4 funciones demasiado complejas, 2 excesos de argumentos, 2 excesos de sentencias, 2 excesos de retornos, 1 error de valor mágico, 1 error de uso de `assert` y 1 error de desempacado de iterables.
+* **Otros**: 17 faltas de coma final, 13 líneas demasiado largas, 1 error de mayúsculas en `TODO`, 1 error de autor en `TODO`, 1 error de enlace en `TODO`, 1 error de resolución de `TODO` y 1 error de cadena ambigua.
+
+**scripts\build\_corpus.py**
+* **Coma final faltante**: 23
+* **Línea demasiado larga**: 21
+* **Falta docstring en función pública**: 7
+* **Error en formato de docstring**: 7
+* **Uso de `print`**: 14
+* **Falta docstring en clase o método público**: 4
+* **Falta anotación de tipo en función privada**: 5
+* **Demasiados argumentos en definición de función**: 5
+* **Demasiados argumentos posicionales**:
+
+Sin mencionar (del log, no los nombra el resumen): scripts/pair_sheet.py, scripts/price_watcher.py, scripts/dev/affinity_batch.py, scripts/macos_mcp_canary.py, scripts/detect_spanish_names.py, scripts/measure_adoption.py, scripts/bump_version.py, COM812, T201, E501, D103, TRY003, EM102, D205, D209, CPY001, PLR2004
+
+[local-delegate warning: salida truncada por max_tokens en 4 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 154297 chars ≈ 80363 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

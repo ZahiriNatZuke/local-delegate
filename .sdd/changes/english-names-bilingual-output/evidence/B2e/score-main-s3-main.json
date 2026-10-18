@@ -1,0 +1,715 @@
+{
+ "runs": "D:\\Projects\\local-delegate\\.sdd\\changes\\english-names-bilingual-output\\evidence\\B2e\\runs\\main-s3",
+ "counter": "main",
+ "rows": [
+  {
+   "id": "A11",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A11",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A11",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A12",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 1
+  },
+  {
+   "id": "A12",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 1
+  },
+  {
+   "id": "A12",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 1
+  },
+  {
+   "id": "A13",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 1
+  },
+  {
+   "id": "A13",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 3
+  },
+  {
+   "id": "A13",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 3
+  },
+  {
+   "id": "A14",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A14",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A14",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A15",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A15",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A15",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B31",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B31",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B31",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B32",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B32",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B32",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B33",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 2
+  },
+  {
+   "id": "B33",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 2
+  },
+  {
+   "id": "B33",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 1
+  },
+  {
+   "id": "B34",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B34",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B34",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B35",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B35",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B35",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "L1",
+   "rep": 1,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.1,
+   "codes_missing": [
+    "E501",
+    "COM812",
+    "T201",
+    "D205",
+    "PLC0415",
+    "D209",
+    "ANN401",
+    "ANN001",
+    "CPY001",
+    "D103"
+   ]
+  },
+  {
+   "id": "L1",
+   "rep": 2,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.0,
+   "codes_missing": [
+    "E501",
+    "COM812",
+    "T201",
+    "D205",
+    "PLC0415",
+    "D209",
+    "ANN401",
+    "ANN001",
+    "CPY001",
+    "D103"
+   ]
+  },
+  {
+   "id": "L1",
+   "rep": 3,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.0,
+   "codes_missing": [
+    "E501",
+    "COM812",
+    "T201",
+    "D205",
+    "PLC0415",
+    "D209",
+    "ANN401",
+    "ANN001",
+    "CPY001",
+    "D103"
+   ]
+  },
+  {
+   "id": "L2",
+   "rep": 1,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.0,
+   "codes_missing": [
+    "COM812",
+    "T201",
+    "E501",
+    "D103",
+    "TRY003",
+    "EM102",
+    "D205",
+    "D209",
+    "CPY001",
+    "PLR2004"
+   ]
+  },
+  {
+   "id": "L2",
+   "rep": 2,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.0,
+   "codes_missing": [
+    "COM812",
+    "T201",
+    "E501",
+    "D103",
+    "TRY003",
+    "EM102",
+    "D205",
+    "D209",
+    "CPY001",
+    "PLR2004"
+   ]
+  },
+  {
+   "id": "L2",
+   "rep": 3,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.0,
+   "codes_missing": [
+    "COM812",
+    "T201",
+    "E501",
+    "D103",
+    "TRY003",
+    "EM102",
+    "D205",
+    "D209",
+    "CPY001",
+    "PLR2004"
+   ]
+  },
+  {
+   "id": "L3",
+   "rep": 1,
+   "chunks": 8,
+   "finish_reason": "length",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": null,
+   "files": 0.0,
+   "codes_missing": []
+  },
+  {
+   "id": "L3",
+   "rep": 2,
+   "chunks": 8,
+   "finish_reason": "length",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": null,
+   "files": 0.0,
+   "codes_missing": []
+  },
+  {
+   "id": "L3",
+   "rep": 3,
+   "chunks": 8,
+   "finish_reason": "length",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": null,
+   "files": 0.0,
+   "codes_missing": []
+  },
+  {
+   "id": "L4",
+   "rep": 1,
+   "chunks": 4,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.0,
+   "codes_missing": [
+    "lint/style/noMagicNumbers",
+    "lint/style/useNamingConvention",
+    "lint/style/noExcessiveClassesPerFile",
+    "lint/style/useBlockStatements",
+    "lint/style/noParameterProperties",
+    "lint/style/useImportType",
+    "lint/nursery/noRestrictedDependencies",
+    "lint/style/noDefaultExport"
+   ]
+  },
+  {
+   "id": "L4",
+   "rep": 2,
+   "chunks": 4,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.8,
+   "codes_missing": [
+    "lint/style/noMagicNumbers",
+    "lint/style/useNamingConvention",
+    "lint/style/noExcessiveClassesPerFile",
+    "lint/style/useBlockStatements",
+    "lint/style/noParameterProperties",
+    "lint/style/useImportType",
+    "lint/nursery/noRestrictedDependencies",
+    "lint/style/noDefaultExport"
+   ]
+  },
+  {
+   "id": "L4",
+   "rep": 3,
+   "chunks": 4,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.1,
+   "codes_missing": [
+    "lint/style/noMagicNumbers",
+    "lint/style/useNamingConvention",
+    "lint/style/noExcessiveClassesPerFile",
+    "lint/style/useBlockStatements",
+    "lint/style/noParameterProperties",
+    "lint/style/useImportType",
+    "lint/nursery/noRestrictedDependencies",
+    "lint/style/noDefaultExport"
+   ]
+  },
+  {
+   "id": "L5",
+   "rep": 1,
+   "chunks": 3,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.2,
+   "codes_missing": [
+    "COM812",
+    "TRY003",
+    "D102",
+    "T201",
+    "EM102",
+    "CPY001",
+    "D107",
+    "PLR2004",
+    "D101",
+    "D105"
+   ]
+  },
+  {
+   "id": "L5",
+   "rep": 2,
+   "chunks": 3,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.2,
+   "codes_missing": [
+    "COM812",
+    "TRY003",
+    "D102",
+    "T201",
+    "EM102",
+    "CPY001",
+    "D107",
+    "PLR2004",
+    "D101",
+    "D105"
+   ]
+  },
+  {
+   "id": "L5",
+   "rep": 3,
+   "chunks": 3,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.0,
+   "codes_missing": [
+    "COM812",
+    "TRY003",
+    "D102",
+    "T201",
+    "EM102",
+    "CPY001",
+    "D107",
+    "PLR2004",
+    "D101",
+    "D105"
+   ]
+  },
+  {
+   "id": "E1",
+   "rep": 1,
+   "chunks": 5,
+   "finish_reason": "stop",
+   "steps": null,
+   "judged": true,
+   "registered": 0.47058823529411764,
+   "registered_missing": [
+    "start",
+    "stop",
+    "add",
+    "list",
+    "llamaswap",
+    "residency",
+    "doctor",
+    "recalcular-coste",
+    "benchmark"
+   ],
+   "top_level": 0.20408163265306123,
+   "doctor_and_benchmark": false
+  },
+  {
+   "id": "E1",
+   "rep": 2,
+   "chunks": 5,
+   "finish_reason": "stop",
+   "steps": null,
+   "judged": true,
+   "registered": 0.4117647058823529,
+   "registered_missing": [
+    "test-window",
+    "start",
+    "stop",
+    "add",
+    "list",
+    "check-llamaswap",
+    "init-llamaswap",
+    "doctor",
+    "recalcular-coste",
+    "benchmark"
+   ],
+   "top_level": 0.2857142857142857,
+   "doctor_and_benchmark": false
+  },
+  {
+   "id": "E1",
+   "rep": 3,
+   "chunks": 5,
+   "finish_reason": "stop",
+   "steps": null,
+   "judged": true,
+   "registered": 0.0,
+   "registered_missing": [
+    "test-window",
+    "start",
+    "stop",
+    "add",
+    "list",
+    "llamaswap",
+    "residency",
+    "check-llamaswap",
+    "init-llamaswap",
+    "doctor",
+    "serve",
+    "recompute-cost",
+    "recalcular-coste",
+    "install",
+    "update",
+    "uninstall",
+    "benchmark"
+   ],
+   "top_level": 0.40816326530612246,
+   "doctor_and_benchmark": false
+  },
+  {
+   "id": "E2",
+   "rep": 1,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": null,
+   "judged": true,
+   "registered": 1.0,
+   "registered_missing": [],
+   "top_level": 0.1951219512195122
+  },
+  {
+   "id": "E2",
+   "rep": 2,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": null,
+   "judged": true,
+   "registered": 1.0,
+   "registered_missing": [],
+   "top_level": 0.14634146341463414
+  },
+  {
+   "id": "E2",
+   "rep": 3,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": null,
+   "judged": true,
+   "registered": 0.5,
+   "registered_missing": [
+    "add_parser"
+   ],
+   "top_level": 0.12195121951219512
+  },
+  {
+   "id": "E3",
+   "rep": 1,
+   "chunks": 9,
+   "finish_reason": "length",
+   "steps": null,
+   "judged": true,
+   "registered": null,
+   "registered_missing": [],
+   "top_level": 0.15384615384615385
+  },
+  {
+   "id": "E3",
+   "rep": 2,
+   "chunks": 9,
+   "finish_reason": "length",
+   "steps": null,
+   "judged": true,
+   "registered": null,
+   "registered_missing": [],
+   "top_level": 0.03296703296703297
+  },
+  {
+   "id": "E3",
+   "rep": 3,
+   "chunks": 9,
+   "finish_reason": "length",
+   "steps": null,
+   "judged": true,
+   "registered": null,
+   "registered_missing": [],
+   "top_level": 0.04395604395604396
+  }
+ ],
+ "summary": {
+  "lint_codes_mean": 0.0,
+  "lint_files_mean": 0.0933,
+  "lint_fidelity_mean": 0,
+  "lint_cut": 9,
+  "lint_calls": 15,
+  "not_judged": [],
+  "E1_doctor_and_benchmark": [
+   false,
+   false,
+   false
+  ],
+  "E1_E2_registered_mean": 0.5637,
+  "E3_top_level_mean": 0.0769,
+  "explain_top_level_mean": 0.1769,
+  "control_fidelity_total": 15,
+  "control_cut": 0,
+  "control_calls": 30,
+  "explain_cut": 6
+ }
+}

@@ -695,7 +695,10 @@ PROMPT_BOUNDARIES: dict[str, frozenset[str]] = {
     # B2d-3: el `system` de `local_lint_summary` (y su reduce) pide la cantidad solo cuando el log
     # la da o se cuenta con sus lineas: el modelo inventaba recuentos entre parentesis. B2d-4: el
     # log llega con los bloques de lineas iguales compactados ("... y N lineas mas") y la regla
-    # dice que hacer con ese N: B35 se cortaba por `max_tokens` enumerando 80 elementos.
+    # dice que hacer con ese N: B35 se cortaba por `max_tokens` enumerando 80 elementos. B2e: en
+    # el troceado, el paso final de `local_lint_summary` usa el `system` de lint (antes el reduce
+    # por defecto, prosa «sin enumerar») con un inventario de ficheros y codigos, y el de
+    # `local_explain_code` anade al inventario los nombres que registra cada funcion.
     "0.36.0": frozenset(
         {
             "local_summarize",

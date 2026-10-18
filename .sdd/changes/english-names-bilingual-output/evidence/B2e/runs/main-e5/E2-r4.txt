@@ -1,0 +1,11 @@
+Este archivo implementa un sistema integral de benchmarking y monitorización de recursos, diseñado principalmente para entornos Windows. Su núcleo es la ejecución de pruebas de lenguaje (LLM) mediante la carga de un corpus estructurado, la generación de solicitudes a una API y la validación rigurosa de las respuestas. La validación incluye la verificación de sintaxis JSON, la ejecución segura de código generado en procesos aislados y la comprobación de conteos de reglas específicas, asignando una puntuación final basada en cobertura y calidad.
+
+Paralelamente, el código integra una sofisticada capa de telemetría de hardware. Utiliza APIs nativas de Windows (`kernel32`, `psapi`) y herramientas de línea de comandos (`typeperf`, `nvidia-smi`) para rastrear en tiempo real el uso de memoria RAM y VRAM de los procesos involucrados. Gestiona la resolución dinámica de identificadores de GPU (LUID) y monitorea flujos de datos asíncronos para capturar picos de consumo sin bloquear la ejecución principal.
+
+La orquestación general se realiza a través de la función `run_benchmark`, que coordina la carga de casos, la configuración del cliente de API, la ejecución iterativa de las pruebas y el registro de resultados en formato JSONL. Además, incluye utilidades para el manejo de configuraciones, normalización de texto y seguimiento del estado térmico del servidor, proporcionando una herramienta completa para evaluar el rendimiento y la eficiencia de modelos de lenguaje bajo carga real.
+
+[local-delegate warning: salida truncada por max_tokens en 1 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 59966 chars ≈ 29539 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

@@ -1,0 +1,56 @@
+**Resumen de problemas por archivo**
+
+**scripts/build_corpus.py**
+* **Coma final faltante**: 22
+* **Línea demasiado larga**: 18
+* **Uso de `print` detectado**: 13
+* **Uso de f-string en excepción no permitido**: 5
+* **Evitar especificar mensajes largos fuera de la clase de excepción**: 5
+* **Falta docstring en función pública**: 6
+* **Requerida una línea en blanco entre resumen y descripción**: 4
+* **Las comillas de cierre de docstring multilínea deben estar en una línea separada**: 4
+* **Uso de `os.path.abspath()` debe ser reemplazado por `Path.resolve()`**: 4
+* **Demasiados argumentos en la definición de la función**: 4
+* **Falta docstring en clase pública**: 3
+* **Valor mágico usado en comparación**: 3
+* **Demasiados argumentos posicionales**: 2
+* **Demasiadas ramas**: 2
+* **Demasiada complejidad**: 2
+* **Argumento posicional de tipo booleano en llamada a función**: 2
+* **Captura de excepción ciega**: 2
+* **Expresiones de tipo dinámico (typing.Any) no permitidas**: 3
+* **Falta anotación de tipo de retorno en función privada**: 5
+* **Falta anotación de tipo para argumento de función**: 1
+* **Argumento posicional de tipo booleano en definición de función**: 1
+* **Uso de función posiblemente insegura**: 1
+* **Uso de `assert` detectado**: 1
+* **La aserción debe dividirse en varias partes**: 1
+* **Sobrescritura de variable de bucle `for`**: 1
+* **Uso de `list.extend` para crear una lista transformada**: 1
+* **Uso de operador ternario en lugar de bloque `if-else`**: 1
+* **Falta docstring en método público**: 1
+
+**scripts/bump_version.py**
+* **Evitar especificar mensajes largos fuera de la clase de excepción**: 11
+* **Uso de `print` detectado**: 8
+* **La excepción no debe usar un literal de f-string**: 6
+* **La excepción no debe usar un literal de cadena**: 5
+* **Coma final faltante**: 2
+* **Falta docstring en función pública**: 1
+* **Falta aviso de copyright al inicio del archivo**: 1
+* **Demasiada complejidad**: 1
+* **Valor mágico usado en comparación**: 1
+* **Llamada a `subprocess`: comprobar ejecución de entrada no confiable**: 1
+
+**scripts/macos_mcp_canary.py**
+* **La excepción no debe usar un literal f-string**: 8
+* **Falta coma final**: 7
+* **Falta docstring en método público**: 6
+* **Evitar especificar mensajes largos fuera de la clase de excepción**: 6
+* **Falta docstring en clase pública
+
+[local-delegate warning: salida truncada por max_tokens en 4 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 154297 chars ≈ 80363 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

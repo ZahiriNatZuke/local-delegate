@@ -1,0 +1,10 @@
+**Local Delegate Doctor Summary**
+
+**File: local-delegate**
+
+*   **Warnings:** 2
+    *   Obsolete Hook Name: LD\_HOOK\_READ\_BLOQUEAR is deprecated; use LD\_HOOK\_READ\_BLOCK (to be removed in 0.38.0).
+    *   Missing Resident Affinity: No resident affinity is configured, recommended to use benchmarks/affinity-2026-10 or re-measure the footprint.
+*   **Overall:** 2 issues detected, requiring review.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

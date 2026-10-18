@@ -1,0 +1,11 @@
+Este módulo actúa como el núcleo de diagnóstico y verificación del sistema, centralizando veinticinco comprobaciones no invasivas que evalúan el estado del andamiaje sin modificar el entorno. Define una estructura de datos inmutable, `Result`, para almacenar el estado (OK, MISSING, WARN, UNKNOWN), detalles y pistas de reparación, junto con la clase `Check` que agrupa cada verificación por ID, grupo y función sonda.
+
+El código gestiona la internacionalización mediante diccionarios de traducción (`status_label`, `*_hint`) que formatean salías legibles y proporcionan instrucciones contextuales para instalar, configurar o reiniciar componentes. Utiliza constantes específicas para estados y comandos genéricos, optimizando la claridad del diagnóstico.
+
+Las funciones auxiliares, prefijadas con guion bajo, realizan las sondas técnicas: verifican la presencia de clientes (Claude, Codex), la configuración de hooks, la conectividad del daemon mediante importaciones diferidas para evitar dependencias circulares, y la validez de tokens y credenciales mediante expresiones regulares. También incluye lógica para comparar versiones, detectar orfandad de archivos y evaluar la topología de red o la residencia del servicio. El flujo general consiste en ejecutar estas sondas, recopilar sus resultados en instancias de `Result`, y presentar un informe unificado que indica si el sistema está operativo, requiere intervención manual o presenta advertencias configurables, asegurando una retroalimentación precisa al usuario sobre la salud integral del entorno.
+
+[local-delegate warning: salida truncada por max_tokens en 3 de 9 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 98017 chars ≈ 48284 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 9 pasadas por local-delegate)

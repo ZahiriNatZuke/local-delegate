@@ -1,0 +1,16 @@
+**Resumen de problemas**
+
+**scripts/build_corpus.py**
+
+*   **Reglas de Ruff**: Se identificaron 45 incidencias relacionadas con cambios en el sistema debido a los prompts de la versión 0.36.0, distribuidas en las siguientes categorías:
+    *   **Resumen de tres reglas de Ruff**: cambios en el sistema.
+    *   **Resumen de docstrings de Ruff**: cambios en el sistema.
+    *   **Resumen de un solo archivo de Ruff**: cambios en el sistema.
+*   **Diferencias de commit**: Se identificaron 40 incidencias relacionadas con cambios en el parámetro `max_tokens` debido a los prompts de la versión 0.36.0, afectando a los siguientes identificadores:
+    *   **Diferencia de commit 19k**: cambio en `max_tokens`.
+    *   **Commit 9eb197b**: cambio en `max_tokens`.
+    *   **Commit c2312cd**: cambio en `max_tokens`.
+
+ok
+
+(read server-side: 881 chars ≈ 458 Claude tokens that did not enter your context)

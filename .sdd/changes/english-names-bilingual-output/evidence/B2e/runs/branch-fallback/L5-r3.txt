@@ -1,0 +1,39 @@
+**src/local_delegate/benchmark.py**
+**Problemas más relevantes**
+* **Complejidad excesiva**: La función `run_benchmark` presenta demasiada complejidad, ramificaciones y sentencias.
+* **Documentación faltante**: Se detectaron 18 casos de métodos, funciones o clases públicas sin cadenas de documentación.
+* **Gestión de excepciones**: Existen 6 errores por mensajes largos fuera de la clase de excepción y 7 por usar literales de cadena o f-strings en excepciones.
+
+**Otros errores**
+* **Importaciones**: 2 importaciones deben moverse a un bloque de comprobación de tipos y 2 deben estar en el nivel superior.
+* **Subprocess**: 2 llamadas a `subprocess` carecen de un argumento `check` explícito o manejan entrada no confiable.
+* **Valores mágicos**: 2 comparaciones utilizan valores mágicos.
+* **Formato y otros**: 15 errores de formato, docstrings, exceso de argumentos, líneas largas, uso de `print` y `r"""`.
+
+**src/local_delegate/agents.py**
+* **Documentación y estilo**: 1 error de modo imperativo en la cadena de documentación y 1 falta de coma final.
+* **Importaciones**: 1 importación de `pathlib.Path` debe moverse a un bloque de comprobación de tipos.
+* **Otros**: 1 falta de aviso de derechos de autor, 1 uso de valor mágico en comparación y 1 error de documentación.
+
+**src/local_delegate/autostart.py**
+* **Seguridad y estilo**: 1 llamada a `subprocess` requiere comprobar la ejecución de entrada no confiable y 1 error de modo imperativo en la documentación.
+* **Otros**: 1 falta de aviso de derechos de autor.
+
+**src/local_delegate/__init__.py**
+* **Otros**: 1 falta de aviso de derechos de autor.
+
+**src/local_delegate/__main__.py**
+* **Otros**: 1 falta de aviso de derechos de autor.
+
+**Resumen de problemas por archivo:**
+* **src/local_delegate/benchmark.py**: 59
+* **src/local_delegate/agents.py**: 5
+* **src/local_delegate/autostart.py**: 3
+* **src/local_delegate/__init__.py**: 1
+* **src/local_delegate/__main__.py**: 1
+
+Sin mencionar (del log, no los nombra el resumen): COM812, TRY003, D102, T201, EM102, CPY001, D107, PLR2004, D101, D105
+
+(leído server-side: 8589 chars ≈ 4473 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 2 partes en 3 pasadas por local-delegate)

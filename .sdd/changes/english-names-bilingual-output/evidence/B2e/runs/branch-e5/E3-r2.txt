@@ -1,0 +1,11 @@
+Este módulo actúa como el núcleo de verificación del andamiaje, centralizando veinticinco sondas no destructivas que evalúan el estado del sistema sin modificarlo. Define cuatro estados fundamentales mediante constantes de cadena: `OK` (todo correcto), `MISSING` (faltan componentes), `WARN` (configuración subóptima) y `UNKNOWN` (imposible verificar). Utiliza un diccionario de mapeo para traducir estos estados a etiquetas visuales formateadas, facilitando la interpretación por parte del usuario.
+
+La estructura de datos se basa en clases inmutables: `Result` almacena el estado, el detalle legible y la pista de solución, mientras que `Check` define cada elemento del andamiaje, su grupo, título y la función sonda asociada. El código incluye múltiples funciones de ayuda para generar pistas contextuales en el idioma vigente, como instrucciones de instalación, actualización de ganchos, reinicio de servicios o gestión de credenciales y tokens.
+
+Las sondas implementadas cubren una amplia gama de componentes: verifican la conectividad y autenticación del daemon (incluyendo soporte para tokens y llamaswap), consultan modelos de backend, detectan la presencia de clientes específicos (como Claude o Codex) y sus configuraciones MCP, y evalúan la residencia y afinidad del sistema. También maneja la comparación de versiones, la detección de ganchos obsoletos o huérfanos, y la consulta de metadatos remotos como las últimas versiones en PyPI. El módulo finaliza ejecutando todas las comprobaciones definidas, proporcionando un diagnóstico integral del entorno.
+
+[local-delegate warning: salida truncada por max_tokens en 3 de 9 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 98017 chars ≈ 48284 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 9 pasadas por local-delegate)

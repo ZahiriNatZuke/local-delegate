@@ -1,0 +1,89 @@
+w-20261018T000152Z
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+Received session ID: e13af00fdd5742f485960edb34ab99ac
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 202 Accepted"
+HTTP Request: GET http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A11 r1 local_lint_summary chars=683 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A12 r1 local_lint_summary chars=806 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A13 r1 local_lint_summary chars=489 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A14 r1 local_lint_summary chars=1549 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A15 r1 local_lint_summary chars=677 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A11 r2 local_lint_summary chars=856 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A12 r2 local_lint_summary chars=816 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A13 r2 local_lint_summary chars=1492 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A14 r2 local_lint_summary chars=1549 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A15 r2 local_lint_summary chars=633 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A11 r3 local_lint_summary chars=629 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A12 r3 local_lint_summary chars=793 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A13 r3 local_lint_summary chars=1132 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A14 r3 local_lint_summary chars=1584 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A15 r3 local_lint_summary chars=633 error=False
+HTTP Request: DELETE http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+w-20261018T000152Z cerrada: 2026-10-18T00:01:52.586Z a 2026-10-18T00:03:44.379Z
+w-20261018T000354Z
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+Received session ID: 64395c6bd8e24f5e9b032cfe72fdf25b
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 202 Accepted"
+HTTP Request: GET http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B31 r1 local_lint_summary chars=602 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B32 r1 local_lint_summary chars=918 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B33 r1 local_lint_summary chars=728 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B34 r1 local_lint_summary chars=853 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B35 r1 local_lint_summary chars=770 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B31 r2 local_lint_summary chars=662 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B32 r2 local_lint_summary chars=918 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B33 r2 local_lint_summary chars=674 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B34 r2 local_lint_summary chars=879 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B35 r2 local_lint_summary chars=900 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B31 r3 local_lint_summary chars=668 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B32 r3 local_lint_summary chars=1004 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B33 r3 local_lint_summary chars=788 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B34 r3 local_lint_summary chars=853 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B35 r3 local_lint_summary chars=790 error=False
+HTTP Request: DELETE http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+w-20261018T000354Z cerrada: 2026-10-18T00:03:54.879Z a 2026-10-18T00:05:32.217Z
+w-20261018T000542Z
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+Received session ID: dec0e244103440eba3f51e1e8471b6b9
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 202 Accepted"
+HTTP Request: GET http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+L1 r1 local_lint_summary chars=1582 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+L2 r1 local_lint_summary chars=1574 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+L3 r1 local_lint_summary chars=1555 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"

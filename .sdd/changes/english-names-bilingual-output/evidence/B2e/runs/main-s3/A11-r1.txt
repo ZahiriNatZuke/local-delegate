@@ -1,0 +1,15 @@
+**Summary of Errors by File**
+
+The output indicates several errors related to file locations for specific models. The primary issue is that the specified GGUF files were not found.
+
+**Model-Specific Errors:**
+
+*   **gemma3-4b:** ERROR (file not found: MODELOS\gemma-3-4b-it-Q4\_K\_M.gguf)
+*   **llama31-8b:** ERROR (file not found: MODELOS\Meta-Llama-3.1-8B-Instruct-Q4\_K\_M.gguf)
+*   **qwen25-coder-14b:** ERROR (file not found: MODELOS\Qwen2.5-Coder-14B-Instruct-Q4\_K\_M.gguf)
+*   **qwen35-2b:** ERROR (file not found: MODELOS\Qwen3.5-2B-UD-Q8\_K\_XL.gguf)
+*   **qwen3-vl-8b:** ERROR (file not found: MODELOS\Qwen3VL-8B-Instruct-Q4\_K\_M.gguf)
+
+These errors suggest a discrepancy between the specified model files and their actual locations within the 'MODELOS' directory. The total VRAM usage across all models is 0 GiB due to these missing files.
+
+(leído server-side: 743 chars ≈ 386 tokens de Claude que no entraron a tu contexto)

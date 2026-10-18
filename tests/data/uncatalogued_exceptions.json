@@ -648,9 +648,51 @@
     },
     {
       "file": "src/local_delegate/server.py",
-      "text": "{}Estas son notas EN ORDEN sobre los fragmentos de un mismo fichero de código. La lista de arriba es el inventario COMPLETO de sus definiciones de primer nivel; las notas pueden no cubrirlo entero. Explica el fichero completo:\n\n{}",
+      "text": "- nivel del módulo",
       "kind": "verbatim",
-      "reason": "prompt del modelo local: entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen). B2c: cuerpo obligatorio del commit y troceado de `local_explain_code`/`local_extract`"
+      "reason": "prompt del modelo local (B2e, lo que se pierde al combinar los trozos): entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "lo que registra el módulo `{}`",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (B2e, lo que se pierde al combinar los trozos): entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": " y 9999 más",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (B2e, lo que se pierde al combinar los trozos): entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Ficheros que nombra el log (los más nombrados primero):",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (B2e, lo que se pierde al combinar los trozos): entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Códigos de regla o error que nombra el log (los más frecuentes primero):",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (B2e, lo que se pierde al combinar los trozos): entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "{}Estos son resúmenes parciales y EN ORDEN de un mismo log de linter/tests. La lista de arriba sale del log entero; los parciales pueden no cubrirla. Un fichero que aparece en varios parciales va en una sola entrada. Redacta un único resumen de todo el log:\n\n{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (B2e, lo que se pierde al combinar los trozos): entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": " y de los nombres que registran sus funciones; nómbralos todos en la explicación",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (B2e, lo que se pierde al combinar los trozos): entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "{}Estas son notas EN ORDEN sobre los fragmentos de un mismo fichero de código. La lista de arriba es el inventario COMPLETO de sus definiciones de primer nivel{}; las notas pueden no cubrirlo entero. Explica el fichero completo:\n\n{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (B2e, lo que se pierde al combinar los trozos): entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
     }
   ]
 }

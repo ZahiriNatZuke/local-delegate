@@ -1,0 +1,862 @@
+{
+ "runs": "D:\\Projects\\local-delegate\\.sdd\\changes\\english-names-bilingual-output\\evidence\\B2e\\runs\\branch-fallback",
+ "counter": "main",
+ "rows": [
+  {
+   "id": "A11",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A11",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A11",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A12",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A12",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A12",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A13",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A13",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 3
+  },
+  {
+   "id": "A13",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 1
+  },
+  {
+   "id": "A14",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A14",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A14",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A15",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 1
+  },
+  {
+   "id": "A15",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A15",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B31",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B31",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B31",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B32",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 2
+  },
+  {
+   "id": "B32",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B32",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 2
+  },
+  {
+   "id": "B33",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 2
+  },
+  {
+   "id": "B33",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 2
+  },
+  {
+   "id": "B33",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 1
+  },
+  {
+   "id": "B34",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B34",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B34",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B35",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B35",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B35",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "L1",
+   "rep": 1,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 2600,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2056,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 1605,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2317,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 1934,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 2577,
+     "finish_reason": "length"
+    }
+   ],
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 1.0,
+   "files": 1.0,
+   "codes_missing": []
+  },
+  {
+   "id": "L1",
+   "rep": 2,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 2610,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2071,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 1605,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2350,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 1595,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 2023,
+     "finish_reason": "length"
+    }
+   ],
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 1.0,
+   "files": 1.0,
+   "codes_missing": []
+  },
+  {
+   "id": "L1",
+   "rep": 3,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 2600,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2053,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 1924,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 1994,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 1963,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 2578,
+     "finish_reason": "length"
+    }
+   ],
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 1.0,
+   "files": 1.0,
+   "codes_missing": []
+  },
+  {
+   "id": "L2",
+   "rep": 1,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 275,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2549,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2152,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2175,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2166,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 2473,
+     "finish_reason": "length"
+    }
+   ],
+   "fidelity_total": 4,
+   "judged": true,
+   "codes": 1.0,
+   "files": 1.0,
+   "codes_missing": []
+  },
+  {
+   "id": "L2",
+   "rep": 2,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 284,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2602,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2204,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2259,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2179,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 2485,
+     "finish_reason": "length"
+    }
+   ],
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 1.0,
+   "files": 1.0,
+   "codes_missing": []
+  },
+  {
+   "id": "L2",
+   "rep": 3,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 274,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2590,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2107,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2292,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2147,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 2595,
+     "finish_reason": "length"
+    }
+   ],
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 1.0,
+   "files": 1.0,
+   "codes_missing": []
+  },
+  {
+   "id": "L3",
+   "rep": 1,
+   "chunks": 8,
+   "finish_reason": "length",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 2418,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2588,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2586,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2688,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2606,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 1177,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 256,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 2850,
+     "finish_reason": "length"
+    }
+   ],
+   "fidelity_total": 3,
+   "judged": true,
+   "codes": null,
+   "files": 1.0,
+   "codes_missing": []
+  },
+  {
+   "id": "L3",
+   "rep": 2,
+   "chunks": 8,
+   "finish_reason": "length",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 2177,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2645,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2551,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2471,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2696,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 1173,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 256,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 2602,
+     "finish_reason": "length"
+    }
+   ],
+   "fidelity_total": 2,
+   "judged": true,
+   "codes": null,
+   "files": 1.0,
+   "codes_missing": []
+  },
+  {
+   "id": "L3",
+   "rep": 3,
+   "chunks": 8,
+   "finish_reason": "length",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 2435,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2478,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2594,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2778,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 2718,
+     "finish_reason": "length"
+    },
+    {
+     "kind": "map",
+     "chars_out": 1008,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 256,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 2772,
+     "finish_reason": "length"
+    }
+   ],
+   "fidelity_total": 2,
+   "judged": true,
+   "codes": null,
+   "files": 1.0,
+   "codes_missing": []
+  },
+  {
+   "id": "L4",
+   "rep": 1,
+   "chunks": 4,
+   "finish_reason": "stop",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 1012,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 786,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 983,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 1489,
+     "finish_reason": "stop"
+    }
+   ],
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 1.0,
+   "files": 1.0,
+   "codes_missing": []
+  },
+  {
+   "id": "L4",
+   "rep": 2,
+   "chunks": 4,
+   "finish_reason": "stop",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 1146,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 782,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 1096,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 1431,
+     "finish_reason": "stop"
+    }
+   ],
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 1.0,
+   "files": 1.0,
+   "codes_missing": []
+  },
+  {
+   "id": "L4",
+   "rep": 3,
+   "chunks": 4,
+   "finish_reason": "stop",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 1122,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 780,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 984,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 1493,
+     "finish_reason": "stop"
+    }
+   ],
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 1.0,
+   "files": 1.0,
+   "codes_missing": []
+  },
+  {
+   "id": "L5",
+   "rep": 1,
+   "chunks": 3,
+   "finish_reason": "stop",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 2213,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 937,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 2385,
+     "finish_reason": "stop"
+    }
+   ],
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 1.0,
+   "files": 1.0,
+   "codes_missing": []
+  },
+  {
+   "id": "L5",
+   "rep": 2,
+   "chunks": 3,
+   "finish_reason": "stop",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 2213,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 937,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 1730,
+     "finish_reason": "stop"
+    }
+   ],
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 1.0,
+   "files": 1.0,
+   "codes_missing": []
+  },
+  {
+   "id": "L5",
+   "rep": 3,
+   "chunks": 3,
+   "finish_reason": "stop",
+   "steps": [
+    {
+     "kind": "map",
+     "chars_out": 1814,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "map",
+     "chars_out": 938,
+     "finish_reason": "stop"
+    },
+    {
+     "kind": "reduce",
+     "chars_out": 1940,
+     "finish_reason": "stop"
+    }
+   ],
+   "fidelity_total": 1,
+   "judged": true,
+   "codes": 1.0,
+   "files": 1.0,
+   "codes_missing": []
+  }
+ ],
+ "summary": {
+  "lint_codes_mean": 1.0,
+  "lint_files_mean": 1.0,
+  "lint_fidelity_mean": 0.8,
+  "lint_cut": 9,
+  "lint_calls": 15,
+  "not_judged": [],
+  "E1_doctor_and_benchmark": [],
+  "E1_E2_registered_mean": null,
+  "E3_top_level_mean": null,
+  "explain_top_level_mean": null,
+  "control_fidelity_total": 14,
+  "control_cut": 0,
+  "control_calls": 30,
+  "explain_cut": 0
+ }
+}

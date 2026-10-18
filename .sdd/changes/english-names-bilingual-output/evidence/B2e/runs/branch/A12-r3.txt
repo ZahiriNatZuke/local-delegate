@@ -1,0 +1,9 @@
+**Summary of Issues by File:**
+
+The provided output indicates several issues related to system changes and prompt updates stemming from version 0.36.0, all categorized under the label "frontera declarada".
+
+Specifically, there are eleven instances of changes related to the system, including `resumen-md-2k`, `resumen-md-10k`, `resumen-changelog-7k`, `commit-diff-19k`, and `techo-commit-156k`. These changes involve modifications to `max_tokens`.
+
+The output also mentions a single issue concerning `plaza plaza-1 tomada tras 1s`, which is a UV run with frozen python scripts.  It’s important to note that the exact nature of this issue is not detailed in the provided snippet.
+
+(leído server-side: 587 chars ≈ 305 tokens de Claude que no entraron a tu contexto)

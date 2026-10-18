@@ -1,0 +1,17 @@
+Este documento presenta un resumen exhaustivo de las pruebas ejecutadas en diversos módulos del sistema. El conjunto de pruebas abarca la validación de experimentos de adopción, afinidad de modelos, procesamiento por lotes y la gestión de agentes. Se incluyen verificaciones críticas de rendimiento mediante análisis de latencia, métricas de Prometheus y estudios de significancia, así como pruebas de atribución, inicio automático y sondeo del backend.
+
+La suite cubre aspectos de infraestructura como la instalación de clientes, gestión de entornos, aislamiento de variables, procesos de actualización del demonio y compatibilidad con la interfaz de línea de comandos. Asimismo, se validan componentes de la interfaz de usuario, incluyendo el panel de control, la lógica de JavaScript, la visualización de datos y la localización al español. También se realizan pruebas de seguridad web, gestión de cuotas, seguimiento de precios, procesamiento de visión y la integridad del corpus de datos. Finalmente, se ejecutan diagnósticos de conectividad, manejo de errores HTTP, mecanismos de respaldo y la generación de resúmenes estructurados.
+
+**Resumen de advertencias**
+
+**.venv\Lib\site-packages\starlette\testclient.py**
+
+* **Advertencia de depreciación**: El alias `anyio.abc.BlockingPortal` está obsoleto y debe sustituirse por `anyio.from_thread.BlockingPortal`.
+
+2617 tests collected in 0.74s
+
+[local-delegate warning: salida truncada por max_tokens en 2 de 8 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 206985 chars ≈ 107804 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 8 pasadas por local-delegate)

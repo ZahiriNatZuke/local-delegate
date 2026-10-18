@@ -1,0 +1,11 @@
+El código implementa un sistema integral de benchmarking para evaluar modelos de lenguaje, centrado en la medición precisa de recursos de hardware y la ejecución segura de casos de prueba. Comienza definiendo estructuras de datos inmutables como `CorpusCase` y `Corpus` para gestionar los casos de prueba y sus metadatos, facilitando la carga e integridad de datos mediante `load_corpus` y `_frozen_source`. La evaluación de la calidad de las respuestas se realiza a través de `score_output`, que analiza cobertura, validez JSON y ejecución de código, apoyado por utilidades como `parse_prometheus_metrics` para métricas de rendimiento y `normalize_for_match` para comparaciones de texto precisas.
+
+Un componente crítico es el monitoreo de recursos en Windows. Utilizando APIs de bajo nivel (`_win32_api`, `list_processes`, `read_process_memory`) y herramientas del sistema (`typeperf`, `nvidia-smi`), el código resuelve identificadores únicos de GPU (`resolve_gpu_luid`, `choose_gpu_luid`) y monitorea el uso de memoria VRAM y RAM en tiempo real. Clases como `ProcessProbe`, `TypeperfStream` y `ResourceSampler` orquestan estas lecturas en hilos separados para evitar interferencias, mientras `ThermalTracker` ajusta las mediciones según el estado térmico del servidor.
+
+La ejecución de los benchmarks se orquesta mediante `run_benchmark`, que itera sobre los casos filtrados por `_select_cases`, realiza inferencias a través de `post_attempt` (manejando errores y rechazos de contexto con `is_context_rejection`) y registra los resultados. La seguridad se garantiza con `run_execution_checks` para ejecutar código generado en entornos aislados. Finalmente, `add_parser` configura la interfaz de línea de comandos, registrando el subcomando "benchmark" que inicia todo el proceso, asegurando una evaluación robusta, segura y detallada del rendimiento del modelo.
+
+[local-delegate warning: salida truncada por max_tokens en 1 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 59966 chars ≈ 29539 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

@@ -1,0 +1,58 @@
+**Resumen de problemas por archivo**
+
+**scripts/build_corpus.py**
+* **Coma final faltante**: 23
+* **Línea demasiado larga**: 21
+* **Uso de `print`**: 13
+* **Falta docstring en función pública**: 7
+* **Error en formato de docstring (línea en blanco o comillas)**: 7
+* **Falta anotación de tipo en argumento o retorno**: 6
+* **Evitar mensajes largos fuera de la clase de excepción**: 5
+* **No usar literales f-string en excepciones**: 5
+* **Demasiados argumentos en definición de función**: 5
+* **Falta docstring en clase o método público**: 4
+* **Demasiados saltos o complejidad excesiva**: 4
+* **Uso de `os.path.abspath()` debe ser reemplazado por `Path.resolve()`**: 4
+* **Uso de valores mágicos en comparaciones**: 3
+* **Tipos dinámicos (typing.Any) no permitidos**: 3
+* **Demasiados argumentos posicionales**: 2
+* **Argumento posicional de tipo booleano**: 2
+* **Captura de excepción ciega**: 2
+* **Uso de `assert` o división de aserciones**: 2
+* **Uso de función potencialmente insegura**: 1
+* **Uso de `list.extend` para transformar listas**: 1
+* **Uso de operador ternario en lugar de bloque if-else**: 1
+* **Variable de bucle `for` sobrescrita**: 1
+
+**scripts/analyze_benchmark.py**
+* **Falta docstring en clases, métodos o funciones públicas**: 23
+* **Falta de coma final**: 15
+* **Línea demasiado larga**: 11
+* **Expresiones de tipo dinámico (`Any`) no permitidas**: 8
+* **Funciones demasiado complejas, demasiadas ramas o demasiadas sentencias**: 3
+* **Falta de anotación de tipo**: 1
+* **Error en formato de resumen/comillas**: 4
+
+**scripts/bump_version.py**
+* **Evitar mensajes largos fuera de la clase de excepción**: 11
+* **Uso de `print`**: 7
+* **No usar literales de cadena en excepciones**: 7
+* **No usar literales f-string en excepciones**: 5
+* **Falta de coma final**: 2
+* **Llamada a `subprocess` insegura o sin argumento `check`**: 2
+* **Demasiada complejidad en función `main`**: 1
+* **Falta docstring en función pública**: 1
+* **Uso de valores mágicos en comparaciones**: 1
+* **Falta aviso de copyright**: 1
+
+**scripts/adoption_experiment.py**
+* **Falta de coma final**: 6
+* **Línea demasiado larga**: 5
+* **Falta de docstring en funciones públicas**: 3
+* **Error en formato de resumen/comillas**: 2
+
+[local-delegate warning: salida truncada por max_tokens en 4 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 154297 chars ≈ 80363 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

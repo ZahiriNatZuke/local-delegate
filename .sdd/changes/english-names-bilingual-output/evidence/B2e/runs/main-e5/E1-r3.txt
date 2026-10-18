@@ -1,0 +1,11 @@
+Este fichero implementa la lógica de una herramienta de línea de comandos en Python, probablemente para gestionar la instalación, actualización y desinstalación de clientes de IA (como Codex), además de gestionar un daemon de servidor MCP y la configuración de "llamaswap" para optimización de recursos.
+
+La estructura se basa en `argparse`, donde `build_parser` y funciones auxiliares (`_add_*_parser`) definen los subcomandos (`serve`, `install`, `update`, `uninstall`, `recompute-cost`, `check-llamaswap`, `init-llamaswap`, `test-window`, `doctor`). La función `run` actúa como punto de entrada, inicializando el contexto de internacionalización y ejecutando la acción correspondiente.
+
+Las operaciones de instalación y actualización (`cmd_install`, `cmd_update`, `cmd_uninstall`) orquestan procesos complejos mediante `_run_install`, resolviendo clientes, validando opciones y generando reportes de estado. También incluye utilidades para verificar la terminal, gestionar configuraciones de Codex y advertir sobre rutas de CLI.
+
+Por otro lado, gestiona la integración con `llamaswap` y su daemon. Funciones como `cmd_init_llamaswap` y `cmd_llamaswap_residency` manejan la configuración de modelos, validando presupuestos de VRAM/RAM (`_check_budget`, `_estimate_all`) y evitando conflictos con modelos no agrupados. La comunicación con el daemon se abstraye en funciones como `_daemon_status`, `_daemon_url` y `_daemon_watch`, permitiendo operaciones atómicas y vigilancia de estado. Finalmente, `cmd_recompute_cost` permite recalcular costes de API, mientras que `cmd_serve` inicia el servidor HTTP y dashboard.
+
+(leído server-side: 58875 chars ≈ 29002 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)

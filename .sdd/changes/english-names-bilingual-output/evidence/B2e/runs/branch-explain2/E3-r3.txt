@@ -1,0 +1,11 @@
+Este módulo actúa como el núcleo de verificación del andamiaje del sistema, centralizando veinticinco comprobaciones no destructivas que evalúan el estado de diversos componentes sin modificar el entorno. Define un sistema de estados estandarizado mediante constantes (`OK`, `MISSING`, `WARN`, `UNKNOWN`) y estructuras de datos inmutables (`Result`, `Check`) para encapsular el estado, detalles y sugerencias de reparación de cada sonda.
+
+La lógica se basa en funciones de sonda privadas (prefijadas con `_`) que interrogan el sistema para verificar la presencia y configuración de servicios clave, como el daemon principal, la integración con LlamaSwap, clientes CLI y modelos de backend. Estas sondas consultan puertos, verifican tokens de autenticación, analizan archivos de configuración y detectan obsolescencias. El módulo también gestiona la internacionalización, mapeando los estados a etiquetas traducibles y proporcionando pistas contextuales para la reparación (instalación, reinicio, credenciales).
+
+Además, incluye utilidades para el manejo de versiones, comparando números semánticos y verificando actualizaciones disponibles en PyPI, así como funciones auxiliares para leer archivos, parsear JSON y gestionar directorios. La función principal `run_all` orquesta la ejecución de todas las comprobaciones, agregando los resultados para ofrecer una visión completa de la salud y configuración del entorno, facilitando la detección temprana de problemas y la guía del usuario hacia soluciones automáticas o manuales.
+
+[local-delegate warning: salida truncada por max_tokens en 2 de 9 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 98017 chars ≈ 48284 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 9 pasadas por local-delegate)

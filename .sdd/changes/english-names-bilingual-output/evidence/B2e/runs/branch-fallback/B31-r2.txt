@@ -1,0 +1,12 @@
+**Resumen de pruebas**
+
+**tests/test_chunking.py**
+* **Pruebas superadas**: 41 pruebas pasaron satisfactoriamente, incluyendo validaciones de división de texto, límites de tamaño, manejo de encabezados Markdown, gestión de errores en el backend, clasificación de origen por host y procesamiento de diferencias de archivos.
+
+**tests/test_density.py**
+* **Pruebas superadas**: 16 pruebas pasaron satisfactoriamente, cubriendo aspectos como el cálculo de tokens, prioridades de herramientas sobre extensiones, gestión de variables de respaldo, manejo de imágenes y consistencia en la fusión de datos.
+
+**Resultado final**
+57 passed in 0.75s
+
+(read server-side: 11014 chars ≈ 5736 Claude tokens that did not enter your context)

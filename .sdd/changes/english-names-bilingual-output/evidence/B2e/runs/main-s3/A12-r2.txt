@@ -1,0 +1,10 @@
+**Summary of Issues by File:**
+
+The provided output indicates several issues related to system changes and prompt updates stemming from version 0.36.0, all categorized as “frontera declarada”.
+
+**Files:**
+
+*   **scripts/build\_corpus.py:**  There are 11 lines of output, including the initial report and subsequent similar entries.
+*   **resumen-md-2k, resumen-md-10k, resumen-changelog-7k, commit-diff-19k, techo-commit-156k:** These files contain system changes related to prompt updates from version 0.36.0, with a focus on modifications to the `max_tokens` parameter. The total number of lines within these files is 11.
+
+(leído server-side: 587 chars ≈ 305 tokens de Claude que no entraron a tu contexto)

@@ -1,0 +1,11 @@
+El código implementa un sistema integral de benchmarking para evaluar modelos de lenguaje, centrado en la ejecución segura de casos de prueba y la monitorización precisa de recursos del sistema. Comienza definiendo estructuras de datos inmutables (`CorpusCase`, `Corpus`, `ResourceSample`) y funciones de carga que validan la integridad de los archivos de prueba mediante hashes SHA-256 y normalizan el texto para comparaciones robustas.
+
+La evaluación de las respuestas del modelo se realiza mediante `run_execution_checks`, que ejecuta código generado en un entorno aislado y seguro, y `score_output`, que calcula la calidad basándose en cobertura, validez de JSON y conteo de reglas. Para la monitorización de recursos, el código integra herramientas específicas de Windows: utiliza `ctypes` para interactuar con APIs del sistema (`kernel32`, `psapi`) y el comando `typeperf` para rastrear el uso de memoria VRAM de la GPU y RAM del proceso. Clases como `ProcessProbe` y `ResourceSampler` gestionan estos flujos de datos en hilos separados, asegurando lecturas continuas sin bloquear la ejecución principal y detectando cambios en los identificadores de proceso (PID) o LUID de la GPU.
+
+Finalmente, la orquestación se realiza mediante `run_benchmark`, que coordina la carga de casos, la gestión de intentos de llamada a la API (`Attempt`, `post_attempt`), el manejo de rechazos por contexto (`is_context_rejection`) y el seguimiento térmico del servidor (`ThermalTracker`). El script expone una interfaz de línea de comandos a través de `add_parser`, permitiendo filtrar casos y ejecutar el benchmark completo con una gestión robusta de errores y recursos.
+
+[local-delegate warning: salida truncada por max_tokens en 1 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 59966 chars ≈ 29539 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

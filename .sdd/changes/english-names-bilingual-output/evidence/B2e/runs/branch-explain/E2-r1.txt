@@ -1,0 +1,11 @@
+El código implementa un sistema integral de benchmarking para evaluar modelos de lenguaje, centrado en la medición precisa del rendimiento y el uso de recursos. Comienza definiendo estructuras de datos inmutables como `CorpusCase` y `Corpus` para gestionar casos de prueba, junto con utilidades de validación como `_frozen_source` y `load_corpus` que aseguran la integridad de los datos mediante hashes SHA-256. Incluye parsers para métricas Prometheus (`parse_prometheus_metrics`) y datos de rendimiento de Windows (`parse_typeperf_header`, `parse_typeperf_sample`), normalizando texto con `normalize_for_match` y extrayendo JSON con `_json_object`.
+
+La monitorización de recursos es un pilar central: `MetricsSampler` captura picos de uso de CPU/memoria en segundo plano, mientras que en Windows, `ProcessProbe` y `TypeperfStream` rastrean el uso de VRAM y memoria privada mediante APIs de sistema (`_win32_api`, `list_processes`). `ResourceSampler` coordina estas lecturas sincrónica y asincrónicamente, generando resúmenes estadísticos con `summarize_resources`.
+
+La ejecución del benchmark se orquesta en `run_benchmark`, que filtra casos con `_select_cases` y gestiona intentos de llamada a la API mediante la clase `Attempt` y la función `post_attempt`. Se incluyen chequeos de calidad como `score_output` y `check_counts`, así como detección de rechazos por contexto con `is_context_rejection`. El sistema también monitorea la estabilidad térmica del servidor mediante `ThermalTracker`. Finalmente, la integración con la línea de comandos se realiza a través de `add_parser`, que registra el subcomando "benchmark", permitiendo ejecutar todo el flujo de evaluación de manera configurada y segura.
+
+[local-delegate warning: salida truncada por max_tokens en 1 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 59966 chars ≈ 29539 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

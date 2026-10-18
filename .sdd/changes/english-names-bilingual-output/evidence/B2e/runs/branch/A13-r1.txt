@@ -1,0 +1,35 @@
+**Local Delegate Doctor Summary**
+
+**File: local-delegate**
+
+*   **Warnings:** 2
+    *   Obsolete Hook Name: LD\_HOOK\_READ\_BLOQUEAR is deprecated; use LD\_HOOK\_READ\_BLOCK (to be removed in 0.38.0).
+    *   Missing Resident Affinity: No resident affinity is configured, recommended to use benchmarks/affinity-2026-10 or the config to measure the footprint.
+
+**Service Status:**
+
+*   Local Delegate Daemon: OK (PID 31432)
+*   Backend: OK (http://127.0.0.1:9292/v1/models)
+*   MCP Credentials: No MCP entry to check.
+*   Claude Desktop Token: Claude Desktop not configured.
+
+**Version Checks:**
+
+*   llama-swap: v255 (Tested)
+*   llama-server: b10909 (Tested)
+
+**MCP Clients:**
+
+*   claude-ai (various versions): 6
+*   claude-code: 1
+*   local-agent-mode-local-delegate (various versions): 6
+*   mcp: 1
+*   mcp-remote-fallback-test: 1
+
+**Hook Status:**
+
+*   Claude Code: Not installed (no .claude file).
+*   Codex: Not installed (no .codex file).
+*   opencode: Not installed (no .config/opencode file).
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

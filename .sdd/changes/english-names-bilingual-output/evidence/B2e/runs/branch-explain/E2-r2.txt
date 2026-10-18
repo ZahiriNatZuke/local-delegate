@@ -1,0 +1,9 @@
+El código implementa un sistema integral de benchmarking para evaluar modelos de lenguaje, abarcando desde la carga de datos hasta la medición de recursos del sistema. Comienza definiendo estructuras de datos inmutables como `CorpusCase` y `Corpus` para gestionar casos de prueba, validando la integridad de las fuentes mediante `_frozen_source` y `load_corpus`. Para evaluar las respuestas del modelo, utiliza `normalize_for_match` y `_json_object` para procesar texto, mientras que `run_execution_checks` y `check_counts` verifican la ejecución segura de código y el conteo de reglas. La calidad se puntúa con `score_output`, evaluando cobertura, términos prohibidos y validez estructural.
+
+La interacción con el modelo se maneja mediante `Attempt`, `post_attempt` y funciones auxiliares como `is_context_rejection` e `effective_reasoning`, que gestionan errores y contextos. Para el monitoreo de rendimiento, el código integra herramientas específicas de Windows: `probe_supported` verifica el entorno, mientras que `ProcessProbe`, `TypeperfStream` y `ResourceSampler` coordinan la lectura asíncrona de métricas de VRAM y memoria mediante APIs como `read_process_memory` y `list_processes`. Se resuelven identificadores de GPU con `resolve_gpu_luid` y `choose_gpu_luid`. Finalmente, `run_benchmark` orquesta todo el proceso, seleccionando casos con `_select_cases` y registrando resultados, todo ello configurado mediante `add_parser` para el subcomando "benchmark".
+
+[local-delegate warning: salida truncada por max_tokens en 1 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 59966 chars ≈ 29539 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

@@ -1,0 +1,174 @@
+**Resumen de problemas por archivo**
+
+**scripts/build_corpus.py**
+* Coma final faltante: 23
+* Línea demasiado larga: 18
+* Uso de `print` detectado: 13
+* Evitar especificar mensajes largos fuera de la clase de excepción: 6
+* La excepción no debe usar un literal f-string: 6
+* Falta docstring en función pública: 6
+* Falta anotación de tipo de retorno en función privada: 5
+* Requerida una línea en blanco entre resumen y descripción: 4
+* Las comillas de cierre de docstring multilínea deben estar en una línea separada: 4
+* Uso de `os.path.abspath()` debe ser reemplazado por `Path.resolve()`: 4
+* Demasiados argumentos en definición de función: 4
+* Falta docstring en clase pública: 3
+* Tipos dinámicos (typing.Any) no permitidos: 3
+* Valor mágico usado en comparación: 3
+* Demasiados argumentos posicionales: 2
+* Demasiados caminos (complejidad): 2
+* Demasiadas ramas: 2
+* Argumento posicional de tipo booleano en llamada a función: 2
+* Captura de excepción ciega: 2
+* Falta docstring en método público: 1
+* Demasiadas sentencias: 1
+* Falta anotación de tipo para argumento de función: 1
+* Argumento posicional de tipo booleano en definición de función: 1
+* Uso de función posiblemente insegura: 1
+* Uso de `assert` detectado: 1
+* La aserción debe dividirse en varias partes: 1
+* Sobrescritura de variable de bucle `for`: 1
+
+**scripts/_claude_bench.py**
+* Demasiados argumentos, ramas o sentencias: 4
+* Requerida una línea en blanco entre resumen y descripción: 1
+* Comillas de cierre en línea separada: 1
+* Falta coma final en varias líneas: 1
+* Falta cadena de documentación en funciones públicas: 1
+* Línea demasiado larga: 1
+* Expresiones con tipado dinámico no permitidas: 1
+* Llamada a `subprocess` con entrada no confiable: 1
+* Mensajes de excepción largos o uso de literales/f-strings en excepciones: 3
+* Otros: falta aviso de copyright, nombre de excepción incorrecto, uso de `os.path.abspath` en lugar de `Path.resolve()`, falta anotación de tipo, complejidad excesiva, importaciones fuera de nivel superior y uso de `print`.
+
+**scripts/adoption_experiment.py**
+* Exceso de ramas, sentencias o complejidad: 3
+* Línea demasiado larga: 1
+* Falta cadena de documentación en funciones públicas: 1
+* Falta coma final: 1
+* Se encontró `print`: 1
+* Generadores pseudoaleatorios no aptos para criptografía: 1
+* Uso de valores mágicos en comparaciones: 1
+* Otros: falta aviso de copyright y errores en docstrings.
+
+**scripts/analyze_benchmark.py**
+* Exceso de argumentos, ramas, sentencias o complejidad: 5
+* Problemas con comentarios `TODO`: 5
+* Faltan cadenas de documentación en métodos, funciones y clases: 4
+* Línea demasiado larga: 1
+* Falta coma final: 1
+* Expresiones con tipado dinámico no permitidas: 1
+* Uso de `assert` detectado: 1
+* Otros: falta aviso de copyright, errores en docstrings, uso de valores mágicos y errores de rendimiento.
+
+**scripts/build_site.py**
+* Uso de `print` detectado: 6
+* Falta docstring en función pública: 2
+* Coma final faltante: 1
+* Falta aviso de copyright: 1
+
+**scripts/bump_version.py**
+* Evitar especificar mensajes largos fuera de la clase de excepción: 11
+* La excepción no debe usar un literal f-string: 6
+* Uso de `print` detectado: 7
+* La excepción no debe usar un literal de cadena: 5
+* Coma final faltante: 2
+* Falta docstring en función pública: 1
+* Complejidad excesiva en `main`: 1
+* Valor mágico usado en comparación: 1
+* Llamada a `subprocess` sin argumento `check` explícito: 1
+* Llamada a `subprocess` debe verificar entrada no confiable: 1
+* Falta aviso de copyright: 1
+
+**scripts/dev/fake_backend.py**
+* Falta de coma final: 2
+* Uso de `print` detectado: 2
+* Falta de docstring en función pública: 1
+
+**scripts/dev/measure_bash_outputs.py**
+* Uso de `print` detectado: 17
+* Falta de docstring en función pública: 1
+* Falta de aviso de copyright: 1
+* Archivo parte de un paquete de espacio de nombres implícito: 1
+
+**scripts/dev/measure_ttl_race.py**
+* Falta de docstring en función pública: 3
+* Línea demasiado larga: 2
+* Falta de coma final: 2
+* Importación debe estar en el nivel superior del archivo: 2
+* Uso de `assert` detectado: 1
+* Valor mágico usado en comparación: 1
+* Falta de aviso de copyright: 1
+* Uso de `print` detectado: 1
+
+**scripts/extract_dashboard_js.py**
+* Evitar especificar mensajes largos fuera de la clase de excepción: 1
+* La excepción no debe usar un literal de cadena: 1
+* Falta de aviso de copyright: 1
+* Archivo parte de un paquete de espacio de nombres implícito: 1
+* Uso de `print` detectado: 1
+
+**scripts/judge_response_language.py**
+* Falta de coma final: 4
+* Variable de bucle `for` sobrescrita por objetivo de asignación: 2
+* Importación de nivel de módulo no está al principio del archivo: 2
+* La primera línea del docstring debe estar en modo imperativo: 2
+* Evitar especificar mensajes largos fuera de la clase de excepción: 1
+* Falta de docstring en clase pública: 1
+* Falta de docstring en función pública: 1
+* La excepción no debe usar un literal de f-string: 1
+* Uso de `r"""` si hay barras invertidas en un docstring: 1
+* Falta de aviso de copyright: 1
+
+**scripts/macos_mcp_canary.py**
+* La excepción no debe usar un literal f-string: 7
+* Falta de docstring en método público: 5
+* Evitar especificar mensajes largos fuera de la clase de excepción: 5
+* Falta de coma final: 6
+* Falta de docstring en clase pública: 2
+* Falta de docstring en método mágico: 2
+* La excepción no debe usar un literal de cadena: 2
+* Uso de `assert` detectado: 2
+* La aserción debe dividirse en varias partes: 2
+* Falta de docstring en `__init__`: 1
+* Falta de docstring en función pública: 1
+* Auditar apertura de URL para esqu
+
+**scripts/review_sheet.py**
+* Falta de coma final: 5
+* Uso de `print` detectado: 6
+* La excepción no debe usar literales de cadena o f-strings, asigne a una variable primero: 3
+* Evitar mensajes largos fuera de la clase de excepción: 3
+* Falta docstring en función pública: 2
+* Línea demasiado larga: 2
+* Generadores pseudoaleatorios estándar no aptos para propósitos criptográficos: 1
+* Abstraer `raise` a una función interna: 1
+
+**scripts/score_lint_fidelity.py**
+* Falta docstring en función pública: 3
+* Falta de coma final: 3
+* La primera línea del docstring debe estar en modo imperativo: 2
+* Uso de `print` detectado: 2
+* Falta aviso de derechos de autor al inicio del archivo: 1
+* Línea demasiado larga: 1
+* Usar `list.extend` para crear una lista transformada: 1
+
+**scripts/script_i18n.py**
+* Falta docstring en función pública: 3
+* Mover importación de la biblioteca estándar a un bloque de comprobación de tipos: 2
+* Falta aviso de derechos de autor al inicio del archivo: 1
+* Expresiones de tipado dinámico no permitidas: 1
+* Uso de `assert` detectado: 1
+* La aserción debe dividirse en varias partes: 1
+* La primera palabra del docstring debe estar en mayúscula: 1
+* Se requiere una línea en blanco entre el resumen y la descripción: 1
+* Las comillas de cierre de un docstring multilínea deben estar en una línea separada: 1
+* El archivo es parte de un paquete de espacio de nombres implícito
+
+Sin mencionar (del log, no los nombra el resumen): scripts/pair_sheet.py, scripts/price_watcher.py, scripts/dev/affinity_batch.py, scripts/detect_spanish_names.py, scripts/measure_adoption.py, COM812, T201, E501, D103, TRY003, EM102, D205, D209, CPY001, PLR2004
+
+[local-delegate warning: salida truncada por max_tokens en 4 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 154297 chars ≈ 80363 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

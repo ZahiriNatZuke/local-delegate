@@ -1,0 +1,61 @@
+Aquí tienes el resumen de los problemas detectados:
+
+**src\local_delegate\__init__.py**
+* 1 aviso de falta de aviso de derechos de autor.
+
+**src\local_delegate\__main__.py**
+* 1 aviso de falta de aviso de derechos de autor.
+
+**src\local_delegate\agents.py**
+* 1 aviso de falta de aviso de derechos de autor.
+* 1 aviso de mover importación de la biblioteca estándar a un bloque de comprobación de tipos.
+* 1 aviso de falta de coma final.
+* 1 aviso de la primera línea de la cadena de documentación debe estar en modo imperativo.
+* 1 aviso de uso de valor mágico en comparación.
+
+**src\local_delegate\attribution.py**
+* 1 aviso de falta de aviso de derechos de autor.
+* 2 avisos de mover importación de la biblioteca estándar a un bloque de comprobación de tipos.
+* 1 aviso de línea demasiado larga.
+* 1 aviso de considerar mover la sentencia a un bloque else.
+* 1 aviso de falta de coma final.
+* 1 aviso de no capturar excepciones ciegas.
+* 1 aviso de demasiados argumentos en la definición de la función.
+* 1 aviso de variable de bucle for sobrescrita.
+* 1 aviso de reemplazar os.replace() por Path.replace().
+* 1 aviso de usar contextlib.suppress(OSError) en lugar de try-except-pass.
+* 1 aviso de reemplazar os.unlink() por Path.unlink().
+* 1 aviso de parámetro de función de prueba con argumento por defecto.
+* 2 avisos de requerir una línea en blanco entre el resumen y la descripción.
+* 1 aviso de las comillas de cierre de la cadena de documentación multilínea deben estar en una línea separada.
+
+**src\local_delegate\autostart.py**
+* 1 aviso de falta de aviso de derechos de autor.
+* 1 aviso de la primera línea de la cadena de documentación debe estar en modo imperativo.
+* 1 aviso de llamada a subprocess que requiere verificar la ejecución de entrada no confiable.
+
+**src\local_delegate\benchmark.py**
+* 1 aviso de falta de aviso de derechos de autor.
+* 3 avisos de mover importación de la biblioteca estándar a un bloque de comprobación de tipos.
+* 3 avisos de falta de cadena de documentación en clase pública.
+* 1 aviso de uso de valor mágico en comparación.
+* 1 aviso de variable de bucle for sobrescrita.
+* 6 avisos de falta de coma final.
+* 2 avisos de la importación debe estar en el nivel superior del archivo.
+* 1 aviso de llamada a subprocess que requiere verificar la ejecución de entrada no confiable.
+* 1 aviso de subprocess.run sin argumento check explícito.
+* 2 avisos de complejidad excesiva.
+* 1 aviso de demasiadas ramas.
+* 1 aviso de demasiadas sentencias.
+* 1 aviso de falta de cadena de documentación en __init__.
+
+**src\local_delegate\cli.py**
+*
+
+Sin mencionar (del log, no los nombra el resumen): src/local_delegate/web/metrics.py, src/local_delegate/server.py, src/local_delegate/checks.py, src/local_delegate/residency.py, src/local_delegate/install.py, src/local_delegate/resources/hooks/hook_common.py, src/local_delegate/legacy_names.py, src/local_delegate/pace.py, E501, COM812, T201, D205, PLC0415, D209, ANN401, ANN001, CPY001, D103
+
+[local-delegate warning: salida truncada por max_tokens en 6 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 179890 chars ≈ 93692 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

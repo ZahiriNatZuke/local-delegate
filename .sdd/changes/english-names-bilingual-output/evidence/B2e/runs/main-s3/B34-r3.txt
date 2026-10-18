@@ -1,0 +1,5 @@
+Resumen de Problemas:
+
+El análisis revela errores relacionados con la ubicación de archivos de modelo. Se identificaron problemas en varios grupos, principalmente dentro del grupo ‘resident’. Específicamente, se encontraron errores al intentar estimar la VRAM para los siguientes modelos: gemma3-4b, gemma4-26b-a4b, qwen35-2b, gemma4-12b y qwen36-35b-a3b.  Estos errores se manifiestan como “archivo no encontrado” para los archivos de GGUF correspondientes en la carpeta MODELOS. El grupo ‘swap’ también presenta errores similares, afectando a gemma4-26b-a4b, qwen36-35b-a3b, qwen35-2b y gemma4-12b.  El peor caso, en términos de VRAM disponible, es de 0,00 GiB.
+
+(read server-side: 727 chars ≈ 378 Claude tokens that did not enter your context)

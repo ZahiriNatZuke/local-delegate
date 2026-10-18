@@ -1,0 +1,11 @@
+Este script implementa un sistema de benchmarking integral para evaluar modelos de lenguaje, centrado en la precisión, el rendimiento y la estabilidad. Comienza definiendo estructuras de datos inmutables como `CorpusCase` y `Corpus` para gestionar casos de prueba, cargados mediante `load_corpus` con validación de integridad SHA256. La evaluación de respuestas se realiza mediante `score_output`, que verifica validez JSON, ejecución de código aislado (`run_execution_checks`) y conteo de reglas (`check_counts`), apoyado por utilidades como `parse_prometheus_metrics` y `normalize_for_match`.
+
+El núcleo del análisis de rendimiento reside en la monitorización de recursos. En entornos Windows, utiliza APIs nativas (`_win32_api`, `list_processes`, `read_process_memory`) y comandos del sistema (`typeperf`, `nvidia-smi`) para rastrear memoria VRAM y RAM. Clases como `TypeperfStream`, `ProcessProbe` y `ResourceSampler` gestionan el muestreo asíncrono y sincrónico de estos datos, capturando picos de uso sin bloquear la ejecución. `summarize_resources` agrega estas métricas para detectar anomalías térmicas o de memoria.
+
+La interacción con el modelo se orquesta mediante `post_attempt` y la clase `Attempt`, que manejan solicitudes HTTP y errores específicos como el rechazo por contexto (`is_context_rejection`). El flujo principal, `run_benchmark`, coordina la carga de casos filtrados por `_select_cases`, la ejecución iterativa y el registro de resultados. Finalmente, `add_parser` configura la interfaz de línea de comandos para el subcomando "benchmark", permitiendo la ejecución controlada de todo el pipeline de evaluación.
+
+[local-delegate warning: salida truncada por max_tokens en 1 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 59966 chars ≈ 29539 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

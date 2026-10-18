@@ -79,14 +79,18 @@ def test_the_single_lint_call_asks_for_the_new_cap(captured):
 
 
 def test_every_step_of_the_chunked_lint_asks_for_the_new_cap(monkeypatch, captured):
-    """Mutant "no `max_tokens_for` for lint" (the shared `2·w+64`): every step has 464."""
+    """Mutant "no `max_tokens_for` for lint" (the shared `2·w+64`): every map step has 464.
+
+    B2e (2026-10-18): the final step (reduce) has its own, larger cap; the maps keep this one.
+    """
     monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "mechanical", 1200)
     monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 1200)
     server.local_lint_summary(text="tests/x.py:1: E1 fallo de prueba\n" * 120)
     assert len(captured) > 2  # guard: map and reduce really ran
     assert "Resume la siguiente salida" not in captured[-1]["user"]  # guard: the last one reduces
     expected = 200 * server.LINT_TOKENS_PER_WORD + server.LINT_CHUNK_TOKENS_BASE
-    assert [c["max_tokens"] for c in captured] == [expected] * len(captured)
+    assert [c["max_tokens"] for c in captured[:-1]] == [expected] * (len(captured) - 1)
+    assert captured[-1]["max_tokens"] == server._lint_final_max_tokens(200)
 
 
 def test_the_other_tools_keep_the_shared_chunk_cap(monkeypatch, captured):

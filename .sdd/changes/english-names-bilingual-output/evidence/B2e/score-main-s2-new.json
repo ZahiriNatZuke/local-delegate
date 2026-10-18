@@ -1,0 +1,568 @@
+{
+ "runs": "D:\\Projects\\local-delegate\\.sdd\\changes\\english-names-bilingual-output\\evidence\\B2e\\runs\\main-s2",
+ "counter": "new",
+ "rows": [
+  {
+   "id": "A11",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A11",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A11",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A12",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A12",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A12",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A13",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A13",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 4
+  },
+  {
+   "id": "A13",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 4
+  },
+  {
+   "id": "A14",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A14",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A14",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A15",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A15",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "A15",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B31",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B31",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B31",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B32",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B32",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B32",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B33",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 2
+  },
+  {
+   "id": "B33",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 2
+  },
+  {
+   "id": "B33",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 1
+  },
+  {
+   "id": "B34",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B34",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B34",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B35",
+   "rep": 1,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B35",
+   "rep": 2,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "B35",
+   "rep": 3,
+   "chunks": 1,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0
+  },
+  {
+   "id": "L1",
+   "rep": 1,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.0,
+   "codes_missing": [
+    "E501",
+    "COM812",
+    "T201",
+    "D205",
+    "PLC0415",
+    "D209",
+    "ANN401",
+    "ANN001",
+    "CPY001",
+    "D103"
+   ]
+  },
+  {
+   "id": "L1",
+   "rep": 2,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.0,
+   "codes_missing": [
+    "E501",
+    "COM812",
+    "T201",
+    "D205",
+    "PLC0415",
+    "D209",
+    "ANN401",
+    "ANN001",
+    "CPY001",
+    "D103"
+   ]
+  },
+  {
+   "id": "L1",
+   "rep": 3,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.0,
+   "codes_missing": [
+    "E501",
+    "COM812",
+    "T201",
+    "D205",
+    "PLC0415",
+    "D209",
+    "ANN401",
+    "ANN001",
+    "CPY001",
+    "D103"
+   ]
+  },
+  {
+   "id": "L2",
+   "rep": 1,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.0,
+   "codes_missing": [
+    "COM812",
+    "T201",
+    "E501",
+    "D103",
+    "TRY003",
+    "EM102",
+    "D205",
+    "D209",
+    "CPY001",
+    "PLR2004"
+   ]
+  },
+  {
+   "id": "L2",
+   "rep": 2,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.0,
+   "codes_missing": [
+    "COM812",
+    "T201",
+    "E501",
+    "D103",
+    "TRY003",
+    "EM102",
+    "D205",
+    "D209",
+    "CPY001",
+    "PLR2004"
+   ]
+  },
+  {
+   "id": "L2",
+   "rep": 3,
+   "chunks": 6,
+   "finish_reason": "length",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.0,
+   "codes_missing": [
+    "COM812",
+    "T201",
+    "E501",
+    "D103",
+    "TRY003",
+    "EM102",
+    "D205",
+    "D209",
+    "CPY001",
+    "PLR2004"
+   ]
+  },
+  {
+   "id": "L3",
+   "rep": 1,
+   "chunks": 8,
+   "finish_reason": "length",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": null,
+   "files": 0.0,
+   "codes_missing": []
+  },
+  {
+   "id": "L3",
+   "rep": 2,
+   "chunks": 8,
+   "finish_reason": "length",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": null,
+   "files": 0.0,
+   "codes_missing": []
+  },
+  {
+   "id": "L3",
+   "rep": 3,
+   "chunks": 8,
+   "finish_reason": "length",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": null,
+   "files": 0.0,
+   "codes_missing": []
+  },
+  {
+   "id": "L4",
+   "rep": 1,
+   "chunks": 4,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.1,
+   "codes_missing": [
+    "lint/style/noMagicNumbers",
+    "lint/style/useNamingConvention",
+    "lint/style/noExcessiveClassesPerFile",
+    "lint/style/useBlockStatements",
+    "lint/style/noParameterProperties",
+    "lint/style/useImportType",
+    "lint/nursery/noRestrictedDependencies",
+    "lint/style/noDefaultExport"
+   ]
+  },
+  {
+   "id": "L4",
+   "rep": 2,
+   "chunks": 4,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.0,
+   "codes_missing": [
+    "lint/style/noMagicNumbers",
+    "lint/style/useNamingConvention",
+    "lint/style/noExcessiveClassesPerFile",
+    "lint/style/useBlockStatements",
+    "lint/style/noParameterProperties",
+    "lint/style/useImportType",
+    "lint/nursery/noRestrictedDependencies",
+    "lint/style/noDefaultExport"
+   ]
+  },
+  {
+   "id": "L4",
+   "rep": 3,
+   "chunks": 4,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.0,
+   "codes_missing": [
+    "lint/style/noMagicNumbers",
+    "lint/style/useNamingConvention",
+    "lint/style/noExcessiveClassesPerFile",
+    "lint/style/useBlockStatements",
+    "lint/style/noParameterProperties",
+    "lint/style/useImportType",
+    "lint/nursery/noRestrictedDependencies",
+    "lint/style/noDefaultExport"
+   ]
+  },
+  {
+   "id": "L5",
+   "rep": 1,
+   "chunks": 3,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 1,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.2,
+   "codes_missing": [
+    "COM812",
+    "TRY003",
+    "D102",
+    "T201",
+    "EM102",
+    "CPY001",
+    "D107",
+    "PLR2004",
+    "D101",
+    "D105"
+   ]
+  },
+  {
+   "id": "L5",
+   "rep": 2,
+   "chunks": 3,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 1,
+   "judged": true,
+   "codes": 0.0,
+   "files": 0.2,
+   "codes_missing": [
+    "COM812",
+    "TRY003",
+    "D102",
+    "T201",
+    "EM102",
+    "CPY001",
+    "D107",
+    "PLR2004",
+    "D101",
+    "D105"
+   ]
+  },
+  {
+   "id": "L5",
+   "rep": 3,
+   "chunks": 3,
+   "finish_reason": "stop",
+   "steps": null,
+   "fidelity_total": 0,
+   "judged": true,
+   "codes": 0.0,
+   "files": 1.0,
+   "codes_missing": [
+    "COM812",
+    "TRY003",
+    "D102",
+    "T201",
+    "EM102",
+    "CPY001",
+    "D107",
+    "PLR2004",
+    "D101",
+    "D105"
+   ]
+  }
+ ],
+ "summary": {
+  "lint_codes_mean": 0.0,
+  "lint_files_mean": 0.1,
+  "lint_fidelity_mean": 0.1333,
+  "lint_cut": 9,
+  "lint_calls": 15,
+  "not_judged": [],
+  "E1_doctor_and_benchmark": [],
+  "E1_E2_registered_mean": null,
+  "E3_top_level_mean": null,
+  "explain_top_level_mean": null,
+  "control_fidelity_total": 13,
+  "control_cut": 0,
+  "control_calls": 30,
+  "explain_cut": 0
+ }
+}

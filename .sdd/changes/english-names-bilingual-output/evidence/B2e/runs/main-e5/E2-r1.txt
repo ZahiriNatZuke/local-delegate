@@ -1,0 +1,11 @@
+Este fichero implementa un sistema integral de benchmarking y evaluación de modelos de lenguaje, enfocado en medir el rendimiento, la calidad de salida y el consumo de recursos. Comienza definiendo estructuras de datos inmutables (`CorpusCase`, `Corpus`, `ResourceSample`) para gestionar casos de prueba y métricas de hardware. La carga de datos valida la integridad de fuentes externas mediante hashes SHA-256 y normaliza textos para comparaciones precisas.
+
+La evaluación de la calidad de las respuestas (`score_output`) es multifacética: verifica la validez de JSON, ejecuta código generado en entornos aislados para comprobar su funcionalidad y valida conteos de reglas específicas. Paralelamente, el módulo se especializa en el monitoreo de recursos de GPU en Windows. Utiliza APIs nativas (`ctypes`, `psapi`, `Toolhelp32`) y herramientas de línea de comandos (`typeperf`, `nvidia-smi`) para resolver identificadores únicos de GPU (LUID) y rastrear el uso de memoria VRAM dedicada y compartida en tiempo real. Clases como `TypeperfStream`, `ProcessProbe` y `ResourceSampler` gestionan la recolección asíncrona y sincrónica de estas métricas, proporcionando estadísticas resumidas (picos, promedios) durante la ejecución.
+
+Finalmente, la orquestación principal (`run_benchmark`) coordina la carga de casos, la ejecución de intentos de API con manejo de errores y reintentos, y el registro de resultados. Incluye utilidades para filtrar casos por ID o rol, detectar rechazos por límite de contexto y rastrear cambios térmicos del servidor basados en cambios de PID. La interfaz de línea de comandos se configura mediante `add_parser`, permitiendo una ejecución controlada y reproducible del benchmark.
+
+[local-delegate warning: salida truncada por max_tokens en 1 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 59966 chars ≈ 29539 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

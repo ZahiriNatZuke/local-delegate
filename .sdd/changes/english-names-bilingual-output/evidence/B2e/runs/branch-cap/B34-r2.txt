@@ -1,0 +1,13 @@
+Resumen de Problemas:
+
+El análisis revela errores relacionados con la ubicación de archivos de modelo. Se identificaron fallos al intentar estimar el uso de VRAM para varios modelos.
+
+**Archivo MODELOS\gemma-3-4b-it-Q4_K_M.gguf**: Error al encontrar el archivo para gemma3-4b.
+**Archivo MODELOS\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf**: Error al encontrar el archivo para gemma4-26b-a4b.
+**Archivo MODELOS\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf**: Error al encontrar el archivo para qwen36-35b-a3b.
+**Archivo MODELOS\Qwen3.5-2B-UD-Q8_K_XL.gguf**: Error al encontrar el archivo para qwen35-2b.
+**Archivo MODELOS\gemma-4-12b-it-Q4_K_M.gguf**: Error al encontrar el archivo para gemma4-12b.
+
+El grupo 'resident' presenta un uso total de 0,00 GiB de VRAM, y el grupo 'swap' también 0,00 GiB.  Se reporta un margen de 6,50 GiB disponibles.  El total peor caso de VRAM es de 0,00 GiB.
+
+(read server-side: 727 chars ≈ 378 Claude tokens that did not enter your context)

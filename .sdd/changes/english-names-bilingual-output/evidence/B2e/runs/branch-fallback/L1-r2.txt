@@ -1,0 +1,45 @@
+**Resumen de problemas por archivo**
+
+**src/local_delegate/web/metrics.py**
+* **Línea demasiado larga (E501)**: 178
+* **Falta anotación de tipo de retorno para función pública (ANN201)**: 16
+* **Cadena con símbolo ambiguo (RUF001)**: 13
+* **Error en docstring (D205, D209, D103)**: 10
+* **Falta coma final (COM812)**: 7
+* **Acceso a miembro privado (SLF001)**: 9
+* **Captura de excepción ciega (BLE001)**: 3
+* **Uso de la sentencia global desaconsejado (PLW0603)**: 2
+* **Otros**: 1 error de `print` (T201), 1 de importación en nivel superior (PLC0415), 1 de sugerencia de bloque `else` (TRY300), 1 de uso de `try-except-pass` (S110), 1 de uso de `contextlib.suppress` (SIM105) y 1 de detección de `try-except-pass` (S110).
+
+**src/local_delegate/server.py**
+* **Coma final faltante**: 15
+* **Falta anotación de tipo para argumento de función**: 10
+* **Demasiados argumentos en definición de función**: 8
+* **Falta línea en blanco entre resumen y descripción**: 8
+* **Primera línea de docstring debe estar en modo imperativo**: 7
+* **Falta línea en blanco tras última sección**: 7
+* **Argumento posicional de tipo booleano en definición de función**: 6
+* **Línea demasiado larga**: 5
+* **Complejidad excesiva**: 5
+* **Comillas de cierre de docstring multilínea en línea separada**: 4
+* **Uso de valor mágico en comparación**: 4
+* **Demasiadas sentencias**: 3
+* **Uso de `r"""` si hay barras invertidas en docstring**: 3
+* **Demasiadas ramificaciones**: 2
+* **Otros**: Uso de `assert`, importación en nivel superior, uso de `open()` en lugar de `Path.open()`, captura de excepción ciega, uso de `global` y caracteres ambiguos.
+
+**src/local_delegate/web/sysinfo.py**
+* **`subprocess.run` sin argumento `check` explícito (PLW1510)**: 4
+* **Inicio de proceso con ruta de ejecutable parcial (S607)**: 4
+* **Uso de `open()` debe ser reemplazado por `Path.open()` (PTH123)**: 3
+* **Valor mágico usado en comparación (PLR2004)**: 3
+* **Primera palabra del docstring debe estar capitalizada (D403)**: 3
+* **Uso de la sentencia global
+
+Sin mencionar (del log, no los nombra el resumen): src/local_delegate/cli.py, src/local_delegate/checks.py, src/local_delegate/residency.py, src/local_delegate/install.py, src/local_delegate/benchmark.py, src/local_delegate/resources/hooks/hook_common.py, src/local_delegate/legacy_names.py, src/local_delegate/pace.py, ANN401, ANN001, CPY001
+
+[local-delegate warning: salida truncada por max_tokens en 5 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 179890 chars ≈ 93692 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

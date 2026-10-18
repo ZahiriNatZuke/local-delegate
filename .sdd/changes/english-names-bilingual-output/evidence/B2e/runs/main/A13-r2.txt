@@ -1,0 +1,22 @@
+**Local Delegate Doctor Summary**
+
+**File-Based Issue Breakdown:**
+
+*   **LLAMASWAP_EXE:** No errors found.
+*   **LLAMASWAP_CONFIG:** No errors found.
+*   **Backend:** No errors found.
+*   **Hooks:** 3 warnings: LD\_HOOK\_READ\_BLOQUEAR is deprecated (needs renaming to LD\_HOOK\_READ\_BLOCK).  No hooks are copied, orphaned, or registered due to Claude Code not being installed.
+*   **MCP Clients:** 8 clients observed (claude-ai, claude-code, local-agent-mode-local-delegate, mcp, mcp-remote, codex-mcp-client). No errors found.
+*   **Cost & Padding:** 159 rows judged with the price table (2026-10-06). No errors found.
+*   **Test Windows:** 67 windows, none open. No errors found.
+*   **Skill Local Delegation:** 2 skills (Claude Code, opencode) are missing clients.
+*   **Memory:** 3 clients (Claude Code, Codex, opencode) are missing clients.
+*   **MCP in Claude Code/Codex/opencode:** Claude Code, Codex, and opencode clients are not installed.
+*   **Daemon:** The daemon is running (local-delegate 0.35.0).
+*   **Backend Credentials/Tokens:** The backend requires credentials and tokens, but no MCP entries are present.
+*   **Claude Desktop:** Claude Desktop is not configured.
+*   **Versions:** llama-swap and llama-server are up to date.  A warning exists regarding the affinity configuration (gemma4-26b-a4b) and recommends using benchmarks or re-measuring the footprint.
+
+**Total Warnings:** 2
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

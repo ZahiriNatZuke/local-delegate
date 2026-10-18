@@ -1,0 +1,9 @@
+**Summary of Issues by File:**
+
+The provided output indicates several issues related to system changes and prompt updates stemming from version 0.36.0, all categorized as “frontera declarada”.
+
+**Issues:**
+
+*   **resumen-md-2k, resumen-md-10k, resumen-changelog-7k, commit-diff-19k, techo-commit-156k:** These files contain a total of eleven entries, all representing changes related to `max_tokens` and prompt modifications introduced in version 0.36.0. These changes are considered “frontera declarada”.
+
+(leído server-side: 587 chars ≈ 305 tokens de Claude que no entraron a tu contexto)

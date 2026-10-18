@@ -1,0 +1,9 @@
+El código implementa una interfaz de línea de comandos (CLI) robusta para gestionar la instalación, actualización y desinstalación de clientes, así como el control de un daemon MCP y la integración con LlamaSwap. La estructura se basa en `argparse`, orquestada por la función `run`, que maneja la internacionalización y la ejecución de subcomandos.
+
+Las funciones principales (`cmd_install`, `cmd_update`, `cmd_uninstall`) delegan en `_run_install` para orquestar acciones, gestionar opciones y verificar dependencias como la terminal o la presencia del CLI en el PATH. También incluye utilidades para resolver configuraciones de Codex y manejar advertencias de depreciación.
+
+Por otro lado, el módulo gestiona profundamente la interacción con el daemon de LlamaSwap. Funciones como `_daemon_status`, `_daemon_url` y `_daemon_watch` facilitan la comunicación HTTP asíncrona para monitorear el estado y esperar resultados de operaciones. La lógica de configuración se centra en `cmd_init_llamaswap` y `cmd_llamaswap_residency`, que validan presupuestos de VRAM/RAM, analizan especificaciones de modelos y escriben configuraciones de forma atómica, restaurando estados previos si hay errores. Además, incluye herramientas de diagnóstico como `cmd_recompute_cost` para recalcular cuotas y `cmd_test_window` para gestionar ventanas de tiempo en logs. En resumen, es un sistema de gestión integral que combina instalación de software, monitoreo de servicios en tiempo real y gestión de recursos de inferencia de IA.
+
+(leído server-side: 58875 chars ≈ 29002 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)

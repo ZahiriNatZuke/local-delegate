@@ -1,0 +1,70 @@
+**Resumen de pruebas por archivo**
+
+**tests/test_update.py**
+* 73 pruebas sobre lógica de actualización, reparación de servicios, gestión de ganchos y detección de mecanismos de registro.
+
+**tests/test_analyze_benchmark.py**
+* 86 pruebas sobre análisis de rendimiento, latencia, pruebas de significancia y validación de archivos.
+
+**tests/test_metrics.py**
+* 63 pruebas sobre disponibilidad del backend, estadísticas de uso, contabilidad de tokens y gestión de registros.
+
+**tests/test_checks.py**
+* 62 pruebas de diagnóstico sobre instalaciones, versiones, credenciales y estado del backend.
+
+**tests/test_affinity.py**
+* 48 pruebas sobre afinidad de modelos, gestión de colas, uso de roles y errores de capacidad.
+
+**tests/test_install.py**
+* 46 pruebas sobre existencia de recursos, escritura de ganchos, rutas en Windows e idempotencia.
+
+**tests/test_llamaswap_config.py**
+* 45 pruebas sobre carga de configuración, estimación de memoria y validación de archivos GGUF.
+
+**tests/test_web_auth.py**
+* 36 pruebas de autenticación web, encabezados de seguridad, tokens y gestión de sesiones.
+
+**tests/test_adoption_experiment.py**
+* 34 pruebas sobre experimentos de adopción, costos y reproducibilidad de planes.
+
+**tests/test_benchmark.py**
+* 34 pruebas sobre métricas de rendimiento, análisis de Prometheus y errores de JSON.
+
+**tests/test_attribution.py**
+* 33 pruebas sobre atribución, gestión de notas y resolución de subagentes.
+
+**tests/test_measure_cooldown.py**
+* 31 pruebas sobre reglas de enfriamiento, manejo de fallos y generación de informes.
+
+**tests/test_measure_slowness.py**
+* 31 pruebas sobre medición de lentitud, ventanas de tokens y códigos de parada.
+
+**tests/test_pace.py**
+* 31 pruebas sobre medición de ritmo, entradas inválidas y registros de eventos.
+
+**tests/test_install_opencode.py**
+* 31 pruebas sobre gestión de directorios según XDG y manejo de archivos JSONC.
+
+**tests/test_install_clients.py**
+* 27 pruebas sobre simulación de directorios, detección de clientes y reportes de estado.
+
+**tests/test_chains.py**
+* 26 pruebas sobre cadenas de ejecución, saltos entre modelos y disponibilidad de miembros.
+
+**tests/test_install_timeouts.py**
+* 23 pruebas sobre persistencia de tiempos de espera en clientes y modos de ejecución.
+
+**tests/test_vendor.py**
+* 21 pruebas de integridad de archivos, validación de manifiestos y detección de vulnerabilidades.
+
+**tests/test_affinity_batch.py**
+* 18 pruebas sobre procesamiento por lotes, conteo de peticiones y gestión de ventanas de tiempo.
+
+**tests/test_boilerplate_output.py**
+* 19 pruebas sobre salida de código base,
+
+[local-delegate warning: salida truncada por max_tokens en 4 de 8 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 206985 chars ≈ 107804 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 8 pasadas por local-delegate)
