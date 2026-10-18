@@ -6,6 +6,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Añade
+
+- **El panel en español o en inglés, por visitante.** Selector `ES`/`EN` en la cabecera; la
+  elección se guarda en el navegador (`ld-lang`) y, sin ella, el panel sigue al idioma del
+  navegador (español si empieza por `es`, inglés si no). El mismo daemon sirve a la vez a un
+  visitante en cada idioma: lo que redacta el servidor (causas del backend, motivos del coste y de
+  la cuota, roles y resumen de cada tool) llega con `?lang=` en los `/api/*`. Números y fechas con
+  los separadores de cada idioma. Todo el texto del panel vive en el catálogo `panel.*`.
+
 ### Cambia
 
 - **Afinidad: `local_lint_summary` ya no se va a `gemma4-26b-a4b` aunque esté cargado.** Su celda
@@ -15,6 +24,11 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `qwen36-35b-a3b` tampoco llega. Antes la celda estaba aprobada, pero desde la orden de idioma su
   huella ya no coincidía y `doctor` avisaba «afinidad sin base»; ahora no hay celda y no avisa.
   Quedan tres celdas (traducir con los dos alternativos y `local_delegate` con el 26B).
+- **«Procesos del backend» ya no cuenta los `llama-swap` de los tests.** Solo el que escucha en el
+  puerto de `LOCAL_DELEGATE_BASE_URL`; la línea de órdenes de cada `llama-swap` se lee en segundo
+  plano (PowerShell en Windows, `/proc` en Linux).
+- **`/api/stats`: las claves de `cost.bar.excluded_by_reason` son valores de máquina**
+  (`not_claude`, `tests`) en vez de prosa en español.
 
 - **`local_commit_msg` escribe siempre un cuerpo** de 2 a 6 viñetas que dicen qué cambia y para
   qué, también en el paso final del map-reduce. Topes: 700 tokens en la llamada única (antes 256) y
