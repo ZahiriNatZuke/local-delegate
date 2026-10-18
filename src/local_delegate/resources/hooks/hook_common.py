@@ -389,8 +389,89 @@ _SPANISH = re.compile(r"^es(?![a-z])", re.IGNORECASE)
 # Idioma primario de un LANGID de Windows (los 10 bits bajos), por si `windows_locale` no lo trae.
 _WINDOWS_PRIMARY_LANGUAGES = {0x0A: "es", 0x09: "en"}
 
-# Textos de los hooks (REQ-030/031), en ASCII. Los llena B3; el guardian de paridad ya los cubre.
-HOOK_TEXTS: dict[str, dict[str, str]] = {"es": {}, "en": {}}
+# Textos de los hooks (REQ-030/031). Los hooks no pueden importar el paquete, asi que su catalogo
+# vive aqui. En ASCII (i18n, punto 1e): una consola de Windows en cp1252 convertia la raya del
+# motivo del bloqueo en basura. `tests/test_i18n_parity.py` exige las mismas claves, marcadores e
+# identificadores entre comillas invertidas en los dos idiomas. Las frases "y es prosa" y "de prosa
+# al contexto" (y sus equivalentes en ingles) las busca `scripts/_claude_bench.py` para reconocer
+# un bloqueo en un transcript: no se cambian sin cambiar alli `BLOCK_MARKERS`.
+HOOK_TEXTS: dict[str, dict[str, str]] = {
+    "es": {
+        "prompt.mechanical": (
+            "Oportunidad mecanica detectada ({category}). Antes de leer contenido grande, evalua "
+            "usar la tool local_* especifica con path. Conserva en Claude cualquier parte que "
+            "exija criterio, varias fuentes, tools externas o acciones de riesgo."
+        ),
+        "read.block": (
+            "Este archivo pesa {size_kb} KB y es prosa. Pasalo por una tool local con "
+            '`path="{path}"`: `local_summarize` para el contenido, `local_extract` para campos '
+            "concretos, `local_translate` o `local_explain_code`. Asi no entra al contexto.\n\n"
+            "Si de verdad necesitas el texto literal (lineas exactas para citar o editar), "
+            "leelo por franjas con `offset` y `limit`, que no se bloquean."
+        ),
+        "read.suggest": (
+            "{strength}: este archivo pesa {size_kb} KB. Si necesitas una transformacion global "
+            "(resumen, campos, traduccion o explicacion), usa {target} para que no entre al "
+            "contexto. Leelo directamente si necesitas lineas exactas para razonar o editar."
+        ),
+        "read.strength.strong": "Recomendacion fuerte",
+        "read.strength.suggest": "Sugerencia",
+        "read.target.any": "una tool local_* con path",
+        "read.target.data": "local_extract con path, si lo que buscas son campos concretos",
+        "shell.block": (
+            "Este comando vuelca {size_kb} KB de prosa al contexto. Pasalo por una tool local "
+            'con `path="{path}"`: `local_summarize` para el contenido, `local_extract` para '
+            "campos concretos.\n\n"
+            "Si necesitas el texto literal, pide solo el trozo que te hace falta (`sed -n`, "
+            "`head -n`, `Get-Content -TotalCount`), que no se bloquean."
+        ),
+    },
+    "en": {
+        "prompt.mechanical": (
+            "Mechanical task detected ({category}). Before reading large content, consider the "
+            "specific local_* tool with path. Keep in Claude any part that needs judgment, "
+            "several sources, external tools or risky actions."
+        ),
+        "read.block": (
+            "This file is {size_kb} KB and it is prose. Pass it to a local tool with "
+            '`path="{path}"`: `local_summarize` for the content, `local_extract` for specific '
+            "fields, `local_translate` or `local_explain_code`. That way it does not enter the "
+            "context.\n\n"
+            "If you really need the literal text (exact lines to quote or edit), read it in "
+            "ranges with `offset` and `limit`, which are not blocked."
+        ),
+        "read.suggest": (
+            "{strength}: this file is {size_kb} KB. If you need a global transformation "
+            "(summary, fields, translation or explanation), use {target} so that it does not "
+            "enter the context. Read it directly if you need exact lines to reason or edit."
+        ),
+        "read.strength.strong": "Strong recommendation",
+        "read.strength.suggest": "Suggestion",
+        "read.target.any": "a local_* tool with path",
+        "read.target.data": "local_extract with path, if what you need are specific fields",
+        "shell.block": (
+            "This command dumps {size_kb} KB of prose into the context. Pass it to a local tool "
+            'with `path="{path}"`: `local_summarize` for the content, `local_extract` for '
+            "specific fields.\n\n"
+            "If you need the literal text, ask only for the part you need (`sed -n`, "
+            "`head -n`, `Get-Content -TotalCount`), which are not blocked."
+        ),
+    },
+}
+
+
+def hook_language() -> str:
+    """El idioma de los textos del hook: la regla del paquete con el mismo `LOG_DIR` que el daemon."""
+    return resolve_language(log_dir()).lang
+
+
+def hook_text(key: str, /, lang: str | None = None, **values: object) -> str:
+    """El texto de `key` en `lang` (por defecto, el vigente), interpolado con nombre.
+
+    Los valores se insertan tal cual: una ruta con llaves no se vuelve a interpretar.
+    """
+    texts = HOOK_TEXTS.get(lang or hook_language()) or HOOK_TEXTS["en"]
+    return texts[key].format(**values)
 
 
 class LanguageResolution(NamedTuple):

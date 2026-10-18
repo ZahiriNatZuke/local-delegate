@@ -7,7 +7,7 @@ import json
 import re
 import sys
 
-from hook_common import block_state, context_of, emit, record
+from hook_common import block_state, context_of, emit, hook_text, record
 
 _CATEGORIES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("summarize", re.compile(r"\b(resum|sintetiz|summary|summarize)\w*\b", re.IGNORECASE)),
@@ -69,11 +69,7 @@ def main() -> None:
     if category is None:
         record("UserPromptSubmit", suggested=False, prompt_chars=len(prompt), **common)
         return
-    context = (
-        f"Oportunidad mecanica detectada ({category}). Antes de leer contenido grande, evalua "
-        "usar la tool local_* especifica con path. Conserva en Claude cualquier parte que exija "
-        "criterio, varias fuentes, tools externas o acciones de riesgo."
-    )
+    context = hook_text("prompt.mechanical", category=category)
     emit("UserPromptSubmit", context, category=category, prompt_chars=len(prompt), **common)
 
 

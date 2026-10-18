@@ -30,6 +30,7 @@ from hook_common import (
     context_of,
     cooled_model,
     deny,
+    hook_text,
     new_id,
     path_digest,
     record,
@@ -176,11 +177,7 @@ def main() -> None:
     # propio directorio y no encontraría el fichero.
     deny(
         "PreToolUse",
-        f"Este comando vuelca {size_kb:.0f} KB de prosa al contexto. Pasalo por una tool local "
-        f'con `path="{path}"`: `local_summarize` para el contenido, `local_extract` para campos '
-        "concretos.\n\n"
-        "Si necesitas el texto literal, pide solo el trozo que te hace falta —`sed -n`, "
-        "`head -n`, `Get-Content -TotalCount`— que no se bloquean.",
+        hook_text("shell.block", size_kb=f"{size_kb:.0f}", path=path),
         reason="large_prose",
         id=block_id,
         **common,

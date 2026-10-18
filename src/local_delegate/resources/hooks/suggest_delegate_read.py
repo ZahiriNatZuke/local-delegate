@@ -67,6 +67,7 @@ from hook_common import (
     cooled_model,
     deny,
     emit,
+    hook_text,
     new_id,
     path_digest,
     record,
@@ -301,28 +302,17 @@ def main() -> None:
             record_block(common["id"], file_path)
             deny(
                 "PreToolUse",
-                f"Este archivo pesa {size_kb:.0f} KB y es prosa. Pasalo por una tool local con "
-                f'`path="{file_path}"`: `local_summarize` para el contenido, `local_extract` '
-                "para campos concretos, `local_translate` o `local_explain_code`. Asi no entra al "
-                "contexto.\n\n"
-                "Si de verdad necesitas el texto literal —lineas exactas para citar o editar—, "
-                "leelo por franjas con `offset` y `limit`, que no se bloquean.",
+                hook_text("read.block", size_kb=f"{size_kb:.0f}", path=file_path),
                 reason="large_prose",
                 **common,
             )
             return
 
-    strength = "Recomendacion fuerte" if band == "strong" else "Sugerencia"
-    target = (
-        "una tool local_* con path"
-        if ext not in DATA_EXTENSIONS
-        else "local_extract con path, si lo que buscas son campos concretos"
-    )
+    strength = hook_text(f"read.strength.{band}")
+    target = hook_text("read.target.data" if ext in DATA_EXTENSIONS else "read.target.any")
     emit(
         "PreToolUse",
-        f"{strength}: este archivo pesa {size_kb:.0f} KB. Si necesitas una transformacion "
-        f"global (resumen, campos, traduccion o explicacion), usa {target} para "
-        "que no entre al contexto. Leelo directamente si necesitas lineas exactas para razonar o editar.",
+        hook_text("read.suggest", strength=strength, size_kb=f"{size_kb:.0f}", target=target),
         **common,
     )
 

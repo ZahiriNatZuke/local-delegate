@@ -44,7 +44,7 @@ SURFACE_OWNERS = {
     "install": "B5",
 }
 #: Superficies cuya ola ya vació su lista: su fichero de pendientes se borra (decisión 9 de B1).
-CLOSED_SURFACES = frozenset({"doctor", "cli", "mcp", "panel"})
+CLOSED_SURFACES = frozenset({"doctor", "cli", "mcp", "panel", "hooks"})
 #: Scripts del repo que entran en el alcance: sus rótulos los imprime B1 (A-close-5).
 SCRIPTS_IN_SCOPE = ("measure_cooldown.py", "pair_sheet.py", "analyze_benchmark.py")
 #: El escáner del panel (literales del JS y texto y atributos del HTML de `web/metrics.py`) lo
@@ -104,7 +104,12 @@ TEXT_KEYWORDS = frozenset(
     }
 )
 #: Funciones del catálogo: su primer argumento (el segundo en `t_lang`) es una clave, no un texto.
-CATALOG_CALLS = {"t": 0, "t_lang": 1}
+CATALOG_CALLS = {"t": 0, "t_lang": 1, "hook_text": 0}
+#: Catálogos que viven en el código y no en `resources/i18n/` (fichero, nombre de la constante): los
+#: hooks no pueden importar el paquete y llevan sus textos dentro (REQ-030). Van atados a su fichero
+#: para que otra constante con el mismo nombre no esconda texto; la paridad y el ASCII de este
+#: catálogo los vigila `tests/test_i18n_parity.py`.
+INLINE_CATALOGS = frozenset({("src/local_delegate/resources/hooks/hook_common.py", "HOOK_TEXTS")})
 # (2) el mensaje de `raise`, (4) el valor de `return` y (5) las constantes de módulo o de clase
 # con texto se tratan en `_output_nodes`.
 
@@ -175,6 +180,18 @@ def _catalog_key_ids(tree: ast.AST) -> set[int]:
     return ids
 
 
+def _inline_catalog_ids(tree: ast.Module, rel: str) -> set[int]:
+    """Todos los nodos bajo el valor de un catálogo en código de `INLINE_CATALOGS`."""
+    names = {name for file, name in INLINE_CATALOGS if file == rel}
+    ids = set()
+    for stmt in tree.body:
+        if isinstance(stmt, ast.AnnAssign | ast.Assign) and stmt.value is not None:
+            targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]
+            if any(isinstance(t, ast.Name) and t.id in names for t in targets):
+                ids.update(id(node) for node in ast.walk(stmt.value))
+    return ids
+
+
 def _output_nodes(tree: ast.Module) -> list[ast.AST]:
     """Las raíces de los contextos de salida; sus literales se recorren por debajo."""
     roots: list[ast.AST] = []
@@ -237,7 +254,7 @@ def scan_source(source: str, rel: str) -> list[Hit]:
     literal de Python sino con `scan_panel`, con las líneas del fichero.
     """
     tree = ast.parse(source)
-    skip = _docstring_ids(tree) | _catalog_key_ids(tree)
+    skip = _docstring_ids(tree) | _catalog_key_ids(tree) | _inline_catalog_ids(tree, rel)
     hits: set[Hit] = set()
     for node in _template_nodes(tree, PANEL_TEMPLATES.get(rel, frozenset())):
         skip.add(id(node))
@@ -702,3 +719,21 @@ def test_the_panel_template_is_scanned_through_scan_source():
         )
         + 1
     )
+
+
+def test_the_hook_catalog_is_skipped_only_in_its_file():
+    """`HOOK_TEXTS` es el catálogo de los hooks (REQ-030) solo en `hook_common.py`.
+
+    Control positivo: la misma constante en otro fichero se caza, para que el nombre no sirva de
+    escondite.
+    """
+    source = 'HOOK_TEXTS = {"es": {"a.b": "Hola, mundo"}}\nLABELS = {"x": "otra cosa"}'
+    catalog_file = "src/local_delegate/resources/hooks/hook_common.py"
+    texts = [hit.text for hit in scan_source(source, catalog_file) if hit.net == "context"]
+    assert texts == ["otra cosa"]
+    elsewhere = [hit.text for hit in scan_source(source, "x.py") if hit.net == "context"]
+    assert "Hola, mundo" in elsewhere
+
+
+def test_a_hook_text_key_is_not_caught():
+    assert _texts('print(hook_text("read.block", size_kb="1", path="p"))') == []
