@@ -10,7 +10,7 @@
     "fires": [
      ">       assert all(f\"cmd-zz{i}\" in reduce_user for i in range(14))",
      "E       assert False",
-     "E        +  where False = all(<generator object test_the_explain_reduce_inventory_names_the_registered_subcommands.<locals>.<genexpr> at 0x0000022A92E398C0>)"
+     "E        +  where False = all(<generator object test_the_explain_reduce_inventory_names_the_registered_subcommands.<locals>.<genexpr> at 0x00000246790A57E0>)"
     ]
    }
   ]

@@ -56,7 +56,7 @@ def captured(monkeypatch, tmp_path) -> list[dict]:
     monkeypatch.setattr(config, "FEEDBACK_ENABLED", False)
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
-    monkeypatch.setattr(config, "DUMP_CHUNK_NOTES_DIR", None)
+    monkeypatch.delenv("LOCAL_DELEGATE_DUMP_CHUNK_NOTES", raising=False)
     monkeypatch.setenv("LOCAL_DELEGATE_LANG", "es")
     monkeypatch.delenv("LOCAL_DELEGATE_OUTPUT_LANGUAGE", raising=False)
     i18n.reset()
@@ -363,7 +363,7 @@ def test_the_dump_of_the_notes_is_off_by_default(captured, tmp_path):
 def test_the_dump_writes_each_step_with_its_text_to_a_local_file(monkeypatch, captured, tmp_path):
     """Mutant "no dump": the file assert fails."""
     folder = tmp_path / "notes"
-    monkeypatch.setattr(config, "DUMP_CHUNK_NOTES_DIR", str(folder))
+    monkeypatch.setenv("LOCAL_DELEGATE_DUMP_CHUNK_NOTES", str(folder))
     server.local_explain_code(code=_four_pieces())
     (dump,) = folder.glob("local_explain_code-*.json")
     data = json.loads(dump.read_text(encoding="utf-8"))

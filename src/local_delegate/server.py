@@ -3154,7 +3154,8 @@ def _dump_chunk_notes(
     this machine and nothing else: the usage log keeps the steps without their text. Best effort,
     like the log: a folder that cannot be written never breaks the tool.
     """
-    try:
+    # Best effort, like the usage log: a folder that cannot be written never breaks the tool.
+    with suppress(OSError, ValueError):
         stamp = _utcnow().strftime("%Y%m%dT%H%M%S%fZ")
         target = Path(folder) / f"{tool}-{stamp}-{entry_id}.json"
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -3163,8 +3164,6 @@ def _dump_chunk_notes(
             "steps": [dict(step, text=text) for step, text in zip(steps, texts, strict=False)],
         }
         target.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    except (OSError, ValueError):
-        pass
 
 
 def _chat_map_reduce(
@@ -3257,6 +3256,7 @@ def _chat_map_reduce(
     # goes only to the local dump of `LOCAL_DELEGATE_DUMP_CHUNK_NOTES` when it is on.
     steps: list[dict] = []
     step_texts: list[str] = []
+    dump_dir = config.dump_chunk_notes_dir()
 
     def _one(sys_prompt: str, user: str, max_tokens: int, kind: str = "map") -> str | None:
         nonlocal calls, latency_ms, tokens_in, tokens_out, failed, truncated_calls, raw_chars
@@ -3283,7 +3283,7 @@ def _chat_map_reduce(
                 "finish_reason": result.finish_reason,
             }
         )
-        if config.DUMP_CHUNK_NOTES_DIR:
+        if dump_dir:
             step_texts.append(result.text if result.ok else "")
         if not result.ok:
             failed = result
@@ -3493,8 +3493,8 @@ def _chat_map_reduce(
         steps=steps,
         **current.log_fields(failed),
     )
-    if config.DUMP_CHUNK_NOTES_DIR:
-        _dump_chunk_notes(config.DUMP_CHUNK_NOTES_DIR, tool, entry_id, steps, step_texts)
+    if dump_dir:
+        _dump_chunk_notes(dump_dir, tool, entry_id, steps, step_texts)
     if report is not None:
         report.update(
             truncated_calls=truncated_calls if ok else 0,

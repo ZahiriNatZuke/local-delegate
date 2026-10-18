@@ -58,7 +58,7 @@ MUTANTS = [
         SERVER,
         [
             (
-                "    if config.DUMP_CHUNK_NOTES_DIR:\r\n        _dump_chunk_notes(",
+                "    if dump_dir:\r\n        _dump_chunk_notes(",
                 "    if False:\r\n        _dump_chunk_notes(",
             )
         ],
