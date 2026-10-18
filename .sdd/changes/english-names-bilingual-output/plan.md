@@ -2094,6 +2094,28 @@ están todos) y antes de B3/B4.
     registra.
   - *`localStorage` bloqueado:* el selector funciona durante la visita y no hay errores en
     consola.
+- **Decisiones del usuario del 2026-10-18 (antes de implementar):**
+  1. **«Procesos del backend» deja de contar los `llama-swap.exe` que lanzan los tests**: solo
+     los del backend real. Como `tests/fake_llamaswap.py` lanza el mismo ejecutable que el real,
+     ni el nombre ni la ruta los distinguen; los distingue el puerto de `-listen` de su línea de
+     órdenes, que en las pruebas es un puerto libre y en el real es el de `LOCAL_DELEGATE_BASE_URL`.
+     Toca `web/sysinfo.py` (fuera de la lista «posee» de arriba; se añade a B4 por esta
+     decisión). Con test y mutante.
+  2. **El aspecto del panel no se le pregunta al usuario**: se aplican las reglas de dashboard de
+     la memoria `panel-es-un-dashboard` (sin prosa, la información en diálogo, tipografía coherente
+     y modo oscuro), el selector se integra en ese estilo y se verifica con capturas de Playwright
+     en claro y oscuro, en `es` y en `en`, guardadas en `evidence/B4/screenshots/`.
+- **Decisiones de implementación (2026-10-18):**
+  - `attribution.test_reason` y `exclusion_reason` devuelven valores de máquina (`tests`,
+    `not_claude`) en vez de prosa en español usada como valor (REQ-033); nada los persiste: solo
+    viajan como claves de `excluded_by_reason` en `/api/stats`.
+  - `quota.status`, `quota.criterion` y `valuation.cost_block` reciben `language`; sin él, el idioma
+    del proceso (el CLI de `recompute-cost` sigue igual).
+  - El `detail` de `server.probe_backend` llega ya redactado en el idioma del proceso y `server.py`
+    no es de B4: `metrics.py` lo vuelve a redactar con `failures.detail(…, language=…)` cuando el
+    visitante pide el otro idioma, con el nombre de la excepción sacado del propio texto.
+  - Los mensajes de la vigía (`/api/llamaswap/watch`) los lee el CLI de residencia, no el panel:
+    salen en el idioma del proceso del daemon (`i18n.t`).
 
 #### B5 — `install`, skill, bloques y preferencia
 
