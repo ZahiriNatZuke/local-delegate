@@ -1,0 +1,9 @@
+**Summary of Issues by File:**
+
+The provided output indicates several changes related to prompt updates from version 0.36.0, impacting various files. The primary issue revolves around a **"frontera declarada"** (declared frontier) change.
+
+Specifically, there are multiple occurrences of changes related to **`max_tokens`** across several files, including `pesado`, `resumen-md-2k`, `resumen-md-10k`, `resumen-changelog-7k` and `commit-diff-19k`, `techo-commit-156k`.  These changes are categorized as system modifications.
+
+The output reports a total of eleven lines, including the initial line indicating the completion of the run.  No specific error or rule counts are provided within the given text.
+
+(leído server-side: 587 chars ≈ 305 tokens de Claude que no entraron a tu contexto)

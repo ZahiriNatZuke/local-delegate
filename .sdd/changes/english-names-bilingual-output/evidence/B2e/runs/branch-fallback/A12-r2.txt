@@ -1,0 +1,9 @@
+**Summary of Issues by File:**
+
+The provided output indicates several issues related to system changes and prompt updates stemming from version 0.36.0, all categorized under the label "frontera declarada".
+
+Specifically, there are eleven entries detailing modifications concerning the `max_tokens` parameter. These changes are present in files named `pesado`, `resumen-md-2k`, `resumen-md-10k`, `resumen-changelog-7k`, and `commit-diff-19k`, and `techo-commit-156k`.  
+
+The `pesado` file contains a total of eleven lines.  Each of the other files listed also contains eleven lines.  These issues appear to be related to adjustments made to the prompts within the system, likely impacting the maximum token length allowed.
+
+(leído server-side: 587 chars ≈ 305 tokens de Claude que no entraron a tu contexto)

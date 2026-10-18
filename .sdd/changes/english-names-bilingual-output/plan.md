@@ -1847,6 +1847,13 @@ del cambio del ruido del modelo (8 llamadas de prompt idéntico dieron 22 frente
   local_explain_code`, clave `C-r<k>-explain_code`) se miden cuando el usuario avise, en `main` y en
   la rama, en la misma sesión. **El veredicto de B2e queda PENDIENTE** de esa tanda: esta solo da el
   de la parte de lint y el del control.
+- **Resultado de la parte de lint (2026-10-18, `evidence/B2e/live.md`): NO llega.** Rama: códigos
+  0,33, ficheros 0,52, fidelidad 1,40, 10 cortadas de 15 (`main`: 0,00 / 0,10 / 0,13 / 9). Con el
+  respaldo «sin mencionar» (`af879da`, segunda ronda con el mismo criterio): 1,00 / 1,00 / 0,87 / 9
+  cortadas; la cobertura pasa por construcción, la fidelidad y los cortes no. El control (prompts
+  idénticos) varía menos que el efecto. Los cortes son del paso final en L1–L3 (6 y 8 trozos) con
+  los topes fijos: **decisión del usuario pendiente** (tope del paso final del lint troceado,
+  límite conocido o criterio).
 - **Cierre del lote:** suite completa en `es` y en `en`, `ruff`, corpus y afinidad (cambian los
   prompts del reduce de lint y de `explain_code`: frontera en `PROMPT_BOUNDARIES` con su motivo),
   CHANGELOG, y registro en `waves/B2e.md` con las llamadas `local_*`.

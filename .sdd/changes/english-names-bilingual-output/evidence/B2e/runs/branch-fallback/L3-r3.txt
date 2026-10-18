@@ -1,0 +1,57 @@
+Aquí tienes el resumen de las pruebas ejecutadas, agrupadas por archivo:
+
+**tests/test_metrics.py**
+* 65 pruebas sobre la rotación de archivos de registro, disponibilidad del backend, estadísticas de uso, contabilidad de tokens y visualización del panel de control.
+
+**tests/test_install.py**
+* 47 pruebas sobre la existencia de recursos, escritura de hooks, gestión de rutas en Windows, idempotencia de la instalación, desinstalación y migración de entradas heredadas.
+
+**tests/test_llamaswap_config.py**
+* 46 pruebas sobre la carga de configuración, estimación de memoria VRAM y RAM, validación de archivos GGUF y gestión de grupos de modelos.
+
+**tests/test_install_clients.py**
+* 27 pruebas sobre la simulación de directorios de inicio, detección de clientes presentes, configuración automática, comportamiento de desinstalación y reportes de estado.
+
+**tests/test_install_timeouts.py**
+* 23 pruebas sobre la persistencia de tiempos de espera en diferentes clientes y modos, y la visualización de estos mediante el comando doctor.
+
+**tests/test_install_opencode.py**
+* 31 pruebas sobre la detección de directorios mediante XDG, manejo de comentarios en archivos JSONC, sintaxis de entrada para Opencode y procesos de actualización o desinstalación.
+
+**tests/test_measure_cooldown.py**
+* 31 pruebas sobre las reglas de enfriamiento, manejo de episodios, informes de errores y compatibilidad con versiones antiguas de las opciones.
+
+**tests/test_measure_slowness.py**
+* 31 pruebas sobre la medición de lentitud mediante ventanas de tiempo, gestión de tokens, umbrales de velocidad y códigos de parada.
+
+**tests/test_pace.py**
+* 31 pruebas.
+
+**tests/test_install_header.py**
+* 18 pruebas sobre la preservación de encabezados existentes, gestión de variables de entorno para tokens web y rechazo de banderas duplicadas.
+
+**tests/test_map_reduce.py**
+* 18 pruebas sobre el resumen de documentos largos, manejo de fallos en el backend, detección de desbordamientos de tokens y reintentos de división de fragmentos.
+
+**tests/test_measure_adoption.py**
+* 16 pruebas sobre la medición de delegaciones, manejo de registros corruptos y consistencia entre versiones de scripts.
+
+**tests/test_load_probe.py**
+* 15 pruebas sobre la traducción de muestras a estados de carga, manejo de temporizadores y señales de disponibilidad del modelo.
+
+**tests/test_llamaswap_api.py**
+* 14 pruebas sobre el estado de ejecución, conteo de solicitudes en curso por modelo, manejo de errores 401 y gestión de observadores.
+
+**tests/test_measure_structured_summary.py**
+* 9 pruebas sobre la validación de resúmenes estructurados, orden de títulos y cobertura de secciones.
+
+**tests/test_hooks_telemetry_api.py**
+* 5 pruebas sobre la agrupación de lecturas por extensión, telemetría antigua y consist
+
+Sin mencionar (del log, no los nombra el resumen): tests/test_checks.py, tests/test_analyze_benchmark.py, tests/test_update.py, tests/test_residency.py, tests/test_core.py, tests/test_connection_cause.py, tests/test_topology.py, tests/test_corpus.py, tests/test_structured_summary.py
+
+[local-delegate warning: salida truncada por max_tokens en 4 de 8 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 206985 chars ≈ 107804 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 8 pasadas por local-delegate)

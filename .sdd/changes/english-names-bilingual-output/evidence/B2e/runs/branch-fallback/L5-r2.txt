@@ -1,0 +1,29 @@
+**src/local_delegate/benchmark.py**
+* **Complejidad excesiva**: La función `run_benchmark` tiene demasiadas ramificaciones y sentencias.
+* **Documentación faltante**: Faltan cadenas de documentación en clases públicas, métodos públicos, métodos mágicos, funciones públicas y en el método `__init__`.
+* **Manejo de excepciones**: Errores por usar mensajes largos fuera de la clase de excepción, uso de literales de cadena o f-strings en excepciones y falta de abstracción al lanzar excepciones.
+* **Otros errores**: Se encontraron múltiples instancias de `print`, faltan comas finales, líneas demasiado largas, uso de valores mágicos en comparaciones, valores booleanos posicionales, demasiados argumentos en funciones, importaciones que deben ir en el nivel superior, importaciones de la biblioteca estándar que deben moverse a bloques de comprobación de tipos, llamadas a `subprocess` con entradas no confiables, falta del argumento `check` en `subprocess.run`, errores de formato en cadenas de documentación y problemas en la unión de tipos con `None`.
+
+**src/local_delegate/agents.py**
+* Falta el aviso de derechos de autor.
+* Mover importación de `pathlib.Path` a un bloque de comprobación de tipos.
+* Falta la coma final.
+* La primera línea de la cadena de documentación debe estar en modo imperativo.
+* Uso de valor mágico en una comparación.
+
+**src/local_delegate/autostart.py**
+* Falta el aviso de derechos de autor.
+* La primera línea de la cadena de documentación debe estar en modo imperativo.
+* Llamada a `subprocess`: comprobar la ejecución de entradas no confiables.
+
+**src/local_delegate/__init__.py**
+* Falta el aviso de derechos de autor.
+
+**src/local_delegate/__main__.py**
+* Falta el aviso de derechos de autor.
+
+Sin mencionar (del log, no los nombra el resumen): COM812, TRY003, D102, T201, EM102, CPY001, D107, PLR2004, D101, D105
+
+(leído server-side: 8589 chars ≈ 4473 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 2 partes en 3 pasadas por local-delegate)

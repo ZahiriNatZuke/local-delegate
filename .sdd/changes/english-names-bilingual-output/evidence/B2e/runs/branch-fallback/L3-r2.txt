@@ -1,0 +1,64 @@
+**Resumen de pruebas por archivo**
+
+**tests/test_metrics.py**
+* 68 pruebas de métricas, incluyendo archivos de registro, estados de la API, contabilidad de tokens, uso de recursos y visualización en el panel de control.
+
+**tests/test_install.py**
+* 47 pruebas de instalación, incluyendo gestión de recursos, comandos de shell, manejo de rutas en Windows, idempotencia, desinstalación y migración de entradas heredadas.
+
+**tests/test_llamaswap_config.py**
+* 46 pruebas de configuración de Llamaswap, cubriendo rutas GGUF, estimación de memoria VRAM/RAM, validación de modelos y gestión de grupos.
+
+**tests/test_install_opencode.py**
+* 33 pruebas de configuración de Opencode, incluyendo manejo de directorios XDG, comentarios en archivos JSONC, esquemas de entrada y desinstalación.
+
+**tests/test_measure_cooldown.py**
+* 31 pruebas de reglas de enfriamiento, manejo de episodios y generación de informes.
+
+**tests/test_measure_slowness.py**
+* 31 pruebas de medición de lentitud, incluyendo ventanas de tiempo, umbrales de tokens y códigos de parada.
+
+**tests/test_pace.py**
+* 30 pruebas de medición de ritmo, incluyendo manejo de entradas inválidas y siembra de datos.
+
+**tests/test_install_clients.py**
+* 28 pruebas de configuración de clientes, manejo de rutas de inicio simuladas, detección de clientes presentes y comportamiento de la terminal.
+
+**tests/test_install_timeouts.py**
+* 23 pruebas de gestión de tiempos de espera para diferentes clientes y persistencia de configuraciones.
+
+**tests/test_install_header.py**
+* 18 pruebas sobre la preservación y escritura de encabezados según variables de entorno y banderas.
+
+**tests/test_map_reduce.py**
+* 18 pruebas de la estrategia de reducción de mapas, incluyendo manejo de documentos largos, fragmentación y reintentos.
+
+**tests/test_measure_adoption.py**
+* 16 pruebas de medición de adopción y delegación de bloques.
+
+**tests/test_load_probe.py**
+* 15 pruebas de sondeo de carga y estados de modelos.
+
+**tests/test_llamaswap_api.py**
+* 14 pruebas de la API de Llamaswap, incluyendo estados de ejecución, conteo de modelos y manejo de errores.
+
+**tests/test_pair_sheet.py**
+* 11 pruebas de hojas de comparación, incluyendo validación de respuestas y generación de tablas de veredicto.
+
+**tests/test_measure_structured_summary.py**
+* 9 pruebas de validación de resúmenes estructurados y cobertura de secciones.
+
+**tests/test_hooks_telemetry_api.py**
+* 5 pruebas de telemetría y agrupación de lecturas.
+
+**Otros archivos de prueba**
+* **tests/test_adoption_experiment.py**: validación de tareas, costos y reproducibilidad.
+* **tests/test_affinity.py
+
+Sin mencionar (del log, no los nombra el resumen): tests/test_checks.py, tests/test_analyze_benchmark.py, tests/test_update.py, tests/test_residency.py, tests/test_core.py, tests/test_connection_cause.py, tests/test_topology.py, tests/test_corpus.py, tests/test_structured_summary.py
+
+[local-delegate warning: salida truncada por max_tokens en 3 de 8 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 206985 chars ≈ 107804 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 8 pasadas por local-delegate)

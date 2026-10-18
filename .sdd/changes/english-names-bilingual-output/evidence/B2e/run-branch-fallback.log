@@ -1,0 +1,130 @@
+[pesado] plaza plaza-1 tomada tras 0s: pwsh -NoProfile -File C:\Users\Yohan\.claude\relevos\b2e-measure.ps1 -Step A -Tag branch-fallback
+free RAM before window A [branch-fallback]: 21.3 GB of 31.1
+w-20261018T014733Z
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+Received session ID: 12caaf41b3e6416a83fdc4f58f621e0b
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 202 Accepted"
+HTTP Request: GET http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A11 r1 local_lint_summary chars=810 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A12 r1 local_lint_summary chars=788 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A13 r1 local_lint_summary chars=1181 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A14 r1 local_lint_summary chars=1567 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A15 r1 local_lint_summary chars=633 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A11 r2 local_lint_summary chars=856 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A12 r2 local_lint_summary chars=806 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A13 r2 local_lint_summary chars=1106 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A14 r2 local_lint_summary chars=1549 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A15 r2 local_lint_summary chars=665 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A11 r3 local_lint_summary chars=882 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A12 r3 local_lint_summary chars=590 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A13 r3 local_lint_summary chars=1349 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A14 r3 local_lint_summary chars=1584 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+A15 r3 local_lint_summary chars=665 error=False
+HTTP Request: DELETE http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+w-20261018T014733Z cerrada: 2026-10-18T01:47:33.569Z a 2026-10-18T01:49:19.906Z
+[pesado] plaza plaza-1 tomada tras 0s: pwsh -NoProfile -File C:\Users\Yohan\.claude\relevos\b2e-measure.ps1 -Step B -Tag branch-fallback
+free RAM before window B [branch-fallback]: 17.8 GB of 31.1
+w-20261018T014930Z
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+Received session ID: 1cb5277a4af84231bedf12adf573dabd
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 202 Accepted"
+HTTP Request: GET http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B31 r1 local_lint_summary chars=633 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B32 r1 local_lint_summary chars=492 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B33 r1 local_lint_summary chars=782 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B34 r1 local_lint_summary chars=824 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B35 r1 local_lint_summary chars=578 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B31 r2 local_lint_summary chars=723 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B32 r2 local_lint_summary chars=902 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B33 r2 local_lint_summary chars=728 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B34 r2 local_lint_summary chars=853 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B35 r2 local_lint_summary chars=510 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B31 r3 local_lint_summary chars=712 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B32 r3 local_lint_summary chars=505 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B33 r3 local_lint_summary chars=751 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B34 r3 local_lint_summary chars=721 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+B35 r3 local_lint_summary chars=896 error=False
+HTTP Request: DELETE http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+w-20261018T014930Z cerrada: 2026-10-18T01:49:30.910Z a 2026-10-18T01:51:02.736Z
+[pesado] plaza plaza-1 tomada tras 0s: pwsh -NoProfile -File C:\Users\Yohan\.claude\relevos\b2e-measure.ps1 -Step C -Tag branch-fallback -OnlyTool local_lint_summary
+free RAM before window C [branch-fallback]: 7.5 GB of 31.1
+w-20261018T015113Z
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+Received session ID: 3a8d6a58cc304094ba5590a3eaa7c78f
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 202 Accepted"
+HTTP Request: GET http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+L1 r1 local_lint_summary chars=3230 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+L2 r1 local_lint_summary chars=3047 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+L3 r1 local_lint_summary chars=3361 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+L1 r2 local_lint_summary chars=2624 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+L2 r2 local_lint_summary chars=3089 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+L3 r2 local_lint_summary chars=3145 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+L1 r3 local_lint_summary chars=3231 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+L2 r3 local_lint_summary chars=3169 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+L3 r3 local_lint_summary chars=3315 error=False
+HTTP Request: DELETE http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+w-20261018T015113Z cerrada: 2026-10-18T01:51:13.715Z a 2026-10-18T02:14:37.208Z
+[pesado] plaza plaza-1 tomada tras 0s: pwsh -NoProfile -File C:\Users\Yohan\.claude\relevos\b2e-measure.ps1 -Step F -Tag branch-fallback -OnlyTool local_lint_summary
+free RAM before window F [branch-fallback]: 15.7 GB of 31.1
+w-20261018T021448Z
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+Received session ID: 08731985a14b4d0fb38f8a0daad32c0f
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 202 Accepted"
+HTTP Request: GET http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+L4 r1 local_lint_summary chars=1727 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+L5 r1 local_lint_summary chars=2649 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+L4 r2 local_lint_summary chars=1669 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+L5 r2 local_lint_summary chars=1994 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+L4 r3 local_lint_summary chars=1731 error=False
+HTTP Request: POST http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+L5 r3 local_lint_summary chars=2204 error=False
+HTTP Request: DELETE http://127.0.0.1:9393/mcp "HTTP/1.1 200 OK"
+w-20261018T021448Z cerrada: 2026-10-18T02:14:48.294Z a 2026-10-18T02:18:17.885Z

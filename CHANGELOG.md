@@ -54,6 +54,23 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   resumen copia como cualquier otra cifra del log. Antes, un log de 89 líneas con más de 80 elementos con el mismo aviso agotaba el tope
   de salida enumerándolos uno a uno. Las líneas con ruta o posición de fichero nunca se agrupan: un
   log de lint por fichero llega entero.
+- **`local_lint_summary` troceado conserva el formato de lint.** El paso final usaba el resumen
+  por defecto («prosa sin enumerar») y devolvía párrafos sin un fichero ni un código de regla.
+  Ahora lleva el formato de la tool (agrupado por archivo, con la regla de la cantidad y la de
+  idioma) y, delante de los parciales, la lista de ficheros y códigos del log entero, sacada por
+  programa y sin recuentos. Si el resumen deja fuera alguno de los 10 ficheros o los 10 códigos más
+  nombrados, el programa añade una línea «Sin mencionar: …» con ellos. La llamada única no cambia.
+  En la medición en vivo de logs de 9 000 a 208 000 caracteres, el resumen pasó de nombrar 0 de 10
+  códigos y 1 de 10 ficheros a 3 y 5 (y, con la línea añadida, a todos). Borrador: los logs de 6
+  trozos o más siguen cortándose en el paso final con los topes de hoy, y los recuentos por
+  fichero traen más cifras inventadas que la prosa de antes; queda por decidir antes de publicar.
+- **`local_explain_code` troceado no pierde lo que una función registra.** El inventario del paso
+  final añade los nombres que registra cada función (`sub.add_parser("doctor")`, calculados con
+  `ast`), dentro del mismo tope; sin registros, el inventario de antes, byte a byte. Pendiente de
+  la medición en vivo.
+- **El log de uso registra cada paso de una operación troceada** (`steps`: tipo, `chars_out` y
+  `finish_reason`, sin el texto). `LOCAL_DELEGATE_DUMP_CHUNK_NOTES=<dir>` (apagado por defecto)
+  vuelca el texto de cada paso a un JSON local, solo para medir.
 
 - **El resumen por secciones ya no duplica una sección cuando el modelo traduce su título.** La
   «Introducción» sintética sale en el idioma de respuesta (no en el del producto), y si el modelo

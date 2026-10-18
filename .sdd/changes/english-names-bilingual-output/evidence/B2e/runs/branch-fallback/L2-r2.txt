@@ -1,0 +1,39 @@
+**Resumen de problemas por archivo**
+
+**scripts/build_corpus.py**
+* **Coma final faltante**: 23
+* **Línea demasiado larga**: 21
+* **Uso de `print`**: 14
+* **Excepción con mensaje largo o f-string**: 10
+* **Falta docstring en función pública**: 7
+* **Error en formato de docstring (línea en blanco o comillas)**: 7
+* **Demasiados argumentos en definición de función**: 5
+* **Demasiadas ramas o complejidad excesiva**: 5
+* **Falta anotación de tipo en argumento o retorno**: 5
+* **Tipado dinámico (Any) no permitido**: 4
+* **Uso de `os.path.abspath()` debe ser `Path.resolve()`**: 4
+* **Falta docstring en clase o método público**: 4
+* **Valor mágico en comparación**: 3
+* **Demasiados argumentos posicionales**: 2
+* **Captura de excepción ciega**: 2
+* **Argumento booleano posicional**: 2
+* **Otros**: función insegura, uso de `list.extend`, operador ternario recomendado, uso de `assert`, variable de bucle sobrescrita.
+
+**scripts/_claude_bench.py**
+* **Docstrings y formato**: 2 errores de línea en blanco requerida entre resumen y descripción, 1 error de comillas de cierre en docstrings multilínea, 2 errores de importaciones fuera del nivel superior y 1 error de coma final faltante.
+* **Complejidad y lógica**: 1 función demasiado compleja, 1 exceso de ramas, 1 exceso de argumentos y 1 variable de bucle sobrescrita.
+* **Seguridad y excepciones**: 1 llamada a `subprocess` con entrada no confiable, 2 errores de mensajes largos fuera de la clase de excepción, 1 error de uso de f-strings en excepciones y 1 error de nombre de excepción sin sufijo.
+* **Otros**: 1 aviso de paquete de espacio de nombres implícito, 1 aviso de falta de aviso de copyright, 1 error de anotación de tipo faltante, 2 errores de reemplazo de `os.path.abspath()` por `Path.resolve()`, 1 error de uso de `print` y 4 errores de coma final faltante.
+
+**scripts/adoption_experiment.py**
+* **Docstrings y formato**: 1 error de uso de `r"""`, 2 errores de falta de punto al final de la primera línea, 1 error de línea en blanco requerida en docstring, 1 error de comillas de cierre en docstring y 4 errores de falta de docstring en funciones públicas.
+* **Complejidad y lógica**: 1 función demasiado compleja, 1 exceso de ramas, 1 exceso de sentencias y 3 errores de uso de valores mágicos en comparaciones.
+* **Seguridad y otros**: 1 llamada a `subprocess` con entrada no confiable, 1 uso de generador pseudoaleatorio no apto para criptografía, 4 errores de líneas demasiado largas, 1 error de coma final falt
+
+Sin mencionar (del log, no los nombra el resumen): scripts/analyze_benchmark.py, scripts/pair_sheet.py, scripts/price_watcher.py, scripts/dev/affinity_batch.py, scripts/macos_mcp_canary.py, scripts/detect_spanish_names.py, scripts/measure_adoption.py, scripts/bump_version.py, COM812, T201, E501, D103, TRY003, EM102, D205, D209, CPY001, PLR2004
+
+[local-delegate warning: salida truncada por max_tokens en 4 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 154297 chars ≈ 80363 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

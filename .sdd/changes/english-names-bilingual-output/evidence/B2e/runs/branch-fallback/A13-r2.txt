@@ -1,0 +1,22 @@
+**Local Delegate Doctor Summary**
+
+**File-Based Issue Breakdown:**
+
+*   **LLAMASWAP_EXE:** No issues found.
+*   **LLAMASWAP_CONFIG:** No issues found.
+*   **Backend:** No issues found.
+*   **Hooks:** 3 hooks are missing (Claude Code, opencode, and Codex clients).
+*   **MCP Clients:** 7 MCP clients are present, with no elicitation observed.
+*   **Backup Chains:** Valid backup chains detected.
+*   **Cost & Padding:** The last check matches the price table from 2026-10-06.
+*   **Test Windows:** 67 test windows are open, none are open.
+*   **Andamaje (Hooks, Skill, Memory, MCP):** 3 hooks are missing. No skill or memory issues detected. MCP clients are not installed for Claude Code, Codex, or opencode.
+*   **Services:** The daemon is running (local-delegate 0.35.0) and the backend is responding.
+*   **Versions:** llama-swap and llama-server versions are up to date. A warning indicates the absence of a resident configuration for llama-swap.
+
+**Error/Rule Counts:**
+
+*   **Warnings:** 2
+*   **Missing Hooks:** 3
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)
