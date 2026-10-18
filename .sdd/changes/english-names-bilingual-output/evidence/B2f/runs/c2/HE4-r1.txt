@@ -1,0 +1,6 @@
+**tools/gen.py**
+* **E402**: Multiple module level imports are not located at the top of the file.
+* **E501**: Several lines exceed the maximum allowed length.
+* **E711**: A comparison to `None` should be implemented using the `is` operator.
+
+(read server-side: 438 chars ≈ 228 Claude tokens that did not enter your context)

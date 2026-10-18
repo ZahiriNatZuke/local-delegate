@@ -1,0 +1,76 @@
+**Local Delegate Doctor Summary**
+
+**File: LLAMASWAP_EXE**
+
+*   No errors found.
+
+**File: LLAMASWAP_CONFIG**
+
+*   No errors found.
+
+**File: Backend**
+
+*   No errors found.
+
+**File: HOME**
+
+*   No errors found.
+
+**File: Language**
+
+*   No errors found.
+
+**File: Response**
+
+*   No errors found.
+
+**File: States**
+
+*   Warnings: 1 (LD\_HOOK\_READ\_BLOQUEAR is deprecated, needs renaming to LD\_HOOK\_READ\_BLOCK).
+*   Missing: 0
+*   Other: 0
+
+**File: CLI Environment**
+
+*   OK: 6
+*   Warn: 1 (LD\_HOOK\_READ\_BLOQUEAR is deprecated)
+*   Other: 0
+
+**File: MCP Clients**
+
+*   Various MCP clients (claude-ai, claude-code, local-agent-mode) are present, but no active elicitation is observed.
+
+**File: Backups**
+
+*   OK: 1 (Valid chains, no resident chains)
+
+**File: Cost and Padding**
+
+*   OK: 159 rows checked against the price table of 2026-10-06.
+
+**File: Test Windows**
+
+*   OK: 67 windows, none open.
+
+**File: Framework (Hooks, Skill, Memory, MCP)**
+
+*   Hooks: Claude Code is not installed.
+*   Hooks: Claude Code is not installed.
+*   Hooks: Claude Code is not installed.
+*   Skill: Claude Code client not installed, opencode client not installed.
+*   Memory: Claude Code client not installed, Codex client not installed, opencode client not installed.
+*   MCP: Claude Code client not installed, Codex client not installed, opencode client not installed.
+
+**File: Services**
+
+*   Daemon: local-delegate 0.35.0 running.
+*   Backend: http://127.0.0.1:9292/v1/models responding.
+*   No backend credential or token requirement.
+
+**File: Versions**
+
+*   llama-swap: v255 (tested)
+*   llama-server: b10909 (tested)
+*   Warning: Affinity configuration is not using the specified model (gemma4-26b-a4b), needs review.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

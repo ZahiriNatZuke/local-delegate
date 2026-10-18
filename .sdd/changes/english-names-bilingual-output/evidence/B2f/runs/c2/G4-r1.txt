@@ -1,0 +1,38 @@
+**src/local_delegate/web/metrics.py**
+* **E501** Línea demasiado larga: 227 errores.
+* **ANN201** Falta anotación de tipo de retorno para función pública: 16 errores.
+* **COM812** Falta coma final: 12 errores.
+* **RUF001** La cadena contiene un carácter ambiguo (guion o signo de multiplicación): 11 errores.
+* **SLF001** Acceso a miembro privado: 7 errores.
+* **FAST002** Dependencia de FastAPI sin `Annotated`: 7 errores.
+* **D103** Falta docstring en función pública: 6 errores.
+* **TID252** Preferir importaciones absolutas sobre relativas: 15 errores.
+* **D209** Las comillas de cierre de docstrings multilínea deberían estar en una línea separada: 3 errores.
+* **D205** Se requiere una línea en blanco entre la línea de resumen y la descripción: 3 errores.
+* **BLE001** No capturar excepciones ciegas: 3 errores.
+* **PLW0603** Se desaconseja el uso de `global` para actualizar variables: 2 errores.
+* **RUF003** El comentario contiene un signo de menos ambiguo: 2 errores.
+* **Otros**: 1 error cada uno de **PLR2004** (valor mágico), **PLW2901** (variable sobrescrita), **C901** (complejidad), **PLR0915** (demasiadas sentencias), **FBT001** (argumento booleano posicional), **SIM108** (usar operador ternario), **SIM105** (usar `contextlib.suppress`), **S110** (detectado `try-except-pass`), **PLC0415** (importación fuera del nivel superior), **TRY300** (mover a bloque `else`) y **T201** (`print` encontrado).
+
+**src/local_delegate/web/sysinfo.py**
+* **PLW1510** `subprocess.run` sin argumento `check` explícito: 4 errores.
+* **S607** Inicio de proceso con ruta de ejecutable parcial: 4 errores.
+* **BLE001** No capturar excepciones ciegas: 3 errores.
+* **PTH123** Reemplazar `open()` por `Path.open()`: 3 errores.
+* **PLR2004** Valor mágico usado en comparación: 3 errores.
+* **D403** La primera palabra del docstring debe estar capitalizada: 3 errores.
+* **Otros**: 1 error cada uno de **CPY001** (falta aviso de copyright), **PLC0415** (importación fuera del nivel superior), **PTH208** (usar `iterdir()`), **S603** (verificar ejecución de entrada no confiable) y **PLW0603** (uso de `global` desaconsejado).
+
+**src/local_delegate/web/auth.py**
+* **ANN001** Falta anotación de tipo para argumento de función: 8 errores.
+* **COM812** Falta coma final: 3 errores.
+* **D400** La primera línea debe terminar con un punto: 2 errores.
+* **ANN202** Falta anotación de tipo de retorno para función privada: 2 errores.
+* **Otros**: 1 error cada uno de **CPY001** (falta aviso de copyright), **D107** (falta docstring en `__init__`), **D102** (falta docstring en método público) y **ANN201** (falta anotación de tipo de retorno para función pública).
+
+**src/local_delegate/web/__init__.py**
+* **CPY001** Falta aviso de copyright al inicio del archivo: 1 error.
+
+Found 388 errors.
+
+(leído server-side: 33805 chars ≈ 17606 tokens de Claude que no entraron a tu contexto)

@@ -2098,7 +2098,7 @@ están todos) y antes de B3/B4.
   o límites, escrito aquí antes de medir; (3) si aun así no, límite documentado aquí, en
   `waves/B2f.md` y en la evidencia, nota en `evidence/B2f/backlog-note.md`, y la mejor versión que
   no rompa nada.
-- **Primera tanda (2026-10-18, 07:21–09:10 UTC; `main` → `runs/main/`, candidato 1 en `30d6f9a` →
+- **Primera tanda (2026-10-18, 07:21–08:06 UTC; `main` → `runs/main/`, candidato 1 en `30d6f9a` →
   `runs/c1/`; `evidence/B2f/compare-main-c1.json`): NO llega, solo por las cortadas.** El rol
   mecánico conserva sus códigos en `main` (0,92 `es`, 0,93 `en`): no se toca. Con el candidato 1:
   códigos 1,00 y ficheros 1,00 en los cuatro grupos (criterio 1); el modelo solo, en español, de
@@ -2115,6 +2115,17 @@ están todos) y antes de B3/B4.
   caracteres más el inventario, ~9 600) el prompt queda por debajo de ~20 000 tokens de los 38 400
   del contexto de `gemma4-26b-a4b`. Mismo criterio, misma sesión, todas las ventanas otra vez
   (`runs/c2/`), comparado con el mismo `runs/main/`.
+- **Segunda tanda (2026-10-18, 08:12–08:33 UTC, `b2885ba` → `runs/c2/`,
+  `evidence/B2f/compare-main-c2.json`): LLEGA, los cinco criterios.** Códigos y ficheros 1,00 en los
+  cuatro grupos; el modelo solo, en español, 0,75 frente a 0,24 de `main` (G 0,49, H 0,96) y en
+  inglés 1,00 y 0,93 (GE y HE, `main` 0,93 y 0,88); invenciones 0,64 por respuesta frente a 0,71
+  (ruido 0,12); **cortadas 0 frente a 6** (ruido 1; la única de la tanda, M5 r2, es del rol mecánico
+  con el prompt idéntico); A14/A15/B31/B32 sin invenciones ni cortes. Latencia mediana de G y GE
+  sin cambio apreciable (22,9 y 21,5 s frente a 22,8 y 19,7 s); el tope nuevo se usó hasta 944
+  tokens. Versión adoptada: la de `b2885ba`.
+- **Corpus F2:** `lint-9k` (8,6 k, rol largo) cambia su `user_template`; se declara en
+  `build_corpus.PROMPT_BOUNDARY_EXTRA_FIELDS` (solo `local_lint_summary`, solo ese campo), con su
+  test en `tests/test_corpus.py`.
 - **Tests y mutantes:** `tests/test_lint_single_long.py` (inventario delante del log en la llamada
   larga, en `es` y `en`; línea «sin mencionar»; control positivo: lo nombrado no se repite; rol
   mecánico byte a byte; log sin ficheros ni códigos sin cambios). Mutantes en

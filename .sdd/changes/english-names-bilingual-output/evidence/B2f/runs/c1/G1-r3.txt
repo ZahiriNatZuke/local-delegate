@@ -1,0 +1,51 @@
+**src/local_delegate/benchmark.py**
+* **Coma final faltante**: 14
+* **Falta docstring en clase pública**: 3
+* **Falta docstring en método público**: 7
+* **Falta docstring en función pública**: 3
+* **Falta docstring en método mágico**: 3
+* **Falta docstring en `__init__`**: 5
+* **Evitar especificar mensajes largos fuera de la clase de excepción**: 8
+* **La excepción no debe usar un literal de cadena f, asigne primero a una variable**: 6
+* **La excepción no debe usar un literal de cadena, asigne primero a una variable**: 2
+* **Uso de valor mágico en comparación, considere reemplazar con una variable constante**: 3
+* **Se encontró `print`**: 7
+* **Importación debe estar en el nivel superior del archivo**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiadas ramas**: 1
+* **Demasiadas sentencias**: 1
+* **Demasiada complejidad**: 1
+* **Línea demasiado larga**: 3
+* **Mover importación de la biblioteca estándar a un bloque de comprobación de tipos**: 2
+* **Falta docstring en**: 1
+* **La primera línea de la docstring debe estar en modo imperativo**: 1
+* **Use `r"""` si hay barras invertidas en una docstring**: 1
+* **Se requiere una línea en blanco entre la línea de resumen y la descripción**: 1
+* **Las comillas de cierre de la docstring multilínea deben estar en una línea separada**: 1
+* **`None` no está al final de la unión de tipos**: 1
+* **Abstraer `raise` a una función interna**: 1
+* **Llamada a `subprocess`: compruebe la ejecución de entrada no confiable**: 1
+* **`subprocess.run` sin argumento `check` explícito**: 1
+* **Valor booleano posicional en la llamada a la función**: 1
+
+**src/local_delegate/agents.py**
+* **Falta aviso de derechos de autor al principio del archivo**: 1
+* **Mover importación de la biblioteca estándar a un bloque de comprobación de tipos**: 1
+* **Coma final faltante**: 1
+* **La primera línea de la docstring debe estar en modo imperativo**: 1
+* **Uso de valor mágico en comparación, considere reemplazar con una variable constante**: 1
+
+**src/local_delegate/autostart.py**
+* **Falta aviso de derechos de autor al principio del archivo**: 1
+* **La primera línea de la docstring debe estar en modo imperativo**: 1
+* **Llamada a `subprocess`: compruebe la ejecución de entrada no confiable**: 1
+
+**src/local_delegate/__init__.py**
+* **Falta aviso de derechos de autor al principio del archivo**: 1
+
+**src/local_delegate/__main__.py**
+* **Falta aviso de derechos de autor al principio del archivo**: 1
+
+Sin mencionar (del log, no los nombra el resumen): COM812, TRY003, D102, T201, EM102, CPY001, D107, PLR2004, D101, D105
+
+(leído server-side: 8589 chars ≈ 4473 tokens de Claude que no entraron a tu contexto)

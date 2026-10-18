@@ -1,0 +1,266 @@
+{
+ "G1": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "G2": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "G3": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "G4": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "G5": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "GE1": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "GE2": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "GE3": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "GE4": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "GE5": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "H1": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "H2": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "H3": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "H4": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "H5": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "H6": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "HE1": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "HE2": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "HE3": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "HE4": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "HE5": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "HE6": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "M1": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": true,
+  "same_steps": 1
+ },
+ "M2": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": true,
+  "same_steps": 1
+ },
+ "M3": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": true,
+  "same_steps": 1
+ },
+ "M4": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": true,
+  "same_steps": 1
+ },
+ "M5": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": true,
+  "same_steps": 1
+ },
+ "M6": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": true,
+  "same_steps": 1
+ },
+ "ME1": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": true,
+  "same_steps": 1
+ },
+ "ME2": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": true,
+  "same_steps": 1
+ },
+ "ME3": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": true,
+  "same_steps": 1
+ },
+ "ME4": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": true,
+  "same_steps": 1
+ },
+ "ME5": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": true,
+  "same_steps": 1
+ },
+ "ME6": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": true,
+  "same_steps": 1
+ },
+ "A11": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": true,
+  "same_steps": 1
+ },
+ "A12": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": true,
+  "same_steps": 1
+ },
+ "A13": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": true,
+  "same_steps": 1
+ },
+ "A14": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "A15": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": true,
+  "same_steps": 1
+ },
+ "B31": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ },
+ "B32": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": true,
+  "same_steps": 1
+ },
+ "B33": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": true,
+  "same_steps": 1
+ },
+ "B34": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": true,
+  "same_steps": 1
+ },
+ "B35": {
+  "steps_main": 1,
+  "steps_branch": 1,
+  "identical": false,
+  "same_steps": 0
+ }
+}

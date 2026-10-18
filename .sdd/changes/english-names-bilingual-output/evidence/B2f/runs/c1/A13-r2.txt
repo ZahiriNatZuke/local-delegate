@@ -1,0 +1,17 @@
+**Local Delegate Doctor Summary**
+
+**File-Based Issue Breakdown:**
+
+*   **LLAMASWAP_EXE:** No errors found.
+*   **LLAMASWAP_CONFIG:** No errors found.
+*   **Hooks:** 3 warnings: LD\_HOOK\_READ\_BLOQUEAR is deprecated (needs renaming to LD\_HOOK\_READ\_BLOCK).  Hooks related to Claude Code are missing (no Claude Code or opencode client installed).
+*   **MCP Clients:** 0 errors found.  Several MCP clients are present but not actively used.
+*   **Cost and Padding:** 0 errors found.
+*   **Test Windows:** 0 errors found.
+*   **Andamaje (Hooks, Skill, Memory, MCP):** 3 warnings: Missing Claude Code and opencode clients.  MCP configuration requires credentials but none are present. Affinity settings need review.
+*   **Services:** 0 errors found.
+*   **Versions:** 1 warning: Llama-swap version is up-to-date, but the backend affinity is not configured.
+
+**Total Warnings:** 3.  The system recommends reviewing and addressing the deprecated hook and affinity configuration issues.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

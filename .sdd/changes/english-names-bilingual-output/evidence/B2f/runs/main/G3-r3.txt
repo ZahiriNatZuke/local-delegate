@@ -1,0 +1,27 @@
+**src\app\core\decorators\log-audit.decorator.ts**
+* **Uso de definiciones de tipo consistentes**: 1 error (se sugiere usar interfaz en lugar de tipo).
+* **Definición de componente de React**: 1 aviso por usar funciones de flecha.
+* **Uso de tipo explícito**: 1 error por falta de tipo de retorno en la función.
+* **Uso de tipo de retorno explícito**: 1 aviso por falta de tipo de retorno en la función.
+
+**src\app\core\decorators\throttle.decorator.ts**
+* **Uso de separadores numéricos**: 3 errores (faltan separadores en literales numéricos largos).
+* **Definición de componente de React**: 5 avisos por usar funciones de flecha.
+* **Uso de tipo explícito**: 5 errores por falta de tipo de retorno en las funciones.
+* **Uso de tipo de retorno explícito**: 5 avisos por falta de tipo de retorno en las funciones.
+
+**src\app\core\filters\http-exception.filter.ts**
+* **Sin operador ternario**: 1 aviso por uso inesperado de operador ternario.
+* **Uso de `this` en métodos de clase**: 1 aviso por no utilizar `this` en el método `catch`.
+* **Uso de tipo explícito**: 1 error por falta de tipo de retorno en el miembro.
+* **Uso de tipo de retorno explícito**: 1 aviso por falta de tipo de retorno en la función.
+
+**src\app\core\decorators\app-controller.decorator.ts**
+* **Uso de tipo explícito**: 1 error por falta de tipo de retorno en la función.
+* **Uso de tipo de retorno explícito**: 1 aviso por falta de tipo de retorno en la función.
+
+Found 125 errors.
+Found 551 warnings.
+Found 653 infos.
+
+(leído server-side: 22235 chars ≈ 11580 tokens de Claude que no entraron a tu contexto)

@@ -1,0 +1,35 @@
+**src\local_delegate\web\__init__.py**
+* **Aviso de incompatibilidad**: Las reglas `incorrect-blank-line-before-class` (D203) y `blank-line-before-class` (D211) son incompatibles.
+* **Aviso de incompatibilidad**: Las reglas `multi-line-summary-first-line` (D212) y `multi-line-summary-second-line` (D213) son incompatibles.
+
+**src\local_delegate\web\auth.py**
+* **Aviso de aviso de copyright**: Falta el aviso de copyright al inicio del archivo (CPY001).
+* **Anotaciones de tipo faltantes**: 9 errores (ANN001, ANN201, ANN202).
+* **Falta de docstrings**: 2 errores (D102, D107).
+* **Comas finales faltantes**: 3 errores (COM812).
+* **Formato de docstring**: 2 errores (D400).
+* **Otros**: 1 error de aviso de copyright (CPY001).
+
+**src\local_delegate\web\metrics.py**
+* **Líneas demasiado largas**: 158 errores (E501).
+* **Comas finales faltantes**: 11 errores (COM812).
+* **Importaciones preferidas**: 14 errores de importaciones absolutas (TID252).
+* **Símbolos ambiguos en comentarios o cadenas**: 15 errores (RUF001, RUF002, RUF003).
+* **Falta de anotaciones de tipo**: 5 errores (ANN001, ANN201).
+* **Dependencias de FastAPI sin Annotated**: 8 errores (FAST002).
+* **Acceso a miembros privados**: 7 errores (SLF001).
+* **Docstrings incorrectos o faltantes**: 7 errores (D103, D205, D209).
+* **Otros**: Errores de complejidad (C901), exceso de sentencias (PLR0915), uso de `global` (PLW0603), excepciones ciegas (BLE001), valores mágicos (PLR2004), y otros (FBT001, SIM105, S110, SIM108, PLC0415, TRY300, T201, PLW2901).
+
+**src\local_delegate\web\sysinfo.py**
+* **Uso de open()**: 3 errores (PTH123).
+* **Subprocess sin argumento check**: 4 errores (PLW1510).
+* **Ruta de ejecutable parcial**: 4 errores (S607).
+* **Excepciones ciegas**: 3 errores (BLE001).
+* **Uso de global**: 2 errores (PLW0603).
+* **Capitalización de docstrings**: 3 errores (D403).
+* **Otros**: Aviso de copyright (CPY001), importación en nivel superior (PLC0415
+
+[local-delegate warning: salida truncada por max_tokens]
+
+(leído server-side: 33805 chars ≈ 17606 tokens de Claude que no entraron a tu contexto)

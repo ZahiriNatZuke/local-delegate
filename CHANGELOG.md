@@ -88,6 +88,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corrige
 
+- **`local_lint_summary` conserva los códigos de regla con logs largos.** Los logs de 6 000 a
+  48 000 caracteres los resume en una sola llamada el modelo del rol largo (`gemma4-26b-a4b`), que
+  con la orden de idioma nueva describía cada regla en palabras y omitía su código («Línea
+  demasiado larga» en vez de `E501`): en español nombraba un tercio de los códigos. Ahora esa
+  llamada lleva delante del log la lista de ficheros y códigos que nombra, sacada por programa y
+  sin recuentos (como el troceado), detrás la línea «Sin mencionar: …» si el resumen deja alguno de
+  los más nombrados fuera, y el doble de tope de salida (1 456 tokens para 200 palabras), porque
+  al nombrar cada código la respuesta de los logs con más reglas se cortaba. En la medición en vivo
+  el modelo pasó a nombrar por sí solo tres cuartos de los códigos en español (antes un cuarto) y
+  todos en inglés, sin más cifras inventadas y sin respuestas cortadas (antes 6 de 30). Los logs
+  cortos, que van al rol mecánico, no cambian.
 - **`local_lint_summary` ya no pide cantidades que el log no da.** El formato pedía «el conteo por
   tipo de error/regla» sin condición, y en logs sin cifras el modelo las inventaba («Claude Code
   Client (3)»): en la medición en vivo, 12 fallos de fidelidad en 10 logs (9 antes). Ahora la

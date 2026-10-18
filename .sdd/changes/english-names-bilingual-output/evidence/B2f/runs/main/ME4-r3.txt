@@ -1,0 +1,7 @@
+**Summary of Issues**
+
+**tools/gen.py:**
+
+This file exhibits multiple import-related issues. Specifically, there are four instances of **Module level import not at top of file** (E402) occurring on lines 4, 5, 6, and 7. Additionally, two lines contain excessively long lines (E501) at lines 20 and 31, and another two at lines 32 and 50. Finally, there is one instance of **Comparison to `None` should be `cond is None`** (E711) on line 50.
+
+(read server-side: 438 chars ≈ 228 Claude tokens that did not enter your context)

@@ -1,0 +1,34 @@
+**apps\api\package.json**
+* **lint/nursery/noRestrictedDependencies**: Use of the restricted dependency `express` detected.
+
+**apps\api\src\config\env.schema.ts**
+* **lint/style/noMagicNumbers**: 1 magic number detected.
+* **lint/style/useNamingConvention**: 6 property names should be in camelCase.
+
+**apps\api\src\geocode\dto\geocode.dto.ts**
+* **lint/style/noExcessiveClassesPerFile**: File exceeds the maximum of 1 class, found 2 classes.
+* **lint/style/noMagicNumbers**: 4 magic numbers detected.
+
+**apps\api\src\validate\dto\validate.dto.ts**
+* **lint/style/noExcessiveClassesPerFile**: File exceeds the maximum of 1 class, found 2 classes.
+* **lint/style/noMagicNumbers**: 5 magic numbers detected.
+* **lint/style/useNamingConvention**: 4 property names should be in camelCase.
+
+**apps\api\src\config\repo-root.ts**
+* **lint/style/useBlockStatements**: 2 block statements are preferred in this position.
+
+**apps\api\src\geocode\geocode.controller.ts**
+* **lint/style/noParameterProperties**: 1 parameter property should be an explicit class property.
+* **lint/style/useImportType**: 2 imports are only used as types.
+
+**apps\api\src\validate\validate.controller.ts**
+* **lint/style/noParameterProperties**: 1 parameter property should be an explicit class property.
+
+**packages\core\vitest.config.ts**
+* **lint/style/noDefaultExport**: Avoid default exports.
+
+Found 3 errors.
+Found 51 warnings.
+Found 192 infos.
+
+(read server-side: 18043 chars ≈ 9397 Claude tokens that did not enter your context)

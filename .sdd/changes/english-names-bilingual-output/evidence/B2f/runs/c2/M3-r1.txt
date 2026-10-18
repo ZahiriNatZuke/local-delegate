@@ -1,0 +1,5 @@
+**Resumen de Problemas**
+
+El archivo `lib/io.py` presenta dos problemas de importación, ambos clasificados como `I001` y afectando las primeras líneas del archivo.  El archivo `lib/net.py` también muestra dos problemas de importación, igualmente clasificados como `I001`.  En `lib/db.py` se identifican tres problemas de uso de `if` (SIM102) en las líneas 5, 6 y 33.  Además, en `lib/db.py` se detecta una inconsistencia en las anotaciones de tipo, específicamente el uso de `List` en lugar de `list` (UP006) en las líneas 5 y 6, y el uso de `Dict` en lugar de `dict` en las líneas 9 y 10. Finalmente, en `lib/net.py` se encuentra un problema de asignación innecesaria antes de la sentencia `return` (RET504) en las líneas 91 y 70.
+
+(leído server-side: 784 chars ≈ 408 tokens de Claude que no entraron a tu contexto)

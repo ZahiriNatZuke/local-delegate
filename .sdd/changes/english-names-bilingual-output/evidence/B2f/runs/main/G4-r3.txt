@@ -1,0 +1,29 @@
+**src\local_delegate\web\__init__.py**
+* **Aviso de incompatibilidad**: las reglas `incorrect-blank-line-before-class` (D203) y `blank-line-before-class` (D211) son incompatibles.
+* **Aviso de incompatibilidad**: las reglas `multi-line-summary-first-line` (D212) y `multi-line-summary-second-line` (D213) son incompatibles.
+* **Falta de aviso de copyright**: 1 error de tipo `CPY001`.
+
+**src\local_delegate\web\auth.py**
+* **Falta de anotación de tipo**: 8 errores de tipo `ANN001`.
+* **Falta de anotación de tipo de retorno**: 3 errores de tipo `ANN201` y `ANN202`.
+* **Falta de coma final**: 3 errores de tipo `COM812`.
+* **Falta de docstring**: 2 errores de tipo `D102` y `D107`.
+* **Error de formato**: 2 errores de tipo `D400` (la primera línea debe terminar con punto).
+* **Falta de aviso de copyright**: 1 error de tipo `CPY001`.
+
+**src\local_delegate\web\metrics.py**
+* **Línea demasiado larga**: 142 errores de tipo `E501`.
+* **Importación relativa**: 15 errores de tipo `TID252` (preferir importaciones absolutas).
+* **Falta de coma final**: 10 errores de tipo `COM812`.
+* **Falta de anotación de tipo de retorno**: 9 errores de tipo `ANN201`.
+* **Falta de anotación de tipo**: 2 errores de tipo `ANN001`.
+* **Dependencia de FastAPI sin `Annotated`**: 7 errores de tipo `FAST002`.
+* **Acceso a miembro privado**: 7 errores de tipo `SLF001`.
+* **Carácter ambiguo en cadena o comentario**: 7 errores de tipo `RUF001`, `RUF002` y `RUF003`.
+* **Falta de docstring**: 4 errores de tipo `D103`.
+* **Error de formato de docstring**: 3 errores de tipo `D205` y `D209`.
+* **Otros**: 1 error de `BLE001` (captura ciega de excepción), 1 de `C901` (complejidad excesiva), 1 de `PLR0915` (demasiadas sentencias), 1 de `PLW2901` (variable sobrescrita), 1 de `PLR2004` (valor mágico), 1 de `FBT001` (argumento booleano posicional), 1 de `SIM108` (usar operador ternario), 1 de `SIM105` (usar `contextlib.suppress`), 1 de `S110` (no registrar excepción), 1 de `PLW0603`
+
+[local-delegate warning: salida truncada por max_tokens]
+
+(leído server-side: 33805 chars ≈ 17606 tokens de Claude que no entraron a tu contexto)

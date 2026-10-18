@@ -1,0 +1,14 @@
+**src/a.py**
+* **Falta de docstring en módulo público**: 1
+* **Falta de docstring en función pública**: 2
+* **No usar estructuras de datos mutables para valores por defecto de argumentos**: 1
+
+**src/b.py**
+* **Falta de docstring en módulo público**: 1
+* **Falta de docstring en función pública**: 3
+
+**src/c.py**
+* **Falta de docstring en módulo público**: 1
+* **Se encontró la función print**: 3
+
+(leído server-side: 626 chars ≈ 326 tokens de Claude que no entraron a tu contexto)

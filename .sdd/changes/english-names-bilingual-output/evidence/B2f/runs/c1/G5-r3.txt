@@ -1,0 +1,23 @@
+### src/local_delegate/benchmark.py
+
+**Errores de documentación y estilo**
+* **Falta de docstrings**: 25 errores de tipo **D101** (clases públicas), **D102** (métodos públicos), **D103** (funciones públicas), **D105** (métodos mágicos) y **D107** (métodos `__init__`).
+* **Comas finales faltantes**: 13 errores de tipo **COM812**.
+* **Docstrings mal formados**: 1 error **D205** (línea en blanco faltante), 1 error **D209** (comillas de cierre en línea separada) y 1 error **D301** (uso de barras invertidas sin prefijo `r`).
+
+**Errores de lógica y complejidad**
+* **Complejidad excesiva**: 1 error **C901** (función `score_output`), 1 error **PLR0912** (demasiadas ramas en `run_benchmark`) y 1 error **PLR0915** (demasiadas sentencias en `run_benchmark`).
+* **Argumentos y valores**: 2 errores **PLR0913** (demasiados argumentos), 2 errores **PLR2004** (uso de valores mágicos) y 1 error **FBT003** (valor booleano posicional).
+
+**Errores de importación y ejecución**
+* **Importaciones**: 2 errores **PLC0415** (importaciones fuera del nivel superior del archivo).
+* **Subprocesos**: 1 error **S603** (llamada a `subprocess` con entrada no confiable) y 1 error **PLW1510** (falta argumento `check` en `subprocess.run`).
+
+**Otros errores**
+* **Salida y tipos**: 7 errores **T201** (uso de `print`), 1 error **CPY001** (falta aviso de copyright), 1 error **PLW2901** (sobrescritura de variable en bucle), 1 error **RUF036** (`None` no al final de la unión de tipos) y 3 errores **E501** (línea demasiado larga).
+
+Found 68 errors.
+
+Sin mencionar (del log, no los nombra el resumen): checks.json, TC003
+
+(leído server-side: 33048 chars ≈ 17212 tokens de Claude que no entraron a tu contexto)

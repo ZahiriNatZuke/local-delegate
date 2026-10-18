@@ -1,0 +1,9 @@
+**Summary of Issues**
+
+**src/a.py:** This file exhibits two instances of the **Missing Docstring** rule (D100), occurring on lines 5 and 14, and one instance of the **Mutable Default Arguments** rule (B006) on line 61.  It also contains three instances of the **Print Statement** rule (T201) on lines 17, 18, and 19.
+
+**src/b.py:** This file presents four instances of the **Missing Docstring** rule (D100) located on lines 1, 8, 22, and 44.
+
+**src/c.py:**  This file has three instances of the **Print Statement** rule (T201) on lines 17, 18, and 19.  It also contains one instance of the **Missing Docstring** rule (D100) on line 1.
+
+(read server-side: 626 chars ≈ 326 Claude tokens that did not enter your context)

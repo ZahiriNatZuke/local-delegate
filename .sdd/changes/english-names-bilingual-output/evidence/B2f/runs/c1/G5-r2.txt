@@ -1,0 +1,38 @@
+### src/local_delegate/benchmark.py
+
+**Errores y avisos:**
+
+*   **Falta de docstrings:**
+    *   **D101** (3): En clases públicas.
+    *   **D102** (7): En métodos públicos.
+    *   **D103** (3): En funciones públicas.
+    *   **D105** (4): En métodos mágicos.
+    *   **D107** (5): En el método `__init__`.
+*   **Formato y estilo:**
+    *   **COM812** (13): Falta una coma final.
+    *   **E501** (3): Línea demasiado larga.
+    *   **D205** (1): Se requiere una línea en blanco entre el resumen y la descripción.
+    *   **D209** (1): Las comillas de cierre de un docstring multilínea deberían estar en una línea separada.
+    *   **D301** (1): Uso de cadenas sin el prefijo `r` cuando contienen barras invertidas.
+    *   **RUF036** (1): El valor `None` no está al final de la unión de tipos.
+*   **Complejidad y lógica:**
+    *   **C901** (2): Función demasiado compleja.
+    *   **PLR0912** (1): Demasiadas ramificaciones.
+    *   **PLR0913** (2): Demasiados argumentos en la definición de la función.
+    *   **PLR0915** (1): Demasiadas sentencias.
+    *   **PLR2004** (3): Uso de valores mágicos en comparaciones.
+    *   **PLW2901** (1): Sobrescritura de la variable de un bucle `for`.
+*   **Otros:**
+    *   **T201** (8): Se encontró la función `print`.
+    *   **CPY001** (1): Falta el aviso de derechos de autor al inicio del archivo.
+    *   **TC003** (3): Importaciones de la biblioteca estándar que deben moverse a un bloque de comprobación de tipos.
+    *   **PLC0415** (2): La importación debe estar en el nivel superior del archivo.
+    *   **S603** (1): Llamada a `subprocess` que requiere verificar la ejecución de entradas no confiables.
+    *   **PLW1510** (1): `subprocess.run` sin el argumento `check` explícito.
+    *   **FBT003** (1): Valor booleano posicional en una llamada a función.
+
+Found 68 errors.
+
+Sin mencionar (del log, no los nombra el resumen): checks.json
+
+(leído server-side: 33048 chars ≈ 17212 tokens de Claude que no entraron a tu contexto)

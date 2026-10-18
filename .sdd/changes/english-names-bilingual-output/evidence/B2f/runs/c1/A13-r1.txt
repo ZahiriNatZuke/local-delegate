@@ -1,0 +1,29 @@
+**Local Delegate Doctor Summary**
+
+**File-Based Issue Breakdown:**
+
+*   **LLAMASWAP_EXE:** No issues found.
+*   **LLAMASWAP_CONFIG:** No issues found.
+*   **Backend:** No issues found.
+*   **Clientes:** 0 issues found.
+*   **Cadenas de respaldo:** 0 issues found.
+*   **Coste y relleno:** 0 issues found.
+*   **Ventanas de prueba:** 0 issues found.
+*   **Andamiaje (hooks, skill, memoria y entradas MCP):** 6 issues found.
+    *   Hooks copiados: 0
+    *   Hooks huérfanos: 0
+    *   Hooks registrados: 0
+    *   Skill local-delegation: 2 (Claude Code and opencode clients not installed)
+    *   Memoria global: 2 (Claude Code and opencode clients not installed)
+    *   MCP en Claude Code: 1 (Claude Code client not installed)
+    *   MCP en Codex: 1 (Codex client not installed)
+    *   MCP en opencode: 1 (opencode client not installed)
+*   **Servicios:** 0 issues found.
+*   **Versiones:** 1 warning (llama-swap residency).
+
+**Detailed Warnings:**
+
+*   **LD\_HOOK\_READ\_BLOQUEAR:** Obsolete, rename to LD\_HOOK\_READ\_BLOCK (to be removed in version 0.38.0).
+*   **Llama-swap residency:** No resident affinity is recommended.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

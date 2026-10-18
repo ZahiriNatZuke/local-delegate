@@ -1,0 +1,15 @@
+**lib/io.py**
+* **Bloque de importación sin ordenar o sin formato**: 2
+* **Uso de `dict` en lugar de `Dict` para anotaciones de tipo**: 2
+
+**lib/net.py**
+* **Uso de una única sentencia `if`**: 3
+* **Bloque de importación sin ordenar o sin formato**: 1
+* **Asignación innecesaria antes de `return`**: 1
+
+**lib/db.py**
+* **Uso de una única sentencia `if`**: 2
+* **Uso de `list` en lugar de `List` para anotaciones de tipo**: 1
+* **Asignación innecesaria antes de `return`**: 1
+
+(leído server-side: 784 chars ≈ 408 tokens de Claude que no entraron a tu contexto)

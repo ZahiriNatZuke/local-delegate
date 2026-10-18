@@ -1,0 +1,37 @@
+**src\local_delegate\benchmark.py**
+
+**Errores de documentación**
+* **Falta de docstring en clase pública**: 4 errores (**D101**)
+* **Falta de docstring en método público**: 6 errores (**D102**)
+* **Falta de docstring en función pública**: 4 errores (**D103**)
+* **Falta de docstring en método mágico**: 3 errores (**D105**)
+* **Falta de docstring en el constructor**: 4 errores (**D107**)
+* **Error de formato en docstring**: 1 error (**D205**)
+* **Error de formato en docstring**: 1 error (**D209**)
+
+**Errores de estilo y formato**
+* **Falta de coma final**: 13 errores (**COM812**)
+* **Línea demasiado larga**: 3 errores (**E501**)
+* **Uso de valores mágicos en comparaciones**: 3 errores (**PLR2004**)
+* **Importación debe estar en el nivel superior del archivo**: 2 errores (**PLC0415**)
+* **Uso de `print`**: 7 errores (**T201**)
+* **Uso de `r"""` si hay barras invertidas en un docstring**: 1 error (**D301**)
+* **`None` no está al final de la unión de tipos**: 1 error (**RUF036**)
+
+**Errores de complejidad y diseño**
+* **Función demasiado compleja**: 2 errores (**C901**)
+* **Demasiados argumentos en la definición de la función**: 2 errores (**PLR0913**)
+* **Demasiadas ramificaciones**: 1 error (**PLR0912**)
+* **Demasiadas sentencias**: 1 error (**PLR0915**)
+* **Variable de bucle `for` sobrescrita por objetivo de asignación**: 1 error (**PLW2901**)
+* **Llamada a `subprocess` sin verificar entrada no confiable**: 1 error (**S603**)
+* **`subprocess.run` sin argumento `check` explícito**: 1 error (**PLW1510**)
+* **Valor booleano posicional en llamada a función**: 1 error (**FBT003**)
+
+**Otros errores**
+* **Falta aviso de copyright al inicio del archivo**: 1 error (**CPY001**)
+* **Importación de librería estándar debe moverse a un bloque de comprobación de tipos**: 3 errores (**TC003**)
+
+Found 68 errors.
+
+(leído server-side: 33048 chars ≈ 17212 tokens de Claude que no entraron a tu contexto)

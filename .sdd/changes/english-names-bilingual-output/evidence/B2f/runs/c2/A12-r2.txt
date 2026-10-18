@@ -1,0 +1,9 @@
+**Summary of Issues by File:**
+
+The provided output indicates several issues related to system changes and prompt updates stemming from version 0.36.0, all categorized under the label "frontera declarada".
+
+Specifically, there are eleven entries detailing changes related to the `system` prompt. These include: `resumen-md-2k`, `resumen-md-10k`, `resumen-changelog-7k`, `commit-diff-19k`, and `techo-commit-156k`.  Each of these represents a modification to the system prompt, likely impacting the behavior of the model.
+
+The output does not provide a specific count of errors or warnings for each individual issue. It simply lists the entries. The total number of lines presented is 11.
+
+(leído server-side: 587 chars ≈ 305 tokens de Claude que no entraron a tu contexto)

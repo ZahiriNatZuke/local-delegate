@@ -1,0 +1,32 @@
+**src/local_delegate/benchmark.py**
+
+* **COM812**: 11 instances of missing trailing commas.
+* **D102**: 7 instances of missing docstrings in public methods.
+* **D107**: 5 instances of missing docstrings in `__init__` methods.
+* **D105**: 4 instances of missing docstrings in magic methods.
+* **T201**: 8 instances of `print` statements found.
+* **D101**: 3 instances of missing docstrings in public classes.
+* **PLR2004**: 3 instances of magic values used in comparisons.
+* **D103**: 3 instances of missing docstrings in public functions.
+* **E501**: 3 instances of lines exceeding the maximum length.
+* **TC003**: 3 instances of standard library imports that should be moved to a type-checking block.
+* **PLC0415**: 2 instances of imports not being at the top-level of the file.
+* **PLR0913**: 2 instances of too many arguments in function definitions.
+* **C901**: 2 instances of high function complexity.
+* **CPY001**: 1 instance of a missing copyright notice.
+* **PLW2901**: 1 instance of a loop variable being overwritten.
+* **S603**: 1 instance of an untrusted subprocess call.
+* **PLW1510**: 1 instance of `subprocess.run` missing an explicit `check` argument.
+* **D301**: 1 instance of needing a raw docstring due to backslashes.
+* **FBT003**: 1 instance of a boolean positional value in a function call.
+* **PLR0912**: 1 instance of too many branches in a function.
+* **PLR0915**: 1 instance of too many statements in a function.
+* **D205**: 1 instance of a missing blank line before a docstring description.
+* **D209**: 1 instance of multi-line docstring closing quotes needing a separate line.
+* **RUF036**: 1 instance of `None` not being at the end of a type union.
+
+Found 68 errors.
+
+Not mentioned (in the log, not named by the summary): checks.json
+
+(read server-side: 33048 chars ≈ 17212 Claude tokens that did not enter your context)

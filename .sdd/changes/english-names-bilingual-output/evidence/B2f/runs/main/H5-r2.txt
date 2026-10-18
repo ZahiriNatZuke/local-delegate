@@ -1,0 +1,10 @@
+**src\local_delegate\sections.py**
+
+*   **Errores de documentación**: 11 errores, incluyendo la falta de docstrings en clases públicas, la falta de docstrings en métodos públicos, la necesidad de una línea en blanco entre el resumen y la descripción, el uso de caracteres ambiguos en docstrings, el uso de cadenas crudas para barras invertidas y que la primera línea debe terminar con un punto.
+*   **Errores de complejidad y estructura**: 4 errores, incluyendo funciones con demasiadas ramas, demasiados argumentos en la definición de una función y funciones con una complejidad excesiva.
+*   **Errores de formato**: 5 errores por líneas demasiado largas.
+*   **Otros errores**: 6 errores, incluyendo la falta de un aviso de derechos de autor, la necesidad de mover una importación de la biblioteca estándar a un bloque de comprobación de tipos y el uso de un valor mágico en una comparación.
+
+Found 26 errors.
+
+(leído server-side: 2627 chars ≈ 1368 tokens de Claude que no entraron a tu contexto)

@@ -1,0 +1,51 @@
+**src/local_delegate/web/metrics.py**
+* **E501**: 216 lines too long
+* **COM812**: 14 trailing comma missing
+* **ANN201**: 16 missing return type annotation for public function
+* **RUF001**: 11 string contains ambiguous characters
+* **SLF001**: 7 private member accessed
+* **FAST002**: 7 FastAPI dependency without `Annotated`
+* **D103**: 5 missing docstring in public function
+* **D205**: 3 blank line required between summary line and description
+* **D209**: 3 multi-line docstring closing quotes should be on a separate line
+* **TID252**: 14 prefer absolute imports over relative imports
+* **RUF002**: 3 docstring contains ambiguous characters
+* **PLW0603**: 2 using the global statement is discouraged
+* **BLE001**: 3 do not catch blind exception
+* **SIM108**: 1 use ternary operator instead of if-else block
+* **SIM105**: 1 use `contextlib.suppress` instead of try-except-pass
+* **S110**: 1 try-except-pass detected
+* **C901**: 1 function is too complex
+* **PLR0915**: 1 too many statements
+* **PLR2004**: 1 magic value used in comparison
+* **PLW2901**: 1 loop variable overwritten
+* **PLC0415**: 1 import should be at the top-level
+* **TRY300**: 1 consider moving statement to an else block
+* **T201**: 1 print found
+* **FBT001**: 1 boolean-typed positional argument in function definition
+
+**src/local_delegate/web/sysinfo.py**
+* **PTH123**: 3 `open()` should be replaced by `Path.open()`
+* **PLW1510**: 4 `subprocess.run` without explicit `check` argument
+* **S607**: 4 starting a process with a partial executable path
+* **BLE001**: 3 do not catch blind exception
+* **PLR2004**: 3 magic value used in comparison
+* **D403**: 3 first word of the docstring should be capitalized
+* **COM812**: 2 trailing comma missing
+* **S603**: 1 subprocess call check for untrusted input
+* **PLW0603**: 2 using the global statement is discouraged
+* **PTH208**: 1 use `pathlib.Path.iterdir()` instead
+* **PLC0415**: 1 import should be at the top-level
+* **CPY001**: 1 missing copyright notice
+
+**src/local_delegate/web/auth.py**
+* **ANN001**: 9 missing type annotation for function argument
+* **COM812**: 3 trailing comma missing
+* **D400**: 2 first line should end with a period
+* **ANN202**: 2 missing return type annotation for private function
+
+Not mentioned (in the log, not named by the summary): src/local_delegate/web/__init__.py
+
+[local-delegate warning: output truncated by max_tokens]
+
+(read server-side: 33805 chars ≈ 17606 Claude tokens that did not enter your context)

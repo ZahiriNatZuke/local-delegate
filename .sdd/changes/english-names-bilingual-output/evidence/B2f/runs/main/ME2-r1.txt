@@ -1,0 +1,9 @@
+**Summary of Issues**
+
+**src/a.py:** This file contains 3 instances of the **Missing docstring in public module** rule (D100) and 1 instance of the **Missing docstring in public function** rule (D103). Additionally, it includes a single **Test** violation (T201) related to the `print` function. Furthermore, there is one instance of the **Mutable data structures for argument defaults** rule (B006).
+
+**src/b.py:** This file exhibits 4 instances of the **Missing docstring in public module** rule (D100) and 4 instances of the **Missing docstring in public function** rule (D103).
+
+**src/c.py:** This file presents 3 instances of the **Missing docstring in public module** rule (D100) and 3 instances of the **Missing docstring in public function** rule (D103). It also contains 3 instances of the **Test** violation (T201) concerning the `print` function.
+
+(read server-side: 626 chars ≈ 326 Claude tokens that did not enter your context)

@@ -1,0 +1,13 @@
+**app/main.py**
+*   **Línea demasiado larga**: 2 errores.
+*   **Importación no utilizada**: 1 error con el identificador `os`.
+
+**app/util.py**
+*   **Línea demasiado larga**: 1 error.
+*   **Importación no utilizada**: 2 errores con los identificadores `sys` y `re`.
+*   **Espacio en blanco al final de la línea**: 1 error.
+
+**app/cli.py**
+*   **Línea demasiado larga**: 1 error.
+
+(leído server-side: 340 chars ≈ 177 tokens de Claude que no entraron a tu contexto)

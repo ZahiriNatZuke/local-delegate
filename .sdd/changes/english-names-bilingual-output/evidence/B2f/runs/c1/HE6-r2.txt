@@ -1,0 +1,28 @@
+**src/cli/commands/export.ts**
+* **TS2550**: The property 'at' is missing from the string array type.
+
+**src/cli/commands/import.ts**
+* **TS2550**: The property 'at' is missing from the string array type.
+
+**src/cli/index.ts**
+* **TS2550**: The property 'hasOwn' is missing from the ObjectConstructor type.
+
+**src/cli/ui/style.ts**
+* **TS2550**: The property 'replaceAll' is missing from the string type.
+
+**src/cli/ui/width.ts**
+* **TS2339**: The property 'Segmenter' is missing from the Intl type.
+
+**src/adapters/claude-json.ts**
+* **TS2554**: More arguments were provided than expected.
+
+**src/adapters/codex/index.ts**
+* **TS2550**: The property 'hasOwn' is missing from the ObjectConstructor type.
+
+**src/io/fs/atomic.ts**
+* **TS4113**: The 'override' modifier is used on a member that does not exist in the base Error class.
+
+**src/io/vault/index.ts**
+* **TS2554**: More arguments were provided than expected.
+
+(read server-side: 1647 chars ≈ 857 Claude tokens that did not enter your context)

@@ -1,0 +1,112 @@
+[
+ {
+  "mutant": "1 single long call: the prompt of before",
+  "file": "src/local_delegate/server.py",
+  "results": [
+   {
+    "test": "test_the_single_long_lint_call_gets_the_inventory_in_front_of_the_log[es]",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert \"src/pkg/mod_00.py\" in head and \"CPY001\" in head and \"S603\" in head",
+     "E       AssertionError: assert ('src/pkg/mod_00.py' in '')"
+    ]
+   },
+   {
+    "test": "test_the_single_long_lint_call_gets_the_inventory_in_front_of_the_log[en]",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert \"src/pkg/mod_00.py\" in head and \"CPY001\" in head and \"S603\" in head",
+     "E       AssertionError: assert ('src/pkg/mod_00.py' in '')"
+    ]
+   }
+  ]
+ },
+ {
+  "mutant": "2 single long call: no fallback",
+  "file": "src/local_delegate/server.py",
+  "results": [
+   {
+    "test": "test_the_single_long_lint_answer_lists_what_it_does_not_mention[es-Sin mencionar]",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       (line,) = [ln for ln in out.splitlines() if ln.startswith(label)]",
+     "E       ValueError: not enough values to unpack (expected 1, got 0)"
+    ]
+   },
+   {
+    "test": "test_the_single_long_lint_answer_lists_what_it_does_not_mention[en-Not mentioned]",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       (line,) = [ln for ln in out.splitlines() if ln.startswith(label)]",
+     "E       ValueError: not enough values to unpack (expected 1, got 0)"
+    ]
+   }
+  ]
+ },
+ {
+  "mutant": "3 mechanical also gets the inventory",
+  "file": "src/local_delegate/server.py",
+  "results": [
+   {
+    "test": "test_the_mechanical_single_call_keeps_the_prompt_of_before",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert call[\"user\"] == BASE + log",
+     "E       AssertionError: assert 'Ficheros que... 12 errors.\\n' == 'Resume la si... 12 errors.\\n'",
+     "E",
+     "E         - Resume la siguiente salida de linter/tests:"
+    ]
+   }
+  ]
+ },
+ {
+  "mutant": "4 single long call: the cap of before",
+  "file": "src/local_delegate/server.py",
+  "results": [
+   {
+    "test": "test_the_single_long_lint_call_gets_the_inventory_in_front_of_the_log[es]",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert call[\"max_tokens\"] == 2 * server._lint_max_tokens(200) == 1456  # rule (2) of B2f",
+     "E       assert 728 == (2 * 728)",
+     "E        +  where 728 = <function _lint_max_tokens at 0x000001CAF2D2BBA0>(200)",
+     "E        +    where <function _lint_max_tokens at 0x000001CAF2D2BBA0> = server._lint_max_tokens"
+    ]
+   },
+   {
+    "test": "test_the_single_long_lint_call_gets_the_inventory_in_front_of_the_log[en]",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert call[\"max_tokens\"] == 2 * server._lint_max_tokens(200) == 1456  # rule (2) of B2f",
+     "E       assert 728 == (2 * 728)",
+     "E        +  where 728 = <function _lint_max_tokens at 0x00000261D8653920>(200)",
+     "E        +    where <function _lint_max_tokens at 0x00000261D8653920> = server._lint_max_tokens"
+    ]
+   }
+  ]
+ },
+ {
+  "mutant": "5 mechanical also gets the larger cap",
+  "file": "src/local_delegate/server.py",
+  "results": [
+   {
+    "test": "test_the_mechanical_single_call_keeps_the_prompt_of_before",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert call[\"max_tokens\"] == server._lint_max_tokens(200) == 728  # its cap of before",
+     "E       assert 1456 == 728",
+     "E        +  where 728 = <function _lint_max_tokens at 0x000001BD50C6BA60>(200)",
+     "E        +    where <function _lint_max_tokens at 0x000001BD50C6BA60> = server._lint_max_tokens"
+    ]
+   }
+  ]
+ }
+]

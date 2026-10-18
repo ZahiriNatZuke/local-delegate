@@ -1,0 +1,15 @@
+**lib/net.py**
+* **SIM102**: Three instances where a single `if` statement should be used.
+* **I001**: One instance of an unsorted or unformatted import block.
+* **RET504**: One instance of an unnecessary assignment before a `return`.
+
+**lib/io.py**
+* **I001**: Two instances of unsorted or unformatted import blocks.
+* **UP006**: Two instances where `dict` should be used instead of `Dict` for type annotation.
+
+**lib/db.py**
+* **SIM102**: Two instances where a single `if` statement should be used.
+* **UP006**: One instance where `list` should be used instead of `List` for type annotation.
+* **RET504**: One instance of an unnecessary assignment before a `return`.
+
+(read server-side: 784 chars ≈ 408 Claude tokens that did not enter your context)

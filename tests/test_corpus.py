@@ -58,10 +58,18 @@ def test_versioned_corpus_still_mirrors_production():
     notices: list[str] = []
     assert build.check_versioned(DESTINATION, notices=notices) == []
     assert _noticed_tools(notices, DESTINATION) == set(build.PROMPT_BOUNDARIES["0.36.0"])
-    # B2c: el commit cambia también sus topes; el resto de tools, solo el `system`.
-    assert all("system" in n or "max_tokens" in n for n in notices), (
+    # B2c: el commit cambia también sus topes; el resto de tools, solo el `system`. B2f: el lint
+    # largo de una llamada cambia también su `user_template` (`lint-9k`), y solo esa tool.
+    assert all("system" in n or "max_tokens" in n or "user_template" in n for n in notices), (
         "una frontera declarada fuera de los campos del prompt"
     )
+    tool_of = {
+        c["id"]: c["tool"]
+        for c in json.loads((DESTINATION / "cases.json").read_text(encoding="utf-8"))["cases"]
+    }
+    templates = {n.split(":", 1)[0] for n in notices if "user_template" in n}
+    assert templates == {"lint-9k"}  # guard: the change B2f declares is the one that is seen
+    assert {tool_of[t] for t in templates} == {"local_lint_summary"}
 
 
 def test_split_is_the_protocol_one():

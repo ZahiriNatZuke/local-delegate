@@ -1,0 +1,18 @@
+Here's a summary of the issues, grouped by file:
+
+**app/main.py**
+
+*   **E501 Line too long:** 2 instances (lines 12 and 40).
+*   **F401 Unused import:** 3 instances (lines 7, 401 and 70).
+
+**app/util.py**
+
+*   **E501 Line too long:** 1 instance (line 55).
+*   **F401 Unused import:** 3 instances (lines 3, 9, and 55).
+*   **W291 Trailing whitespace:** 1 instance (line 70).
+
+**app/cli.py**
+
+*   **E501 Line too long:** 1 instance (line 21).
+
+(read server-side: 340 chars ≈ 177 Claude tokens that did not enter your context)

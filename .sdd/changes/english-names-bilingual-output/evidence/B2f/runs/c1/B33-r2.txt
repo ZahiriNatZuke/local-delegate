@@ -1,0 +1,9 @@
+Resumen de Problemas:
+
+**Archivo:** src/app/features/auth/pages/login.page.ts
+- **Error:** TS2345 - Incompatibilidad de tipos en el parámetro `returnUrl`.  Se detecta un `string | undefined` donde se espera un `string`.  El problema radica en la asignación de un valor `undefined` a una variable de tipo `string`.
+
+**Archivo:** src/app/features/home/components/tech-stack.component.ts
+- **Error:** TS2375 - Incompatibilidad de tipos en la propiedad `version`. Se identifica un `string | undefined` donde se espera un `string`. La presencia de `undefined` es incompatible con el tipo `string`.
+
+(read server-side: 1435 chars ≈ 747 Claude tokens that did not enter your context)

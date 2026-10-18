@@ -1,0 +1,39 @@
+**src/local_delegate/web/metrics.py**
+* **E501** Línea demasiado larga: 233 errores.
+* **ANN201** Falta anotación de tipo de retorno para función pública: 15 errores.
+* **COM812** Falta coma final: 12 errores.
+* **RUF001** La cadena contiene un carácter ambiguo (guion o signo menos): 10 errores.
+* **SLF001** Acceso a miembro privado: 7 errores.
+* **FAST002** Dependencia de FastAPI sin `Annotated`: 7 errores.
+* **D103** Falta docstring en función pública: 6 errores.
+* **TID252** Preferir importaciones absolutas sobre relativas: 15 errores.
+* **D209** Las comillas de cierre de docstrings multilínea deberían estar en una línea separada: 3 errores.
+* **D205** Se requiere una línea en blanco entre la línea de resumen y la descripción: 3 errores.
+* **RUF002** El docstring contiene un carácter ambiguo (signo de multiplicación): 3 errores.
+* **BLE001** No capturar excepciones ciegas: 3 errores.
+* **PLW0603** Se desaconseja el uso de `global` para actualizar variables: 2 errores.
+* **PLR2004** Uso de valor mágico en comparación: 1 error.
+* **PLW2901** Variable de bucle `for` sobrescrita: 1 error.
+* **C901** Función demasiado compleja: 1 error.
+* **PLR0915** Demasiadas sentencias: 1 error.
+* **FBT001** Argumento posicional de tipo booleano en definición de función: 1 error.
+* **SIM108** Usar operador ternario en lugar de bloque `if-else`: 1 error.
+* **SIM105** Usar `contextlib.suppress` en lugar de `try-except-pass`: 1 error.
+* **S110** Se detectó `try-except-pass`, considere registrar la excepción: 1 error.
+* **PLC0415** La importación debería estar en el nivel superior del archivo: 1 error.
+* **TRY300** Considere mover esta sentencia a un bloque `else`: 1 error.
+* **T201** Se encontró un `print`: 1 error.
+
+**src/local_delegate/web/sysinfo.py**
+* **BLE001** No capturar excepciones ciegas: 3 errores.
+* **PLW1510** `subprocess.run` sin argumento `check` explícito: 4 errores.
+* **S607** Iniciar un proceso con una ruta de ejecutable parcial: 4 errores.
+* **PTH123** `open()` debería ser reemplazado por `Path.open()`: 3 errores.
+* **PLR2004** Uso de valor mágico en comparación: 3 errores.
+* **D403** La primera palabra del docstring debería estar
+
+Sin mencionar (del log, no los nombra el resumen): src/local_delegate/web/auth.py, src/local_delegate/web/__init__.py, ANN001
+
+[local-delegate warning: salida truncada por max_tokens]
+
+(leído server-side: 33805 chars ≈ 17606 tokens de Claude que no entraron a tu contexto)

@@ -1,0 +1,7 @@
+**Summary of Errors by File**
+
+The analysis identified several errors related to missing model files. Specifically, there were errors for the following models: gemma3-4b, llama31-8b, qwen25-coder-14b, qwen35-2b, and qwen3-vl-8b. Each of these models resulted in an error indicating that the corresponding file was not found. The file paths are located in the MODELOS directory.
+
+The 'resident' group had a total of 0.00 GiB of VRAM usage, and the 'swap' group also had 0.00 GiB. The errors are categorized as "ERROR" due to the inability to locate the specified model files. The total worst-case VRAM usage is 0.00 GiB.
+
+(leído server-side: 743 chars ≈ 386 tokens de Claude que no entraron a tu contexto)

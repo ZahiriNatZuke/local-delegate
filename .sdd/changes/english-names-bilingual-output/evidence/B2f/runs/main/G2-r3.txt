@@ -1,0 +1,34 @@
+**apps\api\package.json**
+* **Uso de dependencias restringidas**: 1 (se detectó el uso de `express` y se sugieren alternativas como `h3`, `@tinyhttp/app`, `hono` o `elysia`).
+
+**apps\api\src\config\env.schema.ts**
+* **Números mágicos**: 1
+* **Uso de convención de nombres**: 6 (las propiedades del objeto deben usar `camelCase`).
+
+**apps\api\src\geocode\dto\geocode.dto.ts**
+* **Clases excesivas por archivo**: 1 (el archivo contiene 2 clases y el máximo permitido es 1).
+* **Números mágicos**: 4
+
+**apps\api\src\validate\dto\validate.dto.ts**
+* **Clases excesivas por archivo**: 1
+* **Números mágicos**: 5
+* **Uso de convención de nombres**: 4
+
+**apps\api\src\config\repo-root.ts**
+* **Uso de sentencias de bloque**: 2 (se prefieren bloques para las sentencias `if`).
+
+**apps\api\src\geocode\geocode.controller.ts**
+* **Propiedades de parámetro**: 1
+* **Uso de tipo de importación**: 2
+
+**apps\api\src\validate\validate.controller.ts**
+* **Propiedades de parámetro**: 1
+
+**packages\core\vitest.config.ts**
+* **Evitar exportaciones por defecto**: 1
+
+Found 3 errors.
+Found 51 warnings.
+Found 192 infos.
+
+(leído server-side: 18043 chars ≈ 9397 tokens de Claude que no entraron a tu contexto)

@@ -1,0 +1,9 @@
+**Resumen de Problemas:**
+
+El archivo `lib/io.py` presenta dos problemas de importación, ambos clasificados como `I001 Import block is un-sorted or un-formatted`.
+El archivo `lib/net.py` también tiene dos problemas de importación, igualmente clasificados como `I001 Import block is un-sorted or un-formatted`.
+El archivo `lib/db.py` contiene tres problemas de uso de `if` (SIM102), y un problema de anotación de tipo (UP006).
+El archivo `lib/net.py` presenta un problema de asignación innecesaria antes de la sentencia `return` (RET504).
+El archivo `lib/db.py` también tiene un problema de asignación innecesaria antes de la sentencia `return` (RET504).
+
+(leído server-side: 784 chars ≈ 408 tokens de Claude que no entraron a tu contexto)

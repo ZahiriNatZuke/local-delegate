@@ -1,0 +1,43 @@
+**src/local_delegate/benchmark.py**
+* **COM812** Falta coma final: 14
+* **TRY003** Evitar especificar mensajes largos fuera de la clase de excepción: 8
+* **D102** Falta docstring en método público: 7
+* **T201** Se encontró `print`: 7
+* **D107** Falta docstring en `__init__`: 5
+* **EM102** La excepción no debe usar un literal f-string, asigne primero a una variable: 5
+* **D101** Falta docstring en clase pública: 3
+* **D105** Falta docstring en método mágico: 3
+* **D103** Falta docstring en función pública: 3
+* **PLR2004** Valor mágico usado en comparación, considere reemplazarlo por una constante: 3
+* **EM101** La excepción no debe usar un literal de cadena, asigne primero a una variable: 2
+* **PLC0415** El `import` debería estar en el nivel superior del archivo: 2
+* **S603** Llamada a `subprocess`: compruebe la ejecución de entrada no confiable: 1
+* **PLW1510** `subprocess.run` sin argumento `check` explícito: 1
+* **D301** Use `r"""` si hay barras invertidas en un docstring: 1
+* **FBT003** Valor posicional booleano en la llamada a la función: 1
+* **RUF036** `None` no está al final de la unión de tipos: 1
+* **D205** Se requiere una línea en blanco entre la línea de resumen y la descripción: 1
+* **D209** Las comillas de cierre de un docstring multilínea deberían estar en una línea separada: 1
+* **E501** Línea demasiado larga: 3
+* **PLR0913** Demasiados argumentos en la definición de la función: 2
+* **TRY301** Abstraiga el `raise` a una función interna: 1
+* **C901** `run_benchmark` es demasiado complejo: 1
+* **PLR0912** Demasiadas ramificaciones: 1
+* **PLR0915** Demasiadas sentencias: 1
+
+**src/local_delegate/agents.py**
+* **CPY001** Falta aviso de derechos de autor al principio del archivo: 1
+* **TC003** Mover importación de la biblioteca estándar `pathlib.Path` a un bloque de comprobación de tipos: 1
+* **COM812** Falta coma final: 1
+* **D401** La primera línea del docstring debe estar en modo imperativo: 1
+* **PLR2004** Valor mágico usado en comparación, considere reemplazarlo por una constante: 1
+
+**src/local_delegate/autostart.py**
+* **CPY001** Falta aviso de derechos de autor al principio del archivo: 1
+* **D4
+
+Sin mencionar (del log, no los nombra el resumen): src/local_delegate/__init__.py, src/local_delegate/__main__.py
+
+[local-delegate warning: salida truncada por max_tokens]
+
+(leído server-side: 8589 chars ≈ 4473 tokens de Claude que no entraron a tu contexto)

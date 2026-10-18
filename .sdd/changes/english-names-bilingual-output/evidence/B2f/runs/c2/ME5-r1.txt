@@ -1,0 +1,26 @@
+**Summary of Issues by File**
+
+**src\local\_delegate\sections.py:**
+
+-   Missing copyright notice at the top of the file (CPY001) - 1 instance
+-   Ambiguous `–` (EN DASH) in docstring (RUF002) - 1 instance
+-   `collections.abc.Callable` import should be in a type-checking block (TC003) - 1 instance
+-   Line too long (E501) - 4 instances (101, 103, 102, 101)
+-   Missing docstring in public class (D101) - 3 instances
+-   Missing docstring in public method (D102) - 2 instances
+-   Use `r"""` for docstrings with backslashes (D301) - 1 instance
+-   First line should end with a period (D400) - 1 instance
+-   `markdown_headings` is too complex (C901) - 1 instance
+-   Magic value used in comparison (PLR2004) - 1 instance
+-   `match_headings` is too complex (C901) - 1 instance
+-   Too many branches (PLR0912) - 1 instance
+-   Ambiguous `×` (MULTIPLICATION SIGN) in docstring (RUF002) - 1 instance
+-   Missing docstring in public class (D101) - 1 instance
+-   Missing docstring in public method (D102) - 1 instance
+-   Too many arguments in function definition (PLR0913) - 1 instance
+-   1 blank line required between summary line and description (D205) - 1 instance
+-   Line too long (E501) - 1 instance
+
+Found 26 errors.
+
+(read server-side: 2627 chars ≈ 1368 Claude tokens that did not enter your context)
