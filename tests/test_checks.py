@@ -346,7 +346,7 @@ def test_the_hint_depends_on_how_it_is_installed(tmp_path, monkeypatch):
     hint = hint_for(update.EDITABLE, "b")
     assert "git -C" in hint and "uv sync" in hint
 
-    assert hint_for(update.OTHER, "c") == update.GENERIC_UPGRADE
+    assert hint_for(update.OTHER, "c") == update.generic_upgrade()
 
 
 def test_the_detail_and_hint_fit_the_windows_console(tmp_path, monkeypatch):

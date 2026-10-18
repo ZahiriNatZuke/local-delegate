@@ -723,6 +723,60 @@
       "text": "rtk read",
       "kind": "verbatim",
       "reason": "verbo de shell que el hook compara tal cual con el comando (`rtk read X`)"
+    },
+    {
+      "file": "src/local_delegate/agents.py",
+      "text": "^#{1,3}\\s*(?:Delegaci[oó]n a modelos locales|Delegation to local models)",
+      "kind": "verbatim",
+      "reason": "regex que reconoce el encabezado de la sección de delegación que escribió el usuario en su subagente, en los dos idiomas (REQ-029); se compara contra texto ajeno, no se muestra"
+    },
+    {
+      "file": "src/local_delegate/install.py",
+      "text": "Read",
+      "kind": "machine_name",
+      "reason": "matcher del hook de Claude Code: el nombre de la tool `Read`"
+    },
+    {
+      "file": "src/local_delegate/install.py",
+      "text": "Bearer ${{}}",
+      "kind": "machine_name",
+      "reason": "valor de la cabecera Authorization con la referencia a la variable, en la sintaxis de Claude Code"
+    },
+    {
+      "file": "src/local_delegate/install.py",
+      "text": "Authorization",
+      "kind": "machine_name",
+      "reason": "nombre de cabecera HTTP"
+    },
+    {
+      "file": "src/local_delegate/install.py",
+      "text": "claude mcp add-json --scope user",
+      "kind": "verbatim",
+      "reason": "comando de la CLI de Claude Code que se nombra tal cual en el resultado de la acción"
+    },
+    {
+      "file": "src/local_delegate/install.py",
+      "text": "opencode mcp add",
+      "kind": "verbatim",
+      "reason": "comando de la CLI de opencode que se nombra tal cual en el resultado de la acción"
+    },
+    {
+      "file": "src/local_delegate/install.py",
+      "text": "claude mcp remove",
+      "kind": "verbatim",
+      "reason": "comando de la CLI de Claude Code que se nombra tal cual en el resultado de la acción"
+    },
+    {
+      "file": "src/local_delegate/update.py",
+      "text": "uv tool upgrade {}",
+      "kind": "verbatim",
+      "reason": "comando que actualiza la instalación de `uv tool`; se copia y se ejecuta tal cual"
+    },
+    {
+      "file": "src/local_delegate/update.py",
+      "text": "git -C {} pull && uv sync --project {}",
+      "kind": "verbatim",
+      "reason": "comando que actualiza una instalación editable; se copia y se ejecuta tal cual"
     }
   ]
 }

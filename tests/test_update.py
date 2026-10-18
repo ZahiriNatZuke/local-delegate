@@ -275,7 +275,7 @@ def test_without_a_receipt_nothing_is_claimed(monkeypatch, tmp_path):
     """`pip`, `pipx`, conda… no se adivina: comando genérico, no uno que podría fallar."""
     _fake_prefix(monkeypatch, tmp_path, None)
     assert update.install_kind() == update.OTHER
-    assert update.upgrade_command() == update.GENERIC_UPGRADE
+    assert update.upgrade_command() == update.generic_upgrade()
 
 
 def test_a_receipt_from_another_package_is_not_ours(monkeypatch, tmp_path):
@@ -325,7 +325,7 @@ def test_the_uv_tool_warning_fits_in_the_windows_console(monkeypatch, tmp_path):
     _fake_prefix(monkeypatch, tmp_path, f'[tool]\nname = "{update.PACKAGE}"')
     monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
     "\n".join(update.uv_tool_lines("0.18.0")).encode("cp1252")
-    update.GENERIC_UPGRADE.encode("cp1252")
+    update.generic_upgrade().encode("cp1252")
 
 
 def test_the_uv_tool_warning_changes_neither_the_plan_nor_the_exit_code(tmp_path, monkeypatch):
@@ -370,7 +370,7 @@ def test_the_queried_version_says_where_it_came_from(monkeypatch):
     monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
     (line,) = update.version_lines("0.17.0", None, from_user=False)
     assert "0.17.0" in line
-    assert update.PYPI_SOURCE in line
+    assert update.pypi_source() in line
 
 
 def test_installed_newer_than_published_warns_and_reminds_the_flag(monkeypatch):

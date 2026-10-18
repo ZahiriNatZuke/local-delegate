@@ -29,6 +29,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from . import i18n
+
 ANCHOR = "mcp__local-delegate__local_delegate"
 TOOL_PREFIX = "mcp__local-delegate__"
 
@@ -40,16 +42,14 @@ CATALOG_END = "<!-- local-delegate:catalog:end -->"
 _CATALOG_BLOCK_RE = re.compile(
     re.escape(CATALOG_BEGIN) + r".*?" + re.escape(CATALOG_END), re.DOTALL
 )
-_DELEGATION_HEADING_RE = re.compile(r"^#{1,3}\s*Delegaci[oó]n a modelos locales", re.IGNORECASE)
+# El encabezado de la sección de delegación, en los dos idiomas (REQ-029): un subagente escrito
+# en inglés también recibe el bloque.
+_DELEGATION_HEADING_RE = re.compile(
+    r"^#{1,3}\s*(?:Delegaci[oó]n a modelos locales|Delegation to local models)", re.IGNORECASE
+)
 _HEADING_RE = re.compile(r"^#{1,3}\s")
 # Filas de la tabla de la skill: | `local_x` | cuándo | args | devuelve |
 _CATALOG_ROW_RE = re.compile(r"^\|\s*`(local_\w+)`\s*\|\s*([^|]+?)\s*\|")
-
-_RULE = (
-    "Regla de oro: si el paso cabe en una frase con formato de salida explícito, delégalo; si "
-    "necesita criterio, arquitectura o razonamiento, hazlo tú. Detalle en la skill "
-    "`local-delegation`."
-)
 
 
 def tool_catalog(skill_md: Path) -> list[tuple[str, str]]:
@@ -61,8 +61,8 @@ def tool_catalog(skill_md: Path) -> list[tuple[str, str]]:
 
     La ruta **se recibe** en vez de derivarse de ``install.resources_dir()``: importar ``install``
     aquí cerraba un ciclo —``install`` importa este módulo para planificar la acción— que CodeQL
-    marcó en el PR. Recibirla deja este módulo sin una sola dependencia del paquete, que además
-    es lo que lo hace trivial de probar.
+    marcó en el PR. Recibirla deja este módulo sin más dependencia del paquete que el catálogo de
+    textos (`i18n`), que es lo que lo hace trivial de probar.
 
     Si la tabla no se puede leer devuelve vacío, y con el catálogo vacío no se toca ningún
     agente: la degradación segura de una escritura es no escribir.
@@ -78,14 +78,19 @@ def tool_catalog(skill_md: Path) -> list[tuple[str, str]]:
     ]
 
 
-def catalog_block(catalog: list[tuple[str, str]]) -> str:
-    """El bloque que se inserta en los agentes, ya delimitado."""
+def catalog_block(catalog: list[tuple[str, str]], lang: str | None = None) -> str:
+    """El bloque que se inserta en los agentes, ya delimitado, en ``lang`` (por defecto, el
+    idioma de este proceso). ``catalog`` sale de la skill del mismo idioma."""
+    language = lang or i18n.lang()
     # Solo la inicial en minúscula: un `.lower()` entero convertiría «lint/tests/CI» en
     # «lint/tests/ci» y se comería los acrónimos de la tabla. Se vio en la primera ejecución real.
     listing = ", ".join(f"`{name}` ({what[:1].lower()}{what[1:]})" for name, what in catalog)
-    body = (
-        f"**Catálogo de tools `local_*` (MCP `local-delegate`, {len(catalog)} tools):** "
-        f"{listing}.\n\n{_RULE}"
+    body = i18n.t_lang(
+        language,
+        "install.agents.catalog",
+        n=len(catalog),
+        listing=listing,
+        rule=i18n.t_lang(language, "install.agents.rule"),
     )
     return f"{CATALOG_BEGIN}\n{body}\n{CATALOG_END}\n"
 
@@ -95,8 +100,8 @@ def normalize_block(text: str) -> str:
 
     Un fichero guardado en CRLF, o un editor que deja espacios al final, no cambian lo que el
     bloque dice; compararlos literalmente daría un aviso perpetuo y una reescritura en cada
-    `update` (D12). Vive aquí, y no en `install`, porque este módulo no depende de ningún otro
-    del paquete y `install` lo importa para el bloque de memoria.
+    `update` (D12). Vive aquí, y no en `install`, porque este módulo no importa `install` y
+    `install` lo importa para el bloque de memoria.
     """
     lines = text.replace("\r\n", "\n").replace("\r", "\n").strip().split("\n")
     return "\n".join(line.rstrip() for line in lines)
@@ -176,17 +181,23 @@ def _update_catalog_block(text: str, block: str) -> tuple[str, str | None]:
     return "".join(before + block_lines + after), "inserted"
 
 
-def process(text: str, catalog: list[tuple[str, str]]) -> tuple[str, list[str], str | None]:
+def process(
+    text: str, catalog: list[tuple[str, str]], lang: str | None = None
+) -> tuple[str, list[str], str | None]:
     """(texto nuevo, tools añadidas, acción sobre el bloque). Sin catálogo no se toca nada."""
     if not catalog or not is_delegator(text):
         return text, [], None
     text, added = _update_tools_line(text, catalog)
-    text, action = _update_catalog_block(text, catalog_block(catalog))
+    text, action = _update_catalog_block(text, catalog_block(catalog, lang))
     return text, added, action
 
 
-def pending(agents_dir: Path, skill_md: Path) -> list[tuple[Path, str, list[str], str | None]]:
+def pending(
+    agents_dir: Path, skill_md: Path, lang: str | None = None
+) -> list[tuple[Path, str, list[str], str | None]]:
     """Agentes que cambiarían: (ruta, texto nuevo, tools añadidas, acción del bloque).
+
+    ``skill_md`` es la skill del idioma ``lang``, el del bloque que se escribe.
 
     Solo lectura. Un fichero ilegible se salta en vez de tumbar el recorrido: el instalador es
     best-effort sobre ficheros que no escribió él.
@@ -200,7 +211,7 @@ def pending(agents_dir: Path, skill_md: Path) -> list[tuple[Path, str, list[str]
             original = path.read_text(encoding="utf-8")
         except OSError:
             continue
-        updated, added, action = process(original, catalog)
+        updated, added, action = process(original, catalog, lang)
         if updated != original:
             out.append((path, updated, added, action))
     return out

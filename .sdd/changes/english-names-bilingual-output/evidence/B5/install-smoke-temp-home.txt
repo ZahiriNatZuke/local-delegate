@@ -1,0 +1,119 @@
+[pesado] plaza plaza-1 tomada tras 0s: bash .sdd/changes/english-names-bilingual-output/evidence/B5/install_smoke.sh C:/Users/Yohan/AppData/Local/Temp/claude/D--Projects-local-delegate/9d9ecade-e04b-4a3b-bd28-ea018a806ed3/scratchpad/b5/smoke
+################ LOCAL_DELEGATE_LANG=en
+Installing local-delegate in C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home
+clients: by --clients: claude, codex
+components: agents, hooks, mcp, memory, skill
+
+[language] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\data\language.json — saves language en (source: variable)
+    written to C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\data\language.json
+[copy] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\hooks\local-delegate — advisory hook scripts
+    copied -> C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\hooks\local-delegate
+[settings] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\settings.json — registers 2 hook(s): UserPromptSubmit, PreToolUse/mcp__local-delegate__.*
+    2 hook(s) registered
+[copy] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\skills\local-delegation — skill local-delegation (en)
+    copied -> C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\skills\local-delegation
+[agents] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\agents — updates 1 subagent(s): probe.md (+10 tools, catalog inserted)
+    updated 1: probe.md
+[markdown] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\CLAUDE.md — delegation rule block (en)
+    managed block updated
+[markdown] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.codex\AGENTS.md — delegation rule block (en)
+    managed block updated
+[mcp] claude — registers the MCP server 'local-delegate' (stdio)
+    written to C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude.json
+[toml] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.codex\config.toml — registers the MCP server 'local-delegate' (stdio)
+    entry [mcp_servers.local-delegate] updated
+
+Done. Restart the client (Claude Code / Codex / opencode) to pick up the changes.
+
+State of the scaffolding after writing:
+States: [ OK ] ready · [WARN] review · [MISS] missing · [ -- ] could not be checked
+
+Environment (the CLI and the clients):
+  [ OK ] local-delegate CLI: D:\Projects\ld-wt-b5\.venv\Scripts\local-delegate.EXE (version 0.35.0)
+  [ -- ] published version: installed 0.35.0; PyPI is not asked in this command
+  [ OK ] clients: found: Claude Code, Codex
+  [ -- ] observed MCP clients: no MCP client has talked to this local-delegate yet
+  [ OK ] fallback chains: valid chains; no resident
+  [WARN] deprecated names: read by the hooks (last 7 days): LD_HOOK_READ_BLOQUEAR is deprecated: use LD_HOOK_READ_BLOCK (it is removed in 0.38.0)
+         fix it with: rename LD_HOOK_READ_BLOQUEAR to LD_HOOK_READ_BLOCK
+  [ -- ] cost and backfill: no saved check in C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\data: no transcripts on this machine or `local-delegate recompute-cost` never run
+  [ OK ] test windows: no windows
+
+Scaffolding (hooks, skill, memory and MCP entries):
+  [ OK ] copied hooks: 5 script(s) in C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\hooks\local-delegate
+  [ OK ] orphan hooks: none loose in C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\hooks
+  [ OK ] registered hooks: 2 registered: UserPromptSubmit, PreToolUse/mcp__local-delegate__.*
+  [ OK ] skill local-delegation: Claude Code: installed in C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\skills\local-delegation · opencode: client not installed
+  [ OK ] global memory: Claude Code: block up to date in C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\CLAUDE.md · Codex: block up to date in C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.codex\AGENTS.md · opencode: client not installed
+  [ OK ] MCP in Claude Code: registered in C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude.json (stdio uvx)
+  [ OK ] MCP in Codex: managed block in C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.codex\config.toml (stdio)
+  [ -- ] MCP in opencode: opencode is not installed (C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.config\opencode does not exist)
+== language.json: {"lang": "en", "source": "variable"}
+== SKILL.md: # Delegation to local models (MCP `local-delegate`)
+== bloques en CLAUDE.md: 1
+## Delegation to local models (MCP `local-delegate`)
+**Catalog of `local_*` tools (MCP `local-delegate`, 11 tools)
+################ LOCAL_DELEGATE_LANG=es
+Instalando local-delegate en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home
+clientes: por --clients: claude, codex
+componentes: agents, hooks, mcp, memory, skill
+
+[language] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\data\language.json — guarda el idioma es (origen: variable)
+    escrito en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\data\language.json
+[copy] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\hooks\local-delegate — scripts de hooks consultivos
+    copiado -> C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\hooks\local-delegate
+[settings] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\settings.json — registra 2 hook(s): UserPromptSubmit, PreToolUse/mcp__local-delegate__.*
+    2 hook(s) registrados (retiradas 2 entrada(s) previa(s))
+[copy] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\skills\local-delegation — skill local-delegation (es)
+    copiado -> C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\skills\local-delegation
+[agents] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\agents — actualiza 1 subagente(s): probe.md (+0 tools, catálogo reemplazado)
+    actualizados 1: probe.md
+[markdown] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\CLAUDE.md — bloque de regla de delegación (es)
+    bloque gestionado actualizado
+[markdown] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.codex\AGENTS.md — bloque de regla de delegación (es)
+    bloque gestionado actualizado
+[mcp] claude — registra el servidor MCP 'local-delegate' (stdio)
+    escrito en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude.json
+[toml] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.codex\config.toml — registra el servidor MCP 'local-delegate' (stdio)
+    entrada [mcp_servers.local-delegate] actualizada
+
+Listo. Reinicia el cliente (Claude Code / Codex / opencode) para tomar los cambios.
+
+Estado del andamiaje después de escribir:
+Estados: [ OK ] a punto · [WARN] revisar · [FALT] falta · [ -- ] no se pudo comprobar
+
+Entorno (el CLI y los clientes):
+  [ OK ] CLI local-delegate: D:\Projects\ld-wt-b5\.venv\Scripts\local-delegate.EXE (versión 0.35.0)
+  [ -- ] versión publicada: instalada 0.35.0; no se consulta PyPI en este comando
+  [ OK ] clientes: detectados: Claude Code, Codex
+  [ -- ] clientes MCP observados: todavía no ha hablado ningún cliente MCP con este local-delegate
+  [ OK ] cadenas de respaldo: cadenas válidas; sin residente
+  [WARN] nombres obsoletos: leído por los hooks (últimos 7 días): LD_HOOK_READ_BLOQUEAR está obsoleto: usa LD_HOOK_READ_BLOCK (se retira en la 0.38.0)
+         arréglalo con: renombra LD_HOOK_READ_BLOQUEAR a LD_HOOK_READ_BLOCK
+  [ -- ] coste y relleno: no hay cotejo guardado en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\data: sin transcripts en esta máquina o `local-delegate recompute-cost` nunca lanzado
+  [ OK ] ventanas de prueba: sin ventanas
+
+Andamiaje (hooks, skill, memoria y entradas MCP):
+  [ OK ] hooks copiados: 5 script(s) en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\hooks\local-delegate
+  [ OK ] hooks huérfanos: ninguno suelto en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\hooks
+  [ OK ] hooks registrados: 2 registrado(s): UserPromptSubmit, PreToolUse/mcp__local-delegate__.*
+  [ OK ] skill local-delegation: Claude Code: instalada en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\skills\local-delegation · opencode: cliente no instalado
+  [ OK ] memoria global: Claude Code: bloque al día en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude\CLAUDE.md · Codex: bloque al día en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.codex\AGENTS.md · opencode: cliente no instalado
+  [ OK ] MCP en Claude Code: registrado en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.claude.json (stdio uvx)
+  [ OK ] MCP en Codex: bloque gestionado en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.codex\config.toml (stdio)
+  [ -- ] MCP en opencode: opencode no está instalado (C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.config\opencode no existe)
+== language.json: {"lang": "es", "source": "variable"}
+== SKILL.md: # Delegación a modelos locales (MCP `local-delegate`)
+== bloques en CLAUDE.md: 1
+## Delegación a modelos locales (MCP `local-delegate`)
+**Catálogo de tools `local_*` (MCP `local-delegate`, 11 tools)
+################ doctor sin la variable (lee la preferencia es/variable)
+Idioma:           es (preferencia; C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\data\language.json)
+                  para volver a seguir al sistema, borra `C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\data\language.json` y ejecuta `local-delegate install`
+Respuesta:        es (preferencia)
+################ uninstall
+         fix it with: local-delegate install
+  [MISS] MCP in Codex: no [mcp_servers.local-delegate] in C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.codex\config.toml
+         fix it with: local-delegate install
+  [ -- ] MCP in opencode: opencode is not installed (C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-bd28-ea018a806ed3\scratchpad\b5\smoke\home\.config\opencode does not exist)
+== language.json tras uninstall: 0 fichero(s)
