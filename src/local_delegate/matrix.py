@@ -84,15 +84,18 @@ def _qwen_36(prompt_sha256: str) -> dict[str, Any]:
 
 
 _TRANSLATE_PROMPT = "146a43ac5f5b129d7f93e76cda4a3d46ebc65395557aa1b81533cf45e10f13e5"
-_LINT_PROMPT = "5202980b8aab9b7676889f5e7e7b1ba00a7c6cd38cd3111a8f9f71ca6d016838"
 _DELEGATE_PROMPT = "804bdc0a8674dfef530698a753cfcd6c4546e89b5d434d647cda0321b260615b"
 
 #: Las celdas `aprobada` del veredicto de T6 (`solo_mecanicas: false`), todas frente al rol
-#: mecánico (`gemma3-4b`). Las siete `rechazada` (incluida `local_commit_msg`) no están.
+#: mecánico (`gemma3-4b`), menos las que re-evaluó y no aprobó un veredicto posterior. Las siete
+#: `rechazada` de T6 (incluida `local_commit_msg`) no están. La de `local_lint_summary` →
+#: `gemma4-26b-a4b` salió en B2-affinity (0.36.0): con los prompts de la 0.36.0 (orden de idioma,
+#: que además hace la huella distinta en `es` y en `en`) el 26B deja de nombrar los códigos de
+#: regla y la celda queda rechazada en los dos idiomas, igual que `qwen36-35b-a3b`
+#: (`benchmarks/afinidad-2026-10/reevaluation-0.36.0/verdict.json`).
 CELLS: tuple[Cell, ...] = (
     Cell("local_translate", "gemma4-26b-a4b", "gemma3-4b", _gemma_26b(_TRANSLATE_PROMPT)),
     Cell("local_translate", "qwen36-35b-a3b", "gemma3-4b", _qwen_36(_TRANSLATE_PROMPT)),
-    Cell("local_lint_summary", "gemma4-26b-a4b", "gemma3-4b", _gemma_26b(_LINT_PROMPT)),
     Cell("local_delegate", "gemma4-26b-a4b", "gemma3-4b", _gemma_26b(_DELEGATE_PROMPT)),
 )
 
@@ -103,6 +106,8 @@ CELLS: tuple[Cell, ...] = (
 #: huella y deja la celda «sin base».
 PROMPT_INPUTS: Mapping[str, tuple[Any, ...]] = {
     "local_translate": ("español", "inglés"),
+    # Sin celda desde B2-affinity; se conserva para la próxima medición (la huella de lint la
+    # calcula con esto `evidence/B2-affinity/evaluate_reevaluation.py`).
     "local_lint_summary": (200,),
     "local_delegate": (
         "Solo el texto en mayúsculas, en una línea",

@@ -24,7 +24,17 @@ import backend_mock
 import httpx2
 import pytest
 
-from local_delegate import chains, checks, config, footprint, legacy_names, matrix, server, turn
+from local_delegate import (
+    chains,
+    checks,
+    config,
+    footprint,
+    i18n,
+    legacy_names,
+    matrix,
+    server,
+    turn,
+)
 from local_delegate.turn import PendingRequest
 
 BASE = "http://127.0.0.1:9292/v1"
@@ -499,21 +509,35 @@ def _verdict() -> dict:
     return legacy_names.normalize_affinity_verdict(json.loads(path.read_text(encoding="utf-8")))
 
 
+#: La re-evaluación de la 0.36.0 (B2-affinity): sus celdas reemplazan a las de T6 que nombra en
+#: `supersedes`, en todos los idiomas.
+REEVALUATION = VERDICT_DIR / "reevaluation-0.36.0" / "verdict.json"
+
+
+def _key(c: dict) -> tuple[str, str, str]:
+    return (c["tool"], c["alternative"], c["compared_role"])
+
+
 def test_matrix_cells_are_the_approved_cells_of_the_verdict():
+    """`CELLS` = lo aprobado en T6, menos lo que la re-evaluación de la 0.36.0 reemplaza, más lo
+    que esa re-evaluación aprueba. Mutante: volver a poner la celda de lint en `CELLS` lo rompe."""
     verdict = _verdict()
-    verdict_approved_cells = {
-        (c["tool"], c["alternative"], c["compared_role"])
+    reevaluation = json.loads(REEVALUATION.read_text(encoding="utf-8"))
+    superseded = {_key(c) for c in reevaluation["supersedes"]}
+    assert superseded, "guarda: la re-evaluación reemplaza alguna celda de T6"
+    assert superseded <= {_key(c) for c in verdict["cells"] if c["state"] == "approved"}
+    footprints = {
+        _key(c): c["footprint"]
         for c in verdict["cells"]
-        if c["state"] == "approved"
+        if c["state"] == "approved" and _key(c) not in superseded
     }
+    for c in reevaluation["cells"]:
+        if c["state"] == "approved":
+            footprints[_key(c)] = c["footprint"]
+    verdict_approved_cells = set(footprints)
     code_cells = {(c.tool, c.alternative, c.compared_role) for c in matrix.CELLS}
 
     assert code_cells == verdict_approved_cells
-    footprints = {
-        (c["tool"], c["alternative"], c["compared_role"]): c["footprint"]
-        for c in verdict["cells"]
-        if c["state"] == "approved"
-    }
     for cell in matrix.CELLS:
         assert dict(cell.footprint) == footprints[(cell.tool, cell.alternative, cell.compared_role)]
     assert len(matrix.CELLS) == len(code_cells), "una celda repetida"
@@ -543,27 +567,51 @@ def test_frozen_verdict_footprints_with_old_keys_are_read_with_the_new_ones():
             assert not {"ruta", "tamano_bytes"} & set(new[new_key])
 
 
-#: Celdas cuya huella cambió a propósito con un cambio de prompt declarado (REQ-028, B2b-2) y que
-#: quedan sin base hasta el lote B2-affinity. Solo puede encoger: cambiar `_guard` o el prompt de
-#: traducción las dejaría a todas fuera y este test lo diría.
-CELLS_WITHOUT_BASE = frozenset({"local_lint_summary"})
-
-
 def test_prompt_footprint_of_the_code_is_the_measured_one():
     """El prompt que `server` reconstruye para cada tool da el `sha256` que midió la evaluación:
-    si cambia `_guard` o el texto de la tool, este test lo dice (y la celda queda sin base)."""
+    si cambia `_guard` o el texto de la tool, este test lo dice (y la celda queda sin base).
+
+    Sin excepciones desde B2-affinity: la celda de lint, la única que perdió la base con los
+    prompts de la 0.36.0, se re-evaluó y salió de `CELLS`. La suite corre en `es` y en `en`, así
+    que una celda cuyo prompt dependa del idioma rompe aquí en una de las dos corridas."""
     import hashlib
 
+    assert matrix.CELLS, "guarda: hay celdas que comprobar"
     for cell in matrix.CELLS:
         prompt = server._affinity_prompt(cell.tool)
         assert prompt is not None
         digest = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
-        if cell.tool in CELLS_WITHOUT_BASE:
-            # B2b-2: la orden de idioma de REQ-028 cambia el prompt de lint; la celda queda «sin
-            # base» (a propósito) hasta que el lote B2-affinity la vuelva a medir.
-            assert digest != cell.footprint["prompt_sha256"], cell.tool
-        else:
-            assert digest == cell.footprint["prompt_sha256"], cell.tool
+        assert digest == cell.footprint["prompt_sha256"], cell.tool
+
+
+def test_reevaluation_verdict_rejects_the_lint_cell_in_both_languages():
+    """B2-affinity: la celda de lint se midió con los prompts de la 0.36.0 en `es` y en `en`, con
+    el 26B y, por la regla (1), con `qwen36-35b-a3b`, y ninguna llegó al criterio. La huella
+    guardada es la del prompt que se midió: la de hoy en cada idioma."""
+    import hashlib
+
+    reevaluation = json.loads(REEVALUATION.read_text(encoding="utf-8"))
+    cells = reevaluation["cells"]
+    measured = {(c["alternative"], c["language"]) for c in cells}
+    assert measured == {
+        (alternative, language)
+        for alternative in ("gemma4-26b-a4b", "qwen36-35b-a3b")
+        for language in ("es", "en")
+    }
+    assert all(c["tool"] == "local_lint_summary" for c in cells)
+    assert all(c["state"] == "rejected" for c in cells)
+    assert all(len(c["repetitions"]) == 3 for c in cells)
+    language = i18n.response_language().value
+    assert language in ("es", "en"), "guarda: la suite corre en es o en en"
+    prompt = server._affinity_prompt("local_lint_summary")
+    assert prompt is not None
+    digest = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+    same_language = [c for c in cells if c["language"] == language]
+    assert len(same_language) == 2
+    for c in same_language:
+        assert c["footprint"]["prompt_sha256"] == digest, c["alternative"]
+    other = {c["footprint"]["prompt_sha256"] for c in cells if c["language"] != language}
+    assert digest not in other, "guarda: el prompt de lint depende del idioma"
 
 
 # --- Camino feliz sin red ---------------------------------------------------------------------
