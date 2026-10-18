@@ -1,0 +1,31 @@
+**Resumen de problemas por archivo**
+
+**scripts\_claude_bench.py**
+* **Complejidad y estructura**: 1 función demasiado compleja, 1 con demasiadas ramas, 1 con demasiados argumentos y 1 con demasiadas sentencias.
+* **Documentación y tipos**: 1 error de anotación de tipo faltante, 2 errores de formato en docstrings y 1 error de paquete de espacio de nombres implícito.
+* **Seguridad y excepciones**: 1 llamada a `subprocess` insegura, 2 errores por mensajes de excepción largos fuera de la clase, 1 error por uso de f-strings en excepciones y 1 error por uso de literales de cadena en excepciones.
+* **Estilo y otros**: 2 errores de importación en nivel superior, 4 faltas de comas finales, 1 uso de `print`, 2 reemplazos recomendados de `os.path.abspath()` por `Path.resolve()` y 1 nombre de excepción incorrecto.
+
+**scripts\adoption_experiment.py**
+* **Documentación**: 5 funciones públicas sin docstring, 2 errores de formato en docstrings y 1 error de uso de cadenas crudas en docstrings.
+* **Seguridad y criptografía**: 1 llamada a `subprocess` insegura y 2 avisos sobre generadores pseudoaleatorios no aptos para criptografía.
+* **Estilo y complejidad**: 4 líneas demasiado largas, 5 faltas de comas finales, 4 usos de `print`, 1 error de línea que termina sin puntuación y 1 función demasiado compleja con demasiadas ramas y sentencias.
+* **Otros**: 1 aviso de falta de aviso de derechos de autor, 3 errores por valores mágicos en comparaciones y 1 error de importación.
+
+**scripts\analyze_benchmark.py**
+* **Documentación**: 22 métodos o funciones públicas sin docstring, 2 clases sin docstring, 4 errores de formato en docstrings y 1 error de falta de punto al final de la primera línea.
+* **Tipado**: 7 errores por expresiones con tipado dinámico (`typing.Any`) y 1 error de anotación de tipo faltante.
+* **Estilo y complejidad**: 15 faltas de comas finales, 11 líneas demasiado largas, 4 funciones demasiado complejas, 3 con demasiados argumentos, 2 con demasiadas ramas, 2 con demasiadas sentencias y 1 error de uso de `assert`.
+* **Otros**: 1 aviso de derechos de autor, 1 error de uso de `assert` mal estructurado, 1 error de capitalización de `TODO`, 1 error de `TODO` incompleto, 1 error de `TODO` sin enlace, 1 error de resolución de `TODO`, 1 error de rendimiento por uso de `list.extend` y 1 error de cadena con comillas ambiguas.
+
+**scripts\build_corpus.py**
+* **Coma final faltante**: 22
+* **Línea demasiado larga**: 18
+* **Falta docstring en función pública**: 6
+* **Error en formato de docstring (línea en blanco o comillas)**:
+
+[local-delegate warning: salida truncada por max_tokens en 4 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 154297 chars ≈ 80363 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

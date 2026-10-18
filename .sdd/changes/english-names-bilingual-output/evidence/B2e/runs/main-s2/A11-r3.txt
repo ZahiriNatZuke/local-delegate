@@ -1,0 +1,13 @@
+**Summary of Errors by File**
+
+The analysis identified several errors related to missing model files. Specifically, there were errors for:
+
+*   **gemma3-4b**: ERROR (file not found: MODELOS\gemma-3-4b-it-Q4_K_M.gguf)
+*   **llama31-8b**: ERROR (file not found: MODELOS\Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf)
+*   **qwen25-coder-14b**: ERROR (file not found: MODELOS\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf)
+*   **qwen35-2b**: ERROR (file not found: MODELOS\Qwen3.5-2B-UD-Q8_K_XL.gguf)
+*   **qwen3-vl-8b**: ERROR (file not found: MODELOS\Qwen3VL-8B-Instruct-Q4_K_M.gguf)
+
+These errors indicate that the specified model files are not present in the expected directory. The total worst-case VRAM usage is 0.00 GiB.
+
+(leído server-side: 743 chars ≈ 386 tokens de Claude que no entraron a tu contexto)

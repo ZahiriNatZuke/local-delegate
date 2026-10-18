@@ -1836,6 +1836,17 @@ del cambio del ruido del modelo (8 llamadas de prompt idéntico dieron 22 frente
     se repite con `--repeat 5`, sin cambiar el criterio.
   - Si el campo de pasos muestra cortes del reduce de `explain_code`, se anota y se decide el tope
     con el usuario antes de medir otra vez.
+- **Decisión del usuario (2026-10-17, tras el corte por memoria): `explain_code` va en una tanda
+  aparte.** La primera medición se cortó por falta de RAM en E1 (`qwen36-35b-a3b`, ~17,8 GB; quedaban
+  0,7 GB de 31). Esta tanda mide todo menos E1–E3: control A y B, ventana C solo con lint (L1–L3,
+  `run_live.py --only-tool local_lint_summary`, clave `C-r<k>-lint_summary` en `live-runs.json`) y
+  la F, en `main` y en la rama. Las entradas, el método y el criterio **no cambian**; para que ninguna
+  llamada cargue `qwen36-35b-a3b`, la C y la F van con `LOCAL_DELEGATE_FALLBACK_LONG=none` en las dos
+  versiones (la cadena de respaldo de `long` acaba en ese modelo; sin fallos no cambia nada), y cada
+  ventana se para si quedan menos de 4 GB libres antes de empezar. E1–E3 (`--only-tool
+  local_explain_code`, clave `C-r<k>-explain_code`) se miden cuando el usuario avise, en `main` y en
+  la rama, en la misma sesión. **El veredicto de B2e queda PENDIENTE** de esa tanda: esta solo da el
+  de la parte de lint y el del control.
 - **Cierre del lote:** suite completa en `es` y en `en`, `ruff`, corpus y afinidad (cambian los
   prompts del reduce de lint y de `explain_code`: frontera en `PROMPT_BOUNDARIES` con su motivo),
   CHANGELOG, y registro en `waves/B2e.md` con las llamadas `local_*`.

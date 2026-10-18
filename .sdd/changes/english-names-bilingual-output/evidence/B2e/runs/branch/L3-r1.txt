@@ -1,0 +1,60 @@
+**Resumen de pruebas por archivo**
+
+**tests/test_checks.py**
+* 61 pruebas de diagnóstico que validan versiones, detección de huérfanos, credenciales, estado del demonio y conectividad. Incluye detección de versiones, validación de clientes, autenticación, gestión de configuración, topología de red, residencia de modelos y nombres obsoletos.
+
+**tests/test_metrics.py**
+* 65 pruebas sobre métricas del sistema, estadísticas de uso, contabilidad de tokens, paneles de control y seguridad de la API.
+
+**tests/test_analyze_benchmark.py**
+* 89 pruebas de análisis de rendimiento sobre calidad, latencia, significancia, archivos congelados y reglas de reemplazo.
+
+**tests/test_affinity.py**
+* 48 pruebas sobre afinidad de modelos, cubriendo carga, gestión de colas, roles, advertencias del doctor y fallos de capacidad.
+
+**tests/test_install.py**
+* 47 pruebas sobre instalación, gestión de recursos, comandos de shell, rutas en Windows, idempotencia, desinstalación y migración.
+
+**tests/test_llamaswap_config.py**
+* 45 pruebas sobre carga de configuración, estimación de memoria (VRAM/RAM), validación de archivos GGUF y grupos de modelos.
+
+**tests/test_benchmark.py**
+* 37 pruebas de métricas de rendimiento sobre análisis de JSON, bucles infinitos, casos de imagen y ejecuciones truncadas.
+
+**tests/test_adoption_experiment.py**
+* 34 pruebas sobre experimentos de adopción, incluyendo planes, cobertura de títulos, gestión de contenido y reportes.
+
+**tests/test_attribution.py**
+* 34 pruebas sobre atribución, validando servidores de hooks, resolución de subagentes, notas y procesos de relleno.
+
+**tests/test_measure_cooldown.py**
+* 31 pruebas sobre reglas de enfriamiento, gestión de fallos, ventanas de tiempo e informes.
+
+**tests/test_measure_slowness.py**
+* 31 pruebas sobre medición de lentitud, ventanas de tokens, decisiones de referencia y códigos de parada.
+
+**tests/test_pace.py**
+* 31 pruebas sobre medición del ritmo, entradas inválidas y semillas mensuales.
+
+**tests/test_install_opencode.py**
+* 31 pruebas sobre configuración de directorios, archivos JSON/JSONC, comentarios, esquemas y actualizaciones.
+
+**tests/test_install_clients.py**
+* 28 pruebas sobre configuración de clientes, directorios de inicio, detección de clientes, desinstalación y reportes.
+
+**tests/test_chains.py**
+* 26 pruebas sobre cadenas de ejecución, configuraciones de saltos, disponibilidad de modelos y variables.
+
+**tests/test_install_timeouts.py**
+* 23 pruebas sobre persistencia de tiempos de espera en clientes y modos de ejecución.
+
+**tests/test_affinity_batch.py**
+* 17 pruebas sobre procesos por lotes, incluyendo conteo de peticiones, errores, formatos y huellas.
+
+**tests/test_measure_
+
+[local-delegate warning: salida truncada por max_tokens en 4 de 8 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 206985 chars ≈ 107804 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 8 pasadas por local-delegate)

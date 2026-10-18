@@ -100,7 +100,11 @@ def score(runs: Path, counter: str, logs: list[Path]) -> dict:
         for key, window in sorted(windows.items()):
             if not key.startswith(call["window"] + "-r"):
                 continue
-            rep = key.split("-r")[1]
+            # `run_live.py --only-tool` (2026-10-17) writes `C-r1-lint_summary` and covers only
+            # the calls of that tool: its time window does not hold the others.
+            if window.get("only_tool") not in (None, call["tool"]):
+                continue
+            rep = key.split("-r")[1].split("-")[0]
             answer_path = runs / f"{call['id']}-r{rep}.txt"
             if not answer_path.is_file():
                 continue

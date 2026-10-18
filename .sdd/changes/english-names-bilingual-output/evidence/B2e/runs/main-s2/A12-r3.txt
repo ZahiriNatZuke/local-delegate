@@ -1,0 +1,13 @@
+**Summary of Issues by File:**
+
+The provided output indicates several issues related to system changes and prompt updates stemming from version 0.36.0, all characterized as “frontera declarada”.
+
+**Files:**
+
+*   `scripts/build_corpus.py`: Contains 11 entries, primarily related to system changes and prompt updates.
+*   `resumen-md-2k`, `resumen-md-10k`, `resumen-changelog-7k`: These files contain 11 entries each, all concerning system changes and prompt updates.
+*   `commit-diff-19k`, `techo-commit-156k`: These files have 11 entries each, focusing on changes to `max_tokens` alongside prompt updates.
+
+The most prevalent issue appears to be the system changes and prompt updates introduced in version 0.36.0, impacting multiple files and representing the core concern highlighted in the output.
+
+(leído server-side: 587 chars ≈ 305 tokens de Claude que no entraron a tu contexto)

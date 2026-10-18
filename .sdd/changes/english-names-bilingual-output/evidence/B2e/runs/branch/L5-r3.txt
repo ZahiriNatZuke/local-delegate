@@ -1,0 +1,30 @@
+**src/local_delegate/benchmark.py**
+* **Problemas más relevantes**: Complejidad excesiva en la función `run_benchmark`, falta de documentación en métodos, funciones y clases públicas, y errores en la gestión de excepciones por el uso de literales de cadena o mensajes largos fuera de la clase de excepción.
+* **Otros errores**: Uso de `print`, falta de comas finales, líneas demasiado largas, importaciones mal ubicadas, exceso de argumentos en funciones, uso incorrecto de barras invertidas en cadenas de documentación, problemas con la unión de tipos y falta de líneas en blanco en la documentación.
+* **Resumen de problemas por archivo**: 66
+
+**src/local_delegate/agents.py**
+* Falta el aviso de derechos de autor: 1
+* Mover importación de la biblioteca estándar `pathlib.Path` a un bloque de comprobación de tipos: 1
+* Falta la coma final: 1
+* La primera línea de la cadena de documentación debe estar en modo imperativo: 1
+* Uso de valor mágico en una comparación: 1
+* **Resumen de problemas por archivo**: 5
+
+**src/local_delegate/autostart.py**
+* Falta el aviso de derechos de autor: 1
+* La primera línea de la cadena de documentación debe estar en modo imperativo: 1
+* Llamada a `subprocess`: comprobar la ejecución de entrada no confiable: 1
+* **Resumen de problemas por archivo**: 3
+
+**src/local_delegate/__init__.py**
+* Falta el aviso de derechos de autor: 1
+* **Resumen de problemas por archivo**: 1
+
+**src/local_delegate/__main__.py**
+* Falta el aviso de derechos de autor: 1
+* **Resumen de problemas por archivo**: 1
+
+(leído server-side: 8589 chars ≈ 4473 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 2 partes en 3 pasadas por local-delegate)

@@ -1,0 +1,47 @@
+**Local Delegate Doctor Summary**
+
+**File: Local Delegate**
+
+*   **Warnings:** 2
+    *   Obsolete Hook Name: LD\_HOOK\_READ\_BLOQUEAR is deprecated; use LD\_HOOK\_READ\_BLOCK (to be removed in 0.38.0).
+    *   Missing Resident Affinity: No resident affinity is configured, recommended to use benchmarks/affinity-2026-10 or the config to measure the footprint.
+
+**Service Status:**
+
+*   Local Delegate Daemon: OK (version 0.35.0)
+*   Backend: OK (http://127.0.0.1:9292/v1)
+*   MCP Credentials: No MCP entry found.
+*   Claude Desktop Token: Claude Desktop is not configured.
+
+**Client Status:**
+
+*   claude-ai (via mcp-remote 0.1.0): 1
+*   claude-ai (via mcp-remote 0.13.5): 1
+*   claude-ai (via mcp-remote 0.8.2): 1
+*   claude-ai (via mcp-remote 0.8.5): 1
+*   claude-ai (via mcp-remote 0.8.6): 1
+*   claude-code 2.1.300: 1
+*   codex-mcp-client 0.160.0: 1
+*   local-agent-mode-local-delegate 1.0.0: 1
+*   local-agent-mode-local-delegate (via mcp-remote 0.1.37): 1
+*   local-agent-mode-local-delegate (via mcp-remote 0.13.5): 1
+*   local-agent-mode-local-delegate (via mcp-remote 0.8.2): 1
+*   local-agent-mode-local-delegate (via mcp-remote 0.8.5): 1
+*   local-agent-mode-local-delegate (via mcp-remote 0.8.6): 1
+*   local-agent-mode-local-delegate (via mcp-remote 0.8.7): 1
+*   mcp 0.1.0: 1
+*   mcp-remote-fallback-test 0.0.0: 1
+
+**Hooks:**
+
+*   Claude Code: Not installed (no .claude file exists)
+*   Hooks: Not installed (no .claude file exists)
+*   Registered Hooks: Not installed (no .claude file exists)
+
+**Memory:**
+
+*   Claude Code: Client not installed
+*   Codex: Client not installed
+*   opencode: Client not installed
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

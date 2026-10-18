@@ -1,0 +1,51 @@
+Aquí tienes el resumen de los problemas detectados:
+
+**src\local_delegate\web\metrics.py**
+* Línea demasiado larga (E501): 178
+* Falta anotación de tipo de retorno para función pública (ANN201): 16
+* Cadena con carácter ambiguo (RUF001): 14
+* Acceso a miembro privado (SLF001): 9
+* Falta coma final (COM812): 7
+* Falta docstring en función pública (D103): 4
+* Requerida una línea en blanco entre resumen y descripción (D205): 3
+* Las comillas de cierre de docstring multilínea deben estar en una línea separada (D209): 3
+* Captura de excepción ciega (BLE001): 3
+* Uso de la sentencia global desaconsejado (PLW0603): 2
+* Uso de try-except-pass detectado (S110): 1
+* Sustituir try-except-pass por contextlib.suppress (SIM105): 1
+* Importación debe estar en el nivel superior del archivo (PLC0415): 1
+* Considerar mover esta sentencia a un bloque else (TRY300): 1
+* Se encontró print (T201): 1
+
+**src\local_delegate\server.py**
+* Comas finales faltantes: 12
+* Docstrings: 11
+* Anotaciones de tipo: 11
+* Argumentos booleanos: 6
+* Demasiados argumentos: 8
+* Complejidad: 5
+* Otros: errores de líneas demasiado largas, exceso de sentencias, uso de `assert`, valores mágicos en comparaciones, importaciones fuera de nivel, uso de `open()` en lugar de `Path.open()`, captura de excepciones ciegas, variables de bucle sobrescritas y comentarios con caracteres ambiguos.
+
+**src\local_delegate\cli.py**
+* Uso de `print` (T201): 10
+* Falta de coma final (COM812): 8
+* Falta de anotación de tipo para el argumento `sub` (ANN001): 2
+* Falta de docstring en función pública (D103): 2
+
+**src\local_delegate\config.py**
+* Valores booleanos posicionales en llamadas a funciones (FBT003): 11
+* Falta de docstring en función pública (D103): 8
+* Falta de coma final (COM812): 2
+* Líneas demasiado largas (E501): 2
+* Argumentos posicionales de tipo booleano en definición de función (FBT001): 2
+* Falta de aviso de copyright (CPY001): 1
+* Falta de docstring en clase pública (D101): 1
+
+**src\local_delegate\benchmark.py**
+* Falta de coma final (COM812): 6
+
+[local-delegate warning: salida truncada por max_tokens en 5 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 179890 chars ≈ 93692 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

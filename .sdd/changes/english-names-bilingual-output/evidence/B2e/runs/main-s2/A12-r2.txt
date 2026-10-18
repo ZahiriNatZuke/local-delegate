@@ -1,0 +1,10 @@
+**Summary of Issues by File:**
+
+The provided output indicates several issues related to system changes and prompt updates stemming from version 0.36.0, all categorized as “frontera declarada”.
+
+**Issues:**
+
+*   **scripts/build\_corpus.py:** 11 lines of output, including multiple entries related to system changes and prompt updates.
+*   **resumen-md-2k, resumen-md-10k, resumen-changelog-7k, commit-diff-19k, techo-commit-156k:** These files contain system changes and prompt updates related to version 0.36.0, with a total of 11 lines of output. The core issue is the modification of the system due to changes in prompts.
+
+(leído server-side: 587 chars ≈ 305 tokens de Claude que no entraron a tu contexto)

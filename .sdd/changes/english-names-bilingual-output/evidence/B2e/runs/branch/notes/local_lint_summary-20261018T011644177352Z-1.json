@@ -1,0 +1,29 @@
+{
+  "tool": "local_lint_summary",
+  "steps": [
+    {
+      "kind": "map",
+      "chars_out": 1013,
+      "finish_reason": "stop",
+      "text": "**apps\\api\\package.json**\n* **No usar dependencias restringidas**: 1 error de `lint/nursery/noRestrictedDependencies`. Se detectó el uso de `express`, sugiriendo alternativas como `h3`, `@tinyhttp/app`, `hono` o `elysia`.\n\n**apps\\api\\src\\config\\env.schema.ts**\n* **Usar convención de nombres**: 6 errores de `lint/style/useNamingConvention`. Los nombres de las propiedades del objeto deben seguir el formato `camelCase` (detectados en `NODE_ENV`, `PORT`, `DB_PATH`, `LOG_LEVEL`, `CORS_ORIGIN` y `NOMINATIM_USER_AGENT`).\n* **Números mágicos**: 1 error de `lint/style/noMagicNumbers`. Se detectó un número que debe extraerse a una constante con un nombre significativo.\n\n**apps\\api\\src\\geocode\\dto\\geocode.dto.ts**\n* **Números mágicos**: 3 errores de `lint/style/noMagicNumbers`. Se detectaron valores numéricos que deben convertirse en constantes.\n* **No exceder el número de clases por archivo**: 1 error de `lint/style/noExcessiveClassesPerFile`. El archivo contiene 2 clases, superando el máximo permitido de 1."
+    },
+    {
+      "kind": "map",
+      "chars_out": 777,
+      "finish_reason": "stop",
+      "text": "**apps\\api\\src\\geocode\\dto\\geocode.dto.ts**\n\n*   **Números mágicos detectados**: 2 errores de **noMagicNumbers** que requieren extraer valores numéricos a constantes con nombres significativos.\n\n**apps\\api\\src\\validate\\dto\\validate.dto.ts**\n\n*   **Exceso de clases por archivo**: 1 error de **noExcessiveClassesPerFile** porque el archivo contiene 2 clases, superando el máximo permitido de 1.\n*   **Números mágicos detectados**: 5 errores de **noMagicNumbers** relacionados con valores numéricos en esquemas de validación.\n*   **Convención de nombres**: 4 errores de **useNamingConvention** indicando que las propiedades de los objetos deben usar formato camelCase.\n\n**apps\\api\\src\\config\\repo-root.ts**\n\n*   **Uso de sentencias de bloque**: 1 error de **useBlockStatements**."
+    },
+    {
+      "kind": "map",
+      "chars_out": 984,
+      "finish_reason": "stop",
+      "text": "**apps\\api\\src\\config\\repo-root.ts**\n\n*   **Uso de sentencias de bloque**: Se prefieren bloques para las sentencias en esta posición (2 avisos de **lint/style/useBlockStatements**).\n\n**apps\\api\\src\\geocode\\geocode.controller.ts**\n\n*   **Propiedades de parámetro**: Se debe usar una propiedad de clase más explícita en lugar de una propiedad de parámetro (1 aviso de **lint/style/noParameterProperties**).\n*   **Uso de tipo de importación**: Algunas importaciones con nombre se utilizan únicamente como tipos (2 avisos de **lint/style/useImportType**).\n\n**apps\\api\\src\\validate\\validate.controller.ts**\n\n*   **Propiedades de parámetro**: Se debe usar una propiedad de clase más explícita en lugar de una propiedad de parámetro (1 aviso de **lint/style/noParameterProperties**).\n\n**packages\\core\\vitest.config.ts**\n\n*   **Sin exportación por defecto**: Evite las exportaciones por defecto (1 aviso de **lint/style/noDefaultExport**).\n\nFound 3 errors.\nFound 51 warnings.\nFound 192 infos."
+    },
+    {
+      "kind": "reduce",
+      "chars_out": 1469,
+      "finish_reason": "stop",
+      "text": "**apps/api/package.json**\n* **No usar dependencias restringidas**: 1 error de `lint/nursery/noRestrictedDependencies` por el uso de `express`.\n\n**apps/api/src/config/env.schema.ts**\n* **Usar convención de nombres**: 6 errores de `lint/style/useNamingConvention` debido a propiedades que no usan `camelCase`.\n* **Números mágicos**: 1 error de `lint/style/noMagicNumbers`.\n\n**apps/api/src/geocode/dto/geocode.dto.ts**\n* **Números mágicos**: 5 errores de `lint/style/noMagicNumbers`.\n* **No exceder el número de clases por archivo**: 1 error de `lint/style/noExcessiveClassesPerFile`.\n\n**apps/api/src/validate/dto/validate.dto.ts**\n* **Números mágicos**: 5 errores de `lint/style/noMagicNumbers`.\n* **Convención de nombres**: 4 errores de `lint/style/useNamingConvention`.\n* **Exceso de clases por archivo**: 1 error de `lint/style/noExcessiveClassesPerFile`.\n\n**apps/api/src/config/repo-root.ts**\n* **Uso de sentencias de bloque**: 3 avisos de `lint/style/useBlockStatements`.\n\n**apps/api/src/geocode/geocode.controller.ts**\n* **Uso de tipo de importación**: 2 avisos de `lint/style/useImportType`.\n* **Propiedades de parámetro**: 1 aviso de `lint/style/noParameterProperties`.\n\n**apps/api/src/validate/validate.controller.ts**\n* **Propiedades de parámetro**: 1 aviso de `lint/style/noParameterProperties`.\n\n**packages/core/vitest.config.ts**\n* **Sin exportación por defecto**: 1 aviso de `lint/style/noDefaultExport`.\n\nFound 3 errors.\nFound 51 warnings.\nFound 192 infos."
+    }
+  ]
+}

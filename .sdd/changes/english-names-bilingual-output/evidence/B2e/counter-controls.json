@@ -1,0 +1,58 @@
+[
+ {
+  "case": "negative: Found 7777 errors",
+  "old": true,
+  "new": true,
+  "expected_new": true,
+  "ok": true
+ },
+ {
+  "case": "negative: 4321 packages",
+  "old": true,
+  "new": true,
+  "expected_new": true,
+  "ok": true
+ },
+ {
+  "case": "negative: invented file",
+  "old": true,
+  "new": true,
+  "expected_new": true,
+  "ok": true
+ },
+ {
+  "case": "negative: number word",
+  "old": true,
+  "new": true,
+  "expected_new": true,
+  "ok": true
+ },
+ {
+  "case": "positive: escaped underscore",
+  "old": true,
+  "new": false,
+  "expected_new": false,
+  "ok": true
+ },
+ {
+  "case": "positive: tsc position",
+  "old": true,
+  "new": false,
+  "expected_new": false,
+  "ok": true
+ },
+ {
+  "case": "positive: version v",
+  "old": true,
+  "new": false,
+  "expected_new": false,
+  "ok": true
+ },
+ {
+  "case": "positive: word over a column",
+  "old": false,
+  "new": true,
+  "expected_new": true,
+  "ok": true
+ }
+]

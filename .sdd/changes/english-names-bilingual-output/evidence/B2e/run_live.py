@@ -57,6 +57,7 @@ async def run(
     manifest_path: Path = HERE / "manifest.json",
     answers_dir: Path | None = None,
     repeat: int = 1,
+    only_tool: str | None = None,
 ) -> int:
     import httpx2
     from mcp import ClientSession
@@ -64,6 +65,11 @@ async def run(
 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     calls = [c for c in manifest["calls"] if c["window"] == window]
+    if only_tool is not None:
+        calls = [c for c in calls if c["tool"] == only_tool]
+        if not calls:
+            print(f"window {window} has no call of {only_tool}", file=sys.stderr)
+            return 2
     for c in calls:
         doc = ROOT / c["document"]
         digest = hashlib.sha256(doc.read_bytes()).hexdigest()
@@ -94,12 +100,16 @@ async def run(
                 )
             runs = json.loads(runs_path.read_text(encoding="utf-8")) if runs_path.exists() else {}
             key = window if answers_dir is None else f"{window}-r{rep}"
+            if only_tool is not None:
+                key += "-" + only_tool.removeprefix("local_")
             runs[key] = {
                 "started": started,
                 "finished": _now(),
                 "calls": len(calls),
                 "errors": errors,
             }
+            if only_tool is not None:
+                runs[key]["only_tool"] = only_tool
             runs_path.parent.mkdir(parents=True, exist_ok=True)
             runs_path.write_text(json.dumps(runs, indent=2) + "\n", encoding="utf-8", newline="\n")
             total_errors += errors
@@ -112,11 +122,18 @@ def main() -> int:
     parser.add_argument("--manifest", type=Path, default=HERE / "manifest.json")
     parser.add_argument("--answers-dir", type=Path, help="folder for <id>-r<k>.txt (B2d-3)")
     parser.add_argument("--repeat", type=int, default=1, help="runs of the whole window")
+    parser.add_argument(
+        "--only-tool",
+        help="run only the window's calls of this tool (B2e, 2026-10-17: window C without"
+        " explain_code, which does not fit in RAM; the key in live-runs.json gets the suffix)",
+    )
     args = parser.parse_args()
     if args.repeat < 1 or (args.repeat > 1 and args.answers_dir is None):
         parser.error("--repeat N > 1 needs --answers-dir: the manifest has one answer per call")
     answers_dir = args.answers_dir.resolve() if args.answers_dir else None
-    return asyncio.run(run(args.window, args.manifest.resolve(), answers_dir, args.repeat))
+    return asyncio.run(
+        run(args.window, args.manifest.resolve(), answers_dir, args.repeat, args.only_tool)
+    )
 
 
 if __name__ == "__main__":

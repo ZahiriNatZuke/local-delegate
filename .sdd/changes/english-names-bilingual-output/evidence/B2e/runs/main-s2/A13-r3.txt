@@ -1,0 +1,20 @@
+**Local Delegate Doctor Summary**
+
+**File-Based Issue Breakdown:**
+
+*   **LLAMASWAP_EXE:** No errors found.
+*   **LLAMASWAP_CONFIG:** No errors found.
+*   **Hooks (Andamiaje):** 3 warnings:
+    *   `LD_HOOK_READ_BLOQUEAR` is deprecated, needs renaming to `LD_HOOK_READ_BLOCK` (expected in 0.38.0).
+    *   No Claude Code or opencode clients are installed, leading to missing hooks and skill definitions.
+*   **MCP Clients:** 9 clients observed, all without elicitation.
+*   **Backend Services:** 3 warnings:
+    *   The backend requires credentials, but no MCP entry is present.
+    *   The daemon port requires a token, but no MCP entry is present.
+    *   Claude Desktop is not configured on the machine.
+*   **Versions:** 1 warning:
+    *   The llama-swap residency is not resident, recommended to be resident.
+
+**Total Warnings:** 3. The system reports 2 warnings and 1 advisory.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

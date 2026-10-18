@@ -1,0 +1,9 @@
+**Summary of Errors by File**
+
+The analysis identified several errors related to file locations for specific models. Specifically, there were errors encountered while attempting to estimate VRAM for the following models: gemma3-4b, llama31-8b, qwen25-coder-14b, qwen35-2b, and qwen3-vl-8b.
+
+The 'resident' group experienced an error for gemma3-4b, with a file not found error reported for MODELOS\gemma-3-4b-it-Q4_K_M.gguf. Similarly, the 'swap' group encountered errors for llama31-8b, qwen25-coder-14b, qwen35-2b, qwen3-vl-8b, each with a file not found error for their respective model files: MODELOS\Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf, MODELOS\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf, MODELOS\Qwen3.5-2B-UD-Q8_K_XL.gguf, and MODELOS\Qwen3VL-8B-Instruct-Q4_K_M.gguf.
+
+The total worst-case VRAM usage reported was 0.00 GiB.
+
+(leído server-side: 743 chars ≈ 386 tokens de Claude que no entraron a tu contexto)
