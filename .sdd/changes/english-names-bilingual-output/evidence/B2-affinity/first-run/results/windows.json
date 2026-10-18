@@ -1,0 +1,116 @@
+{
+  "es/gemma3-4b": {
+    "started": "2026-10-18T06:27:09.675Z",
+    "finished": "2026-10-18T06:27:33.867Z",
+    "calls": 13,
+    "log_lines": 13,
+    "warmup": {
+      "ts": "2026-10-18T06:27:14+00:00",
+      "model": "gemma3-4b",
+      "latency_ms": 4552,
+      "ok": true,
+      "chars_out": 371,
+      "finish_reason": "stop",
+      "tokens_out": 141,
+      "truncated_out": null,
+      "routing": null,
+      "v": "0.35.0"
+    },
+    "problems": []
+  },
+  "en/gemma3-4b": {
+    "started": "2026-10-18T06:27:56.817Z",
+    "finished": "2026-10-18T06:28:21.382Z",
+    "calls": 13,
+    "log_lines": 13,
+    "warmup": {
+      "ts": "2026-10-18T06:27:58+00:00",
+      "model": "gemma3-4b",
+      "latency_ms": 1883,
+      "ok": true,
+      "chars_out": 523,
+      "finish_reason": "stop",
+      "tokens_out": 196,
+      "truncated_out": null,
+      "routing": null,
+      "v": "0.35.0"
+    },
+    "problems": []
+  },
+  "en/qwen35-2b": {
+    "started": "2026-10-18T06:28:35.368Z",
+    "finished": "2026-10-18T06:28:49.994Z",
+    "calls": 13,
+    "log_lines": 13,
+    "warmup": {
+      "ts": "2026-10-18T06:28:40+00:00",
+      "model": "qwen35-2b",
+      "latency_ms": 4694,
+      "ok": true,
+      "chars_out": 316,
+      "finish_reason": "stop",
+      "tokens_out": 105,
+      "truncated_out": null,
+      "routing": null,
+      "v": "0.35.0"
+    },
+    "problems": []
+  },
+  "es/qwen35-2b": {
+    "started": "2026-10-18T06:29:05.659Z",
+    "finished": "2026-10-18T06:29:21.074Z",
+    "calls": 13,
+    "log_lines": 13,
+    "warmup": {
+      "ts": "2026-10-18T06:29:06+00:00",
+      "model": "qwen35-2b",
+      "latency_ms": 1205,
+      "ok": true,
+      "chars_out": 431,
+      "finish_reason": "stop",
+      "tokens_out": 119,
+      "truncated_out": null,
+      "routing": null,
+      "v": "0.35.0"
+    },
+    "problems": []
+  },
+  "es/gemma4-26b-a4b": {
+    "started": "2026-10-18T06:29:46.875Z",
+    "finished": "2026-10-18T06:30:40.619Z",
+    "calls": 13,
+    "log_lines": 13,
+    "warmup": {
+      "ts": "2026-10-18T06:30:01+00:00",
+      "model": "gemma4-26b-a4b",
+      "latency_ms": 14101,
+      "ok": true,
+      "chars_out": 378,
+      "finish_reason": "stop",
+      "tokens_out": 126,
+      "truncated_out": null,
+      "routing": null,
+      "v": "0.35.0"
+    },
+    "problems": []
+  },
+  "en/gemma4-26b-a4b": {
+    "started": "2026-10-18T06:30:56.336Z",
+    "finished": "2026-10-18T06:31:44.881Z",
+    "calls": 13,
+    "log_lines": 13,
+    "warmup": {
+      "ts": "2026-10-18T06:31:00+00:00",
+      "model": "gemma4-26b-a4b",
+      "latency_ms": 3924,
+      "ok": true,
+      "chars_out": 342,
+      "finish_reason": "stop",
+      "tokens_out": 129,
+      "truncated_out": null,
+      "routing": null,
+      "v": "0.35.0"
+    },
+    "problems": []
+  }
+}

@@ -1,0 +1,14 @@
+warmup resume-ruff-tres-reglas r0 chars=516 error=False
+case resume-ruff-tres-reglas r1 chars=391 error=False
+case resume-ruff-docstrings r1 chars=660 error=False
+case resume-ruff-un-solo-archivo r1 chars=373 error=False
+case resume-ruff-cinco-reglas r1 chars=864 error=False
+case resume-ruff-tres-reglas r2 chars=629 error=False
+case resume-ruff-docstrings r2 chars=568 error=False
+case resume-ruff-un-solo-archivo r2 chars=381 error=False
+case resume-ruff-cinco-reglas r2 chars=895 error=False
+case resume-ruff-tres-reglas r3 chars=424 error=False
+case resume-ruff-docstrings r3 chars=439 error=False
+case resume-ruff-un-solo-archivo r3 chars=408 error=False
+case resume-ruff-cinco-reglas r3 chars=801 error=False
+12 rows -> D:\Projects\local-delegate\benchmarks\afinidad-2026-10\reevaluation-0.36.0\results\es\qwen35-2b.jsonl; problems=0

@@ -1,0 +1,278 @@
+## 1. References
+v1 resume-ruff-tres-reglas: ok={'quality': 1.0, 'format': True} bad={'quality': 0.6666666666666666, 'format': True} -> pass
+v1 resume-ruff-docstrings: ok={'quality': 1.0, 'format': True} bad={'quality': 0.75, 'format': True} -> pass
+v1 resume-ruff-un-solo-archivo: ok={'quality': 1.0, 'format': True} bad={'quality': 0.3333333333333333, 'format': True} -> pass
+v1 resume-ruff-cinco-reglas: ok={'quality': 1.0, 'format': True} bad={'quality': 0.75, 'format': True} -> pass
+v2 resume-ruff-tres-reglas: ok={'quality': 1.0, 'format': True} bad={'quality': 0.6666666666666666, 'format': True} -> pass
+v2 resume-ruff-docstrings: ok={'quality': 1.0, 'format': True} bad={'quality': 0.75, 'format': True} -> pass
+v2 resume-ruff-un-solo-archivo: ok={'quality': 1.0, 'format': True} bad={'quality': 0.3333333333333333, 'format': True} -> pass
+v2 resume-ruff-cinco-reglas: ok={'quality': 1.0, 'format': True} bad={'quality': 0.75, 'format': True} -> pass
+
+## 2. Frozen T6 answers: v2 == v1
+DIFFERS gemma3-4b resume-ruff-tres-reglas r1: v1={'quality': 0.3333333333333333, 'format': True} v2={'quality': 1.0, 'format': True}
+DIFFERS gemma3-4b resume-ruff-cinco-reglas r1: v1={'quality': 0.0, 'format': True} v2={'quality': 0.25, 'format': True}
+DIFFERS qwen35-2b resume-ruff-tres-reglas r1: v1={'quality': 0.3333333333333333, 'format': True} v2={'quality': 1.0, 'format': True}
+DIFFERS qwen35-2b resume-ruff-un-solo-archivo r1: v1={'quality': 0.6666666666666666, 'format': True} v2={'quality': 1.0, 'format': True}
+DIFFERS qwen35-2b resume-ruff-cinco-reglas r1: v1={'quality': 0.75, 'format': True} v2={'quality': 0.5, 'format': True}
+DIFFERS qwen36-35b-a3b resume-ruff-tres-reglas r1: v1={'quality': 0.0, 'format': True} v2={'quality': 1.0, 'format': True}
+DIFFERS qwen36-35b-a3b resume-ruff-un-solo-archivo r1: v1={'quality': 0.0, 'format': True} v2={'quality': 1.0, 'format': True}
+DIFFERS qwen36-35b-a3b resume-ruff-cinco-reglas r1: v1={'quality': 0.0, 'format': True} v2={'quality': 0.75, 'format': True}
+16 T6 lint rows compared, 8 differ
+
+## 3. Repetition 1 of the first run (for the manual review)
+
+### es gemma3-4b resume-ruff-tres-reglas
+valid counts: {'E501': [1, 2, 3, 4], 'F401': [1, 2, 3], 'W291': [1]}
+wrong v1: []  wrong v2: []
+**Resumen de Problemas:**
+
+**app/main.py:**
+- E501 Line too long: 2 ocurrencias.
+- F401 `os` imported but unused: 1 ocurrencia.
+- F401 `sys` imported but unused: 1 ocurrencia.
+- F401 `re` imported but unused: 1 ocurrencia.
+
+**app/util.py:**
+- E501 Line too long: 1 ocurrencia.
+- F401 `os` imported but unused: 1 ocurrencia.
+- F401 `sys` imported but unused: 1 ocurrencia.
+- F401 `re` imported but unused: 1 ocurrencia.
+- W291 Trailing whitespace: 1 ocurrencia.
+
+**app/cli.py:**
+- E501 Line too long: 1 ocurrencia.
+
+### es gemma3-4b resume-ruff-docstrings
+valid counts: {'D100': [1, 3], 'D103': [2, 3, 5], 'T201': [1, 3], 'B006': [1]}
+wrong v1: ['D103']  wrong v2: ['D103']
+Resumen de Problemas:
+
+**Archivo src/a.py:**
+- D100: 3 errores por la falta de *docstring* en módulos públicos.
+- D103: 4 errores por la falta de *docstring* en funciones públicas.
+- B006: 1 error por el uso de estructuras de datos mutables en los valores predeterminados de argumentos.
+
+**Archivo src/b.py:**
+- D100: 3 errores por la falta de *docstring* en módulos públicos.
+- D103: 4 errores por la falta de *docstring* en funciones públicas.
+
+**Archivo src/c.py:**
+- T201: 3 errores por el uso de la función `print`.
+
+**Resumen General:**
+Se identificaron un total de 14 errores por la falta de *docstring* en funciones y módulos públicos, y 3 errores por el uso de la función `print`.
+
+### es gemma3-4b resume-ruff-un-solo-archivo
+valid counts: {'E402': [1, 4], 'E501': [1, 3], 'E711': [1]}
+wrong v1: ['E402', 'E501', 'E711']  wrong v2: []
+**Resumen de Problemas:**
+
+**tools/gen.py:**
+
+*   **Importaciones de Módulo:** Se identificaron 4 errores de tipo E402, relacionados con importaciones de módulo ubicadas directamente en la parte superior del archivo.
+*   **Líneas Largas:** Se encontraron 3 errores de tipo E501, debido a líneas que exceden el límite de longitud establecido. Las líneas problemáticas se encuentran en las líneas 20, 31 y 32.
+*   **Comparación con None:** Se detectó un error de tipo E711, indicando una comparación directa con `None` que debería ser reemplazada por una verificación explícita de si la variable es `None`.
+
+### es gemma3-4b resume-ruff-cinco-reglas
+valid counts: {'I001': [1, 2, 3], 'SIM102': [2, 3, 5], 'UP006': [1, 2, 3], 'RET504': [1, 2]}
+wrong v1: ['I001', 'SIM102', 'UP006', 'RET504']  wrong v2: []
+Resumen de Problemas:
+
+**Archivo: lib/io.py**
+
+*   Problemas de Importación: 2 (I001)
+*   Problemas de Tipado: 3 (UP006)
+
+**Archivo: lib/net.py**
+
+*   Problemas de Importación: 1 (I001)
+*   Problemas de `if` único: 3 (SIM102)
+
+**Archivo: lib/db.py**
+
+*   Problemas de Importación: 1 (I001)
+*   Problemas de Tipado: 2 (UP006)
+*   Asignaciones innecesarias antes de `return`: 2 (RET504)
+
+En total, se encontraron 13 problemas. Los más frecuentes son los problemas de importación y los problemas de tipado. Se identificaron tres casos de uso de múltiples `if` statements, y dos asignaciones innecesarias antes de la sentencia `return`.
+
+### es gemma4-26b-a4b resume-ruff-tres-reglas
+valid counts: {'E501': [1, 2, 3, 4], 'F401': [1, 2, 3], 'W291': [1]}
+wrong v1: ['E501', 'F401', 'W291']  wrong v2: ['E501', 'F401', 'W291']
+**app/main.py**
+*   **Línea demasiado larga**: 2 errores.
+*   **Importación no utilizada**: 1 error con el identificador `os`.
+
+**app/util.py**
+*   **Línea demasiado larga**: 1 error.
+*   **Importación no utilizada**: 2 errores con los identificadores `sys` y `re`.
+*   **Espacio en blanco al final de la línea**: 1 error.
+
+**app/cli.py**
+*   **Línea demasiado larga**: 1 error.
+
+### es gemma4-26b-a4b resume-ruff-docstrings
+valid counts: {'D100': [1, 3], 'D103': [2, 3, 5], 'T201': [1, 3], 'B006': [1]}
+wrong v1: ['D100', 'D103', 'T201', 'B006']  wrong v2: ['D100', 'D103', 'T201', 'B006']
+**src/a.py**
+* **Falta de docstring en módulo público**: 1
+* **Falta de docstring en función pública**: 2
+* **No usar estructuras de datos mutables para valores predeterminados de argumentos**: 1
+
+**src/b.py**
+* **Falta de docstring en módulo público**: 1
+* **Falta de docstring en función pública**: 3
+
+**src/c.py**
+* **Falta de docstring en módulo público**: 1
+* **Se encontró la función print**: 3
+
+### es gemma4-26b-a4b resume-ruff-un-solo-archivo
+valid counts: {'E402': [1, 4], 'E501': [1, 3], 'E711': [1]}
+wrong v1: ['E402', 'E501', 'E711']  wrong v2: []
+**tools/gen.py**
+
+* **Importaciones de nivel de módulo fuera de la parte superior del archivo**: 4 errores de tipo E402.
+* **Línea demasiado larga**: 3 errores de tipo E501.
+* **La comparación con `None` debería ser `cond is None`**: 1 error de tipo E711.
+
+### es gemma4-26b-a4b resume-ruff-cinco-reglas
+valid counts: {'I001': [1, 2, 3], 'SIM102': [2, 3, 5], 'UP006': [1, 2, 3], 'RET504': [1, 2]}
+wrong v1: ['I001', 'SIM102', 'UP006', 'RET504']  wrong v2: ['I001', 'SIM102', 'UP006', 'RET504']
+**lib/io.py**
+* **Bloque de importación sin ordenar o sin formato**: 2
+* **Uso de `dict` en lugar de `Dict` para anotaciones de tipo**: 2
+
+**lib/net.py**
+* **Uso de una única sentencia `if`**: 3
+* **Bloque de importación sin ordenar o sin formato**: 1
+* **Asignación innecesaria antes de `return`**: 1
+
+**lib/db.py**
+* **Uso de una única sentencia `if`**: 2
+* **Uso de `list` en lugar de `List` para anotaciones de tipo**: 1
+* **Asignación innecesaria antes de `return`**: 1
+
+### en gemma3-4b resume-ruff-tres-reglas
+valid counts: {'E501': [1, 2, 3, 4], 'F401': [1, 2, 3], 'W291': [1]}
+wrong v1: ['E501', 'F401', 'W291']  wrong v2: []
+Here's a summary of the issues, grouped by file:
+
+**app/main.py**
+
+*   **E501 Line too long:** 2 instances (Lines 12 and 40).
+*   **F401 Unused import:** 1 instance (Line 7, `os`).
+*   **F401 Unused import:** 1 instance (Line 7, `sys`).
+*   **F401 Unused import:** 1 instance (Line 9, `re`).
+
+**app/util.py**
+
+*   **E501 Line too long:** 1 instance (Line 55).
+*   **F401 Unused import:** 1 instance (Line 5).
+*   **F401 Unused import:** 1 instance (Line 9).
+*   **W291 Trailing whitespace:** 1 instance (Line 70).
+
+**app/cli.py**
+
+*   **E501 Line too long:** 1 instance (Line 21).
+
+### en gemma3-4b resume-ruff-docstrings
+valid counts: {'D100': [1, 3], 'D103': [2, 3, 5], 'T201': [1, 3], 'B006': [1]}
+wrong v1: ['D100', 'D103', 'T201', 'B006']  wrong v2: ['D100', 'D103', 'T201']
+**Summary of Issues**
+
+**src/a.py:** This file contains three instances of the **Missing docstring in public module** error (D100), occurring on lines 5 and 30, and one instance of the **Missing docstring in public function** error (D103) on lines 14 and 17. Additionally, there is one instance of the **Do not use mutable data structures for argument defaults** bug (B006) on line 61.
+
+**src/b.py:** This file has four instances of the **Missing docstring in public module** error (D100) on lines 1, 8, 22, and 44, and one instance of the **Missing docstring in public function** error (D103) on line 18.
+
+**src/c.py:** This file presents three instances of the **print** warning (T201) on lines 17, 18, and 19.
+
+### en gemma3-4b resume-ruff-un-solo-archivo
+valid counts: {'E402': [1, 4], 'E501': [1, 3], 'E711': [1]}
+wrong v1: ['E402', 'E501', 'E711']  wrong v2: ['E402', 'E501']
+**Summary of Issues**
+
+**tools/gen.py:**
+
+This file exhibits several import-related issues. There are four instances of the **Module level import not at top of file** error (E402), occurring on lines 4, 5, 6, and 7. Additionally, two lines exceed the maximum allowed length, specifically on lines 20 and 31, resulting in the **Line too long** error (E501). Finally, there is one instance of the **Comparison to `None` should be `cond is None`** error (E711) on line 50.
+
+### en gemma3-4b resume-ruff-cinco-reglas
+valid counts: {'I001': [1, 2, 3], 'SIM102': [2, 3, 5], 'UP006': [1, 2, 3], 'RET504': [1, 2]}
+wrong v1: ['I001', 'SIM102', 'UP006', 'RET504']  wrong v2: []
+Here's a summary of the issues, grouped by file:
+
+**lib/io.py**
+
+*   **I001 Import block issues:** Two instances of unsorted or unformatted import blocks are identified.
+*   **UP006 Type annotation issues:** Two instances of using `Dict` instead of `dict` are found.
+
+**lib/net.py**
+
+*   **SIM102 Single `if` statement issues:** Three instances of using multiple `if` statements where a single statement would suffice are detected.
+*   **RET504 Unnecessary assignment before return:** One instance of an unnecessary assignment before a `return` statement is reported.
+
+**lib/db.py**
+
+*   **SIM102 Single `if` statement issues:** Two instances of using multiple `if` statements where a single statement would suffice are detected.
+*   **UP006 Type annotation issues:** Two instances of using `List` instead of `list` are found.
+*   **RET504 Unnecessary assignment before return:** One instance of an unnecessary assignment before a `return` statement is reported.
+
+### en gemma4-26b-a4b resume-ruff-tres-reglas
+valid counts: {'E501': [1, 2, 3, 4], 'F401': [1, 2, 3], 'W291': [1]}
+wrong v1: ['E501', 'F401', 'W291']  wrong v2: []
+**app/main.py**
+* **Line too long**: 2 instances of E501.
+* **Unused import**: 1 instance of F401 regarding `os`.
+
+**app/util.py**
+* **Unused import**: 2 instances of F401 regarding `sys` and `re`.
+* **Line too long**: 1 instance of E501.
+* **Trailing whitespace**: 1 instance of W291.
+
+**app/cli.py**
+* **Line too long**: 1 instance of E501.
+
+### en gemma4-26b-a4b resume-ruff-docstrings
+valid counts: {'D100': [1, 3], 'D103': [2, 3, 5], 'T201': [1, 3], 'B006': [1]}
+wrong v1: ['D100', 'D103', 'T201', 'B006']  wrong v2: []
+**src/a.py**
+* **Missing docstring in public function**: two instances of D103.
+* **Missing docstring in public module**: one instance of D100.
+* **Do not use mutable data structures for argument defaults**: one instance of B006.
+
+**src/b.py**
+* **Missing docstring in public function**: three instances of D103.
+* **Missing docstring in public module**: one instance of D100.
+
+**src/c.py**
+* **Print found**: three instances of T201.
+* **Missing docstring in public module**: one instance of D100.
+
+### en gemma4-26b-a4b resume-ruff-un-solo-archivo
+valid counts: {'E402': [1, 4], 'E501': [1, 3], 'E711': [1]}
+wrong v1: ['E402', 'E501', 'E711']  wrong v2: []
+**Summary of issues by file:**
+
+**tools/gen.py**
+* **E402 Module level import not at top of file**: Four instances where imports are not placed at the beginning of the file.
+* **E501 Line too long**: Three instances where lines exceed the permitted length.
+* **E711 Comparison to `None` should be `cond is None`**: One instance where a comparison to `None` is not using the identity operator.
+
+### en gemma4-26b-a4b resume-ruff-cinco-reglas
+valid counts: {'I001': [1, 2, 3], 'SIM102': [2, 3, 5], 'UP006': [1, 2, 3], 'RET504': [1, 2]}
+wrong v1: ['I001', 'SIM102', 'UP006', 'RET504']  wrong v2: []
+**lib/net.py**
+* **SIM102**: Three instances where a single `if` statement should be used.
+* **I001**: One instance of an unsorted or unformatted import block.
+* **RET504**: One instance of an unnecessary assignment before a `return`.
+
+**lib/db.py**
+* **SIM102**: Two instances where a single `if` statement should be used.
+* **UP006**: One instance where `list` should be used instead of `List` for type annotation.
+* **RET504**: One instance of an unnecessary assignment before a `return`.
+
+**lib/io.py**
+* **UP006**: Two instances where `dict` should be used instead of `Dict` for type annotation.
+* **I001**: Two instances of unsorted or unformatted import blocks.
+
+checks failed: 1

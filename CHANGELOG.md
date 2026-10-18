@@ -8,6 +8,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Cambia
 
+- **Afinidad: `local_lint_summary` ya no se va a `gemma4-26b-a4b` aunque esté cargado.** Su celda
+  se volvió a medir con los prompts de la 0.36.0, en español y en inglés (4 casos, 3 repeticiones,
+  la tool real del daemon): con la orden de idioma nueva el 26B deja de nombrar los códigos de
+  regla (en español, en 3 de 4 casos) o las cifras, y queda por debajo del modelo del rol;
+  `qwen36-35b-a3b` tampoco llega. Antes la celda estaba aprobada, pero desde la orden de idioma su
+  huella ya no coincidía y `doctor` avisaba «afinidad sin base»; ahora no hay celda y no avisa.
+  Quedan tres celdas (traducir con los dos alternativos y `local_delegate` con el 26B).
+
 - **`local_commit_msg` escribe siempre un cuerpo** de 2 a 6 viñetas que dicen qué cambia y para
   qué, también en el paso final del map-reduce. Topes: 700 tokens en la llamada única (antes 256) y
   250 palabras en el paso final (antes 90). Con «cuerpo opcional» el modelo paraba tras la primera

@@ -3870,10 +3870,11 @@ def _lint_inventory(log: str, max_chars: int) -> str:
 
 
 def _lint_system(max_words: int) -> str:
-    """El prompt de sistema de `local_lint_summary`. También entra en la huella (T15): con la orden
-    de idioma de REQ-028 la huella deja de ser la medida y la celda de afinidad de lint queda «sin
-    base» hasta el lote B2-affinity, que la vuelve a medir. B2d-3: la cantidad, solo cuando se
-    puede saber (`_lint_count_clause`)."""
+    """El prompt de sistema de `local_lint_summary`. También entra en la huella (T15). Con la orden
+    de idioma de REQ-028 depende del idioma de respuesta; B2-affinity lo midió en `es` y en `en`
+    y la celda de afinidad de lint no llegó al criterio (ni con el 26B ni con Qwen3.6: dejan de
+    nombrar los códigos de regla), así que salió de `matrix.CELLS`. B2d-3: la cantidad, solo
+    cuando se puede saber (`_lint_count_clause`)."""
     return (
         _guard(
             "un resumen de los problemas agrupados por archivo, con la cantidad por tipo de "

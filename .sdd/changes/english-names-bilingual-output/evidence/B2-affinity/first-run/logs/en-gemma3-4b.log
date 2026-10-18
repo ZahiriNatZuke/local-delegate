@@ -1,0 +1,14 @@
+warmup resume-ruff-tres-reglas r0 chars=606 error=False
+case resume-ruff-tres-reglas r1 chars=663 error=False
+case resume-ruff-docstrings r1 chars=795 error=False
+case resume-ruff-un-solo-archivo r1 chars=552 error=False
+case resume-ruff-cinco-reglas r1 chars=1045 error=False
+case resume-ruff-tres-reglas r2 chars=672 error=False
+case resume-ruff-docstrings r2 chars=945 error=False
+case resume-ruff-un-solo-archivo r2 chars=583 error=False
+case resume-ruff-cinco-reglas r2 chars=1161 error=False
+case resume-ruff-tres-reglas r3 chars=663 error=False
+case resume-ruff-docstrings r3 chars=838 error=False
+case resume-ruff-un-solo-archivo r3 chars=649 error=False
+case resume-ruff-cinco-reglas r3 chars=1047 error=False
+12 rows -> D:\Projects\local-delegate\benchmarks\afinidad-2026-10\reevaluation-0.36.0\results\en\gemma3-4b.jsonl; problems=0
