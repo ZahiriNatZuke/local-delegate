@@ -390,15 +390,17 @@ def scan_panel(template: str, rel: str, first_line: int = 1) -> list[Hit]:
             if is_human_text(part):
                 hits.add(Hit(rel, first_line + offset, part.strip(), "context"))
 
-    for m in re.finditer(r"<script>(.*?)</script>", template, re.DOTALL):
+    for m in re.finditer(
+        r"<script\b[^>]*>(.*?)</script\b[^>]*>", template, re.DOTALL | re.IGNORECASE
+    ):
         base = template.count("\n", 0, m.start(1))
         for line, text in js_strings(m.group(1)):
             add(base + line - 1, text)
     markup = re.sub(
-        r"<script>.*?</script>|<style>.*?</style>|<!--.*?-->",
+        r"<script\b[^>]*>.*?</script\b[^>]*>|<style\b[^>]*>.*?</style\b[^>]*>|<!--.*?--!?>",
         lambda m: "\n" * m.group(0).count("\n"),
         template,
-        flags=re.DOTALL,
+        flags=re.DOTALL | re.IGNORECASE,
     )
     for m in re.finditer(r">([^<]+)<", markup):
         if is_human_text(m.group(1)):

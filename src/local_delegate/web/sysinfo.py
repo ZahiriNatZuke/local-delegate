@@ -196,8 +196,7 @@ def backend_port() -> int | None:
 # se leen en un hilo de fondo, como la VRAM. `ok` es `None` hasta la primera muestra y `False` si la
 # última falló; `lines` son las de la última muestra (pid -> línea, vacía si no se pudo leer).
 _cmd_lock = threading.Lock()
-_cmd_cache: dict = {"ok": None, "lines": {}}
-_cmd_refreshing = False
+_cmd_cache: dict = {"ok": None, "lines": {}, "refreshing": False}
 
 
 def _windows_llamaswap_command_lines() -> dict[int, str] | None:
@@ -223,7 +222,6 @@ def _windows_llamaswap_command_lines() -> dict[int, str] | None:
 
 
 def _refresh_command_lines() -> None:
-    global _cmd_refreshing
     try:
         lines = _windows_llamaswap_command_lines()
     except Exception:  # best-effort, como todo el módulo: sin muestra, se cuentan todos
@@ -231,12 +229,11 @@ def _refresh_command_lines() -> None:
     with _cmd_lock:
         _cmd_cache["ok"] = lines is not None
         _cmd_cache["lines"] = lines or {}
-        _cmd_refreshing = False
+        _cmd_cache["refreshing"] = False
 
 
 def _command_line(pid: int) -> str | object | None:
     """La línea de órdenes de `pid`, `None` si no se puede saber, o `PENDING` mientras se lee."""
-    global _cmd_refreshing
     if sys.platform.startswith("linux"):
         try:
             with open(f"/proc/{pid}/cmdline", "rb") as f:
@@ -250,8 +247,8 @@ def _command_line(pid: int) -> str | object | None:
         if pid in lines:
             return lines[pid] or None
         # Un llama-swap que la última muestra no vio (recién lanzado): se pide otra en fondo.
-        if not _cmd_refreshing:
-            _cmd_refreshing = True
+        if not _cmd_cache["refreshing"]:
+            _cmd_cache["refreshing"] = True
             threading.Thread(target=_refresh_command_lines, daemon=True, name="cmdline").start()
     return None if ok is False else PENDING
 
