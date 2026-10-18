@@ -1,0 +1,2003 @@
+Using CPython 3.11.15
+Creating virtual environment at: .venv
+   Building local-delegate-mcp @ file:///D:/Projects/ld-wt-b2e-main
+      Built local-delegate-mcp @ file:///D:/Projects/ld-wt-b2e-main
+warning: Failed to hardlink files; falling back to full copy. This may lead to degraded performance.
+         If the cache and target directories are on different filesystems, hardlinking may not be supported.
+         If this is intentional, set `export UV_LINK_MODE=copy` or use `--link-mode=copy` to suppress this warning.
+Installed 51 packages in 1.31s
+warning: `incorrect-blank-line-before-class` (D203) and `blank-line-before-class` (D211) are incompatible. Ignoring `incorrect-blank-line-before-class`.
+warning: `multi-line-summary-first-line` (D212) and `multi-line-summary-second-line` (D213) are incompatible. Ignoring `multi-line-summary-second-line`.
+src\local_delegate\__init__.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\__main__.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\agents.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\agents.py:30:21: TC003 Move standard library import `pathlib.Path` into a type-checking block
+src\local_delegate\agents.py:41:74: COM812 [*] Trailing comma missing
+src\local_delegate\agents.py:123:5: D401 First line of docstring should be in imperative mood: "True si el agente ya declara nuestras tools. El frontmatter está al principio."
+src\local_delegate\agents.py:171:26: PLR2004 Magic value used in comparison, consider replacing `2` with a constant variable
+src\local_delegate\attribution.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\attribution.py:26:29: TC003 Move standard library import `collections.abc.Callable` into a type-checking block
+src\local_delegate\attribution.py:26:39: TC003 Move standard library import `collections.abc.Iterable` into a type-checking block
+src\local_delegate\attribution.py:43:101: E501 Line too long (107 > 100)
+src\local_delegate\attribution.py:104:9: TRY300 Consider moving this statement to an `else` block
+src\local_delegate\attribution.py:153:92: COM812 [*] Trailing comma missing
+src\local_delegate\attribution.py:188:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\attribution.py:193:5: PLR0913 Too many arguments in function definition (6 > 5)
+src\local_delegate\attribution.py:346:9: PLW2901 `for` loop variable `new_entry` overwritten by assignment target
+src\local_delegate\attribution.py:361:9: PTH105 `os.replace()` should be replaced by `Path.replace()`
+src\local_delegate\attribution.py:363:9: SIM105 Use `contextlib.suppress(OSError)` instead of `try`-`except`-`pass`
+src\local_delegate\attribution.py:364:13: PTH108 `os.unlink()` should be replaced by `Path.unlink()`
+src\local_delegate\attribution.py:376:58: PT028 Test function parameter `backfill_entry` has default argument
+src\local_delegate\attribution.py:377:5: D205 1 blank line required between summary line and description
+src\local_delegate\attribution.py:404:5: D205 1 blank line required between summary line and description
+src\local_delegate\attribution.py:404:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\autostart.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\autostart.py:28:5: D401 First line of docstring should be in imperative mood: "True si el endpoint OpenAI-compatible responde a /models."
+src\local_delegate\autostart.py:70:13: S603 `subprocess` call: check for execution of untrusted input
+src\local_delegate\benchmark.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\benchmark.py:26:29: TC003 Move standard library import `collections.abc.Callable` into a type-checking block
+src\local_delegate\benchmark.py:26:39: TC003 Move standard library import `collections.abc.Mapping` into a type-checking block
+src\local_delegate\benchmark.py:26:48: TC003 Move standard library import `collections.abc.Sequence` into a type-checking block
+src\local_delegate\benchmark.py:59:7: D101 Missing docstring in public class
+src\local_delegate\benchmark.py:72:7: D101 Missing docstring in public class
+src\local_delegate\benchmark.py:97:38: PLR2004 Magic value used in comparison, consider replacing `2` with a constant variable
+src\local_delegate\benchmark.py:102:9: PLW2901 `for` loop variable `raw` overwritten by assignment target
+src\local_delegate\benchmark.py:120:22: COM812 [*] Trailing comma missing
+src\local_delegate\benchmark.py:133:14: COM812 [*] Trailing comma missing
+src\local_delegate\benchmark.py:218:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\benchmark.py:226:20: S603 `subprocess` call: check for execution of untrusted input
+src\local_delegate\benchmark.py:226:20: PLW1510 `subprocess.run` without explicit `check` argument
+src\local_delegate\benchmark.py:281:5: C901 `score_output` is too complex (11 > 10)
+src\local_delegate\benchmark.py:282:90: COM812 [*] Trailing comma missing
+src\local_delegate\benchmark.py:377:9: D107 Missing docstring in `__init__`
+src\local_delegate\benchmark.py:378:86: COM812 [*] Trailing comma missing
+src\local_delegate\benchmark.py:387:9: D105 Missing docstring in magic method
+src\local_delegate\benchmark.py:406:9: D105 Missing docstring in magic method
+src\local_delegate\benchmark.py:411:9: D102 Missing docstring in public method
+src\local_delegate\benchmark.py:460:7: D101 Missing docstring in public class
+src\local_delegate\benchmark.py:515:5: D301 Use `r"""` if any backslashes in a docstring
+src\local_delegate\benchmark.py:539:92: COM812 [*] Trailing comma missing
+src\local_delegate\benchmark.py:584:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\benchmark.py:662:5: D103 Missing docstring in public function
+src\local_delegate\benchmark.py:677:75: FBT003 Boolean positional value in function call
+src\local_delegate\benchmark.py:700:9: D107 Missing docstring in `__init__`
+src\local_delegate\benchmark.py:762:9: D102 Missing docstring in public method
+src\local_delegate\benchmark.py:770:9: D102 Missing docstring in public method
+src\local_delegate\benchmark.py:790:9: PLR0913 Too many arguments in function definition (8 > 5)
+src\local_delegate\benchmark.py:790:9: D107 Missing docstring in `__init__`
+src\local_delegate\benchmark.py:830:9: D102 Missing docstring in public method
+src\local_delegate\benchmark.py:862:9: D102 Missing docstring in public method
+src\local_delegate\benchmark.py:867:77: COM812 [*] Trailing comma missing
+src\local_delegate\benchmark.py:877:101: E501 Line too long (101 > 100)
+src\local_delegate\benchmark.py:878:101: E501 Line too long (101 > 100)
+src\local_delegate\benchmark.py:931:9: D107 Missing docstring in `__init__`
+src\local_delegate\benchmark.py:946:9: D105 Missing docstring in magic method
+src\local_delegate\benchmark.py:959:9: D105 Missing docstring in magic method
+src\local_delegate\benchmark.py:965:9: D102 Missing docstring in public method
+src\local_delegate\benchmark.py:978:47: RUF036 [*] `None` not at the end of the type union.
+src\local_delegate\benchmark.py:983:9: T201 `print` found
+src\local_delegate\benchmark.py:987:9: T201 `print` found
+src\local_delegate\benchmark.py:1020:47: COM812 [*] Trailing comma missing
+src\local_delegate\benchmark.py:1022:5: D205 1 blank line required between summary line and description
+src\local_delegate\benchmark.py:1022:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\benchmark.py:1023:101: E501 Line too long (104 > 100)
+src\local_delegate\benchmark.py:1031:5: PLR0913 Too many arguments in function definition (6 > 5)
+src\local_delegate\benchmark.py:1091:22: PLR2004 Magic value used in comparison, consider replacing `400` with a constant variable
+src\local_delegate\benchmark.py:1095:7: D101 Missing docstring in public class
+src\local_delegate\benchmark.py:1111:5: D103 Missing docstring in public function
+src\local_delegate\benchmark.py:1117:32: PLR2004 Magic value used in comparison, consider replacing `400` with a constant variable
+src\local_delegate\benchmark.py:1164:9: D107 Missing docstring in `__init__`
+src\local_delegate\benchmark.py:1168:9: D102 Missing docstring in public method
+src\local_delegate\benchmark.py:1197:5: C901 `run_benchmark` is too complex (16 > 10)
+src\local_delegate\benchmark.py:1197:5: PLR0912 Too many branches (16 > 12)
+src\local_delegate\benchmark.py:1197:5: PLR0915 Too many statements (73 > 50)
+src\local_delegate\benchmark.py:1197:5: D103 Missing docstring in public function
+src\local_delegate\benchmark.py:1205:13: T201 `print` found
+src\local_delegate\benchmark.py:1211:9: T201 `print` found
+src\local_delegate\benchmark.py:1217:9: T201 `print` found
+src\local_delegate\benchmark.py:1222:9: T201 `print` found
+src\local_delegate\benchmark.py:1325:94: COM812 [*] Trailing comma missing
+src\local_delegate\benchmark.py:1331:60: COM812 [*] Trailing comma missing
+src\local_delegate\benchmark.py:1342:25: T201 `print` found
+src\local_delegate\benchmark.py:1345:67: COM812 [*] Trailing comma missing
+src\local_delegate\benchmark.py:1372:5: D103 Missing docstring in public function
+src\local_delegate\benchmark.py:1386:85: COM812 [*] Trailing comma missing
+src\local_delegate\chains.py:1:1: D205 1 blank line required between summary line and description
+src\local_delegate\chains.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\chains.py:61:7: D101 Missing docstring in public class
+src\local_delegate\chains.py:65:101: E501 Line too long (101 > 100)
+src\local_delegate\chains.py:81:12: PLW0603 Using the global statement to update `_loaded_provider` is discouraged
+src\local_delegate\chains.py:89:5: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\chains.py:186:91: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\checks.py:31:29: TC003 Move standard library import `collections.abc.Callable` into a type-checking block
+src\local_delegate\checks.py:77:5: D103 Missing docstring in public function
+src\local_delegate\checks.py:81:5: D103 Missing docstring in public function
+src\local_delegate\checks.py:85:5: D103 Missing docstring in public function
+src\local_delegate\checks.py:89:5: D103 Missing docstring in public function
+src\local_delegate\checks.py:93:5: D103 Missing docstring in public function
+src\local_delegate\checks.py:97:5: D103 Missing docstring in public function
+src\local_delegate\checks.py:102:101: E501 Line too long (101 > 100)
+src\local_delegate\checks.py:116:20: SLF001 Private member accessed: `_CODEX_BEARER_RE`
+src\local_delegate\checks.py:118:13: S105 Possible hardcoded password assigned to: "TOKEN_VAR"
+src\local_delegate\checks.py:128:5: D401 First line of docstring should be in imperative mood: "True si el estado cuenta como aviso para el exit code (``unknown`` no cuenta)."
+src\local_delegate\checks.py:163:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\checks.py:170:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\checks.py:177:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\checks.py:192:5: ANN202 Missing return type annotation for private function `_default_llamaswap_daemon`
+src\local_delegate\checks.py:194:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\checks.py:199:5: N802 Function name `NO_LLAMASWAP_DAEMON` should be lowercase
+src\local_delegate\checks.py:199:5: ANN201 Missing return type annotation for public function `NO_LLAMASWAP_DAEMON`
+src\local_delegate\checks.py:204:5: N802 Function name `NO_TOKEN_PROBE` should be lowercase
+src\local_delegate\checks.py:226:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\checks.py:228:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\checks.py:235:82: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:240:41: FBT003 Boolean positional value in function call
+src\local_delegate\checks.py:244:96: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:248:41: FBT003 Boolean positional value in function call
+src\local_delegate\checks.py:252:13: FBT003 Boolean positional value in function call
+src\local_delegate\checks.py:252:94: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:262:5: N802 Function name `NO_KEY_PROBE` should be lowercase
+src\local_delegate\checks.py:289:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\checks.py:294:5: N802 Function name `SKIP_PYPI` should be lowercase
+src\local_delegate\checks.py:338:9: PLW2901 `for` loop variable `line` overwritten by assignment target
+src\local_delegate\checks.py:350:5: N802 Function name `NO_CLIENTS` should be lowercase
+src\local_delegate\checks.py:360:5: D401 First line of docstring should be in imperative mood: "True si alguien escucha en el puerto (sea o no nuestro daemon)."
+src\local_delegate\checks.py:386:59: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:392:64: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:395:60: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:398:56: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:403:60: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:409:58: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:416:63: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:421:66: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:430:62: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:434:9: D102 Missing docstring in public method
+src\local_delegate\checks.py:439:9: D301 Use `r"""` if any backslashes in a docstring
+src\local_delegate\checks.py:453:9: D102 Missing docstring in public method
+src\local_delegate\checks.py:467:9: D102 Missing docstring in public method
+src\local_delegate\checks.py:527:5: D401 First line of docstring should be in imperative mood: "True si el script instalado no es byte a byte el del paquete. Sin referencia, no se afirma."
+src\local_delegate\checks.py:527:101: E501 Line too long (101 > 100)
+src\local_delegate\checks.py:537:5: D401 First line of docstring should be in imperative mood: "True si el bloque gestionado está delimitado y en orden."
+src\local_delegate\checks.py:616:93: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:622:5: D400 First line should end with a period
+src\local_delegate\checks.py:662:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\checks.py:666:16: ARG001 Unused function argument: `ctx`
+src\local_delegate\checks.py:667:5: D400 First line should end with a period
+src\local_delegate\checks.py:710:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\checks.py:716:5: D400 First line should end with a period
+src\local_delegate\checks.py:728:100: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:744:91: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:755:98: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:769:94: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:772:76: SLF001 Private member accessed: `_HOOK_EVENTS`
+src\local_delegate\checks.py:803:97: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:843:5: C901 `_probe_hook_settings` is too complex (14 > 10)
+src\local_delegate\checks.py:843:5: PLR0911 Too many return statements (7 > 6)
+src\local_delegate\checks.py:843:5: PLR0912 Too many branches (13 > 12)
+src\local_delegate\checks.py:855:92: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:869:47: SLF001 Private member accessed: `_is_ours`
+src\local_delegate\checks.py:876:93: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:942:90: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:1028:15: SLF001 Private member accessed: `_CODEX_SECTION_RE`
+src\local_delegate\checks.py:1045:56: SLF001 Private member accessed: `_describe_timeouts`
+src\local_delegate\checks.py:1054:98: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:1077:5: PLR0911 Too many return statements (7 > 6)
+src\local_delegate\checks.py:1089:15: SLF001 Private member accessed: `_CODEX_SECTION_RE`
+src\local_delegate\checks.py:1097:33: SLF001 Private member accessed: `_CODEX_TIMEOUT_RE`
+src\local_delegate\checks.py:1105:94: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:1164:5: D400 First line should end with a period
+src\local_delegate\checks.py:1202:96: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:1231:37: S104 Possible binding to all interfaces
+src\local_delegate\checks.py:1257:5: D400 First line should end with a period
+src\local_delegate\checks.py:1335:50: S104 Possible binding to all interfaces
+src\local_delegate\checks.py:1356:5: C901 `_probe_desktop_auth` is too complex (13 > 10)
+src\local_delegate\checks.py:1356:5: PLR0911 Too many return statements (12 > 6)
+src\local_delegate\checks.py:1357:5: D400 First line should end with a period
+src\local_delegate\checks.py:1376:94: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:1432:91: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:1437:100: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:1442:5: PLR0911 Too many return statements (7 > 6)
+src\local_delegate\checks.py:1450:12: PLR1714 Consider merging multiple comparisons: `version not in ("?", installed)`. Use a `set` if the elements are hashable.
+src\local_delegate\checks.py:1463:97: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:1533:18: SLF001 Private member accessed: `_compare_line`
+src\local_delegate\checks.py:1549:5: D103 Missing docstring in public function
+src\local_delegate\checks.py:1565:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\checks.py:1585:101: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:1602:23: ANN001 Missing type annotation for function argument `photo`
+src\local_delegate\checks.py:1602:30: ANN001 Missing type annotation for function argument `loaded`
+src\local_delegate\checks.py:1604:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\checks.py:1629:99: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:1642:5: D103 Missing docstring in public function
+src\local_delegate\checks.py:1650:27: ANN001 Missing type annotation for function argument `photo`
+src\local_delegate\checks.py:1665:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\checks.py:1666:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\checks.py:1672:21: SLF001 Private member accessed: `_model_config`
+src\local_delegate\checks.py:1673:18: SLF001 Private member accessed: `_affinity_prompt`
+src\local_delegate\checks.py:1688:101: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:1689:18: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:1697:42: ANN001 Missing type annotation for function argument `photo`
+src\local_delegate\checks.py:1698:5: D205 1 blank line required between summary line and description
+src\local_delegate\checks.py:1698:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\checks.py:1705:97: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:1716:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\checks.py:1731:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\checks.py:1737:94: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:1747:97: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:1749:12: SLF001 Private member accessed: `_backend_on_loopback`
+src\local_delegate\checks.py:1778:15: SLF001 Private member accessed: `_clashes_by_groups`
+src\local_delegate\checks.py:1782:21: ARG001 Unused function argument: `ctx`
+src\local_delegate\checks.py:1789:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\checks.py:1790:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\checks.py:1821:101: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:1822:14: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:1838:88: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:1886:5: C901 `_probe_deprecated_names` is too complex (14 > 10)
+src\local_delegate\checks.py:1887:101: E501 Line too long (101 > 100)
+src\local_delegate\checks.py:1905:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\checks.py:1906:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\checks.py:1952:73: RUF003 Comment contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\checks.py:1957:55: RUF002 Docstring contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\checks.py:1965:24: SLF001 Private member accessed: `_log_files`
+src\local_delegate\checks.py:1968:31: SLF001 Private member accessed: `_read_log`
+src\local_delegate\checks.py:1971:25: SLF001 Private member accessed: `_instant`
+src\local_delegate\checks.py:1979:5: D400 First line should end with a period
+src\local_delegate\checks.py:1982:101: E501 Line too long (101 > 100)
+src\local_delegate\checks.py:1983:101: E501 Line too long (118 > 100)
+src\local_delegate\checks.py:2005:18: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:2021:92: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:2040:92: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:2045:5: D205 1 blank line required between summary line and description
+src\local_delegate\checks.py:2068:14: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:2072:9: PERF401 Use `list.extend` to create a transformed list
+src\local_delegate\checks.py:2078:14: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:2082:52: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:2095:100: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:2113:98: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:2160:98: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:2166:101: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:2171:100: COM812 [*] Trailing comma missing
+src\local_delegate\checks.py:2197:16: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\cli.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\cli.py:6:101: E501 Line too long (117 > 100)
+src\local_delegate\cli.py:25:29: TC003 Move standard library import `collections.abc.Iterator` into a type-checking block
+src\local_delegate\cli.py:54:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:65:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:88:5: ANN202 Missing return type annotation for private function `_install_options`
+src\local_delegate\cli.py:88:67: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\cli.py:88:67: FBT002 Boolean default positional argument in function definition
+src\local_delegate\cli.py:89:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:113:5: D401 First line of docstring should be in imperative mood: "True si se puede preguntar de verdad. Un stdin raro NO es una terminal."
+src\local_delegate\cli.py:121:28: ANN001 Missing type annotation for function argument `results`
+src\local_delegate\cli.py:128:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:137:5: D401 First line of docstring should be in imperative mood: "True si hay que SALTAR la escritura de la entrada MCP de Codex."
+src\local_delegate\cli.py:139:9: T201 `print` found
+src\local_delegate\cli.py:140:9: T201 `print` found
+src\local_delegate\cli.py:143:9: T201 `print` found
+src\local_delegate\cli.py:144:9: T201 `print` found
+src\local_delegate\cli.py:147:9: T201 `print` found
+src\local_delegate\cli.py:148:9: T201 `print` found
+src\local_delegate\cli.py:149:9: T201 `print` found
+src\local_delegate\cli.py:151:5: T201 `print` found
+src\local_delegate\cli.py:155:9: T201 `print` found
+src\local_delegate\cli.py:159:5: T201 `print` found
+src\local_delegate\cli.py:163:34: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\cli.py:170:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:175:92: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:177:5: T201 `print` found
+src\local_delegate\cli.py:179:9: T201 `print` found
+src\local_delegate\cli.py:181:9: T201 `print` found
+src\local_delegate\cli.py:182:5: T201 `print` found
+src\local_delegate\cli.py:184:9: T201 `print` found
+src\local_delegate\cli.py:185:9: T201 `print` found
+src\local_delegate\cli.py:186:9: SLF001 Private member accessed: `_print_group`
+src\local_delegate\cli.py:189:44: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\cli.py:190:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:191:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:197:9: T201 `print` found
+src\local_delegate\cli.py:200:5: T201 `print` found
+src\local_delegate\cli.py:201:5: T201 `print` found
+src\local_delegate\cli.py:206:9: T201 `print` found
+src\local_delegate\cli.py:208:9: T201 `print` found
+src\local_delegate\cli.py:209:9: T201 `print` found
+src\local_delegate\cli.py:210:9: T201 `print` found
+src\local_delegate\cli.py:219:76: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:226:9: T201 `print` found
+src\local_delegate\cli.py:229:5: T201 `print` found
+src\local_delegate\cli.py:230:5: T201 `print` found
+src\local_delegate\cli.py:232:5: T201 `print` found
+src\local_delegate\cli.py:234:9: T201 `print` found
+src\local_delegate\cli.py:238:9: T201 `print` found
+src\local_delegate\cli.py:248:9: T201 `print` found
+src\local_delegate\cli.py:253:22: ANN001 Missing type annotation for function argument `opts`
+src\local_delegate\cli.py:260:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:266:9: T201 `print` found
+src\local_delegate\cli.py:268:5: T201 `print` found
+src\local_delegate\cli.py:280:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:284:5: T201 `print` found
+src\local_delegate\cli.py:285:5: T201 `print` found
+src\local_delegate\cli.py:286:5: T201 `print` found
+src\local_delegate\cli.py:287:5: T201 `print` found
+src\local_delegate\cli.py:290:5: ANN202 Missing return type annotation for private function `_update_options`
+src\local_delegate\cli.py:291:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:302:5: D103 Missing docstring in public function
+src\local_delegate\cli.py:303:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:308:5: D103 Missing docstring in public function
+src\local_delegate\cli.py:314:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:318:9: T201 `print` found
+src\local_delegate\cli.py:339:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:344:9: T201 `print` found
+src\local_delegate\cli.py:350:9: T201 `print` found
+src\local_delegate\cli.py:352:5: T201 `print` found
+src\local_delegate\cli.py:362:42: ANN001 Missing type annotation for function argument `windows`
+src\local_delegate\cli.py:363:101: E501 Line too long (103 > 100)
+src\local_delegate\cli.py:364:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:366:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:390:5: C901 `cmd_test_window` is too complex (11 > 10)
+src\local_delegate\cli.py:390:5: PLR0911 Too many return statements (7 > 6)
+src\local_delegate\cli.py:392:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:394:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:395:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:402:13: T201 `print` found
+src\local_delegate\cli.py:406:13: T201 `print` found
+src\local_delegate\cli.py:412:18: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:418:17: T201 `print` found
+src\local_delegate\cli.py:420:17: T201 `print` found
+src\local_delegate\cli.py:423:9: T201 `print` found
+src\local_delegate\cli.py:435:9: T201 `print` found
+src\local_delegate\cli.py:438:9: T201 `print` found
+src\local_delegate\cli.py:441:9: T201 `print` found
+src\local_delegate\cli.py:445:9: T201 `print` found
+src\local_delegate\cli.py:453:14: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:456:9: T201 `print` found
+src\local_delegate\cli.py:460:29: ANN001 Missing type annotation for function argument `sub`
+src\local_delegate\cli.py:479:5: D103 Missing docstring in public function
+src\local_delegate\cli.py:483:5: PLR0913 Too many arguments in function definition (6 > 5)
+src\local_delegate\cli.py:483:5: PLR0917 Too many positional arguments (6 > 5)
+src\local_delegate\cli.py:492:5: T201 `print` found
+src\local_delegate\cli.py:493:5: T201 `print` found
+src\local_delegate\cli.py:499:10: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:501:5: T201 `print` found
+src\local_delegate\cli.py:504:9: T201 `print` found
+src\local_delegate\cli.py:510:14: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:516:17: T201 `print` found
+src\local_delegate\cli.py:518:17: T201 `print` found
+src\local_delegate\cli.py:525:22: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:527:5: T201 `print` found
+src\local_delegate\cli.py:528:5: T201 `print` found
+src\local_delegate\cli.py:532:62: ANN001 Missing type annotation for function argument `estimator`
+src\local_delegate\cli.py:532:71: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:543:92: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:559:51: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\cli.py:564:5: T201 `print` found
+src\local_delegate\cli.py:566:9: T201 `print` found
+src\local_delegate\cli.py:570:5: PLR0913 Too many arguments in function definition (7 > 5)
+src\local_delegate\cli.py:570:5: PLR0917 Too many positional arguments (7 > 5)
+src\local_delegate\cli.py:575:5: ANN001 Missing type annotation for function argument `estimator`
+src\local_delegate\cli.py:589:9: T201 `print` found
+src\local_delegate\cli.py:590:9: T201 `print` found
+src\local_delegate\cli.py:596:5: T201 `print` found
+src\local_delegate\cli.py:598:9: T201 `print` found
+src\local_delegate\cli.py:604:14: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:607:5: T201 `print` found
+src\local_delegate\cli.py:611:5: D103 Missing docstring in public function
+src\local_delegate\cli.py:616:9: T201 `print` found
+src\local_delegate\cli.py:621:9: T201 `print` found
+src\local_delegate\cli.py:628:89: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:635:9: T201 `print` found
+src\local_delegate\cli.py:637:94: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:658:5: C901 `cmd_init_llamaswap` is too complex (21 > 10)
+src\local_delegate\cli.py:658:5: PLR0911 Too many return statements (12 > 6)
+src\local_delegate\cli.py:658:5: PLR0912 Too many branches (20 > 12)
+src\local_delegate\cli.py:658:5: PLR0915 Too many statements (63 > 50)
+src\local_delegate\cli.py:658:5: D103 Missing docstring in public function
+src\local_delegate\cli.py:662:9: T201 `print` found
+src\local_delegate\cli.py:666:9: T201 `print` found
+src\local_delegate\cli.py:677:9: T201 `print` found
+src\local_delegate\cli.py:685:13: T201 `print` found
+src\local_delegate\cli.py:691:101: E501 Line too long (101 > 100)
+src\local_delegate\cli.py:691:102: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:698:9: T201 `print` found
+src\local_delegate\cli.py:717:9: T201 `print` found
+src\local_delegate\cli.py:727:96: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:730:9: T201 `print` found
+src\local_delegate\cli.py:735:9: T201 `print` found
+src\local_delegate\cli.py:737:101: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:740:13: T201 `print` found
+src\local_delegate\cli.py:744:9: T201 `print` found
+src\local_delegate\cli.py:745:9: T201 `print` found
+src\local_delegate\cli.py:749:9: T201 `print` found
+src\local_delegate\cli.py:750:9: T201 `print` found
+src\local_delegate\cli.py:751:9: T201 `print` found
+src\local_delegate\cli.py:752:9: T201 `print` found
+src\local_delegate\cli.py:756:9: T201 `print` found
+src\local_delegate\cli.py:757:9: T201 `print` found
+src\local_delegate\cli.py:764:9: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:767:9: T201 `print` found
+src\local_delegate\cli.py:768:9: T201 `print` found
+src\local_delegate\cli.py:771:5: T201 `print` found
+src\local_delegate\cli.py:788:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:799:18: ANN001 Missing type annotation for function argument `answer`
+src\local_delegate\cli.py:811:5: ANN202 Missing return type annotation for private function `_config_path`
+src\local_delegate\cli.py:816:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:827:44: ANN001 Missing type annotation for function argument `kind`
+src\local_delegate\cli.py:833:17: TRY301 Abstract `raise` to an inner function
+src\local_delegate\cli.py:837:78: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:842:5: ANN202 Missing return type annotation for private function `_daemon_status`
+src\local_delegate\cli.py:849:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:851:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:864:32: PLR2004 Magic value used in comparison, consider replacing `200` with a constant variable
+src\local_delegate\cli.py:872:5: ANN202 Missing return type annotation for private function `_llamaswap_status`
+src\local_delegate\cli.py:872:23: ANN001 Missing type annotation for function argument `daemon_answer`
+src\local_delegate\cli.py:873:5: D205 1 blank line required between summary line and description
+src\local_delegate\cli.py:873:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\cli.py:875:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:883:87: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:890:5: ANN202 Missing return type annotation for private function `_daemon_watch`
+src\local_delegate\cli.py:892:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:894:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:896:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:907:63: PLR2004 Magic value used in comparison, consider replacing `200` with a constant variable
+src\local_delegate\cli.py:917:5: ANN202 Missing return type annotation for private function `_open_watch`
+src\local_delegate\cli.py:923:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:925:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:939:36: PLR2004 Magic value used in comparison, consider replacing `200` with a constant variable
+src\local_delegate\cli.py:959:5: D205 1 blank line required between summary line and description
+src\local_delegate\cli.py:959:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\cli.py:962:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:970:5: PLR0913 Too many arguments in function definition (6 > 5)
+src\local_delegate\cli.py:970:5: PLR0917 Too many positional arguments (6 > 5)
+src\local_delegate\cli.py:970:5: PLR0911 Too many return statements (7 > 6)
+src\local_delegate\cli.py:970:75: ANN001 Missing type annotation for function argument `status`
+src\local_delegate\cli.py:970:83: ANN001 Missing type annotation for function argument `origin`
+src\local_delegate\cli.py:972:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:976:9: T201 `print` found
+src\local_delegate\cli.py:979:9: T201 `print` found
+src\local_delegate\cli.py:980:9: T201 `print` found
+src\local_delegate\cli.py:988:13: T201 `print` found
+src\local_delegate\cli.py:990:9: T201 `print` found
+src\local_delegate\cli.py:992:13: T201 `print` found
+src\local_delegate\cli.py:995:9: T201 `print` found
+src\local_delegate\cli.py:1008:9: T201 `print` found
+src\local_delegate\cli.py:1011:9: T201 `print` found
+src\local_delegate\cli.py:1013:5: T201 `print` found
+src\local_delegate\cli.py:1018:72: ANN001 Missing type annotation for function argument `daemon_answer`
+src\local_delegate\cli.py:1018:90: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:1028:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:1036:9: T201 `print` found
+src\local_delegate\cli.py:1040:9: T201 `print` found
+src\local_delegate\cli.py:1048:9: T201 `print` found
+src\local_delegate\cli.py:1050:5: T201 `print` found
+src\local_delegate\cli.py:1053:5: T201 `print` found
+src\local_delegate\cli.py:1054:5: T201 `print` found
+src\local_delegate\cli.py:1056:9: T201 `print` found
+src\local_delegate\cli.py:1058:9: T201 `print` found
+src\local_delegate\cli.py:1060:5: T201 `print` found
+src\local_delegate\cli.py:1068:5: C901 `cmd_llamaswap_residency` is too complex (17 > 10)
+src\local_delegate\cli.py:1068:5: PLR0911 Too many return statements (14 > 6)
+src\local_delegate\cli.py:1068:5: PLR0912 Too many branches (17 > 12)
+src\local_delegate\cli.py:1068:5: PLR0915 Too many statements (51 > 50)
+src\local_delegate\cli.py:1068:5: D103 Missing docstring in public function
+src\local_delegate\cli.py:1069:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\cli.py:1073:9: T201 `print` found
+src\local_delegate\cli.py:1079:9: T201 `print` found
+src\local_delegate\cli.py:1082:9: T201 `print` found
+src\local_delegate\cli.py:1090:17: T201 `print` found
+src\local_delegate\cli.py:1091:17: T201 `print` found
+src\local_delegate\cli.py:1098:13: T201 `print` found
+src\local_delegate\cli.py:1112:17: T201 `print` found
+src\local_delegate\cli.py:1115:95: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:1120:13: T201 `print` found
+src\local_delegate\cli.py:1123:13: T201 `print` found
+src\local_delegate\cli.py:1127:9: T201 `print` found
+src\local_delegate\cli.py:1130:9: T201 `print` found
+src\local_delegate\cli.py:1133:9: T201 `print` found
+src\local_delegate\cli.py:1135:9: T201 `print` found
+src\local_delegate\cli.py:1136:9: T201 `print` found
+src\local_delegate\cli.py:1141:9: T201 `print` found
+src\local_delegate\cli.py:1145:27: ANN001 Missing type annotation for function argument `sub`
+src\local_delegate\cli.py:1171:97: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:1182:94: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:1198:89: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:1208:5: D103 Missing docstring in public function
+src\local_delegate\cli.py:1239:92: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:1300:88: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:1303:92: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:1446:101: COM812 [*] Trailing comma missing
+src\local_delegate\cli.py:1483:26: ANN001 Missing type annotation for function argument `sub`
+src\local_delegate\cli.py:1586:5: D103 Missing docstring in public function
+src\local_delegate\clients.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\clients.py:34:21: TC003 Move standard library import `pathlib.Path` into a type-checking block
+src\local_delegate\clients.py:84:50: COM812 [*] Trailing comma missing
+src\local_delegate\clients.py:108:55: COM812 [*] Trailing comma missing
+src\local_delegate\clients.py:116:50: COM812 [*] Trailing comma missing
+src\local_delegate\clients.py:130:28: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `ctx`
+src\local_delegate\clients.py:131:5: D205 1 blank line required between summary line and description
+src\local_delegate\clients.py:131:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\clients.py:145:28: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `caps`
+src\local_delegate\clients.py:178:9: PTH105 `os.replace()` should be replaced by `Path.replace()`
+src\local_delegate\clients.py:227:18: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `caps`
+src\local_delegate\clients.py:227:36: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `client_info`
+src\local_delegate\clients.py:294:31: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `ctx`
+src\local_delegate\clients.py:294:47: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `call_next`
+src\local_delegate\clients.py:294:55: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `observe_client`
+src\local_delegate\clients.py:313:9: S110 `try`-`except`-`pass` detected, consider logging the exception
+src\local_delegate\clients.py:313:16: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\clients.py:320:9: S110 `try`-`except`-`pass` detected, consider logging the exception
+src\local_delegate\clients.py:320:16: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\config.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\config.py:55:26: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\config.py:96:41: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\config.py:234:51: FBT003 Boolean positional value in function call
+src\local_delegate\config.py:235:61: FBT003 Boolean positional value in function call
+src\local_delegate\config.py:249:88: FBT003 Boolean positional value in function call
+src\local_delegate\config.py:252:101: E501 Line too long (101 > 100)
+src\local_delegate\config.py:255:63: COM812 [*] Trailing comma missing
+src\local_delegate\config.py:270:51: COM812 [*] Trailing comma missing
+src\local_delegate\config.py:310:81: FBT003 Boolean positional value in function call
+src\local_delegate\config.py:310:86: COM812 [*] Trailing comma missing
+src\local_delegate\config.py:356:49: FBT003 Boolean positional value in function call
+src\local_delegate\config.py:365:49: FBT003 Boolean positional value in function call
+src\local_delegate\config.py:369:101: E501 Line too long (101 > 100)
+src\local_delegate\config.py:396:5: D103 Missing docstring in public function
+src\local_delegate\config.py:400:5: D103 Missing docstring in public function
+src\local_delegate\config.py:404:5: D103 Missing docstring in public function
+src\local_delegate\config.py:408:5: D103 Missing docstring in public function
+src\local_delegate\config.py:409:48: FBT003 Boolean positional value in function call
+src\local_delegate\config.py:417:5: D103 Missing docstring in public function
+src\local_delegate\config.py:424:5: D103 Missing docstring in public function
+src\local_delegate\config.py:438:7: D101 Missing docstring in public class
+src\local_delegate\config.py:444:5: D103 Missing docstring in public function
+src\local_delegate\config.py:496:47: FBT003 Boolean positional value in function call
+src\local_delegate\config.py:502:51: FBT003 Boolean positional value in function call
+src\local_delegate\config.py:551:51: FBT003 Boolean positional value in function call
+src\local_delegate\config.py:558:47: FBT003 Boolean positional value in function call
+src\local_delegate\config.py:562:57: FBT003 Boolean positional value in function call
+src\local_delegate\cooldown.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\cooldown.py:34:29: TC003 Move standard library import `collections.abc.Callable` into a type-checking block
+src\local_delegate\cooldown.py:62:101: E501 Line too long (102 > 100)
+src\local_delegate\cooldown.py:99:5: D205 1 blank line required between summary line and description
+src\local_delegate\cooldown.py:99:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\cooldown.py:116:7: D101 Missing docstring in public class
+src\local_delegate\cooldown.py:117:9: PLR0913 Too many arguments in function definition (7 > 5)
+src\local_delegate\cooldown.py:117:9: D107 Missing docstring in `__init__`
+src\local_delegate\cooldown.py:196:91: COM812 [*] Trailing comma missing
+src\local_delegate\cooldown.py:219:9: D205 1 blank line required between summary line and description
+src\local_delegate\cooldown.py:277:9: D205 1 blank line required between summary line and description
+src\local_delegate\cooldown.py:277:9: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\cooldown.py:291:21: SIM105 Use `contextlib.suppress(OSError)` instead of `try`-`except`-`pass`
+src\local_delegate\cooldown.py:304:9: SIM105 Use `contextlib.suppress(OSError)` instead of `try`-`except`-`pass`
+src\local_delegate\cost.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\cost.py:22:29: TC003 Move standard library import `collections.abc.Iterable` into a type-checking block
+src\local_delegate\cost.py:24:21: TC003 Move standard library import `pathlib.Path` into a type-checking block
+src\local_delegate\cost.py:81:5: D205 1 blank line required between summary line and description
+src\local_delegate\cost.py:81:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\cost.py:140:5: D205 1 blank line required between summary line and description
+src\local_delegate\cost.py:140:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\cost.py:154:5: D205 1 blank line required between summary line and description
+src\local_delegate\cost.py:154:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\cost.py:173:5: D205 1 blank line required between summary line and description
+src\local_delegate\cost.py:173:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\cost.py:242:82: COM812 [*] Trailing comma missing
+src\local_delegate\cost.py:244:5: D205 1 blank line required between summary line and description
+src\local_delegate\cost.py:244:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\cost.py:251:5: SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+src\local_delegate\cost.py:253:5: S110 `try`-`except`-`pass` detected, consider logging the exception
+src\local_delegate\cost.py:253:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\cost.py:269:5: D205 1 blank line required between summary line and description
+src\local_delegate\cost.py:269:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\daemon.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\daemon.py:16:21: TC003 Move standard library import `pathlib.Path` into a type-checking block
+src\local_delegate\daemon.py:21:36: TC002 Move third-party import `starlette.applications.Starlette` into a type-checking block
+src\local_delegate\daemon.py:22:32: TC002 Move third-party import `starlette.requests.Request` into a type-checking block
+src\local_delegate\daemon.py:39:22: PTH123 `open()` should be replaced by `Path.open()`
+src\local_delegate\daemon.py:47:9: T201 `print` found
+src\local_delegate\daemon.py:63:20: SLF001 Private member accessed: `_get_version`
+src\local_delegate\daemon.py:77:5: PTH105 `os.replace()` should be replaced by `Path.replace()`
+src\local_delegate\daemon.py:105:95: COM812 [*] Trailing comma missing
+src\local_delegate\daemon.py:138:32: PLR2004 Magic value used in comparison, consider replacing `401` with a constant variable
+src\local_delegate\daemon.py:159:32: PLR2004 Magic value used in comparison, consider replacing `401` with a constant variable
+src\local_delegate\daemon.py:161:20: PLR2004 Magic value used in comparison, consider replacing `200` with a constant variable
+src\local_delegate\daemon.py:161:50: PLR2004 Magic value used in comparison, consider replacing `300` with a constant variable
+src\local_delegate\daemon.py:180:96: COM812 [*] Trailing comma missing
+src\local_delegate\daemon.py:246:5: PLR0911 Too many return statements (7 > 6)
+src\local_delegate\daemon.py:276:18: COM812 [*] Trailing comma missing
+src\local_delegate\deprecation_notices.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\deprecations.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\deprecations.py:1:101: E501 Line too long (101 > 100)
+src\local_delegate\deprecations.py:30:87: COM812 [*] Trailing comma missing
+src\local_delegate\deprecations.py:37:7: D101 Missing docstring in public class
+src\local_delegate\deprecations.py:47:9: D102 Missing docstring in public method
+src\local_delegate\deprecations.py:61:95: COM812 [*] Trailing comma missing
+src\local_delegate\deprecations.py:77:93: COM812 [*] Trailing comma missing
+src\local_delegate\deprecations.py:154:5: D103 Missing docstring in public function
+src\local_delegate\doctor.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\doctor.py:17:8: TC003 Move standard library import `argparse` into a type-checking block
+src\local_delegate\doctor.py:49:5: D205 1 blank line required between summary line and description
+src\local_delegate\doctor.py:49:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\doctor.py:55:97: COM812 [*] Trailing comma missing
+src\local_delegate\doctor.py:68:23: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\doctor.py:76:9: T201 `print` found
+src\local_delegate\doctor.py:80:13: T201 `print` found
+src\local_delegate\doctor.py:102:5: T201 `print` found
+src\local_delegate\doctor.py:103:5: T201 `print` found
+src\local_delegate\doctor.py:114:53: COM812 [*] Trailing comma missing
+src\local_delegate\doctor.py:116:5: T201 `print` found
+src\local_delegate\doctor.py:117:5: T201 `print` found
+src\local_delegate\doctor.py:118:5: T201 `print` found
+src\local_delegate\doctor.py:119:5: T201 `print` found
+src\local_delegate\doctor.py:121:9: T201 `print` found
+src\local_delegate\doctor.py:122:5: T201 `print` found
+src\local_delegate\doctor.py:123:5: T201 `print` found
+src\local_delegate\doctor.py:124:5: T201 `print` found
+src\local_delegate\doctor.py:127:9: T201 `print` found
+src\local_delegate\doctor.py:129:9: T201 `print` found
+src\local_delegate\doctor.py:131:5: T201 `print` found
+src\local_delegate\doctor.py:135:9: T201 `print` found
+src\local_delegate\doctor.py:136:9: T201 `print` found
+src\local_delegate\doctor.py:141:17: T201 `print` found
+src\local_delegate\doctor.py:144:17: T201 `print` found
+src\local_delegate\doctor.py:147:5: T201 `print` found
+src\local_delegate\doctor.py:149:9: T201 `print` found
+src\local_delegate\doctor.py:155:14: COM812 [*] Trailing comma missing
+src\local_delegate\doctor.py:158:5: T201 `print` found
+src\local_delegate\entrypoint.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\entrypoint.py:44:5: T201 `print` found
+src\local_delegate\entrypoint.py:62:9: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\entrypoint.py:74:13: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\entrypoint.py:77:9: S110 `try`-`except`-`pass` detected, consider logging the exception
+src\local_delegate\entrypoint.py:77:16: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\failures.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\failures.py:37:29: TC003 Move standard library import `collections.abc.Iterator` into a type-checking block
+src\local_delegate\failures.py:47:7: UP042 Class FailureClass inherits from both `str` and `enum.Enum`
+src\local_delegate\failures.py:114:5: D401 First line of docstring should be in imperative mood: "True si el fallo significa que no hay nadie escuchando en el endpoint."
+src\local_delegate\failures.py:146:27: PLR2004 Magic value used in comparison, consider replacing `400` with a constant variable
+src\local_delegate\failures.py:148:12: PLR2004 Magic value used in comparison, consider replacing `200` with a constant variable
+src\local_delegate\failures.py:148:37: PLR2004 Magic value used in comparison, consider replacing `300` with a constant variable
+src\local_delegate\failures.py:159:8: PLR2004 Magic value used in comparison, consider replacing `400` with a constant variable
+src\local_delegate\failures.py:159:24: PLR2004 Magic value used in comparison, consider replacing `500` with a constant variable
+src\local_delegate\failures.py:163:18: PLR2004 Magic value used in comparison, consider replacing `500` with a constant variable
+src\local_delegate\failures.py:171:5: PLR0911 Too many return statements (8 > 6)
+src\local_delegate\failures.py:215:7: UP042 Class ConnectionCause inherits from both `str` and `enum.Enum`
+src\local_delegate\failures.py:284:5: C901 `connection_cause` is too complex (15 > 10)
+src\local_delegate\failures.py:284:5: PLR0911 Too many return statements (14 > 6)
+src\local_delegate\failures.py:284:5: PLR0912 Too many branches (14 > 12)
+src\local_delegate\failures.py:296:12: PLR2004 Magic value used in comparison, consider replacing `200` with a constant variable
+src\local_delegate\failures.py:296:27: PLR2004 Magic value used in comparison, consider replacing `300` with a constant variable
+src\local_delegate\failures.py:297:19: TRY003 Avoid specifying long messages outside the exception class
+src\local_delegate\failures.py:297:30: EM102 Exception must not use an f-string literal, assign to variable first
+src\local_delegate\failures.py:343:5: D205 1 blank line required between summary line and description
+src\local_delegate\failures.py:343:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\failures.py:349:101: E501 Line too long (102 > 100)
+src\local_delegate\failures.py:353:5: PLR0913 Too many arguments in function definition (6 > 5)
+src\local_delegate\failures.py:396:101: E501 Line too long (103 > 100)
+src\local_delegate\failures.py:405:5: PLR0911 Too many return statements (9 > 6)
+src\local_delegate\footprint.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\footprint.py:23:29: TC003 Move standard library import `collections.abc.Mapping` into a type-checking block
+src\local_delegate\footprint.py:23:38: TC003 Move standard library import `collections.abc.Sequence` into a type-checking block
+src\local_delegate\footprint.py:42:5: D301 Use `r"""` if any backslashes in a docstring
+src\local_delegate\i18n.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\i18n.py:39:5: D103 Missing docstring in public function
+src\local_delegate\i18n.py:52:101: E501 Line too long (101 > 100)
+src\local_delegate\i18n.py:106:5: D103 Missing docstring in public function
+src\local_delegate\i18n.py:168:94: COM812 [*] Trailing comma missing
+src\local_delegate\i18n.py:179:98: COM812 [*] Trailing comma missing
+src\local_delegate\i18n.py:196:5: D403 [*] First word of the docstring should be capitalized: `msgid` -> `Msgid`
+src\local_delegate\install.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\install.py:145:5: D401 First line of docstring should be in imperative mood: "True si ``home`` apunta fuera del HOME real: entonces no se toca nada global."
+src\local_delegate\install.py:224:9: D102 Missing docstring in public method
+src\local_delegate\install.py:309:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\install.py:317:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\install.py:334:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\install.py:377:83: COM812 [*] Trailing comma missing
+src\local_delegate\install.py:379:5: D301 Use `r"""` if any backslashes in a docstring
+src\local_delegate\install.py:414:5: D401 First line of docstring should be in imperative mood: "True si esta entrada de hook la puso local-delegate (ahora o en una versión previa)."
+src\local_delegate\install.py:432:5: D401 First line of docstring should be in imperative mood: "True si el ``settings.json`` de Claude Code registra ya nuestro hook de lectura."
+src\local_delegate\install.py:457:80: COM812 [*] Trailing comma missing
+src\local_delegate\install.py:479:5: C901 `strip_hook_settings` is too complex (11 > 10)
+src\local_delegate\install.py:515:17: S105 Possible hardcoded password assigned to: "WEB_TOKEN_VAR"
+src\local_delegate\install.py:536:37: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\install.py:556:5: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\install.py:558:5: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\install.py:558:5: FBT002 Boolean default positional argument in function definition
+src\local_delegate\install.py:643:83: COM812 [*] Trailing comma missing
+src\local_delegate\install.py:734:52: COM812 [*] Trailing comma missing
+src\local_delegate\install.py:738:96: COM812 [*] Trailing comma missing
+src\local_delegate\install.py:762:5: D103 Missing docstring in public function
+src\local_delegate\install.py:837:5: D401 First line of docstring should be in imperative mood: "True si el JSONC lleva comentarios fuera de una cadena."
+src\local_delegate\install.py:857:5: D401 First line of docstring should be in imperative mood: "A cuál de los dos se escribe. Misma regla que usa el propio `opencode mcp add` (medida)."
+src\local_delegate\install.py:892:5: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\install.py:894:5: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\install.py:894:5: FBT002 Boolean default positional argument in function definition
+src\local_delegate\install.py:941:12: RUF005 Consider `[*args, "--", *entry.get("command", [])]` instead of concatenation
+src\local_delegate\install.py:946:7: D101 Missing docstring in public class
+src\local_delegate\install.py:1103:5: C901 `plan_install` is too complex (29 > 10)
+src\local_delegate\install.py:1103:5: PLR0912 Too many branches (19 > 12)
+src\local_delegate\install.py:1103:5: PLR0915 Too many statements (81 > 50)
+src\local_delegate\install.py:1128:27: ANN001 Missing type annotation for function argument `path`
+src\local_delegate\install.py:1128:47: ANN001 Missing type annotation for function argument `entries`
+src\local_delegate\install.py:1128:64: ANN001 Missing type annotation for function argument `hooks_dir`
+src\local_delegate\install.py:1145:14: COM812 [*] Trailing comma missing
+src\local_delegate\install.py:1156:14: COM812 [*] Trailing comma missing
+src\local_delegate\install.py:1173:14: COM812 [*] Trailing comma missing
+src\local_delegate\install.py:1182:9: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\install.py:1203:25: ANN001 Missing type annotation for function argument `path`
+src\local_delegate\install.py:1203:36: ANN001 Missing type annotation for function argument `block`
+src\local_delegate\install.py:1204:17: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\install.py:1252:18: COM812 [*] Trailing comma missing
+src\local_delegate\install.py:1260:28: ANN001 Missing type annotation for function argument `path`
+src\local_delegate\install.py:1260:46: ANN001 Missing type annotation for function argument `block`
+src\local_delegate\install.py:1271:18: COM812 [*] Trailing comma missing
+src\local_delegate\install.py:1296:86: COM812 [*] Trailing comma missing
+src\local_delegate\install.py:1298:18: COM812 [*] Trailing comma missing
+src\local_delegate\install.py:1311:13: S603 `subprocess` call: check for execution of untrusted input
+src\local_delegate\install.py:1311:13: PLW1510 `subprocess.run` without explicit `check` argument
+src\local_delegate\install.py:1312:17: S607 Starting a process with a partial executable path
+src\local_delegate\install.py:1317:20: S603 `subprocess` call: check for execution of untrusted input
+src\local_delegate\install.py:1317:20: PLW1510 `subprocess.run` without explicit `check` argument
+src\local_delegate\install.py:1318:17: S607 Starting a process with a partial executable path
+src\local_delegate\install.py:1453:20: S603 `subprocess` call: check for execution of untrusted input
+src\local_delegate\install.py:1453:20: PLW1510 `subprocess.run` without explicit `check` argument
+src\local_delegate\install.py:1454:17: S607 Starting a process with a partial executable path
+src\local_delegate\install.py:1510:5: C901 `plan_uninstall` is too complex (27 > 10)
+src\local_delegate\install.py:1510:5: PLR0912 Too many branches (14 > 12)
+src\local_delegate\install.py:1510:5: PLR0915 Too many statements (56 > 50)
+src\local_delegate\install.py:1521:27: ANN001 Missing type annotation for function argument `path`
+src\local_delegate\install.py:1521:47: ANN001 Missing type annotation for function argument `hooks_dir`
+src\local_delegate\install.py:1529:92: COM812 [*] Trailing comma missing
+src\local_delegate\install.py:1532:21: ANN001 Missing type annotation for function argument `path`
+src\local_delegate\install.py:1543:24: ANN001 Missing type annotation for function argument `path`
+src\local_delegate\install.py:1558:27: ANN001 Missing type annotation for function argument `path`
+src\local_delegate\install.py:1565:98: COM812 [*] Trailing comma missing
+src\local_delegate\install.py:1580:25: ANN001 Missing type annotation for function argument `path`
+src\local_delegate\install.py:1596:18: COM812 [*] Trailing comma missing
+src\local_delegate\install.py:1606:28: ANN001 Missing type annotation for function argument `path`
+src\local_delegate\install.py:1620:18: COM812 [*] Trailing comma missing
+src\local_delegate\install.py:1628:20: S603 `subprocess` call: check for execution of untrusted input
+src\local_delegate\install.py:1628:20: PLW1510 `subprocess.run` without explicit `check` argument
+src\local_delegate\install.py:1629:17: S607 Starting a process with a partial executable path
+src\local_delegate\install.py:1652:52: ANN001 Missing type annotation for function argument `out`
+src\local_delegate\install.py:1667:16: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\json_state.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\json_state.py:13:21: TC003 Move standard library import `pathlib.Path` into a type-checking block
+src\local_delegate\json_state.py:26:5: D103 Missing docstring in public function
+src\local_delegate\json_state.py:36:9: SIM105 Use `contextlib.suppress(OSError)` instead of `try`-`except`-`pass`
+src\local_delegate\legacy_names.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\legacy_names.py:36:101: E501 Line too long (101 > 100)
+src\local_delegate\legacy_names.py:65:101: E501 Line too long (102 > 100)
+src\local_delegate\legacy_names.py:119:101: E501 Line too long (103 > 100)
+src\local_delegate\legacy_names.py:201:101: E501 Line too long (102 > 100)
+src\local_delegate\legacy_names.py:230:101: E501 Line too long (101 > 100)
+src\local_delegate\legacy_names.py:301:98: COM812 [*] Trailing comma missing
+src\local_delegate\legacy_names.py:535:101: E501 Line too long (101 > 100)
+src\local_delegate\legacy_names.py:571:101: E501 Line too long (101 > 100)
+src\local_delegate\legacy_names.py:587:48: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `value`
+src\local_delegate\legacy_names.py:587:56: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `new_value`
+src\local_delegate\legacy_names.py:594:67: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `default`
+src\local_delegate\legacy_names.py:594:82: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `read_key`
+src\local_delegate\legacy_names.py:636:5: D205 1 blank line required between summary line and description
+src\local_delegate\legacy_names.py:636:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\legacy_names.py:647:33: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `point`
+src\local_delegate\legacy_names.py:647:41: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `normalize_cost_point`
+src\local_delegate\legacy_names.py:689:5: D205 1 blank line required between summary line and description
+src\local_delegate\legacy_names.py:689:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\legacy_names.py:699:5: D205 1 blank line required between summary line and description
+src\local_delegate\legacy_names.py:699:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\legacy_names.py:717:36: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `footprint`
+src\local_delegate\legacy_names.py:717:44: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `normalize_footprint`
+src\local_delegate\legacy_names.py:718:5: D205 1 blank line required between summary line and description
+src\local_delegate\legacy_names.py:718:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\legacy_names.py:726:5: D205 1 blank line required between summary line and description
+src\local_delegate\legacy_names.py:726:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\legacy_names.py:742:5: D205 1 blank line required between summary line and description
+src\local_delegate\legacy_names.py:742:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\legacy_names.py:756:5: D205 1 blank line required between summary line and description
+src\local_delegate\legacy_names.py:756:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\legacy_names.py:765:5: D205 1 blank line required between summary line and description
+src\local_delegate\legacy_names.py:765:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\legacy_names.py:801:5: D205 1 blank line required between summary line and description
+src\local_delegate\legacy_names.py:801:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\legacy_names.py:808:17: PLW2901 `for` loop variable `item` overwritten by assignment target
+src\local_delegate\legacy_names.py:820:5: D205 1 blank line required between summary line and description
+src\local_delegate\legacy_names.py:820:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\legacy_names.py:832:5: D205 1 blank line required between summary line and description
+src\local_delegate\legacy_names.py:832:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\legacy_names.py:844:5: D205 1 blank line required between summary line and description
+src\local_delegate\legacy_names.py:844:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\llamaswap_api.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\llamaswap_api.py:32:29: TC003 Move standard library import `collections.abc.Iterator` into a type-checking block
+src\local_delegate\llamaswap_api.py:32:39: TC003 Move standard library import `collections.abc.Mapping` into a type-checking block
+src\local_delegate\llamaswap_api.py:101:7: N818 Exception name `TooManyWatches` should be named with an Error suffix
+src\local_delegate\llamaswap_api.py:130:98: COM812 [*] Trailing comma missing
+src\local_delegate\llamaswap_api.py:137:5: D401 First line of docstring should be in imperative mood: "`/running` reducido a `{id, state, ttl}`. Todo lo demás (el `cmd` incluido) se descarta."
+src\local_delegate\llamaswap_api.py:164:14: COM812 [*] Trailing comma missing
+src\local_delegate\llamaswap_api.py:185:22: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `data`
+src\local_delegate\llamaswap_api.py:186:101: E501 Line too long (103 > 100)
+src\local_delegate\llamaswap_api.py:193:27: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `data`
+src\local_delegate\llamaswap_api.py:211:83: COM812 [*] Trailing comma missing
+src\local_delegate\llamaswap_api.py:245:83: COM812 [*] Trailing comma missing
+src\local_delegate\llamaswap_api.py:278:79: COM812 [*] Trailing comma missing
+src\local_delegate\llamaswap_api.py:309:9: D102 Missing docstring in public method
+src\local_delegate\llamaswap_api.py:325:9: D102 Missing docstring in public method
+src\local_delegate\llamaswap_api.py:325:30: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `data`
+src\local_delegate\llamaswap_api.py:379:25: PLR2004 Magic value used in comparison, consider replacing `200` with a constant variable
+src\local_delegate\llamaswap_api.py:477:9: D107 Missing docstring in `__init__`
+src\local_delegate\llamaswap_api.py:489:28: TD006 [*] Invalid TODO capitalization: `todo` should be `TODO`
+src\local_delegate\llamaswap_api.py:489:28: TD002 Missing author in TODO; try: `# TODO(<author_name>): ...` or `# TODO @<author_name>: ...`
+src\local_delegate\llamaswap_api.py:489:28: TD004 Missing colon in TODO
+src\local_delegate\llamaswap_api.py:489:28: TD003 Missing issue link for this TODO
+src\local_delegate\llamaswap_api.py:489:28: FIX002 Line contains TODO, consider resolving the issue
+src\local_delegate\llamaswap_api.py:499:9: D102 Missing docstring in public method
+src\local_delegate\llamaswap_api.py:569:88: COM812 [*] Trailing comma missing
+src\local_delegate\llamaswap_api.py:625:9: ANN204 Missing return type annotation for special method `__init__`
+src\local_delegate\llamaswap_api.py:625:9: D107 Missing docstring in `__init__`
+src\local_delegate\llamaswap_api.py:648:91: COM812 [*] Trailing comma missing
+src\local_delegate\llamaswap_api.py:664:9: D102 Missing docstring in public method
+src\local_delegate\llamaswap_config.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\llamaswap_config.py:86:23: ANN001 Missing type annotation for function argument `f`
+src\local_delegate\llamaswap_config.py:91:5: ANN202 Missing return type annotation for private function `_read_gguf_value`
+src\local_delegate\llamaswap_config.py:91:22: ANN001 Missing type annotation for function argument `f`
+src\local_delegate\llamaswap_config.py:109:5: C901 `read_gguf_arch_info` is too complex (11 > 10)
+src\local_delegate\llamaswap_config.py:109:5: PLR0911 Too many return statements (7 > 6)
+src\local_delegate\llamaswap_config.py:122:26: PLR2004 Magic value used in comparison, consider replacing `2` with a constant variable
+src\local_delegate\llamaswap_config.py:182:26: PLR2004 Magic value used in comparison, consider replacing `2` with a constant variable
+src\local_delegate\llamaswap_config.py:273:7: D101 Missing docstring in public class
+src\local_delegate\llamaswap_config.py:307:71: COM812 [*] Trailing comma missing
+src\local_delegate\llamaswap_config.py:347:90: COM812 [*] Trailing comma missing
+src\local_delegate\llamaswap_config.py:396:95: COM812 [*] Trailing comma missing
+src\local_delegate\llamaswap_config.py:402:71: COM812 [*] Trailing comma missing
+src\local_delegate\llamaswap_config.py:436:7: D101 Missing docstring in public class
+src\local_delegate\llamaswap_config.py:445:57: COM812 [*] Trailing comma missing
+src\local_delegate\llamaswap_config.py:476:14: COM812 [*] Trailing comma missing
+src\local_delegate\matrix.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\matrix.py:1:28: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\matrix.py:24:29: TC003 Move standard library import `collections.abc.Callable` into a type-checking block
+src\local_delegate\matrix.py:24:39: TC003 Move standard library import `collections.abc.Collection` into a type-checking block
+src\local_delegate\matrix.py:24:51: TC003 Move standard library import `collections.abc.Mapping` into a type-checking block
+src\local_delegate\matrix.py:24:60: TC003 Move standard library import `collections.abc.Sequence` into a type-checking block
+src\local_delegate\matrix.py:32:99: COM812 [*] Trailing comma missing
+src\local_delegate\matrix.py:118:5: D301 Use `r"""` if any backslashes in a docstring
+src\local_delegate\matrix.py:160:13: PERF401 Use a list comprehension to create a transformed list
+src\local_delegate\matrix.py:165:13: PERF401 Use `list.extend` to create a transformed list
+src\local_delegate\matrix.py:210:9: D102 Missing docstring in public method
+src\local_delegate\matrix.py:213:9: D102 Missing docstring in public method
+src\local_delegate\matrix.py:216:9: D102 Missing docstring in public method
+src\local_delegate\matrix.py:220:9: D205 1 blank line required between summary line and description
+src\local_delegate\matrix.py:220:9: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\matrix.py:231:9: D205 1 blank line required between summary line and description
+src\local_delegate\matrix.py:231:9: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\matrix.py:241:9: D205 1 blank line required between summary line and description
+src\local_delegate\matrix.py:241:9: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\matrix.py:253:9: D205 1 blank line required between summary line and description
+src\local_delegate\matrix.py:253:9: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\matrix.py:254:14: RUF002 Docstring contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\matrix.py:254:23: RUF002 Docstring contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\matrix.py:261:5: D205 1 blank line required between summary line and description
+src\local_delegate\matrix.py:261:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\matrix.py:268:5: PLR0913 Too many arguments in function definition (6 > 5)
+src\local_delegate\pace.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\pace.py:34:29: TC003 Move standard library import `collections.abc.Iterable` into a type-checking block
+src\local_delegate\pace.py:34:39: TC003 Move standard library import `collections.abc.Iterator` into a type-checking block
+src\local_delegate\pace.py:35:22: TC003 Move standard library import `datetime.datetime` into a type-checking block
+src\local_delegate\pace.py:62:20: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `value`
+src\local_delegate\pace.py:70:19: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `ok`
+src\local_delegate\pace.py:70:36: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `tokens_out`
+src\local_delegate\pace.py:70:48: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `tok_s`
+src\local_delegate\pace.py:71:101: E501 Line too long (101 > 100)
+src\local_delegate\pace.py:90:9: D107 Missing docstring in `__init__`
+src\local_delegate\pace.py:91:86: COM812 [*] Trailing comma missing
+src\local_delegate\pace.py:97:45: COM812 [*] Trailing comma missing
+src\local_delegate\pace.py:101:43: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `tokens_in`
+src\local_delegate\pace.py:106:26: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `model`
+src\local_delegate\pace.py:106:38: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `tok_s`
+src\local_delegate\pace.py:106:54: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `tokens_in`
+src\local_delegate\pace.py:115:29: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `event`
+src\local_delegate\pace.py:126:16: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\pace.py:142:34: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `line`
+src\local_delegate\pace.py:146:16: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\pace.py:151:45: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `tokens_in`
+src\local_delegate\pace.py:156:16: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\pace.py:159:32: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `model`
+src\local_delegate\pace.py:159:48: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `tokens_in`
+src\local_delegate\pace.py:169:22: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `model`
+src\local_delegate\pace.py:169:34: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `tok_s`
+src\local_delegate\pace.py:169:50: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `tokens_in`
+src\local_delegate\pace.py:169:93: COM812 [*] Trailing comma missing
+src\local_delegate\pace.py:183:16: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `model`
+src\local_delegate\pace.py:184:16: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `tok_s`
+src\local_delegate\pace.py:185:20: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `tokens_in`
+src\local_delegate\pace.py:188:21: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `tokens_out`
+src\local_delegate\pace.py:196:57: FBT003 Boolean positional value in function call
+src\local_delegate\pace.py:203:16: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\pace.py:221:22: COM812 [*] Trailing comma missing
+src\local_delegate\pace.py:223:13: TRY300 Consider moving this statement to an `else` block
+src\local_delegate\pace.py:224:16: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\pace.py:243:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\pace.py:251:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\pace.py:265:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\pace.py:300:88: COM812 [*] Trailing comma missing
+src\local_delegate\pricing.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\pricing.py:25:39: RUF003 Comment contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\pricing.py:73:101: E501 Line too long (101 > 100)
+src\local_delegate\pricing.py:101:32: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\probes.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\probes.py:23:21: TC003 Move standard library import `pathlib.Path` into a type-checking block
+src\local_delegate\probes.py:65:15: S603 `subprocess` call: check for execution of untrusted input
+src\local_delegate\probes.py:65:15: PLW1510 `subprocess.run` without explicit `check` argument
+src\local_delegate\probes.py:79:11: SLF001 Private member accessed: `_find_exe`
+src\local_delegate\probes.py:90:5: D301 Use `r"""` if any backslashes in a docstring
+src\local_delegate\probes.py:90:101: E501 Line too long (101 > 100)
+src\local_delegate\probes.py:134:9: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\probes.py:148:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\probes.py:174:14: COM812 [*] Trailing comma missing
+src\local_delegate\probes.py:187:9: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\probes.py:197:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\probes.py:215:58: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\probes.py:243:91: COM812 [*] Trailing comma missing
+src\local_delegate\probes.py:248:100: COM812 [*] Trailing comma missing
+src\local_delegate\probes.py:253:100: COM812 [*] Trailing comma missing
+src\local_delegate\probes.py:261:5: D401 First line of docstring should be in imperative mood: "True si el endpoint OpenAI-compatible responde a /models (best-effort)."
+src\local_delegate\probes.py:275:16: SLF001 Private member accessed: `_is_loopback_host`
+src\local_delegate\probes.py:275:41: SLF001 Private member accessed: `_split_host_port`
+src\local_delegate\probes.py:279:9: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\probes.py:284:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\probes.py:287:37: FBT003 Boolean positional value in function call
+src\local_delegate\probes.py:289:37: FBT003 Boolean positional value in function call
+src\local_delegate\probes.py:292:33: FBT003 Boolean positional value in function call
+src\local_delegate\probes.py:308:9: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\probes.py:312:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\questions.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\questions.py:47:32: COM812 [*] Trailing comma missing
+src\local_delegate\questions.py:51:33: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `ctx`
+src\local_delegate\questions.py:51:49: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `call_next`
+src\local_delegate\questions.py:51:57: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `remember_context`
+src\local_delegate\questions.py:81:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\questions.py:101:15: ANN202 Missing return type annotation for private function `_with_timeout`
+src\local_delegate\questions.py:138:5: D400 First line should end with a period
+src\local_delegate\questions.py:162:101: E501 Line too long (101 > 100)
+src\local_delegate\quota.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\quota.py:20:29: TC003 Move standard library import `collections.abc.Iterable` into a type-checking block
+src\local_delegate\quota.py:60:5: D103 Missing docstring in public function
+src\local_delegate\quota.py:71:63: RUF002 Docstring contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\quota.py:98:14: COM812 [*] Trailing comma missing
+src\local_delegate\quota.py:107:82: PLR2004 Magic value used in comparison, consider replacing `100` with a constant variable
+src\local_delegate\quota.py:142:89: COM812 [*] Trailing comma missing
+src\local_delegate\quota.py:151:5: C901 `statusline_points` is too complex (13 > 10)
+src\local_delegate\quota.py:151:5: PLR0912 Too many branches (13 > 12)
+src\local_delegate\quota.py:204:18: COM812 [*] Trailing comma missing
+src\local_delegate\quota.py:215:5: D205 1 blank line required between summary line and description
+src\local_delegate\quota.py:215:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\quota.py:229:5: D205 1 blank line required between summary line and description
+src\local_delegate\quota.py:229:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\quota.py:247:5: D205 1 blank line required between summary line and description
+src\local_delegate\quota.py:247:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\quota.py:292:43: RUF002 Docstring contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\quota.py:303:61: RUF002 Docstring contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\quota.py:304:22: RUF002 Docstring contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\quota.py:322:5: D205 1 blank line required between summary line and description
+src\local_delegate\quota.py:322:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\quota.py:328:19: PLR2004 Magic value used in comparison, consider replacing `2` with a constant variable
+src\local_delegate\quota.py:347:5: C901 `status` is too complex (11 > 10)
+src\local_delegate\quota.py:348:5: D205 1 blank line required between summary line and description
+src\local_delegate\quota.py:383:72: COM812 [*] Trailing comma missing
+src\local_delegate\recompute.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\recompute.py:28:29: TC003 Move standard library import `collections.abc.Iterator` into a type-checking block
+src\local_delegate\recompute.py:46:5: D103 Missing docstring in public function
+src\local_delegate\recompute.py:79:9: PTH105 `os.replace()` should be replaced by `Path.replace()`
+src\local_delegate\recompute.py:81:9: SIM105 Use `contextlib.suppress(OSError)` instead of `try`-`except`-`pass`
+src\local_delegate\recompute.py:82:13: PTH108 `os.unlink()` should be replaced by `Path.unlink()`
+src\local_delegate\recompute.py:104:5: D205 1 blank line required between summary line and description
+src\local_delegate\recompute.py:104:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\recompute.py:110:17: PLW2901 `for` loop variable `line` overwritten by assignment target
+src\local_delegate\recompute.py:131:34: PLR2004 Magic value used in comparison, consider replacing `12` with a constant variable
+src\local_delegate\recompute.py:138:5: D205 1 blank line required between summary line and description
+src\local_delegate\recompute.py:138:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\recompute.py:179:55: B905 `zip()` without an explicit `strict=` parameter
+src\local_delegate\recompute.py:179:93: COM812 [*] Trailing comma missing
+src\local_delegate\recompute.py:200:5: D205 1 blank line required between summary line and description
+src\local_delegate\recompute.py:200:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\recompute.py:218:81: COM812 [*] Trailing comma missing
+src\local_delegate\recompute.py:258:5: C901 `run` is too complex (13 > 10)
+src\local_delegate\recompute.py:316:14: C420 [*] Unnecessary dict comprehension for iterable; use `dict.fromkeys` instead
+src\local_delegate\recompute.py:351:101: E501 Line too long (101 > 100)
+src\local_delegate\recompute.py:383:36: ANN001 Missing type annotation for function argument `value`
+src\local_delegate\recompute.py:398:97: COM812 [*] Trailing comma missing
+src\local_delegate\recompute.py:402:85: COM812 [*] Trailing comma missing
+src\local_delegate\recompute.py:424:14: COM812 [*] Trailing comma missing
+src\local_delegate\recompute.py:442:14: COM812 [*] Trailing comma missing
+src\local_delegate\residency.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\residency.py:26:101: E501 Line too long (101 > 100)
+src\local_delegate\residency.py:46:29: TC003 Move standard library import `collections.abc.Mapping` into a type-checking block
+src\local_delegate\residency.py:46:38: TC003 Move standard library import `collections.abc.Sequence` into a type-checking block
+src\local_delegate\residency.py:49:21: TC003 Move standard library import `pathlib.Path` into a type-checking block
+src\local_delegate\residency.py:84:7: D101 Missing docstring in public class
+src\local_delegate\residency.py:90:7: D101 Missing docstring in public class
+src\local_delegate\residency.py:96:7: D101 Missing docstring in public class
+src\local_delegate\residency.py:102:7: D101 Missing docstring in public class
+src\local_delegate\residency.py:107:7: D101 Missing docstring in public class
+src\local_delegate\residency.py:134:17: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `mark`
+src\local_delegate\residency.py:139:5: D205 1 blank line required between summary line and description
+src\local_delegate\residency.py:150:101: COM812 [*] Trailing comma missing
+src\local_delegate\residency.py:158:26: EM101 Exception must not use a string literal, assign to variable first
+src\local_delegate\residency.py:164:95: COM812 [*] Trailing comma missing
+src\local_delegate\residency.py:168:94: COM812 [*] Trailing comma missing
+src\local_delegate\residency.py:172:5: ANN202 Missing return type annotation for private function `_walk`
+src\local_delegate\residency.py:172:17: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `node`
+src\local_delegate\residency.py:183:22: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `root`
+src\local_delegate\residency.py:191:30: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `root`
+src\local_delegate\residency.py:205:26: COM812 [*] Trailing comma missing
+src\local_delegate\residency.py:211:5: D205 1 blank line required between summary line and description
+src\local_delegate\residency.py:211:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\residency.py:224:10: COM812 [*] Trailing comma missing
+src\local_delegate\residency.py:236:26: EM101 Exception must not use a string literal, assign to variable first
+src\local_delegate\residency.py:248:20: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `mapping`
+src\local_delegate\residency.py:266:20: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `root`
+src\local_delegate\residency.py:276:43: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\residency.py:276:43: FBT002 Boolean default positional argument in function definition
+src\local_delegate\residency.py:306:24: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `node`
+src\local_delegate\residency.py:306:32: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `_last_scalar`
+src\local_delegate\residency.py:313:26: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `node`
+src\local_delegate\residency.py:359:29: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `root`
+src\local_delegate\residency.py:373:23: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `root`
+src\local_delegate\residency.py:380:25: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `root`
+src\local_delegate\residency.py:380:70: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `_node_members`
+src\local_delegate\residency.py:388:32: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `root`
+src\local_delegate\residency.py:399:29: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `root`
+src\local_delegate\residency.py:409:32: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `root`
+src\local_delegate\residency.py:415:32: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `root`
+src\local_delegate\residency.py:435:32: PLC0207 [*] String is split more times than necessary
+src\local_delegate\residency.py:517:5: D205 1 blank line required between summary line and description
+src\local_delegate\residency.py:517:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\residency.py:555:81: COM812 [*] Trailing comma missing
+src\local_delegate\residency.py:558:92: COM812 [*] Trailing comma missing
+src\local_delegate\residency.py:592:22: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\residency.py:604:51: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\residency.py:609:75: COM812 [*] Trailing comma missing
+src\local_delegate\residency.py:611:5: D205 1 blank line required between summary line and description
+src\local_delegate\residency.py:611:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\residency.py:615:19: B007 Loop control variable `new` not used within loop body
+src\local_delegate\residency.py:674:7: D101 Missing docstring in public class
+src\local_delegate\residency.py:689:26: EM101 Exception must not use a string literal, assign to variable first
+src\local_delegate\residency.py:697:7: D101 Missing docstring in public class
+src\local_delegate\residency.py:709:7: D101 Missing docstring in public class
+src\local_delegate\residency.py:716:9: D102 Missing docstring in public method
+src\local_delegate\residency.py:721:9: D102 Missing docstring in public method
+src\local_delegate\residency.py:775:14: COM812 [*] Trailing comma missing
+src\local_delegate\residency.py:779:92: COM812 [*] Trailing comma missing
+src\local_delegate\residency.py:798:58: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `_written_ttl`
+src\local_delegate\residency.py:803:82: COM812 [*] Trailing comma missing
+src\local_delegate\residency.py:818:5: D103 Missing docstring in public function
+src\local_delegate\residency.py:819:82: COM812 [*] Trailing comma missing
+src\local_delegate\residency.py:853:91: COM812 [*] Trailing comma missing
+src\local_delegate\residency.py:869:83: COM812 [*] Trailing comma missing
+src\local_delegate\residency.py:883:18: COM812 [*] Trailing comma missing
+src\local_delegate\residency.py:893:14: COM812 [*] Trailing comma missing
+src\local_delegate\residency.py:930:14: COM812 [*] Trailing comma missing
+src\local_delegate\residency.py:935:5: C901 `plan_pin` is too complex (12 > 10)
+src\local_delegate\residency.py:935:5: PLR0913 Too many arguments in function definition (6 > 5)
+src\local_delegate\residency.py:935:5: PLR0917 Too many positional arguments (6 > 5)
+src\local_delegate\residency.py:983:18: COM812 [*] Trailing comma missing
+src\local_delegate\residency.py:996:14: COM812 [*] Trailing comma missing
+src\local_delegate\residency.py:1020:38: FBT003 Boolean positional value in function call
+src\local_delegate\residency.py:1020:44: FBT003 Boolean positional value in function call
+src\local_delegate\residency.py:1020:51: FBT003 Boolean positional value in function call
+src\local_delegate\residency.py:1041:5: D205 1 blank line required between summary line and description
+src\local_delegate\residency.py:1041:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\residency.py:1050:18: PTH123 `open()` should be replaced by `Path.open()`
+src\local_delegate\residency.py:1059:21: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `f`
+src\local_delegate\residency.py:1085:17: PTH105 `os.replace()` should be replaced by `Path.replace()`
+src\local_delegate\residency.py:1086:17: TRY300 Consider moving this statement to an `else` block
+src\local_delegate\residency.py:1091:9: TRY301 Abstract `raise` to an inner function
+src\local_delegate\residency.py:1092:101: COM812 [*] Trailing comma missing
+src\local_delegate\residency.py:1098:13: PTH108 `os.unlink()` should be replaced by `Path.unlink()`
+src\local_delegate\residency.py:1109:26: EM101 Exception must not use a string literal, assign to variable first
+src\local_delegate\residency.py:1116:14: COM812 [*] Trailing comma missing
+src\local_delegate\resources\hooks\hook_common.py:1:1: INP001 File `src\local_delegate\resources\hooks\hook_common.py` is part of an implicit namespace package. Add an `__init__.py`.
+src\local_delegate\resources\hooks\hook_common.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\resources\hooks\hook_common.py:25:29: TC003 Move standard library import `collections.abc.Mapping` into a type-checking block
+src\local_delegate\resources\hooks\hook_common.py:94:5: D103 Missing docstring in public function
+src\local_delegate\resources\hooks\hook_common.py:122:5: T201 `print` found
+src\local_delegate\resources\hooks\hook_common.py:128:18: COM812 [*] Trailing comma missing
+src\local_delegate\resources\hooks\hook_common.py:131:10: COM812 [*] Trailing comma missing
+src\local_delegate\resources\hooks\hook_common.py:153:5: T201 `print` found
+src\local_delegate\resources\hooks\hook_common.py:160:18: COM812 [*] Trailing comma missing
+src\local_delegate\resources\hooks\hook_common.py:163:10: COM812 [*] Trailing comma missing
+src\local_delegate\resources\hooks\hook_common.py:171:101: E501 Line too long (107 > 100)
+src\local_delegate\resources\hooks\hook_common.py:172:101: E501 Line too long (101 > 100)
+src\local_delegate\resources\hooks\hook_common.py:237:19: S310 Audit URL open for permitted schemes. Allowing use of `file:` or custom schemes is often unexpected.
+src\local_delegate\resources\hooks\hook_common.py:240:14: S310 Audit URL open for permitted schemes. Allowing use of `file:` or custom schemes is often unexpected.
+src\local_delegate\resources\hooks\hook_common.py:241:38: PLR2004 Magic value used in comparison, consider replacing `500` with a constant variable
+src\local_delegate\resources\hooks\hook_common.py:245:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\resources\hooks\hook_common.py:251:5: ANN201 Missing return type annotation for public function `backend_available`
+src\local_delegate\resources\hooks\hook_common.py:268:5: SIM105 Use `contextlib.suppress(OSError)` instead of `try`-`except`-`pass`
+src\local_delegate\resources\hooks\hook_common.py:281:101: E501 Line too long (101 > 100)
+src\local_delegate\resources\hooks\hook_common.py:299:5: D205 1 blank line required between summary line and description
+src\local_delegate\resources\hooks\hook_common.py:299:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\resources\hooks\hook_common.py:312:5: D205 1 blank line required between summary line and description
+src\local_delegate\resources\hooks\hook_common.py:312:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\resources\hooks\hook_common.py:324:5: D205 1 blank line required between summary line and description
+src\local_delegate\resources\hooks\hook_common.py:324:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\resources\hooks\hook_common.py:336:5: D205 1 blank line required between summary line and description
+src\local_delegate\resources\hooks\hook_common.py:336:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\resources\hooks\hook_common.py:348:101: E501 Line too long (101 > 100)
+src\local_delegate\resources\hooks\hook_common.py:386:101: E501 Line too long (101 > 100)
+src\local_delegate\resources\hooks\hook_common.py:396:7: D101 Missing docstring in public class
+src\local_delegate\resources\hooks\hook_common.py:478:9: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\resources\hooks\hook_common.py:481:13: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\resources\hooks\hook_common.py:486:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\resources\hooks\hook_common.py:494:98: COM812 [*] Trailing comma missing
+src\local_delegate\resources\hooks\hook_common.py:514:5: D205 1 blank line required between summary line and description
+src\local_delegate\resources\hooks\hook_common.py:514:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\resources\hooks\hook_common.py:554:31: PTH100 `os.path.abspath()` should be replaced by `Path.resolve()`
+src\local_delegate\resources\hooks\hook_common.py:558:5: D103 Missing docstring in public function
+src\local_delegate\resources\hooks\hook_common.py:578:5: SIM105 Use `contextlib.suppress(OSError)` instead of `try`-`except`-`pass`
+src\local_delegate\resources\hooks\hook_common.py:590:101: E501 Line too long (125 > 100)
+src\local_delegate\resources\hooks\hook_common.py:620:5: D205 1 blank line required between summary line and description
+src\local_delegate\resources\hooks\hook_common.py:620:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\resources\hooks\hook_common.py:639:9: SIM105 Use `contextlib.suppress(OSError)` instead of `try`-`except`-`pass`
+src\local_delegate\resources\hooks\hook_common.py:666:13: PTH105 `os.replace()` should be replaced by `Path.replace()`
+src\local_delegate\resources\hooks\hook_common.py:668:13: SIM105 Use `contextlib.suppress(OSError)` instead of `try`-`except`-`pass`
+src\local_delegate\resources\hooks\hook_common.py:669:17: PTH108 `os.unlink()` should be replaced by `Path.unlink()`
+src\local_delegate\resources\hooks\hook_common.py:676:9: TRY300 Consider moving this statement to an `else` block
+src\local_delegate\resources\hooks\hook_common.py:677:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\resources\hooks\record_call.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\resources\hooks\record_call.py:23:5: D103 Missing docstring in public function
+src\local_delegate\resources\hooks\record_call.py:33:5: SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+src\local_delegate\resources\hooks\record_call.py:35:5: S110 `try`-`except`-`pass` detected, consider logging the exception
+src\local_delegate\resources\hooks\record_call.py:35:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\resources\hooks\suggest_delegate_prompt.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\resources\hooks\suggest_delegate_prompt.py:38:84: COM812 [*] Trailing comma missing
+src\local_delegate\resources\hooks\suggest_delegate_prompt.py:42:5: D103 Missing docstring in public function
+src\local_delegate\resources\hooks\suggest_delegate_prompt.py:46:5: D103 Missing docstring in public function
+src\local_delegate\resources\hooks\suggest_delegate_prompt.py:55:5: D103 Missing docstring in public function
+src\local_delegate\resources\hooks\suggest_delegate_read.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\resources\hooks\suggest_delegate_read.py:125:6: COM812 [*] Trailing comma missing
+src\local_delegate\resources\hooks\suggest_delegate_read.py:152:11: PTH122 `os.path.splitext()` should be replaced by `Path.suffix`, `Path.stem`, and `Path.parent`
+src\local_delegate\resources\hooks\suggest_delegate_read.py:200:9: SIM105 Use `contextlib.suppress(OSError)` instead of `try`-`except`-`pass`
+src\local_delegate\resources\hooks\suggest_delegate_read.py:201:39: PTH202 `os.path.getsize` should be replaced by `Path.stat().st_size`
+src\local_delegate\resources\hooks\suggest_delegate_read.py:210:5: C901 `main` is too complex (12 > 10)
+src\local_delegate\resources\hooks\suggest_delegate_read.py:210:5: PLR0911 Too many return statements (9 > 6)
+src\local_delegate\resources\hooks\suggest_delegate_read.py:210:5: D103 Missing docstring in public function
+src\local_delegate\resources\hooks\suggest_delegate_read.py:255:98: COM812 [*] Trailing comma missing
+src\local_delegate\resources\hooks\suggest_delegate_read.py:262:19: PTH202 `os.path.getsize` should be replaced by `Path.stat().st_size`
+src\local_delegate\resources\hooks\suggest_delegate_read.py:325:101: E501 Line too long (106 > 100)
+src\local_delegate\resources\hooks\suggest_delegate_shell.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\resources\hooks\suggest_delegate_shell.py:113:5: C901 `main` is too complex (12 > 10)
+src\local_delegate\resources\hooks\suggest_delegate_shell.py:113:5: PLR0911 Too many return statements (10 > 6)
+src\local_delegate\resources\hooks\suggest_delegate_shell.py:113:5: D103 Missing docstring in public function
+src\local_delegate\resources\hooks\suggest_delegate_shell.py:144:12: PTH117 `os.path.isabs()` should be replaced by `Path.is_absolute()`
+src\local_delegate\resources\hooks\suggest_delegate_shell.py:145:33: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+src\local_delegate\resources\hooks\suggest_delegate_shell.py:145:72: PTH109 `os.getcwd()` should be replaced by `Path.cwd()`
+src\local_delegate\resources\hooks\suggest_delegate_shell.py:150:19: PTH202 `os.path.getsize` should be replaced by `Path.stat().st_size`
+src\local_delegate\sections.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\sections.py:4:4: RUF002 Docstring contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\sections.py:21:29: TC003 Move standard library import `collections.abc.Callable` into a type-checking block
+src\local_delegate\sections.py:27:101: E501 Line too long (101 > 100)
+src\local_delegate\sections.py:31:7: D101 Missing docstring in public class
+src\local_delegate\sections.py:38:7: D101 Missing docstring in public class
+src\local_delegate\sections.py:43:9: D102 Missing docstring in public method
+src\local_delegate\sections.py:55:5: D301 Use `r"""` if any backslashes in a docstring
+src\local_delegate\sections.py:65:5: D400 First line should end with a period
+src\local_delegate\sections.py:75:5: C901 `markdown_headings` is too complex (11 > 10)
+src\local_delegate\sections.py:131:29: PLR2004 Magic value used in comparison, consider replacing `2` with a constant variable
+src\local_delegate\sections.py:228:5: C901 `match_headings` is too complex (13 > 10)
+src\local_delegate\sections.py:228:5: PLR0912 Too many branches (15 > 12)
+src\local_delegate\sections.py:229:88: COM812 [*] Trailing comma missing
+src\local_delegate\sections.py:290:101: E501 Line too long (103 > 100)
+src\local_delegate\sections.py:305:7: D101 Missing docstring in public class
+src\local_delegate\sections.py:313:5: D400 First line should end with a period
+src\local_delegate\sections.py:313:5: D415 First line should end with a period, question mark, or exclamation point
+src\local_delegate\sections.py:327:5: C901 `complete` is too complex (11 > 10)
+src\local_delegate\sections.py:334:101: E501 Line too long (102 > 100)
+src\local_delegate\sections.py:418:7: D101 Missing docstring in public class
+src\local_delegate\sections.py:428:9: D102 Missing docstring in public method
+src\local_delegate\sections.py:464:5: D400 First line should end with a period
+src\local_delegate\sections.py:464:5: D415 First line should end with a period, question mark, or exclamation point
+src\local_delegate\sections.py:504:59: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\sections.py:521:7: D101 Missing docstring in public class
+src\local_delegate\sections.py:529:9: D102 Missing docstring in public method
+src\local_delegate\sections.py:539:5: PLR0913 Too many arguments in function definition (6 > 5)
+src\local_delegate\sections.py:548:5: D205 1 blank line required between summary line and description
+src\local_delegate\sections.py:548:101: E501 Line too long (101 > 100)
+src\local_delegate\server.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\server.py:25:29: TC003 Move standard library import `collections.abc.Callable` into a type-checking block
+src\local_delegate\server.py:25:39: TC003 Move standard library import `collections.abc.Collection` into a type-checking block
+src\local_delegate\server.py:25:51: TC003 Move standard library import `collections.abc.Generator` into a type-checking block
+src\local_delegate\server.py:25:62: TC003 Move standard library import `collections.abc.Iterable` into a type-checking block
+src\local_delegate\server.py:25:72: TC003 Move standard library import `collections.abc.Sequence` into a type-checking block
+src\local_delegate\server.py:159:12: PLW0603 Using the global statement to update `_client` is discouraged
+src\local_delegate\server.py:170:22: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:196:13: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\server.py:197:13: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\server.py:206:51: FBT003 Boolean positional value in function call
+src\local_delegate\server.py:212:9: TRY300 Consider moving this statement to an `else` block
+src\local_delegate\server.py:213:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\server.py:224:22: ANN001 Missing type annotation for function argument `mutate_fn`
+src\local_delegate\server.py:258:84: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:260:12: PLW0603 Using the global statement to update `_inflight_next_id` is discouraged
+src\local_delegate\server.py:390:101: E501 Line too long (101 > 100)
+src\local_delegate\server.py:428:35: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\server.py:465:10: PTH123 `open()` should be replaced by `Path.open()`
+src\local_delegate\server.py:503:38: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\server.py:545:9: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\server.py:578:23: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `data`
+src\local_delegate\server.py:637:13: SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+src\local_delegate\server.py:639:13: S110 `try`-`except`-`pass` detected, consider logging the exception
+src\local_delegate\server.py:639:20: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\server.py:645:5: PLR0913 Too many arguments in function definition (7 > 5)
+src\local_delegate\server.py:655:5: D205 1 blank line required between summary line and description
+src\local_delegate\server.py:694:14: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:697:9: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\server.py:719:101: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:724:5: C901 `_log_event` is too complex (35 > 10)
+src\local_delegate\server.py:724:5: PLR0913 Too many arguments in function definition (35 > 5)
+src\local_delegate\server.py:724:5: PLR0912 Too many branches (34 > 12)
+src\local_delegate\server.py:724:5: PLR0915 Too many statements (84 > 50)
+src\local_delegate\server.py:797:16: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\server.py:810:17: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\server.py:813:9: S110 `try`-`except`-`pass` detected, consider logging the exception
+src\local_delegate\server.py:813:16: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\server.py:824:85: RUF003 Comment contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\server.py:921:18: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:949:22: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\server.py:954:15: TRY003 Avoid specifying long messages outside the exception class
+src\local_delegate\server.py:954:26: EM102 Exception must not use an f-string literal, assign to variable first
+src\local_delegate\server.py:974:58: RUF002 Docstring contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\server.py:1086:7: D101 Missing docstring in public class
+src\local_delegate\server.py:1093:101: E501 Line too long (101 > 100)
+src\local_delegate\server.py:1096:101: E501 Line too long (101 > 100)
+src\local_delegate\server.py:1097:101: E501 Line too long (104 > 100)
+src\local_delegate\server.py:1143:89: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:1192:80: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:1285:16: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\server.py:1291:9: D401 First line of docstring should be in imperative mood: "True si estaba `ready`, False si `starting`; None si no hubo muestra a tiempo."
+src\local_delegate\server.py:1312:12: SLF001 Private member accessed: `_is_loopback_host`
+src\local_delegate\server.py:1312:37: SLF001 Private member accessed: `_split_host_port`
+src\local_delegate\server.py:1315:5: C901 `_post_chat` is too complex (12 > 10)
+src\local_delegate\server.py:1315:5: PLR0911 Too many return statements (7 > 6)
+src\local_delegate\server.py:1315:5: PLR0912 Too many branches (13 > 12)
+src\local_delegate\server.py:1334:18: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:1446:11: TRY003 Avoid specifying long messages outside the exception class
+src\local_delegate\server.py:1446:26: EM101 Exception must not use a string literal, assign to variable first
+src\local_delegate\server.py:1482:5: SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+src\local_delegate\server.py:1484:5: S110 `try`-`except`-`pass` detected, consider logging the exception
+src\local_delegate\server.py:1484:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\server.py:1489:101: E501 Line too long (101 > 100)
+src\local_delegate\server.py:1510:12: PLW0603 Using the global statement to update `_turn` is discouraged
+src\local_delegate\server.py:1611:5: D205 1 blank line required between summary line and description
+src\local_delegate\server.py:1611:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\server.py:1634:5: D205 1 blank line required between summary line and description
+src\local_delegate\server.py:1634:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\server.py:1645:5: C901 `_affinity_observe` is too complex (12 > 10)
+src\local_delegate\server.py:1646:63: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:1704:5: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\server.py:1707:5: D205 1 blank line required between summary line and description
+src\local_delegate\server.py:1707:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\server.py:1733:60: RUF002 Docstring contains ambiguous `∪` (UNION). Did you mean `U` (LATIN CAPITAL LETTER U)?
+src\local_delegate\server.py:1820:89: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:1838:93: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:1852:9: D205 1 blank line required between summary line and description
+src\local_delegate\server.py:1852:9: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\server.py:1864:78: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:1903:9: S101 Use of `assert` detected
+src\local_delegate\server.py:1903:9: PT018 Assertion should be broken down into multiple parts
+src\local_delegate\server.py:1941:9: S101 Use of `assert` detected
+src\local_delegate\server.py:2002:32: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\server.py:2002:58: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:2029:5: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\server.py:2043:5: PLR0913 Too many arguments in function definition (10 > 5)
+src\local_delegate\server.py:2116:5: D205 1 blank line required between summary line and description
+src\local_delegate\server.py:2116:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\server.py:2128:5: C901 `_with_fallback` is too complex (22 > 10)
+src\local_delegate\server.py:2128:5: PLR0913 Too many arguments in function definition (8 > 5)
+src\local_delegate\server.py:2128:5: PLR0915 Too many statements (72 > 50)
+src\local_delegate\server.py:2160:9: C901 `call` is too complex (11 > 10)
+src\local_delegate\server.py:2167:9: D205 1 blank line required between summary line and description
+src\local_delegate\server.py:2167:9: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\server.py:2191:79: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:2196:13: S101 Use of `assert` detected
+src\local_delegate\server.py:2288:5: PLR0913 Too many arguments in function definition (12 > 5)
+src\local_delegate\server.py:2358:9: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\server.py:2377:9: PLR0913 Too many arguments in function definition (7 > 5)
+src\local_delegate\server.py:2445:22: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\server.py:2485:5: PLR0913 Too many arguments in function definition (25 > 5)
+src\local_delegate\server.py:2667:5: D301 Use `r"""` if any backslashes in a docstring
+src\local_delegate\server.py:2672:5: D301 Use `r"""` if any backslashes in a docstring
+src\local_delegate\server.py:2685:5: C901 `_diff_inventory` is too complex (13 > 10)
+src\local_delegate\server.py:2852:5: D301 Use `r"""` if any backslashes in a docstring
+src\local_delegate\server.py:2862:5: C901 `_chat_chunked` is too complex (17 > 10)
+src\local_delegate\server.py:2862:5: PLR0913 Too many arguments in function definition (13 > 5)
+src\local_delegate\server.py:2862:5: PLR0915 Too many statements (70 > 50)
+src\local_delegate\server.py:2866:5: ANN001 Missing type annotation for function argument `build_user`
+src\local_delegate\server.py:2888:89: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:2918:88: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:2924:57: PLR2004 Magic value used in comparison, consider replacing `2` with a constant variable
+src\local_delegate\server.py:3016:5: D401 First line of docstring should be in imperative mood: "True si el backend rechazó la llamada por no caber en el contexto del modelo."
+src\local_delegate\server.py:3044:101: E501 Line too long (102 > 100)
+src\local_delegate\server.py:3058:5: C901 `_chat_map_reduce` is too complex (43 > 10)
+src\local_delegate\server.py:3058:5: PLR0913 Too many arguments in function definition (32 > 5)
+src\local_delegate\server.py:3058:5: PLR0912 Too many branches (27 > 12)
+src\local_delegate\server.py:3058:5: PLR0915 Too many statements (121 > 50)
+src\local_delegate\server.py:3062:5: ANN001 Missing type annotation for function argument `build_user`
+src\local_delegate\server.py:3072:5: ANN001 Missing type annotation for function argument `build_reduce`
+src\local_delegate\server.py:3126:89: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:3178:101: E501 Line too long (101 > 100)
+src\local_delegate\server.py:3206:21: ANN001 Missing type annotation for function argument `piece`
+src\local_delegate\server.py:3209:19: ANN001 Missing type annotation for function argument `piece`
+src\local_delegate\server.py:3212:21: ANN001 Missing type annotation for function argument `piece`
+src\local_delegate\server.py:3216:16: ANN001 Missing type annotation for function argument `piece`
+src\local_delegate\server.py:3221:20: ANN001 Missing type annotation for function argument `piece`
+src\local_delegate\server.py:3234:21: PLR2004 Magic value used in comparison, consider replacing `2` with a constant variable
+src\local_delegate\server.py:3237:25: PLR2004 Magic value used in comparison, consider replacing `2` with a constant variable
+src\local_delegate\server.py:3290:94: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:3330:97: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:3405:27: C420 [*] Unnecessary dict comprehension for iterable; use `dict.fromkeys` instead
+src\local_delegate\server.py:3475:5: D401 First line of docstring should be in imperative mood: "The hardened language order of `local_summarize` and `local_lint_summary` (REQ-028, B2d)."
+src\local_delegate\server.py:3503:5: D401 First line of docstring should be in imperative mood: "What both hardened orders share: every sentence is written in `name`, not copied."
+src\local_delegate\server.py:3512:5: D401 First line of docstring should be in imperative mood: "The language order of `local_lint_summary`: the hardened one, plus its labels (B2d-fix)."
+src\local_delegate\server.py:3552:5: D401 First line of docstring should be in imperative mood: "The cap of the single `local_lint_summary` call for `words` words."
+src\local_delegate\server.py:3557:5: D401 First line of docstring should be in imperative mood: "The cap of each step of the chunked `local_lint_summary` (map, regroup and reduce)."
+src\local_delegate\server.py:3562:5: D401 First line of docstring should be in imperative mood: "The count rule of `local_lint_summary` (B2d-3), in the single call and in the reduce."
+src\local_delegate\server.py:3612:5: D401 First line of docstring should be in imperative mood: "The templates of a line: the line with ONE token masked, for each token that may change."
+src\local_delegate\server.py:3623:5: C901 `compact_repeated_lines` is too complex (12 > 10)
+src\local_delegate\server.py:3630:101: E501 Line too long (122 > 100)
+src\local_delegate\server.py:3635:52: PLR2004 Magic value used in comparison, consider replacing `3` with a constant variable
+src\local_delegate\server.py:3679:5: D205 1 blank line required between summary line and description
+src\local_delegate\server.py:3679:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\server.py:3720:90: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:3732:14: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:3775:19: ANN001 Missing type annotation for function argument `sections_`
+src\local_delegate\server.py:3778:87: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:3793:5: ANN001 Missing type annotation for function argument `sections_`
+src\local_delegate\server.py:3793:79: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:3799:98: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:3806:40: ANN001 Missing type annotation for function argument `sections_`
+src\local_delegate\server.py:3821:5: PLR0913 Too many arguments in function definition (11 > 5)
+src\local_delegate\server.py:3826:5: ANN001 Missing type annotation for function argument `structure`
+src\local_delegate\server.py:3839:30: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\server.py:3841:85: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:3871:23: ANN001 Missing type annotation for function argument `chunk`
+src\local_delegate\server.py:3876:21: ANN001 Missing type annotation for function argument `chunk`
+src\local_delegate\server.py:3920:5: D205 1 blank line required between summary line and description
+src\local_delegate\server.py:3930:5: D413 [*] Missing blank line after last section ("Args")
+src\local_delegate\server.py:4014:5: D413 [*] Missing blank line after last section ("Args")
+src\local_delegate\server.py:4034:101: E501 Line too long (101 > 100)
+src\local_delegate\server.py:4065:5: D205 1 blank line required between summary line and description
+src\local_delegate\server.py:4079:5: D413 [*] Missing blank line after last section ("Args")
+src\local_delegate\server.py:4168:93: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:4201:62: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\server.py:4201:62: FBT002 Boolean default positional argument in function definition
+src\local_delegate\server.py:4202:5: D401 First line of docstring should be in imperative mood: "Generates boilerplate code from a specification, with a local code model."
+src\local_delegate\server.py:4208:5: D413 [*] Missing blank line after last section ("Args")
+src\local_delegate\server.py:4236:5: A002 Function argument `input` is shadowing a Python builtin
+src\local_delegate\server.py:4241:5: D401 First line of docstring should be in imperative mood: "Generic escape tool: delegates a text->text task to a local model."
+src\local_delegate\server.py:4251:5: D413 [*] Missing blank line after last section ("Args")
+src\local_delegate\server.py:4255:101: E501 Line too long (102 > 100)
+src\local_delegate\server.py:4320:5: D205 1 blank line required between summary line and description
+src\local_delegate\server.py:4332:5: D413 [*] Missing blank line after last section ("Args")
+src\local_delegate\server.py:4391:5: D205 1 blank line required between summary line and description
+src\local_delegate\server.py:4400:5: D413 [*] Missing blank line after last section ("Args")
+src\local_delegate\server.py:4411:78: RUF003 Comment contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\server.py:4448:59: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:4506:91: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:4533:5: D205 1 blank line required between summary line and description
+src\local_delegate\server.py:4546:5: D413 [*] Missing blank line after last section ("Args")
+src\local_delegate\server.py:4577:5: D205 1 blank line required between summary line and description
+src\local_delegate\server.py:4586:5: D413 [*] Missing blank line after last section ("Args")
+src\local_delegate\server.py:4598:98: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:4613:25: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:4668:5: D205 1 blank line required between summary line and description
+src\local_delegate\server.py:4678:5: D413 [*] Missing blank line after last section ("Args")
+src\local_delegate\server.py:4728:15: PLW1510 `subprocess.run` without explicit `check` argument
+src\local_delegate\server.py:4729:13: S607 Starting a process with a partial executable path
+src\local_delegate\server.py:4740:22: PLR2004 Magic value used in comparison, consider replacing `2` with a constant variable
+src\local_delegate\server.py:4745:61: PLR2004 Magic value used in comparison, consider replacing `2048` with a constant variable
+src\local_delegate\server.py:4761:13: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\server.py:4784:18: PTH123 `open()` should be replaced by `Path.open()`
+src\local_delegate\server.py:4793:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\server.py:4796:57: PLR2004 Magic value used in comparison, consider replacing `2` with a constant variable
+src\local_delegate\server.py:4798:95: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:4813:9: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\server.py:4816:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\server.py:4851:101: E501 Line too long (101 > 100)
+src\local_delegate\server.py:4879:7: TD006 [*] Invalid TODO capitalization: `Todo` should be `TODO`
+src\local_delegate\server.py:4879:7: TD002 Missing author in TODO; try: `# TODO(<author_name>): ...` or `# TODO @<author_name>: ...`
+src\local_delegate\server.py:4879:7: TD004 Missing colon in TODO
+src\local_delegate\server.py:4879:7: TD003 Missing issue link for this TODO
+src\local_delegate\server.py:4879:7: FIX002 Line contains TODO, consider resolving the issue
+src\local_delegate\server.py:4892:13: TRY301 Abstract `raise` to an inner function
+src\local_delegate\server.py:4893:17: EM101 Exception must not use a string literal, assign to variable first
+src\local_delegate\server.py:4893:48: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:4901:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\server.py:4905:25: FBT003 Boolean positional value in function call
+src\local_delegate\server.py:4905:39: FBT003 Boolean positional value in function call
+src\local_delegate\server.py:4908:5: PLR0913 Too many arguments in function definition (6 > 5)
+src\local_delegate\server.py:4925:25: FBT003 Boolean positional value in function call
+src\local_delegate\server.py:4925:39: FBT003 Boolean positional value in function call
+src\local_delegate\server.py:4968:10: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:4985:14: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:5005:54: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:5015:101: E501 Line too long (104 > 100)
+src\local_delegate\server.py:5035:6: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:5051:5: C901 `local_status` is too complex (16 > 10)
+src\local_delegate\server.py:5051:5: PLR0912 Too many branches (17 > 12)
+src\local_delegate\server.py:5051:5: PLR0915 Too many statements (74 > 50)
+src\local_delegate\server.py:5066:40: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:5069:97: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:5105:17: PLW2901 `for` loop variable `raw_line` overwritten by assignment target
+src\local_delegate\server.py:5141:77: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:5144:9: PERF401 Use `list.extend` to create a transformed list
+src\local_delegate\server.py:5149:14: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:5165:14: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:5194:5: D205 1 blank line required between summary line and description
+src\local_delegate\server.py:5194:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\server.py:5198:101: COM812 [*] Trailing comma missing
+src\local_delegate\server.py:5217:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\test_windows.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\test_windows.py:1:101: E501 Line too long (108 > 100)
+src\local_delegate\test_windows.py:43:101: E501 Line too long (101 > 100)
+src\local_delegate\test_windows.py:81:7: D101 Missing docstring in public class
+src\local_delegate\test_windows.py:89:9: D102 Missing docstring in public method
+src\local_delegate\test_windows.py:92:9: D102 Missing docstring in public method
+src\local_delegate\test_windows.py:115:9: D105 Missing docstring in magic method
+src\local_delegate\test_windows.py:155:9: D102 Missing docstring in public method
+src\local_delegate\test_windows.py:164:5: D103 Missing docstring in public function
+src\local_delegate\test_windows.py:194:5: PLR0911 Too many return statements (7 > 6)
+src\local_delegate\test_windows.py:222:53: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\test_windows.py:258:9: TRY300 Consider moving this statement to an `else` block
+src\local_delegate\test_windows.py:259:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\test_windows.py:261:91: COM812 [*] Trailing comma missing
+src\local_delegate\test_windows.py:275:9: PTH105 `os.replace()` should be replaced by `Path.replace()`
+src\local_delegate\test_windows.py:277:9: SIM105 Use `contextlib.suppress(OSError)` instead of `try`-`except`-`pass`
+src\local_delegate\test_windows.py:278:13: PTH108 `os.unlink()` should be replaced by `Path.unlink()`
+src\local_delegate\test_windows.py:305:18: COM812 [*] Trailing comma missing
+src\local_delegate\test_windows.py:311:93: COM812 [*] Trailing comma missing
+src\local_delegate\test_windows.py:344:101: COM812 [*] Trailing comma missing
+src\local_delegate\test_windows.py:368:95: COM812 [*] Trailing comma missing
+src\local_delegate\test_windows.py:378:85: COM812 [*] Trailing comma missing
+src\local_delegate\test_windows.py:382:83: COM812 [*] Trailing comma missing
+src\local_delegate\test_windows.py:391:5: PLR0913 Too many arguments in function definition (6 > 5)
+src\local_delegate\test_windows.py:400:5: D205 1 blank line required between summary line and description
+src\local_delegate\test_windows.py:400:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\test_windows.py:415:94: COM812 [*] Trailing comma missing
+src\local_delegate\topology.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\topology.py:129:7: D101 Missing docstring in public class
+src\local_delegate\topology.py:136:18: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `value`
+src\local_delegate\topology.py:136:23: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\topology.py:140:20: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `value`
+src\local_delegate\topology.py:144:20: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `value`
+src\local_delegate\topology.py:148:21: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `value`
+src\local_delegate\topology.py:152:23: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `value`
+src\local_delegate\topology.py:156:5: C901 `_shape_errors` is too complex (21 > 10)
+src\local_delegate\topology.py:156:5: PLR0912 Too many branches (25 > 12)
+src\local_delegate\topology.py:156:5: PLR0915 Too many statements (56 > 50)
+src\local_delegate\topology.py:171:9: PLW2901 `for` loop variable `cfg` overwritten by assignment target
+src\local_delegate\topology.py:262:5: C901 `validate_like_load_go` is too complex (21 > 10)
+src\local_delegate\topology.py:262:5: PLR0912 Too many branches (20 > 12)
+src\local_delegate\topology.py:262:33: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `data`
+src\local_delegate\topology.py:293:9: PLW2901 `for` loop variable `cfg` overwritten by assignment target
+src\local_delegate\topology.py:316:13: PLW2901 `for` loop variable `member` overwritten by assignment target
+src\local_delegate\topology.py:327:22: COM812 [*] Trailing comma missing
+src\local_delegate\topology.py:355:9: D102 Missing docstring in public method
+src\local_delegate\topology.py:382:9: D102 Missing docstring in public method
+src\local_delegate\topology.py:423:9: PLW2901 `for` loop variable `gcfg` overwritten by assignment target
+src\local_delegate\topology.py:426:42: FBT003 Boolean positional value in function call
+src\local_delegate\topology.py:427:52: FBT003 Boolean positional value in function call
+src\local_delegate\topology.py:428:54: FBT003 Boolean positional value in function call
+src\local_delegate\topology.py:440:9: PLW2901 `for` loop variable `name` overwritten by assignment target
+src\local_delegate\topology.py:471:5: D205 1 blank line required between summary line and description
+src\local_delegate\topology.py:471:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\topology.py:473:12: PLW0603 Using the global statement to update `_reads` is discouraged
+src\local_delegate\topology.py:487:22: ANN401 Dynamically typed expressions (typing.Any) are disallowed in `data`
+src\local_delegate\topology.py:538:14: PTH116 `os.stat()` should be replaced by `Path.stat()`, `Path.owner()`, or `Path.group()`
+src\local_delegate\transcripts.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\transcripts.py:14:44: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\transcripts.py:23:29: TC003 Move standard library import `collections.abc.Iterable` into a type-checking block
+src\local_delegate\transcripts.py:72:7: D101 Missing docstring in public class
+src\local_delegate\transcripts.py:96:5: D205 1 blank line required between summary line and description
+src\local_delegate\transcripts.py:96:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\transcripts.py:122:5: C901 `_read_line` is too complex (17 > 10)
+src\local_delegate\transcripts.py:122:5: PLR0913 Too many arguments in function definition (6 > 5)
+src\local_delegate\transcripts.py:122:5: PLR0917 Too many positional arguments (6 > 5)
+src\local_delegate\transcripts.py:122:5: PLR0912 Too many branches (16 > 12)
+src\local_delegate\transcripts.py:122:5: ANN202 Missing return type annotation for private function `_read_line`
+src\local_delegate\transcripts.py:122:66: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\transcripts.py:182:5: D205 1 blank line required between summary line and description
+src\local_delegate\transcripts.py:182:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\transcripts.py:246:5: D205 1 blank line required between summary line and description
+src\local_delegate\transcripts.py:246:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\transcripts.py:257:5: D103 Missing docstring in public function
+src\local_delegate\transcripts.py:305:72: COM812 [*] Trailing comma missing
+src\local_delegate\transcripts.py:311:72: RUF002 Docstring contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\transcripts.py:352:5: D205 1 blank line required between summary line and description
+src\local_delegate\transcripts.py:352:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\transcripts.py:352:22: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\turn.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\turn.py:55:9: D105 Missing docstring in magic method
+src\local_delegate\turn.py:62:9: D102 Missing docstring in public method
+src\local_delegate\turn.py:74:9: D102 Missing docstring in public method
+src\local_delegate\turn.py:87:9: D102 Missing docstring in public method
+src\local_delegate\turn.py:91:9: D102 Missing docstring in public method
+src\local_delegate\turn.py:102:9: D102 Missing docstring in public method
+src\local_delegate\turn.py:105:9: D102 Missing docstring in public method
+src\local_delegate\turn.py:110:7: D101 Missing docstring in public class
+src\local_delegate\turn.py:122:7: D101 Missing docstring in public class
+src\local_delegate\turn.py:126:9: D102 Missing docstring in public method
+src\local_delegate\turn.py:144:75: COM812 [*] Trailing comma missing
+src\local_delegate\turn.py:146:5: D401 First line of docstring should be in imperative mood: "`A'` de REQ-003 para una petición frente a `actives`."
+src\local_delegate\turn.py:180:80: COM812 [*] Trailing comma missing
+src\local_delegate\turn.py:212:55: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\turn.py:224:41: FBT003 Boolean positional value in function call
+src\local_delegate\turn.py:228:73: FBT003 Boolean positional value in function call
+src\local_delegate\turn.py:238:38: FBT003 Boolean positional value in function call
+src\local_delegate\turn.py:271:74: COM812 [*] Trailing comma missing
+src\local_delegate\turn.py:323:5: D103 Missing docstring in public function
+src\local_delegate\turn.py:338:7: N818 Exception name `AbandonedWait` should be named with an Error suffix
+src\local_delegate\turn.py:357:9: D107 Missing docstring in `__init__`
+src\local_delegate\turn.py:380:9: D102 Missing docstring in public method
+src\local_delegate\turn.py:384:9: D102 Missing docstring in public method
+src\local_delegate\turn.py:436:84: COM812 [*] Trailing comma missing
+src\local_delegate\turn.py:449:9: C901 `_wait` is too complex (13 > 10)
+src\local_delegate\turn.py:464:25: TRY301 Abstract `raise` to an inner function
+src\local_delegate\turn.py:515:86: COM812 [*] Trailing comma missing
+src\local_delegate\update.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\update.py:68:16: S603 `subprocess` call: check for execution of untrusted input
+src\local_delegate\update.py:68:16: PLW1510 `subprocess.run` without explicit `check` argument
+src\local_delegate\update.py:99:9: D105 Missing docstring in magic method
+src\local_delegate\update.py:103:34: SLF001 Private member accessed: `_default_daemon_status`
+src\local_delegate\update.py:246:69: COM812 [*] Trailing comma missing
+src\local_delegate\update.py:250:101: E501 Line too long (111 > 100)
+src\local_delegate\update.py:288:22: COM812 [*] Trailing comma missing
+src\local_delegate\update.py:289:18: COM812 [*] Trailing comma missing
+src\local_delegate\update.py:337:14: S310 Audit URL open for permitted schemes. Allowing use of `file:` or custom schemes is often unexpected.
+src\local_delegate\update.py:374:17: SLF001 Private member accessed: `_installed_version`
+src\local_delegate\update.py:377:22: SLF001 Private member accessed: `_compare_versions`
+src\local_delegate\update.py:403:12: PLR1714 Consider merging multiple comparisons: `current in ("sin-pin", version)`. Use a `set` if the elements are hashable.
+src\local_delegate\update.py:406:18: ANN001 Missing type annotation for function argument `path`
+src\local_delegate\update.py:406:29: ANN001 Missing type annotation for function argument `current`
+src\local_delegate\update.py:411:13: SLF001 Private member accessed: `_write_text`
+src\local_delegate\update.py:429:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\update.py:441:9: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\update.py:480:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\update.py:509:17: SLF001 Private member accessed: `_installed_version`
+src\local_delegate\update.py:512:8: SLF001 Private member accessed: `_compare_versions`
+src\local_delegate\update.py:527:5: D205 1 blank line required between summary line and description
+src\local_delegate\update.py:527:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\update.py:574:54: COM812 [*] Trailing comma missing
+src\local_delegate\update.py:578:5: S603 `subprocess` call: check for execution of untrusted input
+src\local_delegate\update.py:586:75: COM812 [*] Trailing comma missing
+src\local_delegate\update.py:603:48: ANN001 Missing type annotation for function argument `out`
+src\local_delegate\update.py:615:5: D401 First line of docstring should be in imperative mood: "True si tras parar el servicio ese mismo pid **sigue** respondiendo en el puerto."
+src\local_delegate\update.py:626:35: ANN001 Missing type annotation for function argument `out`
+src\local_delegate\update.py:666:101: E501 Line too long (101 > 100)
+src\local_delegate\update.py:666:102: COM812 [*] Trailing comma missing
+src\local_delegate\update.py:712:36: ANN001 Missing type annotation for function argument `out`
+src\local_delegate\update.py:721:19: SLF001 Private member accessed: `_split_host_port`
+src\local_delegate\update.py:745:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\update.py:755:5: C901 `run_update` is too complex (14 > 10)
+src\local_delegate\update.py:755:5: PLR0912 Too many branches (14 > 12)
+src\local_delegate\update.py:755:31: ANN001 Missing type annotation for function argument `out`
+src\local_delegate\update.py:766:90: COM812 [*] Trailing comma missing
+src\local_delegate\update.py:845:5: D400 First line should end with a period
+src\local_delegate\valuation.py:1:1: D205 1 blank line required between summary line and description
+src\local_delegate\valuation.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\valuation.py:24:29: TC003 Move standard library import `collections.abc.Iterable` into a type-checking block
+src\local_delegate\valuation.py:88:5: D400 First line should end with a period
+src\local_delegate\valuation.py:88:5: D415 First line should end with a period, question mark, or exclamation point
+src\local_delegate\valuation.py:103:5: D205 1 blank line required between summary line and description
+src\local_delegate\valuation.py:103:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\valuation.py:107:11: SLF001 Private member accessed: `_accounting`
+src\local_delegate\valuation.py:109:56: COM812 [*] Trailing comma missing
+src\local_delegate\valuation.py:116:19: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\valuation.py:116:50: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\valuation.py:116:57: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\valuation.py:116:74: RUF002 Docstring contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\valuation.py:116:81: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\valuation.py:149:5: D205 1 blank line required between summary line and description
+src\local_delegate\valuation.py:149:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\valuation.py:149:5: D401 First line of docstring should be in imperative mood: "A céntimos. Sumar 0.0 convierte el `-0.0` de un negativo diminuto en `0.0`: la API no"
+src\local_delegate\valuation.py:154:5: C901 `cost_block` is too complex (16 > 10)
+src\local_delegate\valuation.py:154:5: PLR0912 Too many branches (16 > 12)
+src\local_delegate\valuation.py:154:5: PLR0915 Too many statements (71 > 50)
+src\local_delegate\valuation.py:155:82: COM812 [*] Trailing comma missing
+src\local_delegate\valuation.py:168:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\valuation.py:172:28: C420 [*] Unnecessary dict comprehension for iterable; use `dict.fromkeys` instead
+src\local_delegate\valuation.py:174:33: C420 [*] Unnecessary dict comprehension for iterable; use `dict.fromkeys` instead
+src\local_delegate\valuation.py:175:39: C420 [*] Unnecessary dict comprehension for iterable; use `dict.fromkeys` instead
+src\local_delegate\valuation.py:186:15: SLF001 Private member accessed: `_accounting`
+src\local_delegate\valuation.py:293:5: D205 1 blank line required between summary line and description
+src\local_delegate\valuation.py:293:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\valuation.py:299:15: SLF001 Private member accessed: `_accounting`
+src\local_delegate\version.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\version.py:33:12: PLW0603 Using the global statement to update `_CACHE` is discouraged
+src\local_delegate\version.py:33:12: PLW0603 Using the global statement to update `_CACHE` is discouraged
+src\local_delegate\web\__init__.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\web\auth.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\web\auth.py:86:5: D400 First line should end with a period
+src\local_delegate\web\auth.py:101:5: D400 First line should end with a period
+src\local_delegate\web\auth.py:115:80: COM812 [*] Trailing comma missing
+src\local_delegate\web\auth.py:151:14: ANN001 Missing type annotation for function argument `scope`
+src\local_delegate\web\auth.py:178:18: COM812 [*] Trailing comma missing
+src\local_delegate\web\auth.py:185:9: D107 Missing docstring in `__init__`
+src\local_delegate\web\auth.py:185:24: ANN001 Missing type annotation for function argument `app`
+src\local_delegate\web\auth.py:192:9: ANN202 Missing return type annotation for private function `_delivering_session`
+src\local_delegate\web\auth.py:192:35: ANN001 Missing type annotation for function argument `send`
+src\local_delegate\web\auth.py:195:19: ANN202 Missing return type annotation for private function `send_wrapper`
+src\local_delegate\web\auth.py:195:32: ANN001 Missing type annotation for function argument `message`
+src\local_delegate\web\auth.py:206:15: D102 Missing docstring in public method
+src\local_delegate\web\auth.py:206:30: ANN001 Missing type annotation for function argument `scope`
+src\local_delegate\web\auth.py:206:37: ANN001 Missing type annotation for function argument `receive`
+src\local_delegate\web\auth.py:206:46: ANN001 Missing type annotation for function argument `send`
+src\local_delegate\web\auth.py:249:14: COM812 [*] Trailing comma missing
+src\local_delegate\web\auth.py:254:5: ANN201 Missing return type annotation for public function `protect`
+src\local_delegate\web\auth.py:254:13: ANN001 Missing type annotation for function argument `app`
+src\local_delegate\web\metrics.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:112:23: ANN001 Missing type annotation for function argument `path`
+src\local_delegate\web\metrics.py:126:17: PLW2901 `for` loop variable `line` overwritten by assignment target
+src\local_delegate\web\metrics.py:134:95: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:147:37: PLR2004 Magic value used in comparison, consider replacing `12` with a constant variable
+src\local_delegate\web\metrics.py:151:15: ANN001 Missing type annotation for function argument `ts`
+src\local_delegate\web\metrics.py:244:15: SLF001 Private member accessed: `_accounting`
+src\local_delegate\web\metrics.py:247:5: C901 `_aggregate` is too complex (11 > 10)
+src\local_delegate\web\metrics.py:247:5: PLR0915 Too many statements (78 > 50)
+src\local_delegate\web\metrics.py:260:10: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:272:10: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:286:10: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:301:10: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:314:28: RUF003 Comment contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:463:70: RUF003 Comment contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:503:35: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\web\metrics.py:511:5: ANN201 Missing return type annotation for public function `events`
+src\local_delegate\web\metrics.py:511:5: D103 Missing docstring in public function
+src\local_delegate\web\metrics.py:512:5: FAST002 FastAPI dependency without `Annotated`
+src\local_delegate\web\metrics.py:513:5: FAST002 FastAPI dependency without `Annotated`
+src\local_delegate\web\metrics.py:514:5: FAST002 FastAPI dependency without `Annotated`
+src\local_delegate\web\metrics.py:532:10: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:537:5: ANN201 Missing return type annotation for public function `stats`
+src\local_delegate\web\metrics.py:537:5: D103 Missing docstring in public function
+src\local_delegate\web\metrics.py:538:5: FAST002 FastAPI dependency without `Annotated`
+src\local_delegate\web\metrics.py:539:5: FAST002 FastAPI dependency without `Annotated`
+src\local_delegate\web\metrics.py:540:5: FAST002 FastAPI dependency without `Annotated`
+src\local_delegate\web\metrics.py:553:101: E501 Line too long (105 > 100)
+src\local_delegate\web\metrics.py:559:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:577:18: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\web\metrics.py:577:81: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\web\metrics.py:640:13: SIM108 Use ternary operator `key = "suggested" if suggested else str(row.get("reason") or "unrecorded")` instead of `if`-`else`-block
+src\local_delegate\web\metrics.py:688:5: ANN201 Missing return type annotation for public function `hooks`
+src\local_delegate\web\metrics.py:689:5: FAST002 FastAPI dependency without `Annotated`
+src\local_delegate\web\metrics.py:690:5: FAST002 FastAPI dependency without `Annotated`
+src\local_delegate\web\metrics.py:691:5: FAST002 FastAPI dependency without `Annotated`
+src\local_delegate\web\metrics.py:707:14: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:716:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:732:10: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:737:5: ANN201 Missing return type annotation for public function `inflight`
+src\local_delegate\web\metrics.py:760:10: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:765:5: ANN201 Missing return type annotation for public function `backend`
+src\local_delegate\web\metrics.py:790:10: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:795:5: D205 1 blank line required between summary line and description
+src\local_delegate\web\metrics.py:795:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\web\metrics.py:795:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:805:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:808:36: SLF001 Private member accessed: `_probe_timeout`
+src\local_delegate\web\metrics.py:824:5: ANN201 Missing return type annotation for public function `backend_stats`
+src\local_delegate\web\metrics.py:837:16: SLF001 Private member accessed: `_backend_on_loopback`
+src\local_delegate\web\metrics.py:839:36: SLF001 Private member accessed: `_probe_timeout`
+src\local_delegate\web\metrics.py:846:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\web\metrics.py:858:5: ANN201 Missing return type annotation for public function `status`
+src\local_delegate\web\metrics.py:874:5: SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+src\local_delegate\web\metrics.py:877:22: SLF001 Private member accessed: `_tool_manager`
+src\local_delegate\web\metrics.py:879:5: S110 `try`-`except`-`pass` detected, consider logging the exception
+src\local_delegate\web\metrics.py:879:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\web\metrics.py:883:24: SLF001 Private member accessed: `_get_version`
+src\local_delegate\web\metrics.py:901:10: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:906:5: ANN201 Missing return type annotation for public function `system`
+src\local_delegate\web\metrics.py:921:10: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:948:5: ANN201 Missing return type annotation for public function `llamaswap_status`
+src\local_delegate\web\metrics.py:949:5: D205 1 blank line required between summary line and description
+src\local_delegate\web\metrics.py:949:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\web\metrics.py:954:87: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:959:13: SLF001 Private member accessed: `_topology`
+src\local_delegate\web\metrics.py:964:30: SLF001 Private member accessed: `_clashes_by_groups`
+src\local_delegate\web\metrics.py:969:5: ANN201 Missing return type annotation for public function `llamaswap_watch_open`
+src\local_delegate\web\metrics.py:970:5: D205 1 blank line required between summary line and description
+src\local_delegate\web\metrics.py:970:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\web\metrics.py:987:5: ANN201 Missing return type annotation for public function `llamaswap_watch_result`
+src\local_delegate\web\metrics.py:1017:5: ANN201 Missing return type annotation for public function `favicon`
+src\local_delegate\web\metrics.py:1017:5: D103 Missing docstring in public function
+src\local_delegate\web\metrics.py:1033:5: ANN201 Missing return type annotation for public function `vendor_chart_js`
+src\local_delegate\web\metrics.py:1033:5: D103 Missing docstring in public function
+src\local_delegate\web\metrics.py:1034:12: PLW0603 Using the global statement to update `_CHART_JS` is discouraged
+src\local_delegate\web\metrics.py:1034:12: PLW0603 Using the global statement to update `_CHART_JS` is discouraged
+src\local_delegate\web\metrics.py:1058:101: E501 Line too long (161 > 100)
+src\local_delegate\web\metrics.py:1061:5: D103 Missing docstring in public function
+src\local_delegate\web\metrics.py:1075:5: ANN201 Missing return type annotation for public function `index`
+src\local_delegate\web\metrics.py:1075:5: D103 Missing docstring in public function
+src\local_delegate\web\metrics.py:1079:5: ANN201 Missing return type annotation for public function `run_in_thread`
+src\local_delegate\web\metrics.py:1085:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\web\metrics.py:1098:9: TRY300 Consider moving this statement to an `else` block
+src\local_delegate\web\metrics.py:1099:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\web\metrics.py:1109:101: E501 Line too long (156 > 100)
+src\local_delegate\web\metrics.py:1121:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:1128:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:1151:101: E501 Line too long (123 > 100)
+src\local_delegate\web\metrics.py:1173:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:1175:101: E501 Line too long (145 > 100)
+src\local_delegate\web\metrics.py:1176:101: E501 Line too long (150 > 100)
+src\local_delegate\web\metrics.py:1177:101: E501 Line too long (129 > 100)
+src\local_delegate\web\metrics.py:1202:101: E501 Line too long (128 > 100)
+src\local_delegate\web\metrics.py:1203:101: E501 Line too long (118 > 100)
+src\local_delegate\web\metrics.py:1205:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:1220:101: E501 Line too long (124 > 100)
+src\local_delegate\web\metrics.py:1225:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:1229:101: E501 Line too long (111 > 100)
+src\local_delegate\web\metrics.py:1231:19: RUF001 String contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:1252:101: E501 Line too long (105 > 100)
+src\local_delegate\web\metrics.py:1260:101: E501 Line too long (127 > 100)
+src\local_delegate\web\metrics.py:1265:101: E501 Line too long (110 > 100)
+src\local_delegate\web\metrics.py:1275:101: E501 Line too long (113 > 100)
+src\local_delegate\web\metrics.py:1276:101: E501 Line too long (114 > 100)
+src\local_delegate\web\metrics.py:1287:101: E501 Line too long (107 > 100)
+src\local_delegate\web\metrics.py:1294:101: E501 Line too long (119 > 100)
+src\local_delegate\web\metrics.py:1297:101: E501 Line too long (118 > 100)
+src\local_delegate\web\metrics.py:1301:101: E501 Line too long (118 > 100)
+src\local_delegate\web\metrics.py:1305:101: E501 Line too long (153 > 100)
+src\local_delegate\web\metrics.py:1306:101: E501 Line too long (157 > 100)
+src\local_delegate\web\metrics.py:1307:101: E501 Line too long (118 > 100)
+src\local_delegate\web\metrics.py:1309:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:1314:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:1321:101: E501 Line too long (146 > 100)
+src\local_delegate\web\metrics.py:1322:101: E501 Line too long (157 > 100)
+src\local_delegate\web\metrics.py:1323:101: E501 Line too long (154 > 100)
+src\local_delegate\web\metrics.py:1324:101: E501 Line too long (151 > 100)
+src\local_delegate\web\metrics.py:1326:101: E501 Line too long (177 > 100)
+src\local_delegate\web\metrics.py:1328:101: E501 Line too long (104 > 100)
+src\local_delegate\web\metrics.py:1329:101: E501 Line too long (110 > 100)
+src\local_delegate\web\metrics.py:1330:101: E501 Line too long (109 > 100)
+src\local_delegate\web\metrics.py:1331:101: E501 Line too long (116 > 100)
+src\local_delegate\web\metrics.py:1332:101: E501 Line too long (142 > 100)
+src\local_delegate\web\metrics.py:1333:101: E501 Line too long (171 > 100)
+src\local_delegate\web\metrics.py:1336:101: E501 Line too long (120 > 100)
+src\local_delegate\web\metrics.py:1339:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:1340:101: E501 Line too long (105 > 100)
+src\local_delegate\web\metrics.py:1345:101: E501 Line too long (119 > 100)
+src\local_delegate\web\metrics.py:1349:101: E501 Line too long (122 > 100)
+src\local_delegate\web\metrics.py:1351:101: E501 Line too long (157 > 100)
+src\local_delegate\web\metrics.py:1353:101: E501 Line too long (151 > 100)
+src\local_delegate\web\metrics.py:1354:101: E501 Line too long (121 > 100)
+src\local_delegate\web\metrics.py:1356:101: E501 Line too long (131 > 100)
+src\local_delegate\web\metrics.py:1362:101: E501 Line too long (127 > 100)
+src\local_delegate\web\metrics.py:1363:101: E501 Line too long (107 > 100)
+src\local_delegate\web\metrics.py:1364:101: E501 Line too long (113 > 100)
+src\local_delegate\web\metrics.py:1367:101: E501 Line too long (139 > 100)
+src\local_delegate\web\metrics.py:1369:101: E501 Line too long (113 > 100)
+src\local_delegate\web\metrics.py:1372:101: E501 Line too long (139 > 100)
+src\local_delegate\web\metrics.py:1376:101: E501 Line too long (125 > 100)
+src\local_delegate\web\metrics.py:1377:101: E501 Line too long (106 > 100)
+src\local_delegate\web\metrics.py:1380:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:1400:101: E501 Line too long (106 > 100)
+src\local_delegate\web\metrics.py:1401:101: E501 Line too long (138 > 100)
+src\local_delegate\web\metrics.py:1406:101: E501 Line too long (122 > 100)
+src\local_delegate\web\metrics.py:1408:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:1411:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:1416:101: E501 Line too long (118 > 100)
+src\local_delegate\web\metrics.py:1451:101: E501 Line too long (107 > 100)
+src\local_delegate\web\metrics.py:1469:101: E501 Line too long (159 > 100)
+src\local_delegate\web\metrics.py:1472:101: E501 Line too long (133 > 100)
+src\local_delegate\web\metrics.py:1488:101: E501 Line too long (278 > 100)
+src\local_delegate\web\metrics.py:1493:101: E501 Line too long (283 > 100)
+src\local_delegate\web\metrics.py:1496:101: E501 Line too long (223 > 100)
+src\local_delegate\web\metrics.py:1498:101: E501 Line too long (234 > 100)
+src\local_delegate\web\metrics.py:1500:101: E501 Line too long (280 > 100)
+src\local_delegate\web\metrics.py:1509:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:1514:101: E501 Line too long (118 > 100)
+src\local_delegate\web\metrics.py:1519:101: E501 Line too long (106 > 100)
+src\local_delegate\web\metrics.py:1520:101: E501 Line too long (112 > 100)
+src\local_delegate\web\metrics.py:1533:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:1537:101: E501 Line too long (106 > 100)
+src\local_delegate\web\metrics.py:1538:101: E501 Line too long (148 > 100)
+src\local_delegate\web\metrics.py:1547:101: E501 Line too long (107 > 100)
+src\local_delegate\web\metrics.py:1554:101: E501 Line too long (118 > 100)
+src\local_delegate\web\metrics.py:1561:101: E501 Line too long (122 > 100)
+src\local_delegate\web\metrics.py:1578:101: E501 Line too long (105 > 100)
+src\local_delegate\web\metrics.py:1584:101: E501 Line too long (122 > 100)
+src\local_delegate\web\metrics.py:1588:101: E501 Line too long (174 > 100)
+src\local_delegate\web\metrics.py:1591:101: E501 Line too long (173 > 100)
+src\local_delegate\web\metrics.py:1611:101: E501 Line too long (122 > 100)
+src\local_delegate\web\metrics.py:1622:101: E501 Line too long (216 > 100)
+src\local_delegate\web\metrics.py:1625:101: E501 Line too long (156 > 100)
+src\local_delegate\web\metrics.py:1628:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:1630:101: E501 Line too long (121 > 100)
+src\local_delegate\web\metrics.py:1631:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:1632:101: E501 Line too long (104 > 100)
+src\local_delegate\web\metrics.py:1634:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:1656:101: E501 Line too long (156 > 100)
+src\local_delegate\web\metrics.py:1658:101: E501 Line too long (144 > 100)
+src\local_delegate\web\metrics.py:1659:101: E501 Line too long (143 > 100)
+src\local_delegate\web\metrics.py:1660:101: E501 Line too long (128 > 100)
+src\local_delegate\web\metrics.py:1661:101: E501 Line too long (142 > 100)
+src\local_delegate\web\metrics.py:1662:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:1671:101: E501 Line too long (104 > 100)
+src\local_delegate\web\metrics.py:1674:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:1690:57: RUF001 String contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:1701:60: RUF001 String contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:1718:101: E501 Line too long (111 > 100)
+src\local_delegate\web\metrics.py:1721:101: E501 Line too long (119 > 100)
+src\local_delegate\web\metrics.py:1723:101: E501 Line too long (119 > 100)
+src\local_delegate\web\metrics.py:1724:101: E501 Line too long (140 > 100)
+src\local_delegate\web\metrics.py:1737:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:1764:101: E501 Line too long (241 > 100)
+src\local_delegate\web\metrics.py:1765:101: E501 Line too long (188 > 100)
+src\local_delegate\web\metrics.py:1766:101: E501 Line too long (364 > 100)
+src\local_delegate\web\metrics.py:1767:101: E501 Line too long (198 > 100)
+src\local_delegate\web\metrics.py:1768:101: E501 Line too long (287 > 100)
+src\local_delegate\web\metrics.py:1769:101: E501 Line too long (274 > 100)
+src\local_delegate\web\metrics.py:1770:101: E501 Line too long (214 > 100)
+src\local_delegate\web\metrics.py:1780:101: E501 Line too long (133 > 100)
+src\local_delegate\web\metrics.py:1782:101: E501 Line too long (115 > 100)
+src\local_delegate\web\metrics.py:1785:101: E501 Line too long (108 > 100)
+src\local_delegate\web\metrics.py:1787:101: E501 Line too long (124 > 100)
+src\local_delegate\web\metrics.py:1788:101: E501 Line too long (116 > 100)
+src\local_delegate\web\metrics.py:1850:101: E501 Line too long (138 > 100)
+src\local_delegate\web\metrics.py:1873:101: E501 Line too long (120 > 100)
+src\local_delegate\web\metrics.py:1913:101: E501 Line too long (104 > 100)
+src\local_delegate\web\metrics.py:1916:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:1923:101: E501 Line too long (117 > 100)
+src\local_delegate\web\metrics.py:1926:101: E501 Line too long (107 > 100)
+src\local_delegate\web\metrics.py:1945:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:1957:101: E501 Line too long (129 > 100)
+src\local_delegate\web\metrics.py:1958:101: E501 Line too long (130 > 100)
+src\local_delegate\web\metrics.py:1990:101: E501 Line too long (108 > 100)
+src\local_delegate\web\metrics.py:1999:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:2002:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:2009:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:2014:101: E501 Line too long (106 > 100)
+src\local_delegate\web\metrics.py:2019:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:2020:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:2056:101: E501 Line too long (110 > 100)
+src\local_delegate\web\metrics.py:2057:101: E501 Line too long (110 > 100)
+src\local_delegate\web\metrics.py:2059:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:2067:101: E501 Line too long (110 > 100)
+src\local_delegate\web\metrics.py:2076:101: E501 Line too long (110 > 100)
+src\local_delegate\web\metrics.py:2083:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:2090:71: RUF001 String contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:2102:25: RUF001 String contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:2105:45: RUF001 String contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:2105:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:2119:101: E501 Line too long (120 > 100)
+src\local_delegate\web\metrics.py:2128:101: E501 Line too long (106 > 100)
+src\local_delegate\web\metrics.py:2129:101: E501 Line too long (105 > 100)
+src\local_delegate\web\metrics.py:2131:47: RUF001 String contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:2140:101: E501 Line too long (111 > 100)
+src\local_delegate\web\metrics.py:2150:101: E501 Line too long (106 > 100)
+src\local_delegate\web\metrics.py:2151:101: E501 Line too long (128 > 100)
+src\local_delegate\web\metrics.py:2160:101: E501 Line too long (118 > 100)
+src\local_delegate\web\metrics.py:2161:101: E501 Line too long (127 > 100)
+src\local_delegate\web\metrics.py:2187:101: E501 Line too long (120 > 100)
+src\local_delegate\web\metrics.py:2204:101: E501 Line too long (128 > 100)
+src\local_delegate\web\metrics.py:2225:101: E501 Line too long (109 > 100)
+src\local_delegate\web\metrics.py:2261:101: E501 Line too long (111 > 100)
+src\local_delegate\web\metrics.py:2264:101: E501 Line too long (104 > 100)
+src\local_delegate\web\metrics.py:2279:101: E501 Line too long (121 > 100)
+src\local_delegate\web\metrics.py:2362:101: E501 Line too long (117 > 100)
+src\local_delegate\web\metrics.py:2369:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:2375:101: E501 Line too long (111 > 100)
+src\local_delegate\web\metrics.py:2387:101: E501 Line too long (156 > 100)
+src\local_delegate\web\metrics.py:2389:101: E501 Line too long (122 > 100)
+src\local_delegate\web\metrics.py:2390:101: E501 Line too long (113 > 100)
+src\local_delegate\web\metrics.py:2397:101: E501 Line too long (122 > 100)
+src\local_delegate\web\metrics.py:2407:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:2412:49: RUF001 String contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:2413:101: E501 Line too long (147 > 100)
+src\local_delegate\web\metrics.py:2415:101: E501 Line too long (172 > 100)
+src\local_delegate\web\metrics.py:2416:101: E501 Line too long (167 > 100)
+src\local_delegate\web\metrics.py:2417:101: E501 Line too long (234 > 100)
+src\local_delegate\web\metrics.py:2426:101: E501 Line too long (152 > 100)
+src\local_delegate\web\metrics.py:2442:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:2493:101: E501 Line too long (104 > 100)
+src\local_delegate\web\metrics.py:2494:101: E501 Line too long (119 > 100)
+src\local_delegate\web\metrics.py:2495:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:2497:101: E501 Line too long (124 > 100)
+src\local_delegate\web\metrics.py:2500:101: E501 Line too long (144 > 100)
+src\local_delegate\web\metrics.py:2502:101: E501 Line too long (112 > 100)
+src\local_delegate\web\metrics.py:2513:101: E501 Line too long (117 > 100)
+src\local_delegate\web\metrics.py:2522:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:2557:101: E501 Line too long (282 > 100)
+src\local_delegate\web\metrics.py:2561:101: E501 Line too long (123 > 100)
+src\local_delegate\web\metrics.py:2568:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:2572:101: E501 Line too long (148 > 100)
+src\local_delegate\web\metrics.py:2580:101: E501 Line too long (123 > 100)
+src\local_delegate\web\metrics.py:2582:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:2583:101: E501 Line too long (120 > 100)
+src\local_delegate\web\metrics.py:2584:101: E501 Line too long (127 > 100)
+src\local_delegate\web\metrics.py:2592:101: E501 Line too long (106 > 100)
+src\local_delegate\web\metrics.py:2595:101: E501 Line too long (108 > 100)
+src\local_delegate\web\metrics.py:2596:101: E501 Line too long (114 > 100)
+src\local_delegate\web\metrics.py:2610:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:2615:101: E501 Line too long (115 > 100)
+src\local_delegate\web\metrics.py:2617:101: E501 Line too long (109 > 100)
+src\local_delegate\web\metrics.py:2620:101: E501 Line too long (129 > 100)
+src\local_delegate\web\metrics.py:2628:101: E501 Line too long (116 > 100)
+src\local_delegate\web\metrics.py:2629:101: E501 Line too long (118 > 100)
+src\local_delegate\web\metrics.py:2638:12: RUF001 String contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\web\metrics.py:2640:101: E501 Line too long (129 > 100)
+src\local_delegate\web\metrics.py:2675:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:2700:42: RUF001 String contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:2703:40: RUF001 String contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:2721:65: RUF001 String contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:2721:101: E501 Line too long (124 > 100)
+src\local_delegate\web\metrics.py:2722:101: E501 Line too long (319 > 100)
+src\local_delegate\web\metrics.py:2724:101: E501 Line too long (109 > 100)
+src\local_delegate\web\metrics.py:2725:101: E501 Line too long (177 > 100)
+src\local_delegate\web\metrics.py:2727:101: E501 Line too long (181 > 100)
+src\local_delegate\web\metrics.py:2730:101: E501 Line too long (270 > 100)
+src\local_delegate\web\metrics.py:2733:101: E501 Line too long (135 > 100)
+src\local_delegate\web\metrics.py:2735:101: E501 Line too long (132 > 100)
+src\local_delegate\web\metrics.py:2741:101: E501 Line too long (151 > 100)
+src\local_delegate\web\metrics.py:2760:101: E501 Line too long (106 > 100)
+src\local_delegate\web\metrics.py:2829:101: E501 Line too long (119 > 100)
+src\local_delegate\web\metrics.py:2842:101: E501 Line too long (123 > 100)
+src\local_delegate\web\metrics.py:2853:42: RUF001 String contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\web\metrics.py:2856:17: RUF001 String contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\web\metrics.py:2869:101: E501 Line too long (139 > 100)
+src\local_delegate\web\metrics.py:2875:101: E501 Line too long (162 > 100)
+src\local_delegate\web\metrics.py:2880:101: E501 Line too long (132 > 100)
+src\local_delegate\web\metrics.py:2880:120: RUF001 String contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\web\metrics.py:2881:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:2882:101: E501 Line too long (241 > 100)
+src\local_delegate\web\metrics.py:2886:101: E501 Line too long (190 > 100)
+src\local_delegate\web\metrics.py:2887:101: E501 Line too long (115 > 100)
+src\local_delegate\web\metrics.py:2891:101: E501 Line too long (110 > 100)
+src\local_delegate\web\metrics.py:2905:101: E501 Line too long (112 > 100)
+src\local_delegate\web\metrics.py:2906:101: E501 Line too long (128 > 100)
+src\local_delegate\web\metrics.py:2919:101: E501 Line too long (111 > 100)
+src\local_delegate\web\metrics.py:2920:101: E501 Line too long (109 > 100)
+src\local_delegate\web\metrics.py:2921:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:2927:101: E501 Line too long (122 > 100)
+src\local_delegate\web\metrics.py:2958:101: E501 Line too long (116 > 100)
+src\local_delegate\web\metrics.py:2959:101: E501 Line too long (106 > 100)
+src\local_delegate\web\metrics.py:2971:101: E501 Line too long (120 > 100)
+src\local_delegate\web\metrics.py:2998:5: T201 `print` found
+src\local_delegate\web\sysinfo.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\web\sysinfo.py:32:13: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\web\sysinfo.py:55:18: PTH123 `open()` should be replaced by `Path.open()`
+src\local_delegate\web\sysinfo.py:64:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\web\sysinfo.py:78:15: PLW1510 `subprocess.run` without explicit `check` argument
+src\local_delegate\web\sysinfo.py:79:13: S607 Starting a process with a partial executable path
+src\local_delegate\web\sysinfo.py:94:22: PLR2004 Magic value used in comparison, consider replacing `3` with a constant variable
+src\local_delegate\web\sysinfo.py:113:11: PLW1510 `subprocess.run` without explicit `check` argument
+src\local_delegate\web\sysinfo.py:114:9: S607 Starting a process with a partial executable path
+src\local_delegate\web\sysinfo.py:133:14: COM812 [*] Trailing comma missing
+src\local_delegate\web\sysinfo.py:141:18: PTH208 Use `pathlib.Path.iterdir()` instead.
+src\local_delegate\web\sysinfo.py:145:18: PTH123 `open()` should be replaced by `Path.open()`
+src\local_delegate\web\sysinfo.py:148:18: PTH123 `open()` should be replaced by `Path.open()`
+src\local_delegate\web\sysinfo.py:172:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\web\sysinfo.py:187:14: COM812 [*] Trailing comma missing
+src\local_delegate\web\sysinfo.py:202:5: D403 [*] First word of the docstring should be capitalized: `pid` -> `Pid`
+src\local_delegate\web\sysinfo.py:203:11: PLW1510 `subprocess.run` without explicit `check` argument
+src\local_delegate\web\sysinfo.py:204:9: S607 Starting a process with a partial executable path
+src\local_delegate\web\sysinfo.py:216:26: PLR2004 Magic value used in comparison, consider replacing `2` with a constant variable
+src\local_delegate\web\sysinfo.py:230:5: D403 [*] First word of the docstring should be capitalized: `pid` -> `Pid`
+src\local_delegate\web\sysinfo.py:236:11: S603 `subprocess` call: check for execution of untrusted input
+src\local_delegate\web\sysinfo.py:236:11: PLW1510 `subprocess.run` without explicit `check` argument
+src\local_delegate\web\sysinfo.py:237:9: S607 Starting a process with a partial executable path
+src\local_delegate\web\sysinfo.py:248:26: PLR2004 Magic value used in comparison, consider replacing `2` with a constant variable
+src\local_delegate\web\sysinfo.py:262:12: PLW0603 Using the global statement to update `_vram_refreshing` is discouraged
+src\local_delegate\web\sysinfo.py:270:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\web\sysinfo.py:279:5: D403 [*] First word of the docstring should be capitalized: `pid` -> `Pid`
+src\local_delegate\web\sysinfo.py:280:12: PLW0603 Using the global statement to update `_vram_refreshing` is discouraged
+Found 1991 errors.
+[*] 367 fixable with `--fix` (257 unsafe fixes available with `--fix --unsafe-fixes`).

@@ -1785,6 +1785,19 @@ publicaría con la misma pérdida que aquí se demuestra.
      `C43`/`C44`), con los dos contadores; se aplica solo si no suelta ninguna inventada. Cada caso
      con su test y su mutante en el test del contador.
 
+**Decisiones del usuario (2026-10-17), antes de implementar:**
+
+1. **Sí entra** la pérdida del lint troceado (punto 2): paso final propio con el formato de lint y
+   un inventario por programa de ficheros y códigos, sin recuentos; las expresiones `FILE` y
+   `CODE` se mueven a `src/` y el contador las importa.
+2. **Sí al volcado opcional de las notas parciales** de cada trozo a un fichero local: apagado
+   por defecto, encendido con `LOCAL_DELEGATE_DUMP_CHUNK_NOTES=<dir>` solo durante la medición;
+   no expone nada fuera de la máquina y se documenta donde las demás variables. Se suma al
+   registro de pasos sin texto en el log de uso.
+3. **Respaldo, solo si la primera medición no llega:** el programa añade a la respuesta una línea
+   «sin mencionar: …» con lo del inventario que el modelo omitió. Si se activa, se mide otra ronda
+   con el mismo criterio (fijado aquí, sin cambiarlo) y se informa de las dos rondas.
+
 **Medición.** Lección de B2d-4: con `--repeat 3`, la media del corpus entero no separa el efecto
 del cambio del ruido del modelo (8 llamadas de prompt idéntico dieron 22 frente a 13). Así que:
 

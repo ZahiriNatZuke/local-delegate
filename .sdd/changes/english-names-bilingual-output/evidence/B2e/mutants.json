@@ -1,0 +1,142 @@
+[
+ {
+  "mutant": "1 explain: the inventory of today",
+  "file": "src/local_delegate/server.py",
+  "results": [
+   {
+    "test": "test_the_explain_reduce_inventory_names_the_registered_subcommands",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert all(f\"cmd-zz{i}\" in reduce_user for i in range(14))",
+     "E       assert False",
+     "E        +  where False = all(<generator object test_the_explain_reduce_inventory_names_the_registered_subcommands.<locals>.<genexpr> at 0x0000029244A0E7A0>)"
+    ]
+   }
+  ]
+ },
+ {
+  "mutant": "2 lint: the default reduce",
+  "file": "src/local_delegate/server.py",
+  "results": [
+   {
+    "test": "test_the_chunked_lint_reduce_keeps_the_lint_format[es]",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert \"agrupados por archivo\" in reduce_step[\"system\"]",
+     "E       AssertionError: assert 'agrupados por archivo' in 'Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un �NICO resumen global en prosa clara, sin repetir ni enumerar los fragmentos. M�ximo 200 palabras. Nada fuera del formato.'"
+    ]
+   },
+   {
+    "test": "test_the_chunked_lint_reduce_keeps_the_lint_format[en]",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert \"agrupados por archivo\" in reduce_step[\"system\"]",
+     "E       AssertionError: assert 'agrupados por archivo' in 'Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un �NICO resumen global en prosa clara, sin repetir ni enumerar los fragmentos. M�ximo 200 palabras. Nada fuera del formato.'"
+    ]
+   }
+  ]
+ },
+ {
+  "mutant": "3 steps: one step only",
+  "file": "src/local_delegate/server.py",
+  "results": [
+   {
+    "test": "test_the_chunked_log_records_every_step_without_its_text",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert [s[\"kind\"] for s in row[\"steps\"]] == [\"map\"] * 4 + [\"reduce\"]",
+     "E       AssertionError: assert ['reduce'] == ['map', 'map'...ap', 'reduce']",
+     "E",
+     "E         At index 0 diff: 'reduce' != 'map'"
+    ]
+   }
+  ]
+ },
+ {
+  "mutant": "4 dump: never written",
+  "file": "src/local_delegate/server.py",
+  "results": [
+   {
+    "test": "test_the_dump_writes_each_step_with_its_text_to_a_local_file",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       (dump,) = folder.glob(\"local_explain_code-*.json\")",
+     "E       ValueError: not enough values to unpack (expected 1, got 0)"
+    ]
+   }
+  ]
+ },
+ {
+  "mutant": "5 counter: no Markdown unescaping",
+  "file": "scripts/score_lint_fidelity.py",
+  "results": [
+   {
+    "test": "test_a_markdown_escaped_underscore_is_the_file_of_the_log",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert fidelity.count_inventions(r\"Falla `scripts/build\\_corpus.py`.\", log)[",
+     "E       AssertionError: assert ['scripts/build\\\\_corpus.py'] == []",
+     "E",
+     "E         Left contains one more item: 'scripts/build\\\\_corpus.py'"
+    ]
+   }
+  ]
+ },
+ {
+  "mutant": "6 counter: no (N,M) figures",
+  "file": "scripts/score_lint_fidelity.py",
+  "results": [
+   {
+    "test": "test_a_tsc_position_gives_two_figures",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert fidelity.count_inventions(\"Error en la l�nea 52, columna 24.\", log)[",
+     "E       AssertionError: assert ['52', '24'] == []",
+     "E",
+     "E         Left contains 2 more items, first extra item: '52'"
+    ]
+   }
+  ]
+ },
+ {
+  "mutant": "7 counter: no v versions",
+  "file": "scripts/score_lint_fidelity.py",
+  "results": [
+   {
+    "test": "test_a_version_with_v_is_its_figure",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert fidelity.count_inventions(\"Versi�n 255.\", log)[\"invented_numbers\"] == []",
+     "E       AssertionError: assert ['255'] == []",
+     "E",
+     "E         Left contains one more item: '255'"
+    ]
+   }
+  ]
+ },
+ {
+  "mutant": "8 counter: words lean on every figure",
+  "file": "scripts/score_lint_fidelity.py",
+  "results": [
+   {
+    "test": "test_a_number_word_does_not_lean_on_a_line_or_column",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       assert fidelity.count_inventions(\"nine instances of T201.\", log)[\"invented_numbers\"] == [",
+     "E       AssertionError: assert [] == ['nine']",
+     "E",
+     "E         Right contains one more item: 'nine'"
+    ]
+   }
+  ]
+ }
+]

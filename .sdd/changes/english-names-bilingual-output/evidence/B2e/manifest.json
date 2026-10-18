@@ -1,0 +1,210 @@
+{
+  "frozen_at": "2026-10-17",
+  "frozen_before_any_measurement_call": true,
+  "derived_from": ".sdd/changes/english-names-bilingual-output/evidence/B2e/build_set.py; control A11-A15 and B31-B35 from B2d-4/manifest.json",
+  "windows": {
+    "A": {
+      "env": {
+        "LOCAL_DELEGATE_OUTPUT_LANGUAGE": "en"
+      },
+      "product": "es",
+      "label": "B2e control A (set 3, prompt not touched)"
+    },
+    "B": {
+      "env": {
+        "LOCAL_DELEGATE_LANG": "en",
+        "LOCAL_DELEGATE_OUTPUT_LANGUAGE": "es"
+      },
+      "product": "en",
+      "label": "B2e control B (set 3, prompt not touched)"
+    },
+    "C": {
+      "env": {},
+      "product": "es",
+      "label": "B2e touched: lint and explain that chunk"
+    },
+    "F": {
+      "env": {
+        "LOCAL_DELEGATE_MAX_CHARS_LONG": "8000"
+      },
+      "product": "es",
+      "label": "B2e touched: forced lint chunking (8000)"
+    }
+  },
+  "calls": [
+    {
+      "id": "A11",
+      "window": "A",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-check-llamaswap-pre-b10909.txt",
+      "document_sha256": "e2d30b729c1ad2543d089764b55759c33b4063c046e0555dda4f121caa5321e7",
+      "input_language": "es",
+      "requested": "en",
+      "answer": ".sdd/changes/english-names-bilingual-output/evidence/B2d-4/runs/A11.txt",
+      "purpose": "B2e control: same prompt in main and in the branch"
+    },
+    {
+      "id": "A12",
+      "window": "A",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-B2c_corpus-f2-check.txt",
+      "document_sha256": "e55c52f2c40404391ce087ca987dffa411a9d8f5b63fc386a885ed753731705d",
+      "input_language": "es",
+      "requested": "en",
+      "answer": ".sdd/changes/english-names-bilingual-output/evidence/B2d-4/runs/A12.txt",
+      "purpose": "B2e control: same prompt in main and in the branch"
+    },
+    {
+      "id": "A13",
+      "window": "A",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-doctor-empty-home.txt",
+      "document_sha256": "367ab3af2a166576928e52c12605bcee7940be5f582f6c2eacefe49d4cc7e161",
+      "input_language": "es",
+      "requested": "en",
+      "answer": ".sdd/changes/english-names-bilingual-output/evidence/B2d-4/runs/A13.txt",
+      "purpose": "B2e control: same prompt in main and in the branch"
+    },
+    {
+      "id": "A14",
+      "window": "A",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-biome-lint-nest.txt",
+      "document_sha256": "3af20fa5cfba9f2dedb4f8a5653f382acfaf93477085774587aa694b7da994a2",
+      "input_language": "en",
+      "requested": "en",
+      "answer": ".sdd/changes/english-names-bilingual-output/evidence/B2d-4/runs/A14.txt",
+      "purpose": "B2e control: same prompt in main and in the branch"
+    },
+    {
+      "id": "A15",
+      "window": "A",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-ruff-concise-build-site.txt",
+      "document_sha256": "0e539a8a8a7eafac0f94a6dc56173a2d3ef2636c737467d63bea2ea43c6519e9",
+      "input_language": "en",
+      "requested": "en",
+      "answer": ".sdd/changes/english-names-bilingual-output/evidence/B2d-4/runs/A15.txt",
+      "purpose": "B2e control: same prompt in main and in the branch"
+    },
+    {
+      "id": "B31",
+      "window": "B",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-pytest-chunking-density.txt",
+      "document_sha256": "0fa7d99e62af9ba251cc42f12c808445ac1f62573169ba778796cfbbc451b6f4",
+      "input_language": "en",
+      "requested": "es",
+      "answer": ".sdd/changes/english-names-bilingual-output/evidence/B2d-4/runs/B31.txt",
+      "purpose": "B2e control: same prompt in main and in the branch"
+    },
+    {
+      "id": "B32",
+      "window": "B",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-ruff-concise-clean-watcher.txt",
+      "document_sha256": "5a73a08070f3573b78cc4b31bfcccecf06b7d6d4045de1af4b9a82a173a7525f",
+      "input_language": "en",
+      "requested": "es",
+      "answer": ".sdd/changes/english-names-bilingual-output/evidence/B2d-4/runs/B32.txt",
+      "purpose": "B2e control: same prompt in main and in the branch"
+    },
+    {
+      "id": "B33",
+      "window": "B",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-tsc-angular.txt",
+      "document_sha256": "292208ba99d5044fa0a927eb14c70d7b5d369553ec52d9ffffc642314e76a63a",
+      "input_language": "en",
+      "requested": "es",
+      "answer": ".sdd/changes/english-names-bilingual-output/evidence/B2d-4/runs/B33.txt",
+      "purpose": "B2e control: same prompt in main and in the branch"
+    },
+    {
+      "id": "B34",
+      "window": "B",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-check-llamaswap-pre-no-resident.txt",
+      "document_sha256": "1adc07d48a6a2b687f2b76e7a5197281456f8323471f31b42040debbae800482",
+      "input_language": "es",
+      "requested": "es",
+      "answer": ".sdd/changes/english-names-bilingual-output/evidence/B2d-4/runs/B34.txt",
+      "purpose": "B2e control: same prompt in main and in the branch"
+    },
+    {
+      "id": "B35",
+      "window": "B",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-B2d-fix_corpus-affinity-check.txt",
+      "document_sha256": "8c261db94aaaa22a75abe82729c777865dbbcf34a64cdde565f09170a46304f0",
+      "input_language": "es",
+      "requested": "es",
+      "answer": ".sdd/changes/english-names-bilingual-output/evidence/B2d-4/runs/B35.txt",
+      "purpose": "B2e control: same prompt in main and in the branch"
+    },
+    {
+      "id": "L1",
+      "window": "C",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2e/docs/L1-ruff-select-all-src.txt",
+      "document_sha256": "0ab080b35f3348139c0cbc846f4934c94129de17d479ec386c36337478d557b2",
+      "purpose": "ruff --select ALL concise over src/ of main"
+    },
+    {
+      "id": "L2",
+      "window": "C",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2e/docs/L2-ci-log-with-uv-lock.txt",
+      "document_sha256": "ab52be64fe6f6316fc12a20e8e724fe0c7cfc4b9aeaf3573a1d86bc1870bb865",
+      "purpose": "CI log with a uv.lock inside (dense)"
+    },
+    {
+      "id": "L3",
+      "window": "C",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2e/docs/L3-pytest-collect-only.txt",
+      "document_sha256": "e8ab3e97fea063db651fbaa09cef762bdf503cc2d1e33d635cbf9d3ea681aa00",
+      "purpose": "pytest --collect-only (A-close-5)"
+    },
+    {
+      "id": "L4",
+      "window": "F",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-biome-lint.txt",
+      "document_sha256": "071dd4473f52d3136e2fa336c275589614f40e6821965d6ba3aeef210ffc1ba8",
+      "purpose": "biome, as C43 (forced 8000)"
+    },
+    {
+      "id": "L5",
+      "window": "F",
+      "tool": "local_lint_summary",
+      "document": "benchmarks/catalogo-2026-09/fuentes/lint-9k.txt",
+      "document_sha256": "9c7295b2b49627aff832ce808789be7993522cd72c8f947fb06f19664723801f",
+      "purpose": "ruff, as C44"
+    },
+    {
+      "id": "E1",
+      "window": "C",
+      "tool": "local_explain_code",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2e/docs/E1-cli.py.txt",
+      "document_sha256": "b33822ff7c8be5ad8fff1620f432c3a860bdf173ab48b88b3bfd9f1154e5b327",
+      "purpose": "cli.py of main: 16 literal add_parser names plus benchmark"
+    },
+    {
+      "id": "E2",
+      "window": "C",
+      "tool": "local_explain_code",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2e/docs/E2-benchmark.py.txt",
+      "document_sha256": "094a8b7a60c368db4cfb67299f49776f1b2c043808286e3910cedf3b1996dc0d",
+      "purpose": "benchmark.py of main: add_parser and its benchmark"
+    },
+    {
+      "id": "E3",
+      "window": "C",
+      "tool": "local_explain_code",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2e/docs/E3-checks.py.txt",
+      "document_sha256": "507e0ccc3069aaf8fa8cfb7ce0124a9430d2cbb8d1d3c98ff605783f80e310b0",
+      "purpose": "checks.py of main: no registrations (control)"
+    }
+  ]
+}
