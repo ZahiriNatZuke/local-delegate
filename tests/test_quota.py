@@ -19,7 +19,7 @@ from test_transcripts import (
     write_jsonl,
 )
 
-from local_delegate import quota, recompute, transcripts
+from local_delegate import i18n, quota, recompute, transcripts
 
 R1 = "2026-10-01T17:00:00+00:00"  # resets de 5 h (valor opaco: solo agrupa)
 R7 = "2026-10-05T00:00:00+00:00"
@@ -284,7 +284,7 @@ def test_without_sources_it_says_so():
     """REQ-061: sin registro ni transcripts, «no hay datos de calibración en esta máquina»."""
     now = BASE
     with_nothing = {"points": [], "sources": {"transcripts": False, "statusline": False}}
-    assert quota.status(with_nothing, now)["five_hour"]["reason"] == quota.NO_DATA
-    assert quota.status(None, now)["seven_day"]["reason"] == quota.NO_DATA
+    assert quota.status(with_nothing, now)["five_hour"]["reason"] == i18n.t(quota.NO_DATA)
+    assert quota.status(None, now)["seven_day"]["reason"] == i18n.t(quota.NO_DATA)
     transcripts_only = {"points": [], "sources": {"transcripts": True, "statusline": False}}
-    assert quota.status(transcripts_only, now)["five_hour"]["reason"] == quota.NO_STATUSLINE
+    assert quota.status(transcripts_only, now)["five_hour"]["reason"] == i18n.t(quota.NO_STATUSLINE)

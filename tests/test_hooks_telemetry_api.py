@@ -16,7 +16,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
-from local_delegate import config
+from local_delegate import config, i18n
 from local_delegate.web import metrics
 
 
@@ -222,8 +222,13 @@ def test_the_endpoint_returns_neither_commands_nor_prompts(monkeypatch, tmp_path
 
 def _labels_js(page: str) -> str:
     """Las etiquetas legibles (clave interna → texto del panel) y la tabla de valores viejos que
-    inyecta el servidor, tal como salen en la página servida."""
+    inyecta el servidor, tal como salen en la página servida. Los textos salen del catálogo que
+    inyecta el servidor (`I18N`) por `T`, con el panel en español, como el `locale` de los tests
+    de Playwright (REQ-043)."""
     parts = [
+        "const LANG = 'es'",
+        *(_extract_js_function(page, header) for header in ("const I18N = {", "function T(")),
+    ] + [
         _extract_js_function(page, header)
         for header in (
             "const LABELS = {",
@@ -351,7 +356,9 @@ def test_the_card_hides_when_there_is_no_telemetry(tmp_path):
     assert "sugieren" not in with_data["body"]
     dialog = metrics.HTML[metrics.HTML.index('<section id="dlgHooks"') :]
     dialog = dialog[: dialog.index("</section>")]
-    assert "Los hooks <b>sugieren</b>; delegar lo decides tú." in dialog
+    assert 'data-i18n-html="dialog.hooks.body_html"' in dialog  # el texto sale del catálogo
+    body = i18n.t_lang("es", "panel.dialog.hooks.body_html")
+    assert "Los hooks <b>sugieren</b>; delegar lo decides tú." in body
     assert 'id="hooksInfo" data-group="hooks"' in metrics.HTML
 
     # Y que el escapado se USE, no solo que exista. Probar `escHooks` por su cuenta deja pasar

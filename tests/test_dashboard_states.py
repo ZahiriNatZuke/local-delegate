@@ -43,10 +43,10 @@ const emit = x => console.log(JSON.stringify(x).replace(/[\u007f-\uffff]/g,
 def _globals() -> str:
     """Lo que las funciones de estado usan del panel: formateadores, `escHooks` y las tablas."""
     parts = [_EMIT, _formatters(), _extract("function escHooks(")]
-    for function in ("initialView", "turnWords"):
+    for function in ("initialView", "turnWords", "langQuery", "humanLabel", "labelFor"):
         if f"function {function}(" in metrics.HTML:
             parts.append(_extract(f"function {function}("))
-    for name in ("CAUSES_ANSWERING", "RUNNING_WORDS", "WAIT_WORDS"):
+    for name in ("CAUSES_ANSWERING", "RUNNING_WORDS", "WAIT_WORDS", "LABELS"):
         if f"const {name} = {{" in metrics.HTML:
             parts.append(_const(name))
     return "\n".join(parts)
@@ -510,7 +510,8 @@ const state = {inflight: [], activity: null, lastEvent: null, status: null, view
 const callCount = {};
 let fetchPending = {};          // url -> true: esa ruta no resuelve nunca
 let responses = {};              // url -> [json, json, …] (se consumen en orden)
-globalThis.fetch = url => {
+globalThis.fetch = full => {
+  const url = full.split('?')[0];   // el panel añade `?lang=` (D6): la cuenta es por ruta
   callCount[url] = (callCount[url] || 0) + 1;
   if (fetchPending[url]) return new Promise(() => {});
   const queue = responses[url] || [{}];

@@ -60,6 +60,7 @@ from .. import (
     config,
     cost,
     failures,
+    i18n,
     legacy_names,
     llamaswap_api,
     pricing,
@@ -81,12 +82,18 @@ logger = logging.getLogger(__name__)
 
 # Lo que ve el navegador cuando no se abre una vigía: un texto fijo por familia de fallo. El
 # detalle de la excepción va al log del daemon, nunca a la respuesta (CodeQL
-# py/stack-trace-exposure).
-WATCH_LIMIT = "el daemon ya tiene abiertas todas las vigías que admite; inténtalo en unos segundos"
-WATCH_REJECTED = "llama-swap contestó, pero no dejó abrir la vigía (detalle en el log del daemon)"
-WATCH_UNREACHABLE = (
-    "no se pudo hablar con llama-swap para abrir la vigía (detalle en el log del daemon)"
-)
+# py/stack-trace-exposure). Son claves del catálogo: los lee el CLI de residencia, no el panel, así
+# que salen en el idioma del proceso del daemon.
+WATCH_LIMIT = "panel.watch.limit"
+WATCH_REJECTED = "panel.watch.rejected"
+WATCH_UNREACHABLE = "panel.watch.unreachable"
+
+
+def _lang(value: str | None) -> str:
+    """El idioma que pide el panel con `?lang=` (D6). Sin él, o si no vale, el del proceso: un JS
+    viejo contra un daemon nuevo sigue funcionando."""
+    return value if value in i18n.LANGUAGES else i18n.lang()
+
 
 # {ruta: (mtime, size, filas)} — releer un archivo solo si cambió desde la última lectura.
 _FILE_CACHE: dict[str, tuple[float, int, list[dict]]] = {}
@@ -513,6 +520,7 @@ def events(
     to: str | None = Query(None),
     include_tests: str | None = Query(None),
 ):
+    # Sin `lang`: las filas son datos del log y se sirven tal cual (REQ-033).
     range_from, range_to = _resolve_range(from_, to)
     rows, files_read = _load(range_from, range_to)
     rows, counts = _usage_rows(rows, _include_tests(include_tests))
@@ -538,7 +546,9 @@ def stats(
     from_: str | None = Query(None, alias="from"),
     to: str | None = Query(None),
     include_tests: str | None = Query(None),
+    lang: str | None = Query(None),
 ):
+    language = _lang(lang)
     range_from, range_to = _resolve_range(from_, to)
     rows, _files_read = _load(range_from, range_to)
     usage, counts = _usage_rows(list(rows), _include_tests(include_tests))
@@ -554,13 +564,13 @@ def stats(
     # no depende del interruptor (REQ-014). Las imágenes son uso: siguen al interruptor.
     now = _now()
     aggregates = recompute.read_aggregates(config.LOG_DIR)
-    data["cost"] = valuation.cost_block(rows, aggregates, now=now)
+    data["cost"] = valuation.cost_block(rows, aggregates, now=now, language=language)
     data["images"] = valuation.images_block(usage)
     # El contenido es `density.json` tal cual (sin las claves `_`): sus claves cambian con su lector.
     data["density_table"] = {
         k: v for k, v in pricing.load_density().items() if not k.startswith("_")
     }
-    data["quota"] = _quota_block(aggregates, now)
+    data["quota"] = _quota_block(aggregates, now, language)
     return JSONResponse(data)
 
 
@@ -569,19 +579,19 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
-def _quota_block(aggregates: dict | None, now: datetime) -> dict:
+def _quota_block(aggregates: dict | None, now: datetime, language: str | None = None) -> dict:
     """Estado de cada tipo de ventana con la vigencia aplicada AL LEER (REQ-054, `quota.status`).
 
     Un tipo `calibrado` lleva el % sobre SU ventana móvil, que termina ahora y no depende del
     rango que elija el panel (REQ-060): A = cota baja de lo delegado en las últimas 5 h (o 7 días)
     ÷ mediana(C) × 100, y B = la estimación de esos mismos eventos ÷ mediana(C) × 100.
     """
-    status = quota.status(aggregates, now)
+    status = quota.status(aggregates, now, language)
     for kind, e in status.items():
         if e.get("status") != "calibrated":
             continue
         rows, _ = _load(now - quota.DURATION[kind], now)
-        block = valuation.cost_block(rows, aggregates, now=now)
+        block = valuation.cost_block(rows, aggregates, now=now, language=language)
         capacity = e.get("median_C")
         figure = block["figure"]
         if figure and capacity:
@@ -689,6 +699,7 @@ def hooks(
     from_: str | None = Query(None, alias="from"),
     to: str | None = Query(None),
     include_tests: str | None = Query(None),
+    lang: str | None = Query(None),
 ):
     """Lo que los hooks consultivos han sugerido, en el mismo rango que el resto del panel.
 
@@ -701,7 +712,7 @@ def hooks(
         return JSONResponse(
             {
                 "enabled": False,
-                "reason": "LD_HOOK_TELEMETRY_LOG no está definida en el entorno del daemon",
+                "reason": i18n.t_lang(_lang(lang), "panel.hooks.disabled"),
                 "excluded_tests": 0,
                 **_aggregate_hooks([]),
             }
@@ -762,7 +773,7 @@ def inflight():
 
 
 @app.get("/api/backend")
-def backend():
+def backend(lang: str | None = Query(None)):
     """Estado del backend para el poll rápido (2s) del dashboard: modelos montados y su status.
 
     Combina dos señales, ambas refrescadas en el mismo ciclo de 2s para que el dashboard marque
@@ -775,6 +786,7 @@ def backend():
     `models` es la última lista buena de esta URL con `models_stale: true` (REQ-021). `/running`
     solo se pide si `/models` respondió (REQ-013), y `running_ok` dice si respondió (REQ-022).
     """
+    language = _lang(lang)
     probe = server.probe_backend()
     running, running_ok = _running() if probe.available else ([], False)
     return JSONResponse(
@@ -784,21 +796,49 @@ def backend():
             "running_ok": running_ok,
             "models": probe.models,
             "models_stale": probe.models_stale,
-            **_cause_json(probe.cause, probe.detail),
+            **_cause_json(probe.cause, _probe_detail(probe, language), language),
             "origin": config.backend_origin(),
             "host": config.backend_host(),
         }
     )
 
 
-def _cause_json(cause: str | None, detail: str | None) -> dict:
+def _cause_json(cause: str | None, detail: str | None, language: str | None = None) -> dict:
     """Las claves de la causa para el panel. La etiqueta corta sale de `failures.py`, como el detalle:
-    el JS no redacta los textos de una causa (REQ-011)."""
+    el JS no redacta los textos de una causa (REQ-011), y llegan en el idioma del visitante (D6)."""
     return {
         "cause": cause,
-        "label": failures.label(cause) if cause else None,
+        "label": failures.label(cause, language=language) if cause else None,
         "detail": detail,
     }
+
+
+#: El nombre de la excepción que `failures.detail` deja entre paréntesis (`type_suffix`).
+_EXCEPTION_SUFFIX = re.compile(r" \(([A-Za-z_][A-Za-z0-9_]*)\)")
+
+
+def _probe_detail(probe: server.BackendState, language: str) -> str | None:
+    """El `detail` del sondeo en el idioma del visitante (D6).
+
+    `server.probe_backend` lo redacta en el idioma del proceso y no guarda la excepción; si el
+    visitante pide el otro idioma, se vuelve a redactar con los mismos datos: el código HTTP, o el
+    endpoint y el nombre de la excepción, que se saca del propio texto.
+    """
+    if probe.cause is None or language == i18n.lang():
+        return probe.detail
+    exception = None
+    match = _EXCEPTION_SUFFIX.search(probe.detail or "")
+    if match:
+        exception = type(match.group(1), (Exception,), {})()
+    by_status = probe.status_http is not None
+    return failures.detail(
+        probe.cause,
+        host=config.backend_host(),
+        status=probe.status_http if by_status else None,
+        endpoint=None if by_status else f"{config.BASE_URL}/models",
+        exception=exception,
+        language=language,
+    )
 
 
 def _running() -> tuple[list, bool]:
@@ -821,7 +861,7 @@ def _running() -> tuple[list, bool]:
 
 
 @app.get("/api/backend/stats")
-def backend_stats():
+def backend_stats(lang: str | None = Query(None)):
     """Proxy best-effort de GET {base sin /v1}/api/metrics/stats de llama-swap (#898, timeout 1s).
 
     Métricas de actividad agregadas (histogramas/percentiles/tokens-por-segundo) que llama-swap
@@ -832,6 +872,7 @@ def backend_stats():
     Sin datos, dice por qué (REQ-020): `cause`, `label`, `detail` y `status_http` (este último
     solo con una respuesta HTTP). El panel solo culpa a la versión de llama-swap con un 404.
     """
+    language = _lang(lang)
     base = config.BASE_URL.removesuffix("/v1")
     endpoint = f"{base}/api/metrics/stats"
     loopback = server._backend_on_loopback()
@@ -840,22 +881,46 @@ def backend_stats():
             r = c.get(endpoint, headers=config.auth_headers())
         if not r.is_success:
             cause = failures.connection_cause(r.status_code, loopback=loopback)
-            text = failures.detail(cause, host=config.backend_host(), status=r.status_code)
-            return JSONResponse(_no_stats(cause.value, text, r.status_code))
+            text = failures.detail(
+                cause, host=config.backend_host(), status=r.status_code, language=language
+            )
+            return JSONResponse(_no_stats(cause.value, text, r.status_code, language))
         data = r.json()
     except Exception as exc:  # como el sondeo: lo que no se espera también tiene causa
         cause = failures.connection_cause(exc, loopback=loopback)
-        text = failures.detail(cause, host=config.backend_host(), endpoint=endpoint, exception=exc)
-        return JSONResponse(_no_stats(cause.value, text, None))
+        text = failures.detail(
+            cause, host=config.backend_host(), endpoint=endpoint, exception=exc, language=language
+        )
+        return JSONResponse(_no_stats(cause.value, text, None, language))
     return JSONResponse({"available": True, "stats": data})
 
 
-def _no_stats(cause: str, detail: str, status_http: int | None) -> dict:
-    return {"available": False, **_cause_json(cause, detail), "status_http": status_http}
+def _no_stats(cause: str, detail: str, status_http: int | None, language: str) -> dict:
+    return {"available": False, **_cause_json(cause, detail, language), "status_http": status_http}
+
+
+#: Roles del catálogo de modelos, en el orden del panel; la etiqueta sale de `panel.role.<rol>`.
+_ROLES = (
+    ("mechanical", "MODEL_MECHANICAL"),
+    ("long", "MODEL_LONG"),
+    ("code", "MODEL_CODE"),
+    ("vision", "MODEL_VISION"),
+)
+
+
+def _tool_summary(name: str, description: str | None, language: str) -> str:
+    """El resumen de una tool para el panel, del catálogo en el idioma del visitante (REQ-027). Una
+    tool sin resumen en el catálogo enseña la primera línea de su descripción (en inglés)."""
+    key = f"panel.tool.{name}"
+    text = i18n.t_lang(language, key)
+    if text != key:
+        return text
+    lines = (description or "").strip().splitlines()
+    return lines[0][:160] if lines else ""
 
 
 @app.get("/api/status")
-def status():
+def status(lang: str | None = Query(None)):
     """Identidad y disponibilidad: versión del MCP, modelos reales del backend, catálogo, tools.
 
     Los modelos salen de GET {BASE_URL}/models (lo que el backend de verdad expone), no del
@@ -863,17 +928,20 @@ def status():
     """
     # Modelos reales del backend con su estado loaded/unloaded (#901): el mismo sondeo que
     # /api/backend, con su causa (REQ-012) y la lista guardada cuando falla (REQ-021).
+    language = _lang(lang)
     probe = server.probe_backend()
     catalog = [
-        {"role": "mechanical", "label": "mecánico", "model": config.MODEL_MECHANICAL},
-        {"role": "long", "label": "largo", "model": config.MODEL_LONG},
-        {"role": "code", "label": "código", "model": config.MODEL_CODE},
-        {"role": "vision", "label": "visión", "model": config.MODEL_VISION},
+        {
+            "role": role,
+            "label": i18n.t_lang(language, f"panel.role.{role}"),
+            "model": getattr(config, variable),
+        }
+        for role, variable in _ROLES
     ]
     tools: list[dict] = []
     try:
         tools = [
-            {"name": t.name, "summary": (t.description or "").strip().splitlines()[0][:160]}
+            {"name": t.name, "summary": _tool_summary(t.name, t.description, language)}
             for t in server.mcp._tool_manager.list_tools()
         ]
     except Exception:
@@ -886,7 +954,7 @@ def status():
                 "available": probe.available,
                 "models": probe.models,
                 "models_stale": probe.models_stale,
-                **_cause_json(probe.cause, probe.detail),
+                **_cause_json(probe.cause, _probe_detail(probe, language), language),
                 # dónde corre la inferencia de ESTE proceso MCP: loopback = local, si no remoto
                 "origin": config.backend_origin(),
                 "host": config.backend_host(),
@@ -938,7 +1006,7 @@ def _require_web_token(request: Request) -> None:
         return
     if auth.valid_session(request.cookies.get(auth.COOKIE), token) is not None:
         return
-    raise HTTPException(status_code=401, detail="falta el token del puerto o no es correcto")
+    raise HTTPException(status_code=401, detail=i18n.t("panel.token.missing"))
 
 
 _WITH_WEB_TOKEN = [Depends(_require_web_token)]
@@ -972,14 +1040,14 @@ def llamaswap_watch_open():
     try:
         wid = llamaswap_api.watches.open(llamaswap_api.local_backend())
     except (llamaswap_api.QueryError, httpx2.HTTPError) as e:
-        logger.warning("no se abrió la vigía de llama-swap: %r", e)
+        logger.warning("llama-swap watch not opened: %r", e)
         if isinstance(e, llamaswap_api.TooManyWatches):
             message = WATCH_LIMIT
         elif isinstance(e, llamaswap_api.QueryError):
             message = WATCH_REJECTED
         else:
             message = WATCH_UNREACHABLE
-        return JSONResponse({"error": message}, status_code=502)
+        return JSONResponse({"error": i18n.t(message)}, status_code=502)
     return JSONResponse({"id": wid})
 
 
@@ -988,7 +1056,7 @@ def llamaswap_watch_result(wid: str):
     """La salida de la vigía (`outcome`, `null` mientras no se sabe) y la línea que la decidió."""
     result = llamaswap_api.watches.result(wid)
     if result is None:
-        return JSONResponse({"error": "no hay ninguna vigía con ese id"}, status_code=404)
+        return JSONResponse({"error": i18n.t("panel.watch.not_found")}, status_code=404)
     return JSONResponse(result)
 
 
@@ -1058,8 +1126,22 @@ _WEB_FONTS_TAGS = """<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">"""
 
 
+def panel_catalogs() -> dict[str, dict[str, str]]:
+    """Las claves `panel.*` del catálogo en los dos idiomas, para inyectarlas en el panel: el
+    selector cambia de idioma sin volver a pedir la página (REQ-020)."""
+    return {
+        language: {k: v for k, v in i18n.catalog(language).items() if k.startswith("panel.")}
+        for language in i18n.LANGUAGES
+    }
+
+
+def _script_json(value: object) -> str:
+    """JSON para un `<script>`: un `</` dentro de un texto (`</b>`) cerraría el script."""
+    return json.dumps(value, ensure_ascii=False).replace("</", "<\\/")
+
+
 def render_index() -> str:
-    tags = _WEB_FONTS_TAGS if config.WEB_FONTS else "<!-- fuentes web desactivadas -->"
+    tags = _WEB_FONTS_TAGS if config.WEB_FONTS else "<!-- LOCAL_DELEGATE_WEB_FONTS=0 -->"
     # La marca del header se **inyecta** desde el mismo fichero que sirve `/favicon.svg` en vez
     # de estar escrita en el HTML. Antes había un SVG dibujado a mano ahí: al unificar la marca
     # se actualizó el favicon y el header se quedó con el icono viejo, así que el panel enseñaba
@@ -1068,6 +1150,7 @@ def render_index() -> str:
         HTML.replace("__WEB_FONTS__", tags)
         .replace("__BRAND_MARK__", FAVICON.strip())
         .replace("__LEGACY_VALUES__", json.dumps(legacy_names.PANEL_VALUE_ALIASES))
+        .replace("__I18N__", _script_json(panel_catalogs()))
     )
 
 
@@ -1101,12 +1184,13 @@ def run_in_thread(host: str | None = None, port: int | None = None):
 
 
 HTML = r"""<!doctype html>
-<html lang="es" data-theme="dark">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>local·delegate — panel de ahorro</title>
-<meta name="description" content="Delegaciones a modelos locales de local-delegate: contexto conservado, equivalente a precio de API y estado de la cuota.">
+<!-- El título y la descripción los pone `applyStatic()` en el idioma del selector. -->
+<title>local·delegate</title>
+<meta name="description" content="">
 <meta name="theme-color" content="#0a0c11">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 __WEB_FONTS__
@@ -1201,6 +1285,8 @@ a{color:var(--blue);text-decoration:none}
 select.btn{appearance:none;padding-right:28px;
   background-image:linear-gradient(45deg,transparent 50%,var(--mut) 50%),linear-gradient(135deg,var(--mut) 50%,transparent 50%);
   background-position:calc(100% - 16px) 55%,calc(100% - 11px) 55%;background-size:5px 5px;background-repeat:no-repeat}
+/* Selector de idioma: el código en mono, como la versión del MCP. */
+select.btn.lang{font-family:var(--mono);letter-spacing:.04em}
 input[type=date].btn{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums}
 input[type=date]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.65;transition:opacity .13s}
 input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
@@ -1464,63 +1550,72 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
            la landing. `aria-hidden` en el contenedor oculta todo el subárbol al lector de
            pantalla, incluido el aria-label del propio SVG: el nombre ya lo dice .brand-name
            justo al lado y repetirlo sería ruido. -->
+      <!-- Los textos del marcado no se escriben aquí: los pone `applyStatic()` desde el catálogo
+           `panel.*` en el idioma del selector (REQ-020, REQ-025). `data-i18n` es el texto,
+           `data-i18n-html` el texto con marcado, `data-i18n-title` y `data-i18n-aria` los atributos. -->
       <span class="mark" aria-hidden="true">__BRAND_MARK__</span>
       <div class="brand-txt">
-        <div class="brand-name">local<b>·</b>delegate<span class="ver" id="ver" title="Versión del MCP que sirve este panel" style="display:none"></span></div>
-        <div class="brand-sub">panel de ahorro</div>
+        <div class="brand-name">local<b>·</b>delegate<span class="ver" id="ver" data-i18n-title="header.version" style="display:none"></span></div>
+        <div class="brand-sub" data-i18n="header.subtitle"></div>
       </div>
-      <span class="live" id="live" title="Estado de los datos"><span class="live-dot"></span><span id="liveTxt">EN VIVO</span></span>
+      <span class="live" id="live" data-i18n-title="live.title"><span class="live-dot"></span><span id="liveTxt" data-i18n="live.live"></span></span>
     </div>
     <div class="controls">
-      <select id="range" class="btn" title="Rango temporal">
-        <option value="today" selected>Hoy</option>
-        <option value="7">Últimos 7 días</option>
-        <option value="30">Últimos 30 días</option>
-        <option value="prev-month">Mes anterior</option>
-        <option value="all">Todo el histórico</option>
-        <option value="custom">Personalizado…</option>
+      <select id="range" class="btn" data-i18n-title="range.title">
+        <option value="today" selected data-i18n="range.today"></option>
+        <option value="7" data-i18n="range.7"></option>
+        <option value="30" data-i18n="range.30"></option>
+        <option value="prev-month" data-i18n="range.prev_month"></option>
+        <option value="all" data-i18n="range.all"></option>
+        <option value="custom" data-i18n="range.custom"></option>
       </select>
-      <input type="date" id="rangeFrom" class="btn" style="display:none" title="Desde">
-      <input type="date" id="rangeTo" class="btn" style="display:none" title="Hasta">
+      <input type="date" id="rangeFrom" class="btn" style="display:none" data-i18n-title="range.from">
+      <input type="date" id="rangeTo" class="btn" style="display:none" data-i18n-title="range.to">
       <!-- Interruptor «Pruebas» (test-windows-out-of-metrics, REQ-016): apagado, el panel aparta
            las pruebas; encendido, las tres peticiones de fetchData llevan include_tests=1. -->
-      <button id="tests" class="btn" title="Incluir pruebas" aria-pressed="false">
+      <button id="tests" class="btn" data-i18n-title="tests.title" aria-pressed="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6"/><path d="M10 3v6.5L4.6 18.4A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.4-2.6L14 9.5V3"/><path d="M7.5 15h9"/></svg>
-        Pruebas<span class="tdot" id="testsDot" hidden></span></button>
+        <span data-i18n="tests.label"></span><span class="tdot" id="testsDot" hidden></span></button>
       <button class="ibtn" id="testsInfo" data-group="tests" aria-haspopup="dialog"
-        title="Qué cuenta como prueba" aria-label="Información sobre las pruebas"></button>
-      <button id="auto" class="btn on" title="Auto-refresco cada 15 s">
+        data-i18n-title="tests.info_title" data-i18n-aria="tests.info_aria"></button>
+      <button id="auto" class="btn on" data-i18n-title="auto.title">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.4-6.4L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.4 6.4L3 16"/><path d="M3 21v-5h5"/></svg>
-        Auto</button>
-      <button id="reload" class="btn icon" title="Refrescar ahora" aria-label="Refrescar">
+        <span data-i18n="auto.label"></span></button>
+      <button id="reload" class="btn icon" data-i18n-title="reload.title" data-i18n-aria="reload.aria">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg></button>
-      <button id="theme" class="btn icon" title="Tema claro / oscuro" aria-label="Cambiar tema">
+      <!-- Selector de idioma (REQ-020): el código del idioma, en mono como la versión del MCP; la
+           elección se guarda en este navegador (`ld-lang`), no en el servidor. -->
+      <select id="lang" class="btn lang" data-i18n-title="lang.title" data-i18n-aria="lang.aria">
+        <option value="es">ES</option>
+        <option value="en">EN</option>
+      </select>
+      <button id="theme" class="btn icon" data-i18n-title="theme.title" data-i18n-aria="theme.aria">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.4 14.2A8.5 8.5 0 0 1 9.8 3.6a8.5 8.5 0 1 0 10.6 10.6z"/></svg></button>
-      <button id="help" class="btn icon" title="¿Cómo se calcula el ahorro?" aria-label="Ayuda">
+      <button id="help" class="btn icon" data-i18n-title="help.title" data-i18n-aria="help.aria">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.2a2.8 2.8 0 1 1 3.9 2.6c-.8.4-1.1 1-1.1 1.9"/><path d="M12 17h.01"/></svg></button>
     </div>
   </header>
 
   <div class="grid duo">
     <div class="card" style="--hc:var(--violet)">
-      <div class="panel-h"><h2>Backend</h2><span style="display:flex;gap:6px;align-items:center">
-        <span id="originPill" class="pill org local" style="display:none">cómputo local</span>
-        <span id="backendPill" class="pill down">sin datos</span></span></div>
-      <div id="modelsBody"><div class="empty" style="padding:16px">Consultando el backend…</div></div>
-      <div class="subh">Rendimiento del backend <span class="mut" id="bstatsHead"></span></div>
-      <div id="backendStats"><div class="empty" style="padding:12px">sin datos</div></div>
-      <div class="subh" id="inflightHead">En curso</div>
+      <div class="panel-h"><h2 data-i18n="backend.title"></h2><span style="display:flex;gap:6px;align-items:center">
+        <span id="originPill" class="pill org local" style="display:none" data-i18n="backend.origin_local"></span>
+        <span id="backendPill" class="pill down" data-i18n="backend.no_data"></span></span></div>
+      <div id="modelsBody"><div class="empty" style="padding:16px" data-i18n="backend.querying"></div></div>
+      <div class="subh"><span data-i18n="backend.stats_head"></span> <span class="mut" id="bstatsHead"></span></div>
+      <div id="backendStats"><div class="empty" style="padding:12px" data-i18n="stats.no_data"></div></div>
+      <div class="subh" id="inflightHead" data-i18n="backend.inflight"></div>
       <div id="inflightBody"></div>
-      <div class="subh">Tools MCP disponibles <span id="toolsCount" class="num" style="color:var(--tx2)"></span></div>
+      <div class="subh"><span data-i18n="backend.tools"></span> <span id="toolsCount" class="num" style="color:var(--tx2)"></span></div>
       <div class="toolchips" id="toolsBody"><span class="tchip">…</span></div>
     </div>
     <div class="card" style="--hc:var(--amber)">
-      <div class="panel-h"><h2>Sistema</h2>
+      <div class="panel-h"><h2 data-i18n="system.title"></h2>
         <span class="ph-r"><button class="ibtn" id="systemInfo" data-group="system" aria-haspopup="dialog"
-          title="Qué mide esta tarjeta" aria-label="Información sobre la tarjeta Sistema"></button></span></div>
-      <div id="metersBody"><div class="empty" style="padding:16px">Leyendo métricas…</div></div>
+          data-i18n-title="system.info_title" data-i18n-aria="system.info_aria"></button></span></div>
+      <div id="metersBody"><div class="empty" style="padding:16px" data-i18n="system.reading"></div></div>
       <div id="procSection">
-        <div class="subh">Procesos del backend</div>
+        <div class="subh" data-i18n="system.processes"></div>
         <div style="overflow-x:auto"><table class="proc" id="procTable"></table></div>
       </div>
     </div>
@@ -1532,37 +1627,37 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
        Python en /api/stats; aquí solo se pinta. Las tarjetas llevan cifras; los supuestos sin los
        que no hay cifra (REQ-044) van en el diálogo `infoDlg`, a un clic del botón ⓘ de cada una. -->
   <div class="card tablecard" id="costCard" style="--hc:var(--amber);display:none">
-    <div class="panel-h"><h2>Equivalente a precio de API</h2>
+    <div class="panel-h"><h2 data-i18n="cost.title"></h2>
       <span class="ph-r"><span class="mut" id="costHead"></span>
         <button class="ibtn" id="costInfo" data-group="cost" data-section="dlgCost" aria-haspopup="dialog"
-          title="Cómo leer esta cifra, la cuota y las imágenes" aria-label="Información sobre el equivalente a precio de API"></button></span></div>
+          data-i18n-title="cost.info_title" data-i18n-aria="cost.info_aria"></button></span></div>
     <div id="costBody"></div>
   </div>
 
   <div class="grid cols2" id="quotaImgRow" style="display:none">
     <div class="card" id="quotaCard" style="--hc:var(--violet);display:none">
-      <div class="panel-h"><h2>Cuota de la suscripción</h2>
+      <div class="panel-h"><h2 data-i18n="quota.title"></h2>
         <span class="ph-r"><span class="mut" id="quotaHead"></span>
           <button class="ibtn" data-group="cost" data-section="dlgQuota" aria-haspopup="dialog"
-            title="Cómo se calibra la cuota" aria-label="Información sobre la cuota"></button></span></div>
+            data-i18n-title="quota.info_title" data-i18n-aria="quota.info_aria"></button></span></div>
       <div id="quotaBody"></div>
     </div>
     <div class="card" id="imagesCard" style="--hc:var(--cyan);display:none">
-      <div class="panel-h"><h2>Imágenes</h2>
-        <span class="ph-r"><span class="mut">fuera del neto</span>
+      <div class="panel-h"><h2 data-i18n="images.title"></h2>
+        <span class="ph-r"><span class="mut" data-i18n="images.outside_net"></span>
           <button class="ibtn" data-group="cost" data-section="dlgImages" aria-haspopup="dialog"
-            title="Por qué las imágenes van aparte" aria-label="Información sobre las imágenes"></button></span></div>
+            data-i18n-title="images.info_title" data-i18n-aria="images.info_aria"></button></span></div>
       <div id="imagesBody"></div>
     </div>
   </div>
 
   <div class="grid cols">
     <div class="card chartcard" style="--hc:var(--acc)">
-      <div class="panel-h"><h2>Ahorro de contexto en el tiempo</h2><span class="mut" id="tsMode">tokens · día</span></div>
+      <div class="panel-h"><h2 data-i18n="chart.ts.title"></h2><span class="mut" id="tsMode" data-i18n="chart.ts.unit"></span></div>
       <div class="cbox"><canvas id="tsChart"></canvas></div>
     </div>
     <div class="card chartcard" style="--hc:var(--blue)">
-      <div class="panel-h"><h2>Ahorro por herramienta</h2><span class="mut">tokens</span></div>
+      <div class="panel-h"><h2 data-i18n="chart.tool.title"></h2><span class="mut" data-i18n="chart.tool.unit"></span></div>
       <div class="cbox donut"><canvas id="toolDonut"></canvas></div>
     </div>
   </div>
@@ -1571,23 +1666,23 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
        siempre daba 100 % de un lado; lo dice ya la píldora de cómputo local/remoto del Backend. -->
   <div class="grid cols2">
     <div class="card chartcard" style="--hc:var(--violet)">
-      <div class="panel-h"><h2>Llamadas por modelo</h2><span class="mut">llamadas</span></div>
+      <div class="panel-h"><h2 data-i18n="chart.model.title"></h2><span class="mut" data-i18n="chart.model.unit"></span></div>
       <div class="cbox donut"><canvas id="modelBar"></canvas></div>
     </div>
     <div class="card chartcard" style="--hc:var(--acc)">
-      <div class="panel-h"><h2>Origen del input</h2><span class="mut">por ruta = ahorro real</span></div>
+      <div class="panel-h"><h2 data-i18n="chart.src.title"></h2><span class="mut" data-i18n="chart.src.unit"></span></div>
       <div class="cbox donut"><canvas id="srcDonut"></canvas></div>
     </div>
   </div>
 
   <div class="card tablecard">
-    <div class="panel-h" style="--hc:var(--cyan)"><h2>Actividad reciente</h2><span class="mut" id="actCount"></span></div>
+    <div class="panel-h" style="--hc:var(--cyan)"><h2 data-i18n="activity.title"></h2><span class="mut" id="actCount"></span></div>
     <div style="overflow-x:auto"><table id="activity"></table></div>
     <div class="pager" id="pager" style="display:none">
-      <button class="pbtn" id="pgPrev" aria-label="Página anterior">
+      <button class="pbtn" id="pgPrev" data-i18n-aria="activity.prev">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
       <span class="pinfo" id="pgInfo"></span>
-      <button class="pbtn" id="pgNext" aria-label="Página siguiente">
+      <button class="pbtn" id="pgNext" data-i18n-aria="activity.next">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
     </div>
   </div>
@@ -1596,19 +1691,19 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
        smoke tests de un mes de trabajo real; esto sí. NO se lee como conversión: dice quién llamó,
        no cuántas sugerencias se siguieron. -->
   <div class="card tablecard" id="clientsCard" style="display:none">
-    <div class="panel-h" style="--hc:var(--cyan)"><h2>Quién delegó</h2>
+    <div class="panel-h" style="--hc:var(--cyan)"><h2 data-i18n="clients.title"></h2>
       <span class="mut" id="clientsHead"></span></div>
     <div id="clientsBody"></div>
   </div>
 
   <!-- Los hooks consultivos sugieren; el usuario decide. Esta tarjeta cuenta lo primero y NO
        pretende medir lo segundo: no hay identificador que una una sugerencia con una delegación,
-       y cruzarlos sería inventar una correlación. El texto de la tarjeta lo dice. -->
+       y cruzarlos sería inventar una correlación. El texto del diálogo lo dice. -->
   <div class="card tablecard" id="hooksCard" style="display:none">
-    <div class="panel-h" style="--hc:var(--amber)"><h2>Sugerencias de los hooks</h2>
+    <div class="panel-h" style="--hc:var(--amber)"><h2 data-i18n="hooks.title"></h2>
       <span class="ph-r"><span class="mut" id="hooksHead"></span>
         <button class="ibtn" id="hooksInfo" data-group="hooks" aria-haspopup="dialog"
-          title="Qué mide esta tarjeta" aria-label="Información sobre las sugerencias de los hooks"></button></span></div>
+          data-i18n-title="hooks.info_title" data-i18n-aria="hooks.info_aria"></button></span></div>
     <div id="hooksBody"></div>
   </div>
 
@@ -1620,25 +1715,11 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
     <div class="help-h">
       <span class="k-ico" style="--kc:var(--acc)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.9 12a8.9 8.9 0 1 1-3.6-7.2"/><path d="M9 12l2.5 2.5L21 5"/></svg></span>
-      <h3 id="helpTitle">¿Cómo se calcula el ahorro?</h3>
-      <button class="help-x" id="helpClose" aria-label="Cerrar">
+      <h3 id="helpTitle" data-i18n="help.title"></h3>
+      <button class="help-x" id="helpClose" data-i18n-aria="dialog.close">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
-    <p><b>Contexto conservado</b> = el contenido de entrada que el MCP leyó <i>server-side</i>
-    (llamadas con <span class="src path">path</span>) y que <b>nunca entró a la ventana de contexto de
-    Claude</b>. Son tokens que no ocuparon tu contexto, no un trozo de cuota medido: Anthropic no
-    publica la cuota en tokens, y la cuota tiene su propio bloque. Las llamadas <span class="src inline">inline</span> ya
-    viajaron por tu contexto, así que no cuentan como ahorro. Se cuenta <b>una vez</b> por delegación
-    aunque el MCP la trocee: lo que no entró a tu contexto es el documento, no el trabajo de la GPU.</p>
-    <p><b>Coste local</b> = los tokens de entrada que consumió de verdad el backend, sumando
-    <b>todas</b> las llamadas. Una delegación troceada repite el prompt de sistema en cada trozo, así
-    que aquí sí paga el troceo. Enfrentado al ahorro, distingue una delegación eficiente de una que
-    quemó la GPU varias veces.</p>
-    <p><b>Generado en local</b> = tokens de salida: trabajo de generación que hicieron los modelos
-    locales en vez de Claude.</p>
-    <div class="frm">coste local: el token <b>real</b> que reporta el backend, caracteres ÷ 4 solo
-    cuando falta &nbsp;·&nbsp; contexto conservado: tokens de Claude por familia y tipo de contenido
-    &nbsp;·&nbsp; ahorro real = solo llamadas con <b>source=path</b></div>
+    <div data-i18n-html="help.body_html"></div>
   </div>
 </dialog>
 
@@ -1652,59 +1733,75 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
     <div class="help-h">
       <span class="k-ico" id="infoDlgIco"></span>
       <h3 id="infoDlgTitle"></h3>
-      <button class="help-x" id="infoDlgClose" aria-label="Cerrar">
+      <button class="help-x" id="infoDlgClose" data-i18n-aria="dialog.close">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
-    <section id="dlgCost" data-group="cost" style="--hc:var(--amber)"><h4>Equivalente a precio de API</h4><div id="dlgCostBody"></div></section>
-    <section id="dlgQuota" data-group="cost" style="--hc:var(--violet)"><h4>Cuota de la suscripción</h4><div id="dlgQuotaBody"></div></section>
-    <section id="dlgImages" data-group="cost" style="--hc:var(--cyan)"><h4>Imágenes</h4><div id="dlgImagesBody"></div></section>
-    <section id="dlgTests" data-group="tests" style="--hc:var(--amber)"><h4>Qué cuenta como prueba</h4><div id="dlgTestsBody"></div></section>
-    <section id="dlgHooks" data-group="hooks" style="--hc:var(--amber)"><h4>Qué mide esta tarjeta</h4>
-      <p>Los hooks <b>sugieren</b>; delegar lo decides tú. Esto no mide cuántas sugerencias se
-      siguieron —nada enlaza una sugerencia con la delegación que vino después—, sino en qué avisó
-      el hook de lectura y por qué se calló en el resto.</p>
-      <p><b>Categoría</b> es el hook que sugirió (lectura, shell) o la tarea que el hook de prompt
-      reconoció en tu mensaje (resumen, extracción, clasificación, traducción, código repetitivo).
-      <b>Lecturas vistas</b> reparte las lecturas que vio el hook de lectura por lo que hizo con
-      ellas: avisó, o se calló porque la lectura era acotada, de código, pequeña, iba por otro
-      MCP o el backend no estaba.</p></section>
-    <section id="dlgSystem" data-group="system" style="--hc:var(--amber)"><h4>Qué mide esta tarjeta</h4>
-      <p>La <b>RAM</b>, la <b>carga de la GPU</b> y la <b>VRAM</b> de la máquina donde corre este
-      panel, y los procesos del backend que encuentra en ella. La lista de procesos solo se lee en
-      Windows y Linux; en macOS todavía no se miden ni la RAM ni la VRAM, y la fila sale con «—».</p>
-      <p>Con el <b>backend en otra máquina</b>, la fila <b>Backend</b> enlaza al panel de esa
-      máquina, que es donde se ven su RAM, su VRAM y sus procesos. Ese panel pide el token de
-      aquella máquina, no el de esta.</p></section>
+    <section id="dlgCost" data-group="cost" style="--hc:var(--amber)"><h4 data-i18n="cost.title"></h4><div id="dlgCostBody"></div></section>
+    <section id="dlgQuota" data-group="cost" style="--hc:var(--violet)"><h4 data-i18n="quota.title"></h4><div id="dlgQuotaBody"></div></section>
+    <section id="dlgImages" data-group="cost" style="--hc:var(--cyan)"><h4 data-i18n="images.title"></h4><div id="dlgImagesBody"></div></section>
+    <section id="dlgTests" data-group="tests" style="--hc:var(--amber)"><h4 data-i18n="dialog.tests.title"></h4><div id="dlgTestsBody"></div></section>
+    <section id="dlgHooks" data-group="hooks" style="--hc:var(--amber)"><h4 data-i18n="dialog.card.title"></h4>
+      <div data-i18n-html="dialog.hooks.body_html"></div></section>
+    <section id="dlgSystem" data-group="system" style="--hc:var(--amber)"><h4 data-i18n="dialog.card.title"></h4>
+      <div data-i18n-html="dialog.system.body_html"></div></section>
   </div>
 </dialog>
 
 <div class="tt" id="tt"></div>
 <script>
+// --- Idioma del panel (REQ-020, REQ-025) --------------------------------------------------------
+// Los textos salen del catálogo `panel.*`, que el servidor inyecta con los DOS idiomas: el selector
+// cambia el panel sin recargar. El idioma es del visitante, no del daemon: se guarda en este
+// navegador (`ld-lang`) y, sin elección guardada, sale del navegador: español si su idioma empieza
+// por `es`, inglés en cualquier otro caso. Sin `localStorage` (bloqueado), vale durante la visita.
+const I18N = __I18N__;
+const LANGS = ['es', 'en'];
+function pickLang(saved, nav){
+  if(LANGS.includes(saved)) return saved;
+  return /^es(?![a-z])/i.test(String(nav || '')) ? 'es' : 'en';
+}
+let LANG = 'en';
+try{ LANG = pickLang(localStorage.getItem('ld-lang'), navigator.language); }
+catch(e){ LANG = pickLang(null, navigator.language); }
+// El texto de `key` (sin el prefijo `panel.`) en el idioma del panel, con `{nombre}` sustituido. Si
+// a un idioma le falta la clave sale la española, y si falta en los dos, la propia clave (como
+// `i18n.t_lang` en Python).
+function T(key, vars){
+  const k = 'panel.' + key, cat = I18N[LANG] || {};
+  let s = Object.prototype.hasOwnProperty.call(cat, k) ? cat[k] : (I18N.es || {})[k];
+  if(s === undefined) return k;
+  if(vars) s = s.replace(/\{(\w+)\}/g, (m, name) =>
+    Object.prototype.hasOwnProperty.call(vars, name) ? String(vars[name]) : m);
+  return s;
+}
 const CPT = 4, F = {format: n => fmtNum(n, 0)}, PAGE = 10;
 const F1 = {format: n => fmtNum(n, 1)};
-// Formato de números del panel: punto de miles SIEMPRE, coma decimal y signo menos. No se usa
-// `Intl.NumberFormat('es')`: el español no agrupa los números de cuatro cifras (8003), y la opción
-// que lo arregla (`useGrouping:'always'`) un navegador sin Intl v3 la convierte en `true` y vuelve
-// a pintar 8003 sin avisar. Sin `toFixed` para no mezclar dos maneras de redondear.
+// Formato de números del panel con los separadores del idioma (REQ-026): `8.003` y `1,5` en
+// español, `8,003` y `1.5` en inglés, y signo menos. No se usa `Intl.NumberFormat('es')`: el
+// español no agrupa los números de cuatro cifras (8003), y la opción que lo arregla
+// (`useGrouping:'always'`) un navegador sin Intl v3 la convierte en `true` y vuelve a pintar 8003
+// sin avisar. Sin `toFixed` para no mezclar dos maneras de redondear. Sin `LANG` (node), español.
 function fmtNum(n, decimals){
   if(n===null || n===undefined || !isFinite(n)) return '–';
+  const en = typeof LANG !== 'undefined' && LANG === 'en';
   const d = decimals || 0, p = Math.pow(10, d);
   const r = Math.round(Math.abs(n) * p);
   const ent = Math.floor(r / p), frac = r - ent * p;
-  let s = String(ent).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  if(d > 0) s += ',' + String(frac).padStart(d, '0');
+  let s = String(ent).replace(/\B(?=(\d{3})+(?!\d))/g, en ? ',' : '.');
+  if(d > 0) s += (en ? '.' : ',') + String(frac).padStart(d, '0');
   return (n < 0 && r > 0 ? '-' : '') + s;
 }
 // Latencias y duraciones en segundos con un decimal. Por debajo de 50 ms redondearía a «0,0 s»,
 // que se lee como «no tardó nada»: se dice «< 0,1 s».
 function fmtSec(ms){
   if(ms===null || ms===undefined || !isFinite(ms)) return '–';
-  if(ms < 50) return '< 0,1 s';
+  if(ms < 50) return '< ' + fmtNum(0.1, 1) + ' s';
   return F1.format(ms / 1000) + ' s';
 }
-// «1 estimado / 4 estimados»: la cifra con su formato y la palabra concordada, sin «(s)».
-function plural(n, one, many){ return fmtNum(n, 0) + ' ' + (n === 1 ? one : many); }
-const state = {events:[], stats:null, range:'today', auto:true, tests:false, charts:{},
+// «1 estimado / 4 estimados»: la cifra con su formato y la palabra concordada del catálogo
+// (`<key>.one` y `<key>.other`), sin «(s)».
+function plural(n, key){ return fmtNum(n, 0) + ' ' + T(key + (n === 1 ? '.one' : '.other')); }
+const state = {events:[], stats:null, hooks:null, system:null, range:'today', auto:true, tests:false, charts:{},
   page:0, status:null, running:{}, backendUp:undefined, inflight:[],
   activity:null, lastEvent:null, backendOrigin:null, backendHost:null};
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -1742,9 +1839,10 @@ if(HAS_CHART) Chart.register({ id:'centerText',
 function applyDefaults(){
   if(!HAS_CHART) return;
   Chart.defaults.font.family=SANS; Chart.defaults.font.size=11;
-  // Ejes y tooltips con el formato del panel (punto de miles, coma decimal), como `fmtNum`: sin
-  // esto Chart.js formatea con el idioma del navegador y un eje enseñaba «1,000» o «0.5».
-  Chart.defaults.locale='de-DE';
+  // Ejes y tooltips con el formato del panel, como `fmtNum`: sin esto Chart.js formatea con el
+  // idioma del navegador y un eje en español enseñaba «1,000» o «0.5». `de-DE` es el que da punto de
+  // miles y coma decimal también con cuatro cifras.
+  Chart.defaults.locale = LANG === 'en' ? 'en-US' : 'de-DE';
   Chart.defaults.color=cssv('--mut');
   Chart.defaults.animation.duration=650; Chart.defaults.animation.easing='easeOutQuart';
   Chart.defaults.plugins.tooltip.backgroundColor=cssv('--bg2');
@@ -1784,8 +1882,17 @@ function localMidnight(d, deltaDays){ return new Date(d.getFullYear(), d.getMont
 function localDayKey(d){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
-const FMT_TIME = new Intl.DateTimeFormat('es',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
-function fmtLocalTs(ts){ const d=new Date(ts); return isFinite(d) ? FMT_TIME.format(d).replace(',','') : (ts||''); }
+// La hora corta de la tabla y de los títulos, en el idioma del panel (REQ-026): el formateador se
+// rehace cuando cambia el selector.
+const FMT_TIME = {lang:null, fmt:null};
+function fmtLocalTs(ts){
+  const d=new Date(ts); if(!isFinite(d)) return (ts||'');
+  if(FMT_TIME.lang !== LANG){
+    FMT_TIME.fmt = new Intl.DateTimeFormat(LANG,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
+    FMT_TIME.lang = LANG;
+  }
+  return FMT_TIME.fmt.format(d).replace(',','');
+}
 
 // Presets de rango -> {from, to} ISO absoluto. 'custom' lee los <input type=date> (que el
 // navegador entrega como fecha local, así que se interpretan en hora local).
@@ -1809,18 +1916,22 @@ function computeRange(preset){
 }
 
 // La query de las tres peticiones del panel. Pura, para que node la pruebe: rango e interruptor
-// «Pruebas» van juntos y una petición no puede salir con otro conjunto que las demás.
-function buildQuery(range, includeTests){
+// «Pruebas» van juntos y una petición no puede salir con otro conjunto que las demás. `lang` es el
+// idioma del selector: el servidor redacta en él lo que manda ya escrito (D6).
+function buildQuery(range, includeTests, lang){
   const qs = new URLSearchParams();
   if(range && range.from) qs.set('from', range.from);
   if(range && range.to) qs.set('to', range.to);
   if(includeTests) qs.set('include_tests', '1');
+  if(lang) qs.set('lang', lang);
   return qs.toString();
 }
+// `?lang=` de las peticiones sin rango (D6).
+function langQuery(){ return 'lang=' + encodeURIComponent(LANG); }
 
 async function fetchData(){
   try{
-    const q = buildQuery(computeRange(state.range), state.tests);
+    const q = buildQuery(computeRange(state.range), state.tests, LANG);
     // Los KPIs vienen de /api/stats y NO se recalculan aquí: es la única implementación de las
     // cuentas (la de Python). Además /api/events viene topado a MAX_EVENTS, así que sumar sobre
     // esta lista subestimaría en rangos grandes mientras el pie muestra el total real.
@@ -1837,20 +1948,24 @@ async function fetchData(){
     renderClients(state.stats);
     renderCost(state.stats);
     renderTestsInfo(state.stats);
-    try{ renderHooks(await rh.json()); }catch(e){ renderHooks(null); }
-    render(); updateLive();
-    const cnt = plural(state.meta.count||0, 'evento', 'eventos');
-    const filesN = (state.meta.files_read||[]).length;
-    document.getElementById('foot').textContent =
-      (state.meta.log_dir||'') + '   ·   ' + cnt + '   ·   '
-      + plural(filesN, 'archivo leído', 'archivos leídos')
-      + '   ·   tokens de Claude por familia y tipo de contenido; modelo local ~' + CPT
-      + ' chars/token   ·   horas en ' + TZ + ' (' + TZ_OFFSET_TXT + ')   ·   local·delegate';
+    try{ state.hooks = await rh.json(); }catch(e){ state.hooks = null; }
+    renderHooks(state.hooks);
+    render(); updateLive(); renderFoot();
   }catch(e){
-    document.getElementById('kpis').innerHTML='<div class="card empty">No se pudo leer <b>/api/events</b>. ¿El MCP está corriendo?</div>';
+    document.getElementById('kpis').innerHTML='<div class="card empty">' + T('error.events_html') + '</div>';
     document.getElementById('live').classList.add('stale');
-    document.getElementById('liveTxt').textContent='SIN DATOS';
+    document.getElementById('liveTxt').textContent=T('live.no_data');
   }
+}
+
+function renderFoot(){
+  const meta = state.meta || {};
+  const filesN = (meta.files_read||[]).length;
+  document.getElementById('foot').textContent =
+    (meta.log_dir||'') + '   ·   ' + plural(meta.count||0, 'unit.event') + '   ·   '
+    + plural(filesN, 'unit.file_read')
+    + '   ·   ' + T('foot.tokens', {cpt: CPT})
+    + '   ·   ' + T('foot.tz', {tz: TZ, offset: TZ_OFFSET_TXT}) + '   ·   local·delegate';
 }
 
 // --- Quién delegó: el desglose por cliente de /api/stats ---
@@ -1865,8 +1980,7 @@ function renderClients(s){
   card.style.display='';
 
   const totalCalls = rows.reduce((a,c)=>a+c.calls,0);
-  document.getElementById('clientsHead').textContent =
-    rows.length + (rows.length===1 ? ' cliente' : ' clientes');
+  document.getElementById('clientsHead').textContent = plural(rows.length, 'unit.client');
 
   const body = rows.map(c=>{
     const p = totalCalls ? (c.calls/totalCalls*100) : 0;
@@ -1879,9 +1993,9 @@ function renderClients(s){
 
   document.getElementById('clientsBody').innerHTML =
     '<div style="overflow-x:auto"><table>'
-    + '<thead><tr><th>Cliente</th><th>Delegaciones</th>'
-    + '<th>Llamadas al backend</th><th>Tokens netos</th>'
-    + '<th>Reparto</th></tr></thead>'
+    + '<thead><tr><th>' + T('clients.col.client') + '</th><th>' + T('clients.col.delegations') + '</th>'
+    + '<th>' + T('clients.col.backend_calls') + '</th><th>' + T('clients.col.net') + '</th>'
+    + '<th>' + T('clients.col.share') + '</th></tr></thead>'
     + '<tbody>' + body + '</tbody></table></div>';
 }
 
@@ -1891,39 +2005,33 @@ function renderClients(s){
 // `test_dashboard_cost.py`) y devuelven LÍNEAS de texto, la primera es el titular. Ninguna frase lo
 // presenta como dinero en el bolsillo ni como un trozo de cuota medido (REQ-045), y sin calibrar no
 // hay % (REQ-059).
-const THREAD_TXT = {main:'hilo principal', subagent:'subagente'};
+const THREAD_TXT = {main:'cost.thread.main', subagent:'cost.thread.subagent'};
 
 // Etiquetas de presentación: clave interna (la del log y la de la API, que NO cambian) → texto que
-// se lee en el panel. Los nombres propios de tools y modelos (`local_summarize`, `gemma4-26b-a4b`)
-// no pasan por aquí: se enseñan tal cual. Una clave que no esté en el mapa no sale cruda:
-// `humanLabel` le quita los guiones bajos y le pone la mayúscula inicial.
+// se lee en el panel, del catálogo (`panel.label.<tipo>.<valor>`). Los nombres propios de tools y
+// modelos (`local_summarize`, `gemma4-26b-a4b`) no pasan por aquí: se enseñan tal cual. Una clave que
+// no esté en la lista no sale cruda: `humanLabel` le quita los guiones bajos y le pone la mayúscula.
 const LABELS = {
   // Categoría de la sugerencia: el hook que la emitió (lectura, shell) o la tarea que el hook de
   // prompt reconoció en el mensaje (resumir, extraer, …).
-  hookCategory: {read:'Lectura', shell:'Shell', bash:'Shell', lint:'Lint', summarize:'Resumen',
-    extract:'Extracción', classify:'Clasificación', translate:'Traducción',
-    boilerplate:'Código repetitivo', no_category:'Sin categoría'},
+  hookCategory: ['read', 'shell', 'bash', 'lint', 'summarize', 'extract', 'classify', 'translate',
+    'boilerplate', 'no_category'],
   // Por qué el hook de lectura avisó o se calló (`reason` del log de hooks). Los valores viejos
   // (`mcp_ajeno`, `avisó`…) los traduce `LEGACY_VALUES`, que inyecta el servidor (REQ-009).
-  hookReason: {suggested:'Avisó', bounded:'Lectura acotada', code:'Código',
-    small:'Pequeño', foreign_mcp:'Por otro MCP', backend_missing:'Backend ausente',
-    model_cooled:'Modelo enfriado', large_prose:'Prosa grande', not_prose:'No es prosa',
-    not_a_dump:'No es un volcado', no_file:'Sin fichero', block_off:'Bloqueo apagado',
-    unrecorded:'Sin registrar'},
-  client: {'claude-code':'Claude Code', 'claude-desktop':'Claude Desktop', 'claude-ai':'Claude Desktop',
-    codex:'Codex', 'codex-mcp-client':'Codex',
-    unknown:'Desconocido'},
-  effort: {low:'Bajo', medium:'Medio', high:'Alto', xhigh:'Muy alto', max:'Máximo', no_data:'Sin dato',
-    'sin dato':'Sin dato'},
-  thread: {main:'Hilo principal', subagent:'Subagente'},
-  origin: {local:'Local', remote:'Remoto', unknown:'Sin dato'},
-  // Estado del modelo que informa el backend (llama-swap) en la insignia de cada fila.
+  hookReason: ['suggested', 'bounded', 'code', 'small', 'foreign_mcp', 'backend_missing',
+    'model_cooled', 'large_prose', 'not_prose', 'not_a_dump', 'no_file', 'block_off', 'unrecorded'],
+  client: ['claude-code', 'claude-desktop', 'claude-ai', 'codex', 'codex-mcp-client', 'unknown'],
+  effort: ['low', 'medium', 'high', 'xhigh', 'max', 'no_data'],
+  thread: ['main', 'subagent'],
+  origin: ['local', 'remote', 'unknown'],
   // Origen del input: `path` = el MCP leyó el fichero server-side (ahorro real); `inline`, no.
-  source: {path:'Por ruta (path)', inline:'Texto en línea (inline)'},
-  modelStatus: {loaded:'Cargado', unloaded:'Sin cargar', starting:'Cargando', stopping:'Descargando', ready:'Listo'},
+  source: ['path', 'inline'],
+  // Estado del modelo que informa el backend (llama-swap) en la insignia de cada fila.
+  modelStatus: ['loaded', 'unloaded', 'starting', 'stopping', 'ready'],
 };
 function humanLabel(key){
-  const s = String(key===null || key===undefined || key==='' ? 'sin dato' : key).replace(/_/g, ' ').trim();
+  if(key===null || key===undefined || key==='') return T('label.no_data');
+  const s = String(key).replace(/_/g, ' ').trim();
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 // Valores viejos de máquina → nuevos, por diccionario. Sale de `legacy_names.PANEL_VALUE_ALIASES`
@@ -1934,17 +2042,17 @@ function legacyValue(kind, key){
   return Object.prototype.hasOwnProperty.call(alias, key) ? alias[key] : key;
 }
 function labelFor(kind, key){
-  const m = LABELS[kind] || {};
+  const known = LABELS[kind] || [];
   const alias = LEGACY_VALUES[kind] || {};
   if(Object.prototype.hasOwnProperty.call(alias, key)) key = alias[key];
-  return Object.prototype.hasOwnProperty.call(m, key) ? m[key] : humanLabel(key);
+  return known.includes(key) ? T('label.' + kind + '.' + key) : humanLabel(key);
 }
 function dollars(x){ return '$' + fmtNum(x, 2); }
 
 // Las dos celdas en dólares de una fila del desglose. Con T ≤ 0 la tool devolvió tanto o más de lo
 // que leyó: la fila no tiene ahorro y no se pinta una cifra (sería «$0,00» o un negativo sin signo).
 function costCells(g){
-  if(!(g.T > 0)) return '<td class="num" colspan="2" style="color:var(--mut)">sin ahorro</td>';
+  if(!(g.T > 0)) return '<td class="num" colspan="2" style="color:var(--mut)">' + T('cost.no_saving') + '</td>';
   return '<td class="num">' + dollars(g.low_bound) + '</td>'
     + '<td class="num" style="color:var(--amber)">' + dollars(g.estimate) + '</td>';
 }
@@ -1954,20 +2062,16 @@ function testsText(j){
   if(!j) return [];
   const L = [];
   const excluded = j.excluded_tests||0, inRange = j.tests_in_range||0;
-  if(excluded) L.push('Fuera de las cifras: ' + plural(excluded, 'fila de prueba', 'filas de prueba') + ' en el rango elegido.');
-  else if(inRange) L.push('Pruebas incluidas: ' + plural(inRange, 'fila de prueba', 'filas de prueba') + ' en el rango elegido.');
-  else L.push('En el rango elegido no hay pruebas.');
+  if(excluded) L.push(T('tests.line.excluded', {n: plural(excluded, 'unit.test_row')}));
+  else if(inRange) L.push(T('tests.line.included', {n: plural(inRange, 'unit.test_row')}));
+  else L.push(T('tests.line.none'));
   // Los comandos y los ids van entre comillas invertidas: `renderTestsInfo` los pinta como código.
   for(const w of (j.open_test_windows||[])){
-    L.push('Ventana de prueba abierta: `' + w.id + '` desde ' + fmtLocalTs(w.start)
-      + '. Ciérrala con `local-delegate test-window stop ' + w.id + '`.');
+    L.push(T('tests.line.window', {id: w.id, start: fmtLocalTs(w.start)}));
   }
-  L.push('Una prueba es una delegación del cliente `mcp` de los scripts del repo, la de un banco, '
-    + 'o cualquiera hecha dentro de una ventana de prueba. Apagado, el interruptor las aparta de '
-    + 'todo el panel; encendido, las enseña.');
-  L.push('El coste equivalente y la cuota las apartan siempre, con el interruptor como esté.');
-  L.push('Para marcar una prueba en vivo: `local-delegate test-window start --label «…»` antes de '
-    + 'empezar, guarda el id que imprime, y `local-delegate test-window stop <id>` al acabar.');
+  L.push(T('tests.line.rule'));
+  L.push(T('tests.line.cost'));
+  L.push(T('tests.line.mark'));
   return L;
 }
 
@@ -1983,42 +2087,36 @@ function costText(j){
   if(!c) return [];
   const L = [];
   L.push(c.figure
-    ? 'Equivalente estimado a precio de API: entre ' + dollars(c.figure.low_bound)
-      + ' y ~' + dollars(c.figure.estimate)
-    : 'Equivalente estimado a precio de API: sin cifra (' + c.reason + ')');
-  L.push('No es dinero que hayas ahorrado: tu suscripción es de tarifa plana.');
-  if(c.figure) L.push('El primer número es la cota baja con estos supuestos (una sola escritura de caché); '
-    + 'el segundo suma las relecturas de caché posteriores y las caducidades.');
+    ? T('cost.line.figure', {low: dollars(c.figure.low_bound), estimate: dollars(c.figure.estimate)})
+    : T('cost.line.no_figure', {reason: c.reason}));
+  L.push(T('cost.line.not_money'));
+  if(c.figure) L.push(T('cost.line.two_numbers'));
   const b = c.bar || {}, r = c.fallback || {};
-  L.push('Cobertura: ' + plural(b.at_call||0, 'atribuida al momento', 'atribuidas al momento')
-    + ' · ' + F.format(b.backfilled||0) + ' por relleno · ' + F.format(b.pending||0)
-    + ' pendientes · ' + F.format(b.assumed||0) + ' supuestas · ' + F.format(b.excluded||0)
-    + ' excluidas (pruebas: scripts, bancos y ventanas de prueba; y clientes que no son Claude).');
-  L.push(F.format(b.with_assumed_model||0) + ' de ' + F.format(b.valued||0)
-    + ' con modelo supuesto: ' + (r.name||'') + ' en ' + (THREAD_TXT[r.thread]||r.thread||'')
-    + (r.invalid ? ' (el valor de ' + r.variable + ' no es válido: se usa el declarado)' : '') + '.');
+  L.push(T('cost.line.coverage', {at_call: plural(b.at_call||0, 'unit.attributed'),
+    backfilled: F.format(b.backfilled||0), pending: F.format(b.pending||0),
+    assumed: F.format(b.assumed||0), excluded: F.format(b.excluded||0)}));
+  L.push(T('cost.line.assumed_model', {n: F.format(b.with_assumed_model||0), valued: F.format(b.valued||0),
+    name: r.name||'', thread: THREAD_TXT[r.thread] ? T(THREAD_TXT[r.thread]) : (r.thread||''),
+    invalid: r.invalid ? T('cost.line.invalid_variable', {variable: r.variable}) : ''}));
   const n = c.n_origin || {}, nd = c.n_declared || {};
-  L.push('Relecturas (N): ' + F.format(n.backfill||0) + ' del relleno, ' + F.format(n.aggregate||0)
-    + ' de la mediana de su grupo, ' + F.format(n.declared||0) + ' con el valor declarado (principal '
-    + F.format(nd.main) + ', subagente ' + F.format(nd.subagent) + ').');
+  L.push(T('cost.line.rereads', {backfill: F.format(n.backfill||0), aggregate: F.format(n.aggregate||0),
+    declared: F.format(n.declared||0), main: F.format(nd.main), subagent: F.format(nd.subagent)}));
   const d = c.density || {}, o = d.origin || {};
   // Las familias llegan como término de máquina (`new`, `previous`): aquí se dicen en palabras.
-  const FAMILY = {new:'nueva', previous:'anterior'};
+  const FAMILY = {new:'cost.family.new', previous:'cost.family.previous'};
   const fams = Object.entries(d.families||{})
-    .map(([k,v]) => (FAMILY[k] || k) + ' ' + F.format(v)).join(', ');
-  L.push('Densidad de Claude por familia de tokenizador (' + (fams || 'ninguna') + '): celda medida '
-    + F.format(o.measured||0) + ', sin numerar ' + F.format(o.unnumbered||0) + ', conservadora '
-    + F.format(o.conservative||0) + '; ' + F.format(d.family_density||0)
-    + ' con densidad de la familia y ' + F.format(d.assumed_family||0) + ' con familia supuesta.');
+    .map(([k,v]) => (FAMILY[k] ? T(FAMILY[k]) : k) + ' ' + F.format(v)).join(', ');
+  L.push(T('cost.line.density', {families: fams || T('cost.family.none'),
+    measured: F.format(o.measured||0), unnumbered: F.format(o.unnumbered||0),
+    conservative: F.format(o.conservative||0), family_density: F.format(d.family_density||0),
+    assumed_family: F.format(d.assumed_family||0)}));
   const sp = c.unpriced || {};
-  if(sp.n) L.push(plural(sp.n, 'delegación de un modelo sin precio', 'delegaciones de modelos sin precio')
-    + ', fuera de la suma: ' + (sp.ids||[]).join(', ') + '.');
+  if(sp.n) L.push(T('cost.line.unpriced', {what: plural(sp.n, 'unit.unpriced'), ids: (sp.ids||[]).join(', ')}));
   const fb = c.outside_base || {};
-  L.push('Fuera de la cifra: ' + plural(fb.images||0, 'imagen', 'imágenes') + ' y '
-    + plural(fb.output_to_file||0, 'salida a fichero', 'salidas a fichero') + '.');
-  L.push('Neto de la respuesta de la tool. Contrafactual: si Claude hubiera leído el fichero entero '
-    + 'una vez con Read. No descuenta las relecturas del mismo fichero (medidas entre ~3 % y ~30 %).');
-  L.push('Precios de la tabla del paquete del ' + ((c.table||{}).consulted || 'sin fecha') + '.');
+  L.push(T('cost.line.outside', {images: plural(fb.images||0, 'unit.image'),
+    files: plural(fb.output_to_file||0, 'unit.output_file')}));
+  L.push(T('cost.line.counterfactual'));
+  L.push(T('cost.line.prices', {date: (c.table||{}).consulted || T('cost.line.no_date')}));
   return L;
 }
 
@@ -2026,37 +2124,31 @@ function quotaText(j){
   const q = j && j.quota;
   if(!q) return [];
   const L = [];
-  [['five_hour','Ventana de 5 h'], ['seven_day','Ventana semanal']].forEach(([kind, name])=>{
-    const e = q[kind];
+  WINDOWS.forEach(([kind, nameKey])=>{
+    const e = q[kind], name = T(nameKey);
     if(!e) return;
     const disp = (e.dispersion!==undefined && e.dispersion!==null)
-      ? ', dispersión ' + F1.format(e.dispersion*100) + ' %' : '';
+      ? T('quota.dispersion', {x: F1.format(e.dispersion*100)}) : '';
     if(e.status==='calibrated'){
-      const v = kind==='five_hour'
-        ? 'de una ventana de 5 h (lo delegado en las últimas 5 h'
-        : 'de una ventana semanal (lo delegado en los últimos 7 días';
       L.push(e.a_pct!==null && e.a_pct!==undefined
-        ? name + ': ≈ entre ' + F1.format(e.a_pct) + ' % y ' + F1.format(e.b_pct) + ' % ' + v
-          + '; la estimación incluye relecturas que pueden caer después de la ventana); estimación '
-          + 'calibrada con ' + plural(e.points||0, 'punto', 'puntos') + disp
-          + '; supone que la cuota sigue al precio de lista.'
-        : name + ': calibrada, sin cifra (' + (e.pct_reason||'') + ').');
+        ? T('quota.line.calibrated', {name, a: F1.format(e.a_pct), b: F1.format(e.b_pct),
+            scope: T('quota.scope.' + kind), points: plural(e.points||0, 'unit.point'), dispersion: disp})
+        : T('quota.line.no_figure', {name, reason: e.pct_reason||''}));
       if(e.warning) L.push(name + ': ' + e.warning + '.');
       return;
     }
-    let t = name + ': sin calibrar (' + (e.reason||'') + ')';
-    if(!q.has_aggregates) t += '; los genera ' + q.command;
+    let t = T('quota.line.uncalibrated', {name, reason: e.reason||''});
+    if(!q.has_aggregates) t += T('quota.line.generated_by', {command: q.command});
     L.push(t + '.');
     // Los motivos de descarte son claves de `quota.py`; aquí, en palabras.
-    const DISCARD = {corrupt_line:'línea corrupta', out_of_range:'fuera de rango',
-      small_delta:'variación pequeña', no_local_use:'sin uso local', contaminated:'contaminado',
-      overlapping:'solapado', expired:'caducado', reset:'reinicio'};
+    const DISCARD = ['corrupt_line', 'out_of_range', 'small_delta', 'no_local_use', 'contaminated',
+      'overlapping', 'expired', 'reset'];
     const desc = Object.entries(e.discards||{}).filter(([,k])=>k)
-      .map(([m,k]) => (DISCARD[m] || String(m).replace(/_/g, ' ')) + ' ' + F.format(k));
-    L.push(name + ': ' + plural(e.points||0, 'punto del statusline vigente', 'puntos del statusline vigentes')
-      + ', ' + plural(e.rejection_points||0, 'punto de rechazo', 'puntos de rechazo') + ' (solo comprobación)'
-      + disp + '; descartes: ' + (desc.length ? desc.join(', ') : 'ninguno')
-      + (e.drift ? '; hubo deriva' : '') + (e.reset ? '; reiniciada a mano el ' + e.reset : '') + '.');
+      .map(([m,k]) => (DISCARD.includes(m) ? T('quota.discard.' + m) : String(m).replace(/_/g, ' ')) + ' ' + F.format(k));
+    L.push(T('quota.line.points', {name, points: plural(e.points||0, 'unit.statusline_point'),
+      rejections: plural(e.rejection_points||0, 'unit.rejection_point'), dispersion: disp,
+      discards: desc.length ? desc.join(', ') : T('quota.discards_none'),
+      drift: e.drift ? T('quota.drift') : '', reset: e.reset ? T('quota.reset', {date: e.reset}) : ''}));
   });
   return L;
 }
@@ -2064,10 +2156,9 @@ function quotaText(j){
 function imagesText(j){
   const i = j && j.images;
   if(!i) return [];
-  return [plural(i.n||0, 'imagen', 'imágenes') + ' · ' + F.format(i.bytes||0) + ' bytes leídos server-side · '
-      + F.format(i.chars_returned||0) + ' caracteres devueltos a Claude',
-    'Sin cifra de tokens de Claude: el log guarda bytes, no dimensiones. No entran en el contexto '
-      + 'conservado ni en el equivalente a precio de API.'];
+  return [T('images.line', {images: plural(i.n||0, 'unit.image'), bytes: F.format(i.bytes||0),
+      chars: F.format(i.chars_returned||0)}),
+    T('images.no_tokens')];
 }
 
 // Las líneas de texto van al diálogo de información, como párrafos; la primera del coste es el
@@ -2084,7 +2175,7 @@ function kstat(lbl, val, hint, color){
     + (hint ? '<div class="k-hint">' + hint + '</div>' : '') + '</div>';
 }
 
-const WINDOWS = [['five_hour','Ventana de 5 h'], ['seven_day','Ventana semanal']];
+const WINDOWS = [['five_hour','quota.window.five_hour'], ['seven_day','quota.window.seven_day']];
 
 // Ventanas calibradas: sin ninguna, la tarjeta de cuota no se pinta (su explicación vive en el
 // diálogo). Calibrada sin cifra cuenta como calibrada: se pinta con «–».
@@ -2099,13 +2190,13 @@ function pct2(x){ return Math.round(x*100)/100; }
 
 function quotaMeter(e, name){
   if(!e || e.status!=='calibrated' || e.a_pct===null || e.a_pct===undefined){
-    return kstat(name, '–', e && e.status==='calibrated' ? 'calibrada, sin cifra' : 'sin calibrar');
+    return kstat(name, '–', T(e && e.status==='calibrated' ? 'quota.meter.no_figure' : 'quota.meter.uncalibrated'));
   }
   const a = Math.max(0, Math.min(100, e.a_pct)), b = Math.max(a, Math.min(100, e.b_pct));
   return kstat(name, F1.format(e.a_pct) + ' – ' + F1.format(e.b_pct) + '<span class="unit">%</span>',
-      'calibrada con ' + plural(e.points||0, 'punto', 'puntos'))
-    + '<div class="qrange" role="img" aria-label="Entre ' + F1.format(e.a_pct) + ' % y '
-    + F1.format(e.b_pct) + ' % de la ventana"><i class="qa" style="width:' + pct2(a) + '%"></i>'
+      T('quota.meter.calibrated_with', {points: plural(e.points||0, 'unit.point')}))
+    + '<div class="qrange" role="img" aria-label="' + escHooks(T('quota.meter.aria', {a: F1.format(e.a_pct),
+      b: F1.format(e.b_pct)})) + '"><i class="qa" style="width:' + pct2(a) + '%"></i>'
     + '<i class="qb" style="left:' + pct2(a) + '%;width:' + pct2(b - a) + '%"></i></div>'
     + '<div class="qscale"><span>0 %</span><span>100 %</span></div>';
 }
@@ -2116,7 +2207,7 @@ function renderCost(s){
   const c = s && s.cost;
   cc.style.display = c ? '' : 'none';
   if(c){
-    document.getElementById('costHead').textContent = c.figure ? plural(c.events||0, 'delegación', 'delegaciones') : '';
+    document.getElementById('costHead').textContent = c.figure ? plural(c.events||0, 'unit.delegation') : '';
     const rows = (c.breakdown||[]).map(g => '<tr><td class="mono">' + escHooks(g.name) + '</td>'
       + '<td class="mono">' + escHooks(labelFor('thread', g.thread)) + '</td>'
       + '<td class="mono">' + escHooks(labelFor('effort', g.effort)) + '</td>'
@@ -2124,31 +2215,32 @@ function renderCost(s){
       + '<td class="num">' + F.format(g.T) + '</td>'
       + costCells(g) + '</tr>').join('');
     const figures = c.figure
-      ? kstat('Cota baja', dollars(c.figure.low_bound), 'no es un ahorro: tarifa plana')
-        + kstat('Estimación', '~' + dollars(c.figure.estimate), 'con relecturas de caché', 'var(--amber)')
-        + (c.T !== undefined ? kstat('Tokens valorados', F.format(c.T) + '<span class="unit">tok</span>',
-            'netos de Claude, con precio') : '')
-      : kstat('Equivalente a precio de API', '–', escHooks('sin cifra: ' + (c.reason||'')));
+      ? kstat(T('cost.low_bound'), dollars(c.figure.low_bound), T('cost.low_bound_hint'))
+        + kstat(T('cost.estimate'), '~' + dollars(c.figure.estimate), T('cost.estimate_hint'), 'var(--amber)')
+        + (c.T !== undefined ? kstat(T('cost.valued'), F.format(c.T) + '<span class="unit">tok</span>',
+            T('cost.valued_hint')) : '')
+      : kstat(T('cost.title'), '–', escHooks(T('cost.no_figure', {reason: c.reason||''})));
     document.getElementById('costBody').innerHTML = '<div class="kstats">' + figures + '</div>'
-      + (rows ? '<div style="overflow-x:auto"><table><thead><tr><th>Modelo</th><th>Hilo</th>'
-        + '<th>Esfuerzo</th><th>Casos</th><th>T (tokens)</th><th>Cota baja</th><th>Estimación</th>'
+      + (rows ? '<div style="overflow-x:auto"><table><thead><tr><th>' + T('cost.col.model') + '</th><th>'
+        + T('cost.col.thread') + '</th><th>' + T('cost.col.effort') + '</th><th>' + T('cost.col.cases')
+        + '</th><th>' + T('cost.col.t') + '</th><th>' + T('cost.low_bound') + '</th><th>' + T('cost.estimate') + '</th>'
         + '</tr></thead><tbody>' + rows + '</tbody></table></div>' : '');
   }
   const q = s && s.quota, cal = calibratedWindows(q);
   qc.style.display = cal ? '' : 'none';
   if(cal){
-    document.getElementById('quotaHead').textContent = plural(cal, 'ventana calibrada', 'ventanas calibradas');
+    document.getElementById('quotaHead').textContent = plural(cal, 'unit.calibrated_window');
     document.getElementById('quotaBody').innerHTML = '<div class="kstats">'
-      + WINDOWS.map(([t, name]) => '<div>' + quotaMeter(q[t], name) + '</div>').join('') + '</div>';
+      + WINDOWS.map(([t, name]) => '<div>' + quotaMeter(q[t], T(name)) + '</div>').join('') + '</div>';
   }
   // Sin imágenes en el rango la tarjeta no se pinta, como «Quién delegó» sin clientes.
   const im = s && s.images, hasImg = !!(im && im.n);
   ic.style.display = hasImg ? '' : 'none';
   if(hasImg){
     document.getElementById('imagesBody').innerHTML = '<div class="kstats">'
-      + kstat('Imágenes', F.format(im.n), 'delegaciones sin fallo')
-      + kstat('Bytes leídos', F.format(im.bytes||0) + '<span class="unit">B</span>', 'leídos server-side')
-      + kstat('Devuelto a Claude', F.format(im.chars_returned||0) + '<span class="unit">car.</span>', 'texto de la descripción')
+      + kstat(T('images.count'), F.format(im.n), T('images.count_hint'))
+      + kstat(T('images.bytes'), F.format(im.bytes||0) + '<span class="unit">B</span>', T('images.bytes_hint'))
+      + kstat(T('images.returned'), F.format(im.chars_returned||0) + '<span class="unit">' + T('unit.chars_short') + '</span>', T('images.returned_hint'))
       + '</div>';
   }
   // Una sola tarjeta visible ocupa la fila entera en vez de dejar medio hueco al lado.
@@ -2157,8 +2249,8 @@ function renderCost(s){
   ic.style.gridColumn = cal ? '' : '1 / -1';
   // El diálogo de información: el mismo texto que antes llenaba las tarjetas.
   document.getElementById('dlgCostBody').innerHTML = c ? paragraphsHtml(costText(s), true) : '';
-  document.getElementById('dlgQuotaBody').innerHTML = q ? paragraphsHtml(quotaText(s)) : '<p>Sin datos de cuota.</p>';
-  document.getElementById('dlgImagesBody').innerHTML = im ? paragraphsHtml(imagesText(s)) : '<p>Sin imágenes en el rango.</p>';
+  document.getElementById('dlgQuotaBody').innerHTML = q ? paragraphsHtml(quotaText(s)) : '<p>' + T('quota.dialog_empty') + '</p>';
+  document.getElementById('dlgImagesBody').innerHTML = im ? paragraphsHtml(imagesText(s)) : '<p>' + T('images.dialog_empty') + '</p>';
 }
 
 // --- Sugerencias de los hooks: /api/hooks ---
@@ -2180,7 +2272,7 @@ function renderHooks(h){
 
   const pct = F1.format(h.rate*100);
   document.getElementById('hooksHead').textContent =
-    F.format(h.suggested) + ' de ' + F.format(h.total) + ' (' + pct + ' %)';
+    T('hooks.head', {n: F.format(h.suggested), total: F.format(h.total), pct});
 
   const rows = (h.by_category||[]).map(c=>{
     const p = c.total ? (c.suggested/c.total*100) : 0;
@@ -2197,8 +2289,8 @@ function renderHooks(h){
   const totalRead = h.read_total || 0;
   const aim = !reasons.length ? '' :
     '<div style="overflow-x:auto;margin-top:4px"><table>'
-    + '<thead><tr><th>Lecturas vistas</th><th>Eventos</th>'
-    + '<th>Reparto</th></tr></thead><tbody>'
+    + '<thead><tr><th>' + T('hooks.col.reads') + '</th><th>' + T('hooks.col.events') + '</th>'
+    + '<th>' + T('hooks.col.share') + '</th></tr></thead><tbody>'
     + reasons.map(m=>{
         const p = totalRead ? (m.total/totalRead*100) : 0;
         return '<tr><td class="mono" title="' + escHooks(m.reason) + '">' + escHooks(labelFor('hookReason', m.reason)) + '</td>'
@@ -2209,8 +2301,8 @@ function renderHooks(h){
 
   document.getElementById('hooksBody').innerHTML =
     '<div style="overflow-x:auto"><table>'
-    + '<thead><tr><th>Categoría</th><th>Sugeridas</th>'
-    + '<th>Vistas</th><th>Tasa</th></tr></thead>'
+    + '<thead><tr><th>' + T('hooks.col.category') + '</th><th>' + T('hooks.col.suggested') + '</th>'
+    + '<th>' + T('hooks.col.seen') + '</th><th>' + T('hooks.col.rate') + '</th></tr></thead>'
     + '<tbody>' + rows + '</tbody></table></div>'
     + aim;
 }
@@ -2220,14 +2312,16 @@ function renderHooks(h){
 // sondeo de 2 s de /api/backend (REQ-021), a través del estado visible (REQ-028).
 async function fetchStatus(){
   try{
-    const r = await fetch('/api/status'); const j = await r.json();
+    const r = await fetch('/api/status?' + langQuery()); const j = await r.json();
     state.status = j;
     if(j.version){ const v=document.getElementById('ver'); v.textContent='v'+j.version; v.style.display=''; }
     renderBackend(); renderTools();
   }catch(e){ /* el panel de backend es opcional: si falla, la web sigue funcionando */ }
   try{
-    const sr = await fetch('/api/backend/stats'); renderBackendStats(await sr.json());
-  }catch(e){ renderBackendStats(null); }
+    const sr = await fetch('/api/backend/stats?' + langQuery());
+    state.backendStats = await sr.json();
+  }catch(e){ state.backendStats = null; }
+  renderBackendStats(state.backendStats);
 }
 
 function roleLabels(model){
@@ -2237,14 +2331,14 @@ function roleLabels(model){
 // Causas en las que ALGUIEN CONTESTA (REQ-014): el badge dice su etiqueta en ámbar, sin «caído».
 // Las etiquetas y los detalles no se escriben aquí: llegan del daemon, redactados por failures.py.
 const CAUSES_ANSWERING = {credential:1, http_error:1, invalid_response:1, no_response:1};
-// Estados de /running y motivos de espera local, en palabras (REQ-022).
-const RUNNING_WORDS = {ready:'listo', starting:'cargando', stopping:'descargando'};
-const WAIT_WORDS = {slot:'esperando plaza (máximo de llamadas a la vez)'};
+// Estados de /running y motivos de espera local, en palabras del catálogo (REQ-022).
+const RUNNING_WORDS = {ready:'model.running.ready', starting:'model.running.starting', stopping:'model.running.stopping'};
+const WAIT_WORDS = {slot:'model.wait.slot'};
 
 // La espera de turno del daemon en palabras (REQ-008): una sola fuente para el title de la fila
 // del modelo y para «En curso».
 function turnWords(it){
-  return 'esperando turno del daemon (en uso: '+((it.turn_in_use||[]).join(', ')||'nada')+')';
+  return T('model.turn', {models: (it.turn_in_use||[]).join(', ') || T('model.turn_nothing')});
 }
 
 function initialView(){
@@ -2271,13 +2365,13 @@ function visibleState(prev, bj){
 function badgeBackend(view, baseUrl){
   const v = view || initialView(), u = v.last || {};
   if(v.status==='connected'){
-    const notice = v.failures>0 ? ' · último sondeo: '+(u.detail||u.label||'sin respuesta') : '';
-    return {text:'conectado', cls:'up', title:(baseUrl||'')+notice};
+    const notice = v.failures>0 ? T('badge.last_probe', {detail: u.detail||u.label||T('badge.no_answer')}) : '';
+    return {text:T('badge.connected'), cls:'up', title:(baseUrl||'')+notice};
   }
-  if(v.status==='checking') return {text:'comprobando…', cls:'neutral', title:u.detail||''};
-  const shortLabel = u.label || u.cause || 'sin respuesta';
+  if(v.status==='checking') return {text:T('badge.checking'), cls:'neutral', title:u.detail||''};
+  const shortLabel = u.label || u.cause || T('badge.no_answer');
   if(CAUSES_ANSWERING[legacyValue('connectionCause', u.cause)]) return {text:shortLabel, cls:'warn', title:u.detail||''};
-  return {text:'caído · '+shortLabel, cls:'down', title:u.detail||''};
+  return {text:T('badge.down', {label: shortLabel}), cls:'down', title:u.detail||''};
 }
 
 // Clase de la chip de /v1/models (REQ-023): cualquier valor tiene chip; null o ausente, ninguna.
@@ -2298,6 +2392,8 @@ function sortModels(ids, catalog){
 
 // Texto de la fila de un modelo (tabla de REQ-022, en orden: gana la primera). «En vuelo» sale del
 // último /api/inflight; running, status y running_ok, del sondeo de REFERENCIA del estado visible.
+// `state` es el código del estado (el que decide el punto de color) y `text`, su texto en el idioma
+// del panel.
 function modelState(o){
   const view = o.view || initialView(), ref = view.ref || {}, available = !!view.available;
   const calls = (o.inflight||[]).filter(it=>it && it.model===o.model);
@@ -2307,10 +2403,10 @@ function modelState(o){
   const running = run ? (run.state||'ready') : null;
   const mod = (ref.models||[]).find(m=>m && m.id===o.model);
   const status = mod ? mod.status : null;
-  const row = (text, title) => ({text, title:title||'', dimmed:!available});
-  if(!available && inFlight) return row('esperando al backend');
-  if(!available) return row('desconocido', 'sin conexión con el backend: '
-    +(((view.last||{}).label) || 'comprobando…'));
+  const row = (code, title) => ({state:code, text:T('model.state.' + code), title:title||'', dimmed:!available});
+  if(!available && inFlight) return row('waiting_backend');
+  if(!available) return row('unknown', T('model.title.no_connection',
+    {label: ((view.last||{}).label) || T('badge.checking')}));
   if(inFlight && localWait){
     // El motivo «turno» (daemon-reparte-el-backend, REQ-008) dice con qué modelos está ocupado el
     // turno, con sus propias palabras (sin el prefijo de las demás, que repetiría «esperando»).
@@ -2319,25 +2415,25 @@ function modelState(o){
     calls.forEach(it=>{
       const bucket = it.local_wait==='turn' ? turnParts : reasons;
       const m = it.local_wait==='turn' ? turnWords(it)
-        : (WAIT_WORDS[it.local_wait] || String(it.local_wait));
+        : (WAIT_WORDS[it.local_wait] ? T(WAIT_WORDS[it.local_wait]) : String(it.local_wait));
       if(!bucket.includes(m)) bucket.push(m); });
-    const parts = reasons.length ? ['esperando dentro de local-delegate: '+reasons.join(', ')] : [];
-    return row('en cola local', parts.concat(turnParts).join('; '));
+    const parts = reasons.length ? [T('model.title.waiting_inside', {reasons: reasons.join(', ')})] : [];
+    return row('local_queue', parts.concat(turnParts).join('; '));
   }
-  if(!ref.running_ok && inFlight) return row('en curso');
-  if(!ref.running_ok) return row(status==='loaded' ? 'montado' : 'frío');
-  if(running==='starting') return row('cargando');
-  if(running==='ready' && inFlight) return row('procesando');
-  if(running==='ready') return row('montado');
+  if(!ref.running_ok && inFlight) return row('running');
+  if(!ref.running_ok) return row(status==='loaded' ? 'mounted' : 'cold');
+  if(running==='starting') return row('loading');
+  if(running==='ready' && inFlight) return row('processing');
+  if(running==='ready') return row('mounted');
   if(inFlight){
     const runningList = (ref.running||[]).filter(r=>r && r.model)
-      .map(r=>r.model+' '+(RUNNING_WORDS[r.state||'ready'] || r.state));
-    return row('esperando turno', runningList.length
-      ? 'llama-swap aún no lo atiende; en /running: '+runningList.join(', ')
-      : 'llama-swap aún no lo atiende; /running está vacío');
+      .map(r=>r.model+' '+(RUNNING_WORDS[r.state||'ready'] ? T(RUNNING_WORDS[r.state||'ready']) : r.state));
+    return row('waiting_turn', runningList.length
+      ? T('model.title.not_served_running', {list: runningList.join(', ')})
+      : T('model.title.not_served_empty'));
   }
-  if(running==='stopping') return row('descargando');
-  return row('frío');
+  if(running==='stopping') return row('unloading');
+  return row('cold');
 }
 
 function renderBackend(){
@@ -2356,10 +2452,10 @@ function renderBackend(){
   const oPill = document.getElementById('originPill');
   if(oPill){
     if(origin){
-      oPill.className = 'pill org '+origin;
-      oPill.textContent = origin==='remote' ? 'cómputo remoto' : 'cómputo local';
-      oPill.title = (origin==='remote'
-        ? 'La inferencia corre en otra máquina: ' : 'La inferencia corre en esta máquina: ')+(host||st.base_url||'');
+      oPill.className = ['pill', 'org', origin].join(' ');
+      oPill.textContent = T(origin==='remote' ? 'backend.origin_remote' : 'backend.origin_local');
+      oPill.title = T(origin==='remote' ? 'backend.origin_remote_title' : 'backend.origin_local_title',
+        {host: host||st.base_url||''});
       oPill.style.display='';
     } else { oPill.style.display='none'; }
   }
@@ -2372,16 +2468,17 @@ function renderBackend(){
   const body = document.getElementById('modelsBody');
   if(!ids.length){
     body.innerHTML = '<div class="empty" style="padding:16px">'+(view.available
-      ? 'El backend no expone modelos ('+escHooks(st.base_url||'?')+').' : 'Consultando el backend…')+'</div>';
+      ? escHooks(T('backend.no_models', {url: st.base_url||'?'})) : T('backend.querying'))+'</div>';
     return;
   }
-  const DOT = {'montado':'ready', 'cargando':'starting', 'descargando':'starting',
-    'esperando turno':'starting', 'en cola local':'starting', 'esperando al backend':'starting',
-    'procesando':'busy', 'en curso':'busy'};
+  // El punto de color sale del CÓDIGO del estado, no de su texto: así no depende del idioma.
+  const DOT = {mounted:'ready', loading:'starting', unloading:'starting',
+    waiting_turn:'starting', local_queue:'starting', waiting_backend:'starting',
+    processing:'busy', running:'busy'};
   body.innerHTML = ids.map(m=>{
     const e = modelState({model:m, view, inflight:state.inflight});
-    const busy = !e.dimmed && (e.text==='procesando' || e.text==='en curso');
-    const cls = (DOT[e.text]||'') + (busy && DOT[e.text]!=='busy' ? ' busy' : '');
+    const busy = !e.dimmed && (e.state==='processing' || e.state==='running');
+    const cls = (DOT[e.state]||'') + (busy && DOT[e.state]!=='busy' ? ' busy' : '');
     const roles = roleLabels(m).map(l=>`<span class="mrole">${l}</span>`).join('');
     const chip = statusChip(statusById[m]);
     const badge = chip ? `<span class="mstatus ${chip}" title="${escHooks(statusById[m])}">${escHooks(labelFor('modelStatus', statusById[m]))}</span>` : '';
@@ -2394,9 +2491,9 @@ function renderBackend(){
 // Lo que dice la tarjeta de métricas de llama-swap sin datos (REQ-020): la versión solo se culpa
 // con un 404; con cualquier otra causa, su etiqueta corta.
 function statsText(j){
-  if(j && j.status_http===404) return 'sin datos (este backend no expone /api/metrics/stats: requiere llama-swap ≥ v236)';
-  if(j && j.label) return 'sin datos: '+j.label;
-  return 'sin datos';
+  if(j && j.status_http===404) return T('stats.no_endpoint');
+  if(j && j.label) return T('stats.no_data_label', {label: j.label});
+  return T('stats.no_data');
 }
 
 // #898: métricas de actividad que llama-swap persiste en SQLite (proxy /api/backend/stats).
@@ -2410,11 +2507,11 @@ function renderBackendStats(j){
   }
   const s = j.stats, gen = s.gen_histogram||{}, pr = s.prompt_histogram||{};
   const f1 = x => F1.format(x);   // sin dato, «–» (lo pone fmtNum)
-  if(head) head.textContent = (s.total_requests!=null) ? ('· '+F.format(s.total_requests)+' '+(s.total_requests===1?'petición':'peticiones')) : '';
+  if(head) head.textContent = (s.total_requests!=null) ? ('· '+plural(s.total_requests, 'unit.request')) : '';
   el.innerHTML = `<div class="bstats">
-    <div class="bstat"><div class="bk">Generación tok/s</div><div class="bv">${f1(gen.p50)}<span class="bp">p50</span></div><div class="bsub">p95 ${f1(gen.p95)}</div></div>
-    <div class="bstat"><div class="bk">Entrada tok/s</div><div class="bv">${f1(pr.p50)}<span class="bp">p50</span></div><div class="bsub">p95 ${f1(pr.p95)}</div></div>
-    <div class="bstat"><div class="bk">Tokens entrada/salida</div><div class="bv">${F.format(s.total_input_tokens||0)}/${F.format(s.total_output_tokens||0)}</div><div class="bsub">caché ${F.format(s.total_cache_tokens||0)}</div></div>
+    <div class="bstat"><div class="bk">${T('stats.gen')}</div><div class="bv">${f1(gen.p50)}<span class="bp">p50</span></div><div class="bsub">p95 ${f1(gen.p95)}</div></div>
+    <div class="bstat"><div class="bk">${T('stats.prompt')}</div><div class="bv">${f1(pr.p50)}<span class="bp">p50</span></div><div class="bsub">p95 ${f1(pr.p95)}</div></div>
+    <div class="bstat"><div class="bk">${T('stats.tokens')}</div><div class="bv">${F.format(s.total_input_tokens||0)}/${F.format(s.total_output_tokens||0)}</div><div class="bsub">${T('stats.cache', {n: F.format(s.total_cache_tokens||0)})}</div></div>
   </div>`;
 }
 
@@ -2424,7 +2521,7 @@ function renderTools(){
   document.getElementById('toolsCount').textContent = tools.length?('('+tools.length+')'):'';
   document.getElementById('toolsBody').innerHTML = tools.length
     ? tools.map(t=>`<span class="tchip${busyTools.has(t.name)?' busy':''}" title="${(t.summary||'').replace(/"/g,'&quot;')}">${t.name}</span>`).join('')
-    : '<span class="tchip">sin datos</span>';
+    : '<span class="tchip">' + T('tools.no_data') + '</span>';
 }
 
 // Sondeos de 2 s (REQ-026): /api/inflight y /api/backend van POR SEPARADO, cada uno con su guarda
@@ -2460,7 +2557,7 @@ async function pollBackend(){
   if(document.visibilityState!=='visible' || POLL.backend) return;
   POLL.backend = true;
   try{
-    applyBackend(await (await fetch('/api/backend')).json());
+    applyBackend(await (await fetch('/api/backend?' + langQuery())).json());
   }catch(e){ /* si el daemon no contesta, no es un sondeo del backend: no cambia el estado */ }
   finally{
     POLL.backend = false;
@@ -2490,16 +2587,16 @@ function renderInflight(){
 
   if(state.inflight.length){
     body.innerHTML = state.inflight.map(it=>{
-      const chunk = it.chunks ? `<span class="chunkchip">Trozo ${it.chunk||1}/${it.chunks}</span>` : '';
-      const org = it.backend ? `<span class="org ${it.backend}">${it.backend==='remote'?'remoto':'local'}</span>` : '';
+      const chunk = it.chunks ? `<span class="chunkchip">${T('backend.chunk', {n: it.chunk||1, total: it.chunks})}</span>` : '';
+      const org = it.backend ? `<span class="org ${it.backend}">${escHooks(labelFor('origin', it.backend))}</span>` : '';
       // Espera de turno del daemon (REQ-008): las mismas palabras que el title de la fila del modelo.
       const turnText = it.local_wait==='turn' ? turnWords(it) : '';
       const turnChip = turnText ? `<span class="chunkchip" title="${escHooks(turnText)}">${escHooks(turnText)}</span>` : '';
       return `<div class="ifrow"><span class="spin"></span><span class="badge">${it.tool}</span>
         <span class="badge model">${it.model}</span>${chunk}${turnChip}${org}
-        <span class="num" style="color:var(--mut)">${escHooks(fmtSec((it.elapsed_s||0)*1000))} · ${F.format(it.chars_in||0)} car.</span></div>`;
+        <span class="num" style="color:var(--mut)">${escHooks(fmtSec((it.elapsed_s||0)*1000))} · ${F.format(it.chars_in||0)} ${T('unit.chars_short')}</span></div>`;
     }).join('');
-    head.innerHTML = 'En curso <span class="num" style="color:var(--amber)">('+state.inflight.length+')</span>';
+    head.innerHTML = escHooks(T('backend.inflight')) + ' <span class="num" style="color:var(--amber)">('+state.inflight.length+')</span>';
     return;
   }
 
@@ -2510,21 +2607,21 @@ function renderInflight(){
   if(ev && ev.ts){
     const skew = (state.activity && state.activity.skewMs) || 0;
     const ago = Math.max(0, Math.round((Date.now() - skew - Date.parse(ev.ts))/1000));
-    const org = ev.backend ? `<span class="org ${ev.backend}">${ev.backend==='remote'?'remoto':'local'}</span>` : '';
+    const org = ev.backend ? `<span class="org ${ev.backend}">${escHooks(labelFor('origin', ev.backend))}</span>` : '';
     const dur = ev.latency_ms!=null ? escHooks(fmtSec(ev.latency_ms))+' · ' : '';
     const mark = ev.ok===false
       ? '<span class="num" style="color:var(--red)">✕</span>'
       : '<span class="num" style="color:var(--ok)">✓</span>';
     body.innerHTML = `<div class="ifrow" style="opacity:.75">${mark}
-      <span class="num" style="color:var(--faint)">hace ${fmtAgo(ago)}</span>
+      <span class="num" style="color:var(--faint)">${T('backend.ago', {ago: fmtAgo(ago)})}</span>
       <span class="badge">${ev.tool||'?'}</span>
       <span class="badge model">${ev.model||'?'}</span>${org}
-      <span class="num" style="color:var(--mut)">${dur}${F.format(ev.chars_in||0)} car.</span></div>`;
+      <span class="num" style="color:var(--mut)">${dur}${F.format(ev.chars_in||0)} ${T('unit.chars_short')}</span></div>`;
   } else {
-    body.innerHTML = '<div class="ifrow" style="color:var(--faint)">Sin delegaciones todavía</div>';
+    body.innerHTML = '<div class="ifrow" style="color:var(--faint)">' + T('backend.none_yet') + '</div>';
   }
   // REQ-024: lo que se pinta es la última terminada, no algo en curso.
-  head.innerHTML = (ev && ev.ts) ? 'Última delegación' : 'En curso';
+  head.innerHTML = escHooks(T((ev && ev.ts) ? 'backend.last' : 'backend.inflight'));
 }
 
 function fmtAgo(s){
@@ -2545,12 +2642,12 @@ function systemRows(j){
   if(remote){
     const host = String((j && j.host) || '').replace(/:\d+$/, '');
     const url = String((j && j.panel_url) || '');
-    rows.push({label:'Backend', value: host || null, href: /^https?:\/\//.test(url) ? url : null});
+    rows.push({label:T('system.row.backend'), value: host || null, href: /^https?:\/\//.test(url) ? url : null});
   }
   if(!(j && (j.ram || j.vram))) rows.push({label:'RAM / VRAM', value:null, href:null});
   // Con el backend remoto sus procesos no están aquí: la sección se oculta si no hay ninguno.
   const listable = !plat || plat==='win32' || plat==='linux';
-  if(!remote && !listable && !procs.length) rows.push({label:'Procesos', value:null, href:null});
+  if(!remote && !listable && !procs.length) rows.push({label:T('system.row.processes'), value:null, href:null});
   const showProcs = procs.length > 0 || (!remote && listable);
   return {rows, showProcs};
 }
@@ -2559,7 +2656,7 @@ function systemRowHTML(r){
   let val;
   if(r.value==null) val = '<span class="sysrow-val nodata">—</span>';
   else if(r.href) val = '<span class="sysrow-val"><a href="'+escHooks(r.href)+'" target="_blank" rel="noopener noreferrer"'
-    + ' title="Abrir el panel de esa máquina">'+escHooks(r.value)+EXT_ICON+'</a></span>';
+    + ' title="'+escHooks(T('system.open_panel'))+'">'+escHooks(r.value)+EXT_ICON+'</a></span>';
   else val = '<span class="sysrow-val">'+escHooks(r.value)+'</span>';
   return '<div class="sysrow"><span class="sysrow-lbl">'+escHooks(r.label)+'</span>'+val+'</div>';
 }
@@ -2575,12 +2672,18 @@ function meterHTML(lbl,valTxt,pct,color){
 async function pollSystem(){
   if(document.visibilityState!=='visible') return;
   try{
-    const r = await fetch('/api/system'); const j = await r.json();
+    const r = await fetch('/api/system?' + langQuery()); state.system = await r.json();
+    renderSystem(state.system);
+  }catch(e){ /* el panel de sistema es opcional: si falla, la web sigue funcionando */ }
+}
+function renderSystem(j){
+  if(!j) return;
+  {
     let h = '';
-    if(j.ram) h += meterHTML('RAM de sistema', F1.format(j.ram.used_gb)+' / '+F1.format(j.ram.total_gb)+' GiB', j.ram.pct);
+    if(j.ram) h += meterHTML(T('system.ram'), F1.format(j.ram.used_gb)+' / '+F1.format(j.ram.total_gb)+' GiB', j.ram.pct);
     // Carga de la GPU (uso del procesador gráfico) y, debajo, VRAM (memoria llena). Sin GPU que
     // medir (otra plataforma, sin nvidia-smi) no hay `vram` y las dos filas se ocultan, como la RAM.
-    if(j.vram && j.vram.gpu_util_pct!=null) h += meterHTML('Carga de la GPU', '', j.vram.gpu_util_pct, 'var(--violet)');
+    if(j.vram && j.vram.gpu_util_pct!=null) h += meterHTML(T('system.gpu_load'), '', j.vram.gpu_util_pct, 'var(--violet)');
     if(j.vram) h += meterHTML('VRAM', F1.format(j.vram.used_mb/1024)+' / '+F1.format(j.vram.total_mb/1024)+' GiB', j.vram.pct);
     const sr = systemRows(j);
     document.getElementById('metersBody').innerHTML = h + sr.rows.map(systemRowHTML).join('');
@@ -2590,15 +2693,15 @@ async function pollSystem(){
     if(!procs.length){
       // Estado vacío: `.empty` (mono), como los demás vacíos del panel.
       tbl.innerHTML = '<tbody><tr><td class="empty" style="padding:10px 8px;color:var(--faint);border:0">'
-        + 'Ningún proceso del backend detectado.</td></tr></tbody>';
+        + T('system.no_processes') + '</td></tr></tbody>';
     }else{
-      tbl.innerHTML = '<thead><tr><th>Proceso</th><th>PID</th><th>RAM</th><th>VRAM</th></tr></thead><tbody>'
-        + procs.map(p=>`<tr><td class="mono">${p.name}${p.self?'<span class="selfchip">DAEMON MCP</span>':''}</td>
+      tbl.innerHTML = '<thead><tr><th>' + T('system.col.process') + '</th><th>PID</th><th>RAM</th><th>VRAM</th></tr></thead><tbody>'
+        + procs.map(p=>`<tr><td class="mono">${escHooks(p.name)}${p.self?'<span class="selfchip">'+T('system.daemon_chip')+'</span>':''}</td>
             <td class="mono">${p.pid}</td><td class="mono">${fmtMB(p.ram_mb||0)}</td>
             <td class="mono">${p.vram_mb!=null?fmtMB(p.vram_mb):'—'}</td></tr>`).join('')
         + '</tbody>';
     }
-  }catch(e){ /* el panel de sistema es opcional: si falla, la web sigue funcionando */ }
+  }
 }
 
 // Estado de actividad. Antes se calculaba SOLO dentro de fetchData(), con el evento más
@@ -2612,13 +2715,13 @@ function updateLive(){
     live.classList.toggle('busy',cls==='busy'); txt.textContent=label; live.title=title; };
   if(state.inflight && state.inflight.length){
     const n=state.inflight.length;
-    return set('busy','EN CURSO'+(n>1?' ('+n+')':''), plural(n,'delegación','delegaciones')+' ejecutándose ahora');
+    return set('busy',T('live.busy')+(n>1?' ('+n+')':''), T('live.busy_title', {what: plural(n,'unit.delegation')}));
   }
-  if(!a || !a.lastEventMs){ return set('stale','SIN DATOS','Todavía no hay ninguna delegación registrada'); }
+  if(!a || !a.lastEventMs){ return set('stale',T('live.no_data'),T('live.none_title')); }
   // el desfase entre el reloj del navegador y el del servidor se descuenta con a.skewMs
   const mins=(Date.now()-a.skewMs-a.lastEventMs)/6e4;
-  if(mins>IDLE_MIN) return set('stale','EN REPOSO','Última delegación '+fmtLocalTs(a.lastEventTs)+' ('+Math.round(mins)+' min)');
-  set('','EN VIVO','Última delegación '+fmtLocalTs(a.lastEventTs));
+  if(mins>IDLE_MIN) return set('stale',T('live.idle'),T('live.idle_title', {when: fmtLocalTs(a.lastEventTs), min: Math.round(mins)}));
+  set('',T('live.live'),T('live.last_title', {when: fmtLocalTs(a.lastEventTs)}));
 }
 
 function kpiCard(o){
@@ -2637,7 +2740,7 @@ function kpiCard(o){
 // fundida por Python, con `density[tipo] = [c100, origen]`. Imagen o sin densidad: 0; si no,
 // cantidad×100/c100 redondeado hacia abajo, como la división entera de Python.
 function claudeTokens(amount,kind,e){
-  if(kind!=='text'&&kind!=='returned'&&kind!=='output'&&kind!=='image') throw new Error('tipo de conversión desconocido: '+kind);
+  if(kind!=='text'&&kind!=='returned'&&kind!=='output'&&kind!=='image') throw new Error('claudeTokens: '+kind);
   if(kind==='image') return 0;
   const cell = e && e.density ? e.density[kind] : null;
   if(!cell) return 0;
@@ -2710,35 +2813,38 @@ function render(){
   const estN = s.estimated_events||0;
   // Las llamadas de más salen de trocear o de un respaldo que respondió: las dos gastan backend.
   // El desglose va al tooltip del ⓘ: la pista de cada KPI es UNA línea corta (REQ de simetría).
-  const extra = bCalls>nEv ? ' Desglose: +'+F.format(bCalls-nEv)+' por trocear o saltar' : '';
-  const estTxt = estN ? ' En este rango: '+plural(estN,'estimado','estimados')+'.' : '';
+  const extra = bCalls>nEv ? T('kpi.calls.breakdown', {n: F.format(bCalls-nEv)}) : '';
+  const estTxt = estN ? T('kpi.gen.estimated', {what: plural(estN,'unit.estimated')}) : '';
   const fbN = s.fallback_events||0;
-  const fbTxt = fbN ? (extra ? ', ' : ' Desglose: ')+F.format(fbN)+' con salto' : '';
+  const fbTxt = fbN ? T(extra ? 'kpi.calls.breakdown_fb_more' : 'kpi.calls.breakdown_fb', {n: F.format(fbN)}) : '';
+  // Los textos van al HTML (etiqueta, `title` y `data-tip`): se escapan una vez aquí.
+  const A = s => escHooks(s);
 
   document.getElementById('kpis').innerHTML =
     kpiCard({hero:true,icon:ICON.save,kc:'var(--acc)',val:F.format(net),unit:'tok',
-       lbl:'Contexto conservado',
-       hint:'bruto <span class="num">'+F.format(saved)+'</span> − devuelto <span class="num">'+F.format(returned)+'</span>',
-       tip:'Neto: lo que el MCP leyó server-side (source=path) o escribió a un fichero y no viajó al contexto de Claude, menos lo que la tool devolvió a tu contexto. Se cuenta UNA vez por delegación aunque se trocee, y los fallos no suman. No descuenta relecturas: si luego lees tú el mismo fichero, eso no se resta.'})
-    + kpiCard({icon:ICON.calls,kc:'var(--blue)',val:F.format(nEv),lbl:'Delegaciones',
-       hint:'<span class="num">'+F.format(bCalls)+'</span> '+(bCalls===1?'llamada':'llamadas')+' al backend',
-       tip:'Invocaciones a tools locales. Una delegación troceada gasta N llamadas al backend: por eso las dos cifras pueden no coincidir.'+extra+fbTxt+((extra||fbTxt)?'.':'')})
-    + kpiCard({icon:ICON.gen,kc:'var(--violet)',val:F.format(gen),unit:'tok',lbl:'Generado',
-       hint:'salida de los modelos locales',tip:'Tokens de salida que reportó el backend (usage.completion_tokens). Solo se estima con chars÷4 cuando el backend no los da.'+estTxt})
-    + kpiCard({icon:ICON.cost,kc:'var(--amber)',val:F.format(costIn),unit:'tok',lbl:'Coste local',
-       hint:'entrada leída por la GPU',
-       tip:'Tokens de entrada que consumió de verdad el backend (usage.prompt_tokens), sumando TODAS las llamadas. Incluye el prompt de sistema repetido en cada trozo: por eso crece con el troceo y el contexto conservado no. Son tokens del modelo local, no de Claude.'})
+       lbl:A(T('kpi.saved.label')),
+       hint:T('kpi.saved.hint_html', {gross: F.format(saved), returned: F.format(returned)}),
+       tip:A(T('kpi.saved.tip'))})
+    + kpiCard({icon:ICON.calls,kc:'var(--blue)',val:F.format(nEv),lbl:A(T('kpi.calls.label')),
+       hint:T('kpi.calls.hint_html', {n: F.format(bCalls), calls: A(T(bCalls===1 ? 'unit.call.one' : 'unit.call.other'))}),
+       tip:A(T('kpi.calls.tip')+extra+fbTxt+((extra||fbTxt)?'.':''))})
+    + kpiCard({icon:ICON.gen,kc:'var(--violet)',val:F.format(gen),unit:'tok',lbl:A(T('kpi.gen.label')),
+       hint:A(T('kpi.gen.hint')),tip:A(T('kpi.gen.tip')+estTxt)})
+    + kpiCard({icon:ICON.cost,kc:'var(--amber)',val:F.format(costIn),unit:'tok',lbl:A(T('kpi.cost.label')),
+       hint:A(T('kpi.cost.hint')),
+       tip:A(T('kpi.cost.tip'))})
     // La unidad va dentro del valor («116,9 s», «< 0,1 s»): `fmtSec` decide la forma entera.
-    + kpiCard({icon:ICON.lat,kc:'var(--mut)',val:escHooks(fmtSec(lat)),lbl:'Latencia',
-       hint:'con la carga del modelo',tip:'Promedio de latency_ms. La 1ª llamada a cada modelo paga la carga en VRAM vía llama-swap.'})
-    + kpiCard({icon:ICON.err,kc:errs?'var(--danger)':'var(--acc)',val:errPct,unit:'%',lbl:'Errores',
-       hint:'<span class="num">'+F.format(errs)+'</span> '+(errs===1?'fallo':'fallos'),tip:'Porcentaje de llamadas con ok=false.'});
+    + kpiCard({icon:ICON.lat,kc:'var(--mut)',val:escHooks(fmtSec(lat)),lbl:A(T('kpi.latency.label')),
+       hint:A(T('kpi.latency.hint')),tip:A(T('kpi.latency.tip'))})
+    + kpiCard({icon:ICON.err,kc:errs?'var(--danger)':'var(--acc)',val:errPct,unit:'%',lbl:A(T('kpi.errors.label')),
+       hint:T('kpi.errors.hint_html', {n: F.format(errs), what: A(T(errs===1 ? 'unit.failure.one' : 'unit.failure.other'))}),
+       tip:A(T('kpi.errors.tip'))});
 
   if(HAS_CHART){
     drawSpark(ev); drawTs(ev); drawToolDonut(ev); drawModelBar(ev); drawSrcDonut(ev);
   } else {
     document.querySelectorAll('.cbox').forEach(el=>{
-      el.innerHTML='<div class="empty">Gráficos no disponibles: no se pudo cargar Chart.js (¿sin conexión?). El resto del panel funciona igual.</div>';
+      el.innerHTML='<div class="empty">' + T('chart.unavailable') + '</div>';
     });
   }
   drawActivity(ev);
@@ -2781,10 +2887,10 @@ function drawTs(ev){
   const acc=cssv('--acc'), blue=cssv('--blue'), grid=hexA(cssv('--bd'),.6), mut=cssv('--mut');
   state.charts.tsChart = new Chart(fresh('tsChart'),{
     data:{labels:days.map(d=>d[0]),datasets:[
-      {type:'bar',label:'tokens netos',data:days.map(d=>d[1].net),order:2,
+      {type:'bar',label:T('chart.ts.net'),data:days.map(d=>d[1].net),order:2,
         backgroundColor:c=>vGrad(c.chart,hexA(acc,.35),acc),hoverBackgroundColor:cssv('--acc2'),
         borderRadius:6,maxBarThickness:46},
-      {type:'line',label:'delegaciones',data:days.map(d=>d[1].calls),order:1,yAxisID:'y1',
+      {type:'line',label:T('chart.ts.calls'),data:days.map(d=>d[1].calls),order:1,yAxisID:'y1',
         borderColor:blue,borderWidth:2,pointRadius:3,pointBackgroundColor:blue,
         pointBorderColor:cssv('--panel'),pointBorderWidth:1.5,tension:.35,fill:true,
         backgroundColor:c=>vGrad(c.chart,hexA(blue,0),hexA(blue,.14))}]},
@@ -2827,7 +2933,7 @@ function barH(id,pairs,unit,color){
 // Neto por herramienta, de TODAS las fuentes (la salida a fichero también ahorra) y con signo:
 // una herramienta que devuelve más de lo que ahorra sale a la izquierda del 0 (REQ-004).
 function drawToolDonut(ev){ barH('toolDonut',agg(ev,'tool',e=>acct(e).net,{withNegatives:true}),'tok',cssv('--acc')); }
-function drawModelBar(ev){ barH('modelBar',agg(ev,'model',()=>1),'llamadas',cssv('--violet')); }
+function drawModelBar(ev){ barH('modelBar',agg(ev,'model',()=>1),T('chart.model.unit'),cssv('--violet')); }
 
 // Local vs remoto: dónde corrió la INFERENCIA de cada delegación. Los eventos anteriores a
 // que se registrara el campo salen como "n/d" en vez de asumirse locales.
@@ -2838,56 +2944,58 @@ function drawSrcDonut(ev){
   const pct=total?Math.round(100*pathN/total):0;
   const colFor=l=>l==='path'?cssv('--acc'):l==='inline'?cssv('--mut'):cssv('--blue');
   if(!pairs.length){ return state.charts.srcDonut=new Chart(el,{type:'doughnut',
-    data:{labels:['sin datos'],datasets:[{data:[1],backgroundColor:[cssv('--bd')],borderWidth:0}]},
+    data:{labels:[T('chart.no_data')],datasets:[{data:[1],backgroundColor:[cssv('--bd')],borderWidth:0}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},centerText:false}}}); }
   state.charts.srcDonut=new Chart(el,{type:'doughnut',
     data:{labels:pairs.map(p=>labelFor('source', p[0])),datasets:[{data:pairs.map(p=>p[1]),
       backgroundColor:pairs.map(p=>colFor(p[0])),borderColor:cssv('--panel'),borderWidth:3,hoverOffset:6}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'70%',
-      plugins:{centerText:{text:F.format(pct)+' %',sub:'por ruta',color:cssv('--acc')},
+      plugins:{centerText:{text:F.format(pct)+' %',sub:T('chart.src.center'),color:cssv('--acc')},
         legend:{position:'bottom',labels:{color:cssv('--mut'),boxWidth:9,boxHeight:9,usePointStyle:true,pointStyle:'circle',padding:14,font:{size:11}}},
-        tooltip:{callbacks:{label:c=>' '+c.label+': '+F.format(c.parsed)+' llamadas'}}}}});
+        tooltip:{callbacks:{label:c=>T('chart.src.tooltip', {label: c.label, n: F.format(c.parsed)})}}}}});
 }
 
 // Espera frente a lentitud (REQ-027). `slowMark` marca una llamada que generó por debajo de la
 // velocidad normal de su modelo: «lento ×0,37». Sin `slow`, nada. Funciones puras: las corre node.
 function slowMark(e){
   if(!e || e.slow!==true || e.pace_rel===null || e.pace_rel===undefined) return '';
-  return 'lento ×' + fmtNum(e.pace_rel, 2);
+  return T('activity.slow', {x: fmtNum(e.pace_rel, 2)});
 }
 // La espera (turno, plaza, cola de llama-swap, carga) y la inferencia, por separado. Sin
 // `inference_ms` (backend sin `timings`), nada: no se inventa un reparto.
 function waitInferenceText(e){
   if(!e || e.inference_ms===null || e.inference_ms===undefined) return '';
-  return 'espera ' + fmtSec(e.wait_ms) + ' · inferencia ' + fmtSec(e.inference_ms);
+  return T('activity.split', {wait: fmtSec(e.wait_ms), inference: fmtSec(e.inference_ms)});
 }
 
 function drawActivity(ev){
-  document.getElementById('actCount').textContent=plural(ev.length,'llamada','llamadas');
+  document.getElementById('actCount').textContent=plural(ev.length,'unit.call');
   const pager=document.getElementById('pager');
   if(!ev.length){
-    document.getElementById('activity').innerHTML='<tbody><tr><td class="empty">Sin actividad en el rango seleccionado.</td></tr></tbody>';
+    document.getElementById('activity').innerHTML='<tbody><tr><td class="empty">' + T('activity.empty') + '</td></tr></tbody>';
     pager.style.display='none'; return;
   }
   const pages=Math.max(1,Math.ceil(ev.length/PAGE));
   state.page=Math.min(Math.max(state.page,0),pages-1);
   const rows=ev.slice(state.page*PAGE,state.page*PAGE+PAGE);
-  let h='<thead><tr><th>Hora</th><th>Tool</th><th>Modelo</th><th>Input</th><th>Cómputo</th><th>Chars in→out</th><th>Latencia</th><th>OK</th></tr></thead><tbody>';
+  const COLS=['time','tool','model','input','compute','chars','latency','ok'];
+  let h='<thead><tr>'+COLS.map(c=>'<th>'+T('activity.col.'+c)+'</th>').join('')+'</tr></thead><tbody>';
   rows.forEach(e=>{ const time=fmtLocalTs(e.ts);   // hora LOCAL, el log guarda UTC
     const org=e.backend||'unknown';
-    const orgTxt=org==='remote'?'Remoto':org==='local'?'Local':'Sin dato';   // = LABELS.origin
+    const orgTxt=escHooks(labelFor('origin', org));
     // `chunks` del log son LLAMADAS al backend, no trozos: el título decía otra cosa que el dato
-    const chunks=e.chunks?`<span class="chunkchip" title="Gastó ${e.chunks} llamadas al backend (troceado)">${e.chunks}×</span>`:'';
+    const chunks=e.chunks?`<span class="chunkchip" title="${escHooks(T('activity.chunks_title', {n: e.chunks}))}">${e.chunks}×</span>`:'';
     // Hubo salto: respondió un respaldo. Se marca para que nadie lea esta fila como del modelo pedido.
-    const fb=(e.model_requested && e.routing!=='affinity')?`<span class="chunkchip fbchip" title="Respondió ${e.model} en lugar de ${e.model_requested} (${e.fallback_reason||e.fallback_class||'sin causa'})">↪ ${e.model_requested}</span>`:'';
-    const cause=(e.ok===false&&e.error_class)?` title="causa: ${e.error_class}"`:'';
+    // El motivo (`fallback_reason`) es prosa ya escrita en el log y se enseña tal cual (REQ-033).
+    const fb=(e.model_requested && e.routing!=='affinity')?`<span class="chunkchip fbchip" title="${escHooks(T('activity.fallback_title', {model: e.model, requested: e.model_requested, cause: e.fallback_reason||e.fallback_class||T('activity.no_cause')}))}">↪ ${e.model_requested}</span>`:'';
+    const cause=(e.ok===false&&e.error_class)?` title="${escHooks(T('activity.cause_title', {cause: e.error_class}))}"`:'';
     const split=waitInferenceText(e), slow=slowMark(e);
     const timings=split?`<div class="mut" style="font-size:10px">${escHooks(split)}</div>`:'';
-    const slowChip=slow?`<span class="chunkchip slowchip" title="Generó a ${escHooks(fmtNum(e.tok_s,1))} tok/s, por debajo de la velocidad normal de ${e.model}">${escHooks(slow)}</span>`:'';
+    const slowChip=slow?`<span class="chunkchip slowchip" title="${escHooks(T('activity.slow_title', {speed: fmtNum(e.tok_s,1), model: e.model}))}">${escHooks(slow)}</span>`:'';
     h+=`<tr><td class="mono" title="${e.ts||''}">${time}</td><td><span class="badge">${e.tool}</span>${chunks}</td>
       <td><span class="badge model">${e.model}</span>${fb}</td>
       <td><span class="src ${e.source}">${e.source}</span></td>
-      <td><span class="org ${org}" title="${e.backend_host||'sin dato'}">${orgTxt}</span></td>
+      <td><span class="org ${org}" title="${escHooks(e.backend_host||T('label.no_data'))}">${orgTxt}</span></td>
       <td class="mono">${F.format(e.chars_in||0)} <span class="flow">→</span> ${F.format(e.chars_out||0)}</td>
       <td class="mono">${escHooks(fmtSec(e.latency_ms))}${slowChip}${timings}</td>
       <td><span class="dot ${e.ok===false?'err':'ok'}"${cause}></span></td></tr>`; });
@@ -2937,6 +3045,35 @@ document.getElementById('tests').onclick=()=>{
   try{ localStorage.setItem('ld-tests', state.tests ? '1' : '0'); }catch(e){}
   fetchData();
 };
+// Selector de idioma (REQ-020). Lo ya pintado se repinta al momento con los datos que hay; lo que
+// redacta el servidor (causas, motivos, resúmenes de tools) llega con el refresco que se pide ya
+// (REQ-025: como muy tarde en el siguiente refresco). No toca el rango, los filtros ni la sesión.
+function applyStatic(){
+  document.documentElement.lang = LANG;
+  document.title = T('page.title');
+  const meta = document.querySelector('meta[name="description"]');
+  if(meta) meta.setAttribute('content', T('page.description'));
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = T(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = T(el.dataset.i18nHtml); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = T(el.dataset.i18nTitle); });
+  document.querySelectorAll('[data-i18n-aria]').forEach(el => { el.setAttribute('aria-label', T(el.dataset.i18nAria)); });
+  document.getElementById('lang').value = LANG;
+}
+function repaint(){
+  renderClients(state.stats); renderCost(state.stats); renderTestsInfo(state.stats);
+  renderHooks(state.hooks); render(); updateLive(); renderFoot();
+  renderBackend(); renderTools(); renderInflight(); renderBackendStats(state.backendStats);
+  renderSystem(state.system);
+  if(infoDlg.open && infoDlg.dataset.group) openInfo(infoDlg.dataset.group);
+}
+function setLang(lang){
+  if(!LANGS.includes(lang) || lang === LANG) return;
+  LANG = lang;
+  try{ localStorage.setItem('ld-lang', LANG); }catch(e){ /* sin almacenamiento: vale para esta visita */ }
+  applyStatic(); applyDefaults(); repaint();
+  fetchData(); fetchStatus(); pollNow(); pollSystem();
+}
+document.getElementById('lang').onchange=e=>setLang(e.target.value);
 document.getElementById('pgPrev').onclick=()=>{ state.page--; drawActivity(state.events); };
 document.getElementById('pgNext').onclick=()=>{ state.page++; drawActivity(state.events); };
 const helpDlg=document.getElementById('helpDlg');
@@ -2947,16 +3084,18 @@ helpDlg.addEventListener('click',e=>{ if(e.target===helpDlg) helpDlg.close(); })
 // Esc lo cierra (es un <dialog> modal) y el foco vuelve al botón que lo abrió.
 const infoDlg=document.getElementById('infoDlg');
 const INFO_GROUPS = {
-  cost:{title:'Coste, cuota e imágenes', icon:ICON.cost, color:'var(--amber)'},
-  hooks:{title:'Sugerencias de los hooks', icon:ICON.info, color:'var(--amber)'},
-  system:{title:'Sistema', icon:ICON.gen, color:'var(--amber)'},
-  tests:{title:'Pruebas', icon:ICON.info, color:'var(--amber)'},
+  cost:{title:'info.cost', icon:ICON.cost, color:'var(--amber)'},
+  hooks:{title:'info.hooks', icon:ICON.info, color:'var(--amber)'},
+  system:{title:'info.system', icon:ICON.gen, color:'var(--amber)'},
+  tests:{title:'info.tests', icon:ICON.info, color:'var(--amber)'},
 };
 function openInfo(group, section){
   const g = INFO_GROUPS[group] || INFO_GROUPS.cost;
-  document.getElementById('infoDlgTitle').textContent = g.title;
+  infoDlg.dataset.group = INFO_GROUPS[group] ? group : 'cost';
+  document.getElementById('infoDlgTitle').textContent = T(g.title);
   const ico = document.getElementById('infoDlgIco'); ico.innerHTML = g.icon; ico.style.setProperty('--kc', g.color);
   infoDlg.querySelectorAll('section[data-group]').forEach(s => { s.hidden = s.dataset.group !== group; });
+  if(infoDlg.open) return;   // el selector de idioma lo repinta abierto: solo cambia el texto
   infoDlg.showModal();
   const sec = section && document.getElementById(section);
   const first = infoDlg.querySelector('section[data-group="' + group + '"]');
@@ -2969,6 +3108,7 @@ document.querySelectorAll('.ibtn[data-group]').forEach(b=>{
 document.getElementById('infoDlgClose').onclick=()=>infoDlg.close();
 infoDlg.addEventListener('click',e=>{ if(e.target===infoDlg) infoDlg.close(); });
 try{const th=localStorage.getItem('ld-theme'); if(th) document.documentElement.setAttribute('data-theme',th);}catch(e){}
+applyStatic();
 applyDefaults();
 setInterval(()=>{ if(state.auto) fetchData(); },15000);
 setInterval(pollSystem,5000);

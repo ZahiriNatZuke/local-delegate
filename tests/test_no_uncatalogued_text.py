@@ -44,13 +44,16 @@ SURFACE_OWNERS = {
     "install": "B5",
 }
 #: Superficies cuya ola ya vació su lista: su fichero de pendientes se borra (decisión 9 de B1).
-CLOSED_SURFACES = frozenset({"doctor", "cli", "mcp"})
+CLOSED_SURFACES = frozenset({"doctor", "cli", "mcp", "panel"})
 #: Scripts del repo que entran en el alcance: sus rótulos los imprime B1 (A-close-5).
 SCRIPTS_IN_SCOPE = ("measure_cooldown.py", "pair_sheet.py", "analyze_benchmark.py")
 #: El escáner del panel (literales del JS y texto y atributos del HTML de `web/metrics.py`) lo
-#: escribe B4, dueña de `metrics.py`. Mientras sea `False`, `metrics.py` no puede salir de la lista.
-PANEL_SCANNER_IMPLEMENTED = False
+#: escribió B4, dueña de `metrics.py` (`scan_panel`, abajo).
+PANEL_SCANNER_IMPLEMENTED = True
 PANEL_FILE = "src/local_delegate/web/metrics.py"
+#: Constantes de módulo que son la plantilla del panel: se recorren con `scan_panel` (JS y HTML) y
+#: no como un solo literal de Python.
+PANEL_TEMPLATES = {PANEL_FILE: frozenset({"HTML"})}
 #: Prefijos de contrato que se quedan tal cual en cualquier idioma (i18n §1 c).
 #: Prefijo de error y marcadores de REQ-010 (B2b-1): valores de máquina del contrato de las tools MCP.
 CONTRACT_PREFIXES = (
@@ -213,11 +216,32 @@ def _literals(root: ast.AST, skip: set[int]) -> list[tuple[int, str]]:
     return found
 
 
+def _template_nodes(tree: ast.Module, names: frozenset[str]) -> list[ast.Constant]:
+    """Los literales asignados a las constantes de plantilla (`HTML = r\"\"\"…\"\"\"`)."""
+    found = []
+    for stmt in tree.body:
+        targets = stmt.targets if isinstance(stmt, ast.Assign) else []
+        if (
+            any(isinstance(t, ast.Name) and t.id in names for t in targets)
+            and isinstance(stmt.value, ast.Constant)
+            and isinstance(stmt.value.value, str)
+        ):
+            found.append(stmt.value)
+    return found
+
+
 def scan_source(source: str, rel: str) -> list[Hit]:
-    """Las apariciones de texto para personas de un fichero Python, por las dos redes."""
+    """Las apariciones de texto para personas de un fichero Python, por las dos redes.
+
+    Si el fichero tiene plantilla de panel (`PANEL_TEMPLATES`), esa constante no se mira como un
+    literal de Python sino con `scan_panel`, con las líneas del fichero.
+    """
     tree = ast.parse(source)
     skip = _docstring_ids(tree) | _catalog_key_ids(tree)
     hits: set[Hit] = set()
+    for node in _template_nodes(tree, PANEL_TEMPLATES.get(rel, frozenset())):
+        skip.add(id(node))
+        hits.update(scan_panel(node.value, rel, first_line=node.lineno))
     for root in _output_nodes(tree):
         for line, text in _literals(root, skip):
             if is_human_text(text):
@@ -226,6 +250,170 @@ def scan_source(source: str, rel: str) -> list[Hit]:
         if _ACCENTS.search(text):
             hits.add(Hit(rel, line, text, "accent"))
     return sorted(hits, key=lambda hit: (hit.line, hit.net, hit.text))
+
+
+# --- El panel: el JS y el HTML de la plantilla (B4) ----------------------------------------------
+#
+# En el panel TODO literal del JS puede acabar en pantalla, así que todos son contexto de salida; lo
+# que los separa de un nombre de máquina es `is_human_text`, igual que en Python. Un literal con
+# marcado (`'<th>Proceso</th>'`) se mira sin las etiquetas y, aparte, el valor de sus atributos
+# visibles. En el HTML cuenta el texto entre etiquetas y esos mismos atributos; el CSS, los
+# comentarios y los `data-i18n*` (claves del catálogo) no.
+
+#: Atributos que el navegador enseña a la persona.
+_VISIBLE_ATTRS = ("title", "aria-label", "placeholder", "alt", "content", "label")
+_ATTR_RE = re.compile(r"\b(?:{})\s*=\s*\"([^\"]*)\"".format("|".join(_VISIBLE_ATTRS)))
+_TAG_RE = re.compile(r"<[^<>]*>")
+#: Lo que precede a una `/` que abre una expresión regular (y no una división).
+_REGEX_PRECEDERS = set("(,=:[!&|?{};+-*%<>~^") | {""}
+_JS_KEYWORDS_BEFORE_REGEX = ("return", "typeof", "case", "in", "of")
+
+
+def js_strings(js: str) -> list[tuple[int, str]]:
+    """(línea, texto) de cada literal de cadena del JS, sin comentarios ni expresiones regulares.
+
+    Un template cuenta como un solo texto con `{}` en cada `${…}`, y lo que va dentro del hueco se
+    recorre como código (sus cadenas cuentan aparte).
+    """
+    found: list[tuple[int, str]] = []
+    n = len(js)
+
+    def line_of(i: int) -> int:
+        return js.count("\n", 0, i) + 1
+
+    def prev_token(i: int) -> str:
+        j = i - 1
+        while j >= 0 and js[j] in " \t\r\n":
+            j -= 1
+        if j < 0:
+            return ""
+        if js[j].isalnum() or js[j] in "_$":
+            k = j
+            while k >= 0 and (js[k].isalnum() or js[k] in "_$"):
+                k -= 1
+            return js[k + 1 : j + 1]
+        return js[j]
+
+    def quoted(i: int) -> int:
+        quote, j, chars = js[i], i + 1, []
+        while j < n and js[j] != quote:
+            if js[j] == "\\" and j + 1 < n:
+                chars.append(js[j + 1])
+                j += 2
+                continue
+            chars.append(js[j])
+            j += 1
+        found.append((line_of(i), "".join(chars)))
+        return j + 1
+
+    def regex(i: int) -> int:
+        j, in_class = i + 1, False
+        while j < n:
+            c = js[j]
+            if c == "\\":
+                j += 2
+                continue
+            if c == "[":
+                in_class = True
+            elif c == "]":
+                in_class = False
+            elif c == "/" and not in_class:
+                break
+            j += 1
+        j += 1
+        while j < n and js[j].isalpha():
+            j += 1
+        return j
+
+    def template(i: int) -> int:
+        j, parts = i + 1, []
+        while j < n and js[j] != "`":
+            if js[j] == "\\" and j + 1 < n:
+                parts.append(js[j + 1])
+                j += 2
+            elif js.startswith("${", j):
+                parts.append("{}")
+                j = code(j + 2, until_brace=True)
+            else:
+                parts.append(js[j])
+                j += 1
+        found.append((line_of(i), "".join(parts)))
+        return j + 1
+
+    def code(i: int, until_brace: bool = False) -> int:
+        depth = 0
+        while i < n:
+            c = js[i]
+            if js.startswith("//", i):
+                i = js.find("\n", i)
+                i = n if i < 0 else i
+            elif js.startswith("/*", i):
+                i = js.find("*/", i + 2)
+                i = n if i < 0 else i + 2
+            elif c in "'\"":
+                i = quoted(i)
+            elif c == "`":
+                i = template(i)
+            elif c == "/" and (
+                prev_token(i) in _REGEX_PRECEDERS or prev_token(i) in _JS_KEYWORDS_BEFORE_REGEX
+            ):
+                i = regex(i)
+            elif c == "{":
+                depth += 1
+                i += 1
+            elif c == "}":
+                if until_brace and depth == 0:
+                    return i + 1
+                depth -= 1
+                i += 1
+            else:
+                i += 1
+        return i
+
+    code(0)
+    return found
+
+
+def _visible_parts(fragment: str) -> list[str]:
+    """Lo que una persona lee de un trozo de HTML: el texto sin etiquetas y los atributos visibles."""
+    attrs = _ATTR_RE.findall(fragment)
+    text = _TAG_RE.sub(" ", _ATTR_RE.sub(" ", fragment))
+    return [text, *attrs]
+
+
+def scan_panel(template: str, rel: str, first_line: int = 1) -> list[Hit]:
+    """Las apariciones de texto para personas en la plantilla del panel (JS y HTML)."""
+    hits: set[Hit] = set()
+
+    def add(offset: int, text: str) -> None:
+        for part in _visible_parts(text):
+            if is_human_text(part):
+                hits.add(Hit(rel, first_line + offset, part.strip(), "context"))
+
+    for m in re.finditer(r"<script>(.*?)</script>", template, re.DOTALL):
+        base = template.count("\n", 0, m.start(1))
+        for line, text in js_strings(m.group(1)):
+            add(base + line - 1, text)
+    markup = re.sub(
+        r"<script>.*?</script>|<style>.*?</style>|<!--.*?-->",
+        lambda m: "\n" * m.group(0).count("\n"),
+        template,
+        flags=re.DOTALL,
+    )
+    for m in re.finditer(r">([^<]+)<", markup):
+        if is_human_text(m.group(1)):
+            hits.add(
+                Hit(
+                    rel,
+                    first_line + markup.count("\n", 0, m.start()),
+                    m.group(1).strip(),
+                    "context",
+                )
+            )
+    for m in _ATTR_RE.finditer(markup):
+        if is_human_text(m.group(1)):
+            hits.add(Hit(rel, first_line + markup.count("\n", 0, m.start()), m.group(1), "context"))
+    return sorted(hits, key=lambda hit: (hit.line, hit.text))
 
 
 # --- Datos: alcance, pendientes y excepciones -----------------------------------------------------
@@ -451,3 +639,64 @@ def test_a_contract_prefix_must_be_a_known_one():
     unknown = {**known, "text": "[local-delegate otro aviso]"}
     assert exception_problems([known]) == []
     assert exception_problems([unknown]) != []
+
+
+# --- El escáner del panel, sobre plantillas sintéticas y sobre la de verdad (control positivo) ---
+
+
+@pytest.mark.parametrize(
+    "template",
+    [
+        "<body><h2>Latencia</h2></body>",
+        '<body><button title="Rango temporal"></button></body>',
+        "<script>el.textContent = 'Cargando';</script>",
+        "<script>h += '<th>Proceso</th>';</script>",
+        "<script>x = `<td>${n} llamadas al backend</td>`;</script>",
+        "<script>el.innerHTML = '<span title=\"Abrir el panel\">x</span>';</script>",
+        "<script>x = `${a ? 'Sin datos' : ''}`;</script>",
+    ],
+)
+def test_panel_text_outside_the_catalog_is_caught(template):
+    assert scan_panel(template, "x.py") != []
+
+
+@pytest.mark.parametrize(
+    "template",
+    [
+        '<body><h2 data-i18n="backend.title"></h2></body>',
+        "<script>el.textContent = T('kpi.latency.label');</script>",
+        "<script>// Latencia del modelo\nconst re = /[&<>\"']/g; x = 'none';</script>",
+        "<script>/* Un comentario\n con texto */ y = a / b / 'c';</script>",
+        '<style>.x{content:"Hola mundo"}</style><!-- Un comentario largo -->',
+        "<script>c.className = ['pill', 'org', o].join(' ');</script>",
+        "<body><span>ES</span><b>·</b></body>",
+    ],
+)
+def test_panel_machine_text_and_keys_are_not_caught(template):
+    assert scan_panel(template, "x.py") == []
+
+
+def test_the_real_panel_with_one_word_left_untranslated_is_caught():
+    """Control positivo sobre la plantilla de verdad: «Latencia» fuera del catálogo salta."""
+    from local_delegate.web import metrics
+
+    assert scan_panel(metrics.HTML, PANEL_FILE) == []
+    mutated = metrics.HTML.replace("lbl:A(T('kpi.latency.label'))", "lbl:'Latencia'")
+    assert mutated != metrics.HTML
+    assert [hit.text for hit in scan_panel(mutated, PANEL_FILE)] == ["Latencia"]
+
+
+def test_the_panel_template_is_scanned_through_scan_source():
+    """`metrics.py` entra al guardián por `scan_source`: su plantilla no es un literal opaco."""
+    source = (ROOT / PANEL_FILE).read_text(encoding="utf-8")
+    mutated = source.replace("lbl:A(T('kpi.latency.label'))", "lbl:'Latencia'")
+    assert mutated != source
+    hits = scan_source(mutated, PANEL_FILE)
+    assert [hit.text for hit in hits] == ["Latencia"]
+    assert (
+        hits[0].line
+        == source.splitlines().index(
+            next(line for line in source.splitlines() if "kpi.latency.label" in line)
+        )
+        + 1
+    )

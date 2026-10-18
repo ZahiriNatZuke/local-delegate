@@ -20,7 +20,7 @@ from collections import Counter
 from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 
-from . import legacy_names
+from . import i18n, legacy_names
 
 TYPES = ("five_hour", "seven_day")
 DURATION = {"five_hour": timedelta(hours=5), "seven_day": timedelta(days=7)}
@@ -36,11 +36,17 @@ MARK_CHECK_ONLY = "check_only"
 MARK_OTHER_SURFACES = "low_bound_if_other_surfaces"
 MARK_RESET = "reset"
 
-REJECTION_WARNING = (
-    "la calibración da menos capacidad que un rechazo observado: probable uso en otras superficies"
-)
-NO_DATA = "no hay datos de calibración en esta máquina"
-NO_STATUSLINE = "no hay registro del statusline en esta máquina: no se puede calibrar"
+#: Claves del catálogo (`panel.json`) de los textos que llegan al panel por `/api/stats` (REQ-025).
+REJECTION_WARNING = "panel.quota.warning.rejection"
+NO_DATA = "panel.quota.reason.no_data"
+NO_STATUSLINE = "panel.quota.reason.no_statusline"
+MISSING_POINTS = "panel.quota.reason.missing_points"
+HIGH_DISPERSION = "panel.quota.reason.high_dispersion"
+
+
+def _text(language: str | None, key: str, /, **values: object) -> str:
+    """El texto de `key` en `language` (el del visitante del panel) o, sin él, en el del proceso."""
+    return i18n.t_lang(language or i18n.lang(), key, **values)
 
 
 def _iso(t: datetime) -> str:
@@ -314,13 +320,13 @@ def drift(cs: list[float]) -> int | None:
     return s if drifted else None
 
 
-def _pct(x: float) -> str:
-    return f"{x * 100:.1f}".replace(".", ",") + " %"
+def _pct(x: float, language: str | None = None) -> str:
+    return i18n.format_number(x * 100, 1, language=language or i18n.lang()) + " %"
 
 
-def criterion(cs: list[float]) -> dict:
+def criterion(cs: list[float], language: str | None = None) -> dict:
     """Estado de un tipo a partir de las capacidades de sus puntos del statusline vigentes, en
-    orden cronológico (REQ-055 y REQ-056)."""
+    orden cronológico (REQ-055 y REQ-056). `language` es el de los motivos (REQ-025)."""
     k = drift(cs)
     if k is not None:
         cs = cs[k:]
@@ -330,12 +336,15 @@ def criterion(cs: list[float]) -> dict:
     if len(cs) < MIN_POINTS:
         r.update(
             status="uncalibrated",
-            reason=f"faltan {MIN_POINTS - len(cs)} puntos del statusline",
+            reason=_text(language, MISSING_POINTS, n=MIN_POINTS - len(cs)),
         )
         return r
     d = dispersion(cs)
     if d >= THRESHOLD:
-        r.update(status="uncalibrated", reason=f"dispersión {_pct(d)} ≥ 25 %")
+        r.update(
+            status="uncalibrated",
+            reason=_text(language, HIGH_DISPERSION, value=_pct(d, language)),
+        )
         return r
     r.update(status="calibrated", median_C=statistics.median(cs))
     return r
@@ -344,9 +353,12 @@ def criterion(cs: list[float]) -> dict:
 # --- Lo que pinta el panel --------------------------------------------------------------------
 
 
-def status(aggregates: dict | None, now: datetime) -> dict[str, dict]:
+def status(aggregates: dict | None, now: datetime, language: str | None = None) -> dict[str, dict]:
     """Por tipo: estado, puntos vigentes, rechazos, dispersión, descartes, deriva, reinicio y qué
     falta (REQ-059), o la capacidad si está calibrado (REQ-060) y el aviso de REQ-058.
+
+    Los motivos y el aviso salen redactados en `language` (el panel pasa el del visitante, D6) o,
+    sin él, en el idioma del proceso.
 
     Aplica la vigencia AL LEER (REQ-054): un punto caduca aunque el JSON no se regenere.
     """
@@ -354,7 +366,7 @@ def status(aggregates: dict | None, now: datetime) -> dict[str, dict]:
         return {
             kind: {
                 "status": "uncalibrated",
-                "reason": NO_DATA,
+                "reason": _text(language, NO_DATA),
                 "points": 0,
                 "rejection_points": 0,
                 "discards": {},
@@ -393,7 +405,7 @@ def status(aggregates: dict | None, now: datetime) -> dict[str, dict]:
             discards["expired"] = discards.get("expired", 0) + len(sl) - without_reset
         if without_reset > len(valid):
             discards["reset"] = discards.get("reset", 0) + without_reset - len(valid)
-        r = criterion([float(p["C"]) for p in valid])
+        r = criterion([float(p["C"]) for p in valid], language)
         r.update(
             rejection_points=len(rejections_valid),
             discards=discards,
@@ -402,12 +414,12 @@ def status(aggregates: dict | None, now: datetime) -> dict[str, dict]:
         if r["status"] == "calibrated" and any(
             r["median_C"] < float(p["C"]) for p in rejections_valid
         ):
-            r["warning"] = REJECTION_WARNING
+            r["warning"] = _text(language, REJECTION_WARNING)
         if isinstance(sources, dict) and sources and r["status"] != "calibrated":
             # REQ-061: sin fuentes en esta máquina, el bloque lo dice en vez de «faltan k».
             if not sources.get("statusline") and not sources.get("transcripts"):
-                r["reason"] = NO_DATA
+                r["reason"] = _text(language, NO_DATA)
             elif not sources.get("statusline"):
-                r["reason"] = NO_STATUSLINE
+                r["reason"] = _text(language, NO_STATUSLINE)
         out[kind] = r
     return out

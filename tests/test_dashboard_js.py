@@ -59,7 +59,23 @@ def _legacy() -> str:
     return f"const LEGACY_VALUES = {table};\n" + _extract("function legacyValue(")
 
 
-def _run(tmp_path, functions: list[str], body: str, prelude: str = ""):
+def i18n_prelude(lang: str = "es") -> str:
+    """El catálogo `panel.*` que inyecta `render_index` (`__I18N__`) y `T`, con el panel en `lang`.
+
+    Las funciones del panel sacan sus textos de `T`: sin esto, en node no tienen de dónde. El idioma
+    va explícito, como el `locale` de Playwright (REQ-043): los asserts en español no dependen de
+    nada de la máquina.
+    """
+    return (
+        f"const I18N = {metrics._script_json(metrics.panel_catalogs())};\n"
+        f"const LANGS = ['es', 'en'];\nlet LANG = {json.dumps(lang)};\n"
+        + _extract("function T(")
+        + "\n"
+        + _extract("function pickLang(")
+    )
+
+
+def _run(tmp_path, functions: list[str], body: str, prelude: str = "", lang: str = "es"):
     """Ejecuta `body` con esas funciones del panel cargadas. Devuelve lo que imprima en JSON."""
     node = shutil.which("node")
     if node is None:
@@ -67,7 +83,9 @@ def _run(tmp_path, functions: list[str], body: str, prelude: str = ""):
 
     program = tmp_path / "test.mjs"
     program.write_text(
-        "\n".join([_legacy(), prelude, *(_extract(f) for f in functions), body]),
+        "\n".join(
+            [i18n_prelude(lang), _legacy(), prelude, *(_extract(f) for f in functions), body]
+        ),
         encoding="utf-8",
     )
     # El entorno se hereda ENTERO con `TZ` encima. Recortarlo a `PATH` + `TZ` mata a node en
@@ -452,13 +470,26 @@ def test_plural_without_parentheses(tmp_path):
     r = _run(
         tmp_path,
         [],
-        "console.log(JSON.stringify([plural(1,'estimado','estimados'),"
-        " plural(4,'estimado','estimados'), plural(1234,'evento','eventos')]));",
+        "console.log(JSON.stringify([plural(1,'unit.estimated'),"
+        " plural(4,'unit.estimated'), plural(1234,'unit.event')]));",
         _formatters(),
     )
     assert r[0] == "1 estimado"
     assert r[1] == "4 estimados"
     assert r[2] == "1.234 eventos"
+
+
+def test_plural_in_english_uses_the_english_forms_and_separators(tmp_path):
+    """REQ-026 en el panel en inglés: la palabra del catálogo inglés y la coma de miles."""
+    r = _run(
+        tmp_path,
+        [],
+        "console.log(JSON.stringify([plural(1,'unit.event'), plural(1234,'unit.event'),"
+        " F1.format(1234.5), fmtSec(20)]));",
+        _formatters(),
+        lang="en",
+    )
+    assert r == ["1 event", "1,234 events", "1,234.5", "< 0.1 s"]
 
 
 def test_no_plurals_with_parentheses_or_toFixed_remain():
@@ -536,7 +567,7 @@ globalThis.fetch = async u => { urls.push(u); return {json: async () => ({})}; }
 const state = {range: 'today', tests: TESTS, events: [], meta: {}};
 function computeRange(){ return {from: '2026-10-08T04:00:00.000Z', to: '2026-10-08T16:00:00.000Z'}; }
 function renderClients(){} function renderCost(){} function renderTestsInfo(){}
-function renderHooks(){} function render(){} function updateLive(){}
+function renderHooks(){} function render(){} function updateLive(){} function renderFoot(){}
 function plural(){ return ''; }
 const CPT = 4, TZ = 'x', TZ_OFFSET_TXT = 'y';
 const document = {getElementById: () => ({textContent: '', innerHTML: '', classList: {add(){}}})};
@@ -554,3 +585,55 @@ def test_the_three_requests_carry_the_same_query(tmp_path, include):
     assert len(queries) == 1, urls
     (query,) = queries
     assert ("include_tests=1" in query) is include
+
+
+# --- Idioma del panel (B4, REQ-020) ---------------------------------------------------------------
+
+
+def test_pick_lang_follows_the_saved_choice_and_then_the_browser(tmp_path):
+    """Lo guardado gana; sin nada guardado, español si el navegador empieza por `es`, si no inglés
+    (al revés que la landing, decisión del 2026-10-12)."""
+    cases = [
+        ["es", "en-US"],
+        ["en", "es-ES"],
+        [None, "es-ES"],
+        [None, "es"],
+        [None, "es-419"],
+        [None, "ES-mx"],
+        [None, "en-US"],
+        [None, "fr-FR"],
+        [None, "est"],
+        [None, ""],
+        [None, None],
+        ["fr", "es-ES"],
+    ]
+    body = f"console.log(JSON.stringify({json.dumps(cases)}.map(([s, n]) => pickLang(s, n))));"
+    assert _run(tmp_path, [], body) == [
+        "es",
+        "en",
+        "es",
+        "es",
+        "es",
+        "es",
+        "en",
+        "en",
+        "en",
+        "en",
+        "en",
+        "es",
+    ]
+
+
+def test_t_interpolates_and_falls_back_to_spanish_then_to_the_key(tmp_path):
+    body = """
+    I18N.en['panel.only.es'] = undefined; delete I18N.en['panel.only.es'];
+    I18N.es['panel.only.es'] = 'solo {x}';
+    console.log(JSON.stringify([T('kpi.latency.label'), T('only.es', {x: 1}), T('no.such.key'),
+      T('backend.no_models', {url: 'http://h'})]));
+    """
+    assert _run(tmp_path, [], body, lang="en") == [
+        "Latency",
+        "solo 1",
+        "panel.no.such.key",
+        "The backend exposes no models (http://h).",
+    ]

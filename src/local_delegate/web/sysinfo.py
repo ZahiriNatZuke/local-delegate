@@ -17,6 +17,9 @@ import subprocess
 import sys
 import threading
 import time
+from urllib.parse import urlsplit
+
+from .. import config
 
 # Procesos "interesantes" para el dashboard: los backends locales típicos que corren por
 # debajo del MCP. El propio proceso (el MCP que sirve esta web) se añade siempre por pid.
@@ -156,28 +159,146 @@ def _linux_processes() -> list[dict]:
     return procs
 
 
+# --- El llama-swap del backend frente a los de las pruebas ----------------------------------------
+# Decisión del usuario del 2026-10-18 (B4): «Procesos del backend» no cuenta los `llama-swap.exe`
+# que lanzan los tests. `tests/fake_llamaswap.py` lanza el MISMO ejecutable que el backend real, con
+# `-listen 127.0.0.1:<puerto libre>`: ni el nombre ni la ruta los distinguen, el puerto sí. El del
+# backend es el de `LOCAL_DELEGATE_BASE_URL`; un llama-swap que escucha en otro no es el backend de
+# este panel. Sus modelos de prueba son `python.exe` y ya no entraban en la lista.
+_LLAMASWAP = "llama-swap"
+_LISTEN_RE = re.compile(r"(?:^|\s)--?listen(?:=|\s+)(\S+)")
+#: Lo que escucha llama-swap sin `-listen` (`:8080`).
+_LLAMASWAP_DEFAULT_PORT = 8080
+#: Una línea de órdenes que todavía no se ha leído (la primera muestra está en camino).
+PENDING = object()
+
+
+def listen_port(command_line: str) -> int | None:
+    """El puerto de `-listen`/`--listen` (`host:puerto` o `:puerto`) de una línea de órdenes de
+    llama-swap; sin la opción, el de por defecto. `None` si el valor no trae un puerto."""
+    m = _LISTEN_RE.search(command_line)
+    if not m:
+        return _LLAMASWAP_DEFAULT_PORT
+    _, sep, port = m.group(1).strip("'\"").rpartition(":")
+    return int(port) if sep and port.isdigit() else None
+
+
+def backend_port() -> int | None:
+    """El puerto de `LOCAL_DELEGATE_BASE_URL` (el del esquema si no lo lleva)."""
+    try:
+        parts = urlsplit(config.BASE_URL)
+        return parts.port or {"http": 80, "https": 443}.get(parts.scheme)
+    except ValueError:
+        return None
+
+
+# Líneas de órdenes de los llama-swap en Windows: `tasklist` no las da y PowerShell tarda ~1 s, así que
+# se leen en un hilo de fondo, como la VRAM. `ok` es `None` hasta la primera muestra y `False` si la
+# última falló; `lines` son las de la última muestra (pid -> línea, vacía si no se pudo leer).
+_cmd_lock = threading.Lock()
+_cmd_cache: dict = {"ok": None, "lines": {}}
+_cmd_refreshing = False
+
+
+def _windows_llamaswap_command_lines() -> dict[int, str] | None:
+    order = (
+        "Get-CimInstance Win32_Process -Filter \"Name like 'llama-swap%'\" | "
+        'ForEach-Object { "$($_.ProcessId)`t$($_.CommandLine)" }'
+    )
+    out = subprocess.run(
+        ["powershell", "-NoProfile", "-NonInteractive", "-Command", order],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        creationflags=_CREATE_NO_WINDOW,
+    )
+    if out.returncode != 0:
+        return None
+    lines: dict[int, str] = {}
+    for line in out.stdout.splitlines():
+        pid, _, command_line = line.partition("\t")
+        if pid.strip().isdigit():
+            lines[int(pid)] = command_line.strip()
+    return lines
+
+
+def _refresh_command_lines() -> None:
+    global _cmd_refreshing
+    try:
+        lines = _windows_llamaswap_command_lines()
+    except Exception:  # best-effort, como todo el módulo: sin muestra, se cuentan todos
+        lines = None
+    with _cmd_lock:
+        _cmd_cache["ok"] = lines is not None
+        _cmd_cache["lines"] = lines or {}
+        _cmd_refreshing = False
+
+
+def _command_line(pid: int) -> str | object | None:
+    """La línea de órdenes de `pid`, `None` si no se puede saber, o `PENDING` mientras se lee."""
+    global _cmd_refreshing
+    if sys.platform.startswith("linux"):
+        try:
+            with open(f"/proc/{pid}/cmdline", "rb") as f:
+                return f.read().replace(b"\0", b" ").decode("utf-8", "replace").strip() or None
+        except OSError:
+            return None
+    if sys.platform != "win32":
+        return None
+    with _cmd_lock:
+        lines, ok = _cmd_cache["lines"], _cmd_cache["ok"]
+        if pid in lines:
+            return lines[pid] or None
+        # Un llama-swap que la última muestra no vio (recién lanzado): se pide otra en fondo.
+        if not _cmd_refreshing:
+            _cmd_refreshing = True
+            threading.Thread(target=_refresh_command_lines, daemon=True, name="cmdline").start()
+    return None if ok is False else PENDING
+
+
+def is_backend_llamaswap(pid: int, port: int | None) -> bool:
+    """¿Es este llama-swap el del backend? Sí si escucha en `port`; si su línea de órdenes no se
+    puede leer, se cuenta (como antes de esta regla); mientras se lee, todavía no."""
+    line = _command_line(pid)
+    if line is PENDING:
+        return False
+    if line is None or port is None:
+        return True
+    return listen_port(str(line)) == port
+
+
+def _all_processes() -> list[dict] | None:
+    """Todos los procesos de la máquina, o `None` si esta plataforma no los lista."""
+    if sys.platform == "win32":
+        return _windows_processes()
+    if sys.platform.startswith("linux"):
+        return _linux_processes()
+    return None
+
+
 def interesting_processes() -> list[dict]:
     """Procesos del backend local (llama-*, ollama…) + el propio MCP, con RAM y VRAM.
 
     Cada entrada: {pid, name, ram_mb, vram_mb (o None), self (bool)}. Lista vacía si la
-    plataforma no está soportada o la enumeración falló.
+    plataforma no está soportada o la enumeración falló. Un llama-swap que no escucha en el puerto
+    del backend (los que lanzan los tests) no entra (`is_backend_llamaswap`).
     """
     try:
-        if sys.platform == "win32":
-            all_procs = _windows_processes()
-        elif sys.platform.startswith("linux"):
-            all_procs = _linux_processes()
-        else:
-            return []
+        all_procs = _all_processes()
     except Exception:
+        return []
+    if all_procs is None:
         return []
     self_pid = os.getpid()
     vram_map = proc_vram_map()
+    port = backend_port()
     picked: list[dict] = []
     for p in all_procs:
         lname = p["name"].lower()
         is_self = p["pid"] == self_pid
         if not is_self and not any(k in lname for k in _PROC_KEYWORDS):
+            continue
+        if not is_self and _LLAMASWAP in lname and not is_backend_llamaswap(p["pid"], port):
             continue
         picked.append(
             {

@@ -28,12 +28,13 @@ import re
 import threading
 import time
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Self
 
 import pytest
 import uvicorn
 
-from local_delegate import config
+from local_delegate import config, i18n
 from local_delegate.web import metrics
 
 pytest.importorskip("playwright.sync_api", reason="Playwright no está instalado (grupo `ui`)")
@@ -117,6 +118,17 @@ class _Server:
         self._thread.join(timeout=10)
 
 
+@pytest.fixture(autouse=True)
+def backend_down(request, monkeypatch):
+    """El backend del panel de prueba es el servidor que corta cada conexión de la suite
+    (`RejectingServer`), no el llama-swap de verdad de `127.0.0.1:9292`: sin esto, cada sondeo de
+    `/api/backend` y `/api/status` de estos tests le preguntaba al backend real de la máquina (B4)."""
+    from conftest import CUT_DAEMON
+
+    port = request.node.stash[CUT_DAEMON].port
+    monkeypatch.setattr(config, "BASE_URL", f"http://127.0.0.1:{port}/v1")
+
+
 @pytest.fixture
 def panel(tmp_path, monkeypatch):
     """Dashboard servido con dos páginas justas de actividad."""
@@ -151,7 +163,7 @@ def _visible_rows(page) -> list[str]:
     )
 
 
-def test_table_pagination_changes_the_rows(panel):
+def test_table_pagination_changes_the_rows(panel, new_page):
     """Lo que ninguna otra capa ve: que pulsar «siguiente» reescribe la tabla.
 
     El control positivo es la primera aserción: se comprueba que **había** más de una página antes
@@ -161,7 +173,7 @@ def test_table_pagination_changes_the_rows(panel):
     url, per_page = panel
     with sync_playwright() as pw:
         browser = _browser(pw)
-        page = browser.new_page()
+        page = new_page(browser)
         page.goto(url)
         page.wait_for_selector("#activity tbody tr")
 
@@ -194,7 +206,7 @@ def test_table_pagination_changes_the_rows(panel):
         browser.close()
 
 
-def test_changing_the_range_refetches_the_data_and_resets_the_page(panel):
+def test_changing_the_range_refetches_the_data_and_resets_the_page(panel, new_page):
     """El selector de rango decide qué se le pide al backend, y reinicia el pager.
 
     Si no reiniciara, cambiar de rango desde la página 2 dejaría al usuario mirando una página que
@@ -203,7 +215,7 @@ def test_changing_the_range_refetches_the_data_and_resets_the_page(panel):
     url, _per_page = panel
     with sync_playwright() as pw:
         browser = _browser(pw)
-        page = browser.new_page()
+        page = new_page(browser)
 
         requested: list[str] = []
         page.on("request", lambda r: requested.append(r.url) if "/api/events" in r.url else None)
@@ -236,12 +248,12 @@ def test_changing_the_range_refetches_the_data_and_resets_the_page(panel):
         browser.close()
 
 
-def test_the_custom_range_shows_both_date_fields(panel):
+def test_the_custom_range_shows_both_date_fields(panel, new_page):
     """`custom` es el único valor que cambia la forma del panel, y estaba sin ejercer."""
     url, _ = panel
     with sync_playwright() as pw:
         browser = _browser(pw)
-        page = browser.new_page()
+        page = new_page(browser)
         page.goto(url)
         page.wait_for_selector("#activity tbody tr")
 
@@ -377,7 +389,8 @@ def measurements(tmp_path_factory):
         metrics._FILE_CACHE.clear()
         with _Server(9497) as server, sync_playwright() as pw:
             browser = _browser(pw)
-            page = browser.new_page()
+            # `locale` explícito (REQ-043): el fixture `new_page` no llega a un fixture de módulo.
+            page = browser.new_page(locale="es-ES")
             # Sin red: `getComputedStyle` devuelve la familia declarada aunque no llegue la cara.
             page.route(
                 re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort()
@@ -550,10 +563,20 @@ _CARD_TYPOGRAPHY = """() => {
 }"""
 
 
+#: Los guardianes de tipografía y de «sin prosa» corren con el panel en los dos idiomas (REQ-032).
+_BOTH_LOCALES = pytest.mark.parametrize("browser_locale", ["es-ES", "en-US"], ids=["es", "en"])
+
+
+def _lang_of(locale: str) -> str:
+    return "es" if locale.startswith("es") else "en"
+
+
+@_BOTH_LOCALES
 @pytest.mark.parametrize("state", list(_SYSTEM_STATES))
-def test_cards_only_use_the_panel_fonts(tmp_path, monkeypatch, state):
+def test_cards_only_use_the_panel_fonts(tmp_path, monkeypatch, state, new_page, browser_locale):
     """Guardián: ningún texto visible de ninguna tarjeta sale en una fuente ajena al panel, y la
-    tarjeta Sistema no lleva prosa ni el host como texto plano."""
+    tarjeta Sistema no lleva prosa ni el host como texto plano. En español y en inglés."""
+    lang = _lang_of(browser_locale)
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     monkeypatch.setattr(config, "WEB_FONTS", True)
@@ -562,7 +585,7 @@ def test_cards_only_use_the_panel_fonts(tmp_path, monkeypatch, state):
     metrics._FILE_CACHE.clear()
     with _Server(9496) as server, sync_playwright() as pw:
         browser = _browser(pw)
-        page = browser.new_page(viewport={"width": 1440, "height": 1000})
+        page = new_page(browser, viewport={"width": 1440, "height": 1000})
         page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
         page.route(re.compile(r"/api/hooks(\?|$)"), _json(_HOOKS))
         page.route(re.compile(r"/api/system(\?|$)"), _json(_SYSTEM_STATES[state]))
@@ -570,7 +593,8 @@ def test_cards_only_use_the_panel_fonts(tmp_path, monkeypatch, state):
         page.wait_for_selector("#activity tbody tr")
         page.wait_for_selector("#hooksBody table")
         page.wait_for_function(
-            "() => !document.getElementById('metersBody').innerText.includes('Leyendo')"
+            "w => !document.getElementById('metersBody').innerText.includes(w)",
+            arg=_t(lang, "system.reading"),
         )
         m = page.evaluate(_CARD_TYPOGRAPHY)
         browser.close()
@@ -581,7 +605,7 @@ def test_cards_only_use_the_panel_fonts(tmp_path, monkeypatch, state):
     assert m["seen"] >= 40, m["seen"]
     assert not m["outside"], "texto en una fuente ajena al panel: " + "; ".join(m["outside"])
     # El botón «Pruebas» entra en lo que mide el guardián (y por tanto en `fuera` si se sale).
-    assert "Pruebas" in m["barTexts"], m["barTexts"]
+    assert _t(lang, "tests.label") in m["barTexts"], m["barTexts"]
 
     # Sin prosa en la tarjeta Sistema: etiquetas y cifras, nada de frases (van en su ⓘ).
     sentences = [t for t in m["texts"] if len(t.split()) >= 6]
@@ -594,7 +618,7 @@ def test_cards_only_use_the_panel_fonts(tmp_path, monkeypatch, state):
         assert link["text"] == "pc.example.ts.net"
         assert link["target"] == "_blank"
         assert "noopener" in link["rel"].split()
-        assert "Procesos del backend".upper() not in [t.upper() for t in m["texts"]]
+        assert _t(lang, "system.processes").upper() not in [t.upper() for t in m["texts"]]
     else:
         assert m["link"] is None
         assert "llama-server.exe" in m["texts"]
@@ -669,14 +693,19 @@ _MEASURE_CARDS = """() => {
 }"""
 
 
-def test_cost_quota_and_image_cards_carry_figures_not_paragraphs(tmp_path, monkeypatch):
+@_BOTH_LOCALES
+def test_cost_quota_and_image_cards_carry_figures_not_paragraphs(
+    tmp_path, monkeypatch, new_page, browser_locale
+):
     """El panel pinta lo que trae `/api/stats` como cifras con la forma de los KPIs: el coste con
     su cota baja, su estimación y el desglose; la imagen con sus bytes. La cuota «sin calibrar» (sin
-    `cost-aggregates.json` en esta carpeta) **no se pinta**. Ningún párrafo en el cuerpo."""
+    `cost-aggregates.json` en esta carpeta) **no se pinta**. Ningún párrafo en el cuerpo, en los dos
+    idiomas, y las cifras con los separadores de cada uno (REQ-026)."""
+    lang = _lang_of(browser_locale)
     _cost_and_image_log(tmp_path, monkeypatch)
     with _Server(9495) as server, sync_playwright() as pw:
         browser = _browser(pw)
-        page = browser.new_page()
+        page = new_page(browser)
         page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
         page.goto(server.url)
         page.wait_for_selector("#costBody .kstat")
@@ -685,13 +714,14 @@ def test_cost_quota_and_image_cards_carry_figures_not_paragraphs(tmp_path, monke
         browser.close()
     metrics._FILE_CACHE.clear()
     # Sin relleno: Opus 5.5 en subagente con N = 40 → $2,50 y ~$6,50 (escenario de la spec).
-    assert "$2,50" in m["cost"]
-    assert "~$6,50" in m["cost"]
-    assert "no es un ahorro: tarifa plana" in m["cost"]
+    money, estimate = {"es": ("$2,50", "~$6,50"), "en": ("$2.50", "~$6.50")}[lang]
+    assert money in m["cost"]
+    assert estimate in m["cost"]
+    assert _t(lang, "cost.low_bound_hint") in m["cost"]
     assert m["breakdown"] == 1
     assert not m["quotaVisible"]  # sin calibrar no hay tarjeta
     assert m["imagesVisible"]
-    assert "250.000" in m["images"]
+    assert {"es": "250.000", "en": "250,000"}[lang] in m["images"]
     assert m["paragraphs"] == 0
     assert m["longest"] <= 40, m["longest"]
     assert m["valCost"] == m["valKpi"], (m["valCost"], m["valKpi"])
@@ -699,13 +729,13 @@ def test_cost_quota_and_image_cards_carry_figures_not_paragraphs(tmp_path, monke
     assert m["gap"] == 16, m["gap"]  # el mismo `gap` que entre el resto de tarjetas
 
 
-def test_the_info_dialog_carries_the_text_and_closes_with_esc(tmp_path, monkeypatch):
+def test_the_info_dialog_carries_the_text_and_closes_with_esc(tmp_path, monkeypatch, new_page):
     """El ⓘ de la tarjeta de coste abre un diálogo con los supuestos, la calibración de la cuota y
     la nota de las imágenes; Esc lo cierra y el foco vuelve al botón."""
     _cost_and_image_log(tmp_path, monkeypatch)
     with _Server(9495) as server, sync_playwright() as pw:
         browser = _browser(pw)
-        page = browser.new_page()
+        page = new_page(browser)
         page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
         page.goto(server.url)
         page.wait_for_selector("#costBody .kstat")
@@ -732,7 +762,7 @@ def test_the_info_dialog_carries_the_text_and_closes_with_esc(tmp_path, monkeypa
     assert m["focus"] == "costInfo"
 
 
-def test_the_calibrated_quota_appears_as_a_meter(tmp_path, monkeypatch):
+def test_the_calibrated_quota_appears_as_a_meter(tmp_path, monkeypatch, new_page):
     """Con una ventana calibrada la tarjeta aparece con la cifra A – B % y un medidor; la otra,
     sin calibrar, dice «sin calibrar» con «–». `/api/stats` se intercepta para inyectar la cuota:
     calibrarla de verdad pide tres puntos del statusline."""
@@ -752,7 +782,7 @@ def test_the_calibrated_quota_appears_as_a_meter(tmp_path, monkeypatch):
 
     with _Server(9495) as server, sync_playwright() as pw:
         browser = _browser(pw)
-        page = browser.new_page()
+        page = new_page(browser)
         page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
         page.route(re.compile(r"/api/stats(\?|$)"), _inject)
         page.goto(server.url)
@@ -774,13 +804,13 @@ def test_the_calibrated_quota_appears_as_a_meter(tmp_path, monkeypatch):
     assert m["width"] == "8.5%"
 
 
-def test_native_controls_follow_the_theme(panel):
+def test_native_controls_follow_the_theme(panel, new_page):
     """`color-scheme` sigue al tema: es lo que pinta claro el icono del calendario de los
     `<input type=date>` en oscuro (antes salía negro sobre el panel) y la lista del `<select>`."""
     url, _ = panel
     with sync_playwright() as pw:
         browser = _browser(pw)
-        page = browser.new_page()
+        page = new_page(browser)
         page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
         page.goto(url)
         dark = page.evaluate(
@@ -838,7 +868,7 @@ _KPI_OVERFLOWS = """() => [...document.querySelectorAll('#kpis .k-val')].flatMap
 
 
 @pytest.mark.parametrize("fonts", FONT_STATES)
-def test_the_kpi_unit_is_not_cut_off(tmp_path, monkeypatch, fonts):
+def test_the_kpi_unit_is_not_cut_off(tmp_path, monkeypatch, fonts, new_page):
     """«3.161.168 tok» en el hero salía como «3.161.168 to» entre 1320 y 1440 px. Con cifras de
     siete dígitos en los KPIs, a 1280, 1366 y 1440 px y en los dos temas, nada se sale."""
     _cost_and_image_log(tmp_path, monkeypatch)
@@ -860,7 +890,7 @@ def test_the_kpi_unit_is_not_cut_off(tmp_path, monkeypatch, fonts):
         browser = _browser(pw)
         for width in (1280, 1366, 1440):
             for theme in ("dark", "light"):
-                page = browser.new_page(viewport={"width": width, "height": 900})
+                page = new_page(browser, viewport={"width": width, "height": 900})
                 page.add_init_script(
                     f"try{{localStorage.setItem('ld-theme','{theme}')}}catch(e){{}}"
                 )
@@ -939,9 +969,10 @@ def _raw_clients(path):
     path.fulfill(response=response, body=json.dumps(data))
 
 
-def _full_page(pw, url, width=1366, theme="dark", fonts="bloqueadas"):
+def _full_page(pw, url, width=1366, theme="dark", fonts="bloqueadas", locale="es-ES"):
     browser = _browser(pw)
-    page = browser.new_page(viewport={"width": width, "height": 1000})
+    # `locale` explícito (REQ-043): el panel elige idioma por el navegador, no por la variable.
+    page = browser.new_page(viewport={"width": width, "height": 1000}, locale=locale)
     page.add_init_script(f"try{{localStorage.setItem('ld-theme','{theme}')}}catch(e){{}}")
     _before_loading(page, fonts)
     page.route(re.compile(r"/api/hooks(\?|$)"), _json(_RAW_HOOKS))
@@ -1123,12 +1154,12 @@ def test_system_shows_the_gpu_load_as_a_bar(tmp_path, monkeypatch):
         assert not _DECIMAL_WITH_DOT.search(f), f
 
 
-def test_the_range_selector_arrow_does_not_move_on_hover(panel):
+def test_the_range_selector_arrow_does_not_move_on_hover(panel, new_page):
     """`.btn:hover` cambiaba el atajo `background` y borraba la flecha (un `background-image`)."""
     url, _ = panel
     with sync_playwright() as pw:
         browser = _browser(pw)
-        page = browser.new_page()
+        page = new_page(browser)
         page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
         page.goto(url)
         image = "() => getComputedStyle(document.getElementById('range')).backgroundImage"
@@ -1192,7 +1223,7 @@ def test_the_hero_line_does_not_overlap_its_hint(tmp_path, monkeypatch, fonts):
             assert not any(x["clipped"] for x in m["lines"]), (key, m["lines"])
 
 
-def test_backend_and_in_flight_speak_spanish(tmp_path, monkeypatch):
+def test_backend_and_in_flight_speak_spanish(tmp_path, monkeypatch, new_page):
     """Estados de modelo con mayúscula inicial, «Trozo 9/14», «· 39.110 car.» y «peticiones» /
     «caché» en el rendimiento del backend: nada en minúscula de máquina ni en inglés."""
     _cost_and_image_log(tmp_path, monkeypatch)
@@ -1242,7 +1273,7 @@ def test_backend_and_in_flight_speak_spanish(tmp_path, monkeypatch):
     }
     with _Server(9495) as server, sync_playwright() as pw:
         browser = _browser(pw)
-        page = browser.new_page()
+        page = new_page(browser)
         page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
         page.route(re.compile(r"/api/backend(\?|$)"), _json(backend))
         page.route(re.compile(r"/api/inflight(\?|$)"), _json(in_flight))
@@ -1269,13 +1300,13 @@ def test_backend_and_in_flight_speak_spanish(tmp_path, monkeypatch):
     assert "caché" in m["performance"] and "cache " not in m["performance"], m["performance"]
 
 
-def test_the_input_origin_legend_is_in_spanish(panel):
+def test_the_input_origin_legend_is_in_spanish(panel, new_page):
     """«path»/«inline» pasan a «Por ruta (path)» y «Texto en línea (inline)»; el centro dice «por
     ruta». Se lee del gráfico de Chart.js: la leyenda se pinta en el canvas."""
     url, _ = panel
     with sync_playwright() as pw:
         browser = _browser(pw)
-        page = browser.new_page()
+        page = new_page(browser)
         page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
         page.goto(url)
         page.wait_for_function("() => state.charts && state.charts.srcDonut")
@@ -1288,13 +1319,13 @@ def test_the_input_origin_legend_is_in_spanish(panel):
     assert m["center"] == "por ruta"
 
 
-def test_there_is_no_longer_a_card_for_where_the_compute_ran(panel):
+def test_there_is_no_longer_a_card_for_where_the_compute_ran(panel, new_page):
     """Se quitó: el backend es fijo por instalación y el donut siempre daba 100 % de un lado. La
     columna de origen de la actividad sigue, con etiqueta legible."""
     url, _ = panel
     with sync_playwright() as pw:
         browser = _browser(pw)
-        page = browser.new_page()
+        page = new_page(browser)
         page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
         page.goto(url)
         page.wait_for_selector("#activity tbody tr .org")
@@ -1332,7 +1363,7 @@ def test_in_CI_this_module_can_NOT_be_skipped():
 # --- Interruptor «Pruebas» (test-windows-out-of-metrics, REQ-016 y REQ-026) ----------------------
 
 
-def test_the_tests_switch_requests_all_three_with_the_parameter(tmp_path, monkeypatch):
+def test_the_tests_switch_requests_all_three_with_the_parameter(tmp_path, monkeypatch, new_page):
     """Empieza apagado; con una ventana abierta enseña el punto; su ⓘ dice cuántas filas quedan
     fuera; al pulsarlo, las tres peticiones llevan `include_tests=1` y el estado se recuerda."""
     from local_delegate import test_windows
@@ -1361,7 +1392,7 @@ def test_the_tests_switch_requests_all_three_with_the_parameter(tmp_path, monkey
     requested: list[str] = []
     with _Server(9487) as server, sync_playwright() as pw:
         browser = _browser(pw)
-        page = browser.new_page(viewport={"width": 1440, "height": 1000})
+        page = new_page(browser, viewport={"width": 1440, "height": 1000})
         page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
         page.on("request", lambda r: requested.append(r.url) if "/api/" in r.url else None)
         page.goto(server.url)
@@ -1413,3 +1444,288 @@ def test_the_tests_switch_requests_all_three_with_the_parameter(tmp_path, monkey
     ]
     assert all("include_tests=1" in u for u in after), after
     assert (remembered, enabled) == ("1", True)
+
+
+# --- Idioma del panel (B4: REQ-020, REQ-025, REQ-026, REQ-032, REQ-034, REQ-043) ----------------
+#
+# El panel elige idioma por el NAVEGADOR (o por lo que el visitante eligió en el selector), nunca
+# por el daemon: la suite corre con el proceso en español y aquí se abre en `en-US` para ver que
+# todo, también lo que redacta el servidor, sale en inglés.
+
+_CATALOG_DIR = Path(metrics.__file__).parents[1] / "resources" / "i18n"
+_PLACEHOLDER = re.compile(r"\{[^{}]*\}")
+_LETTERS = re.compile(r"[A-Za-zÀ-ÿ]")
+
+
+def _catalog_from_disk(lang: str) -> dict[str, str]:
+    """El catálogo leído de los ficheros, no de `i18n.catalog` (que un test puede mutar)."""
+    merged: dict[str, str] = {}
+    for path in sorted((_CATALOG_DIR / lang).glob("*.json")):
+        merged.update(json.loads(path.read_text(encoding="utf-8")))
+    return merged
+
+
+def _fragments(text: str) -> set[str]:
+    """Los trozos fijos de un texto del catálogo: sin marcadores, sin etiquetas y sin puntuación."""
+    plain = re.sub(r"<[^>]*>", "\n", _PLACEHOLDER.sub("\n", text)).replace("&nbsp;", " ")
+    parts = {p.strip(" ·.,;:()«»—–-") for p in plain.split("\n")}
+    return {p for p in parts if len(_LETTERS.findall(p)) >= 3}
+
+
+def _spanish_fragments() -> set[str]:
+    """Lo que delataría el español en el panel: los trozos de cada texto del panel (y de las causas,
+    que el servidor redacta para él) cuyo texto inglés es distinto, menos los que también usa algún
+    texto inglés (`Backend`, `tok/s`)."""
+    es, en = _catalog_from_disk("es"), _catalog_from_disk("en")
+    prefixes = ("panel.", "mcp.failure.label.", "mcp.failure.detail.")
+    english = set().union(*(_fragments(v) for k, v in en.items() if k.startswith(prefixes)))
+    found: set[str] = set()
+    for key, text in es.items():
+        if key.startswith(prefixes) and en.get(key) != text:
+            found |= _fragments(text) - english
+    return found
+
+
+def _spanish_leftovers(texts: list[str]) -> list[str]:
+    """REQ-025: las cadenas del catálogo en español (distintas de su versión inglesa) que aparecen
+    en el texto visible. Por palabra entera: «Modelo» no salta dentro de «Models»."""
+    blob = "\n".join(texts)
+    return sorted(
+        frag
+        for frag in _spanish_fragments()
+        if re.search(r"(?<![\wÀ-ÿ])" + re.escape(frag) + r"(?![\wÀ-ÿ])", blob)
+    )
+
+
+# Todo lo que una persona puede leer: el texto del DOM (también el de los diálogos cerrados), los
+# atributos visibles, el título de la pestaña, la descripción y lo que Chart.js pinta en el canvas.
+_VISIBLE_TEXT = """() => {
+  const out = [];
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = w.nextNode(); n; n = w.nextNode()) {
+    const p = n.parentElement;
+    if (!p || p.closest('script, style')) continue;
+    const t = n.textContent.trim();
+    if (t) out.push(t);
+  }
+  for (const el of document.querySelectorAll('[title], [aria-label], [data-tip]')) {
+    for (const a of ['title', 'aria-label', 'data-tip']) {
+      const v = el.getAttribute(a); if (v) out.push(v);
+    }
+  }
+  out.push(document.title, document.querySelector('meta[name="description"]').content);
+  for (const c of Object.values(state.charts || {})) {
+    if (!c || !c.data) continue;
+    (c.data.labels || []).forEach(l => out.push(String(l)));
+    (c.data.datasets || []).forEach(d => { if (d.label) out.push(String(d.label)); });
+    const center = c.options && c.options.plugins && c.options.plugins.centerText;
+    if (center && center.sub) out.push(center.sub);
+  }
+  return out;
+}"""
+
+_LANG_STATE = """() => ({
+  lang: document.documentElement.lang,
+  title: document.title,
+  description: document.querySelector('meta[name="description"]').content,
+  selector: document.getElementById('lang').value,
+  today: document.querySelector('#range option[value="today"]').textContent,
+  range: document.getElementById('range').value,
+  tests: document.getElementById('tests').getAttribute('aria-pressed'),
+  kpi: [...document.querySelectorAll('#kpis .k-lbl-t')].map(e => e.textContent),
+  pill: document.getElementById('backendPill').textContent,
+  roles: [...document.querySelectorAll('#modelsBody .mrole')].map(e => e.textContent),
+  cause: state.view && state.view.last ? state.view.last.cause : null,
+})"""
+
+#: Causas en las que alguien contesta: el badge dice solo su etiqueta (`CAUSES_ANSWERING` del JS).
+_ANSWERING = {"credential", "http_error", "invalid_response", "no_response"}
+
+
+def _t(lang: str, key: str) -> str:
+    return _catalog_from_disk(lang)["panel." + key]
+
+
+def _down_badge(lang: str, cause: str) -> str:
+    """El badge del backend caído, del catálogo: la etiqueta la redacta el servidor (D6)."""
+    label = _catalog_from_disk(lang)["mcp.failure.label." + cause]
+    return label if cause in _ANSWERING else _t(lang, "badge.down").replace("{label}", label)
+
+
+def _lang_page(new_page, browser, url: str, **kwargs):
+    page = new_page(browser, viewport={"width": 1440, "height": 1000}, **kwargs)
+    page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+    return page
+
+
+def _open_full(page, url: str, lang: str) -> dict:
+    """Abre el panel con todas las tarjetas pintadas y espera al badge «caído» (segundo sondeo)."""
+    page.route(re.compile(r"/api/hooks(\?|$)"), _json(_HOOKS))
+    page.route(re.compile(r"/api/system(\?|$)"), _json(_SYSTEM))
+    page.goto(url)
+    page.wait_for_selector("#activity tbody tr")
+    page.wait_for_selector("#costBody .kstat")
+    page.wait_for_selector("#hooksBody table")
+    # El badge pasa a «caído» en el segundo sondeo fallido (`backend_down`), ~2 s después.
+    page.wait_for_function(
+        "() => state.view && state.view.status === 'down' && state.view.last", timeout=15000
+    )
+    m = page.evaluate(_LANG_STATE)
+    assert m["pill"] == _down_badge(lang, m["cause"]), m
+    return m
+
+
+@pytest.mark.parametrize(
+    ("browser_locale", "expected"),
+    [("es-ES", "es"), ("es-419", "es"), ("en-US", "en"), ("fr-FR", "en")],
+)
+def test_the_first_paint_follows_the_browser_language(panel, new_page, expected):
+    """REQ-020: sin elección guardada, español si el navegador empieza por `es`; si no, inglés."""
+    url, _ = panel
+    with sync_playwright() as pw:
+        browser = _browser(pw)
+        page = _lang_page(new_page, browser, url)
+        page.goto(url)
+        page.wait_for_selector("#activity tbody tr")
+        m = page.evaluate(_LANG_STATE)
+        browser.close()
+    assert m["lang"] == m["selector"] == expected
+    assert m["title"] == _t(expected, "page.title")
+    assert m["description"] == _t(expected, "page.description")
+    assert m["today"] == _t(expected, "range.today")
+    assert m["kpi"][0] == _t(expected, "kpi.saved.label")
+
+
+@pytest.mark.parametrize("browser_locale", ["en-US"])
+def test_the_selector_switches_without_reload_and_is_remembered(panel, new_page):
+    """REQ-020: el selector cambia el panel sin recargar, no pierde el rango ni el interruptor, pide
+    el refresco ya con `?lang=` (lo que redacta el servidor llega en el idioma nuevo) y se recuerda
+    al volver (`ld-lang`)."""
+    url, _ = panel
+    with sync_playwright() as pw:
+        browser = _browser(pw)
+        page = _lang_page(new_page, browser, url)
+        requests: list[str] = []
+        page.on("request", lambda r: requests.append(r.url))
+        before = _open_full(page, url, "en")
+        page.select_option("#range", "7")
+        page.click("#tests")
+        page.wait_for_function(
+            "() => document.getElementById('tests').getAttribute('aria-pressed') === 'true'"
+        )
+        requests.clear()
+        page.select_option("#lang", "es")
+        page.wait_for_function("() => document.documentElement.lang === 'es'")
+        instant = page.evaluate(_LANG_STATE)
+        # Lo que manda el servidor ya redactado (la causa del backend) llega con el refresco.
+        page.wait_for_function(
+            "w => document.getElementById('backendPill').textContent === w",
+            arg=_down_badge("es", before["cause"]),
+            timeout=15000,
+        )
+        stored = page.evaluate("() => localStorage.getItem('ld-lang')")
+        page.reload()
+        page.wait_for_selector("#activity tbody tr")
+        after = page.evaluate(_LANG_STATE)
+        browser.close()
+    assert before["lang"] == "en" and before["pill"] == _down_badge("en", before["cause"])
+    assert _down_badge("en", before["cause"]) != _down_badge("es", before["cause"])  # guarda
+    assert instant["kpi"][0] == _t("es", "kpi.saved.label")
+    assert instant["title"] == _t("es", "page.title")
+    assert (instant["range"], instant["tests"]) == ("7", "true")  # ni el rango ni el filtro
+    stats = [u for u in requests if "/api/stats?" in u]
+    assert stats and all("lang=es" in u and "include_tests=1" in u for u in stats), requests
+    assert any("/api/backend?lang=es" in u for u in requests), requests
+    assert stored == "es"
+    assert after["lang"] == after["selector"] == "es"
+
+
+def test_two_visitors_in_two_languages_against_one_daemon(tmp_path, monkeypatch, new_page):
+    """Escenario de la spec: el mismo daemon (en español) sirve a la vez a un navegador `en-US`, que
+    lo ve entero en inglés —también las causas y los roles que redacta el servidor—, y a uno
+    `es-ES`, que lo ve en español."""
+    _cost_and_image_log(tmp_path, monkeypatch)
+    with _Server(9499) as server, sync_playwright() as pw:
+        browser = _browser(pw)
+        english = _lang_page(new_page, browser, server.url, locale="en-US")
+        spanish = _lang_page(new_page, browser, server.url, locale="es-ES")
+        m_en = _open_full(english, server.url, "en")
+        m_es = _open_full(spanish, server.url, "es")
+        texts_en = english.evaluate(_VISIBLE_TEXT)
+        texts_es = spanish.evaluate(_VISIBLE_TEXT)
+        browser.close()
+    metrics._FILE_CACHE.clear()
+    assert (m_en["lang"], m_es["lang"]) == ("en", "es")
+    assert m_en["roles"][:4] == ["mechanical", "long", "code", "vision"], m_en["roles"]
+    assert m_es["roles"][:4] == ["mecánico", "largo", "código", "visión"], m_es["roles"]
+    assert len(texts_en) >= 150, len(texts_en)  # guarda: se leyó el panel entero
+    assert _spanish_leftovers(texts_en) == []
+    # Control de la propia comprobación: sobre el panel en español sí encuentra español.
+    assert len(_spanish_leftovers(texts_es)) >= 40
+
+
+def test_one_word_left_in_spanish_is_caught_in_the_english_DOM(tmp_path, monkeypatch, new_page):
+    """Control positivo de REQ-025: «Latencia» sin traducir (el inglés con el texto español) salta."""
+    _cost_and_image_log(tmp_path, monkeypatch)
+    monkeypatch.setitem(i18n.catalog("en"), "panel.kpi.latency.label", "Latencia")
+    with _Server(9499) as server, sync_playwright() as pw:
+        browser = _browser(pw)
+        page = _lang_page(new_page, browser, server.url, locale="en-US")
+        _open_full(page, server.url, "en")
+        texts = page.evaluate(_VISIBLE_TEXT)
+        browser.close()
+    metrics._FILE_CACHE.clear()
+    assert _spanish_leftovers(texts) == ["Latencia"]
+
+
+@pytest.mark.parametrize("browser_locale", ["en-US"])
+def test_without_the_spanish_locale_the_spanish_asserts_fail(panel, new_page):
+    """REQ-043, control registrado: los asserts en español del módulo valen porque el fixture fija
+    `es-ES`. Con el navegador en `en-US` (lo que da Chromium en el CI) no se cumplirían."""
+    url, _ = panel
+    with sync_playwright() as pw:
+        browser = _browser(pw)
+        page = _lang_page(new_page, browser, url)
+        page.goto(url)
+        page.wait_for_selector("#activity tbody tr")
+        m = page.evaluate(_LANG_STATE)
+        bar = page.inner_text(".topbar .controls")
+        browser.close()
+    assert "Contexto conservado" not in m["kpi"]
+    assert "Pruebas" not in bar
+    assert m["kpi"][0] == "Context kept"
+
+
+_BLOCKED_STORAGE = """
+Object.defineProperty(window, 'localStorage', {
+  configurable: true,
+  get() { throw new DOMException('blocked', 'SecurityError'); },
+});
+"""
+
+
+def test_with_local_storage_blocked_the_selector_still_works(panel, new_page, monkeypatch):
+    """Sin `localStorage` (bloqueado por el navegador), el idioma sale del navegador, el selector
+    cambia el panel durante la visita y no hay errores en la consola."""
+    url, _ = panel
+    monkeypatch.setattr(config, "WEB_FONTS", False)  # sin peticiones abortadas en la consola
+    with sync_playwright() as pw:
+        browser = _browser(pw)
+        page = _lang_page(new_page, browser, url)
+        page.add_init_script(_BLOCKED_STORAGE)
+        errors: list[str] = []
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+        page.goto(url)
+        page.wait_for_selector("#activity tbody tr")
+        blocked = page.evaluate(
+            "() => { try { localStorage; return false; } catch (e) { return true; } }"
+        )
+        first = page.evaluate(_LANG_STATE)
+        page.select_option("#lang", "en")
+        page.wait_for_function("() => document.documentElement.lang === 'en'")
+        second = page.evaluate(_LANG_STATE)
+        browser.close()
+    assert blocked  # guarda: el almacenamiento estaba bloqueado de verdad
+    assert first["lang"] == "es" and second["kpi"][0] == _t("en", "kpi.saved.label")
+    assert errors == []
