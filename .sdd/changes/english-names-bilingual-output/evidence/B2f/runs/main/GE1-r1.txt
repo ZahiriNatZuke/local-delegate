@@ -1,0 +1,31 @@
+**src/local_delegate/__init__.py**
+* **Missing copyright notice**: 1
+
+**src/local_delegate/__main__.py**
+* **Missing copyright notice**: 1
+
+**src/local_delegate/agents.py**
+* **Missing copyright notice**: 1
+* **Type checking import error**: 1
+* **Missing trailing comma**: 1
+* **Docstring imperative mood error**: 1
+* **Magic value used in comparison**: 1
+
+**src/local_delegate/autostart.py**
+* **Missing copyright notice**: 1
+* **Docstring imperative mood error**: 1
+* **Subprocess execution security risk**: 1
+
+**src/local_delegate/benchmark.py**
+* **Missing docstring**: 25
+* **Missing trailing comma**: 13
+* **Exception message/literal error**: 13
+* **Print statement found**: 7
+* **Magic value used in comparison**: 3
+* **Type checking import error**: 2
+* **Import at top-level error**: 2
+* **Complexity/Length/Branching errors**: 4
+* **Missing copyright notice**: 1
+* **Other errors**: 10 (including `subprocess` security, `None` union position, line length, and docstring formatting)
+
+(read server-side: 8589 chars ≈ 4473 Claude tokens that did not enter your context)

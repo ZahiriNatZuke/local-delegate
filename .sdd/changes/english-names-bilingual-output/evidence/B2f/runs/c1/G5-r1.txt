@@ -1,0 +1,38 @@
+### src/local_delegate/benchmark.py
+
+**Errores y avisos:**
+
+*   **Falta de documentación (docstrings):**
+    *   **D101**: Faltan en clases públicas (3).
+    *   **D102**: Faltan en métodos públicos (7).
+    *   **D103**: Faltan en funciones públicas (4).
+    *   **D105**: Faltan en métodos mágicos (4).
+    *   **D107**: Faltan en el método `__init__` (5).
+*   **Formato y estilo:**
+    *   **COM812**: Falta una coma final en llamadas o definiciones (12).
+    *   **E501**: Línea demasiado larga (3).
+    *   **D205**: Se requiere una línea en blanco entre la línea de resumen y la descripción (1).
+    *   **D209**: Las comillas de cierre de un docstring multilínea deberían estar en una línea separada (1).
+    *   **D301**: Se debe usar una cadena de texto cruda si hay barras invertidas en un docstring (1).
+    *   **RUF036**: El valor `None` no está al final de la unión de tipos (1).
+*   **Complejidad y lógica:**
+    *   **C901**: Función demasiado compleja (2).
+    *   **PLR0913**: Demasiados argumentos en la definición de la función (2).
+    *   **PLR0912**: Demasiadas ramificaciones (1).
+    *   **PLR0915**: Demasiadas sentencias (1).
+    *   **PLR2004**: Uso de valores mágicos en comparaciones (3).
+    *   **PLW2901**: La variable de bucle `for` es sobrescrita por el objetivo de asignación (1).
+*   **Otros:**
+    *   **T201**: Se encontró una función `print` (8).
+    *   **CPY001**: Falta el aviso de derechos de autor al inicio del archivo (1).
+    *   **TC003**: Importaciones de la biblioteca estándar deben moverse a un bloque de comprobación de tipos (3).
+    *   **PLC0415**: La importación debe estar en el nivel superior del archivo (2).
+    *   **S603**: Llamada a `subprocess` requiere verificar la ejecución de entradas no confiables (1).
+    *   **PLW1510**: `subprocess.run` sin el argumento `check` explícito (1).
+    *   **FBT003**: Valor booleano posicional en la llamada a una función (1).
+
+Found 68 errors.
+
+Sin mencionar (del log, no los nombra el resumen): checks.json
+
+(leído server-side: 33048 chars ≈ 17212 tokens de Claude que no entraron a tu contexto)

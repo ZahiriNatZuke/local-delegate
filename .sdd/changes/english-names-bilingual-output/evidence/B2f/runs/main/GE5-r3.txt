@@ -1,0 +1,37 @@
+**src\local_delegate\benchmark.py**
+
+**Docstring Issues**
+* **D101**: 4 missing docstrings in public classes.
+* **D102**: 7 missing docstrings in public methods.
+* **D103**: 3 missing docstrings in public functions.
+* **D105**: 3 missing docstrings in magic methods.
+* **D107**: 5 missing docstrings in `__init__` methods.
+* **D205**: 1 error regarding blank lines between summary and description.
+* **D209**: 1 error regarding multi-line docstring closing quotes.
+
+**Code Quality and Complexity**
+* **C901**: 2 functions are too complex.
+* **PLR0912**: 1 function has too many branches.
+* **PLR0913**: 2 functions have too many arguments.
+* **PLR0915**: 1 function has too many statements.
+* **PLR2004**: 3 instances of magic values used in comparisons.
+* **E501**: 3 lines are too long.
+* **RUF036**: 1 instance where `None` is not at the end of a type union.
+
+**Imports and Style**
+* **COM812**: 13 missing trailing commas.
+* **PLC0415**: 2 imports should be at the top-level.
+* **TC003**: 3 standard library imports should move to a type-checking block.
+* **T201**: 7 instances of `print` found.
+* **PLW2901**: 1 variable overwritten in a loop.
+* **FBT003**: 1 boolean positional value in a function call.
+* **D301**: 1 recommendation to use raw docstrings.
+* **CPY001**: 1 missing copyright notice.
+
+**Security and Logic**
+* **S603**: 1 subprocess call with untrusted input.
+* **PLW1510**: 1 subprocess call without an explicit check argument.
+
+Found 68 errors.
+
+(read server-side: 33048 chars ≈ 17212 Claude tokens that did not enter your context)

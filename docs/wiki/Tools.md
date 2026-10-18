@@ -164,6 +164,11 @@ Resume la salida de lint, tests o CI: qué falló, dónde y por qué, sin las mi
 la tool para cuando un comando escupe más de lo que cabe — vuelca la salida a un archivo y pasa
 `path`. Map-reduce si hace falta.
 
+Con un log largo (el que va al rol largo, en una llamada o troceado), el programa pone delante la
+lista de ficheros y códigos de regla que nombra el log, sin recuentos, y si el resumen deja fuera
+alguno de los diez ficheros o los diez códigos más nombrados, lo añade al final en una línea
+«Sin mencionar: …». Un log corto va al rol mecánico tal cual.
+
 ## `local_commit_msg`
 
 ```python

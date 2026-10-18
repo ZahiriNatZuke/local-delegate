@@ -1,0 +1,55 @@
+**src/local_delegate/web/metrics.py**
+* **E501**: 218 lines too long
+* **ANN201**: 15 missing return type annotations
+* **COM812**: 13 missing trailing commas
+* **RUF001**: 11 ambiguous characters in strings
+* **SLF001**: 7 private member accesses
+* **FAST002**: 7 FastAPI dependencies without `Annotated`
+* **D103**: 6 missing docstrings in public functions
+* **TID252**: 14 relative imports from parent modules
+* **D205/D209**: 3 docstring formatting issues
+* **RUF002**: 3 ambiguous multiplication signs
+* **RUF003**: 2 ambiguous minus signs
+* **PLW0603**: 2 discouraged global statements
+* **PLR2004**: 1 magic value used in comparison
+* **PLR0915**: 1 too many statements
+* **C901**: 1 function too complex
+* **BLE001**: 3 blind exception catches
+* **SIM108**: 1 ternary operator suggestion
+* **SIM105**: 1 `try-except-pass` pattern
+* **S110**: 1 unlogged exception
+* **FBT001**: 1 boolean-typed positional argument
+* **PLC0415**: 1 import not at top-level
+* **TRY300**: 1 statement suggested for `else` block
+* **T201**: 1 `print` statement found
+* **PLW2901**: 1 overwritten loop variable
+
+**src/local_delegate/web/sysinfo.py**
+* **BLE001**: 4 blind exception catches
+* **PLW1510**: 4 `subprocess.run` calls without `check` argument
+* **S607**: 4 partial executable paths in processes
+* **PTH123**: 3 `open()` calls to be replaced by `Path.open()`
+* **PLR2004**: 3 magic values in comparisons
+* **D403**: 3 docstring capitalization errors
+* **PLW0603**: 2 discouraged global statements
+* **PTH208**: 1 `iterdir()` suggestion
+* **S603**: 1 untrusted input check in `subprocess`
+* **PLC0415**: 1 import not at top-level
+* **CPY001**: 1 missing copyright notice
+* **COM812**: 2 missing trailing commas
+
+**src/local_delegate/web/auth.py**
+* **ANN001**: 9 missing type annotations for arguments
+* **COM812**: 3 missing trailing commas
+* **D400**: 2 lines not ending with a period
+* **ANN201**: 1 missing return type annotation
+* **ANN202**: 2 missing return type annotations for private functions
+* **CPY001**: 1 missing copyright notice
+* **D107**: 1 missing docstring in `__init__`
+* **D102**: 1 missing docstring in
+
+Not mentioned (in the log, not named by the summary): src/local_delegate/web/__init__.py
+
+[local-delegate warning: output truncated by max_tokens]
+
+(read server-side: 33805 chars ≈ 17606 Claude tokens that did not enter your context)

@@ -1,0 +1,22 @@
+**Summary of Issues**
+
+The following summarizes the identified issues, grouped by file and categorized by type.
+
+**lib/io.py**
+-   **I001 Import block issues:** Two instances of unsorted import blocks were detected.
+
+**lib/net.py**
+-   **I001 Import block issues:** Three instances of unsorted import blocks were found.
+-   **SIM102 Single `if` statement:** Three instances of the suggestion to use a single `if` statement were identified.
+
+**lib/db.py**
+-   **SIM102 Single `if` statement:** Two instances of the suggestion to use a single `if` statement were found.
+-   **UP006 Type annotation:** Two instances of using `List` instead of `list` for type annotations were detected.
+
+**lib/net.py**
+-   **RET504 Unnecessary assignment:** One instance of an unnecessary assignment before a `return` statement was identified.
+
+**lib/db.py**
+-   **RET504 Unnecessary assignment:** One instance of an unnecessary assignment before a `return` statement was found.
+
+(read server-side: 784 chars ≈ 408 Claude tokens that did not enter your context)

@@ -1,0 +1,16 @@
+**Summary of Issues by File**
+
+**src\local\_delegate\sections.py:**
+
+-   **Missing Docstrings:** 5 instances of `D101` (Missing docstring in public class/method).
+-   **Line Length:** 5 instances of `E501` (Line too long - exceeding 100 characters).
+-   **Complex Expressions:** 2 instances of `C901` (Too complex - exceeding 10 arguments).
+-   **Docstring Ambiguity:** 2 instances of `RUF002` (Ambiguous characters in docstrings – `×` and `-`).
+-   **Blank Line Issues:** 2 instances of `D203` and `D211` (Incompatible blank line rules).
+-   **Summary Line Issues:** 1 instance of `D205` (Missing blank line between summary and description).
+-   **Type Checking:** 1 instance of `TC003` (Move import to type-checking block).
+-   **Other:** 1 instance of `CPY001` (Missing copyright notice), 1 instance of `PLR2004` (Magic value in comparison), 1 instance of `PLR0912` (Too many branches), 1 instance of `PLR0913` (Too many arguments).
+
+Found 26 errors.
+
+(read server-side: 2627 chars ≈ 1368 Claude tokens that did not enter your context)

@@ -1,0 +1,25 @@
+**Summary of Issues by File**
+
+**src\local\_delegate\sections.py:**
+
+-   Missing copyright notice at the top of the file (CPY001) - 1 instance
+-   Docstring contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)? (RUF002) - 1 instance
+-   Missing docstring in public class (D101) - 3 instances
+-   Missing docstring in public method (D102) - 2 instances
+-   Use `r"""` if any backslashes in a docstring (D301) - 1 instance
+-   First line should end with a period (D400) - 1 instance
+-   `markdown_headings` is too complex (11 > 10) (C901) - 1 instance
+-   `match_headings` is too complex (12 > 10) (C901) - 1 instance
+-   Too many branches (14 > 12) (PLR0912) - 1 instance
+-   Line too long (101 > 100) (E501) - 3 instances
+-   Line too long (103 > 100) (E501) - 1 instance
+-   Line too long (102 > 100) (E501) - 1 instance
+-   Line too long (101 > 100) (E501) - 1 instance
+-   Line too long (105 > 100) (E501) - 1 instance
+-   Blank line required between summary line and description (D205) - 1 instance
+-   Ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)? (RUF002) - 1 instance
+-   Too many arguments in function definition (6 > 5) (PLR0913) - 1 instance
+
+Found 26 errors.
+
+(read server-side: 2627 chars ≈ 1368 Claude tokens that did not enter your context)

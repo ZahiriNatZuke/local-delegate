@@ -1,0 +1,28 @@
+**src/adapters/claude-json.ts**
+* **Argument mismatch**: One instance of error TS2554 where more arguments were provided than expected.
+
+**src/adapters/codex/index.ts**
+* **Missing property**: One instance of error TS2550 regarding the absence of the hasOwn property on ObjectConstructor.
+
+**src/cli/commands/export.ts**
+* **Missing property**: Two instances of error TS2550 where the at property is missing from the string array type.
+
+**src/cli/commands/import.ts**
+* **Missing property**: One instance of error TS2550 where the at property is missing from the string array type.
+
+**src/cli/index.ts**
+* **Missing property**: One instance of error TS2550 regarding the absence of the hasOwn property on ObjectConstructor.
+
+**src/cli/ui/style.ts**
+* **Missing property**: One instance of error TS2550 where the replaceAll property is missing from the string type.
+
+**src/cli/ui/width.ts**
+* **Missing property**: One instance of error TS2339 where the Segmenter property is missing from the Intl type.
+
+**src/io/fs/atomic.ts**
+* **Invalid modifier**: One instance of error TS4113 where the override modifier is used on a member not declared in the base class.
+
+**src/io/vault/index.ts**
+* **Argument mismatch**: One instance of error TS2554 where more arguments were provided than expected.
+
+(read server-side: 1647 chars ≈ 857 Claude tokens that did not enter your context)

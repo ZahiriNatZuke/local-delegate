@@ -1,0 +1,14 @@
+**src/a.py**
+* Dos errores de falta de docstring en función pública (D103).
+* Un error de falta de docstring en módulo público (D100).
+* Un error por usar estructuras de datos mutables en argumentos por defecto (B006).
+
+**src/b.py**
+* Tres errores de falta de docstring en función pública (D103).
+* Un error de falta de docstring en módulo público (D100).
+
+**src/c.py**
+* Tres errores por el uso de la función `print` (T201).
+* Un error de falta de docstring en módulo público (D100).
+
+(leído server-side: 626 chars ≈ 326 tokens de Claude que no entraron a tu contexto)

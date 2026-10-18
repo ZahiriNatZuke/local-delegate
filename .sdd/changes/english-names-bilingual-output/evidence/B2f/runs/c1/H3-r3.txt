@@ -1,0 +1,15 @@
+**lib/net.py**
+*   **SIM102**: Tres instancias de uso de una única sentencia `if`.
+*   **I001**: Un bloque de importación sin ordenar o sin formato.
+*   **RET504**: Una asignación innecesaria antes de un `return`.
+
+**lib/io.py**
+*   **I001**: Dos bloques de importación sin ordenar o sin formato.
+*   **UP006**: Dos instancias de uso de `dict` en lugar de `Dict` para la anotación de tipos.
+
+**lib/db.py**
+*   **SIM102**: Dos instancias de uso de una única sentencia `if`.
+*   **UP006**: Una instancia de uso de `list` en lugar de `List` para la anotación de tipos.
+*   **RET504**: Una asignación innecesaria antes de un `return`.
+
+(leído server-side: 784 chars ≈ 408 tokens de Claude que no entraron a tu contexto)

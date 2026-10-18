@@ -1,0 +1,27 @@
+**src\app\core\decorators\throttle.decorator.ts**
+* **Uso de definición de componente de React**: 4 errores por definir componentes mediante funciones de flecha.
+* **Uso de separadores numéricos**: 3 errores por falta de separadores en literales numéricos largos.
+* **Uso de tipo explícito**: 5 errores por falta de tipos de retorno en funciones.
+* **Uso de tipo de retorno explícito**: 5 errores por falta de tipos de retorno en funciones.
+
+**src\app\core\decorators\log-audit.decorator.ts**
+* **Uso de definiciones de tipo consistentes**: 1 error por uso de tipo en lugar de interfaz.
+* **Uso de definición de componente de React**: 1 error por definir un componente mediante una función de flecha.
+* **Uso de tipo explícito**: 1 error por falta de tipos de retorno.
+* **Uso de tipo de retorno explícito**: 1 error por falta de tipos de retorno.
+
+**src\app\core\filters\http-exception.filter.ts**
+* **Uso de tipo explícito**: 1 error por falta de tipos de retorno en miembros.
+* **Uso de tipo de retorno explícito**: 1 error por falta de tipos de retorno en funciones.
+* **No usar operador ternario**: 1 error por el uso de un operador ternario inesperado.
+* **Uso de `this` en métodos de clase**: 1 error por no utilizar `this` en el método de clase.
+
+**src\app\core\decorators\app-controller.decorator.ts**
+* **Uso de tipo explícito**: 1 error por falta de tipos de retorno.
+* **Uso de tipo de retorno explícito**: 1 error por falta de tipos de retorno.
+
+Found 125 errors.
+
+Sin mencionar (del log, no los nombra el resumen): lint/nursery/useExplicitReturnType, lint/nursery/useExplicitType, lint/nursery/useReactFunctionComponentDefinition, lint/style/useNumericSeparators, lint/style/useConsistentTypeDefinitions, lint/style/noTernary, lint/nursery/useThisInClassMethods
+
+(leído server-side: 22235 chars ≈ 11580 tokens de Claude que no entraron a tu contexto)

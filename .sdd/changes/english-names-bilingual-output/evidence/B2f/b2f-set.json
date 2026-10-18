@@ -1,0 +1,712 @@
+{
+ "frozen_at": "2026-10-18",
+ "frozen_before_any_measurement_call": true,
+ "entries": [
+  {
+   "id": "G1",
+   "path": "benchmarks/catalogo-2026-09/fuentes/lint-9k.txt",
+   "sha256": "9c7295b2b49627aff832ce808789be7993522cd72c8f947fb06f19664723801f",
+   "chars": 8589,
+   "top_codes": [
+    "COM812",
+    "TRY003",
+    "D102",
+    "T201",
+    "EM102",
+    "CPY001",
+    "D107",
+    "PLR2004",
+    "D101",
+    "D105"
+   ],
+   "top_files": [
+    "src/local_delegate/benchmark.py",
+    "src/local_delegate/agents.py",
+    "src/local_delegate/autostart.py",
+    "src/local_delegate/__init__.py",
+    "src/local_delegate/__main__.py"
+   ],
+   "purpose": "ruff concise 8.6k (C44)"
+  },
+  {
+   "id": "G2",
+   "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-biome-lint.txt",
+   "sha256": "071dd4473f52d3136e2fa336c275589614f40e6821965d6ba3aeef210ffc1ba8",
+   "chars": 18043,
+   "top_codes": [
+    "lint/style/noMagicNumbers",
+    "lint/style/useNamingConvention",
+    "lint/style/noExcessiveClassesPerFile",
+    "lint/style/useBlockStatements",
+    "lint/style/noParameterProperties",
+    "lint/style/useImportType",
+    "lint/nursery/noRestrictedDependencies",
+    "lint/style/noDefaultExport"
+   ],
+   "top_files": [
+    "apps/api/src/validate/dto/validate.dto.ts",
+    "apps/api/src/config/env.schema.ts",
+    "apps/api/src/geocode/dto/geocode.dto.ts",
+    "pnpm-workspace.yaml",
+    "./dto/geocode.dto.ts",
+    "./geocode.service.ts",
+    "apps/api/src/geocode/geocode.controller.ts",
+    "apps/api/src/config/repo-root.ts",
+    "apps/api/package.json",
+    "apps/api/src/validate/validate.controller.ts"
+   ],
+   "purpose": "biome 18k (C43)"
+  },
+  {
+   "id": "G3",
+   "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-biome-lint-nest.txt",
+   "sha256": "3af20fa5cfba9f2dedb4f8a5653f382acfaf93477085774587aa694b7da994a2",
+   "chars": 22235,
+   "top_codes": [
+    "lint/nursery/useExplicitReturnType",
+    "lint/nursery/useExplicitType",
+    "lint/nursery/useReactFunctionComponentDefinition",
+    "lint/style/useNumericSeparators",
+    "lint/style/useConsistentTypeDefinitions",
+    "lint/style/noTernary",
+    "lint/nursery/useThisInClassMethods"
+   ],
+   "top_files": [
+    "src/app/core/decorators/throttle.decorator.ts",
+    "src/app/core/decorators/log-audit.decorator.ts",
+    "src/app/core/filters/http-exception.filter.ts",
+    "src/app/core/decorators/app-controller.decorator.ts"
+   ],
+   "purpose": "biome 22k (A14)"
+  },
+  {
+   "id": "G4",
+   "path": ".sdd/changes/english-names-bilingual-output/evidence/B2f/docs/G4-ruff-concise-web.txt",
+   "sha256": "1fcaacd0cd70656b9b99897ffee9a7a6efce302bb29bccb75eb2189bc38149da",
+   "chars": 33805,
+   "top_codes": [
+    "E501",
+    "COM812",
+    "ANN201",
+    "RUF001",
+    "TID252",
+    "ANN001",
+    "FAST002",
+    "SLF001",
+    "D103",
+    "BLE001"
+   ],
+   "top_files": [
+    "src/local_delegate/web/metrics.py",
+    "src/local_delegate/web/sysinfo.py",
+    "src/local_delegate/web/auth.py",
+    "src/local_delegate/web/__init__.py"
+   ],
+   "purpose": "ruff --select ALL concise, web/ of main"
+  },
+  {
+   "id": "G5",
+   "path": ".sdd/changes/english-names-bilingual-output/evidence/B2f/docs/G5-ruff-full-benchmark.txt",
+   "sha256": "b81cd4e3f7c9d5edad5db9b15b6bbc7693c97ce758fcd979ceaa5d79da7db8ac",
+   "chars": 33048,
+   "top_codes": [
+    "COM812",
+    "D102",
+    "T201",
+    "D107",
+    "D101",
+    "D105",
+    "D103",
+    "TC003",
+    "PLR2004",
+    "E501"
+   ],
+   "top_files": [
+    "src/local_delegate/benchmark.py",
+    "checks.json"
+   ],
+   "purpose": "ruff --select ALL full, benchmark.py"
+  },
+  {
+   "id": "GE1",
+   "path": "benchmarks/catalogo-2026-09/fuentes/lint-9k.txt",
+   "sha256": "9c7295b2b49627aff832ce808789be7993522cd72c8f947fb06f19664723801f",
+   "chars": 8589,
+   "top_codes": [
+    "COM812",
+    "TRY003",
+    "D102",
+    "T201",
+    "EM102",
+    "CPY001",
+    "D107",
+    "PLR2004",
+    "D101",
+    "D105"
+   ],
+   "top_files": [
+    "src/local_delegate/benchmark.py",
+    "src/local_delegate/agents.py",
+    "src/local_delegate/autostart.py",
+    "src/local_delegate/__init__.py",
+    "src/local_delegate/__main__.py"
+   ],
+   "purpose": "ruff concise 8.6k (C44)"
+  },
+  {
+   "id": "GE2",
+   "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-biome-lint.txt",
+   "sha256": "071dd4473f52d3136e2fa336c275589614f40e6821965d6ba3aeef210ffc1ba8",
+   "chars": 18043,
+   "top_codes": [
+    "lint/style/noMagicNumbers",
+    "lint/style/useNamingConvention",
+    "lint/style/noExcessiveClassesPerFile",
+    "lint/style/useBlockStatements",
+    "lint/style/noParameterProperties",
+    "lint/style/useImportType",
+    "lint/nursery/noRestrictedDependencies",
+    "lint/style/noDefaultExport"
+   ],
+   "top_files": [
+    "apps/api/src/validate/dto/validate.dto.ts",
+    "apps/api/src/config/env.schema.ts",
+    "apps/api/src/geocode/dto/geocode.dto.ts",
+    "pnpm-workspace.yaml",
+    "./dto/geocode.dto.ts",
+    "./geocode.service.ts",
+    "apps/api/src/geocode/geocode.controller.ts",
+    "apps/api/src/config/repo-root.ts",
+    "apps/api/package.json",
+    "apps/api/src/validate/validate.controller.ts"
+   ],
+   "purpose": "biome 18k (C43)"
+  },
+  {
+   "id": "GE3",
+   "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-biome-lint-nest.txt",
+   "sha256": "3af20fa5cfba9f2dedb4f8a5653f382acfaf93477085774587aa694b7da994a2",
+   "chars": 22235,
+   "top_codes": [
+    "lint/nursery/useExplicitReturnType",
+    "lint/nursery/useExplicitType",
+    "lint/nursery/useReactFunctionComponentDefinition",
+    "lint/style/useNumericSeparators",
+    "lint/style/useConsistentTypeDefinitions",
+    "lint/style/noTernary",
+    "lint/nursery/useThisInClassMethods"
+   ],
+   "top_files": [
+    "src/app/core/decorators/throttle.decorator.ts",
+    "src/app/core/decorators/log-audit.decorator.ts",
+    "src/app/core/filters/http-exception.filter.ts",
+    "src/app/core/decorators/app-controller.decorator.ts"
+   ],
+   "purpose": "biome 22k (A14)"
+  },
+  {
+   "id": "GE4",
+   "path": ".sdd/changes/english-names-bilingual-output/evidence/B2f/docs/G4-ruff-concise-web.txt",
+   "sha256": "1fcaacd0cd70656b9b99897ffee9a7a6efce302bb29bccb75eb2189bc38149da",
+   "chars": 33805,
+   "top_codes": [
+    "E501",
+    "COM812",
+    "ANN201",
+    "RUF001",
+    "TID252",
+    "ANN001",
+    "FAST002",
+    "SLF001",
+    "D103",
+    "BLE001"
+   ],
+   "top_files": [
+    "src/local_delegate/web/metrics.py",
+    "src/local_delegate/web/sysinfo.py",
+    "src/local_delegate/web/auth.py",
+    "src/local_delegate/web/__init__.py"
+   ],
+   "purpose": "ruff --select ALL concise, web/ of main"
+  },
+  {
+   "id": "GE5",
+   "path": ".sdd/changes/english-names-bilingual-output/evidence/B2f/docs/G5-ruff-full-benchmark.txt",
+   "sha256": "b81cd4e3f7c9d5edad5db9b15b6bbc7693c97ce758fcd979ceaa5d79da7db8ac",
+   "chars": 33048,
+   "top_codes": [
+    "COM812",
+    "D102",
+    "T201",
+    "D107",
+    "D101",
+    "D105",
+    "D103",
+    "TC003",
+    "PLR2004",
+    "E501"
+   ],
+   "top_files": [
+    "src/local_delegate/benchmark.py",
+    "checks.json"
+   ],
+   "purpose": "ruff --select ALL full, benchmark.py"
+  },
+  {
+   "id": "H1",
+   "path": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-tres-reglas.txt",
+   "sha256": "ec0b6183c8ca06cac255bdf11c914291473771ddd2df55b2ecbda2767bd49270",
+   "chars": 340,
+   "top_codes": [
+    "E501",
+    "F401",
+    "W291"
+   ],
+   "top_files": [
+    "app/util.py",
+    "app/main.py",
+    "app/cli.py"
+   ],
+   "purpose": "affinity corpus: three rules"
+  },
+  {
+   "id": "H2",
+   "path": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-docstrings.txt",
+   "sha256": "b110b57cb1159eec9243dcedb0ecdbc2e38f79d44b3891bc64fbd192659c3538",
+   "chars": 626,
+   "top_codes": [
+    "D103",
+    "D100",
+    "T201",
+    "B006"
+   ],
+   "top_files": [
+    "src/a.py",
+    "src/b.py",
+    "src/c.py"
+   ],
+   "purpose": "affinity corpus: docstrings"
+  },
+  {
+   "id": "H3",
+   "path": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-cinco-reglas.txt",
+   "sha256": "0809f67c265b1bed3ef6bcec7b6beba41fc4cd61a328cfe9f90986ce870c889c",
+   "chars": 784,
+   "top_codes": [
+    "SIM102",
+    "I001",
+    "UP006",
+    "RET504"
+   ],
+   "top_files": [
+    "lib/net.py",
+    "lib/io.py",
+    "lib/db.py"
+   ],
+   "purpose": "affinity corpus: five rules"
+  },
+  {
+   "id": "H4",
+   "path": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-un-solo-archivo.txt",
+   "sha256": "7666debfbc2ca5df842cb29520580e7711e8c44dfcda60b9d8188d9715d1db3e",
+   "chars": 438,
+   "top_codes": [
+    "E402",
+    "E501",
+    "E711"
+   ],
+   "top_files": [
+    "tools/gen.py"
+   ],
+   "purpose": "affinity corpus: a single file"
+  },
+  {
+   "id": "H5",
+   "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-ruff-concise.txt",
+   "sha256": "1b45f1d58d013abcffaf2a48def98c192a598f5a5990eb3cadf9a92d55780645",
+   "chars": 2627,
+   "top_codes": [
+    "E501",
+    "D101",
+    "D102",
+    "RUF002",
+    "C901",
+    "D203",
+    "D211",
+    "D212",
+    "D213",
+    "CPY001"
+   ],
+   "top_files": [
+    "src/local_delegate/sections.py"
+   ],
+   "purpose": "ruff concise 2.6k, 17 codes"
+  },
+  {
+   "id": "H6",
+   "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-tsc.txt",
+   "sha256": "2705c2d9eac77e04a707594093594fc412b8a2f25e8bb2d5cd8ea5df205e7fcf",
+   "chars": 1647,
+   "top_codes": [
+    "TS2550",
+    "TS2554",
+    "TS2339",
+    "TS4113"
+   ],
+   "top_files": [
+    "src/cli/commands/export.ts",
+    "src/adapters/claude-json.ts",
+    "src/adapters/codex/index.ts",
+    "src/cli/commands/import.ts",
+    "src/cli/index.ts",
+    "src/cli/ui/style.ts",
+    "src/cli/ui/width.ts",
+    "src/io/fs/atomic.ts",
+    "src/io/vault/index.ts"
+   ],
+   "purpose": "tsc 1.6k"
+  },
+  {
+   "id": "HE1",
+   "path": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-tres-reglas.txt",
+   "sha256": "ec0b6183c8ca06cac255bdf11c914291473771ddd2df55b2ecbda2767bd49270",
+   "chars": 340,
+   "top_codes": [
+    "E501",
+    "F401",
+    "W291"
+   ],
+   "top_files": [
+    "app/util.py",
+    "app/main.py",
+    "app/cli.py"
+   ],
+   "purpose": "affinity corpus: three rules"
+  },
+  {
+   "id": "HE2",
+   "path": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-docstrings.txt",
+   "sha256": "b110b57cb1159eec9243dcedb0ecdbc2e38f79d44b3891bc64fbd192659c3538",
+   "chars": 626,
+   "top_codes": [
+    "D103",
+    "D100",
+    "T201",
+    "B006"
+   ],
+   "top_files": [
+    "src/a.py",
+    "src/b.py",
+    "src/c.py"
+   ],
+   "purpose": "affinity corpus: docstrings"
+  },
+  {
+   "id": "HE3",
+   "path": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-cinco-reglas.txt",
+   "sha256": "0809f67c265b1bed3ef6bcec7b6beba41fc4cd61a328cfe9f90986ce870c889c",
+   "chars": 784,
+   "top_codes": [
+    "SIM102",
+    "I001",
+    "UP006",
+    "RET504"
+   ],
+   "top_files": [
+    "lib/net.py",
+    "lib/io.py",
+    "lib/db.py"
+   ],
+   "purpose": "affinity corpus: five rules"
+  },
+  {
+   "id": "HE4",
+   "path": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-un-solo-archivo.txt",
+   "sha256": "7666debfbc2ca5df842cb29520580e7711e8c44dfcda60b9d8188d9715d1db3e",
+   "chars": 438,
+   "top_codes": [
+    "E402",
+    "E501",
+    "E711"
+   ],
+   "top_files": [
+    "tools/gen.py"
+   ],
+   "purpose": "affinity corpus: a single file"
+  },
+  {
+   "id": "HE5",
+   "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-ruff-concise.txt",
+   "sha256": "1b45f1d58d013abcffaf2a48def98c192a598f5a5990eb3cadf9a92d55780645",
+   "chars": 2627,
+   "top_codes": [
+    "E501",
+    "D101",
+    "D102",
+    "RUF002",
+    "C901",
+    "D203",
+    "D211",
+    "D212",
+    "D213",
+    "CPY001"
+   ],
+   "top_files": [
+    "src/local_delegate/sections.py"
+   ],
+   "purpose": "ruff concise 2.6k, 17 codes"
+  },
+  {
+   "id": "HE6",
+   "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-tsc.txt",
+   "sha256": "2705c2d9eac77e04a707594093594fc412b8a2f25e8bb2d5cd8ea5df205e7fcf",
+   "chars": 1647,
+   "top_codes": [
+    "TS2550",
+    "TS2554",
+    "TS2339",
+    "TS4113"
+   ],
+   "top_files": [
+    "src/cli/commands/export.ts",
+    "src/adapters/claude-json.ts",
+    "src/adapters/codex/index.ts",
+    "src/cli/commands/import.ts",
+    "src/cli/index.ts",
+    "src/cli/ui/style.ts",
+    "src/cli/ui/width.ts",
+    "src/io/fs/atomic.ts",
+    "src/io/vault/index.ts"
+   ],
+   "purpose": "tsc 1.6k"
+  },
+  {
+   "id": "M1",
+   "path": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-tres-reglas.txt",
+   "sha256": "ec0b6183c8ca06cac255bdf11c914291473771ddd2df55b2ecbda2767bd49270",
+   "chars": 340,
+   "top_codes": [
+    "E501",
+    "F401",
+    "W291"
+   ],
+   "top_files": [
+    "app/util.py",
+    "app/main.py",
+    "app/cli.py"
+   ],
+   "purpose": "affinity corpus: three rules"
+  },
+  {
+   "id": "M2",
+   "path": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-docstrings.txt",
+   "sha256": "b110b57cb1159eec9243dcedb0ecdbc2e38f79d44b3891bc64fbd192659c3538",
+   "chars": 626,
+   "top_codes": [
+    "D103",
+    "D100",
+    "T201",
+    "B006"
+   ],
+   "top_files": [
+    "src/a.py",
+    "src/b.py",
+    "src/c.py"
+   ],
+   "purpose": "affinity corpus: docstrings"
+  },
+  {
+   "id": "M3",
+   "path": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-cinco-reglas.txt",
+   "sha256": "0809f67c265b1bed3ef6bcec7b6beba41fc4cd61a328cfe9f90986ce870c889c",
+   "chars": 784,
+   "top_codes": [
+    "SIM102",
+    "I001",
+    "UP006",
+    "RET504"
+   ],
+   "top_files": [
+    "lib/net.py",
+    "lib/io.py",
+    "lib/db.py"
+   ],
+   "purpose": "affinity corpus: five rules"
+  },
+  {
+   "id": "M4",
+   "path": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-un-solo-archivo.txt",
+   "sha256": "7666debfbc2ca5df842cb29520580e7711e8c44dfcda60b9d8188d9715d1db3e",
+   "chars": 438,
+   "top_codes": [
+    "E402",
+    "E501",
+    "E711"
+   ],
+   "top_files": [
+    "tools/gen.py"
+   ],
+   "purpose": "affinity corpus: a single file"
+  },
+  {
+   "id": "M5",
+   "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-ruff-concise.txt",
+   "sha256": "1b45f1d58d013abcffaf2a48def98c192a598f5a5990eb3cadf9a92d55780645",
+   "chars": 2627,
+   "top_codes": [
+    "E501",
+    "D101",
+    "D102",
+    "RUF002",
+    "C901",
+    "D203",
+    "D211",
+    "D212",
+    "D213",
+    "CPY001"
+   ],
+   "top_files": [
+    "src/local_delegate/sections.py"
+   ],
+   "purpose": "ruff concise 2.6k, 17 codes"
+  },
+  {
+   "id": "M6",
+   "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-tsc.txt",
+   "sha256": "2705c2d9eac77e04a707594093594fc412b8a2f25e8bb2d5cd8ea5df205e7fcf",
+   "chars": 1647,
+   "top_codes": [
+    "TS2550",
+    "TS2554",
+    "TS2339",
+    "TS4113"
+   ],
+   "top_files": [
+    "src/cli/commands/export.ts",
+    "src/adapters/claude-json.ts",
+    "src/adapters/codex/index.ts",
+    "src/cli/commands/import.ts",
+    "src/cli/index.ts",
+    "src/cli/ui/style.ts",
+    "src/cli/ui/width.ts",
+    "src/io/fs/atomic.ts",
+    "src/io/vault/index.ts"
+   ],
+   "purpose": "tsc 1.6k"
+  },
+  {
+   "id": "ME1",
+   "path": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-tres-reglas.txt",
+   "sha256": "ec0b6183c8ca06cac255bdf11c914291473771ddd2df55b2ecbda2767bd49270",
+   "chars": 340,
+   "top_codes": [
+    "E501",
+    "F401",
+    "W291"
+   ],
+   "top_files": [
+    "app/util.py",
+    "app/main.py",
+    "app/cli.py"
+   ],
+   "purpose": "affinity corpus: three rules"
+  },
+  {
+   "id": "ME2",
+   "path": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-docstrings.txt",
+   "sha256": "b110b57cb1159eec9243dcedb0ecdbc2e38f79d44b3891bc64fbd192659c3538",
+   "chars": 626,
+   "top_codes": [
+    "D103",
+    "D100",
+    "T201",
+    "B006"
+   ],
+   "top_files": [
+    "src/a.py",
+    "src/b.py",
+    "src/c.py"
+   ],
+   "purpose": "affinity corpus: docstrings"
+  },
+  {
+   "id": "ME3",
+   "path": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-cinco-reglas.txt",
+   "sha256": "0809f67c265b1bed3ef6bcec7b6beba41fc4cd61a328cfe9f90986ce870c889c",
+   "chars": 784,
+   "top_codes": [
+    "SIM102",
+    "I001",
+    "UP006",
+    "RET504"
+   ],
+   "top_files": [
+    "lib/net.py",
+    "lib/io.py",
+    "lib/db.py"
+   ],
+   "purpose": "affinity corpus: five rules"
+  },
+  {
+   "id": "ME4",
+   "path": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-un-solo-archivo.txt",
+   "sha256": "7666debfbc2ca5df842cb29520580e7711e8c44dfcda60b9d8188d9715d1db3e",
+   "chars": 438,
+   "top_codes": [
+    "E402",
+    "E501",
+    "E711"
+   ],
+   "top_files": [
+    "tools/gen.py"
+   ],
+   "purpose": "affinity corpus: a single file"
+  },
+  {
+   "id": "ME5",
+   "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-ruff-concise.txt",
+   "sha256": "1b45f1d58d013abcffaf2a48def98c192a598f5a5990eb3cadf9a92d55780645",
+   "chars": 2627,
+   "top_codes": [
+    "E501",
+    "D101",
+    "D102",
+    "RUF002",
+    "C901",
+    "D203",
+    "D211",
+    "D212",
+    "D213",
+    "CPY001"
+   ],
+   "top_files": [
+    "src/local_delegate/sections.py"
+   ],
+   "purpose": "ruff concise 2.6k, 17 codes"
+  },
+  {
+   "id": "ME6",
+   "path": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-tsc.txt",
+   "sha256": "2705c2d9eac77e04a707594093594fc412b8a2f25e8bb2d5cd8ea5df205e7fcf",
+   "chars": 1647,
+   "top_codes": [
+    "TS2550",
+    "TS2554",
+    "TS2339",
+    "TS4113"
+   ],
+   "top_files": [
+    "src/cli/commands/export.ts",
+    "src/adapters/claude-json.ts",
+    "src/adapters/codex/index.ts",
+    "src/cli/commands/import.ts",
+    "src/cli/index.ts",
+    "src/cli/ui/style.ts",
+    "src/cli/ui/width.ts",
+    "src/io/fs/atomic.ts",
+    "src/io/vault/index.ts"
+   ],
+   "purpose": "tsc 1.6k"
+  }
+ ]
+}

@@ -1,0 +1,34 @@
+**apps\api\package.json**
+* **Dependencia restringida**: Se detectó el uso de la dependencia restringida `express`.
+
+**apps\api\src\config\env.schema.ts**
+* **Números mágicos**: 1 error. Se detectó un número mágico que debe extraerse a una constante.
+* **Convención de nombres**: 6 avisos. Las propiedades del objeto deben usar `camelCase`.
+
+**apps\api\src\geocode\dto\geocode.dto.ts**
+* **Clases excesivas por archivo**: 1 aviso. El archivo contiene 2 clases, superando el máximo de 1.
+* **Números mágicos**: 4 avisos. Se detectaron números mágicos en las validaciones de longitud.
+
+**apps\api\src\validate\dto\validate.dto.ts**
+* **Clases excesivas por archivo**: 1 aviso. El archivo contiene 2 clases, superando el máximo de 1.
+* **Números mágicos**: 5 avisos. Se detectaron números mágicos en las validaciones de longitud y arreglos.
+* **Convención de nombres**: 4 avisos. Las propiedades del objeto deben usar `camelCase`.
+
+**apps\api\src\config\repo-root.ts**
+* **Uso de sentencias de bloque**: 2 avisos. Se prefieren sentencias de bloque para las instrucciones `if`.
+
+**apps\api\src\geocode\geocode.controller.ts**
+* **Propiedades de parámetro**: 1 aviso. Se recomienda usar propiedades de clase más explícitas.
+* **Uso de tipo de importación**: 2 avisos. Algunas importaciones solo se utilizan como tipos.
+
+**apps\api\src\validate\validate.controller.ts**
+* **Propiedades de parámetro**: 1 aviso. Se recomienda usar propiedades de clase más explícitas.
+
+**packages\core\vitest.config.ts**
+* **Exportación por defecto**: 1 aviso. Se debe evitar el uso de `export default`.
+
+Found 3 errors.
+Found 51 warnings.
+Found 192 infos.
+
+(leído server-side: 18043 chars ≈ 9397 tokens de Claude que no entraron a tu contexto)

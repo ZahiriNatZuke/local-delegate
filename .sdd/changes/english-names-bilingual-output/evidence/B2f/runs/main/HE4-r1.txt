@@ -1,0 +1,8 @@
+**Summary of issues by file:**
+
+**tools/gen.py**
+* **E402 Module level import not at top of file**: Four instances where imports are not placed at the beginning of the file.
+* **E501 Line too long**: Three instances where lines exceed the permitted length.
+* **E711 Comparison to `None` should be `cond is None`**: One instance where a comparison to `None` is not using the identity operator.
+
+(read server-side: 438 chars ≈ 228 Claude tokens that did not enter your context)

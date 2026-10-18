@@ -1,0 +1,20 @@
+**Resumen de Problemas**
+
+El análisis revela problemas agrupados por archivo.
+
+**lib/io.py:**
+-   Problemas de formato de importaciones: 2
+-   Problemas de anotaciones de tipo: 2
+
+**lib/net.py:**
+-   Problemas de formato de importaciones: 1
+-   Problemas de `if`s anidados: 3
+-   Asignación innecesaria antes de `return`: 1
+
+**lib/db.py:**
+-   Problemas de anotaciones de tipo: 2
+-   Asignación innecesaria antes de `return`: 1
+
+Los problemas más frecuentes son los relacionados con el formato de importaciones y el uso de `if`s anidados en el archivo `lib/net.py`.  También se identificaron problemas de anotaciones de tipo en los archivos `lib/db.py` y `lib/io.py`.
+
+(leído server-side: 784 chars ≈ 408 tokens de Claude que no entraron a tu contexto)

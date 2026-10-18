@@ -1,0 +1,30 @@
+**Resumen de errores por archivo**
+
+**src/adapters/claude-json.ts**
+* Un error de exceso de argumentos en una función.
+
+**src/adapters/codex/index.ts**
+* Un error de propiedad inexistente en el constructor de objetos.
+
+**src/cli/commands/export.ts**
+* Dos errores de propiedad inexistente en arreglos de cadenas.
+
+**src/cli/commands/import.ts**
+* Un error de propiedad inexistente en arreglos de cadenas.
+
+**src/cli/index.ts**
+* Un error de propiedad inexistente en el constructor de objetos.
+
+**src/cli/ui/style.ts**
+* Un error de propiedad inexistente en cadenas de texto.
+
+**src/cli/ui/width.ts**
+* Un error de propiedad inexistente en el objeto de internacionalización.
+
+**src/io/fs/atomic.ts**
+* Un error de uso incorrecto del modificador de anulación.
+
+**src/io/vault/index.ts**
+* Un error de exceso de argumentos en una función.
+
+(leído server-side: 1647 chars ≈ 857 tokens de Claude que no entraron a tu contexto)

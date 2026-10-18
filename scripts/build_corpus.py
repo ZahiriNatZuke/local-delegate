@@ -698,7 +698,9 @@ PROMPT_BOUNDARIES: dict[str, frozenset[str]] = {
     # dice que hacer con ese N: B35 se cortaba por `max_tokens` enumerando 80 elementos. B2e: en
     # el troceado, el paso final de `local_lint_summary` usa el `system` de lint (antes el reduce
     # por defecto, prosa «sin enumerar») con un inventario de ficheros y codigos, y el de
-    # `local_explain_code` anade al inventario los nombres que registra cada funcion.
+    # `local_explain_code` anade al inventario los nombres que registra cada funcion. B2f: la
+    # llamada unica del rol `long` de `local_lint_summary` lleva ese inventario delante del log y
+    # el doble de `max_tokens`; la del rol mecanico no cambia.
     "0.36.0": frozenset(
         {
             "local_summarize",
@@ -710,11 +712,20 @@ PROMPT_BOUNDARIES: dict[str, frozenset[str]] = {
     ),
 }
 _PROMPT_BOUNDARY_FIELDS = frozenset({"system", "max_tokens"})
+# Campos de mas que una tool cambio a proposito en esa version. B2f: la llamada unica del rol `long`
+# de `local_lint_summary` lleva el inventario de ficheros y codigos en el mensaje de usuario, delante
+# del log (en el corpus F2, `lint-9k`).
+PROMPT_BOUNDARY_EXTRA_FIELDS: dict[str, dict[str, frozenset[str]]] = {
+    "0.36.0": {"local_lint_summary": frozenset({"user_template"})},
+}
 
 
 def declared_prompt_change(tool: str, field_name: str) -> str | None:
     """La version que cambio a proposito ese campo del prompt de esa tool, o `None`."""
     if field_name not in _PROMPT_BOUNDARY_FIELDS:
+        for version, extra in PROMPT_BOUNDARY_EXTRA_FIELDS.items():
+            if field_name in extra.get(tool, frozenset()):
+                return version
         return None
     for version, tools in PROMPT_BOUNDARIES.items():
         if tool in tools:

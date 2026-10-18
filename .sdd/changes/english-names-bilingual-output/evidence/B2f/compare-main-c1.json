@@ -1,0 +1,194 @@
+{
+ "noise": {
+  "calls": 57,
+  "fidelity_mean_diff": 0.10529999999999995,
+  "cut_diff": 1
+ },
+ "table": {
+  "long_es": {
+   "main": {
+    "codes": 0.3333,
+    "files": 0.7933,
+    "model_codes": 0.3333,
+    "model_files": 0.7933,
+    "fidelity_mean": 0.7333,
+    "cut": 2,
+    "calls": 15
+   },
+   "branch": {
+    "codes": 1.0,
+    "files": 1.0,
+    "model_codes": 0.44,
+    "model_files": 0.7133,
+    "fidelity_mean": 0.7333,
+    "cut": 4,
+    "calls": 15
+   }
+  },
+  "long_en": {
+   "main": {
+    "codes": 0.9267,
+    "files": 0.81,
+    "model_codes": 0.9267,
+    "model_files": 0.81,
+    "fidelity_mean": 1.2,
+    "cut": 4,
+    "calls": 15
+   },
+   "branch": {
+    "codes": 1.0,
+    "files": 1.0,
+    "model_codes": 1.0,
+    "model_files": 0.78,
+    "fidelity_mean": 0.7333,
+    "cut": 6,
+    "calls": 15
+   }
+  },
+  "forced_long_es": {
+   "main": {
+    "codes": 0.1667,
+    "files": 1.0,
+    "model_codes": 0.1667,
+    "model_files": 1.0,
+    "fidelity_mean": 0.5,
+    "cut": 0,
+    "calls": 18
+   },
+   "branch": {
+    "codes": 1.0,
+    "files": 1.0,
+    "model_codes": 0.9333,
+    "model_files": 1.0,
+    "fidelity_mean": 0.5,
+    "cut": 0,
+    "calls": 18
+   }
+  },
+  "forced_long_en": {
+   "main": {
+    "codes": 0.8778,
+    "files": 1.0,
+    "model_codes": 0.8778,
+    "model_files": 1.0,
+    "fidelity_mean": 0.5,
+    "cut": 0,
+    "calls": 18
+   },
+   "branch": {
+    "codes": 1.0,
+    "files": 1.0,
+    "model_codes": 0.9333,
+    "model_files": 1.0,
+    "fidelity_mean": 0.5,
+    "cut": 0,
+    "calls": 18
+   }
+  },
+  "mechanical_es": {
+   "main": {
+    "codes": 0.9194,
+    "model_codes": 0.9194,
+    "files": 1.0,
+    "fidelity_mean": 1.0556,
+    "cut": 0
+   },
+   "branch": {
+    "codes": 0.8861,
+    "model_codes": 0.8861,
+    "files": 1.0,
+    "fidelity_mean": 0.8889,
+    "cut": 1
+   }
+  },
+  "mechanical_en": {
+   "main": {
+    "codes": 0.925,
+    "model_codes": 0.925,
+    "files": 1.0,
+    "fidelity_mean": 0.3889,
+    "cut": 0
+   },
+   "branch": {
+    "codes": 0.8694,
+    "model_codes": 0.8694,
+    "files": 1.0,
+    "fidelity_mean": 0.5556,
+    "cut": 0
+   }
+  }
+ },
+ "watched": {
+  "A14": {
+   "main": {
+    "fidelity": 0,
+    "cut": 0,
+    "codes": null
+   },
+   "branch": {
+    "fidelity": 0,
+    "cut": 0,
+    "codes": null
+   }
+  },
+  "A15": {
+   "main": {
+    "fidelity": 0,
+    "cut": 0,
+    "codes": null
+   },
+   "branch": {
+    "fidelity": 0,
+    "cut": 0,
+    "codes": null
+   }
+  },
+  "B31": {
+   "main": {
+    "fidelity": 0,
+    "cut": 0,
+    "codes": null
+   },
+   "branch": {
+    "fidelity": 0,
+    "cut": 0,
+    "codes": null
+   }
+  },
+  "B32": {
+   "main": {
+    "fidelity": 0,
+    "cut": 0,
+    "codes": null
+   },
+   "branch": {
+    "fidelity": 0,
+    "cut": 0,
+    "codes": null
+   }
+  }
+ },
+ "long_totals": {
+  "fidelity_mean": {
+   "main": 0.7121,
+   "branch": 0.6061
+  },
+  "cut": {
+   "main": 6,
+   "branch": 10
+  },
+  "es_model_codes": {
+   "main": 0.2424,
+   "branch": 0.7091
+  }
+ },
+ "criterion": {
+  "1_reader_codes_files_ge_0.9": true,
+  "2a_model_codes_not_worse": true,
+  "2b_es_model_codes_plus_0.2": true,
+  "3_fidelity": true,
+  "4_cut": false,
+  "5_watched": true
+ },
+ "met": false
+}

@@ -684,6 +684,12 @@
     },
     {
       "file": "src/local_delegate/server.py",
+      "text": "{}\n\nLa lista de arriba sale del log de abajo. {}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (B2f, la llamada única del rol largo de local_lint_summary lleva el inventario): entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
       "text": " y de los nombres que registran sus funciones; nómbralos todos en la explicación",
       "kind": "verbatim",
       "reason": "prompt del modelo local (B2e, lo que se pierde al combinar los trozos): entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"

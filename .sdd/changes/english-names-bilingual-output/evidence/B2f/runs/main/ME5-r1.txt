@@ -1,0 +1,20 @@
+**Summary of Issues by File**
+
+**src\local\_delegate\sections.py:**
+
+-   Missing copyright notice at the top of the file (CPY001) - 1 instance.
+-   Ambiguous `–` (EN DASH) in docstring (RUF002) - 1 instance.
+-   Missing docstring in public class (D101) - 3 instances.
+-   Missing docstring in public method (D102) - 2 instances.
+-   Use `r"""` for docstrings with backslashes (D301) - 1 instance.
+-   First line of docstring should end with a period (D400) - 1 instance.
+-   `markdown_headings` is too complex (C901) - 2 instances.
+-   Magic value used in comparison (PLR2004) - 1 instance.
+-   Too many branches in function (PLR0912) - 1 instance.
+-   Line too long (E501) - 5 instances.
+-   Ambiguous `×` (MULTIPLICATION SIGN) in docstring (RUF002) - 1 instance.
+-   1 blank line required between summary line and description (D205) - 1 instance.
+
+Total errors: 26
+
+(read server-side: 2627 chars ≈ 1368 Claude tokens that did not enter your context)

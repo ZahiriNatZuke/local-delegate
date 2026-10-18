@@ -1,0 +1,9 @@
+Here's a summary of the issues, grouped by file and prioritized by relevance:
+
+**tools/gen.py**
+
+*   **Module Level Imports:** There are four instances of the error ‘Module level import not at top of file’ (E402) occurring on lines 4, 5, 6, and 7. This indicates that import statements are located within the body of the file, rather than at the top.
+*   **Line Length:** The file contains two instances of the error ‘Line too long’ (E501) on lines 20 and 31, and one on line 32. These lines exceed the defined maximum line length.
+*   **None Comparison:** The error ‘Comparison to `None` should be `cond is None`’ (E711) appears on line 50. This suggests an incorrect way to check for the absence of a value, requiring a more explicit check for `None`.
+
+(read server-side: 438 chars ≈ 228 Claude tokens that did not enter your context)

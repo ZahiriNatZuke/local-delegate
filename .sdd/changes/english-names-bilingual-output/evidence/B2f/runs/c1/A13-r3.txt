@@ -1,0 +1,16 @@
+**Local Delegate Doctor Summary**
+
+**File-Based Issue Breakdown:**
+
+*   **LLAMASWAP_EXE:** No errors found.
+*   **LLAMASWAP_CONFIG:** No errors found.
+*   **Hooks (Andamiaje):** 3 warnings – Hooks copiados, hooks huérfanos, hooks registrados. The Claude Code client is not installed, leading to missing hooks.
+*   **MCP Clients:** 8 warnings – Various MCP clients (claude-ai, claude-code, local-agent-mode) are present but not actively used, with no MCP configuration found.
+*   **Memoria Global:** No errors found.
+*   **Backend:** 1 warning – The backend requires credentials, but no MCP entry is present for verification.
+*   **Versiones:** 1 warning – The local llama-swap version is present, but no resident configuration is detected, suggesting a potential issue with affinity settings.
+*   **Cadenas de respaldo:** No errors found.
+
+**Total Warnings:** 11. The output indicates 2 warnings.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

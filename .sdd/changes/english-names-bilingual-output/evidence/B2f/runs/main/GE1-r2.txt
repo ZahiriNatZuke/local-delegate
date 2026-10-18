@@ -1,0 +1,49 @@
+**src/local_delegate/__init__.py**
+* 1 **Missing copyright notice** (CPY001)
+
+**src/local_delegate/__main__.py**
+* 1 **Missing copyright notice** (CPY001)
+
+**src/local_delegate/agents.py**
+* 1 **Missing copyright notice** (CPY001)
+* 1 **Move standard library import into a type-checking block** (TC003)
+* 1 **Trailing comma missing** (COM812)
+* 1 **First line of docstring should be in imperative mood** (D401)
+* 1 **Magic value used in comparison** (PLR2004)
+
+**src/local_delegate/autostart.py**
+* 1 **Missing copyright notice** (CPY001)
+* 1 **First line of docstring should be in imperative mood** (D401)
+* 1 **Subprocess call: check for execution of untrusted input** (S603)
+
+**src/local_delegate/benchmark.py**
+* 1 **Missing copyright notice** (CPY001)
+* 2 **Move standard library import into a type-checking block** (TC003)
+* 3 **Missing docstring in public class** (D101)
+* 7 **Avoid specifying long messages outside the exception class** (TRY003)
+* 5 **Exception must not use an f-string literal** (EM102)
+* 1 **Magic value used in comparison** (PLR2004)
+* 2 **Exception must not use a string literal** (EM101)
+* 1 **Missing docstring in public class** (D101)
+* 1 **Missing docstring in __init__** (D107)
+* 1 **Missing docstring in magic method** (D105)
+* 1 **Missing docstring in public method** (D102)
+* 1 **Missing docstring in public method** (D102)
+* 1 **Missing docstring in public method** (D102)
+* 1 **Missing docstring in public method** (D102)
+* 1 **Missing docstring in public method** (D102)
+* 1 **Missing docstring in public method** (D102)
+* 1 **Missing docstring in public method** (D102)
+* 1 **Missing docstring in public method** (D102)
+* 1 **Missing docstring in public function** (D103)
+* 1 **Missing docstring in __init__** (D107)
+* 1 **Missing docstring in __init__** (D107)
+* 1 **Missing docstring in __init__** (D107)
+* 1 **Missing docstring in __init__** (D107)
+* 1 **Missing docstring in magic method** (D105)
+* 1 **Missing docstring in magic method** (D105)
+* 1 **Missing docstring in public function** (D10
+
+[local-delegate warning: output truncated by max_tokens]
+
+(read server-side: 8589 chars ≈ 4473 Claude tokens that did not enter your context)

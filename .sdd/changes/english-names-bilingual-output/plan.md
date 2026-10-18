@@ -980,7 +980,7 @@ nuevos o la documentación en ficheros que el agente que renombra no toca, siemp
 **Orden de mezcla (explícito):**
 
 ```
-A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close-5) → higiene de CodeQL → `affinity --check` sin entorno → B0 (B0a → B0b) → B1 → B2 (lotes B2a → B2b → B2c → B2d → B2d-2 → B2d-3 → B2d-4 → B2e → B2-affinity) → { B3 ∥ B4 } → B5 → [release 0.36.0]
+A10b → cierre del frente A (A-close-1…4) → valores de una palabra (A-close-5) → higiene de CodeQL → `affinity --check` sin entorno → B0 (B0a → B0b) → B1 → B2 (lotes B2a → B2b → B2c → B2d → B2d-2 → B2d-3 → B2d-4 → B2e → B2-affinity → B2f) → { B3 ∥ B4 } → B5 → [release 0.36.0]
 ```
 
 - **Valores de una palabra (A-close-5, añadida el 2026-10-14), tras A-close-4.** El barrido de
@@ -2043,6 +2043,93 @@ están todos) y antes de B3/B4.
 - **Cierre del lote:** suite en `es` y en `en`, `ruff`, corpus y afinidad, `doctor` sin «afinidad
   sin base» con la config real, CHANGELOG, `waves/B2-affinity.md` con las llamadas `local_*`, y el
   daemon con el código de la rama instalado.
+
+#### B2f — local_lint_summary conserva los códigos de regla con el rol largo
+
+- **Origen (hallazgo del 2026-10-18, regla «un hallazgo que impacta va al plan»):** la medición de
+  B2-affinity (`evidence/B2-affinity/live.md`, `backlog-note.md`) vio que, con la orden de idioma
+  endurecida (B2d/B2d-fix), `gemma4-26b-a4b` en español no nombra ningún código de regla en 9 de 9
+  respuestas de tres casos («Línea demasiado larga» en vez de `E501`). Ese modelo es el rol `long`
+  en producción: resume en UNA llamada todo log de 6 000 a 48 000 caracteres
+  (`config.LONG_INPUT_CHARS`, `MAX_CHARS_BY_ROLE["long"]`). B2e ya lo había visto en el troceado y
+  lo tapó con el inventario y la línea «sin mencionar» solo ahí. Sale en la 0.36.0.
+- **Verificación en `main` (`2e25e60`, 2026-10-18, `evidence/B2f/runs/main/`, ×3):** con el rol
+  largo en llamada única, códigos nombrados **0,33** en español (logs de 8–34 k, ventana G; 0 de 9
+  en los tres primeros) y **0,17** en los logs pequeños forzados al rol largo (ventana H); en inglés
+  0,93 (GE). Los ficheros, 0,79–1,00. La pérdida existe y es del español. El rol `mechanical`
+  (`gemma3-4b`, ventanas M/ME) se mide en la misma tanda como referencia.
+- **Posee:** `src/local_delegate/server.py` (`_lint_not_mentioned`, `_lint_single_user` y la llamada
+  única de `local_lint_summary`, junto a `_lint_inventory` de B2e), `tests/test_lint_single_long.py`,
+  `scripts/build_corpus.py` (`PROMPT_BOUNDARIES`: lint ya está declarado en la 0.36.0; solo el
+  comentario), `evidence/B2f/`, `waves/B2f.md`, CHANGELOG (Unreleased) y la wiki `Tools.md` si
+  describe la salida de lint.
+- **Candidatos, de menos a más dependiente de la obediencia (decidido antes de medir la rama):**
+  1. **(a) por programa:** en la llamada única del rol `long`, el inventario de ficheros y códigos
+     del log (`_lint_inventory`, el mismo del troceado, presupuesto 25 % del trozo) delante del log,
+     y detrás de la respuesta la línea «sin mencionar» (`lint_patterns.not_mentioned`). El `system`
+     no cambia (ni la regla de la cantidad de B2d-3 ni el compactado de B2d-4) y el rol `mechanical`
+     conserva su prompt byte a byte, **salvo** que `main` muestre que `gemma3-4b` también pierde
+     códigos (códigos del modelo < 0,9 en M o ME): entonces el candidato se aplica también a él.
+  2. **(a)+(b):** si el 1 no llega por el criterio 2 (el modelo solo), una frase en el prompt de
+     usuario de esa misma llamada, junto al inventario: que cada regla se nombre por su código tal
+     como sale en la lista. Va en el `user` y no en `_lint_system`, para no tocar el troceado ni el
+     rol mecánico; sin ejemplos con cifras (regla del 1b).
+- **Medición:** `main` (árbol aparte `D:/Projects/ld-wt-b2f-main`) y la rama en la misma sesión,
+  `--repeat 3`, con `evidence/B2f/run_live.py`, `score_b2f.py`, el conjunto congelado
+  `b2f-set.json`/`manifest.json` (`build_set.py`) y `~/.claude/relevos/b2f-measure.ps1`
+  (`LOCAL_DELEGATE_FALLBACK_LONG=none` en toda ventana que puede usar el rol largo). Ventanas: G/GE
+  (logs de 8–34 k: ruff concise y full, biome ×2, `lint-9k`), H/HE (los 4 del corpus de afinidad,
+  ruff concise de 17 códigos y tsc, forzados al rol largo con `LOCAL_DELEGATE_LONG_INPUT_CHARS=100`),
+  M/ME (los mismos, rol mecánico), A/B (control de B2e, A11–B35). Control de ruido:
+  `evidence/B2f/same_prompt_check.py` (qué prompts son idénticos en `main` y la rama).
+- **Criterio de «hecho» (fijado antes de medir la rama), en los cuatro grupos del rol largo (G, GE,
+  H, HE):**
+  1. lector: códigos nombrados ≥ 0,9 y ficheros ≥ 0,9 en cada grupo (con la línea del programa);
+  2. modelo (sin la línea): códigos del modelo no peores que `main` en ningún grupo, y en español
+     (G y H juntos) al menos 0,2 por encima de `main`;
+  3. invenciones (`score_lint_fidelity.py`): media por respuesta de los cuatro grupos ≤ la de
+     `main` + la diferencia absoluta de media por respuesta en las llamadas de prompt idéntico;
+  4. cortadas: no más que `main` + la diferencia de cortadas en las llamadas de prompt idéntico;
+  5. 0 regresiones: el rol mecánico (M/ME) con prompt idéntico (comprobado) o, si se tocó, mismas
+     tres condiciones 1–4 frente a `main`; y A14/A15/B31/B32 sin más invenciones ni cortes que
+     `main` + el ruido del punto 3.
+- **Si no llega (reglas del usuario del 2026-10-18):** (1) hasta 2 candidatos nuevos con el mismo
+  criterio (el 2 de arriba y uno más, escrito aquí antes de medirlo); (2) si no, ajustar parámetros
+  o límites, escrito aquí antes de medir; (3) si aun así no, límite documentado aquí, en
+  `waves/B2f.md` y en la evidencia, nota en `evidence/B2f/backlog-note.md`, y la mejor versión que
+  no rompa nada.
+- **Primera tanda (2026-10-18, 07:21–08:06 UTC; `main` → `runs/main/`, candidato 1 en `30d6f9a` →
+  `runs/c1/`; `evidence/B2f/compare-main-c1.json`): NO llega, solo por las cortadas.** El rol
+  mecánico conserva sus códigos en `main` (0,92 `es`, 0,93 `en`): no se toca. Con el candidato 1:
+  códigos 1,00 y ficheros 1,00 en los cuatro grupos (criterio 1); el modelo solo, en español, de
+  0,24 a 0,71 (G 0,33→0,44, H 0,17→0,93) y en inglés no peor (criterio 2); invenciones 0,61 frente a
+  0,71 (criterio 3); A14/A15/B31/B32 sin invenciones ni cortes (criterio 5). **Cortadas: 10 frente a
+  6** (ruido 1): todas en G1, G4 y GE1, GE4, los dos logs de ruff con más códigos, que `main` ya
+  cortaba en 2 de 3 repeticiones y la rama en 3 de 3; al nombrar cada código con su descripción la
+  respuesta necesita más que los 728 tokens del tope (`_lint_max_tokens(200)`).
+- **Regla (1) y (2), decidido antes de la segunda tanda:** el candidato 2 se definió para el
+  criterio 2, que pasa, y alarga la respuesta (la dirección contraria a las cortadas): no se mide.
+  Se aplica la regla (2) al único criterio que falla: **el tope de la llamada única del rol `long`
+  pasa a 2 × `_lint_max_tokens` (1 456 tokens para 200 palabras)**; el del rol mecánico, el del
+  `map` y el del paso final del troceado no cambian. Cabe: con la entrada máxima del rol (48 000
+  caracteres más el inventario, ~9 600) el prompt queda por debajo de ~20 000 tokens de los 38 400
+  del contexto de `gemma4-26b-a4b`. Mismo criterio, misma sesión, todas las ventanas otra vez
+  (`runs/c2/`), comparado con el mismo `runs/main/`.
+- **Segunda tanda (2026-10-18, 08:12–08:33 UTC, `b2885ba` → `runs/c2/`,
+  `evidence/B2f/compare-main-c2.json`): LLEGA, los cinco criterios.** Códigos y ficheros 1,00 en los
+  cuatro grupos; el modelo solo, en español, 0,75 frente a 0,24 de `main` (G 0,49, H 0,96) y en
+  inglés 1,00 y 0,93 (GE y HE, `main` 0,93 y 0,88); invenciones 0,64 por respuesta frente a 0,71
+  (ruido 0,12); **cortadas 0 frente a 6** (ruido 1; la única de la tanda, M5 r2, es del rol mecánico
+  con el prompt idéntico); A14/A15/B31/B32 sin invenciones ni cortes. Latencia mediana de G y GE
+  sin cambio apreciable (22,9 y 21,5 s frente a 22,8 y 19,7 s); el tope nuevo se usó hasta 944
+  tokens. Versión adoptada: la de `b2885ba`.
+- **Corpus F2:** `lint-9k` (8,6 k, rol largo) cambia su `user_template`; se declara en
+  `build_corpus.PROMPT_BOUNDARY_EXTRA_FIELDS` (solo `local_lint_summary`, solo ese campo), con su
+  test en `tests/test_corpus.py`.
+- **Tests y mutantes:** `tests/test_lint_single_long.py` (inventario delante del log en la llamada
+  larga, en `es` y `en`; línea «sin mencionar»; control positivo: lo nombrado no se repite; rol
+  mecánico byte a byte; log sin ficheros ni códigos sin cambios). Mutantes en
+  `evidence/B2f/mutants_b2f.py`: «el prompt de antes», «sin respaldo» y «también el mecánico».
 
 #### B3 — Hooks
 

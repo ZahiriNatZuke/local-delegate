@@ -1,0 +1,19 @@
+**Summary of Errors by File**
+
+**src/adapters/claude-json.ts:** One error detected. The issue involves an incorrect number of arguments provided to a function, specifically at line 294, column 124.
+
+**src/adapters/codex/index.ts:** One error identified. This error relates to the absence of the 'hasOwn' property on the specified type, suggesting a potential compatibility issue with the target library.
+
+**src/cli/commands/export.ts:** Two errors found. Both errors stem from the non-existence of the 'at' property on the 'string[]' type, prompting a review of the target library and compiler options.
+
+**src/cli/commands/import.ts:** One error detected. Similar to the previous file, this error concerns the 'at' property not existing on the 'string[]' type, requiring a potential adjustment to the target library.
+
+**src/cli/index.ts:** One error identified. The error is related to the missing 'hasOwn' property on the specified type, suggesting a potential compatibility issue with the target library.
+
+**src/cli/ui/style.ts:** One error detected. The error is due to the absence of the 'replaceAll' property on the 'string' type, indicating a need to update the target library.
+
+**src/cli/ui/width.ts:** One error found. This error is related to the missing 'Segmenter' property on the 'Intl' type.
+
+**src/io/fs/atomic.ts:** One error detected. The error is a type error, specifically related to the 'override' modifier, indicating a potential issue with inheritance or base class definitions.
+
+(read server-side: 1647 chars ≈ 857 Claude tokens that did not enter your context)

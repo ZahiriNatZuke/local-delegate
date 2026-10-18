@@ -1,0 +1,27 @@
+### src/local_delegate/benchmark.py
+
+**Errores y avisos:**
+
+*   **Falta de documentación (D101, D102, D103, D105, D107):** Múltiples instancias de clases, métodos públicos, funciones y métodos mágicos sin cadenas de documentación.
+*   **Comas finales faltantes (COM812):** 13 avisos indicando la necesidad de añadir comas al final en llamadas a funciones o definiciones.
+*   **Uso de `print` (T201):** 8 instancias de la función `print` detectadas.
+*   **Valores mágicos (PLR2004):** Uso de valores constantes como `2` o `400` en comparaciones sin asignar una variable constante.
+*   **Complejidad excesiva (C901, PLR0912, PLR0915):** Funciones como `score_output` y `run_benchmark` exceden los límites de complejidad, ramas o sentencias.
+*   **Argumentos excesivos (PLR0913):** Funciones con más argumentos de los permitidos.
+*   **Problemas de importación (PLC0415):** Importaciones que no están en el nivel superior del archivo.
+*   **Líneas demasiado largas (E501):** 3 líneas que exceden el límite de 100 caracteres.
+*   **Otros errores:**
+    *   **CPY001:** Falta el aviso de derechos de autor al inicio del archivo.
+    *   **TC003:** Importaciones de la biblioteca estándar que deberían moverse a un bloque de comprobación de tipos.
+    *   **PLW2901:** Sobrescritura de la variable de bucle `raw`.
+    *   **S603 y PLW1510:** Problemas de seguridad y falta de argumento `check` en llamadas a `subprocess.run`.
+    *   **D301:** Uso de cadenas de documentación que requieren el prefijo `r`.
+    *   **FBT003:** Uso de valores booleanos posicionales en llamadas a funciones.
+    *   **RUF036:** El tipo `None` no está al final de la unión de tipos.
+    *   **D205 y D209:** Errores de formato en la estructura de las cadenas de documentación.
+
+Found 68 errors.
+
+Sin mencionar (del log, no los nombra el resumen): checks.json
+
+(leído server-side: 33048 chars ≈ 17212 tokens de Claude que no entraron a tu contexto)

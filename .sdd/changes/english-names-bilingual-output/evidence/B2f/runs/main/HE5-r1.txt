@@ -1,0 +1,18 @@
+**src\local_delegate\sections.py**
+
+**Most Relevant Issues**
+* **Complexity and Logic**: Two instances of **Too complex** (C901) and one instance of **Too many branches** (PLR0912).
+* **Documentation**: Multiple instances of **Missing docstring in public class** (D101), **Missing docstring in public method** (D102), **First line should end with a period** (D400), and **One blank line required between summary line and description** (D205).
+* **Code Style**: Several instances of **Line too long** (E501).
+
+**Other Issues**
+* **Missing copyright notice** (CPY001).
+* **Ambiguous characters in docstrings** (RUF002).
+* **Standard library import should be in a type-checking block** (TC003).
+* **Magic value used in comparison** (PLR2004).
+* **Too many arguments in function definition** (PLR0913).
+* **Use raw docstrings if backslashes are present** (D301).
+
+Found 26 errors.
+
+(read server-side: 2627 chars ≈ 1368 Claude tokens that did not enter your context)

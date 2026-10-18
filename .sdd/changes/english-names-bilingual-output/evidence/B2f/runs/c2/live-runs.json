@@ -1,0 +1,146 @@
+{
+  "G-r1": {
+    "started": "2026-10-18T08:12:11Z",
+    "finished": "2026-10-18T08:14:13Z",
+    "calls": 5,
+    "errors": 0
+  },
+  "G-r2": {
+    "started": "2026-10-18T08:14:13Z",
+    "finished": "2026-10-18T08:16:05Z",
+    "calls": 5,
+    "errors": 0
+  },
+  "G-r3": {
+    "started": "2026-10-18T08:16:05Z",
+    "finished": "2026-10-18T08:17:56Z",
+    "calls": 5,
+    "errors": 0
+  },
+  "GE-r1": {
+    "started": "2026-10-18T08:18:09Z",
+    "finished": "2026-10-18T08:19:58Z",
+    "calls": 5,
+    "errors": 0
+  },
+  "GE-r2": {
+    "started": "2026-10-18T08:19:58Z",
+    "finished": "2026-10-18T08:21:47Z",
+    "calls": 5,
+    "errors": 0
+  },
+  "GE-r3": {
+    "started": "2026-10-18T08:21:47Z",
+    "finished": "2026-10-18T08:23:36Z",
+    "calls": 5,
+    "errors": 0
+  },
+  "H-r1": {
+    "started": "2026-10-18T08:23:49Z",
+    "finished": "2026-10-18T08:24:20Z",
+    "calls": 6,
+    "errors": 0
+  },
+  "H-r2": {
+    "started": "2026-10-18T08:24:20Z",
+    "finished": "2026-10-18T08:24:52Z",
+    "calls": 6,
+    "errors": 0
+  },
+  "H-r3": {
+    "started": "2026-10-18T08:24:52Z",
+    "finished": "2026-10-18T08:25:23Z",
+    "calls": 6,
+    "errors": 0
+  },
+  "HE-r1": {
+    "started": "2026-10-18T08:25:36Z",
+    "finished": "2026-10-18T08:26:08Z",
+    "calls": 6,
+    "errors": 0
+  },
+  "HE-r2": {
+    "started": "2026-10-18T08:26:08Z",
+    "finished": "2026-10-18T08:26:38Z",
+    "calls": 6,
+    "errors": 0
+  },
+  "HE-r3": {
+    "started": "2026-10-18T08:26:38Z",
+    "finished": "2026-10-18T08:27:09Z",
+    "calls": 6,
+    "errors": 0
+  },
+  "M-r1": {
+    "started": "2026-10-18T08:27:32Z",
+    "finished": "2026-10-18T08:27:49Z",
+    "calls": 6,
+    "errors": 0
+  },
+  "M-r2": {
+    "started": "2026-10-18T08:27:49Z",
+    "finished": "2026-10-18T08:28:05Z",
+    "calls": 6,
+    "errors": 0
+  },
+  "M-r3": {
+    "started": "2026-10-18T08:28:05Z",
+    "finished": "2026-10-18T08:28:18Z",
+    "calls": 6,
+    "errors": 0
+  },
+  "ME-r1": {
+    "started": "2026-10-18T08:28:31Z",
+    "finished": "2026-10-18T08:28:45Z",
+    "calls": 6,
+    "errors": 0
+  },
+  "ME-r2": {
+    "started": "2026-10-18T08:28:45Z",
+    "finished": "2026-10-18T08:28:58Z",
+    "calls": 6,
+    "errors": 0
+  },
+  "ME-r3": {
+    "started": "2026-10-18T08:28:58Z",
+    "finished": "2026-10-18T08:29:12Z",
+    "calls": 6,
+    "errors": 0
+  },
+  "A-r1": {
+    "started": "2026-10-18T08:29:35Z",
+    "finished": "2026-10-18T08:30:10Z",
+    "calls": 5,
+    "errors": 0
+  },
+  "A-r2": {
+    "started": "2026-10-18T08:30:10Z",
+    "finished": "2026-10-18T08:30:43Z",
+    "calls": 5,
+    "errors": 0
+  },
+  "A-r3": {
+    "started": "2026-10-18T08:30:43Z",
+    "finished": "2026-10-18T08:31:17Z",
+    "calls": 5,
+    "errors": 0
+  },
+  "B-r1": {
+    "started": "2026-10-18T08:31:30Z",
+    "finished": "2026-10-18T08:32:02Z",
+    "calls": 5,
+    "errors": 0
+  },
+  "B-r2": {
+    "started": "2026-10-18T08:32:02Z",
+    "finished": "2026-10-18T08:32:29Z",
+    "calls": 5,
+    "errors": 0
+  },
+  "B-r3": {
+    "started": "2026-10-18T08:32:29Z",
+    "finished": "2026-10-18T08:32:56Z",
+    "calls": 5,
+    "errors": 0
+  }
+}

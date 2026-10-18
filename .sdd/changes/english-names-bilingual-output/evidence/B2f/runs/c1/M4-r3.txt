@@ -1,0 +1,9 @@
+**Resumen de Problemas:**
+
+**tools/gen.py:**
+
+*   **Importaciones de Módulo:** Se identificaron 4 errores de tipo E402, relacionados con importaciones de módulos ubicadas directamente en la parte superior del archivo, lo cual no se cumplió.
+*   **Líneas Largas:** Se encontraron 3 errores de tipo E501, debido a líneas que exceden el límite de longitud establecido. Las líneas problemáticas se encuentran en las líneas 20, 31 y 32.
+*   **Comparación con `None`:** Se detectó un error de tipo E711, indicando una comparación directa con `None` que debería ser reemplazada por una verificación explícita de si la variable es `None`.
+
+(leído server-side: 438 chars ≈ 228 tokens de Claude que no entraron a tu contexto)

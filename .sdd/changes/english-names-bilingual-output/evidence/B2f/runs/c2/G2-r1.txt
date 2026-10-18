@@ -1,0 +1,36 @@
+**apps/api/package.json**
+* 1 error de **uso de dependencias restringidas**: se detectó el uso de `express`.
+
+**apps/api/src/config/env.schema.ts**
+* 5 avisos de **convención de nombres**: las propiedades del objeto deben usar `camelCase`.
+* 1 aviso de **números mágicos**: se detectó un número que debe extraerse a una constante.
+
+**apps/api/src/config/repo-root.ts**
+* 2 avisos de **uso de sentencias de bloque**: se prefieren bloques para las sentencias `if`.
+
+**apps/api/src/geocode/dto/geocode.dto.ts**
+* 1 aviso de **exceso de clases por archivo**: el archivo contiene 2 clases en lugar de la máxima de 1.
+* 4 avisos de **números mágicos**: se detectaron números que deben extraerse a constantes.
+
+**apps/api/src/geocode/geocode.controller.ts**
+* 1 aviso de **propiedades de parámetro**: se recomienda usar propiedades de clase más explícitas.
+* 2 avisos de **uso de tipo de importación**: algunas importaciones solo se usan como tipos.
+
+**apps/api/src/validate/controller.ts**
+* 1 aviso de **propiedades de parámetro**: se recomienda usar propiedades de clase más explícitas.
+
+**apps/api/src/validate/dto/validate.dto.ts**
+* 1 aviso de **exceso de clases por archivo**: el archivo contiene 2 clases en lugar de la máxima de 1.
+* 5 avisos de **números mágicos**: se detectaron números que deben extraerse a constantes.
+* 4 avisos de **convención de nombres**: las propiedades del objeto deben usar `camelCase`.
+
+**packages/core/vitest.config.ts**
+* 1 aviso de **exportación por defecto**: se recomienda evitar las exportaciones por defecto.
+
+Found 3 errors.
+Found 51 warnings.
+Found 192 infos.
+
+Sin mencionar (del log, no los nombra el resumen): pnpm-workspace.yaml, ./geocode.service.ts, apps/api/src/validate/validate.controller.ts, lint/style/noMagicNumbers, lint/style/useNamingConvention, lint/style/noExcessiveClassesPerFile, lint/style/useBlockStatements, lint/style/noParameterProperties, lint/style/useImportType, lint/nursery/noRestrictedDependencies, lint/style/noDefaultExport
+
+(leído server-side: 18043 chars ≈ 9397 tokens de Claude que no entraron a tu contexto)

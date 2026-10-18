@@ -1,0 +1,53 @@
+**src\local_delegate\web\__init__.py**
+* **CPY001**: Missing copyright notice at top of file
+
+**src\local_delegate\web\auth.py**
+* **ANN001**: Missing type annotation for function argument
+* **ANN201**: Missing return type annotation for public function
+* **ANN202**: Missing return type annotation for private function
+* **COM812**: Trailing comma missing
+* **D102**: Missing docstring in public method
+* **D107**: Missing docstring in `__init__`
+* **D400**: First line should end with a period
+
+**src\local_delegate\web\metrics.py**
+* **ANN001**: Missing type annotation for function argument
+* **ANN201**: Missing return type annotation for public function
+* **BLE001**: Do not catch blind exception: `Exception`
+* **C901**: `_aggregate` is too complex
+* **COM812**: Trailing comma missing
+* **D103**: Missing docstring in public function
+* **D205**: 1 blank line required between summary line and description
+* **D209**: Multi-line docstring closing quotes should be on a separate line
+* **E501**: Line too long
+* **FBT001**: Boolean-typed positional argument in function definition
+* **FAST002**: FastAPI dependency without `Annotated`
+* **PLR0915**: Too many statements
+* **PLR2004**: Magic value used in comparison
+* **PLW0603**: Using the global statement to update is discouraged
+* **PLW2901**: `for` loop variable overwritten by assignment target
+* **PLC0415**: `import` should be at the top-level of a file
+* **SLF001**: Private member accessed
+* **SIM105**: Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+* **SIM108**: Use ternary operator instead of `if`-`else`-block
+* **S110**: `try`-`except`-`pass` detected
+* **T201**: `print` found
+* **TID252**: Prefer absolute imports over relative imports from parent modules
+* **TRY300**: Consider moving this statement to an `else` block
+* **RUF001**: String contains ambiguous character
+* **RUF002**: Docstring contains ambiguous character
+* **RUF003**: Comment contains ambiguous character
+
+**src\local_delegate\web\sysinfo.py**
+* **BLE001**: Do not catch blind exception: `Exception`
+* **COM812**: Trailing comma missing
+* **D403**: First word of the docstring should be capitalized
+* **PTH123**: `open()` should be replaced by `Path.open()`
+* **PTH208**: Use `pathlib.Path.iterdir()` instead
+* **PLR2004**: Magic value used in comparison
+* **PLW0603**: Using the global statement to update is discouraged
+* **PLW1510**: `subprocess
+
+[local-delegate warning: output truncated by max_tokens]
+
+(read server-side: 33805 chars ≈ 17606 Claude tokens that did not enter your context)

@@ -1,0 +1,23 @@
+**Local Delegate Doctor Summary**
+
+**File-Based Issue Breakdown:**
+
+*   **LLAMASWAP_EXE:** No errors found.
+*   **LLAMASWAP_CONFIG:** No errors found.
+*   **Hooks (andamiaje):** 3 hooks are missing (Claude Code, opencode, and Codex clients). This is flagged as a warning.
+*   **MCP Clients:** 8 MCP clients are present (claude-ai, claude-code, local-agent-mode, mcp, mcp-remote). All are reported as working without elicitation.
+*   **Memoria Global:** No issues found.
+*   **Backend:** The backend is responding correctly.
+*   **Versiones:** llama-swap and llama-server are up to date. A warning indicates the absence of a resident configuration for llama-swap.
+*   **Cadenas de respaldo:** Valid backup chains are present.
+
+**Error/Rule Counts:**
+
+*   **Warnings:** 2 (LD\_HOOK\_READ\_BLOQUEAR obsoletos, afinidad sin base)
+*   **Missing Hooks:** 3 (Claude Code, opencode, Codex)
+
+**Key Issues:**
+
+The primary concerns are the missing Claude Code, opencode, and Codex clients, which are preventing the hooks from being properly utilized. Additionally, the absence of a resident configuration for llama-swap is flagged as a recommendation. The warnings relate to outdated hook names and the lack of a base affinity configuration.
+
+(leído server-side: 5380 chars ≈ 2802 tokens de Claude que no entraron a tu contexto)

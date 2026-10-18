@@ -1,0 +1,45 @@
+**src\local_delegate\web\__init__.py**
+* **Aviso**: Incompatibilidad entre reglas de líneas en blanco antes de clases y entre reglas de resumen multilínea.
+
+**src\local_delegate\web\auth.py**
+* **Aviso**: Falta de aviso de derechos de autor al inicio del archivo.
+* **Error**: Falta de anotación de tipo para argumentos de función.
+* **Error**: Falta de anotación de tipo de retorno para funciones privadas y públicas.
+* **Error**: Falta de docstring en métodos y funciones.
+* **Error**: Falta de coma final.
+* **Error**: La primera línea no termina con un punto.
+
+**src\local_delegate\web\metrics.py**
+* **Error**: Exceso de longitud de línea.
+* **Error**: Falta de anotación de tipo de retorno para funciones públicas.
+* **Error**: Falta de docstring en funciones públicas.
+* **Error**: Falta de coma final.
+* **Error**: Uso de dependencias de FastAPI sin `Annotated`.
+* **Error**: Acceso a miembros privados.
+* **Error**: Importaciones relativas en lugar de absolutas.
+* **Error**: Caracteres ambiguos en comentarios o cadenas (signos de resta o multiplicación).
+* **Error**: Complejidad excesiva y demasiadas sentencias en una función.
+* **Error**: Uso de valores mágicos en comparaciones.
+* **Error**: Captura de excepciones ciegas.
+* **Error**: Uso de la sentencia `global`.
+* **Error**: Importaciones fuera del nivel superior del archivo.
+* **Error**: Uso de `print`.
+* **Error**: Uso de operadores ternarios o bloques `try-except` mejorables.
+
+**src\local_delegate\web\sysinfo.py**
+* **Error**: Falta de aviso de derechos de autor.
+* **Error**: Uso de `open()` en lugar de `Path.open()`.
+* **Error**: Captura de excepciones ciegas.
+* **Error**: Ejecución de procesos con rutas parciales o sin argumento `check` explícito.
+* **Error**: Uso de la sentencia `global`.
+* **Error**: Uso de valores mágicos.
+* **Error**: La primera palabra del docstring no está capitalizada.
+* **Error**: Uso de `iterdir()` mejorable.
+* **Error**: Importaciones fuera del nivel superior.
+
+**src\local_delegate\web\sysinfo.py**
+* **Error**: Llamada a `subprocess` que requiere verificar la ejecución de entradas no confiables.
+
+Found 388 errors.
+
+(leído server-side: 33805 chars ≈ 17606 tokens de Claude que no entraron a tu contexto)
