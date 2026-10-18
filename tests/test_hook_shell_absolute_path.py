@@ -35,21 +35,22 @@ def _load(name: str):
 shell_hook = _load("suggest_delegate_shell")
 read_hook = _load("suggest_delegate_read")
 
-# Copiado LITERAL de `main` (e46fe70). Si el texto del bloqueo de lectura se toca, esto falla.
+# Copiado LITERAL de `main` (e46fe70) y pasado a ASCII en la ola B3: las rayas, por paréntesis,
+# porque `HOOK_TEXTS` va en ASCII. Si el texto del bloqueo se toca, esto falla.
 READ_TEXT = (
     "Este archivo pesa 40 KB y es prosa. Pasalo por una tool local con "
     '`path="{p}"`: `local_summarize` para el contenido, `local_extract` '
     "para campos concretos, `local_translate` o `local_explain_code`. Asi no entra al "
     "contexto.\n\n"
-    "Si de verdad necesitas el texto literal —lineas exactas para citar o editar—, "
+    "Si de verdad necesitas el texto literal (lineas exactas para citar o editar), "
     "leelo por franjas con `offset` y `limit`, que no se bloquean."
 )
 SHELL_TEXT = (
     "Este comando vuelca 40 KB de prosa al contexto. Pasalo por una tool local "
     'con `path="{p}"`: `local_summarize` para el contenido, `local_extract` para campos '
     "concretos.\n\n"
-    "Si necesitas el texto literal, pide solo el trozo que te hace falta —`sed -n`, "
-    "`head -n`, `Get-Content -TotalCount`— que no se bloquean."
+    "Si necesitas el texto literal, pide solo el trozo que te hace falta (`sed -n`, "
+    "`head -n`, `Get-Content -TotalCount`), que no se bloquean."
 )
 
 

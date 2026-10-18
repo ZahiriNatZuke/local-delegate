@@ -33,8 +33,14 @@ TOOL_PRINCIPAL = "mcp__local-delegate__local_summarize"
 LOCAL_PREFIX = "mcp__local-delegate__local_"
 #: Resultado de Bash por encima del cual contar como «volcado» si el comando nombra el fichero.
 DUMP_THRESHOLD = 2048
-#: Marcas del texto de los bloqueos de nuestros hooks (Read y Shell).
-BLOCK_MARKERS = ("y es prosa", "de prosa al contexto")
+#: Marcas del texto de los bloqueos de nuestros hooks (Read y Shell), en los dos idiomas de
+#: `hook_common.HOOK_TEXTS` (`read.block` y `shell.block`).
+BLOCK_MARKERS = (
+    "y es prosa",
+    "de prosa al contexto",
+    "and it is prose",
+    "of prose into the context",
+)
 
 
 class UnknownFormat(RuntimeError):

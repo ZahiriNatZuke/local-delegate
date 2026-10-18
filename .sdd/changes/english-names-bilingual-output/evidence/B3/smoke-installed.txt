@@ -1,0 +1,14 @@
+[en] Read             sh         rc=0 ascii=True :: Suggestion: this file is 39 KB. If you need a global transformation (summary, fields, tran
+[en] Read             cmd        rc=0 ascii=True :: Suggestion: this file is 39 KB. If you need a global transformation (summary, fields, tran
+[en] Read             powershell rc=0 ascii=True :: Suggestion: this file is 39 KB. If you need a global transformation (summary, fields, tran
+[en] UserPromptSubmit sh         rc=0 ascii=True :: Mechanical task detected (summarize). Before reading large content, consider the specific 
+[en] UserPromptSubmit cmd        rc=0 ascii=True :: Mechanical task detected (summarize). Before reading large content, consider the specific 
+[en] UserPromptSubmit powershell rc=0 ascii=True :: Mechanical task detected (summarize). Before reading large content, consider the specific 
+[es] Read             sh         rc=0 ascii=True :: Sugerencia: este archivo pesa 39 KB. Si necesitas una transformacion global (resumen, camp
+[es] Read             cmd        rc=0 ascii=True :: Sugerencia: este archivo pesa 39 KB. Si necesitas una transformacion global (resumen, camp
+[es] Read             powershell rc=0 ascii=True :: Sugerencia: este archivo pesa 39 KB. Si necesitas una transformacion global (resumen, camp
+[es] UserPromptSubmit sh         rc=0 ascii=True :: Oportunidad mecanica detectada (summarize). Antes de leer contenido grande, evalua usar la
+[es] UserPromptSubmit cmd        rc=0 ascii=True :: Oportunidad mecanica detectada (summarize). Antes de leer contenido grande, evalua usar la
+[es] UserPromptSubmit powershell rc=0 ascii=True :: Oportunidad mecanica detectada (summarize). Antes de leer contenido grande, evalua usar la
+command Read: D:/Projects/ld-wt-b3/.venv/Scripts/python.exe "<scratchpad>/b3-smoke-ovgm113a/home/.claude/hooks/local-delegate/suggest_delegate_read.py" --enabled
+RESULT: OK

@@ -1,0 +1,10 @@
+[pesado] esperando plaza (ocupada por: pwsh -NoProfile -File C:\Users\Yohan\.claude\relevos\b2f-measure.ps1 -Step G -Tag c1)
+[pesado] plaza plaza-1 tomada tras 1215s: .venv/Scripts/python.exe .sdd/changes/english-names-bilingual-output/evidence/B3/run_mutants.py
+M1 import del paquete en un hook: rc=1 -> CAZADO por el assert esperado
+M2 tilde en HOOK_TEXTS: rc=1 -> CAZADO por el assert esperado
+M3 hook tocado sin regenerar el conjunto: rc=1 -> CAZADO por el assert esperado
+M4 regenerar sustituye en vez de unir: rc=1 -> CAZADO por el assert esperado
+M5 tramo por fecha en vez de por huella: rc=1 -> CAZADO por el assert esperado
+M6 los hooks ignoran el idioma (siempre es): rc=1 -> CAZADO por el assert esperado
+M7 el guardian deja de saltarse solo HOOK_TEXTS de su fichero: rc=1 -> CAZADO por el assert esperado
+RESULT: OK

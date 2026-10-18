@@ -17,6 +17,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Cambia
 
+- **Los hooks hablan el idioma de la integración.** El aviso de delegar, la sugerencia de lectura
+  y los dos bloqueos (lectura y `cat`) salen en español o en inglés según `LOCAL_DELEGATE_LANG` o
+  el `language.json`, con la misma regla que el resto del paquete, y en ASCII: la raya del motivo
+  del bloqueo se veía como basura en una consola cp1252. Los textos viven en el propio
+  `hook_common.py`, porque un hook instalado no puede importar el paquete.
+- **`measure_adoption.py` separa los tramos por versión, no por fecha.** Cada evento de hook se
+  asigna por la huella del script que lo escribió (`scripts/data/hook_hashes_after.json`, que crea
+  y amplía `bump_version.py --boundaries` en cada release, sin quitar nunca una huella), y cada fila
+  del log de uso por su `v`. Un evento con huella vieja y fecha nueva sigue en «antes».
+
 - **Afinidad: `local_lint_summary` ya no se va a `gemma4-26b-a4b` aunque esté cargado.** Su celda
   se volvió a medir con los prompts de la 0.36.0, en español y en inglés (4 casos, 3 repeticiones,
   la tool real del daemon): con la orden de idioma nueva el 26B deja de nombrar los códigos de

@@ -15,6 +15,8 @@ Uso:
     python scripts/bump_version.py 0.12.0            # aplica y regenera uv.lock
     python scripts/bump_version.py 0.12.0 --dry-run  # enseña el plan sin tocar nada
     python scripts/bump_version.py --check           # ¿coinciden los cuatro? (sale 1 si no)
+    python scripts/bump_version.py --boundaries      # une las huellas de hoy de los hooks
+    python scripts/bump_version.py 0.12.0 --boundaries  # las dos cosas, en el PR de release
 
 `--check` es lo mismo que comprueba el CI, disponible en local antes del push.
 
@@ -26,6 +28,7 @@ horizonte de cada alias (REQ-004).
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import re
 import shutil
@@ -59,8 +62,56 @@ SERVER_VERSION_RE = re.compile(r'("version"\s*:\s*")([^"]+)(")')
 DEPRECATIONS_FILE = Path("src") / "local_delegate" / "deprecations.py"
 
 
+#: Fronteras de la telemetría de hooks (REQ-041, plan D9): el conjunto «después» de huellas por
+#: script. Lo referencia `scripts/data/measurement_boundaries.json`.
+HOOK_HASHES_FILE = Path("scripts") / "data" / "hook_hashes_after.json"
+HOOKS_DIR = Path("src") / "local_delegate" / "resources" / "hooks"
+#: Los hooks que estampan su huella (`hook_common.context_of`) en cada evento de telemetría.
+#: `tests/test_hook_boundaries.py` exige que sean exactamente los que llaman a `context_of`.
+HASHED_HOOKS = (
+    "suggest_delegate_prompt.py",
+    "suggest_delegate_read.py",
+    "suggest_delegate_shell.py",
+)
+
+
 class BumpError(RuntimeError):
     """Algo no cuadra; el mensaje ya está redactado para el usuario."""
+
+
+def _hook_common(root: Path):
+    """`hook_common` cargado por ruta: su `version_de` es la huella que escribe cada evento."""
+    spec = importlib.util.spec_from_file_location(
+        "_bump_hook_common", root / HOOKS_DIR / "hook_common.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def current_hook_hashes(root: Path = ROOT) -> dict[str, str]:
+    """La huella de hoy de cada hook de `HASHED_HOOKS`, calculada como la calcula el hook."""
+    version_de = _hook_common(root).version_de
+    return {name: version_de(str(root / HOOKS_DIR / name)) for name in HASHED_HOOKS}
+
+
+def update_boundaries(root: Path = ROOT) -> dict[str, list[str]]:
+    """**Une** las huellas de hoy al conjunto «después»; nunca quita ninguna (plan D9).
+
+    Si una máquina se queda en la versión anterior, sus eventos llevan la huella vieja: sustituir
+    el conjunto los devolvería al tramo «antes».
+    """
+    path = root / HOOK_HASHES_FILE
+    data: dict[str, list[str]] = (
+        json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+    )
+    for name, digest in current_hook_hashes(root).items():
+        if not digest:
+            raise BumpError(f"no se pudo leer {HOOKS_DIR.as_posix()}/{name}")
+        data[name] = sorted(set(data.get(name, [])) | {digest})
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes((json.dumps(dict(sorted(data.items())), indent=2) + "\n").encode("utf-8"))
+    return data
 
 
 def _read(path: Path) -> tuple[str, str]:
@@ -235,6 +286,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--dry-run", action="store_true", help="enseña el plan sin escribir")
     parser.add_argument("--no-lock", action="store_true", help="no regenerar uv.lock")
+    parser.add_argument(
+        "--boundaries",
+        action="store_true",
+        help=f"une la huella de hoy de cada hook a {HOOK_HASHES_FILE.as_posix()} (nunca quita)",
+    )
     args = parser.parse_args(argv)
 
     # Este script se ejecuta en Windows justo antes de publicar, y ahí la consola suele ser
@@ -253,8 +309,15 @@ def main(argv: list[str] | None = None) -> int:
             print(f"OK: todos los archivos declaran {check()}")
             return 0
 
+        if args.boundaries and not args.dry_run:
+            data = update_boundaries(ROOT)
+            total = sum(len(v) for v in data.values())
+            print(f"OK: {HOOK_HASHES_FILE.as_posix()} con {total} huellas de {len(data)} hooks")
+            if not args.version:
+                return 0
+
         if not args.version:
-            parser.error("falta la versión nueva (o usa --check)")
+            parser.error("falta la versión nueva (o usa --check o --boundaries)")
 
         current = read_versions()
         changes = plan(args.version)

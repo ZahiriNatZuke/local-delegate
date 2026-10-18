@@ -727,6 +727,13 @@ correlacionada, y cuántas delegaciones fueron espontáneas —esas no se las pu
 Avisa además si la ventana mezcla dos versiones de script, porque una sesión abierta hereda el
 entorno del lanzador y entonces la muestra junta dos políticas sin decirlo.
 
+Desde la 0.36.0 parte además los recuentos en dos **tramos** («antes» y «después», campo
+`by_side` de `--json`), y la frontera es la **versión**, no la fecha: un evento de hook es del
+tramo «después» si la huella del script que lo escribió está en `scripts/data/hook_hashes_after.json`,
+y una fila del log de uso si su `v` es igual o posterior a `package_version_after`
+(`scripts/data/measurement_boundaries.json`). Así, los eventos de una máquina que se quedó en una
+versión anterior siguen en «antes» aunque se escriban después.
+
 Lo que sí responde es «¿cuánta de mi actividad pasa por delante del hook, y en qué parte cree que
 hay una oportunidad?». En la máquina de referencia, con 1817 eventos en tres días: **17,0 % de
 sugerencias**, repartidas de forma muy desigual — `bash` acumulaba 1396 eventos con **cero**

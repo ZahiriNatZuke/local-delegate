@@ -31,7 +31,19 @@ from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent))
+
+import measurement_boundaries
+
 from local_delegate import attribution, config, cost, legacy_names, test_windows
+
+#: El hook que escribe cada evento, para buscar su huella en el conjunto de ESE script: el de
+#: prompts no lleva `category` de lectura, el de shell lleva `shell` y el resto es el de `Read`.
+HOOK_SCRIPTS = {
+    "prompt": "suggest_delegate_prompt.py",
+    "shell": "suggest_delegate_shell.py",
+    "read": "suggest_delegate_read.py",
+}
 
 
 def hook_telemetry() -> Path:
@@ -82,7 +94,57 @@ def merged_usages(since: str | None) -> list[dict]:
     return usages
 
 
-def measure(since: str | None, include_tests: bool = False) -> dict:
+def hook_script(event: dict) -> str:
+    """El script de hook que escribio `event`."""
+    if event.get("event") == "UserPromptSubmit":
+        return HOOK_SCRIPTS["prompt"]
+    if event.get("category") == "shell":
+        return HOOK_SCRIPTS["shell"]
+    return HOOK_SCRIPTS["read"]
+
+
+def hook_side(event: dict, hashes: dict[str, set[str]]) -> str:
+    """`before` o `after` por la huella del script que corrio (REQ-041). Nunca mira la fecha.
+
+    Una maquina que se queda en una version anterior sigue escribiendo eventos con fecha nueva y
+    huella vieja: esos son del tramo «antes», aunque se midan despues.
+    """
+    version = str(event.get("version") or "")
+    in_set = version and version in hashes.get(hook_script(event), set())
+    return measurement_boundaries.AFTER if in_set else measurement_boundaries.BEFORE
+
+
+def by_side(
+    reads: list[dict],
+    usages: list[dict],
+    delegated_ids: set[str],
+    boundaries: dict | None = None,
+    root: Path | None = None,
+) -> dict:
+    """Los recuentos que comparan politicas, partidos por tramo (plan D9)."""
+    boundaries = measurement_boundaries.load() if boundaries is None else boundaries
+    hashes = measurement_boundaries.hook_hashes_after(
+        boundaries, root=measurement_boundaries.ROOT if root is None else root
+    )
+    sides = (measurement_boundaries.BEFORE, measurement_boundaries.AFTER)
+    result = {side: Counter() for side in sides}
+    for event in reads:
+        counts = result[hook_side(event, hashes)]
+        counts["reads"] += 1
+        if event.get("suggested"):
+            counts["offered"] += 1
+            if event.get("blocked"):
+                counts["blocks"] += 1
+                if event.get("id") in delegated_ids:
+                    counts["accepted"] += 1
+    for row in usages:
+        if str(row.get("tool", "")).startswith("local_"):
+            result[measurement_boundaries.usage_side(row, boundaries)]["delegations"] += 1
+    keys = ("reads", "offered", "blocks", "accepted", "delegations")
+    return {side: {key: result[side][key] for key in keys} for side in sides}
+
+
+def measure(since: str | None, include_tests: bool = False, boundaries: dict | None = None) -> dict:
     # Claves y valores viejos (`motivo`, `bloqueo`, `camino`…) y nuevos dan lo mismo (REQ-006).
     hooks = [legacy_names.normalize("hook_telemetry", e) for e in read(hook_telemetry(), since)]
     usages = merged_usages(since)
@@ -147,6 +209,7 @@ def measure(since: str | None, include_tests: bool = False) -> dict:
         "bounded_worth_delegating": len(worth_delegating),
         "excluded_tests": outside,
         "test_windows": applied,
+        "by_side": by_side(reads, usages, delegated_ids, boundaries),
     }
 
 
@@ -196,6 +259,15 @@ def main() -> int:
     print("Guarda de lectura acotada (REQ-F1-8):")
     print(f"  agrupables por fichero: {result['bounded_with_footprint']}")
     print(f"  convenia delegarlas:    {result['bounded_worth_delegating']}")
+
+    print()
+    print("Tramos por version (REQ-041; la fecha no cuenta):")
+    for side, counts in result["by_side"].items():
+        print(
+            f"  {side:6} lecturas {counts['reads']}, ofrecidos {counts['offered']}, bloqueos "
+            f"{counts['blocks']}, aceptados {counts['accepted']}, delegaciones "
+            f"{counts['delegations']}"
+        )
 
     versions = result["script_versions"]
     if "?" in versions:

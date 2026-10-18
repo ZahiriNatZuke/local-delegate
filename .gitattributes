@@ -34,3 +34,8 @@ tests/fixtures/residency/** -text
 
 # Conjunto de B2e (lo que se pierde al combinar los trozos): su sha256 va en chunking-set.json y se mide byte a byte.
 .sdd/changes/english-names-bilingual-output/evidence/B2e/docs/** -text
+
+# Los hooks se miden por su huella (sha256 de los bytes del script, `hook_common.version_de`) y el
+# conjunto «después» de `scripts/data/hook_hashes_after.json` se calcula sobre el blob con LF. Un
+# checkout de Windows con `core.autocrlf=true` daría otra huella al mismo hook (REQ-041).
+src/local_delegate/resources/hooks/*.py -text

@@ -2064,6 +2064,10 @@ están todos) y antes de B3/B4.
   - *el conjunto solo crece* (D9): tras regenerar con un hook cambiado, el hash de la versión
     anterior sigue dentro. Mutante: sustituir en vez de unir.
   - *dos máquinas:* un evento con hash viejo y fecha posterior queda en «antes».
+- **Estado (2026-10-18):** hecho en `sdd/english-names-b3` (registro en `waves/B3.md`). Son 8
+  textos y no 7 (la sugerencia de lectura son 5 piezas). Fuera de la lista «posee»: `.gitattributes`
+  (`-text` para los hooks, si no el checkout de Windows cambia su huella), `scripts/_claude_bench.py`
+  (marcas de bloqueo en inglés) y el cierre de la superficie en `test_no_uncatalogued_text.py`.
 
 #### B4 — Panel
 
