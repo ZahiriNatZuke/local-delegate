@@ -1,0 +1,392 @@
+warning: `incorrect-blank-line-before-class` (D203) and `blank-line-before-class` (D211) are incompatible. Ignoring `incorrect-blank-line-before-class`.
+warning: `multi-line-summary-first-line` (D212) and `multi-line-summary-second-line` (D213) are incompatible. Ignoring `multi-line-summary-second-line`.
+src\local_delegate\web\__init__.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\web\auth.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\web\auth.py:86:5: D400 First line should end with a period
+src\local_delegate\web\auth.py:101:5: D400 First line should end with a period
+src\local_delegate\web\auth.py:115:80: COM812 [*] Trailing comma missing
+src\local_delegate\web\auth.py:151:14: ANN001 Missing type annotation for function argument `scope`
+src\local_delegate\web\auth.py:178:18: COM812 [*] Trailing comma missing
+src\local_delegate\web\auth.py:185:9: D107 Missing docstring in `__init__`
+src\local_delegate\web\auth.py:185:24: ANN001 Missing type annotation for function argument `app`
+src\local_delegate\web\auth.py:192:9: ANN202 Missing return type annotation for private function `_delivering_session`
+src\local_delegate\web\auth.py:192:35: ANN001 Missing type annotation for function argument `send`
+src\local_delegate\web\auth.py:195:19: ANN202 Missing return type annotation for private function `send_wrapper`
+src\local_delegate\web\auth.py:195:32: ANN001 Missing type annotation for function argument `message`
+src\local_delegate\web\auth.py:206:15: D102 Missing docstring in public method
+src\local_delegate\web\auth.py:206:30: ANN001 Missing type annotation for function argument `scope`
+src\local_delegate\web\auth.py:206:37: ANN001 Missing type annotation for function argument `receive`
+src\local_delegate\web\auth.py:206:46: ANN001 Missing type annotation for function argument `send`
+src\local_delegate\web\auth.py:249:14: COM812 [*] Trailing comma missing
+src\local_delegate\web\auth.py:254:5: ANN201 Missing return type annotation for public function `protect`
+src\local_delegate\web\auth.py:254:13: ANN001 Missing type annotation for function argument `app`
+src\local_delegate\web\metrics.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:57:1: TID252 Prefer absolute imports over relative imports from parent modules
+src\local_delegate\web\metrics.py:112:23: ANN001 Missing type annotation for function argument `path`
+src\local_delegate\web\metrics.py:126:17: PLW2901 `for` loop variable `line` overwritten by assignment target
+src\local_delegate\web\metrics.py:134:95: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:147:37: PLR2004 Magic value used in comparison, consider replacing `12` with a constant variable
+src\local_delegate\web\metrics.py:151:15: ANN001 Missing type annotation for function argument `ts`
+src\local_delegate\web\metrics.py:244:15: SLF001 Private member accessed: `_accounting`
+src\local_delegate\web\metrics.py:247:5: C901 `_aggregate` is too complex (11 > 10)
+src\local_delegate\web\metrics.py:247:5: PLR0915 Too many statements (78 > 50)
+src\local_delegate\web\metrics.py:260:10: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:272:10: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:286:10: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:301:10: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:314:28: RUF003 Comment contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:463:70: RUF003 Comment contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:503:35: FBT001 Boolean-typed positional argument in function definition
+src\local_delegate\web\metrics.py:511:5: ANN201 Missing return type annotation for public function `events`
+src\local_delegate\web\metrics.py:511:5: D103 Missing docstring in public function
+src\local_delegate\web\metrics.py:512:5: FAST002 FastAPI dependency without `Annotated`
+src\local_delegate\web\metrics.py:513:5: FAST002 FastAPI dependency without `Annotated`
+src\local_delegate\web\metrics.py:514:5: FAST002 FastAPI dependency without `Annotated`
+src\local_delegate\web\metrics.py:532:10: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:537:5: ANN201 Missing return type annotation for public function `stats`
+src\local_delegate\web\metrics.py:537:5: D103 Missing docstring in public function
+src\local_delegate\web\metrics.py:538:5: FAST002 FastAPI dependency without `Annotated`
+src\local_delegate\web\metrics.py:539:5: FAST002 FastAPI dependency without `Annotated`
+src\local_delegate\web\metrics.py:540:5: FAST002 FastAPI dependency without `Annotated`
+src\local_delegate\web\metrics.py:553:101: E501 Line too long (105 > 100)
+src\local_delegate\web\metrics.py:559:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:577:18: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\web\metrics.py:577:81: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\web\metrics.py:640:13: SIM108 Use ternary operator `key = "suggested" if suggested else str(row.get("reason") or "unrecorded")` instead of `if`-`else`-block
+src\local_delegate\web\metrics.py:688:5: ANN201 Missing return type annotation for public function `hooks`
+src\local_delegate\web\metrics.py:689:5: FAST002 FastAPI dependency without `Annotated`
+src\local_delegate\web\metrics.py:690:5: FAST002 FastAPI dependency without `Annotated`
+src\local_delegate\web\metrics.py:691:5: FAST002 FastAPI dependency without `Annotated`
+src\local_delegate\web\metrics.py:707:14: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:716:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:732:10: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:737:5: ANN201 Missing return type annotation for public function `inflight`
+src\local_delegate\web\metrics.py:760:10: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:765:5: ANN201 Missing return type annotation for public function `backend`
+src\local_delegate\web\metrics.py:790:10: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:795:5: D205 1 blank line required between summary line and description
+src\local_delegate\web\metrics.py:795:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\web\metrics.py:795:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:805:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:808:36: SLF001 Private member accessed: `_probe_timeout`
+src\local_delegate\web\metrics.py:824:5: ANN201 Missing return type annotation for public function `backend_stats`
+src\local_delegate\web\metrics.py:837:16: SLF001 Private member accessed: `_backend_on_loopback`
+src\local_delegate\web\metrics.py:839:36: SLF001 Private member accessed: `_probe_timeout`
+src\local_delegate\web\metrics.py:846:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\web\metrics.py:858:5: ANN201 Missing return type annotation for public function `status`
+src\local_delegate\web\metrics.py:874:5: SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+src\local_delegate\web\metrics.py:877:22: SLF001 Private member accessed: `_tool_manager`
+src\local_delegate\web\metrics.py:879:5: S110 `try`-`except`-`pass` detected, consider logging the exception
+src\local_delegate\web\metrics.py:879:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\web\metrics.py:883:24: SLF001 Private member accessed: `_get_version`
+src\local_delegate\web\metrics.py:901:10: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:906:5: ANN201 Missing return type annotation for public function `system`
+src\local_delegate\web\metrics.py:921:10: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:948:5: ANN201 Missing return type annotation for public function `llamaswap_status`
+src\local_delegate\web\metrics.py:949:5: D205 1 blank line required between summary line and description
+src\local_delegate\web\metrics.py:949:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\web\metrics.py:954:87: COM812 [*] Trailing comma missing
+src\local_delegate\web\metrics.py:959:13: SLF001 Private member accessed: `_topology`
+src\local_delegate\web\metrics.py:964:30: SLF001 Private member accessed: `_clashes_by_groups`
+src\local_delegate\web\metrics.py:969:5: ANN201 Missing return type annotation for public function `llamaswap_watch_open`
+src\local_delegate\web\metrics.py:970:5: D205 1 blank line required between summary line and description
+src\local_delegate\web\metrics.py:970:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src\local_delegate\web\metrics.py:987:5: ANN201 Missing return type annotation for public function `llamaswap_watch_result`
+src\local_delegate\web\metrics.py:1017:5: ANN201 Missing return type annotation for public function `favicon`
+src\local_delegate\web\metrics.py:1017:5: D103 Missing docstring in public function
+src\local_delegate\web\metrics.py:1033:5: ANN201 Missing return type annotation for public function `vendor_chart_js`
+src\local_delegate\web\metrics.py:1033:5: D103 Missing docstring in public function
+src\local_delegate\web\metrics.py:1034:12: PLW0603 Using the global statement to update `_CHART_JS` is discouraged
+src\local_delegate\web\metrics.py:1034:12: PLW0603 Using the global statement to update `_CHART_JS` is discouraged
+src\local_delegate\web\metrics.py:1058:101: E501 Line too long (161 > 100)
+src\local_delegate\web\metrics.py:1061:5: D103 Missing docstring in public function
+src\local_delegate\web\metrics.py:1075:5: ANN201 Missing return type annotation for public function `index`
+src\local_delegate\web\metrics.py:1075:5: D103 Missing docstring in public function
+src\local_delegate\web\metrics.py:1079:5: ANN201 Missing return type annotation for public function `run_in_thread`
+src\local_delegate\web\metrics.py:1085:5: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\web\metrics.py:1098:9: TRY300 Consider moving this statement to an `else` block
+src\local_delegate\web\metrics.py:1099:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\web\metrics.py:1109:101: E501 Line too long (156 > 100)
+src\local_delegate\web\metrics.py:1121:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:1128:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:1151:101: E501 Line too long (123 > 100)
+src\local_delegate\web\metrics.py:1173:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:1175:101: E501 Line too long (145 > 100)
+src\local_delegate\web\metrics.py:1176:101: E501 Line too long (150 > 100)
+src\local_delegate\web\metrics.py:1177:101: E501 Line too long (129 > 100)
+src\local_delegate\web\metrics.py:1202:101: E501 Line too long (128 > 100)
+src\local_delegate\web\metrics.py:1203:101: E501 Line too long (118 > 100)
+src\local_delegate\web\metrics.py:1205:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:1220:101: E501 Line too long (124 > 100)
+src\local_delegate\web\metrics.py:1225:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:1229:101: E501 Line too long (111 > 100)
+src\local_delegate\web\metrics.py:1231:19: RUF001 String contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:1252:101: E501 Line too long (105 > 100)
+src\local_delegate\web\metrics.py:1260:101: E501 Line too long (127 > 100)
+src\local_delegate\web\metrics.py:1265:101: E501 Line too long (110 > 100)
+src\local_delegate\web\metrics.py:1275:101: E501 Line too long (113 > 100)
+src\local_delegate\web\metrics.py:1276:101: E501 Line too long (114 > 100)
+src\local_delegate\web\metrics.py:1287:101: E501 Line too long (107 > 100)
+src\local_delegate\web\metrics.py:1294:101: E501 Line too long (119 > 100)
+src\local_delegate\web\metrics.py:1297:101: E501 Line too long (118 > 100)
+src\local_delegate\web\metrics.py:1301:101: E501 Line too long (118 > 100)
+src\local_delegate\web\metrics.py:1305:101: E501 Line too long (153 > 100)
+src\local_delegate\web\metrics.py:1306:101: E501 Line too long (157 > 100)
+src\local_delegate\web\metrics.py:1307:101: E501 Line too long (118 > 100)
+src\local_delegate\web\metrics.py:1309:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:1314:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:1321:101: E501 Line too long (146 > 100)
+src\local_delegate\web\metrics.py:1322:101: E501 Line too long (157 > 100)
+src\local_delegate\web\metrics.py:1323:101: E501 Line too long (154 > 100)
+src\local_delegate\web\metrics.py:1324:101: E501 Line too long (151 > 100)
+src\local_delegate\web\metrics.py:1326:101: E501 Line too long (177 > 100)
+src\local_delegate\web\metrics.py:1328:101: E501 Line too long (104 > 100)
+src\local_delegate\web\metrics.py:1329:101: E501 Line too long (110 > 100)
+src\local_delegate\web\metrics.py:1330:101: E501 Line too long (109 > 100)
+src\local_delegate\web\metrics.py:1331:101: E501 Line too long (116 > 100)
+src\local_delegate\web\metrics.py:1332:101: E501 Line too long (142 > 100)
+src\local_delegate\web\metrics.py:1333:101: E501 Line too long (171 > 100)
+src\local_delegate\web\metrics.py:1336:101: E501 Line too long (120 > 100)
+src\local_delegate\web\metrics.py:1339:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:1340:101: E501 Line too long (105 > 100)
+src\local_delegate\web\metrics.py:1345:101: E501 Line too long (119 > 100)
+src\local_delegate\web\metrics.py:1349:101: E501 Line too long (122 > 100)
+src\local_delegate\web\metrics.py:1351:101: E501 Line too long (157 > 100)
+src\local_delegate\web\metrics.py:1353:101: E501 Line too long (151 > 100)
+src\local_delegate\web\metrics.py:1354:101: E501 Line too long (121 > 100)
+src\local_delegate\web\metrics.py:1356:101: E501 Line too long (131 > 100)
+src\local_delegate\web\metrics.py:1362:101: E501 Line too long (127 > 100)
+src\local_delegate\web\metrics.py:1363:101: E501 Line too long (107 > 100)
+src\local_delegate\web\metrics.py:1364:101: E501 Line too long (113 > 100)
+src\local_delegate\web\metrics.py:1367:101: E501 Line too long (139 > 100)
+src\local_delegate\web\metrics.py:1369:101: E501 Line too long (113 > 100)
+src\local_delegate\web\metrics.py:1372:101: E501 Line too long (139 > 100)
+src\local_delegate\web\metrics.py:1376:101: E501 Line too long (125 > 100)
+src\local_delegate\web\metrics.py:1377:101: E501 Line too long (106 > 100)
+src\local_delegate\web\metrics.py:1380:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:1400:101: E501 Line too long (106 > 100)
+src\local_delegate\web\metrics.py:1401:101: E501 Line too long (138 > 100)
+src\local_delegate\web\metrics.py:1406:101: E501 Line too long (122 > 100)
+src\local_delegate\web\metrics.py:1408:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:1411:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:1416:101: E501 Line too long (118 > 100)
+src\local_delegate\web\metrics.py:1451:101: E501 Line too long (107 > 100)
+src\local_delegate\web\metrics.py:1469:101: E501 Line too long (159 > 100)
+src\local_delegate\web\metrics.py:1472:101: E501 Line too long (133 > 100)
+src\local_delegate\web\metrics.py:1488:101: E501 Line too long (278 > 100)
+src\local_delegate\web\metrics.py:1493:101: E501 Line too long (283 > 100)
+src\local_delegate\web\metrics.py:1496:101: E501 Line too long (223 > 100)
+src\local_delegate\web\metrics.py:1498:101: E501 Line too long (234 > 100)
+src\local_delegate\web\metrics.py:1500:101: E501 Line too long (280 > 100)
+src\local_delegate\web\metrics.py:1509:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:1514:101: E501 Line too long (118 > 100)
+src\local_delegate\web\metrics.py:1519:101: E501 Line too long (106 > 100)
+src\local_delegate\web\metrics.py:1520:101: E501 Line too long (112 > 100)
+src\local_delegate\web\metrics.py:1533:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:1537:101: E501 Line too long (106 > 100)
+src\local_delegate\web\metrics.py:1538:101: E501 Line too long (148 > 100)
+src\local_delegate\web\metrics.py:1547:101: E501 Line too long (107 > 100)
+src\local_delegate\web\metrics.py:1554:101: E501 Line too long (118 > 100)
+src\local_delegate\web\metrics.py:1561:101: E501 Line too long (122 > 100)
+src\local_delegate\web\metrics.py:1578:101: E501 Line too long (105 > 100)
+src\local_delegate\web\metrics.py:1584:101: E501 Line too long (122 > 100)
+src\local_delegate\web\metrics.py:1588:101: E501 Line too long (174 > 100)
+src\local_delegate\web\metrics.py:1591:101: E501 Line too long (173 > 100)
+src\local_delegate\web\metrics.py:1611:101: E501 Line too long (122 > 100)
+src\local_delegate\web\metrics.py:1622:101: E501 Line too long (216 > 100)
+src\local_delegate\web\metrics.py:1625:101: E501 Line too long (156 > 100)
+src\local_delegate\web\metrics.py:1628:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:1630:101: E501 Line too long (121 > 100)
+src\local_delegate\web\metrics.py:1631:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:1632:101: E501 Line too long (104 > 100)
+src\local_delegate\web\metrics.py:1634:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:1656:101: E501 Line too long (156 > 100)
+src\local_delegate\web\metrics.py:1658:101: E501 Line too long (144 > 100)
+src\local_delegate\web\metrics.py:1659:101: E501 Line too long (143 > 100)
+src\local_delegate\web\metrics.py:1660:101: E501 Line too long (128 > 100)
+src\local_delegate\web\metrics.py:1661:101: E501 Line too long (142 > 100)
+src\local_delegate\web\metrics.py:1662:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:1671:101: E501 Line too long (104 > 100)
+src\local_delegate\web\metrics.py:1674:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:1690:57: RUF001 String contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:1701:60: RUF001 String contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:1718:101: E501 Line too long (111 > 100)
+src\local_delegate\web\metrics.py:1721:101: E501 Line too long (119 > 100)
+src\local_delegate\web\metrics.py:1723:101: E501 Line too long (119 > 100)
+src\local_delegate\web\metrics.py:1724:101: E501 Line too long (140 > 100)
+src\local_delegate\web\metrics.py:1737:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:1764:101: E501 Line too long (241 > 100)
+src\local_delegate\web\metrics.py:1765:101: E501 Line too long (188 > 100)
+src\local_delegate\web\metrics.py:1766:101: E501 Line too long (364 > 100)
+src\local_delegate\web\metrics.py:1767:101: E501 Line too long (198 > 100)
+src\local_delegate\web\metrics.py:1768:101: E501 Line too long (287 > 100)
+src\local_delegate\web\metrics.py:1769:101: E501 Line too long (274 > 100)
+src\local_delegate\web\metrics.py:1770:101: E501 Line too long (214 > 100)
+src\local_delegate\web\metrics.py:1780:101: E501 Line too long (133 > 100)
+src\local_delegate\web\metrics.py:1782:101: E501 Line too long (115 > 100)
+src\local_delegate\web\metrics.py:1785:101: E501 Line too long (108 > 100)
+src\local_delegate\web\metrics.py:1787:101: E501 Line too long (124 > 100)
+src\local_delegate\web\metrics.py:1788:101: E501 Line too long (116 > 100)
+src\local_delegate\web\metrics.py:1850:101: E501 Line too long (138 > 100)
+src\local_delegate\web\metrics.py:1873:101: E501 Line too long (120 > 100)
+src\local_delegate\web\metrics.py:1913:101: E501 Line too long (104 > 100)
+src\local_delegate\web\metrics.py:1916:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:1923:101: E501 Line too long (117 > 100)
+src\local_delegate\web\metrics.py:1926:101: E501 Line too long (107 > 100)
+src\local_delegate\web\metrics.py:1945:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:1957:101: E501 Line too long (129 > 100)
+src\local_delegate\web\metrics.py:1958:101: E501 Line too long (130 > 100)
+src\local_delegate\web\metrics.py:1990:101: E501 Line too long (108 > 100)
+src\local_delegate\web\metrics.py:1999:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:2002:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:2009:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:2014:101: E501 Line too long (106 > 100)
+src\local_delegate\web\metrics.py:2019:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:2020:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:2056:101: E501 Line too long (110 > 100)
+src\local_delegate\web\metrics.py:2057:101: E501 Line too long (110 > 100)
+src\local_delegate\web\metrics.py:2059:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:2067:101: E501 Line too long (110 > 100)
+src\local_delegate\web\metrics.py:2076:101: E501 Line too long (110 > 100)
+src\local_delegate\web\metrics.py:2083:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:2090:71: RUF001 String contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:2102:25: RUF001 String contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:2105:45: RUF001 String contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:2105:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:2119:101: E501 Line too long (120 > 100)
+src\local_delegate\web\metrics.py:2128:101: E501 Line too long (106 > 100)
+src\local_delegate\web\metrics.py:2129:101: E501 Line too long (105 > 100)
+src\local_delegate\web\metrics.py:2131:47: RUF001 String contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:2140:101: E501 Line too long (111 > 100)
+src\local_delegate\web\metrics.py:2150:101: E501 Line too long (106 > 100)
+src\local_delegate\web\metrics.py:2151:101: E501 Line too long (128 > 100)
+src\local_delegate\web\metrics.py:2160:101: E501 Line too long (118 > 100)
+src\local_delegate\web\metrics.py:2161:101: E501 Line too long (127 > 100)
+src\local_delegate\web\metrics.py:2187:101: E501 Line too long (120 > 100)
+src\local_delegate\web\metrics.py:2204:101: E501 Line too long (128 > 100)
+src\local_delegate\web\metrics.py:2225:101: E501 Line too long (109 > 100)
+src\local_delegate\web\metrics.py:2261:101: E501 Line too long (111 > 100)
+src\local_delegate\web\metrics.py:2264:101: E501 Line too long (104 > 100)
+src\local_delegate\web\metrics.py:2279:101: E501 Line too long (121 > 100)
+src\local_delegate\web\metrics.py:2362:101: E501 Line too long (117 > 100)
+src\local_delegate\web\metrics.py:2369:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:2375:101: E501 Line too long (111 > 100)
+src\local_delegate\web\metrics.py:2387:101: E501 Line too long (156 > 100)
+src\local_delegate\web\metrics.py:2389:101: E501 Line too long (122 > 100)
+src\local_delegate\web\metrics.py:2390:101: E501 Line too long (113 > 100)
+src\local_delegate\web\metrics.py:2397:101: E501 Line too long (122 > 100)
+src\local_delegate\web\metrics.py:2407:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:2412:49: RUF001 String contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:2413:101: E501 Line too long (147 > 100)
+src\local_delegate\web\metrics.py:2415:101: E501 Line too long (172 > 100)
+src\local_delegate\web\metrics.py:2416:101: E501 Line too long (167 > 100)
+src\local_delegate\web\metrics.py:2417:101: E501 Line too long (234 > 100)
+src\local_delegate\web\metrics.py:2426:101: E501 Line too long (152 > 100)
+src\local_delegate\web\metrics.py:2442:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:2493:101: E501 Line too long (104 > 100)
+src\local_delegate\web\metrics.py:2494:101: E501 Line too long (119 > 100)
+src\local_delegate\web\metrics.py:2495:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:2497:101: E501 Line too long (124 > 100)
+src\local_delegate\web\metrics.py:2500:101: E501 Line too long (144 > 100)
+src\local_delegate\web\metrics.py:2502:101: E501 Line too long (112 > 100)
+src\local_delegate\web\metrics.py:2513:101: E501 Line too long (117 > 100)
+src\local_delegate\web\metrics.py:2522:101: E501 Line too long (102 > 100)
+src\local_delegate\web\metrics.py:2557:101: E501 Line too long (282 > 100)
+src\local_delegate\web\metrics.py:2561:101: E501 Line too long (123 > 100)
+src\local_delegate\web\metrics.py:2568:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:2572:101: E501 Line too long (148 > 100)
+src\local_delegate\web\metrics.py:2580:101: E501 Line too long (123 > 100)
+src\local_delegate\web\metrics.py:2582:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:2583:101: E501 Line too long (120 > 100)
+src\local_delegate\web\metrics.py:2584:101: E501 Line too long (127 > 100)
+src\local_delegate\web\metrics.py:2592:101: E501 Line too long (106 > 100)
+src\local_delegate\web\metrics.py:2595:101: E501 Line too long (108 > 100)
+src\local_delegate\web\metrics.py:2596:101: E501 Line too long (114 > 100)
+src\local_delegate\web\metrics.py:2610:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:2615:101: E501 Line too long (115 > 100)
+src\local_delegate\web\metrics.py:2617:101: E501 Line too long (109 > 100)
+src\local_delegate\web\metrics.py:2620:101: E501 Line too long (129 > 100)
+src\local_delegate\web\metrics.py:2628:101: E501 Line too long (116 > 100)
+src\local_delegate\web\metrics.py:2629:101: E501 Line too long (118 > 100)
+src\local_delegate\web\metrics.py:2638:12: RUF001 String contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\web\metrics.py:2640:101: E501 Line too long (129 > 100)
+src\local_delegate\web\metrics.py:2675:101: E501 Line too long (101 > 100)
+src\local_delegate\web\metrics.py:2700:42: RUF001 String contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:2703:40: RUF001 String contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:2721:65: RUF001 String contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+src\local_delegate\web\metrics.py:2721:101: E501 Line too long (124 > 100)
+src\local_delegate\web\metrics.py:2722:101: E501 Line too long (319 > 100)
+src\local_delegate\web\metrics.py:2724:101: E501 Line too long (109 > 100)
+src\local_delegate\web\metrics.py:2725:101: E501 Line too long (177 > 100)
+src\local_delegate\web\metrics.py:2727:101: E501 Line too long (181 > 100)
+src\local_delegate\web\metrics.py:2730:101: E501 Line too long (270 > 100)
+src\local_delegate\web\metrics.py:2733:101: E501 Line too long (135 > 100)
+src\local_delegate\web\metrics.py:2735:101: E501 Line too long (132 > 100)
+src\local_delegate\web\metrics.py:2741:101: E501 Line too long (151 > 100)
+src\local_delegate\web\metrics.py:2760:101: E501 Line too long (106 > 100)
+src\local_delegate\web\metrics.py:2829:101: E501 Line too long (119 > 100)
+src\local_delegate\web\metrics.py:2842:101: E501 Line too long (123 > 100)
+src\local_delegate\web\metrics.py:2853:42: RUF001 String contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\web\metrics.py:2856:17: RUF001 String contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\web\metrics.py:2869:101: E501 Line too long (139 > 100)
+src\local_delegate\web\metrics.py:2875:101: E501 Line too long (162 > 100)
+src\local_delegate\web\metrics.py:2880:101: E501 Line too long (132 > 100)
+src\local_delegate\web\metrics.py:2880:120: RUF001 String contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+src\local_delegate\web\metrics.py:2881:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:2882:101: E501 Line too long (241 > 100)
+src\local_delegate\web\metrics.py:2886:101: E501 Line too long (190 > 100)
+src\local_delegate\web\metrics.py:2887:101: E501 Line too long (115 > 100)
+src\local_delegate\web\metrics.py:2891:101: E501 Line too long (110 > 100)
+src\local_delegate\web\metrics.py:2905:101: E501 Line too long (112 > 100)
+src\local_delegate\web\metrics.py:2906:101: E501 Line too long (128 > 100)
+src\local_delegate\web\metrics.py:2919:101: E501 Line too long (111 > 100)
+src\local_delegate\web\metrics.py:2920:101: E501 Line too long (109 > 100)
+src\local_delegate\web\metrics.py:2921:101: E501 Line too long (103 > 100)
+src\local_delegate\web\metrics.py:2927:101: E501 Line too long (122 > 100)
+src\local_delegate\web\metrics.py:2958:101: E501 Line too long (116 > 100)
+src\local_delegate\web\metrics.py:2959:101: E501 Line too long (106 > 100)
+src\local_delegate\web\metrics.py:2971:101: E501 Line too long (120 > 100)
+src\local_delegate\web\metrics.py:2998:5: T201 `print` found
+src\local_delegate\web\sysinfo.py:1:1: CPY001 Missing copyright notice at top of file
+src\local_delegate\web\sysinfo.py:32:13: PLC0415 `import` should be at the top-level of a file
+src\local_delegate\web\sysinfo.py:55:18: PTH123 `open()` should be replaced by `Path.open()`
+src\local_delegate\web\sysinfo.py:64:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\web\sysinfo.py:78:15: PLW1510 `subprocess.run` without explicit `check` argument
+src\local_delegate\web\sysinfo.py:79:13: S607 Starting a process with a partial executable path
+src\local_delegate\web\sysinfo.py:94:22: PLR2004 Magic value used in comparison, consider replacing `3` with a constant variable
+src\local_delegate\web\sysinfo.py:113:11: PLW1510 `subprocess.run` without explicit `check` argument
+src\local_delegate\web\sysinfo.py:114:9: S607 Starting a process with a partial executable path
+src\local_delegate\web\sysinfo.py:133:14: COM812 [*] Trailing comma missing
+src\local_delegate\web\sysinfo.py:141:18: PTH208 Use `pathlib.Path.iterdir()` instead.
+src\local_delegate\web\sysinfo.py:145:18: PTH123 `open()` should be replaced by `Path.open()`
+src\local_delegate\web\sysinfo.py:148:18: PTH123 `open()` should be replaced by `Path.open()`
+src\local_delegate\web\sysinfo.py:172:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\web\sysinfo.py:187:14: COM812 [*] Trailing comma missing
+src\local_delegate\web\sysinfo.py:202:5: D403 [*] First word of the docstring should be capitalized: `pid` -> `Pid`
+src\local_delegate\web\sysinfo.py:203:11: PLW1510 `subprocess.run` without explicit `check` argument
+src\local_delegate\web\sysinfo.py:204:9: S607 Starting a process with a partial executable path
+src\local_delegate\web\sysinfo.py:216:26: PLR2004 Magic value used in comparison, consider replacing `2` with a constant variable
+src\local_delegate\web\sysinfo.py:230:5: D403 [*] First word of the docstring should be capitalized: `pid` -> `Pid`
+src\local_delegate\web\sysinfo.py:236:11: S603 `subprocess` call: check for execution of untrusted input
+src\local_delegate\web\sysinfo.py:236:11: PLW1510 `subprocess.run` without explicit `check` argument
+src\local_delegate\web\sysinfo.py:237:9: S607 Starting a process with a partial executable path
+src\local_delegate\web\sysinfo.py:248:26: PLR2004 Magic value used in comparison, consider replacing `2` with a constant variable
+src\local_delegate\web\sysinfo.py:262:12: PLW0603 Using the global statement to update `_vram_refreshing` is discouraged
+src\local_delegate\web\sysinfo.py:270:12: BLE001 Do not catch blind exception: `Exception`
+src\local_delegate\web\sysinfo.py:279:5: D403 [*] First word of the docstring should be capitalized: `pid` -> `Pid`
+src\local_delegate\web\sysinfo.py:280:12: PLW0603 Using the global statement to update `_vram_refreshing` is discouraged
+Found 388 errors.
+[*] 24 fixable with `--fix` (26 unsafe fixes available with `--fix --unsafe-fixes`).

@@ -1,0 +1,928 @@
+warning: `incorrect-blank-line-before-class` (D203) and `blank-line-before-class` (D211) are incompatible. Ignoring `incorrect-blank-line-before-class`.
+warning: `multi-line-summary-first-line` (D212) and `multi-line-summary-second-line` (D213) are incompatible. Ignoring `multi-line-summary-second-line`.
+CPY001 Missing copyright notice at top of file
+--> src\local_delegate\benchmark.py:1:1
+
+TC003 Move standard library import `collections.abc.Callable` into a type-checking block
+  --> src\local_delegate\benchmark.py:26:29
+   |
+24 | import time
+25 | import unicodedata
+26 | from collections.abc import Callable, Mapping, Sequence
+   |                             ^^^^^^^^
+27 | from dataclasses import dataclass, field
+28 | from datetime import UTC, datetime
+   |
+help: Move into type-checking block
+   |
+25 | import unicodedata
+   - from collections.abc import Callable, Mapping, Sequence
+26 | from dataclasses import dataclass, field
+27 | from datetime import UTC, datetime
+28 | from pathlib import Path
+29 | from types import SimpleNamespace
+   - from typing import Any, Self
+30 + from typing import Any, Self, TYPE_CHECKING
+31 |
+--------------------------------------------------------------------------------
+36 |
+37 + if TYPE_CHECKING:
+38 +     from collections.abc import Callable, Mapping, Sequence
+39 +
+40 | # El muestreo frecuente de /metrics no debe convertir el benchmark en un log de cada GET.
+   |
+note: This is an unsafe fix and may change runtime behavior
+
+TC003 Move standard library import `collections.abc.Mapping` into a type-checking block
+  --> src\local_delegate\benchmark.py:26:39
+   |
+24 | import time
+25 | import unicodedata
+26 | from collections.abc import Callable, Mapping, Sequence
+   |                                       ^^^^^^^
+27 | from dataclasses import dataclass, field
+28 | from datetime import UTC, datetime
+   |
+help: Move into type-checking block
+   |
+25 | import unicodedata
+   - from collections.abc import Callable, Mapping, Sequence
+26 | from dataclasses import dataclass, field
+27 | from datetime import UTC, datetime
+28 | from pathlib import Path
+29 | from types import SimpleNamespace
+   - from typing import Any, Self
+30 + from typing import Any, Self, TYPE_CHECKING
+31 |
+--------------------------------------------------------------------------------
+36 |
+37 + if TYPE_CHECKING:
+38 +     from collections.abc import Callable, Mapping, Sequence
+39 +
+40 | # El muestreo frecuente de /metrics no debe convertir el benchmark en un log de cada GET.
+   |
+note: This is an unsafe fix and may change runtime behavior
+
+TC003 Move standard library import `collections.abc.Sequence` into a type-checking block
+  --> src\local_delegate\benchmark.py:26:48
+   |
+24 | import time
+25 | import unicodedata
+26 | from collections.abc import Callable, Mapping, Sequence
+   |                                                ^^^^^^^^
+27 | from dataclasses import dataclass, field
+28 | from datetime import UTC, datetime
+   |
+help: Move into type-checking block
+   |
+25 | import unicodedata
+   - from collections.abc import Callable, Mapping, Sequence
+26 | from dataclasses import dataclass, field
+27 | from datetime import UTC, datetime
+28 | from pathlib import Path
+29 | from types import SimpleNamespace
+   - from typing import Any, Self
+30 + from typing import Any, Self, TYPE_CHECKING
+31 |
+--------------------------------------------------------------------------------
+36 |
+37 + if TYPE_CHECKING:
+38 +     from collections.abc import Callable, Mapping, Sequence
+39 +
+40 | # El muestreo frecuente de /metrics no debe convertir el benchmark en un log de cada GET.
+   |
+note: This is an unsafe fix and may change runtime behavior
+
+D101 Missing docstring in public class
+  --> src\local_delegate\benchmark.py:59:7
+   |
+58 | @dataclass(frozen=True)
+59 | class CorpusCase:
+   |       ^^^^^^^^^^
+60 |     id: str
+61 |     tool: str
+   |
+
+D101 Missing docstring in public class
+  --> src\local_delegate\benchmark.py:72:7
+   |
+71 | @dataclass(frozen=True)
+72 | class Corpus:
+   |       ^^^^^^
+73 |     cases: list[CorpusCase]
+74 |     controls: list[dict[str, Any]]
+   |
+
+PLR2004 Magic value used in comparison, consider replacing `2` with a constant variable
+  --> src\local_delegate\benchmark.py:97:38
+   |
+95 |     """Carga el corpus v2 y verifica el hash de cada fuente y de cada control antes de nada."""
+96 |     data = json.loads(path.read_text(encoding="utf-8"))
+97 |     if data.get("schema_version") != 2 or not isinstance(data.get("cases"), list):
+   |                                      ^
+98 |         raise ValueError(t("cli.benchmark.invalid_corpus"))
+99 |     cases: list[CorpusCase] = []
+   |
+
+PLW2901 `for` loop variable `raw` overwritten by assignment target
+   --> src\local_delegate\benchmark.py:102:9
+    |
+100 |     seen: set[str] = set()
+101 |     for raw in data["cases"]:
+102 |         raw = legacy_names.normalize("benchmark_corpus", raw)
+    |         ^^^
+103 |         case_id = str(raw.get("id", "")).strip()
+104 |         if not case_id or case_id in seen:
+    |
+
+COM812 [*] Trailing comma missing
+   --> src\local_delegate\benchmark.py:120:22
+    |
+118 |                         field=field_name,
+119 |                         value=repr(raw.get(field_name)),
+120 |                     )
+    |                      ^
+121 |                 )
+122 |         cases.append(
+    |
+help: Add trailing comma
+    |
+119 |                         value=repr(raw.get(field_name)),
+    -                     )
+120 +                     ),
+121 |                 )
+    |
+
+COM812 [*] Trailing comma missing
+   --> src\local_delegate\benchmark.py:133:14
+    |
+131 |                 source=_frozen_source(path.parent, raw),
+132 |                 raw=raw,
+133 |             )
+    |              ^
+134 |         )
+135 |     controls = list(data.get("controls") or [])
+    |
+help: Add trailing comma
+    |
+132 |                 raw=raw,
+    -             )
+133 +             ),
+134 |         )
+    |
+
+PLC0415 `import` should be at the top-level of a file
+   --> src\local_delegate\benchmark.py:218:5
+    |
+216 |     operador lo acepta al correr el caso (decision del usuario, tarea 19).
+217 |     """
+218 |     from .server import _strip_fences  # lo mismo que `local_boilerplate` deja en el fichero
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+219 |
+220 |     failed = [False] * len(checks)
+    |
+
+S603 `subprocess` call: check for execution of untrusted input
+   --> src\local_delegate\benchmark.py:226:20
+    |
+224 |         Path(workdir, "checks.json").write_text(json.dumps(list(checks)), encoding="utf-8")
+225 |         try:
+226 |             proc = subprocess.run(
+    |                    ^^^^^^^^^^^^^^
+227 |                 [sys.executable, "-I", "-c", _HARNESS],
+228 |                 cwd=workdir,
+    |
+
+PLW1510 `subprocess.run` without explicit `check` argument
+   --> src\local_delegate\benchmark.py:226:20
+    |
+224 |         Path(workdir, "checks.json").write_text(json.dumps(list(checks)), encoding="utf-8")
+225 |         try:
+226 |             proc = subprocess.run(
+    |                    ^^^^^^^^^^^^^^
+227 |                 [sys.executable, "-I", "-c", _HARNESS],
+228 |                 cwd=workdir,
+    |
+help: Add explicit `check=False`
+    |
+227 |                 [sys.executable, "-I", "-c", _HARNESS],
+    -                 cwd=workdir,
+228 +                 check=False, cwd=workdir,
+229 |                 env=env,
+    |
+note: This suggestion may be incorrect or produce invalid syntax. It requires manual review and cannot be applied automatically
+
+C901 `score_output` is too complex (11 > 10)
+   --> src\local_delegate\benchmark.py:281:5
+    |
+281 | def score_output(
+    |     ^^^^^^^^^^^^
+282 |     case: dict[str, Any], text: str, finish_reason: str | None, *, repeated: bool = False
+283 | ) -> dict[str, Any]:
+    |
+
+COM812 [*] Trailing comma missing
+   --> src\local_delegate\benchmark.py:282:90
+    |
+281 | def score_output(
+282 |     case: dict[str, Any], text: str, finish_reason: str | None, *, repeated: bool = False
+    |                                                                                          ^
+283 | ) -> dict[str, Any]:
+284 |     """Puntua una respuesta de calidad y dice QUE componente la hundio (`zero_by`).
+    |
+help: Add trailing comma
+    |
+281 | def score_output(
+    -     case: dict[str, Any], text: str, finish_reason: str | None, *, repeated: bool = False
+282 +     case: dict[str, Any], text: str, finish_reason: str | None, *, repeated: bool = False,
+283 | ) -> dict[str, Any]:
+    |
+
+D107 Missing docstring in `__init__`
+   --> src\local_delegate\benchmark.py:377:9
+    |
+375 |     """Muestrea /metrics durante la request para no confundir before/after con el pico."""
+376 |
+377 |     def __init__(
+    |         ^^^^^^^^
+378 |         self, url: str, interval: float = 0.25, headers: dict[str, str] | None = None
+379 |     ) -> None:
+    |
+
+COM812 [*] Trailing comma missing
+   --> src\local_delegate\benchmark.py:378:86
+    |
+377 |     def __init__(
+378 |         self, url: str, interval: float = 0.25, headers: dict[str, str] | None = None
+    |                                                                                      ^
+379 |     ) -> None:
+380 |         self.url = url
+    |
+help: Add trailing comma
+    |
+377 |     def __init__(
+    -         self, url: str, interval: float = 0.25, headers: dict[str, str] | None = None
+378 +         self, url: str, interval: float = 0.25, headers: dict[str, str] | None = None,
+379 |     ) -> None:
+    |
+
+D105 Missing docstring in magic method
+   --> src\local_delegate\benchmark.py:387:9
+    |
+385 |         self._thread: threading.Thread | None = None
+386 |
+387 |     def __enter__(self) -> Self:
+    |         ^^^^^^^^^
+388 |         def sample() -> None:
+389 |             while not self._stop.is_set():
+    |
+
+D105 Missing docstring in magic method
+   --> src\local_delegate\benchmark.py:406:9
+    |
+404 |         return self
+405 |
+406 |     def __exit__(self, *_args: object) -> None:
+    |         ^^^^^^^^
+407 |         self._stop.set()
+408 |         if self._thread:
+    |
+
+D102 Missing docstring in public method
+   --> src\local_delegate\benchmark.py:411:9
+    |
+409 |             self._thread.join(timeout=2.0)
+410 |
+411 |     def peaks(self) -> dict[str, float]:
+    |         ^^^^^
+412 |         names = {name for sample in self.samples for name in sample}
+413 |         return {name: max(sample.get(name, 0.0) for sample in self.samples) for name in names}
+    |
+
+D101 Missing docstring in public class
+   --> src\local_delegate\benchmark.py:460:7
+    |
+459 | @dataclass(frozen=True)
+460 | class VramReading:
+    |       ^^^^^^^^^^^
+461 |     dedicated_bytes: int | None
+462 |     shared_bytes: int | None
+    |
+
+D301 Use `r"""` if any backslashes in a docstring
+   --> src\local_delegate\benchmark.py:515:5
+    |
+514 | def parse_adapter_dedicated(output: str) -> dict[str, int]:
+515 |     """`typeperf "\\GPU Adapter Memory(*)\\Dedicated Usage" -sc 1` -> `{luid: bytes}`."""
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+516 |     header: list[str] | None = None
+517 |     for line in output.splitlines():
+    |
+help: Add `r` prefix
+    |
+514 | def parse_adapter_dedicated(output: str) -> dict[str, int]:
+    -     """`typeperf "\\GPU Adapter Memory(*)\\Dedicated Usage" -sc 1` -> `{luid: bytes}`."""
+515 +     r"""`typeperf "\\GPU Adapter Memory(*)\\Dedicated Usage" -sc 1` -> `{luid: bytes}`."""
+516 |     header: list[str] | None = None
+    |
+note: This is an unsafe fix and may change runtime behavior
+
+COM812 [*] Trailing comma missing
+   --> src\local_delegate\benchmark.py:539:92
+    |
+538 | def choose_gpu_luid(
+539 |     adapter_dedicated: dict[str, int], nvidia_used_mib: float, tolerance_mib: float = 128.0
+    |                                                                                            ^
+540 | ) -> str | None:
+541 |     """El LUID cuyo `Dedicated Usage` cuadra con la memoria usada que reporta `nvidia-smi`.
+    |
+help: Add trailing comma
+    |
+538 | def choose_gpu_luid(
+    -     adapter_dedicated: dict[str, int], nvidia_used_mib: float, tolerance_mib: float = 128.0
+539 +     adapter_dedicated: dict[str, int], nvidia_used_mib: float, tolerance_mib: float = 128.0,
+540 | ) -> str | None:
+    |
+
+PLC0415 `import` should be at the top-level of a file
+   --> src\local_delegate\benchmark.py:584:5
+    |
+582 |     # Solo `import`: CodeQL marca mezclar `import ctypes` con `from ctypes import`, y ruff (PLR0402)
+583 |     # marca el alias. El submodulo se importa aqui porque solo existe para Windows.
+584 |     import ctypes.wintypes
+    |     ^^^^^^^^^^^^^^^^^^^^^^
+585 |
+586 |     wintypes = ctypes.wintypes
+    |
+
+D103 Missing docstring in public function
+   --> src\local_delegate\benchmark.py:662:5
+    |
+662 | def find_pids(name: str, lister: Callable[[], dict[int, str]] = list_processes) -> list[int]:
+    |     ^^^^^^^^^
+663 |     return sorted(pid for pid, image in lister().items() if image.casefold() == name.casefold())
+    |
+
+FBT003 Boolean positional value in function call
+   --> src\local_delegate\benchmark.py:677:75
+    |
+675 |         return None
+676 |     api = _win32_api()
+677 |     handle = api.kernel32.OpenProcess(_PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+    |                                                                           ^^^^^
+678 |     if not handle:
+679 |         return None
+    |
+
+D107 Missing docstring in `__init__`
+   --> src\local_delegate\benchmark.py:700:9
+    |
+698 |     """
+699 |
+700 |     def __init__(
+    |         ^^^^^^^^
+701 |         self,
+702 |         pid: int,
+    |
+
+D102 Missing docstring in public method
+   --> src\local_delegate\benchmark.py:762:9
+    |
+760 |                     self._latest_at = self._clock()
+761 |
+762 |     def latest(self, max_age: float) -> VramReading | None:
+    |         ^^^^^^
+763 |         with self._lock:
+764 |             if self._latest is None or self._latest_at is None:
+    |
+
+D102 Missing docstring in public method
+   --> src\local_delegate\benchmark.py:770:9
+    |
+768 |             return self._latest
+769 |
+770 |     def close(self) -> None:
+    |         ^^^^^
+771 |         try:
+772 |             self._process.terminate()
+    |
+
+PLR0913 Too many arguments in function definition (8 > 5)
+   --> src\local_delegate\benchmark.py:790:9
+    |
+788 |     """
+789 |
+790 |     def __init__(
+    |         ^^^^^^^^
+791 |         self,
+792 |         process_name: str,
+    |
+
+D107 Missing docstring in `__init__`
+   --> src\local_delegate\benchmark.py:790:9
+    |
+788 |     """
+789 |
+790 |     def __init__(
+    |         ^^^^^^^^
+791 |         self,
+792 |         process_name: str,
+    |
+
+D102 Missing docstring in public method
+   --> src\local_delegate\benchmark.py:830:9
+    |
+828 |                 self.stream_error = f"{type(exc).__name__}: {exc}"
+829 |
+830 |     def sample(self) -> ResourceSample:
+    |         ^^^^^^
+831 |         pids = self._find(self.process_name)
+832 |         if len(pids) > 1:
+    |
+
+D102 Missing docstring in public method
+   --> src\local_delegate\benchmark.py:862:9
+    |
+860 |         )
+861 |
+862 |     def close(self) -> None:
+    |         ^^^^^
+863 |         self._switch(None)
+    |
+
+COM812 [*] Trailing comma missing
+   --> src\local_delegate\benchmark.py:867:77
+    |
+866 | def summarize_resources(
+867 |     samples: Sequence[ResourceSample], *, enabled: bool, vram_expected: bool
+    |                                                                             ^
+868 | ) -> dict[str, Any]:
+869 |     """Resumen por corrida, con el motivo de anulacion si lo hay.
+    |
+help: Add trailing comma
+    |
+866 | def summarize_resources(
+    -     samples: Sequence[ResourceSample], *, enabled: bool, vram_expected: bool
+867 +     samples: Sequence[ResourceSample], *, enabled: bool, vram_expected: bool,
+868 | ) -> dict[str, Any]:
+    |
+
+E501 Line too long (101 > 100)
+   --> src\local_delegate\benchmark.py:877:101
+    |
+875 |     vram = [s for s in samples if s.vram_dedicated_bytes is not None]
+876 |     shared = [s.vram_shared_bytes for s in samples if s.vram_shared_bytes is not None]
+877 |     # En WDDM la privada incluye la VRAM reservada: solo la diferencia sigue a los expertos que viven
+    |                                                                                                     ^
+878 |     # en RAM (protocolo CP-2b, P-13). Por muestra y solo con los dos datos: restar picos seria restar
+879 |     # lecturas de momentos distintos, y una VRAM ausente no es cero.
+    |
+
+E501 Line too long (101 > 100)
+   --> src\local_delegate\benchmark.py:878:101
+    |
+876 |     shared = [s.vram_shared_bytes for s in samples if s.vram_shared_bytes is not None]
+877 |     # En WDDM la privada incluye la VRAM reservada: solo la diferencia sigue a los expertos que viven
+878 |     # en RAM (protocolo CP-2b, P-13). Por muestra y solo con los dos datos: restar picos seria restar
+    |                                                                                                     ^
+879 |     # lecturas de momentos distintos, y una VRAM ausente no es cero.
+880 |     host = [
+    |
+
+D107 Missing docstring in `__init__`
+   --> src\local_delegate\benchmark.py:931:9
+    |
+929 |     """
+930 |
+931 |     def __init__(self, probe: ProcessProbe | None, interval: float = 0.25) -> None:
+    |         ^^^^^^^^
+932 |         self.probe = probe
+933 |         self.interval = interval
+    |
+
+D105 Missing docstring in magic method
+   --> src\local_delegate\benchmark.py:946:9
+    |
+944 |             self.samples.append(ResourceSample(None, reason=f"error:{type(exc).__name__}"))
+945 |
+946 |     def __enter__(self) -> Self:
+    |         ^^^^^^^^^
+947 |         if self.probe is None:
+948 |             return self
+    |
+
+D105 Missing docstring in magic method
+   --> src\local_delegate\benchmark.py:959:9
+    |
+957 |         return self
+958 |
+959 |     def __exit__(self, *_args: object) -> None:
+    |         ^^^^^^^^
+960 |         self._stop.set()
+961 |         if self._thread:
+    |
+
+D102 Missing docstring in public method
+   --> src\local_delegate\benchmark.py:965:9
+    |
+963 |             self._take()
+964 |
+965 |     def summary(self) -> dict[str, Any]:
+    |         ^^^^^^^
+966 |         return summarize_resources(
+967 |             self.samples,
+    |
+
+RUF036 [*] `None` not at the end of the type union.
+   --> src\local_delegate\benchmark.py:978:47
+    |
+978 | def _build_probe(args: argparse.Namespace) -> ProcessProbe | None | int:
+    |                                               ^^^^^^^^^^^^^^^^^^^^^^^^^
+979 |     """La sonda pedida, `None` si no se pidio, o un exit code si no se puede montar."""
+980 |     if not args.probe_process:
+    |
+help: Move `None` to the end of the type union
+    |
+977 |
+    - def _build_probe(args: argparse.Namespace) -> ProcessProbe | None | int:
+978 + def _build_probe(args: argparse.Namespace) -> ProcessProbe | int | None:
+979 |     """La sonda pedida, `None` si no se pidio, o un exit code si no se puede montar."""
+    |
+
+T201 `print` found
+   --> src\local_delegate\benchmark.py:983:9
+    |
+981 |         return None
+982 |     if not probe_supported():
+983 |         print(t("cli.benchmark.probe_windows_only"))
+    |         ^^^^^
+984 |         return 2
+985 |     luid = args.gpu_luid or resolve_gpu_luid()
+    |
+help: Remove `print`
+    |
+982 |     if not probe_supported():
+    -         print(t("cli.benchmark.probe_windows_only"))
+983 |         return 2
+    |
+note: This is an unsafe fix and may change runtime behavior
+
+T201 `print` found
+   --> src\local_delegate\benchmark.py:987:9
+    |
+985 |     luid = args.gpu_luid or resolve_gpu_luid()
+986 |     if not luid:
+987 |         print(t("cli.benchmark.gpu_luid_ambiguous"))
+    |         ^^^^^
+988 |         return 2
+989 |     return ProcessProbe(args.probe_process, luid)
+    |
+help: Remove `print`
+    |
+986 |     if not luid:
+    -         print(t("cli.benchmark.gpu_luid_ambiguous"))
+987 |         return 2
+    |
+note: This is an unsafe fix and may change runtime behavior
+
+COM812 [*] Trailing comma missing
+    --> src\local_delegate\benchmark.py:1020:47
+     |
+1019 | def effective_reasoning(
+1020 |     case: CorpusCase, model_effort: str | None
+     |                                               ^
+1021 | ) -> tuple[str | None, str | None]:
+1022 |     """Precedencia caso > modelo (§4.7): el mismo modelo corre casos de resumir, donde hay que
+     |
+help: Add trailing comma
+     |
+1019 | def effective_reasoning(
+     -     case: CorpusCase, model_effort: str | None
+1020 +     case: CorpusCase, model_effort: str | None,
+1021 | ) -> tuple[str | None, str | None]:
+     |
+
+D205 1 blank line required between summary line and description
+    --> src\local_delegate\benchmark.py:1022:5
+     |
+1020 |       case: CorpusCase, model_effort: str | None
+1021 |   ) -> tuple[str | None, str | None]:
+1022 | /     """Precedencia caso > modelo (§4.7): el mismo modelo corre casos de resumir, donde hay que
+1023 | |     apagarle el razonamiento, y de codigo, donde no. Con un solo valor se mediria mal uno de los dos."""
+     | |________________________________________________________________________________________________________^
+1024 |       if case.raw.get("reasoning_effort"):
+1025 |           return case.raw["reasoning_effort"], "case"
+     |
+help: Insert single blank line
+
+D209 [*] Multi-line docstring closing quotes should be on a separate line
+    --> src\local_delegate\benchmark.py:1022:5
+     |
+1020 |       case: CorpusCase, model_effort: str | None
+1021 |   ) -> tuple[str | None, str | None]:
+1022 | /     """Precedencia caso > modelo (§4.7): el mismo modelo corre casos de resumir, donde hay que
+1023 | |     apagarle el razonamiento, y de codigo, donde no. Con un solo valor se mediria mal uno de los dos."""
+     | |________________________________________________________________________________________________________^
+1024 |       if case.raw.get("reasoning_effort"):
+1025 |           return case.raw["reasoning_effort"], "case"
+     |
+help: Move closing quotes to new line
+     |
+1022 |     """Precedencia caso > modelo (§4.7): el mismo modelo corre casos de resumir, donde hay que
+     -     apagarle el razonamiento, y de codigo, donde no. Con un solo valor se mediria mal uno de los dos."""
+1023 +     apagarle el razonamiento, y de codigo, donde no. Con un solo valor se mediria mal uno de los dos.
+1024 +     """
+1025 |     if case.raw.get("reasoning_effort"):
+     |
+
+E501 Line too long (104 > 100)
+    --> src\local_delegate\benchmark.py:1023:101
+     |
+1021 | ) -> tuple[str | None, str | None]:
+1022 |     """Precedencia caso > modelo (§4.7): el mismo modelo corre casos de resumir, donde hay que
+1023 |     apagarle el razonamiento, y de codigo, donde no. Con un solo valor se mediria mal uno de los dos."""
+     |                                                                                                     ^^^^
+1024 |     if case.raw.get("reasoning_effort"):
+1025 |         return case.raw["reasoning_effort"], "case"
+     |
+
+PLR0913 Too many arguments in function definition (6 > 5)
+    --> src\local_delegate\benchmark.py:1031:5
+     |
+1031 | def build_payload(
+     |     ^^^^^^^^^^^^^
+1032 |     case: CorpusCase,
+1033 |     model: str,
+     |
+
+PLR2004 Magic value used in comparison, consider replacing `400` with a constant variable
+    --> src\local_delegate\benchmark.py:1091:22
+     |
+1089 |     reclasificar.
+1090 |     """
+1091 |     return status == 400 and "exceed_context_size_error" in body
+     |                      ^^^
+
+D101 Missing docstring in public class
+    --> src\local_delegate\benchmark.py:1095:7
+     |
+1094 | @dataclass
+1095 | class Attempt:
+     |       ^^^^^^^
+1096 |     outcome: str
+1097 |     text: str = ""
+     |
+
+D103 Missing docstring in public function
+    --> src\local_delegate\benchmark.py:1111:5
+     |
+1111 | def post_attempt(client: httpx2.Client, url: str, payload: dict[str, Any]) -> Attempt:
+     |     ^^^^^^^^^^^^
+1112 |     try:
+1113 |         response = client.post(url, json=payload)
+     |
+
+PLR2004 Magic value used in comparison, consider replacing `400` with a constant variable
+    --> src\local_delegate\benchmark.py:1117:32
+     |
+1115 |         return Attempt("error", error=f"{type(exc).__name__}: {exc}")
+1116 |     body = response.text
+1117 |     if response.status_code >= 400:
+     |                                ^^^
+1118 |         outcome = (
+1119 |             "context_rejection" if is_context_rejection(response.status_code, body) else "error"
+     |
+
+D107 Missing docstring in `__init__`
+    --> src\local_delegate\benchmark.py:1164:9
+     |
+1162 |     """
+1163 |
+1164 |     def __init__(self) -> None:
+     |         ^^^^^^^^
+1165 |         self._last_pid: int | None = None
+1166 |         self._started = False
+     |
+
+D102 Missing docstring in public method
+    --> src\local_delegate\benchmark.py:1168:9
+     |
+1166 |         self._started = False
+1167 |
+1168 |     def classify(self, resources: dict[str, Any]) -> str | None:
+     |         ^^^^^^^^
+1169 |         pids = resources.get("pids") or []
+1170 |         if not resources.get("enabled") or not pids:
+     |
+
+C901 `run_benchmark` is too complex (16 > 10)
+    --> src\local_delegate\benchmark.py:1197:5
+     |
+1197 | def run_benchmark(args: argparse.Namespace) -> int:
+     |     ^^^^^^^^^^^^^
+1198 |     corpus_path = Path(args.cases)
+1199 |     corpus = load_corpus(corpus_path)
+     |
+
+PLR0912 Too many branches (16 > 12)
+    --> src\local_delegate\benchmark.py:1197:5
+     |
+1197 | def run_benchmark(args: argparse.Namespace) -> int:
+     |     ^^^^^^^^^^^^^
+1198 |     corpus_path = Path(args.cases)
+1199 |     corpus = load_corpus(corpus_path)
+     |
+
+PLR0915 Too many statements (73 > 50)
+    --> src\local_delegate\benchmark.py:1197:5
+     |
+1197 | def run_benchmark(args: argparse.Namespace) -> int:
+     |     ^^^^^^^^^^^^^
+1198 |     corpus_path = Path(args.cases)
+1199 |     corpus = load_corpus(corpus_path)
+     |
+
+D103 Missing docstring in public function
+    --> src\local_delegate\benchmark.py:1197:5
+     |
+1197 | def run_benchmark(args: argparse.Namespace) -> int:
+     |     ^^^^^^^^^^^^^
+1198 |     corpus_path = Path(args.cases)
+1199 |     corpus = load_corpus(corpus_path)
+     |
+
+T201 `print` found
+    --> src\local_delegate\benchmark.py:1205:13
+     |
+1203 |         control = next((c for c in corpus.controls if c["id"] == args.input_control), None)
+1204 |         if control is None:
+1205 |             print(t("cli.benchmark.no_such_control", control=repr(args.input_control)))
+     |             ^^^^^
+1206 |             return 2
+1207 |         # Ya verificado por hash en load_corpus. Solo aplica a los casos que el control declara.
+     |
+help: Remove `print`
+     |
+1204 |         if control is None:
+     -             print(t("cli.benchmark.no_such_control", control=repr(args.input_control)))
+1205 |             return 2
+     |
+note: This is an unsafe fix and may change runtime behavior
+
+T201 `print` found
+    --> src\local_delegate\benchmark.py:1211:9
+     |
+1209 |         cases = [case for case in cases if case.id in control["para"]]
+1210 |     if not cases:
+1211 |         print(t("cli.benchmark.no_cases"))
+     |         ^^^^^
+1212 |         return 2
+1213 |     without_prompt = [
+     |
+help: Remove `print`
+     |
+1210 |     if not cases:
+     -         print(t("cli.benchmark.no_cases"))
+1211 |         return 2
+     |
+note: This is an unsafe fix and may change runtime behavior
+
+T201 `print` found
+    --> src\local_delegate\benchmark.py:1217:9
+     |
+1215 |     ]
+1216 |     if without_prompt:
+1217 |         print(t("cli.benchmark.cases_without_prompt", cases=", ".join(without_prompt)))
+     |         ^^^^^
+1218 |         return 2
+     |
+help: Remove `print`
+     |
+1216 |     if without_prompt:
+     -         print(t("cli.benchmark.cases_without_prompt", cases=", ".join(without_prompt)))
+1217 |         return 2
+     |
+note: This is an unsafe fix and may change runtime behavior
+
+T201 `print` found
+    --> src\local_delegate\benchmark.py:1222:9
+     |
+1220 |     output = Path(args.output)
+1221 |     if output.exists() and not args.append:
+1222 |         print(t("cli.benchmark.output_exists", path=output))
+     |         ^^^^^
+1223 |         return 2
+     |
+help: Remove `print`
+     |
+1221 |     if output.exists() and not args.append:
+     -         print(t("cli.benchmark.output_exists", path=output))
+1222 |         return 2
+     |
+note: This is an unsafe fix and may change runtime behavior
+
+COM812 [*] Trailing comma missing
+    --> src\local_delegate\benchmark.py:1325:94
+     |
+1323 | …                     "discarded_reason": resource_summary["annul"],
+1324 | …                     "score": score_output(
+1325 | …                         case.raw, result.text, result.finish_reason, repeated=doubled
+     |                                                                                        ^
+1326 | …                     )
+1327 | …                     if scored
+     |
+help: Add trailing comma
+     |
+1324 |                             "score": score_output(
+     -                                 case.raw, result.text, result.finish_reason, repeated=doubled
+1325 +                                 case.raw, result.text, result.finish_reason, repeated=doubled,
+1326 |                             )
+     |
+
+COM812 [*] Trailing comma missing
+    --> src\local_delegate\benchmark.py:1331:60
+     |
+1329 |                             "response_chars": len(result.text),
+1330 |                             "response_sha256": hashlib.sha256(
+1331 |                                 result.text.encode("utf-8")
+     |                                                            ^
+1332 |                             ).hexdigest(),
+1333 |                         }
+     |
+help: Add trailing comma
+     |
+1330 |                             "response_sha256": hashlib.sha256(
+     -                                 result.text.encode("utf-8")
+1331 +                                 result.text.encode("utf-8"),
+1332 |                             ).hexdigest(),
+     |
+
+T201 `print` found
+    --> src\local_delegate\benchmark.py:1342:25
+     |
+1340 |                         quality = (record["score"] or {}).get("quality")
+1341 |                         annul = resource_summary["annul"]
+1342 |                         print(
+     |                         ^^^^^
+1343 |                             f"[{result.outcome}] {case.id} run={run} attempt={attempt} "
+1344 |                             f"latency={elapsed_ms}ms quality={quality}"
+     |
+help: Remove `print`
+     |
+1341 |                         annul = resource_summary["annul"]
+     -                         print(
+     -                             f"[{result.outcome}] {case.id} run={run} attempt={attempt} "
+     -                             f"latency={elapsed_ms}ms quality={quality}"
+     -                             + (f" annul={annul}" if annul else "")
+     -                         )
+1342 |                         # Todos los intentos quedan en el JSONL: un descarte silencioso seria
+     |
+note: This is an unsafe fix and may change runtime behavior
+
+COM812 [*] Trailing comma missing
+    --> src\local_delegate\benchmark.py:1345:67
+     |
+1343 |                             f"[{result.outcome}] {case.id} run={run} attempt={attempt} "
+1344 |                             f"latency={elapsed_ms}ms quality={quality}"
+1345 |                             + (f" annul={annul}" if annul else "")
+     |                                                                   ^
+1346 |                         )
+1347 |                         # Todos los intentos quedan en el JSONL: un descarte silencioso seria
+     |
+help: Add trailing comma
+     |
+1344 |                             f"latency={elapsed_ms}ms quality={quality}"
+     -                             + (f" annul={annul}" if annul else "")
+1345 +                             + (f" annul={annul}" if annul else ""),
+1346 |                         )
+     |
+
+D103 Missing docstring in public function
+    --> src\local_delegate\benchmark.py:1372:5
+     |
+1372 | def add_parser(sub: argparse._SubParsersAction) -> None:
+     |     ^^^^^^^^^^
+1373 |     parser = sub.add_parser(
+1374 |         "benchmark",
+     |
+
+COM812 [*] Trailing comma missing
+    --> src\local_delegate\benchmark.py:1386:85
+     |
+1384 |     parser.add_argument("--case", action="append", help=t("cli.help.benchmark.case"))
+1385 |     parser.add_argument(
+1386 |         "--role", action="append", choices=_ROLES, help=t("cli.help.benchmark.role")
+     |                                                                                     ^
+1387 |     )
+1388 |     parser.add_argument(
+     |
+help: Add trailing comma
+     |
+1385 |     parser.add_argument(
+     -         "--role", action="append", choices=_ROLES, help=t("cli.help.benchmark.role")
+1386 +         "--role", action="append", choices=_ROLES, help=t("cli.help.benchmark.role"),
+1387 |     )
+     |
+
+Found 68 errors.
+[*] 13 fixable with `--fix` (11 unsafe fixes available with `--fix --unsafe-fixes`).
