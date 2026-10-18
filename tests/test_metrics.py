@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -17,7 +18,7 @@ import httpx2
 import pytest
 from fastapi.testclient import TestClient
 
-from local_delegate import config, cost, failures, legacy_names, llamaswap_api, server
+from local_delegate import config, cost, failures, i18n, legacy_names, llamaswap_api, server
 from local_delegate.web import metrics
 
 
@@ -1754,7 +1755,7 @@ def test_llamaswap_watch_that_cannot_open_is_502(monkeypatch):
     r = TestClient(metrics.app).post("/api/llamaswap/watch")
 
     assert r.status_code == 502
-    assert r.json() == {"error": metrics.WATCH_REJECTED}
+    assert r.json() == {"error": i18n.t(metrics.WATCH_REJECTED)}
 
 
 @pytest.mark.parametrize(
@@ -1782,7 +1783,7 @@ def test_llamaswap_watch_502_does_not_expose_the_exception(monkeypatch, caplog, 
 
     assert r.status_code == 502
     assert marker not in r.text
-    assert r.json() == {"error": message}
+    assert r.json() == {"error": i18n.t(message)}
     assert marker in caplog.text, "guarda: el detalle sí llegó al log"
 
 
@@ -1872,7 +1873,7 @@ def test_the_switch_shows_them_and_the_cost_does_not_change(tmp_path, monkeypatc
     assert included["cost"] == excluded["cost"]
     assert included["quota"] == excluded["quota"]
     # La de ventana es una imagen, que va fuera de la base del coste: quedan la `mcp` y la de banco.
-    assert included["cost"]["bar"]["excluded_by_reason"] == {"pruebas": 2}
+    assert included["cost"]["bar"]["excluded_by_reason"] == {"tests": 2}
     assert (excluded["images"]["n"], included["images"]["n"]) == (0, 1)
 
 
@@ -1882,7 +1883,7 @@ def test_codex_still_counts_in_the_usage(tmp_path, monkeypatch):
     assert s["total"]["calls"] == 12
     by_client = {c["client"]: c["calls"] for c in s["by_client"]}
     assert by_client.get("codex-mcp-client") == 2
-    assert s["cost"]["bar"]["excluded_by_reason"]["no es Claude"] == 2
+    assert s["cost"]["bar"]["excluded_by_reason"]["not_claude"] == 2
 
 
 @pytest.mark.parametrize("include", [False, True])
@@ -1954,3 +1955,209 @@ def test_live_data_is_not_filtered(tmp_path, monkeypatch):
 @pytest.mark.parametrize("value", ["0", "yes", "", "TRUE ", "1", "true"])
 def test_include_tests_only_turns_on_with_1_or_true(value):
     assert metrics._include_tests(value) is (value.strip().lower() in {"1", "true"})
+
+
+# --- `?lang=` en los `/api/*` y el catálogo del panel (B4, plan D6) -----------------------------
+#
+# La suite corre con el proceso en español (`LOCAL_DELEGATE_LANG=es`, REQ-043): lo que llega en
+# inglés solo puede venir del `?lang=` del visitante.
+
+
+def _empty_logs(tmp_path, monkeypatch) -> TestClient:
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    metrics._FILE_CACHE.clear()
+    return TestClient(metrics.app)
+
+
+def test_api_stats_writes_its_reasons_in_the_visitor_language(tmp_path, monkeypatch):
+    from local_delegate import quota, valuation
+
+    client = _empty_logs(tmp_path, monkeypatch)
+    by_lang = {
+        lang: client.get("/api/stats", params={"lang": lang}).json() for lang in ("es", "en")
+    }
+    for lang, data in by_lang.items():
+        assert data["cost"]["reason"] == i18n.t_lang(lang, valuation.NO_DELEGATIONS)
+        assert data["quota"]["five_hour"]["reason"] == i18n.t_lang(lang, quota.NO_DATA)
+    assert by_lang["es"]["cost"]["reason"] != by_lang["en"]["cost"]["reason"]  # guarda
+
+
+@pytest.mark.parametrize("lang", [None, "fr", "EN"])
+def test_without_a_valid_lang_the_server_uses_its_own_language(tmp_path, monkeypatch, lang):
+    """D6: sin `lang`, o con uno que no vale, el del proceso (aquí `es`): un JS viejo sigue igual."""
+    from local_delegate import valuation
+
+    client = _empty_logs(tmp_path, monkeypatch)
+    params = {} if lang is None else {"lang": lang}
+    data = client.get("/api/stats", params=params).json()
+    assert data["cost"]["reason"] == i18n.t_lang("es", valuation.NO_DELEGATIONS)
+
+
+def test_api_hooks_says_why_it_is_off_in_the_visitor_language(monkeypatch):
+    monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", None)
+    client = TestClient(metrics.app)
+    es = client.get("/api/hooks").json()["reason"]
+    en = client.get("/api/hooks", params={"lang": "en"}).json()["reason"]
+    assert es == i18n.t_lang("es", "panel.hooks.disabled")
+    assert en == i18n.t_lang("en", "panel.hooks.disabled") != es
+
+
+def test_api_status_roles_and_tool_summaries_come_from_the_catalog():
+    """REQ-027: el resumen de cada tool sale del catálogo en el idioma del panel, no del docstring
+    (que sigue en inglés y no cambia con el idioma)."""
+    client = TestClient(metrics.app)
+    es = client.get("/api/status").json()
+    en = client.get("/api/status", params={"lang": "en"}).json()
+    assert [c["label"] for c in es["catalog"]] == ["mecánico", "largo", "código", "visión"]
+    assert [c["label"] for c in en["catalog"]] == ["mechanical", "long", "code", "vision"]
+    names = [t.name for t in server.mcp._tool_manager.list_tools()]
+    assert len(names) == 11 and [t["name"] for t in en["tools"]] == names
+    for lang, data in (("es", es), ("en", en)):
+        for tool in data["tools"]:
+            assert tool["summary"] == i18n.t_lang(lang, "panel.tool." + tool["name"]), tool
+    assert es["tools"][0]["summary"] != en["tools"][0]["summary"]
+
+
+def test_every_tool_has_its_summary_in_both_catalogs():
+    names = [t.name for t in server.mcp._tool_manager.list_tools()]
+    for lang in ("es", "en"):
+        missing = [n for n in names if "panel.tool." + n not in i18n.catalog(lang)]
+        assert missing == [], (lang, missing)
+
+
+@backend_mock.mock
+def test_api_backend_writes_the_cause_in_the_visitor_language(monkeypatch):
+    """D6: el daemon en español sirve la causa en inglés a quien la pide en inglés, también el
+    `detail` que `server.probe_backend` ya redactó en el idioma del proceso. Mutante: devolver
+    `probe.detail` tal cual en `_probe_detail` → el detalle sale en español y falla."""
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    backend_mock.get("http://test-backend/v1/models").mock(side_effect=httpx2.ConnectError("down"))
+    client = TestClient(metrics.app)
+    es = client.get("/api/backend").json()
+    en = client.get("/api/backend", params={"lang": "en"}).json()
+    assert (es["label"], es["detail"]) == (
+        "fallo de red",
+        "fallo de red con test-backend (ConnectError)",
+    )
+    assert en["label"] == failures.label("transport", language="en") == "network failure"
+    assert en["detail"] == "network failure with test-backend (ConnectError)"
+    status_en = client.get("/api/status", params={"lang": "en"}).json()["backend"]
+    assert (status_en["label"], status_en["detail"]) == (en["label"], en["detail"])
+
+
+@backend_mock.mock
+def test_api_backend_rewords_an_http_status_cause(monkeypatch):
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    backend_mock.get("http://test-backend/v1/models").mock(return_value=httpx2.Response(500))
+    en = TestClient(metrics.app).get("/api/backend", params={"lang": "en"}).json()
+    assert en["detail"] == failures.detail(
+        en["cause"], host="test-backend", status=500, language="en"
+    )
+    assert "500" in en["detail"]
+
+
+@backend_mock.mock
+def test_api_backend_stats_writes_the_cause_in_the_visitor_language(monkeypatch):
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    backend_mock.get("http://test-backend/api/metrics/stats").mock(
+        return_value=httpx2.Response(404)
+    )
+    client = TestClient(metrics.app)
+    es = client.get("/api/backend/stats").json()
+    en = client.get("/api/backend/stats", params={"lang": "en"}).json()
+    assert es["status_http"] == en["status_http"] == 404
+    assert en["label"] == failures.label(en["cause"], language="en") != es["label"]
+
+
+def test_the_page_carries_both_catalogs_without_closing_its_script():
+    """REQ-020: el panel lleva los dos idiomas (cambia sin recargar). Un `</b>` de un texto sin
+    escapar cerraría el `<script>` a mitad del catálogo."""
+    html = TestClient(metrics.app).get("/").text
+    assert html.count("</script>") == 2  # Chart.js y el del panel
+    raw = re.search(r"const I18N = (.*?);\r?\nconst LANGS", html, re.DOTALL).group(1)
+    assert "</" not in raw
+    catalogs = json.loads(raw.replace("<\\/", "</"))
+    assert catalogs == metrics.panel_catalogs()
+    assert set(catalogs) == {"es", "en"} and len(catalogs["en"]) >= 300  # guarda de no vacío
+    assert "__I18N__" not in html
+
+
+# --- «Procesos del backend» sin los llama-swap de los tests (decisión del usuario, 2026-10-18) ----
+
+
+@pytest.mark.parametrize(
+    ("command_line", "port"),
+    [
+        (r"D:\llms\llama-swap.exe --config c.yaml -watch-config --listen 127.0.0.1:9292", 9292),
+        ("llama-swap -config c.yaml -listen 127.0.0.1:53111 -watch-config", 53111),
+        ("llama-swap --listen=:5800", 5800),
+        ("llama-swap -config c.yaml", 8080),  # sin -listen: el de por defecto
+        ("llama-swap -listen 127.0.0.1", None),
+    ],
+)
+def test_listen_port_reads_the_llamaswap_command_line(command_line, port):
+    from local_delegate.web import sysinfo
+
+    assert sysinfo.listen_port(command_line) == port
+
+
+def test_the_backend_processes_leave_out_the_test_llamaswaps(monkeypatch):
+    """El de la suite (`fake_llamaswap.py`) es el mismo `llama-swap.exe` en un puerto libre: no se
+    cuenta. El del backend, el `llama-server` y el propio daemon, sí. Mutante: que
+    `is_backend_llamaswap` devuelva siempre `True` → el 202 aparece y falla el primer assert."""
+    from local_delegate.web import sysinfo
+
+    me = os.getpid()
+    processes = [
+        {"pid": 201, "name": "llama-swap.exe", "ram_mb": 40},
+        {"pid": 202, "name": "llama-swap.exe", "ram_mb": 30},
+        {"pid": 203, "name": "llama-server.exe", "ram_mb": 7000},
+        {"pid": 204, "name": "llama-swap.exe", "ram_mb": 20},
+        {"pid": 205, "name": "llama-swap.exe", "ram_mb": 10},
+        {"pid": me, "name": "python.exe", "ram_mb": 90},
+    ]
+    lines = {
+        201: r"D:\llms\llama-swap.exe --config c.yaml --listen 127.0.0.1:9292",
+        202: r"D:\llms\llama-swap.exe -config t\config.yaml -listen 127.0.0.1:53111",
+        204: sysinfo.PENDING,  # recién lanzado: su línea todavía no se ha leído
+        205: None,  # no se puede leer (permisos): se cuenta, como antes de esta regla
+    }
+    monkeypatch.setattr(config, "BASE_URL", "http://127.0.0.1:9292/v1")
+    monkeypatch.setattr(sysinfo, "_all_processes", lambda: processes)
+    monkeypatch.setattr(sysinfo, "_command_line", lambda pid: lines.get(pid))
+    monkeypatch.setattr(sysinfo, "proc_vram_map", dict)
+
+    pids = [p["pid"] for p in sysinfo.interesting_processes()]
+
+    assert 202 not in pids
+    assert 204 not in pids
+    assert pids == [me, 203, 201, 205]  # el daemon primero y luego por RAM
+
+
+@pytest.mark.llamaswap_real
+@pytest.mark.skipif(sys.platform != "win32", reason="la línea de órdenes se lee con PowerShell")
+def test_a_real_test_llamaswap_is_not_listed(tmp_path):
+    """Probar el uso, no la pieza: un llama-swap de prueba DE VERDAD (`fake_llamaswap.py`, el mismo
+    ejecutable que el backend) no sale en «Procesos del backend» una vez leída su línea de órdenes."""
+    from fake_llamaswap import FakeModel, binary_available, fake_llamaswap
+
+    from local_delegate.web import sysinfo
+
+    if not binary_available():
+        pytest.skip("falta llama-swap-v255 de prueba")
+    with fake_llamaswap(tmp_path, [FakeModel("m-proc")]) as ls:
+        pid = ls._proc.pid
+        listed: dict[int, str] = {}
+        sampled = False
+        for _ in range(150):  # la primera muestra de PowerShell tarda ~1 s
+            listed = {p["pid"]: p["name"] for p in sysinfo.interesting_processes()}
+            with sysinfo._cmd_lock:
+                sampled = pid in sysinfo._cmd_cache["lines"]
+            if sampled:
+                listed = {p["pid"]: p["name"] for p in sysinfo.interesting_processes()}
+                break
+            time.sleep(0.1)
+        assert sampled, "guarda: la línea de órdenes del llama-swap de prueba llegó a leerse"
+        assert f":{ls.port}" in sysinfo._cmd_cache["lines"][pid]
+        assert pid not in listed

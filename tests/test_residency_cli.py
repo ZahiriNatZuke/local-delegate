@@ -25,7 +25,7 @@ import uvicorn
 from conftest import DEAD_PORT
 from fake_llamaswap import FakeModel, binary_available, fake_llamaswap
 
-from local_delegate import checks, cli, config, llamaswap_api, server
+from local_delegate import checks, cli, config, i18n, llamaswap_api, server
 from local_delegate.web import metrics
 
 FIXTURES = Path(__file__).parent / "fixtures" / "residency"
@@ -378,7 +378,7 @@ def test_without_a_watch_it_does_not_write_unless_now(tmp_path, monkeypatch, cap
         assert "no se puede vigilar la recarga" in output
         # El 502 no lleva el texto de la excepción (CodeQL py/stack-trace-exposure), sino el fijo
         # de su familia: el del tope de vigías.
-        assert metrics.WATCH_LIMIT in output
+        assert i18n.t(metrics.WATCH_LIMIT) in output
         assert "ya hay 4 vigías abiertas" not in output
         assert "--now" in output
         assert _sha(path) == before

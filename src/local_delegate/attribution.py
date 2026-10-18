@@ -38,10 +38,12 @@ TAIL_BYTES = 256 * 1024
 BUDGET_S = 0.050
 
 #: Clientes que no son Claude: sus delegaciones cuentan como uso, pero no se valoran (REQ-007).
-NON_CLAUDE_CLIENTS = {"codex-mcp-client": "no es Claude"}
+#: Los motivos son valores de máquina (REQ-033): el panel los recibe como claves de
+#: `excluded_by_reason` y no los pinta tal cual.
+NON_CLAUDE_CLIENTS = {"codex-mcp-client": "not_claude"}
 
 #: El cliente `mcp` es el de los scripts del repo: lo que hace es una prueba (test-windows-out-of-metrics).
-TEST_CLIENTS = {"mcp": "pruebas"}
+TEST_CLIENTS = {"mcp": "tests"}
 
 #: Clientes cuyas delegaciones no se valoran, con el rótulo del tramo `excluido` (REQ-007). Se
 #: conserva como unión de los dos de arriba; la regla vive en `exclusion_reason` y `test_reason`.
@@ -374,7 +376,7 @@ def write_backfill(log_dir: Path, month: str, entries: dict[str, dict]) -> dict[
 
 
 def test_reason(row: dict, backfill_entry: dict | None = None) -> str | None:
-    """`"pruebas"` si la fila es una prueba, o `None`. Es la ÚNICA regla de «esto es una prueba»
+    """`"tests"` si la fila es una prueba, o `None`. Es la ÚNICA regla de «esto es una prueba»
     (test-windows-out-of-metrics, REQ-004): la aplican el panel entero, `local_status`, el coste, el
     recálculo y los medidores de `scripts/`.
 
@@ -387,14 +389,14 @@ def test_reason(row: dict, backfill_entry: dict | None = None) -> str | None:
         return reason
     bench = backfill_entry.get("bench") if isinstance(backfill_entry, dict) else row.get("bench")
     if bench or row.get("test_window"):
-        return "pruebas"
+        return "tests"
     return None
 
 
 def exclusion_reason(row: dict, backfill_entry: dict | None = None) -> str | None:
     """El motivo por el que la delegación no se valora (REQ-007), o `None` si cuenta.
 
-    `no es Claude` (Codex) o `pruebas` (`test_reason`). Las de Codex sí cuentan como uso en el
+    `not_claude` (Codex) o `tests` (`test_reason`). Las de Codex sí cuentan como uso en el
     panel: solo el coste las deja fuera.
     """
     return NON_CLAUDE_CLIENTS.get(str(row.get("client") or "")) or test_reason(row, backfill_entry)

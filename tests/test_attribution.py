@@ -613,10 +613,10 @@ def test_the_backfill_only_improves(tmp_path):
 
 def test_excluded():
     """REQ-007. Control (b): mutante «sin la rama de `banco`» → la de banco cuenta."""
-    assert attribution.exclusion_reason({"client": "codex-mcp-client"}) == "no es Claude"
-    assert attribution.exclusion_reason({"client": "mcp"}) == "pruebas"
+    assert attribution.exclusion_reason({"client": "codex-mcp-client"}) == "not_claude"
+    assert attribution.exclusion_reason({"client": "mcp"}) == "tests"
     f = {"client": "claude-code"}
-    assert attribution.exclusion_reason(f, {"bench": True}) == "pruebas"
+    assert attribution.exclusion_reason(f, {"bench": True}) == "tests"
     assert attribution.exclusion_reason(f, {"bench": False}) is None
     assert attribution.exclusion_reason(f) is None
 
@@ -640,20 +640,18 @@ def test_deletion_deadline(tmp_path):
 
 def test_test_reason_recognizes_the_three_test_classes():
     """Control: mutante «`test_reason` ignora `test_window`» → falla el caso de la ventana."""
-    assert attribution.test_reason({"client": "mcp"}) == "pruebas"
-    assert attribution.test_reason({"client": "claude-code"}, {"bench": True}) == "pruebas"
+    assert attribution.test_reason({"client": "mcp"}) == "tests"
+    assert attribution.test_reason({"client": "claude-code"}, {"bench": True}) == "tests"
     # El panel la llama con un solo argumento sobre la fila ya fundida, que trae `bench`.
-    assert attribution.test_reason({"client": "claude-code", "bench": True}) == "pruebas"
-    assert attribution.test_reason({"client": "claude-code", "test_window": "w-1"}) == "pruebas"
+    assert attribution.test_reason({"client": "claude-code", "bench": True}) == "tests"
+    assert attribution.test_reason({"client": "claude-code", "test_window": "w-1"}) == "tests"
     assert attribution.test_reason({"client": "codex-mcp-client"}) is None
     assert attribution.test_reason({"client": "claude-code"}) is None
 
 
 def test_excluded_adds_up_non_claude_and_tests():
-    assert attribution.exclusion_reason({"client": "codex-mcp-client"}) == "no es Claude"
-    assert (
-        attribution.exclusion_reason({"client": "claude-code", "test_window": "w-1"}) == "pruebas"
-    )
+    assert attribution.exclusion_reason({"client": "codex-mcp-client"}) == "not_claude"
+    assert attribution.exclusion_reason({"client": "claude-code", "test_window": "w-1"}) == "tests"
     assert attribution.exclusion_reason({"client": "claude-code"}) is None
 
 

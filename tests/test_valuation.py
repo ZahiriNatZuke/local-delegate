@@ -13,7 +13,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from local_delegate import attribution, config, cost, pricing, recompute, valuation
+from local_delegate import attribution, config, cost, i18n, pricing, recompute, valuation
 
 NOW = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
 MONTH = f"{NOW:%Y%m}"
@@ -181,7 +181,7 @@ def test_a_model_without_a_price_does_not_give_zero(tmp_path):
     assert all(f["caller_origin"] == "line" for f in alone)  # guarda: no tomó el respaldo
     b = valuation.cost_block(alone, None, now=NOW)
     assert b["figure"] is None
-    assert b["reason"] == valuation.ALL_UNPRICED
+    assert b["reason"] == i18n.t(valuation.ALL_UNPRICED)
     assert b["unpriced"]["n"] == 2
 
 
@@ -197,7 +197,7 @@ def test_without_table_and_without_delegations(tmp_path, monkeypatch):
 
     monkeypatch.setattr(pricing, "load_prices", _broken)
     b = valuation.cost_block(rows, None, now=NOW)
-    assert b["reason"] == valuation.NO_TABLE
+    assert b["reason"] == i18n.t(valuation.NO_TABLE)
     assert b["figure"] is None
 
 
@@ -260,7 +260,7 @@ def test_the_excluded_ones_go_to_the_bar_and_do_not_add_up(tmp_path):
     backfill = {k: _backfill() for k in ("toolu_0000", "toolu_0001", "toolu_0002")}
     b = valuation.cost_block(_merged(tmp_path, lines, backfill), None, now=NOW)
     assert b["bar"]["excluded"] == 2
-    assert b["bar"]["excluded_by_reason"] == {"no es Claude": 1, "pruebas": 1}
+    assert b["bar"]["excluded_by_reason"] == {"not_claude": 1, "tests": 1}
     assert b["figure"] == {"low_bound": 2.50, "estimate": 6.50}
 
 
@@ -309,4 +309,4 @@ def test_a_row_in_a_window_goes_to_the_excluded_test_bucket(tmp_path):
     assert cost.segment(rows[1], now=NOW, cleanup_days=30) == "excluded"
     assert cost.segment(rows[0], now=NOW, cleanup_days=30) != "excluded", "guarda"
     b = valuation.cost_block(rows, None, now=NOW)
-    assert b["bar"]["excluded_by_reason"] == {"pruebas": 1}
+    assert b["bar"]["excluded_by_reason"] == {"tests": 1}

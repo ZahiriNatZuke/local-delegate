@@ -237,7 +237,7 @@ SEED_AND_MOCK = """({DENSITY, PRICES_CHECKED}) => {
     T: 1241362,
     bar: {excluded: 22, at_call: 94, backfilled: 0, pending: 4, assumed: 0,
       valued: 98, with_assumed_model: 4,
-      excluded_by_reason: {'no es Claude': 15, pruebas: 7}, cleanup_days: 30},
+      excluded_by_reason: {not_claude: 15, tests: 7}, cleanup_days: 30},
     fallback: {model: 'claude-opus-5-5', name: 'Opus 5.5', thread: 'subagent',
       invalid: false, variable: 'LOCAL_DELEGATE_COST_FALLBACK'},
     n_origin: {backfill: 0, aggregate: 0, declared: 98}, n_declared: {main: 127, subagent: 40},

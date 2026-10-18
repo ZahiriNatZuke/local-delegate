@@ -252,6 +252,10 @@ local-delegate test-window list                               # ventanas y filas
 
 El botón **Pruebas** de la barra del panel las vuelve a enseñar; su ⓘ dice cuántas quedaron fuera.
 
+El panel sale en español o en inglés según el idioma de tu navegador, y el selector `ES`/`EN` de su
+cabecera lo cambia (se recuerda en ese navegador). Ver
+[Savings & metrics](docs/wiki/Savings-and-metrics.md#idioma).
+
 Los rangos, los días del gráfico y las horas de la tabla usan **tu zona horaria** (el log se
 escribe en UTC, que es un instante sin ambigüedad; la conversión es de presentación). El
 dashboard también separa **dónde corrió el cómputo**: `local` si el backend escucha en loopback,

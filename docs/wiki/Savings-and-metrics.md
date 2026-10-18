@@ -519,6 +519,24 @@ los bloques de [coste equivalente](#coste-equivalente-a-precio-de-api), [cuota](
 JSONL; no interfiere con el MCP ni el backend (salvo el proxy de estado de `/api/backend`,
 una lectura sin efectos).
 
+### Idioma
+
+El panel sale en **español o en inglés**, por visitante: el selector `ES`/`EN` de la cabecera
+cambia todo el panel sin recargar ni perder el rango o los filtros, y la elección se guarda en el
+navegador (`localStorage`, clave `ld-lang`), no en el servidor. Sin elección guardada, el panel
+sigue al idioma del **navegador**: español si empieza por `es`, inglés en cualquier otro caso. El
+idioma del daemon no influye: el mismo daemon sirve a la vez a un visitante en español y a otro en
+inglés. Los textos del panel salen del catálogo `panel.*` (`resources/i18n/<idioma>/panel.json`),
+que el servidor inyecta con los dos idiomas; lo que el servidor redacta (causas del backend,
+motivos de la cuota y del coste, roles del catálogo de modelos y el resumen de cada tool) lo pide
+el panel con `?lang=` en cada `/api/*`. Los números y las fechas siguen el idioma: `8.003` y `1,5`
+en español, `8,003` y `1.5` en inglés. La prosa ya escrita en el log (el motivo de un respaldo,
+la etiqueta de una ventana de prueba) se enseña tal cual, en el idioma en que se escribió.
+
+La fila **Procesos del backend** de la tarjeta Sistema solo cuenta el `llama-swap` que escucha
+en el puerto de `LOCAL_DELEGATE_BASE_URL`: los que lanza la suite de tests (el mismo ejecutable en
+un puerto libre) no aparecen.
+
 ### Zona horaria
 
 El log se escribe en **UTC** (un instante sin ambigüedad y comparable entre máquinas), pero el
@@ -668,6 +686,7 @@ que todavía convivan clientes HTTP y procesos `stdio`.
 | `GET /api/llamaswap/status`, `POST /api/llamaswap/watch`, `GET /api/llamaswap/watch/<id>` | Estado de llama-swap para el CLI y `doctor`, y vigía de recarga de `llamaswap residency`. Ver [Daemon](Daemon.md#llama-swap-visto-desde-el-daemon) |
 | `GET /api/system` | RAM, VRAM y procesos del backend, más `platform`, `origin`, `host` y `panel_url` (panel de la máquina del backend; vacío si es local) |
 | `GET /api/hooks?from=&to=&include_tests=` | Lo que los hooks consultivos **sugirieron** en el rango, sin los eventos que caen en una ventana de prueba salvo con `include_tests=1` (`excluded_tests` dice cuántos): `total`, `suggested`, `rate`, y desglose por evento, categoría y día. `enabled: false` cuando `LD_HOOK_TELEMETRY_LOG` no está definida |
+| `?lang=es\|en` | Lo aceptan `/api/stats`, `/api/hooks`, `/api/backend`, `/api/backend/stats` y `/api/status`: los textos que redacta el servidor (`reason`, `warning`, `pct_reason`, la etiqueta y el detalle de la causa, los roles y el resumen de cada tool) salen en ese idioma. Sin él, o con otro valor, en el del proceso del daemon |
 | `GET /favicon.svg` | Icono de marca — el **mismo** fichero que la landing y que el icono del header del panel, inyectado desde `resources/brand/favicon.svg` |
 
 ### Sugerencias de los hooks

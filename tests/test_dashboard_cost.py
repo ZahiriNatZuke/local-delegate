@@ -15,6 +15,7 @@ import io
 import json
 import os
 import pathlib
+import re
 import shutil
 import socket
 import subprocess
@@ -23,6 +24,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from test_dashboard_js import i18n_prelude
 
 from local_delegate import attribution, cost, quota, recompute, server
 from local_delegate import config as cfg
@@ -166,14 +168,19 @@ _FUNCTIONS = (
 )
 
 
-def _texts(tmp_path, stats: dict) -> dict[str, str]:
+def _texts(tmp_path, stats: dict, lang: str = "es") -> dict[str, str]:
     """`costText`, `quotaText` y `imagesText` del panel sobre esa respuesta, en node."""
     node = shutil.which("node")
     if node is None:
         pytest.skip("node no está en el PATH")
+    windows = re.search(r"const WINDOWS = \[.*?\];", metrics.HTML).group(0)
     prelude = (
-        "const F = {format: n => fmtNum(n, 0)};\n"
-        "const F1 = {format: n => fmtNum(n, 1)};\n" + _extract("const THREAD_TXT = {") + ";\n"
+        i18n_prelude(lang) + "\nconst F = {format: n => fmtNum(n, 0)};\n"
+        "const F1 = {format: n => fmtNum(n, 1)};\n"
+        + _extract("const THREAD_TXT = {")
+        + ";\n"
+        + windows
+        + "\n"
     )
     body = (
         f"const j = {json.dumps(stats)};\n"
@@ -613,6 +620,7 @@ def test_a_row_without_saving_shows_no_dollars(env, tmp_path):
     program.write_text(
         "\n".join(
             [
+                i18n_prelude(),
                 *(_extract(f) for f in ("function fmtNum(", "function dollars(")),
                 _extract("function costCells("),
                 f"const rowsIn = {json.dumps(by_t)};",

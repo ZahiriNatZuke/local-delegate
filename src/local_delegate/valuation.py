@@ -24,7 +24,7 @@ from collections import Counter
 from collections.abc import Iterable
 from datetime import UTC, datetime
 
-from . import attribution, cost, legacy_names, pricing, server
+from . import attribution, cost, i18n, legacy_names, pricing, server
 
 #: `N` declarado por hilo (REQ-042 (3)), medido con `atribucion_n.py`: principal 127 (14 casos),
 #: subagente 40 (135 casos).
@@ -37,9 +37,10 @@ DEFAULT_CLEANUP_DAYS = attribution.DEFAULT_CLEANUP_DAYS
 N_ORIGINS = ("backfill", "aggregate", "declared")
 DENSITY_ORIGINS = ("measured", "unnumbered", "conservative")
 
-NO_DELEGATIONS = "sin delegaciones en el periodo"
-NO_TABLE = "no se pudo cargar la tabla de precios del paquete"
-ALL_UNPRICED = "todas las delegaciones del periodo son de modelos sin precio"
+#: Por qué no hay cifra: claves del catálogo (`panel.json`), redactadas en el idioma que se pida.
+NO_DELEGATIONS = "panel.cost.reason.no_delegations"
+NO_TABLE = "panel.cost.reason.no_table"
+ALL_UNPRICED = "panel.cost.reason.all_unpriced"
 COMMAND = "local-delegate recompute-cost"
 FALLBACK_VARIABLE = "LOCAL_DELEGATE_COST_FALLBACK"
 
@@ -152,9 +153,14 @@ def _money(x: float) -> float:
 
 
 def cost_block(
-    rows: Iterable[dict], aggregates: dict | None, *, now: datetime | None = None
+    rows: Iterable[dict],
+    aggregates: dict | None,
+    *,
+    now: datetime | None = None,
+    language: str | None = None,
 ) -> dict:
-    """La cifra del periodo con sus supuestos a la vista. Sin cifra, el motivo (REQ-046)."""
+    """La cifra del periodo con sus supuestos a la vista. Sin cifra, el motivo (REQ-046), redactado
+    en `language` (el del visitante del panel, D6) o, sin él, en el idioma del proceso."""
     now = now or datetime.now(UTC)
     cleanup_days = DEFAULT_CLEANUP_DAYS
     if isinstance(aggregates, dict):
@@ -250,7 +256,7 @@ def cost_block(
         "figure": None
         if reason
         else {"low_bound": _money(low_bound), "estimate": _money(estimate)},
-        "reason": reason,
+        "reason": i18n.t_lang(language or i18n.lang(), reason) if reason else None,
         "events": valued,
         "T": t_total,
         "bar": {
