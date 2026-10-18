@@ -44,7 +44,7 @@ SURFACE_OWNERS = {
     "install": "B5",
 }
 #: Superficies cuya ola ya vació su lista: su fichero de pendientes se borra (decisión 9 de B1).
-CLOSED_SURFACES = frozenset({"doctor", "cli", "mcp", "panel", "hooks"})
+CLOSED_SURFACES = frozenset({"doctor", "cli", "mcp", "panel", "hooks", "install"})
 #: Scripts del repo que entran en el alcance: sus rótulos los imprime B1 (A-close-5).
 SCRIPTS_IN_SCOPE = ("measure_cooldown.py", "pair_sheet.py", "analyze_benchmark.py")
 #: El escáner del panel (literales del JS y texto y atributos del HTML de `web/metrics.py`) lo

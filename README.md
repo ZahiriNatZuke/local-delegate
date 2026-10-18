@@ -296,6 +296,12 @@ Por defecto se configuran **solo los clientes que tengas instalados**; se elige 
 plugins en TypeScript, que es otra superficie, y Claude Desktop no tiene hooks en absoluto. Cada
 pieza se puede excluir (`--no-hooks`, `--no-skill`, `--no-memory`, `--no-mcp`).
 
+Todo sale en **español o en inglés**. `install` y `update` guardan el idioma de la sesión en
+que corren (`LOCAL_DELEGATE_LANG=es|en`, o el del sistema) en `language.json`, para que el
+daemon y los hooks lo usen también, y escriben la skill, el bloque de memoria y el catálogo de
+los subagentes en ese idioma. Precedencia y cómo volver a seguir al sistema:
+[Idioma](./docs/wiki/Language.md).
+
 Se instalan solos dos hooks: `UserPromptSubmit` (intenciones mecánicas) y `record_call.py`
 (`PreToolUse` sobre las tools de local-delegate), que no avisa ni bloquea: anota qué agente pidió
 cada delegación y con qué esfuerzo, para atribuir el coste equivalente a su modelo. Los dos de

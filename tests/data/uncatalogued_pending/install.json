@@ -1,9 +1,0 @@
-{
-  "surface": "install",
-  "owner": "B5",
-  "files": [
-    "src/local_delegate/agents.py",
-    "src/local_delegate/install.py",
-    "src/local_delegate/update.py"
-  ]
-}

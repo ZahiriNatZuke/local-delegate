@@ -1,0 +1,17 @@
+feat(i18n): install, update y uninstall en español y en inglés, con la preferencia de idioma (frente B, ola B5)
+
+- install y update guardan en language.json el idioma de la sesión con su
+  origen (REQ-047): la variable siempre, el sistema solo sin elección
+  explícita, la reserva nunca; uninstall completo lo borra; --home simulado
+  no lo toca salvo con LOCAL_DELEGATE_LOG_DIR.
+- La skill (SKILL.en.md), el bloque de memoria (local-delegate.en.md) y el
+  catálogo de los subagentes se instalan en el idioma vigente; reinstalar en
+  el otro idioma deja un solo bloque, y el encabezado «Delegation to local
+  models» también se reconoce (REQ-029).
+- D12 con el inglés: un bloque o un catálogo al día en cualquier idioma da OK
+  y update no lo reescribe.
+- Mensajes de install.py, update.py y agents.py en el catálogo install.*;
+  uncatalogued_pending/install.json vacío y borrado.
+- Wiki: página nueva Idioma (precedencia y D11); README y CHANGELOG.
+- Tests: preferencia, D11, skill y bloques en inglés, paridad de las skills y
+  humo en inglés, con sus controles positivos.

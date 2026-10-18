@@ -8,6 +8,21 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Añade
 
+- **`install`, `update` y `uninstall` en español o en inglés, y la preferencia de idioma.**
+  `install` y `update` guardan el idioma de la sesión en que corren en `language.json` (en el
+  directorio de datos) con su origen, para que el daemon y los hooks, que no ven tu shell, hablen
+  el mismo idioma. `LOCAL_DELEGATE_LANG` se guarda siempre; el idioma del sistema solo si no había
+  una elección explícita; la reserva nunca. `uninstall` lo borra. Para volver a seguir al sistema
+  tras elegir con la variable: borra `language.json` y ejecuta `install`. Con `--home` de prueba
+  no se toca salvo con `LOCAL_DELEGATE_LOG_DIR`. Ver la página nueva de la wiki
+  [Idioma](docs/wiki/Language.md).
+- **La skill, el bloque de memoria y el catálogo de los subagentes en inglés.** `install` los
+  escribe en el idioma vigente (`SKILL.en.md` y `local-delegate.en.md` en el paquete);
+  reinstalar en el otro idioma deja un solo bloque. Los subagentes con la sección «Delegation to
+  local models» también reciben el catálogo. Un bloque o un catálogo al día en cualquiera de los
+  dos idiomas da `OK` en `doctor` y `update` no lo reescribe. Un guardián exige que las dos
+  skills listen las mismas tools con los mismos argumentos.
+
 - **El panel en español o en inglés, por visitante.** Selector `ES`/`EN` en la cabecera; la
   elección se guarda en el navegador (`ld-lang`) y, sin ella, el panel sigue al idioma del
   navegador (español si empieza por `es`, inglés si no). El mismo daemon sirve a la vez a un

@@ -45,7 +45,7 @@ de delegarlo.
 | `local_describe_image` | Describir una imagen o responder una pregunta sobre ella | `path`, `question?` | Descripción (prosa) |
 | `local_status` | Diagnóstico de solo lectura | — | Backend/catálogo/log/VRAM |
 
-Los ids de modelos del catálogo (mecánico/largo/código/rápido/visión) son configurables por
+Los ids de modelos del catálogo (mecánico/largo/código/visión) son configurables por
 env y pueden cambiar entre máquinas: consulta `local_status` para ver el catálogo
 activo en vez de asumir nombres fijos. `local_describe_image` es **solo imagen→texto**
 (describir, leer texto visible, responder una pregunta puntual) — nunca genera ni edita
@@ -56,9 +56,10 @@ imágenes.
 `local_translate` (y `local_delegate` con entradas largas) parten el texto por límites
 naturales —headers Markdown, párrafos— y procesan cada trozo en su propia llamada,
 concatenando las salidas en orden. Un documento de 20 000+ caracteres vuelve **completo**,
-sin el aviso `[salida truncada]`. Esa estrategia sirve para transformar todo el texto
-(traducir, reescribir, reformatear); para tareas de reducción sobre el conjunto (contar,
-elegir el máximo, un único resumen global) usa `local_summarize` o `chunk='off'`.
+sin el aviso de salida truncada (`[local-delegate warning: …]`). Esa estrategia sirve para
+transformar todo el texto (traducir, reescribir, reformatear); para tareas de reducción sobre
+el conjunto (contar, elegir el máximo, un único resumen global) usa `local_summarize` o
+`chunk='off'`.
 
 ## Cuándo SÍ delegar (ejemplos)
 - Resumir un log/archivo grande para saber qué contiene → `local_summarize(path=…)`.

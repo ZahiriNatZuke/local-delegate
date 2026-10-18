@@ -38,6 +38,7 @@ from importlib import metadata
 from pathlib import Path
 
 from . import checks, config, install
+from .i18n import t
 
 PACKAGE = "local-delegate-mcp"
 
@@ -53,12 +54,19 @@ LAUNCHCTL = "launchctl"
 SYSTEMD = "systemd"
 FALLBACK = "fallback"
 
-MECHANISM_LABEL = {
-    SCHTASKS: f"tarea programada {TASK_NAME}",
-    LAUNCHCTL: f"LaunchAgent {LAUNCH_LABEL}",
-    SYSTEMD: f"unidad {SYSTEMD_UNIT} de systemd --user",
-    FALLBACK: "terminar el proceso y relanzar `serve` desacoplado",
+#: Mecanismo → (clave del catálogo, nombre del servicio que va en el texto).
+_MECHANISM_KEYS = {
+    SCHTASKS: ("install.update.mechanism.schtasks", TASK_NAME),
+    LAUNCHCTL: ("install.update.mechanism.launchctl", LAUNCH_LABEL),
+    SYSTEMD: ("install.update.mechanism.systemd", SYSTEMD_UNIT),
+    FALLBACK: ("install.update.mechanism.fallback", ""),
 }
+
+
+def mechanism_label(mechanism: str) -> str:
+    """El mecanismo de arranque del daemon contado para una persona, en el idioma vigente."""
+    key, name = _MECHANISM_KEYS[mechanism]
+    return t(key, name=name)
 
 
 # --- Ejecución de comandos, inyectable ---------------------------------------
@@ -95,6 +103,9 @@ class Options:
     sleep: Callable[[float], None] | None = None
     clock: Callable[[], float] | None = None
     spawn: Callable[[list[str]], None] | None = None
+    # Lo mismo que en `install.Options`: dónde va `language.json` y la regla del idioma (REQ-047).
+    data_dir: Path | None = None
+    language_probe: Callable | None = None
 
     def __post_init__(self) -> None:
         if self.runner is None:
@@ -137,7 +148,6 @@ class Repair:
     states: tuple[str, ...]
     components: frozenset[str]
     targets: frozenset[str] | str
-    why: str = ""
 
 
 # Los checks que no aparecen aquí —`cli.path`, `client.presence`, `client.observed`,
@@ -161,7 +171,6 @@ REPAIRS: tuple[Repair, ...] = (
         (checks.MISSING, checks.WARN),
         frozenset({"hooks"}),
         frozenset({"claude"}),
-        why="scripts de hooks de otra versión",
     ),
     Repair(
         "scaffold.hook_settings",
@@ -170,7 +179,6 @@ REPAIRS: tuple[Repair, ...] = (
         (checks.MISSING, checks.WARN),
         frozenset({"hooks"}),
         frozenset({"claude"}),
-        why="hooks en formato de instalación anterior",
     ),
     Repair(
         "scaffold.hook_orphans",
@@ -182,7 +190,6 @@ REPAIRS: tuple[Repair, ...] = (
         (checks.WARN,),
         frozenset({"hooks"}),
         frozenset({"claude"}),
-        why="scripts de hooks de una instalación anterior",
     ),
     Repair(
         "scaffold.skill",
@@ -195,7 +202,6 @@ REPAIRS: tuple[Repair, ...] = (
         # skills—, y es el mismo marcador que ya usa `scaffold.memory` por la misma razón: no
         # crearle a nadie el directorio de un cliente que no tiene instalado.
         PRESENT,
-        why="skill incompleta",
     ),
     # `warn` = el bloque está pero no es el empaquetado (D12): por ejemplo, el de la 0.34.0, que
     # nombra la skill ya retirada. Lo que se reescribe es solo lo de entre los marcadores.
@@ -213,6 +219,29 @@ REPAIRS: tuple[Repair, ...] = (
     # repone si falta.
     Repair("scaffold.mcp_opencode", (checks.MISSING,), frozenset({"mcp"}), frozenset({"opencode"})),
 )
+
+
+def install_options(opts: Options) -> install.Options:
+    """Las opciones de `install` con las que `update` decide el idioma (REQ-047)."""
+    return install.Options(
+        home=opts.home,
+        components=set(),
+        targets=set(),
+        python_exe=install.default_python(),
+        data_dir=opts.data_dir,
+        language_probe=opts.language_probe,
+    )
+
+
+def language_actions(opts: Options) -> list[install.Action]:
+    """La acción que escribe `language.json` con el idioma de esta sesión, si hay que escribirlo.
+
+    Solo cuando escribe: lo que `install` cuenta sin escribir («ya guardado», «se conserva») aquí
+    sería una acción en cada pasada, y `update` dejaría de poder decir «nada que reparar».
+    """
+    plan = install.plan_language(install_options(opts))
+    action = install.language_action(plan) if plan.write is not None else None
+    return [action] if action is not None else []
 
 
 def _present_targets(home: Path) -> set[str]:
@@ -285,6 +314,10 @@ def plan_repairs(
                         # a planificar la misma acción —el probe seguía viendo el árbol
                         # simulado vacío— mientras la config de verdad sí se había reescrito.
                         use_cli=not opts.simulated_home,
+                        # La preferencia de idioma la escribe `run_update` una sola vez.
+                        write_language=False,
+                        data_dir=opts.data_dir,
+                        language_probe=opts.language_probe,
                     )
                 )
             )
@@ -293,7 +326,8 @@ def plan_repairs(
     # `doctor` no mira `~/.claude/agents`, pero se informa como una reparación más: solo se
     # reescribe lo de entre los marcadores y solo si no es el catálogo empaquetado.
     if "claude" in present:
-        actions.extend(install.plan_catalog_refresh(opts.home))
+        language = install.plan_language(install_options(opts))
+        actions.extend(install.plan_catalog_refresh(opts.home, language.lang))
 
     # Deduplicación por (kind, target), y no es cosmética: `plan_install` con
     # components={"hooks"} emite DOS acciones —copiar el árbol y registrar en settings.json— y
@@ -337,16 +371,18 @@ def latest_version(timeout: float = 30.0) -> tuple[str | None, str | None]:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             data = json.load(response)
     except (urllib.error.URLError, OSError, ValueError) as exc:
-        return None, f"no se pudo consultar PyPI ({exc})"
+        return None, t("install.update.pypi_unreachable", reason=exc)
 
     versions = [v for v in data.get("versions", []) if re.fullmatch(r"\d+(\.\d+)*", v)]
     if not versions:
-        return None, "PyPI no devolvió ninguna versión utilizable"
+        return None, t("install.update.pypi_no_versions")
     # Ordena por número y no alfabéticamente: "0.9.0" es MENOR que "0.11.0".
     return max(versions, key=lambda v: [int(p) for p in re.findall(r"\d+", v)]), None
 
 
-PYPI_SOURCE = "índice simple de PyPI, que se sirve con caché"
+def pypi_source() -> str:
+    """De dónde sale la «última versión publicada», y que puede ir con retraso."""
+    return t("install.update.pypi_source")
 
 
 def version_lines(version: str | None, reason: str | None, *, from_user: bool) -> list[str]:
@@ -364,35 +400,37 @@ def version_lines(version: str | None, reason: str | None, *, from_user: bool) -
     la instalada más nueva que la publicada.
     """
     if from_user:
-        return [f"Versión pedida con --version: {version}"]
+        return [t("install.update.version_requested", version=version)]
     if version is None:
         # Sin red no se puede resolver el pin, pero completar y reiniciar sí se puede: se avisa
         # y se sigue. No es un error (edge case de la spec).
-        return [f"Aviso: {reason}. Se sigue sin tocar los pines."]
+        return [t("install.update.version_unknown", reason=reason)]
 
-    lines = [f"Última versión publicada: {version} ({PYPI_SOURCE})"]
+    lines = [t("install.update.version_latest", version=version, source=pypi_source())]
     installed = checks._installed_version()
     # `_compare_versions` devuelve None si alguna no es comparable; ahí se calla en vez de
     # inventarse un aviso, que es la misma regla que gobierna todo el registro de checks.
     if installed and checks._compare_versions(installed, version) == 1:
         lines += [
-            f"  Ojo: la instalada ({installed}) es MÁS NUEVA que la que anuncia PyPI.",
-            "  Suele significar que la publicación aún no se propagó (o no ha terminado).",
-            f"  Si es la que quieres fijar: local-delegate update --version {installed}",
+            t("install.update.newer_installed", installed=installed),
+            t("install.update.newer_installed_why"),
+            t("install.update.newer_installed_hint", installed=installed),
         ]
     return lines
 
 
 _PIN_RE = re.compile(re.escape(PACKAGE) + r"==[\d.]+")
+#: Valor de máquina de `current_pin` para una entrada sin `==` (antes `sin-pin`).
+UNPINNED = "unpinned"
 
 
 def current_pin(path: Path) -> str | None:
-    """Versión fijada en el fichero, ``"sin-pin"`` si está la entrada sin ``==``, o None."""
+    """Versión fijada en el fichero, ``UNPINNED`` si está la entrada sin ``==``, o None."""
     text, _reason = checks.read_text(path)
     if text is None or PACKAGE not in text:
         return None
     match = re.search(re.escape(PACKAGE) + r"==([\d.]+)", text)
-    return match.group(1) if match else "sin-pin"
+    return match.group(1) if match else UNPINNED
 
 
 def plan_pin(opts: Options, version: str) -> list[install.Action]:
@@ -400,7 +438,7 @@ def plan_pin(opts: Options, version: str) -> list[install.Action]:
     actions: list[install.Action] = []
     for path in (opts.home / ".claude.json", opts.home / ".codex" / "config.toml"):
         current = current_pin(path)
-        if current is None or current == "sin-pin" or current == version:
+        if current is None or current == UNPINNED or current == version:
             continue
 
         def _run(path=path, current=current) -> str:
@@ -409,9 +447,10 @@ def plan_pin(opts: Options, version: str) -> list[install.Action]:
             # fichero: en Windows, escribir con el de la plataforma convertiría a CRLF un
             # `.claude.json` guardado en LF y el usuario vería el fichero entero modificado.
             install._write_text(path, _PIN_RE.sub(f"{PACKAGE}=={version}", text or ""))
-            return f"{current} -> {version} (copia en {path.name}.bak)"
+            return t("install.update.pin_done", current=current, version=version, name=path.name)
 
-        actions.append(install.Action("pin", path, f"fija {PACKAGE}=={version}", _run))
+        plan = t("install.update.pin_plan", pin=f"{PACKAGE}=={version}")
+        actions.append(install.Action("pin", path, plan, _run))
     return actions
 
 
@@ -453,7 +492,11 @@ UV_TOOL = "uv-tool"  # instalado con `uv tool install`
 OTHER = "other"  # pip, pipx, conda… no lo sabemos, y no lo adivinamos
 
 UV_TOOL_UPGRADE = f"uv tool upgrade {PACKAGE}"
-GENERIC_UPGRADE = f"actualiza {PACKAGE} con el gestor con el que lo instalaste"
+
+
+def generic_upgrade() -> str:
+    """El consejo de actualizar cuando no se sabe con qué gestor se instaló."""
+    return t("install.update.generic_upgrade", package=PACKAGE)
 
 
 def install_kind() -> str:
@@ -491,7 +534,7 @@ def upgrade_command() -> str:
     if kind == EDITABLE:
         origin = editable_origin()
         return f"git -C {origin} pull && uv sync --project {origin}"
-    return UV_TOOL_UPGRADE if kind == UV_TOOL else GENERIC_UPGRADE
+    return UV_TOOL_UPGRADE if kind == UV_TOOL else generic_upgrade()
 
 
 def uv_tool_lines(version: str | None) -> list[str]:
@@ -515,9 +558,9 @@ def uv_tool_lines(version: str | None) -> list[str]:
     # Sin línea en blanco delante: esto devuelve **el aviso**, no su maquetación. La separación
     # la pone quien imprime, que es el que sabe qué hay encima.
     return [
-        f"El CLI está instalado como `uv tool` en la versión {installed}.",
-        "  `update` no puede actualizarlo: reinstalaría el entorno desde el que se está",
-        "  ejecutando, y eso deja la instalación rota. Hazlo tú, en otra terminal:",
+        t("install.update.uv_tool.installed", installed=installed),
+        t("install.update.uv_tool.cannot_1"),
+        t("install.update.uv_tool.cannot_2"),
         f"    {UV_TOOL_UPGRADE}",
     ]
 
@@ -607,7 +650,7 @@ def _terminate(opts: Options, pid: int | None, out) -> None:
     try:
         os.kill(pid, signal.SIGTERM)
     except OSError as exc:
-        out(f"    aviso: no se pudo terminar el pid {pid}: {exc}")
+        out(t("install.update.terminate_failed", pid=pid, reason=exc))
     opts.sleep(1.0)
 
 
@@ -633,9 +676,9 @@ def restart_daemon(opts: Options, out=print) -> int:
     mechanism = detect_mechanism(opts)
 
     if before:
-        out(f"Reiniciando el daemon (pid {previous_pid}) por {MECHANISM_LABEL[mechanism]}…")
+        out(t("install.update.restarting", pid=previous_pid, mechanism=mechanism_label(mechanism)))
     else:
-        out(f"El daemon no responde; se levanta por {MECHANISM_LABEL[mechanism]}…")
+        out(t("install.update.starting", mechanism=mechanism_label(mechanism)))
 
     if mechanism == FALLBACK:
         _terminate(opts, previous_pid, out)
@@ -645,7 +688,8 @@ def restart_daemon(opts: Options, out=print) -> int:
         for argv in stop_commands:
             done = opts.runner(argv)
             if done.returncode != 0:
-                out(f"    aviso: `{' '.join(argv)}` falló ({done.stderr.strip() or 'sin detalle'})")
+                detail = done.stderr.strip() or t("install.update.no_detail")
+                out(t("install.update.command_failed", command=" ".join(argv), detail=detail))
 
         # Parar el SERVICIO no siempre para el PROCESO, y esto se descubrió ejecutándolo: en
         # Windows la tarea lanza `conhost -> powershell -> launcher`, y el launcher crea el
@@ -655,28 +699,27 @@ def restart_daemon(opts: Options, out=print) -> int:
         # todavía sirviendo. Por eso, si el mismo pid sigue ahí, se le manda la señal — y es
         # legítimo porque ese pid lo confirmó `/api/daemon`, no un fichero de estado.
         if stop_commands and previous_pid and _still_serving(opts, previous_pid):
-            out(f"    el servicio paró pero el pid {previous_pid} sigue sirviendo (launcher")
-            out("    desacoplado): se le manda la señal al proceso confirmado.")
+            out(t("install.update.still_serving_1", pid=previous_pid))
+            out(t("install.update.still_serving_2"))
             _terminate(opts, previous_pid, out)
 
         for argv in start_commands:
             done = opts.runner(argv)
             if done.returncode != 0:
-                out(
-                    f"    aviso: `{' '.join(argv)}` falló ({done.stderr.strip() or done.returncode})"
-                )
-                out("    se cae al fallback: terminar y relanzar")
+                detail = done.stderr.strip() or done.returncode
+                out(t("install.update.command_failed", command=" ".join(argv), detail=detail))
+                out(t("install.update.falling_back"))
                 _terminate(opts, previous_pid, out)
                 _spawn_detached(opts, _serve_argv())
                 break
 
     status = wait_until_up(opts, other_than=previous_pid)
     if status is None:
-        out("ERROR: el daemon no volvió a responder dentro del margen de espera.")
+        out(t("install.update.daemon_down"))
         return 1
-    out(f"    daemon {status.get('version')} arriba · pid {status.get('pid')}")
+    out(t("install.update.daemon_up", version=status.get("version"), pid=status.get("pid")))
     # REQ-013: el backend es un proceso aparte y no se ha tocado.
-    out("    el backend de inferencia no se ha tocado: los modelos siguen en VRAM.")
+    out(t("install.update.backend_untouched"))
     return 0
 
 
@@ -715,48 +758,48 @@ def restart_backend(opts: Options, out=print) -> int:
     if origin != "local":
         # El caso de la Mac apuntando a la PC por Tailscale: el backend no corre aquí y no hay
         # nada que reiniciar. No es un error.
-        out(f"El backend es remoto ({config.backend_host()}): no hay nada que reiniciar aquí.")
+        out(t("install.update.backend_remote", host=config.backend_host()))
         return 0
 
     _host, port = config._split_host_port(config.BASE_URL)
     port_number = int(str(port).lstrip(":") or 0)
     if not port_number:
-        out(f"El backend ({config.BASE_URL}) no declara puerto: no se puede localizar el proceso.")
+        out(t("install.update.backend_no_port", url=config.BASE_URL))
         return 1
     pid = _port_owner(opts, port_number)
     if not pid:
-        out(f"Nadie escucha en el puerto {port_number}; se intenta arrancar el backend.")
+        out(t("install.update.port_free", port=port_number))
     else:
         name = _process_name(opts, pid)
         # Dos confirmaciones antes de señalar, igual que con el daemon: el propio docstring de
         # `backend_origin` avisa de que la heurística del host falla con un túnel.
         if "llama-swap" not in name.lower():
-            out(f"El puerto {port_number} lo ocupa '{name}' (pid {pid}), que no es llama-swap.")
-            out("No se toca. Revisa qué está escuchando ahí.")
+            out(t("install.update.port_taken", port=port_number, name=name, pid=pid))
+            out(t("install.update.port_taken_hint"))
             return 1
-        out(f"Terminando llama-swap (pid {pid})…")
+        out(t("install.update.stopping_llamaswap", pid=pid))
         try:
             os.kill(pid, signal.SIGTERM)
         except OSError as exc:
-            out(f"ERROR: no se pudo terminar el pid {pid}: {exc}")
+            out(t("install.update.kill_failed", pid=pid, reason=exc))
             return 1
         opts.sleep(2.0)
 
     from . import autostart
 
     if autostart.ensure_backend(wait=15.0):
-        out("    backend arriba de nuevo.")
+        out(t("install.update.backend_up"))
         return 0
-    out("ERROR: el backend no volvió a responder.")
+    out(t("install.update.backend_down"))
     return 1
 
 
 # --- Orquestación --------------------------------------------------------------
 def run_update(opts: Options, out=print) -> int:
     """Ejecuta el subcomando completo. Devuelve el código de salida."""
-    out(f"local-delegate update — HOME: {opts.home}")
+    out(t("install.update.header", home=opts.home))
     if opts.simulated_home:
-        out("  (--home simulado: se repara ese árbol y NO se toca ningún servicio)")
+        out(t("install.update.simulated_home_note"))
     out("")
 
     # 1. Diagnóstico: el mismo que ve `doctor`, sin lógica propia. Con `SKIP_PYPI` porque la
@@ -776,8 +819,8 @@ def run_update(opts: Options, out=print) -> int:
     editable = editable_origin()
     if editable:
         out("")
-        out(f"Instalación EDITABLE: el código se sirve de {editable}")
-        out("  Reiniciar el daemon NO cambia la versión. Para actualizar de verdad:")
+        out(t("install.update.editable", path=editable))
+        out(t("install.update.editable_hint"))
         out(f"    git -C {editable} pull")
         out(f"    uv sync --project {editable}")
 
@@ -788,43 +831,45 @@ def run_update(opts: Options, out=print) -> int:
         for line in notice:
             out(line)
 
-    # 3. Plan: pines + reparaciones del andamiaje.
+    # 3. Plan: la preferencia de idioma (REQ-047), pines y reparaciones del andamiaje.
+    language = language_actions(opts)
     actions = plan_pin(opts, version) if version else []
     repairs, notes = plan_repairs(results, opts)
     actions.extend(repairs)
 
     out("")
+    # La preferencia va aparte: guardarla no es reparar el andamiaje.
+    failures = install.apply(language, dry_run=opts.dry_run, out=out) if language else 0
     if actions:
-        failures = install.apply(actions, dry_run=opts.dry_run, out=out)
+        failures += install.apply(actions, dry_run=opts.dry_run, out=out)
     else:
-        out("Nada que reparar: el andamiaje está completo y los pines al día.")
-        failures = 0
+        out(t("install.update.nothing_to_repair"))
 
     for note in notes:
-        out(f"  aviso — {note}")
+        out(t("install.update.note", note=note))
 
     # 4. El daemon, al final de todo.
     if opts.dry_run:
         out("")
-        out("--dry-run: no se escribió nada ni se reinició ningún servicio.")
+        out(t("install.update.dry_run"))
         return 0
     if failures:
-        out(f"{failures} acción(es) fallaron.")
+        out(t("install.update.failures", n=failures))
         return 1
 
     out("")
     if opts.no_restart:
-        out("--no-restart: no se toca el daemon.")
+        out(t("install.update.no_restart"))
         return 0
     if opts.simulated_home:
-        out("HOME simulado: no se toca el daemon de la máquina.")
+        out(t("install.update.simulated_home"))
         return 0
 
     daemon_result = _daemon_status_of(results)
     if daemon_result is None or not _daemon_applies(results):
         # El caso `stdio` + `uvx` de la Mac: no hay daemon que reiniciar y no es un error.
-        out("No hay daemon que reiniciar: la configuración usa stdio (uvx arranca el MCP).")
-        out("Lo que aplica aquí es reiniciar el cliente (Claude Code / Codex).")
+        out(t("install.update.no_daemon"))
+        out(t("install.update.no_daemon_hint"))
         return 0
 
     code = restart_daemon(opts, out=out)

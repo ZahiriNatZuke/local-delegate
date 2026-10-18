@@ -1,0 +1,35 @@
+[pesado] plaza plaza-1 tomada tras 0s: uv run --no-sync python C:/Users/Yohan/AppData/Local/Temp/claude/D--Projects-local-delegate/9d9ecade-e04b-4a3b-bd28-ea018a806ed3/scratchpad/b5/mutants.py
+## escribe-la-reserva: exit=1
+   FAILED tests/test_install_language.py::test_a_system_choice_survives_update_in_fallback
+   E       AssertionError: assert {'lang': 'en'...': 'fallback'} == {'lang': 'es'...ce': 'system'}
+   E
+## pisa-la-eleccion-explicita: exit=1
+   FAILED tests/test_install_language.py::test_an_explicit_choice_survives_update_without_the_variable
+   E       AssertionError: update no debía planificar nada
+   E       assert ['[language] ...anguage.json'] == []
+## bloques-de-memoria-sin-ingles: exit=1
+   FAILED tests/test_install_language.py::test_an_english_block_up_to_date_is_ok_and_update_does_not_rewrite_it
+   E       AssertionError: Claude Code: bloque desfasado en C:\Users\Yohan\AppData\Local\Temp\pytest-of-Yohan\pytest-2306\test_an_english_block_up_to_da0\home\.claude\CLAUDE.md · Codex: bloque desfasado en C:\Users\Yohan\Ap
+   E       assert 'warn' == 'ok'
+## catalogos-sin-ingles: exit=1
+   FAILED tests/test_install_language.py::test_an_english_block_up_to_date_is_ok_and_update_does_not_rewrite_it
+   E       AssertionError: [Action(kind='agents', target=WindowsPath('C:/Users/Yohan/AppData/Local/Temp/pytest-of-Yohan/pytest-2307/test_an_english_block_up_to_da0/home/.claude/agents'), detail='regenera el catálogo desfasa
+   E       assert [Action(kind=..., literal='')] == []
+## uninstall-no-borra-la-preferencia: exit=1
+   FAILED tests/test_install_language.py::test_uninstall_deletes_the_preference
+   E       AssertionError: assert not True
+   E        +  where True = exists()
+## encabezado-solo-en-espanol: exit=1
+   FAILED tests/test_install_language.py::test_subagents_get_the_english_catalog[english-heading]
+   E       AssertionError: assert 0 == 1
+   E        +  where 0 = <built-in method count of str object at 0x00000220549987A0>('<!-- local-delegate:catalog:begin -->')
+## skill-siempre-en-espanol: exit=1
+   FAILED tests/test_install_language.py::test_the_skill_is_installed_in_english_without_the_variants
+   E           assert b"---\nname: ...uno remoto.\n" == b"---\nname: ...remote one.\n"
+   E
+## skill-inglesa-sin-una-fila: exit=1
+   FAILED tests/test_skill_parity.py::test_the_skills_list_the_same_tools_with_the_same_identifiers
+   FAILED tests/test_skill_parity.py::test_the_catalog_of_each_language_has_the_same_tools
+   FAILED tests/test_skill_parity.py::test_the_guardian_catches_a_broken_english_skill[a-changed-identifier]
+   E       assert ["filas: ['lo...ion?'] != []"] == []
+   E

@@ -30,9 +30,15 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from importlib.resources import files as _resource_files
 from pathlib import Path, PurePath
+
+from . import config, i18n
+from .i18n import t
+from .resources.hooks import hook_common
 
 # Marcadores de los bloques gestionados en archivos que también edita el usuario.
 MD_BEGIN = "<!-- local-delegate:begin -->"
@@ -293,23 +299,52 @@ def managed_block(text: str, begin: str, end: str) -> str | None:
     return found.group(1) if found else None
 
 
+def localized_resource(path: Path, lang: str) -> Path:
+    """La variante de ``path`` en ``lang``: el español es el fichero base (`SKILL.md`) y cada
+    otro idioma lleva su código antes de la extensión (`SKILL.en.md`), en el mismo directorio.
+
+    Así el directorio de la skill se copia entero salvo las variantes, y el `SKILL.md` instalado
+    es siempre el del idioma vigente (REQ-029).
+    """
+    if lang == i18n.CATALOG_FALLBACK:
+        return path
+    return path.with_name(f"{path.stem}.{lang}{path.suffix}")
+
+
+def skill_source(lang: str) -> Path:
+    """El `SKILL.md` empaquetado en ``lang``."""
+    return localized_resource(resources_dir() / "skills" / SKILL_NAME / "SKILL.md", lang)
+
+
+def memory_source(lang: str) -> Path:
+    """El bloque de memoria empaquetado en ``lang``."""
+    return localized_resource(resources_dir() / "memory" / "local-delegate.md", lang)
+
+
 def packaged_memory_blocks() -> tuple[str, ...]:
     """El bloque de memoria empaquetado de cada idioma admitido (D12).
 
     Es la lista contra la que `doctor` decide si el bloque de `CLAUDE.md`/`AGENTS.md` está al
-    día. Hoy solo hay español; el frente B añade aquí el inglés, y por eso `checks` llama a esta
-    función en vez de leer el fichero: no tiene que saber cuántos idiomas hay.
+    día, y por eso `checks` llama a esta función en vez de leer el fichero: no tiene que saber
+    cuántos idiomas hay. Un bloque al día en **cualquier** idioma da `OK` y `update` no lo
+    reescribe; cambiar de idioma es cosa de `install`.
     """
-    return ((resources_dir() / "memory" / "local-delegate.md").read_text(encoding="utf-8"),)
+    return tuple(memory_source(lang).read_text(encoding="utf-8") for lang in i18n.LANGUAGES)
+
+
+def catalog_block_for(lang: str) -> str | None:
+    """El bloque de catálogo de subagentes en ``lang``, sacado de la skill de ese idioma."""
+    # Import diferido por el mismo motivo que en `plan_install`: `agents` no importa este módulo.
+    from . import agents as agents_mod
+
+    catalog = agents_mod.tool_catalog(skill_source(lang))
+    return agents_mod.catalog_block(catalog, lang) if catalog else None
 
 
 def packaged_catalog_blocks() -> tuple[str, ...]:
     """El bloque de catálogo de subagentes empaquetado de cada idioma admitido (D12)."""
-    # Import diferido por el mismo motivo que en `plan_install`: `agents` no importa este módulo.
-    from . import agents as agents_mod
-
-    catalog = agents_mod.tool_catalog(resources_dir() / "skills" / SKILL_NAME / "SKILL.md")
-    return (agents_mod.catalog_block(catalog),) if catalog else ()
+    blocks = (catalog_block_for(lang) for lang in i18n.LANGUAGES)
+    return tuple(block for block in blocks if block)
 
 
 def memory_block_is_current(text: str) -> bool | None:
@@ -323,21 +358,22 @@ def memory_block_is_current(text: str) -> bool | None:
     return normalize_block(inner) in packaged
 
 
-def plan_catalog_refresh(home: Path) -> list[Action]:
+def plan_catalog_refresh(home: Path, lang: str | None = None) -> list[Action]:
     """Regenera el bloque de catálogo de los subagentes que ya lo tienen y está desfasado (D12).
 
     Solo mira los `~/.claude/agents/*.md` que **ya** traen los marcadores de catálogo, y solo
     reescribe lo que hay entre ellos: por eso no necesita `--agents`, que es el permiso para
     tocar ficheros que escribió el usuario. Un subagente sin marcadores no se toca, y uno cuyo
-    bloque coincide con el empaquetado de algún idioma tampoco.
+    bloque coincide con el empaquetado de algún idioma tampoco. Lo desfasado se reescribe en
+    ``lang`` (el idioma vigente; por defecto, el de este proceso).
     """
     from . import agents as agents_mod
 
     agents_dir = home / ".claude" / "agents"
     packaged = packaged_catalog_blocks()
-    if not packaged or not agents_dir.is_dir():
+    current = catalog_block_for(lang or i18n.lang())
+    if not packaged or current is None or not agents_dir.is_dir():
         return []
-    current = packaged[0]
     changes = []
     for path in sorted(agents_dir.glob("*.md")):
         try:
@@ -357,12 +393,25 @@ def plan_catalog_refresh(home: Path) -> list[Action]:
                 _write_text(path, text)
                 written.append(path.name)
             except OSError as exc:
-                failed.append(f"{path.name} ({exc.strerror or exc})")
-        detail = f"catálogo regenerado en {len(written)}: {', '.join(written)}"
-        return detail + (f" · NO se pudieron escribir: {'; '.join(failed)}" if failed else "")
+                failed.append(_failure(path.name, exc))
+        detail = t("install.agents.catalog_refreshed", n=len(written), names=", ".join(written))
+        return detail + _not_written(failed)
 
     names = ", ".join(path.name for path, _ in changes)
-    return [Action("agents", agents_dir, f"regenera el catálogo desfasado ({names})", _run)]
+    return [Action("agents", agents_dir, t("install.agents.refresh_plan", names=names), _run)]
+
+
+def _failure(name: str, exc: OSError) -> str:
+    """``nombre (motivo)`` de un fichero que no se pudo escribir o borrar."""
+    return f"{name} ({exc.strerror or exc})"
+
+
+def _not_written(failed: list[str]) -> str:
+    return t("install.not_written", names="; ".join(failed)) if failed else ""
+
+
+def _not_removed(failed: list[str]) -> str:
+    return t("install.not_removed", names="; ".join(failed)) if failed else ""
 
 
 def remove_block(text: str, begin: str, end: str) -> str:
@@ -678,7 +727,8 @@ def _without_secrets(entry: dict) -> dict:
     value = (entry.get("headers") or {}).get("Authorization")
     if not value or _REFERENCE_RE.match(value):
         return entry
-    return {**entry, "headers": {"Authorization": "Bearer <token conservado, no se muestra>"}}
+    hidden = f"Bearer <{t('install.mcp.token_hidden')}>"
+    return {**entry, "headers": {"Authorization": hidden}}
 
 
 def codex_mcp_block(entry: dict, timeouts: dict | None = None) -> str:
@@ -876,14 +926,17 @@ def read_opencode_config(path: Path) -> tuple[dict | None, str | None]:
     except FileNotFoundError:
         return None, None
     except (OSError, UnicodeDecodeError) as exc:
-        return None, f"no se pudo leer {path}: {getattr(exc, 'strerror', None) or exc}"
+        reason = getattr(exc, "strerror", None) or exc
+        return None, t("install.opencode.unreadable_path", path=path, reason=reason)
     if not text.strip():
         return {}, None
     try:
         data = json.loads(strip_jsonc(text))
     except ValueError as exc:
-        return None, f"{path} no es JSON(C) válido ({exc.msg})"
-    return (data, None) if isinstance(data, dict) else (None, f"{path} no contiene un objeto")
+        return None, t("install.opencode.invalid_json_path", path=path, reason=exc.msg)
+    if isinstance(data, dict):
+        return data, None
+    return None, t("install.opencode.not_an_object_path", path=path)
 
 
 def opencode_mcp_entry(
@@ -962,6 +1015,120 @@ class Options:
     # filtrar la lista de acciones por su `kind`: un filtro por string desde fuera sería frágil
     # y, sobre todo, mudo — nadie sabría por qué falta esa acción.
     skip_codex_mcp: bool = False
+    # REQ-047: `install` guarda en `language.json` el idioma de la sesión en la que corre. `update`
+    # lo pone a False en las llamadas por reparación y escribe la preferencia una sola vez.
+    write_language: bool = True
+    # Dónde vive `language.json`; `None` = el que diga `language_dir` (ver allí).
+    data_dir: Path | None = None
+    # La regla del idioma, inyectable para los tests: recibe el directorio de datos y devuelve la
+    # resolución de REQ-018. `None` = `hook_common.resolve_language` con el entorno del proceso.
+    language_probe: Callable[[Path], hook_common.LanguageResolution] | None = None
+
+
+# --- La preferencia de idioma (REQ-047, D11) ----------------------------------
+#: Orígenes que `install`/`update` pueden pisar al escribir el del sistema. «Variable» es una
+#: elección explícita y no se pisa nunca; un fichero sin origen, por si acaso, tampoco.
+_OVERWRITABLE_SOURCES = frozenset({"system", "fallback"})
+
+
+@dataclass(frozen=True)
+class LanguagePlan:
+    """Qué hace `install`/`update` con el idioma: cuál vale y qué se escribe.
+
+    ``lang`` es el idioma vigente **después** de escribir: el de la skill, los bloques y el
+    catálogo de los subagentes. ``write`` es lo que se escribirá en ``path`` (`None` si no se
+    toca), y ``reason`` un código de máquina de por qué (`written`, `unchanged`, `explicit_kept`,
+    `fallback`, `no_data_dir`).
+    """
+
+    lang: str
+    path: Path | None
+    write: dict | None
+    reason: str
+    stored: dict | None = None
+
+
+def language_dir(opts: Options) -> Path | None:
+    """El directorio de datos donde va `language.json`, o `None` si no se debe tocar.
+
+    Es `config.LOG_DIR`, el mismo que leen el CLI, el servidor y los hooks (REQ-047). Con un HOME
+    simulado no se toca, porque `language.json` no vive en el HOME y `--home` es un sandbox: solo
+    se escribe si además se eligió el directorio de datos con `LOCAL_DELEGATE_LOG_DIR`.
+    """
+    if opts.data_dir is not None:
+        return opts.data_dir
+    if is_simulated_home(opts.home) and not os.environ.get("LOCAL_DELEGATE_LOG_DIR", "").strip():
+        return None
+    return Path(config.LOG_DIR)
+
+
+def _stored_preference(path: Path) -> dict | None:
+    """``{"lang", "source"}`` de un `language.json` válido, o `None` si falta o no vale."""
+    data = _read_json(path)
+    lang = data.get("lang")
+    parsed = hook_common.parse_language(lang) if isinstance(lang, str) else None
+    if parsed is None:
+        return None
+    return {"lang": parsed, "source": data.get("source")}
+
+
+def plan_language(opts: Options) -> LanguagePlan:
+    """Aplica la regla de escritura de REQ-047 sin tocar el disco.
+
+    El idioma de la sesión se resuelve con los pasos 1, 3 y 4 de REQ-018 (variable, sistema y
+    reserva), **sin** leer la preferencia vieja: se le pasa a la regla un directorio vacío.
+    """
+    probe = opts.language_probe or hook_common.resolve_language
+    with tempfile.TemporaryDirectory() as empty:
+        session = probe(Path(empty))
+    data_dir = language_dir(opts)
+    if data_dir is None:
+        return LanguagePlan(session.lang, None, None, "no_data_dir")
+    path = data_dir / hook_common.LANGUAGE_PREFERENCE_FILE
+    stored = _stored_preference(path)
+
+    write = None
+    if session.source == "variable":
+        write = {"lang": session.lang, "source": "variable"}
+    elif session.source == "system" and (
+        stored is None or stored["source"] in _OVERWRITABLE_SOURCES
+    ):
+        write = {"lang": session.lang, "source": "system"}
+
+    if write is not None and write == stored:
+        return LanguagePlan(write["lang"], path, None, "unchanged", stored)
+    if write is not None:
+        return LanguagePlan(write["lang"], path, write, "written", stored)
+    if stored is not None:
+        reason = "fallback" if session.source == "fallback" else "explicit_kept"
+        return LanguagePlan(stored["lang"], path, None, reason, stored)
+    # Reserva y sin preferencia: el idioma vigente es el de la reserva, y el fichero no se toca.
+    return LanguagePlan(session.lang, path, None, "fallback", stored)
+
+
+def language_action(plan: LanguagePlan) -> Action | None:
+    """La acción que escribe `language.json`, o la que dice por qué no se toca."""
+    if plan.path is None:
+        return None
+    if plan.write is None:
+        if plan.reason == "explicit_kept":
+            detail = t("install.language.explicit_kept", lang=plan.lang, path=plan.path)
+        elif plan.reason == "unchanged":
+            detail = t("install.language.unchanged", lang=plan.lang)
+        else:
+            detail = t("install.language.fallback")
+        return Action("language", plan.path, detail)
+    source = t(f"common.language.source.{plan.write['source']}")
+    detail = t("install.language.write_plan", lang=plan.lang, source=source)
+    content = json.dumps(plan.write, ensure_ascii=False)
+
+    def _run(path=plan.path, content=content) -> str:
+        # Sin `.bak`: es configuración del instalador, no un fichero del usuario.
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content + "\n", encoding="utf-8")
+        return t("install.language.written", path=path)
+
+    return Action("language", plan.path, detail, _run, literal=content)
 
 
 def _claude_dir(opts: Options) -> Path:
@@ -1035,14 +1202,15 @@ def _retire_skills_action(skills_root: Path) -> Action:
                 removed.append(path.name)
             except OSError as exc:
                 # Igual que con los hooks huérfanos: lo que no se deja borrar se dice y se sigue.
-                failed.append(f"{path.name} ({exc.strerror or exc})")
-        detail = (
-            f"retiradas {len(removed)}: {', '.join(removed)}" if removed else "nada que retirar"
-        )
-        return detail + (f" · NO se pudieron retirar: {'; '.join(failed)}" if failed else "")
+                failed.append(_failure(path.name, exc))
+        if removed:
+            detail = t("install.skill.retired", n=len(removed), names=", ".join(removed))
+        else:
+            detail = t("install.nothing_to_retire")
+        return detail + _not_removed(failed)
 
     names = ", ".join(p.name for p in retired_skill_dirs(skills_root))
-    return Action("prune", skills_root, f"retira skills de una versión anterior ({names})", _run)
+    return Action("prune", skills_root, t("install.skill.retire_plan", names=names), _run)
 
 
 def _prune_orphans_action(claude_dir: Path) -> Action:
@@ -1057,20 +1225,32 @@ def _prune_orphans_action(claude_dir: Path) -> Action:
             except OSError as exc:
                 # Un fichero que no se deja borrar no tumba el resto del install: se dice y se
                 # sigue. El usuario se entera y puede quitarlo a mano.
-                failed.append(f"{path.name} ({exc.strerror or exc})")
-        detail = (
-            f"retirados {len(removed)}: {', '.join(removed)}" if removed else "nada que retirar"
-        )
-        return detail + (f" · NO se pudieron retirar: {'; '.join(failed)}" if failed else "")
+                failed.append(_failure(path.name, exc))
+        if removed:
+            detail = t("install.hooks.retired", n=len(removed), names=", ".join(removed))
+        else:
+            detail = t("install.nothing_to_retire")
+        return detail + _not_removed(failed)
 
-    return Action("prune", root, "retira scripts de hooks de una instalación anterior", _run)
+    return Action("prune", root, t("install.hooks.retire_plan"), _run)
+
+
+def _agent_summary(path: Path, added: list[str], action: str | None) -> str:
+    """``nombre (+N tools, catálogo insertado)`` de un subagente que cambia."""
+    if action:
+        return t(
+            "install.agents.item_with_catalog",
+            name=path.name,
+            n=len(added),
+            action=t(f"install.agents.catalog_action.{action}"),
+        )
+    return t("install.agents.item", name=path.name, n=len(added))
 
 
 def _agents_action(agents_dir: Path, changes: list) -> Action:
     """Escribe los subagentes que cambian. `cambios` viene de `agents.pending()`, que solo lee."""
     summary = ", ".join(
-        f"{path.name} (+{len(added)} tools{', catálogo ' + action if action else ''})"
-        for path, _text, added, action in changes
+        _agent_summary(path, added, action) for path, _text, added, action in changes
     )
 
     def _run() -> str:
@@ -1083,11 +1263,12 @@ def _agents_action(agents_dir: Path, changes: list) -> Action:
                 _write_text(path, text)
                 written.append(path.name)
             except OSError as exc:
-                failed.append(f"{path.name} ({exc.strerror or exc})")
-        detail = f"actualizados {len(written)}: {', '.join(written)}"
-        return detail + (f" · NO se pudieron escribir: {'; '.join(failed)}" if failed else "")
+                failed.append(_failure(path.name, exc))
+        detail = t("install.agents.updated", n=len(written), names=", ".join(written))
+        return detail + _not_written(failed)
 
-    return Action("agents", agents_dir, f"actualiza {len(changes)} subagente(s): {summary}", _run)
+    plan = t("install.agents.update_plan", n=len(changes), summary=summary)
+    return Action("agents", agents_dir, plan, _run)
 
 
 def _copy_tree_action(src: Path, dst: Path, detail: str) -> Action:
@@ -1095,7 +1276,27 @@ def _copy_tree_action(src: Path, dst: Path, detail: str) -> Action:
         if dst.exists():
             shutil.rmtree(dst)
         shutil.copytree(src, dst)
-        return f"copiado -> {dst}"
+        return t("install.copied", path=dst)
+
+    return Action("copy", dst, detail, _run)
+
+
+#: Las variantes por idioma de la skill (`SKILL.en.md`): no se copian, se elige una (REQ-029).
+_LOCALIZED_VARIANTS = tuple(
+    f"*.{lang}.md" for lang in i18n.LANGUAGES if lang != i18n.CATALOG_FALLBACK
+)
+
+
+def _copy_skill_action(dst: Path, lang: str, detail: str) -> Action:
+    """Copia la skill con su `SKILL.md` en ``lang`` y sin las variantes de los otros idiomas."""
+    src = resources_dir() / "skills" / SKILL_NAME
+
+    def _run() -> str:
+        if dst.exists():
+            shutil.rmtree(dst)
+        shutil.copytree(src, dst, ignore=shutil.ignore_patterns(*_LOCALIZED_VARIANTS))
+        (dst / "SKILL.md").write_bytes(skill_source(lang).read_bytes())
+        return t("install.copied", path=dst)
 
     return Action("copy", dst, detail, _run)
 
@@ -1107,10 +1308,15 @@ def plan_install(opts: Options) -> list[Action]:
     claude = _claude_dir(opts)
     codex = _codex_dir(opts)
     opencode = opencode_dir(opts.home)
+    # El idioma va primero: la skill, el bloque y el catálogo se escriben en el que quede vigente.
+    language = plan_language(opts)
+    lang = language.lang
+    if opts.write_language and (language_step := language_action(language)) is not None:
+        actions.append(language_step)
 
     if "hooks" in opts.components and "claude" in opts.targets:
         hooks_dst = claude / "hooks" / HOOKS_SUBDIR
-        actions.append(_copy_tree_action(res / "hooks", hooks_dst, "scripts de hooks consultivos"))
+        actions.append(_copy_tree_action(res / "hooks", hooks_dst, t("install.hooks.copy_plan")))
         # Solo si hay algo que retirar: sin esto, reinstalar sobre una máquina limpia emitiría
         # una acción que no hace nada y el plan mentiría sobre lo que va a pasar.
         if orphan_hook_scripts(claude):
@@ -1128,15 +1334,18 @@ def plan_install(opts: Options) -> list[Action]:
         def _run_settings(path=settings_path, entries=entries, hooks_dir=hooks_dst) -> str:
             data, removed = merge_hook_settings(_read_json(path), entries, hooks_dir)
             _write_json(path, data)
-            note = f" (retiradas {removed} entrada(s) previa(s))" if removed else ""
-            return f"{len(entries)} hook(s) registrados{note}"
+            note = t("install.hooks.previous_removed", n=removed) if removed else ""
+            return t("install.hooks.registered", n=len(entries), note=note)
 
         actions.append(
             Action(
                 "settings",
                 settings_path,
-                f"registra {len(entries)} hook(s): "
-                + ", ".join(f"{e}{'/' + m if m else ''}" for e, m, _c in entries),
+                t(
+                    "install.hooks.register_plan",
+                    n=len(entries),
+                    events=", ".join(f"{e}{'/' + m if m else ''}" for e, m, _c in entries),
+                ),
                 _run_settings,
                 literal="\n".join(
                     f"{e}{'/' + m if m else ''}: {json.dumps(c, ensure_ascii=False)}"
@@ -1149,10 +1358,10 @@ def plan_install(opts: Options) -> list[Action]:
         if retired_skill_dirs(claude / "skills"):
             actions.append(_retire_skills_action(claude / "skills"))
         actions.append(
-            _copy_tree_action(
-                res / "skills" / SKILL_NAME,
+            _copy_skill_action(
                 claude / "skills" / SKILL_NAME,
-                f"skill {SKILL_NAME}",
+                lang,
+                t("install.skill.copy_plan", skill=SKILL_NAME, lang=lang),
             )
         )
 
@@ -1166,10 +1375,10 @@ def plan_install(opts: Options) -> list[Action]:
         if retired_skill_dirs(opencode / OPENCODE_SKILL_SUBDIR):
             actions.append(_retire_skills_action(opencode / OPENCODE_SKILL_SUBDIR))
         actions.append(
-            _copy_tree_action(
-                res / "skills" / SKILL_NAME,
+            _copy_skill_action(
                 opencode / OPENCODE_SKILL_SUBDIR / SKILL_NAME,
-                f"skill {SKILL_NAME} (opencode)",
+                lang,
+                t("install.skill.copy_plan_opencode", skill=SKILL_NAME, lang=lang),
             )
         )
 
@@ -1181,13 +1390,12 @@ def plan_install(opts: Options) -> list[Action]:
         # módulo (cerraría un ciclo que CodeQL marcó), así que la fuente del catálogo se le da.
         from . import agents as agents_mod
 
-        skill_md = res / "skills" / SKILL_NAME / "SKILL.md"
-        changes = agents_mod.pending(claude / "agents", skill_md)
+        changes = agents_mod.pending(claude / "agents", skill_source(lang), lang)
         if changes:
             actions.append(_agents_action(claude / "agents", changes))
 
     if "memory" in opts.components:
-        block = (res / "memory" / "local-delegate.md").read_text(encoding="utf-8")
+        block = memory_source(lang).read_text(encoding="utf-8")
         memory_files = []
         if "claude" in opts.targets:
             memory_files.append(claude / "CLAUDE.md")
@@ -1206,11 +1414,12 @@ def plan_install(opts: Options) -> list[Action]:
                 current = _read_text(path)
                 updated = upsert_block(current, block, MD_BEGIN, MD_END)
                 if path.is_file() and normalize_block(updated) == normalize_block(current):
-                    return "bloque gestionado ya al día"
+                    return t("install.memory.up_to_date")
                 _write_text(path, updated)
-                return "bloque gestionado actualizado"
+                return t("install.memory.updated")
 
-            actions.append(Action("markdown", path, "bloque de regla de delegación", _run_md))
+            plan = t("install.memory.plan", lang=lang)
+            actions.append(Action("markdown", path, plan, _run_md))
 
     if "mcp" in opts.components:
         requested = opts.web_token_env is True
@@ -1221,7 +1430,7 @@ def plan_install(opts: Options) -> list[Action]:
             opts.pin_version,
             requested,
         )
-        detail = f"registra el servidor MCP '{SERVER_NAME}' ({opts.mcp_mode})"
+        detail = t("install.mcp.register_plan", server=SERVER_NAME, mode=opts.mcp_mode)
 
         def _kept(target: str) -> str | None:
             # Solo cuando nadie dijo nada: un flag explícito, en cualquiera de sus dos sentidos,
@@ -1233,9 +1442,9 @@ def plan_install(opts: Options) -> list[Action]:
         def _detail(header: str | None, timeouts: dict) -> str:
             text = detail
             if header:
-                text += " — conserva la cabecera de autorización que ya tenía"
+                text += t("install.mcp.keeps_header")
             if timeouts:
-                text += f" — conserva el plazo que ya tenía ({_describe_timeouts(timeouts)})"
+                text += t("install.mcp.keeps_timeouts", timeouts=_describe_timeouts(timeouts))
             return text
 
         if "claude" in opts.targets:
@@ -1259,7 +1468,7 @@ def plan_install(opts: Options) -> list[Action]:
 
             def _run_codex(path=config_path, block=codex_block) -> str:
                 _write_text(path, upsert_codex_mcp(_read_text(path), block))
-                return "entrada [mcp_servers.local-delegate] actualizada"
+                return t("install.mcp.codex_updated", server=SERVER_NAME)
 
             actions.append(
                 Action(
@@ -1334,7 +1543,7 @@ def _register_claude_mcp(opts: Options, entry: dict) -> str:
             if done.returncode == 0 and (
                 not timeouts or existing_timeouts(opts.home, "claude") == timeouts
             ):
-                return "registrado con `claude mcp add-json --scope user`"
+                return t("install.mcp.registered_with", command="claude mcp add-json --scope user")
         except (OSError, subprocess.SubprocessError):
             pass  # cae al modo archivo
     path = opts.home / ".claude.json"
@@ -1345,16 +1554,11 @@ def _register_claude_mcp(opts: Options, entry: dict) -> str:
         data["mcpServers"] = servers
     servers[SERVER_NAME] = entry
     _write_json(path, data)
-    return f"escrito en {path}"
+    return t("install.mcp.written_to", path=path)
 
 
-# Lo que se dice cuando la entrada de opencode NO se escribe. Es un aviso, no un fallo: el resto de
-# componentes sí se instala y el exit code no sube (ver la regla en `apply`).
-_OPENCODE_UNTOUCHED = (
-    "no se tocó {path}: sin la CLI `opencode` y con un fichero que no se puede reescribir sin "
-    "destruir lo que hay ({reason}). Instala opencode en el PATH y repite, o añade la entrada "
-    "'{server}' a mano"
-)
+# Lo que se dice cuando la entrada de opencode NO se escribe (`install.opencode.untouched`). Es un
+# aviso, no un fallo: el resto de componentes sí se instala y el exit code no sube (ver `apply`).
 
 
 def _read_opencode_config(path: Path) -> tuple[str, str | None]:
@@ -1371,7 +1575,8 @@ def _read_opencode_config(path: Path) -> tuple[str, str | None]:
     except FileNotFoundError:
         return "", None
     except (OSError, UnicodeDecodeError) as exc:
-        return "", f"no se pudo leer: {getattr(exc, 'strerror', None) or exc}"
+        reason = getattr(exc, "strerror", None) or exc
+        return "", t("install.opencode.unreadable", reason=reason)
 
 
 def _reason_not_to_write(text: str) -> str | None:
@@ -1390,15 +1595,15 @@ def _reason_not_to_write(text: str) -> str | None:
         return None
     clean, had_comments = _scan_jsonc(text)
     if had_comments:
-        return "tiene comentarios y se perderían"
+        return t("install.opencode.has_comments")
     try:
         data = json.loads(clean)
     except ValueError as exc:
-        return f"no es JSON(C) válido: {exc.msg}"
+        return t("install.opencode.invalid_json", reason=exc.msg)
     if not isinstance(data, dict):
-        return "no contiene un objeto JSON"
+        return t("install.opencode.not_an_object")
     if not isinstance(data.get("mcp", {}), dict):
-        return "su clave 'mcp' no es un objeto"
+        return t("install.opencode.mcp_not_an_object", key="mcp")
     return None
 
 
@@ -1462,7 +1667,7 @@ def _register_opencode_mcp(opts: Options, entry: dict) -> str:
             # nombre, confiar en el código de salida daría por hecho un registro que no ocurrió.
             # Lo que decide es que la entrada esté después.
             if done.returncode == 0 and opencode_mcp_installed(opts.home) is not None:
-                return "registrado con `opencode mcp add`"
+                return t("install.mcp.registered_with", command="opencode mcp add")
         except (OSError, subprocess.SubprocessError):
             pass  # cae al modo archivo
 
@@ -1470,12 +1675,12 @@ def _register_opencode_mcp(opts: Options, entry: dict) -> str:
     text, failure = _read_opencode_config(path)
     reason = failure or _reason_not_to_write(text)
     if reason:
-        return _OPENCODE_UNTOUCHED.format(path=path, reason=reason, server=SERVER_NAME)
+        return t("install.opencode.untouched", path=path, reason=reason, server=SERVER_NAME)
     data = json.loads(strip_jsonc(text)) if text.strip() else {"$schema": OPENCODE_SCHEMA}
     servers = data.setdefault("mcp", {})
     servers[SERVER_NAME] = entry
     _write_json(path, data)
-    return f"escrito en {path}"
+    return t("install.mcp.written_to", path=path)
 
 
 def _unregister_opencode_mcp(opts: Options) -> str:
@@ -1492,7 +1697,7 @@ def _unregister_opencode_mcp(opts: Options) -> str:
         text, failure = _read_opencode_config(path)
         reason = failure or _reason_not_to_write(text)
         if reason:
-            details.append(f"{path}: no se tocó ({reason})")
+            details.append(t("install.opencode.not_touched", path=path, reason=reason))
             continue
         data = json.loads(strip_jsonc(text)) if text.strip() else {}
         servers = data.get("mcp")
@@ -1503,8 +1708,8 @@ def _unregister_opencode_mcp(opts: Options) -> str:
         if not servers:
             data.pop("mcp", None)
         _write_json(path, data)
-        details.append(f"quitado de {path}")
-    return " · ".join(details) if details else "no estaba registrado"
+        details.append(t("install.mcp.removed_from", path=path))
+    return " · ".join(details) if details else t("install.mcp.not_registered")
 
 
 def plan_uninstall(opts: Options) -> list[Action]:
@@ -1520,22 +1725,22 @@ def plan_uninstall(opts: Options) -> list[Action]:
 
         def _run_settings(path=settings_path, hooks_dir=hooks_dst) -> str:
             if not path.is_file():
-                return "settings.json no existe"
+                return t("install.uninstall.no_settings", name=path.name)
             data, removed = strip_hook_settings(_read_json(path), hooks_dir)
             _write_json(path, data)
-            return f"{removed} hook(s) de local-delegate quitados"
+            return t("install.uninstall.hooks_removed", n=removed)
 
         actions.append(
-            Action("settings", settings_path, "quita los hooks registrados", _run_settings)
+            Action("settings", settings_path, t("install.uninstall.hooks_plan"), _run_settings)
         )
 
         def _run_rm(path=hooks_dst) -> str:
             if path.is_dir():
                 shutil.rmtree(path)
-                return "eliminado"
-            return "no existía"
+                return t("install.uninstall.removed")
+            return t("install.uninstall.did_not_exist")
 
-        actions.append(Action("remove", hooks_dst, "borra los scripts de hooks", _run_rm))
+        actions.append(Action("remove", hooks_dst, t("install.uninstall.scripts_plan"), _run_rm))
 
     if "skill" in opts.components and "claude" in opts.targets:
         skill_dst = claude / "skills" / SKILL_NAME
@@ -1543,10 +1748,11 @@ def plan_uninstall(opts: Options) -> list[Action]:
         def _run_skill(path=skill_dst) -> str:
             if path.is_dir():
                 shutil.rmtree(path)
-                return "eliminada"
-            return "no existía"
+                return t("install.uninstall.skill_removed")
+            return t("install.uninstall.did_not_exist")
 
-        actions.append(Action("remove", skill_dst, f"borra la skill {SKILL_NAME}", _run_skill))
+        plan = t("install.uninstall.skill_plan", skill=SKILL_NAME)
+        actions.append(Action("remove", skill_dst, plan, _run_skill))
         # Una máquina que pasó de la 0.34 sin `install` ni `update` conserva la skill con su
         # nombre viejo, que también es nuestra.
         if retired_skill_dirs(claude / "skills"):
@@ -1558,12 +1764,11 @@ def plan_uninstall(opts: Options) -> list[Action]:
         def _run_skill_oc(path=oc_skill) -> str:
             if path.is_dir():
                 shutil.rmtree(path)
-                return "eliminada"
-            return "no existía"
+                return t("install.uninstall.skill_removed")
+            return t("install.uninstall.did_not_exist")
 
-        actions.append(
-            Action("remove", oc_skill, f"borra la skill {SKILL_NAME} de opencode", _run_skill_oc)
-        )
+        plan = t("install.uninstall.skill_plan_opencode", skill=SKILL_NAME)
+        actions.append(Action("remove", oc_skill, plan, _run_skill_oc))
         if retired_skill_dirs(opencode / OPENCODE_SKILL_SUBDIR):
             actions.append(_retire_skills_action(opencode / OPENCODE_SKILL_SUBDIR))
 
@@ -1579,11 +1784,12 @@ def plan_uninstall(opts: Options) -> list[Action]:
 
             def _run_md(path=path) -> str:
                 if not path.is_file():
-                    return "no existía"
+                    return t("install.uninstall.did_not_exist")
                 _write_text(path, remove_block(_read_text(path), MD_BEGIN, MD_END))
-                return "bloque gestionado quitado"
+                return t("install.uninstall.block_removed")
 
-            actions.append(Action("markdown", path, "quita el bloque de delegación", _run_md))
+            plan = t("install.uninstall.block_plan")
+            actions.append(Action("markdown", path, plan, _run_md))
 
     if "mcp" in opts.components:
         if "claude" in opts.targets:
@@ -1591,7 +1797,7 @@ def plan_uninstall(opts: Options) -> list[Action]:
                 Action(
                     "mcp",
                     "claude",
-                    f"quita el servidor MCP '{SERVER_NAME}'",
+                    t("install.uninstall.mcp_plan", server=SERVER_NAME),
                     lambda: _unregister_claude_mcp(opts),
                 )
             )
@@ -1605,21 +1811,43 @@ def plan_uninstall(opts: Options) -> list[Action]:
             # retirarla es justo lo que se pidió. Preguntar aquí sería estorbar.
             def _run_codex(path=config_path) -> str:
                 if not path.is_file():
-                    return "no existía"
+                    return t("install.uninstall.did_not_exist")
                 _write_text(path, remove_codex_mcp(_read_text(path)))
-                return "entrada quitada"
+                return t("install.uninstall.entry_removed")
 
-            actions.append(Action("toml", config_path, f"quita '{SERVER_NAME}'", _run_codex))
+            plan = t("install.uninstall.codex_plan", server=SERVER_NAME)
+            actions.append(Action("toml", config_path, plan, _run_codex))
         if "opencode" in opts.targets:
             actions.append(
                 Action(
                     "mcp",
                     "opencode",
-                    f"quita el servidor MCP '{SERVER_NAME}'",
+                    t("install.uninstall.mcp_plan", server=SERVER_NAME),
                     lambda: _unregister_opencode_mcp(opts),
                 )
             )
+
+    # REQ-047: `language.json` lo escribió `install`, así que se va con lo demás. Solo en una
+    # desinstalación completa: quitar un componente suelto no es dejar de usar el paquete.
+    data_dir = language_dir(opts)
+    if FULL_COMPONENTS <= opts.components and data_dir is not None:
+        actions.append(_remove_language_action(data_dir / hook_common.LANGUAGE_PREFERENCE_FILE))
     return actions
+
+
+#: Los componentes por defecto: desinstalarlos todos es una desinstalación completa.
+FULL_COMPONENTS = frozenset({"hooks", "skill", "memory", "mcp"})
+
+
+def _remove_language_action(path: Path) -> Action:
+    def _run() -> str:
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            return t("install.uninstall.did_not_exist")
+        return t("install.uninstall.removed")
+
+    return Action("remove", path, t("install.uninstall.language_plan"), _run)
 
 
 def _unregister_claude_mcp(opts: Options) -> str:
@@ -1632,7 +1860,7 @@ def _unregister_claude_mcp(opts: Options) -> str:
                 timeout=30,
             )
             if done.returncode == 0:
-                return "quitado con `claude mcp remove`"
+                return t("install.mcp.removed_with", command="claude mcp remove")
         except (OSError, subprocess.SubprocessError):
             # El binario `claude` está pero no se pudo ejecutar (o se pasó del plazo). No es un
             # fallo de la desinstalación: justo debajo está el camino que edita `.claude.json`
@@ -1645,8 +1873,8 @@ def _unregister_claude_mcp(opts: Options) -> str:
     servers = data.get("mcpServers")
     if isinstance(servers, dict) and servers.pop(SERVER_NAME, None) is not None:
         _write_json(path, data)
-        return f"quitado de {path}"
-    return "no estaba registrado"
+        return t("install.mcp.removed_from", path=path)
+    return t("install.mcp.not_registered")
 
 
 def apply(actions: list[Action], *, dry_run: bool, out=print) -> int:
@@ -1666,7 +1894,7 @@ def apply(actions: list[Action], *, dry_run: bool, out=print) -> int:
             result = action.run() if callable(action.run) else None
         except Exception as exc:  # una acción fallida no debe abortar el resto
             failures += 1
-            out(f"    ERROR: {exc}")
+            out(t("install.action_error", detail=exc))
             continue
         if result:
             out(f"    {result}")
