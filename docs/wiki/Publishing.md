@@ -42,6 +42,11 @@ Luego, para publicar una versión nueva:
 #    veces a mano es justo lo que falló en la 0.8.1, donde el lock se quedó atrás.
 uv run python scripts/bump_version.py X.Y.Z
 uv run python scripts/bump_version.py --check     # los cuatro declaran lo mismo
+# Une la huella de hoy de cada hook al conjunto «después» de las mediciones de adopción
+# (`scripts/data/hook_hashes_after.json`). Solo añade, nunca quita: una máquina que se quede en
+# la versión anterior sigue midiéndose en el tramo «antes». `test_hook_boundaries.py` falla si un
+# hook cambió y su huella no está.
+uv run python scripts/bump_version.py --boundaries
 
 uv run ruff check .
 uv run ruff format --check .

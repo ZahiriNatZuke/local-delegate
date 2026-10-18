@@ -200,7 +200,10 @@ con `LD_HOOK_ENABLED=0` para baseline y `LD_HOOK_ENABLED=1` para piloto.
 2. Solo si pruebas el experimento Read (instalado con `--enable-read-hook`, o con
    `LD_HOOK_READ_ENABLED=1`), pide leer tres archivos **que no sean código**: uno de 5 KiB (no debe
    decir nada), otro de 20 KiB (`Sugerencia`) y otro de 120 KiB (`Recomendacion fuerte`). Con el
-   umbral anterior de 32 KB los dos primeros callaban, que es justo lo que se cambió.
+   umbral anterior de 32 KB los dos primeros callaban, que es justo lo que se cambió. En inglés
+   (`LOCAL_DELEGATE_LANG=en` o `language.json` con `en`) son `Suggestion` y `Strong
+   recommendation`: los hooks siguen el mismo idioma que el resto de la integración, y sus textos
+   van en ASCII.
 3. Ejecuta `pytest` o `npm test`: **no** debe aparecer ninguna sugerencia. El hook que la
    emitía está retirado, y comprobar su ausencia es lo que detecta una copia vieja que siguiera
    registrada de una instalación anterior.
