@@ -310,6 +310,12 @@ STRUCTURED_SUMMARY = _env_alias_flag(
     "LOCAL_DELEGATE_STRUCTURED_SUMMARY", "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO", False
 )
 
+# B2e: carpeta LOCAL donde cada operación troceada (map-reduce) deja un JSON con la salida de cada
+# paso (map, reagrupado, reduce). Apagado por defecto (vacío): solo se enciende para medir, porque
+# esas notas son lo único que separa «el trozo ya lo había perdido» de «se perdió al combinar».
+# Nunca sale de la máquina: es un fichero en disco, no va al log de uso ni al panel.
+DUMP_CHUNK_NOTES_DIR: str | None = _env("LOCAL_DELEGATE_DUMP_CHUNK_NOTES", "").strip() or None
+
 # Tope de entrada POR ROL (evita desbordar el ctx del backend). Por rol y no por modelo: dos roles
 # pueden resolver al mismo modelo (REQ-004), y un dict indexado por nombre de modelo hacía que el
 # último rol del literal pisara el tope de los demás sin avisar (F3, tarea 25).

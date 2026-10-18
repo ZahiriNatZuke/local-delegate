@@ -31,3 +31,6 @@ tests/fixtures/residency/** -text
 
 # Conjunto de control 3 de B2d-fix: su sha256 va en lang-sample-docs-3.json y se mide byte a byte.
 .sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/** -text
+
+# Conjunto de B2e (lo que se pierde al combinar los trozos): su sha256 va en chunking-set.json y se mide byte a byte.
+.sdd/changes/english-names-bilingual-output/evidence/B2e/docs/** -text

@@ -38,6 +38,7 @@ RAM van más rápidos, pero Windows desaloja al modelo pequeño de la VRAM para 
 | `LOCAL_DELEGATE_STRUCTURED_SUMMARY` (antes `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO`) | `0` | `local_summarize` sigue la estructura de un Markdown (solo modelo largo); experimental, ver [Tools](Tools#resumen-por-secciones-experimental-apagado) |
 | `LOCAL_DELEGATE_MAX_CHARS_MECHANICAL` / `_LONG` / `_CODE` / `_FAST` | `20000` / `48000` / `20000` / `12000` | tope de chars de entrada **por rol**: por encima, las tools que reducen (`local_summarize`, `local_lint_summary`, `local_commit_msg`, `local_explain_code`, `local_extract`) hacen map-reduce y las que transforman trocean |
 | `LOCAL_DELEGATE_MAX_IMAGE_MB` | `8` | tope de tamaño de imagen para `local_describe_image` |
+| `LOCAL_DELEGATE_DUMP_CHUNK_NOTES` | *(vacío: apagado)* | carpeta **local** donde cada operación troceada (map-reduce) deja un JSON con la salida de cada paso (map, reagrupado, reduce). Solo para medir: no va al log de uso ni al panel y nunca sale de la máquina. El log de uso ya guarda los pasos **sin texto** (campo `steps`). Lo lee el daemon al arrancar |
 | `LOCAL_DELEGATE_CHUNK_CHARS` | `3500` | tamaño de trozo al partir documentos largos (`local_translate`, `local_delegate`) |
 | `LOCAL_DELEGATE_CHUNK_MAX_TOKENS` | `2048` | techo de `max_tokens` por trozo |
 | `LOCAL_DELEGATE_CHUNK_MIN_CHARS` | `400` | trozo mínimo: por debajo ya no se vuelve a partir aunque el modelo trunque |
