@@ -1918,6 +1918,132 @@ del cambio del ruido del modelo (8 llamadas de prompt idéntico dieron 22 frente
   prompts del reduce de lint y de `explain_code`: frontera en `PROMPT_BOUNDARIES` con su motivo),
   CHANGELOG, y registro en `waves/B2e.md` con las llamadas `local_*`.
 
+#### B2-affinity — La celda de afinidad de `local_lint_summary`, medida con los prompts de la 0.36.0
+
+Lote previsto desde la enmienda del 2026-10-14 (arriba, «B2-affinity»): la orden de idioma de
+REQ-028 (B2b-2), la regla de la cantidad (B2d-3), la de los bloques compactados (B2d-4) y los topes
+(B2d-2) cambian el `system` de `local_lint_summary`, que entra en la huella de su celda de afinidad
+(`matrix.PROMPT_INPUTS`, `server._affinity_prompt`). La 0.36.0 no puede salir con una celda aprobada
+que `doctor` marca «sin base» en esta PC. Va **después de B2e** (los prompts que se publican ya
+están todos) y antes de B3/B4.
+
+- **Celdas afectadas (comprobado por ejecución el 2026-10-18 en `db384c3`,
+  `checks._stale_affinity_cells` con la config real de llama-swap):** solo
+  `local_lint_summary → gemma4-26b-a4b` (rol comparado `gemma3-4b`), por `prompt_sha256`; el resto
+  de la huella (GGUF, tamaño, `-ncmoe 12`, contexto 38 400) sigue igual. `local_translate` (las dos)
+  y `local_delegate` conservan su `sha256`. **Hallazgo:** el prompt de lint depende ahora del idioma
+  de respuesta (`es` → `0b070d5d…`, `en` → `2c9a0a31…`; la medida era `5202980b…`), así que una sola
+  huella no puede valer en los dos idiomas. Las celdas rechazadas en T6 (p. ej. lint →
+  `qwen36-35b-a3b`) no tenían base que perder y no se re-evalúan (fuera de alcance).
+- **Posee:** `src/local_delegate/matrix.py` (`Cell` con idioma, `CELLS`), `checks._stale_affinity_cells`
+  (una celda de otro idioma no avisa si su gemela del idioma vigente existe; las dos cosas, solo si
+  se aprueba alguna celda de lint: ver «Regla (3)» abajo),
+  `tests/test_affinity.py` (fuera `CELLS_WITHOUT_BASE`; huella y veredicto por idioma),
+  `benchmarks/afinidad-2026-10/reevaluation-0.36.0/` (casos, resultados, `verdict.json`),
+  `evidence/B2-affinity/`, el docstring de `server._lint_system`, CHANGELOG y wiki `Tools.md` si
+  cambia lo que dice de la afinidad.
+- **Método (el de T5/T6, sin tocar el evaluador):** los 4 casos de lint del corpus congelado
+  (`resume-ruff-*`, mismas fuentes y `sha256`) por la tool REAL del daemon instalado desde la rama
+  (prompt de producción, temperatura 0,2, `max_words` 200), con `path`. Tres modelos, como en T6:
+  `gemma3-4b` (rol), `qwen35-2b` (control débil, criterio 1) y `gemma4-26b-a4b` (alternativo). Una
+  ventana de prueba por (modelo, idioma): el daemon se reinicia con `LOCAL_DELEGATE_MODEL_MECHANICAL`
+  = el modelo, `LOCAL_DELEGATE_FALLBACK=0` (sin saltos que mezclen modelos) y, en `en`,
+  `LOCAL_DELEGATE_LANG=en`; una llamada de calentamiento descartada y **3 repeticiones** de los 4
+  casos (T6 corrió 1 por caso con semilla fija; la tool no fija semilla, así que se repite y se
+  comprueba con el `sha256` de cada respuesta si las repeticiones difieren). Modelo servido,
+  latencia y resultado salen del log de uso del daemon; toda línea de la ventana tiene que ser de la
+  tanda (ajenas = 0). Carga en frío del rol: `median_cold_load` sobre una copia nueva de
+  `metrics.db`. Los seis criterios los aplica `analyze_benchmark.evaluate_mechanical_cell` tal cual.
+  La comparación rol/alternativo es **de la misma sesión** por construcción; los números de T6 se
+  dan solo como referencia.
+- **Criterio de «hecho» (fijado antes de medir):** por idioma, la celda queda aprobada si
+  `evaluate_mechanical_cell` da `approved` en **cada una de las 3 repeticiones** (la repetición k de
+  cada modelo con la k de los otros), con criterio 1 cumplido. No se promedia el conjunto (lección de
+  B2d-4). Si las 3 repeticiones dan respuestas idénticas (mismo `sha256`) en los tres modelos, se
+  dice: la repetición no midió ruido.
+- **Si no llega (reglas del usuario del 2026-10-18):** (1) un candidato nuevo con el mismo criterio:
+  `qwen36-35b-a3b` como alternativo (el otro que admite REQ-011), solo si hay RAM (≥ 4 GB libres
+  antes de cargarlo); (2) si el fallo es de una sola repetición y de un solo criterio, `--repeat 5`
+  con el criterio «`approved` en ≥ 4 de 5», escrito aquí antes de medir; (3) si aun así no, la
+  celda de ese idioma sale de `CELLS` (sin afinidad de lint en ese idioma, honesto y sin aviso),
+  límite documentado aquí, en `waves/B2-affinity.md` y en la evidencia, y nota de backlog en
+  `evidence/B2-affinity/backlog-note.md`.
+- **Primera tanda (2026-10-18, 06:27–06:32 UTC, `evidence/B2-affinity/first-run/`): el método no
+  discrimina.** Con el puntuador de T6 el rol saca 0 en 2–3 de 4 casos y el alternativo en 4 de 4, en
+  los dos idiomas; en `en` sale «aprobada» en 2 repeticiones solo porque todos sacan 0. Causa (leída
+  en las respuestas): `rules_with_wrong_count` solo atribuye a un código los enteros que van
+  **detrás** de él en su línea, el formato «`E501: 4`» que daba el prompt viejo; con el prompt nuevo
+  los modelos escriben «4 errores de tipo E402», «two instances of D103» o «Four instances…», y la
+  línea `(leído server-side: …)` del programa cuenta en las palabras. Además, el 26B en `es` traduce
+  el nombre de la regla y **omite el código** en 3 de 4 casos (con cifras correctas), cosa que sí es
+  del modelo. Se aplica la regla (2) **antes** de la (1): con una flecha que pone 0 a todos, un
+  candidato nuevo no se puede juzgar.
+- **Ajuste (2), fijado antes de la segunda tanda (puntuador «lint v2», solo en
+  `evidence/B2-affinity/evaluate_reevaluation.py`; el de T6 no se toca):**
+  1. se quita la línea final `(leído server-side: …)` / `(read server-side: …)`, que pone el
+     programa, antes de puntuar y de contar palabras;
+  2. no son cuentas los números de línea ni las coordenadas: fuera `línea(s)`/`line(s)` seguidos de
+     una lista de enteros, y `:N` / `:N:M`;
+  3. cuentan también los números escritos con letra del 1 al 15 (`un`/`una`/`uno`…`quince`,
+     `one`…`fifteen`);
+  4. cada línea se parte en frases (`. ` y `;`); en una frase con **un solo** código de la lista,
+     todas sus cuentas son de ese código, vayan delante o detrás; con varios códigos, la regla de T6
+     (detrás de cada código hasta el siguiente).
+  Validación de la flecha antes de usarla: `reference_ok` = 1 y `reference_bad` < 1 en los 4 casos;
+  sobre las respuestas congeladas de T6 (`resultados/*.jsonl`) da las mismas notas que el de T6 (el
+  ajuste no cambia lo que T6 ya medía); y una revisión a mano de las 16 respuestas de la repetición 1
+  de la primera tanda (rol y 26B, dos idiomas), juicio del agente y no humano, anotada en
+  `evidence/B2-affinity/scorer-v2-check.md`. Si la v2 no pasa esto, no se usa. Después, **segunda
+  tanda completa nueva** (las seis ventanas otra vez); la primera queda como evidencia, no se
+  re-puntúa para decidir.
+- **La v2 no pasó su control 2 (2026-10-18, `evidence/B2-affinity/scorer-v2-check.txt`):** sobre
+  las 16 respuestas de lint de T6 cambia 8 notas. Leídas a mano, 7 son la v2 **corrigiendo** a la
+  v1: el puntuador de T6 también contaba como cuentas los números de línea («E501 (2): … en las
+  líneas 12 y 40», «4 ocurrencias (líneas 4, 5, 6, 7)»), y por eso puso 0 a respuestas correctas
+  (entre ellas las dos de `qwen36-35b-a3b` que tumbaron su celda de lint en T6: nota de backlog). La
+  otra es un error de la v2: el artículo «un» («en lugar de un solo bloque») contado como 1. El
+  control estaba mal planteado: suponía que la v1 acertaba en T6. Se corrige así, antes de la
+  segunda tanda: **v3** = v2 sin `un`/`una` en los números con letra; su control 2 pasa a ser «cada
+  nota de T6 que la v3 cambia, la revisión a mano le da la razón a la v3», y se añade el control 3
+  sobre las 16 respuestas de la primera tanda (la v3 coincide con la revisión a mano en ≥ 15 de 16
+  notas por caso). Revisión del agente, no humana, en `evidence/B2-affinity/scorer-v2-check.md`.
+- **Resultado de los controles de la v3:** 1 pasa; 2 pasa (las 7 diferencias con T6 le dan la razón
+  a la v3); **3 no llega: 14 de 16** (dos respuestas del rol en prosa ambigua, una de menos y otra de
+  más; ninguna cambia el sentido de la comparación rol/26B). Durante la revisión se arregló un fallo
+  de implementación de la regla 2 («, and 7» al final de una lista de líneas). No se retoca más la
+  flecha. **Decisión para la segunda tanda, escrita antes de lanzarla:** la v3 puntúa y
+  `evaluate_mechanical_cell` decide; además se revisa a mano el sentido de la comparación rol/26B de
+  cada (idioma, caso, repetición) que decida el criterio 2, y donde no coincida manda la revisión a
+  mano (anotado en `evidence/B2-affinity/live.md`). Si `es` queda rechazada, regla (1): una ventana
+  de `qwen36-35b-a3b` en `es` con el mismo criterio, si hay ≥ 4 GB libres.
+- **Aprobación (mecanismo del repo):** el veredicto nuevo
+  (`reevaluation-0.36.0/verdict.json`, con `supersedes` = la celda de T6 que reemplaza) y `CELLS`
+  con una celda por idioma aprobado (campo `language`, si hay alguna); `test_matrix_cells_are_the_approved_cells_of_the_verdict`
+  compara `CELLS` con el veredicto de T6 menos lo reemplazado más lo aprobado aquí, y
+  `test_prompt_footprint_of_the_code_is_the_measured_one` exige el `sha256` medido para las celdas
+  del idioma vigente (la suite corre en `es` y en `en`). Las notas «frontera declarada» de
+  `affinity --check` se quedan: el corpus congelado no se regenera (B2b-2) y lo dicen a propósito.
+- **Resultado de la segunda tanda (2026-10-18, 06:38–06:48 UTC, `evidence/B2-affinity/live.md`):
+  NO llega en ningún idioma ni con ningún candidato.** `gemma4-26b-a4b`: `es` rechazada en 3 de 3
+  repeticiones, `en` en 2 de 3 (calidad). Regla (1), `qwen36-35b-a3b`: rechazada en 3 de 3 en los
+  dos idiomas. La latencia cumple siempre; falla la calidad. La revisión a mano coincide con la v3 en
+  el sentido de cada comparación: en `es` el 26B **no nombra ningún código de regla** en 9 de 9
+  respuestas de tres casos (traduce el nombre de la regla, con cifras correctas); en `en` a veces no
+  da cifras («Several lines»); Qwen escribe prosa sin códigos. La regla (2) ya se gastó en la flecha;
+  cambiar el prompt de lint es cambiar el producto (lo midieron B2d–B2e), no un parámetro de este
+  lote.
+- **Regla (3) — límite conocido y versión adoptada:** la celda `local_lint_summary →
+  gemma4-26b-a4b` **sale de `CELLS`**: en la 0.36.0 no hay afinidad de lint (el lint corto va
+  siempre al rol mecánico), `doctor` no avisa y el veredicto nuevo dice por qué. En tiempo de
+  ejecución no cambia nada respecto a hoy: la celda sin base ya no se usaba. Como no queda ninguna
+  celda que dependa del idioma, el campo `language` de `Cell` y el cambio de `doctor` **no se
+  hacen** (quedan descritos para la próxima medición). Nota de backlog con la causa (los modelos
+  grandes dejan de nombrar los códigos de regla con la orden de idioma, también en el rol largo) y
+  los dos hallazgos del método: `evidence/B2-affinity/backlog-note.md`.
+- **Cierre del lote:** suite en `es` y en `en`, `ruff`, corpus y afinidad, `doctor` sin «afinidad
+  sin base» con la config real, CHANGELOG, `waves/B2-affinity.md` con las llamadas `local_*`, y el
+  daemon con el código de la rama instalado.
+
 #### B3 — Hooks
 
 - **REQ:** 024, 041 (conjunto de hashes y lectura en `measure_adoption.py`) y 034 (humo de hooks).

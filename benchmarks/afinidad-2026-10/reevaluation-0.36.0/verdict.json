@@ -1,0 +1,1029 @@
+{
+  "schema_version": 1,
+  "method": "B2-affinity (plan.md): T6 criteria per repetition, approved in every one",
+  "scorer": "v2",
+  "supersedes": [
+    {
+      "tool": "local_lint_summary",
+      "alternative": "gemma4-26b-a4b",
+      "compared_role": "gemma3-4b"
+    }
+  ],
+  "cold_load_role_s": 3.265672855769231,
+  "cells": [
+    {
+      "tool": "local_lint_summary",
+      "alternative": "gemma4-26b-a4b",
+      "compared_role": "gemma3-4b",
+      "language": "es",
+      "state": "rejected",
+      "repetitions": [
+        {
+          "run": 1,
+          "tool": "local_lint_summary",
+          "alternative": "gemma4-26b-a4b",
+          "compared_role": "gemma3-4b",
+          "state": "rejected",
+          "criteria": {
+            "discriminates": {
+              "ok": true,
+              "bad_references": [],
+              "cases_where_role_or_weak_fail": [
+                "resume-ruff-tres-reglas",
+                "resume-ruff-docstrings",
+                "resume-ruff-un-solo-archivo",
+                "resume-ruff-cinco-reglas"
+              ]
+            },
+            "quality": {
+              "ok": false,
+              "worse_cases": [
+                "resume-ruff-tres-reglas",
+                "resume-ruff-docstrings",
+                "resume-ruff-cinco-reglas"
+              ]
+            },
+            "format": {
+              "ok": true,
+              "cases_without_format": []
+            },
+            "verbosity": {
+              "ok": true,
+              "median": 0.804487919359803,
+              "max": 1.5
+            },
+            "reliability": {
+              "ok": true,
+              "cases_failing_only_in_alternative": []
+            },
+            "latency": {
+              "ok": true,
+              "alternative_median_ms": 3282.5,
+              "role_median_ms": 1551.0,
+              "cold_load_role_s": 3.265672855769231,
+              "note": null
+            }
+          },
+          "cases": 4,
+          "scores": {
+            "resume-ruff-tres-reglas": [
+              1.0,
+              0.6666666666666666,
+              0.0
+            ],
+            "resume-ruff-docstrings": [
+              0.5,
+              0.0,
+              0.0
+            ],
+            "resume-ruff-un-solo-archivo": [
+              0.6666666666666666,
+              0.0,
+              1.0
+            ],
+            "resume-ruff-cinco-reglas": [
+              1.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        {
+          "run": 2,
+          "tool": "local_lint_summary",
+          "alternative": "gemma4-26b-a4b",
+          "compared_role": "gemma3-4b",
+          "state": "rejected",
+          "criteria": {
+            "discriminates": {
+              "ok": true,
+              "bad_references": [],
+              "cases_where_role_or_weak_fail": [
+                "resume-ruff-tres-reglas",
+                "resume-ruff-docstrings",
+                "resume-ruff-un-solo-archivo",
+                "resume-ruff-cinco-reglas"
+              ]
+            },
+            "quality": {
+              "ok": false,
+              "worse_cases": [
+                "resume-ruff-tres-reglas",
+                "resume-ruff-docstrings",
+                "resume-ruff-cinco-reglas"
+              ]
+            },
+            "format": {
+              "ok": true,
+              "cases_without_format": []
+            },
+            "verbosity": {
+              "ok": true,
+              "median": 0.7820334338325343,
+              "max": 1.5
+            },
+            "reliability": {
+              "ok": true,
+              "cases_failing_only_in_alternative": []
+            },
+            "latency": {
+              "ok": true,
+              "alternative_median_ms": 3330.0,
+              "role_median_ms": 1488.0,
+              "cold_load_role_s": 3.265672855769231,
+              "note": null
+            }
+          },
+          "cases": 4,
+          "scores": {
+            "resume-ruff-tres-reglas": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "resume-ruff-docstrings": [
+              0.75,
+              0.0,
+              0.0
+            ],
+            "resume-ruff-un-solo-archivo": [
+              0.6666666666666666,
+              0.6666666666666666,
+              1.0
+            ],
+            "resume-ruff-cinco-reglas": [
+              1.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        {
+          "run": 3,
+          "tool": "local_lint_summary",
+          "alternative": "gemma4-26b-a4b",
+          "compared_role": "gemma3-4b",
+          "state": "rejected",
+          "criteria": {
+            "discriminates": {
+              "ok": true,
+              "bad_references": [],
+              "cases_where_role_or_weak_fail": [
+                "resume-ruff-tres-reglas",
+                "resume-ruff-docstrings",
+                "resume-ruff-un-solo-archivo",
+                "resume-ruff-cinco-reglas"
+              ]
+            },
+            "quality": {
+              "ok": false,
+              "worse_cases": [
+                "resume-ruff-tres-reglas",
+                "resume-ruff-docstrings",
+                "resume-ruff-cinco-reglas"
+              ]
+            },
+            "format": {
+              "ok": true,
+              "cases_without_format": []
+            },
+            "verbosity": {
+              "ok": true,
+              "median": 0.5815678179100676,
+              "max": 1.5
+            },
+            "reliability": {
+              "ok": true,
+              "cases_failing_only_in_alternative": []
+            },
+            "latency": {
+              "ok": true,
+              "alternative_median_ms": 3059.0,
+              "role_median_ms": 1615.5,
+              "cold_load_role_s": 3.265672855769231,
+              "note": null
+            }
+          },
+          "cases": 4,
+          "scores": {
+            "resume-ruff-tres-reglas": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "resume-ruff-docstrings": [
+              0.75,
+              0.25,
+              0.0
+            ],
+            "resume-ruff-un-solo-archivo": [
+              0.6666666666666666,
+              0.0,
+              1.0
+            ],
+            "resume-ruff-cinco-reglas": [
+              0.5,
+              0.25,
+              0.0
+            ]
+          }
+        }
+      ],
+      "distinct_responses_of_12": {
+        "gemma3-4b": 11,
+        "qwen35-2b": 12,
+        "gemma4-26b-a4b": 10
+      },
+      "latency_ms_all_runs": {
+        "gemma3-4b": 1495.0,
+        "qwen35-2b": 1095.0,
+        "gemma4-26b-a4b": 3311.0
+      },
+      "footprint": {
+        "path": "D:\\Projects\\llms\\models\\gemma4-26b-a4b\\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf",
+        "size_bytes": 13597177568,
+        "flags": {
+          "n_cpu_moe": 12,
+          "ctx_size": 38400,
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "mmproj": null,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "0b070d5d5b2e1a1e95d451b69d3edb6b4ddffd226487f2d91af9f134cefa2f70"
+      },
+      "role_footprint": {
+        "path": "D:\\Projects\\llms\\models\\gemma3-4b\\gemma-3-4b-it-Q4_K_M.gguf",
+        "size_bytes": 2489894016,
+        "flags": {
+          "n_cpu_moe": null,
+          "ctx_size": 8192,
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "mmproj": null,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "0b070d5d5b2e1a1e95d451b69d3edb6b4ddffd226487f2d91af9f134cefa2f70"
+      }
+    },
+    {
+      "tool": "local_lint_summary",
+      "alternative": "qwen36-35b-a3b",
+      "compared_role": "gemma3-4b",
+      "language": "es",
+      "state": "rejected",
+      "repetitions": [
+        {
+          "run": 1,
+          "tool": "local_lint_summary",
+          "alternative": "qwen36-35b-a3b",
+          "compared_role": "gemma3-4b",
+          "state": "rejected",
+          "criteria": {
+            "discriminates": {
+              "ok": true,
+              "bad_references": [],
+              "cases_where_role_or_weak_fail": [
+                "resume-ruff-tres-reglas",
+                "resume-ruff-docstrings",
+                "resume-ruff-un-solo-archivo",
+                "resume-ruff-cinco-reglas"
+              ]
+            },
+            "quality": {
+              "ok": false,
+              "worse_cases": [
+                "resume-ruff-docstrings",
+                "resume-ruff-un-solo-archivo",
+                "resume-ruff-cinco-reglas"
+              ]
+            },
+            "format": {
+              "ok": true,
+              "cases_without_format": []
+            },
+            "verbosity": {
+              "ok": false,
+              "median": 1.5713873499538318,
+              "max": 1.5
+            },
+            "reliability": {
+              "ok": true,
+              "cases_failing_only_in_alternative": []
+            },
+            "latency": {
+              "ok": true,
+              "alternative_median_ms": 4483.5,
+              "role_median_ms": 1551.0,
+              "cold_load_role_s": 3.265672855769231,
+              "note": null
+            }
+          },
+          "cases": 4,
+          "scores": {
+            "resume-ruff-tres-reglas": [
+              1.0,
+              0.6666666666666666,
+              1.0
+            ],
+            "resume-ruff-docstrings": [
+              0.5,
+              0.0,
+              0.25
+            ],
+            "resume-ruff-un-solo-archivo": [
+              0.6666666666666666,
+              0.0,
+              0.0
+            ],
+            "resume-ruff-cinco-reglas": [
+              1.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        {
+          "run": 2,
+          "tool": "local_lint_summary",
+          "alternative": "qwen36-35b-a3b",
+          "compared_role": "gemma3-4b",
+          "state": "rejected",
+          "criteria": {
+            "discriminates": {
+              "ok": true,
+              "bad_references": [],
+              "cases_where_role_or_weak_fail": [
+                "resume-ruff-tres-reglas",
+                "resume-ruff-docstrings",
+                "resume-ruff-un-solo-archivo",
+                "resume-ruff-cinco-reglas"
+              ]
+            },
+            "quality": {
+              "ok": false,
+              "worse_cases": [
+                "resume-ruff-tres-reglas",
+                "resume-ruff-docstrings",
+                "resume-ruff-un-solo-archivo",
+                "resume-ruff-cinco-reglas"
+              ]
+            },
+            "format": {
+              "ok": true,
+              "cases_without_format": []
+            },
+            "verbosity": {
+              "ok": true,
+              "median": 1.4283284182084781,
+              "max": 1.5
+            },
+            "reliability": {
+              "ok": true,
+              "cases_failing_only_in_alternative": []
+            },
+            "latency": {
+              "ok": true,
+              "alternative_median_ms": 3867.5,
+              "role_median_ms": 1488.0,
+              "cold_load_role_s": 3.265672855769231,
+              "note": null
+            }
+          },
+          "cases": 4,
+          "scores": {
+            "resume-ruff-tres-reglas": [
+              1.0,
+              0.0,
+              0.6666666666666666
+            ],
+            "resume-ruff-docstrings": [
+              0.75,
+              0.0,
+              0.0
+            ],
+            "resume-ruff-un-solo-archivo": [
+              0.6666666666666666,
+              0.6666666666666666,
+              0.0
+            ],
+            "resume-ruff-cinco-reglas": [
+              1.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        {
+          "run": 3,
+          "tool": "local_lint_summary",
+          "alternative": "qwen36-35b-a3b",
+          "compared_role": "gemma3-4b",
+          "state": "rejected",
+          "criteria": {
+            "discriminates": {
+              "ok": true,
+              "bad_references": [],
+              "cases_where_role_or_weak_fail": [
+                "resume-ruff-tres-reglas",
+                "resume-ruff-docstrings",
+                "resume-ruff-un-solo-archivo",
+                "resume-ruff-cinco-reglas"
+              ]
+            },
+            "quality": {
+              "ok": false,
+              "worse_cases": [
+                "resume-ruff-docstrings",
+                "resume-ruff-un-solo-archivo"
+              ]
+            },
+            "format": {
+              "ok": true,
+              "cases_without_format": []
+            },
+            "verbosity": {
+              "ok": true,
+              "median": 1.1274354729525942,
+              "max": 1.5
+            },
+            "reliability": {
+              "ok": true,
+              "cases_failing_only_in_alternative": []
+            },
+            "latency": {
+              "ok": true,
+              "alternative_median_ms": 4127.5,
+              "role_median_ms": 1615.5,
+              "cold_load_role_s": 3.265672855769231,
+              "note": null
+            }
+          },
+          "cases": 4,
+          "scores": {
+            "resume-ruff-tres-reglas": [
+              1.0,
+              0.0,
+              1.0
+            ],
+            "resume-ruff-docstrings": [
+              0.75,
+              0.25,
+              0.5
+            ],
+            "resume-ruff-un-solo-archivo": [
+              0.6666666666666666,
+              0.0,
+              0.0
+            ],
+            "resume-ruff-cinco-reglas": [
+              0.5,
+              0.25,
+              0.75
+            ]
+          }
+        }
+      ],
+      "distinct_responses_of_12": {
+        "gemma3-4b": 11,
+        "qwen35-2b": 12,
+        "qwen36-35b-a3b": 12
+      },
+      "latency_ms_all_runs": {
+        "gemma3-4b": 1495.0,
+        "qwen35-2b": 1095.0,
+        "qwen36-35b-a3b": 3870.0
+      },
+      "footprint": {
+        "path": "D:\\Projects\\llms\\models\\qwen36-35b-a3b\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf",
+        "size_bytes": 17730509792,
+        "flags": {
+          "n_cpu_moe": 20,
+          "ctx_size": 16384,
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "mmproj": null,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "0b070d5d5b2e1a1e95d451b69d3edb6b4ddffd226487f2d91af9f134cefa2f70"
+      },
+      "role_footprint": {
+        "path": "D:\\Projects\\llms\\models\\gemma3-4b\\gemma-3-4b-it-Q4_K_M.gguf",
+        "size_bytes": 2489894016,
+        "flags": {
+          "n_cpu_moe": null,
+          "ctx_size": 8192,
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "mmproj": null,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "0b070d5d5b2e1a1e95d451b69d3edb6b4ddffd226487f2d91af9f134cefa2f70"
+      }
+    },
+    {
+      "tool": "local_lint_summary",
+      "alternative": "gemma4-26b-a4b",
+      "compared_role": "gemma3-4b",
+      "language": "en",
+      "state": "rejected",
+      "repetitions": [
+        {
+          "run": 1,
+          "tool": "local_lint_summary",
+          "alternative": "gemma4-26b-a4b",
+          "compared_role": "gemma3-4b",
+          "state": "rejected",
+          "criteria": {
+            "discriminates": {
+              "ok": true,
+              "bad_references": [],
+              "cases_where_role_or_weak_fail": [
+                "resume-ruff-tres-reglas",
+                "resume-ruff-docstrings",
+                "resume-ruff-un-solo-archivo",
+                "resume-ruff-cinco-reglas"
+              ]
+            },
+            "quality": {
+              "ok": false,
+              "worse_cases": [
+                "resume-ruff-un-solo-archivo"
+              ]
+            },
+            "format": {
+              "ok": true,
+              "cases_without_format": []
+            },
+            "verbosity": {
+              "ok": true,
+              "median": 0.7395188382217803,
+              "max": 1.5
+            },
+            "reliability": {
+              "ok": true,
+              "cases_failing_only_in_alternative": []
+            },
+            "latency": {
+              "ok": true,
+              "alternative_median_ms": 3473.5,
+              "role_median_ms": 1667.5,
+              "cold_load_role_s": 3.265672855769231,
+              "note": null
+            }
+          },
+          "cases": 4,
+          "scores": {
+            "resume-ruff-tres-reglas": [
+              1.0,
+              0.0,
+              1.0
+            ],
+            "resume-ruff-docstrings": [
+              0.5,
+              0.0,
+              1.0
+            ],
+            "resume-ruff-un-solo-archivo": [
+              0.6666666666666666,
+              0.6666666666666666,
+              0.0
+            ],
+            "resume-ruff-cinco-reglas": [
+              1.0,
+              0.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "run": 2,
+          "tool": "local_lint_summary",
+          "alternative": "gemma4-26b-a4b",
+          "compared_role": "gemma3-4b",
+          "state": "rejected",
+          "criteria": {
+            "discriminates": {
+              "ok": true,
+              "bad_references": [],
+              "cases_where_role_or_weak_fail": [
+                "resume-ruff-tres-reglas",
+                "resume-ruff-docstrings",
+                "resume-ruff-un-solo-archivo",
+                "resume-ruff-cinco-reglas"
+              ]
+            },
+            "quality": {
+              "ok": false,
+              "worse_cases": [
+                "resume-ruff-un-solo-archivo"
+              ]
+            },
+            "format": {
+              "ok": true,
+              "cases_without_format": []
+            },
+            "verbosity": {
+              "ok": true,
+              "median": 0.7095579446395442,
+              "max": 1.5
+            },
+            "reliability": {
+              "ok": true,
+              "cases_failing_only_in_alternative": []
+            },
+            "latency": {
+              "ok": true,
+              "alternative_median_ms": 3720.0,
+              "role_median_ms": 1791.5,
+              "cold_load_role_s": 3.265672855769231,
+              "note": null
+            }
+          },
+          "cases": 4,
+          "scores": {
+            "resume-ruff-tres-reglas": [
+              1.0,
+              0.3333333333333333,
+              1.0
+            ],
+            "resume-ruff-docstrings": [
+              0.75,
+              0.0,
+              1.0
+            ],
+            "resume-ruff-un-solo-archivo": [
+              0.3333333333333333,
+              1.0,
+              0.0
+            ],
+            "resume-ruff-cinco-reglas": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          }
+        },
+        {
+          "run": 3,
+          "tool": "local_lint_summary",
+          "alternative": "gemma4-26b-a4b",
+          "compared_role": "gemma3-4b",
+          "state": "approved",
+          "criteria": {
+            "discriminates": {
+              "ok": true,
+              "bad_references": [],
+              "cases_where_role_or_weak_fail": [
+                "resume-ruff-tres-reglas",
+                "resume-ruff-docstrings",
+                "resume-ruff-un-solo-archivo",
+                "resume-ruff-cinco-reglas"
+              ]
+            },
+            "quality": {
+              "ok": true,
+              "worse_cases": []
+            },
+            "format": {
+              "ok": true,
+              "cases_without_format": []
+            },
+            "verbosity": {
+              "ok": true,
+              "median": 0.7800706059429228,
+              "max": 1.5
+            },
+            "reliability": {
+              "ok": true,
+              "cases_failing_only_in_alternative": []
+            },
+            "latency": {
+              "ok": true,
+              "alternative_median_ms": 3763.5,
+              "role_median_ms": 1562.5,
+              "cold_load_role_s": 3.265672855769231,
+              "note": null
+            }
+          },
+          "cases": 4,
+          "scores": {
+            "resume-ruff-tres-reglas": [
+              1.0,
+              0.0,
+              1.0
+            ],
+            "resume-ruff-docstrings": [
+              0.25,
+              0.5,
+              1.0
+            ],
+            "resume-ruff-un-solo-archivo": [
+              0.3333333333333333,
+              1.0,
+              1.0
+            ],
+            "resume-ruff-cinco-reglas": [
+              1.0,
+              0.0,
+              1.0
+            ]
+          }
+        }
+      ],
+      "distinct_responses_of_12": {
+        "gemma3-4b": 12,
+        "qwen35-2b": 12,
+        "gemma4-26b-a4b": 7
+      },
+      "latency_ms_all_runs": {
+        "gemma3-4b": 1674.0,
+        "qwen35-2b": 531.5,
+        "gemma4-26b-a4b": 3730.5
+      },
+      "footprint": {
+        "path": "D:\\Projects\\llms\\models\\gemma4-26b-a4b\\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf",
+        "size_bytes": 13597177568,
+        "flags": {
+          "n_cpu_moe": 12,
+          "ctx_size": 38400,
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "mmproj": null,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "2c9a0a31b3068e2a73864d9a4209f4e2be7e022f5acc46f775ebb09b7c3789ba"
+      },
+      "role_footprint": {
+        "path": "D:\\Projects\\llms\\models\\gemma3-4b\\gemma-3-4b-it-Q4_K_M.gguf",
+        "size_bytes": 2489894016,
+        "flags": {
+          "n_cpu_moe": null,
+          "ctx_size": 8192,
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "mmproj": null,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "2c9a0a31b3068e2a73864d9a4209f4e2be7e022f5acc46f775ebb09b7c3789ba"
+      }
+    },
+    {
+      "tool": "local_lint_summary",
+      "alternative": "qwen36-35b-a3b",
+      "compared_role": "gemma3-4b",
+      "language": "en",
+      "state": "rejected",
+      "repetitions": [
+        {
+          "run": 1,
+          "tool": "local_lint_summary",
+          "alternative": "qwen36-35b-a3b",
+          "compared_role": "gemma3-4b",
+          "state": "rejected",
+          "criteria": {
+            "discriminates": {
+              "ok": true,
+              "bad_references": [],
+              "cases_where_role_or_weak_fail": [
+                "resume-ruff-tres-reglas",
+                "resume-ruff-docstrings",
+                "resume-ruff-un-solo-archivo",
+                "resume-ruff-cinco-reglas"
+              ]
+            },
+            "quality": {
+              "ok": false,
+              "worse_cases": [
+                "resume-ruff-tres-reglas",
+                "resume-ruff-docstrings",
+                "resume-ruff-un-solo-archivo",
+                "resume-ruff-cinco-reglas"
+              ]
+            },
+            "format": {
+              "ok": true,
+              "cases_without_format": []
+            },
+            "verbosity": {
+              "ok": true,
+              "median": 1.1815714992206954,
+              "max": 1.5
+            },
+            "reliability": {
+              "ok": true,
+              "cases_failing_only_in_alternative": []
+            },
+            "latency": {
+              "ok": true,
+              "alternative_median_ms": 4345.5,
+              "role_median_ms": 1667.5,
+              "cold_load_role_s": 3.265672855769231,
+              "note": null
+            }
+          },
+          "cases": 4,
+          "scores": {
+            "resume-ruff-tres-reglas": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "resume-ruff-docstrings": [
+              0.5,
+              0.0,
+              0.0
+            ],
+            "resume-ruff-un-solo-archivo": [
+              0.6666666666666666,
+              0.6666666666666666,
+              0.0
+            ],
+            "resume-ruff-cinco-reglas": [
+              1.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        {
+          "run": 2,
+          "tool": "local_lint_summary",
+          "alternative": "qwen36-35b-a3b",
+          "compared_role": "gemma3-4b",
+          "state": "rejected",
+          "criteria": {
+            "discriminates": {
+              "ok": true,
+              "bad_references": [],
+              "cases_where_role_or_weak_fail": [
+                "resume-ruff-tres-reglas",
+                "resume-ruff-docstrings",
+                "resume-ruff-un-solo-archivo",
+                "resume-ruff-cinco-reglas"
+              ]
+            },
+            "quality": {
+              "ok": false,
+              "worse_cases": [
+                "resume-ruff-tres-reglas",
+                "resume-ruff-docstrings",
+                "resume-ruff-cinco-reglas"
+              ]
+            },
+            "format": {
+              "ok": true,
+              "cases_without_format": []
+            },
+            "verbosity": {
+              "ok": true,
+              "median": 1.011557277970633,
+              "max": 1.5
+            },
+            "reliability": {
+              "ok": true,
+              "cases_failing_only_in_alternative": []
+            },
+            "latency": {
+              "ok": true,
+              "alternative_median_ms": 3576.0,
+              "role_median_ms": 1791.5,
+              "cold_load_role_s": 3.265672855769231,
+              "note": null
+            }
+          },
+          "cases": 4,
+          "scores": {
+            "resume-ruff-tres-reglas": [
+              1.0,
+              0.3333333333333333,
+              0.0
+            ],
+            "resume-ruff-docstrings": [
+              0.75,
+              0.0,
+              0.0
+            ],
+            "resume-ruff-un-solo-archivo": [
+              0.3333333333333333,
+              1.0,
+              1.0
+            ],
+            "resume-ruff-cinco-reglas": [
+              1.0,
+              0.5,
+              0.0
+            ]
+          }
+        },
+        {
+          "run": 3,
+          "tool": "local_lint_summary",
+          "alternative": "qwen36-35b-a3b",
+          "compared_role": "gemma3-4b",
+          "state": "rejected",
+          "criteria": {
+            "discriminates": {
+              "ok": true,
+              "bad_references": [],
+              "cases_where_role_or_weak_fail": [
+                "resume-ruff-tres-reglas",
+                "resume-ruff-docstrings",
+                "resume-ruff-un-solo-archivo",
+                "resume-ruff-cinco-reglas"
+              ]
+            },
+            "quality": {
+              "ok": false,
+              "worse_cases": [
+                "resume-ruff-tres-reglas",
+                "resume-ruff-docstrings",
+                "resume-ruff-cinco-reglas"
+              ]
+            },
+            "format": {
+              "ok": true,
+              "cases_without_format": []
+            },
+            "verbosity": {
+              "ok": true,
+              "median": 0.8862898224740122,
+              "max": 1.5
+            },
+            "reliability": {
+              "ok": true,
+              "cases_failing_only_in_alternative": []
+            },
+            "latency": {
+              "ok": true,
+              "alternative_median_ms": 3223.0,
+              "role_median_ms": 1562.5,
+              "cold_load_role_s": 3.265672855769231,
+              "note": null
+            }
+          },
+          "cases": 4,
+          "scores": {
+            "resume-ruff-tres-reglas": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "resume-ruff-docstrings": [
+              0.25,
+              0.5,
+              0.0
+            ],
+            "resume-ruff-un-solo-archivo": [
+              0.3333333333333333,
+              1.0,
+              1.0
+            ],
+            "resume-ruff-cinco-reglas": [
+              1.0,
+              0.0,
+              0.0
+            ]
+          }
+        }
+      ],
+      "distinct_responses_of_12": {
+        "gemma3-4b": 12,
+        "qwen35-2b": 12,
+        "qwen36-35b-a3b": 12
+      },
+      "latency_ms_all_runs": {
+        "gemma3-4b": 1674.0,
+        "qwen35-2b": 531.5,
+        "qwen36-35b-a3b": 3874.0
+      },
+      "footprint": {
+        "path": "D:\\Projects\\llms\\models\\qwen36-35b-a3b\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf",
+        "size_bytes": 17730509792,
+        "flags": {
+          "n_cpu_moe": 20,
+          "ctx_size": 16384,
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "mmproj": null,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "2c9a0a31b3068e2a73864d9a4209f4e2be7e022f5acc46f775ebb09b7c3789ba"
+      },
+      "role_footprint": {
+        "path": "D:\\Projects\\llms\\models\\gemma3-4b\\gemma-3-4b-it-Q4_K_M.gguf",
+        "size_bytes": 2489894016,
+        "flags": {
+          "n_cpu_moe": null,
+          "ctx_size": 8192,
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "mmproj": null,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "2c9a0a31b3068e2a73864d9a4209f4e2be7e022f5acc46f775ebb09b7c3789ba"
+      }
+    }
+  ],
+  "cases_sha256": "6dc7d7a1723fdfff02e110b1197f085618f63e3a0af0b4f08d92ebbebaa6739c"
+}
