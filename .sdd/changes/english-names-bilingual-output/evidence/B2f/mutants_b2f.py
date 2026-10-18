@@ -47,6 +47,26 @@ MUTANTS = [
         [('    if role != "long":\r\n        return base\r\n', "")],
         [T + "test_the_mechanical_single_call_keeps_the_prompt_of_before"],
     ),
+    (
+        "4 single long call: the cap of before",
+        SERVER,
+        [("LINT_LONG_SINGLE_TOKENS_FACTOR = 2", "LINT_LONG_SINGLE_TOKENS_FACTOR = 1")],
+        [
+            T + "test_the_single_long_lint_call_gets_the_inventory_in_front_of_the_log[es]",
+            T + "test_the_single_long_lint_call_gets_the_inventory_in_front_of_the_log[en]",
+        ],
+    ),
+    (
+        "5 mechanical also gets the larger cap",
+        SERVER,
+        [
+            (
+                '    factor = LINT_LONG_SINGLE_TOKENS_FACTOR if role == "long" else 1',
+                "    factor = LINT_LONG_SINGLE_TOKENS_FACTOR",
+            )
+        ],
+        [T + "test_the_mechanical_single_call_keeps_the_prompt_of_before"],
+    ),
 ]
 
 

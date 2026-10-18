@@ -2098,6 +2098,23 @@ están todos) y antes de B3/B4.
   o límites, escrito aquí antes de medir; (3) si aun así no, límite documentado aquí, en
   `waves/B2f.md` y en la evidencia, nota en `evidence/B2f/backlog-note.md`, y la mejor versión que
   no rompa nada.
+- **Primera tanda (2026-10-18, 07:21–09:10 UTC; `main` → `runs/main/`, candidato 1 en `30d6f9a` →
+  `runs/c1/`; `evidence/B2f/compare-main-c1.json`): NO llega, solo por las cortadas.** El rol
+  mecánico conserva sus códigos en `main` (0,92 `es`, 0,93 `en`): no se toca. Con el candidato 1:
+  códigos 1,00 y ficheros 1,00 en los cuatro grupos (criterio 1); el modelo solo, en español, de
+  0,24 a 0,71 (G 0,33→0,44, H 0,17→0,93) y en inglés no peor (criterio 2); invenciones 0,61 frente a
+  0,71 (criterio 3); A14/A15/B31/B32 sin invenciones ni cortes (criterio 5). **Cortadas: 10 frente a
+  6** (ruido 1): todas en G1, G4 y GE1, GE4, los dos logs de ruff con más códigos, que `main` ya
+  cortaba en 2 de 3 repeticiones y la rama en 3 de 3; al nombrar cada código con su descripción la
+  respuesta necesita más que los 728 tokens del tope (`_lint_max_tokens(200)`).
+- **Regla (1) y (2), decidido antes de la segunda tanda:** el candidato 2 se definió para el
+  criterio 2, que pasa, y alarga la respuesta (la dirección contraria a las cortadas): no se mide.
+  Se aplica la regla (2) al único criterio que falla: **el tope de la llamada única del rol `long`
+  pasa a 2 × `_lint_max_tokens` (1 456 tokens para 200 palabras)**; el del rol mecánico, el del
+  `map` y el del paso final del troceado no cambian. Cabe: con la entrada máxima del rol (48 000
+  caracteres más el inventario, ~9 600) el prompt queda por debajo de ~20 000 tokens de los 38 400
+  del contexto de `gemma4-26b-a4b`. Mismo criterio, misma sesión, todas las ventanas otra vez
+  (`runs/c2/`), comparado con el mismo `runs/main/`.
 - **Tests y mutantes:** `tests/test_lint_single_long.py` (inventario delante del log en la llamada
   larga, en `es` y `en`; línea «sin mencionar»; control positivo: lo nombrado no se repite; rol
   mecánico byte a byte; log sin ficheros ni códigos sin cambios). Mutantes en

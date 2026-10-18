@@ -3692,6 +3692,19 @@ def _lint_max_tokens(words: int) -> int:
     return int(words * LINT_TOKENS_PER_WORD) + LINT_TOKENS_BASE
 
 
+#: B2f (rule (2) of the user, 2026-10-18): the single call of the `long` role doubles its cap.
+#: With the inventory in front of the log, `gemma4-26b-a4b` names every rule code with its
+#: description, and the ruff logs with the most codes ended in `length` at 728 tokens in 3 of 3
+#: repetitions (`evidence/B2f/live.md`). The `mechanical` role keeps `_lint_max_tokens`.
+LINT_LONG_SINGLE_TOKENS_FACTOR = 2
+
+
+def _lint_single_max_tokens(words: int, role: str) -> int:
+    """The cap of the single `local_lint_summary` call: twice as much with the `long` role."""
+    factor = LINT_LONG_SINGLE_TOKENS_FACTOR if role == "long" else 1
+    return factor * _lint_max_tokens(words)
+
+
 def _lint_chunk_max_tokens(words: int) -> int:
     """The cap of each map step of the chunked `local_lint_summary`."""
     return int(words * LINT_TOKENS_PER_WORD) + LINT_CHUNK_TOKENS_BASE
@@ -4623,7 +4636,7 @@ def local_lint_summary(
         model,
         system,
         user,
-        max_tokens=_lint_max_tokens(max_words),
+        max_tokens=_lint_single_max_tokens(max_words, role),
         tool="local_lint_summary",
         role=role,
         chars_in=len(content),

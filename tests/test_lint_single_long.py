@@ -92,7 +92,8 @@ def test_the_single_long_lint_call_gets_the_inventory_in_front_of_the_log(
     (row,) = _rows(tmp_path)
     assert row["model"] == config.models_by_role()["long"]  # guard: the long role
     assert call["system"] == server._lint_system(200)  # the system is not touched
-    assert call["max_tokens"] == server._lint_max_tokens(200) == 728  # nor its cap
+    # Mutant "the cap of before" (factor 1): this assert fails, not the guards above.
+    assert call["max_tokens"] == 2 * server._lint_max_tokens(200) == 1456  # rule (2) of B2f
     head, sep, rest = call["user"].partition(BASE)
     assert sep and rest == log  # the log goes as before, after the inventory
     assert "src/pkg/mod_00.py" in head and "CPY001" in head and "S603" in head
@@ -136,6 +137,7 @@ def test_the_mechanical_single_call_keeps_the_prompt_of_before(captured, tmp_pat
     (row,) = _rows(tmp_path)
     assert row["model"] == config.models_by_role()["mechanical"]  # guard: the mechanical role
     assert call["user"] == BASE + log
+    assert call["max_tokens"] == server._lint_max_tokens(200) == 728  # its cap of before
     assert "Sin mencionar" not in out
 
 
