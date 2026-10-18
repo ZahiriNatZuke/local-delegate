@@ -1,0 +1,15 @@
+Se ha completado la ejecución de un conjunto exhaustivo de pruebas que abarca la validación de experimentos de adopción, afinidad de modelos, procesos por lotes, gestión de agentes y análisis de rendimiento. El proceso de pruebas incluyó la verificación de la infraestructura de backend, métricas de sistema, gestión de errores de conexión, protocolos de comunicación y la integridad de la interfaz de usuario y el panel de control. Asimismo, se validaron los mecanismos de instalación, actualización de versiones, seguridad web, autenticación, gestión de recursos de hardware y la correcta ejecución de herramientas de diagnóstico y telemetría. También se cubrieron aspectos de procesamiento de lenguaje, como la detección de idiomas y la fragmentación de texto, junto con la gestión de la residencia de modelos, la lógica de enfriamiento y la conformidad con protocolos de delegación. Finalmente, se realizaron pruebas de humo, de integración continua y de consistencia en la generación de resúmenes estructurados y hojas de comparación.
+
+**Resumen de advertencias**
+
+**.venv\Lib\site-packages\starlette\testclient.py**
+
+* **Advertencia de depreciación**: El alias `anyio.abc.BlockingPortal` está obsoleto y debe sustituirse por `anyio.from_thread.BlockingPortal`.
+
+2617 tests collected in 0.74s
+
+[local-delegate warning: salida truncada por max_tokens en 2 de 8 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 206985 chars ≈ 107804 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 8 pasadas por local-delegate)
