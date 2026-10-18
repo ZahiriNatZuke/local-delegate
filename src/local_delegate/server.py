@@ -4534,6 +4534,16 @@ def local_lint_summary(
                 f"resumen de todo el log:\n\n{joined}"
             )
 
+        def _add_not_mentioned(answer: str, _truncated: bool) -> str:
+            # B2e, respaldo decidido por el usuario el 2026-10-17 (la primera medición no llegó):
+            # lo del inventario que el resumen no nombra lo añade el programa, en una línea y sin
+            # cifras, para que el lector sepa qué ficheros y reglas del log quedaron fuera.
+            missing = lint_patterns.not_mentioned(answer, log)
+            if not missing:
+                return answer
+            line = i18n.t("mcp.lint.not_mentioned", items=", ".join(missing))
+            return f"{answer.rstrip()}\n\n{line}"
+
         return _chat_map_reduce(
             model,
             system,
@@ -4549,6 +4559,7 @@ def local_lint_summary(
             reduce_system=system,
             build_reduce=_build_reduce,
             max_tokens_for=_lint_chunk_max_tokens,
+            postprocess=_add_not_mentioned,
         )
 
     user = _build(content)

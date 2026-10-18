@@ -65,6 +65,7 @@
   "mcp.input.target_not_absolute": "'target' must be an absolute path: the server does not share your working directory. Received: {target}",
   "mcp.input.target_required": "'target' is required: the absolute path of the file to write.",
   "mcp.input.text_or_path": "You must provide 'text' or 'path'.",
+  "mcp.lint.not_mentioned": "Not mentioned (in the log, not named by the summary): {items}",
   "mcp.question.choose_format.description": "Which output format is expected.",
   "mcp.question.choose_format.field": "Format",
   "mcp.question.choose_format.message": "The delegation does not say which output format you want. Which one should I use?",

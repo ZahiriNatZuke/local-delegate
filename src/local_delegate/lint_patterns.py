@@ -57,3 +57,34 @@ def codes_by_frequency(log: str) -> list[str]:
     for match in RULE.findall(text):
         order.setdefault(match, len(order))
     return sorted(counts, key=lambda c: (-counts[c], order[c]))
+
+
+#: A Markdown escape (`build\_corpus.py`): the model writes it, the reader sees `_`.
+MARKDOWN_ESCAPE = re.compile(r"\\([_*`-])")
+
+
+def mentions(item: str, text: str) -> bool:
+    r"""Whether `text` names `item`, a file (by its path or its basename) or a rule code.
+
+    As a whole token, after removing Markdown escapes: `E501` is not named by `E5011`, and
+    `build\_corpus.py` names `scripts/build_corpus.py`.
+    """
+    text = MARKDOWN_ESCAPE.sub(r"\1", text)
+    if FILE.fullmatch(item):
+        norm, path = norm_path(text), norm_path(item).removeprefix("./")
+        base = path.rsplit("/", 1)[-1]
+        return (
+            path in norm
+            or re.search(r"(?<![\w.-])" + re.escape(base) + r"(?!\w)", norm) is not None
+        )
+    return re.search(r"(?<![\w-])" + re.escape(item) + r"(?![\w-])", text) is not None
+
+
+def not_mentioned(answer: str, log: str, limit: int = 10) -> list[str]:
+    """The most named files and rule codes of `log` (up to `limit` of each) that `answer` omits.
+
+    B2e, fallback decided by the user on 2026-10-17: in the chunked `local_lint_summary` the
+    program, not the model, lists what of the inventory the summary left out.
+    """
+    items = files_by_frequency(log)[:limit] + codes_by_frequency(log)[:limit]
+    return [item for item in items if not mentions(item, answer)]

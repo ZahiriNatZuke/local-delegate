@@ -212,6 +212,48 @@ def test_the_counter_uses_the_patterns_of_the_tool():
     assert fidelity.CODE is lint_patterns.CODE
 
 
+# --- 2b. Fallback: the program lists what the chunked summary left out (2026-10-17) -------------
+
+
+@pytest.mark.parametrize(("product", "label"), [("es", "Sin mencionar"), ("en", "Not mentioned")])
+def test_the_chunked_lint_answer_lists_what_it_does_not_mention(
+    monkeypatch, captured, product, label
+):
+    """Mutant "no fallback" (no `postprocess`): the line is missing and this assert fails, not the
+    guard that it really chunked. The fake model answers "- nota": it names nothing."""
+    monkeypatch.setenv("LOCAL_DELEGATE_LANG", product)
+    i18n.reset()
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "mechanical", 1200)
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 1200)
+    log = _ruff_log(12, 6)
+    out = server.local_lint_summary(text=log)
+    assert len(captured) > 2  # guard: it really chunked
+    (line,) = [ln for ln in out.splitlines() if ln.startswith(label)]
+    assert "src/pkg/mod_00.py" in line and "CPY001" in line and "S603" in line
+    assert "src/pkg/mod_10.py" not in line  # only the 10 most named files
+    names = lint_patterns.RULE.sub(" ", lint_patterns.FILE.sub(" ", line))
+    assert not re.search(r"\d", names), line  # no figure of its own
+
+
+def test_a_named_item_is_not_listed_again():
+    log = _ruff_log(2, 3)
+    answer = r"**src/pkg/mod\_00.py**: CPY001 y D401. `mod_01.py`: S603."
+    assert lint_patterns.not_mentioned(answer, log) == []
+    assert lint_patterns.not_mentioned("CPY0011 en mod_000.py", log) == [
+        "src/pkg/mod_00.py",
+        "src/pkg/mod_01.py",
+        "CPY001",
+        "D401",
+        "S603",
+    ]
+
+
+def test_the_single_lint_answer_gets_no_fallback_line(captured):
+    """Control: a log that does not chunk has no inventory and no line."""
+    out = server.local_lint_summary(text=_ruff_log(2, 3))
+    assert "Sin mencionar" not in out
+
+
 # --- 3. The steps of a chunked operation in the usage log ---------------------------------------
 
 

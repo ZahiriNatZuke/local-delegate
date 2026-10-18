@@ -7,6 +7,7 @@ that matches nothing mutates nothing).
 """
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -92,6 +93,15 @@ MUTANTS = [
         ],
         [T + "test_a_number_word_does_not_lean_on_a_line_or_column"],
     ),
+    (
+        "9 lint fallback: no 'not mentioned' line (2026-10-17)",
+        SERVER,
+        [("            postprocess=_add_not_mentioned,\r\n", "")],
+        [
+            T + "test_the_chunked_lint_answer_lists_what_it_does_not_mention[es-Sin mencionar]",
+            T + "test_the_chunked_lint_answer_lists_what_it_does_not_mention[en-Not mentioned]",
+        ],
+    ),
 ]
 
 
@@ -127,6 +137,7 @@ for name, rel, edits, tests in MUTANTS:
                 text=True,
                 encoding="utf-8",
                 errors="replace",
+                env={**os.environ, "PYTHONIOENCODING": "utf-8"},
             )
             m = re.search(r"(\d+) failed", r.stdout)
             rows.append(

@@ -10,7 +10,7 @@
     "fires": [
      ">       assert all(f\"cmd-zz{i}\" in reduce_user for i in range(14))",
      "E       assert False",
-     "E        +  where False = all(<generator object test_the_explain_reduce_inventory_names_the_registered_subcommands.<locals>.<genexpr> at 0x0000029244A0E7A0>)"
+     "E        +  where False = all(<generator object test_the_explain_reduce_inventory_names_the_registered_subcommands.<locals>.<genexpr> at 0x0000024CFB146960>)"
     ]
    }
   ]
@@ -25,7 +25,7 @@
     "rc": 1,
     "fires": [
      ">       assert \"agrupados por archivo\" in reduce_step[\"system\"]",
-     "E       AssertionError: assert 'agrupados por archivo' in 'Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un �NICO resumen global en prosa clara, sin repetir ni enumerar los fragmentos. M�ximo 200 palabras. Nada fuera del formato.'"
+     "E       AssertionError: assert 'agrupados por archivo' in 'Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un ÚNICO resumen global en prosa clara, sin repetir ni enumerar los fragmentos. Máximo 200 palabras. Nada fuera del formato.'"
     ]
    },
    {
@@ -34,7 +34,7 @@
     "rc": 1,
     "fires": [
      ">       assert \"agrupados por archivo\" in reduce_step[\"system\"]",
-     "E       AssertionError: assert 'agrupados por archivo' in 'Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un �NICO resumen global en prosa clara, sin repetir ni enumerar los fragmentos. M�ximo 200 palabras. Nada fuera del formato.'"
+     "E       AssertionError: assert 'agrupados por archivo' in 'Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un ÚNICO resumen global en prosa clara, sin repetir ni enumerar los fragmentos. Máximo 200 palabras. Nada fuera del formato.'"
     ]
    }
   ]
@@ -80,7 +80,7 @@
     "failed": 1,
     "rc": 1,
     "fires": [
-     ">       assert fidelity.count_inventions(r\"Falla `scripts/build\\_corpus.py`.\", log)[",
+     ">       assert (",
      "E       AssertionError: assert ['scripts/build\\\\_corpus.py'] == []",
      "E",
      "E         Left contains one more item: 'scripts/build\\\\_corpus.py'"
@@ -97,7 +97,7 @@
     "failed": 1,
     "rc": 1,
     "fires": [
-     ">       assert fidelity.count_inventions(\"Error en la l�nea 52, columna 24.\", log)[",
+     ">       assert (",
      "E       AssertionError: assert ['52', '24'] == []",
      "E",
      "E         Left contains 2 more items, first extra item: '52'"
@@ -114,7 +114,7 @@
     "failed": 1,
     "rc": 1,
     "fires": [
-     ">       assert fidelity.count_inventions(\"Versi�n 255.\", log)[\"invented_numbers\"] == []",
+     ">       assert fidelity.count_inventions(\"Versión 255.\", log)[\"invented_numbers\"] == []",
      "E       AssertionError: assert ['255'] == []",
      "E",
      "E         Left contains one more item: '255'"
@@ -131,10 +131,34 @@
     "failed": 1,
     "rc": 1,
     "fires": [
-     ">       assert fidelity.count_inventions(\"nine instances of T201.\", log)[\"invented_numbers\"] == [",
+     ">       assert fidelity.count_inventions(\"nine instances of T201.\", log)[\"invented_numbers\"] == [\"nine\"]",
      "E       AssertionError: assert [] == ['nine']",
      "E",
      "E         Right contains one more item: 'nine'"
+    ]
+   }
+  ]
+ },
+ {
+  "mutant": "9 lint fallback: no 'not mentioned' line (2026-10-17)",
+  "file": "src/local_delegate/server.py",
+  "results": [
+   {
+    "test": "test_the_chunked_lint_answer_lists_what_it_does_not_mention[es-Sin mencionar]",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       (line,) = [ln for ln in out.splitlines() if ln.startswith(label)]",
+     "E       ValueError: not enough values to unpack (expected 1, got 0)"
+    ]
+   },
+   {
+    "test": "test_the_chunked_lint_answer_lists_what_it_does_not_mention[en-Not mentioned]",
+    "failed": 1,
+    "rc": 1,
+    "fires": [
+     ">       (line,) = [ln for ln in out.splitlines() if ln.startswith(label)]",
+     "E       ValueError: not enough values to unpack (expected 1, got 0)"
     ]
    }
   ]
