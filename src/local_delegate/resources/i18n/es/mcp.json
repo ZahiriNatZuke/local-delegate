@@ -19,6 +19,7 @@
   "mcp.error.no_model_left": "la operación se quedó sin modelo al elegir.",
   "mcp.error.read_timeout": "{model} no respondió en {seconds} s. Puede que el backend aún lo esté cargando.",
   "mcp.error.unexpected_response": "respuesta inesperada de {model}: {error}",
+  "mcp.explain.not_mentioned": "Sin mencionar (los registra el fichero, no los nombra la explicación): {items}",
   "mcp.extract.not_json": "respuesta no parseable como JSON",
   "mcp.extract.not_object": "la respuesta no es un objeto JSON",
   "mcp.failure.detail.connect_timeout": "{host} no contesta a la conexión (ruta, cortafuegos o VPN)",

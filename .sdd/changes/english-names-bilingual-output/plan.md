@@ -1854,6 +1854,47 @@ del cambio del ruido del modelo (8 llamadas de prompt idéntico dieron 22 frente
   idénticos) varía menos que el efecto. Los cortes son del paso final en L1–L3 (6 y 8 trozos) con
   los topes fijos: **decisión del usuario pendiente** (tope del paso final del lint troceado,
   límite conocido o criterio).
+- **Decisiones del usuario (2026-10-17, tras la parte de lint), anotadas antes de medir:**
+  1. *La tanda de `explain_code` (E1–E3) se mide ya*, con la PC libre: `main` (`e0bcf97`) y la
+     rama con el código de `af879da` (antes de tocar el tope de lint, para no mezclar cambios), en
+     la misma sesión, `--only-tool local_explain_code`, rol `code` (`qwen36-35b-a3b`). La ventana no
+     arranca con menos de 4 GB libres y se detiene si durante la corrida bajan de 1,5 GB. Mismo
+     criterio de «hecho» de arriba.
+  2. *Se sube el tope SOLO del paso final del lint troceado* (reduce y reagrupado de
+     `local_lint_summary` cuando hay más de un trozo). **Excepción a la regla «los topes no se
+     tocan»:** esa regla vino de B2d-2 para la llamada única, que conserva sus topes (3·w+128 y
+     3·w+96); en el paso final troceado el corte por tope ya existe en `main` (9 de 15), así que
+     subirlo no esconde nada que la llamada única mida. El valor se fija antes de medir, con los
+     `chars_out`/`finish_reason` del campo `steps` de las corridas ya hechas y sin pasar del
+     contexto de `gemma4-26b-a4b`; test y mutante (tope viejo). Luego otra ronda de lint (ventanas C
+     solo-lint y F) de la rama, y `main` C-lint y F re-medido en esta sesión desde el árbol aparte
+     (lo de `runs/main-s2` es de otra sesión), con el control de ruido como en la tanda anterior y
+     `LOCAL_DELEGATE_FALLBACK_LONG=none`. **Mismo criterio, sin cambiarlo.**
+  3. Si no llega, veredicto, evidencia y propuesta, sin maquillar.
+  4. *(2026-10-18, regla nueva del usuario)* Si una parte no llega tras iterar: para
+     `explain_code`, hasta dos candidatos nuevos con el mismo criterio, luego parámetros/límites;
+     si sigue sin llegar (y para lint, si el tope nuevo tampoco llega), se documenta el límite
+     conocido aquí, en `live.md` y en `waves/B2e.md`, se adopta la mejor versión medida que no
+     rompa nada, sin maquillar el veredicto, y se deja una nota para el backlog del vault.
+- **`explain_code`, primera tanda (2026-10-18, `af879da`): NO llega.** E1 nombra `doctor` y
+  `benchmark` en 0 de 3 (`main`: 0 de 3); media de nombres registrados de E1 y E2 0,81 (`main`
+  0,56); E3 0,044 (`main` 0,077, con prompts idénticos: E3 no tiene registros). El reduce no se
+  corta en E1 (`steps`: todos `stop`): el inventario llega y el modelo omite nombres.
+- **Fijado antes de la segunda tanda (2026-10-18):**
+  - *Candidato 1 de `explain_code`:* el respaldo «sin mencionar» de la decisión 3 aplicado a
+    `explain_code`: el programa añade una línea con los nombres registrados (literales de
+    `add_parser` y módulos que registran lo suyo) que la explicación no nombra; sin registros, nada
+    (E3 no cambia). Pasa la cobertura por construcción, como en lint, y así se informa.
+  - *Tope del paso final del lint troceado:* `_lint_final_max_tokens(w) = 3·(3·w+96)` = 2 088
+    tokens para 200 palabras (antes 696), solo en reduce y reagrupado. Por qué: en las 18 llamadas
+    L1–L3 de la rama el paso final acabó en `length` a 2 023–2 850 caracteres (~4 por token); el
+    formato pide una entrada por fichero y esos logs nombran 40–109 ficheros (~60–70 caracteres por
+    entrada → ~1 800–2 050 tokens para el más largo). Contexto: el prompt del reduce cabe en
+    `_map_budget` (38 400 caracteres para `long`), y prompt más salida quedan bajo los 38 400 tokens
+    de `gemma4-26b-a4b`. **Aviso previo:** «0 cortadas» cuenta cualquier paso cortado, y en L1–L3
+    también se cortan 2–5 de los `map` (mismo campo `steps`), cuyo tope no se toca: es esperable que
+    L1–L3 sigan contando como cortadas aunque el paso final ya no lo esté. Se informa de los dos
+    recuentos (paso final y cualquier paso) con el criterio sin cambiar.
 - **Cierre del lote:** suite completa en `es` y en `en`, `ruff`, corpus y afinidad (cambian los
   prompts del reduce de lint y de `explain_code`: frontera en `PROMPT_BOUNDARIES` con su motivo),
   CHANGELOG, y registro en `waves/B2e.md` con las llamadas `local_*`.

@@ -24,7 +24,7 @@ MUTANTS = [
         SERVER,
         [
             (
-                "        registered = _format_registered(_registered_names(content), inventory_cap)\r\n",
+                "        registered = _format_registered(registrations, inventory_cap)\r\n",
                 '        registered = ""\r\n',
             )
         ],
@@ -96,10 +96,47 @@ MUTANTS = [
     (
         "9 lint fallback: no 'not mentioned' line (2026-10-17)",
         SERVER,
-        [("            postprocess=_add_not_mentioned,\r\n", "")],
+        [
+            (
+                (
+                    "            final_max_tokens_for=_lint_final_max_tokens,\r\n"
+                    "            postprocess=_add_not_mentioned,\r\n"
+                ),
+                "            final_max_tokens_for=_lint_final_max_tokens,\r\n",
+            )
+        ],
         [
             T + "test_the_chunked_lint_answer_lists_what_it_does_not_mention[es-Sin mencionar]",
             T + "test_the_chunked_lint_answer_lists_what_it_does_not_mention[en-Not mentioned]",
+        ],
+    ),
+    (
+        "10 lint final cap: the old cap (2026-10-18)",
+        SERVER,
+        [("            final_max_tokens_for=_lint_final_max_tokens,\r\n", "")],
+        [
+            T + "test_only_the_final_steps_of_the_chunked_lint_get_the_larger_cap",
+        ],
+    ),
+    (
+        "11 explain fallback: no 'not mentioned' line (2026-10-18)",
+        SERVER,
+        [
+            (
+                (
+                    "            pieces=_code_pieces(content, budget),\r\n"
+                    "            postprocess=_add_not_mentioned,\r\n"
+                ),
+                "            pieces=_code_pieces(content, budget),\r\n",
+            )
+        ],
+        [
+            T
+            + "test_the_chunked_explanation_lists_the_registered_names_it_omits"
+            + "[es-Sin mencionar (los registra el fichero]",
+            T
+            + "test_the_chunked_explanation_lists_the_registered_names_it_omits"
+            + "[en-Not mentioned (registered by]",
         ],
     ),
 ]

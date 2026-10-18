@@ -116,6 +116,47 @@ def test_a_file_without_registrations_keeps_the_inventory_of_today_byte_for_byte
     assert captured[-1]["user"] == f"{names}\n\n{TODAY_REDUCE}{joined}"
 
 
+@pytest.mark.parametrize(
+    ("product", "label"),
+    [("es", "Sin mencionar (los registra el fichero"), ("en", "Not mentioned (registered by")],
+)
+def test_the_chunked_explanation_lists_the_registered_names_it_omits(
+    monkeypatch, captured, product, label
+):
+    """B2e, 2026-10-18. Mutant "no fallback" (no `postprocess` in `local_explain_code`): the line
+    is missing and this assert fails, not the guard that it really chunked. The fake model
+    answers "- nota": it names nothing."""
+    monkeypatch.setenv("LOCAL_DELEGATE_LANG", product)
+    i18n.reset()
+    out = server.local_explain_code(code=_cli_like(14, 220))
+    assert len(captured) > 2  # guard: it really chunked
+    (line,) = [ln for ln in out.splitlines() if ln.startswith(label)]
+    assert all(f"cmd-zz{i}" in line for i in range(14))
+    assert line.endswith(", other")  # the module that registers its own
+
+
+def test_a_registered_name_the_explanation_gives_is_not_listed_again(monkeypatch, captured):
+    def run_chat(model, system, user, max_tokens, temperature, **_):
+        captured.append({"system": system, "user": user, "max_tokens": max_tokens})
+        text = "build_parser registra cmd-zz0 y lo de other."
+        result = server.ChatResult(text=text, ok=True, finish_reason="stop")
+        return result, 0, None, [server.Attempt(model, True, None, None, 0)]
+
+    monkeypatch.setattr(server, "_run_chat", run_chat)
+    out = server.local_explain_code(code=_cli_like(14, 220))
+    (line,) = [ln for ln in out.splitlines() if ln.startswith("Sin mencionar")]
+    assert "cmd-zz0," not in line and "other" not in line
+    assert "cmd-zz1," in line and "cmd-zz10" in line  # cmd-zz0 does not hide cmd-zz10
+
+
+def test_a_chunked_explanation_without_registrations_gets_no_line(captured):
+    """Control: no `add_parser` in the file, so nothing is added to the answer."""
+    code = _cli_like(0, 220).replace("    other.add_parser(sub)\n", "    return sub\n")
+    out = server.local_explain_code(code=code)
+    assert len(captured) > 2  # guard: it really chunked
+    assert "Sin mencionar" not in out
+
+
 def test_registered_names_come_from_ast_with_their_function():
     code = (
         "import argparse\n\n"
@@ -252,6 +293,39 @@ def test_the_single_lint_answer_gets_no_fallback_line(captured):
     """Control: a log that does not chunk has no inventory and no line."""
     out = server.local_lint_summary(text=_ruff_log(2, 3))
     assert "Sin mencionar" not in out
+
+
+def test_only_the_final_steps_of_the_chunked_lint_get_the_larger_cap(
+    monkeypatch, captured, tmp_path
+):
+    """B2e, 2026-10-18. Mutant "the old cap" (no `final_max_tokens_for`): the reduce and regroup
+    asserts fail, not the guards that it chunked and regrouped."""
+
+    def run_chat(model, system, user, max_tokens, temperature, **_):
+        # Notes long enough that the partials do not fit in one reduce: there is a regroup.
+        captured.append({"system": system, "user": user, "max_tokens": max_tokens})
+        result = server.ChatResult(text="- nota " + "x" * 120, ok=True, finish_reason="stop")
+        return result, 0, None, [server.Attempt(model, True, None, None, 0)]
+
+    monkeypatch.setattr(server, "_run_chat", run_chat)
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "mechanical", 1200)
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 1200)
+    server.local_lint_summary(text=_ruff_log(40, 6))
+    (row,) = _rows(tmp_path, "local_lint_summary")
+    kinds = [s["kind"] for s in row["steps"]]
+    assert "regroup" in kinds and kinds[-1] == "reduce"  # guard: it chunked and regrouped
+    assert len(captured) == len(kinds)
+    caps = {kind: {c["max_tokens"] for c, k in zip(captured, kinds) if k == kind} for kind in kinds}
+    assert caps["map"] == {server._lint_chunk_max_tokens(200)} == {696}
+    assert caps["reduce"] == {server._lint_final_max_tokens(200)} == {2088}
+    assert caps["regroup"] == {2088}
+
+
+def test_the_single_lint_call_keeps_its_cap(captured):
+    """Control: the single call is not touched by the final cap of the chunked lint."""
+    server.local_lint_summary(text=_ruff_log(2, 3))
+    (call,) = captured
+    assert call["max_tokens"] == server._lint_max_tokens(200) == 728
 
 
 # --- 3. The steps of a chunked operation in the usage log ---------------------------------------

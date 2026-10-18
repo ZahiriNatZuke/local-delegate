@@ -3201,6 +3201,7 @@ def _chat_map_reduce(
     reduce_shortcut: Callable[[list[str]], str | None] | None = None,
     report: dict | None = None,
     max_tokens_for: Callable[[int], int] | None = None,
+    final_max_tokens_for: Callable[[int], int] | None = None,
 ) -> str:
     """Resume un documento que no cabe en el modelo: resume por trozos y luego los resúmenes.
 
@@ -3229,7 +3230,9 @@ def _chat_map_reduce(
     ahorro, ni el recibo—: esos datos quedan en `report` para que quien parsea los recoloque.
 
     `max_tokens_for(words)` replaces the shared `2·w+64` cap of every step (map, regroup and
-    reduce) for a tool that needs its own (lint, B2d-2).
+    reduce) for a tool that needs its own (lint, B2d-2). `final_max_tokens_for(words)`, when
+    given, replaces it only in the steps that combine partials (reduce and regroup): the map keeps
+    `max_tokens_for` (lint, B2e).
     """
     budget = _map_budget(max_chars)
     if pieces is None:
@@ -3294,6 +3297,11 @@ def _chat_map_reduce(
         if max_tokens_for is not None:
             return max_tokens_for(words)
         return int(words * 2) + 64
+
+    def _final_tokens(words: int) -> int:
+        if final_max_tokens_for is not None:
+            return final_max_tokens_for(words)
+        return _tokens(words)
 
     # Cada parcial se deja algo más largo que el resumen final: el reduce necesita material
     # con el que trabajar, y un parcial demasiado corto ya habría perdido lo que importa.
@@ -3405,7 +3413,7 @@ def _chat_map_reduce(
                     # llevar delante material fijo (el inventario del diff, p. ej.), y medir sin
                     # él desbordaría el contexto justo en la llamada que produce el resultado.
                     if len(prompt) <= budget:
-                        out = _one(reduce_system, prompt, _tokens(max_words), "reduce")
+                        out = _one(reduce_system, prompt, _final_tokens(max_words), "reduce")
                         text = out or ""
                         break
                     # Ni los parciales caben: se reducen por grupos y se repite.
@@ -3414,7 +3422,7 @@ def _chat_map_reduce(
                         out = _one(
                             regroup_system,
                             build_user(group.strip()),
-                            _tokens(partial_words),
+                            _final_tokens(partial_words),
                             "regroup",
                         )
                         if out is None:
@@ -3685,8 +3693,24 @@ def _lint_max_tokens(words: int) -> int:
 
 
 def _lint_chunk_max_tokens(words: int) -> int:
-    """The cap of each step of the chunked `local_lint_summary` (map, regroup and reduce)."""
+    """The cap of each map step of the chunked `local_lint_summary`."""
     return int(words * LINT_TOKENS_PER_WORD) + LINT_CHUNK_TOKENS_BASE
+
+
+# B2e (user decision of 2026-10-18): the cap of the FINAL steps of the chunked lint (reduce and
+# regroup) is three times the map cap: 2 088 tokens for the default 200 words, against 696
+# before. With 696 the final step of the logs of 6 and 8 chunks (L1-L3) ended in `length` in the
+# 18 calls of the branch, at 2 023-2 850 characters (~4 per token): the lint format asks for one
+# entry per file, and those logs name 40-109 files, so ~60-70 characters per entry needs
+# ~1 800-2 050 tokens for the longest. The single call keeps its caps (`_lint_max_tokens`), and
+# the map keeps `_lint_chunk_max_tokens`. With the reduce prompt within `_map_budget` (38 400
+# characters for `long`), prompt plus output stays under the 38 400 tokens of `gemma4-26b-a4b`.
+LINT_FINAL_TOKENS_FACTOR = 3
+
+
+def _lint_final_max_tokens(words: int) -> int:
+    """The cap of the steps that combine partials (reduce and regroup) of the chunked lint."""
+    return LINT_FINAL_TOKENS_FACTOR * _lint_chunk_max_tokens(words)
 
 
 def _lint_count_clause() -> str:
@@ -4559,6 +4583,7 @@ def local_lint_summary(
             reduce_system=system,
             build_reduce=_build_reduce,
             max_tokens_for=_lint_chunk_max_tokens,
+            final_max_tokens_for=_lint_final_max_tokens,
             postprocess=_add_not_mentioned,
         )
 
@@ -4805,7 +4830,8 @@ def local_explain_code(
         # B2e: lo registrado va primero dentro del mismo tope; sin registros, el inventario de
         # siempre, byte a byte.
         inventory_cap = int(budget * 0.25)
-        registered = _format_registered(_registered_names(content), inventory_cap)
+        registrations = _registered_names(content)
+        registered = _format_registered(registrations, inventory_cap)
         names_cap = inventory_cap - len(registered) - 2 if registered else inventory_cap
         names = _format_names(_TOP_LEVEL_NAME.findall(content), names_cap)
         if registered:
@@ -4836,6 +4862,20 @@ def local_explain_code(
                 f"completo:\n\n{joined}"
             )
 
+        registered_items = [
+            item for _o, found, modules in registrations for item in found + modules
+        ]
+
+        def _add_not_mentioned(answer: str, _truncated: bool) -> str:
+            # B2e, the fallback of decision 3 of 2026-10-17 (the explain round of 2026-10-18 did
+            # not reach): what the file registers and the explanation does not name is added by
+            # the program, in one line, as in the chunked lint. Without registrations, nothing.
+            missing = [n for n in registered_items if not lint_patterns.mentions(n, answer)]
+            if not missing:
+                return answer
+            line = i18n.t("mcp.explain.not_mentioned", items=", ".join(missing))
+            return f"{answer.rstrip()}\n\n{line}"
+
         return _chat_map_reduce(
             config.MODEL_CODE,
             map_system,
@@ -4852,6 +4892,7 @@ def local_explain_code(
             raw_len=raw_len,
             path=path,
             pieces=_code_pieces(content, budget),
+            postprocess=_add_not_mentioned,
         )
 
     return _chat(
