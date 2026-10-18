@@ -3869,6 +3869,38 @@ def _lint_inventory(log: str, max_chars: int) -> str:
     return "\n".join(line for line in (files, codes) if line)
 
 
+def _lint_not_mentioned(answer: str, log: str) -> str:
+    """B2e fallback: what of the inventory the summary does not name, added by the program.
+
+    One line and no figures, so that the reader knows which files and rules of the log were left
+    out. B2e put it in the chunked lint; B2f also in the single call of the `long` role.
+    """
+    missing = lint_patterns.not_mentioned(answer, log)
+    if not missing:
+        return answer
+    line = i18n.t("mcp.lint.not_mentioned", items=", ".join(missing))
+    return f"{answer.rstrip()}\n\n{line}"
+
+
+def _lint_single_user(content: str, log: str, role: str) -> str:
+    """The user prompt of the single `local_lint_summary` call.
+
+    B2f: with the `long` role the inventory of files and rule codes of the log (computed by the
+    program, without counts, as in the chunked reduce of B2e) goes in front of the log. In the live
+    measurement of B2-affinity `gemma4-26b-a4b`, the model of that role, named no rule code in 9 of
+    9 Spanish answers ("Línea demasiado larga" instead of `E501`), and `evidence/B2f/live.md`
+    measured the same in the logs of 8-34 k characters it summarizes in one call. The `mechanical`
+    role keeps the prompt of before, byte for byte: `gemma3-4b` copies the codes.
+    """
+    base = f"Resume la siguiente salida de linter/tests:\n\n{content}"
+    if role != "long":
+        return base
+    inventory = _lint_inventory(log, int(_map_budget(config.max_chars_for_role(role)) * 0.25))
+    if not inventory:
+        return base
+    return f"{inventory}\n\nLa lista de arriba sale del log de abajo. {base}"
+
+
 def _lint_system(max_words: int) -> str:
     """El prompt de sistema de `local_lint_summary`. También entra en la huella (T15). Con la orden
     de idioma de REQ-028 depende del idioma de respuesta; B2-affinity lo midió en `es` y en `en`
@@ -4563,11 +4595,7 @@ def local_lint_summary(
             # B2e, respaldo decidido por el usuario el 2026-10-17 (la primera medición no llegó):
             # lo del inventario que el resumen no nombra lo añade el programa, en una línea y sin
             # cifras, para que el lector sepa qué ficheros y reglas del log quedaron fuera.
-            missing = lint_patterns.not_mentioned(answer, log)
-            if not missing:
-                return answer
-            line = i18n.t("mcp.lint.not_mentioned", items=", ".join(missing))
-            return f"{answer.rstrip()}\n\n{line}"
+            return _lint_not_mentioned(answer, log)
 
         return _chat_map_reduce(
             model,
@@ -4588,7 +4616,9 @@ def local_lint_summary(
             postprocess=_add_not_mentioned,
         )
 
-    user = _build(content)
+    # B2f: con el rol largo, el inventario delante del log y la línea «sin mencionar» detrás, como
+    # en el troceado; el rol mecánico, como antes.
+    user = _lint_single_user(content, log, role)
     result = _chat(
         model,
         system,
@@ -4601,6 +4631,9 @@ def local_lint_summary(
         truncated_in=truncated_in,
         raw_len=raw_len,
         path=path,
+        postprocess=(lambda answer, _t: _lint_not_mentioned(answer, log))
+        if role == "long"
+        else None,
     )
     return _truncation_prefix(content, truncated_in, raw_len) + result
 
