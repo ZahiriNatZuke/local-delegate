@@ -1,0 +1,12 @@
+$ uv run python scripts/detect_spanish_names.py --exceptions .sdd/changes/english-names-bilingual-output/rename-exceptions.md --json .sdd/changes/english-names-bilingual-output/evidence/close/detector.json
+nombres en español (únicos por categoría y fichero): 849
+  file_name: 1
+  identifier: 10
+  js_identifier: 2
+  js_string: 5
+  json_key: 8
+  json_value: 120
+  string_key: 371
+  string_value: 332
+fuera de la lista de excepciones: 0
+palabras sin clasificar: 111

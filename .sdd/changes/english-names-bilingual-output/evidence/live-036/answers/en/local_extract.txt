@@ -1,0 +1,11 @@
+{
+  "name": "local-delegate-mcp",
+  "version": "0.36.0",
+  "requires-python": ">=3.11",
+  "_local_delegate": {
+    "read_server_side": {
+      "chars": 7929,
+      "approx_tokens": 4217
+    }
+  }
+}

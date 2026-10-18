@@ -1,0 +1,63 @@
+{
+  "es-ES-light": {
+    "lang": "es",
+    "selector": "es",
+    "processes_heading": "Procesos del backend",
+    "processes": [
+      "PROCESO PID RAM VRAM",
+      "pythonw.exeDAEMON MCP 42728 152 MiB —",
+      "llama-swap.exe 1688 207 MiB —"
+    ],
+    "system_title": "Sistema",
+    "kpi_labels": []
+  },
+  "es-ES-switch-to-en": {
+    "after_select": {
+      "lang": "en",
+      "selector": "en",
+      "processes_heading": "Backend processes"
+    },
+    "after_reload": {
+      "lang": "en",
+      "selector": "en",
+      "processes_heading": "Backend processes"
+    },
+    "stored": "en"
+  },
+  "es-ES-dark": {
+    "lang": "es",
+    "selector": "es",
+    "processes_heading": "Procesos del backend",
+    "processes": [
+      "PROCESO PID RAM VRAM",
+      "pythonw.exeDAEMON MCP 42728 155 MiB —",
+      "llama-swap.exe 1688 209 MiB —"
+    ],
+    "system_title": "Sistema",
+    "kpi_labels": []
+  },
+  "en-US-light": {
+    "lang": "en",
+    "selector": "en",
+    "processes_heading": "Backend processes",
+    "processes": [
+      "PROCESS PID RAM VRAM",
+      "pythonw.exeMCP DAEMON 42728 155 MiB —",
+      "llama-swap.exe 1688 209 MiB —"
+    ],
+    "system_title": "System",
+    "kpi_labels": []
+  },
+  "en-US-dark": {
+    "lang": "en",
+    "selector": "en",
+    "processes_heading": "Backend processes",
+    "processes": [
+      "PROCESS PID RAM VRAM",
+      "pythonw.exeMCP DAEMON 42728 156 MiB —",
+      "llama-swap.exe 1688 206 MiB —"
+    ],
+    "system_title": "System",
+    "kpi_labels": []
+  }
+}

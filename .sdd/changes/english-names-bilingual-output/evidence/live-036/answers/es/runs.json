@@ -1,0 +1,79 @@
+{
+  "local_status": {
+    "at": "2026-10-18T13:46:41Z",
+    "seconds": 0.5,
+    "chars": 1837,
+    "error": false,
+    "free_ram_gb_before": 18.5
+  },
+  "local_summarize": {
+    "at": "2026-10-18T13:47:07Z",
+    "seconds": 25.6,
+    "chars": 1640,
+    "error": false,
+    "free_ram_gb_before": 18.4
+  },
+  "local_classify": {
+    "at": "2026-10-18T13:47:12Z",
+    "seconds": 5.0,
+    "chars": 3,
+    "error": false,
+    "free_ram_gb_before": 4.9
+  },
+  "local_extract": {
+    "at": "2026-10-18T13:47:22Z",
+    "seconds": 10.4,
+    "chars": 197,
+    "error": false,
+    "free_ram_gb_before": 15.6
+  },
+  "local_boilerplate": {
+    "at": "2026-10-18T13:47:39Z",
+    "seconds": 16.4,
+    "chars": 212,
+    "error": false,
+    "free_ram_gb_before": 4.8
+  },
+  "local_delegate": {
+    "at": "2026-10-18T13:50:12Z",
+    "seconds": 3.5,
+    "chars": 50,
+    "error": false,
+    "free_ram_gb_before": 18.2
+  },
+  "local_lint_summary": {
+    "at": "2026-10-18T13:50:39Z",
+    "seconds": 27.1,
+    "chars": 1440,
+    "error": false,
+    "free_ram_gb_before": 15.4
+  },
+  "local_commit_msg": {
+    "at": "2026-10-18T13:50:59Z",
+    "seconds": 19.7,
+    "chars": 498,
+    "error": false,
+    "free_ram_gb_before": 4.6
+  },
+  "local_translate": {
+    "at": "2026-10-18T13:53:33Z",
+    "seconds": 3.6,
+    "chars": 108,
+    "error": false,
+    "free_ram_gb_before": 18.3
+  },
+  "local_explain_code": {
+    "at": "2026-10-18T13:54:28Z",
+    "seconds": 55.8,
+    "chars": 1941,
+    "error": false,
+    "free_ram_gb_before": 15.5
+  },
+  "local_describe_image": {
+    "at": "2026-10-18T13:56:44Z",
+    "seconds": 15.6,
+    "chars": 923,
+    "error": false,
+    "free_ram_gb_before": 5.4
+  }
+}

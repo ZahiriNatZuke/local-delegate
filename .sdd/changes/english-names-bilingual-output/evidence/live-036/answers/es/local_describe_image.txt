@@ -1,0 +1,5 @@
+Las etiquetas de la interfaz están en español. La imagen muestra un panel de control de un sistema llamado "local delegate", que parece ser una herramienta para gestionar modelos de lenguaje locales y optimizar el uso de tokens.
+
+Las figuras principales incluyen métricas de rendimiento como "Contexto conservado" (133.967 tok), "Delegaciones" (6), "Generado" (6.415 tok), "Coste local" (102.314 tok), "Latencia" (59,3 s) y "Errores" (0,0 %). También presenta gráficos de barras y circulares que detallan el ahorro de contexto en el tiempo, el ahorro por herramienta, las llamadas por modelo y el origen del input. En la parte inferior, se observa una tabla de "Actividad reciente" con registros de herramientas específicas como `local_lint_summary` y `local_commit_msg`, junto con información sobre el uso de memoria del sistema y la carga de la GPU.
+
+(leído server-side: 556636 bytes imagen que no entraron a tu contexto)

@@ -1,0 +1,47 @@
+local-delegate doctor — diagnóstico del andamiaje, los servicios y el backend local
+
+LLAMASWAP_EXE:    D:\Projects\llms\llama-swap-v255\llama-swap.exe
+LLAMASWAP_CONFIG: D:\Projects\llms\llama-swap\config.yaml
+Backend BASE_URL: http://127.0.0.1:9292/v1 — arriba
+HOME:             ~
+Idioma:           es (preferencia; ~\AppData\Local\local-delegate\language.json)
+                  para volver a seguir al sistema, borra `~\AppData\Local\local-delegate\language.json` y ejecuta `local-delegate install`
+Respuesta:        es (preferencia)
+
+Estados: [ OK ] a punto · [WARN] revisar · [FALT] falta · [ -- ] no se pudo comprobar
+
+Entorno (el CLI y los clientes):
+  [ OK ] CLI local-delegate: ~\.local\bin\local-delegate.EXE (versión 0.36.0)
+  [ OK ] versión publicada: instalada 0.36.0, por delante de la publicada 0.35.0
+  [ OK ] clientes: detectados: Claude Code, Codex, opencode
+  [ OK ] clientes MCP observados: claude-ai 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.1.37) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.13.5) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.8.2) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.8.5) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.8.6) 0.1.0 [2025-11-25] sin elicitation; claude-code 2.1.302 [2026-07-28] elicitation; codex-mcp-client 0.160.0 [2025-06-18] elicitation; local-agent-mode-local-delegate 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.1.37) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.13.5) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.8.2) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.8.5) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.8.6) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.8.7) 1.0.0 [2025-11-25] sin elicitation; mcp 0.1.0 [2025-11-25] sin elicitation; mcp-remote-fallback-test 0.0.0 [2025-11-25] sin elicitation
+  [ OK ] cadenas de respaldo: cadenas válidas; sin residente
+  [WARN] nombres obsoletos: leído por los hooks (últimos 7 días): LD_HOOK_READ_BLOQUEAR está obsoleto: usa LD_HOOK_READ_BLOCK (se retira en la 0.38.0)
+         arréglalo con: renombra LD_HOOK_READ_BLOQUEAR a LD_HOOK_READ_BLOCK
+  [ OK ] coste y relleno: el último cotejo (2026-10-13T12:39:20+00:00) cuadra: 159 fila(s) juzgadas con la tabla de precios del 2026-10-06
+  [ OK ] ventanas de prueba: 158 ventanas, 1 abierta(s)
+
+Andamiaje (hooks, skill, memoria y entradas MCP):
+  [ OK ] hooks copiados: 5 script(s) en ~\.claude\hooks\local-delegate
+  [ OK ] hooks huérfanos: ninguno suelto en ~\.claude\hooks
+  [ OK ] hooks registrados: 5 registrado(s): PreToolUse/mcp__local-delegate__.*, PreToolUse/Read, PreToolUse/mcp__.+__(read_[a-z_]*|get_file_contents), PreToolUse/Bash|PowerShell, UserPromptSubmit
+  [ OK ] skill local-delegation: Claude Code: instalada en ~\.claude\skills\local-delegation · opencode: instalada en ~\.config\opencode\skill\local-delegation
+  [ OK ] memoria global: Claude Code: bloque al día en ~\.claude\CLAUDE.md · Codex: bloque al día en ~\.codex\AGENTS.md · opencode: bloque al día en ~\.config\opencode\AGENTS.md
+  [ OK ] MCP en Claude Code: registrado en ~\.claude.json (http http://127.0.0.1:9393/mcp)
+  [ OK ] MCP en Codex: bloque gestionado en ~\.codex\config.toml (http)
+  [ OK ] MCP en opencode: registrado en ~\.config\opencode\opencode.jsonc (remote http://127.0.0.1:9393/mcp)
+
+Servicios:
+  [ OK ] daemon: local-delegate 0.36.0 · pid 42728 · http://127.0.0.1:9393/mcp
+  [ OK ] backend: http://127.0.0.1:9292/v1/models responde
+  [ OK ] credencial del backend: el backend exige credencial y las entradas MCP van por el daemon (http)
+  [ OK ] token del puerto del daemon: el puerto del daemon exige token y las entradas MCP lo referencian
+  [ OK ] token de Claude Desktop: el daemon acepta el token de Claude Desktop (escrito literal en su configuración)
+
+Versiones (instalada vs probada; usa --online para comparar con GitHub):
+  [ OK ] llama-swap: v255 (= probada)
+  [ OK ] llama-server: b10909 (= probada)
+  [ OK ] residencia de llama-swap: sin residente (recomendado) (la config de este shell)
+  [ OK ] turno del daemon: turno activo según el daemon (choques: swap [swap, no exclusivo]: gemma3-4b, gemma4-26b-a4b, qwen36-35b-a3b, qwen35-2b, gemma4-12b)
+
+Resultado: 1 aviso(s) — revisa [FALT] y [WARN] arriba.

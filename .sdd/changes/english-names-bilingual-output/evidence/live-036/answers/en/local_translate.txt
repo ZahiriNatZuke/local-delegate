@@ -1,0 +1,1 @@
+El daemon guarda cada delegación en un log mensual. Desde ahí el panel calcula cuánto contexto se ahorró.

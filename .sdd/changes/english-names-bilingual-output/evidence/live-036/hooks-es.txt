@@ -1,0 +1,11 @@
+language.json: {"lang": "es", "source": "variable"}
+LD_HOOK_READ_BLOCK: 1
+Read             sh         rc=0 ascii=True decision=deny
+    Este archivo pesa 51 KB y es prosa. Pasalo por una tool local con `path="~\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-
+Read             powershell rc=0 ascii=True decision=deny
+    Este archivo pesa 51 KB y es prosa. Pasalo por una tool local con `path="~\AppData\Local\Temp\claude\D--Projects-local-delegate\9d9ecade-e04b-4a3b-
+UserPromptSubmit sh         rc=0 ascii=True decision=-
+    Oportunidad mecanica detectada (summarize). Antes de leer contenido grande, evalua usar la tool local_* especifica con path. Conserva en Claude cualquier parte 
+UserPromptSubmit powershell rc=0 ascii=True decision=-
+    Oportunidad mecanica detectada (summarize). Antes de leer contenido grande, evalua usar la tool local_* especifica con path. Conserva en Claude cualquier parte 
+RESULT: OK

@@ -1,0 +1,9 @@
+feat(server): implement B2f single-call linting with long role
+
+- Add LINT_LONG_SINGLE_TOKENS_FACTOR to double token cap for 'long' role
+- Introduce _lint_single_max_tokens to apply role-specific token limits
+- Create _lint_single_user to prepend inventory for 'long' role prompts
+- Add _lint_not_mentioned helper to append missing rule codes to output
+- Refactor local_lint_summary to use new single-call logic and postprocessing
+
+(read server-side: 4834 chars ≈ 2177 Claude tokens that did not enter your context)

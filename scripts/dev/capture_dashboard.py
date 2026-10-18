@@ -61,6 +61,8 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).parents[2]
+#: `locale` del navegador de la captura: el del README que la enseña (en español).
+README_LOCALE = "es-ES"
 
 ABOUT_MANIFEST = [
     "Manifiesto de la captura del README. Es la FUENTE DE VERDAD de con qué versión se generó.",
@@ -90,8 +92,12 @@ def _dashboard_version(url: str) -> str:
     return str(version)
 
 
-def _write_manifest(png: Path, version: str) -> Path:
-    """Deja junto al PNG el manifiesto que lo describe. Devuelve su ruta."""
+def _write_manifest(png: Path, version: str, lang: str) -> Path:
+    """Deja junto al PNG el manifiesto que lo describe. Devuelve su ruta.
+
+    `lang` es el `<html lang>` de la página capturada: desde la 0.36.0 el panel sigue al idioma
+    del navegador, y el README que la enseña está en español (`README_LANG`).
+    """
     blob = png.read_bytes()
     dest = png.with_suffix(".json")
     dest.write_text(
@@ -101,6 +107,7 @@ def _write_manifest(png: Path, version: str) -> Path:
                 "_about": ABOUT_MANIFEST,
                 "file": png.name,
                 "version": version,
+                "lang": lang,
                 "sha256": hashlib.sha256(blob).hexdigest(),
                 "bytes": len(blob),
             },
@@ -477,8 +484,12 @@ async def run(url: str, out: Path, width: int, timezone: str) -> int:
         try:
             # La zona se fija: si no, el pie de la captura acaba anunciando la zona de quien
             # la generó y la imagen deja de ser reproducible.
+            # Y el idioma: desde la 0.36.0 el panel sigue al del navegador, y Chromium sin `locale`
+            # dice `en-US`; el README que enseña la captura está en español.
             context = await browser.new_context(
-                viewport={"width": width, "height": 1400}, timezone_id=timezone
+                viewport={"width": width, "height": 1400},
+                timezone_id=timezone,
+                locale=README_LOCALE,
             )
             page = await context.new_page()
             await page.goto(url, wait_until="networkidle")
@@ -491,7 +502,8 @@ async def run(url: str, out: Path, width: int, timezone: str) -> int:
             out.parent.mkdir(parents=True, exist_ok=True)
             await page.screenshot(path=str(out), full_page=True)
             print(f"{out} — {total} eventos, indicador «{info['live']}», {info['canvas']} gráficos")
-            manifest = _write_manifest(out, version)
+            lang = await page.evaluate("() => document.documentElement.lang")
+            manifest = _write_manifest(out, version, lang)
             print(f"{manifest} — versión {version}, la que sirvió el dashboard capturado")
         finally:
             await browser.close()
