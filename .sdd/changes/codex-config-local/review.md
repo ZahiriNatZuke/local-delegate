@@ -9,7 +9,7 @@
 | Requisito | Implementado | Verificado | Notas |
 | --- | --- | --- | --- |
 | REQ-001 `codex mcp list` no aborta dentro del repo | sí | sí | exit 0; antes fallaba con `url is not supported for stdio` |
-| REQ-002 los cinco MCP del repo + `local-delegate` | sí | sí | `MCP_DOCKER`, `codegraph`, `git`, `socket-mcp`, `jetbrains`, y `local-delegate` en `http://127.0.0.1:9393/mcp` |
+| REQ-002 los cuatro MCP del repo + `local-delegate` | sí | sí | `MCP_DOCKER`, `git`, `socket-mcp`, `jetbrains`, y `local-delegate` en `http://127.0.0.1:9393/mcp` |
 | REQ-003 `github` una sola vez, HTTP, global | sí | sí | `https://api.githubcopilot.com/mcp/`, `Auth: Bearer token` |
 | REQ-004 `rtk` resoluble en el sandbox | sí | sí | `Get-Command rtk` → `.local\bin\rtk.cmd`; `rtk 0.34.0`, exit 0 |
 | REQ-005 sin duplicar el binario | sí | sí | shim de 1 línea a `%USERPROFILE%\rtk.exe`; ni copia ni hardlink |

@@ -43,8 +43,8 @@ se resuelve por nombre en el entorno donde Codex ejecuta comandos.
 
 - **Ni `auth.json` ni ningún token se leen, copian ni se citan.** El bearer de `github` vive en una
   variable de entorno referenciada por nombre; ese nombre no es un secreto y su valor no se toca.
-- Quitar la entrada del repo deja `github` **solo** por HTTP. Hay que comprobar que los otros cinco
-  MCP del repo (MCP_DOCKER, codegraph, git, socket-mcp, jetbrains) siguen resolviéndose.
+- Quitar la entrada del repo deja `github` **solo** por HTTP. Hay que comprobar que los otros cuatro
+  MCP del repo (MCP_DOCKER, git, socket-mcp, jetbrains) siguen resolviéndose.
 - La causa real del hallazgo 2 **no es la anotada en el backlog** — ver `spec.md`. Las dos vías que
   se traían apuntadas (PATH del sistema, `shell_environment_policy`) no lo arreglarían.
 

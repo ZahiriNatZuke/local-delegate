@@ -15,7 +15,7 @@ en el mismo entorno restringido que usa el agente **sin gastar cuota del modelo*
 | Req | Comprobación | Antes | Después |
 |---|---|---|---|
 | REQ-001 | `codex mcp list` con cwd en el repo | `Error: failed to load configuration / url is not supported for stdio in mcp_servers.github` | **exit 0**, lista completa |
-| REQ-002 | Los cinco MCP del repo en la listada | — | `MCP_DOCKER`, `codegraph`, `git`, `socket-mcp`, `jetbrains` ✓ y `local-delegate` (`http://127.0.0.1:9393/mcp`) ✓ |
+| REQ-002 | Los cuatro MCP del repo en la listada | — | `MCP_DOCKER`, `git`, `socket-mcp`, `jetbrains` ✓ y `local-delegate` (`http://127.0.0.1:9393/mcp`) ✓ |
 | REQ-003 | `github` una sola vez | duplicado con transportes incompatibles | una entrada, `https://api.githubcopilot.com/mcp/`, `Auth: Bearer token`, bearer por `CODEX_GITHUB_PERSONAL_ACCESS_TOKEN` |
 | REQ-004 | `Get-Command rtk` **dentro** del sandbox | *«The term 'rtk' is not recognized»* | `C:\Users\Yohan\.local\bin\rtk.cmd`, `rtk 0.34.0`, exit 0 |
 | REQ-005 | Un solo binario | — | el shim invoca `%USERPROFILE%\rtk.exe`; no hay copia ni hardlink |

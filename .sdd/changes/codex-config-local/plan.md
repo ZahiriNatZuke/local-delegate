@@ -34,7 +34,7 @@ lectura a todo el perfil del usuario.
 2. **Quitar el bloque `[mcp_servers.github]` del config del repo**
    - Ficheros: `D:\Projects\local-delegate\.codex\config.toml` (líneas 25-31, 7 líneas)
    - Requisitos: REQ-001, REQ-002, REQ-003
-   - Verificación: `codex mcp list` con cwd en el repo sale con código 0 y lista los cinco MCP del
+   - Verificación: `codex mcp list` con cwd en el repo sale con código 0 y lista los cuatro MCP del
      repo + `local-delegate` + `github`; `codex mcp get github` muestra transporte HTTP
    - Rollback: restaurar el `.bak` de la tarea 1
 
