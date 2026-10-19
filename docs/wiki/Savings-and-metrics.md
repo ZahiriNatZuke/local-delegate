@@ -519,6 +519,14 @@ los bloques de [coste equivalente](#coste-equivalente-a-precio-de-api), [cuota](
 JSONL; no interfiere con el MCP ni el backend (salvo el proxy de estado de `/api/backend`,
 una lectura sin efectos).
 
+Las seis tarjetas de KPIs tienen **tamaño fijo**: no cambian de ancho ni de alto con las cifras. Sus
+bordes casan con los dos paneles de arriba (las tres primeras bajo el de modelos y rendimiento, las
+tres últimas bajo el de GPU y procesos); entre 880 y 1320 px van tres bajo cada panel y, más
+estrecho, se apilan. Una cifra que no cabe se muestra con fuente más pequeña o en forma corta
+(«45,7 mil M tok») y el valor exacto queda al pasar el ratón; lo mismo con las cifras de coste,
+cuota e imágenes. Si un título no cabe con la fuente de reserva del sistema, los seis se aprietan
+por igual antes de recortarse con «…» (desde la 0.36.1).
+
 ### Idioma
 
 El panel sale en **español o en inglés**, por visitante: el selector `ES`/`EN` de la cabecera

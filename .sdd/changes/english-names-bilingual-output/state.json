@@ -3,9 +3,9 @@
   "slug": "english-names-bilingual-output",
   "title": "Renombrado a inglés de lo publicado y salidas en español e inglés",
   "mode": "standard",
-  "status": "implementing",
+  "status": "closed",
   "createdAt": "2026-10-12T13:28:15.262Z",
-  "updatedAt": "2026-10-18T14:30:00.000Z",
+  "updatedAt": "2026-10-19T15:20:30.000Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,22 +20,22 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-19T15:20:00.000Z",
+      "evidence": "evidence/gates/quality.md: CI 19/19 en #330 y en cada PR hasta la 0.36.1 (#331-#339, #341, #342; incluidos CodeQL, GitGuardian y Socket); suite completa 3196 passed / 2 skipped en worktree limpio, por defecto y con LANG=es_ES.UTF-8; ruff limpio; 0 alertas de code scanning y de Dependabot. Aprobado por delegacion expresa del usuario (cierre del frente B y release 0.36.1 sin confirmacion).",
+      "actor": "orchestrator"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-19T15:20:10.000Z",
+      "evidence": "evidence/gates/conformance.md: 47 REQ, 41 cumplidos y 6 con limite anotado, 0 no cumplidos. Los tres huecos de la revision quedaron resueltos antes de aprobar: 0 palabras sin clasificar (PR #332, guardian ampliado); muestra en vivo en fr y 5+ documentos por tool e idioma (PR #339, juez de #338; evidence/req028-samples/live.md). REQ-028 cumple en es/en/fr. Fuera de alcance: ola R (0.38.0), backlog 1.8 parcial y 1.11. Aprobado por delegacion expresa del usuario.",
+      "actor": "orchestrator"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-19T15:20:20.000Z",
+      "evidence": "Memoria en el vault: projects/local-delegate/, nota de la jornada del 2026-10-19 (cierre del SDD y release 0.36.1), con puntero en MEMORY.md del proyecto. handoff.md rellenado. Aprobado por delegacion expresa del usuario.",
+      "actor": "orchestrator"
     }
   },
   "history": [
@@ -101,6 +101,58 @@
       "type": "note",
       "at": "2026-10-18T14:30:00.000Z",
       "reason": "Rama release/0.36.0 (desde main c61206d): version 0.36.0 con bump_version.py --boundaries; pasada en vivo de la 0.36.0 candidata (plan 4.3) en las ventanas w-20261018T132615Z (en) y w-20261018T134632Z (es), ambas cerradas: 11/11 tools sin error en los dos idiomas, muestra D10 12/12 en el idioma pedido, doctor y local_status con el mismo idioma, origen y ruta (REQ-047), install real en en y luego es, hooks instalados en sh y PowerShell, panel con es-ES y en-US. Detector REQ-016 a 0 al cerrar (23 hallazgos nuevos apartados con motivo, guardian nuevo en la suite); sin pendientes de REQ-045. Arreglo: captura del README en espanol. Evidencia: evidence/live-036/, evidence/close/, verification.md. Gates quality/conformance/memory pendientes del PR de release."
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-10-19T15:19:50.000Z",
+      "reason": "Todo mezclado en main (v0.36.0 y PR #331-#342); evidencia de verificacion en evidence/gates/"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-10-19T15:20:00.000Z",
+      "evidence": "evidence/gates/quality.md: CI 19/19 en #330 y en cada PR hasta la 0.36.1 (#331-#339, #341, #342; incluidos CodeQL, GitGuardian y Socket); suite completa 3196 passed / 2 skipped en worktree limpio, por defecto y con LANG=es_ES.UTF-8; ruff limpio; 0 alertas de code scanning y de Dependabot. Aprobado por delegacion expresa del usuario (cierre del frente B y release 0.36.1 sin confirmacion).",
+      "actor": "orchestrator"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-10-19T15:20:05.000Z",
+      "reason": "evidence/gates/conformance.md contra los 47 REQ"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-10-19T15:20:10.000Z",
+      "evidence": "evidence/gates/conformance.md: 47 REQ, 41 cumplidos y 6 con limite anotado, 0 no cumplidos. Los tres huecos de la revision quedaron resueltos antes de aprobar: 0 palabras sin clasificar (PR #332, guardian ampliado); muestra en vivo en fr y 5+ documentos por tool e idioma (PR #339, juez de #338; evidence/req028-samples/live.md). REQ-028 cumple en es/en/fr. Fuera de alcance: ola R (0.38.0), backlog 1.8 parcial y 1.11. Aprobado por delegacion expresa del usuario.",
+      "actor": "orchestrator"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-10-19T15:20:20.000Z",
+      "evidence": "Memoria en el vault: projects/local-delegate/, nota de la jornada del 2026-10-19 (cierre del SDD y release 0.36.1), con puntero en MEMORY.md del proyecto. handoff.md rellenado. Aprobado por delegacion expresa del usuario.",
+      "actor": "orchestrator"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-10-19T15:20:25.000Z",
+      "reason": "Release v0.36.1: CHANGELOG, README y docs/wiki; handoff.md rellenado"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-10-19T15:20:30.000Z",
+      "reason": "cambio cerrado"
     }
   ]
 }
