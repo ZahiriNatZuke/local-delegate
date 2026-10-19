@@ -982,13 +982,206 @@ def test_kpi_cards_keep_their_width_with_a_huge_figure(
     for width in (1440, 1280, 720, 390):
         normal, big = measured[(width, "normales")], measured[(width, "enormes")]
         assert big["rows"] == normal["rows"], (width, normal["rows"], big["rows"])
-        # Fuera de la primera columna, las tarjetas de una fila miden lo mismo entre sí.
+        # Fuera de la primera columna, las tarjetas normales bajo un mismo panel miden lo mismo:
+        # en la fila de seis, las dos de la izquierda (junto al hero) y las tres de la derecha.
         for row in big["rows"]:
-            rest = row[1:]  # la primera columna puede ser la ancha (1,4fr)
-            assert max(rest, default=0) - min(rest, default=0) <= 1, (width, big["rows"])
+            groups = [row[1:3], row[3:]] if len(row) == 6 else [row[1:]]
+            for rest in groups:
+                assert max(rest, default=0) - min(rest, default=0) <= 1, (width, big["rows"])
         assert not big["overflow"], (width, big["overflow"])
         assert not big["page"], (width, "la página se sale por la derecha")
         assert big["titles"][0] == exact, (width, big["titles"])
+
+
+# Los dos juegos de cifras de las capturas del usuario (0.36.0): con ellos las tarjetas cambiaban
+# de ancho de una a otra y no casaban con los dos paneles de arriba.
+_USER_FIGURES = {
+    "grandes": {
+        "tokens_context_net": 2_742_953,
+        "tokens_context_saved": 2_992_338,
+        "tokens_returned": 249_385,
+        "tokens_generated_local": 247_780,
+        "tokens_local_input": 2_380_307,
+        "backend_calls": 597,
+        "total_calls": 454,
+    },
+    "pequeñas": {
+        "tokens_context_net": 77_673,
+        "tokens_context_saved": 80_886,
+        "tokens_returned": 3_213,
+        "tokens_generated_local": 6_207,
+        "tokens_local_input": 64_325,
+        "backend_calls": 16,
+        "total_calls": 5,
+    },
+}
+
+
+def _user_figures(figures: dict, extra: dict | None = None):
+    def _inject(path):
+        response = path.fetch()
+        data = response.json()
+        data.update({k: v for k, v in figures.items() if k != "total_calls"})
+        data.setdefault("total", {})["calls"] = figures["total_calls"]
+        data.update(extra or {})
+        path.fulfill(response=response, body=json.dumps(data))
+
+    return _inject
+
+
+# Bordes de los dos paneles de arriba y de cada tarjeta KPI, y lo que una tarjeta pisa del hueco
+# central entre los paneles.
+_KPI_EDGES = """() => {
+  const R = e => { const r = e.getBoundingClientRect();
+    return {l: r.left, r: r.right, w: r.width, h: r.height}; };
+  return {
+    panels: [...document.querySelectorAll('.grid.duo > .card')].map(R),
+    cards: [...document.querySelectorAll('#kpis > .card')].map(R),
+    cut: [...document.querySelectorAll('#kpis .k-lbl-t')]
+      .filter(t => t.scrollWidth > t.clientWidth).map(t => t.textContent),
+    page: document.documentElement.scrollWidth > window.innerWidth,
+  };
+}"""
+
+
+@_BOTH_LOCALES
+@pytest.mark.parametrize("fonts", ("bloqueadas", "ancha"))
+def test_kpi_edges_line_up_with_the_panels_above(
+    tmp_path, monkeypatch, fonts, new_page, browser_locale
+):
+    """Pedido del usuario: las tarjetas KPI no cambian de tamaño con las cifras y sus bordes casan
+    con los dos paneles de arriba (modelos y rendimiento | GPU y procesos): una tarjeta empieza donde
+    empieza cada panel y otra acaba donde acaba, y ninguna pisa el hueco central. Con los paneles
+    apilados (720 y 390 px) solo cuentan los bordes de fuera. Con los dos juegos de cifras de sus
+    capturas, cada tarjeta mide lo mismo de ancho y de alto."""
+    _cost_and_image_log(tmp_path, monkeypatch)
+    measured = {}
+    with _Server(9495) as server, sync_playwright() as pw:
+        browser = _browser(pw)
+        for width in (1440, 1280, 1024, 720, 390):
+            for name, figures in _USER_FIGURES.items():
+                page = new_page(browser, viewport={"width": width, "height": 900})
+                _before_loading(page, fonts)
+                page.route(re.compile(r"/api/stats(\?|$)"), _user_figures(figures))
+                page.goto(server.url)
+                page.wait_for_function(
+                    "() => document.querySelectorAll('#kpis > .card').length === 6"
+                )
+                _after_loading(page, fonts)
+                measured[(width, name)] = page.evaluate(_KPI_EDGES)
+                page.close()
+        browser.close()
+    metrics._FILE_CACHE.clear()
+
+    def near(a, b):
+        return abs(a - b) <= 0.5
+
+    for width in (1440, 1280, 1024, 720, 390):
+        big, small = measured[(width, "grandes")], measured[(width, "pequeñas")]
+        sizes = [[(round(c["w"], 1), round(c["h"], 1)) for c in m["cards"]] for m in (big, small)]
+        assert sizes[0] == sizes[1], (width, "el tamaño depende de las cifras", sizes)
+        assert not big["page"], (width, "la página se sale por la derecha")
+        if fonts == "bloqueadas":  # con la fuente ancha el «…» es lo previsto
+            assert not big["cut"], (width, "títulos cortados con «…»", big["cut"])
+        left, right = big["panels"]
+        cards = big["cards"]
+        side_by_side = right["l"] > left["r"]
+        edges = (
+            [left["l"], left["r"], right["l"], right["r"]]
+            if side_by_side
+            else [left["l"], left["r"]]
+        )
+        for edge in edges:
+            assert any(near(c["l"], edge) or near(c["r"], edge) for c in cards), (
+                width,
+                f"ninguna tarjeta casa con el borde {edge:.2f}",
+                [(round(c["l"], 2), round(c["r"], 2)) for c in cards],
+            )
+        if side_by_side:
+            straddling = [
+                c for c in cards if c["l"] < left["r"] - 0.5 and c["r"] > right["l"] + 0.5
+            ]
+            assert not straddling, (
+                width,
+                "una tarjeta pisa el hueco entre los paneles",
+                straddling,
+            )
+            # Tres bajo cada panel.
+            under_left = [c for c in cards if c["r"] <= left["r"] + 0.5]
+            assert len(under_left) == 3, (width, len(under_left))
+        assert all(
+            c["l"] >= left["l"] - 0.5 and c["r"] <= max(p["r"] for p in big["panels"]) + 0.5
+            for c in cards
+        ), (width, "una tarjeta se sale de los paneles")
+
+
+# En cada fila de cifras (coste, cuota, imágenes): el espacio libre entre el final de la tinta de
+# una cifra y el borde de la columna siguiente, las cifras que desbordan su caja y su `title`.
+_KSTAT_GAPS = """() => {
+  const out = {gaps: [], over: [], titles: {}};
+  ['costBody', 'quotaBody', 'imagesBody'].forEach(id => {
+    const ks = [...document.querySelectorAll('#' + id + ' .kstat')];
+    ks.forEach((a, i) => {
+      const v = a.querySelector('.k-val');
+      out.titles[v.textContent.trim()] = v.getAttribute('title');
+      if (v.scrollWidth > v.clientWidth) out.over.push(v.textContent);
+      const b = ks[i + 1];
+      if (!b) return;
+      const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+      if (Math.abs(ra.top - rb.top) > 2) return;
+      const rg = document.createRange(); rg.selectNodeContents(v);
+      out.gaps.push([id, v.textContent.trim(), rb.left - rg.getBoundingClientRect().right]);
+    });
+  });
+  return out;
+}"""
+
+
+@pytest.mark.parametrize("fonts", ("bloqueadas", "ancha"))
+def test_large_figures_keep_clear_of_the_next_column(tmp_path, monkeypatch, fonts, new_page):
+    """Captura del usuario: en «Imágenes», «17.232.705 B» quedaba pegada a «48.309 car.» de la
+    columna de al lado. Con cifras grandes en imágenes, precio de API y cuota, a 1440, 1280 y
+    1024 px, ninguna cifra desborda su columna, entre la tinta de una y la columna siguiente
+    quedan al menos 12 px y el valor exacto sigue en el `title`."""
+    _cost_and_image_log(tmp_path, monkeypatch)
+    extra = {
+        "images": {"n": 45, "bytes": 17_232_705, "chars_returned": 48_309},
+        "quota": {
+            "five_hour": {"status": "calibrated", "points": 9, "a_pct": 100.0, "b_pct": 100.0},
+            "seven_day": {"status": "calibrated", "points": 9, "a_pct": 88.8, "b_pct": 100.0},
+            "has_aggregates": True,
+            "command": "local-delegate recompute-cost",
+        },
+    }
+
+    def _inject(path):
+        response = path.fetch()
+        data = response.json()
+        data.update(extra)
+        data["cost"]["T"] = 1_234_567_890
+        path.fulfill(response=response, body=json.dumps(data))
+
+    measured = {}
+    with _Server(9495) as server, sync_playwright() as pw:
+        browser = _browser(pw)
+        for width in (1440, 1280, 1024):
+            page = new_page(browser, viewport={"width": width, "height": 900})
+            _before_loading(page, fonts)
+            page.route(re.compile(r"/api/stats(\?|$)"), _inject)
+            page.goto(server.url)
+            page.wait_for_selector("#imagesBody .kstat")
+            page.wait_for_selector("#quotaBody .kstat")
+            _after_loading(page, fonts)
+            measured[width] = page.evaluate(_KSTAT_GAPS)
+            page.close()
+        browser.close()
+    metrics._FILE_CACHE.clear()
+    for width, m in measured.items():
+        assert not m["over"], (width, "cifras que desbordan su columna", m["over"])
+        tight = [g for g in m["gaps"] if g[2] < 12]
+        assert not tight, (width, "cifras pegadas a la columna de al lado", tight)
+        assert "17.232.705 B" in m["titles"].values(), (width, m["titles"])
+        assert "1.234.567.890 tok" in m["titles"].values(), (width, m["titles"])
 
 
 # --- Etiquetas legibles, tipografía, simetría de los KPIs y la tarjeta Sistema -----------------

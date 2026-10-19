@@ -1299,11 +1299,24 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
    reparten en 3+3 y 2+2+2, así que ninguna se queda sola en una fila con el hueco al lado.
    Columnas de ancho FIJO (`minmax(0, …fr)`, no `1fr`, que es `minmax(auto, 1fr)`): con `1fr` una
    cifra larga ensanchaba su tarjeta y contraía las demás de la fila. Ahora el ancho no depende del
-   contenido; la cifra que no cabe se reduce o se compacta (`fitKpis`) y el título lleva «…».
-   El hero a 1,4fr (antes 1,7fr) deja ~180 px a las demás: «DELEGACIONES» cabe sin «…». */
-.kpis{grid-template-columns:minmax(0,1.4fr) repeat(5,minmax(0,1fr))}
-@media(max-width:1320px){.kpis{grid-template-columns:minmax(0,1.4fr) repeat(2,minmax(0,1fr))}}
-@media(max-width:1040px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+   contenido; la cifra que no cabe se reduce o se compacta (`fitFigures`) y el título lleva «…».
+   Alineada con los dos paneles de arriba (`.duo`): las tres primeras tarjetas ocupan justo el
+   ancho del panel izquierdo y las tres últimas el del derecho, con el mismo hueco central. Las
+   dos rejillas salen de la misma columna derecha, `--duo-r` (el `1fr` de `1.15fr 1fr`, escrito
+   en largo para poder usarlo aquí): las tres de la derecha miden un tercio de ella menos los
+   huecos, y las tres de la izquierda se reparten lo que queda (el panel izquierdo) a 1,4 : 1 : 1.
+   Así los bordes coinciden a cualquier ancho en vez de por casualidad de las fracciones. Las dos
+   normales de la izquierda quedan ~4 px más anchas que las de la derecha: con las seis iguales
+   (178 px a 1440) «DELEGACIONES» salía con «…». */
+.grid{--duo-r:calc((100% - 16px) / 2.15)}
+.kpis{grid-template-columns:minmax(0,1.4fr) repeat(2,minmax(0,1fr)) repeat(3,calc((var(--duo-r) - 32px) / 3))}
+/* Entre 880 y 1320 px los paneles siguen lado a lado, pero un tercio del derecho ya no da para
+   una cifra: las tarjetas van en las dos columnas de los paneles, tres bajo cada uno, en el
+   mismo orden que en una fila (hero, delegaciones, generado | coste, latencia, errores). */
+@media(max-width:1320px){.kpis{grid-template-columns:minmax(0,1fr) var(--duo-r);
+  grid-template-rows:repeat(3,auto);grid-auto-flow:column}}
+/* Con los paneles apilados (≤ 880 px) solo hay que casar los bordes de fuera. */
+@media(max-width:880px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:none;grid-auto-flow:row}}
 @media(max-width:720px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:460px){.kpis{grid-template-columns:minmax(0,1fr)}}
 #kpis > .card{min-width:0}
@@ -1345,14 +1358,16 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
   text-shadow:0 2px 20px color-mix(in srgb,var(--acc) 40%,transparent)}
 #kpis .k-val{height:44px;display:flex;align-items:flex-end;white-space:nowrap;overflow:hidden;
   font-size:calc(31px * var(--kfit,1))}
-/* `--kfit` (0,62–1) lo pone `fitKpis` cuando la cifra no cabe en su tarjeta de ancho fijo. */
+/* `--kfit` (0,62–1) lo pone `fitFigures` cuando la cifra no cabe en su tarjeta de ancho fijo. */
 #kpis .hero .k-val{font-size:calc(clamp(26px,12cqi,42px) * var(--kfit,1))}
 #kpis .k-val .unit{font-size:max(11px,calc(15px * var(--kfit,1)))}
 #kpis .k-num{display:inline-block;line-height:1}
 .k-val .unit{font-size:15px;font-weight:600;color:var(--mut);margin-left:5px;letter-spacing:0}
 .hero .k-val .unit{color:color-mix(in srgb,var(--acc) 75%,var(--mut))}
 .k-hint{color:var(--mut);font-size:11.5px;line-height:1.45;margin-top:9px;position:relative;z-index:1}
-#kpis .k-hint{min-height:calc(2 * 1.45em);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+/* Alto FIJO, no mínimo: una cifra en mono dentro de la pista (`.num`, otra fuente) alargaba la
+   línea un par de píxeles y la tarjeta cambiaba de alto según el valor. */
+#kpis .k-hint{height:calc(2 * 1.45em);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 /* En el hero la pista va en una sola línea (con «…» si no cabe): la segunda línea reservada es el
    sitio de su gráfico, y una pista partida (tarjeta estrecha, fuente ancha) caía encima. */
 #kpis .hero .k-hint{display:block;white-space:nowrap;text-overflow:ellipsis}
@@ -1412,8 +1427,11 @@ td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .dot.err{background:var(--danger);box-shadow:0 0 8px color-mix(in srgb,var(--danger) 60%,transparent)}
 
 /* ---------- backend local + sistema ---------- */
-.duo{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);margin-bottom:16px}
-@media(max-width:880px){.duo{grid-template-columns:minmax(0,1fr)}}
+/* `1.15fr 1fr` escrito con `--duo-r` (ver `.kpis`): la fila de KPIs y la de cuota/imágenes
+   casan sus bordes con estos dos paneles. */
+.duo,#quotaImgRow{grid-template-columns:minmax(0,1fr) var(--duo-r)}
+.duo{margin-bottom:16px}
+@media(max-width:880px){.duo,#quotaImgRow{grid-template-columns:minmax(0,1fr)}}
 .pill{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;letter-spacing:.06em;
   border-radius:999px;padding:3px 10px;text-transform:uppercase}
 .pill.up{color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent);border:1px solid color-mix(in srgb,var(--acc) 32%,transparent)}
@@ -1515,8 +1533,16 @@ dialog.help.wide{max-width:680px;max-height:calc(100vh - 48px);overflow:auto}
   border:1px solid var(--bd);background:transparent;color:var(--mut);transition:.13s}
 .ibtn:hover{color:var(--tx);border-color:var(--bd2)}
 .ibtn svg{width:15px;height:15px;display:block}
-.kstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px 18px}
-.kstat .k-val{margin-top:10px}
+/* 150 px de mínimo: con la fila alineada a los paneles, la tarjeta de imágenes mide ~530 px por
+   dentro a 1440 y con 170 sus tres cifras se partían en 2 + 1. */
+.kstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 18px}
+/* La cifra no sale de su columna (como en los KPIs): una línea, recortada a su caja y ajustada
+   por `fitFigures` con `--kfit`; el hueco de 18 px entre columnas queda siempre libre. */
+.kstat{min-width:0}
+.kstat .k-val{margin-top:10px;height:34px;display:flex;align-items:flex-end;white-space:nowrap;
+  overflow:hidden;font-size:calc(31px * var(--kfit,1))}
+.kstat .k-val .unit{font-size:max(11px,calc(15px * var(--kfit,1)))}
+.kstat .k-num{display:inline-block;line-height:1}
 .kstat .k-hint{margin-top:7px}
 #costCard .kstats{padding-bottom:14px;margin-bottom:4px;border-bottom:1px solid var(--bd)}
 .qrange{position:relative;height:8px;border-radius:6px;margin-top:12px;overflow:hidden;
@@ -2190,10 +2216,15 @@ function paragraphsHtml(L, lead){
 }
 
 // Una cifra con la misma forma que los KPIs de arriba: etiqueta, valor en mono y una pista corta.
-// `val` y `hint` llegan ya escapados o son cifras formateadas.
-function kstat(lbl, val, hint, color){
+// `val` y `hint` llegan ya escapados o son cifras formateadas. Como en los KPIs, la cifra no
+// ensancha su columna: `fitFigures` la reduce (o pasa a `compact`, si lo hay) y el valor exacto
+// queda en `title`. Sin esto, «17.232.705 B» invadía la columna de al lado.
+function kstat(lbl, val, hint, color, compact){
+  const exact = val.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  const short = compact && compact !== val.replace(/<.*$/, '') ? ' data-compact="' + compact + '"' : '';
   return '<div class="kstat"><div class="k-lbl">' + lbl + '</div>'
-    + '<div class="k-val num"' + (color ? ' style="color:' + color + '"' : '') + '>' + val + '</div>'
+    + '<div class="k-val num" title="' + exact + '"' + (color ? ' style="color:' + color + '"' : '') + '>'
+    + '<span class="k-num"' + short + '>' + val + '</span></div>'
     + (hint ? '<div class="k-hint">' + hint + '</div>' : '') + '</div>';
 }
 
@@ -2240,7 +2271,7 @@ function renderCost(s){
       ? kstat(T('cost.low_bound'), dollars(c.figure.low_bound), T('cost.low_bound_hint'))
         + kstat(T('cost.estimate'), '~' + dollars(c.figure.estimate), T('cost.estimate_hint'), 'var(--amber)')
         + (c.T !== undefined ? kstat(T('cost.valued'), F.format(c.T) + '<span class="unit">tok</span>',
-            T('cost.valued_hint')) : '')
+            T('cost.valued_hint'), '', fmtCompact(c.T)) : '')
       : kstat(T('cost.title'), '–', escHooks(T('cost.no_figure', {reason: c.reason||''})));
     document.getElementById('costBody').innerHTML = '<div class="kstats">' + figures + '</div>'
       + (rows ? '<div style="overflow-x:auto"><table><thead><tr><th>' + T('cost.col.model') + '</th><th>'
@@ -2260,15 +2291,16 @@ function renderCost(s){
   ic.style.display = hasImg ? '' : 'none';
   if(hasImg){
     document.getElementById('imagesBody').innerHTML = '<div class="kstats">'
-      + kstat(T('images.count'), F.format(im.n), T('images.count_hint'))
+      + kstat(T('images.count'), F.format(im.n), T('images.count_hint'), '', fmtCompact(im.n))
       + kstat(T('images.bytes'), F.format(im.bytes||0) + '<span class="unit">B</span>', T('images.bytes_hint'))
-      + kstat(T('images.returned'), F.format(im.chars_returned||0) + '<span class="unit">' + T('unit.chars_short') + '</span>', T('images.returned_hint'))
+      + kstat(T('images.returned'), F.format(im.chars_returned||0) + '<span class="unit">' + T('unit.chars_short') + '</span>', T('images.returned_hint'), '', fmtCompact(im.chars_returned||0))
       + '</div>';
   }
   // Una sola tarjeta visible ocupa la fila entera en vez de dejar medio hueco al lado.
   row.style.display = (cal || hasImg) ? '' : 'none';
   qc.style.gridColumn = hasImg ? '' : '1 / -1';
   ic.style.gridColumn = cal ? '' : '1 / -1';
+  fitFigures(); watchFigures();
   // El diálogo de información: el mismo texto que antes llenaba las tarjetas.
   document.getElementById('dlgCostBody').innerHTML = c ? paragraphsHtml(costText(s), true) : '';
   document.getElementById('dlgQuotaBody').innerHTML = q ? paragraphsHtml(quotaText(s)) : '<p>' + T('quota.dialog_empty') + '</p>';
@@ -2750,7 +2782,7 @@ function kpiCard(o){
   const i = o.tip?`<span class="info" data-tip="${o.tip}">${ICON.info}</span>`:'';
   const ico = o.icon?`<span class="k-ico" style="--kc:${o.kc||'var(--mut)'}">${o.icon}</span>`:'';
   const unit = o.unit?`<span class="unit">${o.unit}</span>`:'';
-  // El valor exacto va siempre en `title`: `fitKpis` puede reducir la cifra o compactarla.
+  // El valor exacto va siempre en `title`: `fitFigures` puede reducir la cifra o compactarla.
   const exact = o.val + (o.unit ? ' ' + o.unit : '');
   const compact = o.compact && o.compact !== o.val ? ` data-compact="${o.compact}"` : '';
   return `<div class="card ${o.hero?'hero':''}">${o.hero?'<div class="spark"><canvas id="spark"></canvas></div>':''}
@@ -2759,13 +2791,14 @@ function kpiCard(o){
     <div class="k-hint">${o.hint||''}</div></div>`;
 }
 
-// Las tarjetas de KPI tienen ancho fijo: la cifra que no cabe se ajusta a SU tarjeta en vez de
-// ensancharla. Primero se reduce la fuente (hasta el 62 %); si aun así no cabe y hay forma corta
+// Las tarjetas de KPI (y las cifras de coste, cuota e imágenes) tienen ancho fijo: la cifra que no
+// cabe se ajusta a SU caja en vez de ensancharla o invadir la de al lado. Primero se reduce la fuente (hasta el 62 %); si aun así no cabe y hay forma corta
 // (`data-compact`), se pinta «1,2 mil M» con la fuente que haga falta. Se repite al cambiar el
 // ancho de la ventana o al cargar las fuentes, partiendo siempre de la cifra entera.
 const KFIT_MIN = 0.62;
-function fitKpis(){
-  document.querySelectorAll('#kpis .k-val').forEach(v => {
+const FIT_VALUES = '#kpis .k-val, .kstat .k-val';
+function fitFigures(){
+  document.querySelectorAll(FIT_VALUES).forEach(v => {
     const num = v.querySelector('.k-num'), txt = num && num.firstChild;
     if(!txt || txt.nodeType !== 3) return;
     if(num.dataset.full === undefined) num.dataset.full = txt.nodeValue;
@@ -2792,20 +2825,22 @@ function fitKpis(){
   });
 }
 // Se vuelve a ajustar cuando cambia el ancho de la fila (ventana, breakpoints) o el de una cifra
-// (otra fuente que llega tarde o se aplica después). No hay bucle: `fitKpis` deja cada cifra en el
+// (otra fuente que llega tarde o se aplica después). No hay bucle: `fitFigures` deja cada cifra en el
 // mismo tamaño si nada cambió, y el observador solo avisa de tamaños nuevos.
 let kfitFrame = 0;
-const kfitLater = () => { cancelAnimationFrame(kfitFrame); kfitFrame = requestAnimationFrame(fitKpis); };
+const kfitLater = () => { cancelAnimationFrame(kfitFrame); kfitFrame = requestAnimationFrame(fitFigures); };
 // En el frame siguiente, no dentro del observador: cambiar tamaños ahí dispara el aviso de bucle.
 const kfitObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(kfitLater) : null;
-function watchKpis(){
+function watchFigures(){
   if(!kfitObserver) return;
   kfitObserver.disconnect();
-  kfitObserver.observe(document.getElementById('kpis'));
-  document.querySelectorAll('#kpis .k-num').forEach(n => kfitObserver.observe(n));
+  ['kpis', 'costBody', 'quotaBody', 'imagesBody'].forEach(id => {
+    const e = document.getElementById(id); if(e) kfitObserver.observe(e);
+  });
+  document.querySelectorAll('#kpis .k-num, .kstat .k-num').forEach(n => kfitObserver.observe(n));
 }
 if(!kfitObserver) window.addEventListener('resize', kfitLater);
-if(document.fonts && document.fonts.ready) document.fonts.ready.then(fitKpis);
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(fitFigures);
 
 // Conversión a tokens de CLAUDE de lo ahorrado y lo devuelto. Espejo de `claude_tokens` en
 // server.py y única conversión del panel: `acct` no divide por CPT para saved/returned/net.
@@ -2912,7 +2947,7 @@ function render(){
     + kpiCard({icon:ICON.err,kc:errs?'var(--danger)':'var(--acc)',val:errPct,unit:'%',lbl:A(T('kpi.errors.label')),
        hint:T('kpi.errors.hint_html', {n: F.format(errs), what: A(T(errs===1 ? 'unit.failure.one' : 'unit.failure.other'))}),
        tip:A(T('kpi.errors.tip'))});
-  fitKpis(); watchKpis();
+  fitFigures(); watchFigures();
 
   if(HAS_CHART){
     drawSpark(ev); drawTs(ev); drawToolDonut(ev); drawModelBar(ev); drawSrcDonut(ev);
