@@ -35,8 +35,8 @@ descarta por riesgo.
 
 - **REQ-001:** Con el cwd en `D:\Projects\local-delegate`, `codex mcp list` termina con éxito y no
   emite `failed to load configuration`.
-- **REQ-002:** En esa misma listada aparecen los cinco MCP que aporta el `.codex/config.toml` del
-  repo — `MCP_DOCKER`, `codegraph`, `git`, `socket-mcp`, `jetbrains` — y también `local-delegate`,
+- **REQ-002:** En esa misma listada aparecen los cuatro MCP que aporta el `.codex/config.toml` del
+  repo — `MCP_DOCKER`, `git`, `socket-mcp`, `jetbrains` — y también `local-delegate`,
   que viene de la global.
 - **REQ-003:** `github` queda definido **una sola vez**, por HTTP, en el `config.toml` global, y
   sigue apareciendo en la listada hecha desde dentro del repo.
@@ -53,7 +53,7 @@ descarta por riesgo.
 
 - **Dado** el cwd en `D:\Projects\local-delegate` y la entrada `github` eliminada del config del repo
 - **Cuando** se ejecuta `codex mcp list`
-- **Entonces** el comando sale con código 0 y lista los cinco MCP del repo, `local-delegate` y
+- **Entonces** el comando sale con código 0 y lista los cuatro MCP del repo, `local-delegate` y
   `github` (HTTP), sin error de configuración
 
 ### Escenario: `rtk` se resuelve donde Codex ejecuta
