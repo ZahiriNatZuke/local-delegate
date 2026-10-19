@@ -637,3 +637,26 @@ def test_t_interpolates_and_falls_back_to_spanish_then_to_the_key(tmp_path):
         "panel.no.such.key",
         "The backend exposes no models (http://h).",
     ]
+
+
+# --- fmtCompact: la forma corta de un KPI que no cabe en su tarjeta ------------
+
+
+@pytest.mark.parametrize(
+    ("lang", "expected"),
+    [
+        ("es", ["999.999", "1,2 M", "45,7 mil M", "-3,5 M"]),
+        ("en", ["999,999", "1.2M", "45.7B", "-3.5M"]),
+    ],
+)
+def test_the_compact_figure_speaks_the_panel_language(tmp_path, lang, expected):
+    """Por debajo del millón, la cifra entera; encima, millones y miles de millones con los
+    separadores del idioma. En español no se usa «B»: ahí sería billón (10^12)."""
+    result = _run(
+        tmp_path,
+        ["function fmtNum(", "function fmtCompact("],
+        "console.log(JSON.stringify([fmtCompact(999999), fmtCompact(1234567),"
+        " fmtCompact(45678901234), fmtCompact(-3456789)]));",
+        lang=lang,
+    )
+    assert result == expected

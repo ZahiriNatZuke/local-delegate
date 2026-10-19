@@ -843,6 +843,12 @@ _INTER_LOADED = (
 )
 
 
+# Las cifras de los KPIs se ajustan a su tarjeta con un `ResizeObserver` (`fitKpis`). Si la fuente
+# cambia después de cargar, el observador lo ve tras el layout de un frame y reajusta en el `rAF`
+# del siguiente: tres `rAF` seguidos dejan pasar los dos frames con margen.
+_FRAMES = "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r))))"
+
+
 def _before_loading(page, fonts):
     if fonts != "cargadas":
         page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
@@ -852,6 +858,7 @@ def _after_loading(page, fonts):
     if fonts == "ancha":
         page.add_style_tag(content=_WIDE_FONT)
     page.evaluate("() => document.fonts.ready.then(() => 1)")
+    page.evaluate(_FRAMES)
 
 
 # Cada cifra de los KPIs, con su unidad, dentro de su tarjeta: ni la cifra desborda su caja ni la
@@ -906,6 +913,79 @@ def test_the_kpi_unit_is_not_cut_off(tmp_path, monkeypatch, fonts, new_page):
         browser.close()
     metrics._FILE_CACHE.clear()
     assert all(not v for v in overflows.values()), overflows
+
+
+# Ancho de cada tarjeta de KPI agrupado por fila, cifras que desbordan su caja, el valor exacto de
+# cada cifra (`title`) y si la página entera se sale por la derecha.
+_KPI_WIDTHS = """() => {
+  const rows = {};
+  [...document.querySelectorAll('#kpis > .card')].forEach(c => {
+    const r = c.getBoundingClientRect(), top = Math.round(r.top);
+    (rows[top] = rows[top] || []).push(Math.round(r.width * 10) / 10);
+  });
+  const vals = [...document.querySelectorAll('#kpis .k-val')];
+  return {
+    rows: Object.values(rows),
+    overflow: vals.filter(v => v.scrollWidth > v.clientWidth).map(v => v.textContent),
+    titles: vals.map(v => v.getAttribute('title')),
+    page: document.documentElement.scrollWidth > window.innerWidth,
+  };
+}"""
+
+
+@_BOTH_LOCALES
+@pytest.mark.parametrize("fonts", ("bloqueadas", "ancha"))
+def test_kpi_cards_keep_their_width_with_a_huge_figure(
+    tmp_path, monkeypatch, fonts, new_page, browser_locale
+):
+    """Nota del usuario: «si la card de contexto salvado muestra un valor muy grande, otras de la
+    misma fila se contraen». Con `1fr` (= `minmax(auto, 1fr)`) la cifra larga ensanchaba su
+    columna. Ahora, a 1440, 1280, 720 y 390 px, cada tarjeta mide lo mismo con cifras normales que
+    con un «contexto conservado» de billones; ninguna cifra desborda, la página no se sale por la
+    derecha y el valor exacto queda en el `title`."""
+    _cost_and_image_log(tmp_path, monkeypatch)
+    huge = {
+        "tokens_context_net": 1_234_567_890_123,
+        "tokens_context_saved": 1_250_000_000_000,
+        "tokens_returned": 15_432_109_877,
+        "tokens_local_input": 98_765_432_109,
+    }
+
+    def _huge_figures(path):
+        response = path.fetch()
+        data = response.json()
+        data.update(huge)
+        path.fulfill(response=response, body=json.dumps(data))
+
+    measured = {}
+    with _Server(9495) as server, sync_playwright() as pw:
+        browser = _browser(pw)
+        for width in (1440, 1280, 720, 390):
+            for figures in ("normales", "enormes"):
+                page = new_page(browser, viewport={"width": width, "height": 900})
+                _before_loading(page, fonts)
+                if figures == "enormes":
+                    page.route(re.compile(r"/api/stats(\?|$)"), _huge_figures)
+                page.goto(server.url)
+                page.wait_for_function(
+                    "() => document.querySelectorAll('#kpis > .card').length === 6"
+                )
+                _after_loading(page, fonts)
+                measured[(width, figures)] = page.evaluate(_KPI_WIDTHS)
+                page.close()
+        browser.close()
+    metrics._FILE_CACHE.clear()
+    exact = "1.234.567.890.123 tok" if browser_locale.startswith("es") else "1,234,567,890,123 tok"
+    for width in (1440, 1280, 720, 390):
+        normal, big = measured[(width, "normales")], measured[(width, "enormes")]
+        assert big["rows"] == normal["rows"], (width, normal["rows"], big["rows"])
+        # Fuera de la primera columna, las tarjetas de una fila miden lo mismo entre sí.
+        for row in big["rows"]:
+            rest = row[1:]  # la primera columna puede ser la ancha (1,4fr)
+            assert max(rest, default=0) - min(rest, default=0) <= 1, (width, big["rows"])
+        assert not big["overflow"], (width, big["overflow"])
+        assert not big["page"], (width, "la página se sale por la derecha")
+        assert big["titles"][0] == exact, (width, big["titles"])
 
 
 # --- Etiquetas legibles, tipografía, simetría de los KPIs y la tarjeta Sistema -----------------
