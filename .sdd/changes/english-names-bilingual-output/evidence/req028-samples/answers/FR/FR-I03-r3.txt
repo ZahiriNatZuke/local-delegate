@@ -1,0 +1,9 @@
+L'image montre une fenêtre contextuelle ou une boîte de dialogue intitulée « Coste, cuota e imágenes » (Coût, quota et images). Le texte est rédigé en espagnol et détaille une analyse technique des coûts et de l'utilisation des ressources pour un service, probablement lié à l'intelligence artificielle Claude.
+
+La première section, « EQUIVALENTE A PRECIO DE API », estime le coût équivalent entre 8,67 € et 32,40 €. Elle explique que, bien que l'abonnement soit à tarif fixe, ces chiffres reflètent la consommation réelle. Elle mentionne des détails précis comme la couverture de 94 attributs, les relectures, la densité de Claude par rapport à la famille de tokeniseurs, et des notes sur les fichiers lus.
+
+La deuxième section, « CUOTA DE LA SUSCRIPCIÓN », détaille les quotas de fenêtres de temps (5 heures, 1 heure et hebdomadaire), mentionnant des points de statut et des rejets.
+
+Enfin, la section « IMÁGENES » indique que 25 images ont été lues côté serveur, représentant 696 353 octets, avec 17 637 caractères retournés à Claude. Le design est épuré, avec un fond blanc et des titres en bleu et orange.
+
+(leído server-side: 181077 bytes imagen que no entraron a tu contexto)

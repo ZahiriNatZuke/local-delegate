@@ -1,0 +1,7 @@
+Esta imagen muestra un panel de control (dashboard) de una aplicación llamada "local delegate", diseñada para monitorear el rendimiento de modelos de lenguaje locales. La interfaz presenta un diseño oscuro con tarjetas informativas que organizan diversos datos técnicos.
+
+En la parte superior, se listan modelos como "gemma4-3b" y "qwen-35b", junto con métricas de rendimiento como "generation tokens/s" y "input tokens/s". A la derecha, una sección de "System" muestra el uso de memoria RAM, carga de GPU y VRAM, además de los procesos activos como "python.exe" y "llama-swap.exe".
+
+El centro del tablero contiene indicadores clave de rendimiento (KPIs) que muestran valores de "Context Kept", "Delegations", "Generated", "Local Cost", "Latency" y "Errors". Debajo, hay gráficos de líneas y circulares que visualizan el ahorro de contexto y las fuentes de entrada. La parte inferior incluye una tabla de "Hook suggestions" con categorías como "Shell" y "Read", detallando sugerencias y tasas de visualización. El diseño es limpio, profesional y orientado a analistas de datos o desarrolladores de IA.
+
+(leído server-side: 394165 bytes imagen que no entraron a tu contexto)

@@ -1,0 +1,9 @@
+Ce script Python évalue la fidélité de réponses de modèles de langage en vérifiant la présence de chiffres spécifiques dans des fichiers journaux. Il cible quatre logs précis (A14, A15, B31, B32) dont les compteurs réels sont connus.
+
+La fonction `kept` utilise une expression régulière pour détecter si un chiffre apparaît comme nombre entier isolé dans le texte, évitant les faux positifs comme les décimales ou les nombres plus longs. Elle accepte la ponctuation finale (point de phrase) mais rejette les chiffres adjacents.
+
+Pour chaque version de réponse (dossier spécifié), le script parcourt les fichiers correspondant aux IDs de contrôle. Il compte combien de répétitions conservent au moins un chiffre valide. Une réponse est considérée comme "conserve" (kept) si la majorité de ses répétitions (plus de la moitié) préservent les chiffres. Si un fichier est manquant, le cas est marqué comme échoué.
+
+Le programme accepte plusieurs dossiers via l'argument `--answers-dir` pour comparer différentes versions. Il génère un rapport JSON indiquant pour chaque ID les chiffres attendus, les répétitions analysées, et si le cas est jugé valide. La sortie finale indique si tous les contrôles sont réussis (code de sortie 0) ou non (code 1), permettant d'automatiser la vérification de l'intégrité des données dans les réponses générées.
+
+(leído server-side: 4735 chars ≈ 2332 tokens de Claude que no entraron a tu contexto)

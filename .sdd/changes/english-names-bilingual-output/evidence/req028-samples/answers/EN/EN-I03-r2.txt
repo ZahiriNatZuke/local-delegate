@@ -1,0 +1,5 @@
+The image shows a dark-themed web interface for a software application called "local_delegate," specifically a "PANEL DE AHORRO" (Savings Panel). The layout is horizontal and minimalist, featuring a dark gray background with white and green accents. On the left, there is a green square icon with a stylized white "d" and the version number "v0.35.0" in a small green box. Next to it, a yellow pill-shaped button displays the text "EN CURSO" (In Progress) with a small yellow dot.
+
+On the right side, there is a series of interactive controls. These include a dropdown menu currently set to "Últimos 30 días" (Last 30 days), a button labeled "Pruebas" (Tests) with a flask icon, and a circular refresh icon. A prominent green button labeled "Auto" with a circular arrow icon is positioned near the center-right. Finally, there are smaller icons for language selection (currently set to "ES"), a moon icon for dark mode, and a question mark for help.
+
+(read server-side: 21932 image bytes that did not enter your context)

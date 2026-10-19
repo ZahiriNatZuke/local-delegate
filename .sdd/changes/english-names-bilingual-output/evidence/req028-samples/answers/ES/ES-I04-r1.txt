@@ -1,0 +1,7 @@
+Esta imagen muestra un panel de control (dashboard) de una aplicación llamada "local delegate", diseñada para monitorear el ahorro de costos y el rendimiento de modelos de lenguaje locales. La interfaz utiliza un diseño limpio con una paleta de colores predominantemente blanca, azul y verde.
+
+En la parte superior, se detallan el estado del "Backend" con modelos como gemma y qwen, junto con el uso del sistema (RAM, GPU, VRAM). Debajo, una sección de métricas clave destaca el "Context Kept", "Delegations", "Generated" y "Local Cost", acompañados de iconos informativos.
+
+El cuerpo central presenta tablas de costos equivalentes en API, estadísticas de imágenes y gráficos de barras y líneas que muestran el ahorro de contexto a lo largo del tiempo y por herramienta. En la parte inferior, se incluyen gráficos de barras para las llamadas por modelo, un gráfico circular sobre la fuente de entrada, una tabla de actividad reciente con tiempos de latencia y una sección final de sugerencias de "hooks" con porcentajes de tasa. La interfaz es densa en datos pero organizada mediante tarjetas y secciones claramente delimitadas.
+
+(leído server-side: 782215 bytes imagen que no entraron a tu contexto)

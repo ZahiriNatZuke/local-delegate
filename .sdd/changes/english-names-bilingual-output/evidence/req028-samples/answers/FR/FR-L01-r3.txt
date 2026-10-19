@@ -1,0 +1,27 @@
+**Résumé des problèmes par fichier :**
+
+**src\local_delegate\sections.py**
+
+*   CPY001 : Manque d'avis de copyright au début du fichier (1)
+*   RUF002 : La chaîne de documentation contient une ambiguïté `–` (EN DASH).  Avez-vous voulu `-` (HYPHEN-MINUS) ? (1)
+*   TC003 : Il faut déplacer l'importation de la bibliothèque standard `collections.abc.Callable` dans un bloc de contrôle de type (1)
+*   E501 : Ligne trop longue (103, 101, 102, 105) (4)
+*   D101 : Manque de chaîne de documentation dans les classes publiques (3)
+*   D102 : Manque de chaîne de documentation dans les méthodes publiques (2)
+*   D301 : Utiliser `r"""` si des antislash sont présents dans une chaîne de documentation (1)
+*   D400 : La première ligne doit se terminer par un point (1)
+*   C901 : `markdown_headings` est trop complexe (11 > 10) (2)
+*   PLR2004 : Utilisation d'une valeur magique dans une comparaison, envisager de remplacer `2` par une variable constante (1)
+*   PLR0912 : Trop de branches (14 > 12) (1)
+*   RUF002 : La chaîne de documentation contient une ambiguïté `×` (MULTIPLICATION SIGN). Avez-vous voulu `x` (LATIN SMALL LETTER X) ? (1)
+*   D101 : Manque de chaîne de documentation dans les classes publiques (1)
+*   D102 : Manque de chaîne de documentation dans les méthodes publiques (1)
+*   PLR0913 : Trop d'arguments dans la définition de la fonction (6 > 5) (1)
+*   D205 : 1 ligne vide requise entre la ligne de résumé et la description (1)
+*   E501 : Ligne trop longue (101) (1)
+
+**Total des erreurs : 26**
+
+2 corrections potentiellement dangereuses sont disponibles avec `--fix --unsafe-fixes`.
+
+(leído server-side: 2627 chars ≈ 1368 tokens de Claude que no entraron a tu contexto)

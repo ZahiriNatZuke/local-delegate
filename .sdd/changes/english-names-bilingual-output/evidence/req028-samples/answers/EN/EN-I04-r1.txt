@@ -1,0 +1,7 @@
+This image shows a comprehensive technical dashboard for a software tool called "local delegate," which appears to be a system for managing local AI model computations to save on API costs. The interface is dense with data, featuring various widgets, charts, and tables.
+
+At the top, the "Backend" and "Sistema" sections monitor model status (like gemma2-9b and qwen35-35b-a3b) and hardware resources, including RAM and GPU usage. Below this, a row of large metrics highlights "Contexto Conservado" (3,161,168 tokens), "Delegaciones" (390), and "Coste Local" (1,898,456 tokens).
+
+The middle section includes a cost estimation table comparing local usage to API prices, and several visualizations: a bar chart for "Ahorro de contexto en el tiempo," a horizontal bar chart for "Ahorro por herramienta," and a donut chart showing "Origen del input" (69% by path). The bottom half features a detailed "Actividad reciente" table listing specific tool calls, model types, and latencies, followed by tables summarizing "Quién delegó" and "Sugerencias de los hooks." The overall aesthetic is a clean, professional "dark mode" inspired layout with blue and green accents.
+
+(read server-side: 796169 image bytes that did not enter your context)

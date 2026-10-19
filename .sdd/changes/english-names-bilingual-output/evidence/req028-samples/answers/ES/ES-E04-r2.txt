@@ -1,0 +1,9 @@
+Este script de Python valida la precisión de un nuevo sistema de puntuación de "lint" (scorer v2/v3) comparándolo con la versión anterior (v1/T6). Su objetivo es asegurar que las reglas de corrección ortográfica y gramatical funcionan correctamente antes de su implementación final.
+
+El código se divide en tres secciones principales. Primero, verifica casos de referencia controlados: confirma que el scorer asigna una puntuación perfecta (1.0) a respuestas correctas (`reference_ok`) y una inferior a 1.0 a respuestas incorrectas (`reference_bad`). Si alguna referencia falla esta prueba, se incrementa el contador de fallos.
+
+Segundo, compara las puntuaciones de v1 y v2 sobre un conjunto de datos congelado de respuestas de la versión T6. Para cada fila donde ambas versiones difieren, el script imprime los detalles de la discrepancia, incluyendo los conteos válidos y las reglas específicas marcadas como erróneas por cada scorer. Esto facilita la revisión manual de los casos conflictivos.
+
+Tercero, analiza los resultados de la primera ejecución de pruebas (repetición 1) para diferentes idiomas y modelos. Extrae las reglas fallidas por cada versión y las presenta junto con la respuesta procesada, permitiendo una auditoría detallada. Finalmente, el script retorna un código de salida no cero si se detectan fallos en las referencias o si no se compararon filas, indicando que la validación no fue exitosa.
+
+(leído server-side: 3924 chars ≈ 1933 tokens de Claude que no entraron a tu contexto)

@@ -1,0 +1,9 @@
+Ce code Python gère la vérification de la cohérence entre les coûts facturés par l'outil Claude Code et une table de prix de référence stockée localement. Il garantit l'absence de requêtes réseau lors du chargement des données en utilisant `importlib.resources` pour lire les fichiers JSON `prices.json` et `density.json` depuis le package. Les fonctions `load_prices` et `load_density` utilisent un cache pour partager ces données efficacement.
+
+Le processus de comparaison commence par la normalisation des identifiants de modèles via `normalize_id`, qui nettoie les chaînes en supprimant les codes de formatage et les suffixes de date. La fonction `entry` récupère ensuite les tarifs exacts correspondant à un modèle normalisé, retournant `None` si aucune correspondance n'est trouvée, ce qui évite les approximations dangereuses.
+
+La logique principale réside dans la fonction `_judge`, qui évalue chaque ligne de données (tokens d'entrée, sortie, recherche web, etc.) contre les prix unitaires de la table. Elle calcule un coût théorique en combinant les différents types de tokens et les recherches web. Une tolérance est appliquée pour tenir compte des arrondis. Si le coût réel de Claude Code tombe dans la fourchette calculée (en tenant compte des variations de prix pour la création de cache), le résultat est "inside". Sinon, il est "outside". Les lignes dont le coût est négligeable sont ignorées.
+
+Enfin, `check_rows` applique cette vérification à une liste de lignes, et `verdict` détermine le statut global : "pass" si toutes les lignes sont conformes ou ignorées, et "fail" si l'une d'elles est hors tolérance ou sans prix défini. Ce mécanisme assure l'intégrité financière du système en détectant les écarts de facturation.
+
+(leído server-side: 4364 chars ≈ 2149 tokens de Claude que no entraron a tu contexto)

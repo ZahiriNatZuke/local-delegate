@@ -1,0 +1,25 @@
+**Résumé des problèmes par fichier:**
+
+**LLAMASWAP_EXE:** Le fichier LLAMASWAP_EXE n'est pas configuré. Il est recherché dans le PATH, mais aucune configuration n'est trouvée.
+
+**LLAMASWAP_CONFIG:** Le fichier LLAMASWAP_CONFIG n'est pas configuré.
+
+**Backend BASE_URL:** Le backend est opérationnel à l'adresse http://127.0.0.1:9292/v1.
+
+**tests\_sin\_logs/language.json:**  Le fichier n'est pas spécifié.
+
+**Local-delegate (Hooks):** 5 scripts sont copiés dans <TMP>\True\es\home\.claude\hooks\local-delegate. Aucun hook orphelin n'est trouvé. 2 hooks sont enregistrés : UserPromptSubmit, PreToolUse/mcp__local-delegate__.*
+
+**Local-delegate (Skills):** Claude Code et opencode sont installés dans <TMP>\True\es\home\.claude\skills\local-delegate et <TMP>\True\es\home\.config\opencode\skill\local-delegate respectivement.
+
+**Local-delegate (Mémoire):** Claude Code, Codex et opencode ont leur mémoire globale mise à jour.
+
+**Local-delegate (MCP):** Les MCP sont enregistrés dans <TMP>\True\es\home\.claude.json, <TMP>\True\es\home\.codex\config.toml et <TMP>\True\es\home\.config\opencode\opencode.json.
+
+**Local-delegate (Services):** Le daemon local-delegate est en cours d'exécution (pid 42) sur http://127.0.0.1:9393/mcp. Le backend répond à http://127.0.0.1:9292/v1.
+
+**Local-delegate (Versions):** llama-swap (v255) et llama-server (b10909) sont à jour. La résidence de llama-swap est manquante.
+
+**Claude Desktop:** Claude Desktop n'est pas configuré.
+
+(leído server-side: 3122 chars ≈ 1626 tokens de Claude que no entraron a tu contexto)

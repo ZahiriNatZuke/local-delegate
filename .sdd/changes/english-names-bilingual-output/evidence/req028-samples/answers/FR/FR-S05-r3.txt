@@ -1,0 +1,22 @@
+## pycparser v3.00
+C'est un analyseur syntaxique écrit uniquement en Python.
+
+## Introduction
+**Qu'est-ce que pycparser ?** C'est un module Python pour analyser le code C. **À quoi sert-il ?** Il permet l'obfuscation, l'analyse statique ou la création de compilateurs. **Quelle version de C est supportée ?** Il cible le standard C99 et partiellement C11. **Quelle grammaire suit-il ?** Il respecte l'annexe A du standard C99. **Quelle est sa licence ?** Il utilise la licence BSD. **Détails de contact** : Les problèmes se signalent via GitHub.
+
+## Installing
+**Prérequis** : Python moderne sur divers systèmes. **Processus d'installation** : Utiliser la commande `pip install pycparser`.
+
+## Using
+**Interaction avec le préprocesseur C** : Il nécessite un code préprocesse par `cpp`. **Qu'en est-il des en-têtes de la bibliothèque standard C ?** Il utilise des en-têtes fictifs dans `utils/fake_libc_include`. **Utilisation de base** : Consultez le répertoire `examples/`. **Utilisation avancée** : Consultez `pycparser/c_parser.py` ou `pycparser/_c_ast.cfg`.
+
+## Modifying
+Les nœuds AST sont générés via `_c_ast.cfg` par `_ast_gen.py`.
+
+## Package contents
+Le paquet contient la licence, la configuration `pyproject.toml`, des exemples et les tests.
+
+## Contributors
+Les contributeurs sont listés dans le fichier `CONTRIBUTORS`.
+
+(leído server-side: 8229 chars ≈ 4114 tokens de Claude que no entraron a tu contexto)

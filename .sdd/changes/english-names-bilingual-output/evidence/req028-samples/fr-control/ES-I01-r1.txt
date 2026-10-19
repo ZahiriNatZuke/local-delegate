@@ -1,0 +1,11 @@
+L'image montre une capture d'écran d'une interface utilisateur avec un en-tête indiquant "Cost, quota and images". Le contenu est divisé en trois sections principales détaillées avec du texte en anglais sur un fond blanc.
+
+La première section, "API-PRICE EQUIVALENT", indique un coût estimé entre 6,87 $ et environ 27,40 $, précisant que l'abonnement est gratuit. Elle explique que le premier chiffre est la limite inférieure et le second inclut les re-lectures et les expirations. Elle détaille des métriques techniques telles que la couverture des attributs, la densité de Claude et l'utilisation de modèles tels qu'Opus 5.5.
+
+La deuxième section, "SUBSCRIPTION QUOTA", analyse des fenêtres de temps de 5 heures et une fenêtre hebdomadaire, mentionnant des points de "statuisine" et des suppressions pour contamination ou changements mineurs.
+
+La troisième section, "IMAGES", informe sur le traitement de 25 images, précisant qu'elles totalisent 696353 octets sur le serveur et 17637 caractères renvoyés à Claude. Il est précisé que les images ne comptent pas dans le contexte ni dans l'équivalent de prix de l'API. Le design est épuré, avec du texte en couleur gris foncé et des détails en bleu.
+
+(lu côté serveur : 170114 octets d'image qui n'ont pas entré dans votre contexte)
+
+(leído server-side: 1181 chars ≈ 590 tokens de Claude que no entraron a tu contexto)

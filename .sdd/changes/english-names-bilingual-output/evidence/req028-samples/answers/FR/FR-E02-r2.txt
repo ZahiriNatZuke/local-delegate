@@ -1,0 +1,9 @@
+Ce script Python évalue si des chiffres spécifiques (compteurs de logs) ont été conservés dans les réponses générées par un modèle, en distinguant les vrais chiffres des inventions. Il définit quatre cas de contrôle (A14, A15, B31, B32) avec leurs valeurs attendues.
+
+La fonction `kept` utilise une expression régulière pour vérifier si un chiffre apparaît comme un nombre entier isolé dans le texte de la réponse. Elle exclut les chiffres intégrés à d'autres nombres (comme `157` pour `57`) ou les décimales (comme `0.57`), mais autorise la ponctuation finale (comme un point de phrase).
+
+Pour chaque dossier de réponses fourni via l'argument `--answers-dir`, le script identifie les fichiers correspondant aux cas de contrôle. Si un cas est manquant, il est marqué comme échoué. Sinon, pour chaque répétition d'exécution, il vérifie quels chiffres sont conservés. Un cas est considéré comme "conservé" pour une version donnée si la majorité des répétitions (au moins 2 sur 3) ont gardé au moins un chiffre valide.
+
+Le script compare ensuite les versions (par exemple, la base vs l'étape 1). Il retourne un résultat JSON indiquant, pour chaque cas, les répétitions, les chiffres conservés et si le cas est jugé réussi (`ok`). Si tous les cas de contrôle sont réussis pour une version, `controls_ok` est vrai. Le programme se termine avec le code 0 si toutes les versions vérifiées sont valides, et 1 sinon, permettant ainsi une intégration continue pour détecter les régressions dans la fidélité des chiffres.
+
+(leído server-side: 4735 chars ≈ 2332 tokens de Claude que no entraron a tu contexto)

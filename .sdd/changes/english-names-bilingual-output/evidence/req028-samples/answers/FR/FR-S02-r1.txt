@@ -1,0 +1,19 @@
+## Introducción
+Cette topologie recommande de garder le délégué local sur le client pour préserver l'accès aux fichiers locaux.
+
+## 1. Publicar el loopback dentro del tailnet
+Le flux utilise Tailscale Serve pour publier les services via HTTPS sur le réseau privé.
+**Autenticación de llama-swap** L'authentification utilise des clés API stockées de manière sécurisée dans le Keychain sur Mac ou via des chaînes sécurisées sur Windows, évitant toute exposition dans les fichiers de configuration.
+
+## 2. Mantener el MCP local en la Mac
+**Elegir exactamente que revision se prueba** Il est nécessaire de fixer une version spécifique via un SHA Git pour tester des changements non publiés sur PyPI.
+**Canary automatizado desde la Mac** Un script Python automatise les tests en effectuant des inférences et en vérifiant la résolution des chemins locaux.
+**Resultado validado (2026-07-23)** Les tests confirment le succès de vingt inférences et la gestion correcte de l'authentification et des chemins macOS.
+
+## Alternativa: MCP remoto completo
+Cette option publie le service directement depuis le PC, mais elle est moins recommandée car elle utilise les chemins de fichiers Windows.
+
+## Criterio de aceptación
+Le système doit valider l'accès sécurisé, la confidentialité des jetons et la résolution correcte des chemins locaux.
+
+(leído server-side: 11477 chars ≈ 5738 tokens de Claude que no entraron a tu contexto)

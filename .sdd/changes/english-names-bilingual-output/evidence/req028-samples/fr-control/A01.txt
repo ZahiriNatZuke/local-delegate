@@ -1,0 +1,23 @@
+**Résumé des problèmes par fichier**
+
+**1. prices.json et vigilant**
+
+*   **Problèmes clés :** 3 erreurs (2 assertions, 1 KeyError)
+    *   **Incompatibilité du schéma :** 1 échec d'assertion dû à la présence de la clé "entrada" restante dans le schéma de la table, causant des divergences lors de la comparaison.
+    *   **KeyError dans Vigilant :** 1 KeyError lié à 'input' lorsque vigilant compare les champs de la table, provenant de tests/test_vigilante.py.
+    *   **KeyError dans Pricing Judge :** 1 KeyError dans pricing._judge en raison de 'input' manquant.
+*   **Restauration :** Restauration réussie du fichier prices.json.
+
+**2. Étiquettes familiales dans le panneau (FAMILIA)**
+
+*   **Problème clé :** 1 échec d'assertion.
+    *   **Incompatibilité de la clé d'étiquette :** Échec d'assertion dû à l'utilisation de la clé "nueva" au lieu de "nueva" dans les étiquettes familiales, entraînant un écart dans la chaîne de caractères attendue.
+*   **Restauration :** Restauration réussie du fichier metrics.py.
+
+**3. Python ↔ JS Parité de la comptabilité (acct)**
+
+*   **Problème clé :** 1 échec d'assertion.
+    *   **Différence de densité :** Échec d'assertion dû à une différence dans le champ 'density' entre le code Python et JavaScript.
+*   **Restauration :** Restauration réussie du fichier metrics.py.
+
+(leído server-side: 1262 chars ≈ 631 tokens de Claude que no entraron a tu contexto)

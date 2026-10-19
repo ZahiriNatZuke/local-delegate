@@ -1,0 +1,9 @@
+Ce script Python automatise la préparation du site statique pour GitHub Pages en injectant dynamiquement la version du projet. Il évite la duplication manuelle de la version en la lisant directement depuis le fichier `pyproject.toml` via le module standard `tomllib`.
+
+Le processus commence par définir les répertoires source (`site/`) et de destination (`_site/`). La fonction `declared_version()` extrait la chaîne de version du fichier de configuration. Ensuite, la fonction `build()` copie l'arborescence source vers le répertoire de destination, en excluant les fichiers sources intermédiaires (suffixe `.src.html`). Elle parcourt ensuite récursivement les fichiers HTML, CSS, JS, JSON et WebManifest. Pour chaque fichier contenant le marqueur spécifique `__LD_VERSION__`, le script remplace cette chaîne par la version extraite. L'écriture respecte les sauts de ligne Unix (`\n`) pour garantir la compatibilité du serveur web.
+
+Une fonction `check()` permet un mode de vérification sans écriture. Elle scanne le répertoire de sortie pour détecter la présence résiduelle du marqueur. Si des fichiers non traités sont trouvés, le script signale une erreur, indiquant que le build a échoué à remplacer toutes les occurrences.
+
+L'exécution principale (`main()`) utilise `argparse` pour gérer les arguments, notamment `--check` pour le mode diagnostic et `--out` pour spécifier le répertoire de sortie. Si le mode vérification est activé, il retourne un code d'erreur si des marqueurs persistent. Sinon, il effectue la construction, affiche les fichiers modifiés et confirme l'injection de la version. Ce script utilise uniquement la bibliothèque standard, assurant ainsi une exécution légère et sans dépendances externes dans les pipelines CI/CD.
+
+(leído server-side: 4053 chars ≈ 1996 tokens de Claude que no entraron a tu contexto)

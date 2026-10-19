@@ -1,0 +1,9 @@
+Cette image présente une capture d'écran d'une fenêtre contextuelle ou d'un rapport technique intitulé « Cost, quota and images ». Le texte est structuré en trois sections principales, chacune introduite par une icône de barre verticale orange.
+
+La première section, « API-PRICE EQUIVALENT », estime le coût équivalent de l'utilisation de l'API entre 6,87 $ et environ 27,40 $. Elle explique que le premier chiffre est une borne inférieure et que le second inclut les relis et les expirations. Des détails techniques sur la couverture des données (94 attributs), la densité de Claude et les prix du forfait de juin 2026 sont fournis.
+
+La deuxième section, « SUBSCRIPTION QUOTA », détaille les fenêtres de temps (5 heures et hebdomadaires) avec des notes sur le calibrage et les points de statut.
+
+Enfin, la section « IMAGES » indique que 25 images ont été lues, totalisant 696 053 octets côté serveur et 17 673 caractères retournés à Claude. Le texte précise que les jetons Claude ne sont pas inclus dans ce décompte. L'interface est sobre, avec un fond blanc et une police de caractères noire.
+
+(leído server-side: 170114 bytes imagen que no entraron a tu contexto)

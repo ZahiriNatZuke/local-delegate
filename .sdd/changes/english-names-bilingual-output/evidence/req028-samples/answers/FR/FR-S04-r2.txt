@@ -1,0 +1,7 @@
+**Résumé du projet Identify**
+
+Le projet "identify" est une bibliothèque Python de 2.6.19, publiée sous licence MIT, visant à identifier des fichiers. Elle fournit une fonction principale, `tags_from_path`, qui analyse un fichier (ou des informations sur celui-ci) et renvoie un ensemble de balises standardisées décrivant son type.  L'installation se fait via `pip install identify`.
+
+L'utilisation se fait via des fonctions Python, mais aussi via une interface en ligne de commande (`identify-cli`).  La bibliothèque peut identifier des fichiers comme des fichiers texte, Python, exécutables, liens symboliques, répertoires, binaires, et peut également déterminer le type de licence contenu dans un fichier via l'API `license_id`.  L'identification repose sur l'analyse du type de fichier, de son exécutabilité, de son extension, et, si c'est un fichier texte, de sa ligne shebang.  La bibliothèque s'appuie sur des outils externes comme `licensee` pour l'analyse des licences.  Elle utilise également des métriques d'édition pour déterminer la similarité des noms de fichiers et des interpréteurs.  La version 2.1 inclut des améliorations et des corrections de bugs.
+
+(leído server-side: 4373 chars ≈ 2186 tokens de Claude que no entraron a tu contexto)

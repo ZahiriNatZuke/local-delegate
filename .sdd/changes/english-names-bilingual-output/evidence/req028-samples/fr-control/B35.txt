@@ -1,0 +1,19 @@
+**Résumé des erreurs**
+
+**scripts/build_corpus.py**
+
+*   **Modifications des invites de la version 0.36.0 (frontière déclarée) :** 76 erreurs.
+    *   **Nombre maximal de tokens :** 35 incidents où la valeur de `max_tokens` a été modifiée.
+    *   **Système :** 41 incidents où le message de `system` a été modifié.
+
+**Résumé des règles de Ruff**
+
+*   **Modifications des invites de la version 0.36.0 (frontière déclarée) :** 4 erreurs.
+    *   **Résumé des trois règles de Ruff :** 1 incidence.
+    *   **Résumé des docstrings de Ruff :** 1 incidence.
+    *   **Résumé d'un seul fichier de Ruff :** 1 incidence.
+    *   **Résumé de cinq règles de Ruff :** 1 incidence.
+
+(lecture côté serveur : 7699 chars ≈ 4009 Claude tokens qui n'ont pas entré dans votre contexte)
+
+(leído server-side: 735 chars ≈ 367 tokens de Claude que no entraron a tu contexto)

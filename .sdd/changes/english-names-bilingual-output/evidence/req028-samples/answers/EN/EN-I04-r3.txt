@@ -1,0 +1,12 @@
+This image shows a comprehensive technical dashboard for a software tool called "local delegate," which appears to be a system for managing and monitoring local AI model computations. The interface is densely packed with data visualizations, including bar charts, line graphs, and donut charts, all presented in a clean, light-themed UI.
+
+The dashboard is divided into several functional sections:
+- **Backend and System:** Displays the status of various models (like gemma and qwen), GPU/RAM usage, and active processes.
+- **Metrics:** Key performance indicators (KPIs) show "Contexto Conservado," "Delegaciones," "Generado," "Coste Local," "Latencia," and "Errores."
+- **Financial Analysis:** A section titled "Equivalente a precio de API" estimates costs and savings compared to standard API pricing.
+- **Visualizations:** Graphs track "Ahorro de contexto en el tiempo," "Ahorro por herramienta," and "Llamadas por modelo."
+- **Activity Logs:** A detailed table at the bottom lists recent tool executions, including timestamps, model types, and latency.
+
+The overall aesthetic is professional and data-centric, utilizing a blue and green color palette to highlight positive metrics and status indicators.
+
+(read server-side: 796169 image bytes that did not enter your context)

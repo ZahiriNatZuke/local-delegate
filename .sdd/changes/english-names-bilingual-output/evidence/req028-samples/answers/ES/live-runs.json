@@ -1,0 +1,23 @@
+{
+  "ES-r1": {
+    "started": "2026-10-19T04:11:27Z",
+    "finished": "2026-10-19T04:13:13Z",
+    "calls": 10,
+    "errors": 0,
+    "daemon_response_language": "es"
+  },
+  "ES-r2": {
+    "started": "2026-10-19T04:13:13Z",
+    "finished": "2026-10-19T04:14:48Z",
+    "calls": 10,
+    "errors": 0,
+    "daemon_response_language": "es"
+  },
+  "ES-r3": {
+    "started": "2026-10-19T04:14:48Z",
+    "finished": "2026-10-19T04:16:21Z",
+    "calls": 10,
+    "errors": 0,
+    "daemon_response_language": "es"
+  }
+}

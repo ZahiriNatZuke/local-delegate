@@ -1,0 +1,11 @@
+La imagen muestra una ventana emergente o notificación de interfaz de usuario con el título "Cost, quota and images". El diseño es limpio, con un fondo blanco y texto en negro y azul.
+
+El contenido se divide en tres secciones principales identificadas con barras verticales azules:
+
+1. **API-PRICE EQUIVALENT**: Indica un valor estimado entre $6.87 y ~$27.40. Explica que el primer número es el límite inferior y el segundo incluye re-lecturas y expiraciones. Detalla métricas técnicas como la cobertura de atributos (94), la densidad de Claude (74) y menciona modelos como Opus 5.5. También señala que se procesaron 25 imágenes y 0 salidas de archivo.
+
+2. **SUBSCRIPTION QUOTA**: Presenta datos sobre ventanas de tiempo (5 horas y semanal). Menciona que algunas no están calibradas y detalla puntos de "statuisine", incluyendo rechazos y descartes por contaminación o cambios pequeños.
+
+3. **IMAGES**: Confirma la presencia de 25 imágenes, con un tamaño de 696,353 bytes en el servidor y 17,637 caracteres devueltos a Claude. Aclara que las imágenes no cuentan en el contexto ni en el equivalente de precio de la API.
+
+(leído server-side: 170114 bytes imagen que no entraron a tu contexto)

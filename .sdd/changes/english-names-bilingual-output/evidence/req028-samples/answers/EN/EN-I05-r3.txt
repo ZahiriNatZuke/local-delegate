@@ -1,0 +1,9 @@
+This image displays a complex technical dashboard for a software tool called "local delegate," which appears to manage local AI model computations. The interface features a dark theme with various widgets, charts, and data tables.
+
+At the top, the "Backend" section lists several models (like qwen3-4b and qwen36-35b-a3b) with status indicators and performance metrics such as tokens per second. A "Sistema" panel shows hardware usage, including RAM, GPU load, and VRAM.
+
+The middle section contains several key performance indicators (KPIs) in large text, highlighting "Contexto Conservado" (133,967 tokens), "Delegaciones" (6), and "Coste Local" (102,314 tokens). Below these, there are comparative charts showing "Ahorro de contexto en el tiempo" (context savings over time) and "Ahorro por herramienta" (savings per tool), along with a donut chart showing "Origen del input."
+
+The bottom half includes a detailed "Actividad reciente" table listing specific tool calls, model names, and latency times. Finally, a "Sugerencias de los hooks" table at the bottom summarizes categories like Shell and Lectura with corresponding view counts and percentages.
+
+(read server-side: 556636 image bytes that did not enter your context)

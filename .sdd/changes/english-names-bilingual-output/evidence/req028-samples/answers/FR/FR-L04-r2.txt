@@ -1,0 +1,21 @@
+**Résumé des problèmes par fichier**
+
+**local-delegate doctor:**
+
+*   **LLAMASWAP_EXE:** Non défini ; recherche de llama-swap dans le PATH.
+*   **LLAMASWAP_CONFIG:** Non défini.
+*   **Backend BASE\_URL:** http://127.0.0.1:9292/v1 - OK.
+*   **Versions:** llama-swap (v255) et llama-server (b10909) sont à jour. Absence de configuration LLAMASWAP_CONFIG, ce qui cause un problème de vérification.
+*   **Clients:** Détection de Claude Code, Codex et opencode (sans observation des clients MCP).
+*   **Cost et Remplissage:** Pas de vérification enregistrée.
+*   **Hooks:** 5 scripts copiés, aucun hook orphelin, 2 hooks enregistrés.
+*   **Skills:** Claude Code et opencode sont installés.
+*   **Mémoire:** Claude Code, Codex et opencode sont à jour.
+*   **MCP:** Enregistrement des MCP dans les fichiers correspondants.
+*   **Services:** Daemon et backend opérationnels.
+*   **Token du port du daemon:** Pas de token requis.
+*   **Token de Claude Desktop:** Non configuré.
+
+Aucune erreur ou avertissement spécifique n'est signalée. L'état général est "tout à point".
+
+(leído server-side: 3122 chars ≈ 1626 tokens de Claude que no entraron a tu contexto)

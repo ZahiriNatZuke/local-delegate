@@ -1,0 +1,7 @@
+Cette image présente un tableau de bord analytique complexe pour un outil nommé "local delegate", conçu pour surveiller et optimiser l'utilisation de modèles de langage (LLM) locaux. L'interface est riche en données, organisée en plusieurs sections colorées et graphiques.
+
+En haut, on observe des indicateurs de performance du backend, incluant des modèles comme gemma et qwen, ainsi que l'utilisation des ressources système (RAM, GPU, VRAM). Des widgets centraux affichent des statistiques clés telles que le contexte conservé, le nombre de délégations, les jetons générés et la latence moyenne.
+
+La partie centrale contient des graphiques à barres et des diagrammes circulaires illustrant l'économie de contexte au fil du temps, l'économie par outil et l'origine des entrées. Une section "Activité récente" liste les appels spécifiques avec des détails sur les outils utilisés, les modèles et les temps de réponse. Enfin, le bas de la page détaille les clients ayant délégué des tâches et les suggestions de "hooks" classées par catégorie, offrant une vue d'ensemble complète sur l'efficacité opérationnelle du système.
+
+(leído server-side: 796169 bytes imagen que no entraron a tu contexto)

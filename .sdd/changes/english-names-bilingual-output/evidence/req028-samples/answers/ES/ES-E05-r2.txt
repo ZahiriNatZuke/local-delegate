@@ -1,0 +1,9 @@
+Este script de Python genera un informe JSON para la revisión manual de la precisión de contadores de inventos en respuestas de lenguaje. Su objetivo principal es comparar dos versiones de un algoritmo de validación: la versión principal (`score_lint_fidelity_main.py`) y una versión corregida (`score_lint_fidelity.py`).
+
+El programa recibe pares de argumentos `ANSWER=LOG`, donde `ANSWER` es el texto de la respuesta y `LOG` es el registro asociado. Para cada par, carga dinámicamente ambos módulos de validación. Luego, identifica todos los números (dígitos o palabras) y nombres de archivos presentes en el texto utilizando expresiones regulares definidas en el módulo nuevo.
+
+Para cada elemento único encontrado, el script extrae un contexto textual limitado (caracteres antes y después del token) para facilitar la revisión humana. Posteriormente, verifica si cada número o archivo fue clasificado como "inventado" por ambas versiones del contador. El resultado se estructura como una lista de diccionarios, donde cada entrada contiene el tipo de elemento (número o archivo), el token específico, su contexto y los booleanos `old_invented` y `new_invented` que indican si cada contador lo marcó como inventado.
+
+Finalmente, el script imprime todo el reporte en formato JSON legible. Esto permite a los revisores humanos examinar caso por caso las discrepancias entre los dos contadores, asegurando que las nuevas reglas de validación no generen falsos positivos o negativos injustificados antes de ser adoptadas oficialmente. Es una herramienta de auditoría y depuración para mejorar la fidelidad de la lint de respuestas.
+
+(leído server-side: 2822 chars ≈ 1390 tokens de Claude que no entraron a tu contexto)

@@ -1,0 +1,9 @@
+L'image montre une capture d'écran d'une fenêtre contextuelle ou d'une section de rapport intitulée « Cost, quota and images ». Le texte est structuré en trois sections principales avec des titres en majuscules : « API-PRICE EQUIVALENT », « SUBSCRIPTION QUOTA » et « IMAGES ».
+
+La première section estime l'équivalent du prix de l'API entre 6,87 $ et environ 27,40 $, précisant que l'abonnement est gratuit. Elle détaille la couverture des données, mentionnant des chiffres spécifiques comme 94 unités attribuées et des exclusions pour les tests et les scripts.
+
+La deuxième section traite du quota d'abonnement, mentionnant des fenêtres de 5 heures et de 7 jours avec des notes sur le calibrage et les points de statut.
+
+Enfin, la section « IMAGES » indique qu'il y a 25 images, avec des détails techniques sur les octets lus côté serveur (696 353) et les caractères renvoyés à Claude (17 637). L'interface est sobre, avec un fond blanc, du texte noir et des icônes orange.
+
+(leído server-side: 170114 bytes imagen que no entraron a tu contexto)

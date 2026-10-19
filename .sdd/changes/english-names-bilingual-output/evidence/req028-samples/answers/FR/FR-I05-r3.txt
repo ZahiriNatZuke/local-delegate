@@ -1,0 +1,7 @@
+Cette image présente un tableau de bord technique complexe, intitulé "local delegate", affiché sur un fond sombre avec des éléments graphiques en vert, bleu et blanc. L'interface est divisée en plusieurs sections analytiques qui surveillent les performances d'un système d'intelligence artificielle local.
+
+En haut, on observe des indicateurs de backend et de système, montrant l'utilisation de la RAM, de la charge GPU et les processus actifs comme "pythonx.exe" et "llama-swap.exe". Le centre de l'écran affiche des statistiques clés telles que le "Contexte conservé" (133 967 tokens), le nombre de délégations et le coût local.
+
+Des graphiques à barres et circulaires illustrent l'économie de contexte, les économies par outil et la répartition des appels par modèle (comme qwen36-35b-a3b). En bas, un tableau détaillé répertorie l'activité récente, précisant l'heure, l'outil utilisé, le modèle et la latence. L'ensemble de la page est conçu pour offrir une vue d'ensemble précise sur l'efficacité et les coûts d'un système de traitement de données local.
+
+(leído server-side: 556636 bytes imagen que no entraron a tu contexto)

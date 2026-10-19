@@ -1,0 +1,13 @@
+El script compara métricas de rendimiento entre una versión base (`main`) y una rama (`tag`) de un sistema, aplicando criterios específicos de evaluación (sección B2f). Lee datos de puntuación desde archivos JSON (`score-<tag>.json`) y un archivo de verificación de prompts idénticos (`same-prompt-check.json`).
+
+Primero, identifica "ruido" calculando diferencias en fidelidad y cortes de longitud entre versiones para prompts idénticos. Luego, agrupa los datos por categorías (longas en español/inglés, mecánicas) y calcula promedios de métricas como códigos generados, archivos, fidelidad y tasa de cortes.
+
+El núcleo del script evalúa un conjunto de criterios booleanos para determinar si la rama cumple con los estándares:
+1.  Los promedios de códigos y archivos en la rama deben ser al menos 0.9.
+2.  La calidad del modelo en la rama no debe ser peor que en la base.
+3.  La fidelidad y los cortes en la rama no deben exceder significativamente los de la base, ajustados por el ruido calculado.
+4.  Se verifican casos específicos ("watched") con tolerancias estrictas.
+
+Finalmente, el script genera un reporte JSON detallado que incluye las métricas agrupadas, los totales, el estado de cada criterio individual y una conclusión global (`met`) que indica si todos los criterios se cumplen. Este reporte se guarda en un archivo y se imprime en la consola, facilitando la auditoría automatizada de cambios en el sistema.
+
+(leído server-side: 5047 chars ≈ 2486 tokens de Claude que no entraron a tu contexto)

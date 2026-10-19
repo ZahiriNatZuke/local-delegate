@@ -1,0 +1,13 @@
+**tests/test_detect_language.py**
+* **Tests réussis** : 15 tests ont été validés avec succès.
+
+**tests/test_corpus.py**
+* **Tests réussis** : 61 tests ont été validés avec succès.
+
+**Résumé global**
+=================================== PASSES ====================================
+76 passed in 30.35s
+
+Sin mencionar (del log, no los nombra el resumen): Projects/local-delegate/.venv/Scripts/python.exe, pyproject.toml
+
+(leído server-side: 15540 chars ≈ 8093 tokens de Claude que no entraron a tu contexto)

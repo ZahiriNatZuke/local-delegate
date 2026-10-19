@@ -1,0 +1,9 @@
+This image shows a complex technical dashboard for a software tool called "local delegate," which appears to be a local inference system for Large Language Models (LLMs). The interface uses a dark theme with a structured layout of various widgets and data visualizations.
+
+The top section displays system status, including backend model information (like qwen models), GPU load (3%), and RAM usage. Below this, several large metric cards highlight key statistics such as "Contexto Conservado" (133,967 tokens), "Delegaciones" (6), and "Latencia" (59.3 s).
+
+The middle section features comparative data, including an "Equivalente a precio de API" section and several charts. These charts visualize "Ahorro de contexto en el tiempo" (context savings over time) and "Ahorro por herramienta" (savings per tool), using bar and line graphs. A circular progress chart shows "100% por ruta."
+
+The bottom half contains a detailed "Actividad reciente" table listing specific tool calls, model types, and latency times. Finally, a "Sugerencias de los hooks" table at the bottom summarizes categories like Shell and Lectura with associated counts and percentages.
+
+(read server-side: 556636 image bytes that did not enter your context)

@@ -1,0 +1,7 @@
+Cette image présente un tableau de bord technique complexe et sombre, intitulé "local delegate", qui surveille les performances d'un système d'intelligence artificielle local. L'interface est divisée en plusieurs sections analytiques utilisant des graphiques à barres, des diagrammes circulaires et des tableaux de données.
+
+En haut, on observe des indicateurs de backend et de système, affichant l'utilisation de la RAM, de la GPU et des modèles de langage actifs comme "qwen". Le centre de l'écran met en évidence des statistiques clés telles que le "contexte conservé" (133 967 tokens), le "coût local" et la "latence".
+
+Plus bas, des graphiques illustrent l'économie de contexte au fil du temps et par outil, tandis qu'un diagramme circulaire montre une économie de 100 % par chemin. La partie inférieure détaille l'activité récente avec des horodatages, les outils utilisés (comme `local_commit_msg`) et les temps d'inférence. L'esthétique générale est professionnelle, utilisant des tons sombres avec des accents de vert et de bleu pour une lecture claire des données de performance.
+
+(leído server-side: 556636 bytes imagen que no entraron a tu contexto)

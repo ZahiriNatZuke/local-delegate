@@ -1,0 +1,5 @@
+L'image montre une fenêtre contextuelle ou une interface logicielle intitulée « Coste, cuota e imágenes » (Coût, quota et images). Le texte est rédigé en espagnol et détaille une analyse technique des coûts d'utilisation d'une API, probablement liée à un modèle d'intelligence artificielle comme Claude.
+
+Le contenu est divisé en trois sections principales. La première section, « EQUIVALENTE A PRECIO DE API », estime le coût entre 8,67 € et 32,40 €, expliquant que l'abonnement est à tarif fixe. Elle fournit des statistiques précises sur la couverture des données, les lectures et la densité de tokenisation. La deuxième section, « CUOTA DE LA SUSCRIPCIÓN », détaille les limites de quotas sur différentes fenêtres de temps (5 heures, 1 heure et hebdomadaire), mentionnant des points de statut et des rejets. Enfin, la section « IMÁGENES » indique que 25 images ont été lues côté serveur, générant 696 353 octets, sans impact sur le coût de l'API. L'esthétique est sobre, avec un fond blanc, du texte noir et des accents orange.
+
+(leído server-side: 181077 bytes imagen que no entraron a tu contexto)

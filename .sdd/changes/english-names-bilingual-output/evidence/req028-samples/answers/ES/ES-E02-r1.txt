@@ -1,0 +1,9 @@
+Este script de Python verifica la integridad de datos numéricos específicos en archivos de respuesta de registros (logs). Su objetivo principal es asegurar que ciertos conteos reales (como errores o advertencias) se mantengan intactos en las respuestas generadas, eliminando solo los conteos inventados.
+
+El código define un diccionario `CONTROLS` con identificadores (ej. "A14") y sus cifras esperadas. La función clave `kept` utiliza expresiones regulares para detectar si una cifra aparece como un número entero completo en el texto, evitando falsos positivos como parte de otro número o decimales. Permite que el número termine con un punto final de oración.
+
+Para cada carpeta de respuestas especificada, el script lee los archivos, identifica las repeticiones de cada caso y verifica cuántas de las cifras esperadas se conservan. Un caso se considera "conservado" si al menos una cifra se mantiene. En caso de múltiples repeticiones, se requiere que la mayoría (más de la mitad) conserve la cifra para considerar el caso válido.
+
+Finalmente, el script genera un informe en JSON que indica para cada caso si fue conservado correctamente y si todos los controles pasaron. Esto permite evaluar si las modificaciones en el sistema de procesamiento de logs han preservado los datos críticos originales.
+
+(leído server-side: 4735 chars ≈ 2332 tokens de Claude que no entraron a tu contexto)

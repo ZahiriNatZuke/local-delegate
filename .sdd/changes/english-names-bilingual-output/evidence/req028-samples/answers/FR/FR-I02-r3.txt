@@ -1,0 +1,10 @@
+Cette image présente un tableau de bord analytique complexe intitulé "local delegate", conçu pour surveiller les performances et les économies liées à l'utilisation de modèles de langage locaux. L'interface utilise une palette de couleurs sobres, principalement le blanc, le gris et des touches de bleu et de vert pour les indicateurs de données.
+
+Le tableau de bord est divisé en plusieurs sections clés :
+1. **Backend et Système** : En haut, on voit l'état des modèles (comme gemma et qwen) et les ressources matérielles (RAM, GPU, VRAM).
+2. **Statistiques Globales** : Des cartes affichent le contexte conservé, le nombre de délégations, les jetons générés et la latence moyenne.
+3. **Équivalence de Prix** : Une section estime les économies financières réalisées par rapport aux tarifs API standards.
+4. **Visualisations de Données** : Des graphiques à barres et des diagrammes circulaires illustrent les économies de contexte au fil du temps, la répartition par outil et la source des entrées.
+5. **Activité Récente** : Un tableau détaillé en bas répertorie les appels spécifiques, les modèles utilisés et les temps de réponse.
+
+(leído server-side: 782215 bytes imagen que no entraron a tu contexto)

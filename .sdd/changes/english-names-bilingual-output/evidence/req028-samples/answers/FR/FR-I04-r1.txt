@@ -1,0 +1,12 @@
+Cette image présente un tableau de bord complexe et détaillé pour un outil nommé "local delegate", conçu pour surveiller et analyser l'utilisation de modèles de langage (LLM) en local. L'interface utilise une palette de couleurs sobres, principalement le blanc, le gris et des touches de bleu et orange pour les indicateurs de données.
+
+Le tableau de bord est divisé en plusieurs sections :
+1. **Backend et Système** : En haut, on voit l'état des modèles (comme gemma et qwen) et les ressources matérielles (RAM, GPU, VRAM).
+2. **Statistiques Clés** : Des widgets affichent le contexte conservé, le nombre de délégations, les jetons générés et la latence moyenne.
+3. **Équivalence de Prix** : Une section compare les coûts estimés par rapport aux tarifs API standards.
+4. **Graphiques** : Des diagrammes à barres et circulaires illustrent l'économie de contexte, l'économie par outil et l'origine des entrées.
+5. **Activité Récente** : Un tableau en bas liste les dernières requêtes avec des détails sur l'outil utilisé, le modèle, le type d'entrée et la latence.
+
+L'ensemble offre une vue analytique complète sur l'efficacité de l'exécution locale des modèles d'IA.
+
+(leído server-side: 796169 bytes imagen que no entraron a tu contexto)

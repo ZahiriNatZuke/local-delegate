@@ -1,0 +1,9 @@
+This Python module implements a verification system to compare pricing data from local JSON files against costs calculated by Claude Code, ensuring compliance with specific requirements (REQ-011, REQ-012, REQ-013). It operates without network requests, relying on `importlib.resources` to read `prices.json` and `density.json` from the package’s `resources/data/` directory. These tables are cached using `functools.cache` to ensure efficiency and shared access, while allowing tests or mutants to work on copies if modifications are needed.
+
+The core logic begins with `normalize_id`, which cleans model identifiers by removing formatting artifacts like `[1m]` and date suffixes (e.g., `-20251001`). The `entry` function then performs an exact lookup in the price table using this normalized ID, returning `None` if no match is found, thereby preventing incorrect price assignments between similar models.
+
+The `check_rows` function evaluates each row of usage data (containing token counts and costs) against the price table. It calculates the expected cost based on input, output, cache read/write, and web search tokens, applying specific rates from the table. A tolerance threshold is applied to account for rounding differences. The `_judge` helper determines if the actual cost falls within an acceptable range (`inside`), is outside it (`outside`), or if the model lacks pricing data (`unpriced`). Rows with negligible costs are ignored.
+
+Finally, the `verdict` function aggregates these judgments. If any row is marked `outside` or `unpriced`, the overall result is `fail`; otherwise, it is `pass`. This ensures that Claude Code’s billing aligns closely with the official price table, flagging discrepancies for investigation.
+
+(read server-side: 4364 chars ≈ 2149 Claude tokens that did not enter your context)

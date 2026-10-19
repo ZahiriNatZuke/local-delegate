@@ -1,0 +1,5 @@
+La imagen muestra una interfaz de usuario de un panel de control digital, específicamente un "SAVINGS DASHBOARD" para un proyecto llamado "local_delegate". En la esquina superior izquierda, aparece un logotipo cuadrado de color verde con un símbolo de flecha hacia abajo y el nombre del proyecto en letras blancas grandes. Junto a este, se indica la versión "v0.35.8" y un indicador de estado con un punto amarillo que dice "RUNNING".
+
+En la parte derecha, hay una barra de herramientas con varios controles. Destaca un menú desplegable que selecciona "Last 30 days", un botón de "Tests" con un icono de matraz, un botón de actualización circular y un botón verde prominente que dice "Auto" con un icono de flechas en ciclo. También se incluyen opciones para cambiar el idioma (actualmente en "EN"), un icono de luna para el modo oscuro y un signo de interrogación para ayuda. El diseño es moderno, con un fondo oscuro y elementos de navegación simplificados.
+
+(leído server-side: 21812 bytes imagen que no entraron a tu contexto)

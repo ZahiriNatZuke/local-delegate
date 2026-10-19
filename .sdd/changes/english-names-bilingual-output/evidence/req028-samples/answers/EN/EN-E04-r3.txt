@@ -1,0 +1,7 @@
+This Python script sanitizes HTML fixture files by removing visitor-specific tracking data while preserving public site configuration. It targets specific identifiers such as analytics IDs (`anonymousId`, `stableId`), anti-fraud session IDs, IP-derived country codes, and Content Security Policy nonces. These elements vary per user and are unnecessary for testing price extraction or text limits.
+
+The script uses regular expressions to identify these keys in various formats (HTML attributes, JSON, escaped strings) and replaces their values with neutral placeholders: a zeroed-out UUID for IDs, a static nonce string, and "ZZ" for countries. It distinguishes between long identifiers (likely unique session tokens) and short ones (like country codes) to avoid false positives; long values are replaced globally, while short values are replaced only within the matched pattern context.
+
+The process is idempotent, meaning running it on already-cleaned files produces no changes. The script reads HTML files from the `tests/fixtures/vigilante` directory or specified command-line arguments, performs the substitution, and writes the cleaned content back in bytes to preserve line endings. It also provides a `leftovers` function to verify that no private data remains, which is used in tests to ensure fixtures are properly sanitized. This ensures that test data does not leak sensitive user information while maintaining the structural integrity of the HTML for parsing purposes.
+
+(read server-side: 4156 chars ≈ 2047 Claude tokens that did not enter your context)

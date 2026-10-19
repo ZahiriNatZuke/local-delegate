@@ -1,0 +1,7 @@
+This image displays a complex technical dashboard for a software tool called "local delegate," which appears to be a system for managing and monitoring local AI model computations. The interface features a dark theme with a high density of data visualizations, including bar charts, line graphs, and circular progress indicators.
+
+The top section monitors backend status, listing various models like "qwen" and "llama," along with system resources such as RAM and GPU usage. Below this, several large metric cards highlight key statistics like "Contexto Conservado" (133,967 tokens), "Delegaciones" (6), and "Latencia" (59.3 s).
+
+The middle section provides a financial comparison, estimating API costs versus local costs, and includes a "Ahorro de contexto" (Context Savings) chart. A "Llamadas por modelo" (Calls per model) bar chart shows the distribution of requests across different AI models. The bottom half features a detailed "Actividad reciente" (Recent Activity) table, listing specific tool calls, timestamps, and latency, followed by a summary of "Sugerencias de los hooks" (Hook suggestions). The overall layout is professional, data-heavy, and designed for monitoring local inference performance.
+
+(read server-side: 556636 image bytes that did not enter your context)

@@ -1,0 +1,23 @@
+{
+  "FR-r1": {
+    "started": "2026-10-19T04:42:11Z",
+    "finished": "2026-10-19T04:45:36Z",
+    "calls": 20,
+    "errors": 0,
+    "daemon_response_language": "fr"
+  },
+  "FR-r2": {
+    "started": "2026-10-19T04:45:36Z",
+    "finished": "2026-10-19T04:49:01Z",
+    "calls": 20,
+    "errors": 0,
+    "daemon_response_language": "fr"
+  },
+  "FR-r3": {
+    "started": "2026-10-19T04:49:01Z",
+    "finished": "2026-10-19T04:52:25Z",
+    "calls": 20,
+    "errors": 0,
+    "daemon_response_language": "fr"
+  }
+}
