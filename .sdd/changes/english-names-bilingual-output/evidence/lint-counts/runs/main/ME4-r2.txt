@@ -1,0 +1,7 @@
+**Summary of Issues**
+
+**tools/gen.py:**
+
+This file exhibits multiple import-related issues. Specifically, there are four instances of the **Module Level Import Not at Top of File** error (E402), occurring on lines 4, 5, 6, and 7. Additionally, two lines (20 and 31) contain lines that exceed the maximum allowed length (E501), with a total of 110 and 121 characters respectively. Finally, there is one instance of the **Comparison to None Should Be Cond Is None** error (E711) on line 50.
+
+(read server-side: 438 chars ≈ 228 Claude tokens that did not enter your context)

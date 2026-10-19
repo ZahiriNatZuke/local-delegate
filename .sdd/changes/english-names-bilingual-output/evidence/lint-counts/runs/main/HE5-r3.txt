@@ -1,0 +1,22 @@
+**src/local_delegate/sections.py**
+
+**Most Relevant Issues**
+* **E501**: Multiple instances of lines exceeding the maximum length.
+* **D101**: Several public classes are missing docstrings.
+* **D102**: Multiple public methods lack docstrings.
+* **C901**: Functions `markdown_headings` and `match_headings` exceed the complexity threshold.
+* **PLR0912**: The function contains too many branches.
+* **PLR0913**: A function definition has too many arguments.
+* **RUF002**: Docstrings contain ambiguous characters like en dashes or multiplication signs.
+* **PLR2004**: A magic value is used in a comparison instead of a constant.
+* **CPY001**: The file is missing a copyright notice.
+* **TC003**: A standard library import should be moved to a type-checking block.
+* **D301**: Docstrings containing backslashes should use raw strings.
+* **D400**: The first line of a docstring does not end with a period.
+* **D205**: A blank line is required between the summary and the description.
+
+Found 26 errors.
+
+Not mentioned (in the log, not named by the summary): D203, D211, D212, D213
+
+(read server-side: 2627 chars ≈ 1368 Claude tokens that did not enter your context)

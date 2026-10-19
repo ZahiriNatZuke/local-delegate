@@ -1,0 +1,6 @@
+**tools/gen.py**
+* **E402**: Module level import not at top of file (4)
+* **E501**: Line too long (3)
+* **E711**: Comparison to `None` should be `cond is None` (1)
+
+(read server-side: 438 chars ≈ 228 Claude tokens that did not enter your context)

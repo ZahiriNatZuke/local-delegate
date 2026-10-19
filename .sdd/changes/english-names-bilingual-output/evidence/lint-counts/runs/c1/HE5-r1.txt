@@ -1,0 +1,24 @@
+**src/local_delegate/sections.py**
+
+**Errors**
+* **E501**: 6 instances of lines exceeding the maximum length.
+* **D101**: 5 instances of missing docstrings in public classes.
+* **D102**: 3 instances of missing docstrings in public methods.
+* **RUF002**: 2 instances of ambiguous characters in docstrings.
+* **C901**: 2 instances of overly complex functions.
+* **D203**: 1 instance of incompatible blank line configuration before a class.
+* **D211**: 1 instance of incompatible blank line configuration before a class.
+* **D212**: 1 instance of incompatible summary line configuration.
+* **D213**: 1 instance of incompatible summary line configuration.
+* **CPY001**: 1 instance of a missing copyright notice.
+* **TC003**: 1 instance of a standard library import that should be moved to a type-checking block.
+* **D301**: 1 instance of failing to use raw docstrings when backslashes are present.
+* **D400**: 1 instance of a first line not ending with a period.
+* **PLR2004**: 1 instance of using a magic value in a comparison.
+* **PLR0912**: 1 instance of having too many branches.
+* **PLR0913**: 1 instance of having too many arguments in a function definition.
+* **D205**: 1 instance of requiring a blank line between a summary and a description.
+
+Found 26 errors.
+
+(read server-side: 2627 chars ≈ 1368 Claude tokens that did not enter your context)

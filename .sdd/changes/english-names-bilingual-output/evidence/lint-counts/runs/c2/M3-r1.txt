@@ -1,0 +1,22 @@
+**Resumen de Problemas por Archivo**
+
+**lib/net.py:**
+*   SIM102: 4
+*   I001: 3
+*   RET504: 1
+
+**lib/io.py:**
+*   I001: 3
+*   UP006: 3
+*   RET504: 0
+
+**lib/db.py:**
+*   I001: 2
+*   SIM102: 4
+*   UP006: 1
+*   RET504: 2
+
+**Detalles Adicionales:**
+Found 13 errors.
+
+(leído server-side: 784 chars ≈ 408 tokens de Claude que no entraron a tu contexto)

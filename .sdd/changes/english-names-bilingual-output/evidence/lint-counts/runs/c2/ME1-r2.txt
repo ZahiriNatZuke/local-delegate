@@ -1,0 +1,15 @@
+Here's a summary of the issues grouped by file, prioritizing the most frequent ones:
+
+**app/main.py:**
+- E501: 2 (Line too long)
+- F401: 1 (Unused import of `os`)
+
+**app/util.py:**
+- E501: 2 (Line too long)
+- F401: 3 (Unused imports of `sys`, `re`, and `os`)
+- W291: 1 (Trailing whitespace)
+
+**app/cli.py:**
+- E501: 1 (Line too long)
+
+(read server-side: 340 chars ≈ 177 Claude tokens that did not enter your context)

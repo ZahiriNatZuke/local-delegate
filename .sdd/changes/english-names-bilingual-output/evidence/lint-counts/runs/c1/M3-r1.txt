@@ -1,0 +1,19 @@
+Resumen de Problemas:
+
+**Archivo: lib/io.py**
+- Problemas de Importación: 2 (I001)
+- Problemas de Tipado: 3 (UP006)
+
+**Archivo: lib/net.py**
+- Problemas de Importación: 1 (I001)
+- Problemas de `if`: 3 (SIM102)
+
+**Archivo: lib/db.py**
+- Problemas de Importación: 1 (I001)
+- Problemas de Tipado: 2 (UP006)
+- Asignaciones Innecesarias antes de `return`: 2 (RET504)
+
+**Total General:**
+- Found 13 problemas.
+
+(leído server-side: 784 chars ≈ 408 tokens de Claude que no entraron a tu contexto)

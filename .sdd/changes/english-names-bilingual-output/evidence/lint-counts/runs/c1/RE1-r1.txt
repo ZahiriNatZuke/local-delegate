@@ -1,0 +1,26 @@
+**src/local_delegate/sections.py**
+
+**Errors**
+* **D101**: 5 missing docstrings in public classes.
+* **E501**: 4 lines are too long.
+* **D102**: 3 missing docstrings in public methods.
+* **D400**: 3 first lines of docstrings should end with a period.
+* **C901**: 3 functions are too complex.
+* **RUF002**: 2 docstrings contain ambiguous characters.
+* **D415**: 2 first lines of docstrings should end with proper punctuation.
+* **D203**: 1 warning regarding incompatible blank line rules.
+* **D211**: 1 warning regarding incompatible blank line rules.
+* **D212**: 1 warning regarding incompatible docstring summary rules.
+* **D213**: 1 warning regarding incompatible docstring summary rules.
+* **CPY001**: 1 missing copyright notice at the top of the file.
+* **TC003**: 1 standard library import should be moved to a type-checking block.
+* **D301**: 1 docstring should use a raw string due to backslashes.
+* **PLR2004**: 1 magic value used in comparison.
+* **PLR0912**: 1 function has too many branches.
+* **COM812**: 1 trailing comma is missing.
+* **PLR0913**: 1 function has too many arguments.
+* **D205**: 1 blank line is required between the summary and description.
+
+Found 30 errors.
+
+(read server-side: 14237 chars ≈ 7415 Claude tokens that did not enter your context)

@@ -1,0 +1,24 @@
+**src/local_delegate/sections.py**
+
+**Errores principales**
+* **E501**: 6 líneas son demasiado largas.
+* **D101**: 5 clases públicas carecen de una cadena de documentación.
+* **D102**: 3 métodos públicos carecen de una cadena de documentación.
+* **RUF002**: 2 cadenas de documentación contienen caracteres ambiguos.
+* **C901**: 2 funciones presentan una complejidad excesiva.
+* **D205**: 1 línea en blanco es necesaria entre el resumen y la descripción.
+* **D211**: 1 advertencia de incompatibilidad con la regla de línea en blanco antes de una clase.
+* **D212**: 1 advertencia de incompatibilidad con la regla de resumen de varias líneas.
+* **D213**: 1 advertencia de incompatibilidad con la regla de resumen de varias líneas.
+* **D203**: 1 advertencia de incompatibilidad con la regla de línea en blanco antes de una clase.
+* **D301**: 1 indicación para usar cadenas de texto crudas si hay barras invertidas.
+* **D400**: 1 error de formato donde la primera línea debe terminar con un punto.
+* **PLR2004**: 1 uso de un valor mágico en una comparación.
+* **PLR0912**: 1 función tiene demasiadas ramificaciones.
+* **PLR0913**: 1 función tiene demasiados argumentos.
+* **CPY001**: 1 aviso de falta de notificación de derechos de autor al inicio del archivo.
+* **TC003**: 1 sugerencia para mover una importación de la biblioteca estándar a un bloque de comprobación de tipos.
+
+Found 26 errors.
+
+(leído server-side: 2627 chars ≈ 1368 tokens de Claude que no entraron a tu contexto)

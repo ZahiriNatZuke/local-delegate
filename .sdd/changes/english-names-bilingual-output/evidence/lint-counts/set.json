@@ -1,0 +1,2780 @@
+{
+ "entries": [
+  {
+   "id": "R1",
+   "top_codes": [
+    "C901",
+    "COM812",
+    "CPY001",
+    "D101",
+    "D102",
+    "D205",
+    "D301",
+    "D400",
+    "D415",
+    "E501",
+    "PLR0912",
+    "PLR0913",
+    "PLR2004",
+    "RUF002",
+    "TC003"
+   ],
+   "top_files": [
+    "src/local_delegate/sections.py"
+   ],
+   "true_counts": {
+    "C901": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/sections.py": 3
+     }
+    },
+    "COM812": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "CPY001": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "D101": {
+     "total": 5,
+     "per_file": {
+      "src/local_delegate/sections.py": 5
+     }
+    },
+    "D102": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/sections.py": 3
+     }
+    },
+    "D205": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "D301": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "D400": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/sections.py": 3
+     }
+    },
+    "D415": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/sections.py": 2
+     }
+    },
+    "E501": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/sections.py": 4
+     }
+    },
+    "PLR0912": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "PLR0913": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "PLR2004": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "RUF002": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/sections.py": 2
+     }
+    },
+    "TC003": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "RE1",
+   "top_codes": [
+    "C901",
+    "COM812",
+    "CPY001",
+    "D101",
+    "D102",
+    "D205",
+    "D301",
+    "D400",
+    "D415",
+    "E501",
+    "PLR0912",
+    "PLR0913",
+    "PLR2004",
+    "RUF002",
+    "TC003"
+   ],
+   "top_files": [
+    "src/local_delegate/sections.py"
+   ],
+   "true_counts": {
+    "C901": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/sections.py": 3
+     }
+    },
+    "COM812": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "CPY001": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "D101": {
+     "total": 5,
+     "per_file": {
+      "src/local_delegate/sections.py": 5
+     }
+    },
+    "D102": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/sections.py": 3
+     }
+    },
+    "D205": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "D301": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "D400": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/sections.py": 3
+     }
+    },
+    "D415": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/sections.py": 2
+     }
+    },
+    "E501": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/sections.py": 4
+     }
+    },
+    "PLR0912": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "PLR0913": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "PLR2004": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "RUF002": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/sections.py": 2
+     }
+    },
+    "TC003": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "G1",
+   "top_codes": [
+    "COM812",
+    "TRY003",
+    "D102",
+    "T201",
+    "EM102",
+    "CPY001",
+    "D107",
+    "PLR2004",
+    "D101",
+    "D105"
+   ],
+   "top_files": [
+    "src/local_delegate/benchmark.py",
+    "src/local_delegate/agents.py",
+    "src/local_delegate/autostart.py",
+    "src/local_delegate/__init__.py",
+    "src/local_delegate/__main__.py"
+   ],
+   "true_counts": {
+    "C901": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "COM812": {
+     "total": 16,
+     "per_file": {
+      "src/local_delegate/agents.py": 1,
+      "src/local_delegate/benchmark.py": 15
+     }
+    },
+    "CPY001": {
+     "total": 5,
+     "per_file": {
+      "src/local_delegate/__init__.py": 1,
+      "src/local_delegate/__main__.py": 1,
+      "src/local_delegate/agents.py": 1,
+      "src/local_delegate/autostart.py": 1,
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "D101": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 4
+     }
+    },
+    "D102": {
+     "total": 7,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 7
+     }
+    },
+    "D103": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 4
+     }
+    },
+    "D105": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 4
+     }
+    },
+    "D107": {
+     "total": 5,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 5
+     }
+    },
+    "D205": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "D209": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "D301": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "D401": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/agents.py": 1,
+      "src/local_delegate/autostart.py": 1
+     }
+    },
+    "E501": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 3
+     }
+    },
+    "EM101": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 2
+     }
+    },
+    "EM102": {
+     "total": 6,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 6
+     }
+    },
+    "FBT003": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "PLC0415": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 2
+     }
+    },
+    "PLR0912": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "PLR0913": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 2
+     }
+    },
+    "PLR0915": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "PLR2004": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/agents.py": 1,
+      "src/local_delegate/benchmark.py": 3
+     }
+    },
+    "PLW1510": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "RUF036": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "S603": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/autostart.py": 1,
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "T201": {
+     "total": 7,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 7
+     }
+    },
+    "TC003": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/agents.py": 1,
+      "src/local_delegate/benchmark.py": 2
+     }
+    },
+    "TRY003": {
+     "total": 8,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 8
+     }
+    },
+    "TRY301": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "G2",
+   "top_codes": [
+    "lint/style/noMagicNumbers",
+    "lint/style/useNamingConvention",
+    "lint/style/noExcessiveClassesPerFile",
+    "lint/style/useBlockStatements",
+    "lint/style/noParameterProperties",
+    "lint/style/useImportType",
+    "lint/nursery/noRestrictedDependencies",
+    "lint/style/noDefaultExport"
+   ],
+   "top_files": [
+    "apps/api/src/validate/dto/validate.dto.ts",
+    "apps/api/src/config/env.schema.ts",
+    "apps/api/src/geocode/dto/geocode.dto.ts",
+    "pnpm-workspace.yaml",
+    "./dto/geocode.dto.ts",
+    "./geocode.service.ts",
+    "apps/api/src/geocode/geocode.controller.ts",
+    "apps/api/src/config/repo-root.ts",
+    "apps/api/package.json",
+    "apps/api/src/validate/validate.controller.ts"
+   ],
+   "true_counts": null
+  },
+  {
+   "id": "G3",
+   "top_codes": [
+    "lint/nursery/useExplicitReturnType",
+    "lint/nursery/useExplicitType",
+    "lint/nursery/useReactFunctionComponentDefinition",
+    "lint/style/useNumericSeparators",
+    "lint/style/useConsistentTypeDefinitions",
+    "lint/style/noTernary",
+    "lint/nursery/useThisInClassMethods"
+   ],
+   "top_files": [
+    "src/app/core/decorators/throttle.decorator.ts",
+    "src/app/core/decorators/log-audit.decorator.ts",
+    "src/app/core/filters/http-exception.filter.ts",
+    "src/app/core/decorators/app-controller.decorator.ts"
+   ],
+   "true_counts": null
+  },
+  {
+   "id": "G4",
+   "top_codes": [
+    "E501",
+    "COM812",
+    "ANN201",
+    "RUF001",
+    "TID252",
+    "ANN001",
+    "FAST002",
+    "SLF001",
+    "D103",
+    "BLE001"
+   ],
+   "top_files": [
+    "src/local_delegate/web/metrics.py",
+    "src/local_delegate/web/sysinfo.py",
+    "src/local_delegate/web/auth.py",
+    "src/local_delegate/web/__init__.py"
+   ],
+   "true_counts": {
+    "ANN001": {
+     "total": 10,
+     "per_file": {
+      "src/local_delegate/web/auth.py": 8,
+      "src/local_delegate/web/metrics.py": 2
+     }
+    },
+    "ANN201": {
+     "total": 16,
+     "per_file": {
+      "src/local_delegate/web/auth.py": 1,
+      "src/local_delegate/web/metrics.py": 15
+     }
+    },
+    "ANN202": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/web/auth.py": 2
+     }
+    },
+    "BLE001": {
+     "total": 6,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 3,
+      "src/local_delegate/web/sysinfo.py": 3
+     }
+    },
+    "C901": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1
+     }
+    },
+    "COM812": {
+     "total": 18,
+     "per_file": {
+      "src/local_delegate/web/auth.py": 3,
+      "src/local_delegate/web/metrics.py": 13,
+      "src/local_delegate/web/sysinfo.py": 2
+     }
+    },
+    "CPY001": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/web/__init__.py": 1,
+      "src/local_delegate/web/auth.py": 1,
+      "src/local_delegate/web/metrics.py": 1,
+      "src/local_delegate/web/sysinfo.py": 1
+     }
+    },
+    "D102": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/auth.py": 1
+     }
+    },
+    "D103": {
+     "total": 6,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 6
+     }
+    },
+    "D107": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/auth.py": 1
+     }
+    },
+    "D205": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 3
+     }
+    },
+    "D209": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 3
+     }
+    },
+    "D400": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/web/auth.py": 2
+     }
+    },
+    "D403": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/web/sysinfo.py": 3
+     }
+    },
+    "E501": {
+     "total": 231,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 231
+     }
+    },
+    "FAST002": {
+     "total": 9,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 9
+     }
+    },
+    "FBT001": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1
+     }
+    },
+    "PLC0415": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1,
+      "src/local_delegate/web/sysinfo.py": 1
+     }
+    },
+    "PLR0915": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1
+     }
+    },
+    "PLR2004": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1,
+      "src/local_delegate/web/sysinfo.py": 3
+     }
+    },
+    "PLW0603": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 2,
+      "src/local_delegate/web/sysinfo.py": 2
+     }
+    },
+    "PLW1510": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/web/sysinfo.py": 4
+     }
+    },
+    "PLW2901": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1
+     }
+    },
+    "PTH123": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/web/sysinfo.py": 3
+     }
+    },
+    "PTH208": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/sysinfo.py": 1
+     }
+    },
+    "RUF001": {
+     "total": 15,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 15
+     }
+    },
+    "RUF002": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 2
+     }
+    },
+    "RUF003": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 2
+     }
+    },
+    "S110": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1
+     }
+    },
+    "S603": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/sysinfo.py": 1
+     }
+    },
+    "S607": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/web/sysinfo.py": 4
+     }
+    },
+    "SIM105": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1
+     }
+    },
+    "SIM108": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1
+     }
+    },
+    "SLF001": {
+     "total": 8,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 8
+     }
+    },
+    "T201": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1
+     }
+    },
+    "TID252": {
+     "total": 14,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 14
+     }
+    },
+    "TRY300": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "G5",
+   "top_codes": [
+    "COM812",
+    "D102",
+    "T201",
+    "D107",
+    "D101",
+    "D105",
+    "D103",
+    "TC003",
+    "PLR2004",
+    "E501"
+   ],
+   "top_files": [
+    "src/local_delegate/benchmark.py",
+    "checks.json"
+   ],
+   "true_counts": {
+    "C901": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 2
+     }
+    },
+    "COM812": {
+     "total": 11,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 11
+     }
+    },
+    "CPY001": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "D101": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 4
+     }
+    },
+    "D102": {
+     "total": 7,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 7
+     }
+    },
+    "D103": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 4
+     }
+    },
+    "D105": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 4
+     }
+    },
+    "D107": {
+     "total": 5,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 5
+     }
+    },
+    "D205": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "D209": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "D301": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "E501": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 3
+     }
+    },
+    "FBT003": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "PLC0415": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 2
+     }
+    },
+    "PLR0912": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "PLR0913": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 2
+     }
+    },
+    "PLR0915": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "PLR2004": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 3
+     }
+    },
+    "PLW1510": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "PLW2901": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "RUF036": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "S603": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "T201": {
+     "total": 7,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 7
+     }
+    },
+    "TC003": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 3
+     }
+    }
+   }
+  },
+  {
+   "id": "GE1",
+   "top_codes": [
+    "COM812",
+    "TRY003",
+    "D102",
+    "T201",
+    "EM102",
+    "CPY001",
+    "D107",
+    "PLR2004",
+    "D101",
+    "D105"
+   ],
+   "top_files": [
+    "src/local_delegate/benchmark.py",
+    "src/local_delegate/agents.py",
+    "src/local_delegate/autostart.py",
+    "src/local_delegate/__init__.py",
+    "src/local_delegate/__main__.py"
+   ],
+   "true_counts": {
+    "C901": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "COM812": {
+     "total": 16,
+     "per_file": {
+      "src/local_delegate/agents.py": 1,
+      "src/local_delegate/benchmark.py": 15
+     }
+    },
+    "CPY001": {
+     "total": 5,
+     "per_file": {
+      "src/local_delegate/__init__.py": 1,
+      "src/local_delegate/__main__.py": 1,
+      "src/local_delegate/agents.py": 1,
+      "src/local_delegate/autostart.py": 1,
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "D101": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 4
+     }
+    },
+    "D102": {
+     "total": 7,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 7
+     }
+    },
+    "D103": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 4
+     }
+    },
+    "D105": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 4
+     }
+    },
+    "D107": {
+     "total": 5,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 5
+     }
+    },
+    "D205": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "D209": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "D301": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "D401": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/agents.py": 1,
+      "src/local_delegate/autostart.py": 1
+     }
+    },
+    "E501": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 3
+     }
+    },
+    "EM101": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 2
+     }
+    },
+    "EM102": {
+     "total": 6,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 6
+     }
+    },
+    "FBT003": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "PLC0415": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 2
+     }
+    },
+    "PLR0912": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "PLR0913": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 2
+     }
+    },
+    "PLR0915": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "PLR2004": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/agents.py": 1,
+      "src/local_delegate/benchmark.py": 3
+     }
+    },
+    "PLW1510": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "RUF036": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "S603": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/autostart.py": 1,
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "T201": {
+     "total": 7,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 7
+     }
+    },
+    "TC003": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/agents.py": 1,
+      "src/local_delegate/benchmark.py": 2
+     }
+    },
+    "TRY003": {
+     "total": 8,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 8
+     }
+    },
+    "TRY301": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "GE2",
+   "top_codes": [
+    "lint/style/noMagicNumbers",
+    "lint/style/useNamingConvention",
+    "lint/style/noExcessiveClassesPerFile",
+    "lint/style/useBlockStatements",
+    "lint/style/noParameterProperties",
+    "lint/style/useImportType",
+    "lint/nursery/noRestrictedDependencies",
+    "lint/style/noDefaultExport"
+   ],
+   "top_files": [
+    "apps/api/src/validate/dto/validate.dto.ts",
+    "apps/api/src/config/env.schema.ts",
+    "apps/api/src/geocode/dto/geocode.dto.ts",
+    "pnpm-workspace.yaml",
+    "./dto/geocode.dto.ts",
+    "./geocode.service.ts",
+    "apps/api/src/geocode/geocode.controller.ts",
+    "apps/api/src/config/repo-root.ts",
+    "apps/api/package.json",
+    "apps/api/src/validate/validate.controller.ts"
+   ],
+   "true_counts": null
+  },
+  {
+   "id": "GE3",
+   "top_codes": [
+    "lint/nursery/useExplicitReturnType",
+    "lint/nursery/useExplicitType",
+    "lint/nursery/useReactFunctionComponentDefinition",
+    "lint/style/useNumericSeparators",
+    "lint/style/useConsistentTypeDefinitions",
+    "lint/style/noTernary",
+    "lint/nursery/useThisInClassMethods"
+   ],
+   "top_files": [
+    "src/app/core/decorators/throttle.decorator.ts",
+    "src/app/core/decorators/log-audit.decorator.ts",
+    "src/app/core/filters/http-exception.filter.ts",
+    "src/app/core/decorators/app-controller.decorator.ts"
+   ],
+   "true_counts": null
+  },
+  {
+   "id": "GE4",
+   "top_codes": [
+    "E501",
+    "COM812",
+    "ANN201",
+    "RUF001",
+    "TID252",
+    "ANN001",
+    "FAST002",
+    "SLF001",
+    "D103",
+    "BLE001"
+   ],
+   "top_files": [
+    "src/local_delegate/web/metrics.py",
+    "src/local_delegate/web/sysinfo.py",
+    "src/local_delegate/web/auth.py",
+    "src/local_delegate/web/__init__.py"
+   ],
+   "true_counts": {
+    "ANN001": {
+     "total": 10,
+     "per_file": {
+      "src/local_delegate/web/auth.py": 8,
+      "src/local_delegate/web/metrics.py": 2
+     }
+    },
+    "ANN201": {
+     "total": 16,
+     "per_file": {
+      "src/local_delegate/web/auth.py": 1,
+      "src/local_delegate/web/metrics.py": 15
+     }
+    },
+    "ANN202": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/web/auth.py": 2
+     }
+    },
+    "BLE001": {
+     "total": 6,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 3,
+      "src/local_delegate/web/sysinfo.py": 3
+     }
+    },
+    "C901": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1
+     }
+    },
+    "COM812": {
+     "total": 18,
+     "per_file": {
+      "src/local_delegate/web/auth.py": 3,
+      "src/local_delegate/web/metrics.py": 13,
+      "src/local_delegate/web/sysinfo.py": 2
+     }
+    },
+    "CPY001": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/web/__init__.py": 1,
+      "src/local_delegate/web/auth.py": 1,
+      "src/local_delegate/web/metrics.py": 1,
+      "src/local_delegate/web/sysinfo.py": 1
+     }
+    },
+    "D102": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/auth.py": 1
+     }
+    },
+    "D103": {
+     "total": 6,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 6
+     }
+    },
+    "D107": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/auth.py": 1
+     }
+    },
+    "D205": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 3
+     }
+    },
+    "D209": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 3
+     }
+    },
+    "D400": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/web/auth.py": 2
+     }
+    },
+    "D403": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/web/sysinfo.py": 3
+     }
+    },
+    "E501": {
+     "total": 231,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 231
+     }
+    },
+    "FAST002": {
+     "total": 9,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 9
+     }
+    },
+    "FBT001": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1
+     }
+    },
+    "PLC0415": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1,
+      "src/local_delegate/web/sysinfo.py": 1
+     }
+    },
+    "PLR0915": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1
+     }
+    },
+    "PLR2004": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1,
+      "src/local_delegate/web/sysinfo.py": 3
+     }
+    },
+    "PLW0603": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 2,
+      "src/local_delegate/web/sysinfo.py": 2
+     }
+    },
+    "PLW1510": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/web/sysinfo.py": 4
+     }
+    },
+    "PLW2901": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1
+     }
+    },
+    "PTH123": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/web/sysinfo.py": 3
+     }
+    },
+    "PTH208": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/sysinfo.py": 1
+     }
+    },
+    "RUF001": {
+     "total": 15,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 15
+     }
+    },
+    "RUF002": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 2
+     }
+    },
+    "RUF003": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 2
+     }
+    },
+    "S110": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1
+     }
+    },
+    "S603": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/sysinfo.py": 1
+     }
+    },
+    "S607": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/web/sysinfo.py": 4
+     }
+    },
+    "SIM105": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1
+     }
+    },
+    "SIM108": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1
+     }
+    },
+    "SLF001": {
+     "total": 8,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 8
+     }
+    },
+    "T201": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1
+     }
+    },
+    "TID252": {
+     "total": 14,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 14
+     }
+    },
+    "TRY300": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/web/metrics.py": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "GE5",
+   "top_codes": [
+    "COM812",
+    "D102",
+    "T201",
+    "D107",
+    "D101",
+    "D105",
+    "D103",
+    "TC003",
+    "PLR2004",
+    "E501"
+   ],
+   "top_files": [
+    "src/local_delegate/benchmark.py",
+    "checks.json"
+   ],
+   "true_counts": {
+    "C901": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 2
+     }
+    },
+    "COM812": {
+     "total": 11,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 11
+     }
+    },
+    "CPY001": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "D101": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 4
+     }
+    },
+    "D102": {
+     "total": 7,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 7
+     }
+    },
+    "D103": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 4
+     }
+    },
+    "D105": {
+     "total": 4,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 4
+     }
+    },
+    "D107": {
+     "total": 5,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 5
+     }
+    },
+    "D205": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "D209": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "D301": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "E501": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 3
+     }
+    },
+    "FBT003": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "PLC0415": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 2
+     }
+    },
+    "PLR0912": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "PLR0913": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 2
+     }
+    },
+    "PLR0915": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "PLR2004": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 3
+     }
+    },
+    "PLW1510": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "PLW2901": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "RUF036": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "S603": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 1
+     }
+    },
+    "T201": {
+     "total": 7,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 7
+     }
+    },
+    "TC003": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/benchmark.py": 3
+     }
+    }
+   }
+  },
+  {
+   "id": "H1",
+   "top_codes": [
+    "E501",
+    "F401",
+    "W291"
+   ],
+   "top_files": [
+    "app/util.py",
+    "app/main.py",
+    "app/cli.py"
+   ],
+   "true_counts": {
+    "E501": {
+     "total": 4,
+     "per_file": {
+      "app/main.py": 2,
+      "app/util.py": 1,
+      "app/cli.py": 1
+     }
+    },
+    "F401": {
+     "total": 3,
+     "per_file": {
+      "app/main.py": 1,
+      "app/util.py": 2
+     }
+    },
+    "W291": {
+     "total": 1,
+     "per_file": {
+      "app/util.py": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "H2",
+   "top_codes": [
+    "D103",
+    "D100",
+    "T201",
+    "B006"
+   ],
+   "top_files": [
+    "src/a.py",
+    "src/b.py",
+    "src/c.py"
+   ],
+   "true_counts": {
+    "B006": {
+     "total": 1,
+     "per_file": {
+      "src/a.py": 1
+     }
+    },
+    "D100": {
+     "total": 3,
+     "per_file": {
+      "src/a.py": 1,
+      "src/b.py": 1,
+      "src/c.py": 1
+     }
+    },
+    "D103": {
+     "total": 5,
+     "per_file": {
+      "src/a.py": 2,
+      "src/b.py": 3
+     }
+    },
+    "T201": {
+     "total": 3,
+     "per_file": {
+      "src/c.py": 3
+     }
+    }
+   }
+  },
+  {
+   "id": "H3",
+   "top_codes": [
+    "SIM102",
+    "I001",
+    "UP006",
+    "RET504"
+   ],
+   "top_files": [
+    "lib/net.py",
+    "lib/io.py",
+    "lib/db.py"
+   ],
+   "true_counts": {
+    "I001": {
+     "total": 3,
+     "per_file": {
+      "lib/io.py": 2,
+      "lib/net.py": 1
+     }
+    },
+    "RET504": {
+     "total": 2,
+     "per_file": {
+      "lib/net.py": 1,
+      "lib/db.py": 1
+     }
+    },
+    "SIM102": {
+     "total": 5,
+     "per_file": {
+      "lib/net.py": 3,
+      "lib/db.py": 2
+     }
+    },
+    "UP006": {
+     "total": 3,
+     "per_file": {
+      "lib/db.py": 1,
+      "lib/io.py": 2
+     }
+    }
+   }
+  },
+  {
+   "id": "H4",
+   "top_codes": [
+    "E402",
+    "E501",
+    "E711"
+   ],
+   "top_files": [
+    "tools/gen.py"
+   ],
+   "true_counts": {
+    "E402": {
+     "total": 4,
+     "per_file": {
+      "tools/gen.py": 4
+     }
+    },
+    "E501": {
+     "total": 3,
+     "per_file": {
+      "tools/gen.py": 3
+     }
+    },
+    "E711": {
+     "total": 1,
+     "per_file": {
+      "tools/gen.py": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "H5",
+   "top_codes": [
+    "E501",
+    "D101",
+    "D102",
+    "RUF002",
+    "C901",
+    "D203",
+    "D211",
+    "D212",
+    "D213",
+    "CPY001"
+   ],
+   "top_files": [
+    "src/local_delegate/sections.py"
+   ],
+   "true_counts": {
+    "C901": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/sections.py": 2
+     }
+    },
+    "CPY001": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "D101": {
+     "total": 5,
+     "per_file": {
+      "src/local_delegate/sections.py": 5
+     }
+    },
+    "D102": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/sections.py": 3
+     }
+    },
+    "D205": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "D301": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "D400": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "E501": {
+     "total": 6,
+     "per_file": {
+      "src/local_delegate/sections.py": 6
+     }
+    },
+    "PLR0912": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "PLR0913": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "PLR2004": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "RUF002": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/sections.py": 2
+     }
+    },
+    "TC003": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "H6",
+   "top_codes": [
+    "TS2550",
+    "TS2554",
+    "TS2339",
+    "TS4113"
+   ],
+   "top_files": [
+    "src/cli/commands/export.ts",
+    "src/adapters/claude-json.ts",
+    "src/adapters/codex/index.ts",
+    "src/cli/commands/import.ts",
+    "src/cli/index.ts",
+    "src/cli/ui/style.ts",
+    "src/cli/ui/width.ts",
+    "src/io/fs/atomic.ts",
+    "src/io/vault/index.ts"
+   ],
+   "true_counts": {
+    "TS2339": {
+     "total": 1,
+     "per_file": {
+      "src/cli/ui/width.ts": 1
+     }
+    },
+    "TS2550": {
+     "total": 6,
+     "per_file": {
+      "src/adapters/codex/index.ts": 1,
+      "src/cli/commands/export.ts": 2,
+      "src/cli/commands/import.ts": 1,
+      "src/cli/index.ts": 1,
+      "src/cli/ui/style.ts": 1
+     }
+    },
+    "TS2554": {
+     "total": 2,
+     "per_file": {
+      "src/adapters/claude-json.ts": 1,
+      "src/io/vault/index.ts": 1
+     }
+    },
+    "TS4113": {
+     "total": 1,
+     "per_file": {
+      "src/io/fs/atomic.ts": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "HE1",
+   "top_codes": [
+    "E501",
+    "F401",
+    "W291"
+   ],
+   "top_files": [
+    "app/util.py",
+    "app/main.py",
+    "app/cli.py"
+   ],
+   "true_counts": {
+    "E501": {
+     "total": 4,
+     "per_file": {
+      "app/main.py": 2,
+      "app/util.py": 1,
+      "app/cli.py": 1
+     }
+    },
+    "F401": {
+     "total": 3,
+     "per_file": {
+      "app/main.py": 1,
+      "app/util.py": 2
+     }
+    },
+    "W291": {
+     "total": 1,
+     "per_file": {
+      "app/util.py": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "HE2",
+   "top_codes": [
+    "D103",
+    "D100",
+    "T201",
+    "B006"
+   ],
+   "top_files": [
+    "src/a.py",
+    "src/b.py",
+    "src/c.py"
+   ],
+   "true_counts": {
+    "B006": {
+     "total": 1,
+     "per_file": {
+      "src/a.py": 1
+     }
+    },
+    "D100": {
+     "total": 3,
+     "per_file": {
+      "src/a.py": 1,
+      "src/b.py": 1,
+      "src/c.py": 1
+     }
+    },
+    "D103": {
+     "total": 5,
+     "per_file": {
+      "src/a.py": 2,
+      "src/b.py": 3
+     }
+    },
+    "T201": {
+     "total": 3,
+     "per_file": {
+      "src/c.py": 3
+     }
+    }
+   }
+  },
+  {
+   "id": "HE3",
+   "top_codes": [
+    "SIM102",
+    "I001",
+    "UP006",
+    "RET504"
+   ],
+   "top_files": [
+    "lib/net.py",
+    "lib/io.py",
+    "lib/db.py"
+   ],
+   "true_counts": {
+    "I001": {
+     "total": 3,
+     "per_file": {
+      "lib/io.py": 2,
+      "lib/net.py": 1
+     }
+    },
+    "RET504": {
+     "total": 2,
+     "per_file": {
+      "lib/net.py": 1,
+      "lib/db.py": 1
+     }
+    },
+    "SIM102": {
+     "total": 5,
+     "per_file": {
+      "lib/net.py": 3,
+      "lib/db.py": 2
+     }
+    },
+    "UP006": {
+     "total": 3,
+     "per_file": {
+      "lib/db.py": 1,
+      "lib/io.py": 2
+     }
+    }
+   }
+  },
+  {
+   "id": "HE4",
+   "top_codes": [
+    "E402",
+    "E501",
+    "E711"
+   ],
+   "top_files": [
+    "tools/gen.py"
+   ],
+   "true_counts": {
+    "E402": {
+     "total": 4,
+     "per_file": {
+      "tools/gen.py": 4
+     }
+    },
+    "E501": {
+     "total": 3,
+     "per_file": {
+      "tools/gen.py": 3
+     }
+    },
+    "E711": {
+     "total": 1,
+     "per_file": {
+      "tools/gen.py": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "HE5",
+   "top_codes": [
+    "E501",
+    "D101",
+    "D102",
+    "RUF002",
+    "C901",
+    "D203",
+    "D211",
+    "D212",
+    "D213",
+    "CPY001"
+   ],
+   "top_files": [
+    "src/local_delegate/sections.py"
+   ],
+   "true_counts": {
+    "C901": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/sections.py": 2
+     }
+    },
+    "CPY001": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "D101": {
+     "total": 5,
+     "per_file": {
+      "src/local_delegate/sections.py": 5
+     }
+    },
+    "D102": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/sections.py": 3
+     }
+    },
+    "D205": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "D301": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "D400": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "E501": {
+     "total": 6,
+     "per_file": {
+      "src/local_delegate/sections.py": 6
+     }
+    },
+    "PLR0912": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "PLR0913": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "PLR2004": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "RUF002": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/sections.py": 2
+     }
+    },
+    "TC003": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "HE6",
+   "top_codes": [
+    "TS2550",
+    "TS2554",
+    "TS2339",
+    "TS4113"
+   ],
+   "top_files": [
+    "src/cli/commands/export.ts",
+    "src/adapters/claude-json.ts",
+    "src/adapters/codex/index.ts",
+    "src/cli/commands/import.ts",
+    "src/cli/index.ts",
+    "src/cli/ui/style.ts",
+    "src/cli/ui/width.ts",
+    "src/io/fs/atomic.ts",
+    "src/io/vault/index.ts"
+   ],
+   "true_counts": {
+    "TS2339": {
+     "total": 1,
+     "per_file": {
+      "src/cli/ui/width.ts": 1
+     }
+    },
+    "TS2550": {
+     "total": 6,
+     "per_file": {
+      "src/adapters/codex/index.ts": 1,
+      "src/cli/commands/export.ts": 2,
+      "src/cli/commands/import.ts": 1,
+      "src/cli/index.ts": 1,
+      "src/cli/ui/style.ts": 1
+     }
+    },
+    "TS2554": {
+     "total": 2,
+     "per_file": {
+      "src/adapters/claude-json.ts": 1,
+      "src/io/vault/index.ts": 1
+     }
+    },
+    "TS4113": {
+     "total": 1,
+     "per_file": {
+      "src/io/fs/atomic.ts": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "M1",
+   "top_codes": [
+    "E501",
+    "F401",
+    "W291"
+   ],
+   "top_files": [
+    "app/util.py",
+    "app/main.py",
+    "app/cli.py"
+   ],
+   "true_counts": {
+    "E501": {
+     "total": 4,
+     "per_file": {
+      "app/main.py": 2,
+      "app/util.py": 1,
+      "app/cli.py": 1
+     }
+    },
+    "F401": {
+     "total": 3,
+     "per_file": {
+      "app/main.py": 1,
+      "app/util.py": 2
+     }
+    },
+    "W291": {
+     "total": 1,
+     "per_file": {
+      "app/util.py": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "M2",
+   "top_codes": [
+    "D103",
+    "D100",
+    "T201",
+    "B006"
+   ],
+   "top_files": [
+    "src/a.py",
+    "src/b.py",
+    "src/c.py"
+   ],
+   "true_counts": {
+    "B006": {
+     "total": 1,
+     "per_file": {
+      "src/a.py": 1
+     }
+    },
+    "D100": {
+     "total": 3,
+     "per_file": {
+      "src/a.py": 1,
+      "src/b.py": 1,
+      "src/c.py": 1
+     }
+    },
+    "D103": {
+     "total": 5,
+     "per_file": {
+      "src/a.py": 2,
+      "src/b.py": 3
+     }
+    },
+    "T201": {
+     "total": 3,
+     "per_file": {
+      "src/c.py": 3
+     }
+    }
+   }
+  },
+  {
+   "id": "M3",
+   "top_codes": [
+    "SIM102",
+    "I001",
+    "UP006",
+    "RET504"
+   ],
+   "top_files": [
+    "lib/net.py",
+    "lib/io.py",
+    "lib/db.py"
+   ],
+   "true_counts": {
+    "I001": {
+     "total": 3,
+     "per_file": {
+      "lib/io.py": 2,
+      "lib/net.py": 1
+     }
+    },
+    "RET504": {
+     "total": 2,
+     "per_file": {
+      "lib/net.py": 1,
+      "lib/db.py": 1
+     }
+    },
+    "SIM102": {
+     "total": 5,
+     "per_file": {
+      "lib/net.py": 3,
+      "lib/db.py": 2
+     }
+    },
+    "UP006": {
+     "total": 3,
+     "per_file": {
+      "lib/db.py": 1,
+      "lib/io.py": 2
+     }
+    }
+   }
+  },
+  {
+   "id": "M4",
+   "top_codes": [
+    "E402",
+    "E501",
+    "E711"
+   ],
+   "top_files": [
+    "tools/gen.py"
+   ],
+   "true_counts": {
+    "E402": {
+     "total": 4,
+     "per_file": {
+      "tools/gen.py": 4
+     }
+    },
+    "E501": {
+     "total": 3,
+     "per_file": {
+      "tools/gen.py": 3
+     }
+    },
+    "E711": {
+     "total": 1,
+     "per_file": {
+      "tools/gen.py": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "M5",
+   "top_codes": [
+    "E501",
+    "D101",
+    "D102",
+    "RUF002",
+    "C901",
+    "D203",
+    "D211",
+    "D212",
+    "D213",
+    "CPY001"
+   ],
+   "top_files": [
+    "src/local_delegate/sections.py"
+   ],
+   "true_counts": {
+    "C901": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/sections.py": 2
+     }
+    },
+    "CPY001": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "D101": {
+     "total": 5,
+     "per_file": {
+      "src/local_delegate/sections.py": 5
+     }
+    },
+    "D102": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/sections.py": 3
+     }
+    },
+    "D205": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "D301": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "D400": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "E501": {
+     "total": 6,
+     "per_file": {
+      "src/local_delegate/sections.py": 6
+     }
+    },
+    "PLR0912": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "PLR0913": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "PLR2004": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "RUF002": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/sections.py": 2
+     }
+    },
+    "TC003": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "M6",
+   "top_codes": [
+    "TS2550",
+    "TS2554",
+    "TS2339",
+    "TS4113"
+   ],
+   "top_files": [
+    "src/cli/commands/export.ts",
+    "src/adapters/claude-json.ts",
+    "src/adapters/codex/index.ts",
+    "src/cli/commands/import.ts",
+    "src/cli/index.ts",
+    "src/cli/ui/style.ts",
+    "src/cli/ui/width.ts",
+    "src/io/fs/atomic.ts",
+    "src/io/vault/index.ts"
+   ],
+   "true_counts": {
+    "TS2339": {
+     "total": 1,
+     "per_file": {
+      "src/cli/ui/width.ts": 1
+     }
+    },
+    "TS2550": {
+     "total": 6,
+     "per_file": {
+      "src/adapters/codex/index.ts": 1,
+      "src/cli/commands/export.ts": 2,
+      "src/cli/commands/import.ts": 1,
+      "src/cli/index.ts": 1,
+      "src/cli/ui/style.ts": 1
+     }
+    },
+    "TS2554": {
+     "total": 2,
+     "per_file": {
+      "src/adapters/claude-json.ts": 1,
+      "src/io/vault/index.ts": 1
+     }
+    },
+    "TS4113": {
+     "total": 1,
+     "per_file": {
+      "src/io/fs/atomic.ts": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "ME1",
+   "top_codes": [
+    "E501",
+    "F401",
+    "W291"
+   ],
+   "top_files": [
+    "app/util.py",
+    "app/main.py",
+    "app/cli.py"
+   ],
+   "true_counts": {
+    "E501": {
+     "total": 4,
+     "per_file": {
+      "app/main.py": 2,
+      "app/util.py": 1,
+      "app/cli.py": 1
+     }
+    },
+    "F401": {
+     "total": 3,
+     "per_file": {
+      "app/main.py": 1,
+      "app/util.py": 2
+     }
+    },
+    "W291": {
+     "total": 1,
+     "per_file": {
+      "app/util.py": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "ME2",
+   "top_codes": [
+    "D103",
+    "D100",
+    "T201",
+    "B006"
+   ],
+   "top_files": [
+    "src/a.py",
+    "src/b.py",
+    "src/c.py"
+   ],
+   "true_counts": {
+    "B006": {
+     "total": 1,
+     "per_file": {
+      "src/a.py": 1
+     }
+    },
+    "D100": {
+     "total": 3,
+     "per_file": {
+      "src/a.py": 1,
+      "src/b.py": 1,
+      "src/c.py": 1
+     }
+    },
+    "D103": {
+     "total": 5,
+     "per_file": {
+      "src/a.py": 2,
+      "src/b.py": 3
+     }
+    },
+    "T201": {
+     "total": 3,
+     "per_file": {
+      "src/c.py": 3
+     }
+    }
+   }
+  },
+  {
+   "id": "ME3",
+   "top_codes": [
+    "SIM102",
+    "I001",
+    "UP006",
+    "RET504"
+   ],
+   "top_files": [
+    "lib/net.py",
+    "lib/io.py",
+    "lib/db.py"
+   ],
+   "true_counts": {
+    "I001": {
+     "total": 3,
+     "per_file": {
+      "lib/io.py": 2,
+      "lib/net.py": 1
+     }
+    },
+    "RET504": {
+     "total": 2,
+     "per_file": {
+      "lib/net.py": 1,
+      "lib/db.py": 1
+     }
+    },
+    "SIM102": {
+     "total": 5,
+     "per_file": {
+      "lib/net.py": 3,
+      "lib/db.py": 2
+     }
+    },
+    "UP006": {
+     "total": 3,
+     "per_file": {
+      "lib/db.py": 1,
+      "lib/io.py": 2
+     }
+    }
+   }
+  },
+  {
+   "id": "ME4",
+   "top_codes": [
+    "E402",
+    "E501",
+    "E711"
+   ],
+   "top_files": [
+    "tools/gen.py"
+   ],
+   "true_counts": {
+    "E402": {
+     "total": 4,
+     "per_file": {
+      "tools/gen.py": 4
+     }
+    },
+    "E501": {
+     "total": 3,
+     "per_file": {
+      "tools/gen.py": 3
+     }
+    },
+    "E711": {
+     "total": 1,
+     "per_file": {
+      "tools/gen.py": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "ME5",
+   "top_codes": [
+    "E501",
+    "D101",
+    "D102",
+    "RUF002",
+    "C901",
+    "D203",
+    "D211",
+    "D212",
+    "D213",
+    "CPY001"
+   ],
+   "top_files": [
+    "src/local_delegate/sections.py"
+   ],
+   "true_counts": {
+    "C901": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/sections.py": 2
+     }
+    },
+    "CPY001": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "D101": {
+     "total": 5,
+     "per_file": {
+      "src/local_delegate/sections.py": 5
+     }
+    },
+    "D102": {
+     "total": 3,
+     "per_file": {
+      "src/local_delegate/sections.py": 3
+     }
+    },
+    "D205": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "D301": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "D400": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "E501": {
+     "total": 6,
+     "per_file": {
+      "src/local_delegate/sections.py": 6
+     }
+    },
+    "PLR0912": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "PLR0913": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "PLR2004": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    },
+    "RUF002": {
+     "total": 2,
+     "per_file": {
+      "src/local_delegate/sections.py": 2
+     }
+    },
+    "TC003": {
+     "total": 1,
+     "per_file": {
+      "src/local_delegate/sections.py": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "ME6",
+   "top_codes": [
+    "TS2550",
+    "TS2554",
+    "TS2339",
+    "TS4113"
+   ],
+   "top_files": [
+    "src/cli/commands/export.ts",
+    "src/adapters/claude-json.ts",
+    "src/adapters/codex/index.ts",
+    "src/cli/commands/import.ts",
+    "src/cli/index.ts",
+    "src/cli/ui/style.ts",
+    "src/cli/ui/width.ts",
+    "src/io/fs/atomic.ts",
+    "src/io/vault/index.ts"
+   ],
+   "true_counts": {
+    "TS2339": {
+     "total": 1,
+     "per_file": {
+      "src/cli/ui/width.ts": 1
+     }
+    },
+    "TS2550": {
+     "total": 6,
+     "per_file": {
+      "src/adapters/codex/index.ts": 1,
+      "src/cli/commands/export.ts": 2,
+      "src/cli/commands/import.ts": 1,
+      "src/cli/index.ts": 1,
+      "src/cli/ui/style.ts": 1
+     }
+    },
+    "TS2554": {
+     "total": 2,
+     "per_file": {
+      "src/adapters/claude-json.ts": 1,
+      "src/io/vault/index.ts": 1
+     }
+    },
+    "TS4113": {
+     "total": 1,
+     "per_file": {
+      "src/io/fs/atomic.ts": 1
+     }
+    }
+   }
+  }
+ ]
+}

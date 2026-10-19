@@ -1,0 +1,13 @@
+**app/main.py**
+*   **Línea demasiado larga** (E501): 2
+*   **Importación no utilizada** (F401): 1
+
+**app/util.py**
+*   **Importación no utilizada** (F401): 2
+*   **Línea demasiado larga** (E501): 1
+*   **Espacio en blanco al final de la línea** (W291): 1
+
+**app/cli.py**
+*   **Línea demasiado larga** (E501): 1
+
+(leído server-side: 340 chars ≈ 177 tokens de Claude que no entraron a tu contexto)

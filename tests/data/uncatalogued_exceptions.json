@@ -684,9 +684,21 @@
     },
     {
       "file": "src/local_delegate/server.py",
-      "text": "{}\n\nLa lista de arriba sale del log de abajo. {}",
+      "text": "{}\n\nLa lista de arriba sale del log de abajo.{} {}",
       "kind": "verbatim",
-      "reason": "prompt del modelo local (B2f, la llamada única del rol largo de local_lint_summary lleva el inventario): entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
+      "reason": "prompt del modelo local (ola lint-counts: el inventario de la llamada única lleva el recuento por código, y desde la afinidad por idioma también en el rol mecánico): entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Códigos de regla o error que nombra el log, con las veces que aparece cada uno en todo el log (contadas por el programa; los más frecuentes primero):",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (ola lint-counts: el inventario de la llamada única lleva el recuento por código, y desde la afinidad por idioma también en el rol mecánico): entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": " Las cifras de los códigos están contadas por el programa en todo el log: nombra cada regla por su código, tal cual aparece en la lista, y cuando des su cantidad en total copia esa cifra en vez de contar tú.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (ola lint-counts: el inventario de la llamada única lleva el recuento por código, y desde la afinidad por idioma también en el rol mecánico): entra en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
     },
     {
       "file": "src/local_delegate/server.py",

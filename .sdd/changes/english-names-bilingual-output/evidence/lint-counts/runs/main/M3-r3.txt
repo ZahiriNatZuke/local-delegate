@@ -1,0 +1,10 @@
+**Resumen de Problemas**
+
+El análisis revela problemas agrupados por archivo.
+
+**lib/io.py:** Presenta dos problemas de formato de importaciones (**I001**), con un total de dos.
+**lib/net.py:**  Identifica tres problemas de formato de importaciones (**I001**) y una regla de estilo que sugiere usar una única sentencia `if` (**SIM102**), con un total de cuatro.
+**lib/db.py:**  Detecta dos problemas de formato de importaciones (**I001**) y dos reglas de estilo que sugieren usar una única sentencia `if` (**SIM102**), además de una regla de retorno que indica una asignación innecesaria antes de la sentencia `return` (**RET504**), con un total de cinco.
+Se identificaron un total de 13 problemas.
+
+(leído server-side: 784 chars ≈ 408 tokens de Claude que no entraron a tu contexto)

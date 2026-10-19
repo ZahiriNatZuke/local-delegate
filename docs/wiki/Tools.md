@@ -292,14 +292,14 @@ segundo espera y luego carga el suyo.
 Si el modelo grande ya está en memoria, a veces es mejor usarlo para una tarea mecánica que
 desalojarlo para cargar el pequeño. El daemon lo hace **solo** donde una medición previa lo aprobó:
 una celda «tool → modelo alternativo» que pasó, frente al modelo del rol, el criterio de aprobación
-escrito antes de medir (`benchmarks/afinidad-2026-10/veredicto.json`). Hoy hay **tres celdas aprobadas**, todas frente
-al rol mecánico (`gemma3-4b`); la de commit se midió frente al rol de código:
+escrito antes de medir (`benchmarks/afinidad-2026-10/veredicto.json`). Hoy hay **cuatro celdas aprobadas** (la de lint, una por idioma), todas
+frente al rol mecánico (`gemma3-4b`); la de commit se midió frente al rol de código:
 
 | Tool | Alternativo | Estado |
 | --- | --- | --- |
 | `local_translate` | `gemma4-26b-a4b` | aprobada |
 | `local_translate` | `qwen36-35b-a3b` | aprobada |
-| `local_lint_summary` | `gemma4-26b-a4b` | aprobada en la 0.35; **rechazada desde la 0.36.0** (re-evaluada con los prompts nuevos en español y en inglés: el modelo deja de nombrar los códigos de regla; `benchmarks/afinidad-2026-10/reevaluation-0.36.0/verdict.json`) |
+| `local_lint_summary` | `gemma4-26b-a4b` | aprobada en la 0.35, rechazada en la 0.36.0 (el modelo dejaba de nombrar los códigos de regla) y **aprobada de nuevo, una celda por idioma** (`es` y `en`), desde que la llamada mecánica lleva el inventario de códigos del log; la celda del otro idioma no se usa (`benchmarks/afinidad-2026-10/reevaluation-lint-counts/verdict.json`) |
 | `local_delegate` | `gemma4-26b-a4b` | aprobada |
 | `local_classify`, `local_extract` (los dos alternativos); `local_lint_summary` y `local_delegate` con `qwen36-35b-a3b` | — | rechazadas |
 | `local_commit_msg` | `gemma4-26b-a4b` | rechazada, frente a `qwen36-35b-a3b` (el rol de código); además, por decisión del usuario, sin afinidad de commit |

@@ -1,0 +1,15 @@
+**File: src\local_delegate\sections.py**
+
+-   **Missing Docstrings:** 6 instances of `D101` (Missing docstring in public class/method).
+-   **Line Length:** 5 instances of `E501` (Line too long – exceeding 100 characters).
+-   **Complex Expressions:** 2 instances of `C901` (Too complex – exceeding 10 arguments).
+-   **Docstring Ambiguity:** 2 instances of `RUF002` (Ambiguous characters in docstrings – `×` and `-`).
+-   **Blank Line Issues:** 2 instances of `D203` and `D211` (Incompatible blank line rules).
+-   **Heading Issues:** 1 instance of `D400` (First line of a section should end with a period).
+-   **Type Checking:** 1 instance of `TC003` (Move import into type-checking block).
+-   **Branch Complexity:** 1 instance of `PLR0912` (Too many branches in a function).
+-   **Magic Value:** 1 instance of `PLR2004` (Using a magic value in a comparison).
+
+Found 26 errors.
+
+(read server-side: 2627 chars ≈ 1368 Claude tokens that did not enter your context)

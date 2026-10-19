@@ -1,0 +1,17 @@
+Resumen de Problemas:
+
+**Archivo src/a.py:**
+- D100: 3 errores por falta de *docstring* en módulos públicos.
+- D103: 4 errores por falta de *docstring* en funciones públicas.
+- B006: 1 problema por el uso de estructuras de datos mutables en los valores predeterminados de los argumentos.
+
+**Archivo src/b.py:**
+- D100: 3 errores por falta de *docstring* en módulos públicos.
+- D103: 4 errores por falta de *docstring* en funciones públicas.
+
+**Archivo src/c.py:**
+- T201: 3 errores por el uso de la función `print`.
+
+En total, se encontraron 14 errores por falta de *docstring* y 3 errores por el uso de `print`.
+
+(leído server-side: 626 chars ≈ 326 tokens de Claude que no entraron a tu contexto)

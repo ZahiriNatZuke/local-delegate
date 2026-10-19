@@ -1,0 +1,36 @@
+**apps/api/package.json**
+* 1 **lint/nursery/noRestrictedDependencies**: Use of the restricted dependency `express` detected.
+
+**apps/api/src/config/env.schema.ts**
+* 5 **lint/style/useNamingConvention**: Object property names should be in camelCase.
+* 1 **lint/style/noMagicNumbers**: Magic number detected.
+
+**apps/api/src/config/repo-root.ts**
+* 2 **lint/style/useBlockStatements**: Block statements are preferred in this position.
+
+**apps/api/src/geocode/dto/geocode.dto.ts**
+* 4 **lint/style/noMagicNumbers**: Magic number detected.
+* 1 **lint/style/noExcessiveClassesPerFile**: File exceeds the maximum of 1 class.
+
+**apps/api/src/geocode/geocode.controller.ts**
+* 2 **lint/style/useImportType**: Some named imports are only used as types.
+* 1 **lint/style/noParameterProperties**: Use a more explicit class property instead of a parameter property.
+
+**apps/api/src/validate/controller.ts**
+* 1 **lint/style/noParameterProperties**: Use a more explicit class property instead of a parameter property.
+
+**apps/api/src/validate/dto/validate.dto.ts**
+* 6 **lint/style/noMagicNumbers**: Magic number detected.
+* 4 **lint/style/useNamingConvention**: Object property names should be in camelCase.
+* 1 **lint/style/noExcessiveClassesPerFile**: File exceeds the maximum of 1 class.
+
+**packages/core/vitest.config.ts**
+* 1 **lint/style/noDefaultExport**: Avoid default exports.
+
+Found 3 errors.
+Found 51 warnings.
+Found 192 infos.
+
+Not mentioned (in the log, not named by the summary): pnpm-workspace.yaml, ./geocode.service.ts, apps/api/src/validate/validate.controller.ts
+
+(read server-side: 18043 chars ≈ 9397 Claude tokens that did not enter your context)

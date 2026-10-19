@@ -1,0 +1,100 @@
+**src/local_delegate/benchmark.py**
+* **Coma final faltante**: 14
+* **Evitar mensajes largos fuera de la clase de excepción**: 8
+* **Falta docstring en método público**: 7
+* **Falta docstring en método mágico**: 4
+* **Falta docstring en función pública**: 4
+* **Falta docstring en clase pública**: 3
+* **Falta docstring en `__init__`**: 4
+* **Uso de valor mágico en comparación**: 3
+* **Uso de f-string en excepción**: 4
+* **Uso de literal de cadena en excepción**: 2
+* **Uso de `print`**: 6
+* **Línea demasiado larga**: 3
+* **Importación debe estar en el nivel superior del archivo**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Llamada a `subprocess`**: 1
+* **`subprocess.run` sin argumento `check` explícito**: 1
+* **Uso de `r"""` si hay barras invertidas en un docstring**: 1
+* **Valor booleano posicional en la llamada a la función**: 1
+* **`None` no está al final de la unión de tipos**: 1
+* **Demasiadas ramas**: 1
+* **Demasiadas sentencias**: 1
+* **Demasiada complejidad**: 1
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función**: 2
+* **Demasiados argumentos en la definición de la función
+
+Sin mencionar (del log, no los nombra el resumen): src/local_delegate/agents.py, src/local_delegate/autostart.py, src/local_delegate/__init__.py, src/local_delegate/__main__.py, COM812, TRY003, D102, T201, EM102, CPY001, D107, PLR2004, D101, D105
+
+[local-delegate warning: salida truncada por max_tokens]
+
+(leído server-side: 8589 chars ≈ 4473 tokens de Claude que no entraron a tu contexto)

@@ -1,0 +1,25 @@
+**src/app/core/decorators/throttle.decorator.ts**
+* **lint/nursery/useReactFunctionComponentDefinition**: 4 instances where components are defined as arrow functions.
+* **lint/nursery/useExplicitReturnType**: 5 instances of missing return types on functions.
+* **lint/nursery/useExplicitType**: 5 instances of missing return types on functions.
+* **lint/style/useNumericSeparators**: 3 instances where long numeric literals lack separators.
+
+**src/app/core/decorators/log-audit.decorator.ts**
+* **lint/nursery/useReactFunctionComponentDefinition**: 1 instance of a component defined as an arrow function.
+* **lint/nursery/useExplicitReturnType**: 1 instance of a missing return type on a function.
+* **lint/nursery/useExplicitType**: 1 instance of a missing return type on a function.
+* **lint/style/useConsistentTypeDefinitions**: 1 instance regarding consistent coding style for type definitions.
+
+**src/app/core/filters/http-exception.filter.ts**
+* **lint/nursery/useExplicitReturnType**: 1 instance of a missing return type on a function.
+* **lint/nursery/useExplicitType**: 1 instance of a missing return type on a member.
+* **lint/nursery/useThisInClassMethods**: 1 instance where a class method does not use the instance state.
+* **lint/style/noTernary**: 1 instance of an unexpected ternary operator.
+
+**src/app/core/decorators/app-controller.decorator.ts**
+* **lint/nursery/useExplicitReturnType**: 1 instance of a missing return type on a function.
+* **lint/nursery/useExplicitType**: 1 instance of a missing return type on a function.
+
+Found 125 errors.
+
+(read server-side: 22235 chars ≈ 11580 Claude tokens that did not enter your context)
