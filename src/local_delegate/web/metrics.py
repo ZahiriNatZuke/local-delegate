@@ -1347,6 +1347,13 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
 #kpis .k-lbl{display:flex;align-items:center;gap:4px;min-width:0;flex:1 1 auto}
 #kpis .k-lbl-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 #kpis .k-lbl .info{flex:0 0 auto}
+/* Si algún título no cabe con la fuente de reserva del sistema (en Linux es más ancha que Segoe UI),
+   `fitFigures` aprieta TODOS los títulos por igual antes de llegar al «…»: primero el espaciado y
+   luego el cuerpo, para que las seis tarjetas sigan con la misma tipografía. */
+#kpis[data-label-fit="1"] .k-lbl{letter-spacing:.025em}
+#kpis[data-label-fit="2"] .k-lbl{letter-spacing:0}
+#kpis[data-label-fit="3"] .k-lbl{letter-spacing:0;font-size:10.5px}
+#kpis[data-label-fit="4"] .k-lbl{letter-spacing:0;font-size:10px}
 .k-ico{width:26px;height:26px;flex:0 0 auto;display:grid;place-items:center;border-radius:8px;
   background:color-mix(in srgb,var(--kc,var(--mut)) 15%,transparent);color:var(--kc,var(--mut))}
 .k-ico svg{width:15px;height:15px}
@@ -2818,6 +2825,14 @@ function fitFigures(){
     };
     if(!fit() && num.dataset.compact){ txt.nodeValue = num.dataset.compact; fit(); }
   });
+  // Los títulos de los KPIs: el mismo ajuste para los seis, el menor que evite el «…».
+  const kpis = document.getElementById('kpis');
+  if(kpis){
+    const cut = () => [...kpis.querySelectorAll('.k-lbl-t')].some(t => t.scrollWidth > t.clientWidth);
+    let level = 0;
+    kpis.removeAttribute('data-label-fit');
+    while(cut() && level < 4){ level++; kpis.dataset.labelFit = level; }
+  }
   // La pista que se corta con «…» lleva su texto entero en `title`.
   document.querySelectorAll('#kpis .k-hint').forEach(h => {
     if(h.scrollWidth > h.clientWidth || h.scrollHeight > h.clientHeight + 1) h.title = h.textContent;

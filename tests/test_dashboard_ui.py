@@ -996,7 +996,7 @@ def test_kpi_cards_keep_their_width_with_a_huge_figure(
 # Los dos juegos de cifras de las capturas del usuario (0.36.0): con ellos las tarjetas cambiaban
 # de ancho de una a otra y no casaban con los dos paneles de arriba.
 _USER_FIGURES = {
-    "grandes": {
+    "large": {
         "tokens_context_net": 2_742_953,
         "tokens_context_saved": 2_992_338,
         "tokens_returned": 249_385,
@@ -1005,7 +1005,7 @@ _USER_FIGURES = {
         "backend_calls": 597,
         "total_calls": 454,
     },
-    "pequeñas": {
+    "small": {
         "tokens_context_net": 77_673,
         "tokens_context_saved": 80_886,
         "tokens_returned": 3_213,
@@ -1077,7 +1077,7 @@ def test_kpi_edges_line_up_with_the_panels_above(
         return abs(a - b) <= 0.5
 
     for width in (1440, 1280, 1024, 720, 390):
-        big, small = measured[(width, "grandes")], measured[(width, "pequeñas")]
+        big, small = measured[(width, "large")], measured[(width, "small")]
         sizes = [[(round(c["w"], 1), round(c["h"], 1)) for c in m["cards"]] for m in (big, small)]
         assert sizes[0] == sizes[1], (width, "el tamaño depende de las cifras", sizes)
         assert not big["page"], (width, "la página se sale por la derecha")

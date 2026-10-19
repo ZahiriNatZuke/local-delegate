@@ -48,6 +48,9 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - **Las cifras de coste, cuota e imágenes no invaden la columna de al lado.** «17.232.705 B» en
   «Imágenes» quedaba pegada a la cifra siguiente. Ahora esas cifras se ajustan a su columna igual
   que las de los KPIs (fuente más pequeña o forma corta) y el valor exacto queda al pasar el ratón.
+- **Los títulos de los KPIs caben también sin la fuente del panel.** Si Google Fonts no llega y la
+  fuente de reserva del sistema es más ancha (la de Linux lo es más que Segoe UI), los seis títulos
+  se aprietan por igual (primero el espaciado y luego el cuerpo) antes de recortarse con «…».
 
 ### Documentación
 
