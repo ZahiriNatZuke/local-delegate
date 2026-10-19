@@ -714,7 +714,9 @@ PROMPT_BOUNDARIES: dict[str, frozenset[str]] = {
 _PROMPT_BOUNDARY_FIELDS = frozenset({"system", "max_tokens"})
 # Campos de mas que una tool cambio a proposito en esa version. B2f: la llamada unica del rol `long`
 # de `local_lint_summary` lleva el inventario de ficheros y codigos en el mensaje de usuario, delante
-# del log (en el corpus F2, `lint-9k`).
+# del log (en el corpus F2, `lint-9k`). Afinidad por idioma (2026-10-19, tras la 0.36.0): la llamada
+# del rol mecanico tambien lo lleva, asi que cambia el `user_template` de los 4 casos de lint del
+# corpus de afinidad; va bajo la misma frontera (el corpus se congelo antes de las dos).
 PROMPT_BOUNDARY_EXTRA_FIELDS: dict[str, dict[str, frozenset[str]]] = {
     "0.36.0": {"local_lint_summary": frozenset({"user_template"})},
 }
@@ -2757,7 +2759,12 @@ def _apart_declared_changes(
         old = old_cases.get(case.get("id"))
         if old is not None:
             case = dict(case)
-            for field_name in sorted(_PROMPT_BOUNDARY_FIELDS):
+            extra = {
+                name
+                for fields in PROMPT_BOUNDARY_EXTRA_FIELDS.values()
+                for name in fields.get(str(case.get("tool")), frozenset())
+            }
+            for field_name in sorted(_PROMPT_BOUNDARY_FIELDS | extra):
                 version = declared_prompt_change(str(case.get("tool")), field_name)
                 if version is not None and case.get(field_name) != old.get(field_name):
                     if notices is not None:

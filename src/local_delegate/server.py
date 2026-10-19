@@ -1629,10 +1629,13 @@ def _approved_alternatives(
         return ()
     roles = config.models_by_role()
     prompt = _affinity_prompt(tool)
+    language = i18n.response_language().value
     found: list[str] = []
     for cell in matrix.CELLS:
         if cell.tool != tool or cell.alternative in found or cell.compared_role != role_model:
             continue
+        if not matrix.applies_to_language(cell, language):
+            continue  # measured with the prompt of another response language
         if not matrix.allowed_direction(cell, role_name, roles):
             continue
         if cell.alternative not in config.ALLOWED_MODELS:
@@ -3945,8 +3948,10 @@ def _lint_system(max_words: int) -> str:
     """El prompt de sistema de `local_lint_summary`. También entra en la huella (T15). Con la orden
     de idioma de REQ-028 depende del idioma de respuesta; B2-affinity lo midió en `es` y en `en`
     y la celda de afinidad de lint no llegó al criterio (ni con el 26B ni con Qwen3.6: dejan de
-    nombrar los códigos de regla), así que salió de `matrix.CELLS`. B2d-3: la cantidad, solo
-    cuando se puede saber (`_lint_count_clause`)."""
+    nombrar los códigos de regla), así que salió de `matrix.CELLS`. Volvió con la afinidad por
+    idioma (2026-10-19): una celda por idioma, con el inventario también en la llamada mecánica
+    (`_lint_single_user`). B2d-3: la cantidad, solo cuando se puede saber
+    (`_lint_count_clause`)."""
     return (
         _guard(
             "un resumen de los problemas agrupados por archivo, con la cantidad por tipo de "

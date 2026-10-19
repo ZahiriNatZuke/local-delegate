@@ -1666,9 +1666,12 @@ def _stale_affinity_cells(photo) -> tuple[list[str], int]:
     from . import matrix, server
 
     roles = configuration.models_by_role()
+    language = i18n.response_language().value
     stale: list[str] = []
     elsewhere = 0
     for cell in matrix.CELLS:
+        if not matrix.applies_to_language(cell, language):
+            continue  # its prompt is the one of another language: no base to lose here
         model_cfg = server._model_config(photo, cell.alternative)
         prompt = server._affinity_prompt(cell.tool)
         if model_cfg is None or prompt is None:

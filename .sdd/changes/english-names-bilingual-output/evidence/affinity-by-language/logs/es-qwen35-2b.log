@@ -1,0 +1,14 @@
+warmup resume-ruff-tres-reglas r0 chars=966 error=False
+case resume-ruff-tres-reglas r1 chars=311 error=False
+case resume-ruff-docstrings r1 chars=410 error=False
+case resume-ruff-un-solo-archivo r1 chars=330 error=False
+case resume-ruff-cinco-reglas r1 chars=390 error=False
+case resume-ruff-tres-reglas r2 chars=477 error=False
+case resume-ruff-docstrings r2 chars=1127 error=False
+case resume-ruff-un-solo-archivo r2 chars=272 error=False
+case resume-ruff-cinco-reglas r2 chars=531 error=False
+case resume-ruff-tres-reglas r3 chars=746 error=False
+case resume-ruff-docstrings r3 chars=563 error=False
+case resume-ruff-un-solo-archivo r3 chars=344 error=False
+case resume-ruff-cinco-reglas r3 chars=985 error=False
+12 rows -> benchmarks\afinidad-2026-10\reevaluation-lint-counts\results\es\qwen35-2b.jsonl; problems=0
