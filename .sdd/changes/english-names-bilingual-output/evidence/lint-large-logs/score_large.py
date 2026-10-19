@@ -67,7 +67,13 @@ POSITIONS = re.compile(
     r"\(\d+,\s*\d+\)|\b\d+:\d+(?::\d+)?\b|\b(?:l[íi]neas?|lines?|L)\s*\d+(?:\s*(?:,|y|and|-|–)\s*\d+)*",
     re.IGNORECASE,
 )
-HEADING = re.compile(r"^\s*(?:#+\s|\*\*[^*]+\*\*:?\s*$|[A-ZÁÉÍÓÚ][^:]{0,60}:\s*$)")
+#: A heading: a Markdown title, or a whole line that is only a bold label or a short "Label:".
+HEADING_START = re.compile(r"\s*#+\s")
+HEADING_LINE = re.compile(r"\s*(?:\*\*[^*]+\*\*:?|[A-ZÁÉÍÓÚ][^:]{0,60}:)\s*")
+
+
+def _is_heading(line: str) -> bool:
+    return bool(HEADING_START.match(line) or HEADING_LINE.fullmatch(line))
 
 
 def _file_keys(truth_files: list[str]) -> dict[str, str]:
@@ -138,7 +144,7 @@ def per_file_check(text: str, truth: dict | None, log: str = "") -> dict:
         files = _files_in(raw, keys)
         if len(files) == 1:
             current = next(iter(files))
-        elif len(files) > 1 or HEADING.match(raw):
+        elif len(files) > 1 or _is_heading(raw):
             current = None
             continue
         line = POSITIONS.sub(" ", lint_patterns.FILE.sub(" ", raw))
