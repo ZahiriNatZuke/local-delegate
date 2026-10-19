@@ -1,0 +1,117 @@
+**Resumen de pruebas por archivo**
+
+**tests/test_checks.py**
+* Pruebas de diagnósticos, incluyendo unicidad de IDs, comparación de versiones, detección de huérfanos, estado del demonio, credenciales y conectividad del backend, además de validación de clientes, autenticación de demonios, configuración de escritorio, gestión de ganchos, topología de residencia y nombres obsoletos.
+
+**tests/test_analyze_benchmark.py**
+* Pruebas de análisis de rendimiento, incluyendo criterios de calidad, latencia, reglas de techo, pruebas de significancia, validación de archivos congelados y gestión de errores de ejecución.
+
+**tests/test_metrics.py**
+* Pruebas de métricas, incluyendo validación de archivos de registro, estadísticas de la API, contabilidad de tokens y visualización del panel de control.
+
+**tests/test_update.py**
+* Pruebas de procesos de actualización, detección de instalaciones, reparación de configuraciones, gestión de servicios en distintos sistemas operativos y manejo de archivos de configuración.
+
+**tests/test_residency.py**
+* Pruebas de detección de claves sensibles, edición quirúrgica de archivos, gestión de TTL y persistencia de configuraciones.
+
+**tests/test_core.py**
+* Pruebas sobre lectura de archivos, limpieza de bloques de pensamiento, esquemas JSON, estado local, gestión de logs y límites de concurrencia.
+
+**tests/test_connection_cause.py**
+* Pruebas sobre la clasificación de errores de conexión, códigos HTTP, errores de DNS y sugerencias de solución.
+
+**tests/test_topology.py**
+* Pruebas de cambios de topología y gestión de reservas.
+
+**tests/test_corpus.py**
+* Pruebas sobre la integridad del corpus, reglas de validación, detección de datos privados y consistencia de versiones.
+
+**tests/test_structured_summary.py**
+* Pruebas de detección de secciones en documentos, normalización de encabezados, manejo de contenido cortado y presupuestos de palabras.
+
+**Otros archivos**
+* **tests/test_adoption_experiment.py**: Pruebas de experimentos de adopción.
+* **tests/test_affinity.py**: Pruebas de afinidad y gestión de TTL.
+* **tests/test_affinity_batch.py**: Pruebas de procesamiento por lotes.
+* **tests/test_agents.py**: Pruebas de agentes y catálogos de habilidades.
+* **tests/test_attribution.py**: Pruebas de atribución y resolución de modelos.
+* **tests/test_autostart.py**: Pruebas de inicio automático.
+* **tests/test_backend_probe.py**: Pruebas de sondeo del backend.
+* **tests/test_benchmark.py**: Pruebas de métricas de rendimiento.
+* **tests/test_boilerplate_output.py**: Pruebas de salida de código base.
+* **tests/test_bump_version.py**: Pruebas de actualización de versiones.
+* **tests/test_capture.py**: Pruebas de captura de pantalla.
+* **tests/test_chains.py**: Pruebas de cadenas y residentes.
+* **tests/test_chunking.py**: Pruebas de división de texto.
+* **tests/test_ci_gate.py**: Pruebas de integración continua.
+* **tests/test_cli_renamed_names.py**: Pruebas de comandos heredados.
+* **tests/test_clients.py**: Pruebas de capacidades de clientes.
+* **tests/test_commit_language.py**: Pruebas de detección de idiomas.
+* **tests/test_cooldown.py**: Pruebas de sistema de enfriamiento.
+* **tests/test_correlation.py**: Pruebas de correlación de bloques.
+* **tests/test_cost_doctor.py**: Pruebas de advertencias de plazos.
+* **tests/test_ctrl_c.py**: Pruebas de interrupciones de teclado.
+* **tests/test_daemon.py**: Pruebas de autenticación y gestión de tokens.
+* **tests/test_dashboard_cost.py**: Pruebas de estadísticas de la API.
+* **tests/test_dashboard_js.py**: Pruebas de lógica de JavaScript.
+* **tests/test_dashboard_states.py**: Pruebas de estados del modelo.
+* **tests/test_dashboard_ui.py**: Pruebas de interfaz de usuario.
+* **tests/test_delegation_connection.py**: Pruebas de tiempos de espera.
+* **tests/test_density.py**: Pruebas de cálculo de densidad.
+* **tests/test_deprecations.py**: Pruebas de reglas de nombres obsoletos.
+* **tests/test_detect_spanish_names.py**: Pruebas de detección de nombres españoles.
+* **tests/test_doctor.py**: Pruebas de diagnóstico del sistema.
+* **tests/test_environment_isolation.py**: Pruebas de aislamiento de configuración.
+* **tests/test_f1_conformance.py**: Pruebas de cumplimiento de reglas.
+* **tests/test_failure_captures.py**: Pruebas de clasificación de errores.
+* **tests/test_failures.py**: Pruebas de errores HTTP.
+* **tests/test_failures_integration.py**: Pruebas de integración de errores.
+* **tests/test_fake_llamaswap.py**: Pruebas de simulaciones de recarga.
+* **tests/test_fallback.py**: Pruebas de mecanismos de respaldo.
+* **tests/test_fallback_observability.py**: Pruebas de registro de causas de respaldo.
+* **tests/test_fast_role_retired.py**: Pruebas de gestión de roles retirados.
+* **tests/test_footprint.py**: Pruebas de lectura de configuraciones.
+* **tests/test_hook_common.py**: Pruebas de bloqueos y marcas de salud.
+* **tests/test_hook_legacy_names.py**: Pruebas de compatibilidad de hooks.
+* **tests/test_hook_recipes.py**: Pruebas de recetas de hooks.
+* **tests/test_hooks_telemetry_api.py**: Pruebas de telemetría.
+* **tests/test_install.py**: Pruebas de instalación y migración.
+* **tests/test_install_clients.py**: Pruebas de configuración de clientes.
+* **tests/test_install_header.py**: Pruebas de gestión de tokens web.
+* **tests/test_install_opencode.py**: Pruebas de validación de directorios.
+* **tests/test_install_timeouts.py**: Pruebas de persistencia de tiempos de espera.
+* **tests/test_llamaswap_api.py**: Pruebas de estados de ejecución.
+* **tests/test_llamaswap_config.py**: Pruebas de validación de archivos YAML.
+* **tests/test_load_probe.py**: Pruebas de estados de carga de modelos.
+* **tests/test_map_reduce.py**: Pruebas de reducción de mapas.
+* **tests/test_measure_adoption.py**: Pruebas de medición de delegaciones.
+* **tests/test_measure_cooldown.py**: Pruebas de reglas de recuperación.
+* **tests/test_measure_slowness.py**: Pruebas de umbrales de velocidad.
+* **tests/test_pace.py**: Pruebas de validación de medianas.
+* **tests/test_pair_sheet.py**: Pruebas de validación de hojas.
+* **tests/test_post_chat_paths.py**: Pruebas de respuestas HTTP.
+* **tests/test_price_watcher.py**: Pruebas de monitoreo de precios.
+* **tests/test_pricing.py**: Pruebas de normalización de fechas.
+* **tests/test_questions.py**: Pruebas de interacción con el usuario.
+* **tests/test_quota.py**: Pruebas de cálculo de cuotas.
+* **tests/test_recompute.py**: Pruebas de recomputación de agregados.
+* **tests/test_recompute_legacy.py**: Pruebas de compatibilidad de archivos.
+* **tests/test_release_metadata.py**: Pruebas de metadatos de versión.
+* **tests/test_residency_cli.py**: Pruebas de la interfaz de línea de comandos.
+* **tests/test_resource_probe.py**: Pruebas de sondeo de recursos.
+* **tests/test_role_caps.py**: Pruebas de límites de capacidad de roles.
+* **tests/test_site.py**: Pruebas de la página web.
+* **tests/test_slowness.py**: Pruebas de tiempos de respuesta.
+* **tests/test_smoke.py**: Pruebas de humo de herramientas y servidor.
+* **tests/test_test_sessions.py**: Pruebas de conteo de sesiones de SDK.
+* **tests/test_turn.py**: Pruebas de lógica de turnos.
+* **
+
+Y otros 99 ficheros que nombra el log no tienen entrada en el resumen.
+
+[local-delegate warning: salida truncada por max_tokens en 4 de 8 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 206985 chars ≈ 107804 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 8 pasadas por local-delegate)

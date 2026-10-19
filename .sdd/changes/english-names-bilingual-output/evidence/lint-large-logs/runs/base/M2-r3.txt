@@ -1,0 +1,9 @@
+**Resumen de Problemas por Archivo**
+
+**src/a.py:**  Se identificaron 3 errores de tipo D103 (Faltan descripciones en funciones públicas) y 1 error de tipo B006 (No se deben usar estructuras de datos mutables para los valores predeterminados de los argumentos).  Además, se encontraron 3 errores de tipo T201 (Se detectó el uso de la función `print`).
+
+**src/b.py:** Se identificaron 4 errores de tipo D100 (Faltan descripciones en módulos públicos) y 4 errores de tipo D103 (Faltan descripciones en funciones públicas).
+
+**src/c.py:** Se identificaron 3 errores de tipo T201 (Se detectó el uso de la función `print`).
+
+(leído server-side: 626 chars ≈ 326 tokens de Claude que no entraron a tu contexto)

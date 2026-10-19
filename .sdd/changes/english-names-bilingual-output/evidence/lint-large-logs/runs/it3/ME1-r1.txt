@@ -1,0 +1,9 @@
+Here's a summary of the issues grouped by file, prioritizing the most frequent ones:
+
+**app/main.py:** This file contains three instances of the **E501 Line too long** error, occurring on lines 12, 40, and 7. Additionally, there is one **F401** imported but unused issue on line 7.
+
+**app/util.py:** This file presents four **E501 Line too long** errors found on lines 55 and 70, along with a line too long error on line 70. It also includes three **F401** imported but unused issues on lines 3, 9, and 55. Finally, there is one **W291 Trailing whitespace** error on line 70.
+
+**app/cli.py:** This file has one **E501 Line too long** error on line 21.
+
+(read server-side: 340 chars ≈ 177 Claude tokens that did not enter your context)

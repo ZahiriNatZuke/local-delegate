@@ -1,0 +1,9 @@
+Resumen de problemas por archivo:
+
+**lib/net.py**: Se identificaron 3 errores del tipo SIM102, relacionados con el uso de una sola declaración `if`. Además, se encontró 1 error del tipo RET504, que indica una asignación innecesaria antes de una sentencia `return`.
+
+**lib/io.py**: Se detectaron 2 errores del tipo I001, referentes a la falta de ordenación o formato en los bloques de importación. También se identificaron 2 errores del tipo UP006, que sugieren el uso de `dict` en lugar de `Dict` y `list` en lugar de `List` para anotaciones de tipo.
+
+**lib/db.py**: Se encontraron 2 errores del tipo SIM102, relacionados con el uso de una sola declaración `if`.  Además, se identificaron 2 errores del tipo SIM102, relacionados con el uso de una sola declaración `if`.  También se detectó 1 error del tipo UP006, que indica el uso de `List` en lugar de `list` para anotaciones de tipo.  Finalmente, se encontró 1 error del tipo RET504, que indica una asignación innecesaria antes de una sentencia `return`.
+
+(leído server-side: 784 chars ≈ 408 tokens de Claude que no entraron a tu contexto)

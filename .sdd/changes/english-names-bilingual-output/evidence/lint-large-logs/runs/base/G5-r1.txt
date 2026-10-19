@@ -1,0 +1,36 @@
+**src/local_delegate/benchmark.py**
+
+*   **COM812**: 11 faltan comas finales.
+*   **D102**: 7 falta docstring en método público.
+*   **T201**: 7 se encontró el uso de `print`.
+*   **D107**: 5 falta docstring en `__init__`.
+*   **D101**: 4 falta docstring en clase pública.
+*   **D105**: 4 falta docstring en método mágico.
+*   **D103**: 4 falta docstring en función pública.
+*   **TC003**: 3 mover importación de la biblioteca estándar a un bloque de comprobación de tipos.
+*   **PLR2004**: 3 uso de valor mágico en comparación.
+*   **E501**: 3 línea demasiado larga.
+*   **PLC0415**: 2 la importación debería estar en el nivel superior del archivo.
+*   **C901**: 2 la función es demasiado compleja.
+*   **PLR0913**: 2 demasiados argumentos en la definición de la función.
+*   **D203**: 1 incompatibilidad entre reglas de línea en blanco antes de clase.
+*   **D211**: 1 incompatibilidad entre reglas de línea en blanco antes de clase.
+*   **D212**: 1 incompatibilidad entre reglas de resumen multilínea.
+*   **D213**: 1 incompatibilidad entre reglas de resumen multilínea.
+*   **CPY001**: 1 falta aviso de copyright al inicio del archivo.
+*   **PLW2901**: 1 la variable del bucle `for` es sobrescrita por el objetivo de asignación.
+*   **S603**: 1 llamada a `subprocess` requiere verificar la ejecución de entrada no confiable.
+*   **PLW1510**: 1 `subprocess.run` sin el argumento `check` explícito.
+*   **D301**: 1 usar `r"""` si hay barras invertidas en un docstring.
+*   **FBT003**: 1 valor booleano posicional en llamada a función.
+*   **RUF036**: 1 `None` no está al final de la unión de tipos.
+*   **D205**: 1 se requiere una línea en blanco entre la línea de resumen y la descripción.
+*   **D209**: 1 las comillas de cierre de un docstring multilínea deberían estar en una línea separada.
+*   **PLR0912**: 1 demasiadas ramificaciones.
+*   **PLR0915**: 1 demasiadas sentencias.
+
+Found 68 errors.
+
+Sin mencionar (del log, no los nombra el resumen): checks.json
+
+(leído server-side: 33048 chars ≈ 17212 tokens de Claude que no entraron a tu contexto)

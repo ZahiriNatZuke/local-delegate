@@ -1,0 +1,34 @@
+**Resumen de problemas por archivo**
+
+**home/runner/work/shop-web/shop-web/src/app/core/state/report-builder.tsx**: longitud máxima de línea, reasignación de parámetros, declaraciones de consola, sombreado de variables, uso de cualquier, declaraciones no utilizadas, promesas sin esperar, preferir constantes, tipo de retorno de función faltante, espera dentro de un bucle, métodos de ciclo de vida vacíos, complejidad, comparación de igualdad y orden de importación.
+
+**home/runner/work/shop-web/shop-web/src/app/catalog/users-table.js**: uso de cualquier, comparación de igualdad, métodos de ciclo de vida vacíos, declaraciones no utilizadas, preferir constantes, promesas sin esperar, complejidad, declaraciones de consola, orden de importación, longitud máxima de línea, reasignación de parámetros y espera dentro de un bucle.
+
+**home/runner/work/shop-web/shop-web/src/lib/money/mailer.tsx**: preferir constantes, uso de cualquier, comparación de igualdad, reasignación de parámetros, declaraciones de consola, declaraciones no utilizadas, espera dentro de un bucle, promesas sin esperar, tipo de retorno de función faltante, longitud máxima de línea, sombreado de variables, complejidad, métodos de ciclo de vida vacíos y orden de importación.
+
+**home/runner/work/shop-web/shop-web/src/app/admin/reports/profile-form.ts**: uso de cualquier, promesas sin esperar, tipo de retorno de función faltante, reasignación de parámetros, orden de importación, declaraciones de consola, preferir constantes, declaraciones no utilizadas, comparación de igualdad, longitud máxima de línea, sombreado de variables, métodos de ciclo de vida vacíos, complejidad y espera dentro de un bucle.
+
+**home/runner/work/shop-web/shop-web/src/lib/format/report-builder.js**: uso de cualquier, declaraciones no utilizadas, orden de importación, tipo de retorno de función faltante, longitud máxima de línea, preferir constantes, comparación de igualdad, sombreado de variables, declaraciones de consola, espera dentro de un bucle y complejidad.
+
+**home/runner/work/shop-web/shop-web/src/server/db/utils.tsx**: declaraciones de consola, preferir constantes, tipo de retorno de función faltante, comparación de igualdad, declaraciones no utilizadas, uso de cualquier, complejidad, orden de importación, longitud máxima de línea, sombreado de variables y promesas sin esperar.
+
+**home/runner/work/shop-web/shop-web/src/app/auth/button.ts**: longitud máxima de línea, preferir constantes, declaraciones no utilizadas, uso de cualquier, orden de importación, comparación de igualdad, tipo de retorno de función faltante, declaraciones de consola, complejidad, sombreado de variables y espera dentro de un bucle.
+
+**home/runner/work/shop-web/shop-web/src/app/core/state/date-range.pipe.ts**: longitud máxima de línea, uso de cualquier, declaraciones no utilizadas, comparación de igualdad, espera dentro de un bucle, tipo de retorno de función faltante, métodos de ciclo de vida vacíos, declaraciones de consola, preferir constantes, complejidad, orden de importación y reasignación de parámetros.
+
+**home/runner/work/shop-web/shop-web/src/lib/format/button.js**: espera dentro de un bucle, declaraciones no utilizadas, uso de cualquier, preferir constantes, sombreado de variables, longitud máxima de línea, declaraciones de consola, métodos de ciclo de vida vacíos, tipo de retorno de función faltante, complejidad, orden de importación, promesas sin esperar y comparación de igualdad.
+
+**home/runner/work/shop-web/shop-web/src/app/core/state/token.interceptor.js**: espera dentro de un bucle, comparación de igualdad, promesas sin esperar, complejidad, uso de cualquier, declaraciones no utilizadas, declaraciones de consola y preferir constantes.
+
+Hay 118 ficheros más.
+
+**Totales**
+✖ 1445 problems (663 errors, 782 warnings)
+
+Y otros 118 ficheros que nombra el log no tienen entrada en el resumen.
+
+[local-delegate warning: salida truncada por max_tokens en 1 de 5 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 136846 chars ≈ 71273 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)

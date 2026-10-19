@@ -1,0 +1,7 @@
+**Resumen de Problemas por Archivo**
+
+**tools/gen.py:**
+
+Este archivo presenta principalmente problemas relacionados con la longitud de las líneas y la importación de módulos. Se identificaron 4 errores del tipo E402, indicando que las importaciones de módulos se encuentran ubicadas dentro del cuerpo del archivo y no en la parte superior. Además, se encontraron 3 errores del tipo E501, señalando líneas que exceden el límite de longitud permitido. Finalmente, se detectó 1 error del tipo E711, relacionado con comparaciones con `None` que deberían ser expresadas de manera más explícita.
+
+(leído server-side: 438 chars ≈ 228 tokens de Claude que no entraron a tu contexto)

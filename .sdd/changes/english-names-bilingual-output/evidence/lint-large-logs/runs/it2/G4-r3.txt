@@ -1,0 +1,55 @@
+**src/local_delegate/web/metrics.py**
+* **E501**: 231 líneas demasiado largas.
+* **ANN201**: 16 falta anotación de tipo de retorno para función pública.
+* **COM812**: 18 falta coma final.
+* **RUF001**: 15 cadena contiene carácter ambiguo.
+* **SLF001**: 8 acceso a miembro privado.
+* **FAST002**: 9 dependencia de FastAPI sin `Annotated`.
+* **D103**: 6 falta docstring en función pública.
+* **TID252**: 14 preferir importaciones absolutas sobre relativas.
+* **RUF002**: 2 docstring contiene carácter de multiplicación ambiguo.
+* **D205**: 2 se requiere una línea en blanco entre el resumen y la descripción.
+* **D209**: 3 las comillas de cierre de docstrings multilínea deberían estar en una línea separada.
+* **PLW0603**: 2 uso de la sentencia global para actualizar variables no es recomendable.
+* **PLR2004**: 1 valor mágico usado en comparación.
+* **PLR0915**: 1 demasiadas sentencias.
+* **C901**: 1 la función es demasiado compleja.
+* **SIM108**: 1 usar operador ternario en lugar de bloque if-else.
+* **SIM105**: 1 usar `contextlib.suppress` en lugar de try-except-pass.
+* **S110**: 1 se detectó try-except-pass, considere registrar la excepción.
+* **BLE001**: 3 no capturar excepciones ciegas.
+* **FBT001**: 1 argumento posicional de tipo booleano en definición de función.
+* **PLC0415**: 1 la importación debería estar en el nivel superior del archivo.
+* **TRY300**: 1 considerar mover esta sentencia a un bloque else.
+* **T201**: 1 se encontró un print.
+
+**src/local_delegate/web/sysinfo.py**
+* **BLE001**: 4 no capturar excepciones ciegas.
+* **S607**: 4 iniciar un proceso con una ruta de ejecutable parcial.
+* **PLW1510**: 4 `subprocess.run` sin argumento `check` explícito.
+* **PLR2004**: 3 valor mágico usado en comparación.
+* **PTH123**: 3 `open()` debería ser reemplazado por `Path.open()`.
+* **D403**: 3 la primera palabra del docstring debería estar capitalizada.
+* **COM812**: 2 falta coma final.
+* **PLW0603**: 2 uso de la sentencia global no es recomendable.
+* **CPY001**: 1 falta aviso de copyright al inicio del archivo.
+* **PLC0415**: 1 la importación debería estar en el nivel superior del archivo.
+* **PTH208**: 1 usar `pathlib.Path.iterdir()`.
+* **S603**: 1 llamada a `subprocess` requiere verificar la ejecución de entrada no confiable.
+
+**src/local_delegate/web/auth.py**
+* **ANN001**: 10 falta anotación de tipo para argumento de función.
+* **COM812**: 3 falta coma final.
+* **D400**: 2 la primera línea debería terminar con un punto.
+* **ANN201**: 1 falta anotación de tipo de retorno para función pública.
+* **ANN202**: 2 falta anotación de tipo de retorno para función privada.
+* **CPY001**: 1 falta aviso de copyright al inicio del archivo.
+* **D107**: 1 falta docstring en `__init__`.
+* **D102**: 1 falta docstring en método público.
+
+**src/local_delegate/web/__init__.py**
+* **CPY001**: 1 falta aviso de copyright al inicio del archivo.
+
+Found 388 errors.
+
+(leído server-side: 33805 chars ≈ 17606 tokens de Claude que no entraron a tu contexto)

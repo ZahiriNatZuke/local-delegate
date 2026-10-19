@@ -1,0 +1,137 @@
+**Resumen de problemas por archivo**
+
+**src/local_delegate/web/metrics.py**
+340 diagnósticos: errores E501, COM812, ANN201, D205, D209, SLF001, BLE001, SIM105, S110, D103, PLW0603, PLC0415, TRY300, RUF001, T201, aviso de copyright faltante, preferir importaciones absolutas sobre relativas y falta de anotación de tipo para argumento de función.
+
+**src/local_delegate/cli.py**
+248 diagnósticos: errores de complejidad excesiva, demasiadas sentencias de retorno, demasiadas ramas, falta de anotación de tipo para argumento de función, falta de anotación de tipo para función pública y privada, encuentro de `print`, argumento posicional de tipo booleano, argumento de tipo booleano por defecto, acceso a miembro privado, demasiados argumentos en definición y posición de función, línea demasiado larga, importación de biblioteca estándar en bloque de comprobación de tipos, importación debe estar en el nivel superior, aviso de copyright faltante y falta de coma final.
+
+**src/local_delegate/server.py**
+234 diagnósticos: errores de complejidad excesiva, demasiadas sentencias, demasiadas ramas, demasiados argumentos en definición de función, captura de excepción ciega, uso de `assert`, uso de `r"""` con barras invertidas, falta de anotación de tipo para argumento de función, valor mágico usado en comparación, primera línea de docstring en modo imperativo, línea demasiado larga, comprensión de diccionario innecesaria, falta de línea en blanco después de la última sección, argumento de función que sombrea un nombre integrado, comentario con signo menos ambiguo, `subprocess.run` sin argumento `check` explícito, inicio de proceso con ruta de ejecutable parcial, reemplazo de `open()` por `Path.open()`, uso de `list.extend` para transformar listas, importación en nivel superior, reemplazo de `os.replace()` por `Path.replace()`, uso de `contextlib.suppress(OSError)` en lugar de `try-except-pass`, reemplazo de `os.unlink()` por `Path.unlink()`, valor posicional booleano en llamada a función, variable de bucle sobrescrita, aviso de copyright faltante, uso de sentencia global desaconsejado, falta de coma final, requiere línea en blanco entre resumen y descripción, comillas de cierre de docstring en línea separada, detección de `try-except-pass` sin registro, acceso a miembro privado, evitar mensajes largos fuera de la clase de excepción, excepción con literal de cadena, docstring con símbolo ambiguo, falta docstring en clase pública, primer línea de docstring debe terminar con punto, argumento de función `input` sombrea nombre integrado y capitalización de TODO inválida.
+
+**src/local_delegate/checks.py**
+149 diagnósticos: errores de complejidad excesiva, demasiadas sentencias de retorno, demasiadas ramas, acceso a miembro privado, posible contraseña codificada, primer línea de docstring en modo imperativo, importación en nivel superior, falta anotación de tipo de retorno para funciones públicas y privadas, nombre de función en minúsculas, falta de coma final, valor booleano posicional en llamada a función, argumento de función no utilizado, primera línea debe terminar con punto, posible vinculación a todas las interfaces, uso de `list.extend` para crear lista transformada, aviso de copyright faltante, importación de biblioteca estándar en bloque de comprobación de tipos, falta docstring en función pública, línea demasiado larga, comentario y docstring con signo menos ambiguo.
+
+**src/local_delegate/residency.py**
+87 diagnósticos: errores de complejidad excesiva, demasiados argumentos posicionales, clase con demasiados argumentos, reemplazo de `open` por `Path.open()`, reemplazo de `os.replace` por `Path.replace()`, reemplazo de `os.unlink` por `Path.unlink()`, mover sentencia a un bloque `else`, abstraer `raise` a una función interna, aviso de copyright faltante, línea demasiado larga, importar en bloque de comprobación de tipos, falta docstring en clase pública y en método público, expresiones de tipo dinámico, requiere línea en blanco entre resumen y descripción, comillas de cierre de docstring en línea separada, excepción con literal de cadena, falta anotación de tipo de retorno para función privada, argumento posicional de tipo booleano en definición de función, división de cadena excesiva y variable de control de bucle no utilizada.
+
+**src/local_delegate/install.py**
+75 diagnósticos: errores de complejidad excesiva, demasiadas ramas, demasiadas sentencias, detección de llamada a `subprocess`, `subprocess.run` sin argumento `check` explícito, iniciar proceso con ruta parcial, aviso de copyright faltante, primera línea de docstring en modo imperativo, falta docstring en método y clase pública, importación en nivel superior, falta de anotación de tipo para argumento de función, posible contraseña codificada, argumento posicional de tipo booleano en definición y por defecto, considerar uso de desempacado en lugar de concatenación y falta de coma final.
+
+**src/local_delegate/benchmark.py**
+68 diagnósticos: errores de complejidad excesiva, demasiadas ramas, demasiadas sentencias, valor mágico usado en comparación, variable de bucle sobrescrita, falta de coma final, importación en nivel superior, llamada a `subprocess` con entrada no confiable, `subprocess.run` sin argumento `check` explícito, valor booleano posicional en llamada a función, demasiados argumentos en definición y posicionales, aviso de copyright faltante, importación de biblioteca estándar en bloque de comprobación de tipos, falta de docstring en clase pública, en `__init__`, en método mágico y en método público, y uso de `r"""` con barras invertidas.
+
+**src/local_delegate/resources/hooks/hook_common.py**
+48 diagnósticos: errores de complejidad excesiva, demasiadas sentencias de retorno, captura de excepciones ciegas, reemplazo de `os.path.abspath` por `Path.resolve()`, reemplazo de `os.replace` por `Path.replace()`, reemplazo de `os.unlink` por `Path.unlink()`, mover sentencia a un bloque `else`, importación en nivel superior, aviso de copyright faltante, importar en bloque de comprobación de tipos, falta docstring en función pública, uso de `print`, falta de coma final, línea demasiado larga, auditar apertura de URL, valor mágico usado en comparación y falta de anotación de tipo para función pública.
+
+**src/local_delegate/legacy_names.py**
+42 diagnósticos: errores de línea demasiado larga, falta de coma final, expresiones con tipado dinámico no permitidas, requiere línea en blanco entre resumen y descripción, comillas de cierre de docstring en línea separada, variable de bucle sobrescrita, aviso de copyright faltante.
+
+**src/local_delegate/pace.py**
+41 diagnósticos: errores de captura de excepciones ciegas, expresiones de tipo dinámico, falta de coma final, valor booleano posicional en llamada a función y mover sentencia a un bloque `else`.
+
+**Totales de reglas/errores**
+Found 1991 errors.
+E501: 292
+COM812: 273
+T201: 156
+D205: 87
+PLC0415: 78
+D209: 71
+ANN401: 68
+ANN001: 67
+CPY001: 52
+D103: 52
+BLE001: 44
+TC003: 42
+SLF001: 40
+C901: 39
+D102: 39
+PLR2004: 38
+FBT003: 34
+D101: 31
+FBT001: 31
+D401: 30
+PLR0913: 24
+RUF002: 24
+PLR0912: 18
+ANN201: 18
+PLR0911: 17
+SIM105: 16
+D400: 15
+RUF001: 15
+ANN202: 14
+TID252: 14
+PLR0915: 13
+PLW2901: 12
+PLW1510: 12
+D107: 11
+PLW0603: 11
+S603: 10
+D301: 10
+D413: 10
+S110: 9
+S607: 9
+FAST002: 9
+TRY300: 7
+PTH105: 7
+D105: 7
+PTH123: 7
+RUF003: 6
+EM101: 6
+PTH108: 5
+N802: 5
+FBT002: 5
+PLR0917: 5
+C420: 5
+PERF401: 4
+TRY301: 4
+D403: 4
+TRY003: 3
+S310: 3
+PTH202: 3
+D415: 3
+S101: 3
+S105: 2
+ARG001: 2
+S104: 2
+PLR1714: 2
+TC002: 2
+UP042: 2
+EM102: 2
+N818: 2
+TD006: 2
+TD002: 2
+TD004: 2
+TD003: 2
+FIX002: 2
+D203: 1
+D211: 1
+D212: 1
+D213: 1
+PT028: 1
+RUF036: 1
+RUF005: 1
+ANN204: 1
+B905: 1
+PLC0207: 1
+B007: 1
+INP001: 1
+PTH100: 1
+PTH122: 1
+PTH117: 1
+PTH118: 1
+PTH109: 1
+PT018: 1
+A002: 1
+PTH116: 1
+SIM108: 1
+PTH208: 1
+
+Y otros 44 ficheros que nombra el log no tienen entrada en el resumen.
+
+[local-delegate warning: salida truncada por max_tokens en 4 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 179890 chars ≈ 93692 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

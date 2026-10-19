@@ -1,0 +1,998 @@
+> shop-web@3.4.0 typecheck
+> tsc --noEmit -p tsconfig.json
+
+src/app/admin/reports/checkout.component.tsx(3,6): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/app/admin/reports/checkout.component.tsx(31,49): error TS2554: Expected 1 arguments, but got 2.
+src/app/admin/reports/checkout.component.tsx(42,61): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/reports/checkout.component.tsx(56,66): error TS2339: Property 'total' does not exist on type 'Order'.
+src/app/admin/reports/checkout.component.tsx(61,65): error TS2564: Property 'query' has no initializer and is not definitely assigned in the constructor.
+src/app/admin/reports/checkout.component.tsx(71,3): error TS7006: Parameter 'query' implicitly has an 'any' type.
+src/app/admin/reports/checkout.component.tsx(82,61): error TS2554: Expected 1 arguments, but got 2.
+src/app/admin/reports/checkout.component.tsx(127,72): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/reports/checkout.component.tsx(131,24): error TS6133: 'user' is declared but its value is never read.
+src/app/admin/reports/checkout.component.tsx(131,46): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/reports/checkout.component.tsx(143,74): error TS18048: 'order' is possibly 'undefined'.
+src/app/admin/reports/checkout.component.tsx(192,27): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/reports/checkout.component.tsx(193,35): error TS18048: 'user' is possibly 'undefined'.
+src/app/admin/reports/checkout.component.tsx(207,11): error TS2554: Expected 1 arguments, but got 2.
+src/app/admin/reports/checkout.component.tsx(238,44): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/reports/checkout.component.tsx(249,36): error TS7006: Parameter 'cb' implicitly has an 'any' type.
+src/app/admin/reports/checkout.component.tsx(250,54): error TS2554: Expected 1 arguments, but got 2.
+src/app/admin/reports/checkout.component.tsx(258,38): error TS2532: Object is possibly 'undefined'.
+src/app/admin/reports/checkout.component.tsx(284,7): error TS2532: Object is possibly 'undefined'.
+src/app/admin/reports/checkout.component.tsx(291,75): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/reports/checkout.component.tsx(376,61): error TS2554: Expected 1 arguments, but got 2.
+src/app/admin/reports/checkout.component.tsx(389,44): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/reports/checkout.component.tsx(423,24): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/reports/checkout.component.tsx(444,47): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/admin/reports/checkout.component.tsx(458,15): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/reports/checkout.component.tsx(489,2): error TS2307: Cannot find module '@app/idx' or its corresponding type declarations.
+src/app/admin/reports/checkout.component.tsx(498,77): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/reports/effects.ts(8,67): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/admin/reports/effects.ts(52,48): error TS2307: Cannot find module '@app/order' or its corresponding type declarations.
+src/app/admin/reports/effects.ts(152,73): error TS7006: Parameter 'opts' implicitly has an 'any' type.
+src/app/admin/reports/effects.ts(261,79): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/reports/effects.ts(321,75): error TS2564: Property 'data' has no initializer and is not definitely assigned in the constructor.
+src/app/admin/reports/effects.ts(356,23): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/app/admin/reports/effects.ts(426,74): error TS7006: Parameter 'rows' implicitly has an 'any' type.
+src/app/admin/reports/pricing.tsx(290,12): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/reports/pricing.tsx(295,70): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/reports/pricing.tsx(343,47): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/reports/pricing.tsx(432,40): error TS6133: 'subtotal' is declared but its value is never read.
+src/app/admin/reports/pricing.tsx(456,22): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/admin/reports/users-table.ts(42,14): error TS2339: Property 'query' does not exist on type 'Order'.
+src/app/admin/reports/users-table.ts(351,39): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/reports/users-table.ts(360,62): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/reports/users-table.ts(389,37): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/reports/users-table.ts(487,17): error TS2532: Object is possibly 'undefined'.
+src/app/admin/reports/users-table.ts(488,50): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/reports/utils.tsx(55,12): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/admin/reports/utils.tsx(197,64): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/reports/utils.tsx(250,69): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/users/auth.guard.tsx(87,7): error TS2307: Cannot find module '@app/token' or its corresponding type declarations.
+src/app/admin/users/auth.guard.tsx(112,20): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/admin/users/currency.pipe.ts(4,2): error TS6133: 'token' is declared but its value is never read.
+src/app/admin/users/currency.pipe.ts(7,40): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/admin/users/currency.pipe.ts(23,47): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/users/currency.pipe.ts(58,16): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/admin/users/currency.pipe.ts(94,51): error TS2554: Expected 1 arguments, but got 2.
+src/app/admin/users/currency.pipe.ts(138,70): error TS18048: 'rows' is possibly 'undefined'.
+src/app/admin/users/currency.pipe.ts(157,53): error TS7006: Parameter 'order' implicitly has an 'any' type.
+src/app/admin/users/currency.pipe.ts(190,19): error TS2339: Property 'order' does not exist on type 'Order'.
+src/app/admin/users/currency.pipe.ts(201,35): error TS7006: Parameter 'rows' implicitly has an 'any' type.
+src/app/admin/users/currency.pipe.ts(218,65): error TS7006: Parameter 'cb' implicitly has an 'any' type.
+src/app/admin/users/currency.pipe.ts(219,80): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/admin/users/currency.pipe.ts(225,67): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/users/currency.pipe.ts(232,7): error TS2339: Property 'subtotal' does not exist on type 'Order'.
+src/app/admin/users/currency.pipe.ts(239,2): error TS6133: 'user' is declared but its value is never read.
+src/app/admin/users/currency.pipe.ts(244,73): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/admin/users/currency.pipe.ts(280,72): error TS7006: Parameter 'query' implicitly has an 'any' type.
+src/app/admin/users/currency.pipe.ts(286,16): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/admin/users/currency.pipe.ts(355,13): error TS2307: Cannot find module '@app/cb' or its corresponding type declarations.
+src/app/admin/users/currency.pipe.ts(370,37): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/users/currency.pipe.ts(378,62): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/users/currency.pipe.ts(397,71): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/users/currency.pipe.ts(406,31): error TS2339: Property 'price' does not exist on type 'Order'.
+src/app/admin/users/currency.pipe.ts(433,46): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/admin/users/currency.pipe.ts(438,30): error TS2554: Expected 1 arguments, but got 2.
+src/app/admin/users/currency.pipe.ts(457,19): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/users/currency.pipe.ts(468,78): error TS7006: Parameter 'total' implicitly has an 'any' type.
+src/app/admin/users/currency.pipe.ts(480,74): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/users/schema.ts(20,29): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/admin/users/schema.ts(50,37): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/admin/users/schema.ts(71,50): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/admin/users/schema.ts(118,74): error TS2532: Object is possibly 'undefined'.
+src/app/admin/users/schema.ts(127,28): error TS2532: Object is possibly 'undefined'.
+src/app/admin/users/schema.ts(208,61): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/users/schema.ts(259,45): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/admin/users/schema.ts(274,16): error TS2532: Object is possibly 'undefined'.
+src/app/admin/users/schema.ts(326,8): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/users/schema.ts(349,72): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/users/schema.ts(362,13): error TS7006: Parameter 'token' implicitly has an 'any' type.
+src/app/admin/users/schema.ts(371,74): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/admin/users/search-box.ts(22,35): error TS18048: 'token' is possibly 'undefined'.
+src/app/admin/users/search-box.ts(27,60): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/users/search-box.ts(58,67): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/users/search-box.ts(142,66): error TS2532: Object is possibly 'undefined'.
+src/app/admin/users/search-box.ts(223,17): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/admin/users/search-box.ts(235,12): error TS2532: Object is possibly 'undefined'.
+src/app/admin/users/search-box.ts(292,2): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/users/search-box.ts(297,29): error TS2554: Expected 1 arguments, but got 2.
+src/app/admin/users/search-box.ts(304,48): error TS2339: Property 'query' does not exist on type 'Order'.
+src/app/admin/users/search-box.ts(489,31): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/admin/users/selectors.ts(74,56): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/admin/users/selectors.ts(161,39): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/admin/users/selectors.ts(205,7): error TS6133: 'ctx' is declared but its value is never read.
+src/app/admin/users/selectors.ts(225,15): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/app/admin/users/selectors.ts(229,7): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/admin/users/selectors.ts(235,72): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/app/admin/users/selectors.ts(343,63): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/users/selectors.ts(456,49): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/admin/users/selectors.ts(482,45): error TS2307: Cannot find module '@app/rows' or its corresponding type declarations.
+src/app/admin/users/users.route.tsx(4,10): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/admin/users/users.route.tsx(56,70): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/admin/users/users.route.tsx(136,31): error TS2532: Object is possibly 'undefined'.
+src/app/admin/users/users.route.tsx(147,45): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/auth/cart.service.tsx(14,10): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/auth/cart.service.tsx(40,27): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/auth/cart.service.tsx(51,65): error TS2532: Object is possibly 'undefined'.
+src/app/auth/cart.service.tsx(75,47): error TS2307: Cannot find module '@app/idx' or its corresponding type declarations.
+src/app/auth/cart.service.tsx(79,43): error TS2554: Expected 1 arguments, but got 2.
+src/app/auth/cart.service.tsx(89,51): error TS2339: Property 'rows' does not exist on type 'Order'.
+src/app/auth/cart.service.tsx(93,59): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/auth/cart.service.tsx(128,61): error TS2554: Expected 1 arguments, but got 2.
+src/app/auth/cart.service.tsx(146,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/auth/cart.service.tsx(152,72): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/auth/cart.service.tsx(163,61): error TS7006: Parameter 'total' implicitly has an 'any' type.
+src/app/auth/cart.service.tsx(167,71): error TS18048: 'item' is possibly 'undefined'.
+src/app/auth/cart.service.tsx(187,24): error TS6133: 'token' is declared but its value is never read.
+src/app/auth/cart.service.tsx(189,73): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/app/auth/cart.service.tsx(200,32): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/auth/cart.service.tsx(245,34): error TS2307: Cannot find module '@app/price' or its corresponding type declarations.
+src/app/auth/cart.service.tsx(272,33): error TS18048: 'idx' is possibly 'undefined'.
+src/app/auth/cart.service.tsx(274,59): error TS6133: 'price' is declared but its value is never read.
+src/app/auth/cart.service.tsx(308,25): error TS2339: Property 'res' does not exist on type 'Order'.
+src/app/auth/cart.service.tsx(322,22): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/auth/cart.service.tsx(337,64): error TS2554: Expected 1 arguments, but got 2.
+src/app/auth/cart.service.tsx(377,66): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/auth/cart.service.tsx(388,8): error TS2532: Object is possibly 'undefined'.
+src/app/auth/cart.service.tsx(463,39): error TS2532: Object is possibly 'undefined'.
+src/app/auth/checkout.component.ts(72,73): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/auth/checkout.component.ts(361,68): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/auth/mailer.ts(67,16): error TS7006: Parameter 'opts' implicitly has an 'any' type.
+src/app/auth/mailer.ts(130,22): error TS2532: Object is possibly 'undefined'.
+src/app/auth/mailer.ts(171,71): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/auth/mailer.ts(188,21): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/auth/mailer.ts(308,43): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/app/auth/pricing.ts(56,70): error TS18048: 'total' is possibly 'undefined'.
+src/app/auth/pricing.ts(100,69): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/auth/pricing.ts(113,53): error TS2532: Object is possibly 'undefined'.
+src/app/auth/pricing.ts(127,11): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/app/auth/pricing.ts(142,68): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/auth/pricing.ts(235,46): error TS2532: Object is possibly 'undefined'.
+src/app/auth/pricing.ts(263,34): error TS2339: Property 'opts' does not exist on type 'Order'.
+src/app/auth/pricing.ts(263,39): error TS2532: Object is possibly 'undefined'.
+src/app/auth/pricing.ts(302,71): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/auth/pricing.ts(313,22): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/auth/pricing.ts(322,67): error TS2339: Property 'subtotal' does not exist on type 'Order'.
+src/app/auth/pricing.ts(344,21): error TS2307: Cannot find module '@app/opts' or its corresponding type declarations.
+src/app/auth/pricing.ts(380,3): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/auth/pricing.ts(381,58): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/auth/pricing.ts(438,72): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/auth/pricing.ts(439,60): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/auth/pricing.ts(445,20): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/cart.component.ts(8,19): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/cart.component.ts(9,24): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/cart.component.ts(11,10): error TS2564: Property 'price' has no initializer and is not definitely assigned in the constructor.
+src/app/cart/cart.component.ts(13,76): error TS2532: Object is possibly 'undefined'.
+src/app/cart/cart.component.ts(26,25): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/cart.component.ts(44,67): error TS2564: Property 'user' has no initializer and is not definitely assigned in the constructor.
+src/app/cart/cart.component.ts(55,65): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/cart/cart.component.ts(74,44): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/cart.component.ts(92,75): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/cart.component.ts(101,21): error TS2339: Property 'idx' does not exist on type 'Order'.
+src/app/cart/cart.component.ts(111,25): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/cart/cart.component.ts(117,76): error TS7006: Parameter 'rows' implicitly has an 'any' type.
+src/app/cart/cart.component.ts(124,6): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/cart/cart.component.ts(124,67): error TS2532: Object is possibly 'undefined'.
+src/app/cart/cart.component.ts(151,45): error TS18048: 'data' is possibly 'undefined'.
+src/app/cart/cart.component.ts(152,17): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/cart/cart.component.ts(162,50): error TS2532: Object is possibly 'undefined'.
+src/app/cart/cart.component.ts(167,49): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/cart.component.ts(167,52): error TS7006: Parameter 'token' implicitly has an 'any' type.
+src/app/cart/cart.component.ts(175,32): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/cart/cart.component.ts(178,17): error TS2532: Object is possibly 'undefined'.
+src/app/cart/cart.component.ts(182,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/cart.component.ts(183,65): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/cart.component.ts(186,71): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/cart.component.ts(188,65): error TS2532: Object is possibly 'undefined'.
+src/app/cart/cart.component.ts(205,71): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/cart/cart.component.ts(216,4): error TS2532: Object is possibly 'undefined'.
+src/app/cart/cart.component.ts(224,75): error TS2532: Object is possibly 'undefined'.
+src/app/cart/cart.component.ts(250,54): error TS7006: Parameter 'token' implicitly has an 'any' type.
+src/app/cart/cart.component.ts(258,36): error TS2307: Cannot find module '@app/price' or its corresponding type declarations.
+src/app/cart/cart.component.ts(271,20): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/cart.component.ts(275,17): error TS2532: Object is possibly 'undefined'.
+src/app/cart/cart.component.ts(282,33): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/cart.component.ts(287,20): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/cart/cart.component.ts(291,31): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/cart.component.ts(298,3): error TS2339: Property 'query' does not exist on type 'Order'.
+src/app/cart/cart.component.ts(300,76): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/cart.component.ts(315,22): error TS2564: Property 'data' has no initializer and is not definitely assigned in the constructor.
+src/app/cart/cart.component.ts(323,33): error TS18048: 'data' is possibly 'undefined'.
+src/app/cart/cart.component.ts(324,66): error TS2532: Object is possibly 'undefined'.
+src/app/cart/cart.component.ts(327,21): error TS7006: Parameter 'total' implicitly has an 'any' type.
+src/app/cart/cart.component.ts(344,30): error TS2532: Object is possibly 'undefined'.
+src/app/cart/cart.component.ts(348,76): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/cart/cart.component.ts(355,19): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/cart.component.ts(360,35): error TS2339: Property 'data' does not exist on type 'Order'.
+src/app/cart/cart.component.ts(366,1): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/cart/cart.component.ts(387,58): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/cart/cart.component.ts(390,60): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/cart.component.ts(400,18): error TS6133: 'rows' is declared but its value is never read.
+src/app/cart/cart.component.ts(405,52): error TS2307: Cannot find module '@app/cb' or its corresponding type declarations.
+src/app/cart/cart.component.ts(432,76): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/cart/cart.component.ts(436,42): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/cart.component.ts(442,19): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/cart/cart.component.ts(452,8): error TS2307: Cannot find module '@app/subtotal' or its corresponding type declarations.
+src/app/cart/cart.component.ts(460,27): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/cart/cart.component.ts(464,22): error TS2339: Property 'cb' does not exist on type 'Order'.
+src/app/cart/cart.component.ts(469,71): error TS2307: Cannot find module '@app/token' or its corresponding type declarations.
+src/app/cart/cart.component.ts(480,45): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/app/cart/cart.component.ts(484,36): error TS7006: Parameter 'cb' implicitly has an 'any' type.
+src/app/cart/cart.component.ts(485,5): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/cart.component.ts(489,73): error TS2564: Property 'rows' has no initializer and is not definitely assigned in the constructor.
+src/app/cart/cart.service.tsx(66,70): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/cart/cart.service.tsx(196,10): error TS2339: Property 'price' does not exist on type 'Order'.
+src/app/cart/report-builder.ts(126,24): error TS2532: Object is possibly 'undefined'.
+src/app/cart/report-builder.ts(150,57): error TS7006: Parameter 'token' implicitly has an 'any' type.
+src/app/cart/report-builder.ts(202,20): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/cart/report-builder.ts(214,4): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/report-builder.ts(239,59): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/cart/report-builder.ts(307,5): error TS2564: Property 'cb' has no initializer and is not definitely assigned in the constructor.
+src/app/cart/report-builder.ts(315,37): error TS7006: Parameter 'opts' implicitly has an 'any' type.
+src/app/cart/report-builder.ts(347,2): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/cart/report-builder.ts(395,6): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/report-builder.ts(487,28): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/cart/round.ts(16,75): error TS18048: 'rows' is possibly 'undefined'.
+src/app/cart/round.ts(35,31): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/round.ts(40,8): error TS2339: Property 'ctx' does not exist on type 'Order'.
+src/app/cart/round.ts(66,49): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/round.ts(85,22): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/round.ts(86,5): error TS2554: Expected 1 arguments, but got 2.
+src/app/cart/round.ts(90,75): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/round.ts(92,44): error TS2532: Object is possibly 'undefined'.
+src/app/cart/round.ts(115,77): error TS7006: Parameter 'price' implicitly has an 'any' type.
+src/app/cart/round.ts(150,77): error TS2554: Expected 1 arguments, but got 2.
+src/app/cart/round.ts(156,53): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/round.ts(162,72): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/cart/round.ts(164,60): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/round.ts(166,10): error TS2339: Property 'ctx' does not exist on type 'Order'.
+src/app/cart/round.ts(175,67): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/app/cart/round.ts(193,10): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/cart/round.ts(211,44): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/app/cart/round.ts(220,4): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/cart/round.ts(237,9): error TS2307: Cannot find module '@app/rows' or its corresponding type declarations.
+src/app/cart/round.ts(241,72): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/round.ts(243,19): error TS18048: 'data' is possibly 'undefined'.
+src/app/cart/round.ts(243,56): error TS6133: 'total' is declared but its value is never read.
+src/app/cart/round.ts(255,50): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/cart/round.ts(257,46): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/round.ts(269,8): error TS6133: 'total' is declared but its value is never read.
+src/app/cart/round.ts(294,30): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/round.ts(307,7): error TS18048: 'item' is possibly 'undefined'.
+src/app/cart/round.ts(318,25): error TS7006: Parameter 'token' implicitly has an 'any' type.
+src/app/cart/round.ts(337,73): error TS2307: Cannot find module '@app/opts' or its corresponding type declarations.
+src/app/cart/round.ts(353,51): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/round.ts(374,72): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/round.ts(380,24): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/cart/round.ts(421,54): error TS2532: Object is possibly 'undefined'.
+src/app/cart/round.ts(457,70): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/cart/round.ts(482,41): error TS2339: Property 'query' does not exist on type 'Order'.
+src/app/cart/round.ts(489,21): error TS2532: Object is possibly 'undefined'.
+src/app/cart/round.ts(498,30): error TS2307: Cannot find module '@app/idx' or its corresponding type declarations.
+src/app/catalog/cart.service.tsx(3,1): error TS2532: Object is possibly 'undefined'.
+src/app/catalog/cart.service.tsx(4,73): error TS2307: Cannot find module '@app/order' or its corresponding type declarations.
+src/app/catalog/cart.service.tsx(7,63): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/cart.service.tsx(11,22): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/cart.service.tsx(20,55): error TS7006: Parameter 'rows' implicitly has an 'any' type.
+src/app/catalog/cart.service.tsx(41,58): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/cart.service.tsx(80,21): error TS2532: Object is possibly 'undefined'.
+src/app/catalog/cart.service.tsx(83,6): error TS2307: Cannot find module '@app/rows' or its corresponding type declarations.
+src/app/catalog/cart.service.tsx(95,4): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/catalog/cart.service.tsx(108,20): error TS2532: Object is possibly 'undefined'.
+src/app/catalog/cart.service.tsx(108,67): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/catalog/cart.service.tsx(121,4): error TS2307: Cannot find module '@app/rows' or its corresponding type declarations.
+src/app/catalog/cart.service.tsx(131,70): error TS7006: Parameter 'token' implicitly has an 'any' type.
+src/app/catalog/cart.service.tsx(135,8): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/catalog/cart.service.tsx(162,45): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/cart.service.tsx(165,38): error TS2307: Cannot find module '@app/query' or its corresponding type declarations.
+src/app/catalog/cart.service.tsx(170,3): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/cart.service.tsx(222,72): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/catalog/cart.service.tsx(234,72): error TS18048: 'query' is possibly 'undefined'.
+src/app/catalog/cart.service.tsx(235,60): error TS2532: Object is possibly 'undefined'.
+src/app/catalog/cart.service.tsx(238,40): error TS2532: Object is possibly 'undefined'.
+src/app/catalog/cart.service.tsx(262,3): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/catalog/cart.service.tsx(264,30): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/catalog/cart.service.tsx(280,80): error TS2307: Cannot find module '@app/order' or its corresponding type declarations.
+src/app/catalog/cart.service.tsx(319,65): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/cart.service.tsx(378,16): error TS6133: 'subtotal' is declared but its value is never read.
+src/app/catalog/cart.service.tsx(382,4): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/catalog/cart.service.tsx(397,62): error TS2307: Cannot find module '@app/item' or its corresponding type declarations.
+src/app/catalog/cart.service.tsx(417,71): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/cart.service.tsx(420,27): error TS6133: 'data' is declared but its value is never read.
+src/app/catalog/cart.service.tsx(423,74): error TS2564: Property 'res' has no initializer and is not definitely assigned in the constructor.
+src/app/catalog/cart.service.tsx(449,13): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/cart.service.tsx(488,60): error TS2532: Object is possibly 'undefined'.
+src/app/catalog/checkout.component.ts(52,63): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/checkout.component.ts(125,3): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/catalog/checkout.component.ts(227,43): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/checkout.component.ts(314,4): error TS2564: Property 'cb' has no initializer and is not definitely assigned in the constructor.
+src/app/catalog/checkout.component.ts(392,55): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/checkout.component.ts(397,69): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/checkout.component.ts(434,62): error TS2339: Property 'user' does not exist on type 'Order'.
+src/app/catalog/filters.tsx(258,37): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/catalog/filters.tsx(452,41): error TS2554: Expected 1 arguments, but got 2.
+src/app/catalog/login.component.ts(6,10): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/catalog/login.component.ts(28,3): error TS18048: 'opts' is possibly 'undefined'.
+src/app/catalog/login.component.ts(87,50): error TS7006: Parameter 'rows' implicitly has an 'any' type.
+src/app/catalog/login.component.ts(96,39): error TS2532: Object is possibly 'undefined'.
+src/app/catalog/login.component.ts(124,35): error TS2307: Cannot find module '@app/query' or its corresponding type declarations.
+src/app/catalog/login.component.ts(183,28): error TS7006: Parameter 'opts' implicitly has an 'any' type.
+src/app/catalog/login.component.ts(356,72): error TS6133: 'idx' is declared but its value is never read.
+src/app/catalog/login.component.ts(413,40): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/migrations.ts(271,46): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/migrations.ts(428,58): error TS7006: Parameter 'price' implicitly has an 'any' type.
+src/app/catalog/migrations.ts(450,60): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/order-history.ts(45,48): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/catalog/order-history.ts(165,26): error TS7006: Parameter 'total' implicitly has an 'any' type.
+src/app/catalog/order-history.ts(472,49): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/profile-form.ts(45,13): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/profile-form.ts(60,35): error TS2554: Expected 1 arguments, but got 2.
+src/app/catalog/profile-form.ts(79,30): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/catalog/profile-form.ts(87,40): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/profile-form.ts(91,37): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/catalog/profile-form.ts(125,73): error TS7006: Parameter 'data' implicitly has an 'any' type.
+src/app/catalog/profile-form.ts(136,52): error TS6133: 'opts' is declared but its value is never read.
+src/app/catalog/profile-form.ts(141,32): error TS2554: Expected 1 arguments, but got 2.
+src/app/catalog/profile-form.ts(147,75): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/profile-form.ts(147,77): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/catalog/profile-form.ts(153,40): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/catalog/profile-form.ts(244,4): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/catalog/profile-form.ts(254,10): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/catalog/profile-form.ts(309,40): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/catalog/profile-form.ts(422,14): error TS2532: Object is possibly 'undefined'.
+src/app/catalog/profile-form.ts(426,78): error TS2532: Object is possibly 'undefined'.
+src/app/catalog/profile-form.ts(457,49): error TS7006: Parameter 'opts' implicitly has an 'any' type.
+src/app/catalog/profile-form.ts(478,70): error TS2554: Expected 1 arguments, but got 2.
+src/app/catalog/users.route.tsx(20,54): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/users.route.tsx(86,24): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/users.route.tsx(138,47): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/users.route.tsx(353,79): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/catalog/users.route.tsx(377,2): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/checkout/api-client.tsx(106,2): error TS7006: Parameter 'order' implicitly has an 'any' type.
+src/app/checkout/api-client.tsx(268,16): error TS7006: Parameter 'opts' implicitly has an 'any' type.
+src/app/checkout/api-client.tsx(456,49): error TS2532: Object is possibly 'undefined'.
+src/app/checkout/api-client.tsx(471,25): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/checkout/checkout.component.tsx(26,30): error TS2554: Expected 1 arguments, but got 2.
+src/app/checkout/checkout.component.tsx(52,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/checkout/checkout.component.tsx(294,31): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/checkout/checkout.component.tsx(429,43): error TS2532: Object is possibly 'undefined'.
+src/app/checkout/format-date.ts(5,70): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/checkout/format-date.ts(93,22): error TS18048: 'query' is possibly 'undefined'.
+src/app/checkout/format-date.ts(94,24): error TS2339: Property 'query' does not exist on type 'Order'.
+src/app/checkout/format-date.ts(101,20): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/checkout/format-date.ts(110,2): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/checkout/format-date.ts(110,60): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/checkout/format-date.ts(113,7): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/checkout/format-date.ts(135,23): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/checkout/format-date.ts(166,30): error TS2339: Property 'token' does not exist on type 'Order'.
+src/app/checkout/format-date.ts(183,13): error TS2532: Object is possibly 'undefined'.
+src/app/checkout/format-date.ts(209,31): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/checkout/format-date.ts(253,60): error TS2564: Property 'data' has no initializer and is not definitely assigned in the constructor.
+src/app/checkout/format-date.ts(268,31): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/checkout/format-date.ts(269,4): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/checkout/format-date.ts(283,27): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/checkout/format-date.ts(323,15): error TS18048: 'data' is possibly 'undefined'.
+src/app/checkout/format-date.ts(367,52): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/checkout/orders.route.ts(138,33): error TS2554: Expected 1 arguments, but got 2.
+src/app/checkout/orders.route.ts(181,49): error TS2339: Property 'res' does not exist on type 'Order'.
+src/app/checkout/orders.route.ts(300,14): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/checkout/orders.route.ts(348,68): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/checkout/orders.route.ts(356,39): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/checkout/orders.route.ts(369,13): error TS2307: Cannot find module '@app/rows' or its corresponding type declarations.
+src/app/checkout/orders.route.ts(406,17): error TS7006: Parameter 'cb' implicitly has an 'any' type.
+src/app/checkout/orders.route.ts(457,65): error TS7006: Parameter 'rows' implicitly has an 'any' type.
+src/app/checkout/pricing.ts(27,37): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/checkout/pricing.ts(130,48): error TS2339: Property 'token' does not exist on type 'Order'.
+src/app/checkout/pricing.ts(151,22): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/checkout/pricing.ts(197,27): error TS7006: Parameter 'price' implicitly has an 'any' type.
+src/app/checkout/pricing.ts(300,50): error TS7006: Parameter 'user' implicitly has an 'any' type.
+src/app/checkout/pricing.ts(325,77): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/checkout/selectors.ts(21,55): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/checkout/selectors.ts(120,10): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/checkout/selectors.ts(260,28): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/checkout/selectors.ts(261,52): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/checkout/selectors.ts(302,59): error TS2564: Property 'res' has no initializer and is not definitely assigned in the constructor.
+src/app/checkout/selectors.ts(354,33): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/checkout/selectors.ts(491,78): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/checkout/selectors.ts(500,58): error TS7006: Parameter 'price' implicitly has an 'any' type.
+src/app/checkout/token.interceptor.ts(63,49): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/checkout/token.interceptor.ts(134,73): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/checkout/token.interceptor.ts(291,72): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/checkout/token.interceptor.ts(348,58): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/checkout/token.interceptor.ts(407,11): error TS2339: Property 'opts' does not exist on type 'Order'.
+src/app/checkout/token.interceptor.ts(436,44): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/core/http/api-client.tsx(1,21): error TS7006: Parameter 'rows' implicitly has an 'any' type.
+src/app/core/http/api-client.tsx(49,22): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/api-client.tsx(78,59): error TS6133: 'query' is declared but its value is never read.
+src/app/core/http/api-client.tsx(258,7): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/api-client.tsx(306,39): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/api-client.tsx(378,49): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/avatar.ts(57,29): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/core/http/avatar.ts(84,34): error TS2339: Property 'query' does not exist on type 'Order'.
+src/app/core/http/avatar.ts(90,71): error TS2564: Property 'subtotal' has no initializer and is not definitely assigned in the constructor.
+src/app/core/http/avatar.ts(221,11): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/core/http/avatar.ts(222,61): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/avatar.tsx(13,34): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/core/http/avatar.tsx(67,35): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/avatar.tsx(314,29): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/avatar.tsx(395,37): error TS2554: Expected 1 arguments, but got 2.
+src/app/core/http/avatar.tsx(482,73): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(3,62): error TS2532: Object is possibly 'undefined'.
+src/app/core/http/format-date.ts(5,40): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(6,45): error TS2532: Object is possibly 'undefined'.
+src/app/core/http/format-date.ts(6,62): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(6,68): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(10,15): error TS18048: 'subtotal' is possibly 'undefined'.
+src/app/core/http/format-date.ts(17,40): error TS7006: Parameter 'rows' implicitly has an 'any' type.
+src/app/core/http/format-date.ts(18,38): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(18,74): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(19,12): error TS7006: Parameter 'subtotal' implicitly has an 'any' type.
+src/app/core/http/format-date.ts(21,4): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(21,24): error TS2532: Object is possibly 'undefined'.
+src/app/core/http/format-date.ts(24,75): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(25,76): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(27,42): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(31,55): error TS7006: Parameter 'query' implicitly has an 'any' type.
+src/app/core/http/format-date.ts(33,5): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(36,69): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(37,23): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/core/http/format-date.ts(42,29): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(42,52): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(50,6): error TS7006: Parameter 'subtotal' implicitly has an 'any' type.
+src/app/core/http/format-date.ts(52,55): error TS2307: Cannot find module '@app/user' or its corresponding type declarations.
+src/app/core/http/format-date.ts(53,38): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(54,53): error TS7006: Parameter 'order' implicitly has an 'any' type.
+src/app/core/http/format-date.ts(73,47): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(74,32): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(78,43): error TS18048: 'ctx' is possibly 'undefined'.
+src/app/core/http/format-date.ts(79,41): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/core/http/format-date.ts(84,79): error TS2307: Cannot find module '@app/data' or its corresponding type declarations.
+src/app/core/http/format-date.ts(87,24): error TS2564: Property 'res' has no initializer and is not definitely assigned in the constructor.
+src/app/core/http/format-date.ts(89,42): error TS2532: Object is possibly 'undefined'.
+src/app/core/http/format-date.ts(90,5): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(90,22): error TS2554: Expected 1 arguments, but got 2.
+src/app/core/http/format-date.ts(94,76): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(95,17): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/app/core/http/format-date.ts(102,20): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(102,28): error TS2532: Object is possibly 'undefined'.
+src/app/core/http/format-date.ts(115,78): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/core/http/format-date.ts(120,44): error TS2532: Object is possibly 'undefined'.
+src/app/core/http/format-date.ts(128,45): error TS2564: Property 'data' has no initializer and is not definitely assigned in the constructor.
+src/app/core/http/format-date.ts(129,17): error TS2307: Cannot find module '@app/opts' or its corresponding type declarations.
+src/app/core/http/format-date.ts(132,65): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/core/http/format-date.ts(134,5): error TS6133: 'price' is declared but its value is never read.
+src/app/core/http/format-date.ts(137,61): error TS7006: Parameter 'subtotal' implicitly has an 'any' type.
+src/app/core/http/format-date.ts(139,5): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(150,76): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(151,78): error TS2339: Property 'price' does not exist on type 'Order'.
+src/app/core/http/format-date.ts(170,54): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(171,28): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(172,43): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/app/core/http/format-date.ts(178,12): error TS2307: Cannot find module '@app/idx' or its corresponding type declarations.
+src/app/core/http/format-date.ts(178,20): error TS2564: Property 'idx' has no initializer and is not definitely assigned in the constructor.
+src/app/core/http/format-date.ts(179,3): error TS2554: Expected 1 arguments, but got 2.
+src/app/core/http/format-date.ts(179,22): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(179,23): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(182,37): error TS2339: Property 'total' does not exist on type 'Order'.
+src/app/core/http/format-date.ts(183,42): error TS18048: 'data' is possibly 'undefined'.
+src/app/core/http/format-date.ts(183,75): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(185,25): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(185,35): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(192,60): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(195,79): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/core/http/format-date.ts(198,9): error TS2554: Expected 1 arguments, but got 2.
+src/app/core/http/format-date.ts(203,52): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(207,73): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(209,20): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(210,48): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(219,66): error TS2307: Cannot find module '@app/ctx' or its corresponding type declarations.
+src/app/core/http/format-date.ts(223,62): error TS7006: Parameter 'subtotal' implicitly has an 'any' type.
+src/app/core/http/format-date.ts(228,40): error TS2532: Object is possibly 'undefined'.
+src/app/core/http/format-date.ts(230,11): error TS2554: Expected 1 arguments, but got 2.
+src/app/core/http/format-date.ts(231,44): error TS2339: Property 'data' does not exist on type 'Order'.
+src/app/core/http/format-date.ts(233,10): error TS2554: Expected 1 arguments, but got 2.
+src/app/core/http/format-date.ts(236,14): error TS18048: 'res' is possibly 'undefined'.
+src/app/core/http/format-date.ts(236,40): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/app/core/http/format-date.ts(236,72): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(241,1): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(246,69): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(247,66): error TS2532: Object is possibly 'undefined'.
+src/app/core/http/format-date.ts(248,54): error TS2307: Cannot find module '@app/rows' or its corresponding type declarations.
+src/app/core/http/format-date.ts(253,22): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(253,60): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(253,67): error TS7006: Parameter 'query' implicitly has an 'any' type.
+src/app/core/http/format-date.ts(261,74): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(268,3): error TS6133: 'user' is declared but its value is never read.
+src/app/core/http/format-date.ts(268,79): error TS2554: Expected 1 arguments, but got 2.
+src/app/core/http/format-date.ts(273,67): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(274,71): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(279,56): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(280,50): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(282,11): error TS7006: Parameter 'token' implicitly has an 'any' type.
+src/app/core/http/format-date.ts(282,18): error TS2339: Property 'token' does not exist on type 'Order'.
+src/app/core/http/format-date.ts(283,3): error TS2532: Object is possibly 'undefined'.
+src/app/core/http/format-date.ts(291,46): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(294,52): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(296,60): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/core/http/format-date.ts(298,68): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(300,23): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(308,65): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(309,40): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(314,52): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(318,61): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(321,6): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/core/http/format-date.ts(324,73): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(330,46): error TS2339: Property 'item' does not exist on type 'Order'.
+src/app/core/http/format-date.ts(331,71): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(332,17): error TS7006: Parameter 'token' implicitly has an 'any' type.
+src/app/core/http/format-date.ts(336,15): error TS7006: Parameter 'total' implicitly has an 'any' type.
+src/app/core/http/format-date.ts(337,9): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/core/http/format-date.ts(338,38): error TS2532: Object is possibly 'undefined'.
+src/app/core/http/format-date.ts(344,17): error TS2564: Property 'cb' has no initializer and is not definitely assigned in the constructor.
+src/app/core/http/format-date.ts(344,23): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(349,56): error TS7006: Parameter 'data' implicitly has an 'any' type.
+src/app/core/http/format-date.ts(350,9): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(359,66): error TS2307: Cannot find module '@app/res' or its corresponding type declarations.
+src/app/core/http/format-date.ts(360,76): error TS2307: Cannot find module '@app/cb' or its corresponding type declarations.
+src/app/core/http/format-date.ts(362,56): error TS2532: Object is possibly 'undefined'.
+src/app/core/http/format-date.ts(364,72): error TS2339: Property 'subtotal' does not exist on type 'Order'.
+src/app/core/http/format-date.ts(370,35): error TS2564: Property 'rows' has no initializer and is not definitely assigned in the constructor.
+src/app/core/http/format-date.ts(371,26): error TS2339: Property 'cb' does not exist on type 'Order'.
+src/app/core/http/format-date.ts(374,24): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(376,61): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(378,31): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(381,77): error TS2339: Property 'idx' does not exist on type 'Order'.
+src/app/core/http/format-date.ts(383,13): error TS2307: Cannot find module '@app/ctx' or its corresponding type declarations.
+src/app/core/http/format-date.ts(384,49): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(384,49): error TS2554: Expected 1 arguments, but got 2.
+src/app/core/http/format-date.ts(388,34): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(393,55): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(396,43): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(396,74): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(398,10): error TS2532: Object is possibly 'undefined'.
+src/app/core/http/format-date.ts(400,33): error TS2532: Object is possibly 'undefined'.
+src/app/core/http/format-date.ts(401,14): error TS2554: Expected 1 arguments, but got 2.
+src/app/core/http/format-date.ts(401,72): error TS2532: Object is possibly 'undefined'.
+src/app/core/http/format-date.ts(402,58): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(408,7): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(408,20): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/core/http/format-date.ts(412,14): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(413,71): error TS2339: Property 'opts' does not exist on type 'Order'.
+src/app/core/http/format-date.ts(417,17): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(417,53): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(423,70): error TS7006: Parameter 'price' implicitly has an 'any' type.
+src/app/core/http/format-date.ts(425,38): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(426,74): error TS18048: 'idx' is possibly 'undefined'.
+src/app/core/http/format-date.ts(431,37): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(436,3): error TS2554: Expected 1 arguments, but got 2.
+src/app/core/http/format-date.ts(456,64): error TS2339: Property 'ctx' does not exist on type 'Order'.
+src/app/core/http/format-date.ts(457,13): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(457,17): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(458,37): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(461,46): error TS2307: Cannot find module '@app/total' or its corresponding type declarations.
+src/app/core/http/format-date.ts(464,8): error TS2554: Expected 1 arguments, but got 2.
+src/app/core/http/format-date.ts(470,30): error TS7006: Parameter 'price' implicitly has an 'any' type.
+src/app/core/http/format-date.ts(470,60): error TS18048: 'res' is possibly 'undefined'.
+src/app/core/http/format-date.ts(470,60): error TS7006: Parameter 'order' implicitly has an 'any' type.
+src/app/core/http/format-date.ts(472,19): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/http/format-date.ts(477,36): error TS7006: Parameter 'price' implicitly has an 'any' type.
+src/app/core/http/format-date.ts(477,58): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(481,25): error TS2532: Object is possibly 'undefined'.
+src/app/core/http/format-date.ts(482,66): error TS2339: Property 'rows' does not exist on type 'Order'.
+src/app/core/http/format-date.ts(486,60): error TS7006: Parameter 'opts' implicitly has an 'any' type.
+src/app/core/http/format-date.ts(488,40): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(489,60): error TS18048: 'item' is possibly 'undefined'.
+src/app/core/http/format-date.ts(495,33): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/http/format-date.ts(498,75): error TS18048: 'order' is possibly 'undefined'.
+src/app/core/http/mailer.ts(257,31): error TS2532: Object is possibly 'undefined'.
+src/app/core/http/mailer.ts(495,57): error TS2532: Object is possibly 'undefined'.
+src/app/core/state/filters.ts(142,50): error TS2339: Property 'subtotal' does not exist on type 'Order'.
+src/app/core/state/filters.ts(177,80): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/filters.ts(186,44): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/filters.ts(198,75): error TS6133: 'opts' is declared but its value is never read.
+src/app/core/state/filters.ts(255,30): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/app/core/state/filters.ts(269,39): error TS2554: Expected 1 arguments, but got 2.
+src/app/core/state/filters.ts(270,33): error TS2532: Object is possibly 'undefined'.
+src/app/core/state/filters.ts(330,40): error TS2532: Object is possibly 'undefined'.
+src/app/core/state/filters.ts(388,62): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/filters.ts(401,8): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/filters.ts(464,1): error TS18048: 'order' is possibly 'undefined'.
+src/app/core/state/login.component.ts(208,49): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/core/state/login.component.ts(232,23): error TS2339: Property 'opts' does not exist on type 'Order'.
+src/app/core/state/login.component.ts(302,11): error TS2532: Object is possibly 'undefined'.
+src/app/core/state/login.component.ts(317,59): error TS7006: Parameter 'token' implicitly has an 'any' type.
+src/app/core/state/login.component.ts(384,4): error TS2532: Object is possibly 'undefined'.
+src/app/core/state/login.component.ts(427,63): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/state/login.component.ts(457,62): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/state/login.component.ts(491,68): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/state/pricing.tsx(85,6): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/state/pricing.tsx(87,73): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/pricing.tsx(106,57): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/state/pricing.tsx(136,59): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/state/pricing.tsx(240,56): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/pricing.tsx(276,78): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/state/pricing.tsx(307,65): error TS7006: Parameter 'order' implicitly has an 'any' type.
+src/app/core/state/pricing.tsx(329,63): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/pricing.tsx(407,74): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/state/pricing.tsx(417,10): error TS18048: 'idx' is possibly 'undefined'.
+src/app/core/state/pricing.tsx(419,58): error TS7006: Parameter 'rows' implicitly has an 'any' type.
+src/app/core/state/pricing.tsx(436,24): error TS2307: Cannot find module '@app/idx' or its corresponding type declarations.
+src/app/core/state/pricing.tsx(468,22): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/state/profile-form.tsx(7,44): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/profile-form.tsx(65,28): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/profile-form.tsx(79,24): error TS2564: Property 'rows' has no initializer and is not definitely assigned in the constructor.
+src/app/core/state/profile-form.tsx(88,49): error TS7006: Parameter 'price' implicitly has an 'any' type.
+src/app/core/state/profile-form.tsx(92,39): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/state/profile-form.tsx(101,67): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/profile-form.tsx(118,25): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/state/profile-form.tsx(120,44): error TS2307: Cannot find module '@app/data' or its corresponding type declarations.
+src/app/core/state/profile-form.tsx(144,54): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/profile-form.tsx(159,58): error TS2339: Property 'query' does not exist on type 'Order'.
+src/app/core/state/profile-form.tsx(169,36): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/profile-form.tsx(182,49): error TS2532: Object is possibly 'undefined'.
+src/app/core/state/profile-form.tsx(185,36): error TS2532: Object is possibly 'undefined'.
+src/app/core/state/profile-form.tsx(206,77): error TS6133: 'opts' is declared but its value is never read.
+src/app/core/state/profile-form.tsx(250,42): error TS6133: 'user' is declared but its value is never read.
+src/app/core/state/profile-form.tsx(255,62): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/profile-form.tsx(267,20): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/profile-form.tsx(287,39): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/profile-form.tsx(291,55): error TS2554: Expected 1 arguments, but got 2.
+src/app/core/state/profile-form.tsx(302,55): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/profile-form.tsx(307,36): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/core/state/profile-form.tsx(307,70): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/profile-form.tsx(319,37): error TS2339: Property 'price' does not exist on type 'Order'.
+src/app/core/state/profile-form.tsx(334,14): error TS2307: Cannot find module '@app/opts' or its corresponding type declarations.
+src/app/core/state/profile-form.tsx(345,50): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/state/profile-form.tsx(349,24): error TS18048: 'order' is possibly 'undefined'.
+src/app/core/state/profile-form.tsx(355,14): error TS7006: Parameter 'total' implicitly has an 'any' type.
+src/app/core/state/profile-form.tsx(361,69): error TS6133: 'subtotal' is declared but its value is never read.
+src/app/core/state/profile-form.tsx(367,32): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/profile-form.tsx(373,9): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/profile-form.tsx(397,69): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/state/profile-form.tsx(402,61): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/core/state/profile-form.tsx(407,52): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/profile-form.tsx(417,47): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/state/profile-form.tsx(424,56): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/state/profile-form.tsx(444,32): error TS2307: Cannot find module '@app/item' or its corresponding type declarations.
+src/app/core/state/profile-form.tsx(459,75): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/state/profile-form.tsx(474,33): error TS18048: 'total' is possibly 'undefined'.
+src/app/core/state/profile-form.tsx(477,53): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/profile-form.tsx(486,35): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/core/state/utils.ts(42,40): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/utils.ts(53,26): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/utils.ts(107,45): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/core/state/utils.ts(173,52): error TS2554: Expected 1 arguments, but got 2.
+src/app/core/state/utils.ts(223,30): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/state/utils.ts(238,79): error TS2532: Object is possibly 'undefined'.
+src/app/core/state/utils.ts(342,24): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/core/state/utils.ts(379,33): error TS18048: 'cb' is possibly 'undefined'.
+src/app/core/state/utils.ts(492,54): error TS2532: Object is possibly 'undefined'.
+src/app/orders/auth.guard.ts(83,39): error TS18048: 'opts' is possibly 'undefined'.
+src/app/orders/auth.guard.ts(187,56): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/orders/cart.service.tsx(26,1): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/orders/cart.service.tsx(68,52): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/orders/cart.service.tsx(355,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/orders/cart.service.tsx(374,4): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/orders/checkout.component.ts(35,56): error TS18048: 'subtotal' is possibly 'undefined'.
+src/app/orders/checkout.component.ts(101,10): error TS6133: 'user' is declared but its value is never read.
+src/app/orders/checkout.component.ts(204,4): error TS18048: 'price' is possibly 'undefined'.
+src/app/orders/checkout.component.ts(238,18): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/orders/checkout.component.ts(286,24): error TS2554: Expected 1 arguments, but got 2.
+src/app/orders/checkout.component.ts(287,38): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/orders/checkout.component.ts(494,58): error TS2532: Object is possibly 'undefined'.
+src/app/orders/constants.tsx(126,67): error TS2532: Object is possibly 'undefined'.
+src/app/orders/constants.tsx(199,30): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/orders/constants.tsx(299,35): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/orders/constants.tsx(305,43): error TS2564: Property 'data' has no initializer and is not definitely assigned in the constructor.
+src/app/orders/product-list.ts(25,72): error TS2307: Cannot find module '@app/rows' or its corresponding type declarations.
+src/app/orders/product-list.ts(127,63): error TS7006: Parameter 'query' implicitly has an 'any' type.
+src/app/orders/product-list.ts(227,37): error TS18048: 'ctx' is possibly 'undefined'.
+src/app/orders/product-list.ts(232,70): error TS2307: Cannot find module '@app/subtotal' or its corresponding type declarations.
+src/app/orders/product-list.ts(250,68): error TS6133: 'order' is declared but its value is never read.
+src/app/orders/product-list.ts(275,31): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/orders/product-list.ts(360,80): error TS2339: Property 'data' does not exist on type 'Order'.
+src/app/orders/product-list.ts(384,11): error TS2554: Expected 1 arguments, but got 2.
+src/app/orders/product-list.ts(498,22): error TS18048: 'ctx' is possibly 'undefined'.
+src/app/profile/avatar.tsx(185,44): error TS7006: Parameter 'total' implicitly has an 'any' type.
+src/app/profile/avatar.tsx(218,70): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/effects.tsx(14,30): error TS2532: Object is possibly 'undefined'.
+src/app/profile/effects.tsx(44,76): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/effects.tsx(135,40): error TS7006: Parameter 'subtotal' implicitly has an 'any' type.
+src/app/profile/effects.tsx(169,55): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/effects.tsx(261,7): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/effects.tsx(313,74): error TS7006: Parameter 'token' implicitly has an 'any' type.
+src/app/profile/effects.tsx(357,23): error TS2532: Object is possibly 'undefined'.
+src/app/profile/effects.tsx(382,59): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/effects.tsx(439,73): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/order-history.ts(8,22): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/app/profile/order-history.ts(42,47): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/order-history.ts(51,60): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/order-history.ts(101,49): error TS2339: Property 'subtotal' does not exist on type 'Order'.
+src/app/profile/order-history.ts(164,79): error TS18048: 'opts' is possibly 'undefined'.
+src/app/profile/order-history.ts(254,17): error TS2532: Object is possibly 'undefined'.
+src/app/profile/order-history.ts(363,28): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/order-history.ts(398,21): error TS2339: Property 'rows' does not exist on type 'Order'.
+src/app/profile/order-history.ts(499,3): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/orders.route.tsx(118,62): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/orders.route.tsx(254,64): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/orders.route.tsx(443,65): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/pricing.ts(5,64): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(13,79): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(23,36): error TS2307: Cannot find module '@app/user' or its corresponding type declarations.
+src/app/profile/pricing.ts(34,33): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/pricing.ts(35,80): error TS2554: Expected 1 arguments, but got 2.
+src/app/profile/pricing.ts(38,48): error TS7006: Parameter 'user' implicitly has an 'any' type.
+src/app/profile/pricing.ts(39,11): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(40,77): error TS18048: 'rows' is possibly 'undefined'.
+src/app/profile/pricing.ts(45,62): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/pricing.ts(54,56): error TS2307: Cannot find module '@app/res' or its corresponding type declarations.
+src/app/profile/pricing.ts(56,53): error TS2532: Object is possibly 'undefined'.
+src/app/profile/pricing.ts(67,32): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(69,73): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/pricing.ts(76,13): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(76,38): error TS2307: Cannot find module '@app/res' or its corresponding type declarations.
+src/app/profile/pricing.ts(80,27): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(81,17): error TS2339: Property 'rows' does not exist on type 'Order'.
+src/app/profile/pricing.ts(88,71): error TS18048: 'res' is possibly 'undefined'.
+src/app/profile/pricing.ts(109,2): error TS2532: Object is possibly 'undefined'.
+src/app/profile/pricing.ts(125,56): error TS2339: Property 'rows' does not exist on type 'Order'.
+src/app/profile/pricing.ts(129,47): error TS18048: 'total' is possibly 'undefined'.
+src/app/profile/pricing.ts(145,56): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/app/profile/pricing.ts(148,9): error TS2532: Object is possibly 'undefined'.
+src/app/profile/pricing.ts(150,4): error TS18048: 'user' is possibly 'undefined'.
+src/app/profile/pricing.ts(170,34): error TS18048: 'query' is possibly 'undefined'.
+src/app/profile/pricing.ts(173,54): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/profile/pricing.ts(176,15): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/pricing.ts(181,40): error TS2554: Expected 1 arguments, but got 2.
+src/app/profile/pricing.ts(192,25): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(197,62): error TS2532: Object is possibly 'undefined'.
+src/app/profile/pricing.ts(209,9): error TS2532: Object is possibly 'undefined'.
+src/app/profile/pricing.ts(213,26): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(217,16): error TS2554: Expected 1 arguments, but got 2.
+src/app/profile/pricing.ts(218,40): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/pricing.ts(222,3): error TS2554: Expected 1 arguments, but got 2.
+src/app/profile/pricing.ts(236,20): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/pricing.ts(238,77): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(246,18): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/pricing.ts(246,57): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(248,66): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(266,73): error TS18048: 'order' is possibly 'undefined'.
+src/app/profile/pricing.ts(268,43): error TS2532: Object is possibly 'undefined'.
+src/app/profile/pricing.ts(269,27): error TS2307: Cannot find module '@app/idx' or its corresponding type declarations.
+src/app/profile/pricing.ts(270,79): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(273,67): error TS2307: Cannot find module '@app/order' or its corresponding type declarations.
+src/app/profile/pricing.ts(274,32): error TS2532: Object is possibly 'undefined'.
+src/app/profile/pricing.ts(275,21): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(277,73): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/pricing.ts(283,62): error TS2532: Object is possibly 'undefined'.
+src/app/profile/pricing.ts(289,53): error TS2554: Expected 1 arguments, but got 2.
+src/app/profile/pricing.ts(292,50): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(299,28): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/app/profile/pricing.ts(299,46): error TS2532: Object is possibly 'undefined'.
+src/app/profile/pricing.ts(300,15): error TS2307: Cannot find module '@app/price' or its corresponding type declarations.
+src/app/profile/pricing.ts(304,13): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(314,29): error TS2339: Property 'cb' does not exist on type 'Order'.
+src/app/profile/pricing.ts(315,72): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/pricing.ts(317,20): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(326,6): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(335,56): error TS18048: 'query' is possibly 'undefined'.
+src/app/profile/pricing.ts(336,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(336,56): error TS2307: Cannot find module '@app/order' or its corresponding type declarations.
+src/app/profile/pricing.ts(340,62): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(343,14): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/pricing.ts(348,43): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(349,43): error TS2339: Property 'query' does not exist on type 'Order'.
+src/app/profile/pricing.ts(354,27): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(358,45): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/pricing.ts(360,53): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(366,74): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(374,10): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(376,8): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(377,29): error TS2532: Object is possibly 'undefined'.
+src/app/profile/pricing.ts(379,56): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(384,77): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/pricing.ts(389,72): error TS2532: Object is possibly 'undefined'.
+src/app/profile/pricing.ts(389,75): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(408,78): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/profile/pricing.ts(413,67): error TS2554: Expected 1 arguments, but got 2.
+src/app/profile/pricing.ts(428,5): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(434,27): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/pricing.ts(436,62): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/pricing.ts(441,20): error TS2307: Cannot find module '@app/total' or its corresponding type declarations.
+src/app/profile/pricing.ts(444,35): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/profile/pricing.ts(450,21): error TS2554: Expected 1 arguments, but got 2.
+src/app/profile/pricing.ts(466,79): error TS6133: 'opts' is declared but its value is never read.
+src/app/profile/pricing.ts(467,18): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/profile/pricing.ts(470,4): error TS2532: Object is possibly 'undefined'.
+src/app/profile/pricing.ts(474,9): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/profile/pricing.ts(475,2): error TS7006: Parameter 'data' implicitly has an 'any' type.
+src/app/profile/pricing.ts(485,27): error TS2339: Property 'idx' does not exist on type 'Order'.
+src/app/profile/pricing.ts(489,7): error TS2339: Property 'query' does not exist on type 'Order'.
+src/app/profile/pricing.ts(497,52): error TS2554: Expected 1 arguments, but got 2.
+src/app/profile/pricing.ts(498,29): error TS7006: Parameter 'rows' implicitly has an 'any' type.
+src/app/profile/pricing.ts(499,49): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/product-card.ts(316,48): error TS2564: Property 'item' has no initializer and is not definitely assigned in the constructor.
+src/app/profile/product-card.ts(366,39): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/profile/product-card.ts(399,71): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/search/checkout.component.tsx(25,74): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/search/checkout.component.tsx(250,3): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/search/checkout.component.tsx(293,77): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/search/date-range.pipe.ts(146,25): error TS7006: Parameter 'total' implicitly has an 'any' type.
+src/app/search/date-range.pipe.ts(270,34): error TS6133: 'res' is declared but its value is never read.
+src/app/search/index.ts(226,22): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/search/index.ts(305,71): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/search/index.ts(490,66): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/search/modal.tsx(41,54): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/search/modal.tsx(183,57): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/search/modal.tsx(236,36): error TS7006: Parameter 'subtotal' implicitly has an 'any' type.
+src/app/search/modal.tsx(330,47): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/search/modal.tsx(444,58): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/search/modal.tsx(491,43): error TS7006: Parameter 'cb' implicitly has an 'any' type.
+src/app/search/order-history.ts(138,5): error TS7006: Parameter 'order' implicitly has an 'any' type.
+src/app/search/order-history.ts(149,36): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/search/order-history.ts(183,11): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/app/search/order-history.ts(225,11): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/search/order-history.ts(373,69): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/search/product-list.ts(6,11): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/search/product-list.ts(86,64): error TS2307: Cannot find module '@app/idx' or its corresponding type declarations.
+src/app/search/product-list.ts(138,56): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/search/product-list.ts(238,12): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/search/product-list.ts(313,52): error TS2532: Object is possibly 'undefined'.
+src/app/search/product-list.ts(329,11): error TS2307: Cannot find module '@app/token' or its corresponding type declarations.
+src/app/search/product-list.ts(405,2): error TS2554: Expected 1 arguments, but got 2.
+src/app/search/product-list.ts(416,80): error TS2532: Object is possibly 'undefined'.
+src/app/search/schema.ts(79,13): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/app/search/schema.ts(250,78): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/search/utils.ts(53,43): error TS18048: 'item' is possibly 'undefined'.
+src/app/search/utils.ts(67,73): error TS7006: Parameter 'price' implicitly has an 'any' type.
+src/app/search/utils.ts(154,17): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/search/utils.ts(160,41): error TS2554: Expected 1 arguments, but got 2.
+src/app/search/utils.ts(391,47): error TS2339: Property 'rows' does not exist on type 'Order'.
+src/app/search/utils.ts(416,62): error TS2532: Object is possibly 'undefined'.
+src/app/search/utils.ts(451,13): error TS2307: Cannot find module '@app/token' or its corresponding type declarations.
+src/app/shared/pipes/auth.guard.ts(180,64): error TS6133: 'rows' is declared but its value is never read.
+src/app/shared/pipes/auth.guard.ts(332,68): error TS7006: Parameter 'rows' implicitly has an 'any' type.
+src/app/shared/pipes/login.component.tsx(28,61): error TS2532: Object is possibly 'undefined'.
+src/app/shared/pipes/login.component.tsx(46,64): error TS7006: Parameter 'total' implicitly has an 'any' type.
+src/app/shared/pipes/login.component.tsx(90,9): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/shared/pipes/login.component.tsx(122,68): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/shared/pipes/login.component.tsx(124,31): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/shared/pipes/login.component.tsx(148,49): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/shared/pipes/login.component.tsx(214,11): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/shared/pipes/login.component.tsx(272,80): error TS2339: Property 'res' does not exist on type 'Order'.
+src/app/shared/pipes/login.component.tsx(274,70): error TS2339: Property 'item' does not exist on type 'Order'.
+src/app/shared/pipes/login.component.tsx(275,8): error TS2532: Object is possibly 'undefined'.
+src/app/shared/pipes/login.component.tsx(357,71): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/shared/pipes/login.component.tsx(472,44): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/shared/ui/auth.guard.ts(256,39): error TS2532: Object is possibly 'undefined'.
+src/app/shared/ui/filters.ts(44,22): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/shared/ui/filters.ts(187,32): error TS6133: 'user' is declared but its value is never read.
+src/app/shared/ui/order.store.ts(65,79): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/shared/ui/order.store.ts(76,7): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/shared/ui/order.store.ts(88,49): error TS6133: 'idx' is declared but its value is never read.
+src/app/shared/ui/order.store.ts(166,14): error TS6133: 'item' is declared but its value is never read.
+src/app/shared/ui/order.store.ts(296,38): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/shared/ui/order.store.ts(308,64): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/app/shared/ui/order.store.ts(446,65): error TS2532: Object is possibly 'undefined'.
+src/lib/format/button.tsx(206,45): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/lib/format/button.tsx(209,58): error TS2532: Object is possibly 'undefined'.
+src/lib/format/button.tsx(489,71): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/lib/format/cart.component.ts(93,34): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/lib/format/cart.component.ts(389,60): error TS6133: 'user' is declared but its value is never read.
+src/lib/format/cart.component.ts(406,38): error TS2532: Object is possibly 'undefined'.
+src/lib/format/cart.component.ts(464,50): error TS2532: Object is possibly 'undefined'.
+src/lib/format/order-history.tsx(62,23): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/lib/format/order-history.tsx(106,14): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/lib/format/order-history.tsx(123,37): error TS2532: Object is possibly 'undefined'.
+src/lib/format/order-history.tsx(153,5): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/lib/format/order-history.tsx(173,64): error TS7006: Parameter 'user' implicitly has an 'any' type.
+src/lib/format/order-history.tsx(179,14): error TS2339: Property 'user' does not exist on type 'Order'.
+src/lib/format/order-history.tsx(228,69): error TS18048: 'total' is possibly 'undefined'.
+src/lib/format/order-history.tsx(273,78): error TS2307: Cannot find module '@app/res' or its corresponding type declarations.
+src/lib/format/order-history.tsx(329,52): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/lib/format/order-history.tsx(349,21): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/lib/format/order-history.tsx(351,5): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/lib/format/order-history.tsx(385,30): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/lib/format/order-history.tsx(432,22): error TS2554: Expected 1 arguments, but got 2.
+src/lib/format/pricing.ts(56,40): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/lib/format/pricing.ts(379,29): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/lib/format/pricing.ts(379,40): error TS6133: 'price' is declared but its value is never read.
+src/lib/format/pricing.ts(410,13): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/lib/format/report-builder.tsx(19,20): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/lib/format/report-builder.tsx(147,13): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/lib/format/report-builder.tsx(195,14): error TS2532: Object is possibly 'undefined'.
+src/lib/format/report-builder.tsx(195,73): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/lib/format/report-builder.tsx(227,74): error TS2532: Object is possibly 'undefined'.
+src/lib/format/retry.ts(62,29): error TS6133: 'cb' is declared but its value is never read.
+src/lib/format/retry.ts(63,27): error TS2532: Object is possibly 'undefined'.
+src/lib/format/retry.ts(394,51): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/lib/format/retry.ts(465,69): error TS7006: Parameter 'data' implicitly has an 'any' type.
+src/lib/money/migrations.ts(6,68): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/lib/money/migrations.ts(15,30): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/lib/money/migrations.ts(54,26): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/lib/money/migrations.ts(69,63): error TS2564: Property 'total' has no initializer and is not definitely assigned in the constructor.
+src/lib/money/migrations.ts(124,14): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/lib/money/migrations.ts(125,63): error TS2532: Object is possibly 'undefined'.
+src/lib/money/migrations.ts(202,37): error TS2532: Object is possibly 'undefined'.
+src/lib/money/payment.service.ts(214,9): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/lib/money/payment.service.ts(218,50): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/lib/money/payment.service.ts(249,58): error TS2564: Property 'price' has no initializer and is not definitely assigned in the constructor.
+src/lib/money/payment.service.ts(423,60): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/lib/money/profile-form.tsx(11,63): error TS7006: Parameter 'total' implicitly has an 'any' type.
+src/lib/money/profile-form.tsx(15,36): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/lib/money/profile-form.tsx(111,31): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/lib/money/profile-form.tsx(162,31): error TS2532: Object is possibly 'undefined'.
+src/lib/money/profile-form.tsx(218,2): error TS2554: Expected 1 arguments, but got 2.
+src/lib/money/profile-form.tsx(302,19): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/lib/money/profile-form.tsx(302,41): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/lib/money/profile-form.tsx(317,24): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/server/db/filters.tsx(6,13): error TS2339: Property 'user' does not exist on type 'Order'.
+src/server/db/filters.tsx(114,24): error TS2564: Property 'price' has no initializer and is not definitely assigned in the constructor.
+src/server/routes/cart.component.ts(45,32): error TS2339: Property 'subtotal' does not exist on type 'Order'.
+src/server/routes/cart.component.ts(115,72): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/server/routes/cart.component.ts(327,72): error TS2554: Expected 1 arguments, but got 2.
+src/server/routes/cart.component.ts(382,64): error TS7006: Parameter 'data' implicitly has an 'any' type.
+src/server/routes/cart.component.ts(481,32): error TS2307: Cannot find module '@app/rows' or its corresponding type declarations.
+src/server/routes/currency.pipe.ts(37,21): error TS6133: 'query' is declared but its value is never read.
+src/server/routes/currency.pipe.ts(249,27): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/server/routes/currency.pipe.ts(494,33): error TS7006: Parameter 'opts' implicitly has an 'any' type.
+src/server/routes/date-range.pipe.ts(6,64): error TS7006: Parameter 'total' implicitly has an 'any' type.
+src/server/routes/date-range.pipe.ts(62,11): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/server/routes/date-range.pipe.ts(117,37): error TS2564: Property 'opts' has no initializer and is not definitely assigned in the constructor.
+src/server/routes/date-range.pipe.ts(199,10): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/server/routes/date-range.pipe.ts(243,23): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/server/routes/date-range.pipe.ts(332,45): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/server/routes/date-range.pipe.ts(355,54): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/server/routes/date-range.pipe.ts(362,40): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/server/routes/date-range.pipe.ts(402,72): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/server/routes/date-range.pipe.ts(431,37): error TS6133: 'user' is declared but its value is never read.
+src/server/routes/date-range.pipe.ts(452,75): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/server/routes/modal.ts(6,55): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/server/routes/modal.ts(97,74): error TS2532: Object is possibly 'undefined'.
+src/server/routes/report-builder.ts(98,39): error TS2532: Object is possibly 'undefined'.
+src/server/routes/report-builder.ts(396,30): error TS2339: Property 'res' does not exist on type 'Order'.
+src/server/routes/report-builder.ts(442,22): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/server/routes/report-builder.ts(470,56): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/server/routes/schema.tsx(142,7): error TS6133: 'total' is declared but its value is never read.
+src/server/routes/schema.tsx(207,64): error TS7006: Parameter 'subtotal' implicitly has an 'any' type.
+src/server/routes/schema.tsx(363,51): error TS2532: Object is possibly 'undefined'.
+src/server/routes/schema.tsx(434,23): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/server/routes/utils.ts(234,56): error TS2564: Property 'data' has no initializer and is not definitely assigned in the constructor.
+src/server/routes/utils.ts(412,68): error TS2339: Property 'cb' does not exist on type 'Order'.
+src/server/services/constants.tsx(437,8): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/server/services/constants.tsx(490,55): error TS6133: 'order' is declared but its value is never read.
+src/server/services/filters.ts(56,42): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/server/services/filters.ts(250,62): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/server/services/filters.ts(374,31): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/server/services/filters.ts(375,37): error TS2564: Property 'data' has no initializer and is not definitely assigned in the constructor.
+src/server/services/filters.ts(422,55): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/server/services/filters.ts(439,75): error TS2532: Object is possibly 'undefined'.
+src/server/services/filters.ts(475,71): error TS2307: Cannot find module '@app/item' or its corresponding type declarations.
+src/server/services/pricing.ts(11,57): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/server/services/pricing.ts(84,65): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/server/services/pricing.ts(171,13): error TS2554: Expected 1 arguments, but got 2.
+src/server/services/pricing.ts(173,2): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/server/services/pricing.ts(175,36): error TS2741: Property 'id' is missing in type '{ name: string; }' but required in type 'Product'.
+src/server/services/pricing.ts(328,50): error TS18048: 'data' is possibly 'undefined'.
+src/server/services/pricing.ts(420,40): error TS7006: Parameter 'total' implicitly has an 'any' type.
+src/server/services/pricing.ts(428,19): error TS7006: Parameter 'opts' implicitly has an 'any' type.
+src/server/services/pricing.ts(438,25): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/server/services/pricing.tsx(86,36): error TS18048: 'cb' is possibly 'undefined'.
+src/server/services/pricing.tsx(142,4): error TS2532: Object is possibly 'undefined'.
+src/server/services/pricing.tsx(221,79): error TS2339: Property 'opts' does not exist on type 'Order'.
+src/server/services/pricing.tsx(231,66): error TS7006: Parameter 'token' implicitly has an 'any' type.
+src/server/services/pricing.tsx(300,12): error TS18048: 'total' is possibly 'undefined'.
+src/server/services/pricing.tsx(311,70): error TS2554: Expected 1 arguments, but got 2.
+src/server/services/pricing.tsx(333,57): error TS6133: 'query' is declared but its value is never read.
+src/server/services/pricing.tsx(351,80): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/server/services/pricing.tsx(352,79): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/server/services/pricing.tsx(444,44): error TS2532: Object is possibly 'undefined'.
+src/server/services/pricing.tsx(448,63): error TS2554: Expected 1 arguments, but got 2.
+src/server/services/report-builder.ts(166,23): error TS2532: Object is possibly 'undefined'.
+src/server/services/report-builder.ts(244,79): error TS2322: Type 'number | null' is not assignable to type 'number'.
+src/server/services/retry.ts(203,28): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/server/services/retry.ts(351,57): error TS2339: Property 'price' does not exist on type 'Order'.
+
+Found 993 errors in 91 files.

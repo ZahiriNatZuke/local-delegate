@@ -1,0 +1,4580 @@
+{
+ "entries": [
+  {
+   "id": "X1",
+   "top_codes": [
+    "E501",
+    "COM812",
+    "T201",
+    "D205",
+    "PLC0415",
+    "D209",
+    "ANN401",
+    "ANN001",
+    "CPY001",
+    "D103"
+   ],
+   "top_files": [
+    "src/local_delegate/web/metrics.py",
+    "src/local_delegate/cli.py",
+    "src/local_delegate/server.py",
+    "src/local_delegate/checks.py",
+    "src/local_delegate/residency.py",
+    "src/local_delegate/install.py",
+    "src/local_delegate/benchmark.py",
+    "src/local_delegate/resources/hooks/hook_common.py",
+    "src/local_delegate/legacy_names.py",
+    "src/local_delegate/pace.py"
+   ],
+   "truth": {
+    "format": "concise",
+    "per_file": {
+     "src/local_delegate/__init__.py": {
+      "total": 1,
+      "codes": {
+       "CPY001": 1
+      }
+     },
+     "src/local_delegate/__main__.py": {
+      "total": 1,
+      "codes": {
+       "CPY001": 1
+      }
+     },
+     "src/local_delegate/agents.py": {
+      "total": 5,
+      "codes": {
+       "COM812": 1,
+       "CPY001": 1,
+       "D401": 1,
+       "PLR2004": 1,
+       "TC003": 1
+      }
+     },
+     "src/local_delegate/attribution.py": {
+      "total": 16,
+      "codes": {
+       "BLE001": 1,
+       "COM812": 1,
+       "CPY001": 1,
+       "D205": 2,
+       "D209": 1,
+       "E501": 1,
+       "PLR0913": 1,
+       "PLW2901": 1,
+       "PT028": 1,
+       "PTH105": 1,
+       "PTH108": 1,
+       "SIM105": 1,
+       "TC003": 2,
+       "TRY300": 1
+      }
+     },
+     "src/local_delegate/autostart.py": {
+      "total": 3,
+      "codes": {
+       "CPY001": 1,
+       "D401": 1,
+       "S603": 1
+      }
+     },
+     "src/local_delegate/benchmark.py": {
+      "total": 68,
+      "codes": {
+       "C901": 2,
+       "COM812": 11,
+       "CPY001": 1,
+       "D101": 4,
+       "D102": 7,
+       "D103": 4,
+       "D105": 4,
+       "D107": 5,
+       "D205": 1,
+       "D209": 1,
+       "D301": 1,
+       "E501": 3,
+       "FBT003": 1,
+       "PLC0415": 2,
+       "PLR0912": 1,
+       "PLR0913": 2,
+       "PLR0915": 1,
+       "PLR2004": 3,
+       "PLW1510": 1,
+       "PLW2901": 1,
+       "RUF036": 1,
+       "S603": 1,
+       "T201": 7,
+       "TC003": 3
+      }
+     },
+     "src/local_delegate/chains.py": {
+      "total": 7,
+      "codes": {
+       "COM812": 1,
+       "CPY001": 1,
+       "D101": 1,
+       "D205": 1,
+       "E501": 1,
+       "FBT001": 1,
+       "PLW0603": 1
+      }
+     },
+     "src/local_delegate/checks.py": {
+      "total": 149,
+      "codes": {
+       "ANN001": 4,
+       "ANN201": 1,
+       "ANN202": 1,
+       "ARG001": 2,
+       "BLE001": 2,
+       "C901": 3,
+       "COM812": 49,
+       "CPY001": 1,
+       "D102": 3,
+       "D103": 8,
+       "D205": 2,
+       "D209": 1,
+       "D301": 1,
+       "D400": 7,
+       "D401": 4,
+       "E501": 5,
+       "FBT003": 3,
+       "N802": 5,
+       "PERF401": 1,
+       "PLC0415": 18,
+       "PLR0911": 4,
+       "PLR0912": 1,
+       "PLR1714": 1,
+       "PLW2901": 1,
+       "RUF002": 1,
+       "RUF003": 1,
+       "S104": 2,
+       "S105": 1,
+       "SLF001": 15,
+       "TC003": 1
+      }
+     },
+     "src/local_delegate/cli.py": {
+      "total": 248,
+      "codes": {
+       "ANN001": 14,
+       "ANN202": 7,
+       "C901": 3,
+       "COM812": 26,
+       "CPY001": 1,
+       "D103": 8,
+       "D205": 2,
+       "D209": 2,
+       "D401": 2,
+       "E501": 3,
+       "FBT001": 4,
+       "FBT002": 1,
+       "PLC0415": 33,
+       "PLR0911": 4,
+       "PLR0912": 2,
+       "PLR0913": 3,
+       "PLR0915": 2,
+       "PLR0917": 3,
+       "PLR2004": 3,
+       "SLF001": 1,
+       "T201": 122,
+       "TC003": 1,
+       "TRY301": 1
+      }
+     },
+     "src/local_delegate/clients.py": {
+      "total": 19,
+      "codes": {
+       "ANN401": 7,
+       "BLE001": 2,
+       "COM812": 3,
+       "CPY001": 1,
+       "D205": 1,
+       "D209": 1,
+       "PTH105": 1,
+       "S110": 2,
+       "TC003": 1
+      }
+     },
+     "src/local_delegate/config.py": {
+      "total": 28,
+      "codes": {
+       "COM812": 3,
+       "CPY001": 1,
+       "D101": 1,
+       "D103": 7,
+       "E501": 2,
+       "FBT001": 2,
+       "FBT003": 12
+      }
+     },
+     "src/local_delegate/cooldown.py": {
+      "total": 14,
+      "codes": {
+       "COM812": 1,
+       "CPY001": 1,
+       "D101": 1,
+       "D107": 1,
+       "D205": 3,
+       "D209": 2,
+       "E501": 1,
+       "PLR0913": 1,
+       "SIM105": 2,
+       "TC003": 1
+      }
+     },
+     "src/local_delegate/cost.py": {
+      "total": 19,
+      "codes": {
+       "BLE001": 1,
+       "COM812": 1,
+       "CPY001": 1,
+       "D205": 6,
+       "D209": 6,
+       "S110": 1,
+       "SIM105": 1,
+       "TC003": 2
+      }
+     },
+     "src/local_delegate/daemon.py": {
+      "total": 16,
+      "codes": {
+       "COM812": 3,
+       "CPY001": 1,
+       "PLR0911": 1,
+       "PLR2004": 4,
+       "PTH105": 1,
+       "PTH123": 1,
+       "SLF001": 1,
+       "T201": 1,
+       "TC002": 2,
+       "TC003": 1
+      }
+     },
+     "src/local_delegate/deprecation_notices.py": {
+      "total": 1,
+      "codes": {
+       "CPY001": 1
+      }
+     },
+     "src/local_delegate/deprecations.py": {
+      "total": 8,
+      "codes": {
+       "COM812": 3,
+       "CPY001": 1,
+       "D101": 1,
+       "D102": 1,
+       "D103": 1,
+       "E501": 1
+      }
+     },
+     "src/local_delegate/doctor.py": {
+      "total": 30,
+      "codes": {
+       "COM812": 3,
+       "CPY001": 1,
+       "D205": 1,
+       "D209": 1,
+       "FBT001": 1,
+       "T201": 22,
+       "TC003": 1
+      }
+     },
+     "src/local_delegate/entrypoint.py": {
+      "total": 6,
+      "codes": {
+       "BLE001": 1,
+       "CPY001": 1,
+       "PLC0415": 2,
+       "S110": 1,
+       "T201": 1
+      }
+     },
+     "src/local_delegate/failures.py": {
+      "total": 25,
+      "codes": {
+       "C901": 1,
+       "CPY001": 1,
+       "D205": 1,
+       "D209": 1,
+       "D401": 1,
+       "E501": 2,
+       "EM102": 1,
+       "PLR0911": 3,
+       "PLR0912": 1,
+       "PLR0913": 1,
+       "PLR2004": 8,
+       "TC003": 1,
+       "TRY003": 1,
+       "UP042": 2
+      }
+     },
+     "src/local_delegate/footprint.py": {
+      "total": 4,
+      "codes": {
+       "CPY001": 1,
+       "D301": 1,
+       "TC003": 2
+      }
+     },
+     "src/local_delegate/i18n.py": {
+      "total": 7,
+      "codes": {
+       "COM812": 2,
+       "CPY001": 1,
+       "D103": 2,
+       "D403": 1,
+       "E501": 1
+      }
+     },
+     "src/local_delegate/install.py": {
+      "total": 75,
+      "codes": {
+       "ANN001": 15,
+       "BLE001": 1,
+       "C901": 3,
+       "COM812": 16,
+       "CPY001": 1,
+       "D101": 1,
+       "D102": 1,
+       "D103": 1,
+       "D301": 1,
+       "D401": 5,
+       "FBT001": 5,
+       "FBT002": 2,
+       "PLC0415": 5,
+       "PLR0912": 2,
+       "PLR0915": 2,
+       "PLW1510": 4,
+       "RUF005": 1,
+       "S105": 1,
+       "S603": 4,
+       "S607": 4
+      }
+     },
+     "src/local_delegate/json_state.py": {
+      "total": 4,
+      "codes": {
+       "CPY001": 1,
+       "D103": 1,
+       "SIM105": 1,
+       "TC003": 1
+      }
+     },
+     "src/local_delegate/legacy_names.py": {
+      "total": 42,
+      "codes": {
+       "ANN401": 8,
+       "COM812": 1,
+       "CPY001": 1,
+       "D205": 12,
+       "D209": 12,
+       "E501": 7,
+       "PLW2901": 1
+      }
+     },
+     "src/local_delegate/llamaswap_api.py": {
+      "total": 29,
+      "codes": {
+       "ANN204": 1,
+       "ANN401": 3,
+       "COM812": 7,
+       "CPY001": 1,
+       "D102": 4,
+       "D107": 2,
+       "D401": 1,
+       "E501": 1,
+       "FIX002": 1,
+       "N818": 1,
+       "PLR2004": 1,
+       "TC003": 2,
+       "TD002": 1,
+       "TD003": 1,
+       "TD004": 1,
+       "TD006": 1
+      }
+     },
+     "src/local_delegate/llamaswap_config.py": {
+      "total": 16,
+      "codes": {
+       "ANN001": 2,
+       "ANN202": 1,
+       "C901": 1,
+       "COM812": 6,
+       "CPY001": 1,
+       "D101": 2,
+       "PLR0911": 1,
+       "PLR2004": 2
+      }
+     },
+     "src/local_delegate/matrix.py": {
+      "total": 26,
+      "codes": {
+       "COM812": 1,
+       "CPY001": 1,
+       "D102": 3,
+       "D205": 5,
+       "D209": 5,
+       "D301": 1,
+       "PERF401": 2,
+       "PLR0913": 1,
+       "RUF002": 3,
+       "TC003": 4
+      }
+     },
+     "src/local_delegate/pace.py": {
+      "total": 41,
+      "codes": {
+       "ANN401": 20,
+       "BLE001": 8,
+       "COM812": 5,
+       "CPY001": 1,
+       "D107": 1,
+       "E501": 1,
+       "FBT003": 1,
+       "TC003": 3,
+       "TRY300": 1
+      }
+     },
+     "src/local_delegate/pricing.py": {
+      "total": 4,
+      "codes": {
+       "CPY001": 1,
+       "E501": 1,
+       "RUF002": 1,
+       "RUF003": 1
+      }
+     },
+     "src/local_delegate/probes.py": {
+      "total": 26,
+      "codes": {
+       "BLE001": 4,
+       "COM812": 4,
+       "CPY001": 1,
+       "D301": 1,
+       "D401": 1,
+       "E501": 1,
+       "FBT001": 1,
+       "FBT003": 3,
+       "PLC0415": 4,
+       "PLW1510": 1,
+       "S603": 1,
+       "SLF001": 3,
+       "TC003": 1
+      }
+     },
+     "src/local_delegate/questions.py": {
+      "total": 9,
+      "codes": {
+       "ANN202": 1,
+       "ANN401": 3,
+       "BLE001": 1,
+       "COM812": 1,
+       "CPY001": 1,
+       "D400": 1,
+       "E501": 1
+      }
+     },
+     "src/local_delegate/quota.py": {
+      "total": 25,
+      "codes": {
+       "C901": 2,
+       "COM812": 4,
+       "CPY001": 1,
+       "D103": 1,
+       "D205": 5,
+       "D209": 4,
+       "PLR0912": 1,
+       "PLR2004": 2,
+       "RUF002": 4,
+       "TC003": 1
+      }
+     },
+     "src/local_delegate/recompute.py": {
+      "total": 25,
+      "codes": {
+       "ANN001": 1,
+       "B905": 1,
+       "C420": 1,
+       "C901": 1,
+       "COM812": 6,
+       "CPY001": 1,
+       "D103": 1,
+       "D205": 3,
+       "D209": 3,
+       "E501": 1,
+       "PLR2004": 1,
+       "PLW2901": 1,
+       "PTH105": 1,
+       "PTH108": 1,
+       "SIM105": 1,
+       "TC003": 1
+      }
+     },
+     "src/local_delegate/residency.py": {
+      "total": 87,
+      "codes": {
+       "ANN202": 1,
+       "ANN401": 19,
+       "B007": 1,
+       "C901": 1,
+       "COM812": 21,
+       "CPY001": 1,
+       "D101": 8,
+       "D102": 2,
+       "D103": 1,
+       "D205": 5,
+       "D209": 4,
+       "E501": 1,
+       "EM101": 4,
+       "FBT001": 3,
+       "FBT002": 1,
+       "FBT003": 3,
+       "PLC0207": 1,
+       "PLR0913": 1,
+       "PLR0917": 1,
+       "PTH105": 1,
+       "PTH108": 1,
+       "PTH123": 1,
+       "TC003": 3,
+       "TRY300": 1,
+       "TRY301": 1
+      }
+     },
+     "src/local_delegate/resources/hooks/hook_common.py": {
+      "total": 48,
+      "codes": {
+       "ANN201": 1,
+       "BLE001": 3,
+       "COM812": 5,
+       "CPY001": 1,
+       "D101": 1,
+       "D103": 2,
+       "D205": 6,
+       "D209": 6,
+       "E501": 6,
+       "INP001": 1,
+       "PLC0415": 2,
+       "PLR2004": 1,
+       "PTH100": 1,
+       "PTH105": 1,
+       "PTH108": 1,
+       "S310": 2,
+       "SIM105": 4,
+       "T201": 2,
+       "TC003": 1,
+       "TRY300": 1
+      }
+     },
+     "src/local_delegate/resources/hooks/record_call.py": {
+      "total": 5,
+      "codes": {
+       "BLE001": 1,
+       "CPY001": 1,
+       "D103": 1,
+       "S110": 1,
+       "SIM105": 1
+      }
+     },
+     "src/local_delegate/resources/hooks/suggest_delegate_prompt.py": {
+      "total": 5,
+      "codes": {
+       "COM812": 1,
+       "CPY001": 1,
+       "D103": 3
+      }
+     },
+     "src/local_delegate/resources/hooks/suggest_delegate_read.py": {
+      "total": 11,
+      "codes": {
+       "C901": 1,
+       "COM812": 2,
+       "CPY001": 1,
+       "D103": 1,
+       "E501": 1,
+       "PLR0911": 1,
+       "PTH122": 1,
+       "PTH202": 2,
+       "SIM105": 1
+      }
+     },
+     "src/local_delegate/resources/hooks/suggest_delegate_shell.py": {
+      "total": 8,
+      "codes": {
+       "C901": 1,
+       "CPY001": 1,
+       "D103": 1,
+       "PLR0911": 1,
+       "PTH109": 1,
+       "PTH117": 1,
+       "PTH118": 1,
+       "PTH202": 1
+      }
+     },
+     "src/local_delegate/sections.py": {
+      "total": 30,
+      "codes": {
+       "C901": 3,
+       "COM812": 1,
+       "CPY001": 1,
+       "D101": 5,
+       "D102": 3,
+       "D205": 1,
+       "D301": 1,
+       "D400": 3,
+       "D415": 2,
+       "E501": 4,
+       "PLR0912": 1,
+       "PLR0913": 1,
+       "PLR2004": 1,
+       "RUF002": 2,
+       "TC003": 1
+      }
+     },
+     "src/local_delegate/server.py": {
+      "total": 234,
+      "codes": {
+       "A002": 1,
+       "ANN001": 15,
+       "ANN401": 1,
+       "BLE001": 9,
+       "C420": 1,
+       "C901": 10,
+       "COM812": 42,
+       "CPY001": 1,
+       "D101": 1,
+       "D205": 16,
+       "D209": 8,
+       "D301": 3,
+       "D401": 11,
+       "D413": 10,
+       "E501": 12,
+       "EM101": 2,
+       "EM102": 1,
+       "FBT001": 9,
+       "FBT002": 1,
+       "FBT003": 5,
+       "FIX002": 1,
+       "PERF401": 1,
+       "PLC0415": 8,
+       "PLR0911": 1,
+       "PLR0912": 4,
+       "PLR0913": 11,
+       "PLR0915": 5,
+       "PLR2004": 7,
+       "PLW0603": 3,
+       "PLW1510": 1,
+       "PLW2901": 1,
+       "PT018": 1,
+       "PTH123": 2,
+       "RUF002": 3,
+       "RUF003": 2,
+       "S101": 3,
+       "S110": 3,
+       "S607": 1,
+       "SIM105": 2,
+       "SLF001": 2,
+       "TC003": 5,
+       "TD002": 1,
+       "TD003": 1,
+       "TD004": 1,
+       "TD006": 1,
+       "TRY003": 2,
+       "TRY300": 1,
+       "TRY301": 1
+      }
+     },
+     "src/local_delegate/test_windows.py": {
+      "total": 27,
+      "codes": {
+       "BLE001": 1,
+       "COM812": 8,
+       "CPY001": 1,
+       "D101": 1,
+       "D102": 3,
+       "D103": 1,
+       "D105": 1,
+       "D205": 1,
+       "D209": 1,
+       "E501": 2,
+       "FBT001": 1,
+       "PLR0911": 1,
+       "PLR0913": 1,
+       "PTH105": 1,
+       "PTH108": 1,
+       "SIM105": 1,
+       "TRY300": 1
+      }
+     },
+     "src/local_delegate/topology.py": {
+      "total": 30,
+      "codes": {
+       "ANN401": 7,
+       "C901": 2,
+       "COM812": 1,
+       "CPY001": 1,
+       "D101": 1,
+       "D102": 2,
+       "D205": 1,
+       "D209": 1,
+       "FBT001": 1,
+       "FBT003": 3,
+       "PLR0912": 2,
+       "PLR0915": 1,
+       "PLW0603": 1,
+       "PLW2901": 5,
+       "PTH116": 1
+      }
+     },
+     "src/local_delegate/transcripts.py": {
+      "total": 22,
+      "codes": {
+       "ANN202": 1,
+       "C901": 1,
+       "COM812": 1,
+       "CPY001": 1,
+       "D101": 1,
+       "D103": 1,
+       "D205": 4,
+       "D209": 4,
+       "FBT001": 1,
+       "PLR0912": 1,
+       "PLR0913": 1,
+       "PLR0917": 1,
+       "RUF002": 3,
+       "TC003": 1
+      }
+     },
+     "src/local_delegate/turn.py": {
+      "total": 28,
+      "codes": {
+       "C901": 1,
+       "COM812": 5,
+       "CPY001": 1,
+       "D101": 2,
+       "D102": 9,
+       "D103": 1,
+       "D105": 1,
+       "D107": 1,
+       "D401": 1,
+       "FBT001": 1,
+       "FBT003": 3,
+       "N818": 1,
+       "TRY301": 1
+      }
+     },
+     "src/local_delegate/update.py": {
+      "total": 39,
+      "codes": {
+       "ANN001": 6,
+       "BLE001": 2,
+       "C901": 1,
+       "COM812": 7,
+       "CPY001": 1,
+       "D105": 1,
+       "D205": 1,
+       "D209": 1,
+       "D400": 1,
+       "D401": 1,
+       "E501": 2,
+       "PLC0415": 2,
+       "PLR0912": 1,
+       "PLR1714": 1,
+       "PLW1510": 1,
+       "S310": 1,
+       "S603": 2,
+       "SLF001": 7
+      }
+     },
+     "src/local_delegate/valuation.py": {
+      "total": 29,
+      "codes": {
+       "BLE001": 1,
+       "C420": 3,
+       "C901": 1,
+       "COM812": 2,
+       "CPY001": 1,
+       "D205": 4,
+       "D209": 3,
+       "D400": 1,
+       "D401": 1,
+       "D415": 1,
+       "PLR0912": 1,
+       "PLR0915": 1,
+       "RUF002": 5,
+       "SLF001": 3,
+       "TC003": 1
+      }
+     },
+     "src/local_delegate/version.py": {
+      "total": 3,
+      "codes": {
+       "CPY001": 1,
+       "PLW0603": 2
+      }
+     },
+     "src/local_delegate/web/__init__.py": {
+      "total": 1,
+      "codes": {
+       "CPY001": 1
+      }
+     },
+     "src/local_delegate/web/auth.py": {
+      "total": 19,
+      "codes": {
+       "ANN001": 8,
+       "ANN201": 1,
+       "ANN202": 2,
+       "COM812": 3,
+       "CPY001": 1,
+       "D102": 1,
+       "D107": 1,
+       "D400": 2
+      }
+     },
+     "src/local_delegate/web/metrics.py": {
+      "total": 340,
+      "codes": {
+       "ANN001": 2,
+       "ANN201": 15,
+       "BLE001": 3,
+       "C901": 1,
+       "COM812": 13,
+       "CPY001": 1,
+       "D103": 6,
+       "D205": 3,
+       "D209": 3,
+       "E501": 231,
+       "FAST002": 9,
+       "FBT001": 1,
+       "PLC0415": 1,
+       "PLR0915": 1,
+       "PLR2004": 1,
+       "PLW0603": 2,
+       "PLW2901": 1,
+       "RUF001": 15,
+       "RUF002": 2,
+       "RUF003": 2,
+       "S110": 1,
+       "SIM105": 1,
+       "SIM108": 1,
+       "SLF001": 8,
+       "T201": 1,
+       "TID252": 14,
+       "TRY300": 1
+      }
+     },
+     "src/local_delegate/web/sysinfo.py": {
+      "total": 28,
+      "codes": {
+       "BLE001": 3,
+       "COM812": 2,
+       "CPY001": 1,
+       "D403": 3,
+       "PLC0415": 1,
+       "PLR2004": 3,
+       "PLW0603": 2,
+       "PLW1510": 4,
+       "PTH123": 3,
+       "PTH208": 1,
+       "S603": 1,
+       "S607": 4
+      }
+     }
+    },
+    "codes": {
+     "A002": 1,
+     "ANN001": 67,
+     "ANN201": 18,
+     "ANN202": 14,
+     "ANN204": 1,
+     "ANN401": 68,
+     "ARG001": 2,
+     "B007": 1,
+     "B905": 1,
+     "BLE001": 44,
+     "C420": 5,
+     "C901": 39,
+     "COM812": 273,
+     "CPY001": 52,
+     "D101": 31,
+     "D102": 39,
+     "D103": 52,
+     "D105": 7,
+     "D107": 11,
+     "D205": 87,
+     "D209": 71,
+     "D301": 10,
+     "D400": 15,
+     "D401": 30,
+     "D403": 4,
+     "D413": 10,
+     "D415": 3,
+     "E501": 292,
+     "EM101": 6,
+     "EM102": 2,
+     "FAST002": 9,
+     "FBT001": 31,
+     "FBT002": 5,
+     "FBT003": 34,
+     "FIX002": 2,
+     "INP001": 1,
+     "N802": 5,
+     "N818": 2,
+     "PERF401": 4,
+     "PLC0207": 1,
+     "PLC0415": 78,
+     "PLR0911": 17,
+     "PLR0912": 18,
+     "PLR0913": 24,
+     "PLR0915": 13,
+     "PLR0917": 5,
+     "PLR1714": 2,
+     "PLR2004": 38,
+     "PLW0603": 11,
+     "PLW1510": 12,
+     "PLW2901": 12,
+     "PT018": 1,
+     "PT028": 1,
+     "PTH100": 1,
+     "PTH105": 7,
+     "PTH108": 5,
+     "PTH109": 1,
+     "PTH116": 1,
+     "PTH117": 1,
+     "PTH118": 1,
+     "PTH122": 1,
+     "PTH123": 7,
+     "PTH202": 3,
+     "PTH208": 1,
+     "RUF001": 15,
+     "RUF002": 24,
+     "RUF003": 6,
+     "RUF005": 1,
+     "RUF036": 1,
+     "S101": 3,
+     "S104": 2,
+     "S105": 2,
+     "S110": 9,
+     "S310": 3,
+     "S603": 10,
+     "S607": 9,
+     "SIM105": 16,
+     "SIM108": 1,
+     "SLF001": 40,
+     "T201": 156,
+     "TC002": 2,
+     "TC003": 42,
+     "TD002": 2,
+     "TD003": 2,
+     "TD004": 2,
+     "TD006": 2,
+     "TID252": 14,
+     "TRY003": 3,
+     "TRY300": 7,
+     "TRY301": 4,
+     "UP042": 2
+    }
+   }
+  },
+  {
+   "id": "X2",
+   "top_codes": [],
+   "top_files": [
+    "tests/test_checks.py",
+    "tests/test_analyze_benchmark.py",
+    "tests/test_metrics.py",
+    "tests/test_update.py",
+    "tests/test_residency.py",
+    "tests/test_core.py",
+    "tests/test_connection_cause.py",
+    "tests/test_topology.py",
+    "tests/test_corpus.py",
+    "tests/test_structured_summary.py"
+   ],
+   "truth": {
+    "format": "pytest",
+    "per_file": {
+     "tests/test_adoption_experiment.py": {
+      "total": 33,
+      "codes": {}
+     },
+     "tests/test_affinity.py": {
+      "total": 43,
+      "codes": {}
+     },
+     "tests/test_affinity_batch.py": {
+      "total": 19,
+      "codes": {}
+     },
+     "tests/test_agents.py": {
+      "total": 16,
+      "codes": {}
+     },
+     "tests/test_analyze_benchmark.py": {
+      "total": 119,
+      "codes": {}
+     },
+     "tests/test_attribution.py": {
+      "total": 33,
+      "codes": {}
+     },
+     "tests/test_autostart.py": {
+      "total": 2,
+      "codes": {}
+     },
+     "tests/test_backend_probe.py": {
+      "total": 15,
+      "codes": {}
+     },
+     "tests/test_benchmark.py": {
+      "total": 37,
+      "codes": {}
+     },
+     "tests/test_boilerplate_output.py": {
+      "total": 19,
+      "codes": {}
+     },
+     "tests/test_bump_version.py": {
+      "total": 8,
+      "codes": {}
+     },
+     "tests/test_capture.py": {
+      "total": 4,
+      "codes": {}
+     },
+     "tests/test_chains.py": {
+      "total": 27,
+      "codes": {}
+     },
+     "tests/test_checks.py": {
+      "total": 140,
+      "codes": {}
+     },
+     "tests/test_chunking.py": {
+      "total": 41,
+      "codes": {}
+     },
+     "tests/test_ci_gate.py": {
+      "total": 24,
+      "codes": {}
+     },
+     "tests/test_cli_renamed_names.py": {
+      "total": 21,
+      "codes": {}
+     },
+     "tests/test_clients.py": {
+      "total": 25,
+      "codes": {}
+     },
+     "tests/test_commit_language.py": {
+      "total": 15,
+      "codes": {}
+     },
+     "tests/test_connection_cause.py": {
+      "total": 55,
+      "codes": {}
+     },
+     "tests/test_cooldown.py": {
+      "total": 40,
+      "codes": {}
+     },
+     "tests/test_core.py": {
+      "total": 61,
+      "codes": {}
+     },
+     "tests/test_corpus.py": {
+      "total": 53,
+      "codes": {}
+     },
+     "tests/test_correlation.py": {
+      "total": 14,
+      "codes": {}
+     },
+     "tests/test_cost_doctor.py": {
+      "total": 6,
+      "codes": {}
+     },
+     "tests/test_ctrl_c.py": {
+      "total": 7,
+      "codes": {}
+     },
+     "tests/test_daemon.py": {
+      "total": 29,
+      "codes": {}
+     },
+     "tests/test_dashboard_cost.py": {
+      "total": 14,
+      "codes": {}
+     },
+     "tests/test_dashboard_js.py": {
+      "total": 27,
+      "codes": {}
+     },
+     "tests/test_dashboard_states.py": {
+      "total": 26,
+      "codes": {}
+     },
+     "tests/test_dashboard_ui.py": {
+      "total": 39,
+      "codes": {}
+     },
+     "tests/test_delegation_connection.py": {
+      "total": 14,
+      "codes": {}
+     },
+     "tests/test_density.py": {
+      "total": 16,
+      "codes": {}
+     },
+     "tests/test_deprecations.py": {
+      "total": 23,
+      "codes": {}
+     },
+     "tests/test_detect_spanish_names.py": {
+      "total": 43,
+      "codes": {}
+     },
+     "tests/test_doctor.py": {
+      "total": 26,
+      "codes": {}
+     },
+     "tests/test_environment_isolation.py": {
+      "total": 5,
+      "codes": {}
+     },
+     "tests/test_f1_conformance.py": {
+      "total": 15,
+      "codes": {}
+     },
+     "tests/test_failure_captures.py": {
+      "total": 10,
+      "codes": {}
+     },
+     "tests/test_failures.py": {
+      "total": 49,
+      "codes": {}
+     },
+     "tests/test_failures_integration.py": {
+      "total": 11,
+      "codes": {}
+     },
+     "tests/test_fake_llamaswap.py": {
+      "total": 13,
+      "codes": {}
+     },
+     "tests/test_fallback.py": {
+      "total": 35,
+      "codes": {}
+     },
+     "tests/test_fallback_observability.py": {
+      "total": 10,
+      "codes": {}
+     },
+     "tests/test_fast_role_retired.py": {
+      "total": 14,
+      "codes": {}
+     },
+     "tests/test_footprint.py": {
+      "total": 9,
+      "codes": {}
+     },
+     "tests/test_hook_common.py": {
+      "total": 20,
+      "codes": {}
+     },
+     "tests/test_hook_legacy_names.py": {
+      "total": 16,
+      "codes": {}
+     },
+     "tests/test_hook_recipes.py": {
+      "total": 30,
+      "codes": {}
+     },
+     "tests/test_hook_shell.py": {
+      "total": 33,
+      "codes": {}
+     },
+     "tests/test_hook_shell_absolute_path.py": {
+      "total": 3,
+      "codes": {}
+     },
+     "tests/test_hooks_telemetry_api.py": {
+      "total": 20,
+      "codes": {}
+     },
+     "tests/test_install.py": {
+      "total": 42,
+      "codes": {}
+     },
+     "tests/test_install_clients.py": {
+      "total": 30,
+      "codes": {}
+     },
+     "tests/test_install_header.py": {
+      "total": 18,
+      "codes": {}
+     },
+     "tests/test_install_opencode.py": {
+      "total": 34,
+      "codes": {}
+     },
+     "tests/test_install_timeouts.py": {
+      "total": 24,
+      "codes": {}
+     },
+     "tests/test_llamaswap_api.py": {
+      "total": 14,
+      "codes": {}
+     },
+     "tests/test_llamaswap_config.py": {
+      "total": 49,
+      "codes": {}
+     },
+     "tests/test_load_probe.py": {
+      "total": 15,
+      "codes": {}
+     },
+     "tests/test_map_reduce.py": {
+      "total": 18,
+      "codes": {}
+     },
+     "tests/test_measure_adoption.py": {
+      "total": 16,
+      "codes": {}
+     },
+     "tests/test_measure_cooldown.py": {
+      "total": 31,
+      "codes": {}
+     },
+     "tests/test_measure_slowness.py": {
+      "total": 37,
+      "codes": {}
+     },
+     "tests/test_measure_structured_summary.py": {
+      "total": 11,
+      "codes": {}
+     },
+     "tests/test_metrics.py": {
+      "total": 97,
+      "codes": {}
+     },
+     "tests/test_pace.py": {
+      "total": 32,
+      "codes": {}
+     },
+     "tests/test_pair_sheet.py": {
+      "total": 43,
+      "codes": {}
+     },
+     "tests/test_post_chat_paths.py": {
+      "total": 12,
+      "codes": {}
+     },
+     "tests/test_price_watcher.py": {
+      "total": 37,
+      "codes": {}
+     },
+     "tests/test_pricing.py": {
+      "total": 9,
+      "codes": {}
+     },
+     "tests/test_questions.py": {
+      "total": 23,
+      "codes": {}
+     },
+     "tests/test_quota.py": {
+      "total": 10,
+      "codes": {}
+     },
+     "tests/test_recompute.py": {
+      "total": 11,
+      "codes": {}
+     },
+     "tests/test_recompute_legacy.py": {
+      "total": 9,
+      "codes": {}
+     },
+     "tests/test_release_metadata.py": {
+      "total": 5,
+      "codes": {}
+     },
+     "tests/test_residency.py": {
+      "total": 60,
+      "codes": {}
+     },
+     "tests/test_residency_cli.py": {
+      "total": 14,
+      "codes": {}
+     },
+     "tests/test_resource_probe.py": {
+      "total": 30,
+      "codes": {}
+     },
+     "tests/test_role_caps.py": {
+      "total": 7,
+      "codes": {}
+     },
+     "tests/test_site.py": {
+      "total": 27,
+      "codes": {}
+     },
+     "tests/test_slowness.py": {
+      "total": 14,
+      "codes": {}
+     },
+     "tests/test_smoke.py": {
+      "total": 18,
+      "codes": {}
+     },
+     "tests/test_structured_summary.py": {
+      "total": 51,
+      "codes": {}
+     },
+     "tests/test_test_sessions.py": {
+      "total": 3,
+      "codes": {}
+     },
+     "tests/test_test_windows.py": {
+      "total": 28,
+      "codes": {}
+     },
+     "tests/test_test_windows_cli.py": {
+      "total": 17,
+      "codes": {}
+     },
+     "tests/test_topology.py": {
+      "total": 55,
+      "codes": {}
+     },
+     "tests/test_transcripts.py": {
+      "total": 7,
+      "codes": {}
+     },
+     "tests/test_turn.py": {
+      "total": 28,
+      "codes": {}
+     },
+     "tests/test_turn_daemon.py": {
+      "total": 15,
+      "codes": {}
+     },
+     "tests/test_update.py": {
+      "total": 70,
+      "codes": {}
+     },
+     "tests/test_valuation.py": {
+      "total": 13,
+      "codes": {}
+     },
+     "tests/test_vendor.py": {
+      "total": 22,
+      "codes": {}
+     },
+     "tests/test_vision.py": {
+      "total": 13,
+      "codes": {}
+     },
+     "tests/test_web_auth.py": {
+      "total": 31,
+      "codes": {}
+     },
+     "tests/test_wiki.py": {
+      "total": 15,
+      "codes": {}
+     }
+    },
+    "codes": {}
+   }
+  },
+  {
+   "id": "X3",
+   "top_codes": [],
+   "top_files": [
+    "home/runner/work/shop-web/shop-web/src/app/core/state/report-builder.tsx",
+    "home/runner/work/shop-web/shop-web/src/app/catalog/users-table.js",
+    "home/runner/work/shop-web/shop-web/src/lib/money/mailer.tsx",
+    "home/runner/work/shop-web/shop-web/src/app/admin/reports/profile-form.ts",
+    "home/runner/work/shop-web/shop-web/src/lib/format/report-builder.js",
+    "home/runner/work/shop-web/shop-web/src/server/db/utils.tsx",
+    "home/runner/work/shop-web/shop-web/src/app/auth/button.ts",
+    "home/runner/work/shop-web/shop-web/src/app/core/state/date-range.pipe.ts",
+    "home/runner/work/shop-web/shop-web/src/lib/format/button.js",
+    "home/runner/work/shop-web/shop-web/src/app/core/state/token.interceptor.js"
+   ],
+   "truth": {
+    "format": "eslint",
+    "per_file": {
+     "src/app/admin/reports/avatar.js": {
+      "total": 2,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 2
+      }
+     },
+     "src/app/admin/reports/date-range.pipe.ts": {
+      "total": 8,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 1,
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-unused-vars": 2,
+       "import/order": 1,
+       "max-len": 1,
+       "no-shadow": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/app/admin/reports/mailer.tsx": {
+      "total": 4,
+      "codes": {
+       "@typescript-eslint/no-unused-vars": 1,
+       "no-await-in-loop": 1,
+       "no-console": 1,
+       "no-shadow": 1
+      }
+     },
+     "src/app/admin/reports/order.store.js": {
+      "total": 8,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 3,
+       "@typescript-eslint/no-unused-vars": 2,
+       "eqeqeq": 1,
+       "no-param-reassign": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/app/admin/reports/payment.service.tsx": {
+      "total": 13,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 1,
+       "@typescript-eslint/explicit-function-return-type": 2,
+       "@typescript-eslint/no-explicit-any": 4,
+       "@typescript-eslint/no-unused-vars": 3,
+       "no-console": 2,
+       "prefer-const": 1
+      }
+     },
+     "src/app/admin/reports/product-card.ts": {
+      "total": 2,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 2
+      }
+     },
+     "src/app/admin/reports/profile-form.ts": {
+      "total": 52,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 1,
+       "@typescript-eslint/explicit-function-return-type": 1,
+       "@typescript-eslint/no-explicit-any": 17,
+       "@typescript-eslint/no-floating-promises": 2,
+       "@typescript-eslint/no-unused-vars": 8,
+       "complexity": 1,
+       "eqeqeq": 3,
+       "import/order": 2,
+       "max-len": 3,
+       "no-await-in-loop": 1,
+       "no-console": 3,
+       "no-param-reassign": 4,
+       "no-shadow": 2,
+       "prefer-const": 4
+      }
+     },
+     "src/app/admin/reports/search-box.ts": {
+      "total": 4,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-floating-promises": 1,
+       "no-shadow": 2
+      }
+     },
+     "src/app/admin/users/auth.guard.ts": {
+      "total": 3,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "no-console": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/app/admin/users/constants.ts": {
+      "total": 15,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 2,
+       "@typescript-eslint/explicit-function-return-type": 1,
+       "@typescript-eslint/no-explicit-any": 5,
+       "@typescript-eslint/no-unused-vars": 2,
+       "complexity": 2,
+       "eqeqeq": 1,
+       "no-console": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/app/admin/users/currency.pipe.js": {
+      "total": 5,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 3,
+       "@typescript-eslint/no-unused-vars": 1,
+       "eqeqeq": 1
+      }
+     },
+     "src/app/admin/users/order.store.ts": {
+      "total": 7,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 1,
+       "@typescript-eslint/no-explicit-any": 2,
+       "@typescript-eslint/no-floating-promises": 1,
+       "no-console": 1,
+       "no-param-reassign": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/app/admin/users/pricing.tsx": {
+      "total": 1,
+      "codes": {
+       "@typescript-eslint/no-unused-vars": 1
+      }
+     },
+     "src/app/admin/users/report-builder.ts": {
+      "total": 1,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1
+      }
+     },
+     "src/app/admin/users/selectors.js": {
+      "total": 2,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "no-await-in-loop": 1
+      }
+     },
+     "src/app/auth/api-client.tsx": {
+      "total": 7,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 2,
+       "@typescript-eslint/no-explicit-any": 4,
+       "no-console": 1
+      }
+     },
+     "src/app/auth/button.ts": {
+      "total": 38,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 2,
+       "@typescript-eslint/no-explicit-any": 6,
+       "@typescript-eslint/no-unused-vars": 4,
+       "complexity": 2,
+       "eqeqeq": 4,
+       "import/order": 4,
+       "max-len": 2,
+       "no-await-in-loop": 2,
+       "no-console": 4,
+       "no-shadow": 3,
+       "prefer-const": 5
+      }
+     },
+     "src/app/auth/cart.service.ts": {
+      "total": 4,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-unused-vars": 2,
+       "max-len": 1
+      }
+     },
+     "src/app/auth/currency.pipe.ts": {
+      "total": 3,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 2,
+       "prefer-const": 1
+      }
+     },
+     "src/app/auth/effects.ts": {
+      "total": 5,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 3,
+       "@typescript-eslint/no-unused-vars": 1,
+       "import/order": 1
+      }
+     },
+     "src/app/auth/orders.route.tsx": {
+      "total": 5,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 2,
+       "max-len": 1,
+       "no-console": 1,
+       "no-param-reassign": 1
+      }
+     },
+     "src/app/auth/product-list.tsx": {
+      "total": 6,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 2,
+       "@typescript-eslint/no-unused-vars": 1,
+       "no-console": 2,
+       "no-shadow": 1
+      }
+     },
+     "src/app/auth/users-table.ts": {
+      "total": 10,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 1,
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-unused-vars": 2,
+       "eqeqeq": 1,
+       "max-len": 1,
+       "no-console": 1,
+       "prefer-const": 3
+      }
+     },
+     "src/app/auth/users-table.tsx": {
+      "total": 4,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 1,
+       "@typescript-eslint/no-explicit-any": 1,
+       "import/order": 1,
+       "no-shadow": 1
+      }
+     },
+     "src/app/cart/api-client.ts": {
+      "total": 5,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 2,
+       "no-await-in-loop": 1,
+       "no-param-reassign": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/app/cart/cart.component.tsx": {
+      "total": 1,
+      "codes": {
+       "@typescript-eslint/no-floating-promises": 1
+      }
+     },
+     "src/app/cart/filters.ts": {
+      "total": 5,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-unused-vars": 2,
+       "no-shadow": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/app/cart/filters.tsx": {
+      "total": 2,
+      "codes": {
+       "eqeqeq": 2
+      }
+     },
+     "src/app/cart/migrations.js": {
+      "total": 7,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 1,
+       "@typescript-eslint/no-explicit-any": 2,
+       "@typescript-eslint/no-unused-vars": 2,
+       "no-await-in-loop": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/app/catalog/button.tsx": {
+      "total": 11,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 1,
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-floating-promises": 1,
+       "@typescript-eslint/no-unused-vars": 3,
+       "complexity": 1,
+       "import/order": 1,
+       "max-len": 1,
+       "no-param-reassign": 1,
+       "no-shadow": 1
+      }
+     },
+     "src/app/catalog/cart.service.ts": {
+      "total": 4,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "max-len": 3
+      }
+     },
+     "src/app/catalog/currency.pipe.ts": {
+      "total": 2,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 1,
+       "no-console": 1
+      }
+     },
+     "src/app/catalog/mailer.ts": {
+      "total": 2,
+      "codes": {
+       "no-shadow": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/app/catalog/product-card.js": {
+      "total": 6,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 1,
+       "@typescript-eslint/explicit-function-return-type": 1,
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-unused-vars": 1,
+       "eqeqeq": 1,
+       "no-console": 1
+      }
+     },
+     "src/app/catalog/users-table.js": {
+      "total": 101,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 4,
+       "@typescript-eslint/explicit-function-return-type": 4,
+       "@typescript-eslint/no-explicit-any": 29,
+       "@typescript-eslint/no-floating-promises": 1,
+       "@typescript-eslint/no-unused-vars": 14,
+       "complexity": 6,
+       "eqeqeq": 14,
+       "import/order": 5,
+       "max-len": 5,
+       "no-await-in-loop": 2,
+       "no-console": 6,
+       "no-param-reassign": 3,
+       "prefer-const": 8
+      }
+     },
+     "src/app/checkout/api-client.ts": {
+      "total": 4,
+      "codes": {
+       "@typescript-eslint/no-unused-vars": 2,
+       "eqeqeq": 1,
+       "max-len": 1
+      }
+     },
+     "src/app/checkout/checkout.component.ts": {
+      "total": 3,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "eqeqeq": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/app/checkout/constants.js": {
+      "total": 9,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 1,
+       "@typescript-eslint/no-explicit-any": 4,
+       "@typescript-eslint/no-unused-vars": 3,
+       "eqeqeq": 1
+      }
+     },
+     "src/app/checkout/modal.js": {
+      "total": 2,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "max-len": 1
+      }
+     },
+     "src/app/checkout/orders.route.js": {
+      "total": 6,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 3,
+       "complexity": 1,
+       "max-len": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/app/checkout/payment.service.ts": {
+      "total": 10,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 2,
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-unused-vars": 1,
+       "complexity": 1,
+       "eqeqeq": 1,
+       "no-param-reassign": 1,
+       "no-shadow": 2,
+       "prefer-const": 1
+      }
+     },
+     "src/app/checkout/product-card.tsx": {
+      "total": 4,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 1,
+       "@typescript-eslint/no-explicit-any": 1,
+       "complexity": 1,
+       "no-console": 1
+      }
+     },
+     "src/app/checkout/product-list.ts": {
+      "total": 4,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 2,
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-unused-vars": 1
+      }
+     },
+     "src/app/core/http/auth.guard.ts": {
+      "total": 16,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 3,
+       "@typescript-eslint/no-explicit-any": 4,
+       "@typescript-eslint/no-unused-vars": 2,
+       "import/order": 1,
+       "max-len": 2,
+       "no-await-in-loop": 1,
+       "no-console": 2,
+       "prefer-const": 1
+      }
+     },
+     "src/app/core/http/cart.service.ts": {
+      "total": 2,
+      "codes": {
+       "@typescript-eslint/no-floating-promises": 1,
+       "no-console": 1
+      }
+     },
+     "src/app/core/http/checkout.component.tsx": {
+      "total": 20,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 2,
+       "@typescript-eslint/no-explicit-any": 5,
+       "@typescript-eslint/no-floating-promises": 1,
+       "@typescript-eslint/no-unused-vars": 3,
+       "complexity": 2,
+       "import/order": 1,
+       "max-len": 3,
+       "no-console": 1,
+       "prefer-const": 2
+      }
+     },
+     "src/app/core/http/currency.pipe.ts": {
+      "total": 20,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 1,
+       "@typescript-eslint/no-explicit-any": 4,
+       "@typescript-eslint/no-unused-vars": 2,
+       "eqeqeq": 2,
+       "import/order": 2,
+       "max-len": 1,
+       "no-console": 5,
+       "no-shadow": 1,
+       "prefer-const": 2
+      }
+     },
+     "src/app/core/http/date-range.pipe.ts": {
+      "total": 3,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "eqeqeq": 1,
+       "no-console": 1
+      }
+     },
+     "src/app/core/http/index.js": {
+      "total": 12,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 1,
+       "@typescript-eslint/explicit-function-return-type": 1,
+       "@typescript-eslint/no-explicit-any": 4,
+       "@typescript-eslint/no-floating-promises": 1,
+       "@typescript-eslint/no-unused-vars": 1,
+       "complexity": 1,
+       "import/order": 1,
+       "no-console": 1,
+       "no-shadow": 1
+      }
+     },
+     "src/app/core/http/migrations.ts": {
+      "total": 5,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-unused-vars": 1,
+       "no-await-in-loop": 1,
+       "no-console": 1,
+       "no-shadow": 1
+      }
+     },
+     "src/app/core/http/order.store.tsx": {
+      "total": 3,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "import/order": 1,
+       "max-len": 1
+      }
+     },
+     "src/app/core/http/payment.service.ts": {
+      "total": 8,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 2,
+       "@typescript-eslint/no-explicit-any": 2,
+       "@typescript-eslint/no-unused-vars": 1,
+       "eqeqeq": 1,
+       "no-shadow": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/app/core/http/report-builder.tsx": {
+      "total": 2,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-unused-vars": 1
+      }
+     },
+     "src/app/core/state/auth.guard.ts": {
+      "total": 3,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 2,
+       "prefer-const": 1
+      }
+     },
+     "src/app/core/state/cart.service.tsx": {
+      "total": 7,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-unused-vars": 1,
+       "eqeqeq": 1,
+       "max-len": 1,
+       "no-await-in-loop": 1,
+       "no-shadow": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/app/core/state/checkout.component.tsx": {
+      "total": 3,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 1,
+       "@typescript-eslint/no-explicit-any": 1,
+       "max-len": 1
+      }
+     },
+     "src/app/core/state/date-range.pipe.ts": {
+      "total": 45,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 1,
+       "@typescript-eslint/explicit-function-return-type": 2,
+       "@typescript-eslint/no-explicit-any": 12,
+       "@typescript-eslint/no-unused-vars": 7,
+       "complexity": 2,
+       "eqeqeq": 7,
+       "import/order": 1,
+       "max-len": 2,
+       "no-await-in-loop": 3,
+       "no-console": 3,
+       "no-param-reassign": 1,
+       "prefer-const": 4
+      }
+     },
+     "src/app/core/state/format-date.ts": {
+      "total": 4,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "complexity": 1,
+       "no-console": 1,
+       "no-shadow": 1
+      }
+     },
+     "src/app/core/state/order.store.ts": {
+      "total": 27,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 1,
+       "@typescript-eslint/no-explicit-any": 10,
+       "@typescript-eslint/no-floating-promises": 4,
+       "@typescript-eslint/no-unused-vars": 3,
+       "import/order": 1,
+       "max-len": 1,
+       "no-console": 2,
+       "prefer-const": 5
+      }
+     },
+     "src/app/core/state/order.store.tsx": {
+      "total": 8,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 4,
+       "@typescript-eslint/no-floating-promises": 1,
+       "@typescript-eslint/no-unused-vars": 1,
+       "no-await-in-loop": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/app/core/state/report-builder.tsx": {
+      "total": 240,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 12,
+       "@typescript-eslint/explicit-function-return-type": 12,
+       "@typescript-eslint/no-explicit-any": 66,
+       "@typescript-eslint/no-floating-promises": 3,
+       "@typescript-eslint/no-unused-vars": 31,
+       "complexity": 8,
+       "eqeqeq": 13,
+       "import/order": 8,
+       "max-len": 13,
+       "no-await-in-loop": 6,
+       "no-console": 23,
+       "no-param-reassign": 8,
+       "no-shadow": 11,
+       "prefer-const": 26
+      }
+     },
+     "src/app/core/state/search-box.ts": {
+      "total": 8,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 2,
+       "@typescript-eslint/no-explicit-any": 3,
+       "eqeqeq": 1,
+       "no-await-in-loop": 1,
+       "no-console": 1
+      }
+     },
+     "src/app/core/state/token.interceptor.js": {
+      "total": 20,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 7,
+       "@typescript-eslint/no-floating-promises": 2,
+       "@typescript-eslint/no-unused-vars": 5,
+       "complexity": 1,
+       "eqeqeq": 1,
+       "no-await-in-loop": 2,
+       "no-console": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/app/orders/cart.component.tsx": {
+      "total": 20,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 1,
+       "@typescript-eslint/no-explicit-any": 3,
+       "@typescript-eslint/no-unused-vars": 5,
+       "complexity": 2,
+       "eqeqeq": 5,
+       "import/order": 1,
+       "no-console": 2,
+       "prefer-const": 1
+      }
+     },
+     "src/app/orders/format-date.js": {
+      "total": 1,
+      "codes": {
+       "eqeqeq": 1
+      }
+     },
+     "src/app/orders/modal.ts": {
+      "total": 18,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 2,
+       "@typescript-eslint/no-explicit-any": 7,
+       "@typescript-eslint/no-unused-vars": 2,
+       "complexity": 1,
+       "no-await-in-loop": 1,
+       "no-console": 1,
+       "no-param-reassign": 1,
+       "no-shadow": 1,
+       "prefer-const": 2
+      }
+     },
+     "src/app/orders/order.store.js": {
+      "total": 14,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 2,
+       "@typescript-eslint/no-explicit-any": 4,
+       "@typescript-eslint/no-unused-vars": 2,
+       "complexity": 1,
+       "eqeqeq": 1,
+       "import/order": 1,
+       "no-console": 1,
+       "no-param-reassign": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/app/orders/orders.route.ts": {
+      "total": 8,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 2,
+       "@typescript-eslint/no-explicit-any": 3,
+       "@typescript-eslint/no-floating-promises": 1,
+       "complexity": 1,
+       "no-shadow": 1
+      }
+     },
+     "src/app/orders/report-builder.tsx": {
+      "total": 7,
+      "codes": {
+       "@typescript-eslint/no-unused-vars": 2,
+       "eqeqeq": 1,
+       "import/order": 1,
+       "no-console": 1,
+       "no-param-reassign": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/app/profile/date-range.pipe.ts": {
+      "total": 13,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 4,
+       "@typescript-eslint/no-floating-promises": 1,
+       "@typescript-eslint/no-unused-vars": 1,
+       "eqeqeq": 1,
+       "import/order": 1,
+       "no-console": 2,
+       "no-shadow": 1,
+       "prefer-const": 2
+      }
+     },
+     "src/app/profile/date-range.pipe.tsx": {
+      "total": 1,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 1
+      }
+     },
+     "src/app/profile/payment.service.tsx": {
+      "total": 9,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 1,
+       "@typescript-eslint/no-explicit-any": 3,
+       "@typescript-eslint/no-unused-vars": 1,
+       "eqeqeq": 1,
+       "no-console": 2,
+       "no-shadow": 1
+      }
+     },
+     "src/app/profile/users.route.js": {
+      "total": 6,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 2,
+       "@typescript-eslint/no-unused-vars": 2,
+       "max-len": 1,
+       "no-console": 1
+      }
+     },
+     "src/app/profile/users.route.ts": {
+      "total": 3,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 2,
+       "no-console": 1
+      }
+     },
+     "src/app/search/button.ts": {
+      "total": 8,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 2,
+       "@typescript-eslint/no-unused-vars": 2,
+       "no-await-in-loop": 1,
+       "no-console": 1,
+       "no-param-reassign": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/app/search/checkout.component.js": {
+      "total": 3,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-floating-promises": 1,
+       "max-len": 1
+      }
+     },
+     "src/app/search/migrations.tsx": {
+      "total": 5,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 3,
+       "@typescript-eslint/no-unused-vars": 1,
+       "import/order": 1
+      }
+     },
+     "src/app/search/product-list.ts": {
+      "total": 10,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 1,
+       "@typescript-eslint/no-explicit-any": 5,
+       "@typescript-eslint/no-floating-promises": 2,
+       "no-param-reassign": 1,
+       "no-shadow": 1
+      }
+     },
+     "src/app/search/schema.tsx": {
+      "total": 2,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 2
+      }
+     },
+     "src/app/search/selectors.js": {
+      "total": 3,
+      "codes": {
+       "@typescript-eslint/no-unused-vars": 3
+      }
+     },
+     "src/app/shared/pipes/cart.service.js": {
+      "total": 15,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 1,
+       "@typescript-eslint/no-explicit-any": 6,
+       "@typescript-eslint/no-floating-promises": 1,
+       "@typescript-eslint/no-unused-vars": 1,
+       "eqeqeq": 1,
+       "import/order": 1,
+       "no-console": 1,
+       "no-param-reassign": 1,
+       "no-shadow": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/app/shared/pipes/cart.service.tsx": {
+      "total": 7,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 1,
+       "@typescript-eslint/no-explicit-any": 4,
+       "prefer-const": 2
+      }
+     },
+     "src/app/shared/pipes/filters.js": {
+      "total": 9,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-unused-vars": 3,
+       "no-await-in-loop": 1,
+       "no-console": 2,
+       "no-param-reassign": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/app/shared/pipes/index.ts": {
+      "total": 3,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "import/order": 1,
+       "no-console": 1
+      }
+     },
+     "src/app/shared/pipes/login.component.js": {
+      "total": 6,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-unused-vars": 1,
+       "no-await-in-loop": 1,
+       "prefer-const": 3
+      }
+     },
+     "src/app/shared/pipes/login.component.ts": {
+      "total": 15,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 1,
+       "@typescript-eslint/no-explicit-any": 4,
+       "@typescript-eslint/no-unused-vars": 3,
+       "eqeqeq": 2,
+       "no-await-in-loop": 1,
+       "no-console": 1,
+       "prefer-const": 3
+      }
+     },
+     "src/app/shared/pipes/migrations.js": {
+      "total": 2,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-unused-vars": 1
+      }
+     },
+     "src/app/shared/pipes/modal.js": {
+      "total": 3,
+      "codes": {
+       "@typescript-eslint/no-unused-vars": 1,
+       "no-console": 1,
+       "no-param-reassign": 1
+      }
+     },
+     "src/app/shared/pipes/modal.ts": {
+      "total": 5,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 2,
+       "@typescript-eslint/no-unused-vars": 1,
+       "no-console": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/app/shared/pipes/order.store.js": {
+      "total": 1,
+      "codes": {
+       "max-len": 1
+      }
+     },
+     "src/app/shared/pipes/orders.route.js": {
+      "total": 4,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "import/order": 1,
+       "no-console": 1,
+       "no-shadow": 1
+      }
+     },
+     "src/app/shared/pipes/users-table.ts": {
+      "total": 7,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 2,
+       "@typescript-eslint/no-explicit-any": 3,
+       "@typescript-eslint/no-floating-promises": 1,
+       "@typescript-eslint/no-unused-vars": 1
+      }
+     },
+     "src/app/shared/ui/avatar.tsx": {
+      "total": 2,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "eqeqeq": 1
+      }
+     },
+     "src/lib/format/avatar.js": {
+      "total": 7,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 2,
+       "@typescript-eslint/no-unused-vars": 2,
+       "no-console": 2,
+       "no-shadow": 1
+      }
+     },
+     "src/lib/format/button.js": {
+      "total": 27,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 1,
+       "@typescript-eslint/explicit-function-return-type": 2,
+       "@typescript-eslint/no-explicit-any": 8,
+       "@typescript-eslint/no-floating-promises": 1,
+       "@typescript-eslint/no-unused-vars": 4,
+       "complexity": 2,
+       "eqeqeq": 2,
+       "import/order": 1,
+       "max-len": 1,
+       "no-await-in-loop": 1,
+       "no-console": 2,
+       "no-shadow": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/lib/format/cart.service.js": {
+      "total": 5,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-unused-vars": 2,
+       "import/order": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/lib/format/constants.js": {
+      "total": 18,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 1,
+       "@typescript-eslint/no-explicit-any": 7,
+       "@typescript-eslint/no-floating-promises": 1,
+       "@typescript-eslint/no-unused-vars": 2,
+       "complexity": 1,
+       "eqeqeq": 1,
+       "import/order": 1,
+       "max-len": 1,
+       "prefer-const": 3
+      }
+     },
+     "src/lib/format/currency.pipe.ts": {
+      "total": 1,
+      "codes": {
+       "prefer-const": 1
+      }
+     },
+     "src/lib/format/effects.ts": {
+      "total": 2,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "no-console": 1
+      }
+     },
+     "src/lib/format/mailer.ts": {
+      "total": 3,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 3
+      }
+     },
+     "src/lib/format/migrations.tsx": {
+      "total": 7,
+      "codes": {
+       "@typescript-eslint/no-unused-vars": 3,
+       "import/order": 1,
+       "no-console": 1,
+       "prefer-const": 2
+      }
+     },
+     "src/lib/format/orders.route.ts": {
+      "total": 3,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-unused-vars": 1,
+       "no-console": 1
+      }
+     },
+     "src/lib/format/report-builder.js": {
+      "total": 51,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 3,
+       "@typescript-eslint/no-explicit-any": 12,
+       "@typescript-eslint/no-unused-vars": 9,
+       "complexity": 3,
+       "eqeqeq": 3,
+       "import/order": 4,
+       "max-len": 3,
+       "no-await-in-loop": 2,
+       "no-console": 4,
+       "no-shadow": 2,
+       "prefer-const": 6
+      }
+     },
+     "src/lib/format/selectors.ts": {
+      "total": 22,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 1,
+       "@typescript-eslint/explicit-function-return-type": 3,
+       "@typescript-eslint/no-explicit-any": 8,
+       "@typescript-eslint/no-floating-promises": 1,
+       "eqeqeq": 2,
+       "import/order": 2,
+       "max-len": 1,
+       "no-console": 2,
+       "prefer-const": 2
+      }
+     },
+     "src/lib/money/filters.ts": {
+      "total": 6,
+      "codes": {
+       "@typescript-eslint/no-floating-promises": 1,
+       "@typescript-eslint/no-unused-vars": 3,
+       "import/order": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/lib/money/mailer.tsx": {
+      "total": 79,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 4,
+       "@typescript-eslint/explicit-function-return-type": 2,
+       "@typescript-eslint/no-explicit-any": 19,
+       "@typescript-eslint/no-floating-promises": 4,
+       "@typescript-eslint/no-unused-vars": 13,
+       "complexity": 2,
+       "eqeqeq": 4,
+       "import/order": 3,
+       "max-len": 4,
+       "no-await-in-loop": 1,
+       "no-console": 9,
+       "no-param-reassign": 3,
+       "no-shadow": 4,
+       "prefer-const": 7
+      }
+     },
+     "src/lib/money/pricing.ts": {
+      "total": 2,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 2
+      }
+     },
+     "src/lib/money/product-card.tsx": {
+      "total": 5,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 2,
+       "@typescript-eslint/no-floating-promises": 1,
+       "@typescript-eslint/no-unused-vars": 1,
+       "prefer-const": 1
+      }
+     },
+     "src/lib/money/users.route.tsx": {
+      "total": 8,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 3,
+       "@typescript-eslint/no-floating-promises": 1,
+       "@typescript-eslint/no-unused-vars": 1,
+       "no-console": 2,
+       "prefer-const": 1
+      }
+     },
+     "src/server/db/api-client.tsx": {
+      "total": 13,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 2,
+       "@typescript-eslint/no-explicit-any": 5,
+       "@typescript-eslint/no-unused-vars": 1,
+       "eqeqeq": 1,
+       "no-console": 4
+      }
+     },
+     "src/server/db/checkout.component.tsx": {
+      "total": 8,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 2,
+       "@typescript-eslint/no-floating-promises": 1,
+       "@typescript-eslint/no-unused-vars": 3,
+       "import/order": 1,
+       "no-console": 1
+      }
+     },
+     "src/server/db/product-card.tsx": {
+      "total": 3,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "complexity": 1,
+       "no-await-in-loop": 1
+      }
+     },
+     "src/server/db/selectors.js": {
+      "total": 2,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "no-console": 1
+      }
+     },
+     "src/server/db/users-table.ts": {
+      "total": 3,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 1,
+       "@typescript-eslint/no-explicit-any": 1,
+       "complexity": 1
+      }
+     },
+     "src/server/db/utils.tsx": {
+      "total": 35,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 1,
+       "@typescript-eslint/no-explicit-any": 6,
+       "@typescript-eslint/no-floating-promises": 2,
+       "@typescript-eslint/no-unused-vars": 9,
+       "complexity": 3,
+       "eqeqeq": 1,
+       "import/order": 2,
+       "max-len": 1,
+       "no-console": 3,
+       "no-shadow": 3,
+       "prefer-const": 4
+      }
+     },
+     "src/server/routes/button.tsx": {
+      "total": 5,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 2,
+       "@typescript-eslint/no-unused-vars": 1,
+       "max-len": 1,
+       "no-console": 1
+      }
+     },
+     "src/server/routes/constants.ts": {
+      "total": 4,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-unused-vars": 2,
+       "no-await-in-loop": 1
+      }
+     },
+     "src/server/routes/migrations.ts": {
+      "total": 4,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 2,
+       "eqeqeq": 1,
+       "no-shadow": 1
+      }
+     },
+     "src/server/routes/report-builder.ts": {
+      "total": 5,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-unused-vars": 2,
+       "eqeqeq": 1,
+       "import/order": 1
+      }
+     },
+     "src/server/routes/users.route.ts": {
+      "total": 7,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-unused-vars": 1,
+       "import/order": 1,
+       "no-console": 1,
+       "no-param-reassign": 1,
+       "prefer-const": 2
+      }
+     },
+     "src/server/services/api-client.tsx": {
+      "total": 9,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 1,
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-unused-vars": 1,
+       "complexity": 2,
+       "eqeqeq": 2,
+       "no-console": 1,
+       "no-shadow": 1
+      }
+     },
+     "src/server/services/button.ts": {
+      "total": 5,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "@typescript-eslint/no-unused-vars": 1,
+       "eqeqeq": 2,
+       "prefer-const": 1
+      }
+     },
+     "src/server/services/cart.service.js": {
+      "total": 4,
+      "codes": {
+       "@typescript-eslint/no-unused-vars": 1,
+       "import/order": 1,
+       "no-console": 2
+      }
+     },
+     "src/server/services/index.ts": {
+      "total": 2,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "no-param-reassign": 1
+      }
+     },
+     "src/server/services/schema.tsx": {
+      "total": 14,
+      "codes": {
+       "@angular-eslint/no-empty-lifecycle-method": 2,
+       "@typescript-eslint/explicit-function-return-type": 1,
+       "@typescript-eslint/no-explicit-any": 5,
+       "@typescript-eslint/no-unused-vars": 1,
+       "complexity": 2,
+       "import/order": 1,
+       "max-len": 1,
+       "no-console": 1
+      }
+     },
+     "src/server/services/selectors.js": {
+      "total": 2,
+      "codes": {
+       "@typescript-eslint/no-unused-vars": 1,
+       "no-console": 1
+      }
+     },
+     "src/server/services/users-table.js": {
+      "total": 2,
+      "codes": {
+       "@typescript-eslint/no-explicit-any": 1,
+       "eqeqeq": 1
+      }
+     },
+     "src/server/services/users-table.tsx": {
+      "total": 9,
+      "codes": {
+       "@typescript-eslint/explicit-function-return-type": 1,
+       "@typescript-eslint/no-explicit-any": 2,
+       "@typescript-eslint/no-unused-vars": 2,
+       "eqeqeq": 1,
+       "max-len": 1,
+       "no-shadow": 2
+      }
+     }
+    },
+    "codes": {
+     "@angular-eslint/no-empty-lifecycle-method": 53,
+     "@typescript-eslint/explicit-function-return-type": 66,
+     "@typescript-eslint/no-explicit-any": 411,
+     "@typescript-eslint/no-floating-promises": 40,
+     "@typescript-eslint/no-unused-vars": 218,
+     "complexity": 52,
+     "eqeqeq": 95,
+     "import/order": 60,
+     "max-len": 63,
+     "no-await-in-loop": 36,
+     "no-console": 130,
+     "no-param-reassign": 35,
+     "no-shadow": 55,
+     "prefer-const": 131
+    }
+   }
+  },
+  {
+   "id": "X4",
+   "top_codes": [
+    "TS2345",
+    "TS2322",
+    "TS2532",
+    "TS7006",
+    "TS2339",
+    "TS2307",
+    "TS2554",
+    "TS2741",
+    "TS18048",
+    "TS6133"
+   ],
+   "top_files": [
+    "src/app/core/http/format-date.ts",
+    "src/app/profile/pricing.ts",
+    "src/app/cart/cart.component.ts",
+    "src/app/core/state/profile-form.tsx",
+    "src/app/cart/round.ts",
+    "src/app/catalog/cart.service.tsx",
+    "src/app/admin/reports/checkout.component.tsx",
+    "src/app/admin/users/currency.pipe.ts",
+    "src/app/auth/cart.service.tsx",
+    "src/app/catalog/profile-form.ts"
+   ],
+   "truth": {
+    "format": "tsc",
+    "per_file": {
+     "src/app/admin/reports/checkout.component.tsx": {
+      "total": 27,
+      "codes": {
+       "TS18048": 2,
+       "TS2307": 1,
+       "TS2322": 1,
+       "TS2339": 1,
+       "TS2345": 10,
+       "TS2532": 2,
+       "TS2554": 5,
+       "TS2564": 1,
+       "TS6133": 1,
+       "TS7006": 3
+      }
+     },
+     "src/app/admin/reports/effects.ts": {
+      "total": 7,
+      "codes": {
+       "TS2307": 1,
+       "TS2322": 1,
+       "TS2345": 1,
+       "TS2564": 1,
+       "TS7006": 3
+      }
+     },
+     "src/app/admin/reports/pricing.tsx": {
+      "total": 5,
+      "codes": {
+       "TS2322": 1,
+       "TS2345": 3,
+       "TS6133": 1
+      }
+     },
+     "src/app/admin/reports/users-table.ts": {
+      "total": 6,
+      "codes": {
+       "TS2339": 1,
+       "TS2345": 4,
+       "TS2532": 1
+      }
+     },
+     "src/app/admin/reports/utils.tsx": {
+      "total": 3,
+      "codes": {
+       "TS2322": 1,
+       "TS2345": 2
+      }
+     },
+     "src/app/admin/users/auth.guard.tsx": {
+      "total": 2,
+      "codes": {
+       "TS2307": 1,
+       "TS2741": 1
+      }
+     },
+     "src/app/admin/users/currency.pipe.ts": {
+      "total": 27,
+      "codes": {
+       "TS18048": 1,
+       "TS2307": 1,
+       "TS2322": 5,
+       "TS2339": 3,
+       "TS2345": 7,
+       "TS2554": 2,
+       "TS2741": 1,
+       "TS6133": 2,
+       "TS7006": 5
+      }
+     },
+     "src/app/admin/users/schema.ts": {
+      "total": 12,
+      "codes": {
+       "TS2322": 3,
+       "TS2345": 3,
+       "TS2532": 3,
+       "TS2741": 2,
+       "TS7006": 1
+      }
+     },
+     "src/app/admin/users/search-box.ts": {
+      "total": 10,
+      "codes": {
+       "TS18048": 1,
+       "TS2322": 2,
+       "TS2339": 1,
+       "TS2345": 3,
+       "TS2532": 2,
+       "TS2554": 1
+      }
+     },
+     "src/app/admin/users/selectors.ts": {
+      "total": 9,
+      "codes": {
+       "TS2307": 1,
+       "TS2322": 2,
+       "TS2345": 2,
+       "TS2741": 1,
+       "TS6133": 1,
+       "TS7006": 2
+      }
+     },
+     "src/app/admin/users/users.route.tsx": {
+      "total": 4,
+      "codes": {
+       "TS2322": 2,
+       "TS2532": 1,
+       "TS2741": 1
+      }
+     },
+     "src/app/auth/cart.service.tsx": {
+      "total": 24,
+      "codes": {
+       "TS18048": 2,
+       "TS2307": 2,
+       "TS2322": 5,
+       "TS2339": 2,
+       "TS2345": 2,
+       "TS2532": 3,
+       "TS2554": 3,
+       "TS2741": 1,
+       "TS6133": 2,
+       "TS7006": 2
+      }
+     },
+     "src/app/auth/checkout.component.ts": {
+      "total": 2,
+      "codes": {
+       "TS2345": 2
+      }
+     },
+     "src/app/auth/mailer.ts": {
+      "total": 5,
+      "codes": {
+       "TS2322": 1,
+       "TS2345": 1,
+       "TS2532": 1,
+       "TS7006": 2
+      }
+     },
+     "src/app/auth/pricing.ts": {
+      "total": 17,
+      "codes": {
+       "TS18048": 1,
+       "TS2307": 1,
+       "TS2322": 2,
+       "TS2339": 2,
+       "TS2345": 7,
+       "TS2532": 3,
+       "TS7006": 1
+      }
+     },
+     "src/app/cart/cart.component.ts": {
+      "total": 61,
+      "codes": {
+       "TS18048": 2,
+       "TS2307": 4,
+       "TS2322": 9,
+       "TS2339": 4,
+       "TS2345": 17,
+       "TS2532": 10,
+       "TS2564": 4,
+       "TS2741": 4,
+       "TS6133": 1,
+       "TS7006": 6
+      }
+     },
+     "src/app/cart/cart.service.tsx": {
+      "total": 2,
+      "codes": {
+       "TS2322": 1,
+       "TS2339": 1
+      }
+     },
+     "src/app/cart/report-builder.ts": {
+      "total": 10,
+      "codes": {
+       "TS2322": 3,
+       "TS2345": 2,
+       "TS2532": 1,
+       "TS2564": 1,
+       "TS2741": 1,
+       "TS7006": 2
+      }
+     },
+     "src/app/cart/round.ts": {
+      "total": 37,
+      "codes": {
+       "TS18048": 3,
+       "TS2307": 3,
+       "TS2322": 4,
+       "TS2339": 3,
+       "TS2345": 12,
+       "TS2532": 3,
+       "TS2554": 2,
+       "TS2741": 1,
+       "TS6133": 2,
+       "TS7006": 4
+      }
+     },
+     "src/app/catalog/cart.service.tsx": {
+      "total": 33,
+      "codes": {
+       "TS18048": 1,
+       "TS2307": 6,
+       "TS2322": 6,
+       "TS2345": 8,
+       "TS2532": 6,
+       "TS2564": 1,
+       "TS2741": 1,
+       "TS6133": 2,
+       "TS7006": 2
+      }
+     },
+     "src/app/catalog/checkout.component.ts": {
+      "total": 7,
+      "codes": {
+       "TS2322": 1,
+       "TS2339": 1,
+       "TS2345": 4,
+       "TS2564": 1
+      }
+     },
+     "src/app/catalog/filters.tsx": {
+      "total": 2,
+      "codes": {
+       "TS2322": 1,
+       "TS2554": 1
+      }
+     },
+     "src/app/catalog/login.component.ts": {
+      "total": 8,
+      "codes": {
+       "TS18048": 1,
+       "TS2307": 1,
+       "TS2345": 1,
+       "TS2532": 1,
+       "TS2741": 1,
+       "TS6133": 1,
+       "TS7006": 2
+      }
+     },
+     "src/app/catalog/migrations.ts": {
+      "total": 3,
+      "codes": {
+       "TS2345": 2,
+       "TS7006": 1
+      }
+     },
+     "src/app/catalog/order-history.ts": {
+      "total": 3,
+      "codes": {
+       "TS2322": 1,
+       "TS2345": 1,
+       "TS7006": 1
+      }
+     },
+     "src/app/catalog/profile-form.ts": {
+      "total": 18,
+      "codes": {
+       "TS2322": 6,
+       "TS2345": 3,
+       "TS2532": 2,
+       "TS2554": 3,
+       "TS2741": 1,
+       "TS6133": 1,
+       "TS7006": 2
+      }
+     },
+     "src/app/catalog/users.route.tsx": {
+      "total": 5,
+      "codes": {
+       "TS2345": 5
+      }
+     },
+     "src/app/checkout/api-client.tsx": {
+      "total": 4,
+      "codes": {
+       "TS2345": 1,
+       "TS2532": 1,
+       "TS7006": 2
+      }
+     },
+     "src/app/checkout/checkout.component.tsx": {
+      "total": 4,
+      "codes": {
+       "TS2322": 1,
+       "TS2345": 1,
+       "TS2532": 1,
+       "TS2554": 1
+      }
+     },
+     "src/app/checkout/format-date.ts": {
+      "total": 17,
+      "codes": {
+       "TS18048": 2,
+       "TS2322": 5,
+       "TS2339": 2,
+       "TS2345": 6,
+       "TS2532": 1,
+       "TS2564": 1
+      }
+     },
+     "src/app/checkout/orders.route.ts": {
+      "total": 8,
+      "codes": {
+       "TS2307": 1,
+       "TS2322": 1,
+       "TS2339": 1,
+       "TS2345": 1,
+       "TS2554": 1,
+       "TS2741": 1,
+       "TS7006": 2
+      }
+     },
+     "src/app/checkout/pricing.ts": {
+      "total": 6,
+      "codes": {
+       "TS2322": 1,
+       "TS2339": 1,
+       "TS2345": 1,
+       "TS2741": 1,
+       "TS7006": 2
+      }
+     },
+     "src/app/checkout/selectors.ts": {
+      "total": 8,
+      "codes": {
+       "TS2322": 1,
+       "TS2345": 4,
+       "TS2564": 1,
+       "TS2741": 1,
+       "TS7006": 1
+      }
+     },
+     "src/app/checkout/token.interceptor.ts": {
+      "total": 6,
+      "codes": {
+       "TS2322": 1,
+       "TS2339": 1,
+       "TS2345": 3,
+       "TS2741": 1
+      }
+     },
+     "src/app/core/http/api-client.tsx": {
+      "total": 6,
+      "codes": {
+       "TS2322": 1,
+       "TS2345": 3,
+       "TS6133": 1,
+       "TS7006": 1
+      }
+     },
+     "src/app/core/http/avatar.ts": {
+      "total": 5,
+      "codes": {
+       "TS2339": 1,
+       "TS2345": 1,
+       "TS2564": 1,
+       "TS2741": 2
+      }
+     },
+     "src/app/core/http/avatar.tsx": {
+      "total": 5,
+      "codes": {
+       "TS2322": 2,
+       "TS2345": 1,
+       "TS2554": 1,
+       "TS2741": 1
+      }
+     },
+     "src/app/core/http/format-date.ts": {
+      "total": 167,
+      "codes": {
+       "TS18048": 8,
+       "TS2307": 10,
+       "TS2322": 32,
+       "TS2339": 11,
+       "TS2345": 45,
+       "TS2532": 15,
+       "TS2554": 10,
+       "TS2564": 5,
+       "TS2741": 9,
+       "TS6133": 2,
+       "TS7006": 20
+      }
+     },
+     "src/app/core/http/mailer.ts": {
+      "total": 2,
+      "codes": {
+       "TS2532": 2
+      }
+     },
+     "src/app/core/state/filters.ts": {
+      "total": 11,
+      "codes": {
+       "TS18048": 1,
+       "TS2339": 1,
+       "TS2345": 4,
+       "TS2532": 2,
+       "TS2554": 1,
+       "TS6133": 1,
+       "TS7006": 1
+      }
+     },
+     "src/app/core/state/login.component.ts": {
+      "total": 8,
+      "codes": {
+       "TS2322": 3,
+       "TS2339": 1,
+       "TS2532": 2,
+       "TS2741": 1,
+       "TS7006": 1
+      }
+     },
+     "src/app/core/state/pricing.tsx": {
+      "total": 13,
+      "codes": {
+       "TS18048": 1,
+       "TS2307": 1,
+       "TS2322": 6,
+       "TS2345": 3,
+       "TS7006": 2
+      }
+     },
+     "src/app/core/state/profile-form.tsx": {
+      "total": 40,
+      "codes": {
+       "TS18048": 2,
+       "TS2307": 3,
+       "TS2322": 7,
+       "TS2339": 2,
+       "TS2345": 14,
+       "TS2532": 2,
+       "TS2554": 1,
+       "TS2564": 1,
+       "TS2741": 3,
+       "TS6133": 3,
+       "TS7006": 2
+      }
+     },
+     "src/app/core/state/utils.ts": {
+      "total": 9,
+      "codes": {
+       "TS18048": 1,
+       "TS2322": 2,
+       "TS2345": 3,
+       "TS2532": 2,
+       "TS2554": 1
+      }
+     },
+     "src/app/orders/auth.guard.ts": {
+      "total": 2,
+      "codes": {
+       "TS18048": 1,
+       "TS2322": 1
+      }
+     },
+     "src/app/orders/cart.service.tsx": {
+      "total": 4,
+      "codes": {
+       "TS2322": 2,
+       "TS2345": 2
+      }
+     },
+     "src/app/orders/checkout.component.ts": {
+      "total": 7,
+      "codes": {
+       "TS18048": 2,
+       "TS2322": 1,
+       "TS2345": 1,
+       "TS2532": 1,
+       "TS2554": 1,
+       "TS6133": 1
+      }
+     },
+     "src/app/orders/constants.tsx": {
+      "total": 4,
+      "codes": {
+       "TS2322": 1,
+       "TS2345": 1,
+       "TS2532": 1,
+       "TS2564": 1
+      }
+     },
+     "src/app/orders/product-list.ts": {
+      "total": 9,
+      "codes": {
+       "TS18048": 2,
+       "TS2307": 2,
+       "TS2339": 1,
+       "TS2345": 1,
+       "TS2554": 1,
+       "TS6133": 1,
+       "TS7006": 1
+      }
+     },
+     "src/app/profile/avatar.tsx": {
+      "total": 2,
+      "codes": {
+       "TS2345": 1,
+       "TS7006": 1
+      }
+     },
+     "src/app/profile/effects.tsx": {
+      "total": 9,
+      "codes": {
+       "TS2322": 3,
+       "TS2345": 2,
+       "TS2532": 2,
+       "TS7006": 2
+      }
+     },
+     "src/app/profile/order-history.ts": {
+      "total": 9,
+      "codes": {
+       "TS18048": 1,
+       "TS2322": 1,
+       "TS2339": 2,
+       "TS2345": 3,
+       "TS2532": 1,
+       "TS7006": 1
+      }
+     },
+     "src/app/profile/orders.route.tsx": {
+      "total": 3,
+      "codes": {
+       "TS2322": 3
+      }
+     },
+     "src/app/profile/pricing.ts": {
+      "total": 95,
+      "codes": {
+       "TS18048": 7,
+       "TS2307": 8,
+       "TS2322": 15,
+       "TS2339": 6,
+       "TS2345": 29,
+       "TS2532": 12,
+       "TS2554": 8,
+       "TS2741": 4,
+       "TS6133": 1,
+       "TS7006": 5
+      }
+     },
+     "src/app/profile/product-card.ts": {
+      "total": 3,
+      "codes": {
+       "TS2322": 1,
+       "TS2345": 1,
+       "TS2564": 1
+      }
+     },
+     "src/app/search/checkout.component.tsx": {
+      "total": 3,
+      "codes": {
+       "TS2322": 1,
+       "TS2345": 2
+      }
+     },
+     "src/app/search/date-range.pipe.ts": {
+      "total": 2,
+      "codes": {
+       "TS6133": 1,
+       "TS7006": 1
+      }
+     },
+     "src/app/search/index.ts": {
+      "total": 3,
+      "codes": {
+       "TS2322": 1,
+       "TS2345": 1,
+       "TS2741": 1
+      }
+     },
+     "src/app/search/modal.tsx": {
+      "total": 6,
+      "codes": {
+       "TS2322": 2,
+       "TS2345": 2,
+       "TS7006": 2
+      }
+     },
+     "src/app/search/order-history.ts": {
+      "total": 5,
+      "codes": {
+       "TS2322": 1,
+       "TS2345": 2,
+       "TS7006": 2
+      }
+     },
+     "src/app/search/product-list.ts": {
+      "total": 8,
+      "codes": {
+       "TS2307": 2,
+       "TS2322": 1,
+       "TS2345": 2,
+       "TS2532": 2,
+       "TS2554": 1
+      }
+     },
+     "src/app/search/schema.ts": {
+      "total": 2,
+      "codes": {
+       "TS2345": 1,
+       "TS2741": 1
+      }
+     },
+     "src/app/search/utils.ts": {
+      "total": 7,
+      "codes": {
+       "TS18048": 1,
+       "TS2307": 1,
+       "TS2322": 1,
+       "TS2339": 1,
+       "TS2532": 1,
+       "TS2554": 1,
+       "TS7006": 1
+      }
+     },
+     "src/app/shared/pipes/auth.guard.ts": {
+      "total": 2,
+      "codes": {
+       "TS6133": 1,
+       "TS7006": 1
+      }
+     },
+     "src/app/shared/pipes/login.component.tsx": {
+      "total": 12,
+      "codes": {
+       "TS2322": 3,
+       "TS2339": 2,
+       "TS2345": 4,
+       "TS2532": 2,
+       "TS7006": 1
+      }
+     },
+     "src/app/shared/ui/auth.guard.ts": {
+      "total": 1,
+      "codes": {
+       "TS2532": 1
+      }
+     },
+     "src/app/shared/ui/filters.ts": {
+      "total": 2,
+      "codes": {
+       "TS2345": 1,
+       "TS6133": 1
+      }
+     },
+     "src/app/shared/ui/order.store.ts": {
+      "total": 7,
+      "codes": {
+       "TS2322": 2,
+       "TS2345": 2,
+       "TS2532": 1,
+       "TS6133": 2
+      }
+     },
+     "src/lib/format/button.tsx": {
+      "total": 3,
+      "codes": {
+       "TS2532": 1,
+       "TS2741": 1,
+       "TS7006": 1
+      }
+     },
+     "src/lib/format/cart.component.ts": {
+      "total": 4,
+      "codes": {
+       "TS2345": 1,
+       "TS2532": 2,
+       "TS6133": 1
+      }
+     },
+     "src/lib/format/order-history.tsx": {
+      "total": 13,
+      "codes": {
+       "TS18048": 1,
+       "TS2307": 1,
+       "TS2322": 3,
+       "TS2339": 1,
+       "TS2345": 4,
+       "TS2532": 1,
+       "TS2554": 1,
+       "TS7006": 1
+      }
+     },
+     "src/lib/format/pricing.ts": {
+      "total": 4,
+      "codes": {
+       "TS2345": 3,
+       "TS6133": 1
+      }
+     },
+     "src/lib/format/report-builder.tsx": {
+      "total": 5,
+      "codes": {
+       "TS2322": 1,
+       "TS2345": 1,
+       "TS2532": 2,
+       "TS2741": 1
+      }
+     },
+     "src/lib/format/retry.ts": {
+      "total": 4,
+      "codes": {
+       "TS2345": 1,
+       "TS2532": 1,
+       "TS6133": 1,
+       "TS7006": 1
+      }
+     },
+     "src/lib/money/migrations.ts": {
+      "total": 7,
+      "codes": {
+       "TS2345": 2,
+       "TS2532": 2,
+       "TS2564": 1,
+       "TS2741": 2
+      }
+     },
+     "src/lib/money/payment.service.ts": {
+      "total": 4,
+      "codes": {
+       "TS2345": 2,
+       "TS2564": 1,
+       "TS7006": 1
+      }
+     },
+     "src/lib/money/profile-form.tsx": {
+      "total": 8,
+      "codes": {
+       "TS2322": 3,
+       "TS2345": 2,
+       "TS2532": 1,
+       "TS2554": 1,
+       "TS7006": 1
+      }
+     },
+     "src/server/db/filters.tsx": {
+      "total": 2,
+      "codes": {
+       "TS2339": 1,
+       "TS2564": 1
+      }
+     },
+     "src/server/routes/cart.component.ts": {
+      "total": 5,
+      "codes": {
+       "TS2307": 1,
+       "TS2322": 1,
+       "TS2339": 1,
+       "TS2554": 1,
+       "TS7006": 1
+      }
+     },
+     "src/server/routes/currency.pipe.ts": {
+      "total": 3,
+      "codes": {
+       "TS2345": 1,
+       "TS6133": 1,
+       "TS7006": 1
+      }
+     },
+     "src/server/routes/date-range.pipe.ts": {
+      "total": 11,
+      "codes": {
+       "TS2322": 2,
+       "TS2345": 6,
+       "TS2564": 1,
+       "TS6133": 1,
+       "TS7006": 1
+      }
+     },
+     "src/server/routes/modal.ts": {
+      "total": 2,
+      "codes": {
+       "TS2532": 1,
+       "TS2741": 1
+      }
+     },
+     "src/server/routes/report-builder.ts": {
+      "total": 4,
+      "codes": {
+       "TS2339": 1,
+       "TS2345": 2,
+       "TS2532": 1
+      }
+     },
+     "src/server/routes/schema.tsx": {
+      "total": 4,
+      "codes": {
+       "TS2345": 1,
+       "TS2532": 1,
+       "TS6133": 1,
+       "TS7006": 1
+      }
+     },
+     "src/server/routes/utils.ts": {
+      "total": 2,
+      "codes": {
+       "TS2339": 1,
+       "TS2564": 1
+      }
+     },
+     "src/server/services/constants.tsx": {
+      "total": 2,
+      "codes": {
+       "TS2322": 1,
+       "TS6133": 1
+      }
+     },
+     "src/server/services/filters.ts": {
+      "total": 7,
+      "codes": {
+       "TS2307": 1,
+       "TS2322": 1,
+       "TS2345": 3,
+       "TS2532": 1,
+       "TS2564": 1
+      }
+     },
+     "src/server/services/pricing.ts": {
+      "total": 9,
+      "codes": {
+       "TS18048": 1,
+       "TS2322": 2,
+       "TS2345": 2,
+       "TS2554": 1,
+       "TS2741": 1,
+       "TS7006": 2
+      }
+     },
+     "src/server/services/pricing.tsx": {
+      "total": 11,
+      "codes": {
+       "TS18048": 2,
+       "TS2322": 1,
+       "TS2339": 1,
+       "TS2345": 1,
+       "TS2532": 2,
+       "TS2554": 2,
+       "TS6133": 1,
+       "TS7006": 1
+      }
+     },
+     "src/server/services/report-builder.ts": {
+      "total": 2,
+      "codes": {
+       "TS2322": 1,
+       "TS2532": 1
+      }
+     },
+     "src/server/services/retry.ts": {
+      "total": 2,
+      "codes": {
+       "TS2339": 1,
+       "TS2345": 1
+      }
+     }
+    },
+    "codes": {
+     "TS18048": 47,
+     "TS2307": 53,
+     "TS2322": 177,
+     "TS2339": 59,
+     "TS2345": 284,
+     "TS2532": 108,
+     "TS2554": 51,
+     "TS2564": 26,
+     "TS2741": 48,
+     "TS6133": 37,
+     "TS7006": 103
+    }
+   }
+  },
+  {
+   "id": "G1",
+   "top_codes": [
+    "COM812",
+    "TRY003",
+    "D102",
+    "T201",
+    "EM102",
+    "CPY001",
+    "D107",
+    "PLR2004",
+    "D101",
+    "D105"
+   ],
+   "top_files": [
+    "src/local_delegate/benchmark.py",
+    "src/local_delegate/agents.py",
+    "src/local_delegate/autostart.py",
+    "src/local_delegate/__init__.py",
+    "src/local_delegate/__main__.py"
+   ],
+   "truth": {
+    "format": "concise",
+    "per_file": {
+     "src/local_delegate/__init__.py": {
+      "total": 1,
+      "codes": {
+       "CPY001": 1
+      }
+     },
+     "src/local_delegate/__main__.py": {
+      "total": 1,
+      "codes": {
+       "CPY001": 1
+      }
+     },
+     "src/local_delegate/agents.py": {
+      "total": 5,
+      "codes": {
+       "COM812": 1,
+       "CPY001": 1,
+       "D401": 1,
+       "PLR2004": 1,
+       "TC003": 1
+      }
+     },
+     "src/local_delegate/autostart.py": {
+      "total": 3,
+      "codes": {
+       "CPY001": 1,
+       "D401": 1,
+       "S603": 1
+      }
+     },
+     "src/local_delegate/benchmark.py": {
+      "total": 86,
+      "codes": {
+       "C901": 1,
+       "COM812": 15,
+       "CPY001": 1,
+       "D101": 4,
+       "D102": 7,
+       "D103": 4,
+       "D105": 4,
+       "D107": 5,
+       "D205": 1,
+       "D209": 1,
+       "D301": 1,
+       "E501": 3,
+       "EM101": 2,
+       "EM102": 6,
+       "FBT003": 1,
+       "PLC0415": 2,
+       "PLR0912": 1,
+       "PLR0913": 2,
+       "PLR0915": 1,
+       "PLR2004": 3,
+       "PLW1510": 1,
+       "RUF036": 1,
+       "S603": 1,
+       "T201": 7,
+       "TC003": 2,
+       "TRY003": 8,
+       "TRY301": 1
+      }
+     }
+    },
+    "codes": {
+     "C901": 1,
+     "COM812": 16,
+     "CPY001": 5,
+     "D101": 4,
+     "D102": 7,
+     "D103": 4,
+     "D105": 4,
+     "D107": 5,
+     "D205": 1,
+     "D209": 1,
+     "D301": 1,
+     "D401": 2,
+     "E501": 3,
+     "EM101": 2,
+     "EM102": 6,
+     "FBT003": 1,
+     "PLC0415": 2,
+     "PLR0912": 1,
+     "PLR0913": 2,
+     "PLR0915": 1,
+     "PLR2004": 4,
+     "PLW1510": 1,
+     "RUF036": 1,
+     "S603": 2,
+     "T201": 7,
+     "TC003": 3,
+     "TRY003": 8,
+     "TRY301": 1
+    }
+   }
+  },
+  {
+   "id": "G2",
+   "top_codes": [
+    "lint/style/noMagicNumbers",
+    "lint/style/useNamingConvention",
+    "lint/style/noExcessiveClassesPerFile",
+    "lint/style/useBlockStatements",
+    "lint/style/noParameterProperties",
+    "lint/style/useImportType",
+    "lint/nursery/noRestrictedDependencies",
+    "lint/style/noDefaultExport"
+   ],
+   "top_files": [
+    "apps/api/src/validate/dto/validate.dto.ts",
+    "apps/api/src/config/env.schema.ts",
+    "apps/api/src/geocode/dto/geocode.dto.ts",
+    "pnpm-workspace.yaml",
+    "./dto/geocode.dto.ts",
+    "./geocode.service.ts",
+    "apps/api/src/geocode/geocode.controller.ts",
+    "apps/api/src/config/repo-root.ts",
+    "apps/api/package.json",
+    "apps/api/src/validate/validate.controller.ts"
+   ],
+   "truth": null
+  },
+  {
+   "id": "G3",
+   "top_codes": [
+    "lint/nursery/useExplicitReturnType",
+    "lint/nursery/useExplicitType",
+    "lint/nursery/useReactFunctionComponentDefinition",
+    "lint/style/useNumericSeparators",
+    "lint/style/useConsistentTypeDefinitions",
+    "lint/style/noTernary",
+    "lint/nursery/useThisInClassMethods"
+   ],
+   "top_files": [
+    "src/app/core/decorators/throttle.decorator.ts",
+    "src/app/core/decorators/log-audit.decorator.ts",
+    "src/app/core/filters/http-exception.filter.ts",
+    "src/app/core/decorators/app-controller.decorator.ts"
+   ],
+   "truth": null
+  },
+  {
+   "id": "G4",
+   "top_codes": [
+    "E501",
+    "COM812",
+    "ANN201",
+    "RUF001",
+    "TID252",
+    "ANN001",
+    "FAST002",
+    "SLF001",
+    "D103",
+    "BLE001"
+   ],
+   "top_files": [
+    "src/local_delegate/web/metrics.py",
+    "src/local_delegate/web/sysinfo.py",
+    "src/local_delegate/web/auth.py",
+    "src/local_delegate/web/__init__.py"
+   ],
+   "truth": {
+    "format": "concise",
+    "per_file": {
+     "src/local_delegate/web/__init__.py": {
+      "total": 1,
+      "codes": {
+       "CPY001": 1
+      }
+     },
+     "src/local_delegate/web/auth.py": {
+      "total": 19,
+      "codes": {
+       "ANN001": 8,
+       "ANN201": 1,
+       "ANN202": 2,
+       "COM812": 3,
+       "CPY001": 1,
+       "D102": 1,
+       "D107": 1,
+       "D400": 2
+      }
+     },
+     "src/local_delegate/web/metrics.py": {
+      "total": 340,
+      "codes": {
+       "ANN001": 2,
+       "ANN201": 15,
+       "BLE001": 3,
+       "C901": 1,
+       "COM812": 13,
+       "CPY001": 1,
+       "D103": 6,
+       "D205": 3,
+       "D209": 3,
+       "E501": 231,
+       "FAST002": 9,
+       "FBT001": 1,
+       "PLC0415": 1,
+       "PLR0915": 1,
+       "PLR2004": 1,
+       "PLW0603": 2,
+       "PLW2901": 1,
+       "RUF001": 15,
+       "RUF002": 2,
+       "RUF003": 2,
+       "S110": 1,
+       "SIM105": 1,
+       "SIM108": 1,
+       "SLF001": 8,
+       "T201": 1,
+       "TID252": 14,
+       "TRY300": 1
+      }
+     },
+     "src/local_delegate/web/sysinfo.py": {
+      "total": 28,
+      "codes": {
+       "BLE001": 3,
+       "COM812": 2,
+       "CPY001": 1,
+       "D403": 3,
+       "PLC0415": 1,
+       "PLR2004": 3,
+       "PLW0603": 2,
+       "PLW1510": 4,
+       "PTH123": 3,
+       "PTH208": 1,
+       "S603": 1,
+       "S607": 4
+      }
+     }
+    },
+    "codes": {
+     "ANN001": 10,
+     "ANN201": 16,
+     "ANN202": 2,
+     "BLE001": 6,
+     "C901": 1,
+     "COM812": 18,
+     "CPY001": 4,
+     "D102": 1,
+     "D103": 6,
+     "D107": 1,
+     "D205": 3,
+     "D209": 3,
+     "D400": 2,
+     "D403": 3,
+     "E501": 231,
+     "FAST002": 9,
+     "FBT001": 1,
+     "PLC0415": 2,
+     "PLR0915": 1,
+     "PLR2004": 4,
+     "PLW0603": 4,
+     "PLW1510": 4,
+     "PLW2901": 1,
+     "PTH123": 3,
+     "PTH208": 1,
+     "RUF001": 15,
+     "RUF002": 2,
+     "RUF003": 2,
+     "S110": 1,
+     "S603": 1,
+     "S607": 4,
+     "SIM105": 1,
+     "SIM108": 1,
+     "SLF001": 8,
+     "T201": 1,
+     "TID252": 14,
+     "TRY300": 1
+    }
+   }
+  },
+  {
+   "id": "G5",
+   "top_codes": [
+    "COM812",
+    "D102",
+    "T201",
+    "D107",
+    "D101",
+    "D105",
+    "D103",
+    "TC003",
+    "PLR2004",
+    "E501"
+   ],
+   "top_files": [
+    "src/local_delegate/benchmark.py",
+    "checks.json"
+   ],
+   "truth": {
+    "format": "full",
+    "per_file": {
+     "src/local_delegate/benchmark.py": {
+      "total": 68,
+      "codes": {
+       "C901": 2,
+       "COM812": 11,
+       "CPY001": 1,
+       "D101": 4,
+       "D102": 7,
+       "D103": 4,
+       "D105": 4,
+       "D107": 5,
+       "D205": 1,
+       "D209": 1,
+       "D301": 1,
+       "E501": 3,
+       "FBT003": 1,
+       "PLC0415": 2,
+       "PLR0912": 1,
+       "PLR0913": 2,
+       "PLR0915": 1,
+       "PLR2004": 3,
+       "PLW1510": 1,
+       "PLW2901": 1,
+       "RUF036": 1,
+       "S603": 1,
+       "T201": 7,
+       "TC003": 3
+      }
+     }
+    },
+    "codes": {
+     "C901": 2,
+     "COM812": 11,
+     "CPY001": 1,
+     "D101": 4,
+     "D102": 7,
+     "D103": 4,
+     "D105": 4,
+     "D107": 5,
+     "D205": 1,
+     "D209": 1,
+     "D301": 1,
+     "E501": 3,
+     "FBT003": 1,
+     "PLC0415": 2,
+     "PLR0912": 1,
+     "PLR0913": 2,
+     "PLR0915": 1,
+     "PLR2004": 3,
+     "PLW1510": 1,
+     "PLW2901": 1,
+     "RUF036": 1,
+     "S603": 1,
+     "T201": 7,
+     "TC003": 3
+    }
+   }
+  },
+  {
+   "id": "M1",
+   "top_codes": [
+    "E501",
+    "F401",
+    "W291"
+   ],
+   "top_files": [
+    "app/util.py",
+    "app/main.py",
+    "app/cli.py"
+   ],
+   "truth": {
+    "format": "concise",
+    "per_file": {
+     "app/cli.py": {
+      "total": 1,
+      "codes": {
+       "E501": 1
+      }
+     },
+     "app/main.py": {
+      "total": 3,
+      "codes": {
+       "E501": 2,
+       "F401": 1
+      }
+     },
+     "app/util.py": {
+      "total": 4,
+      "codes": {
+       "E501": 1,
+       "F401": 2,
+       "W291": 1
+      }
+     }
+    },
+    "codes": {
+     "E501": 4,
+     "F401": 3,
+     "W291": 1
+    }
+   }
+  },
+  {
+   "id": "M2",
+   "top_codes": [
+    "D103",
+    "D100",
+    "T201",
+    "B006"
+   ],
+   "top_files": [
+    "src/a.py",
+    "src/b.py",
+    "src/c.py"
+   ],
+   "truth": {
+    "format": "concise",
+    "per_file": {
+     "src/a.py": {
+      "total": 4,
+      "codes": {
+       "B006": 1,
+       "D100": 1,
+       "D103": 2
+      }
+     },
+     "src/b.py": {
+      "total": 4,
+      "codes": {
+       "D100": 1,
+       "D103": 3
+      }
+     },
+     "src/c.py": {
+      "total": 4,
+      "codes": {
+       "D100": 1,
+       "T201": 3
+      }
+     }
+    },
+    "codes": {
+     "B006": 1,
+     "D100": 3,
+     "D103": 5,
+     "T201": 3
+    }
+   }
+  },
+  {
+   "id": "M3",
+   "top_codes": [
+    "SIM102",
+    "I001",
+    "UP006",
+    "RET504"
+   ],
+   "top_files": [
+    "lib/net.py",
+    "lib/io.py",
+    "lib/db.py"
+   ],
+   "truth": {
+    "format": "concise",
+    "per_file": {
+     "lib/db.py": {
+      "total": 4,
+      "codes": {
+       "RET504": 1,
+       "SIM102": 2,
+       "UP006": 1
+      }
+     },
+     "lib/io.py": {
+      "total": 4,
+      "codes": {
+       "I001": 2,
+       "UP006": 2
+      }
+     },
+     "lib/net.py": {
+      "total": 5,
+      "codes": {
+       "I001": 1,
+       "RET504": 1,
+       "SIM102": 3
+      }
+     }
+    },
+    "codes": {
+     "I001": 3,
+     "RET504": 2,
+     "SIM102": 5,
+     "UP006": 3
+    }
+   }
+  },
+  {
+   "id": "M4",
+   "top_codes": [
+    "E402",
+    "E501",
+    "E711"
+   ],
+   "top_files": [
+    "tools/gen.py"
+   ],
+   "truth": {
+    "format": "concise",
+    "per_file": {
+     "tools/gen.py": {
+      "total": 8,
+      "codes": {
+       "E402": 4,
+       "E501": 3,
+       "E711": 1
+      }
+     }
+    },
+    "codes": {
+     "E402": 4,
+     "E501": 3,
+     "E711": 1
+    }
+   }
+  },
+  {
+   "id": "M5",
+   "top_codes": [
+    "E501",
+    "D101",
+    "D102",
+    "RUF002",
+    "C901",
+    "D203",
+    "D211",
+    "D212",
+    "D213",
+    "CPY001"
+   ],
+   "top_files": [
+    "src/local_delegate/sections.py"
+   ],
+   "truth": {
+    "format": "concise",
+    "per_file": {
+     "src/local_delegate/sections.py": {
+      "total": 26,
+      "codes": {
+       "C901": 2,
+       "CPY001": 1,
+       "D101": 5,
+       "D102": 3,
+       "D205": 1,
+       "D301": 1,
+       "D400": 1,
+       "E501": 6,
+       "PLR0912": 1,
+       "PLR0913": 1,
+       "PLR2004": 1,
+       "RUF002": 2,
+       "TC003": 1
+      }
+     }
+    },
+    "codes": {
+     "C901": 2,
+     "CPY001": 1,
+     "D101": 5,
+     "D102": 3,
+     "D205": 1,
+     "D301": 1,
+     "D400": 1,
+     "E501": 6,
+     "PLR0912": 1,
+     "PLR0913": 1,
+     "PLR2004": 1,
+     "RUF002": 2,
+     "TC003": 1
+    }
+   }
+  },
+  {
+   "id": "M6",
+   "top_codes": [
+    "TS2550",
+    "TS2554",
+    "TS2339",
+    "TS4113"
+   ],
+   "top_files": [
+    "src/cli/commands/export.ts",
+    "src/adapters/claude-json.ts",
+    "src/adapters/codex/index.ts",
+    "src/cli/commands/import.ts",
+    "src/cli/index.ts",
+    "src/cli/ui/style.ts",
+    "src/cli/ui/width.ts",
+    "src/io/fs/atomic.ts",
+    "src/io/vault/index.ts"
+   ],
+   "truth": {
+    "format": "tsc",
+    "per_file": {
+     "src/adapters/claude-json.ts": {
+      "total": 1,
+      "codes": {
+       "TS2554": 1
+      }
+     },
+     "src/adapters/codex/index.ts": {
+      "total": 1,
+      "codes": {
+       "TS2550": 1
+      }
+     },
+     "src/cli/commands/export.ts": {
+      "total": 2,
+      "codes": {
+       "TS2550": 2
+      }
+     },
+     "src/cli/commands/import.ts": {
+      "total": 1,
+      "codes": {
+       "TS2550": 1
+      }
+     },
+     "src/cli/index.ts": {
+      "total": 1,
+      "codes": {
+       "TS2550": 1
+      }
+     },
+     "src/cli/ui/style.ts": {
+      "total": 1,
+      "codes": {
+       "TS2550": 1
+      }
+     },
+     "src/cli/ui/width.ts": {
+      "total": 1,
+      "codes": {
+       "TS2339": 1
+      }
+     },
+     "src/io/fs/atomic.ts": {
+      "total": 1,
+      "codes": {
+       "TS4113": 1
+      }
+     },
+     "src/io/vault/index.ts": {
+      "total": 1,
+      "codes": {
+       "TS2554": 1
+      }
+     }
+    },
+    "codes": {
+     "TS2339": 1,
+     "TS2550": 6,
+     "TS2554": 2,
+     "TS4113": 1
+    }
+   }
+  },
+  {
+   "id": "ME1",
+   "top_codes": [
+    "E501",
+    "F401",
+    "W291"
+   ],
+   "top_files": [
+    "app/util.py",
+    "app/main.py",
+    "app/cli.py"
+   ],
+   "truth": {
+    "format": "concise",
+    "per_file": {
+     "app/cli.py": {
+      "total": 1,
+      "codes": {
+       "E501": 1
+      }
+     },
+     "app/main.py": {
+      "total": 3,
+      "codes": {
+       "E501": 2,
+       "F401": 1
+      }
+     },
+     "app/util.py": {
+      "total": 4,
+      "codes": {
+       "E501": 1,
+       "F401": 2,
+       "W291": 1
+      }
+     }
+    },
+    "codes": {
+     "E501": 4,
+     "F401": 3,
+     "W291": 1
+    }
+   }
+  },
+  {
+   "id": "ME2",
+   "top_codes": [
+    "D103",
+    "D100",
+    "T201",
+    "B006"
+   ],
+   "top_files": [
+    "src/a.py",
+    "src/b.py",
+    "src/c.py"
+   ],
+   "truth": {
+    "format": "concise",
+    "per_file": {
+     "src/a.py": {
+      "total": 4,
+      "codes": {
+       "B006": 1,
+       "D100": 1,
+       "D103": 2
+      }
+     },
+     "src/b.py": {
+      "total": 4,
+      "codes": {
+       "D100": 1,
+       "D103": 3
+      }
+     },
+     "src/c.py": {
+      "total": 4,
+      "codes": {
+       "D100": 1,
+       "T201": 3
+      }
+     }
+    },
+    "codes": {
+     "B006": 1,
+     "D100": 3,
+     "D103": 5,
+     "T201": 3
+    }
+   }
+  },
+  {
+   "id": "ME3",
+   "top_codes": [
+    "SIM102",
+    "I001",
+    "UP006",
+    "RET504"
+   ],
+   "top_files": [
+    "lib/net.py",
+    "lib/io.py",
+    "lib/db.py"
+   ],
+   "truth": {
+    "format": "concise",
+    "per_file": {
+     "lib/db.py": {
+      "total": 4,
+      "codes": {
+       "RET504": 1,
+       "SIM102": 2,
+       "UP006": 1
+      }
+     },
+     "lib/io.py": {
+      "total": 4,
+      "codes": {
+       "I001": 2,
+       "UP006": 2
+      }
+     },
+     "lib/net.py": {
+      "total": 5,
+      "codes": {
+       "I001": 1,
+       "RET504": 1,
+       "SIM102": 3
+      }
+     }
+    },
+    "codes": {
+     "I001": 3,
+     "RET504": 2,
+     "SIM102": 5,
+     "UP006": 3
+    }
+   }
+  },
+  {
+   "id": "ME4",
+   "top_codes": [
+    "E402",
+    "E501",
+    "E711"
+   ],
+   "top_files": [
+    "tools/gen.py"
+   ],
+   "truth": {
+    "format": "concise",
+    "per_file": {
+     "tools/gen.py": {
+      "total": 8,
+      "codes": {
+       "E402": 4,
+       "E501": 3,
+       "E711": 1
+      }
+     }
+    },
+    "codes": {
+     "E402": 4,
+     "E501": 3,
+     "E711": 1
+    }
+   }
+  },
+  {
+   "id": "ME5",
+   "top_codes": [
+    "E501",
+    "D101",
+    "D102",
+    "RUF002",
+    "C901",
+    "D203",
+    "D211",
+    "D212",
+    "D213",
+    "CPY001"
+   ],
+   "top_files": [
+    "src/local_delegate/sections.py"
+   ],
+   "truth": {
+    "format": "concise",
+    "per_file": {
+     "src/local_delegate/sections.py": {
+      "total": 26,
+      "codes": {
+       "C901": 2,
+       "CPY001": 1,
+       "D101": 5,
+       "D102": 3,
+       "D205": 1,
+       "D301": 1,
+       "D400": 1,
+       "E501": 6,
+       "PLR0912": 1,
+       "PLR0913": 1,
+       "PLR2004": 1,
+       "RUF002": 2,
+       "TC003": 1
+      }
+     }
+    },
+    "codes": {
+     "C901": 2,
+     "CPY001": 1,
+     "D101": 5,
+     "D102": 3,
+     "D205": 1,
+     "D301": 1,
+     "D400": 1,
+     "E501": 6,
+     "PLR0912": 1,
+     "PLR0913": 1,
+     "PLR2004": 1,
+     "RUF002": 2,
+     "TC003": 1
+    }
+   }
+  },
+  {
+   "id": "ME6",
+   "top_codes": [
+    "TS2550",
+    "TS2554",
+    "TS2339",
+    "TS4113"
+   ],
+   "top_files": [
+    "src/cli/commands/export.ts",
+    "src/adapters/claude-json.ts",
+    "src/adapters/codex/index.ts",
+    "src/cli/commands/import.ts",
+    "src/cli/index.ts",
+    "src/cli/ui/style.ts",
+    "src/cli/ui/width.ts",
+    "src/io/fs/atomic.ts",
+    "src/io/vault/index.ts"
+   ],
+   "truth": {
+    "format": "tsc",
+    "per_file": {
+     "src/adapters/claude-json.ts": {
+      "total": 1,
+      "codes": {
+       "TS2554": 1
+      }
+     },
+     "src/adapters/codex/index.ts": {
+      "total": 1,
+      "codes": {
+       "TS2550": 1
+      }
+     },
+     "src/cli/commands/export.ts": {
+      "total": 2,
+      "codes": {
+       "TS2550": 2
+      }
+     },
+     "src/cli/commands/import.ts": {
+      "total": 1,
+      "codes": {
+       "TS2550": 1
+      }
+     },
+     "src/cli/index.ts": {
+      "total": 1,
+      "codes": {
+       "TS2550": 1
+      }
+     },
+     "src/cli/ui/style.ts": {
+      "total": 1,
+      "codes": {
+       "TS2550": 1
+      }
+     },
+     "src/cli/ui/width.ts": {
+      "total": 1,
+      "codes": {
+       "TS2339": 1
+      }
+     },
+     "src/io/fs/atomic.ts": {
+      "total": 1,
+      "codes": {
+       "TS4113": 1
+      }
+     },
+     "src/io/vault/index.ts": {
+      "total": 1,
+      "codes": {
+       "TS2554": 1
+      }
+     }
+    },
+    "codes": {
+     "TS2339": 1,
+     "TS2550": 6,
+     "TS2554": 2,
+     "TS4113": 1
+    }
+   }
+  }
+ ]
+}

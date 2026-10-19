@@ -1,0 +1,36 @@
+**apps/api/package.json**
+* **lint/nursery/noRestrictedDependencies**: 1 uso de la dependencia restringida `express`.
+
+**apps/api/src/config/env.schema.ts**
+* **lint/style/noMagicNumbers**: 1 número mágico detectado.
+* **lint/style/useNamingConvention**: 6 propiedades de objeto que deberían usar `camelCase`.
+
+**apps/api/src/geocode/dto/geocode.dto.ts**
+* **lint/style/noExcessiveClassesPerFile**: 1 archivo que excede el máximo de 1 clase.
+* **lint/style/noMagicNumbers**: 4 números mágicos detectados.
+
+**apps/api/src/validate/dto/validate.dto.ts**
+* **lint/style/noExcessiveClassesPerFile**: 1 archivo que excede el máximo de 1 clase.
+* **lint/style/noMagicNumbers**: 5 números mágicos detectados.
+* **lint/style/useNamingConvention**: 4 propiedades de objeto que deberían usar `camelCase`.
+
+**apps/api/src/config/repo-root.ts**
+* **lint/style/useBlockStatements**: 2 declaraciones que prefieren el uso de bloques.
+
+**apps/api/src/geocode/geocode.controller.ts**
+* **lint/style/noParameterProperties**: 1 propiedad de parámetro que debería ser una propiedad de clase explícita.
+* **lint/style/useImportType**: 2 importaciones que solo se utilizan como tipos.
+
+**apps/api/src/validate/validate.controller.ts**
+* **lint/style/noParameterProperties**: 1 propiedad de parámetro que debería ser una propiedad de clase explícita.
+
+**packages/core/vitest.config.ts**
+* **lint/style/noDefaultExport**: 1 exportación por defecto que debe evitarse.
+
+Found 3 errors.
+Found 51 warnings.
+Found 192 infos.
+
+Sin mencionar (del log, no los nombra el resumen): pnpm-workspace.yaml, ./geocode.service.ts
+
+(leído server-side: 18043 chars ≈ 9397 tokens de Claude que no entraron a tu contexto)

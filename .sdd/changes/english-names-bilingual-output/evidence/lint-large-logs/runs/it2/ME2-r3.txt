@@ -1,0 +1,22 @@
+**Summary of Issues by File**
+
+**src/a.py:**
+- D100: 2 instances related to missing docstrings in public modules.
+- D103: 4 instances related to missing docstrings in public functions.
+- B006: 1 instance related to the use of mutable data structures for argument defaults.
+
+**src/b.py:**
+- D100: 2 instances related to missing docstrings in public modules.
+- D103: 4 instances related to missing docstrings in public functions.
+
+**src/c.py:**
+- T201: 3 instances related to the usage of the `print` statement.
+
+Found 13 issues.
+
+Count per file (counted by the program):
+- src/a.py: D103 2, D100 1, B006 1
+- src/b.py: D103 3, D100 1
+- src/c.py: T201 3, D100 1
+
+(read server-side: 626 chars ≈ 326 Claude tokens that did not enter your context)

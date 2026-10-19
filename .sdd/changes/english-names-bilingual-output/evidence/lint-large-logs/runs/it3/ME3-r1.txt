@@ -1,0 +1,11 @@
+**Summary of Issues by File**
+
+**lib/net.py:** This file contains 4 instances of the import sorting issue (SIM102) and 1 instance of the unnecessary assignment before return rule (RET504).
+
+**lib/io.py:** This file has 3 instances of the import sorting issue (SIM102) and 3 instances of the type annotation rule (UP006).
+
+**lib/db.py:** This file presents 4 instances of the import sorting issue (SIM102) and 2 instances of the type annotation rule (UP006).
+
+Found 5 instances of SIM102, 3 instances of I001, 3 instances of UP006 and 2 instances of RET504.
+
+(read server-side: 784 chars ≈ 408 Claude tokens that did not enter your context)

@@ -1,0 +1,15 @@
+**Resumen de Problemas por Archivo:**
+
+**src/a.py:**
+- D100: 2 (Missing docstring in public module)
+- D103: 3 (Missing docstring in public function)
+- B006: 1 (Do not use mutable data structures for argument defaults)
+
+**src/b.py:**
+- D100: 1 (Missing docstring in public module)
+- D103: 4 (Missing docstring in public function)
+
+**src/c.py:**
+- T201: 3 (`print` found)
+
+(leído server-side: 626 chars ≈ 326 tokens de Claude que no entraron a tu contexto)

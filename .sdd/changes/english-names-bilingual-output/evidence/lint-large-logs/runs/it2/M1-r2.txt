@@ -1,0 +1,20 @@
+**Resumen de Problemas por Archivo**
+
+**app/main.py:**
+- E501 Line too long: 2
+- F401 `os` imported but unused: 1
+**app/util.py:**
+- E501 Line too long: 2
+- F401 `os` imported but unused: 1
+- F401 `sys` imported but unused: 1
+- F401 `re` imported but unused: 1
+- W291 Trailing whitespace: 1
+**app/cli.py:**
+- E501 Line too long: 1
+
+Recuento por fichero (contado por el programa):
+- app/util.py: F401 2, E501 1, W291 1
+- app/main.py: E501 2, F401 1
+- app/cli.py: E501 1
+
+(leído server-side: 340 chars ≈ 177 tokens de Claude que no entraron a tu contexto)

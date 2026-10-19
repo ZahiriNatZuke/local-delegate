@@ -1,0 +1,49 @@
+**Resumen de problemas por archivo**
+
+**home/runner/work/shop-web/shop-web/src/app/core/state/report-builder.tsx**
+* **Errores**: Asignación a parámetros de función, variables declaradas pero no utilizadas, uso de `await` dentro de un bucle, uso de comparaciones laxas en lugar de estrictas, variables que no se reasignan, métodos de ciclo de vida vacíos, sombreado de variables y promesas sin manejar.
+* **Advertencias**: Uso de tipo `any` inesperado, declaraciones de consola inesperadas, longitud de línea excedida, falta del tipo de retorno en la función, complejidad de método excesiva y orden de importaciones incorrecto.
+
+**home/runner/work/shop-web/shop-web/src/app/catalog/users-table.js**
+* **Errores**: Uso de comparaciones laxas en lugar de estrictas, variables declaradas pero no utilizadas, métodos de ciclo de vida vacíos, asignación a parámetros de función, uso de `await` dentro de un bucle y variables que no se reasignan.
+* **Advertencias**: Uso de tipo `any` inesperado, complejidad de método excesiva, orden de importaciones incorrecto, longitud de línea excedida y declaraciones de consola inesperadas.
+
+**home/runner/work/shop-web/shop-web/src/lib/money/mailer.tsx**
+* **Errores**: Promesas sin manejar o sin `await`.
+
+**home/runner/work/shop-web/shop-web/src/app/admin/reports/profile-form.ts**
+* **Errores**: Uso de comparaciones no estrictas, variables no utilizadas, reasignación de parámetros de función, promesas sin gestionar, uso de `await` en bucles, variables con sombra, métodos de ciclo de vida vacíos y uso de `let` en lugar de `const`.
+* **Advertencias**: Uso de tipo `any`, orden de importaciones, longitud de línea, falta de tipo de retorno en funciones y uso de `console`.
+
+**home/runner/work/shop-web/shop-web/src/lib/format/report-builder.js**
+* **Errores**: Uso de comparaciones no estrictas, variables no utilizadas, sombra de variables, uso de `let` en lugar de `const` y uso de `await` en bucles.
+* **Advertencias**: Uso de tipo `any`, orden de importaciones, longitud de línea, falta de tipo de retorno en funciones, complejidad de métodos y uso de `console`.
+
+**home/runner/work/shop-web/shop-web/src/server/db/utils.tsx**
+* **Errores**: Uso de comparaciones no estrictas, variables no utilizadas, sombra de variables, uso de `let` en lugar de `const` y promesas sin gestionar.
+* **Advertencias**: Uso de tipo `any`, orden de importaciones, complejidad de métodos, longitud de línea y uso de `console`.
+
+**home/runner/work/shop-web/shop-web/src/app/auth/button.ts**
+* **Errores**: Uso de comparaciones no estrictas, variables no utilizadas, sombra de variables, uso de `let` en lugar de `const` y uso de `await` en bucles.
+* **Advertencias**: Uso de tipo `any`, orden de importaciones, longitud de línea, falta de tipo de retorno en funciones, complejidad de métodos y uso de `console`.
+
+**home/runner/work/shop-web/shop-web/src/app/core/state/date-range.pipe.ts**
+* **Errores**: Uso de comparaciones no estrictas, variables no utilizadas, uso de `let` en lugar de `const`, métodos de ciclo de vida vacíos y uso de `await` en bucles.
+* **Advertencias**: Uso de tipo `any`, orden de importaciones, longitud de línea, falta de tipo de retorno en funciones, complejidad de métodos y uso de `console`.
+
+**home/runner/work/shop-web/shop-web/src/lib/format/button.js**
+* **Errores**: Uso de comparaciones no estrictas, variables no utilizadas, sombra de variables, uso de `let` en lugar de `const`, métodos de ciclo de vida vacíos y promesas sin gestionar.
+* **Advertencias**: Uso de tipo `any`, orden de importaciones, longitud de línea, falta de tipo de retorno en funciones, complejidad de métodos y uso de `console`.
+
+**home/runner/work/shop-web/shop-web/src/app/core/state/token.interceptor.js**
+* No se dispone de información en el log para este archivo.
+
+Hay 118 ficheros más.
+
+Y otros 118 ficheros que nombra el log no tienen entrada en el resumen.
+
+[local-delegate warning: salida truncada por max_tokens en 4 de 5 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 136846 chars ≈ 71273 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)

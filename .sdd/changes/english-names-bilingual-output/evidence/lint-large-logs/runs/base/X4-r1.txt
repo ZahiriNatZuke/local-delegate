@@ -1,0 +1,162 @@
+**Resumen de errores de TypeScript**
+
+**src/app/admin/reports/checkout.component.tsx**
+* 11 Argumentos de tipo `string | undefined` no asignables a `string`.
+* 6 Se esperaba 1 argumento pero se recibieron 2.
+* 3 Parámetros con tipo `any` implícito.
+* 2 Objetos que podrían ser `undefined`.
+* 1 Propiedad `total` no existe en el tipo `Order`.
+* 1 Propiedad `query` sin inicializador.
+* 1 Variable `user` declarada pero nunca leída.
+* 1 Módulo `@app/idx` no encontrado.
+* Otros: error de asignación de tipo `number | null` y propiedad inexistente.
+
+**src/app/admin/reports/effects.ts**
+* 2 Parámetros con tipo `any` implícito.
+* 1 Error de asignación de tipo `number | null`.
+* 1 Propiedad `data` sin inicializador.
+* 1 Módulo `@app/order` no encontrado.
+* 1 Argumento de tipo `string | undefined` no asignable a `string`.
+
+**src/app/admin/reports/pricing.tsx**
+* 3 Argumentos de tipo `string | undefined` no asignables a `string`.
+* 1 Variable `subtotal` declarada pero nunca leída.
+* 1 Error de asignación de tipo `number | null`.
+
+**src/app/admin/reports/users-table.ts**
+* 3 Argumentos de tipo `string | undefined` no asignables a `string`.
+* 1 Propiedad `query` no existe en el tipo `Order`.
+* 1 Objeto que podría ser `undefined`.
+
+**src/app/admin/reports/utils.tsx**
+* 2 Argumentos de tipo `string | undefined` no asignables a `string`.
+* 1 Error de asignación de tipo `number | null`.
+
+**src/app/admin/users/auth.guard.tsx**
+* 1 Módulo `@app/token` no encontrado.
+* 1 Propiedad `id` faltante en el tipo `Product`.
+
+**src/app/admin/users/currency.pipe.ts**
+* 6 Argumentos de tipo `string | undefined` no asignables a `string`.
+* 5 Parámetros con tipo `any` implícito.
+* 4 Errores de asignación de tipo `number | null`.
+* 1 Módulo `@app/cb` no encontrado.
+* Otros: propiedades inexistentes en `Order`, variable no leída y objeto posiblemente `undefined`.
+
+**src/app/admin/users/schema.ts**
+* 3 Argumentos de tipo `string | undefined` no asignables a `string`.
+* 2 Objetos que podrían ser `undefined`.
+* 2 Errores de asignación de tipo `number | null`.
+* 1 Propiedad `id` faltante en el tipo `Product`.
+* 1 Parámetro con tipo `any` implícito.
+
+**src/app/catalog/profile-form.ts**
+* 5 Errores de tipo `number | null` no compatible con `number`.
+* 2 Argumentos de tipo `string | undefined` no compatible con `string`.
+* 2 Parámetros con tipo `any` implícito.
+* 2 Argumentos inesperados (se recibieron 2 cuando se esperaba 1).
+* 2 Objetos posiblemente indefinidos.
+* 1 Propiedad `id` faltante en el tipo `Product`.
+* 1 Variable no utilizada.
+
+**src/app/catalog/users.route.tsx**
+* 5 Errores de compatibilidad de `string` en argumentos.
+
+**src/app/checkout/api-client.tsx**
+* 2 Errores de tipo implícito `any`.
+* 1 Objeto posiblemente indefinido.
+* 1 Argumento no asignable.
+
+**src/app/checkout/checkout.component.tsx**
+* 1 Argumento inesperado.
+* 1 Argumento no asignable.
+* 1 Tipo no asignable.
+* 1 Objeto posiblemente indefinido.
+
+**src/app/checkout/format-date.ts**
+* 11 Errores de compatibilidad de `string` en argumentos.
+* 7 Errores de importación de módulos no encontrados.
+* 6 Errores de compatibilidad de `number`.
+* 6 Errores de propiedades inexistentes en el tipo `Order`.
+* 6 Errores de objetos posiblemente indefinidos.
+* 6 Errores de tipo implícito `any`.
+* 3 Errores de propiedades sin inicializar.
+* 2 Errores de argumentos inesperados.
+* 2 Errores de propiedad faltante en `Product`.
+* 2 Errores de valores posiblemente indefinidos.
+
+**src/app/checkout/orders.route.ts**
+* 2 Errores de tipo implícito `any`.
+* 1 Argumento inesperado.
+* 1 Propiedad inexistente.
+* 1 Argumento no asignable.
+* 1 Tipo no asignable.
+* 1 Propiedad faltante.
+* 1 Módulo no encontrado.
+
+**src/app/checkout/pricing.ts**
+* 2 Errores de tipo implícito `any`.
+* 1 Propiedad faltante.
+* 1 Propiedad inexistente.
+* 1 Argumento no asignable.
+* 1 Tipo no asignable.
+
+**src/app/checkout/selectors.ts**
+* 4 Argumentos no asignables.
+* 1 Tipo no asignable.
+* 1 Propiedad faltante.
+
+**src/app/core/state/profile-form.tsx**
+* 2 Errores de asignación de tipo `number | null` a `number`.
+* 2 Errores de valores posiblemente indefinidos.
+* 1 Módulo `@app/item` no encontrado.
+* 1 Propiedad `id` faltante en el tipo `Product`.
+
+**src/app/core/state/utils.ts**
+* 3 Argumentos de tipo `string | undefined` no asignables a `string`.
+* 3 Objetos o valores posiblemente indefinidos.
+* 2 Errores de asignación de tipo `number | null` a `number`.
+* 1 Argumento incorrecto (se recibieron 2 cuando se esperaba 1).
+
+**src/app/orders/auth.guard.ts**
+* 1 Objeto posiblemente indefinido.
+* 1 Error de asignación de tipo `number | null` a `number`.
+
+**src/app/orders/cart.service.tsx**
+* 2 Argumentos de tipo `string | undefined` no asignables a `string`.
+* 2 Errores de asignación de tipo `number | null` a `number`.
+
+**src/app/orders/checkout.component.ts**
+* 3 Objetos posiblemente indefinidos.
+* 1 Argumento de tipo `string | undefined` no asignable a `string`.
+* 1 Error de asignación de tipo `number | null` a `number`.
+* 1 Argumento incorrecto (se recibieron 2 cuando se esperaba 1).
+* 1 Variable `user` no leída.
+
+**src/app/orders/constants.tsx**
+* 1 Objeto posiblemente indefinido.
+* 1 Argumento de tipo `string | undefined` no asignable a `string`.
+* 1 Error de asignación de tipo `number | null` a `number`.
+* 1 Propiedad `data` sin inicializar.
+
+**src/app/orders/product-list.ts**
+* 2 Módulos no encontrados (`@app/rows` y `@app/subtotal`).
+* 2 Objetos posiblemente indefinidos.
+* 1 Parámetro con tipo `any` implícito.
+* 1 Argumento de tipo `string | undefined` no asignable a `string`.
+* 1 Variable `order` no leída.
+* 1 Propiedad inexistente.
+
+**src/server/services/retry.ts**
+* 1 Argumento de tipo cadena o indefinido no asignable a cadena.
+* 1 Propiedad `precio` inexistente en el tipo `Orden`.
+
+Found 993 errors in 91 files.
+
+Sin mencionar (del log, no los nombra el resumen): src/app/cart/cart.component.ts, src/app/cart/round.ts, TS2345, TS2322, TS2532, TS7006, TS2339, TS2307, TS2554, TS2741, TS18048, TS6133
+
+[local-delegate warning: salida truncada por max_tokens en 3 de 7 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 115238 chars ≈ 60019 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 6 partes en 7 pasadas por local-delegate)

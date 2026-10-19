@@ -1,0 +1,108 @@
+**tests/test_checks.py**: pruebas de verificación.
+
+**tests/test_analyze_benchmark.py**: no hay problemas registrados.
+
+**tests/test_metrics.py**: pruebas de métricas.
+
+**tests/test_update.py**: pruebas de actualización.
+
+**tests/test_residency.py**: pruebas de detección de claves y gestión de residencia.
+
+**tests/test_core.py**: pruebas de núcleo.
+
+**tests/test_connection_cause.py**: pruebas de causa de conexión.
+
+**tests/test_topology.py**: pruebas de topología de modelos y validación de configuración YAML.
+
+**tests/test_corpus.py**: pruebas de corpus.
+
+**tests/test_structured_summary.py**: pruebas de detección de secciones y resumen estructurado.
+
+**Otros archivos**:
+* **tests/test_adoption_experiment.py**: errores en las pruebas de que el hecho plantado aparece una vez y cerca del medio y en las tres formas de introducir contenido.
+* **tests/test_chunking.py**: pruebas de fragmentación.
+* **tests/test_ci_gate.py**: pruebas de puerta de integración continua.
+* **tests/test_cli_renamed_names.py**: pruebas de nombres de comandos renombrados.
+* **tests/test_clients.py**: pruebas de clientes.
+* **tests/test_commit_language.py**: pruebas de lenguaje de confirmación.
+* **tests/test_cooldown.py**: pruebas de enfriamiento.
+* **tests/test_correlation.py**: pruebas de correlación.
+* **tests/test_cost_doctor.py**: pruebas de doctor de costes.
+* **tests/test_ctrl_c.py**: pruebas de interrupción de control.
+* **tests/test_daemon.py**: pruebas de demonio.
+* **tests/test_dashboard_cost.py**: pruebas de costes del panel.
+* **tests/test_dashboard_js.py**: pruebas de construcción de consultas y nombres de ventanas.
+* **tests/test_dashboard_states.py**: pruebas de estados del panel, carga de turnos y errores de conexión.
+* **tests/test_dashboard_ui.py**: pruebas de paginación, tipografía, temas y visualización de métricas.
+* **tests/test_delegation_connection.py**: pruebas de tiempos de espera y errores de conexión remota.
+* **tests/test_density.py**: pruebas de cálculo de densidad y tokens.
+* **tests/test_deprecations.py**: pruebas de gestión de nombres obsoletos y registros.
+* **tests/test_detect_spanish_names.py**: pruebas de detección de nombres en español y heurísticas.
+* **tests/test_doctor.py**: pruebas de detección de versiones y estado del demonio.
+* **tests/test_environment_isolation.py**: pruebas de aislamiento de variables de entorno.
+* **tests/test_f1_conformance.py**: pruebas de cumplimiento de reglas de enfriamiento y bloqueos.
+* **tests/test_failure_captures.py**: pruebas de captura de errores de capacidad y carga.
+* **tests/test_failures.py**: pruebas de clasificación de errores HTTP y fallos de contenido.
+* **tests/test_failures_integration.py**: pruebas de integración de errores de conexión y contenido.
+* **tests/test_fake_llamaswap.py**: pruebas de simulador de servidor y recarga de configuración.
+* **tests/test_fallback.py**: pruebas de mecanismos de respaldo y enfriamiento de modelos.
+* **tests/test_fallback_observability.py**: pruebas de registro de eventos de respaldo.
+* **tests/test_fast_role_retired.py**: pruebas de roles retirados y advertencias.
+* **tests/test_footprint.py**: pruebas de huella de configuración y tamaño de prompts.
+* **tests/test_hook_common.py**: pruebas de bloqueos, marcas de salud y contexto de scripts.
+* **tests/test_hook_legacy_names.py**: pruebas de compatibilidad con nombres antiguos de hooks.
+* **tests/test_hook_recipes.py**: pruebas de recetas de hooks de lectura y telemetría.
+* **tests/test_hook_shell.py**: pruebas de bloqueo de comandos de volcado de documentos en la terminal.
+* **tests/test_hook_shell_absolute_path.py**: pruebas de rutas absolutas en comandos de lectura.
+* **tests/test_hooks_telemetry_api.py**: pruebas de la API de telemetría de hooks y filtros de rango.
+* **tests/test_install.py**: pruebas de instalación.
+* **tests/test_install_clients.py**: pruebas de clientes de instalación.
+* **tests/test_install_header.py**: pruebas de cabeceras de instalación.
+* **tests/test_install_opencode.py**: pruebas de configuración de opencode.
+* **tests/test_install_timeouts.py**: pruebas de tiempos de espera de instalación.
+* **tests/test_llamaswap_api.py**: pruebas de la interfaz de llamaswap.
+* **tests/test_llamaswap_config.py**: pruebas de configuración de llamaswap.
+* **tests/test_load_probe.py**: pruebas de sondeo de carga.
+* **tests/test_map_reduce.py**: pruebas de reducción de mapas.
+* **tests/test_measure_adoption.py**: pruebas de medición de adopción.
+* **tests/test_measure_cooldown.py**: pruebas de medición de enfriamiento.
+* **tests/test_measure_slowness.py**: pruebas de medición de lentitud.
+* **tests/test_measure_structured_summary.py**: pruebas de resumen estructurado.
+* **tests/test_pace.py**: pruebas de ritmo.
+* **tests/test_pair_sheet.py**: pruebas de generación de hojas, validación de reglas y formatos.
+* **tests/test_post_chat_paths.py**: pruebas de rutas y respuestas de red.
+* **tests/test_price_watcher.py**: pruebas de seguimiento de precios y cambios en modelos.
+* **tests/test_pricing.py**: pruebas de normalización de fechas y búsqueda de precios.
+* **tests/test_questions.py**: pruebas de interacción con el usuario y esquemas de elicitación.
+* **tests/test_quota.py**: pruebas de gestión de cuotas y sesiones.
+* **tests/test_recompute.py**: pruebas de recomputación de agregados y limpieza.
+* **tests/test_recompute_legacy.py**: pruebas de compatibilidad con archivos antiguos.
+* **tests/test_release_metadata.py**: pruebas de metadatos de versión y paquetes.
+* **tests/test_residency_cli.py**: pruebas de interfaz de línea de comandos para residencia.
+* **tests/test_resource_probe.py**: pruebas de monitorización de recursos de procesos.
+* **tests/test_role_caps.py**: pruebas de límites de capacidad por rol.
+* **tests/test_site.py**: pruebas de generación de sitio web y metadatos sociales.
+* **tests/test_slowness.py**: pruebas de medición de latencia y tiempos de respuesta.
+* **tests/test_smoke.py**: pruebas de humo y configuración por defecto.
+* **tests/test_test_sessions.py**: pruebas de conteo de sesiones de SDK.
+* **tests/test_test_windows.py**: pruebas de gestión de ventanas de tiempo y archivos.
+* **tests/test_test_windows_cli.py**: pruebas de interfaz de línea de comandos para ventanas.
+* **tests/test_transcripts.py**: pruebas de gestión de transcripciones y tiempos de vida.
+* **tests/test_turn.py**: pruebas de gestión de turnos y afinidad de cola.
+* **tests/test_turn_daemon.py**: pruebas de demonio de turno.
+* **tests/test_valuation.py**: pruebas de valoración.
+* **tests/test_vendor.py**: pruebas de proveedor.
+* **tests/test_vision.py**: pruebas de visión.
+* **tests/test_web_auth.py**: pruebas de autenticación web.
+* **tests/test_wiki.py**: pruebas de wiki.
+* **.venv\Lib\site-packages\starlette\testclient.py**: una advertencia de depreciación de anyio.abc.BlockingPortal.
+
+Hay 99 archivos más.
+
+Y otros 99 ficheros que nombra el log no tienen entrada en el resumen.
+
+[local-delegate warning: salida truncada por max_tokens en 1 de 8 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 206985 chars ≈ 107804 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 8 pasadas por local-delegate)

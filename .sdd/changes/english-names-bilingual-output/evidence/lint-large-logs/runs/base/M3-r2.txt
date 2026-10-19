@@ -1,0 +1,23 @@
+**Resumen de Problemas por Archivo**
+
+**lib/net.py:**
+*   SIM102: 4
+*   I001: 3
+*   RET504: 1
+
+**lib/io.py:**
+*   I001: 3
+*   UP006: 3
+*   RET504: 0
+
+**lib/db.py:**
+*   I001: 2
+*   SIM102: 4
+*   UP006: 1
+*   RET504: 2
+
+**Detalles Adicionales:**
+
+Se encontraron 5 errores del tipo SIM102, 3 errores del tipo I001, 3 errores del tipo UP006 y 2 errores del tipo RET504. Los problemas más frecuentes se encuentran en los archivos lib/net.py y lib/io.py. Se identificaron problemas relacionados con la organización de bloques de importación (I001) y el uso de declaraciones `if` (SIM102). Además, se detectaron errores de tipo de anotación en los archivos lib/io.py y lib/db.py (UP006). Finalmente, se encontró una asignación innecesaria antes de una sentencia `return` en los archivos lib/net.py y lib/db.py (RET504).
+
+(leído server-side: 784 chars ≈ 408 tokens de Claude que no entraron a tu contexto)

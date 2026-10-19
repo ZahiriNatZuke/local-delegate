@@ -1,0 +1,19 @@
+**Resumen de Problemas por Archivo**
+
+**src/a.py:**
+*   D100: 3
+*   D103: 3
+*   B006: 1
+
+**src/b.py:**
+*   D100: 3
+*   D103: 4
+
+**src/c.py:**
+*   T201: 3
+
+**Detalles Adicionales:**
+
+Se encontraron 3 errores de tipo D100, 3 errores de tipo D103, 3 errores de tipo T201 y 1 error de tipo B006. Los problemas más frecuentes se concentran en la falta de documentación en módulos y funciones públicas. Se detectó el uso de estructuras de datos mutables como argumento predeterminado en una función dentro de src/a.py.
+
+(leído server-side: 626 chars ≈ 326 tokens de Claude que no entraron a tu contexto)

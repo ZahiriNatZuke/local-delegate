@@ -1,0 +1,16 @@
+**Summary of Issues by File**
+
+**src/a.py:** This file exhibits the most issues. It contains one instance of the rule D100, related to the absence of a documentation string in a public module. Furthermore, it has three instances of the rule D103, concerning the lack of documentation strings in public functions. Finally, it includes one instance of the rule B006, regarding the inappropriate use of mutable data structures for argument defaults.
+
+**src/b.py:** This file presents three instances of the rule D100, indicating missing documentation strings in public modules. Additionally, it has four instances of the rule D103, pertaining to the absence of documentation strings in public functions.
+
+**src/c.py:** This file contains three instances of the rule T201, which flags the presence of the `print` statement.
+
+Total lines: 11
+
+Count per file (counted by the program):
+- src/a.py: D103 2, D100 1, B006 1
+- src/b.py: D103 3, D100 1
+- src/c.py: T201 3, D100 1
+
+(read server-side: 626 chars ≈ 326 Claude tokens that did not enter your context)

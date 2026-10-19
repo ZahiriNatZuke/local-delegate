@@ -1,0 +1,139 @@
+### Resumen de problemas por archivo
+
+**src\local_delegate\__init__.py**
+* Falta aviso de copyright (1).
+
+**src\local_delegate\__main__.py**
+* Falta aviso de copyright (1).
+
+**src\local_delegate\agents.py**
+* Falta aviso de copyright (1).
+* Importaciones de la biblioteca estándar deben moverse a un bloque de comprobación de tipos (1).
+* Falta coma final (1).
+* La primera línea de la cadena de documentación debe estar en modo imperativo (1).
+* Uso de valor mágico en comparación (1).
+
+**src\local_delegate\attribution.py**
+* Falta aviso de copyright (1).
+* Importaciones de la biblioteca estándar deben moverse a un bloque de comprobación de tipos (2).
+* Línea demasiado larga (1).
+* Considerar mover la sentencia a un bloque `else` (1).
+* Falta coma final (1).
+* No capturar excepciones ciegas (1).
+* Demasiados argumentos en la definición de la función (1).
+* Variable de bucle `for` sobrescrita por objetivo de asignación (1).
+* Reemplazar `os.replace()` por `Path.replace()` (1).
+* Usar `contextlib.suppress(OSError)` en lugar de `try-except-pass` (1).
+* Reemplazar `os.unlink()` por `Path.unlink()` (1).
+* El parámetro de la función de prueba tiene un argumento por defecto (1).
+* Se requiere una línea en blanco entre la línea de resumen y la descripción (2).
+* Las comillas de cierre de la cadena de documentación multilínea deben estar en una línea separada (1).
+* Acceso a miembro privado (1).
+
+**src\local_delegate\autostart.py**
+* Falta aviso de copyright (1).
+* La primera línea de la cadena de documentación debe estar en modo imperativo (1).
+* Llamada a `subprocess`: comprobar la ejecución de entrada no confiable (1).
+
+**src\local_delegate\benchmark.py**
+* Falta aviso de copyright (1).
+* Importaciones de la biblioteca estándar deben moverse a un bloque de comprobación de tipos (3).
+* Falta cadena de documentación en clase pública (3).
+* Uso de valor mágico en comparación (2).
+* Variable de bucle `for` sobrescrita por objetivo de asignación (1).
+* Falta coma final (7).
+* La importación debe estar en el nivel superior del archivo (2).
+* Llamada a `subprocess`: comprobar la ejecución de entrada no confiable (1).
+* `subprocess.run` sin argumento `check` explícito (1).
+* Función demasiado compleja (2).
+* Falta cadena de documentación en `__init__` (4).
+* Falta cadena de documentación en método mágico (2).
+* Falta cadena de documentación en método público (5).
+* Falta cadena de documentación en función pública (2).
+* Uso de `r"""` si hay barras invertidas en la cadena de documentación (1).
+
+**src\local_delegate\cli.py**
+* **T201**: Se encontraron instrucciones `print` (10).
+* **COM812**: Falta coma final (8).
+* **ANN001**: Falta anotación de tipo en el argumento `sub` (2).
+* **D103**: Falta docstring en función pública (2).
+
+**src\local_delegate\clients.py**
+* **ANN401**: Expresiones con tipado dinámico (`typing.Any`) no permitidas (6).
+* **COM812**: Falta coma final (3).
+* **BLE001**: No capturar excepciones ciegas (2).
+* **S110**: Se detectó `try`-`except`-`pass`, considere registrar la excepción (2).
+* **D205**: Se requiere una línea en blanco entre el resumen y la descripción (1).
+* **D209**: Las comillas de cierre de docstrings multilínea deben estar en una línea separada (1).
+* **CPY001**: Falta aviso de copyright al inicio del archivo (1).
+* **TC003**: Mover importación de la librería estándar a un bloque de comprobación de tipos (1).
+* **PTH105**: Reemplazar `os.replace()` por `Path.replace()` (1).
+
+**src\local_delegate\config.py**
+* **FBT003**: Valor booleano posicional en llamada a función (7).
+* **D103**: Falta docstring en función pública (6).
+* **FBT001**: Argumento posicional de tipo booleano en definición de función (2).
+* **E501**: Línea demasiado larga (2).
+* **COM812**: Falta coma final (3).
+* **D101**: Falta docstring en clase pública (1).
+
+**src\local_delegate\cooldown.py**
+* **D205**: Se requiere una línea en blanco entre el resumen y la descripción (3).
+* **D209**: Las comillas de cierre de docstrings multilínea deben estar en una línea separada (3).
+* **CPY001**: Falta aviso de copyright al inicio del archivo (1).
+* **TC003**: Mover importación de la librería estándar a un bloque de comprobación de tipos (1).
+* **E501**: Línea demasiado larga (1).
+* **D101**: Falta docstring en clase pública (1).
+* **PLR0913**: Demasiados argumentos en la definición de la función (1).
+* **D107**: Falta docstring en `__init__` (1).
+* **COM812**: Falta coma final (1).
+* **SIM105**: Usar `contextlib.suppress(OSError)` en lugar de `try`-`except`-`pass` (2).
+
+**src\local_delegate\pace.py**
+* **BLE001**: Captura de excepciones ciegas (7).
+* **ANN401**: Expresiones con tipado dinámico no permitidas (11).
+* **COM812**: Falta de coma final (3).
+* **FBT003**: Valor booleano posicional en llamada a función (1).
+* **TRY300**: Mover sentencia a un bloque else (1).
+
+**src\local_delegate\pricing.py**
+* **CPY001**: Falta aviso de copyright (1).
+* **RUF003, RUF002**: Comentario o docstring con caracteres ambiguos (2).
+* **E501**: Línea demasiado larga (1).
+
+**src\local_delegate\probes.py**
+* **BLE001**: Captura de excepciones ciegas (2).
+* **COM812**: Falta de coma final (4).
+* **PLC0415**: Importación debe estar en el nivel superior (4).
+* **SLF001**: Acceso a miembro privado (3).
+* **TC003, S603, PLW1510, D301, E501, FBT001, D401, FBT003**: 1 error por tipo.
+
+**src\local_delegate\questions.py**
+* **ANN401**: Expresiones con tipado dinámico no permitidas (3).
+* **CPY001, COM812, ANN202, D400, E501**: 1 error por tipo.
+
+**src\local_delegate\quota.py**
+* **RUF002**: Docstring con caracteres ambiguos (4).
+* **D205, D209**: Requerir línea en blanco o comillas en línea separada (8).
+* **CPY001, TC003, D103, COM812, PLR2004, C901, PLR0912**: 1 error por tipo.
+
+**src\local_delegate\recompute.py**
+* **COM812**: Falta de coma final (7).
+* **CPY001, TC003, D103, PTH105, SIM105, PTH108, D205, D209, PLW2901, PLR2004, B905, C901, C420, E501, ANN001**: 1 error por tipo.
+
+**src\local_delegate\residency.py**
+* **ANN401**: Expresiones con tipado dinámico no permitidas (15).
+* **COM812**: Falta de coma final.
+
+**src\local_delegate\server.py**
+* **COM812**: Coma final faltante (16).
+* **FBT003**: Argumento posicional de tipo booleano en definición de función (6).
+* **PLR0913**: Demasi
+
+Sin mencionar (del log, no los nombra el resumen): src/local_delegate/web/metrics.py, src/local_delegate/checks.py, src/local_delegate/install.py, src/local_delegate/resources/hooks/hook_common.py, src/local_delegate/legacy_names.py
+
+[local-delegate warning: salida truncada por max_tokens en 6 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 179890 chars ≈ 93692 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

@@ -1,0 +1,25 @@
+**Resumen de Problemas por Archivo**
+
+**src/local_delegate/sections.py**
+
+*   **E501:** 6 (Líneas demasiado largas)
+*   **D101:** 5 (Faltan docstrings en clases públicas)
+*   **D102:** 3 (Faltan docstrings en métodos públicos)
+*   **RUF002:** 2 (Docstring ambiguo, posible reemplazo de caracteres)
+*   **C901:** 2 (Complejidad excesiva en variables)
+*   **D203:** 1 (Advertencia incompatible de `incorrect-blank-line-before-class` y `blank-line-before-class`)
+*   **D211:** 1 (Advertencia incompatible de `multi-line-summary-first-line` y `multi-line-summary-second-line`)
+*   **D212:** 1 (Advertencia incompatible de `multi-line-summary-first-line` y `multi-line-summary-second-line`)
+*   **D213:** 1 (Advertencia incompatible de `multi-line-summary-first-line` y `multi-line-summary-second-line`)
+*   **CPY001:** 1 (Falta aviso de copyright al inicio del archivo)
+*   **TC003:** 1 (Mover importaciones de la biblioteca estándar a un bloque de control de tipos)
+*   **D205:** 1 (Falta una línea en blanco entre la línea de resumen y la descripción)
+*   **D301:** 1 (Usar `r"""` si hay barras invertidas en un docstring)
+*   **D400:** 1 (La primera línea de un docstring debe terminar con un punto)
+*   **PLR2004:** 1 (Uso de valor mágico en comparación, considerar reemplazar `2` con una variable constante)
+*   **PLR0912:** 1 (Demasiadas ramas en la definición de la función)
+*   **PLR0913:** 1 (Demasiados argumentos en la definición de la función)
+*   **RUF002:** 1 (Docstring ambiguo, posible reemplazo de caracteres)
+*   **D205:** 1 (Falta una línea en blanco entre la línea de resumen y la descripción)
+
+(leído server-side: 2627 chars ≈ 1368 tokens de Claude que no entraron a tu contexto)
