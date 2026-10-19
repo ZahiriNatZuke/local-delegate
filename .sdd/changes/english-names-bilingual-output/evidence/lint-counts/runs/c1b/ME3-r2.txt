@@ -1,0 +1,23 @@
+Here's a summary of the issues, grouped by file and prioritized by relevance:
+
+**Import Block Issues**
+
+*   **lib/io.py:** 2 instances of import block formatting issues (I001).
+*   **lib/net.py:** 2 instances of import block formatting issues (I001).
+
+**Single `if` Statement Issues**
+
+*   **lib/net.py:** 3 instances of the single `if` statement rule (SIM102).
+*   **lib/db.py:** 2 instances of the single `if` statement rule (SIM102).
+
+**Type Annotation Issues**
+
+*   **lib/db.py:** 2 instances of using `List` instead of `list` for type annotations (UP006).
+*   **lib/io.py:** 2 instances of using `Dict` instead of `dict` for type annotations (UP006).
+
+**Unnecessary Assignment Issues**
+
+*   **lib/net.py:** 1 instance of an unnecessary assignment before a `return` statement (RET504).
+*   **lib/db.py:** 1 instance of an unnecessary assignment before a `return` statement (RET504).
+
+(read server-side: 784 chars ≈ 408 Claude tokens that did not enter your context)

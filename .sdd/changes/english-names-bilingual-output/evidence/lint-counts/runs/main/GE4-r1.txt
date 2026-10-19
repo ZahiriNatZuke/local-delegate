@@ -1,0 +1,55 @@
+**src/local_delegate/web/__init__.py**
+* **CPY001**: Missing copyright notice at top of file (1)
+
+**src/local_delegate/web/auth.py**
+* **ANN001**: Missing type annotation for function argument (7)
+* **ANN201**: Missing return type annotation for public function (1)
+* **ANN202**: Missing return type annotation for private function (2)
+* **COM812**: Trailing comma missing (3)
+* **CPY001**: Missing copyright notice at top of file (1)
+* **D102**: Missing docstring in public method (1)
+* **D107**: Missing docstring in `__init__` (1)
+* **D400**: First line should end with a period (2)
+
+**src/local_delegate/web/metrics.py**
+* **E501**: Line too long (165)
+* **ANN201**: Missing return type annotation for public function (12)
+* **COM812**: Trailing comma missing (12)
+* **RUF001**: String contains ambiguous character (8)
+* **SLF001**: Private member accessed (7)
+* **FAST002**: FastAPI dependency without `Annotated` (8)
+* **TID252**: Prefer absolute imports over relative imports from parent modules (14)
+* **D103**: Missing docstring in public function (6)
+* **D205**: 1 blank line required between summary line and description (3)
+* **D209**: Multi-line docstring closing quotes should be on a separate line (3)
+* **RUF002**: Docstring contains ambiguous character (3)
+* **BLE001**: Do not catch blind exception (3)
+* **PLW0603**: Using the global statement to update is discouraged (2)
+* **C901**: Function is too complex (1)
+* **PLR2004**: Magic value used in comparison (1)
+* **PLR0915**: Too many statements (1)
+* **SIM105**: Use `contextlib.suppress` instead of `try-except-pass` (1)
+* **SIM108**: Use ternary operator instead of `if-else` block (1)
+* **S110**: `try-except-pass` detected (1)
+* **PLC0415**: Import should be at the top-level of a file (1)
+* **PLW2901**: Variable overwritten by assignment target (1)
+* **FBT001**: Boolean-typed positional argument in function definition (1)
+* **T201**: `print` found (1)
+
+**src/local_delegate/web/sysinfo.py**
+* **S607**: Starting a process with a partial executable path (4)
+* **PLW1510**: `subprocess.run` without explicit `check` argument (4)
+* **PTH123**: `open()` should be replaced by `Path.open()` (3)
+* **PLR2004**: Magic value used in comparison (3)
+* **BLE001**: Do not catch blind exception (2)
+* **D403**: First word of the docstring should be capitalized (3)
+* **PLW0603**: Using the global statement to update is discouraged (2)
+* **CPY001**: Missing copyright notice at top of file (1)
+* **PLC0415**: Import should be at the top-level of a file (1)
+* **PTH208**: Use `pathlib.Path.iterdir()` instead (1)
+* **S603**: `subprocess` call: check for execution of untrusted input (1)
+* **COM812**: Trailing comma missing (2)
+
+Found 388 errors.
+
+(read server-side: 33805 chars ≈ 17606 Claude tokens that did not enter your context)

@@ -1,0 +1,45 @@
+**src/local_delegate/benchmark.py**
+* **COM812**: 11 instances of missing trailing commas.
+* **TRY003**: 8 instances of specifying long messages outside the exception class.
+* **D102**: 7 instances of missing docstrings in public methods.
+* **T201**: 7 instances of finding print statements.
+* **EM102**: 6 instances of using f-string literals in exceptions.
+* **D107**: 5 instances of missing docstrings in __init__.
+* **D101**: 4 instances of missing docstrings in public classes.
+* **D105**: 4 instances of missing docstrings in magic methods.
+* **D103**: 4 instances of missing docstrings in public functions.
+* **PLR2004**: 3 instances of using magic values in comparisons.
+* **E501**: 3 instances of lines being too long.
+* **EM101**: 2 instances of using string literals in exceptions.
+* **PLC0415**: 2 instances of imports not being at the top-level.
+* **PLR0913**: 2 instances of too many arguments in function definitions.
+* **D205**: 1 instance of a missing blank line in docstrings.
+* **D209**: 1 instance of incorrect multi-line docstring closing quotes.
+* **C901**: 1 instance of high function complexity.
+* **PLR0912**: 1 instance of too many branches.
+* **PLR0915**: 1 instance of too many statements.
+* **PLW1510**: 1 instance of subprocess.run without an explicit check argument.
+* **FBT003**: 1 instance of a boolean positional value in a function call.
+* **RUF036**: 1 instance of None not being at the end of a type union.
+* **D301**: 1 instance of needing a raw docstring for backslashes.
+* **TRY301**: 1 instance of an abstract raise.
+
+**src/local_delegate/agents.py**
+* **CPY001**: 1 instance of a missing copyright notice.
+* **TC003**: 1 instance of needing to move a standard library import to a type-checking block.
+* **COM812**: 1 instance of a missing trailing comma.
+* **D401**: 1 instance of a docstring not using the imperative mood.
+* **PLR2004**: 1 instance of a magic value used in comparison.
+
+**src/local_delegate/autostart.py**
+* **CPY001**: 1 instance of a missing copyright notice.
+* **D401**: 1 instance of a docstring not using the imperative mood.
+* **S603**: 1 instance of a subprocess call checking for untrusted input.
+
+**src/local_delegate/__init__.py**
+* **CPY001**: 1 instance of a missing copyright notice.
+
+**src/local_delegate/__main__.py**
+* **CPY001**: 1 instance of a missing copyright notice.
+
+(read server-side: 8589 chars ≈ 4473 Claude tokens that did not enter your context)

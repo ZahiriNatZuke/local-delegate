@@ -1,0 +1,55 @@
+**src/local_delegate/web/metrics.py**
+* **E501**: 215 lines too long
+* **COM812**: 14 trailing commas missing
+* **ANN201**: 15 missing return type annotations
+* **RUF001**: 11 ambiguous characters in strings
+* **SLF001**: 7 private member accesses
+* **FAST002**: 7 FastAPI dependencies without `Annotated`
+* **D103**: 5 missing docstrings in public functions
+* **D205**: 3 missing blank lines in docstrings
+* **D209**: 3 multi-line docstring closing quotes issues
+* **TID252**: 14 relative imports from parent modules
+* **RUF002**: 3 ambiguous multiplication signs in docstrings
+* **PLW0603**: 2 discouraged global statement updates
+* **BLE001**: 3 blind exception catches
+* **C901**: 1 overly complex function
+* **PLR0915**: 1 function with too many statements
+* **PLR2004**: 1 magic value used in comparison
+* **PLW2901**: 1 overwritten loop variable
+* **PLC0415**: 1 import not at top-level
+* **SIM105**: 1 use of `try-except-pass` instead of `contextlib.suppress`
+* **SIM108**: 1 ternary operator recommendation
+* **S110**: 1 `try-except-pass` detected
+* **T201**: 1 `print` statement found
+* **FBT001**: 1 boolean-typed positional argument
+
+**src/local_delegate/web/sysinfo.py**
+* **PTH123**: 3 `open()` calls should use `Path.open()`
+* **PLW1510**: 4 `subprocess.run` calls without explicit `check`
+* **S607**: 4 partial executable paths in processes
+* **BLE001**: 3 blind exception catches
+* **PLR2004**: 3 magic values used in comparison
+* **D403**: 3 docstring capitalization issues
+* **PLW0603**: 2 discouraged global statement updates
+* **CPY001**: 1 missing copyright notice
+* **PLC0415**: 1 import not at top-level
+* **PTH208**: 1 recommendation to use `Path.iterdir()`
+* **S603**: 1 untrusted input in `subprocess` call
+* **COM812**: 2 trailing commas missing
+
+**src/local_delegate/web/auth.py**
+* **ANN001**: 9 missing type annotations for arguments
+* **COM812**: 3 trailing commas missing
+* **D400**: 2 lines not ending with a period
+* **ANN202**: 2 missing return type annotations for private functions
+* **CPY001**: 1 missing copyright notice
+* **D107**: 1 missing docstring in `__init__`
+* **D102**: 1 missing docstring in public method
+* **ANN201**: 1 missing return type annotation
+
+**src/local_delegate/web/__init__.py**
+* **CPY001**: 1 missing copyright notice
+
+Found 388 errors.
+
+(read server-side: 33805 chars ≈ 17606 Claude tokens that did not enter your context)

@@ -1,0 +1,14 @@
+**src/a.py**
+* Falta la cadena de documentación en la función pública (D103): 2
+* Falta la cadena de documentación en el módulo público (D100): 1
+* No utilizar estructuras de datos mutables para valores predeterminados de argumentos (B006): 1
+
+**src/b.py**
+* Falta la cadena de documentación en la función pública (D103): 3
+* Falta la cadena de documentación en el módulo público (D100): 1
+
+**src/c.py**
+* Se encontró el uso de print (T201): 3
+* Falta la cadena de documentación en el módulo público (D100): 1
+
+(leído server-side: 626 chars ≈ 326 tokens de Claude que no entraron a tu contexto)

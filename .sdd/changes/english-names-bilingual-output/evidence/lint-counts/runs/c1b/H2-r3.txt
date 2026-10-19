@@ -1,0 +1,14 @@
+**src/b.py**
+*   **D103**: 5 faltan docstrings en funciones públicas.
+*   **D100**: 3 faltan docstrings en módulos públicos.
+
+**src/a.py**
+*   **D103**: 5 faltan docstrings en funciones públicas.
+*   **D100**: 3 faltan docstrings en módulos públicos.
+*   **B006**: 1 no se deben usar estructuras de datos mutables para valores por defecto en argumentos.
+
+**src/c.py**
+*   **T201**: 3 se encontró el uso de `print`.
+*   **D100**: 3 faltan docstrings en módulos públicos.
+
+(leído server-side: 626 chars ≈ 326 tokens de Claude que no entraron a tu contexto)

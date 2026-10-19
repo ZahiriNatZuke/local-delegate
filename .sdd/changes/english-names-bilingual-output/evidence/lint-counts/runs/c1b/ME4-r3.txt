@@ -1,0 +1,7 @@
+**Summary of Issues**
+
+**tools/gen.py:**
+
+This file exhibits multiple issues related to **module level imports**. Specifically, there are four instances of **E402 Module level import not at top of file** occurring on lines 4, 5, 6, and 7. Additionally, two lines, at lines 20 and 31, trigger **E501 Line too long** warnings. Finally, on line 50, a **E711 Comparison to `None` should be `cond is None`** error is detected. These issues suggest potential organizational concerns within the file and a need for careful review of import statements and line lengths.
+
+(read server-side: 438 chars ≈ 228 Claude tokens that did not enter your context)

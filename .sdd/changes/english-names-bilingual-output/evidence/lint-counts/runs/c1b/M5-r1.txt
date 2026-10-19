@@ -1,0 +1,34 @@
+**Resumen de Problemas por Archivo:**
+
+**src\local_delegate\sections.py:**
+
+*   CPY001: Falta aviso de copyright al inicio del archivo (1)
+*   RUF002: La cadena de documentación contiene una ambigüedad con `–` (EN DASH). ¿Se refiere a `-` (HYPHEN-MINUS)? (1)
+*   TC003: Mover la importación de la biblioteca estándar `collections.abc.Callable` a un bloque de verificación de tipos (1)
+*   E501: Línea demasiado larga (7)
+*   D101: Falta cadena de documentación en clase pública (3)
+*   D102: Falta cadena de documentación en método público (2)
+*   D301: Usar `r"""` si hay barras invertidas en una cadena de documentación (1)
+*   D400: La primera línea debe terminar con un punto (1)
+*   C901: `markdown_headings` es demasiado complejo (2)
+*   PLR2004: Se utiliza un valor mágico en la comparación, considerar reemplazar `2` con una variable constante (1)
+*   PLR0912: Demasiadas ramas (14)
+*   RUF002: La cadena de documentación contiene una ambigüedad con `×` (MULTIPLICATION SIGN). ¿Se refiere a `x` (LATIN SMALL LETTER X)? (1)
+*   D205: Se requiere una línea en blanco entre la línea de resumen y la descripción (1)
+*   D101: Falta cadena de documentación en clase pública (1)
+*   E501: Línea demasiado larga (4)
+*   D101: Falta cadena de documentación en clase pública (1)
+*   D102: Falta cadena de documentación en método público (1)
+*   C901: `markdown_headings` es demasiado complejo (1)
+*   PLR0913: Demasiados argumentos en la definición de la función (1)
+*   E501: Línea demasiado larga (1)
+*   D205: Se requiere una línea en blanco entre la línea de resumen y la descripción (1)
+*   E501: Línea demasiado larga (1)
+*   E501: Línea demasiado larga (1)
+*   E501: Línea demasiado larga (1)
+*   D101: Falta cadena de documentación en clase pública (1)
+*   D102: Falta cadena de documentación en método público (1)
+
+**Total de Errores:** 26
+
+(leído server-side: 2627 chars ≈ 1368 tokens de Claude que no entraron a tu contexto)

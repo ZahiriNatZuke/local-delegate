@@ -1,0 +1,22 @@
+**src/local_delegate/sections.py**
+
+**Errores más relevantes**
+* **Línea demasiado larga** (E501): 6 errores.
+* **Falta de cadena de documentación en clase pública** (D101): 5 errores.
+* **Falta de cadena de documentación en método público** (D102): 3 errores.
+* **Cadena de documentación con caracteres ambiguos** (RUF002): 2 errores.
+* **Complejidad excesiva** (C901): 2 errores.
+* **Falta de aviso de derechos de autor al inicio del archivo** (CPY001).
+* **Mover importación de la biblioteca estándar a un bloque de comprobación de tipos** (TC003).
+* **Usar `r"""` si hay barras invertidas en una cadena de documentación** (D301).
+* **La primera línea debe terminar con un punto** (D400).
+* **Uso de valor mágico en una comparación** (PLR2004).
+* **Demasiadas ramificaciones** (PLR0912).
+* **Demasiados argumentos en la definición de la función** (PLR0913).
+* **Se requiere una línea en blanco entre la línea de resumen y la descripción** (D205).
+
+Found 26 errors.
+
+Sin mencionar (del log, no los nombra el resumen): D203, D211, D212, D213
+
+(leído server-side: 2627 chars ≈ 1368 tokens de Claude que no entraron a tu contexto)
