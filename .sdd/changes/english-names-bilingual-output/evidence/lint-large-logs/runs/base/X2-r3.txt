@@ -1,0 +1,210 @@
+**Resumen de pruebas por archivo**
+
+**tests/test_update.py**
+* 74 pruebas sobre detección de instalaciones, reparación de servicios, gestión de hooks, actualizaciones y reinicio del demonio.
+
+**tests/test_analyze_benchmark.py**
+* 86 pruebas de análisis de rendimiento, incluyendo calidad, latencia, significancia, datos truncados y formatos JSON.
+
+**tests/test_checks.py**
+* 63 pruebas de diagnóstico sobre validación de IDs, versiones, estado del demonio, credenciales y archivos huérfanos.
+
+**tests/test_metrics.py**
+* 66 pruebas sobre métricas del sistema, estadísticas de uso, contabilidad de tokens, paneles y seguridad de la API.
+
+**tests/test_residency.py**
+* 54 pruebas sobre gestión de residencia de modelos, detección de claves sensibles, edición de archivos y configuración de TTL.
+
+**tests/test_affinity.py**
+* 48 pruebas de afinidad, cubriendo gestión de carga, cambios de modelo, uso de roles y errores en cola.
+
+**tests/test_install.py**
+* 46 pruebas sobre el proceso de instalación, gestión de recursos, comandos de shell, rutas en Windows e idempotencia.
+
+**tests/test_failures.py**
+* 45 pruebas sobre clasificación de errores HTTP, tiempos de espera y estados de autoinicio.
+
+**tests/test_llamaswap_config.py**
+* 44 pruebas sobre carga de configuración, estimación de memoria RAM/VRAM, validación de GGUF y grupos de modelos.
+
+**tests/test_structured_summary.py**
+* 44 pruebas sobre generación de resúmenes, detección de encabezados y gestión de secciones.
+
+**tests/test_detect_spanish_names.py**
+* 43 pruebas sobre detección de nombres en español y heurísticas de palabras similares.
+
+**tests/test_adoption_experiment.py**
+* 36 pruebas de experimentos de adopción, incluyendo tareas, costos y reportes.
+
+**tests/test_price_watcher.py**
+* 36 pruebas sobre seguimiento de precios, cambios en modelos y validación de formatos.
+
+**tests/test_web_auth.py**
+* 37 pruebas de seguridad web, incluyendo encabezados, tokens Bearer, autenticación y sesiones.
+
+**tests/test_fallback.py**
+* 37 pruebas sobre mecanismos de respaldo, saltos entre modelos y observabilidad de fallos.
+
+**tests/test_dashboard_ui.py**
+* 35 pruebas sobre paginación, tipografía, componentes visuales y localización.
+
+**tests/test_benchmark.py**
+* 35 pruebas de métricas de rendimiento, incluyendo GPU, errores JSON y bucles infinitos.
+
+**tests/test_pair_sheet.py**
+* 33 pruebas de generación de hojas de comparación, validación de reglas y lectura de archivos.
+
+**tests/test_install_opencode.py**
+* 33 pruebas sobre configuración de directorios, archivos JSON/JSONC y esquemas de entrada.
+
+**tests/test_dashboard_states.py**
+* 30 pruebas sobre estados del modelo, fallos, latencia e interfaz de usuario.
+
+**tests/test_measure_cooldown.py**
+* 31 pruebas sobre reglas de enfriamiento, manejo de episodios e informes de errores.
+
+**tests/test_pace.py**
+* 31 pruebas sobre medición del ritmo, entradas inválidas y semillas de datos.
+
+**tests/test_resource_probe.py**
+* 31 pruebas sobre monitorización de recursos (RAM, VRAM) y gestión de muestras.
+
+**tests/test_clients.py**
+* Gestión de capacidades de clientes, rotación de registros y estados de la API.
+
+**tests/test_core.py**
+* Lectura de archivos, limpieza de bloques, esquemas JSON y límites de concurrencia.
+
+**tests/test_corpus.py**
+* Integridad del corpus, reglas de roles y validación de hashes.
+
+**tests/test_daemon.py**
+* Autenticación, consultas al backend, gestión de tokens y apagado limpio.
+
+**tests/test_deprecations.py**
+* 23 pruebas sobre gestión de nombres obsoletos y registros de depreciación.
+
+**tests/test_install_timeouts.py**
+* 23 pruebas sobre persistencia de tiempos de espera en clientes.
+
+**tests/test_test_windows.py**
+* 23 pruebas sobre gestión de ventanas de tiempo, registros y fechas.
+
+**tests/test_questions.py**
+* 22 pruebas sobre capacidad de preguntas, sesiones y esquemas de elicitación.
+
+**tests/test_vendor.py**
+* 21 pruebas de integridad de archivos, manifiestos y detección de vulnerabilidades.
+
+**tests/test_post_chat_paths.py**
+* 20 pruebas de respuesta de rutas de chat ante códigos de estado y errores.
+
+**tests/test_smoke.py**
+* 19 pruebas de humo para verificar registro de herramientas y ejecución del servidor.
+
+**tests/test_affinity_batch.py**
+* 18 pruebas de procesamiento por lotes, gestión de errores y archivos.
+
+**tests/test_boilerplate_output.py**
+* 18 pruebas de salida de código, gestión de rutas y errores de backend.
+
+**tests/test_install_header.py**
+* 18 pruebas sobre gestión de encabezados y variables de entorno.
+
+**tests/test_map_reduce.py**
+* 18 pruebas sobre procesamiento de documentos largos y reintentos.
+
+**tests/test_hook_legacy_names.py**
+* 17 pruebas sobre compatibilidad con nombres antiguos y advertencias.
+
+**tests/test_agents.py**
+* 15 pruebas de agentes, centradas en catálogo de habilidades y ejecución.
+
+**tests/test_f1_conformance.py**
+* 15 pruebas sobre conformidad con el protocolo y registros de eventos.
+
+**tests/test_load_probe.py**
+* 15 pruebas sobre traducción de estados de carga y tiempos de espera.
+
+**tests/test_backend_probe.py**
+* 14 pruebas de sondeo del servidor, estados de acceso y tiempos de conexión.
+
+**tests/test_delegation_connection.py**
+* 14 pruebas sobre tiempos de espera de conexión y errores de delegación.
+
+**tests/test_fast_role_retired.py**
+* 14 pruebas sobre la retirada del rol rápido y advertencias.
+
+**tests/test_llamaswap_api.py**
+* 14 pruebas sobre estado de ejecución, modelos en vuelo y actividad.
+
+**tests/test_residency_cli.py**
+* 14 pruebas sobre la interfaz de línea de comandos para residencia.
+
+**tests/test_slowness.py**
+* 14 pruebas sobre medición de lentitud en llamadas y gestión de tiempos.
+
+**tests/test_turn_daemon.py**
+* 14 pruebas sobre funcionamiento del demonio, topologías y excepciones.
+
+**tests/test_vision.py**
+* 14 pruebas sobre procesamiento de imágenes, rutas y uso de tokens.
+
+**tests/test_fake_llamaswap.py**
+* 13 pruebas sobre comportamiento simulado y gestión de procesos.
+
+**tests/test_valuation.py**
+* 13 pruebas sobre cálculo de valoraciones, expiraciones y desgloses.
+
+**tests/test_pair_sheet.py**
+* 11 pruebas de generación de hojas, validación de reglas y lectura de archivos.
+
+**tests/test_failure_captures.py**
+* 10 pruebas sobre captura de errores por capacidad y tiempos de espera.
+
+**tests/test_measure_structured_summary.py**
+* 10 pruebas sobre validación de resúmenes, títulos y cobertura.
+
+**tests/test_quota.py**
+* 10 pruebas sobre cálculo de cuotas, sesiones paralelas y puntos.
+
+**tests/test_recompute.py**
+* 10 pruebas sobre recomputación de agregados, privacidad e idempotencia.
+
+**tests/test_failures_integration.py**
+* 9 pruebas de integración sobre errores de conexión y respuestas de modelos.
+
+**tests/test_fallback_observability.py**
+* 9 pruebas sobre registro de causas de respaldo y estados locales.
+
+**tests/test_bump_version.py**
+* 8 pruebas de actualización de versión y validación de registros.
+
+**tests/test_footprint.py**
+* 8 pruebas sobre lectura de configuraciones y huellas de ejecución.
+
+**tests/test_pricing.py**
+* 8 pruebas sobre normalización de fechas, búsqueda de precios y tablas.
+
+**tests/test_recompute_legacy.py**
+* 8 pruebas sobre compatibilidad y migración de datos antiguos.
+
+**tests/test_role_caps.py**
+* 8 pruebas sobre capacidades de roles y truncamiento de contenido.
+
+**tests/test_release_metadata.py**
+* 6 pruebas sobre consistencia de versión y metadatos de publicación.
+
+**tests/test_environment_isolation.py**
+* 5 pruebas sobre aislamiento de variables de entorno y configuración.
+
+**tests/test_hooks_telemetry_api.py**
+* 5 pruebas de telemetría y agrupación de
+
+Sin mencionar (del log, no los nombra el resumen): tests/test_connection_cause.py, tests/test_topology.py
+
+[local-delegate warning: salida truncada por max_tokens en 4 de 8 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 206985 chars ≈ 107804 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 8 pasadas por local-delegate)

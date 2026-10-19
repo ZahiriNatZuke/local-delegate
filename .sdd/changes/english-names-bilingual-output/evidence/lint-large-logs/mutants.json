@@ -1,0 +1,29 @@
+{
+ "global counts (no per-file branch in the mechanical call)": {
+  "returncode": 1,
+  "failed": [
+   "test_the_mechanical_call_with_several_files_gets_the_counts_per_file"
+  ]
+ },
+ "one entry per file (no bound in the final step, no line of the rest)": {
+  "returncode": 1,
+  "failed": [
+   "test_a_chunked_log_without_per_file_counts_forbids_them",
+   "test_the_chunked_lint_bounds_the_entries_and_counts_the_rest",
+   "test_the_line_of_the_rest_in_english"
+  ]
+ },
+ "map of before (no prohibition of per-file figures in the map)": {
+  "returncode": 1,
+  "failed": [
+   "test_a_map_with_many_files_names_only_the_most_named",
+   "test_the_map_steps_give_no_figures_per_file"
+  ]
+ },
+ "no prohibition in the final step of an uncountable log": {
+  "returncode": 1,
+  "failed": [
+   "test_a_chunked_log_without_per_file_counts_forbids_them"
+  ]
+ }
+}

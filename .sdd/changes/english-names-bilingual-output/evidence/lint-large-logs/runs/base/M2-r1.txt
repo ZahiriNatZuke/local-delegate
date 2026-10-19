@@ -1,0 +1,9 @@
+**Resumen de Problemas por Archivo**
+
+**src/a.py:**  El archivo presenta 3 problemas de tipo D100 (Faltan cadenas de documentación en módulos públicos) y 1 problema de tipo D103 (Faltan cadenas de documentación en funciones públicas). Además, se detectó 1 problema de tipo B006 (No se deben utilizar estructuras de datos mutables para valores predeterminados de argumentos).
+
+**src/b.py:** El archivo muestra 4 problemas de tipo D100 (Faltan cadenas de documentación en módulos públicos) y 4 problemas de tipo D103 (Faltan cadenas de documentación en funciones públicas).
+
+**src/c.py:** El archivo contiene 3 problemas de tipo T201 (Se encontró la instrucción `print`).
+
+(leído server-side: 626 chars ≈ 326 tokens de Claude que no entraron a tu contexto)

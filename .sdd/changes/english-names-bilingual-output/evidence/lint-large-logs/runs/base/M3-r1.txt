@@ -1,0 +1,22 @@
+**Resumen de Problemas por Archivo**
+
+**lib/net.py:**
+- I001: 3
+- SIM102: 3
+- RET504: 1
+
+**lib/io.py:**
+- I001: 2
+- SIM102: 1
+- UP006: 3
+
+**lib/db.py:**
+- I001: 2
+- SIM102: 2
+- UP006: 1
+- RET504: 1
+
+**Observaciones:**
+El código de regla I001 aparece con mayor frecuencia. La regla SIM102 también es común. La regla UP006 aparece menos, seguida de RET504.
+
+(leído server-side: 784 chars ≈ 408 tokens de Claude que no entraron a tu contexto)

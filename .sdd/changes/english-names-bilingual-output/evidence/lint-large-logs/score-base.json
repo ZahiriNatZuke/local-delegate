@@ -1,0 +1,2522 @@
+{
+ "runs": "D:\\Projects\\ld-wt-biglog\\.sdd\\changes\\english-names-bilingual-output\\evidence\\lint-large-logs\\runs\\base",
+ "rows": [
+  {
+   "id": "X1",
+   "window": "X",
+   "rep": 1,
+   "model": "gemma4-26b-a4b",
+   "chunks": 6,
+   "finish_reason": "length",
+   "latency_ms": 216825,
+   "cut_notice": false,
+   "chars": 7285,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 0.9,
+   "model_files": 0.6,
+   "per_file_checked": 22,
+   "per_file_wrong": 11,
+   "per_file_items": [
+    {
+     "file": "src/local_delegate/web/metrics.py",
+     "code": "E501",
+     "figure": 178,
+     "line": "* Línea demasiado larga (E501): 178"
+    },
+    {
+     "file": "src/local_delegate/web/metrics.py",
+     "code": "RUF001",
+     "figure": 14,
+     "line": "* Cadenas con caracteres ambiguos (RUF001): 14"
+    },
+    {
+     "file": "src/local_delegate/web/metrics.py",
+     "code": "D103",
+     "figure": 10,
+     "line": "* Error en docstring (D205, D209, D103): 10"
+    },
+    {
+     "file": "src/local_delegate/web/metrics.py",
+     "code": "SLF001",
+     "figure": 10,
+     "line": "* Acceso a miembro privado (SLF001): 10"
+    },
+    {
+     "file": "src/local_delegate/web/metrics.py",
+     "code": "COM812",
+     "figure": 7,
+     "line": "* Coma final faltante (COM812): 7"
+    },
+    {
+     "file": "src/local_delegate/web/metrics.py",
+     "code": "BLE001",
+     "figure": 4,
+     "line": "* Captura de excepción ciega (BLE001): 4"
+    },
+    {
+     "file": "src/local_delegate/residency.py",
+     "code": "ANN401",
+     "figure": 15,
+     "line": "* Expresiones con tipado dinámico no permitidas (ANN401): 15"
+    },
+    {
+     "file": "src/local_delegate/quota.py",
+     "code": "D209",
+     "figure": 8,
+     "line": "* Requerir línea en blanco o comillas en línea separada (D205, D209): 8"
+    },
+    {
+     "file": "src/local_delegate/pace.py",
+     "code": "ANN401",
+     "figure": 11,
+     "line": "* Expresiones con tipado dinámico no permitidas (ANN401): 11"
+    },
+    {
+     "file": "src/local_delegate/pace.py",
+     "code": "BLE001",
+     "figure": 7,
+     "line": "* Captura de excepciones ciegas (BLE001): 7"
+    },
+    {
+     "file": "src/local_delegate/pace.py",
+     "code": "COM812",
+     "figure": 3,
+     "line": "* Falta de coma final (COM812): 3"
+    }
+   ]
+  },
+  {
+   "id": "X1",
+   "window": "X",
+   "rep": 2,
+   "model": "gemma4-26b-a4b",
+   "chunks": 6,
+   "finish_reason": "length",
+   "latency_ms": 213164,
+   "cut_notice": false,
+   "chars": 6994,
+   "fidelity_total": 2,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 0.9,
+   "model_files": 0.5,
+   "per_file_checked": 21,
+   "per_file_wrong": 9,
+   "per_file_items": [
+    {
+     "file": "src/local_delegate/pace.py",
+     "code": "BLE001",
+     "figure": 7,
+     "line": "* Captura de excepciones ciegas (BLE001): 7"
+    },
+    {
+     "file": "src/local_delegate/pace.py",
+     "code": "ANN401",
+     "figure": 11,
+     "line": "* Expresiones con tipado dinámico no permitidas (ANN401): 11"
+    },
+    {
+     "file": "src/local_delegate/pace.py",
+     "code": "COM812",
+     "figure": 3,
+     "line": "* Falta de coma final (COM812): 3"
+    },
+    {
+     "file": "src/local_delegate/pricing.py",
+     "code": "RUF002",
+     "figure": 2,
+     "line": "* Comentario o docstring con caracteres ambiguos (RUF003, RUF002): 2"
+    },
+    {
+     "file": "src/local_delegate/probes.py",
+     "code": "BLE001",
+     "figure": 2,
+     "line": "* Captura de excepciones ciegas (BLE001): 2"
+    },
+    {
+     "file": "src/local_delegate/probes.py",
+     "code": "FBT003",
+     "figure": 1,
+     "line": "* Otros (TC003, S603, PLW1510, D301, E501, FBT001, D401, FBT003): 1 error por tipo."
+    },
+    {
+     "file": "src/local_delegate/quota.py",
+     "code": "D209",
+     "figure": 8,
+     "line": "* Requerir línea en blanco o comillas en línea separada (D205, D209): 8"
+    },
+    {
+     "file": "src/local_delegate/recompute.py",
+     "code": "COM812",
+     "figure": 7,
+     "line": "* Falta de coma final (COM812): 7"
+    },
+    {
+     "file": "src/local_delegate/residency.py",
+     "code": "ANN401",
+     "figure": 15,
+     "line": "* Expresiones con tipado dinámico no permitidas (ANN401): 15"
+    }
+   ]
+  },
+  {
+   "id": "X1",
+   "window": "X",
+   "rep": 3,
+   "model": "gemma4-26b-a4b",
+   "chunks": 6,
+   "finish_reason": "length",
+   "latency_ms": 210500,
+   "cut_notice": false,
+   "chars": 6750,
+   "fidelity_total": 2,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 0.5,
+   "per_file_checked": 4,
+   "per_file_wrong": 1,
+   "per_file_items": [
+    {
+     "file": "src/local_delegate/probes.py",
+     "code": "FBT003",
+     "figure": 1,
+     "line": "* **TC003, S603, PLW1510, D301, E501, FBT001, D401, FBT003**: 1 error por tipo."
+    }
+   ]
+  },
+  {
+   "id": "X2",
+   "window": "X",
+   "rep": 1,
+   "model": "gemma4-26b-a4b",
+   "chunks": 8,
+   "finish_reason": "length",
+   "latency_ms": 216125,
+   "cut_notice": false,
+   "chars": 7107,
+   "fidelity_total": 5,
+   "codes": null,
+   "files": 1.0,
+   "model_codes": null,
+   "model_files": 0.4,
+   "per_file_checked": 39,
+   "per_file_wrong": 28,
+   "per_file_items": [
+    {
+     "file": "tests/test_analyze_benchmark.py",
+     "code": null,
+     "figure": 89,
+     "line": "* 89 pruebas de análisis de rendimiento, incluyendo criterios de calidad, latencia, pruebas de significancia, gestión de"
+    },
+    {
+     "file": "tests/test_update.py",
+     "code": null,
+     "figure": 72,
+     "line": "* 72 pruebas sobre el proceso de actualización, detección de instalaciones, reparación de ganchos, manejo de versiones, "
+    },
+    {
+     "file": "tests/test_checks.py",
+     "code": null,
+     "figure": 62,
+     "line": "* 62 pruebas de diagnóstico y comprobación, incluyendo validación de IDs de registro, versiones instaladas, estado del d"
+    },
+    {
+     "file": "tests/test_metrics.py",
+     "code": null,
+     "figure": 65,
+     "line": "* 65 pruebas sobre métricas del sistema, estadísticas de uso, contabilidad de tokens, paneles de control y seguridad de "
+    },
+    {
+     "file": "tests/test_affinity.py",
+     "code": null,
+     "figure": 47,
+     "line": "* 47 pruebas de afinidad, cubriendo tareas mecánicas, gestión de carga, cambios de modelo, uso de memoria y comportamien"
+    },
+    {
+     "file": "tests/test_install.py",
+     "code": null,
+     "figure": 46,
+     "line": "* 46 pruebas sobre el proceso de instalación, gestión de recursos, comandos de shell, manejo de rutas en Windows, idempo"
+    },
+    {
+     "file": "tests/test_llamaswap_config.py",
+     "code": null,
+     "figure": 44,
+     "line": "* 44 pruebas sobre la carga de configuración, estimación de memoria VRAM/RAM, validación de archivos GGUF y gestión de g"
+    },
+    {
+     "file": "tests/test_adoption_experiment.py",
+     "code": null,
+     "figure": 34,
+     "line": "* 34 pruebas de experimentos de adopción, incluyendo validaciones de tareas, costos, planes reproducibles y reportes de "
+    },
+    {
+     "file": "tests/test_measure_slowness.py",
+     "code": null,
+     "figure": 31,
+     "line": "* 31 pruebas sobre la medición de lentitud, ventanas de tiempo, umbrales de tokens y códigos de parada."
+    },
+    {
+     "file": "tests/test_pace.py",
+     "code": null,
+     "figure": 30,
+     "line": "* 30 pruebas sobre la medición del ritmo, manejo de entradas inválidas y siembra de datos mensuales."
+    },
+    {
+     "file": "tests/test_install_clients.py",
+     "code": null,
+     "figure": 28,
+     "line": "* 28 pruebas sobre la configuración de clientes, detección de directorios, simulaciones de rutas de inicio, comportamien"
+    },
+    {
+     "file": "tests/test_install_opencode.py",
+     "code": null,
+     "figure": 32,
+     "line": "* 32 pruebas sobre la configuración de directorios, manejo de archivos JSON/JSONC, comentarios, esquemas de configuració"
+    },
+    {
+     "file": "tests/test_web_auth.py",
+     "code": null,
+     "figure": 36,
+     "line": "* 36 pruebas sobre autenticación web, validación de encabezados Bearer y Basic, gestión de sesiones, cookies y seguridad"
+    },
+    {
+     "file": "tests/test_benchmark.py",
+     "code": null,
+     "figure": 36,
+     "line": "* 36 pruebas de métricas de rendimiento, incluyendo análisis de métricas de Prometheus, gestión de casos de visión, bucl"
+    },
+    {
+     "file": "tests/test_agents.py",
+     "code": null,
+     "figure": 15,
+     "line": "* 15 pruebas de agentes, centradas en el catálogo de habilidades, actualización de bloques, ejecución en seco y reemplaz"
+    },
+    {
+     "file": "tests/test_backend_probe.py",
+     "code": null,
+     "figure": 13,
+     "line": "* 13 pruebas de sondeo del backend, incluyendo estados de acceso, tiempos de espera y validación de respuestas."
+    },
+    {
+     "file": "tests/test_valuation.py",
+     "code": null,
+     "figure": 12,
+     "line": "* 12 pruebas sobre el cálculo de valoraciones, manejo de caracteres, expiraciones y desgloses de esfuerzo."
+    },
+    {
+     "file": "tests/test_pair_sheet.py",
+     "code": null,
+     "figure": 11,
+     "line": "* 11 pruebas sobre la generación de hojas de comparación, validación de respuestas y tablas de veredictos."
+    },
+    {
+     "file": "tests/test_measure_structured_summary.py",
+     "code": null,
+     "figure": 10,
+     "line": "* 10 pruebas sobre la validación de resúmenes estructurados, títulos y cobertura de contenido."
+    },
+    {
+     "file": "tests/test_chains.py",
+     "code": null,
+     "figure": 25,
+     "line": "* 25 pruebas de cadenas de ejecución, incluyendo configuraciones de fallback, gestión de variables y disponibilidad de m"
+    },
+    {
+     "file": "tests/test_install_timeouts.py",
+     "code": null,
+     "figure": 23,
+     "line": "* 23 pruebas sobre la persistencia de tiempos de espera en diferentes clientes y modos de ejecución."
+    },
+    {
+     "file": "tests/test_vendor.py",
+     "code": null,
+     "figure": 21,
+     "line": "* 21 pruebas sobre la integridad de archivos, manifiestos, vulnerabilidades, versiones y reportes de seguridad."
+    },
+    {
+     "file": "tests/test_affinity_batch.py",
+     "code": null,
+     "figure": 18,
+     "line": "* 18 pruebas de procesamiento por lotes, incluyendo conteo de peticiones, gestión de errores, formatos de escritura y lí"
+    },
+    {
+     "file": "tests/test_boilerplate_output.py",
+     "code": null,
+     "figure": 18,
+     "line": "* 18 pruebas de salida de código estándar, incluyendo gestión de directorios, rutas relativas, ahorro de salida y manejo"
+    },
+    {
+     "file": "tests/test_turn.py",
+     "code": null,
+     "figure": 16,
+     "line": "* 16 pruebas sobre la gestión de turnos, reservas, cambios de topología y colas de espera."
+    },
+    {
+     "file": "tests/test_turn_daemon.py",
+     "code": null,
+     "figure": 14,
+     "line": "* 14 pruebas sobre el funcionamiento del demonio, incluyendo la gestión de modelos, topologías, eventos forzados y excep"
+    },
+    {
+     "file": "tests/test_vision.py",
+     "code": null,
+     "figure": 14,
+     "line": "* 14 pruebas sobre el procesamiento de imágenes, validación de rutas, extensiones, límites de tamaño y uso de tokens."
+    },
+    {
+     "file": "tests/test_hooks_telemetry_api.py",
+     "code": null,
+     "figure": 5,
+     "line": "* 5 pruebas de telemetría y agrupación de lecturas por extensión."
+    }
+   ]
+  },
+  {
+   "id": "X2",
+   "window": "X",
+   "rep": 2,
+   "model": "gemma4-26b-a4b",
+   "chunks": 8,
+   "finish_reason": "length",
+   "latency_ms": 232698,
+   "cut_notice": false,
+   "chars": 8530,
+   "fidelity_total": 5,
+   "codes": null,
+   "files": 1.0,
+   "model_codes": null,
+   "model_files": 0.5,
+   "per_file_checked": 45,
+   "per_file_wrong": 30,
+   "per_file_items": [
+    {
+     "file": "tests/test_adoption_experiment.py",
+     "code": null,
+     "figure": 34,
+     "line": "* 34 pruebas sobre experimentos de adopción, incluyendo validación de planes, cobertura de títulos, manejo de archivos y"
+    },
+    {
+     "file": "tests/test_affinity.py",
+     "code": null,
+     "figure": 48,
+     "line": "* 48 pruebas sobre gestión de afinidad, incluyendo modelos cargados, gestión de colas, cambios de huella digital y compo"
+    },
+    {
+     "file": "tests/test_affinity_batch.py",
+     "code": null,
+     "figure": 18,
+     "line": "* 18 pruebas sobre procesos por lotes, cubriendo recuentos de peticiones, reintentos, escritura de formatos y gestión de"
+    },
+    {
+     "file": "tests/test_agents.py",
+     "code": null,
+     "figure": 15,
+     "line": "* 15 pruebas sobre gestión de agentes, incluyendo actualización de bloques, uso de catálogos e integridad de agentes ext"
+    },
+    {
+     "file": "tests/test_analyze_benchmark.py",
+     "code": null,
+     "figure": 86,
+     "line": "* 86 pruebas sobre análisis de rendimiento, incluyendo criterios de calidad, comparaciones de latencia, pruebas de signi"
+    },
+    {
+     "file": "tests/test_attribution.py",
+     "code": null,
+     "figure": 34,
+     "line": "* 34 pruebas sobre atribución, incluyendo funcionamiento de hooks, resolución de subagentes y gestión de notas."
+    },
+    {
+     "file": "tests/test_backend_probe.py",
+     "code": null,
+     "figure": 14,
+     "line": "* 14 pruebas sobre la sonda del backend, incluyendo estados de acceso, errores 401 y tiempos de conexión."
+    },
+    {
+     "file": "tests/test_benchmark.py",
+     "code": null,
+     "figure": 35,
+     "line": "* 35 pruebas sobre métricas de rendimiento, incluyendo análisis de JSON, bucles infinitos, casos de imagen y estados tér"
+    },
+    {
+     "file": "tests/test_boilerplate_output.py",
+     "code": null,
+     "figure": 18,
+     "line": "* 18 pruebas sobre generación de archivos de salida, incluyendo gestión de directorios, rutas relativas y contabilidad d"
+    },
+    {
+     "file": "tests/test_chains.py",
+     "code": null,
+     "figure": 26,
+     "line": "* 26 pruebas sobre cadenas de ejecución, incluyendo configuraciones de respaldo, disponibilidad de modelos y gestión de "
+    },
+    {
+     "file": "tests/test_checks.py",
+     "code": null,
+     "figure": 62,
+     "line": "* 62 pruebas de diagnóstico y otras sobre detección de versiones, validación de clientes, autenticación de demonios, ges"
+    },
+    {
+     "file": "tests/test_dashboard_js.py",
+     "code": null,
+     "figure": 5,
+     "line": "* 5 pruebas de lógica JavaScript para el panel, incluyendo construcción de consultas, gestión de ventanas, zonas horaria"
+    },
+    {
+     "file": "tests/test_dashboard_states.py",
+     "code": null,
+     "figure": 30,
+     "line": "* 30 pruebas sobre estados del modelo, gestión de fallos, esperas locales y visualización de actividad."
+    },
+    {
+     "file": "tests/test_dashboard_ui.py",
+     "code": null,
+     "figure": 35,
+     "line": "* 35 pruebas de interfaz de usuario, incluyendo paginación, tipografía, temas, tarjetas de KPI y localización."
+    },
+    {
+     "file": "tests/test_deprecations.py",
+     "code": null,
+     "figure": 24,
+     "line": "* 24 pruebas de validación de nombres obsoletos, registros de depreciación y consistencia con el registro de cambios."
+    },
+    {
+     "file": "tests/test_detect_spanish_names.py",
+     "code": null,
+     "figure": 44,
+     "line": "* 44 pruebas de detección de nombres en español, heurísticas de palabras reservadas y falsos positivos."
+    },
+    {
+     "file": "tests/test_failures.py",
+     "code": null,
+     "figure": 45,
+     "line": "* 45 pruebas de clasificación de errores HTTP, tiempos de espera de lectura/conexión y gestión de respuestas rotas."
+    },
+    {
+     "file": "tests/test_failures_integration.py",
+     "code": null,
+     "figure": 9,
+     "line": "* 9 pruebas de integración de fallos, incluyendo errores de conexión y respuestas de modelos."
+    },
+    {
+     "file": "tests/test_fake_llamaswap.py",
+     "code": null,
+     "figure": 12,
+     "line": "* 12 pruebas de simulación de LlamaSwap, gestión de configuración y procesos."
+    },
+    {
+     "file": "tests/test_fallback.py",
+     "code": null,
+     "figure": 36,
+     "line": "* 36 pruebas sobre mecanismos de respaldo, saltos entre modelos, enfriamiento y observabilidad de fallos."
+    },
+    {
+     "file": "tests/test_fallback_observability.py",
+     "code": null,
+     "figure": 9,
+     "line": "* 9 pruebas de registro de logs y estados de respaldo."
+    },
+    {
+     "file": "tests/test_footprint.py",
+     "code": null,
+     "figure": 8,
+     "line": "* 8 pruebas de lectura de huellas de configuración y tamaños de prompts."
+    },
+    {
+     "file": "tests/test_hook_common.py",
+     "code": null,
+     "figure": 16,
+     "line": "* 16 pruebas de funcionamiento común de hooks, marcas de salud y gestión de endpoints."
+    },
+    {
+     "file": "tests/test_hook_legacy_names.py",
+     "code": null,
+     "figure": 17,
+     "line": "* 17 pruebas de compatibilidad con nombres antiguos de hooks."
+    },
+    {
+     "file": "tests/test_hooks_telemetry_api.py",
+     "code": null,
+     "figure": 5,
+     "line": "* 5 pruebas de telemetría y agrupación de lecturas por extensión."
+    },
+    {
+     "file": "tests/test_install.py",
+     "code": null,
+     "figure": 46,
+     "line": "* 46 pruebas sobre el proceso de instalación, gestión de recursos, comandos de shell, rutas en Windows, idempotencia y m"
+    },
+    {
+     "file": "tests/test_install_clients.py",
+     "code": null,
+     "figure": 28,
+     "line": "* 28 pruebas sobre configuración de clientes, detección de directorios, simulaciones de rutas y reportes de estado."
+    },
+    {
+     "file": "tests/test_install_opencode.py",
+     "code": null,
+     "figure": 31,
+     "line": "* 31 pruebas sobre configuración de directorios, manejo de archivos JSON/JSONC, comentarios y procesos de desinstalación"
+    },
+    {
+     "file": "tests/test_install_timeouts.py",
+     "code": null,
+     "figure": 23,
+     "line": "* 23 pruebas sobre la persistencia de tiempos de espera en diferentes clientes y modos."
+    },
+    {
+     "file": "tests/test_llamaswap_config.py",
+     "code": null,
+     "figure": 46,
+     "line": "* 46 pruebas sobre carga de configuración, estimación de memoria VRAM/RAM, validación de archivos GGUF y gestión de grup"
+    }
+   ]
+  },
+  {
+   "id": "X2",
+   "window": "X",
+   "rep": 3,
+   "model": "gemma4-26b-a4b",
+   "chunks": 8,
+   "finish_reason": "length",
+   "latency_ms": 220832,
+   "cut_notice": false,
+   "chars": 7964,
+   "fidelity_total": 9,
+   "codes": null,
+   "files": 1.0,
+   "model_codes": null,
+   "model_files": 0.8,
+   "per_file_checked": 63,
+   "per_file_wrong": 45,
+   "per_file_items": [
+    {
+     "file": "tests/test_update.py",
+     "code": null,
+     "figure": 74,
+     "line": "* 74 pruebas sobre detección de instalaciones, reparación de servicios, gestión de hooks, actualizaciones y reinicio del"
+    },
+    {
+     "file": "tests/test_analyze_benchmark.py",
+     "code": null,
+     "figure": 86,
+     "line": "* 86 pruebas de análisis de rendimiento, incluyendo calidad, latencia, significancia, datos truncados y formatos JSON."
+    },
+    {
+     "file": "tests/test_checks.py",
+     "code": null,
+     "figure": 63,
+     "line": "* 63 pruebas de diagnóstico sobre validación de IDs, versiones, estado del demonio, credenciales y archivos huérfanos."
+    },
+    {
+     "file": "tests/test_metrics.py",
+     "code": null,
+     "figure": 66,
+     "line": "* 66 pruebas sobre métricas del sistema, estadísticas de uso, contabilidad de tokens, paneles y seguridad de la API."
+    },
+    {
+     "file": "tests/test_residency.py",
+     "code": null,
+     "figure": 54,
+     "line": "* 54 pruebas sobre gestión de residencia de modelos, detección de claves sensibles, edición de archivos y configuración "
+    },
+    {
+     "file": "tests/test_affinity.py",
+     "code": null,
+     "figure": 48,
+     "line": "* 48 pruebas de afinidad, cubriendo gestión de carga, cambios de modelo, uso de roles y errores en cola."
+    },
+    {
+     "file": "tests/test_install.py",
+     "code": null,
+     "figure": 46,
+     "line": "* 46 pruebas sobre el proceso de instalación, gestión de recursos, comandos de shell, rutas en Windows e idempotencia."
+    },
+    {
+     "file": "tests/test_failures.py",
+     "code": null,
+     "figure": 45,
+     "line": "* 45 pruebas sobre clasificación de errores HTTP, tiempos de espera y estados de autoinicio."
+    },
+    {
+     "file": "tests/test_llamaswap_config.py",
+     "code": null,
+     "figure": 44,
+     "line": "* 44 pruebas sobre carga de configuración, estimación de memoria RAM/VRAM, validación de GGUF y grupos de modelos."
+    },
+    {
+     "file": "tests/test_structured_summary.py",
+     "code": null,
+     "figure": 44,
+     "line": "* 44 pruebas sobre generación de resúmenes, detección de encabezados y gestión de secciones."
+    },
+    {
+     "file": "tests/test_adoption_experiment.py",
+     "code": null,
+     "figure": 36,
+     "line": "* 36 pruebas de experimentos de adopción, incluyendo tareas, costos y reportes."
+    },
+    {
+     "file": "tests/test_price_watcher.py",
+     "code": null,
+     "figure": 36,
+     "line": "* 36 pruebas sobre seguimiento de precios, cambios en modelos y validación de formatos."
+    },
+    {
+     "file": "tests/test_web_auth.py",
+     "code": null,
+     "figure": 37,
+     "line": "* 37 pruebas de seguridad web, incluyendo encabezados, tokens Bearer, autenticación y sesiones."
+    },
+    {
+     "file": "tests/test_fallback.py",
+     "code": null,
+     "figure": 37,
+     "line": "* 37 pruebas sobre mecanismos de respaldo, saltos entre modelos y observabilidad de fallos."
+    },
+    {
+     "file": "tests/test_dashboard_ui.py",
+     "code": null,
+     "figure": 35,
+     "line": "* 35 pruebas sobre paginación, tipografía, componentes visuales y localización."
+    },
+    {
+     "file": "tests/test_benchmark.py",
+     "code": null,
+     "figure": 35,
+     "line": "* 35 pruebas de métricas de rendimiento, incluyendo GPU, errores JSON y bucles infinitos."
+    },
+    {
+     "file": "tests/test_pair_sheet.py",
+     "code": null,
+     "figure": 33,
+     "line": "* 33 pruebas de generación de hojas de comparación, validación de reglas y lectura de archivos."
+    },
+    {
+     "file": "tests/test_install_opencode.py",
+     "code": null,
+     "figure": 33,
+     "line": "* 33 pruebas sobre configuración de directorios, archivos JSON/JSONC y esquemas de entrada."
+    },
+    {
+     "file": "tests/test_dashboard_states.py",
+     "code": null,
+     "figure": 30,
+     "line": "* 30 pruebas sobre estados del modelo, fallos, latencia e interfaz de usuario."
+    },
+    {
+     "file": "tests/test_pace.py",
+     "code": null,
+     "figure": 31,
+     "line": "* 31 pruebas sobre medición del ritmo, entradas inválidas y semillas de datos."
+    },
+    {
+     "file": "tests/test_resource_probe.py",
+     "code": null,
+     "figure": 31,
+     "line": "* 31 pruebas sobre monitorización de recursos (RAM, VRAM) y gestión de muestras."
+    },
+    {
+     "file": "tests/test_install_timeouts.py",
+     "code": null,
+     "figure": 23,
+     "line": "* 23 pruebas sobre persistencia de tiempos de espera en clientes."
+    },
+    {
+     "file": "tests/test_test_windows.py",
+     "code": null,
+     "figure": 23,
+     "line": "* 23 pruebas sobre gestión de ventanas de tiempo, registros y fechas."
+    },
+    {
+     "file": "tests/test_questions.py",
+     "code": null,
+     "figure": 22,
+     "line": "* 22 pruebas sobre capacidad de preguntas, sesiones y esquemas de elicitación."
+    },
+    {
+     "file": "tests/test_vendor.py",
+     "code": null,
+     "figure": 21,
+     "line": "* 21 pruebas de integridad de archivos, manifiestos y detección de vulnerabilidades."
+    },
+    {
+     "file": "tests/test_post_chat_paths.py",
+     "code": null,
+     "figure": 20,
+     "line": "* 20 pruebas de respuesta de rutas de chat ante códigos de estado y errores."
+    },
+    {
+     "file": "tests/test_smoke.py",
+     "code": null,
+     "figure": 19,
+     "line": "* 19 pruebas de humo para verificar registro de herramientas y ejecución del servidor."
+    },
+    {
+     "file": "tests/test_affinity_batch.py",
+     "code": null,
+     "figure": 18,
+     "line": "* 18 pruebas de procesamiento por lotes, gestión de errores y archivos."
+    },
+    {
+     "file": "tests/test_boilerplate_output.py",
+     "code": null,
+     "figure": 18,
+     "line": "* 18 pruebas de salida de código, gestión de rutas y errores de backend."
+    },
+    {
+     "file": "tests/test_hook_legacy_names.py",
+     "code": null,
+     "figure": 17,
+     "line": "* 17 pruebas sobre compatibilidad con nombres antiguos y advertencias."
+    },
+    {
+     "file": "tests/test_agents.py",
+     "code": null,
+     "figure": 15,
+     "line": "* 15 pruebas de agentes, centradas en catálogo de habilidades y ejecución."
+    },
+    {
+     "file": "tests/test_backend_probe.py",
+     "code": null,
+     "figure": 14,
+     "line": "* 14 pruebas de sondeo del servidor, estados de acceso y tiempos de conexión."
+    },
+    {
+     "file": "tests/test_turn_daemon.py",
+     "code": null,
+     "figure": 14,
+     "line": "* 14 pruebas sobre funcionamiento del demonio, topologías y excepciones."
+    },
+    {
+     "file": "tests/test_vision.py",
+     "code": null,
+     "figure": 14,
+     "line": "* 14 pruebas sobre procesamiento de imágenes, rutas y uso de tokens."
+    },
+    {
+     "file": "tests/test_pair_sheet.py",
+     "code": null,
+     "figure": 11,
+     "line": "* 11 pruebas de generación de hojas, validación de reglas y lectura de archivos."
+    },
+    {
+     "file": "tests/test_measure_structured_summary.py",
+     "code": null,
+     "figure": 10,
+     "line": "* 10 pruebas sobre validación de resúmenes, títulos y cobertura."
+    },
+    {
+     "file": "tests/test_recompute.py",
+     "code": null,
+     "figure": 10,
+     "line": "* 10 pruebas sobre recomputación de agregados, privacidad e idempotencia."
+    },
+    {
+     "file": "tests/test_failures_integration.py",
+     "code": null,
+     "figure": 9,
+     "line": "* 9 pruebas de integración sobre errores de conexión y respuestas de modelos."
+    },
+    {
+     "file": "tests/test_fallback_observability.py",
+     "code": null,
+     "figure": 9,
+     "line": "* 9 pruebas sobre registro de causas de respaldo y estados locales."
+    },
+    {
+     "file": "tests/test_footprint.py",
+     "code": null,
+     "figure": 8,
+     "line": "* 8 pruebas sobre lectura de configuraciones y huellas de ejecución."
+    },
+    {
+     "file": "tests/test_pricing.py",
+     "code": null,
+     "figure": 8,
+     "line": "* 8 pruebas sobre normalización de fechas, búsqueda de precios y tablas."
+    },
+    {
+     "file": "tests/test_recompute_legacy.py",
+     "code": null,
+     "figure": 8,
+     "line": "* 8 pruebas sobre compatibilidad y migración de datos antiguos."
+    },
+    {
+     "file": "tests/test_role_caps.py",
+     "code": null,
+     "figure": 8,
+     "line": "* 8 pruebas sobre capacidades de roles y truncamiento de contenido."
+    },
+    {
+     "file": "tests/test_release_metadata.py",
+     "code": null,
+     "figure": 6,
+     "line": "* 6 pruebas sobre consistencia de versión y metadatos de publicación."
+    },
+    {
+     "file": "tests/test_hooks_telemetry_api.py",
+     "code": null,
+     "figure": 5,
+     "line": "* 5 pruebas de telemetría y agrupación de"
+    }
+   ]
+  },
+  {
+   "id": "X3",
+   "window": "X",
+   "rep": 1,
+   "model": "gemma4-26b-a4b",
+   "chunks": 5,
+   "finish_reason": "length",
+   "latency_ms": 168362,
+   "cut_notice": false,
+   "chars": 7168,
+   "fidelity_total": 1,
+   "codes": null,
+   "files": 1.0,
+   "model_codes": null,
+   "model_files": 1.0,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "X3",
+   "window": "X",
+   "rep": 2,
+   "model": "gemma4-26b-a4b",
+   "chunks": 5,
+   "finish_reason": "length",
+   "latency_ms": 160633,
+   "cut_notice": false,
+   "chars": 6671,
+   "fidelity_total": 0,
+   "codes": null,
+   "files": 1.0,
+   "model_codes": null,
+   "model_files": 1.0,
+   "per_file_checked": 5,
+   "per_file_wrong": 1,
+   "per_file_items": [
+    {
+     "file": "src/app/auth/users-table.ts",
+     "code": "prefer-const",
+     "figure": 2,
+     "line": "* **Errores:** 5 (Variables no usadas: 2, Uso de `prefer-const`: 2, Métodos de ciclo de vida vacíos: 1, Comparación inco"
+    }
+   ]
+  },
+  {
+   "id": "X3",
+   "window": "X",
+   "rep": 3,
+   "model": "gemma4-26b-a4b",
+   "chunks": 5,
+   "finish_reason": "length",
+   "latency_ms": 161510,
+   "cut_notice": false,
+   "chars": 6407,
+   "fidelity_total": 2,
+   "codes": null,
+   "files": 1.0,
+   "model_codes": null,
+   "model_files": 1.0,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "X4",
+   "window": "X",
+   "rep": 1,
+   "model": "gemma4-26b-a4b",
+   "chunks": 7,
+   "finish_reason": "length",
+   "latency_ms": 150208,
+   "cut_notice": false,
+   "chars": 6246,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 0.0,
+   "model_files": 0.8,
+   "per_file_checked": 28,
+   "per_file_wrong": 6,
+   "per_file_items": [
+    {
+     "file": "src/app/admin/users/currency.pipe.ts",
+     "code": null,
+     "figure": 4,
+     "line": "* 4 Errores de asignación de tipo `number | null`."
+    },
+    {
+     "file": "src/app/catalog/profile-form.ts",
+     "code": null,
+     "figure": 5,
+     "line": "* 5 Errores de tipo `number | null` no compatible con `number`."
+    },
+    {
+     "file": "src/app/checkout/format-date.ts",
+     "code": null,
+     "figure": 11,
+     "line": "* 11 Errores de compatibilidad de `string` en argumentos."
+    },
+    {
+     "file": "src/app/checkout/format-date.ts",
+     "code": null,
+     "figure": 7,
+     "line": "* 7 Errores de importación de módulos no encontrados."
+    },
+    {
+     "file": "src/app/checkout/format-date.ts",
+     "code": null,
+     "figure": 3,
+     "line": "* 3 Errores de propiedades sin inicializar."
+    },
+    {
+     "file": "src/server/services/retry.ts",
+     "code": null,
+     "figure": 993,
+     "line": "Found 993 errors in 91 files."
+    }
+   ]
+  },
+  {
+   "id": "X4",
+   "window": "X",
+   "rep": 2,
+   "model": "gemma4-26b-a4b",
+   "chunks": 7,
+   "finish_reason": "length",
+   "latency_ms": 148791,
+   "cut_notice": false,
+   "chars": 6736,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 0.0,
+   "model_files": 0.8,
+   "per_file_checked": 1,
+   "per_file_wrong": 1,
+   "per_file_items": [
+    {
+     "file": "src/server/services/retry.ts",
+     "code": null,
+     "figure": 993,
+     "line": "Found 993 errors in 91 files."
+    }
+   ]
+  },
+  {
+   "id": "X4",
+   "window": "X",
+   "rep": 3,
+   "model": "gemma4-26b-a4b",
+   "chunks": 7,
+   "finish_reason": "length",
+   "latency_ms": 155234,
+   "cut_notice": false,
+   "chars": 6819,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 0.0,
+   "model_files": 0.8,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "G1",
+   "window": "G",
+   "rep": 1,
+   "model": "gemma4-26b-a4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 41812,
+   "cut_notice": false,
+   "chars": 2651,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 35,
+   "per_file_wrong": 3,
+   "per_file_items": [
+    {
+     "file": "src/local_delegate/benchmark.py",
+     "code": "COM812",
+     "figure": 16,
+     "line": "* **COM812**: 16 faltas de coma final."
+    },
+    {
+     "file": "src/local_delegate/benchmark.py",
+     "code": "PLR2004",
+     "figure": 4,
+     "line": "* **PLR2004**: 4 uso de valor mágico en comparación, considere reemplazar con una variable constante."
+    },
+    {
+     "file": "src/local_delegate/benchmark.py",
+     "code": "S603",
+     "figure": 2,
+     "line": "* **S603**: 2 llamada a `subprocess`: compruebe la ejecución de entrada no confiable."
+    }
+   ]
+  },
+  {
+   "id": "G1",
+   "window": "G",
+   "rep": 2,
+   "model": "gemma4-26b-a4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 24854,
+   "cut_notice": false,
+   "chars": 2589,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 35,
+   "per_file_wrong": 3,
+   "per_file_items": [
+    {
+     "file": "src/local_delegate/benchmark.py",
+     "code": "COM812",
+     "figure": 16,
+     "line": "* **COM812**: 16 faltas de coma final."
+    },
+    {
+     "file": "src/local_delegate/benchmark.py",
+     "code": "PLR2004",
+     "figure": 4,
+     "line": "* **PLR2004**: 4 uso de valor mágico en comparación."
+    },
+    {
+     "file": "src/local_delegate/benchmark.py",
+     "code": "S603",
+     "figure": 2,
+     "line": "* **S603**: 2 llamada a `subprocess`: compruebe la ejecución de entrada no confiable."
+    }
+   ]
+  },
+  {
+   "id": "G1",
+   "window": "G",
+   "rep": 3,
+   "model": "gemma4-26b-a4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 25825,
+   "cut_notice": false,
+   "chars": 2573,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 35,
+   "per_file_wrong": 3,
+   "per_file_items": [
+    {
+     "file": "src/local_delegate/benchmark.py",
+     "code": "COM812",
+     "figure": 16,
+     "line": "* **COM812**: 16 faltas de coma final."
+    },
+    {
+     "file": "src/local_delegate/benchmark.py",
+     "code": "PLR2004",
+     "figure": 4,
+     "line": "* **PLR2004**: 4 uso de valor mágico en comparación."
+    },
+    {
+     "file": "src/local_delegate/benchmark.py",
+     "code": "S603",
+     "figure": 2,
+     "line": "* **S603**: 2 llamada a `subprocess`: compruebe la ejecución de entrada no confiable."
+    }
+   ]
+  },
+  {
+   "id": "G2",
+   "window": "G",
+   "rep": 1,
+   "model": "gemma4-26b-a4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 18953,
+   "cut_notice": false,
+   "chars": 1677,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 0.8,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "G2",
+   "window": "G",
+   "rep": 2,
+   "model": "gemma4-26b-a4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 17004,
+   "cut_notice": false,
+   "chars": 1678,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 0.8,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "G2",
+   "window": "G",
+   "rep": 3,
+   "model": "gemma4-26b-a4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 16516,
+   "cut_notice": false,
+   "chars": 1603,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 0.8,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "G3",
+   "window": "G",
+   "rep": 1,
+   "model": "gemma4-26b-a4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 18138,
+   "cut_notice": false,
+   "chars": 1572,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "G3",
+   "window": "G",
+   "rep": 2,
+   "model": "gemma4-26b-a4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 16969,
+   "cut_notice": false,
+   "chars": 1600,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "G3",
+   "window": "G",
+   "rep": 3,
+   "model": "gemma4-26b-a4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 17637,
+   "cut_notice": false,
+   "chars": 1603,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "G4",
+   "window": "G",
+   "rep": 1,
+   "model": "gemma4-26b-a4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 40711,
+   "cut_notice": false,
+   "chars": 2985,
+   "fidelity_total": 2,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 46,
+   "per_file_wrong": 10,
+   "per_file_items": [
+    {
+     "file": "src/local_delegate/web/metrics.py",
+     "code": "E501",
+     "figure": 251,
+     "line": "* **E501**: 251 líneas demasiado largas."
+    },
+    {
+     "file": "src/local_delegate/web/metrics.py",
+     "code": "ANN201",
+     "figure": 21,
+     "line": "* **ANN201**: 21 falta de anotación de tipo de retorno para funciones públicas."
+    },
+    {
+     "file": "src/local_delegate/web/metrics.py",
+     "code": "COM812",
+     "figure": 15,
+     "line": "* **COM812**: 15 falta de coma final."
+    },
+    {
+     "file": "src/local_delegate/web/metrics.py",
+     "code": "RUF001",
+     "figure": 11,
+     "line": "* **RUF001**: 11 cadenas con caracteres ambiguos."
+    },
+    {
+     "file": "src/local_delegate/web/metrics.py",
+     "code": "FAST002",
+     "figure": 6,
+     "line": "* **FAST002**: 6 dependencia de FastAPI sin `Annotated`."
+    },
+    {
+     "file": "src/local_delegate/web/metrics.py",
+     "code": "RUF002",
+     "figure": 3,
+     "line": "* **RUF002**: 3 cadenas con caracteres de multiplicación ambiguos."
+    },
+    {
+     "file": "src/local_delegate/web/sysinfo.py",
+     "code": "BLE001",
+     "figure": 4,
+     "line": "* **BLE001**: 4 no capturar excepciones ciegas."
+    },
+    {
+     "file": "src/local_delegate/web/auth.py",
+     "code": "ANN001",
+     "figure": 10,
+     "line": "* **ANN001**: 10 falta de anotación de tipo para argumentos de función."
+    },
+    {
+     "file": "src/local_delegate/web/auth.py",
+     "code": "ANN202",
+     "figure": 1,
+     "line": "* **ANN202**: 1 falta de anotación de tipo de retorno para función privada."
+    },
+    {
+     "file": "src/local_delegate/web/__init__.py",
+     "code": null,
+     "figure": 388,
+     "line": "Found 388 errors."
+    }
+   ]
+  },
+  {
+   "id": "G4",
+   "window": "G",
+   "rep": 2,
+   "model": "gemma4-26b-a4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 39545,
+   "cut_notice": false,
+   "chars": 3023,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 45,
+   "per_file_wrong": 6,
+   "per_file_items": [
+    {
+     "file": "src/local_delegate/web/metrics.py",
+     "code": "ANN201",
+     "figure": 16,
+     "line": "* **ANN201**: 16 falta anotación de tipo de retorno para función pública."
+    },
+    {
+     "file": "src/local_delegate/web/metrics.py",
+     "code": "COM812",
+     "figure": 18,
+     "line": "* **COM812**: 18 falta coma final."
+    },
+    {
+     "file": "src/local_delegate/web/metrics.py",
+     "code": "D205",
+     "figure": 2,
+     "line": "* **D205**: 2 se requiere una línea en blanco entre el resumen y la descripción."
+    },
+    {
+     "file": "src/local_delegate/web/sysinfo.py",
+     "code": "BLE001",
+     "figure": 4,
+     "line": "* **BLE001**: 4 no capturar excepciones ciegas."
+    },
+    {
+     "file": "src/local_delegate/web/auth.py",
+     "code": "ANN001",
+     "figure": 10,
+     "line": "* **ANN001**: 10 falta anotación de tipo para argumento de función."
+    },
+    {
+     "file": "src/local_delegate/web/__init__.py",
+     "code": null,
+     "figure": 388,
+     "line": "Found 388 errors."
+    }
+   ]
+  },
+  {
+   "id": "G4",
+   "window": "G",
+   "rep": 3,
+   "model": "gemma4-26b-a4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 39319,
+   "cut_notice": false,
+   "chars": 3226,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 43,
+   "per_file_wrong": 6,
+   "per_file_items": [
+    {
+     "file": "src/local_delegate/web/metrics.py",
+     "code": "ANN201",
+     "figure": 16,
+     "line": "* **ANN201**: 16 falta la anotación de tipo de retorno para funciones públicas."
+    },
+    {
+     "file": "src/local_delegate/web/metrics.py",
+     "code": "COM812",
+     "figure": 18,
+     "line": "* **COM812**: 18 falta la coma final."
+    },
+    {
+     "file": "src/local_delegate/web/metrics.py",
+     "code": "D205",
+     "figure": 2,
+     "line": "* **D205**: 2 se requiere una línea en blanco entre el resumen y la descripción."
+    },
+    {
+     "file": "src/local_delegate/web/sysinfo.py",
+     "code": "BLE001",
+     "figure": 4,
+     "line": "* **BLE001**: 4 no capturar excepciones ciegas de tipo `Exception`."
+    },
+    {
+     "file": "src/local_delegate/web/auth.py",
+     "code": "ANN001",
+     "figure": 10,
+     "line": "* **ANN001**: 10 falta la anotación de tipo para el argumento de la función."
+    },
+    {
+     "file": "src/local_delegate/web/__init__.py",
+     "code": null,
+     "figure": 388,
+     "line": "Found 388 errors."
+    }
+   ]
+  },
+  {
+   "id": "G5",
+   "window": "G",
+   "rep": 1,
+   "model": "gemma4-26b-a4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 26603,
+   "cut_notice": false,
+   "chars": 2054,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 0.5,
+   "per_file_checked": 25,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "G5",
+   "window": "G",
+   "rep": 2,
+   "model": "gemma4-26b-a4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 26915,
+   "cut_notice": false,
+   "chars": 2026,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 0.5,
+   "per_file_checked": 25,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "G5",
+   "window": "G",
+   "rep": 3,
+   "model": "gemma4-26b-a4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 27508,
+   "cut_notice": false,
+   "chars": 1958,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 0.5,
+   "per_file_checked": 25,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "M1",
+   "window": "M",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 4822,
+   "cut_notice": false,
+   "chars": 491,
+   "fidelity_total": 3,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 7,
+   "per_file_wrong": 3,
+   "per_file_items": [
+    {
+     "file": "app/main.py",
+     "code": "W291",
+     "figure": 0,
+     "line": "- W291: 0 (Espacios en blanco al final de línea)"
+    },
+    {
+     "file": "app/util.py",
+     "code": "E501",
+     "figure": 2,
+     "line": "- E501: 2 (Líneas demasiado largas)"
+    },
+    {
+     "file": "app/util.py",
+     "code": "F401",
+     "figure": 3,
+     "line": "- F401: 3 (Importación de módulos no utilizados: `sys`, `re`)"
+    }
+   ]
+  },
+  {
+   "id": "M1",
+   "window": "M",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 1596,
+   "cut_notice": false,
+   "chars": 518,
+   "fidelity_total": 3,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 7,
+   "per_file_wrong": 3,
+   "per_file_items": [
+    {
+     "file": "app/main.py",
+     "code": "W291",
+     "figure": 0,
+     "line": "- W291: 0 (Espacios en blanco innecesarios al final de línea)"
+    },
+    {
+     "file": "app/util.py",
+     "code": "E501",
+     "figure": 2,
+     "line": "- E501: 2 (Líneas demasiado largas)"
+    },
+    {
+     "file": "app/util.py",
+     "code": "F401",
+     "figure": 3,
+     "line": "- F401: 3 (Importación de módulos no utilizada: `sys`, `re`)"
+    }
+   ]
+  },
+  {
+   "id": "M1",
+   "window": "M",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 1597,
+   "cut_notice": false,
+   "chars": 485,
+   "fidelity_total": 3,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 7,
+   "per_file_wrong": 3,
+   "per_file_items": [
+    {
+     "file": "app/main.py",
+     "code": "W291",
+     "figure": 0,
+     "line": "- W291: 0 (Espacio en blanco al final innecesario)"
+    },
+    {
+     "file": "app/util.py",
+     "code": "E501",
+     "figure": 2,
+     "line": "- E501: 2 (Líneas demasiado largas)"
+    },
+    {
+     "file": "app/util.py",
+     "code": "F401",
+     "figure": 3,
+     "line": "- F401: 3 (Importación de `os`, `sys` y `re` no utilizada)"
+    }
+   ]
+  },
+  {
+   "id": "M2",
+   "window": "M",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 1673,
+   "cut_notice": false,
+   "chars": 754,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "M2",
+   "window": "M",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 1999,
+   "cut_notice": false,
+   "chars": 635,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 6,
+   "per_file_wrong": 4,
+   "per_file_items": [
+    {
+     "file": "src/a.py",
+     "code": "D100",
+     "figure": 3,
+     "line": "*   D100: 3"
+    },
+    {
+     "file": "src/a.py",
+     "code": "D103",
+     "figure": 3,
+     "line": "*   D103: 3"
+    },
+    {
+     "file": "src/b.py",
+     "code": "D100",
+     "figure": 3,
+     "line": "*   D100: 3"
+    },
+    {
+     "file": "src/b.py",
+     "code": "D103",
+     "figure": 4,
+     "line": "*   D103: 4"
+    }
+   ]
+  },
+  {
+   "id": "M2",
+   "window": "M",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 1667,
+   "cut_notice": false,
+   "chars": 703,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "M3",
+   "window": "M",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 1610,
+   "cut_notice": false,
+   "chars": 439,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 10,
+   "per_file_wrong": 4,
+   "per_file_items": [
+    {
+     "file": "lib/net.py",
+     "code": "I001",
+     "figure": 3,
+     "line": "- I001: 3"
+    },
+    {
+     "file": "lib/io.py",
+     "code": "SIM102",
+     "figure": 1,
+     "line": "- SIM102: 1"
+    },
+    {
+     "file": "lib/io.py",
+     "code": "UP006",
+     "figure": 3,
+     "line": "- UP006: 3"
+    },
+    {
+     "file": "lib/db.py",
+     "code": "I001",
+     "figure": 2,
+     "line": "- I001: 2"
+    }
+   ]
+  },
+  {
+   "id": "M3",
+   "window": "M",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 2895,
+   "cut_notice": false,
+   "chars": 898,
+   "fidelity_total": 1,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 10,
+   "per_file_wrong": 8,
+   "per_file_items": [
+    {
+     "file": "lib/net.py",
+     "code": "SIM102",
+     "figure": 4,
+     "line": "*   SIM102: 4"
+    },
+    {
+     "file": "lib/net.py",
+     "code": "I001",
+     "figure": 3,
+     "line": "*   I001: 3"
+    },
+    {
+     "file": "lib/io.py",
+     "code": "I001",
+     "figure": 3,
+     "line": "*   I001: 3"
+    },
+    {
+     "file": "lib/io.py",
+     "code": "UP006",
+     "figure": 3,
+     "line": "*   UP006: 3"
+    },
+    {
+     "file": "lib/io.py",
+     "code": "RET504",
+     "figure": 0,
+     "line": "*   RET504: 0"
+    },
+    {
+     "file": "lib/db.py",
+     "code": "I001",
+     "figure": 2,
+     "line": "*   I001: 2"
+    },
+    {
+     "file": "lib/db.py",
+     "code": "SIM102",
+     "figure": 4,
+     "line": "*   SIM102: 4"
+    },
+    {
+     "file": "lib/db.py",
+     "code": "RET504",
+     "figure": 2,
+     "line": "*   RET504: 2"
+    }
+   ]
+  },
+  {
+   "id": "M3",
+   "window": "M",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 1435,
+   "cut_notice": false,
+   "chars": 346,
+   "fidelity_total": 1,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 10,
+   "per_file_wrong": 8,
+   "per_file_items": [
+    {
+     "file": "lib/net.py",
+     "code": "SIM102",
+     "figure": 4,
+     "line": "*   SIM102: 4"
+    },
+    {
+     "file": "lib/net.py",
+     "code": "I001",
+     "figure": 3,
+     "line": "*   I001: 3"
+    },
+    {
+     "file": "lib/io.py",
+     "code": "I001",
+     "figure": 3,
+     "line": "*   I001: 3"
+    },
+    {
+     "file": "lib/io.py",
+     "code": "UP006",
+     "figure": 3,
+     "line": "*   UP006: 3"
+    },
+    {
+     "file": "lib/io.py",
+     "code": "RET504",
+     "figure": 0,
+     "line": "*   RET504: 0"
+    },
+    {
+     "file": "lib/db.py",
+     "code": "I001",
+     "figure": 2,
+     "line": "*   I001: 2"
+    },
+    {
+     "file": "lib/db.py",
+     "code": "SIM102",
+     "figure": 4,
+     "line": "*   SIM102: 4"
+    },
+    {
+     "file": "lib/db.py",
+     "code": "RET504",
+     "figure": 2,
+     "line": "*   RET504: 2"
+    }
+   ]
+  },
+  {
+   "id": "M4",
+   "window": "M",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 1225,
+   "cut_notice": false,
+   "chars": 642,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "M4",
+   "window": "M",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 1319,
+   "cut_notice": false,
+   "chars": 634,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "M4",
+   "window": "M",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 1332,
+   "cut_notice": false,
+   "chars": 691,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "M5",
+   "window": "M",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 4654,
+   "cut_notice": false,
+   "chars": 1589,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 14,
+   "per_file_wrong": 2,
+   "per_file_items": [
+    {
+     "file": "src/local_delegate/sections.py",
+     "code": "D101",
+     "figure": 6,
+     "line": "*   **D101:** 6 (Faltan comentarios en clases públicas)"
+    },
+    {
+     "file": "src/local_delegate/sections.py",
+     "code": "RUF002",
+     "figure": 1,
+     "line": "*   **RUF002:** 1 (Documentación con ambigüedad en el uso de signos de multiplicación)"
+    }
+   ]
+  },
+  {
+   "id": "M5",
+   "window": "M",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "length",
+   "latency_ms": 6689,
+   "cut_notice": false,
+   "chars": 2202,
+   "fidelity_total": 3,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 15,
+   "per_file_wrong": 1,
+   "per_file_items": [
+    {
+     "file": "src/local_delegate/sections.py",
+     "code": "RUF002",
+     "figure": 1,
+     "line": "*   **RUF002:** 1 (Docstring ambiguo con `×` (MULTIPLICATION SIGN), posible reemplazo con `x` (LATIN SMALL LETTER X))"
+    }
+   ]
+  },
+  {
+   "id": "M5",
+   "window": "M",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 4586,
+   "cut_notice": false,
+   "chars": 1532,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 14,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "M6",
+   "window": "M",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 3376,
+   "cut_notice": false,
+   "chars": 1116,
+   "fidelity_total": 1,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "M6",
+   "window": "M",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 3389,
+   "cut_notice": false,
+   "chars": 1116,
+   "fidelity_total": 1,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "M6",
+   "window": "M",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 3511,
+   "cut_notice": false,
+   "chars": 1116,
+   "fidelity_total": 1,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "ME1",
+   "window": "ME",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 2014,
+   "cut_notice": false,
+   "chars": 803,
+   "fidelity_total": 1,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "ME1",
+   "window": "ME",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 1999,
+   "cut_notice": false,
+   "chars": 790,
+   "fidelity_total": 1,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "ME1",
+   "window": "ME",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 2431,
+   "cut_notice": false,
+   "chars": 809,
+   "fidelity_total": 1,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "ME2",
+   "window": "ME",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 2193,
+   "cut_notice": false,
+   "chars": 906,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "ME2",
+   "window": "ME",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 2309,
+   "cut_notice": false,
+   "chars": 793,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 4,
+   "per_file_wrong": 1,
+   "per_file_items": [
+    {
+     "file": null,
+     "code": "D103",
+     "figure": 8,
+     "line": "*   **D103:** 8"
+    }
+   ]
+  },
+  {
+   "id": "ME2",
+   "window": "ME",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 1949,
+   "cut_notice": false,
+   "chars": 908,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "ME3",
+   "window": "ME",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 2726,
+   "cut_notice": false,
+   "chars": 963,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "ME3",
+   "window": "ME",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 1683,
+   "cut_notice": false,
+   "chars": 594,
+   "fidelity_total": 0,
+   "codes": 0.75,
+   "files": 1.0,
+   "model_codes": 0.75,
+   "model_files": 1.0,
+   "per_file_checked": 3,
+   "per_file_wrong": 1,
+   "per_file_items": [
+    {
+     "file": null,
+     "code": "SIM102",
+     "figure": 4,
+     "line": "SIM102: 4"
+    }
+   ]
+  },
+  {
+   "id": "ME3",
+   "window": "ME",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 2945,
+   "cut_notice": false,
+   "chars": 1011,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 4,
+   "per_file_wrong": 1,
+   "per_file_items": [
+    {
+     "file": null,
+     "code": "SIM102",
+     "figure": 4,
+     "line": "*   `SIM102`: 4"
+    }
+   ]
+  },
+  {
+   "id": "ME4",
+   "window": "ME",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 2440,
+   "cut_notice": false,
+   "chars": 959,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 3,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "ME4",
+   "window": "ME",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 1461,
+   "cut_notice": false,
+   "chars": 564,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "ME4",
+   "window": "ME",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 1508,
+   "cut_notice": false,
+   "chars": 673,
+   "fidelity_total": 1,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "ME5",
+   "window": "ME",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 6308,
+   "cut_notice": false,
+   "chars": 1887,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 13,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "ME5",
+   "window": "ME",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 5758,
+   "cut_notice": false,
+   "chars": 1813,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 13,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "ME5",
+   "window": "ME",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 5562,
+   "cut_notice": false,
+   "chars": 1859,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 13,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "ME6",
+   "window": "ME",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 4043,
+   "cut_notice": false,
+   "chars": 1126,
+   "fidelity_total": 3,
+   "codes": 1.0,
+   "files": 0.8888888888888888,
+   "model_codes": 1.0,
+   "model_files": 0.8888888888888888,
+   "per_file_checked": 3,
+   "per_file_wrong": 1,
+   "per_file_items": [
+    {
+     "file": null,
+     "code": "TS2550",
+     "figure": 8,
+     "line": "- TS2550: 8"
+    }
+   ]
+  },
+  {
+   "id": "ME6",
+   "window": "ME",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 5717,
+   "cut_notice": false,
+   "chars": 1757,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 4,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  },
+  {
+   "id": "ME6",
+   "window": "ME",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "latency_ms": 5449,
+   "cut_notice": false,
+   "chars": 1757,
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "per_file_checked": 4,
+   "per_file_wrong": 0,
+   "per_file_items": []
+  }
+ ],
+ "summary": {
+  "large_es": {
+   "calls": 12,
+   "models": [
+    "gemma4-26b-a4b"
+   ],
+   "multi_chunk": 12,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 0.4667,
+   "model_files": 0.725,
+   "fidelity_mean": 2.1667,
+   "cut": 12,
+   "answers_per_file_wrong": 9,
+   "per_file_wrong": 132,
+   "per_file_checked": 228,
+   "latency_median_s": 189.4,
+   "chars_median": 6906.5
+  },
+  "long_es_control": {
+   "calls": 15,
+   "models": [
+    "gemma4-26b-a4b"
+   ],
+   "multi_chunk": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 0.86,
+   "fidelity_mean": 0.1333,
+   "cut": 0,
+   "answers_per_file_wrong": 6,
+   "per_file_wrong": 31,
+   "per_file_checked": 314,
+   "latency_median_s": 25.8,
+   "chars_median": 2026
+  },
+  "mech_es": {
+   "calls": 18,
+   "models": [
+    "gemma3-4b"
+   ],
+   "multi_chunk": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "model_files": 1.0,
+   "fidelity_mean": 0.9444,
+   "cut": 1,
+   "answers_per_file_wrong": 9,
+   "per_file_wrong": 36,
+   "per_file_checked": 100,
+   "latency_median_s": 1.8,
+   "chars_median": 697.0
+  },
+  "mech_en": {
+   "calls": 18,
+   "models": [
+    "gemma3-4b"
+   ],
+   "multi_chunk": 0,
+   "codes": 0.9861,
+   "files": 0.9938,
+   "model_codes": 0.9861,
+   "model_files": 0.9938,
+   "fidelity_mean": 0.3889,
+   "cut": 0,
+   "answers_per_file_wrong": 4,
+   "per_file_wrong": 4,
+   "per_file_checked": 64,
+   "latency_median_s": 2.4,
+   "chars_median": 933.5
+  }
+ }
+}

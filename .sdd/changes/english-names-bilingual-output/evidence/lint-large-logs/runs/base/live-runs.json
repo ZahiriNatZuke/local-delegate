@@ -1,0 +1,74 @@
+{
+  "M-r1": {
+    "started": "2026-10-19T11:24:10Z",
+    "finished": "2026-10-19T11:24:27Z",
+    "calls": 6,
+    "errors": 0
+  },
+  "M-r2": {
+    "started": "2026-10-19T11:24:27Z",
+    "finished": "2026-10-19T11:24:45Z",
+    "calls": 6,
+    "errors": 0
+  },
+  "M-r3": {
+    "started": "2026-10-19T11:24:45Z",
+    "finished": "2026-10-19T11:24:59Z",
+    "calls": 6,
+    "errors": 0
+  },
+  "ME-r1": {
+    "started": "2026-10-19T11:25:13Z",
+    "finished": "2026-10-19T11:25:33Z",
+    "calls": 6,
+    "errors": 0
+  },
+  "ME-r2": {
+    "started": "2026-10-19T11:25:33Z",
+    "finished": "2026-10-19T11:25:52Z",
+    "calls": 6,
+    "errors": 0
+  },
+  "ME-r3": {
+    "started": "2026-10-19T11:25:52Z",
+    "finished": "2026-10-19T11:26:11Z",
+    "calls": 6,
+    "errors": 0
+  },
+  "G-r1": {
+    "started": "2026-10-19T11:26:25Z",
+    "finished": "2026-10-19T11:28:52Z",
+    "calls": 5,
+    "errors": 0
+  },
+  "G-r2": {
+    "started": "2026-10-19T11:28:52Z",
+    "finished": "2026-10-19T11:30:57Z",
+    "calls": 5,
+    "errors": 0
+  },
+  "G-r3": {
+    "started": "2026-10-19T11:30:57Z",
+    "finished": "2026-10-19T11:33:04Z",
+    "calls": 5,
+    "errors": 0
+  },
+  "X-r1": {
+    "started": "2026-10-19T11:37:12Z",
+    "finished": "2026-10-19T11:49:45Z",
+    "calls": 4,
+    "errors": 0
+  },
+  "X-r2": {
+    "started": "2026-10-19T11:49:45Z",
+    "finished": "2026-10-19T12:02:21Z",
+    "calls": 4,
+    "errors": 0
+  },
+  "X-r3": {
+    "started": "2026-10-19T12:02:21Z",
+    "finished": "2026-10-19T12:14:50Z",
+    "calls": 4,
+    "errors": 0
+  }
+}
