@@ -3914,15 +3914,18 @@ def _lint_single_user(content: str, log: str, role: str) -> str:
     program, without counts, as in the chunked reduce of B2e) goes in front of the log. In the live
     measurement of B2-affinity `gemma4-26b-a4b`, the model of that role, named no rule code in 9 of
     9 Spanish answers ("Línea demasiado larga" instead of `E501`), and `evidence/B2f/live.md`
-    measured the same in the logs of 8-34 k characters it summarizes in one call. The `mechanical`
-    role keeps the prompt of before, byte for byte: `gemma3-4b` copies the codes.
+    measured the same in the logs of 8-34 k characters it summarizes in one call. B2f left the
+    `mechanical` role as it was (`gemma3-4b` copies the codes).
 
     Wave lint-counts: each code of that inventory carries its count in the whole log, and the
     prompt says to copy it (`_LINT_COUNTS_CLAUSE`).
+
+    Affinity by language (2026-10-18): the `mechanical` role gets the same inventory. The
+    affinity cell `local_lint_summary -> gemma4-26b-a4b` serves the mechanical call with the
+    26B and the mechanical prompt, and without the inventory the 26B named no rule code in 9 of
+    9 Spanish answers (`evidence/B2-affinity/live.md`); `evidence/affinity-by-language/live.md`.
     """
     base = f"Resume la siguiente salida de linter/tests:\n\n{content}"
-    if role != "long":
-        return base
     budget = int(_map_budget(config.max_chars_for_role(role)) * 0.25)
     inventory = _lint_inventory(log, budget, with_counts=True)
     if not inventory:

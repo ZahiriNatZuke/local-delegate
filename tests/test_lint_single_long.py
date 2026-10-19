@@ -151,15 +151,19 @@ def test_a_long_answer_that_names_everything_gets_no_line(captured, long_role):
     assert "CPY001, D401 y S603" in out  # guard: the answer of the model is there
 
 
-def test_the_mechanical_single_call_keeps_the_prompt_of_before(captured, tmp_path):
-    """Control: the `mechanical` role (`gemma3-4b`, which copies the codes) is not touched: same
-    prompt byte for byte and no line, also with a log full of codes."""
+def test_the_mechanical_single_call_gets_the_inventory_and_keeps_the_rest(captured, tmp_path):
+    """Affinity by language: the `mechanical` role gets the inventory with counts too (the 26B
+    of the affinity cell answers with this prompt), and keeps its cap and no "not mentioned"
+    line. Mutant "the long role only" (`_lint_single_user` returns `base` for `mechanical`): the
+    inventory assert fails, not the guard of the role."""
     log = _ruff_log(4, 3)
     out = server.local_lint_summary(text=log)
     (call,) = captured
     (row,) = _rows(tmp_path)
     assert row["model"] == config.models_by_role()["mechanical"]  # guard: the mechanical role
-    assert call["user"] == BASE + log
+    head, sep, rest = call["user"].partition(BASE)
+    assert sep and rest == log
+    assert head.startswith("Ficheros que nombra el log") and "CPY001: 4, D401: 4, S603: 4" in head
     assert call["max_tokens"] == server._lint_max_tokens(200) == 728  # its cap of before
     assert "Sin mencionar" not in out
 
