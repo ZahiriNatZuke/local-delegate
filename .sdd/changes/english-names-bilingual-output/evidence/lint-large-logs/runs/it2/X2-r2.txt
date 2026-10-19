@@ -1,0 +1,32 @@
+**tests/test_checks.py**: pruebas de verificación de versiones, clientes, autenticación, escritorio, ganchos, residencia, topología, ventanas y nombres obsoletos.
+
+**tests/test_analyze_benchmark.py**: no hay pruebas registradas.
+
+**tests/test_metrics.py**: pruebas de métricas.
+
+**tests/test_update.py**: pruebas de actualización.
+
+**tests/test_residency.py**: pruebas de residencia de claves y edición de archivos.
+
+**tests/test_core.py**: pruebas de variables de entorno, lectura de entrada, limpieza de bloques de pensamiento y vallas, respuestas de chat, esquemas JSON, estado local, inventario y directorios permitidos.
+
+**tests/test_connection_cause.py**: pruebas de causas de eventos, errores de red, códigos de estado HTTP, errores de atributo, errores de clave y sugerencias de conexión.
+
+**tests/test_topology.py**: pruebas de topología de grupos y validación de configuración.
+
+**tests/test_corpus.py**: pruebas de corpus versionado, reglas de rol, límites de llamadas, términos de commit, cambios en el registro y validación de datos privados.
+
+**tests/test_structured_summary.py**: pruebas de detección de secciones y resúmenes estructurados.
+
+Hay 89 ficheros más.
+
+**.venv\Lib\site-packages\starlette\testclient.py**:
+* **Advertencia de depreciación**: una advertencia de depreciación de anyio.abc.BlockingPortal.
+
+Y otros 99 ficheros que nombra el log no tienen entrada en el resumen.
+
+[local-delegate warning: salida truncada por max_tokens en 1 de 8 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 206985 chars ≈ 107804 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 8 pasadas por local-delegate)

@@ -1,0 +1,14 @@
+**Resumen de Problemas por Archivo**
+
+**lib/io.py:** Se identificaron problemas relacionados con la organización de bloques de importación. Se encontraron tres instancias de la regla I001, que indica que los bloques de importación no están ordenados o formateados de manera consistente. Además, se detectaron tres instancias de la regla UP006, que sugiere el uso de `dict` en lugar de `Dict` para las anotaciones de tipo.
+
+**lib/net.py:** Este archivo presenta problemas con la estructura de bloques de importación. Se identificaron tres instancias de la regla I001, indicando que los bloques de importación no están ordenados o formateados de manera consistente. También se encontraron cuatro instancias de la regla SIM102, que requiere el uso de una única declaración `if` en lugar de múltiples. Finalmente, se detectó una instancia de la regla RET504, relacionada con una asignación innecesaria antes de una sentencia `return`.
+
+**lib/db.py:** Este archivo contiene problemas relacionados con la organización de bloques de importación y el uso de anotaciones de tipo. Se identificaron dos instancias de la regla SIM102, que requiere el uso de una única declaración `if` en lugar de múltiples. Además, se detectó una instancia de la regla UP006, que sugiere el uso de `list` en lugar de `List` para las anotaciones de tipo. Finalmente, se detectó una instancia de la regla RET504, relacionada con una asignación innecesaria antes de una sentencia `return`.
+
+Recuento por fichero (contado por el programa):
+- lib/net.py: SIM102 3, I001 1, RET504 1
+- lib/io.py: I001 2, UP006 2
+- lib/db.py: SIM102 2, UP006 1, RET504 1
+
+(leído server-side: 784 chars ≈ 408 tokens de Claude que no entraron a tu contexto)

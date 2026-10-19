@@ -527,8 +527,8 @@
    "files": 1.0,
    "model_codes": 1.0,
    "model_files": 1.0,
-   "per_file_checked": 45,
-   "per_file_wrong": 6,
+   "per_file_checked": 44,
+   "per_file_wrong": 5,
    "per_file_items": [
     {
      "file": "src/local_delegate/web/metrics.py",
@@ -559,12 +559,6 @@
      "code": "ANN001",
      "figure": 10,
      "line": "* **ANN001**: 10 falta anotación de tipo para argumento de función."
-    },
-    {
-     "file": "src/local_delegate/web/__init__.py",
-     "code": null,
-     "figure": 388,
-     "line": "Found 388 errors."
     }
    ]
   },
@@ -583,8 +577,8 @@
    "files": 1.0,
    "model_codes": 1.0,
    "model_files": 1.0,
-   "per_file_checked": 45,
-   "per_file_wrong": 10,
+   "per_file_checked": 44,
+   "per_file_wrong": 9,
    "per_file_items": [
     {
      "file": "src/local_delegate/web/metrics.py",
@@ -639,12 +633,6 @@
      "code": "ANN202",
      "figure": 1,
      "line": "* **ANN202**: 1 falta de anotación de tipo de retorno para función privada."
-    },
-    {
-     "file": "src/local_delegate/web/__init__.py",
-     "code": null,
-     "figure": 388,
-     "line": "Found 388 errors."
     }
    ]
   },
@@ -663,8 +651,8 @@
    "files": 1.0,
    "model_codes": 1.0,
    "model_files": 1.0,
-   "per_file_checked": 44,
-   "per_file_wrong": 6,
+   "per_file_checked": 43,
+   "per_file_wrong": 5,
    "per_file_items": [
     {
      "file": "src/local_delegate/web/metrics.py",
@@ -695,12 +683,6 @@
      "code": "ANN001",
      "figure": 10,
      "line": "* **ANN001**: 10 falta anotación de tipo para argumento de función."
-    },
-    {
-     "file": "src/local_delegate/web/__init__.py",
-     "code": null,
-     "figure": 388,
-     "line": "Found 388 errors."
     }
    ]
   },
@@ -719,7 +701,7 @@
    "files": 1.0,
    "model_codes": 1.0,
    "model_files": 0.5,
-   "per_file_checked": 25,
+   "per_file_checked": 24,
    "per_file_wrong": 0,
    "per_file_items": []
   },
@@ -738,7 +720,7 @@
    "files": 1.0,
    "model_codes": 1.0,
    "model_files": 0.5,
-   "per_file_checked": 25,
+   "per_file_checked": 24,
    "per_file_wrong": 0,
    "per_file_items": []
   },
@@ -757,7 +739,7 @@
    "files": 1.0,
    "model_codes": 1.0,
    "model_files": 0.5,
-   "per_file_checked": 25,
+   "per_file_checked": 24,
    "per_file_wrong": 0,
    "per_file_items": []
   },
@@ -1634,8 +1616,8 @@
    "fidelity_mean": 0.0667,
    "cut": 0,
    "answers_per_file_wrong": 6,
-   "per_file_wrong": 31,
-   "per_file_checked": 315,
+   "per_file_wrong": 28,
+   "per_file_checked": 309,
    "latency_median_s": 25.6,
    "chars_median": 1990
   },

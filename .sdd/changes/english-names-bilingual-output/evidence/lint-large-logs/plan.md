@@ -111,3 +111,26 @@ Medida 12:18–13:00 UTC; base 11:24–12:14 UTC. Puntuación en `score-base.jso
   tipos de problema separados por comas, sin explicarlos y sin cifras.
 - Paso final: se dice que tras la entrada del último fichero de la lista no va ninguna otra entrada
   de fichero.
+
+## Iteración 2 (`22c4b12`) — resultado y decisión (escrito antes de medir lo siguiente)
+
+Medida 13:08–13:44 UTC. Corrección del lector tras verla, aplicada igual a base, it1 e it2: una
+línea copiada tal cual del log no es una cifra por fichero (X3 copiaba la línea de total de eslint
+tras su último fichero y el lector le cargaba 1445, 663 y 782). Con ella la base de X pasa de 9 a 8
+respuestas con cifras mal; it1 e it2, 1.
+
+- X: 1b–1e **cumplen** (invenciones 0,25; cifras mal 1 de 12; `model_codes`/`model_files` 1,00;
+  latencia 189 → 126 s). **1a no**: 12 de 12 cortadas; los `map` escuetos de ruff siguen llegando al
+  tope (~3 k caracteres con 696 tokens: diez ficheros con decenas de códigos cada uno) y el paso final
+  de X1 (91 códigos en el apartado de totales) se corta en 2 de 3 a ~6 k caracteres.
+- M: **no cumple** (6 de 18; cifras mal 15). M2 sigue escribiendo cifras (mal) pese a la orden, y
+  contradicen el bloque del programa que va justo debajo. M5 (un fichero, prompt de la base) 1 cifra
+  mal en 3 de 3. **ME retrocede**: ME1 deja de nombrar los códigos en 3 de 3 (`model_codes` 0,99 →
+  0,83) e invenciones 0,39 → 1,17, más que el ruido de G (0,13 → 0,27).
+
+**Decisión (paso de límites, una vez):**
+- Problema 1: el tope de los `map` del lint troceado pasa a 2× (696 → 1 392 tokens) y el del paso
+  final de 3× a 4× (2 088 → 2 784). Se mide X (y G y M/ME de control).
+- Problema 2: no hay límite que tocar (la llamada no se corta: falla la obediencia del 4B). Dos
+  iteraciones sin llegar y con retroceso en `en`: **no se adopta**; la llamada mecánica vuelve a la
+  de la base y queda documentado el límite en el informe y en el texto del backlog.

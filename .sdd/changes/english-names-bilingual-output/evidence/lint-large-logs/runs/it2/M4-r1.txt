@@ -1,0 +1,11 @@
+**Resumen de Problemas por Archivo:**
+
+**tools/gen.py**
+
+Este archivo presenta los siguientes problemas:
+
+*   **E402 Module level import not at top of file:** Ocurre 4 veces. Se trata de importaciones de módulos ubicadas directamente en el nivel superior del archivo, lo cual no se considera la práctica recomendada.
+*   **E501 Line too long:** Se identificaron 3 líneas que exceden la longitud máxima permitida.
+*   **E711 Comparison to `None` should be `cond is None`:**  Se encontró 1 problema relacionado con comparaciones con `None`, sugiriendo el uso de una verificación más explícita para manejar valores nulos.
+
+(leído server-side: 438 chars ≈ 228 tokens de Claude que no entraron a tu contexto)

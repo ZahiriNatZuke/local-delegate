@@ -1,0 +1,31 @@
+**File: src/local_delegate/sections.py**
+
+**Summary:**
+
+This file contains a breakdown of the identified issues, categorized by error/rule code and frequency.
+
+**Error/Rule Counts:**
+
+*   **E501:** 6
+*   **D101:** 5
+*   **D102:** 3
+*   **RUF002:** 2
+*   **C901:** 2
+*   **D203:** 1
+*   **D211:** 1
+*   **D212:** 1
+*   **D213:** 1
+*   **CPY001:** 1
+*   **TC003:** 1
+*   **D301:** 1
+*   **D400:** 1
+*   **PLR2004:** 1
+*   **PLR0912:** 1
+*   **PLR0913:** 1
+*   **D205:** 1
+
+**Detailed Issues:**
+
+Several lines exceed the maximum length of 100 characters. There are multiple instances of missing docstrings for public classes and methods (D101), and missing docstrings for public methods (D102).  The rule RUF002 flags ambiguous characters in docstrings. The rule C901 identifies overly complex expressions. Several warnings relate to incompatible checks.  Additionally, there is a copyright notice missing at the top of the file (CPY001). One test case (TC003) requires a type-checking block.  Some lines require a period at the end (D400).  Blank line issues are also present (D205).  The log indicates 26 errors.
+
+(read server-side: 2627 chars ≈ 1368 Claude tokens that did not enter your context)

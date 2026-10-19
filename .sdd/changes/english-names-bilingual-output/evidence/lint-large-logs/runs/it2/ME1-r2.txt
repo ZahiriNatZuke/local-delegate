@@ -1,0 +1,16 @@
+**Summary of Issues by File**
+
+**app/main.py:** This file contains two **Line too long** errors at lines 12 and 40. Additionally, there is one **`os` imported but unused** error at line 7.
+
+**app/util.py:** This file has three **`os` imported but unused** errors, located at lines 3, 9, and 55. It also includes one **`re` imported but unused** error at line 70, and one **Trailing whitespace** error at line 70.
+
+**app/cli.py:** This file presents one **Line too long** error at line 21.
+
+Total lines of code: 8.
+
+Count per file (counted by the program):
+- app/util.py: F401 2, E501 1, W291 1
+- app/main.py: E501 2, F401 1
+- app/cli.py: E501 1
+
+(read server-side: 340 chars ≈ 177 Claude tokens that did not enter your context)

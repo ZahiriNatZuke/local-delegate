@@ -109,17 +109,32 @@ def _code_figures(line: str, code: str) -> list[int]:
     return out[:1]
 
 
-def per_file_check(text: str, truth: dict | None) -> dict:
-    """The reader of `plan.md`. Returns `checked`, `wrong` and the wrong items (for the record)."""
+def _copied(line: str, log_lines: set[str]) -> bool:
+    """A line the model copied from the log as it is (its total line, say), Markdown aside."""
+    bare = re.sub(r"[*`_>]+", "", line).strip(" -•\t")
+    return len(bare) >= 12 and bare in log_lines
+
+
+def per_file_check(text: str, truth: dict | None, log: str = "") -> dict:
+    """The reader of `plan.md`. Returns `checked`, `wrong` and the wrong items (for the record).
+
+    Fix of 2026-10-19 (after iteration 2, applied to every version alike): a line copied as it is
+    from the log is not a figure per file. X3 copied the total line of eslint ("✖ 1445 problems
+    (663 errors, 782 warnings)") after its last file entry, and the reader charged its figures to
+    that file.
+    """
     if not truth:
         return {"checked": 0, "wrong": 0, "items": []}
     text = b2f.ESCAPE.sub(r"\1", NOT_MODEL.sub("", PER_FILE_BLOCK.sub("", text)))
+    log_lines = {line.strip() for line in log.splitlines() if line.strip()}
     per_file, totals = truth["per_file"], truth["codes"]
     keys = _file_keys(list(per_file))
     codes = sorted(totals, key=len, reverse=True)
     current: str | None = None
     checked, items = 0, []
     for raw in text.splitlines():
+        if _copied(raw, log_lines):
+            continue
         files = _files_in(raw, keys)
         if len(files) == 1:
             current = next(iter(files))
@@ -173,7 +188,7 @@ def score(runs: Path, logs: list[Path]) -> dict:
             log = doc.read_text(encoding="utf-8", errors="replace")
             entry = entries[call["id"]]
             codes, files = entry["top_codes"], entry["top_files"]
-            check = per_file_check(raw, entry["truth"])
+            check = per_file_check(raw, entry["truth"], log)
             out.append(
                 {
                     "id": call["id"],

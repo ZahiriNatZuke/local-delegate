@@ -1,0 +1,17 @@
+**Resumen de Problemas por Archivo**
+
+**app/main.py:**
+Se identificaron dos problemas de líneas demasiado largas. La primera se encuentra en la línea 12, con una longitud de 101 caracteres. La segunda se localiza en la línea 40, con una longitud de 105 caracteres. Además, se detectó una importación no utilizada de la librería `os`.
+
+**app/util.py:**
+Este archivo presenta tres importaciones no utilizadas: `sys`, `re` y `os`. También se encontraron dos líneas demasiado largas. La primera se encuentra en la línea 55, con una longitud de 120 caracteres. La segunda se localiza en la línea 70, con una longitud de 5 caracteres. Finalmente, se detectó un espacio en blanco al final de la línea 70.
+
+**app/cli.py:**
+Se identificó un problema de línea demasiado larga en la línea 21, con una longitud de 110 caracteres.
+
+Recuento por fichero (contado por el programa):
+- app/util.py: F401 2, E501 1, W291 1
+- app/main.py: E501 2, F401 1
+- app/cli.py: E501 1
+
+(leído server-side: 340 chars ≈ 177 tokens de Claude que no entraron a tu contexto)

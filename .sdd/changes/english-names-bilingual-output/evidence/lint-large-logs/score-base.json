@@ -944,8 +944,8 @@
    "files": 1.0,
    "model_codes": 0.0,
    "model_files": 0.8,
-   "per_file_checked": 28,
-   "per_file_wrong": 6,
+   "per_file_checked": 27,
+   "per_file_wrong": 5,
    "per_file_items": [
     {
      "file": "src/app/admin/users/currency.pipe.ts",
@@ -976,12 +976,6 @@
      "code": null,
      "figure": 3,
      "line": "* 3 Errores de propiedades sin inicializar."
-    },
-    {
-     "file": "src/server/services/retry.ts",
-     "code": null,
-     "figure": 993,
-     "line": "Found 993 errors in 91 files."
     }
    ]
   },
@@ -1000,16 +994,9 @@
    "files": 1.0,
    "model_codes": 0.0,
    "model_files": 0.8,
-   "per_file_checked": 1,
-   "per_file_wrong": 1,
-   "per_file_items": [
-    {
-     "file": "src/server/services/retry.ts",
-     "code": null,
-     "figure": 993,
-     "line": "Found 993 errors in 91 files."
-    }
-   ]
+   "per_file_checked": 0,
+   "per_file_wrong": 0,
+   "per_file_items": []
   },
   {
    "id": "X4",
@@ -1273,8 +1260,8 @@
    "files": 1.0,
    "model_codes": 1.0,
    "model_files": 1.0,
-   "per_file_checked": 46,
-   "per_file_wrong": 10,
+   "per_file_checked": 45,
+   "per_file_wrong": 9,
    "per_file_items": [
     {
      "file": "src/local_delegate/web/metrics.py",
@@ -1329,12 +1316,6 @@
      "code": "ANN202",
      "figure": 1,
      "line": "* **ANN202**: 1 falta de anotación de tipo de retorno para función privada."
-    },
-    {
-     "file": "src/local_delegate/web/__init__.py",
-     "code": null,
-     "figure": 388,
-     "line": "Found 388 errors."
     }
    ]
   },
@@ -1353,8 +1334,8 @@
    "files": 1.0,
    "model_codes": 1.0,
    "model_files": 1.0,
-   "per_file_checked": 45,
-   "per_file_wrong": 6,
+   "per_file_checked": 44,
+   "per_file_wrong": 5,
    "per_file_items": [
     {
      "file": "src/local_delegate/web/metrics.py",
@@ -1385,12 +1366,6 @@
      "code": "ANN001",
      "figure": 10,
      "line": "* **ANN001**: 10 falta anotación de tipo para argumento de función."
-    },
-    {
-     "file": "src/local_delegate/web/__init__.py",
-     "code": null,
-     "figure": 388,
-     "line": "Found 388 errors."
     }
    ]
   },
@@ -1409,8 +1384,8 @@
    "files": 1.0,
    "model_codes": 1.0,
    "model_files": 1.0,
-   "per_file_checked": 43,
-   "per_file_wrong": 6,
+   "per_file_checked": 42,
+   "per_file_wrong": 5,
    "per_file_items": [
     {
      "file": "src/local_delegate/web/metrics.py",
@@ -1441,12 +1416,6 @@
      "code": "ANN001",
      "figure": 10,
      "line": "* **ANN001**: 10 falta la anotación de tipo para el argumento de la función."
-    },
-    {
-     "file": "src/local_delegate/web/__init__.py",
-     "code": null,
-     "figure": 388,
-     "line": "Found 388 errors."
     }
    ]
   },
@@ -1465,7 +1434,7 @@
    "files": 1.0,
    "model_codes": 1.0,
    "model_files": 0.5,
-   "per_file_checked": 25,
+   "per_file_checked": 24,
    "per_file_wrong": 0,
    "per_file_items": []
   },
@@ -1484,7 +1453,7 @@
    "files": 1.0,
    "model_codes": 1.0,
    "model_files": 0.5,
-   "per_file_checked": 25,
+   "per_file_checked": 24,
    "per_file_wrong": 0,
    "per_file_items": []
   },
@@ -1503,7 +1472,7 @@
    "files": 1.0,
    "model_codes": 1.0,
    "model_files": 0.5,
-   "per_file_checked": 25,
+   "per_file_checked": 24,
    "per_file_wrong": 0,
    "per_file_items": []
   },
@@ -2458,9 +2427,9 @@
    "model_files": 0.725,
    "fidelity_mean": 2.1667,
    "cut": 12,
-   "answers_per_file_wrong": 9,
-   "per_file_wrong": 132,
-   "per_file_checked": 228,
+   "answers_per_file_wrong": 8,
+   "per_file_wrong": 130,
+   "per_file_checked": 226,
    "latency_median_s": 189.4,
    "chars_median": 6906.5
   },
@@ -2477,8 +2446,8 @@
    "fidelity_mean": 0.1333,
    "cut": 0,
    "answers_per_file_wrong": 6,
-   "per_file_wrong": 31,
-   "per_file_checked": 314,
+   "per_file_wrong": 28,
+   "per_file_checked": 308,
    "latency_median_s": 25.8,
    "chars_median": 2026
   },
