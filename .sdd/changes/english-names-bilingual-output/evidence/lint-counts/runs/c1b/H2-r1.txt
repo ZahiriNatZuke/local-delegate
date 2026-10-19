@@ -1,0 +1,14 @@
+**src/b.py**
+*   **D103**: 5 veces falta la cadena de documentación en funciones públicas.
+*   **D100**: 3 veces falta la cadena de documentación en el módulo público.
+
+**src/a.py**
+*   **D103**: 5 veces falta la cadena de documentación en funciones públicas.
+*   **D100**: 3 veces falta la cadena de documentación en el módulo público.
+*   **B006**: 1 vez no se deben usar estructuras de datos mutables para valores por defecto en los argumentos.
+
+**src/c.py**
+*   **T201**: 3 veces se encontró el uso de la función `print`.
+*   **D100**: 3 veces falta la cadena de documentación en el módulo público.
+
+(leído server-side: 626 chars ≈ 326 tokens de Claude que no entraron a tu contexto)

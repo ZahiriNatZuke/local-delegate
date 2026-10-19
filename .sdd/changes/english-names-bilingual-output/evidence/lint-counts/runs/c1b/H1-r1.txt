@@ -1,0 +1,13 @@
+**app/main.py**
+* **E501**: Dos líneas son demasiado largas.
+* **F401**: El módulo `os` se importa pero no se utiliza.
+
+**app/util.py**
+* **F401**: Dos módulos, `sys` y `re`, se importan pero no se utilizan.
+* **E501**: Una línea es demasiado larga.
+* **W291**: Se detectó un espacio en blanco al final de la línea.
+
+**app/cli.py**
+* **E501**: Una línea es demasiado larga.
+
+(leído server-side: 340 chars ≈ 177 tokens de Claude que no entraron a tu contexto)

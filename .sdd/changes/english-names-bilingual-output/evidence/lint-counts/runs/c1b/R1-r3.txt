@@ -1,0 +1,25 @@
+**src/local_delegate/sections.py**
+
+*   **D101**: 5 faltan docstrings en clases públicas.
+*   **E501**: 4 líneas son demasiado largas.
+*   **D102**: 3 faltan docstrings en métodos públicos.
+*   **D400**: 3 la primera línea debería terminar con un punto.
+*   **C901**: 3 funciones son demasiado complejas.
+*   **RUF002**: 2 la docstring contiene caracteres ambiguos.
+*   **D415**: 2 la primera línea debería terminar con puntuación de cierre.
+*   **D203**: 1 advertencia de incompatibilidad de líneas en blanco antes de clase.
+*   **D211**: 1 advertencia de incompatibilidad de líneas en blanco antes de clase.
+*   **D212**: 1 advertencia de incompatibilidad de líneas de resumen.
+*   **D213**: 1 advertencia de incompatibilidad de líneas de resumen.
+*   **CPY001**: 1 falta el aviso de copyright al inicio del archivo.
+*   **TC003**: 1 la importación de la librería estándar debería moverse a un bloque de comprobación de tipos.
+*   **D301**: 1 se debería usar una cadena de texto cruda si hay barras invertidas en la docstring.
+*   **PLR2004**: 1 se utiliza un valor mágico en una comparación.
+*   **PLR0912**: 1 hay demasiadas ramificaciones.
+*   **COM812**: 1 falta una coma final.
+*   **PLR0913**: 1 la definición de la función tiene demasiados argumentos.
+*   **D205**: 1 se requiere una línea en blanco entre la línea de resumen y la descripción.
+
+Found 30 errors.
+
+(leído server-side: 14237 chars ≈ 7415 tokens de Claude que no entraron a tu contexto)

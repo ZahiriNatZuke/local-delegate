@@ -25,7 +25,7 @@ No necesita red ni dependencias: solo la biblioteca estándar.
 Uso:
     python scripts/detect_spanish_names.py                       # resumen por categoría
     python scripts/detect_spanish_names.py --json salida.json    # resumen y hallazgos completos
-    python scripts/detect_spanish_names.py --exceptions .sdd/changes/<slug>/rename-exceptions.md
+    python scripts/detect_spanish_names.py --exceptions otra_lista.json  # por defecto, la de scripts/data
     python scripts/detect_spanish_names.py --dump-words palabras.json  # para generar el léxico
 """
 
@@ -49,6 +49,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = Path(__file__).resolve().parent / "data"
 LEXICON_PATH = DATA_DIR / "spanish_lexicon.json"
 RESERVED_PATH = DATA_DIR / "reserved_words.json"
+EXCEPTIONS_PATH = DATA_DIR / "name_exceptions.json"
 
 ACCENTED = frozenset("áéíóúñüÁÉÍÓÚÑÜ")
 # Sufijos españoles sobre la palabra ya plegada (sin tildes). Solo se aplican a palabras que NO
@@ -671,22 +672,23 @@ class ExceptionEntry:
     section: str
 
 
-def load_exceptions(path: Path) -> list[ExceptionEntry]:
-    """Filas `| nombre | fichero (glob) | motivo | … |` de las tablas de `rename-exceptions.md`."""
+def load_exceptions(path: Path = EXCEPTIONS_PATH) -> list[ExceptionEntry]:
+    """Entradas `{name, file, reason}` de las secciones de `name_exceptions.json`.
+
+    Un fichero que falta o una entrada sin nombre o sin motivo es un error, no una lista vacía: el
+    guardián de REQ-016 no puede quedarse sin lista en silencio.
+    """
+    data = json.loads(path.read_text(encoding="utf-8"))
     entries: list[ExceptionEntry] = []
-    section = ""
-    for raw in path.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if line.startswith("## "):
-            section = line[3:].strip()
-            continue
-        if not line.startswith("|"):
-            continue
-        cells = [c.strip() for c in line.strip("|").split("|")]
-        if len(cells) < 3 or set(cells[0]) <= set("-: ") or cells[0].lower() == "nombre":
-            continue
-        name = cells[0].strip("`")
-        entries.append(ExceptionEntry(name, cells[1].strip("`") or "*", cells[2], section))
+    for section in data["sections"]:
+        for item in section["entries"]:
+            if not item.get("name") or not str(item.get("reason", "")).strip():
+                raise ValueError(f"{path}: entrada sin nombre o sin motivo: {item!r}")
+            entries.append(
+                ExceptionEntry(
+                    item["name"], item.get("file") or "*", item["reason"], section["title"]
+                )
+            )
     return entries
 
 
@@ -746,7 +748,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--root", type=Path, default=ROOT, help="raíz del repo")
     parser.add_argument("--lexicon", type=Path, default=LEXICON_PATH)
-    parser.add_argument("--exceptions", type=Path, help="rename-exceptions.md (REQ-016)")
+    parser.add_argument(
+        "--exceptions", type=Path, default=EXCEPTIONS_PATH, help="lista de excepciones (REQ-016)"
+    )
     parser.add_argument("--json", type=Path, help="escribe el informe completo en este fichero")
     parser.add_argument(
         "--dump-words", type=Path, help="escribe todas las palabras vistas (para el léxico) y sale"
@@ -761,7 +765,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{len(all_words(scan))} palabras escritas en {args.dump_words}")
         return 0
 
-    exceptions = load_exceptions(args.exceptions) if args.exceptions else []
+    exceptions = load_exceptions(args.exceptions)
     report = analyse(scan, Lexicon.load(args.lexicon), exceptions)
     if args.json:
         args.json.write_text(

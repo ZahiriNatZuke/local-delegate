@@ -1,0 +1,25 @@
+**src/local_delegate/sections.py**
+
+**Errores y avisos:**
+
+*   **D101 (Falta docstring en clase pública):** 5
+*   **D102 (Falta docstring en método público):** 4
+*   **D400 (La primera línea debe terminar con un punto):** 4
+*   **E501 (Línea demasiado larga):** 4
+*   **D415 (La primera línea debe terminar con punto, signo de interrogación o exclamación):** 2
+*   **C901 (Complejidad excesiva):** 3
+*   **RUF002 (Docstring contiene caracteres ambiguos):** 2
+*   **PLR0912 (Demasiadas ramificaciones):** 1
+*   **PLR0913 (Demasiados argumentos en la definición de la función):** 1
+*   **PLR2004 (Uso de valor mágico en comparación):** 1
+*   **D301 (Usar r""" si hay barras invertidas en un docstring):** 1
+*   **D205 (Se requiere una línea en blanco entre el resumen y la descripción):** 1
+*   **TC003 (Mover importación de la biblioteca estándar a un bloque de comprobación de tipos):** 1
+*   **CPY001 (Falta aviso de copyright al inicio del archivo):** 1
+*   **COM812 (Falta coma final):** 1
+
+Found 30 errors.
+
+Sin mencionar (del log, no los nombra el resumen): D203, D211, D212
+
+(leído server-side: 14237 chars ≈ 7415 tokens de Claude que no entraron a tu contexto)

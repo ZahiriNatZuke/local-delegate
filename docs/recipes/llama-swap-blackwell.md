@@ -77,6 +77,11 @@ llama-swap descarga el modelo y libera la VRAM. Es un compromiso:
   ocupada más tiempo tras el último uso.
 - **`ttl` bajo** (p. ej. 30): libera la VRAM poco después de un *burst*, sigue caliente para
   llamadas inmediatas de la misma tarea. **Buen equilibrio para delegación desde Claude.**
+- **Modelos grandes con `--load-mode mmap`** (MoE con expertos en CPU): además de la VRAM ocupan
+  en RAM casi todo el GGUF mientras esperan el `ttl`; dales un `ttl` más corto que al resto. Ver
+  [Troubleshooting · Queda muy poca RAM libre](../wiki/Troubleshooting.md#queda-muy-poca-ram-libre-con-un-modelo-grande-cargado).
+  Para cambiar el `ttl` de un modelo sin editar a mano: `local-delegate llamaswap residency --ttl
+  <modelo>=<segundos>`.
 
 No existe un "descargar en cuanto responde el HTTP": la palanca es `ttl`. Cambiarlo requiere
 **reiniciar llama-swap**. El paquete `local-delegate` **no** gestiona la VRAM (es un cliente

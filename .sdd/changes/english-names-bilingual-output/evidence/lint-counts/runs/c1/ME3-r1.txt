@@ -1,0 +1,19 @@
+Here's a summary of the issues, grouped by file:
+
+**lib/io.py**
+
+*   **I001 Import block issues:** Two instances of unsorted import blocks.
+*   **UP006 Type annotation issues:** Three instances of using `Dict` instead of `dict`.
+
+**lib/net.py**
+
+*   **SIM102 Single `if` statement issues:** Three instances where a single `if` statement could be used.
+*   **RET504 Unnecessary assignment before return:** One instance of an unnecessary assignment before a `return` statement.
+
+**lib/db.py**
+
+*   **SIM102 Single `if` statement issues:** Two instances where a single `if` statement could be used.
+*   **UP006 Type annotation issues:** Two instances of using `List` instead of `list`.
+*   **RET504 Unnecessary assignment before return:** One instance of an unnecessary assignment before a `return` statement.
+
+(read server-side: 784 chars ≈ 408 Claude tokens that did not enter your context)

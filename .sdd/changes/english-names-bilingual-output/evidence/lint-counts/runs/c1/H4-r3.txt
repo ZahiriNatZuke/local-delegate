@@ -1,0 +1,7 @@
+**tools/gen.py**
+
+* **E402**: Importaciones a nivel de módulo fuera de la parte superior del archivo.
+* **E501**: Línea demasiado larga.
+* **E711**: Las comparaciones con `None` deberían usar `cond is None`.
+
+(leído server-side: 438 chars ≈ 228 tokens de Claude que no entraron a tu contexto)

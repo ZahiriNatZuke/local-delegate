@@ -1,0 +1,28 @@
+**src/cli/commands/export.ts**
+* TS2550: 2 errores indicando que la propiedad `at` no existe en el tipo `string[]`.
+
+**src/cli/index.ts**
+* TS2550: Un error indicando que la propiedad `hasOwn` no existe en el tipo `ObjectConstructor`.
+
+**src/cli/ui/style.ts**
+* TS2550: Un error indicando que la propiedad `replaceAll` no existe en el tipo `string`.
+
+**src/cli/ui/width.ts**
+* TS2339: Un error indicando que la propiedad `Segmenter` no existe en el tipo `typeof Intl`.
+
+**src/adapters/claude-json.ts**
+* TS2554: Un error que indica que se esperaban entre 0 y 1 argumentos, pero se recibieron 2.
+
+**src/adapters/codex/index.ts**
+* TS2550: Un error indicando que la propiedad `hasOwn` no existe en el tipo `ObjectConstructor`.
+
+**src/cli/commands/import.ts**
+* TS2550: Un error indicando que la propiedad `at` no existe en el tipo `string[]`.
+
+**src/io/fs/atomic.ts**
+* TS4113: Un error indicando que este miembro no puede tener un modificador `override` porque no está declarado en la clase base `Error`.
+
+**src/io/vault/index.ts**
+* TS2554: Un error que indica que se esperaban entre 0 y 1 argumentos, pero se recibieron 2.
+
+(leído server-side: 1647 chars ≈ 857 tokens de Claude que no entraron a tu contexto)

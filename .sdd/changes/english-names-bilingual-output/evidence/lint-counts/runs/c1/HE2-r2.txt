@@ -1,0 +1,14 @@
+**src/a.py**
+* **D103**: Two instances of missing docstrings in public functions.
+* **D100**: One instance of a missing docstring in the public module.
+* **B006**: One instance of using mutable data structures for argument defaults.
+
+**src/b.py**
+* **D103**: Three instances of missing docstrings in public functions.
+* **D100**: One instance of a missing docstring in the public module.
+
+**src/c.py**
+* **T201**: Three instances where print statements were found.
+* **D100**: One instance of a missing docstring in the public module.
+
+(read server-side: 626 chars ≈ 326 Claude tokens that did not enter your context)

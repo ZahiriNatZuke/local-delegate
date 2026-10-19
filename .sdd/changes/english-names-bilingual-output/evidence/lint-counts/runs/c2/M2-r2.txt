@@ -1,0 +1,18 @@
+**Resumen de Problemas por Archivo**
+
+**src/a.py:**
+*   D100: 3
+*   D103: 3
+*   B006: 1
+
+**src/b.py:**
+*   D100: 3
+*   D103: 4
+
+**src/c.py:**
+*   T201: 3
+
+**Observaciones:**
+Los errores D100 y D103 son los más frecuentes, apareciendo en los archivos src/a.py y src/b.py respectivamente. El error T201 se encuentra únicamente en el archivo src/c.py. Se identificaron 3 errores de tipo D100, 3 errores de tipo D103, 3 errores de tipo T201 y 1 error de tipo B006.
+
+(leído server-side: 626 chars ≈ 326 tokens de Claude que no entraron a tu contexto)

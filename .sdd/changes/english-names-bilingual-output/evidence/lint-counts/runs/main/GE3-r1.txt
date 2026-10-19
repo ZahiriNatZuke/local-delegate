@@ -1,0 +1,27 @@
+**src\app\core\decorators\log-audit.decorator.ts**
+* **lint/nursery/useReactFunctionComponentDefinition**: 1 instance where a component is defined as an arrow function.
+* **lint/style/useConsistentTypeDefinitions**: 1 instance regarding type definition consistency.
+* **lint/nursery/useExplicitReturnType**: 1 instance of a missing return type.
+* **lint/nursery/useExplicitType**: 1 instance of a missing type.
+
+**src\app\core\decorators\throttle.decorator.ts**
+* **lint/nursery/useReactFunctionComponentDefinition**: 4 instances of arrow function component definitions.
+* **lint/style/useNumericSeparators**: 3 instances of missing numeric separators in long literals.
+* **lint/nursery/useExplicitReturnType**: 5 instances of missing return types.
+* **lint/nursery/useExplicitType**: 5 instances of missing types.
+
+**src\app\core\filters\http-exception.filter.ts**
+* **lint/nursery/useExplicitType**: 1 instance of a missing return type on a member.
+* **lint/nursery/useExplicitReturnType**: 1 instance of a missing return type.
+* **lint/nursery/useThisInClassMethods**: 1 instance where a class method should use `this`.
+* **lint/style/noTernary**: 1 instance of an unexpected ternary operator.
+
+**src\app\core\decorators\app-controller.decorator.ts**
+* **lint/nursery/useExplicitReturnType**: 1 instance of a missing return type.
+* **lint/nursery/useExplicitType**: 1 instance of a missing type.
+
+Found 125 errors.
+Found 551 warnings.
+Found 653 infos.
+
+(read server-side: 22235 chars ≈ 11580 Claude tokens that did not enter your context)

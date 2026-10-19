@@ -1,0 +1,372 @@
+warning: `incorrect-blank-line-before-class` (D203) and `blank-line-before-class` (D211) are incompatible. Ignoring `incorrect-blank-line-before-class`.
+warning: `multi-line-summary-first-line` (D212) and `multi-line-summary-second-line` (D213) are incompatible. Ignoring `multi-line-summary-second-line`.
+CPY001 Missing copyright notice at top of file
+--> src\local_delegate\sections.py:1:1
+
+RUF002 Docstring contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+ --> src\local_delegate\sections.py:4:4
+  |
+3 | Por qué existe: en el piloto de T5 del SDD `subagente-lector-local`, Claude pidió resúmenes de
+4 | 450–600 palabras y la tool nombró entre el 0 % y el 27 % de los títulos del documento. El prompt
+  |    ^
+5 | pedía «prosa clara» y el modelo aplanaba la estructura; Claude, sin saber qué secciones había,
+6 | volvía a leer el fichero. Aquí vive todo lo que no le pedimos al modelo porque se puede calcular:
+  |
+
+TC003 Move standard library import `collections.abc.Callable` into a type-checking block
+  --> src\local_delegate\sections.py:21:29
+   |
+19 | import re
+20 | import unicodedata
+21 | from collections.abc import Callable
+   |                             ^^^^^^^^
+22 | from dataclasses import dataclass, field
+23 | from itertools import pairwise
+   |
+help: Move into type-checking block
+   |
+20 | import unicodedata
+   - from collections.abc import Callable
+21 | from dataclasses import dataclass, field
+22 | from itertools import pairwise
+23 |
+24 | from . import i18n
+25 + from typing import TYPE_CHECKING
+26 +
+27 + if TYPE_CHECKING:
+28 +     from collections.abc import Callable
+29 |
+   |
+note: This is an unsafe fix and may change runtime behavior
+
+E501 Line too long (101 > 100)
+  --> src\local_delegate\sections.py:27:101
+   |
+25 | from . import i18n
+26 |
+27 | # --- Detección -------------------------------------------------------------------------------------
+   |                                                                                                     ^
+
+D101 Missing docstring in public class
+  --> src\local_delegate\sections.py:31:7
+   |
+30 | @dataclass(frozen=True)
+31 | class Heading:
+   |       ^^^^^^^
+32 |     text: str
+33 |     level: int
+   |
+
+D101 Missing docstring in public class
+  --> src\local_delegate\sections.py:38:7
+   |
+37 | @dataclass(frozen=True)
+38 | class Structure:
+   |       ^^^^^^^^^
+39 |     level: int
+40 |     headings: tuple[Heading, ...]
+   |
+
+D102 Missing docstring in public method
+  --> src\local_delegate\sections.py:43:9
+   |
+42 |     @property
+43 |     def texts(self) -> list[str]:
+   |         ^^^^^
+44 |         return [t.text for t in self.headings]
+   |
+
+D301 Use `r"""` if any backslashes in a docstring
+  --> src\local_delegate\sections.py:55:5
+   |
+54 | def _lines(text: str) -> list[tuple[int, str]]:
+55 |     """(posición, línea sin su salto). Acepta `\\n` y `\\r\\n` sin cambiar las posiciones."""
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+56 |     out: list[tuple[int, str]] = []
+57 |     pos = 0
+   |
+help: Add `r` prefix
+   |
+54 | def _lines(text: str) -> list[tuple[int, str]]:
+   -     """(posición, línea sin su salto). Acepta `\\n` y `\\r\\n` sin cambiar las posiciones."""
+55 +     r"""(posición, línea sin su salto). Acepta `\\n` y `\\r\\n` sin cambiar las posiciones."""
+56 |     out: list[tuple[int, str]] = []
+   |
+note: This is an unsafe fix and may change runtime behavior
+
+D400 First line should end with a period
+  --> src\local_delegate\sections.py:65:5
+   |
+64 | def _is_paragraph(line: str) -> bool:
+65 |     """¿Puede esta línea ser el texto de un título setext?"""
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+66 |     if not line.strip():
+67 |         return False
+   |
+help: Add period
+
+C901 `markdown_headings` is too complex (11 > 10)
+  --> src\local_delegate\sections.py:75:5
+   |
+75 | def markdown_headings(text: str) -> list[Heading]:
+   |     ^^^^^^^^^^^^^^^^^
+76 |     """Todos los títulos del documento, en orden, sin los de dentro de vallas ni front matter."""
+77 |     lines = _lines(text)
+   |
+
+PLR2004 Magic value used in comparison, consider replacing `2` with a constant variable
+   --> src\local_delegate\sections.py:131:29
+    |
+129 |     for level in range(1, 7):
+130 |         at_level = tuple(t for t in headings if t.level == level)
+131 |         if len(at_level) >= 2:
+    |                             ^
+132 |             return Structure(level, at_level)
+133 |     return None
+    |
+
+C901 `match_headings` is too complex (13 > 10)
+   --> src\local_delegate\sections.py:228:5
+    |
+228 | def match_headings(
+    |     ^^^^^^^^^^^^^^
+229 |     output: str, expected: list[str], *, min_content: int = 3, positional: bool = False
+230 | ) -> Matching:
+    |
+
+PLR0912 Too many branches (15 > 12)
+   --> src\local_delegate\sections.py:228:5
+    |
+228 | def match_headings(
+    |     ^^^^^^^^^^^^^^
+229 |     output: str, expected: list[str], *, min_content: int = 3, positional: bool = False
+230 | ) -> Matching:
+    |
+
+COM812 [*] Trailing comma missing
+   --> src\local_delegate\sections.py:229:88
+    |
+228 | def match_headings(
+229 |     output: str, expected: list[str], *, min_content: int = 3, positional: bool = False
+    |                                                                                        ^
+230 | ) -> Matching:
+231 |     """Subsecuencia común más larga entre los títulos esperados y las líneas de título.
+    |
+help: Add trailing comma
+    |
+228 | def match_headings(
+    -     output: str, expected: list[str], *, min_content: int = 3, positional: bool = False
+229 +     output: str, expected: list[str], *, min_content: int = 3, positional: bool = False,
+230 | ) -> Matching:
+    |
+
+E501 Line too long (103 > 100)
+   --> src\local_delegate\sections.py:290:101
+    |
+289 | def not_summarized() -> str:
+290 |     """El texto que va bajo el título de una sección que el modelo no resumió, en el idioma vigente."""
+    |                                                                                                     ^^^
+291 |     return i18n.t("mcp.sections.not_summarized")
+    |
+
+D101 Missing docstring in public class
+   --> src\local_delegate\sections.py:305:7
+    |
+304 | @dataclass
+305 | class Completion:
+    |       ^^^^^^^^^^
+306 |     text: str
+307 |     missing: int
+    |
+
+D400 First line should end with a period
+   --> src\local_delegate\sections.py:313:5
+    |
+312 |   def _is_cut_heading(line: str, expected: list[str]) -> bool:
+313 | /     """Is this last line of a truncated output a heading cut in the middle? (B2d-2)
+314 | |
+315 | |     Only if it is a heading line no longer than the longest expected heading: a cut heading cannot
+316 | |     be longer than a whole one. Before, any line that started with `#` was dropped, and a model
+317 | |     that wrote the body of a section on the same line as a `###` lost the whole body (the probable
+318 | |     httpcore2 case of set 3: 2112 tokens generated, 752 chars delivered, `## Changelog` empty).
+319 | |     """
+    | |_______^
+320 |       found = heading_lines(line)
+321 |       if not found:
+    |
+help: Add period
+    |
+312 | def _is_cut_heading(line: str, expected: list[str]) -> bool:
+    -     """Is this last line of a truncated output a heading cut in the middle? (B2d-2)
+313 +     """Is this last line of a truncated output a heading cut in the middle? (B2d-2).
+314 |
+    |
+note: This is an unsafe fix and may change runtime behavior
+
+D415 First line should end with a period, question mark, or exclamation point
+   --> src\local_delegate\sections.py:313:5
+    |
+312 |   def _is_cut_heading(line: str, expected: list[str]) -> bool:
+313 | /     """Is this last line of a truncated output a heading cut in the middle? (B2d-2)
+314 | |
+315 | |     Only if it is a heading line no longer than the longest expected heading: a cut heading cannot
+316 | |     be longer than a whole one. Before, any line that started with `#` was dropped, and a model
+317 | |     that wrote the body of a section on the same line as a `###` lost the whole body (the probable
+318 | |     httpcore2 case of set 3: 2112 tokens generated, 752 chars delivered, `## Changelog` empty).
+319 | |     """
+    | |_______^
+320 |       found = heading_lines(line)
+321 |       if not found:
+    |
+help: Add closing punctuation
+    |
+312 | def _is_cut_heading(line: str, expected: list[str]) -> bool:
+    -     """Is this last line of a truncated output a heading cut in the middle? (B2d-2)
+313 +     """Is this last line of a truncated output a heading cut in the middle? (B2d-2).
+314 |
+    |
+note: This is an unsafe fix and may change runtime behavior
+
+C901 `complete` is too complex (11 > 10)
+   --> src\local_delegate\sections.py:327:5
+    |
+327 | def complete(
+    |     ^^^^^^^^
+328 |     output: str,
+329 |     expected: list[str],
+    |
+
+E501 Line too long (102 > 100)
+   --> src\local_delegate\sections.py:334:101
+    |
+332 |     empty_in_document: frozenset[int] = frozenset(),
+333 | ) -> Completion:
+334 |     """Inserta en su sitio los títulos que el modelo no puso, y avisa de cuántos quedaron sin resumir.
+    |                                                                                                     ^^
+335 |
+336 |     Con `truncated` (la salida acabó por `length`), una última línea que es un título a medias
+    |
+
+D101 Missing docstring in public class
+   --> src\local_delegate\sections.py:418:7
+    |
+417 | @dataclass(frozen=True)
+418 | class Section:
+    |       ^^^^^^^
+419 |     heading: str
+420 |     start: int
+    |
+
+D102 Missing docstring in public method
+   --> src\local_delegate\sections.py:428:9
+    |
+427 |     @property
+428 |     def size(self) -> int:
+    |         ^^^^
+429 |         return self.end - self.start
+    |
+
+D400 First line should end with a period
+   --> src\local_delegate\sections.py:464:5
+    |
+463 | def _is_introduction(heading: str) -> bool:
+464 |     """Is this document heading the one the product adds, in either language? (B2d-2)"""
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+465 |     return normalize_heading(heading) in {normalize_heading(f) for f in INTRODUCTION_FORMS}
+    |
+help: Add period
+    |
+463 | def _is_introduction(heading: str) -> bool:
+    -     """Is this document heading the one the product adds, in either language? (B2d-2)"""
+464 +     """Is this document heading the one the product adds, in either language? (B2d-2)."""
+465 |     return normalize_heading(heading) in {normalize_heading(f) for f in INTRODUCTION_FORMS}
+    |
+note: This is an unsafe fix and may change runtime behavior
+
+D415 First line should end with a period, question mark, or exclamation point
+   --> src\local_delegate\sections.py:464:5
+    |
+463 | def _is_introduction(heading: str) -> bool:
+464 |     """Is this document heading the one the product adds, in either language? (B2d-2)"""
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+465 |     return normalize_heading(heading) in {normalize_heading(f) for f in INTRODUCTION_FORMS}
+    |
+help: Add closing punctuation
+    |
+463 | def _is_introduction(heading: str) -> bool:
+    -     """Is this document heading the one the product adds, in either language? (B2d-2)"""
+464 +     """Is this document heading the one the product adds, in either language? (B2d-2)."""
+465 |     return normalize_heading(heading) in {normalize_heading(f) for f in INTRODUCTION_FORMS}
+    |
+note: This is an unsafe fix and may change runtime behavior
+
+RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+   --> src\local_delegate\sections.py:504:59
+    |
+502 |     """Reparte `total` en proporción a `sizes`, sin pasar nunca de `total`.
+503 |
+504 |     El mínimo solo se aplica si cabe para todos (`minimum × n ≤ total`); si no, el reparto es
+    |                                                           ^
+505 |     proporcional puro (y al menos 1 a cada uno). A size of 0 (a section with no content in the
+506 |     document, B2d-2) gets 0 words and does not count for the minimum.
+    |
+
+D101 Missing docstring in public class
+   --> src\local_delegate\sections.py:521:7
+    |
+520 | @dataclass(frozen=True)
+521 | class Chunk:
+    |       ^^^^^
+522 |     text: str
+523 |     start: int
+    |
+
+D102 Missing docstring in public method
+   --> src\local_delegate\sections.py:529:9
+    |
+528 |     @property
+529 |     def headings(self) -> tuple[str, ...]:
+    |         ^^^^^^^^
+530 |         return tuple(s.heading for s in self.sections)
+    |
+
+PLR0913 Too many arguments in function definition (6 > 5)
+   --> src\local_delegate\sections.py:539:5
+    |
+539 | def chunks_by_sections(
+    |     ^^^^^^^^^^^^^^^^^^
+540 |     text: str,
+541 |     sections_: list[Section],
+    |
+
+D205 1 blank line required between summary line and description
+   --> src\local_delegate\sections.py:548:5
+    |
+546 |       to_pos: int | None = None,
+547 |   ) -> list[Chunk]:
+548 | /     """Corta `text[from_pos:to_pos]` SOLO al principio de las secciones y empaqueta secciones enteras
+549 | |     hasta el presupuesto.
+550 | |
+551 | |     Cortar por las posiciones ya detectadas —y no por cualquier `#`— es lo que impide partir
+552 | |     dentro de una valla de código o en un subtítulo. Una sección mayor que el presupuesto se parte
+553 | |     con `split` (el troceado genérico); sus partes siguientes son continuaciones de esa sección.
+554 | |     Las palabras se reparten después, con `allocate_words`.
+555 | |     """
+    | |_______^
+556 |       to_pos = len(text) if to_pos is None else to_pos
+557 |       cuts = [s.start for s in sections_ if from_pos < s.start < to_pos]
+    |
+help: Insert single blank line
+
+E501 Line too long (101 > 100)
+   --> src\local_delegate\sections.py:548:101
+    |
+546 |     to_pos: int | None = None,
+547 | ) -> list[Chunk]:
+548 |     """Corta `text[from_pos:to_pos]` SOLO al principio de las secciones y empaqueta secciones enteras
+    |                                                                                                     ^
+549 |     hasta el presupuesto.
+    |
+
+Found 30 errors.
+[*] 1 fixable with `--fix` (6 unsafe fixes available with `--fix --unsafe-fixes`).

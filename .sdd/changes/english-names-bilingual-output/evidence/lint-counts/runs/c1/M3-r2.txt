@@ -1,0 +1,5 @@
+**Resumen de Problemas:**
+
+El archivo `lib/io.py` presenta dos problemas de formato en el bloque de importaciones. El archivo `lib/net.py` también tiene dos problemas de formato en el bloque de importaciones. En el archivo `lib/db.py` se encuentran tres problemas de formato en el bloque de importaciones. Además, se detecta una única vulnerabilidad de estilo en `lib/net.py` (SIM102) relacionada con el uso de múltiples sentencias `if`.  En `lib/db.py` se identifica una única vulnerabilidad de estilo (SIM102) relacionada con el uso de múltiples sentencias `if`.  Finalmente, en `lib/db.py` se encuentra una única regla de estilo (UP006) relacionada con el uso de `List` en lugar de `list` en las anotaciones de tipo, y otra regla de estilo (UP006) relacionada con el uso de `Dict` en lugar de `dict` en las anotaciones de tipo.  En `lib/net.py` se detecta una única regla de estilo (RET504) relacionada con la asignación innecesaria antes de la sentencia `return`.
+
+(leído server-side: 784 chars ≈ 408 tokens de Claude que no entraron a tu contexto)

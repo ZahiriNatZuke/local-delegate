@@ -1,0 +1,25 @@
+**File: src/local_delegate/sections.py**
+
+**Error/Rule Summary:**
+
+*   **E501:** 6 (Line too long)
+*   **D101:** 5 (Missing docstring)
+*   **D102:** 3 (Missing docstring in public method)
+*   **RUF002:** 2 (Docstring contains ambiguous character)
+*   **C901:** 2 (Too complex)
+*   **D203:** 1 (incorrect-blank-line-before-class)
+*   **D211:** 1 (blank-line-before-class)
+*   **D212:** 1 (multi-line-summary-first-line)
+*   **D213:** 1 (multi-line-summary-second-line)
+*   **CPY001:** 1 (Missing copyright notice)
+*   **TC003:** 1 (Move standard library import)
+*   **D205:** 1 (1 blank line required between summary line and description)
+*   **D301:** 1 (Use `r"""` if any backslashes in a docstring)
+*   **D400:** 1 (First line should end with a period)
+*   **PLR2004:** 1 (Magic value used in comparison)
+*   **PLR0912:** 1 (Too many branches)
+*   **PLR0913:** 1 (Too many arguments in function definition)
+
+The file `src/local_delegate/sections.py` contains several issues primarily related to docstrings, line length, and complexity. There are 6 instances of the error E501, indicating lines exceeding the maximum allowed length. The rule D101 appears 5 times, highlighting missing docstrings in public classes and methods. The rule D102 appears 3 times, indicating missing docstrings in public methods. Additionally, there are two instances of RUF002, related to ambiguous characters in docstrings, and two instances of C901, indicating overly complex expressions.  Furthermore, there are instances of incompatible warnings (D203, D211, D212) that have been ignored. The file also contains one instance of CPY001, indicating a missing copyright notice. Finally, there is one instance of TC003, D205, D301, D400, PLR2004, PLR0912 and PLR0913.
+
+(read server-side: 2627 chars ≈ 1368 Claude tokens that did not enter your context)

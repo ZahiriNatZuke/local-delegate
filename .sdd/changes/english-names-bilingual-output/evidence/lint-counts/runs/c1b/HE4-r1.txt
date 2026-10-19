@@ -1,0 +1,6 @@
+**tools/gen.py**
+* **E402**: 4 instances of module level import not at the top of the file.
+* **E501**: 3 instances of line too long.
+* **E711**: 1 instance of comparison to `None` should be `cond is None`.
+
+(read server-side: 438 chars ≈ 228 Claude tokens that did not enter your context)

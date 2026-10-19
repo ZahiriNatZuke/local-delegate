@@ -1,0 +1,6 @@
+**tools/gen.py**
+* **E402**: Four instances where module level imports are not located at the top of the file.
+* **E501**: Three instances of lines exceeding the maximum allowed length.
+* **E711**: One instance where a comparison to `None` should be implemented as `cond is None`.
+
+(read server-side: 438 chars ≈ 228 Claude tokens that did not enter your context)
