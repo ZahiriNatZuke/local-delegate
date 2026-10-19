@@ -1,0 +1,43 @@
+**Resumen de problemas por archivo**
+
+**src/app/core/http/format-date.ts**: 167 diagnósticos. Incluye objeto posiblemente indefinido, argumento no asignable, parámetro con tipo any implícito, propiedad faltante, módulo no encontrado, tipo no asignable, propiedad inexistente y propiedad sin inicializador.
+
+**src/app/profile/pricing.ts**: 95 diagnósticos. Incluye argumento no asignable, módulo no encontrado, asignación de tipo, número de argumentos esperado, propiedad inexistente, objeto posiblemente indefinido, valor posiblemente indefinido, tipo any implícito y propiedad posiblemente indefinida.
+
+**src/app/cart/cart.component.ts**: 61 diagnósticos. Incluye argumento de tipo string o indefinido no asignable a string, propiedad sin inicializador, objeto posiblemente indefinido, propiedad faltante en el tipo, propiedad inexistente en el tipo, tipo número o nulo no asignable a número, parámetro con tipo any implícito, módulo no encontrado y elemento posiblemente indefinido.
+
+**src/app/core/state/profile-form.tsx**: 40 diagnósticos. Incluye asignación de tipo, módulo no encontrado, valor posiblemente indefinido, argumento no asignable, propiedad faltante, propiedad sin inicializador, parámetro con tipo any implícito, tipo no asignable, propiedad inexistente y objeto posiblemente indefinido.
+
+**src/app/cart/round.ts**: 37 diagnósticos. Incluye elemento posiblemente indefinido, argumento de tipo string o indefinido no asignable a string, propiedad inexistente en el tipo, número de argumentos incorrecto, objeto posiblemente indefinido, parámetro con tipo any implícito, tipo número o nulo no asignable a número, módulo no encontrado, variable declarada pero nunca leída y propiedad faltante en el tipo.
+
+**src/app/catalog/cart.service.tsx**: 33 diagnósticos. Incluye objeto posiblemente indefinido, módulo no encontrado, argumento de tipo string o indefinido no asignable a string, parámetro con tipo any implícito, tipo número o nulo no asignable a número, elemento posiblemente indefinido, propiedad sin inicializador, variable declarada pero nunca leída y propiedad faltante en el tipo.
+
+**src/app/admin/reports/checkout.component.tsx**: 27 diagnósticos. Incluye parámetro con tipo any implícito, número de argumentos incorrecto, argumento de tipo string o indefinido no asignable a string, propiedad inexistente en el tipo, propiedad sin inicializador, variable declarada pero nunca leída, objeto posiblemente indefinido, tipo número o nulo no asignable a número y módulo no encontrado.
+
+**src/app/admin/users/currency.pipe.ts**: 27 diagnósticos. Incluye variable declarada pero nunca leída, propiedad faltante en el tipo, argumento de tipo string o indefinido no asignable a string, tipo número o nulo no asignable a número, número de argumentos incorrecto, objeto posiblemente indefinido, propiedad inexistente en el tipo, parámetro con tipo any implícito y módulo no encontrado.
+
+**src/app/auth/cart.service.tsx**: 24 diagnósticos. Incluye argumento de tipo string o indefinido no asignable a string, tipo número o nulo no asignable a número, objeto posiblemente indefinido, módulo no encontrado, número de argumentos incorrecto, propiedad inexistente en el tipo, parámetro con tipo any implícito, elemento posiblemente indefinido, variable declarada pero nunca leída e índice posiblemente indefinido.
+
+**src/app/catalog/profile-form.ts**: 18 diagnósticos. Incluye argumento de tipo string o indefinido no asignable a string, número de argumentos incorrecto, tipo número o nulo no asignable a número, argumento no asignable, tipo no asignable, parámetro con tipo any implícito, variable declarada pero no leída, argumentos inesperados, propiedad faltante, objeto posiblemente indefinido y otros.
+
+Hay 82 archivos más.
+
+**Totales de códigos de error**
+
+**TS2345**: 284
+**TS2322**: 177
+**TS2532**: 108
+**TS7006**: 103
+**TS2339**: 59
+**TS2307**: 53
+**TS2554**: 51
+**TS2741**: 48
+**TS18048**: 47
+**TS6133**: 37
+**TS2564**: 26
+
+Y otros 82 ficheros que nombra el log no tienen entrada en el resumen.
+
+(leído server-side: 115238 chars ≈ 60019 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 6 partes en 7 pasadas por local-delegate)

@@ -1,0 +1,9 @@
+Here's a summary of the issues grouped by file, prioritizing the most frequent ones:
+
+**app/main.py:** This file contains three instances of the 'E501 Line too long' error, occurring on lines 12, 40, and 7. Additionally, there is one instance of the 'F401 `os` imported but unused' error on line 7, and one instance of the 'F401 `sys` imported but unused' error on line 40, and one instance of the 'F401 `re` imported but unused' error on line 55.
+
+**app/util.py:** This file has one instance of the 'W291 Trailing whitespace' error on line 70. It also presents three instances of the 'F401 `os` imported but unused' error, one instance of the 'F401 `sys` imported but unused' error, and one instance of the 'F401 `re` imported but unused' error.
+
+**app/cli.py:** This file contains one instance of the 'E501 Line too long' error on line 21.
+
+(read server-side: 340 chars ≈ 177 Claude tokens that did not enter your context)

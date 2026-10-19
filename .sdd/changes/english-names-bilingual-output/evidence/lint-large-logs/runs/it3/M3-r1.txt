@@ -1,0 +1,9 @@
+**Resumen de Problemas por Archivo**
+
+**lib/net.py:** El archivo presenta 4 problemas. La regla SIM102 aparece 3 veces, relacionada con el uso de múltiples `if` statements. La regla UP006 aparece 2 veces, relacionada con el uso de `List` en lugar de `dict` en anotaciones de tipo. La regla RET504 aparece 1 vez, relacionada con asignaciones innecesarias antes de un `return`.
+
+**lib/io.py:** El archivo presenta 3 problemas. La regla I001 aparece 3 veces, relacionada con la falta de ordenamiento o formato en bloques de importación. La regla UP006 aparece 2 veces, relacionada con el uso de `Dict` en lugar de `dict` en anotaciones de tipo.
+
+**lib/db.py:** El archivo presenta 3 problemas. La regla SIM102 aparece 2 veces, relacionada con el uso de múltiples `if` statements. La regla UP006 aparece 1 vez, relacionada con el uso de `List` en lugar de `dict` en anotaciones de tipo. La regla RET504 aparece 1 vez, relacionada con asignaciones innecesarias antes de un `return`.
+
+(leído server-side: 784 chars ≈ 408 tokens de Claude que no entraron a tu contexto)

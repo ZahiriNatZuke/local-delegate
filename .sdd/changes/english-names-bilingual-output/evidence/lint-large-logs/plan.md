@@ -134,3 +134,9 @@ respuestas con cifras mal; it1 e it2, 1.
 - Problema 2: no hay límite que tocar (la llamada no se corta: falla la obediencia del 4B). Dos
   iteraciones sin llegar y con retroceso en `en`: **no se adopta**; la llamada mecánica vuelve a la
   de la base y queda documentado el límite en el informe y en el texto del backlog.
+
+## Paso de límites (`34dde55`) — resultado
+
+Medido 13:50–14:35 UTC. Pasos finales cortados 2 → 0 de 12; `map` cortados 25 → 15 de 66; cortadas en
+total 10 de 12 (1a sigue sin llegar). Con más tope los `map` escriben más (hasta 10 k caracteres) y no
+respetan la lista de ficheros. Fin de las iteraciones: veredicto y límite en `live.md`.

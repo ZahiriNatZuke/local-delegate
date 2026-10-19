@@ -1,0 +1,16 @@
+Resumen de Problemas por Archivo:
+
+**app/main.py:**
+- E501: 2 (Líneas demasiado largas)
+- F401: 1 (Importación de `os` no utilizada)
+- W291: 0 (Espacio en blanco al final innecesario)
+
+**app/util.py:**
+- E501: 2 (Líneas demasiado largas)
+- F401: 3 (Importación de `os`, `sys` y `re` no utilizada)
+- W291: 1 (Espacio en blanco al final innecesario)
+
+**app/cli.py:**
+- E501: 1 (Líneas demasiado largas)
+
+(leído server-side: 340 chars ≈ 177 tokens de Claude que no entraron a tu contexto)

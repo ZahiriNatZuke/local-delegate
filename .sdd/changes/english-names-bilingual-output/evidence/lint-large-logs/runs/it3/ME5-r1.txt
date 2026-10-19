@@ -1,0 +1,22 @@
+**File: src/local_delegate/sections.py**
+
+**Summary:**
+
+The following analysis identifies issues within the `src/local_delegate/sections.py` file. The most frequent errors are `E501` (Line too long), followed by `D101` (Missing docstring in public class) and `D102` (Missing docstring in public method).
+
+*   **E501:** 6 instances – Lines exceeding the maximum length of 100 characters.
+*   **D101:** 5 instances – Missing docstrings in public classes.
+*   **D102:** 3 instances – Missing docstrings in public methods.
+*   **RUF002:** 2 instances – Ambiguous characters in docstrings (EN DASH and MULTIPLICATION SIGN).
+*   **C901:** 2 instances – Complex expressions exceeding the recommended complexity limit (10).
+*   **D203:** 1 instance – Incompatible warning messages.
+*   **D211:** 1 instance – Incompatible warning messages.
+*   **D212:** 1 instance – Incompatible warning messages.
+*   **D213:** 1 instance – Incompatible warning messages.
+*   **CPY001:** 1 instance – Missing copyright notice.
+*   **TC003:** 1 instance – Move import statement to a type-checking block.
+*   **D205:** 1 instance – Missing blank line between summary and description.
+
+Other issues include: `PLR2004` (Magic value used in comparison), `PLR0912` (Too many branches), `PLR0913` (Too many arguments in function definition), and several instances of lines being too long. Additionally, there are warnings related to inconsistent blank line formatting and ambiguous characters within docstrings. A total of 26 errors were found.
+
+(read server-side: 2627 chars ≈ 1368 Claude tokens that did not enter your context)
