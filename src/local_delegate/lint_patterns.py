@@ -70,6 +70,38 @@ def code_counts(log: str) -> list[tuple[str, int]]:
     return [(c, counts[c]) for c in sorted(counts, key=lambda c: (-counts[c], order[c]))]
 
 
+#: Diagnostic lines that carry the file and the rule code together, so the program can count per
+#: file (wave lint-large-logs): ruff concise / flake8 `path:line:col: CODE`, the full format of
+#: ruff (`CODE message` and `--> path:line:col` on the next line) and tsc `path(line,col): error
+#: TS1234:`. Other formats (biome, eslint stylish, pytest) put the file on another line or carry no
+#: code: no per-file counts for them.
+_PER_FILE_FORMATS = (
+    re.compile(r"(?m)^(?P<file>[^\s:]+\.\w+):\d+:\d+: (?P<code>[A-Z]{1,5}\d{2,5})\b"),
+    re.compile(r"(?m)^(?P<code>[A-Z]{1,5}\d{2,5}) [^\n]*\n\s*--> (?P<file>[^\s:]+\.\w+):\d+"),
+    re.compile(r"(?m)^(?P<file>[^\s(]+\.\w+)\(\d+,\d+\): error (?P<code>TS\d+):"),
+)
+
+
+def per_file_code_counts(log: str) -> dict[str, Counter[str]] | None:
+    """How many diagnostics of each rule code each file has, or `None` if the format does not say.
+
+    Only for the formats of `_PER_FILE_FORMATS`, the first one that matches; files in order of
+    their number of diagnostics (most first, ties in order of first appearance), codes the same.
+    """
+    for pattern in _PER_FILE_FORMATS:
+        found = [(m["file"].replace("\\", "/"), m["code"]) for m in pattern.finditer(log)]
+        if found:
+            break
+    else:
+        return None
+    per: dict[str, Counter[str]] = {}
+    for file, code in found:
+        per.setdefault(file, Counter())[code] += 1
+    order = {file: index for index, file in enumerate(per)}
+    ranked = sorted(per, key=lambda f: (-sum(per[f].values()), order[f]))
+    return {f: Counter(dict(per[f].most_common())) for f in ranked}
+
+
 #: A Markdown escape (`build\_corpus.py`): the model writes it, the reader sees `_`.
 MARKDOWN_ESCAPE = re.compile(r"\\([_*`-])")
 

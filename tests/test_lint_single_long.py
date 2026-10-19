@@ -155,8 +155,10 @@ def test_the_mechanical_single_call_gets_the_inventory_and_keeps_the_rest(captur
     """Affinity by language: the `mechanical` role gets the inventory with counts too (the 26B
     of the affinity cell answers with this prompt), and keeps its cap and no "not mentioned"
     line. Mutant "the long role only" (`_lint_single_user` returns `base` for `mechanical`): the
-    inventory assert fails, not the guard of the role."""
-    log = _ruff_log(4, 3)
+    inventory assert fails, not the guard of the role. One file: with several files and a
+    countable format the mechanical call gets the counts per file instead (wave lint-large-logs,
+    `tests/test_lint_large_logs.py`)."""
+    log = _ruff_log(1, 12)
     out = server.local_lint_summary(text=log)
     (call,) = captured
     (row,) = _rows(tmp_path)
