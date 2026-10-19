@@ -10,6 +10,9 @@ validado antes contra la lectura a mano (`lint-counts/runs/c2` M1-r3 y M3-r3, 3 
 
 ## Versiones (misma sesión, mismo método)
 
+SHA de antes del rebase sobre `main` (tras mezclarse #331); en la rama publicada: `13daae6` → `87a86cd`,
+`22c4b12` → `257bcd6`, `34dde55` → `65ba241`.
+
 | Tag | Código | Ventanas (M, ME, G, X) |
 |---|---|---|
 | `base` | `b604969` (rama de #331) | `w-20261019T112408Z`, `…112511Z`, `…112624Z`, `…113711Z` |

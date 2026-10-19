@@ -8,6 +8,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Cambiado
 
+- **`local_lint_summary` con logs muy grandes: el resumen final ya no se corta ni inventa
+  recuentos por fichero** (backlog §1.8). En el lint troceado el resumen da entrada solo a los diez
+  ficheros más nombrados y el programa añade cuántos más hay; las cifras (total de cada fichero
+  cuando el formato lo permite, veces de cada código en todo el log) las pone el programa, y con
+  logs que no dan cifras por fichero (pytest, eslint) no se da ninguna. Los pasos intermedios
+  responden en formato escueto y sin cifras, y los topes pasan a 1 392 tokens (pasos intermedios) y
+  2 784 (paso final). Medido en vivo con cuatro logs de 115–210 k (ruff, pytest, eslint, tsc) y 3
+  repeticiones: pasos finales cortados 7 → 0 de 12, cifras por fichero mal 130 → 7, invenciones por
+  respuesta 2,17 → 0,33, códigos nombrados por el modelo 0,47 → 1,00, latencia mediana 189 → 152 s.
+  Límite conocido: algunos pasos intermedios aún acaban cortados (10 de 12 respuestas con alguno).
+  Medición: `.sdd/changes/english-names-bilingual-output/evidence/lint-large-logs/live.md`.
+
 - **La lista de excepciones del detector de nombres vive ahora en `scripts/data/`.** Pasa de las
   tablas de `.sdd/changes/english-names-bilingual-output/rename-exceptions.md` a
   `scripts/data/name_exceptions.json` (motivos y formato en `name_exceptions.README.md`), que

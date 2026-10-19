@@ -165,9 +165,17 @@ la tool para cuando un comando escupe más de lo que cabe — vuelca la salida a
 `path`. Map-reduce si hace falta.
 
 Con un log largo (el que va al rol largo, en una llamada o troceado), el programa pone delante la
-lista de ficheros y códigos de regla que nombra el log, sin recuentos, y si el resumen deja fuera
-alguno de los diez ficheros o los diez códigos más nombrados, lo añade al final en una línea
-«Sin mencionar: …». Un log corto va al rol mecánico tal cual.
+lista de ficheros y códigos de regla que nombra el log, y si el resumen deja fuera alguno de los
+diez ficheros o los diez códigos más nombrados, lo añade al final en una línea «Sin mencionar: …».
+
+Con un log que no cabe en una llamada (troceado), el resumen tiene entrada solo para los **diez
+ficheros más nombrados**; el programa añade al final cuántos ficheros más nombra el log («Y otros N
+ficheros…»). Las cifras salen del programa: el total de cada uno de esos ficheros cuando el formato
+lo permite (ruff, tsc) y las veces de cada código en todo el log; con logs que no dan cifras por
+fichero (pytest, eslint), el resumen no da ninguna. Así un log de 150–210 k caracteres ya no deja el
+resumen final cortado ni inventa recuentos de tests por fichero. Algún paso intermedio aún puede
+acabar cortado, y entonces la respuesta lo avisa; lo que se pierde ahí lo cubre la lista del
+programa.
 
 ## `local_commit_msg`
 
