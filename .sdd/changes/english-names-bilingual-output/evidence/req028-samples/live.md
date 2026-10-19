@@ -47,7 +47,7 @@ publicadas en el repo (ninguna `pagina-es-*-1440.png`, que llevan datos de la PC
 | EN | `w-20261019T043654Z` (04:36:54Z–04:41:46Z) | `local_explain_code` | 15/15 (100 %) | 0 | 0 | CUMPLE |
 | EN | `w-20261019T043654Z` | `local_describe_image` | 15/15 (100 %) | 0 | 0 | CUMPLE |
 | FR | `w-20261019T044210Z` (04:42:10Z–04:52:26Z) | `local_summarize` | 14/15 (93 %) | 0 | 0 | CUMPLE (1 `unknown`: FR-S03 r1, margen 0,135) |
-| FR | `w-20261019T044210Z` | `local_lint_summary` | 12/15 (80 %) | 0 | 0 | **NO CUMPLE** (3 `unknown`, el mismo documento) |
+| FR | `w-20261019T044210Z` | `local_lint_summary` | 12/15 (80 %) → **15/15 (100 %)** con R1 ampliado | 0 | 0 | NO CUMPLE con el juez de `main`; **CUMPLE** re-juzgado (ver abajo) |
 | FR | `w-20261019T044210Z` | `local_explain_code` | 15/15 (100 %) | 0 | 0 | CUMPLE |
 | FR | `w-20261019T044210Z` | `local_describe_image` | 15/15 (100 %) | 0 | 0 | CUMPLE |
 
@@ -71,6 +71,27 @@ criterio se fijó antes de medir y no se cambia a la vista del fallo: el veredic
 siendo 12/15. Salida propuesta: un lote corto que añada a R1 la línea «Sin mencionar (…)» /
 «Not mentioned (…)» (con su test y su mutante) y vuelva a juzgar estas respuestas, sin repetir
 llamadas.
+
+### Re-juicio con la regla R1 ampliada (sin llamadas nuevas)
+
+Rama `fix/judge-r1-not-mentioned` (commit `769c3c2`, desde `origin/main`): R1 quita también la
+línea «Sin mencionar (…): …» / «Not mentioned (…): …». Su texto sale del catálogo (claves
+`mcp.lint.not_mentioned` y `mcp.explain.not_mentioned`, en todos sus idiomas: hoy es y en), no de
+un literal. Tests: la línea se quita en cada idioma y clave; guarda de que el catálogo aporta es y
+en; control positivo (el mismo texto dentro de una frase sí se juzga). Mutante (quitar la
+comprobación en `prose()`): falla solo `test_r1_the_not_mentioned_line_is_dropped_in_every_language`,
+en el assert de tokens (32 ≠ 19).
+
+Las 120 respuestas guardadas se volvieron a juzgar con ese juez (`judge_samples.py --scripts-dir
+D:/Projects/ld-wt-judge/scripts --out judge-r1.jsonl`); el criterio es el mismo.
+
+- ES y EN: 0 cambios de veredicto y 0 cambios de recuento de palabras (60 filas).
+- FR: cambian solo las 3 filas de FR-L02 (`unknown` → `requested`, 30 → 21 palabras juzgables);
+  son las únicas respuestas de las tres tandas que llevan esa línea. Lint fr: **15/15**.
+- Ninguna otra combinación cambia de veredicto. FR-L02 queda a 1 palabra del mínimo (20): es una
+  respuesta corta de un log de pytest sin fallos.
+
+`answers/<tanda>/judge.jsonl` es el juicio con el juez de `main` y `judge-r1.jsonl` el re-juicio.
 
 ## Cómo se cambió el idioma de cada tanda
 

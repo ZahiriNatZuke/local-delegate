@@ -5,29 +5,37 @@ es/en windows: `scripts/judge_response_language.py` (prose-only judge, unchanged
 Writes `answers/<window>/judge.jsonl` and prints one line per tool with the counts and PASS/FAIL.
 
     python judge_samples.py --window ES
+    python judge_samples.py --window FR --scripts-dir D:/Projects/ld-wt-judge/scripts --out judge-r1.jsonl
+
+`--scripts-dir` loads `judge_response_language` (and the detector) from another checkout, to
+re-judge the saved answers with a newer judge without new calls; `--out` names the file.
 """
 
 import argparse
 import collections
+import importlib
 import json
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).parent
 ROOT = HERE.parents[4]
-sys.path.insert(0, str(ROOT / "scripts"))
-sys.path.insert(0, str(ROOT / "src"))
-sys.path.insert(0, str(HERE))
-
-import detect_language
-import fr_judge
-import judge_response_language
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--window", required=True, choices=["ES", "EN", "FR"])
+    parser.add_argument("--scripts-dir", type=Path, default=ROOT / "scripts")
+    parser.add_argument("--out", default="judge.jsonl")
     args = parser.parse_args()
+    scripts = args.scripts_dir.resolve()
+    sys.path[:0] = [str(HERE), str(scripts), str(scripts.parent / "src")]
+    # In this order: fr_judge would put this checkout's scripts/ first if it came before.
+    detect_language = importlib.import_module("detect_language")
+    judge_response_language = importlib.import_module("judge_response_language")
+    fr_judge = importlib.import_module("fr_judge")
+
+    print(f"judge: {judge_response_language.__file__}")
     manifest = json.loads((HERE / "manifest.json").read_text(encoding="utf-8"))
     requested = manifest["windows"][args.window]["requested"]
     repeat = manifest["repeat"]
@@ -59,7 +67,7 @@ def main() -> int:
             rows.append(
                 {"id": c["id"], "rep": rep, "tool": c["tool"], "chars": len(text), **verdict}
             )
-    with (folder / "judge.jsonl").open("w", encoding="utf-8", newline="\n") as fh:
+    with (folder / args.out).open("w", encoding="utf-8", newline="\n") as fh:
         for r in rows:
             fh.write(json.dumps(r, ensure_ascii=False) + "\n")
     ok = True
