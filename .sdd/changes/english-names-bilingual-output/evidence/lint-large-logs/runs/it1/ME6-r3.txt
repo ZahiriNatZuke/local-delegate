@@ -1,0 +1,13 @@
+**Summary of Errors by File**
+
+- **src/adapters/claude-json.ts**: TS2554 (1) - Expected 0-1 arguments, but got 2.
+- **src/adapters/codex/index.ts**: TS2550 (1) - Property 'hasOwn' does not exist on type 'ObjectConstructor'.
+- **src/cli/commands/export.ts**: TS2550 (3) - Property 'at' does not exist on type 'string[]'.
+- **src/cli/commands/import.ts**: TS2550 (1) - Property 'at' does not exist on type 'string[]'.
+- **src/cli/index.ts**: TS2550 (1) - Property 'hasOwn' does not exist on type 'ObjectConstructor'.
+- **src/cli/ui/style.ts**: TS2550 (1) - Property 'replaceAll' does not exist on type 'string'.
+- **src/cli/ui/width.ts**: TS2339 (1) - Property 'Segmenter' does not exist on type 'typeof Intl'.
+- **src/io/fs/atomic.ts**: TS4113 (1) - This member cannot have an 'override' modifier because it is not declared in the base class 'Error'.
+- **src/io/vault/index.ts**: TS2554 (1) - Expected 0-1 arguments, but got 2.
+
+(read server-side: 1647 chars ≈ 857 Claude tokens that did not enter your context)

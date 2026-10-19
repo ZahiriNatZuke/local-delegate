@@ -1,0 +1,9 @@
+**File Summary**
+
+**src/a.py:** The file contains 2 instances of **D103** (Missing docstring in public function), 1 instance of **D100** (Missing docstring in public module), and 1 instance of **B006** (Do not use mutable data structures for argument defaults).
+
+**src/b.py:** This file has 3 instances of **D103** (Missing docstring in public function) and 1 instance of **D100** (Missing docstring in public module).
+
+**src/c.py:** The file includes 3 instances of **T201** (`print` found).
+
+(read server-side: 626 chars ≈ 326 Claude tokens that did not enter your context)

@@ -1,0 +1,32 @@
+**Resumen de Problemas por Archivo**
+
+**src/local_delegate/sections.py**
+
+*   **E501:** 6 (Líneas demasiado largas)
+*   **D101:** 5 (Faltan docstrings en clases públicas)
+*   **D102:** 3 (Faltan docstrings en métodos públicos)
+*   **RUF002:** 2 (Docstring ambiguo con `–`, posible reemplazo con `-`)
+*   **C901:** 2 (Complejidad excesiva en `markdown_headings` y `match_headings`)
+*   **D203:** 1 (Warning incompatible: `incorrect-blank-line-before-class` y `blank-line-before-class`)
+*   **D211:** 1 (Warning incompatible: `multi-line-summary-first-line` y `multi-line-summary-second-line`)
+*   **D212:** 1 (Warning incompatible: `multi-line-summary-second-line`)
+*   **D213:** 1 (Warning incompatible: `multi-line-summary-first-line`)
+*   **CPY001:** 1 (Falta aviso de copyright al inicio del archivo)
+*   **TC003:** 1 (Mover importación de `collections.abc.Callable` a un bloque de type-checking)
+*   **D205:** 1 (Requiere 1 línea en blanco entre la línea de resumen y la descripción)
+*   **D301:** 1 (Usar `r"""` si hay barras invertidas en un docstring)
+*   **D400:** 1 (La primera línea del docstring debe terminar con un punto)
+*   **PLR2004:** 1 (Uso de valor mágico en comparación, considerar reemplazar `2` con una variable constante)
+*   **PLR0912:** 1 (Demasiadas ramas en la función)
+*   **PLR0913:** 1 (Demasiados argumentos en la definición de la función)
+*   **RUF002:** 1 (Docstring ambiguo con `×`, posible reemplazo con `x`)
+*   **D316:** 1 (Falta docstring en clase pública)
+*   **D324:** 1 (Falta docstring en método público)
+*   **D404:** 1 (Falta docstring en clase pública)
+*   **D406:** 1 (Requiere 1 línea en blanco entre la línea de resumen y la descripción)
+*   **E501:** 1 (Línea demasiado larga)
+*   **E501:** 1 (Línea demasiado larga)
+*   **E501:** 1 (Línea demasiado larga)
+*   **E501:** 1 (Línea demasiado larga)
+
+(leído server-side: 2627 chars ≈ 1368 tokens de Claude que no entraron a tu contexto)

@@ -88,3 +88,26 @@ documentar el límite y el texto del backlog.
 - Problema 2: en la llamada mecánica, cuando el log es de un formato contable y nombra más de un
   fichero, el inventario da los recuentos POR FICHERO (contados por el programa) en lugar del total
   de cada código en todo el log.
+
+## Iteración 1 (`13daae6`) — resultado y decisión de la iteración 2 (escrito antes de medirla)
+
+Medida 12:18–13:00 UTC; base 11:24–12:14 UTC. Puntuación en `score-base.json` / `score-it1.json`.
+
+- X: 1b, 1c, 1d y 1e **cumplen** (invenciones 2,17 → 0,25; respuestas con cifras por fichero mal
+  9 → 1 de 12; `model_codes` 0,47 → 1,00; `model_files` 0,73 → 1,00; latencia 189 → 180 s). **1a no**:
+  12 de 12 cortadas. El paso final ya acaba en `stop` en X1, X3 y X4, pero en X2 (pytest) sigue
+  escribiendo entradas después de los 10 ficheros pedidos (7–8 k caracteres, `length`), y los `map`
+  se cortan (escriben una frase por regla y no respetan la lista de ficheros del trozo).
+- M: **no cumple** (9 → 8 de 18; cifras mal 36 → 18). M1 y M3 quedan a 0; M2 y M6 siguen mal en 3 de 3
+  con el inventario por fichero correcto delante: el 4B copia D103 3 donde la lista dice 2 y TS2550 3
+  donde dice 2. M5 (un fichero, prompt idéntico a la base) varía entre 0 y 5: ruido.
+- G (control): invenciones 0,13 → 0,07, cortadas 0 → 0, cifras mal 6 → 6 de 15: sin ruido apreciable.
+
+**Iteración 2:**
+- Mecánico con varios ficheros y formato contable: la lista por fichero va SIN cifras y se pide no dar
+  ninguna; el programa añade detrás un bloque con el recuento por fichero (de `per_file_code_counts`).
+  El lector lo aparta como línea del programa (igual que «Sin mencionar» y «Y otros N ficheros»).
+- `map` del lint troceado: formato escueto, una línea por fichero de la lista, con solo sus códigos o
+  tipos de problema separados por comas, sin explicarlos y sin cifras.
+- Paso final: se dice que tras la entrada del último fichero de la lista no va ninguna otra entrada
+  de fichero.

@@ -1,0 +1,78 @@
+**Resumen de problemas por archivo**
+
+**src/local_delegate/web/metrics.py**
+* **Línea demasiado larga**: E501.
+* **Falta anotación de tipo de retorno para función pública**: ANN201.
+* **Acceso a miembro privado**: SLF001.
+* **Falta coma final**: COM812.
+* **Cadena contiene símbolo ambiguo**: RUF001.
+* **Error en docstring**: D205, D209, D103.
+* **Captura de excepción ciega**: BLE001.
+* **Otros**: Uso de la sentencia `global` (PLW0603), importación fuera del nivel superior (PLC0415), detección de `try-except-pass` (S110), sugerencia de `contextlib.suppress` (SIM105), mover sentencia a bloque `else` (TRY300) y uso de `print` (T201).
+
+**src/local_delegate/cli.py**
+* **Uso de print**: 10 errores de tipo T201.
+* **Falta de coma final**: 8 errores de tipo COM812.
+* **Falta de anotación de tipo**: 2 errores de tipo ANN001.
+* **Falta de docstring en función pública**: 2 errores de tipo D103.
+
+**src/local_delegate/server.py**
+* **Argumentos booleanos posicionales**: FBT001, FBT002, FBT003.
+* **Exceso de argumentos en funciones**: PLR0913.
+* **Complejidad excesiva**: C901.
+* **Docstrings incorrectos o mal formateados**: D205, D209, D301, D401, D413.
+* **Faltan anotaciones de tipo**: ANN001.
+* **Comas finales faltantes**: COM812.
+* **Líneas demasiado largas**: E501.
+* **Otros**: Exceso de sentencias (PLR0915), uso de `assert` (S101), valores mágicos (PLR2004), exceso de ramas (PLR0912), comprensión de diccionarios innecesaria (C420), importaciones fuera de nivel (PLC0415), uso de `open()` (PTH123), excepciones ciegas (BLE001), uso de `global` (PLW0603), y caracteres ambiguos (RUF003).
+
+**src/local_delegate/checks.py**
+* No se detallan errores específicos en el contenido proporcionado.
+
+**src/local_delegate/residency.py**
+* No se detallan errores específicos en el contenido proporcionado.
+
+**src/local_delegate/install.py**
+* No se detallan errores específicos en el contenido proporcionado.
+
+**src/local_delegate/benchmark.py**
+* **Aviso de derechos de autor faltante**.
+* **Importaciones de biblioteca estándar que deben moverse a un bloque de comprobación de tipos**.
+* **Falta de cadena de documentación en clase pública**.
+* **Uso de valor mágico en comparación**.
+* **Variable de bucle `for` sobrescrita por el objetivo de asignación**.
+* **Falta de coma final**.
+* **La importación debe estar en el nivel superior del archivo**.
+* **Llamada a `subprocess` que debe verificar la ejecución de entrada no confiable**.
+* **`subprocess.run` sin argumento `check` explícito**.
+* **Complejidad excesiva en la función**.
+* **Falta de cadena de documentación en métodos mágicos, métodos públicos e inicializadores**.
+* **La cadena de documentación debe usar `r"""` si contiene barras invertidas**.
+* **`None` no está al final de la unión de tipos**.
+* **Uso de `print`**.
+
+**src/local_delegate/resources/hooks/hook_common.py**
+* No se detallan errores específicos en el contenido proporcionado.
+
+**src/local_delegate/legacy_names.py**
+* No se detallan errores específicos en el contenido proporcionado.
+
+**src/local_delegate/pace.py**
+* **Captura de excepciones ciegas**: 8 errores de tipo BLE001.
+* **Expresiones con tipado dinámico no permitidas**: 10 errores de tipo ANN401.
+* **Falta de coma final**: 3 errores de tipo COM812.
+* **Valor booleano posicional en llamada a función**: 2 errores de tipo FBT003.
+* **Otros**: Considerar mover sentencia a un bloque `else` (TRY300), acceso a miembro privado, y errores de formato.
+
+**Totales de códigos de regla**
+E501: 292, COM812: 273, T201: 156, D205: 87, PLC0415: 78, D209: 71, ANN401: 68, ANN001: 67, CPY001: 52, D103: 52, BLE001: 44, TC003: 42, SLF001: 40, C901: 39, D102: 39, PLR2004: 38, FBT003: 34, D101: 31, FBT001: 31, D401: 30, PLR0913: 24, RUF002: 24, PLR0912: 18, ANN201: 18, PLR0911: 17, SIM105: 16, D400: 15, RUF001: 15, ANN202: 14, TID252: 14, PLR0915: 13, PLW2901: 12, PLW1510: 12, D107: 11, PLW0603: 11, S603: 10, D301: 10, D413: 10, S110: 9, S607: 9, FAST002: 9, TRY300: 7, PTH105: 7, D105: 7, PTH123: 7, RUF003: 6, EM101: 6, PTH108: 5, N802: 5, FBT002: 5, PLR0917: 5, C420: 5, PERF401: 4, TRY301: 4, D403: 4, TRY003: 3, S310: 3, PTH202: 3, D415: 3, S101: 3, S105: 2, ARG001: 2, S104: 2, PLR1714: 2, TC002: 2, UP042: 2, EM102: 2, N818: 2, TD006: 2, TD002: 2, TD004: 2, TD003: 2, FIX002: 2, D203: 1, D211: 1, D212: 1, D213: 1, PT028: 1, RUF036: 1, RUF005: 1, ANN204: 1, B905: 1, PLC0207: 1, B007: 1, INP001: 1, PTH100: 1, PTH122: 1, PTH117: 1, PTH118: 1, PTH109: 1, PT018: 1, A002: 1, PTH116: 1, SIM108: 1, PTH208: 1
+
+Found 1991 errors.
+
+Y otros 44 ficheros que nombra el log no tienen entrada en el resumen.
+
+[local-delegate warning: salida truncada por max_tokens en 4 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 179890 chars ≈ 93692 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

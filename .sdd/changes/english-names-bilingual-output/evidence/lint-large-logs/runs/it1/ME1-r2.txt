@@ -1,0 +1,17 @@
+Here's a summary of the issues, grouped by file, with counts for each type of error/rule within each file:
+
+**app/main.py:**
+- E501: 2 (Line too long)
+- F401: 1 (`os` imported but unused)
+- **Line Length Issues:** Two lines exceeding 100 characters.
+
+**app/util.py:**
+- E501: 3 (Line too long)
+- F401: 3 (`os` imported but unused, `sys` imported but unused, `re` imported but unused)
+- **Line Length Issues:** One line exceeding 120 characters.
+- **Whitespace:** One instance of trailing whitespace.
+
+**app/cli.py:**
+- E501: 1 (Line too long)
+
+(read server-side: 340 chars ≈ 177 Claude tokens that did not enter your context)

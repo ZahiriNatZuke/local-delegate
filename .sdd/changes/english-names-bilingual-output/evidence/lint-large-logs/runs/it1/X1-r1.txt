@@ -1,0 +1,97 @@
+**Resumen de problemas por archivo**
+
+**src/local_delegate/web/metrics.py**
+* **Línea demasiado larga (E501)**: Gran cantidad de líneas que exceden los 100 caracteres.
+* **Falta anotación de tipo de retorno para función pública (ANN201)**: Múltiples funciones carecen de anotación de retorno.
+* **Acceso a miembro privado (SLF001)**: Uso de atributos privados.
+* **Falta coma final (COM812)**: Varias instancias donde falta una coma al final.
+* **Error en docstring (D205, D209, D103)**: Requiere línea en blanco entre resumen y descripción, comillas de cierre en línea separada o falta de docstring en funciones públicas.
+* **Captura de excepción ciega (BLE001)**: Uso de `except Exception`.
+* **Cadena con caracteres ambiguos (RUF001)**: Uso de signos de menos o multiplicación no estándar.
+* **Otros**: Uso de la sentencia `global` (PLW0603), importación fuera del nivel superior (PLC0415), detección de `try-except-pass` (S110, SIM105), uso de `print` (T201) y sugerencia de mover sentencia a un bloque `else` (TRY300).
+
+**src/local_delegate/cli.py**
+* **Uso de `print` (T201)**
+* **Falta coma final (COM812)**
+* **Falta anotación de tipo para el argumento `sub` (ANN001)**
+* **Falta docstring en función pública (D103)**
+
+**src/local_delegate/server.py**
+* **Coma final faltante**: 14
+* **Demasiados argumentos en la definición de la función**: 8
+* **Falta anotación de tipo para el argumento de la función**: 10
+* **La primera línea de la cadena de documentación debe estar en modo imperativo**: 8
+* **Complejidad excesiva**: 5
+* **Se requiere una línea en blanco entre la línea de resumen y la descripción**: 8
+* **Las comillas de cierre de la cadena de documentación multilínea deben estar en una línea separada**: 4
+* **Demasiadas sentencias**: 3
+* **Uso de valores mágicos en comparaciones**: 4
+* **Línea demasiado larga**: 5
+* **Uso de argumentos posicionales de tipo booleano en la definición de la función**: 4
+* **Falta de línea en blanco después de la última sección**: 7
+* **Otros**: Uso de `assert`, uso de `r"""`, demasiadas ramas, uso de `global`, importaciones fuera del nivel superior, uso de `open()` en lugar de `Path.open()`, captura de excepciones ciegas, uso de `subprocess.run` sin argumento `check`, uso de rutas parciales en procesos, sombreado de nombres integrados y uso de valores booleanos posicionales en llamadas.
+
+**src/local_delegate/checks.py**
+* (No se proporcionan detalles de errores para este archivo en el texto)
+
+**src/local_delegate/residency.py**
+* (No se proporcionan detalles de errores para este archivo en el texto)
+
+**src/local_delegate/install.py**
+* (No se proporcionan detalles de errores para este archivo en el texto)
+
+**src/local_delegate/benchmark.py**
+* Falta aviso de derechos de autor.
+* Importaciones de librería estándar deben moverse a un bloque de comprobación de tipos.
+* Falta cadena de documentación en clase pública.
+* Uso de valor mágico en comparación.
+* Variable de bucle `for` sobrescrita por objetivo de asignación.
+* Falta coma final.
+* La importación debe estar en el nivel superior del archivo.
+* Llamada a `subprocess`: comprobar la ejecución de entrada no confiable.
+* `subprocess.run` sin argumento `check` explícito.
+* Función demasiado compleja.
+* Falta cadena de documentación en métodos mágicos, métodos públicos e `__init__`.
+* Uso de `r"""` si hay barras invertidas en la cadena de documentación.
+* `None` no está al final de la unión de tipos.
+* Uso de `print` encontrado.
+* Demasiados argumentos, ramas o sentencias en funciones.
+* Valor booleano posicional en llamada a función.
+
+**src/local_delegate/resources/hooks/hook_common.py**
+* (No se proporcionan detalles de errores para este archivo en el texto)
+
+**src/local_delegate/legacy_names.py**
+* (No se proporcionan detalles de errores para este archivo en el texto)
+
+**src/local_delegate/pace.py**
+* **Captura de excepciones ciegas**: 8
+* **Expresiones con tipado dinámico no permitidas**: 10
+* **Falta de coma final**: 3
+* **Valor booleano posicional en llamada a función**: 1
+* **Mover sentencia a un bloque else**: 1
+
+**Totales de códigos de regla**
+* E501: 292
+* COM812: 273
+* T201: 156
+* D205: 87
+* PLC0415: 78
+* D209: 71
+* ANN401: 68
+* ANN001: 67
+* CPY001: 52
+* D103: 52
+* BLE001: 44
+* TC003: 42
+* ... (otros códigos omitidos para brevedad)
+
+Found 1991 errors.
+
+Y otros 44 ficheros que nombra el log no tienen entrada en el resumen.
+
+[local-delegate warning: salida truncada por max_tokens en 4 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 179890 chars ≈ 93692 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

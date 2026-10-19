@@ -1,0 +1,48 @@
+**Resumen de problemas por archivo**
+
+**home/runner/work/shop-web/shop-web/src/app/core/state/report-builder.tsx**
+* **Errores**: Asignación a parámetro de función, sombreado de variables, variables no utilizadas, promesas sin esperar o sin manejo de errores, uso de `let` en lugar de `const`, uso de `await` dentro de un bucle, métodos de ciclo de vida vacíos y uso de comparación débil en lugar de estricta.
+* **Advertencias**: Longitud de línea excedida, uso de `console.log`, uso de tipo `any`, falta de tipo de retorno en funciones, complejidad de método excesiva y orden de importaciones incorrecto.
+
+**home/runner/work/shop-web/shop-web/src/app/catalog/users-table.js**
+* **Errores**: Comparación débil, métodos de ciclo de vida vacíos, variables no utilizadas, uso de `let` en lugar de `const`, promesas sin esperar, asignación a parámetro de función y uso de `await` dentro de un bucle.
+* **Advertencias**: Uso de tipo `any`, complejidad de método excesiva, uso de `console.log`, orden de importaciones incorrecto, longitud de línea excedida y falta de tipo de retorno en funciones.
+
+**home/runner/work/shop-web/shop-web/src/lib/money/mailer.tsx**
+* **Errores**: Uso de `let` en lugar de `const`, comparación débil, asignación a parámetro de función, variables no utilizadas, uso de `await` dentro de un bucle, promesas sin esperar y sombreado de variables.
+
+**home/runner/work/shop-web/shop-web/src/app/admin/reports/profile-form.ts**
+* **Errores**: Uso de `any` inesperado, promesas sin esperar, reasignación de parámetros de función, uso de `const` en lugar de `let`, variables no utilizadas, sombras de variables, comparaciones con `==` en lugar de `===`, uso de `await` dentro de un bucle, métodos de ciclo de vida vacíos y variables declaradas en un ámbito superior.
+* **Advertencias**: Uso de `any` inesperado, falta de tipo de retorno en funciones, orden de importación incorrecto, sentencias de consola inesperadas y longitud de línea excedida.
+
+**home/runner/work/shop-web/shop-web/src/lib/format/report-builder.js**
+* **Errores**: Variables no utilizadas, sombras de variables, uso de `const` en lugar de `let`, comparaciones incorrectas y uso de `await` dentro de un bucle.
+* **Advertencias**: Uso de `any` inesperado, orden de importación incorrecto, falta de tipo de retorno, longitud de línea excedida, sentencias de consola inesperadas y complejidad de método excesiva.
+
+**home/runner/work/shop-web/shop-web/src/server/db/utils.tsx**
+* **Errores**: Uso de `const` en lugar de `let`, comparaciones incorrectas, variables no utilizadas, sombras de variables y promesas sin esperar.
+* **Advertencias**: Sentencias de consola inesperadas, falta de tipo de retorno, orden de importación incorrecto, longitud de línea excedida y complejidad de método excesiva.
+
+**home/runner/work/shop-web/shop-web/src/app/auth/button.ts**
+* **Errores**: Uso de `const` en lugar de `let`, variables no utilizadas, comparaciones incorrectas, sombras de variables y uso de `await` dentro de un bucle.
+* **Advertencias**: Longitud de línea excedida, uso de `any` inesperado, orden de importación incorrecto, falta de tipo de retorno, sentencias de consola inesperadas y complejidad de método excesiva.
+
+**home/runner/work/shop-web/shop-web/src/app/core/state/date-range.pipe.ts**
+* **Errores**: Variables no utilizadas, comparaciones incorrectas, uso de `await` dentro de un bucle, uso de `const` en lugar de `let`, métodos de ciclo de vida vacíos y reasignación de parámetros.
+* **Advertencias**: Longitud de línea excedida, uso de `any` inesperado, falta de tipo de retorno, sentencias de consola inesperadas, orden de importación incorrecto y complejidad de método excesiva.
+
+**home/runner/work/shop-web/shop-web/src/lib/format/button.js**
+* **Errores**: Uso de `await` dentro de un bucle, variables no utilizadas y uso de `const` en lugar de `let`.
+
+**home/runner/work/shop-web/shop-web/src/app/core/state/token.interceptor.js**
+* No se han encontrado problemas en este archivo.
+
+Hay 118 ficheros más.
+
+Y otros 118 ficheros que nombra el log no tienen entrada en el resumen.
+
+[local-delegate warning: salida truncada por max_tokens en 4 de 5 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 136846 chars ≈ 71273 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)

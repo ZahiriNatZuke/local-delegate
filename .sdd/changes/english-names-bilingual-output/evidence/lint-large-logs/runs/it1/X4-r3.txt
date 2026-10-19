@@ -1,0 +1,80 @@
+**src/app/core/http/format-date.ts**
+No se dispone de detalles específicos para este archivo en el resumen.
+
+**src/app/profile/pricing.ts**
+* **Argumento no asignable**: 13
+* **Módulo no encontrado**: 4
+* **Error de asignación de tipo**: 6
+* **Argumentos inesperados**: 5
+* **Tipo any implícito**: 2
+* **Posiblemente indefinido**: 7
+* **Propiedad faltante**: 3
+* **Propiedad inexistente**: 3
+
+**src/app/cart/cart.component.ts**
+No se dispone de detalles específicos para este archivo en el resumen.
+
+**src/app/core/state/profile-form.tsx**
+* **Error de asignación de tipo**: 2
+* **Módulo no encontrado**: 1
+* **Posiblemente indefinido**: 2
+* **Argumento no asignable**: 1
+* **Propiedad faltante**: 1
+
+**src/app/cart/round.ts**
+No se dispone de detalles específicos para este archivo en el resumen.
+
+**src/app/catalog/cart.service.tsx**
+No se dispone de detalles específicos para este archivo en el resumen.
+
+**src/app/admin/reports/checkout.component.tsx**
+* **Error de asignación de tipos**: 1
+* **Error de argumentos**: 1
+* **Error de tipo implícito**: 1
+* **Error de propiedad inexistente**: 1
+* **Error de inicialización**: 1
+* **Error de variable no leída**: 1
+* **Error de posible indefinición**: 1
+* **Error de tipo incompatible**: 1
+* **Error de módulo no encontrado**: 1
+
+**src/app/admin/users/currency.pipe.ts**
+* **Error de variable no leída**: 1
+* **Error de asignación de tipos**: 1
+* **Error de tipo incompatible**: 1
+
+**src/app/auth/cart.service.tsx**
+No se dispone de detalles específicos para este archivo en el resumen.
+
+**src/app/catalog/profile-form.ts**
+* **Error de asignación de tipos**: 2
+* **Error de tipo implícito**: 1
+* **Error de argumentos**: 1
+* **Error de propiedad faltante**: 1
+* **Error de objeto posiblemente indefinido**: 1
+* **Variable no utilizada**: 1
+
+Hay 82 archivos más.
+
+**Totales**
+* **TS2345**: 284
+* **TS2322**: 177
+* **TS2532**: 108
+* **TS7006**: 103
+* **TS2339**: 59
+* **TS2307**: 53
+* **TS2554**: 51
+* **TS2741**: 48
+* **TS18048**: 47
+* **TS6133**: 37
+* **TS2564**: 26
+
+Found 993 errors in 91 files.
+
+Y otros 82 ficheros que nombra el log no tienen entrada en el resumen.
+
+[local-delegate warning: salida truncada por max_tokens en 3 de 7 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 115238 chars ≈ 60019 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 6 partes en 7 pasadas por local-delegate)

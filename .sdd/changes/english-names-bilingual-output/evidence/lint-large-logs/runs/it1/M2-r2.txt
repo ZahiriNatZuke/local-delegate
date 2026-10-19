@@ -1,0 +1,9 @@
+**Resumen de Problemas por Archivo:**
+
+**src/a.py:**  D103 (3), D100 (2), B006 (1).  Se identificaron problemas relacionados con la falta de documentación en funciones públicas y el uso de estructuras de datos mutables en argumentos predeterminados.
+
+**src/b.py:** D103 (4), D100 (1).  Se encontraron problemas de documentación faltante en módulos y funciones públicas.
+
+**src/c.py:** T201 (3).  Se detectó el uso de la función `print` en varias líneas.
+
+(leído server-side: 626 chars ≈ 326 tokens de Claude que no entraron a tu contexto)
