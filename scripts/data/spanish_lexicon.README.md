@@ -87,6 +87,11 @@ de diccionario.
    `nav`, `cols`). Desde entonces el guardián
    `test_repo_has_no_spanish_name_outside_the_exception_list` exige también 0 sin clasificar.
 
+10. Al mezclar las tarjetas de ancho fijo del panel (2026-10-19) el detector informó de 3 palabras
+    sin clasificar, a mano, todas a inglés: `kfit` (el ajuste de la cifra de las tarjetas,
+    `KFIT_MIN` y `kfitObserver`), `disconnect` (método del `ResizeObserver`) y `frames` (`_FRAMES`,
+    espera de fotogramas en `tests/test_dashboard_ui.py`).
+
 ## Heurísticas (no usan datos ajenos)
 
 En `detect_spanish_names.classify_word`, en este orden:
