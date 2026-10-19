@@ -1,0 +1,8 @@
+{"id": "A01", "verdict": "requested", "lang": "fr", "tokens": 154, "es_ratio": 0.0, "en_ratio": 0.0, "fr_ratio": 0.1558, "margin": 0.1558}
+{"id": "A19", "verdict": "requested", "lang": "fr", "tokens": 193, "es_ratio": 0.0, "en_ratio": 0.0052, "fr_ratio": 0.2487, "margin": 0.2435}
+{"id": "B33", "verdict": "requested", "lang": "fr", "tokens": 117, "es_ratio": 0.0, "en_ratio": 0.0, "fr_ratio": 0.2222, "margin": 0.2222}
+{"id": "B35", "verdict": "requested", "lang": "fr", "tokens": 89, "es_ratio": 0.0, "en_ratio": 0.0, "fr_ratio": 0.1798, "margin": 0.1798}
+{"id": "ES-E01-r1", "verdict": "requested", "lang": "fr", "tokens": 227, "es_ratio": 0.0, "en_ratio": 0.0, "fr_ratio": 0.2555, "margin": 0.2555}
+{"id": "ES-E03-r1", "verdict": "requested", "lang": "fr", "tokens": 218, "es_ratio": 0.0, "en_ratio": 0.0, "fr_ratio": 0.2202, "margin": 0.2202}
+{"id": "ES-I01-r1", "verdict": "requested", "lang": "fr", "tokens": 201, "es_ratio": 0.0, "en_ratio": 0.005, "fr_ratio": 0.2289, "margin": 0.2239}
+{"id": "ES-I04-r1", "verdict": "requested", "lang": "fr", "tokens": 185, "es_ratio": 0.0, "en_ratio": 0.0, "fr_ratio": 0.227, "margin": 0.227}
