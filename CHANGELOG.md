@@ -6,6 +6,24 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Cambiado
+
+- **La lista de excepciones del detector de nombres vive ahora en `scripts/data/`.** Pasa de las
+  tablas de `.sdd/changes/english-names-bilingual-output/rename-exceptions.md` a
+  `scripts/data/name_exceptions.json` (motivos y formato en `name_exceptions.README.md`), que
+  `scripts/detect_spanish_names.py` lee por defecto. El guardián
+  `test_repo_has_no_spanish_name_outside_the_exception_list` ya no se salta si falta la carpeta del
+  cambio: si falta la lista, falla; y exige también **0 palabras sin clasificar** (REQ-044), tras
+  clasificar a mano las 111 que quedaban (16 español, 95 inglés).
+
+### Documentación
+
+- **Poca RAM libre con los modelos grandes cargados**: nueva sección en
+  [Troubleshooting](docs/wiki/Troubleshooting.md) y nota en la receta de llama-swap. Con los MoE
+  grandes y `--load-mode mmap` quedan 0,4–1,4 GB libres mientras el modelo espera su `ttl`; la
+  palanca es un `ttl` más corto solo para ellos, con `local-delegate llamaswap residency --ttl
+  <modelo>=<segundos>`.
+
 ## [0.36.0] - 2026-10-18
 
 Esta versión hace que todo `local-delegate` hable **en español o en inglés**: el CLI y su `--help`,
