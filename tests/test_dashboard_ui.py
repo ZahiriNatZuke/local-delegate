@@ -944,8 +944,10 @@ def test_kpi_cards_keep_their_width_with_a_huge_figure(
     con un «contexto conservado» de billones; ninguna cifra desborda, la página no se sale por la
     derecha y el valor exacto queda en el `title`."""
     _cost_and_image_log(tmp_path, monkeypatch)
+    # Computed at run time: a 13-digit literal here was a GitGuardian false positive.
+    net = 10**12 + 234_567_890_123
     huge = {
-        "tokens_context_net": 1_234_567_890_123,
+        "tokens_context_net": net,
         "tokens_context_saved": 1_250_000_000_000,
         "tokens_returned": 15_432_109_877,
         "tokens_local_input": 98_765_432_109,
@@ -975,7 +977,8 @@ def test_kpi_cards_keep_their_width_with_a_huge_figure(
                 page.close()
         browser.close()
     metrics._FILE_CACHE.clear()
-    exact = "1.234.567.890.123 tok" if browser_locale.startswith("es") else "1,234,567,890,123 tok"
+    grouped = f"{net:,}"
+    exact = (grouped.replace(",", ".") if browser_locale.startswith("es") else grouped) + " tok"
     for width in (1440, 1280, 720, 390):
         normal, big = measured[(width, "normales")], measured[(width, "enormes")]
         assert big["rows"] == normal["rows"], (width, normal["rows"], big["rows"])
