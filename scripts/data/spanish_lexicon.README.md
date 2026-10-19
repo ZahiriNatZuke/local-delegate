@@ -92,6 +92,10 @@ de diccionario.
     `KFIT_MIN` y `kfitObserver`), `disconnect` (método del `ResizeObserver`) y `frames` (`_FRAMES`,
     espera de fotogramas en `tests/test_dashboard_ui.py`).
 
+11. Al alinear la fila de KPIs con los paneles (2026-10-19) el detector informó de 5 palabras sin
+    clasificar, a mano, todas a inglés: `edges`, `gaps`, `panels`, `straddling` y `tight` (medidas
+    y nombres de los tests de bordes de `tests/test_dashboard_ui.py`).
+
 ## Heurísticas (no usan datos ajenos)
 
 En `detect_spanish_names.classify_word`, en este orden:

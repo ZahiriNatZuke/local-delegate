@@ -40,6 +40,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   cabe, se muestra en forma corta («45,7 mil M tok», «45.7B tok» en inglés) con el valor exacto al
   pasar el ratón. El hero pasa de 1,7 a 1,4 veces el ancho de las demás, para que títulos como
   «Delegaciones» quepan sin «…». En el móvil la página ya no se sale por la derecha.
+- **La fila de KPIs casa con los dos paneles de arriba.** Las tres primeras tarjetas ocupan justo
+  el ancho del panel de modelos y rendimiento, y las tres últimas el del panel de GPU y procesos,
+  con el mismo hueco central; la fila de cuota e imágenes, también. Las tarjetas normales miden lo
+  mismo entre sí y el hero se queda el resto, y el tamaño no cambia con las cifras. Entre 880 y
+  1320 px, con los paneles aún lado a lado, van tres bajo cada panel; más estrecho, como antes.
+- **Las cifras de coste, cuota e imágenes no invaden la columna de al lado.** «17.232.705 B» en
+  «Imágenes» quedaba pegada a la cifra siguiente. Ahora esas cifras se ajustan a su columna igual
+  que las de los KPIs (fuente más pequeña o forma corta) y el valor exacto queda al pasar el ratón.
+- **Los títulos de los KPIs caben también sin la fuente del panel.** Si Google Fonts no llega y la
+  fuente de reserva del sistema es más ancha (la de Linux lo es más que Segoe UI), los seis títulos
+  se aprietan por igual (primero el espaciado y luego el cuerpo) antes de recortarse con «…».
 
 ### Documentación
 
