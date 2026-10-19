@@ -172,6 +172,9 @@ niveles si hace falta. Antes truncaban —de un log de CI enorme se resumía el 
 se descartaba en silencio, que es justo donde suelen estar los errores— y ahora se lee entero. Si
 algún trozo se corta por `max_tokens`, el resultado lo avisa y el log registra `finish_reason:
 length`.
+Desde la 0.36.1, con un log que no cabe en una llamada, `local_lint_summary` da entrada solo a los
+diez ficheros más nombrados (y dice cuántos más hay), y las cifras del resumen final las pone el
+programa, no el modelo.
 Desde la 0.36.0 también `local_commit_msg`, `local_explain_code` (por `def`/`class` de primer
 nivel, con el inventario de nombres en el paso final) y `local_extract` (un objeto parcial por
 trozo y un paso final con schema que los combina) leen la entrada entera.

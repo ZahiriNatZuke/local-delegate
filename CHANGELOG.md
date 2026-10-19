@@ -6,6 +6,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.36.1] - 2026-10-19
+
+Cierra el cambio del idioma y del renombrado (SDD `english-names-bilingual-output`) con los restos
+de la 0.36.0: `local_lint_summary` con logs muy grandes, el panel alineado y las muestras de
+idioma en español, inglés y francés. Nada rompe.
+
 ### Cambiado
 
 - **`local_lint_summary` con logs muy grandes: el resumen final ya no se corta ni inventa
@@ -63,6 +69,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - **Los títulos de los KPIs caben también sin la fuente del panel.** Si Google Fonts no llega y la
   fuente de reserva del sistema es más ancha (la de Linux lo es más que Segoe UI), los seis títulos
   se aprietan por igual (primero el espaciado y luego el cuerpo) antes de recortarse con «…».
+
+### Interno
+
+- **Juez de idioma:** la regla R1 quita la línea «Sin mencionar (…)» / «Not mentioned (…)» que
+  añaden `local_lint_summary` y `local_explain_code`, en todos los idiomas del catálogo (#338).
+- **Muestras en vivo del idioma de respuesta (REQ-028)** en español, inglés y francés, con 5
+  documentos por tool y 3 repeticiones (#339). Con ellas se cierra el SDD
+  `english-names-bilingual-output` (gates `quality`, `conformance` y `memory`).
+- **Dependencias:** `fastapi` 0.143.2, `filelock` 4.2.0, `platformdirs` 4.13.3; de desarrollo,
+  `ruff` 0.17.1, `pre-commit` 4.7.0 y `playwright` 1.64.0 (#334–#337).
 
 ### Documentación
 
@@ -3013,7 +3029,9 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.35.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.36.1...HEAD
+[0.36.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.36.0...v0.36.1
+[0.36.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.35.0...v0.36.0
 [0.35.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.34.0...v0.35.0
 [0.34.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.33.0...v0.34.0
 [0.33.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.32.0...v0.33.0
