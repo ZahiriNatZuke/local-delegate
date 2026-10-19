@@ -1,0 +1,314 @@
+{
+  "frozen_before_any_measurement_call": true,
+  "repeat": 3,
+  "criterion": "Per window and tool, over the 15 answers (5 documents x 3 repetitions): at least 90 % with verdict `requested` (errors and not_judgeable count as misses) and 0 `opposite`. es/en: scripts/judge_response_language.py; fr: fr_judge.py.",
+  "windows": {
+    "ES": {
+      "product": "es",
+      "requested": "es",
+      "env": {},
+      "label": "REQ-028 muestras es (explain_code, describe_image)",
+      "runnable_without_restart": true
+    },
+    "EN": {
+      "product": "en",
+      "requested": "en",
+      "env": {
+        "LOCAL_DELEGATE_LANG": "en"
+      },
+      "label": "REQ-028 muestras en (explain_code, describe_image)",
+      "runnable_without_restart": false
+    },
+    "FR": {
+      "product": "es",
+      "requested": "fr",
+      "env": {
+        "LOCAL_DELEGATE_OUTPUT_LANGUAGE": "fr"
+      },
+      "label": "REQ-028 muestras fr (4 tools)",
+      "runnable_without_restart": false
+    }
+  },
+  "calls": [
+    {
+      "id": "ES-E01",
+      "window": "ES",
+      "tool": "local_explain_code",
+      "document": "src/local_delegate/lint_patterns.py",
+      "document_sha256": "1a7dc435c15924119f4a3973dfe07f3c726ffd7baa2d96ed2dcd606baaf91538"
+    },
+    {
+      "id": "ES-E02",
+      "window": "ES",
+      "tool": "local_explain_code",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-3/check_controls.py",
+      "document_sha256": "ce3f16d8763c207d954f3d24eaf0f3885c3d89a46421d132321573be314e4c3a"
+    },
+    {
+      "id": "ES-E03",
+      "window": "ES",
+      "tool": "local_explain_code",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2f/compare.py",
+      "document_sha256": "4ed3d1bf37c79c5d10a25eba57587149113dea8e19f3228b3cf9bd7e8452ceca"
+    },
+    {
+      "id": "ES-E04",
+      "window": "ES",
+      "tool": "local_explain_code",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2-affinity/scorer_v2_check.py",
+      "document_sha256": "95dc0fc5a33b7233688a4b38dd75abc9a6329961abf1e720878c68ba15376caa"
+    },
+    {
+      "id": "ES-E05",
+      "window": "ES",
+      "tool": "local_explain_code",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2e/validate_counter.py",
+      "document_sha256": "5f4e35a72ca6361ec570583db94d75439d75c7d83b20323a31007234746405d9"
+    },
+    {
+      "id": "ES-I01",
+      "window": "ES",
+      "tool": "local_describe_image",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B4/screenshots/dialog-cost-en-light.png",
+      "document_sha256": "8152bce60421a5e5cb15da5f7c4d4bcfa85d45a23e1f87fd5659dfec59c8173c"
+    },
+    {
+      "id": "ES-I02",
+      "window": "ES",
+      "tool": "local_describe_image",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B4/screenshots/dialog-cost-en-dark.png",
+      "document_sha256": "3e4a330bfee86333b5635624c6ea0e3986c99d93b8dba5b06007cd6ab6d09068"
+    },
+    {
+      "id": "ES-I03",
+      "window": "ES",
+      "tool": "local_describe_image",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B4/screenshots/header-en-dark.png",
+      "document_sha256": "bb94d9c74a98d8298a30dcf532a68ef85e878707d0feba0267da56c7a9810a3a"
+    },
+    {
+      "id": "ES-I04",
+      "window": "ES",
+      "tool": "local_describe_image",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B4/screenshots/panel-en-light.png",
+      "document_sha256": "588751d379060df199b54162fa6b10d3342d4753edf748fef50f0fd003d38357"
+    },
+    {
+      "id": "ES-I05",
+      "window": "ES",
+      "tool": "local_describe_image",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/live-036/panel-en-US-dark.png",
+      "document_sha256": "62d5647669d541b47da41ed320f0fccb1ff7fce4c39b34d002b6b7b8a4d42f76"
+    },
+    {
+      "id": "EN-E01",
+      "window": "EN",
+      "tool": "local_explain_code",
+      "document": "src/local_delegate/pricing.py",
+      "document_sha256": "335e9a96d5d3c4a3e10a59ff100503edeef29bc700b3e9c2be86fc49cfd8160b"
+    },
+    {
+      "id": "EN-E02",
+      "window": "EN",
+      "tool": "local_explain_code",
+      "document": "src/local_delegate/entrypoint.py",
+      "document_sha256": "573f353600010493ab82c338eb469cfc69eba2c1d246961a45d81dcc3bcb373c"
+    },
+    {
+      "id": "EN-E03",
+      "window": "EN",
+      "tool": "local_explain_code",
+      "document": "scripts/build_site.py",
+      "document_sha256": "c34ca6ef728aa9027b94a3b34e3323578445e51150e6cf24f057355709bcb6d6"
+    },
+    {
+      "id": "EN-E04",
+      "window": "EN",
+      "tool": "local_explain_code",
+      "document": "scripts/clean_watcher_fixtures.py",
+      "document_sha256": "bcb2a60141d10e265c7227dcff430d4398f8522896ff356da59fae2d906e6f10"
+    },
+    {
+      "id": "EN-E05",
+      "window": "EN",
+      "tool": "local_explain_code",
+      "document": "scripts/sync_wiki.py",
+      "document_sha256": "5cfbde2fe48c22756013bf96fc7fb376cdd51cdf8f92ae51c2a5ae221ce9715b"
+    },
+    {
+      "id": "EN-I01",
+      "window": "EN",
+      "tool": "local_describe_image",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B4/screenshots/dialog-cost-es-light.png",
+      "document_sha256": "ccab0e6045fdf349ab37bd8644d3e850c431140f87349e23e382c080b26bf1a3"
+    },
+    {
+      "id": "EN-I02",
+      "window": "EN",
+      "tool": "local_describe_image",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B4/screenshots/dialog-cost-es-dark.png",
+      "document_sha256": "3078bd60456799963d5325290e82ccdf5cea4a5814315638cdc6c71d12cf1125"
+    },
+    {
+      "id": "EN-I03",
+      "window": "EN",
+      "tool": "local_describe_image",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B4/screenshots/header-es-dark.png",
+      "document_sha256": "d8a411ed76bb69e327af47564d1fbda8c642ec49db9ea81ef355bb1e032084b1"
+    },
+    {
+      "id": "EN-I04",
+      "window": "EN",
+      "tool": "local_describe_image",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B4/screenshots/panel-es-light.png",
+      "document_sha256": "99c6766fa17ab6c6216e8c3ed0496f64f50a60f367df5d30bee0e7f501347ffd"
+    },
+    {
+      "id": "EN-I05",
+      "window": "EN",
+      "tool": "local_describe_image",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/live-035/panel-claro.png",
+      "document_sha256": "c5862233776608daba4173a061822347471cf22c51cc3b06324b4647e9054064"
+    },
+    {
+      "id": "FR-S01",
+      "window": "FR",
+      "tool": "local_summarize",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-doc-docs_recipes_claude-code-hooks.md",
+      "document_sha256": "439ac36e277919bdc50842c48eba921650c6893da542295666cba9c4f9d7519d"
+    },
+    {
+      "id": "FR-S02",
+      "window": "FR",
+      "tool": "local_summarize",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-doc-docs_recipes_remote-backend.md",
+      "document_sha256": "388182f8232edeaf9c8583870c9a8b0a78d61b3694e892c4365bce69c875559f"
+    },
+    {
+      "id": "FR-S03",
+      "window": "FR",
+      "tool": "local_summarize",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-doc-docs_recipes_llama-swap-groups.md",
+      "document_sha256": "28b1419b2814990f04b2ffc6cc2d2714e80cefd7f4d90eeff1316e1d65150d74"
+    },
+    {
+      "id": "FR-S04",
+      "window": "FR",
+      "tool": "local_summarize",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-doc-identify-2.6.19.METADATA.md",
+      "document_sha256": "6bd3f4b6084b3aa9bbfdd4631b2edffdc2908b396dfc2971891d0356bccb4965"
+    },
+    {
+      "id": "FR-S05",
+      "window": "FR",
+      "tool": "local_summarize",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-doc-pycparser-3.0.METADATA.md",
+      "document_sha256": "f547a60b0ab54cc2f242213d1f87960ad80df7dd5dfeb98d17a444d48bfb6b93"
+    },
+    {
+      "id": "FR-L01",
+      "window": "FR",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-ruff-concise.txt",
+      "document_sha256": "1b45f1d58d013abcffaf2a48def98c192a598f5a5990eb3cadf9a92d55780645"
+    },
+    {
+      "id": "FR-L02",
+      "window": "FR",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-pytest.txt",
+      "document_sha256": "475392a64a7d58a336de6e841b54de8dfaf650b7336de343add1f207ba404dd0"
+    },
+    {
+      "id": "FR-L03",
+      "window": "FR",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-tsc-angular.txt",
+      "document_sha256": "292208ba99d5044fa0a927eb14c70d7b5d369553ec52d9ffffc642314e76a63a"
+    },
+    {
+      "id": "FR-L04",
+      "window": "FR",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/es-log-B1b_doctor_es_complete.txt",
+      "document_sha256": "760e3c9f3585d085b4d97bf68eacdfc3468855da57d114b9aa3fa454bf7c8e7d"
+    },
+    {
+      "id": "FR-L05",
+      "window": "FR",
+      "tool": "local_lint_summary",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/es-log-check-llamaswap-pre-b10909.txt",
+      "document_sha256": "e2d30b729c1ad2543d089764b55759c33b4063c046e0555dda4f121caa5321e7"
+    },
+    {
+      "id": "FR-E01",
+      "window": "FR",
+      "tool": "local_explain_code",
+      "document": "src/local_delegate/lint_patterns.py",
+      "document_sha256": "1a7dc435c15924119f4a3973dfe07f3c726ffd7baa2d96ed2dcd606baaf91538"
+    },
+    {
+      "id": "FR-E02",
+      "window": "FR",
+      "tool": "local_explain_code",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-3/check_controls.py",
+      "document_sha256": "ce3f16d8763c207d954f3d24eaf0f3885c3d89a46421d132321573be314e4c3a"
+    },
+    {
+      "id": "FR-E03",
+      "window": "FR",
+      "tool": "local_explain_code",
+      "document": "src/local_delegate/pricing.py",
+      "document_sha256": "335e9a96d5d3c4a3e10a59ff100503edeef29bc700b3e9c2be86fc49cfd8160b"
+    },
+    {
+      "id": "FR-E04",
+      "window": "FR",
+      "tool": "local_explain_code",
+      "document": "src/local_delegate/entrypoint.py",
+      "document_sha256": "573f353600010493ab82c338eb469cfc69eba2c1d246961a45d81dcc3bcb373c"
+    },
+    {
+      "id": "FR-E05",
+      "window": "FR",
+      "tool": "local_explain_code",
+      "document": "scripts/build_site.py",
+      "document_sha256": "c34ca6ef728aa9027b94a3b34e3323578445e51150e6cf24f057355709bcb6d6"
+    },
+    {
+      "id": "FR-I01",
+      "window": "FR",
+      "tool": "local_describe_image",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B4/screenshots/dialog-cost-en-light.png",
+      "document_sha256": "8152bce60421a5e5cb15da5f7c4d4bcfa85d45a23e1f87fd5659dfec59c8173c"
+    },
+    {
+      "id": "FR-I02",
+      "window": "FR",
+      "tool": "local_describe_image",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B4/screenshots/panel-en-light.png",
+      "document_sha256": "588751d379060df199b54162fa6b10d3342d4753edf748fef50f0fd003d38357"
+    },
+    {
+      "id": "FR-I03",
+      "window": "FR",
+      "tool": "local_describe_image",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B4/screenshots/dialog-cost-es-light.png",
+      "document_sha256": "ccab0e6045fdf349ab37bd8644d3e850c431140f87349e23e382c080b26bf1a3"
+    },
+    {
+      "id": "FR-I04",
+      "window": "FR",
+      "tool": "local_describe_image",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/B4/screenshots/panel-es-light.png",
+      "document_sha256": "99c6766fa17ab6c6216e8c3ed0496f64f50a60f367df5d30bee0e7f501347ffd"
+    },
+    {
+      "id": "FR-I05",
+      "window": "FR",
+      "tool": "local_describe_image",
+      "document": ".sdd/changes/english-names-bilingual-output/evidence/live-035/panel-claro.png",
+      "document_sha256": "c5862233776608daba4173a061822347471cf22c51cc3b06324b4647e9054064"
+    }
+  ]
+}

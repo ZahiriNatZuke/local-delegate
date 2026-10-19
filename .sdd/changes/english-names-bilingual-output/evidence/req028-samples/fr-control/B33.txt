@@ -1,0 +1,11 @@
+**Résumé des Problèmes**
+
+**Fichier : src/app/features/auth/pages/login.page.ts**
+
+*   **Erreur de Type (TS2345) :** Une erreur de type est détectée lors de l'affectation d'un objet ayant une propriété `returnUrl` optionnelle (type `string | undefined`) à un paramètre qui attend une propriété `returnUrl` obligatoire (type `string`). La solution proposée est de déclarer `undefined` comme type optionnel pour les propriétés du type de destination. Le nombre d'occurrences de ce type d'erreur est de 1.
+
+**Fichier : src/app/features/home/components/tech-stack.component.ts**
+
+*   **Erreur de Type (TS2375) :** Une erreur de type est identifiée lors de l'affectation d'un objet ayant une propriété `version` optionnelle (type `string | undefined`) à un type `StackItem` qui attend une propriété `version` obligatoire (type `string`). Il est suggéré d'inclure `undefined` dans les types des propriétés du type de destination. Le nombre d'occurrences de ce type d'erreur est de 1.
+
+(leído server-side: 972 chars ≈ 486 tokens de Claude que no entraron a tu contexto)

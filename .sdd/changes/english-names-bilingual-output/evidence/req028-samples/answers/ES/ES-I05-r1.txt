@@ -1,0 +1,7 @@
+Esta imagen muestra un panel de control (dashboard) de software llamado "local delegate", diseñado para monitorear el rendimiento de modelos de lenguaje locales y el uso de recursos del sistema. La interfaz utiliza un tema oscuro con acentos en colores neón como verde, azul y naranja.
+
+En la parte superior, se detallan los modelos de IA disponibles (como gemma4 y qwen) y el estado del sistema, incluyendo el uso de la memoria RAM, la carga de la GPU y la memoria VRAM. Debajo, una serie de tarjetas informativas muestran métricas clave como "Context Kept", "Delegations", "Generated", "Local Cost", "Latency" y "Errors", la mayoría con valores en cero.
+
+La sección central contiene gráficos de líneas y de barras para visualizar el ahorro de contexto y el ahorro por herramienta a lo largo del tiempo. En la parte inferior, se presentan tablas de "Recent activity" (sin actividad reciente) y "Hook suggestions", que desglosan categorías como "Shell" y "Read" con sus respectivas tasas de sugerencia. El diseño es técnico, denso en datos y organizado en una cuadrícula modular.
+
+(leído server-side: 394165 bytes imagen que no entraron a tu contexto)

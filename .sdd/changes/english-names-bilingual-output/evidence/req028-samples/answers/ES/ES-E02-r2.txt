@@ -1,0 +1,9 @@
+El script evalúa si respuestas de modelos de IA conservan cifras numéricas específicas de registros de control (logs), asegurando que no se inventen ni se alteren. Define un conjunto de casos (`CONTROLS`) con identificadores y los números exactos que deben aparecer intactos.
+
+La función `kept` utiliza expresiones regulares para verificar si una cifra aparece como un número entero completo en el texto de la respuesta. La regex asegura que el número no esté adyacente a otros dígitos o puntos decimales, pero permite que termine con un punto final de oración, corrigiendo así falsos negativos previos.
+
+El script procesa directorios de respuestas, agrupándolas por versión y ejecutando múltiples repeticiones para cada caso. Para cada identificador, lee los archivos de texto y verifica cuántas repeticiones mantienen al menos una de las cifras esperadas. Un caso se considera "mantenido" (`ok`) si la mayoría de las repeticiones (más de la mitad) conservan los datos.
+
+Finalmente, genera un informe en JSON que detalla el estado de cada caso, indicando si las cifras se conservaron y si el control general es exitoso. El programa acepta directorios de respuestas mediante argumentos de línea de comandos, permitiendo comparar diferentes versiones o configuraciones. Si todas las versiones pasan el control, sale con código 0; de lo contrario, con 1. Esto sirve como validación automatizada para garantizar la fidelidad de los datos en los resultados generados.
+
+(leído server-side: 4735 chars ≈ 2332 tokens de Claude que no entraron a tu contexto)

@@ -1,0 +1,9 @@
+El script `scorer_v2_check.py` valida la precisión de un nuevo sistema de puntuación (v2/v3) comparándolo con el anterior (v1/T6) antes de su implementación definitiva. Su objetivo es asegurar que las reglas de "lint" (revisión de estilo) funcionan correctamente y detectar discrepancias.
+
+El código se ejecuta en tres fases principales. Primero, verifica casos de referencia controlados: asigna puntuaciones a respuestas ideales (`reference_ok`) y defectuosas (`reference_bad`) usando ambos sistemas. Si el sistema v1 o v2 no distingue adecuadamente entre una respuesta correcta (puntuación 1.0) y una incorrecta, se registra un fallo.
+
+Segundo, compara las respuestas congeladas del benchmark T6. El script itera sobre los resultados JSONL, aplicando ambos puntuadores a cada respuesta válida. Si v1 y v2 difieren en su evaluación, imprime detalles completos para revisión manual, incluyendo los conteos de reglas válidas y las reglas específicas marcadas como erróneas por cada versión. Esto ayuda a identificar si los cambios en el algoritmo introducen falsos positivos o negativos.
+
+Tercero, analiza los resultados de la primera ejecución del modelo (repetición 1) para múltiples idiomas y modelos. Similar a la fase anterior, compara qué reglas marcan como incorrectas v1 versus v2 para cada respuesta, facilitando la auditoría manual documentada en `scorer-v2-check.md`. Finalmente, el script retorna un código de salida basado en el número de fallos detectados, permitiendo que procesos automatizados detengan la integración si la validación falla.
+
+(leído server-side: 3924 chars ≈ 1933 tokens de Claude que no entraron a tu contexto)

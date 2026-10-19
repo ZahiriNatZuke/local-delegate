@@ -1,0 +1,22 @@
+## pycparser v3.00
+Un analyseur de langage C en Python pur.
+
+## Introduction
+**Qu'est-ce que pycparser ?** C'est un module d'analyseur C basé sur Python. **À quoi ça sert ?** Il sert à divers usages tels que le brouillage ou l'analyse statique. **Quelle version de C pycparser supporte-t-il ?** Il supporte C99 et certaines fonctionnalités de C11. **Quelle grammaire pycparser suit-il ?** Il suit la grammaire standard C99. **Comment pycparser est-il licencié ?** Il utilise une licence BSD. **Coordonnées de contact** Les utilisateurs peuvent signaler les problèmes via GitHub.
+
+## Installation
+**Prérequis** Il nécessite un Python moderne sur diverses plateformes. **Processus d'installation** Utilisez `pip install pycparser`.
+
+## Utilisation
+**Interaction avec le préprocesseur C** L'outil nécessite du code pré-traité et peut interagir avec `cpp`. **Que dire des en-têtes de la bibliothèque C standard ?** Il fournit des en-têtes factices minimaux dans `utils/fake_libc_include` pour l'efficacité. **Utilisation de base** Les utilisateurs peuvent trouver des instructions dans le répertoire `examples`. **Utilisation avancée** La documentation est disponible dans `pycparser/c_parser.py` et `pycparser/_c_ast.cfg`.
+
+## Modification
+Les utilisateurs doivent régénérer les nœuds AST en utilisant `_ast_gen.py` si la modification de `_c_ast.cfg`.
+
+## Contenu du paquet
+Le paquet inclut des métadonnées, du code source, des exemples, des tests et des fichiers utilitaires.
+
+## Contributeurs
+Les contributeurs sont répertoriés dans le fichier `CONTRIBUTORS` ou suivis sur GitHub.
+
+(leído server-side: 1407 chars ≈ 703 tokens de Claude que no entraron a tu contexto)

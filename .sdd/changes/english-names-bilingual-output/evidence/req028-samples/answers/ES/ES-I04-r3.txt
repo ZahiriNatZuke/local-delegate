@@ -1,0 +1,7 @@
+Esta imagen muestra un panel de control (dashboard) de una aplicación llamada "local delegate", diseñada para monitorear el ahorro de tokens y el rendimiento de modelos de lenguaje locales. La interfaz utiliza un diseño limpio con un fondo blanco y diversos widgets organizados en cuadrículas.
+
+En la parte superior, se detallan el estado del backend, incluyendo modelos como gemma y qwen, junto con el uso del sistema (RAM, GPU y VRAM). Debajo, una fila de tarjetas destaca métricas clave como "Context Kept", "Delegations", "Generated" y "Local Cost".
+
+La sección central presenta un desglose de costos equivalentes en dólares, estadísticas de imágenes procesadas y gráficos de barras y líneas que muestran el ahorro de contexto a lo largo del tiempo y por herramienta. En la parte inferior, una tabla de "Recent activity" registra llamadas específicas con tiempos de latencia, mientras que gráficos circulares y de barras finales muestran la distribución de fuentes de entrada y sugerencias de "hooks". El diseño general es técnico, utilizando colores suaves, iconos minimalistas y tipografía clara para facilitar la lectura de datos complejos.
+
+(leído server-side: 782215 bytes imagen que no entraron a tu contexto)

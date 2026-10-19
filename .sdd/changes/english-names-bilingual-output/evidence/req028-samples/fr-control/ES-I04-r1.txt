@@ -1,0 +1,7 @@
+Cette image présente un tableau de bord (dashboard) d'une application nommée "local delegate", conçue pour surveiller les économies de coûts et les performances de modèles de langage locaux. L'interface utilise un design épuré avec une palette de couleurs principalement blanche, bleue et verte.
+
+En haut, l'état du "Backend" avec des modèles tels que gemma et qwen est détaillé, ainsi que l'utilisation du système (RAM, GPU, VRAM). En dessous, une section de métriques clés met en évidence le "Context Kept", "Delegations", "Generated" et "Local Cost", accompagnée d'icônes informatives.
+
+Le corps central présente des tableaux de coûts équivalents en API, des statistiques d'images et des graphiques à barres et à lignes qui illustrent les économies de contexte dans le temps et par outil. En bas, des graphiques à barres pour les appels par modèle, un graphique circulaire sur la source d'entrée, un tableau d'activité récente avec des temps de latence et une section finale de suggestions de "hooks" avec des pourcentages de taux. L'interface est dense en données mais organisée par des cartes et des sections clairement délimitées.
+
+(leído server-side: 1200 chars ≈ 600 tokens de Claude que no entraron a tu contexto)

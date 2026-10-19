@@ -1,0 +1,9 @@
+Este script de Python valida la precisión de un nuevo sistema de puntuación ("v2" o "v3") comparándolo con la versión anterior ("v1" o T6) antes de su implementación oficial. Su objetivo principal es asegurar que el nuevo puntaje de "lint" (calidad de formato y estilo) funcione correctamente mediante tres secciones de verificación.
+
+Primero, realiza pruebas de referencia utilizando casos de prueba predefinidos (`reference_ok` y `reference_bad`). Verifica que el nuevo puntaje asigne una calidad de 1.0 a las respuestas correctas y menos de 1.0 a las incorrectas, reportando fallos si esta lógica no se cumple.
+
+Segundo, compara el comportamiento del nuevo puntaje contra el puntaje T6 congelado en un conjunto de datos de evaluación real (`resultados/*.jsonl`). Para cada respuesta válida, calcula el puntaje con ambos sistemas y destaca manualmente las discrepancias, mostrando las reglas específicas que cada uno considera erróneas. Esto facilita la revisión humana de los casos donde los sistemas difieren.
+
+Finalmente, analiza los resultados de la primera ejecución del modelo en diferentes idiomas y configuraciones. Extrae las reglas de formato marcadas como incorrectas por ambas versiones para su revisión manual, documentando las diferencias en un archivo de texto. El script finaliza devolviendo un código de salida no nulo si se detectan fallos en las pruebas de referencia o si no hay datos suficientes para comparar, asegurando así la fiabilidad del nuevo puntaje antes de su uso en producción.
+
+(leído server-side: 3924 chars ≈ 1933 tokens de Claude que no entraron a tu contexto)

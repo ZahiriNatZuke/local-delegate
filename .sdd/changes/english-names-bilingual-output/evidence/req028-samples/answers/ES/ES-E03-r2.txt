@@ -1,0 +1,9 @@
+Este script evalúa el cumplimiento de un criterio de calidad (sección B2f) comparando dos versiones de software: una base (`main`) y una rama (`tag`). Lee datos de puntuación de archivos JSON generados previamente y un archivo de verificación de prompts idénticos.
+
+Primero, calcula métricas de "ruido" utilizando los prompts idénticos entre versiones para establecer una línea base de variación natural en la fidelidad y el corte de texto. Luego, agrupa los resultados por tipo de ventana (larga, mecánica, etc.) y calcula promedios para métricas como códigos, archivos, fidelidad y conteo de cortes.
+
+El núcleo del análisis reside en la evaluación de siete condiciones booleanas almacenadas en `criterion`. Estas verifican si la rama mantiene o mejora la calidad respecto a la base, considerando el ruido calculado. Por ejemplo, exige que los códigos y archivos superen 0.9, que los códigos del modelo no empeoren, que la fidelidad no aumente más allá del ruido permitido y que los casos específicos vigilados (`WATCHED`) cumplan con límites estrictos de fidelidad y corte.
+
+Finalmente, el script determina si se cumple el criterio general (`met`) verificando que todas las condiciones sean verdaderas. Genera un reporte detallado en formato JSON que incluye las tablas de métricas, totales, el estado de cada condición y el resultado final, guardándolo en un archivo y mostrándolo en la consola.
+
+(leído server-side: 5047 chars ≈ 2486 tokens de Claude que no entraron a tu contexto)

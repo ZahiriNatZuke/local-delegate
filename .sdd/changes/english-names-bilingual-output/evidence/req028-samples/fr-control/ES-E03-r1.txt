@@ -1,0 +1,9 @@
+Le script compare des métriques de performance entre deux versions de logiciel, identifiées comme `main` et une branche spécifique (`tag`), en évaluant le respect de critères de qualité définis dans la section B2f.
+
+Tout d'abord, il charge des données structurées à partir de fichiers JSON locaux (`score-<tag>.json` et `same-prompt-check.json`). Il identifie des cas de "bruit" (appels identiques dans les deux versions) afin d'établir une ligne de base de variation naturelle. Il calcule des différences en matière de fidélité et de troncature entre le bruit de la branche et la version principale.
+
+Ensuite, il regroupe les données par catégories de fenêtres de texte (longueur en espagnol/anglais, mécanique, etc.) et calcule des moyennes pour les métriques clés : codes générés, fichiers, fidélité du modèle et taux de troncature. Ces résultats sont organisés dans un tableau détaillé.
+
+Enfin, il évalue un ensemble de critères booléens (`criterion`) afin de déterminer si la branche améliore ou maintient la qualité par rapport à `main`. Les critères incluent des seuils minimaux de codes/fichiers, pas de dégradation des métriques du modèle, amélioration spécifique en espagnol, et des limites strictes en matière de fidélité et de troncature, ajustés par le marge de bruit calculée. Le résultat final indique si le critère est rempli (`met`). Les données traitées et le verdict sont sauvegardés et affichés au format JSON, facilitant l'audit automatique des changements dans le système.
+
+(leído server-side: 1453 chars ≈ 726 tokens de Claude que no entraron a tu contexto)

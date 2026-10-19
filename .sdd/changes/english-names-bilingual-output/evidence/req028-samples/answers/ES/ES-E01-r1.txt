@@ -1,0 +1,7 @@
+Este código Python gestiona el análisis de registros de linting para identificar y contar archivos y reglas mencionadas, asegurando la consistencia entre diferentes componentes del sistema. Define expresiones regulares específicas para reconocer nombres de archivos con extensiones comunes (`FILE`), códigos de reglas alfanuméricos (`CODE`) y rutas de reglas estructuradas (`RULE`).
+
+La función `files_by_frequency` extrae todos los archivos del texto, normaliza sus rutas (convirtiendo barras invertidas a normales y usando minúsculas) y las ordena por frecuencia de aparición, manteniendo el orden original en caso de empates. De manera similar, `codes_by_frequency` identifica las reglas, pero primero elimina las coincidencias de archivos para evitar falsos positivos (como extraer "E501" de un nombre de archivo `test_E501.py`).
+
+La función `mentions` verifica si un ítem específico (archivo o regla) está presente en un texto dado. Maneja escapes de Markdown y utiliza coincidencia de subcadenas para archivos o expresiones regulares con límites de palabras para reglas, asegurando precisiones como distinguir "E501" de "E5011". Finalmente, `not_mentioned` compara una respuesta generada contra el registro original, devolviendo una lista de los archivos y reglas más frecuentes que fueron omitidos en dicha respuesta. Esto permite evaluar la fidelidad de un resumen o respuesta automática frente a la información completa disponible en el log.
+
+(leído server-side: 3975 chars ≈ 1958 tokens de Claude que no entraron a tu contexto)

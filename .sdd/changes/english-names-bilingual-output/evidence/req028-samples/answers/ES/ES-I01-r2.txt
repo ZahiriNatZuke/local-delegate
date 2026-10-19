@@ -1,0 +1,9 @@
+La imagen muestra una ventana emergente o notificación de interfaz de usuario titulada "Cost, quota and images". El diseño es limpio, con un fondo blanco y texto en negro y azul. La información se divide en tres secciones principales identificadas con barras verticales de color naranja.
+
+La primera sección, "API-PRICE EQUIVALENT", indica un costo estimado entre $6.87 y ~$27.40, aclarando que la suscripción es gratuita. Detalla métricas técnicas como la cobertura de atributos (94), el uso de modelos (Opus 5.5) y la densidad de Claude en relación con la familia de tokenizadores.
+
+La segunda sección, "SUBSCRIPTION QUOTA", describe el estado de las ventanas de tiempo de 5 horas y una ventana semanal, mencionando puntos de "statuisine" y descartes por contaminación o cambios pequeños.
+
+Finalmente, la sección "IMAGES" informa sobre el procesamiento de 25 imágenes, especificando un tamaño de 696,353 bytes en el servidor y 17,637 caracteres devueltos a Claude. Se aclara que los bytes de los registros no cuentan para el contexto ni para el equivalente de precio de la API.
+
+(leído server-side: 170114 bytes imagen que no entraron a tu contexto)
