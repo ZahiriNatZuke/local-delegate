@@ -1,0 +1,7 @@
+This image shows a comprehensive technical dashboard for a software tool called "local delegate," which appears to be a system for managing and optimizing local AI model computations. The interface is dense with data, featuring various widgets, charts, and tables in a clean, modern layout with a white and light gray color scheme.
+
+Key sections include a "Backend" status area showing different models (like gemma and qwen) and their loading states, a "Sistema" panel monitoring hardware resources like RAM and GPU usage, and a series of large metric cards displaying "Contexto Conservado," "Delegaciones," and "Coste Local."
+
+The dashboard includes several visualizations: a bar chart for "Ahorro de contexto en el tiempo," a horizontal bar chart for "Ahorro por herramienta," a model call distribution chart, and a donut chart showing input origins. At the bottom, detailed tables list "Actividad reciente" with timestamps and tool names, "Quién delegó" showing client distribution, and "Sugerencias de los hooks" categorized by type. The overall design suggests a professional monitoring tool for developers or data scientists.
+
+(read server-side: 796169 image bytes that did not enter your context)

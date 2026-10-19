@@ -1,0 +1,5 @@
+The image shows a technical report or dashboard titled "Coste, cuota e imágenes" (Cost, quota, and images) in Spanish. It provides a detailed breakdown of API usage costs and subscription status. The top section estimates the API price equivalent between €8.67 and €27.40, noting that the subscription is a flat rate. It details coverage metrics, including 94 attributed items, 4 pending, and 22 excluded items.
+
+The text explains technical nuances such as re-reads, tokenizer density (averaging 74 per cell), and file processing statistics, mentioning that Claude would have read the file once if not for specific tool interactions. The middle section, "CUOTA DE LA SUSCRIPCIÓN," lists status windows for 5 hours, 1 hour, and weekly periods, showing various "statuline" points and rejection counts. The final section, "IMÁGENES," reports that 25 images were processed, totaling 696,353 bytes read server-side and 17,637 characters returned to Claude. The interface features a clean white background with orange accents and a close button in the top right corner.
+
+(read server-side: 181077 image bytes that did not enter your context)

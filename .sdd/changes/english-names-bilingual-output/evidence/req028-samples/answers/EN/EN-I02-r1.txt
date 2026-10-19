@@ -1,0 +1,9 @@
+The image shows a dark-themed user interface, likely from a software application or a web dashboard, displaying a detailed report titled "Coste, cuota e imágenes" (Cost, quota, and images). The text is written in Spanish and organized into three main sections highlighted with orange vertical bars.
+
+The first section, "EQUIVALENTE A PRECIO DE API," estimates the API cost between $8.87 and $27.40. It explains that the subscription is a flat rate and provides a breakdown of data usage, including "94 attributed at the moment," "4 pending," and "22 excluded." It also mentions specific metrics like "Claude density" and "re-reads."
+
+The second section, "CUOTA DE LA SUSCRIPCIÓN," details usage windows (5-hour and 1-hour) and weekly quotas, mentioning "statusine" points and "rejection points."
+
+The final section, "IMÁGENES," reports that 25 images were read server-side, totaling 696,335 bytes, with 17,637 characters returned to Claude. It notes that these images do not count toward token limits or the API price equivalent.
+
+(read server-side: 171554 image bytes that did not enter your context)

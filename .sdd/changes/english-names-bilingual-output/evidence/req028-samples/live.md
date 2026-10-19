@@ -4,8 +4,8 @@ Encargo: los dos huecos de REQ-028 que dejó la revisión de conformidad: (a) ni
 modelo en vivo con `LOCAL_DELEGATE_OUTPUT_LANGUAGE=fr`; (b) `local_explain_code` y
 `local_describe_image` con 1 documento por idioma, cuando la spec pide al menos 5.
 
-Versión medida: la **0.36.0 publicada**, instalada con `uv tool` y servida por el daemon tal como
-estaba (no se reinstaló ni se reinició).
+Versión medida: la **0.36.0 publicada**, instalada con `uv tool` y servida por el daemon (no se
+reinstaló; se reinició solo para cambiar el idioma, ver «Cómo se cambió el idioma de cada tanda»).
 
 ## Criterio, fijado antes de medir
 
@@ -40,50 +40,56 @@ publicadas en el repo (ninguna `pagina-es-*-1440.png`, que llevan datos de la PC
 
 ## Resultado
 
-| Tanda | Ventana de prueba | Tool | `requested` | Otro idioma | Errores | Veredicto |
+| Tanda | Ventana de prueba | Tool | `requested` | Otro idioma | Errores | Veredicto (criterio congelado) |
 |---|---|---|---|---|---|---|
 | ES | `w-20261019T041119Z` (04:11:19Z–04:16:46Z) | `local_explain_code` | 15/15 (100 %) | 0 | 0 | CUMPLE |
 | ES | `w-20261019T041119Z` | `local_describe_image` | 15/15 (100 %) | 0 | 0 | CUMPLE |
-| EN | — | `local_explain_code`, `local_describe_image` | sin medir | | | PENDIENTE |
-| FR | — | las cuatro | sin medir | | | PENDIENTE |
+| EN | `w-20261019T043654Z` (04:36:54Z–04:41:46Z) | `local_explain_code` | 15/15 (100 %) | 0 | 0 | CUMPLE |
+| EN | `w-20261019T043654Z` | `local_describe_image` | 15/15 (100 %) | 0 | 0 | CUMPLE |
+| FR | `w-20261019T044210Z` (04:42:10Z–04:52:26Z) | `local_summarize` | 14/15 (93 %) | 0 | 0 | CUMPLE (1 `unknown`: FR-S03 r1, margen 0,135) |
+| FR | `w-20261019T044210Z` | `local_lint_summary` | 12/15 (80 %) | 0 | 0 | **NO CUMPLE** (3 `unknown`, el mismo documento) |
+| FR | `w-20261019T044210Z` | `local_explain_code` | 15/15 (100 %) | 0 | 0 | CUMPLE |
+| FR | `w-20261019T044210Z` | `local_describe_image` | 15/15 (100 %) | 0 | 0 | CUMPLE |
 
-Respuestas literales: `answers/ES/*.txt`; veredictos: `answers/ES/judge.jsonl`; tiempos:
-`answers/ES/live-runs.json`. Ninguna respuesta pasó por el contexto de Claude.
+Respuestas literales: `answers/<tanda>/*.txt`; veredictos: `answers/<tanda>/judge.jsonl`; tiempos:
+`answers/<tanda>/live-runs.json`. En las tres tandas `run_samples.py` comprobó con `local_status`
+que el idioma de respuesta del daemon era el de la tanda (`es`, `en`, `fr`) antes de llamar.
 
-## Por qué EN y FR quedan sin medir: el idioma no se puede cambiar por llamada
+### El fallo de `local_lint_summary` en fr es del juez, no del modelo
 
-- El idioma vigente se cachea al arrancar el proceso (`i18n.current()`, `functools.cache`) y sale
-  de `LOCAL_DELEGATE_LANG` o de `language.json` (hoy `es`). `LOCAL_DELEGATE_OUTPUT_LANGUAGE` se lee
-  en cada llamada (`i18n.response_language()`), pero del entorno **del daemon**, que es el de su
-  lanzador. Ninguna tool acepta el idioma como argumento.
-- B2d-2 y la pasada de la 0.36.0 lo cambiaron **reiniciando el daemon** (variables en el lanzador o
-  `install` con otro `LOCAL_DELEGATE_LANG`). Este encargo prohibía reiniciarlo (tira el MCP de la
-  sesión que orquesta), así que solo se pudo medir la tanda cuyo idioma coincide con el del daemon.
-- Levantar un segundo servidor MCP con otro entorno contra el mismo backend necesita la credencial
-  del backend que guarda el lanzador cifrada; no se tocó.
+Los 3 `unknown` son las tres repeticiones de FR-L02 (`en-log-pytest.txt`), respuesta idéntica de
+503 chars. La prosa del modelo está en francés («Tests réussis : 15 tests ont été validés avec
+succès»). Lo que inclina el recuento es la línea que añade el **producto**, «Sin mencionar (del
+log, no los nombra el resumen): …», que va en el idioma de la interfaz (`es`, como manda REQ-028:
+la variable de salida no cambia los textos de interfaz) y que la regla R1 del juez no conoce (R1
+solo quita «(leído server-side: …)», los avisos y «(sin resumir)»). En una respuesta de 30 palabras
+juzgables, esa línea baja el margen a 0,067.
 
-`run_samples.py` comprueba antes de llamar que `local_status` informa del idioma de respuesta que
-pide la tanda, y para (código 3) si no coincide: así una tanda no puede medirse con el idioma
-equivocado.
+Recuento secundario, **no** el veredicto oficial: quitando solo esa línea de producto (mismo
+espíritu que R1), lint fr da 15/15, aunque FR-L02 queda con 21 palabras (el mínimo es 20). El
+criterio se fijó antes de medir y no se cambia a la vista del fallo: el veredicto oficial sigue
+siendo 12/15. Salida propuesta: un lote corto que añada a R1 la línea «Sin mencionar (…)» /
+«Not mentioned (…)» (con su test y su mutante) y vuelva a juzgar estas respuestas, sin repetir
+llamadas.
 
-### Cómo cerrar las dos tandas pendientes (necesita reiniciar el daemon dos veces)
+## Cómo se cambió el idioma de cada tanda
 
-```bash
-# Tanda EN: el lanzador con $env:LOCAL_DELEGATE_LANG = 'en'; reiniciar el daemon; /mcp en la sesión.
-local-delegate test-window start --label "REQ-028 muestras en (explain_code, describe_image)"
-bash ~/.claude/scripts/pesado.sh python run_samples.py --window EN --repeat 3
-python judge_samples.py --window EN
-local-delegate test-window stop <id>
-# Tanda FR: el lanzador con $env:LOCAL_DELEGATE_OUTPUT_LANGUAGE = 'fr' (sin LANG); reiniciar.
-local-delegate test-window start --label "REQ-028 muestras fr (4 tools)"
-bash ~/.claude/scripts/pesado.sh python run_samples.py --window FR --repeat 3
-python judge_samples.py --window FR
-local-delegate test-window stop <id>
-# Devolver el lanzador a su huella original y reiniciar.
-```
+El idioma vigente se cachea al arrancar el proceso (`i18n.current()`) y
+`LOCAL_DELEGATE_OUTPUT_LANGUAGE` se lee del entorno del daemon, así que no hay forma por llamada.
+Con permiso expreso del coordinador para estas dos tandas, el método fue el de B2d-2: una línea
+temporal en el lanzador del daemon y reinicio por la tarea programada (`schtasks /End`, matar el
+pid de `daemon.json`, `schtasks /Run`; el lanzador pone la credencial del backend, que no se leyó).
 
-Duración estimada por tanda: la ES (30 llamadas) tardó 5 min 27 s; la FR (60 llamadas, con
-resúmenes y lint) unos 20–30 min.
+| Tanda | Línea temporal en el lanzador | pid del daemon |
+|---|---|---|
+| ES | ninguna (`language.json` = `es`) | 35336 |
+| EN | `$env:LOCAL_DELEGATE_LANG = 'en'` | 41768 |
+| FR | `$env:LOCAL_DELEGATE_OUTPUT_LANGUAGE = 'fr'` (producto `es`) | 58220 |
+| restaurado | ninguna | 24316 |
+
+Al terminar, el lanzador volvió a su huella original (sha256 `c96f022a…f69f69a`, idéntico byte a
+byte a la copia previa) y, tras el último reinicio, `local_status` informa de `local-delegate
+v0.36.0`, «Idioma: es (preferencia …)» e «Idioma de respuesta del modelo: es (preferencia)».
 
 ## Juez francés y sus controles
 
@@ -103,4 +109,4 @@ resúmenes y lint) unos 20–30 min.
 
 `build_manifest.py`, `manifest.json`, `run_samples.py`, `judge_samples.py`, `fr_judge.py`,
 `fr_control_positive.py`, `fr_judge_controls.py`, `fr-control/`, `fr-control-*.jsonl`,
-`answers/ES/`.
+`answers/ES/`, `answers/EN/`, `answers/FR/`.

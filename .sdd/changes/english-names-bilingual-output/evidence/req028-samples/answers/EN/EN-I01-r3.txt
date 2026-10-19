@@ -1,0 +1,9 @@
+The image shows a technical report or dashboard titled "Coste, cuota e imágenes" (Cost, quota, and images) in Spanish. It provides a detailed breakdown of API pricing equivalents, subscription quotas, and image data.
+
+The first section, "EQUIVALENTE A PRECIO DE API," estimates the cost between $8.67 and $32.40. It explains that the lower figure represents a single cache write, while the higher figure includes re-reads. It lists specific metrics such as 94 attributed items, 4 pending items, and 22 excluded items. It also mentions a "Claude density" of 98 and notes that 55 images and 9 file outputs were processed.
+
+The second section, "CUOTA DE LA SUSCRIPCIÓN," details usage windows. It shows a 5-hour window with 2 points of "dustline" remaining and a 1-hour window with 1 point of rejection. It also notes a weekly window with no remaining points.
+
+The final section, "IMÁGENES," states that 25 images were processed, totaling 696,353 bytes read server-side and 17,637 characters returned to Claude. It clarifies that these do not count toward the token limit or the API price equivalent.
+
+(read server-side: 181077 image bytes that did not enter your context)

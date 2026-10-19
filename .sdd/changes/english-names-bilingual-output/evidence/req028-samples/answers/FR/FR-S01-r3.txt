@@ -1,0 +1,24 @@
+## Introducción
+Ce document présente les recommandations pour utiliser les hooks de Claude Code afin de suggérer la délégation de tâches.
+
+## Hooks
+**`suggest_delegate_prompt.py` — `UserPromptSubmit`** Détecte les intentions de résumé ou de traduction pour proposer une délégation sans imposer de décision.
+**`suggest_delegate_read.py` — `PreToolUse`, matcher `Read`** Propose de déléguer la lecture de fichiers volumineux, mais reste désactivé par défaut pour éviter le bruit.
+**`suggest_delegate_shell.py` — `PreToolUse`, matcher `Bash|PowerShell`** Identifie les commandes de lecture de fichiers simples pour suggérer une délégation de contenu.
+**`record_call.py` — `PreToolUse`, matcher `mcp__local-delegate__.*`** Enregistre systématiquement les appels aux outils de délégation pour le suivi des coûts et des métriques.
+**`suggest_lint_summary.py`** Ce script a été retiré le 2026-09-08 en raison d'un taux de réussite trop faible.
+
+## Instalación
+L'installation s'effectue via `local-delegate install`, copiant les scripts dans le répertoire des hooks de l'utilisateur.
+
+## Configuración
+Les paramètres sont gérés par des variables d'environnement comme `LD_HOOK_ENABLED` ou `LD_HOOK_READ_ENABLED` pour activer les fonctionnalités.
+
+## Verificación manual
+L'utilisateur peut tester les hooks en envoyant des requêtes de résumé ou en vérifiant l'absence de suggestions pour les tests.
+
+## Piloto A/B
+Le test compare des sessions avec et sans hooks en utilisant des benchmarks spécifiques pour mesurer l'adoption.
+**Resultado del piloto de 2026-07-23** Les hooks actifs ont amélioré l'adoption de 20%, bien que le hook de lecture nécessite encore des ajustements.
+
+(leído server-side: 12899 chars ≈ 6449 tokens de Claude que no entraron a tu contexto)

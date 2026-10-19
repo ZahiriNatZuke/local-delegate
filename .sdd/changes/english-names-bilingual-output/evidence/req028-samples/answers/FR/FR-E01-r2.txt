@@ -1,0 +1,9 @@
+Ce code Python définit des utilitaires pour analyser et comparer des journaux de linters (outils de vérification de code). Il identifie systématiquement les fichiers et les codes de règles mentionnés dans un texte brut.
+
+D'abord, trois expressions régulières sont définies : `FILE` pour reconnaître les noms de fichiers avec leurs extensions, `CODE` pour les codes de règles génériques (comme `E501`) et `RULE` pour les codes spécifiques ou les chemins de règles Biome. La fonction `norm_path` standardise les chemins de fichiers en utilisant des barres obliques et des minuscules pour assurer une comparaison cohérente.
+
+Les fonctions `files_by_frequency` et `codes_by_frequency` extraient respectivement les fichiers et les codes de règles du journal, en les classant par ordre de fréquence de mention. `codes_by_frequency` nettoie d'abord le texte en remplaçant les noms de fichiers par des espaces pour éviter de confondre les codes de règles avec des parties de chemins de fichiers.
+
+La fonction `mentions` vérifie si un élément spécifique (fichier ou code) est présent dans un texte donné, en gérant les échappements Markdown et en effectuant des correspondances exactes ou partielles selon le contexte. Enfin, `not_mentioned` compare un texte de réponse à un journal de référence pour identifier les fichiers et règles les plus fréquents qui ont été omis dans la réponse. Cela permet d'évaluer la fidélité ou la complétude d'une réponse générée par un modèle par rapport aux données d'origine, en signalant les éléments importants qui manquent.
+
+(leído server-side: 3975 chars ≈ 1958 tokens de Claude que no entraron a tu contexto)

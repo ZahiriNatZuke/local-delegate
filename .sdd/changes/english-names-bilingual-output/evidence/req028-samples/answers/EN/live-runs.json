@@ -1,0 +1,23 @@
+{
+  "EN-r1": {
+    "started": "2026-10-19T04:37:11Z",
+    "finished": "2026-10-19T04:38:37Z",
+    "calls": 10,
+    "errors": 0,
+    "daemon_response_language": "en"
+  },
+  "EN-r2": {
+    "started": "2026-10-19T04:38:37Z",
+    "finished": "2026-10-19T04:40:11Z",
+    "calls": 10,
+    "errors": 0,
+    "daemon_response_language": "en"
+  },
+  "EN-r3": {
+    "started": "2026-10-19T04:40:11Z",
+    "finished": "2026-10-19T04:41:45Z",
+    "calls": 10,
+    "errors": 0,
+    "daemon_response_language": "en"
+  }
+}

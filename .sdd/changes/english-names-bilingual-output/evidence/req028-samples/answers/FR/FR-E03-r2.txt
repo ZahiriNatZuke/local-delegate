@@ -1,0 +1,9 @@
+Ce code Python gère la vérification de la cohérence entre les coûts facturés par l'API Claude et une table de tarification de référence intégrée au package. Il lit deux fichiers JSON (`prices.json` et `density.json`) depuis les ressources locales via `importlib.resources`, assurant ainsi qu'aucune requête réseau n'est effectuée lors du chargement. Ces données sont mises en cache pour optimiser les performances.
+
+La fonction `normalize_id` nettoie les identifiants de modèle en supprimant les codes de formatage et les suffixes de date, permettant une correspondance exacte avec la table de prix. La fonction `entry` récupère les tarifs spécifiques à un modèle.
+
+Le cœur du système réside dans `_judge` et `check_rows`, qui comparent les lignes de données réelles (tokens d'entrée/sortie, recherche web, etc.) aux prix théoriques. Le calcul prend en compte les coûts des tokens, de la lecture/écriture de cache et des recherches web. Une tolérance est appliquée pour tenir compte des arrondis. Si le coût réel tombe hors de la fourchette calculée (entre le coût minimal et maximal estimé par le cache), la ligne est marquée comme « outside ». Les lignes dont le coût est inférieur à un seuil (`MIN_JUDGED_COST`) sont ignorées.
+
+Enfin, la fonction `verdict` agrège les résultats : si une seule ligne est jugée « outside » ou « unpriced » (prix manquant), le verdict global est « fail », sinon il est « pass ». Cela permet de détecter automatiquement les écarts de facturation ou les modèles non tarifés.
+
+(leído server-side: 4364 chars ≈ 2149 tokens de Claude que no entraron a tu contexto)

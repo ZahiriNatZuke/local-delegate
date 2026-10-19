@@ -1,0 +1,9 @@
+Ce code Python définit des utilitaires pour analyser des journaux de linter, en extrayant et en comparant les noms de fichiers et les codes de règles. Il utilise des expressions régulières pour identifier les chemins de fichiers (`FILE`) et les codes de règles (`RULE`, comme `E501` ou `lint/style/noMagicNumbers`).
+
+La fonction `files_by_frequency` parcourt le journal pour compter les occurrences de chaque fichier, en normalisant les chemins (barres obliques, minuscules) pour éviter les doublons dus aux différences de format. Elle retourne une liste triée par fréquence décroissante, en préservant l'ordre d'apparition pour les égalités. De même, `codes_by_frequency` extrait les codes de règles, mais supprime d'abord les noms de fichiers du texte pour éviter les faux positifs (par exemple, éviter de confondre `E501` dans un nom de fichier avec le code de règle lui-même).
+
+La fonction `mentions` vérifie si un élément spécifique (fichier ou code) est cité dans un texte donné. Elle gère les échappements Markdown et utilise des expressions régulières pour s'assurer que la correspondance se fait au niveau d'un mot entier (délimiteurs de mots), évitant ainsi les sous-correspondances incorrectes.
+
+Enfin, `not_mentioned` identifie les éléments les plus fréquents du journal qui sont absents d'une réponse donnée (`answer`). Cela permet de mesurer la fidélité ou la complétude d'une réponse par rapport au journal source, en listant les fichiers et règles importants qui ont été omis. L'objectif global est de fournir un inventaire fiable pour évaluer la précision des résumés générés par des modèles d'IA à partir de logs de linter.
+
+(leído server-side: 3975 chars ≈ 1958 tokens de Claude que no entraron a tu contexto)

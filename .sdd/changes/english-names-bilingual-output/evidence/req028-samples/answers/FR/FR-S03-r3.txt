@@ -1,0 +1,38 @@
+## Introduction
+Par défaut, llama-swap exécute un seul modèle à la fois, mais les groupes permettent de gérer la coexistence ou l'alternance des modèles.
+
+## Installation
+L'installation nécessite l'extension optionnelle `[llamaswap]` via `pip` ou `uv` pour inclure la dépendance `pyyaml`.
+
+## Semántica de `groups`
+**Groups** utilise le mécanisme de routage par défaut pour gérer les modèles en alternance ou en résidence permanente via des paramètres spécifiques.
+
+## Introducción
+(sin resumir)
+
+## Instalación
+(sin resumir)
+
+## Semántica de `groups` (verificada contra el código real de llama-swap)
+(sin resumir)
+
+## Presupuesto de VRAM
+**VRAM** est calculée en estimant le pire scénario de consommation concurrente pour chaque groupe, incluant les poids et le cache KV.
+
+## Presupuesto de RAM de sistema (opcional, `--ram-gb`)
+**RAM** est estimée via le poids des fichiers, car le mappage mémoire est utilisé même lors d'un déchargement total sur GPU.
+
+## Los comandos
+**check-llamaswap** valide la configuration existante.
+**init-llamaswap** génère ou met à jour les groupes.
+**llamaswap residency** permet de visualiser ou modifier les modèles résidents.
+
+## Ritual de aplicación (recomendado, manual)
+**Ritual** consiste à sauvegarder, tester avec `--dry-run`, appliquer, redémarrer et vérifier la consommation mémoire réelle.
+
+## Por qué el paquete no hace esto solo
+Le paquet évite toute modification automatique pour prévenir les erreurs de configuration pouvant causer des dépassements de mémoire.
+
+[local-delegate warning: 3 secciones sin resumir por el límite de palabras o del modelo]
+
+(leído server-side: 14978 chars ≈ 7489 tokens de Claude que no entraron a tu contexto)

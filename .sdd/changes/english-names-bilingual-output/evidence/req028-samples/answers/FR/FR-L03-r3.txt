@@ -1,0 +1,11 @@
+**Résumé des problèmes par fichier :**
+
+**src/app/features/auth/pages/login.page.ts**
+
+Ce fichier contient un seul problème. Il s'agit d'une erreur de type (TS2345) concernant l'assignation d'un argument à un paramètre. L'argument fourni est incompatible avec le type attendu pour la propriété `returnUrl`. Le message d'erreur suggère d'ajouter `undefined` aux types des propriétés cibles.
+
+**src/app/features/home/components/tech-stack.component.ts**
+
+Ce fichier présente également un problème de type (TS2375).  Il concerne l'incompatibilité des types de la propriété `version`.  Comme pour le fichier précédent, la solution proposée est d'ajouter `undefined` aux types des propriétés cibles.
+
+(leído server-side: 1435 chars ≈ 747 tokens de Claude que no entraron a tu contexto)

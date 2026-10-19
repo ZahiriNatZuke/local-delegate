@@ -1,0 +1,9 @@
+Cette image présente une fenêtre contextuelle ou une boîte de dialogue intitulée « Cost, quota and images ». Le texte est structuré en trois sections principales, chacune introduite par une barre verticale orange.
+
+La première section, « API-PRICE EQUIVALENT », estime le coût équivalent de l'utilisation entre 6,87 $ et environ 27,40 $. Elle explique que ce montant varie selon les relectures et les expirations, précisant que l'abonnement actuel est gratuit. Elle détaille également la couverture des données, mentionnant des chiffres spécifiques sur les tests, les scripts et les clients.
+
+La deuxième section, « SUBSCRIPTION QUOTA », traite des fenêtres de temps (5 heures et hebdomadaires) et mentionne des points de statut, des rejets et des changements de taille.
+
+Enfin, la section « IMAGES » indique que 25 images ont été lues, avec des détails techniques sur les octets servis et les caractères retournés à Claude. Le texte précise que les jetons Claude ne sont pas inclus dans ce calcul de coût. L'interface est sobre, avec un fond blanc et une icône de badge orange en haut à gauche.
+
+(leído server-side: 170114 bytes imagen que no entraron a tu contexto)

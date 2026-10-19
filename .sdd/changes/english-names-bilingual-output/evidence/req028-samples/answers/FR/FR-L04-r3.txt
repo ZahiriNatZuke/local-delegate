@@ -1,0 +1,17 @@
+**Résumé des problèmes par fichier:**
+
+**LLAMASWAP_EXE:** Le fichier LLAMASWAP_EXE n'est pas configuré. Il est recherché dans le PATH.
+
+**LLAMASWAP_CONFIG:** Le fichier LLAMASWAP_CONFIG n'est pas configuré.
+
+**local-delegate:**
+*   **Andamiaje:** 5 scripts copiés dans <TMP>\True\es\home\.claude\hooks\local-delegate. Aucun hook orphelin. 2 hooks enregistrés. Claude Code et opencode sont installés. La mémoire globale est à jour pour Claude Code, Codex et opencode. Les MCP sont enregistrés pour Claude Code et Codex.
+*   **Services:** Le daemon local-delegate 0.35.0 est en cours d'exécution. Le backend http://127.0.0.1:9292/v1/models est opérationnel.
+*   **Versions:** llama-swap v255 est installé et testé. llama-server b10909 est installé et testé. Absence de configuration LLAMASWAP_CONFIG.
+
+**D:\Projects\local-delegate\tests\_sin_logs\language.json:** Variable linguistique.
+
+**Autres:**
+*   Aucun problème signalé. Tout est à l'état "OK".
+
+(leído server-side: 3122 chars ≈ 1626 tokens de Claude que no entraron a tu contexto)

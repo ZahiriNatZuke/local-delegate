@@ -1,0 +1,7 @@
+**Résumé des problèmes par fichier**
+
+Le rapport indique des erreurs liées à la localisation de fichiers de modèles.  Plus précisément, il y a des problèmes avec les fichiers `gemma-3-4b-it-Q4_K_M.gguf`, `Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf`, `Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf`, `Qwen3.5-2B-UD-Q8_K_XL.gguf` et `Qwen3VL-8B-Instruct-Q4_K_M.gguf`.  Ces fichiers ne sont pas trouvés dans le répertoire `MODELOS`.
+
+Le groupe 'resident' présente un total de 0,00 GiB de VRAM utilisé, et le groupe 'swap' affiche également 0,00 GiB.  Il n'y a pas de VRAM disponible.  L'erreur la plus critique concerne l'absence de ces fichiers de modèles, ce qui empêche le processus de fonctionner correctement.  Aucun problème de VRAM n'est détecté.
+
+(leído server-side: 743 chars ≈ 386 tokens de Claude que no entraron a tu contexto)

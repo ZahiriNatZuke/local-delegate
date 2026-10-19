@@ -1,0 +1,7 @@
+Ce script Python automatise la préparation du site web pour GitHub Pages en injectant dynamiquement la version de l'application. Son objectif principal est d'éviter la redondance et les erreurs de synchronisation, car la version est déjà définie dans `pyproject.toml`. Le script lit cette version via le module standard `tomllib`, puis copie le répertoire source `site/` vers `_site/`, en excluant les fichiers sources non publiés (suffixe `.src.html`).
+
+Pendant la copie, il parcourt tous les fichiers HTML, CSS, JS, JSON et Webmanifest. Il remplace une balise spécifique, `__LD_VERSION__`, par la version extraite. Cette approche garantit que le numéro de version affiché dans l'interface (comme le "hero eyebrow" ou la sortie du terminal) correspond toujours à la déclaration officielle du projet. Le script gère également les fins de ligne pour assurer une compatibilité uniforme.
+
+Il offre deux modes d'exécution. Par défaut, il construit le site et affiche les fichiers modifiés. Avec l'option `--check`, il vérifie l'intégrité du répertoire de destination : s'il trouve encore la balise `__LD_VERSION__` dans les fichiers générés, il signale une erreur, indiquant qu'une étape de remplacement a échoué. Ce mécanisme sert de contrôle qualité lors du déploiement. N'utilisant que la bibliothèque standard, il est léger et idéal pour s'intégrer dans des workflows CI/CD sans dépendances externes.
+
+(leído server-side: 4053 chars ≈ 1996 tokens de Claude que no entraron a tu contexto)

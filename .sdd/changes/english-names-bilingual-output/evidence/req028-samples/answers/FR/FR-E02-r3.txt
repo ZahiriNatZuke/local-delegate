@@ -1,0 +1,9 @@
+Ce script Python évalue la fidélité de réponses de modèles de langage en vérifiant la présence de chiffres spécifiques dans des fichiers journaux. Il est conçu pour s'assurer que les compteurs réels extraits des logs sont conservés dans les réponses générées, et non remplacés par des estimations inventées.
+
+Le programme définit d'abord une référence (`CONTROLS`) associant des identifiants de logs (comme A14, B31) à des chiffres clés attendus (ex: "125", "57"). La fonction `kept` utilise une expression régulière pour détecter si un chiffre apparaît comme un nombre entier isolé dans le texte de la réponse, en excluant les cas où il fait partie d'un nombre plus grand ou d'une décimale, mais en autorisant la ponctuation finale comme un point.
+
+L'analyse se fait dossier par dossier. Pour chaque identifiant, le script lit les fichiers de réponse correspondants, y compris les répétitions (suffixes `-r<k>`). Une réponse est considérée comme "conserve" (kept) si elle contient au moins un des chiffres de référence. Pour les cas avec plusieurs répétitions, la version est jugée valide si la majorité des répétitions conservent les chiffres (au moins 2 sur 3).
+
+Le script accepte des répertoires de réponses via la ligne de commande. Il génère un rapport JSON indiquant, pour chaque cas, quels chiffres ont été conservés et si le contrôle est réussi. Si tous les cas sont valides, le script retourne 0 ; sinon, il retourne 1, permettant une intégration facile dans des pipelines de test automatisés pour valider la précision des extractions de données.
+
+(leído server-side: 4735 chars ≈ 2332 tokens de Claude que no entraron a tu contexto)

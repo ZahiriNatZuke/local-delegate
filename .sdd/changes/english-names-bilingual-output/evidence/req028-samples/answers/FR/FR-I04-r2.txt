@@ -1,0 +1,7 @@
+Cette image présente un tableau de bord analytique complexe pour un outil nommé "local delegate", conçu pour surveiller et optimiser l'utilisation de modèles de langage (LLM) locaux. L'interface est dense en données, utilisant des widgets, des graphiques à barres, des diagrammes circulaires et des tableaux pour afficher des métriques de performance.
+
+En haut, on observe des indicateurs de statut pour différents modèles (comme gemma et qwen) et des statistiques système sur l'utilisation de la RAM et du GPU. La section centrale met en avant des économies de coûts, avec des chiffres clés comme "3.161.168 tok" de contexte conservé et une estimation de coût d'environ 27,40 $.
+
+Des graphiques temporels illustrent l'économie de contexte et les économies par outil, tandis qu'un diagramme circulaire montre l'origine des entrées. En bas, un journal d'activité détaillée répertorie les appels récents, les outils utilisés et la latence, complété par des tableaux sur les clients et les suggestions de "hooks". L'esthétique est professionnelle, utilisant des tons bleus, verts et gris sur un fond clair.
+
+(leído server-side: 796169 bytes imagen que no entraron a tu contexto)

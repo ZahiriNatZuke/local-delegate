@@ -1,0 +1,11 @@
+**Résumé des problèmes par fichier**
+
+**src/app/features/auth/pages/login.page.ts**
+
+Ce fichier contient un seul problème. Il s'agit d'une erreur de type (TS2345) concernant l'assignation d'un argument à un paramètre. L'argument passé est de type `{ returnUrl: string | undefined; email: string; password: string; rememberMe: boolean; }`, alors que le paramètre attendu est de type `{ email: string; password: string; rememberMe: boolean; returnUrl?: string; }`.  Le problème réside dans le `returnUrl` qui est de type `string | undefined` alors qu'il devrait être de type `string`.
+
+**src/app/features/home/components/tech-stack.component.ts**
+
+Ce fichier présente également un seul problème. Il s'agit d'une erreur de type (TS2375) concernant l'assignation d'un argument à un paramètre. L'argument passé est de type `{ name: string; docs: string; version: string | undefined; }`, alors que le paramètre attendu est de type `StackItem`. Le problème est que la propriété `version` est de type `string | undefined` alors qu'elle devrait être de type `string`.
+
+(leído server-side: 1435 chars ≈ 747 tokens de Claude que no entraron a tu contexto)
