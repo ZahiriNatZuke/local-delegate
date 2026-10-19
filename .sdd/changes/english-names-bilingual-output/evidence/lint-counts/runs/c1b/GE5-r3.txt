@@ -1,0 +1,36 @@
+**src/local_delegate/benchmark.py**
+
+* **COM812**: 11 trailing commas are missing.
+* **D102**: 7 public methods are missing docstrings.
+* **T201**: 7 instances of `print` were found.
+* **D107**: 5 `__init__` methods are missing docstrings.
+* **D101**: 4 public classes are missing docstrings.
+* **D105**: 4 magic methods are missing docstrings.
+* **D103**: 4 public functions are missing docstrings.
+* **TC003**: 3 standard library imports should be moved into a type-checking block.
+* **PLR2004**: 3 magic values used in comparisons should be replaced with constants.
+* **E501**: 3 lines are too long.
+* **PLC0415**: 2 imports should be at the top-level of the file.
+* **C901**: 2 functions are too complex.
+* **PLR0913**: 2 function definitions have too many arguments.
+* **FBT003**: 1 boolean positional value was used in a function call.
+* **RUF036**: 1 type union has `None` not at the end.
+* **S603**: 1 subprocess call lacks a check for untrusted input.
+* **PLW1510**: 1 subprocess call is missing an explicit `check` argument.
+* **PLW2901**: 1 loop variable is overwritten by assignment.
+* **D301**: 1 docstring should use a raw string prefix.
+* **D209**: 1 multi-line docstring closing quote should be on a separate line.
+* **D205**: 1 blank line is required between a summary line and description.
+* **PLR0912**: 1 function has too many branches.
+* **PLR0915**: 1 function has too many statements.
+* **CPY001**: 1 missing copyright notice at the top of the file.
+* **D203**: 1 incompatible warning regarding blank lines before a class.
+* **D211**: 1 incompatible warning regarding blank lines before a class.
+* **D212**: 1 incompatible warning regarding multi-line summary lines.
+* **D213**: 1 incompatible warning regarding multi-line summary lines.
+
+Found 68 errors.
+
+Not mentioned (in the log, not named by the summary): checks.json
+
+(read server-side: 33048 chars ≈ 17212 Claude tokens that did not enter your context)

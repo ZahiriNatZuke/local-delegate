@@ -1,0 +1,11 @@
+Here's a summary of the issues grouped by file, prioritizing the most frequent ones:
+
+**app/main.py:** This file contains three instances of the **E501 Line too long** error, occurring on lines 12, 40, and 7. Additionally, it has one **F401 `os` imported but unused** error on line 7 and one **F401 `sys` imported but unused** error on line 8.
+
+**app/util.py:** This file presents five **E501 Line too long** errors, found on lines 55, 70, and 9. It also includes three **F401 `os` imported but unused** errors, occurring on line 9, one **F401 `sys` imported but unused** error on line 55 and one **F401 `re` imported but unused** error on line 70.
+
+**app/cli.py:** This file has one **E501 Line too long** error, located on line 21.
+
+Found 4 E501 errors, 3 F401 errors, and 1 W291 error.
+
+(read server-side: 340 chars ≈ 177 Claude tokens that did not enter your context)

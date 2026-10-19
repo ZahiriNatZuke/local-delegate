@@ -1,0 +1,27 @@
+**src/local_delegate/sections.py**
+
+**Errores y avisos**
+
+*   **D101**: Falta la cadena de documentación en una clase pública (5)
+*   **E501**: La línea es demasiado larga (4)
+*   **D400**: La primera línea debería terminar con un punto (3)
+*   **D102**: Falta la cadena de documentación en un método público (3)
+*   **C901**: La complejidad de la función es demasiado alta (3)
+*   **RUF002**: La cadena de documentación contiene un carácter ambiguo (2)
+*   **D415**: La primera línea debería terminar con un punto, signo de interrogación o de exclamación (2)
+*   **D203**: Incompatibilidad entre la línea en blanco incorrecta antes de una clase y la línea en blanco antes de una clase (1)
+*   **D211**: Incompatibilidad entre la línea en blanco incorrecta antes de una clase y la línea en blanco antes de una clase (1)
+*   **D212**: Incompatibilidad entre la primera línea del resumen multilínea y la segunda línea del resumen multilínea (1)
+*   **D213**: Incompatibilidad entre la primera línea del resumen multilínea y la segunda línea del resumen multilínea (1)
+*   **D205**: Se requiere una línea en blanco entre la línea de resumen y la descripción (1)
+*   **D301**: Usar una cadena de texto cruda si hay barras invertidas en la documentación (1)
+*   **CPY001**: Falta el aviso de derechos de autor al inicio del archivo (1)
+*   **PLR2004**: Se utiliza un valor mágico en una comparación, considere reemplazarlo por una constante (1)
+*   **PLR0912**: Demasiadas ramificaciones (1)
+*   **PLR0913**: Demasiados argumentos en la definición de la función (1)
+*   **COM812**: Falta la coma final (1)
+*   **TC003**: Mover la importación de la biblioteca estándar a un bloque de comprobación de tipos (1)
+
+Found 30 errors.
+
+(leído server-side: 14237 chars ≈ 7415 tokens de Claude que no entraron a tu contexto)

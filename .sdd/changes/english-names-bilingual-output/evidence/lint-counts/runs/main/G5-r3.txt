@@ -1,0 +1,21 @@
+**src/local_delegate/benchmark.py**
+
+*   **Falta de docstrings**: 23 errores de tipo **D101** (clases públicas), **D102** (métodos públicos), **D103** (funciones públicas), **D105** (métodos mágicos) y **D107** (métodos `__init__`).
+*   **Comas finales faltantes**: 12 errores de tipo **COM812**.
+*   **Uso de `print`**: 8 errores de tipo **T201**.
+*   **Valores mágicos**: 3 errores de tipo **PLR2004**.
+*   **Líneas demasiado largas**: 3 errores de tipo **E501**.
+*   **Complejidad excesiva**: 2 errores de tipo **C901**.
+*   **Demasiados argumentos**: 2 errores de tipo **PLR0913**.
+*   **Importaciones**: 2 errores de tipo **PLC0415** (importaciones fuera del nivel superior).
+*   **Otros errores**: 1 error de tipo **D205** (línea en blanco requerida), 1 error de tipo **D209** (comillas de cierre de docstring), 1 error de tipo **D301** (uso de cadenas crudas), 1 error de tipo **FBT003** (valor booleano posicional), 1 error de tipo **PLR0912** (demasiadas ramificaciones), 1 error de tipo **PLR0915** (demasiadas sentencias), 1 error de tipo **PLW1510** (argumento `check` ausente en `subprocess.run`), 1 error de tipo **PLW2901** (variable de bucle sobrescrita) y 1 error de tipo **RUF036** (`None` no al final de la unión de tipos).
+*   **Avisos de incompatibilidad**: 2 avisos sobre reglas de líneas en blanco incompatibles (**D203** y **D211**) y 1 aviso sobre la primera línea de resumen (**D212** y **D213**).
+*   **Aviso de copyright**: 1 error de tipo **CPY001** (falta aviso de copyright).
+*   **Aviso de importación**: 1 error de tipo **TC003** (importación de librería estándar debe moverse a un bloque de comprobación de tipos).
+*   **Aviso de seguridad**: 1 error de tipo **S603** (llamada a `subprocess` con entrada no confiable).
+
+Found 68 errors.
+
+Sin mencionar (del log, no los nombra el resumen): checks.json
+
+(leído server-side: 33048 chars ≈ 17212 tokens de Claude que no entraron a tu contexto)

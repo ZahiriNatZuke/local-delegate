@@ -241,6 +241,70 @@ def _translate() -> str:
     return server.local_translate(target_lang="inglés", text="hola mundo")
 
 
+# --- Celdas por idioma (afinidad por idioma, 2026-10-19) ------------------------------------
+
+
+def _other_language() -> str:
+    return "en" if i18n.response_language().value == "es" else "es"
+
+
+def _with_language(cell: matrix.Cell, language: str) -> matrix.Cell:
+    return matrix.Cell(cell.tool, cell.alternative, cell.compared_role, cell.footprint, language)
+
+
+@pytest.mark.parametrize("same_language", [True, False])
+@backend_mock.mock
+def test_a_cell_routes_only_in_its_language(affinity, tmp_path, monkeypatch, same_language):
+    """The translate cells measured in the response language route to the loaded 26B; the same
+    cells marked with the other language do not (the role answers). Positive control: the
+    `same_language` case routes, so the negative one is not a cell that never routes."""
+    language = i18n.response_language().value if same_language else _other_language()
+    cells = tuple(
+        _with_language(c, language) if c.tool == "local_translate" else c for c in matrix.CELLS
+    )
+    monkeypatch.setattr(matrix, "CELLS", cells)
+    backend = _Backend().install(ready={LONG: 120}, ended_ago={LONG: 10})
+
+    _translate()
+
+    assert backend.served == ([LONG] if same_language else [MECH])
+
+
+@pytest.mark.parametrize("same_language", [True, False])
+def test_doctor_warns_only_for_the_cell_of_its_language(
+    affinity, tmp_path, monkeypatch, same_language
+):
+    """A lint cell whose footprint has another prompt (the one of the other language) warns only
+    if it is marked with the response language. Mutant "no language filter in
+    `_stale_affinity_cells`": the `same_language=False` case warns and fails."""
+    language = i18n.response_language().value if same_language else _other_language()
+    cells = tuple(
+        _with_language(
+            matrix.Cell(
+                c.tool, c.alternative, c.compared_role, {**c.footprint, "prompt_sha256": "0" * 64}
+            ),
+            language,
+        )
+        if c.tool == "local_lint_summary"
+        else c
+        for c in matrix.CELLS
+    )
+    monkeypatch.setattr(matrix, "CELLS", cells)
+    result = checks._probe_residency(checks.Context(home=tmp_path, config_path=affinity))
+    if same_language:
+        assert result.status == checks.WARN
+        assert "`local_lint_summary` → `gemma4-26b-a4b`" in result.detail
+    else:
+        assert result.status == checks.OK, result.detail
+
+
+def test_cells_without_language_hold_in_every_language():
+    cell = matrix.Cell("local_translate", LONG, MECH, {})
+    assert matrix.applies_to_language(cell, "es") and matrix.applies_to_language(cell, "en")
+    assert matrix.applies_to_language(_with_language(cell, "es"), "es")
+    assert not matrix.applies_to_language(_with_language(cell, "es"), "en")
+
+
 # --- Escenario «la tarea mecánica usa el 26B cargado» -----------------------------------------
 
 
@@ -512,34 +576,47 @@ def _verdict() -> dict:
 #: La re-evaluación de la 0.36.0 (B2-affinity): sus celdas reemplazan a las de T6 que nombra en
 #: `supersedes`, en todos los idiomas.
 REEVALUATION = VERDICT_DIR / "reevaluation-0.36.0" / "verdict.json"
+#: Afinidad por idioma (2026-10-19): la celda de lint vuelve, una por idioma, con el inventario del
+#: log también en la llamada mecánica. Sus celdas llevan `language`.
+REEVALUATION_BY_LANGUAGE = VERDICT_DIR / "reevaluation-lint-counts" / "verdict.json"
 
 
 def _key(c: dict) -> tuple[str, str, str]:
     return (c["tool"], c["alternative"], c["compared_role"])
 
 
+def _cell_key(c: dict) -> tuple[str, str, str, str | None]:
+    return (*_key(c), c.get("language"))
+
+
 def test_matrix_cells_are_the_approved_cells_of_the_verdict():
     """`CELLS` = lo aprobado en T6, menos lo que la re-evaluación de la 0.36.0 reemplaza, más lo
-    que esa re-evaluación aprueba. Mutante: volver a poner la celda de lint en `CELLS` lo rompe."""
+    que aprueban las re-evaluaciones posteriores (la de la 0.36.0, ninguna; la de afinidad por
+    idioma, una celda de lint por idioma). Mutante: quitar una de las dos celdas de lint de
+    `CELLS`, o quitarle su `language`, lo rompe."""
     verdict = _verdict()
     reevaluation = json.loads(REEVALUATION.read_text(encoding="utf-8"))
+    by_language = json.loads(REEVALUATION_BY_LANGUAGE.read_text(encoding="utf-8"))
     superseded = {_key(c) for c in reevaluation["supersedes"]}
     assert superseded, "guarda: la re-evaluación reemplaza alguna celda de T6"
     assert superseded <= {_key(c) for c in verdict["cells"] if c["state"] == "approved"}
     footprints = {
-        _key(c): c["footprint"]
+        (*_key(c), None): c["footprint"]
         for c in verdict["cells"]
         if c["state"] == "approved" and _key(c) not in superseded
     }
-    for c in reevaluation["cells"]:
-        if c["state"] == "approved":
-            footprints[_key(c)] = c["footprint"]
+    for later in (reevaluation, by_language):
+        for c in later["cells"]:
+            if c["state"] == "approved":
+                footprints[_cell_key(c)] = c["footprint"]
+    assert any(k[3] for k in footprints), "guarda: hay celdas aprobadas por idioma"
     verdict_approved_cells = set(footprints)
-    code_cells = {(c.tool, c.alternative, c.compared_role) for c in matrix.CELLS}
+    code_cells = {(c.tool, c.alternative, c.compared_role, c.language) for c in matrix.CELLS}
 
     assert code_cells == verdict_approved_cells
     for cell in matrix.CELLS:
-        assert dict(cell.footprint) == footprints[(cell.tool, cell.alternative, cell.compared_role)]
+        key = (cell.tool, cell.alternative, cell.compared_role, cell.language)
+        assert dict(cell.footprint) == footprints[key]
     assert len(matrix.CELLS) == len(code_cells), "una celda repetida"
 
 
@@ -571,17 +648,23 @@ def test_prompt_footprint_of_the_code_is_the_measured_one():
     """El prompt que `server` reconstruye para cada tool da el `sha256` que midió la evaluación:
     si cambia `_guard` o el texto de la tool, este test lo dice (y la celda queda sin base).
 
-    Sin excepciones desde B2-affinity: la celda de lint, la única que perdió la base con los
-    prompts de la 0.36.0, se re-evaluó y salió de `CELLS`. La suite corre en `es` y en `en`, así
-    que una celda cuyo prompt dependa del idioma rompe aquí en una de las dos corridas."""
+    Las celdas con `language` (lint, desde la afinidad por idioma) se comprueban solo en su
+    idioma: la suite corre en `es` y en `en`, así que cada una se comprueba en una de las dos
+    corridas, y la del otro idioma tiene que tener OTRA huella (el prompt de lint depende del
+    idioma)."""
     import hashlib
 
+    language = i18n.response_language().value
     assert matrix.CELLS, "guarda: hay celdas que comprobar"
+    assert any(c.language == language for c in matrix.CELLS), "guarda: hay celda de este idioma"
     for cell in matrix.CELLS:
         prompt = server._affinity_prompt(cell.tool)
         assert prompt is not None
         digest = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
-        assert digest == cell.footprint["prompt_sha256"], cell.tool
+        if matrix.applies_to_language(cell, language):
+            assert digest == cell.footprint["prompt_sha256"], cell.tool
+        else:
+            assert digest != cell.footprint["prompt_sha256"], cell.tool
 
 
 def test_reevaluation_verdict_rejects_the_lint_cell_in_both_languages():

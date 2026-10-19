@@ -1,0 +1,25 @@
+**File: src/local_delegate/sections.py**
+
+**Error/Rule Summary:**
+
+*   **E501:** 6 (Line too long)
+*   **D101:** 5 (Missing docstring)
+*   **D102:** 3 (Missing docstring in public method)
+*   **RUF002:** 2 (Docstring contains ambiguous character)
+*   **C901:** 2 (Too complex)
+*   **D203:** 1 (incorrect-blank-line-before-class)
+*   **D211:** 1 (blank-line-before-class)
+*   **D212:** 1 (multi-line-summary-first-line)
+*   **D213:** 1 (multi-line-summary-second-line)
+*   **CPY001:** 1 (Missing copyright notice)
+*   **TC003:** 1 (Move standard library import)
+*   **D205:** 1 (1 blank line required between summary line and description)
+*   **D301:** 1 (Use `r"""` if any backslashes in a docstring)
+*   **D400:** 1 (First line should end with a period)
+*   **PLR2004:** 1 (Magic value used in comparison)
+*   **PLR0912:** 1 (Too many branches)
+*   **PLR0913:** 1 (Too many arguments in function definition)
+
+The file `src/local_delegate/sections.py` contains several issues related to code style and documentation. Specifically, there are 6 instances of lines exceeding the maximum length (E501), 5 missing docstrings (D101), and 3 missing docstrings for public methods (D102). Additionally, there are 2 instances of ambiguous characters in docstrings (RUF002), 2 instances of overly complex expressions (C901), and 1 instance of an incompatible warning (D203, D211, D212). There is also one missing copyright notice (CPY001), one instance of a standard library import issue (TC003), and one instance of a specific docstring formatting requirement (D205). Finally, there is one instance of a missing period at the end of a line (D400), one magic value usage (PLR2004), one too many branches (PLR0912), and one too many arguments in a function definition (PLR0913).
+
+(read server-side: 2627 chars ≈ 1368 Claude tokens that did not enter your context)

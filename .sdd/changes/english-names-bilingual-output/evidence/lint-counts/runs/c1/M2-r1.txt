@@ -1,0 +1,15 @@
+Resumen de Problemas:
+
+**Archivo src/a.py:**
+- D100: Falta la documentación en el módulo público (2)
+- D103: Falta la documentación en la función pública (4)
+- B006: No se deben utilizar estructuras de datos mutables para los valores predeterminados de los argumentos (1)
+
+**Archivo src/b.py:**
+- D100: Falta la documentación en el módulo público (2)
+- D103: Falta la documentación en la función pública (4)
+
+**Archivo src/c.py:**
+- T201: Se encontró la instrucción `print` (3)
+
+(leído server-side: 626 chars ≈ 326 tokens de Claude que no entraron a tu contexto)

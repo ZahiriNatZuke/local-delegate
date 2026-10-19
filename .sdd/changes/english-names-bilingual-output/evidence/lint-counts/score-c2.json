@@ -1,0 +1,758 @@
+{
+ "runs": "D:\\Projects\\ld-wt-lint\\.sdd\\changes\\english-names-bilingual-output\\evidence\\lint-counts\\runs\\c2",
+ "rows": [
+  {
+   "id": "M1",
+   "window": "M",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 3,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 3,
+   "wrong_counts": [],
+   "no_count": []
+  },
+  {
+   "id": "M1",
+   "window": "M",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 3,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 3,
+   "wrong_counts": [],
+   "no_count": []
+  },
+  {
+   "id": "M1",
+   "window": "M",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 3,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 3,
+   "wrong_counts": [],
+   "no_count": []
+  },
+  {
+   "id": "M2",
+   "window": "M",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 4,
+   "wrong_counts": [
+    "D103:[3, 4]!=[2, 3, 5]"
+   ],
+   "no_count": []
+  },
+  {
+   "id": "M2",
+   "window": "M",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 4,
+   "wrong_counts": [
+    "D103:[3, 4]!=[2, 3, 5]"
+   ],
+   "no_count": []
+  },
+  {
+   "id": "M2",
+   "window": "M",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 4,
+   "wrong_counts": [
+    "D103:[3, 4]!=[2, 3, 5]"
+   ],
+   "no_count": []
+  },
+  {
+   "id": "M3",
+   "window": "M",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 1,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 4,
+   "wrong_counts": [
+    "RET504:[0, 1, 2]!=[1, 2]",
+    "SIM102:[4]!=[2, 3, 5]"
+   ],
+   "no_count": []
+  },
+  {
+   "id": "M3",
+   "window": "M",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 1,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 4,
+   "wrong_counts": [
+    "RET504:[0, 1, 2]!=[1, 2]",
+    "SIM102:[4, 5]!=[2, 3, 5]"
+   ],
+   "no_count": []
+  },
+  {
+   "id": "M3",
+   "window": "M",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 1,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 4,
+   "wrong_counts": [
+    "RET504:[0, 1, 2]!=[1, 2]",
+    "SIM102:[4]!=[2, 3, 5]"
+   ],
+   "no_count": []
+  },
+  {
+   "id": "M4",
+   "window": "M",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 3,
+   "wrong_counts": [],
+   "no_count": [
+    "E711"
+   ]
+  },
+  {
+   "id": "M4",
+   "window": "M",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 3,
+   "wrong_counts": [],
+   "no_count": []
+  },
+  {
+   "id": "M4",
+   "window": "M",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 3,
+   "wrong_counts": [],
+   "no_count": [
+    "E711"
+   ]
+  },
+  {
+   "id": "M5",
+   "window": "M",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 13,
+   "wrong_counts": [
+    "PLR2004:[1, 2]!=[1]"
+   ],
+   "no_count": []
+  },
+  {
+   "id": "M5",
+   "window": "M",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 13,
+   "wrong_counts": [
+    "D101:[6]!=[5]",
+    "PLR2004:[1, 2]!=[1]"
+   ],
+   "no_count": []
+  },
+  {
+   "id": "M5",
+   "window": "M",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 13,
+   "wrong_counts": [
+    "D101:[6]!=[5]",
+    "PLR2004:[1, 2]!=[1]"
+   ],
+   "no_count": []
+  },
+  {
+   "id": "M6",
+   "window": "M",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 1,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 4,
+   "wrong_counts": [
+    "TS2554:[0, 1, 2]!=[1, 2]"
+   ],
+   "no_count": [
+    "TS2339",
+    "TS2550",
+    "TS4113"
+   ]
+  },
+  {
+   "id": "M6",
+   "window": "M",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 1,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 4,
+   "wrong_counts": [
+    "TS2554:[0, 1, 2]!=[1, 2]"
+   ],
+   "no_count": [
+    "TS2339",
+    "TS2550",
+    "TS4113"
+   ]
+  },
+  {
+   "id": "M6",
+   "window": "M",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 1,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 4,
+   "wrong_counts": [
+    "TS2554:[0, 1, 2]!=[1, 2]"
+   ],
+   "no_count": [
+    "TS2339",
+    "TS2550",
+    "TS4113"
+   ]
+  },
+  {
+   "id": "ME1",
+   "window": "ME",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 1,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 3,
+   "wrong_counts": [
+    "E501:[1, 3, 4, 5]!=[1, 2, 4]"
+   ],
+   "no_count": []
+  },
+  {
+   "id": "ME1",
+   "window": "ME",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 2,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 3,
+   "wrong_counts": [],
+   "no_count": []
+  },
+  {
+   "id": "ME1",
+   "window": "ME",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 2,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 3,
+   "wrong_counts": [],
+   "no_count": []
+  },
+  {
+   "id": "ME2",
+   "window": "ME",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 4,
+   "wrong_counts": [
+    "D100:[3, 4]!=[1, 3]",
+    "D103:[3, 4]!=[2, 3, 5]"
+   ],
+   "no_count": []
+  },
+  {
+   "id": "ME2",
+   "window": "ME",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 4,
+   "wrong_counts": [
+    "D103:[3, 4, 8]!=[2, 3, 5]"
+   ],
+   "no_count": []
+  },
+  {
+   "id": "ME2",
+   "window": "ME",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 4,
+   "wrong_counts": [
+    "D103:[3, 4]!=[2, 3, 5]"
+   ],
+   "no_count": []
+  },
+  {
+   "id": "ME3",
+   "window": "ME",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 4,
+   "wrong_counts": [
+    "SIM102:[3, 4]!=[2, 3, 5]"
+   ],
+   "no_count": []
+  },
+  {
+   "id": "ME3",
+   "window": "ME",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 4,
+   "wrong_counts": [
+    "SIM102:[3, 4]!=[2, 3, 5]"
+   ],
+   "no_count": []
+  },
+  {
+   "id": "ME3",
+   "window": "ME",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 4,
+   "wrong_counts": [
+    "SIM102:[4]!=[2, 3, 5]"
+   ],
+   "no_count": []
+  },
+  {
+   "id": "ME4",
+   "window": "ME",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 3,
+   "wrong_counts": [],
+   "no_count": []
+  },
+  {
+   "id": "ME4",
+   "window": "ME",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 3,
+   "wrong_counts": [],
+   "no_count": []
+  },
+  {
+   "id": "ME4",
+   "window": "ME",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 3,
+   "wrong_counts": [],
+   "no_count": []
+  },
+  {
+   "id": "ME5",
+   "window": "ME",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 13,
+   "wrong_counts": [],
+   "no_count": []
+  },
+  {
+   "id": "ME5",
+   "window": "ME",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 13,
+   "wrong_counts": [],
+   "no_count": []
+  },
+  {
+   "id": "ME5",
+   "window": "ME",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 13,
+   "wrong_counts": [],
+   "no_count": []
+  },
+  {
+   "id": "ME6",
+   "window": "ME",
+   "rep": 1,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 3,
+   "codes": 1.0,
+   "files": 0.8888888888888888,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 4,
+   "wrong_counts": [
+    "TS2550:[8]!=[1, 2, 6]",
+    "TS2554:[0, 1, 2]!=[1, 2]"
+   ],
+   "no_count": []
+  },
+  {
+   "id": "ME6",
+   "window": "ME",
+   "rep": 2,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 4,
+   "wrong_counts": [
+    "TS2554:[0, 1, 2]!=[1, 2]"
+   ],
+   "no_count": []
+  },
+  {
+   "id": "ME6",
+   "window": "ME",
+   "rep": 3,
+   "model": "gemma3-4b",
+   "chunks": 1,
+   "finish_reason": "stop",
+   "fidelity_total": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "missing_codes": [],
+   "named_truth_codes": 4,
+   "wrong_counts": [
+    "TS2554:[0, 1, 2]!=[1, 2]"
+   ],
+   "no_count": []
+  }
+ ],
+ "summary": {
+  "ruff_es": {
+   "calls": 0,
+   "models": [],
+   "multi_chunk": 0,
+   "codes": null,
+   "files": null,
+   "model_codes": null,
+   "fidelity_mean": null,
+   "cut": 0,
+   "wrong_counts": 0,
+   "no_count": 0,
+   "answers_with_wrong_counts": 0
+  },
+  "ruff_en": {
+   "calls": 0,
+   "models": [],
+   "multi_chunk": 0,
+   "codes": null,
+   "files": null,
+   "model_codes": null,
+   "fidelity_mean": null,
+   "cut": 0,
+   "wrong_counts": 0,
+   "no_count": 0,
+   "answers_with_wrong_counts": 0
+  },
+  "long_es": {
+   "calls": 0,
+   "models": [],
+   "multi_chunk": 0,
+   "codes": null,
+   "files": null,
+   "model_codes": null,
+   "fidelity_mean": null,
+   "cut": 0,
+   "wrong_counts": 0,
+   "no_count": 0,
+   "answers_with_wrong_counts": 0
+  },
+  "long_en": {
+   "calls": 0,
+   "models": [],
+   "multi_chunk": 0,
+   "codes": null,
+   "files": null,
+   "model_codes": null,
+   "fidelity_mean": null,
+   "cut": 0,
+   "wrong_counts": 0,
+   "no_count": 0,
+   "answers_with_wrong_counts": 0
+  },
+  "forced_long_es": {
+   "calls": 0,
+   "models": [],
+   "multi_chunk": 0,
+   "codes": null,
+   "files": null,
+   "model_codes": null,
+   "fidelity_mean": null,
+   "cut": 0,
+   "wrong_counts": 0,
+   "no_count": 0,
+   "answers_with_wrong_counts": 0
+  },
+  "forced_long_en": {
+   "calls": 0,
+   "models": [],
+   "multi_chunk": 0,
+   "codes": null,
+   "files": null,
+   "model_codes": null,
+   "fidelity_mean": null,
+   "cut": 0,
+   "wrong_counts": 0,
+   "no_count": 0,
+   "answers_with_wrong_counts": 0
+  },
+  "mechanical_es": {
+   "calls": 18,
+   "models": [
+    "gemma3-4b"
+   ],
+   "multi_chunk": 0,
+   "codes": 1.0,
+   "files": 1.0,
+   "model_codes": 1.0,
+   "fidelity_mean": 0.8333,
+   "cut": 0,
+   "wrong_counts": 17,
+   "no_count": 11,
+   "answers_with_wrong_counts": 12
+  },
+  "mechanical_en": {
+   "calls": 18,
+   "models": [
+    "gemma3-4b"
+   ],
+   "multi_chunk": 0,
+   "codes": 1.0,
+   "files": 0.9938,
+   "model_codes": 1.0,
+   "fidelity_mean": 0.4444,
+   "cut": 0,
+   "wrong_counts": 12,
+   "no_count": 0,
+   "answers_with_wrong_counts": 10
+  }
+ }
+}

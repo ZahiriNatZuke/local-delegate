@@ -1,0 +1,12 @@
+**Resumen de Problemas**
+
+**src/adapters/claude-json.ts:** 1 error TS2554 relacionado con la cantidad de argumentos.
+**src/adapters/codex/index.ts:** 1 error TS2550 relacionado con la propiedad 'hasOwn' y la necesidad de actualizar la versión del compilador.
+**src/cli/commands/export.ts:** 2 errores TS2550 relacionados con la propiedad 'at' y la necesidad de actualizar la versión del compilador.
+**src/cli/commands/import.ts:** 1 error TS2550 relacionado con la propiedad 'at' y la necesidad de actualizar la versión del compilador.
+**src/cli/index.ts:** 1 error TS2550 relacionado con la propiedad 'hasOwn' y la necesidad de actualizar la versión del compilador.
+**src/cli/ui/style.ts:** 1 error TS2550 relacionado con la propiedad 'replaceAll' y la necesidad de actualizar la versión del compilador.
+**src/cli/ui/width.ts:** 1 error TS2339 relacionado con la propiedad 'Segmenter' y la falta de declaración en la clase base.
+**src/io/fs/atomic.ts:** 1 error TS4113 relacionado con el modificador 'override' y la falta de declaración en la clase base.
+
+(leído server-side: 1647 chars ≈ 857 tokens de Claude que no entraron a tu contexto)

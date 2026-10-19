@@ -1,0 +1,11 @@
+Here's a summary of the issues, grouped by file and prioritized by relevance:
+
+**tools/gen.py**
+
+*   **Module Level Imports:** This file contains four instances of the error E402, indicating that module-level imports are not located at the top of the file. This suggests a potential organizational issue with import statements.
+*   **Line Length Violations:** The file also has three instances of the E501 error, signifying lines exceeding the specified length. Specifically, lines 20, 31, and 32 are flagged.
+*   **None Comparison:** Finally, there is one E711 error, highlighting an improper comparison to `None`. The recommended correction involves using `cond is None` instead.
+
+Total errors: 4
+
+(read server-side: 438 chars ≈ 228 Claude tokens that did not enter your context)

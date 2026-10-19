@@ -1,0 +1,56 @@
+**src/local_delegate/web/metrics.py**
+* **E501** Línea demasiado larga: 244
+* **ANN201** Falta anotación de tipo para la función de retorno: 16
+* **COM812** Falta coma final: 14
+* **RUF001** La cadena contiene un carácter ambiguo: 11
+* **D103** Falta la cadena de documentación en una función pública: 7
+* **FAST002** Dependencia de FastAPI sin usar `Annotated`: 7
+* **SLF001** Acceso a un miembro privado: 7
+* **TID252** Preferir importaciones absolutas sobre relativas desde módulos padres: 14
+* **RUF002** La cadena de documentación contiene un carácter ambiguo: 3
+* **D205** Se requiere una línea en blanco entre la línea de resumen y la descripción: 3
+* **D209** Las comillas de cierre de una cadena de documentación multilínea deben estar en una línea separada: 3
+* **PLW0603** Se desaconseja el uso de la sentencia `global` para actualizar variables: 2
+* **PLR2004** Valor mágico utilizado en una comparación: 1
+* **PLR0915** Demasiadas sentencias: 1
+* **C901** La función es demasiado compleja: 1
+* **SIM108** Usar el operador ternario en lugar de un bloque `if-else`: 1
+* **SIM105** Usar `contextlib.suppress` en lugar de `try-except-pass`: 1
+* **S110** Se detectó un bloque `try-except-pass`, considere registrar la excepción: 1
+* **BLE001** No capturar excepciones ciegas: 3
+* **FBT001** Argumento posicional de tipo booleano en la definición de la función: 1
+* **PLC0415** La importación debería estar en el nivel superior del archivo: 1
+* **TRY300** Considere mover esta sentencia a un bloque `else`: 1
+* **T201** Se encontró un `print`: 1
+* **PLW2901** La variable del bucle `for` es sobrescrita por el objetivo de asignación: 1
+
+**src/local_delegate/web/sysinfo.py**
+* **PLW1510** `subprocess.run` sin el argumento `check` explícito: 4
+* **S607** Inicio de un proceso con una ruta de ejecutable parcial: 4
+* **BLE001** No capturar excepciones ciegas: 3
+* **PLR2004** Valor mágico utilizado en una comparación: 3
+* **PTH123** `open()` debería ser reemplazado por `Path.open()`: 3
+* **D403** La primera palabra de la cadena de documentación debería estar capitalizada: 3
+* **COM812** Falta coma final: 2
+* **PLW0603** Se desaconseja el uso de la sentencia `global` para actualizar variables: 2
+* **PTH208** Usar `pathlib.Path.iterdir()` en su lugar: 1
+* **S603** Llamada a `subprocess`: verificar la ejecución de entradas no confiables: 1
+* **CPY001** Falta el aviso de derechos de autor al principio del archivo: 1
+* **PLC0415** La importación debería estar en el nivel superior del archivo: 1
+
+**src/local_delegate/web/auth.py**
+* **ANN001** Falta anotación de tipo para el argumento de la función: 7
+* **COM812** Falta coma final: 3
+* **D400** La primera línea debería terminar con un punto: 2
+* **ANN201** Falta anotación de tipo para la función de retorno: 1
+* **ANN202** Falta anotación de tipo de retorno para una función privada: 1
+* **D107** Falta la cadena de documentación en `__init__`: 1
+* **D102** Falta la cadena de documentación en un método público: 1
+* **CPY001** Falta el aviso de derechos de autor al principio del archivo: 1
+
+**src/local_delegate/web/__init__.py**
+* **CPY001** Falta el aviso de derechos de autor al principio del archivo: 1
+
+Found 388 errors.
+
+(leído server-side: 33805 chars ≈ 17606 tokens de Claude que no entraron a tu contexto)

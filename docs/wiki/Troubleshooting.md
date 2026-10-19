@@ -199,6 +199,35 @@ generación. Si además lleva **«lento ×0,37»**, el modelo generó a un 37 % 
 backend local, el evento guarda `free_ram_mb`, y una RAM libre muy baja suele querer decir que
 Windows echó parte del modelo de la VRAM (ver [Savings & metrics](Savings-and-metrics.md#qué-se-mide)).
 
+## Queda muy poca RAM libre con un modelo grande cargado
+
+Con los MoE grandes (`qwen36-35b-a3b`, 16,5 GB de GGUF; `gemma4-26b-a4b`, 12,7 GB) y
+`--load-mode mmap`, llama-server mapea el fichero entero en RAM y deja en la CPU los expertos de las
+capas de `-ncmoe`: en una PC de 32 GB compartida con navegador o video quedan entre 0,4 y 1,4 GB
+libres **mientras el modelo espera su `ttl`** (medido en la pasada en vivo de la 0.36.0; durante las
+llamadas no bajó de 1,5 GB). No es una fuga: es el modelo cargado. El riesgo es que otra app
+pesada abierta en ese rato fuerce a Windows a sacar páginas del modelo (llamada «lenta») o, en el
+peor caso, a quedarse sin memoria.
+
+`local-delegate` no descarga modelos por su cuenta: la palanca es el `ttl` de cada modelo en la
+config de llama-swap. Al descargarse, las páginas del GGUF pasan a la lista *standby* de Windows,
+que cuenta como RAM disponible y se recupera sola si otra app la pide; si nadie la pide, la
+siguiente carga las vuelve a mapear sin leer el disco. Por eso un `ttl` corto para los modelos
+grandes cuesta poco: acorta el rato con la RAM justa y una ráfaga de llamadas seguidas sigue
+caliente. Para bajarlo a 60 s solo en los dos grandes:
+
+```bash
+local-delegate llamaswap residency --ttl gemma4-26b-a4b=60 --ttl qwen36-35b-a3b=60 --dry-run
+local-delegate llamaswap residency --ttl gemma4-26b-a4b=60 --ttl qwen36-35b-a3b=60
+```
+
+La escritura deja copia (`.bak`) y es atómica; con `-watch-config`, llama-swap recarga la config
+(y descarga lo que tenga cargado), así que no lo hagas en mitad de una medición. Para comprobar el
+efecto: carga el modelo con una llamada del rol largo y mira la RAM libre en el panel (o con
+`Get-Counter '\Memory\Available MBytes'`) antes y después de que pase el `ttl`; la línea
+`DESCARGADO por ttl` del monitor de llama-swap marca el momento. Si la recarga en frío de una
+llamada aislada pesa más que la RAM ganada, vuelve al valor anterior con `--ttl <modelo>=120`.
+
 ## Una delegación espera turno («esperando turno del daemon»)
 
 Es el **turno** del daemon, no una avería: su modelo choca en llama-swap con uno que está en uso

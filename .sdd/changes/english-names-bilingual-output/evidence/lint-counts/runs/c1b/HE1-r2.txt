@@ -1,0 +1,13 @@
+**app/main.py**
+* **E501**: 2 instances of line too long.
+* **F401**: 1 instance of unused import `os`.
+
+**app/util.py**
+* **F401**: 2 instances of unused imports `sys` and `re`.
+* **E501**: 1 instance of line too long.
+* **W291**: 1 instance of trailing whitespace.
+
+**app/cli.py**
+* **E501**: 1 instance of line too long.
+
+(read server-side: 340 chars ≈ 177 Claude tokens that did not enter your context)
