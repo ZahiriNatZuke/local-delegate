@@ -1,0 +1,56 @@
+**src/local_delegate/web/metrics.py**
+* **E501**: 231 Line too long
+* **ANN201**: 16 Missing return type annotation for public function
+* **RUF001**: 15 String contains ambiguous character
+* **COM812**: 11 Trailing comma missing
+* **SLF001**: 8 Private member accessed
+* **FAST002**: 8 FastAPI dependency without `Annotated`
+* **D103**: 6 Missing docstring in public function
+* **PLW0603**: 2 Using the global statement is discouraged
+* **RUF002**: 2 Docstring contains ambiguous character
+* **D205**: 3 1 blank line required between summary line and description
+* **D209**: 3 Multi-line docstring closing quotes should be on a separate line
+* **TID252**: 14 Prefer absolute imports over relative imports
+* **PLR2004**: 1 Magic value used in comparison
+* **PLR0915**: 1 Too many statements
+* **C901**: 1 Complexity too high
+* **SIM108**: 1 Use ternary operator instead of `if`-`else`-block
+* **SIM105**: 1 Use `contextlib.suppress` instead of `try`-`except`-`pass`
+* **S110**: 1 `try`-`except`-`pass` detected
+* **BLE001**: 3 Do not catch blind exception
+* **FBT001**: 1 Boolean-typed positional argument in function definition
+* **PLC0415**: 1 `import` should be at the top-level
+* **TRY300**: 1 Consider moving statement to an `else` block
+* **T201**: 1 `print` found
+* **PLW2901**: 1 Variable overwritten by assignment target
+
+**src/local_delegate/web/sysinfo.py**
+* **BLE001**: 4 Do not catch blind exception
+* **S607**: 4 Starting a process with a partial executable path
+* **PLW1510**: 4 `subprocess.run` without explicit `check` argument
+* **PTH123**: 3 `open()` should be replaced by `Path.open()`
+* **PLR2004**: 3 Magic value used in comparison
+* **PLW0603**: 2 Using the global statement is discouraged
+* **D403**: 3 First word of the docstring should be capitalized
+* **COM812**: 2 Trailing comma missing
+* **CPY001**: 1 Missing copyright notice at top of file
+* **PLC0415**: 1 `import` should be at the top-level
+* **PTH208**: 1 Use `pathlib.Path.iterdir()` instead
+* **S603**: 1 Check for execution of untrusted input
+
+**src/local_delegate/web/auth.py**
+* **ANN001**: 10 Missing type annotation for function argument
+* **COM812**: 3 Trailing comma missing
+* **D400**: 2 First line should end with a period
+* **ANN201**: 1 Missing return type annotation for public function
+* **ANN202**: 1 Missing return type annotation for private function
+* **CPY001**: 1 Missing copyright notice at top of file
+* **D102**: 1 Missing docstring in public method
+* **D107**: 1 Missing docstring in `__init__`
+
+**src/local_delegate/web/__init__.py**
+* **CPY001**: 1 Missing copyright notice at top of file
+
+Found 388 errors.
+
+(read server-side: 33805 chars ≈ 17606 Claude tokens that did not enter your context)

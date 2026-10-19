@@ -1,0 +1,5 @@
+**Resumen de Problemas**
+
+El archivo `lib/io.py` presenta dos problemas de formato en el bloque de importaciones (**I001**). El archivo `lib/net.py` también tiene dos problemas de formato en el bloque de importaciones (**I001**). En `lib/net.py` se identifica una única vulnerabilidad relacionada con el uso de múltiples sentencias `if` (**SIM102**).  El archivo `lib/db.py` contiene tres problemas de formato en el bloque de importaciones (**I001**) y dos problemas relacionados con el uso de múltiples sentencias `if` (**SIM102**).  Además, en `lib/db.py` se detecta una regla de retorno innecesaria (**RET504**) y en `lib/net.py` también se identifica una regla de retorno innecesaria (**RET504**).  En `lib/db.py` se encuentra una regla de anotación de tipo que utiliza `List` en lugar de `list` (**UP006**), y en `lib/io.py` y `lib/io.py` se detecta una regla de anotación de tipo que utiliza `Dict` en lugar de `dict` (**UP006**).
+
+(leído server-side: 784 chars ≈ 408 tokens de Claude que no entraron a tu contexto)

@@ -1,0 +1,27 @@
+**src/local_delegate/sections.py**
+
+*   **Falta de docstrings**:
+    *   **D101**: 5 clases públicas sin docstring.
+    *   **D102**: 3 métodos públicos sin docstring.
+*   **Problemas de formato y estilo**:
+    *   **E501**: 4 líneas demasiado largas.
+    *   **D400**: 3 docstrings cuya primera línea debería terminar con un punto.
+    *   **D415**: 2 docstrings cuya primera línea debería terminar con puntuación de cierre.
+    *   **D205**: 1 docstring requiere una línea en blanco entre el resumen y la descripción.
+    *   **COM812**: 1 falta de coma final.
+    *   **D301**: 1 docstring requiere el prefijo `r` por el uso de barras invertidas.
+*   **Complejidad y diseño**:
+    *   **C901**: 3 funciones con complejidad excesiva.
+    *   **PLR0912**: 1 función con demasiadas ramificaciones.
+    *   **PLR0913**: 1 función con demasiados argumentos.
+    *   **PLR2004**: 1 uso de valor mágico en una comparación.
+*   **Otros**:
+    *   **RUF002**: 2 docstrings contienen caracteres ambiguos.
+    *   **CPY001**: 1 aviso de falta de notificación de derechos de autor al inicio del archivo.
+    *   **TC003**: 1 importación de la biblioteca estándar debe moverse a un bloque de comprobación de tipos.
+
+Found 30 errors.
+
+Sin mencionar (del log, no los nombra el resumen): D203, D211, D212
+
+(leído server-side: 14237 chars ≈ 7415 tokens de Claude que no entraron a tu contexto)

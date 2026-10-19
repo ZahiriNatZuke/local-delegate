@@ -1,0 +1,37 @@
+**src/local_delegate/benchmark.py**
+* **COM812**: 12 instances of missing trailing commas.
+* **TRY003**: 8 instances of specifying long messages outside the exception class.
+* **D102**: 7 instances of missing docstrings in public methods.
+* **T201**: 7 instances of `print` statements found.
+* **EM102**: 6 instances of exceptions using f-string literals.
+* **D107**: 5 instances of missing docstrings in `__init__`.
+* **D101**: 4 instances of missing docstrings in public classes.
+* **D105**: 4 instances of missing docstrings in magic methods.
+* **D103**: 4 instances of missing docstrings in public functions.
+* **PLR2004**: 3 instances of magic values used in comparisons.
+* **EM101**: 2 instances of exceptions using string literals.
+* **PLC0415**: 2 instances of imports not being at the top-level.
+* **PLR0913**: 2 instances of too many arguments in function definitions.
+* **E501**: 3 instances of lines being too long.
+* **S603**: 2 instances of untrusted input in `subprocess` calls.
+* **D205**, **D209**, **FBT003**, **PLR0912**, **PLR0915**, **PLW1510**, **R036**, **TRY301**, **C901**: 1 instance each.
+
+**src/local_delegate/agents.py**
+* **CPY001**: 1 instance of missing copyright notice.
+* **TC003**: 1 instance of moving standard library imports to a type-checking block.
+* **COM812**: 1 instance of missing trailing comma.
+* **D401**: 1 instance of docstring not using imperative mood.
+* **PLR2004**: 1 instance of magic value used in comparison.
+
+**src/local_delegate/autostart.py**
+* **CPY001**: 1 instance of missing copyright notice.
+* **D401**: 1 instance of docstring not using imperative mood.
+* **S603**: 1 instance of untrusted input in `subprocess` calls.
+
+**src/local_delegate/__init__.py**
+* **CPY001**: 1 instance of missing copyright notice.
+
+**src/local_delegate/__main__.py**
+* **CPY001**: 1 instance of missing copyright notice.
+
+(read server-side: 8589 chars ≈ 4473 Claude tokens that did not enter your context)

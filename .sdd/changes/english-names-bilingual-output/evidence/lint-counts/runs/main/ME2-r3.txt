@@ -1,0 +1,9 @@
+**Summary of Issues**
+
+**src/a.py:** This file contains 3 instances of the **Missing docstring in public module** error (**D100**). Additionally, it has 3 instances of the **Missing docstring in public function** error (**D103**). Finally, it includes one instance of the **Do not use mutable data structures for argument defaults** warning (**B006**).
+
+**src/b.py:** This file presents 4 instances of the **Missing docstring in public module** error (**D100**) and 4 instances of the **Missing docstring in public function** error (**D103**).
+
+**src/c.py:** This file has 3 instances of the **Missing docstring in public module** error (**D100**) and 3 instances of the **`print` found** test (**T201**).
+
+(read server-side: 626 chars ≈ 326 Claude tokens that did not enter your context)

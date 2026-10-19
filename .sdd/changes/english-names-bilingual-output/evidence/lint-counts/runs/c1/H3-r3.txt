@@ -1,0 +1,15 @@
+**lib/net.py**
+* **SIM102**: Tres instancias donde se recomienda usar una única sentencia `if`.
+* **RET504**: Una asignación innecesaria antes de un `return`.
+* **I001**: El bloque de importación no está ordenado o formateado.
+
+**lib/io.py**
+* **UP006**: Dos casos donde se debe usar `dict` en lugar de `Dict` para anotaciones de tipo.
+* **I001**: Dos bloques de importación no están ordenados o formateados.
+
+**lib/db.py**
+* **SIM102**: Dos instancias donde se recomienda usar una única sentencia `if`.
+* **RET504**: Una asignación innecesaria antes de un `return`.
+* **UP006**: Se debe usar `list` en lugar de `List` para la anotación de tipo.
+
+(leído server-side: 784 chars ≈ 408 tokens de Claude que no entraron a tu contexto)

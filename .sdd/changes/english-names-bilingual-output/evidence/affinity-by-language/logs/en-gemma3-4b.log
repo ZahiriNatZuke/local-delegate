@@ -1,0 +1,14 @@
+warmup resume-ruff-tres-reglas r0 chars=459 error=False
+case resume-ruff-tres-reglas r1 chars=459 error=False
+case resume-ruff-docstrings r1 chars=906 error=False
+case resume-ruff-un-solo-archivo r1 chars=564 error=False
+case resume-ruff-cinco-reglas r1 chars=944 error=False
+case resume-ruff-tres-reglas r2 chars=745 error=False
+case resume-ruff-docstrings r2 chars=895 error=False
+case resume-ruff-un-solo-archivo r2 chars=565 error=False
+case resume-ruff-cinco-reglas r2 chars=851 error=False
+case resume-ruff-tres-reglas r3 chars=534 error=False
+case resume-ruff-docstrings r3 chars=922 error=False
+case resume-ruff-un-solo-archivo r3 chars=567 error=False
+case resume-ruff-cinco-reglas r3 chars=862 error=False
+12 rows -> benchmarks\afinidad-2026-10\reevaluation-lint-counts\results\en\gemma3-4b.jsonl; problems=0

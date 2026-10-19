@@ -1,0 +1,14 @@
+**src/a.py**
+* **Missing docstring in public function**: 2 occurrences of D103.
+* **Missing docstring in public module**: 1 occurrence of D100.
+* **Do not use mutable data structures for argument defaults**: 1 occurrence of B006.
+
+**src/b.py**
+* **Missing docstring in public function**: 3 occurrences of D103.
+* **Missing docstring in public module**: 1 occurrence of D100.
+
+**src/c.py**
+* **Print found**: 3 occurrences of T201.
+* **Missing docstring in public module**: 1 occurrence of D100.
+
+(read server-side: 626 chars ≈ 326 Claude tokens that did not enter your context)

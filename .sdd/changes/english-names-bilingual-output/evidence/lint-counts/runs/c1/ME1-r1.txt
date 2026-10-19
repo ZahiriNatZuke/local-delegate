@@ -1,0 +1,9 @@
+**Summary of Issues**
+
+**app/main.py:** This file contains two **line length violations** (E501) at lines 12 and 40. Additionally, there is one **unused import** (F401) of the `os` module at line 7.
+
+**app/util.py:** This file presents three **unused import** (F401) statements for `sys`, `re`, and `os`. Furthermore, it has one **line length violation** (E501) at line 55 and one **trailing whitespace** (W291) at line 70.
+
+**app/cli.py:** This file has one **line length violation** (E501) at line 21.
+
+(read server-side: 340 chars ≈ 177 Claude tokens that did not enter your context)

@@ -1,0 +1,11 @@
+**Resumen de Problemas por Archivo**
+
+**src/a.py:** Este archivo presenta 3 problemas de la regla D103, relacionados con la falta de documentación en funciones públicas, y 1 problema de la regla B006, que advierte sobre el uso de estructuras de datos mutables como argumentos predeterminados.
+
+**src/b.py:** Este archivo tiene 4 problemas de la regla D103, también relacionados con la falta de documentación en funciones públicas, y 3 problemas de la regla T201, indicando la presencia de la función `print`.
+
+**src/c.py:** Este archivo contiene 3 problemas de la regla T201, que señalan la presencia de la función `print` en varias líneas.
+
+**Cantidad de Errores/Reglas:** D103: 3, D100: 3, T201: 3, B006: 1.
+
+(leído server-side: 626 chars ≈ 326 tokens de Claude que no entraron a tu contexto)

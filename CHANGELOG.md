@@ -6,6 +6,24 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Cambiado
+
+- **`local_lint_summary` copia los recuentos por regla en vez de contarlos** (llamada única). El
+  inventario de ficheros y códigos que el programa pone delante del log lleva ahora, junto a cada
+  código, las veces que aparece en todo el log, y el prompt pide nombrar cada regla por su código y
+  copiar esa cifra. En la pasada en vivo de la 0.36.0 el resumen en español de un log de `ruff` de
+  14 k caracteres dio 2 de 15 cifras mal (D101 6 en vez de 5, D400 4 en vez de 3); con el cambio,
+  0 de 15 en las 3 repeticiones, y el rol largo en español nombra todos los códigos que antes
+  traducía. El lint troceado no cambia. Medición:
+  `.sdd/changes/english-names-bilingual-output/evidence/lint-counts/live.md`.
+- **Vuelve la afinidad de `local_lint_summary`, una celda por idioma.** Si `gemma4-26b-a4b` ya está
+  cargado, el lint corto puede ir a él en vez de cargar `gemma3-4b`. Para eso la llamada del rol
+  mecánico también recibe el inventario con los recuentos (sin él, el 26B no nombraba los códigos
+  en español), y como el prompt de lint depende del idioma de respuesta, cada celda lleva su idioma
+  (`matrix.Cell.language`): la del otro idioma ni se usa ni hace avisar a `doctor`. Aprobadas en
+  `es` y en `en` en 3 de 3 repeticiones. Medición:
+  `.sdd/changes/english-names-bilingual-output/evidence/affinity-by-language/live.md`.
+
 ## [0.36.0] - 2026-10-18
 
 Esta versión hace que todo `local-delegate` hable **en español o en inglés**: el CLI y su `--help`,

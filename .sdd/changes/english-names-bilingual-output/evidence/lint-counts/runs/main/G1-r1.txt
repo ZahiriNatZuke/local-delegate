@@ -1,0 +1,47 @@
+**src/local_delegate/benchmark.py**
+* **COM812** Falta la coma final: 14
+* **TRY003** Evitar especificar mensajes largos fuera de la clase de excepción: 8
+* **D102** Falta la cadena de documentación en un método público: 7
+* **T201** Se encontró la función `print`: 7
+* **D107** Falta la cadena de documentación en `__init__`: 5
+* **EM102** La excepción no debe usar un literal de cadena f-string, asigne primero a una variable: 5
+* **D101** Falta la cadena de documentación en una clase pública: 3
+* **D105** Falta la cadena de documentación en un método mágico: 3
+* **D103** Falta la cadena de documentación en una función pública: 3
+* **PLR2004** Valor mágico utilizado en una comparación, considere reemplazarlo por una variable constante: 3
+* **EM101** La excepción no debe usar un literal de cadena, asigne primero a una variable: 2
+* **PLC0415** La importación debe estar en el nivel superior del archivo: 2
+* **TC003** Mover la importación de la biblioteca estándar a un bloque de comprobación de tipos: 2
+* **PLR0913** Demasiados argumentos en la definición de la función: 2
+* **E501** Línea demasiado larga: 3
+* **S603** Llamada a `subprocess`: comprobar la ejecución de entradas no confiables: 2
+* **D205** Se requiere una línea en blanco entre la línea de resumen y la descripción: 1
+* **D209** Las comillas de cierre de una cadena de documentación multilínea deben estar en una línea separada: 1
+* **D301** Use `r"""` si hay barras invertidas en una cadena de documentación: 1
+* **FBT003** Valor posicional booleano en la llamada a la función: 1
+* **PLW1510** `subprocess.run` sin el argumento `check` explícito: 1
+* **PLR0912** Demasiadas ramificaciones: 1
+* **PLR0915** Demasiadas sentencias: 1
+* **RUF036** `None` no está al final de la unión de tipos: 1
+* **TRY301** Abstraiga el `raise` a una función interna: 1
+* **C901** `run_benchmark` es demasiado complejo: 1
+
+**src/local_delegate/agents.py**
+* **CPY001** Falta el aviso de derechos de autor al principio del archivo: 1
+* **TC003** Mover la importación de la biblioteca estándar a un bloque de comprobación de tipos: 1
+* **COM812** Falta la coma final: 1
+* **D401** La primera línea de la cadena de documentación debe estar en modo imperativo: 1
+* **PLR2004** Valor mágico utilizado en una comparación, considere reemplazarlo por una variable constante: 1
+
+**src/local_delegate/autostart.py**
+* **CPY001** Falta el aviso de derechos de autor al principio del archivo: 1
+* **D401** La primera línea de la cadena de documentación debe estar en modo imperativo: 1
+* **S603** Llamada a `subprocess`: comprobar la ejecución de entradas no confiables: 1
+
+**src/local_delegate/__init__.py**
+* **CPY001** Falta el aviso de derechos de autor al principio del archivo: 1
+
+**src/local_delegate/__main__.py**
+* **CPY001** Falta el aviso de derechos de autor al principio del archivo: 1
+
+(leído server-side: 8589 chars ≈ 4473 tokens de Claude que no entraron a tu contexto)

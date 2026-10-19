@@ -1,0 +1,13 @@
+**app/main.py**
+* **E501**: 2 instances of line length exceeding the limit.
+* **F401**: 1 instance of an unused import.
+
+**app/util.py**
+* **F401**: 2 instances of unused imports.
+* **E501**: 1 instance of line length exceeding the limit.
+* **W291**: 1 instance of trailing whitespace.
+
+**app/cli.py**
+* **E501**: 1 instance of line length exceeding the limit.
+
+(read server-side: 340 chars ≈ 177 Claude tokens that did not enter your context)

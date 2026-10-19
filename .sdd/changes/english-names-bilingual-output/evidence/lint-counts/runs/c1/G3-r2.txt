@@ -1,0 +1,27 @@
+**src/app/core/decorators/throttle.decorator.ts**
+* **Uso de definición de componente de React** (4): Los componentes `StrictThrottle`, `ModerateThrottle`, `LenientThrottle` y `SkipThrottle` están definidos como funciones de flecha.
+* **Uso de separadores numéricos** (3): Faltan separadores en literales numéricos largos.
+* **Uso de tipo explícito** (5): Faltan tipos de retorno en las funciones.
+* **Uso de tipo de retorno explícito** (5): Faltan tipos de retorno en las funciones.
+
+**src/app/core/decorators/log-audit.decorator.ts**
+* **Uso de definición de componente de React** (1): El componente `LogAudit` está definido como una función de flecha.
+* **Uso de definiciones de tipo consistentes** (1): Se detectó el uso de un tipo que debería ser una interfaz.
+* **Uso de tipo explícito** (1): Falta el tipo de retorno en la función.
+* **Uso de tipo de retorno explícito** (1): Falta el tipo de retorno en la función.
+
+**src/app/core/filters/http-exception.filter.ts**
+* **Uso de tipo explícito** (1): Falta el tipo de retorno en el miembro.
+* **Uso de tipo de retorno explícito** (1): Falta el tipo de retorno en la función.
+* **Uso de no ternario** (1): Se detectó un operador ternario inesperado.
+* **Uso de this en métodos de clase** (1): Se esperaba el uso de `this` en el método `catch`.
+
+**src/app/core/decorators/app-controller.decorator.ts**
+* **Uso de tipo explícito** (1): Falta el tipo de retorno en la función.
+* **Uso de tipo de retorno explícito** (1): Falta el tipo de retorno en la función.
+
+Found 125 errors.
+
+Sin mencionar (del log, no los nombra el resumen): lint/nursery/useExplicitReturnType, lint/nursery/useExplicitType, lint/nursery/useReactFunctionComponentDefinition, lint/style/useNumericSeparators, lint/style/useConsistentTypeDefinitions, lint/style/noTernary, lint/nursery/useThisInClassMethods
+
+(leído server-side: 22235 chars ≈ 11580 tokens de Claude que no entraron a tu contexto)

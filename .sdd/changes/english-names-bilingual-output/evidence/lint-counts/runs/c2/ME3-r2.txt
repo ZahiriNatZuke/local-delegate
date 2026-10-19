@@ -1,0 +1,11 @@
+**Summary of Issues by File**
+
+**lib/net.py:** This file exhibits the most issues. It contains 4 instances of the import sorting rule (**SIM102**) and 1 instance of the `return` statement rule (**RET504**). Additionally, it has 3 instances of the import formatting rule (**I001**).
+
+**lib/io.py:** This file presents 3 instances of the import sorting rule (**SIM102**) and 3 instances of the `dict` type annotation rule (**UP006**). It also contains 2 instances of the import formatting rule (**I001**).
+
+**lib/db.py:** This file has 4 instances of the import sorting rule (**SIM102**) and 1 instance of the `list` type annotation rule (**UP006**). Furthermore, it includes 1 instance of the `return` statement rule (**RET504**).
+
+Found 13 errors.
+
+(read server-side: 784 chars ≈ 408 Claude tokens that did not enter your context)

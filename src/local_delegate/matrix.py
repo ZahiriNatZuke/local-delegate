@@ -41,12 +41,23 @@ class Cell:
 
     `footprint` es la huella del ALTERNATIVO tal como la escribió la evaluación (`huella` en
     `veredicto.json`): la de `footprint.footprint` con su config y el prompt de la tool.
+
+    `language` (affinity by language, 2026-10-19): the response language the cell was measured
+    in, for a tool whose prompt depends on it (`local_lint_summary`); `None` for the cells whose
+    prompt is the same in every language. A cell of another language neither routes nor makes
+    `doctor` warn (`applies_to_language`).
     """
 
     tool: str
     alternative: str
     compared_role: str
     footprint: Mapping[str, Any] = field(hash=False)
+    language: str | None = None
+
+
+def applies_to_language(cell: Cell, language: str) -> bool:
+    """Whether `cell` holds for the response language `language` (always, without `language`)."""
+    return cell.language is None or cell.language == language
 
 
 def _gemma_26b(prompt_sha256: str) -> dict[str, Any]:
@@ -93,10 +104,19 @@ _DELEGATE_PROMPT = "804bdc0a8674dfef530698a753cfcd6c4546e89b5d434d647cda0321b260
 #: que además hace la huella distinta en `es` y en `en`) el 26B deja de nombrar los códigos de
 #: regla y la celda queda rechazada en los dos idiomas, igual que `qwen36-35b-a3b`
 #: (`benchmarks/afinidad-2026-10/reevaluation-0.36.0/verdict.json`).
+#:
+#: Affinity by language (2026-10-19): it is back, one cell per response language, since its prompt
+#: (and so its footprint) depends on the language. With the inventory of the log in front of the
+#: mechanical call too, the 26B names the rule codes again and both cells are approved in 3 of 3
+#: repetitions (`benchmarks/afinidad-2026-10/reevaluation-lint-counts/verdict.json`).
+_LINT_PROMPT_ES = "0b070d5d5b2e1a1e95d451b69d3edb6b4ddffd226487f2d91af9f134cefa2f70"
+_LINT_PROMPT_EN = "2c9a0a31b3068e2a73864d9a4209f4e2be7e022f5acc46f775ebb09b7c3789ba"
 CELLS: tuple[Cell, ...] = (
     Cell("local_translate", "gemma4-26b-a4b", "gemma3-4b", _gemma_26b(_TRANSLATE_PROMPT)),
     Cell("local_translate", "qwen36-35b-a3b", "gemma3-4b", _qwen_36(_TRANSLATE_PROMPT)),
     Cell("local_delegate", "gemma4-26b-a4b", "gemma3-4b", _gemma_26b(_DELEGATE_PROMPT)),
+    Cell("local_lint_summary", "gemma4-26b-a4b", "gemma3-4b", _gemma_26b(_LINT_PROMPT_ES), "es"),
+    Cell("local_lint_summary", "gemma4-26b-a4b", "gemma3-4b", _gemma_26b(_LINT_PROMPT_EN), "en"),
 )
 
 #: Con qué parámetros construyó cada tool sus prompts de sistema en el corpus de la evaluación
@@ -106,8 +126,8 @@ CELLS: tuple[Cell, ...] = (
 #: huella y deja la celda «sin base».
 PROMPT_INPUTS: Mapping[str, tuple[Any, ...]] = {
     "local_translate": ("español", "inglés"),
-    # Sin celda desde B2-affinity; se conserva para la próxima medición (la huella de lint la
-    # calcula con esto `evidence/B2-affinity/evaluate_reevaluation.py`).
+    # One cell per language since affinity by language (the footprint of lint is computed with
+    # this by `evidence/B2-affinity/evaluate_reevaluation.py` too).
     "local_lint_summary": (200,),
     "local_delegate": (
         "Solo el texto en mayúsculas, en una línea",

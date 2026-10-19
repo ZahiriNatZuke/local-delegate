@@ -1,0 +1,35 @@
+### src/local_delegate/benchmark.py
+
+**Errores y avisos:**
+
+*   **Falta de docstrings:**
+    *   **D101** (3): En clases públicas.
+    *   **D102** (7): En métodos públicos.
+    *   **D103** (3): En funciones públicas.
+    *   **D105** (4): En métodos mágicos.
+    *   **D107** (5): En el método `__init__`.
+*   **Comas finales faltantes (COM812):** 13 avisos.
+*   **Uso de `print` (T201):** 8 avisos.
+*   **Valores mágicos en comparaciones (PLR2004):** 3 avisos.
+*   **Líneas demasiado largas (E501):** 3 avisos.
+*   **Demasiados argumentos en definición de función (PLR0913):** 2 avisos.
+*   **Importaciones en nivel incorrecto (PLC0415):** 2 avisos.
+*   **Complejidad excesiva (C901):** 1 aviso.
+*   **Demasiadas ramificaciones (PLR0912):** 1 aviso.
+*   **Demasiadas sentencias (PLR0915):** 1 aviso.
+*   **Variable de bucle `for` sobrescrita (PLW2901):** 1 aviso.
+*   **Llamada a `subprocess.run` sin argumento `check` explícito (PLW1510):** 1 aviso.
+*   **Llamada a `subprocess` con entrada no confiable (S603):** 1 aviso.
+*   **Falta de aviso de copyright (CPY001):** 1 aviso.
+*   **Importación de librería estándar debe moverse a un bloque de comprobación de tipos (TC003):** 3 avisos.
+*   **Uso de valor booleano posicional en llamada a función (FBT003):** 1 aviso.
+*   **`None` no está al final de la unión de tipos (RUF036):** 1 aviso.
+*   **Uso de `r"""` requerido por barras invertidas en docstring (D301):** 1 aviso.
+*   **Falta de línea en blanco entre resumen y descripción (D205):** 1 aviso.
+*   **Las comillas de cierre de docstring multilínea deben estar en una línea separada (D209):** 1 aviso.
+
+Found 68 errors.
+
+Sin mencionar (del log, no los nombra el resumen): checks.json
+
+(leído server-side: 33048 chars ≈ 17212 tokens de Claude que no entraron a tu contexto)

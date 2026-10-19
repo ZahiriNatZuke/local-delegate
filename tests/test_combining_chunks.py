@@ -226,13 +226,15 @@ def test_the_chunked_lint_reduce_keeps_the_lint_format(monkeypatch, captured, pr
     assert "un único resumen de todo el log" in reduce_step["user"].lower()
 
 
-def test_the_single_lint_call_is_unchanged(captured):
-    """Control: a log that does not chunk gets the prompt of `main`, byte for byte."""
+def test_the_single_lint_call_is_one_call_with_the_log_whole(captured):
+    """Control: a log that does not chunk goes in one call, whole, after the inventory of the
+    single call (`test_lint_single_long.py`), with the system of `main`."""
     log = _ruff_log(2, 3)
     server.local_lint_summary(text=log)
     (call,) = captured
     assert call["system"] == server._lint_system(200)
-    assert call["user"] == f"Resume la siguiente salida de linter/tests:\n\n{log}"
+    assert call["user"].endswith(f"Resume la siguiente salida de linter/tests:\n\n{log}")
+    assert call["user"] == server._lint_single_user(log, log, "mechanical")
 
 
 def test_the_lint_inventory_has_no_counts_and_is_cut_without_figures():
