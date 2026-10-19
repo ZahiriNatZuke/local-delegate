@@ -31,6 +31,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `es` y en `en` en 3 de 3 repeticiones. Medición:
   `.sdd/changes/english-names-bilingual-output/evidence/affinity-by-language/live.md`.
 
+### Corregido
+
+- **Las tarjetas del panel tienen ancho fijo.** Una cifra muy larga (por ejemplo, el «Contexto
+  conservado» de un rango largo) ensanchaba su tarjeta y contraía las demás de la fila: las
+  columnas eran `1fr`, que en CSS crece con el contenido. Ahora la fila de KPIs y las demás filas
+  de tarjetas usan columnas de ancho fijo; la cifra que no cabe reduce su tamaño y, si ni así
+  cabe, se muestra en forma corta («45,7 mil M tok», «45.7B tok» en inglés) con el valor exacto al
+  pasar el ratón. El hero pasa de 1,7 a 1,4 veces el ancho de las demás, para que títulos como
+  «Delegaciones» quepan sin «…». En el móvil la página ya no se sale por la derecha.
+
 ### Documentación
 
 - **Poca RAM libre con los modelos grandes cargados**: nueva sección en

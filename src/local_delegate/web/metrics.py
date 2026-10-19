@@ -1296,12 +1296,17 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
 /* ---------- grid + cards ---------- */
 .grid{display:grid;gap:16px}
 /* 6 tarjetas: el hero + ahorro/coste/generado/latencia/error. Los breakpoints de abajo las
-   reparten en 3+3 y 2+2+2, así que ninguna se queda sola en una fila con el hueco al lado. */
-.kpis{grid-template-columns:1.7fr repeat(5,1fr)}
-@media(max-width:1320px){.kpis{grid-template-columns:1.7fr 1fr 1fr}}
-@media(max-width:1040px){.kpis{grid-template-columns:1fr 1fr 1fr}}
-@media(max-width:720px){.kpis{grid-template-columns:1fr 1fr}}
-@media(max-width:460px){.kpis{grid-template-columns:1fr}}
+   reparten en 3+3 y 2+2+2, así que ninguna se queda sola en una fila con el hueco al lado.
+   Columnas de ancho FIJO (`minmax(0, …fr)`, no `1fr`, que es `minmax(auto, 1fr)`): con `1fr` una
+   cifra larga ensanchaba su tarjeta y contraía las demás de la fila. Ahora el ancho no depende del
+   contenido; la cifra que no cabe se reduce o se compacta (`fitKpis`) y el título lleva «…».
+   El hero a 1,4fr (antes 1,7fr) deja ~180 px a las demás: «DELEGACIONES» cabe sin «…». */
+.kpis{grid-template-columns:minmax(0,1.4fr) repeat(5,minmax(0,1fr))}
+@media(max-width:1320px){.kpis{grid-template-columns:minmax(0,1.4fr) repeat(2,minmax(0,1fr))}}
+@media(max-width:1040px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:720px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:460px){.kpis{grid-template-columns:minmax(0,1fr)}}
+#kpis > .card{min-width:0}
 .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--bd);
   border-radius:16px;padding:17px 18px;box-shadow:var(--shadow);transition:transform .16s,border-color .16s,box-shadow .16s}
 .card:hover{border-color:var(--bd2)}
@@ -1323,10 +1328,10 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
 /* El título va en UNA línea pase lo que pase con la fuente: si la de reserva es más ancha
    (sin Google Fonts, en otro sistema), se recorta con «…» y el título entero queda en `title`;
    el ⓘ no se recorta nunca. Con dos líneas posibles, la simetría dependía de la fuente. */
-/* El título SÍ aporta su ancho a la rejilla (sin `width:0`): con una fuente ancha la columna crece
-   en vez de recortar, y el hero, que escala su cifra, cede el sitio. El «…» queda de red. */
-#kpis .k-top{height:26px}
-#kpis .k-lbl{display:flex;align-items:center;gap:5px;min-width:0;flex:1 1 auto}
+/* El título NO cambia el ancho de la columna (rejilla de ancho fijo): si no cabe, «…» y el texto
+   entero en `title`. */
+#kpis .k-top{height:26px;gap:5px}
+#kpis .k-lbl{display:flex;align-items:center;gap:4px;min-width:0;flex:1 1 auto}
 #kpis .k-lbl-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 #kpis .k-lbl .info{flex:0 0 auto}
 .k-ico{width:26px;height:26px;flex:0 0 auto;display:grid;place-items:center;border-radius:8px;
@@ -1338,7 +1343,11 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
    la tarjeta mide ~260 px y «3.161.168 tok» a 42 px no cabía, el `overflow:hidden` cortaba la unidad. */
 .hero .k-val{font-size:clamp(26px,12cqi,42px);color:var(--acc);position:relative;z-index:1;
   text-shadow:0 2px 20px color-mix(in srgb,var(--acc) 40%,transparent)}
-#kpis .k-val{height:44px;display:flex;align-items:flex-end;white-space:nowrap}
+#kpis .k-val{height:44px;display:flex;align-items:flex-end;white-space:nowrap;overflow:hidden;
+  font-size:calc(31px * var(--kfit,1))}
+/* `--kfit` (0,62–1) lo pone `fitKpis` cuando la cifra no cabe en su tarjeta de ancho fijo. */
+#kpis .hero .k-val{font-size:calc(clamp(26px,12cqi,42px) * var(--kfit,1))}
+#kpis .k-val .unit{font-size:max(11px,calc(15px * var(--kfit,1)))}
 #kpis .k-num{display:inline-block;line-height:1}
 .k-val .unit{font-size:15px;font-weight:600;color:var(--mut);margin-left:5px;letter-spacing:0}
 .hero .k-val .unit{color:color-mix(in srgb,var(--acc) 75%,var(--mut))}
@@ -1352,12 +1361,15 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
 .info svg{width:100%;height:100%;display:block}
 .info:hover{color:var(--tx2)}
 
-.cols{grid-template-columns:1.5fr 1fr;margin-top:16px}
-.cols2{grid-template-columns:1fr 1fr;margin-top:16px}
-.cols3{grid-template-columns:1fr 1fr 1fr;margin-top:16px}
-@media(max-width:1040px){.cols3{grid-template-columns:1fr 1fr}}
-@media(max-width:880px){.cols,.cols2,.cols3{grid-template-columns:1fr}}
-.panel-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 14px}
+/* Las demás filas de tarjetas, también de ancho fijo (`minmax(0, …)`): el contenido no ensancha
+   una columna a costa de la otra ni saca la página de la pantalla en el móvil. */
+.grid > .card{min-width:0}
+.cols{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);margin-top:16px}
+.cols2{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:16px}
+.cols3{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:16px}
+@media(max-width:1040px){.cols3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:880px){.cols,.cols2,.cols3{grid-template-columns:minmax(0,1fr)}}
+.panel-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 14px;flex-wrap:wrap}
 .panel-h h2{font-size:13px;font-weight:700;margin:0;letter-spacing:.01em;display:flex;align-items:center;gap:8px}
 .panel-h h2::before{content:"";width:3px;height:14px;border-radius:2px;background:var(--hc,var(--acc));opacity:.9}
 .panel-h .mut{color:var(--mut);font-size:11.5px;font-weight:600;font-family:var(--mono)}
@@ -1400,8 +1412,8 @@ td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .dot.err{background:var(--danger);box-shadow:0 0 8px color-mix(in srgb,var(--danger) 60%,transparent)}
 
 /* ---------- backend local + sistema ---------- */
-.duo{grid-template-columns:1.15fr 1fr;margin-bottom:16px}
-@media(max-width:880px){.duo{grid-template-columns:1fr}}
+.duo{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);margin-bottom:16px}
+@media(max-width:880px){.duo{grid-template-columns:minmax(0,1fr)}}
 .pill{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;letter-spacing:.06em;
   border-radius:999px;padding:3px 10px;text-transform:uppercase}
 .pill.up{color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent);border:1px solid color-mix(in srgb,var(--acc) 32%,transparent)}
@@ -1437,7 +1449,7 @@ td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .tchip{font-family:var(--mono);font-size:10.5px;color:var(--mut);border:1px solid var(--bd);border-radius:7px;padding:3px 8px;cursor:default;transition:.13s}
 .tchip:hover{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 40%,transparent)}
 .tchip.busy{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 50%,transparent);background:color-mix(in srgb,var(--amber) 12%,transparent)}
-.ifrow{display:flex;align-items:center;gap:9px;padding:6px 2px;font-size:12.5px;color:var(--tx2);font-family:var(--mono)}
+.ifrow{display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding:6px 2px;font-size:12.5px;color:var(--tx2);font-family:var(--mono)}
 .spin{width:12px;height:12px;border-radius:50%;flex:0 0 auto;
   border:2px solid color-mix(in srgb,var(--amber) 28%,transparent);border-top-color:var(--amber);animation:rot .8s linear infinite}
 @keyframes rot{to{transform:rotate(360deg)}}
@@ -1797,6 +1809,16 @@ function fmtSec(ms){
   if(ms===null || ms===undefined || !isFinite(ms)) return '–';
   if(ms < 50) return '< ' + fmtNum(0.1, 1) + ' s';
   return F1.format(ms / 1000) + ' s';
+}
+// Forma corta de una cifra grande para un KPI que no cabe ni con la fuente reducida: «1,2 M» y
+// «1,2 mil M» en español, «1.2M» y «1.2B» en inglés (en español «B» sería billón, 10^12). Por
+// debajo del millón, la cifra entera. El valor exacto queda en el `title` de la tarjeta.
+function fmtCompact(n){
+  if(n===null || n===undefined || !isFinite(n)) return '–';
+  const en = typeof LANG !== 'undefined' && LANG === 'en', a = Math.abs(n);
+  if(a < 1e6) return fmtNum(n, 0);
+  if(a < 1e9) return fmtNum(n / 1e6, 1) + (en ? 'M' : ' M');
+  return fmtNum(n / 1e9, 1) + (en ? 'B' : ' mil M');
 }
 // «1 estimado / 4 estimados»: la cifra con su formato y la palabra concordada del catálogo
 // (`<key>.one` y `<key>.other`), sin «(s)».
@@ -2728,11 +2750,62 @@ function kpiCard(o){
   const i = o.tip?`<span class="info" data-tip="${o.tip}">${ICON.info}</span>`:'';
   const ico = o.icon?`<span class="k-ico" style="--kc:${o.kc||'var(--mut)'}">${o.icon}</span>`:'';
   const unit = o.unit?`<span class="unit">${o.unit}</span>`:'';
+  // El valor exacto va siempre en `title`: `fitKpis` puede reducir la cifra o compactarla.
+  const exact = o.val + (o.unit ? ' ' + o.unit : '');
+  const compact = o.compact && o.compact !== o.val ? ` data-compact="${o.compact}"` : '';
   return `<div class="card ${o.hero?'hero':''}">${o.hero?'<div class="spark"><canvas id="spark"></canvas></div>':''}
     <div class="k-top">${ico}<div class="k-lbl" title="${o.lbl}"><span class="k-lbl-t">${o.lbl}</span>${i}</div></div>
-    <div class="k-val num"><span class="k-num">${o.val}${unit}</span></div>
+    <div class="k-val num" title="${exact}"><span class="k-num"${compact}>${o.val}${unit}</span></div>
     <div class="k-hint">${o.hint||''}</div></div>`;
 }
+
+// Las tarjetas de KPI tienen ancho fijo: la cifra que no cabe se ajusta a SU tarjeta en vez de
+// ensancharla. Primero se reduce la fuente (hasta el 62 %); si aun así no cabe y hay forma corta
+// (`data-compact`), se pinta «1,2 mil M» con la fuente que haga falta. Se repite al cambiar el
+// ancho de la ventana o al cargar las fuentes, partiendo siempre de la cifra entera.
+const KFIT_MIN = 0.62;
+function fitKpis(){
+  document.querySelectorAll('#kpis .k-val').forEach(v => {
+    const num = v.querySelector('.k-num'), txt = num && num.firstChild;
+    if(!txt || txt.nodeType !== 3) return;
+    if(num.dataset.full === undefined) num.dataset.full = txt.nodeValue;
+    txt.nodeValue = num.dataset.full;
+    const fit = () => {
+      v.style.removeProperty('--kfit');
+      if(v.scrollWidth <= v.clientWidth) return true;
+      // En centésimas enteras: la proporción que falta y, como la unidad tiene un mínimo de
+      // 11 px y no encoge al mismo ritmo, pasos de 2 hasta que quepa o se llegue al mínimo.
+      const min = Math.round(100 * KFIT_MIN);
+      let p = Math.max(min, Math.floor(100 * v.clientWidth / v.scrollWidth));
+      v.style.setProperty('--kfit', p / 100);
+      while(v.scrollWidth > v.clientWidth && p > min){
+        p = Math.max(min, p - 2); v.style.setProperty('--kfit', p / 100);
+      }
+      return v.scrollWidth <= v.clientWidth;
+    };
+    if(!fit() && num.dataset.compact){ txt.nodeValue = num.dataset.compact; fit(); }
+  });
+  // La pista que se corta con «…» lleva su texto entero en `title`.
+  document.querySelectorAll('#kpis .k-hint').forEach(h => {
+    if(h.scrollWidth > h.clientWidth || h.scrollHeight > h.clientHeight + 1) h.title = h.textContent;
+    else h.removeAttribute('title');
+  });
+}
+// Se vuelve a ajustar cuando cambia el ancho de la fila (ventana, breakpoints) o el de una cifra
+// (otra fuente que llega tarde o se aplica después). No hay bucle: `fitKpis` deja cada cifra en el
+// mismo tamaño si nada cambió, y el observador solo avisa de tamaños nuevos.
+let kfitFrame = 0;
+const kfitLater = () => { cancelAnimationFrame(kfitFrame); kfitFrame = requestAnimationFrame(fitKpis); };
+// En el frame siguiente, no dentro del observador: cambiar tamaños ahí dispara el aviso de bucle.
+const kfitObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(kfitLater) : null;
+function watchKpis(){
+  if(!kfitObserver) return;
+  kfitObserver.disconnect();
+  kfitObserver.observe(document.getElementById('kpis'));
+  document.querySelectorAll('#kpis .k-num').forEach(n => kfitObserver.observe(n));
+}
+if(!kfitObserver) window.addEventListener('resize', kfitLater);
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(fitKpis);
 
 // Conversión a tokens de CLAUDE de lo ahorrado y lo devuelto. Espejo de `claude_tokens` en
 // server.py y única conversión del panel: `acct` no divide por CPT para saved/returned/net.
@@ -2821,16 +2894,16 @@ function render(){
   const A = s => escHooks(s);
 
   document.getElementById('kpis').innerHTML =
-    kpiCard({hero:true,icon:ICON.save,kc:'var(--acc)',val:F.format(net),unit:'tok',
+    kpiCard({hero:true,icon:ICON.save,kc:'var(--acc)',val:F.format(net),compact:fmtCompact(net),unit:'tok',
        lbl:A(T('kpi.saved.label')),
        hint:T('kpi.saved.hint_html', {gross: F.format(saved), returned: F.format(returned)}),
        tip:A(T('kpi.saved.tip'))})
-    + kpiCard({icon:ICON.calls,kc:'var(--blue)',val:F.format(nEv),lbl:A(T('kpi.calls.label')),
+    + kpiCard({icon:ICON.calls,kc:'var(--blue)',val:F.format(nEv),compact:fmtCompact(nEv),lbl:A(T('kpi.calls.label')),
        hint:T('kpi.calls.hint_html', {n: F.format(bCalls), calls: A(T(bCalls===1 ? 'unit.call.one' : 'unit.call.other'))}),
        tip:A(T('kpi.calls.tip')+extra+fbTxt+((extra||fbTxt)?'.':''))})
-    + kpiCard({icon:ICON.gen,kc:'var(--violet)',val:F.format(gen),unit:'tok',lbl:A(T('kpi.gen.label')),
+    + kpiCard({icon:ICON.gen,kc:'var(--violet)',val:F.format(gen),compact:fmtCompact(gen),unit:'tok',lbl:A(T('kpi.gen.label')),
        hint:A(T('kpi.gen.hint')),tip:A(T('kpi.gen.tip')+estTxt)})
-    + kpiCard({icon:ICON.cost,kc:'var(--amber)',val:F.format(costIn),unit:'tok',lbl:A(T('kpi.cost.label')),
+    + kpiCard({icon:ICON.cost,kc:'var(--amber)',val:F.format(costIn),compact:fmtCompact(costIn),unit:'tok',lbl:A(T('kpi.cost.label')),
        hint:A(T('kpi.cost.hint')),
        tip:A(T('kpi.cost.tip'))})
     // La unidad va dentro del valor («116,9 s», «< 0,1 s»): `fmtSec` decide la forma entera.
@@ -2839,6 +2912,7 @@ function render(){
     + kpiCard({icon:ICON.err,kc:errs?'var(--danger)':'var(--acc)',val:errPct,unit:'%',lbl:A(T('kpi.errors.label')),
        hint:T('kpi.errors.hint_html', {n: F.format(errs), what: A(T(errs===1 ? 'unit.failure.one' : 'unit.failure.other'))}),
        tip:A(T('kpi.errors.tip'))});
+  fitKpis(); watchKpis();
 
   if(HAS_CHART){
     drawSpark(ev); drawTs(ev); drawToolDonut(ev); drawModelBar(ev); drawSrcDonut(ev);
