@@ -98,8 +98,31 @@ def test_the_single_long_lint_call_gets_the_inventory_in_front_of_the_log(
     assert sep and rest == log  # the log goes as before, after the inventory
     assert "src/pkg/mod_00.py" in head and "CPY001" in head and "S603" in head
     assert head.startswith("Ficheros que nombra el log")
-    names = lint_patterns.RULE.sub(" ", lint_patterns.FILE.sub(" ", head))
-    assert not re.search(r"\d", names), head  # no count of its own
+    # Wave lint-counts: each code carries its count in the whole log (4 files x 1 of each rule),
+    # and the prompt says to copy it. Mutant "inventory without counts" (`with_counts=False` in
+    # `_lint_single_user`): these asserts fail, not the ones above.
+    assert "CPY001: 4, D401: 4, S603: 4" in head
+    assert server._LINT_COUNTS_CLAUSE.strip() in head
+    figures = re.sub(r"\b[A-Z]{1,5}\d{2,5}: \d+", " ", head)
+    names = lint_patterns.RULE.sub(" ", lint_patterns.FILE.sub(" ", figures))
+    assert not re.search(r"\d", names), head  # no other figure than the counts of the codes
+
+
+def test_the_counts_of_the_single_long_call_come_from_the_log(captured, long_role):
+    """Wave lint-counts: the counts are the log's, not a constant. Positive control: a log with
+    different counts per code gives different figures (5, 2, 1), in that order; a code inside a
+    file name (`test_E501.py`) is not counted. Mutant "count each code once" (`code_counts`
+    returns 1 for every code): the first assert fails."""
+    log = (
+        "".join(f"a.py:{n}:1: D101 Missing docstring\n" for n in range(1, 6))
+        + "b.py:1:1: E501 Line too long\nb.py:9:1: E501 Line too long\n"
+        + "tests/test_E501.py:3:1: F401 unused import\n"
+        + "Found 8 errors.\n"
+    )
+    server.local_lint_summary(text=log)
+    (call,) = captured
+    assert "D101: 5, E501: 2, F401: 1" in call["user"]
+    assert "E501: 3" not in call["user"]
 
 
 @pytest.mark.parametrize(("product", "label"), [("es", "Sin mencionar"), ("en", "Not mentioned")])

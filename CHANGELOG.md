@@ -6,6 +6,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Cambiado
+
+- **`local_lint_summary` copia los recuentos por regla en vez de contarlos** (rol largo, llamada
+  única). El inventario de ficheros y códigos que el programa pone delante del log lleva ahora,
+  junto a cada código, las veces que aparece en todo el log, y el prompt pide copiar esa cifra. En
+  la pasada en vivo de la 0.36.0 el resumen en español de un log de `ruff` de 14 k caracteres dio 2
+  de 15 cifras mal (D101 6 en vez de 5, D400 4 en vez de 3). El rol mecánico y el lint troceado no
+  cambian. Medición: `.sdd/changes/english-names-bilingual-output/evidence/lint-counts/live.md`.
+
 ## [0.36.0] - 2026-10-18
 
 Esta versión hace que todo `local-delegate` hable **en español o en inglés**: el CLI y su `--help`,

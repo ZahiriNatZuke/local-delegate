@@ -3860,13 +3860,20 @@ def _lint_inventory_line(header: str, items: list[str], max_chars: int) -> str:
     return f"{header} {', '.join(shown)}{tail}"
 
 
-def _lint_inventory(log: str, max_chars: int) -> str:
+def _lint_inventory(log: str, max_chars: int, with_counts: bool = False) -> str:
     """B2e: los ficheros y códigos de regla del log, calculados por programa, sin recuentos.
 
     En el lint troceado el reduce solo veía los parciales, y en vivo (B2d-2, tanda C) devolvió dos
     párrafos de prosa sin un código ni un fichero. Las expresiones son las del contador de
     fidelidad (`lint_patterns`); los más nombrados van primero y no se dice cuántos: una cifra que
     el log no escribe es justo lo que la regla de la cantidad prohíbe.
+
+    Wave lint-counts (2026-10-18): with `with_counts` each code carries how many times the whole
+    log names it (`lint_patterns.code_counts`), counted here. Only the single call of the `long`
+    role asks for it, where the model sees the whole log: in the live pass of 0.36.0 the Spanish
+    summary of a ruff log of 14 k characters got 2 of 15 figures wrong (D101 6 instead of 5, D400
+    4 instead of 3) by counting them itself (`evidence/lint-counts/live.md`). The chunked reduce
+    keeps the inventory without figures.
     """
     half = max_chars // 2
     files = _lint_inventory_line(
@@ -3874,11 +3881,16 @@ def _lint_inventory(log: str, max_chars: int) -> str:
         lint_patterns.files_by_frequency(log),
         half,
     )
-    codes = _lint_inventory_line(
-        "Códigos de regla o error que nombra el log (los más frecuentes primero):",
-        lint_patterns.codes_by_frequency(log),
-        max_chars - len(files) - 1,
-    )
+    if with_counts:
+        header = (
+            "Códigos de regla o error que nombra el log, con las veces que aparece cada uno en "
+            "todo el log (contadas por el programa; los más frecuentes primero):"
+        )
+        items = [f"{code}: {count}" for code, count in lint_patterns.code_counts(log)]
+    else:
+        header = "Códigos de regla o error que nombra el log (los más frecuentes primero):"
+        items = lint_patterns.codes_by_frequency(log)
+    codes = _lint_inventory_line(header, items, max_chars - len(files) - 1)
     return "\n".join(line for line in (files, codes) if line)
 
 
@@ -3904,14 +3916,25 @@ def _lint_single_user(content: str, log: str, role: str) -> str:
     9 Spanish answers ("Línea demasiado larga" instead of `E501`), and `evidence/B2f/live.md`
     measured the same in the logs of 8-34 k characters it summarizes in one call. The `mechanical`
     role keeps the prompt of before, byte for byte: `gemma3-4b` copies the codes.
+
+    Wave lint-counts: each code of that inventory carries its count in the whole log, and the
+    prompt says to copy it (`_LINT_COUNTS_CLAUSE`).
     """
     base = f"Resume la siguiente salida de linter/tests:\n\n{content}"
     if role != "long":
         return base
-    inventory = _lint_inventory(log, int(_map_budget(config.max_chars_for_role(role)) * 0.25))
+    budget = int(_map_budget(config.max_chars_for_role(role)) * 0.25)
+    inventory = _lint_inventory(log, budget, with_counts=True)
     if not inventory:
         return base
-    return f"{inventory}\n\nLa lista de arriba sale del log de abajo. {base}"
+    return f"{inventory}\n\nLa lista de arriba sale del log de abajo.{_LINT_COUNTS_CLAUSE} {base}"
+
+
+#: Wave lint-counts: what the single `long` call is told about the figures of its inventory.
+_LINT_COUNTS_CLAUSE = (
+    " Las cifras de los códigos están contadas por el programa en todo el log: cuando des la "
+    "cantidad de una regla en total, copia esa cifra en vez de contar tú."
+)
 
 
 def _lint_system(max_words: int) -> str:
