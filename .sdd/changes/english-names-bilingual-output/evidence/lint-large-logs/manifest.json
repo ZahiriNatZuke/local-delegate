@@ -1,0 +1,220 @@
+{
+ "frozen_at": "2026-10-19",
+ "frozen_before_any_measurement_call": true,
+ "derived_from": "evidence/lint-large-logs/build_set.py; G, M, ME copied from lint-counts",
+ "windows": {
+  "X": {
+   "env": {},
+   "product": "es",
+   "label": "lint-large-logs chunked long es"
+  },
+  "G": {
+   "env": {},
+   "product": "es",
+   "label": "B2f long single call es"
+  },
+  "M": {
+   "env": {},
+   "product": "es",
+   "label": "B2f small logs mechanical es"
+  },
+  "ME": {
+   "env": {
+    "LOCAL_DELEGATE_LANG": "en"
+   },
+   "product": "en",
+   "label": "B2f small logs mechanical en"
+  }
+ },
+ "calls": [
+  {
+   "id": "X1",
+   "window": "X",
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2e/docs/L1-ruff-select-all-src.txt",
+   "document_sha256": "0ab080b35f3348139c0cbc846f4934c94129de17d479ec386c36337478d557b2",
+   "requested": "es",
+   "purpose": "ruff --select ALL concise, src/ (B2e L1)"
+  },
+  {
+   "id": "X2",
+   "window": "X",
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2e/docs/L3-pytest-collect-only.txt",
+   "document_sha256": "e8ab3e97fea063db651fbaa09cef762bdf503cc2d1e33d635cbf9d3ea681aa00",
+   "requested": "es",
+   "purpose": "pytest --collect-only (B2e L3)"
+  },
+  {
+   "id": "X3",
+   "window": "X",
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/lint-large-logs/docs/N1-eslint-stylish.txt",
+   "document_sha256": "5ff21c41ad002591bb02e7b3cd0ab3ded18e52c3bb24465883aa2b486c9c7f9b",
+   "requested": "es",
+   "purpose": "eslint stylish, synthetic"
+  },
+  {
+   "id": "X4",
+   "window": "X",
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/lint-large-logs/docs/N2-tsc.txt",
+   "document_sha256": "80862e3619574d35b4d45fa9b51328b3e1a474a333082fc468feaf3de565e807",
+   "requested": "es",
+   "purpose": "tsc, synthetic"
+  },
+  {
+   "id": "G1",
+   "window": "G",
+   "tool": "local_lint_summary",
+   "document": "benchmarks/catalogo-2026-09/fuentes/lint-9k.txt",
+   "document_sha256": "9c7295b2b49627aff832ce808789be7993522cd72c8f947fb06f19664723801f",
+   "requested": "es",
+   "purpose": "ruff concise 8.6k (C44)"
+  },
+  {
+   "id": "G2",
+   "window": "G",
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-biome-lint.txt",
+   "document_sha256": "071dd4473f52d3136e2fa336c275589614f40e6821965d6ba3aeef210ffc1ba8",
+   "requested": "es",
+   "purpose": "biome 18k (C43)"
+  },
+  {
+   "id": "G3",
+   "window": "G",
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-3/en-log-biome-lint-nest.txt",
+   "document_sha256": "3af20fa5cfba9f2dedb4f8a5653f382acfaf93477085774587aa694b7da994a2",
+   "requested": "es",
+   "purpose": "biome 22k (A14)"
+  },
+  {
+   "id": "G4",
+   "window": "G",
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2f/docs/G4-ruff-concise-web.txt",
+   "document_sha256": "1fcaacd0cd70656b9b99897ffee9a7a6efce302bb29bccb75eb2189bc38149da",
+   "requested": "es",
+   "purpose": "ruff --select ALL concise, web/ of main"
+  },
+  {
+   "id": "G5",
+   "window": "G",
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2f/docs/G5-ruff-full-benchmark.txt",
+   "document_sha256": "b81cd4e3f7c9d5edad5db9b15b6bbc7693c97ce758fcd979ceaa5d79da7db8ac",
+   "requested": "es",
+   "purpose": "ruff --select ALL full, benchmark.py"
+  },
+  {
+   "id": "M1",
+   "window": "M",
+   "tool": "local_lint_summary",
+   "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-tres-reglas.txt",
+   "document_sha256": "ec0b6183c8ca06cac255bdf11c914291473771ddd2df55b2ecbda2767bd49270",
+   "requested": "es",
+   "purpose": "affinity corpus: three rules"
+  },
+  {
+   "id": "M2",
+   "window": "M",
+   "tool": "local_lint_summary",
+   "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-docstrings.txt",
+   "document_sha256": "b110b57cb1159eec9243dcedb0ecdbc2e38f79d44b3891bc64fbd192659c3538",
+   "requested": "es",
+   "purpose": "affinity corpus: docstrings"
+  },
+  {
+   "id": "M3",
+   "window": "M",
+   "tool": "local_lint_summary",
+   "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-cinco-reglas.txt",
+   "document_sha256": "0809f67c265b1bed3ef6bcec7b6beba41fc4cd61a328cfe9f90986ce870c889c",
+   "requested": "es",
+   "purpose": "affinity corpus: five rules"
+  },
+  {
+   "id": "M4",
+   "window": "M",
+   "tool": "local_lint_summary",
+   "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-un-solo-archivo.txt",
+   "document_sha256": "7666debfbc2ca5df842cb29520580e7711e8c44dfcda60b9d8188d9715d1db3e",
+   "requested": "es",
+   "purpose": "affinity corpus: a single file"
+  },
+  {
+   "id": "M5",
+   "window": "M",
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-ruff-concise.txt",
+   "document_sha256": "1b45f1d58d013abcffaf2a48def98c192a598f5a5990eb3cadf9a92d55780645",
+   "requested": "es",
+   "purpose": "ruff concise 2.6k, 17 codes"
+  },
+  {
+   "id": "M6",
+   "window": "M",
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-tsc.txt",
+   "document_sha256": "2705c2d9eac77e04a707594093594fc412b8a2f25e8bb2d5cd8ea5df205e7fcf",
+   "requested": "es",
+   "purpose": "tsc 1.6k"
+  },
+  {
+   "id": "ME1",
+   "window": "ME",
+   "tool": "local_lint_summary",
+   "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-tres-reglas.txt",
+   "document_sha256": "ec0b6183c8ca06cac255bdf11c914291473771ddd2df55b2ecbda2767bd49270",
+   "requested": "en",
+   "purpose": "affinity corpus: three rules"
+  },
+  {
+   "id": "ME2",
+   "window": "ME",
+   "tool": "local_lint_summary",
+   "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-docstrings.txt",
+   "document_sha256": "b110b57cb1159eec9243dcedb0ecdbc2e38f79d44b3891bc64fbd192659c3538",
+   "requested": "en",
+   "purpose": "affinity corpus: docstrings"
+  },
+  {
+   "id": "ME3",
+   "window": "ME",
+   "tool": "local_lint_summary",
+   "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-cinco-reglas.txt",
+   "document_sha256": "0809f67c265b1bed3ef6bcec7b6beba41fc4cd61a328cfe9f90986ce870c889c",
+   "requested": "en",
+   "purpose": "affinity corpus: five rules"
+  },
+  {
+   "id": "ME4",
+   "window": "ME",
+   "tool": "local_lint_summary",
+   "document": "benchmarks/afinidad-2026-10/fuentes/resume-ruff-un-solo-archivo.txt",
+   "document_sha256": "7666debfbc2ca5df842cb29520580e7711e8c44dfcda60b9d8188d9715d1db3e",
+   "requested": "en",
+   "purpose": "affinity corpus: a single file"
+  },
+  {
+   "id": "ME5",
+   "window": "ME",
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-ruff-concise.txt",
+   "document_sha256": "1b45f1d58d013abcffaf2a48def98c192a598f5a5990eb3cadf9a92d55780645",
+   "requested": "en",
+   "purpose": "ruff concise 2.6k, 17 codes"
+  },
+  {
+   "id": "ME6",
+   "window": "ME",
+   "tool": "local_lint_summary",
+   "document": ".sdd/changes/english-names-bilingual-output/evidence/B2d-fix/docs-2/en-log-tsc.txt",
+   "document_sha256": "2705c2d9eac77e04a707594093594fc412b8a2f25e8bb2d5cd8ea5df205e7fcf",
+   "requested": "en",
+   "purpose": "tsc 1.6k"
+  }
+ ]
+}

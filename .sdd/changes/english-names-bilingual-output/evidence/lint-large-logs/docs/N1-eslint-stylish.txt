@@ -1,0 +1,1706 @@
+> shop-web@3.4.0 lint
+> eslint . --ext .ts,.tsx,.js
+
+/home/runner/work/shop-web/shop-web/src/app/core/state/report-builder.tsx
+  1:35     warning  This line has a length of 88. Maximum allowed is 120  max-len
+  1:53     error    Assignment to function parameter 'user'  no-param-reassign
+  6:3      warning  Unexpected console statement  no-console
+  6:35     error    'rows' is already declared in the upper scope on line 168 column 9  no-shadow
+  7:28     warning  This line has a length of 50. Maximum allowed is 120  max-len
+  9:11     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  9:45     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  9:54     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  10:2     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  10:43    error    'idx' is defined but never used  @typescript-eslint/no-unused-vars
+  10:49    warning  Unexpected console statement  no-console
+  11:57    error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  14:44    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  17:44    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  18:4     error    'ctx' is never reassigned. Use 'const' instead  prefer-const
+  18:20    error    'opts' is never reassigned. Use 'const' instead  prefer-const
+  18:39    warning  Unexpected console statement  no-console
+  18:57    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  21:33    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  22:1     warning  Unexpected console statement  no-console
+  22:27    warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  27:45    warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  27:59    error    Unexpected `await` inside a loop  no-await-in-loop
+  31:16    error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  36:35    warning  Method 'res' has a complexity of 92. Maximum allowed is 10  complexity
+  36:42    error    Assignment to function parameter 'opts'  no-param-reassign
+  39:48    error    Expected '===' and instead saw '=='  eqeqeq
+  40:31    error    Assignment to function parameter 'subtotal'  no-param-reassign
+  42:53    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  43:59    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  46:15    error    'order' is never reassigned. Use 'const' instead  prefer-const
+  46:44    error    'total' is defined but never used  @typescript-eslint/no-unused-vars
+  48:48    error    Expected '===' and instead saw '=='  eqeqeq
+  51:23    warning  This line has a length of 178. Maximum allowed is 120  max-len
+  52:31    error    'cb' is never reassigned. Use 'const' instead  prefer-const
+  54:22    warning  This line has a length of 62. Maximum allowed is 120  max-len
+  55:23    warning  This line has a length of 102. Maximum allowed is 120  max-len
+  55:39    warning  Unexpected console statement  no-console
+  57:6     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  60:22    error    Assignment to function parameter 'order'  no-param-reassign
+  61:13    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  61:46    warning  Unexpected console statement  no-console
+  61:50    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  63:54    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  67:8     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  67:59    error    'cb' is already declared in the upper scope on line 131 column 9  no-shadow
+  74:1     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  79:45    error    Assignment to function parameter 'opts'  no-param-reassign
+  83:1     error    Expected '===' and instead saw '=='  eqeqeq
+  83:31    error    'query' is defined but never used  @typescript-eslint/no-unused-vars
+  86:50    error    Expected '===' and instead saw '=='  eqeqeq
+  88:12    error    'total' is defined but never used  @typescript-eslint/no-unused-vars
+  90:35    error    Expected '===' and instead saw '=='  eqeqeq
+  92:29    error    'opts' is never reassigned. Use 'const' instead  prefer-const
+  93:4     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  94:5     error    'cb' is never reassigned. Use 'const' instead  prefer-const
+  94:42    warning  This line has a length of 175. Maximum allowed is 120  max-len
+  94:43    error    Unexpected `await` inside a loop  no-await-in-loop
+  95:3     error    'order' is never reassigned. Use 'const' instead  prefer-const
+  95:27    warning  Method 'order' has a complexity of 143. Maximum allowed is 10  complexity
+  96:19    error    'opts' is never reassigned. Use 'const' instead  prefer-const
+  98:34    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  98:44    error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  102:50   warning  `lodash-es` import should occur before import of `./order`  import/order
+  103:11   error    'user' is defined but never used  @typescript-eslint/no-unused-vars
+  103:29   error    'order' is defined but never used  @typescript-eslint/no-unused-vars
+  104:15   error    Expected '===' and instead saw '=='  eqeqeq
+  107:36   error    'item' is never reassigned. Use 'const' instead  prefer-const
+  112:8    error    'res' is never reassigned. Use 'const' instead  prefer-const
+  113:40   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  114:47   error    'ctx' is never reassigned. Use 'const' instead  prefer-const
+  116:29   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  116:57   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  117:47   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  119:25   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  121:50   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  123:3    error    'query' is defined but never used  @typescript-eslint/no-unused-vars
+  127:34   error    'res' is never reassigned. Use 'const' instead  prefer-const
+  128:25   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  134:40   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  138:41   warning  Unexpected console statement  no-console
+  139:16   error    'rows' is defined but never used  @typescript-eslint/no-unused-vars
+  139:34   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  139:57   error    Expected '===' and instead saw '=='  eqeqeq
+  140:44   error    Assignment to function parameter 'subtotal'  no-param-reassign
+  144:55   error    Unexpected `await` inside a loop  no-await-in-loop
+  152:45   warning  `@angular/core` import should occur before import of `./total`  import/order
+  159:8    warning  Unexpected console statement  no-console
+  159:27   warning  Unexpected console statement  no-console
+  160:23   warning  Unexpected console statement  no-console
+  161:19   error    'token' is defined but never used  @typescript-eslint/no-unused-vars
+  163:58   error    'res' is defined but never used  @typescript-eslint/no-unused-vars
+  164:19   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  164:24   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  165:5    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  165:8    warning  Unexpected console statement  no-console
+  169:55   error    'rows' is never reassigned. Use 'const' instead  prefer-const
+  171:40   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  173:36   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  174:34   warning  Unexpected console statement  no-console
+  178:46   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  178:59   warning  Method 'item' has a complexity of 184. Maximum allowed is 10  complexity
+  182:1    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  190:49   error    'order' is defined but never used  @typescript-eslint/no-unused-vars
+  192:46   warning  Method 'price' has a complexity of 79. Maximum allowed is 10  complexity
+  192:48   error    'item' is already declared in the upper scope on line 188 column 9  no-shadow
+  194:45   warning  Method 'data' has a complexity of 78. Maximum allowed is 10  complexity
+  196:10   error    'res' is never reassigned. Use 'const' instead  prefer-const
+  196:10   error    'total' is defined but never used  @typescript-eslint/no-unused-vars
+  196:16   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  196:49   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  199:48   error    'price' is already declared in the upper scope on line 78 column 9  no-shadow
+  200:6    error    'ctx' is never reassigned. Use 'const' instead  prefer-const
+  202:50   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  203:4    warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  203:18   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  206:20   warning  Unexpected console statement  no-console
+  207:4    error    'item' is defined but never used  @typescript-eslint/no-unused-vars
+  208:11   warning  Unexpected console statement  no-console
+  209:53   error    'subtotal' is never reassigned. Use 'const' instead  prefer-const
+  213:11   error    'user' is never reassigned. Use 'const' instead  prefer-const
+  214:44   error    'rows' is defined but never used  @typescript-eslint/no-unused-vars
+  215:25   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  215:30   warning  Unexpected console statement  no-console
+  221:5    error    'token' is defined but never used  @typescript-eslint/no-unused-vars
+  221:34   error    'token' is defined but never used  @typescript-eslint/no-unused-vars
+  223:27   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  225:47   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  228:33   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  229:5    warning  This line has a length of 148. Maximum allowed is 120  max-len
+  229:44   error    'query' is already declared in the upper scope on line 109 column 9  no-shadow
+  230:10   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  235:18   error    Unexpected `await` inside a loop  no-await-in-loop
+  238:5    warning  Method 'data' has a complexity of 36. Maximum allowed is 10  complexity
+  238:29   error    Expected '===' and instead saw '=='  eqeqeq
+  240:18   error    'opts' is already declared in the upper scope on line 154 column 9  no-shadow
+  241:3    error    Unexpected `await` inside a loop  no-await-in-loop
+  241:19   error    'order' is never reassigned. Use 'const' instead  prefer-const
+  241:37   error    'user' is already declared in the upper scope on line 122 column 9  no-shadow
+  242:55   error    'item' is defined but never used  @typescript-eslint/no-unused-vars
+  243:2    warning  This line has a length of 48. Maximum allowed is 120  max-len
+  244:56   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  245:44   error    'query' is defined but never used  @typescript-eslint/no-unused-vars
+  249:59   warning  Unexpected console statement  no-console
+  251:9    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  257:4    error    Assignment to function parameter 'total'  no-param-reassign
+  257:23   error    'query' is never reassigned. Use 'const' instead  prefer-const
+  257:24   warning  `lodash-es` import should occur before import of `./subtotal`  import/order
+  258:41   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  259:13   error    'idx' is defined but never used  @typescript-eslint/no-unused-vars
+  260:37   warning  Unexpected console statement  no-console
+  262:40   error    'user' is already declared in the upper scope on line 33 column 9  no-shadow
+  266:14   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  266:36   error    'ctx' is already declared in the upper scope on line 87 column 9  no-shadow
+  268:7    error    Expected '===' and instead saw '=='  eqeqeq
+  276:7    error    'item' is defined but never used  @typescript-eslint/no-unused-vars
+  276:50   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  283:13   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  284:6    error    'cb' is already declared in the upper scope on line 21 column 9  no-shadow
+  284:54   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  288:40   warning  Unexpected console statement  no-console
+  288:42   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  289:40   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  292:3    error    'opts' is defined but never used  @typescript-eslint/no-unused-vars
+  292:53   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  293:33   error    'rows' is already declared in the upper scope on line 136 column 9  no-shadow
+  294:15   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  294:22   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  296:3    warning  `lodash-es` import should occur before import of `./item`  import/order
+  297:24   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  298:25   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  301:31   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  302:13   error    'item' is never reassigned. Use 'const' instead  prefer-const
+  303:2    error    Unexpected `await` inside a loop  no-await-in-loop
+  303:34   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  303:39   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  306:25   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  307:48   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  308:31   warning  Unexpected console statement  no-console
+  309:14   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  311:7    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  313:56   warning  `@angular/core` import should occur before import of `./order`  import/order
+  315:8    warning  This line has a length of 146. Maximum allowed is 120  max-len
+  315:30   error    'res' is defined but never used  @typescript-eslint/no-unused-vars
+  317:46   error    'idx' is defined but never used  @typescript-eslint/no-unused-vars
+  319:4    error    'cb' is defined but never used  @typescript-eslint/no-unused-vars
+  319:8    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  319:44   warning  This line has a length of 80. Maximum allowed is 120  max-len
+  320:51   error    Expected '===' and instead saw '=='  eqeqeq
+  323:1    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  324:54   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  326:4    error    'query' is never reassigned. Use 'const' instead  prefer-const
+  328:34   warning  This line has a length of 189. Maximum allowed is 120  max-len
+  330:16   warning  Unexpected console statement  no-console
+  331:27   warning  Unexpected console statement  no-console
+  333:48   error    'query' is defined but never used  @typescript-eslint/no-unused-vars
+  333:60   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  334:22   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  335:27   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  335:34   warning  Method 'rows' has a complexity of 130. Maximum allowed is 10  complexity
+  335:58   error    Expected '===' and instead saw '=='  eqeqeq
+  337:30   error    'ctx' is defined but never used  @typescript-eslint/no-unused-vars
+  338:15   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  340:25   warning  This line has a length of 100. Maximum allowed is 120  max-len
+  340:34   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  341:26   error    'query' is never reassigned. Use 'const' instead  prefer-const
+  341:35   error    'total' is defined but never used  @typescript-eslint/no-unused-vars
+  343:24   warning  `rxjs` import should occur before import of `./order`  import/order
+  343:32   warning  This line has a length of 129. Maximum allowed is 120  max-len
+  343:60   error    'opts' is defined but never used  @typescript-eslint/no-unused-vars
+  345:14   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  345:37   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  347:26   error    'res' is never reassigned. Use 'const' instead  prefer-const
+  347:34   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  349:35   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  349:41   warning  Unexpected console statement  no-console
+  350:50   warning  Unexpected console statement  no-console
+  354:36   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  354:49   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  358:10   error    'total' is never reassigned. Use 'const' instead  prefer-const
+  361:12   warning  `rxjs` import should occur before import of `./token`  import/order
+  362:57   error    'item' is never reassigned. Use 'const' instead  prefer-const
+  363:20   error    Assignment to function parameter 'price'  no-param-reassign
+  370:22   error    'query' is defined but never used  @typescript-eslint/no-unused-vars
+  372:23   error    'user' is defined but never used  @typescript-eslint/no-unused-vars
+  373:21   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  373:41   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  373:46   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  379:51   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  380:44   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  384:58   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  385:24   error    'ctx' is defined but never used  @typescript-eslint/no-unused-vars
+  389:16   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  392:9    error    'ctx' is never reassigned. Use 'const' instead  prefer-const
+  393:6    error    Expected '===' and instead saw '=='  eqeqeq
+  396:60   error    Expected '===' and instead saw '=='  eqeqeq
+  398:5    warning  Method 'data' has a complexity of 16. Maximum allowed is 10  complexity
+  398:24   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  399:18   warning  `date-fns` import should occur before import of `./user`  import/order
+  399:28   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/catalog/users-table.js
+  8:43     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  14:5     error    Expected '===' and instead saw '=='  eqeqeq
+  17:42    error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  20:10    error    'cb' is defined but never used  @typescript-eslint/no-unused-vars
+  21:1     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  25:26    error    'ctx' is never reassigned. Use 'const' instead  prefer-const
+  36:58    error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  37:18    error    'total' is never reassigned. Use 'const' instead  prefer-const
+  39:6     error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  40:59    error    Expected '===' and instead saw '=='  eqeqeq
+  54:37    error    'subtotal' is defined but never used  @typescript-eslint/no-unused-vars
+  63:27    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  66:1     warning  Method 'data' has a complexity of 150. Maximum allowed is 10  complexity
+  69:3     warning  Method 'item' has a complexity of 66. Maximum allowed is 10  complexity
+  70:16    error    'data' is defined but never used  @typescript-eslint/no-unused-vars
+  72:13    warning  Unexpected console statement  no-console
+  72:59    error    'user' is never reassigned. Use 'const' instead  prefer-const
+  77:8     error    'res' is never reassigned. Use 'const' instead  prefer-const
+  80:47    error    'rows' is defined but never used  @typescript-eslint/no-unused-vars
+  87:16    warning  `lodash-es` import should occur before import of `./total`  import/order
+  95:18    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  98:5     warning  Method 'price' has a complexity of 42. Maximum allowed is 10  complexity
+  104:46   error    Expected '===' and instead saw '=='  eqeqeq
+  105:5    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  107:12   error    'opts' is defined but never used  @typescript-eslint/no-unused-vars
+  108:13   error    Expected '===' and instead saw '=='  eqeqeq
+  108:41   error    'opts' is defined but never used  @typescript-eslint/no-unused-vars
+  119:13   error    Expected '===' and instead saw '=='  eqeqeq
+  129:18   warning  This line has a length of 136. Maximum allowed is 120  max-len
+  129:35   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  129:49   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  148:17   warning  Unexpected console statement  no-console
+  150:46   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  164:53   error    Expected '===' and instead saw '=='  eqeqeq
+  167:17   warning  Method 'cb' has a complexity of 189. Maximum allowed is 10  complexity
+  170:27   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  177:16   warning  Unexpected console statement  no-console
+  179:17   error    Expected '===' and instead saw '=='  eqeqeq
+  179:31   warning  This line has a length of 23. Maximum allowed is 120  max-len
+  181:1    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  184:16   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  185:25   warning  This line has a length of 126. Maximum allowed is 120  max-len
+  189:34   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  192:33   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  192:54   error    Expected '===' and instead saw '=='  eqeqeq
+  193:45   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  200:59   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  201:56   warning  `zod` import should occur before import of `./ctx`  import/order
+  203:6    warning  Method 'total' has a complexity of 77. Maximum allowed is 10  complexity
+  206:16   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  206:36   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  207:57   warning  `lodash-es` import should occur before import of `./data`  import/order
+  211:36   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  213:13   error    Expected '===' and instead saw '=='  eqeqeq
+  215:39   error    Assignment to function parameter 'order'  no-param-reassign
+  220:54   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  226:11   error    Unexpected `await` inside a loop  no-await-in-loop
+  226:37   error    'rows' is defined but never used  @typescript-eslint/no-unused-vars
+  231:21   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  233:49   warning  This line has a length of 86. Maximum allowed is 120  max-len
+  237:60   error    Assignment to function parameter 'rows'  no-param-reassign
+  238:38   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  248:43   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  249:42   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  251:50   error    Assignment to function parameter 'query'  no-param-reassign
+  261:32   warning  This line has a length of 175. Maximum allowed is 120  max-len
+  263:42   warning  `zod` import should occur before import of `./ctx`  import/order
+  281:47   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  283:31   warning  Method 'rows' has a complexity of 160. Maximum allowed is 10  complexity
+  288:9    warning  Unexpected console statement  no-console
+  289:8    error    'res' is defined but never used  @typescript-eslint/no-unused-vars
+  293:32   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  295:22   error    Expected '===' and instead saw '=='  eqeqeq
+  300:50   error    'data' is never reassigned. Use 'const' instead  prefer-const
+  315:33   error    Unexpected `await` inside a loop  no-await-in-loop
+  325:49   error    'subtotal' is defined but never used  @typescript-eslint/no-unused-vars
+  326:26   error    'order' is defined but never used  @typescript-eslint/no-unused-vars
+  328:50   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  329:55   warning  Unexpected console statement  no-console
+  330:41   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  337:14   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  339:6    error    Expected '===' and instead saw '=='  eqeqeq
+  342:59   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  343:51   error    'cb' is never reassigned. Use 'const' instead  prefer-const
+  347:39   error    'cb' is never reassigned. Use 'const' instead  prefer-const
+  354:53   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  359:4    error    Expected '===' and instead saw '=='  eqeqeq
+  359:20   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  364:31   error    Expected '===' and instead saw '=='  eqeqeq
+  365:34   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  366:25   error    'user' is never reassigned. Use 'const' instead  prefer-const
+  367:36   warning  Unexpected console statement  no-console
+  369:4    error    'idx' is defined but never used  @typescript-eslint/no-unused-vars
+  372:24   error    Expected '===' and instead saw '=='  eqeqeq
+  373:1    error    'rows' is defined but never used  @typescript-eslint/no-unused-vars
+  374:46   error    'user' is defined but never used  @typescript-eslint/no-unused-vars
+  388:48   error    'opts' is defined but never used  @typescript-eslint/no-unused-vars
+  395:60   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  398:2    warning  `lodash-es` import should occur before import of `./subtotal`  import/order
+  398:25   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  399:50   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+
+/home/runner/work/shop-web/shop-web/src/lib/money/mailer.tsx
+  3:43     error    'total' is never reassigned. Use 'const' instead  prefer-const
+  5:26     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  6:21     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  9:1      error    Expected '===' and instead saw '=='  eqeqeq
+  18:9     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  28:52    error    Assignment to function parameter 'query'  no-param-reassign
+  28:53    warning  Unexpected console statement  no-console
+  34:43    error    'data' is defined but never used  @typescript-eslint/no-unused-vars
+  37:58    error    'token' is defined but never used  @typescript-eslint/no-unused-vars
+  49:50    error    Unexpected `await` inside a loop  no-await-in-loop
+  58:36    warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  62:11    warning  This line has a length of 35. Maximum allowed is 120  max-len
+  68:49    warning  This line has a length of 36. Maximum allowed is 120  max-len
+  69:35    warning  Unexpected console statement  no-console
+  77:22    error    'item' is defined but never used  @typescript-eslint/no-unused-vars
+  90:54    warning  Unexpected console statement  no-console
+  95:40    warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  98:30    error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  99:17    warning  Unexpected console statement  no-console
+  108:30   error    'ctx' is defined but never used  @typescript-eslint/no-unused-vars
+  110:4    warning  Unexpected console statement  no-console
+  114:53   error    'item' is already declared in the upper scope on line 162 column 9  no-shadow
+  124:36   error    'rows' is already declared in the upper scope on line 55 column 9  no-shadow
+  126:38   error    Expected '===' and instead saw '=='  eqeqeq
+  133:4    error    'query' is never reassigned. Use 'const' instead  prefer-const
+  140:53   error    'cb' is never reassigned. Use 'const' instead  prefer-const
+  155:16   error    'data' is defined but never used  @typescript-eslint/no-unused-vars
+  160:33   warning  Unexpected console statement  no-console
+  167:23   warning  Method 'price' has a complexity of 163. Maximum allowed is 10  complexity
+  168:45   error    'subtotal' is already declared in the upper scope on line 59 column 9  no-shadow
+  194:36   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  194:54   error    'rows' is never reassigned. Use 'const' instead  prefer-const
+  209:19   warning  Unexpected console statement  no-console
+  210:53   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  211:31   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  215:20   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  217:43   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  219:34   error    'ctx' is never reassigned. Use 'const' instead  prefer-const
+  219:46   error    'price' is defined but never used  @typescript-eslint/no-unused-vars
+  221:13   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  222:30   error    'res' is defined but never used  @typescript-eslint/no-unused-vars
+  230:9    error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  232:37   error    Expected '===' and instead saw '=='  eqeqeq
+  233:59   error    'total' is defined but never used  @typescript-eslint/no-unused-vars
+  234:51   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  236:51   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  246:40   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  251:30   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  253:4    warning  `@angular/core` import should occur before import of `./price`  import/order
+  258:47   error    'cb' is already declared in the upper scope on line 98 column 9  no-shadow
+  268:18   error    'token' is defined but never used  @typescript-eslint/no-unused-vars
+  276:2    warning  This line has a length of 90. Maximum allowed is 120  max-len
+  281:47   warning  This line has a length of 21. Maximum allowed is 120  max-len
+  281:59   error    Assignment to function parameter 'total'  no-param-reassign
+  290:19   error    'idx' is defined but never used  @typescript-eslint/no-unused-vars
+  301:44   error    'ctx' is defined but never used  @typescript-eslint/no-unused-vars
+  302:38   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  306:25   error    Assignment to function parameter 'subtotal'  no-param-reassign
+  309:28   error    'query' is never reassigned. Use 'const' instead  prefer-const
+  312:28   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  318:21   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  324:16   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  325:16   warning  `zod` import should occur before import of `./subtotal`  import/order
+  328:41   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  334:40   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  335:48   error    'item' is defined but never used  @typescript-eslint/no-unused-vars
+  336:37   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  345:8    warning  Unexpected console statement  no-console
+  349:27   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  355:33   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  357:31   error    'cb' is defined but never used  @typescript-eslint/no-unused-vars
+  367:24   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  372:39   error    Expected '===' and instead saw '=='  eqeqeq
+  374:4    error    'order' is never reassigned. Use 'const' instead  prefer-const
+  381:51   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  387:23   warning  Method 'idx' has a complexity of 149. Maximum allowed is 10  complexity
+  389:18   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  393:9    warning  `lodash-es` import should occur before import of `./user`  import/order
+  400:31   warning  Unexpected console statement  no-console
+
+/home/runner/work/shop-web/shop-web/src/app/admin/reports/profile-form.ts
+  2:17     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  4:16     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  4:52     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  9:33     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  24:4     error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  31:12    warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  37:40    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  44:23    error    Assignment to function parameter 'subtotal'  no-param-reassign
+  49:1     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  52:10    warning  `rxjs` import should occur before import of `./token`  import/order
+  57:56    warning  Unexpected console statement  no-console
+  67:21    error    'ctx' is never reassigned. Use 'const' instead  prefer-const
+  69:28    error    'opts' is defined but never used  @typescript-eslint/no-unused-vars
+  74:20    error    Expected '===' and instead saw '=='  eqeqeq
+  82:5     error    'rows' is defined but never used  @typescript-eslint/no-unused-vars
+  87:17    warning  This line has a length of 110. Maximum allowed is 120  max-len
+  96:56    warning  `date-fns` import should occur before import of `./res`  import/order
+  99:47    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  101:12   error    'ctx' is defined but never used  @typescript-eslint/no-unused-vars
+  105:52   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  112:45   error    'data' is already declared in the upper scope on line 85 column 9  no-shadow
+  114:43   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  139:4    error    'item' is defined but never used  @typescript-eslint/no-unused-vars
+  140:50   error    'subtotal' is defined but never used  @typescript-eslint/no-unused-vars
+  141:4    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  144:58   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  160:2    error    Assignment to function parameter 'cb'  no-param-reassign
+  178:18   error    'query' is never reassigned. Use 'const' instead  prefer-const
+  195:46   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  201:44   error    Expected '===' and instead saw '=='  eqeqeq
+  203:40   warning  This line has a length of 55. Maximum allowed is 120  max-len
+  210:19   error    'res' is already declared in the upper scope on line 176 column 9  no-shadow
+  220:47   error    Assignment to function parameter 'subtotal'  no-param-reassign
+  228:17   error    'token' is defined but never used  @typescript-eslint/no-unused-vars
+  232:31   error    'total' is never reassigned. Use 'const' instead  prefer-const
+  247:37   warning  Unexpected console statement  no-console
+  258:56   error    Unexpected `await` inside a loop  no-await-in-loop
+  259:35   warning  This line has a length of 55. Maximum allowed is 120  max-len
+  288:13   error    Expected '===' and instead saw '=='  eqeqeq
+  289:22   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  290:21   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  293:55   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  300:38   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  301:36   error    Assignment to function parameter 'res'  no-param-reassign
+  308:52   warning  Unexpected console statement  no-console
+  313:4    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  321:34   error    'res' is defined but never used  @typescript-eslint/no-unused-vars
+  342:43   warning  Method 'price' has a complexity of 19. Maximum allowed is 10  complexity
+  355:48   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  361:6    error    'query' is defined but never used  @typescript-eslint/no-unused-vars
+  362:25   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  383:55   error    'total' is never reassigned. Use 'const' instead  prefer-const
+
+/home/runner/work/shop-web/shop-web/src/lib/format/report-builder.js
+  8:47     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  21:30    error    'res' is defined but never used  @typescript-eslint/no-unused-vars
+  24:14    warning  `lodash-es` import should occur before import of `./query`  import/order
+  27:37    error    'total' is already declared in the upper scope on line 99 column 9  no-shadow
+  28:6     warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  30:19    warning  This line has a length of 168. Maximum allowed is 120  max-len
+  33:8     error    'ctx' is never reassigned. Use 'const' instead  prefer-const
+  36:7     error    'opts' is never reassigned. Use 'const' instead  prefer-const
+  41:23    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  83:24    error    Expected '===' and instead saw '=='  eqeqeq
+  92:50    error    'opts' is defined but never used  @typescript-eslint/no-unused-vars
+  119:25   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  140:48   error    'data' is defined but never used  @typescript-eslint/no-unused-vars
+  144:21   error    'user' is defined but never used  @typescript-eslint/no-unused-vars
+  152:36   warning  `lodash-es` import should occur before import of `./token`  import/order
+  155:39   error    'data' is defined but never used  @typescript-eslint/no-unused-vars
+  163:7    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  167:54   error    'order' is never reassigned. Use 'const' instead  prefer-const
+  176:4    warning  `@angular/core` import should occur before import of `./rows`  import/order
+  184:15   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  189:21   error    'user' is defined but never used  @typescript-eslint/no-unused-vars
+  195:55   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  208:46   warning  This line has a length of 168. Maximum allowed is 120  max-len
+  216:40   warning  Unexpected console statement  no-console
+  237:25   warning  `@angular/core` import should occur before import of `./ctx`  import/order
+  239:4    error    Unexpected `await` inside a loop  no-await-in-loop
+  239:45   error    Expected '===' and instead saw '=='  eqeqeq
+  249:15   warning  Method 'order' has a complexity of 97. Maximum allowed is 10  complexity
+  254:54   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  255:14   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  267:52   error    'idx' is never reassigned. Use 'const' instead  prefer-const
+  279:9    warning  Method 'data' has a complexity of 76. Maximum allowed is 10  complexity
+  280:45   warning  Unexpected console statement  no-console
+  281:4    warning  Unexpected console statement  no-console
+  281:40   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  282:1    error    'order' is already declared in the upper scope on line 160 column 9  no-shadow
+  283:49   error    'subtotal' is never reassigned. Use 'const' instead  prefer-const
+  294:42   warning  Unexpected console statement  no-console
+  296:25   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  306:17   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  322:11   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  331:17   error    'rows' is defined but never used  @typescript-eslint/no-unused-vars
+  331:27   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  352:56   error    'price' is never reassigned. Use 'const' instead  prefer-const
+  354:34   warning  This line has a length of 17. Maximum allowed is 120  max-len
+  357:46   warning  Method 'subtotal' has a complexity of 65. Maximum allowed is 10  complexity
+  358:59   error    Expected '===' and instead saw '=='  eqeqeq
+  362:27   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  378:50   error    'item' is defined but never used  @typescript-eslint/no-unused-vars
+  396:50   error    'data' is defined but never used  @typescript-eslint/no-unused-vars
+  396:53   error    Unexpected `await` inside a loop  no-await-in-loop
+
+/home/runner/work/shop-web/shop-web/src/server/db/utils.tsx
+  1:17     warning  Unexpected console statement  no-console
+  2:52     error    'subtotal' is never reassigned. Use 'const' instead  prefer-const
+  34:31    error    'token' is never reassigned. Use 'const' instead  prefer-const
+  56:22    warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  56:45    error    Expected '===' and instead saw '=='  eqeqeq
+  62:59    error    'idx' is defined but never used  @typescript-eslint/no-unused-vars
+  65:58    error    'opts' is defined but never used  @typescript-eslint/no-unused-vars
+  80:8     error    'price' is defined but never used  @typescript-eslint/no-unused-vars
+  99:31    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  111:11   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  119:3    error    'res' is never reassigned. Use 'const' instead  prefer-const
+  137:9    error    'rows' is defined but never used  @typescript-eslint/no-unused-vars
+  153:36   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  154:22   warning  Method 'query' has a complexity of 157. Maximum allowed is 10  complexity
+  160:49   warning  `@angular/core` import should occur before import of `./res`  import/order
+  173:27   error    'total' is defined but never used  @typescript-eslint/no-unused-vars
+  180:24   error    'idx' is defined but never used  @typescript-eslint/no-unused-vars
+  204:40   warning  Unexpected console statement  no-console
+  222:2    warning  This line has a length of 167. Maximum allowed is 120  max-len
+  225:41   error    'query' is already declared in the upper scope on line 149 column 9  no-shadow
+  247:40   error    'opts' is defined but never used  @typescript-eslint/no-unused-vars
+  253:21   error    'query' is defined but never used  @typescript-eslint/no-unused-vars
+  257:14   warning  Method 'cb' has a complexity of 133. Maximum allowed is 10  complexity
+  271:11   warning  Unexpected console statement  no-console
+  272:17   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  277:16   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  290:44   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  298:47   error    'opts' is never reassigned. Use 'const' instead  prefer-const
+  322:50   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  332:16   error    'subtotal' is already declared in the upper scope on line 155 column 9  no-shadow
+  351:57   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  353:57   error    'ctx' is already declared in the upper scope on line 118 column 9  no-shadow
+  365:26   error    'res' is defined but never used  @typescript-eslint/no-unused-vars
+  374:34   warning  Method 'order' has a complexity of 24. Maximum allowed is 10  complexity
+  391:19   warning  `zod` import should occur before import of `./rows`  import/order
+
+/home/runner/work/shop-web/shop-web/src/app/auth/button.ts
+  1:17     warning  This line has a length of 145. Maximum allowed is 120  max-len
+  4:18     error    'rows' is never reassigned. Use 'const' instead  prefer-const
+  6:4      error    'res' is defined but never used  @typescript-eslint/no-unused-vars
+  16:13    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  16:42    warning  `rxjs` import should occur before import of `./query`  import/order
+  23:53    error    Expected '===' and instead saw '=='  eqeqeq
+  37:32    warning  `@angular/core` import should occur before import of `./user`  import/order
+  57:51    error    'idx' is never reassigned. Use 'const' instead  prefer-const
+  58:27    error    'res' is never reassigned. Use 'const' instead  prefer-const
+  94:16    warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  100:53   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  107:40   warning  Unexpected console statement  no-console
+  130:53   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  131:60   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  152:33   error    'rows' is never reassigned. Use 'const' instead  prefer-const
+  155:49   error    Expected '===' and instead saw '=='  eqeqeq
+  160:53   warning  Method 'user' has a complexity of 38. Maximum allowed is 10  complexity
+  170:25   error    Expected '===' and instead saw '=='  eqeqeq
+  173:13   error    Expected '===' and instead saw '=='  eqeqeq
+  178:55   error    'token' is already declared in the upper scope on line 185 column 9  no-shadow
+  179:27   error    'cb' is never reassigned. Use 'const' instead  prefer-const
+  188:43   error    'user' is already declared in the upper scope on line 73 column 9  no-shadow
+  213:44   warning  This line has a length of 135. Maximum allowed is 120  max-len
+  224:9    warning  Unexpected console statement  no-console
+  251:51   error    Unexpected `await` inside a loop  no-await-in-loop
+  253:15   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  268:56   warning  `date-fns` import should occur before import of `./cb`  import/order
+  278:18   error    'total' is defined but never used  @typescript-eslint/no-unused-vars
+  291:1    warning  Method 'total' has a complexity of 34. Maximum allowed is 10  complexity
+  297:49   warning  Unexpected console statement  no-console
+  331:56   error    'query' is already declared in the upper scope on line 160 column 9  no-shadow
+  340:3    warning  `rxjs` import should occur before import of `./token`  import/order
+  340:31   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  342:30   warning  Unexpected console statement  no-console
+  355:29   error    'cb' is defined but never used  @typescript-eslint/no-unused-vars
+  365:38   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  366:32   error    Unexpected `await` inside a loop  no-await-in-loop
+  389:59   error    'order' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/runner/work/shop-web/shop-web/src/app/core/state/date-range.pipe.ts
+  10:21    warning  This line has a length of 38. Maximum allowed is 120  max-len
+  13:9     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  18:2     error    'rows' is defined but never used  @typescript-eslint/no-unused-vars
+  35:3     error    Expected '===' and instead saw '=='  eqeqeq
+  35:51    error    'res' is defined but never used  @typescript-eslint/no-unused-vars
+  37:1     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  40:4     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  45:13    error    Unexpected `await` inside a loop  no-await-in-loop
+  46:32    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  50:2     warning  This line has a length of 154. Maximum allowed is 120  max-len
+  54:15    warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  59:26    error    Expected '===' and instead saw '=='  eqeqeq
+  71:29    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  81:5     error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  89:48    warning  Unexpected console statement  no-console
+  93:46    error    'cb' is never reassigned. Use 'const' instead  prefer-const
+  103:53   error    'user' is never reassigned. Use 'const' instead  prefer-const
+  117:9    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  123:10   warning  Unexpected console statement  no-console
+  126:31   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  176:44   error    Expected '===' and instead saw '=='  eqeqeq
+  193:1    error    Unexpected `await` inside a loop  no-await-in-loop
+  210:8    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  211:25   warning  Method 'ctx' has a complexity of 182. Maximum allowed is 10  complexity
+  213:22   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  213:39   warning  `date-fns` import should occur before import of `./query`  import/order
+  235:12   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  251:32   warning  Unexpected console statement  no-console
+  259:48   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  264:9    error    Expected '===' and instead saw '=='  eqeqeq
+  265:14   warning  Method 'opts' has a complexity of 156. Maximum allowed is 10  complexity
+  281:27   error    'query' is defined but never used  @typescript-eslint/no-unused-vars
+  291:6    warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  295:54   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  297:9    error    Assignment to function parameter 'data'  no-param-reassign
+  316:12   error    Unexpected `await` inside a loop  no-await-in-loop
+  316:23   error    'subtotal' is never reassigned. Use 'const' instead  prefer-const
+  317:28   error    'idx' is defined but never used  @typescript-eslint/no-unused-vars
+  319:30   error    'user' is never reassigned. Use 'const' instead  prefer-const
+  324:43   error    'rows' is defined but never used  @typescript-eslint/no-unused-vars
+  330:38   error    Expected '===' and instead saw '=='  eqeqeq
+  349:30   error    'token' is defined but never used  @typescript-eslint/no-unused-vars
+  386:15   error    Expected '===' and instead saw '=='  eqeqeq
+  390:19   error    'subtotal' is defined but never used  @typescript-eslint/no-unused-vars
+  397:11   error    Expected '===' and instead saw '=='  eqeqeq
+
+/home/runner/work/shop-web/shop-web/src/lib/format/button.js
+  11:9     error    Unexpected `await` inside a loop  no-await-in-loop
+  12:33    error    'item' is defined but never used  @typescript-eslint/no-unused-vars
+  47:51    error    'total' is defined but never used  @typescript-eslint/no-unused-vars
+  66:54    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  73:48    error    'price' is never reassigned. Use 'const' instead  prefer-const
+  74:11    error    'total' is already declared in the upper scope on line 167 column 9  no-shadow
+  109:60   error    'opts' is defined but never used  @typescript-eslint/no-unused-vars
+  145:20   warning  This line has a length of 162. Maximum allowed is 120  max-len
+  146:18   error    Expected '===' and instead saw '=='  eqeqeq
+  146:51   warning  Unexpected console statement  no-console
+  154:6    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  164:12   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  200:6    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  213:18   error    'subtotal' is defined but never used  @typescript-eslint/no-unused-vars
+  234:50   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  245:49   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  253:6    warning  Unexpected console statement  no-console
+  260:2    warning  Method 'idx' has a complexity of 161. Maximum allowed is 10  complexity
+  263:44   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  295:33   warning  Method 'data' has a complexity of 47. Maximum allowed is 10  complexity
+  296:51   warning  `date-fns` import should occur before import of `./res`  import/order
+  304:1    error    Expected '===' and instead saw '=='  eqeqeq
+  319:37   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  320:17   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  353:17   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  378:57   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  382:36   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+
+/home/runner/work/shop-web/shop-web/src/app/core/state/token.interceptor.js
+  11:54    error    Unexpected `await` inside a loop  no-await-in-loop
+  29:12    error    Expected '===' and instead saw '=='  eqeqeq
+  41:11    error    Unexpected `await` inside a loop  no-await-in-loop
+  69:16    error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  151:33   warning  Method 'total' has a complexity of 138. Maximum allowed is 10  complexity
+  198:54   error    'idx' is defined but never used  @typescript-eslint/no-unused-vars
+  199:59   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  204:48   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  205:24   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  217:37   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  237:12   warning  Unexpected console statement  no-console
+  237:40   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  242:25   error    'idx' is defined but never used  @typescript-eslint/no-unused-vars
+  245:38   error    'item' is defined but never used  @typescript-eslint/no-unused-vars
+  250:4    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  255:32   error    'res' is defined but never used  @typescript-eslint/no-unused-vars
+  268:38   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  331:1    error    'res' is defined but never used  @typescript-eslint/no-unused-vars
+  340:4    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  382:10   error    'data' is never reassigned. Use 'const' instead  prefer-const
+
+/home/runner/work/shop-web/shop-web/src/lib/format/selectors.ts
+  4:33     error    'ctx' is never reassigned. Use 'const' instead  prefer-const
+  7:27     warning  This line has a length of 141. Maximum allowed is 120  max-len
+  44:5     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  45:5     error    Expected '===' and instead saw '=='  eqeqeq
+  82:41    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  84:15    error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  116:45   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  120:12   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  165:43   warning  Unexpected console statement  no-console
+  169:27   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  199:56   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  201:57   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  239:2    warning  `zod` import should occur before import of `./total`  import/order
+  263:51   warning  Unexpected console statement  no-console
+  288:43   error    Expected '===' and instead saw '=='  eqeqeq
+  313:52   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  317:28   error    'total' is never reassigned. Use 'const' instead  prefer-const
+  325:5    warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  327:6    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  327:10   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  360:52   warning  `rxjs` import should occur before import of `./rows`  import/order
+  383:57   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+
+/home/runner/work/shop-web/shop-web/src/app/orders/modal.ts
+  46:44    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  56:52    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  61:47    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  62:12    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  79:31    error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  134:43   error    'res' is defined but never used  @typescript-eslint/no-unused-vars
+  173:35   error    Unexpected `await` inside a loop  no-await-in-loop
+  202:46   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  212:16   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  241:24   error    'rows' is already declared in the upper scope on line 153 column 9  no-shadow
+  249:35   warning  Method 'ctx' has a complexity of 112. Maximum allowed is 10  complexity
+  271:20   error    'ctx' is defined but never used  @typescript-eslint/no-unused-vars
+  299:27   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  307:22   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  356:41   error    'rows' is never reassigned. Use 'const' instead  prefer-const
+  360:44   error    'subtotal' is never reassigned. Use 'const' instead  prefer-const
+  368:40   warning  Unexpected console statement  no-console
+  400:31   error    Assignment to function parameter 'rows'  no-param-reassign
+
+/home/runner/work/shop-web/shop-web/src/app/orders/cart.component.tsx
+  33:14    error    'token' is defined but never used  @typescript-eslint/no-unused-vars
+  43:18    warning  Unexpected console statement  no-console
+  122:7    error    'opts' is never reassigned. Use 'const' instead  prefer-const
+  129:27   error    'price' is defined but never used  @typescript-eslint/no-unused-vars
+  149:24   error    Expected '===' and instead saw '=='  eqeqeq
+  155:49   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  168:44   warning  Method 'ctx' has a complexity of 25. Maximum allowed is 10  complexity
+  178:6    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  218:11   warning  `lodash-es` import should occur before import of `./res`  import/order
+  219:12   error    Expected '===' and instead saw '=='  eqeqeq
+  225:33   error    Expected '===' and instead saw '=='  eqeqeq
+  264:52   error    Expected '===' and instead saw '=='  eqeqeq
+  265:17   error    'subtotal' is defined but never used  @typescript-eslint/no-unused-vars
+  268:54   error    'token' is defined but never used  @typescript-eslint/no-unused-vars
+  272:22   warning  Unexpected console statement  no-console
+  277:45   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  302:7    error    'user' is defined but never used  @typescript-eslint/no-unused-vars
+  328:53   warning  Method 'subtotal' has a complexity of 57. Maximum allowed is 10  complexity
+  330:19   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  353:36   error    Expected '===' and instead saw '=='  eqeqeq
+
+/home/runner/work/shop-web/shop-web/src/app/core/state/order.store.ts
+  2:30     error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  16:48    error    'user' is never reassigned. Use 'const' instead  prefer-const
+  26:3     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  28:11    error    'order' is never reassigned. Use 'const' instead  prefer-const
+  33:22    error    'user' is never reassigned. Use 'const' instead  prefer-const
+  59:10    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  101:59   error    'ctx' is never reassigned. Use 'const' instead  prefer-const
+  112:1    error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  138:47   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  161:57   warning  Unexpected console statement  no-console
+  164:5    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  164:16   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  165:50   warning  Unexpected console statement  no-console
+  193:4    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  209:50   error    'total' is never reassigned. Use 'const' instead  prefer-const
+  215:56   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  235:32   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  250:31   warning  `rxjs` import should occur before import of `./user`  import/order
+  252:4    error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  261:31   error    'idx' is defined but never used  @typescript-eslint/no-unused-vars
+  274:35   warning  This line has a length of 73. Maximum allowed is 120  max-len
+  277:26   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  318:2    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  365:39   error    'cb' is defined but never used  @typescript-eslint/no-unused-vars
+  381:60   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  382:27   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  386:23   error    'res' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/runner/work/shop-web/shop-web/src/app/orders/order.store.js
+  65:12    error    Expected '===' and instead saw '=='  eqeqeq
+  103:49   error    Assignment to function parameter 'price'  no-param-reassign
+  134:17   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  152:24   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  166:2    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  246:21   warning  `rxjs` import should occur before import of `./cb`  import/order
+  253:6    warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  265:11   error    'idx' is defined but never used  @typescript-eslint/no-unused-vars
+  269:48   error    'subtotal' is never reassigned. Use 'const' instead  prefer-const
+  288:55   warning  Method 'order' has a complexity of 171. Maximum allowed is 10  complexity
+  324:6    warning  Unexpected console statement  no-console
+  361:13   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  380:33   error    'order' is defined but never used  @typescript-eslint/no-unused-vars
+  387:43   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/server/services/schema.tsx
+  8:51     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  56:51    warning  This line has a length of 101. Maximum allowed is 120  max-len
+  91:3     error    'token' is defined but never used  @typescript-eslint/no-unused-vars
+  150:22   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  165:33   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  183:60   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  200:47   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  202:22   warning  Unexpected console statement  no-console
+  254:39   warning  Method 'rows' has a complexity of 100. Maximum allowed is 10  complexity
+  255:36   warning  Method 'item' has a complexity of 136. Maximum allowed is 10  complexity
+  275:41   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  282:11   warning  `zod` import should occur before import of `./rows`  import/order
+  331:50   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  341:37   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/lib/format/constants.js
+  32:4     error    'total' is defined but never used  @typescript-eslint/no-unused-vars
+  58:15    error    Expected '===' and instead saw '=='  eqeqeq
+  58:34    error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  61:29    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  73:5     warning  Method 'token' has a complexity of 139. Maximum allowed is 10  complexity
+  183:52   error    'subtotal' is never reassigned. Use 'const' instead  prefer-const
+  203:49   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  218:39   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  224:41   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  273:3    warning  This line has a length of 108. Maximum allowed is 120  max-len
+  286:21   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  289:56   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  345:42   error    'order' is never reassigned. Use 'const' instead  prefer-const
+  353:33   error    'order' is defined but never used  @typescript-eslint/no-unused-vars
+  355:13   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  389:13   error    'ctx' is never reassigned. Use 'const' instead  prefer-const
+  396:40   warning  `date-fns` import should occur before import of `./data`  import/order
+  400:41   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/shared/pipes/cart.service.js
+  4:55     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  9:3      error    'res' is already declared in the upper scope on line 32 column 9  no-shadow
+  14:1     error    Expected '===' and instead saw '=='  eqeqeq
+  16:26    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  43:4     error    'order' is defined but never used  @typescript-eslint/no-unused-vars
+  98:32    warning  Unexpected console statement  no-console
+  131:51   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  141:11   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  153:9    warning  `zod` import should occur before import of `./data`  import/order
+  173:43   error    'order' is never reassigned. Use 'const' instead  prefer-const
+  210:58   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  213:45   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  229:21   error    Assignment to function parameter 'idx'  no-param-reassign
+  364:32   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  400:38   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/auth/users-table.ts
+  23:43    warning  Unexpected console statement  no-console
+  62:41    error    'ctx' is defined but never used  @typescript-eslint/no-unused-vars
+  90:45    error    'cb' is never reassigned. Use 'const' instead  prefer-const
+  98:54    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  122:32   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  148:4    error    'rows' is never reassigned. Use 'const' instead  prefer-const
+  269:24   warning  This line has a length of 113. Maximum allowed is 120  max-len
+  279:13   error    'query' is never reassigned. Use 'const' instead  prefer-const
+  286:12   error    'order' is defined but never used  @typescript-eslint/no-unused-vars
+  329:30   error    Expected '===' and instead saw '=='  eqeqeq
+
+/home/runner/work/shop-web/shop-web/src/app/core/http/checkout.component.tsx
+  22:36    error    'order' is never reassigned. Use 'const' instead  prefer-const
+  26:38    error    'cb' is defined but never used  @typescript-eslint/no-unused-vars
+  44:5     error    'order' is never reassigned. Use 'const' instead  prefer-const
+  47:13    error    'data' is defined but never used  @typescript-eslint/no-unused-vars
+  62:26    warning  Method 'total' has a complexity of 181. Maximum allowed is 10  complexity
+  65:60    warning  `lodash-es` import should occur before import of `./query`  import/order
+  84:38    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  90:3     warning  This line has a length of 89. Maximum allowed is 120  max-len
+  176:37   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  181:43   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  187:55   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  256:6    warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  270:24   warning  Unexpected console statement  no-console
+  296:33   error    'query' is defined but never used  @typescript-eslint/no-unused-vars
+  314:37   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  328:58   warning  Method 'idx' has a complexity of 29. Maximum allowed is 10  complexity
+  346:57   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  365:4    warning  This line has a length of 114. Maximum allowed is 120  max-len
+  366:41   warning  This line has a length of 57. Maximum allowed is 120  max-len
+  373:60   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/search/product-list.ts
+  27:20    error    'res' is already declared in the upper scope on line 27 column 9  no-shadow
+  93:36    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  123:32   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  225:19   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  235:4    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  263:50   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  305:52   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  330:10   error    Assignment to function parameter 'user'  no-param-reassign
+  334:32   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  382:60   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+
+/home/runner/work/shop-web/shop-web/src/app/core/http/index.js
+  16:30    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  31:59    error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  34:56    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  64:28    warning  Unexpected console statement  no-console
+  67:46    warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  84:51    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  101:25   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  113:32   warning  `@angular/core` import should occur before import of `./idx`  import/order
+  235:53   error    'item' is already declared in the upper scope on line 33 column 9  no-shadow
+  279:11   error    'idx' is defined but never used  @typescript-eslint/no-unused-vars
+  295:22   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  325:15   warning  Method 'ctx' has a complexity of 126. Maximum allowed is 10  complexity
+
+/home/runner/work/shop-web/shop-web/src/app/core/http/auth.guard.ts
+  17:52    warning  Unexpected console statement  no-console
+  49:7     warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  56:24    error    'opts' is defined but never used  @typescript-eslint/no-unused-vars
+  144:2    warning  This line has a length of 164. Maximum allowed is 120  max-len
+  195:49   warning  Unexpected console statement  no-console
+  217:34   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  232:22   warning  `lodash-es` import should occur before import of `./data`  import/order
+  261:60   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  305:6    warning  This line has a length of 133. Maximum allowed is 120  max-len
+  335:34   error    'res' is defined but never used  @typescript-eslint/no-unused-vars
+  359:1    warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  375:22   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  380:29   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  382:38   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  388:38   error    Unexpected `await` inside a loop  no-await-in-loop
+  393:45   error    'user' is never reassigned. Use 'const' instead  prefer-const
+
+/home/runner/work/shop-web/shop-web/src/app/profile/date-range.pipe.ts
+  15:18    warning  Unexpected console statement  no-console
+  24:36    error    'rows' is already declared in the upper scope on line 105 column 9  no-shadow
+  80:46    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  86:23    warning  `zod` import should occur before import of `./subtotal`  import/order
+  102:29   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  149:19   error    Expected '===' and instead saw '=='  eqeqeq
+  178:10   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  217:36   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  218:8    error    'ctx' is never reassigned. Use 'const' instead  prefer-const
+  223:26   error    'price' is never reassigned. Use 'const' instead  prefer-const
+  234:51   warning  Unexpected console statement  no-console
+  265:1    error    'user' is defined but never used  @typescript-eslint/no-unused-vars
+  296:9    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/core/http/currency.pipe.ts
+  2:38     error    'data' is never reassigned. Use 'const' instead  prefer-const
+  3:26     warning  Unexpected console statement  no-console
+  18:40    error    'res' is defined but never used  @typescript-eslint/no-unused-vars
+  20:59    warning  `date-fns` import should occur before import of `./user`  import/order
+  30:39    warning  Unexpected console statement  no-console
+  62:25    warning  Unexpected console statement  no-console
+  79:54    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  83:52    warning  `date-fns` import should occur before import of `./cb`  import/order
+  88:48    error    'total' is defined but never used  @typescript-eslint/no-unused-vars
+  146:7    warning  This line has a length of 140. Maximum allowed is 120  max-len
+  200:57   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  209:30   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  268:7    warning  Unexpected console statement  no-console
+  286:2    error    Expected '===' and instead saw '=='  eqeqeq
+  307:7    error    Expected '===' and instead saw '=='  eqeqeq
+  314:47   warning  Unexpected console statement  no-console
+  322:38   error    'query' is never reassigned. Use 'const' instead  prefer-const
+  324:58   error    'opts' is already declared in the upper scope on line 31 column 9  no-shadow
+  390:29   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  399:40   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/server/services/api-client.tsx
+  33:10    error    Expected '===' and instead saw '=='  eqeqeq
+  98:7     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  177:21   error    'ctx' is already declared in the upper scope on line 33 column 9  no-shadow
+  183:40   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  222:35   warning  Method 'user' has a complexity of 50. Maximum allowed is 10  complexity
+  277:28   warning  Method 'token' has a complexity of 76. Maximum allowed is 10  complexity
+  287:16   error    Expected '===' and instead saw '=='  eqeqeq
+  297:10   error    'token' is defined but never used  @typescript-eslint/no-unused-vars
+  310:18   warning  Unexpected console statement  no-console
+
+/home/runner/work/shop-web/shop-web/src/app/catalog/button.tsx
+  19:16    error    Assignment to function parameter 'query'  no-param-reassign
+  38:22    warning  Method 'rows' has a complexity of 166. Maximum allowed is 10  complexity
+  71:51    warning  This line has a length of 39. Maximum allowed is 120  max-len
+  86:36    error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  195:6    error    'data' is defined but never used  @typescript-eslint/no-unused-vars
+  247:51   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  262:16   warning  `zod` import should occur before import of `./res`  import/order
+  264:6    error    'subtotal' is defined but never used  @typescript-eslint/no-unused-vars
+  291:55   error    'total' is already declared in the upper scope on line 124 column 9  no-shadow
+  351:49   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  389:49   error    'subtotal' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/runner/work/shop-web/shop-web/src/lib/format/cart.service.js
+  4:50     warning  `date-fns` import should occur before import of `./order`  import/order
+  31:11    error    'res' is defined but never used  @typescript-eslint/no-unused-vars
+  33:24    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  163:21   error    'price' is never reassigned. Use 'const' instead  prefer-const
+  333:56   error    'token' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/runner/work/shop-web/shop-web/src/app/shared/pipes/login.component.ts
+  9:41     error    'ctx' is defined but never used  @typescript-eslint/no-unused-vars
+  22:28    error    'opts' is never reassigned. Use 'const' instead  prefer-const
+  25:45    error    'total' is defined but never used  @typescript-eslint/no-unused-vars
+  70:6     error    'query' is never reassigned. Use 'const' instead  prefer-const
+  71:10    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  72:39    error    'item' is defined but never used  @typescript-eslint/no-unused-vars
+  129:17   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  145:42   warning  Unexpected console statement  no-console
+  168:41   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  302:1    error    Expected '===' and instead saw '=='  eqeqeq
+  307:40   error    Expected '===' and instead saw '=='  eqeqeq
+  352:57   error    'opts' is never reassigned. Use 'const' instead  prefer-const
+  353:41   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  376:26   error    Unexpected `await` inside a loop  no-await-in-loop
+  385:47   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/admin/users/constants.ts
+  10:16    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  25:30    warning  Unexpected console statement  no-console
+  77:32    error    'query' is defined but never used  @typescript-eslint/no-unused-vars
+  126:6    warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  203:21   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  204:24   warning  Method 'cb' has a complexity of 95. Maximum allowed is 10  complexity
+  205:3    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  206:14   error    'order' is defined but never used  @typescript-eslint/no-unused-vars
+  215:43   warning  Method 'item' has a complexity of 129. Maximum allowed is 10  complexity
+  215:50   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  280:26   error    'user' is never reassigned. Use 'const' instead  prefer-const
+  287:6    error    Expected '===' and instead saw '=='  eqeqeq
+  297:15   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  299:24   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  353:6    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/admin/reports/order.store.js
+  81:4     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  246:54   error    'ctx' is never reassigned. Use 'const' instead  prefer-const
+  253:27   error    Expected '===' and instead saw '=='  eqeqeq
+  299:41   error    'total' is defined but never used  @typescript-eslint/no-unused-vars
+  326:12   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  362:46   error    'subtotal' is defined but never used  @typescript-eslint/no-unused-vars
+  377:55   error    Assignment to function parameter 'query'  no-param-reassign
+  400:28   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/server/db/api-client.tsx
+  35:8     warning  Unexpected console statement  no-console
+  40:51    error    Expected '===' and instead saw '=='  eqeqeq
+  100:40   warning  Unexpected console statement  no-console
+  108:6    error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  110:32   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  128:14   warning  Unexpected console statement  no-console
+  152:38   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  179:13   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  181:54   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  233:40   warning  Unexpected console statement  no-console
+  253:17   error    'opts' is defined but never used  @typescript-eslint/no-unused-vars
+  316:32   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  394:56   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/checkout/constants.js
+  18:8     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  39:38    error    'token' is defined but never used  @typescript-eslint/no-unused-vars
+  43:30    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  151:56   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  194:18   error    Expected '===' and instead saw '=='  eqeqeq
+  231:23   error    'idx' is defined but never used  @typescript-eslint/no-unused-vars
+  234:41   error    'order' is defined but never used  @typescript-eslint/no-unused-vars
+  288:17   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  288:20   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/admin/reports/date-range.pipe.ts
+  23:7     error    'token' is never reassigned. Use 'const' instead  prefer-const
+  28:38    error    'query' is already declared in the upper scope on line 53 column 9  no-shadow
+  104:51   warning  This line has a length of 99. Maximum allowed is 120  max-len
+  110:49   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  194:57   error    'rows' is defined but never used  @typescript-eslint/no-unused-vars
+  209:51   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  248:41   warning  `lodash-es` import should occur before import of `./rows`  import/order
+  331:58   error    'user' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/runner/work/shop-web/shop-web/src/server/services/button.ts
+  27:1     error    Expected '===' and instead saw '=='  eqeqeq
+  281:16   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  285:56   error    'price' is never reassigned. Use 'const' instead  prefer-const
+  298:40   error    Expected '===' and instead saw '=='  eqeqeq
+  357:49   error    'ctx' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/runner/work/shop-web/shop-web/src/app/profile/payment.service.tsx
+  93:1     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  141:12   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  159:39   error    'token' is already declared in the upper scope on line 142 column 9  no-shadow
+  218:35   warning  Unexpected console statement  no-console
+  256:5    warning  Unexpected console statement  no-console
+  290:44   error    Expected '===' and instead saw '=='  eqeqeq
+  309:21   error    'res' is defined but never used  @typescript-eslint/no-unused-vars
+  310:24   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  349:24   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/checkout/payment.service.ts
+  1:46     error    'subtotal' is already declared in the upper scope on line 94 column 9  no-shadow
+  49:3     error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  73:33    error    'order' is already declared in the upper scope on line 85 column 9  no-shadow
+  81:60    error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  82:59    error    Assignment to function parameter 'token'  no-param-reassign
+  102:11   error    'cb' is never reassigned. Use 'const' instead  prefer-const
+  123:30   warning  Method 'token' has a complexity of 73. Maximum allowed is 10  complexity
+  208:56   error    'price' is defined but never used  @typescript-eslint/no-unused-vars
+  288:15   error    Expected '===' and instead saw '=='  eqeqeq
+  292:15   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/lib/money/users.route.tsx
+  11:16    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  92:46    warning  Unexpected console statement  no-console
+  119:29   error    'user' is defined but never used  @typescript-eslint/no-unused-vars
+  166:36   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  206:2    warning  Unexpected console statement  no-console
+  257:35   error    'total' is never reassigned. Use 'const' instead  prefer-const
+  269:15   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  377:42   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+
+/home/runner/work/shop-web/shop-web/src/server/services/users-table.tsx
+  28:35    warning  This line has a length of 115. Maximum allowed is 120  max-len
+  80:27    error    'query' is defined but never used  @typescript-eslint/no-unused-vars
+  134:55   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  154:50   error    'opts' is already declared in the upper scope on line 73 column 9  no-shadow
+  235:56   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  281:58   error    Expected '===' and instead saw '=='  eqeqeq
+  288:33   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  319:15   error    'price' is defined but never used  @typescript-eslint/no-unused-vars
+  368:25   error    'opts' is already declared in the upper scope on line 67 column 9  no-shadow
+
+/home/runner/work/shop-web/shop-web/src/app/shared/pipes/users-table.ts
+  11:57    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  24:21    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  53:15    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  192:60   error    'ctx' is defined but never used  @typescript-eslint/no-unused-vars
+  231:29   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  325:10   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  374:38   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+
+/home/runner/work/shop-web/shop-web/src/app/core/state/search-box.ts
+  99:52    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  118:18   error    Unexpected `await` inside a loop  no-await-in-loop
+  147:31   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  234:4    error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  248:54   warning  Unexpected console statement  no-console
+  250:7    error    Expected '===' and instead saw '=='  eqeqeq
+  326:6    error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  354:21   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/orders/orders.route.ts
+  38:9     warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  55:53    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  57:12    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  153:9    warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  158:56   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  190:45   error    'query' is already declared in the upper scope on line 164 column 9  no-shadow
+  358:34   warning  Method 'data' has a complexity of 26. Maximum allowed is 10  complexity
+  399:23   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+
+/home/runner/work/shop-web/shop-web/src/server/routes/button.tsx
+  75:36    error    'token' is defined but never used  @typescript-eslint/no-unused-vars
+  202:53   warning  Unexpected console statement  no-console
+  266:35   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  310:28   warning  This line has a length of 47. Maximum allowed is 120  max-len
+  314:51   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+
+/home/runner/work/shop-web/shop-web/src/app/admin/reports/payment.service.tsx
+  82:13    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  106:28   warning  Unexpected console statement  no-console
+  113:10   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  209:57   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  242:24   error    'res' is never reassigned. Use 'const' instead  prefer-const
+  255:50   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  306:10   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  312:9    error    'ctx' is defined but never used  @typescript-eslint/no-unused-vars
+  335:41   error    'rows' is defined but never used  @typescript-eslint/no-unused-vars
+  365:33   warning  Unexpected console statement  no-console
+  375:8    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  385:41   error    'data' is defined but never used  @typescript-eslint/no-unused-vars
+  394:8    warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+
+/home/runner/work/shop-web/shop-web/src/app/shared/pipes/filters.js
+  115:13   error    Unexpected `await` inside a loop  no-await-in-loop
+  160:37   error    'order' is never reassigned. Use 'const' instead  prefer-const
+  194:8    warning  Unexpected console statement  no-console
+  292:60   error    'rows' is defined but never used  @typescript-eslint/no-unused-vars
+  315:6    error    'query' is defined but never used  @typescript-eslint/no-unused-vars
+  347:22   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  374:53   error    'cb' is defined but never used  @typescript-eslint/no-unused-vars
+  387:35   warning  Unexpected console statement  no-console
+  393:34   error    Assignment to function parameter 'data'  no-param-reassign
+
+/home/runner/work/shop-web/shop-web/src/app/shared/ui/avatar.tsx
+  166:12   error    Expected '===' and instead saw '=='  eqeqeq
+  300:8    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/checkout/product-list.ts
+  96:26    error    'order' is defined but never used  @typescript-eslint/no-unused-vars
+  261:20   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  295:29   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  337:41   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+
+/home/runner/work/shop-web/shop-web/src/lib/format/avatar.js
+  126:52   error    'item' is defined but never used  @typescript-eslint/no-unused-vars
+  177:18   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  194:47   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  256:31   warning  Unexpected console statement  no-console
+  257:34   error    'data' is defined but never used  @typescript-eslint/no-unused-vars
+  272:33   warning  Unexpected console statement  no-console
+  366:15   error    'user' is already declared in the upper scope on line 16 column 9  no-shadow
+
+/home/runner/work/shop-web/shop-web/src/app/core/http/payment.service.ts
+  24:6     error    'query' is defined but never used  @typescript-eslint/no-unused-vars
+  31:20    error    Expected '===' and instead saw '=='  eqeqeq
+  41:42    error    'user' is never reassigned. Use 'const' instead  prefer-const
+  44:8     error    'price' is already declared in the upper scope on line 97 column 9  no-shadow
+  160:15   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  227:58   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  262:29   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  325:19   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/core/state/cart.service.tsx
+  198:56   error    'item' is defined but never used  @typescript-eslint/no-unused-vars
+  229:50   error    'price' is already declared in the upper scope on line 153 column 9  no-shadow
+  259:57   error    Unexpected `await` inside a loop  no-await-in-loop
+  290:48   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  305:1    error    'res' is never reassigned. Use 'const' instead  prefer-const
+  345:19   warning  This line has a length of 37. Maximum allowed is 120  max-len
+  380:20   error    Expected '===' and instead saw '=='  eqeqeq
+
+/home/runner/work/shop-web/shop-web/src/app/auth/cart.service.ts
+  21:2     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  169:58   error    'item' is defined but never used  @typescript-eslint/no-unused-vars
+  252:51   error    'res' is defined but never used  @typescript-eslint/no-unused-vars
+  309:10   warning  This line has a length of 52. Maximum allowed is 120  max-len
+
+/home/runner/work/shop-web/shop-web/src/app/auth/users-table.tsx
+  115:21   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  121:17   error    'price' is already declared in the upper scope on line 170 column 9  no-shadow
+  170:54   warning  `zod` import should occur before import of `./item`  import/order
+  394:39   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+
+/home/runner/work/shop-web/shop-web/src/app/shared/pipes/login.component.js
+  15:32    error    'subtotal' is defined but never used  @typescript-eslint/no-unused-vars
+  101:41   error    Unexpected `await` inside a loop  no-await-in-loop
+  230:31   error    'price' is never reassigned. Use 'const' instead  prefer-const
+  238:17   error    'subtotal' is never reassigned. Use 'const' instead  prefer-const
+  395:43   error    'price' is never reassigned. Use 'const' instead  prefer-const
+  398:46   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/server/routes/users.route.ts
+  16:37    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  55:43    error    'order' is defined but never used  @typescript-eslint/no-unused-vars
+  109:28   warning  Unexpected console statement  no-console
+  115:8    warning  `zod` import should occur before import of `./price`  import/order
+  141:48   error    Assignment to function parameter 'total'  no-param-reassign
+  265:39   error    'idx' is never reassigned. Use 'const' instead  prefer-const
+  374:46   error    'order' is never reassigned. Use 'const' instead  prefer-const
+
+/home/runner/work/shop-web/shop-web/src/app/auth/orders.route.tsx
+  17:16    warning  This line has a length of 104. Maximum allowed is 120  max-len
+  63:43    warning  Unexpected console statement  no-console
+  70:51    error    Assignment to function parameter 'item'  no-param-reassign
+  273:40   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  369:48   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/catalog/product-card.js
+  18:37    error    'data' is defined but never used  @typescript-eslint/no-unused-vars
+  65:5     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  118:53   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  268:29   error    Expected '===' and instead saw '=='  eqeqeq
+  295:43   warning  Unexpected console statement  no-console
+  367:10   error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+
+/home/runner/work/shop-web/shop-web/src/app/checkout/orders.route.js
+  80:22    warning  This line has a length of 31. Maximum allowed is 120  max-len
+  250:29   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  257:57   error    'query' is never reassigned. Use 'const' instead  prefer-const
+  322:1    warning  Method 'user' has a complexity of 31. Maximum allowed is 10  complexity
+  333:34   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  395:12   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/checkout/product-card.tsx
+  5:59     warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  40:46    warning  Unexpected console statement  no-console
+  222:17   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  392:9    warning  Method 'idx' has a complexity of 103. Maximum allowed is 10  complexity
+
+/home/runner/work/shop-web/shop-web/src/app/search/button.ts
+  25:54    error    'idx' is defined but never used  @typescript-eslint/no-unused-vars
+  67:17    error    Unexpected `await` inside a loop  no-await-in-loop
+  281:54   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  290:40   error    'user' is defined but never used  @typescript-eslint/no-unused-vars
+  323:7    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  377:15   error    'opts' is never reassigned. Use 'const' instead  prefer-const
+  387:24   error    Assignment to function parameter 'order'  no-param-reassign
+  393:27   warning  Unexpected console statement  no-console
+
+/home/runner/work/shop-web/shop-web/src/server/routes/report-builder.ts
+  37:59    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  58:27    error    'ctx' is defined but never used  @typescript-eslint/no-unused-vars
+  111:35   error    Expected '===' and instead saw '=='  eqeqeq
+  183:54   error    'ctx' is defined but never used  @typescript-eslint/no-unused-vars
+  230:19   warning  `rxjs` import should occur before import of `./user`  import/order
+
+/home/runner/work/shop-web/shop-web/src/app/core/state/order.store.tsx
+  48:33    error    'opts' is defined but never used  @typescript-eslint/no-unused-vars
+  77:33    error    Unexpected `await` inside a loop  no-await-in-loop
+  110:16   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  125:52   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  172:39   error    'opts' is never reassigned. Use 'const' instead  prefer-const
+  236:47   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  293:3    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  321:13   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/orders/report-builder.tsx
+  44:7     error    'user' is defined but never used  @typescript-eslint/no-unused-vars
+  95:30    error    'rows' is defined but never used  @typescript-eslint/no-unused-vars
+  158:9    error    Expected '===' and instead saw '=='  eqeqeq
+  190:50   warning  `@angular/core` import should occur before import of `./query`  import/order
+  254:43   error    Assignment to function parameter 'ctx'  no-param-reassign
+  309:48   warning  Unexpected console statement  no-console
+  361:26   error    'opts' is never reassigned. Use 'const' instead  prefer-const
+
+/home/runner/work/shop-web/shop-web/src/app/admin/reports/mailer.tsx
+  79:31    error    Unexpected `await` inside a loop  no-await-in-loop
+  103:3    error    'total' is already declared in the upper scope on line 173 column 9  no-shadow
+  131:42   error    'idx' is defined but never used  @typescript-eslint/no-unused-vars
+  372:47   warning  Unexpected console statement  no-console
+
+/home/runner/work/shop-web/shop-web/src/app/cart/migrations.js
+  104:33   error    Unexpected `await` inside a loop  no-await-in-loop
+  133:21   error    'order' is defined but never used  @typescript-eslint/no-unused-vars
+  170:27   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  181:7    error    'price' is defined but never used  @typescript-eslint/no-unused-vars
+  236:2    error    'token' is never reassigned. Use 'const' instead  prefer-const
+  239:47   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  335:48   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+
+/home/runner/work/shop-web/shop-web/src/app/checkout/checkout.component.ts
+  9:37     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  202:41   error    Expected '===' and instead saw '=='  eqeqeq
+  217:36   error    'item' is never reassigned. Use 'const' instead  prefer-const
+
+/home/runner/work/shop-web/shop-web/src/lib/money/filters.ts
+  31:38    error    'total' is never reassigned. Use 'const' instead  prefer-const
+  56:22    error    'user' is defined but never used  @typescript-eslint/no-unused-vars
+  142:57   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  150:31   error    'rows' is defined but never used  @typescript-eslint/no-unused-vars
+  208:48   warning  `date-fns` import should occur before import of `./res`  import/order
+  377:15   error    'token' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/runner/work/shop-web/shop-web/src/app/shared/pipes/modal.ts
+  42:27    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  196:51   error    'token' is defined but never used  @typescript-eslint/no-unused-vars
+  215:60   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  231:20   warning  Unexpected console statement  no-console
+  282:25   error    'res' is never reassigned. Use 'const' instead  prefer-const
+
+/home/runner/work/shop-web/shop-web/src/app/profile/users.route.ts
+  56:57    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  242:31   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  292:59   warning  Unexpected console statement  no-console
+
+/home/runner/work/shop-web/shop-web/src/app/cart/filters.ts
+  133:56   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  150:22   error    'idx' is already declared in the upper scope on line 190 column 9  no-shadow
+  272:58   error    'ctx' is defined but never used  @typescript-eslint/no-unused-vars
+  375:60   error    'item' is defined but never used  @typescript-eslint/no-unused-vars
+  394:44   error    'price' is never reassigned. Use 'const' instead  prefer-const
+
+/home/runner/work/shop-web/shop-web/src/lib/format/migrations.tsx
+  71:6     error    'query' is defined but never used  @typescript-eslint/no-unused-vars
+  91:17    warning  Unexpected console statement  no-console
+  122:34   error    'order' is never reassigned. Use 'const' instead  prefer-const
+  155:58   error    'subtotal' is defined but never used  @typescript-eslint/no-unused-vars
+  215:17   warning  `lodash-es` import should occur before import of `./order`  import/order
+  257:59   error    'opts' is defined but never used  @typescript-eslint/no-unused-vars
+  365:23   error    'total' is never reassigned. Use 'const' instead  prefer-const
+
+/home/runner/work/shop-web/shop-web/src/lib/format/mailer.ts
+  154:26   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  234:26   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  312:16   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/admin/users/report-builder.ts
+  308:20   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/shared/pipes/cart.service.tsx
+  11:25    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  41:59    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  59:24    error    'res' is never reassigned. Use 'const' instead  prefer-const
+  143:12   error    'res' is never reassigned. Use 'const' instead  prefer-const
+  177:54   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  311:27   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  318:26   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+
+/home/runner/work/shop-web/shop-web/src/app/search/migrations.tsx
+  27:28    warning  `zod` import should occur before import of `./opts`  import/order
+  64:24    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  343:16   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  358:59   error    'ctx' is defined but never used  @typescript-eslint/no-unused-vars
+  372:60   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/search/schema.tsx
+  83:56    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  350:57   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/core/http/order.store.tsx
+  96:54    warning  This line has a length of 89. Maximum allowed is 120  max-len
+  167:42   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  233:35   warning  `lodash-es` import should occur before import of `./token`  import/order
+
+/home/runner/work/shop-web/shop-web/src/app/profile/users.route.js
+  18:39    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  37:28    error    'idx' is defined but never used  @typescript-eslint/no-unused-vars
+  210:25   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  240:50   warning  This line has a length of 171. Maximum allowed is 120  max-len
+  346:1    error    'order' is defined but never used  @typescript-eslint/no-unused-vars
+  370:17   warning  Unexpected console statement  no-console
+
+/home/runner/work/shop-web/shop-web/src/app/profile/date-range.pipe.tsx
+  72:35    error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+
+/home/runner/work/shop-web/shop-web/src/app/core/http/cart.service.ts
+  41:19    warning  Unexpected console statement  no-console
+  150:11   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+
+/home/runner/work/shop-web/shop-web/src/app/shared/pipes/migrations.js
+  252:7    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  300:12   error    'order' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/runner/work/shop-web/shop-web/src/app/cart/cart.component.tsx
+  2:59     error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+
+/home/runner/work/shop-web/shop-web/src/app/checkout/api-client.ts
+  9:60     error    Expected '===' and instead saw '=='  eqeqeq
+  178:25   warning  This line has a length of 147. Maximum allowed is 120  max-len
+  188:53   error    'item' is defined but never used  @typescript-eslint/no-unused-vars
+  345:1    error    'idx' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/runner/work/shop-web/shop-web/src/app/core/state/auth.guard.ts
+  103:7    error    'order' is never reassigned. Use 'const' instead  prefer-const
+  178:22   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  300:30   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/core/state/checkout.component.tsx
+  151:20   warning  This line has a length of 188. Maximum allowed is 120  max-len
+  242:41   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  345:13   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+
+/home/runner/work/shop-web/shop-web/src/server/db/checkout.component.tsx
+  19:36    warning  `lodash-es` import should occur before import of `./token`  import/order
+  127:18   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  187:44   error    'cb' is defined but never used  @typescript-eslint/no-unused-vars
+  196:3    error    'query' is defined but never used  @typescript-eslint/no-unused-vars
+  227:48   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  231:35   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  279:30   warning  Unexpected console statement  no-console
+  360:16   error    'data' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/runner/work/shop-web/shop-web/src/app/admin/users/selectors.js
+  248:21   error    Unexpected `await` inside a loop  no-await-in-loop
+  335:41   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/auth/api-client.tsx
+  100:17   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  155:52   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  204:51   warning  Unexpected console statement  no-console
+  255:4    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  262:53   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  329:4    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  376:27   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+
+/home/runner/work/shop-web/shop-web/src/app/auth/currency.pipe.ts
+  88:24    error    'rows' is never reassigned. Use 'const' instead  prefer-const
+  121:17   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  244:42   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/server/services/index.ts
+  94:39    error    Assignment to function parameter 'cb'  no-param-reassign
+  346:14   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/core/http/report-builder.tsx
+  44:9     error    'opts' is defined but never used  @typescript-eslint/no-unused-vars
+  68:59    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/auth/effects.ts
+  56:57    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  125:31   error    'query' is defined but never used  @typescript-eslint/no-unused-vars
+  178:35   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  199:7    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  377:12   warning  `date-fns` import should occur before import of `./token`  import/order
+
+/home/runner/work/shop-web/shop-web/src/app/auth/product-list.tsx
+  31:18    error    'ctx' is defined but never used  @typescript-eslint/no-unused-vars
+  57:7     warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  66:10    error    'cb' is already declared in the upper scope on line 48 column 9  no-shadow
+  159:9    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  275:22   warning  Unexpected console statement  no-console
+  377:43   warning  Unexpected console statement  no-console
+
+/home/runner/work/shop-web/shop-web/src/app/admin/users/pricing.tsx
+  269:33   error    'data' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/runner/work/shop-web/shop-web/src/app/core/http/date-range.pipe.ts
+  3:47     error    Expected '===' and instead saw '=='  eqeqeq
+  308:33   warning  Unexpected console statement  no-console
+  356:12   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/search/selectors.js
+  64:35    error    'cb' is defined but never used  @typescript-eslint/no-unused-vars
+  132:4    error    'idx' is defined but never used  @typescript-eslint/no-unused-vars
+  289:36   error    'price' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/runner/work/shop-web/shop-web/src/app/core/http/migrations.ts
+  49:30    error    'idx' is defined but never used  @typescript-eslint/no-unused-vars
+  123:28   warning  Unexpected console statement  no-console
+  149:57   error    Unexpected `await` inside a loop  no-await-in-loop
+  289:57   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  379:25   error    'data' is already declared in the upper scope on line 106 column 9  no-shadow
+
+/home/runner/work/shop-web/shop-web/src/app/search/checkout.component.js
+  309:21   warning  This line has a length of 137. Maximum allowed is 120  max-len
+  357:33   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  363:36   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+
+/home/runner/work/shop-web/shop-web/src/app/admin/users/order.store.ts
+  106:44   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  173:57   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  188:51   warning  Unexpected console statement  no-console
+  228:29   error    'data' is never reassigned. Use 'const' instead  prefer-const
+  252:12   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  321:11   error    Assignment to function parameter 'res'  no-param-reassign
+  327:19   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/lib/format/orders.route.ts
+  81:58    error    'idx' is defined but never used  @typescript-eslint/no-unused-vars
+  184:39   warning  Unexpected console statement  no-console
+  247:9    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/shared/pipes/orders.route.js
+  20:9     warning  Unexpected console statement  no-console
+  147:52   warning  `lodash-es` import should occur before import of `./ctx`  import/order
+  252:25   error    'order' is already declared in the upper scope on line 67 column 9  no-shadow
+  337:49   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/shared/pipes/order.store.js
+  4:42     warning  This line has a length of 66. Maximum allowed is 120  max-len
+
+/home/runner/work/shop-web/shop-web/src/app/admin/users/auth.guard.ts
+  216:41   warning  Unexpected console statement  no-console
+  255:10   error    'res' is never reassigned. Use 'const' instead  prefer-const
+  343:3    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/server/db/users-table.ts
+  31:59    warning  Method 'user' has a complexity of 155. Maximum allowed is 10  complexity
+  211:6    error    Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  350:10   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/lib/money/product-card.tsx
+  10:12    error    'subtotal' is defined but never used  @typescript-eslint/no-unused-vars
+  107:16   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+  143:25   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  149:57   error    'order' is never reassigned. Use 'const' instead  prefer-const
+  273:14   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/server/db/selectors.js
+  125:21   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  381:58   warning  Unexpected console statement  no-console
+
+/home/runner/work/shop-web/shop-web/src/server/routes/migrations.ts
+  132:14   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  258:52   error    Expected '===' and instead saw '=='  eqeqeq
+  343:2    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  368:11   error    'cb' is already declared in the upper scope on line 67 column 9  no-shadow
+
+/home/runner/work/shop-web/shop-web/src/lib/format/currency.pipe.ts
+  114:21   error    'order' is never reassigned. Use 'const' instead  prefer-const
+
+/home/runner/work/shop-web/shop-web/src/app/shared/pipes/index.ts
+  336:2    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  364:25   warning  `lodash-es` import should occur before import of `./token`  import/order
+  383:12   warning  Unexpected console statement  no-console
+
+/home/runner/work/shop-web/shop-web/src/app/catalog/mailer.ts
+  165:2    error    'query' is never reassigned. Use 'const' instead  prefer-const
+  221:58   error    'opts' is already declared in the upper scope on line 121 column 9  no-shadow
+
+/home/runner/work/shop-web/shop-web/src/server/db/product-card.tsx
+  215:23   warning  Method 'opts' has a complexity of 42. Maximum allowed is 10  complexity
+  264:47   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  332:34   error    Unexpected `await` inside a loop  no-await-in-loop
+
+/home/runner/work/shop-web/shop-web/src/lib/format/effects.ts
+  103:3    warning  Unexpected console statement  no-console
+  132:21   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/admin/reports/product-card.ts
+  182:37   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  292:39   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/lib/money/pricing.ts
+  109:49   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  353:47   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/server/services/selectors.js
+  157:37   error    'query' is defined but never used  @typescript-eslint/no-unused-vars
+  157:44   warning  Unexpected console statement  no-console
+
+/home/runner/work/shop-web/shop-web/src/app/checkout/modal.js
+  243:13   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  321:21   warning  This line has a length of 48. Maximum allowed is 120  max-len
+
+/home/runner/work/shop-web/shop-web/src/app/shared/pipes/modal.js
+  167:5    warning  Unexpected console statement  no-console
+  210:52   error    Assignment to function parameter 'query'  no-param-reassign
+  259:52   error    'opts' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/runner/work/shop-web/shop-web/src/app/catalog/cart.service.ts
+  92:26    warning  This line has a length of 20. Maximum allowed is 120  max-len
+  207:12   warning  This line has a length of 46. Maximum allowed is 120  max-len
+  280:60   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  281:59   warning  This line has a length of 29. Maximum allowed is 120  max-len
+
+/home/runner/work/shop-web/shop-web/src/app/core/state/format-date.ts
+  268:6    warning  Unexpected console statement  no-console
+  364:37   error    'user' is already declared in the upper scope on line 84 column 9  no-shadow
+  376:17   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  395:53   warning  Method 'res' has a complexity of 106. Maximum allowed is 10  complexity
+
+/home/runner/work/shop-web/shop-web/src/server/services/cart.service.js
+  131:25   error    'query' is defined but never used  @typescript-eslint/no-unused-vars
+  181:38   warning  Unexpected console statement  no-console
+  288:28   warning  `zod` import should occur before import of `./total`  import/order
+  394:30   warning  Unexpected console statement  no-console
+
+/home/runner/work/shop-web/shop-web/src/app/orders/format-date.js
+  324:18   error    Expected '===' and instead saw '=='  eqeqeq
+
+/home/runner/work/shop-web/shop-web/src/server/services/users-table.js
+  297:5    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  327:37   error    Expected '===' and instead saw '=='  eqeqeq
+
+/home/runner/work/shop-web/shop-web/src/app/admin/users/currency.pipe.js
+  113:19   error    'cb' is defined but never used  @typescript-eslint/no-unused-vars
+  214:49   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  272:11   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  297:11   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  348:17   error    Expected '===' and instead saw '=='  eqeqeq
+
+/home/runner/work/shop-web/shop-web/src/app/admin/reports/avatar.js
+  262:11   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  322:41   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/server/routes/constants.ts
+  117:16   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  214:44   error    'cb' is defined but never used  @typescript-eslint/no-unused-vars
+  326:45   error    Unexpected `await` inside a loop  no-await-in-loop
+  372:15   error    'subtotal' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/runner/work/shop-web/shop-web/src/app/cart/api-client.ts
+  14:48    error    Unexpected `await` inside a loop  no-await-in-loop
+  42:51    error    Assignment to function parameter 'idx'  no-param-reassign
+  116:54   error    'price' is never reassigned. Use 'const' instead  prefer-const
+  362:1    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  372:3    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/runner/work/shop-web/shop-web/src/app/cart/filters.tsx
+  100:37   error    Expected '===' and instead saw '=='  eqeqeq
+  251:19   error    Expected '===' and instead saw '=='  eqeqeq
+
+/home/runner/work/shop-web/shop-web/src/app/admin/reports/search-box.ts
+  105:25   error    'subtotal' is already declared in the upper scope on line 27 column 9  no-shadow
+  197:42   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  246:43   error    'rows' is already declared in the upper scope on line 109 column 9  no-shadow
+  385:19   error    Promises must be awaited, end with a call to .catch, or end with a call to .then  @typescript-eslint/no-floating-promises
+
+/home/runner/work/shop-web/shop-web/src/app/catalog/currency.pipe.ts
+  108:36   warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+  174:19   warning  Unexpected console statement  no-console
+
+✖ 1445 problems (663 errors, 782 warnings)
+  73 errors and 0 warnings potentially fixable with the `--fix` option.
