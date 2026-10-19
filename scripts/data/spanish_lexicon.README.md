@@ -92,6 +92,10 @@ de diccionario.
     `KFIT_MIN` y `kfitObserver`), `disconnect` (método del `ResizeObserver`) y `frames` (`_FRAMES`,
     espera de fotogramas en `tests/test_dashboard_ui.py`).
 
+11. En la ola lint-large-logs (2026-10-19) el detector informó de 4 palabras sin clasificar, a
+    mano, todas a inglés: `countable`, `eslint`, `forbids` (nombres de tests de
+    `tests/test_lint_large_logs.py`) y `ranked` (variable de `lint_patterns.per_file_code_counts`).
+
 ## Heurísticas (no usan datos ajenos)
 
 En `detect_spanish_names.classify_word`, en este orden:
