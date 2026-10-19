@@ -17,17 +17,9 @@ SERVER = ROOT / "src" / "local_delegate" / "server.py"
 OUT = Path(__file__).resolve().parent / "mutants.json"
 
 MUTANTS = {
-    "global counts (no per-file branch in the mechanical call)": (
-        "return per_file if per_file is not None and len(per_file) > 1 else None",
-        "return None",
-    ),
-    "counts to the model (per-file inventory with figures in the prompt)": (
-        "inventory = _lint_per_file_inventory(per_file, budget, with_counts=False)",
-        "inventory = _lint_per_file_inventory(per_file, budget, with_counts=True)",
-    ),
-    "no block (the program does not add the counts per file)": (
-        "        return lambda answer, _t: _lint_per_file_counts(answer, per_file)",
-        "        return None",
+    "map cap of before (the map keeps the base cap of 696)": (
+        "            max_tokens_for=_lint_map_max_tokens,",
+        "            max_tokens_for=_lint_chunk_max_tokens,",
     ),
     "one entry per file (no bound in the final step, no line of the rest)": (
         "    if left_out <= 0:\n        return answer",
@@ -65,6 +57,7 @@ def main() -> int:
                     "-p",
                     "no:cacheprovider",
                     "tests/test_lint_large_logs.py",
+                    "tests/test_combining_chunks.py",
                 ],
                 cwd=ROOT,
                 capture_output=True,

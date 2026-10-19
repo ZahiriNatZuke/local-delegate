@@ -1,25 +1,24 @@
-"""Wave lint-large-logs: bounded chunked lint and per-file counts in the mechanical call.
+"""Wave lint-large-logs: the chunked lint of very large logs, bounded and with program counts.
 
-Born of two live measurements:
+Born of backlog §1.8 (`evidence/B2e/live.md`): with logs of 150-210 k characters the final step of
+the chunked lint wrote one entry per file (50-130 files), 6-8 k characters, and ended in `length`;
+the map steps counted tests per file chunk by chunk and got them wrong. Now each map answers in a
+terse format with no figures and an entry only for the most named files of its chunk, the final
+step an entry only for the `LINT_TOP_FILES` most named files of the log, with the counts of the
+program, and the program adds how many files are left out. Map and final steps have larger caps.
 
-- backlog §1.8 (`evidence/B2e/live.md`): with logs of 150-210 k characters the final step of the
-  chunked lint wrote one entry per file (50-130 files), 6-8 k characters, and ended in `length`;
-  the map steps counted tests per file chunk by chunk and got them wrong. Now the map gives no
-  figures per file and an entry only to the most named files of its chunk, the final step an entry
-  only to the `LINT_TOP_FILES` most named files of the log, with the counts of the program, and the
-  program adds how many files are left out.
-- `evidence/affinity-by-language/live.md`: the mechanical model copied under one file the count of
-  a code in the whole log. With several files and a countable format, the mechanical call now gets
-  the counts per file.
+`lint_patterns.per_file_code_counts` gives the program the count per file in the formats that put
+the file and the code on the same diagnostic (ruff concise and full, tsc). The per-file counts in
+the mechanical call (iterations 1 and 2 of the wave) were measured and not adopted; a control test
+checks that the call is as in the base.
 
 The backend is faked (`_run_chat`): no network, no GPU. Each test names the mutant that makes it
-fail (`evidence/lint-large-logs/mutants.md`).
+fail (`evidence/lint-large-logs/mutants.json`).
 """
 
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 
 import pytest
@@ -136,80 +135,16 @@ def test_formats_that_do_not_say_the_file_of_each_code_give_no_per_file_counts()
     assert lint_patterns.per_file_code_counts("Todo en orden.\n") is None
 
 
-# --- problem 2: the mechanical call ------------------------------------------------------------
+# --- the mechanical call: not touched (iterations 1 and 2 did not reach the criterion) --------
 
 
-def test_the_mechanical_call_with_several_files_gets_the_codes_per_file(captured, tmp_path):
-    """Mutant "global counts" (`_lint_mechanical_per_file` returning `None`): the prompt says
-    "F401: 3", the count of the whole log the 4B copied under `app/util.py`, and the per-file
-    lines are missing. Mutant "counts to the model" (`with_counts=True` in the prompt): the
-    prompt carries "F401 2", which the 4B miscopied in iteration 1."""
-    server.local_lint_summary(text=THREE_FILES)
-    (call,) = captured
-    (row,) = _rows(tmp_path)
-    assert row["model"] == config.models_by_role()["mechanical"]  # guard: the mechanical role
-    head, sep, rest = call["user"].partition(BASE)
-    assert sep and rest == THREE_FILES
-    assert "- app/util.py: F401, E501, W291" in head
-    assert "- app/main.py: E501, F401" in head
-    assert "- app/cli.py: E501" in head
-    assert "F401: 3" not in head and "F401 2" not in head
-    assert "no escribas ninguna cifra ni recuento" in head
-    assert call["max_tokens"] == server._lint_max_tokens(200)  # its cap of before
-
-
-def test_the_program_adds_the_counts_per_file_after_the_mechanical_answer(captured):
-    """Mutant "no block" (`_lint_single_postprocess` returning `None` for the mechanical role):
-    the answer is the model's alone, with no counts."""
-    captured.answer = "**app/util.py**: F401, E501, W291"
-    out = server.local_lint_summary(text=THREE_FILES)
-    assert out.startswith("**app/util.py**: F401, E501, W291")  # guard: the model's answer
-    block = (
-        "Recuento por fichero (contado por el programa):\n"
-        "- app/util.py: F401 2, E501 1, W291 1\n"
-        "- app/main.py: E501 2, F401 1\n"
-        "- app/cli.py: E501 1"
-    )
-    assert block in out
-    assert "Sin mencionar" not in out
-
-
-def test_the_mechanical_call_with_one_file_keeps_the_counts_of_the_log(captured):
-    """Control: with one file the count of the log IS the count of the file; nothing changes."""
-    log = "".join(f"tools/gen.py:{n}:1: E402 Module level import\n" for n in range(1, 5))
-    server.local_lint_summary(text=log)
-    (call,) = captured
-    head = call["user"].partition(BASE)[0]
-    assert head.startswith("Ficheros que nombra el log") and "E402: 4" in head
-
-
-def test_the_mechanical_call_of_a_format_without_per_file_counts_keeps_the_inventory(captured):
-    """Control: tsc-like but not countable (biome-style codes): the inventory of before."""
-    log = (
-        "src/a.ts:3:5 lint/style/noMagicNumbers  Magic number.\n"
-        "src/b.ts:9:1 lint/style/noMagicNumbers  Magic number.\n"
-    )
-    server.local_lint_summary(text=log)
-    (call,) = captured
-    head = call["user"].partition(BASE)[0]
-    assert head.startswith("Ficheros que nombra el log") and "Recuento por fichero" not in head
-
-
-def test_the_single_long_call_keeps_the_counts_of_the_whole_log(captured, monkeypatch):
-    """Control: the single call of the `long` role (window G of the measurement) is untouched."""
-    monkeypatch.setattr(config, "LONG_INPUT_CHARS", 100)
+def test_the_mechanical_call_keeps_the_counts_of_the_whole_log(captured):
+    """Control: the per-file counts of iterations 1 and 2 were not adopted (`plan.md`); the
+    mechanical call keeps the inventory of the base, with the count of each code in the log."""
     server.local_lint_summary(text=THREE_FILES)
     (call,) = captured
     head = call["user"].partition(BASE)[0]
-    assert "F401: 3" in head and "Recuento por fichero" not in head
-
-
-def test_the_per_file_inventory_is_cut_without_figures():
-    """Over its budget the inventory ends in "y otros", with no count of what is left out."""
-    per = lint_patterns.per_file_code_counts(_ruff_log(30, 3))
-    text = server._lint_per_file_inventory(per, 400, with_counts=False)
-    assert len(text) <= 400 and text.endswith("\n- y otros")
-    assert "CPY001" in text and re.search(r"[A-Z]+\d+ \d", text) is None  # codes, no counts
+    assert head.startswith("Ficheros que nombra el log") and "F401: 3" in head
 
 
 # --- problem 1: the chunked lint ---------------------------------------------------------------

@@ -322,9 +322,10 @@ def test_only_the_final_steps_of_the_chunked_lint_get_the_larger_cap(
     assert "regroup" in kinds and kinds[-1] == "reduce"  # guard: it chunked and regrouped
     assert len(captured) == len(kinds)
     caps = {kind: {c["max_tokens"] for c, k in zip(captured, kinds) if k == kind} for kind in kinds}
-    assert caps["map"] == {server._lint_chunk_max_tokens(200)} == {696}
-    assert caps["reduce"] == {server._lint_final_max_tokens(200)} == {2088}
-    assert caps["regroup"] == {2088}
+    # Wave lint-large-logs (limit step): map 2x and final steps 4x the base cap of 696.
+    assert caps["map"] == {server._lint_map_max_tokens(200)} == {1392}
+    assert caps["reduce"] == {server._lint_final_max_tokens(200)} == {2784}
+    assert caps["regroup"] == {2784}
 
 
 def test_the_single_lint_call_keeps_its_cap(captured):

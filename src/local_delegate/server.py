@@ -23,7 +23,6 @@ import subprocess
 import sys
 import threading
 import time
-from collections import Counter
 from collections.abc import Callable, Collection, Generator, Iterable, Sequence
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field, replace
@@ -3710,8 +3709,20 @@ def _lint_single_max_tokens(words: int, role: str) -> int:
 
 
 def _lint_chunk_max_tokens(words: int) -> int:
-    """The cap of each map step of the chunked `local_lint_summary`."""
+    """The base cap of the steps of the chunked `local_lint_summary` (map and final steps)."""
     return int(words * LINT_TOKENS_PER_WORD) + LINT_CHUNK_TOKENS_BASE
+
+
+#: Wave lint-large-logs (limit step, 2026-10-19): the map of the chunked lint doubles its cap
+#: (1 392 tokens for 200 words). Even with the terse format (one line per listed file, only its
+#: codes) the map steps of a ruff log of 180 k characters reach ~3 000 characters, ten files with
+#: dozens of codes each, and 696 tokens cut them (`evidence/lint-large-logs/plan.md`, iteration 2).
+LINT_MAP_TOKENS_FACTOR = 2
+
+
+def _lint_map_max_tokens(words: int) -> int:
+    """The cap of each map step of the chunked `local_lint_summary`."""
+    return LINT_MAP_TOKENS_FACTOR * _lint_chunk_max_tokens(words)
 
 
 # B2e (user decision of 2026-10-18): the cap of the FINAL steps of the chunked lint (reduce and
@@ -3722,7 +3733,10 @@ def _lint_chunk_max_tokens(words: int) -> int:
 # ~1 800-2 050 tokens for the longest. The single call keeps its caps (`_lint_max_tokens`), and
 # the map keeps `_lint_chunk_max_tokens`. With the reduce prompt within `_map_budget` (38 400
 # characters for `long`), prompt plus output stays under the 38 400 tokens of `gemma4-26b-a4b`.
-LINT_FINAL_TOKENS_FACTOR = 3
+# Wave lint-large-logs (limit step, 2026-10-19): four times, 2 784 tokens. With the entries bounded
+# to the 10 most named files, the final step of a ruff log with 91 codes still ended in `length`
+# at ~6 000 characters (~3 per token) in 2 of 3, its section of totals naming every code.
+LINT_FINAL_TOKENS_FACTOR = 4
 
 
 def _lint_final_max_tokens(words: int) -> int:
@@ -3931,85 +3945,10 @@ def _lint_single_user(content: str, log: str, role: str) -> str:
     """
     base = f"Resume la siguiente salida de linter/tests:\n\n{content}"
     budget = int(_map_budget(config.max_chars_for_role(role)) * 0.25)
-    # Wave lint-large-logs: with several files, the mechanical call gets the counts PER FILE.
-    per_file = _lint_mechanical_per_file(log, role)
-    if per_file is not None:
-        inventory = _lint_per_file_inventory(per_file, budget, with_counts=False)
-        return (
-            f"{inventory}\n\nLa lista de arriba sale del log de abajo.{_LINT_PER_FILE_CLAUSE} "
-            f"{base}"
-        )
     inventory = _lint_inventory(log, budget, with_counts=True)
     if not inventory:
         return base
     return f"{inventory}\n\nLa lista de arriba sale del log de abajo.{_LINT_COUNTS_CLAUSE} {base}"
-
-
-def _lint_mechanical_per_file(log: str, role: str) -> dict[str, Counter[str]] | None:
-    """The counts per file of a log of the mechanical call with several files, or `None`.
-
-    Wave lint-large-logs: only the `mechanical` role (the single `long` call is untouched) and only
-    when the format lets the program count per file (`lint_patterns.per_file_code_counts`) and the
-    log names more than one file (with one, the count of the log is the count of the file).
-    """
-    if role != "mechanical":
-        return None
-    per_file = lint_patterns.per_file_code_counts(log)
-    return per_file if per_file is not None and len(per_file) > 1 else None
-
-
-def _lint_per_file_inventory(
-    per_file: dict[str, Counter[str]], max_chars: int, with_counts: bool = True
-) -> str:
-    """Wave lint-large-logs: one line per file with its codes (and their count), by program.
-
-    In the live measurement of affinity by language (`evidence/affinity-by-language/live.md`) the
-    mechanical model (`gemma3-4b`) copied under one file the count of a code in the WHOLE log,
-    which is what the inventory of `_lint_inventory(with_counts=True)` gives ("F401: 3" in
-    `app/util.py`, which has 2), and wrote codes a file does not have ("W291: 0"). Iteration 1 gave
-    it the count of each code in each file, and it still miscopied them ("D103: 3" where the list
-    said 2, `evidence/lint-large-logs/plan.md`); so the model gets the codes of each file WITHOUT
-    figures (`with_counts=False`) and the program adds the counts after the answer
-    (`_lint_per_file_counts`). Files with most diagnostics first; cut WITHOUT figures ("y otros")
-    when they do not fit, as `_lint_inventory_line`.
-    """
-    if with_counts:
-        header = i18n.t("mcp.lint.per_file_counts")
-    else:
-        header = "Códigos de cada fichero, según el programa:"
-    lines = [header]
-    used = len(header) + len("\n- y otros")
-    for file, codes in per_file.items():
-        if with_counts:
-            items = ", ".join(f"{code} {count}" for code, count in codes.items())
-        else:
-            items = ", ".join(codes)
-        line = f"- {file}: {items}"
-        if used + len(line) + 1 > max_chars:
-            lines.append("- y otros" if not with_counts else "- …")
-            break
-        lines.append(line)
-        used += len(line) + 1
-    return "\n".join(lines)
-
-
-#: Wave lint-large-logs: what the mechanical call with several files is told (iteration 2).
-_LINT_PER_FILE_CLAUSE = (
-    " La lista dice qué códigos tiene cada fichero: nombra cada regla por su código, tal cual "
-    "aparece en la lista, y no escribas ninguna cifra ni recuento: el programa añade el recuento "
-    "por fichero al final de tu resumen. Un código que la lista no da para un fichero no va en su "
-    "entrada."
-)
-
-#: Wave lint-large-logs: the most characters of the block of counts per file the program adds
-#: after the mechanical answer (a log of the mechanical role is short; this is only a guard).
-LINT_PER_FILE_BLOCK_CHARS = 2000
-
-
-def _lint_per_file_counts(answer: str, per_file: dict[str, Counter[str]]) -> str:
-    """Wave lint-large-logs: the counts per file, added by the program after the answer."""
-    block = _lint_per_file_inventory(per_file, LINT_PER_FILE_BLOCK_CHARS, with_counts=True)
-    return f"{answer.rstrip()}\n\n{block}"
 
 
 #: Wave lint-large-logs: how many files get an entry in the chunked lint (map and final step).
@@ -4833,7 +4772,7 @@ def local_lint_summary(
             path=path,
             reduce_system=system,
             build_reduce=_build_reduce,
-            max_tokens_for=_lint_chunk_max_tokens,
+            max_tokens_for=_lint_map_max_tokens,
             final_max_tokens_for=_lint_final_max_tokens,
             postprocess=_add_not_mentioned,
         )
@@ -4853,23 +4792,11 @@ def local_lint_summary(
         truncated_in=truncated_in,
         raw_len=raw_len,
         path=path,
-        postprocess=_lint_single_postprocess(log, role),
+        postprocess=(lambda answer, _t: _lint_not_mentioned(answer, log))
+        if role == "long"
+        else None,
     )
     return _truncation_prefix(content, truncated_in, raw_len) + result
-
-
-def _lint_single_postprocess(log: str, role: str) -> Callable[[str, bool], str] | None:
-    """What the program adds after the single `local_lint_summary` call.
-
-    B2f: with the `long` role, the "not mentioned" line. Wave lint-large-logs: with the
-    `mechanical` role and several files of a countable format, the counts per file.
-    """
-    if role == "long":
-        return lambda answer, _t: _lint_not_mentioned(answer, log)
-    per_file = _lint_mechanical_per_file(log, role)
-    if per_file is not None:
-        return lambda answer, _t: _lint_per_file_counts(answer, per_file)
-    return None
 
 
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_commit_msg"]))
