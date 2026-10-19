@@ -8,6 +8,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Cambiado
 
+- **La lista de excepciones del detector de nombres vive ahora en `scripts/data/`.** Pasa de las
+  tablas de `.sdd/changes/english-names-bilingual-output/rename-exceptions.md` a
+  `scripts/data/name_exceptions.json` (motivos y formato en `name_exceptions.README.md`), que
+  `scripts/detect_spanish_names.py` lee por defecto. El guardián
+  `test_repo_has_no_spanish_name_outside_the_exception_list` ya no se salta si falta la carpeta del
+  cambio: si falta la lista, falla; y exige también **0 palabras sin clasificar** (REQ-044), tras
+  clasificar a mano las 111 que quedaban (16 español, 95 inglés).
 - **`local_lint_summary` copia los recuentos por regla en vez de contarlos** (llamada única). El
   inventario de ficheros y códigos que el programa pone delante del log lleva ahora, junto a cada
   código, las veces que aparece en todo el log, y el prompt pide nombrar cada regla por su código y
@@ -23,6 +30,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   (`matrix.Cell.language`): la del otro idioma ni se usa ni hace avisar a `doctor`. Aprobadas en
   `es` y en `en` en 3 de 3 repeticiones. Medición:
   `.sdd/changes/english-names-bilingual-output/evidence/affinity-by-language/live.md`.
+
+### Documentación
+
+- **Poca RAM libre con los modelos grandes cargados**: nueva sección en
+  [Troubleshooting](docs/wiki/Troubleshooting.md) y nota en la receta de llama-swap. Con los MoE
+  grandes y `--load-mode mmap` quedan 0,4–1,4 GB libres mientras el modelo espera su `ttl`; la
+  palanca es un `ttl` más corto solo para ellos, con `local-delegate llamaswap residency --ttl
+  <modelo>=<segundos>`.
 
 ## [0.36.0] - 2026-10-18
 

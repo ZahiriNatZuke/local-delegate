@@ -1,0 +1,1921 @@
+{
+  "description": "Excepciones del detector de nombres en español (REQ-016). Formato y motivos válidos: name_exceptions.README.md.",
+  "sections": [
+    {
+      "title": "Alias de compatibilidad",
+      "entries": [
+        {
+          "name": "delegacion-local",
+          "file": "src/local_delegate/install.py",
+          "reason": "alias de compatibilidad permanente (REQ-012/013): nombre de la skill hasta la 0.34.0 en `_RETIRED_SKILLS`; sin retirada, porque quien salte desde una 0.34 sigue teniendo la copia vieja (ola A6, respuesta 7)"
+        },
+        {
+          "name": "anotar_llamada.py",
+          "file": "src/local_delegate/install.py",
+          "reason": "alias de compatibilidad permanente (REQ-012): nombre del hook hasta la 0.34.0 en `_RETIRED_SCRIPTS`; misma razón (ola A2, apuntado en A6, respuesta 7)"
+        },
+        {
+          "name": "delegacion-local",
+          "file": "tests/*",
+          "reason": "alias de compatibilidad (REQ-012): instalación 0.34.0 simulada en los tests de `install`/`update` y de la retirada de la skill (ola A6)"
+        },
+        {
+          "name": "ld_sesion",
+          "file": "tests/test_web_auth.py",
+          "reason": "alias de compatibilidad (REQ-012): cookie de la 0.34.0 que tiene que dar 401 (ola A6)"
+        },
+        {
+          "name": "--desde",
+          "file": "scripts/measure_adoption.py",
+          "reason": "alias de compatibilidad (decisión 10 de A10a): nombre de antes de `--since`, por los comandos escritos en la wiki y en el `verification.md` de `delegacion-precisa-y-fiable`; el test lo usa en una de las dos llamadas a `main` (ola A10a-4)"
+        },
+        {
+          "name": "--desde",
+          "file": "tests/test_measure_adoption.py",
+          "reason": "alias de compatibilidad (decisión 10 de A10a): nombre de antes de `--since`, por los comandos escritos en la wiki y en el `verification.md` de `delegacion-precisa-y-fiable`; el test lo usa en una de las dos llamadas a `main` (ola A10a-4)"
+        },
+        {
+          "name": "LD_HOOK_READ_BLOQUEAR",
+          "file": "src/local_delegate/config.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del interruptor del bloqueo que leen el daemon y los hooks, y los tests que la prueban (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "LD_HOOK_READ_BLOQUEAR",
+          "file": "src/local_delegate/deprecations.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del interruptor del bloqueo que leen el daemon y los hooks, y los tests que la prueban (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "LD_HOOK_READ_BLOQUEAR",
+          "file": "src/local_delegate/resources/hooks/hook_common.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del interruptor del bloqueo que leen el daemon y los hooks, y los tests que la prueban (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "LD_HOOK_READ_BLOQUEAR",
+          "file": "tests/test_cli_renamed_names.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del interruptor del bloqueo que leen el daemon y los hooks, y los tests que la prueban (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "LD_HOOK_READ_BLOQUEAR",
+          "file": "tests/test_hook_legacy_names.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del interruptor del bloqueo que leen el daemon y los hooks, y los tests que la prueban (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "LD_HOOK_READ_BLOQUEAR",
+          "file": "tests/test_environment_isolation.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del interruptor del bloqueo que leen el daemon y los hooks, y los tests que la prueban (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "LD_HOOK_READ_INTERRUPTOR",
+          "file": "src/local_delegate/config.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable de la ruta del interruptor, y los tests que la prueban (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "LD_HOOK_READ_INTERRUPTOR",
+          "file": "src/local_delegate/deprecations.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable de la ruta del interruptor, y los tests que la prueban (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "LD_HOOK_READ_INTERRUPTOR",
+          "file": "src/local_delegate/resources/hooks/hook_common.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable de la ruta del interruptor, y los tests que la prueban (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "LD_HOOK_READ_INTERRUPTOR",
+          "file": "tests/test_cli_renamed_names.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable de la ruta del interruptor, y los tests que la prueban (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "LD_HOOK_READ_INTERRUPTOR",
+          "file": "tests/test_hook_legacy_names.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable de la ruta del interruptor, y los tests que la prueban (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
+          "file": "src/local_delegate/config.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del resumen estructurado, y los tests que la prueban (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
+          "file": "src/local_delegate/deprecations.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del resumen estructurado, y los tests que la prueban (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
+          "file": "tests/test_cli_renamed_names.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del resumen estructurado, y los tests que la prueban (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
+          "file": "tests/test_structured_summary.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del resumen estructurado, y los tests que la prueban (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
+          "file": "src/local_delegate/config.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del coste de respaldo, y los tests que la prueban (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
+          "file": "src/local_delegate/deprecations.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del coste de respaldo, y los tests que la prueban (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
+          "file": "tests/test_cli_renamed_names.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del coste de respaldo, y los tests que la prueban (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
+          "file": "tests/test_density.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del coste de respaldo, y los tests que la prueban (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "recalcular-coste",
+          "file": "src/local_delegate/cli.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); subcomando viejo de `recompute-cost`, y el test que lo prueba (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "recalcular-coste",
+          "file": "src/local_delegate/deprecations.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); subcomando viejo de `recompute-cost`, y el test que lo prueba (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "recalcular-coste",
+          "file": "tests/test_cli_renamed_names.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); subcomando viejo de `recompute-cost`, y el test que lo prueba (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "recalcular-coste",
+          "file": "tests/test_cli_english.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); el humo en inglés comprueba que su aviso sale en inglés (frente B, ola B1a)"
+        },
+        {
+          "name": "reiniciar-calibracion",
+          "file": "tests/test_cli_renamed_names.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); opción vieja `--reiniciar-calibracion` de `--reset-calibration`, que el test usa (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "local-delegate-bloqueo-apagado",
+          "file": "src/local_delegate/deprecations.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); fichero de `~/.claude/` que apaga el bloqueo; lo lee el hook (REQ-012) (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "local-delegate-bloqueo-apagado",
+          "file": "src/local_delegate/resources/hooks/hook_common.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); fichero de `~/.claude/` que apaga el bloqueo; lo lee el hook (REQ-012) (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "enfriamiento.json",
+          "file": "src/local_delegate/deprecations.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); escritura doble (`legacy_write`) de `cooldown.json` con el nombre viejo, para que los hooks de versiones anteriores vean los modelos enfriados (REQ-005) (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "enfriamiento.json",
+          "file": "src/local_delegate/resources/hooks/hook_common.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); escritura doble (`legacy_write`) de `cooldown.json` con el nombre viejo, para que los hooks de versiones anteriores vean los modelos enfriados (REQ-005) (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "enfriamiento.json",
+          "file": "tests/test_cooldown.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); escritura doble (`legacy_write`) de `cooldown.json` con el nombre viejo, para que los hooks de versiones anteriores vean los modelos enfriados (REQ-005) (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "enfriamiento.json",
+          "file": "tests/test_fallback.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); escritura doble (`legacy_write`) de `cooldown.json` con el nombre viejo, para que los hooks de versiones anteriores vean los modelos enfriados (REQ-005) (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "enfriamiento.json",
+          "file": "tests/test_f1_conformance.py",
+          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); escritura doble (`legacy_write`) de `cooldown.json` con el nombre viejo, para que los hooks de versiones anteriores vean los modelos enfriados (REQ-005) (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "anotar_llamada.py",
+          "file": "tests/test_install.py",
+          "reason": "alias de compatibilidad permanente (REQ-012), como la fila de `install.py`: los tests que comprueban que `install` sobre una 0.34 retira el hook viejo `anotar_llamada.py` (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "test_*anotar_llamada*",
+          "file": "tests/test_install.py",
+          "reason": "alias de compatibilidad permanente (REQ-012), como la fila de `install.py`: los tests que comprueban que `install` sobre una 0.34 retira el hook viejo `anotar_llamada.py` (cierre del frente A, lote 4)"
+        }
+      ]
+    },
+    {
+      "title": "Lectura de formato viejo",
+      "entries": [
+        {
+          "name": "residente",
+          "file": "src/local_delegate/chains.py",
+          "reason": "lectura de formato viejo (REQ-022): `_OBSOLETE_SYNONYMS` acepta `residente` (y `resident`) como sinónimo obsoleto del paso `loaded` en `LOCAL_DELEGATE_FALLBACK_<ROL>`, con aviso de `doctor`; hoy el detector no lo marca, la fila deja escrito por qué sigue (ola A8a-1, respuesta 4)"
+        },
+        {
+          "name": "modelo",
+          "file": "tests/test_measure_cooldown.py",
+          "reason": "lectura de formato viejo (REQ-007): clave del registro viejo de enfriamiento y clase de error vieja que el test escribe a propósito para probar la lectura dual (ola A10a-3)"
+        },
+        {
+          "name": "evento",
+          "file": "tests/test_measure_cooldown.py",
+          "reason": "lectura de formato viejo (REQ-007): clave del registro viejo de enfriamiento que el test escribe a propósito (ola A10a-3)"
+        },
+        {
+          "name": "clase",
+          "file": "tests/test_measure_cooldown.py",
+          "reason": "lectura de formato viejo (REQ-007): clave del registro viejo de enfriamiento que el test escribe a propósito (ola A10a-3)"
+        },
+        {
+          "name": "espera_s",
+          "file": "tests/test_measure_cooldown.py",
+          "reason": "lectura de formato viejo (REQ-007): clave del registro viejo de enfriamiento que el test escribe a propósito (ola A10a-3)"
+        },
+        {
+          "name": "tras_vencer",
+          "file": "tests/test_measure_cooldown.py",
+          "reason": "lectura de formato viejo (REQ-007): clave del registro viejo de enfriamiento que el test escribe a propósito (ola A10a-3)"
+        },
+        {
+          "name": "entra",
+          "file": "tests/test_measure_cooldown.py",
+          "reason": "lectura de formato viejo (REQ-007): valor de evento del registro viejo que el test escribe a propósito (ola A10a-3)"
+        },
+        {
+          "name": "limpia",
+          "file": "tests/test_measure_cooldown.py",
+          "reason": "lectura de formato viejo (REQ-007): valor de evento del registro viejo que el test escribe a propósito (ola A10a-3)"
+        },
+        {
+          "name": "timeout_lectura",
+          "file": "tests/test_measure_cooldown.py",
+          "reason": "lectura de formato viejo (REQ-007): clase de error vieja que el test escribe a propósito (ola A10a-3)"
+        },
+        {
+          "name": "capacidad_o_carga",
+          "file": "tests/test_measure_cooldown.py",
+          "reason": "lectura de formato viejo (REQ-007): clase de error vieja que el test escribe a propósito (ola A10a-3)"
+        },
+        {
+          "name": "peticion",
+          "file": "tests/test_measure_cooldown.py",
+          "reason": "lectura de formato viejo (REQ-007): clase de error vieja que el test escribe a propósito (ola A10a-3)"
+        },
+        {
+          "name": "enfriamiento",
+          "file": "tests/test_measure_cooldown.py",
+          "reason": "lectura de formato viejo (REQ-007): clase de salto vieja que el test escribe a propósito (ola A10a-3)"
+        },
+        {
+          "name": "enfriamiento-eventos.jsonl",
+          "file": "tests/test_measure_cooldown.py",
+          "reason": "lectura de formato viejo (REQ-007): nombre del fichero viejo de eventos, que el script sigue leyendo (ola A10a-3)"
+        },
+        {
+          "name": "motivo",
+          "file": "tests/test_measure_adoption.py",
+          "reason": "lectura de formato viejo (REQ-006): clave de la telemetría vieja de hooks que el escenario escribe a propósito; `test_new_or_mixed_rows_give_the_same_measure_as_the_old_ones` exige que esté (ola A10a-4)"
+        },
+        {
+          "name": "camino",
+          "file": "tests/test_measure_adoption.py",
+          "reason": "lectura de formato viejo (REQ-006): clave vieja de la telemetría de hooks (`route` en la nueva) que el escenario escribe a propósito (ola A10a-4)"
+        },
+        {
+          "name": "prosa_grande",
+          "file": "tests/test_measure_adoption.py",
+          "reason": "lectura de formato viejo (REQ-006): valor viejo de `motivo` en el escenario (ola A10a-4)"
+        },
+        {
+          "name": "acotada",
+          "file": "tests/test_measure_adoption.py",
+          "reason": "lectura de formato viejo (REQ-006): valor viejo de `motivo` en el escenario (ola A10a-4)"
+        },
+        {
+          "name": "no_es_volcado",
+          "file": "tests/test_measure_adoption.py",
+          "reason": "lectura de formato viejo (REQ-006): valor viejo de `motivo` en el escenario (ola A10a-4)"
+        },
+        {
+          "name": "bloqueo_id",
+          "file": "tests/test_measure_adoption.py",
+          "reason": "lectura de formato viejo (REQ-006): clave del log de uso de la 0.34.0 que el escenario escribe a propósito; `test_the_new_block_id_counts_the_same_as_the_old_bloqueo_id` la traduce y compara (ola A10a-4)"
+        },
+        {
+          "name": "test_the_new_block_id_counts_the_same_as_the_old_bloqueo_id",
+          "file": "tests/test_measure_adoption.py",
+          "reason": "lectura de formato viejo (REQ-006): el nombre del test cita la clave vieja `bloqueo_id` que prueba (ola A10a-4)"
+        },
+        {
+          "name": "sesiones",
+          "file": "tests/test_test_sessions.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10a): el fichero de ventanas excluidas que el test escribe en el formato viejo para probar que `merge` lo lee y lo devuelve en el nuevo (ola A10a-4)"
+        },
+        {
+          "name": "ventanas",
+          "file": "tests/test_test_sessions.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10a): el fichero de ventanas excluidas que el test escribe en el formato viejo para probar que `merge` lo lee y lo devuelve en el nuevo (ola A10a-4)"
+        },
+        {
+          "name": "inicio",
+          "file": "tests/test_test_sessions.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10a): el fichero de ventanas excluidas que el test escribe en el formato viejo para probar que `merge` lo lee y lo devuelve en el nuevo (ola A10a-4)"
+        },
+        {
+          "name": "fin",
+          "file": "tests/test_test_sessions.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10a): el fichero de ventanas excluidas que el test escribe en el formato viejo para probar que `merge` lo lee y lo devuelve en el nuevo (ola A10a-4)"
+        },
+        {
+          "name": "ventanas-excluidas.json",
+          "file": "scripts/test_sessions.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10a): nombre de antes de `benchmarks/excluded-windows.json`, que `merge` lee si el nuevo no existe y nunca escribe; el congelado de `benchmarks/` no se renombra (ola A10a-4)"
+        },
+        {
+          "name": "ventanas-excluidas.json",
+          "file": "tests/test_test_sessions.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10a): nombre de antes de `benchmarks/excluded-windows.json`, que `merge` lee si el nuevo no existe y nunca escribe; el congelado de `benchmarks/` no se renombra (ola A10a-4)"
+        },
+        {
+          "name": "sesiones",
+          "file": "tests/test_adoption_experiment.py",
+          "reason": "lectura de formato viejo (decisión 7 de A10a): el fichero de ventanas excluidas en el formato de antes, que el test escribe a propósito para probar que `_banco_claude.anotar_ventana` lo lee y escribe el nuevo (ola A10a-5)"
+        },
+        {
+          "name": "ventanas",
+          "file": "tests/test_adoption_experiment.py",
+          "reason": "lectura de formato viejo (decisión 7 de A10a): el fichero de ventanas excluidas en el formato de antes, que el test escribe a propósito para probar que `_banco_claude.anotar_ventana` lo lee y escribe el nuevo (ola A10a-5)"
+        },
+        {
+          "name": "inicio",
+          "file": "tests/test_adoption_experiment.py",
+          "reason": "lectura de formato viejo (decisión 7 de A10a): el fichero de ventanas excluidas en el formato de antes, que el test escribe a propósito para probar que `_banco_claude.anotar_ventana` lo lee y escribe el nuevo (ola A10a-5)"
+        },
+        {
+          "name": "fin",
+          "file": "tests/test_adoption_experiment.py",
+          "reason": "lectura de formato viejo (decisión 7 de A10a): el fichero de ventanas excluidas en el formato de antes, que el test escribe a propósito para probar que `_banco_claude.anotar_ventana` lo lee y escribe el nuevo (ola A10a-5)"
+        },
+        {
+          "name": "motivo",
+          "file": "tests/test_adoption_experiment.py",
+          "reason": "lectura de formato viejo (decisión 7 de A10a): el fichero de ventanas excluidas en el formato de antes, que el test escribe a propósito para probar que `_banco_claude.anotar_ventana` lo lee y escribe el nuevo (ola A10a-5)"
+        },
+        {
+          "name": "tanda",
+          "file": "tests/test_adoption_experiment.py",
+          "reason": "lectura de formato viejo (decisión 7 de A10a): el fichero de ventanas excluidas en el formato de antes, que el test escribe a propósito para probar que `_banco_claude.anotar_ventana` lo lee y escribe el nuevo (ola A10a-5)"
+        },
+        {
+          "name": "ventanas-excluidas.json",
+          "file": "tests/test_adoption_experiment.py",
+          "reason": "lectura de formato viejo (decisión 7 de A10a): el fichero de ventanas excluidas en el formato de antes, que el test escribe a propósito para probar que `_banco_claude.anotar_ventana` lo lee y escribe el nuevo (ola A10a-5)"
+        },
+        {
+          "name": "bloqueo",
+          "file": "tests/test_adoption_experiment.py",
+          "reason": "lectura de formato viejo (REQ-006): clave de la telemetría vieja de hooks (`bloqueo: encendido`) que el test da a `corrida_valida` a propósito (ola A10a-5)"
+        },
+        {
+          "name": "apagado_fichero",
+          "file": "tests/test_adoption_experiment.py",
+          "reason": "lectura de formato viejo (REQ-006): valor viejo de `bloqueo` en la misma fila (ola A10a-5)"
+        },
+        {
+          "name": "ficheros",
+          "file": "tests/test_adoption_experiment.py",
+          "reason": "lectura de formato viejo: el `MANIFEST.json` del test copia el congelado de `benchmarks/resumen-estructurado/`, que `source_text` traduce con la tabla `sources_manifest` (ola A10a-5)"
+        },
+        {
+          "name": "origen",
+          "file": "tests/test_adoption_experiment.py",
+          "reason": "lectura de formato viejo: mismo `MANIFEST.json` del test (ola A10a-5)"
+        },
+        {
+          "name": "resultados.jsonl",
+          "file": "scripts/adoption_experiment.py",
+          "reason": "lectura de formato viejo: `--resume` sigue en el `resultados.jsonl` de una tanda empezada antes del renombrado; sus filas se leen con la tabla `adoption_runs` (ola A10a-5)"
+        },
+        {
+          "name": "descartada",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): el test nuevo cuenta las filas `descartada` del resultado congelado (`benchmarks/afinidad-2026-10/resultados/gemma3-4b.jsonl`) para comprobar que los tres cargadores las dan como `discarded` (ola A10b-1)"
+        },
+        {
+          "name": "descartada_motivo",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): mismo test; comprueba que no queda la clave vieja (ola A10b-1)"
+        },
+        {
+          "name": "rechazo_por_contexto",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): valor viejo de `outcome` que el test escribe a propósito para probar la traducción (ola A10b-1)"
+        },
+        {
+          "name": "truncado_repetido",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): valor viejo de `score.zero_by` que el test escribe a propósito (ola A10b-1)"
+        },
+        {
+          "name": "descartada",
+          "file": "tests/test_affinity_batch.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): el test nuevo cuenta las filas `descartada` del resultado congelado para comprobar `_read_rows` (ola A10b-1)"
+        },
+        {
+          "name": "inicio_utc",
+          "file": "tests/test_affinity_batch.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): clave de `ventanas-tanda.json` congelado que el test compara con la traducida (ola A10b-1)"
+        },
+        {
+          "name": "ventanas-tanda.json",
+          "file": "tests/test_affinity_batch.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): nombre del fichero de ventanas de antes de `batch-windows.json`, del que parte `register_window` (ola A10b-1)"
+        },
+        {
+          "name": "huellas.json",
+          "file": "tests/test_affinity_batch.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): nombre de las huellas de antes de `footprints.json`, con las que `write_footprints` compara una tanda empezada antes (ola A10b-1)"
+        },
+        {
+          "name": "procedencia",
+          "file": "tests/test_benchmark.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): el test nuevo comprueba que el corpus congelado dice `procedencia` y `load_corpus` lo da como `provenance` (ola A10b-1)"
+        },
+        {
+          "name": "veredicto.json",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): el test del ciclo copia el veredicto congelado y comprueba que se lee si falta `verdict.json` (ola A10b-2)"
+        },
+        {
+          "name": "solo_mecanicas",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): clave vieja del veredicto que el test exige que ya no se escriba (ola A10b-2)"
+        },
+        {
+          "name": "reglas_sha256",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): clave vieja del veredicto que el test exige que ya no se escriba (ola A10b-2)"
+        },
+        {
+          "name": "rol_comparado",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): clave vieja de la celda que el test exige que ya no se escriba (ola A10b-2)"
+        },
+        {
+          "name": "pares",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): el juicio de la hoja de commits en el formato de `hoja_pares` de antes, escrito a mano en `_OLD_NAMES` (ola A10b-2)"
+        },
+        {
+          "name": "reglas.json",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): `reglas.json` congelado, que `read_affinity_rules` y `rules_file` siguen leyendo (ola A10b-2)"
+        },
+        {
+          "name": "humano",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): fila de `hoja_pares.py destapar --json` de antes, que `merge_unblinded_pairs` suma (ola A10b-2)"
+        },
+        {
+          "name": "celdas",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): celda del `veredicto.json` de antes, escrita a mano, con la que el test comprueba que el estado viejo se lee en inglés (ola A10b-3)"
+        },
+        {
+          "name": "estado",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): mismo test; clave vieja del estado de la celda (`aprobada`/`rechazada`/`sin base`), que el lector traduce a `state` (ola A10b-3)"
+        },
+        {
+          "name": "pares",
+          "file": "tests/test_pair_sheet.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): control de que la `clave-1.json` congelada sigue con el formato viejo antes de leerla con `read_commit` (ola A10b-4)"
+        },
+        {
+          "name": "respuestas",
+          "file": "tests/test_pair_sheet.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): control de que la `respuestas-1.json` congelada sigue con el formato viejo (ola A10b-4)"
+        },
+        {
+          "name": "respuestas-1.json",
+          "file": "tests/test_pair_sheet.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): nombre de las respuestas congeladas de la hoja 1, que el test lee (ola A10b-4)"
+        },
+        {
+          "name": "clave-1.json",
+          "file": "tests/test_pair_sheet.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): nombre de la clave congelada de la hoja 1, que el test lee (ola A10b-4)"
+        },
+        {
+          "name": "juegos",
+          "file": "tests/test_pair_sheet.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): control de que el `trampas.json` congelado sigue con el formato viejo (ola A10b-4)"
+        },
+        {
+          "name": "cobertura",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): señal vieja de `reference_signal` que el test exige en el `cases.json` congelado antes de comprobar que se lee en inglés (ola A10b-4)"
+        },
+        {
+          "name": "prohibido",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): mismo test: señal vieja del corpus congelado (ola A10b-4)"
+        },
+        {
+          "name": "json_valido",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): mismo test: señal vieja del corpus congelado (ola A10b-4)"
+        },
+        {
+          "name": "json_campos",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): mismo test: señal vieja del corpus congelado (ola A10b-4)"
+        },
+        {
+          "name": "ejecucion",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): mismo test: señal vieja del corpus congelado (ola A10b-4)"
+        },
+        {
+          "name": "conteos",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): mismo test: señal vieja del corpus congelado (ola A10b-4)"
+        },
+        {
+          "name": "eventos_local",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): control de que el `conteos-log.json` congelado sigue con las claves viejas (ola A10b-4)"
+        },
+        {
+          "name": "seleccion",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): control de que el corpus de afinidad congelado sigue con las claves viejas (ola A10b-4)"
+        },
+        {
+          "name": "puntuador",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): mismo test: clave vieja de cada caso del corpus de afinidad congelado (ola A10b-4)"
+        },
+        {
+          "name": "procedencia",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): mismo test: el caso normalizado ya no la lleva (ola A10b-4)"
+        },
+        {
+          "name": "tipo",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): mismo test: el puntuador normalizado ya no la lleva (ola A10b-4)"
+        },
+        {
+          "name": "trampas.json",
+          "file": "tests/test_pair_sheet.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): el `trampas.json` congelado, que `REAL_SETS` lee normalizado y el test de formato viejo en crudo (ola A10b-6)"
+        },
+        {
+          "name": "reglas.json",
+          "file": "tests/test_pair_sheet.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): el `reglas.json` congelado de la hoja 1, que `read_rules` sigue leyendo (ola A10b-4; fila añadida en A10b-6)"
+        },
+        {
+          "name": "calidad",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): valor viejo de `kind` del corpus y de los resultados congelados, escrito a mano en `_OLD_KINDS` para comprobar que los cargadores lo dan como `quality` (ola A10b-5)"
+        },
+        {
+          "name": "techo",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): mismo test; valor viejo de `kind` del sondeo de techo, que se lee como `ceiling` (ola A10b-5)"
+        },
+        {
+          "name": "ruta",
+          "file": "tests/test_affinity.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 1): clave de la huella del `veredicto.json` congelado que el test lee a propósito para comprobar que sale como `path`"
+        },
+        {
+          "name": "tamano_bytes",
+          "file": "tests/test_affinity.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 1): mismo test; sale como `size_bytes`"
+        },
+        {
+          "name": "ruta",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 1): clave de la huella del `huellas.json` congelado que el test lee a propósito para comprobar que sale como `path`"
+        },
+        {
+          "name": "tamano_bytes",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 1): mismo test; sale como `size_bytes`"
+        },
+        {
+          "name": "huellas.json",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "lectura de formato viejo (decisión 6 de A10): `huellas.json` congelado, que `footprints_file` sigue leyendo si falta `footprints.json` (ola A10b-2; fila añadida en A10b-5)"
+        },
+        {
+          "name": "generado",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 3): valor viejo de `provenance` de los corpus congelados, escrito a mano en `_OLD_PROVENANCES` para comprobar que se lee como `generated`"
+        },
+        {
+          "name": "inventado",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 3): mismo test; se lee como `made_up`"
+        },
+        {
+          "name": "texto",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 3): valor viejo de `media_type` de los corpus congelados (`_OLD_MEDIA`); se lee como `text`"
+        },
+        {
+          "name": "imagen",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 3): mismo test; se lee como `image`"
+        },
+        {
+          "name": "trampa",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 3): valor viejo de `sheet_role` del corpus de afinidad congelado (`_OLD_SHEET_ROLES`); se lee como `trap`"
+        },
+        {
+          "name": "rol_en_hoja",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 3): mismo test; clave vieja de `sheet_role` que el test lee en crudo del congelado"
+        },
+        {
+          "name": "techo",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 3): valor viejo de `scorer.kind` del corpus de afinidad congelado (`_OLD_SCORER_KINDS`); se lee como `ceiling`"
+        },
+        {
+          "name": "hoja",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 3): mismo test; se lee como `sheet`"
+        },
+        {
+          "name": "privacidad",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 5): clave vieja de `selection.privacy` del corpus de afinidad congelado; el test comprueba que su valor viejo sale traducido (`exclude`)"
+        },
+        {
+          "name": "trampas",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 5): clave vieja de `selection.traps` del corpus de afinidad y de cada juego del `trampas.json` congelados, que el test lee en crudo para comprobar que la fecha y el origen del cuerpo salen traducidos"
+        },
+        {
+          "name": "juegos",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 5): mismo test; clave vieja de `sets` del `trampas.json` congelado"
+        },
+        {
+          "name": "cuerpo_origen",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 5): mismo test; clave vieja de `source_body`, cuyo valor viejo sale como `written`/`real-rewritten`"
+        },
+        {
+          "name": "generado",
+          "file": "tests/test_benchmark.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 3): valor viejo de `provenance` del corpus congelado, escrito a mano para comprobar que `load_corpus` lo da como `generated`"
+        },
+        {
+          "name": "inventado",
+          "file": "tests/test_benchmark.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 3): mismo test; sale como `made_up`"
+        },
+        {
+          "name": "tipo",
+          "file": "tests/test_pair_sheet.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 3): clave vieja del par de `clave-1.json` congelado, que el test lee en crudo para comprobar que el par `trampa` sale como `trap`"
+        },
+        {
+          "name": "*",
+          "file": "src/local_delegate/legacy_names.py",
+          "reason": "lectura de formato viejo: es la tabla de nombres viejos que se traducen al leer (claves y valores de cada formato persistido) (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "*",
+          "file": "tests/test_recompute_legacy.py",
+          "reason": "lectura de formato viejo (REQ-005, REQ-006, REQ-008): siembra a propósito `coste-agregados.json` y el registro del statusline con los nombres viejos para probar su lectura (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "*",
+          "file": "tests/test_deprecations.py",
+          "reason": "lectura de formato viejo: prueba la API de `legacy_names` (`read_key`, `normalize`) con claves y valores viejos (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "fallos",
+          "file": "src/local_delegate/resources/hooks/hook_common.py",
+          "reason": "lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "fallos",
+          "file": "tests/test_cooldown.py",
+          "reason": "lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "fallos",
+          "file": "tests/test_fallback.py",
+          "reason": "lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "fallos",
+          "file": "tests/test_f1_conformance.py",
+          "reason": "lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "fallos",
+          "file": "tests/test_fallback_observability.py",
+          "reason": "lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "espera_s",
+          "file": "src/local_delegate/resources/hooks/hook_common.py",
+          "reason": "lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "espera_s",
+          "file": "tests/test_cooldown.py",
+          "reason": "lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "espera_s",
+          "file": "tests/test_fallback.py",
+          "reason": "lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "espera_s",
+          "file": "tests/test_f1_conformance.py",
+          "reason": "lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "espera_s",
+          "file": "tests/test_fallback_observability.py",
+          "reason": "lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "hasta",
+          "file": "src/local_delegate/resources/hooks/hook_common.py",
+          "reason": "lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "hasta",
+          "file": "tests/test_cooldown.py",
+          "reason": "lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "hasta",
+          "file": "tests/test_fallback.py",
+          "reason": "lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "hasta",
+          "file": "tests/test_f1_conformance.py",
+          "reason": "lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "hasta",
+          "file": "tests/test_fallback_observability.py",
+          "reason": "lectura de formato viejo (REQ-005): claves viejas de `enfriamiento.json` (`COOLDOWN_STATE_KEYS`), que el hook lee y escribe y los tests siembran (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "enfriamiento-eventos.jsonl",
+          "file": "tests/test_cooldown.py",
+          "reason": "lectura de formato viejo (REQ-005): registro viejo de eventos de enfriamiento que el test siembra (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "local-delegate-bloqueos.jsonl",
+          "file": "src/local_delegate/resources/hooks/hook_common.py",
+          "reason": "lectura de formato viejo (REQ-012): registro y carpeta de los hooks de la 0.34, que el hook sigue leyendo (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "local-delegate-bloqueos.jsonl",
+          "file": "tests/test_hook_legacy_names.py",
+          "reason": "lectura de formato viejo (REQ-012): registro y carpeta de los hooks de la 0.34, que el hook sigue leyendo (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "local-delegate-llamadas",
+          "file": "src/local_delegate/resources/hooks/hook_common.py",
+          "reason": "lectura de formato viejo (REQ-012): registro y carpeta de los hooks de la 0.34, que el hook sigue leyendo (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "local-delegate-llamadas",
+          "file": "tests/test_hook_legacy_names.py",
+          "reason": "lectura de formato viejo (REQ-012): registro y carpeta de los hooks de la 0.34, que el hook sigue leyendo (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "toolu_viejo",
+          "file": "tests/test_hook_legacy_names.py",
+          "reason": "lectura de formato viejo (REQ-012): llamada sembrada en la carpeta vieja de los hooks (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "toolu_viejo.json",
+          "file": "tests/test_hook_legacy_names.py",
+          "reason": "lectura de formato viejo (REQ-012): llamada sembrada en la carpeta vieja de los hooks (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "cuota-statusline.jsonl",
+          "file": "tests/test_dashboard_cost.py",
+          "reason": "lectura de formato viejo (REQ-033): nombre viejo del registro del statusline, que se sigue leyendo (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "cuota-statusline.jsonl",
+          "file": "tests/test_recompute.py",
+          "reason": "lectura de formato viejo (REQ-033): nombre viejo del registro del statusline, que se sigue leyendo (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "bloqueo_id",
+          "file": "tests/test_metrics.py",
+          "reason": "lectura de formato viejo (REQ-007, REQ-008): filas de log y bloqueos con claves y clases de error viejas que el test siembra (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "secciones",
+          "file": "tests/test_metrics.py",
+          "reason": "lectura de formato viejo (REQ-007, REQ-008): filas de log y bloqueos con claves y clases de error viejas que el test siembra (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "fallo_conexion",
+          "file": "tests/test_metrics.py",
+          "reason": "lectura de formato viejo (REQ-007, REQ-008): filas de log y bloqueos con claves y clases de error viejas que el test siembra (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "b-viejo",
+          "file": "tests/test_metrics.py",
+          "reason": "lectura de formato viejo (REQ-007, REQ-008): filas de log y bloqueos con claves y clases de error viejas que el test siembra (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "timeout_lectura",
+          "file": "tests/test_metrics.py",
+          "reason": "lectura de formato viejo (REQ-007, REQ-008): filas de log y bloqueos con claves y clases de error viejas que el test siembra (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "backend_ausente",
+          "file": "tests/test_metrics.py",
+          "reason": "lectura de formato viejo (REQ-007, REQ-008): filas de log y bloqueos con claves y clases de error viejas que el test siembra (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "mcp_ajeno",
+          "file": "tests/test_hooks_telemetry_api.py",
+          "reason": "lectura de formato viejo (REQ-008): telemetría de hooks en el formato viejo que el test siembra (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "prosa_grande",
+          "file": "tests/test_hooks_telemetry_api.py",
+          "reason": "lectura de formato viejo (REQ-008): telemetría de hooks en el formato viejo que el test siembra (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "entradas",
+          "file": "tests/test_attribution.py",
+          "reason": "lectura de formato viejo (REQ-005): relleno viejo (`_old_backfill`) que el test siembra (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "banco",
+          "file": "tests/test_attribution.py",
+          "reason": "lectura de formato viejo (REQ-005): relleno viejo (`_old_backfill`) que el test siembra (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "cruce",
+          "file": "tests/test_attribution.py",
+          "reason": "lectura de formato viejo (REQ-005): relleno viejo (`_old_backfill`) que el test siembra (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "sin_cruce",
+          "file": "tests/test_attribution.py",
+          "reason": "lectura de formato viejo (REQ-005): relleno viejo (`_old_backfill`) que el test siembra (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "causa",
+          "file": "tests/test_checks.py",
+          "reason": "lectura de formato viejo: claves viejas que `checks.py` lee con `read_key` (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "detalle",
+          "file": "tests/test_checks.py",
+          "reason": "lectura de formato viejo: claves viejas que `checks.py` lee con `read_key` (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "n_por_mes",
+          "file": "src/local_delegate/valuation.py",
+          "reason": "lectura de formato viejo (REQ-006): claves viejas de `coste-agregados.json` que `valuation.py` lee con `read_key` (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "plazo_dias",
+          "file": "src/local_delegate/valuation.py",
+          "reason": "lectura de formato viejo (REQ-006): claves viejas de `coste-agregados.json` que `valuation.py` lee con `read_key` (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "config.rol_retirado",
+          "file": "tests/test_fast_role_retired.py",
+          "reason": "lectura de formato viejo: id de check retirado que el test comprueba que ya no sale (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "celdas",
+          "file": "tests/test_affinity.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 1): claves viejas de `veredicto.json` congelado que el test lee en crudo para comprobar que siguen viejas y se normalizan (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "huella",
+          "file": "tests/test_affinity.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 1): claves viejas de `veredicto.json` congelado que el test lee en crudo para comprobar que siguen viejas y se normalizan (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "huella_rol",
+          "file": "tests/test_affinity.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 1): claves viejas de `veredicto.json` congelado que el test lee en crudo para comprobar que siguen viejas y se normalizan (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "congelado",
+          "file": "tests/test_benchmark.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 3): valores viejos de `provenance` del corpus congelado, escritos a mano para comprobar que se leen como `frozen` y `reconstructed` (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "congelado",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 3): valores viejos de `provenance` del corpus congelado, escritos a mano para comprobar que se leen como `frozen` y `reconstructed` (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "reconstruido",
+          "file": "tests/test_benchmark.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 3): valores viejos de `provenance` del corpus congelado, escritos a mano para comprobar que se leen como `frozen` y `reconstructed` (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "reconstruido",
+          "file": "tests/test_corpus.py",
+          "reason": "lectura de formato viejo (cierre del frente A, lote 3): valores viejos de `provenance` del corpus congelado, escritos a mano para comprobar que se leen como `frozen` y `reconstructed` (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "si",
+          "file": "scripts/pair_sheet.py",
+          "reason": "lectura de formato viejo (ola B1d, decisión 7 de B1): la respuesta «si» que la persona escribe en la hoja `.md` española; `pair_sheet` la lee para siempre (`_SYNONYMS_RESPONSE`), junto a «yes»/«y» de la hoja inglesa"
+        },
+        {
+          "name": "parcial",
+          "file": "scripts/pair_sheet.py",
+          "reason": "lectura de formato viejo (ola B1d, decisión 7 de B1): la respuesta «parcial» de la hoja `.md` española; se lee para siempre, junto a «partial»"
+        },
+        {
+          "name": "empate",
+          "file": "scripts/pair_sheet.py",
+          "reason": "lectura de formato viejo (ola B1d, decisión 7 de B1): «empate» de la hoja `.md` española (`_TIE_WORDS`) y el `human` que `unblind --json` escribía antes; desde B1d se escribe `tie` (`HUMAN_TIE`) y `empate` se lee para siempre (`HUMAN_TIE_OLD`)"
+        },
+        {
+          "name": "EMPATE",
+          "file": "scripts/pair_sheet.py",
+          "reason": "lectura de formato viejo (ola B1d, decisión 7 de B1): «empate» en mayúsculas en la hoja `.md` española; la preferencia se compara en minúsculas (`_TIE_WORDS`)"
+        },
+        {
+          "name": "empate",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "lectura de formato viejo (ola B1d, decisión 7 de B1): el `human` con `empate` que escribía `unblind --json` antes de B1d; `pairs_for_role` suma `tie` y `empate` para siempre"
+        },
+        {
+          "name": "empate",
+          "file": "tests/test_pair_sheet.py",
+          "reason": "lectura de formato viejo (ola B1d, decisión 7 de B1): la elección «empate» de la hoja `.md` española que el test escribe a mano; `unblind --json` escribe ahora `tie`"
+        },
+        {
+          "name": "Inventa",
+          "file": "tests/test_pair_sheet.py",
+          "reason": "lectura de formato viejo (ola B1d, decisión 7 de B1): la etiqueta «Inventa» de la hoja `.md` española que la persona contesta a mano; el lector acepta «Inventa» e «Invents»"
+        },
+        {
+          "name": "Inventa",
+          "file": "tests/test_scripts_english.py",
+          "reason": "lectura de formato viejo (ola B1d): la etiqueta de la hoja `.md` congelada (`hoja-1.md`), que el test contesta a mano para comprobar que se lee con el proceso en inglés"
+        },
+        {
+          "name": "empate",
+          "file": "tests/test_scripts_english.py",
+          "reason": "lectura de formato viejo (ola B1d): el `human` de `unblind --json` de antes de B1d, que `pairs_for_role` sigue sumando"
+        },
+        {
+          "name": "respuestas",
+          "file": "tests/test_scripts_english.py",
+          "reason": "lectura de formato viejo (ola B1d): clave de la `respuestas-1.json` congelada que el test lee en crudo para rellenar la hoja"
+        },
+        {
+          "name": "preferencia",
+          "file": "tests/test_scripts_english.py",
+          "reason": "lectura de formato viejo (ola B1d): clave de la `respuestas-1.json` congelada que el test lee en crudo para rellenar la hoja"
+        },
+        {
+          "name": "hoja-1.md",
+          "file": "tests/test_scripts_english.py",
+          "reason": "lectura de formato viejo (ola B1d): la hoja congelada de la hoja 1, que el test lee"
+        },
+        {
+          "name": "clave-1.json",
+          "file": "tests/test_scripts_english.py",
+          "reason": "lectura de formato viejo (ola B1d): la clave congelada de la hoja 1, que el test lee"
+        },
+        {
+          "name": "respuestas-1.json",
+          "file": "tests/test_scripts_english.py",
+          "reason": "lectura de formato viejo (ola B1d): las respuestas congeladas de la hoja 1, que el test lee"
+        },
+        {
+          "name": "reglas.json",
+          "file": "tests/test_scripts_english.py",
+          "reason": "lectura de formato viejo (ola B1d): el `reglas.json` congelado, que `read_rules` sigue leyendo"
+        },
+        {
+          "name": "afinidad-2026-10",
+          "file": "tests/test_scripts_english.py",
+          "reason": "lectura de formato viejo (ola B1d): directorio del corpus congelado en `benchmarks/`"
+        },
+        {
+          "name": "calidad",
+          "file": "scripts/analyze_benchmark.py",
+          "reason": "lectura de formato viejo (ola B1d): valor de `criterion` en `decide --json` (contrato que el frente B no cambia); el informe lo dice con `_CRITERION_KEYS` en el idioma vigente"
+        },
+        {
+          "name": "techo",
+          "file": "scripts/analyze_benchmark.py",
+          "reason": "lectura de formato viejo (ola B1d): valor de `criterion` en `decide --json` (contrato que el frente B no cambia); el informe lo dice con `_CRITERION_KEYS` en el idioma vigente"
+        },
+        {
+          "name": "velocidad",
+          "file": "scripts/analyze_benchmark.py",
+          "reason": "lectura de formato viejo (ola B1d): valor de `criterion` en `decide --json` (contrato que el frente B no cambia); el informe lo dice con `_CRITERION_KEYS` en el idioma vigente"
+        },
+        {
+          "name": "empate",
+          "file": "scripts/analyze_benchmark.py",
+          "reason": "lectura de formato viejo (ola B1d): valor de `criterion` en `decide --json` (contrato que el frente B no cambia); el informe lo dice con `_CRITERION_KEYS` en el idioma vigente; y el `human` de antes de B1d que `pairs_for_role` suma"
+        },
+        {
+          "name": "leido_server_side",
+          "file": "tests/test_tool_contract.py",
+          "reason": "lectura de formato viejo (ola B2b-1): nombre viejo de REQ-010 que el test de contrato exige que **no** salga en `_local_delegate`"
+        },
+        {
+          "name": "tokens_aprox",
+          "file": "tests/test_tool_contract.py",
+          "reason": "lectura de formato viejo (ola B2b-1): nombre viejo de REQ-010 que el test de contrato exige que **no** salga en `_local_delegate`"
+        },
+        {
+          "name": "en_lugar_de",
+          "file": "tests/test_tool_contract.py",
+          "reason": "lectura de formato viejo (ola B2b-1): nombre viejo de REQ-010 que el test de contrato exige que **no** salga en el respaldo"
+        }
+      ]
+    },
+    {
+      "title": "Envoltorio de REQ-046",
+      "entries": [
+        {
+          "name": "medir_enfriamiento",
+          "file": "scripts/medir_enfriamiento.py",
+          "reason": "envoltorio de REQ-046: nombre del script y opciones `--desde`/`--hasta`/`--excluir` del comando de P-4; se retira tras la medición de los 90 días (~2026-12-14, backlog 1.6) (ola A10a-3)"
+        },
+        {
+          "name": "medir_enfriamiento",
+          "file": "tests/test_measure_cooldown.py",
+          "reason": "envoltorio de REQ-046: los dos tests que cargan el envoltorio; se retiran con él (ola A10a-3)"
+        },
+        {
+          "name": "medir_enfriamiento.py",
+          "file": "tests/test_measure_cooldown.py",
+          "reason": "envoltorio de REQ-046: ruta del envoltorio en esos dos tests (ola A10a-3)"
+        }
+      ]
+    },
+    {
+      "title": "Dato de un tercero",
+      "entries": [
+        {
+          "name": "de-DE",
+          "file": "src/local_delegate/web/metrics.py",
+          "reason": "dato de un tercero: etiqueta de idioma BCP 47 que se pasa a `toLocaleString` y a Chart.js; `de` es alemán (cierre del frente A, lote 4)"
+        }
+      ]
+    },
+    {
+      "title": "Dato de prueba del detector",
+      "entries": [
+        {
+          "name": "*",
+          "file": "tests/test_detect_spanish_names.py",
+          "reason": "casos de control positivo del detector (REQ-044)"
+        },
+        {
+          "name": "*",
+          "file": "scripts/data/*",
+          "reason": "léxico congelado y palabras reservadas del detector (REQ-044)"
+        }
+      ]
+    },
+    {
+      "title": "Palabra inglesa que el léxico toma por española",
+      "entries": [
+        {
+          "name": "meterHTML",
+          "file": "src/local_delegate/web/metrics.py",
+          "reason": "«meter» = medidor (inglés): pinta las barras `.meter` de la tarjeta Sistema; el léxico lo lee como el verbo español (ola A8b, decisión 7)"
+        },
+        {
+          "name": "quotaMeter",
+          "file": "src/local_delegate/web/metrics.py",
+          "reason": "«meter» = medidor (inglés): nombre nuevo de `medidorCuota` en A8b, mismo falso positivo que `meterHTML`"
+        },
+        {
+          "name": "test_the_calibrated_quota_appears_as_a_meter",
+          "file": "tests/test_dashboard_ui.py",
+          "reason": "«meter» = medidor (inglés), mismo caso que `meterHTML` (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "nobody-blocked-me.md",
+          "file": "tests/test_correlation.py",
+          "reason": "«me» es el pronombre inglés; el léxico lo tiene como el pronombre español (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "me",
+          "file": "tests/test_metrics.py",
+          "reason": "«me» es el pronombre inglés: el pid del propio proceso del test de «Procesos del backend» (B4); mismo falso positivo que `nobody-blocked-me.md` (cierre del cambio, release 0.36.0)"
+        },
+        {
+          "name": "*quota.meter.*",
+          "file": "src/local_delegate/web/metrics.py",
+          "reason": "«meter» = medidor (inglés): claves del catálogo del medidor de cuota que pinta `quotaMeter` (B4); mismo falso positivo que `meterHTML` (cierre del cambio, release 0.36.0)"
+        },
+        {
+          "name": "*quota.meter.*",
+          "file": "src/local_delegate/resources/i18n/en/panel.json",
+          "reason": "«meter» = medidor (inglés): las mismas claves en el catálogo inglés (B4) (cierre del cambio, release 0.36.0)"
+        },
+        {
+          "name": "_BOTH_LOCALES",
+          "file": "tests/test_dashboard_ui.py",
+          "reason": "«locales» es el plural inglés de *locale* (los dos `locale` del navegador de los tests del panel, B4); el léxico lo lee como el adjetivo español (cierre del cambio, release 0.36.0)"
+        }
+      ]
+    },
+    {
+      "title": "Dato congelado de corpus o caso",
+      "entries": [
+        {
+          "name": "nonce-neutro",
+          "file": "scripts/clean_watcher_fixtures.py",
+          "reason": "dato congelado de corpus o caso: valor neutro (`NEUTRAL_NONCE`) que el limpiador ya escribió en las copias de `tests/fixtures/vigilante/*.html`; cambiarlo obligaría a reescribir esas copias (ola A10a-1)"
+        },
+        {
+          "name": "catalogo-2026-09",
+          "file": "tests/test_resource_probe.py",
+          "reason": "dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10a-3)"
+        },
+        {
+          "name": "clasificar-53",
+          "file": "tests/test_resource_probe.py",
+          "reason": "dato congelado de corpus o caso: id de un caso del corpus congelado (ola A10a-3)"
+        },
+        {
+          "name": "adopcion-directa",
+          "file": "scripts/adoption_experiment.py",
+          "reason": "dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10a-5)"
+        },
+        {
+          "name": "tareas.json",
+          "file": "scripts/adoption_experiment.py",
+          "reason": "dato congelado de corpus o caso: `benchmarks/adopcion-directa/tareas.json`, que no reescribe nadie; `load_tasks` traduce sus claves (ola A10a-5)"
+        },
+        {
+          "name": "wiki-instalacion",
+          "file": "scripts/adoption_experiment.py",
+          "reason": "dato congelado de corpus o caso: id de una tarea del corpus congelado (ola A10a-5)"
+        },
+        {
+          "name": "wiki-instalacion",
+          "file": "tests/test_adoption_experiment.py",
+          "reason": "dato congelado de corpus o caso: id de una tarea del corpus congelado (ola A10a-5)"
+        },
+        {
+          "name": "experimento-adopcion",
+          "file": "scripts/adoption_experiment.py",
+          "reason": "dato congelado de corpus o caso: etiqueta de las tandas ya anotadas en el fichero congelado de ventanas excluidas (ola A10a-5)"
+        },
+        {
+          "name": "resumen-estructurado",
+          "file": "scripts/measure_structured_summary.py",
+          "reason": "dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (copias fijas, `MANIFEST.json` y resultados ya escritos) (ola A10a-6)"
+        },
+        {
+          "name": "afinidad-2026-10",
+          "file": "scripts/analyze_benchmark.py",
+          "reason": "dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10b-1)"
+        },
+        {
+          "name": "afinidad-2026-10",
+          "file": "scripts/dev/affinity_batch.py",
+          "reason": "dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10b-1)"
+        },
+        {
+          "name": "afinidad-2026-10",
+          "file": "tests/test_affinity.py",
+          "reason": "dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10b-1)"
+        },
+        {
+          "name": "afinidad-2026-10",
+          "file": "tests/test_affinity_batch.py",
+          "reason": "dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10b-1)"
+        },
+        {
+          "name": "catalogo-2026-09",
+          "file": "tests/test_benchmark.py",
+          "reason": "dato congelado de corpus o caso: directorio del corpus congelado en `benchmarks/` (ola A10b-1)"
+        },
+        {
+          "name": "resultados-sin-idioma",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "dato congelado de corpus o caso: directorio de resultados congelado en `benchmarks/afinidad-2026-10/`; el test lee sus filas del techo con el `via` viejo (cierre del frente A, lote 5)"
+        },
+        {
+          "name": "clasificar-53",
+          "file": "tests/test_benchmark.py",
+          "reason": "dato congelado de corpus o caso: id de un caso del corpus congelado (ola A10b-1)"
+        },
+        {
+          "name": "describir-dashboard",
+          "file": "tests/test_benchmark.py",
+          "reason": "dato congelado de corpus o caso: id de un caso del corpus congelado (ola A10b-1)"
+        },
+        {
+          "name": "leer-cifras-dashboard",
+          "file": "tests/test_benchmark.py",
+          "reason": "dato congelado de corpus o caso: id de un caso del corpus congelado (ola A10b-1)"
+        },
+        {
+          "name": "resumen-md-2k",
+          "file": "tests/test_benchmark.py",
+          "reason": "dato congelado de corpus o caso: id de un caso del corpus congelado (ola A10b-1)"
+        },
+        {
+          "name": "techo-resumen-103k",
+          "file": "tests/test_benchmark.py",
+          "reason": "dato congelado de corpus o caso: id de un caso del corpus congelado (ola A10b-1)"
+        },
+        {
+          "name": "techo-commit-156k",
+          "file": "scripts/analyze_benchmark.py",
+          "reason": "dato congelado de corpus o caso: id del caso de techo del corpus congelado; resultados, hojas y claves lo citan (ola A10b-1)"
+        },
+        {
+          "name": "techo-commit-156k",
+          "file": "scripts/dev/affinity_batch.py",
+          "reason": "dato congelado de corpus o caso: id del caso de techo del corpus congelado (ola A10b-1)"
+        },
+        {
+          "name": "LD_HOOK_READ_BLOQUEAR",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: término esperado de un caso congelado (el caso que resume la nota de la variable vieja) (ola A10b-4)"
+        },
+        {
+          "name": "a_favor",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "abstenciones",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "afinidad-2026-10",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: nombre de directorio de un corpus congelado en `benchmarks/` (no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "afinidad-2026-10",
+          "file": "scripts/pair_sheet.py",
+          "reason": "dato congelado de corpus o caso: nombre de directorio de un corpus congelado en `benchmarks/` (no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "asistentes",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "catalogo-2026-09",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: nombre de directorio de un corpus congelado en `benchmarks/` (no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "clasifica-bug-con-etiquetas-en-ingles",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "clasifica-deportes",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "clasifica-economia",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "clasifica-idioma-aleman",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "clasifica-ironia",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "clasifica-lenguaje-de-programacion",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "clasifica-negacion-reenvio",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "clasifica-peticion-de-funcion",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "clasificar-53",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "cliente",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "correo",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "delega-contar-palabras",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "delega-fecha-iso",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "delega-lista-a-csv",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "delega-mayusculas",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "delegar-56",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "describir-dashboard",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "en_contra",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "explicar-install-20k",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "explicar-metrics-15k",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "extrae-acta-con-cifras",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "extrae-correo-sin-telefono",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "extrae-factura",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "extrae-linea-de-acceso-web",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "extrae-linea-de-log-con-numeros",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "extrae-producto-sin-existencias",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "extrae-reunion-sin-organizador",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "extrae-toml-sin-licencia",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "extraer-toml-2k",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "extraer-uvlock-48k",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "factura",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "fecha",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "hora",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "leer-cifras-dashboard",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "lugar",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "metodo",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "moneda",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "nivel",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "organizador",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "precio",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "resume-ruff-cinco-reglas",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "resume-ruff-tres-reglas",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "resume-ruff-un-solo-archivo",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "resumen-changelog-7k",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "resumen-md-10k",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "resumen-md-2k",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "ruta",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "servicio",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "socios",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "talla",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "techo-commit-156k",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "techo-resumen-103k",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "telefono",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "traduce-guia-de-inicio",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "traduce-lista-de-version",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "traduce-registro-de-cambios",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "traduce-solucion-de-problemas",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "traducir-42",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-4)"
+        },
+        {
+          "name": "latencia_ms",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "nombre",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado de un caso congelado (contenido del documento en español que el modelo extrae) (ola A10b-4)"
+        },
+        {
+          "name": "asunto",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado del caso `extrae-correo-sin-telefono` (contenido del documento en español que el modelo extrae); el `asunto` de las trampas sí pasa a `subject` (ola A10b-4)"
+        },
+        {
+          "name": "codigo",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo esperado del caso `extrae-linea-de-acceso-web` (contenido del documento en español que el modelo extrae); el `codigo` del puntuador sí pasa a `code` (ola A10b-4)"
+        },
+        {
+          "name": "primer_paquete",
+          "file": "scripts/build_corpus.py",
+          "reason": "dato congelado de corpus o caso: campo que el caso `extraer-uvlock-48k` pide extraer; va en su prompt congelado y en `expected_json_fields` del corpus (ola A10b-4)"
+        },
+        {
+          "name": "catalogo-2026-09",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "dato congelado de corpus o caso: nombre de directorio de un corpus congelado en `benchmarks/` (no se reescribe) (ola A10b-5)"
+        },
+        {
+          "name": "afinidad-2026-10",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "dato congelado de corpus o caso: nombre de directorio de un corpus congelado en `benchmarks/` (no se reescribe) (ola A10b-5)"
+        },
+        {
+          "name": "techo-gemma4-26b-a4b.jsonl",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "dato congelado de corpus o caso: fichero de resultados del sondeo de techo congelado en `benchmarks/afinidad-2026-10/resultados/` (no se reescribe) (ola A10b-5)"
+        },
+        {
+          "name": "clasificar-53",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-5)"
+        },
+        {
+          "name": "describir-dashboard",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-5)"
+        },
+        {
+          "name": "explicar-install-20k",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-5)"
+        },
+        {
+          "name": "explicar-metrics-15k",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-5)"
+        },
+        {
+          "name": "extraer-uvlock-48k",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-5)"
+        },
+        {
+          "name": "resumen-changelog-7k",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-5)"
+        },
+        {
+          "name": "resumen-md-10k",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-5)"
+        },
+        {
+          "name": "resumen-md-2k",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-5)"
+        },
+        {
+          "name": "techo-resumen-103k",
+          "file": "tests/test_analyze_benchmark.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-5)"
+        },
+        {
+          "name": "catalogo-2026-09",
+          "file": "tests/test_corpus.py",
+          "reason": "dato congelado de corpus o caso: nombre de directorio de un corpus congelado en `benchmarks/` (no se reescribe) (ola A10b-6)"
+        },
+        {
+          "name": "afinidad-2026-10",
+          "file": "tests/test_corpus.py",
+          "reason": "dato congelado de corpus o caso: nombre de directorio de un corpus congelado en `benchmarks/` (no se reescribe) (ola A10b-6)"
+        },
+        {
+          "name": "afinidad-2026-10",
+          "file": "tests/test_pair_sheet.py",
+          "reason": "dato congelado de corpus o caso: nombre de directorio de un corpus congelado en `benchmarks/` (no se reescribe) (ola A10b-6)"
+        },
+        {
+          "name": "clasifica-bug-con-etiquetas-en-ingles",
+          "file": "tests/test_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-6)"
+        },
+        {
+          "name": "clasificar-53",
+          "file": "tests/test_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-6)"
+        },
+        {
+          "name": "explicar-install-20k",
+          "file": "tests/test_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-6)"
+        },
+        {
+          "name": "explicar-metrics-15k",
+          "file": "tests/test_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-6)"
+        },
+        {
+          "name": "resumen-changelog-7k",
+          "file": "tests/test_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-6)"
+        },
+        {
+          "name": "resumen-md-10k",
+          "file": "tests/test_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-6)"
+        },
+        {
+          "name": "resumen-md-2k",
+          "file": "tests/test_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-6)"
+        },
+        {
+          "name": "techo-resumen-106k",
+          "file": "tests/test_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-6)"
+        },
+        {
+          "name": "techo-resumen-120k",
+          "file": "tests/test_corpus.py",
+          "reason": "dato congelado de corpus o caso: id de caso de un corpus congelado en `benchmarks/` (resultados, hojas y claves lo citan; no se reescribe) (ola A10b-6)"
+        },
+        {
+          "name": "clasificar-53.txt",
+          "file": "tests/test_corpus.py",
+          "reason": "dato congelado de corpus o caso: fichero de `fuentes/` de un corpus congelado en `benchmarks/` (no se reescribe) (ola A10b-6)"
+        },
+        {
+          "name": "resumen-md-2k.md",
+          "file": "tests/test_corpus.py",
+          "reason": "dato congelado de corpus o caso: fichero de `fuentes/` de un corpus congelado en `benchmarks/` (no se reescribe) (ola A10b-6)"
+        },
+        {
+          "name": "clave-falsa",
+          "file": "tests/test_residency.py",
+          "reason": "dato congelado de corpus o caso: marcador con que las copias congeladas de configs reales (`tests/fixtures/residency/*.yaml`) sustituyen las claves; el test comprueba la sustitución y no se reescriben las copias (cierre del frente A, lote 2)"
+        },
+        {
+          "name": "clave-falsa-1",
+          "file": "tests/test_residency.py",
+          "reason": "dato congelado de corpus o caso: la clave sustituida que llevan esas copias congeladas (cierre del frente A, lote 2)"
+        },
+        {
+          "name": "estado.json",
+          "file": "tests/test_corpus.py",
+          "reason": "dato congelado de corpus o caso: identificador sacado del diff de un commit real del historial (`commit-diff-19k`), contenido del caso (ola A10b-6)"
+        },
+        {
+          "name": "resumen-estructurado",
+          "file": "tests/test_structured_summary.py",
+          "reason": "dato congelado de corpus o caso: directorio del corpus congelado `benchmarks/resumen-estructurado/` y clave de su `MANIFEST.json`, que no se reescriben (cierre del frente A, lote 4)"
+        },
+        {
+          "name": "ficheros",
+          "file": "tests/test_structured_summary.py",
+          "reason": "dato congelado de corpus o caso: directorio del corpus congelado `benchmarks/resumen-estructurado/` y clave de su `MANIFEST.json`, que no se reescriben (cierre del frente A, lote 4)"
+        }
+      ]
+    },
+    {
+      "title": "Entrada de interfaz escrita por una persona",
+      "note": "Vacía desde la ola B1d: `pair_sheet` escribe la hoja en el idioma del proceso y lee las dos formas, así que sus filas pasaron a «Lectura de formato viejo».",
+      "entries": []
+    },
+    {
+      "title": "Texto de salida que traduce el frente B",
+      "note": "Vacía desde el cierre del cambio (release 0.36.0, 2026-10-18): los rótulos del JS del panel (`montado`, `cargando`, `descargando`, `procesando`, `remoto`, `llamada`, `fallo`) viven en el catálogo `panel.*` desde B4, y el motivo `pruebas` de `excluded_by_reason` es el valor de máquina `tests` desde B4. El detector ya no los encuentra fuera de `resources/i18n/es/`.",
+      "entries": []
+    },
+    {
+      "title": "Catálogo de textos (frente B)",
+      "note": "Valores que el detector toma por nombres y que no lo son: el texto de salida del catálogo español y los códigos de idioma con los que se prueba la regla del idioma. Nacen en la ola B0a.",
+      "entries": [
+        {
+          "name": "*",
+          "file": "src/local_delegate/resources/i18n/es/*.json",
+          "reason": "texto de salida del catálogo español (REQ-030): el detector toma por término de máquina los valores de una sola palabra («preferencia», «sistema»), que son rótulos para personas con su par en `en/` (ola B0a)"
+        },
+        {
+          "name": "es[-_]*",
+          "file": "tests/conftest.py",
+          "reason": "código de idioma (`es-ES`, BCP 47) del `locale` del navegador de los tests del panel (REQ-043), no un nombre en español (ola B0a)"
+        },
+        {
+          "name": "es[-_]*",
+          "file": "tests/test_language.py",
+          "reason": "códigos de idioma (`es-ES`, `es_ES`, `es_ES.UTF-8`) que son la entrada de los casos de la regla del idioma (REQ-018), no nombres en español (ola B0a)"
+        },
+        {
+          "name": "es[-_]*",
+          "file": "tests/test_dashboard_js.py",
+          "reason": "código de idioma (`es-ES`) del idioma del navegador con que se prueba la elección del idioma del panel (REQ-020, B4), no un nombre en español (cierre del cambio, release 0.36.0)"
+        },
+        {
+          "name": "es[-_]*",
+          "file": "tests/test_dashboard_ui.py",
+          "reason": "código de idioma (`es-ES`) del `locale` del navegador de los tests del panel en los dos idiomas (REQ-020, B4) (cierre del cambio, release 0.36.0)"
+        },
+        {
+          "name": "es[-_]*",
+          "file": "scripts/dev/capture_dashboard.py",
+          "reason": "código de idioma (`es-ES`) del `locale` con que se genera la captura del README, que está en español (cierre del cambio, release 0.36.0)"
+        },
+        {
+          "name": "es[-_]*",
+          "file": "tests/test_install_language.py",
+          "reason": "código de idioma (`es_ES.UTF-8`) del sistema simulado con que se prueba la preferencia de `install` (REQ-047, B5) (cierre del cambio, release 0.36.0)"
+        },
+        {
+          "name": "cero",
+          "file": "scripts/score_lint_fidelity.py",
+          "reason": "numeral español que el medidor reconoce en las respuestas en español para contar cifras inventadas (B2d-3): es el texto que se busca, no un nombre (cierre del cambio, release 0.36.0)"
+        },
+        {
+          "name": "dos",
+          "file": "scripts/score_lint_fidelity.py",
+          "reason": "ídem, numeral español de `NUMBER_WORDS` (B2d-3)"
+        },
+        {
+          "name": "tres",
+          "file": "scripts/score_lint_fidelity.py",
+          "reason": "ídem, numeral español de `NUMBER_WORDS` (B2d-3)"
+        },
+        {
+          "name": "cuatro",
+          "file": "scripts/score_lint_fidelity.py",
+          "reason": "ídem, numeral español de `NUMBER_WORDS` (B2d-3)"
+        },
+        {
+          "name": "cinco",
+          "file": "scripts/score_lint_fidelity.py",
+          "reason": "ídem, numeral español de `NUMBER_WORDS` (B2d-3)"
+        },
+        {
+          "name": "siete",
+          "file": "scripts/score_lint_fidelity.py",
+          "reason": "ídem, numeral español de `NUMBER_WORDS` (B2d-3)"
+        },
+        {
+          "name": "ocho",
+          "file": "scripts/score_lint_fidelity.py",
+          "reason": "ídem, numeral español de `NUMBER_WORDS` (B2d-3)"
+        },
+        {
+          "name": "nueve",
+          "file": "scripts/score_lint_fidelity.py",
+          "reason": "ídem, numeral español de `NUMBER_WORDS` (B2d-3)"
+        },
+        {
+          "name": "doce",
+          "file": "scripts/score_lint_fidelity.py",
+          "reason": "ídem, numeral español de `NUMBER_WORDS` (B2d-3)"
+        },
+        {
+          "name": "veinte",
+          "file": "scripts/score_lint_fidelity.py",
+          "reason": "ídem, numeral español de `NUMBER_WORDS` (B2d-3)"
+        },
+        {
+          "name": "seis",
+          "file": "scripts/score_lint_fidelity.py",
+          "reason": "ídem, numeral español de `NUMBER_WORDS` (B2d-3)"
+        },
+        {
+          "name": "diez",
+          "file": "scripts/score_lint_fidelity.py",
+          "reason": "ídem, numeral español de `NUMBER_WORDS` (B2d-3)"
+        },
+        {
+          "name": "trece",
+          "file": "scripts/score_lint_fidelity.py",
+          "reason": "ídem, numeral español de `NUMBER_WORDS` (B2d-3)"
+        },
+        {
+          "name": "catorce",
+          "file": "scripts/score_lint_fidelity.py",
+          "reason": "ídem, numeral español de `NUMBER_WORDS` (B2d-3)"
+        },
+        {
+          "name": "quince",
+          "file": "scripts/score_lint_fidelity.py",
+          "reason": "ídem, numeral español de `NUMBER_WORDS` (B2d-3)"
+        },
+        {
+          "name": "dieciseis",
+          "file": "scripts/score_lint_fidelity.py",
+          "reason": "ídem, numeral español de `NUMBER_WORDS` (B2d-3)"
+        },
+        {
+          "name": "diecisiete",
+          "file": "scripts/score_lint_fidelity.py",
+          "reason": "ídem, numeral español de `NUMBER_WORDS` (B2d-3)"
+        },
+        {
+          "name": "dieciocho",
+          "file": "scripts/score_lint_fidelity.py",
+          "reason": "ídem, numeral español de `NUMBER_WORDS` (B2d-3)"
+        },
+        {
+          "name": "diecinueve",
+          "file": "scripts/score_lint_fidelity.py",
+          "reason": "ídem, numeral español de `NUMBER_WORDS` (B2d-3)"
+        }
+      ]
+    },
+    {
+      "title": "Pendiente",
+      "note": "Vacía desde la ola B2b-1 (2026-10-14): las subclaves de `_local_delegate` de REQ-010 pasaron a `truncated`, `warning`, `read_server_side.{chars, approx_tokens}`, `fallback.{answered_by, instead_of, reason, class}` y `raw`, y los tests a la forma nueva.",
+      "entries": []
+    }
+  ]
+}

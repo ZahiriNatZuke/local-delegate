@@ -77,6 +77,16 @@ de diccionario.
    (nombres del troceado de `local_explain_code`/`local_extract` y de sus tests) y `zzz` (el
    marcador `ZZZ_marker` del test del fichero de 60 000 caracteres, que pide el plan).
 
+9. Tras la 0.36.0 (2026-10-18) el detector informó de 111 palabras sin clasificar, revisadas a
+   mano una a una: 16 a español y 95 a inglés. Las españolas son los numerales que reconoce
+   `scripts/score_lint_fidelity.py` (`seis`, `diez`, `trece`…`diecinueve`, con su fila en
+   `name_exceptions.json` igual que `cero`…`veinte`) y textos del catálogo `i18n/es`
+   (`eliminada`, `eliminado`, `estimado`, `estimados`, `insertado`, `listo`, `reemplazado`). Las
+   inglesas son palabras de nombres de tests, del panel y de los scripts de medición (`asserts`,
+   `counterfactual`, `judgeable`, `unpinned`…) y abreviaturas técnicas (`ast`, `tsc`, `https`,
+   `nav`, `cols`). Desde entonces el guardián
+   `test_repo_has_no_spanish_name_outside_the_exception_list` exige también 0 sin clasificar.
+
 ## Heurísticas (no usan datos ajenos)
 
 En `detect_spanish_names.classify_word`, en este orden:
