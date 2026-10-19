@@ -56,3 +56,21 @@ y el candidato de esta rama.
 
 Si no llega en 2 iteraciones: tocar una vez la redacción o el formato del inventario y, si no,
 documentar el límite y el backlog.
+
+## Iteración 1 (c1, `f5ea72c`) — resultado y decisión de la iteración 2 (escrito antes de medirla)
+
+Medido 02:15–02:36 UTC; `main` 01:46–02:10 UTC. Puntuación en `score-main.json` / `score-c1.json`.
+
+- R/RE: **cumple** (es: 6 cifras mal en 3 respuestas → 0; en: 0 → 0; 15/15 códigos en las 6).
+- G (largo `es`): **no cumple**. Invenciones por respuesta 0,73 → 10,2 y cortadas 0 → 2: G1
+  (ruff concise de 8,6 k) entró en bucle en 2 de 3 («Demasiados argumentos…: 1» repetido hasta el
+  tope), con las reglas traducidas y sin código. El control de prompt idéntico (M) también se movió
+  (0,50 → 1,33 invenciones, 0 → 2 cortadas en M5), así que el ruido es grande, pero 10,2 no es
+  ruido.
+- GE/H/HE: sin regresión (GE 0,80 → 0,27 invenciones).
+
+**Iteración 2 (c1b), un solo cambio de redacción:** la frase de las cifras pide además nombrar
+cada regla por su código tal cual, como en la lista. Hipótesis: el formato «D101: 5» invita a
+escribir «descripción traducida: N» sin el código, que es donde aparecieron el bucle y las cifras
+sin dueño. Mismo conjunto, mismo criterio, las 8 ventanas otra vez (M/ME de nuevo como control).
+Si c1b no cumple, se documenta el límite: la ola no se adopta y queda en backlog.

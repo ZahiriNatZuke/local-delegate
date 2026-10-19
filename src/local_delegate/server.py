@@ -3932,8 +3932,9 @@ def _lint_single_user(content: str, log: str, role: str) -> str:
 
 #: Wave lint-counts: what the single `long` call is told about the figures of its inventory.
 _LINT_COUNTS_CLAUSE = (
-    " Las cifras de los códigos están contadas por el programa en todo el log: cuando des la "
-    "cantidad de una regla en total, copia esa cifra en vez de contar tú."
+    " Las cifras de los códigos están contadas por el programa en todo el log: nombra cada regla "
+    "por su código, tal cual aparece en la lista, y cuando des su cantidad en total copia esa "
+    "cifra en vez de contar tú."
 )
 
 
