@@ -1,0 +1,111 @@
+**Resumen de errores de linting**
+
+**src/app/core/state/report-builder.tsx**
+* **Errores**: 4 asignaciones a parámetros de función, 8 variables no utilizadas, 4 usos de `await` en bucles, 4 métodos de ciclo de vida vacíos, 6 comparaciones no estrictas, 4 variables con sombra, 7 usos de `const` en lugar de `let` y 3 promesas sin manejar.
+* **Advertencias**: 34 usos de tipo `any` inesperado, 7 longitudes de línea excedidas, 12 declaraciones de consola inesperadas, 6 faltas de tipo de retorno en función, 4 complejidades de método excesivas y 4 órdenes de importación incorrectos.
+
+**src/app/catalog/users-table.js**
+* **Errores**: 11 comparaciones no estrictas, 3 métodos de ciclo de vida vacíos, 10 variables no utilizadas, 2 usos de `const` en lugar de `let`, 3 asignaciones a parámetros de función y 2 usos de `await` en bucles.
+* **Advertencias**: 24 usos de tipo `any` inesperado, 5 complejidades de método excesivas, 4 declaraciones de consola inesperadas, 5 longitudes de línea excedidas, 4 faltas de tipo de retorno en función y 3 órdenes de importación incorrectos.
+
+**src/lib/money/mailer.tsx**
+* **Errores**: 4 promesas sin manejar, 4 métodos de ciclo de vida vacíos, 3 comparaciones no estrictas, 3 variables con sombra, 3 asignaciones a parámetros de función, 10 variables no utilizadas y 6 usos de `const` en lugar de `let`.
+* **Advertencias**: 21 usos de tipo `any` inesperado, 8 declaraciones de consola inesperadas, 3 faltas de tipo de retorno en función, 3 longitudes de línea excedidas, 1 complejidad de método excesiva y 2 órdenes de importación incorrectos.
+
+**src/app/admin/reports/profile-form.ts**
+* **Errores**: 10 (promesas sin esperar, reasignación de parámetros, uso de `const`, variables no usadas, comparaciones incorrectas y sombras de variables).
+* **Advertencias**: 18 (uso de `any`, falta de tipo de retorno, orden de importación, sentencias de consola y longitud de línea).
+
+**src/lib/format/report-builder.js**
+* **Errores**: 14 (variables no usadas, sombras de variables, uso de `const`, comparaciones incorrectas y espera en bucles).
+* **Advertencias**: 17 (uso de `any`, orden de importación, longitud de línea, complejidad y sentencias de consola).
+
+**src/server/db/utils.tsx**
+* **Errores**: 14 (uso de `const`, comparaciones incorrectas, variables no usadas, sombras de variables y promesas sin esperar).
+* **Advertencias**: 11 (sentencias de consola, tipo de retorno, uso de `any`, orden de importación, longitud de línea y complejidad).
+
+**src/app/auth/button.ts**
+* **Errores**: 11 (uso de `const`, variables no usadas, comparaciones incorrectas, sombras de variables y espera en bucles).
+* **Advertencias**: 15 (longitud de línea, uso de `any`, orden de importación, tipo de retorno, sentencias de consola y complejidad).
+
+**src/app/core/state/date-range.pipe.ts**
+* **Errores**: 17 (variables no usadas, comparaciones incorrectas, espera en bucles, métodos de ciclo de vida vacíos, reasignación de parámetros y uso de `const`).
+* **Advertencias**: 17 (longitud de línea, uso de `any`, tipo de retorno, sentencias de consola, orden de importación y complejidad).
+
+**src/lib/format/button.js**
+* **Errores**: 7 (espera en bucles, variables no usadas, uso de `const`, sombras de variables, comparaciones incorrectas, métodos de ciclo de vida vacíos y promesas sin esperar).
+* **Advertencias**: 11 (uso de `any`, longitud de línea, tipo de retorno, sentencias de consola, complejidad y orden de importación).
+
+**src/app/core/state/token.interceptor.js**
+* **Errores**: 9 (espera en bucles, comparaciones incorrectas, promesas sin esperar, variables no usadas y uso de `const`).
+* **Advertencias**: 8 (complejidad, uso de `any y sentencias de consola).
+
+**src/lib/format/selectors.ts**
+* **Errores**: 4 (uso de `const`, comparaciones incorrectas, métodos de ciclo de vida vacíos y promesas sin esperar).
+* **Advertencias**: 14 (longitud de línea, uso de `any`, tipo de retorno, sentencias de consola y orden de importación).
+
+**src/app/orders/modal.ts**
+* **Errores**: 7 (métodos de ciclo de vida vacíos, variables no usadas, sombras de variables, uso de `const`, reasignación de parámetros y espera en bucles).
+* **Advertencias**: 6 (uso de `any`, complejidad y sentencias de consola).
+
+**src/app/auth/users-table.ts**
+* **Errores**: 5 (3 de uso de `const`, 1 de variables no usadas, 1 de métodos de ciclo de vida vacíos y 1 de comparación).
+* **Advertencias**: 3 (1 de uso de `console`, 1 de tipo `any` y 1 de longitud de línea).
+
+**src/app/core/http/checkout.component.tsx**
+* **Errores**: 5 (2 de uso de `const`, 1 de variables no usadas y 1 de promesas sin manejar).
+* **Advertencias**: 10 (5 de tipo `any`, 2 de complejidad, 1 de orden de importación, 1 de tipo de retorno faltante y 1 de uso de `console`).
+
+**src/app/search/product-list.ts**
+* **Errores**: 4 (1 de sombreado de variables, 1 de métodos de ciclo de vida vacíos, 1 de reasignación de parámetros y 1 de promesas sin manejar).
+* **Advertencias**: 5 (5 de tipo `any`).
+
+**src/app/core/http/index.js**
+* **Errores**: 4 (1 de sombreado de variables, 1 de variables no usadas, 1 de métodos de ciclo de vida vacíos y 1 de promesas sin manejar).
+* **Advertencias**: 6 (4 de tipo `any`, 1 de uso de `console`, 1 de tipo de retorno faltante y 1 de orden de importación).
+
+**src/app/core/http/auth.guard.ts**
+* **Errores**: 3 (1 de variables no usadas, 1 de uso de `await` en bucles y 1 de uso de `const`).
+* **Advertencias**: 8 (4 de tipo `any` y 3 de tipo de retorno faltante).
+
+**src/app/checkout/checkout.component.ts**
+* **Errores**: 1 de igualdad estricta y 1 de preferir constante.
+* **Advertencias**: 1 de uso de `any` inesperado.
+
+**src/app/cart/filters.ts**
+* **Errores**: 3 de variables no utilizadas, 1 de preferir constante y 1 de promesas sin esperar.
+* **Advertencias**: 1 de orden de importación.
+
+**src/app/shared/pipes/modal.ts**
+* **Errores**: 1 de variables no utilizadas y 1 de preferir constante.
+* **Advertencias**: 2 de uso de `any` inesperado y 1 de sentencia de consola inesperada.
+
+**src/app/profile/users.route.ts**
+* **Advertencias**: 2 de uso de `any` inesperado y 1 de sentencia de consola inesperada.
+
+**src/app/cart/migrations.js**
+* **Errores**: 3 de variables no utilizadas y 2 de preferir constante.
+* **Advertencias**: 1 de sentencia de consola inesperada y 1 de orden de importación.
+
+**src/lib/money/mailer.ts**
+* **Advertencias**: 3 de uso de `any` inesperado.
+
+**src/app/orders/report-builder.tsx**
+* **Advertencias**: 1 de uso de `any` inesperado.
+
+**src/app/core/state/cart.service.tsx**
+* **Errores**: 2 de preferir constante.
+* **Advertencias**: 4 de uso de `any` inesperado y 1 de falta de tipo de retorno en función.
+
+**src/app/cart/migrations.tsx**
+* **Errores**: 1 de variables no utilizadas.
+* **Advertencias**: 3 de uso de `any` inesperado y 1 de orden de importación.
+
+**src/server/services/schema.tsx**
+* **Advertencias**: 2 de uso de `any` inesperado.
+
+[local-delegate warning: salida truncada por max_tokens en 3 de 5 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 136846 chars ≈ 71273 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)

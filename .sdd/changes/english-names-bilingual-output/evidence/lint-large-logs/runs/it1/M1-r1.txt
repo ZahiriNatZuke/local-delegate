@@ -1,0 +1,7 @@
+Resumen de problemas por archivo:
+
+**app/main.py**: Se encontraron 3 errores de longitud de línea (E501), uno de importación no utilizada (F401) y dos errores de longitud de línea (E501).
+**app/util.py**: Se encontraron 4 errores de longitud de línea (E501), dos de importación no utilizada (F401) y un aviso de espacio en blanco al final (W291).
+**app/cli.py**: Se encontró 1 error de longitud de línea (E501).
+
+(leído server-side: 340 chars ≈ 177 tokens de Claude que no entraron a tu contexto)

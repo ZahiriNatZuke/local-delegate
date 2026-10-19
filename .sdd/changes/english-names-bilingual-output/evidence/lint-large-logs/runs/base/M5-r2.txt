@@ -1,0 +1,34 @@
+**Archivo: src/local_delegate/sections.py**
+
+*   **E501:** 6 (Líneas demasiado largas)
+*   **D101:** 5 (Faltan docstrings en clases públicas)
+*   **D102:** 3 (Faltan docstrings en métodos públicos)
+*   **RUF002:** 2 (Docstring ambiguo con `–` (EN DASH), posible reemplazo con `-` (HYPHEN-MINUS))
+*   **C901:** 2 (Complejidad excesiva en `markdown_headings` y `match_headings`)
+*   **D203:** 1 (Advertencia incompatible: `incorrect-blank-line-before-class` y `blank-line-before-class`)
+*   **D211:** 1 (Advertencia incompatible: `multi-line-summary-first-line` y `multi-line-summary-second-line`)
+*   **D212:** 1 (Advertencia incompatible: `multi-line-summary-second-line`)
+*   **D213:** 1 (Advertencia incompatible: `multi-line-summary-second-line`)
+*   **CPY001:** 1 (Falta aviso de copyright al inicio del archivo)
+*   **TC003:** 1 (Mover importación de la biblioteca estándar `collections.abc.Callable` a un bloque de verificación de tipos)
+*   **D205:** 1 (Requiere 1 línea en blanco entre la línea de resumen y la descripción)
+*   **D301:** 1 (Usar `r"""` si hay barras invertidas en un docstring)
+*   **D400:** 1 (La primera línea del docstring debe terminar con un punto)
+*   **PLR2004:** 1 (Uso de valor mágico en comparación, considerar reemplazar `2` con una variable constante)
+*   **PLR0912:** 1 (Demasiadas ramas en la definición de la función)
+*   **PLR0913:** 1 (Demasiados argumentos en la definición de la función)
+*   **RUF002:** 1 (Docstring ambiguo con `×` (MULTIPLICATION SIGN), posible reemplazo con `x` (LATIN SMALL LETTER X))
+*   **D205:** 1 (Requiere 1 línea en blanco entre la línea de resumen y la descripción)
+*   **D250:** 1 (Falta docstring en clase pública)
+*   **D316:** 1 (Falta docstring en clase pública)
+*   **D324:** 1 (Falta docstring en método público)
+*   **D364:** 1 (Problema de longitud de línea)
+*   **D404:** 1 (Problema de longitud de línea)
+*   **D406:** 1 (Problema de longitud de línea)
+*   **D406:** 1 (Problema de longitud de línea)
+*   **D406:** 1 (Problema de longitud de línea)
+*   **D406:** 1 (Problema
+
+[local-delegate warning: salida truncada por max_tokens]
+
+(leído server-side: 2627 chars ≈ 1368 tokens de Claude que no entraron a tu contexto)

@@ -1,0 +1,47 @@
+**src/local_delegate/benchmark.py**
+* **COM812**: 16 faltas de coma final.
+* **TRY003**: 8 mensajes largos fuera de la clase de excepción.
+* **D102**: 7 falta de docstrings en métodos públicos.
+* **T201**: 7 uso de la función `print`.
+* **EM102**: 6 excepciones que usan literales f-string.
+* **D107**: 5 falta de docstrings en el método `__init__`.
+* **D101**: 4 falta de docstrings en clases públicas.
+* **D105**: 4 falta de docstrings en métodos mágicos.
+* **D103**: 4 falta de docstrings en funciones públicas.
+* **PLR2004**: 4 uso de valores mágicos en comparaciones.
+* **EM101**: 2 excepciones que usan literales de cadena.
+* **PLC0415**: 2 importaciones que deberían estar en el nivel superior.
+* **S603**: 2 llamadas a `subprocess` que requieren verificar entradas no confiables.
+* **PLR0913**: 2 demasiados argumentos en la definición de funciones.
+* **E501**: 3 líneas demasiado largas.
+* **PLR0912**: 1 demasiadas ramas.
+* **PLR0915**: 1 demasiadas sentencias.
+* **D301**: 1 uso de docstrings que requieren `r"""`.
+* **D205**: 1 línea en blanco requerida entre resumen y descripción.
+* **D209**: 1 las comillas de cierre de docstrings multilínea deberían estar en una línea separada.
+* **FBT003**: 1 valor booleano posicional en llamada a función.
+* **RUF036**: 1 `None` no está al final de la unión de tipos.
+* **C901**: 1 complejidad excesiva en la función `run_benchmark`.
+* **PLW1510**: 1 `subprocess.run` sin el argumento `check` explícito.
+* **TRY301**: 1 elevar excepciones abstractas a una función interna.
+* **PLR0913**: 2 demasiados argumentos en la definición de funciones.
+
+**src/local_delegate/agents.py**
+* **CPY001**: 1 falta de aviso de copyright al inicio del archivo.
+* **TC003**: 1 mover importación de la biblioteca estándar a un bloque de comprobación de tipos.
+* **COM812**: 1 falta de coma final.
+* **D401**: 1 la primera línea del docstring debe estar en modo imperativo.
+* **PLR2004**: 1 uso de valor mágico en comparación.
+
+**src/local_delegate/autostart.py**
+* **CPY001**: 1 falta de aviso de copyright al inicio del archivo.
+* **D401**: 1 la primera línea del docstring debe estar en modo imperativo.
+* **S603**: 1 llamada a `subprocess` que requiere verificar entradas no confiables.
+
+**src/local_delegate/__init__.py**
+* **CPY001**: 1 falta de aviso de copyright al inicio del archivo.
+
+**src/local_delegate/__main__.py**
+* **CPY001**: 1 falta de aviso de copyright al inicio del archivo.
+
+(leído server-side: 8589 chars ≈ 4473 tokens de Claude que no entraron a tu contexto)

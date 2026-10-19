@@ -1,0 +1,32 @@
+**tests/test_checks.py**: pruebas de verificación.
+
+**tests/test_analyze_benchmark.py**: no hay problemas registrados.
+
+**tests/test_metrics.py**: pruebas de métricas.
+
+**tests/test_update.py**: pruebas de actualización.
+
+**tests/test_residency.py**: pruebas de detección de claves y gestión de residencia.
+
+**tests/test_core.py**: pruebas de núcleo.
+
+**tests/test_connection_cause.py**: pruebas de causas de conexión.
+
+**tests/test_topology.py**: pruebas de topología de modelos y sintaxis de configuración.
+
+**tests/test_corpus.py**: pruebas de corpus.
+
+**tests/test_structured_summary.py**: pruebas de detección de secciones y resumen estructurado.
+
+Hay 89 ficheros más.
+
+**Totales**
+* **Advertencia de depreciación de anyio.abc.BlockingPortal**: 1
+
+Y otros 99 ficheros que nombra el log no tienen entrada en el resumen.
+
+[local-delegate warning: salida truncada por max_tokens en 1 de 8 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 206985 chars ≈ 107804 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 8 pasadas por local-delegate)

@@ -3709,8 +3709,20 @@ def _lint_single_max_tokens(words: int, role: str) -> int:
 
 
 def _lint_chunk_max_tokens(words: int) -> int:
-    """The cap of each map step of the chunked `local_lint_summary`."""
+    """The base cap of the steps of the chunked `local_lint_summary` (map and final steps)."""
     return int(words * LINT_TOKENS_PER_WORD) + LINT_CHUNK_TOKENS_BASE
+
+
+#: Wave lint-large-logs (limit step, 2026-10-19): the map of the chunked lint doubles its cap
+#: (1 392 tokens for 200 words). Even with the terse format (one line per listed file, only its
+#: codes) the map steps of a ruff log of 180 k characters reach ~3 000 characters, ten files with
+#: dozens of codes each, and 696 tokens cut them (`evidence/lint-large-logs/plan.md`, iteration 2).
+LINT_MAP_TOKENS_FACTOR = 2
+
+
+def _lint_map_max_tokens(words: int) -> int:
+    """The cap of each map step of the chunked `local_lint_summary`."""
+    return LINT_MAP_TOKENS_FACTOR * _lint_chunk_max_tokens(words)
 
 
 # B2e (user decision of 2026-10-18): the cap of the FINAL steps of the chunked lint (reduce and
@@ -3721,7 +3733,10 @@ def _lint_chunk_max_tokens(words: int) -> int:
 # ~1 800-2 050 tokens for the longest. The single call keeps its caps (`_lint_max_tokens`), and
 # the map keeps `_lint_chunk_max_tokens`. With the reduce prompt within `_map_budget` (38 400
 # characters for `long`), prompt plus output stays under the 38 400 tokens of `gemma4-26b-a4b`.
-LINT_FINAL_TOKENS_FACTOR = 3
+# Wave lint-large-logs (limit step, 2026-10-19): four times, 2 784 tokens. With the entries bounded
+# to the 10 most named files, the final step of a ruff log with 91 codes still ended in `length`
+# at ~6 000 characters (~3 per token) in 2 of 3, its section of totals naming every code.
+LINT_FINAL_TOKENS_FACTOR = 4
 
 
 def _lint_final_max_tokens(words: int) -> int:
@@ -3934,6 +3949,106 @@ def _lint_single_user(content: str, log: str, role: str) -> str:
     if not inventory:
         return base
     return f"{inventory}\n\nLa lista de arriba sale del log de abajo.{_LINT_COUNTS_CLAUSE} {base}"
+
+
+#: Wave lint-large-logs: how many files get an entry in the chunked lint (map and final step).
+#: The same 10 as the "not mentioned" line (`lint_patterns.not_mentioned`). With one entry per
+#: file, the final step of logs naming 50-130 files wrote 6-8 k characters and ended in `length`
+#: in 7 of 9 calls even with 2 088 tokens (`evidence/B2e/live.md`); the rest is a line counted by
+#: the program.
+LINT_TOP_FILES = 10
+
+
+def _lint_map_user(piece: str) -> str:
+    """The user prompt of each map step (and regroup) of the chunked lint (wave lint-large-logs).
+
+    No figures per file: a chunk sees only part of each file, and in B2e the model counted the
+    tests per file of a pytest log chunk by chunk and got them wrong (`evidence/B2e/live.md`). The
+    final step gets the counts of the whole log from the program. With more files than
+    `LINT_TOP_FILES`, only the most named of the chunk get an entry, so the output stays bounded.
+
+    Iteration 2: a terse format, one line per file with only its codes or kinds of problem. In
+    iteration 1 the map wrote one sentence per rule and an entry for every file of the chunk, and
+    38 of the 66 map steps ended in `length` (`evidence/lint-large-logs/plan.md`).
+    """
+    files = lint_patterns.files_by_frequency(piece)
+    head = (
+        "Esto es un trozo de un log mayor. Responde en formato escueto: una línea por fichero, "
+        "«fichero: códigos o tipos de problema separados por comas», sin explicarlos y sin "
+        "cifras (las cifras las pone el programa en el paso final)."
+    )
+    if len(files) > LINT_TOP_FILES:
+        head += (
+            f" El trozo nombra {len(files)} ficheros: da entrada solo a estos, los más nombrados, "
+            f"y a ningún otro: {', '.join(files[:LINT_TOP_FILES])}."
+        )
+    return f"{head}\n\nResume la siguiente salida de linter/tests:\n\n{piece}"
+
+
+def _lint_final_inventory(log: str, max_chars: int) -> tuple[str, int]:
+    """The inventory of the final step of the chunked lint, and how many files are left out.
+
+    Wave lint-large-logs: the `LINT_TOP_FILES` most named files (with their number of diagnostics
+    when the format lets the program count it) and the codes of the whole log with their count.
+    The prompt asks for one entry per listed file only; `_lint_other_files` adds the rest.
+    """
+    files = lint_patterns.files_by_frequency(log)
+    top = files[:LINT_TOP_FILES]
+    per_file = lint_patterns.per_file_code_counts(log)
+    totals = {f.lower(): sum(c.values()) for f, c in (per_file or {}).items()}
+    if per_file is not None:
+        header = (
+            f"Los {len(top)} ficheros más nombrados del log (de {len(files)}), con su número de "
+            "diagnósticos contado por el programa:"
+        )
+        items = [f"{f} {totals[f.lower()]}" if f.lower() in totals else f for f in top]
+    else:
+        header = f"Los {len(top)} ficheros más nombrados del log (de {len(files)}):"
+        items = top
+    lines = [f"{header} {', '.join(items)}"] if top else []
+    rule = ""
+    if top:
+        rule = (
+            f"Escribe una entrada solo para los {len(top)} ficheros de la lista, en ese orden"
+            + (
+                "; el programa añade al final cuántos más hay. Ninguna entrada más tras el último."
+                if len(files) > len(top)
+                else "."
+            )
+        )
+        if per_file is not None:
+            rule += (
+                " El total de cada fichero es el de la lista. Las cifras por código son del log "
+                "entero: van en un apartado final de totales, nunca dentro de la entrada de un "
+                "fichero."
+            )
+        else:
+            rule += (
+                " El log no da cifras por fichero: no pongas ninguna en las entradas. Las cifras "
+                "por código, si la lista las da, son del log entero y van en un apartado final de "
+                "totales."
+            )
+    # The rule goes first in the budget and the codes line takes what is left: the reduce prompt
+    # is measured whole, and one over the budget regroups instead of reducing (B2e).
+    code_items = [f"{code}: {count}" for code, count in lint_patterns.code_counts(log)]
+    codes = _lint_inventory_line(
+        "Códigos de regla o error del log entero, con las veces que aparece cada uno (contadas "
+        "por el programa; los más frecuentes primero):",
+        code_items,
+        max_chars - sum(len(line) + 1 for line in lines) - len(rule) - 1,
+    )
+    if codes:
+        lines.append(codes)
+    if rule:
+        lines.append(rule)
+    return "\n".join(lines), len(files) - len(top)
+
+
+def _lint_other_files(answer: str, left_out: int) -> str:
+    """Wave lint-large-logs: the line of the program with how many files got no entry."""
+    if left_out <= 0:
+        return answer
+    return f"{answer.rstrip()}\n\n{i18n.t('mcp.lint.other_files', count=left_out)}"
 
 
 #: Wave lint-counts: what the single `long` call is told about the figures of its inventory.
@@ -4615,9 +4730,6 @@ def local_lint_summary(
     content, _groups = compact_repeated_lines(content)
     system = _lint_system(max_words)
 
-    def _build(piece: str) -> str:
-        return f"Resume la siguiente salida de linter/tests:\n\n{piece}"
-
     if len(content) > config.max_chars_for_role(role):
         # Un log de CI es justo el caso donde truncar duele: los errores interesantes suelen
         # estar al final, y era exactamente lo que se descartaba.
@@ -4625,7 +4737,11 @@ def local_lint_summary(
         # la del idioma) y no el reduce por defecto, que pedía prosa «sin enumerar»; con reduce
         # propio el reagrupado usa también el `system` de lint. Delante de los parciales, el
         # inventario de ficheros y códigos del log entero, por programa y sin recuentos.
-        inventory = _lint_inventory(log, int(_map_budget(config.max_chars_for_role(role)) * 0.25))
+        # Wave lint-large-logs: the final step gets an entry only for the most named files, with
+        # the counts of the program, and the program adds how many files are left out.
+        inventory, left_out = _lint_final_inventory(
+            log, int(_map_budget(config.max_chars_for_role(role)) * 0.25)
+        )
 
         def _build_reduce(joined: str) -> str:
             head = f"{inventory}\n\n" if inventory else ""
@@ -4640,13 +4756,13 @@ def local_lint_summary(
             # B2e, respaldo decidido por el usuario el 2026-10-17 (la primera medición no llegó):
             # lo del inventario que el resumen no nombra lo añade el programa, en una línea y sin
             # cifras, para que el lector sepa qué ficheros y reglas del log quedaron fuera.
-            return _lint_not_mentioned(answer, log)
+            return _lint_not_mentioned(_lint_other_files(answer, left_out), log)
 
         return _chat_map_reduce(
             model,
             system,
             content,
-            _build,
+            _lint_map_user,
             max_chars=config.max_chars_for_role(role),
             tool="local_lint_summary",
             role=role,
@@ -4656,7 +4772,7 @@ def local_lint_summary(
             path=path,
             reduce_system=system,
             build_reduce=_build_reduce,
-            max_tokens_for=_lint_chunk_max_tokens,
+            max_tokens_for=_lint_map_max_tokens,
             final_max_tokens_for=_lint_final_max_tokens,
             postprocess=_add_not_mentioned,
         )

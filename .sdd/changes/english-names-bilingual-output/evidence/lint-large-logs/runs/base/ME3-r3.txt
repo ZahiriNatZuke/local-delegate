@@ -1,0 +1,16 @@
+**Summary of Issues by File**
+
+**lib/net.py:** This file presents the most issues. It contains 4 instances of the `SIM102` rule (Use a single `if` statement), 1 instance of the `RET504` rule (Unnecessary assignment before `return`), and 1 instance of the `I001` rule (Import block is un-sorted or un-formatted).
+
+**lib/io.py:** This file has 3 instances of the `I001` rule (Import block is un-sorted or un-formatted), 1 instance of the `UP006` rule (Use `dict` instead of `Dict` for type annotation), and 1 instance of the `UP006` rule (Use `dict` instead of `Dict` for type annotation).
+
+**lib/db.py:** This file contains 3 instances of the `SIM102` rule (Use a single `if` statement), 1 instance of the `UP006` rule (Use `list` instead of `List` for type annotation), and 1 instance of the `RET504` rule (Unnecessary assignment before `return`).
+
+**Total Errors:**
+
+*   `SIM102`: 4
+*   `I001`: 3
+*   `UP006`: 2
+*   `RET504`: 2
+
+(read server-side: 784 chars ≈ 408 Claude tokens that did not enter your context)

@@ -1,0 +1,25 @@
+**File: src/local_delegate/sections.py**
+
+**Error/Rule Summary:**
+
+*   **E501:** 6 - Line too long (exceeding 100 characters).
+*   **D101:** 5 - Missing docstring in public class.
+*   **D102:** 3 - Missing docstring in public method.
+*   **RUF002:** 2 - Docstring contains ambiguous characters.
+*   **C901:** 2 - Complex expressions (more than 10 elements).
+*   **D203:** 1 - Warning: `incorrect-blank-line-before-class` and `blank-line-before-class` are incompatible.
+*   **D211:** 1 - Warning: `multi-line-summary-first-line` and `multi-line-summary-second-line` are incompatible.
+*   **D212:** 1 - Warning: `multi-line-summary-second-line` is incompatible.
+*   **D213:** 1 - Warning: `multi-line-summary-first-line` is incompatible.
+*   **CPY001:** 1 - Missing copyright notice at the top of the file.
+*   **TC003:** 1 - Move standard library import `collections.abc.Callable` into a type-checking block.
+*   **D205:** 1 - 1 blank line required between summary line and description.
+*   **D301:** 1 - Use `r"""` if any backslashes are in a docstring.
+*   **D400:** 1 - First line should end with a period.
+*   **PLR2004:** 1 - Magic value used in comparison, consider replacing `2` with a constant variable.
+*   **PLR0912:** 1 - Too many branches (more than 12).
+*   **PLR0913:** 1 - Too many arguments in function definition (more than 5).
+
+Found 26 errors.
+
+(read server-side: 2627 chars ≈ 1368 Claude tokens that did not enter your context)

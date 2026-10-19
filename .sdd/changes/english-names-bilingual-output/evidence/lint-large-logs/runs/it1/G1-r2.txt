@@ -1,0 +1,47 @@
+**src/local_delegate/benchmark.py**
+* **COM812**: 16 faltas de coma final.
+* **TRY003**: 8 evitar especificar mensajes largos fuera de la clase de excepción.
+* **D102**: 7 falta de docstring en método público.
+* **T201**: 7 uso de `print`.
+* **EM102**: 6 la excepción no debe usar un literal f-string, asigne a una variable primero.
+* **D107**: 5 falta de docstring en `__init__`.
+* **D101**: 4 falta de docstring en clase pública.
+* **D105**: 4 falta de docstring en método mágico.
+* **D103**: 4 falta de docstring en función pública.
+* **PLR2004**: 4 uso de valor mágico en comparación, considere reemplazar con una constante.
+* **EM101**: 2 la excepción no debe usar un literal de cadena, asigne a una variable primero.
+* **PLC0415**: 2 la importación debe estar en el nivel superior del archivo.
+* **S603**: 2 llamada a `subprocess`: compruebe la ejecución de entrada no confiable.
+* **PLR0913**: 2 demasiados argumentos en la definición de la función.
+* **E501**: 3 línea demasiado larga.
+* **D205**: 1 se requiere una línea en blanco entre la línea de resumen y la descripción.
+* **D209**: 1 las comillas de cierre de un docstring multilínea deben estar en una línea separada.
+* **D301**: 1 use `r"""` si hay barras invertidas en un docstring.
+* **FBT003**: 1 valor posicional booleano en la llamada a la función.
+* **PLR0913**: 2 demasiados argumentos en la definición de la función.
+* **PLR0912**: 1 demasiadas ramas.
+* **PLR0915**: 1 demasiadas sentencias.
+* **C901**: 1 `run_benchmark` es demasiado complejo.
+* **RUF036**: 1 `None` no está al final de la unión de tipos.
+* **TRY301**: 1 abstraiga el `raise` a una función interna.
+* **PLW1510**: 1 `subprocess.run` sin argumento `check` explícito.
+
+**src/local_delegate/agents.py**
+* **CPY001**: 1 falta el aviso de derechos de autor al principio del archivo.
+* **TC003**: 1 mover la importación de la biblioteca estándar `pathlib.Path` a un bloque de comprobación de tipos.
+* **COM812**: 1 falta de coma final.
+* **D401**: 1 la primera línea del docstring debe estar en modo imperativo.
+* **PLR2004**: 1 uso de valor mágico en comparación.
+
+**src/local_delegate/autostart.py**
+* **CPY001**: 1 falta el aviso de derechos de autor al principio del archivo.
+* **D401**: 1 la primera línea del docstring debe estar en modo imperativo.
+* **S603**: 1 llamada a `subprocess`: compruebe la ejecución de entrada no confiable.
+
+**src/local_delegate/__init__.py**
+* **CPY001**: 1 falta el aviso de derechos de autor al principio del archivo.
+
+**src/local_delegate/__main__.py**
+* **CPY001**: 1 falta el aviso de derechos de autor al principio del archivo.
+
+(leído server-side: 8589 chars ≈ 4473 tokens de Claude que no entraron a tu contexto)

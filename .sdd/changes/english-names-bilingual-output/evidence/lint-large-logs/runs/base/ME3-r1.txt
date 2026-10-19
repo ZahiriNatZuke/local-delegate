@@ -1,0 +1,11 @@
+**Summary of Issues by File**
+
+**lib/net.py:** This file presents three issues. Specifically, it contains two instances of the rule `SIM102` related to using a single `if` statement, and one instance of the rule `RET504` concerning an unnecessary assignment before a return.
+
+**lib/io.py:** This file has three instances of the rule `I001` regarding the unsorted or unformatted import block. Additionally, it includes three instances of the rule `UP006` suggesting the use of `dict` instead of `Dict` for type annotations.
+
+**lib/db.py:** This file exhibits three instances of the rule `SIM102` related to using a single `if` statement. Furthermore, it contains two instances of the rule `UP006` recommending the use of `list` instead of `List` for type annotations, and one instance of the rule `RET504` concerning an unnecessary assignment before a return.
+
+**Total Errors:** 13
+
+(read server-side: 784 chars ≈ 408 Claude tokens that did not enter your context)

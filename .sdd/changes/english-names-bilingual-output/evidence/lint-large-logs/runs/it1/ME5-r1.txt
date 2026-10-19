@@ -1,0 +1,25 @@
+**File: src/local_delegate/sections.py**
+
+**Error/Rule Summary:**
+
+*   **E501:** 6 (Line too long)
+*   **D101:** 5 (Missing docstring)
+*   **D102:** 3 (Missing docstring in public method)
+*   **RUF002:** 2 (Docstring contains ambiguous character)
+*   **C901:** 2 (Too complex)
+*   **D203:** 1 (incorrect-blank-line-before-class)
+*   **D211:** 1 (blank-line-before-class)
+*   **D212:** 1 (multi-line-summary-second-line)
+*   **D213:** 1 (multi-line-summary-first-line)
+*   **CPY001:** 1 (Missing copyright notice)
+*   **TC003:** 1 (Move standard library import)
+*   **D205:** 1 (1 blank line required between summary line and description)
+*   **D301:** 1 (Use `r"""` if any backslashes in a docstring)
+*   **D400:** 1 (First line should end with a period)
+*   **PLR2004:** 1 (Magic value used in comparison)
+*   **PLR0912:** 1 (Too many branches)
+*   **PLR0913:** 1 (Too many arguments in function definition)
+
+The file contains 26 errors and 2 unsafe fixes are available. Several warnings relate to line length exceeding 100 characters, requiring adjustments. Missing docstrings for public classes and methods are also prevalent. Additionally, there are issues with ambiguous characters in docstrings, overly complex expressions, and the absence of copyright notices. Several incompatible warnings were found and ignored.
+
+(read server-side: 2627 chars ≈ 1368 Claude tokens that did not enter your context)

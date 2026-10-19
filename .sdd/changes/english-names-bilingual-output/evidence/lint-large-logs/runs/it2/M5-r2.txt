@@ -1,0 +1,21 @@
+**src/local_delegate/sections.py**
+
+*   **E501:** 6 (Líneas demasiado largas)
+*   **D101:** 6 (Faltan comentarios en clases públicas)
+*   **D102:** 3 (Faltan comentarios en métodos públicos)
+*   **RUF002:** 2 (Documentación con ambigüedad en el uso de guiones)
+*   **C901:** 2 (Complejidad excesiva en variables)
+*   **D203:** 1 (Advertencia incompatible entre `incorrect-blank-line-before-class` y `blank-line-before-class`)
+*   **D211:** 1 (Advertencia incompatible entre `multi-line-summary-first-line` y `multi-line-summary-second-line`)
+*   **D212:** 1 (Advertencia incompatible entre `multi-line-summary-first-line` y `multi-line-summary-second-line`)
+*   **D213:** 1 (Advertencia incompatible entre `multi-line-summary-first-line` y `multi-line-summary-second-line`)
+*   **CPY001:** 1 (Falta aviso de copyright al inicio del archivo)
+*   **TC003:** 1 (Mover importaciones de la biblioteca estándar `collections.abc.Callable` a un bloque de verificación de tipos)
+*   **D301:** 1 (Usar `r"""` si hay barras invertidas en un comentario)
+*   **D400:** 1 (La primera línea de un comentario debe terminar con un punto)
+*   **PLR2004:** 1 (Se utiliza un valor mágico en la comparación, considerar reemplazar `2` con una variable constante)
+*   **PLR0912:** 1 (Demasiadas ramas en la definición de la función)
+*   **PLR0913:** 1 (Demasiados argumentos en la definición de la función)
+*   **D205:** 1 (Se requiere una línea en blanco entre la línea de resumen y la descripción)
+
+(leído server-side: 2627 chars ≈ 1368 tokens de Claude que no entraron a tu contexto)

@@ -414,12 +414,6 @@
     },
     {
       "file": "src/local_delegate/server.py",
-      "text": "Resume la siguiente salida de linter/tests:\n\n{}",
-      "kind": "verbatim",
-      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
-    },
-    {
-      "file": "src/local_delegate/server.py",
       "text": "un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; una línea en blanco y un cuerpo OBLIGATORIO de {} viñetas '- ' que digan qué cambia y para qué",
       "kind": "verbatim",
       "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
@@ -795,6 +789,60 @@
       "text": "git -C {} pull && uv sync --project {}",
       "kind": "verbatim",
       "reason": "comando que actualiza una instalación editable; se copia y se ejecuta tal cual"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Esto es un trozo de un log mayor. Responde en formato escueto: una línea por fichero, «fichero: códigos o tipos de problema separados por comas», sin explicarlos y sin cifras (las cifras las pone el programa en el paso final).",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": " El trozo nombra {} ficheros: da entrada solo a estos, los más nombrados, y a ningún otro: {}.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "{}\n\nResume la siguiente salida de linter/tests:\n\n{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Los {} ficheros más nombrados del log (de {}), con su número de diagnósticos contado por el programa:",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Los {} ficheros más nombrados del log (de {}):",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "; el programa añade al final cuántos más hay. Ninguna entrada más tras el último.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": " El total de cada fichero es el de la lista. Las cifras por código son del log entero: van en un apartado final de totales, nunca dentro de la entrada de un fichero.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": " El log no da cifras por fichero: no pongas ninguna en las entradas. Las cifras por código, si la lista las da, son del log entero y van en un apartado final de totales.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Códigos de regla o error del log entero, con las veces que aparece cada uno (contadas por el programa; los más frecuentes primero):",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
     }
   ]
 }

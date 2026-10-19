@@ -1,0 +1,7 @@
+**Summary of Issues by File**
+
+**tools/gen.py**
+
+This file exhibits several issues. The most frequent error is **E402 Module level import not at top of file**, appearing 4 times.  Following this, the error **E501 Line too long** occurs 3 times.  Additionally, the issue **E711 Comparison to `None` should be `cond is None`** is found once.  The lines exceeding the maximum length are located at lines 20, 31, 32, and 50.  These issues primarily relate to import statements and line length constraints.
+
+(read server-side: 438 chars ≈ 228 Claude tokens that did not enter your context)

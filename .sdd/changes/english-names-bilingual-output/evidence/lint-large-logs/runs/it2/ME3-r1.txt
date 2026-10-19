@@ -1,0 +1,16 @@
+**Summary of Issues by File**
+
+**lib/io.py:** The file exhibits multiple issues related to import formatting. Specifically, it contains three instances of the I001 error, indicating that the import block is either unsorted or unformatted. Additionally, there are three instances of the UP006 error, suggesting the use of `dict` instead of `Dict` for type annotations.
+
+**lib/net.py:** This file presents three instances of the I001 error, concerning the import block's formatting. Furthermore, it contains four instances of the SIM102 error, which relates to the use of multiple `if` statements where a single statement would be more appropriate. Finally, there is one instance of the RET504 error, indicating an unnecessary assignment before a `return` statement.
+
+**lib/db.py:** The file contains two instances of the SIM102 error, related to the use of multiple `if` statements. It also has two instances of the UP006 error, requiring the use of `list` instead of `List` for type annotations. Lastly, there is one instance of the RET504 error, indicating an unnecessary assignment before a `return` statement.
+
+Total lines: 14
+
+Count per file (counted by the program):
+- lib/net.py: SIM102 3, I001 1, RET504 1
+- lib/io.py: I001 2, UP006 2
+- lib/db.py: SIM102 2, UP006 1, RET504 1
+
+(read server-side: 784 chars ≈ 408 Claude tokens that did not enter your context)

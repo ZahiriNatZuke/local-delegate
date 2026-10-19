@@ -1,0 +1,9 @@
+**File Summary**
+
+**lib/net.py:** This file contains three instances of the rule **SIM102**, related to the use of single `if` statements. It also has one instance of the rule **I001**, concerning import block formatting. Furthermore, it presents one instance of the rule **RET504**, indicating an unnecessary assignment before a `return` statement.
+
+**lib/io.py:** The file exhibits two instances of the rule **I001**, pertaining to import block formatting. It also contains two instances of the rule **UP006**, related to the use of `dict` instead of `Dict` for type annotations.
+
+**lib/db.py:** This file includes two instances of the rule **SIM102**, concerning the use of single `if` statements. It also has one instance of the rule **UP006**, related to the use of `list` instead of `List` for type annotations. Finally, it presents one instance of the rule **RET504**, indicating an unnecessary assignment before a `return` statement.
+
+(read server-side: 784 chars ≈ 408 Claude tokens that did not enter your context)

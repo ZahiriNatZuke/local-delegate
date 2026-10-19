@@ -1,0 +1,9 @@
+Here's a summary of the issues grouped by file, based on the provided linter/tests output:
+
+**app/main.py:** This file contains two instances of the `E501` error, indicating lines that are too long. Additionally, there is one instance of the `F401` error, signifying that the module `os` is imported but not used.
+
+**app/util.py:** This file has three instances of the `E501` error, representing lines that are excessively long. It also includes one `F401` error, indicating that the modules `sys` and `re` are imported but not utilized. Furthermore, there is one `W291` warning related to trailing whitespace.
+
+**app/cli.py:** This file has one instance of the `E501` error, signifying a line that exceeds the maximum length.
+
+(read server-side: 340 chars ≈ 177 Claude tokens that did not enter your context)

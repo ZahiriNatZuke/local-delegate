@@ -88,7 +88,9 @@ def test_every_step_of_the_chunked_lint_asks_for_the_new_cap(monkeypatch, captur
     server.local_lint_summary(text="tests/x.py:1: E1 fallo de prueba\n" * 120)
     assert len(captured) > 2  # guard: map and reduce really ran
     assert "Resume la siguiente salida" not in captured[-1]["user"]  # guard: the last one reduces
-    expected = 200 * server.LINT_TOKENS_PER_WORD + server.LINT_CHUNK_TOKENS_BASE
+    # Wave lint-large-logs: the maps get twice the base cap (`LINT_MAP_TOKENS_FACTOR`).
+    base = 200 * server.LINT_TOKENS_PER_WORD + server.LINT_CHUNK_TOKENS_BASE
+    expected = server.LINT_MAP_TOKENS_FACTOR * base
     assert [c["max_tokens"] for c in captured[:-1]] == [expected] * (len(captured) - 1)
     assert captured[-1]["max_tokens"] == server._lint_final_max_tokens(200)
 

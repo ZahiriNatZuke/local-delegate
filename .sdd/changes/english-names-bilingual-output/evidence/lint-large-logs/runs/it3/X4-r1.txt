@@ -1,0 +1,47 @@
+**Resumen de problemas por archivo**
+
+**src/app/core/http/format-date.ts**: 167 diagnósticos que incluyen objeto posiblemente indefinido, argumento no asignable, parámetro con tipo any implícito, propiedad faltante, módulo no encontrado, tipo no asignable, propiedad inexistente y propiedad sin inicializador.
+
+**src/app/profile/pricing.ts**: 95 diagnósticos que incluyen argumento no asignable, módulo no encontrado, asignación de tipo, número de argumentos esperado, posible indefinido, propiedad inexistente y tipo any implícito.
+
+**src/app/cart/cart.component.ts**: 61 diagnósticos que incluyen argumento no asignable a tipo string, propiedad sin inicializador, objeto posiblemente indefinido, propiedad faltante en el tipo, propiedad inexistente, tipo no asignable a número, parámetro con tipo any implícito, módulo no encontrado y variable declarada pero no leída.
+
+**src/app/core/state/profile-form.tsx**: 40 diagnósticos que incluyen argumento no asignable, propiedad sin inicializador, parámetro con tipo any implícito, tipo no asignable, módulo no encontrado, propiedad inexistente, objeto posiblemente indefinido, variable no leída, propiedad faltante y posible indefinido.
+
+**src/app/cart/round.ts**: 37 diagnósticos que incluyen objeto posiblemente indefinido, argumento no asignable a tipo string, propiedad inexistente, número de argumentos incorrecto, tipo no asignable a número, parámetro con tipo any implícito, módulo no encontrado, variable declarada pero no leída y propiedad faltante en el tipo.
+
+**src/app/catalog/cart.service.tsx**: 33 diagnósticos que incluyen objeto posiblemente indefinido, módulo no encontrado, argumento no asignable a tipo string, parámetro con tipo any implícito, tipo no asignable a número, variable declarada pero no leída y propiedad faltante en el tipo.
+
+**src/app/admin/reports/checkout.component.tsx**: 27 diagnósticos que incluyen parámetro con tipo any implícito, número de argumentos incorrecto, argumento no asignable a tipo string, propiedad inexistente, propiedad sin inicializador, variable declarada pero no leída, objeto posiblemente indefinido, tipo no asignable a número y módulo no encontrado.
+
+**src/app/admin/users/currency.pipe.ts**: 27 diagnósticos que incluyen variable declarada pero no leída, argumento no asignable a tipo string, tipo no asignable a número, número de argumentos incorrecto, objeto posiblemente indefinido, propiedad inexistente, parámetro con tipo any implícito y módulo no encontrado.
+
+**src/app/auth/cart.service.tsx**: 24 diagnósticos que incluyen argumento no asignable a tipo string, tipo no asignable a número, objeto posiblemente indefinido, módulo no encontrado, número de argumentos incorrecto, propiedad inexistente, propiedad faltante en el tipo, parámetro con tipo any implícito y variable declarada pero no leída.
+
+**src/app/catalog/profile-form.ts**: 18 diagnósticos que incluyen argumento no asignable a tipo string, número de argumentos incorrecto, tipo no asignable a número, argumento no asignable, tipo no asignable, parámetro con tipo any implícito, variable declarada pero no leída, argumentos inesperados, propiedad faltante y objeto posiblemente indefinido.
+
+Hay 82 archivos más.
+
+**Totales de errores**
+
+**TS2345**: 284
+**TS2322**: 177
+**TS2532**: 108
+**TS7006**: 103
+**TS2339**: 59
+**TS2307**: 53
+**TS2554**: 51
+**TS2741**: 48
+**TS18048**: 47
+**TS6133**: 37
+**TS2564**: 26
+
+Found 993 errors in 91 files.
+
+Y otros 82 ficheros que nombra el log no tienen entrada en el resumen.
+
+[local-delegate warning: salida truncada por max_tokens en 1 de 7 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 115238 chars ≈ 60019 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 6 partes en 7 pasadas por local-delegate)

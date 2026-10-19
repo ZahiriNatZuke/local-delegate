@@ -1,0 +1,25 @@
+**src/app/core/decorators/throttle.decorator.ts**
+* **lint/nursery/useReactFunctionComponentDefinition**: 4 errores por definir componentes de React como funciones de flecha.
+* **lint/nursery/useExplicitReturnType**: 5 errores por falta de tipo de retorno en funciones.
+* **lint/nursery/useExplicitType**: 5 errores por falta de tipos explícitos.
+* **lint/style/useNumericSeparators**: 3 errores por falta de separadores en literales numéricos largos.
+
+**src/app/core/decorators/log-audit.decorator.ts**
+* **lint/nursery/useReactFunctionComponentDefinition**: 1 error por definición de componente mediante función de flecha.
+* **lint/nursery/useExplicitReturnType**: 1 error por falta de tipo de retorno.
+* **lint/nursery/useExplicitType**: 1 error por falta de tipo explícito.
+* **lint/style/useConsistentTypeDefinitions**: 1 error por inconsistencia en el estilo de definición de tipos.
+
+**src/app/core/filters/http-exception.filter.ts**
+* **lint/nursery/useExplicitReturnType**: 1 error por falta de tipo de retorno en el método.
+* **lint/nursery/useExplicitType**: 1 error por falta de tipo en un miembro.
+* **lint/nursery/useThisInClassMethods**: 1 error por no utilizar `this` en un método de clase.
+* **lint/style/noTernary**: 1 error por uso inesperado de un operador ternario.
+
+**src/app/core/decorators/app-controller.decorator.ts**
+* **lint/nursery/useExplicitReturnType**: 1 error por falta de tipo de retorno.
+* **lint/nursery/useExplicitType**: 1 error por falta de tipo explícito.
+
+Found 125 errors.
+
+(leído server-side: 22235 chars ≈ 11580 tokens de Claude que no entraron a tu contexto)

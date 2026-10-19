@@ -1,0 +1,139 @@
+**Resumen de pruebas por archivo**
+
+**tests/test_analyze_benchmark.py**
+* 89 pruebas de análisis de rendimiento, incluyendo criterios de calidad, latencia, pruebas de significancia, gestión de errores de ejecución y validación de formatos JSON.
+
+**tests/test_update.py**
+* 72 pruebas sobre el proceso de actualización, detección de instalaciones, reparación de ganchos, manejo de versiones, servicios del sistema y detección de instalaciones editables.
+
+**tests/test_checks.py**
+* 62 pruebas de diagnóstico y comprobación, incluyendo validación de IDs de registro, versiones instaladas, estado del demonio y credenciales.
+
+**tests/test_metrics.py**
+* 65 pruebas sobre métricas del sistema, estadísticas de uso, contabilidad de tokens, paneles de control y seguridad de endpoints.
+
+**tests/test_affinity.py**
+* 47 pruebas de afinidad, cubriendo tareas mecánicas, gestión de carga, cambios de modelo, uso de memoria y comportamiento de la cola.
+
+**tests/test_install.py**
+* 46 pruebas sobre el proceso de instalación, gestión de recursos, comandos de shell, manejo de rutas en Windows, idempotencia, desinstalación y migración de configuraciones heredadas.
+
+**tests/test_llamaswap_config.py**
+* 44 pruebas sobre la carga de configuración, estimación de memoria VRAM/RAM, validación de archivos GGUF y gestión de grupos de modelos.
+
+**tests/test_adoption_experiment.py**
+* 34 pruebas de experimentos de adopción, incluyendo validaciones de tareas, costos, planes reproducibles y reportes de resumen.
+
+**tests/test_attribution.py**
+* 33 pruebas de atribución, cubriendo viajes de ida y vuelta del servidor, gestión de notas, resolución de subagentes y procesos de relleno de datos.
+
+**tests/test_measure_cooldown.py**
+* 31 pruebas sobre las reglas de enfriamiento, manejo de fallos, reportes de errores y compatibilidad con versiones antiguas.
+
+**tests/test_measure_slowness.py**
+* 31 pruebas sobre la medición de lentitud, ventanas de tiempo, umbrales de tokens y códigos de parada.
+
+**tests/test_pace.py**
+* 30 pruebas sobre la medición del ritmo, manejo de entradas inválidas y siembra de datos mensuales.
+
+**tests/test_install_clients.py**
+* 28 pruebas sobre la configuración de clientes, detección de directorios, simulaciones de rutas de inicio, comportamiento de comandos de instalación y reportes de estado.
+
+**tests/test_ci_gate.py**
+* Verifica el estado de los trabajos en la integración continua, incluyendo casos de éxito, saltos, cancelaciones, tiempos de espera agotados y la lectura de la API.
+
+**tests/test_install_opencode.py**
+* 32 pruebas sobre la configuración de directorios, manejo de archivos JSON/JSONC, comentarios, esquemas de configuración y desinstalación de habilidades.
+
+**tests/test_web_auth.py**
+* 36 pruebas sobre autenticación web, validación de encabezados Bearer y Basic, gestión de sesiones, cookies y seguridad de rutas.
+
+**tests/test_benchmark.py**
+* 36 pruebas de métricas de rendimiento, incluyendo análisis de métricas de Prometheus, gestión de casos de visión, bucles infinitos y estados térmicos.
+
+**tests/test_agents.py**
+* 15 pruebas de agentes, centradas en el catálogo de habilidades, actualización de bloques, ejecución en seco y reemplazo de contenido.
+
+**tests/test_backend_probe.py**
+* 13 pruebas de sondeo del backend, incluyendo estados de acceso, tiempos de espera y validación de respuestas.
+
+**tests/test_valuation.py**
+* 12 pruebas sobre el cálculo de valoraciones, manejo de caracteres, expiraciones y desgloses de esfuerzo.
+
+**tests/test_pair_sheet.py**
+* 11 pruebas sobre la generación de hojas de comparación, validación de respuestas y tablas de veredictos.
+
+**tests/test_measure_structured_summary.py**
+* 10 pruebas sobre la validación de resúmenes estructurados, títulos y cobertura de contenido.
+
+**tests/test_bump_version.py**
+* 8 pruebas de actualización de versión, incluyendo lectura de archivos de configuración y validación de repositorios.
+
+**tests/test_chains.py**
+* 25 pruebas de cadenas de ejecución, incluyendo configuraciones de fallback, gestión de variables y disponibilidad de modelos.
+
+**tests/test_install_timeouts.py**
+* 23 pruebas sobre la persistencia de tiempos de espera en diferentes clientes y modos de ejecución.
+
+**tests/test_vendor.py**
+* 21 pruebas sobre la integridad de archivos, manifiestos, vulnerabilidades, versiones y reportes de seguridad.
+
+**tests/test_affinity_batch.py**
+* 18 pruebas de procesamiento por lotes, incluyendo conteo de peticiones, gestión de errores, formatos de escritura y límites de ventana.
+
+**tests/test_boilerplate_output.py**
+* 18 pruebas de salida de código estándar, incluyendo gestión de directorios, rutas relativas, ahorro de salida y manejo de errores.
+
+**tests/test_map_reduce.py**
+* 18 pruebas sobre el procesamiento de documentos largos, resúmenes por partes, detección de desbordamientos y reintentos.
+
+**tests/test_install_header.py**
+* 18 pruebas sobre la gestión de encabezados, variables de entorno para tokens web y validación de banderas.
+
+**tests/test_measure_adoption.py**
+* 16 pruebas sobre la medición de adopción de delegaciones y manejo de registros corruptos.
+
+**tests/test_turn.py**
+* 16 pruebas sobre la gestión de turnos, reservas, cambios de topología y colas de espera.
+
+**tests/test_load_probe.py**
+* 15 pruebas sobre la detección del estado de carga de modelos y gestión de tiempos de espera.
+
+**tests/test_wiki.py**
+* 15 pruebas sobre la sincronización de la wiki, gestión de enlaces, conversión de URLs y documentación del catálogo.
+
+**tests/test_llamaswap_api.py**
+* 14 pruebas sobre el estado de ejecución, conteo de modelos en vuelo, registros de actividad y gestión de observadores.
+
+**tests/test_turn_daemon.py**
+* 14 pruebas sobre el funcionamiento del demonio, incluyendo la gestión de modelos, topologías, eventos forzados y excepciones inesperadas.
+
+**tests/test_vision.py**
+* 14 pruebas sobre el procesamiento de imágenes, validación de rutas, extensiones, límites de tamaño y uso de tokens.
+
+**tests/test_resource_probe.py**
+* Sondeo de recursos, medición de RAM y VRAM, gestión de procesos (PID/LUID) y manejo de flujos de datos.
+
+**tests/test_hooks_telemetry_api.py**
+* 5 pruebas de telemetría y agrupación de lecturas por extensión.
+
+**tests/test_capture.py**
+* 4 pruebas de captura de pantalla y generación de manifiestos.
+
+**tests/test_autostart.py**
+* 2 pruebas de inicio automático y configuración de vigilancia.
+
+**Resumen de advertencias**
+
+**.venv\Lib\site-packages\starlette\testclient.py**
+* **Advertencia de depreciación**: El alias `anyio.abc.BlockingPortal` está obsoleto y debe sustituirse por `anyio.from_thread.BlockingPortal`.
+
+2617 tests collected in 0.74s
+
+Sin mencionar (del log, no los nombra el resumen): tests/test_residency.py, tests/test_core.py, tests/test_connection_cause.py, tests/test_topology.py, tests/test_corpus.py, tests/test_structured_summary.py
+
+[local-delegate warning: salida truncada por max_tokens en 2 de 8 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 206985 chars ≈ 107804 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 7 partes en 8 pasadas por local-delegate)

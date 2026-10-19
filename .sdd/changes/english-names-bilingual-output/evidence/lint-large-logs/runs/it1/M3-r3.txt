@@ -1,0 +1,9 @@
+Resumen de problemas por archivo:
+
+**lib/io.py**: Se encontraron 4 errores del tipo I001, relacionados con la falta de ordenamiento o formato en los bloques de importación. Además, se identificaron 4 errores del tipo UP006, que sugieren el uso de `dict` en lugar de `Dict` y `list` en lugar de `List` para las anotaciones de tipo.
+
+**lib/net.py**: Se detectaron 4 errores del tipo I001, referentes a la organización de los bloques de importación. También se identificaron 4 problemas del tipo SIM102, indicando la necesidad de utilizar una única sentencia `if` en varias ubicaciones. Finalmente, se encontró 1 error del tipo RET504, relacionado con una asignación innecesaria antes de una sentencia `return`.
+
+**lib/db.py**: Se identificaron 3 errores del tipo SIM102, que requieren la utilización de una única sentencia `if`. Además, se detectaron 2 errores del tipo UP006, que sugieren el uso de `dict` en lugar de `Dict` para las anotaciones de tipo.
+
+(leído server-side: 784 chars ≈ 408 tokens de Claude que no entraron a tu contexto)

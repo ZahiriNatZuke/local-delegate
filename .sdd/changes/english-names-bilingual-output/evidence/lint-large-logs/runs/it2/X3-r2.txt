@@ -1,0 +1,43 @@
+**Resumen de problemas por archivo**
+
+**home/runner/work/shop-web/shop-web/src/app/core/state/report-builder.tsx**
+Errores de longitud máxima, reasignación de parámetros, uso de consola, sombreado de variables, uso de cualquier, variables no utilizadas, promesas sin esperar, preferir constantes, falta de tipo de retorno, espera en bucle, métodos de ciclo de vida vacíos, complejidad, comparación estricta y orden de importación.
+
+**home/runner/work/shop-web/shop-web/src/app/catalog/users-table.js**
+Errores de uso de cualquier, comparación estricta, métodos de ciclo de vida vacíos, variables no utilizadas, preferir constantes, promesas sin esperar, complejidad, uso de consola, orden de importación, longitud máxima, reasignación de parámetros y espera en bucle.
+
+**home/runner/work/shop-web/shop-web/src/lib/money/mailer.tsx**
+Errores de preferir constantes, uso de cualquier, comparación estricta, reasignación de parámetros, uso de consola, variables no utilizadas, espera en bucle, promesas sin esperar, falta de tipo de retorno, longitud máxima, sombreado de variables, complejidad, métodos de ciclo de vida vacíos y orden de importación.
+
+**home/runner/work/shop-web/shop-web/src/app/admin/reports/profile-form.ts**
+Errores de uso de cualquier, promesas sin esperar, falta de tipo de retorno, reasignación de parámetros, orden de importación, uso de consola, preferir constantes, variables no utilizadas, comparación estricta, longitud máxima, sombreado de variables, métodos de ciclo de vida vacíos, complejidad y espera en bucle.
+
+**home/runner/work/shop-web/shop-web/src/lib/format/report-builder.js**
+Errores de uso de cualquier, variables no utilizadas, orden de importación, falta de tipo de retorno, longitud máxima, preferir constantes, comparación estricta, sombreado de variables, uso de consola, espera en bucle y complejidad.
+
+**home/runner/work/shop-web/shop-web/src/server/db/utils.tsx**
+Errores de uso de consola, preferir constantes, falta de tipo de retorno, comparación estricta, variables no utilizadas, uso de cualquier, complejidad, orden de importación, longitud máxima, sombreado de variables y promesas sin esperar.
+
+**home/runner/work/shop-web/shop-web/src/app/auth/button.ts**
+Errores de longitud máxima, preferir constantes, variables no utilizadas, uso de cualquier, orden de importación, comparación estricta, falta de tipo de retorno, uso de consola, complejidad, sombreado de variables y espera en bucle.
+
+**home/runner/work/shop-web/shop-web/src/app/core/state/date-range.pipe.ts**
+Errores de longitud máxima, uso de cualquier, variables no utilizadas, comparación estricta, espera en bucle, falta de tipo de retorno, métodos de ciclo de vida vacíos, uso de consola, preferir constantes, complejidad, orden de importación y reasignación de parámetros.
+
+**home/runner/work/shop-web/shop-web/src/lib/format/button.js**
+Errores de espera en bucle, variables no utilizadas, uso de cualquier, preferir constantes, sombreado de variables, longitud máxima, uso de consola, métodos de ciclo de vida vacíos, falta de tipo de retorno, complejidad, orden de importación, promesas sin esperar y comparación estricta.
+
+**home/runner/work/shop-web/shop-web/src/app/core/state/token.interceptor.js**
+Errores de espera en bucle y comparación estricta.
+
+Hay 118 ficheros más.
+
+✖ 1445 problemas (663 errores, 782 avisos)
+
+Y otros 118 ficheros que nombra el log no tienen entrada en el resumen.
+
+[local-delegate warning: salida truncada por max_tokens en 1 de 5 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 136846 chars ≈ 71273 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)

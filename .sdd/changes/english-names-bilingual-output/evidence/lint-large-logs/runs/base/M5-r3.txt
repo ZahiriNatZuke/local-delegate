@@ -1,0 +1,23 @@
+**Archivo: src/local_delegate/sections.py**
+
+*   **E501:** 6 (Líneas demasiado largas)
+*   **D101:** 5 (Faltan comentarios en clases públicas)
+*   **D102:** 3 (Faltan comentarios en métodos públicos)
+*   **RUF002:** 2 (Documentación con ambigüedad en el uso de guiones)
+*   **C901:** 2 (Complejidad excesiva en variables/expresiones)
+*   **D203:** 1 (Advertencia incompatible: `incorrect-blank-line-before-class` y `blank-line-before-class`)
+*   **D211:** 1 (Advertencia incompatible: `multi-line-summary-first-line` y `multi-line-summary-second-line`)
+*   **D212:** 1 (Advertencia incompatible: `multi-line-summary-first-line` y `multi-line-summary-second-line`)
+*   **D213:** 1 (Advertencia incompatible: `multi-line-summary-first-line` y `multi-line-summary-second-line`)
+*   **CPY001:** 1 (Falta aviso de copyright al inicio del archivo)
+*   **TC003:** 1 (Mover importaciones de la biblioteca estándar a un bloque de verificación de tipos)
+*   **D205:** 1 (Falta una línea en blanco entre la línea de resumen y la descripción)
+*   **D301:** 1 (Usar `r"""` si hay barras invertidas en un comentario)
+*   **D400:** 1 (La primera línea debe terminar con un punto)
+*   **PLR2004:** 1 (Uso de valor mágico en comparación, considerar reemplazar `2` con una variable constante)
+*   **PLR0912:** 1 (Demasiadas ramas en la definición de la función)
+*   **PLR0913:** 1 (Demasiados argumentos en la definición de la función)
+
+Se encontraron 26 errores.
+
+(leído server-side: 2627 chars ≈ 1368 tokens de Claude que no entraron a tu contexto)

@@ -1,0 +1,18 @@
+**Resumen de Problemas por Archivo**
+
+**src/a.py:**
+*   D100: 3
+*   D103: 3
+*   B006: 1
+
+**src/b.py:**
+*   D100: 3
+*   D103: 4
+
+**src/c.py:**
+*   T201: 3
+
+**Detalles Adicionales:**
+Se encontraron 3 errores de tipo D100, 3 errores de tipo D103, 3 errores de tipo T201 y 1 error de tipo B006. Los problemas más frecuentes se encuentran en el archivo src/b.py. Los errores D100 se refieren a la falta de documentación en módulos públicos, mientras que los errores D103 indican la ausencia de documentación en funciones públicas. Los errores T201 se relacionan con el uso de la función `print`. El error B006 advierte sobre el uso de estructuras de datos mutables para valores predeterminados de argumentos.
+
+(leído server-side: 626 chars ≈ 326 tokens de Claude que no entraron a tu contexto)

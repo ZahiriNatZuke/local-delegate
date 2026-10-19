@@ -1,0 +1,194 @@
+**Resumen de errores por archivo**
+
+**src/app/admin/reports/checkout.component.tsx**
+* **Argumento de tipo 'string | undefined' no asignable a parámetro de tipo 'string'**: 9
+* **Se esperaba 1 argumento, pero se recibieron 2**: 5
+* **Parámetro con tipo 'any' implícito**: 3
+* **Objeto posiblemente 'undefined'**: 2
+* **Propiedad no existe en el tipo 'Order'**: 1
+* **Propiedad sin inicializador y no asignada en el constructor**: 1
+* **Variable declarada pero nunca leída**: 1
+* **No se puede encontrar el módulo '@app/idx'**: 1
+
+**src/app/admin/reports/effects.ts**
+* **Parámetro con tipo 'any' implícito**: 3
+* **Tipo 'number | null' no asignable a tipo 'number'**: 1
+* **No se puede encontrar el módulo '@app/order'**: 1
+* **Argumento de tipo 'string | undefined' no asignable a parámetro de tipo 'string'**: 1
+* **Propiedad sin inicializador y no asignada en el constructor**: 1
+
+**src/app/admin/reports/pricing.tsx**
+* **Argumento de tipo 'string | undefined' no asignable a parámetro de tipo 'string'**: 3
+* **Tipo 'number | null' no asignable a tipo 'number'**: 1
+* **Variable declarada pero nunca leída**: 1
+
+**src/app/admin/reports/users-table.ts**
+* **Argumento de tipo 'string | undefined' no asignable a parámetro de tipo 'string'**: 3
+* **Propiedad no existe en el tipo 'Order'**: 1
+* **Objeto posiblemente 'undefined'**: 1
+
+**src/app/admin/reports/utils.tsx**
+* **Argumento de tipo 'string | undefined' no asignable a parámetro de tipo 'string'**: 2
+* **Tipo 'number | null' no asignable a tipo 'number'**: 1
+
+**src/app/admin/users/auth.guard.tsx**
+* **No se puede encontrar el módulo '@app/token'**: 1
+* **Falta la propiedad 'id' en el tipo 'Product'**: 1
+
+**src/app/admin/users/currency.pipe.ts**
+* **Argumento de tipo 'string | undefined' no asignable a parámetro de tipo 'string'**: 5
+* **Parámetro con tipo 'any' implícito**: 4
+* **Tipo 'number | null' no asignable a tipo 'number'**: 4
+* **Propiedad no existe en el tipo 'Order'**: 2
+* **Se esperaba 1 argumento, pero se recibieron 2**: 2
+* **Falta la propiedad 'id' en el tipo 'Product'**: 1
+* **Variable declarada pero nunca leída**: 1
+* **Objeto posiblemente 'undefined'**: 1
+* **No se puede encontrar el módulo '@app/cb'**: 1
+
+**src/app/catalog/profile-form.ts**
+* **Argumento no asignable**: 2
+* **Tipo no asignable**: 5
+* **Parámetro con tipo 'any' implícito**: 2
+* **Variable declarada pero nunca leída**: 1
+* **Número de argumentos esperado incorrecto**: 2
+* **Propiedad faltante en tipo**: 1
+* **Objeto posiblemente indefinido**: 2
+
+**src/app/catalog/users.route.tsx**
+* **Argumento no asignable**: 5
+
+**src/app/checkout/api-client.tsx**
+* **Parámetro con tipo 'any' implícito**: 2
+* **Objeto posiblemente indefinido**: 1
+* **Argumento no asignable**: 1
+
+**src/app/checkout/checkout.component.tsx**
+* **Número de argumentos esperado incorrecto**: 1
+* **Argumento no asignable**: 1
+* **Tipo no asignable**: 1
+* **Objeto posiblemente indefinido**: 1
+
+**src/app/checkout/format-date.ts**
+* **Argumento no asignable**: 10
+* **Tipo no asignable**: 7
+* **Objeto posiblemente indefinido**: 6
+* **Propiedad inexistente en tipo**: 7
+* **Parámetro con tipo 'any' implícito**: 6
+* **Módulo no encontrado**: 7
+* **Propiedad sin inicializador**: 3
+* **Posiblemente indefinido**: 2
+* **Número de argumentos esperado incorrecto**: 3
+
+**src/app/checkout/orders.route.ts**
+* **Número de argumentos esperado incorrecto**: 1
+* **Propiedad inexistente en tipo**: 1
+* **Argumento no asignable**: 1
+* **Tipo no asignable**: 1
+* **Propiedad faltante en tipo**: 1
+* **Módulo no encontrado**: 1
+* **Parámetro con tipo 'any' implícito**: 2
+
+**src/app/checkout/pricing.ts**
+* **Propiedad faltante en tipo**: 1
+* **Propiedad inexistente en tipo**: 1
+* **Argumento no asignable**: 1
+* **Parámetro con tipo 'any' implícito**: 2
+* **Tipo no asignable**: 1
+
+**src/app/checkout/selectors.ts**
+* **Propiedad faltante en tipo**: 1
+* **Argumento no asignable**: 4
+* **Tipo no asignable**: 1
+* **Propiedad sin inicializador**: 1
+* **Parámetro con tipo 'any' implícito**: 1
+
+**src/app/checkout/token.interceptor.ts**
+* **Tipo no asignable**: 1
+* **Argumento no asignable**: 3
+* **Propiedad inexistente en tipo**: 1
+* **Propiedad faltante en tipo**: 1
+
+**src/app/core/http/api-client.tsx**
+* **Parámetro con tipo 'any' implícito**: 1
+
+**src/app/core/state/profile-form.tsx**
+* **Asignación de tipo incorrecta**: 2
+* **Módulo no encontrado**: 1
+* **Posiblemente indefinido**: 2
+* **Argumento no asignable**: 1
+* **Propiedad faltante**: 1
+
+**src/app/core/state/utils.ts**
+* **Argumento no asignable**: 3
+* **Argumentos inesperados**: 1
+* **Asignación de tipo incorrecta**: 1
+* **Posiblemente indefinido**: 2
+
+**src/app/orders/auth.guard.ts**
+* **Posiblemente indefinido**: 1
+* **Asignación de tipo incorrecta**: 1
+
+**src/app/orders/cart.service.tsx**
+* **Argumento no asignable**: 2
+* **Asignación de tipo incorrecta**: 2
+
+**src/app/orders/checkout.component.ts**
+* **Posiblemente indefinido**: 2
+* **Variable declarada pero no leída**: 1
+* **Asignación de tipo incorrecta**: 1
+* **Argumentos inesperados**: 1
+* **Argumento no asignable**: 1
+
+**src/app/orders/constants.tsx**
+* **Posiblemente indefinido**: 1
+* **Asignación de tipo incorrecta**: 1
+* **Argumento no asignable**: 1
+* **Propiedad sin inicializar**: 1
+
+**src/app/orders/product-list.ts**
+* **Módulo no encontrado**: 2
+* **Tipo any implícito**: 1
+* **Posiblemente indefinido**: 2
+* **Variable declarada pero no leída**: 1
+* **Argumento no asignable**: 1
+* **Propiedad inexistente**: 1
+* **Argumentos inesperados**: 1
+
+**src/app/profile/avatar.tsx**
+* **Tipo any implícito**: 1
+* **Argumento no asignable**: 1
+
+**src/app/profile/effects.tsx**
+* **Posiblemente indefinido**: 2
+* **Argumento no asignable**: 1
+* **Tipo any implícito**: 1
+* **Asignación de tipo incorrecta**: 3
+
+**src/app/profile/order-history.ts**
+* **Tipo any implícito**: 1
+* **Argumento no asignable**: 3
+* **Propiedad inexistente**: 2
+* **Posiblemente indefinido**: 1
+* **Asignación de tipo incorrecta**: 1
+
+**src/app/profile/orders.route.tsx**
+* **Asignación de tipo incorrecta**: 3
+
+**src/app/profile/pricing.ts**
+* **Argumento no asignable**: 11
+* **Módulo no encontrado**: 4
+* **Asignación de tipo incorrecta**: 4
+* **Argumentos inesperados**: 4
+
+**src/server/services/retry.ts**
+* **El argumento de tipo cadena o indefinido no se puede asignar al parámetro de tipo cadena**: 1
+* **La propiedad price no
+
+Sin mencionar (del log, no los nombra el resumen): src/app/cart/cart.component.ts, src/app/cart/round.ts, TS2345, TS2322, TS2532, TS7006, TS2339, TS2307, TS2554, TS2741, TS18048, TS6133
+
+[local-delegate warning: salida truncada por max_tokens en 4 de 7 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 115238 chars ≈ 60019 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 6 partes en 7 pasadas por local-delegate)

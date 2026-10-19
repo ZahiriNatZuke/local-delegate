@@ -1,0 +1,23 @@
+**Archivo: src/local_delegate/sections.py**
+
+*   **E501:** 6 (Líneas demasiado largas)
+*   **D101:** 5 (Faltan docstrings en clases públicas)
+*   **D102:** 3 (Faltan docstrings en métodos públicos)
+*   **RUF002:** 2 (Docstring ambiguo con `–` (EN DASH). Considerar `-` (HYPHEN-MINUS))
+*   **C901:** 2 (Complejidad excesiva en `markdown_headings` y `match_headings`)
+*   **D203:** 1 (Warning incompatible: `incorrect-blank-line-before-class` y `blank-line-before-class`)
+*   **D211:** 1 (Warning incompatible: `multi-line-summary-first-line` y `multi-line-summary-second-line`)
+*   **D212:** 1 (Warning incompatible: `multi-line-summary-second-line`)
+*   **D213:** 1 (Warning incompatible: `multi-line-summary-first-line`)
+*   **CPY001:** 1 (Falta aviso de copyright al inicio del archivo)
+*   **TC003:** 1 (Mover importación de la biblioteca estándar `collections.abc.Callable` a un bloque de verificación de tipos)
+*   **D301:** 1 (Usar `r"""` si hay barras invertidas en un docstring)
+*   **D400:** 1 (La primera línea debe terminar con un punto)
+*   **PLR2004:** 1 (Valor mágico utilizado en comparación, considerar reemplazar `2` con una variable constante)
+*   **PLR0912:** 1 (Demasiadas ramas en la función)
+*   **PLR0913:** 1 (Demasiados argumentos en la definición de la función)
+*   **D205:** 1 (Se requiere 1 espacio en blanco entre la línea de resumen y la descripción)
+
+Found 26 errors.
+
+(leído server-side: 2627 chars ≈ 1368 tokens de Claude que no entraron a tu contexto)

@@ -1,0 +1,19 @@
+**File: src/local_delegate/sections.py**
+
+**Summary:**
+
+This file exhibits several issues, primarily related to docstrings, line length, and complexity. The most frequent errors are E501 (Line too long - 6), followed by D101 (Missing docstring in public class - 5), and D102 (Missing docstring in public method - 3).  RUF002 appears twice, and C901 appears twice.
+
+**Detailed Breakdown:**
+
+*   **E501:** 6 - Line length exceeds 100 characters. Several lines are affected, including lines 27, 235, 258, 260, and 304.
+*   **D101:** 5 - Missing docstrings in public classes.  Lines 31, 38, 250, and 316 are affected.
+*   **D102:** 3 - Missing docstrings in public methods. Lines 43, 324, and 387 are affected.
+*   **RUF002:** 2 - Docstring contains ambiguous characters.  Line 364 is affected.
+*   **C901:** 2 - Function complexity exceeds the recommended limit. Lines 75 and 181 are affected.
+*   **PLR2004:** 1 - Magic value used in comparison. Line 131 is affected.
+*   **PLR0912:** 1 - Too many branches in a function definition. Line 181 is affected.
+*   **PLR0913:** 1 - Too many arguments in a function definition. Line 397 is affected.
+*   **D203, D211, D212, D213, D205, TC003, D205, D211, D212, D213, CPY001, D301, D400:** 1 each - These checks are present but not frequent.  CPY001 is related to a missing copyright notice. D301 concerns the use of `r"""` for docstrings, D400 relates to ending lines with a period, and TC003 involves type-checking imports.
+
+(read server-side: 2627 chars ≈ 1368 Claude tokens that did not enter your context)

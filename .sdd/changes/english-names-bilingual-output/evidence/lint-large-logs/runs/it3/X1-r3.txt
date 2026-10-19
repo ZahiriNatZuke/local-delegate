@@ -1,0 +1,44 @@
+**Resumen de problemas por archivo**
+
+**src/local_delegate/web/metrics.py**
+*   Falta de aviso de copyright, preferencia de importaciones absolutas, falta de anotación de tipo, línea demasiado larga, falta de coma final, falta de anotación de tipo de retorno en función pública, falta de línea en blanco entre resumen y descripción, comillas de cierre de docstring multilínea en línea separada, acceso a miembro privado, captura de excepción ciega, uso de `contextlib.suppress(Exception)`, detección de `try`-`except`-`pass`, importación en nivel superior, uso de `else`, signo de menos o guion ambiguo, falta de docstring en función pública, uso de sentencia `global` desaconsejado, signo de multiplicación ambiguo y uso de `print`.
+
+**src/local_delegate/cli.py**
+*   Uso de `print`, falta de coma final, falta de anotación de tipo, falta de docstring en función pública, uso de `CPY001`, `E501`, `TC003`, `PLC0415`, `ANN202`, `FBT001`, `D401`, `ANN001`, `T201`, `SLF001`, `D103`, `PLR0913`, `PLR0917`, `TRY301`, `PLR2004`, `D205`, `D209`, `C901`, `PLR0911`, `PLR0912` y `PLR0915`.
+
+**src/local_delegate/server.py**
+*   Falta de aviso de copyright, importación de biblioteca estándar en bloque de comprobación de tipos, uso de sentencia `global` desaconsejado, falta de coma final, importación en nivel superior, argumento posicional de tipo booleano, demasiados argumentos en definición de función, complejidad excesiva, demasiadas ramas, demasiadas sentencias, uso de `assert`, evitar mensajes largos fuera de la clase de excepción, excepción no debe usar `f-string`, falta de docstring en clase pública, docstring en modo imperativo, acceso a miembro privado, docstring con símbolo ambiguo, línea demasiado larga, comprensión de diccionario innecesaria, falta de línea en blanco después de la última sección, ensombrecimiento de nombre integrado, comentario con guion ambiguo, `subprocess.run` sin argumento `check` explícito, inicio de proceso con ruta de ejecutable parcial, reemplazo de `open()` por `Path.open()`, captura de excepción ciega, capitalización de TODO inválida, falta de autor, falta de dos puntos, falta de enlace de problema, uso de `list.extend`, reemplazo de `os.replace()` por `Path.replace()`, uso de `contextlib.suppress(OSError)` y reemplazo de `os.unlink()` por `Path.unlink()`.
+
+**src/local_delegate/checks.py**
+*   Uso de `CPY001`, `TC003`, `D103`, `E501`, `SLF001`, `S105`, `D401`, `PLC0415`, `ANN202`, `N802`, `ANN201`, `COM812`, `FBT003`, `D400`, `ARG001`, `D102`, `D301`, `S603`, `C901`, `PLR0911`, `PLR0912`, `PLR2004`, `ANN001`, `RUF003`, `RUF002` y `PERF401`.
+
+**src/local_delegate/residency.py**
+*   Falta de aviso de copyright, línea demasiado larga, importación de biblioteca estándar en bloque de comprobación de tipos, falta de docstring en clase pública, expresiones con tipado dinámico, línea en blanco requerida en docstring, comillas de cierre de docstring multilínea en línea separada, excepción no debe usar literal de cadena, falta de anotación de tipo de retorno en función privada, argumento posicional de tipo booleano en definición de función, división de cadena innecesaria, variable de bucle no utilizada, falta de docstring en método público, demasiados argumentos en definición de función, reemplazo de `open` por `Path` y raise abstracto a función interna.
+
+**src/local_delegate/install.py**
+*   Falta de aviso de copyright, primera línea de docstring en modo imperativo, falta de docstring en método público, importación en nivel superior, falta de coma final, función demasiado compleja, demasiadas ramificaciones, demasiadas sentencias, falta de anotación de tipo, llamada a `subprocess` con entrada no confiable, `subprocess.run` sin argumento `check` explícito, iniciar proceso con ruta de ejecutable parcial, argumento posicional de tipo booleano en definición de función, argumento posicional booleano por defecto en definición de función, considerar uso de desempacado en lugar de concatenación, falta de docstring en clase pública y captura de excepción ciega.
+
+**src/local_delegate/benchmark.py**
+*   Uso de `CPY001`, `TC003`, `D101`, `PLR2004`, `PLW2901`, `COM812`, `PLC0415`, `S603`, `PLW1510`, `C901`, `D107`, `D105`, `D102`, `D301`, `D103`, `FBT003`, `E501`, `RUF036`, `T201`, `D205`, `D209`, `PLR0913`, `PLR0912` y `PLR0915`.
+
+**src/local_delegate/resources/hooks/hook_common.py**
+*   Paquete de espacio de nombres implícito, falta de aviso de copyright, importación de librería estándar en bloque de comprobación de tipos, falta de docstring en función pública, uso de `print`, falta de coma final, línea demasiado larga, auditoría de apertura de URL, valor mágico usado en comparación, captura de excepción ciega, falta de anotación de tipo de retorno en función pública, línea en blanco requerida en docstring, comillas de cierre de docstring multilínea en línea separada, reemplazo de `os.path` por `Path`, reemplazo de `os` por `Path` y mover importación a nivel superior.
+
+**src/local_delegate/legacy_names.py**
+*   Falta de aviso de copyright, línea demasiado larga, falta de coma final, expresiones con tipado dinámico no permitidas, falta de línea en blanco entre resumen y descripción, comillas de cierre de docstring en línea separada y variable de bucle `for` sobrescrita.
+
+**src/local_delegate/pace.py**
+*   Capturar excepciones ciegas, expresiones de tipo dinámico, falta de coma final, valor booleano posicional en llamada a función y mover sentencia a bloque `else`.
+
+**Totales de reglas**
+E501: 292, COM812: 273, T201: 156, D205: 87, PLC0415: 78, D209: 71, ANN401: 68, ANN001: 67, CPY001: 52, D103: 52, BLE001: 44, TC003: 42, SLF001: 40, C901: 39, D102: 39, PLR2004: 38, FBT003: 34, D101: 31, FBT001: 31, D401: 30, PLR0913: 24, RUF002: 24, PLR0912: 18, ANN201: 18, PLR0911: 17, SIM105: 16, D400: 15, RUF001: 15, ANN202: 14, TID252: 14, PLR0915: 13, PLW2901: 12, PLW1510: 12, D107: 11, PLW0603: 11, S603: 10, D301: 10, D413: 10, S110: 9, S607: 9, FAST002: 9, TRY300: 7, PTH105: 7, D105: 7, PTH123: 7, RUF003: 6, EM101: 6, PTH108: 5, N802: 5, FBT002: 5, PLR0917: 5, C420: 5, PERF401: 4, TRY301: 4, D403: 4, TRY003: 3, S310: 3, PTH202: 3, D415: 3, S101: 3, S105: 2, ARG001: 2, S104: 2, PLR1714: 2, TC002: 2, UP042: 2, EM102: 2, N818: 2, TD006: 2, TD002: 2, TD004: 2, TD003: 2, FIX002: 2, D203: 1, D211: 1, D212: 1, D213: 1, PT028: 1, RUF036: 1, RUF005: 1, ANN204: 1, B905: 1, PLC0207: 1, B007: 1, INP001: 1, PTH100: 1, PTH122: 1, PTH117: 1, PTH118: 1, PTH109: 1, PT018: 1, A002: 1, PTH116: 1, SIM108: 1, PTH208: 1
+
+Found 1991 errors.
+
+Y otros 44 ficheros que nombra el log no tienen entrada en el resumen.
+
+[local-delegate warning: salida truncada por max_tokens en 2 de 6 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 179890 chars ≈ 93692 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 5 partes en 6 pasadas por local-delegate)

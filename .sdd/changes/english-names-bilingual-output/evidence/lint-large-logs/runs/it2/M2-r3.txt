@@ -1,0 +1,22 @@
+**Resumen de Problemas por Archivo**
+
+**src/a.py:**
+- D100: 2
+- D103: 3
+- B006: 1
+
+**src/b.py:**
+- D100: 2
+- D103: 4
+
+**src/c.py:**
+- T201: 3
+
+Los problemas más frecuentes son las **falta de documentación** (D100 y D103) en los módulos y funciones.  Se identificaron **tres instancias** de la regla T201, relacionadas con el uso de la función `print`.  Además, se encontró un caso de uso de estructuras de datos mutables (B006) en el archivo src/a.py.
+
+Recuento por fichero (contado por el programa):
+- src/a.py: D103 2, D100 1, B006 1
+- src/b.py: D103 3, D100 1
+- src/c.py: T201 3, D100 1
+
+(leído server-side: 626 chars ≈ 326 tokens de Claude que no entraron a tu contexto)

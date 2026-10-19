@@ -6,7 +6,25 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.36.1] - 2026-10-19
+
+Cierra el cambio del idioma y del renombrado (SDD `english-names-bilingual-output`) con los restos
+de la 0.36.0: `local_lint_summary` con logs muy grandes, el panel alineado y las muestras de
+idioma en español, inglés y francés. Nada rompe.
+
 ### Cambiado
+
+- **`local_lint_summary` con logs muy grandes: el resumen final ya no se corta ni inventa
+  recuentos por fichero** (backlog §1.8). En el lint troceado el resumen da entrada solo a los diez
+  ficheros más nombrados y el programa añade cuántos más hay; las cifras (total de cada fichero
+  cuando el formato lo permite, veces de cada código en todo el log) las pone el programa, y con
+  logs que no dan cifras por fichero (pytest, eslint) no se da ninguna. Los pasos intermedios
+  responden en formato escueto y sin cifras, y los topes pasan a 1 392 tokens (pasos intermedios) y
+  2 784 (paso final). Medido en vivo con cuatro logs de 115–210 k (ruff, pytest, eslint, tsc) y 3
+  repeticiones: pasos finales cortados 7 → 0 de 12, cifras por fichero mal 130 → 7, invenciones por
+  respuesta 2,17 → 0,33, códigos nombrados por el modelo 0,47 → 1,00, latencia mediana 189 → 152 s.
+  Límite conocido: algunos pasos intermedios aún acaban cortados (10 de 12 respuestas con alguno).
+  Medición: `.sdd/changes/english-names-bilingual-output/evidence/lint-large-logs/live.md`.
 
 - **La lista de excepciones del detector de nombres vive ahora en `scripts/data/`.** Pasa de las
   tablas de `.sdd/changes/english-names-bilingual-output/rename-exceptions.md` a
@@ -40,6 +58,27 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   cabe, se muestra en forma corta («45,7 mil M tok», «45.7B tok» en inglés) con el valor exacto al
   pasar el ratón. El hero pasa de 1,7 a 1,4 veces el ancho de las demás, para que títulos como
   «Delegaciones» quepan sin «…». En el móvil la página ya no se sale por la derecha.
+- **La fila de KPIs casa con los dos paneles de arriba.** Las tres primeras tarjetas ocupan justo
+  el ancho del panel de modelos y rendimiento, y las tres últimas el del panel de GPU y procesos,
+  con el mismo hueco central; la fila de cuota e imágenes, también. Las tarjetas normales miden lo
+  mismo entre sí y el hero se queda el resto, y el tamaño no cambia con las cifras. Entre 880 y
+  1320 px, con los paneles aún lado a lado, van tres bajo cada panel; más estrecho, como antes.
+- **Las cifras de coste, cuota e imágenes no invaden la columna de al lado.** «17.232.705 B» en
+  «Imágenes» quedaba pegada a la cifra siguiente. Ahora esas cifras se ajustan a su columna igual
+  que las de los KPIs (fuente más pequeña o forma corta) y el valor exacto queda al pasar el ratón.
+- **Los títulos de los KPIs caben también sin la fuente del panel.** Si Google Fonts no llega y la
+  fuente de reserva del sistema es más ancha (la de Linux lo es más que Segoe UI), los seis títulos
+  se aprietan por igual (primero el espaciado y luego el cuerpo) antes de recortarse con «…».
+
+### Interno
+
+- **Juez de idioma:** la regla R1 quita la línea «Sin mencionar (…)» / «Not mentioned (…)» que
+  añaden `local_lint_summary` y `local_explain_code`, en todos los idiomas del catálogo (#338).
+- **Muestras en vivo del idioma de respuesta (REQ-028)** en español, inglés y francés, con 5
+  documentos por tool y 3 repeticiones (#339). Con ellas se cierra el SDD
+  `english-names-bilingual-output` (gates `quality`, `conformance` y `memory`).
+- **Dependencias:** `fastapi` 0.143.2, `filelock` 4.2.0, `platformdirs` 4.13.3; de desarrollo,
+  `ruff` 0.17.1, `pre-commit` 4.7.0 y `playwright` 1.64.0 (#334–#337).
 
 ### Documentación
 
@@ -2990,7 +3029,9 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.35.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.36.1...HEAD
+[0.36.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.36.0...v0.36.1
+[0.36.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.35.0...v0.36.0
 [0.35.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.34.0...v0.35.0
 [0.34.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.33.0...v0.34.0
 [0.33.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.32.0...v0.33.0

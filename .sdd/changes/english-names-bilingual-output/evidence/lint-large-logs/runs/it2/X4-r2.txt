@@ -1,0 +1,47 @@
+**Resumen de problemas por archivo**
+
+**src/app/core/http/format-date.ts** (167): Argumento no asignable, objeto posiblemente indefinido, parámetro con tipo any implícito, módulo no encontrado, propiedad faltante, tipo no asignable, propiedad inexistente y propiedad sin inicializador.
+
+**src/app/profile/pricing.ts** (95): Argumento no asignable, módulo no encontrado, asignación de tipo, número de argumentos esperado, posible indefinido, propiedad inexistente y tipo any implícito.
+
+**src/app/cart/cart.component.ts** (61): Argumento no asignable a parámetro.
+
+**src/app/core/state/profile-form.tsx** (40): Argumento no asignable y propiedad sin inicializador.
+
+**src/app/cart/round.ts** (37): No se encuentran errores detallados.
+
+**src/app/catalog/cart.service.tsx** (33): No se encuentran errores detallados.
+
+**src/app/admin/reports/checkout.component.tsx** (27): Parámetro con tipo any implícito, número de argumentos incorrecto, argumento no asignable a parámetro de tipo string, propiedad inexistente en el tipo, propiedad sin inicializador, variable declarada pero nunca leída, objeto posiblemente indefinido, tipo no asignable a número y módulo no encontrado.
+
+**src/app/admin/users/currency.pipe.ts** (27): Variable declarada pero nunca leída, argumento no asignable a parámetro de tipo string, tipo no asignable a número, número de argumentos incorrecto, propiedad inexistente en el tipo, objeto posiblemente indefinido, parámetro con tipo any implícito y módulo no encontrado.
+
+**src/app/auth/cart.service.tsx** (24): Argumento no asignable a parámetro de tipo string, tipo no asignable a número, objeto posiblemente indefinido, módulo no encontrado, número de argumentos incorrecto, propiedad inexistente en el tipo, parámetro con tipo any implícito, variable declarada pero nunca leída y elemento posiblemente indefinido.
+
+**src/app/catalog/profile-form.ts** (18): Argumento no asignable, tipo no asignable, parámetro con tipo any implícito, variable declarada pero no leída, argumentos esperados no recibidos, propiedad faltante y objeto posiblemente indefinido.
+
+Hay 82 archivos más.
+
+**Totales de errores**
+
+**TS2345**: 284
+**TS2322**: 177
+**TS2532**: 108
+**TS7006**: 103
+**TS2339**: 59
+**TS2307**: 53
+**TS2554**: 51
+**TS2741**: 48
+**TS18048**: 47
+**TS6133**: 37
+**TS2564**: 26
+
+Found 993 errors in 91 files.
+
+Y otros 82 ficheros que nombra el log no tienen entrada en el resumen.
+
+[local-delegate warning: salida truncada por max_tokens en 3 de 7 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 115238 chars ≈ 60019 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 6 partes en 7 pasadas por local-delegate)

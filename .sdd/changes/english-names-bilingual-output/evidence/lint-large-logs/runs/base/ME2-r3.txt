@@ -1,0 +1,9 @@
+**Summary of Issues by File**
+
+**src/a.py:** This file exhibits the most issues. It contains 3 instances of the D100 error, related to missing docstrings in public modules. Additionally, it has 3 instances of the D103 error, concerning the absence of docstrings in public functions. Furthermore, it includes 1 instance of the B006 rule, advising against the utilization of mutable data structures for argument defaults. Finally, it has 3 instances of the T201 error, indicating the presence of the `print` statement.
+
+**src/b.py:** This file presents 4 instances of the D100 error, indicating missing docstrings in public modules. It also contains 4 instances of the D103 error, related to missing docstrings in public functions.
+
+**src/c.py:** This file has 3 instances of the T201 error, specifically the `print` statement.
+
+(read server-side: 626 chars ≈ 326 Claude tokens that did not enter your context)

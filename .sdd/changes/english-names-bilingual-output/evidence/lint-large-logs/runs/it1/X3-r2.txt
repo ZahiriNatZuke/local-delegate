@@ -1,0 +1,49 @@
+**Resumen de errores de linting**
+
+**src/app/core/state/report-builder.tsx**
+* **Errores**: Asignación a parámetros de función, variables no utilizadas, uso de `await` dentro de un bucle, uso de comparaciones laxas, variables que deberían ser constantes, métodos de ciclo de vida vacíos, promesas sin manejar y sombreado de variables.
+* **Advertencias**: Uso de tipo `any`, declaraciones de consola inesperadas, longitud de línea excedida, falta de tipo de retorno en función, complejidad de método excesiva y orden de importaciones incorrecto.
+
+**src/app/catalog/users-table.js**
+* **Errores**: Uso de comparaciones laxas, variables no utilizadas, métodos de ciclo de vida vacíos, asignación a parámetros de función, uso de `await` dentro de un bucle y variables que deberían ser constantes.
+* **Advertencias**: Uso de tipo `any`, complejidad de método excesiva, orden de importaciones incorrecto, longitud de línea excedida y declaraciones de consola inesperadas.
+
+**src/lib/money/mailer.tsx**
+* **Errores**: Promesas sin manejar, métodos de ciclo de vida vacíos y variables no utilizadas.
+
+**home/runner/work/shop-web/shop-web/src/app/admin/reports/profile-form.ts**
+* **Errores**: Uso de comparaciones laxas, variables no utilizadas, reasignación de parámetros de función, promesas sin manejar, uso de `await` en bucles, métodos de ciclo de vida vacíos, sombreado de variables y uso de `let` donde debería ser `const`.
+* **Advertencias**: Uso de tipo `any`, longitud de línea excedida, orden de importaciones, falta de tipo de retorno en funciones y declaraciones de consola.
+
+**home/runner/work/shop-web/shop-web/src/lib/format/report-builder.js**
+* **Errores**: Variables no utilizadas, sombreado de variables, uso de `let` donde debería ser `const`, uso de `await` en bucles y comparaciones laxas.
+* **Advertencias**: Uso de tipo `any`, orden de importaciones, longitud de línea, falta de tipo de retorno, declaraciones de consola y complejidad de métodos.
+
+**home/runner/work/shop-web/shop-web/src/server/db/utils.tsx**
+* **Errores**: Uso de `let` donde debería ser `const`, comparaciones laxas, variables no utilizadas, sombreado de variables y promesas sin manejar.
+* **Advertencias**: Uso de tipo `any`, orden de importaciones, complejidad de métodos, longitud de línea y declaraciones de consola.
+
+**home/runner/work/shop-web/shop-web/src/app/auth/button.ts**
+* **Errores**: Uso de `let` donde debería ser `const`, variables no utilizadas, sombreado de variables, comparaciones laxas y uso de `await` en bucles.
+* **Advertencias**: Uso de tipo `any`, orden de importaciones, complejidad de métodos, longitud de línea y declaraciones de consola.
+
+**home/runner/work/shop-web/shop-web/src/app/core/state/date-range.pipe.ts**
+* **Errores**: Variables no utilizadas, comparaciones laxas, uso de `await` en bucles, reasignación de parámetros y uso de `let` donde debería ser `const`.
+* **Advertencias**: Uso de tipo `any`, complejidad de métodos, orden de importaciones, longitud de línea, declaraciones de consola y falta de tipo de retorno.
+
+**home/runner/work/shop-web/shop-web/src/lib/format/button.js**
+* **Errores**: Uso de `await` en bucles, variables no utilizadas, uso de `let` donde debería ser `const`, sombreado de variables, comparaciones laxas y métodos de ciclo de vida vacíos.
+* **Advertencias**: Uso de tipo `any`, complejidad de métodos, orden de importaciones, longitud de línea, falta de tipo de retorno y declaraciones de consola.
+
+**home/runner/work/shop-web/shop-web/src/app/core/state/token.interceptor.js**
+* **Errores**: Uso de `await` en bucles, comparaciones laxas, promesas sin manejar y variables no utilizadas.
+
+Hay 118 ficheros más.
+
+Y otros 118 ficheros que nombra el log no tienen entrada en el resumen.
+
+[local-delegate warning: salida truncada por max_tokens en 4 de 5 llamadas; puede faltar parte del contenido]
+
+(leído server-side: 136846 chars ≈ 71273 tokens de Claude que no entraron a tu contexto)
+
+(resumido de 4 partes en 5 pasadas por local-delegate)
