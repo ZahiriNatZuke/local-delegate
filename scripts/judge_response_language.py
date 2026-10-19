@@ -11,8 +11,12 @@ Rules, applied in this order (each one has a unit test and a mutant in
 `tests/test_judge_response_language.py`):
 
 R1. Product lines: a whole line that is the product's own wrapper is dropped:
-    "(leído server-side: ...)" / "(read server-side: ...)", "[local-delegate warning: ...]"
-    and "(sin resumir)" / "(not summarized)".
+    "(leído server-side: ...)" / "(read server-side: ...)", "[local-delegate warning: ...]",
+    "(sin resumir)" / "(not summarized)", and the "not mentioned" list that `local_lint_summary`
+    and `local_explain_code` append ("Sin mencionar (...): ..." / "Not mentioned (...): ...").
+    That last one goes in the interface language, not in the response language, so with
+    `LOCAL_DELEGATE_OUTPUT_LANGUAGE` it would count against the answer; its prefixes are taken
+    from the catalog keys `NOT_MENTIONED_KEYS` in every catalog language, never from a literal.
 R2. Document headings: a Markdown ATX heading line (`#` to `######`) whose text, normalized with
     `sections.normalize_heading`, equals the normalized text of a heading of the ORIGINAL
     document (`sections.markdown_headings`) is dropped. A heading the model translated or
@@ -47,6 +51,7 @@ import argparse
 import json
 import re
 import sys
+from importlib.resources import files
 from pathlib import Path
 from typing import NamedTuple
 
@@ -57,7 +62,7 @@ for _path in (_ROOT / "scripts", _ROOT / "src"):
 
 import detect_language
 
-from local_delegate import sections
+from local_delegate import i18n, sections
 
 MIN_TOKENS = detect_language.MIN_TOKENS
 MIN_MARGIN = detect_language.MIN_MARGIN
@@ -67,6 +72,31 @@ VERDICTS = ("requested", "opposite", "unknown", "not_judgeable")
 PRODUCT_LINE = re.compile(
     r"^\s*(\((leído|read) server-side:.*\)|\[local-delegate warning:.*\]"
     r"|\((sin resumir|not summarized)\))\s*$"
+)
+#: Catalog keys of the product's "not mentioned" line (R1); the list of names follows `{items}`.
+NOT_MENTIONED_KEYS = ("mcp.lint.not_mentioned", "mcp.explain.not_mentioned")
+
+
+def not_mentioned_prefixes() -> tuple[str, ...]:
+    """The fixed text before `{items}` of every `NOT_MENTIONED_KEYS`, in every catalog language."""
+    root = files("local_delegate").joinpath("resources", "i18n")
+    prefixes = []
+    for folder in sorted(root.iterdir(), key=lambda item: item.name):
+        if not folder.is_dir():
+            continue
+        catalog = i18n.catalog(folder.name)
+        for key in NOT_MENTIONED_KEYS:
+            template = catalog.get(key, "")
+            if "{items}" in template:
+                prefixes.append(template.split("{items}", 1)[0].rstrip())
+    if not prefixes:  # an empty alternation would match, and drop, every line
+        raise RuntimeError(f"no catalog text for {NOT_MENTIONED_KEYS}")
+    return tuple(prefixes)
+
+
+NOT_MENTIONED_PREFIXES = not_mentioned_prefixes()
+NOT_MENTIONED_LINE = re.compile(
+    r"^\s*(?:" + "|".join(re.escape(prefix) for prefix in NOT_MENTIONED_PREFIXES) + r")"
 )
 ATX_LINE = re.compile(r"^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$")
 FENCE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
@@ -128,7 +158,7 @@ def prose(response: str, document: str) -> str:
         if opening:  # R3, a fence opens
             fence = opening.group(1)
             continue
-        if PRODUCT_LINE.match(line):  # R1
+        if PRODUCT_LINE.match(line) or NOT_MENTIONED_LINE.match(line):  # R1
             continue
         atx = ATX_LINE.match(line)
         if atx and sections.normalize_heading(atx.group(1)) in headings:  # R2
