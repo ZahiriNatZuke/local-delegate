@@ -1,0 +1,19 @@
+**Summary of Errors by File**
+
+**src/adapters/claude-json.ts:** One error reported, specifically a TypeScript error (TS2554) indicating an incorrect number of arguments provided to a function.
+
+**src/adapters/codex/index.ts:** One error reported, a TypeScript error (TS2550) related to the `hasOwn` property not existing on the specified type.
+
+**src/cli/commands/export.ts:** Two errors reported, both TypeScript errors (TS2550) concerning the `at` property not existing on the `string[]` type.
+
+**src/cli/commands/import.ts:** One error reported, a TypeScript error (TS2550) regarding the `at` property not existing on the `string[]` type.
+
+**src/cli/index.ts:** One error reported, a TypeScript error (TS2550) concerning the `hasOwn` property not existing on the specified type.
+
+**src/cli/ui/style.ts:** One error reported, a TypeScript error (TS2550) related to the `replaceAll` property not existing on the `string` type.
+
+**src/cli/ui/width.ts:** One error reported, a TypeScript error (TS2339) indicating the absence of the `Segmenter` property on the `Intl` type.
+
+**src/io/fs/atomic.ts:** One error reported, a TypeScript error (TS4113) related to the `override` modifier not being applicable to the specified member.
+
+(read server-side: 1647 chars ≈ 857 Claude tokens that did not enter your context)

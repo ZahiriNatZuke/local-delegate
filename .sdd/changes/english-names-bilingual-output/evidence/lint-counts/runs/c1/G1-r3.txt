@@ -1,0 +1,46 @@
+**src/local_delegate/benchmark.py**
+* **Coma final faltante (COM812)**: 13
+* **Evitar mensajes largos fuera de la clase de excepción (TRY003)**: 8
+* **Falta docstring en método público (D102)**: 7
+* **Falta docstring en función pública (D103)**: 4
+* **Falta docstring en método mágico (D105)**: 4
+* **Falta docstring en `__init__` (D107)**: 5
+* **Falta docstring en clase pública (D101)**: 3
+* **Uso de valor mágico en comparación (PLR2004)**: 3
+* **La excepción no debe usar literales f-string (EM102)**: 5
+* **La excepción no debe usar literales de cadena (EM101)**: 2
+* **Uso de `print` (T201)**: 6
+* **Importación debe estar en el nivel superior del archivo (PLC0415)**: 2
+* **Demasiados argumentos en la definición de la función (PLR0913)**: 2
+* **Línea demasiado larga (E501)**: 3
+* **Llamada a `subprocess` (S603)**: 1
+* **`subprocess.run` sin argumento `check` explícito (PLW1510)**: 1
+* **Demasiados enunciados (PLR0915)**: 1
+* **Demasiadas ramas (PLR0912)**: 1
+* **Complejidad excesiva (C901)**: 1
+* **Uso de `r"""` si hay barras invertidas en un docstring (D301)**: 1
+* **Valor booleano posicional en llamada a función (FBT003)**: 1
+* **`None` no está al final de la unión de tipos (RUF036)**: 1
+* **Abstraer `raise` a una función interna (TRY301)**: 1
+* **Se requiere una línea en blanco entre el resumen y la descripción (D205)**: 1
+* **Las comillas de cierre de un docstring multilínea deben estar en una línea separada (D209)**: 1
+
+**src/local_delegate/agents.py**
+* **Falta aviso de derechos de autor al principio del archivo (CPY001)**: 1
+* **Coma final faltante (COM812)**: 1
+* **Mover importación de la biblioteca estándar a un bloque de comprobación de tipos (TC003)**: 1
+* **La primera línea del docstring debe estar en modo imperativo (D401)**: 1
+* **Uso de valor mágico en comparación (PLR2004)**: 1
+
+**src/local_delegate/autostart.py**
+* **Falta aviso de derechos de autor al principio del archivo (CPY001)**: 1
+* **La primera línea del docstring debe estar en modo imperativo (D401)**: 1
+* **Llamada a `subprocess` (S603)**: 1
+
+**src/local_delegate/__init__.py**
+* **Falta aviso de derechos de autor al principio del archivo (CPY001)**: 1
+
+**src/local_delegate/__main__.py**
+* **Falta aviso de derechos de autor al principio del archivo (CPY001)**: 1
+
+(leído server-side: 8589 chars ≈ 4473 tokens de Claude que no entraron a tu contexto)

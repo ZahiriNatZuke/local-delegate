@@ -51,12 +51,23 @@ def codes_by_frequency(log: str) -> list[str]:
     command (`local-delegate`, `build-site`), and an inventory of those would tell the model
     nothing about the rules.
     """
-    text = FILE.sub(" ", log)
-    counts = Counter(RULE.findall(text))
+    return [code for code, _ in code_counts(log)]
+
+
+def code_counts(log: str) -> list[tuple[str, int]]:
+    """The rule codes of `codes_by_frequency` with how many times the log names each one.
+
+    The count is of mentions outside a file token, in the whole log: one per diagnostic in the
+    usual formats (`path:line:col: E501 ...`, the full format of ruff, tsc), and also a code named
+    in a warning line (`D203` in "D203 and D211 are incompatible"). Wave lint-counts gives these
+    figures to the model of the single `long` call so that it copies them instead of counting.
+    """
+    found = RULE.findall(FILE.sub(" ", log))
+    counts = Counter(found)
     order: dict[str, int] = {}
-    for match in RULE.findall(text):
+    for match in found:
         order.setdefault(match, len(order))
-    return sorted(counts, key=lambda c: (-counts[c], order[c]))
+    return [(c, counts[c]) for c in sorted(counts, key=lambda c: (-counts[c], order[c]))]
 
 
 #: A Markdown escape (`build\_corpus.py`): the model writes it, the reader sees `_`.

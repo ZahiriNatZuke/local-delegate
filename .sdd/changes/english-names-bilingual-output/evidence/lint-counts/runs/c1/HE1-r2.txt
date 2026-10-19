@@ -1,0 +1,13 @@
+**app/main.py**
+* **Line too long** (E501): 2 occurrences.
+* **Unused import** (F401): 1 occurrence.
+
+**app/util.py**
+* **Unused import** (F401): 2 occurrences.
+* **Line too long** (E501): 1 occurrence.
+* **Trailing whitespace** (W291): 1 occurrence.
+
+**app/cli.py**
+* **Line too long** (E501): 1 occurrence.
+
+(read server-side: 340 chars ≈ 177 Claude tokens that did not enter your context)

@@ -171,6 +171,44 @@ def test_r1_product_lines_are_dropped():
     assert_excluded(en(LIMIT - 1) + "\n[local-delegate warning: one section not summarized]")
 
 
+def _not_mentioned_lines() -> list[tuple[str, str, str]]:
+    """(language, key, line) for every `NOT_MENTIONED_KEYS` in every catalog language."""
+    from importlib.resources import files
+
+    from local_delegate import i18n
+
+    root = files("local_delegate").joinpath("resources", "i18n")
+    languages = sorted(item.name for item in root.iterdir() if item.is_dir())
+    return [
+        (lang, key, i18n.t_lang(lang, key, items="alpha, beta, gamma"))
+        for lang in languages
+        for key in judge_mod.NOT_MENTIONED_KEYS
+    ]
+
+
+def test_r1_the_not_mentioned_line_comes_from_every_catalog_language():
+    lines = _not_mentioned_lines()
+    # Guard that the case below checks something: es and en today, both keys, real catalog text.
+    assert {lang for lang, _key, _line in lines} >= {"es", "en"}
+    assert len(judge_mod.NOT_MENTIONED_PREFIXES) == len(lines)
+    for _lang, key, line in lines:
+        assert line != key and "alpha, beta, gamma" in line, (key, line)
+
+
+def test_r1_the_not_mentioned_line_is_dropped_in_every_language():
+    for lang, key, line in _not_mentioned_lines():
+        result = run(en(LIMIT - 1) + "\n\n" + line)
+        assert result.tokens == LIMIT - 1, (lang, key, result.judged_text)
+        assert result.verdict == "not_judgeable", (lang, key, result)
+
+
+def test_r1_the_not_mentioned_text_inside_a_sentence_is_judged():
+    # Positive control: only the whole product line goes, not the same words quoted in prose.
+    _lang, _key, line = _not_mentioned_lines()[0]
+    result = run(en(LIMIT - 1) + " " + line)
+    assert result.tokens > LIMIT, result.judged_text
+
+
 def test_r2_a_document_heading_copied_literally_is_dropped():
     assert_excluded("## Configuración del sistema\n" + en(LIMIT - 1))
 

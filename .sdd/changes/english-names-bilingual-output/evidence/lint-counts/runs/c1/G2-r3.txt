@@ -1,0 +1,36 @@
+**apps/api/package.json**
+* **Dependencia restringida**: 1 error de `lint/nursery/noRestrictedDependencies` por el uso de `express`.
+
+**apps/api/src/config/env.schema.ts**
+* **Uso de convenciones de nombres**: 6 avisos de `lint/style/useNamingConvention` debido a propiedades que no usan `camelCase`.
+* **Número mágico**: 1 aviso de `lint/style/noMagicNumbers` por un valor numérico sin constante.
+
+**apps/api/src/geocode/dto/geocode.dto.ts**
+* **Número mágico**: 4 avisos de `lint/style/noMagicNumbers` por valores numéricos en esquemas.
+* **Clases excesivas por archivo**: 1 aviso de `lint/style/noExcessiveClassesPerFile` por contener más de una clase.
+
+**apps/api/src/validate/dto/validate.dto.ts**
+* **Número mágico**: 5 avisos de `lint/style/noMagicNumbers` por valores numéricos en esquemas.
+* **Uso de convenciones de nombres**: 4 avisos de `lint/style/useNamingConvention` por propiedades que no usan `camelCase`.
+* **Clases excesivas por archivo**: 1 aviso de `lint/style/noExcessiveClassesPerFile` por contener más de una clase.
+
+**apps/api/src/config/repo-root.ts**
+* **Uso de sentencias de bloque**: 2 avisos de `lint/style/useBlockStatements` por no usar llaves en condicionales.
+
+**apps/api/src/geocode/geocode.controller.ts**
+* **Uso de tipo de importación**: 2 avisos de `lint/style/useImportType` por importar tipos sin la palabra clave `type`.
+* **Propiedades de parámetro**: 1 aviso de `lint/style/noParameterProperties` por declarar propiedades directamente en el constructor.
+
+**apps/api/src/validate/validate.controller.ts**
+* **Propiedades de parámetro**: 1 aviso de `lint/style/noParameterProperties` por declarar propiedades directamente en el constructor.
+
+**packages/core/vitest.config.ts**
+* **Exportación por defecto**: 1 aviso de `lint/style/noDefaultExport` por evitar exportaciones predeterminadas.
+
+Found 3 errors.
+Found 51 warnings.
+Found 192 infos.
+
+Sin mencionar (del log, no los nombra el resumen): pnpm-workspace.yaml, ./geocode.service.ts
+
+(leído server-side: 18043 chars ≈ 9397 tokens de Claude que no entraron a tu contexto)

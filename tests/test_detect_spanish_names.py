@@ -178,13 +178,22 @@ def test_declarations_with_commas_declare_every_name():
 
 
 # --- Lista de excepciones (REQ-016) -------------------------------------------
+def _write_exceptions(path: Path, entries: list[dict]) -> Path:
+    data = {"sections": [{"title": "Alias de compatibilidad", "entries": entries}]}
+    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    return path
+
+
 def test_exception_list_sets_aside_only_its_name_and_file(tmp_path):
-    exceptions = tmp_path / "rename-exceptions.md"
-    exceptions.write_text(
-        "# Excepciones\n\n## Alias de compatibilidad\n\n"
-        "| Nombre | Fichero | Motivo |\n| --- | --- | --- |\n"
-        "| `recalcular-coste` | `src/local_delegate/cli.py` | alias, se retira en la 0.38.0 |\n",
-        encoding="utf-8",
+    exceptions = _write_exceptions(
+        tmp_path / "name_exceptions.json",
+        [
+            {
+                "name": "recalcular-coste",
+                "file": "src/local_delegate/cli.py",
+                "reason": "alias, se retira en la 0.38.0",
+            }
+        ],
     )
     entries = det.load_exceptions(exceptions)
     assert [(e.name, e.section) for e in entries] == [
@@ -199,15 +208,30 @@ def test_exception_list_sets_aside_only_its_name_and_file(tmp_path):
     assert report["findings"][0]["file"] == "src/local_delegate/otro.py"
 
 
-def test_change_exception_list_exists_and_parses():
-    path = ROOT / ".sdd" / "changes" / "english-names-bilingual-output" / "rename-exceptions.md"
-    if not path.is_file():
-        pytest.skip("la carpeta del cambio no está en este árbol")
-    entries = det.load_exceptions(path)
-    # Tras A0 solo hay excepciones para los datos de prueba del propio detector; cada ola añade
-    # las suyas con su motivo.
+def test_exception_list_exists_and_parses():
+    """La lista vive en `scripts/data/`, no en la carpeta del cambio (que se archiva)."""
+    assert det.EXCEPTIONS_PATH == ROOT / "scripts" / "data" / "name_exceptions.json"
+    assert det.EXCEPTIONS_PATH.is_file(), f"falta la lista de excepciones: {det.EXCEPTIONS_PATH}"
+    entries = det.load_exceptions()
     assert entries, "la lista debe parsear al menos las filas de los datos del detector"
     assert all(e.reason.strip() for e in entries), "toda excepción lleva su motivo"
+    # Al cerrar el cambio, estas dos secciones quedaron vacías (README de la lista).
+    assert not {e.section for e in entries} & {
+        "Pendiente",
+        "Texto de salida que traduce el frente B",
+    }
+
+
+def test_a_missing_exception_list_is_an_error_not_an_empty_list(tmp_path):
+    """El guardián no puede quedarse sin lista en silencio."""
+    with pytest.raises(FileNotFoundError):
+        det.load_exceptions(tmp_path / "missing.json")
+
+
+def test_an_exception_without_reason_is_rejected(tmp_path):
+    path = _write_exceptions(tmp_path / "x.json", [{"name": "empate", "file": "*", "reason": " "}])
+    with pytest.raises(ValueError, match="sin motivo"):
+        det.load_exceptions(path)
 
 
 def test_repo_has_no_spanish_name_outside_the_exception_list():
@@ -215,14 +239,16 @@ def test_repo_has_no_spanish_name_outside_the_exception_list():
 
     Sin este test, los nombres nuevos de B2d-3 a B5 (23) solo se vieron al cerrar la 0.36.0. Un
     nombre nuevo en español, o un falso positivo del léxico, se resuelve aquí: renombrándolo o
-    con su fila y su motivo en `rename-exceptions.md`.
+    con su entrada y su motivo en `scripts/data/name_exceptions.json`. Sin `skip`: si falta la
+    lista, `load_exceptions` lanza y el test falla.
     """
-    path = ROOT / ".sdd" / "changes" / "english-names-bilingual-output" / "rename-exceptions.md"
-    if not path.is_file():
-        pytest.skip("la carpeta del cambio no está en este árbol")
-    report = det.analyse(det.collect(ROOT), LEXICON, det.load_exceptions(path))
+    report = det.analyse(det.collect(ROOT), LEXICON, det.load_exceptions(det.EXCEPTIONS_PATH))
     outside = [f"{f['file']}:{f['line']} {f['name']!r}" for f in report["findings"]]
     assert report["outside_exceptions"] == 0, "\n".join(outside)
+    # REQ-044: una palabra sin clasificar bloquea REQ-016 (no cuenta como inglés). Se resuelve
+    # clasificándola en `scripts/data/spanish_lexicon.json` (README, «Cómo se generó»).
+    unclassified = [f"{w} ({where})" for w, where in report["unclassified_words"].items()]
+    assert not unclassified, "palabras sin clasificar:\n" + "\n".join(unclassified)
 
 
 def test_detector_walks_a_tree_and_sees_each_category(tmp_path):

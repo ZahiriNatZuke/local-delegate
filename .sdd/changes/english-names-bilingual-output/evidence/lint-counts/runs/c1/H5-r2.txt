@@ -1,0 +1,26 @@
+**src/local_delegate/sections.py**
+
+**Errores principales**
+* **Línea demasiado larga** (E501): 6
+* **Falta de docstring en clase pública** (D101): 5
+* **Falta de docstring en método público** (D102): 3
+* **Docstring con caracteres ambiguos** (RUF002): 2
+* **Complejidad excesiva en funciones** (C901): 2
+* **Demasiadas ramificaciones** (PLR0912): 1
+* **Demasiados argumentos en la definición de la función** (PLR0913): 1
+* **Uso de valor mágico en comparación** (PLR2004): 1
+* **Falta de aviso de derechos de autor al inicio del archivo** (CPY001): 1
+* **Mover importación de la biblioteca estándar a un bloque de comprobación de tipos** (TC003): 1
+* **Uso de cadenas de texto crudas para docstrings con barras invertidas** (D301): 1
+* **La primera línea debe terminar con un punto** (D400): 1
+* **Se requiere una línea en blanco entre el resumen y la descripción** (D205): 1
+
+**Advertencias de incompatibilidad**
+* Se ignoró la regla de línea en blanco incorrecta antes de una clase debido a incompatibilidad con la regla de línea en blanco antes de una clase.
+* Se ignoró la regla de la segunda línea de un resumen multilínea debido a incompatibilidad con la regla de la primera línea de un resumen multilínea.
+
+Found 26 errors.
+
+Sin mencionar (del log, no los nombra el resumen): D203, D211, D212, D213
+
+(leído server-side: 2627 chars ≈ 1368 tokens de Claude que no entraron a tu contexto)

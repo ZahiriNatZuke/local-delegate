@@ -6,6 +6,49 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Cambiado
+
+- **La lista de excepciones del detector de nombres vive ahora en `scripts/data/`.** Pasa de las
+  tablas de `.sdd/changes/english-names-bilingual-output/rename-exceptions.md` a
+  `scripts/data/name_exceptions.json` (motivos y formato en `name_exceptions.README.md`), que
+  `scripts/detect_spanish_names.py` lee por defecto. El guardián
+  `test_repo_has_no_spanish_name_outside_the_exception_list` ya no se salta si falta la carpeta del
+  cambio: si falta la lista, falla; y exige también **0 palabras sin clasificar** (REQ-044), tras
+  clasificar a mano las 111 que quedaban (16 español, 95 inglés).
+- **`local_lint_summary` copia los recuentos por regla en vez de contarlos** (llamada única). El
+  inventario de ficheros y códigos que el programa pone delante del log lleva ahora, junto a cada
+  código, las veces que aparece en todo el log, y el prompt pide nombrar cada regla por su código y
+  copiar esa cifra. En la pasada en vivo de la 0.36.0 el resumen en español de un log de `ruff` de
+  14 k caracteres dio 2 de 15 cifras mal (D101 6 en vez de 5, D400 4 en vez de 3); con el cambio,
+  0 de 15 en las 3 repeticiones, y el rol largo en español nombra todos los códigos que antes
+  traducía. El lint troceado no cambia. Medición:
+  `.sdd/changes/english-names-bilingual-output/evidence/lint-counts/live.md`.
+- **Vuelve la afinidad de `local_lint_summary`, una celda por idioma.** Si `gemma4-26b-a4b` ya está
+  cargado, el lint corto puede ir a él en vez de cargar `gemma3-4b`. Para eso la llamada del rol
+  mecánico también recibe el inventario con los recuentos (sin él, el 26B no nombraba los códigos
+  en español), y como el prompt de lint depende del idioma de respuesta, cada celda lleva su idioma
+  (`matrix.Cell.language`): la del otro idioma ni se usa ni hace avisar a `doctor`. Aprobadas en
+  `es` y en `en` en 3 de 3 repeticiones. Medición:
+  `.sdd/changes/english-names-bilingual-output/evidence/affinity-by-language/live.md`.
+
+### Corregido
+
+- **Las tarjetas del panel tienen ancho fijo.** Una cifra muy larga (por ejemplo, el «Contexto
+  conservado» de un rango largo) ensanchaba su tarjeta y contraía las demás de la fila: las
+  columnas eran `1fr`, que en CSS crece con el contenido. Ahora la fila de KPIs y las demás filas
+  de tarjetas usan columnas de ancho fijo; la cifra que no cabe reduce su tamaño y, si ni así
+  cabe, se muestra en forma corta («45,7 mil M tok», «45.7B tok» en inglés) con el valor exacto al
+  pasar el ratón. El hero pasa de 1,7 a 1,4 veces el ancho de las demás, para que títulos como
+  «Delegaciones» quepan sin «…». En el móvil la página ya no se sale por la derecha.
+
+### Documentación
+
+- **Poca RAM libre con los modelos grandes cargados**: nueva sección en
+  [Troubleshooting](docs/wiki/Troubleshooting.md) y nota en la receta de llama-swap. Con los MoE
+  grandes y `--load-mode mmap` quedan 0,4–1,4 GB libres mientras el modelo espera su `ttl`; la
+  palanca es un `ttl` más corto solo para ellos, con `local-delegate llamaswap residency --ttl
+  <modelo>=<segundos>`.
+
 ## [0.36.0] - 2026-10-18
 
 Esta versión hace que todo `local-delegate` hable **en español o en inglés**: el CLI y su `--help`,

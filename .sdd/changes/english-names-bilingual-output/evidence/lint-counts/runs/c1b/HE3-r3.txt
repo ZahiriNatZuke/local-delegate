@@ -1,0 +1,15 @@
+**lib/net.py**
+* SIM102: 3
+* I001: 1
+* RET504: 1
+
+**lib/io.py**
+* I001: 2
+* UP006: 2
+
+**lib/db.py**
+* SIM102: 2
+* RET504: 1
+* UP006: 1
+
+(read server-side: 784 chars ≈ 408 Claude tokens that did not enter your context)

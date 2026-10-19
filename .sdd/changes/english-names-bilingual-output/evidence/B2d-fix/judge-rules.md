@@ -16,7 +16,7 @@ detector cuenta como palabras) y lo que el modelo redacta. Este juez quita solo 
 
 | Regla | Qué se quita | Ejemplo |
 |---|---|---|
-| R1 | Líneas del producto enteras | «(leído server-side: …)», «(read server-side: …)», «[local-delegate warning: …]», «(sin resumir)», «(not summarized)» |
+| R1 | Líneas del producto enteras | «(leído server-side: …)», «(read server-side: …)», «[local-delegate warning: …]», «(sin resumir)», «(not summarized)»; y la lista «Sin mencionar (…): …» / «Not mentioned (…): …» de `local_lint_summary` y `local_explain_code`, que va en el idioma de la interfaz: su texto sale de las claves `mcp.lint.not_mentioned` y `mcp.explain.not_mentioned` en todos los idiomas del catálogo (añadido el 2026-10-19, muestra fr de REQ-028) |
 | R2 | Líneas de título `#`…`######` cuyo texto, normalizado con `sections.normalize_heading`, coincide con un título del documento ORIGINAL (`sections.markdown_headings`) | `## Configuración del sistema` copiado tal cual; también `### 2. CONFIGURACION DEL SISTEMA` |
 | R3 | Código: bloques con valla (```` ``` ```` o `~~~`) y spans `` `…` `` | `` `return value` `` |
 | R4 | URLs (`http://`, `https://`, `www.`); solo la URL, no el texto de un enlace Markdown | `[guía](https://…)` deja «guía» |

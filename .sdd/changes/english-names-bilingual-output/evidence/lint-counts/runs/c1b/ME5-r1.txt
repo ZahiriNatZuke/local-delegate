@@ -1,0 +1,12 @@
+**Summary of Issues by File**
+
+**src\local_delegate\sections.py:**
+
+-   **Docstring Issues:** 6 instances of `D101` (Missing docstring in public class) and 2 instances of `D102` (Missing docstring in public method).
+-   **Line Length:** 4 instances of `E501` (Line too long).
+-   **Style Issues:** 1 instance of `RUF002` (Docstring contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?), 1 instance of `C901` (Too complex), 1 instance of `D400` (First line should end with a period), 1 instance of `D301` (Use `r"""` if any backslashes in a docstring), 1 instance of `PLR2004` (Magic value used in comparison, consider replacing `2` with a constant variable), 1 instance of `PLR0912` (Too many branches), 1 instance of `PLR0913` (Too many arguments in function definition).
+-   **Incompatible Warnings:** 2 warnings related to incompatible rule combinations.
+
+Total errors: 26.
+
+(read server-side: 2627 chars ≈ 1368 Claude tokens that did not enter your context)

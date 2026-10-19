@@ -1,0 +1,34 @@
+### src/local_delegate/benchmark.py
+
+**Errores y avisos:**
+
+*   **Faltan docstrings:**
+    *   **Clase pública** (D101): 3
+    *   **Método público** (D102): 7
+    *   **Método mágico** (D105): 4
+    *   **Método `__init__`** (D107): 5
+    *   **Función pública** (D103): 4
+*   **Falta coma final** (COM812): 12
+*   **Uso de `print`** (T201): 8
+*   **Línea demasiado larga** (E501): 3
+*   **Valores mágicos en comparaciones** (PLR2004): 3
+*   **Demasiados argumentos en definición de función** (PLR0913): 2
+*   **Complejidad excesiva** (C901): 1
+*   **Demasiadas ramas** (PLR0912): 1
+*   **Demasiadas sentencias** (PLR0915): 1
+*   **Importación debe estar en el nivel superior del archivo** (PLC0415): 2
+*   **Variable de bucle `for` sobrescrita por objetivo de asignación** (PLW2901): 1
+*   **Llamada a `subprocess` sin argumento `check` explícito** (PLW1510): 1
+*   **Llamada a `subprocess` sin verificar entrada no confiable** (S603): 1
+*   **`None` no está al final de la unión de tipos** (RUF036): 1
+*   **Uso de `r"""` si hay barras invertidas en un docstring** (D301): 1
+*   **Una línea en blanco requerida entre la línea de resumen y la descripción** (D205): 1
+*   **Las comillas de cierre de un docstring multilínea deben estar en una línea separada** (D209): 1
+*   **Falta aviso de copyright al inicio del archivo** (CPY001): 1
+*   **Importaciones de la biblioteca estándar deben moverse a un bloque de comprobación de tipos** (TC003): 3
+
+Found 68 errors.
+
+Sin mencionar (del log, no los nombra el resumen): checks.json
+
+(leído server-side: 33048 chars ≈ 17212 tokens de Claude que no entraron a tu contexto)
