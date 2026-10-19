@@ -68,6 +68,7 @@
   "mcp.input.text_or_path": "Debes proporcionar 'text' o 'path'.",
   "mcp.lint.not_mentioned": "Sin mencionar (del log, no los nombra el resumen): {items}",
   "mcp.lint.other_files": "Y otros {count} ficheros que nombra el log no tienen entrada en el resumen.",
+  "mcp.lint.per_file_counts": "Recuento por fichero (contado por el programa):",
   "mcp.question.choose_format.description": "Qué formato de salida se espera.",
   "mcp.question.choose_format.field": "Formato",
   "mcp.question.choose_format.message": "La delegación no dice en qué formato quieres la salida. ¿Cuál uso?",

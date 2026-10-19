@@ -210,9 +210,11 @@ def test_the_chunked_lint_reduce_keeps_the_lint_format(monkeypatch, captured, pr
     not the guard that it really chunked."""
     monkeypatch.setenv("LOCAL_DELEGATE_LANG", product)
     i18n.reset()
-    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "mechanical", 1200)
-    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 1200)
-    server.local_lint_summary(text=_ruff_log(12, 6))
+    # 4000, not 1200: the final inventory of the wave lint-large-logs carries its rule, and 25 %
+    # of a 1200-character budget leaves no room for the codes line.
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "mechanical", 4000)
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 4000)
+    server.local_lint_summary(text=_ruff_log(12, 30))
     assert len(captured) > 2  # guard: it really chunked
     reduce_step = captured[-1]
     assert "Resume la siguiente salida" not in reduce_step["user"]  # guard: the reduce
@@ -310,9 +312,11 @@ def test_only_the_final_steps_of_the_chunked_lint_get_the_larger_cap(
         return result, 0, None, [server.Attempt(model, True, None, None, 0)]
 
     monkeypatch.setattr(server, "_run_chat", run_chat)
-    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "mechanical", 1200)
-    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 1200)
-    server.local_lint_summary(text=_ruff_log(40, 6))
+    # 4000 and a larger log (wave lint-large-logs): with 1200 the final inventory and its rule
+    # alone fill the reduce budget, and the partials never fit in a reduce.
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "mechanical", 4000)
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 4000)
+    server.local_lint_summary(text=_ruff_log(400, 6))
     (row,) = _rows(tmp_path, "local_lint_summary")
     kinds = [s["kind"] for s in row["steps"]]
     assert "regroup" in kinds and kinds[-1] == "reduce"  # guard: it chunked and regrouped

@@ -68,6 +68,7 @@
   "mcp.input.text_or_path": "You must provide 'text' or 'path'.",
   "mcp.lint.not_mentioned": "Not mentioned (in the log, not named by the summary): {items}",
   "mcp.lint.other_files": "And {count} other files named by the log have no entry in the summary.",
+  "mcp.lint.per_file_counts": "Count per file (counted by the program):",
   "mcp.question.choose_format.description": "Which output format is expected.",
   "mcp.question.choose_format.field": "Format",
   "mcp.question.choose_format.message": "The delegation does not say which output format you want. Which one should I use?",

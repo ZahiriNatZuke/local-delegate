@@ -43,6 +43,19 @@ NOT_MODEL = re.compile(
 )
 #: The line of the program with how many files have no entry: its figure is not the model's.
 PROGRAM_COUNT = re.compile(r"(?m)^(?:Y otros \d+ ficheros|And \d+ other files).*$")
+#: The block of counts per file the program adds after a mechanical answer (iteration 2): its
+#: figures are the program's, not the model's.
+PER_FILE_BLOCK = re.compile(
+    r"(?m)^(?:Recuento por fichero \(contado por el programa\)|"
+    r"Count per file \(counted by the program\)):\n(?:- [^\n]*(?:\n|$))*"
+)
+
+
+def _program_free(text: str) -> str:
+    """The text without the lines and the block the program adds."""
+    return PROGRAM_COUNT.sub("", PER_FILE_BLOCK.sub("", text))
+
+
 COUNT_WORDS = (
     r"(?:errores|error|avisos|aviso|advertencias|advertencia|veces|vez|tests|test|pruebas|prueba|"
     r"problemas|problema|instancias|instancia|ocurrencias|ocurrencia|casos|caso|diagnósticos|"
@@ -100,7 +113,7 @@ def per_file_check(text: str, truth: dict | None) -> dict:
     """The reader of `plan.md`. Returns `checked`, `wrong` and the wrong items (for the record)."""
     if not truth:
         return {"checked": 0, "wrong": 0, "items": []}
-    text = b2f.ESCAPE.sub(r"\1", NOT_MODEL.sub("", text))
+    text = b2f.ESCAPE.sub(r"\1", NOT_MODEL.sub("", PER_FILE_BLOCK.sub("", text)))
     per_file, totals = truth["per_file"], truth["codes"]
     keys = _file_keys(list(per_file))
     codes = sorted(totals, key=len, reverse=True)
@@ -154,7 +167,7 @@ def score(runs: Path, logs: list[Path]) -> dict:
                 continue
             raw = path.read_text(encoding="utf-8")
             answer = b2f.ESCAPE.sub(r"\1", raw)
-            model_only = b2f.PROGRAM_LINE.sub("", NOT_MODEL.sub("", answer))
+            model_only = b2f.PROGRAM_LINE.sub("", NOT_MODEL.sub("", PER_FILE_BLOCK.sub("", answer)))
             doc = (ROOT / call["document"]).resolve()
             row = b2f._row_for(rows, call["tool"], str(doc), window["started"], window["finished"])
             log = doc.read_text(encoding="utf-8", errors="replace")
@@ -174,9 +187,7 @@ def score(runs: Path, logs: list[Path]) -> dict:
                     and "length" in raw
                     or bool(re.search(r"cortad|truncat", raw[-400:], re.IGNORECASE)),
                     "chars": len(raw),
-                    "fidelity_total": fid.count_inventions(PROGRAM_COUNT.sub("", raw), log, ())[
-                        "total"
-                    ],
+                    "fidelity_total": fid.count_inventions(_program_free(raw), log, ())["total"],
                     "codes": b2f._fraction(codes, answer, b2f._named),
                     "files": b2f._fraction(files, answer, b2f._file_named),
                     "model_codes": b2f._fraction(codes, model_only, b2f._named),

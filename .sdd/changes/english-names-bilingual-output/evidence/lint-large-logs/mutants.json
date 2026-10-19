@@ -2,7 +2,20 @@
  "global counts (no per-file branch in the mechanical call)": {
   "returncode": 1,
   "failed": [
-   "test_the_mechanical_call_with_several_files_gets_the_counts_per_file"
+   "test_the_mechanical_call_with_several_files_gets_the_codes_per_file",
+   "test_the_program_adds_the_counts_per_file_after_the_mechanical_answer"
+  ]
+ },
+ "counts to the model (per-file inventory with figures in the prompt)": {
+  "returncode": 1,
+  "failed": [
+   "test_the_mechanical_call_with_several_files_gets_the_codes_per_file"
+  ]
+ },
+ "no block (the program does not add the counts per file)": {
+  "returncode": 1,
+  "failed": [
+   "test_the_program_adds_the_counts_per_file_after_the_mechanical_answer"
   ]
  },
  "one entry per file (no bound in the final step, no line of the rest)": {
@@ -25,5 +38,8 @@
   "failed": [
    "test_a_chunked_log_without_per_file_counts_forbids_them"
   ]
+ },
+ "(no mutant)": {
+  "returncode": 0
  }
 }

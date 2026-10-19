@@ -18,8 +18,16 @@ OUT = Path(__file__).resolve().parent / "mutants.json"
 
 MUTANTS = {
     "global counts (no per-file branch in the mechanical call)": (
-        'lint_patterns.per_file_code_counts(log) if role == "mechanical" else None',
-        "None",
+        "return per_file if per_file is not None and len(per_file) > 1 else None",
+        "return None",
+    ),
+    "counts to the model (per-file inventory with figures in the prompt)": (
+        "inventory = _lint_per_file_inventory(per_file, budget, with_counts=False)",
+        "inventory = _lint_per_file_inventory(per_file, budget, with_counts=True)",
+    ),
+    "no block (the program does not add the counts per file)": (
+        "        return lambda answer, _t: _lint_per_file_counts(answer, per_file)",
+        "        return None",
     ),
     "one entry per file (no bound in the final step, no line of the rest)": (
         "    if left_out <= 0:\n        return answer",
@@ -30,8 +38,8 @@ MUTANTS = {
         '    return f"Resume la siguiente salida de linter/tests:\\n\\n{piece}"',
     ),
     "no prohibition in the final step of an uncountable log": (
-        '" El log no da cifras por fichero: no pongas ninguna en las entradas. Las cifras por "',
-        '" Las cifras por "',
+        '" El log no da cifras por fichero: no pongas ninguna en las entradas. Las cifras "',
+        '" Las cifras "',
     ),
 }
 
@@ -74,7 +82,28 @@ def main() -> int:
             print(name, "->", failed, flush=True)
     finally:
         SERVER.write_text(original, encoding="utf-8", newline="")
-    subprocess.run(["git", "diff", "--quiet", "--", str(SERVER)], cwd=ROOT, check=True)
+    with SERVER.open(encoding="utf-8", newline="") as fh:
+        if fh.read() != original:
+            raise SystemExit("server.py was not restored")
+    baseline = subprocess.run(
+        [
+            "uv",
+            "run",
+            "--frozen",
+            "pytest",
+            "-q",
+            "-p",
+            "no:cacheprovider",
+            "tests/test_lint_large_logs.py",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    results["(no mutant)"] = {"returncode": baseline.returncode}
     OUT.write_text(json.dumps(results, indent=1) + "\n", encoding="utf-8", newline="\n")
     return 0
 

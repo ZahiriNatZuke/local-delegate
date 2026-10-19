@@ -19,6 +19,7 @@ fail (`evidence/lint-large-logs/mutants.md`).
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -138,22 +139,38 @@ def test_formats_that_do_not_say_the_file_of_each_code_give_no_per_file_counts()
 # --- problem 2: the mechanical call ------------------------------------------------------------
 
 
-def test_the_mechanical_call_with_several_files_gets_the_counts_per_file(captured, tmp_path):
-    """Mutant "global counts" (`_lint_single_user` without the per-file branch): the prompt says
+def test_the_mechanical_call_with_several_files_gets_the_codes_per_file(captured, tmp_path):
+    """Mutant "global counts" (`_lint_mechanical_per_file` returning `None`): the prompt says
     "F401: 3", the count of the whole log the 4B copied under `app/util.py`, and the per-file
-    lines are missing."""
-    out = server.local_lint_summary(text=THREE_FILES)
+    lines are missing. Mutant "counts to the model" (`with_counts=True` in the prompt): the
+    prompt carries "F401 2", which the 4B miscopied in iteration 1."""
+    server.local_lint_summary(text=THREE_FILES)
     (call,) = captured
     (row,) = _rows(tmp_path)
     assert row["model"] == config.models_by_role()["mechanical"]  # guard: the mechanical role
     head, sep, rest = call["user"].partition(BASE)
     assert sep and rest == THREE_FILES
-    assert "- app/util.py: F401 2, E501 1, W291 1" in head
-    assert "- app/main.py: E501 2, F401 1" in head
-    assert "- app/cli.py: E501 1" in head
-    assert "F401: 3" not in head and "EN ESE fichero" in head
-    assert "nunca las de otro fichero ni un total" in head
+    assert "- app/util.py: F401, E501, W291" in head
+    assert "- app/main.py: E501, F401" in head
+    assert "- app/cli.py: E501" in head
+    assert "F401: 3" not in head and "F401 2" not in head
+    assert "no escribas ninguna cifra ni recuento" in head
     assert call["max_tokens"] == server._lint_max_tokens(200)  # its cap of before
+
+
+def test_the_program_adds_the_counts_per_file_after_the_mechanical_answer(captured):
+    """Mutant "no block" (`_lint_single_postprocess` returning `None` for the mechanical role):
+    the answer is the model's alone, with no counts."""
+    captured.answer = "**app/util.py**: F401, E501, W291"
+    out = server.local_lint_summary(text=THREE_FILES)
+    assert out.startswith("**app/util.py**: F401, E501, W291")  # guard: the model's answer
+    block = (
+        "Recuento por fichero (contado por el programa):\n"
+        "- app/util.py: F401 2, E501 1, W291 1\n"
+        "- app/main.py: E501 2, F401 1\n"
+        "- app/cli.py: E501 1"
+    )
+    assert block in out
     assert "Sin mencionar" not in out
 
 
@@ -190,8 +207,9 @@ def test_the_single_long_call_keeps_the_counts_of_the_whole_log(captured, monkey
 def test_the_per_file_inventory_is_cut_without_figures():
     """Over its budget the inventory ends in "y otros", with no count of what is left out."""
     per = lint_patterns.per_file_code_counts(_ruff_log(30, 3))
-    text = server._lint_per_file_inventory(per, 400)
+    text = server._lint_per_file_inventory(per, 400, with_counts=False)
     assert len(text) <= 400 and text.endswith("\n- y otros")
+    assert "CPY001" in text and re.search(r"[A-Z]+\d+ \d", text) is None  # codes, no counts
 
 
 # --- problem 1: the chunked lint ---------------------------------------------------------------
@@ -217,6 +235,7 @@ def test_the_chunked_lint_bounds_the_entries_and_counts_the_rest(captured, chunk
     top = lint_patterns.files_by_frequency(log)[0]
     assert f"{top} {sum(per[top].values())}" in final["user"]
     assert "nunca dentro de la entrada de un fichero" in final["user"]
+    assert "Ninguna entrada más tras el último." in final["user"]
     assert "Y otros 20 ficheros que nombra el log no tienen entrada en el resumen." in out
 
 
@@ -226,17 +245,16 @@ def test_the_map_steps_give_no_figures_per_file(captured, chunked):
     maps = captured[:-1]
     assert len(maps) > 1  # guard: the log was chunked
     for call in maps:
-        assert call["user"].startswith(
-            "Esto es un trozo de un log mayor: no des cifras por fichero"
-        )
+        assert call["user"].startswith("Esto es un trozo de un log mayor. Responde en formato")
+        assert "sin explicarlos y sin cifras" in call["user"]
 
 
 def test_a_map_with_many_files_names_only_the_most_named(captured, chunked):
     """A chunk naming more than `LINT_TOP_FILES` files lists the ones that get an entry."""
     server.local_lint_summary(text=_pytest_log(60, 1))
     first = captured[0]["user"]
-    assert "ficheros: da entrada solo a estos, los más nombrados:" in first
-    listed = first.split("los más nombrados: ", 1)[1].split(".\n", 1)[0]
+    assert "ficheros: da entrada solo a estos, los más nombrados, y a ningún otro:" in first
+    listed = first.split("y a ningún otro: ", 1)[1].split(".\n", 1)[0]
     assert len(listed.split(", ")) == server.LINT_TOP_FILES
 
 
