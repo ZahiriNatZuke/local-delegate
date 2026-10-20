@@ -34,6 +34,26 @@ con saltos pudo contaminarla un swap.
   (quitar el razonamiento `<think>`, completar las secciones del resumen) y de los avisos; en una
   operación troceada, la suma de todas sus llamadas. Sirve para ver cuánto se perdió entre lo
   generado y lo devuelto. Nunca guarda el texto.
+- Parámetros del backend por rol (ver [Configuration](Configuration.md#parámetros-del-backend-por-rol));
+  los cuatro campos se omiten cuando no aplican, así que un evento sin parámetros es idéntico a los
+  de antes:
+  - `backend_params`: `{"role": "<rol>", "values": {<clave>: <valor>}, "source": {<clave>: "env"}}`.
+    Solo aparece si la operación llevó alguna clave. `values` lleva cada valor con su tipo JSON, en
+    el orden del catálogo, y son los valores **intentados**: el campo sale también si el backend los
+    rechazó. `source` solo aparece si alguna clave vino de `LOCAL_DELEGATE_BACKEND_PARAMS`, y lista
+    solo esas (las demás son del fichero). `local_delegate` con modelo explícito nunca lo lleva.
+  - `reasoning_chars` (solo si es mayor que 0): caracteres de razonamiento de **todas** las llamadas
+    de la operación (intentos fallidos, respaldos, trozos y pasos de map/reduce incluidos):
+    `reasoning_content` más lo que se quitó entre etiquetas `<think>`. Sale también sin parámetros
+    de rol, si el modelo razonó por su cuenta. Nunca guarda el texto del razonamiento. El
+    razonamiento que Qwen deja en la respuesta sin etiquetas no se puede contar.
+  - `backend_params_rejected: true`: el backend rechazó los parámetros (HTTP 400) y la operación
+    siguió sin ellos tras un reintento que funcionó.
+  - `reasoning_skipped: "context"`: alguna llamada iba a razonar pero no cabía en el contexto del
+    modelo y fue sin razonamiento.
+
+  El panel marca en la lista de delegaciones las filas que razonaron y las que llevaron parámetros
+  (con un estado propio si se rechazaron), y el diálogo de la fila da el detalle.
 - `tokens_in` / `tokens_out`: tokens reales que reportó el backend (`usage.prompt_tokens` /
   `usage.completion_tokens`), cuando los da. Si faltan, el dashboard estima con `chars/4`.
 - `finish_reason`: `choices[0].finish_reason` del backend (p. ej. `"length"` si la salida se

@@ -222,6 +222,12 @@ cámbialos por los de tu backend.
 | `LOCAL_DELEGATE_TURN_MAX_S` | `600` | Turno del daemon entre modelos que chocan en llama-swap: si la primera de la cola lleva estos segundos esperando **y** el daemon lleva otros tantos sin que empiece ni termine ninguna llamada al backend, se le concede el turno igual (`turn: "forced"` en el log) |
 | `LOCAL_DELEGATE_SLOW_THRESHOLD` | `0.5` | Una llamada es «lenta» (`slow` en el log, «lento ×0,37» en el panel) si genera a menos de esta fracción de la velocidad normal de su modelo |
 | `LOCAL_DELEGATE_AFFINITY_MARGIN_S` | `5` | Afinidad: un modelo ya cargado solo se aprovecha si le quedan al menos estos segundos de TTL |
+| `LOCAL_DELEGATE_BACKEND_PARAMS` | *(vacío)* | Override puntual, clave a clave, de los parámetros por rol de `backend-params.json` (muestreo y razonamiento): `rol.clave=valor;…`, p. ej. `code.top_k=20`. Exige reiniciar el daemon; el fichero no |
+
+Los **parámetros por rol** que viajan en cada petición al backend (`top_k`, `temperature`,
+`enable_thinking` con su presupuesto…) se guardan en `backend-params.json` y se editan con
+`local-delegate backend-params show|set|unset|reset`; la lista cerrada de claves, la precedencia y
+el razonamiento están en la [wiki](docs/wiki/Configuration.md#parámetros-del-backend-por-rol).
 
 ## La métrica de ahorro
 

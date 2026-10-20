@@ -6,6 +6,41 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Añade
+
+- **Parámetros por rol en las peticiones al backend** (SDD `backend-extra-params`). Cada rol
+  (`mechanical`, `long`, `code`, `vision`) puede llevar parámetros de muestreo (`temperature`,
+  `top_k`, `top_p`, `min_p`, penalizaciones, DRY, XTC, mirostat) y de razonamiento
+  (`enable_thinking`, `reasoning_budget_tokens`, `reasoning_effort`) de una lista cerrada de 21
+  claves, validadas por tipo y rango. Se guardan en `backend-params.json`, junto al log de uso, y se
+  editan con el subcomando nuevo `local-delegate backend-params show|set|unset|reset` (`set`
+  valida antes de escribir y, si rechaza, sale con código 2 sin tocar el fichero). La variable
+  `LOCAL_DELEGATE_BACKEND_PARAMS` (`rol.clave=valor;…`) los pisa clave a clave. Una clave no
+  permitida, reservada o fuera de rango se quita sola, con un aviso que nunca repite el valor. El
+  fichero se relee en cada operación (sin reiniciar el daemon); la variable exige reiniciarlo.
+  Las tools MCP no ganan argumentos: el modelo que delega no puede fijar nada.
+- **Razonamiento con presupuesto obligatorio.** Se enciende con `enable_thinking` **y**
+  `reasoning_budget_tokens` (1–8192), que se suma al `max_tokens` de cada llamada;
+  `reasoning_effort` solo no lo enciende. Una llamada cuyo razonamiento no cabe en el contexto del
+  modelo (leído de `--ctx-size` en la config de llama-swap, o un estimado de 8192) va sin
+  razonamiento. Si el backend rechaza los parámetros con un 400, la operación se reintenta una vez
+  sin ellos.
+- `doctor` y `local_status` muestran los parámetros de cada rol y sus avisos, y el
+  panel marca las delegaciones que razonaron o llevaron parámetros, con el detalle en un diálogo.
+  Campos nuevos del log de uso, que se omiten si no aplican: `backend_params`, `reasoning_chars`,
+  `backend_params_rejected` y `reasoning_skipped`. Detalle en la wiki
+  ([Configuration](docs/wiki/Configuration.md#parámetros-del-backend-por-rol) y
+  [Savings & metrics](docs/wiki/Savings-and-metrics.md)).
+
+### Corrige
+
+- **`local-delegate benchmark --reasoning-effort` no encendía el razonamiento.** Ahora un esfuerzo
+  distinto de `off` (de la opción o del caso) manda `chat_template_kwargs.enable_thinking: true`,
+  `reasoning_effort` en la raíz y el presupuesto de `--reasoning-budget N` (1–8192, obligatorio;
+  sin él la corrida sale con error antes de llamar al backend) sumado al `max_tokens` del caso, con
+  la misma regla que producción. Los metadatos de la corrida apuntan el presupuesto y qué claves de
+  rol había activas; el benchmark no las aplica.
+
 ## [0.36.1] - 2026-10-19
 
 Cierra el cambio del idioma y del renombrado (SDD `english-names-bilingual-output`) con los restos

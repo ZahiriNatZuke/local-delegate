@@ -218,6 +218,250 @@ guarda en `cost-aggregates.json`, y el panel y `doctor` usan ese valor guardado:
 abre `~/.claude`. Tampoco hay variable para `N`: sale del relleno, de la mediana de su grupo o del
 valor declarado de su hilo, en ese orden.
 
+## Parámetros del backend por rol
+
+Cada petición al backend lleva solo lo que arma la tool: `model`, `messages`, `max_tokens`,
+`temperature`, `stream` y, en `local_extract`, `response_format`. Para ajustar el muestreo o
+encender el razonamiento sin tocar código hay **parámetros por rol** (`mechanical`, `long`, `code`,
+`vision`), sacados de una lista cerrada y validados por tipo y rango. Las tools MCP no ganan ningún
+argumento: el modelo que delega no puede fijar nada de esto.
+
+### El fichero y el subcomando
+
+Se guardan en `backend-params.json`, dentro de `LOCAL_DELEGATE_LOG_DIR` (el mismo directorio de los
+`usage-YYYYMM.jsonl`), con este esquema:
+
+```json
+{"version": 1, "roles": {"code": {"top_k": 20, "temperature": 0.3}}}
+```
+
+Se edita con `local-delegate backend-params`, no a mano:
+
+```bash
+local-delegate backend-params show            # ruta del fichero y, por rol, valor, origen y avisos
+local-delegate backend-params show --json     # lo mismo en JSON
+local-delegate backend-params set code top_k 20
+local-delegate backend-params unset code top_k
+local-delegate backend-params reset code      # vacía el rol; sin rol, vacía todos
+```
+
+- `set <rol> <clave> <valor>` valida el rol, la clave, el tipo y el rango **antes** de escribir.
+  Si algo no vale, sale con código **2**, dice el motivo (rol y clave, nunca el valor) y no toca el
+  fichero. Si todo va bien, sale con **0** y confirma `<rol>.<clave> guardado en <ruta>`.
+  `enable_thinking` acepta `on`/`off`/`true`/`false`.
+- `unset <rol> <clave>` quita una clave; una clave que no está no es error.
+- `reset [<rol>]` vacía un rol entero, o todos, **sin preguntar**: también se lleva
+  `enable_thinking` y el presupuesto de razonamiento.
+- `show` imprime `Fichero: <ruta>` y luego solo los roles con valores o avisos, una línea por clave
+  con `clave = valor  (fichero|variable)`. Sin nada configurado dice «sin parámetros».
+  `show --json` da `{"file": …, "roles": [{"role", "params": [{"key", "value", "source"}],
+  "warnings": [{"code", "key"}]}]}`, con los cuatro roles siempre.
+- La escritura es atómica (fichero temporal en el mismo directorio y `os.replace`) bajo el cerrojo
+  `backend-params.json.lock`: una escritura que falla a medias deja el fichero anterior como
+  estaba, y dos `set` a la vez no se pisan.
+
+Al leerlo, el producto nunca falla por el fichero:
+
+- ausente, vacío o con `{"version": 1, "roles": {}}`: sin parámetros;
+- JSON ilegible, `version` distinta de 1 o más de 64 KB: se ignora **entero**, con aviso. `set` no
+  lo sobrescribe (así no se pierde a ciegas una edición a mano): arréglalo o bórralo antes;
+- un rol desconocido se quita con aviso;
+- una clave no permitida, de tipo equivocado o fuera de rango se quita **sola**, con un aviso que
+  nombra el rol y la clave pero **nunca el valor**; el resto del rol se aplica.
+
+`doctor` muestra en su cabecera, debajo de las líneas de idioma, la ruta del fichero, los
+parámetros de cada rol (los que vienen de la variable, con la marca `(variable)`) y sus avisos.
+`local_status`, debajo de la línea de `vision`, muestra `Parámetros por rol: <ruta>` y una línea
+por rol con parámetros (`  <rol>: clave=valor (fichero|variable), …`, los booleanos como
+`on`/`off`), con sus avisos debajo. Sin nada configurado, ninguno de los dos añade líneas.
+
+### Override puntual: `LOCAL_DELEGATE_BACKEND_PARAMS`
+
+| Variable | Default | Descripción |
+|---|---|---|
+| `LOCAL_DELEGATE_BACKEND_PARAMS` | *(vacío)* | Override puntual del fichero, clave a clave, con el formato `rol.clave=valor;…` (p. ej. `code.top_k=20;mechanical.temperature=0.5`). Hasta 2048 caracteres; más larga se ignora entera, con aviso |
+
+La gramática:
+
+- se separa por `;` y se descartan los trozos vacíos (un `;` final o `;;` no avisan);
+- se quitan los espacios alrededor de cada trozo, de la clave y del valor;
+- se parte por el **primer** `=` y, a la izquierda, por el **primer** `.`;
+- un trozo sin `=`, con un segundo `=` o sin `.` está mal formado: se quita solo ese, con aviso;
+- si una clave se repite en el mismo rol, gana la última, con aviso;
+- los valores siguen las reglas de `set` (un número que da infinito, como `1e400`, se rechaza).
+
+### Claves permitidas
+
+Solo estas 21 claves. Los rangos son los de llama.cpp b10909, pero **más estrictos**: se rechaza lo
+que el servidor recortaría en silencio. Ningún número puede ser `NaN` ni `±Infinity`, y un booleano
+JSON no cuenta como número.
+
+| Grupo | Clave | Tipo | Rango aceptado | Destino en el cuerpo |
+| --- | --- | --- | --- | --- |
+| muestreo | `temperature` | float | ≥ 0 | raíz |
+| muestreo | `top_k` | int | ≥ 0 (0 = apagado) | raíz |
+| muestreo | `top_p` | float | 0–1 | raíz |
+| muestreo | `min_p` | float | 0–1 | raíz |
+| muestreo | `typical_p` | float | 0–1 | raíz |
+| muestreo | `repeat_penalty` | float | finito | raíz |
+| muestreo | `repeat_last_n` | int | 0–2³¹−1 | raíz |
+| muestreo | `presence_penalty` | float | finito | raíz |
+| muestreo | `frequency_penalty` | float | finito | raíz |
+| muestreo | `dry_multiplier` | float | finito | raíz |
+| muestreo | `dry_base` | float | ≥ 1 | raíz |
+| muestreo | `dry_allowed_length` | int | 0–2³¹−1 | raíz |
+| muestreo | `dry_penalty_last_n` | int | 0–2³¹−1 | raíz |
+| muestreo | `xtc_probability` | float | 0–1 | raíz |
+| muestreo | `xtc_threshold` | float | 0–1 | raíz |
+| muestreo | `mirostat` | int | 0, 1 o 2 | raíz |
+| muestreo | `mirostat_tau` | float | finito | raíz |
+| muestreo | `mirostat_eta` | float | finito | raíz |
+| razonamiento | `enable_thinking` | bool (`set` y la variable aceptan `on`/`off`/`true`/`false`) | — | `chat_template_kwargs.enable_thinking` |
+| razonamiento | `reasoning_budget_tokens` | int | **1–8192** | raíz (más la suma al tope) |
+| razonamiento | `reasoning_effort` | enum | `minimal`, `low`, `medium`, `high`, `xhigh`, `max` | raíz |
+
+El techo de 8192 del presupuesto es una elección conservadora, no un límite técnico: coincide con el
+contexto del modelo más pequeño del catálogo (`gemma3-4b`, `--ctx-size 8192`), y en las pruebas en
+vivo bastaron entre 100 y 700 tokens. El mínimo es 1 porque un presupuesto de 0 cierra el
+razonamiento en el acto.
+
+### Claves reservadas
+
+Ninguna de estas se puede configurar, ni por fichero, ni por variable, ni con `set`. El cuerpo nunca
+lleva una clave reservada que no haya puesto el producto.
+
+| Grupo | Claves |
+| --- | --- |
+| contrato de la tool | `model`, `messages`, `stream`, `stream_options`, `max_tokens`, `max_completion_tokens`, `n_predict`, `response_format`, `json_schema`, `grammar`, `tools`, `tool_choice`, `functions`, `function_call`, `n`, `n_cmpl`, `stop`, `logprobs`, `n_probs`, `response_fields` |
+| servidor | `cache_prompt`, `id_slot`, `n_keep`, `samplers`, `seed` |
+| razonamiento en crudo | `chat_template_kwargs`, `reasoning_format` |
+
+Tampoco se aceptan, por ahora, las claves aplazadas: `dry_sequence_breakers`, `top_n_sigma`,
+`dynatemp_range`, `dynatemp_exponent`, `min_keep`, `adaptive_target`, `adaptive_decay`,
+`reasoning_budget_message` y `reasoning_control`. Para ajustar modelo a modelo, en vez de rol a rol,
+está `filters.setParams` de llama-swap.
+
+### Precedencia y fusión
+
+Para cada rol y cada clave, el valor efectivo sale de, en este orden:
+**`LOCAL_DELEGATE_BACKEND_PARAMS` > `backend-params.json` > valor propio de la tool**. La variable
+pisa clave a clave: una clave que solo está en el fichero se mantiene. Hoy la tool solo tiene valor
+propio para `temperature` (`local_classify` y `local_extract` 0, `local_boilerplate` 0,1 y las demás
+0,2): configurada en un rol, la temperatura pisa la de **todas** las tools que corren con ese rol.
+
+El cuerpo de cada llamada al backend se arma en tres capas, de abajo arriba:
+
+1. **Base de la tool**: su `temperature` y su `max_tokens`.
+2. **Parámetros del rol**: van encima y pueden pisar `temperature`. El presupuesto de razonamiento
+   **se suma** al `max_tokens` de la tool, nunca lo sustituye.
+3. **Claves de contrato** (`model`, `messages`, `stream`, `response_format` y las demás reservadas
+   que ponga el producto): van encima de todo y nunca se pisan.
+
+Los parámetros se resuelven **una vez por operación**, con el rol de origen, y viajan iguales a
+todas sus llamadas: cada trozo, cada paso de map/reduce, la reducción, los reintentos y el
+**respaldo**. Si la afinidad o el respaldo mandan la operación a otro modelo, sigue llevando los
+parámetros de su rol de origen, no los del rol de ese modelo.
+
+Dos casos aparte:
+
+- `local_delegate` con `model=…` explícito no lleva **ningún** parámetro de rol; sin modelo
+  explícito usa los de `mechanical`.
+- Si el backend rechaza una llamada con parámetros (HTTP 400), se reintenta **una vez** sin ellos
+  (con la `temperature` y el `max_tokens` de la tool, sin presupuesto, y con `response_format` si lo
+  había), antes del reintento sin schema de `LOCAL_DELEGATE_JSON_SCHEMA=auto`. Si así funciona, el
+  resto de la operación va sin parámetros y el log lo marca con `backend_params_rejected`. Si
+  también falla sin ellos, la culpa no era de los parámetros: no se marca nada y se sigue el flujo
+  de siempre, con los parámetros. Esa prueba se hace una sola vez por operación.
+
+### Qué rol usa cada tool
+
+| Tool | Rol |
+| --- | --- |
+| `local_classify` | `mechanical` |
+| `local_summarize`, `local_extract`, `local_lint_summary`, `local_translate` | `mechanical` o `long`, **según el tamaño de la entrada**: por encima de `LOCAL_DELEGATE_LONG_INPUT_CHARS` (6000), `long` |
+| `local_commit_msg`, `local_explain_code`, `local_boilerplate` | `code` |
+| `local_describe_image` | `vision` |
+| `local_delegate` | `mechanical` (sin modelo explícito; con él, ninguno) |
+
+Ojo con las cuatro que cambian de rol: un `local_summarize` corto usa los parámetros de
+`mechanical` y uno largo los de `long`. Si quieres el mismo ajuste en las dos, ponlo en los dos
+roles.
+
+### Razonamiento
+
+El razonamiento se enciende con `enable_thinking` **y** un `reasoning_budget_tokens` en el mismo
+rol. Primero el presupuesto, luego el interruptor:
+
+```bash
+local-delegate backend-params set code reasoning_budget_tokens 512
+local-delegate backend-params set code enable_thinking on
+```
+
+- `set <rol> enable_thinking on` sin presupuesto se rechaza (código 2). También se rechaza
+  `unset <rol> reasoning_budget_tokens` mientras `enable_thinking` siga encendido en el fichero
+  (antes, `unset <rol> enable_thinking`). `reset` sí vacía el rol entero sin exigir nada.
+- Si la combinación sin presupuesto llega por un fichero editado a mano o por la variable,
+  `enable_thinking` se ignora en ese rol, con aviso.
+- Con el razonamiento encendido, cada llamada lleva `chat_template_kwargs: {"enable_thinking": true}`,
+  `reasoning_budget_tokens` y `max_tokens = tope de la tool + presupuesto`. Así el razonamiento no
+  se come la respuesta: el presupuesto **se suma** al tope.
+- `enable_thinking off` manda `chat_template_kwargs: {"enable_thinking": false}` y no toca
+  `max_tokens`.
+
+**`reasoning_effort` solo no enciende el razonamiento.** Va en la raíz del cuerpo y llama.cpp lo
+pasa a la plantilla como variable, pero con los modelos de referencia, servidos con
+`--reasoning off`, no vence a ese flag: lo que lo vence es `enable_thinking: true`. Úsalo solo
+junto con `enable_thinking` y presupuesto.
+
+<!-- T19: completar con el resultado en vivo de la comparación low/high (REQ-020) -->
+*Pendiente de la prueba en vivo:* con el razonamiento encendido, las plantillas de Qwen3.6 y
+Gemma 4 podrían no leer la variable de `reasoning_effort`; hasta medirlo, no cuentes con que `low` y
+`high` den resultados distintos.
+
+**El razonamiento tiene que caber en el contexto del modelo.** Antes de cada llamada con el
+razonamiento encendido se estima si cabe:
+
+```text
+ceil((caracteres del sistema + caracteres de la entrada) × 2 / 4) + max_tokens de la tool + presupuesto ≤ n_ctx
+```
+
+Se cuenta a 2 caracteres por token, no a 4, porque en código y en español la densidad llega al
+doble. Si no cabe, **esa llamada** va sin razonamiento (`enable_thinking: false` y el `max_tokens`
+de la tool, sin presupuesto), con el resto de parámetros del rol, y el log marca
+`reasoning_skipped: "context"`. La entrada no se recorta. El `n_ctx` de cada modelo se lee de
+`--ctx-size`/`-c` en la config de llama-swap; si no se puede (sin el extra `[llamaswap]`, sin config
+o sin el modelo en ella), se usa un estimado de **8192** y `doctor` y `local_status` lo avisan. El rol
+`vision` queda fuera de la comprobación: su entrada es una imagen. `set` avisa, sin rechazar, si el
+tope de entrada del rol (`LOCAL_DELEGATE_MAX_CHARS_<ROL>`) en tokens más
+`LOCAL_DELEGATE_CHUNK_MAX_TOKENS` más el presupuesto pasa del contexto del modelo del rol; `show`,
+`doctor` y `local_status` repiten el aviso.
+
+**Qwen y el razonamiento sin etiquetas.** Con Qwen, el razonamiento que pasa del presupuesto puede
+colarse en la respuesta sin etiquetas `<think>`: el producto no lo puede quitar ni contar, así que
+`reasoning_chars` del log no lo incluye. Solo cuenta lo que llega en `reasoning_content` o entre
+etiquetas `<think>`.
+
+### Dónde se aplica y cuándo cambia
+
+- **El fichero no exige reiniciar nada**: se relee al empezar cada operación (con una caché que se
+  invalida cuando el fichero cambia), así que un `set` vale desde la llamada siguiente del daemon.
+- **La variable sí exige reiniciar el daemon**: el daemon ve el entorno con el que arrancó.
+  `backend-params show` y `doctor` leen la variable de **tu** shell, que puede no ser la del daemon;
+  `doctor` lo avisa cuando la encuentra definida.
+- **La configuración es de cada máquina que delega**, no del backend: una Mac que delega en la GPU
+  de la PC usa su propio `backend-params.json`. En una máquina sin la config de llama-swap, como la
+  Mac, el contexto de cada modelo es el estimado de 8192, así que los roles cuyo modelo tiene más
+  contexto se saltarán el razonamiento antes de lo necesario.
+
+### Antes de dar por bueno un cambio
+
+Un cambio de temperatura (o de cualquier parámetro de muestreo o de razonamiento) se mide con el
+benchmark de afinidad (`local-delegate benchmark` sobre el corpus
+`benchmarks/afinidad-2026-10/cases.json`, ver [Backend versions](Backend-versions.md)) **antes** de darlo por bueno: a ojo no se ve si un
+resumen mejoró o empeoró. El benchmark no aplica `backend-params.json` ni la variable, pero apunta en
+los metadatos de la corrida qué claves había activas en cada rol; para medir razonamiento usa sus
+opciones `--reasoning-effort` y `--reasoning-budget`.
+
 ## `local_extract` — JSON con schema
 
 | Variable | Default | Descripción |

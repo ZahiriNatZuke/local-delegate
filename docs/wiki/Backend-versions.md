@@ -114,8 +114,14 @@ El corpus (`schema_version: 2`) sale de delegaciones reales del log de uso: cada
 prompt de producción de su tool** sobre una fuente congelada, y el runner **falla** si el hash de la
 fuente no cuadra. El corpus sintético de julio (`benchmarks/moe/`) ya no se carga. `--role` y
 `--case` eligen qué corre; `--input-control` sustituye la imagen de los casos de visión por la de
-control. `--reasoning-effort off` apaga el razonamiento (`enable_thinking: false`), y un valor
-propio del caso manda sobre el del modelo. `--context-size` y `--load-mode` quedan en el registro
+control. `--reasoning-effort off` apaga el razonamiento (`enable_thinking: false`); otro nivel
+(`minimal`, `low`, `medium`, `high`, `xhigh`, `max`) lo enciende como producción
+(`enable_thinking: true`, `reasoning_effort` en la raíz) y exige `--reasoning-budget N` (1–8192),
+que se suma al `max_tokens` del caso: sin él, la corrida sale con error antes de llamar al backend.
+Un valor propio del caso manda sobre el de la opción. El benchmark no aplica
+`backend-params.json` ni `LOCAL_DELEGATE_BACKEND_PARAMS` (ver
+[Configuration](Configuration.md#parámetros-del-backend-por-rol)), pero apunta en los metadatos
+qué claves había activas en cada rol. `--context-size` y `--load-mode` quedan en el registro
 y hay que pasarlos siempre: el análisis solo compara dos modelos medidos con los mismos.
 
 Cada registro trae un `outcome`, y no todo lo que no es `ok` es mala calidad:

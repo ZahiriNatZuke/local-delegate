@@ -369,6 +369,36 @@
     el conocido por tiempo con carga; solo pasa (13/13 del fichero). `ruff check .` y
     `ruff format --check .` en verde.
 
+### Decisiones de la documentación (T18)
+
+1. **Sitio de la sección**: `## Parámetros del backend por rol` va en `Configuration.md` justo antes
+   de `## local_extract — JSON con schema` (la l. 221 del plan), con subsecciones por cada punto de
+   REQ-021. Las tablas de las 21 claves y de las reservadas se copiaron literal de la spec; la de
+   reservadas va agrupada (contrato, servidor, razonamiento en crudo), y se nombran también las
+   claves aplazadas de «Fuera de alcance».
+2. **Punto 5 (`low`/`high`) pendiente de T19**: queda escrito con el marcador
+   `<!-- T19: completar con el resultado en vivo de la comparación low/high (REQ-020) -->` y una
+   frase provisional prudente («no cuentes con que `low` y `high` den resultados distintos»). T19
+   la sustituye por el resultado medido.
+3. **Campos del log (REQ-018) y `local_status` (REQ-016) según la PR del lote D (#355)**, con la
+   forma exacta que pasó el orquestador: `source` solo aparece si alguna clave viene de la
+   variable; `values` en orden del catálogo y con los valores intentados aunque haya rechazo;
+   `reasoning_chars` sale también sin parámetros de rol; `local_status` pone «Parámetros por rol:
+   <ruta>» debajo de `vision` y una línea por rol con `clave=valor (fichero|variable)`.
+4. **Desviación: `docs/wiki/Backend-versions.md`** (fuera de la lista de T18, señalado por el lote
+   F): decía solo que `--reasoning-effort off` apaga el razonamiento, sin decir que los demás
+   niveles no hacían nada antes ni que ahora exigen `--reasoning-budget`. Se reescribió ese párrafo.
+5. **Test de más**: además de `test_configuration_documents_backend_params` (pedido por el plan, que
+   busca el subcomando y la variable **dentro** de la sección), `test_configuration_lists_every_backend_param_key`
+   compara la tabla con `backend_params.ALLOWED_KEYS` y exige cada clave de `RESERVED_KEYS`: las
+   tablas son copias a mano y se desincronizan solas. Controles positivos (mutante en
+   `Configuration.md` → assert que dispara): variable renombrada → «falta
+   `LOCAL_DELEGATE_BACKEND_PARAMS`»; subcomando renombrado → «falta el subcomando
+   `backend-params`»; fila `top_k` quitada → «la tabla de claves no cuadra… faltan ['top_k']»;
+   `seed` quitada → «claves reservadas sin documentar: ['seed']».
+6. **CHANGELOG** en `[Unreleased]` con las secciones en español que usa el fichero (`### Añade`
+   y `### Corrige`, el equivalente de `Added`/`Fixed`).
+
 ### Léxico del detector de nombres tocado fuera de lo que cada lote poseía
 
 - `scripts/data/spanish_lexicon.json` y su README no estaban en la lista de ficheros de ningún
