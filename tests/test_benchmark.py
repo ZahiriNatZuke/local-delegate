@@ -333,17 +333,70 @@ def test_the_control_image_replaces_the_case_image():
 
 def test_off_reaches_the_payload_and_the_case_wins_over_the_model():
     case = _case("clasificar-53")
-    assert benchmark.build_payload(case, "m", 1, "off")["chat_template_kwargs"] == {
-        "enable_thinking": False
+    assert benchmark.reasoning_kwargs("off") == {"chat_template_kwargs": {"enable_thinking": False}}
+    assert benchmark.reasoning_kwargs("high", 256) == {
+        "chat_template_kwargs": {"enable_thinking": True},
+        "reasoning_effort": "high",
+        "reasoning_budget_tokens": 256,
     }
-    assert benchmark.build_payload(case, "m", 1, "low")["chat_template_kwargs"] == {
-        "reasoning_effort": "low"
-    }
-    assert "chat_template_kwargs" not in benchmark.build_payload(case, "m", 1, None)
+    assert benchmark.reasoning_kwargs(None) == {}
+    off = benchmark.build_payload(case, "m", 1, "off")
+    assert off["chat_template_kwargs"] == {"enable_thinking": False}
+    assert "reasoning_effort" not in off and "reasoning_budget_tokens" not in off
+    high = benchmark.build_payload(case, "m", 1, "high", reasoning_budget=256)
+    assert high["chat_template_kwargs"] == {"enable_thinking": True}
+    assert (high["reasoning_effort"], high["reasoning_budget_tokens"]) == ("high", 256)
+    plain = benchmark.build_payload(case, "m", 1, None)
+    assert not {"chat_template_kwargs", "reasoning_effort", "reasoning_budget_tokens"} & set(plain)
     with_own_value = dataclasses.replace(case, raw={**case.raw, "reasoning_effort": "off"})
     assert benchmark.effective_reasoning(with_own_value, "high") == ("off", "case")
     assert benchmark.effective_reasoning(case, "high") == ("high", "model")
     assert benchmark.effective_reasoning(case, None) == (None, None)
+
+
+def test_benchmark_body_matches_production_to_body():
+    # The same rule as production: what `to_body` builds for a role with thinking on.
+    case = _case("clasificar-53")
+    payload = benchmark.build_payload(case, "m", 1, "medium", reasoning_budget=300)
+    overrides, extra = benchmark.backend_params.to_body(
+        {"enable_thinking": True, "reasoning_budget_tokens": 300, "reasoning_effort": "medium"},
+        tool_temperature=float(case.raw["temperature"]),
+        tool_max_tokens=int(case.raw["max_tokens"]),
+    )
+    assert {key: payload[key] for key in [*overrides, *extra]} == {**overrides, **extra}
+
+
+def _benchmark_parser():
+    parser = argparse.ArgumentParser()
+    benchmark.add_parser(parser.add_subparsers())
+    base = ["benchmark", "--model", "m", "--label", "l", "--cases", "c", "--output", "o"]
+    return parser, base
+
+
+def test_effort_enum_matches_product():
+    assert benchmark.REASONING_EFFORTS == ("off", *benchmark.backend_params.REASONING_EFFORTS)
+    assert benchmark.REASONING_EFFORTS == (
+        "off",
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+    )
+    parser, base = _benchmark_parser()
+    assert parser.parse_args([*base, "--reasoning-effort", "xhigh"]).reasoning_effort == "xhigh"
+    with pytest.raises(SystemExit):
+        parser.parse_args([*base, "--reasoning-effort", "none"])
+
+
+@pytest.mark.parametrize("text", ["0", "8193", "-1", "abc", "1.5"])
+def test_reasoning_budget_out_of_range_is_refused(text):
+    parser, base = _benchmark_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args([*base, "--reasoning-budget", text])
+    assert parser.parse_args([*base, "--reasoning-budget", "8192"]).reasoning_budget == 8192
+    assert parser.parse_args([*base, "--reasoning-budget", "1"]).reasoning_budget == 1
 
 
 # --- El runner de punta a punta, con backend falso ------------------------------------------------
@@ -660,3 +713,157 @@ def test_frozen_corpus_old_provenance_key_is_read_as_the_new_one():
         "inventado": "made_up",
     }
     assert [c.provenance for c in cases] == [old_values[c["procedencia"]] for c in frozen]
+
+
+# --- Razonamiento como produccion (REQ-020, SDD backend-extra-params, T17) ------------------------
+
+
+def _never_called(request):
+    raise AssertionError(f"the backend must not be called: {request.url}")
+
+
+def test_effort_without_budget_from_option_fails(tmp_path, monkeypatch, capsys):
+    rc, records = _run(
+        tmp_path,
+        monkeypatch,
+        _never_called,
+        "--case",
+        "clasificar-53",
+        "--reasoning-effort",
+        "high",
+    )
+    assert (rc, records) == (2, [])
+    assert "clasificar-53" in capsys.readouterr().out
+
+
+def test_off_needs_no_budget(tmp_path, monkeypatch):
+    sent = []
+
+    def handler(request):
+        sent.append(json.loads(request.content))
+        return _response("bug")
+
+    rc, _ = _run(
+        tmp_path, monkeypatch, handler, "--case", "clasificar-53", "--reasoning-effort", "off"
+    )
+    assert rc == 0
+    assert sent[0]["chat_template_kwargs"] == {"enable_thinking": False}
+    assert sent[0]["max_tokens"] == 16
+
+
+def _with_case_effort(monkeypatch, effort):
+    real = benchmark.load_corpus
+
+    def load(path):
+        corpus = real(path)
+        cases = [
+            dataclasses.replace(c, raw={**c.raw, "reasoning_effort": effort})
+            if c.id == "clasificar-53"
+            else c
+            for c in corpus.cases
+        ]
+        return dataclasses.replace(corpus, cases=cases)
+
+    monkeypatch.setattr(benchmark, "load_corpus", load)
+
+
+def test_case_effort_without_budget_fails(tmp_path, monkeypatch, capsys):
+    _with_case_effort(monkeypatch, "high")
+    # The option says off, but the case wins: its `high` still needs a budget.
+    rc, records = _run(
+        tmp_path, monkeypatch, _never_called, "--case", "clasificar-53", "--reasoning-effort", "off"
+    )
+    assert (rc, records) == (2, [])
+    assert "clasificar-53" in capsys.readouterr().out
+
+
+def test_unknown_effort_in_case_fails(tmp_path, monkeypatch, capsys):
+    _with_case_effort(monkeypatch, "none")
+    rc, records = _run(
+        tmp_path,
+        monkeypatch,
+        _never_called,
+        "--case",
+        "clasificar-53",
+        "--reasoning-budget",
+        "64",
+    )
+    assert (rc, records) == (2, [])
+    out = capsys.readouterr().out
+    assert "clasificar-53" in out and "xhigh" in out
+
+
+def test_budget_is_added_to_max_tokens(tmp_path, monkeypatch):
+    sent = []
+
+    def handler(request):
+        sent.append(json.loads(request.content))
+        return _response("bug", "length" if len(sent) == 1 else "stop")
+
+    rc, records = _run(
+        tmp_path,
+        monkeypatch,
+        handler,
+        "--case",
+        "clasificar-53",
+        "--reasoning-effort",
+        "high",
+        "--reasoning-budget",
+        "256",
+    )
+    assert rc == 0
+    # Case cap 16 (doubled to 32 on truncation) plus the budget, never in its place.
+    assert [p["max_tokens"] for p in sent] == [16 + 256, 32 + 256]
+    assert all(p["reasoning_budget_tokens"] == 256 for p in sent)
+    assert all(p["reasoning_effort"] == "high" for p in sent)
+    assert all(p["chat_template_kwargs"] == {"enable_thinking": True} for p in sent)
+    assert [r["max_tokens"] for r in records] == [16, 32]
+    assert {r["variant"]["reasoning_budget_tokens"] for r in records} == {256}
+
+
+def _params_file(tmp_path, monkeypatch, roles):
+    from local_delegate import backend_params
+
+    monkeypatch.delenv("LOCAL_DELEGATE_BACKEND_PARAMS", raising=False)
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+    monkeypatch.setattr(benchmark.config, "LOG_DIR", log_dir)
+    if roles is not None:
+        backend_params.path().write_text(
+            json.dumps({"version": 1, "roles": roles}), encoding="utf-8"
+        )
+
+
+def test_run_metadata_lists_active_param_names(tmp_path, monkeypatch):
+    _params_file(
+        tmp_path,
+        monkeypatch,
+        {"code": {"top_k": 37, "reasoning_effort": "high"}, "long": {"temperature": 0.43}},
+    )
+    sent = []
+
+    def handler(request):
+        sent.append(json.loads(request.content))
+        return _response("bug")
+
+    rc, (record,) = _run(tmp_path, monkeypatch, handler, "--case", "clasificar-53")
+    assert rc == 0
+    active = record["variant"]["role_params_active"]
+    assert {role: sorted(keys) for role, keys in active.items()} == {
+        "long": ["temperature"],
+        "code": ["reasoning_effort", "top_k"],
+    }
+    # Names only, never the values; and the benchmark does not apply them.
+    dumped = json.dumps(record["variant"])
+    assert "37" not in dumped and "0.43" not in dumped
+    assert "top_k" not in sent[0] and sent[0]["temperature"] != 0.43
+
+
+def test_run_metadata_without_params_is_empty(tmp_path, monkeypatch):
+    _params_file(tmp_path, monkeypatch, None)
+    rc, (record,) = _run(
+        tmp_path, monkeypatch, lambda _r: _response("bug"), "--case", "clasificar-53"
+    )
+    assert rc == 0
+    assert record["variant"]["role_params_active"] == {}
+    assert record["variant"]["reasoning_budget_tokens"] is None
