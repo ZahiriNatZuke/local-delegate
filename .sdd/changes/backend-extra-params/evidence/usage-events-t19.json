@@ -1,0 +1,29 @@
+[
+  {
+    "ts": "2026-10-20T18:38:42+00:00",
+    "tool": "local_explain_code",
+    "model": "qwen36-35b-a3b",
+    "ok": true,
+    "finish_reason": "length",
+    "truncated_out": true,
+    "tokens_in": 575,
+    "tokens_out": 956,
+    "backend_params": {
+      "role": "code",
+      "values": {
+        "enable_thinking": true,
+        "reasoning_budget_tokens": 256
+      }
+    },
+    "reasoning_chars": 1067
+  },
+  {
+    "ts": "2026-10-20T18:39:06+00:00",
+    "tool": "local_explain_code",
+    "model": "qwen36-35b-a3b",
+    "ok": true,
+    "finish_reason": "stop",
+    "tokens_in": 577,
+    "tokens_out": 262
+  }
+]
