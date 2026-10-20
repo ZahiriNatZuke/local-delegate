@@ -6,6 +6,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-10-20
+
+Parámetros de muestreo y de razonamiento por rol en las peticiones al backend (SDD
+`backend-extra-params`), configurables desde un fichero, una variable de entorno y un subcomando
+nuevo, y un arreglo del razonamiento en el benchmark. Aditivo: las tools MCP no cambian de
+contrato. Nada rompe.
+
 ### Añade
 
 - **Parámetros por rol en las peticiones al backend** (SDD `backend-extra-params`). Cada rol
@@ -18,19 +25,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `LOCAL_DELEGATE_BACKEND_PARAMS` (`rol.clave=valor;…`) los pisa clave a clave. Una clave no
   permitida, reservada o fuera de rango se quita sola, con un aviso que nunca repite el valor. El
   fichero se relee en cada operación (sin reiniciar el daemon); la variable exige reiniciarlo.
-  Las tools MCP no ganan argumentos: el modelo que delega no puede fijar nada.
+  Las tools MCP no ganan argumentos: el modelo que delega no puede fijar nada (#347, #348, #350,
+  #351).
 - **Razonamiento con presupuesto obligatorio.** Se enciende con `enable_thinking` **y**
   `reasoning_budget_tokens` (1–8192), que se suma al `max_tokens` de cada llamada;
   `reasoning_effort` solo no lo enciende. Una llamada cuyo razonamiento no cabe en el contexto del
   modelo (leído de `--ctx-size` en la config de llama-swap, o un estimado de 8192) va sin
   razonamiento. Si el backend rechaza los parámetros con un 400, la operación se reintenta una vez
-  sin ellos.
+  sin ellos (#350, #353).
 - `doctor` y `local_status` muestran los parámetros de cada rol y sus avisos, y el
   panel marca las delegaciones que razonaron o llevaron parámetros, con el detalle en un diálogo.
   Campos nuevos del log de uso, que se omiten si no aplican: `backend_params`, `reasoning_chars`,
   `backend_params_rejected` y `reasoning_skipped`. Detalle en la wiki
   ([Configuration](docs/wiki/Configuration.md#parámetros-del-backend-por-rol) y
-  [Savings & metrics](docs/wiki/Savings-and-metrics.md)).
+  [Savings & metrics](docs/wiki/Savings-and-metrics.md)) (#346, #351, #354, #355).
 
 ### Corrige
 
@@ -39,7 +47,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `reasoning_effort` en la raíz y el presupuesto de `--reasoning-budget N` (1–8192, obligatorio;
   sin él la corrida sale con error antes de llamar al backend) sumado al `max_tokens` del caso, con
   la misma regla que producción. Los metadatos de la corrida apuntan el presupuesto y qué claves de
-  rol había activas; el benchmark no las aplica.
+  rol había activas; el benchmark no las aplica (#352).
+
+### Interno
+
+- **Red de compatibilidad de las tools:** tests que fijan los cuerpos de las peticiones y los
+  argumentos de cada tool MCP, para que un cambio de firma o de cuerpo no pase sin que falle
+  ninguno (#345).
+- **Corpus de pruebas:** los hashes de la línea `index` de los diffs del corpus ya no dependen del
+  repo local, y `test_corpus` pasa igual en local que en el CI (#349).
+- **Prueba en vivo, benchmark y capturas** del cambio contra el backend real, y cierre del SDD
+  `backend-extra-params` (gates `quality`, `conformance` y `memory`) (#356, #357).
 
 ## [0.36.1] - 2026-10-19
 
@@ -3064,7 +3082,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.36.1...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.37.0...HEAD
+[0.37.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.36.1...v0.37.0
 [0.36.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.36.0...v0.36.1
 [0.36.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.35.0...v0.36.0
 [0.35.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.34.0...v0.35.0
