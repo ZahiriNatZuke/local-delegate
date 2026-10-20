@@ -8,5 +8,20 @@
   "common.language.warning.unreadable_preference": "No se pudo leer el fichero de preferencia {path} y se ignora.",
   "common.output_language.source.output_variable": "variable de salida",
   "common.output_language.warning.control_chars": "`LOCAL_DELEGATE_OUTPUT_LANGUAGE` tiene saltos de línea o caracteres de control y se ignora.",
-  "common.output_language.warning.too_long": "`LOCAL_DELEGATE_OUTPUT_LANGUAGE` pasa de {max} caracteres y se ignora."
+  "common.output_language.warning.too_long": "`LOCAL_DELEGATE_OUTPUT_LANGUAGE` pasa de {max} caracteres y se ignora.",
+  "common.backend_params.warning.unknown_role": "El rol «{role}» no existe y su clave «{key}» se ignora.",
+  "common.backend_params.warning.unknown_key": "La clave «{key}» del rol {role} no es un parámetro admitido y se quita.",
+  "common.backend_params.warning.reserved_key": "La clave «{key}» del rol {role} la controla el producto y no se puede configurar: se quita.",
+  "common.backend_params.warning.deferred_key": "La clave «{key}» del rol {role} todavía no se admite y se quita.",
+  "common.backend_params.warning.bad_type": "La clave «{key}» del rol {role} tiene un valor de tipo equivocado y se quita.",
+  "common.backend_params.warning.out_of_range": "La clave «{key}» del rol {role} tiene un valor fuera de rango y se quita.",
+  "common.backend_params.warning.malformed_entry": "Un trozo de `LOCAL_DELEGATE_BACKEND_PARAMS` está mal formado (rol «{role}», clave «{key}») y se ignora: el formato es `role.key=value`.",
+  "common.backend_params.warning.duplicate_key": "La clave «{key}» del rol {role} se repite en `LOCAL_DELEGATE_BACKEND_PARAMS`: vale la última.",
+  "common.backend_params.warning.override_too_long": "`LOCAL_DELEGATE_BACKEND_PARAMS` pasa de 2048 caracteres y se ignora entera.",
+  "common.backend_params.warning.thinking_without_budget": "El rol {role} enciende el razonamiento sin `reasoning_budget_tokens`: se ignora `enable_thinking`.",
+  "common.backend_params.warning.file_unreadable": "No se pudo leer `backend-params.json` o no es JSON válido: se ignora entero.",
+  "common.backend_params.warning.file_bad_version": "`backend-params.json` no tiene `version: 1` y se ignora entero.",
+  "common.backend_params.warning.file_too_large": "`backend-params.json` pasa de 64 KB y se ignora entero.",
+  "common.backend_params.warning.context_estimated": "No se pudo leer de la config de llama-swap el contexto del modelo del rol {role}: se usa un estimado de 8192 tokens.",
+  "common.backend_params.warning.context_overflow": "En el rol {role}, el razonamiento no cabe en el contexto del modelo: la llamada va sin razonamiento."
 }

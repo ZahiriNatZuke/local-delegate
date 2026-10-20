@@ -463,6 +463,30 @@ def output_language() -> OutputLanguage:
     return OutputLanguage(value, None, raw)
 
 
+# --- Parámetros por rol al backend (SDD backend-extra-params, REQ-008) ----------------------------
+# Override puntual del fichero `LOG_DIR/backend-params.json`, con el formato `role.key=value;…`. Se
+# lee al LLAMAR, como `output_language`. Aquí solo se lee y se acota: la gramática y la validación
+# son de `backend_params.parse_override`. Si pasa del tope se ignora entera (`value=None`) y el
+# aviso es un código (`problem`), cuyo texto está en el catálogo
+# (`common.backend_params.warning.override_too_long`).
+BACKEND_PARAMS_OVERRIDE_MAX_CHARS = 2048
+
+
+class BackendParamsOverride(NamedTuple):
+    value: str | None  # None = sin poner, vacía o ignorada por larga
+    problem: str | None  # None | "override_too_long"
+    raw: str | None  # el valor tal cual; el aviso solo usa rol y clave, nunca lo que va tras `=`
+
+
+def backend_params_override() -> BackendParamsOverride:
+    raw = _env("LOCAL_DELEGATE_BACKEND_PARAMS", "")
+    if not raw.strip():
+        return BackendParamsOverride(None, None, raw or None)
+    if len(raw) > BACKEND_PARAMS_OVERRIDE_MAX_CHARS:
+        return BackendParamsOverride(None, "override_too_long", raw)
+    return BackendParamsOverride(raw, None, raw)
+
+
 # Una lectura al importar, solo para que estos nombres entren en `ENVIRONMENT_VARIABLES`.
 for _reader in (
     llamaswap_config_path,
@@ -472,6 +496,7 @@ for _reader in (
     commit_language,
     language_variable,
     output_language,
+    backend_params_override,
 ):
     _reader()
 
