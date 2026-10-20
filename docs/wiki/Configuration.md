@@ -439,7 +439,10 @@ tope de entrada del rol (`LOCAL_DELEGATE_MAX_CHARS_<ROL>`) en tokens más
 **Qwen y el razonamiento sin etiquetas.** Con Qwen, el razonamiento que pasa del presupuesto puede
 colarse en la respuesta sin etiquetas `<think>`: el producto no lo puede quitar ni contar, así que
 `reasoning_chars` del log no lo incluye. Solo cuenta lo que llega en `reasoning_content` o entre
-etiquetas `<think>`.
+etiquetas `<think>`. Con un presupuesto pequeño pasa además que la respuesta se corta: en la prueba
+en vivo, Qwen3.6 en el rol `code` con 256 tokens gastó el presupuesto, siguió razonando dentro de la
+respuesta y llegó a `max_tokens` (`finish_reason: length`). Si das al rol `code` un presupuesto
+bajo, comprueba en el log que sus eventos no salen con `truncated_out: true`; si salen, súbelo.
 
 ### Dónde se aplica y cuándo cambia
 
