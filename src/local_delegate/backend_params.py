@@ -639,16 +639,14 @@ def reset(
 ) -> tuple[bool, str | None, list[Warning]]:
     """`backend-params reset [<role>]`: empty one role, or every role. `(ok, code, warnings)`.
 
-    Like `unset` of the budget (REQ-011, plan T6 step 4): refused while a role it would empty has
-    `enable_thinking` on with its budget in the file; `unset <role> enable_thinking` goes first.
+    The role goes whole, `enable_thinking` included, so it never leaves reasoning without its
+    budget: no `unset <role> enable_thinking` is needed first (user decision 12).
     """
     if role is not None and role not in ROLES:
         return False, "unknown_role", [Warning(role, "", "unknown_role")]
 
     def mutate(doc: dict) -> None:
         targets = [role] if role is not None else list(doc["roles"])
-        for target in targets:
-            _refuse_budget_loss(target, doc["roles"].get(target))
         for target in targets:
             doc["roles"].pop(target, None)
 

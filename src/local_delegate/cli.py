@@ -476,6 +476,132 @@ def _add_test_window_parser(sub) -> None:
     tw_parser.set_defaults(func=cmd_test_window)
 
 
+#: Rejection codes of `set`/`unset`/`reset` with a CLI text of their own: the text of
+#: `common.json` describes what a tool does with a bad entry ("it is removed"), not a refused
+#: command. The `file_*` codes keep the common text, which already reads as a refusal.
+_BACKEND_PARAMS_REFUSALS = frozenset(
+    {"unknown_role", "unknown_key", "reserved_key", "deferred_key", "bad_type", "out_of_range"}
+)
+
+
+def _backend_params_refused(action: str, warnings) -> int:
+    """Print why `set`/`unset`/`reset` left the file untouched: role, key and code, never a value."""
+    from . import backend_params as bp
+
+    for warning in warnings:
+        if warning.code == "thinking_without_budget":
+            key = "cli.backend_params.refused.thinking_" + ("set" if action == "set" else "unset")
+            reason = t(key, role=warning.role)
+        elif warning.code in _BACKEND_PARAMS_REFUSALS:
+            reason = t(
+                "cli.backend_params.refused." + warning.code, role=warning.role, key=warning.key
+            )
+        else:
+            reason = bp.warning_text(warning)
+        print(t("cli.backend_params.refused", reason=reason), file=sys.stderr)
+    return 2
+
+
+def _backend_params_show(as_json: bool) -> int:
+    import json
+
+    from . import backend_params as bp
+
+    rows = bp.report()
+    file = bp.path()
+    if as_json:
+        data = {
+            "file": str(file),
+            "roles": [
+                {
+                    "role": row.role,
+                    "params": [
+                        {"key": key, "value": value, "source": row.source.get(key, bp.SOURCE_FILE)}
+                        for key, value in row.values.items()
+                    ],
+                    "warnings": [{"code": w.code, "key": w.key} for w in row.warnings],
+                }
+                for row in rows
+            ],
+        }
+        print(json.dumps(data, ensure_ascii=False, indent=2))
+        return 0
+    print(t("cli.backend_params.file", path=file))
+    shown = [row for row in rows if row.values or row.warnings]
+    if not shown:
+        print(t("cli.backend_params.none"))
+        return 0
+    for row in shown:
+        print(row.role or t("cli.backend_params.general"))
+        for key, value in row.values.items():
+            source = t("cli.backend_params.source." + row.source.get(key, bp.SOURCE_FILE))
+            print(
+                t(
+                    "cli.backend_params.row",
+                    key=key,
+                    value=doctor.format_param_value(value),
+                    source=source,
+                )
+            )
+        for warning in row.warnings:
+            print(t("cli.backend_params.warning", detail=bp.warning_text(warning)))
+    return 0
+
+
+def cmd_backend_params(args: argparse.Namespace) -> int:
+    """`backend-params` (SDD backend-extra-params, T8): per-role parameters sent to the backend.
+
+    `show` paints the file path and, per role, the effective values with their source and
+    warnings. `set`, `unset` and `reset` validate before writing: a rejection exits 2, names role,
+    key and reason (never the value) and leaves the file untouched. A context warning of `set`
+    (REQ-023) does not refuse: the file is written and the exit code is 0.
+    """
+    from . import backend_params as bp
+
+    action = args.backend_params_command
+    if action == "show":
+        return _backend_params_show(args.json)
+    if action == "set":
+        ok, _code, warnings = bp.set_value(args.role, args.key, args.value)
+    elif action == "unset":
+        ok, _code, warnings = bp.unset(args.role, args.key)
+    else:
+        ok, _code, warnings = bp.reset(args.role)
+    if not ok:
+        return _backend_params_refused(action, warnings)
+    file = bp.path()
+    if action == "set":
+        print(t("cli.backend_params.saved", role=args.role, key=args.key, path=file))
+    elif action == "unset":
+        print(t("cli.backend_params.removed", role=args.role, key=args.key, path=file))
+    elif args.role is not None:
+        print(t("cli.backend_params.reset_role", role=args.role, path=file))
+    else:
+        print(t("cli.backend_params.reset_all", path=file))
+    for warning in warnings:
+        print(t("cli.backend_params.warning", detail=bp.warning_text(warning)), file=sys.stderr)
+    return 0
+
+
+def _add_backend_params_parser(sub) -> None:
+    bp_parser = sub.add_parser("backend-params", help=t("cli.help.backend_params"))
+    commands = bp_parser.add_subparsers(dest="backend_params_command", required=True)
+    show = commands.add_parser("show", help=t("cli.help.backend_params.show"))
+    show.add_argument("--json", action="store_true", help=t("cli.help.json"))
+    set_ = commands.add_parser("set", help=t("cli.help.backend_params.set"))
+    set_.add_argument("role", help=t("cli.help.backend_params.role"))
+    set_.add_argument("key", help=t("cli.help.backend_params.key"))
+    set_.add_argument("value", help=t("cli.help.backend_params.value"))
+    unset = commands.add_parser("unset", help=t("cli.help.backend_params.unset"))
+    unset.add_argument("role", help=t("cli.help.backend_params.role"))
+    unset.add_argument("key", help=t("cli.help.backend_params.key"))
+    reset = commands.add_parser("reset", help=t("cli.help.backend_params.reset"))
+    reset.add_argument(
+        "role", nargs="?", default=None, help=t("cli.help.backend_params.reset.role")
+    )
+    bp_parser.set_defaults(func=cmd_backend_params)
+
+
 def cmd_uninstall(args: argparse.Namespace) -> int:
     return _run_install(args, uninstall=True)
 
@@ -1387,6 +1513,7 @@ def build_parser() -> argparse.ArgumentParser:
     legacy.set_defaults(func=cmd_recompute_cost_legacy)
 
     _add_test_window_parser(sub)
+    _add_backend_params_parser(sub)
 
     _add_install_parsers(sub)
     # Sin `metavar`, argparse pinta en el `usage` todos los subcomandos, ocultos incluidos.
