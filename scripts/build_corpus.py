@@ -103,8 +103,22 @@ def _git(root: Path, *args: str) -> bytes:
     return subprocess.run(["git", *args], cwd=root, capture_output=True, check=True).stdout
 
 
+# Hashes of the `index` line, asked in full and cut to 7: git lengthens an abbreviation that is
+# ambiguous in the local repo, so the same commit gave different bytes on different machines.
+_FULL_INDEX = re.compile(rb"^(index )([0-9a-f]{40,64})\.\.([0-9a-f]{40,64})", re.MULTILINE)
+_INDEX_ABBREV = 7
+
+
+def _short_index(diff: bytes) -> bytes:
+    return _FULL_INDEX.sub(
+        lambda m: m[1] + m[2][:_INDEX_ABBREV] + b".." + m[3][:_INDEX_ABBREV], diff
+    )
+
+
 def commit_diff(commit: str) -> Source:
-    return lambda root: _git(root, "show", "--format=", "--no-color", "--no-ext-diff", commit)
+    return lambda root: _short_index(
+        _git(root, "show", "--format=", "--no-color", "--no-ext-diff", "--full-index", commit)
+    )
 
 
 def blob(commit: str, rel: str) -> Source:
