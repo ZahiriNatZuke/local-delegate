@@ -39,7 +39,7 @@
 1. El test `test_every_warning_code_has_text_in_es_and_en` del plan se llama
    `test_every_warning_code_has_text_in_both_languages`: el detector de nombres en español
    marcaba el nombre del plan.
-2. Léxico del detector: 13 palabras más a inglés (entrada 14 del README del léxico); ver abajo.
+2. Léxico del detector: 13 palabras más a inglés (entrada 15 del README del léxico); ver abajo.
 3. El tope de 2048 tiene una sola copia: `backend_params.MAX_OVERRIDE_CHARS` toma
    `config.BACKEND_PARAMS_OVERRIDE_MAX_CHARS`.
 4. `to_body`: `overrides` lleva siempre `temperature` y `max_tokens` (los de la tool si el rol no
@@ -61,6 +61,6 @@
 
 - `scripts/data/spanish_lexicon.json` y su README no estaban en la lista de ficheros de ningún
   lote, pero `tests/test_detect_spanish_names.py::test_repo_has_no_spanish_name_outside_the_exception_list`
-  exige 0 palabras sin clasificar. L0 añadió 14 (entrada 13), A1 13 más (entrada 14) y E las suyas
-  en su propia entrada; todas a inglés, clasificadas a mano. Al rebasar se unieron las listas
-  (ordenadas y sin duplicados).
+  exige 0 palabras sin clasificar. L0 añadió 14 (entrada 13), E 6 (entrada 14: `rechazados` a
+  español y 5 a inglés) y A1 13 más (entrada 15, todas a inglés), clasificadas a mano. Al rebasar
+  se unieron las listas (ordenadas y sin duplicados).
