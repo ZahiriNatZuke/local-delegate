@@ -1,0 +1,155 @@
+{
+  "local_boilerplate": [
+    [
+      "spec",
+      "str"
+    ],
+    [
+      "language",
+      "str"
+    ],
+    [
+      "target",
+      "str"
+    ],
+    [
+      "overwrite",
+      "bool"
+    ]
+  ],
+  "local_classify": [
+    [
+      "text",
+      "str"
+    ],
+    [
+      "labels",
+      "list[str]"
+    ]
+  ],
+  "local_commit_msg": [
+    [
+      "diff",
+      "str | None"
+    ],
+    [
+      "path",
+      "str | None"
+    ],
+    [
+      "style",
+      "str"
+    ]
+  ],
+  "local_delegate": [
+    [
+      "task",
+      "str"
+    ],
+    [
+      "input",
+      "str"
+    ],
+    [
+      "output_format",
+      "str"
+    ],
+    [
+      "model",
+      "str | None"
+    ],
+    [
+      "chunk",
+      "str"
+    ]
+  ],
+  "local_describe_image": [
+    [
+      "path",
+      "str"
+    ],
+    [
+      "question",
+      "str | None"
+    ],
+    [
+      "max_words",
+      "int"
+    ]
+  ],
+  "local_explain_code": [
+    [
+      "code",
+      "str | None"
+    ],
+    [
+      "path",
+      "str | None"
+    ],
+    [
+      "question",
+      "str | None"
+    ]
+  ],
+  "local_extract": [
+    [
+      "fields",
+      "list[str]"
+    ],
+    [
+      "text",
+      "str | None"
+    ],
+    [
+      "path",
+      "str | None"
+    ]
+  ],
+  "local_lint_summary": [
+    [
+      "path",
+      "str | None"
+    ],
+    [
+      "text",
+      "str | None"
+    ],
+    [
+      "max_words",
+      "int"
+    ]
+  ],
+  "local_status": [],
+  "local_summarize": [
+    [
+      "text",
+      "str | None"
+    ],
+    [
+      "path",
+      "str | None"
+    ],
+    [
+      "max_words",
+      "int"
+    ],
+    [
+      "focus",
+      "str | None"
+    ]
+  ],
+  "local_translate": [
+    [
+      "target_lang",
+      "str"
+    ],
+    [
+      "text",
+      "str | None"
+    ],
+    [
+      "path",
+      "str | None"
+    ]
+  ]
+}
