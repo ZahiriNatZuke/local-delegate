@@ -2005,3 +2005,58 @@ def test_with_local_storage_blocked_the_selector_still_works(panel, new_page, mo
     assert blocked  # guarda: el almacenamiento estaba bloqueado de verdad
     assert first["lang"] == "es" and second["kpi"][0] == _t("en", "kpi.saved.label")
     assert errors == []
+
+
+# --- Detalle de una delegación (T16 de backend-extra-params, REQ-019) ----------------------------
+
+
+def test_event_row_opens_dialog_with_enter(tmp_path, monkeypatch, new_page):
+    """Una fila con marcas se enfoca con el teclado y Enter abre `eventDlg` con su tabla clave →
+    valor; Escape lo cierra. Es el cableado que node no ve: el `keydown` de la tabla y `showModal`."""
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    now = datetime.now(UTC)
+    event = {
+        "ts": now.isoformat(timespec="seconds"),
+        "tool": "local_explain_code",
+        "model": "qwen36-35b-a3b",
+        "source": "path",
+        "chars_in": 4000,
+        "chars_out": 300,
+        "latency_ms": 2100,
+        "ok": True,
+        "backend": "local",
+        "backend_params": {"role": "code", "values": {"reasoning_budget": 1024}, "source": {}},
+        "reasoning_chars": 812,
+    }
+    (tmp_path / f"usage-{now:%Y%m}.jsonl").write_text(json.dumps(event) + "\n", encoding="utf-8")
+    metrics._FILE_CACHE.clear()
+    with _Server(9486) as server, sync_playwright() as pw:
+        browser = _browser(pw)
+        page = new_page(browser)
+        page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+        page.goto(server.url)
+        page.wait_for_selector("#activity tbody tr[data-i] .reasonchip")
+        marks = page.eval_on_selector_all(
+            "#activity tbody tr[data-i] .chunkchip", "els => els.map(e => e.className)"
+        )
+        page.focus("#activity tbody tr[data-i]")
+        page.keyboard.press("Enter")
+        opened = page.evaluate("() => document.getElementById('eventDlg').open")
+        title = page.inner_text("#eventDlgTitle")
+        rows = page.eval_on_selector_all(
+            "#eventDlgBody tr",
+            "trs => trs.map(tr => [tr.querySelector('th').innerText.trim(),"
+            " tr.querySelector('td').innerText.trim()])",
+        )
+        page.keyboard.press("Escape")
+        closed = page.evaluate("() => !document.getElementById('eventDlg').open")
+        browser.close()
+    metrics._FILE_CACHE.clear()
+    assert "chunkchip reasonchip" in marks and "chunkchip paramschip" in marks
+    assert opened, "Enter sobre la fila enfocada abre el diálogo"
+    assert title == "local_explain_code"
+    labels = [k.lower() for k, _ in rows]
+    assert labels == ["modelo", "rol", "parámetros", "razonamiento (caracteres)"]
+    assert all(v for _, v in rows), "sin filas vacías"
+    assert closed

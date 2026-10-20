@@ -106,6 +106,12 @@ de diccionario.
     `penalty`, `predict`, `probability`, `probs`, `tau`, `typical`, `xtc`) y nombres de ese test y
     de `tests/test_request_body_compat.py` (`indirect`, `offenders`, `want`).
 
+14. En el lote E de backend-extra-params (2026-10-20, marcas y diálogo de detalle del panel) el
+    detector informó de 6 palabras sin clasificar, a mano: `rechazados` a español (texto del
+    catálogo `i18n/es/panel.json`) y 5 a inglés: `paramschip` (clase de la marca de parámetros),
+    `closest`, `prevent` y `stringify` (métodos del DOM y de `JSON` en el JS del panel) y
+    `reasoned` (variable de `tests/test_dashboard_states.py`).
+
 ## Heurísticas (no usan datos ajenos)
 
 En `detect_spanish_names.classify_word`, en este orden:

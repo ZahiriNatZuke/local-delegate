@@ -1428,6 +1428,14 @@ td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
   background:color-mix(in srgb,var(--violet) 14%,transparent);color:var(--violet)}
 .fbchip{background:color-mix(in srgb,var(--amber,#d97706) 16%,transparent);color:var(--amber,#d97706)}
 .slowchip{background:color-mix(in srgb,var(--red,#dc2626) 14%,transparent);color:var(--red,#dc2626)}
+/* Backend params (REQ-019): the call reasoned, carried per-role params, or the backend rejected
+   them. Short labels; the detail lives in `eventDlg`. */
+.reasonchip{background:color-mix(in srgb,var(--cyan) 15%,transparent);color:var(--cyan)}
+.paramschip{background:color-mix(in srgb,var(--blue) 14%,transparent);color:var(--blue)}
+.paramschip.rejected{background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger)}
+/* The row opens the detail dialog with the mouse and with the keyboard (Enter). */
+#activity tbody tr[data-i]{cursor:pointer}
+#activity tbody tr[data-i]:focus-visible{outline:2px solid color-mix(in srgb,var(--acc) 70%,transparent);outline-offset:-2px}
 .flow{color:var(--faint)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%}
 .dot.ok{background:var(--acc);box-shadow:0 0 8px color-mix(in srgb,var(--acc) 60%,transparent)}
@@ -1525,6 +1533,12 @@ dialog.help::backdrop{background:rgba(3,5,9,.6);backdrop-filter:blur(5px)}
 .help-in .frm b{color:var(--acc)}
 /* El diálogo de información de coste, cuota e imágenes: la prosa que no cabe en un dashboard. */
 dialog.help.wide{max-width:680px;max-height:calc(100vh - 48px);overflow:auto}
+/* Detail of one delegation (REQ-019): key → value, no prose. */
+.proc.kv{margin-top:14px}
+.proc.kv th{color:var(--faint);font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;text-align:left}
+.proc.kv td{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--tx);white-space:normal;overflow-wrap:anywhere}
+.proc.kv tbody tr:last-child th{border-bottom:0}
+.proc.kv .chunkchip{margin-left:0;margin-right:6px}
 .help-in section{scroll-margin-top:12px}
 .help-in h4{margin:22px 0 0;font-size:11px;font-weight:700;color:var(--tx);text-transform:uppercase;letter-spacing:.055em;
   display:flex;align-items:center;gap:8px}
@@ -1789,6 +1803,20 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
       <div data-i18n-html="dialog.hooks.body_html"></div></section>
     <section id="dlgSystem" data-group="system" style="--hc:var(--amber)"><h4 data-i18n="dialog.card.title"></h4>
       <div data-i18n-html="dialog.system.body_html"></div></section>
+  </div>
+</dialog>
+
+<!-- Detail of one delegation (REQ-019): same pattern and styles as `infoDlg`. A row of the
+     activity table opens it (click or Enter); `eventRows` builds its key → value table. -->
+<dialog class="help" id="eventDlg" aria-labelledby="eventDlgTitle">
+  <div class="help-in">
+    <div class="help-h">
+      <span class="k-ico" id="eventDlgIco" style="--kc:var(--violet)"></span>
+      <h3 id="eventDlgTitle"></h3>
+      <button class="help-x" id="eventDlgClose" data-i18n-aria="dialog.close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <table class="proc kv" id="eventDlgBody"></table>
   </div>
 </dialog>
 
@@ -3092,6 +3120,76 @@ function waitInferenceText(e){
   return T('activity.split', {wait: fmtSec(e.wait_ms), inference: fmtSec(e.inference_ms)});
 }
 
+// Backend params and reasoning (REQ-018, REQ-019). Pure functions: node runs them. Every field is
+// optional: an event of the old format has none of them and gets no mark.
+function paramKeys(e){
+  const bp = e && e.backend_params;
+  return (bp && bp.values && typeof bp.values === 'object') ? Object.keys(bp.values) : [];
+}
+// The marks of one row: `reasonchip` when it reasoned, `paramschip` when it carried per-role params
+// (`rejected` when the backend refused them). Short labels; the detail goes to `eventDlg`.
+function activityMarks(e){
+  if(!e) return '';
+  let h = '';
+  if(Number(e.reasoning_chars) > 0){
+    const title = T('activity.reasoning_title', {n: F.format(Number(e.reasoning_chars))});
+    h += `<span class="chunkchip reasonchip" title="${escHooks(title)}">${escHooks(T('activity.reasoning'))}</span>`;
+  }
+  const rejected = e.backend_params_rejected === true;
+  if(e.backend_params || rejected){
+    const vars = {role: (e.backend_params && e.backend_params.role) || '–', keys: paramKeys(e).join(', ') || '–'};
+    const title = T(rejected ? 'activity.params_rejected_title' : 'activity.params_title', vars);
+    const label = T(rejected ? 'activity.params_rejected' : 'activity.params');
+    h += `<span class="chunkchip paramschip${rejected ? ' rejected' : ''}" title="${escHooks(title)}">${escHooks(label)}</span>`;
+  }
+  return h;
+}
+// The key → value rows of the detail dialog, as [label, value HTML]. A field that is missing gives
+// no row: no empty rows, and an old-format event shows only what it has.
+function eventRows(e){
+  if(!e) return [];
+  const rows = [];
+  const add = (key, html) => { if(html) rows.push([escHooks(T('event.key.' + key)), html]); };
+  const chip = (cls, text) => `<span class="chunkchip ${[].concat(cls).join(' ')}">${escHooks(text)}</span>`;
+  add('model', e.model ? `<span class="badge model">${escHooks(e.model)}</span>` : '');
+  const bp = (e.backend_params && typeof e.backend_params === 'object') ? e.backend_params : null;
+  add('role', bp && bp.role ? `<span class="mrole">${escHooks(bp.role)}</span>` : '');
+  if(bp){
+    const source = (bp.source && typeof bp.source === 'object') ? bp.source : {};
+    add('params', paramKeys(e).map(k => {
+      const v = bp.values[k];
+      const shown = (v !== null && typeof v === 'object') ? JSON.stringify(v) : String(v);
+      const origin = T(source[k] === 'env' ? 'event.source.env' : 'event.source.file');
+      return `<div>${chip('paramschip', origin)}${escHooks(k)} = ${escHooks(shown)}</div>`;
+    }).join(''));
+  }
+  const status = [];
+  if(e.backend_params_rejected === true) status.push(chip(['paramschip', 'rejected'], T('event.rejected')));
+  if(e.reasoning_skipped){
+    const known = e.reasoning_skipped === 'context';
+    status.push(chip('slowchip', known ? T('event.skipped.context') : String(e.reasoning_skipped)));
+  }
+  add('status', status.join(''));
+  add('reasoning_chars', Number(e.reasoning_chars) > 0 ? escHooks(F.format(Number(e.reasoning_chars))) : '');
+  if(Array.isArray(e.steps) && e.steps.length){
+    const counts = [];
+    e.steps.forEach(s => {
+      const kind = String((s && s.kind) || '?'), last = counts[counts.length - 1];
+      if(last && last[0] === kind) last[1]++; else counts.push([kind, 1]);
+    });
+    add('steps', escHooks(counts.map(([k, n]) => n > 1 ? `${k} ×${n}` : k).join(' → ')));
+  }
+  if(e.model_requested && e.routing !== 'affinity'){
+    const cause = e.fallback_reason || e.fallback_class;
+    add('fallback', `${escHooks(e.model_requested)} <span class="flow">↪</span> ${escHooks(e.model || '')}`
+      + (cause ? ` ${chip('fbchip', cause)}` : ''));
+  }
+  return rows;
+}
+function eventTable(rows){
+  return '<tbody>' + rows.map(([k, v]) => `<tr><th scope="row">${k}</th><td>${v}</td></tr>`).join('') + '</tbody>';
+}
+
 function drawActivity(ev){
   document.getElementById('actCount').textContent=plural(ev.length,'unit.call');
   const pager=document.getElementById('pager');
@@ -3104,7 +3202,8 @@ function drawActivity(ev){
   const rows=ev.slice(state.page*PAGE,state.page*PAGE+PAGE);
   const COLS=['time','tool','model','input','compute','chars','latency','ok'];
   let h='<thead><tr>'+COLS.map(c=>'<th>'+T('activity.col.'+c)+'</th>').join('')+'</tr></thead><tbody>';
-  rows.forEach(e=>{ const time=fmtLocalTs(e.ts);   // hora LOCAL, el log guarda UTC
+  state.pageRows=rows;   // the row's `data-i` points here: the click/Enter opens `eventDlg`
+  rows.forEach((e,i)=>{ const time=fmtLocalTs(e.ts);   // hora LOCAL, el log guarda UTC
     const org=e.backend||'unknown';
     const orgTxt=escHooks(labelFor('origin', org));
     // `chunks` del log son LLAMADAS al backend, no trozos: el título decía otra cosa que el dato
@@ -3116,8 +3215,10 @@ function drawActivity(ev){
     const split=waitInferenceText(e), slow=slowMark(e);
     const timings=split?`<div class="mut" style="font-size:10px">${escHooks(split)}</div>`:'';
     const slowChip=slow?`<span class="chunkchip slowchip" title="${escHooks(T('activity.slow_title', {speed: fmtNum(e.tok_s,1), model: e.model}))}">${escHooks(slow)}</span>`:'';
-    h+=`<tr><td class="mono" title="${e.ts||''}">${time}</td><td><span class="badge">${e.tool}</span>${chunks}</td>
-      <td><span class="badge model">${e.model}</span>${fb}</td>
+    const marks=activityMarks(e);
+    const aria=escHooks(T('activity.row_aria', {tool: e.tool, model: e.model}));
+    h+=`<tr data-i="${i}" tabindex="0" aria-label="${aria}"><td class="mono" title="${e.ts||''}">${time}</td><td><span class="badge">${e.tool}</span>${chunks}</td>
+      <td><span class="badge model">${e.model}</span>${fb}${marks}</td>
       <td><span class="src ${e.source}">${e.source}</span></td>
       <td><span class="org ${org}" title="${escHooks(e.backend_host||T('label.no_data'))}">${orgTxt}</span></td>
       <td class="mono">${F.format(e.chars_in||0)} <span class="flow">→</span> ${F.format(e.chars_out||0)}</td>
@@ -3189,6 +3290,7 @@ function repaint(){
   renderBackend(); renderTools(); renderInflight(); renderBackendStats(state.backendStats);
   renderSystem(state.system);
   if(infoDlg.open && infoDlg.dataset.group) openInfo(infoDlg.dataset.group);
+  if(eventDlg.open && eventDlg.ev) openEvent(eventDlg.ev);
 }
 function setLang(lang){
   if(!LANGS.includes(lang) || lang === LANG) return;
@@ -3231,6 +3333,28 @@ document.querySelectorAll('.ibtn[data-group]').forEach(b=>{
 });
 document.getElementById('infoDlgClose').onclick=()=>infoDlg.close();
 infoDlg.addEventListener('click',e=>{ if(e.target===infoDlg) infoDlg.close(); });
+// Detail of one delegation (REQ-019): a row of the activity table opens it with a click or Enter.
+// Esc closes it (modal <dialog>) and the focus goes back to the row.
+const eventDlg=document.getElementById('eventDlg');
+function openEvent(ev){
+  eventDlg.ev = ev;
+  document.getElementById('eventDlgTitle').textContent = ev.tool || '';
+  document.getElementById('eventDlgIco').innerHTML = ICON.calls;
+  document.getElementById('eventDlgBody').innerHTML = eventTable(eventRows(ev));
+  if(!eventDlg.open) eventDlg.showModal();
+}
+function rowEvent(target){
+  const tr = target && target.closest ? target.closest('#activity tr[data-i]') : null;
+  return tr ? (state.pageRows || [])[Number(tr.dataset.i)] : null;
+}
+const activityTable=document.getElementById('activity');
+activityTable.addEventListener('click',e=>{ const ev=rowEvent(e.target); if(ev) openEvent(ev); });
+activityTable.addEventListener('keydown',e=>{
+  if(String(e.key).toLowerCase()!=='enter') return;   // KeyboardEvent.key value
+  const ev=rowEvent(e.target); if(ev){ e.preventDefault(); openEvent(ev); }
+});
+document.getElementById('eventDlgClose').onclick=()=>eventDlg.close();
+eventDlg.addEventListener('click',e=>{ if(e.target===eventDlg) eventDlg.close(); });
 try{const th=localStorage.getItem('ld-theme'); if(th) document.documentElement.setAttribute('data-theme',th);}catch(e){}
 applyStatic();
 applyDefaults();

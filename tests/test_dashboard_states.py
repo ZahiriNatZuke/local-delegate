@@ -21,7 +21,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 from test_dashboard_js import _extract, _formatters, _run
 
-from local_delegate import config, server
+from local_delegate import config, i18n, server
 from local_delegate.web import metrics
 
 # --- piezas comunes ------------------------------------------------------------------------
@@ -783,7 +783,11 @@ def test_activity_row_shows_wait_inference_and_slow_mark(tmp_path):
     Control (a): hoy la fila solo enseña la latencia total.
     """
     # Las dos ayudantes solo si existen: así el control (a) cae en el assert y no al recortarlas.
-    helpers = [_f(n) for n in ("slowMark", "waitInferenceText") if f"function {n}(" in metrics.HTML]
+    helpers = [
+        _f(n)
+        for n in ("slowMark", "waitInferenceText", *_EVENT_FUNCTIONS)
+        if f"function {n}(" in metrics.HTML
+    ]
     functions = [_f("fmtLocalTs"), *helpers, _f("drawActivity")]
     r = _js(
         tmp_path,
@@ -810,7 +814,11 @@ def test_activity_row_shows_wait_inference_and_slow_mark(tmp_path):
 def test_activity_row_affinity_has_no_fallback_chip(tmp_path):
     """T15 (REQ-016): la afinidad lleva `model_requested`, pero la fila no la marca como salto; un
     salto de verdad sí."""
-    helpers = [_f(n) for n in ("slowMark", "waitInferenceText") if f"function {n}(" in metrics.HTML]
+    helpers = [
+        _f(n)
+        for n in ("slowMark", "waitInferenceText", *_EVENT_FUNCTIONS)
+        if f"function {n}(" in metrics.HTML
+    ]
     functions = [_f("fmtLocalTs"), *helpers, _f("drawActivity")]
     row = (
         "{ts: '2026-10-07T10:00:00+00:00', tool: 'local_translate', model: 'gemma4-26b-a4b',"
@@ -832,3 +840,133 @@ def test_activity_row_affinity_has_no_fallback_chip(tmp_path):
     )
     assert "fbchip" in r["fallback"], "guarda: el mismo guion con un salto sí lleva la marca"
     assert "fbchip" not in r["affinity"]
+
+
+# --- Parámetros por rol y razonamiento (T15 de backend-extra-params, REQ-019) -------------------
+
+_ACTIVITY_PRELUDE = (
+    _DOM
+    + "\nconst PAGE = 10;\nconst state = {page: 0};\n"
+    + "const FMT_TIME = new Intl.DateTimeFormat('es', {hour: '2-digit', minute: '2-digit'});\n"
+)
+_EVENT_FUNCTIONS = ("paramKeys", "activityMarks", "eventRows", "eventTable")
+
+
+def _activity_html(tmp_path, *events: str) -> list[str]:
+    """La fila que pinta `drawActivity` para cada evento (literal JS), una tabla por evento."""
+    helpers = [
+        _f(n)
+        for n in ("slowMark", "waitInferenceText", *_EVENT_FUNCTIONS)
+        if f"function {n}(" in metrics.HTML
+    ]
+    functions = [_f("fmtLocalTs"), *helpers, _f("drawActivity")]
+    body = "const out = [];\n"
+    for event in events:
+        body += f"drawActivity([{event}]);\nout.push(_els.activity.innerHTML);\n"
+    return _js(tmp_path, functions, body + "emit(out);", _ACTIVITY_PRELUDE)
+
+
+_BASE = (
+    "ts: '2026-10-20T10:00:00+00:00', tool: 'local_explain_code', model: 'qwen36-35b-a3b',"
+    " source: 'path', backend: 'local', chars_in: 1000, chars_out: 200, latency_ms: 900, ok: true"
+)
+
+
+def test_activity_reasoning_chip(tmp_path):
+    """`reasoning_chars > 0` → `reasonchip`, con su `title` del catálogo.
+
+    Control positivo: mutante «`reasonchip` siempre» → falla el control sin razonamiento.
+    """
+    reasoned, plain, zero = _activity_html(
+        tmp_path,
+        f"{{{_BASE}, reasoning_chars: 1834}}",
+        f"{{{_BASE}}}",
+        f"{{{_BASE}, reasoning_chars: 0}}",
+    )
+    assert 'class="chunkchip reasonchip" title="Razonamiento: 1.834 caracteres">razonó</span>' in (
+        reasoned
+    )
+    # Control: sin razonamiento (o con 0) no hay marca.
+    assert "reasonchip" not in plain
+    assert "reasonchip" not in zero
+
+
+def test_activity_params_chip(tmp_path):
+    """Con `backend_params`, `paramschip` sin el estado rechazado; su `title` nombra rol y claves,
+    nunca los valores."""
+    (row,) = _activity_html(
+        tmp_path,
+        f"{{{_BASE}, backend_params: {{role: 'code', values: {{reasoning_budget: 2048,"
+        " temperature: 0.2}, source: {temperature: 'env'}}}",
+    )
+    assert (
+        'class="chunkchip paramschip" title="Parámetros del rol code: reasoning_budget, '
+        'temperature">parám.</span>'
+    ) in row
+    assert "rejected" not in row
+    assert "2048" not in row and "0.2" not in row, "los valores van en el diálogo, no en la fila"
+
+
+def test_activity_params_rejected_chip(tmp_path):
+    """`backend_params_rejected: true` → la variante rechazada, con clase, etiqueta y `title`
+    propios."""
+    (row,) = _activity_html(
+        tmp_path,
+        f"{{{_BASE}, backend_params: {{role: 'code', values: {{reasoning_effort: 'high'}}}},"
+        " backend_params_rejected: true}",
+    )
+    assert (
+        'class="chunkchip paramschip rejected" title="El backend rechazó los parámetros del rol '
+        'code (reasoning_effort)">parám. ✕</span>'
+    ) in row
+    assert row.count("paramschip") == 1, "una sola marca de parámetros, no la normal y la rechazada"
+
+
+def test_activity_old_event_unchanged(tmp_path):
+    """Un evento del formato viejo se pinta como hoy: sin marcas nuevas; la fila sigue siendo
+    activable (`tabindex`, `aria-label` del catálogo)."""
+    (row,) = _activity_html(tmp_path, f"{{{_BASE}}}")
+    assert "reasonchip" not in row and "paramschip" not in row
+    assert '<td><span class="badge model">qwen36-35b-a3b</span></td>' in row
+    assert (
+        '<tr data-i="0" tabindex="0" aria-label="Ver el detalle de local_explain_code '
+        '(qwen36-35b-a3b)">'
+    ) in row
+
+
+def _event_rows(tmp_path, *events: str) -> list[list[list[str]]]:
+    functions = [_f(n) for n in _EVENT_FUNCTIONS]
+    body = "emit([" + ", ".join(f"eventRows({e})" for e in events) + "]);"
+    return _js(tmp_path, functions, body)
+
+
+def test_event_dialog_rows_without_empty(tmp_path):
+    """El diálogo: clave → valor de lo que hay, sin filas vacías. El formato viejo solo da el modelo.
+
+    Control positivo: mutante «`add` sin el `if(html)`» → falla el último assert (formato viejo).
+    """
+    full, old = _event_rows(
+        tmp_path,
+        "{tool: 'local_summarize', model: 'qwen36-35b-a3b',"
+        " backend_params: {role: 'long', values: {reasoning_budget: 1024, temperature: 0.2},"
+        " source: {temperature: 'env'}}, backend_params_rejected: true,"
+        " reasoning_skipped: 'context', reasoning_chars: 51234,"
+        " steps: [{kind: 'map'}, {kind: 'map'}, {kind: 'reduce'}],"
+        " model_requested: 'gemma4-26b-a4b', fallback_reason: 'http_500'}",
+        "{tool: 'local_summarize', model: 'gemma3-4b', chars_in: 10, ok: true}",
+    )
+
+    def label(key):
+        return i18n.t_lang("es", f"panel.event.key.{key}")
+
+    keys = ["model", "role", "params", "status", "reasoning_chars", "steps", "fallback"]
+    assert [k for k, _ in full] == [label(k) for k in keys]
+    assert all(v.strip() for _, v in full), "ninguna fila vacía"
+    by_key = dict(zip(keys, (v for _, v in full), strict=True))
+    assert "fichero</span>reasoning_budget = 1024" in by_key["params"]
+    assert "variable</span>temperature = 0.2" in by_key["params"]
+    assert "rechazados" in by_key["status"] and "sin razonamiento: contexto" in by_key["status"]
+    assert by_key["reasoning_chars"] == "51.234"
+    assert by_key["steps"] == "map ×2 → reduce"
+    assert "gemma4-26b-a4b" in by_key["fallback"] and "http_500" in by_key["fallback"]
+    assert [k for k, _ in old] == [label("model")]
