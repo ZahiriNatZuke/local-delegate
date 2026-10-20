@@ -380,11 +380,11 @@
    `<!-- T19: completar con el resultado en vivo de la comparación low/high (REQ-020) -->` y una
    frase provisional prudente («no cuentes con que `low` y `high` den resultados distintos»). T19
    la sustituye por el resultado medido.
-3. **Campos del log (REQ-018) escritos desde la spec**: el lote D aún no estaba mezclado, así que
-   `Savings-and-metrics.md` documenta `backend_params`, `reasoning_chars`,
-   `backend_params_rejected` y `reasoning_skipped` según REQ-018/015/023 (y el valor `"context"`
-   que ya pone C2 en `_RoleParams.reasoning_skipped`). Se revisa contra la PR del lote D antes de
-   mezclar. Igual para la línea de `local_status` (REQ-016), que también es del lote D.
+3. **Campos del log (REQ-018) y `local_status` (REQ-016) según la PR del lote D (#355)**, con la
+   forma exacta que pasó el orquestador: `source` solo aparece si alguna clave viene de la
+   variable; `values` en orden del catálogo y con los valores intentados aunque haya rechazo;
+   `reasoning_chars` sale también sin parámetros de rol; `local_status` pone «Parámetros por rol:
+   <ruta>» debajo de `vision` y una línea por rol con `clave=valor (fichero|variable)`.
 4. **Desviación: `docs/wiki/Backend-versions.md`** (fuera de la lista de T18, señalado por el lote
    F): decía solo que `--reasoning-effort off` apaga el razonamiento, sin decir que los demás
    niveles no hacían nada antes ni que ahora exigen `--reasoning-budget`. Se reescribió ese párrafo.

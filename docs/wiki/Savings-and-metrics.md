@@ -38,13 +38,15 @@ con saltos pudo contaminarla un swap.
   los cuatro campos se omiten cuando no aplican, así que un evento sin parámetros es idéntico a los
   de antes:
   - `backend_params`: `{"role": "<rol>", "values": {<clave>: <valor>}, "source": {<clave>: "env"}}`.
-    Solo aparece si la operación llevó alguna clave; `values` son los valores intentados y `source`
-    solo lista las claves que vinieron de `LOCAL_DELEGATE_BACKEND_PARAMS` (las demás son del
-    fichero). `local_delegate` con modelo explícito nunca lo lleva.
+    Solo aparece si la operación llevó alguna clave. `values` lleva cada valor con su tipo JSON, en
+    el orden del catálogo, y son los valores **intentados**: el campo sale también si el backend los
+    rechazó. `source` solo aparece si alguna clave vino de `LOCAL_DELEGATE_BACKEND_PARAMS`, y lista
+    solo esas (las demás son del fichero). `local_delegate` con modelo explícito nunca lo lleva.
   - `reasoning_chars` (solo si es mayor que 0): caracteres de razonamiento de **todas** las llamadas
-    de la operación, fallidas incluidas: `reasoning_content` más lo que se quitó entre etiquetas
-    `<think>`. Nunca guarda el texto del razonamiento. El razonamiento que Qwen deja en la respuesta
-    sin etiquetas no se puede contar.
+    de la operación (intentos fallidos, respaldos, trozos y pasos de map/reduce incluidos):
+    `reasoning_content` más lo que se quitó entre etiquetas `<think>`. Sale también sin parámetros
+    de rol, si el modelo razonó por su cuenta. Nunca guarda el texto del razonamiento. El
+    razonamiento que Qwen deja en la respuesta sin etiquetas no se puede contar.
   - `backend_params_rejected: true`: el backend rechazó los parámetros (HTTP 400) y la operación
     siguió sin ellos tras un reintento que funcionó.
   - `reasoning_skipped: "context"`: alguna llamada iba a razonar pero no cabía en el contexto del

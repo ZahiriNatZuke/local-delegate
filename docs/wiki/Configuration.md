@@ -271,8 +271,9 @@ Al leerlo, el producto nunca falla por el fichero:
 
 `doctor` muestra en su cabecera, debajo de las líneas de idioma, la ruta del fichero, los
 parámetros de cada rol (los que vienen de la variable, con la marca `(variable)`) y sus avisos.
-`local_status` muestra una línea por rol con parámetros debajo de los roles. Sin nada
-configurado, ninguno de los dos añade líneas.
+`local_status`, debajo de la línea de `vision`, muestra `Parámetros por rol: <ruta>` y una línea
+por rol con parámetros (`  <rol>: clave=valor (fichero|variable), …`, los booleanos como
+`on`/`off`), con sus avisos debajo. Sin nada configurado, ninguno de los dos añade líneas.
 
 ### Override puntual: `LOCAL_DELEGATE_BACKEND_PARAMS`
 
