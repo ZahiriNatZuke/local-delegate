@@ -409,3 +409,81 @@
   C1 añadió 1 (entrada 18: `survive`, a inglés); B ninguna (la entrada 17 queda libre); C2 ninguna
   (renombró los cinco nombres que marcó; la entrada 19 queda libre); F 1 (entrada 20: `enum`, a
   inglés); D 1 (entrada 21: `applicable`, a inglés).
+
+## Prueba en vivo (T19)
+
+Hecha el 2026-10-20 sobre `main` = `26b6a75`, instalado para el daemon con
+`uv tool install --force --reinstall --no-cache ".[llamaswap]"` (la versión sigue diciendo 0.36.1;
+el código es el de `main`). Ventana de prueba **`w-20261020T182615Z`** (de 18:26:15Z a 18:46:08Z,
+cerrada). Evidencia en `.sdd/changes/backend-extra-params/evidence/`.
+
+### Comprobaciones de §4.4
+
+| Paso | Comprobación | Resultado | Evidencia |
+| --- | --- | --- | --- |
+| 1–2 | Ventana abierta, código instalado y daemon reiniciado | OK | Hecho por el orquestador; `local_status` responde con la ventana abierta. |
+| 3 | Mismo `LOG_DIR` en la CLI y en el daemon; `local_status` sin parámetros no añade líneas (REQ-016) | OK | `backend-params show` imprime `C:\Users\Yohan\AppData\Local\local-delegate\backend-params.json`, mismo directorio que el log `usage-202610.jsonl` de `local_status`; sin parámetros no sale ninguna línea «Parámetros por rol». |
+| 4 | `set code reasoning_budget_tokens 256` y `set code enable_thinking on` con el daemon arrancado, sin `/mcp` ni reinicio (REQ-009) | OK | Ambos con código 0; el fichero queda con los dos valores del rol `code`. |
+| 5 | `local_explain_code` sobre `src/local_delegate/json_state.py`: el evento trae `backend_params` del rol `code` y `reasoning_chars > 0` (REQ-011, REQ-018) | OK | Evento de 18:38:42Z: `backend_params = {role: code, values: {enable_thinking: true, reasoning_budget_tokens: 256}}`, `reasoning_chars = 1067`, `tokens_out = 956` (= 700 de la tool + 256). Ver `evidence/usage-events-t19.json`. Sorpresa anotada abajo. |
+| 6 | `local_status` enseña la línea del rol `code` con origen `file` (REQ-016) | OK | `code: enable_thinking=on (fichero), reasoning_budget_tokens=256 (fichero)`. |
+| 7 | Tras `backend-params reset`, la misma llamada da un evento sin `backend_params` ni `reasoning_chars` (REQ-022) | OK | Evento de 18:39:06Z sin las dos claves, `finish_reason = stop`, `tokens_out = 262`. |
+| 8 | Benchmark corto contra `gemma4-26b-a4b`, `off`/`low`/`high` con `--reasoning-budget 256` (REQ-020) | OK | Casos `clasificar-53` y `resumen-md-2k`, una corrida; tabla abajo y `evidence/benchmark-t19.json`. |
+| 9 | Ventana cerrada | OK | `w-20261020T182615Z cerrada: 2026-10-20T18:26:15.469Z a 2026-10-20T18:46:08.786Z`. |
+| 10 | `backend-params.json` vacío y daemon con el código del cambio | OK | El fichero queda `{"version": 1, "roles": {}}`; el daemon no se tocó después del paso 2. |
+
+### Benchmark `off`/`low`/`high` (paso 8)
+
+| Caso | Nivel | ok | `reasoning_chars` | Tokens de salida | `finish_reason` |
+| --- | --- | --- | --- | --- | --- |
+| `resumen-md-2k` | off | sí | 0 | 210 | stop |
+| `resumen-md-2k` | low | sí | 937 | 459 | stop |
+| `resumen-md-2k` | high | sí | 937 | 459 | stop |
+| `clasificar-53` | off | sí | 0 | 2 | stop |
+| `clasificar-53` | low | sí | 812 | 237 | stop |
+| `clasificar-53` | high | sí | 809 | 236 | stop |
+
+`off` no trae razonamiento y `low`/`high` sí. **Entre `low` y `high` no hay diferencia medible**
+con este modelo y presupuesto: queda anotado en la wiki (punto 5 de REQ-021, `docs/wiki/Configuration.md`,
+bloque que antes llevaba el marcador de T19). Las latencias no se comparan: la primera corrida
+cargó el modelo.
+
+### Capturas del panel (§4.5)
+
+Panel aparte en `:9494` con el código instalado y un `LOG_DIR` temporal en el scratchpad sembrado
+con seis eventos de hoy (viejo ×2, con parámetros y una clave `env`, razonó con pasos map/reduce,
+omitido por contexto, rechazado con respaldo). Capturas de la tarjeta «Actividad reciente» y del
+diálogo de detalle de la fila que razonó:
+
+- `evidence/panel-lista-claro.png`, `evidence/panel-lista-oscuro.png`: marcas `razonó`, `parám.`
+  y `parám. ✕` (rechazado, en rojo) visibles, sin solapes, y dos filas del formato viejo sin marca.
+- `evidence/panel-dialogo-claro.png`, `evidence/panel-dialogo-oscuro.png`: filas Modelo, Rol,
+  Parámetros (con origen «fichero»), Razonamiento (1.067) y Pasos (`map ×3 → reduce`); ninguna
+  vacía.
+- Contraste legible en los dos temas (revisado a ojo con `Read`; la primera pasada de
+  `local_describe_image` dijo que había solapes en la lista clara y era falso).
+- Los otros diálogos se comprobaron por su texto en el DOM: el rechazado enseña «Estado:
+  rechazados» y «Respaldo: gemma4-26b-a4b ↪ qwen36-35b-a3b» con el motivo; el omitido, «Estado:
+  sin razonamiento: contexto»; el de la clave `env`, «variable» delante de `temperature`. Sin filas
+  vacías.
+- Panel parado (comprobado: `curl` devuelve `000` y no queda nadie escuchando en `:9494`) y
+  `LOG_DIR` temporal borrado.
+
+### Desviaciones y sorpresas de T19
+
+- **Tema del panel**: el panel no sigue `prefers-color-scheme` (arranca en oscuro y cambia con su
+  botón y `localStorage` `ld-theme`), así que `browser_emulate_media` no basta; el tema claro se
+  sacó con el botón del propio panel. Es el comportamiento de siempre, no de este cambio.
+- **Clave del backend para el benchmark**: el benchmark habla directo con llama-swap y la shell
+  del agente no tiene `LOCAL_DELEGATE_API_KEY` (la primera corrida dio `http_401`). Se cargó del
+  mismo secreto DPAPI que usa el lanzador del daemon, solo en el entorno del proceso del
+  benchmark, sin imprimirla ni guardarla.
+- **Qwen3.6 con presupuesto pequeño sigue razonando en la respuesta visible**: en el paso 5, con
+  256 tokens, el modelo agotó el presupuesto y siguió «pensando» en el contenido (borradores y
+  comprobaciones en inglés) hasta cortarse por `max_tokens` (`finish_reason = length`,
+  `truncated_out = true`). El producto hizo lo que dice la spec (sumó el presupuesto al tope y
+  registró `reasoning_chars`); la calidad de la respuesta con un presupuesto tan bajo es mala.
+  Recomendación para la documentación o el backlog: no aconsejar presupuestos de 256 para el rol
+  `code` con Qwen3.6. No se tocó código.
+- **Capturas por elemento**: Playwright solo escribe bajo el checkout principal
+  (`D:/Projects/local-delegate/.playwright-mcp/`, ignorado por git); se guardaron ahí y se movieron
+  al worktree.

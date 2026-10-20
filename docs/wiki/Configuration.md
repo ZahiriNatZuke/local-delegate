@@ -413,10 +413,10 @@ pasa a la plantilla como variable, pero con los modelos de referencia, servidos 
 `--reasoning off`, no vence a ese flag: lo que lo vence es `enable_thinking: true`. Úsalo solo
 junto con `enable_thinking` y presupuesto.
 
-<!-- T19: completar con el resultado en vivo de la comparación low/high (REQ-020) -->
-*Pendiente de la prueba en vivo:* con el razonamiento encendido, las plantillas de Qwen3.6 y
-Gemma 4 podrían no leer la variable de `reasoning_effort`; hasta medirlo, no cuentes con que `low` y
-`high` den resultados distintos.
+*Medido el 2026-10-20:* con `gemma4-26b-a4b`, presupuesto de 256 tokens y dos casos del corpus,
+`off` no razonó y `low` y `high` razonaron casi lo mismo (937 y 937 caracteres en un caso, 812 y
+809 en el otro): no hubo diferencia medible entre niveles. No cuentes con que `low` y `high` den
+resultados distintos; lo que enciende y acota el razonamiento es `enable_thinking` con su presupuesto.
 
 **El razonamiento tiene que caber en el contexto del modelo.** Antes de cada llamada con el
 razonamiento encendido se estima si cabe:
