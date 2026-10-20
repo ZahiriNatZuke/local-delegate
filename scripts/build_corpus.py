@@ -106,12 +106,12 @@ def _git(root: Path, *args: str) -> bytes:
 # Hashes of the `index` line, asked in full and cut to 7: git lengthens an abbreviation that is
 # ambiguous in the local repo, so the same commit gave different bytes on different machines.
 _FULL_INDEX = re.compile(rb"^(index )([0-9a-f]{40,64})\.\.([0-9a-f]{40,64})", re.MULTILINE)
-_INDEX_ABBREV = 7
+_INDEX_HASH_LENGTH = 7
 
 
 def _short_index(diff: bytes) -> bytes:
     return _FULL_INDEX.sub(
-        lambda m: m[1] + m[2][:_INDEX_ABBREV] + b".." + m[3][:_INDEX_ABBREV], diff
+        lambda m: m[1] + m[2][:_INDEX_HASH_LENGTH] + b".." + m[3][:_INDEX_HASH_LENGTH], diff
     )
 
 
