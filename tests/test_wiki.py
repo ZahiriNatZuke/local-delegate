@@ -292,3 +292,37 @@ def test_the_at_a_glance_table_lists_every_tool():
     assert sorted(table) == _server_tools(), (
         f"la tabla «De un vistazo» no cuadra con el servidor: {sorted(table)}"
     )
+
+
+def _backend_params_section() -> str:
+    """The `## Parámetros del backend por rol` section of `Configuration.md`, up to the next `## `."""
+    text = (WIKI / "Configuration.md").read_text(encoding="utf-8")
+    match = re.search(
+        r"^## Parámetros del backend por rol\n(.*?)(?=^## )", text, re.DOTALL | re.MULTILINE
+    )
+    assert match, "Configuration.md no tiene la sección «Parámetros del backend por rol»"
+    return match.group(1)
+
+
+def test_configuration_documents_backend_params():
+    """REQ-021: the wiki names the subcommand and the override variable of the per-role params."""
+    section = _backend_params_section()
+    assert "local-delegate backend-params" in section, "falta el subcomando `backend-params`"
+    assert "LOCAL_DELEGATE_BACKEND_PARAMS" in section, "falta `LOCAL_DELEGATE_BACKEND_PARAMS`"
+
+
+def test_configuration_lists_every_backend_param_key():
+    """The key tables are copied by hand from the spec: they drift apart from the code on their own."""
+    from local_delegate import backend_params
+
+    section = _backend_params_section()
+    documented = set(
+        re.findall(r"^\| (?:muestreo|razonamiento) \| `(\w+)` \|", section, re.MULTILINE)
+    )
+    assert documented == set(backend_params.ALLOWED_KEYS), (
+        f"la tabla de claves no cuadra con el catálogo: "
+        f"faltan {sorted(set(backend_params.ALLOWED_KEYS) - documented)}, "
+        f"sobran {sorted(documented - set(backend_params.ALLOWED_KEYS))}"
+    )
+    missing = [k for k in sorted(backend_params.RESERVED_KEYS) if f"`{k}`" not in section]
+    assert not missing, f"claves reservadas sin documentar: {missing}"
