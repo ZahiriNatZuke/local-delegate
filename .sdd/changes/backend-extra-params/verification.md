@@ -100,6 +100,55 @@
     para que el aviso de contexto no dependa de la config de llama-swap de la máquina; los tests
     de contexto lo fijan a 8192.
 
+### Decisiones del lote C1 (fusión en el embudo: T10)
+
+1. **Dónde se fusiona**: `_RoleParams.apply` en `_call_model`, sobre el dict nuevo
+   `{"model": model, **payload}`; el `payload` compartido no se toca. `temperature` y `max_tokens`
+   se sustituyen en su sitio; las demás claves que devuelve `to_body` van al final y **nunca**
+   pisan una clave que ya esté en el cuerpo (capa 3), además del `assert` de `to_body`.
+2. **`_role_params_for` devuelve `None`** con modelo explícito, sin rol o si el rol no tiene ningún
+   valor efectivo, aunque tenga avisos (p. ej. `enable_thinking` sin presupuesto y nada más): los
+   avisos se ven en `show`, `doctor` y `local_status` (`report()`), no en cada llamada. Con `None`
+   el cuerpo es el de hoy byte a byte.
+3. En `_chat` la resolución va **dentro** del `try` que cierra la entrada en vuelo, para que un
+   fallo inesperado al leer el fichero no deje la entrada colgada. En `_chat_chunked` y
+   `_chat_map_reduce` se resuelve al crear `_CurrentModel`, como dice el plan.
+4. `_RoleParams` ya lleva `probed`, `rejected`, `reasoning_skipped` (C2), `reasoning_chars` (D) y
+   un `threading.Lock`; en C1 nadie los usa. `budget` solo tiene valor con el razonamiento
+   encendido.
+5. **Tests de más respecto a la lista del plan**: `test_vision_role_params_reach_image_call`
+   (paso 7: la imagen lleva los parámetros de `vision` y no los de otro rol) y un caso `range` en
+   `test_bad_keys_dropped_rest_applied` (REQ-007, `top_p: 1.5`). `test_reserved_key_never_reaches_body`
+   recorre **todas** las claves de `RESERVED_KEYS`, por fichero y por variable.
+6. `test_params_survive_fallback_and_later_chunks` usa `local_explain_code` troceado (map/reduce,
+   rol `code`, `LOCAL_DELEGATE_MAX_CHARS_CODE=3000`) con el modelo de `code` caído: el respaldo es
+   el de `long`, y `long` tiene su propio `top_k: 5` configurado para probar que el rol del
+   respaldo no se cuela en la operación de `code`.
+7. **Controles positivos** (mutante → test → assert que dispara):
+   - `"top_k": 0` siempre en `_call_model` → `test_body_matches_main[simple-no_file]`, assert de
+     igualdad del cuerpo («el cuerpo 0 no es el de f2dd267»);
+   - `_CurrentModel.call` resuelve con `self.role` → `test_params_survive_fallback_and_later_chunks`,
+     `assert body.get("top_k") == 33` en el índice 2 (primer trozo tras el salto);
+   - `_role_params_for` sin mirar `explicit` → `test_explicit_model_carries_no_params`, igualdad
+     con la fixture (sobra `top_k: 20`);
+   - `apply` sin sustituir `temperature`/`max_tokens` → `test_role_temperature_overrides_tool[local_classify]`,
+     `[0.0] == [0.5]`;
+   - `_chat` pasa `role_params=None` → `test_thinking_on_classify_sums_budget`, `16 == 16 + 512`;
+   - resolución cacheada por proceso → `test_file_change_applies_next_operation`,
+     `[20, 20, 20] == [20, 30, None]`;
+   - `local_describe_image` con rol `mechanical` → `test_vision_role_params_reach_image_call`,
+     `99 == 7`;
+   - en `backend_params.py` (mutantes temporales, no cambios): `apply_thinking_rule` apagado →
+     `test_thinking_without_budget_body_has_no_template_kwargs[file]`, assert del aviso;
+     `enable_thinking: false` sin mandar nada → `test_thinking_off_sends_false_and_keeps_max_tokens`,
+     `KeyError: 'chat_template_kwargs'`; validación de valores apagada →
+     `test_bad_keys_dropped_rest_applied[range]`, `assert 'top_p' not in body`; `key_problem` sin
+     `reserved_key` → `test_reserved_key_never_reaches_body[cache_prompt-file]`, en el assert del
+     **código** del aviso (`unknown_key` en vez de `reserved_key`): la clave no llega al cuerpo de
+     todos modos, porque la filtran tres capas (`key_problem`, `_catalog_order` y el filtro de
+     `to_body`); un mutante de una sola capa no puede hacer fallar los asserts del cuerpo.
+8. `backend_params.py` no se toca.
+
 ### Léxico del detector de nombres tocado fuera de lo que cada lote poseía
 
 - `scripts/data/spanish_lexicon.json` y su README no estaban en la lista de ficheros de ningún
@@ -107,3 +156,4 @@
   exige 0 palabras sin clasificar. L0 añadió 14 (entrada 13), E 6 (entrada 14: `rechazados` a
   español y 5 a inglés), A1 13 más (entrada 15, todas a inglés) y A2 9 más (entrada 16, todas a
   inglés), clasificadas a mano. Al rebasar se unieron las listas (ordenadas y sin duplicados).
+  C1 añadió 1 (entrada 18: `survive`, a inglés).

@@ -8,8 +8,9 @@ de uso se compara el **conjunto** de claves, no los valores (la latencia y la ho
 La comparación es de JSON parseado con `object_pairs_hook=list`: dos cuerpos con las mismas claves
 en otro orden son distintos, y un `1` frente a un `1.0` también.
 
-`MODES` es el eje «sin parámetros»: hoy solo hay uno (no existe el fichero de parámetros). T10 le
-añade `{"version": 1, "roles": {}}` y un rol vacío, que deben dar exactamente estos cuerpos.
+`MODES` es el eje «sin parámetros» (REQ-022): sin fichero de parámetros, con
+`{"version": 1, "roles": {}}` y con un rol vacío (`{"code": {}}`). Los tres deben dar exactamente
+estos cuerpos (T10).
 """
 
 from __future__ import annotations
@@ -19,6 +20,8 @@ import json
 from pathlib import Path
 
 import pytest
+
+from local_delegate import backend_params
 
 ROOT = Path(__file__).parents[1]
 SCRIPT = ROOT / "scripts" / "capture_request_bodies.py"
@@ -43,8 +46,13 @@ def _load_script():
 
 capture_request_bodies = _load_script()
 PATHS = capture_request_bodies.PATHS
-#: «Sin parámetros» en todas sus formas. T10 añade aquí el fichero sin roles y el rol vacío.
-MODES = ("no_file",)
+#: «Sin parámetros» en todas sus formas: el documento que se escribe en `LOG_DIR` (o ninguno).
+_DOCUMENTS: dict[str, dict | None] = {
+    "no_file": None,
+    "empty_roles": {"version": 1, "roles": {}},
+    "empty_role": {"version": 1, "roles": {"code": {}}},
+}
+MODES = tuple(_DOCUMENTS)
 
 
 def _fixture(name: str) -> dict:
@@ -61,9 +69,15 @@ def _field(pairs: list, key: str):
 def captured(request, reload_config, tmp_path):
     """Corre el camino con el entorno fijado de la captura; `tmp_path` es el `LOG_DIR`."""
     name, mode = request.param
-    assert mode == "no_file"
     reload_config(**capture_request_bodies.ENVIRONMENT)
-    return name, capture_request_bodies.capture(name, tmp_path)
+    backend_params._forget()
+    document = _DOCUMENTS[mode]
+    if document is not None:
+        backend_params.path().write_text(json.dumps(document), encoding="utf-8")
+    try:
+        return name, capture_request_bodies.capture(name, tmp_path)
+    finally:
+        backend_params._forget()
 
 
 _CASES = [(name, mode) for name in PATHS for mode in MODES]

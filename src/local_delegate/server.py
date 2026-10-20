@@ -38,6 +38,7 @@ from mcp.types import ToolAnnotations
 from . import (
     attribution,
     autostart,
+    backend_params,
     chains,
     clients,
     config,
@@ -2017,15 +2018,23 @@ def _slot(entry_id: int | None) -> Generator[None, None, None]:
 
 
 def _call_model(
-    model: str, payload: dict, json_schema_fallback: bool
+    model: str,
+    payload: dict,
+    json_schema_fallback: bool,
+    role_params: _RoleParams | None = None,
 ) -> tuple[ChatResult, str | None, int]:
     """Una llamada a UN modelo, con el reintento sin schema de siempre si el backend dio 400.
 
     Cada envío va dentro de `in_flight()`, también sin turno: el reloj de la red de seguridad no
     corre mientras el daemon tiene alguna llamada al backend en vuelo (REQ-007).
+
+    Layer 2 of REQ-012 is applied here, on a new dict: `payload` is shared by every attempt of the
+    operation (fallback, chunks) and is never mutated. Without `role_params` the body is today's.
     """
     t0 = time.monotonic()
     request_body = {"model": model, **payload}
+    if role_params is not None:
+        request_body = role_params.apply(request_body)
     with _turn.in_flight(), _own_call(model):
         result = _post_chat(model, request_body)
     json_schema_status = "used" if "response_format" in request_body else None
@@ -2047,9 +2056,10 @@ def _attempt(
     json_schema_fallback: bool,
     state: cooldown.CooldownState,
     attempts: list[Attempt],
+    role_params: _RoleParams | None = None,
 ) -> tuple[ChatResult, str | None]:
     """UNA llamada y su reintento sin schema, DENTRO de la plaza; anota el intento y el estado."""
-    result, schema, ms = _call_model(model, payload, json_schema_fallback)
+    result, schema, ms = _call_model(model, payload, json_schema_fallback, role_params)
     attempts.append(Attempt(model, result.ok, result.error, result.error_class, ms, result.timings))
     if result.ok:
         state.record_success(model)
@@ -2153,6 +2163,7 @@ def _with_fallback(
     json_schema_fallback: bool,
     op: _OperationTurn | None = None,
     entry_id: int | None = None,
+    role_params: _RoleParams | None = None,
 ) -> tuple[ChatResult, str | None, list[Attempt]]:
     """El modelo pedido y, si su fallo lo permite, los candidatos de la cadena de su rol.
 
@@ -2206,7 +2217,7 @@ def _with_fallback(
                     retry_role = True
                 elif target is not None:
                     result, schema = _attempt(
-                        target, payload, json_schema_fallback, state, attempts
+                        target, payload, json_schema_fallback, state, attempts, role_params
                     )
                     if op is not None:
                         op.note_attempt(attempts[-1])
@@ -2317,6 +2328,7 @@ def _run_chat(
     size: int | None = None,
     entry_id: int | None = None,
     op: _OperationTurn | None = None,
+    role_params: _RoleParams | None = None,
 ) -> tuple[ChatResult, int, str | None, list[Attempt]]:
     """UNA llamada lógica al endpoint bajo el semáforo de concurrencia, con su respaldo.
 
@@ -2333,6 +2345,9 @@ def _run_chat(
     en ella como `local_wait: "slot"` y se borra al conseguirla (REQ-022). Con plaza libre no se
     escribe nada de más. `op` es el turno de la operación: se asegura antes de cada plaza. La
     latencia incluye las esperas de turno y de plaza, como incluía la de plaza.
+
+    `role_params` are the per-role backend parameters of the operation (REQ-012), resolved once by
+    whoever starts it; this function builds layers 1 and 3 as before and `_call_model` adds layer 2.
     """
     payload: dict[str, Any] = {
         "messages": [
@@ -2358,8 +2373,72 @@ def _run_chat(
         json_schema_fallback=json_schema_fallback,
         op=op,
         entry_id=entry_id,
+        role_params=role_params,
     )
     return result, int((time.monotonic() - t0) * 1000), json_schema_status, attempts
+
+
+class _RoleParams:
+    """The per-role backend parameters of ONE operation (REQ-009, REQ-012).
+
+    Resolved once, when the operation starts, with the role it started with, and kept apart from
+    `_CurrentModel.role` (which becomes `None` after a hop): every real call of the operation
+    (attempt, schema retry, fallback, chunk, map/reduce step) carries the same values. The flags
+    are for lot C2 (REQ-015 rejection and REQ-023 context); `reasoning_chars` accumulates the
+    reasoning of the operation for lot D. The chunks and the map/reduce steps run one after the
+    other today; the lock is a cheap defence, there is no race to chase.
+    """
+
+    def __init__(self, role: str, resolved: backend_params.Effective) -> None:
+        self.role = role
+        #: The effective values of the role, in catalog order, after REQ-011.
+        self.values: dict[str, object] = dict(resolved.values)
+        self.source: dict[str, str] = dict(resolved.source)
+        self.warnings: list[backend_params.Warning] = list(resolved.warnings)
+        thinking = self.values.get("enable_thinking")
+        self.thinking: bool | None = thinking if isinstance(thinking, bool) else None
+        budget = self.values.get("reasoning_budget_tokens")
+        self.budget: int | None = budget if self.thinking is True else None
+        self.probed = False
+        self.rejected = False
+        self.reasoning_skipped = False
+        self.reasoning_chars = 0
+        self.lock = threading.Lock()
+
+    def apply(self, body: dict) -> dict:
+        """Layer 2 of REQ-012 on a NEW dict, keeping the key order of `body` (REQ-022).
+
+        `temperature` and `max_tokens` are replaced in place (the role's temperature wins over the
+        tool's, REQ-010; the budget is added to the tool's cap, REQ-011); the role's other keys go
+        at the end. A key already in `body` is a contract key (layer 3) and is never replaced.
+        """
+        overrides, extra = backend_params.to_body(
+            self.values,
+            tool_temperature=body["temperature"],
+            tool_max_tokens=body["max_tokens"],
+        )
+        merged = dict(body)
+        for key, value in overrides.items():
+            merged[key] = value
+        for key, value in extra.items():
+            if key not in merged:
+                merged[key] = value
+        return merged
+
+
+def _role_params_for(role: str | None, explicit: bool) -> _RoleParams | None:
+    """The parameters of one operation, or `None`: then the body is exactly today's (REQ-022).
+
+    `None` with a model chosen by the caller (REQ-013), without a role, or when the role has no
+    effective key. Read on every operation; `backend_params` caches by the file's stat and the
+    variable, so a change is seen by the next operation without a restart (REQ-009).
+    """
+    if explicit or role is None:
+        return None
+    resolved = backend_params.effective(role)
+    if not resolved.values:
+        return None
+    return _RoleParams(role, resolved)
 
 
 class _CurrentModel:
@@ -2376,9 +2455,13 @@ class _CurrentModel:
         explicit: bool,
         entry_id: int | None = None,
         op: _OperationTurn | None = None,
+        role_params: _RoleParams | None = None,
     ) -> None:
         #: La entrada en vuelo de la operación, para publicar su espera local (REQ-022).
         self.entry_id = entry_id
+        #: The per-role parameters of the operation, resolved once with the role it started with.
+        #: Kept apart from `role`, which becomes `None` after a hop (REQ-012).
+        self.role_params = role_params
         #: El turno de la operación: tras un salto queda en el destino, que es el que siguen
         #: usando los trozos de después (REQ-006).
         self.op = op
@@ -2416,6 +2499,7 @@ class _CurrentModel:
             size=size,
             entry_id=self.entry_id,
             op=self.op,
+            role_params=self.role_params,
         )
         if self.json_schema is None:
             self.json_schema = schema
@@ -2543,6 +2627,8 @@ def _chat(
     # Turno por operación (REQ-003): una llamada simple (también la de imagen) es una operación.
     op = _OperationTurn(entry_id, model, tool, role_name=role, explicit=explicit)
     try:
+        # Resolved once per operation (REQ-009); `None` keeps today's body (REQ-022).
+        role_params = _role_params_for(role, explicit)
         result, latency_ms, json_schema_status, attempts = _run_chat(
             model,
             system,
@@ -2556,6 +2642,7 @@ def _chat(
             size=chars_in or None,
             entry_id=entry_id,
             op=op,
+            role_params=role_params,
         )
     finally:
         op.release_slot()
@@ -2991,7 +3078,10 @@ def _chat_chunked(
     all_attempts: list[Attempt] = []
     # Turno por operación (REQ-003): todos los trozos bajo el mismo turno.
     op = _OperationTurn(entry_id, model, tool, role_name=role, explicit=explicit)
-    current = _CurrentModel(model, role, explicit, entry_id, op)
+    # The role's parameters, resolved once for every chunk and step (REQ-009, REQ-012).
+    current = _CurrentModel(
+        model, role, explicit, entry_id, op, role_params=_role_params_for(role, explicit)
+    )
 
     def _accumulate(result: ChatResult, ms: int, attempts: list[Attempt]) -> None:
         nonlocal calls, latency_ms, tokens_in, tokens_out
@@ -3252,7 +3342,10 @@ def _chat_map_reduce(
     all_attempts: list[Attempt] = []
     # Turno por operación (REQ-003): map, reagrupados y reduce bajo el mismo turno.
     op = _OperationTurn(entry_id, model, tool, role_name=role, explicit=explicit)
-    current = _CurrentModel(model, role, explicit, entry_id, op)
+    # The role's parameters, resolved once for every chunk and step (REQ-009, REQ-012).
+    current = _CurrentModel(
+        model, role, explicit, entry_id, op, role_params=_role_params_for(role, explicit)
+    )
 
     raw_chars = 0  # what the model generated, before `_strip_think` and the post-processing
     # B2e: one entry per step (map, regroup, reduce) for the usage log, without the text; the text
