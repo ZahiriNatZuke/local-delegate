@@ -281,19 +281,16 @@ def test_unset_budget_rejected_while_thinking_on():
 
 
 @pytest.mark.parametrize("scope", ["role", "all"])
-def test_reset_budget_rejected_while_thinking_on(scope):
-    bp.set_value("code", "reasoning_budget_tokens", "512")
-    bp.set_value("code", "enable_thinking", "on")
-    bp.set_value("long", "top_k", "20")
-    before = bp.path().read_bytes()
-    ok, code, _ = bp.reset("code" if scope == "role" else None)
-    assert (ok, code) == (False, "thinking_without_budget")
-    assert bp.path().read_bytes() == before
-    # Control: with reasoning off, the same reset goes through.
-    bp.unset("code", "enable_thinking")
+def test_reset_empties_role_with_thinking_on(scope):
+    # User decision 12: `reset` takes the role whole, reasoning and budget together, without asking
+    # for `unset <role> enable_thinking` first.
+    assert bp.set_value("code", "reasoning_budget_tokens", "512")[0]
+    assert bp.set_value("code", "enable_thinking", "on")[0]
+    assert bp.set_value("long", "top_k", "20")[0]
     assert bp.reset("code" if scope == "role" else None) == (True, None, [])
     roles = json.loads(bp.path().read_text(encoding="utf-8"))["roles"]
     assert roles == ({"long": {"top_k": 20}} if scope == "role" else {})
+    assert bp.effective("code").values == {}
 
 
 def test_unset_and_reset_other_cases():

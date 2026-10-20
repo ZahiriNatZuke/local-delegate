@@ -17,7 +17,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from . import checks, config, i18n, probes
+from . import backend_params, checks, config, i18n, probes
 
 # Encabezado de cada grupo del registro. El de `backend` se arma aparte porque su texto
 # depende de --online, y es el que el usuario ya leía antes de que el doctor viera el resto.
@@ -62,6 +62,45 @@ def language_lines() -> list[str]:
     lines.append(i18n.t("doctor.language.response_line", value=value, source=source))
     if warning:
         lines.append(i18n.t("doctor.language.warning", detail=warning))
+    return lines
+
+
+def format_param_value(value: object) -> str:
+    """A catalog value as a person writes it in `backend-params set` (`on`/`off` for booleans)."""
+    if isinstance(value, bool):
+        return "on" if value else "off"
+    return str(value)
+
+
+def backend_params_lines() -> list[str]:
+    """REQ-016/023 (SDD backend-extra-params, T9): the per-role backend parameters, as header lines.
+
+    Not a check: it changes neither the 25 checks nor the exit code. It reads the file of this
+    machine and `LOCAL_DELEGATE_BACKEND_PARAMS` of **this** shell, which may not be the daemon's,
+    and says so. It repeats the warnings of `backend_params.report()` (context ones included).
+    Values come only from accepted entries; a dropped entry shows its role, key and code, never its
+    value. Without parameters, warnings or the variable, no line at all.
+    """
+    rows = [row for row in backend_params.report() if row.values or row.warnings]
+    in_shell = config.backend_params_override().raw is not None
+    if not rows and not in_shell:
+        return []
+    lines = [i18n.t("doctor.backend_params.line", path=backend_params.path())]
+    if in_shell:
+        lines.append(i18n.t("doctor.backend_params.env_in_shell"))
+    for row in rows:
+        if row.values:
+            from_env = i18n.t("doctor.backend_params.from_env")
+            params = ", ".join(
+                f"{key}={format_param_value(value)}"
+                + (f" {from_env}" if row.source.get(key) == backend_params.SOURCE_ENV else "")
+                for key, value in row.values.items()
+            )
+            lines.append(i18n.t("doctor.backend_params.role", role=row.role, params=params))
+        lines.extend(
+            i18n.t("doctor.backend_params.warning", detail=backend_params.warning_text(warning))
+            for warning in row.warnings
+        )
     return lines
 
 
@@ -118,6 +157,8 @@ def run_doctor(args: argparse.Namespace) -> int:
     print(i18n.t("doctor.env.backend", url=config.BASE_URL, state=backend_word))
     print(f"HOME:             {home}")
     for line in language_lines():
+        print(line)
+    for line in backend_params_lines():
         print(line)
     print()
     print(status_legend())

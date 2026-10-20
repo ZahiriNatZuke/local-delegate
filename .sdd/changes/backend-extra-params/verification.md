@@ -149,6 +149,47 @@
      `to_body`); un mutante de una sola capa no puede hacer fallar los asserts del cuerpo.
 8. `backend_params.py` no se toca.
 
+### Decisiones del lote B (CLI y `doctor`: T8 y T9)
+
+1. **La desviación 4 del lote A2 queda resuelta por la decisión 12 del usuario** (`brief.md`):
+   `reset` ya no se rechaza con el razonamiento encendido. Se quitó la primera vuelta de
+   `reset.mutate` en `backend_params.py` (el único cambio del lote en ese módulo) y el test
+   `test_reset_budget_rejected_while_thinking_on` pasa a `test_reset_empties_role_with_thinking_on`
+   (`[role|all]`), que comprueba que el rol queda vacío; con el bloqueo repuesto como mutante falla
+   en `assert bp.reset(...) == (True, None, [])`.
+2. **Textos de rechazo propios de la CLI**: los de `common.json` describen lo que hace una tool con
+   una entrada mala («se quita»), no una orden rechazada. `cli.json` lleva
+   `cli.backend_params.refused.<código>` para `unknown_role`, `unknown_key`, `reserved_key`,
+   `deferred_key`, `bad_type` y `out_of_range`, y dos para `thinking_without_budget` según la orden
+   (`thinking_set`: «antes, `set <rol> reasoning_budget_tokens <n>`»; `thinking_unset`: «antes,
+   `unset <rol> enable_thinking`»). Los `file_*` usan el texto común, que ya se lee como rechazo.
+   Nombran rol y clave, nunca el valor.
+3. **Códigos de salida**: rechazo → 2 (como `test-window`), con el motivo en stderr y nada en
+   stdout; éxito → 0, con la línea de confirmación en stdout (sin el valor) y los avisos de contexto
+   de `set` en stderr.
+4. **Forma de `show --json`**: `{"file": ruta, "roles": [{"role", "params": [{"key", "value",
+   "source"}], "warnings": [{"code", "key"}]}]}`, con los cuatro roles siempre y una última entrada
+   `role == ""` solo si hay avisos generales (la de `report()`). `value` va con su tipo JSON
+   (`true`, `20`, `0.1`).
+5. **`show` en texto**: primero `Fichero: <ruta>`; luego solo los roles con valores o avisos, cada
+   uno con `clave = valor  (fichero|variable)` y sus avisos; sin nada, «sin parámetros». Los
+   booleanos se escriben `on`/`off`, como en `set` (`doctor.format_param_value`, que reutiliza la
+   CLI).
+6. **`doctor`**: las líneas salen justo después de las de idioma y con su misma columna. Hay líneas
+   si algún rol tiene valores o avisos, o si `LOCAL_DELEGATE_BACKEND_PARAMS` está definida en esta
+   shell (aunque sus entradas se descarten); definida pero vacía cuenta como no definida. Las
+   claves que vienen de la variable llevan la marca `(variable)`.
+7. **Fuera de los ficheros del lote**: `tests/test_cli_english.py` gana las cinco rutas de ayuda de
+   `backend-params` en `HELP_PATHS` (así la ayuda nueva entra en los tests de idioma), y
+   `tests/test_doctor_backend_params.py` importa `_stub_environment` de `tests/test_doctor.py`.
+8. **Léxico del detector**: ninguna entrada nueva. La única palabra que marcó (`bpsub`, una
+   variable) se renombró a `commands`; la entrada 17 queda libre.
+9. Tests de más sobre los del plan: `test_show_text_rows` y
+   `test_doctor_lines_with_only_the_variable_and_nothing_valid`. El de «salida idéntica a la de
+   hoy» compara `doctor` con y sin las líneas nuevas y además exige la costura de hoy (líneas de
+   idioma, una línea en blanco, la leyenda): sin ella, un `print()` de más en el sitio de la llamada
+   sobrevivía como mutante.
+
 ### Léxico del detector de nombres tocado fuera de lo que cada lote poseía
 
 - `scripts/data/spanish_lexicon.json` y su README no estaban en la lista de ficheros de ningún
@@ -156,4 +197,4 @@
   exige 0 palabras sin clasificar. L0 añadió 14 (entrada 13), E 6 (entrada 14: `rechazados` a
   español y 5 a inglés), A1 13 más (entrada 15, todas a inglés) y A2 9 más (entrada 16, todas a
   inglés), clasificadas a mano. Al rebasar se unieron las listas (ordenadas y sin duplicados).
-  C1 añadió 1 (entrada 18: `survive`, a inglés).
+  C1 añadió 1 (entrada 18: `survive`, a inglés); B ninguna (la entrada 17 queda libre).

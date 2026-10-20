@@ -79,6 +79,11 @@ Sustituyen al alcance inicial de «dos variables» donde choquen. El cambio deja
     como tarea propia del plan: se necesita para medir los cambios de temperatura/razonamiento.
 11. **Documentación (wiki, README, CHANGELOG) solo en español** (2026-10-20). El es/en se cumple en
     los textos de salida del catálogo i18n. Traducir la documentación sería otro cambio.
+12. **`backend-params reset` borra sin preguntar** (2026-10-20, tras el lote A2): `reset <rol>` y
+    `reset` global vacían el rol entero, `enable_thinking` y presupuesto incluidos, **sin exigir
+    antes** `unset <rol> enable_thinking`. El bloqueo no protegía de nada: al irse el rol entero no
+    queda razonamiento sin presupuesto. `unset <rol> reasoning_budget_tokens` con el razonamiento
+    encendido sigue rechazándose (REQ-011), porque ahí sí quedaría.
 
 ## Reglas para todo agente de este cambio
 
