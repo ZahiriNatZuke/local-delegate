@@ -1569,6 +1569,12 @@ def test_the_dashboard_marks_the_operations_with_fallback():
     html = metrics.HTML
     assert "e.model_requested" in html and "fbchip" in html
     assert "e.error_class" in html
+    # REQ-019 (backend-extra-params): the row also marks reasoning and per-role params, and opens
+    # the detail dialog.
+    assert "e.reasoning_chars" in html and "reasonchip" in html
+    assert "e.backend_params" in html and "paramschip" in html
+    assert "e.backend_params_rejected" in html
+    assert 'id="eventDlg"' in html and "eventRows(" in html
 
 
 # --- Quién delegó: el desglose por cliente -----------------------------------------------------
