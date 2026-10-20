@@ -1047,6 +1047,18 @@ def test_affinity_check_is_ok_with_any_environment_language(monkeypatch, environ
     }
 
 
+def test_commit_diff_index_hashes_do_not_depend_on_the_local_repo():
+    """git alarga un hash abreviado ambiguo en el repo local: se piden completos y se cortan a 7."""
+    full_a, full_b = "fb944835" + "0" * 32, "23a28d5" + "1" * 33
+    diff = f"diff --git a/x b/x\nindex {full_a}..{full_b} 100644\n--- a/x\n".encode()
+    assert (
+        build._short_index(diff) == b"diff --git a/x b/x\nindex fb94483..23a28d5 100644\n--- a/x\n"
+    )
+    # Una linea que solo se parece (dentro del contenido del diff) no se toca.
+    content = f"+index {full_a}..{full_b}\n".encode()
+    assert build._short_index(content) == content
+
+
 # --- Lectura dual de lo congelado del corpus (ola A10b-4) -------------------------------------------
 
 AFFINITY = ROOT / "benchmarks" / "afinidad-2026-10"
