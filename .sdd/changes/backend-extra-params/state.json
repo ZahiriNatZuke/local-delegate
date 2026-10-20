@@ -3,9 +3,9 @@
   "slug": "backend-extra-params",
   "title": "Parámetros extra por petición al backend (reasoning effort y extra body)",
   "mode": "standard",
-  "status": "implementing",
+  "status": "closed",
   "createdAt": "2026-10-20T11:58:54.218Z",
-  "updatedAt": "2026-10-20T13:41:08.971Z",
+  "updatedAt": "2026-10-20T19:16:23.858Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,22 +20,22 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-20T19:08:22.610Z",
+      "evidence": "verification.md (Quality checks) sobre main a2ce49d: suite completa 3695 pasados, 2 omitidos, 0 fallos; ruff check y ruff format --check limpios (297 ficheros); JS del panel pasa node --check; ggshield sin secretos en el SDD y la wiki; PR #345-#356 con 19/19 checks (muestra #345, #350, #353, #355, #356) y test-lang-es verde en la #356. Riesgo residual anotado: intermitente test_fake_llamaswap (ttl) y presupuesto 256 en code con Qwen3.6.",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-20T19:13:46.337Z",
+      "evidence": "review.md, Revisión de conformidad (2026-10-20): revisión fresca de los 23 REQ contra código y tests, CONFORME CON NOTAS: 17 cumplen, 6 con nota, 0 incumplen; 5 hallazgos menores. Hallazgos 1 y 4 resueltos en spec.md (Cambios tras la revisión), 2 en docs/wiki/Configuration.md (presupuesto bajo con Qwen en code); 3 (test de resolución por operación) y 5 (booleanos true frente a on en el panel) al backlog. Fuera de alcance respetado. Prueba en vivo T19 OK (verification.md).",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-20T19:16:23.639Z",
+      "evidence": "handoff.md reescrito con el estado final; vault projects/local-delegate/jornada-2026-10-20-cierre-backend-params.md (resultado T19, trampas del procedimiento, gates); backlog del vault §1.12 marcado HECHO y §1.13 nuevo con 4 restos menores; puntero del proyecto en la memoria de Claude Code y en el índice de jornadas. Sin secretos ni datos personales.",
+      "actor": "user"
     }
   },
   "history": [
@@ -96,6 +96,58 @@
       "to": "implementing",
       "at": "2026-10-20T13:41:08.971Z",
       "reason": "Gates spec y plan aprobados; arranca la ola 1 (L0, A1, E en paralelo)"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-10-20T19:08:22.610Z",
+      "evidence": "verification.md (Quality checks) sobre main a2ce49d: suite completa 3695 pasados, 2 omitidos, 0 fallos; ruff check y ruff format --check limpios (297 ficheros); JS del panel pasa node --check; ggshield sin secretos en el SDD y la wiki; PR #345-#356 con 19/19 checks (muestra #345, #350, #353, #355, #356) y test-lang-es verde en la #356. Riesgo residual anotado: intermitente test_fake_llamaswap (ttl) y presupuesto 256 en code con Qwen3.6.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-10-20T19:13:46.337Z",
+      "evidence": "review.md, Revisión de conformidad (2026-10-20): revisión fresca de los 23 REQ contra código y tests, CONFORME CON NOTAS: 17 cumplen, 6 con nota, 0 incumplen; 5 hallazgos menores. Hallazgos 1 y 4 resueltos en spec.md (Cambios tras la revisión), 2 en docs/wiki/Configuration.md (presupuesto bajo con Qwen en code); 3 (test de resolución por operación) y 5 (booleanos true frente a on en el panel) al backlog. Fuera de alcance respetado. Prueba en vivo T19 OK (verification.md).",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-10-20T19:14:51.418Z",
+      "reason": "Olas 1-6 mezcladas (#345-#356); prueba en vivo T19 hecha"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-10-20T19:14:51.616Z",
+      "reason": "Gate quality aprobado: suite 3695/0, ruff, ggshield"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-10-20T19:14:51.818Z",
+      "reason": "Gate conformance aprobado: CONFORME CON NOTAS, 23/23 sin incumplimientos"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-10-20T19:16:23.639Z",
+      "evidence": "handoff.md reescrito con el estado final; vault projects/local-delegate/jornada-2026-10-20-cierre-backend-params.md (resultado T19, trampas del procedimiento, gates); backlog del vault §1.12 marcado HECHO y §1.13 nuevo con 4 restos menores; puntero del proyecto en la memoria de Claude Code y en el índice de jornadas. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-10-20T19:16:23.858Z",
+      "reason": "Cinco gates aprobados; olas 1-6 mezcladas (#345-#356)"
     }
   ]
 }

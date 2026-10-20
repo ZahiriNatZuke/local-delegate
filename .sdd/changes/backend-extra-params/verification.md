@@ -2,25 +2,53 @@
 
 ## Environment
 
-- Revision:
-- Relevant runtime and tool versions:
+- Revisión: `main` en `a2ce49d` (PR #356), con todos los lotes del SDD mezclados (#345–#356, más
+  el arreglo de `test_corpus` en #349); comprobada en el worktree `D:/Projects/ld-wt-close`.
+- Versiones: Windows 11 Enterprise LTSC 2024 (10.0.26200), Python 3.11.15, uv 0.10.12, ruff 0.17.1,
+  Node 24.18.0 (para `node --check` del panel), ggshield 1.56.0; backend real llama.cpp b10909 detrás
+  de llama-swap (según `research.md`).
 
 ## Evidence
 
 | Requirement | Check performed | Result | Evidence |
 | --- | --- | --- | --- |
-| REQ-001 | | | |
+| REQ-001 a REQ-023 | Revisión de conformidad desde cero, requisito por requisito, contra código y tests (`fichero:línea` y test de cada uno) | 17 cumplen, 6 cumplen con nota (REQ-001, 012, 014, 015, 019, 021), 0 incumplen | `review.md`, sección «Revisión de conformidad (gate conformance, 2026-10-20)» |
+| REQ-009, 011, 016, 018, 019, 020, 022 (en vivo) | Prueba contra el daemon y el backend reales, benchmark corto y capturas | Todo OK | Sección «Prueba en vivo (T19)» de este fichero y `evidence/` |
 
 ## Quality checks
 
-- [ ] Project-native tests pass.
-- [ ] Lint, formatting, type checking, and build checks pass where applicable.
-- [ ] Secret scanning passes.
-- [ ] No unrelated changes are present.
+- [x] Project-native tests pass: la suite completa (`uv run pytest -q -n 2 --dist loadgroup`, con el
+  cerrojo de comandos pesados) dio **3695 pasados, 2 omitidos, 0 fallos** en 2 min 26 s, sin
+  ningún intermitente esta vez; el job `test-lang-es` del CI (suite con salida en español) pasó en
+  la #356.
+- [x] Lint, formatting, type checking, and build checks pass where applicable: `ruff check .` sin
+  hallazgos, `ruff format --check .` con 297 ficheros ya formateados, y el JS del panel extraído con
+  `scripts/extract_dashboard_js.py` (92 395 caracteres) pasa `node --check`; el proyecto no tiene
+  verificación de tipos ni paso de build propio.
+- [x] Secret scanning passes: `ggshield secret scan path -r .sdd/changes/backend-extra-params
+  docs/wiki` no encontró secretos; además, GitGuardian corrió en el CI de cada PR (dentro de los 19
+  checks).
+- [x] No unrelated changes are present: `gh pr list --state merged --search backend-extra-params`
+  devuelve justo las #345–#348 y #350–#356 (la #349 es el arreglo de `test_corpus`, ya mezclado);
+  de muestra, las #345, #350, #353 y #355 tienen 19/19 checks en verde, y la #356 consta con 19/19 y
+  estado CLEAN.
+
+Salidas guardadas fuera del repo (scratchpad de la sesión): `close-q-pytest.txt`, `close-q-ruff.txt`,
+`close-q-ggshield.txt` y `close-q-dashboard.js`.
 
 ## Deviations and residual risk
 
-- Record skipped checks, known limitations, and why the evidence is still sufficient or not.
+- **Intermitente conocido**: `test_fake_llamaswap` (ttl) falló una vez en una corrida anterior en
+  `main` y pasó al repetirlo solo; en esta corrida no falló. Depende de tiempos, no de este cambio.
+- **Checks no corridos en local**: el job `test-lang-es` (suite con `LOCAL_DELEGATE_OUTPUT_LANGUAGE=es`),
+  macOS/Linux, CodeQL y Socket solo se vieron en el CI de las PR; basta porque corrieron sobre los
+  mismos commits que ahora están en `main` y todos pasaron (19/19 en las PR revisadas).
+- **Riesgo residual de uso (no de conformidad)**: en T19, Qwen3.6 con presupuesto de razonamiento
+  de 256 tokens en el rol `code` agotó el presupuesto, siguió «pensando» en la respuesta visible y se
+  cortó por `max_tokens` (`finish_reason = length`). El producto cumple la spec (suma el presupuesto
+  al tope y marca la respuesta como truncada), pero un presupuesto tan pequeño no sirve con ese
+  modelo; ver «Desviaciones y sorpresas de T19» más abajo. Conviene documentar un mínimo
+  recomendable para quien configure `code`.
 
 
 ## Desviaciones durante la implementación

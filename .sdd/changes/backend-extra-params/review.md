@@ -689,3 +689,131 @@ arma en `_run_chat` (`server.py:2337-2347`), por capas». Ver P1.
 - P1 aplicado en `spec.md`, y en `plan.md` §1 y §6.
 - P2–P6 incorporados a las tareas afectadas antes de lanzar sus lotes.
 - `state.json` con el gate `plan` aprobado con notas y enlace a esta sección.
+
+# Revisión de conformidad (gate conformance, 2026-10-20)
+
+Revisión fresca sobre `main` = `a2ce49d` (worktree `ld-wt-close`), leyendo el código y los tests
+contra cada REQ de `spec.md` y las decisiones 1–12 de `brief.md`. `verification.md` y las PR se
+usaron solo como pistas. No ejecuté tests: la suite completa la corre otro agente en paralelo, así
+que el «verde» de la suite y de la CI `test-lang-es` no lo afirma esta revisión.
+
+## Veredicto
+
+**CONFORME CON NOTAS.** Los 23 requisitos están implementados y cada uno tiene un test que fallaría
+si se rompe su núcleo; las notas son de redacción de la spec, de cobertura secundaria y de
+documentación de uso, y ninguna bloquea el cierre.
+
+## Requisito por requisito
+
+| REQ | Veredicto | Evidencia (código · test) | Nota |
+| --- | --- | --- | --- |
+| REQ-001 Fichero por rol | cumple con nota | `backend_params.py:397-399` (ruta), `:439-470` (`_read_document`: ausente o vacío = vacío; >64 KB, JSON roto o `version`≠1 → ignorado entero), `:477-498` (rol desconocido fuera), `:501-509` (`load` nunca lanza) · `test_backend_params_file.py::test_load_tolerates`, `test_load_never_raises`, `test_load_exactly_64kb_is_read` | La spec nombra `validate`; el código lo llama `validate_value` (`:214`). Solo nombre. |
+| REQ-002 Escritura atómica | cumple | `backend_params.py:512-541` (`mkstemp` en el mismo directorio + `os.replace` bajo `FileLock`; borra el temporal si falla) · `test_failed_replace_keeps_original_and_no_temp`, `test_concurrent_sets_keep_both_keys` | |
+| REQ-003 Subcomando | cumple | `cli.py:551-602`, registro en `cli.py:1515-1516` junto a `_add_test_window_parser`; `backend_params.py:580-664` · `test_cli_backend_params.py` (cada verbo, `test_show_json_shape`, `test_set_invalid_leaves_file_untouched` con bytes y `mtime`) | Decisión 12 (reset sin preguntar) aplicada en `backend_params.py:648-664`. |
+| REQ-004 Lista cerrada | cumple | `backend_params.py:77-101` (21 claves con los rangos de la tabla), `:214-241` (un booleano no es número, `NaN`/`inf` fuera, una clave int no acepta float) · `test_backend_params_rules.py::test_catalog_has_exactly_21_keys`, `test_value_validation`, `test_every_key_has_a_valid_and_an_invalid_case` | |
+| REQ-005 Reservadas | cumple | `backend_params.py:104-152` (27 reservadas + 9 aplazadas), `:380` (assert de defensa en `to_body`) · `test_reserved_and_deferred_keys_are_rejected`, `test_backend_params_server.py::test_reserved_key_never_reaches_body` | |
+| REQ-006 Quitar solo la clave | cumple | `backend_params.py:179-189` (`Warning` = rol, clave y código; sin valor), `:489-495` · `test_file_and_env_drop_only_bad_key`, `test_bad_keys_dropped_rest_applied`, `test_sentinels_never_in_log`, `test_status_hides_sentinels`, `test_show_hides_sentinels`, `test_doctor_hides_sentinels` | |
+| REQ-007 Fuera de rango o de tipo | cumple | Igual que REQ-006 por fichero y variable; `set` rechaza en `backend_params.py:590-594` · `test_file_and_env_drop_only_bad_key` (`top_p 1.5`, `top_k=x`), `test_set_invalid_leaves_file_untouched` | |
+| REQ-008 Variable y precedencia | cumple | `config.py:472-498` (lector `(value, problem, raw)`, tope 2048, dentro del bucle `_reader`), `backend_params.py:280-319` (gramática), `:694-696` (la variable gana clave a clave) · `test_override_grammar`, `test_variable_is_registered`, `test_env_wins_key_by_key`; `test_environment_isolation.py` sin cambios desde `f2dd267` | |
+| REQ-009 Sin reiniciar | cumple | `backend_params.py:677-731` (caché por `(st_mtime_ns, st_size, st_ino)` + valor crudo de la variable); `server.py:2575-2587` resuelve al empezar cada operación · `test_same_size_rewrite_is_seen[set\|in_place]`, `test_backend_params_server.py::test_file_change_applies_next_operation` (20→30, mismo tamaño); en vivo, T19 paso 4 | |
+| REQ-010 Temperatura del rol | cumple | `backend_params.py:362-364`; `server.py:2553-2572` (sustituye en sitio) · `test_role_temperature_overrides_tool[*]` (incluye `local_boilerplate` sin cambio) | |
+| REQ-011 Razonamiento | cumple | `backend_params.py:322-333` (sin presupuesto se ignora con aviso), `:363` y `:370-377` (suma al tope, `chat_template_kwargs`, `reasoning_effort` en la raíz), `:596-603` y `:612-622` (rechazos de `set` y `unset`) · `test_set_rejects_thinking_without_budget`, `test_unset_budget_rejected_while_thinking_on`, `test_thinking_without_budget_body_has_no_template_kwargs[file\|env]`, `test_thinking_on_classify_sums_budget`, `test_every_chunk_sums_budget`, `test_thinking_off_sends_false_and_keeps_max_tokens`; en vivo, `reasoning_chars = 1067` y `tokens_out = 956 = 700 + 256` | |
+| REQ-012 Capas y respaldo | cumple con nota | `server.py:2084-2110` (capa 2 en `_call_model` sobre una copia; el `payload` no se muta), `:2553-2572` (el contrato nunca se pisa), `:2481-2509` (`_RoleParams` aparte de `_CurrentModel.role`); paso a trozos y map/reduce en `:3258-3260` y `:3522-3524` · `test_to_body_layers`, `test_params_survive_fallback_and_later_chunks`, `test_code_temperature_0_7`, `test_contract_keys_always_from_product` | Hallazgo 3: «una vez por operación» solo lo protege un test de forma indirecta. |
+| REQ-013 Modelo explícito | cumple | `server.py:2590` (`explicit` → `None`), `local_delegate` en `server.py:4918` · `test_explicit_model_carries_no_params`, `test_local_delegate_without_model_uses_mechanical`, `test_explicit_model_event_has_no_backend_params`; camino `delegate_explicit` de la compatibilidad | |
+| REQ-014 Sin argumentos nuevos | cumple con nota | `tests/fixtures/tool_signatures.json` (de `f2dd267`) · `test_tool_signatures.py::test_tool_parameters_match_snapshot`, `test_no_tool_parameter_is_a_backend_param`, `test_the_guard_has_the_keys_of_the_spec` | La guarda (b) exime `("local_delegate", "model")` (hallazgo 1). |
+| REQ-015 Rechazo 400 | cumple con nota | `server.py:2112-2126` (una sola prueba por operación con `claim_probe`, antes del reintento sin esquema; marca solo si funciona), `:2511-2518` (tras el rechazo, el cuerpo de la tool) · `test_backend_params_rejection.py` (6 tests: esquema, 3 trozos = 4 POST, valores de la tool, 400 con y sin parámetros, una sola prueba, control sin parámetros, tool sin esquema), `test_rejected_event_keeps_tried_values` | Un reintento que falla con algo distinto de 400 no lo define la spec (hallazgo 4). |
+| REQ-016 `local_status` y `doctor` | cumple | `server.py:5926-5954` (debajo de `vision`, llamada en `:5804`), `doctor.py:68-98` (`backend_params_lines`, con aviso si la variable está en tu shell) · `test_backend_params_status.py`, `test_doctor_backend_params.py`; `test_checks.py` sin cambios desde `f2dd267`; en vivo, T19 pasos 3 y 6 | |
+| REQ-017 i18n | cumple | `resources/i18n/{es,en}/{cli,common,doctor,mcp,panel}.json` (pares en el diff); `test_i18n_parity.py` sin cambios · `test_backend_params_i18n.py::test_every_warning_code_has_text_in_both_languages`, `test_warning_texts_have_no_value_placeholder`, `test_rendered_warnings_hide_sentinels[es\|en]` | La CI `test-lang-es` no se comprobó aquí. |
+| REQ-018 Log | cumple | `server.py:877-885` (campos aditivos, omitidos si no aplican), `:1387-1400` y `_body_failure` (`reasoning_chars` también en fallos), `:1517-1541` (`reasoning_content` + bloques `<think>`, sin texto), `:2137-2139` (suma de los POST de un intento), `:2590-2615` · `test_backend_params_log.py` (omisión, intento fallido, `<think>` sin `reasoning_content`, texto nunca en `usage-*.jsonl`, `source` solo con `env`, operación troceada) | |
+| REQ-019 Panel | cumple con nota | `web/metrics.py:3131-3147` (`reasonchip`, `paramschip`, estado `rejected`), `:3149-3191` (filas sin vacías), `:3339-3357` (diálogo con el patrón de `infoDlg`, Enter), `:1811` · `test_dashboard_states.py` (casos nuevos hacia `:876-929`), `test_dashboard_ui.py::test_event_row_opens_dialog_with_enter`, `test_metrics.py:1574`; `test_dashboard_js.py` sin cambios; 4 PNG en `evidence/` | Revisé `panel-lista-claro.png` y `panel-dialogo-oscuro.png`: marcas visibles y sin solape, diálogo sin filas vacías. El diálogo pinta los booleanos como `true` y la CLI como `on` (hallazgo 5). |
+| REQ-020 Benchmark | cumple | `benchmark.py:994` (enum = `off` + el del producto), `:1006-1039` y `:1095-1112` (cuerpo vía `backend_params.to_body`, presupuesto sumado), `:1133-1160` (error sin presupuesto, venga el esfuerzo de donde venga), `:1163-1174`, `:1337` y `:1394` (metadatos, solo nombres) · `test_benchmark.py` (forma nueva, errores, metadatos, `test_effort_enum_matches_product`); en vivo `off`/`low`/`high`, sin diferencia entre `low` y `high` | |
+| REQ-021 Documentación | cumple con nota | `docs/wiki/Configuration.md` §«Parámetros del backend por rol» cubre los 9 puntos (fichero y subcomando; tablas de claves y reservadas; precedencia y capas; roles que cambian por tamaño; `reasoning_effort` solo no enciende + medición `low`/`high`; suma al tope y contexto; Qwen sin etiquetas; variable frente a fichero, cada máquina, la Mac con 8192; medir con el benchmark de afinidad); `Savings-and-metrics.md:40-52`; `README.md:225-229`; `CHANGELOG.md` `[Unreleased]` · `test_wiki.py::test_configuration_documents_backend_params`, `test_configuration_lists_every_backend_param_key` | Falta una advertencia de uso sobre presupuestos pequeños con Qwen3.6 (hallazgo 2). |
+| REQ-022 Compatibilidad | cumple | `server.py:2583-2587` (sin valores → `None` → el cuerpo de hoy) · `test_request_body_compat.py` (8 caminos × sin fichero / roles vacíos / rol vacío, comparación ordenada con `object_pairs_hook=list`, conjunto de claves del evento; fixtures de `scripts/capture_request_bodies.py` en `46633bb`, antes de tocar `server.py`, y cada una anota `f2dd267`); en vivo, T19 paso 7 | |
+| REQ-023 Contexto | cumple | `server.py:2526-2538` (fórmula con margen 2, sistema + usuario, `vision` fuera, modelo real del intento), `config.py:543`, `llamaswap_config.py:544-569` (`model_context_size`, caché, estimado 8192, nunca lanza), `backend_params.py:755-781` (aviso de `set`, `show`, `doctor` y `local_status`) · `test_backend_params_context.py` (larga, corta, límite exacto y un carácter más, densa, visión, contexto desconocido, respaldo con su propio contexto), `test_model_context_size.py`, `test_set_context_warning_exit_zero` | El aviso de «contexto estimado» solo sale para roles con el razonamiento encendido; es la lectura razonable de la spec. |
+
+Recuento: 17 cumplen y 6 cumplen con nota (REQ-001, 012, 014, 015, 019 y 021); ninguno incumple.
+
+## Hallazgos
+
+1. **Menor — la guarda de REQ-014 (b) tiene una excepción que la spec no recoge.**
+   `tests/test_tool_signatures.py` (constante `PRE_EXISTING`) exime `("local_delegate", "model")`.
+   La letra de REQ-014 (b) dice que ningún parámetro se llame como una clave reservada, y `model` lo
+   es; pero ese argumento existe desde antes del cambio y quitarlo rompería el assert (a) y a los
+   clientes. El espíritu (el modelo frontera no fija parámetros de rol) se cumple: con `model=` el
+   cuerpo no lleva ninguno (REQ-013). Está anotado en `verification.md` §«Desviaciones». Haría
+   falta: una línea en «Cambios tras la revisión» de la spec, para que la spec y el test digan lo
+   mismo.
+
+2. **Menor — la wiki no advierte del corte con presupuestos pequeños en Qwen3.6 (hallazgo de T19).**
+   `docs/wiki/Configuration.md`, bloque «Qwen y el razonamiento sin etiquetas»: explica que el exceso
+   se cuela en `content` y no se cuenta, pero no que con presupuesto 256 en `code` la respuesta se
+   corta por `max_tokens` (`finish_reason = length`) y sale mala. No contradice ningún REQ (ver la
+   última sección). Haría falta: una frase de recomendación en la wiki, o una entrada en el
+   backlog, sobre el presupuesto mínimo aconsejable por modelo.
+
+3. **Menor — «una vez por operación» (REQ-012) no tiene un test que lo distinga de «en cada llamada».**
+   `server.py:3258-3260` y `:3522-3524` resuelven al empezar. Mutante mental: resolver en
+   `_call_model` con el rol de origen guardado. Ningún test fallaría, porque ninguno cambia el
+   fichero a mitad de una operación troceada. El mutante que sí importa (resolver con
+   `_CurrentModel.role`, que vale `None` tras un salto) lo caza
+   `test_params_survive_fallback_and_later_chunks`. Haría falta, si se quiere blindar: un test que
+   reescriba el fichero desde el backend falso entre el trozo 1 y el 2 y compruebe que el trozo 2
+   lleva el valor viejo.
+
+4. **Menor — REQ-015 no define qué pasa si el reintento sin parámetros falla con algo que no es 400.**
+   `server.py:2112-2126`: si el reintento da timeout o 5xx, no se marca el rechazo, la prueba queda
+   gastada y el flujo sigue con el resultado 400 original (reintento sin esquema, con parámetros).
+   Es coherente con «solo se marca si el reintento funciona», pero la spec solo describe el caso
+   «también da 400». Haría falta: nada en código; anotarlo como comportamiento aceptado.
+
+5. **Menor — los booleanos salen con dos formatos según la superficie.** `web/metrics.py:3149-3191`
+   (`eventRows`) pinta `enable_thinking = true` (se ve en `evidence/panel-dialogo-oscuro.png`),
+   mientras que `show`, `doctor` y `local_status` usan `on`/`off` (`backend_params.py:192-200`).
+   Ningún REQ lo exige; es coherencia de cara al usuario. Haría falta: usar `on`/`off` en el
+   diálogo, si se quiere.
+
+No hay hallazgos bloqueantes ni importantes.
+
+**Mutantes mentales de los REQ críticos** (qué test falla si se rompe):
+- REQ-009: una caché que ignora `st_mtime_ns` o `st_ino` → `test_same_size_rewrite_is_seen[in_place]`;
+  parámetros resueltos al importar → `test_file_change_applies_next_operation`.
+- REQ-011: no sumar el presupuesto → `test_thinking_on_classify_sums_budget`; sumarlo solo en el
+  primer trozo → `test_every_chunk_sums_budget`; `set` que acepta `enable_thinking on` sin
+  presupuesto → `test_set_rejects_thinking_without_budget`.
+- REQ-014: un argumento nuevo en una tool → `test_tool_parameters_match_snapshot`; un argumento
+  llamado como una clave o `reasoning*` → `test_no_tool_parameter_is_a_backend_param`.
+- REQ-018: guardar el texto del razonamiento → `test_reasoning_text_never_logged`; no contar los
+  intentos fallidos → `test_reasoning_chars_sums_failed_attempt`; no contar `<think>` →
+  `test_think_tags_count_without_reasoning_content`.
+- REQ-022: una clave de más, otro orden o un `1` frente a `1.0` en cualquiera de los 8 caminos →
+  `test_body_matches_main`; un `_RoleParams` creado para un rol vacío → el mismo test en modo
+  `empty_role`.
+
+Ningún REQ crítico queda sin un test que lo cace.
+
+## Fuera de alcance respetado
+
+- Sin `LOCAL_DELEGATE_REASONING_EFFORT`, `LOCAL_DELEGATE_EXTRA_BODY` ni `extra_body` en `src/`.
+- Sin parámetros por tool ni por modelo; `filters.setParams` de llama-swap sin tocar.
+- Las 9 claves aplazadas se rechazan (`backend_params.py:140-152`, código `deferred_key`).
+- Sin `reasoning_chars` por paso en `steps[]`.
+- No se recorta la entrada ni se reduce `MAX_CHARS` (`test_long_input_skips_reasoning` comprueba
+  que la entrada llega entera).
+- Sin cambios en `pyproject.toml`, `uv.lock`, `benchmarks/` ni en la config de llama-swap;
+  `llamaswap_config.py` solo gana el lector `model_context_size`. Sin dependencias nuevas.
+- El contenido de Qwen sin etiquetas no se quita ni se cuenta; solo se documenta.
+- README, wiki y CHANGELOG solo en español (decisión 11).
+
+## El hallazgo de T19 (Qwen3.6, presupuesto 256 en `code`)
+
+**No es un incumplimiento; es una recomendación de uso.** El producto hizo exactamente lo que
+piden los REQ: mandó `enable_thinking: true` y `reasoning_budget_tokens: 256`, sumó el presupuesto
+al tope (`tokens_out = 956 = 700 + 256`, REQ-011), registró `backend_params` y
+`reasoning_chars = 1067` (REQ-018) y no recortó nada. Que Qwen3.6 siga «pensando» en el `content`
+visible tras agotar el presupuesto es el riesgo que la spec ya reconoce (tabla de riesgos: «En Qwen
+el razonamiento que pasa del presupuesto aparece en `content` sin etiquetas») y que deja fuera de
+alcance («Quitar o contar el razonamiento que Qwen deja en `content`»). El rango del presupuesto
+(1–8192, REQ-004) es de validación, no de calidad, y medir la calidad de un razonamiento nuevo
+queda para el usuario con el benchmark de afinidad (fuera de alcance). Lo que sí conviene es el
+hallazgo 2: decirlo en la wiki o llevarlo al backlog, para que nadie configure 256 en `code` con
+Qwen3.6 creyendo que es un valor seguro.
