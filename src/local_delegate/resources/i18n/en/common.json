@@ -8,5 +8,20 @@
   "common.language.warning.unreadable_preference": "The preference file {path} could not be read and is ignored.",
   "common.output_language.source.output_variable": "output variable",
   "common.output_language.warning.control_chars": "`LOCAL_DELEGATE_OUTPUT_LANGUAGE` contains line breaks or control characters and is ignored.",
-  "common.output_language.warning.too_long": "`LOCAL_DELEGATE_OUTPUT_LANGUAGE` is longer than {max} characters and is ignored."
+  "common.output_language.warning.too_long": "`LOCAL_DELEGATE_OUTPUT_LANGUAGE` is longer than {max} characters and is ignored.",
+  "common.backend_params.warning.unknown_role": "Role \"{role}\" does not exist, so its key \"{key}\" is ignored.",
+  "common.backend_params.warning.unknown_key": "Key \"{key}\" of role {role} is not an accepted parameter and is removed.",
+  "common.backend_params.warning.reserved_key": "Key \"{key}\" of role {role} is controlled by the product and cannot be configured: it is removed.",
+  "common.backend_params.warning.deferred_key": "Key \"{key}\" of role {role} is not supported yet and is removed.",
+  "common.backend_params.warning.bad_type": "Key \"{key}\" of role {role} has a value of the wrong type and is removed.",
+  "common.backend_params.warning.out_of_range": "Key \"{key}\" of role {role} has an out-of-range value and is removed.",
+  "common.backend_params.warning.malformed_entry": "An entry of `LOCAL_DELEGATE_BACKEND_PARAMS` is malformed (role \"{role}\", key \"{key}\") and is ignored: the format is `role.key=value`.",
+  "common.backend_params.warning.duplicate_key": "Key \"{key}\" of role {role} is repeated in `LOCAL_DELEGATE_BACKEND_PARAMS`: the last one wins.",
+  "common.backend_params.warning.override_too_long": "`LOCAL_DELEGATE_BACKEND_PARAMS` is longer than 2048 characters and is ignored entirely.",
+  "common.backend_params.warning.thinking_without_budget": "Role {role} turns reasoning on without `reasoning_budget_tokens`: `enable_thinking` is ignored.",
+  "common.backend_params.warning.file_unreadable": "`backend-params.json` could not be read or is not valid JSON: it is ignored entirely.",
+  "common.backend_params.warning.file_bad_version": "`backend-params.json` does not have `version: 1` and is ignored entirely.",
+  "common.backend_params.warning.file_too_large": "`backend-params.json` is larger than 64 KB and is ignored entirely.",
+  "common.backend_params.warning.context_estimated": "The context size of the model for role {role} could not be read from the llama-swap config: an estimate of 8192 tokens is used.",
+  "common.backend_params.warning.context_overflow": "In role {role}, reasoning does not fit in the model context: the call goes without reasoning."
 }

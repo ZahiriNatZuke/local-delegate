@@ -9,8 +9,8 @@ independientes:
   reservada (REQ-005), `role`, `backend_params` o `extra_body`, ni empieza por `reasoning`. No
   depende de la instantánea: actualizarla no la apaga.
 
-Hasta el lote A1 las claves se escriben aquí, copiadas de la spec. T3 las sustituye por
-`backend_params.ALLOWED_KEYS | backend_params.RESERVED_KEYS`.
+Las claves salen de `backend_params.ALLOWED_KEYS | backend_params.RESERVED_KEYS` (T3, paso 7);
+`tests/test_backend_params_rules.py` comprueba que son las de la spec.
 
 Para regenerar la instantánea (solo si el cambio de firma es a propósito):
 `uv run python tests/test_tool_signatures.py`.
@@ -24,68 +24,14 @@ import json
 import sys
 from pathlib import Path
 
-from local_delegate import server
+from local_delegate import backend_params, server
 
 SNAPSHOT = Path(__file__).parent / "fixtures" / "tool_signatures.json"
 
-#: REQ-004: las 21 claves permitidas.
-ALLOWED_KEYS = frozenset(
-    {
-        "temperature",
-        "top_k",
-        "top_p",
-        "min_p",
-        "typical_p",
-        "repeat_penalty",
-        "repeat_last_n",
-        "presence_penalty",
-        "frequency_penalty",
-        "dry_multiplier",
-        "dry_base",
-        "dry_allowed_length",
-        "dry_penalty_last_n",
-        "xtc_probability",
-        "xtc_threshold",
-        "mirostat",
-        "mirostat_tau",
-        "mirostat_eta",
-        "enable_thinking",
-        "reasoning_budget_tokens",
-        "reasoning_effort",
-    }
-)
-#: REQ-005: contrato de la tool, servidor y razonamiento en crudo.
-RESERVED_KEYS = frozenset(
-    {
-        "model",
-        "messages",
-        "stream",
-        "stream_options",
-        "max_tokens",
-        "max_completion_tokens",
-        "n_predict",
-        "response_format",
-        "json_schema",
-        "grammar",
-        "tools",
-        "tool_choice",
-        "functions",
-        "function_call",
-        "n",
-        "n_cmpl",
-        "stop",
-        "logprobs",
-        "n_probs",
-        "response_fields",
-        "cache_prompt",
-        "id_slot",
-        "n_keep",
-        "samplers",
-        "seed",
-        "chat_template_kwargs",
-        "reasoning_format",
-    }
-)
+#: REQ-004 y REQ-005: la regla única de `backend_params` (T3, paso 7). La guarda mira el catálogo
+#: del producto, no una copia: una clave que se añada allí queda prohibida aquí sin tocar el test.
+ALLOWED_KEYS = frozenset(backend_params.ALLOWED_KEYS)
+RESERVED_KEYS = backend_params.RESERVED_KEYS
 #: REQ-014 (b): los nombres que, además de las claves, quedan prohibidos.
 EXTRA_FORBIDDEN = frozenset({"role", "backend_params", "extra_body"})
 FORBIDDEN_PREFIX = "reasoning"

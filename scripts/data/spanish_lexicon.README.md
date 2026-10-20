@@ -112,6 +112,12 @@ de diccionario.
     `closest`, `prevent` y `stringify` (métodos del DOM y de `JSON` en el JS del panel) y
     `reasoned` (variable de `tests/test_dashboard_states.py`).
 
+15. Con las reglas de los parámetros por rol al backend (lote A1 del mismo SDD, 2026-10-20) el
+    detector informó de 13 palabras más sin clasificar, a mano, todas a inglés: las claves
+    aplazadas de la spec (`adaptive`, `breakers`, `decay`, `dynatemp`, `exponent`) y palabras de
+    `src/local_delegate/backend_params.py` y de sus tests (`finite`, `hide`, `hostile`, `inf`,
+    `nan`, `sentinel`, `sentinels`, `validation`).
+
 ## Heurísticas (no usan datos ajenos)
 
 En `detect_spanish_names.classify_word`, en este orden:
