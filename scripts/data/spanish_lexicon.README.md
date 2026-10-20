@@ -123,6 +123,11 @@ de diccionario.
     `got`, `holder`, `loss`, `mutator`, `needed`, `refuse` y `temporaries` (de
     `src/local_delegate/backend_params.py` y de sus tests).
 
+18. Con la fusión de los parámetros por rol en el embudo de `server.py` (lote C1 del mismo SDD,
+    2026-10-20) el detector informó de 1 palabra más sin clasificar, a mano, a inglés: `survive`
+    (de `tests/test_backend_params_server.py`). La entrada 17 es la del lote B, que se trabajó en
+    paralelo; al rebasar se unen las listas.
+
 ## Heurísticas (no usan datos ajenos)
 
 En `detect_spanish_names.classify_word`, en este orden:
