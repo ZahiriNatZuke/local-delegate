@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "slug": "backend-extra-params",
+  "title": "Parámetros extra por petición al backend (reasoning effort y extra body)",
+  "mode": "standard",
+  "status": "implementing",
+  "createdAt": "2026-10-20T11:58:54.218Z",
+  "updatedAt": "2026-10-20T13:41:08.971Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-10-20T13:13:42.514Z",
+      "evidence": "spec.md: 23 REQ con criterio de aceptación. Revisión adversarial en review.md: 1.ª pasada APROBABLE CON CAMBIOS (14 hallazgos, 2 bloqueantes), aplicados; 2.ª pasada APROBADO CON NOTAS (S1-S6), aplicadas en spec.md (REQ-004/015/023, sección Cambios tras la revisión). Decisiones del usuario 1-11 en brief.md.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-10-20T13:33:27.671Z",
+      "evidence": "plan.md: 10 lotes, 19 tareas, matriz REQ->tarea->test de los 23 REQ, Delegación local por tarea y verificación. Revisión adversarial en review.md (Revisión del plan): APROBADO CON NOTAS, P1-P16 aplicados (sección Cambios tras la revisión del plan); enmienda de REQ-012 sin cambio de comportamiento en spec.md.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-10-20T11:58:54.218Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-10-20T13:13:42.514Z",
+      "evidence": "spec.md: 23 REQ con criterio de aceptación. Revisión adversarial en review.md: 1.ª pasada APROBABLE CON CAMBIOS (14 hallazgos, 2 bloqueantes), aplicados; 2.ª pasada APROBADO CON NOTAS (S1-S6), aplicadas en spec.md (REQ-004/015/023, sección Cambios tras la revisión). Decisiones del usuario 1-11 en brief.md.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-10-20T13:13:47.981Z",
+      "reason": "probe"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-10-20T13:13:55.733Z",
+      "reason": "Investigación hecha en dos rondas (research.md); spec redactada y revisada"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-10-20T13:13:55.935Z",
+      "reason": "Spec aprobada (23 REQ); se redacta el plan"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-10-20T13:23:02.319Z",
+      "reason": "plan.md redactado: 10 lotes, 19 tareas, delegación local por tarea"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-10-20T13:33:27.671Z",
+      "evidence": "plan.md: 10 lotes, 19 tareas, matriz REQ->tarea->test de los 23 REQ, Delegación local por tarea y verificación. Revisión adversarial en review.md (Revisión del plan): APROBADO CON NOTAS, P1-P16 aplicados (sección Cambios tras la revisión del plan); enmienda de REQ-012 sin cambio de comportamiento en spec.md.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-10-20T13:41:08.971Z",
+      "reason": "Gates spec y plan aprobados; arranca la ola 1 (L0, A1, E en paralelo)"
+    }
+  ]
+}

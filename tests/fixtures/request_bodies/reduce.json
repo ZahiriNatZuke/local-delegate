@@ -1,0 +1,66 @@
+{
+  "commit": "f2dd26750f3fa97b74eb5b5c75ea1bae1bcc743d",
+  "bodies": [
+    [
+      [
+        "model",
+        "gemma4-26b-a4b"
+      ],
+      [
+        "messages",
+        [
+          [
+            [
+              "role",
+              "system"
+            ],
+            [
+              "content",
+              "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un ÚNICO resumen global en prosa clara, sin repetir ni enumerar los fragmentos. Máximo 150 palabras. Nada fuera del formato. Escribe toda la respuesta en español, aunque el contenido esté en otro idioma: redacta en español cada frase, también la descripción de cada error o regla, con frases completas y sin copiar frases del contenido. También van en español las etiquetas en negrita, también las que nombran una subsección: tradúcelas aunque en el contenido aparezcan en otro idioma. Solo se quedan tal cual los títulos de las líneas '## ' que se piden literales, las rutas, el código, los identificadores y los códigos de regla o de error."
+            ]
+          ],
+          [
+            [
+              "role",
+              "user"
+            ],
+            [
+              "content",
+              "Estos son resúmenes parciales y EN ORDEN de un mismo documento. Redacta un único resumen global:\n\nresumen parcial\n\nresumen parcial\n\nresumen parcial\n\nresumen parcial"
+            ]
+          ]
+        ]
+      ],
+      [
+        "max_tokens",
+        364
+      ],
+      [
+        "temperature",
+        0.2
+      ],
+      [
+        "stream",
+        false
+      ]
+    ]
+  ],
+  "event_keys": [
+    "backend",
+    "backend_host",
+    "chars_in",
+    "chars_out",
+    "chars_out_raw",
+    "chunks",
+    "finish_reason",
+    "latency_ms",
+    "model",
+    "ok",
+    "raw_len",
+    "source",
+    "steps",
+    "tool",
+    "ts",
+    "v"
+  ]
+}

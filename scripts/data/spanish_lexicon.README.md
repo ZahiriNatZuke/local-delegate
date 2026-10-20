@@ -100,6 +100,12 @@ de diccionario.
     clasificar, a mano, todas a inglés: `edges`, `gaps`, `panels`, `straddling` y `tight` (medidas
     y nombres de los tests de bordes de `tests/test_dashboard_ui.py`).
 
+13. En el lote L0 del SDD `backend-extra-params` (2026-10-20) el detector informó de 14 palabras
+    sin clasificar, a mano, todas a inglés: las claves de llama-server que la guarda de
+    `tests/test_tool_signatures.py` copia de la spec (`cmpl`, `eta`, `mirostat`, `multiplier`,
+    `penalty`, `predict`, `probability`, `probs`, `tau`, `typical`, `xtc`) y nombres de ese test y
+    de `tests/test_request_body_compat.py` (`indirect`, `offenders`, `want`).
+
 ## Heurísticas (no usan datos ajenos)
 
 En `detect_spanish_names.classify_word`, en este orden:
