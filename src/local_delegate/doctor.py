@@ -65,13 +65,6 @@ def language_lines() -> list[str]:
     return lines
 
 
-def format_param_value(value: object) -> str:
-    """A catalog value as a person writes it in `backend-params set` (`on`/`off` for booleans)."""
-    if isinstance(value, bool):
-        return "on" if value else "off"
-    return str(value)
-
-
 def backend_params_lines() -> list[str]:
     """REQ-016/023 (SDD backend-extra-params, T9): the per-role backend parameters, as header lines.
 
@@ -92,7 +85,7 @@ def backend_params_lines() -> list[str]:
         if row.values:
             from_env = i18n.t("doctor.backend_params.from_env")
             params = ", ".join(
-                f"{key}={format_param_value(value)}"
+                f"{key}={backend_params.format_param_value(value)}"
                 + (f" {from_env}" if row.source.get(key) == backend_params.SOURCE_ENV else "")
                 for key, value in row.values.items()
             )

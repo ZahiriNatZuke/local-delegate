@@ -539,7 +539,7 @@ def _backend_params_show(as_json: bool) -> int:
                 t(
                     "cli.backend_params.row",
                     key=key,
-                    value=doctor.format_param_value(value),
+                    value=bp.format_param_value(value),
                     source=source,
                 )
             )

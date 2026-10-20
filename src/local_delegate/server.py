@@ -5932,8 +5932,6 @@ def _describe_backend_params() -> list[str]:
     a dropped entry shows its role, key and code, never its value (REQ-006). Without parameters
     or warnings, no line at all, so the report stays the one of before.
     """
-    from .doctor import format_param_value
-
     rows = [row for row in backend_params.report() if row.values or row.warnings]
     if not rows:
         return []
@@ -5945,7 +5943,7 @@ def _describe_backend_params() -> list[str]:
     for row in rows:
         if row.values:
             params = ", ".join(
-                f"{key}={format_param_value(value)} "
+                f"{key}={backend_params.format_param_value(value)} "
                 + origin[row.source.get(key, backend_params.SOURCE_FILE)]
                 for key, value in row.values.items()
             )

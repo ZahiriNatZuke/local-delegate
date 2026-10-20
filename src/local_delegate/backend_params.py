@@ -189,6 +189,17 @@ def warning_text(warning: Warning) -> str:
     return i18n.t(_TEXT_PREFIX + warning.code, role=warning.role, key=warning.key)
 
 
+def format_param_value(value: object) -> str:
+    """A catalog value as a person writes it in `backend-params set` (`on`/`off` for booleans).
+
+    Shared by `show` (CLI), `doctor` and `local_status`; it lives here so that `server` does not
+    have to import `doctor` (a cyclic import).
+    """
+    if isinstance(value, bool):
+        return "on" if value else "off"
+    return str(value)
+
+
 def key_problem(key: str) -> str | None:
     """Why a key cannot be configured, or None if it is in the catalog."""
     if key in ALLOWED_KEYS:

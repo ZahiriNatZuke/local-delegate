@@ -319,12 +319,17 @@
    `_chat_map_reduce`. Con modelo explícito `_role_params_for` da `None` y no hay campos (REQ-013).
 6. **`local_status`** (T14): `_describe_backend_params()` justo debajo de la línea de `vision`,
    antes de las cadenas de respaldo. Cabecera `Parámetros por rol: <ruta>`, una línea por rol con
-   valores (`clave=valor (fichero|variable)`, booleanos `on`/`off` con `doctor.format_param_value`,
-   importado dentro de la función) y debajo sus avisos, contexto incluido; los avisos sin rol
+   valores (`clave=valor (fichero|variable)`, booleanos `on`/`off` con
+   `backend_params.format_param_value`) y debajo sus avisos, contexto incluido; los avisos sin rol
    (`role == ""`) también. Mismo criterio que `doctor`: hay líneas si algún rol tiene valores o
    avisos. A diferencia de `doctor`, no avisa de «la variable de esta shell»: `local_status` corre
    en el daemon y lo que muestra **es** lo del daemon. Claves nuevas en `mcp.json` es/en:
    `mcp.status.backend_params.{line,role,warning,from_file,from_env}`.
+   **Cambio tras la primera PR**: la primera versión importaba `doctor.format_param_value` dentro
+   de la función, y CodeQL lo marcó como importación cíclica (alerta 137: `doctor` vuelve a
+   `server` por sus propias importaciones). `format_param_value` se movió a `backend_params.py` (que ya importan `doctor`,
+   `cli` y `server`); `doctor` y `cli` (`show`) la llaman desde ahí, sin alias en `doctor`
+   (ningún test la importaba de ese módulo). `server.py` ya no importa `doctor`.
 7. **Tests de más respecto a la lista del plan**: `test_unclosed_think_counts_to_the_end`,
    `test_reasoning_chars_of_every_post_in_one_attempt`, `test_not_rejected_event_has_no_mark`,
    `test_chunked_operation_event_carries_params[map_reduce|chunked]` (los dos caminos de
