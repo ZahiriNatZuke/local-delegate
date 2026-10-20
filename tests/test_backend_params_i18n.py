@@ -62,6 +62,8 @@ def _sentinel_warnings() -> list[bp.Warning]:
         bp.Warning("", "", "file_too_large"),
         bp.Warning("code", "", "context_estimated"),
         bp.Warning("code", "", "context_overflow"),
+        bp.Warning("", "", "file_busy"),
+        bp.Warning("", "", "file_write_failed"),
     ]
     return warnings
 

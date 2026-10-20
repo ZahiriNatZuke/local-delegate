@@ -23,5 +23,7 @@
   "common.backend_params.warning.file_bad_version": "`backend-params.json` no tiene `version: 1` y se ignora entero.",
   "common.backend_params.warning.file_too_large": "`backend-params.json` pasa de 64 KB y se ignora entero.",
   "common.backend_params.warning.context_estimated": "No se pudo leer de la config de llama-swap el contexto del modelo del rol {role}: se usa un estimado de 8192 tokens.",
-  "common.backend_params.warning.context_overflow": "En el rol {role}, el razonamiento no cabe en el contexto del modelo: la llamada va sin razonamiento."
+  "common.backend_params.warning.context_overflow": "En el rol {role}, el razonamiento no cabe en el contexto del modelo: la llamada va sin razonamiento.",
+  "common.backend_params.warning.file_busy": "`backend-params.json` está bloqueado por otra escritura: no se cambió nada; vuelve a intentarlo.",
+  "common.backend_params.warning.file_write_failed": "No se pudo escribir `backend-params.json`: el fichero anterior queda como estaba."
 }

@@ -118,6 +118,11 @@ de diccionario.
     `src/local_delegate/backend_params.py` y de sus tests (`finite`, `hide`, `hostile`, `inf`,
     `nan`, `sentinel`, `sentinels`, `validation`).
 
+16. Con el fichero, la caché y la resolución por rol (lote A2 del mismo SDD, 2026-10-20) el
+    detector informó de 9 palabras más sin clasificar, a mano, todas a inglés: `anyway`, `foo`,
+    `got`, `holder`, `loss`, `mutator`, `needed`, `refuse` y `temporaries` (de
+    `src/local_delegate/backend_params.py` y de sus tests).
+
 ## Heurísticas (no usan datos ajenos)
 
 En `detect_spanish_names.classify_word`, en este orden:

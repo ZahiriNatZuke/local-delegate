@@ -57,10 +57,53 @@
 8. Los códigos `file_*` y `context_*` aún no tienen productor (llegan en tareas posteriores): el
    test de textos los construye a mano.
 
+### Decisiones del lote A2 (fichero y resolución: T6 y T7)
+
+1. **Dos códigos nuevos**, `file_busy` (el cerrojo no se libera en `LOCK_TIMEOUT` = 10 s) y
+   `file_write_failed` (un `OSError` al escribir), con su texto es/en en `common.json`.
+   `set_value`/`unset`/`reset` devuelven `(ok, code, warnings)` como pide el plan y no lanzan; sin
+   estos dos códigos habrían tenido que dejar escapar `filelock.Timeout` y `OSError` hacia la CLI.
+   `test_backend_params_i18n.py` (de A1) gana esos dos avisos en su lista de todos los códigos.
+   `write(mutator)` sí deja pasar los dos errores: es la pieza de bajo nivel.
+2. **Un rechazo lleva su aviso**: además del código, `warnings` trae `Warning(rol, clave, código)`
+   para que la CLI (lote B) nombre rol y clave sin el valor.
+3. **`set` nunca pisa un fichero que `load` ignoraría entero** (JSON roto, `version` ≠ 1, > 64 KB):
+   devuelve el código `file_*` y no lo toca, como `test_windows._Locked`, que niega la escritura si
+   el fichero existente es ilegible. Así no se pierde a ciegas una edición a mano.
+4. **`reset` con el razonamiento encendido** (`test_reset_budget_rejected_while_thinking_on`):
+   `reset` vacía el rol entero, `enable_thinking` incluido, así que no deja razonamiento sin
+   presupuesto. Se implementa lo que piden el plan (paso 4 y la revisión P4) tal cual: se rechaza
+   `reset <rol>` y `reset` global si algún rol que vaciaría tiene en el fichero
+   `enable_thinking: true` **con** `reasoning_budget_tokens`; antes hay que hacer
+   `unset <rol> enable_thinking`. Si se prefiere que `reset` lo vacíe todo sin preguntar, basta con
+   quitar la primera vuelta de `reset.mutate` y ese test: es una decisión de producto para la CLI.
+5. **`test_same_size_rewrite_is_seen` va en dos casos, `[set|in_place]`**. Con `set` el fichero
+   se reemplaza con `os.replace` y cambia el `st_ino` (también en NTFS), así que el mutante que
+   pide el plan (`st_mtime` en vez de `st_mtime_ns` y sin `st_size`, pero con `st_ino`) **no** lo
+   haría fallar. El caso `in_place` reescribe el mismo fichero (mismo inodo, mismo tamaño) y fija
+   la `mtime` 100 ns después con `os.utime(ns=…)`; a fechas actuales el `float` de `st_mtime` no
+   distingue 100 ns. Con el mutante falla en el assert del valor (`20 == 30`); lo mismo para T7
+   en `test_ctx_size_cache_sees_rewrite` (`4096 != 8000`).
+6. **`write` no vacía la caché**: la invalidación depende solo de la clave
+   `(st_mtime_ns, st_size, st_ino)` + valor crudo de la variable. Si el fichero cambia mientras se
+   lee, el resultado no se cachea.
+7. **`report()`**: una entrada por rol en el orden de `ROLES` y, solo si hay, una última con
+   `role == ""` para los avisos que no son de ningún rol (fichero roto, variable larga, trozo sin
+   rol, rol desconocido). `effective(rol).warnings` = los del rol + esos generales; un rol
+   desconocido da valores vacíos.
+8. **`unset` acepta cualquier clave** (también una que el catálogo rechaza) para poder limpiar una
+   edición a mano; una clave ausente no es error. El rol sí se valida.
+9. **`model_context_size`**: un valor de `--ctx-size`/`-c` que no es un entero positivo (`${CTX}`,
+   `0`, `-5`) da el estimado; `llamaswap_config` importa ahora `config` (no hay ciclo). El código y
+   los comentarios nuevos van en inglés, aunque el resto de `llamaswap_config.py` sigue en español.
+10. En `tests/test_backend_params_file.py` se fija `model_context_size` a 32768 en todos los tests
+    para que el aviso de contexto no dependa de la config de llama-swap de la máquina; los tests
+    de contexto lo fijan a 8192.
+
 ### Léxico del detector de nombres tocado fuera de lo que cada lote poseía
 
 - `scripts/data/spanish_lexicon.json` y su README no estaban en la lista de ficheros de ningún
   lote, pero `tests/test_detect_spanish_names.py::test_repo_has_no_spanish_name_outside_the_exception_list`
   exige 0 palabras sin clasificar. L0 añadió 14 (entrada 13), E 6 (entrada 14: `rechazados` a
-  español y 5 a inglés) y A1 13 más (entrada 15, todas a inglés), clasificadas a mano. Al rebasar
-  se unieron las listas (ordenadas y sin duplicados).
+  español y 5 a inglés), A1 13 más (entrada 15, todas a inglés) y A2 9 más (entrada 16, todas a
+  inglés), clasificadas a mano. Al rebasar se unieron las listas (ordenadas y sin duplicados).

@@ -23,5 +23,7 @@
   "common.backend_params.warning.file_bad_version": "`backend-params.json` does not have `version: 1` and is ignored entirely.",
   "common.backend_params.warning.file_too_large": "`backend-params.json` is larger than 64 KB and is ignored entirely.",
   "common.backend_params.warning.context_estimated": "The context size of the model for role {role} could not be read from the llama-swap config: an estimate of 8192 tokens is used.",
-  "common.backend_params.warning.context_overflow": "In role {role}, reasoning does not fit in the model context: the call goes without reasoning."
+  "common.backend_params.warning.context_overflow": "In role {role}, reasoning does not fit in the model context: the call goes without reasoning.",
+  "common.backend_params.warning.file_busy": "`backend-params.json` is locked by another write: nothing was changed; try again.",
+  "common.backend_params.warning.file_write_failed": "`backend-params.json` could not be written: the previous file stays as it was."
 }

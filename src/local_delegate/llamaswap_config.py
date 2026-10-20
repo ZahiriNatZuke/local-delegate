@@ -13,12 +13,14 @@ cosas, cae a una estimación gruesa (``tamaño_archivo * 1.2``) y lo marca como 
 
 from __future__ import annotations
 
+import os
 import re
 import struct
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import footprint, i18n
+from . import config, footprint, i18n
 
 try:
     import yaml
@@ -510,3 +512,65 @@ def dump_config(data: dict, path: Path) -> None:
     promesa de preservar formato.
     """
     path.write_text(dump_config_str(data), encoding="utf-8")
+
+
+# --- Context of the target model (SDD backend-extra-params, T7, REQ-023) ------------------
+
+#: Context assumed when the real one cannot be read (no PyYAML, no config, no such model, or a
+#: flag that is not a number).
+ESTIMATED_CONTEXT = 8192
+
+_context_lock = threading.Lock()
+# (path, st_mtime_ns, st_size, st_ino) -> {model: n_ctx}; only the last config read.
+_context_cache: dict[str, object] = {"key": None, "sizes": {}}
+
+
+def _context_sizes(data: object) -> dict[str, int]:
+    """`{model: n_ctx}` of the models whose `cmd` carries `--ctx-size N` or `-c N` with N > 0."""
+    sizes: dict[str, int] = {}
+    models = data.get("models") if isinstance(data, dict) else None
+    if not isinstance(models, dict):
+        return sizes
+    for name, cfg in models.items():
+        cmd = cfg.get("cmd") if isinstance(cfg, dict) else None
+        if not isinstance(cmd, str):
+            continue
+        text = _parse_cmd_flags(cmd).get("ctx_size", "")
+        if text.isascii() and text.isdigit() and int(text) > 0:
+            sizes[str(name)] = int(text)
+    return sizes
+
+
+def model_context_size(model: str) -> tuple[int, bool]:
+    """`(n_ctx, is_estimate)` of `model` from the llama-swap config. It never raises.
+
+    Reads the model's `cmd` with `load_config` and `_parse_cmd_flags` (`--ctx-size N` or `-c N`).
+    Without PyYAML, without a config, without the model or with a value that is not a positive
+    integer it returns `(ESTIMATED_CONTEXT, True)`. Cached by `(path, st_mtime_ns, st_size,
+    st_ino)`: a change of the config is seen on the next call without a restart.
+    """
+    estimate = (ESTIMATED_CONTEXT, True)
+    try:
+        _require_yaml()
+        raw = config.llamaswap_config_path()
+        if not raw:
+            return estimate
+        path = Path(raw).expanduser()
+        st = os.stat(path)
+        key = (str(path), st.st_mtime_ns, st.st_size, st.st_ino)
+        with _context_lock:
+            if _context_cache["key"] != key:
+                _context_cache["sizes"] = _context_sizes(load_config(path))
+                _context_cache["key"] = key
+            sizes = _context_cache["sizes"]
+        n_ctx = sizes.get(model)  # type: ignore[union-attr]
+        return (n_ctx, False) if n_ctx else estimate
+    except Exception:  # reading the context never breaks a tool, `set` or `doctor`
+        return estimate
+
+
+def _forget_context_sizes() -> None:
+    """Empty the cache of `model_context_size` (for the tests)."""
+    with _context_lock:
+        _context_cache["key"] = None
+        _context_cache["sizes"] = {}
