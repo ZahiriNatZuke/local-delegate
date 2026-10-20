@@ -131,6 +131,10 @@ de diccionario.
     informó de 1 palabra más sin clasificar, a mano, a inglés: `enum` (del test
     `test_effort_enum_matches_product`, nombre fijado por el plan). La entrada 19 es la del lote
     C2, que se trabajó en paralelo; al rebasar se unen las listas.
+21. Con los campos del log y las líneas de `local_status` (lote D del mismo SDD, 2026-10-20) el
+    detector informó de 4 palabras más sin clasificar. `applicable` (del test
+    `test_fields_omitted_when_not_applicable`, nombre fijado por el plan) va, a mano, a inglés;
+    las otras tres (`posted`, `thought`, `multi`) eran nombres propios del lote y se renombraron.
 
 ## Heurísticas (no usan datos ajenos)
 

@@ -284,6 +284,86 @@
    también marcó, era un nombre propio y se renombró a `without_budget`.
 9. La documentación (`docs/wiki/Backend-versions.md` menciona `--reasoning-effort`) es de T18.
 
+### Decisiones del lote D (log y `local_status`: T13 y T14)
+
+1. **Campos del evento** (los que ya lee el panel del lote E, con esos nombres exactos), cada uno
+   omitido cuando no aplica:
+   - `backend_params`: `{"role": "<rol>", "values": {<clave>: <valor>}, "source": {<clave>:
+     "env"}}`. Sale siempre que la operación se resolvió con parámetros (`_RoleParams` no `None`),
+     también tras un rechazo (son los valores que se probaron). `values` va en el orden del
+     catálogo y con su tipo JSON; `source` solo existe si alguna clave viene de la variable y solo
+     lista esas.
+   - `reasoning_chars`: entero > 0, suma sobre **todos** los `Attempt` de la operación (fallidos,
+     respaldos, trozos y pasos de map/reduce incluidos).
+   - `backend_params_rejected: true` (REQ-015) y `reasoning_skipped: "context"` (REQ-023).
+2. **Cómo se cuenta el razonamiento**: `_reasoning_chars_of(data)` en `_post_chat`, sobre la
+   respuesta ya parseada: `len(reasoning_content)` más los caracteres de los bloques `<think>` que
+   quita `_strip_think` (`_think_chars`, con las mismas dos expresiones; el espacio que recorta el
+   `strip()` final no es razonamiento y no cuenta). También en `_body_failure` (un 200 inservible,
+   p. ej. el razonamiento que agotó `max_tokens`). Sin mensaje que mirar es `None`. El texto nunca se
+   guarda.
+3. **Suma dentro de un `Attempt`**: `_call_model` suma los `reasoning_chars` de sus hasta tres POST
+   (el principal, la prueba de REQ-015 y el reintento sin esquema) y los deja en el resultado que
+   devuelve, aunque el POST que razonó no sea ese. Hoy el POST que falla y se reintenta es siempre un
+   `http_400` sin cuerpo parseado, así que la suma es defensiva; la fija un test de contrato
+   (`test_reasoning_chars_of_every_post_in_one_attempt`, con `ChatResult` falsos).
+4. **Desviación: `_RoleParams.reasoning_chars` se quita.** El plan lo pensaba como acumulador, pero
+   el evento suma sobre `attempts`, que ya viajan hasta `_log_event` en los tres caminos, y así
+   `reasoning_chars` sale también en operaciones **sin** parámetros (un modelo que razona sin que
+   nadie se lo pida, REQ-018 no lo ata a los parámetros). Un acumulador paralelo sería una segunda
+   cuenta que podría divergir.
+5. **Dónde se escriben**: `_log_event` gana tres kw (`backend_params`, `backend_params_rejected`,
+   `reasoning_skipped`) y calcula `reasoning_chars` de `attempts`. Los tres kw salen de
+   `_backend_params_log_fields(role_params)` (lee las banderas bajo el `Lock`): `_chat` lo añade a
+   su llamada y `_CurrentModel.log_fields` lo incluye, que es lo que usan `_chat_chunked` y
+   `_chat_map_reduce`. Con modelo explícito `_role_params_for` da `None` y no hay campos (REQ-013).
+6. **`local_status`** (T14): `_describe_backend_params()` justo debajo de la línea de `vision`,
+   antes de las cadenas de respaldo. Cabecera `Parámetros por rol: <ruta>`, una línea por rol con
+   valores (`clave=valor (fichero|variable)`, booleanos `on`/`off` con `doctor.format_param_value`,
+   importado dentro de la función) y debajo sus avisos, contexto incluido; los avisos sin rol
+   (`role == ""`) también. Mismo criterio que `doctor`: hay líneas si algún rol tiene valores o
+   avisos. A diferencia de `doctor`, no avisa de «la variable de esta shell»: `local_status` corre
+   en el daemon y lo que muestra **es** lo del daemon. Claves nuevas en `mcp.json` es/en:
+   `mcp.status.backend_params.{line,role,warning,from_file,from_env}`.
+7. **Tests de más respecto a la lista del plan**: `test_unclosed_think_counts_to_the_end`,
+   `test_reasoning_chars_of_every_post_in_one_attempt`, `test_not_rejected_event_has_no_mark`,
+   `test_chunked_operation_event_carries_params[map_reduce|chunked]` (los dos caminos de
+   `_CurrentModel`) y `test_source_lists_only_variable_keys`. `test_fields_omitted_when_not_applicable`
+   compara las claves con la fixture de L0 (`simple`) y, como control, comprueba que con
+   parámetros sale exactamente una clave más, `backend_params`.
+8. **Controles positivos** (mutante → test → assert que dispara), con `d-mutants.py` del
+   scratchpad, que aplica cada mutante, corre su test y restaura (18 de 18 muertos):
+   - `reasoning_content` copiado al `error` del resultado → `test_reasoning_text_never_logged`,
+     `assert fragment not in text` (el fragmento sale en el JSONL);
+   - solo cuenta el último intento → `test_reasoning_chars_sums_failed_attempt`, `25 == 40 + 25`;
+   - `_body_failure` sin `reasoning_chars` → el mismo test, `25 == 40 + 25`;
+   - `_think_chars` devuelve 0 → `test_think_tags_count_without_reasoning_content`,
+     `KeyError: 'reasoning_chars'` (con 0 el campo se omite);
+   - `_think_chars` sin el bloque sin cerrar → `test_unclosed_think_counts_to_the_end`, `2 == 44 + 2`;
+   - `_call_model` sin sumar → `test_reasoning_chars_of_every_post_in_one_attempt`, `5 == 12`;
+   - sin `backend_params_rejected` → `test_rejected_event_keeps_tried_values`, `KeyError`;
+   - sin `reasoning_skipped` → `test_reasoning_skipped_in_event`, `KeyError`;
+   - `source` con todas las claves → `test_source_lists_only_variable_keys`, igualdad del dict;
+   - el `raw` de la variable en el evento → `test_sentinels_never_in_log[env]`,
+     `'SENTINEL-7Q' not in …`;
+   - `_role_params_for` sin mirar `explicit` → `test_explicit_model_event_has_no_backend_params`,
+     `'backend_params' not in …`;
+   - `_CurrentModel.log_fields` sin los campos → `test_chunked_operation_event_carries_params`,
+     `KeyError: 'backend_params'`;
+   - `_chat` sin los campos → `test_fields_omitted_when_not_applicable`, claves ≠ fixture + 1;
+   - `local_status`: cabecera sin parámetros → `test_status_without_params_unchanged`,
+     `assert real() == []`; todo «(fichero)» → `test_status_with_env_shows_source`, la línea
+     esperada no está; sin avisos → `test_status_context_estimated`, el aviso no está; el `raw` de la
+     variable → `test_status_hides_sentinels[env]`, `'SENTINEL-7Q' not in …`; sin llamar a
+     `_describe_backend_params` → `test_status_with_file`, la línea tras `vision` no es la cabecera.
+9. **Léxico**: entrada 21, `applicable` a inglés (nombre del test fijado por el plan); `posted` y
+   `thought`, nombres propios del lote, se renombraron (`responses`, `REASONING_TEXT`), y también
+   `multi` (`test_multi_call_…` → `test_chunked_operation_…`).
+10. **Suite completa** (`-n auto --dist loadgroup`, por el cerrojo) y la misma con
+    `LANG=es_ES.UTF-8`: 3692 pasan, 2 saltados y 1 fallo, `test_fake_llamaswap::test_a_ttl_counts_from_request_end`,
+    el conocido por tiempo con carga; solo pasa (13/13 del fichero). `ruff check .` y
+    `ruff format --check .` en verde.
+
 ### Léxico del detector de nombres tocado fuera de lo que cada lote poseía
 
 - `scripts/data/spanish_lexicon.json` y su README no estaban en la lista de ficheros de ningún
@@ -293,4 +373,4 @@
   inglés), clasificadas a mano. Al rebasar se unieron las listas (ordenadas y sin duplicados).
   C1 añadió 1 (entrada 18: `survive`, a inglés); B ninguna (la entrada 17 queda libre); C2 ninguna
   (renombró los cinco nombres que marcó; la entrada 19 queda libre); F 1 (entrada 20: `enum`, a
-  inglés).
+  inglés); D 1 (entrada 21: `applicable`, a inglés).

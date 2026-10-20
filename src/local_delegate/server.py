@@ -764,6 +764,9 @@ def _log_event(
     affinity_dropped_class: str | None = None,
     attempts: Sequence[Attempt] = (),
     steps: Sequence[dict] | None = None,
+    backend_params: dict | None = None,
+    backend_params_rejected: bool = False,
+    reasoning_skipped: str | None = None,
 ) -> None:
     """Escribe una línea JSONL en el log activo (rotado por mes o fijo). Nunca rompe una tool.
 
@@ -771,7 +774,10 @@ def _log_event(
     RESPONDIÓ, así que un evento sin salto se escribe igual que antes y el histórico se lee igual.
 
     `attempts` son las llamadas reales de la operación: de sus `timings` salen la espera, la
-    inferencia y el ritmo (REQ-024 a REQ-026).
+    inferencia y el ritmo (REQ-024 a REQ-026), y de sus `reasoning_chars` el del evento (REQ-018).
+
+    `backend_params`, `backend_params_rejected` and `reasoning_skipped` (REQ-018) come from
+    `_backend_params_log_fields`; like `reasoning_chars`, each one is omitted when it does not apply.
     """
     try:
         rec: dict = {
@@ -864,6 +870,19 @@ def _log_event(
                 }
                 for s in steps
             ]
+        # REQ-018: the per-role parameters the operation carried (`source` only lists the keys
+        # from the variable), how much it reasoned over every real call (failed ones included;
+        # never the text), and whether the backend refused the parameters (REQ-015) or a call
+        # went without reasoning because it did not fit in the context (REQ-023).
+        if backend_params is not None:
+            rec["backend_params"] = backend_params
+        reasoning_chars = sum(a.reasoning_chars or 0 for a in attempts)
+        if reasoning_chars > 0:
+            rec["reasoning_chars"] = reasoning_chars
+        if backend_params_rejected:
+            rec["backend_params_rejected"] = True
+        if reasoning_skipped is not None:
+            rec["reasoning_skipped"] = reasoning_skipped
         if source == "path" and path is not None:
             rec["path"] = path
             # Si esta lectura viene de un bloqueo del hook, el evento se queda con su
@@ -1117,6 +1136,9 @@ class ChatResult:
     #: Los `timings` de llama-server tal como llegan (`prompt_n`, `prompt_ms`, `predicted_n`,
     #: `predicted_ms`…), o `None` si el backend no los manda (REQ-024).
     timings: dict | None = None
+    #: REQ-018: characters of reasoning of the response (`reasoning_content` plus what
+    #: `_strip_think` removes from `content`), or `None` without a parsed response. Never the text.
+    reasoning_chars: int | None = None
 
 
 @dataclass(frozen=True)
@@ -1135,6 +1157,9 @@ class Attempt:
     #: Los `timings` de la respuesta (REQ-024): de aquí salen la inferencia y el ritmo del evento.
     #: Fuera de la comparación y del hash: un dict no es hashable.
     timings: dict | None = field(default=None, compare=False)
+    #: REQ-018: the reasoning characters of every POST of this call (the REQ-015 probe and the
+    #: schema retry included), or `None` when none had a parsed response.
+    reasoning_chars: int | None = field(default=None, compare=False)
 
 
 #: Las clases que permiten saltar (tabla de F3). Capacidad solo al residente (REQ-018).
@@ -1207,12 +1232,18 @@ def _fallback_notice(info: dict, origin: str | None = None) -> str:
 
 
 def _body_failure(
-    model: str, error_class: failures.FailureClass, timings: dict | None = None
+    model: str,
+    error_class: failures.FailureClass,
+    timings: dict | None = None,
+    reasoning_chars: int | None = None,
 ) -> ChatResult:
     """El error legible de una respuesta que llegó con 200 y aun así no sirve.
 
     Antes de esto, un `content` nulo reventaba con `AttributeError` a medio `_post_chat` —el tipo
     no estaba en el `except` de abajo— y se llevaba la tool por delante.
+
+    `reasoning_chars` (REQ-018): a model that spent `max_tokens` reasoning failed, and its
+    reasoning still counts in the event.
     """
     if error_class is failures.FailureClass.CONFIGURATION:
         return ChatResult(
@@ -1221,6 +1252,7 @@ def _body_failure(
             error="config_max_tokens",
             error_class=error_class,
             timings=timings,
+            reasoning_chars=reasoning_chars,
         )
     return ChatResult(
         text=ERROR_PREFIX + i18n.t("mcp.error.empty_response", model=model),
@@ -1228,6 +1260,7 @@ def _body_failure(
         error="bad_response",
         error_class=error_class,
         timings=timings,
+        reasoning_chars=reasoning_chars,
     )
 
 
@@ -1351,9 +1384,10 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                     text=r.text[:300],
                 )
             )
+            reasoning_chars = _reasoning_chars_of(data)
             if error_class is not None:
                 # Un 200 inservible también ocupó la GPU: su inferencia cuenta en el evento.
-                return _body_failure(model, error_class, _timings_of(data))
+                return _body_failure(model, error_class, _timings_of(data), reasoning_chars)
             choice = data["choices"][0]
             usage = data.get("usage") or {}
             return ChatResult(
@@ -1363,6 +1397,7 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                 tokens_in=usage.get("prompt_tokens"),
                 tokens_out=usage.get("completion_tokens"),
                 timings=_timings_of(data),
+                reasoning_chars=reasoning_chars,
             )
         except httpx2.HTTPError as e:
             # Un solo `except` para toda la familia, y la diferencia la marca el clasificador.
@@ -1477,6 +1512,33 @@ def _strip_think(s: str) -> str:
     s = _THINK_RE.sub("", s)
     s = _THINK_UNCLOSED_RE.sub("", s)
     return s.strip()
+
+
+def _think_chars(content: str) -> int:
+    """The characters of the `<think>` blocks that `_strip_think` removes (the surrounding
+    whitespace it strips is not reasoning, so it does not count)."""
+    kept = _THINK_UNCLOSED_RE.sub("", _THINK_RE.sub("", content))
+    return len(content) - len(kept)
+
+
+def _reasoning_chars_of(data: Any) -> int | None:
+    """REQ-018: how many characters of reasoning ONE backend response carried, never the text.
+
+    `len(message.reasoning_content)` plus the `<think>` blocks in `content` (Qwen and R1-style
+    models that do not split it). `None` when the response has no message to look at.
+    """
+    try:
+        message = data["choices"][0]["message"]
+    except (KeyError, IndexError, TypeError):
+        return None
+    if not isinstance(message, dict):
+        return None
+    reasoning = message.get("reasoning_content")
+    content = message.get("content")
+    count = len(reasoning) if isinstance(reasoning, str) else 0
+    if isinstance(content, str):
+        count += _think_chars(content)
+    return count
 
 
 # --- Turno por conjunto de modelos compatibles (daemon-reparte-el-backend, REQ-002 a REQ-009) ---
@@ -2037,7 +2099,8 @@ def _call_model(
     retried ONCE with the tool's body (no role keys, the tool's `temperature` and `max_tokens`,
     `response_format` kept), before the schema retry. If that works the parameters are off for the
     rest of the operation; if not, nothing is marked and today's flow goes on with them. Both POST
-    belong to this one call, so to the same `Attempt`.
+    belong to this one call, so to the same `Attempt`, and so does the `reasoning_chars` of every
+    POST (REQ-018), whichever result is returned.
     """
     t0 = time.monotonic()
     request_body = {"model": model, **payload}
@@ -2046,6 +2109,7 @@ def _call_model(
         request_body = role_params.body_for(model, request_body)
     with _turn.in_flight(), _own_call(model):
         result = _post_chat(model, request_body)
+    responses = [result]
     if (
         not result.ok
         and result.error == "http_400"
@@ -2055,6 +2119,7 @@ def _call_model(
     ):
         with _turn.in_flight(), _own_call(model):
             retry = _post_chat(model, tool_body)
+        responses.append(retry)
         if retry.ok:
             role_params.mark_rejected()
             request_body, result = tool_body, retry
@@ -2065,9 +2130,13 @@ def _call_model(
             request_body.pop("response_format", None)
             with _turn.in_flight(), _own_call(model):
                 result = _post_chat(model, request_body)
+            responses.append(result)
             json_schema_status = "fallback"
         else:
             json_schema_status = "error"
+    counted = [r.reasoning_chars for r in responses if r.reasoning_chars is not None]
+    if counted and sum(counted) != result.reasoning_chars:
+        result = replace(result, reasoning_chars=sum(counted))
     return result, json_schema_status, int((time.monotonic() - t0) * 1000)
 
 
@@ -2081,7 +2150,17 @@ def _attempt(
 ) -> tuple[ChatResult, str | None]:
     """UNA llamada y su reintento sin schema, DENTRO de la plaza; anota el intento y el estado."""
     result, schema, ms = _call_model(model, payload, json_schema_fallback, role_params)
-    attempts.append(Attempt(model, result.ok, result.error, result.error_class, ms, result.timings))
+    attempts.append(
+        Attempt(
+            model,
+            result.ok,
+            result.error,
+            result.error_class,
+            ms,
+            result.timings,
+            result.reasoning_chars,
+        )
+    )
     if result.ok:
         state.record_success(model)
     elif result.error_class is not None:
@@ -2405,9 +2484,10 @@ class _RoleParams:
     Resolved once, when the operation starts, with the role it started with, and kept apart from
     `_CurrentModel.role` (which becomes `None` after a hop): every real call of the operation
     (attempt, schema retry, fallback, chunk, map/reduce step) carries the same values. The flags
-    are for lot C2 (REQ-015 rejection and REQ-023 context); `reasoning_chars` accumulates the
-    reasoning of the operation for lot D. The chunks and the map/reduce steps run one after the
-    other today; the lock is a cheap defence, there is no race to chase.
+    are REQ-015 (rejection) and REQ-023 (context), and go to the event with
+    `_backend_params_log_fields` (REQ-018); the reasoning characters travel in each `Attempt`.
+    The chunks and the map/reduce steps run one after the other today; the lock is a cheap
+    defence, there is no race to chase.
     """
 
     def __init__(self, role: str, resolved: backend_params.Effective) -> None:
@@ -2426,7 +2506,6 @@ class _RoleParams:
         self.rejected = False
         #: REQ-023: `"context"` once a call of the operation went without reasoning, else `None`.
         self.reasoning_skipped: str | None = None
-        self.reasoning_chars = 0
         self.lock = threading.Lock()
 
     def body_for(self, model: str, body: dict) -> dict:
@@ -2506,6 +2585,34 @@ def _role_params_for(role: str | None, explicit: bool) -> _RoleParams | None:
     if not resolved.values:
         return None
     return _RoleParams(role, resolved)
+
+
+def _backend_params_log_fields(role_params: _RoleParams | None) -> dict:
+    """The REQ-018 fields of the event, as `_log_event` keywords; `{}` without parameters.
+
+    `backend_params` lists what the operation was resolved with, also after a rejection (the
+    values that were tried). Only accepted values reach `_RoleParams`, so a dropped entry (and its
+    value) can never be here (REQ-006).
+    """
+    if role_params is None:
+        return {}
+    with role_params.lock:
+        rejected = role_params.rejected
+        skipped = role_params.reasoning_skipped
+    params: dict = {"role": role_params.role, "values": dict(role_params.values)}
+    from_env = {
+        key: backend_params.SOURCE_ENV
+        for key, origin in role_params.source.items()
+        if origin == backend_params.SOURCE_ENV and key in role_params.values
+    }
+    if from_env:
+        params["source"] = from_env
+    fields: dict = {"backend_params": params}
+    if rejected:
+        fields["backend_params_rejected"] = True
+    if skipped is not None:
+        fields["reasoning_skipped"] = skipped
+    return fields
 
 
 class _CurrentModel:
@@ -2609,6 +2716,7 @@ class _CurrentModel:
             fields["model_requested"] = self.requested
         if self.op is not None:
             fields.update(self.op.log_fields())
+        fields.update(_backend_params_log_fields(self.role_params))
         return fields
 
     def notice(self, multiple: bool) -> str:
@@ -2774,6 +2882,7 @@ def _chat(
         connection_failure=None if result.ok else result.connection_failure,
         attempts=attempts,
         **op.log_fields(),
+        **_backend_params_log_fields(role_params),
     )
     # Un fallo del backend NO se escribe al archivo: `result.text` trae el mensaje de error, y
     # dejarlo en disco con nombre de código fuente sería peor que no escribir nada. Se devuelve
@@ -5692,6 +5801,7 @@ def local_status() -> str:
     ):
         lines.append(f"  {role}: {model} (max_chars={config.max_chars_for_role(role)})")
     lines.append(f"  vision: {config.MODEL_VISION} (max_image_mb={config.MAX_IMAGE_MB})")
+    lines.extend(_describe_backend_params())
     lines.extend(chains.describe())
     lines.append(i18n.t("mcp.status.concurrency", n=config.MAX_CONCURRENT_REQUESTS))
     lines.append(_describe_turn())
@@ -5810,6 +5920,40 @@ def _describe_language() -> list[str]:
     lines.append(i18n.t("mcp.status.output_language.line", value=value, source=source))
     if warning:
         lines.append(i18n.t("mcp.status.language.warning", detail=warning))
+    return lines
+
+
+def _describe_backend_params() -> list[str]:
+    """REQ-016/023 (SDD backend-extra-params, T14): the per-role parameters of THIS process.
+
+    The daemon's file and its own `LOCAL_DELEGATE_BACKEND_PARAMS` (which may differ from the
+    user's shell, the blind spot of `doctor`): one line per role with keys, values and source,
+    and the warnings of `backend_params.report()`, context ones included. Only accepted values;
+    a dropped entry shows its role, key and code, never its value (REQ-006). Without parameters
+    or warnings, no line at all, so the report stays the one of before.
+    """
+    from .doctor import format_param_value
+
+    rows = [row for row in backend_params.report() if row.values or row.warnings]
+    if not rows:
+        return []
+    lines = [i18n.t("mcp.status.backend_params.line", path=backend_params.path())]
+    origin = {
+        backend_params.SOURCE_ENV: i18n.t("mcp.status.backend_params.from_env"),
+        backend_params.SOURCE_FILE: i18n.t("mcp.status.backend_params.from_file"),
+    }
+    for row in rows:
+        if row.values:
+            params = ", ".join(
+                f"{key}={format_param_value(value)} "
+                + origin[row.source.get(key, backend_params.SOURCE_FILE)]
+                for key, value in row.values.items()
+            )
+            lines.append(i18n.t("mcp.status.backend_params.role", role=row.role, params=params))
+        lines.extend(
+            i18n.t("mcp.status.backend_params.warning", detail=backend_params.warning_text(w))
+            for w in row.warnings
+        )
     return lines
 
 
