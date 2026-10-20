@@ -15,6 +15,7 @@ from __future__ import annotations
 import ast
 import base64
 import json
+import math
 import os
 import re
 import signal
@@ -50,6 +51,7 @@ from . import (
     legacy_names,
     lint_patterns,
     llamaswap_api,
+    llamaswap_config,
     matrix,
     pace,
     questions,
@@ -2030,13 +2032,32 @@ def _call_model(
 
     Layer 2 of REQ-012 is applied here, on a new dict: `payload` is shared by every attempt of the
     operation (fallback, chunks) and is never mutated. Without `role_params` the body is today's.
+
+    REQ-015: the first `http_400` of the operation on a body that carries the role's parameters is
+    retried ONCE with the tool's body (no role keys, the tool's `temperature` and `max_tokens`,
+    `response_format` kept), before the schema retry. If that works the parameters are off for the
+    rest of the operation; if not, nothing is marked and today's flow goes on with them. Both POST
+    belong to this one call, so to the same `Attempt`.
     """
     t0 = time.monotonic()
     request_body = {"model": model, **payload}
+    tool_body = request_body
     if role_params is not None:
-        request_body = role_params.apply(request_body)
+        request_body = role_params.body_for(model, request_body)
     with _turn.in_flight(), _own_call(model):
         result = _post_chat(model, request_body)
+    if (
+        not result.ok
+        and result.error == "http_400"
+        and role_params is not None
+        and request_body != tool_body
+        and role_params.claim_probe()
+    ):
+        with _turn.in_flight(), _own_call(model):
+            retry = _post_chat(model, tool_body)
+        if retry.ok:
+            role_params.mark_rejected()
+            request_body, result = tool_body, retry
     json_schema_status = "used" if "response_format" in request_body else None
     if json_schema_status and not result.ok and result.error == "http_400":
         if json_schema_fallback:
@@ -2399,13 +2420,58 @@ class _RoleParams:
         self.thinking: bool | None = thinking if isinstance(thinking, bool) else None
         budget = self.values.get("reasoning_budget_tokens")
         self.budget: int | None = budget if self.thinking is True else None
+        #: REQ-015: the call without parameters was already tried in this operation (once, however
+        #: it went) and, if it worked, the parameters are off for the rest of the operation.
         self.probed = False
         self.rejected = False
-        self.reasoning_skipped = False
+        #: REQ-023: `"context"` once a call of the operation went without reasoning, else `None`.
+        self.reasoning_skipped: str | None = None
         self.reasoning_chars = 0
         self.lock = threading.Lock()
 
-    def apply(self, body: dict) -> dict:
+    def body_for(self, model: str, body: dict) -> dict:
+        """The body of ONE real call to `model` (the real target: affinity and fallback included).
+
+        After a rejection (REQ-015) it is `body` itself, the tool's. Otherwise layer 2, with the
+        reasoning off for this call alone when it does not fit in the context of `model` (REQ-023).
+        """
+        with self.lock:
+            if self.rejected:
+                return body
+        thinking_allowed = self._reasoning_fits(model, body)
+        if not thinking_allowed:
+            with self.lock:
+                self.reasoning_skipped = "context"
+        return self.apply(body, thinking_allowed=thinking_allowed)
+
+    def _reasoning_fits(self, model: str, body: dict) -> bool:
+        """REQ-023: `ceil(chars × MARGIN / CHARS_PER_TOKEN) + tool cap + budget ≤ n_ctx`.
+
+        `chars` are the system prompt plus the whole user message. Without reasoning on there is
+        nothing to check, and `vision` is left out: its input is an image, not characters.
+        """
+        if self.budget is None or self.role == "vision":
+            return True
+        texts = [message.get("content") for message in body.get("messages", ())]
+        chars = sum(len(text) for text in texts if isinstance(text, str))
+        estimate = math.ceil(chars * config.REASONING_CONTEXT_MARGIN / config.CHARS_PER_TOKEN)
+        n_ctx, _estimated = llamaswap_config.model_context_size(model)
+        return estimate + body["max_tokens"] + self.budget <= n_ctx
+
+    def claim_probe(self) -> bool:
+        """True for the first `http_400` of the operation only (REQ-015: one probe, at most)."""
+        with self.lock:
+            if self.probed:
+                return False
+            self.probed = True
+            return True
+
+    def mark_rejected(self) -> None:
+        """The backend took the call without the parameters: off for the rest of the operation."""
+        with self.lock:
+            self.rejected = True
+
+    def apply(self, body: dict, *, thinking_allowed: bool = True) -> dict:
         """Layer 2 of REQ-012 on a NEW dict, keeping the key order of `body` (REQ-022).
 
         `temperature` and `max_tokens` are replaced in place (the role's temperature wins over the
@@ -2416,6 +2482,7 @@ class _RoleParams:
             self.values,
             tool_temperature=body["temperature"],
             tool_max_tokens=body["max_tokens"],
+            thinking_allowed=thinking_allowed,
         )
         merged = dict(body)
         for key, value in overrides.items():

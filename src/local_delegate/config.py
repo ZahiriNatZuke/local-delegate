@@ -536,6 +536,11 @@ WEB_PORT = _env_int("LOCAL_DELEGATE_WEB_PORT", 9393)
 # peticiones a terceros. Chart.js se sirve siempre desde el propio paquete.
 WEB_FONTS = _env_flag("LOCAL_DELEGATE_WEB_FONTS", True)
 CHARS_PER_TOKEN = 4  # aproximación del modelo LOCAL: tokens ~ chars / 4 (nunca tokens de Claude)
+# REQ-023 (SDD backend-extra-params): the per-call context check counts the input at
+# CHARS_PER_TOKEN / REASONING_CONTEXT_MARGIN chars per token (2), the dense worst case measured
+# for code and Spanish. Fixed on purpose: a short estimate costs a 400 (REQ-015 then drops the
+# sampling too); a long one only drops the reasoning of that call.
+REASONING_CONTEXT_MARGIN = 2
 
 # Respaldo de modelo para valorar una delegación sin `caller_model` (coste-api-y-cuota, REQ-008):
 # `modelo` o `modelo:main|subagent`. Vacío = el declarado en `cost.py` (Opus 5.5 en subagente).

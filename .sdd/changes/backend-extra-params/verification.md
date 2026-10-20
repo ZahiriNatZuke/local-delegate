@@ -190,6 +190,63 @@
    idioma, una línea en blanco, la leyenda): sin ella, un `print()` de más en el sitio de la llamada
    sobrevivía como mutante.
 
+### Decisiones del lote C2 (rechazo y contexto: T11 y T12)
+
+1. **`REASONING_CONTEXT_MARGIN = 2` va en `config.py`**, junto a `CHARS_PER_TOKEN`; así
+   `backend_params.py` no se toca en este lote.
+2. **`_RoleParams` gana `body_for(model, body)`**, que es lo que llama `_call_model` en lugar de
+   `apply`: tras un rechazo devuelve el cuerpo de la tool tal cual; si no, aplica la capa 2 con
+   `thinking_allowed` según la comprobación de contexto contra el modelo destino real (también el
+   respaldo). `apply` acepta `thinking_allowed` y se lo pasa a `to_body`. `claim_probe()` y
+   `mark_rejected()` tocan las banderas bajo el `Lock`.
+3. **`reasoning_skipped` pasa de `False` a `None`/`"context"`**: es el valor que el log del lote D
+   escribe tal cual y el que el panel (lote E) ya espera (`e.reasoning_skipped === 'context'`).
+4. **Cuándo hay prueba sin parámetros**: `http_400`, hay `_RoleParams` y el cuerpo enviado difiere
+   del de la tool (`request_body != tool_body`), y `claim_probe()` es la primera vez de la
+   operación. El reintento manda el cuerpo de la tool (`{"model", **payload}`: sin claves del rol,
+   con su `temperature`, su `max_tokens` y `response_format` si lo había), va antes del reintento
+   sin esquema y dentro del mismo `Attempt`. Solo si responde bien se marca `rejected` y su
+   resultado sustituye al 400; si falla (400 u otro error) se sigue el flujo de hoy con el 400
+   original y los parámetros.
+5. **El mutante del plan para T11 no aplica tal cual**: «no marcar `probed`» no hace fallar
+   `test_three_chunks_make_four_requests`, porque tras el rechazo es `rejected` lo que manda a los
+   trozos siguientes sin parámetros. Ese test lo mata «no marcar `rejected`»; para `probed` hay un
+   test de más, `test_probe_once_per_operation_even_if_it_fails` (dos llamadas de una operación,
+   todo 400: `[True, False, True]` y no `[True, False, True, False]`).
+6. **Renombrados por el detector de nombres** (sin entrada nueva en el léxico; la 19 queda libre):
+   `test_three_chunks_make_four_posts` → `test_three_chunks_make_four_requests` (`posts` no estaba
+   clasificada), y en los helpers de contexto `_context_config`, `_with_reasoning`, `extra`.
+7. **La comprobación de contexto** suma la longitud de los `content` que son texto (sistema +
+   usuario). `vision` queda fuera por su rol, no por el tipo del contenido, para que el mutante que
+   quita la exclusión falle (`test_vision_never_skips` usa un `ctx_size` de 64 en el modelo de
+   visión).
+8. **Tests de más respecto a la lista del plan**: `test_probe_once_per_operation_even_if_it_fails`
+   (T11) y `test_fallback_checks_its_own_context` (T12: el modelo principal con 32768 lleva
+   razonamiento y el respaldo con 8192 no). `test_unknown_context_uses_8192` cubre sin config y con
+   una config que no tiene el modelo, con un control con contexto conocido de 32768.
+9. **Controles positivos** (mutante → test → assert que dispara), todos con
+   `c2-mutants.py` del scratchpad, que aplica cada mutante, corre su test y restaura:
+   - no marcar `rejected` → `test_three_chunks_make_four_requests`, `len(backend.bodies) == 4`;
+   - `claim_probe` siempre verdadero → `test_probe_once_per_operation_even_if_it_fails`,
+     `[True, False, True, False] == [True, False, True]`;
+   - el reintento quita `response_format` → `test_extract_schema_rejected_params_then_ok`,
+     `KeyError: 'response_format'` en la comparación del esquema;
+   - marcar aunque el reintento falle → `test_400_with_and_without_params_does_not_mark`,
+     `KeyError: 'top_k'` en el reintento sin esquema;
+   - el reintento conserva los valores del rol menos `top_k` → `test_retry_without_params_uses_tool_values`,
+     `retry == today` (0,9 frente a 0,0);
+   - prueba solo con esquema → `test_rejection_in_tool_without_schema`, `'persona' in '[local-delegate error] HTTP 400'`;
+   - prueba también sin parámetros → `test_no_params_400_still_fallback`, `3 == 2`;
+   - margen 1 y sin contar el sistema → `test_dense_input_uses_margin`, `assert _skips(body, cap)`;
+   - `<` en vez de `<=` → `test_boundary_exact_fits_one_more_char_skips`, assert del cuerpo exacto;
+   - sin excluir `vision` → `test_vision_never_skips`, `assert _with_reasoning(body)`;
+   - contexto del modelo del rol en vez del destino → `test_fallback_checks_its_own_context`,
+     `assert _skips(fallback, cap)`;
+   - el estimado tomado como 32768 → `test_unknown_context_uses_8192`, `assert _skips(no_config, cap)`;
+   - la comprobación nunca apaga → `test_long_input_skips_reasoning`, `_skips` del cuerpo;
+   - sin poner `reasoning_skipped` → `test_long_input_skips_reasoning`, `None == 'context'`;
+   - la comprobación siempre apaga → `test_short_input_keeps_reasoning`, `_with_reasoning(body)`.
+
 ### Léxico del detector de nombres tocado fuera de lo que cada lote poseía
 
 - `scripts/data/spanish_lexicon.json` y su README no estaban en la lista de ficheros de ningún
@@ -197,4 +254,5 @@
   exige 0 palabras sin clasificar. L0 añadió 14 (entrada 13), E 6 (entrada 14: `rechazados` a
   español y 5 a inglés), A1 13 más (entrada 15, todas a inglés) y A2 9 más (entrada 16, todas a
   inglés), clasificadas a mano. Al rebasar se unieron las listas (ordenadas y sin duplicados).
-  C1 añadió 1 (entrada 18: `survive`, a inglés); B ninguna (la entrada 17 queda libre).
+  C1 añadió 1 (entrada 18: `survive`, a inglés); B ninguna (la entrada 17 queda libre); C2 ninguna
+  (renombró los cinco nombres que marcó; la entrada 19 queda libre).
