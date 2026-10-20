@@ -127,6 +127,10 @@ de diccionario.
     2026-10-20) el detector informó de 1 palabra más sin clasificar, a mano, a inglés: `survive`
     (de `tests/test_backend_params_server.py`). La entrada 17 es la del lote B, que se trabajó en
     paralelo; al rebasar se unen las listas.
+20. Con el arreglo del razonamiento del benchmark (lote F del mismo SDD, 2026-10-20) el detector
+    informó de 1 palabra más sin clasificar, a mano, a inglés: `enum` (del test
+    `test_effort_enum_matches_product`, nombre fijado por el plan). La entrada 19 es la del lote
+    C2, que se trabajó en paralelo; al rebasar se unen las listas.
 
 ## Heurísticas (no usan datos ajenos)
 

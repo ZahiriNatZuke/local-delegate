@@ -3177,6 +3177,7 @@
   "entries",
   "entry",
   "entrypoint",
+  "enum",
   "env",
   "environ",
   "environment",

@@ -32,7 +32,7 @@ from typing import Any, Self
 
 import httpx2
 
-from . import config, failures, legacy_names
+from . import backend_params, config, failures, legacy_names
 from .i18n import t
 
 # El muestreo frecuente de /metrics no debe convertir el benchmark en un log de cada GET.
@@ -990,7 +990,8 @@ def _build_probe(args: argparse.Namespace) -> ProcessProbe | None | int:
 
 
 CONTENT_MARKER = "{CONTENIDO}"
-REASONING_EFFORTS = ("off", "low", "medium", "high")
+#: `off` plus the product's enum (REQ-020): one copy, the one of `backend_params`.
+REASONING_EFFORTS = ("off",) + backend_params.REASONING_EFFORTS
 _IMAGE_MIME = {
     ".png": "image/png",
     ".jpg": "image/jpeg",
@@ -999,21 +1000,43 @@ _IMAGE_MIME = {
     ".gif": "image/gif",
 }
 _ROLES = ("mechanical", "long", "code", "vision")
+_EFFORTS_OR_NONE = (None, *REASONING_EFFORTS)
 
 
-def reasoning_kwargs(effort: str | None) -> dict[str, Any] | None:
-    """`chat_template_kwargs` para el nivel de razonamiento pedido.
+def _reasoning_values(effort: str | None, budget: int | None) -> dict[str, Any]:
+    """The role values that production would hold for this effort (REQ-020, REQ-011).
 
-    `off` es `enable_thinking: false`, la variable que leen las plantillas de Qwen3 y afines: la
-    cadena esta en `llama-server-impl.dll` de b9925. El resto va como `reasoning_effort`, que es una
-    variable de la plantilla de gpt-oss y el servidor la pasa sin interpretarla. El fallo 4 de julio
-    fue medir con `low` creyendo que era neutro: `off` es lo que faltaba.
+    `off` is `enable_thinking: false`; any other level turns thinking on with its budget and sends
+    the level as `reasoning_effort`. Without a budget production would not turn it on, so that is
+    an error here instead of a silently different measurement. Both errors carry only the value:
+    `reasoning_problem` gives the operator the catalog text before the first call, so reaching
+    them is a bug of the caller.
     """
     if effort is None:
-        return None
+        return {}
+    if effort not in REASONING_EFFORTS:
+        raise ValueError(effort)
     if effort == "off":
         return {"enable_thinking": False}
-    return {"reasoning_effort": effort}
+    if budget is None:
+        raise ValueError(effort)
+    return {"enable_thinking": True, "reasoning_budget_tokens": budget, "reasoning_effort": effort}
+
+
+def reasoning_kwargs(effort: str | None, budget: int | None = None) -> dict[str, Any]:
+    """The body keys for the requested reasoning, the same ones production sends.
+
+    `off` -> `chat_template_kwargs: {"enable_thinking": false}`; another level ->
+    `chat_template_kwargs: {"enable_thinking": true}` plus `reasoning_effort` and
+    `reasoning_budget_tokens` at the root; `None` -> nothing. They come from
+    `backend_params.to_body`, so the benchmark and production cannot drift apart. Before, a level
+    went as a template variable only and never turned thinking on in Qwen3-style templates.
+    """
+    values = _reasoning_values(effort, budget)
+    if not values:
+        return {}
+    _overrides, extra = backend_params.to_body(values, tool_temperature=0.0, tool_max_tokens=0)
+    return extra
 
 
 def effective_reasoning(
@@ -1034,6 +1057,7 @@ def build_payload(
     seed: int,
     reasoning_effort: str | None,
     *,
+    reasoning_budget: int | None = None,
     max_tokens: int | None = None,
     source: bytes | None = None,
 ) -> dict[str, Any]:
@@ -1046,6 +1070,9 @@ def build_payload(
     `system` y `user_template` son los que capturo el constructor de la tool real. En imagen, el
     payload lleva `image_url` igual que `local_describe_image`: sin eso el rol `vision` no se podia
     medir en absoluto. `source` sustituye la entrada (la imagen de control de CP-3).
+
+    The reasoning keys go as production builds them (`backend_params.to_body`): with thinking on,
+    the budget is added to the case cap, never substituted (REQ-020).
     """
     raw = case.raw
     data = case.source if source is None else source
@@ -1067,17 +1094,84 @@ def build_payload(
             {"role": "system", "content": raw["system"]},
             {"role": "user", "content": user},
         ],
-        "max_tokens": max_tokens or raw["max_tokens"],
+        "max_tokens": int(max_tokens or raw["max_tokens"]),
         "temperature": float(raw["temperature"]),
         "seed": seed,
         "stream": False,
     }
     if raw.get("response_format"):
         payload["response_format"] = raw["response_format"]
-    kwargs = reasoning_kwargs(reasoning_effort)
-    if kwargs:
-        payload["chat_template_kwargs"] = kwargs
+    values = _reasoning_values(reasoning_effort, reasoning_budget)
+    if values:
+        overrides, extra = backend_params.to_body(
+            values,
+            tool_temperature=payload["temperature"],
+            tool_max_tokens=payload["max_tokens"],
+        )
+        payload.update(overrides)
+        payload.update(extra)
     return payload
+
+
+def _reasoning_budget(text: str) -> int:
+    """`--reasoning-budget N`: an integer in the product range (1-8192), the same rule as the file."""
+    try:
+        value = int(text)
+    except ValueError:
+        value = None
+    if value is None or not backend_params.validate_value("reasoning_budget_tokens", value)[0]:
+        raise argparse.ArgumentTypeError(
+            t(
+                "cli.benchmark.bad_reasoning_budget",
+                minimum=backend_params.BUDGET_MIN,
+                maximum=backend_params.BUDGET_MAX,
+            )
+        )
+    return value
+
+
+def reasoning_problem(
+    cases: Sequence[CorpusCase], option_effort: str | None, budget: int | None
+) -> str | None:
+    """Why the run cannot start, as a text for the operator, or None (REQ-020).
+
+    Checked before the first call to the backend: an effort outside the enum, or an effective
+    effort other than `off` without `--reasoning-budget`, wherever it comes from (case or option).
+    """
+    unknown = [
+        case.id
+        for case in cases
+        if effective_reasoning(case, option_effort)[0] not in _EFFORTS_OR_NONE
+    ]
+    if unknown:
+        return t(
+            "cli.benchmark.unknown_reasoning_effort",
+            cases=", ".join(unknown),
+            allowed=", ".join(REASONING_EFFORTS),
+        )
+    if budget is None:
+        without_budget = [
+            case.id
+            for case in cases
+            if effective_reasoning(case, option_effort)[0] not in (None, "off")
+        ]
+        if without_budget:
+            return t("cli.benchmark.reasoning_without_budget", cases=", ".join(without_budget))
+    return None
+
+
+def active_role_params() -> dict[str, list[str]]:
+    """The keys each role would send in production, names only (REQ-020).
+
+    The benchmark does not apply `backend-params.json` nor the variable: it records that they were
+    there, so a measurement taken while a role had parameters can be told apart.
+    """
+    active: dict[str, list[str]] = {}
+    for role in backend_params.ROLES:
+        keys = list(backend_params.effective(role).values)
+        if keys:
+            active[role] = keys
+    return active
 
 
 def is_context_rejection(status: int, body: str) -> bool:
@@ -1216,6 +1310,10 @@ def run_benchmark(args: argparse.Namespace) -> int:
     if without_prompt:
         print(t("cli.benchmark.cases_without_prompt", cases=", ".join(without_prompt)))
         return 2
+    problem = reasoning_problem(cases, args.reasoning_effort, args.reasoning_budget)
+    if problem:
+        print(problem)
+        return 2
 
     output = Path(args.output)
     if output.exists() and not args.append:
@@ -1236,6 +1334,7 @@ def run_benchmark(args: argparse.Namespace) -> int:
 
     failures = 0
     thermal = ThermalTracker()
+    role_params_active = active_role_params()
     try:
         with (
             httpx2.Client(timeout=args.timeout, headers=headers) as client,
@@ -1244,6 +1343,8 @@ def run_benchmark(args: argparse.Namespace) -> int:
             for case in cases:
                 source = control_source if control_source is not None else case.source
                 effort, effort_source = effective_reasoning(case, args.reasoning_effort)
+                thinking_on = effort not in (None, "off")
+                budget = args.reasoning_budget if thinking_on else None
                 for run in range(1, args.runs + 1):
                     # Semilla distinta por corrida y la misma en sus reintentos (P-12): con la
                     # temperatura de produccion, las corridas miden la variacion real del modelo.
@@ -1259,6 +1360,7 @@ def run_benchmark(args: argparse.Namespace) -> int:
                             args.model,
                             run_seed,
                             effort,
+                            reasoning_budget=budget,
                             max_tokens=max_tokens,
                             source=source,
                         )
@@ -1287,6 +1389,9 @@ def run_benchmark(args: argparse.Namespace) -> int:
                                 "llama_server_version": args.llama_server_version,
                                 "reasoning_effort": effort,
                                 "reasoning_effort_source": effort_source,
+                                "reasoning_budget_tokens": budget,
+                                # Names only (REQ-020): the benchmark does not apply them.
+                                "role_params_active": role_params_active,
                                 "probe_process": args.probe_process,
                                 "gpu_luid": probe.gpu_luid if probe else None,
                             },
@@ -1419,6 +1524,13 @@ def add_parser(sub: argparse._SubParsersAction) -> None:
         choices=REASONING_EFFORTS,
         default=None,
         help=t("cli.help.benchmark.reasoning_effort"),
+    )
+    parser.add_argument(
+        "--reasoning-budget",
+        type=_reasoning_budget,
+        default=None,
+        metavar="N",
+        help=t("cli.help.benchmark.reasoning_budget"),
     )
     parser.add_argument("--endpoint", default=None, help=t("cli.help.benchmark.endpoint"))
     parser.add_argument("--api-key", default=None, help=argparse.SUPPRESS)

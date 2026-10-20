@@ -247,6 +247,43 @@
    - sin poner `reasoning_skipped` → `test_long_input_skips_reasoning`, `None == 'context'`;
    - la comprobación siempre apaga → `test_short_input_keeps_reasoning`, `_with_reasoning(body)`.
 
+### Decisiones del lote F (benchmark: T17)
+
+1. **Una sola regla con producción**: `build_payload` no arma el razonamiento a mano; llama a
+   `backend_params.to_body` con los valores que tendría un rol (`enable_thinking`,
+   `reasoning_budget_tokens`, `reasoning_effort`) y el tope y la temperatura del caso. Así el
+   presupuesto se suma al `max_tokens` (nunca lo sustituye) por la misma línea que en el embudo, y
+   `reasoning_kwargs(effort, budget)` devuelve el `extra` de esa misma llamada. `None` devuelve
+   `{}` (antes `None`). `backend_params.py` no se toca.
+2. **«Modelo» es la opción**: el benchmark mide un modelo por invocación, así que el «modelo» de
+   `effective_reasoning` (caso > modelo > opción en el plan) es `--reasoning-effort`; no hay una
+   tercera fuente. La precedencia caso > opción no cambia.
+3. **Comprobaciones antes de llamar al backend** (`reasoning_problem`), sobre los casos
+   seleccionados, en este orden y con salida 2 sin abrir el JSONL: esfuerzo efectivo fuera del
+   enum (`cli.benchmark.unknown_reasoning_effort`, nombra los casos y los valores válidos) y
+   esfuerzo efectivo distinto de `off` sin `--reasoning-budget`
+   (`cli.benchmark.reasoning_without_budget`). Un caso con un valor fuera del enum que no se
+   selecciona no rompe la corrida. `_reasoning_values` repite las dos comprobaciones como defensa
+   y lanza `ValueError(effort)` sin prosa (el guardián de textos no admite mensajes fuera del
+   catálogo y el operador ya recibió el del catálogo).
+4. **`--reasoning-budget N`** usa `backend_params.validate_value("reasoning_budget_tokens", N)`
+   (1–8192); fuera de rango o no entero es error de argparse (salida 2) con
+   `cli.benchmark.bad_reasoning_budget`. Con `off` o sin esfuerzo el presupuesto no se manda
+   (`to_body` no lo pone si el razonamiento no se enciende).
+5. **Metadatos**: en `variant` van `reasoning_budget_tokens` (el presupuesto enviado, o `null`) y
+   `role_params_active: {rol: [claves]}` con solo los roles que tienen claves (`{}` si ninguno),
+   calculado una vez por corrida con `backend_params.effective`. El `max_tokens` del registro
+   sigue siendo el tope del caso (el doblado tras truncar incluido), sin el presupuesto: el
+   análisis lo compara entre variantes; lo enviado es ese tope + `reasoning_budget_tokens`.
+6. **Truncado con razonamiento**: al doblar tras `length` se dobla el tope del caso y se le vuelve
+   a sumar el presupuesto (`16+256`, luego `32+256`), no se dobla la suma.
+7. Tests de más sobre los del plan: `test_benchmark_body_matches_production_to_body`,
+   `test_reasoning_budget_out_of_range_is_refused` (5 casos), `test_off_needs_no_budget` y
+   `test_run_metadata_without_params_is_empty`.
+8. **Léxico**: entrada 20, `enum` a inglés (nombre del test fijado por el plan). `needing`, que
+   también marcó, era un nombre propio y se renombró a `without_budget`.
+9. La documentación (`docs/wiki/Backend-versions.md` menciona `--reasoning-effort`) es de T18.
+
 ### Léxico del detector de nombres tocado fuera de lo que cada lote poseía
 
 - `scripts/data/spanish_lexicon.json` y su README no estaban en la lista de ficheros de ningún
@@ -255,4 +292,5 @@
   español y 5 a inglés), A1 13 más (entrada 15, todas a inglés) y A2 9 más (entrada 16, todas a
   inglés), clasificadas a mano. Al rebasar se unieron las listas (ordenadas y sin duplicados).
   C1 añadió 1 (entrada 18: `survive`, a inglés); B ninguna (la entrada 17 queda libre); C2 ninguna
-  (renombró los cinco nombres que marcó; la entrada 19 queda libre).
+  (renombró los cinco nombres que marcó; la entrada 19 queda libre); F 1 (entrada 20: `enum`, a
+  inglés).
