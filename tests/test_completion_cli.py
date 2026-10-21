@@ -1,7 +1,4 @@
-"""`local-delegate completion <shell>` (SDD cli-completion, REQ-001).
-
-L2a subset: only `powershell` exists; L2b adds `zsh` and `bash` to the expectations.
-"""
+"""`local-delegate completion <shell>` (SDD cli-completion, REQ-001), for the three shells."""
 
 from __future__ import annotations
 
@@ -9,15 +6,26 @@ import pytest
 
 from local_delegate import cli, completion, i18n
 
+REGISTRATION = {
+    "powershell": "Register-ArgumentCompleter -Native",
+    "zsh": "compdef _local_delegate local-delegate local-delegate-mcp",
+    "bash": "complete -o default -F _local_delegate local-delegate local-delegate-mcp",
+}
 
-def test_completion_writes_utf8_lf_bytes(capsysbinary):
-    assert cli.run(["completion", "powershell"]) == 0
+
+def test_the_subcommand_offers_the_three_shells():
+    assert completion.SHELLS == ("powershell", "zsh", "bash")
+
+
+@pytest.mark.parametrize("shell", completion.SHELLS)
+def test_completion_writes_utf8_lf_bytes(capsysbinary, shell):
+    assert cli.run(["completion", shell]) == 0
     out = capsysbinary.readouterr().out
     assert b"\r" not in out
     text = out.decode("utf-8")
-    assert text == completion.render("powershell")
-    assert text.startswith("# local-delegate ")
-    assert "Register-ArgumentCompleter -Native" in text
+    assert text == completion.render(shell)
+    assert completion.header_version(text) is not None
+    assert REGISTRATION[shell] in text
 
 
 def test_completion_uses_the_language_in_force(capsysbinary, monkeypatch):
@@ -40,9 +48,10 @@ def test_unknown_shell_is_an_argparse_error_from_the_catalog(capsys):
     assert "'fish'" in err
 
 
-def test_completion_writes_nothing_to_disk(tmp_path, monkeypatch, capsysbinary):
+@pytest.mark.parametrize("shell", completion.SHELLS)
+def test_completion_writes_nothing_to_disk(tmp_path, monkeypatch, capsysbinary, shell):
     """REQ-001: no file appears in the data directory or in the working directory."""
     monkeypatch.chdir(tmp_path)
     before = sorted(tmp_path.rglob("*"))
-    assert cli.run(["completion", "powershell"]) == 0
+    assert cli.run(["completion", shell]) == 0
     assert sorted(tmp_path.rglob("*")) == before

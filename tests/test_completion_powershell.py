@@ -113,12 +113,13 @@ def _cases(files_dir: Path) -> list[dict]:
         _case("log_level", "local-delegate serve --log-level w"),
         _case("benchmark_role", "local-delegate benchmark --role "),
         _case("reset_calibration", "local-delegate recompute-cost --reset-calibration "),
-        # REQ-015 (without `completion `: in L2a it would only offer powershell)
+        # REQ-015
         _case("set_role", "local-delegate backend-params set "),
         _case("set_key", "local-delegate backend-params set code "),
         _case("set_value", "local-delegate backend-params set code top_p "),
         _case("unset_t", "local-delegate backend-params unset vision t"),
         _case("reset_role", "local-delegate backend-params reset "),
+        _case("completion", "local-delegate completion "),
         # REQ-016: free value -> PowerShell's own path completion.
         _case("free_value", "local-delegate install --home ", cwd=str(files_dir)),
         # REQ-017 / REQ-038 (a)
@@ -307,6 +308,7 @@ def test_positionals_by_position(ps_run):
     assert _texts(report, "dot", "set_value") == []
     assert _texts(report, "dot", "unset_t") == ["temperature", "top_k", "top_p", "typical_p"]
     assert _texts(report, "dot", "reset_role") == ROLES
+    assert _texts(report, "dot", "completion") == ["powershell", "zsh", "bash"]
 
 
 def test_free_value_falls_back_to_paths(ps_run):
