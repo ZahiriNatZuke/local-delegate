@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "slug": "claude-plugin-and-mods",
+  "title": "local-delegate como plugin de Claude Code y Claude Desktop, con mods",
+  "mode": "standard",
+  "status": "implementing",
+  "createdAt": "2026-10-21T20:04:48.989Z",
+  "updatedAt": "2026-10-21T22:21:39.514Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-10-21T21:35:40.328Z",
+      "evidence": "spec.md v2 aprobada por el usuario el 2026-10-21: 24 REQ en 4 fases; MCP fuera del plugin; F4 con todas las vías de lectura (§1.5); puente desktop-bridge para el chat de Desktop; review-spec.md (26 hallazgos) incorporada",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-10-21T22:21:22.577Z",
+      "evidence": "plan.md aprobado por el usuario el 2026-10-21 tras dos pasadas de revisión (review-plan.md: 2 bloqueantes y 23 importantes resueltos); 7 olas F1-F4, T0 previo; spec v2.1 anota los cambios de letra de REQ-003 y REQ-023",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-10-21T20:04:48.989Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-10-21T20:04:49.213Z",
+      "reason": "aprobado por el usuario el 2026-10-21: mods (piezas 1-4) + empaquetado como plugin para Claude Code y Claude Desktop; Codex sin cambios"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-10-21T20:28:47.454Z",
+      "reason": "4 informes de investigación consolidados en research.md; decisiones del usuario tomadas"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-10-21T21:35:40.328Z",
+      "evidence": "spec.md v2 aprobada por el usuario el 2026-10-21: 24 REQ en 4 fases; MCP fuera del plugin; F4 con todas las vías de lectura (§1.5); puente desktop-bridge para el chat de Desktop; review-spec.md (26 hallazgos) incorporada",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-10-21T21:35:40.548Z",
+      "reason": "spec aprobada; el plan se escribe en la siguiente sesión"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-10-21T22:21:22.577Z",
+      "evidence": "plan.md aprobado por el usuario el 2026-10-21 tras dos pasadas de revisión (review-plan.md: 2 bloqueantes y 23 importantes resueltos); 7 olas F1-F4, T0 previo; spec v2.1 anota los cambios de letra de REQ-003 y REQ-023",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-10-21T22:21:39.313Z",
+      "reason": "plan v2 revisado en dos pasadas (review-plan.md)"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-10-21T22:21:39.514Z",
+      "reason": "gate plan aprobado por el usuario; empieza la ola 0 (T0 y PR de documentos)"
+    }
+  ]
+}
