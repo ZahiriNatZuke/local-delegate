@@ -235,6 +235,20 @@ def test_no_components_with_completion_is_not_exit_2(tmp_path, capsys):
     assert {name: snapshot(home / name) for name in clients} == clients
 
 
+def test_completion_only_dry_run_ends_with_the_dry_run_line(tmp_path, capsys):
+    """REQ-008 (SDD backlog-minor-leftovers): with clients present, the «completion only»
+    `--dry-run` (every component off) ends with the same final line as the other dry runs and
+    writes nothing. Positive control (checked): without printing `cli.install.dry_run` in that
+    branch, the last line is the last planned action and the second assert fails."""
+    home = make_home(tmp_path, complete=False)
+    before = snapshot(tmp_path)
+    off = ["--no-hooks", "--no-skill", "--no-memory", "--no-mcp"]
+    code, out = run(install_cmd(home, *off, "--shell-completion", "bash", "--dry-run"), capsys)
+    assert code == 0, out
+    assert out.strip().splitlines()[-1] == install.t("cli.install.dry_run")
+    assert snapshot(tmp_path) == before
+
+
 @pytest.mark.parametrize(
     "extra",
     [["--clients", "nope"], ["--clients", "claude", "--target", "codex"]],
@@ -375,6 +389,60 @@ def test_created_profile_parent_is_removed_only_if_install_created_it(tmp_path, 
     assert snapshot(home) == before
 
 
+SANDBOX_PROBES = {
+    "windows": ShellProbes(
+        platform="win32", which=_which("pwsh", "powershell"), simulated_policy="RemoteSigned"
+    ),
+    "linux": LINUX_PROBES,
+}
+#: On Linux `auto` is bash and zsh only; pwsh is named so that `.config/powershell/` appears.
+SANDBOX_ALL_SHELLS = [f"--shell-completion={shell}" for shell in shell_profiles.SHELLS]
+
+
+@pytest.mark.parametrize("system", list(SANDBOX_PROBES))
+def test_round_trip_in_an_empty_sandbox_leaves_no_folder(home, monkeypatch, capsys, system):
+    """REQ-005 (SDD backlog-minor-leftovers): with an empty simulated HOME and no data directory
+    of its own, `install --shell-completion` creates `Documents/` (Windows) or `.config/`
+    (Linux) and `.local/share/local-delegate/`; `uninstall` leaves the HOME as empty as it was.
+    Positive control (checked): without the `created_ancestors` cleanup, `Documents` and `.local`
+    are left behind and the last assert fails."""
+    monkeypatch.delenv("LOCAL_DELEGATE_LOG_DIR", raising=False)
+    use_probes(monkeypatch, SANDBOX_PROBES[system])
+    shells = ["--shell-completion"] if system == "windows" else SANDBOX_ALL_SHELLS
+    code, out = run(install_cmd(home, *shells), capsys)
+    assert code == 0, out
+    assert comp_dir(home) == home / ".local" / "share" / "local-delegate" / "completion"
+    assert (home / ".local").is_dir()
+    parent = "Documents" if system == "windows" else ".config"
+    assert (home / parent).is_dir()
+    code, out = run(uninstall_cmd(home), capsys)
+    assert code == 0, out
+    assert snapshot(home) == {}
+
+
+def test_round_trip_keeps_folders_that_existed_or_got_foreign_content(home, monkeypatch, capsys):
+    """REQ-005: a folder that existed before `install` stays even if it is empty, and one that
+    `install` created but now holds something else stays with its content. Positive control
+    (checked): removing every listed folder with `shutil.rmtree`, `foreign.txt` disappears; and
+    recording folders that already existed, the empty `Documents/` disappears."""
+    monkeypatch.delenv("LOCAL_DELEGATE_LOG_DIR", raising=False)
+    use_probes(monkeypatch, SANDBOX_PROBES["windows"])
+    (home / "Documents").mkdir()
+    share = home / ".local" / "share"
+    share.mkdir(parents=True)
+    assert run(install_cmd(home, "--shell-completion"), capsys)[0] == 0
+    foreign = home / ".local" / "share" / "local-delegate" / "foreign.txt"
+    foreign.write_text("not ours", encoding="utf-8")
+    assert run(uninstall_cmd(home), capsys)[0] == 0
+    assert snapshot(home) == {
+        "Documents": None,
+        ".local": None,
+        str(Path(".local", "share")): None,
+        str(Path(".local", "share", "local-delegate")): None,
+        str(Path(".local", "share", "local-delegate", "foreign.txt")): b"not ours",
+    }
+
+
 def test_uninstall_no_client_cli_still_removes_it(home, capsys):
     """REQ-032: `--no-client-cli` no es una restricción. Control positivo (comprobado): contando
     `no_client_cli` como restricción, el bloque se queda."""
@@ -510,6 +578,47 @@ def test_read_manifest_contract(tmp_path):
     (tmp_path / completion.MANIFEST_NAME).write_bytes(completion.manifest_bytes(bad))
     with pytest.raises(completion.ManifestUnreadableError):
         completion.read_manifest(tmp_path)
+
+
+@pytest.mark.parametrize("lang", ["fr", "", "ES", 7])
+def test_manifest_with_an_unknown_language_is_unreadable(tmp_path, lang):
+    """REQ-010 (SDD backlog-minor-leftovers): `lang` must be a language of the catalog. `"fr"`
+    made `render` raise inside the doctor probe, and `""` made the verdict depend on the session
+    language. Positive control (checked): with `_valid_manifest` accepting any string, the first
+    three cases DID NOT RAISE."""
+    for known in i18n.LANGUAGES:
+        good = completion.merge_manifest(None, generator="1.0", lang=known, written={})
+        (tmp_path / completion.MANIFEST_NAME).write_bytes(completion.manifest_bytes(good))
+        assert completion.read_manifest(tmp_path) == good
+    bad = completion.merge_manifest(None, generator="1.0", lang="es", written={})
+    bad["lang"] = lang
+    (tmp_path / completion.MANIFEST_NAME).write_bytes(completion.manifest_bytes(bad))
+    with pytest.raises(completion.ManifestUnreadableError):
+        completion.read_manifest(tmp_path)
+
+
+def test_manifest_created_ancestors_must_be_a_list_of_strings(tmp_path):
+    """REQ-005: the optional `created_ancestors` lists (top level and per profile) are validated; a
+    manifest without them (written by 0.38.0) is still valid."""
+    profile = {"path": "/p", "created": True, "created_parent": True}
+    base = completion.merge_manifest(
+        None, generator="1.0", lang="es", written={"bash": ("/f", [profile])}
+    )
+    (tmp_path / completion.MANIFEST_NAME).write_bytes(completion.manifest_bytes(base))
+    assert completion.read_manifest(tmp_path) == base
+    for broken in (
+        {**base, "created_ancestors": "/d"},
+        {**base, "created_ancestors": [1]},
+        {
+            **base,
+            "shells": [
+                {**base["shells"][0], "profiles": [{**profile, "created_ancestors": [None]}]}
+            ],
+        },
+    ):
+        (tmp_path / completion.MANIFEST_NAME).write_bytes(completion.manifest_bytes(broken))
+        with pytest.raises(completion.ManifestUnreadableError):
+            completion.read_manifest(tmp_path)
 
 
 # --- REQ-024 y REQ-044: shells ausentes y política ------------------------------------------------
@@ -651,10 +760,28 @@ def test_install_output_shows_policy_per_edition(home, monkeypatch, capsys, dry_
     for edition in ("pwsh", "powershell"):
         target = shell_profiles.ShellTarget("powershell", edition, edition)
         path = shell_profiles.simulated_profile(target, home, platform="win32")
+        # The HOME is simulated, so the line says the policy is assumed (REQ-007).
         line = install.t(
-            "install.completion.policy_note", edition=edition, path=path, policy=policy
+            "install.completion.policy_note_assumed", edition=edition, path=path, policy=policy
         )
         assert line in out
+
+
+@pytest.mark.parametrize(
+    ("language", "assumed_words"),
+    [("es", "supuesta: HOME simulado"), ("en", "assumed: simulated HOME")],
+)
+def test_simulated_home_policy_note_says_it_is_assumed(home, language, assumed_words):
+    """REQ-007 (SDD backlog-minor-leftovers): with a simulated HOME nobody asks PowerShell, so the
+    policy line says the policy is the assumed one, in es and en; with a real HOME it does not
+    (`test_policy_note_per_edition`). Positive control (checked): with `policy_note` ignoring
+    `location.assumed`, the line lacks the words and the first assert fails."""
+    with i18n.override(language):
+        plan = install.plan_completion_install(
+            home, ["powershell"], lang=language, probes=_windows("RemoteSigned")
+        )
+    assert len(plan.notes) == 2
+    assert all(assumed_words in note and "RemoteSigned" in note for note in plan.notes)
 
 
 def test_untouchable_profile_is_reported_and_left_alone(home, capsys):

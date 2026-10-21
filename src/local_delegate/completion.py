@@ -534,10 +534,19 @@ def read_manifest(directory: Path) -> dict | None:
     return data
 
 
+def _valid_dir_list(value: object) -> bool:
+    """`created_ancestors` is optional (0.38.0 did not write it); if present, a list of strings."""
+    return value is None or (isinstance(value, list) and all(isinstance(v, str) for v in value))
+
+
 def _valid_manifest(data: object) -> bool:
     if not isinstance(data, dict) or data.get("version") != MANIFEST_VERSION:
         return False
-    if not isinstance(data.get("lang"), str) or not isinstance(data.get("generator"), str):
+    # A language outside the catalog made `render` raise inside the doctor probe, and an empty one
+    # made the verdict depend on the session language (SDD backlog-minor-leftovers, REQ-010).
+    if data.get("lang") not in i18n.LANGUAGES or not isinstance(data.get("generator"), str):
+        return False
+    if not _valid_dir_list(data.get("created_ancestors")):
         return False
     shells = data.get("shells")
     if not isinstance(shells, list):
@@ -552,6 +561,8 @@ def _valid_manifest(data: object) -> bool:
                 return False
             if not all(isinstance(profile.get(k), bool) for k in ("created", "created_parent")):
                 return False
+            if not _valid_dir_list(profile.get("created_ancestors")):
+                return False
     return True
 
 
@@ -561,6 +572,7 @@ def merge_manifest(
     generator: str,
     lang: str,
     written: dict[str, tuple[str, list[dict]]],
+    created_ancestors: list[str] | None = None,
 ) -> dict:
     """The manifest after an `install`: `existing` plus the shells in `written`.
 
@@ -568,6 +580,11 @@ def merge_manifest(
     shells not in `written` keep their entry; a profile already listed keeps its original
     `created`/`created_parent` (REQ-043), and one listed before but not touched now stays listed,
     so that `uninstall` still cleans it.
+
+    `created_ancestors` are the folders above the completion directory that this `install` created
+    (deepest first). They join the ones already listed, so that a later `install`, which finds
+    them in place, does not forget them; `uninstall` removes them while they are empty (SDD
+    backlog-minor-leftovers, REQ-005). The key is left out when there are none.
     """
     previous = {entry["shell"]: entry for entry in (existing or {}).get("shells", [])}
     shells = []
@@ -580,7 +597,12 @@ def merge_manifest(
             shells.append({"shell": shell, "file": file, "profiles": merged})
         elif shell in previous:
             shells.append(previous[shell])
-    return {"version": MANIFEST_VERSION, "generator": generator, "lang": lang, "shells": shells}
+    data = {"version": MANIFEST_VERSION, "generator": generator, "lang": lang, "shells": shells}
+    dirs = list((existing or {}).get("created_ancestors", []))
+    dirs += [d for d in created_ancestors or [] if d not in dirs]
+    if dirs:
+        data["created_ancestors"] = dirs
+    return data
 
 
 def manifest_without(manifest: dict, shells: tuple[str, ...] | list[str]) -> dict | None:

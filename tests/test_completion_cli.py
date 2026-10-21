@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import tempfile
+from pathlib import Path
+
 import pytest
 
-from local_delegate import cli, completion, i18n
+from local_delegate import cli, completion, config, i18n
 
 REGISTRATION = {
     "powershell": "Register-ArgumentCompleter -Native",
@@ -50,8 +53,24 @@ def test_unknown_shell_is_an_argparse_error_from_the_catalog(capsys):
 
 @pytest.mark.parametrize("shell", completion.SHELLS)
 def test_completion_writes_nothing_to_disk(tmp_path, monkeypatch, capsysbinary, shell):
-    """REQ-001: no file appears in the data directory or in the working directory."""
-    monkeypatch.chdir(tmp_path)
+    """REQ-001 and REQ-011 (SDD backlog-minor-leftovers): no file appears in the working
+    directory, the data directory, HOME or the temporary directory. Each one is a separate
+    folder, so a write anywhere among them changes the snapshot. Positive control (checked):
+    with the subcommand writing a file to `Path.home()` or to `tempfile.gettempdir()`, the old
+    test (working directory only) passed and this one fails on the last assert."""
+    places = {name: tmp_path / name for name in ("cwd", "data", "home", "tmp")}
+    for path in places.values():
+        path.mkdir()
+    monkeypatch.chdir(places["cwd"])
+    monkeypatch.setattr(config, "LOG_DIR", places["data"])
+    monkeypatch.setenv("LOCAL_DELEGATE_LOG_DIR", str(places["data"]))
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: places["home"]))
+    for name in ("HOME", "USERPROFILE"):
+        monkeypatch.setenv(name, str(places["home"]))
+    for name in ("TMP", "TEMP", "TMPDIR"):
+        monkeypatch.setenv(name, str(places["tmp"]))
+    monkeypatch.setattr(tempfile, "tempdir", str(places["tmp"]))
+    assert Path.home() == places["home"] and tempfile.gettempdir() == str(places["tmp"])
     before = sorted(tmp_path.rglob("*"))
     assert cli.run(["completion", shell]) == 0
     assert sorted(tmp_path.rglob("*")) == before

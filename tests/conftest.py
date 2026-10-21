@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import importlib
 import json
+import os
 import socket
 import struct
 import sys
@@ -183,6 +184,14 @@ def real_daemon_down(request, monkeypatch, _rejecting_server):
 #: Marcador del único test que pregunta de verdad a pwsh por la ruta de su perfil (solo lectura).
 REAL_PROFILE_QUERY_MARKER = "real_profile_query"
 PROFILE_GUARD = pytest.StashKey[bool]()
+#: The real HOME, read when conftest is imported: before any test can patch `Path.home` or HOME.
+REAL_HOME = Path.home()
+#: Real shell profiles that no test may create, write or delete (SDD backlog-minor-leftovers,
+#: REQ-006). `.bashrc`/`.bash_profile`/`.zshrc` come from `Path.home()` with no query, so the
+#: PowerShell doubles below do not cover them.
+REAL_SHELL_PROFILES: tuple[Path, ...] = tuple(
+    REAL_HOME / name for name in (".bashrc", ".bash_profile", ".zshrc")
+) + ((Path(os.environ["ZDOTDIR"]).expanduser() / ".zshrc",) if os.environ.get("ZDOTDIR") else ())
 
 
 def _forbidden_profile_lookup(*_args, **_kwargs):
@@ -205,15 +214,71 @@ def real_profiles_untouchable(request, monkeypatch):
     puede averiguar —ni por tanto escribir— el `$PROFILE` real, ni siquiera con `Path.home`
     parcheado (`install.is_simulated_home`). El único caso real lo desactiva con el marcador
     `real_profile_query`. `tests/test_profile_guard.py` comprueba que la fixture está activa.
+
+    It also guards the real POSIX profiles (`REAL_SHELL_PROFILES`, SDD backlog-minor-leftovers,
+    REQ-006), marker or not: a write through `install.write_profile_edit` or
+    `install._atomic_write` fails the test before touching the file, and any other change to
+    them (size, modification time, existence) fails it at teardown.
     """
+    # The POSIX profiles (REQ-006) are guarded always, also under the marker: no test writes.
+    watched = REAL_SHELL_PROFILES
+    before = {path: _profile_state(path) for path in watched}
+    _guard_profile_writes(monkeypatch)
     if request.node.get_closest_marker(REAL_PROFILE_QUERY_MARKER) is not None:
         request.node.stash[PROFILE_GUARD] = False
-        yield
-        return
-    monkeypatch.setattr(shell_profiles, "_default_run", _forbidden_profile_lookup)
-    monkeypatch.setattr(shell_profiles, "_documents_folder", _forbidden_profile_lookup)
-    request.node.stash[PROFILE_GUARD] = True
+    else:
+        monkeypatch.setattr(shell_profiles, "_default_run", _forbidden_profile_lookup)
+        monkeypatch.setattr(shell_profiles, "_documents_folder", _forbidden_profile_lookup)
+        request.node.stash[PROFILE_GUARD] = True
     yield
+    # Backstop for any other way in (a deletion, a plain `write_bytes`): the state must not move.
+    changed = [str(path) for path in watched if _profile_state(path) != before[path]]
+    if changed:
+        pytest.fail(f"a test changed a real shell profile: {', '.join(changed)}", pytrace=False)
+
+
+def _is_guarded_profile(path: Path) -> bool:
+    """True if `path` is one of `REAL_SHELL_PROFILES` (read at call time, so a test can point
+    the list at a temporary file to check the guard itself)."""
+    key = os.path.normcase(os.path.abspath(path))
+    return any(os.path.normcase(os.path.abspath(p)) == key for p in REAL_SHELL_PROFILES)
+
+
+def _forbidden_profile_write(path: Path) -> None:
+    # Same exception as `_forbidden_profile_lookup`: `except OSError` in `install` cannot eat it.
+    pytest.fail(
+        f"a test tried to write the real shell profile {path}; use a simulated HOME (`--home`)",
+        pytrace=False,
+    )
+
+
+def _guard_profile_writes(monkeypatch) -> None:
+    """Wraps the two writers of `install` that can reach a shell profile (REQ-006)."""
+    write_profile_edit = install.write_profile_edit
+    atomic_write = install._atomic_write
+
+    def guarded_profile_edit(edit, *args, **kwargs):
+        for path in (edit.path, edit.target):
+            if _is_guarded_profile(path):
+                _forbidden_profile_write(path)
+        return write_profile_edit(edit, *args, **kwargs)
+
+    def guarded_atomic_write(path, *args, **kwargs):
+        if _is_guarded_profile(path):
+            _forbidden_profile_write(path)
+        return atomic_write(path, *args, **kwargs)
+
+    monkeypatch.setattr(install, "write_profile_edit", guarded_profile_edit)
+    monkeypatch.setattr(install, "_atomic_write", guarded_atomic_write)
+
+
+def _profile_state(path: Path) -> tuple[int, int] | None:
+    """Size and modification time of a profile, or `None` if it does not exist."""
+    try:
+        stat = path.stat()
+    except OSError:
+        return None
+    return stat.st_size, stat.st_mtime_ns
 
 
 @pytest.fixture

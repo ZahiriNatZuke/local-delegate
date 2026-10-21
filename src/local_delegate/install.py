@@ -151,8 +151,8 @@ def resources_dir() -> Path:
 # Las dos las necesitan `install`, `update` y el CLI. Viven aquí —el módulo más bajo de los
 # tres— porque tenerlas duplicadas es exactamente la clase de verdad repartida que ya costó
 # caro en este repo (tres copias de la cuenta de tokens, dos derivaciones del host del daemon).
-# `is_simulated_home` vive en `simulated_home` (la usa también `shell_profiles`, que este módulo
-# importa) y se reexporta arriba con el mismo nombre.
+# `is_simulated_home` lives in `simulated_home` (`shell_profiles`, which this module imports, uses
+# it too) and is re-exported above under the same name.
 
 
 def opencode_dir(home: Path) -> Path:
@@ -477,16 +477,16 @@ def remove_block(text: str, begin: str, end: str) -> str:
     return cleaned.strip() + "\n" if cleaned.strip() else ""
 
 
-# --- Perfiles de shell, por bytes (SDD cli-completion, desviación 1) ----------
-# `upsert_block`/`remove_block` no sirven para un perfil: `_read_text` da "" ante un fichero que no
-# es UTF-8 (un perfil de 5.1 guardado en ANSI con tildes quedaría reemplazado por el bloque),
-# `_write_text` escribe siempre UTF-8, los dos hacen `strip()` y `_backup` pisa el `.bak` del
-# usuario. Estos dos ayudantes no escriben: calculan los bytes nuevos, y `write_profile_edit` los
-# escribe. Fuera del bloque, el perfil queda byte a byte igual (REQ-028).
+# --- Shell profiles, as bytes (SDD cli-completion, deviation 1) -------------
+# `upsert_block`/`remove_block` do not fit a profile: `_read_text` gives "" for a file that is not
+# UTF-8 (a 5.1 profile saved in ANSI with accents would be replaced by the block), `_write_text`
+# always writes UTF-8, both do `strip()` and `_backup` overwrites the user's `.bak`. These two
+# helpers do not write: they compute the new bytes, and `write_profile_edit` writes them. Outside
+# the block, the profile stays byte for byte the same (REQ-028).
 PROFILE_BACKUP_SUFFIX = ".local-delegate.bak"
 _UTF8_BOM = b"\xef\xbb\xbf"
 _UTF16_BOMS = ((b"\xff\xfe", "utf-16-le"), (b"\xfe\xff", "utf-16-be"))
-#: Motivo por el que un perfil no se toca → su texto en el catálogo.
+#: Reason why a profile is not touched → its text in the catalog.
 PROFILE_SKIP_REASONS = {
     "unreadable": "install.completion.reason.unreadable",
     "nul_bytes": "install.completion.reason.nul_bytes",
@@ -497,11 +497,12 @@ PROFILE_SKIP_REASONS = {
 
 @dataclass(frozen=True)
 class ProfileEdit:
-    """Lo que hay que hacer con un perfil, sin haberlo hecho todavía.
+    """What has to be done to a profile, without having done it yet.
 
-    ``target`` es el destino resuelto (el fichero real si ``path`` es un enlace, REQ-045).
-    ``data`` son los bytes nuevos, o ``None`` si no hay cambio. ``reason`` dice por qué no se toca
-    (una clave de ``PROFILE_SKIP_REASONS``); ``existed``, si el destino existía al planificar.
+    ``target`` is the resolved destination (the real file if ``path`` is a link, REQ-045).
+    ``data`` are the new bytes, or ``None`` if there is no change. ``reason`` says why it is not
+    touched (a key of ``PROFILE_SKIP_REASONS``); ``existed``, whether the destination existed when
+    planning.
     """
 
     path: Path
@@ -515,7 +516,7 @@ class ProfileEdit:
         return self.data is not None
 
     def skip_message(self) -> str | None:
-        """El aviso del catálogo de un perfil que no se toca, o ``None``."""
+        """The catalog warning of a profile that is not touched, or ``None``."""
         if self.reason is None:
             return None
         return t(
@@ -526,12 +527,12 @@ class ProfileEdit:
 
 
 def profile_backup_path(target: Path) -> Path:
-    """La copia propia de un perfil, junto al destino: nunca ``<perfil>.bak`` (REQ-046)."""
+    """The own copy of a profile, next to the destination: never ``<profile>.bak`` (REQ-046)."""
     return target.with_name(target.name + PROFILE_BACKUP_SUFFIX)
 
 
 def _profile_target(path: Path) -> tuple[Path, str | None]:
-    """El destino resuelto de ``path`` y, si no se puede tocar, el motivo (REQ-045)."""
+    """The resolved destination of ``path`` and, if it cannot be touched, the reason (REQ-045)."""
     target = path
     if path.is_symlink():
         try:
@@ -544,10 +545,10 @@ def _profile_target(path: Path) -> tuple[Path, str | None]:
 
 
 def _decode_profile(raw: bytes) -> tuple[str, str, bytes] | str:
-    """``(texto, códec, BOM)`` de un perfil, o el motivo por el que no se toca.
+    """``(text, codec, BOM)`` of a profile, or the reason why it is not touched.
 
-    BOM de UTF-16 → ese códec; NUL sin BOM de UTF-16 → no se toca (sería un UTF-16 sin marca);
-    UTF-8 estricto (con o sin BOM); y si no, ``latin-1``, que da la vuelta exacta a cualquier byte.
+    UTF-16 BOM → that codec; NUL without a UTF-16 BOM → not touched (it would be an unmarked
+    UTF-16); strict UTF-8 (with or without BOM); otherwise ``latin-1``, which round-trips any byte.
     """
     for bom, codec in _UTF16_BOMS:
         if raw.startswith(bom):
@@ -571,7 +572,7 @@ def _dominant_newline(text: str) -> str:
 
 
 def _profile_block_span(text: str) -> tuple[int, int] | str | None:
-    """Dónde está el bloque, ``None`` si no hay, o ``"marker_mismatch"`` si está a medias."""
+    """Where the block is, ``None`` if there is none, or ``"marker_mismatch"`` if half of it."""
     begin, end = shell_profiles.BLOCK_BEGIN, shell_profiles.BLOCK_END
     starts, ends = text.count(begin), text.count(end)
     if starts == 0 and ends == 0:
@@ -582,7 +583,7 @@ def _profile_block_span(text: str) -> tuple[int, int] | str | None:
 
 
 def _read_profile(path: Path) -> tuple[Path, tuple[str, str, bytes] | None, str | None]:
-    """Destino, ``(texto, códec, BOM)`` (``None`` si no existe) y motivo para no tocarlo."""
+    """Destination, ``(text, codec, BOM)`` (``None`` if missing) and reason not to touch it."""
     target, problem = _profile_target(path)
     if problem or not target.exists():
         return target, None, problem
@@ -597,14 +598,14 @@ def _read_profile(path: Path) -> tuple[Path, tuple[str, str, bytes] | None, str 
 
 
 def upsert_profile_block(path: Path, block: str) -> ProfileEdit:
-    """Pone ``block`` (con sus marcadores) en el perfil, sin escribir (REQ-027, REQ-028).
+    """Puts ``block`` (with its markers) into the profile, without writing (REQ-027, REQ-028).
 
-    - Perfil vacío o inexistente → ``bloque + NL``.
-    - Con texto → ``texto + NL + bloque + NL``: si el texto acababa en salto, queda una línea en
-      blanco de separación; si no, no.
-    - Con el bloque ya puesto → se reemplaza lo de dentro sin mover nada más.
+    - Empty or missing profile → ``block + NL``.
+    - With text → ``text + NL + block + NL``: if the text ended in a newline, a blank separating
+      line is left; if not, not.
+    - With the block already in place → what is inside is replaced without moving anything else.
 
-    El fin de línea es el dominante del fichero y la codificación (y el BOM), la que tenía.
+    The line ending is the file's dominant one, and the encoding (and BOM) the one it had.
     """
     target, decoded, problem = _read_profile(path)
     if problem:
@@ -616,8 +617,8 @@ def upsert_profile_block(path: Path, block: str) -> ProfileEdit:
     newline = _dominant_newline(text)
     inserted = block.replace("\r\n", "\n").replace("\n", newline)
     if codec == "latin-1":
-        # El bloque de bash/zsh puede llevar la ruta en UTF-8: esos bytes son los que leerá el
-        # shell, así que se meten tal cual en el texto decodificado como latin-1.
+        # The bash/zsh block may carry the path in UTF-8: those bytes are what the shell will
+        # read, so they go as they are into the text decoded as latin-1.
         inserted = inserted.encode("utf-8").decode("latin-1")
     span = _profile_block_span(text)
     if isinstance(span, str):
@@ -634,11 +635,12 @@ def upsert_profile_block(path: Path, block: str) -> ProfileEdit:
 
 
 def remove_profile_block(path: Path) -> ProfileEdit:
-    """Quita el bloque del perfil, sin escribir; es la inversa exacta de ``upsert_profile_block``.
+    """Removes the block from the profile, without writing; the exact inverse of
+    ``upsert_profile_block``.
 
-    Se quitan el bloque, el salto que lo cierra y el salto que lo precede (si lo hay): un perfil
-    que acababa en salto vuelve a acabar en uno, y uno que no, vuelve sin él. Con el bloque al
-    principio, se quitan solo el bloque y su salto.
+    The block, the newline that closes it and the newline before it (if any) are removed: a
+    profile that ended in a newline ends in one again, and one that did not comes back without it.
+    With the block at the start, only the block and its newline are removed.
     """
     target, decoded, problem = _read_profile(path)
     if problem:
@@ -665,14 +667,16 @@ def remove_profile_block(path: Path) -> ProfileEdit:
 
 
 def write_profile_edit(edit: ProfileEdit, *, backup: bool = True) -> str | None:
-    """Escribe un ``ProfileEdit`` en su destino resuelto; ``None`` si fue bien (o no había nada).
+    """Writes a ``ProfileEdit`` to its resolved destination; ``None`` if it went well (or there
+    was nothing to do).
 
-    - Se escribe en el sitio, no con temporal + ``os.replace``: sobre un enlace lo rompería
-      (REQ-045), y en POSIX saltaría la protección de un fichero de solo lectura.
-    - Con ``backup``, antes se copia el destino a ``<destino>.local-delegate.bak`` **solo si esa
-      copia no existe**, para que guarde el estado previo a la primera instalación (REQ-046).
-    - Un error de escritura no lanza: se devuelve ``nombre (motivo)``, como ``_failure``, para el
-      aviso ``install.not_written`` (REQ-028).
+    - It writes in place, not with a temporary + ``os.replace``: over a link that would break it
+      (REQ-045), and on POSIX it would bypass the protection of a read-only file.
+    - With ``backup``, the destination is first copied to ``<destination>.local-delegate.bak``
+      **only if that copy does not exist**, so it keeps the state before the first install
+      (REQ-046).
+    - A write error does not raise: ``name (reason)`` is returned, like ``_failure``, for the
+      ``install.not_written`` warning (REQ-028).
     """
     if edit.data is None:
         return None
@@ -691,19 +695,19 @@ def write_profile_edit(edit: ProfileEdit, *, backup: bool = True) -> str | None:
 
 # --- install/uninstall --shell-completion (SDD cli-completion, L3b) ----------
 class CompletionWriteError(OSError):
-    """Un perfil o fichero del autocompletado que no se pudo escribir o borrar.
+    """A completion profile or file that could not be written or deleted.
 
-    Se lanza desde ``Action.run`` a propósito: ``apply`` la cuenta como fallo y el código de
-    salida pasa a 1 (REQ-028, REQ-030), mientras los demás shells siguen.
+    It is raised from ``Action.run`` on purpose: ``apply`` counts it as a failure and the exit
+    code becomes 1 (REQ-028, REQ-030), while the other shells go on.
     """
 
 
 @dataclass(frozen=True)
 class ShellProbes:
-    """Lo que el autocompletado pregunta a la máquina, inyectable para los tests.
+    """What completion asks the machine, injectable for the tests.
 
-    ``None`` en cada campo es el valor real (``sys.platform``, ``shutil.which``, la consulta a
-    PowerShell…). ``shell_env`` es el ``$SHELL`` de REQ-024.
+    ``None`` in each field is the real value (``sys.platform``, ``shutil.which``, the PowerShell
+    query…). ``shell_env`` is the ``$SHELL`` of REQ-024.
     """
 
     platform: str | None = None
@@ -716,23 +720,23 @@ class ShellProbes:
 
 
 def shell_probes() -> ShellProbes:
-    """Las sondas reales. Los tests de la CLI lo sustituyen por unas con dobles."""
+    """The real probes. The CLI tests replace it with ones made of doubles."""
     return ShellProbes(shell_env=os.environ.get("SHELL"))
 
 
 @dataclass
 class CompletionPlan:
-    """Las acciones del autocompletado y los avisos que se dicen antes de aplicarlas."""
+    """The completion actions and the warnings given before applying them."""
 
     actions: list[Action] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
-    #: Datos que se enseñan antes de los avisos: la ruta y la política de cada edición de
-    #: PowerShell (REQ-040), con y sin ``--dry-run``.
+    #: Data shown before the warnings: the profile path and policy of each PowerShell edition
+    #: (REQ-040), with and without ``--dry-run``.
     notes: list[str] = field(default_factory=list)
 
 
 def _atomic_write(path: Path, data: bytes) -> None:
-    """Temporal en la misma carpeta + ``os.replace``: nunca queda un fichero a medias (REQ-026)."""
+    """Temporary in the same folder + ``os.replace``: never a half-written file (REQ-026)."""
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=path.name + ".", suffix=".tmp")
     try:
@@ -745,6 +749,31 @@ def _atomic_write(path: Path, data: bytes) -> None:
         raise
 
 
+def missing_dirs(directory: Path) -> list[Path]:
+    """`directory` and its ancestors that do not exist yet, deepest first: the folders a
+    `mkdir(parents=True)` would create (SDD backlog-minor-leftovers, REQ-005)."""
+    missing: list[Path] = []
+    current = directory
+    while not current.exists() and current.parent != current:
+        missing.append(current)
+        current = current.parent
+    return missing
+
+
+def remove_empty_dirs(paths: Sequence[Path | str]) -> bool:
+    """Removes each folder of `paths` that exists and is empty, deepest first; `True` if none is
+    left. A folder with anything inside (ours or someone else's) is never touched (REQ-005)."""
+    left = False
+    for path in sorted((Path(p) for p in paths), key=lambda p: len(p.parts), reverse=True):
+        try:
+            if path.is_dir() and not any(path.iterdir()):
+                path.rmdir()
+        except OSError:
+            pass
+        left = left or path.exists()
+    return not left
+
+
 def _same_bytes(path: Path, data: bytes) -> bool:
     try:
         return path.read_bytes() == data
@@ -755,7 +784,7 @@ def _same_bytes(path: Path, data: bytes) -> bool:
 def _owned_file_action(
     kind: str, path: Path, data: bytes, detail: str, literal: str = ""
 ) -> Action:
-    """Escribe un fichero nuestro (completado o manifiesto): sin ``.bak`` y atómico (REQ-026)."""
+    """Writes a file of ours (completion or manifest): no ``.bak``, atomic (REQ-026)."""
     if _same_bytes(path, data):
         return Action(kind, path, t("install.completion.up_to_date"))
 
@@ -793,12 +822,12 @@ def plan_completion_install(
     data_dir: Path | None = None,
     probes: ShellProbes | None = None,
 ) -> CompletionPlan:
-    """Las acciones de ``install --shell-completion`` (REQ-024 a REQ-029, REQ-043, REQ-044).
+    """The actions of ``install --shell-completion`` (REQ-024 to REQ-029, REQ-043, REQ-044).
 
-    Por cada shell resuelto: el fichero de completado (``render(shell, lang=lang)``), el bloque de
-    carga en cada perfil y, al final, el manifiesto fusionado con el que hubiera. Una edición de
-    PowerShell con política que bloquea se salta con aviso; si se saltan todas, no se escribe
-    ``local-delegate.ps1`` ni su entrada. No escribe nada: lo hace ``apply``.
+    For each resolved shell: the completion file (``render(shell, lang=lang)``), the load block in
+    each profile and, at the end, the manifest merged with any previous one. A PowerShell edition
+    with a blocking policy is skipped with a warning; if all are skipped, neither
+    ``local-delegate.ps1`` nor its entry is written. It writes nothing: ``apply`` does.
     """
     probes = probes or shell_probes()
     simulated = is_simulated_home(home)
@@ -852,14 +881,21 @@ def plan_completion_install(
                 plan.warnings.append(edit.skip_message())
                 continue
             previous = listed.get(str(path))
-            created = previous["created"] if previous else not edit.existed
-            created_parent = (
-                previous["created_parent"] if previous else not edit.target.parent.exists()
-            )
-            entries.append(
-                {"path": str(path), "created": created, "created_parent": created_parent}
-            )
-            # Un perfil que creó `install` no lleva copia: su estado previo es «no existe».
+            if previous:
+                entries.append(dict(previous))
+            else:
+                entry = {
+                    "path": str(path),
+                    "created": not edit.existed,
+                    "created_parent": not edit.target.parent.exists(),
+                }
+                # Folders above the parent that `install` creates too (REQ-005, e.g. `Documents`).
+                ancestors = missing_dirs(edit.target.parent.parent)
+                if entry["created_parent"] and ancestors:
+                    entry["created_ancestors"] = [str(d) for d in ancestors]
+                entries.append(entry)
+            created = entries[-1]["created"]
+            # A profile that `install` created gets no copy: its previous state is «missing».
             plan.actions.append(_profile_install_action(shell, edit, block, backup=not created))
         written[shell] = (str(file), entries)
 
@@ -867,7 +903,11 @@ def plan_completion_install(
         from .version import get_version
 
         data = completion.merge_manifest(
-            manifest, generator=get_version(), lang=lang, written=written
+            manifest,
+            generator=get_version(),
+            lang=lang,
+            written=written,
+            created_ancestors=[str(d) for d in missing_dirs(directory.parent)],
         )
         text = completion.manifest_bytes(data)
         path = completion.manifest_path(directory)
@@ -887,14 +927,18 @@ def _read_manifest_or_warn(directory: Path, warnings: list[str]) -> dict | None:
         return None
 
 
-def _profile_uninstall_action(edit: ProfileEdit, created: bool, created_parent: bool) -> Action:
+def _profile_uninstall_action(
+    edit: ProfileEdit, created: bool, created_parent: bool, ancestors: Sequence[str] = ()
+) -> Action:
     data = edit.data or b""
 
     def _run() -> str:
         target = edit.target
         if created and not data.strip():
-            # `install` creó el perfil y solo queda vacío: se borra, y su carpeta si también la
-            # creó y quedó vacía (REQ-032). Un perfil que ya existía no se borra nunca.
+            # `install` created the profile and only emptiness is left: it is deleted, and so is
+            # its folder if `install` also created it and it is now empty (REQ-032), and the
+            # empty folders above it that `install` created (REQ-005). A profile that already
+            # existed is never deleted.
             try:
                 target.unlink()
                 if created_parent and not any(target.parent.iterdir()):
@@ -903,11 +947,13 @@ def _profile_uninstall_action(edit: ProfileEdit, created: bool, created_parent: 
                 raise CompletionWriteError(
                     t("install.completion.not_removed", names=_failure(target.name, exc))
                 ) from exc
+            if created_parent:
+                remove_empty_dirs(ancestors)
             return t("install.completion.profile_deleted")
         error = write_profile_edit(edit, backup=not created)
         if error:
             raise CompletionWriteError(t("install.completion.not_written", names=error))
-        # La copia propia sobra si el perfil volvió a ser ella (REQ-046).
+        # The own copy is not needed if the profile went back to being it (REQ-046).
         copy = profile_backup_path(target)
         if _same_bytes(copy, data):
             with contextlib.suppress(OSError):
@@ -936,7 +982,7 @@ def _remove_owned_action(kind: str, path: Path, detail: str) -> Action:
 
 
 def uninstall_shells(requested: Sequence[str]) -> tuple[str, ...]:
-    """Los shells de ``uninstall --shell-completion``: ``auto`` (o nada) son todos (REQ-032)."""
+    """The shells of ``uninstall --shell-completion``: ``auto`` (or nothing) means all (REQ-032)."""
     if not requested or "auto" in requested:
         return shell_profiles.SHELLS
     return tuple(s for s in shell_profiles.SHELLS if s in requested)
@@ -949,11 +995,12 @@ def plan_completion_uninstall(
     data_dir: Path | None = None,
     probes: ShellProbes | None = None,
 ) -> CompletionPlan:
-    """Las acciones que quitan el autocompletado de los shells pedidos (REQ-032, REQ-046).
+    """The actions that remove completion from the requested shells (REQ-032, REQ-046).
 
-    Quita el bloque de la unión de los perfiles del manifiesto y los candidatos que existan,
-    borra los ficheros de completado, actualiza o borra el manifiesto, y borra el directorio
-    ``completion/`` si queda vacío. Sin nada instalado, no hay acciones. No escribe nada.
+    It removes the block from the union of the manifest profiles and the existing candidates,
+    deletes the completion files, updates or deletes the manifest, and deletes the
+    ``completion/`` directory if it is left empty, plus the empty folders above it that
+    ``install`` created (REQ-005). With nothing installed, there are no actions. It writes nothing.
     """
     probes = probes or shell_probes()
     shells = uninstall_shells(requested)
@@ -993,7 +1040,10 @@ def plan_completion_uninstall(
         entry = listed.get(str(path), {})
         plan.actions.append(
             _profile_uninstall_action(
-                edit, bool(entry.get("created")), bool(entry.get("created_parent"))
+                edit,
+                bool(entry.get("created")),
+                bool(entry.get("created_parent")),
+                entry.get("created_ancestors", ()),
             )
         )
 
@@ -1023,7 +1073,24 @@ def plan_completion_uninstall(
     if removed and directory.is_dir() and set(directory.iterdir()) <= removed:
         detail = t("install.completion.uninstall_dir_plan")
         plan.actions.append(_remove_owned_action("remove", directory, detail))
+        # Only when no entry is left: the folders above `completion/` are shared by all shells.
+        ancestors = (manifest or {}).get("created_ancestors", [])
+        if ancestors and completion.manifest_without(manifest, shells) is None:
+            plan.actions.append(_remove_ancestors_action(ancestors))
     return plan
+
+
+def _remove_ancestors_action(ancestors: Sequence[str]) -> Action:
+    """Removes the folders above `completion/` that `install` created, while they are empty
+    (SDD backlog-minor-leftovers, REQ-005). One with foreign content stays, without an error."""
+    deepest = max((Path(p) for p in ancestors), key=lambda p: len(p.parts))
+
+    def _run() -> str:
+        if remove_empty_dirs(ancestors):
+            return t("install.uninstall.removed")
+        return t("install.completion.ancestors_kept")
+
+    return Action("remove", deepest, t("install.completion.uninstall_ancestors_plan"), _run)
 
 
 # --- Hooks de Claude Code ----------------------------------------------------

@@ -472,3 +472,43 @@ def test_real_query_matches_what_powershell_reports(edition):
         "Undefined",
         "Default",
     }
+
+
+# --- REQ-006 (SDD backlog-minor-leftovers): the guard covers the POSIX profiles too ------------
+def test_the_guard_lists_the_real_posix_profiles():
+    """`real_profiles_untouchable` watches `.bashrc`, `.bash_profile` and `.zshrc` of the real
+    HOME, read before any test could patch `Path.home`. Positive control (checked): with the
+    list limited to PowerShell, the set below is empty and the assert fails."""
+    import conftest
+
+    names = {path.name for path in conftest.REAL_SHELL_PROFILES}
+    assert {".bashrc", ".bash_profile", ".zshrc"} <= names
+    assert all(path.parent == conftest.REAL_HOME for path in conftest.REAL_SHELL_PROFILES[:3])
+
+
+@pytest.mark.parametrize("writer", ["profile_edit", "atomic_write", "cli_install"])
+def test_writing_a_guarded_profile_fails_before_touching_it(tmp_path, monkeypatch, writer):
+    """A write aimed at a guarded profile fails the test (an exception that `except OSError` cannot
+    swallow) and the file is not created. The guarded list points at a temporary `.bashrc` here,
+    so the check runs without going near the real one. Positive control (checked): without the
+    wrappers in the fixture, `pytest.raises` reports DID NOT RAISE and `.bashrc` appears."""
+    import conftest
+
+    from local_delegate import cli, install
+
+    home = tmp_path / "home"
+    home.mkdir()
+    bashrc = home / ".bashrc"
+    monkeypatch.setattr(conftest, "REAL_SHELL_PROFILES", (bashrc,))
+    with pytest.raises(pytest.fail.Exception):
+        if writer == "profile_edit":
+            install.write_profile_edit(install.upsert_profile_block(bashrc, "block"))
+        elif writer == "atomic_write":
+            install._atomic_write(bashrc, b"block\n")
+        else:
+            probes = install.ShellProbes(
+                platform="linux", which={"bash": "/usr/bin/bash"}.get, shell_env="/usr/bin/bash"
+            )
+            monkeypatch.setattr(install, "shell_probes", lambda: probes)
+            cli.run(["install", "--home", str(home), "--shell-completion", "bash"])
+    assert not bashrc.exists()
