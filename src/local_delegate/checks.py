@@ -2016,7 +2016,8 @@ def _probe_claude_settings(ctx: Context) -> Result:
     try:
         raw = path.read_bytes()
     except FileNotFoundError:
-        pass
+        # No file is not a problem of this check: there is nothing to decode.
+        raw = None
     except OSError as exc:
         statuses.append(UNKNOWN)
         details.append(i18n.t("doctor.common.cannot_read", path=path, error=exc.strerror or exc))
