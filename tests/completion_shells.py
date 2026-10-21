@@ -49,13 +49,20 @@ def find_shell(name: str) -> str | None:
 
 
 def _git_bash() -> str | None:
+    """`<Git root>\\bin\\bash.exe`, with `git` in `cmd\\`, `bin\\` or `<mingw64|ucrt64>\\bin\\`.
+
+    The same two roots as `shell_profiles.git_bash`. From a Git Bash session `git` resolves to
+    `ucrt64\\bin\\git.exe`, two levels below the root.
+    """
     git = shutil.which("git")
     if git is None:
         return None
-    candidate = Path(git).resolve().parents[1] / "bin" / "bash.exe"
-    if not candidate.is_file() or "system32" in str(candidate).lower():
-        return None
-    return str(candidate)
+    resolved = Path(git).resolve()
+    for root in (resolved.parents[1], resolved.parents[2]):
+        candidate = root / "bin" / "bash.exe"
+        if candidate.is_file() and "system32" not in str(candidate).lower():
+            return str(candidate)
+    return None
 
 
 def _bash3() -> str | None:

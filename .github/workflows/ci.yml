@@ -163,7 +163,7 @@ jobs:
       - name: Tests (pytest)
         timeout-minutes: 10
         env:
-          COMPLETION_TEST_REQUIRE_SHELLS: ${{ matrix.os == 'windows-latest' && 'pwsh,powershell' || 'pwsh' }}
+          COMPLETION_TEST_REQUIRE_SHELLS: ${{ matrix.os == 'windows-latest' && 'pwsh,powershell,bash' || matrix.os == 'macos-latest' && 'zsh,bash,bash3,pwsh' || 'bash,pwsh' }}
         run: uv run pytest -q -n auto --dist loadgroup
 
       # El instalador ejercido de verdad, y no solo sus funciones. Va en los tres sistemas porque

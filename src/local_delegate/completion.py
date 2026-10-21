@@ -263,10 +263,10 @@ def _route(path: tuple[str, ...]) -> str:
     return " ".join(("local-delegate", *path))
 
 
-# --- Rendering (L2a: PowerShell) ------------------------------------------------------------
+# --- Rendering --------------------------------------------------------------------------------
 
-#: Shells that `render` knows. L2b adds bash and zsh.
-SHELLS = ("powershell",)
+#: Shells that `render` knows, in the order of the `completion` subcommand.
+SHELLS = ("powershell", "zsh", "bash")
 #: Executables registered by every script (REQ-011): the two entry points of the package.
 EXECUTABLES = ("local-delegate", "local-delegate-mcp")
 
@@ -278,8 +278,10 @@ _HEADER_RE = re.compile(
 )
 _HEADER_SLOT = "@@HEADER@@"
 _TABLES_SLOT = "@@TABLES@@"
-_TEMPLATES = {"powershell": "powershell.ps1"}
+_TEMPLATES = {"powershell": "powershell.ps1", "zsh": "zsh.zsh", "bash": "bash.bash"}
 _PS_INDENT = "    "
+#: Names of the data functions of the bash and zsh scripts (one `case` per table).
+_POSIX_PREFIX = "__local_delegate"
 
 
 class CompletionTemplateError(RuntimeError):
@@ -394,4 +396,100 @@ def _fill(template: str, header_line: str, tables: str) -> str:
     return template.replace(_HEADER_SLOT, header_line).replace(_TABLES_SLOT, tables)
 
 
-_RENDERERS = {"powershell": render_powershell}
+def sh_quote(text: str) -> str:
+    """POSIX single-quoted word: nothing inside is expanded, in bash 3.2 and in zsh alike."""
+    return "'" + text.replace("'", "'\\''") + "'"
+
+
+def zsh_describe_item(name: str, description: str) -> str:
+    """`name:description` element of `_describe`, with backslash and `:` escaped (REQ-022)."""
+
+    def escape(text: str) -> str:
+        return text.replace("\\", "\\\\").replace(":", "\\:")
+
+    return f"{escape(name)}:{escape(description)}"
+
+
+def _posix_tables(model: Model) -> dict[str, list[tuple[str, list[str]]]]:
+    """Tables shared by bash and zsh: `table -> [(key, words)]`, in declaration order.
+
+    Keys are `<path>` or `<path>|<name>` (`<path>|#<index>` for positionals), with the path joined
+    by spaces (`""` is the root), as in the PowerShell script.
+    """
+    tables: dict[str, list[tuple[str, list[str]]]] = {
+        "subs": [],
+        "opts": [],
+        "arity": [],
+        "values": [],
+    }
+    for path, node in model.nodes.items():
+        route = " ".join(path)
+        if node.subcommands:
+            tables["subs"].append((route, [sub.name for sub in node.subcommands]))
+        strings = [s for option in node.options for s in option.strings]
+        if strings:
+            tables["opts"].append((route, strings))
+        for option in node.options:
+            if option.arity == ARITY_FLAG:
+                continue
+            for string in option.strings:
+                key = f"{route}|{string}"
+                tables["arity"].append((key, [option.arity]))
+                if option.values:
+                    tables["values"].append((key, list(option.values)))
+        for index, positional in enumerate(node.positionals):
+            if positional.values:
+                tables["values"].append((f"{route}|#{index}", list(positional.values)))
+    return tables
+
+
+def _case_function(name: str, rows: list[tuple[str, str]], default: str) -> list[str]:
+    """`name() { case "$1" in 'key') <body> ;; ... *) <default> ;; esac; }`, valid in bash and zsh."""
+    lines = [f"{_POSIX_PREFIX}_{name}() {{", '    case "$1" in']
+    for key, body in rows:
+        lines.append(f"        {sh_quote(key)}) {body} ;;")
+    lines += [f"        *) {default} ;;", "    esac", "}"]
+    return lines
+
+
+def render_bash(model: Model, *, lang: str) -> str:
+    """bash script of `model` (bash 3.2 and later): data as `case` functions, no descriptions.
+
+    Each function leaves its answer in `_ld_reply`, a local of `_local_delegate` (dynamic scope),
+    as one string of words for `compgen -W`. The body is the same in both languages (REQ-008):
+    only the header says `lang=`.
+    """
+    lines: list[str] = []
+    for table, rows in _posix_tables(model).items():
+        quoted = [(key, f"_ld_reply={sh_quote(' '.join(words))}") for key, words in rows]
+        lines += _case_function(table, quoted, "_ld_reply=''")
+    return _fill(_template("bash"), header("bash", lang), "\n".join(lines))
+
+
+def render_zsh(model: Model, *, lang: str) -> str:
+    """zsh script of `model`: the bash tables as arrays, plus the `_describe` lists (REQ-022)."""
+    lines: list[str] = []
+    for table, rows in _posix_tables(model).items():
+        arrays = [
+            (key, "_ld_reply=(" + " ".join(sh_quote(word) for word in words) + ")")
+            for key, words in rows
+        ]
+        lines += _case_function(table, arrays, "_ld_reply=()")
+    described: list[tuple[str, str]] = []
+    for path, node in model.nodes.items():
+        route = " ".join(path)
+        subs = [zsh_describe_item(sub.name, sub.help) for sub in node.subcommands]
+        opts = [
+            zsh_describe_item(string, option.help)
+            for option in node.options
+            for string in option.strings
+        ]
+        for kind, items in (("subs", subs), ("opts", opts)):
+            if items:
+                body = "_ld_reply=(" + " ".join(sh_quote(item) for item in items) + ")"
+                described.append((f"{route}|{kind}", body))
+    lines += _case_function("describe", described, "_ld_reply=()")
+    return _fill(_template("zsh"), header("zsh", lang), "\n".join(lines))
+
+
+_RENDERERS = {"powershell": render_powershell, "zsh": render_zsh, "bash": render_bash}
