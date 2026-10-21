@@ -261,7 +261,7 @@ jobs:
       - name: CLI tests (pytest)
         timeout-minutes: 5
         run: >-
-          uv run pytest -q tests/test_cli_english.py tests/test_cli_renamed_names.py
+          uv run pytest -q tests/test_cli_english.py tests/test_retired_cli_names.py
           tests/test_completion_model.py tests/test_completion_render.py
 
   # El único job que NO usa `uv.lock`, y esa es exactamente su razón de ser.

@@ -514,7 +514,6 @@ COST_MARK_VALUES: dict[str, str] = {
 #: escribe solo el nuevo y se leen los dos. `hook_common.FILE_NAMES` es su copia (los hooks no
 #: importan el paquete) y `tests/test_hook_legacy_names.py` exige que sean iguales.
 FILE_NAMES: dict[str, tuple[str, str]] = {
-    "switch_file": ("local-delegate-bloqueo-apagado", "local-delegate-block-off"),
     "block_notes": ("local-delegate-bloqueos.jsonl", "local-delegate-blocks.jsonl"),
     "call_notes_dir": ("local-delegate-llamadas", "local-delegate-calls"),
     "health_prefix": ("local-delegate-salud-", "local-delegate-health-"),

@@ -60,16 +60,7 @@ def test_the_suite_runs_without_package_variables_defined(tmp_path):
     assert {n: os.environ.get(n) for n in pinned} == pinned
 
 
-def _call_name(node: ast.Call) -> str | None:
-    func = node.func
-    if isinstance(func, ast.Name):
-        return func.id
-    if isinstance(func, ast.Attribute):
-        return func.attr
-    return None
-
-
-def _variables_read_by_hooks(with_alias: bool = True) -> dict[str, set[str]]:
+def _variables_read_by_hooks() -> dict[str, set[str]]:
     """Escanea `resources/hooks/*.py` y devuelve, por fichero, las variables que consulta.
 
     Que lo cuente el programa y no una lista a mano: contar sitios a ojo ya salió mal una vez en
@@ -104,11 +95,6 @@ def _variables_read_by_hooks(with_alias: bool = True) -> dict[str, set[str]]:
                     first = node.args[0]
                     if isinstance(first, ast.Constant) and isinstance(first.value, str):
                         names.add(first.value)
-            # env_alias("NUEVA", "VIEJA") de hook_common: las dos se leen (REQ-002)
-            if with_alias and isinstance(node, ast.Call) and _call_name(node) == "env_alias":
-                for arg in node.args[:2]:
-                    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-                        names.add(arg.value)
             # os.environ["X"]
             if (
                 isinstance(node, ast.Subscript)
@@ -189,34 +175,35 @@ def test_config_only_reads_the_environment_through_the_registered_door():
     )
 
 
-def test_hooks_read_renamed_names_only_through_env_alias():
-    """REQ-002: una variable renombrada se lee por `hook_common.env_alias`, nunca directa.
+def test_hooks_never_name_a_retired_name():
+    """REQ-010: desde la 0.38.0 los hooks leen solo los nombres nuevos y ni detectan los viejos.
 
-    Una lectura directa (`os.environ["LD_HOOK_READ_BLOQUEAR"]`) se saltaría el alias: el nombre
-    nuevo no ganaría y el viejo no quedaría anotado para el aviso.
+    Ninguna constante de texto de un hook (variables, rutas, docstrings) puede ser el nombre viejo
+    de una variable o un interruptor del registro: si lo fuera, el hook lo estaría leyendo, o
+    prometiendo en su documentación algo que ya no hace. Los nombres viejos salen del registro, no
+    de una lista a mano.
     """
     from local_delegate import deprecations
 
-    # Solo variables: el interruptor viejo (`switch_file`) es un fichero, no se lee del entorno.
-    renamed = {
-        n
-        for kind, old, new in deprecations.hook_names()
-        if kind == "env_var"
-        for n in (old, new)
-        if n
-    }
-    # Control positivo: el registro trae las dos variables de hooks y el escáner de alias las ve.
-    assert {"LD_HOOK_READ_BLOQUEAR", "LD_HOOK_READ_BLOCK"} <= renamed
-    via_alias = set().union(*_variables_read_by_hooks().values())
-    assert renamed <= via_alias, sorted(renamed - via_alias)
+    old_names = {e.old for e in deprecations.env_vars() + deprecations.switch_files()}
+    # Control positivo: el registro trae los tres nombres que leían los hooks.
+    assert len(old_names & {e.old for e in deprecations.switch_files()}) == 1
+    assert len(old_names) >= 3, old_names
 
-    direct = {
-        f"{file}:{name}"
-        for file, names in _variables_read_by_hooks(with_alias=False).items()
-        for name in names
-        if name in renamed
+    hooks = Path(config.__file__).parent / "resources" / "hooks"
+    found = {
+        f"{file.name}:{node.lineno}:{node.value}"
+        for file in sorted(hooks.glob("*.py"))
+        for node in ast.walk(ast.parse(file.read_text(encoding="utf-8")))
+        if isinstance(node, ast.Constant)
+        and isinstance(node.value, str)
+        and any(old in node.value for old in old_names)
     }
-    assert direct == set(), f"lectura directa de un nombre renombrado: {sorted(direct)}"
+    assert found == set(), f"un hook nombra un nombre retirado: {sorted(found)}"
+
+    # Y lee los nuevos directamente (control de que el escáner ve las lecturas del bloqueo).
+    read = set().union(*_variables_read_by_hooks().values())
+    assert {"LD_HOOK_READ_BLOCK", "LD_HOOK_READ_SWITCH_FILE"} <= read, sorted(read)
 
 
 # --- REQ-018 y plan D7: el idioma del sistema se lee en UN solo sitio ------------------------------

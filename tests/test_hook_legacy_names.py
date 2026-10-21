@@ -1,10 +1,13 @@
-"""Ola A2 del renombrado: nombres en disco, interruptor y `deprecated_names` de los hooks.
+"""Nombres en disco y del bloqueo en los hooks (ola A2 del renombrado; retirada en la 0.38.0).
 
 Los hooks escriben solo los nombres nuevos (`local-delegate-blocks.jsonl`, `local-delegate-calls/`,
-`local-delegate-health-*.json`, `~/.claude/local-delegate-block-off`) y el daemon sigue leyendo
-los viejos, porque un hook de una versión anterior puede seguir instalado y escribiendo (REQ-005,
-REQ-006, REQ-012). Con la telemetría encendida, cada evento dice qué nombres viejos leyó la
-invocación, y `doctor` lo cuenta desde la cola del fichero (REQ-003).
+`local-delegate-health-*.json`) y el daemon sigue leyendo los temporales viejos, porque un hook de
+una versión anterior puede seguir instalado y escribiendo (REQ-007 de retire-legacy-aliases).
+
+Desde la 0.38.0 los hooks leen **solo** `LD_HOOK_READ_BLOCK`, `LD_HOOK_READ_SWITCH_FILE` y
+`~/.claude/local-delegate-block-off`: los nombres viejos ni se aplican ni se detectan, y el evento
+de telemetría ya no lleva `deprecated_names` (REQ-010, REQ-011 filas 1–3). `doctor` sigue leyendo
+la cola de 7 días, donde solo llegan eventos de hooks 0.35–0.37 aún sin actualizar.
 """
 
 from __future__ import annotations
@@ -20,11 +23,23 @@ from pathlib import Path
 
 import pytest
 
-from local_delegate import attribution, checks, config, deprecations, legacy_names, server
+from local_delegate import (
+    attribution,
+    checks,
+    config,
+    deprecation_notices,
+    deprecations,
+    legacy_names,
+    server,
+)
 from local_delegate import install as inst
 from local_delegate.resources.hooks import hook_common
 
-OLD_SWITCH, NEW_SWITCH = hook_common.FILE_NAMES["switch_file"]
+# Los nombres viejos salen del registro: el hook ya no los nombra (REQ-010).
+_SWITCH_ENTRY = deprecations.switch_files()[0]
+OLD_SWITCH, NEW_SWITCH = _SWITCH_ENTRY.old, _SWITCH_ENTRY.new
+OLD_BLOCK = next(e.old for e in deprecations.env_vars() if e.new == "LD_HOOK_READ_BLOCK")
+OLD_SWITCH_VAR = next(e.old for e in deprecations.env_vars() if e.new == "LD_HOOK_READ_SWITCH_FILE")
 
 
 @pytest.fixture
@@ -43,16 +58,10 @@ def home_env(tmp_path, monkeypatch):
     (home / ".claude").mkdir(parents=True)
     for name in ("HOME", "USERPROFILE"):
         monkeypatch.setenv(name, str(home))
-    for name in (
-        "LD_HOOK_READ_SWITCH_FILE",
-        "LD_HOOK_READ_INTERRUPTOR",
-        "LD_HOOK_READ_BLOQUEAR",
-    ):
+    for name in ("LD_HOOK_READ_SWITCH_FILE", OLD_SWITCH_VAR, OLD_BLOCK):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1")
-    hook_common.DEPRECATED_SEEN.clear()
-    yield home
-    hook_common.DEPRECATED_SEEN.clear()
+    return home
 
 
 # --- Una sola tabla ---------------------------------------------------------------------------
@@ -64,10 +73,12 @@ def test_the_file_table_is_the_same_in_the_hooks_and_in_the_package():
     assert hook_common.FILE_NAMES == legacy_names.FILE_NAMES
 
 
-def test_the_old_switch_is_in_the_registry_and_in_the_hooks_copy():
-    entry = deprecations.find(OLD_SWITCH)
-    assert entry is not None and entry.kind == "switch_file" and entry.new == NEW_SWITCH
-    assert ("switch_file", OLD_SWITCH, NEW_SWITCH) in hook_common.DEPRECATED_HOOK_NAMES
+def test_the_hook_names_the_switch_with_its_own_constant_and_no_old_name():
+    """El interruptor sale de la tabla de ficheros (ya no se lee el viejo) y el hook lo nombra con
+    una constante propia, que tiene que ser el sucesor del registro (REQ-010)."""
+    assert hook_common.SWITCH_FILE_NAME == NEW_SWITCH
+    assert "switch_file" not in hook_common.FILE_NAMES
+    assert "switch_file" not in legacy_names.FILE_NAMES
 
 
 # --- Temporales: escribe el nuevo, lee los dos ----------------------------------------------
@@ -129,27 +140,21 @@ def test_the_health_mark_uses_the_new_name(temp_dir, monkeypatch):
 # --- El interruptor -------------------------------------------------------------------------
 
 
-def test_the_old_switch_still_turns_off_and_is_noted(home_env):
+def test_the_old_switch_no_longer_turns_off_and_the_new_one_does(home_env):
+    """REQ-011 fila 3, en proceso: el viejo no apaga; su gemelo nuevo, con los mismos datos, sí."""
     (home_env / ".claude" / OLD_SWITCH).write_text("", encoding="utf-8")
+    assert hook_common.block_state() == "on"
 
-    assert hook_common.block_state() == "off_file"
-    assert OLD_SWITCH in hook_common.DEPRECATED_SEEN
-
-
-def test_the_new_switch_turns_off_without_warning(home_env):
     (home_env / ".claude" / NEW_SWITCH).write_text("", encoding="utf-8")
-
     assert hook_common.block_state() == "off_file"
-    assert hook_common.DEPRECATED_SEEN == set()
 
 
 def test_without_a_switch_the_variable_rules(home_env):
-    """Control de los dos anteriores: sin ningún fichero, el bloqueo está encendido."""
+    """Control: sin ningún fichero, el bloqueo está encendido."""
     assert hook_common.block_state() == "on"
-    assert hook_common.DEPRECATED_SEEN == set()
 
 
-# --- `deprecated_names` en la telemetría, con el hook INSTALADO --------------------------------
+# --- Con el hook INSTALADO: solo los nombres nuevos (REQ-010, REQ-011 filas 1–3) ---------------
 
 
 def _run_installed_hook(home: Path, variables: dict[str, str]) -> subprocess.CompletedProcess:
@@ -169,9 +174,9 @@ def _run_installed_hook(home: Path, variables: dict[str, str]) -> subprocess.Com
     hooks_dir = home / ".claude" / "hooks" / inst.HOOKS_SUBDIR
     to_remove = {
         "LD_HOOK_READ_BLOCK",
-        "LD_HOOK_READ_BLOQUEAR",
+        OLD_BLOCK,
         "LD_HOOK_READ_SWITCH_FILE",
-        "LD_HOOK_READ_INTERRUPTOR",
+        OLD_SWITCH_VAR,
         "LD_HOOK_TELEMETRY_LOG",
     }
     env = {k: v for k, v in os.environ.items() if k not in to_remove}
@@ -192,38 +197,56 @@ def _last_event(log: Path) -> dict:
     return json.loads(log.read_text(encoding="utf-8").splitlines()[-1])
 
 
-def test_the_event_says_which_old_names_the_hook_read(tmp_path):
-    log = tmp_path / "telemetry.jsonl"
-    _run_installed_hook(tmp_path, {"LD_HOOK_READ_BLOQUEAR": "1", "LD_HOOK_TELEMETRY_LOG": str(log)})
-
-    event = _last_event(log)
-    assert event["block"] == "on"
-    assert event["deprecated_names"] == ["LD_HOOK_READ_BLOQUEAR"]
-
-
-def test_the_old_switch_also_travels_in_the_event(tmp_path):
-    log = tmp_path / "telemetry.jsonl"
-    (tmp_path / ".claude").mkdir(exist_ok=True)
-    (tmp_path / ".claude" / OLD_SWITCH).write_text("", encoding="utf-8")
-    _run_installed_hook(tmp_path, {"LD_HOOK_READ_BLOCK": "1", "LD_HOOK_TELEMETRY_LOG": str(log)})
-
-    event = _last_event(log)
-    assert event["block"] == "off_file"
-    assert event["deprecated_names"] == [OLD_SWITCH]
+def _installed_event(home: Path, variables: dict[str, str]) -> dict:
+    """Último evento del hook de prompt instalado, con la telemetría en el HOME simulado."""
+    log = home / "telemetry.jsonl"
+    log.unlink(missing_ok=True)
+    _run_installed_hook(home, {"LD_HOOK_TELEMETRY_LOG": str(log), **variables})
+    return _last_event(log)
 
 
-def test_with_new_names_the_event_does_not_carry_the_key(tmp_path):
-    """Control: la clave solo aparece cuando se leyó algo viejo."""
-    log = tmp_path / "telemetry.jsonl"
-    _run_installed_hook(tmp_path, {"LD_HOOK_READ_BLOCK": "1", "LD_HOOK_TELEMETRY_LOG": str(log)})
+def test_installed_hook_ignores_the_old_block_variable(tmp_path):
+    """Fila 1: la variable vieja sola ya no enciende el bloqueo; la nueva, con el mismo valor, sí."""
+    old = _installed_event(tmp_path, {OLD_BLOCK: "1"})
+    assert old["block"] == "off_variable"
+    assert "deprecated_names" not in old, "el hook ya no detecta nombres viejos"
 
-    event = _last_event(log)
-    assert event["block"] == "on"
-    assert "deprecated_names" not in event
+    new = _installed_event(tmp_path, {"LD_HOOK_READ_BLOCK": "1"})
+    assert new["block"] == "on"
+
+
+def test_installed_hook_ignores_the_old_switch_file_variable(tmp_path):
+    """Fila 2: la variable vieja del interruptor no apaga aunque el fichero exista; la nueva sí."""
+    switch = tmp_path / "off.flag"
+    switch.write_text("", encoding="utf-8")
+
+    old = _installed_event(tmp_path, {"LD_HOOK_READ_BLOCK": "1", OLD_SWITCH_VAR: str(switch)})
+    assert old["block"] == "on"
+    assert "deprecated_names" not in old
+
+    new = _installed_event(
+        tmp_path, {"LD_HOOK_READ_BLOCK": "1", "LD_HOOK_READ_SWITCH_FILE": str(switch)}
+    )
+    assert new["block"] == "off_file"
+
+
+def test_installed_hook_ignores_the_old_switch_file(tmp_path):
+    """Fila 3: `~/.claude/<interruptor viejo>` ya no apaga; `~/.claude/<nuevo>` sí."""
+    claude = tmp_path / ".claude"
+    claude.mkdir(exist_ok=True)
+    (claude / OLD_SWITCH).write_text("", encoding="utf-8")
+
+    old = _installed_event(tmp_path, {"LD_HOOK_READ_BLOCK": "1"})
+    assert old["block"] == "on"
+    assert "deprecated_names" not in old
+
+    (claude / NEW_SWITCH).write_text("", encoding="utf-8")
+    new = _installed_event(tmp_path, {"LD_HOOK_READ_BLOCK": "1"})
+    assert new["block"] == "off_file"
 
 
 def test_without_telemetry_nothing_is_written(tmp_path):
-    _run_installed_hook(tmp_path, {"LD_HOOK_READ_BLOQUEAR": "1"})
+    _run_installed_hook(tmp_path, {"LD_HOOK_READ_BLOCK": "1"})
 
     assert not list(tmp_path.glob("**/*.jsonl")), "sin LD_HOOK_TELEMETRY_LOG no hay evento"
 
@@ -266,8 +289,10 @@ def test_the_7_day_tail_gives_the_names_and_looks_no_further_back(tmp_path):
 
 
 def test_doctor_warns_about_what_the_hooks_read(tmp_path, monkeypatch):
+    """La cola de 7 días con un evento sintético de un hook 0.35–0.37 sigue dando `WARN` (REQ-010):
+    los hooks nuevos ya no escriben `deprecated_names`, pero los viejos sin actualizar sí."""
     log = tmp_path / "telemetry.jsonl"
-    _write_telemetry(log, [_event(datetime.now(UTC), ["LD_HOOK_READ_BLOQUEAR"])])
+    _write_telemetry(log, [_event(datetime.now(UTC), [OLD_BLOCK])])
     monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", log)
     for name in config.DEPRECATED_ENV_VALUES:
         monkeypatch.setitem(config.DEPRECATED_ENV_VALUES, name, None)
@@ -277,7 +302,7 @@ def test_doctor_warns_about_what_the_hooks_read(tmp_path, monkeypatch):
 
     assert result.status == checks.WARN
     assert "leído por los hooks" in result.detail
-    assert "LD_HOOK_READ_BLOQUEAR está obsoleto: usa LD_HOOK_READ_BLOCK" in result.detail
+    assert deprecation_notices.warning_text(deprecations.find(OLD_BLOCK)) in result.detail
 
 
 def test_doctor_warns_about_the_old_switch_in_claude(tmp_path, monkeypatch):
