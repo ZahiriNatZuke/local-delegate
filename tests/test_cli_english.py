@@ -53,6 +53,7 @@ HELP_PATHS = (
     ["llamaswap", "residency"],
     ["doctor"],
     ["serve"],
+    ["completion"],
 )
 SURFACES = ("cli", "argparse")
 _WORD = re.compile(r"[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{3,}")

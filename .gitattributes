@@ -39,3 +39,8 @@ tests/fixtures/residency/** -text
 # conjunto «después» de `scripts/data/hook_hashes_after.json` se calcula sobre el blob con LF. Un
 # checkout de Windows con `core.autocrlf=true` daría otra huella al mismo hook (REQ-041).
 src/local_delegate/resources/hooks/*.py -text
+
+# Plantillas del autocompletado (SDD cli-completion): un `\r` rompe bash y zsh, y el generador
+# rechaza la plantilla que lo lleve. Sin esto, el checkout de Windows con `core.autocrlf=true` las
+# convertiría a CRLF.
+src/local_delegate/resources/completion/** -text
