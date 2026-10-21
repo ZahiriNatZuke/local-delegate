@@ -488,12 +488,16 @@ def read_text(path: Path) -> tuple[str | None, str | None]:
 
 
 def read_json(path: Path) -> tuple[dict | None, str | None]:
-    """Igual que :func:`read_text`, pero además un JSON ilegible es motivo de ``unknown``."""
+    """Igual que :func:`read_text`, pero además un JSON ilegible es motivo de ``unknown``.
+
+    Un BOM UTF-8 no lo hace ilegible: PowerShell 5.1 lo pone al guardar con `-Encoding UTF8`
+    (REQ-026 de `retire-legacy-aliases`).
+    """
     text, reason = read_text(path)
     if text is None:
         return None, reason
     try:
-        data = json.loads(text)
+        data = json.loads(text.removeprefix("\ufeff"))
     except ValueError as exc:
         return None, i18n.t("doctor.common.bad_json", path=path, error=exc.msg)
     if isinstance(data, dict):

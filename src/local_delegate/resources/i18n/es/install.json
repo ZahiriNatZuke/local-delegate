@@ -37,6 +37,8 @@
   "install.completion.uninstall_profile_plan": "quita el bloque de carga del autocompletado",
   "install.completion.up_to_date": "ya al día",
   "install.completion.written": "escrito",
+  "install.config_unreadable": "no se toca {path}: {reason}. {fix}",
+  "install.config_unreadable.fix": "Corrígelo para que sea un objeto JSON válido en UTF-8 (o apártalo) y vuelve a ejecutar el comando; el fichero queda tal cual estaba",
   "install.copied": "copiado -> {path}",
   "install.hooks.copy_plan": "scripts de hooks consultivos",
   "install.hooks.previous_removed": " (retiradas {n} entrada(s) previa(s))",
