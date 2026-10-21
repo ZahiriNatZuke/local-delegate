@@ -255,3 +255,42 @@ def test_reset_all(capsys):
     assert (code, err) == (0, "")
     assert out.strip() == t("cli.backend_params.reset_all", path=bp.path())
     assert _roles() == {}
+
+
+# --- completion values (SDD cli-completion, REQ-005) ----------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("argv", "key"),
+    [
+        (("set", "foo", "temperature", "1"), "temperature"),
+        (("unset", "foo", "top_k"), "top_k"),
+        (("reset", "foo"), ""),
+    ],
+    ids=["set", "unset", "reset"],
+)
+def test_completion_values_keep_the_catalog_refusal(argv, key, capsys):
+    """The roles feed the completion scripts without `choices=`: argparse never rejects them."""
+    # The refusal exits with 2 like an argparse error: the text is what tells them apart.
+    code, out, err = _run(capsys, *argv)
+    assert code == 2
+    assert out == ""
+    assert "usage:" not in err.lower()
+    reason = t("cli.backend_params.refused.unknown_role", role="foo", key=key)
+    assert err.strip() == t("cli.backend_params.refused", reason=reason)
+
+
+def test_backend_params_positionals_have_completion_values_and_no_choices():
+    parser = cli.build_parser()
+    root = next(a for a in parser._actions if a.dest == "command")
+    commands = root.choices["backend-params"]._subparsers._group_actions[0].choices
+    seen = 0
+    for name in ("set", "unset", "reset"):
+        for action in commands[name]._actions:
+            if action.dest in ("role", "key"):
+                assert action.choices is None
+                assert action.completion_values == (
+                    bp.ROLES if action.dest == "role" else tuple(bp.ALLOWED_KEYS)
+                )
+                seen += 1
+    assert seen == 5
