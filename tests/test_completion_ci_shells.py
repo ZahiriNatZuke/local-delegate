@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import completion_shells
 import pytest
 import yaml
-from completion_shells import REQUIRE_ENV
 
 CI_YML = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "ci.yml"
 EXPECTED = "${{ matrix.os == 'windows-latest' && 'pwsh,powershell' || 'pwsh' }}"
@@ -28,7 +28,7 @@ def _step(job: dict, name: str) -> dict:
 
 def test_tests_step_requires_the_shells_per_system():
     step = _step(_jobs()["test"], "Tests (pytest)")
-    assert step["env"][REQUIRE_ENV] == EXPECTED
+    assert step["env"][completion_shells.REQUIRE_ENV] == EXPECTED
 
 
 def test_render_tests_run_in_the_python_matrix():
@@ -38,8 +38,6 @@ def test_render_tests_run_in_the_python_matrix():
 
 def _outcome(name: str) -> tuple[type, str]:
     """How `require_or_skip(name)` ends; caught here so a skip cannot skip the test itself."""
-    import completion_shells
-
     try:
         completion_shells.require_or_skip(name)
     except (pytest.fail.Exception, pytest.skip.Exception) as exc:
@@ -49,22 +47,18 @@ def _outcome(name: str) -> tuple[type, str]:
 
 def test_helper_fails_a_required_missing_shell_and_skips_the_rest(monkeypatch):
     """REQ-037: the helper fails when the missing shell is required, and skips it otherwise."""
-    import completion_shells
-
     monkeypatch.setattr(completion_shells, "find_shell", lambda name: None)
-    monkeypatch.setenv(REQUIRE_ENV, "zsh, pwsh")
+    monkeypatch.setenv(completion_shells.REQUIRE_ENV, "zsh, pwsh")
     kind, message = _outcome("zsh")
     assert kind is pytest.fail.Exception
     assert "'zsh' is required" in message
     assert _outcome("bash") == (pytest.skip.Exception, "shell 'bash' not found")
-    monkeypatch.setenv(REQUIRE_ENV, "")
+    monkeypatch.setenv(completion_shells.REQUIRE_ENV, "")
     assert _outcome("zsh")[0] is pytest.skip.Exception
 
 
 def test_windows_bash_is_never_the_one_of_system32(monkeypatch, tmp_path):
     """REQ-037: on Windows, `bash` is derived from Git, never `System32\bash.exe` (WSL)."""
-    import completion_shells
-
     git = tmp_path / "Git" / "cmd" / "git.exe"
     bash = tmp_path / "Git" / "bin" / "bash.exe"
     for path in (git, bash):

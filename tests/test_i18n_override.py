@@ -24,9 +24,13 @@ def test_override_switches_lang_t_and_argparse():
 
 
 def test_override_restores_after_an_exception():
-    with pytest.raises(RuntimeError), i18n.override("en"):
-        assert i18n.lang() == "en"
-        raise RuntimeError("boom")
+    def fail_inside() -> None:
+        with i18n.override("en"):
+            assert i18n.lang() == "en"
+            raise RuntimeError("boom")
+
+    with pytest.raises(RuntimeError):
+        fail_inside()
     assert i18n.lang() == "es"
 
 
@@ -47,8 +51,8 @@ def test_override_does_not_touch_the_cache_of_current():
 
 
 def test_override_rejects_an_unknown_language():
-    with pytest.raises(ValueError, match="fr"), i18n.override("fr"):
-        pass
+    with pytest.raises(ValueError, match="fr"):
+        i18n.override("fr").__enter__()
     assert i18n.lang() == "es"
 
 

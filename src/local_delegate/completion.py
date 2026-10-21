@@ -23,10 +23,11 @@ its `choices` (REQ-005).
 from __future__ import annotations
 
 import argparse
+import importlib
 import re
 from dataclasses import dataclass
 
-from . import deprecations
+from . import deprecations, i18n
 
 #: Arity of an option: takes no value, a required value or an optional value.
 ARITY_FLAG = "flag"
@@ -292,8 +293,9 @@ def render(shell: str, *, lang: str | None = None) -> str:
     every help text (including `-h`) comes out in `lang`. Nothing is read from the network or
     written to disk.
     """
-    from . import cli, i18n  # cli imports this module: lazy import, no cycle at load time
-
+    # The parser lives in `cli`, which imports this module for the `completion` subcommand.
+    # Resolved by name at call time, so the two modules do not import each other.
+    cli = importlib.import_module(f"{__package__}.cli")
     if shell not in SHELLS:
         raise ValueError(f"shell={shell!r}")
     language = lang or i18n.lang()

@@ -81,8 +81,10 @@ def require_or_skip(name: str) -> str:
     if executable is not None:
         return executable
     if name in required_shells():
-        pytest.fail(f"shell {name!r} is required by {REQUIRE_ENV} and was not found")
-    pytest.skip(f"shell {name!r} not found")
+        raise pytest.fail.Exception(
+            f"shell {name!r} is required by {REQUIRE_ENV} and was not found"
+        )
+    raise pytest.skip.Exception(f"shell {name!r} not found")
 
 
 def powershell_env(name: str) -> dict[str, str]:

@@ -8,6 +8,7 @@ It runs also in `cli-python-matrix` (Python 3.11 to 3.15).
 
 from __future__ import annotations
 
+import importlib.resources
 import re
 
 import pytest
@@ -294,8 +295,6 @@ def test_template_with_carriage_return_is_rejected(monkeypatch):
         def read_bytes(self) -> bytes:
             return self.data
 
-    import importlib.resources
-
     monkeypatch.setattr(
         importlib.resources, "files", lambda package: FakeEntry(b"@@HEADER@@\r\n@@TABLES@@\r\n")
     )
@@ -304,9 +303,11 @@ def test_template_with_carriage_return_is_rejected(monkeypatch):
 
 
 def test_packaged_template_has_its_slots_and_no_carriage_return():
-    from importlib.resources import files
-
-    raw = files("local_delegate").joinpath("resources", "completion", "powershell.ps1").read_bytes()
+    raw = (
+        importlib.resources.files("local_delegate")
+        .joinpath("resources", "completion", "powershell.ps1")
+        .read_bytes()
+    )
     assert b"\r" not in raw
     assert max(raw) < 0x80
     assert raw.count(b"@@HEADER@@") == 1
