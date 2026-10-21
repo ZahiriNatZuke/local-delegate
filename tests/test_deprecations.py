@@ -59,17 +59,6 @@ def test_old_names_are_unique():
     assert len(old_names) == len(set(old_names))
 
 
-def test_registry_holds_the_three_fast_role_variables_as_retired():
-    fast = {e.old: e for e in deprecations.DEPRECATED_NAMES if e.old.endswith("_FAST")}
-    assert set(fast) == {
-        "LOCAL_DELEGATE_MODEL_FAST",
-        "LOCAL_DELEGATE_MAX_CHARS_FAST",
-        "LOCAL_DELEGATE_FALLBACK_FAST",
-    }
-    for e in fast.values():
-        assert (e.kind, e.new, e.introduced, e.warn_until) == ("retired", None, "0.30.0", "0.37.0")
-
-
 # --- Horizonte (REQ-004) ------------------------------------------------------
 def test_horizon_no_deprecated_name_is_overdue_in_the_current_version():
     """EL guardián: cuando la versión del paquete alcanza la retirada, esto falla con el nombre."""
@@ -95,11 +84,6 @@ def test_alias_expires_at_introduced_plus_three_and_failure_names_it():
 def test_retired_expires_after_warn_until_and_failure_names_it():
     with pytest.raises(AssertionError, match="LD_RETIRED_TEST_VAR"):
         _assert_horizon("0.38.0", (RETIRED,))
-
-
-def test_real_fast_variables_expire_in_0_38_0():
-    with pytest.raises(AssertionError, match="LOCAL_DELEGATE_MODEL_FAST"):
-        _assert_horizon("0.38.0")
 
 
 def test_unreleased_alias_never_expires():

@@ -1,8 +1,7 @@
 """deprecations.py — registro único de nombres obsoletos (D1 del SDD english-names-bilingual-output).
 
 Una sola tabla, `DEPRECATED_NAMES`, para todo nombre viejo que el paquete todavía reconoce:
-subcomandos y opciones del CLI, variables de entorno, ficheros interruptor, ficheros que se siguen
-escribiendo también con el nombre viejo (`legacy_write`) y nombres retirados.
+subcomandos y opciones del CLI, variables de entorno, ficheros interruptor y nombres retirados.
 La leen el CLI (aviso en `stderr`), `config` (variables), el check `config.deprecated_names` de
 `doctor` y los tests de horizonte (`tests/test_deprecations.py`). Los hooks no importan el
 paquete: llevan su copia mínima en `hook_common.py`, atada a esta por un test de igualdad.
@@ -26,9 +25,7 @@ from dataclasses import dataclass
 
 UNRELEASED = "UNRELEASED"
 
-KINDS = frozenset(
-    {"cli_command", "cli_option", "env_var", "switch_file", "legacy_write", "retired"}
-)
+KINDS = frozenset({"cli_command", "cli_option", "env_var", "switch_file", "retired"})
 # Menores que vive un alias desde su versión de introducción (REQ-004): 0.N, 0.N+1 y 0.N+2.
 ALIAS_MINOR_VERSIONS = 3
 
@@ -49,11 +46,6 @@ class DeprecatedName:
 
 
 DEPRECATED_NAMES: tuple[DeprecatedName, ...] = (
-    # El rol `fast`, retirado en la 0.30.0 (sección `[0.30.0]` del CHANGELOG). Antes lo cubría
-    # `config.rol_retirado`; el check generalizado avisa igual y deja de hacerlo tras la 0.37.x.
-    DeprecatedName("retired", "LOCAL_DELEGATE_MODEL_FAST", None, "0.30.0", "0.37.0"),
-    DeprecatedName("retired", "LOCAL_DELEGATE_MAX_CHARS_FAST", None, "0.30.0", "0.37.0"),
-    DeprecatedName("retired", "LOCAL_DELEGATE_FALLBACK_FAST", None, "0.30.0", "0.37.0"),
     # Ola A1: CLI y variables de entorno (REQ-001, REQ-002).
     DeprecatedName("cli_command", "recalcular-coste", "recompute-cost", "0.35.0"),
     DeprecatedName("cli_option", "--reiniciar-calibracion", "--reset-calibration", "0.35.0"),
@@ -84,10 +76,6 @@ DEPRECATED_NAMES: tuple[DeprecatedName, ...] = (
         "0.35.0",
         used_by_hooks=True,
     ),
-    # Ola A4: excepción de REQ-005. El daemon escribe también `enfriamiento.json` (claves viejas)
-    # para que los hooks de versiones anteriores sigan viendo los modelos enfriados. Mientras esta
-    # entrada exista, `cooldown.legacy_write_enabled()` es True; al retirarla, se deja de escribir.
-    DeprecatedName("legacy_write", "enfriamiento.json", "cooldown.json", "0.35.0"),
 )
 
 

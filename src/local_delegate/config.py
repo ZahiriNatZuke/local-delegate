@@ -277,23 +277,13 @@ MODEL_CODE = _env("LOCAL_DELEGATE_MODEL_CODE", "qwen36-35b-a3b")  # código / bo
 MODEL_VISION = _env("LOCAL_DELEGATE_MODEL_VISION", "gemma4-12b")
 ALLOWED_MODELS: set[str] = {MODEL_MECHANICAL, MODEL_LONG, MODEL_CODE}
 
-# --- El rol `fast`, RETIRADO en la 0.30.0 ------------------------------------
-# No tenía carga: 5 registros en 164 del log de uso, 3 de ellos de un test de concurrencia, y
-# ninguna tool lo enrutaba. Sus tres variables se siguen **leyendo** —por la puerta registrada, así
-# que constan en el inventario y la suite las sigue aislando— pero ya no tienen efecto. Se leen para
-# poder AVISAR: borrarlas sin más las habría vuelto mudas, que es justo el fallo que este repo
-# persigue. El aviso lo da `doctor` (`config.deprecated_names`) y no una excepción al arrancar:
-# romper el arranque castigaría a quien actualiza con la variable puesta, que no hizo nada malo.
-#
-# Desde la ola A0 del SDD english-names-bilingual-output los nombres salen del registro único
-# `deprecations.DEPRECATED_NAMES` (entradas `retired`), no de una lista escrita aquí.
+# --- Variables con nombre obsoleto ------------------------------------------
+# Se leen por la puerta registrada (constan en el inventario y la suite las aísla) para que el
+# check `config.deprecated_names` de `doctor` pueda AVISAR de que siguen puestas: borrarlas sin
+# más las habría vuelto mudas. Los nombres salen del registro único `deprecations.DEPRECATED_NAMES`
+# (`deprecations.env_vars()`), no de una lista escrita aquí.
 DEPRECATED_ENV_VALUES: dict[str, str | None] = {
     entry.old: _read(entry.old) for entry in deprecations.env_vars()
-}
-RETIRED_FAST_ROLE_VARIABLES: dict[str, str | None] = {
-    name: value
-    for name, value in DEPRECATED_ENV_VALUES.items()
-    if (entry := deprecations.find(name)) is not None and entry.is_retired
 }
 
 # Umbral para elegir el modelo "largo" vs "mecánico" en tools que enrutan por tamaño.

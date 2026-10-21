@@ -367,50 +367,54 @@ def test_without_disk_for_the_episodes_the_cooldown_goes_on(path, clock, monkeyp
     assert state.lookup("m") is not None
 
 
-# --- Ola A4 del renombrado: `cooldown.json`, `enfriamiento.json` y su escritura doble -----------
+# --- Ola A4 del renombrado: `cooldown.json` y la lectura dual de `enfriamiento.json` -------------
 #
-# REQ-005 (excepción): mientras viva la entrada `legacy_write` de `deprecations`, el daemon escribe
-# también `enfriamiento.json` con las claves viejas, para los hooks de una versión anterior.
-# REQ-006: se lee `cooldown.json` y, si no existe, `enfriamiento.json` traducido; gana el nuevo.
-
-
-def _old(path) -> dict:
-    return json.loads(path.with_name("enfriamiento.json").read_text(encoding="utf-8"))
+# REQ-006 (english-names-bilingual-output): se lee `cooldown.json` y, si no existe,
+# `enfriamiento.json` traducido; gana el nuevo. La escritura doble se retiró en la 0.38.0
+# (REQ-006 de retire-legacy-aliases): el daemon solo escribe `cooldown.json`.
 
 
 def _new(path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _same_state(path) -> None:
-    """Los dos ficheros dicen lo mismo: el viejo, traducido, es igual al nuevo."""
-    old = {model: cooldown._entry(entry) for model, entry in _old(path).items()}
-    assert old == _new(path)
-
-
-def test_dual_write_leaves_the_same_state_after_enter_reenter_and_clear(path, clock):
+def test_the_daemon_never_writes_the_old_file(path, clock):
+    """Tras entrar, reentrar y limpiar existe `cooldown.json` y nunca `enfriamiento.json`."""
+    old_file = path.with_name("enfriamiento.json")
     state = _state(path, clock)
     _fail(state, "m", 3)
     assert _new(path)["m"]["until"] is not None, "tras entrar"
-    _same_state(path)
+    assert not old_file.exists(), "tras entrar"
     clock.advance(121)
     _fail(state, "m", 1)
     assert _new(path)["m"]["reentries"] == 2, "tras reentrar"
-    _same_state(path)
+    assert not old_file.exists(), "tras reentrar"
     clock.advance(241)
     state.record_success("m")
-    assert _new(path) == {}, "tras limpiar"
-    _same_state(path)
+    assert path.exists() and _new(path) == {}, "tras limpiar"
+    assert not old_file.exists(), "tras limpiar"
     assert [e["event"] for e in _events(path)] == ["enter", "reenter", "clear"]
 
 
-def test_the_old_file_carries_the_old_keys_a_previous_hook_reads(path, clock):
-    """Un hook de la 0.34.0 lee `data[modelo]["hasta"]` de `enfriamiento.json`."""
+def test_an_existing_old_file_is_neither_deleted_nor_modified(path, clock):
+    old_file = path.with_name("enfriamiento.json")
+    # Con sangría y salto final: cualquier reescritura, aunque dijera lo mismo, cambiaría los bytes.
+    old_file.write_text(
+        json.dumps(
+            {"m": {"fallos": 0, "espera_s": 120.0, "hasta": START + 60, "reentradas": 1}}, indent=2
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    before = old_file.read_bytes()
     state = _state(path, clock)
-    _fail(state, "m", 3)
-    entry = _old(path)["m"]
-    assert set(entry) == {"fallos", "espera_s", "hasta", "reentradas"}
-    assert entry["hasta"] == pytest.approx(START + 120.0)
+    _fail(state, "n", 3)
+    clock.advance(121)
+    _fail(state, "n", 1)
+    clock.advance(241)
+    state.record_success("n")
+    assert path.exists(), "el estado nuevo no se escribió"
+    assert old_file.read_bytes() == before
 
 
 def test_an_old_state_from_a_previous_daemon_is_read_if_there_is_no_new_one(path, clock):
@@ -437,19 +441,6 @@ def test_with_both_files_the_new_one_wins(path, clock):
     assert _state(path, clock).lookup("m") is None
 
 
-def test_without_its_legacy_write_entry_the_old_file_is_not_written(path, clock, monkeypatch):
-    """La excepción tiene horizonte: al retirar la entrada del registro, deja de escribirse."""
-    from local_delegate import deprecations
-
-    assert cooldown.legacy_write_enabled()
-    without_it = tuple(e for e in deprecations.DEPRECATED_NAMES if e.kind != "legacy_write")
-    monkeypatch.setattr(deprecations, "DEPRECATED_NAMES", without_it)
-    assert not cooldown.legacy_write_enabled()
-    _fail(_state(path, clock), "m", 3)
-    assert path.exists()
-    assert not path.with_name("enfriamiento.json").exists()
-
-
 def test_from_config_writes_cooldown_json_and_the_new_log(tmp_path, monkeypatch):
     from local_delegate import config
 
@@ -458,7 +449,7 @@ def test_from_config_writes_cooldown_json_and_the_new_log(tmp_path, monkeypatch)
     monkeypatch.setattr(config, "COOLDOWN_FAILURES", 1)
     cooldown.from_config().record_failure("m", FailureClass.MODEL)
     assert (tmp_path / "cooldown.json").exists()
-    assert (tmp_path / "enfriamiento.json").exists()
+    assert not (tmp_path / "enfriamiento.json").exists()
     assert (tmp_path / "cooldown-events.jsonl").exists()
     assert not (tmp_path / "enfriamiento-eventos.jsonl").exists()
 

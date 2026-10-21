@@ -1894,13 +1894,11 @@ def _probe_deprecated_names(ctx: Context) -> Result:
 
     Sustituye a `config.rol_retirado` (REQ-003) y lo generaliza: la lista sale del registro único
     `deprecations.DEPRECATED_NAMES`, así que cada alias que añada una ola se avisa aquí sin tocar
-    el probe. Desde la ola A1 trae las cuatro variables renombradas (alias con aviso) y las tres
-    del rol `fast`, retirado en la 0.30.0.
+    el probe. Desde la ola A1 trae las cuatro variables renombradas (alias con aviso).
 
     Retirar algo tiene dos mitades y la segunda se olvida siempre: quitar el código es fácil, y
-    quien tenía `LOCAL_DELEGATE_MODEL_FAST` en su entorno se queda creyendo que configura un modelo
-    que ya no existe. Pedir ese modelo por `model=` da un error claro solo —sale de
-    `ALLOWED_MODELS`—; la variable, en cambio, no fallaría nunca. De ahí este aviso.
+    quien tenía el nombre viejo en su entorno se queda creyendo que configura algo que ya no lo
+    lee nadie. Una variable no falla nunca por sí sola. De ahí este aviso.
 
     Mira tres sitios, y ninguno sale a la red, así que vive en `environment`: el entorno de la shell
     donde corre `doctor`, el bloque `env` de `~/.claude/settings.json` (de donde heredan los hooks)
@@ -1949,8 +1947,6 @@ def _probe_deprecated_names(ctx: Context) -> Result:
         else i18n.t("doctor.probe.deprecated_names.rename", old=e.old, new=e.new)
         for e in seen
     ]
-    if any(e.old.endswith("_FAST") for e in seen):
-        hints.append(i18n.t("doctor.probe.deprecated_names.current_roles"))
     return Result(WARN, " | ".join(warnings), "; ".join(hints))
 
 

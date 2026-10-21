@@ -114,7 +114,6 @@
   "doctor.probe.daemon_auth.unknown": "no se pudo saber si {host}:{port} exige token",
   "doctor.probe.daemon_auth.uses_variable": "{client} usa {variable}",
   "doctor.probe.daemon_auth.variable_not_in_env": "el puerto del daemon exige token y {detail}, que no está en el entorno de este proceso: si el cliente tampoco la ve, sus tools local_* responderán 401",
-  "doctor.probe.deprecated_names.current_roles": "los roles vigentes son mechanical, long, code y vision",
   "doctor.probe.deprecated_names.in_claude_dir": "en ~/.claude",
   "doctor.probe.deprecated_names.in_settings_env": "en el env de settings.json",
   "doctor.probe.deprecated_names.in_shell": "en la shell",
