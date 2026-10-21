@@ -1,0 +1,10 @@
+total 14
+drwxr-xr-x 1 Yohan 197121   0 Oct 21 11:09 .
+drwxr-xr-x 1 Yohan 197121   0 Oct 21 11:09 ..
+-rw-r--r-- 1 Yohan 197121 955 Oct 21 11:09 CLAUDE.md
+drwxr-xr-x 1 Yohan 197121   0 Oct 21 11:09 hooks
+-rw-r--r-- 1 Yohan 197121   0 Oct 21 11:09 local-delegate-block-off
+-rw-r--r-- 1 Yohan 197121 957 Oct 21 11:09 settings.json
+-rw-r--r-- 1 Yohan 197121 210 Oct 21 11:09 settings.json.bak
+-rw-r--r-- 1 Yohan 197121 270 Oct 21 11:09 settings.json.retired-names.bak
+drwxr-xr-x 1 Yohan 197121   0 Oct 21 11:09 skills

@@ -1,0 +1,26 @@
+local-delegate update — HOME: C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home-bom
+  (--home simulado: se repara ese árbol y NO se toca ningún servicio)
+
+Nombres retirados: se migran a sus sucesores antes de diagnosticar.
+[migrate] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home-bom\.claude\settings.json — renombra en el env nombres retirados: LD_HOOK_READ_BLOQUEAR → LD_HOOK_READ_BLOCK
+    env migrado: LD_HOOK_READ_BLOQUEAR → LD_HOOK_READ_BLOCK; copia del original en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home-bom\.claude\settings.json.retired-names.bak (lleva el env completo, que puede contener claves); registro de la migración en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-logs\retired-names-migration.json
+
+Versión pedida con --version: 0.37.0
+
+Instalación EDITABLE: el código se sirve de D:\Projects\local-delegate
+  Reiniciar el daemon NO cambia la versión. Para actualizar de verdad:
+    git -C D:\Projects\local-delegate pull
+    uv sync --project D:\Projects\local-delegate
+
+[copy] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home-bom\.claude\hooks\local-delegate — scripts de hooks consultivos
+    copiado -> C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home-bom\.claude\hooks\local-delegate
+[settings] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home-bom\.claude\settings.json — registra 2 hook(s): UserPromptSubmit, PreToolUse/mcp__local-delegate__.*
+    2 hook(s) registrados
+[copy] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home-bom\.claude\skills\local-delegation — skill local-delegation (es)
+    copiado -> C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home-bom\.claude\skills\local-delegation
+[markdown] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home-bom\.claude\CLAUDE.md — bloque de regla de delegación (es)
+    bloque gestionado actualizado
+[mcp] claude — registra el servidor MCP 'local-delegate' (http)
+    escrito en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home-bom\.claude.json
+
+--no-restart: no se toca el daemon.

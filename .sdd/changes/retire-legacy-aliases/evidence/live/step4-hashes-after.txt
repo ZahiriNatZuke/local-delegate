@@ -1,0 +1,2 @@
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 *./local-delegate-bloqueo-apagado
+5f767d6fc15dfdffeb39e0b49aa7fce0b1865b1144b60b810749399dd2ccb3fe *./settings.json

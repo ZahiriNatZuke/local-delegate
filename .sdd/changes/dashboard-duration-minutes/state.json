@@ -3,9 +3,9 @@
   "slug": "dashboard-duration-minutes",
   "title": "Duraciones del panel en minutos y horas",
   "mode": "lite",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-10-21T13:59:44.106Z",
-  "updatedAt": "2026-10-21T14:19:33.206Z",
+  "updatedAt": "2026-10-21T16:17:30.859Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,22 +20,22 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-21T15:10:35.925Z",
+      "evidence": "PR #378 (b0ba620): suite 4128 passed/28 skipped (-n 2), UI Playwright 62 passed, ruff limpio, gh pr checks verde, CodeQL 0 alertas",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-21T15:10:36.354Z",
+      "evidence": "Sesión principal: REQ-001..005 contra tests/test_dashboard_js.py (14 casos + nulo, es/en, fronteras 59,94/59,96/60/3599,4/3599,6/3600 s, title exacto, un solo formateador) y capturas evidence/ claro/oscuro es/en revisadas: 15 min 52 s, 1 h 5 min, 15 min 47 s, 1 min 57 s, 16 min 42 s; sin desbordes",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-21T16:17:30.660Z",
+      "evidence": "handoff.md; vault jornada-2026-10-21-retirada-de-alias-y-0-38.md; sin secretos",
+      "actor": "user"
     }
   },
   "history": [
@@ -103,6 +103,51 @@
       "to": "verifying",
       "at": "2026-10-21T14:19:33.206Z",
       "reason": "Suite 4128 verde, UI en serie verde, ruff limpio, capturas claro/oscuro revisadas"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-10-21T15:10:35.925Z",
+      "evidence": "PR #378 (b0ba620): suite 4128 passed/28 skipped (-n 2), UI Playwright 62 passed, ruff limpio, gh pr checks verde, CodeQL 0 alertas",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-10-21T15:10:36.146Z",
+      "reason": "calidad aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-10-21T15:10:36.354Z",
+      "evidence": "Sesión principal: REQ-001..005 contra tests/test_dashboard_js.py (14 casos + nulo, es/en, fronteras 59,94/59,96/60/3599,4/3599,6/3600 s, title exacto, un solo formateador) y capturas evidence/ claro/oscuro es/en revisadas: 15 min 52 s, 1 h 5 min, 15 min 47 s, 1 min 57 s, 16 min 42 s; sin desbordes",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-10-21T16:17:30.465Z",
+      "reason": "conformidad aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-10-21T16:17:30.660Z",
+      "evidence": "handoff.md; vault jornada-2026-10-21-retirada-de-alias-y-0-38.md; sin secretos",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-10-21T16:17:30.859Z",
+      "reason": "SDD ligero completo"
     }
   ]
 }

@@ -1,0 +1,14 @@
+local-delegate update — HOME: C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home
+  (--home simulado: se repara ese árbol y NO se toca ningún servicio)
+
+Versión pedida con --version: 0.37.0
+
+Instalación EDITABLE: el código se sirve de D:\Projects\local-delegate
+  Reiniciar el daemon NO cambia la versión. Para actualizar de verdad:
+    git -C D:\Projects\local-delegate pull
+    uv sync --project D:\Projects\local-delegate
+
+Nada que reparar: el andamiaje está completo y los pines al día.
+  aviso — token del puerto del daemon: local-delegate install --mcp-mode http --web-token-env
+
+--dry-run: no se escribió nada ni se reinició ningún servicio.

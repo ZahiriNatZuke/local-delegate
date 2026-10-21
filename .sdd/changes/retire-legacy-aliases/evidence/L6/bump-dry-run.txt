@@ -1,0 +1,9 @@
+pyproject.toml → 0.38.0
+server.json → 0.38.0
+src/local_delegate/deprecations.py → 0.38.0
+(dry-run) versiones actuales: ['0.37.0']
+(dry-run) uv.lock se regeneraría con `uv lock`
+pyproject.toml → 0.38.0
+server.json → 0.38.0
+src/local_delegate/deprecations.py → 0.38.0
+7 [] ['recalcular-coste', '--reiniciar-calibracion'] []

@@ -1,0 +1,6 @@
+FAILED tests/test_retired_cli_names.py::test_real_registry_rejects_the_old_command_and_option
+FAILED tests/test_retired_cli_names.py::test_real_registry_entrypoint_rejects_the_old_command[local-delegate]
+FAILED tests/test_retired_cli_names.py::test_real_registry_entrypoint_rejects_the_old_command[local-delegate-mcp]
+FAILED tests/test_checks.py::test_real_registry_retired_name_in_settings_json_env_warns_with_rename
+FAILED tests/test_install.py::test_retired_name_migration_with_the_real_registry
+5 failed, 228 deselected in 3.62s
