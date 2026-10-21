@@ -1,0 +1,100 @@
+import re
+
+def parse_duration(text: str) -> int:
+    """Parse a duration string like '1h30m', '45s', '2h', or '1h5m10s' into seconds.
+    
+    Accepts h, m, and s units in that order, each at most once.
+    Raises ValueError on empty input or invalid format.
+    """
+    if not text:
+        raise ValueError("Input cannot be empty")
+    
+    pattern = r'^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$'
+    match = re.match(pattern, text)
+    
+    if not match:
+        raise ValueError(f"Invalid duration format: {text}")
+        
+    hours, minutes, seconds = match.groups()
+    
+    return (
+        (int(hours) * 3600 if hours else 0) +
+        (int(minutes) * 60 if minutes else 0) +
+        (int(seconds) if seconds else 0)
+    )
+```
+
+Wait, the prompt says "NO uses herramientas, NO busques en internet. Output EXACTO: solo código python válido, sin explicaciones ni ```. Nada fuera del formato."
+I need to make sure I output ONLY the code, no markdown formatting.
+Also, I should double-check the regex and logic.
+Pattern: `^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$`
+This allows empty strings? No, `if not text:` handles that. But `re.match` on empty string would match with all groups None. The `if not text:` check covers it.
+What about '0h0m0s'? The prompt says "each at most once", doesn't explicitly forbid 0, but typically durations are positive. I'll stick with `\d+` which allows 0. If they want strictly positive, I could use `[1-9]\d*`, but `\d+` is standard. I'll keep `\d+`.
+Wait, the prompt says "Accept the units h, m and s in that order, each at most once". It doesn't say they must be present. So '45s' is valid.
+The regex handles it.
+Let's test mentally:
+'1h30m' -> hours='1', minutes='30', seconds=None -> 3600 + 1800 = 5400. Correct.
+'45s' -> hours=None, minutes=None, seconds='45' -> 45. Correct.
+'2h' -> 7200. Correct.
+'1h5m10s' -> 3600 + 300 + 10 = 3910. Correct.
+Empty string -> ValueError. Correct.
+'1h30m10s' -> matches. Correct.
+'1m1h' -> doesn't match pattern (order enforced). Correct.
+'1h30' -> doesn't match. Correct.
+'1h30m10s1' -> doesn't match. Correct.
+What about '1h30m10s ' (trailing space)? Doesn't match. Correct.
+The regex `^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$` is solid.
+
+One minor thing: `re` is standard library. The prompt says "Standard library only." That's fine.
+I will output exactly the code, no markdown.
+Wait, the prompt says "sin explicaciones ni ```". So I must not use markdown code blocks.
+I will just output the raw Python code.
+
+Let's verify the exact output format:
+```python
+import re
+
+def parse_duration(text: str) -> int:
+    ...
+```
+But without the markdown ticks.
+I'll write it out directly.
+
+One detail: `if not text:` raises ValueError. The prompt says "raise ValueError on empty input or any other format."
+I'll make sure the error message is clear, but it's not strictly required.
+I'll keep it simple.
+
+Code:
+import re
+
+def parse_duration(text: str) -> int:
+    """Parse a duration string like '1h30m', '45s', '2h', or '1h5m10s' into seconds.
+    
+    Accepts h, m, and s units in that order, each at most once.
+    Raises ValueError on empty input or invalid format.
+    """
+    if not text:
+        raise ValueError("Input cannot be empty")
+    
+    match = re.match(r'^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)$', text)
+    if not match:
+        raise ValueError(f"Invalid duration format: {text}")
+        
+    hours, minutes, seconds = match.groups()
+    
+    return (
+        (int(hours) * 3600 if hours else 0) +
+        (int(minutes) * 60 if minutes else 0) +
+        (int(seconds) if seconds else 0)
+    )
+
+Wait, I changed the regex slightly: `^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)$` (removed `$` inside the last group, but it's fine either way. Actually, `^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$` is safer if we want to allow empty, but we already check `if not text`. I'll stick with `^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)$` to enforce at least one unit, or keep `$` at the end. Actually, `^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)$` is better because it requires at least one unit, but the prompt says "such as '1h30m', '45s', '2h' or '1h5m10s'", implying at least one. I'll keep `^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)$`. Wait, if I use `^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)$`, it won't match empty string anyway. But I already check `if not text`. I'll just use `^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)$`.
+
+Actually, `^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)$` is fine.
+Let's test '45s' -> matches.
+'2h' -> matches.
+'1h30m' -> matches.
+'1h5m10s' -> matches.
+All good.
+
+One thing: `re` module needs to be imported.

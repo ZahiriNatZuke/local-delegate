@@ -1,0 +1,9 @@
+feat(metrics): mejorar formato de latencia y duración en tarjetas
+
+- Se renombra `fmtSec` a `fmtSecExact` para los valores exactos en `title` y se implementa una nueva `fmtSec` para la visualización principal.
+- La nueva función formatea duraciones en segundos, minutos y segundos, o horas y minutos, aplicando redondeo por rangos para evitar valores como «60,0 s».
+- Se modifica `kpiCard` para aceptar una prop `exact` que defina el texto del `title`, separando la representación visual de la precisión exacta.
+- Se actualiza la tarjeta de latencia para inyectar `fmtSecExact` en `exact`, garantizando tooltips precisos mientras se usa el formato compacto en pantalla.
+- Se ajustan los comentarios para documentar el nuevo comportamiento de redondeo y la lógica de visualización por niveles.
+
+(leído server-side: 3598 chars ≈ 1620 tokens de Claude que no entraron a tu contexto)

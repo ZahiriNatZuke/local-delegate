@@ -1,0 +1,9 @@
+Este módulo gestiona las cadenas de respaldo para roles de texto (mecánico, largo, código), permitiendo saltar a modelos alternativos si falla el principal. Define una estructura `Chain` que almacena los pasos de fallback, resolviendo dinámicamente la configuración vigente.
+
+El núcleo es la función `resolve`, que toma un rol y construye su cadena de respaldo. Primero obtiene los pasos crudos desde la configuración o usa los predeterminados (`DEFAULT_CHAINS`). Luego, filtra y valida cada paso: ignora valores nulos, elimina duplicados y excluye el modelo principal. Los pasos se mapean a modelos concretos del catálogo o al marcador especial `LOADED`. Si se usan sinónimos obsoletos como "residente", se registran para advertencias futuras.
+
+El marcador `LOADED` representa modelos ya cargados en el sistema. Su resolución es diferida: al saltar, se llama a `loaded_members`, que consulta un proveedor registrado (`_loaded_provider`) para obtener los modelos activos en ese momento, excluyendo el que falló. Si no hay proveedor (bloque B ausente), `LOADED` se resuelve como vacío, simplificando las cadenas efectivas.
+
+El módulo también maneja la visibilidad del estado mediante `describe` y `residents_text`, mostrando si el respaldo está activo, los residentes actuales y las cadenas asignadas a cada rol. Ignora roles desconocidos o configuraciones inválidas, asegurando robustez ante cambios en la topología o la configuración de modelos.
+
+(leído server-side: 7881 chars ≈ 3882 tokens de Claude que no entraron a tu contexto)

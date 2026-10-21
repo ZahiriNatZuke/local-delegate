@@ -1,0 +1,9 @@
+</think>
+
+Este módulo gestiona cadenas de respaldo para roles de modelos de IA (`code`, `long`, `mechanical`). Cuando el modelo principal falla, el sistema salta a alternativas definidas en orden. Cada rol tiene una cadena predeterminada que incluye el paso especial `loaded`, el cual se resuelve dinámicamente en tiempo de ejecución mediante un proveedor registrado (`register_loaded_provider`). Si no hay proveedor, `loaded` se omite y la cadena efectiva solo incluye modelos estáticos.
+
+La función `resolve(role)` lee la configuración vigente, valida cada paso, filtra el modelo principal y duplicados, y detecta nombres obsoletos o inválidos. Los pasos válidos se almacenan en un objeto `Chain`, que separa modelos concretos del marcador `loaded`. La función `loaded_members` invoca al proveedor registrado para obtener los modelos ya cargados en el momento exacto del salto, excluyendo el fallido y manteniendo el orden.
+
+Además, el código expone utilidades de estado: `describe()` y `residents_text()` generan líneas legibles para `local_status`, indicando si el respaldo está activo, si hay residentes (modelos con TTL cero) y mostrando la cadena resuelta por rol. Todo el proceso prioriza la configuración actual, ignora valores nulos y asegura que los saltos sean deterministas y seguros, sin depender de nombres de modelos fijos.
+
+(leído server-side: 7881 chars ≈ 3882 tokens de Claude que no entraron a tu contexto)

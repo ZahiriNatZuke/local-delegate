@@ -1,0 +1,9 @@
+feat(metrics): mejorar formato de latencias y precisión en KPIs
+
+- Renombrar fmtSec a fmtSecExact para conservar el valor preciso en los títulos
+- Implementar nueva lógica de fmtSec para mostrar minutos y horas con redondeo inteligente
+- Actualizar kpiCard para aceptar parámetro exact y priorizarlo sobre el valor principal
+- Pasar el valor exacto de latencia al KPI para mantener precisión en tooltips
+- Actualizar comentarios para reflejar la nueva estructura de visualización de tiempos
+
+(leído server-side: 3598 chars ≈ 1620 tokens de Claude que no entraron a tu contexto)

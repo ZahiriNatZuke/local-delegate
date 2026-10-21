@@ -1,0 +1,34 @@
+- First line: `tipo(scope): resumen` (imperative, <=72 chars)
+     - Blank line
+     - Body: 2 to 6 bullet points (`- `), explaining what changes and why.
+     - Entire message in Spanish.
+     - Nothing else.
+
+2.  **Determine Commit Type & Scope:**
+   - Type: `fix` (fixes encoding crashes on Windows) or `chore` or `feat`. Given it's fixing a crash/encoding issue, `fix` is appropriate.
+   - Scope: `cli` or `entrypoint` or `encoding`. The diff touches `entrypoint.py` and `install.py`, but the core issue is CLI/console encoding. Let's use `cli` or `encoding`. I'll go with `cli` as it's triggered in the CLI path, or `core`. Actually, `fix(cli):` fits well. Let's stick to `fix(cli):`.
+   - Summary: Needs to be imperative, <=72 chars, in Spanish.
+     - Draft: `fix(cli): evitar UnicodeEncodeError en redirección de salida en Windows` (78 chars) -> too long.
+     - Draft: `fix(cli): manejar codificación de consola para evitar fallos en Windows` (76) -> too long.
+     - Draft: `fix(cli): tolerar errores de codificación en salida de consola` (68) -> good.
+     - Let's count: `fix(cli): tolerar errores de codificación en salida de consola` -> 63 chars. Good.
+     - Alternative: `fix(cli): evitar UnicodeEncodeError al redirigir salida en Windows` (71) -> exactly 71. Good.
+     - Let's stick to: `fix(cli): tolerar errores de codificación en salida de consola`
+
+3.  **Draft Body (2-6 bullets, Spanish, what & why):**
+   - Need to explain the changes and the purpose.
+   - Bullet 1: Introduce `_tolerant_console_output()` to reconfigure stdout/stderr with `errors="replace"` when running in CLI mode.
+   - Bullet 2: Replace the Unicode arrow `→` with ASCII `->` in `_names()` to prevent encoding crashes during Windows redirection.
+   - Bullet 3: Ensure migration scripts and scheduled tasks don't fail on non-UTF-8 console environments.
+   - Let's format them properly in Spanish, starting with `- `.
+   - Draft:
+     - Se añade `_tolerant_console_output()` para reconfigurar stdout y stderr con `errors="replace"` si usan UTF-8 estricto.
+     - Se cambia la flecha Unicode `→` por `->` en `_names()` para evitar fallos de codificación al redirigir la salida.
+     - Se invoca la nueva función antes de ejecutar el CLI, garantizando que migraciones y scripts no se interrumpan por caracteres no soportados.
+     - Se respeta la configuración explícita del usuario (`PYTHONIOENCODING`) y se ignoran flujos ya cerrados o no compatibles.
+   - Check constraints: 2 to 6 bullets? Yes, 4.
+   - Explain what
+
+[local-delegate warning: salida truncada por max_tokens]
+
+(leído server-side: 3292 chars ≈ 1482 tokens de Claude que no entraron a tu contexto)

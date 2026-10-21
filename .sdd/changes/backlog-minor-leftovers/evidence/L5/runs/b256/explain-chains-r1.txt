@@ -1,0 +1,7 @@
+Este módulo gestiona cadenas de respaldo para roles de generación de texto (`code`, `long`, `mechanical`). Cuando falla el modelo principal, define una lista ordenada de pasos alternativos. Las cadenas se declaran por rol para sobrevivir a cambios de modelos por defecto.
+
+El código resuelve la cadena efectiva consultando la configuración vigente (`config.FALLBACK_CHAINS` o valores por defecto en `DEFAULT_CHAINS`). Elimina duplicados, excluye el modelo principal y filtra valores inválidos. El paso especial `LOADED` no se resuelve inmediatamente; se deja como marcador y se expande dinámicamente en el momento del salto mediante un proveedor registrado (`_loaded_provider`), que devuelve los modelos ya cargados según el contexto. También soporta sinónimos obsoletos (`residente`, `resident`) que se normalizan a `LOADED` con una advertencia.
+
+Funciones auxiliares como `resolve()` construyen objetos `Chain` con los pasos válidos, ignorados y obsoletos. `describe()` y `residents_text()` formatean la información para el estado del sistema, indicando si el respaldo está activo, los residentes configurados y las cadenas resultantes por rol. Todo el manejo de resolución y estado se mantiene desacoplado del enrutamiento real, delegando la ejecución final a `server._next_hop`.
+
+(leído server-side: 7881 chars ≈ 3882 tokens de Claude que no entraron a tu contexto)

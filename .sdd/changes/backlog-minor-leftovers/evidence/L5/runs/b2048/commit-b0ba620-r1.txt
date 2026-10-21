@@ -1,0 +1,9 @@
+feat(metrics): mejorar formato de latencia y duración en segundos
+
+- Separa el formateo de valor exacto (`fmtSecExact`) del de visualización (`fmtSec`).
+- Implementa lógica escalonada en `fmtSec` para mostrar segundos, minutos o horas con redondeo por nivel.
+- Actualiza `kpiCard` para aceptar un parámetro `exact` que se asigna al atributo `title`.
+- Aplica las nuevas funciones al KPI de latencia para mostrar el valor compactado y conservar los segundos exactos en el tooltip.
+- Mejora la legibilidad de las métricas de tiempo sin perder precisión en los detalles.
+
+(leído server-side: 3598 chars ≈ 1620 tokens de Claude que no entraron a tu contexto)

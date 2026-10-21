@@ -1,0 +1,8 @@
+fix(cli): tolerar errores de codificación al redirigir salida en Windows
+
+- Cambia: añade `_tolerant_console_output()` que reconfigura `stdout` y `stderr` con `errors="replace"` si detecta codificación estricta. Para qué: evita `UnicodeEncodeError` en Windows cuando la salida se redirige a ficheros o tuberías.
+- Cambia: invoca la función anterior en `main()` antes de ejecutar subcomandos de la CLI. Para qué: garantiza que toda la salida del protocolo MCP y los subcomandos use la política tolerante.
+- Cambia: reemplaza la flecha Unicode `→` por `->` en `_names()`. Para qué: previene fallos de escritura en entornos con codificación `cp1252` durante las migraciones.
+- Cambia: importa `codecs` y añade validación de flujos de texto. Para qué: asegura compatibilidad con streams cerrados o configuraciones de entorno personalizadas sin romper el comportamiento por defecto.
+
+(leído server-side: 3292 chars ≈ 1482 tokens de Claude que no entraron a tu contexto)

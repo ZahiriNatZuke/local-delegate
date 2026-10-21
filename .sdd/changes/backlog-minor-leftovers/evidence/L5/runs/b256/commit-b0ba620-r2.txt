@@ -1,0 +1,10 @@
+feat(metrics): mejorar formato de latencia y precisión en tooltips
+
+- Renombrar fmtSec a fmtSecExact para conservar el valor preciso en segundos
+- Implementar nueva fmtSec con formato escalonado (<1 min, min:s, h:min)
+- Actualizar kpiCard para aceptar prop exact y asignarla al atributo title
+- Pasar valor exacto al KPI de latencia para mostrar segundos precisos en tooltip
+- Mantener redondeo inteligente por unidad para evitar valores como 60,0 s o 60 min
+- Actualizar comentarios para reflejar nueva lógica de visualización y precisión
+
+(leído server-side: 3598 chars ≈ 1620 tokens de Claude que no entraron a tu contexto)

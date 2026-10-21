@@ -1,0 +1,8 @@
+feat(metrics): mejorar formato de latencias y valores exactos
+
+- Renombrar `fmtSec` a `fmtSecExact` para generar valores precisos en los atributos `title`.
+- Implementar nueva función `fmtSec` que formatea duraciones en segundos, minutos y horas, aplicando redondeo inteligente para evitar «60 s» o «60 min».
+- Actualizar `kpiCard` para aceptar una propiedad `exact` y mostrarla en el `title` de la tarjeta.
+- Pasar el valor exacto de latencia al renderizar el KPI, mejorando la legibilidad sin perder precisión en los detalles.
+
+(leído server-side: 3598 chars ≈ 1620 tokens de Claude que no entraron a tu contexto)

@@ -1,0 +1,9 @@
+fix(cli): evitar UnicodeEncodeError en Windows con salida redirigida
+
+- Reemplazar flecha Unicode «→» por ASCII «->» en mensajes de migración
+- Configurar streams stdout/stderr con errors="replace" si no son UTF-8
+- Prevenir fallos silenciosos en scripts y tareas programadas en Windows
+- Mantener compatibilidad con codificaciones explícitas del usuario
+- Asegurar registro completo de hooks durante actualizaciones
+
+(leído server-side: 3292 chars ≈ 1482 tokens de Claude que no entraron a tu contexto)

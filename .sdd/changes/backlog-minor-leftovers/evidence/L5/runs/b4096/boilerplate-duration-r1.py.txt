@@ -1,0 +1,25 @@
+import re
+
+def parse_duration(text: str) -> int:
+    """
+    Parses a duration string like '1h30m', '45s', '2h', or '1h5m10s' into seconds.
+    Accepts h, m, s in that order, each at most once.
+    Raises ValueError on empty input or invalid format.
+    """
+    if not text:
+        raise ValueError("Input cannot be empty")
+
+    match = re.fullmatch(r'(\d+h)?(\d+m)?(\d+s)?', text)
+    if not match:
+        raise ValueError(f"Invalid duration format: {text}")
+
+    h_part, m_part, s_part = match.groups()
+
+    if h_part and s_part and not m_part:
+        raise ValueError("Missing 'm' between 'h' and 's'")
+
+    hours = int(h_part[:-1]) if h_part else 0
+    minutes = int(m_part[:-1]) if m_part else 0
+    seconds = int(s_part[:-1]) if s_part else 0
+
+    return hours * 3600 + minutes * 60 + seconds

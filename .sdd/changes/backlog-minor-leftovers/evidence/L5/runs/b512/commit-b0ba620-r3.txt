@@ -1,0 +1,41 @@
+3.  **Draft Body (2-6 bullets, explaining what & why):**
+   - `- Renombrar fmtSec a fmtSecExact para mostrar segundos exactos en los títulos.`
+   - `- Reimplementar fmtSec para formatear duraciones en minutos y horas automáticamente.`
+   - `- Actualizar kpiCard para aceptar una prop exacta y mostrarla en el atributo title.`
+   - `- Pasar el valor exacto de latencia a la tarjeta para mantener precisión en los tooltips.`
+   - `- Ajustar comentarios y lógica de redondeo para evitar valores como «60,0 s» o «60 min».`
+   - Check constraints: 5 bullets. Each starts with `- `. Explains what changes and why. In Spanish. Matches diff.
+
+4.  **Refine & Verify against Constraints:**
+   - Format: `tipo(scope): resumen` \n\n `- `...\n `- `...\n `- `...\n `- `...\n `- `...
+   - Type/Scope: `feat(metrics):`
+   - Summary: `mejorar formato de latencia y duración en segundos` (48 chars). Total line: `feat(metrics): mejorar formato de latencia y duración en segundos` (64 chars) <= 72. Imperative? Yes.
+   - Blank line? Yes.
+   - Body: 5 bullets. Each explains what & why. All in Spanish.
+   - Check exact wording against diff:
+     - `fmtSec` -> `fmtSecExact` for exact values in `title`.
+     - `fmtSec` now handles <1m, 1-60m, >60m with proper rounding.
+     - `kpiCard` gets `exact` prop for tooltip.
+     - Latency card passes `exact` prop.
+     - Comments updated.
+   - All matches.
+   - Constraint check: "primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; una línea en blanco y un cuerpo OBLIGATORIO de 2 a 6 viñetas '- ' que digan qué cambia y para qué. Nada fuera del formato. Escribe el mensaje de commit entero (primera línea y cuerpo) en español."
+   - I will ensure strict formatting.
+
+   Draft:
+   feat(metrics): mejorar formato de latencia y duración en segundos
+
+   - Renombrar fmtSec a fmtSecExact para mostrar el valor preciso en los títulos.
+   - Reimplementar fmtSec para formatear automáticamente segundos, minutos y horas.
+   - Actualizar kpiCard para aceptar una prop exacta y asignarla al atributo title.
+   - Pasar el valor exacto de latencia a la tarjeta para conservar precisión en los tooltips.
+   - Ajustar la lógica de redondeo para evitar formatos redundantes como «60,0 s» o «60 min».
+
+   Check length of first line: `feat(metrics): mejorar formato de latencia y duración en segundos` -> 64 chars. <=72. Imperative? Yes.
+   Body: 5 bullets. Starts with `- `. Explains what & why. Spanish.
+   No extra text. Matches all constraints.
+   Ready. Output matches exactly.✅
+
+[local-delegate warning: salida truncada por max_tokens]
+
+(leído server-side: 3598 chars ≈ 1620 tokens de Claude que no entraron a tu contexto)

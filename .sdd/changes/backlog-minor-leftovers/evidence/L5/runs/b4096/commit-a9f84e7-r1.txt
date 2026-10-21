@@ -1,0 +1,8 @@
+fix(console): ajusta codificación de consola para evitar fallos
+
+- Se añade `_tolerant_console_output()` para reconfigurar `stdout` y `stderr` con `errors="replace"` si detecta UTF-8 estricto.
+- Se invoca la función antes de ejecutar la CLI para proteger la salida de subcomandos.
+- Se cambia `→` por `->` en `_names()` para evitar errores de codificación al imprimir nombres retirados.
+- Se soluciona `UnicodeEncodeError` en Windows (cp1252) al redirigir la salida, permitiendo que caracteres no soportados se muestren como `?` sin interrumpir la ejecución.
+
+(leído server-side: 3292 chars ≈ 1482 tokens de Claude que no entraron a tu contexto)

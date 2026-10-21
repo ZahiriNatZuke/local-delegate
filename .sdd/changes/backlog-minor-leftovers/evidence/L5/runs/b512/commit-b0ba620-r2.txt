@@ -1,0 +1,9 @@
+feat(metrics): mejorar formato de latencia y duración en tarjetas KPI
+
+- Renombrar `fmtSec` a `fmtSecExact` para conservar el valor preciso en el `title` de las tarjetas.
+- Implementar nueva lógica de `fmtSec` que muestra segundos con un decimal bajo un minuto, minutos y segundos entre 1 y 59 min, y horas a partir de 1 h.
+- Aplicar redondeo inteligente por unidad para evitar valores como «60,0 s» o «60 min» en la visualización principal.
+- Actualizar `kpiCard` para aceptar un parámetro `exact` y pasarlo al atributo `title`, manteniendo la precisión en el tooltip.
+- Ajustar la tarjeta de latencia para separar el valor formateado de la pantalla del valor exacto del `title`, mejorando la legibilidad y la información al pasar el cursor.
+
+(leído server-side: 3598 chars ≈ 1620 tokens de Claude que no entraron a tu contexto)

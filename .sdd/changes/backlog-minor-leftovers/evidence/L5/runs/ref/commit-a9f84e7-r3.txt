@@ -1,0 +1,9 @@
+fix(console): evitar UnicodeEncodeError en Windows con salida redirigida
+
+- Configurar sys.stdout y sys.stderr con errors="replace" si usan UTF-8 estricto
+- Sustituir la flecha Unicode «→» por ASCII "->" en mensajes de migración
+- Garantizar que los subprocesos no fallen por caracteres no soportados en cp1252
+- Aplicar la correación solo en la rama CLI para no afectar al protocolo MCP
+- Respetar configuraciones de codificación explícitas del usuario (PYTHONIOENCODING)
+
+(leído server-side: 3292 chars ≈ 1482 tokens de Claude que no entraron a tu contexto)
