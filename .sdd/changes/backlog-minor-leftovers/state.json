@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "slug": "backlog-minor-leftovers",
+  "title": "Restos menores de backend-params, cli-completion y retire-legacy-aliases",
+  "mode": "lite",
+  "status": "closed",
+  "createdAt": "2026-10-21T17:09:39.161Z",
+  "updatedAt": "2026-10-21T19:11:52.208Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-10-21T17:11:02.224Z",
+      "evidence": "spec.md 13 REQ trazados a §1.13-§1.15; decisiones de producto del usuario 2026-10-21 (tema del sistema, WARN no UTF-8, WARN copia .bak)",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-10-21T17:11:02.415Z",
+      "evidence": "plan.md: 5 lotes con ficheros disjuntos, L1-L4 en paralelo en worktrees, L5 medición aparte por GPU; tests primero y control positivo",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-10-21T19:11:07.969Z",
+      "evidence": "PR #383-#387: CI verde en los 5 (19 checks), suites 4153-4166 passed -n 2, ruff limpio, CodeQL 0 (2 note arregladas), GitGuardian verde",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-10-21T19:11:08.408Z",
+      "evidence": "review.md conforms-with-notes: REQ-001..013 con tests, mutantes y capturas (evidence/L1-L5)",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "approved",
+      "updatedAt": "2026-10-21T19:11:51.962Z",
+      "evidence": "handoff.md; vault jornada-2026-10-21-restos-menores-y-mods.md e investigacion-mods-claude-code-2026-10-21.md; backlog §1.13-§1.15 cerrados; sin secretos",
+      "actor": "user"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-10-21T17:09:39.161Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-10-21T17:11:02.224Z",
+      "evidence": "spec.md 13 REQ trazados a §1.13-§1.15; decisiones de producto del usuario 2026-10-21 (tema del sistema, WARN no UTF-8, WARN copia .bak)",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-10-21T17:11:02.415Z",
+      "evidence": "plan.md: 5 lotes con ficheros disjuntos, L1-L4 en paralelo en worktrees, L5 medición aparte por GPU; tests primero y control positivo",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-10-21T19:11:07.969Z",
+      "evidence": "PR #383-#387: CI verde en los 5 (19 checks), suites 4153-4166 passed -n 2, ruff limpio, CodeQL 0 (2 note arregladas), GitGuardian verde",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-10-21T19:11:08.408Z",
+      "evidence": "review.md conforms-with-notes: REQ-001..013 con tests, mutantes y capturas (evidence/L1-L5)",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-10-21T19:11:24.193Z",
+      "reason": "restos del backlog §1.13-§1.15 y review.md de los tres SDD"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-10-21T19:11:24.409Z",
+      "reason": "spec.md 13 REQ"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-10-21T19:11:24.635Z",
+      "reason": "plan.md 5 lotes"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-10-21T19:11:24.859Z",
+      "reason": "plan revisado"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-10-21T19:11:25.085Z",
+      "reason": "gates aprobados; L1-L4 en paralelo, L5 después"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-10-21T19:11:25.288Z",
+      "reason": "5 PR mezclados (#383-#387)"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-10-21T19:11:25.493Z",
+      "reason": "calidad aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-10-21T19:11:25.697Z",
+      "reason": "conformidad aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-10-21T19:11:51.962Z",
+      "evidence": "handoff.md; vault jornada-2026-10-21-restos-menores-y-mods.md e investigacion-mods-claude-code-2026-10-21.md; backlog §1.13-§1.15 cerrados; sin secretos",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-10-21T19:11:52.208Z",
+      "reason": "SDD ligero completo"
+    }
+  ]
+}
