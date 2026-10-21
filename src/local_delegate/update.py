@@ -37,7 +37,7 @@ from dataclasses import dataclass
 from importlib import metadata
 from pathlib import Path
 
-from . import checks, config, install
+from . import checks, completion, config, install, shell_profiles
 from .i18n import t
 
 PACKAGE = "local-delegate-mcp"
@@ -162,6 +162,12 @@ class Repair:
 # trozo de andamiaje roto que haya que reponer. Es el mismo criterio que deja fuera el `warn` de
 # `scaffold.mcp_codex`: no se pisa configuración escrita por una persona. El aviso dice qué pasa y
 # qué comando lo arregla; ejecutarlo es del usuario.
+#
+# `scaffold.shell_completion` tampoco está, y no porque no se repare: su refresco es un paso propio
+# (`plan_completion_refresh`), porque un `Repair` solo actúa sobre clientes presentes y el
+# autocompletado no pertenece a ningún cliente; en una máquina sin clientes nunca se habría
+# regenerado. Su `warn` de «bloque borrado» o «fichero ausente» no lo repone `update`: lo dice su
+# `fix_hint` (`install --shell-completion`), porque reescribir un perfil es una decisión del usuario.
 REPAIRS: tuple[Repair, ...] = (
     Repair(
         "scaffold.hook_files",
@@ -344,9 +350,57 @@ def plan_repairs(
     notes = [
         f"{check.title}: {result.fix_hint}"
         for check, result in results
-        if result.fix_hint and check.id not in {r.check_id for r in REPAIRS}
+        if result.fix_hint
+        and check.id not in {r.check_id for r in REPAIRS}
+        # «Ejecuta `update`» dicho desde `update`: lo resuelve `plan_completion_refresh`.
+        and result.fix_hint != checks.SHELL_COMPLETION_UPDATE_HINT
     ]
     return unique, notes
+
+
+def plan_completion_refresh(opts: Options) -> list[install.Action]:
+    """Regenera los ficheros de autocompletado listados que estén viejos (REQ-034).
+
+    En el idioma **configurado** (el de `plan_language`, como `plan_catalog_refresh`), así que
+    resuelve una versión nueva y también un cambio de idioma; el manifiesto pasa a decir ese
+    idioma y la versión instalada. Paso propio y fuera de `REPAIRS`: `run_update` lo llama siempre,
+    haya o no clientes en la máquina. Un fichero listado que falta o no se puede leer se deja (el
+    check de `doctor` lo manda a `install --shell-completion`), no se crean ficheros no listados
+    ni se tocan perfiles, y sin manifiesto (o con uno ilegible) no hay nada que hacer. Solo lee:
+    escribe `install.apply`.
+
+    Vive aquí y no en `completion`: allí tendría que importar `install` y `shell_profiles`, que
+    importan `completion`, y CodeQL marca ese ciclo (`py/cyclic-import`).
+    """
+    from .version import get_version
+
+    lang = install.plan_language(install_options(opts)).lang
+    directory = shell_profiles.completion_dir(opts.home, opts.data_dir)
+    try:
+        manifest = completion.read_manifest(directory)
+    except completion.ManifestUnreadableError:
+        return []
+    if not manifest:
+        return []
+    actions: list[install.Action] = []
+    for entry in manifest["shells"]:
+        path = Path(entry["file"])
+        try:
+            current = path.read_bytes()
+        except OSError:
+            continue
+        content = completion.render(entry["shell"], lang=lang).encode("utf-8")
+        if current != content:
+            detail = t("install.completion.refresh_plan", shell=entry["shell"], lang=lang)
+            actions.append(install._owned_file_action("completion", path, content, detail))
+    updated = {**manifest, "lang": lang, "generator": get_version()}
+    if updated != manifest:
+        text = completion.manifest_bytes(updated)
+        detail = t("install.completion.manifest_plan")
+        path = completion.manifest_path(directory)
+        literal = text.decode("utf-8")
+        actions.append(install._owned_file_action("manifest", path, text, detail, literal=literal))
+    return actions
 
 
 # --- El pin de versión (paridad con el bash) ----------------------------------
@@ -836,6 +890,7 @@ def run_update(opts: Options, out=print) -> int:
     actions = plan_pin(opts, version) if version else []
     repairs, notes = plan_repairs(results, opts)
     actions.extend(repairs)
+    actions.extend(plan_completion_refresh(opts))
 
     out("")
     # La preferencia va aparte: guardarla no es reparar el andamiaje.

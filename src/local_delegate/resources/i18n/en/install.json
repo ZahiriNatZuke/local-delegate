@@ -27,6 +27,7 @@
   "install.completion.reason.marker_mismatch": "it has a local-delegate marker without its pair; fix it by hand",
   "install.completion.reason.nul_bytes": "it has NUL bytes without a UTF-16 mark and would be corrupted",
   "install.completion.reason.unreadable": "it cannot be read",
+  "install.completion.refresh_plan": "regenerate the {shell} completion in language {lang}",
   "install.completion.shell_missing": "shell completion: {shell} not found; nothing is written for it",
   "install.completion.uninstall_dir_plan": "deletes the completion directory, which is left empty",
   "install.completion.uninstall_file_plan": "deletes the {shell} completion file",

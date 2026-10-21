@@ -1,7 +1,7 @@
 """Lines of the per-role backend parameters in `doctor` (SDD backend-extra-params, T9).
 
 REQ-016 (`doctor`), REQ-023 (context warnings) and REQ-017 (no value of a dropped entry). They are
-header lines, not a check: the 25 checks and the exit code do not change.
+header lines, not a check: the 26 checks and the exit code do not change.
 """
 
 from __future__ import annotations

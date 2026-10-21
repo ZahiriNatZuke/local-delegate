@@ -2,7 +2,7 @@
 
 Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
 backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
-definición de «estar a punto»**: los veinticinco elementos del andamiaje, cada uno con un ``probe``
+definición de «estar a punto»**: los veintiséis elementos del andamiaje, cada uno con un ``probe``
 que responde en qué estado está.
 
 Tres reglas ordenan el módulo:
@@ -12,7 +12,7 @@ Tres reglas ordenan el módulo:
 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
    un ``fix`` posterior sobrescribiría configuración ajena.
-3. **Es una lista, no un framework.** Veinticinco checks son una tupla de objetos con una función;
+3. **Es una lista, no un framework.** Veintiséis checks son una tupla de objetos con una función;
    no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso, el
    diseño se revisa antes de seguir.
 
@@ -71,6 +71,9 @@ def status_label(status: str) -> str:
 
 
 INSTALL_HINT = "local-delegate install"
+#: The two fixes of `scaffold.shell_completion` (REQ-033): commands, the same in every language.
+SHELL_COMPLETION_INSTALL_HINT = "local-delegate install --shell-completion"
+SHELL_COMPLETION_UPDATE_HINT = "local-delegate update"
 
 
 # Las pistas con prosa salen del catálogo al llamarlas: el idioma se resuelve en ejecución.
@@ -2100,8 +2103,126 @@ def _probe_test_windows(ctx: Context) -> Result:
     )
 
 
+# --- Shell completion (SDD cli-completion, REQ-033) ----------------------------------------------
+#: Profile problems of `install.upsert_profile_block` that mean «could not read it», not «the block
+#: is gone»: those are `unknown`, never a reason to reinstall over the file.
+_PROFILE_UNREADABLE = frozenset({"unreadable", "nul_bytes", "broken_link"})
+
+
+def _probe_shell_completion(ctx: Context) -> Result:
+    """The completion that `install --shell-completion` left: files and load blocks (REQ-033).
+
+    Reads the manifest (REQ-043) and the files of the completion directory, and never launches a
+    shell. Each listed file is compared with `render(shell, lang=<language of the manifest>)`, not
+    with the language of the session: a file installed in `es` is `ok` from a `doctor` in `en`, the
+    same verdict in both languages. Each listed profile must still carry the complete block that
+    loads its file; looking only at the files gave a false `ok` with the block deleted.
+
+    `completion` (and, through `render`, `cli`) is imported here and not at the top: `cli` imports
+    this module for `install`, and a machine without the completion never pays for building the
+    parser. With no manifest and no files nothing is rendered.
+    """
+    from . import completion, shell_profiles
+    from .version import get_version
+
+    directory = shell_profiles.completion_dir(ctx.home)
+    try:
+        manifest = completion.read_manifest(directory)
+    except completion.ManifestUnreadableError:
+        path = completion.manifest_path(directory)
+        return Result(
+            UNKNOWN, i18n.t("doctor.probe.shell_completion.manifest_unreadable", path=path)
+        )
+    entries = (manifest or {}).get("shells", [])
+    listed = {Path(entry["file"]) for entry in entries}
+    loose = [
+        file
+        for file in (shell_profiles.completion_file(directory, s) for s in shell_profiles.SHELLS)
+        if file.exists() and file not in listed
+    ]
+    if not entries and not loose:
+        return Result(OK, i18n.t("doctor.probe.shell_completion.not_installed"))
+
+    statuses: list[str] = []
+    details: list[str] = []
+    needs_install = False
+    if loose:
+        statuses.append(WARN)
+        needs_install = True
+        files = ", ".join(str(file) for file in loose)
+        details.append(i18n.t("doctor.probe.shell_completion.loose", files=files))
+    lang = (manifest or {}).get("lang", "")
+    for entry in entries:
+        shell, file = entry["shell"], Path(entry["file"])
+        problems: list[str] = []
+        try:
+            current = file.read_bytes()
+        except FileNotFoundError:
+            statuses.append(WARN)
+            needs_install = True
+            problems.append(i18n.t("doctor.probe.shell_completion.file_missing", path=file))
+        except OSError as exc:
+            statuses.append(UNKNOWN)
+            problems.append(i18n.t("doctor.common.cannot_read", path=file, error=exc))
+        else:
+            if current != completion.render(shell, lang=lang).encode("utf-8"):
+                statuses.append(WARN)
+                found = completion.header_version(current.decode("utf-8", errors="replace"))
+                installed = get_version()
+                if found and found != installed:
+                    problems.append(
+                        i18n.t(
+                            "doctor.probe.shell_completion.stale_version",
+                            path=file,
+                            found=found,
+                            installed=installed,
+                        )
+                    )
+                else:
+                    problems.append(
+                        i18n.t("doctor.probe.shell_completion.content_differs", path=file)
+                    )
+        block = shell_profiles.load_block(shell, file)
+        for profile in entry["profiles"]:
+            path = Path(profile["path"])
+            edit = install.upsert_profile_block(path, block)
+            if edit.reason in _PROFILE_UNREADABLE:
+                statuses.append(UNKNOWN)
+                reason = i18n.t(install.PROFILE_SKIP_REASONS[edit.reason])
+                problems.append(f"{path}: {reason}")
+            elif edit.reason or edit.changed:
+                statuses.append(WARN)
+                needs_install = True
+                problems.append(i18n.t("doctor.probe.shell_completion.no_block", path=path))
+        if problems:
+            details.extend(f"{shell}: {problem}" for problem in problems)
+            continue
+        statuses.append(OK)
+        profiles = ", ".join(profile["path"] for profile in entry["profiles"])
+        if profiles:
+            details.append(
+                i18n.t(
+                    "doctor.probe.shell_completion.current",
+                    shell=shell,
+                    lang=lang,
+                    profiles=profiles,
+                )
+            )
+        else:
+            details.append(
+                i18n.t("doctor.probe.shell_completion.current_no_profiles", shell=shell, lang=lang)
+            )
+    status = _worst(statuses)
+    hint = ""
+    if needs_install:
+        hint = SHELL_COMPLETION_INSTALL_HINT
+    elif status == WARN:
+        hint = SHELL_COMPLETION_UPDATE_HINT
+    return Result(status, " · ".join(details), hint)
+
+
 # --- El registro --------------------------------------------------------------
-# Veinticinco elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
+# Veintiséis elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
 # el problema no sería el registro sino el diseño.
 #
 # El número se dice en cinco sitios de este módulo y llegó a decir «once» con doce checks ya
@@ -2153,6 +2274,14 @@ CHECKS: tuple[Check, ...] = (
         "doctor.check.scaffold.mcp_opencode",
         _probe_mcp_opencode,
     ),
+    # Optional: with nothing installed it is `ok`. In `scaffold` because it only reads the HOME,
+    # so the report of `install` (which runs only that group) also sees it.
+    Check(
+        "scaffold.shell_completion",
+        "scaffold",
+        "doctor.check.scaffold.shell_completion",
+        _probe_shell_completion,
+    ),
     Check("service.daemon", "service", "doctor.check.service.daemon", _probe_daemon),
     Check("service.backend", "service", "doctor.check.service.backend", _probe_backend_models),
     # En `service` y no en `scaffold` aunque lea las entradas MCP: sale a la red, y el grupo
@@ -2183,7 +2312,7 @@ CHECKS: tuple[Check, ...] = (
 
 
 def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
-    """Corre los veinticinco probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+    """Corre los veintiséis probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
 
     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
@@ -2197,7 +2326,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
             continue
         try:
             result = check.probe(ctx)
-        except Exception as exc:  # un check roto no debe impedir ver los otros veinticuatro
+        except Exception as exc:  # un check roto no debe impedir ver los otros veinticinco
             result = Result(UNKNOWN, i18n.t("doctor.probe.failed", error=exc))
         results.append((check, result))
     return results
