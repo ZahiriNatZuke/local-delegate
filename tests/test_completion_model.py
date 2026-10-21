@@ -46,7 +46,7 @@ def _subparsers(parser: argparse.ArgumentParser) -> argparse._SubParsersAction |
 
 def _independent_paths(parser: argparse.ArgumentParser) -> set[tuple[str, ...]]:
     """Paths from the pseudo actions argparse lists in the help, minus the retired commands."""
-    retired = {e.old for e in deprecations.DEPRECATED_NAMES if e.kind == "cli_command"}
+    retired = {e.old for e in deprecations.cli_entries()}
     paths = {()}
     stack: list[tuple[tuple[str, ...], argparse.ArgumentParser]] = [((), parser)]
     while stack:
@@ -136,7 +136,11 @@ def _all_parsers(parser: argparse.ArgumentParser):
 
 
 def test_hidden_real_names(real_model):
-    """The real retired names (from the registry) and `benchmark --api-key` are not offered."""
+    """The real old CLI names (from the registry) and `benchmark --api-key` are not offered.
+
+    REQ-022 (SDD retire-legacy-aliases): the old names are gone from the parser too, so neither
+    the parser nor the model has them.
+    """
     parsers = list(_all_parsers(cli.build_parser()))
     commands = {path[-1] for path, _ in parsers if path}
     options = {s for _, p in parsers for s in p._option_string_actions}
@@ -145,17 +149,18 @@ def test_hidden_real_names(real_model):
         s for node in real_model.nodes.values() for o in node.options for s in o.strings
     }
     checked = 0
-    for entry in deprecations.DEPRECATED_NAMES:
-        if entry.kind == "cli_command":
-            # The name exists in the parser: otherwise this check would check nothing.
-            assert entry.old in commands
+    for entry in deprecations.cli_entries():
+        if deprecations.effective_kind(entry) == "cli_command":
+            # Control: the successor is in the parser and offered, so the search finds names.
+            assert entry.new in commands and entry.new in offered_commands
+            assert entry.old not in commands
             assert entry.old not in offered_commands
             assert not any(entry.old in path for path in real_model.nodes)
-            checked += 1
-        elif entry.kind == "cli_option":
-            assert entry.old in options
+        else:
+            assert entry.new in options and entry.new in offered_options
+            assert entry.old not in options
             assert entry.old not in offered_options
-            checked += 1
+        checked += 1
     assert checked >= 2  # today: the old `recompute-cost` command and its old option
     assert "--api-key" in dict(parsers)[("benchmark",)]._option_string_actions
     assert _option(real_model.nodes[("benchmark",)], "--api-key") is None
@@ -198,6 +203,45 @@ def test_hidden_deprecated_names_even_with_help(monkeypatch):
     keep = model.nodes[("keep",)]
     assert _option(keep, "--new-opt").strings == ("--new-opt",)
     assert _option(keep, "--only-old") is None
+
+
+def test_hidden_retired_names_with_a_new_name(monkeypatch):
+    """REQ-022: a retired entry hides its old name by its former surface (`retired_from`)."""
+    retired = {"kind": "retired", "warn_until": "0.40.0"}
+    monkeypatch.setattr(
+        deprecations,
+        "DEPRECATED_NAMES",
+        (
+            deprecations.DeprecatedName(
+                old="old-cmd",
+                new="keep",
+                introduced="0.38.0",
+                retired_from="cli_command",
+                **retired,
+            ),
+            deprecations.DeprecatedName(
+                old="--old-opt",
+                new="--new-opt",
+                introduced="0.38.0",
+                retired_from="cli_option",
+                **retired,
+            ),
+            # Retired from another surface: it does not hide a CLI name.
+            deprecations.DeprecatedName(
+                old="--only-old",
+                new="OTHER",
+                introduced="0.38.0",
+                retired_from="env_var",
+                **retired,
+            ),
+        ),
+    )
+    assert deprecations.class_problems() == []
+    model = build_model(_parser_with_named_things())
+    assert [s.name for s in model.nodes[()].subcommands] == ["keep"]
+    keep = model.nodes[("keep",)]
+    assert _option(keep, "--new-opt").strings == ("--new-opt",)
+    assert _option(keep, "--only-old") is not None
 
 
 def test_suppressed_actions_are_hidden():

@@ -383,40 +383,11 @@ def cmd_install(args: argparse.Namespace) -> int:
     return _run_install(args, uninstall=False)
 
 
-def _warn_deprecated(old: str) -> None:
-    """Aviso en `stderr` por un nombre viejo del CLI: nombra el nuevo y la versión de retirada."""
-    from . import deprecation_notices, deprecations
-
-    entry = deprecations.find(old)
-    if entry is not None:
-        print(t("cli.warning", detail=deprecation_notices.warning_text(entry)), file=sys.stderr)
-
-
-def _resolve_reset_calibration(args: argparse.Namespace) -> str | None:
-    """`--reset-calibration` o su alias oculto `--reiniciar-calibracion` (REQ-001).
-
-    Si llegan los dos con valores distintos no hay lectura obvia, así que se rechaza, como
-    `--clients`/`--target`.
-    """
-    new = getattr(args, "reset_calibration", None)
-    old = getattr(args, "legacy_reset_calibration", None)
-    if old is None:
-        return new
-    _warn_deprecated("--reiniciar-calibracion")
-    if new is not None and new != old:
-        raise ValueError(t("cli.recompute_cost.reset_mismatch"))
-    return old
-
-
 def cmd_recompute_cost(args: argparse.Namespace) -> int:
     """`recompute-cost` (coste-api-y-cuota, REQ-070): escribe solo en el directorio de logs."""
     from . import config, recompute
 
-    try:
-        reset = _resolve_reset_calibration(args)
-    except ValueError as exc:
-        print(t("cli.error", detail=exc), file=sys.stderr)
-        return 2
+    reset = args.reset_calibration
     claude_dir = Path(args.claude_dir) if args.claude_dir else Path.home() / ".claude"
     try:
         summary = recompute.run(claude_dir, config.LOG_DIR, reset=reset)
@@ -425,12 +396,6 @@ def cmd_recompute_cost(args: argparse.Namespace) -> int:
         return 1
     print(recompute.summary_text(summary))
     return 0
-
-
-def cmd_recompute_cost_legacy(args: argparse.Namespace) -> int:
-    """`recalcular-coste`, alias oculto de `recompute-cost`: mismo handler, con aviso."""
-    _warn_deprecated("recalcular-coste")
-    return cmd_recompute_cost(args)
 
 
 def _count_rows_by_window(log_dir: Path, windows) -> dict[str, int]:
@@ -1608,23 +1573,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_recompute_cost_args(recalc)
     recalc.set_defaults(func=cmd_recompute_cost)
-    # Nombre viejo (REQ-001): sin `help`, argparse no lo lista en la ayuda; avisa al usarse.
-    legacy = sub.add_parser("recalcular-coste")
-    _add_recompute_cost_args(legacy)
-    legacy.set_defaults(func=cmd_recompute_cost_legacy)
 
     _add_test_window_parser(sub)
     _add_backend_params_parser(sub)
 
     _add_install_parsers(sub)
     _add_completion_parser(sub)
-    # Sin `metavar`, argparse pinta en el `usage` todos los subcomandos, ocultos incluidos.
-    sub.metavar = "{" + ",".join(n for n in sub.choices if n not in _HIDDEN_COMMANDS) + "}"
     return parser
-
-
-# Subcomandos que siguen funcionando pero no salen en la ayuda (alias de `deprecations`).
-_HIDDEN_COMMANDS = frozenset({"recalcular-coste"})
 
 
 def _add_recompute_cost_args(p: argparse.ArgumentParser) -> None:
@@ -1633,14 +1588,6 @@ def _add_recompute_cost_args(p: argparse.ArgumentParser) -> None:
         choices=("five_hour", "seven_day"),
         default=None,
         help=t("cli.help.recompute_cost.reset_calibration"),
-    )
-    # Nombre viejo (REQ-001), oculto en la ayuda; `_resolve_reset_calibration` avisa al usarlo.
-    p.add_argument(
-        "--reiniciar-calibracion",
-        dest="legacy_reset_calibration",
-        choices=("five_hour", "seven_day"),
-        default=None,
-        help=argparse.SUPPRESS,
     )
     p.add_argument(
         "--claude-dir",
@@ -1827,7 +1774,38 @@ def _argparse_in_language() -> Iterator[None]:
         argparse._, argparse.ngettext = saved
 
 
+def _reject_retired_names(argv: list[str]) -> int | None:
+    """2 si `argv` usa un nombre del CLI retirado con sucesor; `None` si no (REQ-008).
+
+    Va antes de construir el parser para dar un error que nombra el sucesor en lugar del
+    «invalid choice» de argparse. Solo mira **retirados**: un alias vigente funciona con aviso y
+    nunca se rechaza. El subcomando se busca en el primer token que no empieza por `-` (así
+    `--label <nombre viejo>` no dispara) y la opción en los tokens anteriores a `--`, sola o con
+    `=valor`.
+    """
+    from . import deprecation_notices, deprecations
+
+    retired = [e for e in deprecations.cli_entries() if e.is_retired]
+    if not retired:
+        return None
+    command = next((token for token in argv if not token.startswith("-")), None)
+    options = argv[: argv.index("--")] if "--" in argv else argv
+    for entry in retired:
+        if deprecations.effective_kind(entry) == "cli_command":
+            hit = command == entry.old
+        else:
+            hit = any(tok == entry.old or tok.startswith(f"{entry.old}=") for tok in options)
+        if hit:
+            detail = deprecation_notices.warning_text(entry)
+            print(t("cli.error", detail=detail), file=sys.stderr)
+            return 2
+    return None
+
+
 def run(argv: list[str]) -> int:
     with _argparse_in_language():
+        rejected = _reject_retired_names(argv)
+        if rejected is not None:
+            return rejected
         args = build_parser().parse_args(argv)
         return args.func(args)

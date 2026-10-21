@@ -255,11 +255,7 @@ def test_powershell_registers_both_executables():
 def test_hidden_names_do_not_appear(shell):
     """REQ-004: SUPPRESS help, subparsers without help and deprecated names stay out."""
     script = completion.render(shell, lang="es")
-    retired = [
-        entry.old
-        for entry in deprecations.DEPRECATED_NAMES
-        if entry.kind in ("cli_command", "cli_option")
-    ]
+    retired = [entry.old for entry in deprecations.cli_entries()]
     assert len(retired) >= 2  # the old subcommand and the old option of recompute-cost
     # Whole words: quotes delimit them in PowerShell, spaces and quotes in the case tables.
     words = set(re.findall(r"[A-Za-z0-9_.:/+-]+", script))

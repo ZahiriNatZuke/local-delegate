@@ -1,9 +1,8 @@
-"""Nombres renombrados del CLI y del entorno, con su alias viejo (SDD english-names, ola A1).
+"""Nombres renombrados del entorno, con su alias viejo (SDD english-names, ola A1).
 
-REQ-001: `recompute-cost` y `--reset-calibration`, con `recalcular-coste` y
-`--reiniciar-calibracion` como alias ocultos que avisan. REQ-002: las cuatro variables, con el
-nombre viejo vivo en el paquete y en los hooks instalados. REQ-003: `local_status` dice los
-nombres viejos que leyó el proceso servidor.
+REQ-002: las cuatro variables, con el nombre viejo vivo en el paquete y en los hooks instalados.
+REQ-003: `local_status` dice los nombres viejos que leyó el proceso servidor. La parte del CLI
+está en `tests/test_retired_cli_names.py` (SDD retire-legacy-aliases, L3).
 """
 
 from __future__ import annotations
@@ -12,15 +11,12 @@ import json
 import os
 import subprocess
 import sys
-from dataclasses import replace
 from pathlib import Path
 
 import pytest
 from test_install import _install
-from test_recompute import _delegation_with_n
-from test_transcripts import subagent
 
-from local_delegate import cli, config, deprecations, recompute, server
+from local_delegate import config, server
 
 RENAMED_ENV = (
     ("LD_HOOK_READ_BLOCK", "LD_HOOK_READ_BLOQUEAR"),
@@ -28,102 +24,6 @@ RENAMED_ENV = (
     ("LOCAL_DELEGATE_STRUCTURED_SUMMARY", "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO"),
     ("LOCAL_DELEGATE_COST_FALLBACK", "LOCAL_DELEGATE_COSTE_RESPALDO"),
 )
-
-
-def _run(argv: list[str]) -> int:
-    try:
-        return cli.run(argv)
-    except SystemExit as e:
-        return int(e.code or 0)
-
-
-# --- REQ-001: subcomando y opción ------------------------------------------------------------
-
-
-def _recompute(tmp_path: Path, monkeypatch, capsys, command: str) -> tuple[int, dict, str]:
-    claude, log = tmp_path / command / "claude", tmp_path / command / "log"
-    _delegation_with_n(subagent(claude, "a1"), "toolu_cli", 3)
-    monkeypatch.setattr(config, "LOG_DIR", log)
-    code = _run([command, "--claude-dir", str(claude)])
-    stderr = capsys.readouterr().err
-    written = log / recompute.FILE_NAME
-    data = json.loads(written.read_text(encoding="utf-8")) if written.is_file() else {}
-    return code, data, stderr
-
-
-def _without_times(data: dict) -> dict:
-    """Lo escrito por dos corridas seguidas, sin lo que depende del reloj."""
-    return {k: v for k, v in data.items() if "generated" not in k and "ts" not in k}
-
-
-def test_legacy_command_writes_the_same_file_and_warns(tmp_path, monkeypatch, capsys):
-    code_new, data_new, err_new = _recompute(tmp_path, monkeypatch, capsys, "recompute-cost")
-    code_old, data_old, err_old = _recompute(tmp_path, monkeypatch, capsys, "recalcular-coste")
-
-    assert data_new, "el nombre nuevo no escribió el fichero de agregados"
-    assert code_old == code_new == 0
-    assert _without_times(data_old) == _without_times(data_new)
-    assert err_new == "", f"el nombre nuevo no debe avisar: {err_new!r}"
-    assert "recalcular-coste" in err_old and "recompute-cost" in err_old
-
-
-def test_warning_names_the_removal_version_once_released(monkeypatch, capsys):
-    """Publicado en la 0.35.0, el alias vive 0.35, 0.36 y 0.37 y se retira en la 0.38.0."""
-    released = tuple(
-        replace(e, introduced="0.35.0") if e.old == "recalcular-coste" else e
-        for e in deprecations.DEPRECATED_NAMES
-    )
-    monkeypatch.setattr(deprecations, "DEPRECATED_NAMES", released)
-    cli._warn_deprecated("recalcular-coste")
-    err = capsys.readouterr().err
-    assert "usa recompute-cost" in err
-    assert "0.38.0" in err
-
-
-@pytest.mark.parametrize(
-    ("argv", "expected"),
-    [
-        (["--reset-calibration", "five_hour"], "five_hour"),
-        (["--reiniciar-calibracion", "seven_day"], "seven_day"),
-        (["--reset-calibration", "five_hour", "--reiniciar-calibracion", "five_hour"], "five_hour"),
-        ([], None),
-    ],
-)
-def test_reset_calibration_and_its_alias_reach_the_same_argument(
-    argv, expected, tmp_path, monkeypatch, capsys
-):
-    seen: list[str | None] = []
-
-    def fake_run(claude_dir, log_dir, *, reset=None, **_kw):
-        seen.append(reset)
-        return {}
-
-    monkeypatch.setattr(recompute, "run", fake_run)
-    monkeypatch.setattr(recompute, "summary_text", lambda _r: "")
-    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
-    assert _run(["recompute-cost", "--claude-dir", str(tmp_path), *argv]) == 0
-    assert seen == [expected]
-    err = capsys.readouterr().err
-    assert ("--reiniciar-calibracion" in err) == ("--reiniciar-calibracion" in argv)
-
-
-def test_reset_calibration_with_two_different_values_is_an_error(tmp_path, monkeypatch, capsys):
-    monkeypatch.setattr(
-        recompute, "run", lambda *a, **k: pytest.fail("no debía llegar a recalcular")
-    )
-    argv = ["--reset-calibration", "five_hour", "--reiniciar-calibracion", "seven_day"]
-    assert _run(["recompute-cost", "--claude-dir", str(tmp_path), *argv]) == 2
-    assert "no coinciden" in capsys.readouterr().err
-
-
-def test_help_shows_only_the_new_names(capsys):
-    assert _run(["--help"]) == 0
-    top = capsys.readouterr().out
-    assert _run(["recompute-cost", "--help"]) == 0
-    sub = capsys.readouterr().out
-    assert "recompute-cost" in top and "--reset-calibration" in sub
-    for old in ("recalcular-coste", "reiniciar-calibracion", "SUPPRESS"):
-        assert old not in top + sub, old
 
 
 # --- REQ-002: variables en el paquete --------------------------------------------------------
