@@ -46,6 +46,7 @@ _CHECK_COUNT_WORDS = {
     24: "veinticuatro",
     25: "veinticinco",
     26: "veintiséis",
+    27: "veintisiete",
 }
 
 # `[texto](destino)`, quedándose con el destino.
