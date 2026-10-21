@@ -153,7 +153,8 @@ def _new_events(log: Path, offset: int) -> list[dict]:
         try:
             out.append(json.loads(line))
         except json.JSONDecodeError:
-            pass
+            # A line still being written by the daemon: the caller retries until the event lands.
+            continue
     return out
 
 
