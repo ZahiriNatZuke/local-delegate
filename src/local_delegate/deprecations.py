@@ -45,8 +45,6 @@ class DeprecatedName:
     new: str | None
     introduced: str
     warn_until: str | None = None
-    # Lo lee también un hook instalado (`hook_common.py`), que lleva su propia copia.
-    used_by_hooks: bool = False
     # Solo para un retirado con sucesor: la superficie que tenía cuando era alias.
     retired_from: str | None = None
 
@@ -59,16 +57,8 @@ DEPRECATED_NAMES: tuple[DeprecatedName, ...] = (
     # Ola A1: CLI y variables de entorno (REQ-001, REQ-002).
     DeprecatedName("cli_command", "recalcular-coste", "recompute-cost", "0.35.0"),
     DeprecatedName("cli_option", "--reiniciar-calibracion", "--reset-calibration", "0.35.0"),
-    DeprecatedName(
-        "env_var", "LD_HOOK_READ_BLOQUEAR", "LD_HOOK_READ_BLOCK", "0.35.0", used_by_hooks=True
-    ),
-    DeprecatedName(
-        "env_var",
-        "LD_HOOK_READ_INTERRUPTOR",
-        "LD_HOOK_READ_SWITCH_FILE",
-        "0.35.0",
-        used_by_hooks=True,
-    ),
+    DeprecatedName("env_var", "LD_HOOK_READ_BLOQUEAR", "LD_HOOK_READ_BLOCK", "0.35.0"),
+    DeprecatedName("env_var", "LD_HOOK_READ_INTERRUPTOR", "LD_HOOK_READ_SWITCH_FILE", "0.35.0"),
     DeprecatedName(
         "env_var",
         "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
@@ -80,11 +70,7 @@ DEPRECATED_NAMES: tuple[DeprecatedName, ...] = (
     ),
     # Ola A2: el fichero que apaga el bloqueo (REQ-012). Vive en `~/.claude/`; lo lee el hook.
     DeprecatedName(
-        "switch_file",
-        "local-delegate-bloqueo-apagado",
-        "local-delegate-block-off",
-        "0.35.0",
-        used_by_hooks=True,
+        "switch_file", "local-delegate-bloqueo-apagado", "local-delegate-block-off", "0.35.0"
     ),
 )
 
@@ -178,11 +164,6 @@ def switch_files() -> tuple[DeprecatedName, ...]:
 def cli_entries() -> tuple[DeprecatedName, ...]:
     """Subcomandos y opciones del CLI con nombre viejo (alias o retirados)."""
     return tuple(e for e in DEPRECATED_NAMES if effective_kind(e) in ("cli_command", "cli_option"))
-
-
-def hook_names() -> tuple[tuple[str, str, str | None], ...]:
-    """El subconjunto que copian los hooks, en la forma de su tabla: `(kind, old, new)`."""
-    return tuple((e.kind, e.old, e.new) for e in DEPRECATED_NAMES if e.used_by_hooks)
 
 
 def find(old: str) -> DeprecatedName | None:

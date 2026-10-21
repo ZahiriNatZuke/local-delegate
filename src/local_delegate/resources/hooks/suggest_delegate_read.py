@@ -34,9 +34,8 @@ exacto, y ahí el resumen no sirve.
 
 Tres cosas apagan el bloqueo, y las tres son deliberadas:
 
-- `LD_HOOK_READ_BLOCK=0` (antes `LD_HOOK_READ_BLOQUEAR`), que se lee **en cada invocación**: una
-  sesión abierta hereda el entorno del lanzador, así que una variable que solo se mire al arrancar
-  no serviría de freno.
+- `LD_HOOK_READ_BLOCK=0`, que se lee **en cada invocación**: una sesión abierta hereda el entorno
+  del lanzador, así que una variable que solo se mire al arrancar no serviría de freno.
 - Que el backend local no responda: bloquear sin sitio a donde delegar deja al agente sin forma de
   leer el fichero.
 - El interruptor general del experimento, `LD_HOOK_ENABLED=0`.

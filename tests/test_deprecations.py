@@ -1,14 +1,12 @@
 """El registro único de nombres obsoletos (`deprecations.py`, D1) y sus guardianes (REQ-004).
 
-Tres guardianes que no dependen de que alguien se acuerde:
+Dos guardianes que no dependen de que alguien se acuerde:
 
 - **horizonte**: un alias vive en la versión que lo publica y en las dos menores siguientes, y
   desaparece en la tercera; un nombre retirado se avisa hasta su `warn_until`. Cuando la versión
   del paquete llega ahí, la suite falla y nombra lo que hay que quitar;
 - **CHANGELOG**: la versión que registra cada entrada es la de la sección del CHANGELOG que la
-  anuncia, y esa sección nombra el nombre viejo y el nuevo;
-- **paridad con los hooks**: los hooks no importan el paquete y llevan su propia tabla; tiene que
-  ser igual al subconjunto `used_by_hooks` del registro.
+  anuncia, y esa sección nombra el nombre viejo y el nuevo.
 
 Además: el esqueleto de `legacy_names` (D2) y el stamped de `UNRELEASED` que
 hace `scripts/bump_version.py` al publicar.
@@ -26,7 +24,6 @@ import pytest
 
 from local_delegate import deprecation_notices, deprecations, i18n, legacy_names
 from local_delegate.deprecations import DeprecatedName
-from local_delegate.resources.hooks import hook_common
 
 ROOT = Path(__file__).parents[1]
 
@@ -286,16 +283,6 @@ def test_changelog_check_detects_the_missing_line():
     assert problems == ["LD_RETIRED_TEST_VAR: la sección [0.30.0] no nombra LD_RETIRED_TEST_VAR"]
     # Y una versión registrada que no tiene sección.
     assert "no hay sección" in changelog_problems(mutated, (ALIAS,))[0]
-
-
-# --- Paridad con los hooks (D1) -----------------------------------------------
-def test_hook_table_is_the_registry_subset():
-    """`hook_common` declarará `DEPRECATED_HOOK_NAMES` con `(kind, old, new)` (ola A2).
-
-    Hasta entonces las dos partes están vacías y el test ya vigila que sigan siendo iguales.
-    """
-    from_hooks = tuple(getattr(hook_common, "DEPRECATED_HOOK_NAMES", ()))
-    assert from_hooks == deprecations.hook_names()
 
 
 # --- legacy_names (D2): API fijada, tablas vacías ------------------------------

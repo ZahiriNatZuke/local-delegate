@@ -98,10 +98,6 @@ def record(event: str, **metadata: object) -> None:
     if not destination:
         return
     payload = {"ts": datetime.now(UTC).isoformat(), "event": event, **metadata}
-    if DEPRECATED_SEEN:
-        # Nombres viejos que esta invocacion leyo (REQ-003). Solo viaja con la telemetria
-        # encendida; `doctor` los cuenta desde la cola de este mismo fichero.
-        payload["deprecated_names"] = sorted(DEPRECATED_SEEN)
     try:
         path = Path(destination)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -167,16 +163,15 @@ def deny(event: str, message: str, **metadata: object) -> None:
 # --- Nombres en disco (REQ-012) -----------------------------------------------------------------
 #
 # `(viejo, nuevo)` de cada fichero que comparten los hooks y el daemon. Se ESCRIBE solo el nuevo; el
-# viejo se sigue LEYENDO porque un hook de una version anterior puede seguir instalado (y
-# escribiendo) y porque el interruptor viejo apaga el bloqueo mientras viva su alias. Es la copia minima de
-# `local_delegate.legacy_names.FILE_NAMES`; `tests/test_hook_legacy_names.py` exige que sean iguales.
+# viejo se sigue LEYENDO porque un hook o un daemon de una version anterior puede seguir instalado
+# (y escribiendo). Es la copia minima de `local_delegate.legacy_names.FILE_NAMES`;
+# `tests/test_hook_legacy_names.py` exige que sean iguales.
 FILE_NAMES: dict[str, tuple[str, str]] = {
-    "switch_file": ("local-delegate-bloqueo-apagado", "local-delegate-block-off"),
     "block_notes": ("local-delegate-bloqueos.jsonl", "local-delegate-blocks.jsonl"),
     "call_notes_dir": ("local-delegate-llamadas", "local-delegate-calls"),
     "health_prefix": ("local-delegate-salud-", "local-delegate-health-"),
-    # En `LOG_DIR`: lo escribe el daemon (los dos, mientras viva su `legacy_write`) y lo lee
-    # `cooled_model`. Gana el nuevo; el viejo cubre un daemon de una version anterior.
+    # En `LOG_DIR`: lo escribe solo el daemon, con el nombre nuevo, y lo lee `cooled_model`. Gana
+    # el nuevo; el viejo cubre un daemon de una version anterior.
     "cooldown_state": ("enfriamiento.json", "cooldown.json"),
 }
 
@@ -282,54 +277,21 @@ def backend_available(*, ttl_s: float = 60.0, timeout_s: float = 0.3, marker: Pa
 
 TRUTHY = {"1", "true", "yes", "on"}
 
-# Nombres viejos que los hooks siguen leyendo, como `(kind, old, new)`. Es la copia minima del
-# registro `local_delegate.deprecations` (los hooks no importan el paquete);
-# `tests/test_deprecations.py` exige que sea igual a `deprecations.hook_names()`.
-DEPRECATED_HOOK_NAMES = (
-    ("env_var", "LD_HOOK_READ_BLOQUEAR", "LD_HOOK_READ_BLOCK"),
-    ("env_var", "LD_HOOK_READ_INTERRUPTOR", "LD_HOOK_READ_SWITCH_FILE"),
-    ("switch_file", "local-delegate-bloqueo-apagado", "local-delegate-block-off"),
-)
-
-# Nombres viejos leidos con valor en esta invocacion (REQ-003).
-DEPRECATED_SEEN: set[str] = set()
-
-
-def env_alias(new: str, old: str, default: str = "") -> str:
-    """Lee una variable renombrada: gana la nueva; si solo esta la vieja, vale la vieja y se anota
-    en `DEPRECATED_SEEN`. Es el equivalente de `config._env_alias` para los hooks."""
-    value = os.environ.get(new)
-    if value is not None:
-        return value
-    old_value = os.environ.get(old)
-    if old_value is not None:
-        DEPRECATED_SEEN.add(old)
-        return old_value
-    return default
+#: El fichero que apaga el bloqueo, en `~/.claude/`. Desde la 0.38.0 los hooks leen solo los
+#: nombres nuevos: ni aplican ni detectan los viejos; de avisar se encarga `doctor`.
+SWITCH_FILE_NAME = "local-delegate-block-off"
 
 
 def switch_path() -> Path:
     """Donde vive el fichero que apaga el bloqueo. Fuera de `~/.claude/hooks/local-delegate/`, que
     el instalador reescribe y poda."""
-    target = env_alias("LD_HOOK_READ_SWITCH_FILE", "LD_HOOK_READ_INTERRUPTOR").strip()
-    return Path(target) if target else Path.home() / ".claude" / FILE_NAMES["switch_file"][1]
-
-
-def legacy_switch_path() -> Path:
-    """El interruptor con su nombre viejo, que sigue apagando mientras viva su alias (REQ-012)."""
-    return Path.home() / ".claude" / FILE_NAMES["switch_file"][0]
+    target = os.environ.get("LD_HOOK_READ_SWITCH_FILE", "").strip()
+    return Path(target) if target else Path.home() / ".claude" / SWITCH_FILE_NAME
 
 
 def switch_on() -> bool:
-    """¿Esta puesto el fichero que apaga el bloqueo? El nuevo o, si no se eligio otra ruta, el
-    viejo; el viejo se anota en `DEPRECATED_SEEN` para que `doctor` pueda avisar."""
-    if switch_path().exists():
-        return True
-    configured = env_alias("LD_HOOK_READ_SWITCH_FILE", "LD_HOOK_READ_INTERRUPTOR").strip()
-    if not configured and legacy_switch_path().exists():
-        DEPRECATED_SEEN.add(FILE_NAMES["switch_file"][0])
-        return True
-    return False
+    """¿Esta puesto el fichero que apaga el bloqueo?"""
+    return switch_path().exists()
 
 
 def block_state() -> str:
@@ -338,7 +300,7 @@ def block_state() -> str:
     cuando decidio."""
     if switch_on():
         return "off_file"
-    if env_alias("LD_HOOK_READ_BLOCK", "LD_HOOK_READ_BLOQUEAR", "0").strip().lower() in TRUTHY:
+    if os.environ.get("LD_HOOK_READ_BLOCK", "0").strip().lower() in TRUTHY:
         return "on"
     return "off_variable"
 
