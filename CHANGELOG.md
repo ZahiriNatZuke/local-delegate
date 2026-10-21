@@ -107,6 +107,15 @@ persigue.
   temporal con perfiles sembrados, completa en el shell real cargando el perfil y desinstala
   comprobando los perfiles byte a byte (#367).
 
+### Corrige
+
+- **`install`, `update` y `uninstall` ya no vacían un `settings.json` o un `~/.claude.json` que no
+  entienden**: leen el BOM UTF-8 (el que pone PowerShell 5.1) y lo conservan al reescribir; si el
+  fichero no es un objeto JSON legible, el paso que lo escribiría lo deja byte a byte como estaba,
+  avisa de cómo arreglarlo y el comando termina con error. Antes se reescribía desde cero y se
+  perdían el `env` (también el recién migrado), las claves ajenas y el bloqueo de lectura. `doctor`
+  también lee los ficheros con BOM.
+
 ### Interno
 
 - **Retirada de los nombres viejos** (SDD `retire-legacy-aliases`), en lotes que dejan `main` verde

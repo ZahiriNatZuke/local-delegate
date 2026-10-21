@@ -406,7 +406,7 @@ def cleanup_period_days(claude_dir: Path) -> int:
     """`H`: `cleanupPeriodDays` de `claude_dir/settings.json`, o 30 si falta o no es un entero
     positivo (enmienda 1)."""
     try:
-        data = json.loads((Path(claude_dir) / "settings.json").read_text(encoding="utf-8"))
+        data = json.loads((Path(claude_dir) / "settings.json").read_text(encoding="utf-8-sig"))
     except (OSError, ValueError):
         return DEFAULT_CLEANUP_DAYS
     value = data.get("cleanupPeriodDays") if isinstance(data, dict) else None

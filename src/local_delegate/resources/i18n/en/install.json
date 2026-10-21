@@ -37,6 +37,8 @@
   "install.completion.uninstall_profile_plan": "removes the completion loading block",
   "install.completion.up_to_date": "already up to date",
   "install.completion.written": "written",
+  "install.config_unreadable": "{path} is left untouched: {reason}. {fix}",
+  "install.config_unreadable.fix": "Fix it so it is a valid JSON object in UTF-8 (or move it aside) and run the command again; the file is left exactly as it was",
   "install.copied": "copied -> {path}",
   "install.hooks.copy_plan": "advisory hook scripts",
   "install.hooks.previous_removed": " ({n} previous entry(ies) removed)",

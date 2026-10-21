@@ -260,20 +260,82 @@ def _read_text(path: Path) -> str:
         return ""
 
 
-def _read_json(path: Path) -> dict:
+class UnreadableConfigError(Exception):
+    """A config file exists but is not a readable JSON object.
+
+    The step that would rewrite it raises this instead, so the file stays byte for byte as it was
+    and `apply` counts the action as a failure (REQ-027 of `retire-legacy-aliases`).
+    """
+
+
+def _decode_config_json(raw: bytes) -> tuple[dict | None, str | None]:
+    """`(object, None)` or `(None, reason)`. Decodes with `utf-8-sig`: a BOM is not an error."""
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return None, t("install.migrate.reason.not_utf8")
+    try:
+        data = json.loads(text)
+    except ValueError:
+        return None, t("install.migrate.reason.not_json")
+    if not isinstance(data, dict):
+        return None, t("install.migrate.reason.not_object")
+    return data, None
+
+
+def _read_json(path: Path) -> dict:
+    """For read-only lookups: a missing or unreadable file reads as `{}`.
+
+    A step that rewrites the file afterwards must use `_read_config_json`: rebuilding the file from
+    this `{}` would wipe its `env` and every foreign key (REQ-027).
+    """
+    try:
+        raw = path.read_bytes()
+    except OSError:
         return {}
-    return data if isinstance(data, dict) else {}
+    data, _reason = _decode_config_json(raw)
+    return data if data is not None else {}
+
+
+def _read_config_json(path: Path) -> dict:
+    """For a step that rewrites `path`: `{}` if it does not exist; `UnreadableConfigError` if it
+    exists but cannot be read as a JSON object (REQ-027). A BOM is read (REQ-026)."""
+    try:
+        raw = path.read_bytes()
+    except FileNotFoundError:
+        return {}
+    except OSError as exc:
+        reason = str(exc.strerror or exc)
+    else:
+        data, reason = _decode_config_json(raw)
+        if data is not None:
+            return data
+    raise UnreadableConfigError(
+        t(
+            "install.config_unreadable",
+            path=path,
+            reason=reason,
+            fix=t("install.config_unreadable.fix"),
+        )
+    )
+
+
+def _has_utf8_bom(path: Path) -> bool:
+    try:
+        with path.open("rb") as handle:
+            return handle.read(len(codecs.BOM_UTF8)) == codecs.BOM_UTF8
+    except OSError:
+        return False
 
 
 def _write_json(path: Path, data: dict) -> None:
+    """Writes `data` with the line ending and the UTF-8 BOM the file already had (REQ-026)."""
     path.parent.mkdir(parents=True, exist_ok=True)
     newline = _detect_newline(path)
+    bom = codecs.BOM_UTF8 if _has_utf8_bom(path) else b""
     _backup(path)
     text = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
-    path.write_bytes(text.replace("\n", newline).encode("utf-8"))
+    path.write_bytes(bom + text.replace("\n", newline).encode("utf-8"))
 
 
 def upsert_block(text: str, block: str, begin: str, end: str) -> str:
@@ -2129,7 +2191,7 @@ def plan_install(opts: Options) -> list[Action]:
         settings_path = claude / "settings.json"
 
         def _run_settings(path=settings_path, entries=entries, hooks_dir=hooks_dst) -> str:
-            data, removed = merge_hook_settings(_read_json(path), entries, hooks_dir)
+            data, removed = merge_hook_settings(_read_config_json(path), entries, hooks_dir)
             _write_json(path, data)
             note = t("install.hooks.previous_removed", n=removed) if removed else ""
             return t("install.hooks.registered", n=len(entries), note=note)
@@ -2344,7 +2406,7 @@ def _register_claude_mcp(opts: Options, entry: dict) -> str:
         except (OSError, subprocess.SubprocessError):
             pass  # cae al modo archivo
     path = opts.home / ".claude.json"
-    data = _read_json(path)
+    data = _read_config_json(path)
     servers = data.setdefault("mcpServers", {})
     if not isinstance(servers, dict):
         servers = {}
@@ -2523,7 +2585,7 @@ def plan_uninstall(opts: Options) -> list[Action]:
         def _run_settings(path=settings_path, hooks_dir=hooks_dst) -> str:
             if not path.is_file():
                 return t("install.uninstall.no_settings", name=path.name)
-            data, removed = strip_hook_settings(_read_json(path), hooks_dir)
+            data, removed = strip_hook_settings(_read_config_json(path), hooks_dir)
             _write_json(path, data)
             return t("install.uninstall.hooks_removed", n=removed)
 
@@ -2666,7 +2728,7 @@ def _unregister_claude_mcp(opts: Options) -> str:
             # atajo.
             pass
     path = opts.home / ".claude.json"
-    data = _read_json(path)
+    data = _read_config_json(path)
     servers = data.get("mcpServers")
     if isinstance(servers, dict) and servers.pop(SERVER_NAME, None) is not None:
         _write_json(path, data)
