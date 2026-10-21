@@ -6,6 +6,23 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Añade
+
+- **Autocompletado de la CLI en PowerShell, zsh y bash** (SDD `cli-completion`). El subcomando
+  nuevo `local-delegate completion powershell|zsh|bash` imprime un script estático, generado desde
+  el propio parser, que completa subcomandos de todos los niveles, opciones y valores fijos (roles,
+  claves de `backend-params`, `--lang`…) y deja rutas y demás valores libres al shell. Cargarlo o
+  pulsar Tab no arranca Python. El de PowerShell es solo ASCII y vale para `pwsh` 7 y Windows
+  PowerShell 5.1; el de bash, para bash 3.2 o posterior. Las descripciones salen en el idioma vigente
+  (#360, #361, #362, #363).
+- **`install --shell-completion [auto|powershell|zsh|bash]`** (repetible, opt-in) escribe el
+  fichero en `<datos>/completion/` y un bloque entre marcadores en el perfil del shell, más un
+  manifiesto `installed.json`. Idempotente y con `--dry-run`. Respeta la codificación, el fin de
+  línea y los enlaces del perfil, y hace su copia en `<perfil>.local-delegate.bak`. Una edición de
+  PowerShell con política `Restricted`, `AllSigned` o `Undefined` se salta con un aviso que dice
+  cómo arreglarlo. `uninstall --shell-completion` quita solo el autocompletado, un `uninstall` sin
+  restricciones también lo quita, y el perfil vuelve byte a byte a como estaba (#364).
+
 ## [0.37.0] - 2026-10-20
 
 Parámetros de muestreo y de razonamiento por rol en las peticiones al backend (SDD

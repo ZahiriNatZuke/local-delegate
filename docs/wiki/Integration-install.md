@@ -26,6 +26,7 @@ local-delegate uninstall             # revierte solo lo que instaló
 | Skill | `~/.claude/skills/local-delegation/SKILL.md` y `~/.config/opencode/skill/local-delegation/SKILL.md` | regla de oro + catálogo de tools |
 | Memoria | bloque entre marcadores en `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` y `~/.config/opencode/AGENTS.md` | resumen corto de la regla, siempre cargado |
 | Idioma | `language.json` en el directorio de datos | el idioma de la sesión en que corre `install` (o `update`), para el daemon y los hooks, que no ven tu shell. La skill, el bloque y el catálogo de los subagentes se escriben en ese idioma. Ver [Idioma](Language.md) |
+| Autocompletado del shell (opt-in) | fichero de completado y `installed.json` en `<datos>/completion/`, más un bloque entre marcadores en el perfil de PowerShell, zsh o bash | solo con `--shell-completion`; ver [Autocompletado del shell](#autocompletado-del-shell) |
 
 ## A quién configura
 
@@ -83,6 +84,13 @@ Si no hay ninguno, no se escribe nada, se dice qué se buscó y el comando termi
   entrada se identifica por su nombre, como en Claude Code. Consecuencia: en opencode no hay
   pregunta previa equivalente a `--force-mcp-codex`, porque no hay forma de distinguir una entrada
   nuestra de una que escribiste tú.
+- **El perfil del shell, intacto fuera del bloque.** El autocompletado es opcional
+  (`--shell-completion`) y reversible: `uninstall` deja el perfil byte a byte como estaba. Se
+  respeta la codificación del perfil (UTF-8 con o sin BOM, UTF-16 con BOM o ANSI, como un perfil de
+  Windows PowerShell 5.1 con tildes), su fin de línea y los enlaces simbólicos (se escribe en el
+  destino). La copia va a `<perfil>.local-delegate.bak`, nunca al `.bak` que pueda ser tuyo. Un
+  perfil que no se puede leer, con bytes NUL sin marca de UTF-16 o con un marcador sin pareja no se
+  toca, y se avisa.
 - **Reversible.** `uninstall` borra los directorios propios y quita solo sus entradas.
 
 ## Comprobarlo desde el propio cliente
@@ -121,6 +129,7 @@ opencode mcp list      # debe decir: ✓ local-delegate connected
 | `--python RUTA` | intérprete con el que corren los hooks (default `python3`, `python` en Windows) |
 | `--home RUTA` | HOME alternativo (útil para probar la instalación en un sandbox) |
 | `--no-client-cli` | no usar el binario `claude`; edita `~/.claude.json` directamente |
+| `--shell-completion [auto \| powershell \| zsh \| bash]` | deja cargado el autocompletado de la CLI en el perfil del shell (sin valor, `auto`: los de esta máquina; repetible). En `uninstall`, quita solo el autocompletado. Ver [Autocompletado del shell](#autocompletado-del-shell) |
 
 El intérprete por defecto **no** es el que ejecuta el instalador: bajo `uvx` ese vive en un
 entorno efímero que desaparece al terminar el comando y dejaría los hooks apuntando a una ruta
@@ -154,6 +163,135 @@ Cuatro reglas gobiernan lo que toca:
 catálogo y su bloque no es el del paquete (por ejemplo, el de la 0.34.0, que nombraba la skill
 `delegacion-local`), regenera lo de entre los marcadores. No toca la línea `tools:` ni los
 subagentes sin marcadores.
+
+## Autocompletado del shell
+
+`local-delegate completion powershell|zsh|bash` imprime por la salida estándar el script de
+autocompletado de ese shell. Completa los subcomandos de todos los niveles, las opciones y los
+**valores fijos** (los roles, la lista cerrada de `backend-params`, `--lang es|en`…), y deja los
+valores libres —rutas, URLs— al completado normal del shell. El script es **estático**: cargarlo o
+pulsar Tab no arranca Python (cada Tab cuesta 1–5 ms). Registra los dos nombres del comando,
+`local-delegate` y `local-delegate-mcp`.
+
+Lo normal es que lo deje cargado `install`. Es **opt-in**: sin la opción no se toca ningún perfil.
+
+```bash
+local-delegate install --shell-completion --dry-run       # enseña fichero, bloque y manifiesto
+local-delegate install --shell-completion                 # los shells de esta máquina (auto)
+local-delegate install --shell-completion bash            # uno concreto (repetible)
+```
+
+`--shell-completion` sin valor es `auto`: en Windows, PowerShell (las ediciones que haya, `pwsh` 7 y
+Windows PowerShell 5.1); en macOS, zsh; en Linux, bash, y también zsh si tu `$SHELL` es zsh. Para
+otro shell, nómbralo: `--shell-completion powershell --shell-completion bash` (se repite, no admite
+comas). Un shell pedido que no está instalado se salta con un aviso y no cambia el código de
+salida. Funciona aunque no haya ningún cliente (Claude Code, Codex u opencode) y se combina con
+`--no-hooks --no-skill --no-memory --no-mcp` para instalar solo esto.
+
+### Dónde escribe
+
+| Pieza | Ruta |
+|---|---|
+| Fichero de completado | `<datos>/completion/local-delegate.ps1`, `local-delegate.bash` o `_local-delegate` (zsh), con `<datos>` el directorio de datos del producto: `%LOCALAPPDATA%\local-delegate` en Windows, `~/Library/Application Support/local-delegate` en macOS, `~/.local/share/local-delegate` en Linux, o `LOCAL_DELEGATE_LOG_DIR`. Las dos ediciones de PowerShell comparten el `.ps1` |
+| Manifiesto | `<datos>/completion/installed.json`: qué shells, qué ficheros, qué perfiles tocó (y si los creó), en qué idioma y con qué versión. Lo leen `doctor`, `update` y `uninstall` |
+| Perfil de PowerShell | `$PROFILE.CurrentUserAllHosts` de cada edición (`Documents\PowerShell\profile.ps1` y `Documents\WindowsPowerShell\profile.ps1`, siguiendo a OneDrive si redirige *Documents*); vale para la consola, Windows Terminal y VS Code. En macOS y Linux, `~/.config/powershell/profile.ps1` |
+| Perfil de zsh | `${ZDOTDIR:-$HOME}/.zshrc` |
+| Perfil de bash | `~/.bashrc`; en macOS, `~/.bash_profile` (Terminal abre shells de inicio de sesión, que no leen `.bashrc`). En Windows, el de Git Bash; el `bash.exe` de WSL no cuenta |
+
+En el perfil va un bloque entre `# >>> local-delegate completion >>>` y
+`# <<< local-delegate completion <<<` que solo carga el fichero **si existe**: borrar el fichero no
+deja un perfil que dé error al abrir el shell. Con `--home` (sandbox), las rutas salen del HOME
+simulado y el fichero va a `<home>/.local/share/local-delegate/completion/`.
+
+### Alternativa sin `install`: cargarlo en cada sesión
+
+Puedes añadir tú una de estas líneas al perfil en vez de usar `install`. Funciona igual, pero
+**cada shell nuevo paga el arranque de Python** para generar el script:
+
+| Shell | Línea | Coste al abrir el shell |
+|---|---|---|
+| PowerShell | `local-delegate completion powershell \| Out-String \| Invoke-Expression` | 0,8–2,1 s (medido: 0,8 s en 5.1 y 2,1 s en `pwsh`) |
+| zsh | `source <(local-delegate completion zsh)` o `eval "$(local-delegate completion zsh)"` | 0,3–2 s |
+| bash | `eval "$(local-delegate completion bash)"` (`source <(…)` también sirve en bash 4 o posterior; en el bash 3.2 de macOS usa `eval`) | lo que tarde Python en arrancar |
+
+Con `install` el perfil solo hace *dot-source* de un fichero ya generado: 7–19 ms en PowerShell y
+unos 2 ms en zsh. Por eso es lo recomendado.
+
+### PowerShell: política de ejecución y 5.1
+
+- **`RemoteSigned` basta** (y `Unrestricted` o `Bypass`): el fichero se genera en tu máquina, así
+  que no necesita firma. `install` pregunta a cada edición su ruta de perfil y su política efectiva.
+- Con **`Restricted`, `AllSigned` o `Undefined`** (que en un Windows de escritorio equivale a
+  `Restricted`), esa edición **se salta con un aviso**, sin tocar su perfil: un perfil que carga un
+  script no firmado daría error cada vez que abres el shell. Para activarlo, en esa edición:
+
+  ```powershell
+  Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+  local-delegate install --shell-completion
+  ```
+
+- Si la política no se puede consultar, se escribe igualmente y se avisa.
+- El script es **solo ASCII** (las tildes de las descripciones van escapadas), así que carga igual en
+  5.1 y en 7, con BOM o sin él y con cualquier página de códigos de la consola.
+- **Límite de Windows PowerShell 5.1**: el motor no llama al completador cuando la palabra es `-` o
+  `--` a secas, así que Tab tras `--` no ofrece nada. Escribe al menos una letra (`--r` + Tab →
+  `--role`). En `pwsh` 7 no pasa.
+
+### zsh
+
+- El script necesita el sistema de completado de zsh (`compinit`). Si tu `.zshrc` no lo carga (el
+  zsh por defecto de macOS no siempre lo hace; Oh My Zsh sí), el propio script lo carga con
+  `compinit -i` antes de registrarse.
+- El fichero `_local-delegate` vale también para `fpath`, si prefieres esa forma a `source`. En ese
+  caso, `compinit` cachea las funciones en `~/.zcompdump`: tras regenerar el fichero, borra
+  `~/.zcompdump*` y abre un shell nuevo. Con el bloque de `install` (que hace `source`) no hace
+  falta.
+
+### bash en macOS
+
+macOS trae bash 3.2 y el script es compatible con él (no usa arrays asociativos, `compopt` ni
+`mapfile`). Como `auto` en macOS solo elige zsh, pídelo explícito:
+`local-delegate install --shell-completion bash`, que escribe el bloque en `~/.bash_profile`.
+
+### Idioma y versión: regenerar con `update`
+
+Las descripciones que enseñan PowerShell y zsh salen en el **idioma configurado en el momento de
+generar** el fichero (el de `language.json`, ver [Idioma](Language.md)); bash no muestra
+descripciones. Y el fichero refleja los subcomandos y opciones de la versión que lo generó. Tras
+**cambiar de idioma o de versión**, regenera:
+
+```bash
+local-delegate update
+```
+
+`update` reescribe los ficheros listados en el manifiesto que no coincidan con lo que generaría
+ahora, y apunta en el manifiesto el idioma y la versión nuevos. No crea ficheros para shells que no
+instalaste ni toca perfiles. Abre un shell nuevo para que cargue el fichero regenerado.
+
+### Quitarlo
+
+```bash
+local-delegate uninstall --shell-completion            # solo el autocompletado, de todos los shells
+local-delegate uninstall --shell-completion zsh        # solo el de zsh
+local-delegate uninstall                               # todo, autocompletado incluido
+```
+
+- `uninstall --shell-completion` no toca clientes (hooks, skill, memoria, MCP). Con `--clients` o
+  `--target` explícitos, quita el autocompletado **y** esos clientes.
+- Un `uninstall` **sin restricciones** también lo quita. Uno **restringido** —`--clients codex`,
+  `--no-hooks` y demás— lo deja intacto. `--no-client-cli`, `--agents`, `--dry-run`, `--python` y
+  `--home` no cuentan como restricción.
+- Quita el bloque de los perfiles del manifiesto y de los perfiles candidatos que existan (así
+  limpia aunque falte el manifiesto), borra los ficheros, el manifiesto y el directorio
+  `completion/` si queda vacío. El perfil vuelve **byte a byte** a como estaba; si `install` lo creó
+  y queda vacío, se borra (y su carpeta, si también la creó).
+- `--dry-run` enseña cada acción, con el texto literal del bloque, sin escribir.
+
+### Solo con el comando instalado
+
+El completado se engancha al comando `local-delegate` (o `local-delegate-mcp`) que está en el
+PATH, es decir, al que deja `uv tool install local-delegate-mcp`. Con `uvx local-delegate-mcp …` el
+comando que tecleas es `uvx`, así que no hay nada que completar.
 
 ## Caso Mac → PC (backend remoto)
 

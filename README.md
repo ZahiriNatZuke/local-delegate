@@ -65,6 +65,11 @@ si detecta ese caso.
 Es idempotente, deja `.bak` de lo que edita, no toca configuración ajena y se revierte con
 `local-delegate uninstall`. Detalle y opciones en [Instalación de la integración](./docs/wiki/Integration-install.md).
 
+¿Autocompletado con Tab de subcomandos, opciones y valores? `local-delegate install
+--shell-completion` lo deja cargado en el perfil de PowerShell, zsh o bash (opt-in, reversible con
+`uninstall --shell-completion`), y `local-delegate completion powershell|zsh|bash` imprime el script
+por si prefieres cargarlo tú. Ver [Autocompletado del shell](./docs/wiki/Integration-install.md#autocompletado-del-shell).
+
 Si usas **varias sesiones o varios clientes** en la misma máquina, se recomienda un solo daemon:
 
 ```powershell

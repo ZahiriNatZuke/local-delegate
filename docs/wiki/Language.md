@@ -75,6 +75,11 @@ cuando el idioma vigente viene de una elección explícita.
 inglés que coincide con el empaquetado da `OK` en `doctor` y no se reescribe. Para pasar el
 bloque y la skill al otro idioma, usa `install`.
 
+El script de autocompletado (`install --shell-completion`) es la excepción: sus descripciones
+salen en el idioma configurado al generarlo, y `update` **sí** lo regenera en el idioma vigente.
+`local-delegate completion <shell>` a mano sale en el idioma de la sesión. Ver
+[Autocompletado del shell](Integration-install.md#autocompletado-del-shell).
+
 ## Cómo ver el idioma vigente
 
 - `local-delegate doctor` muestra en la cabecera `Idioma: <lang> (<origen>; <ruta de language.json>)`.
