@@ -119,8 +119,10 @@ skill y el bloque de `CLAUDE.md`/`AGENTS.md` si quedaron desfasados.
 > [Idioma](./docs/wiki/Language.md).
 
 > **La 0.35.0 renombra comandos, variables, la skill y ficheros de datos a inglés.** Los nombres
-> viejos siguen funcionando con aviso hasta la 0.37.x y se retiran en la 0.38.0; volver a una
-> versión anterior no está soportado. La tabla completa está en el [CHANGELOG](./CHANGELOG.md).
+> viejos funcionaron con aviso desde la 0.35.0 y **en la 0.38.0 se retiraron**: ya no
+> tienen efecto. `local-delegate doctor` nombra los que sigan puestos (hasta la 0.40.x) y
+> `local-delegate update` migra los que puede. Volver a una versión anterior no está soportado. La
+> tabla completa está en el [CHANGELOG](./CHANGELOG.md).
 
 ## Requisitos
 

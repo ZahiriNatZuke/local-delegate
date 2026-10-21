@@ -27,6 +27,61 @@ ejecuta `local-delegate doctor`.
 | `LOCAL_DELEGATE_MODEL_FAST`, `LOCAL_DELEGATE_MAX_CHARS_FAST`, `LOCAL_DELEGATE_FALLBACK_FAST` | — (rol `fast`, retirado en la 0.30.0) | Ya no tenían efecto; ahora `doctor` tampoco avisa de ellas. |
 | `enfriamiento.json` (escrito además de `cooldown.json`) | `cooldown.json` | El daemon deja de escribirlo: los hooks de una versión anterior no ven el enfriamiento hasta que `update` los cambia. |
 
+**Por qué ahora.** Es el plazo que anunció la 0.35.0: los alias vivirían con aviso en la 0.35.x,
+la 0.36.x y la 0.37.x y se retirarían en la 0.38.0. Mantenerlos más tiempo es mantener dos
+nombres para cada cosa en el código, en los hooks y en la documentación. No se rompe el arranque a
+propósito: un nombre viejo se ignora y se avisa de él, como al retirar el rol `fast` en la 0.30.0,
+porque un ajuste que deja de hacer algo en silencio es justo el fallo mudo que este proyecto
+persigue.
+
+**Qué notas si aún usas un nombre viejo**
+
+- **El subcomando o la opción del CLI** (`recalcular-coste`, `--reiniciar-calibracion`): el
+  comando sale con código 2 y un error que nombra el sucesor, sin recalcular nada. Una tarea
+  programada o un script que los use falla a la vista; cámbialos por `recompute-cost` y
+  `--reset-calibration`.
+- **Las variables del bloqueo de lectura** (`LD_HOOK_READ_BLOQUEAR`, `LD_HOOK_READ_INTERRUPTOR`):
+  los hooks no las leen. Con solo la vieja puesta, el bloqueo queda apagado y una ruta de
+  interruptor propia deja de apagarlo.
+- **El fichero interruptor viejo** (`~/.claude/local-delegate-bloqueo-apagado`): ya no apaga el
+  bloqueo. Con `LD_HOOK_READ_BLOCK=1`, el bloqueo se enciende hasta que exista el nuevo. Para
+  apagarlo a mano: `New-Item "$HOME\.claude\local-delegate-block-off" -ItemType File` (PowerShell)
+  o `touch ~/.claude/local-delegate-block-off`.
+- **Las variables del paquete** (`LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO`,
+  `LOCAL_DELEGATE_COSTE_RESPALDO`): el daemon y la CLI no las leen; la función vuelve a su valor
+  por defecto. `local_status` es quien avisa de lo que sigue puesto en el entorno del daemon.
+- **Las variables del rol `fast`** (`LOCAL_DELEGATE_MODEL_FAST`, `LOCAL_DELEGATE_MAX_CHARS_FAST`,
+  `LOCAL_DELEGATE_FALLBACK_FAST`): no tenían efecto desde la 0.30.0 y ahora `doctor` tampoco avisa
+  de ellas. Puedes borrarlas.
+- **`enfriamiento.json`**: el daemon solo escribe `cooldown.json`. Los hooks de una versión vieja
+  que sigan instalados dejan de ver el enfriamiento (y bloquean como si no lo hubiera) hasta que
+  corras `local-delegate update`, que los cambia. El fichero viejo no se borra ni se modifica:
+  puedes borrarlo tú. La lectura de los ficheros de datos viejos no cambia: si no hay
+  `cooldown.json`, el daemon arranca desde `enfriamiento.json`.
+
+**Cómo actualizar**
+
+- **Antes de actualizar, corre `local-delegate doctor`**: el check «nombres obsoletos» dice qué
+  nombre sigue puesto y por cuál cambiarlo. Después de actualizar sigue avisando, hasta la 0.40.x,
+  de los nombres retirados que encuentre.
+- **`update` (e `install`) migran lo que pueden** antes de diagnosticar: renombran las claves
+  viejas del `env` de `~/.claude/settings.json` (mismo valor y misma posición; si ya estaba el
+  nombre nuevo, quitan el viejo) y el fichero interruptor viejo (si ya existe el nuevo, borran el
+  viejo). Antes de escribir `settings.json` guardan el original en
+  `~/.claude/settings.json.retired-names.bak` (o en una copia con fecha UTC si esa ya existe).
+  **Esa copia lleva el `env` completo, que puede contener claves**: bórrala cuando compruebes que
+  todo va bien. Si `settings.json` no se puede leer, no lo tocan y lo dicen. Con `--dry-run` solo
+  enseñan el plan, con nombres y nunca valores. Lo migrado queda anotado en
+  `retired-names-migration.json`, junto al log de uso.
+- **Lo que no migra nadie**: las variables del sistema o del usuario, el perfil de la shell y el
+  lanzador del daemon. De esas avisan `doctor` (las de su entorno) y `local_status` (las del
+  daemon) hasta la 0.40.x; cámbialas a mano y reinicia el daemon. Tampoco mira nadie
+  `~/.claude/settings.local.json`, `~/.claude.json` ni el `settings` de un proyecto: revísalos tú
+  si pusiste ahí alguno de estos nombres.
+- **Quien venga de la 0.34 o anterior** no vio nunca el aviso de los nombres viejos: corre
+  `local-delegate update` y luego `local-delegate doctor`, y revisa el perfil de la shell y el
+  lanzador del daemon.
+
 ### Añade
 
 - **Autocompletado de la CLI en PowerShell, zsh y bash** (SDD `cli-completion`). El subcomando
@@ -51,6 +106,16 @@ ejecuta `local-delegate doctor`.
 - **E2E del autocompletado instalado** en Windows, macOS y Linux: instala dos veces en un HOME
   temporal con perfiles sembrados, completa en el shell real cargando el perfil y desinstala
   comprobando los perfiles byte a byte (#367).
+
+### Interno
+
+- **Retirada de los nombres viejos** (SDD `retire-legacy-aliases`), en lotes que dejan `main` verde
+  uno a uno: fuera las variables del rol `fast` y la doble escritura de `enfriamiento.json` (#370);
+  el registro distingue los retirados con sucesor (#371); fuera el subcomando y la opción viejos,
+  con un chequeo previo que nombra el sucesor (#372); las variables viejas del paquete dejan de
+  tener efecto y `local_status` avisa (#373); los hooks leen solo los nombres nuevos del bloqueo
+  (#374); migración en `update` e `install` (#375); el registro pasa a retirados con sucesor y los
+  guardianes de la 0.38.0 (#376).
 
 ## [0.37.0] - 2026-10-20
 
