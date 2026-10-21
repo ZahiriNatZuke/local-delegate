@@ -115,6 +115,10 @@ persigue.
   avisa de cómo arreglarlo y el comando termina con error. Antes se reescribía desde cero y se
   perdían el `env` (también el recién migrado), las claves ajenas y el bloqueo de lectura. `doctor`
   también lee los ficheros con BOM.
+- **El panel escribía las duraciones largas solo en segundos** («947,2 s»). Desde un minuto se leen
+  en minutos y segundos («15 min 47 s») y desde una hora en horas y minutos («1 h 5 min»), en la
+  tarea en curso, la actividad, la latencia media y el desglose espera/inferencia; el `title` de la
+  tarjeta de latencia conserva los segundos exactos (SDD `dashboard-duration-minutes`).
 
 ### Interno
 
@@ -162,10 +166,6 @@ contrato. Nada rompe.
 
 ### Corrige
 
-- **El panel escribía las duraciones largas solo en segundos** («947,2 s»). Desde un minuto se leen
-  en minutos y segundos («15 min 47 s») y desde una hora en horas y minutos («1 h 5 min»), en la
-  tarea en curso, la actividad, la latencia media y el desglose espera/inferencia; el `title` de la
-  tarjeta de latencia conserva los segundos exactos (SDD `dashboard-duration-minutes`).
 - **`local-delegate benchmark --reasoning-effort` no encendía el razonamiento.** Ahora un esfuerzo
   distinto de `off` (de la opción o del caso) manda `chat_template_kwargs.enable_thinking: true`,
   `reasoning_effort` en la raíz y el presupuesto de `--reasoning-budget N` (1–8192, obligatorio;
