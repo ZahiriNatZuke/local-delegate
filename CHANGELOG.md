@@ -6,6 +6,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Añadido
+
+- `doctor` gana el check «settings.json de Claude Code»: avisa si `~/.claude/settings.json` no es UTF-8 válido aunque sea un JSON correcto, y si queda la copia `settings.json.retired-names*.bak` de la migración (puede llevar claves del `env`), con la sugerencia de borrarla.
+
 ### Corrige
 
 - El panel sigue el tema claro u oscuro del sistema mientras no elijas uno con el botón (tu elección guardada manda), y el diálogo de una delegación escribe los booleanos de los parámetros del backend como `on`/`off`, igual que la CLI, `doctor` y `local_status`.

@@ -89,8 +89,8 @@ def test_registry_ids_are_unique_and_groups_are_known():
 
 
 def test_registry_ids_are_the_published_ones():
-    """A6 (REQ-011): los 26 ids exactos, en inglés. Un id es contrato con quien lea `checks`."""
-    assert len(checks.CHECKS) == 26
+    """A6 (REQ-011): los 27 ids exactos, en inglés. Un id es contrato con quien lea `checks`."""
+    assert len(checks.CHECKS) == 27
     assert {check.id for check in checks.CHECKS} == {
         "cli.path",
         "cli.published",
@@ -98,6 +98,7 @@ def test_registry_ids_are_the_published_ones():
         "client.observed",
         "config.fallback",
         "config.deprecated_names",
+        "config.claude_settings",
         "config.cost",
         "metrics.test_windows",
         "scaffold.hook_files",
@@ -1197,6 +1198,7 @@ _NUMBER_WORDS = {
     24: "veinticuatro",
     25: "veinticinco",
     26: "veintiséis",
+    27: "veintisiete",
 }
 _NUMBER_WORDS_WITHOUT_NOUN = {**_NUMBER_WORDS, 21: "veintiuno"}
 

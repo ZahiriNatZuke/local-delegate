@@ -2,7 +2,7 @@
 
 Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
 backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
-definición de «estar a punto»**: los veintiséis elementos del andamiaje, cada uno con un ``probe``
+definición de «estar a punto»**: los veintisiete elementos del andamiaje, cada uno con un ``probe``
 que responde en qué estado está.
 
 Tres reglas ordenan el módulo:
@@ -12,7 +12,7 @@ Tres reglas ordenan el módulo:
 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
    un ``fix`` posterior sobrescribiría configuración ajena.
-3. **Es una lista, no un framework.** Veintiséis checks son una tupla de objetos con una función;
+3. **Es una lista, no un framework.** Veintisiete checks son una tupla de objetos con una función;
    no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso, el
    diseño se revisa antes de seguir.
 
@@ -1979,6 +1979,80 @@ def _probe_deprecated_names(ctx: Context) -> Result:
     return Result(WARN, " | ".join(warnings), "; ".join(hints))
 
 
+def _migration_backups(claude_dir: Path) -> list[Path]:
+    """The copies the retired-names migration left next to `settings.json`, by name only.
+
+    The names are the ones `install._retired_names_backup` writes: `….retired-names.bak`, and when
+    that one exists `….<stamp>.bak` or `….<stamp>-N.bak`. Only their existence is looked at:
+    they may hold `env` keys, so their content is never opened.
+    """
+    try:
+        candidates = claude_dir.glob(f"{install.RETIRED_NAMES_BACKUP}*.bak")
+        return sorted(path for path in candidates if path.is_file())
+    except OSError:
+        return []
+
+
+def _probe_claude_settings(ctx: Context) -> Result:
+    """`~/.claude/settings.json` in UTF-8, and no copy of the migration left behind.
+
+    A check of its own (REQ-012 and REQ-013 of `backlog-minor-leftovers`) and not a change to
+    `read_text`: that reader decodes with `errors="replace"` on purpose, and a dozen probes rely on
+    it to read what they can of a file instead of going `unknown`. So the strict decoding is done
+    here, only for this file, from the raw bytes; the other checks keep reading it as before. And
+    not inside `scaffold.hook_settings` either: a `warn` there makes `update` rewrite the hooks,
+    which would not fix the encoding and would happen on every run.
+
+    UTF-8 with a BOM is valid (REQ-026 of `retire-legacy-aliases`): the BOM bytes decode as UTF-8.
+    """
+    if absent := _claude_absent(ctx):
+        return absent
+    statuses: list[str] = []
+    details: list[str] = []
+    hints: list[str] = []
+
+    path = ctx.claude_dir / "settings.json"
+    raw: bytes | None = None
+    try:
+        raw = path.read_bytes()
+    except FileNotFoundError:
+        pass
+    except OSError as exc:
+        statuses.append(UNKNOWN)
+        details.append(i18n.t("doctor.common.cannot_read", path=path, error=exc.strerror or exc))
+    if raw is not None:
+        try:
+            raw.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            statuses.append(WARN)
+            details.append(
+                i18n.t(
+                    "doctor.probe.claude_settings.not_utf8",
+                    path=path,
+                    byte=f"0x{raw[exc.start]:02X}",
+                    position=exc.start,
+                )
+            )
+            hints.append(i18n.t("doctor.probe.claude_settings.not_utf8_hint"))
+
+    backups = _migration_backups(ctx.claude_dir)
+    if backups:
+        statuses.append(WARN)
+        details.append(
+            i18n.t(
+                "doctor.probe.claude_settings.backup",
+                paths=", ".join(str(backup) for backup in backups),
+            )
+        )
+        hints.append(i18n.t("doctor.probe.claude_settings.backup_hint"))
+
+    if not statuses:
+        if raw is None:
+            return Result(OK, i18n.t("doctor.common.does_not_exist", path=path))
+        return Result(OK, i18n.t("doctor.probe.claude_settings.ok", path=path))
+    return Result(_worst(statuses), " | ".join(details), "; ".join(hints))
+
+
 RECOMPUTE_HINT = "local-delegate recompute-cost"
 # Margen del aviso de relleno: salta con la pendiente más antigua a `H` − 10 días (REQ-075).
 _BACKFILL_MARGIN = timedelta(days=10)
@@ -2247,7 +2321,7 @@ def _probe_shell_completion(ctx: Context) -> Result:
 
 
 # --- El registro --------------------------------------------------------------
-# Veintiséis elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
+# Veintisiete elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
 # el problema no sería el registro sino el diseño.
 #
 # El número se dice en cinco sitios de este módulo y llegó a decir «once» con doce checks ya
@@ -2267,6 +2341,14 @@ CHECKS: tuple[Check, ...] = (
         "environment",
         "doctor.check.config.deprecated_names",
         _probe_deprecated_names,
+    ),
+    # In `environment`: it only reads `~/.claude`, and `install` (which runs this group too) shows
+    # the copy its own migration has just left.
+    Check(
+        "config.claude_settings",
+        "environment",
+        "doctor.check.config.claude_settings",
+        _probe_claude_settings,
     ),
     # En `environment`: lee ficheros locales del log y de `~/.claude`, no sale a la red.
     Check("config.cost", "environment", "doctor.check.config.cost", _probe_cost),
@@ -2337,7 +2419,7 @@ CHECKS: tuple[Check, ...] = (
 
 
 def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
-    """Corre los veintiséis probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+    """Corre los veintisiete probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
 
     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
@@ -2351,7 +2433,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
             continue
         try:
             result = check.probe(ctx)
-        except Exception as exc:  # un check roto no debe impedir ver los otros veinticinco
+        except Exception as exc:  # un check roto no debe impedir ver los otros veintiséis
             result = Result(UNKNOWN, i18n.t("doctor.probe.failed", error=exc))
         results.append((check, result))
     return results
