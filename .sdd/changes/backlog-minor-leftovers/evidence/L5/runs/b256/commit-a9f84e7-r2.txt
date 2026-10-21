@@ -1,0 +1,39 @@
+- First line: `tipo(scope): resumen` (imperative, <=72 chars)
+     - Blank line
+     - Body: OBLIGATORY 2-6 bullet points (`- `), explaining what changes and why.
+     - Everything in Spanish.
+     - No extra text.
+
+2.  **Determine Commit Type & Scope:**
+   - Type: `fix` (fixes encoding crashes on Windows) or `chore` or `feat`. Given it's fixing a crash/encoding issue, `fix` is appropriate.
+   - Scope: `cli` or `encoding` or `windows`. The diff touches `entrypoint.py` and `install.py`, related to CLI output and encoding. Let's use `cli` or `encoding`. I'll go with `cli` or `encoding`. Actually, `fix(encoding)` or `fix(cli)` works. Let's use `fix(encoding)`.
+   - Summary: Needs to be imperative, <=72 chars, in Spanish.
+     - "fix(encoding): evitar UnicodeEncodeError en salida de consola Windows" (68 chars) - good.
+     - Let's count: `fix(encoding): evitar UnicodeEncodeError en salida de consola Windows` -> 68. Good.
+     - Alternative: `fix(cli): manejar codificación de consola para evitar fallos en Windows` (70 chars)
+     - Let's stick to `fix(encoding): evitar UnicodeEncodeError en redirección de salida` (70 chars)
+     - I'll use: `fix(encoding): evitar UnicodeEncodeError en redirección de salida`
+
+3.  **Draft Body (2-6 bullet points, Spanish, explaining what & why):**
+   - Need to cover:
+     - New function `_tolerant_console_output()` reconfigures stdout/stderr to `errors="replace"` if UTF-8 strict.
+     - Prevents crashes on Windows when output is piped/redirected (cp1252 default).
+     - Replaces Unicode arrow `→` with ASCII `->` in deprecation messages.
+     - Ensures CLI runs reliably in scripts/scheduled tasks without encoding interruptions.
+   - Draft bullets:
+     - Se añade `_tolerant_console_output()` para reconfigurar `stdout` y `stderr` con `errors="replace"` si usan UTF-8 estricto.
+     - Se invoca esta función antes de ejecutar la CLI para evitar `UnicodeEncodeError` al redirigir la salida en Windows.
+     - Se reemplaza la flecha Unicode `→` por `->` en los mensajes de nombres retirados para garantizar compatibilidad con cp1252.
+     - Se respeta la configuración de codificación explícita del usuario y se ignoran flujos ya cerrados o no UTF-8.
+   - Check constraints: 4 bullets. Each starts with `- `. Explains what changes and why. In Spanish. Fits well.
+
+4.  **Refine & Check Constraints:**
+   - Format:
+     ```
+     fix(encoding): evitar UnicodeEncodeError en redirección de salida
+
+     - Se añade `_tolerant_console_output()` para reconfigurar `stdout` y `stderr` con `errors="replace"` si usan UTF
+
+[local-delegate warning: salida truncada por max_tokens]
+
+(leído server-side: 3292 chars ≈ 1482 tokens de Claude que no entraron a tu contexto)

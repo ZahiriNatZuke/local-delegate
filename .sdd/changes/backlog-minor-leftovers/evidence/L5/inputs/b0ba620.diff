@@ -1,0 +1,58 @@
+
+
+
+diff --git a/src/local_delegate/web/metrics.py b/src/local_delegate/web/metrics.py
+index dba3991..1f812d1 100644
+--- a/src/local_delegate/web/metrics.py
++++ b/src/local_delegate/web/metrics.py
+@@ -1865,12 +1865,27 @@ function fmtNum(n, decimals){
+   return (n < 0 && r > 0 ? '-' : '') + s;
+ }
+ // Latencias y duraciones en segundos con un decimal. Por debajo de 50 ms redondearía a «0,0 s»,
+-// que se lee como «no tardó nada»: se dice «< 0,1 s».
+-function fmtSec(ms){
++// que se lee como «no tardó nada»: se dice «< 0,1 s». Es el valor exacto que va en los `title`.
++function fmtSecExact(ms){
+   if(ms===null || ms===undefined || !isFinite(ms)) return '–';
+   if(ms < 50) return '< ' + fmtNum(0.1, 1) + ' s';
+   return F1.format(ms / 1000) + ' s';
+ }
++// Duration for display: seconds with one decimal under a minute, then «15 min 47 s», then
++// «1 h 5 min». Each tier rounds in the unit it shows and that rounding picks the tier, so 59.96 s
++// is «1 min» (never «60,0 s») and 3599.6 s is «1 h» (never «60 min»).
++function fmtSec(ms){
++  if(ms===null || ms===undefined || !isFinite(ms)) return '–';
++  if(Math.round(ms / 100) < 600) return fmtSecExact(ms);
++  const seconds = Math.round(ms / 1000);
++  if(seconds < 3600){
++    const m = Math.floor(seconds / 60), sec = seconds % 60;
++    return m + ' min' + (sec ? ' ' + sec + ' s' : '');
++  }
++  const mins = Math.round(ms / 60000);
++  const h = Math.floor(mins / 60), rest = mins % 60;
++  return h + ' h' + (rest ? ' ' + rest + ' min' : '');
++}
+ // Forma corta de una cifra grande para un KPI que no cabe ni con la fuente reducida: «1,2 M» y
+ // «1,2 mil M» en español, «1.2M» y «1.2B» en inglés (en español «B» sería billón, 10^12). Por
+ // debajo del millón, la cifra entera. El valor exacto queda en el `title` de la tarjeta.
+@@ -2818,7 +2833,7 @@ function kpiCard(o){
+   const ico = o.icon?`<span class="k-ico" style="--kc:${o.kc||'var(--mut)'}">${o.icon}</span>`:'';
+   const unit = o.unit?`<span class="unit">${o.unit}</span>`:'';
+   // El valor exacto va siempre en `title`: `fitFigures` puede reducir la cifra o compactarla.
+-  const exact = o.val + (o.unit ? ' ' + o.unit : '');
++  const exact = (o.exact || o.val) + (o.unit ? ' ' + o.unit : '');
+   const compact = o.compact && o.compact !== o.val ? ` data-compact="${o.compact}"` : '';
+   return `<div class="card ${o.hero?'hero':''}">${o.hero?'<div class="spark"><canvas id="spark"></canvas></div>':''}
+     <div class="k-top">${ico}<div class="k-lbl" title="${o.lbl}"><span class="k-lbl-t">${o.lbl}</span>${i}</div></div>
+@@ -2984,8 +2999,9 @@ function render(){
+     + kpiCard({icon:ICON.cost,kc:'var(--amber)',val:F.format(costIn),compact:fmtCompact(costIn),unit:'tok',lbl:A(T('kpi.cost.label')),
+        hint:A(T('kpi.cost.hint')),
+        tip:A(T('kpi.cost.tip'))})
+-    // La unidad va dentro del valor («116,9 s», «< 0,1 s»): `fmtSec` decide la forma entera.
+-    + kpiCard({icon:ICON.lat,kc:'var(--mut)',val:escHooks(fmtSec(lat)),lbl:A(T('kpi.latency.label')),
++    // La unidad va dentro del valor («1 min 57 s», «< 0,1 s»): `fmtSec` decide la forma entera y
++    // el `title` conserva los segundos exactos («116,9 s»).
++    + kpiCard({icon:ICON.lat,kc:'var(--mut)',val:escHooks(fmtSec(lat)),exact:escHooks(fmtSecExact(lat)),lbl:A(T('kpi.latency.label')),
+        hint:A(T('kpi.latency.hint')),tip:A(T('kpi.latency.tip'))})
+     + kpiCard({icon:ICON.err,kc:errs?'var(--danger)':'var(--acc)',val:errPct,unit:'%',lbl:A(T('kpi.errors.label')),
+        hint:T('kpi.errors.hint_html', {n: F.format(errs), what: A(T(errs===1 ? 'unit.failure.one' : 'unit.failure.other'))}),

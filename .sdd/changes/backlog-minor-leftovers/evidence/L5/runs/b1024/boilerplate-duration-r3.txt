@@ -1,0 +1,4 @@
+[escrito] D:\Projects\ld-wt-l5\.sdd\changes\backlog-minor-leftovers\evidence\L5\runs\b1024\boilerplate-duration-r3.py
+76 líneas, 3945 chars (≈1636 tokens de Claude que no entraron a tu contexto)
+
+[local-delegate warning: salida truncada por max_tokens]

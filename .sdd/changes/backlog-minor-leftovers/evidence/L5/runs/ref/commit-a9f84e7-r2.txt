@@ -1,0 +1,9 @@
+fix(cli): evitar UnicodeEncodeError en Windows por codificación
+
+- Configura stdout/stderr con errors="replace" si no son UTF-8 estrictos
+- Sustituye la flecha Unicode «→» por ASCII "->" en mensajes de migración
+- Previene fallos silenciosos al redirigir salida en scripts o tareas programadas
+- Asegura compatibilidad con entornos Windows que usan cp1252 por defecto
+- Respeta configuraciones de codificación explícitas del usuario (PYTHONIOENCODING)
+
+(leído server-side: 3292 chars ≈ 1482 tokens de Claude que no entraron a tu contexto)

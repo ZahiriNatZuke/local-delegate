@@ -9,6 +9,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ### Añadido
 
 - `doctor` gana el check «settings.json de Claude Code»: avisa si `~/.claude/settings.json` no es UTF-8 válido aunque sea un JSON correcto, y si queda la copia `settings.json.retired-names*.bak` de la migración (puede llevar claves del `env`), con la sugerencia de borrarla.
+- La wiki ([Configuration](docs/wiki/Configuration.md#presupuesto-mínimo-para-el-rol-code)) documenta el presupuesto mínimo de razonamiento para el rol `code`, medido en vivo con Qwen3.6: **4096 tokens** (por debajo, la respuesta se corta o arrastra razonamiento); sin razonamiento, las tres tools del rol salieron completas y unas 6 veces más rápidas.
 
 ### Corrige
 

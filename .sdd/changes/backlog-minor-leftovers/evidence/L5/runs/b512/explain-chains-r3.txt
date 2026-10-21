@@ -1,0 +1,5 @@
+Este módulo gestiona cadenas de respaldo para roles de modelos de IA (`code`, `long`, `mechanical`). Cuando el modelo principal falla, el sistema salta a alternativas definidas en un orden específico. Las cadenas se configuran por rol y se resuelven dinámicamente según la configuración vigente, ignorando cambios en los modelos por defecto.
+
+El código define una cadena especial llamada `loaded`, que apunta a modelos ya cargados en memoria. Esta se resuelve en tiempo de ejecución mediante un proveedor registrado, filtrando el modelo fallido y duplicados. La función `resolve` parsea la configuración, valida los pasos contra roles o modelos permitidos, maneja sinónimos obsoletos (`residente`, `resident`) con advertencias y elimina el modelo principal y repeticiones. Si falta configuración o proveedor, usa cadenas por defecto o devuelve resultados vacíos. Finalmente, `describe` y `residents_text` formatean el estado actual y los residentes para informes, asegurando que el sistema mantenga disponibilidad mediante saltos controlados y validados.
+
+(leído server-side: 7881 chars ≈ 3882 tokens de Claude que no entraron a tu contexto)

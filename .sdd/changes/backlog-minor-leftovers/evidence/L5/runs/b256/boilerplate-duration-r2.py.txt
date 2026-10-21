@@ -1,0 +1,67 @@
+- Wait, the prompt says "Accept the units h, m and s in that order, each at most once". This implies the order must be h, then m, then s if they appear. So valid patterns:
+     - `\d+h`
+     - `\d+m`
+     - `\d+s`
+     - `\d+h\d+m`
+     - `\d+h\d+s`
+     - `\d+m\d+s`
+     - `\d+h\d+m\d+s`
+     - Actually, the prompt says "in that order", so it's strictly h, m, s. So `\d+h\d+m\d+s`, `\d+h\d+m`, `\d+h\d+s`, `\d+m\d+s`, `\d+h`, `\d+m`, `\d+s`.
+     - Wait, does it allow missing units in between? "Accept the units h, m and s in that order, each at most once". This usually means the string must match a regex like `^(\d+h)?(\d+m)?(\d+s)?$` but with the constraint that if a unit is present, it must follow the order. Actually, the regex `^(\d+h)?(\d+m)?(\d+s)?$` already enforces order. But we need to ensure at least one unit is present (non-empty input check).
+     - Let's check the exact wording: "Accept the units h, m and s in that order, each at most once; raise ValueError on empty input or any other format."
+     - So regex: `^(\d+h)?(\d+m)?(\d+s)?$` but must match at least one unit. Actually, `^(\d+h)?(\d+m)?(\d+s)?$` allows empty string, but we check for empty input separately or adjust regex to `^(\d+h)?(\d+m)?(\d+s)?$` and check if it matches and is not empty. Or better: `^(\d+h)?(\d+m)?(\d+s)?$` and ensure `text` is not empty.
+     - Wait, what about leading zeros? The prompt doesn't specify, but `\d+` is fine.
+     - Let's test regex: `^(\d+h)?(\d+m)?(\d+s)?$`
+     - Does it match '1h30m'? Yes.
+     - '45s'? Yes.
+     - '2h'? Yes.
+     - '1h5m10s'? Yes.
+     - '1m1h'? No.
+     - '1h30m10s'? Yes.
+     - What about '1h30m10s'? Yes.
+     - What about '1h30m10s'? Yes.
+     - Wait, the prompt says "in that order", so h, m, s. So `^(\d+h)?(\d+m)?(\d+s)?$` is correct.
+     - But we need to ensure at least one unit is present. We can check `if not text:` raise ValueError. Or adjust regex to `^(\d+h)?(\d+m)?(\d+s)?$` and check if it matches and `text` is not empty. Actually, `^(\d+h)?(\d+m)?(\d+s)?$` matches empty string. So we'll explicitly check `if not text:` raise ValueError.
+     - Wait, what about '1h30m10s'? The regex `^(\d+h)?(\d+m)?(\d+s)?$` matches it.
+     - Let's consider if the prompt implies that all three must be present? "such as '1h30m', '45s', '2h' or '1h5m10s'". So any combination is fine.
+     - I'll use `re.match(r'^(\d+h)?(\d+m)?(\d+s)?$', text)`
+     - If it matches and text is not empty, parse it.
+     - Parsing: extract numbers. We can use `re.findall(r'\d+', text)` or parse manually.
+     - Actually, `re.findall(r'\d+', text)` will give a list of numbers in order. But we need to map them to h, m, s.
+     - Better: use `re.match(r'^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$', text)`
+     - This gives groups for h, m, s.
+     - Let's test: '1h30m' -> groups: ('1', '30', None)
+     - '45s' -> groups: (None, None, '45')
+     - '2h' -> groups: ('2', None, None)
+     - '1h5m10s' -> groups: ('1', '5', '10')
+     - This is robust.
+     - Check for empty input: `if not text:` raise ValueError
+     - Check regex match: `if not match:` raise ValueError
+     - Parse: `h = int(match.group(1)) if match.group(1) else 0`
+     - `m = int(match.group(2)) if match.group(2) else 0`
+     - `s = int(match.group(3)) if match.group(3) else 0`
+     - Return `h * 3600 + m * 60 + s`
+     - Wait, what about '1h30m10s'? The regex `^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$` matches it.
+     - Does it allow '1h30m10s'? Yes.
+     - Does it allow '1h30m10s'? Yes.
+     - What about '1h30m10s'? Yes.
+     - All good.
+     - Let's double check the exact wording: "Accept the units h, m and s in that order, each at most once". This matches the regex.
+     - One edge case: '1h30m10s' -> groups: ('1', '30', '10') -> correct.
+     - What about '1h30m10s'? Correct.
+     - What about '1h30m10s'? Correct.
+     - I'll stick with this.
+     - Wait, should I handle negative numbers? The prompt says duration, so positive integers. `\d+` is fine.
+     - Type hints: `def parse_duration(text: str) -> int:`
+     - Docstring: standard format.
+     - Standard library only: `re` is standard.
+     - Output: exactly the code, no markdown.
+     - Let's draft it:
+
+```python
+import re
+
+def parse_duration(text: str) -> int:
+    """Parse a duration string like '1h30m', '45s', '2h', or '1h5m10s' into total seconds.
+    
+    Accepts h,

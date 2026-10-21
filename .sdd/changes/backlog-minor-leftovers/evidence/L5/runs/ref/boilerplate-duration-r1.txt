@@ -1,0 +1,2 @@
+[escrito] D:\Projects\ld-wt-l5\.sdd\changes\backlog-minor-leftovers\evidence\L5\runs\ref\boilerplate-duration-r1.py
+35 líneas, 1197 chars (≈496 tokens de Claude que no entraron a tu contexto)

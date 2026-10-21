@@ -1,0 +1,22 @@
+- Nothing outside format? Yes.
+   - Spanish? Yes.
+   - Explains what it does and how? Yes.
+
+   All constraints met. I will output exactly this text. No extra greetings, no markdown formatting unless necessary (but the prompt says "prosa", so plain text is fine, but I'll keep it clean). I'll ensure it's strictly within the limit.
+   One minor adjustment: I'll make sure it's strictly prose and flows well. The draft is good. I'll count words precisely.
+   "Este código gestiona archivos JSON compartidos entre múltiples procesos de forma segura. La función `read_json` lee un archivo JSON y devuelve su contenido como diccionario. Si el archivo no existe, falla al leerse o no contiene un diccionario válido, retorna un diccionario vacío, evitando así excepciones que rompan el flujo.
+   La función `write_json_atomic` garantiza escrituras atómicas para evitar corrupción cuando varios procesos escriben simultáneamente. Crea un archivo temporal cuyo nombre incluye el ID del proceso actual (`pid`), lo que evita colisiones entre procesos que podrían mezclar datos o dejar entradas fantasma. Escribe los datos en este temporal y luego lo reemplaza atómicamente sobre el archivo original mediante `replace()`, asegurando que los lectores nunca vean contenido parcial. En el bloque `finally`, intenta eliminar el temporal; si falla (común en Windows por bloqueos de antivirus), ignora el error silenciosamente para no enmascarar la excepción original y prioriza la estabilidad sobre la limpieza estricta. En conjunto, el código implementa un mecanismo robusto y probado para sincronizar estado compartido sin condiciones de carrera." -> 148 words. Perfect.
+   Output matches exactly.✅
+   Proceeds. 
+   Self-Correction/Verification during thought: 
+   Check constraint: "Output EXACTO: una explicación clara en prosa de qué hace el código y cómo.. Máximo 250 palabras. Nada fuera del formato. Responde en español, aunque el contenido esté en otro idioma."
+   The draft is exactly that. I will output it directly. No extra text. All good. 
+   Output generation. 
+   [Done] 
+   *Self-Correction/Refinement during generation prep*: I'll remove the backticks around `read_json` and `write_json_atomic` to keep it strictly prose, though markdown is usually fine. The prompt says "prosa", so plain text is safer. I'll adjust slightly to ensure it's purely prose.
+   "Este código gestiona archivos JSON compartidos entre múltiples procesos de forma segura. La función read_json lee un archivo JSON y devuelve su contenido como diccionario. Si el archivo no existe, falla al leerse o no contiene un diccionario válido, retorna un diccionario vacío, evitando así excepciones que rompan el flujo.
+   La función write_json_atomic garantiza escrituras atómicas para evitar corrupción cuando varios procesos escriben simultáneamente. Crea un archivo temporal cuyo nombre incluye el ID del proceso actual, lo que evita colisiones entre procesos que podrían mezclar datos o dejar entradas fantasma. Escribe los datos en este temporal y luego lo reemplaza atómicamente sobre el archivo original, asegurando que los lectores nunca vean contenido parcial. En el bloque finally,
+
+[local-delegate warning: salida truncada por max_tokens]
+
+(leído server-side: 1863 chars ≈ 917 tokens de Claude que no entraron a tu contexto)

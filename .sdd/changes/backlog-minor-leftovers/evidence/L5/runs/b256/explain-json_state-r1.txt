@@ -1,0 +1,7 @@
+El código proporciona dos funciones para gestionar archivos JSON compartidos entre múltiples procesos de forma segura. `read_json(path)` intenta abrir y parsear un archivo JSON; si el archivo no existe, no se puede leer o su contenido no es un diccionario, devuelve un diccionario vacío `{}`. Esto evita fallos en cascada cuando el estado aún no se ha inicializado.
+
+`write_json_atomic(path, data)` realiza escrituras atómicas para evitar que varios procesos sobrescriban o mezclen datos simultáneamente. En lugar de escribir directamente en el archivo objetivo, crea un archivo temporal cuyo nombre incluye el identificador del proceso actual (`pid`). Esto garantiza que cada proceso tenga su propio temporal y evita colisiones. Una vez escrito el JSON en el temporal, usa `replace()` para renombrarlo y sustituir el archivo original de forma atómica. Finalmente, intenta eliminar el temporal; si falla (común en Windows por bloqueos de antivirus), ignora el error para no enmascarar excepciones reales, priorizando la estabilidad sobre la limpieza perfecta.
+
+En conjunto, el módulo implementa un patrón de escritura "escribir-renombrar" con aislamiento por PID y lectura tolerante a fallos, asegurando consistencia y resiliencia en entornos multiplataforma y multi-proceso.
+
+(leído server-side: 1863 chars ≈ 917 tokens de Claude que no entraron a tu contexto)

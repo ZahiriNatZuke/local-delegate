@@ -1,0 +1,47 @@
+- Wait, let's count characters: `fix(cli): evitar UnicodeEncodeError en redirección de` -> 50 chars. Good.
+     Let's refine: `fix(cli): evitar UnicodeEncodeError al redirigir salida` (54 chars)
+     Or: `fix(cli): manejar codificación de consola en redirección` (56 chars)
+     Let's stick to: `fix(cli): evitar UnicodeEncodeError al redirigir salida`
+
+3.  **Draft Body (2-6 bullet points, Spanish, explaining what & why):**
+   Need to cover:
+   - Added `_tolerant_console_output()` to reconfigure stdout/stderr with `errors="replace"` if UTF-8 strict.
+   - Called it in `main()` before CLI execution.
+   - Replaced Unicode arrow `→` with ASCII `->` in `_names()` to prevent encoding crashes.
+   - All to satisfy REQ-028 and ensure robustness on Windows with redirected output.
+
+   Let's format as bullets:
+   - Se añade `_tolerant_console_output()` para reconfigurar stdout y stderr con `errors="replace"` si usan UTF-8 estricto.
+   - Se invoca la función en `main()` antes de ejecutar la CLI para proteger la salida de subcomandos.
+   - Se cambia la flecha Unicode `→` por `->` en `_names()` para evitar fallos de codificación en Windows.
+   - Se garantiza que las redirecciones a ficheros o tuberías no interrumpan migraciones o hooks por `UnicodeEncodeError`.
+
+   Check constraints: 4 bullets. Each explains what changes and why. All in Spanish. Fits REQ-028 context.
+
+4.  **Assemble & Verify:**
+   Format:
+   ```
+   fix(cli): evitar UnicodeEncodeError al redirigir salida
+
+   - Se añade `_tolerant_console_output()` para reconfigurar stdout y stderr con `errors="replace"` si usan UTF-8 estricto.
+   - Se invoca la función en `main()` antes de ejecutar la CLI para proteger la salida de subcomandos.
+   - Se cambia la flecha Unicode `→` por `->` en `_names()` para evitar fallos de codificación en Windows.
+   - Se garantiza que las redirecciones a ficheros o tuberías no interrumpan migraciones o hooks por `UnicodeEncodeError`.
+   ```
+   Check constraints:
+   - Direct output? Yes.
+   - No tools/internet? Yes.
+   - Exact format: `tipo(scope): resumen` imperative <=72? `fix(cli): evitar UnicodeEncodeError al redirigir salida` (54 chars) -> Yes.
+   - Blank line? Yes.
+   - Body: 2-6 bullets? 4 bullets. Yes.
+   - Bullets start with `- `? Yes.
+   - Say what changes and why? Yes.
+   - Entire message in Spanish? Yes.
+   - Nothing outside format? Yes.
+
+   One minor adjustment: Ensure the summary strictly follows imperative mood in Spanish. "evitar" is imperative. Good.
+   Check character count of summary: `fix(cli): evitar UnicodeEncodeError
+
+[local-delegate warning: salida truncada por max_tokens]
+
+(leído server-side: 3292 chars ≈ 1482 tokens de Claude que no entraron a tu contexto)

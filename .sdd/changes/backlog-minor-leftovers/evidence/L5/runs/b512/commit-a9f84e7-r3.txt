@@ -1,0 +1,11 @@
+</think>
+
+fix(encoding): manejar errores de codificación en consola Windows
+
+- Añadir función `_tolerant_console_output` que reconfigura stdout y stderr con `errors="replace"` si usan UTF-8 estricto
+- Llamar a la nueva función en `main` antes de ejecutar la CLI para evitar `UnicodeEncodeError` al redirigir salida en Windows
+- Reemplazar la flecha Unicode `→` por `->` en `_names` para garantizar compatibilidad con entornos cp1252
+- Importar `codecs` para validar nombres de codificación antes de aplicar la reconfiguración
+- Prevenir interrupciones en migraciones y hooks cuando se ejecutan scripts o tareas programadas con salida redirigida
+
+(leído server-side: 3292 chars ≈ 1482 tokens de Claude que no entraron a tu contexto)

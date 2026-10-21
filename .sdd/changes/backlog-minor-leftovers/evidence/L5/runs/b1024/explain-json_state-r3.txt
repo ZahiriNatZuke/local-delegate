@@ -1,0 +1,5 @@
+Este código implementa una capa de seguridad para leer y escribir archivos JSON compartidos entre múltiples procesos, previniendo condiciones de carrera y corrupción de datos. La función `read_json` carga el archivo y devuelve su contenido como diccionario; si el archivo falta, es inválido o falla el acceso, retorna `{}` para evitar interrupciones. 
+
+`write_json_atomic` asegura escrituras atómicas mediante un archivo temporal con el PID del proceso en su nombre. Esto evita que varios procesos compitan por un mismo nombre temporal y mezclen o pierdan datos. Primero escribe el JSON en el temporal, luego usa `tmp.replace(path)` para reemplazar el archivo original de forma atómica. En el bloque `finally`, intenta borrar el temporal; si falla (frecuente en Windows por bloqueos de antivirus), ignora el error para no enmascarar la excepción real de escritura y mantener la estabilidad. El enfoque refleja soluciones prácticas a problemas de concurrencia y compatibilidad con Windows, garantizando integridad en archivos de estado compartido como `inflight.json`.
+
+(leído server-side: 1863 chars ≈ 917 tokens de Claude que no entraron a tu contexto)

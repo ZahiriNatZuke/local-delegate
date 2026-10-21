@@ -1,0 +1,9 @@
+fix(local_delegate): evitar UnicodeEncodeError en consola Windows
+
+- Reconfigura stdout y stderr con errors="replace" si usan UTF-8 estricto
+- Sustituye la flecha Unicode → por ASCII -> en mensajes de migración
+- Aplica la corrección solo en la rama CLI para no afectar el protocolo MCP
+- Previene fallos a mitad de migración al redirigir salida en Windows
+- Respeta codificaciones explícitas del entorno si están configuradas
+
+(leído server-side: 3292 chars ≈ 1482 tokens de Claude que no entraron a tu contexto)

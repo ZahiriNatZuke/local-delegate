@@ -1,0 +1,41 @@
+- Se reemplaza la flecha Unicode `→` por `->` en `_names()` para asegurar la salida en Windows con codificación cp1252.
+   - Se preserva la configuración de codificación explícita del usuario y se evita la interrupción de migraciones por caracteres no soportados.
+
+   All good. Let's verify constraints:
+   - Direct output? Yes.
+   - No tools/internet? Yes.
+   - Format: `tipo(scope): resumen` <=72 chars? `fix(encoding): tolerar salida de consola y flechas ASCII en Windows` (68) -> Yes.
+   - Blank line? Yes.
+   - Body: 2-6 bullets starting with `- `? Yes, 4 bullets.
+   - Explains what changes and why? Yes.
+   - Spanish? Yes.
+   - No extra text? Yes.
+
+   One minor check: The prompt says "primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres". I'll make sure the summary is strictly imperative. "tolerar" is imperative. Good.
+   Let's count characters exactly: `fix(encoding): tolerar salida de consola y flechas ASCII en Windows` -> 68. Under 72.
+   Body bullets:
+   - Se implementa `_tolerant_console_output()` para aplicar `errors="replace"` en `stdout` y `stderr` cuando usan UTF-8 estricto.
+   - Se ejecuta dicha función en `main()` antes de la CLI, evitando fallos de codificación al redirigir la salida en Windows.
+   - Se reemplaza la flecha Unicode `→` por `->` en `_names()` para asegurar la impresión correcta en entornos cp1252.
+   - Se preserva la configuración de codificación explícita del usuario y se evita la interrupción de migraciones por caracteres no soportados.
+
+   All constraints met. Output matches exactly. Proceeds. 
+   One thing: The prompt says "primera línea 'tipo(scope): resumen' en imperativo". I'll use `fix(cli)` or `fix(encoding)`. I'll stick with `fix(encoding)`.
+   Let's verify the exact output format.
+   ```
+   fix(encoding): tolerar salida de consola y flechas ASCII en Windows
+
+   - Se implementa `_tolerant_console_output()` para aplicar `errors="replace"` en `stdout` y `stderr` cuando usan UTF-8 estricto.
+   - Se ejecuta dicha función en `main()` antes de la CLI, evitando fallos de codificación al redirigir la salida en Windows.
+   - Se reemplaza la flecha Unicode `→` por `->` en `_names()` para asegurar la impresión correcta en entornos cp1252.
+   - Se preserva la configuración de codificación explícita del usuario y se evita la interrupción de migraciones por caracteres no soportados.
+   ```
+   Checks:
+   - Direct? Yes.
+   - No tools? Yes.
+   - Format exact? Yes.
+   - Imperative <=72? `fix(encoding): tolerar salida de consola y flechas ASCII en Windows`
+
+[local-delegate warning: salida truncada por max_tokens]
+
+(leído server-side: 3292 chars ≈ 1482 tokens de Claude que no entraron a tu contexto)

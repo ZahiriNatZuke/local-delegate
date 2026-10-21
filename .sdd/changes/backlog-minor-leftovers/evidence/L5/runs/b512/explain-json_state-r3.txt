@@ -1,0 +1,35 @@
+PID del proceso actual, lo que evita que varios procesos pisén el mismo temporal y generen datos mezclados. Luego, usa `tmp.replace(path)` para reemplazar el archivo original de forma atómica. Finalmente, intenta eliminar el temporal; si falla (común en Windows por bloqueos de antivirus), ignora silenciosamente el error para no enmascarar el éxito de la escritura. El diseño prioriza la robustez y la compatibilidad multiplataforma en entornos con procesos concurrentes.
+
+4.  **Check Constraints:**
+   - Direct from input? Yes.
+   - No tools/internet? Yes.
+   - Output EXACTLY: clear prose explanation? Yes.
+   - Max 250 words? Let's count.
+     "Este módulo gestiona la lectura y escritura segura de archivos JSON compartidos entre múltiples procesos, evitando colisiones y corrupción de datos. La función `read_json` abre el archivo especificado, parsea su contenido como JSON y verifica que sea un diccionario; en caso de error (archivo inexistente, permisos, formato inválido) devuelve un diccionario vacío. La función `write_json_atomic` implementa una escritura atómica: primero escribe los datos en un archivo temporal cuyo nombre incluye el PID del proceso actual, lo que evita que varios procesos pisén el mismo temporal y generen datos mezclados. Luego, usa `tmp.replace(path)` para reemplazar el archivo original de forma atómica. Finalmente, intenta eliminar el temporal; si falla (común en Windows por bloqueos de antivirus), ignora silenciosamente el error para no enmascarar el éxito de la escritura. El diseño prioriza la robustez y la compatibilidad multiplataforma en entornos con procesos concurrentes."
+     Word count: ~118 words. Well under 250.
+   - Nothing outside format? Yes.
+   - Spanish? Yes.
+   - Explains what it does and how? Yes.
+
+   All constraints met. I will output exactly this text. No extra greetings, no markdown formatting unless necessary (but the prompt says "prosa", so plain text is fine, but I'll keep it clean). I'll ensure it's strictly the explanation.
+
+   One minor adjustment: The prompt says "Output EXACTO: una explicación clara en prosa...". I'll just output the paragraph directly.
+
+   Final check of the text against constraints:
+   - Direct? Yes.
+   - No tools? Yes.
+   - Max 250 words? ~115.
+   - Spanish? Yes.
+   - Explains what/how? Yes.
+   - Format exact? Yes.
+
+   Ready.✅
+   Output matches the draft. 
+   Proceeds. 
+   [Output Generation] -> *Self-Correction/Verification during thought*: 
+   Wait, let's count words precisely. 
+   "Este módulo gestiona la lectura y escritura segura de archivos JSON compartidos entre múltiples procesos, evitando colisiones y corrupción de datos. La función read_json abre el archivo especificado, parsea su contenido como JSON y verifica que sea un diccionario; en caso de error devuelve un diccionario vacío. La función write_json_atomic implementa una escritura atómica: escribe los datos en un archivo temporal cuyo nombre incluye el PID del
+
+[local-delegate warning: salida truncada por max_tokens]
+
+(leído server-side: 1863 chars ≈ 917 tokens de Claude que no entraron a tu contexto)

@@ -1,0 +1,8 @@
+fix(cli): evitar UnicodeEncodeError en consola de Windows
+
+- Se añade `_tolerant_console_output()` para reconfigurar `stdout` y `stderr` con `errors="replace"` si usan UTF-8 estricto.
+- Se invoca la función en `main()` antes de ejecutar la CLI, respetando configuraciones de codificación explícitas.
+- Se reemplaza la flecha Unicode `→` por `->` en `_names()` para evitar fallos al redirigir la salida en Windows.
+- Esto previene `UnicodeEncodeError` que interrumpía migraciones y dejaba hooks sin registrar (REQ-028).
+
+(leído server-side: 3292 chars ≈ 1482 tokens de Claude que no entraron a tu contexto)

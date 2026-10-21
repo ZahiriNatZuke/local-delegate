@@ -1,0 +1,8 @@
+feat(metrics): mejorar formato de duraciones y mostrar valor exacto
+
+- Separar la función original en `fmtSecExact` y crear una nueva `fmtSec` con formato por niveles (segundos, minutos, horas). Para: ofrecer una representación legible según la magnitud del tiempo.
+- Actualizar `kpiCard` para aceptar una propiedad `exact` que se asigne al atributo `title`. Para: permitir inyectar valores precisos en los tooltips sin afectar la vista principal.
+- Pasar el resultado de `fmtSecExact` como `exact` en la tarjeta de latencia. Para: garantizar que los `title` muestren segundos exactos mientras la interfaz muestra valores redondeados.
+- Actualizar comentarios y llamadas existentes. Para: mantener la documentación alineada con la nueva lógica de formateo y mejorar la experiencia de usuario.
+
+(leído server-side: 3598 chars ≈ 1620 tokens de Claude que no entraron a tu contexto)

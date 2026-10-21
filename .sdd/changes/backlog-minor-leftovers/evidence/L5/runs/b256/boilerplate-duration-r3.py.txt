@@ -1,0 +1,42 @@
+Wait, the prompt says "Accept the units h, m and s in that order, each at most once". This implies the string can contain any subset of {h, m, s}, but if multiple are present, they must appear in h, then m, then s order. Each at most once.
+   Examples: '1h30m', '45s', '2h', '1h5m10s'
+   Invalid: '30m1h', '1h1h', '1h30m10s10m', 'abc', ''
+   Need to validate format strictly.
+
+3.  **Design Regex:**
+   - Pattern: `^(\d+)h?(\d+m?)?(\d+s)?$`
+   - Wait, this allows '1h30m10s', '1h', '30m', '10s', '1h10s' (missing m), '1h30s' (missing m). The prompt says "Accept the units h, m and s in that order, each at most once". It doesn't explicitly say all three must be present, just that if present, they are in order. But typically, duration parsers might require them to be contiguous or allow missing ones. The examples show '1h30m', '45s', '2h', '1h5m10s'. It doesn't show '1h10s'. I'll stick to allowing optional h, m, s in that order.
+   - Let's refine regex: `^(\d+)h?(\d+m?)?(\d+s)?$`
+   - Wait, this regex allows '1h30m10s' but also '1h30s' (skipping m). Is that allowed? The prompt says "Accept the units h, m and s in that order, each at most once". It doesn't forbid skipping, but usually duration formats like this imply contiguous or at least ordered. I'll assume skipping is fine, or I can make it stricter: `^(\d+)h?(\d+m?)?(\d+s)?$` is fine. Actually, to be safe, I'll use `^(\d+)h?(\d+m?)?(\d+s)?$` but ensure that if a unit is present, it's followed by the next or end.
+   - Let's test mentally: '1h30m' -> matches. '45s' -> matches. '2h' -> matches. '1h5m10s' -> matches.
+   - What about '1h30m10s'? Matches.
+   - What about '1h30'? Doesn't match (no unit). Good.
+   - What about '1h30m10s1'? Doesn't match. Good.
+   - What about '1h30m10s ' (trailing space)? Doesn't match. Good.
+   - I'll use `re.match(r'^(\d+)h?(\d+m?)?(\d+s)?$', text)`
+   - Wait, `re.match` anchors at start, but I need end anchor too. `^...$` handles it.
+   - Let's verify groups: group(1) is hours, group(2) is minutes (with 'm'), group(3) is seconds (with 's').
+   - Actually, group(2) will be like '30m' or None. I can extract digits from it.
+   - Simpler: `^(\d+)h?(\d+m?)?(\d+s)?$`
+   - Let's parse:
+     h_str = m.group(1) if m.group(1) else '0'
+     m_str = m.group(2).rstrip('m') if m.group(2) else '0'
+     s_str = m.group(3).rstrip('s') if m.group(3) else '0'
+   - Wait, what if the string is '1h30m10s'? group(1)='1', group(2)='30m', group(3)='10s'. Works.
+   - What if '1h30s'? group(1)='1', group(2)='30', group(3)='s'? No, regex `(\d+m?)?` would match '30' (m is optional), then `(\d+s)?` would match 's'? Wait, `\d+` requires at least one digit. So 's' alone wouldn't match `(\d+s)?`. So '1h30s' would fail to match because after '30', the regex expects end or 'm' or 's' with digits. Actually, `(\d+m?)?` matches '30', then `(\d+s)?` expects digits before 's'. So '1h30s' fails. That's probably fine.
+   - Let's stick to `^(\d+)h?(\d+m?)?(\d+s)?$`. It's robust.
+   - Wait, what about '1h30m10s'? Matches.
+   - What about '1h30m10s1'? Fails.
+   - What about '1h30m10s '? Fails.
+   - What about '1h30m10s10m'? Fails.
+   - I'll use `re.fullmatch(r'(\d+)h?(\d+m?)?(\d+s)?', text)` which is cleaner.
+   - Actually, `re.fullmatch` is available in Python 3.4+.
+   - Let's test `re.fullmatch(r'(\d+)h?(\d+m?)?(\d+s)?', '1h30m')` -> matches.
+   - `re.fullmatch(r'(\d+)h?(\d+m?)?(\d+s)?', '45s')` -> matches.
+   - `re.fullmatch(r'(\d+)h?(\d+m?)?(\d+s)?', '2h')` -> matches.
+   - `re.fullmatch(r'(\d+)h?(\d+m?)?(\d+s)?', '1h5m10s')` -> matches.
+   - `re.fullmatch(r'(\d+)h?(\d+m?)?(\d+s)?', '')` -> fails (requires at least one digit). Good.
+   - `re.fullmatch(r'(\d+)h?(\d+m?)?(\d+s)?', '1h30')` -> fails. Good.
+   - `re.fullmatch(r'(\d+)h?(\d+m?)?(\d+s)?', '1h30m10s1')` -> fails. Good.
+   - One edge case: '1h30m10s' -> groups: ('1', '30m', '10s')
+   - Another: '1h' -> groups: ('1', None, None)

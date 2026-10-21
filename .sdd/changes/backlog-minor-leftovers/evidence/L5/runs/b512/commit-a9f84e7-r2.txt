@@ -1,0 +1,39 @@
+Let's count characters carefully: `fix(encoding): evitar UnicodeEncodeError en consola de Windows` -> 60 chars. Under 72. Imperative: "evitar". Good.
+
+3.  **Draft Body (2-6 bullet points, Spanish, explaining what & why):**
+   Need to cover:
+   - Added `_tolerant_console_output()` to reconfigure stdout/stderr with `errors="replace"` when UTF-8 strict is detected.
+   - Called it in `main()` before running the CLI.
+   - Replaced Unicode arrow `→` with ASCII `->` in `_names()` to prevent encoding failures during redirection.
+   - Reason: Windows defaults to cp1252 with strict errors, causing crashes on redirected output/scripts.
+   - Reference REQ-028.
+
+   Let's format as bullet points:
+   - Se añade `_tolerant_console_output()` para reconfigurar `stdout` y `stderr` con `errors="replace"` si detecta UTF-8 estricto.
+   - Se invoca la función en `main()` antes de ejecutar el CLI para proteger la salida.
+   - Se cambia la flecha Unicode `→` por `->` en `_names()` para evitar fallos al redirigir la salida.
+   - Previene `UnicodeEncodeError` en Windows cuando se ejecuta en scripts o tareas programadas con redirección.
+   - Cumple con el requisito REQ-028 de robustez ante codificaciones del sistema.
+
+   Check constraints: 2-6 bullets? Yes, 5. Explains what changes and why? Yes. In Spanish? Yes. Imperative/consistent? Yes.
+
+4.  **Refine & Check Constraints:**
+   - Format: `tipo(scope): resumen` \n\n `- `...
+   - First line: `fix(encoding): evitar UnicodeEncodeError en consola de Windows` (60 chars) -> <=72, imperative.
+   - Blank line.
+   - Body: 5 bullets.
+   - Language: Spanish.
+   - No extra text.
+   - Check diff details: The diff shows `import codecs`, `_tolerant_console_output()`, call in `main()`, and `→` to `->` in `install.py`. All covered.
+   - One minor thing: Conventional commits usually prefer lowercase type/scope, but uppercase is fine. I'll stick to `fix(encoding): ...`.
+   - Let's count characters exactly: `fix(encoding): evitar UnicodeEncodeError en consola de Windows` -> 60. Good.
+   - Bullets:
+     - Se añade `_tolerant_console_output()` para reconfigurar `stdout` y `stderr` con `errors="replace"` si detecta UTF-8 estricto.
+     - Se invoca la función en `main()` antes de ejecutar el CLI para proteger la salida.
+     - Se cambia la flecha Unicode `→` por `->` en `_names()` para evitar fallos al redirigir la salida.
+     - Previene `UnicodeEncodeError` en Windows cuando se ejecuta en scripts o tareas programadas con redirección.
+     - Cumple con el requisito REQ-028 de robust
+
+[local-delegate warning: salida truncada por max_tokens]
+
+(leído server-side: 3292 chars ≈ 1482 tokens de Claude que no entraron a tu contexto)

@@ -1,0 +1,24 @@
+- `read_json`: Reads JSON, returns dict or empty dict on failure.
+   - `write_json_atomic`: Writes to a PID-specific temp file, then atomically renames it to the target path. Handles Windows antivirus locks by ignoring cleanup errors.
+   - How it works: PID ensures unique temp files, preventing race conditions. `replace()` is atomic on most OS. Error swallowing in `finally` prevents masking real errors and handles Windows file locks gracefully.
+
+3.  **Draft Explanation (Mental Refinement - Spanish):**
+   Este módulo gestiona archivos JSON compartidos entre múltiples procesos de forma segura. La función `read_json` lee un archivo JSON y devuelve su contenido como diccionario; si el archivo no existe, está corrupto o ocurre un error de sistema, retorna un diccionario vacío para evitar interrupciones. La función `write_json_atomic` realiza escrituras atómicas para evitar que procesos concurrentes sobrescriban o mezclen datos. Para ello, escribe primero en un archivo temporal cuyo nombre incluye el PID del proceso actual, garantizando unicidad y evitando colisiones. Una vez escrito, usa `replace()` para renombrar el temporal al archivo objetivo, operación atómica que asegura la integridad. El bloque `finally` intenta eliminar el temporal, pero ignora silenciosamente los errores de eliminación (comunes en Windows por bloqueos de antivirus), priorizando que no se enmascaren excepciones reales y evitando fallos en cascada. En conjunto, el código implementa un patrón robusto de I/O concurrente, aprendido mediante pruebas prácticas, que equilibra seguridad, compatibilidad multiplataforma y resiliencia ante bloqueos externos.
+
+4.  **Check Constraints:**
+   - Direct from input? Yes.
+   - No tools/internet? Yes.
+   - Output EXACTLY: clear prose explanation? Yes.
+   - Max 250 words? Let's count.
+     "Este módulo gestiona archivos JSON compartidos entre múltiples procesos de forma segura. La función `read_json` lee un archivo JSON y devuelve su contenido como diccionario; si el archivo no existe, está corrupto o ocurre un error de sistema, retorna un diccionario vacío para evitar interrupciones. La función `write_json_atomic` realiza escrituras atómicas para evitar que procesos concurrentes sobrescriban o mezclen datos. Para ello, escribe primero en un archivo temporal cuyo nombre incluye el PID del proceso actual, garantizando unicidad y evitando colisiones. Una vez escrito, usa `replace()` para renombrar el temporal al archivo objetivo, operación atómica que asegura la integridad. El bloque `finally` intenta eliminar el temporal, pero ignora silenciosamente los errores de eliminación (comunes en Windows por bloqueos de antivirus), priorizando que no se enmascaren excepciones reales y evitando fallos en cascada. En conjunto, el código implementa un patrón robusto de I/O concurrente, aprendido mediante pruebas prácticas, que equilibra seguridad, compatibilidad multiplataforma y resiliencia ante bloqueos externos."
+     Word count: ~118 words. Well under 250.
+   - Nothing outside format? Yes.
+   - Spanish? Yes.
+   - Explains what it does and how? Yes.
+
+   All constraints met. Ready.✅
+   Output matches
+
+[local-delegate warning: salida truncada por max_tokens]
+
+(leído server-side: 1863 chars ≈ 917 tokens de Claude que no entraron a tu contexto)

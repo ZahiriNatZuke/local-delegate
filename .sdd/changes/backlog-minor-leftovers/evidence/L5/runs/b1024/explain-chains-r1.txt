@@ -1,0 +1,9 @@
+Wait, I need to count words carefully.
+   Let's count the draft:
+   Este(1) módulo(2) gestiona(3) cadenas(4) de(5) respaldo(6) para(7) roles(8) de(9) modelos(10) de(11) IA(12) (code,(13) long,(14) mechanical).(15) Cuando(16) el(17) modelo(18) principal(19) falla,(20) el(21) sistema(22) salta(23) secuencialmente(24) a(25) los(26) pasos(27) definidos(28) en(29) la(30) cadena(31) correspondiente.(32) La(33) resolución(34) es(35) dinámica(36) y(37) se(38) basa(39) en(40) la(41) configuración(42) vigente.(43)
+   El(44) código(45) define(46) constantes(47) para(48) roles(49) válidos,(50) el(51) paso(52) especial(53) LOADED(54) (que(55) se(56) resuelve(57) en(58) tiempo(59) real(60) mediante(61) un(62) proveedor(63) registrado)(64) y(65) cadenas(66) por(67) defecto.(68) La(69) función(70) resolve(role)(71) parsea(72) la(73) configuración,(74) valida(75) cada(76) paso,(77) filtra(78) el(79) modelo(80) principal(81) y(82) duplicados,(83) y(84) mapea(85) sinónimos(86) obsoletos.(87) Los(88) pasos(89) inválidos(90) se(91) ignoran(92) y(93) registran.(94) La(95) clase(96) Chain(97) almacena(98) el(99) resultado,(100) separando(101) pasos(102) válidos,(103) ignorados(104) y(105) obsoletos.(106)
+   El(107) paso(108) LOADED(109) no(110) se(111) resuelve(112) al(113) definir(114) la(115) cadena,(116) sino(117) al(118) saltar,(119) gracias(120) a(121) loaded_members,(122) que(123) consulta(124)
+
+[local-delegate warning: salida truncada por max_tokens]
+
+(leído server-side: 7881 chars ≈ 3882 tokens de Claude que no entraron a tu contexto)

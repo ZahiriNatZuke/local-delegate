@@ -1,0 +1,9 @@
+fix(cli): evitar UnicodeEncodeError en salida de consola
+
+- Se implementa `_tolerant_console_output()` para aplicar `errors="replace"` en `stdout` y `stderr` cuando usan UTF-8 estricto.
+- Se ejecuta dicha función en `main()` antes de llamar a la CLI, sin afectar el canal del protocolo MCP.
+- Se reemplaza el carácter Unicode `→` por `->` en `_names()` para garantizar compatibilidad con redirecciones.
+- Se evita el `UnicodeEncodeError` que rompía migraciones y hooks en Windows con codificación cp1252.
+- Se satisface el requisito REQ-028 de manejo tolerante de la codificación de consola.
+
+(leído server-side: 3292 chars ≈ 1482 tokens de Claude que no entraron a tu contexto)

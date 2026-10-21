@@ -1,0 +1,7 @@
+Este módulo gestiona las cadenas de respaldo para roles de texto (mecánico, largo, código), permitiendo saltar a modelos alternativos si falla el principal. Define estructuras de datos (`Chain`) que almacenan los pasos de recuperación, priorizando el paso especial `loaded` (modelos ya cargados) y evitando duplicados o el modelo fallido.
+
+La resolución es dinámica: `resolve()` lee la configuración actual para construir la cadena válida, ignorando valores inválidos o obsoletos (como "residente") y notificando errores vía `doctor`. El paso `loaded` se resuelve en tiempo real mediante `loaded_members()`, que consulta un proveedor registrado para obtener los modelos activos, excluyendo el que falló. Si no hay proveedor (bloque B inactivo), `loaded` devuelve vacío, simplificando las cadenas a saltos directos entre modelos estáticos.
+
+El código también maneja la visibilidad del estado mediante `describe()` y `residents_text()`, integrando información sobre residentes (modelos con TTL cero) y el estado del respaldo en los informes locales. Ignora roles no válidos o configuraciones desactivadas, asegurando que solo se procesen cadenas coherentes con el catálogo de modelos permitido.
+
+(leído server-side: 7881 chars ≈ 3882 tokens de Claude que no entraron a tu contexto)

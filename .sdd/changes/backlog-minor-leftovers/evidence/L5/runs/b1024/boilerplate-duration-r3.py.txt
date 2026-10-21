@@ -1,0 +1,76 @@
+import re
+
+def parse_duration(text: str) -> int:
+    """
+    Parse a duration string like '1h30m', '45s', '2h', or '1h5m10s' into seconds.
+    
+    Accepts units h, m, and s in that specific order, each at most once.
+    Raises ValueError on empty input or invalid format.
+    """
+    if not text:
+        raise ValueError("Input cannot be empty")
+    
+    match = re.fullmatch(r'(\d+)h?(\d+m?)?(\d+s)?', text)
+    if not match:
+        raise ValueError(f"Invalid duration format: {text!r}")
+    
+    h_str, m_part, s_part = match.groups()
+    
+    h = int(h_str) if h_str else 0
+    m = int(m_part[:-1]) if m_part and m_part[-1] == 'm' else (int(m_part) if m_part else 0)
+    s = int(s_part[:-1]) if s_part and s_part[-1] == 's' else (int(s_part) if s_part else 0)
+    
+    return h * 3600 + m * 60 + s
+```
+
+Wait, let's test the regex logic mentally:
+- `1h30m10s` -> groups: ('1', '30m', '10s') -> h=1, m=30, s=10. Correct.
+- `1h30m` -> groups: ('1', '30m', None) -> h=1, m=30, s=0. Correct.
+- `1h` -> groups: ('1', None, None) -> h=1, m=0, s=0. Correct.
+- `30m` -> groups: (None, '30m', None) -> h=0, m=30, s=0. Correct.
+- `30m10s` -> groups: (None, '30m', '10s') -> h=0, m=30, s=10. Correct.
+- `10s` -> groups: (None, None, '10s') -> h=0, m=0, s=10. Correct.
+- `1h1m1m` -> regex fails because `(\d+m?)?` matches `1m`, then `(\d+s)?` expects optional s, but there's `1m` left. `fullmatch` will fail. Correct.
+- `1m1h` -> regex fails because h must come before m. Correct.
+- `1h30` -> regex fails because `30` has no unit. Correct.
+- `1h30m10` -> regex fails. Correct.
+- `0h0m0s` -> groups: ('0', '0m', '0s') -> h=0, m=0, s=0. Returns 0. Is that allowed? The prompt says "each at most once", doesn't forbid 0. Usually fine. If they want strictly positive, it doesn't say. I'll keep it.
+- What about `1h30m10s` with extra spaces? `fullmatch` handles exact string. Prompt says "such as '1h30m'...", implies no spaces. I'll stick to exact match.
+- Wait, `m_part[:-1]` when `m_part` is just `'m'`? The regex is `(\d+m?)?`, so it requires at least one digit before optional 'm'. So `m_part` will be like `'30m'` or `'30'`. It won't be just `'m'`. So `m_part[:-1]` is safe.
+- Actually, `m_part` could be `'30'` (if no m). Then `m_part[-1] == 'm'` is False, so it goes to `int(m_part)`. Correct.
+- Same for `s_part`.
+- Let's double check `m_part[:-1]` when `m_part` is `'30m'` -> `'30'`. `int('30')` -> 30. Correct.
+- What if `m_part` is `'0m'`? -> `'0'`. Correct.
+- The logic seems solid.
+
+One minor thing: `re.fullmatch` is available in Python 3.4+. Standard library only, fine.
+Type hints: `text: str) -> int:` included.
+Docstring: included.
+Raises ValueError: included.
+Order enforced: yes.
+Each at most once: yes, regex structure enforces exactly one h block, one m block, one s block, each optional but in order.
+Empty input: checked explicitly.
+
+Let's test edge case: `1h30m10s` -> works.
+`1h` -> works.
+`30m` -> works.
+`10s` -> works.
+`1h30m10s` -> works.
+`1h30m10s` with trailing char -> fails.
+`1h30m10s` with leading char -> fails.
+`1h30m10s` with `1h30m10s` -> works.
+What about `1h30m10s` where numbers are 0? `0h0m0s` -> returns 0. Acceptable.
+What about `1h30m10s` where only one unit is present? `1h` -> returns 3600. Correct.
+
+Wait, is there any case where `m_part` is just `'m'`? The regex `(\d+m?)?` requires `\d+` before `m?`, so at least one digit. So `m_part` will never be just `'m'`. Safe.
+
+One detail: `m_part[:-1]` when `m_part` is `'30m'` gives `'30'`. If `m_part` is `'30'`, it goes to `int(m_part)`. Correct.
+But what if `m_part` is `'30m'` and I do `m_part[:-1]`, it's `'30'`. Correct.
+What if `m_part` is `'30'`? `m_part[-1] == 'm'` is False, so `int(m_part)` -> 30. Correct.
+
+Wait, `m_part` could be `'30m'`, `m_part[:-1]` is `'30'`.
+But what if `m_part` is `'30'`? `int(m_part)` is 30.
+All good.
+
+Let's consider if the prompt implies that if a unit is present, it must have a number. Yes, "1h30m" implies numbers.
+The

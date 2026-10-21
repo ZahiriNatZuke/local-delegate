@@ -1,0 +1,87 @@
+import re
+
+def parse_duration(text: str) -> int:
+    """
+    Parse a duration string like '1h30m', '45s', '2h', or '1h5m10s' into seconds.
+    
+    Accepts units h, m, and s in that order, each at most once.
+    Raises ValueError on empty input or invalid format.
+    """
+    if not text:
+        raise ValueError("Input cannot be empty")
+    
+    match = re.fullmatch(r'(\d+)h?(\d+m)?(\d+s)?', text)
+    if not match:
+        raise ValueError(f"Invalid duration format: {text!r}")
+        
+    hours, minutes, seconds = match.groups()
+    
+    # Ensure at least one unit is present
+    if not any([hours, minutes, seconds]):
+        raise ValueError(f"Invalid duration format: {text!r}")
+        
+    return int(hours or 0) * 3600 + int(minutes or 0) * 60 + int(seconds or 0)
+```
+Wait, the prompt says "NO uses herramientas, NO busques en internet. Output EXACTO: solo código python válido, sin explicaciones ni ```. Nada fuera del formato."
+I must output ONLY the code, without markdown backticks.
+Let's verify the regex: `r'(\d+)h?(\d+m)?(\d+s)?'`
+Does it match '1h30m'? Yes.
+Does it match '45s'? Yes.
+Does it match '2h'? Yes.
+Does it match '1h5m10s'? Yes.
+Does it match '1h30m10s'? Yes.
+Does it match '1h30m10s1h'? No.
+Does it match '123'? Yes, but `any([hours, minutes, seconds])` catches it because all are '123', 'None', 'None' -> `any(['123', None, None])` is True. Wait, `hours` would be '123', so it passes. But '123' has no units. The prompt says "Accept the units h, m and s in that order". It implies at least one unit should be present. I'll adjust the regex to require at least one unit: `r'(\d+h)?(\d+m)?(\d+s)?'` and ensure at least one group matched. Actually, `r'(\d+h)?(\d+m)?(\d+s)?'` won't match '123'. Let's use `r'(\d+h)?(\d+m)?(\d+s)?'` and check `if not any(match.groups()): raise ValueError(...)`.
+Wait, `re.fullmatch(r'(\d+h)?(\d+m)?(\d+s)?', text)` will match empty string. I already check `if not text:`.
+Let's test mentally:
+text = '1h30m' -> groups: ('1h', '30m', None) -> any is True.
+text = '45s' -> groups: (None, None, '45s') -> any is True.
+text = '2h' -> groups: ('2h', None, None) -> any is True.
+text = '1h5m10s' -> groups: ('1h', '5m', '10s') -> any is True.
+text = '123' -> groups: (None, None, None) -> any is False -> raises ValueError. Good.
+text = '' -> caught by `if not text:`.
+text = '1h30m10s' -> matches.
+What about leading zeros? `\d+` allows them. That's fine.
+What about '0h'? It matches. Is that allowed? The prompt doesn't forbid it. I'll keep it.
+One minor thing: `match.groups()` returns strings or None. `any()` on strings works because non-empty strings are truthy.
+So `if not any(match.groups()):` works.
+
+Let's refine the code to be strictly compliant:
+```python
+import re
+
+def parse_duration(text: str) -> int:
+    """
+    Parse a duration string like '1h30m', '45s', '2h', or '1h5m10s' into seconds.
+    
+    Accepts units h, m, and s in that order, each at most once.
+    Raises ValueError on empty input or invalid format.
+    """
+    if not text:
+        raise ValueError("Input cannot be empty")
+        
+    match = re.fullmatch(r'(\d+h)?(\d+m)?(\d+s)?', text)
+    if not match or not any(match.groups()):
+        raise ValueError(f"Invalid duration format: {text!r}")
+        
+    hours, minutes, seconds = match.groups()
+    return int(hours.rstrip('h') or 0) * 3600 + int(minutes.rstrip('m') or 0) * 60 + int(seconds.rstrip('s') or 0)
+```
+Wait, `hours.rstrip('h')` works but is a bit hacky. Better to extract digits directly or use a different regex: `r'(\d+)h?(\d+m)?(\d+s)?'` but that allows '123'. I'll stick to `r'(\d+)h?(\d+m)?(\d+s)?'` and check if at least one unit is present by checking if 'h', 'm', or 's' is in text? No.
+Actually, `r'(\d+)h?(\d+m)?(\d+s)?'` matches '123'. I'll just use `r'(\d+)h?(\d+m)?(\d+s)?'` and verify that the string contains at least one of 'h', 'm', 's'. Or simpler: `r'(\d+)h?(\d+m)?(\d+s)?'` and `if not any(c in text for c in 'hms'): raise ValueError(...)`. But that's messy.
+Let's stick to `r'(\d+h)?(\d+m)?(\d+s)?'`. It's clean.
+Wait, `hours.rstrip('h')` might fail if hours is None. `hours or 0` handles None, but `None.rstrip` fails. So:
+`int(hours[:-1] if hours else 0)`
+Or just:
+`h_val = int(hours[:-1]) if hours else 0`
+`m_val = int(minutes[:-1]) if minutes else 0`
+`s_val = int(seconds[:-1]) if seconds else 0`
+That's safer.
+
+Let's rewrite carefully:
+```python
+import re
+
+def parse_duration(text: str) -> int:
+    """
+    Parse a duration string like '1h30m', '45s', '2h', or '1h5m10s' into seconds.

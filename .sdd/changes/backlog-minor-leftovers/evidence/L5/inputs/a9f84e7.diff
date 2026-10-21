@@ -1,0 +1,76 @@
+
+
+
+diff --git a/src/local_delegate/entrypoint.py b/src/local_delegate/entrypoint.py
+index 8273283..bf91b2e 100644
+--- a/src/local_delegate/entrypoint.py
++++ b/src/local_delegate/entrypoint.py
+@@ -17,6 +17,7 @@ El import de `cli` sigue siendo diferido, pero ahora por la razón que siempre d
+ 
+ from __future__ import annotations
+ 
++import codecs
+ import sys
+ 
+ from . import autostart, config, i18n, server
+@@ -44,6 +45,32 @@ def _interactive_terminal_warning() -> None:
+     print(i18n.t("cli.entrypoint.interactive"), file=sys.stderr)
+ 
+ 
++def _tolerant_console_output() -> None:
++    """Que ningún texto pueda tumbar un subcomando por la codificación de la consola (REQ-028).
++
++    Con la salida redirigida a un fichero o a una tubería, Windows le da a Python la codificación
++    del sistema (cp1252) con la política de errores estricta: un solo carácter fuera de ella —una
++    flecha «→» en la descripción de la migración— lanzaba ``UnicodeEncodeError`` a mitad de
++    ``update``, con la migración a medias y los hooks sin registrar. Es justo como lo lanzan Claude
++    Code, un script o la tarea programada. Con ``errors="replace"`` ese carácter sale como ``?``.
++
++    Solo se toca un flujo de texto que no sea UTF-8 y que tenga la política por defecto: si quien
++    lo lanza eligió otra (``PYTHONIOENCODING=cp1252:backslashreplace``), se respeta. Solo se llama
++    en la rama de la CLI: sin argumentos stdout es el canal del protocolo MCP y no se toca.
++    """
++    for stream in (sys.stdout, sys.stderr):
++        encoding = getattr(stream, "encoding", None)
++        reconfigure = getattr(stream, "reconfigure", None)
++        if not isinstance(encoding, str) or reconfigure is None:
++            continue
++        try:
++            if codecs.lookup(encoding).name == "utf-8" or stream.errors != "strict":
++                continue
++            reconfigure(errors="replace")
++        except (LookupError, AttributeError, ValueError, OSError):
++            continue  # un flujo raro o ya cerrado: se queda como estaba
++
++
+ def main() -> None:
+     """Punto de entrada del binario (usado por [project.scripts] local-delegate).
+ 
+@@ -61,6 +88,8 @@ def main() -> None:
+     if len(sys.argv) > 1:
+         from . import cli
+ 
++        _tolerant_console_output()
++
+         sys.exit(cli.run(sys.argv[1:]))
+ 
+     _interactive_terminal_warning()
+diff --git a/src/local_delegate/install.py b/src/local_delegate/install.py
+index f40995f..84059bd 100644
+--- a/src/local_delegate/install.py
++++ b/src/local_delegate/install.py
+@@ -1867,8 +1867,12 @@ def retired_names_to_migrate(home: Path) -> tuple[deprecations.DeprecatedName, .
+ 
+ 
+ def _names(entries: Sequence[deprecations.DeprecatedName]) -> str:
+-    """`VIEJO → NUEVO, …`: solo nombres, nunca valores (el `env` puede llevar claves, REQ-017)."""
+-    return ", ".join(f"{e.old} → {e.new}" for e in entries)
++    """`VIEJO -> NUEVO, …`: solo nombres, nunca valores (el `env` puede llevar claves, REQ-017).
++
++    Flecha ASCII a propósito: con la salida redirigida en Windows (cp1252) una «→» no se puede
++    escribir, y esta línea la imprime `update` lanzado por un script (REQ-028).
++    """
++    return ", ".join(f"{e.old} -> {e.new}" for e in entries)
+ 
+ 
+ def _retired_names_backup(path: Path, raw: bytes, stamp: str) -> Path:

@@ -392,10 +392,11 @@ roles.
 ### Razonamiento
 
 El razonamiento se enciende con `enable_thinking` **y** un `reasoning_budget_tokens` en el mismo
-rol. Primero el presupuesto, luego el interruptor:
+rol. Primero el presupuesto, luego el interruptor (para `code` con Qwen3.6, no menos de 4096: ver
+[Presupuesto mínimo para el rol `code`](#presupuesto-mínimo-para-el-rol-code)):
 
 ```bash
-local-delegate backend-params set code reasoning_budget_tokens 512
+local-delegate backend-params set code reasoning_budget_tokens 4096
 local-delegate backend-params set code enable_thinking on
 ```
 
@@ -445,6 +446,41 @@ etiquetas `<think>`. Con un presupuesto pequeño pasa además que la respuesta s
 en vivo, Qwen3.6 en el rol `code` con 256 tokens gastó el presupuesto, siguió razonando dentro de la
 respuesta y llegó a `max_tokens` (`finish_reason: length`). Si das al rol `code` un presupuesto
 bajo, comprueba en el log que sus eventos no salen con `truncated_out: true`; si salen, súbelo.
+
+#### Presupuesto mínimo para el rol `code`
+
+*Medido el 2026-10-21* con `qwen36-35b-a3b` (Qwen3.6, llama.cpp b10909, `--ctx-size 16384`),
+llama-swap v255 y local-delegate 0.38.0, contra el daemon real: las tres tools del rol
+(`local_explain_code`, `local_commit_msg`, `local_boilerplate`) sobre cinco entradas del propio
+repo, tres repeticiones por celda. Una llamada cuenta como válida si el log dice `finish_reason:
+stop` sin `truncated_out` **y** pasa un control objetivo (commit con primera línea convencional, el
+código generado se analiza sin error, la explicación nombra funciones del fichero, sin razonamiento
+colado en la respuesta). Criterio fijado antes de medir: el mínimo es el menor presupuesto con las
+15 llamadas válidas.
+
+| Presupuesto | Válidas | Truncadas | Latencia mediana | Latencia máxima |
+| --- | --- | --- | --- | --- |
+| sin razonamiento | 15/15 | 0 | 8 s | 28 s |
+| 256 | 8/15 | 6 | 15 s | 39 s |
+| 512 | 8/15 | 6 | 19 s | 43 s |
+| 1024 | 5/15 | 10 | 37 s | 54 s |
+| 2048 | 14/15 | 1 | 48 s | 75 s |
+| 4096 | 15/15 | 0 | 53 s | 91 s |
+
+- **Mínimo recomendable: 4096.** Por debajo, Qwen gasta el presupuesto, sigue razonando dentro de
+  la respuesta visible (a veces con un `</think>` suelto o frases como «Let's count characters…») y
+  se come el tope: la respuesta sale cortada o no sirve. Subir de 256 a 1024 **no** mejora; 2048
+  casi llega (falló una de tres en `local_boilerplate`).
+- **Sin razonamiento, las 15 fueron válidas y unas 6 veces más rápidas.** Para estas tools el
+  razonamiento no aportó nada medible con este modelo: si no lo necesitas, deja `code` sin
+  `enable_thinking`. Si lo enciendes, ponle 4096 y cuenta con unos 50 s por llamada.
+- 4096 cabe en los 16384 de contexto de ese modelo con los topes por defecto (`set` no avisa),
+  pero con entradas cercanas al tope del rol (20000 caracteres) la comprobación por llamada puede
+  mandar esa llamada sin razonamiento (`reasoning_skipped: "context"` en el log).
+- Las cifras son de una sola PC y una tanda; el control objetivo no juzga si la explicación o el
+  mensaje son buenos, solo si están completos y en forma.
+- Con otro modelo o versión de llama.cpp el mínimo puede cambiar: repite la medición con el script
+  de la evidencia (`.sdd/changes/backlog-minor-leftovers/evidence/L5/run_budget.py` en el repo).
 
 ### Dónde se aplica y cuándo cambia
 

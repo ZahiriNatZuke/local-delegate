@@ -1,0 +1,9 @@
+fix(cli): evitar UnicodeEncodeError al redirigir salida en Windows
+
+- Añadir `_tolerant_console_output()` para reconfigurar `stdout`/`stderr` con `errors="replace"` y prevenir fallos por codificación estricta.
+- Llamar a la función en `main()` antes de ejecutar la CLI para evitar `UnicodeEncodeError` al redirigir la salida a tuberías o archivos.
+- Cambiar `→` por `->` en `_names()` para asegurar que los mensajes de migración se impriman correctamente en consolas Windows cp1252.
+- Importar `codecs` para validar nombres de codificación de forma segura sin interrumpir flujos de entrada/salida existentes.
+- Garantizar el cumplimiento de REQ-028 y mantener la integridad de las migraciones y hooks en entornos automatizados o programados.
+
+(leído server-side: 3292 chars ≈ 1482 tokens de Claude que no entraron a tu contexto)

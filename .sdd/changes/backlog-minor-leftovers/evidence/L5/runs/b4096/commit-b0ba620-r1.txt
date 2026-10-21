@@ -1,0 +1,9 @@
+feat(metrics): mejora formato de latencia y duración en tarjetas
+
+- Se añade `fmtSecExact` para devolver el valor preciso y guardarlo en el atributo `title`.
+- Se reescribe `fmtSec` para mostrar duraciones escalonadas (segundos, minutos, horas) según la magnitud.
+- Se ajusta el redondeo en cada escala para evitar valores como «60,0 s» o «60 min» poco claros.
+- Se actualiza `kpiCard` para aceptar la propiedad `exact` y priorizarla sobre el valor compactado.
+- Se modifica la tarjeta de latencia para pasar el tiempo exacto y mejorar la legibilidad en el panel.
+
+(leído server-side: 3598 chars ≈ 1620 tokens de Claude que no entraron a tu contexto)
