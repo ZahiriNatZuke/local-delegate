@@ -584,21 +584,27 @@ def cmd_backend_params(args: argparse.Namespace) -> int:
 
 
 def _add_backend_params_parser(sub) -> None:
+    from . import backend_params as bp
+
+    # `completion_values` only feeds the completion scripts (REQ-005); without `choices=`, an
+    # unknown role or key keeps its catalog message instead of an argparse error.
+    roles = tuple(bp.ROLES)
+    keys = tuple(bp.ALLOWED_KEYS)
     bp_parser = sub.add_parser("backend-params", help=t("cli.help.backend_params"))
     commands = bp_parser.add_subparsers(dest="backend_params_command", required=True)
     show = commands.add_parser("show", help=t("cli.help.backend_params.show"))
     show.add_argument("--json", action="store_true", help=t("cli.help.json"))
     set_ = commands.add_parser("set", help=t("cli.help.backend_params.set"))
-    set_.add_argument("role", help=t("cli.help.backend_params.role"))
-    set_.add_argument("key", help=t("cli.help.backend_params.key"))
+    set_.add_argument("role", help=t("cli.help.backend_params.role")).completion_values = roles
+    set_.add_argument("key", help=t("cli.help.backend_params.key")).completion_values = keys
     set_.add_argument("value", help=t("cli.help.backend_params.value"))
     unset = commands.add_parser("unset", help=t("cli.help.backend_params.unset"))
-    unset.add_argument("role", help=t("cli.help.backend_params.role"))
-    unset.add_argument("key", help=t("cli.help.backend_params.key"))
+    unset.add_argument("role", help=t("cli.help.backend_params.role")).completion_values = roles
+    unset.add_argument("key", help=t("cli.help.backend_params.key")).completion_values = keys
     reset = commands.add_parser("reset", help=t("cli.help.backend_params.reset"))
     reset.add_argument(
         "role", nargs="?", default=None, help=t("cli.help.backend_params.reset.role")
-    )
+    ).completion_values = roles
     bp_parser.set_defaults(func=cmd_backend_params)
 
 
