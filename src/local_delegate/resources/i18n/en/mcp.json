@@ -110,7 +110,7 @@
   "mcp.status.cooldown.on": "Cooldown: on ({failures} failures in a row, {seconds} s, cap {cap} s)",
   "mcp.status.cooldown.times_many": "{n} times in a row",
   "mcp.status.cooldown.times_one": "once",
-  "mcp.status.deprecated": "Deprecated names read by this process:",
+  "mcp.status.deprecated": "Retired names set in this process's environment (no effect):",
   "mcp.status.group.exclusive": "exclusive",
   "mcp.status.group.no_swap": "no swap",
   "mcp.status.group.none": "no group",

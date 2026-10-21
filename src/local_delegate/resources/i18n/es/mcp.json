@@ -110,7 +110,7 @@
   "mcp.status.cooldown.on": "Enfriamiento: encendido ({failures} fallos seguidos, {seconds} s, tope {cap} s)",
   "mcp.status.cooldown.times_many": "{n} veces seguidas",
   "mcp.status.cooldown.times_one": "1 vez seguida",
-  "mcp.status.deprecated": "Nombres obsoletos leídos por este proceso:",
+  "mcp.status.deprecated": "Nombres retirados puestos en el entorno de este proceso (sin efecto):",
   "mcp.status.group.exclusive": "exclusivo",
   "mcp.status.group.no_swap": "sin swap",
   "mcp.status.group.none": "ningún grupo",

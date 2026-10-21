@@ -1,8 +1,8 @@
-"""Nombres renombrados del entorno, con su alias viejo (SDD english-names, ola A1).
+"""Nombres renombrados del entorno, con su alias viejo en los hooks instalados (SDD english-names).
 
-REQ-002: las cuatro variables, con el nombre viejo vivo en el paquete y en los hooks instalados.
-REQ-003: `local_status` dice los nombres viejos que leyó el proceso servidor. La parte del CLI
-está en `tests/test_retired_cli_names.py` (SDD retire-legacy-aliases, L3).
+REQ-002: las variables del bloqueo, con el nombre viejo vivo en los hooks instalados (se retira en
+el lote L5 de retire-legacy-aliases). La parte del CLI está en `tests/test_retired_cli_names.py` y
+la del paquete y `local_status` en `tests/test_retired_env_names.py`.
 """
 
 from __future__ import annotations
@@ -16,84 +16,12 @@ from pathlib import Path
 import pytest
 from test_install import _install
 
-from local_delegate import config, server
-
 RENAMED_ENV = (
     ("LD_HOOK_READ_BLOCK", "LD_HOOK_READ_BLOQUEAR"),
     ("LD_HOOK_READ_SWITCH_FILE", "LD_HOOK_READ_INTERRUPTOR"),
     ("LOCAL_DELEGATE_STRUCTURED_SUMMARY", "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO"),
     ("LOCAL_DELEGATE_COST_FALLBACK", "LOCAL_DELEGATE_COSTE_RESPALDO"),
 )
-
-
-# --- REQ-002: variables en el paquete --------------------------------------------------------
-
-_PRINT_CONFIG = (
-    "from local_delegate import config; "
-    "print(config.HOOK_READ_BLOCK, config.HOOK_READ_SWITCH_FILE, config.STRUCTURED_SUMMARY, "
-    "config.COST_FALLBACK, sorted(config.DEPRECATED_SEEN), sep='|')"
-)
-
-
-def _config_in_subprocess(variables: dict[str, str]) -> list[str]:
-    names = {n for pair in RENAMED_ENV for n in pair}
-    env = {k: v for k, v in os.environ.items() if k not in names}
-    env.update(variables)
-    out = subprocess.run(
-        [sys.executable, "-c", _PRINT_CONFIG],
-        capture_output=True,
-        text=True,
-        env=env,
-        check=True,
-    )
-    return out.stdout.strip().split("|")
-
-
-def test_package_reads_the_old_names_alone():
-    values = _config_in_subprocess(
-        {
-            "LD_HOOK_READ_BLOQUEAR": "1",
-            "LD_HOOK_READ_INTERRUPTOR": "old.flag",
-            "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO": "1",
-            "LOCAL_DELEGATE_COSTE_RESPALDO": "claude-haiku-4-5",
-        }
-    )
-    assert values[:4] == ["True", "old.flag", "True", "claude-haiku-4-5"]
-    assert values[4] == repr(sorted(old for _new, old in RENAMED_ENV))
-
-
-def test_package_reads_the_new_names_without_deprecation():
-    values = _config_in_subprocess(
-        {
-            "LD_HOOK_READ_BLOCK": "1",
-            "LD_HOOK_READ_SWITCH_FILE": "new.flag",
-            "LOCAL_DELEGATE_STRUCTURED_SUMMARY": "1",
-            "LOCAL_DELEGATE_COST_FALLBACK": "claude-opus-5:main",
-        }
-    )
-    assert values == ["True", "new.flag", "True", "claude-opus-5:main", "[]"]
-
-
-def test_package_prefers_the_new_name_when_both_are_set():
-    values = _config_in_subprocess(
-        {
-            "LD_HOOK_READ_BLOCK": "0",
-            "LD_HOOK_READ_BLOQUEAR": "1",
-            "LD_HOOK_READ_SWITCH_FILE": "new.flag",
-            "LD_HOOK_READ_INTERRUPTOR": "old.flag",
-            "LOCAL_DELEGATE_STRUCTURED_SUMMARY": "0",
-            "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO": "1",
-            "LOCAL_DELEGATE_COST_FALLBACK": "nuevo",
-            "LOCAL_DELEGATE_COSTE_RESPALDO": "viejo",
-        }
-    )
-    assert values == ["False", "new.flag", "False", "nuevo", "[]"]
-
-
-def test_both_names_are_in_the_isolated_inventory():
-    for new, old in RENAMED_ENV:
-        assert new in config.ENVIRONMENT_VARIABLES, new
-        assert old in config.ENVIRONMENT_VARIABLES, old
 
 
 # --- REQ-002: variables en un hook instalado -------------------------------------------------
@@ -149,30 +77,3 @@ def test_installed_hook_reads_switch_file_variable_and_alias(tmp_path, variables
     resolved = {k: v.format(switch=switch, other=other) for k, v in variables.items()}
     state = _installed_prompt_hook_state(tmp_path, {"LD_HOOK_READ_BLOCK": "1", **resolved})
     assert state == "off_file"
-
-
-# --- REQ-003: `local_status` dice lo que leyó el proceso -------------------------------------
-
-
-@pytest.fixture
-def offline_status(monkeypatch):
-    monkeypatch.setattr(
-        server,
-        "probe_backend",
-        lambda: server.BackendState(False, [], True, "rechazada", "sin red en los tests", None),
-    )
-    for name in ("_vram_info", "_ram_info", "_llamaswap_groups"):
-        monkeypatch.setattr(server, name, lambda: None)
-    monkeypatch.setattr(server, "_port_listening", lambda *_: False)
-
-
-def test_local_status_lists_the_old_names_read_by_the_server(reload_config, offline_status):
-    reload_config(LOCAL_DELEGATE_COSTE_RESPALDO="claude-haiku-4-5")
-    text = server.local_status()
-    assert "Nombres obsoletos leídos por este proceso:" in text
-    assert "LOCAL_DELEGATE_COSTE_RESPALDO está obsoleto: usa LOCAL_DELEGATE_COST_FALLBACK" in text
-
-
-def test_local_status_says_nothing_with_the_new_names(reload_config, offline_status):
-    reload_config(LOCAL_DELEGATE_COST_FALLBACK="claude-haiku-4-5")
-    assert "Nombres obsoletos" not in server.local_status()
