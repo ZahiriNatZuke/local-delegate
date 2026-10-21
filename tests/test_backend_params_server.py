@@ -289,6 +289,41 @@ def test_params_survive_fallback_and_later_chunks(reload_config, backend, tmp_pa
     assert backend.bodies[1]["max_tokens"] == backend.bodies[0]["max_tokens"]
 
 
+def test_params_resolved_once_even_if_file_changes_mid_operation(reload_config, backend, tmp_path):
+    """REQ-012: the file is read when the operation starts, not on every real call.
+
+    The fake backend rewrites the parameters file while it answers the first chunk. Every chunk
+    must still carry the values resolved at the start; a resolution per call would send the new
+    ones from the second chunk on. The values differ in size on purpose, so the stat cache of
+    `backend_params` cannot hide the rewrite.
+    """
+    reload_config(**capture.ENVIRONMENT, LOCAL_DELEGATE_MAX_CHARS_CODE="3000")
+    _write_roles({"code": {"temperature": 0.7, "top_k": 33}})
+    rewritten: list[int] = []
+
+    def rewrite_on_first_chunk(_model: str, _body: dict) -> server.ChatResult:
+        if not rewritten:
+            _write_roles({"code": {"temperature": 0.25, "top_k": 444}})
+            rewritten.append(len(backend.bodies))
+        return _ok("- function: notes")
+
+    backend.answer = rewrite_on_first_chunk
+    _explain_long(tmp_path)
+    assert rewritten == [1], "the file is rewritten while the first chunk is in flight"
+    assert len(backend.bodies) >= 3, "several real calls after the rewrite"
+    # Guard: the rewrite is visible to a fresh resolution, so the check below can discriminate.
+    assert bp.effective("code").values.get("top_k") == 444
+    sent = [(body.get("top_k"), body.get("temperature")) for body in backend.bodies]
+    assert sent == [(33, 0.7)] * len(backend.bodies), "every chunk keeps the starting params"
+
+    # The next operation reads the new file (REQ-009).
+    backend.reset()
+    _explain_long(tmp_path)
+    assert {(body.get("top_k"), body.get("temperature")) for body in backend.bodies} == {
+        (444, 0.25)
+    }
+
+
 # --- REQ-013: `local_delegate` ------------------------------------------------------------------
 
 
