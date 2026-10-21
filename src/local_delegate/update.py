@@ -32,12 +32,12 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from dataclasses import dataclass
 from importlib import metadata
 from pathlib import Path
 
-from . import checks, completion, config, install, shell_profiles
+from . import checks, completion, config, deprecations, install, shell_profiles
 from .i18n import t
 
 PACKAGE = "local-delegate-mcp"
@@ -278,7 +278,10 @@ def _infer_mcp_mode(results: list[tuple[checks.Check, checks.Result]]) -> str:
 
 
 def plan_repairs(
-    results: list[tuple[checks.Check, checks.Result]], opts: Options
+    results: list[tuple[checks.Check, checks.Result]],
+    opts: Options,
+    *,
+    migrated: Collection[deprecations.DeprecatedName] = (),
 ) -> tuple[list[install.Action], list[str]]:
     """(acciones a ejecutar, avisos de lo que no se repara solo).
 
@@ -322,6 +325,8 @@ def plan_repairs(
                         use_cli=not opts.simulated_home,
                         # La preferencia de idioma la escribe `run_update` una sola vez.
                         write_language=False,
+                        # La migración de nombres retirados la hace `run_update` antes (REQ-014).
+                        migrate_retired_names=False,
                         data_dir=opts.data_dir,
                         language_probe=opts.language_probe,
                     )
@@ -347,15 +352,40 @@ def plan_repairs(
             seen.add(key)
             unique.append(action)
 
-    notes = [
-        f"{check.title}: {result.fix_hint}"
-        for check, result in results
-        if result.fix_hint
-        and check.id not in {r.check_id for r in REPAIRS}
-        # «Ejecuta `update`» dicho desde `update`: lo resuelve `plan_completion_refresh`.
-        and result.fix_hint != checks.SHELL_COMPLETION_UPDATE_HINT
-    ]
+    notes = []
+    for check, result in results:
+        hint = result.fix_hint
+        if check.id == DEPRECATED_NAMES_CHECK:
+            hint = without_migrated_renames(hint, migrated)
+        if (
+            hint
+            and check.id not in {r.check_id for r in REPAIRS}
+            # «Ejecuta `update`» dicho desde `update`: lo resuelve `plan_completion_refresh`.
+            and hint != checks.SHELL_COMPLETION_UPDATE_HINT
+        ):
+            notes.append(f"{check.title}: {hint}")
     return unique, notes
+
+
+#: El check cuya pista pide «renombra» los nombres viejos (REQ-012).
+DEPRECATED_NAMES_CHECK = "config.deprecated_names"
+
+
+def without_migrated_renames(hint: str, migrated: Collection[deprecations.DeprecatedName]) -> str:
+    """La pista del check sin el «renombra» que la migración de esta corrida cubre (REQ-014).
+
+    Solo lo de `settings.json` y el interruptor, que es lo que se migra: si el nombre está además
+    puesto en la **shell** (que no se migra), su pista se conserva.
+    """
+    in_shell = {name for name, value in config.DEPRECATED_ENV_VALUES.items() if value is not None}
+    covered = {
+        t("doctor.probe.deprecated_names.rename", old=e.old, new=e.new)
+        for e in migrated
+        if e.old not in in_shell
+    }
+    if not covered:
+        return hint
+    return "; ".join(part for part in hint.split("; ") if part not in covered)
 
 
 def plan_completion_refresh(opts: Options) -> list[install.Action]:
@@ -856,6 +886,18 @@ def run_update(opts: Options, out=print) -> int:
         out(t("install.update.simulated_home_note"))
     out("")
 
+    # 0. Migración de los nombres retirados, SIEMPRE antes de diagnosticar (REQ-014): así los checks
+    # ven el resultado y las notas no piden «renombra» lo que ya se migró. Va fuera de
+    # `plan_repairs` (su deduplicación por `(kind, target)` la juntaría con la reparación de hooks)
+    # y relee `settings.json` al aplicarse. En `--dry-run` solo se muestra.
+    migrated = install.retired_names_to_migrate(opts.home)
+    migration = install.plan_retired_name_migration(opts.home, opts.data_dir)
+    failures = 0
+    if migration:
+        out(t("install.update.migration"))
+        failures += install.apply(migration, dry_run=opts.dry_run, out=out)
+        out("")
+
     # 1. Diagnóstico: el mismo que ve `doctor`, sin lógica propia. Con `SKIP_PYPI` porque la
     # última versión publicada la pregunta el paso 2 unas líneas más abajo, y dejar que el check
     # la preguntase otra vez sería consultar dos veces lo mismo en un solo comando.
@@ -888,13 +930,14 @@ def run_update(opts: Options, out=print) -> int:
     # 3. Plan: la preferencia de idioma (REQ-047), pines y reparaciones del andamiaje.
     language = language_actions(opts)
     actions = plan_pin(opts, version) if version else []
-    repairs, notes = plan_repairs(results, opts)
+    repairs, notes = plan_repairs(results, opts, migrated=migrated)
     actions.extend(repairs)
     actions.extend(plan_completion_refresh(opts))
 
     out("")
     # La preferencia va aparte: guardarla no es reparar el andamiaje.
-    failures = install.apply(language, dry_run=opts.dry_run, out=out) if language else 0
+    if language:
+        failures += install.apply(language, dry_run=opts.dry_run, out=out)
     if actions:
         failures += install.apply(actions, dry_run=opts.dry_run, out=out)
     else:

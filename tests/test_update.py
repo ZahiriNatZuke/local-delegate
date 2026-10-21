@@ -909,3 +909,227 @@ def test_second_update_pass_changes_nothing(tmp_path):
 
     assert second == []
     assert snapshot(home) == before
+
+
+# --- Migración de nombres retirados: migrar → checks → notas (REQ-014, REQ-016, REQ-017) ---------
+# Registro sintético: las entradas reales aún son alias (L6 añade el caso real).
+_GONE_ENV = ("LD_OLD_GONE_VAR", "LD_GONE_VAR_NEW")
+_GONE_SWITCH = ("old-gone-switch", "gone-switch-new")
+
+
+def _retired_registry(monkeypatch, *, in_shell: str | None = None):
+    from local_delegate import config, deprecations
+
+    def retired(names, surface):
+        return deprecations.DeprecatedName(
+            "retired", *names, "0.38.0", "0.40.0", retired_from=surface
+        )
+
+    monkeypatch.setattr(
+        deprecations,
+        "DEPRECATED_NAMES",
+        (retired(_GONE_ENV, "env_var"), retired(_GONE_SWITCH, "switch_file")),
+    )
+    monkeypatch.setattr(config, "DEPRECATED_ENV_VALUES", {_GONE_ENV[0]: in_shell})
+    monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", None)
+    # Sin red: la versión publicada no hace falta para migrar.
+    monkeypatch.setattr(update, "latest_version", lambda: (None, "sin red en la suite"))
+
+
+def _home_with_env(tmp_path, env: dict, *, complete=True):
+    import json
+
+    home = make_home(tmp_path, complete=complete)
+    path = home / ".claude" / "settings.json"
+    data = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+    data["env"] = env
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    return home
+
+
+def _run(home, **kwargs) -> tuple[int, str]:
+    lines: list[str] = []
+    code = update.run_update(opts_for(home, **kwargs), out=lambda *a: lines.append(" ".join(a)))
+    return code, "\n".join(lines)
+
+
+def _rename_hint() -> str:
+    return install.t("doctor.probe.deprecated_names.rename", old=_GONE_ENV[0], new=_GONE_ENV[1])
+
+
+def _env(home) -> dict:
+    import json
+
+    return json.loads((home / ".claude" / "settings.json").read_text(encoding="utf-8"))["env"]
+
+
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_update_migrates_before_reporting(monkeypatch, tmp_path, dry_run):
+    """Las notas no piden «renombra» lo que la migración cubre (aplicada o planificada)."""
+    _retired_registry(monkeypatch)
+    home = _home_with_env(tmp_path, {_GONE_ENV[0]: "1"})
+    code, text = _run(home, dry_run=dry_run)
+    assert code == 0, text
+    assert f"{_GONE_ENV[0]} → {_GONE_ENV[1]}" in text
+    assert install.t("install.update.migration") in text
+    assert _rename_hint() not in text
+    expected = {_GONE_ENV[0]: "1"} if dry_run else {_GONE_ENV[1]: "1"}
+    assert _env(home) == expected
+
+
+def test_update_keeps_the_hint_of_a_name_also_in_the_shell(monkeypatch, tmp_path):
+    """La shell no se migra: su pista sigue en las notas (control del filtro de arriba)."""
+    _retired_registry(monkeypatch, in_shell="1")
+    home = _home_with_env(tmp_path, {_GONE_ENV[0]: "1"})
+    code, text = _run(home)
+    assert code == 0, text
+    assert _env(home) == {_GONE_ENV[1]: "1"}
+    assert _rename_hint() in text
+
+
+def test_update_reports_the_rename_when_nothing_is_migrated(monkeypatch, tmp_path):
+    """Control del orden: sin migración que lo cubra, el check sí pide «renombra»."""
+    _retired_registry(monkeypatch)
+    home = _home_with_env(tmp_path, {"OTHER": "x"})
+    (home / ".claude" / _GONE_SWITCH[0]).mkdir()  # un directorio no se migra
+    _code, text = _run(home)
+    hint = install.t(
+        "doctor.probe.deprecated_names.rename", old=_GONE_SWITCH[0], new=_GONE_SWITCH[1]
+    )
+    assert hint in text
+
+
+def test_update_runs_the_migration_before_the_checks(monkeypatch, tmp_path):
+    """El orden fijo: cuando corren los checks, `settings.json` ya está migrado."""
+    _retired_registry(monkeypatch)
+    home = _home_with_env(tmp_path, {_GONE_ENV[0]: "1"})
+    seen: list[dict] = []
+    real_run_all = checks.run_all
+
+    def spy(ctx):
+        seen.append(_env(home))
+        return real_run_all(ctx)
+
+    monkeypatch.setattr(checks, "run_all", spy)
+    code, text = _run(home)
+    assert code == 0, text
+    assert seen == [{_GONE_ENV[1]: "1"}]
+
+
+def test_update_exits_one_when_the_migration_fails(monkeypatch, tmp_path):
+    _retired_registry(monkeypatch)
+    home = _home_with_env(tmp_path, {_GONE_ENV[0]: "1"})
+
+    def refuse(*args, **kwargs):
+        raise PermissionError(13, "denied")
+
+    monkeypatch.setattr(install, "_write_migrated_settings", refuse)
+    code, text = _run(home)
+    assert code == 1, text
+    assert _env(home) == {_GONE_ENV[0]: "1"}
+
+
+def test_migration_and_hook_repair_both_survive(monkeypatch, tmp_path):
+    """`env` viejo y hooks de otra versión a la vez: ninguna de las dos escrituras se pierde."""
+    _retired_registry(monkeypatch)
+    home = make_home(tmp_path, complete=False)
+    install.apply(
+        install.plan_install(
+            install.Options(
+                home=home, components={"hooks"}, targets={"claude"}, python_exe="python"
+            )
+        ),
+        dry_run=False,
+        out=lambda *a: None,
+    )
+    hooks_dir = home / ".claude" / "hooks" / install.HOOKS_SUBDIR
+    stale = hooks_dir / install._HOOK_EVENTS[0][0]
+    stale.write_text("# versión anterior\n", encoding="utf-8")
+    import json
+
+    path = home / ".claude" / "settings.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["env"] = {_GONE_ENV[0]: "1"}
+    # Hooks registrados con otra ruta de Python: el registro está desactualizado.
+    data["hooks"] = {}
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+    code, text = _run(home)
+    assert code == 0, text
+    assert _env(home) == {_GONE_ENV[1]: "1"}
+    packaged = install.resources_dir() / "hooks" / stale.name
+    assert stale.read_bytes() == packaged.read_bytes()
+    after = json.loads(path.read_text(encoding="utf-8"))
+    commands = json.dumps(after.get("hooks"))
+    assert stale.name in commands, "la reparación de hooks no quedó en settings.json"
+
+
+def test_retired_name_migration_dry_run_writes_nothing(monkeypatch, tmp_path):
+    """`--dry-run`: ni settings.json, ni el interruptor, ni registro, ni copia; sí la acción."""
+    _retired_registry(monkeypatch)
+    home = _home_with_env(tmp_path, {_GONE_ENV[0]: "s3cr3t-value", "OTHER": "x"})
+    (home / ".claude" / _GONE_SWITCH[0]).write_text("", encoding="utf-8")
+    before = snapshot(tmp_path)
+    code, text = _run(home, dry_run=True)
+    assert code == 0, text
+    assert snapshot(tmp_path) == before
+    assert "[dry-run] [migrate]" in text
+    assert "s3cr3t-value" not in text
+    assert not list(tmp_path.rglob(install.RETIRED_NAMES_MIGRATION_FILE))
+    assert not list(tmp_path.rglob("settings.json.retired-names*.bak"))
+
+
+def test_retired_name_migration_is_idempotent_in_update(monkeypatch, tmp_path):
+    _retired_registry(monkeypatch)
+    home = _home_with_env(tmp_path, {_GONE_ENV[0]: "s3cr3t-value", "OTHER": "x"})
+    (home / ".claude" / _GONE_SWITCH[0]).write_text("", encoding="utf-8")
+    code, first = _run(home)
+    assert code == 0, first
+    assert install.t("install.update.migration") in first
+    assert _env(home) == {_GONE_ENV[1]: "s3cr3t-value", "OTHER": "x"}
+    assert (home / ".claude" / _GONE_SWITCH[1]).is_file()
+    assert "s3cr3t-value" not in first
+    code, second = _run(home)
+    assert code == 0, second
+    assert install.t("install.update.migration") not in second
+    assert "[migrate]" not in second
+
+
+def test_unreadable_settings_is_left_alone(monkeypatch, tmp_path):
+    """Aislando la migración (sin reparación de hooks): bytes idénticos y el motivo en la salida."""
+    _retired_registry(monkeypatch)
+    home = make_home(tmp_path, complete=True)
+    path = home / ".claude" / "settings.json"
+    path.write_bytes(b'{"env": {"' + _GONE_ENV[0].encode() + b'": "1"')
+    before = path.read_bytes()
+    monkeypatch.setattr(update, "plan_repairs", lambda results, opts, **kw: ([], []))
+    code, text = _run(home)
+    assert code == 0, text
+    assert path.read_bytes() == before
+    assert install.t("install.migrate.reason.not_json") in text
+
+
+def test_the_migration_line_in_english(monkeypatch, tmp_path):
+    """REQ-018: con la CLI en inglés, la línea de la migración sale en inglés."""
+    from local_delegate import i18n
+
+    _retired_registry(monkeypatch)
+    home = _home_with_env(tmp_path, {_GONE_ENV[0]: "1"})
+    with i18n.override("en"):
+        code, text = _run(home, dry_run=True)
+        english = i18n.t("install.migrate.settings_plan", names=f"{_GONE_ENV[0]} → {_GONE_ENV[1]}")
+    assert code == 0, text
+    assert english in text
+    assert english != i18n.t_lang(
+        "es", "install.migrate.settings_plan", names=f"{_GONE_ENV[0]} → {_GONE_ENV[1]}"
+    )
+
+
+def test_the_repairs_do_not_plan_the_migration_twice(monkeypatch, tmp_path):
+    """Con reparaciones de Claude en el plan, `--dry-run` muestra la migración una sola vez."""
+    _retired_registry(monkeypatch)
+    home = _home_with_env(tmp_path, {_GONE_ENV[0]: "1"}, complete=False)
+    code, text = _run(home, dry_run=True)
+    assert code == 0, text
+    assert "[dry-run] [settings]" in text, "la prueba necesita una reparación de settings.json"
+    assert text.count("[dry-run] [migrate]") == 1, text

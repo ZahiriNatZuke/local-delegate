@@ -844,3 +844,343 @@ def test_uninstall_also_removes_the_retired_skill(tmp_path):
     for target_dir in targets:
         assert not (target_dir / "delegacion-local").exists(), target_dir
         assert (target_dir / "ajena" / "SKILL.md").is_file(), target_dir
+
+
+# --- Migración de nombres retirados con sucesor (REQ-015, REQ-016, REQ-017) -----------------
+# Registro sintético: las entradas reales aún son alias (L6 añade el caso real).
+_GONE_ENV = ("LD_OLD_GONE_VAR", "LD_GONE_VAR_NEW")
+_GONE_ENV_2 = ("LD_OLD_SECOND_VAR", "LD_SECOND_VAR_NEW")
+_GONE_SWITCH = ("old-gone-switch", "gone-switch-new")
+_LIVE_ALIAS = ("LD_OLD_LIVE_VAR", "LD_LIVE_VAR_NEW")
+
+
+def _retired_registry(monkeypatch):
+    from local_delegate import deprecations
+
+    def retired(names, surface):
+        return deprecations.DeprecatedName(
+            "retired", *names, "0.38.0", "0.40.0", retired_from=surface
+        )
+
+    entries = (
+        retired(_GONE_ENV, "env_var"),
+        retired(_GONE_ENV_2, "env_var"),
+        retired(_GONE_SWITCH, "switch_file"),
+        deprecations.DeprecatedName("env_var", *_LIVE_ALIAS, "0.37.0"),
+    )
+    monkeypatch.setattr(deprecations, "DEPRECATED_NAMES", entries)
+
+
+def _settings_home(tmp_path, settings: dict | None = None, raw: bytes | None = None) -> Path:
+    home = tmp_path / "home"
+    (home / ".claude").mkdir(parents=True)
+    path = home / ".claude" / "settings.json"
+    if raw is not None:
+        path.write_bytes(raw)
+    elif settings is not None:
+        path.write_bytes(json.dumps(settings, indent=2).encode("utf-8"))
+    return home
+
+
+def _migrate(home, data_dir=None) -> int:
+    return inst.apply(
+        inst.plan_retired_name_migration(home, data_dir), dry_run=False, out=lambda *a: None
+    )
+
+
+def _settings(home) -> dict:
+    return json.loads((home / ".claude" / "settings.json").read_text(encoding="utf-8-sig"))
+
+
+def _backups(home) -> list[Path]:
+    return sorted((home / ".claude").glob("settings.json.retired-names*.bak"))
+
+
+def test_retired_name_migration_renames_the_key_in_place(monkeypatch, tmp_path):
+    """(a) Solo el viejo: pasa a llamarse como el nuevo, mismo valor y misma posición."""
+    _retired_registry(monkeypatch)
+    original = {
+        "hooks": {"PreToolUse": []},
+        "env": {"FIRST": "1", _GONE_ENV[0]: "", "LAST": "z"},
+    }
+    home = _settings_home(tmp_path, original)
+    assert _migrate(home) == 0
+    data = _settings(home)
+    assert list(data["env"]) == ["FIRST", _GONE_ENV[1], "LAST"]
+    assert data["env"][_GONE_ENV[1]] == ""
+    expected = dict(original, env={"FIRST": "1", _GONE_ENV[1]: "", "LAST": "z"})
+    assert data == expected
+
+
+def test_retired_name_migration_drops_the_old_key_when_both_exist(monkeypatch, tmp_path):
+    """(b) Los dos: queda el nuevo con su valor (ya ganaba)."""
+    _retired_registry(monkeypatch)
+    home = _settings_home(tmp_path, {"env": {_GONE_ENV[0]: "a", _GONE_ENV[1]: "b"}})
+    assert _migrate(home) == 0
+    assert _settings(home)["env"] == {_GONE_ENV[1]: "b"}
+
+
+def test_retired_name_migration_renames_the_switch_file(monkeypatch, tmp_path):
+    """(c) Interruptor solo viejo → existe el nuevo y no el viejo; (k) sin `.bak`."""
+    _retired_registry(monkeypatch)
+    home = _settings_home(tmp_path, {"env": {"OTHER": "x"}})
+    before = (home / ".claude" / "settings.json").read_bytes()
+    (home / ".claude" / _GONE_SWITCH[0]).write_text("", encoding="utf-8")
+    assert _migrate(home) == 0
+    assert (home / ".claude" / _GONE_SWITCH[1]).is_file()
+    assert not (home / ".claude" / _GONE_SWITCH[0]).exists()
+    assert (home / ".claude" / "settings.json").read_bytes() == before
+    assert _backups(home) == []
+
+
+def test_retired_name_migration_removes_the_old_switch_when_both_exist(monkeypatch, tmp_path):
+    """(d) Los dos interruptores → queda solo el nuevo, con su contenido."""
+    _retired_registry(monkeypatch)
+    home = _settings_home(tmp_path)
+    (home / ".claude" / _GONE_SWITCH[0]).write_text("old", encoding="utf-8")
+    (home / ".claude" / _GONE_SWITCH[1]).write_text("new", encoding="utf-8")
+    assert _migrate(home) == 0
+    assert not (home / ".claude" / _GONE_SWITCH[0]).exists()
+    assert (home / ".claude" / _GONE_SWITCH[1]).read_text(encoding="utf-8") == "new"
+
+
+def test_retired_name_migration_leaves_a_directory_switch_alone(monkeypatch, tmp_path):
+    _retired_registry(monkeypatch)
+    home = _settings_home(tmp_path)
+    (home / ".claude" / _GONE_SWITCH[0]).mkdir()
+    assert inst.plan_retired_name_migration(home) == []
+    assert (home / ".claude" / _GONE_SWITCH[0]).is_dir()
+
+
+def test_retired_name_migration_backs_up_without_overwriting(monkeypatch, tmp_path):
+    """(e) La copia tiene los bytes originales; una segunda migración no la pisa."""
+    _retired_registry(monkeypatch)
+    home = _settings_home(tmp_path, {"env": {_GONE_ENV[0]: "1"}})
+    path = home / ".claude" / "settings.json"
+    first_bytes = path.read_bytes()
+    assert _migrate(home) == 0
+    first = home / ".claude" / "settings.json.retired-names.bak"
+    assert _backups(home) == [first]
+    assert first.read_bytes() == first_bytes
+
+    path.write_bytes(json.dumps({"env": {_GONE_ENV_2[0]: "2"}}).encode("utf-8"))
+    second_bytes = path.read_bytes()
+    assert _migrate(home) == 0
+    backups = _backups(home)
+    assert len(backups) == 2
+    assert first.read_bytes() == first_bytes, "la segunda migración pisó la primera copia"
+    (dated,) = [b for b in backups if b != first]
+    assert dated.read_bytes() == second_bytes
+    assert dated.name.startswith("settings.json.retired-names.2")
+
+
+def test_retired_name_migration_three_times_in_a_second_keeps_three_copies(monkeypatch, tmp_path):
+    """(l) Fecha en UTC con sufijo de desempate: nunca se pisa una copia, ni en el mismo segundo."""
+    _retired_registry(monkeypatch)
+    home = _settings_home(tmp_path)
+    path = home / ".claude" / "settings.json"
+    contents = []
+    for n in range(3):
+        path.write_bytes(json.dumps({"env": {_GONE_ENV[0]: str(n)}}).encode("utf-8"))
+        contents.append(path.read_bytes())
+        assert _migrate(home) == 0
+    backups = _backups(home)
+    assert len(backups) == 3
+    assert sorted(b.read_bytes() for b in backups) == sorted(contents)
+
+
+def test_retired_name_backup_tiebreaks_within_the_same_second(monkeypatch, tmp_path):
+    """(l) Con el reloj parado, las copias llevan la misma fecha y el sufijo `-1`, `-2`…"""
+    _retired_registry(monkeypatch)
+    home = _settings_home(tmp_path, {"env": {}})
+    path = home / ".claude" / "settings.json"
+    names = [inst._retired_names_backup(path, b"%d" % n, "20261021120000").name for n in range(4)]
+    assert names == [
+        "settings.json.retired-names.bak",
+        "settings.json.retired-names.20261021120000.bak",
+        "settings.json.retired-names.20261021120000-1.bak",
+        "settings.json.retired-names.20261021120000-2.bak",
+    ]
+    assert [(home / ".claude" / n).read_bytes() for n in names] == [b"0", b"1", b"2", b"3"]
+
+
+def test_retired_name_migration_keeps_crlf(monkeypatch, tmp_path):
+    """(f) Un `settings.json` en CRLF sigue en CRLF."""
+    _retired_registry(monkeypatch)
+    text = json.dumps({"env": {_GONE_ENV[0]: "1"}}, indent=2).replace("\n", "\r\n")
+    home = _settings_home(tmp_path, raw=text.encode("utf-8"))
+    assert _migrate(home) == 0
+    raw = (home / ".claude" / "settings.json").read_bytes()
+    assert b"\r\n" in raw and raw.count(b"\n") == raw.count(b"\r\n")
+    assert _settings(home)["env"] == {_GONE_ENV[1]: "1"}
+
+
+def test_retired_name_migration_keeps_the_bom(monkeypatch, tmp_path):
+    """(g) Con BOM (PowerShell 5.1 con `-Encoding UTF8`): se migra y lo conserva."""
+    _retired_registry(monkeypatch)
+    raw = b"\xef\xbb\xbf" + json.dumps({"env": {_GONE_ENV[0]: "1"}}).encode("utf-8")
+    home = _settings_home(tmp_path, raw=raw)
+    assert _migrate(home) == 0
+    after = (home / ".claude" / "settings.json").read_bytes()
+    assert after.startswith(b"\xef\xbb\xbf") and not after.startswith(b"\xef\xbb\xbf" * 2)
+    assert _settings(home)["env"] == {_GONE_ENV[1]: "1"}
+
+
+def test_retired_name_migration_leaves_a_live_alias_alone(monkeypatch, tmp_path):
+    """(h) Un alias vigente aún funciona: no se migra (control: el retirado sí)."""
+    _retired_registry(monkeypatch)
+    home = _settings_home(tmp_path, {"env": {_LIVE_ALIAS[0]: "1", _GONE_ENV[0]: "2"}})
+    assert _migrate(home) == 0
+    assert _settings(home)["env"] == {_LIVE_ALIAS[0]: "1", _GONE_ENV[1]: "2"}
+
+
+def test_retired_name_migration_records_one_date_per_name(monkeypatch, tmp_path):
+    """(i) Registro con una fecha por nombre, sin valores, y fusión en una segunda migración."""
+    _retired_registry(monkeypatch)
+    data_dir = tmp_path / "data"
+    home = _settings_home(tmp_path, {"env": {_GONE_ENV[0]: "s3cr3t-value"}})
+    assert _migrate(home, data_dir) == 0
+    record_path = data_dir / inst.RETIRED_NAMES_MIGRATION_FILE
+    first = json.loads(record_path.read_text(encoding="utf-8"))
+    assert list(first["names"]) == [_GONE_ENV[0]]
+    assert "s3cr3t-value" not in record_path.read_text(encoding="utf-8")
+
+    (home / ".claude" / _GONE_SWITCH[0]).write_text("", encoding="utf-8")
+    assert _migrate(home, data_dir) == 0
+    second = json.loads(record_path.read_text(encoding="utf-8"))["names"]
+    assert set(second) == {_GONE_ENV[0], _GONE_SWITCH[0]}
+    assert second[_GONE_ENV[0]] == first["names"][_GONE_ENV[0]]
+    assert set(inst.read_migration_record(data_dir)) == set(second)
+
+
+def test_retired_name_migration_never_writes_the_record_in_the_real_log_dir(monkeypatch, tmp_path):
+    """(j) HOME simulado y sin `LOCAL_DELEGATE_LOG_DIR`: el `LOG_DIR` real no recibe el registro."""
+    from local_delegate import config
+
+    _retired_registry(monkeypatch)
+    real_log_dir = tmp_path / "real-log-dir"
+    real_log_dir.mkdir()
+    monkeypatch.setattr(config, "LOG_DIR", real_log_dir)
+    monkeypatch.delenv("LOCAL_DELEGATE_LOG_DIR", raising=False)
+    home = _settings_home(tmp_path, {"env": {_GONE_ENV[0]: "1"}})
+    assert inst.data_dir_for(home) is None
+    lines: list[str] = []
+    assert inst.apply(inst.plan_retired_name_migration(home), dry_run=False, out=lines.append) == 0
+    assert list(real_log_dir.iterdir()) == []
+    assert _settings(home)["env"] == {_GONE_ENV[1]: "1"}, "sin registro, la migración va igual"
+    assert any(inst.t("install.migrate.record_skipped") in line for line in lines)
+    # Control: con la variable puesta, el directorio de datos es el elegido.
+    monkeypatch.setenv("LOCAL_DELEGATE_LOG_DIR", str(real_log_dir))
+    assert inst.data_dir_for(home) == real_log_dir
+
+
+def test_retired_name_migration_without_settings_write_has_no_backup(monkeypatch, tmp_path):
+    """(k) `env` ilegible: no escribe, no deja copia, lo dice con el motivo; el interruptor va igual."""
+    _retired_registry(monkeypatch)
+    home = _settings_home(tmp_path, raw=b"{no json " + _GONE_ENV[0].encode())
+    before = (home / ".claude" / "settings.json").read_bytes()
+    (home / ".claude" / _GONE_SWITCH[0]).write_text("", encoding="utf-8")
+    lines: list[str] = []
+    assert inst.apply(inst.plan_retired_name_migration(home), dry_run=False, out=lines.append) == 0
+    assert (home / ".claude" / "settings.json").read_bytes() == before
+    assert _backups(home) == []
+    assert (home / ".claude" / _GONE_SWITCH[1]).is_file()
+    assert any(inst.t("install.migrate.reason.not_json") in line for line in lines), lines
+
+
+def test_retired_name_migration_env_not_an_object_is_left_alone(monkeypatch, tmp_path):
+    _retired_registry(monkeypatch)
+    home = _settings_home(tmp_path, {"env": [_GONE_ENV[0]]})
+    before = (home / ".claude" / "settings.json").read_bytes()
+    lines: list[str] = []
+    assert inst.apply(inst.plan_retired_name_migration(home), dry_run=False, out=lines.append) == 0
+    assert (home / ".claude" / "settings.json").read_bytes() == before
+    assert any(inst.t("install.migrate.reason.env_not_object") in line for line in lines)
+
+
+def test_retired_name_migration_is_idempotent(monkeypatch, tmp_path):
+    _retired_registry(monkeypatch)
+    home = _settings_home(tmp_path, {"env": {_GONE_ENV[0]: "1", _GONE_ENV_2[0]: "2"}})
+    (home / ".claude" / _GONE_SWITCH[0]).write_text("", encoding="utf-8")
+    plan = inst.plan_retired_name_migration(home)
+    assert [a.kind for a in plan] == ["migrate", "migrate"], "todas las claves en una acción"
+    assert _migrate(home) == 0
+    assert inst.plan_retired_name_migration(home) == []
+
+
+def test_retired_name_migration_shows_only_names(monkeypatch, tmp_path):
+    """REQ-017: la descripción y el literal llevan nombres, nunca valores."""
+    _retired_registry(monkeypatch)
+    home = _settings_home(tmp_path, {"env": {_GONE_ENV[0]: "s3cr3t-value", "OTHER": "x"}})
+    lines: list[str] = []
+    inst.apply(inst.plan_retired_name_migration(home), dry_run=True, out=lines.append)
+    text = "\n".join(lines)
+    assert f"{_GONE_ENV[0]} → {_GONE_ENV[1]}" in text
+    assert "s3cr3t-value" not in text
+
+
+def test_retired_name_migration_ignores_the_process_environment(monkeypatch, tmp_path):
+    """REQ-017: los viejos en `os.environ` y no en `settings.json` ni en `~/.claude/` → plan vacío."""
+    _retired_registry(monkeypatch)
+    monkeypatch.setenv(_GONE_ENV[0], "1")
+    home = _settings_home(tmp_path, {"env": {"OTHER": "x"}})
+    assert inst.plan_retired_name_migration(home) == []
+    # Control: el mismo nombre en `env` sí se planifica.
+    (home / ".claude" / "settings.json").write_text(
+        json.dumps({"env": {_GONE_ENV[0]: "1"}}), encoding="utf-8"
+    )
+    assert len(inst.plan_retired_name_migration(home)) == 1
+
+
+def test_retired_name_migration_failure_is_counted(monkeypatch, tmp_path):
+    """Si no se puede escribir `settings.json`, la acción falla y cuenta, y no lo deja a medias."""
+    _retired_registry(monkeypatch)
+    home = _settings_home(tmp_path, {"env": {_GONE_ENV[0]: "1"}})
+    before = (home / ".claude" / "settings.json").read_bytes()
+
+    def refuse(self, data):
+        raise PermissionError(13, "denied")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Path, "write_bytes", refuse)
+        assert _migrate(home) == 1
+    assert (home / ".claude" / "settings.json").read_bytes() == before
+
+
+def test_install_plans_the_migration_for_claude(monkeypatch, tmp_path):
+    """REQ-016: con Claude en el plan, la migración va antes de cualquier acción sobre settings.json."""
+    _retired_registry(monkeypatch)
+    home = make_home(tmp_path, complete=False)
+    settings_path = home / ".claude" / "settings.json"
+    settings_path.write_text(
+        json.dumps({"env": {_GONE_ENV[0]: "s3cr3t-value", "OTHER": "x"}}), encoding="utf-8"
+    )
+    actions = inst.plan_install(_opts(home, targets={"claude"}, enable_read_hook=True))
+    kinds = [a.kind for a in actions]
+    assert "migrate" in kinds and "settings" in kinds
+    assert kinds.index("migrate") < kinds.index("settings")
+
+    before = snapshot(tmp_path)
+    lines: list[str] = []
+    inst.apply(actions, dry_run=True, out=lines.append)
+    assert snapshot(tmp_path) == before, "--dry-run escribió algo (¿registro o copia?)"
+    assert "s3cr3t-value" not in "\n".join(lines)
+    assert any("[migrate]" in line for line in lines)
+
+    assert inst.apply(actions, dry_run=False, out=lambda *a: None) == 0
+    data = _settings(home)
+    assert data["env"] == {_GONE_ENV[1]: "s3cr3t-value", "OTHER": "x"}
+    assert inst.read_hook_registered(home / ".claude"), "la migración pisó el registro de hooks"
+
+
+def test_install_without_claude_does_not_plan_the_migration(monkeypatch, tmp_path):
+    _retired_registry(monkeypatch)
+    home = make_home(tmp_path, complete=False)
+    (home / ".claude" / "settings.json").write_text(
+        json.dumps({"env": {_GONE_ENV[0]: "1"}}), encoding="utf-8"
+    )
+    actions = inst.plan_install(_opts(home, targets={"codex"}))
+    assert "migrate" not in [a.kind for a in actions]
+    # Control: con Claude, sí.
+    actions = inst.plan_install(_opts(home, targets={"claude"}))
+    assert "migrate" in [a.kind for a in actions]

@@ -121,6 +121,7 @@
   "doctor.probe.deprecated_names.read_by_hooks": "read by the hooks (last {days} days)",
   "doctor.probe.deprecated_names.remove": "remove {old}",
   "doctor.probe.deprecated_names.rename": "rename {old} to {new}",
+  "doctor.probe.deprecated_names.settings_unreadable": "could not read the env of settings.json: {reason}",
   "doctor.probe.desktop_auth.bad_url": "the URL of the Claude Desktop entry cannot be read",
   "doctor.probe.desktop_auth.by_variable": "referenced through a variable",
   "doctor.probe.desktop_auth.cannot_test": "could not test the Claude Desktop token against {host}:{port}",
