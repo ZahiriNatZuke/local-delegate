@@ -180,8 +180,13 @@ jobs:
       # rompe aquí, y una sola pasada no la vería. Y se comprueba que `uninstall` deja de verdad
       # el directorio como estaba, porque «reversible» está escrito en el docstring del módulo y
       # hasta ahora nadie lo ejercía de punta a punta en macOS.
+      #
+      # Desde el SDD cli-completion (REQ-039) el script añade la fase del autocompletado: siembra
+      # perfiles, instala `--shell-completion` dos veces, completa en el shell real (PowerShell
+      # 7 y 5.1, bash, zsh; en Linux también readline en un pty), hace el control del bloque sin
+      # fichero y desinstala comparando los perfiles byte a byte. Por eso el límite sube de 3 a 6.
       - name: Instalador end-to-end contra un HOME temporal
-        timeout-minutes: 3
+        timeout-minutes: 6
         run: uv run python scripts/check_install_e2e.py
 
   # REQ-043: la suite no depende del idioma de la máquina. La corrida «en inglés» ya la da el
@@ -295,6 +300,38 @@ jobs:
 
       - name: Handshake MCP contra el paquete instalado
         run: .venv-smoke/bin/python scripts/check_install_handshake.py
+
+      # REQ-036 (SDD cli-completion): las plantillas del autocompletado viajan en el wheel. El
+      # binario instalado genera el script de los tres shells con la versión del wheel en la
+      # cabecera (sacada del nombre del fichero, no de la misma metadata que la escribe), y bash
+      # y pwsh completan con él `backend-params set ` hasta `mechanical`.
+      - name: Autocompletado desde el paquete instalado
+        timeout-minutes: 3
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          bin="$GITHUB_WORKSPACE/.venv-smoke/bin"
+          wheel=$(basename "$(ls "$GITHUB_WORKSPACE"/dist/*.whl)")
+          version=$(echo "$wheel" | cut -d- -f2)
+          for shell in powershell bash zsh; do
+            "$bin/local-delegate" completion "$shell" > "comp-$shell"
+            if ! head -n 2 "comp-$shell" | grep -qF "# local-delegate $version completion $shell "; then
+              echo "la cabecera de $shell no lleva la versión $version del wheel:"; head -n 2 "comp-$shell"
+              exit 1
+            fi
+          done
+          bash --norc --noprofile -c '
+            . ./comp-bash
+            COMP_WORDS=(local-delegate backend-params set ""); COMP_CWORD=3
+            COMP_LINE="local-delegate backend-params set "; COMP_POINT=${#COMP_LINE}
+            spec=$(complete -p local-delegate); func=${spec##*-F }; func=${func%% *}
+            "$func" local-delegate "" set
+            printf "%s\n" "${COMPREPLY[@]}"' > bash-reply
+          grep -qx mechanical bash-reply || { echo "bash no completó mechanical:"; cat bash-reply; exit 1; }
+          mv comp-powershell comp.ps1
+          pwsh -NoProfile -NonInteractive -Command '. ./comp.ps1; $l = "local-delegate backend-params set "; (TabExpansion2 -inputScript $l -cursorColumn $l.Length).CompletionMatches.CompletionText' > pwsh-reply
+          grep -qx mechanical pwsh-reply || { echo "pwsh no completó mechanical:"; cat pwsh-reply; exit 1; }
+          echo "autocompletado del wheel $version: cabeceras de los tres shells, bash y pwsh completan mechanical"
 
   secrets:
     runs-on: ubuntu-latest
