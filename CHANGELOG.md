@@ -6,6 +6,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-10-21
+
+Autocompletado de la CLI en PowerShell, zsh y bash (SDD `cli-completion`), retirada de los nombres
+viejos en español que vivían con aviso desde la 0.35.0 (SDD `retire-legacy-aliases`) y duraciones
+del panel en minutos y horas. Las tools MCP no cambian de contrato.
+
 **Versión incompatible.** Los nombres viejos en español que se renombraron en la 0.35.0 y siguieron
 funcionando con aviso en la 0.35.x, 0.36.x y 0.37.x **ya no tienen efecto**: `doctor` y
 `local_status` los nombran (hasta la 0.40.x) y `update` migra los que puede. Antes de actualizar,
@@ -114,17 +120,17 @@ persigue.
   fichero no es un objeto JSON legible, el paso que lo escribiría lo deja byte a byte como estaba,
   avisa de cómo arreglarlo y el comando termina con error. Antes se reescribía desde cero y se
   perdían el `env` (también el recién migrado), las claves ajenas y el bloqueo de lectura. `doctor`
-  también lee los ficheros con BOM.
+  también lee los ficheros con BOM (#379).
 - **Ningún comando de la CLI se cae ya por la codificación de la salida.** Con la salida redirigida
   a un fichero o a una tubería en Windows (cp1252), que es como lo lanzan Claude Code, un script o la
   tarea programada, `update` reventaba con `UnicodeEncodeError` en la flecha de la migración de los
   nombres retirados: la migración quedaba a medias y los hooks sin registrar. Ahora los subcomandos
   sustituyen por `?` lo que la consola no puede escribir (el servidor MCP por stdio no cambia) y la
-  migración se describe con `->`.
+  migración se describe con `->` (#381).
 - **El panel escribía las duraciones largas solo en segundos** («947,2 s»). Desde un minuto se leen
   en minutos y segundos («15 min 47 s») y desde una hora en horas y minutos («1 h 5 min»), en la
   tarea en curso, la actividad, la latencia media y el desglose espera/inferencia; el `title` de la
-  tarjeta de latencia conserva los segundos exactos (SDD `dashboard-duration-minutes`).
+  tarjeta de latencia conserva los segundos exactos (SDD `dashboard-duration-minutes`, #378).
 
 ### Interno
 
@@ -134,7 +140,8 @@ persigue.
   con un chequeo previo que nombra el sucesor (#372); las variables viejas del paquete dejan de
   tener efecto y `local_status` avisa (#373); los hooks leen solo los nombres nuevos del bloqueo
   (#374); migración en `update` e `install` (#375); el registro pasa a retirados con sucesor y los
-  guardianes de la 0.38.0 (#376).
+  guardianes de la 0.38.0 (#376); documentación de la retirada (#377); el test del registro vale
+  antes y después del bump (#380).
 
 ## [0.37.0] - 2026-10-20
 
@@ -3212,7 +3219,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.37.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.38.0...HEAD
+[0.38.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.37.0...v0.38.0
 [0.37.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.36.1...v0.37.0
 [0.36.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.36.0...v0.36.1
 [0.36.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.35.0...v0.36.0

@@ -1,0 +1,41 @@
+paso0: nombres viejos en la shell = 0 (0 esperado); LOG_DIR exportado=si; TELEMETRY vacio=si
+paso1: hash settings.json real (antes) = 07315718a7dc56d587d95dad98279a6cf9cde91426e4d9a41883b72913453bb6
+paso2: sembrado; hash settings.json sembrado = 5f767d6fc15dfdffeb39e0b49aa7fce0b1865b1144b60b810749399dd2ccb3fe
+paso3: rc=1; línea check: 
+paso3:   LD_HOOK_READ_BLOQUEAR aparece 2 veces
+paso3:   LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO aparece 2 veces
+paso3:   LOCAL_DELEGATE_COSTE_RESPALDO aparece 2 veces
+paso3:   local-delegate-bloqueo-apagado aparece 2 veces
+paso3:   rename aparece 0 veces
+paso3: valores en salida -> sentinelA-7f3q:0 sentinelB-9k2x:0 sentinelC-ajena:0 
+extra-en: rc=1; línea check: 
+extra-en: 'no longer' aparece 0; 'ya no' aparece 0
+paso4: rc=0; hashes $H/.claude antes/después: iguales
+paso4: valores en salida -> sentinelA-7f3q:0 sentinelB-9k2x:0 sentinelC-ajena:0 
+paso4: retired-names-migration.json existe? no; .bak existe? 0
+paso4: acciones de migración listadas: 4 líneas
+paso5: rc=0; valores en salida -> sentinelA-7f3q:0 sentinelB-9k2x:0 sentinelC-ajena:0 
+paso5:   LD_HOOK_READ_BLOCK=1: True
+paso5:   STRUCTURED_SUMMARY=1: True
+paso5:   COST_FALLBACK conserva el valor nuevo (no el viejo): True
+paso5:   viejos presentes: []
+paso5:   clave ajena intacta: True | theme intacto: True
+paso5: .bak existe: si; hash .bak = 5f767d6fc15dfdffeb39e0b49aa7fce0b1865b1144b60b810749399dd2ccb3fe; igual al sembrado: SI
+paso5: interruptor viejo existe: no; nuevo existe: si
+paso5: registro de migración existe; valores dentro -> sentinelA-7f3q:0 sentinelB-9k2x:0 sentinelC-ajena:0 
+paso5: nombres en registro: LD_HOOK_READ_BLOQUEAR LOCAL_DELEGATE_COSTE_RESPALDO LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO local-delegate-bloqueo-apagado 
+paso6: doctor rc=1; línea check: 
+paso6:   LD_HOOK_READ_BLOQUEAR aparece 0
+paso6:   LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO aparece 0
+paso6:   LOCAL_DELEGATE_COSTE_RESPALDO aparece 0
+paso6:   local-delegate-bloqueo-apagado aparece 0
+paso6: segunda update --dry-run rc=0; cabecera de migración presente: 0
+paso7: local-delegate rc=2 nombra recompute-cost: 1; local-delegate-mcp rc=2 nombra recompute-cost: 1
+paso7: no escribió en LOG_DIR artefactos de coste: language.json retired-names-migration.json 
+extra-bom: rc=0; primeros bytes tras migrar: 7b0a20(efbbbf esperado)
+extra-bom:   BLOCK migrado: False | viejo presente: False
+extra-bom: .bak con BOM: efbbbf
+extra-invalid: dry-run rc=0; update rc=0; hash igual: NO; .bak creada: 0
+extra-invalid: doctor línea check: 
+paso9: git grep 1 = 0; git grep 2 = 0; versión pyproject: version = "0.37.0"
+paso8: hash settings.json real (después) = 07315718a7dc56d587d95dad98279a6cf9cde91426e4d9a41883b72913453bb6; igual: SI

@@ -1,0 +1,7 @@
+            raise BumpError(f"{DEPRECATIONS_FILE} no declara DEPRECATED_NAMES")
+>           raise BumpError(f"no se encontró el cierre de DEPRECATED_NAMES en {DEPRECATIONS_FILE}")
+E           bump_version_a0.BumpError: no se encontró el cierre de DEPRECATED_NAMES en src\local_delegate\deprecations.py
+scripts\bump_version.py:225: BumpError
+FAILED tests/test_deprecations.py::test_bump_leaves_a_registry_with_nothing_to_stamp_unchanged[empty_one_line]
+FAILED tests/test_deprecations.py::test_bump_stamps_every_unreleased_entry_of_a_multiline_registry
+2 failed, 5 passed, 27 deselected in 0.31s

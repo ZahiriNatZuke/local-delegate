@@ -1,0 +1,4 @@
+FAILED tests/test_deprecations.py::test_registry_holds_exactly_the_seven_retired_names
+FAILED tests/test_deprecations.py::test_registry_has_nothing_overdue_in_0_38_0
+FAILED tests/test_deprecations.py::test_the_0_38_0_bump_keeps_the_registry_valid
+3 failed, 1 passed, 30 deselected in 3.50s

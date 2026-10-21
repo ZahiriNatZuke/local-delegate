@@ -1,0 +1,23 @@
+local-delegate update — HOME: C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home-bad
+  (--home simulado: se repara ese árbol y NO se toca ningún servicio)
+
+Nombres retirados: se migran a sus sucesores antes de diagnosticar.
+[dry-run] [migrate] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home-bad\.claude\settings.json — no se migra el env de settings.json: no es JSON válido; no se toca
+
+Versión pedida con --version: 0.37.0
+
+Instalación EDITABLE: el código se sirve de D:\Projects\local-delegate
+  Reiniciar el daemon NO cambia la versión. Para actualizar de verdad:
+    git -C D:\Projects\local-delegate pull
+    uv sync --project D:\Projects\local-delegate
+
+[dry-run] [copy] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home-bad\.claude\hooks\local-delegate — scripts de hooks consultivos
+[dry-run] [settings] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home-bad\.claude\settings.json — registra 2 hook(s): UserPromptSubmit, PreToolUse/mcp__local-delegate__.*
+          UserPromptSubmit: "python \"C:/Users/Yohan/AppData/Local/Temp/claude/D--Projects-local-delegate/ffbfb0a5-8272-479c-9bf0-c44cb9d212bb/scratchpad/live-home-bad/.claude/hooks/local-delegate/suggest_delegate_prompt.py\""
+          PreToolUse/mcp__local-delegate__.*: "python \"C:/Users/Yohan/AppData/Local/Temp/claude/D--Projects-local-delegate/ffbfb0a5-8272-479c-9bf0-c44cb9d212bb/scratchpad/live-home-bad/.claude/hooks/local-delegate/record_call.py\""
+[dry-run] [copy] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home-bad\.claude\skills\local-delegation — skill local-delegation (es)
+[dry-run] [markdown] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home-bad\.claude\CLAUDE.md — bloque de regla de delegación (es)
+[dry-run] [mcp] claude — registra el servidor MCP 'local-delegate' (http)
+          {"type": "http", "url": "http://127.0.0.1:9393/mcp"}
+
+--dry-run: no se escribió nada ni se reinició ningún servicio.

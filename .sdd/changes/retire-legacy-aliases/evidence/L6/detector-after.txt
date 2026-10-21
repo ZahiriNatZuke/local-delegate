@@ -1,0 +1,11 @@
+nombres en español (únicos por categoría y fichero): 852
+  file_name: 1
+  identifier: 9
+  js_identifier: 2
+  js_string: 5
+  json_key: 8
+  json_value: 137
+  string_key: 372
+  string_value: 318
+fuera de la lista de excepciones: 0
+palabras sin clasificar: 0

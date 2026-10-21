@@ -1,0 +1,47 @@
+local-delegate doctor — diagnóstico del andamiaje, los servicios y el backend local
+
+LLAMASWAP_EXE:    D:\Projects\llms\llama-swap-v255\llama-swap.exe
+LLAMASWAP_CONFIG: D:\Projects\llms\llama-swap\config.yaml
+Backend BASE_URL: http://127.0.0.1:9292/v1 — arriba
+HOME:             C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home
+Idioma:           es (preferencia; C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-logs\language.json)
+Respuesta:        es (preferencia)
+
+Estados: [ OK ] a punto · [WARN] revisar · [FALT] falta · [ -- ] no se pudo comprobar
+
+Entorno (el CLI y los clientes):
+  [ OK ] CLI local-delegate: C:\Users\Yohan\.local\bin\local-delegate.EXE (versión 0.37.0)
+  [ OK ] versión publicada: 0.37.0 (la última publicada)
+  [ OK ] clientes: detectados: Claude Code
+  [ -- ] clientes MCP observados: todavía no ha hablado ningún cliente MCP con este local-delegate
+  [ OK ] cadenas de respaldo: cadenas válidas; sin residente
+  [ OK ] nombres obsoletos: sin nombres obsoletos en uso
+  [ -- ] coste y relleno: no hay cotejo guardado en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-logs: sin transcripts en esta máquina o `local-delegate recompute-cost` nunca lanzado
+  [ OK ] ventanas de prueba: sin ventanas
+
+Andamiaje (hooks, skill, memoria y entradas MCP):
+  [ OK ] hooks copiados: 5 script(s) en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home\.claude\hooks\local-delegate
+  [ OK ] hooks huérfanos: ninguno suelto en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home\.claude\hooks
+  [ OK ] hooks registrados: 2 registrado(s): UserPromptSubmit, PreToolUse/mcp__local-delegate__.*
+  [ OK ] skill local-delegation: Claude Code: instalada en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home\.claude\skills\local-delegation · opencode: cliente no instalado
+  [ OK ] memoria global: Claude Code: bloque al día en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home\.claude\CLAUDE.md · Codex: cliente no instalado · opencode: cliente no instalado
+  [ OK ] MCP en Claude Code: registrado en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home\.claude.json (http http://127.0.0.1:9393/mcp)
+  [ -- ] MCP en Codex: Codex no está instalado (C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home\.codex no existe)
+  [ -- ] MCP en opencode: opencode no está instalado (C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home\.config\opencode no existe)
+  [ OK ] autocompletado del shell: no instalado (opcional)
+
+Servicios:
+  [ OK ] daemon: local-delegate 0.37.0 · pid 55188 · http://127.0.0.1:9393/mcp
+  [ OK ] backend: http://127.0.0.1:9292/v1/models responde
+  [ OK ] credencial del backend: el backend exige credencial y las entradas MCP van por el daemon (http)
+  [WARN] token del puerto del daemon: el puerto del daemon exige token y Claude Code entra por HTTP sin cabecera de autorización: sus tools local_* responderán 401
+         arréglalo con: local-delegate install --mcp-mode http --web-token-env
+  [ -- ] token de Claude Desktop: Claude Desktop no está configurado en esta máquina
+
+Versiones (instalada vs probada; usa --online para comparar con GitHub):
+  [ OK ] llama-swap: v255 (= probada)
+  [ OK ] llama-server: b10909 (= probada)
+  [ OK ] residencia de llama-swap: sin residente (recomendado) (la config de este shell)
+  [ OK ] turno del daemon: turno activo según el daemon (choques: swap [swap, no exclusivo]: gemma3-4b, gemma4-26b-a4b, qwen36-35b-a3b, qwen35-2b, gemma4-12b)
+
+Resultado: 1 aviso(s) — revisa [FALT] y [WARN] arriba.

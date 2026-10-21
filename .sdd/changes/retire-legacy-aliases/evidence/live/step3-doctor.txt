@@ -1,0 +1,52 @@
+local-delegate doctor — diagnóstico del andamiaje, los servicios y el backend local
+
+LLAMASWAP_EXE:    D:\Projects\llms\llama-swap-v255\llama-swap.exe
+LLAMASWAP_CONFIG: D:\Projects\llms\llama-swap\config.yaml
+Backend BASE_URL: http://127.0.0.1:9292/v1 — arriba
+HOME:             C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home
+Idioma:           es (sistema; C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-logs\language.json)
+Respuesta:        es (sistema)
+
+Estados: [ OK ] a punto · [WARN] revisar · [FALT] falta · [ -- ] no se pudo comprobar
+
+Entorno (el CLI y los clientes):
+  [ OK ] CLI local-delegate: C:\Users\Yohan\.local\bin\local-delegate.EXE (versión 0.37.0)
+  [ OK ] versión publicada: 0.37.0 (la última publicada)
+  [ OK ] clientes: detectados: Claude Code
+  [ -- ] clientes MCP observados: todavía no ha hablado ningún cliente MCP con este local-delegate
+  [ OK ] cadenas de respaldo: cadenas válidas; sin residente
+  [WARN] nombres obsoletos: en el env de settings.json: LD_HOOK_READ_BLOQUEAR ya no tiene efecto: usa LD_HOOK_READ_BLOCK | en el env de settings.json: LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO ya no tiene efecto: usa LOCAL_DELEGATE_STRUCTURED_SUMMARY | en el env de settings.json: LOCAL_DELEGATE_COSTE_RESPALDO ya no tiene efecto: usa LOCAL_DELEGATE_COST_FALLBACK | en ~/.claude: local-delegate-bloqueo-apagado ya no tiene efecto: usa local-delegate-block-off
+         arréglalo con: renombra LD_HOOK_READ_BLOQUEAR a LD_HOOK_READ_BLOCK; renombra LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO a LOCAL_DELEGATE_STRUCTURED_SUMMARY; renombra LOCAL_DELEGATE_COSTE_RESPALDO a LOCAL_DELEGATE_COST_FALLBACK; renombra local-delegate-bloqueo-apagado a local-delegate-block-off
+  [ -- ] coste y relleno: no hay cotejo guardado en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-logs: sin transcripts en esta máquina o `local-delegate recompute-cost` nunca lanzado
+  [ OK ] ventanas de prueba: sin ventanas
+
+Andamiaje (hooks, skill, memoria y entradas MCP):
+  [FALT] hooks copiados: no existe C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home\.claude\hooks\local-delegate
+         arréglalo con: local-delegate install
+  [ OK ] hooks huérfanos: no existe C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home\.claude\hooks: nada que limpiar
+  [FALT] hooks registrados: C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home\.claude\settings.json no registra ningún hook
+         arréglalo con: local-delegate install
+  [FALT] skill local-delegation: Claude Code: no existe C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home\.claude\skills\local-delegation · opencode: cliente no instalado
+         arréglalo con: local-delegate install
+  [FALT] memoria global: Claude Code: no existe C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home\.claude\CLAUDE.md · Codex: cliente no instalado · opencode: cliente no instalado
+         arréglalo con: local-delegate install
+  [FALT] MCP en Claude Code: no existe C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home\.claude.json
+         arréglalo con: local-delegate install
+  [ -- ] MCP en Codex: Codex no está instalado (C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home\.codex no existe)
+  [ -- ] MCP en opencode: opencode no está instalado (C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\live-home\.config\opencode no existe)
+  [ OK ] autocompletado del shell: no instalado (opcional)
+
+Servicios:
+  [ OK ] daemon: local-delegate 0.37.0 · pid 55188 · http://127.0.0.1:9393/mcp
+  [ OK ] backend: http://127.0.0.1:9292/v1/models responde
+  [ -- ] credencial del backend: el backend exige credencial, pero no hay entrada MCP que mirar
+  [ -- ] token del puerto del daemon: el puerto exige token, pero no hay entrada MCP que mirar
+  [ -- ] token de Claude Desktop: Claude Desktop no está configurado en esta máquina
+
+Versiones (instalada vs probada; usa --online para comparar con GitHub):
+  [ OK ] llama-swap: v255 (= probada)
+  [ OK ] llama-server: b10909 (= probada)
+  [ OK ] residencia de llama-swap: sin residente (recomendado) (la config de este shell)
+  [ OK ] turno del daemon: turno activo según el daemon (choques: swap [swap, no exclusivo]: gemma3-4b, gemma4-26b-a4b, qwen36-35b-a3b, qwen35-2b, gemma4-12b)
+
+Resultado: 6 aviso(s) — revisa [FALT] y [WARN] arriba.

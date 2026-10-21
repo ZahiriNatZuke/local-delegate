@@ -1,0 +1,56 @@
+STALE LD_HOOK_READ_BLOQUEAR | src/local_delegate/config.py | Alias de compatibilidad
+used  LD_HOOK_READ_BLOQUEAR | src/local_delegate/deprecations.py | Alias de compatibilidad
+STALE LD_HOOK_READ_BLOQUEAR | src/local_delegate/resources/hooks/hook_common.py | Alias de compatibilidad
+STALE LD_HOOK_READ_BLOQUEAR | tests/test_cli_renamed_names.py | Alias de compatibilidad
+used  LD_HOOK_READ_BLOQUEAR | tests/test_hook_legacy_names.py | Alias de compatibilidad
+STALE LD_HOOK_READ_BLOQUEAR | tests/test_environment_isolation.py | Alias de compatibilidad
+STALE LD_HOOK_READ_INTERRUPTOR | src/local_delegate/config.py | Alias de compatibilidad
+used  LD_HOOK_READ_INTERRUPTOR | src/local_delegate/deprecations.py | Alias de compatibilidad
+STALE LD_HOOK_READ_INTERRUPTOR | src/local_delegate/resources/hooks/hook_common.py | Alias de compatibilidad
+STALE LD_HOOK_READ_INTERRUPTOR | tests/test_cli_renamed_names.py | Alias de compatibilidad
+used  LD_HOOK_READ_INTERRUPTOR | tests/test_hook_legacy_names.py | Alias de compatibilidad
+STALE LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO | src/local_delegate/config.py | Alias de compatibilidad
+used  LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO | src/local_delegate/deprecations.py | Alias de compatibilidad
+STALE LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO | tests/test_cli_renamed_names.py | Alias de compatibilidad
+used  LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO | tests/test_structured_summary.py | Alias de compatibilidad
+STALE LOCAL_DELEGATE_COSTE_RESPALDO | src/local_delegate/config.py | Alias de compatibilidad
+used  LOCAL_DELEGATE_COSTE_RESPALDO | src/local_delegate/deprecations.py | Alias de compatibilidad
+STALE LOCAL_DELEGATE_COSTE_RESPALDO | tests/test_cli_renamed_names.py | Alias de compatibilidad
+used  LOCAL_DELEGATE_COSTE_RESPALDO | tests/test_density.py | Alias de compatibilidad
+STALE recalcular-coste | src/local_delegate/cli.py | Alias de compatibilidad
+used  recalcular-coste | src/local_delegate/deprecations.py | Alias de compatibilidad
+STALE recalcular-coste | tests/test_cli_renamed_names.py | Alias de compatibilidad
+STALE recalcular-coste | tests/test_cli_english.py | Alias de compatibilidad
+STALE reiniciar-calibracion | tests/test_cli_renamed_names.py | Alias de compatibilidad
+used  local-delegate-bloqueo-apagado | src/local_delegate/deprecations.py | Alias de compatibilidad
+STALE local-delegate-bloqueo-apagado | src/local_delegate/resources/hooks/hook_common.py | Alias de compatibilidad
+STALE enfriamiento.json | src/local_delegate/deprecations.py | Alias de compatibilidad
+used  enfriamiento.json | src/local_delegate/resources/hooks/hook_common.py | Alias de compatibilidad
+used  enfriamiento.json | tests/test_cooldown.py | Alias de compatibilidad
+STALE enfriamiento.json | tests/test_fallback.py | Alias de compatibilidad
+used  enfriamiento.json | tests/test_f1_conformance.py | Alias de compatibilidad
+used  LD_HOOK_READ_BLOQUEAR | scripts/build_corpus.py | Dato congelado de corpus o caso
+--- hallazgos de estos nombres:
+LD_HOOK_READ_BLOQUEAR | scripts/build_corpus.py | string_value
+LD_HOOK_READ_BLOQUEAR | src/local_delegate/deprecations.py | string_value
+LD_HOOK_READ_BLOQUEAR | tests/test_deprecations.py | string_value
+LD_HOOK_READ_BLOQUEAR | tests/test_hook_legacy_names.py | string_value
+LD_HOOK_READ_INTERRUPTOR | src/local_delegate/deprecations.py | string_value
+LD_HOOK_READ_INTERRUPTOR | tests/test_deprecations.py | string_value
+LD_HOOK_READ_INTERRUPTOR | tests/test_hook_legacy_names.py | string_value
+LOCAL_DELEGATE_COSTE_RESPALDO | src/local_delegate/deprecations.py | string_value
+LOCAL_DELEGATE_COSTE_RESPALDO | tests/test_density.py | string_value
+LOCAL_DELEGATE_COSTE_RESPALDO | tests/test_deprecations.py | string_value
+LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO | src/local_delegate/deprecations.py | string_value
+LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO | tests/test_deprecations.py | string_value
+LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO | tests/test_structured_summary.py | string_value
+enfriamiento.json | src/local_delegate/legacy_names.py | string_value
+enfriamiento.json | src/local_delegate/resources/hooks/hook_common.py | string_value
+enfriamiento.json | tests/test_cooldown.py | string_value
+enfriamiento.json | tests/test_f1_conformance.py | string_value
+local-delegate-bloqueo-apagado | src/local_delegate/deprecations.py | string_value
+local-delegate-bloqueo-apagado | tests/test_deprecations.py | string_value
+local-delegate-bloqueo-apagado | tests/test_detect_spanish_names.py | string_value
+recalcular-coste | src/local_delegate/deprecations.py | string_value
+recalcular-coste | tests/test_deprecations.py | string_value
+recalcular-coste | tests/test_detect_spanish_names.py | string_value
