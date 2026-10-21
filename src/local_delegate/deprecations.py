@@ -6,16 +6,22 @@ La leen el CLI (aviso en `stderr`), `config` (variables), el check `config.depre
 `doctor` y los tests de horizonte (`tests/test_deprecations.py`). Los hooks no importan el
 paquete: llevan su copia mínima en `hook_common.py`, atada a esta por un test de igualdad.
 
-Hay dos clases de entrada, y la regla es estricta:
+Hay tres clases de entrada, y la regla es estricta (`class_problems` la comprueba):
 
-- **Alias con sucesor** (`new` no es `None`, `kind` distinto de `retired`). El nombre viejo
-  funciona con aviso en la versión que lo renombra (`introduced`) y en las dos menores siguientes,
-  y se retira en la tercera: si se publica en 0.N, vive en 0.N, 0.N+1 y 0.N+2. Toda entrada nueva
-  es de esta clase y nace con `introduced="UNRELEASED"`; `scripts/bump_version.py` cambia ese
-  valor por la versión que se publica.
-- **Nombre retirado sin sucesor** (`kind="retired"`, `new=None`). Ya **no** tiene efecto: el check
-  solo avisa de que sigue puesto. Lleva siempre `warn_until`, la última serie menor en la que el
-  check avisa de él (`"0.37.0"` cubre toda la 0.37.x), y el test de horizonte lo mide contra ella.
+- **Alias con sucesor** (`kind` en `ALIAS_KINDS`, `new` no es `None`, sin `warn_until` ni
+  `retired_from`). El nombre viejo funciona con aviso en la versión que lo renombra
+  (`introduced`) y en las dos menores siguientes, y se retira en la tercera: si se publica en 0.N,
+  vive en 0.N, 0.N+1 y 0.N+2. Toda entrada nueva es de esta clase y nace con
+  `introduced="UNRELEASED"`; `scripts/bump_version.py` cambia ese valor por la versión que se
+  publica.
+- **Nombre retirado sin sucesor** (`kind="retired"`, `new=None`, sin `retired_from`). Ya **no**
+  tiene efecto: el check solo avisa de que sigue puesto. Lleva siempre `warn_until`, la última
+  serie menor en la que el check avisa de él (`"0.37.0"` cubre toda la 0.37.x), y el test de
+  horizonte lo mide contra ella.
+- **Nombre retirado con sucesor** (`kind="retired"`, `new` no es `None`, `retired_from` en
+  `ALIAS_KINDS`). Era un alias y ya **no** tiene efecto: existe solo para avisar (y migrar) hasta
+  la serie de `warn_until`, que es obligatorio y vence como el de un retirado. `retired_from` dice
+  qué superficie tenía; con ella, `effective_kind` decide en qué lector sale.
 """
 
 from __future__ import annotations
@@ -25,7 +31,9 @@ from dataclasses import dataclass
 
 UNRELEASED = "UNRELEASED"
 
-KINDS = frozenset({"cli_command", "cli_option", "env_var", "switch_file", "retired"})
+# Superficies de un nombre: las de un alias y, para un retirado con sucesor, su `retired_from`.
+ALIAS_KINDS = frozenset({"cli_command", "cli_option", "env_var", "switch_file"})
+KINDS = ALIAS_KINDS | {"retired"}
 # Menores que vive un alias desde su versión de introducción (REQ-004): 0.N, 0.N+1 y 0.N+2.
 ALIAS_MINOR_VERSIONS = 3
 
@@ -39,6 +47,8 @@ class DeprecatedName:
     warn_until: str | None = None
     # Lo lee también un hook instalado (`hook_common.py`), que lleva su propia copia.
     used_by_hooks: bool = False
+    # Solo para un retirado con sucesor: la superficie que tenía cuando era alias.
+    retired_from: str | None = None
 
     @property
     def is_retired(self) -> bool:
@@ -122,16 +132,52 @@ def overdue(version: str, entries: tuple[DeprecatedName, ...] = DEPRECATED_NAMES
     return late
 
 
+def effective_kind(entry: DeprecatedName) -> str:
+    """La superficie de la entrada: `retired_from` para un retirado con sucesor, `kind` si no."""
+    if entry.is_retired and entry.new is not None and entry.retired_from is not None:
+        return entry.retired_from
+    return entry.kind
+
+
+def class_problems(entries: tuple[DeprecatedName, ...] = DEPRECATED_NAMES) -> list[str]:
+    """Entradas que rompen la regla de su clase, como `"<old>: <regla>"` (vacía si todo cumple)."""
+    problems: list[str] = []
+    for e in entries:
+        if e.kind not in KINDS:
+            problems.append(f"{e.old}: kind")
+        if e.introduced != UNRELEASED and not re.fullmatch(r"\d+\.\d+\.\d+", e.introduced):
+            problems.append(f"{e.old}: introduced")
+        if not e.is_retired:
+            if not e.new:
+                problems.append(f"{e.old}: alias_without_new")
+            if e.warn_until is not None:
+                problems.append(f"{e.old}: alias_with_warn_until")
+            if e.retired_from is not None:
+                problems.append(f"{e.old}: alias_with_retired_from")
+            continue
+        if not e.warn_until:
+            problems.append(f"{e.old}: retired_without_warn_until")
+        if e.new is None:
+            if e.retired_from is not None:
+                problems.append(f"{e.old}: retired_from_without_new")
+        elif e.retired_from not in ALIAS_KINDS:
+            problems.append(f"{e.old}: retired_from")
+    return problems
+
+
 def env_vars() -> tuple[DeprecatedName, ...]:
-    """Variables de entorno obsoletas: alias con sucesor y retiradas."""
-    return tuple(
-        e for e in DEPRECATED_NAMES if e.kind == "env_var" or (e.is_retired and _looks_env(e.old))
-    )
+    """Variables de entorno obsoletas: alias y retiradas con sucesor cuya superficie es el entorno."""
+    return tuple(e for e in DEPRECATED_NAMES if effective_kind(e) == "env_var")
 
 
 def switch_files() -> tuple[DeprecatedName, ...]:
-    """Ficheros interruptor con nombre viejo, relativos a `~/.claude/`."""
-    return tuple(e for e in DEPRECATED_NAMES if e.kind == "switch_file")
+    """Ficheros interruptor con nombre viejo, relativos a `~/.claude/` (alias o retirados)."""
+    return tuple(e for e in DEPRECATED_NAMES if effective_kind(e) == "switch_file")
+
+
+def cli_entries() -> tuple[DeprecatedName, ...]:
+    """Subcomandos y opciones del CLI con nombre viejo (alias o retirados)."""
+    return tuple(e for e in DEPRECATED_NAMES if effective_kind(e) in ("cli_command", "cli_option"))
 
 
 def hook_names() -> tuple[tuple[str, str, str | None], ...]:
@@ -141,7 +187,3 @@ def hook_names() -> tuple[tuple[str, str, str | None], ...]:
 
 def find(old: str) -> DeprecatedName | None:
     return next((e for e in DEPRECATED_NAMES if e.old == old), None)
-
-
-def _looks_env(name: str) -> bool:
-    return bool(re.fullmatch(r"[A-Z][A-Z0-9_]+", name))

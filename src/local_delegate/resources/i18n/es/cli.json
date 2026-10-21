@@ -64,6 +64,8 @@
   "cli.deprecations.removed_in": "se retira en la {version}",
   "cli.deprecations.removed_later": "se retirará tres versiones menores después",
   "cli.deprecations.retired": "{old} ya no tiene efecto desde la {version}",
+  "cli.deprecations.retired_renamed": "{old} ya no tiene efecto desde la {version}: usa {new}",
+  "cli.deprecations.retired_renamed_unreleased": "{old} ya no tiene efecto: usa {new}",
   "cli.entrypoint.interactive": "local-delegate: sin subcomando, esto arranca el servidor MCP stdio y espera por stdin.\n               Si buscabas los comandos: local-delegate --help",
   "cli.error": "error: {detail}",
   "cli.help._description": "Instala, diagnostica y sirve local-delegate. Sin subcomando, este binario arranca el servidor MCP stdio, que es como lo lanzan Claude Code, Codex y opencode. `check-llamaswap` e `init-llamaswap` piden el extra [llamaswap].",
