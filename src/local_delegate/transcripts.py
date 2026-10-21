@@ -1,4 +1,4 @@
-"""Lectura de los transcripts de Claude Code, SOLO para `local-delegate recalcular-coste`.
+"""Lectura de los transcripts de Claude Code, SOLO para `local-delegate recompute-cost`.
 
 El daemon y el panel no importan este módulo (REQ-073): leer `~/.claude/projects` es cosa del
 comando que lanza el usuario. Todo lo que sale de aquí son números, fechas, ids de modelo y
