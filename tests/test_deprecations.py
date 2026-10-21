@@ -159,7 +159,8 @@ def test_registry_holds_exactly_the_seven_retired_names():
     )
     for e in deprecations.DEPRECATED_NAMES:
         assert e.kind == "retired", e
-        assert e.introduced == deprecations.UNRELEASED, e
+        # `bump_version` sella UNRELEASED con la versión que se publica: vale antes y después.
+        assert e.introduced in (deprecations.UNRELEASED, "0.38.0"), e
         assert e.warn_until == "0.40.0", e
 
 
