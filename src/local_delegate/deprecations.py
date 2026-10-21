@@ -1,10 +1,11 @@
 """deprecations.py — registro único de nombres obsoletos (D1 del SDD english-names-bilingual-output).
 
-Una sola tabla, `DEPRECATED_NAMES`, para todo nombre viejo que el paquete todavía reconoce:
+Una sola tabla, `DEPRECATED_NAMES`, para todo nombre viejo del que el paquete todavía avisa:
 subcomandos y opciones del CLI, variables de entorno, ficheros interruptor y nombres retirados.
-La leen el CLI (aviso en `stderr`), `config` (variables), el check `config.deprecated_names` de
-`doctor` y los tests de horizonte (`tests/test_deprecations.py`). Los hooks no importan el
-paquete: llevan su copia mínima en `hook_common.py`, atada a esta por un test de igualdad.
+La leen el CLI (chequeo previo y aviso en `stderr`), `config` (variables), el check
+`config.deprecated_names` de `doctor`, `local_status`, la migración de `update`/`install` y los
+tests de horizonte (`tests/test_deprecations.py`). Los hooks no la leen: desde la 0.38.0 solo
+conocen los nombres nuevos.
 
 Hay tres clases de entrada, y la regla es estricta (`class_problems` la comprueba):
 
