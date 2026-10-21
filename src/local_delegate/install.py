@@ -36,9 +36,10 @@ from dataclasses import dataclass, field
 from importlib.resources import files as _resource_files
 from pathlib import Path, PurePath
 
-from . import config, i18n
+from . import config, i18n, shell_profiles
 from .i18n import t
 from .resources.hooks import hook_common
+from .simulated_home import is_simulated_home
 
 # Marcadores de los bloques gestionados en archivos que también edita el usuario.
 MD_BEGIN = "<!-- local-delegate:begin -->"
@@ -147,18 +148,8 @@ def resources_dir() -> Path:
 # Las dos las necesitan `install`, `update` y el CLI. Viven aquí —el módulo más bajo de los
 # tres— porque tenerlas duplicadas es exactamente la clase de verdad repartida que ya costó
 # caro en este repo (tres copias de la cuenta de tokens, dos derivaciones del host del daemon).
-def is_simulated_home(home: Path) -> bool:
-    """True si ``home`` apunta fuera del HOME real: entonces no se toca nada global.
-
-    «Global» son dos cosas distintas y las dos importan: los servicios de la máquina (lo que ya
-    cuidaba ``update``) y el binario ``claude``, que con ``mcp add-json --scope user`` escribe
-    **siempre** en el ``~/.claude.json`` del usuario que ejecuta, ignorando cualquier ``--home``.
-    """
-    try:
-        return home.resolve() != Path.home().resolve()
-    except OSError:
-        # Una ruta irresoluble se trata como simulada: el lado seguro es no tocar lo global.
-        return True
+# `is_simulated_home` vive en `simulated_home` (la usa también `shell_profiles`, que este módulo
+# importa) y se reexporta arriba con el mismo nombre.
 
 
 def opencode_dir(home: Path) -> Path:
@@ -419,6 +410,218 @@ def remove_block(text: str, begin: str, end: str) -> str:
     pattern = re.compile(r"\n*" + re.escape(begin) + r".*?" + re.escape(end) + r"\n*", re.DOTALL)
     cleaned = pattern.sub("\n\n", text)
     return cleaned.strip() + "\n" if cleaned.strip() else ""
+
+
+# --- Perfiles de shell, por bytes (SDD cli-completion, desviación 1) ----------
+# `upsert_block`/`remove_block` no sirven para un perfil: `_read_text` da "" ante un fichero que no
+# es UTF-8 (un perfil de 5.1 guardado en ANSI con tildes quedaría reemplazado por el bloque),
+# `_write_text` escribe siempre UTF-8, los dos hacen `strip()` y `_backup` pisa el `.bak` del
+# usuario. Estos dos ayudantes no escriben: calculan los bytes nuevos, y `write_profile_edit` los
+# escribe. Fuera del bloque, el perfil queda byte a byte igual (REQ-028).
+PROFILE_BACKUP_SUFFIX = ".local-delegate.bak"
+_UTF8_BOM = b"\xef\xbb\xbf"
+_UTF16_BOMS = ((b"\xff\xfe", "utf-16-le"), (b"\xfe\xff", "utf-16-be"))
+#: Motivo por el que un perfil no se toca → su texto en el catálogo.
+PROFILE_SKIP_REASONS = {
+    "unreadable": "install.completion.reason.unreadable",
+    "nul_bytes": "install.completion.reason.nul_bytes",
+    "marker_mismatch": "install.completion.reason.marker_mismatch",
+    "broken_link": "install.completion.reason.broken_link",
+}
+
+
+@dataclass(frozen=True)
+class ProfileEdit:
+    """Lo que hay que hacer con un perfil, sin haberlo hecho todavía.
+
+    ``target`` es el destino resuelto (el fichero real si ``path`` es un enlace, REQ-045).
+    ``data`` son los bytes nuevos, o ``None`` si no hay cambio. ``reason`` dice por qué no se toca
+    (una clave de ``PROFILE_SKIP_REASONS``); ``existed``, si el destino existía al planificar.
+    """
+
+    path: Path
+    target: Path
+    data: bytes | None = None
+    reason: str | None = None
+    existed: bool = False
+
+    @property
+    def changed(self) -> bool:
+        return self.data is not None
+
+    def skip_message(self) -> str | None:
+        """El aviso del catálogo de un perfil que no se toca, o ``None``."""
+        if self.reason is None:
+            return None
+        return t(
+            "install.completion.profile_skipped",
+            path=self.path,
+            reason=t(PROFILE_SKIP_REASONS[self.reason]),
+        )
+
+
+def profile_backup_path(target: Path) -> Path:
+    """La copia propia de un perfil, junto al destino: nunca ``<perfil>.bak`` (REQ-046)."""
+    return target.with_name(target.name + PROFILE_BACKUP_SUFFIX)
+
+
+def _profile_target(path: Path) -> tuple[Path, str | None]:
+    """El destino resuelto de ``path`` y, si no se puede tocar, el motivo (REQ-045)."""
+    target = path
+    if path.is_symlink():
+        try:
+            target = path.resolve(strict=True)
+        except (OSError, RuntimeError):
+            return path, "broken_link"
+    if target.exists() and not target.is_file():
+        return target, "unreadable"
+    return target, None
+
+
+def _decode_profile(raw: bytes) -> tuple[str, str, bytes] | str:
+    """``(texto, códec, BOM)`` de un perfil, o el motivo por el que no se toca.
+
+    BOM de UTF-16 → ese códec; NUL sin BOM de UTF-16 → no se toca (sería un UTF-16 sin marca);
+    UTF-8 estricto (con o sin BOM); y si no, ``latin-1``, que da la vuelta exacta a cualquier byte.
+    """
+    for bom, codec in _UTF16_BOMS:
+        if raw.startswith(bom):
+            try:
+                return raw[len(bom) :].decode(codec), codec, bom
+            except UnicodeDecodeError:
+                return "unreadable"
+    if b"\x00" in raw:
+        return "nul_bytes"
+    bom = _UTF8_BOM if raw.startswith(_UTF8_BOM) else b""
+    body = raw[len(bom) :]
+    try:
+        return body.decode("utf-8"), "utf-8", bom
+    except UnicodeDecodeError:
+        return body.decode("latin-1"), "latin-1", bom
+
+
+def _dominant_newline(text: str) -> str:
+    crlf = text.count("\r\n")
+    return "\r\n" if crlf > text.count("\n") - crlf else "\n"
+
+
+def _profile_block_span(text: str) -> tuple[int, int] | str | None:
+    """Dónde está el bloque, ``None`` si no hay, o ``"marker_mismatch"`` si está a medias."""
+    begin, end = shell_profiles.BLOCK_BEGIN, shell_profiles.BLOCK_END
+    starts, ends = text.count(begin), text.count(end)
+    if starts == 0 and ends == 0:
+        return None
+    if starts != 1 or ends != 1 or text.index(end) < text.index(begin):
+        return "marker_mismatch"
+    return text.index(begin), text.index(end) + len(end)
+
+
+def _read_profile(path: Path) -> tuple[Path, tuple[str, str, bytes] | None, str | None]:
+    """Destino, ``(texto, códec, BOM)`` (``None`` si no existe) y motivo para no tocarlo."""
+    target, problem = _profile_target(path)
+    if problem or not target.exists():
+        return target, None, problem
+    try:
+        raw = target.read_bytes()
+    except OSError:
+        return target, None, "unreadable"
+    decoded = _decode_profile(raw)
+    if isinstance(decoded, str):
+        return target, None, decoded
+    return target, decoded, None
+
+
+def upsert_profile_block(path: Path, block: str) -> ProfileEdit:
+    """Pone ``block`` (con sus marcadores) en el perfil, sin escribir (REQ-027, REQ-028).
+
+    - Perfil vacío o inexistente → ``bloque + NL``.
+    - Con texto → ``texto + NL + bloque + NL``: si el texto acababa en salto, queda una línea en
+      blanco de separación; si no, no.
+    - Con el bloque ya puesto → se reemplaza lo de dentro sin mover nada más.
+
+    El fin de línea es el dominante del fichero y la codificación (y el BOM), la que tenía.
+    """
+    target, decoded, problem = _read_profile(path)
+    if problem:
+        return ProfileEdit(path, target, reason=problem, existed=target.exists())
+    if decoded is None:
+        data = (block + "\n").encode("utf-8")
+        return ProfileEdit(path, target, data=data, existed=False)
+    text, codec, bom = decoded
+    newline = _dominant_newline(text)
+    inserted = block.replace("\r\n", "\n").replace("\n", newline)
+    if codec == "latin-1":
+        # El bloque de bash/zsh puede llevar la ruta en UTF-8: esos bytes son los que leerá el
+        # shell, así que se meten tal cual en el texto decodificado como latin-1.
+        inserted = inserted.encode("utf-8").decode("latin-1")
+    span = _profile_block_span(text)
+    if isinstance(span, str):
+        return ProfileEdit(path, target, reason=span, existed=True)
+    if span is not None:
+        updated = text[: span[0]] + inserted + text[span[1] :]
+    elif text == "":
+        updated = inserted + newline
+    else:
+        updated = text + newline + inserted + newline
+    if updated == text:
+        return ProfileEdit(path, target, existed=True)
+    return ProfileEdit(path, target, data=bom + updated.encode(codec), existed=True)
+
+
+def remove_profile_block(path: Path) -> ProfileEdit:
+    """Quita el bloque del perfil, sin escribir; es la inversa exacta de ``upsert_profile_block``.
+
+    Se quitan el bloque, el salto que lo cierra y el salto que lo precede (si lo hay): un perfil
+    que acababa en salto vuelve a acabar en uno, y uno que no, vuelve sin él. Con el bloque al
+    principio, se quitan solo el bloque y su salto.
+    """
+    target, decoded, problem = _read_profile(path)
+    if problem:
+        return ProfileEdit(path, target, reason=problem, existed=target.exists())
+    if decoded is None:
+        return ProfileEdit(path, target, existed=False)
+    text, codec, bom = decoded
+    span = _profile_block_span(text)
+    if isinstance(span, str):
+        return ProfileEdit(path, target, reason=span, existed=True)
+    if span is None:
+        return ProfileEdit(path, target, existed=True)
+    start, end = span
+    for newline in ("\r\n", "\n"):
+        if text.startswith(newline, end):
+            end += len(newline)
+            break
+    for newline in ("\r\n", "\n"):
+        if text[:start].endswith(newline):
+            start -= len(newline)
+            break
+    updated = text[:start] + text[end:]
+    return ProfileEdit(path, target, data=bom + updated.encode(codec), existed=True)
+
+
+def write_profile_edit(edit: ProfileEdit, *, backup: bool = True) -> str | None:
+    """Escribe un ``ProfileEdit`` en su destino resuelto; ``None`` si fue bien (o no había nada).
+
+    - Se escribe en el sitio, no con temporal + ``os.replace``: sobre un enlace lo rompería
+      (REQ-045), y en POSIX saltaría la protección de un fichero de solo lectura.
+    - Con ``backup``, antes se copia el destino a ``<destino>.local-delegate.bak`` **solo si esa
+      copia no existe**, para que guarde el estado previo a la primera instalación (REQ-046).
+    - Un error de escritura no lanza: se devuelve ``nombre (motivo)``, como ``_failure``, para el
+      aviso ``install.not_written`` (REQ-028).
+    """
+    if edit.data is None:
+        return None
+    target = edit.target
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if backup and target.is_file():
+            copy = profile_backup_path(target)
+            if not copy.exists():
+                shutil.copy2(target, copy)
+        target.write_bytes(edit.data)
+    except OSError as exc:
+        return _failure(target.name, exc)
+    return None
 
 
 # --- Hooks de Claude Code ----------------------------------------------------

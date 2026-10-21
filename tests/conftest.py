@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from local_delegate import config, i18n, install
+from local_delegate import config, i18n, install, shell_profiles
 
 #: Idioma con el que corre la suite (REQ-043): los asserts en español valen en cualquier máquina.
 #: Los tests de inglés y los de detección lo sobrescriben con su `monkeypatch`.
@@ -177,6 +177,43 @@ def real_daemon_down(request, monkeypatch, _rejecting_server):
     monkeypatch.setattr(
         "local_delegate.checks._llamaswap_daemon_destination", lambda: ("127.0.0.1", port, {})
     )
+
+
+# --- SDD cli-completion, L3a: ningún test llega al perfil real del usuario ---------------------
+#: Marcador del único test que pregunta de verdad a pwsh por la ruta de su perfil (solo lectura).
+REAL_PROFILE_QUERY_MARKER = "real_profile_query"
+PROFILE_GUARD = pytest.StashKey[bool]()
+
+
+def _forbidden_profile_lookup(*_args, **_kwargs):
+    # `pytest.fail` lanza una excepción que no hereda de `Exception`: ni el `except` de la consulta
+    # (`OSError`, `SubprocessError`) ni el del respaldo por `ctypes` pueden tragársela.
+    pytest.fail(
+        "un test ha llegado a la consulta real del perfil del shell; inyecta `run=`, `query=` o "
+        "`known_folder=`, o usa un HOME simulado",
+        pytrace=False,
+    )
+
+
+@pytest.fixture(autouse=True)
+def real_profiles_untouchable(request, monkeypatch):
+    """Sustituye las dos únicas salidas de `shell_profiles` al sistema por dobles que fallan.
+
+    Son el ejecutor por defecto de la consulta a PowerShell (`_default_run`) y el respaldo por la
+    carpeta conocida *Documents* (`_documents_folder`). No se sustituye `query_powershell`: los
+    tests que le inyectan `run=` siguen funcionando, y solo falla una llamada real. Así ningún test
+    puede averiguar —ni por tanto escribir— el `$PROFILE` real, ni siquiera con `Path.home`
+    parcheado (`install.is_simulated_home`). El único caso real lo desactiva con el marcador
+    `real_profile_query`. `tests/test_profile_guard.py` comprueba que la fixture está activa.
+    """
+    if request.node.get_closest_marker(REAL_PROFILE_QUERY_MARKER) is not None:
+        request.node.stash[PROFILE_GUARD] = False
+        yield
+        return
+    monkeypatch.setattr(shell_profiles, "_default_run", _forbidden_profile_lookup)
+    monkeypatch.setattr(shell_profiles, "_documents_folder", _forbidden_profile_lookup)
+    request.node.stash[PROFILE_GUARD] = True
+    yield
 
 
 @pytest.fixture
