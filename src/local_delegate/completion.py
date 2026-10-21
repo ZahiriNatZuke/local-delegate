@@ -24,8 +24,10 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import json
 import re
 from dataclasses import dataclass
+from pathlib import Path
 
 from . import deprecations, i18n
 
@@ -493,3 +495,104 @@ def render_zsh(model: Model, *, lang: str) -> str:
 
 
 _RENDERERS = {"powershell": render_powershell, "zsh": render_zsh, "bash": render_bash}
+
+
+# --- Installation manifest (REQ-043) ----------------------------------------------------------
+
+#: Name of the manifest inside the completion directory (`shell_profiles.completion_dir`).
+MANIFEST_NAME = "installed.json"
+#: Schema version of the manifest.
+MANIFEST_VERSION = 1
+
+
+class ManifestUnreadableError(ValueError):
+    """The manifest exists but cannot be read or does not follow the schema of REQ-043."""
+
+
+def manifest_path(directory: Path) -> Path:
+    return Path(directory) / MANIFEST_NAME
+
+
+def read_manifest(directory: Path) -> dict | None:
+    """The manifest of `directory`, `None` if there is none.
+
+    Raises `ManifestUnreadableError` when it exists but is not valid JSON or not the schema of
+    REQ-043; whoever reads it decides what to do (`uninstall` goes on with the candidates, the
+    check of `doctor` says `unknown`). Nothing else is raised.
+    """
+    path = manifest_path(directory)
+    try:
+        raw = path.read_bytes()
+    except FileNotFoundError:
+        return None
+    except OSError as exc:
+        raise ManifestUnreadableError(f"{path}: {exc}") from exc
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError) as exc:
+        raise ManifestUnreadableError(f"{path}: {exc}") from exc
+    if not _valid_manifest(data):
+        raise ManifestUnreadableError(f"{path}: schema")
+    return data
+
+
+def _valid_manifest(data: object) -> bool:
+    if not isinstance(data, dict) or data.get("version") != MANIFEST_VERSION:
+        return False
+    if not isinstance(data.get("lang"), str) or not isinstance(data.get("generator"), str):
+        return False
+    shells = data.get("shells")
+    if not isinstance(shells, list):
+        return False
+    for entry in shells:
+        if not isinstance(entry, dict) or entry.get("shell") not in SHELLS:
+            return False
+        if not isinstance(entry.get("file"), str) or not isinstance(entry.get("profiles"), list):
+            return False
+        for profile in entry["profiles"]:
+            if not isinstance(profile, dict) or not isinstance(profile.get("path"), str):
+                return False
+            if not all(isinstance(profile.get(k), bool) for k in ("created", "created_parent")):
+                return False
+    return True
+
+
+def merge_manifest(
+    existing: dict | None,
+    *,
+    generator: str,
+    lang: str,
+    written: dict[str, tuple[str, list[dict]]],
+) -> dict:
+    """The manifest after an `install`: `existing` plus the shells in `written`.
+
+    `written` maps a shell to its completion file and the profiles that carry its block. The
+    shells not in `written` keep their entry; a profile already listed keeps its original
+    `created`/`created_parent` (REQ-043), and one listed before but not touched now stays listed,
+    so that `uninstall` still cleans it.
+    """
+    previous = {entry["shell"]: entry for entry in (existing or {}).get("shells", [])}
+    shells = []
+    for shell in SHELLS:
+        if shell in written:
+            file, profiles = written[shell]
+            merged = [dict(p) for p in previous.get(shell, {}).get("profiles", [])]
+            listed = {p["path"] for p in merged}
+            merged += [dict(p) for p in profiles if p["path"] not in listed]
+            shells.append({"shell": shell, "file": file, "profiles": merged})
+        elif shell in previous:
+            shells.append(previous[shell])
+    return {"version": MANIFEST_VERSION, "generator": generator, "lang": lang, "shells": shells}
+
+
+def manifest_without(manifest: dict, shells: tuple[str, ...] | list[str]) -> dict | None:
+    """`manifest` without the entries of `shells`; `None` when no entry is left (REQ-032)."""
+    left = [entry for entry in manifest.get("shells", []) if entry.get("shell") not in shells]
+    if not left:
+        return None
+    return {**manifest, "shells": left}
+
+
+def manifest_bytes(data: dict) -> bytes:
+    """The manifest as written to disk: UTF-8, LF, two-space indent, final newline."""
+    return (json.dumps(data, ensure_ascii=False, indent=2) + "\n").encode("utf-8")

@@ -24,6 +24,7 @@ Todo es idempotente y reversible:
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -31,12 +32,12 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from importlib.resources import files as _resource_files
 from pathlib import Path, PurePath
 
-from . import config, i18n, shell_profiles
+from . import completion, config, i18n, shell_profiles
 from .i18n import t
 from .resources.hooks import hook_common
 from .simulated_home import is_simulated_home
@@ -622,6 +623,337 @@ def write_profile_edit(edit: ProfileEdit, *, backup: bool = True) -> str | None:
     except OSError as exc:
         return _failure(target.name, exc)
     return None
+
+
+# --- install/uninstall --shell-completion (SDD cli-completion, L3b) ----------
+class CompletionWriteError(OSError):
+    """Un perfil o fichero del autocompletado que no se pudo escribir o borrar.
+
+    Se lanza desde ``Action.run`` a propósito: ``apply`` la cuenta como fallo y el código de
+    salida pasa a 1 (REQ-028, REQ-030), mientras los demás shells siguen.
+    """
+
+
+@dataclass(frozen=True)
+class ShellProbes:
+    """Lo que el autocompletado pregunta a la máquina, inyectable para los tests.
+
+    ``None`` en cada campo es el valor real (``sys.platform``, ``shutil.which``, la consulta a
+    PowerShell…). ``shell_env`` es el ``$SHELL`` de REQ-024.
+    """
+
+    platform: str | None = None
+    which: Callable[[str], str | None] | None = None
+    shell_env: str | None = None
+    query: shell_profiles.Query | None = None
+    environ: Mapping[str, str] | None = None
+    known_folder: Callable[[], Path | None] | None = None
+    simulated_policy: str = shell_profiles.SIMULATED_POLICY
+
+
+def shell_probes() -> ShellProbes:
+    """Las sondas reales. Los tests de la CLI lo sustituyen por unas con dobles."""
+    return ShellProbes(shell_env=os.environ.get("SHELL"))
+
+
+@dataclass
+class CompletionPlan:
+    """Las acciones del autocompletado y los avisos que se dicen antes de aplicarlas."""
+
+    actions: list[Action] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
+def _atomic_write(path: Path, data: bytes) -> None:
+    """Temporal en la misma carpeta + ``os.replace``: nunca queda un fichero a medias (REQ-026)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=path.name + ".", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(data)
+        os.replace(tmp, path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp)
+        raise
+
+
+def _same_bytes(path: Path, data: bytes) -> bool:
+    try:
+        return path.read_bytes() == data
+    except OSError:
+        return False
+
+
+def _owned_file_action(
+    kind: str, path: Path, data: bytes, detail: str, literal: str = ""
+) -> Action:
+    """Escribe un fichero nuestro (completado o manifiesto): sin ``.bak`` y atómico (REQ-026)."""
+    if _same_bytes(path, data):
+        return Action(kind, path, t("install.completion.up_to_date"))
+
+    def _run() -> str:
+        try:
+            _atomic_write(path, data)
+        except OSError as exc:
+            raise CompletionWriteError(
+                t("install.completion.not_written", names=_failure(path.name, exc))
+            ) from exc
+        return t("install.completion.written")
+
+    return Action(kind, path, detail, _run, literal=literal)
+
+
+def _profile_install_action(shell: str, edit: ProfileEdit, block: str, backup: bool) -> Action:
+    if not edit.changed:
+        return Action("profile", edit.path, t("install.completion.up_to_date"))
+
+    def _run() -> str:
+        error = write_profile_edit(edit, backup=backup)
+        if error:
+            raise CompletionWriteError(t("install.completion.not_written", names=error))
+        return t("install.completion.block_written")
+
+    detail = t("install.completion.profile_plan", shell=shell)
+    return Action("profile", edit.path, detail, _run, literal=block)
+
+
+def plan_completion_install(
+    home: Path,
+    requested: Sequence[str],
+    *,
+    lang: str,
+    data_dir: Path | None = None,
+    probes: ShellProbes | None = None,
+) -> CompletionPlan:
+    """Las acciones de ``install --shell-completion`` (REQ-024 a REQ-029, REQ-043, REQ-044).
+
+    Por cada shell resuelto: el fichero de completado (``render(shell, lang=lang)``), el bloque de
+    carga en cada perfil y, al final, el manifiesto fusionado con el que hubiera. Una edición de
+    PowerShell con política que bloquea se salta con aviso; si se saltan todas, no se escribe
+    ``local-delegate.ps1`` ni su entrada. No escribe nada: lo hace ``apply``.
+    """
+    probes = probes or shell_probes()
+    simulated = is_simulated_home(home)
+    directory = shell_profiles.completion_dir(home, data_dir)
+    resolution = shell_profiles.resolve_shells(
+        requested, platform=probes.platform, which=probes.which, shell_env=probes.shell_env
+    )
+    plan = CompletionPlan(warnings=resolution.warnings())
+
+    profiles: dict[str, list[Path]] = {}
+    for target in resolution.targets:
+        location = shell_profiles.profile_path(
+            target,
+            home,
+            simulated=simulated,
+            query=probes.query,
+            platform=probes.platform,
+            environ=probes.environ,
+            known_folder=probes.known_folder,
+            simulated_policy=probes.simulated_policy,
+        )
+        warning = shell_profiles.policy_warning(target, location.policy)
+        if warning:
+            plan.warnings.append(warning)
+        if shell_profiles.policy_blocks(location.policy):
+            continue
+        paths = profiles.setdefault(target.shell, [])
+        if location.path not in paths:
+            paths.append(location.path)
+
+    manifest = _read_manifest_or_warn(directory, plan.warnings)
+    listed = {
+        profile["path"]: profile
+        for entry in (manifest or {}).get("shells", [])
+        for profile in entry["profiles"]
+    }
+    written: dict[str, tuple[str, list[dict]]] = {}
+    for shell in (s for s in shell_profiles.SHELLS if s in profiles):
+        file = shell_profiles.completion_file(directory, shell)
+        content = completion.render(shell, lang=lang).encode("utf-8")
+        detail = t("install.completion.file_plan", shell=shell)
+        plan.actions.append(_owned_file_action("completion", file, content, detail))
+        block = shell_profiles.load_block(shell, file)
+        entries = []
+        for path in profiles[shell]:
+            edit = upsert_profile_block(path, block)
+            if edit.reason:
+                plan.warnings.append(edit.skip_message())
+                continue
+            previous = listed.get(str(path))
+            created = previous["created"] if previous else not edit.existed
+            created_parent = (
+                previous["created_parent"] if previous else not edit.target.parent.exists()
+            )
+            entries.append(
+                {"path": str(path), "created": created, "created_parent": created_parent}
+            )
+            # Un perfil que creó `install` no lleva copia: su estado previo es «no existe».
+            plan.actions.append(_profile_install_action(shell, edit, block, backup=not created))
+        written[shell] = (str(file), entries)
+
+    if written:
+        from .version import get_version
+
+        data = completion.merge_manifest(
+            manifest, generator=get_version(), lang=lang, written=written
+        )
+        text = completion.manifest_bytes(data)
+        path = completion.manifest_path(directory)
+        detail = t("install.completion.manifest_plan")
+        plan.actions.append(
+            _owned_file_action("manifest", path, text, detail, literal=text.decode("utf-8"))
+        )
+    return plan
+
+
+def _read_manifest_or_warn(directory: Path, warnings: list[str]) -> dict | None:
+    try:
+        return completion.read_manifest(directory)
+    except completion.ManifestUnreadableError:
+        path = completion.manifest_path(directory)
+        warnings.append(t("install.completion.manifest_unreadable", path=path))
+        return None
+
+
+def _profile_uninstall_action(edit: ProfileEdit, created: bool, created_parent: bool) -> Action:
+    data = edit.data or b""
+
+    def _run() -> str:
+        target = edit.target
+        if created and not data.strip():
+            # `install` creó el perfil y solo queda vacío: se borra, y su carpeta si también la
+            # creó y quedó vacía (REQ-032). Un perfil que ya existía no se borra nunca.
+            try:
+                target.unlink()
+                if created_parent and not any(target.parent.iterdir()):
+                    target.parent.rmdir()
+            except OSError as exc:
+                raise CompletionWriteError(
+                    t("install.completion.not_removed", names=_failure(target.name, exc))
+                ) from exc
+            return t("install.completion.profile_deleted")
+        error = write_profile_edit(edit, backup=not created)
+        if error:
+            raise CompletionWriteError(t("install.completion.not_written", names=error))
+        # La copia propia sobra si el perfil volvió a ser ella (REQ-046).
+        copy = profile_backup_path(target)
+        if _same_bytes(copy, data):
+            with contextlib.suppress(OSError):
+                copy.unlink()
+        return t("install.completion.block_removed")
+
+    return Action("profile", edit.path, t("install.completion.uninstall_profile_plan"), _run)
+
+
+def _remove_owned_action(kind: str, path: Path, detail: str) -> Action:
+    def _run() -> str:
+        try:
+            if path.is_dir():
+                path.rmdir()
+            else:
+                path.unlink()
+        except FileNotFoundError:
+            return t("install.uninstall.did_not_exist")
+        except OSError as exc:
+            raise CompletionWriteError(
+                t("install.completion.not_removed", names=_failure(path.name, exc))
+            ) from exc
+        return t("install.uninstall.removed")
+
+    return Action(kind, path, detail, _run)
+
+
+def uninstall_shells(requested: Sequence[str]) -> tuple[str, ...]:
+    """Los shells de ``uninstall --shell-completion``: ``auto`` (o nada) son todos (REQ-032)."""
+    if not requested or "auto" in requested:
+        return shell_profiles.SHELLS
+    return tuple(s for s in shell_profiles.SHELLS if s in requested)
+
+
+def plan_completion_uninstall(
+    home: Path,
+    requested: Sequence[str],
+    *,
+    data_dir: Path | None = None,
+    probes: ShellProbes | None = None,
+) -> CompletionPlan:
+    """Las acciones que quitan el autocompletado de los shells pedidos (REQ-032, REQ-046).
+
+    Quita el bloque de la unión de los perfiles del manifiesto y los candidatos que existan,
+    borra los ficheros de completado, actualiza o borra el manifiesto, y borra el directorio
+    ``completion/`` si queda vacío. Sin nada instalado, no hay acciones. No escribe nada.
+    """
+    probes = probes or shell_probes()
+    shells = uninstall_shells(requested)
+    simulated = is_simulated_home(home)
+    directory = shell_profiles.completion_dir(home, data_dir)
+    plan = CompletionPlan()
+    manifest_file = completion.manifest_path(directory)
+    manifest = _read_manifest_or_warn(directory, plan.warnings)
+    broken = manifest is None and manifest_file.is_file()
+
+    listed: dict[str, dict] = {}
+    for entry in (manifest or {}).get("shells", []):
+        if entry["shell"] in shells:
+            for profile in entry["profiles"]:
+                listed.setdefault(profile["path"], profile)
+    candidates = shell_profiles.candidate_profiles(
+        home,
+        simulated=simulated,
+        platform=probes.platform,
+        which=probes.which,
+        query=probes.query,
+        environ=probes.environ,
+        known_folder=probes.known_folder,
+        shells=shells,
+    )
+    paths: list[Path] = []
+    for path in [Path(p) for p in listed] + candidates:
+        if path not in paths:
+            paths.append(path)
+    for path in paths:
+        edit = remove_profile_block(path)
+        if edit.reason:
+            plan.warnings.append(edit.skip_message())
+            continue
+        if not edit.changed:
+            continue
+        entry = listed.get(str(path), {})
+        plan.actions.append(
+            _profile_uninstall_action(
+                edit, bool(entry.get("created")), bool(entry.get("created_parent"))
+            )
+        )
+
+    removed: set[Path] = set()
+    for shell in shells:
+        file = shell_profiles.completion_file(directory, shell)
+        if file.is_file():
+            detail = t("install.completion.uninstall_file_plan", shell=shell)
+            plan.actions.append(_remove_owned_action("completion", file, detail))
+            removed.add(file)
+
+    if manifest is not None:
+        left = completion.manifest_without(manifest, shells)
+        if left is None:
+            detail = t("install.completion.uninstall_manifest_plan")
+            plan.actions.append(_remove_owned_action("manifest", manifest_file, detail))
+            removed.add(manifest_file)
+        elif left != manifest:
+            text = completion.manifest_bytes(left)
+            detail = t("install.completion.manifest_plan")
+            plan.actions.append(_owned_file_action("manifest", manifest_file, text, detail))
+    elif broken and set(shells) == set(shell_profiles.SHELLS):
+        detail = t("install.completion.uninstall_manifest_plan")
+        plan.actions.append(_remove_owned_action("manifest", manifest_file, detail))
+        removed.add(manifest_file)
+
+    if removed and directory.is_dir() and set(directory.iterdir()) <= removed:
+        detail = t("install.completion.uninstall_dir_plan")
+        plan.actions.append(_remove_owned_action("remove", directory, detail))
+    return plan
 
 
 # --- Hooks de Claude Code ----------------------------------------------------

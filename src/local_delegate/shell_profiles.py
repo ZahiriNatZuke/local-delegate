@@ -8,6 +8,9 @@ Es la parte de ``install --shell-completion`` que no depende del script generado
 - el directorio y los nombres de los ficheros de completado (REQ-026);
 - el texto del bloque de carga que va en el perfil (REQ-027).
 
+El escape ASCII de PowerShell del bloque (REQ-018) es ``completion.ps_literal``, el mismo del
+script generado: hay una sola copia, y ``completion`` no importa este módulo, así que no hay ciclo.
+
 Nada de aquí escribe en disco. La única salida al sistema es la consulta a PowerShell
 (``query_powershell``), que pasa siempre por ``_default_run``, y el respaldo por la carpeta
 conocida *Documents* (``_documents_folder``). Las dos las sustituye la suite por dobles que fallan
@@ -28,6 +31,7 @@ from dataclasses import dataclass, field
 from pathlib import Path, PurePath, PurePosixPath, PureWindowsPath
 
 from . import config
+from .completion import ps_literal
 from .i18n import t
 from .simulated_home import is_simulated_home
 
@@ -392,10 +396,11 @@ def candidate_profiles(
     query: Query | None = None,
     environ: Mapping[str, str] | None = None,
     known_folder: Callable[[], Path | None] | None = None,
+    shells: Sequence[str] = SHELLS,
 ) -> list[Path]:
     """Los perfiles de REQ-025 que existen, para que ``uninstall`` limpie aunque falte el
     manifiesto (REQ-032): las dos ediciones de PowerShell, ``.zshrc``, ``.bashrc`` y
-    ``.bash_profile``.
+    ``.bash_profile``. ``shells`` los limita a esos shells (un ``uninstall`` parcial).
 
     Con HOME real solo se pregunta a las ediciones de PowerShell instaladas; para las demás vale
     la ruta de respaldo.
@@ -403,6 +408,8 @@ def candidate_profiles(
     platform = sys.platform if platform is None else platform
     which = shutil.which if which is None else which
     editions = POWERSHELL_EDITIONS if platform == "win32" else ("pwsh",)
+    if "powershell" not in shells:
+        editions = ()
     paths: list[Path] = []
     for edition in editions:
         exe = None if simulated else which(edition)
@@ -420,9 +427,11 @@ def candidate_profiles(
             paths.append(location.path)
         else:
             paths.append(_fallback_powershell_profile(target, home, platform, known_folder))
-    zsh = ShellTarget("zsh", None, "zsh")
-    paths.append(profile_path(zsh, home, simulated=simulated, environ=environ).path)
-    paths.extend([home / ".bashrc", home / ".bash_profile"])
+    if "zsh" in shells:
+        zsh = ShellTarget("zsh", None, "zsh")
+        paths.append(profile_path(zsh, home, simulated=simulated, environ=environ).path)
+    if "bash" in shells:
+        paths.extend([home / ".bashrc", home / ".bash_profile"])
     unique: list[Path] = []
     for path in paths:
         if path not in unique and path.is_file():
@@ -456,27 +465,6 @@ def completion_file(directory: Path, shell: str) -> Path:
     return directory / COMPLETION_FILES[shell]
 
 
-def powershell_string(text: str) -> str:
-    """``text`` como cadena de PowerShell entre comillas dobles y **solo ASCII** (REQ-018).
-
-    Cada carácter no ASCII (y cada control) va como ``$([char]0xNNNN)``, por unidades UTF-16 (un
-    carácter fuera del BMP da su par de sustitutos); `` ` ``, ``"`` y ``$`` van escapados con el
-    acento grave.
-    """
-    out = ['"']
-    for char in text:
-        if char in '`"$':
-            out.append("`" + char)
-        elif 0x20 <= ord(char) < 0x7F:
-            out.append(char)
-        else:
-            units = char.encode("utf-16-be")
-            for i in range(0, len(units), 2):
-                out.append(f"$([char]0x{int.from_bytes(units[i : i + 2], 'big'):04X})")
-    out.append('"')
-    return "".join(out)
-
-
 def posix_single_quoted(text: str) -> str:
     """``text`` entre comillas simples de sh, con ``'`` escrita como ``'\\''`` (REQ-027)."""
     return "'" + text.replace("'", "'\\''") + "'"
@@ -492,7 +480,7 @@ def load_block(shell: str, file_path: Path | PurePath) -> str:
     # POSIX una ruta de Windows conservaría sus `\`.
     posix = file_path.as_posix()
     if shell == "powershell":
-        quoted = powershell_string(posix)
+        quoted = ps_literal(posix)
         body = f"if (Test-Path -LiteralPath {quoted}) {{ . {quoted} }}"
     elif shell == "bash":
         quoted = posix_single_quoted(posix)
