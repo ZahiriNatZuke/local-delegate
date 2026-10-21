@@ -37,7 +37,7 @@ from dataclasses import dataclass
 from importlib import metadata
 from pathlib import Path
 
-from . import checks, config, install
+from . import checks, completion, config, install, shell_profiles
 from .i18n import t
 
 PACKAGE = "local-delegate-mcp"
@@ -362,14 +362,45 @@ def plan_completion_refresh(opts: Options) -> list[install.Action]:
     """Regenera los ficheros de autocompletado listados que estén viejos (REQ-034).
 
     En el idioma **configurado** (el de `plan_language`, como `plan_catalog_refresh`), así que
-    resuelve una versión nueva y también un cambio de idioma. Paso propio y fuera de `REPAIRS`:
-    `run_update` lo llama siempre, haya o no clientes en la máquina. No crea ficheros no listados
-    ni toca perfiles; sin manifiesto, no hay nada que hacer. Solo lee.
-    """
-    from . import completion
+    resuelve una versión nueva y también un cambio de idioma; el manifiesto pasa a decir ese
+    idioma y la versión instalada. Paso propio y fuera de `REPAIRS`: `run_update` lo llama siempre,
+    haya o no clientes en la máquina. Un fichero listado que falta o no se puede leer se deja (el
+    check de `doctor` lo manda a `install --shell-completion`), no se crean ficheros no listados
+    ni se tocan perfiles, y sin manifiesto (o con uno ilegible) no hay nada que hacer. Solo lee:
+    escribe `install.apply`.
 
-    language = install.plan_language(install_options(opts))
-    return completion.plan_refresh(opts.home, opts.data_dir, language.lang)
+    Vive aquí y no en `completion`: allí tendría que importar `install` y `shell_profiles`, que
+    importan `completion`, y CodeQL marca ese ciclo (`py/cyclic-import`).
+    """
+    from .version import get_version
+
+    lang = install.plan_language(install_options(opts)).lang
+    directory = shell_profiles.completion_dir(opts.home, opts.data_dir)
+    try:
+        manifest = completion.read_manifest(directory)
+    except completion.ManifestUnreadableError:
+        return []
+    if not manifest:
+        return []
+    actions: list[install.Action] = []
+    for entry in manifest["shells"]:
+        path = Path(entry["file"])
+        try:
+            current = path.read_bytes()
+        except OSError:
+            continue
+        content = completion.render(entry["shell"], lang=lang).encode("utf-8")
+        if current != content:
+            detail = t("install.completion.refresh_plan", shell=entry["shell"], lang=lang)
+            actions.append(install._owned_file_action("completion", path, content, detail))
+    updated = {**manifest, "lang": lang, "generator": get_version()}
+    if updated != manifest:
+        text = completion.manifest_bytes(updated)
+        detail = t("install.completion.manifest_plan")
+        path = completion.manifest_path(directory)
+        literal = text.decode("utf-8")
+        actions.append(install._owned_file_action("manifest", path, text, detail, literal=literal))
+    return actions
 
 
 # --- El pin de versión (paridad con el bash) ----------------------------------
