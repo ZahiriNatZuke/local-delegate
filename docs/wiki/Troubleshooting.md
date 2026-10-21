@@ -89,7 +89,7 @@ Guía completa: [Backend remoto Mac → PC](Remote-backend.md).
 ## `[local-delegate error] <modelo> respondió 404` (o "model not found")
 
 Los ids de modelo configurados no existen en tu backend. Ajusta
-`LOCAL_DELEGATE_MODEL_MECHANICAL/_LONG/_CODE/_FAST/_VISION` a los ids reales (p. ej. con Ollama,
+`LOCAL_DELEGATE_MODEL_MECHANICAL/_LONG/_CODE/_VISION` a los ids reales (p. ej. con Ollama,
 `llama3.1`, `qwen2.5-coder:14b`…). Ver [Configuration](Configuration.md).
 
 **Si empezó al actualizar a la 0.28.0:** los defaults de largo, código y visión pasaron a

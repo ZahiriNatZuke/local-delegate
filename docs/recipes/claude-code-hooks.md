@@ -59,9 +59,9 @@ El mensaje del rechazo nombra la tool que sirve, el `path` para llamarla y la sa
 leer por franjas con `offset`/`limit`, que nunca se bloquean. Y hay varias formas de que no
 bloquee:
 
-- **el fichero `~/.claude/local-delegate-block-off`** (antes `local-delegate-bloqueo-apagado`,
-  que sigue valiendo con aviso; o la ruta de
-  `LD_HOOK_READ_SWITCH_FILE`): gana a la variable y se mira en cada lectura, así que apaga al
+- **el fichero `~/.claude/local-delegate-block-off`** (o la ruta de
+  `LD_HOOK_READ_SWITCH_FILE`; el nombre viejo `local-delegate-bloqueo-apagado` se retiró en la
+  0.38.0 y ya no apaga nada): gana a la variable y se mira en cada lectura, así que apaga al
   momento sin cerrar la sesión; bórralo para volver a encender;
 - la variable a `0`, que no afecta a una sesión ya abierta, porque hereda el entorno del lanzador;
 - un backend local que no responde;
