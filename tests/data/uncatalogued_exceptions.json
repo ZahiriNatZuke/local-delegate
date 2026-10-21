@@ -843,6 +843,18 @@
       "text": "Códigos de regla o error del log entero, con las veces que aparece cada uno (contadas por el programa; los más frecuentes primero):",
       "kind": "verbatim",
       "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
+    },
+    {
+      "file": "src/local_delegate/shell_profiles.py",
+      "text": "Unknown",
+      "kind": "machine_name",
+      "reason": "valor centinela de la política de PowerShell cuando la consulta falló (REQ-044); se compara, no se muestra: el aviso sale del catálogo"
+    },
+    {
+      "file": "src/local_delegate/shell_profiles.py",
+      "text": "Documents",
+      "kind": "path",
+      "reason": "nombre de la carpeta Documents del perfil de PowerShell en el último recurso de REQ-025; es una ruta, no texto"
     }
   ]
 }

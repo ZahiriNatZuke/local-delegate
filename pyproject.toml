@@ -159,4 +159,7 @@ markers = [
     # Tests de la fixture del llama-swap de prueba que comprueban que el llama-swap real (el de
     # 127.0.0.1:9292) no se toca. Se registra para que pytest no avise de un marcador desconocido.
     "llamaswap_real: comprueban que el llama-swap real no se toca",
+    # El único test que pregunta de verdad a pwsh por la ruta de su perfil (solo lectura); apaga
+    # la fixture `real_profiles_untouchable` de tests/conftest.py (SDD cli-completion, L3a).
+    "real_profile_query: consulta real y de solo lectura del perfil de pwsh",
 ]
