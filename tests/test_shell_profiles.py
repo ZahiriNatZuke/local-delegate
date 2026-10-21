@@ -418,10 +418,17 @@ def test_powershell_block_is_ascii_with_forward_slashes():
     assert block.splitlines()[1] == f"if (Test-Path -LiteralPath {quoted}) {{ . {quoted} }}"
 
 
-def test_powershell_string_escapes():
-    assert shell_profiles.powershell_string('a$b`c"d') == '"a`$b``c`"d"'
-    assert shell_profiles.powershell_string("\U0001d11e") == '"$([char]0xD834)$([char]0xDD1E)"'
-    assert shell_profiles.powershell_string("\t") == '"$([char]0x0009)"'
+def test_block_uses_the_single_powershell_escape():
+    """El bloque y el script generado comparten el escape ASCII (REQ-018): una sola copia, la de
+    `completion`. Control positivo: con una segunda copia en `shell_profiles` (la de L3a), la
+    identidad falla."""
+    from local_delegate import completion
+
+    assert shell_profiles.ps_literal is completion.ps_literal
+    assert not hasattr(shell_profiles, "powershell_string")
+    assert completion.ps_literal('a$b`c"d') == '"a`$b``c`"d"'
+    assert completion.ps_literal("\U0001d11e") == '"$([char]0xD834)$([char]0xDD1E)"'
+    assert completion.ps_literal("\t") == '"$([char]0x0009)"'
 
 
 def test_unknown_shell_has_no_block():

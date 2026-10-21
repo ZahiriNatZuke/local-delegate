@@ -186,11 +186,41 @@ def _scaffold_report(home: Path, dry_run: bool) -> None:
         doctor._print_group(group, results)
 
 
+def _explicit_clients(args: argparse.Namespace) -> bool:
+    """¿Se nombraron clientes? `--target`, o `--clients` con algo distinto de `auto`."""
+    clients = getattr(args, "clients", None) or []
+    return bool(getattr(args, "target", None)) or any(c != "auto" for c in clients)
+
+
+def _shell_completion_request(args: argparse.Namespace, uninstall: bool) -> list[str]:
+    """Los valores de `--shell-completion` que hay que atender; `[]` si no toca (REQ-023, REQ-032).
+
+    En `uninstall`, además, uno **sin restricciones** quita el autocompletado de todos los shells.
+    Se define por los datos, no por la forma de las opciones: los cuatro componentes activos, sin
+    clientes explícitos. `--no-client-cli`, `--agents`, `--dry-run`, `--python` y `--home` no son
+    restricciones.
+    """
+    requested = list(getattr(args, "shell_completion", None) or [])
+    if requested or not uninstall:
+        return requested
+    components = all(getattr(args, name, True) for name in ("hooks", "skill", "memory", "mcp"))
+    return ["auto"] if components and not _explicit_clients(args) else []
+
+
+def _completion_exit(failures: int) -> int:
+    if failures:
+        print(t("cli.install.failures", n=failures), file=sys.stderr)
+        return 1
+    return 0
+
+
 def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
     from . import checks
     from . import install as inst
 
     home = Path(args.home).expanduser() if args.home else Path.home()
+    # REQ-030, orden fijo: 1) clientes (un error sale con 2 sin escribir nada); 2) idioma;
+    # 3) autocompletado; 4) rama «ningún cliente» o flujo de clientes.
     try:
         targets, reason = _resolve_clients(args, home)
     except ValueError as exc:
@@ -198,7 +228,41 @@ def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
         return 2
 
     print(t("cli.install.uninstalling" if uninstall else "cli.install.installing", home=home))
-    print(t("cli.install.clients", reason=reason))
+    shells = _shell_completion_request(args, uninstall)
+    # `uninstall --shell-completion` sin clientes explícitos solo quita el autocompletado.
+    completion_only = uninstall and bool(args.shell_completion) and not _explicit_clients(args)
+    if not completion_only:
+        print(t("cli.install.clients", reason=reason))
+
+    completion_failures, completion_touched = 0, False
+    if shells:
+        lang = inst.plan_language(
+            inst.Options(
+                home=home,
+                components=set(),
+                targets=targets,
+                python_exe=args.python or inst.default_python(),
+            )
+        ).lang
+        if uninstall:
+            plan = inst.plan_completion_uninstall(home, shells)
+        else:
+            plan = inst.plan_completion_install(home, shells, lang=lang)
+        print()
+        print(t("cli.install.completion.heading"))
+        for warning in plan.warnings:
+            print(f"  {warning}")
+        if not plan.actions and uninstall:
+            print(f"  {t('install.completion.nothing_to_uninstall')}")
+        completion_failures = inst.apply(plan.actions, dry_run=args.dry_run)
+        completion_touched = bool(plan.actions)
+
+    if completion_only:
+        print()
+        if args.dry_run:
+            print(t("cli.install.dry_run"))
+            return 0
+        return _completion_exit(completion_failures)
 
     if not targets:
         # Con `auto` y ningún cliente, no hay nada que hacer y casi siempre significa un --home
@@ -206,10 +270,14 @@ def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
         print()
         joiner = f" {t('cli.and')} "
         print(t("cli.install.no_client.searched", dirs=joiner.join(_CLIENT_DIR.values())))
-        print(t("cli.install.no_client.nothing_written", home=home))
+        if completion_touched and not args.dry_run:
+            key = "completion_removed" if uninstall else "completion_written"
+            print(t(f"cli.install.no_client.{key}", home=home))
+        else:
+            print(t("cli.install.no_client.nothing_written", home=home))
         print(t("cli.install.no_client.hint"))
         _scaffold_report(home, dry_run=True)
-        return 0
+        return _completion_exit(completion_failures)
 
     # Primera pasada del registro: para saber si hay configuración del usuario que no se puede
     # pisar sin preguntar. Solo hace falta cuando de verdad vamos a escribir la entrada de Codex.
@@ -223,12 +291,16 @@ def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
 
     opts = _install_options(args, targets, skip_codex_mcp=skip_codex_mcp)
     if not opts.components:
+        if shells:
+            # El autocompletado ya cuenta como algo que hacer: no es «sin componentes» (REQ-030).
+            print()
+            return 0 if args.dry_run else _completion_exit(completion_failures)
         print(t("cli.install.no_component"), file=sys.stderr)
         return 2
     actions = inst.plan_uninstall(opts) if uninstall else inst.plan_install(opts)
     print(t("cli.install.components", components=", ".join(sorted(opts.components))))
     print()
-    failures = inst.apply(actions, dry_run=args.dry_run)
+    failures = inst.apply(actions, dry_run=args.dry_run) + completion_failures
     print()
     if args.dry_run:
         print(t("cli.install.dry_run"))
@@ -1691,6 +1763,7 @@ def _add_install_parsers(sub) -> None:
         action="store_true",
         help=t("cli.help.install.force_mcp_codex"),
     )
+    _add_shell_completion_arg(install, t("cli.help.install.shell_completion"))
     install.set_defaults(func=cmd_install)
 
     upd = sub.add_parser(
@@ -1718,7 +1791,21 @@ def _add_install_parsers(sub) -> None:
         help=t("cli.help.uninstall"),
     )
     _add_common_install_args(uninstall)
+    _add_shell_completion_arg(uninstall, t("cli.help.uninstall.shell_completion"))
     uninstall.set_defaults(func=cmd_uninstall)
+
+
+def _add_shell_completion_arg(p: argparse.ArgumentParser, help_text: str) -> None:
+    """`--shell-completion [shell]` (REQ-023): repeatable like `--clients`, never in `update`."""
+    p.add_argument(
+        "--shell-completion",
+        nargs="?",
+        const="auto",
+        action="append",
+        choices=("auto", *completion.SHELLS),
+        default=None,
+        help=help_text,
+    )
 
 
 @contextlib.contextmanager
