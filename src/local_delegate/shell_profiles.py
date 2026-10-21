@@ -491,7 +491,9 @@ def load_block(shell: str, file_path: Path | PurePath) -> str:
     Solo carga el fichero si existe. La ruta va con barras ``/`` (en Windows, también): PowerShell,
     Git Bash y zsh las entienden, y así el bloque no depende de escapar ``\\``.
     """
-    posix = PurePath(file_path).as_posix()
+    # `as_posix` del propio objeto: `PurePath(file_path)` lo pasaría al sabor del sistema, y en
+    # POSIX una ruta de Windows conservaría sus `\`.
+    posix = file_path.as_posix()
     if shell == "powershell":
         quoted = powershell_string(posix)
         body = f"if (Test-Path -LiteralPath {quoted}) {{ . {quoted} }}"
