@@ -5956,14 +5956,22 @@ def _describe_backend_params() -> list[str]:
 
 
 def _describe_deprecated_names() -> list[str]:
-    """Nombres viejos de variables que ESTE proceso leyó (REQ-003).
+    """Old variable names with a successor that are set in THIS process's environment.
 
-    `doctor` mira la shell donde corre y el `env` de `settings.json`, pero no el entorno del daemon
-    ni el del servidor por stdio: eso solo lo sabe el propio proceso, por `config.DEPRECATED_SEEN`.
+    `doctor` looks at the shell it runs in and at the `env` of `settings.json`, but not at the
+    daemon's environment nor the stdio server's: only the process itself knows, through
+    `config.DEPRECATED_ENV_VALUES` (read only to warn; the old names have no effect). The value is
+    never printed.
     """
     from . import deprecation_notices, deprecations
 
-    entries = [e for e in map(deprecations.find, sorted(config.DEPRECATED_SEEN)) if e is not None]
+    entries = [
+        entry
+        for name, value in sorted(config.DEPRECATED_ENV_VALUES.items())
+        if value is not None
+        and (entry := deprecations.find(name)) is not None
+        and entry.new is not None
+    ]
     if not entries:
         return []
     return ["", i18n.t("mcp.status.deprecated")] + [

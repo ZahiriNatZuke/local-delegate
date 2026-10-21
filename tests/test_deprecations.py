@@ -10,7 +10,7 @@ Tres guardianes que no dependen de que alguien se acuerde:
 - **paridad con los hooks**: los hooks no importan el paquete y llevan su propia tabla; tiene que
   ser igual al subconjunto `used_by_hooks` del registro.
 
-Además: `config._env_alias`, el esqueleto de `legacy_names` (D2) y el stamped de `UNRELEASED` que
+Además: el esqueleto de `legacy_names` (D2) y el stamped de `UNRELEASED` que
 hace `scripts/bump_version.py` al publicar.
 """
 
@@ -24,7 +24,7 @@ from pathlib import Path
 
 import pytest
 
-from local_delegate import config, deprecation_notices, deprecations, i18n, legacy_names
+from local_delegate import deprecation_notices, deprecations, i18n, legacy_names
 from local_delegate.deprecations import DeprecatedName
 from local_delegate.resources.hooks import hook_common
 
@@ -296,35 +296,6 @@ def test_hook_table_is_the_registry_subset():
     """
     from_hooks = tuple(getattr(hook_common, "DEPRECATED_HOOK_NAMES", ()))
     assert from_hooks == deprecations.hook_names()
-
-
-# --- config._env_alias --------------------------------------------------------
-@pytest.fixture
-def isolated_alias(monkeypatch):
-    """Lecturas de prueba fuera del inventario real de variables y del registro de vistas."""
-    monkeypatch.setattr(config, "_READ_VARIABLES", set())
-    monkeypatch.setattr(config, "DEPRECATED_SEEN", set())
-    monkeypatch.delenv("LD_NEW_TEST_VAR", raising=False)
-    monkeypatch.delenv("LD_OLD_TEST_VAR", raising=False)
-    return monkeypatch
-
-
-def test_env_alias_new_wins_when_both_are_set(isolated_alias):
-    isolated_alias.setenv("LD_NEW_TEST_VAR", "nueva")
-    isolated_alias.setenv("LD_OLD_TEST_VAR", "vieja")
-    assert config._env_alias("LD_NEW_TEST_VAR", "LD_OLD_TEST_VAR") == "nueva"
-    assert config.DEPRECATED_SEEN == set()
-
-
-def test_env_alias_old_alone_takes_effect_and_is_recorded(isolated_alias):
-    isolated_alias.setenv("LD_OLD_TEST_VAR", "vieja")
-    assert config._env_alias("LD_NEW_TEST_VAR", "LD_OLD_TEST_VAR") == "vieja"
-    assert config.DEPRECATED_SEEN == {"LD_OLD_TEST_VAR"}
-
-
-def test_env_alias_reads_both_through_the_registered_gate(isolated_alias):
-    assert config._env_alias("LD_NEW_TEST_VAR", "LD_OLD_TEST_VAR") is None
-    assert {"LD_NEW_TEST_VAR", "LD_OLD_TEST_VAR"} <= config._READ_VARIABLES
 
 
 # --- legacy_names (D2): API fijada, tablas vacías ------------------------------
