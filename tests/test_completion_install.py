@@ -588,6 +588,75 @@ def test_real_home_policy_per_edition_and_unknown(tmp_path, monkeypatch, capsys)
     assert not (home / "pw").exists()
 
 
+@pytest.mark.parametrize(
+    ("language", "policy_words", "unknown_word"),
+    [("es", "política de ejecución", "desconocida"), ("en", "execution policy", "unknown")],
+)
+def test_policy_note_per_edition(tmp_path, monkeypatch, language, policy_words, unknown_word):
+    """REQ-040: una línea por edición con la ruta del perfil y la política efectiva, deje pasar,
+    bloquee o sea desconocida, en es y en. Control positivo (comprobado): sin añadir la nota en
+    `plan_completion_install`, `plan.notes` sale vacío y falla el primer assert."""
+    home = tmp_path / "home"
+    documents = home / "Docs"
+    documents.mkdir(parents=True)
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    pwsh_profile = home / "pw" / "profile.ps1"
+    for answers, expected in [
+        (
+            {"pwsh": (pwsh_profile, "RemoteSigned"), "powershell": (None, None)},
+            [
+                ("pwsh", pwsh_profile, "RemoteSigned"),
+                ("powershell", documents / "WindowsPowerShell" / "profile.ps1", unknown_word),
+            ],
+        ),
+        (
+            {"pwsh": (pwsh_profile, "Restricted"), "powershell": (None, None)},
+            [
+                ("pwsh", pwsh_profile, "Restricted"),
+                ("powershell", documents / "WindowsPowerShell" / "profile.ps1", unknown_word),
+            ],
+        ),
+    ]:
+        probes = ShellProbes(
+            platform="win32",
+            which=_which("pwsh", "powershell"),
+            query=lambda exe, answers=answers: answers[Path(exe).name],
+            known_folder=lambda: documents,
+        )
+        with i18n.override(language):
+            plan = install.plan_completion_install(home, ["auto"], lang=language, probes=probes)
+            lines = [
+                install.t("install.completion.policy_note", edition=name, path=where, policy=value)
+                for name, where, value in expected
+            ]
+        assert plan.notes == lines
+        assert all(
+            policy_words in line and str(path) in line
+            for line, (_, path, _) in zip(plan.notes, expected, strict=True)
+        )
+        assert unknown_word in plan.notes[1]
+        assert "Unknown" not in plan.notes[1]
+
+
+@pytest.mark.parametrize("dry_run", [True, False], ids=["dry-run", "real"])
+@pytest.mark.parametrize("policy", ["RemoteSigned", "Restricted"])
+def test_install_output_shows_policy_per_edition(home, monkeypatch, capsys, dry_run, policy):
+    """REQ-040: `install --shell-completion` enseña ruta y política de pwsh y de 5.1, con y sin
+    `--dry-run`, también cuando la política bloquea. Control positivo (comprobado): sin imprimir
+    `plan.notes` en `cli.py`, faltan las dos líneas."""
+    use_probes(monkeypatch, _windows(policy))
+    extra = ["--dry-run"] if dry_run else []
+    code, out = run(install_cmd(home, "--shell-completion", *extra), capsys)
+    assert code == 0, out
+    for edition in ("pwsh", "powershell"):
+        target = shell_profiles.ShellTarget("powershell", edition, edition)
+        path = shell_profiles.simulated_profile(target, home, platform="win32")
+        line = install.t(
+            "install.completion.policy_note", edition=edition, path=path, policy=policy
+        )
+        assert line in out
+
+
 def test_untouchable_profile_is_reported_and_left_alone(home, capsys):
     """REQ-028: un perfil con un marcador sin pareja no se toca y se avisa; el otro shell sí."""
     bashrc = home / ".bashrc"

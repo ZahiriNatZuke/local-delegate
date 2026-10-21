@@ -17,7 +17,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   (#360, #361, #362, #363).
 - **`install --shell-completion [auto|powershell|zsh|bash]`** (repetible, opt-in) escribe el
   fichero en `<datos>/completion/` y un bloque entre marcadores en el perfil del shell, más un
-  manifiesto `installed.json`. Idempotente y con `--dry-run`. Respeta la codificación, el fin de
+  manifiesto `installed.json`. Idempotente y con `--dry-run`. En PowerShell enseña, por edición, la
+  ruta del perfil y la política de ejecución efectiva. Respeta la codificación, el fin de
   línea y los enlaces del perfil, y hace su copia en `<perfil>.local-delegate.bak`. Una edición de
   PowerShell con política `Restricted`, `AllSigned` o `Undefined` se salta con un aviso que dice
   cómo arreglarlo. `uninstall --shell-completion` quita solo el autocompletado, un `uninstall` sin
