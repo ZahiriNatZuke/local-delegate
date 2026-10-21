@@ -417,22 +417,24 @@ run_case() {
 ZSH_PTY_RUNNER = r"""
 zmodload zsh/zpty
 # The markers are typed split by '' so the echo of the typed line never matches the pattern.
+# Each read waits for the prompt (@P@) that follows the marker: a line typed before zle puts the
+# terminal in raw mode arrives in cooked mode, with the Tabs as plain text (seen on macOS).
 session() {  # session <name> <before compinit> <after compinit>
     local name=$1 before=$2 after=$3 out=''
-    zpty -b $name 'TERM=dumb PS1="%% " zsh -f -i'
+    zpty -b $name 'TERM=dumb PS1="@P@ " zsh -f -i'
     zpty -w $name "$before"
     zpty -w $name 'autoload -U compinit && compinit -u -D'
     zpty -w $name "$after"
     zpty -w $name 'setopt nolistbeep; unsetopt menucomplete automenu'
     zpty -w $name "print RE''ADY"
-    zpty -r -m $name out '*READY*'
+    zpty -r -m $name out '*READY*@P@ *'
 }
 tab() {  # tab <session> <id> <line> [<keys>], by default two Tabs
     local name=$1 id=$2 line=$3 keys=$'\t\t' buf=''
     if (( $# > 3 )); then keys=$4; fi
     zpty -n -w $name "$line$keys"
     zpty -w $name $'\x15'"print -r -- @@E''ND@@"
-    zpty -r -m $name buf '*@@END@@*'
+    zpty -r -m $name buf '*@@END@@*@P@ *'
     buf=${buf//$'\r'/}
     buf=${buf%%print -r -- @@E*}
     print -r -- "pty"$'\t'"$id"$'\t'"${${(f)buf}[*]}"
