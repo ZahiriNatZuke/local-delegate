@@ -14,7 +14,8 @@ scripts cannot complete correctly instead of emitting a partial script:
   safe patterns of REQ-007 (the scripts embed them without quoting).
 
 Hidden things are left out (REQ-004): actions with `help=SUPPRESS`, subparsers without an entry
-in `_choices_actions` and any name registered in `deprecations` as `cli_command`/`cli_option`.
+in `_choices_actions` and the old name of every entry in `deprecations.cli_entries()` (CLI
+surface, alias or retired: an alias still works but is not offered).
 
 Fixed values come from the action's own `completion_values` attribute (read only here) or from
 its `choices` (REQ-005).
@@ -59,8 +60,6 @@ ALLOWED_SHORT_OPTIONS = frozenset({"-h"})
 SAFE_VALUE = re.compile(r"^[A-Za-z0-9_.:/+-]+$")
 #: Option strings (REQ-007).
 SAFE_OPTION = re.compile(r"^--?[A-Za-z0-9][A-Za-z0-9_-]*$")
-
-_HIDDEN_KINDS = frozenset({"cli_command", "cli_option"})
 
 
 class CompletionModelError(ValueError):
@@ -126,8 +125,7 @@ def build_model(parser: argparse.ArgumentParser) -> Model:
 
     The deprecation registry is read at call time, so a test can monkeypatch it.
     """
-    entries = deprecations.DEPRECATED_NAMES
-    hidden = frozenset(entry.old for entry in entries if entry.kind in _HIDDEN_KINDS)
+    hidden = frozenset(entry.old for entry in deprecations.cli_entries())
     nodes: dict[tuple[str, ...], Node] = {}
     _walk(parser, (), hidden, nodes)
     return Model(nodes)

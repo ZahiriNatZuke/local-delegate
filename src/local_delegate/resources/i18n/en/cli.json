@@ -287,7 +287,6 @@
   "cli.recompute_cost.match.exact": "exact",
   "cli.recompute_cost.match.no_match": "no_match",
   "cli.recompute_cost.match.window": "window",
-  "cli.recompute_cost.reset_mismatch": "--reset-calibration and --reiniciar-calibracion do not match: use only --reset-calibration",
   "cli.recompute_cost.status.calibrated": "calibrated",
   "cli.recompute_cost.status.uncalibrated": "not calibrated",
   "cli.recompute_cost.summary.backfilled": "Log lines backfilled: {n} ({matches}).",

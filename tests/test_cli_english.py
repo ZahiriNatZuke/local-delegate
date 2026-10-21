@@ -27,8 +27,10 @@ from importlib.resources import files
 from pathlib import Path
 
 import pytest
+from test_retired_cli_names import retired_cli_registry
 
-from local_delegate import cli, i18n, recompute
+from local_delegate import cli, deprecations, i18n, recompute
+from local_delegate.deprecation_notices import warning_text
 
 # Todos los subcomandos con ayuda propia (B1a, y `benchmark` desde B1c).
 HELP_PATHS = (
@@ -95,12 +97,13 @@ def _run(argv: list[str], capsys) -> tuple[int, str]:
 
 
 def _machine_names() -> list[str]:
-    """Subcomandos y opciones del parser, ocultos incluidos: no se traducen (REQ-021).
+    """Subcomandos y opciones del parser, ocultos incluidos, y los nombres viejos del CLI.
 
-    Se quitan de la salida antes de buscar palabras, porque `recalcular-coste` y
-    `--reiniciar-calibracion` son alias en español que siguen vivos hasta su retirada.
+    No se traducen (REQ-021). Se quitan de la salida antes de buscar palabras, porque los
+    nombres viejos del registro (`deprecations.cli_entries()`) son español y salen, sin
+    traducir, en el error que los rechaza (SDD retire-legacy-aliases, REQ-008).
     """
-    names: set[str] = set()
+    names: set[str] = {entry.old for entry in deprecations.cli_entries()}
     pending = [cli.build_parser()]
     while pending:
         parser = pending.pop()
@@ -208,9 +211,12 @@ def test_errors_in_both_languages(lang, expected, monkeypatch, capsys):
 # --- REQ-034: humo en inglés de las salidas ------------------------------------------------
 
 
-def _english_outputs(tmp_path, capsys) -> dict[str, tuple[int, str]]:
+def _english_outputs(tmp_path, monkeypatch, capsys) -> dict[str, tuple[int, str]]:
     claude = tmp_path / "claude"
     claude.mkdir()
+    # El subcomando viejo, retirado (registro sintético hasta el volteo real de L6).
+    monkeypatch.setattr(deprecations, "DEPRECATED_NAMES", retired_cli_registry())
+    old_command = next(e.old for e in deprecations.cli_entries() if e.retired_from == "cli_command")
     runs = {
         "start": ["test-window", "start", "--label", "smoke"],
         "list": ["test-window", "list"],
@@ -220,7 +226,7 @@ def _english_outputs(tmp_path, capsys) -> dict[str, tuple[int, str]]:
         "add_again": ["test-window", "add", "2026-10-01T00:00:00Z", "2026-10-01T01:00:00Z"],
         "add_backwards": ["test-window", "add", "2026-10-02T00:00:00Z", "2026-10-01T00:00:00Z"],
         "recompute": ["recompute-cost", "--claude-dir", str(claude)],
-        "legacy_alias": ["recalcular-coste", "--claude-dir", str(claude)],
+        "retired_command": [old_command, "--claude-dir", str(claude)],
         "init_without_models": ["init-llamaswap", "--config", "x.yaml", "--vram-gb", "8"],
         "clients_and_target": [
             "install",
@@ -239,14 +245,16 @@ def _english_outputs(tmp_path, capsys) -> dict[str, tuple[int, str]]:
 def test_smoke_in_english(tmp_path, monkeypatch, capsys):
     words = _distinctive_spanish_words()
     _set_language(monkeypatch, "en")
-    outputs = _english_outputs(tmp_path, capsys)
+    outputs = _english_outputs(tmp_path, monkeypatch, capsys)
     # Guarda de «esto llegó a comprobar algo»: cada caso salió por el camino que se quería.
     assert outputs["stop"][0] == 0 and "closed:" in outputs["stop"][1]
     assert "there is no open window" in outputs["stop_again"][1]
     assert "added" in outputs["add"][1] and "already there" in outputs["add_again"][1]
     assert "the start has to be before the end" in outputs["add_backwards"][1]
     assert "Transcripts read:" in outputs["recompute"][1]
-    assert "warning: recalcular-coste is deprecated" in outputs["legacy_alias"][1]
+    retired = next(e for e in deprecations.cli_entries() if e.retired_from == "cli_command")
+    assert outputs["retired_command"] == (2, f"error: {warning_text(retired)}\n")
+    assert "has had no effect since" in outputs["retired_command"][1]
     assert "at least --resident or --swap" in outputs["init_without_models"][1]
     assert "cannot be combined" in outputs["clients_and_target"][1]
     assert "unrecognized arguments: --bogus" in outputs["unknown_option"][1]
@@ -259,7 +267,7 @@ def test_the_same_smoke_in_spanish_does_trip_the_detector(tmp_path, monkeypatch,
     """Control positivo permanente: las mismas salidas en español sí tienen palabras distintivas."""
     words = _distinctive_spanish_words()
     _set_language(monkeypatch, "es")
-    outputs = _english_outputs(tmp_path, capsys)
+    outputs = _english_outputs(tmp_path, monkeypatch, capsys)
     tripped = [name for name, (_code, out) in outputs.items() if _spanish_in(out, words)]
     assert len(tripped) >= len(outputs) - 2, tripped
 
