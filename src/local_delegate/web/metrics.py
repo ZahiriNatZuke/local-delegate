@@ -1193,6 +1193,19 @@ HTML = r"""<!doctype html>
 <meta name="description" content="">
 <meta name="theme-color" content="#0a0c11">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<script>
+// Theme: the saved choice (`ld-theme`, set by the button) wins; without one, the system's
+// `prefers-color-scheme`. Runs in <head>, before the CSS and the body, so the wrong theme never
+// paints for an instant. The live follow-up is registered in the main script.
+function pickTheme(saved, systemDark){
+  if(saved === 'dark' || saved === 'light') return saved;
+  return systemDark ? 'dark' : 'light';
+}
+function savedTheme(){ try{ return localStorage.getItem('ld-theme'); }catch(e){ return null; } }
+const SYSTEM_DARK = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+document.documentElement.setAttribute('data-theme',
+  pickTheme(savedTheme(), SYSTEM_DARK ? SYSTEM_DARK.matches : true));
+</script>
 __WEB_FONTS__
 <!-- Chart.js servido desde el propio paquete: el panel funciona sin conexión y no
      avisa a ningún tercero de que estás mirando tus métricas. -->
@@ -3174,7 +3187,9 @@ function eventRows(e){
     const source = (bp.source && typeof bp.source === 'object') ? bp.source : {};
     add('params', paramKeys(e).map(k => {
       const v = bp.values[k];
-      const shown = (v !== null && typeof v === 'object') ? JSON.stringify(v) : String(v);
+      // Booleans as `on`/`off`, like the CLI, `doctor` and `local_status` (`format_param_value`).
+      const shown = typeof v === 'boolean' ? (v ? 'on' : 'off')
+        : (v !== null && typeof v === 'object') ? JSON.stringify(v) : String(v);
       const origin = T(source[k] === 'env' ? 'event.source.env' : 'event.source.file');
       return `<div>${chip('paramschip', origin)}${escHooks(k)} = ${escHooks(shown)}</div>`;
     }).join(''));
@@ -3371,7 +3386,12 @@ activityTable.addEventListener('keydown',e=>{
 });
 document.getElementById('eventDlgClose').onclick=()=>eventDlg.close();
 eventDlg.addEventListener('click',e=>{ if(e.target===eventDlg) eventDlg.close(); });
-try{const th=localStorage.getItem('ld-theme'); if(th) document.documentElement.setAttribute('data-theme',th);}catch(e){}
+// Without a saved choice the panel follows the system live; the charts reread the theme colours.
+if(SYSTEM_DARK && SYSTEM_DARK.addEventListener) SYSTEM_DARK.addEventListener('change', ev => {
+  const nx = pickTheme(savedTheme(), ev.matches);
+  if(nx === document.documentElement.getAttribute('data-theme')) return;
+  document.documentElement.setAttribute('data-theme', nx); applyDefaults(); render();
+});
 applyStatic();
 applyDefaults();
 setInterval(()=>{ if(state.auto) fetchData(); },15000);

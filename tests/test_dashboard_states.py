@@ -970,3 +970,29 @@ def test_event_dialog_rows_without_empty(tmp_path):
     assert by_key["steps"] == "map ×2 → reduce"
     assert "gemma4-26b-a4b" in by_key["fallback"] and "http_500" in by_key["fallback"]
     assert [k for k, _ in old] == [label("model")]
+
+
+def test_event_dialog_shows_booleans_as_on_off(tmp_path):
+    """REQ-001 (backlog-minor-leftovers): the dialog writes booleans as `on`/`off`, like the CLI,
+    `doctor` and `local_status` (`backend_params.format_param_value`); never `true`/`false`.
+
+    Numbers and strings keep their value as is (control: only booleans change).
+    """
+    (rows,) = _event_rows(
+        tmp_path,
+        "{tool: 'local_explain_code', model: 'qwen36-35b-a3b',"
+        " backend_params: {role: 'code', values: {enable_thinking: true, top_k: 20,"
+        " reasoning_effort: 'high', min_p: 0}, source: {}}}",
+    )
+    (off_rows,) = _event_rows(
+        tmp_path,
+        "{tool: 'local_explain_code', model: 'qwen36-35b-a3b',"
+        " backend_params: {role: 'code', values: {enable_thinking: false}, source: {}}}",
+    )
+    params = dict(rows)[i18n.t_lang("es", "panel.event.key.params")]
+    off_params = dict(off_rows)[i18n.t_lang("es", "panel.event.key.params")]
+    assert "enable_thinking = on<" in params
+    assert "enable_thinking = off<" in off_params
+    assert "true" not in params and "false" not in off_params
+    assert "top_k = 20<" in params and "reasoning_effort = high<" in params
+    assert "min_p = 0<" in params

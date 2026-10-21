@@ -810,7 +810,7 @@ def test_native_controls_follow_the_theme(panel, new_page):
     url, _ = panel
     with sync_playwright() as pw:
         browser = _browser(pw)
-        page = new_page(browser)
+        page = new_page(browser, color_scheme="dark")
         page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
         page.goto(url)
         dark = page.evaluate(
@@ -823,6 +823,62 @@ def test_native_controls_follow_the_theme(panel, new_page):
         browser.close()
     assert dark == "dark"
     assert light == "light"
+
+
+_THEME = "() => document.documentElement.getAttribute('data-theme')"
+
+
+def test_without_a_saved_choice_the_theme_follows_the_system(panel, new_page):
+    """REQ-002 (backlog-minor-leftovers): sin `ld-theme`, el panel arranca con el tema del sistema
+    y lo sigue en vivo; el botón alterna y guarda, y desde entonces el sistema ya no lo pisa."""
+    url, _ = panel
+    with sync_playwright() as pw:
+        browser = _browser(pw)
+        page = new_page(browser, color_scheme="light")
+        page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+        page.goto(url)
+        start = page.evaluate(_THEME)
+        page.emulate_media(color_scheme="dark")
+        # The `change` event arrives asynchronously: wait for it, with the default timeout.
+        page.wait_for_function(
+            "() => document.documentElement.getAttribute('data-theme') === 'dark'"
+        )
+        live = page.evaluate(_THEME)
+        page.click("#theme")
+        chosen = page.evaluate(_THEME)
+        saved = page.evaluate("() => localStorage.getItem('ld-theme')")
+        # Guard: count the `change` events (this listener runs after the panel's) so `kept` is read
+        # only once both system changes have reached the page.
+        page.evaluate(
+            "() => { window._changes = 0; matchMedia('(prefers-color-scheme: dark)')"
+            ".addEventListener('change', () => { window._changes += 1; }); }"
+        )
+        # One wait per change: the browser evaluates media queries once per frame, so two changes
+        # in a row could cancel out and fire nothing.
+        page.emulate_media(color_scheme="light")
+        page.wait_for_function("() => window._changes >= 1")
+        page.emulate_media(color_scheme="dark")
+        page.wait_for_function("() => window._changes >= 2")
+        kept = page.evaluate(_THEME)
+        browser.close()
+    assert start == "light"
+    assert live == "dark"
+    assert chosen == saved == "light"
+    assert kept == "light", "con elección guardada, el cambio del sistema no la pisa"
+
+
+@pytest.mark.parametrize(("system", "saved"), [("light", "dark"), ("dark", "light")])
+def test_a_saved_choice_beats_the_system(panel, new_page, system, saved):
+    url, _ = panel
+    with sync_playwright() as pw:
+        browser = _browser(pw)
+        page = new_page(browser, color_scheme=system)
+        page.add_init_script(f"try{{localStorage.setItem('ld-theme','{saved}')}}catch(e){{}}")
+        page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+        page.goto(url)
+        theme = page.evaluate(_THEME)
+        browser.close()
+    assert theme == saved
 
 
 # Tres situaciones de fuente, porque la simetría no puede depender de cuál cargue:

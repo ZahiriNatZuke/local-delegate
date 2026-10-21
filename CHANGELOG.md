@@ -6,6 +6,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corrige
+
+- El panel sigue el tema claro u oscuro del sistema mientras no elijas uno con el botón (tu elección guardada manda), y el diálogo de una delegación escribe los booleanos de los parámetros del backend como `on`/`off`, igual que la CLI, `doctor` y `local_status`.
+
 ## [0.38.0] - 2026-10-21
 
 Autocompletado de la CLI en PowerShell, zsh y bash (SDD `cli-completion`), retirada de los nombres

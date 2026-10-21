@@ -2080,7 +2080,7 @@ def test_the_page_carries_both_catalogs_without_closing_its_script():
     """REQ-020: el panel lleva los dos idiomas (cambia sin recargar). Un `</b>` de un texto sin
     escapar cerraría el `<script>` a mitad del catálogo."""
     html = TestClient(metrics.app).get("/").text
-    assert html.count("</script>") == 2  # Chart.js y el del panel
+    assert html.count("</script>") == 3  # Chart.js, the theme one in <head> and the panel
     raw = re.search(r"const I18N = (.*?);\r?\nconst LANGS", html, re.DOTALL).group(1)
     assert "</" not in raw
     catalogs = json.loads(raw.replace("<\\/", "</"))
