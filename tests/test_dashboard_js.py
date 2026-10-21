@@ -426,7 +426,7 @@ def _formatters() -> str:
     m1 = re.search(r"const F1 = (.*?);", html)
     if m1:
         parts.append(f"const F1 = {m1.group(1)};")
-    for header in ("function fmtSec(", "function plural("):
+    for header in ("function fmtSecExact(", "function fmtSec(", "function plural("):
         if header in html:
             parts.append(_extract(header))
     return "\n".join(parts)
@@ -455,10 +455,12 @@ def test_decimals_with_comma_and_latency_in_seconds(tmp_path):
         tmp_path,
         [],
         "console.log(JSON.stringify({seg: [fmtSec(116948), fmtSec(120), fmtSec(30)],"
+        " exact: typeof fmtSecExact === 'function' ? fmtSecExact(116948) : null,"
         " f1: F1.format(1718.25), neg: F.format(-1234567)}));",
         _WITHOUT_INTL_V3 + _formatters(),
     )
-    assert r["seg"][0] == "116,9 s"
+    assert r["seg"][0] == "1 min 57 s"
+    assert r["exact"] == "116,9 s"
     assert r["seg"][1] == "0,1 s"
     assert r["seg"][2] == "< 0,1 s"
     assert r["f1"] == "1.718,3"
@@ -490,6 +492,69 @@ def test_plural_in_english_uses_the_english_forms_and_separators(tmp_path):
         lang="en",
     )
     assert r == ["1 event", "1,234 events", "1,234.5", "< 0.1 s"]
+
+
+# --- Duraciones en minutos y horas (SDD dashboard-duration-minutes) -----------------------------
+#
+# Tabla de la spec: el redondeo se hace en la unidad que se pinta y decide el tramo, así que
+# 59,96 s no puede salir «60,0 s» ni 3599,6 s «60 min».
+_DURATION_CASES = [
+    (30, "< 0,1 s", "< 0.1 s"),
+    (120, "0,1 s", "0.1 s"),
+    (45300, "45,3 s", "45.3 s"),
+    (59940, "59,9 s", "59.9 s"),
+    (59960, "1 min", "1 min"),
+    (60000, "1 min", "1 min"),
+    (116948, "1 min 57 s", "1 min 57 s"),
+    (947200, "15 min 47 s", "15 min 47 s"),
+    (120000, "2 min", "2 min"),
+    (3599400, "59 min 59 s", "59 min 59 s"),
+    (3599600, "1 h", "1 h"),
+    (3600000, "1 h", "1 h"),
+    (3900000, "1 h 5 min", "1 h 5 min"),
+    (9000000, "2 h 30 min", "2 h 30 min"),
+]
+
+
+@pytest.mark.parametrize("lang", ["es", "en"])
+def test_fmtSec_uses_minutes_and_hours_with_exact_rounding(tmp_path, lang):
+    """REQ-001 a REQ-003: tramos, fronteras exactas y separador decimal según el idioma."""
+    values = json.dumps([c[0] for c in _DURATION_CASES])
+    r = _run(
+        tmp_path,
+        [],
+        # «–» se compara dentro de node: la salida de node en Windows no viaja en UTF-8.
+        f"console.log(JSON.stringify([fmtSec(null) === '\\u2013',...{values}.map(fmtSec)]));",
+        _formatters(),
+        lang=lang,
+    )
+    expected = [True] + [c[1] if lang == "es" else c[2] for c in _DURATION_CASES]
+    assert r == expected
+
+
+def test_latency_card_keeps_exact_seconds_in_title(tmp_path):
+    """REQ-005: la tarjeta pinta «1 min 57 s» pero su `title` conserva «116,9 s»."""
+    html = metrics.HTML
+    call = re.search(r"kpiCard\(\{icon:ICON\.lat,[^\n]*", html)
+    assert call, "no se encontró la tarjeta KPI de latencia"
+    assert "exact:" in call.group(0) and "fmtSecExact(lat)" in call.group(0)
+    r = _run(
+        tmp_path,
+        ["function kpiCard("],
+        "console.log(JSON.stringify(kpiCard({val: fmtSec(116948),"
+        " exact: fmtSecExact(116948), lbl: 'x'})));",
+        _formatters(),
+    )
+    assert 'title="116,9 s"' in r
+    assert ">1 min 57 s<" in r
+
+
+def test_only_the_exact_formatter_converts_milliseconds_to_seconds():
+    """REQ-004: ningún sitio formatea duraciones por su cuenta, todos pasan por `fmtSec`."""
+    html = metrics.HTML
+    exact = _extract("function fmtSecExact(")
+    rest = html.replace(exact, "")
+    assert not re.search(r"F1\.format\([^)]*/\s*1000\)", rest)
 
 
 def test_no_plurals_with_parentheses_or_toFixed_remain():
