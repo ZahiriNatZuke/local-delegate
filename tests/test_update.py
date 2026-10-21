@@ -912,7 +912,7 @@ def test_second_update_pass_changes_nothing(tmp_path):
 
 
 # --- Migración de nombres retirados: migrar → checks → notas (REQ-014, REQ-016, REQ-017) ---------
-# Registro sintético: las entradas reales aún son alias (L6 añade el caso real).
+# Registro sintético: con nombres de mentira, la prueba no depende del registro real.
 _GONE_ENV = ("LD_OLD_GONE_VAR", "LD_GONE_VAR_NEW")
 _GONE_SWITCH = ("old-gone-switch", "gone-switch-new")
 

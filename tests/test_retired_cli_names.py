@@ -5,8 +5,8 @@ con sucesor (`cli_entries()` con `is_retired`): `stderr` con `cli.error` y el av
 código 2 sin ejecutar nada. Un alias vigente **nunca** se rechaza. REQ-011, filas 6 y 7: el nombre
 viejo no hace nada y su gemelo nuevo sí, con los mismos datos.
 
-Hasta el volteo del registro real (L6) las dos entradas siguen siendo alias, así que estos tests
-usan un **registro sintético** que las marca como retiradas; L6 añade los casos con el real.
+Los casos con **registro sintético** marcan las entradas como retiradas y publicadas en la 0.38.0
+(o como alias vivos); desde el volteo (L6), los del final prueban además el registro real.
 """
 
 from __future__ import annotations
@@ -29,11 +29,21 @@ _CLI_KINDS = ("cli_command", "cli_option")
 def retired_cli_registry(
     entries: tuple[deprecations.DeprecatedName, ...] | None = None,
 ) -> tuple[deprecations.DeprecatedName, ...]:
-    """El registro con sus entradas del CLI como retiradas con sucesor (lo que hará L6)."""
+    """El registro con sus entradas del CLI como retiradas con sucesor ya publicadas (0.38.0).
+
+    Sirve para alias (los marca retirados) y para el registro real, que ya los tiene retirados
+    pero aún `UNRELEASED`: así el aviso lleva la versión.
+    """
     source = deprecations.DEPRECATED_NAMES if entries is None else entries
     return tuple(
-        replace(e, kind="retired", retired_from=e.kind, introduced="0.38.0", warn_until="0.40.0")
-        if e.kind in _CLI_KINDS
+        replace(
+            e,
+            kind="retired",
+            retired_from=deprecations.effective_kind(e),
+            introduced="0.38.0",
+            warn_until="0.40.0",
+        )
+        if deprecations.effective_kind(e) in _CLI_KINDS
         else e
         for e in source
     )
@@ -211,4 +221,42 @@ def test_entrypoint_goes_through_the_check(prog, retired, spy, tmp_path, monkeyp
         entrypoint.main()
     assert exc.value.code == 2
     assert capsys.readouterr().err == i18n.t("cli.error", detail=warning_text(entry)) + "\n"
+    assert spy == []
+
+
+# --- Con el registro real (L6): las dos entradas ya son retiradas con sucesor -------------------
+
+
+def _real(new: str) -> deprecations.DeprecatedName:
+    """La entrada real por su nombre nuevo (sin escribir el viejo)."""
+    return next(e for e in deprecations.DEPRECATED_NAMES if e.new == new)
+
+
+def test_real_registry_rejects_the_old_command_and_option(spy, tmp_path, capsys):
+    command, option = _real("recompute-cost"), _real("--reset-calibration")
+    assert command.is_retired and option.is_retired
+    claude = _claude_dir(tmp_path)
+
+    assert _run([command.old, "--claude-dir", str(claude)]) == 2
+    err = capsys.readouterr().err
+    assert err == i18n.t("cli.error", detail=warning_text(command)) + "\n"
+    assert command.new in err and deprecations.UNRELEASED not in err
+    assert _run([command.new, "--claude-dir", str(claude), option.old, "five_hour"]) == 2
+    assert option.new in capsys.readouterr().err
+    assert spy == []
+
+    # Gemelo: los nombres nuevos, con los mismos datos, sí recalculan.
+    assert _run([command.new, "--claude-dir", str(claude), option.new, "five_hour"]) == 0
+    assert spy == ["five_hour"]
+
+
+@pytest.mark.parametrize("prog", ["local-delegate", "local-delegate-mcp"])
+def test_real_registry_entrypoint_rejects_the_old_command(prog, spy, tmp_path, monkeypatch, capsys):
+    command = _real("recompute-cost")
+    monkeypatch.setattr(sys, "argv", [prog, command.old, "--claude-dir", str(tmp_path)])
+    with pytest.raises(SystemExit) as exc:
+        entrypoint.main()
+    assert exc.value.code == 2
+    # El mensaje del chequeo previo, no el error genérico de argparse (que también da 2).
+    assert capsys.readouterr().err == i18n.t("cli.error", detail=warning_text(command)) + "\n"
     assert spy == []

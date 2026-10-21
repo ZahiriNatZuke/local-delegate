@@ -140,10 +140,38 @@ def test_old_names_are_unique():
     assert len(old_names) == len(set(old_names))
 
 
+# --- El registro real tras la retirada (REQ-001 de retire-legacy-aliases) -------------------
+SEVEN_RETIRED = (
+    ("recalcular-coste", "recompute-cost", "cli_command"),
+    ("--reiniciar-calibracion", "--reset-calibration", "cli_option"),
+    ("LD_HOOK_READ_BLOQUEAR", "LD_HOOK_READ_BLOCK", "env_var"),
+    ("LD_HOOK_READ_INTERRUPTOR", "LD_HOOK_READ_SWITCH_FILE", "env_var"),
+    ("LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO", "LOCAL_DELEGATE_STRUCTURED_SUMMARY", "env_var"),
+    ("LOCAL_DELEGATE_COSTE_RESPALDO", "LOCAL_DELEGATE_COST_FALLBACK", "env_var"),
+    ("local-delegate-bloqueo-apagado", "local-delegate-block-off", "switch_file"),
+)
+
+
+def test_registry_holds_exactly_the_seven_retired_names():
+    """Siete retirados con sucesor, en este orden, sin `_FAST` ni doble escritura."""
+    assert [(e.old, e.new, e.retired_from) for e in deprecations.DEPRECATED_NAMES] == list(
+        SEVEN_RETIRED
+    )
+    for e in deprecations.DEPRECATED_NAMES:
+        assert e.kind == "retired", e
+        assert e.introduced == deprecations.UNRELEASED, e
+        assert e.warn_until == "0.40.0", e
+
+
 # --- Horizonte (REQ-004) ------------------------------------------------------
 def test_horizon_no_deprecated_name_is_overdue_in_the_current_version():
     """EL guardián: cuando la versión del paquete alcanza la retirada, esto falla con el nombre."""
     _assert_horizon(_package_version())
+
+
+def test_registry_has_nothing_overdue_in_0_38_0():
+    """REQ-019: la 0.38.0 no deja nada vencido, sin tener que subir la versión del paquete."""
+    _assert_horizon("0.38.0")
 
 
 ALIAS = DeprecatedName("env_var", "LD_OLD_TEST_ALIAS", "LD_TEST_ALIAS", "0.35.0")
@@ -355,6 +383,111 @@ def test_bump_plans_deprecations_only_when_there_is_something_to_stamp(tmp_path)
 
     target.write_text(TEST_DEPRECATIONS.replace('"LD_B", "UNRELEASED"', '"LD_B", "0.34.0"'))
     assert target not in bump.plan("0.35.0", tmp_path)
+
+
+# REQ-020: el registro escrito de cualquier forma. Tres sin nada que sellar y uno con varias.
+_REGISTRY_FORMATS = {
+    "empty_one_line": "DEPRECATED_NAMES: tuple[DeprecatedName, ...] = ()\n",
+    "empty_two_lines": "DEPRECATED_NAMES: tuple[DeprecatedName, ...] = (\n)\n",
+    "many_lines_nothing_unreleased": (
+        "DEPRECATED_NAMES: tuple[DeprecatedName, ...] = (\n"
+        "    DeprecatedName(\n"
+        '        "retired",\n'
+        '        "LD_C",\n'
+        "        None,\n"
+        '        "0.30.0",\n'
+        '        "0.37.0",\n'
+        "    ),\n"
+        ")\n"
+    ),
+}
+_BUMP_CONTEXT = (
+    'UNRELEASED = "UNRELEASED"\n\n',
+    '\n\ndef f(e):\n    # "UNRELEASED" en un comentario\n    return e.introduced == "UNRELEASED"\n',
+)
+
+
+@pytest.mark.parametrize("form", sorted(_REGISTRY_FORMATS))
+def test_bump_leaves_a_registry_with_nothing_to_stamp_unchanged(form, tmp_path):
+    bump = _bump_module()
+    before, after = _BUMP_CONTEXT
+    text = before + _REGISTRY_FORMATS[form] + after
+    assert bump.stamp_unreleased(text, "0.38.0") == text
+    for name in ("pyproject.toml", "server.json"):
+        (tmp_path / name).write_bytes((ROOT / name).read_bytes())
+    target = tmp_path / "src" / "local_delegate" / "deprecations.py"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(text.encode("utf-8"))
+    assert target not in bump.plan("0.38.0", tmp_path)
+
+
+def test_bump_stamps_every_unreleased_entry_of_a_registry_over_many_lines():
+    bump = _bump_module()
+    before, after = _BUMP_CONTEXT
+    registry = (
+        "DEPRECATED_NAMES: tuple[DeprecatedName, ...] = (\n"
+        '    # Comentario que cita "UNRELEASED" dentro de la tupla.\n'
+        "    DeprecatedName(\n"
+        '        "retired",\n'
+        '        "LD_OLD_ñ",\n'
+        '        "LD_NEW_A",\n'
+        '        "UNRELEASED",\n'
+        '        "0.40.0",\n'
+        '        retired_from="env_var",\n'
+        "    ),\n"
+        '    DeprecatedName("env_var", "LD_OLD_B", "LD_NEW_B", "UNRELEASED"),\n'
+        '    DeprecatedName("retired", "LD_C", None, "0.30.0", "0.37.0"),\n'
+        ")\n"
+    )
+    stamped = bump.stamp_unreleased(before + registry + after, "0.38.0")
+    expected_registry = registry.replace('        "UNRELEASED",\n', '        "0.38.0",\n').replace(
+        '"LD_NEW_B", "UNRELEASED")', '"LD_NEW_B", "0.38.0")'
+    )
+    assert stamped == before + expected_registry + after
+    assert '# Comentario que cita "UNRELEASED"' in stamped
+
+
+def _stamped_deprecations(tmp_path, monkeypatch, version: str):
+    """`deprecations.py` real tras el bump a `version`, cargado como módulo de verdad.
+
+    Se lee normalizando a LF como `bump_version._read` y se registra en `sys.modules` antes de
+    `exec_module`: con `@dataclass` y `from __future__ import annotations`, un `exec` en un
+    diccionario suelto no resuelve el módulo de la clase y revienta.
+    """
+    bump = _bump_module()
+    text = Path(deprecations.__file__).read_bytes().decode("utf-8").replace("\r\n", "\n")
+    stamped_file = tmp_path / "deprecations_stamped.py"
+    stamped_file.write_bytes(bump.stamp_unreleased(text, version).encode("utf-8"))
+    spec = importlib.util.spec_from_file_location("deprecations_stamped", stamped_file)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, "deprecations_stamped", module)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_0_38_0_bump_keeps_the_registry_valid(tmp_path, monkeypatch):
+    """REQ-019: la PR de release sella las siete en 0.38.0 y avisan hasta la 0.40.x."""
+    stamped_module = _stamped_deprecations(tmp_path, monkeypatch, "0.38.0")
+    entries = stamped_module.DEPRECATED_NAMES
+    assert [e.old for e in entries] == [old for old, _new, _from in SEVEN_RETIRED]
+    assert {e.introduced for e in entries} == {"0.38.0"}
+    assert stamped_module.class_problems() == []
+    for version in ("0.38.0", "0.39.5", "0.40.9"):
+        assert stamped_module.overdue(version) == [], version
+    # Control positivo: en la 0.41.0 vencen las siete.
+    assert stamped_module.overdue("0.41.0") == [old for old, _new, _from in SEVEN_RETIRED]
+    with i18n.override("es"):
+        assert "0.38.0" in deprecation_notices.warning_text(entries[0])
+
+
+def test_the_0_38_0_changelog_still_announces_every_entry(tmp_path, monkeypatch):
+    """REQ-019: con `[Unreleased]` hecho `[0.38.0]`, la sección sigue nombrando viejo y nuevo."""
+    stamped_module = _stamped_deprecations(tmp_path, monkeypatch, "0.38.0")
+    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert "## [Unreleased]" in text
+    released = text.replace("## [Unreleased]", "## [0.38.0] - 2026-10-22", 1)
+    assert changelog_problems(released, stamped_module.DEPRECATED_NAMES) == []
 
 
 def test_deprecations_imports_nothing_from_the_package():

@@ -54,23 +54,64 @@ class DeprecatedName:
 
 
 DEPRECATED_NAMES: tuple[DeprecatedName, ...] = (
-    # Ola A1: CLI y variables de entorno (REQ-001, REQ-002).
-    DeprecatedName("cli_command", "recalcular-coste", "recompute-cost", "0.35.0"),
-    DeprecatedName("cli_option", "--reiniciar-calibracion", "--reset-calibration", "0.35.0"),
-    DeprecatedName("env_var", "LD_HOOK_READ_BLOQUEAR", "LD_HOOK_READ_BLOCK", "0.35.0"),
-    DeprecatedName("env_var", "LD_HOOK_READ_INTERRUPTOR", "LD_HOOK_READ_SWITCH_FILE", "0.35.0"),
+    # Renombrados en la 0.35.0 (olas A1 y A2), alias con aviso en la 0.35.x, 0.36.x y 0.37.x;
+    # retirados con sucesor desde la 0.38.0 (SDD retire-legacy-aliases): ya no tienen efecto y
+    # solo se avisan (y se migran) hasta la 0.40.x. La PR de release sella `UNRELEASED`.
     DeprecatedName(
-        "env_var",
+        "retired",
+        "recalcular-coste",
+        "recompute-cost",
+        "UNRELEASED",
+        "0.40.0",
+        retired_from="cli_command",
+    ),
+    DeprecatedName(
+        "retired",
+        "--reiniciar-calibracion",
+        "--reset-calibration",
+        "UNRELEASED",
+        "0.40.0",
+        retired_from="cli_option",
+    ),
+    DeprecatedName(
+        "retired",
+        "LD_HOOK_READ_BLOQUEAR",
+        "LD_HOOK_READ_BLOCK",
+        "UNRELEASED",
+        "0.40.0",
+        retired_from="env_var",
+    ),
+    DeprecatedName(
+        "retired",
+        "LD_HOOK_READ_INTERRUPTOR",
+        "LD_HOOK_READ_SWITCH_FILE",
+        "UNRELEASED",
+        "0.40.0",
+        retired_from="env_var",
+    ),
+    DeprecatedName(
+        "retired",
         "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
         "LOCAL_DELEGATE_STRUCTURED_SUMMARY",
-        "0.35.0",
+        "UNRELEASED",
+        "0.40.0",
+        retired_from="env_var",
     ),
     DeprecatedName(
-        "env_var", "LOCAL_DELEGATE_COSTE_RESPALDO", "LOCAL_DELEGATE_COST_FALLBACK", "0.35.0"
+        "retired",
+        "LOCAL_DELEGATE_COSTE_RESPALDO",
+        "LOCAL_DELEGATE_COST_FALLBACK",
+        "UNRELEASED",
+        "0.40.0",
+        retired_from="env_var",
     ),
-    # Ola A2: el fichero que apaga el bloqueo (REQ-012). Vive en `~/.claude/`; lo lee el hook.
     DeprecatedName(
-        "switch_file", "local-delegate-bloqueo-apagado", "local-delegate-block-off", "0.35.0"
+        "retired",
+        "local-delegate-bloqueo-apagado",
+        "local-delegate-block-off",
+        "UNRELEASED",
+        "0.40.0",
+        retired_from="switch_file",
     ),
 )
 
