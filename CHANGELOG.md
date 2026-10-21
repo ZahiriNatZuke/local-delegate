@@ -115,6 +115,12 @@ persigue.
   avisa de cómo arreglarlo y el comando termina con error. Antes se reescribía desde cero y se
   perdían el `env` (también el recién migrado), las claves ajenas y el bloqueo de lectura. `doctor`
   también lee los ficheros con BOM.
+- **Ningún comando de la CLI se cae ya por la codificación de la salida.** Con la salida redirigida
+  a un fichero o a una tubería en Windows (cp1252), que es como lo lanzan Claude Code, un script o la
+  tarea programada, `update` reventaba con `UnicodeEncodeError` en la flecha de la migración de los
+  nombres retirados: la migración quedaba a medias y los hooks sin registrar. Ahora los subcomandos
+  sustituyen por `?` lo que la consola no puede escribir (el servidor MCP por stdio no cambia) y la
+  migración se describe con `->`.
 - **El panel escribía las duraciones largas solo en segundos** («947,2 s»). Desde un minuto se leen
   en minutos y segundos («15 min 47 s») y desde una hora en horas y minutos («1 h 5 min»), en la
   tarea en curso, la actividad, la latencia media y el desglose espera/inferencia; el `title` de la

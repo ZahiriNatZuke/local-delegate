@@ -970,7 +970,7 @@ def test_update_migrates_before_reporting(monkeypatch, tmp_path, dry_run):
     home = _home_with_env(tmp_path, {_GONE_ENV[0]: "1"})
     code, text = _run(home, dry_run=dry_run)
     assert code == 0, text
-    assert f"{_GONE_ENV[0]} → {_GONE_ENV[1]}" in text
+    assert f"{_GONE_ENV[0]} -> {_GONE_ENV[1]}" in text
     assert install.t("install.update.migration") in text
     assert _rename_hint() not in text
     expected = {_GONE_ENV[0]: "1"} if dry_run else {_GONE_ENV[1]: "1"}
@@ -1117,11 +1117,11 @@ def test_the_migration_line_in_english(monkeypatch, tmp_path):
     home = _home_with_env(tmp_path, {_GONE_ENV[0]: "1"})
     with i18n.override("en"):
         code, text = _run(home, dry_run=True)
-        english = i18n.t("install.migrate.settings_plan", names=f"{_GONE_ENV[0]} → {_GONE_ENV[1]}")
+        english = i18n.t("install.migrate.settings_plan", names=f"{_GONE_ENV[0]} -> {_GONE_ENV[1]}")
     assert code == 0, text
     assert english in text
     assert english != i18n.t_lang(
-        "es", "install.migrate.settings_plan", names=f"{_GONE_ENV[0]} → {_GONE_ENV[1]}"
+        "es", "install.migrate.settings_plan", names=f"{_GONE_ENV[0]} -> {_GONE_ENV[1]}"
     )
 
 

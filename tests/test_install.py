@@ -1139,7 +1139,7 @@ def test_retired_name_migration_shows_only_names(monkeypatch, tmp_path):
     lines: list[str] = []
     inst.apply(inst.plan_retired_name_migration(home), dry_run=True, out=lines.append)
     text = "\n".join(lines)
-    assert f"{_GONE_ENV[0]} → {_GONE_ENV[1]}" in text
+    assert f"{_GONE_ENV[0]} -> {_GONE_ENV[1]}" in text
     assert "s3cr3t-value" not in text
 
 

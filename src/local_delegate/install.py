@@ -1867,8 +1867,12 @@ def retired_names_to_migrate(home: Path) -> tuple[deprecations.DeprecatedName, .
 
 
 def _names(entries: Sequence[deprecations.DeprecatedName]) -> str:
-    """`VIEJO → NUEVO, …`: solo nombres, nunca valores (el `env` puede llevar claves, REQ-017)."""
-    return ", ".join(f"{e.old} → {e.new}" for e in entries)
+    """`VIEJO -> NUEVO, …`: solo nombres, nunca valores (el `env` puede llevar claves, REQ-017).
+
+    Flecha ASCII a propósito: con la salida redirigida en Windows (cp1252) una «→» no se puede
+    escribir, y esta línea la imprime `update` lanzado por un script (REQ-028).
+    """
+    return ", ".join(f"{e.old} -> {e.new}" for e in entries)
 
 
 def _retired_names_backup(path: Path, raw: bytes, stamp: str) -> Path:
