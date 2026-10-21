@@ -11,11 +11,11 @@ Retirar un rol tiene **dos superficies visibles**, y las dos se prueban aquí:
 1. **Pedir su modelo da un error claro**, con la lista de válidos, y sin gastar backend. Sale gratis
    —el modelo deja de estar en `ALLOWED_MODELS`— pero justo por eso hay que fijarlo con un test: si
    alguien lo devolviera al catálogo «por compatibilidad», el error se volvería silencio.
-2. **Las tres variables huérfanas no se ignoran calladas.** `LOCAL_DELEGATE_MODEL_FAST`,
-   `LOCAL_DELEGATE_MAX_CHARS_FAST` y `LOCAL_DELEGATE_FALLBACK_FAST` dejan de tener efecto, y quien
-   las tenga puestas merece enterarse. Se avisa desde `doctor` y no rompiendo el arranque: romperlo
-   dejaría sin servicio a quien actualice con la variable puesta, que es justo el que no hizo nada
-   malo.
+2. **Las tres variables huérfanas.** `LOCAL_DELEGATE_MODEL_FAST`, `LOCAL_DELEGATE_MAX_CHARS_FAST` y
+   `LOCAL_DELEGATE_FALLBACK_FAST` dejaron de tener efecto en la 0.30.0, y `doctor` avisó de ellas
+   de la 0.30.x a la 0.37.x. Desde la 0.38.0 (REQ-005 de retire-legacy-aliases) salen del registro
+   de nombres obsoletos y ya no se avisan: con solo una de ellas el check da `OK`, mientras sigue
+   avisando de un nombre obsoleto que aún está registrado.
 """
 
 from __future__ import annotations
@@ -139,35 +139,40 @@ def test_the_retired_model_is_not_valid_as_an_answer_to_the_question_either(monk
     assert seen == []
 
 
-# --- Las variables huérfanas: `doctor` avisa ----------------------------------
+# --- Las variables huérfanas: `doctor` ya no avisa (0.38.0) -------------------
+def _registered_old(new: str) -> str:
+    """El nombre viejo de un alias aún registrado, sacado del registro (sin literal en español)."""
+    from local_delegate import deprecations
+
+    return next(e.old for e in deprecations.DEPRECATED_NAMES if e.new == new)
+
+
 def test_without_retired_role_variables_the_check_is_ok(reload_config, tmp_path):
     """Control: el caso normal —nadie las tiene puestas— no puede dar aviso."""
-    reload_config()
+    reload_config(LD_HOOK_TELEMETRY_LOG="")
     result = checks._probe_deprecated_names(checks.Context(home=tmp_path))
     assert result.status == checks.OK
 
 
-def test_each_retired_role_variable_is_warned_by_name(reload_config, tmp_path):
-    """Una por una, y no «alguna»: el aviso tiene que decir cuál quitar."""
+def test_a_fast_variable_alone_is_ok_while_a_registered_name_still_warns(reload_config, tmp_path):
+    """REQ-005 / REQ-011 fila 9: cada `_FAST` sola da `OK`; el gemelo registrado, `WARN`."""
     for variable in RETIRED_VARIABLES:
-        reload_config(**{variable: "whatever"})
+        reload_config(LD_HOOK_TELEMETRY_LOG="", **{variable: "whatever"})
         result = checks._probe_deprecated_names(checks.Context(home=tmp_path))
-        assert result.status == checks.WARN, f"{variable} puesta no dio aviso"
-        assert variable in result.detail
-        assert "0.30.0" in result.detail or "0.30.0" in result.fix_hint
-
-
-def test_the_warning_names_them_all_when_all_three_are_there(reload_config, tmp_path):
-    reload_config(**dict.fromkeys(RETIRED_VARIABLES, "whatever"))
-    detail = checks._probe_deprecated_names(checks.Context(home=tmp_path)).detail
-    assert all(v in detail for v in RETIRED_VARIABLES)
+        assert result.status == checks.OK, f"{variable} sola todavía da aviso"
+        assert variable not in result.detail
+    twin = _registered_old("LOCAL_DELEGATE_STRUCTURED_SUMMARY")
+    reload_config(LD_HOOK_TELEMETRY_LOG="", **{twin: "1"})
+    result = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+    assert result.status == checks.WARN, "el check dejó de mirar los nombres registrados"
+    assert twin in result.detail
 
 
 def test_the_check_is_in_the_registry(reload_config):
     """Un probe fuera del registro no lo ejecuta nadie: `doctor` no lo llamaría jamás.
 
     Desde la ola A0 del renombrado es el check general de nombres obsoletos (REQ-003), que
-    sustituye a `config.rol_retirado` sin cambiar lo que avisa.
+    sustituye a `config.rol_retirado`.
     """
     ids = [c.id for c in checks.CHECKS]
     assert "config.deprecated_names" in ids
@@ -177,28 +182,34 @@ def test_the_check_is_in_the_registry(reload_config):
     assert check.group == "environment"
 
 
-def test_retired_variable_in_settings_json_env_is_also_warned(reload_config, tmp_path):
-    """Los hooks heredan de `env` de `settings.json`, que `doctor` no ve en su propia shell."""
-    reload_config()
+def test_a_fast_variable_in_settings_json_env_is_not_warned(reload_config, tmp_path):
+    """El `env` de `settings.json` tampoco: la `_FAST` sola da `OK`, el gemelo registrado `WARN`."""
+    reload_config(LD_HOOK_TELEMETRY_LOG="")
     claude = tmp_path / ".claude"
     claude.mkdir()
-    (claude / "settings.json").write_text(
+    settings = claude / "settings.json"
+    settings.write_text(
         json.dumps({"env": {"LOCAL_DELEGATE_MAX_CHARS_FAST": "9000", "OTHER": "1"}}),
         encoding="utf-8",
     )
     result = checks._probe_deprecated_names(checks.Context(home=tmp_path))
-    assert result.status == checks.WARN, "la variable del env de settings.json no dio aviso"
-    assert "LOCAL_DELEGATE_MAX_CHARS_FAST" in result.detail
+    assert result.status == checks.OK, "la `_FAST` del env de settings.json todavía da aviso"
+    twin = _registered_old("LOCAL_DELEGATE_STRUCTURED_SUMMARY")
+    settings.write_text(json.dumps({"env": {twin: "1", "OTHER": "1"}}), encoding="utf-8")
+    result = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+    assert result.status == checks.WARN, "el gemelo del env de settings.json no dio aviso"
+    assert twin in result.detail
     assert "settings.json" in result.detail
     assert "OTHER" not in result.detail
 
 
-def test_retired_variables_come_from_the_single_registry(reload_config):
-    """Una sola fuente: `config` no escribe la lista a mano, la toma de `deprecations`."""
+def test_the_fast_variables_left_the_registry_and_config(reload_config):
+    """Fuera del todo: ni en el registro, ni leídas por `config` para avisar."""
     from local_delegate import deprecations
 
     reload_config()
-    retired = {e.old for e in deprecations.DEPRECATED_NAMES if e.is_retired}
-    assert retired == set(RETIRED_VARIABLES)
-    assert set(config.RETIRED_FAST_ROLE_VARIABLES) == retired
-    assert retired <= config.ENVIRONMENT_VARIABLES
+    registered = {e.old for e in deprecations.DEPRECATED_NAMES}
+    assert not registered & set(RETIRED_VARIABLES)
+    assert not set(config.DEPRECATED_ENV_VALUES) & set(RETIRED_VARIABLES)
+    # Y la suite deja de aislarlas: ya no las lee nadie.
+    assert not config.ENVIRONMENT_VARIABLES & set(RETIRED_VARIABLES)

@@ -518,8 +518,7 @@ FILE_NAMES: dict[str, tuple[str, str]] = {
     "block_notes": ("local-delegate-bloqueos.jsonl", "local-delegate-blocks.jsonl"),
     "call_notes_dir": ("local-delegate-llamadas", "local-delegate-calls"),
     "health_prefix": ("local-delegate-salud-", "local-delegate-health-"),
-    # En `LOG_DIR`. El daemon escribe los dos mientras viva su entrada `legacy_write` de
-    # `deprecations` (excepción de REQ-005); se lee el nuevo y, si no existe, el viejo.
+    # En `LOG_DIR`. El daemon solo escribe el nuevo; se lee el nuevo y, si no existe, el viejo.
     "cooldown_state": ("enfriamiento.json", "cooldown.json"),
 }
 
@@ -598,16 +597,6 @@ def read_key(row: Mapping[str, Any], new: str, old: str, default: Any = None) ->
     if old in row:
         return row[old]
     return default
-
-
-def old_keys(fmt: str, row: Mapping[str, Any]) -> dict[str, Any]:
-    """Copia de `row` con las claves del formato nuevo devueltas a su nombre viejo.
-
-    Solo para las escrituras dobles que mantiene una excepción temporal (`legacy_write`): los
-    valores se copian tal cual, porque esos formatos no tienen valores de enumeración traducidos.
-    """
-    back = {new: old for old, new in FORMATS.get(fmt, {}).get("keys", {}).items()}
-    return {back.get(key, key): value for key, value in row.items()}
 
 
 def normalize(fmt: str, row: Mapping[str, Any]) -> dict[str, Any]:

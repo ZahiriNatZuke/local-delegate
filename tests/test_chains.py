@@ -199,7 +199,6 @@ def test_the_new_variables_are_in_the_inventory(reload_config):
         "LOCAL_DELEGATE_FALLBACK_MECHANICAL",
         "LOCAL_DELEGATE_FALLBACK_LONG",
         "LOCAL_DELEGATE_FALLBACK_CODE",
-        "LOCAL_DELEGATE_FALLBACK_FAST",
         "LLAMASWAP_CONFIG",
         "LLAMASWAP_EXE",
         "LLAMASWAP_LISTEN",

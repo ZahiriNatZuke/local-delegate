@@ -20,7 +20,7 @@ inglés como los roles; `residente` y `resident` se siguen aceptando como sinón
 `doctor` pide renombrarlos (REQ-022).
 
 El rol `rápido` tenía su fila y era **inalcanzable**, porque ninguna tool enrutaba a él. Se retiró
-entero en la 0.30.0; ver `config.RETIRED_FAST_ROLE_VARIABLES`.
+entero en la 0.30.0, y sus variables dejaron de avisarse en la 0.38.0.
 
 Al resolver se quitan los repetidos y el propio modelo principal, y lo que no sea un rol, un modelo
 del catálogo de texto o `loaded` se ignora (y `doctor` lo avisa). Este módulo solo resuelve: qué

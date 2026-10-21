@@ -68,7 +68,7 @@ def _backend(responses: dict) -> list[str]:
 
 
 def _state_file(tmp_path: Path) -> Path:
-    return tmp_path / "enfriamiento.json"
+    return tmp_path / "cooldown.json"
 
 
 def _cool_down(tmp_path: Path, model: str) -> None:
@@ -212,7 +212,7 @@ def test_cooled_down_without_alternative_fails_at_once(reload_config, tmp_path):
 
 
 def _expired(tmp_path: Path, model: str, wait_s: float = 120.0) -> None:
-    data = {model: {"fallos": 0, "espera_s": wait_s, "hasta": time.time() - 1, "reentradas": 1}}
+    data = {model: {"failures": 0, "wait_s": wait_s, "until": time.time() - 1, "reentries": 1}}
     _state_file(tmp_path).write_text(json.dumps(data), encoding="utf-8")
 
 
@@ -237,7 +237,7 @@ def test_cooldown_expires_and_the_failing_probe_doubles_the_wait(reload_config, 
     server.local_classify(text="hola", labels=["a", "b"])
 
     assert requested == [MECHANICAL, LONG]
-    assert _entries(tmp_path)[MECHANICAL]["espera_s"] == 240.0
+    assert _entries(tmp_path)[MECHANICAL]["wait_s"] == 240.0
 
 
 # --- Escenario: traducción en trozos con respaldo a mitad (REQ-006) ---------------------------
@@ -382,7 +382,7 @@ def test_timeout_with_the_model_loaded_counts_and_does_not_hop(
     server.local_classify(text="hola", labels=["a", "b"])
 
     assert requested == [MECHANICAL], "D-2: un timeout de lectura no dispara el respaldo"
-    assert _entries(tmp_path)[MECHANICAL]["fallos"] == 1
+    assert _entries(tmp_path)[MECHANICAL]["failures"] == 1
 
 
 # --- Escenario: benchmark con el mecanismo apagado --------------------------------------------
@@ -540,7 +540,7 @@ def test_if_the_fallbacks_fail_the_original_error_and_the_list_come_back(reload_
     detail = "\n".join(rest)
     assert f"{MECHANICAL} (http_502)" in detail and f"{LONG} (http_503)" in detail
     entries = _entries(tmp_path)
-    assert all(entries[m]["fallos"] == 1 for m in (CODE, MECHANICAL, LONG))
+    assert all(entries[m]["failures"] == 1 for m in (CODE, MECHANICAL, LONG))
 
 
 # --- REQ-007: el aviso nunca se mezcla con el contenido ---------------------------------------

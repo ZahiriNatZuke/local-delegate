@@ -10,10 +10,9 @@ escribe bajo bloqueo, y **si el fichero no se puede leer o el bloqueo no llega a
 como si no hubiera enfriamiento**: este módulo nunca bloquea ni hace fallar una delegación.
 
 Hasta la 0.34.0 el fichero se llamaba `enfriamiento.json` y sus claves iban en español. Se lee el
-nuevo y, si no existe, el viejo traducido (REQ-006: gana el nuevo). Mientras viva la entrada
-`legacy_write` de `deprecations` (excepción de REQ-005), cada escritura deja también
-`enfriamiento.json` con las claves viejas, para que los hooks de una versión anterior, que leen ese
-fichero, sigan viendo los modelos enfriados.
+nuevo y, si no existe, el viejo traducido (REQ-006: gana el nuevo). Solo se escribe el nuevo:
+desde la 0.38.0 el daemon ya no deja una copia en `enfriamiento.json`, y uno que ya exista no se
+borra ni se modifica.
 
 Solo guarda nombres de modelo, contadores y fechas. Nunca prompts, rutas ni contenido.
 
@@ -38,7 +37,7 @@ from pathlib import Path
 
 from filelock import FileLock, Timeout
 
-from . import config, deprecations, legacy_names
+from . import config, legacy_names
 from .failures import FailureClass
 from .json_state import read_json, write_json_atomic
 
@@ -50,18 +49,12 @@ COUNTING_CLASSES = frozenset({FailureClass.MODEL, FailureClass.READ_TIMEOUT})
 #: Cuánto se espera al bloqueo del fichero antes de seguir sin enfriamiento, como `inflight.json`.
 LOCK_WAIT_S = 2.0
 
-#: El fichero de estado, con su nombre viejo, que se sigue escribiendo mientras viva `legacy_write`.
+#: El fichero de estado y su nombre viejo, que solo se lee (lectura dual) si el nuevo no existe.
 LEGACY_STATE_FILE, STATE_FILE = legacy_names.FILE_NAMES["cooldown_state"]
 
 #: El registro de episodios, junto al fichero de estado. Lo lee `scripts/measure_cooldown.py`,
 #: que lee también el viejo.
 LEGACY_EVENTS_FILE, EVENTS_FILE = legacy_names.COOLDOWN_EVENTS_FILE_NAMES
-
-
-def legacy_write_enabled() -> bool:
-    """¿Se escribe todavía `enfriamiento.json`? Mientras su entrada `legacy_write` siga registrada."""
-    entry = deprecations.find(LEGACY_STATE_FILE)
-    return entry is not None and entry.kind == "legacy_write"
 
 
 def _append_lines(path: Path, events: list[dict]) -> None:
@@ -123,7 +116,6 @@ class CooldownState:
         max_wait_s: float,
         enabled: bool = True,
         clock: Callable[[], float] = time.time,
-        legacy_write: bool | None = None,
     ) -> None:
         self._path = Path(path)
         self._events_path = self._path.with_name(EVENTS_FILE)
@@ -133,10 +125,6 @@ class CooldownState:
         self._wait_s = min(float(wait_s), self._max_wait_s)
         self._enabled = enabled
         self._clock = clock
-        # `None`: lo decide el registro de nombres obsoletos. Si la ruta ya es la vieja (un test, o
-        # quien pase `enfriamiento.json` a mano), no hay segundo fichero que escribir.
-        legacy = legacy_write_enabled() if legacy_write is None else legacy_write
-        self._legacy_write = legacy and self._legacy_path != self._path
 
     # --- Escribir ------------------------------------------------------------------------------
 
@@ -285,8 +273,6 @@ class CooldownState:
                 if apply(data) is False:
                     return  # nada cambió: no se reescribe el fichero
                 write_json_atomic(self._path, data)
-                if self._legacy_write:
-                    self._write_legacy(data)
                 if events:
                     try:
                         _append_lines(self._events_path, events)
@@ -294,17 +280,6 @@ class CooldownState:
                         pass  # el registro es para medir: perderlo no deshace el estado ya escrito
         except (Timeout, OSError):
             return  # REQ-012: nunca bloquea ni hace fallar una delegación
-
-    def _write_legacy(self, data: dict) -> None:
-        """`enfriamiento.json` con el mismo estado y las claves viejas (excepción de REQ-005)."""
-        old = {
-            model: legacy_names.old_keys("cooldown_state", _entry(raw))
-            for model, raw in data.items()
-        }
-        try:
-            write_json_atomic(self._legacy_path, old)
-        except OSError:
-            pass  # la copia vieja es para hooks de otra versión: perderla no deshace el estado
 
 
 def from_config() -> CooldownState:
