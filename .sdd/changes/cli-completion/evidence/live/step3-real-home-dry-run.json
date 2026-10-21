@@ -1,0 +1,47 @@
+{
+  "log_dir": "C:\\Users\\Yohan\\AppData\\Local\\local-delegate",
+  "completion_dir": "C:\\Users\\Yohan\\AppData\\Local\\local-delegate\\completion",
+  "targets": {
+    "pwsh": {
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.EXE",
+      "profile": "C:\\Users\\Yohan\\Documents\\PowerShell\\profile.ps1",
+      "policy": "Bypass",
+      "policy_blocks": false
+    },
+    "powershell": {
+      "executable": "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.EXE",
+      "profile": "C:\\Users\\Yohan\\Documents\\WindowsPowerShell\\profile.ps1",
+      "policy": "RemoteSigned",
+      "policy_blocks": false
+    }
+  },
+  "sha256_before": {
+    "C:\\Users\\Yohan\\Documents\\PowerShell\\profile.ps1": null,
+    "C:\\Users\\Yohan\\Documents\\PowerShell\\Microsoft.PowerShell_profile.ps1": "0a33bfaf06b40f3ebdb7c0dd4df8473f317d11449209185d89a0d3af2f8849f1",
+    "C:\\Users\\Yohan\\Documents\\WindowsPowerShell\\profile.ps1": null,
+    "C:\\Users\\Yohan\\AppData\\Local\\local-delegate\\completion (existe)": "False"
+  },
+  "sha256_after": {
+    "C:\\Users\\Yohan\\Documents\\PowerShell\\profile.ps1": null,
+    "C:\\Users\\Yohan\\Documents\\PowerShell\\Microsoft.PowerShell_profile.ps1": "0a33bfaf06b40f3ebdb7c0dd4df8473f317d11449209185d89a0d3af2f8849f1",
+    "C:\\Users\\Yohan\\Documents\\WindowsPowerShell\\profile.ps1": null,
+    "C:\\Users\\Yohan\\AppData\\Local\\local-delegate\\completion (existe)": "False"
+  },
+  "sha256_equal": true,
+  "dry_run": {
+    "cmd": [
+      "C:\\Users\\Yohan\\AppData\\Local\\Temp\\claude\\D--Projects-local-delegate\\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\\scratchpad\\venv-cc\\Scripts\\local-delegate.exe",
+      "install",
+      "--shell-completion",
+      "--dry-run",
+      "--no-hooks",
+      "--no-skill",
+      "--no-memory",
+      "--no-mcp",
+      "--no-client-cli"
+    ],
+    "returncode": 0,
+    "stdout": "Instalando local-delegate en C:\\Users\\Yohan\r\nclientes: deteccion automatica (--clients auto): claude, codex, opencode\r\n\r\nAutocompletado del shell:\r\n[dry-run] [completion] C:\\Users\\Yohan\\AppData\\Local\\local-delegate\\completion\\local-delegate.ps1 — fichero de autocompletado de powershell\r\n[dry-run] [profile] C:\\Users\\Yohan\\Documents\\PowerShell\\profile.ps1 — bloque de carga del autocompletado de powershell\r\n          # >>> local-delegate completion >>>\r\n          if (Test-Path -LiteralPath \"C:/Users/Yohan/AppData/Local/local-delegate/completion/local-delegate.ps1\") { . \"C:/Users/Yohan/AppData/Local/local-delegate/completion/local-delegate.ps1\" }\r\n          # <<< local-delegate completion <<<\r\n[dry-run] [profile] C:\\Users\\Yohan\\Documents\\WindowsPowerShell\\profile.ps1 — bloque de carga del autocompletado de powershell\r\n          # >>> local-delegate completion >>>\r\n          if (Test-Path -LiteralPath \"C:/Users/Yohan/AppData/Local/local-delegate/completion/local-delegate.ps1\") { . \"C:/Users/Yohan/AppData/Local/local-delegate/completion/local-delegate.ps1\" }\r\n          # <<< local-delegate completion <<<\r\n[dry-run] [manifest] C:\\Users\\Yohan\\AppData\\Local\\local-delegate\\completion\\installed.json — manifiesto del autocompletado\r\n          {\r\n            \"version\": 1,\r\n            \"generator\": \"0.37.0\",\r\n            \"lang\": \"es\",\r\n            \"shells\": [\r\n              {\r\n                \"shell\": \"powershell\",\r\n                \"file\": \"C:\\\\Users\\\\Yohan\\\\AppData\\\\Local\\\\local-delegate\\\\completion\\\\local-delegate.ps1\",\r\n                \"profiles\": [\r\n                  {\r\n                    \"path\": \"C:\\\\Users\\\\Yohan\\\\Documents\\\\PowerShell\\\\profile.ps1\",\r\n                    \"created\": true,\r\n                    \"created_parent\": false\r\n                  },\r\n                  {\r\n                    \"path\": \"C:\\\\Users\\\\Yohan\\\\Documents\\\\WindowsPowerShell\\\\profile.ps1\",\r\n                    \"created\": true,\r\n                    \"created_parent\": false\r\n                  }\r\n                ]\r\n              }\r\n            ]\r\n          }\r\n\r\n",
+    "stderr": ""
+  }
+}

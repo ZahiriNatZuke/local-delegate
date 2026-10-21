@@ -1,0 +1,124 @@
+# powershell (C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.EXE) PowerShell 5.1
+# -ExecutionPolicy Bypass: False; PSModulePath vaciado: True
+# todos OK: True
+
+[OK] REQ-012 root: «local-delegate »
+    CompletionText=benchmark                    ToolTip=Ejecuta el corpus v2 de tareas reales contra un backend canary y escribe JSONL.
+    CompletionText=check-llamaswap              ToolTip=Valida el presupuesto de VRAM (y opcionalmente RAM) de los groups de un config.yaml.
+    CompletionText=init-llamaswap               ToolTip=Genera/actualiza groups en un config.yaml de llama-swap con guardrail de VRAM/RAM.
+    CompletionText=llamaswap                    ToolTip=Residencia y TTL de los modelos de llama-swap (pide el extra [llamaswap]).
+    CompletionText=doctor                       ToolTip=Diagnostica el andamiaje (hooks, skill, memoria, MCP), el daemon y el backend.
+    CompletionText=serve                        ToolTip=Sirve MCP Streamable HTTP (/mcp) y dashboard (/) como daemon singleton.
+    CompletionText=recompute-cost               ToolTip=Lee los transcripts de Claude Code y deja en el directorio de logs el relleno de atribución, los agregados de N, el cotejo de precios y los puntos de cuota.
+    CompletionText=test-window                  ToolTip=Marca ventanas de prueba: las filas del log de uso que caen dentro no cuentan en el panel, en local_status ni en el coste.
+    CompletionText=backend-params               ToolTip=Parámetros por rol que viajan en cada petición al backend (muestreo y razonamiento), guardados en backend-params.json.
+    CompletionText=install                      ToolTip=Instala hooks, skill, memoria y la entrada MCP en Claude Code / Codex / opencode.
+    CompletionText=update                       ToolTip=Actualiza el pin, completa lo que falte del andamiaje y deja el daemon arriba.
+    CompletionText=uninstall                    ToolTip=Revierte lo que instaló `local-delegate install` (solo lo suyo).
+    CompletionText=completion                   ToolTip=Imprime el script de autocompletado de un shell (subcomandos, opciones y valores fijos).
+[OK] REQ-012 root_ba: «local-delegate ba»
+    CompletionText=backend-params               ToolTip=Parámetros por rol que viajan en cada petición al backend (muestreo y razonamiento), guardados en backend-params.json.
+[OK] REQ-012 bp: «local-delegate backend-params »
+    CompletionText=show                         ToolTip=muestra la ruta del fichero y, por rol, cada valor efectivo con su origen y sus avisos
+    CompletionText=set                          ToolTip=fija una clave de un rol; valida antes de escribir y, si la rechaza, no toca el fichero
+    CompletionText=unset                        ToolTip=quita una clave de un rol
+    CompletionText=reset                        ToolTip=vacía un rol entero o, sin rol, todos
+[OK] REQ-012 llamaswap: «local-delegate llamaswap »
+    CompletionText=residency                    ToolTip=Muestra o cambia qué modelo se queda cargado y los TTL.
+[OK] REQ-012 test_window: «local-delegate test-window »
+    CompletionText=start                        ToolTip=abre una ventana que empieza ahora e imprime su id (guárdalo)
+    CompletionText=stop                         ToolTip=cierra la ventana ID (sin ID, la única abierta; si hay varias, falla)
+    CompletionText=add                          ToolTip=añade una ventana cerrada (ISO 8601; sin zona = UTC)
+    CompletionText=list                         ToolTip=lista las ventanas y cuántas filas del log caen en cada una
+[OK] REQ-012 case_sensitive: «local-delegate BACKEND-PARAMS »
+    CompletionText=benchmark                    ToolTip=Ejecuta el corpus v2 de tareas reales contra un backend canary y escribe JSONL.
+    CompletionText=check-llamaswap              ToolTip=Valida el presupuesto de VRAM (y opcionalmente RAM) de los groups de un config.yaml.
+    CompletionText=init-llamaswap               ToolTip=Genera/actualiza groups en un config.yaml de llama-swap con guardrail de VRAM/RAM.
+    CompletionText=llamaswap                    ToolTip=Residencia y TTL de los modelos de llama-swap (pide el extra [llamaswap]).
+    CompletionText=doctor                       ToolTip=Diagnostica el andamiaje (hooks, skill, memoria, MCP), el daemon y el backend.
+    CompletionText=serve                        ToolTip=Sirve MCP Streamable HTTP (/mcp) y dashboard (/) como daemon singleton.
+    CompletionText=recompute-cost               ToolTip=Lee los transcripts de Claude Code y deja en el directorio de logs el relleno de atribución, los agregados de N, el cotejo de precios y los puntos de cuota.
+    CompletionText=test-window                  ToolTip=Marca ventanas de prueba: las filas del log de uso que caen dentro no cuentan en el panel, en local_status ni en el coste.
+    CompletionText=backend-params               ToolTip=Parámetros por rol que viajan en cada petición al backend (muestreo y razonamiento), guardados en backend-params.json.
+    CompletionText=install                      ToolTip=Instala hooks, skill, memoria y la entrada MCP en Claude Code / Codex / opencode.
+    CompletionText=update                       ToolTip=Actualiza el pin, completa lo que falte del andamiaje y deja el daemon arriba.
+    CompletionText=uninstall                    ToolTip=Revierte lo que instaló `local-delegate install` (solo lo suyo).
+    CompletionText=completion                   ToolTip=Imprime el script de autocompletado de un shell (subcomandos, opciones y valores fijos).
+[OK] REQ-012 after_flag: «local-delegate --version backend-params »
+    CompletionText=show                         ToolTip=muestra la ruta del fichero y, por rol, cada valor efectivo con su origen y sus avisos
+    CompletionText=set                          ToolTip=fija una clave de un rol; valida antes de escribir y, si la rechaza, no toca el fichero
+    CompletionText=unset                        ToolTip=quita una clave de un rol
+    CompletionText=reset                        ToolTip=vacía un rol entero o, sin rol, todos
+[OK] REQ-013 install_mcp: «local-delegate install --mcp»
+    CompletionText=--mcp-mode                   ToolTip=stdio (uvx, default) o http (daemon compartido en /mcp)
+[OK] REQ-013 serve_options: «local-delegate serve --l»
+    CompletionText=--log-level                  ToolTip=nivel de log de uvicorn (default: warning)
+[OK] REQ-013 append_again: «local-delegate install --clients claude --cl»
+    CompletionText=--clients                    ToolTip=cliente a configurar (repetible; default: auto = los que estén instalados)
+[OK] REQ-014 mcp_mode: «local-delegate install --mcp-mode »
+    CompletionText=stdio                        ToolTip=stdio
+    CompletionText=http                         ToolTip=http
+[OK] REQ-014 mcp_mode_eq: «local-delegate install --mcp-mode=h»
+    CompletionText=--mcp-mode=http              ToolTip=http
+[OK] REQ-014 log_level: «local-delegate serve --log-level w»
+    CompletionText=warning                      ToolTip=warning
+[OK] REQ-014 benchmark_role: «local-delegate benchmark --role »
+    CompletionText=mechanical                   ToolTip=mechanical
+    CompletionText=long                         ToolTip=long
+    CompletionText=code                         ToolTip=code
+    CompletionText=vision                       ToolTip=vision
+[OK] REQ-014 reset_calibration: «local-delegate recompute-cost --reset-calibration »
+    CompletionText=five_hour                    ToolTip=five_hour
+    CompletionText=seven_day                    ToolTip=seven_day
+[OK] REQ-014 shell_completion: «local-delegate install --shell-completion »
+    CompletionText=auto                         ToolTip=auto
+    CompletionText=powershell                   ToolTip=powershell
+    CompletionText=zsh                          ToolTip=zsh
+    CompletionText=bash                         ToolTip=bash
+[OK] REQ-014 shell_completion_d: «local-delegate install --shell-completion --d»
+    CompletionText=--dry-run                    ToolTip=describe los cambios sin escribir
+[OK] REQ-015 set_role: «local-delegate backend-params set »
+    CompletionText=mechanical                   ToolTip=mechanical
+    CompletionText=long                         ToolTip=long
+    CompletionText=code                         ToolTip=code
+    CompletionText=vision                       ToolTip=vision
+[OK] REQ-015 set_key: «local-delegate backend-params set code »
+    CompletionText=temperature                  ToolTip=temperature
+    CompletionText=top_k                        ToolTip=top_k
+    CompletionText=top_p                        ToolTip=top_p
+    CompletionText=min_p                        ToolTip=min_p
+    CompletionText=typical_p                    ToolTip=typical_p
+    CompletionText=repeat_penalty               ToolTip=repeat_penalty
+    CompletionText=repeat_last_n                ToolTip=repeat_last_n
+    CompletionText=presence_penalty             ToolTip=presence_penalty
+    CompletionText=frequency_penalty            ToolTip=frequency_penalty
+    CompletionText=dry_multiplier               ToolTip=dry_multiplier
+    CompletionText=dry_base                     ToolTip=dry_base
+    CompletionText=dry_allowed_length           ToolTip=dry_allowed_length
+    CompletionText=dry_penalty_last_n           ToolTip=dry_penalty_last_n
+    CompletionText=xtc_probability              ToolTip=xtc_probability
+    CompletionText=xtc_threshold                ToolTip=xtc_threshold
+    CompletionText=mirostat                     ToolTip=mirostat
+    CompletionText=mirostat_tau                 ToolTip=mirostat_tau
+    CompletionText=mirostat_eta                 ToolTip=mirostat_eta
+    CompletionText=enable_thinking              ToolTip=enable_thinking
+    CompletionText=reasoning_budget_tokens      ToolTip=reasoning_budget_tokens
+    CompletionText=reasoning_effort             ToolTip=reasoning_effort
+[OK] REQ-015 set_value: «local-delegate backend-params set code top_p »
+    (sin candidatos)
+[OK] REQ-015 unset_t: «local-delegate backend-params unset vision t»
+    CompletionText=temperature                  ToolTip=temperature
+    CompletionText=top_k                        ToolTip=top_k
+    CompletionText=top_p                        ToolTip=top_p
+    CompletionText=typical_p                    ToolTip=typical_p
+[OK] REQ-015 reset_role: «local-delegate backend-params reset »
+    CompletionText=mechanical                   ToolTip=mechanical
+    CompletionText=long                         ToolTip=long
+    CompletionText=code                         ToolTip=code
+    CompletionText=vision                       ToolTip=vision
+[OK] REQ-015 completion: «local-delegate completion »
+    CompletionText=powershell                   ToolTip=powershell
+    CompletionText=zsh                          ToolTip=zsh
+    CompletionText=bash                         ToolTip=bash
+[OK] REQ-017 (control) no_match: «local-delegate zzz»
+    (sin candidatos)

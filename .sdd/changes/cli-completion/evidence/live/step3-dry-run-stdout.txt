@@ -1,0 +1,38 @@
+Instalando local-delegate en C:\Users\Yohan
+clientes: deteccion automatica (--clients auto): claude, codex, opencode
+
+Autocompletado del shell:
+[dry-run] [completion] C:\Users\Yohan\AppData\Local\local-delegate\completion\local-delegate.ps1 — fichero de autocompletado de powershell
+[dry-run] [profile] C:\Users\Yohan\Documents\PowerShell\profile.ps1 — bloque de carga del autocompletado de powershell
+          # >>> local-delegate completion >>>
+          if (Test-Path -LiteralPath "C:/Users/Yohan/AppData/Local/local-delegate/completion/local-delegate.ps1") { . "C:/Users/Yohan/AppData/Local/local-delegate/completion/local-delegate.ps1" }
+          # <<< local-delegate completion <<<
+[dry-run] [profile] C:\Users\Yohan\Documents\WindowsPowerShell\profile.ps1 — bloque de carga del autocompletado de powershell
+          # >>> local-delegate completion >>>
+          if (Test-Path -LiteralPath "C:/Users/Yohan/AppData/Local/local-delegate/completion/local-delegate.ps1") { . "C:/Users/Yohan/AppData/Local/local-delegate/completion/local-delegate.ps1" }
+          # <<< local-delegate completion <<<
+[dry-run] [manifest] C:\Users\Yohan\AppData\Local\local-delegate\completion\installed.json — manifiesto del autocompletado
+          {
+            "version": 1,
+            "generator": "0.37.0",
+            "lang": "es",
+            "shells": [
+              {
+                "shell": "powershell",
+                "file": "C:\\Users\\Yohan\\AppData\\Local\\local-delegate\\completion\\local-delegate.ps1",
+                "profiles": [
+                  {
+                    "path": "C:\\Users\\Yohan\\Documents\\PowerShell\\profile.ps1",
+                    "created": true,
+                    "created_parent": false
+                  },
+                  {
+                    "path": "C:\\Users\\Yohan\\Documents\\WindowsPowerShell\\profile.ps1",
+                    "created": true,
+                    "created_parent": false
+                  }
+                ]
+              }
+            ]
+          }
+

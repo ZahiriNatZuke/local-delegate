@@ -1,0 +1,45 @@
+{
+  "home": "C:\\Users\\Yohan\\AppData\\Local\\Temp\\claude\\D--Projects-local-delegate\\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\\scratchpad\\home-cc",
+  "install_returncode": 0,
+  "installed_completion_files": [
+    "installed.json",
+    "local-delegate.ps1"
+  ],
+  "profiles_after_install": {
+    "C:\\Users\\Yohan\\AppData\\Local\\Temp\\claude\\D--Projects-local-delegate\\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\\scratchpad\\home-cc\\Documents\\WindowsPowerShell\\profile.ps1": "# perfil del usuario: configuraci�n\r\n$saludo = 'a�o'\r\n\r\n# >>> local-delegate completion >>>\r\nif (Test-Path -LiteralPath \"C:/Users/Yohan/AppData/Local/Temp/claude/D--Projects-local-delegate/ffbfb0a5-8272-479c-9bf0-c44cb9d212bb/scratchpad/home-cc/.local/share/local-delegate/completion/local-delegate.ps1\") { . \"C:/Users/Yohan/AppData/Local/Temp/claude/D--Projects-local-delegate/ffbfb0a5-8272-479c-9bf0-c44cb9d212bb/scratchpad/home-cc/.local/share/local-delegate/completion/local-delegate.ps1\" }\r\n# <<< local-delegate completion <<<\r\n",
+    "C:\\Users\\Yohan\\AppData\\Local\\Temp\\claude\\D--Projects-local-delegate\\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\\scratchpad\\home-cc\\Documents\\PowerShell\\profile.ps1": "﻿# perfil de pwsh: canción\n$x = 1\n\n# >>> local-delegate completion >>>\nif (Test-Path -LiteralPath \"C:/Users/Yohan/AppData/Local/Temp/claude/D--Projects-local-delegate/ffbfb0a5-8272-479c-9bf0-c44cb9d212bb/scratchpad/home-cc/.local/share/local-delegate/completion/local-delegate.ps1\") { . \"C:/Users/Yohan/AppData/Local/Temp/claude/D--Projects-local-delegate/ffbfb0a5-8272-479c-9bf0-c44cb9d212bb/scratchpad/home-cc/.local/share/local-delegate/completion/local-delegate.ps1\" }\n# <<< local-delegate completion <<<\n"
+  },
+  "completion": {
+    "pwsh": {
+      "all_ok": true,
+      "bypass": false,
+      "ps_version": "7.6",
+      "ko": []
+    },
+    "powershell": {
+      "all_ok": true,
+      "bypass": false,
+      "ps_version": "5.1",
+      "ko": []
+    }
+  },
+  "doctor_returncode": 1,
+  "doctor_shell_completion_line": [
+    "  [ OK ] autocompletado del shell: powershell: al día en el idioma es, cargado desde C:\\Users\\Yohan\\AppData\\Local\\Temp\\claude\\D--Projects-local-delegate\\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\\scratchpad\\home-cc\\Documents\\PowerShell\\profile.ps1, C:\\Users\\Yohan\\AppData\\Local\\Temp\\claude\\D--Projects-local-delegate\\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\\scratchpad\\home-cc\\Documents\\WindowsPowerShell\\profile.ps1"
+  ],
+  "uninstall_returncode": 0,
+  "uninstall_byte_comparison": {
+    "C:\\Users\\Yohan\\AppData\\Local\\Temp\\claude\\D--Projects-local-delegate\\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\\scratchpad\\home-cc\\Documents\\WindowsPowerShell\\profile.ps1": {
+      "seed_sha256": "18fa97bf80661cf60fb8f9ed1152eb1606accc650b7a3a88a8f3042583e11186",
+      "after_uninstall_sha256": "18fa97bf80661cf60fb8f9ed1152eb1606accc650b7a3a88a8f3042583e11186",
+      "bytes_equal": true
+    },
+    "C:\\Users\\Yohan\\AppData\\Local\\Temp\\claude\\D--Projects-local-delegate\\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\\scratchpad\\home-cc\\Documents\\PowerShell\\profile.ps1": {
+      "seed_sha256": "845a18c5637f749a4f2fc70b153eccf66f045ca6a5afef2f7210cde8f1c16860",
+      "after_uninstall_sha256": "845a18c5637f749a4f2fc70b153eccf66f045ca6a5afef2f7210cde8f1c16860",
+      "bytes_equal": true
+    }
+  },
+  "own_backup_leftovers": [],
+  "completion_dir_remaining": []
+}
