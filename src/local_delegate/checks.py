@@ -1905,6 +1905,9 @@ def _probe_deprecated_names(ctx: Context) -> Result:
     y la existencia de los ficheros interruptor con nombre viejo. Lo que solo ve el daemon lo
     cuenta `local_status`. Y desde la ola A2, lo que los hooks dicen haber leído: con la telemetría
     encendida cada evento lleva `deprecated_names`, y aquí se mira la cola de los últimos 7 días.
+
+    Los lectores del registro van por clase efectiva (`deprecations.effective_kind`), así que un
+    retirado con sucesor sale en su superficie (variable o interruptor) y lleva la pista `rename`.
     """
     from . import config as config_module
     from . import deprecation_notices, deprecations
@@ -1941,9 +1944,10 @@ def _probe_deprecated_names(ctx: Context) -> Result:
 
     if not warnings:
         return Result(OK, i18n.t("doctor.probe.deprecated_names.none"))
+    # Con sucesor (alias o retirado) se pide renombrar; quitar, solo si no hay a qué renombrar.
     hints = [
         i18n.t("doctor.probe.deprecated_names.remove", old=e.old)
-        if e.is_retired
+        if e.new is None
         else i18n.t("doctor.probe.deprecated_names.rename", old=e.old, new=e.new)
         for e in seen
     ]

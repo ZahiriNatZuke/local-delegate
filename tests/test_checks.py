@@ -1978,3 +1978,75 @@ def test_deprecated_names_survives_unreadable_settings_json(monkeypatch, tmp_pat
     _test_registry(monkeypatch, tmp_path)
     (tmp_path / ".claude" / "settings.json").write_text("{no es json", encoding="utf-8")
     assert checks._probe_deprecated_names(checks.Context(home=tmp_path)).status == checks.OK
+
+
+# --- config.deprecated_names con retirados con sucesor (REQ-012, registro sintético) ---
+_RETIRED_ENV = ("LD_OLD_GONE_TEST_VAR", "LD_GONE_FOR_TEST")
+_RETIRED_SWITCH = ("old-gone-test-switch", "gone-switch-for-test")
+
+
+def _retired_registry(monkeypatch, tmp_path, telemetry=None):
+    """Un retirado con sucesor por superficie (variable e interruptor), telemetría y HOME aislados."""
+    from local_delegate import config, deprecations
+
+    entries = (
+        deprecations.DeprecatedName(
+            "retired", *_RETIRED_ENV, "0.38.0", "0.40.0", retired_from="env_var"
+        ),
+        deprecations.DeprecatedName(
+            "retired", *_RETIRED_SWITCH, "0.38.0", "0.40.0", retired_from="switch_file"
+        ),
+    )
+    monkeypatch.setattr(deprecations, "DEPRECATED_NAMES", entries)
+    monkeypatch.setattr(config, "DEPRECATED_ENV_VALUES", {_RETIRED_ENV[0]: None})
+    monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", telemetry)
+    (tmp_path / ".claude").mkdir(exist_ok=True)
+    return config
+
+
+def _assert_retired_warning(result, old, new):
+    assert result.status == checks.WARN
+    assert old in result.detail and new in result.detail
+    assert "ya no tiene efecto desde la 0.38.0" in result.detail
+    assert f"renombra {old} a {new}" in result.fix_hint
+    assert "quita" not in result.fix_hint.lower()
+
+
+def test_retired_renamed_ok_when_nothing_is_set(monkeypatch, tmp_path):
+    _retired_registry(monkeypatch, tmp_path)
+    assert checks._probe_deprecated_names(checks.Context(home=tmp_path)).status == checks.OK
+
+
+def test_retired_renamed_in_the_shell_warns_with_rename(monkeypatch, tmp_path):
+    config = _retired_registry(monkeypatch, tmp_path)
+    monkeypatch.setitem(config.DEPRECATED_ENV_VALUES, _RETIRED_ENV[0], "1")
+    r = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+    _assert_retired_warning(r, *_RETIRED_ENV)
+
+
+def test_retired_renamed_in_settings_json_env_warns_with_rename(monkeypatch, tmp_path):
+    _retired_registry(monkeypatch, tmp_path)
+    (tmp_path / ".claude" / "settings.json").write_text(
+        json.dumps({"env": {_RETIRED_ENV[0]: "1"}}), encoding="utf-8"
+    )
+    r = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+    _assert_retired_warning(r, *_RETIRED_ENV)
+    assert "settings.json" in r.detail
+
+
+def test_retired_switch_file_left_on_disk_warns_with_rename(monkeypatch, tmp_path):
+    _retired_registry(monkeypatch, tmp_path)
+    (tmp_path / ".claude" / _RETIRED_SWITCH[0]).write_text("", encoding="utf-8")
+    r = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+    _assert_retired_warning(r, *_RETIRED_SWITCH)
+
+
+def test_retired_renamed_read_by_hooks_warns_with_rename(monkeypatch, tmp_path):
+    from datetime import UTC, datetime
+
+    log = tmp_path / "telemetry.jsonl"
+    event = {"ts": datetime.now(UTC).isoformat(), "deprecated_names": [_RETIRED_ENV[0]]}
+    log.write_text(json.dumps(event) + "\n", encoding="utf-8")
+    _retired_registry(monkeypatch, tmp_path, telemetry=log)
+    r = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+    _assert_retired_warning(r, *_RETIRED_ENV)

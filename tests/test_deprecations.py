@@ -24,7 +24,7 @@ from pathlib import Path
 
 import pytest
 
-from local_delegate import config, deprecation_notices, deprecations, legacy_names
+from local_delegate import config, deprecation_notices, deprecations, i18n, legacy_names
 from local_delegate.deprecations import DeprecatedName
 from local_delegate.resources.hooks import hook_common
 
@@ -42,16 +42,100 @@ def _assert_horizon(version: str, entries=deprecations.DEPRECATED_NAMES) -> None
 
 
 # --- Forma del registro -------------------------------------------------------
-def test_each_entry_follows_the_rule_of_its_class():
-    for e in deprecations.DEPRECATED_NAMES:
-        assert e.kind in deprecations.KINDS, e
-        if e.is_retired:
-            assert e.new is None and e.warn_until, f"{e.old}: un retirado lleva warn_until y no new"
-        else:
-            assert e.new and e.warn_until is None, f"{e.old}: un alias lleva new y no warn_until"
-        assert e.introduced == deprecations.UNRELEASED or re.fullmatch(
-            r"\d+\.\d+\.\d+", e.introduced
-        ), e
+# Un caso de cada clase y uno inválido por regla (REQ-002). Nombres de mentira, no del registro.
+VALID_BY_CLASS = (
+    DeprecatedName("env_var", "LD_OLD_TEST_ALIAS", "LD_TEST_ALIAS", "0.35.0"),
+    DeprecatedName("retired", "LD_RETIRED_TEST_VAR", None, "0.30.0", "0.37.0"),
+    DeprecatedName(
+        "retired",
+        "LD_OLD_TEST_GONE",
+        "LD_TEST_GONE",
+        "UNRELEASED",
+        "0.40.0",
+        retired_from="env_var",
+    ),
+)
+INVALID_BY_RULE = {
+    "retired_from": DeprecatedName(
+        "retired", "LD_OLD_TEST_NO_FROM", "LD_TEST_NO_FROM", "0.38.0", "0.40.0"
+    ),
+    "alias_with_warn_until": DeprecatedName(
+        "env_var", "LD_OLD_TEST_WU", "LD_TEST_WU", "0.35.0", "0.40.0"
+    ),
+    "retired_from_retired": DeprecatedName(
+        "retired", "LD_OLD_TEST_RR", "LD_TEST_RR", "0.38.0", "0.40.0", retired_from="retired"
+    ),
+    "alias_with_retired_from": DeprecatedName(
+        "env_var", "LD_OLD_TEST_AF", "LD_TEST_AF", "0.35.0", retired_from="env_var"
+    ),
+    "retired_without_warn_until": DeprecatedName(
+        "retired", "LD_OLD_TEST_NO_WARN", "LD_TEST_NO_WARN", "0.38.0", retired_from="env_var"
+    ),
+    "retired_from_without_new": DeprecatedName(
+        "retired", "LD_RETIRED_TEST_RF", None, "0.30.0", "0.37.0", retired_from="env_var"
+    ),
+}
+
+
+def test_every_entry_follows_its_class_rule():
+    """REQ-002: el registro real y uno de cada clase pasan; cada caso inválido se rechaza."""
+    assert deprecations.class_problems() == []
+    assert deprecations.class_problems(VALID_BY_CLASS) == []
+    for rule, entry in INVALID_BY_RULE.items():
+        problems = deprecations.class_problems((entry,))
+        assert problems, f"{rule}: la regla no rechaza {entry}"
+        assert all(p.startswith(f"{entry.old}: ") for p in problems), problems
+
+
+def test_effective_kind_is_retired_from_only_for_a_retired_renamed():
+    alias, retired, retired_renamed = VALID_BY_CLASS
+    assert deprecations.effective_kind(alias) == "env_var"
+    assert deprecations.effective_kind(retired) == "retired"
+    assert deprecations.effective_kind(retired_renamed) == "env_var"
+
+
+# --- Lectores por clase efectiva (REQ-003) -------------------------------------
+_SURFACES = {
+    "cli_command": ("old-test-command", "test-command"),
+    "cli_option": ("--old-test-option", "--test-option"),
+    "env_var": ("LD_OLD_TEST_SURFACE", "LD_TEST_SURFACE"),
+    "switch_file": ("old-test-switch-file", "test-switch-file"),
+}
+_FUNCTION_BY_KIND = {
+    "env_var": "env_vars",
+    "switch_file": "switch_files",
+    "cli_command": "cli_entries",
+    "cli_option": "cli_entries",
+}
+
+
+def _synthetic_registry() -> tuple[DeprecatedName, ...]:
+    entries: list[DeprecatedName] = []
+    for kind, (old, new) in _SURFACES.items():
+        entries.append(DeprecatedName(kind, old, new, "0.35.0"))
+        entries.append(
+            DeprecatedName(
+                "retired", f"{old}-gone", f"{new}-gone", "0.38.0", "0.40.0", retired_from=kind
+            )
+        )
+    # Retirado sin sucesor con forma de variable: no tiene superficie, no sale en ningún lector.
+    entries.append(DeprecatedName("retired", "LD_RETIRED_TEST_VAR", None, "0.30.0", "0.37.0"))
+    return tuple(entries)
+
+
+def test_each_reader_lists_the_alias_and_the_retired_of_its_surface_only(monkeypatch):
+    """REQ-003: un alias y un retirado con sucesor de cada clase salen en su lector y en ningún otro."""
+    registry = _synthetic_registry()
+    monkeypatch.setattr(deprecations, "DEPRECATED_NAMES", registry)
+    listed = {
+        name: {e.old for e in getattr(deprecations, name)()}
+        for name in set(_FUNCTION_BY_KIND.values())
+    }
+    for kind, (old, _new) in _SURFACES.items():
+        for name in (old, f"{old}-gone"):
+            found_in = sorted(function for function, names in listed.items() if name in names)
+            assert found_in == [_FUNCTION_BY_KIND[kind]], (name, found_in)
+    assert all("LD_RETIRED_TEST_VAR" not in names for names in listed.values())
 
 
 def test_old_names_are_unique():
@@ -98,6 +182,60 @@ def test_warning_names_old_new_and_removal_version():
     )
     retired_text = deprecation_notices.warning_text(RETIRED)
     assert "LD_RETIRED_TEST_VAR" in retired_text and "0.30.0" in retired_text
+
+
+RETIRED_RENAMED = DeprecatedName(
+    "retired", "LD_OLD_TEST_GONE", "LD_TEST_GONE", "0.38.0", "0.40.0", retired_from="env_var"
+)
+RETIRED_RENAMED_UNRELEASED = DeprecatedName(
+    "retired",
+    "LD_OLD_TEST_GONE",
+    "LD_TEST_GONE",
+    deprecations.UNRELEASED,
+    "0.40.0",
+    retired_from="env_var",
+)
+
+
+@pytest.mark.parametrize(
+    ("language", "expected"),
+    [
+        ("es", "LD_OLD_TEST_GONE ya no tiene efecto desde la 0.38.0: usa LD_TEST_GONE"),
+        ("en", "LD_OLD_TEST_GONE has had no effect since 0.38.0: use LD_TEST_GONE"),
+    ],
+)
+def test_warning_text_retired_renamed_names_old_new_and_version(language, expected):
+    with i18n.override(language):
+        assert deprecation_notices.warning_text(RETIRED_RENAMED) == expected
+
+
+@pytest.mark.parametrize(
+    ("language", "expected"),
+    [
+        ("es", "LD_OLD_TEST_GONE ya no tiene efecto: usa LD_TEST_GONE"),
+        ("en", "LD_OLD_TEST_GONE has no effect: use LD_TEST_GONE"),
+    ],
+)
+def test_warning_text_retired_renamed_unreleased_never_says_unreleased(language, expected):
+    with i18n.override(language):
+        text = deprecation_notices.warning_text(RETIRED_RENAMED_UNRELEASED)
+    assert text == expected
+    assert deprecations.UNRELEASED not in text
+
+
+@pytest.mark.parametrize("language", ["es", "en"])
+def test_warning_text_alias_and_retired_without_new_keep_their_text(language):
+    """Las otras dos clases no cambian: el alias da su retirada; el retirado, su versión."""
+    unreleased_alias = DeprecatedName("env_var", "LD_X", "LD_Y", deprecations.UNRELEASED)
+    with i18n.override(language):
+        alias_text = deprecation_notices.warning_text(ALIAS)
+        retired_text = deprecation_notices.warning_text(RETIRED)
+        unreleased_text = deprecation_notices.warning_text(unreleased_alias)
+    assert "LD_OLD_TEST_ALIAS" in alias_text and "LD_TEST_ALIAS" in alias_text
+    assert "0.38.0" in alias_text
+    assert "LD_RETIRED_TEST_VAR" in retired_text and "0.30.0" in retired_text
+    for text in (alias_text, retired_text, unreleased_text):
+        assert deprecations.UNRELEASED not in text
 
 
 # --- CHANGELOG (REQ-004) ------------------------------------------------------
