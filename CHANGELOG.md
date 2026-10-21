@@ -6,6 +6,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-10-21
+
+Restos menores que quedaron abiertos tras la 0.37.0 y la 0.38.0 (SDD `backlog-minor-leftovers`):
+`doctor` gana un check para el `settings.json` de Claude Code (ya son 27), el panel sigue el tema
+del sistema y escribe los booleanos como `on`/`off`, el autocompletado cierra sus cabos sueltos y
+la wiki documenta el presupuesto mínimo de razonamiento del rol `code`. Las tools MCP no cambian
+de contrato.
+
 ### Añadido
 
 - `doctor` gana el check «settings.json de Claude Code»: avisa si `~/.claude/settings.json` no es UTF-8 válido aunque sea un JSON correcto, y si queda la copia `settings.json.retired-names*.bak` de la migración (puede llevar claves del `env`), con la sugerencia de borrarla.
@@ -3233,7 +3241,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.38.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.39.0...HEAD
+[0.39.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.38.0...v0.39.0
 [0.38.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.37.0...v0.38.0
 [0.37.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.36.1...v0.37.0
 [0.36.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.36.0...v0.36.1
