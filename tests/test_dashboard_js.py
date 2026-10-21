@@ -725,3 +725,43 @@ def test_the_compact_figure_speaks_the_panel_language(tmp_path, lang, expected):
         lang=lang,
     )
     assert result == expected
+
+
+# --- Tema: el del sistema mientras no haya elección guardada (REQ-002, backlog-minor-leftovers) ---
+
+
+def test_the_theme_follows_the_system_until_there_is_a_saved_choice(tmp_path):
+    """Sin elección guardada (o ilegible), manda `prefers-color-scheme`; con `dark`/`light`
+    guardado, manda la elección aunque el sistema diga lo contrario."""
+    cases = [
+        [None, True],
+        [None, False],
+        ["", False],
+        ["blue", True],
+        ["blue", False],
+        ["dark", False],
+        ["light", True],
+        ["dark", True],
+        ["light", False],
+    ]
+    body = f"console.log(JSON.stringify({json.dumps(cases)}.map(([s, d]) => pickTheme(s, d))));"
+    assert _run(tmp_path, ["function pickTheme("], body) == [
+        "dark",
+        "light",
+        "light",
+        "dark",
+        "light",
+        "dark",
+        "light",
+        "dark",
+        "light",
+    ]
+
+
+def test_the_theme_is_set_in_the_head_before_painting():
+    """El atributo se fija con un script en `<head>`, antes del CSS y del `<body>`: así no se pinta
+    un instante el tema equivocado."""
+    head = metrics.HTML.split("</head>", 1)[0]
+    assert "function pickTheme(" in head
+    assert "matchMedia('(prefers-color-scheme: dark)')" in head
+    assert head.index("pickTheme(") < head.index("<style>")
