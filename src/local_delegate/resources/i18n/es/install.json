@@ -27,6 +27,7 @@
   "install.completion.reason.marker_mismatch": "tiene un marcador de local-delegate sin su pareja; arréglalo a mano",
   "install.completion.reason.nul_bytes": "tiene bytes NUL sin marca de UTF-16 y se corrompería",
   "install.completion.reason.unreadable": "no se puede leer",
+  "install.completion.refresh_plan": "regenera el autocompletado de {shell} en el idioma {lang}",
   "install.completion.shell_missing": "autocompletado: no se encontró {shell}; no se escribe nada para él",
   "install.completion.uninstall_dir_plan": "borra el directorio del autocompletado, que queda vacío",
   "install.completion.uninstall_file_plan": "borra el fichero de autocompletado de {shell}",

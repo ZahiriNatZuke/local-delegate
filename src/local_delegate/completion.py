@@ -596,3 +596,47 @@ def manifest_without(manifest: dict, shells: tuple[str, ...] | list[str]) -> dic
 def manifest_bytes(data: dict) -> bytes:
     """The manifest as written to disk: UTF-8, LF, two-space indent, final newline."""
     return (json.dumps(data, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+
+
+# --- Refresh from `update` (REQ-034) ----------------------------------------------------------
+def plan_refresh(home: Path, data_dir: Path | None, lang: str) -> list:
+    """The actions of `update` that bring the installed completion up to date (REQ-034).
+
+    Each file listed in the manifest that differs from `render(shell, lang=lang)` is rewritten,
+    and the manifest then says `lang` and the installed version. A missing or unreadable listed
+    file is left alone (the check of `doctor` sends it to `install --shell-completion`), files
+    not listed are never created and profiles are never touched. Without a manifest, or with an
+    unreadable one, there is nothing to do. Nothing is written here: `install.apply` does it.
+    """
+    # `install` and `shell_profiles` import this module: resolved at call time.
+    from . import install, shell_profiles
+    from .version import get_version
+
+    directory = shell_profiles.completion_dir(home, data_dir)
+    try:
+        manifest = read_manifest(directory)
+    except ManifestUnreadableError:
+        return []
+    if not manifest:
+        return []
+    actions = []
+    for entry in manifest["shells"]:
+        path = Path(entry["file"])
+        try:
+            current = path.read_bytes()
+        except OSError:
+            continue
+        content = render(entry["shell"], lang=lang).encode("utf-8")
+        if current != content:
+            detail = i18n.t("install.completion.refresh_plan", shell=entry["shell"], lang=lang)
+            actions.append(install._owned_file_action("completion", path, content, detail))
+    updated = {**manifest, "lang": lang, "generator": get_version()}
+    if updated != manifest:
+        text = manifest_bytes(updated)
+        detail = i18n.t("install.completion.manifest_plan")
+        actions.append(
+            install._owned_file_action(
+                "manifest", manifest_path(directory), text, detail, literal=text.decode("utf-8")
+            )
+        )
+    return actions

@@ -89,8 +89,8 @@ def test_registry_ids_are_unique_and_groups_are_known():
 
 
 def test_registry_ids_are_the_published_ones():
-    """A6 (REQ-011): los 25 ids exactos, en inglés. Un id es contrato con quien lea `checks`."""
-    assert len(checks.CHECKS) == 25
+    """A6 (REQ-011): los 26 ids exactos, en inglés. Un id es contrato con quien lea `checks`."""
+    assert len(checks.CHECKS) == 26
     assert {check.id for check in checks.CHECKS} == {
         "cli.path",
         "cli.published",
@@ -108,6 +108,7 @@ def test_registry_ids_are_the_published_ones():
         "scaffold.mcp_claude",
         "scaffold.mcp_codex",
         "scaffold.mcp_opencode",
+        "scaffold.shell_completion",
         "service.daemon",
         "service.backend",
         "service.credential",
@@ -476,7 +477,9 @@ def test_empty_home_reports_missing_with_fix_hint(tmp_path):
     # `scaffold.memory` queda fuera porque agrega dos clientes, y `scaffold.hook_orphans` porque
     # **nunca** puede ser `missing`: pregunta si SOBRA algo, no si falta. En un HOME vacío la
     # respuesta correcta es `ok` — no hay huérfanos que retirar.
-    separate = {"scaffold.memory", "scaffold.hook_orphans"}
+    # `scaffold.shell_completion` tampoco: es opcional, y sin nada instalado la respuesta es `ok`
+    # «no instalado (opcional)», no «falta».
+    separate = {"scaffold.memory", "scaffold.hook_orphans", "scaffold.shell_completion"}
     ctx = make_ctx(make_home(tmp_path, complete=False))
     scaffold = [
         (check, result)
@@ -502,7 +505,8 @@ def test_memory_missing_in_both_clients(tmp_path):
 def test_absent_client_is_unknown_not_missing(tmp_path):
     ctx = make_ctx(make_home(tmp_path, claude=False, codex=False, opencode=False))
     for check, result in checks.run_all(ctx):
-        if check.group == "scaffold":
+        # El autocompletado del shell no es de ningún cliente: su estado no depende de ellos.
+        if check.group == "scaffold" and check.id != "scaffold.shell_completion":
             assert result.status == checks.UNKNOWN, f"{check.id}: {result.detail}"
     assert result_for("client.presence", ctx).status == checks.UNKNOWN
 
@@ -1192,6 +1196,7 @@ _NUMBER_WORDS = {
     23: "veintitrés",
     24: "veinticuatro",
     25: "veinticinco",
+    26: "veintiséis",
 }
 _NUMBER_WORDS_WITHOUT_NOUN = {**_NUMBER_WORDS, 21: "veintiuno"}
 

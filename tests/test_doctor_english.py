@@ -1,6 +1,6 @@
 """`doctor` en español y en inglés (frente B, ola B1b): REQ-019, REQ-022, REQ-034 y D11.
 
-- **REQ-022:** los mismos 25 checks, en el mismo orden y con los mismos ids, en los dos idiomas;
+- **REQ-022:** los mismos 26 checks, en el mismo orden y con los mismos ids, en los dos idiomas;
   los títulos, estados, detalles, remedios, cabeceras y resumen salen en el idioma vigente.
 - **REQ-034:** en inglés no aparece ninguna palabra distintiva del catálogo español (las que no
   salen en ningún valor inglés) ni tildes; control positivo permanente: en español sí aparecen.
@@ -84,9 +84,9 @@ def test_doctor_in_english_has_no_spanish(complete, tmp_path, monkeypatch, capsy
     assert len(words) >= 100, "sin palabras distintivas el test no discrimina"
     code_es, out_es = _doctor_output(tmp_path, monkeypatch, capsys, "es", complete=complete)
     code_en, out_en = _doctor_output(tmp_path, monkeypatch, capsys, "en", complete=complete)
-    # Guarda de «esto llegó a comprobar algo»: los dos corrieron los 25 checks, con el mismo veredicto.
+    # Guarda de «esto llegó a comprobar algo»: los dos corrieron los 26 checks, con el mismo veredicto.
     assert code_es == code_en
-    assert len(_check_lines(out_es)) == len(_check_lines(out_en)) == len(checks.CHECKS) == 25
+    assert len(_check_lines(out_es)) == len(_check_lines(out_en)) == len(checks.CHECKS) == 26
     assert "Language:" in out_en and "Idioma:" in out_es
     for fragment in sorted(PENDING_FRAGMENTS, key=len, reverse=True):
         out_en = out_en.replace(fragment, " ")

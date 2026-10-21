@@ -162,6 +162,12 @@ class Repair:
 # trozo de andamiaje roto que haya que reponer. Es el mismo criterio que deja fuera el `warn` de
 # `scaffold.mcp_codex`: no se pisa configuración escrita por una persona. El aviso dice qué pasa y
 # qué comando lo arregla; ejecutarlo es del usuario.
+#
+# `scaffold.shell_completion` tampoco está, y no porque no se repare: su refresco es un paso propio
+# (`plan_completion_refresh`), porque un `Repair` solo actúa sobre clientes presentes y el
+# autocompletado no pertenece a ningún cliente; en una máquina sin clientes nunca se habría
+# regenerado. Su `warn` de «bloque borrado» o «fichero ausente» no lo repone `update`: lo dice su
+# `fix_hint` (`install --shell-completion`), porque reescribir un perfil es una decisión del usuario.
 REPAIRS: tuple[Repair, ...] = (
     Repair(
         "scaffold.hook_files",
@@ -344,9 +350,26 @@ def plan_repairs(
     notes = [
         f"{check.title}: {result.fix_hint}"
         for check, result in results
-        if result.fix_hint and check.id not in {r.check_id for r in REPAIRS}
+        if result.fix_hint
+        and check.id not in {r.check_id for r in REPAIRS}
+        # «Ejecuta `update`» dicho desde `update`: lo resuelve `plan_completion_refresh`.
+        and result.fix_hint != checks.SHELL_COMPLETION_UPDATE_HINT
     ]
     return unique, notes
+
+
+def plan_completion_refresh(opts: Options) -> list[install.Action]:
+    """Regenera los ficheros de autocompletado listados que estén viejos (REQ-034).
+
+    En el idioma **configurado** (el de `plan_language`, como `plan_catalog_refresh`), así que
+    resuelve una versión nueva y también un cambio de idioma. Paso propio y fuera de `REPAIRS`:
+    `run_update` lo llama siempre, haya o no clientes en la máquina. No crea ficheros no listados
+    ni toca perfiles; sin manifiesto, no hay nada que hacer. Solo lee.
+    """
+    from . import completion
+
+    language = install.plan_language(install_options(opts))
+    return completion.plan_refresh(opts.home, opts.data_dir, language.lang)
 
 
 # --- El pin de versión (paridad con el bash) ----------------------------------
@@ -836,6 +859,7 @@ def run_update(opts: Options, out=print) -> int:
     actions = plan_pin(opts, version) if version else []
     repairs, notes = plan_repairs(results, opts)
     actions.extend(repairs)
+    actions.extend(plan_completion_refresh(opts))
 
     out("")
     # La preferencia va aparte: guardarla no es reparar el andamiaje.
