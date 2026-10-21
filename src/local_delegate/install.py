@@ -765,11 +765,10 @@ def remove_empty_dirs(paths: Sequence[Path | str]) -> bool:
     left. A folder with anything inside (ours or someone else's) is never touched (REQ-005)."""
     left = False
     for path in sorted((Path(p) for p in paths), key=lambda p: len(p.parts), reverse=True):
-        try:
+        # A folder that cannot be read or removed is simply left, and counted as left.
+        with contextlib.suppress(OSError):
             if path.is_dir() and not any(path.iterdir()):
                 path.rmdir()
-        except OSError:
-            pass
         left = left or path.exists()
     return not left
 
