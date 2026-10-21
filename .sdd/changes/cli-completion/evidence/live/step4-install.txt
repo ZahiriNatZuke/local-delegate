@@ -1,0 +1,64 @@
+Instalando local-delegate en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc
+clientes: deteccion automatica (--clients auto): claude, codex, opencode
+
+Autocompletado del shell:
+[completion] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.local\share\local-delegate\completion\local-delegate.ps1 — fichero de autocompletado de powershell
+    escrito
+[profile] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\Documents\PowerShell\profile.ps1 — bloque de carga del autocompletado de powershell
+    bloque escrito
+[profile] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\Documents\WindowsPowerShell\profile.ps1 — bloque de carga del autocompletado de powershell
+    bloque escrito
+[manifest] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.local\share\local-delegate\completion\installed.json — manifiesto del autocompletado
+    escrito
+componentes: hooks, mcp, memory, skill
+
+[copy] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude\hooks\local-delegate — scripts de hooks consultivos
+    copiado -> C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude\hooks\local-delegate
+[settings] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude\settings.json — registra 2 hook(s): UserPromptSubmit, PreToolUse/mcp__local-delegate__.*
+    2 hook(s) registrados
+[copy] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude\skills\local-delegation — skill local-delegation (es)
+    copiado -> C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude\skills\local-delegation
+[copy] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.config\opencode\skill\local-delegation — skill local-delegation (opencode, es)
+    copiado -> C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.config\opencode\skill\local-delegation
+[markdown] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude\CLAUDE.md — bloque de regla de delegación (es)
+    bloque gestionado actualizado
+[markdown] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.codex\AGENTS.md — bloque de regla de delegación (es)
+    bloque gestionado actualizado
+[markdown] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.config\opencode\AGENTS.md — bloque de regla de delegación (es)
+    bloque gestionado actualizado
+[mcp] claude — registra el servidor MCP 'local-delegate' (stdio)
+    escrito en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude.json
+[toml] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.codex\config.toml — registra el servidor MCP 'local-delegate' (stdio)
+    entrada [mcp_servers.local-delegate] actualizada
+[mcp] opencode — registra el servidor MCP 'local-delegate' (stdio)
+    escrito en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.config\opencode\opencode.jsonc
+
+Listo. Reinicia el cliente (Claude Code / Codex / opencode) para tomar los cambios.
+
+Estado del andamiaje después de escribir:
+Estados: [ OK ] a punto · [WARN] revisar · [FALT] falta · [ -- ] no se pudo comprobar
+
+Entorno (el CLI y los clientes):
+  [ OK ] CLI local-delegate: C:\Users\Yohan\.local\bin\local-delegate.EXE (versión 0.37.0)
+  [ -- ] versión publicada: instalada 0.37.0; no se consulta PyPI en este comando
+  [ OK ] clientes: detectados: Claude Code, Codex, opencode
+  [ OK ] clientes MCP observados: claude-ai 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.1.37) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.13.5) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.15.2) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.8.2) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.8.5) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.8.6) 0.1.0 [2025-11-25] sin elicitation; claude-code 2.1.305 [2026-07-28] elicitation; codex-mcp-client 0.160.0 [2025-06-18] elicitation; local-agent-mode-local-delegate 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.1.37) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.13.5) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.15.2) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.8.2) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.8.5) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.8.6) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.8.7) 1.0.0 [2025-11-25] sin elicitation; mcp 0.1.0 [2025-11-25] sin elicitation; mcp-remote-fallback-test 0.0.0 [2025-11-25] sin elicitation
+  [ OK ] cadenas de respaldo: cadenas válidas; sin residente (no se sabe: sin PyYAML)
+  [ OK ] nombres obsoletos: sin nombres obsoletos en uso
+  [ OK ] coste y relleno: el último cotejo (2026-10-13T12:39:20+00:00) cuadra: 159 fila(s) juzgadas con la tabla de precios del 2026-10-06
+  [ OK ] ventanas de prueba: 213 ventanas, ninguna abierta
+
+Andamiaje (hooks, skill, memoria y entradas MCP):
+  [ OK ] hooks copiados: 5 script(s) en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude\hooks\local-delegate
+  [ OK ] hooks huérfanos: ninguno suelto en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude\hooks
+  [ OK ] hooks registrados: 2 registrado(s): UserPromptSubmit, PreToolUse/mcp__local-delegate__.*
+  [ OK ] skill local-delegation: Claude Code: instalada en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude\skills\local-delegation · opencode: instalada en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.config\opencode\skill\local-delegation
+  [ OK ] memoria global: Claude Code: bloque al día en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude\CLAUDE.md · Codex: bloque al día en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.codex\AGENTS.md · opencode: bloque al día en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.config\opencode\AGENTS.md
+  [ OK ] MCP en Claude Code: registrado en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude.json (stdio uvx)
+  [ OK ] MCP en Codex: bloque gestionado en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.codex\config.toml (stdio)
+  [ OK ] MCP en opencode: registrado en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.config\opencode\opencode.jsonc (local ['uvx', '--from', 'local-delegate-mcp', 'local-delegate-mcp'])
+  [ OK ] autocompletado del shell: powershell: al día en el idioma es, cargado desde C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\Documents\PowerShell\profile.ps1, C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\Documents\WindowsPowerShell\profile.ps1
+
+--- stderr ---
+
+returncode=0

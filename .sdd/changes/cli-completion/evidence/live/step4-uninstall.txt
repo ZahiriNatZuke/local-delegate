@@ -1,0 +1,72 @@
+Desinstalando local-delegate en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc
+clientes: deteccion automatica (--clients auto): claude, codex, opencode
+
+Autocompletado del shell:
+[profile] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\Documents\PowerShell\profile.ps1 — quita el bloque de carga del autocompletado
+    bloque quitado
+[profile] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\Documents\WindowsPowerShell\profile.ps1 — quita el bloque de carga del autocompletado
+    bloque quitado
+[completion] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.local\share\local-delegate\completion\local-delegate.ps1 — borra el fichero de autocompletado de powershell
+    eliminado
+[manifest] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.local\share\local-delegate\completion\installed.json — borra el manifiesto del autocompletado
+    eliminado
+[remove] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.local\share\local-delegate\completion — borra el directorio del autocompletado, que queda vacío
+    eliminado
+componentes: hooks, mcp, memory, skill
+
+[settings] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude\settings.json — quita los hooks registrados
+    2 hook(s) de local-delegate quitados
+[remove] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude\hooks\local-delegate — borra los scripts de hooks
+    eliminado
+[remove] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude\skills\local-delegation — borra la skill local-delegation
+    eliminada
+[remove] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.config\opencode\skill\local-delegation — borra la skill local-delegation de opencode
+    eliminada
+[markdown] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude\CLAUDE.md — quita el bloque de delegación
+    bloque gestionado quitado
+[markdown] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.codex\AGENTS.md — quita el bloque de delegación
+    bloque gestionado quitado
+[markdown] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.config\opencode\AGENTS.md — quita el bloque de delegación
+    bloque gestionado quitado
+[mcp] claude — quita el servidor MCP 'local-delegate'
+    quitado de C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude.json
+[toml] C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.codex\config.toml — quita 'local-delegate'
+    entrada quitada
+[mcp] opencode — quita el servidor MCP 'local-delegate'
+    quitado de C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.config\opencode\opencode.jsonc
+
+
+Estado del andamiaje después de escribir:
+Estados: [ OK ] a punto · [WARN] revisar · [FALT] falta · [ -- ] no se pudo comprobar
+
+Entorno (el CLI y los clientes):
+  [ OK ] CLI local-delegate: C:\Users\Yohan\.local\bin\local-delegate.EXE (versión 0.37.0)
+  [ -- ] versión publicada: instalada 0.37.0; no se consulta PyPI en este comando
+  [ OK ] clientes: detectados: Claude Code, Codex, opencode
+  [ OK ] clientes MCP observados: claude-ai 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.1.37) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.13.5) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.15.2) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.8.2) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.8.5) 0.1.0 [2025-11-25] sin elicitation; claude-ai (via mcp-remote 0.8.6) 0.1.0 [2025-11-25] sin elicitation; claude-code 2.1.305 [2026-07-28] elicitation; codex-mcp-client 0.160.0 [2025-06-18] elicitation; local-agent-mode-local-delegate 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.1.37) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.13.5) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.15.2) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.8.2) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.8.5) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.8.6) 1.0.0 [2025-11-25] sin elicitation; local-agent-mode-local-delegate (via mcp-remote 0.8.7) 1.0.0 [2025-11-25] sin elicitation; mcp 0.1.0 [2025-11-25] sin elicitation; mcp-remote-fallback-test 0.0.0 [2025-11-25] sin elicitation
+  [ OK ] cadenas de respaldo: cadenas válidas; sin residente (no se sabe: sin PyYAML)
+  [ OK ] nombres obsoletos: sin nombres obsoletos en uso
+  [ OK ] coste y relleno: el último cotejo (2026-10-13T12:39:20+00:00) cuadra: 159 fila(s) juzgadas con la tabla de precios del 2026-10-06
+  [ OK ] ventanas de prueba: 213 ventanas, ninguna abierta
+
+Andamiaje (hooks, skill, memoria y entradas MCP):
+  [FALT] hooks copiados: no existe C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude\hooks\local-delegate
+         arréglalo con: local-delegate install
+  [ OK ] hooks huérfanos: ninguno suelto en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude\hooks
+  [FALT] hooks registrados: C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude\settings.json no registra ningún hook
+         arréglalo con: local-delegate install
+  [FALT] skill local-delegation: Claude Code: no existe C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude\skills\local-delegation · opencode: no existe C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.config\opencode\skill\local-delegation
+         arréglalo con: local-delegate install
+  [FALT] memoria global: Claude Code: sin bloque gestionado en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude\CLAUDE.md · Codex: sin bloque gestionado en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.codex\AGENTS.md · opencode: sin bloque gestionado en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.config\opencode\AGENTS.md
+         arréglalo con: local-delegate install
+  [FALT] MCP en Claude Code: 'local-delegate' no está en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.claude.json
+         arréglalo con: local-delegate install
+  [FALT] MCP en Codex: sin [mcp_servers.local-delegate] en C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.codex\config.toml
+         arréglalo con: local-delegate install
+  [FALT] MCP en opencode: 'local-delegate' no está en opencode.json ni opencode.jsonc de C:\Users\Yohan\AppData\Local\Temp\claude\D--Projects-local-delegate\ffbfb0a5-8272-479c-9bf0-c44cb9d212bb\scratchpad\home-cc\.config\opencode
+         arréglalo con: local-delegate install
+  [ OK ] autocompletado del shell: no instalado (opcional)
+
+--- stderr ---
+
+returncode=0
