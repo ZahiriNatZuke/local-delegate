@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "slug": "cli-completion",
+  "title": "Autocompletado de la CLI (completion powershell|zsh|bash)",
+  "mode": "standard",
+  "status": "implementing",
+  "createdAt": "2026-10-21T00:08:23.072Z",
+  "updatedAt": "2026-10-21T01:04:17.181Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-10-21T01:03:55.605Z",
+      "evidence": "spec.md 46 REQ; review-spec.md: ronda 1 BLOQUEADA (2 bloq, 6 mayores) -> corregido; ronda 2 APROBADA CON CAMBIOS MENORES, todos aplicados (seccion Cambios tras la revision). Base: research.md, research-repo.md, research-shells.md",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-10-21T01:03:56.425Z",
+      "evidence": "plan.md 9 lotes; review-plan.md: ronda 1 BLOQUEADO (1 bloq, 7 mayores) -> corregido; ronda 2 APROBADO CON CAMBIOS MENORES, todos aplicados; sin bloqueantes abiertos",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-10-21T00:08:23.072Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-10-21T01:03:55.605Z",
+      "evidence": "spec.md 46 REQ; review-spec.md: ronda 1 BLOQUEADA (2 bloq, 6 mayores) -> corregido; ronda 2 APROBADA CON CAMBIOS MENORES, todos aplicados (seccion Cambios tras la revision). Base: research.md, research-repo.md, research-shells.md",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-10-21T01:03:56.425Z",
+      "evidence": "plan.md 9 lotes; review-plan.md: ronda 1 BLOQUEADO (1 bloq, 7 mayores) -> corregido; ronda 2 APROBADO CON CAMBIOS MENORES, todos aplicados; sin bloqueantes abiertos",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-10-21T01:04:14.410Z",
+      "reason": "Fase researching: ver research*.md, spec.md, plan.md y review-*.md del cambio"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-10-21T01:04:15.219Z",
+      "reason": "Fase specifying: ver research*.md, spec.md, plan.md y review-*.md del cambio"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-10-21T01:04:15.867Z",
+      "reason": "Fase planning: ver research*.md, spec.md, plan.md y review-*.md del cambio"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-10-21T01:04:16.537Z",
+      "reason": "Fase plan-review: ver research*.md, spec.md, plan.md y review-*.md del cambio"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-10-21T01:04:17.181Z",
+      "reason": "Fase implementing: ver research*.md, spec.md, plan.md y review-*.md del cambio"
+    }
+  ]
+}
