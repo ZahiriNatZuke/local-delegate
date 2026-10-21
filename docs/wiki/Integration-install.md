@@ -220,7 +220,8 @@ unos 2 ms en zsh. Por eso es lo recomendado.
 ### PowerShell: política de ejecución y 5.1
 
 - **`RemoteSigned` basta** (y `Unrestricted` o `Bypass`): el fichero se genera en tu máquina, así
-  que no necesita firma. `install` pregunta a cada edición su ruta de perfil y su política efectiva.
+  que no necesita firma. `install` pregunta a cada edición su ruta de perfil y su política efectiva,
+  y enseña las dos en una línea por edición, también con `--dry-run`.
 - Con **`Restricted`, `AllSigned` o `Undefined`** (que en un Windows de escritorio equivale a
   `Restricted`), esa edición **se salta con un aviso**, sin tocar su perfil: un perfil que carga un
   script no firmado daría error cada vez que abres el shell. Para activarlo, en esa edición:

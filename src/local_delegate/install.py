@@ -662,6 +662,9 @@ class CompletionPlan:
 
     actions: list[Action] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    #: Datos que se enseñan antes de los avisos: la ruta y la política de cada edición de
+    #: PowerShell (REQ-040), con y sin ``--dry-run``.
+    notes: list[str] = field(default_factory=list)
 
 
 def _atomic_write(path: Path, data: bytes) -> None:
@@ -753,6 +756,9 @@ def plan_completion_install(
             known_folder=probes.known_folder,
             simulated_policy=probes.simulated_policy,
         )
+        note = shell_profiles.policy_note(target, location)
+        if note:
+            plan.notes.append(note)
         warning = shell_profiles.policy_warning(target, location.policy)
         if warning:
             plan.warnings.append(warning)
