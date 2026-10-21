@@ -22,6 +22,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   PowerShell con política `Restricted`, `AllSigned` o `Undefined` se salta con un aviso que dice
   cómo arreglarlo. `uninstall --shell-completion` quita solo el autocompletado, un `uninstall` sin
   restricciones también lo quita, y el perfil vuelve byte a byte a como estaba (#364).
+- **Check `scaffold.shell_completion` en `doctor`** (ya son veintiséis): compara cada fichero
+  instalado con el que genera la versión actual en el idioma del manifiesto y mira que cada perfil
+  conserve su bloque, sin lanzar shells. **`update` regenera** los ficheros viejos en el idioma
+  configurado (también tras cambiar de idioma), aunque no haya ningún cliente (#366).
+- **E2E del autocompletado instalado** en Windows, macOS y Linux: instala dos veces en un HOME
+  temporal con perfiles sembrados, completa en el shell real cargando el perfil y desinstala
+  comprobando los perfiles byte a byte (#367).
 
 ## [0.37.0] - 2026-10-20
 

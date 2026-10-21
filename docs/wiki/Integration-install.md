@@ -265,8 +265,17 @@ local-delegate update
 ```
 
 `update` reescribe los ficheros listados en el manifiesto que no coincidan con lo que generaría
-ahora, y apunta en el manifiesto el idioma y la versión nuevos. No crea ficheros para shells que no
-instalaste ni toca perfiles. Abre un shell nuevo para que cargue el fichero regenerado.
+ahora, y apunta en el manifiesto el idioma y la versión nuevos. Lo hace aunque no haya ningún
+cliente instalado. No crea ficheros para shells que no instalaste, no repone uno que hayas borrado
+(eso es `install --shell-completion`) ni toca perfiles. Abre un shell nuevo para que cargue el
+fichero regenerado.
+
+`local-delegate doctor` lo vigila con el check «autocompletado del shell» (ver
+[la tabla de checks](#comprobar-la-instalación-local-delegate-doctor)): sin nada instalado da
+`[ OK ]` «no instalado (opcional)»; un fichero de otra versión o distinto, `warn` con
+`local-delegate update`; un fichero ausente, un bloque borrado del perfil o ficheros sin manifiesto,
+`warn` con `local-delegate install --shell-completion`. Compara en el idioma del manifiesto, así que
+su veredicto no cambia con el idioma de la sesión.
 
 ### Quitarlo
 
