@@ -405,3 +405,50 @@ def live_memory_files(home: Path) -> list[Path]:
         home / ".codex" / "AGENTS.md",
         install.opencode_dir(home) / "AGENTS.md",
     ]
+
+
+# --- Guard of the required shells (SDD cli-completion, REQ-037) --------------------------------
+#
+# A shell listed in `COMPLETION_TEST_REQUIRE_SHELLS` must have at least one test that PASSED. The
+# helper `completion_shells.require_or_skip` fails a test whose shell is missing; this guard
+# covers what the helper cannot see: every test of that shell deselected (`-k`), never collected
+# or skipped for another reason. Under pytest-xdist the controller only sees the NAMES of the
+# markers in `report.keywords`, not their arguments, so each worker copies the argument of
+# `shell("<name>")` to `user_properties`, which does travel in the report.
+_SHELL_PASSES: dict[str, int] = {}
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers", "shell(name): integration test that launches a real shell (REQ-037)"
+    )
+
+
+def pytest_runtest_setup(item):
+    for mark in item.iter_markers("shell"):
+        item.user_properties.append(("shell", mark.args[0]))
+
+
+def pytest_runtest_logreport(report):
+    if report.when != "call" or not report.passed:
+        return
+    for name, value in report.user_properties:  # tuples here, lists after xdist's JSON
+        if name == "shell":
+            _SHELL_PASSES[value] = _SHELL_PASSES.get(value, 0) + 1
+
+
+def pytest_sessionfinish(session):
+    if hasattr(session.config, "workerinput"):
+        return  # an xdist worker: the controller decides with the reports of all of them
+    from completion_shells import REQUIRE_ENV, required_shells
+
+    missing = sorted(name for name in required_shells() if not _SHELL_PASSES.get(name))
+    if not missing:
+        return
+    session.exitstatus = pytest.ExitCode.TESTS_FAILED
+    reporter = session.config.pluginmanager.get_plugin("terminalreporter")
+    if reporter is not None:
+        reporter.write_line(
+            f"{REQUIRE_ENV}: no test passed for the required shell(s): {', '.join(missing)}",
+            red=True,
+        )

@@ -25,7 +25,7 @@ import sys
 from collections.abc import Iterator
 from pathlib import Path
 
-from . import benchmark, doctor, i18n
+from . import benchmark, completion, doctor, i18n
 from . import llamaswap_config as lc
 from .i18n import t
 from .version import get_version
@@ -606,6 +606,27 @@ def _add_backend_params_parser(sub) -> None:
         "role", nargs="?", default=None, help=t("cli.help.backend_params.reset.role")
     ).completion_values = roles
     bp_parser.set_defaults(func=cmd_backend_params)
+
+
+def cmd_completion(args: argparse.Namespace) -> int:
+    """Prints the completion script of a shell (SDD cli-completion, REQ-001).
+
+    Raw UTF-8 bytes with LF on `stdout.buffer` on every platform: a text stream would turn the
+    line ends into CRLF on Windows, and a carriage return breaks bash and zsh.
+    """
+    sys.stdout.buffer.write(completion.render(args.shell).encode("utf-8"))
+    sys.stdout.buffer.flush()
+    return 0
+
+
+def _add_completion_parser(sub) -> None:
+    parser = sub.add_parser(
+        "completion",
+        help=t("cli.help.completion"),
+        description=t("cli.help.completion._description"),
+    )
+    parser.add_argument("shell", choices=completion.SHELLS, help=t("cli.help.completion.shell"))
+    parser.set_defaults(func=cmd_completion)
 
 
 def cmd_uninstall(args: argparse.Namespace) -> int:
@@ -1522,6 +1543,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_backend_params_parser(sub)
 
     _add_install_parsers(sub)
+    _add_completion_parser(sub)
     # Sin `metavar`, argparse pinta en el `usage` todos los subcomandos, ocultos incluidos.
     sub.metavar = "{" + ",".join(n for n in sub.choices if n not in _HIDDEN_COMMANDS) + "}"
     return parser

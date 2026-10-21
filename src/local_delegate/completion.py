@@ -23,10 +23,11 @@ its `choices` (REQ-005).
 from __future__ import annotations
 
 import argparse
+import importlib
 import re
 from dataclasses import dataclass
 
-from . import deprecations
+from . import deprecations, i18n
 
 #: Arity of an option: takes no value, a required value or an optional value.
 ARITY_FLAG = "flag"
@@ -260,3 +261,137 @@ def _describe(action: argparse.Action) -> str:
 
 def _route(path: tuple[str, ...]) -> str:
     return " ".join(("local-delegate", *path))
+
+
+# --- Rendering (L2a: PowerShell) ------------------------------------------------------------
+
+#: Shells that `render` knows. L2b adds bash and zsh.
+SHELLS = ("powershell",)
+#: Executables registered by every script (REQ-011): the two entry points of the package.
+EXECUTABLES = ("local-delegate", "local-delegate-mcp")
+
+_HEADER_FORMAT = (
+    "# local-delegate {version} completion {shell} lang={lang} (generated; do not edit)"
+)
+_HEADER_RE = re.compile(
+    r"^# local-delegate (\S+) completion [a-z]+ lang=[a-z]+ \(generated; do not edit\)$"
+)
+_HEADER_SLOT = "@@HEADER@@"
+_TABLES_SLOT = "@@TABLES@@"
+_TEMPLATES = {"powershell": "powershell.ps1"}
+_PS_INDENT = "    "
+
+
+class CompletionTemplateError(RuntimeError):
+    """A packaged template is not usable as is (carriage return, missing slot)."""
+
+
+def render(shell: str, *, lang: str | None = None) -> str:
+    """The completion script of `shell`, in `lang` or in the language in force (REQ-042).
+
+    The parser is built inside `i18n.override`, with the argparse scaffold in that language, so
+    every help text (including `-h`) comes out in `lang`. Nothing is read from the network or
+    written to disk.
+    """
+    # The parser lives in `cli`, which imports this module for the `completion` subcommand.
+    # Resolved by name at call time, so the two modules do not import each other.
+    cli = importlib.import_module(f"{__package__}.cli")
+    if shell not in SHELLS:
+        raise ValueError(f"shell={shell!r}")
+    language = lang or i18n.lang()
+    with i18n.override(language), cli._argparse_in_language():
+        model = build_model(cli.build_parser())
+    return _RENDERERS[shell](model, lang=language)
+
+
+def header(shell: str, lang: str) -> str:
+    """First comment line of a script (REQ-009): ASCII, with version, shell and language."""
+    from .version import get_version
+
+    return _HEADER_FORMAT.format(version=get_version(), shell=shell, lang=lang)
+
+
+def header_version(text: str) -> str | None:
+    """Version written in the header of a script, or `None` if it has none (REQ-009).
+
+    The header is the first line, or the second one when the first is `#compdef` (zsh).
+    """
+    for line in text.splitlines()[:2]:
+        match = _HEADER_RE.match(line)
+        if match:
+            return match.group(1)
+    return None
+
+
+def ps_literal(text: str) -> str:
+    """ASCII-only PowerShell double-quoted literal (REQ-018).
+
+    Each non-ASCII character goes as `$([char]0xNNNN)`, one per UTF-16 unit (surrogate pairs out
+    of the BMP); backtick, double quote and dollar are escaped. So the script reads the same in
+    Windows PowerShell 5.1 without BOM and through `Invoke-Expression` with any console code page.
+    """
+    out = []
+    for char in text:
+        if char in '`"$':
+            out.append("`" + char)
+        elif 32 <= ord(char) < 127:
+            out.append(char)
+        else:
+            units = char.encode("utf-16-le")
+            for index in range(0, len(units), 2):
+                code = int.from_bytes(units[index : index + 2], "little")
+                out.append(f"$([char]0x{code:04X})")
+    return '"' + "".join(out) + '"'
+
+
+def _ps_array(items: tuple[str, ...] | list[str]) -> str:
+    return "@(" + ", ".join(ps_literal(item) for item in items) + ")"
+
+
+def render_powershell(model: Model, *, lang: str) -> str:
+    """PowerShell script of `model`: header and data tables poured into the template."""
+    lines: list[str] = []
+
+    def put(table: str, key: str, value: str) -> None:
+        lines.append(f"{_PS_INDENT}${table}[{ps_literal(key)}] = {value}")
+
+    for path, node in model.nodes.items():
+        route = " ".join(path)
+        put("subs", route, _ps_array([sub.name for sub in node.subcommands]))
+        put("opts", route, _ps_array([s for option in node.options for s in option.strings]))
+        for sub in node.subcommands:
+            put("help", f"{route}|{sub.name}", ps_literal(sub.help))
+        for option in node.options:
+            for string in option.strings:
+                key = f"{route}|{string}"
+                put("help", key, ps_literal(option.help))
+                if option.arity != ARITY_FLAG:
+                    put("arity", key, ps_literal(option.arity))
+                    if option.values:
+                        put("values", key, _ps_array(option.values))
+        for index, positional in enumerate(node.positionals):
+            if positional.values:
+                put("values", f"{route}|#{index}", _ps_array(positional.values))
+    return _fill(_template("powershell"), header("powershell", lang), "\n".join(lines))
+
+
+def _template(shell: str) -> str:
+    """Packaged template, read as bytes: a carriage return would break the scripts (REQ-001)."""
+    from importlib.resources import files
+
+    raw = (
+        files("local_delegate").joinpath("resources", "completion", _TEMPLATES[shell]).read_bytes()
+    )
+    if b"\r" in raw:
+        raise CompletionTemplateError(f"{_TEMPLATES[shell]}: carriage_return")
+    return raw.decode("utf-8")
+
+
+def _fill(template: str, header_line: str, tables: str) -> str:
+    for slot in (_HEADER_SLOT, _TABLES_SLOT):
+        if template.count(slot) != 1:
+            raise CompletionTemplateError(f"slot={slot}")
+    return template.replace(_HEADER_SLOT, header_line).replace(_TABLES_SLOT, tables)
+
+
+_RENDERERS = {"powershell": render_powershell}

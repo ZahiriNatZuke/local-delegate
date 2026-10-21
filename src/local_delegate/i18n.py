@@ -16,8 +16,10 @@ módulo `argparse` de su proceso para traducir el armazón de `--help` y de los 
 
 from __future__ import annotations
 
+import contextlib
 import functools
 import json
+from collections.abc import Iterator
 from dataclasses import dataclass
 from importlib.resources import files
 
@@ -36,8 +38,32 @@ def current() -> hook_common.LanguageResolution:
     return hook_common.resolve_language(config.LOG_DIR)
 
 
+#: Language forced by `override` (REQ-042 of cli-completion); `None` outside the block.
+_override_lang: str | None = None
+
+
 def lang() -> str:
+    if _override_lang is not None:
+        return _override_lang
     return current().lang
+
+
+@contextlib.contextmanager
+def override(language: str) -> Iterator[None]:
+    """Inside the block, `lang()`, `t()` and `argparse_gettext` use `language` (REQ-042).
+
+    It does not touch the cache of `current()`: on exit the previous language comes back, also
+    when the block raises, and blocks can be nested.
+    """
+    global _override_lang
+    if language not in LANGUAGES:
+        raise ValueError(f"language={language!r}")
+    previous = _override_lang
+    _override_lang = language
+    try:
+        yield
+    finally:
+        _override_lang = previous
 
 
 @functools.cache

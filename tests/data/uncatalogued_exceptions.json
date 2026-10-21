@@ -855,6 +855,12 @@
       "text": "Documents",
       "kind": "path",
       "reason": "nombre de la carpeta Documents del perfil de PowerShell en el último recurso de REQ-025; es una ruta, no texto"
+    },
+    {
+      "file": "src/local_delegate/completion.py",
+      "text": "# local-delegate {version} completion {shell} lang={lang} (generated; do not edit)",
+      "kind": "verbatim",
+      "reason": "cabecera de los scripts de autocompletado (SDD cli-completion, REQ-009): contrato fijo y ASCII que `header_version` compara tal cual con la primera línea de los ficheros instalados (`doctor`, `update`); no cambia con el idioma"
     }
   ]
 }
