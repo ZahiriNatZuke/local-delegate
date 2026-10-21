@@ -8,7 +8,7 @@ experimento midiera el entorno en vez del producto (`review.md`):
   `settings.json` del usuario pisaría a las del proceso; `--settings` tiene más precedencia. Y el
   control de precedencia al inicio de cada tanda lo comprueba en vez de suponerlo.
 - **El interruptor global de apagado nunca se toca**: afecta a las sesiones del usuario y dispara
-  el criterio de retirada del bloqueo. Se aísla con `LD_HOOK_READ_INTERRUPTOR` a una ruta que no
+  el criterio de retirada del bloqueo. Se aísla con `LD_HOOK_READ_SWITCH_FILE` a una ruta que no
   existe.
 - **Telemetría propia de cada corrida**, para atribuir cada evento a su corrida sin cruces.
 - **La evidencia sale del transcript**, nunca de lo que el modelo diga que hizo.

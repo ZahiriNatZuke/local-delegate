@@ -166,6 +166,9 @@ def _run_installed_hook(home: Path, variables: dict[str, str]) -> subprocess.Com
                 targets={"claude"},
                 python_exe="python3",
                 use_cli=False,
+                # Se prueba el hook, no la migración de `install` (que renombraría el
+                # interruptor viejo desde el volteo del registro, L6).
+                migrate_retired_names=False,
             )
         ),
         dry_run=False,

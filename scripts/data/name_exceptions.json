@@ -35,161 +35,6 @@
           "reason": "alias de compatibilidad (decisión 10 de A10a): nombre de antes de `--since`, por los comandos escritos en la wiki y en el `verification.md` de `delegacion-precisa-y-fiable`; el test lo usa en una de las dos llamadas a `main` (ola A10a-4)"
         },
         {
-          "name": "LD_HOOK_READ_BLOQUEAR",
-          "file": "src/local_delegate/config.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del interruptor del bloqueo que leen el daemon y los hooks, y los tests que la prueban (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "LD_HOOK_READ_BLOQUEAR",
-          "file": "src/local_delegate/deprecations.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del interruptor del bloqueo que leen el daemon y los hooks, y los tests que la prueban (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "LD_HOOK_READ_BLOQUEAR",
-          "file": "src/local_delegate/resources/hooks/hook_common.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del interruptor del bloqueo que leen el daemon y los hooks, y los tests que la prueban (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "LD_HOOK_READ_BLOQUEAR",
-          "file": "tests/test_cli_renamed_names.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del interruptor del bloqueo que leen el daemon y los hooks, y los tests que la prueban (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "LD_HOOK_READ_BLOQUEAR",
-          "file": "tests/test_hook_legacy_names.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del interruptor del bloqueo que leen el daemon y los hooks, y los tests que la prueban (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "LD_HOOK_READ_BLOQUEAR",
-          "file": "tests/test_environment_isolation.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del interruptor del bloqueo que leen el daemon y los hooks, y los tests que la prueban (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "LD_HOOK_READ_INTERRUPTOR",
-          "file": "src/local_delegate/config.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable de la ruta del interruptor, y los tests que la prueban (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "LD_HOOK_READ_INTERRUPTOR",
-          "file": "src/local_delegate/deprecations.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable de la ruta del interruptor, y los tests que la prueban (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "LD_HOOK_READ_INTERRUPTOR",
-          "file": "src/local_delegate/resources/hooks/hook_common.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable de la ruta del interruptor, y los tests que la prueban (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "LD_HOOK_READ_INTERRUPTOR",
-          "file": "tests/test_cli_renamed_names.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable de la ruta del interruptor, y los tests que la prueban (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "LD_HOOK_READ_INTERRUPTOR",
-          "file": "tests/test_hook_legacy_names.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable de la ruta del interruptor, y los tests que la prueban (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
-          "file": "src/local_delegate/config.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del resumen estructurado, y los tests que la prueban (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
-          "file": "src/local_delegate/deprecations.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del resumen estructurado, y los tests que la prueban (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
-          "file": "tests/test_cli_renamed_names.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del resumen estructurado, y los tests que la prueban (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
-          "file": "tests/test_structured_summary.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del resumen estructurado, y los tests que la prueban (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
-          "file": "src/local_delegate/config.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del coste de respaldo, y los tests que la prueban (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
-          "file": "src/local_delegate/deprecations.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del coste de respaldo, y los tests que la prueban (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
-          "file": "tests/test_cli_renamed_names.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del coste de respaldo, y los tests que la prueban (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
-          "file": "tests/test_density.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); variable del coste de respaldo, y los tests que la prueban (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "recalcular-coste",
-          "file": "src/local_delegate/cli.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); subcomando viejo de `recompute-cost`, y el test que lo prueba (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "recalcular-coste",
-          "file": "src/local_delegate/deprecations.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); subcomando viejo de `recompute-cost`, y el test que lo prueba (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "recalcular-coste",
-          "file": "tests/test_cli_renamed_names.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); subcomando viejo de `recompute-cost`, y el test que lo prueba (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "recalcular-coste",
-          "file": "tests/test_cli_english.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); el humo en inglés comprueba que su aviso sale en inglés (frente B, ola B1a)"
-        },
-        {
-          "name": "reiniciar-calibracion",
-          "file": "tests/test_cli_renamed_names.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); opción vieja `--reiniciar-calibracion` de `--reset-calibration`, que el test usa (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "local-delegate-bloqueo-apagado",
-          "file": "src/local_delegate/deprecations.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); fichero de `~/.claude/` que apaga el bloqueo; lo lee el hook (REQ-012) (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "local-delegate-bloqueo-apagado",
-          "file": "src/local_delegate/resources/hooks/hook_common.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); fichero de `~/.claude/` que apaga el bloqueo; lo lee el hook (REQ-012) (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "enfriamiento.json",
-          "file": "src/local_delegate/deprecations.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); escritura doble (`legacy_write`) de `cooldown.json` con el nombre viejo, para que los hooks de versiones anteriores vean los modelos enfriados (REQ-005) (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "enfriamiento.json",
-          "file": "src/local_delegate/resources/hooks/hook_common.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); escritura doble (`legacy_write`) de `cooldown.json` con el nombre viejo, para que los hooks de versiones anteriores vean los modelos enfriados (REQ-005) (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "enfriamiento.json",
-          "file": "tests/test_cooldown.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); escritura doble (`legacy_write`) de `cooldown.json` con el nombre viejo, para que los hooks de versiones anteriores vean los modelos enfriados (REQ-005) (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "enfriamiento.json",
-          "file": "tests/test_fallback.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); escritura doble (`legacy_write`) de `cooldown.json` con el nombre viejo, para que los hooks de versiones anteriores vean los modelos enfriados (REQ-005) (cierre del frente A, lote 4)"
-        },
-        {
-          "name": "enfriamiento.json",
-          "file": "tests/test_f1_conformance.py",
-          "reason": "alias de compatibilidad (REQ-001, REQ-002): nombre viejo registrado en `deprecations.DEPRECATED_NAMES` (`introduced` 0.35.0), que avisa y se retira en la 0.38.0 (ola R); escritura doble (`legacy_write`) de `cooldown.json` con el nombre viejo, para que los hooks de versiones anteriores vean los modelos enfriados (REQ-005) (cierre del frente A, lote 4)"
-        },
-        {
           "name": "anotar_llamada.py",
           "file": "tests/test_install.py",
           "reason": "alias de compatibilidad permanente (REQ-012), como la fila de `install.py`: los tests que comprueban que `install` sobre una 0.34 retira el hook viejo `anotar_llamada.py` (cierre del frente A, lote 4)"
@@ -198,6 +43,91 @@
           "name": "test_*anotar_llamada*",
           "file": "tests/test_install.py",
           "reason": "alias de compatibilidad permanente (REQ-012), como la fila de `install.py`: los tests que comprueban que `install` sobre una 0.34 retira el hook viejo `anotar_llamada.py` (cierre del frente A, lote 4)"
+        }
+      ]
+    },
+    {
+      "title": "Nombre retirado con sucesor",
+      "entries": [
+        {
+          "name": "LD_HOOK_READ_BLOQUEAR",
+          "file": "src/local_delegate/deprecations.py",
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): entrada de `DEPRECATED_NAMES`, que lo conserva solo para avisar y migrar"
+        },
+        {
+          "name": "LD_HOOK_READ_BLOQUEAR",
+          "file": "tests/test_hook_legacy_names.py",
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): nombres de la telemetría de los hooks que el check de `doctor` sigue leyendo para avisar (REQ-012)"
+        },
+        {
+          "name": "LD_HOOK_READ_INTERRUPTOR",
+          "file": "src/local_delegate/deprecations.py",
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): entrada de `DEPRECATED_NAMES`, que lo conserva solo para avisar y migrar"
+        },
+        {
+          "name": "LD_HOOK_READ_INTERRUPTOR",
+          "file": "tests/test_hook_legacy_names.py",
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): nombres de la telemetría de los hooks que el check de `doctor` sigue leyendo para avisar (REQ-012)"
+        },
+        {
+          "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
+          "file": "src/local_delegate/deprecations.py",
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): entrada de `DEPRECATED_NAMES`, que lo conserva solo para avisar y migrar"
+        },
+        {
+          "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
+          "file": "tests/test_structured_summary.py",
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): la variable vieja tiene que faltar del entorno del proceso limpio en que se mide el valor por defecto"
+        },
+        {
+          "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
+          "file": "src/local_delegate/deprecations.py",
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): entrada de `DEPRECATED_NAMES`, que lo conserva solo para avisar y migrar"
+        },
+        {
+          "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
+          "file": "tests/test_density.py",
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): la variable vieja sigue en `config.ENVIRONMENT_VARIABLES`, que la lee solo para avisar (REQ-009)"
+        },
+        {
+          "name": "recalcular-coste",
+          "file": "src/local_delegate/deprecations.py",
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): entrada de `DEPRECATED_NAMES`, que lo conserva solo para avisar y migrar"
+        },
+        {
+          "name": "local-delegate-bloqueo-apagado",
+          "file": "src/local_delegate/deprecations.py",
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): entrada de `DEPRECATED_NAMES`, que lo conserva solo para avisar y migrar"
+        },
+        {
+          "name": "recalcular-coste",
+          "file": "tests/test_deprecations.py",
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): tabla de REQ-001 con la que se compara el registro real"
+        },
+        {
+          "name": "LD_HOOK_READ_BLOQUEAR",
+          "file": "tests/test_deprecations.py",
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): tabla de REQ-001 con la que se compara el registro real"
+        },
+        {
+          "name": "LD_HOOK_READ_INTERRUPTOR",
+          "file": "tests/test_deprecations.py",
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): tabla de REQ-001 con la que se compara el registro real"
+        },
+        {
+          "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
+          "file": "tests/test_deprecations.py",
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): tabla de REQ-001 con la que se compara el registro real"
+        },
+        {
+          "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
+          "file": "tests/test_deprecations.py",
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): tabla de REQ-001 con la que se compara el registro real"
+        },
+        {
+          "name": "local-delegate-bloqueo-apagado",
+          "file": "tests/test_deprecations.py",
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): tabla de REQ-001 con la que se compara el registro real"
         }
       ]
     },
@@ -1053,6 +983,21 @@
           "name": "en_lugar_de",
           "file": "tests/test_tool_contract.py",
           "reason": "lectura de formato viejo (ola B2b-1): nombre viejo de REQ-010 que el test de contrato exige que **no** salga en el respaldo"
+        },
+        {
+          "name": "enfriamiento.json",
+          "file": "src/local_delegate/resources/hooks/hook_common.py",
+          "reason": "lectura de formato viejo (REQ-006 de english-names-bilingual-output): el hook aún lee `enfriamiento.json` si no hay `cooldown.json`"
+        },
+        {
+          "name": "enfriamiento.json",
+          "file": "tests/test_cooldown.py",
+          "reason": "lectura de formato viejo (REQ-006 de english-names-bilingual-output): prueba la lectura del `enfriamiento.json` que dejó una versión anterior"
+        },
+        {
+          "name": "enfriamiento.json",
+          "file": "tests/test_f1_conformance.py",
+          "reason": "lectura de formato viejo (REQ-006 de english-names-bilingual-output): prueba la lectura del `enfriamiento.json` que dejó una versión anterior"
         }
       ]
     },

@@ -28,6 +28,7 @@ horizonte de cada alias (REQ-004).
 from __future__ import annotations
 
 import argparse
+import ast
 import importlib.util
 import json
 import re
@@ -216,15 +217,52 @@ def stamp_unreleased(text: str, new_version: str) -> str:
     Solo dentro de la tupla del registro: la constante `UNRELEASED` y los comentarios que la citan
     se quedan como están. La versión que se publica es la primera que contiene el renombrado, que
     es lo que el horizonte de los alias necesita saber (REQ-004).
+
+    Localiza la tupla con `ast`, no buscando su cierre en el texto: así da igual cómo esté escrita
+    (`= ()` en una línea, `= (\\n)`, una entrada por línea o repartida en varias) y solo se tocan
+    las cadenas `"UNRELEASED"` que son valores dentro de ella (REQ-020 de retire-legacy-aliases).
+    Sin nada que sellar devuelve el texto tal cual.
     """
-    start = text.find("DEPRECATED_NAMES:")
-    if start == -1:
+    try:
+        tree = ast.parse(text)
+    except SyntaxError as exc:
+        raise BumpError(f"{DEPRECATIONS_FILE} no se puede analizar: {exc}") from exc
+    registry = next(
+        (
+            node.value
+            for node in tree.body
+            if isinstance(node, ast.AnnAssign | ast.Assign)
+            and node.value is not None
+            and any(
+                isinstance(target, ast.Name) and target.id == "DEPRECATED_NAMES"
+                for target in (node.targets if isinstance(node, ast.Assign) else [node.target])
+            )
+        ),
+        None,
+    )
+    if registry is None:
         raise BumpError(f"{DEPRECATIONS_FILE} no declara DEPRECATED_NAMES")
-    end = text.find("\n)\n", start)
-    if end == -1:
-        raise BumpError(f"no se encontró el cierre de DEPRECATED_NAMES en {DEPRECATIONS_FILE}")
-    block = text[start:end].replace('"UNRELEASED"', f'"{new_version}"')
-    return text[:start] + block + text[end:]
+    stamps = [
+        node
+        for node in ast.walk(registry)
+        if isinstance(node, ast.Constant) and node.value == "UNRELEASED"
+    ]
+    lines = text.splitlines(keepends=True)
+    # `ast` da las columnas en bytes UTF-8; se pasan a caracteres para cortar el texto.
+    starts = [0]
+    for line in lines:
+        starts.append(starts[-1] + len(line))
+
+    def position(line_number: int, col: int) -> int:
+        return starts[line_number - 1] + len(
+            lines[line_number - 1].encode("utf-8")[:col].decode("utf-8")
+        )
+
+    for node in sorted(stamps, key=lambda n: (n.lineno, n.col_offset), reverse=True):
+        begin = position(node.lineno, node.col_offset)
+        end = position(node.end_lineno, node.end_col_offset)
+        text = text[:begin] + f'"{new_version}"' + text[end:]
+    return text
 
 
 def _verify_pyproject(before: str, after: str, new_version: str) -> None:

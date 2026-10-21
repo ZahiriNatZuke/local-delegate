@@ -6,6 +6,27 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+**Versión incompatible.** Los nombres viejos en español que se renombraron en la 0.35.0 y siguieron
+funcionando con aviso en la 0.35.x, 0.36.x y 0.37.x **ya no tienen efecto**: `doctor` y
+`local_status` los nombran (hasta la 0.40.x) y `update` migra los que puede. Antes de actualizar,
+ejecuta `local-delegate doctor`.
+
+### Lo que rompe y cómo actualizar
+
+**Qué deja de funcionar**
+
+| Nombre viejo | Nombre nuevo | Qué pasa si sigue puesto |
+|---|---|---|
+| `recalcular-coste` (subcomando) | `recompute-cost` | Sale con código 2 y un error que nombra `recompute-cost`; no recalcula nada. |
+| `--reiniciar-calibracion` (opción de `recompute-cost`) | `--reset-calibration` | Sale con código 2 y un error que nombra `--reset-calibration`. |
+| `LD_HOOK_READ_BLOQUEAR` | `LD_HOOK_READ_BLOCK` | Los hooks no la leen: el bloqueo de lectura queda **apagado** (su valor por defecto). |
+| `LD_HOOK_READ_INTERRUPTOR` | `LD_HOOK_READ_SWITCH_FILE` | Los hooks no la leen: vuelven a mirar `~/.claude/local-delegate-block-off` y el fichero de tu ruta ya no apaga el bloqueo. |
+| `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO` | `LOCAL_DELEGATE_STRUCTURED_SUMMARY` | El paquete no la lee: el resumen por secciones se apaga. |
+| `LOCAL_DELEGATE_COSTE_RESPALDO` | `LOCAL_DELEGATE_COST_FALLBACK` | El paquete no la lee: el coste se valora con el respaldo por defecto. |
+| `~/.claude/local-delegate-bloqueo-apagado` (fichero interruptor) | `~/.claude/local-delegate-block-off` | Los hooks no lo miran: con `LD_HOOK_READ_BLOCK=1`, el bloqueo **se enciende**. |
+| `LOCAL_DELEGATE_MODEL_FAST`, `LOCAL_DELEGATE_MAX_CHARS_FAST`, `LOCAL_DELEGATE_FALLBACK_FAST` | — (rol `fast`, retirado en la 0.30.0) | Ya no tenían efecto; ahora `doctor` tampoco avisa de ellas. |
+| `enfriamiento.json` (escrito además de `cooldown.json`) | `cooldown.json` | El daemon deja de escribirlo: los hooks de una versión anterior no ven el enfriamiento hasta que `update` los cambia. |
+
 ### Añade
 
 - **Autocompletado de la CLI en PowerShell, zsh y bash** (SDD `cli-completion`). El subcomando

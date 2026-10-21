@@ -1926,7 +1926,7 @@ def test_ignored_entries_are_counted(tmp_path):
 
 # --- config.deprecated_names (REQ-003): alias con sucesor e interruptores viejos ---
 def _test_registry(monkeypatch, tmp_path):
-    """Un alias de variable y un interruptor viejo de mentira: el registro real aún no tiene."""
+    """Un alias de variable y un interruptor viejo de mentira: el registro real ya no tiene alias."""
     from local_delegate import config, deprecations
 
     entries = (
@@ -2155,3 +2155,27 @@ def test_unreadable_settings_json_warns_with_the_reason(monkeypatch, tmp_path):
     assert r.status == checks.WARN
     assert "no se pudo leer el env de settings.json" in r.detail
     assert "JSON" in r.detail
+
+
+def test_real_registry_retired_name_in_settings_json_env_warns_with_rename(monkeypatch, tmp_path):
+    """REQ-012 con el registro real: el viejo del bloqueo en el `env` de un HOME simulado."""
+    from local_delegate import config, deprecations
+
+    entry = next(e for e in deprecations.DEPRECATED_NAMES if e.new == "LD_HOOK_READ_BLOCK")
+    assert entry.is_retired
+    monkeypatch.setattr(
+        config, "DEPRECATED_ENV_VALUES", {e.old: None for e in deprecations.env_vars()}
+    )
+    monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", None)
+    (tmp_path / ".claude").mkdir()
+    settings = tmp_path / ".claude" / "settings.json"
+    settings.write_text(json.dumps({"env": {entry.new: "1"}}), encoding="utf-8")
+    # Control: con el nombre nuevo no hay nada que avisar.
+    assert checks._probe_deprecated_names(checks.Context(home=tmp_path)).status == checks.OK
+
+    settings.write_text(json.dumps({"env": {entry.old: "1"}}), encoding="utf-8")
+    r = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+    assert r.status == checks.WARN
+    assert entry.old in r.detail and entry.new in r.detail and "settings.json" in r.detail
+    assert "ya no tiene efecto" in r.detail
+    assert f"renombra {entry.old} a {entry.new}" in r.fix_hint

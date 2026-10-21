@@ -847,7 +847,7 @@ def test_uninstall_also_removes_the_retired_skill(tmp_path):
 
 
 # --- Migración de nombres retirados con sucesor (REQ-015, REQ-016, REQ-017) -----------------
-# Registro sintético: las entradas reales aún son alias (L6 añade el caso real).
+# Registro sintético (con un alias vivo, que el real ya no tiene); el caso real va aparte.
 _GONE_ENV = ("LD_OLD_GONE_VAR", "LD_GONE_VAR_NEW")
 _GONE_ENV_2 = ("LD_OLD_SECOND_VAR", "LD_SECOND_VAR_NEW")
 _GONE_SWITCH = ("old-gone-switch", "gone-switch-new")
@@ -1051,6 +1051,30 @@ def test_retired_name_migration_records_one_date_per_name(monkeypatch, tmp_path)
     assert set(second) == {_GONE_ENV[0], _GONE_SWITCH[0]}
     assert second[_GONE_ENV[0]] == first["names"][_GONE_ENV[0]]
     assert set(inst.read_migration_record(data_dir)) == set(second)
+
+
+def test_retired_name_migration_with_the_real_registry(tmp_path):
+    """REQ-015 con el registro real (L6): las cuatro variables y el interruptor se migran."""
+    from local_delegate import deprecations
+
+    env_entries = deprecations.env_vars()
+    (switch,) = deprecations.switch_files()
+    assert len(env_entries) == 4 and all(e.is_retired for e in (*env_entries, switch))
+    original_env = {"KEEP": "k", **{e.old: f"v{i}" for i, e in enumerate(env_entries)}}
+    home = _settings_home(tmp_path, {"hooks": {}, "env": original_env})
+    (home / ".claude" / switch.old).write_text("", encoding="utf-8")
+    data_dir = tmp_path / "data"
+
+    assert _migrate(home, data_dir) == 0
+    assert _settings(home) == {
+        "hooks": {},
+        "env": {"KEEP": "k", **{e.new: f"v{i}" for i, e in enumerate(env_entries)}},
+    }
+    assert (home / ".claude" / switch.new).is_file()
+    assert not (home / ".claude" / switch.old).exists()
+    assert set(inst.read_migration_record(data_dir)) == {e.old for e in (*env_entries, switch)}
+    # Lo que ya está migrado no vuelve a planear nada.
+    assert inst.plan_retired_name_migration(home, data_dir) == []
 
 
 def test_retired_name_migration_never_writes_the_record_in_the_real_log_dir(monkeypatch, tmp_path):
