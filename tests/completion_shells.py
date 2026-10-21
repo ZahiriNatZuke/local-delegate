@@ -18,9 +18,12 @@ import os
 import shutil
 import subprocess
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
+
+from local_delegate import shell_profiles
 
 REQUIRE_ENV = "COMPLETION_TEST_REQUIRE_SHELLS"
 SHELL_NAMES = ("pwsh", "powershell", "bash", "bash3", "zsh")
@@ -94,16 +97,41 @@ def require_or_skip(name: str) -> str:
     raise pytest.skip.Exception(f"shell {name!r} not found")
 
 
-def powershell_env(name: str) -> dict[str, str]:
+def powershell_env(name: str, environ: Mapping[str, str] | None = None) -> dict[str, str]:
     """Environment for a PowerShell process; 5.1 without the `PSModulePath` of pwsh 7.
 
     Launched from pwsh or Git Bash, `powershell.exe` inherits the module path of pwsh 7 and fails
-    to load its own `Microsoft.PowerShell.Security` (research-shells §1).
+    to load its own `Microsoft.PowerShell.Security` (research-shells §1). On Windows the keys of
+    `os.environ` are upper case, so the variable is dropped with the product's case-insensitive
+    rule (`shell_profiles.query_environment`), not with `dict.pop("PSModulePath")`.
     """
-    env = dict(os.environ)
-    if name == "powershell":
-        env.pop("PSModulePath", None)
-    return env
+    return shell_profiles.query_environment(name, os.environ if environ is None else environ)
+
+
+def _run_policy_query(cmd: list[str], *, env: Mapping[str, str], timeout: float):
+    """Real runner for the policy query. Passed explicitly because `tests/conftest.py` replaces
+    the product's default runner with one that fails (no unit test may ask the real shell)."""
+    return subprocess.run(
+        cmd,
+        env=dict(env),
+        timeout=timeout,
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        check=False,
+    )
+
+
+@functools.cache
+def execution_policy_args(executable: str) -> tuple[str, ...]:
+    """`-ExecutionPolicy Bypass` only when the real effective policy would not run the script.
+
+    The policy is asked with the product's query (REQ-025); an unknown answer also gets `Bypass`,
+    so a broken query never turns into a red test for the wrong reason.
+    """
+    _, policy = shell_profiles.query_powershell(executable, run=_run_policy_query)
+    if policy is None or shell_profiles.policy_blocks(policy):
+        return ("-ExecutionPolicy", "Bypass")
+    return ()
 
 
 def powershell_command(executable: str, script: Path, *args: str) -> list[str]:
@@ -111,8 +139,7 @@ def powershell_command(executable: str, script: Path, *args: str) -> list[str]:
         executable,
         "-NoProfile",
         "-NonInteractive",
-        "-ExecutionPolicy",
-        "Bypass",
+        *execution_policy_args(executable),
         "-File",
         str(script),
         *args,

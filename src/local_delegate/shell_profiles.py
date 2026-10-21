@@ -387,6 +387,24 @@ def policy_warning(target: ShellTarget, policy: str | None) -> str | None:
     return None
 
 
+def policy_note(target: ShellTarget, location: ProfileLocation) -> str | None:
+    """La línea de REQ-040 para una edición de PowerShell: ruta del perfil y política efectiva.
+
+    Se enseña siempre, deje pasar o bloquee la política; ``None`` en zsh y bash.
+    """
+    if target.shell != "powershell" or location.policy is None:
+        return None
+    policy = location.policy
+    if policy == UNKNOWN_POLICY:
+        policy = t("install.completion.policy_unknown_value")
+    return t(
+        "install.completion.policy_note",
+        edition=target.edition or "pwsh",
+        path=location.path,
+        policy=policy,
+    )
+
+
 def candidate_profiles(
     home: Path,
     *,

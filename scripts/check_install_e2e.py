@@ -35,7 +35,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from local_delegate import install
+from local_delegate import install, shell_profiles
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -183,9 +183,23 @@ def _shell_env(home: Path, *, windows_powershell: bool = False) -> dict[str, str
         env.pop(name, None)
     if windows_powershell:
         # Lanzado desde pwsh o Git Bash, `powershell.exe` hereda el `PSModulePath` de pwsh 7 y no
-        # carga su propio `Microsoft.PowerShell.Security` (research-shells §1).
-        env.pop("PSModulePath", None)
+        # carga su propio `Microsoft.PowerShell.Security` (research-shells §1). En Windows las
+        # claves de `os.environ` van en mayúsculas: se quita con el criterio del producto, que no
+        # distingue mayúsculas, y no con `env.pop("PSModulePath")`.
+        env = shell_profiles.query_environment("powershell", env)
     return env
+
+
+def _execution_policy_args(executable: str) -> list[str]:
+    """`-ExecutionPolicy Bypass` solo si la política efectiva real no dejaría ejecutar el script.
+
+    Se pregunta con la consulta del producto (REQ-025); una respuesta desconocida también lleva
+    `Bypass`, para que una consulta rota no tumbe la fase por otro motivo.
+    """
+    _, policy = shell_profiles.query_powershell(executable)
+    if policy is None or shell_profiles.policy_blocks(policy):
+        return ["-ExecutionPolicy", "Bypass"]
+    return []
 
 
 def _empty_dir(home: Path) -> Path:
@@ -248,8 +262,7 @@ def _complete_powershell(executable: str, edition: str, profile: Path, home: Pat
             executable,
             "-NoProfile",
             "-NonInteractive",
-            "-ExecutionPolicy",
-            "Bypass",
+            *_execution_policy_args(executable),
             "-File",
             str(runner),
             str(profile),

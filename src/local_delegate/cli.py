@@ -250,6 +250,8 @@ def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
             plan = inst.plan_completion_install(home, shells, lang=lang)
         print()
         print(t("cli.install.completion.heading"))
+        for note in plan.notes:
+            print(f"  {note}")
         for warning in plan.warnings:
             print(f"  {warning}")
         if not plan.actions and uninstall:
