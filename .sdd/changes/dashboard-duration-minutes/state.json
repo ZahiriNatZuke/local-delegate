@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "slug": "dashboard-duration-minutes",
+  "title": "Duraciones del panel en minutos y horas",
+  "mode": "lite",
+  "status": "verifying",
+  "createdAt": "2026-10-21T13:59:44.106Z",
+  "updatedAt": "2026-10-21T14:19:33.206Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-10-21T14:02:01.500Z",
+      "evidence": "spec.md 5 REQ + tabla de 15 casos con fronteras; revisada por la sesión principal",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-10-21T14:02:02.101Z",
+      "evidence": "plan.md: un lote, tests primero, capturas claro/oscuro en :9494; revisado por la sesión principal",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-10-21T13:59:44.106Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-10-21T14:01:36.375Z",
+      "reason": "Causa localizada: fmtSec en web/metrics.py y sus cinco llamadas"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-10-21T14:01:36.577Z",
+      "reason": "Formato decidido en el brief; spec.md con tabla de casos y fronteras"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-10-21T14:02:01.500Z",
+      "evidence": "spec.md 5 REQ + tabla de 15 casos con fronteras; revisada por la sesión principal",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-10-21T14:02:01.714Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-10-21T14:02:01.905Z",
+      "reason": "plan.md un lote"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-10-21T14:02:02.101Z",
+      "evidence": "plan.md: un lote, tests primero, capturas claro/oscuro en :9494; revisado por la sesión principal",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-10-21T14:02:02.314Z",
+      "reason": "gates aprobados"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-10-21T14:19:33.206Z",
+      "reason": "Suite 4128 verde, UI en serie verde, ruff limpio, capturas claro/oscuro revisadas"
+    }
+  ]
+}
