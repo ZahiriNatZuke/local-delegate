@@ -3,9 +3,9 @@
   "slug": "cli-completion",
   "title": "Autocompletado de la CLI (completion powershell|zsh|bash)",
   "mode": "standard",
-  "status": "implementing",
+  "status": "closed",
   "createdAt": "2026-10-21T00:08:23.072Z",
-  "updatedAt": "2026-10-21T01:04:17.181Z",
+  "updatedAt": "2026-10-21T06:17:09.204Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,22 +20,22 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-21T06:03:50.111Z",
+      "evidence": "Suite completa en main 4113 pasados/0 fallos/28 saltados explicados; tras el arreglo #369 suite 4065/0 y CI 19 checks verdes; ruff limpio; CodeQL main 0 alertas; guardian de shells verde en Windows (pwsh,powershell,bash), Ubuntu (bash,pwsh) y macOS (zsh,bash,bash3,pwsh); E2E con fase de autocompletado en los tres SO. Detalle en verification.md (PR #368)",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-21T06:15:50.590Z",
+      "evidence": "review.md: conforms-with-notes; 46 REQ: 37 cumplen, 9 con nota, 0 incumplen; desviaciones 1-8 aprobadas; hallazgos en vivo resueltos en #369; 7 menores al backlog; 785 pruebas del cambio verdes con pwsh, 5.1 y Git Bash reales",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-21T06:17:08.953Z",
+      "evidence": "handoff.md; vault projects/local-delegate/jornada-2026-10-21-autocompletado-de-la-cli.md; backlog 1.12 1b HECHO y 1.14 restos; puntero en MEMORY.md del proyecto. Sin secretos ni datos personales",
+      "actor": "user"
     }
   },
   "history": [
@@ -96,6 +96,58 @@
       "to": "implementing",
       "at": "2026-10-21T01:04:17.181Z",
       "reason": "Fase implementing: ver research*.md, spec.md, plan.md y review-*.md del cambio"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-10-21T06:03:49.888Z",
+      "reason": "L1-L6 y arreglo mezclados (#359-#367, #369); verificacion en vivo en PR #368"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-10-21T06:03:50.111Z",
+      "evidence": "Suite completa en main 4113 pasados/0 fallos/28 saltados explicados; tras el arreglo #369 suite 4065/0 y CI 19 checks verdes; ruff limpio; CodeQL main 0 alertas; guardian de shells verde en Windows (pwsh,powershell,bash), Ubuntu (bash,pwsh) y macOS (zsh,bash,bash3,pwsh); E2E con fase de autocompletado en los tres SO. Detalle en verification.md (PR #368)",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-10-21T06:15:50.362Z",
+      "reason": "Revision de conformidad en review.md (PR #368)"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-10-21T06:15:50.590Z",
+      "evidence": "review.md: conforms-with-notes; 46 REQ: 37 cumplen, 9 con nota, 0 incumplen; desviaciones 1-8 aprobadas; hallazgos en vivo resueltos en #369; 7 menores al backlog; 785 pruebas del cambio verdes con pwsh, 5.1 y Git Bash reales",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-10-21T06:17:08.719Z",
+      "reason": "Gates quality y conformance aprobados"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-10-21T06:17:08.953Z",
+      "evidence": "handoff.md; vault projects/local-delegate/jornada-2026-10-21-autocompletado-de-la-cli.md; backlog 1.12 1b HECHO y 1.14 restos; puntero en MEMORY.md del proyecto. Sin secretos ni datos personales",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-10-21T06:17:09.204Z",
+      "reason": "SDD cerrado: #359-#369"
     }
   ]
 }

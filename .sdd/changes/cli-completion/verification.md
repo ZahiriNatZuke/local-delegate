@@ -239,3 +239,66 @@ pwsh -NoProfile -NoExit -Command ". '$tmp\home\Documents\PowerShell\profile.ps1'
 & "$tmp\venv\Scripts\local-delegate.exe" uninstall --home "$tmp\home" --no-client-cli
 Remove-Item -Recurse -Force $tmp
 ```
+
+## Tras el arreglo #369
+
+Comprobado en el gate de conformidad (ver `review.md`) el 2026-10-21, sobre `main` en
+`35408609eae713dcaae9fb39deba63ce3b86f83b` (PR #369 mezclada), con el `local-delegate.exe` del
+entorno del repo en esa revisión (instalación editable de `main`; no se tocó `uv tool`, el daemon ni
+la tarea programada).
+
+### REQ-040: ruta y política por edición en la salida
+
+`local-delegate install --shell-completion --dry-run --no-hooks --no-skill --no-memory --no-mcp --no-client-cli`
+sobre el HOME real, con `LOCAL_DELEGATE_LANG=es` y `en`: salida 0 en los dos. Las líneas nuevas
+(`install.completion.policy_note`) salen antes de las acciones:
+
+```text
+Autocompletado del shell:
+  autocompletado: pwsh usa el perfil C:\Users\Yohan\Documents\PowerShell\profile.ps1, con política de ejecución Bypass
+  autocompletado: powershell usa el perfil C:\Users\Yohan\Documents\WindowsPowerShell\profile.ps1, con política de ejecución RemoteSigned
+[dry-run] [completion] C:\Users\Yohan\AppData\Local\local-delegate\completion\local-delegate.ps1 — fichero de autocompletado de powershell
+```
+
+```text
+Shell completion:
+  shell completion: pwsh uses the profile C:\Users\Yohan\Documents\PowerShell\profile.ps1, with execution policy Bypass
+  shell completion: powershell uses the profile C:\Users\Yohan\Documents\WindowsPowerShell\profile.ps1, with execution policy RemoteSigned
+```
+
+La salida enseña también el bloque literal de cada perfil y el manifiesto con la ruta en `LOG_DIR`
+(`evidence/live/after369-dry-run-es.txt` y `after369-dry-run-en.txt`). Con esto se cierra la
+desviación 1 de este documento: la política sale aunque no bloquee.
+
+`sha256` antes y después (`evidence/live/after369-real-home-dry-run.json`): **iguales**.
+
+| Ruta | Antes | Después |
+| --- | --- | --- |
+| `Documents\PowerShell\profile.ps1` | no existe | no existe |
+| `Documents\PowerShell\Microsoft.PowerShell_profile.ps1` | `0a33bfaf06b40f3ebdb7c0dd4df8473f317d11449209185d89a0d3af2f8849f1` | `0a33bfaf06b40f3ebdb7c0dd4df8473f317d11449209185d89a0d3af2f8849f1` |
+| `Documents\WindowsPowerShell\profile.ps1` | no existe | no existe |
+| `Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1` | no existe | no existe |
+| `LOG_DIR\completion\` | no existe | no existe |
+
+Pruebas del #369 en la suite: `tests/test_completion_install.py:595` (línea por edición con
+política que deja pasar, que bloquea y desconocida, en es y en) y `:643` (salida real de
+`install`), en verde.
+
+### `PSModulePath` en el ayudante de pruebas y el E2E
+
+`tests/completion_shells.py:100-108` (`powershell_env`) y `scripts/check_install_e2e.py:184-189`
+quitan ahora la variable con `shell_profiles.query_environment`, que compara las claves en
+mayúsculas, y `-ExecutionPolicy Bypass` solo se añade si la política real bloquea o no se puede
+consultar (`completion_shells.py:126-135`, `check_install_e2e.py:193-202`). Con eso se cierra la
+desviación 2 de este documento. Evidencia:
+
+- `test_completion_powershell.py` y `test_completion_install.py` (incluida la ida y vuelta real en
+  pwsh y 5.1) en verde en esta PC: 785 pasados, 27 saltados, 0 fallidos en el bloque de pruebas del
+  gate.
+- `gh pr checks 369`: 19/19 en `pass`, con el paso «Instalador end-to-end» en los tres sistemas.
+
+### Limpieza
+
+Los dry-run y las pruebas lanzaron `pwsh`/`powershell` solo con tope de tiempo
+(`subprocess.run(..., timeout=...)`); al acabar no quedó ningún proceso, shell ni espera de esta
+comprobación.

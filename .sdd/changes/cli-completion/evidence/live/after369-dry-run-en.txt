@@ -1,0 +1,42 @@
+Installing local-delegate in C:\Users\Yohan
+clients: automatic detection (--clients auto): claude, codex, opencode
+
+Shell completion:
+  shell completion: pwsh uses the profile C:\Users\Yohan\Documents\PowerShell\profile.ps1, with execution policy Bypass
+  shell completion: powershell uses the profile C:\Users\Yohan\Documents\WindowsPowerShell\profile.ps1, with execution policy RemoteSigned
+[dry-run] [completion] C:\Users\Yohan\AppData\Local\local-delegate\completion\local-delegate.ps1 — powershell completion file
+[dry-run] [profile] C:\Users\Yohan\Documents\PowerShell\profile.ps1 — powershell completion loading block
+          # >>> local-delegate completion >>>
+          if (Test-Path -LiteralPath "C:/Users/Yohan/AppData/Local/local-delegate/completion/local-delegate.ps1") { . "C:/Users/Yohan/AppData/Local/local-delegate/completion/local-delegate.ps1" }
+          # <<< local-delegate completion <<<
+[dry-run] [profile] C:\Users\Yohan\Documents\WindowsPowerShell\profile.ps1 — powershell completion loading block
+          # >>> local-delegate completion >>>
+          if (Test-Path -LiteralPath "C:/Users/Yohan/AppData/Local/local-delegate/completion/local-delegate.ps1") { . "C:/Users/Yohan/AppData/Local/local-delegate/completion/local-delegate.ps1" }
+          # <<< local-delegate completion <<<
+[dry-run] [manifest] C:\Users\Yohan\AppData\Local\local-delegate\completion\installed.json — completion manifest
+          {
+            "version": 1,
+            "generator": "0.37.0",
+            "lang": "en",
+            "shells": [
+              {
+                "shell": "powershell",
+                "file": "C:\\Users\\Yohan\\AppData\\Local\\local-delegate\\completion\\local-delegate.ps1",
+                "profiles": [
+                  {
+                    "path": "C:\\Users\\Yohan\\Documents\\PowerShell\\profile.ps1",
+                    "created": true,
+                    "created_parent": false
+                  },
+                  {
+                    "path": "C:\\Users\\Yohan\\Documents\\WindowsPowerShell\\profile.ps1",
+                    "created": true,
+                    "created_parent": false
+                  }
+                ]
+              }
+            ]
+          }
+
+
+--- stderr ---
