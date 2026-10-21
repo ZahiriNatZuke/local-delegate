@@ -13,6 +13,11 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ### Corrige
 
 - El panel sigue el tema claro u oscuro del sistema mientras no elijas uno con el botón (tu elección guardada manda), y el diálogo de una delegación escribe los booleanos de los parámetros del backend como `on`/`off`, igual que la CLI, `doctor` y `local_status`.
+- Autocompletado: `uninstall` borra también las carpetas vacías que creó `install` (`Documents/`,
+  `.local/share/local-delegate/`) y nunca una ajena o que ya existía; con HOME simulado la política
+  de PowerShell se marca como supuesta; el `--dry-run` de solo autocompletado acaba con su línea
+  final; y un manifiesto con un idioma desconocido se trata como ilegible (SDD
+  `backlog-minor-leftovers`, L1).
 
 ## [0.38.0] - 2026-10-21
 

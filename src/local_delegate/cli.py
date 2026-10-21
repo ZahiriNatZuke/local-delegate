@@ -187,18 +187,18 @@ def _scaffold_report(home: Path, dry_run: bool) -> None:
 
 
 def _explicit_clients(args: argparse.Namespace) -> bool:
-    """¿Se nombraron clientes? `--target`, o `--clients` con algo distinto de `auto`."""
+    """Were clients named? `--target`, or `--clients` with something other than `auto`."""
     clients = getattr(args, "clients", None) or []
     return bool(getattr(args, "target", None)) or any(c != "auto" for c in clients)
 
 
 def _shell_completion_request(args: argparse.Namespace, uninstall: bool) -> list[str]:
-    """Los valores de `--shell-completion` que hay que atender; `[]` si no toca (REQ-023, REQ-032).
+    """The `--shell-completion` values to act on; `[]` if none apply (REQ-023, REQ-032).
 
-    En `uninstall`, además, uno **sin restricciones** quita el autocompletado de todos los shells.
-    Se define por los datos, no por la forma de las opciones: los cuatro componentes activos, sin
-    clientes explícitos. `--no-client-cli`, `--agents`, `--dry-run`, `--python` y `--home` no son
-    restricciones.
+    In `uninstall`, besides, an **unrestricted** one removes completion from every shell. It is
+    defined by the data, not by the shape of the options: the four components on, with no
+    explicit clients. `--no-client-cli`, `--agents`, `--dry-run`, `--python` and `--home` are not
+    restrictions.
     """
     requested = list(getattr(args, "shell_completion", None) or [])
     if requested or not uninstall:
@@ -219,8 +219,8 @@ def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
     from . import install as inst
 
     home = Path(args.home).expanduser() if args.home else Path.home()
-    # REQ-030, orden fijo: 1) clientes (un error sale con 2 sin escribir nada); 2) idioma;
-    # 3) autocompletado; 4) rama «ningún cliente» o flujo de clientes.
+    # REQ-030, fixed order: 1) clients (an error exits with 2 without writing anything);
+    # 2) language; 3) completion; 4) «no client» branch or the clients flow.
     try:
         targets, reason = _resolve_clients(args, home)
     except ValueError as exc:
@@ -229,7 +229,7 @@ def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
 
     print(t("cli.install.uninstalling" if uninstall else "cli.install.installing", home=home))
     shells = _shell_completion_request(args, uninstall)
-    # `uninstall --shell-completion` sin clientes explícitos solo quita el autocompletado.
+    # `uninstall --shell-completion` without explicit clients only removes completion.
     completion_only = uninstall and bool(args.shell_completion) and not _explicit_clients(args)
     if not completion_only:
         print(t("cli.install.clients", reason=reason))
@@ -294,9 +294,13 @@ def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
     opts = _install_options(args, targets, skip_codex_mcp=skip_codex_mcp)
     if not opts.components:
         if shells:
-            # El autocompletado ya cuenta como algo que hacer: no es «sin componentes» (REQ-030).
+            # Completion already counts as something to do: it is not «no components» (REQ-030).
             print()
-            return 0 if args.dry_run else _completion_exit(completion_failures)
+            if args.dry_run:
+                # Same closing line as the other dry runs (SDD backlog-minor-leftovers, REQ-008).
+                print(t("cli.install.dry_run"))
+                return 0
+            return _completion_exit(completion_failures)
         print(t("cli.install.no_component"), file=sys.stderr)
         return 2
     actions = inst.plan_uninstall(opts) if uninstall else inst.plan_install(opts)

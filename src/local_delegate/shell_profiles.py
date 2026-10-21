@@ -1,21 +1,22 @@
-"""shell_profiles.py — dónde vive el perfil de cada shell y qué política tiene PowerShell.
+"""shell_profiles.py — where each shell keeps its profile and which policy PowerShell has.
 
-Es la parte de ``install --shell-completion`` que no depende del script generado (SDD
-``cli-completion``, lote L3a):
+It is the part of ``install --shell-completion`` that does not depend on the generated script (SDD
+``cli-completion``, batch L3a):
 
-- qué shells se resuelven en esta máquina (REQ-024);
-- la ruta del perfil de cada uno y la política de ejecución de PowerShell (REQ-025, REQ-044);
-- el directorio y los nombres de los ficheros de completado (REQ-026);
-- el texto del bloque de carga que va en el perfil (REQ-027).
+- which shells resolve on this machine (REQ-024);
+- the profile path of each one and the PowerShell execution policy (REQ-025, REQ-044);
+- the directory and the names of the completion files (REQ-026);
+- the text of the load block that goes into the profile (REQ-027).
 
-El escape ASCII de PowerShell del bloque (REQ-018) es ``completion.ps_literal``, el mismo del
-script generado: hay una sola copia, y ``completion`` no importa este módulo, así que no hay ciclo.
+The PowerShell ASCII escaping of the block (REQ-018) is ``completion.ps_literal``, the same one the
+generated script uses: there is a single copy, and ``completion`` does not import this module, so
+there is no cycle.
 
-Nada de aquí escribe en disco. La única salida al sistema es la consulta a PowerShell
-(``query_powershell``), que pasa siempre por ``_default_run``, y el respaldo por la carpeta
-conocida *Documents* (``_documents_folder``). Las dos las sustituye la suite por dobles que fallan
-(fixture ``real_profiles_untouchable`` de ``tests/conftest.py``): así ningún test puede llegar al
-perfil real del usuario, ni siquiera con ``Path.home`` parcheado.
+Nothing here writes to disk. The only ways out to the system are the PowerShell query
+(``query_powershell``), which always goes through ``_default_run``, and the fallback through the
+*Documents* known folder (``_documents_folder``). The suite replaces both with doubles that fail
+(fixture ``real_profiles_untouchable`` in ``tests/conftest.py``), so no test can reach the user's
+real profile, not even with ``Path.home`` patched.
 """
 
 from __future__ import annotations
@@ -35,60 +36,60 @@ from .completion import ps_literal
 from .i18n import t
 from .simulated_home import is_simulated_home
 
-#: Shells con autocompletado, en el orden fijo en que se resuelven.
+#: Shells with completion, in the fixed order in which they are resolved.
 SHELLS = ("powershell", "zsh", "bash")
-#: Ediciones de PowerShell: pwsh 7 y Windows PowerShell 5.1. Comparten fichero de completado.
+#: PowerShell editions: pwsh 7 and Windows PowerShell 5.1. They share one completion file.
 POWERSHELL_EDITIONS = ("pwsh", "powershell")
 
-#: Marcadores del bloque de carga (REQ-027): ASCII, válidos como comentario en los tres shells.
+#: Markers of the load block (REQ-027): ASCII, valid as a comment in the three shells.
 BLOCK_BEGIN = "# >>> local-delegate completion >>>"
 BLOCK_END = "# <<< local-delegate completion <<<"
 
-#: Nombre del fichero de completado de cada shell (REQ-026). El de zsh vale también para `fpath`.
+#: Name of the completion file of each shell (REQ-026). The zsh one also works for `fpath`.
 COMPLETION_FILES = {
     "powershell": "local-delegate.ps1",
     "bash": "local-delegate.bash",
     "zsh": "_local-delegate",
 }
 
-#: Políticas con las que PowerShell no ejecuta el fichero de completado (REQ-044). `Undefined`
-#: resuelve a `Restricted` en un Windows de escritorio.
+#: Policies under which PowerShell does not run the completion file (REQ-044). `Undefined`
+#: resolves to `Restricted` on a desktop Windows.
 BLOCKING_POLICIES = frozenset({"restricted", "allsigned", "undefined"})
-#: Política que se supone con HOME simulado, donde nunca se pregunta al shell (REQ-025).
+#: Policy assumed with a simulated HOME, where the shell is never asked (REQ-025).
 SIMULATED_POLICY = "RemoteSigned"
-#: Valor de la política cuando la consulta falló (REQ-044: se escribe y se avisa).
+#: Policy value when the query failed (REQ-044: the file is written with a warning).
 UNKNOWN_POLICY = "Unknown"
 
-#: Tope de la consulta a PowerShell (REQ-025): pwsh tarda ~250 ms, pero un perfil de máquina
-#: roto o un antivirus pueden colgarla.
+#: Timeout of the PowerShell query (REQ-025): pwsh takes ~250 ms, but a broken machine profile
+#: or an antivirus can hang it.
 QUERY_TIMEOUT = 20
-#: La consulta de REQ-025: ruta del perfil y política efectiva en una sola llamada, en Base64 de
-#: UTF-16 LE para que sobrevivan las tildes y `Documents` redirigido por OneDrive sea cual sea la
-#: página de códigos de la consola.
+#: The query of REQ-025: profile path and effective policy in a single call, in Base64 of
+#: UTF-16 LE so that accents and a `Documents` redirected by OneDrive survive whatever the console
+#: code page is.
 PROFILE_QUERY = (
     "[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes("
     "$PROFILE.CurrentUserAllHosts + [char]10 + (Get-ExecutionPolicy)))"
 )
-#: Variables que se quitan del entorno de la consulta. `PSExecutionPolicyPreference` guarda la
-#: política de ámbito `Process` del padre (un PowerShell abierto con `-ExecutionPolicy Bypass`) y
-#: falsearía la consultada; vale para las dos ediciones.
+#: Variables removed from the environment of the query. `PSExecutionPolicyPreference` holds the
+#: `Process` scope policy of the parent (a PowerShell opened with `-ExecutionPolicy Bypass`) and
+#: would falsify the queried one; it applies to both editions.
 _DROPPED_ALWAYS = frozenset({"PSEXECUTIONPOLICYPREFERENCE"})
-#: `powershell.exe` lanzado desde pwsh hereda su `PSModulePath` y no carga
-#: `Microsoft.PowerShell.Security`: `Get-ExecutionPolicy` falla (research-shells §1).
+#: `powershell.exe` launched from pwsh inherits its `PSModulePath` and does not load
+#: `Microsoft.PowerShell.Security`: `Get-ExecutionPolicy` fails (research-shells §1).
 _DROPPED_WINDOWS_POWERSHELL = frozenset({"PSMODULEPATH"})
 
-#: `FOLDERID_Documents`, para `SHGetKnownFolderPath`.
+#: `FOLDERID_Documents`, for `SHGetKnownFolderPath`.
 _FOLDERID_DOCUMENTS = "{FDD39AD0-238F-46AF-ADB4-6C85480369C7}"
 
-#: Firma del ejecutor de la consulta: recibe la orden, el entorno y el tope.
+#: Signature of the query runner: it receives the command, the environment and the timeout.
 Runner = Callable[..., subprocess.CompletedProcess]
-#: Firma de la consulta a PowerShell: ejecutable → (ruta del perfil, política).
+#: Signature of the PowerShell query: executable → (profile path, policy).
 Query = Callable[[str], "tuple[Path | None, str | None]"]
 
 
 @dataclass(frozen=True)
 class ShellTarget:
-    """Un shell resuelto en esta máquina. ``edition`` solo existe en PowerShell."""
+    """A shell resolved on this machine. ``edition`` only exists for PowerShell."""
 
     shell: str
     edition: str | None
@@ -97,34 +98,37 @@ class ShellTarget:
 
 @dataclass(frozen=True)
 class ShellResolution:
-    """Lo que dio ``resolve_shells``: los shells resueltos y los pedidos que no existen."""
+    """What ``resolve_shells`` gave: the resolved shells and the requested ones that are absent."""
 
     targets: list[ShellTarget] = field(default_factory=list)
     missing: list[str] = field(default_factory=list)
 
     def warnings(self) -> list[str]:
-        """El aviso del catálogo de cada shell pedido que no está (REQ-024)."""
+        """The catalog warning of each requested shell that is not there (REQ-024)."""
         return [t("install.completion.shell_missing", shell=name) for name in self.missing]
 
 
 @dataclass(frozen=True)
 class ProfileLocation:
-    """Dónde está el perfil de un shell y, en PowerShell, su política de ejecución.
+    """Where the profile of a shell is and, for PowerShell, its execution policy.
 
-    ``policy`` es ``None`` en zsh y bash (no tienen), y ``UNKNOWN_POLICY`` si la consulta falló.
+    ``policy`` is ``None`` for zsh and bash (they have none), and ``UNKNOWN_POLICY`` if the query
+    failed. ``assumed`` is true when nobody asked the shell (simulated HOME): the policy is then
+    ``SIMULATED_POLICY``, not the effective one (SDD backlog-minor-leftovers, REQ-007).
     """
 
     path: Path
     policy: str | None = None
+    assumed: bool = False
 
 
-# --- Qué shells (REQ-024) ---------------------------------------------------------------------
+# --- Which shells (REQ-024) ------------------------------------------------------------------
 def git_bash(which: Callable[[str], str | None]) -> str | None:
-    """El ``bash.exe`` de Git for Windows, derivado de dónde está ``git`` (REQ-024, REQ-037).
+    """The ``bash.exe`` of Git for Windows, derived from where ``git`` is (REQ-024, REQ-037).
 
-    ``System32\\bash.exe`` es el de WSL: abre otra máquina, con otro HOME y otro perfil, así que
-    nunca cuenta como «bash existe». Git se instala con ``cmd\\git.exe``, ``bin\\git.exe`` o
-    ``mingw64\\bin\\git.exe`` bajo su raíz, y el bash va siempre en ``<raíz>\\bin\\bash.exe``.
+    ``System32\\bash.exe`` is the WSL one: it opens another machine, with another HOME and another
+    profile, so it never counts as «bash exists». Git installs ``cmd\\git.exe``, ``bin\\git.exe``
+    or ``mingw64\\bin\\git.exe`` under its root, and bash is always ``<root>\\bin\\bash.exe``.
     """
     found = which("git")
     if not found:
@@ -138,7 +142,7 @@ def git_bash(which: Callable[[str], str | None]) -> str | None:
 
 
 def _auto_shells(platform: str, shell_env: str | None) -> list[str]:
-    """Los shells de ``auto`` según la plataforma (REQ-024)."""
+    """The shells of ``auto`` for the platform (REQ-024)."""
     if platform == "win32":
         return ["powershell"]
     if platform == "darwin":
@@ -156,12 +160,12 @@ def resolve_shells(
     which: Callable[[str], str | None] | None = None,
     shell_env: str | None = None,
 ) -> ShellResolution:
-    """Los shells a los que se instala el autocompletado, en el orden fijo de ``SHELLS``.
+    """The shells completion is installed for, in the fixed order of ``SHELLS``.
 
-    ``requested`` son los valores de ``--shell-completion`` (``auto``, ``powershell``, ``zsh``,
-    ``bash``). Un shell pedido sin ejecutable va a ``missing``, con su aviso, y no se escribe nada
-    para él (REQ-024). La política de PowerShell no se mira aquí: la salta quien escribe
-    (REQ-044), con la ruta ya consultada.
+    ``requested`` are the values of ``--shell-completion`` (``auto``, ``powershell``, ``zsh``,
+    ``bash``). A requested shell without an executable goes to ``missing``, with its warning, and
+    nothing is written for it (REQ-024). The PowerShell policy is not checked here: the writer
+    skips it (REQ-044), with the path already queried.
     """
     platform = sys.platform if platform is None else platform
     which = shutil.which if which is None else which
@@ -196,9 +200,9 @@ def _executables(
     return [ShellTarget(shell, None, exe)] if exe else []
 
 
-# --- Consulta a PowerShell (REQ-025) ----------------------------------------------------------
+# --- PowerShell query (REQ-025) -----------------------------------------------------------
 def _default_run(cmd: list[str], *, env: Mapping[str, str], timeout: float):
-    """El ejecutor real de la consulta. La suite lo sustituye por un doble que falla."""
+    """The real runner of the query. The suite replaces it with a double that fails."""
     return subprocess.run(
         cmd,
         env=dict(env),
@@ -214,7 +218,8 @@ def _is_windows_powershell(executable: str) -> bool:
 
 
 def query_environment(executable: str, environ: Mapping[str, str] | None = None) -> dict[str, str]:
-    """El entorno de la consulta: el actual sin las variables que la falsearían (REQ-025)."""
+    """The environment of the query: the current one minus the variables that would falsify it
+    (REQ-025)."""
     environ = os.environ if environ is None else environ
     dropped = set(_DROPPED_ALWAYS)
     if _is_windows_powershell(executable):
@@ -223,7 +228,7 @@ def query_environment(executable: str, environ: Mapping[str, str] | None = None)
 
 
 def decode_query_output(stdout: bytes | str) -> tuple[Path | None, str | None]:
-    """Ruta y política de la salida en Base64 de la consulta; ``(None, None)`` si no se entiende."""
+    """Path and policy from the Base64 output of the query; ``(None, None)`` if unreadable."""
     text = stdout.decode("ascii", "replace") if isinstance(stdout, bytes) else stdout
     try:
         decoded = base64.b64decode(text.strip(), validate=True).decode("utf-16-le")
@@ -231,7 +236,7 @@ def decode_query_output(stdout: bytes | str) -> tuple[Path | None, str | None]:
         return None, None
     path_text, _, policy = decoded.partition("\n")
     path_text = path_text.strip()
-    # Absoluta en cualquiera de los dos sistemas: la decodificación no depende de dónde corre.
+    # Absolute in either system: decoding does not depend on where it runs.
     absolute = PureWindowsPath(path_text).is_absolute() or PurePosixPath(path_text).is_absolute()
     if not path_text or not absolute:
         return None, None
@@ -241,11 +246,11 @@ def decode_query_output(stdout: bytes | str) -> tuple[Path | None, str | None]:
 def query_powershell(
     executable: str, *, run: Runner | None = None, environ: Mapping[str, str] | None = None
 ) -> tuple[Path | None, str | None]:
-    """Pregunta a una edición de PowerShell la ruta de ``$PROFILE.CurrentUserAllHosts`` y la
-    política efectiva, en una sola llamada (REQ-025).
+    """Asks a PowerShell edition for the path of ``$PROFILE.CurrentUserAllHosts`` and the
+    effective policy, in a single call (REQ-025).
 
-    Devuelve ``(None, None)`` si la consulta falla, vence el tope o devuelve algo ilegible: quien
-    llama usa entonces la ruta de respaldo y la política desconocida.
+    Returns ``(None, None)`` if the query fails, times out or returns something unreadable: the
+    caller then uses the fallback path and the unknown policy.
     """
     runner = _default_run if run is None else run
     cmd = [executable, "-NoProfile", "-NonInteractive", "-Command", PROFILE_QUERY]
@@ -259,15 +264,15 @@ def query_powershell(
 
 
 def _documents_folder() -> Path | None:
-    """La carpeta conocida *Documents* de Windows (sigue a OneDrive), o ``None``.
+    """The Windows *Documents* known folder (it follows OneDrive), or ``None``.
 
-    La suite lo sustituye por un doble que falla: es la otra vía, además de la consulta, por la
-    que un test llegaría a la carpeta real del usuario.
+    The suite replaces it with a double that fails: it is the other way, besides the query, by
+    which a test would reach the user's real folder.
     """
     if sys.platform != "win32":
         return None
     try:
-        import ctypes.wintypes  # enlaza también `ctypes`
+        import ctypes.wintypes  # also binds `ctypes`
 
         class _Guid(ctypes.Structure):
             _fields_ = [
@@ -295,17 +300,17 @@ def _documents_folder() -> Path | None:
             return Path(ctypes.wstring_at(buffer.value))
         finally:
             windll.ole32.CoTaskMemFree(buffer)
-    except Exception:  # es un respaldo: cualquier fallo deja el último recurso
+    except Exception:  # it is a fallback: any failure leaves the last resort
         return None
 
 
-# --- Rutas de perfil (REQ-025) ----------------------------------------------------------------
+# --- Profile paths (REQ-025) ------------------------------------------------------------------
 def _powershell_subdir(edition: str | None) -> str:
     return "WindowsPowerShell" if edition == "powershell" else "PowerShell"
 
 
 def simulated_profile(target: ShellTarget, home: Path, *, platform: str | None = None) -> Path:
-    """La ruta del perfil con HOME simulado: sale siempre de ``home`` (REQ-025)."""
+    """The profile path with a simulated HOME: it always comes from ``home`` (REQ-025)."""
     platform = sys.platform if platform is None else platform
     if target.shell == "powershell":
         if platform == "win32":
@@ -327,18 +332,22 @@ def profile_path(
     known_folder: Callable[[], Path | None] | None = None,
     simulated_policy: str = SIMULATED_POLICY,
 ) -> ProfileLocation:
-    """La ruta del perfil de ``target`` y, en PowerShell, su política (REQ-025).
+    """The profile path of ``target`` and, for PowerShell, its policy (REQ-025).
 
-    Con HOME simulado nunca se pregunta al shell ni se mira ``ZDOTDIR``: la ruta sale de ``home``
-    y la política es ``simulated_policy``. Con HOME real, PowerShell responde a la consulta; si
-    falla, la ruta sale de la carpeta conocida *Documents* (en Windows) y la política queda
-    desconocida.
+    With a simulated HOME the shell is never asked and ``ZDOTDIR`` is not read: the path comes
+    from ``home`` and the policy is ``simulated_policy``, marked as assumed. With the real HOME,
+    PowerShell answers the query; if it fails, the path comes from the *Documents* known folder
+    (on Windows) and the policy is unknown.
     """
     platform = sys.platform if platform is None else platform
     environ = os.environ if environ is None else environ
     if simulated:
-        policy = simulated_policy if target.shell == "powershell" else None
-        return ProfileLocation(simulated_profile(target, home, platform=platform), policy)
+        powershell = target.shell == "powershell"
+        return ProfileLocation(
+            simulated_profile(target, home, platform=platform),
+            simulated_policy if powershell else None,
+            assumed=powershell,
+        )
 
     if target.shell == "powershell":
         ask = query_powershell if query is None else query
@@ -368,15 +377,16 @@ def _fallback_powershell_profile(
 
 
 def policy_blocks(policy: str | None) -> bool:
-    """¿Esta política impide ejecutar el fichero de completado? (REQ-044).
+    """Does this policy prevent running the completion file? (REQ-044).
 
-    Una política desconocida no bloquea: se escribe y se avisa de que no se pudo comprobar.
+    An unknown policy does not block: the file is written with a warning that it could not be
+    checked.
     """
     return bool(policy) and policy.strip().lower() in BLOCKING_POLICIES
 
 
 def policy_warning(target: ShellTarget, policy: str | None) -> str | None:
-    """El aviso de REQ-044 para una edición de PowerShell, o ``None`` si no hay nada que decir."""
+    """The REQ-044 warning for a PowerShell edition, or ``None`` if there is nothing to say."""
     if target.shell != "powershell" or policy is None:
         return None
     edition = target.edition or "pwsh"
@@ -388,17 +398,19 @@ def policy_warning(target: ShellTarget, policy: str | None) -> str | None:
 
 
 def policy_note(target: ShellTarget, location: ProfileLocation) -> str | None:
-    """La línea de REQ-040 para una edición de PowerShell: ruta del perfil y política efectiva.
+    """The REQ-040 line for a PowerShell edition: profile path and effective policy.
 
-    Se enseña siempre, deje pasar o bloquee la política; ``None`` en zsh y bash.
+    It is always shown, whether the policy lets the file run or blocks it; ``None`` for zsh and
+    bash. With a simulated HOME the line says the policy is the assumed one (REQ-007).
     """
     if target.shell != "powershell" or location.policy is None:
         return None
     policy = location.policy
     if policy == UNKNOWN_POLICY:
         policy = t("install.completion.policy_unknown_value")
+    key = "policy_note_assumed" if location.assumed else "policy_note"
     return t(
-        "install.completion.policy_note",
+        f"install.completion.{key}",
         edition=target.edition or "pwsh",
         path=location.path,
         policy=policy,
@@ -416,12 +428,12 @@ def candidate_profiles(
     known_folder: Callable[[], Path | None] | None = None,
     shells: Sequence[str] = SHELLS,
 ) -> list[Path]:
-    """Los perfiles de REQ-025 que existen, para que ``uninstall`` limpie aunque falte el
-    manifiesto (REQ-032): las dos ediciones de PowerShell, ``.zshrc``, ``.bashrc`` y
-    ``.bash_profile``. ``shells`` los limita a esos shells (un ``uninstall`` parcial).
+    """The REQ-025 profiles that exist, so that ``uninstall`` cleans up even without the
+    manifest (REQ-032): both PowerShell editions, ``.zshrc``, ``.bashrc`` and ``.bash_profile``.
+    ``shells`` limits them to those shells (a partial ``uninstall``).
 
-    Con HOME real solo se pregunta a las ediciones de PowerShell instaladas; para las demás vale
-    la ruta de respaldo.
+    With the real HOME only the installed PowerShell editions are asked; for the others the
+    fallback path is used.
     """
     platform = sys.platform if platform is None else platform
     which = shutil.which if which is None else which
@@ -457,15 +469,15 @@ def candidate_profiles(
     return unique
 
 
-# --- Ficheros de completado y bloque de carga (REQ-026, REQ-027) ------------------------------
+# --- Completion files and load block (REQ-026, REQ-027) ---------------------------------------
 def completion_dir(home: Path, data_dir: Path | None = None) -> Path:
-    """El directorio de los ficheros de completado: ``<datos>/completion`` (REQ-026).
+    """The directory of the completion files: ``<data>/completion`` (REQ-026).
 
-    Es la **única** derivación, la que usan ``install``, ``uninstall``, ``update`` y el check.
-    ``<datos>`` es ``data_dir`` si se da; si no, ``config.LOG_DIR`` con HOME real o con
-    ``LOCAL_DELEGATE_LOG_DIR`` fijada; y con HOME simulado sin esa variable,
-    ``<home>/.local/share/local-delegate``, para que el sandbox no escriba fuera de su HOME
-    (desviación 2).
+    It is the **only** derivation, the one ``install``, ``uninstall``, ``update`` and the check
+    use. ``<data>`` is ``data_dir`` if given; otherwise ``config.LOG_DIR`` with the real HOME or
+    with ``LOCAL_DELEGATE_LOG_DIR`` set; and with a simulated HOME without that variable,
+    ``<home>/.local/share/local-delegate``, so that the sandbox does not write outside its HOME
+    (deviation 2).
     """
     if data_dir is not None:
         base = Path(data_dir)
@@ -479,23 +491,23 @@ def completion_dir(home: Path, data_dir: Path | None = None) -> Path:
 
 
 def completion_file(directory: Path, shell: str) -> Path:
-    """El fichero de completado de ``shell`` dentro de ``directory`` (REQ-026)."""
+    """The completion file of ``shell`` inside ``directory`` (REQ-026)."""
     return directory / COMPLETION_FILES[shell]
 
 
 def posix_single_quoted(text: str) -> str:
-    """``text`` entre comillas simples de sh, con ``'`` escrita como ``'\\''`` (REQ-027)."""
+    """``text`` in sh single quotes, with ``'`` written as ``'\\''`` (REQ-027)."""
     return "'" + text.replace("'", "'\\''") + "'"
 
 
 def load_block(shell: str, file_path: Path | PurePath) -> str:
-    """El bloque de carga de REQ-027, con sus marcadores y sin salto final.
+    """The REQ-027 load block, with its markers and no final newline.
 
-    Solo carga el fichero si existe. La ruta va con barras ``/`` (en Windows, también): PowerShell,
-    Git Bash y zsh las entienden, y así el bloque no depende de escapar ``\\``.
+    It only loads the file if it exists. The path uses ``/`` (on Windows too): PowerShell, Git
+    Bash and zsh understand it, so the block does not depend on escaping ``\\``.
     """
-    # `as_posix` del propio objeto: `PurePath(file_path)` lo pasaría al sabor del sistema, y en
-    # POSIX una ruta de Windows conservaría sus `\`.
+    # `as_posix` of the object itself: `PurePath(file_path)` would turn it into the system flavour,
+    # and on POSIX a Windows path would keep its `\`.
     posix = file_path.as_posix()
     if shell == "powershell":
         quoted = ps_literal(posix)

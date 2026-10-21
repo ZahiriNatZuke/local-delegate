@@ -163,11 +163,11 @@ class Repair:
 # `scaffold.mcp_codex`: no se pisa configuración escrita por una persona. El aviso dice qué pasa y
 # qué comando lo arregla; ejecutarlo es del usuario.
 #
-# `scaffold.shell_completion` tampoco está, y no porque no se repare: su refresco es un paso propio
-# (`plan_completion_refresh`), porque un `Repair` solo actúa sobre clientes presentes y el
-# autocompletado no pertenece a ningún cliente; en una máquina sin clientes nunca se habría
-# regenerado. Su `warn` de «bloque borrado» o «fichero ausente» no lo repone `update`: lo dice su
-# `fix_hint` (`install --shell-completion`), porque reescribir un perfil es una decisión del usuario.
+# `scaffold.shell_completion` is not listed either, and not because it is not repaired: its refresh
+# is a step of its own (`plan_completion_refresh`), because a `Repair` only acts on clients that are
+# present and completion belongs to no client; on a machine without clients it would never have
+# been regenerated. Its «block deleted» or «file missing» `warn` is not restored by `update`: its
+# `fix_hint` says so (`install --shell-completion`), because rewriting a profile is the user's call.
 REPAIRS: tuple[Repair, ...] = (
     Repair(
         "scaffold.hook_files",
@@ -360,7 +360,7 @@ def plan_repairs(
         if (
             hint
             and check.id not in {r.check_id for r in REPAIRS}
-            # «Ejecuta `update`» dicho desde `update`: lo resuelve `plan_completion_refresh`.
+            # «Run `update`» said from `update`: `plan_completion_refresh` takes care of it.
             and hint != checks.SHELL_COMPLETION_UPDATE_HINT
         ):
             notes.append(f"{check.title}: {hint}")
@@ -389,18 +389,18 @@ def without_migrated_renames(hint: str, migrated: Collection[deprecations.Deprec
 
 
 def plan_completion_refresh(opts: Options) -> list[install.Action]:
-    """Regenera los ficheros de autocompletado listados que estén viejos (REQ-034).
+    """Regenerates the listed completion files that are stale (REQ-034).
 
-    En el idioma **configurado** (el de `plan_language`, como `plan_catalog_refresh`), así que
-    resuelve una versión nueva y también un cambio de idioma; el manifiesto pasa a decir ese
-    idioma y la versión instalada. Paso propio y fuera de `REPAIRS`: `run_update` lo llama siempre,
-    haya o no clientes en la máquina. Un fichero listado que falta o no se puede leer se deja (el
-    check de `doctor` lo manda a `install --shell-completion`), no se crean ficheros no listados
-    ni se tocan perfiles, y sin manifiesto (o con uno ilegible) no hay nada que hacer. Solo lee:
-    escribe `install.apply`.
+    In the **configured** language (the one of `plan_language`, like `plan_catalog_refresh`), so
+    it handles a new version and also a language change; the manifest then states that language
+    and the installed version. A step of its own, outside `REPAIRS`: `run_update` always calls it,
+    whether or not there are clients on the machine. A listed file that is missing or unreadable is
+    left alone (the `doctor` check sends it to `install --shell-completion`), no unlisted files are
+    created and no profiles are touched, and without a manifest (or with an unreadable one) there
+    is nothing to do. It only reads: `install.apply` writes.
 
-    Vive aquí y no en `completion`: allí tendría que importar `install` y `shell_profiles`, que
-    importan `completion`, y CodeQL marca ese ciclo (`py/cyclic-import`).
+    It lives here and not in `completion`: there it would have to import `install` and
+    `shell_profiles`, which import `completion`, and CodeQL flags that cycle (`py/cyclic-import`).
     """
     from .version import get_version
 
