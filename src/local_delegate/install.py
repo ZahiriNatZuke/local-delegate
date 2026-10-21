@@ -39,6 +39,7 @@ from pathlib import Path, PurePath
 from . import config, i18n, shell_profiles
 from .i18n import t
 from .resources.hooks import hook_common
+from .simulated_home import is_simulated_home
 
 # Marcadores de los bloques gestionados en archivos que también edita el usuario.
 MD_BEGIN = "<!-- local-delegate:begin -->"
@@ -147,18 +148,8 @@ def resources_dir() -> Path:
 # Las dos las necesitan `install`, `update` y el CLI. Viven aquí —el módulo más bajo de los
 # tres— porque tenerlas duplicadas es exactamente la clase de verdad repartida que ya costó
 # caro en este repo (tres copias de la cuenta de tokens, dos derivaciones del host del daemon).
-def is_simulated_home(home: Path) -> bool:
-    """True si ``home`` apunta fuera del HOME real: entonces no se toca nada global.
-
-    «Global» son dos cosas distintas y las dos importan: los servicios de la máquina (lo que ya
-    cuidaba ``update``) y el binario ``claude``, que con ``mcp add-json --scope user`` escribe
-    **siempre** en el ``~/.claude.json`` del usuario que ejecuta, ignorando cualquier ``--home``.
-    """
-    try:
-        return home.resolve() != Path.home().resolve()
-    except OSError:
-        # Una ruta irresoluble se trata como simulada: el lado seguro es no tocar lo global.
-        return True
+# `is_simulated_home` vive en `simulated_home` (la usa también `shell_profiles`, que este módulo
+# importa) y se reexporta arriba con el mismo nombre.
 
 
 def opencode_dir(home: Path) -> Path:

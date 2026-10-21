@@ -29,6 +29,7 @@ from pathlib import Path, PurePath, PurePosixPath, PureWindowsPath
 
 from . import config
 from .i18n import t
+from .simulated_home import is_simulated_home
 
 #: Shells con autocompletado, en el orden fijo en que se resuelven.
 SHELLS = ("powershell", "zsh", "bash")
@@ -262,14 +263,13 @@ def _documents_folder() -> Path | None:
     if sys.platform != "win32":
         return None
     try:
-        import ctypes
-        from ctypes import wintypes
+        import ctypes.wintypes  # enlaza también `ctypes`
 
         class _Guid(ctypes.Structure):
             _fields_ = [
-                ("Data1", wintypes.DWORD),
-                ("Data2", wintypes.WORD),
-                ("Data3", wintypes.WORD),
+                ("Data1", ctypes.wintypes.DWORD),
+                ("Data2", ctypes.wintypes.WORD),
+                ("Data3", ctypes.wintypes.WORD),
                 ("Data4", ctypes.c_ubyte * 8),
             ]
 
@@ -443,9 +443,6 @@ def completion_dir(home: Path, data_dir: Path | None = None) -> Path:
     if data_dir is not None:
         base = Path(data_dir)
     else:
-        # Import diferido: `install` importa este módulo y `is_simulated_home` vive allí.
-        from .install import is_simulated_home
-
         explicit = (os.environ.get("LOCAL_DELEGATE_LOG_DIR") or "").strip()
         if explicit or not is_simulated_home(home):
             base = Path(config.LOG_DIR)
