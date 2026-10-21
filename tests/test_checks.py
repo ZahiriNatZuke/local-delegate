@@ -1975,9 +1975,12 @@ def test_deprecated_names_warns_old_switch_file_left_on_disk(monkeypatch, tmp_pa
 
 
 def test_deprecated_names_survives_unreadable_settings_json(monkeypatch, tmp_path):
+    """No revienta, pero ya no calla: un `env` que no se pudo leer es `WARN` con el motivo (L7)."""
     _test_registry(monkeypatch, tmp_path)
     (tmp_path / ".claude" / "settings.json").write_text("{no es json", encoding="utf-8")
-    assert checks._probe_deprecated_names(checks.Context(home=tmp_path)).status == checks.OK
+    r = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+    assert r.status == checks.WARN and "no es JSON válido" in r.detail
+    assert r.fix_hint == ""
 
 
 # --- config.deprecated_names con retirados con sucesor (REQ-012, registro sintético) ---
@@ -2050,3 +2053,105 @@ def test_retired_renamed_read_by_hooks_warns_with_rename(monkeypatch, tmp_path):
     _retired_registry(monkeypatch, tmp_path, telemetry=log)
     r = checks._probe_deprecated_names(checks.Context(home=tmp_path))
     _assert_retired_warning(r, *_RETIRED_ENV)
+
+
+# --- Telemetría ya migrada y settings.json ilegible (REQ-012, L7) ---------------------------
+def _telemetry_at(path, *stamps):
+    path.write_text(
+        "".join(
+            json.dumps({"ts": ts.isoformat(), "deprecated_names": [_RETIRED_ENV[0]]}) + "\n"
+            for ts in stamps
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def _migration_record(directory, **names):
+    (directory / install.RETIRED_NAMES_MIGRATION_FILE).write_text(
+        json.dumps({"names": {old: ts.isoformat() for old, ts in names.items()}}),
+        encoding="utf-8",
+    )
+
+
+def _telemetry_case(monkeypatch, tmp_path, event_at, record):
+    """Evento de telemetría en `event_at` y registro de migración `record` en `ctx.log_dir`."""
+    log = _telemetry_at(tmp_path / "telemetry.jsonl", event_at)
+    _retired_registry(monkeypatch, tmp_path, telemetry=log)
+    data = tmp_path / "data"
+    data.mkdir()
+    if record:
+        _migration_record(data, **record)
+    return checks._probe_deprecated_names(checks.Context(home=tmp_path, log_dir=data))
+
+
+def _times():
+    from datetime import UTC, datetime, timedelta
+
+    t1 = datetime.now(UTC) - timedelta(hours=1)
+    return t1 - timedelta(hours=1), t1, t1 + timedelta(minutes=30)
+
+
+def test_telemetry_before_the_migration_of_that_name_does_not_warn(monkeypatch, tmp_path):
+    t0, t1, _t2 = _times()
+    r = _telemetry_case(monkeypatch, tmp_path, t0, {_RETIRED_ENV[0]: t1})
+    assert r.status == checks.OK, r.detail
+
+
+def test_telemetry_after_the_migration_still_warns(monkeypatch, tmp_path):
+    _t0, t1, t2 = _times()
+    r = _telemetry_case(monkeypatch, tmp_path, t2, {_RETIRED_ENV[0]: t1})
+    _assert_retired_warning(r, *_RETIRED_ENV)
+
+
+def test_telemetry_with_another_name_migrated_still_warns(monkeypatch, tmp_path):
+    t0, t1, _t2 = _times()
+    r = _telemetry_case(monkeypatch, tmp_path, t0, {_RETIRED_SWITCH[0]: t1})
+    _assert_retired_warning(r, *_RETIRED_ENV)
+
+
+def test_telemetry_without_a_migration_record_warns(monkeypatch, tmp_path):
+    t0, _t1, _t2 = _times()
+    r = _telemetry_case(monkeypatch, tmp_path, t0, None)
+    _assert_retired_warning(r, *_RETIRED_ENV)
+
+
+def test_two_successive_migrations_keep_both_dates_for_the_check(monkeypatch, tmp_path):
+    """El registro lo escribe la migración de verdad: dos nombres, dos corridas, dos fechas."""
+    from datetime import UTC, datetime, timedelta
+
+    t0 = datetime.now(UTC) - timedelta(hours=2)
+    log = _telemetry_at(tmp_path / "telemetry.jsonl", t0)
+    _retired_registry(monkeypatch, tmp_path, telemetry=log)
+    data = tmp_path / "data"
+    (tmp_path / ".claude" / "settings.json").write_text(
+        json.dumps({"env": {_RETIRED_ENV[0]: "1"}}), encoding="utf-8"
+    )
+    quiet = {"dry_run": False, "out": lambda *a: None}
+    install.apply(install.plan_retired_name_migration(tmp_path, data), **quiet)
+    (tmp_path / ".claude" / _RETIRED_SWITCH[0]).write_text("", encoding="utf-8")
+    install.apply(install.plan_retired_name_migration(tmp_path, data), **quiet)
+    assert set(install.read_migration_record(data)) == {_RETIRED_ENV[0], _RETIRED_SWITCH[0]}
+    r = checks._probe_deprecated_names(checks.Context(home=tmp_path, log_dir=data))
+    assert r.status == checks.OK, r.detail
+
+
+def test_the_check_reads_the_record_from_the_migration_data_dir(monkeypatch, tmp_path):
+    """Sin `ctx.log_dir`, el registro se busca donde lo deja la migración (la misma regla)."""
+    t0, t1, _t2 = _times()
+    log = _telemetry_at(tmp_path / "telemetry.jsonl", t0)
+    _retired_registry(monkeypatch, tmp_path, telemetry=log)
+    data = install.data_dir_for(tmp_path)
+    assert data is not None  # la suite fija LOCAL_DELEGATE_LOG_DIR
+    _migration_record(data, **{_RETIRED_ENV[0]: t1})
+    r = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+    assert r.status == checks.OK, r.detail
+
+
+def test_unreadable_settings_json_warns_with_the_reason(monkeypatch, tmp_path):
+    _retired_registry(monkeypatch, tmp_path)
+    (tmp_path / ".claude" / "settings.json").write_text("{no es json", encoding="utf-8")
+    r = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+    assert r.status == checks.WARN
+    assert "no se pudo leer el env de settings.json" in r.detail
+    assert "JSON" in r.detail

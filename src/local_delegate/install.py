@@ -24,6 +24,7 @@ Todo es idempotente y reversible:
 
 from __future__ import annotations
 
+import codecs
 import contextlib
 import json
 import os
@@ -34,10 +35,11 @@ import sys
 import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from importlib.resources import files as _resource_files
 from pathlib import Path, PurePath
 
-from . import completion, config, i18n, shell_profiles
+from . import completion, config, deprecations, i18n, shell_profiles
 from .i18n import t
 from .resources.hooks import hook_common
 from .simulated_home import is_simulated_home
@@ -208,7 +210,7 @@ def _quote(path: str) -> str:
 class Action:
     """Un cambio concreto sobre el sistema de archivos o la config de un cliente."""
 
-    kind: str  # copy | settings | markdown | toml | mcp | remove
+    kind: str  # copy | settings | markdown | toml | mcp | remove | migrate
     target: Path | str
     detail: str
     run: object = field(repr=False, default=None)  # callable() -> str | None
@@ -1564,6 +1566,9 @@ class Options:
     # La regla del idioma, inyectable para los tests: recibe el directorio de datos y devuelve la
     # resolución de REQ-018. `None` = `hook_common.resolve_language` con el entorno del proceso.
     language_probe: Callable[[Path], hook_common.LanguageResolution] | None = None
+    # REQ-016: con Claude en el plan, `install` migra antes los nombres retirados. `update` lo pone
+    # a False en las llamadas por reparación: él migra una sola vez, como primer paso (REQ-014).
+    migrate_retired_names: bool = True
 
 
 # --- La preferencia de idioma (REQ-047, D11) ----------------------------------
@@ -1589,18 +1594,24 @@ class LanguagePlan:
     stored: dict | None = None
 
 
-def language_dir(opts: Options) -> Path | None:
-    """El directorio de datos donde va `language.json`, o `None` si no se debe tocar.
+def data_dir_for(home: Path, data_dir: Path | None = None) -> Path | None:
+    """El directorio de datos del instalador para `home`, o `None` si no se debe tocar.
 
-    Es `config.LOG_DIR`, el mismo que leen el CLI, el servidor y los hooks (REQ-047). Con un HOME
-    simulado no se toca, porque `language.json` no vive en el HOME y `--home` es un sandbox: solo
-    se escribe si además se eligió el directorio de datos con `LOCAL_DELEGATE_LOG_DIR`.
+    `data_dir` si se da; si no, `config.LOG_DIR`, el mismo que leen el CLI, el servidor y los hooks
+    (REQ-047). Con un HOME simulado no se toca, porque el directorio de datos no vive en el HOME y
+    `--home` es un sandbox: solo vale si además se eligió con `LOCAL_DELEGATE_LOG_DIR`. Lo usan
+    `language.json` y el registro de la migración de nombres retirados (REQ-015).
     """
-    if opts.data_dir is not None:
-        return opts.data_dir
-    if is_simulated_home(opts.home) and not os.environ.get("LOCAL_DELEGATE_LOG_DIR", "").strip():
+    if data_dir is not None:
+        return data_dir
+    if is_simulated_home(home) and not os.environ.get("LOCAL_DELEGATE_LOG_DIR", "").strip():
         return None
     return Path(config.LOG_DIR)
+
+
+def language_dir(opts: Options) -> Path | None:
+    """El directorio de datos donde va `language.json`, o `None` si no se debe tocar."""
+    return data_dir_for(opts.home, opts.data_dir)
 
 
 def _stored_preference(path: Path) -> dict | None:
@@ -1670,6 +1681,247 @@ def language_action(plan: LanguagePlan) -> Action | None:
         return t("install.language.written", path=path)
 
     return Action("language", plan.path, detail, _run, literal=content)
+
+
+# --- Migración de nombres retirados con sucesor (REQ-015, REQ-016, REQ-017) ---------------
+#: Registro de la migración, en el directorio de datos: una fecha UTC por nombre viejo y ningún
+#: valor (`{"names": {"<viejo>": "<ts>"}}`). Lo lee `doctor` para no pedir «renombra» por eventos
+#: de telemetría anteriores a la migración (REQ-012).
+RETIRED_NAMES_MIGRATION_FILE = "retired-names-migration.json"
+#: Base de la copia propia de `settings.json` antes de migrar su `env`. No es la `.bak` genérica:
+#: esa la pisaría la siguiente escritura de la misma corrida (la reparación de hooks).
+RETIRED_NAMES_BACKUP = "settings.json.retired-names"
+
+
+def retired_names_with_successor(surface: str) -> tuple[deprecations.DeprecatedName, ...]:
+    """Retirados con sucesor cuya superficie efectiva es `surface` (`env_var` o `switch_file`).
+
+    Solo estos se migran: un alias vigente aún funciona y no se toca (desviación 10).
+    """
+    return tuple(
+        e
+        for e in deprecations.DEPRECATED_NAMES
+        if e.is_retired and e.new is not None and deprecations.effective_kind(e) == surface
+    )
+
+
+def read_migration_record(directory: Path | None) -> dict[str, datetime]:
+    """Fecha de migración de cada nombre viejo; vacío sin directorio, sin registro o ilegible."""
+    if directory is None:
+        return {}
+    names = _read_json(directory / RETIRED_NAMES_MIGRATION_FILE).get("names")
+    if not isinstance(names, dict):
+        return {}
+    record: dict[str, datetime] = {}
+    for old, stamp in names.items():
+        try:
+            when = datetime.fromisoformat(str(stamp))
+        except ValueError:
+            continue
+        record[old] = when if when.tzinfo is not None else when.replace(tzinfo=UTC)
+    return record
+
+
+def _record_migration(directory: Path | None, names: Sequence[str]) -> str:
+    """Fusiona en el registro la fecha de ahora para `names`; devuelve la línea que lo cuenta."""
+    if directory is None:
+        return t("install.migrate.record_skipped")
+    path = directory / RETIRED_NAMES_MIGRATION_FILE
+    stored = _read_json(path).get("names")
+    merged = dict(stored) if isinstance(stored, dict) else {}
+    now = datetime.now(UTC).isoformat()
+    merged.update(dict.fromkeys(names, now))
+    payload = json.dumps({"names": merged}, ensure_ascii=False, indent=2) + "\n"
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(payload.encode("utf-8"))
+    except OSError as exc:
+        return t("install.migrate.record_failed", path=path, reason=exc.strerror or exc)
+    return t("install.migrate.record_written", path=path)
+
+
+def _read_settings_for_migration(path: Path) -> tuple[dict | None, bytes, str | None]:
+    """`(datos, bytes, motivo)` de `settings.json` para migrar su `env`.
+
+    Sin fichero: `(None, b"", None)`. Si no se puede migrar (no se lee, no es UTF-8, no es JSON,
+    no es un objeto o su `env` no es un objeto): `(None, bytes, motivo)`. Lee con `utf-8-sig`, así
+    que un fichero con BOM (PowerShell 5.1 con `-Encoding UTF8`) se migra igual.
+    """
+    try:
+        raw = path.read_bytes()
+    except FileNotFoundError:
+        return None, b"", None
+    except OSError as exc:
+        return None, b"", str(exc.strerror or exc)
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return None, raw, t("install.migrate.reason.not_utf8")
+    try:
+        data = json.loads(text)
+    except ValueError:
+        return None, raw, t("install.migrate.reason.not_json")
+    if not isinstance(data, dict):
+        return None, raw, t("install.migrate.reason.not_object")
+    if "env" in data and not isinstance(data["env"], dict):
+        return None, raw, t("install.migrate.reason.env_not_object")
+    return data, raw, None
+
+
+def _migrated_env(env: dict) -> tuple[dict, list[deprecations.DeprecatedName]]:
+    """El `env` con los retirados migrados y cuáles se migraron.
+
+    Viejo solo: la clave pasa a llamarse como el nuevo, mismo valor y misma posición. Los dos: se
+    quita el viejo, que ya perdía frente al nuevo.
+    """
+    moved = [e for e in retired_names_with_successor("env_var") if e.old in env]
+    result = dict(env)
+    for entry in moved:
+        if entry.new in result:
+            del result[entry.old]
+        else:
+            result = {(entry.new if k == entry.old else k): v for k, v in result.items()}
+    return result, moved
+
+
+def _switch_to_migrate(claude: Path, entry: deprecations.DeprecatedName) -> bool:
+    """¿El interruptor viejo es un fichero normal? Un directorio o un enlace no se tocan."""
+    old = claude / entry.old
+    return old.is_file() and not old.is_symlink()
+
+
+def retired_names_to_migrate(home: Path) -> tuple[deprecations.DeprecatedName, ...]:
+    """Los retirados que la migración cubre en `<home>/.claude/`: `env` de `settings.json` e
+    interruptores. Solo lee. `update` lo usa para quitar de sus notas el «renombra» de lo migrado.
+    """
+    claude = home / ".claude"
+    data, _raw, _reason = _read_settings_for_migration(claude / "settings.json")
+    env = data.get("env") if data else None
+    in_env = _migrated_env(env)[1] if isinstance(env, dict) else []
+    switches = [
+        e for e in retired_names_with_successor("switch_file") if _switch_to_migrate(claude, e)
+    ]
+    return (*in_env, *switches)
+
+
+def _names(entries: Sequence[deprecations.DeprecatedName]) -> str:
+    """`VIEJO → NUEVO, …`: solo nombres, nunca valores (el `env` puede llevar claves, REQ-017)."""
+    return ", ".join(f"{e.old} → {e.new}" for e in entries)
+
+
+def _retired_names_backup(path: Path, raw: bytes, stamp: str) -> Path:
+    """Copia `raw` a la primera copia libre, sin pisar nunca otra (REQ-015).
+
+    `settings.json.retired-names.bak`; si existe, `….<stamp>.bak` (UTC); y si también, con sufijo
+    de desempate `-1`, `-2`… Apertura exclusiva (`xb`): ni dos corridas en el mismo segundo se
+    pisan. La copia conserva los permisos del original.
+    """
+    attempt = 0
+    while True:
+        if attempt == 0:
+            name = f"{RETIRED_NAMES_BACKUP}.bak"
+        elif attempt == 1:
+            name = f"{RETIRED_NAMES_BACKUP}.{stamp}.bak"
+        else:
+            name = f"{RETIRED_NAMES_BACKUP}.{stamp}-{attempt - 1}.bak"
+        attempt += 1
+        candidate = path.with_name(name)
+        try:
+            with candidate.open("xb") as handle:
+                handle.write(raw)
+        except FileExistsError:
+            continue
+        shutil.copymode(path, candidate)
+        return candidate
+
+
+def _write_migrated_settings(path: Path, raw: bytes, data: dict) -> Path:
+    """Copia propia y luego `settings.json` de una vez, con su fin de línea y su BOM."""
+    backup = _retired_names_backup(path, raw, datetime.now(UTC).strftime("%Y%m%d%H%M%S"))
+    newline = "\r\n" if b"\r\n" in raw else "\n"
+    text = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+    payload = text.replace("\n", newline).encode("utf-8")
+    if raw.startswith(codecs.BOM_UTF8):
+        payload = codecs.BOM_UTF8 + payload
+    path.write_bytes(payload)
+    return backup
+
+
+def _run_env_migration(path: Path, directory: Path | None) -> str:
+    """Migra el `env` **releyendo** `settings.json` al aplicar, como `_run_settings`: así se
+    combina con cualquier otra escritura de la corrida (B1 de la revisión de la spec)."""
+    data, raw, reason = _read_settings_for_migration(path)
+    if reason is not None:
+        return t("install.migrate.settings_unreadable", reason=reason)
+    env = data.get("env") if data else None
+    migrated, moved = _migrated_env(env) if isinstance(env, dict) else ({}, [])
+    if not moved:
+        return t("install.migrate.nothing")
+    data["env"] = migrated
+    backup = _write_migrated_settings(path, raw, data)
+    done = t("install.migrate.settings_done", names=_names(moved), backup=backup)
+    return f"{done}; {_record_migration(directory, [e.old for e in moved])}"
+
+
+def _run_switch_migration(
+    claude: Path, entry: deprecations.DeprecatedName, directory: Path | None
+) -> str:
+    old, new = claude / entry.old, claude / entry.new
+    if not _switch_to_migrate(claude, entry):
+        return t("install.migrate.nothing")
+    if new.exists() or new.is_symlink():
+        old.unlink()
+        done = t("install.migrate.switch_removed", old=entry.old, new=entry.new)
+    else:
+        old.rename(new)
+        done = t("install.migrate.switch_renamed", old=entry.old, new=entry.new)
+    return f"{done}; {_record_migration(directory, [entry.old])}"
+
+
+def plan_retired_name_migration(home: Path, data_dir: Path | None = None) -> list[Action]:
+    """Acciones `migrate` que pasan los retirados con sucesor a su nombre nuevo (REQ-015).
+
+    Mira **solo** `<home>/.claude/settings.json` (su `env`) y los interruptores de `<home>/.claude/`:
+    nunca el entorno del proceso, perfiles, el lanzador del daemon, `settings.local.json`,
+    `~/.claude.json` ni `~/.codex` (REQ-017). Todas las claves de `env` van en **una** acción, que
+    relee el fichero al aplicarse; cada interruptor, en la suya. El registro de la migración va al
+    directorio de datos de `data_dir_for(home, data_dir)`: con HOME simulado y sin
+    `LOCAL_DELEGATE_LOG_DIR` no hay ninguno y no se escribe (lo dice la salida). Solo lee: escribe
+    `apply`, y en `--dry-run` nada.
+    """
+    claude = home / ".claude"
+    directory = data_dir_for(home, data_dir)
+    actions: list[Action] = []
+    settings_path = claude / "settings.json"
+    data, _raw, reason = _read_settings_for_migration(settings_path)
+    if reason is not None:
+        # Sin `run`: no escribe nada en él, solo lo dice (REQ-016).
+        detail = t("install.migrate.settings_unreadable", reason=reason)
+        actions.append(Action("migrate", settings_path, detail))
+    elif data is not None and isinstance(data.get("env"), dict):
+        _env, moved = _migrated_env(data["env"])
+        if moved:
+            names = _names(moved)
+
+            def _run_env(path=settings_path, directory=directory) -> str:
+                return _run_env_migration(path, directory)
+
+            detail = t("install.migrate.settings_plan", names=names)
+            actions.append(Action("migrate", settings_path, detail, _run_env, literal=names))
+    for entry in retired_names_with_successor("switch_file"):
+        if not _switch_to_migrate(claude, entry):
+            continue
+        new = claude / entry.new
+        key = "switch_remove_plan" if new.exists() or new.is_symlink() else "switch_rename_plan"
+
+        def _run_switch(entry=entry, directory=directory) -> str:
+            return _run_switch_migration(claude, entry, directory)
+
+        detail = t(f"install.migrate.{key}", old=entry.old, new=entry.new)
+        actions.append(
+            Action("migrate", claude / entry.old, detail, _run_switch, literal=_names([entry]))
+        )
+    return actions
 
 
 def _claude_dir(opts: Options) -> Path:
@@ -1854,6 +2106,10 @@ def plan_install(opts: Options) -> list[Action]:
     lang = language.lang
     if opts.write_language and (language_step := language_action(language)) is not None:
         actions.append(language_step)
+
+    # Antes de cualquier otra acción sobre `settings.json` (REQ-016).
+    if opts.migrate_retired_names and "claude" in opts.targets:
+        actions.extend(plan_retired_name_migration(opts.home, opts.data_dir))
 
     if "hooks" in opts.components and "claude" in opts.targets:
         hooks_dst = claude / "hooks" / HOOKS_SUBDIR

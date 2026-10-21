@@ -28,7 +28,7 @@ import re
 import shutil
 import socket
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from importlib import metadata
@@ -1841,9 +1841,16 @@ _TAIL_BLOCK = 64 * 1024
 
 
 def deprecated_names_in_hook_telemetry(
-    path: Path | None, *, now: datetime | None = None, days: int = DEPRECATED_TAIL_DAYS
+    path: Path | None,
+    *,
+    now: datetime | None = None,
+    days: int = DEPRECATED_TAIL_DAYS,
+    migrated: Mapping[str, datetime] | None = None,
 ) -> set[str]:
     """Nombres viejos que los hooks dicen haber leído (`deprecated_names`) en los últimos `days`.
+
+    `migrated` es el registro de la migración (`install.read_migration_record`): un evento con
+    `ts` anterior o igual a la fecha en que se migró **ese** nombre no cuenta (REQ-012).
 
     Lee el fichero **desde el final**, por bloques, y para en cuanto encuentra un evento más viejo
     que el corte: la telemetría crece sin freno (31 691 líneas en la máquina de referencia) y un
@@ -1881,7 +1888,12 @@ def deprecated_names_in_hook_telemetry(
                         break
                     names = event.get("deprecated_names")
                     if isinstance(names, list):
-                        found.update(n for n in names if isinstance(n, str))
+                        found.update(
+                            n
+                            for n in names
+                            if isinstance(n, str)
+                            and not (migrated and n in migrated and ts <= migrated[n])
+                        )
                 if older:
                     break
     except OSError:
@@ -1924,7 +1936,10 @@ def _probe_deprecated_names(ctx: Context) -> Result:
         if env_value is not None and (entry := deprecations.find(env_name)) is not None:
             _note(i18n.t("doctor.probe.deprecated_names.in_shell"), entry)
 
-    settings, _reason = read_json(ctx.claude_dir / "settings.json")
+    settings, reason = read_json(ctx.claude_dir / "settings.json")
+    if reason is not None:
+        # Antes se callaba y podía decir `OK` con nombres viejos dentro (desviación 9).
+        warnings.append(i18n.t("doctor.probe.deprecated_names.settings_unreadable", reason=reason))
     env = settings.get("env") if settings else None
     if isinstance(env, dict):
         for entry in deprecations.env_vars():
@@ -1935,7 +1950,13 @@ def _probe_deprecated_names(ctx: Context) -> Result:
         if (ctx.claude_dir / entry.old).exists():
             _note(i18n.t("doctor.probe.deprecated_names.in_claude_dir"), entry)
 
-    for name in sorted(deprecated_names_in_hook_telemetry(config_module.HOOK_TELEMETRY_LOG)):
+    # El registro de la migración se lee de donde lo escribe (REQ-012, REQ-015).
+    data_dir = ctx.log_dir if ctx.log_dir is not None else install.data_dir_for(ctx.home)
+    migrated = install.read_migration_record(data_dir)
+    telemetry = deprecated_names_in_hook_telemetry(
+        config_module.HOOK_TELEMETRY_LOG, migrated=migrated
+    )
+    for name in sorted(telemetry):
         if (entry := deprecations.find(name)) is not None and entry not in seen:
             _note(
                 i18n.t("doctor.probe.deprecated_names.read_by_hooks", days=DEPRECATED_TAIL_DAYS),
