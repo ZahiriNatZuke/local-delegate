@@ -65,19 +65,22 @@ Decisiones de diseño que toma el plan, además de las de la spec:
    de `hook classify` (stdin JSON → stdout JSON) por `$.process.run`. El mod solo añade un filtro
    barato que **descarta** antes de llamar (nombre de tool y primer token); no clasifica.
 7. **El mod es JavaScript plano, sin toolchain de Node.** `hooks/hooks.json` declara
-   `"modules": ["./register.js"]`. `register.js` carga cada pieza con un **`import()` dinámico
-   dentro de un `try`** (`mod/pinned-tools.js`, `commands.js`, `status.js`, `read.js`): si la pieza
-   falta, lanza o tiene su interruptor apagado, queda apagada y el resto sigue (REQ-016). Así los
-   lotes de F2–F4 solo crean su fichero. La interfaz de `mod/common.js` queda fijada en la ola 3
-   (ver ese lote). Si T0 demuestra que el motor no admite `import()` relativo, `scripts/build_mod.py`
-   concatena las piezas. El generado **no se commitea**: lo produce el job de empaquetado al
-   construir la rueda, y un test comprueba que el script corre.
+   `"modules": ["./register.js"]`. **T0 midió que el motor rechaza `import()` dinámico** (en
+   `validate` y al cargar; `evidence/T0.md`), así que `scripts/build_mod.py` concatena las piezas
+   (`mod/common.js`, `pinned-tools.js`, `commands.js`, `status.js`, `read.js`) en `register.js` y
+   envuelve el registro de **cada pieza en su propio `try`**: si la pieza falta, lanza o tiene su
+   interruptor apagado, queda apagada y el resto sigue (REQ-016). Así los lotes de F2–F4 solo crean
+   su fichero en `mod/`. La interfaz de `mod/common.js` queda fijada en la ola 3 (ver ese lote). El
+   generado **no se commitea**: lo produce el job de empaquetado al construir la rueda, y un test
+   comprueba que el script corre y que una pieza que lanza no tumba las demás.
 8. **La `userConfig` del plugin se declara en dos tandas.** En la ola 1, `ld_bin` (obligatoria) y
    `language`. En la ola 3, `pinned_tools`, `commands_enabled`, `status_enabled` y
    `read_mod_enabled` (este, por defecto `false`). F3 y F4 no tocan `plugin.json`. `update` vuelve
    a aplicar `--config language=…` si cambió `language.json`.
 9. **«Mod cargado» se sabe por un latido.** Al iniciar sesión, el mod escribe
-   `${CLAUDE_PLUGIN_DATA}/heartbeats/<session_id>.json` con la versión, `entrypoint`, si
+   `<config>/plugins/data/<plugin>-<marketplace>/heartbeats/<session_id>.json` (T0: la variable
+   `CLAUDE_PLUGIN_DATA` **no llega al mod**, así que deriva esa ruta, que es la misma carpeta que
+   ven los hooks como `CLAUDE_PLUGIN_DATA`; `$.fs.write` escribe ahí) con la versión, `entrypoint`, si
    `process.run` respondió, si hay diálogo, si el mod de lectura está activo y la fecha. Es un
    fichero **por sesión**: una sesión nunca se guía por el latido de otra. Los de más de 7 días se
    borran al escribir. `doctor` lo lee, y los hooks de lectura lo usan para
@@ -199,6 +202,17 @@ va al scratchpad y a `evidence/T0.md`.
 - **PR de documentos**: con T0 hecho y **antes** de abrir los worktrees de la ola 1, un PR que solo
   añade `.sdd/changes/claude-plugin-and-mods/` (spec, investigación, revisiones, plan, `evidence/`).
   Así los worktrees, que nacen de `main`, ven el brief y el plan.
+
+**Resultado de T0 (2026-10-21, `evidence/T0.md`)**, obligatorio para las olas siguientes:
+- Vía **B** para B-1 (`<python de uv tool> -I -m local_delegate.hook <nombre>`); la A (`onFailure`)
+  no convierte el código 2. `MIN_CLAUDE_PLUGIN_VERSION = 2.1.292`.
+- `claude plugin` respeta `CLAUDE_CONFIG_DIR` en 2.1.292.
+- Mod con `build_mod.py` (decisión 7) y latido en ruta derivada (decisión 9).
+- Diálogo: `isInteractive` de `session.start` en el mod; `CLAUDE_CODE_ENTRYPOINT` en los hooks
+  (`sdk-cli` en `-p`); subagente por `agent_id`, sin medir (se mide en la ola 3b).
+- Un `default` de `userConfig` no rellena `${user_config.*}`: `install` pasa siempre
+  `--config ld_bin=…`.
+- `plugin validate --strict` exige `author` en `plugin.json` y `description` en `marketplace.json`.
 
 ### Ola 1 — F1, cuatro lotes en paralelo
 
@@ -563,7 +577,8 @@ Cada pieza exporta `register(on, options, common)`.
 - **Diseño**:
   - `tool.describe` saca de ToolSearch la lista `pinned_tools`: por defecto las 4 de la spec, y una
     lista vacía lo apaga. Solo acepta `mcp__local-delegate__*`.
-  - `register.js` carga cada pieza con `import()` dinámico dentro de un `try` (decisión 7).
+  - `scripts/build_mod.py` genera `register.js` con cada pieza en su propio `try` (decisión 7; el
+    `import()` dinámico lo rechaza el motor, T0).
   - `ci.yml`: añade el paso `claude plugin test <plugin>` al job `plugin`.
 - **Tests primero**:
   - `test_mod_static.py`:
