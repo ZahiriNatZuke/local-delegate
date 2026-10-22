@@ -393,6 +393,23 @@ def test_reason(row: dict, backfill_entry: dict | None = None) -> str | None:
     return None
 
 
+#: Prefijo del `tool_use_id` de las llamadas que hace el mod del plugin, no el modelo
+#: (claude-plugin-and-mods, REQ-015; medido en vivo: vault
+#: `investigacion-mods-claude-code-2026-10-21.md` §3).
+MOD_TOOL_USE_PREFIX = "toolu_plugin_"
+
+
+def is_mod_call(row: dict) -> bool:
+    """`True` si la delegación la pidió el mod (`tool_use_id` `toolu_plugin_…`), no el modelo.
+
+    Es la ÚNICA regla (REQ-015): la usan el panel (`web/metrics.py`) y el script de medición
+    (`scripts/measure_plugin_adoption.py`). Una llamada del mod es uso: no se aparta del total,
+    se cuenta aparte.
+    """
+    tool_use_id = row.get("tool_use_id")
+    return isinstance(tool_use_id, str) and tool_use_id.startswith(MOD_TOOL_USE_PREFIX)
+
+
 def exclusion_reason(row: dict, backfill_entry: dict | None = None) -> str | None:
     """El motivo por el que la delegación no se valora (REQ-007), o `None` si cuenta.
 

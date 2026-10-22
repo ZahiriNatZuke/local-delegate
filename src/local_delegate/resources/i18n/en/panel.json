@@ -66,6 +66,7 @@
   "panel.clients.col.delegations": "Delegations",
   "panel.clients.col.net": "Net tokens",
   "panel.clients.col.share": "Share",
+  "panel.clients.mod_calls": "{n} from the mod",
   "panel.clients.title": "Who delegated",
   "panel.cost.col.cases": "Cases",
   "panel.cost.col.effort": "Effort",

@@ -996,3 +996,67 @@ def test_event_dialog_shows_booleans_as_on_off(tmp_path):
     assert "true" not in params and "false" not in off_params
     assert "top_k = 20<" in params and "reasoning_effort = high<" in params
     assert "min_p = 0<" in params
+
+
+# --- Delegaciones del mod, aparte (F2-attribution de claude-plugin-and-mods, REQ-015) -------------
+
+
+def _mod_row(client: str, tool_use_id: str | None) -> dict:
+    row = {
+        "ts": "2026-10-21T10:00:00+00:00",
+        "tool": "local_commit_msg",
+        "model": "qwen36-35b-a3b",
+        "source": "path",
+        "chars_in": 4000,
+        "chars_out": 80,
+        "latency_ms": 10,
+        "ok": True,
+        "tokens_in": 1000,
+        "tokens_out": 20,
+        "raw_len": 4000,
+        "client": client,
+    }
+    if tool_use_id:
+        row["tool_use_id"] = tool_use_id
+    return row
+
+
+def test_mod_calls_shown_apart(tmp_path):
+    """Las llamadas del mod (`tool_use_id` `toolu_plugin_…`) se cuentan aparte, sin salir del total.
+
+    Dos de Claude Code decididas por el modelo, una del mod y una de Codex. `_aggregate` las cuenta
+    todas como delegaciones y aparta la del mod en `mod_calls`; `renderClients` pinta «1 del mod»
+    solo en la fila de Claude Code. Mutante: `is_mod_call` mirando `toolu_` (sin `plugin_`) →
+    falla `mod_calls == 1`; sin la celda en el JS → falla «1 del mod».
+    """
+    rows = [
+        _mod_row("claude-code", "toolu_01AbCdEfGh"),
+        _mod_row("claude-code", "toolu_01ZyXwVu"),
+        _mod_row("claude-code", "toolu_plugin_7f3a9c"),
+        _mod_row("codex-mcp-client", None),
+    ]
+    aggregate = metrics._aggregate(rows)
+    by_client = {c["client"]: c for c in aggregate["by_client"]}
+    assert aggregate["total"]["calls"] == 4  # el mod sigue siendo uso
+    assert aggregate["mod_calls"] == 1
+    assert by_client["claude-code"]["calls"] == 3
+    assert by_client["claude-code"]["mod_calls"] == 1
+    assert by_client["codex-mcp-client"]["mod_calls"] == 0
+
+    stats_json = json.dumps({"by_client": aggregate["by_client"]})
+    r = _js(
+        tmp_path,
+        [_f("renderClients")],
+        f"""
+        renderClients({stats_json});
+        emit({{body: _els.clientsBody.innerHTML, head: _els.clientsHead.textContent}});
+        """,
+        _DOM,
+    )
+    claude_row = next(tr for tr in r["body"].split("<tr>") if "Claude Code" in tr)
+    codex_row = next(tr for tr in r["body"].split("<tr>") if "Codex" in tr)
+    mod = i18n.t_lang("es", "panel.clients.mod_calls", n="1")
+    assert mod in claude_row
+    assert i18n.t_lang("es", "panel.clients.mod_calls", n="0") not in codex_row
+    assert "del mod" not in codex_row
+    assert r["head"] == "2 clientes"

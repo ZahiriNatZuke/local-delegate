@@ -66,6 +66,7 @@
   "panel.clients.col.delegations": "Delegaciones",
   "panel.clients.col.net": "Tokens netos",
   "panel.clients.col.share": "Reparto",
+  "panel.clients.mod_calls": "{n} del mod",
   "panel.clients.title": "Quién delegó",
   "panel.cost.col.cases": "Casos",
   "panel.cost.col.effort": "Esfuerzo",
