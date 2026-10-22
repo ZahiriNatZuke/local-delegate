@@ -1,0 +1,23 @@
+{
+  "plugin.fallback.ld_bin_editable": "this is an editable install ({prefix}) and its path can disappear, leaving the hooks inactive; the plugin needs `uv tool install`.",
+  "plugin.fallback.ld_bin_no_python": "the `uv tool` environment ({prefix}) has no Python interpreter.",
+  "plugin.fallback.ld_bin_not_uv_tool": "this is not a `uv tool` install ({prefix}); the plugin needs the stable path of that environment.",
+  "plugin.fallback.ld_bin_uvx_cache": "local-delegate runs from the uv cache ({prefix}); the plugin needs `uv tool install`.",
+  "plugin.fallback.lead": "Claude Code: settings delivery (hooks in settings.json), not the plugin: {detail}",
+  "plugin.fallback.no_cli": "`claude` was not found on the PATH.",
+  "plugin.fallback.old_version": "`claude` {found} is older than {minimum}, the minimum for the plugin.",
+  "plugin.fallback.simulated_home": "simulated HOME on {platform}, where it is not verified that `claude plugin` honours CLAUDE_CONFIG_DIR.",
+  "plugin.fallback.version_unknown": "could not read the version of `claude` ({output}).",
+  "plugin.fallback.wsl": "the plugin is not used under WSL.",
+  "plugin.migration.backup": "Copy of settings.json: {path}",
+  "plugin.migration.backup_failed": "Could not copy settings.json ({detail}); nothing was changed.",
+  "plugin.migration.done": "Claude Code: plugin {plugin} {version} installed.",
+  "plugin.migration.not_current": "The plugin did not end up installed, enabled and at version {version} (list: {found}). settings.json is left as it was.",
+  "plugin.migration.remove_failed": "The plugin is installed, but the hooks could not be removed from settings.json ({detail}): there are duplicates; `doctor` flags them and `update` removes them.",
+  "plugin.migration.removed": "Removed {count} hook entries from settings.json.",
+  "plugin.migration.step_failed": "`claude plugin` failed at step {step}: {detail}. settings.json is left as it was.",
+  "plugin.migration.switch_failed": "Could not save the state of the read hook ({detail}); not migrating.",
+  "plugin.migration.switch_without_data_dir": "The read hook is on and this HOME has no data directory to keep its state: not migrating, so it is not switched off. Set LOCAL_DELEGATE_LOG_DIR or use --claude-delivery settings.",
+  "plugin.revert.done": "Claude Code: back to the settings delivery; plugin uninstalled.",
+  "plugin.revert.restore_failed": "The plugin was uninstalled, but the hooks could not be restored in settings.json ({detail}). Run `install --claude-delivery settings` again."
+}

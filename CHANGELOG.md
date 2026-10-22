@@ -6,6 +6,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Añadido
+
+- Núcleo de la entrega por plugin para Claude Code, todavía sin llamadores: `install_state` guarda en `install-state.json` la vía de entrega y las piezas que escribió `install` (si falta, «no se sabe»); `claude_plugin` decide plugin o settings (CLI ≥ 2.1.292, fuera de WSL, `ld_bin` solo de una instalación `uv tool`) y arma los `claude plugin …` no interactivos con `CLAUDE_CONFIG_DIR` en HOME simulado; `plugin_migration` copia `settings.json` antes de todo, conserva el estado del bloqueo de lectura en `read-hook.json`, instala, comprueba `plugin list --json` y solo entonces retira nuestros hooks de settings, con vuelta atrás en un paso (SDD `claude-plugin-and-mods`, F1-delivery-core).
+
 ### Cambiado
 
 - El hook de shell (`suggest_delegate_shell.py`) deja de reconocer el volcado de fichero de la CLI envolvente que ya no se usa; las formas que bloquea quedan en `cat`, `type`, `more`, `Get-Content`, `gc` y `head` sin recorte. Se retiran del repo las demás menciones a esa CLI.
