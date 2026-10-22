@@ -36,6 +36,7 @@ import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from importlib import import_module
 from importlib.resources import files as _resource_files
 from pathlib import Path, PurePath
 
@@ -140,6 +141,15 @@ _RETIRED_SKILLS: tuple[str, ...] = ("delegacion-local",)
 # al hook) y `uninstall` no la retiraría. Con el argumento, **el registro mismo es el
 # interruptor**: instalar lo enciende y desinstalar lo apaga, sin estado repartido.
 READ_HOOK_FLAG = "--enabled"
+
+
+def _sibling(name: str):
+    """A module that imports this one (`claude_plugin`, `install_state`, `plugin_migration`).
+
+    Resolved by name at call time, so the modules do not import each other (CodeQL
+    `py/cyclic-import`), the same way `completion.render` reaches `cli`.
+    """
+    return import_module(f"{__package__}.{name}")
 
 
 def resources_dir() -> Path:
@@ -1697,6 +1707,26 @@ class Options:
     # REQ-016: con Claude en el plan, `install` migra antes los nombres retirados. `update` lo pone
     # a False en las llamadas por reparación: él migra una sola vez, como primer paso (REQ-014).
     migrate_retired_names: bool = True
+    # REQ-005 (SDD claude-plugin-and-mods): `--claude-delivery plugin|settings`; `None` lets
+    # `claude_plugin.decide` choose, which is the plugin whenever its conditions hold.
+    claude_delivery: str | None = None
+    # `--disable-read-hook`: with `uninstall`, the only way to turn the active layer off.
+    disable_read_hook: bool = False
+    # `--desktop` (REQ-012): the Claude Desktop chat entry, pointing at `desktop-bridge`.
+    desktop: bool = False
+    # Injectable for the tests: the `claude` runner and lookup, and an `ld_bin` already resolved.
+    # `None` means the real ones (`claude_plugin.run_subprocess`, `shutil.which`, the `uv tool`
+    # environment that is running).
+    claude_runner: Callable | None = None
+    claude_which: Callable[[str], str | None] | None = None
+    claude_ld_bin: object | None = None
+    # Where Claude Desktop keeps its config (`<dir>/Claude/claude_desktop_config.json`) and the
+    # executable its entry runs. `None`: `%APPDATA%` (a simulated HOME uses its own) and the
+    # `local-delegate` next to the running interpreter.
+    desktop_dir: Path | None = None
+    desktop_executable: Path | None = None
+    # `sys.platform`, unless a test says otherwise.
+    platform: str | None = None
 
 
 # --- La preferencia de idioma (REQ-047, D11) ----------------------------------
@@ -2172,28 +2202,100 @@ def _agent_summary(path: Path, added: list[str], action: str | None) -> str:
     return t("install.agents.item", name=path.name, n=len(added))
 
 
-def _agents_action(agents_dir: Path, changes: list) -> Action:
-    """Escribe los subagentes que cambian. `cambios` viene de `agents.pending()`, que solo lee."""
+def _agents_action(agents_dir: Path, changes: list, opts: Options | None = None) -> Action:
+    """Escribe los subagentes que cambian. `cambios` viene de `agents.pending()`, que solo lee.
+
+    With ``opts``, what was written is recorded in the installation state (REQ-011), so that
+    ``uninstall`` can undo exactly that and nothing else.
+    """
     summary = ", ".join(
         _agent_summary(path, added, action) for path, _text, added, action in changes
     )
 
     def _run() -> str:
-        written, failed = [], []
-        for path, text, _added, _action in changes:
+        written, failed, record = [], [], {}
+        for path, text, added, action in changes:
             try:
                 # `_write_text` deja `.bak` y conserva el terminador de línea del fichero: en
                 # Windows, escribir con el de la plataforma marcaría el agente entero como
                 # modificado por haberle añadido una línea.
                 _write_text(path, text)
                 written.append(path.name)
+                record[path.name] = {"added": list(added), "block": action}
             except OSError as exc:
                 failed.append(_failure(path.name, exc))
+        if opts is not None and record:
+            _record_agents(opts, agents_dir, record)
         detail = t("install.agents.updated", n=len(written), names=", ".join(written))
         return detail + _not_written(failed)
 
     plan = t("install.agents.update_plan", n=len(changes), summary=summary)
     return Action("agents", agents_dir, plan, _run)
+
+
+def _record_agents(opts: Options, agents_dir: Path, record: dict) -> None:
+    """Adds to the state's `agents` piece what this run wrote, file by file (REQ-011).
+
+    Merged with what earlier runs wrote: the tools added now join the ones added before, and a
+    block counts as ours if any run inserted it.
+    """
+    install_state = _sibling("install_state")
+
+    state = install_state.load(opts.home, opts.data_dir)
+    previous = (install_state.piece(state, "agents") or {}).get("files") or {}
+    files = {name: dict(entry) for name, entry in previous.items() if isinstance(entry, dict)}
+    for name, entry in record.items():
+        merged = files.setdefault(name, {"added": [], "block": None})
+        merged["added"] = sorted(set(merged.get("added") or []) | set(entry["added"]))
+        if entry["block"] == "inserted" or merged.get("block") == "inserted":
+            merged["block"] = "inserted"
+        else:
+            merged["block"] = merged.get("block") or entry["block"]
+    base = state or install_state.new_state("settings", "")
+    install_state.save(
+        opts.home,
+        install_state.with_piece(base, "agents", dir=str(agents_dir), files=files),
+        opts.data_dir,
+    )
+
+
+def _revert_agents_action(opts: Options, agents_dir: Path, piece: dict) -> Action:
+    """Undoes what `install --agents` wrote, as the state records it, and nothing else."""
+    from . import agents as agents_mod
+
+    install_state = _sibling("install_state")
+
+    files = piece.get("files") or {}
+
+    def _run() -> str:
+        restored_names, failed = [], []
+        for name, entry in files.items():
+            path = agents_dir / name
+            if not path.is_file():
+                continue
+            try:
+                current = _read_text(path)
+                restored = agents_mod.revert(
+                    current,
+                    entry.get("added") or [],
+                    remove_block=entry.get("block") == "inserted",
+                )
+                if restored != current:
+                    _write_text(path, restored)
+                    restored_names.append(name)
+            except OSError as exc:
+                failed.append(_failure(name, exc))
+        state = install_state.load(opts.home, opts.data_dir)
+        if state is not None:
+            install_state.save(
+                opts.home, install_state.without_piece(state, "agents"), opts.data_dir
+            )
+        detail = t(
+            "plugin_install.agents.restored", n=len(restored_names), names=", ".join(restored_names)
+        )
+        return detail + _not_written(failed)
+
+    return Action("agents", agents_dir, t("plugin_install.agents.revert_plan", n=len(files)), _run)
 
 
 def _copy_tree_action(src: Path, dst: Path, detail: str) -> Action:
@@ -2226,10 +2328,311 @@ def _copy_skill_action(dst: Path, lang: str, detail: str) -> Action:
     return Action("copy", dst, detail, _run)
 
 
+# --- Claude Code delivery: plugin or settings (SDD claude-plugin-and-mods, F1-install) --------
+#
+# `install` does not repeat a single step of the migration: it decides the delivery with
+# `claude_plugin.decide` and carries it out with `plugin_migration` (REQ-005, REQ-006, REQ-008 b).
+# Both modules import this one, so they are imported where they are used.
+
+
+def claude_delivery_decision(opts: Options):
+    """REQ-005: which delivery Claude Code gets. A `claude` that cannot even be asked → settings."""
+    claude_plugin = _sibling("claude_plugin")
+
+    runner = opts.claude_runner or claude_plugin.run_subprocess
+    which = opts.claude_which or shutil.which
+    try:
+        return claude_plugin.decide(
+            opts.home,
+            requested=opts.claude_delivery,
+            runner=runner,
+            which=which,
+            platform=opts.platform,
+            ld_bin=opts.claude_ld_bin,  # type: ignore[arg-type]
+        )
+    except Exception as exc:  # the probe itself failed: settings, saying why, never a crash
+        detail = t("plugin.fallback.version_unknown", output=str(exc)[:120])
+        return claude_plugin.Decision(
+            claude_plugin.SETTINGS,
+            reason="version_unknown",
+            warning=t("plugin.fallback.lead", detail=detail),
+        )
+
+
+def _settings_hook_entries(hooks_dst: Path, python_exe: str, read_hook: bool) -> list:
+    """`(event, matcher, command)` of the settings delivery; the read trio only when it is on."""
+    entries = [
+        (event, matcher, hook_command(hooks_dst, script, python_exe))
+        for script, event, matcher in _HOOK_EVENTS
+    ]
+    if read_hook:
+        for script, event, matcher in (_READ_HOOK, _MCP_READ_HOOK, _SHELL_HOOK):
+            command = hook_command(hooks_dst, script, python_exe, (READ_HOOK_FLAG,))
+            entries.append((event, matcher, command))
+    return entries
+
+
+def _register_settings_hooks(claude: Path, entries: list) -> str:
+    hooks_dst = claude / "hooks" / HOOKS_SUBDIR
+    path = claude / "settings.json"
+    data, removed = merge_hook_settings(_read_config_json(path), entries, hooks_dst)
+    _write_json(path, data)
+    note = t("install.hooks.previous_removed", n=removed) if removed else ""
+    return t("install.hooks.registered", n=len(entries), note=note)
+
+
+def _settings_hook_actions(opts: Options, claude: Path, warning: str | None) -> list[Action]:
+    """The settings delivery as it was until 0.39: scripts copied and entries in settings.json."""
+    actions: list[Action] = []
+    hooks_dst = claude / "hooks" / HOOKS_SUBDIR
+    actions.append(
+        _copy_tree_action(resources_dir() / "hooks", hooks_dst, t("install.hooks.copy_plan"))
+    )
+    # Solo si hay algo que retirar: sin esto, reinstalar sobre una máquina limpia emitiría
+    # una acción que no hace nada y el plan mentiría sobre lo que va a pasar.
+    if orphan_hook_scripts(claude):
+        actions.append(_prune_orphans_action(claude))
+    read_hook = opts.enable_read_hook and not opts.disable_read_hook
+    entries = _settings_hook_entries(hooks_dst, opts.python_exe, read_hook)
+    detail = t(
+        "install.hooks.register_plan",
+        n=len(entries),
+        events=", ".join(f"{e}{'/' + m if m else ''}" for e, m, _c in entries),
+    )
+    if warning:
+        detail = f"{detail}\n    {warning}"
+    actions.append(
+        Action(
+            "settings",
+            claude / "settings.json",
+            detail,
+            lambda claude=claude, entries=entries: _register_settings_hooks(claude, entries),
+            literal="\n".join(
+                f"{e}{'/' + m if m else ''}: {json.dumps(c, ensure_ascii=False)}"
+                for e, m, c in entries
+            ),
+        )
+    )
+    return actions
+
+
+def _plugin_delivery_action(opts: Options, decision, lang: str) -> Action:
+    """REQ-005/006: the plugin in, the settings delivery out, through `apply_plugin_delivery`."""
+    claude_plugin = _sibling("claude_plugin")
+    plugin_migration = _sibling("plugin_migration")
+    from .version import get_version
+
+    version = get_version()
+    runner = opts.claude_runner or claude_plugin.run_subprocess
+
+    def _run() -> str:
+        result = plugin_migration.apply_plugin_delivery(
+            opts.home,
+            claude_bin=decision.claude_bin,
+            ld_bin=decision.ld_bin,
+            language=lang,
+            version=version,
+            runner=runner,
+            env=decision.env,
+            data_dir=opts.data_dir,
+        )
+        text = "\n    ".join(result.messages)
+        if not result.ok:
+            raise RuntimeError(text or t("plugin_install.failed", step=result.failed_step))
+        return text
+
+    detail = t(
+        "plugin_install.plan",
+        plugin=claude_plugin.PLUGIN_ID,
+        version=version,
+        claude=decision.version or "?",
+    )
+    literal = "\n".join(claude_plugin.dry_run_lines(decision, language=lang))
+    return Action("plugin", "claude", detail, _run, literal=literal)
+
+
+def _revert_to_settings_action(opts: Options, claude: Path) -> Action:
+    """REQ-008 b: `--claude-delivery settings` with the plugin in: out with it, settings back."""
+    claude_plugin = _sibling("claude_plugin")
+    plugin_migration = _sibling("plugin_migration")
+
+    runner = opts.claude_runner or claude_plugin.run_subprocess
+    which = opts.claude_which or shutil.which
+
+    def _restore(read_hook_enabled: bool) -> None:
+        hooks_dst = claude / "hooks" / HOOKS_SUBDIR
+        if hooks_dst.exists():
+            shutil.rmtree(hooks_dst)
+        shutil.copytree(resources_dir() / "hooks", hooks_dst)
+        read_hook = (read_hook_enabled or opts.enable_read_hook) and not opts.disable_read_hook
+        _register_settings_hooks(
+            claude, _settings_hook_entries(hooks_dst, opts.python_exe, read_hook)
+        )
+
+    def _run() -> str:
+        claude_bin = which("claude")
+        if not claude_bin:
+            raise RuntimeError(t("plugin_install.revert_without_cli"))
+        result = plugin_migration.revert_to_settings(
+            opts.home,
+            claude_bin=claude_bin,
+            restore_settings=_restore,
+            runner=runner,
+            env=claude_plugin.child_env(opts.home),
+            data_dir=opts.data_dir,
+        )
+        text = "\n    ".join(result.messages)
+        if not result.ok:
+            raise RuntimeError(text or t("plugin_install.failed", step=result.failed_step))
+        return text
+
+    return Action("plugin", "claude", t("plugin_install.revert_plan"), _run)
+
+
+def _installation_state(opts: Options) -> dict | None:
+    install_state = _sibling("install_state")
+
+    return install_state.load(opts.home, opts.data_dir)
+
+
+def _claude_hook_actions(opts: Options, claude: Path, lang: str) -> list[Action]:
+    """The hooks of Claude Code by the delivery `decide` chose, and the read switch after them."""
+    claude_plugin = _sibling("claude_plugin")
+    install_state = _sibling("install_state")
+
+    decision = claude_delivery_decision(opts)
+    plugin_now = install_state.delivery(_installation_state(opts)) == claude_plugin.PLUGIN
+    actions: list[Action] = []
+    if decision.delivery == claude_plugin.PLUGIN:
+        actions.append(_plugin_delivery_action(opts, decision, lang))
+    elif plugin_now and opts.claude_delivery == claude_plugin.SETTINGS:
+        actions.append(_revert_to_settings_action(opts, claude))
+    elif plugin_now:
+        # The plugin stays (no CLI to remove it with, or an old one): registering settings on
+        # top of it would duplicate every hook (REQ-006). Say it and leave both as they are.
+        actions.append(
+            Action(
+                "plugin",
+                "claude",
+                t("plugin_install.kept", warning=decision.warning or ""),
+                lambda: t("plugin_install.kept_done"),
+            )
+        )
+    else:
+        actions.extend(_settings_hook_actions(opts, claude, decision.warning))
+    if opts.enable_read_hook or opts.disable_read_hook:
+        action = _read_switch_action(opts, active=not opts.disable_read_hook)
+        if action is not None:
+            actions.append(action)
+    return actions
+
+
+def write_read_switch(home: Path, data_dir: Path | None, active: bool) -> Path | None:
+    """`read-hook.json` (`{"active", "since"}`); `since` only moves when the value changes."""
+    install_state = _sibling("install_state")
+    plugin_migration = _sibling("plugin_migration")
+
+    target = plugin_migration.read_switch_path(home, data_dir)
+    if target is None:
+        return None
+    previous = plugin_migration._switch_active(target) if target.exists() else None
+    since = None
+    if previous is active:
+        with contextlib.suppress(OSError, ValueError, AttributeError):
+            since = json.loads(target.read_text(encoding="utf-8-sig")).get("since")
+    install_state.write_json_atomic(
+        target, {"active": active, "since": since or install_state.now_iso()}
+    )
+    return target
+
+
+def _read_switch_action(opts: Options, *, active: bool) -> Action | None:
+    """The active layer of the read hook (REQ-004): `--enable-read-hook` / `--disable-read-hook`."""
+    plugin_migration = _sibling("plugin_migration")
+
+    target = plugin_migration.read_switch_path(opts.home, opts.data_dir)
+    if target is None:
+        return None
+    key = "plugin_install.read_switch.on" if active else "plugin_install.read_switch.off"
+
+    def _run() -> str:
+        write_read_switch(opts.home, opts.data_dir, active)
+        return t(key)
+
+    return Action("switch", target, t(f"{key}_plan"), _run)
+
+
+# --- Claude Desktop chat entry (REQ-012) ----------------------------------------------------
+def desktop_executable(opts: Options) -> Path:
+    """The `local-delegate` of the environment that is running: what the Desktop entry runs."""
+    if opts.desktop_executable is not None:
+        return Path(opts.desktop_executable)
+    import sysconfig
+
+    name = "local-delegate.exe" if (opts.platform or sys.platform) == "win32" else "local-delegate"
+    return Path(sysconfig.get_path("scripts")) / name
+
+
+def desktop_config_path(opts: Options) -> Path:
+    """`claude_desktop_config.json`: `%APPDATA%`, or the simulated HOME's own `AppData/Roaming`."""
+    from . import desktop_config
+
+    if opts.desktop_dir is not None:
+        return desktop_config.config_path(opts.desktop_dir)
+    if is_simulated_home(opts.home):
+        return desktop_config.config_path(opts.home / "AppData" / "Roaming")
+    return desktop_config.config_path()
+
+
+def _desktop_action(opts: Options) -> Action:
+    """Writes the bridge entry; a foreign one is replaced because `--desktop` asked, with a word."""
+    from . import desktop_config
+
+    install_state = _sibling("install_state")
+
+    path = desktop_config_path(opts)
+    executable = desktop_executable(opts)
+
+    def _run() -> str:
+        state = install_state.load(opts.home, opts.data_dir)
+        recorded = install_state.piece(state, "desktop_entry")
+        result = desktop_config.write_entry(
+            path, executable, replace_foreign=True, owned=recorded is not None
+        )
+        lines = [
+            t(
+                "plugin_install.desktop.written"
+                if result.changed
+                else "plugin_install.desktop.up_to_date"
+            )
+        ]
+        if result.replaced_foreign:
+            lines.append(t("plugin_install.desktop.replaced_foreign", backup=result.backup))
+        if result.changed or recorded is not None:
+            replaced = bool(result.replaced_foreign or (recorded or {}).get("replaced_foreign"))
+            backup = result.backup if result.replaced_foreign else (recorded or {}).get("backup")
+            base = state or install_state.new_state(install_state.delivery(state) or "settings", "")
+            install_state.save(
+                opts.home,
+                install_state.with_piece(
+                    base,
+                    "desktop_entry",
+                    path=str(path),
+                    replaced_foreign=replaced,
+                    backup=str(backup) if backup else None,
+                ),
+                opts.data_dir,
+            )
+        return "\n    ".join(lines)
+
+    detail = t("plugin_install.desktop.plan", path=path)
+    literal = json.dumps(desktop_config.bridge_entry(executable), ensure_ascii=False)
+    return Action("desktop", path, detail, _run, literal=literal)
+
+
 def plan_install(opts: Options) -> list[Action]:
     """Lista ordenada de acciones. No toca disco: ejecutarlas es responsabilidad de apply()."""
     actions: list[Action] = []
-    res = resources_dir()
     claude = _claude_dir(opts)
     codex = _codex_dir(opts)
     opencode = opencode_dir(opts.home)
@@ -2244,44 +2647,7 @@ def plan_install(opts: Options) -> list[Action]:
         actions.extend(plan_retired_name_migration(opts.home, opts.data_dir))
 
     if "hooks" in opts.components and "claude" in opts.targets:
-        hooks_dst = claude / "hooks" / HOOKS_SUBDIR
-        actions.append(_copy_tree_action(res / "hooks", hooks_dst, t("install.hooks.copy_plan")))
-        # Solo si hay algo que retirar: sin esto, reinstalar sobre una máquina limpia emitiría
-        # una acción que no hace nada y el plan mentiría sobre lo que va a pasar.
-        if orphan_hook_scripts(claude):
-            actions.append(_prune_orphans_action(claude))
-        entries = [
-            (event, matcher, hook_command(hooks_dst, script, opts.python_exe))
-            for script, event, matcher in _HOOK_EVENTS
-        ]
-        if opts.enable_read_hook:
-            for script, event, matcher in (_READ_HOOK, _MCP_READ_HOOK, _SHELL_HOOK):
-                command = hook_command(hooks_dst, script, opts.python_exe, (READ_HOOK_FLAG,))
-                entries.append((event, matcher, command))
-        settings_path = claude / "settings.json"
-
-        def _run_settings(path=settings_path, entries=entries, hooks_dir=hooks_dst) -> str:
-            data, removed = merge_hook_settings(_read_config_json(path), entries, hooks_dir)
-            _write_json(path, data)
-            note = t("install.hooks.previous_removed", n=removed) if removed else ""
-            return t("install.hooks.registered", n=len(entries), note=note)
-
-        actions.append(
-            Action(
-                "settings",
-                settings_path,
-                t(
-                    "install.hooks.register_plan",
-                    n=len(entries),
-                    events=", ".join(f"{e}{'/' + m if m else ''}" for e, m, _c in entries),
-                ),
-                _run_settings,
-                literal="\n".join(
-                    f"{e}{'/' + m if m else ''}: {json.dumps(c, ensure_ascii=False)}"
-                    for e, m, c in entries
-                ),
-            )
-        )
+        actions.extend(_claude_hook_actions(opts, claude, lang))
 
     if "skill" in opts.components and "claude" in opts.targets:
         if retired_skill_dirs(claude / "skills"):
@@ -2321,7 +2687,7 @@ def plan_install(opts: Options) -> list[Action]:
 
         changes = agents_mod.pending(claude / "agents", skill_source(lang), lang)
         if changes:
-            actions.append(_agents_action(claude / "agents", changes))
+            actions.append(_agents_action(claude / "agents", changes, opts))
 
     if "memory" in opts.components:
         block = memory_source(lang).read_text(encoding="utf-8")
@@ -2435,6 +2801,9 @@ def plan_install(opts: Options) -> list[Action]:
                     ),
                 )
             )
+    # REQ-012: only when asked, and only on Windows (the CLI refuses the flag elsewhere).
+    if opts.desktop and (opts.platform or sys.platform) == "win32":
+        actions.append(_desktop_action(opts))
     return actions
 
 
@@ -2648,6 +3017,15 @@ def plan_uninstall(opts: Options) -> list[Action]:
     codex = _codex_dir(opts)
     opencode = opencode_dir(opts.home)
     hooks_dst = claude / "hooks" / HOOKS_SUBDIR
+    state = _installation_state(opts)
+
+    # REQ-011: the plugin and its marketplace, only if the state says `install` put them there.
+    if (
+        "hooks" in opts.components
+        and "claude" in opts.targets
+        and _state_piece(state, "plugin") is not None
+    ):
+        actions.append(_uninstall_plugin_action(opts, state))
 
     if "hooks" in opts.components and "claude" in opts.targets:
         settings_path = claude / "settings.json"
@@ -2756,12 +3134,126 @@ def plan_uninstall(opts: Options) -> list[Action]:
                 )
             )
 
+    # REQ-012: the Desktop chat entry is an MCP entry; it goes if `install --desktop` wrote it.
+    desktop_piece = _state_piece(state, "desktop_entry")
+    if "mcp" in opts.components and desktop_piece is not None:
+        actions.append(_uninstall_desktop_action(opts, desktop_piece))
+
+    # REQ-011: what `install --agents` wrote in the subagents (until 0.39 it stayed).
+    agents_piece = _state_piece(state, "agents")
+    full = FULL_COMPONENTS <= opts.components
+    if (
+        agents_piece is not None
+        and "claude" in opts.targets
+        and (full or "agents" in opts.components)
+    ):
+        actions.append(_revert_agents_action(opts, claude / "agents", agents_piece))
+
     # REQ-047: `language.json` lo escribió `install`, así que se va con lo demás. Solo en una
     # desinstalación completa: quitar un componente suelto no es dejar de usar el paquete.
     data_dir = language_dir(opts)
-    if FULL_COMPONENTS <= opts.components and data_dir is not None:
+    if full and data_dir is not None:
         actions.append(_remove_language_action(data_dir / hook_common.LANGUAGE_PREFERENCE_FILE))
+    # The read switch and, last of all, the installation state (REQ-004, REQ-007).
+    if "hooks" in opts.components and "claude" in opts.targets:
+        plugin_migration = _sibling("plugin_migration")
+
+        switch = plugin_migration.read_switch_path(opts.home, opts.data_dir)
+        if switch is not None and switch.exists():
+            actions.append(_remove_file_action(switch, t("plugin_install.uninstall.switch_plan")))
+    if full:
+        install_state = _sibling("install_state")
+
+        state_path = install_state.path(opts.home, opts.data_dir)
+        if state_path is not None and state_path.exists():
+            detail = t("plugin_install.uninstall.state_plan")
+            actions.append(_remove_file_action(state_path, detail))
     return actions
+
+
+def _state_piece(state: dict | None, name: str) -> dict | None:
+    install_state = _sibling("install_state")
+
+    return install_state.piece(state, name)
+
+
+def _remove_file_action(path: Path, detail: str) -> Action:
+    def _run() -> str:
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            return t("install.uninstall.did_not_exist")
+        return t("install.uninstall.removed")
+
+    return Action("remove", path, detail, _run)
+
+
+def _uninstall_plugin_action(opts: Options, state: dict | None) -> Action:
+    """Uninstalls the plugin and, if the state lists it, the marketplace (REQ-011)."""
+    claude_plugin = _sibling("claude_plugin")
+    install_state = _sibling("install_state")
+
+    runner = opts.claude_runner or claude_plugin.run_subprocess
+    which = opts.claude_which or shutil.which
+    with_marketplace = install_state.piece(state, "marketplace") is not None
+
+    def _call(argv: list[str]) -> None:
+        done = runner(argv, claude_plugin.child_env(opts.home))
+        if done.returncode != 0:
+            detail = (done.stderr or done.stdout or "").strip()
+            command = " ".join(argv[1:4])
+            raise RuntimeError(
+                t("plugin_install.uninstall.step_failed", command=command, detail=detail)
+            )
+
+    def _run() -> str:
+        claude_bin = which("claude")
+        if not claude_bin:
+            raise RuntimeError(t("plugin_install.uninstall.no_cli"))
+        _call(claude_plugin.uninstall_argv(claude_bin))
+        if with_marketplace:
+            _call(claude_plugin.marketplace_remove_argv(claude_bin))
+        current = install_state.load(opts.home, opts.data_dir)
+        if current is not None:
+            current = install_state.without_piece(current, "plugin")
+            current = install_state.without_piece(current, "marketplace")
+            install_state.save(opts.home, current, opts.data_dir)
+        return t("plugin_install.uninstall.plugin_removed", plugin=claude_plugin.PLUGIN_ID)
+
+    detail = t("plugin_install.uninstall.plugin_plan", plugin=claude_plugin.PLUGIN_ID)
+    return Action("plugin", "claude", detail, _run)
+
+
+def _uninstall_desktop_action(opts: Options, piece: dict) -> Action:
+    """Removes our Desktop entry (REQ-012).
+
+    A foreign entry it once replaced is NOT put back, because it could carry the token: the
+    copy that holds it is named instead.
+    """
+    from . import desktop_config
+
+    install_state = _sibling("install_state")
+
+    path = Path(piece["path"]) if piece.get("path") else desktop_config_path(opts)
+
+    def _run() -> str:
+        result = desktop_config.remove_entry(path)
+        key = (
+            "install.uninstall.entry_removed"
+            if result.changed
+            else "install.uninstall.did_not_exist"
+        )
+        lines = [t(key)]
+        if piece.get("replaced_foreign") and piece.get("backup"):
+            lines.append(t("plugin_install.uninstall.desktop_backup", backup=piece["backup"]))
+        current = install_state.load(opts.home, opts.data_dir)
+        if current is not None:
+            install_state.save(
+                opts.home, install_state.without_piece(current, "desktop_entry"), opts.data_dir
+            )
+        return "\n    ".join(lines)
+
+    return Action("desktop", path, t("plugin_install.uninstall.desktop_plan"), _run)
 
 
 #: Los componentes por defecto: desinstalarlos todos es una desinstalación completa.

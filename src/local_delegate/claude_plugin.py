@@ -43,8 +43,10 @@ PLUGIN = "plugin"
 SETTINGS = "settings"
 
 #: Platforms where T0 or the CI `plugin` job verified that `claude plugin` honours
-#: `CLAUDE_CONFIG_DIR`. Elsewhere a simulated HOME falls back to settings (REQ-005).
-CLAUDE_CONFIG_DIR_VERIFIED = frozenset({"win32"})
+#: `CLAUDE_CONFIG_DIR`. Elsewhere a simulated HOME falls back to settings (REQ-005). Windows by
+#: T0; Linux and macOS by the `plugin` job of PR #392 (install into an empty `CLAUDE_CONFIG_DIR`
+#: with `~/.claude/plugins` unchanged), which keeps checking it on every run.
+CLAUDE_CONFIG_DIR_VERIFIED = frozenset({"win32", "linux", "darwin"})
 
 #: Seconds a `claude plugin …` call may take. `install` copies the plugin into the cache.
 TIMEOUT = 180.0

@@ -59,7 +59,7 @@ COMMON_CASES = [
     # REQ-013
     _case("install_mcp", "install", "--mcp"),
     _case("serve_dashdash", "serve", "--"),
-    _case("append_again", "install", "--clients", "claude", "--cl"),
+    _case("append_again", "install", "--clients", "claude", "--cli"),
     # REQ-014
     _case("mcp_mode", "install", "--mcp-mode", ""),
     _case("log_level", "serve", "--log-level", "w"),
@@ -269,7 +269,7 @@ def test_bash_subcommands_at_every_level(bash_run):
     _, cases, _ = bash_run
     root = _root_subcommands()
     assert cases["root"] == root
-    assert len(root) == 13
+    assert len(root) == 14
     assert cases["root_ba"] == ["backend-params"]
     assert cases["bp"] == ["show", "set", "unset", "reset"]
     assert cases["llamaswap"] == ["residency"]
