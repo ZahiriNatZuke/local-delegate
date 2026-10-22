@@ -60,7 +60,8 @@ def entrypoint(path: Path) -> str:
                 if ep:
                     return str(ep)
     except OSError:
-        pass
+        # An unreadable transcript just has an unknown entrypoint.
+        return "?"
     return "?"
 
 
