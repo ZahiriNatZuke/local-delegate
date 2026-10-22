@@ -246,6 +246,9 @@ arrastra GHSA-82r6-8w77-94w6 (crítica: suplantación de certificado TLS por la 
 del nombre de host), GHSA-3w57-8xmc-8v26 y GHSA-5p39-cfhj-2xmp. Subir `uv.lock` arregla el CI, pero no
 a quien instala desde PyPI. El techo acompaña por el criterio de arriba: `anyio` está en el camino de
 arranque (la importa el SDK) y su versionado tiene major real.
+Con el mismo razonamiento, `opentelemetry-api>=1.45.1,<2` (la traen `mcp` y `fastapi`): hasta la
+1.45.0 arrastra GHSA-xcq7-p3pf-p88h (alerta 26 de Dependabot, media: parseo de `tracestate` sin
+límite), y el SDK la importa al arrancar (`mcp/shared/_otel.py`).
 
 Lo que cubre el resto: `install-smoke` por detección, los PRs semanales de Dependabot con el CI
 detrás, y `uv.lock` para desarrollo y CI (que **no** protege a quien instala desde PyPI).
