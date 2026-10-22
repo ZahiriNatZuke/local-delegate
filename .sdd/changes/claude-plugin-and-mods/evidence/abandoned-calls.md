@@ -83,6 +83,40 @@ Ajuste por la suite existente: las peticiones rápidas que llegan justo antes de
 (`test_detect_spanish_names`: palabras nuevas sin clasificar → añadidas al léxico `en`; su test,
 46 passed). `ruff check .` y `ruff format --check .` limpios.
 
-## Verificación en vivo
+## Verificación en vivo, primera vuelta (sesión principal, 2026-10-22)
 
-Pendiente de la sesión principal (reinstalar y reiniciar el daemon): guion del plan.
+Daemon instalado desde este worktree (pid 21908), ventana de prueba `w-20261022T142031Z`:
+
+- `inflight.json` se vacía en ≤ 1 s en los tres casos (matar el puente, cerrar su stdin,
+  `notifications/cancelled`); el puente sale en 2 s; el uso apunta `cancel_reason`.
+- **Falla** «un `local_classify` posterior responde en < 5 s» en los casos de matar el puente y de
+  cerrar stdin (29,7 s y 29,8 s); con `notifications/cancelled`, 4,9 s, justo.
+- Causa: el envío abandonado a llama-swap (127.0.0.1:9292) seguía abierto y generando el trozo
+  del `gemma4-26b-a4b`; llama-swap no cambia al `gemma3-4b` hasta que acaba.
+
+## Segunda vuelta: cortar la conexión del envío cancelado
+
+Cómo se enviaba: todos los envíos comparten un único `httpx2.Client` del módulo (`_client`, pool
+con keep-alive). Cerrarlo cortaría los envíos de otras llamadas.
+
+Cambio: en una `tools/call`, `_send` usa un cliente propio para ese envío (`_new_client`, mismos
+plazos), lo pasa a `_post_chat` por la `ContextVar` `_SEND_CLIENT` y registra en el token
+`_cut_client`: `shutdown(SHUT_RDWR)` del socket de cada conexión de ese cliente y `close()`. El
+`shutdown` hace falta en Linux y macOS, donde cerrar un socket no despierta al hilo bloqueado en
+`recv` ni manda el FIN. Sin token (CLI, benchmark, tests) se sigue usando el compartido. Un error
+de transporte de un envío cortado no ofrece arrancar el backend (sale por el error genérico).
+`run_abandonable` lanza `CallCancelled` aunque el envío haya vuelto (lo hizo volver el corte).
+
+Coste: sin keep-alive entre trozos de una `tools/call` (una conexión TCP por envío).
+
+Test: `tests/test_cancellation.py::test_cancelled_send_closes_the_backend_connection`, con un
+backend falso por socket que tarda 6 s y anota si el cliente cerró antes. Antes del arreglo falla
+con `el backend no vio cerrarse la conexión: seguiría generando el trozo abandonado`. Controles:
+
+- Sin registrar `_cut_client` → falla igual.
+- Con `close()` y sin `shutdown` → **pasa en Windows** (allí `closesocket` sí corta). El caso que
+  lo distingue es Linux/macOS, que cubre el CI (`test (ubuntu-latest)`, `test (macos-latest)`).
+
+Suite completa (`-n 2`): 4387 passed, 28 skipped. `ruff check` y `ruff format --check` limpios.
+
+Pendiente: repetir la verificación en vivo (la sesión principal).

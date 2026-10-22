@@ -81,8 +81,8 @@ puede dar el token en la config. `install --desktop` escribe en
 - Si Desktop cierra el puente (cierra su stdin) con una delegación en curso, el puente no la
   espera: tras medio segundo de margen manda `notifications/cancelled` por cada petición que siga
   abierta, corta sus conexiones, cierra la sesión con `DELETE` y sale en 3 s como mucho. El daemon
-  cancela la delegación (deja de esperar turno, no manda más trozos al backend, suelta la plaza y
-  la quita de `inflight.json`) y la apunta en el registro de uso con `ok: false`,
+  cancela la delegación (deja de esperar turno, corta el envío en curso para que el backend deje
+  de generar, no manda más trozos, suelta la plaza y la quita de `inflight.json`) y la apunta en el registro de uso con `ok: false`,
   `error: "cancelled"` y `cancel_reason`. Lo mismo pasa con cualquier cliente que mande
   `notifications/cancelled` (el Esc de Claude Code), cierre la sesión o corte la conexión.
 

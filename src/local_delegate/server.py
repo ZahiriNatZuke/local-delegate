@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import ast
 import base64
+import contextvars
 import json
 import math
 import os
@@ -163,21 +164,59 @@ _client_lock = threading.Lock()
 _chat_slots = threading.BoundedSemaphore(config.MAX_CONCURRENT_REQUESTS)
 
 
+def _new_client() -> httpx2.Client:
+    # REQ-019: solo el plazo de CONEXIÓN baja a 10 s (o al total, si es menor). La espera de carga
+    # de un modelo es de lectura y sigue en HTTP_TIMEOUT. Sin esto el kernel decidía: ~21 s en
+    # Windows y ~75 s en macOS por cada fallo de la VPN.
+    return httpx2.Client(
+        timeout=httpx2.Timeout(
+            config.HTTP_TIMEOUT,
+            connect=min(config.DELEGATION_CONNECT_TIMEOUT, config.HTTP_TIMEOUT),
+        )
+    )
+
+
 def _get_client() -> httpx2.Client:
     global _client
     if _client is None:
         with _client_lock:
             if _client is None:
-                # REQ-019: solo el plazo de CONEXIÓN baja a 10 s (o al total, si es menor). La
-                # espera de carga de un modelo es de lectura y sigue en HTTP_TIMEOUT. Sin esto el
-                # kernel decidía: ~21 s en Windows y ~75 s en macOS por cada fallo de la VPN.
-                _client = httpx2.Client(
-                    timeout=httpx2.Timeout(
-                        config.HTTP_TIMEOUT,
-                        connect=min(config.DELEGATION_CONNECT_TIMEOUT, config.HTTP_TIMEOUT),
-                    )
-                )
+                _client = _new_client()
     return _client
+
+
+#: El cliente propio de UN envío que se puede cortar (una `tools/call`, ver `_send`). Fuera de
+#: ahí, `None`: se usa el compartido con keep-alive.
+_SEND_CLIENT: contextvars.ContextVar[httpx2.Client | None] = contextvars.ContextVar(
+    "local_delegate_send_client", default=None
+)
+
+
+def _cut_client(client: httpx2.Client) -> None:
+    """Corta en el acto las conexiones de `client` (un envío cancelado) y lo cierra.
+
+    `close()` solo no basta: en Linux y macOS cerrar un socket no despierta al hilo bloqueado en
+    `recv` ni manda el FIN, y el backend seguiría generando. `shutdown` sí, en los tres sistemas;
+    llama.cpp ve el cierre y para. El acceso al pool es interno de httpx2/httpcore2: si cambia,
+    queda el `close()`.
+    """
+    try:
+        pool = getattr(getattr(client, "_transport", None), "_pool", None)
+        for connection in list(getattr(pool, "connections", ()) or ()):
+            inner = getattr(connection, "_connection", None)
+            stream = getattr(inner, "_network_stream", None)
+            sock = stream.get_extra_info("socket") if stream is not None else None
+            if isinstance(sock, socket.socket):
+                try:
+                    sock.shutdown(socket.SHUT_RDWR)
+                except OSError:
+                    pass  # ya cerrado
+    except Exception:
+        pass  # cortar es una ayuda; el `close()` de abajo va igual
+    try:
+        client.close()
+    except Exception:
+        pass
 
 
 # --- Delegaciones en curso (visibilidad multi-proceso vía archivo compartido) ----------------
@@ -1404,7 +1443,7 @@ mcp.middleware.append(cancellation.middleware(_log_cancelled))
 def _post_chat(model: str, payload: dict) -> ChatResult:
     """POST al endpoint /chat/completions con reintento opcional si el backend está caído."""
     headers = config.auth_headers()
-    client = _get_client()
+    client = _SEND_CLIENT.get() or _get_client()
     for attempt in (1, 2):
         # Una sonda por intento: el plazo de lectura vuelve a contar en cada envío.
         probe = _LoadProbe(model, delay_s=_probe_delay())
@@ -1438,6 +1477,10 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                 reasoning_chars=reasoning_chars,
             )
         except httpx2.HTTPError as e:
+            token = cancellation.current()
+            # Lo cortó `_cut_client` porque la llamada se canceló: no hay backend que ofrecer
+            # arrancar. Sale por el error genérico de abajo, y nadie lee ya ese resultado.
+            cut = token is not None and token.cancelled
             # Un solo `except` para toda la familia, y la diferencia la marca el clasificador.
             # Antes había tres, y `ConnectTimeout` se colaba por el genérico: no es subclase de
             # `ConnectError` —son ramas hermanas—, así que un plazo de conexión agotado se
@@ -1447,7 +1490,7 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                 error_class = failures.classify(e, model_loaded=probe.model_loaded())
             else:
                 error_class = failures.classify(e)
-            if failures.is_backend_missing(e):
+            if failures.is_backend_missing(e) and not cut:
                 # REQ-018: un backend REMOTO no se arranca desde aquí, así que ni se pregunta ni
                 # se intenta, valga AUTOSTART lo que valga. Con origen local, como siempre.
                 local = config.backend_origin() == "local"
@@ -2153,15 +2196,30 @@ def _slot(entry_id: int | None) -> Generator[None, None, None]:
 def _send(model: str, body: dict) -> ChatResult:
     """UN envío al backend, dentro de `in_flight()` y contado como llamada propia.
 
-    En una `tools/call` se puede abandonar: si la llamada se cancela a mitad del envío,
-    `CallCancelled` sale ya y el envío termina por su cuenta (`cancellation.run_abandonable`). El
-    contador de vuelo y el de llamadas propias siguen el envío real, no a quien lo abandonó.
+    En una `tools/call` el envío va por un cliente propio y se puede cortar: si la llamada se
+    cancela, `CallCancelled` sale ya (`cancellation.run_abandonable`) y `_cut_client` cierra la
+    conexión de ESE envío, para que el backend deje de generar (medido en vivo el 2026-10-22: sin
+    el corte, llama-swap no cambiaba de modelo hasta acabar el trozo abandonado, ~30 s). Un cliente
+    propio y no el compartido porque cerrar el compartido cortaría los envíos de otras llamadas.
+    El contador de vuelo y el de llamadas propias siguen el envío real.
     """
     turn_state = _turn
-
-    def post() -> ChatResult:
+    token = cancellation.current()
+    if token is None:
         with turn_state.in_flight(), _own_call(model):
             return _post_chat(model, body)
+
+    own = _new_client()
+    remove = token.on_cancel(lambda: _cut_client(own))
+
+    def post() -> ChatResult:
+        _SEND_CLIENT.set(own)
+        try:
+            with turn_state.in_flight(), _own_call(model):
+                return _post_chat(model, body)
+        finally:
+            remove()
+            own.close()
 
     return cancellation.run_abandonable(post)
 

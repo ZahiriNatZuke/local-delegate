@@ -13,8 +13,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   una conexión cortada no paraban nada: el SDK cancelaba el handler, pero la tool corre en un hilo
   que no se enteraba, así que seguía mandando trozos (medido: un resumen de 256 KB, 302 s) y otra
   llamada esperaba el turno todo ese tiempo (192 s con `local_wait: "turn"`). Ahora la llamada se
-  para: deja de esperar turno y plaza, abandona el envío en curso, no manda más trozos y sale de
-  `inflight.json`. El registro de uso la apunta con `ok: false`, `error: "cancelled"` y un campo
+  para: deja de esperar turno y plaza, corta la conexión del envío en curso (el backend deja de
+  generar ese trozo y puede cambiar de modelo ya), no manda más trozos y sale de
+  `inflight.json`. Cada envío de una llamada de tool usa ahora su propia conexión, para poder
+  cortarla sin tocar las de otras llamadas. El registro de uso la apunta con `ok: false`, `error: "cancelled"` y un campo
   nuevo, `cancel_reason` (`notification`, `disconnect` o `aborted`). (SDD
   `claude-plugin-and-mods`, abandoned-calls)
 - **`desktop-bridge` sale en ≤ 3 s al cerrarse stdin** aunque tenga peticiones en curso: tras

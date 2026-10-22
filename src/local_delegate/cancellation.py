@@ -176,8 +176,9 @@ def run_abandonable(fn: Callable[[], T]) -> T:
         wake.wait()
     finally:
         remove()
-    if not box.get("done"):
-        token.check()
+    # Cancelada, aunque el envío ya haya vuelto: si fue el corte de la conexión lo que lo hizo
+    # volver, su resultado es un error de transporte que no hay que tomar por respuesta.
+    token.check()
     if "error" in box:
         raise box["error"]
     if "value" not in box:
