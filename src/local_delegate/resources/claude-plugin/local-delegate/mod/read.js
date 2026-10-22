@@ -515,18 +515,23 @@ async function readOnToolCall($, common, e, next) {
 }
 
 // At the session's start (and on `--resume`): this session's guarded files and the classifier's
-// tools. `register.js` holds the module's only `session.start` hook and calls this one.
+// tools. `register.js` holds the module's only `session.start` hook and calls this one; what it
+// resolves goes into the heartbeat `register.js` writes right after, so the session's heartbeat
+// says `read_mod_active` from its start and the read hooks step aside from the first read
+// (REQ-023, decision 10). A reload mid-session starts the module over without a `session.start`:
+// then `readBeat` says it at the first classified read.
 export async function onSessionStart($, e, common) {
   if (!READ_STATE.enabled) {
-    return
+    return undefined
   }
   const c = common || engineCommon($)
-  READ_STATE.beat = false
   await readLoadGuard($, c, await readSessionId($))
   const tools = await readListTools(c)
   if (tools) {
     READ_STATE.tools = tools
   }
+  READ_STATE.beat = true
+  return { read_mod_active: true }
 }
 
 /** Registers the `tool.call` hook, only with `read_mod_enabled` on (off by default). */

@@ -15,6 +15,8 @@ one; this module holds what they read, and never builds a ``Result``:
   runs twice (a downgrade to 0.39 without ``uninstall``).
 - ``mod.loaded`` (F2-mod-core): the newest heartbeat the mod wrote at a session's start
   (``heartbeats/<session_id>.json`` in the plugin's data folder), with the state of each piece.
+- ``mod.read_overlap`` (F4-hooks-swap, REQ-023): the ``read_mod_enabled`` option, the read hook's
+  active layer (``read-hook.json``) and our read hooks in ``settings.json``.
 
 Inside WSL Claude Code stays on settings (REQ-005): there no plugin is expected, and its absence
 is not a fault. The helpers ``uses_plugin`` and ``our_settings_hooks`` are also what the hooks
@@ -32,9 +34,10 @@ import time
 from collections.abc import Mapping
 from pathlib import Path
 
-from . import claude_plugin, install, install_state
+from . import claude_plugin, install, install_state, plugin_migration
 
 UPDATE_HINT = "local-delegate update"
+READ_LAYER_HINT = "local-delegate install --enable-read-hook"
 INSTALL_HINT = "local-delegate install"
 
 
@@ -136,3 +139,50 @@ def same_path(a: str | Path, b: str | Path) -> bool:
     # No `resolve()`: on macOS the interpreter of a `uv tool` environment is a symlink to the base
     # Python, and resolving would make every environment look like the same one.
     return os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b))
+
+
+# --- The read mod and the read hooks (F4-hooks-swap, REQ-023, decision 10) -------------------
+#: The matchers of our read hooks (`Read`, other MCPs' read tools, `Bash|PowerShell`).
+READ_HOOK_MATCHERS = frozenset(
+    matcher
+    for _script, _event, matcher in (
+        install._READ_HOOK,
+        install._MCP_READ_HOOK,
+        install._SHELL_HOOK,
+    )
+)
+
+
+def read_mod_enabled(settings: dict | None) -> bool:
+    """The plugin's ``read_mod_enabled`` option (off by default)."""
+    return plugin_options(settings).get("read_mod_enabled") is True
+
+
+def read_layer_active(ctx) -> bool:
+    """The read hook's active layer: ``read-hook.json`` in the data folder, or
+    ``LD_HOOK_READ_ENABLED`` in the environment doctor runs in (``read_switch.enabled``)."""
+    if str(environ(ctx).get("LD_HOOK_READ_ENABLED", "")).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return True
+    target = plugin_migration.read_switch_path(ctx.home, ctx.log_dir)
+    if target is None:
+        return False
+    try:
+        data = json.loads(target.read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        return False
+    return isinstance(data, dict) and data.get("active") is True
+
+
+def settings_read_hooks(settings: dict | None, hooks_dir: Path) -> list[str]:
+    """``event/matcher`` of our read hooks in ``settings.json``: they never see the plugin's option,
+    so they never step aside for the read mod."""
+    return [
+        found
+        for found in our_settings_hooks(settings, hooks_dir)
+        if found.partition("/")[2] in READ_HOOK_MATCHERS
+    ]

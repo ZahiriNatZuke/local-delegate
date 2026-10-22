@@ -385,3 +385,80 @@ def test_mod_not_expected_without_plugin(tmp_path):
     home = make_home(tmp_path, codex=False, opencode=False)
     result = result_for("mod.loaded", make_ctx(home))
     assert result.status == checks.OK, result.detail
+
+
+# --- mod.read_overlap (F4-hooks-swap, REQ-023): the read mod and the read hooks ----------------
+
+
+def _read_mod(home: Path, data: Path, *, enabled: bool, layer: bool | None) -> None:
+    """The `read_mod_enabled` option in `pluginConfigs` and the read hook's active layer
+    (`read-hook.json`, as `install --enable-read-hook` writes it; `None` leaves no file)."""
+    settings = json.loads(_settings_path(home).read_text(encoding="utf-8"))
+    settings["pluginConfigs"][claude_plugin.PLUGIN_ID]["options"]["read_mod_enabled"] = enabled
+    _settings_path(home).write_text(json.dumps(settings, indent=2), encoding="utf-8")
+    switch = plugin_migration.read_switch_path(home, data)
+    assert switch is not None
+    if layer is None:
+        switch.unlink(missing_ok=True)
+    else:
+        switch.parent.mkdir(parents=True, exist_ok=True)
+        payload = {"active": layer, "since": "2026-10-22T10:00:00+00:00"}
+        switch.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def _settings_read_hooks(home: Path) -> None:
+    """The read hooks in `settings.json` as `install --enable-read-hook` registers them there."""
+    hooks_dir = home / ".claude" / "hooks" / install.HOOKS_SUBDIR
+    entries = [
+        (
+            event,
+            matcher,
+            install.hook_command(hooks_dir, script, "python", (install.READ_HOOK_FLAG,)),
+        )
+        for script, event, matcher in (
+            install._READ_HOOK,
+            install._MCP_READ_HOOK,
+            install._SHELL_HOOK,
+        )
+    ]
+    settings = json.loads(_settings_path(home).read_text(encoding="utf-8"))
+    settings, _removed = install.merge_hook_settings(settings, entries, hooks_dir)
+    _settings_path(home).write_text(json.dumps(settings, indent=2), encoding="utf-8")
+
+
+def test_read_mod_and_read_hook_overlap_warns(tmp_path):
+    # Both act: the read hook still in settings.json (it never sees the plugin option, so it never
+    # steps aside) while the read mod is on.
+    home, data = _plugin_home(tmp_path / "both", ld_bin=_ld_bin(tmp_path))
+    _settings_read_hooks(home)
+    _read_mod(home, data, enabled=True, layer=True)
+    both = result_for("mod.read_overlap", _ctx(home, data))
+    assert both.status == checks.WARN, both.detail
+    assert "settings.json" in both.detail
+    assert both.fix_hint == "local-delegate update"
+
+    # Neither acts: the option is on but the read layer is off, so the mod passes every read
+    # (`read_switch` is not `on`) and the hook does not run.
+    home, data = _plugin_home(tmp_path / "none", ld_bin=_ld_bin(tmp_path))
+    _read_mod(home, data, enabled=True, layer=False)
+    none = result_for("mod.read_overlap", _ctx(home, data))
+    assert none.status == checks.WARN, none.detail
+    assert "read_mod_enabled" in none.detail
+    assert none.fix_hint == "local-delegate install --enable-read-hook"
+    _read_mod(home, data, enabled=True, layer=None)
+    assert result_for("mod.read_overlap", _ctx(home, data)).status == checks.WARN
+
+    # Controls: the same HOME with the layer on is coordinated, and with the option off the hooks
+    # act alone; so the warns came from the overlap and the gap, not from the HOME.
+    _read_mod(home, data, enabled=True, layer=True)
+    ok = result_for("mod.read_overlap", _ctx(home, data))
+    assert ok.status == checks.OK, ok.detail
+    _read_mod(home, data, enabled=False, layer=False)
+    assert result_for("mod.read_overlap", _ctx(home, data)).status == checks.OK
+    home, data = _plugin_home(tmp_path / "off", ld_bin=_ld_bin(tmp_path))
+    _settings_read_hooks(home)
+    _read_mod(home, data, enabled=False, layer=True)
+    assert result_for("mod.read_overlap", _ctx(home, data)).status == checks.OK
+    # Without the plugin there is no read mod to overlap with.
+    plain = make_home(tmp_path / "plain", codex=False, opencode=False)
+    assert result_for("mod.read_overlap", make_ctx(plain)).status == checks.OK

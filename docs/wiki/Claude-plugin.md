@@ -56,6 +56,30 @@ puede usar (CLI vieja o ausente), `install` lo deja como está y no registra hoo
 - El apagado en caliente sigue siendo crear `~/.claude/local-delegate-block-off`: afecta solo a la
   capa que *bloquea*, no a la activa.
 
+### El hook de lectura y el mod de lectura
+
+Con la opción `read_mod_enabled` del plugin encendida, el mod de lectura y los hooks de lectura
+(`Read` y `Bash|PowerShell`) no actúan los dos sobre la misma lectura. `hooks.json` no cambia: los
+hooks siguen declarados y **se apartan** solo cuando el mod va a hacer exactamente lo que habrían
+hecho ellos, es decir, cuando se cumplen las cuatro condiciones a la vez:
+
+1. la opción `read_mod_enabled` está encendida (llega al hook como
+   `CLAUDE_PLUGIN_OPTION_READ_MOD_ENABLED`);
+2. el latido de **la misma sesión** (`heartbeats/<sesión>.json` en la carpeta de datos del plugin)
+   dice `read_mod_active` y que `process.run` respondió, y tiene menos de 24 h. El mod lo escribe
+   al iniciar la sesión, así que vale desde la primera lectura;
+3. la capa que *bloquea* está encendida (en «solo registrar» el mod no actúa y el hook registra);
+4. la vía es clasificable: una lectura de un fichero en disco con alcance conocido, por `Read`,
+   `Bash` o `PowerShell`. Las tools de otros MCP o un `git show HEAD:x` las sigue tratando el hook.
+
+Al apartarse, el hook deja en `blocks.jsonl` una línea con `step_aside: "read_mod_active"`,
+`reason: "step_aside"`, la vía, el alcance y la huella del fichero; la decisión del mod va en su
+propia línea (`source: "mod"`). Si falta cualquiera de las cuatro condiciones, el hook actúa como
+en la 0.40: si el mod se apaga o falla, el hook vuelve. Los hooks de lectura que sigan en
+`settings.json` no ven la opción del plugin y no se apartan; `doctor` lo avisa en «mod de lectura y
+hooks de lectura coordinados» (`mod.read_overlap`), igual que avisa si la opción está encendida con
+la capa activa apagada (entonces no actúa ninguno).
+
 ## Claude Desktop (`install --desktop`, solo Windows)
 
 El chat de Claude Desktop no pasa su entorno a los MCP ni expande `${VAR}`, así que no se le

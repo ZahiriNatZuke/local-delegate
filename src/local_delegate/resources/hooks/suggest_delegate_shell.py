@@ -46,6 +46,7 @@ from suggest_delegate_read import (
     block_on,
     extension_of,
     is_enabled,
+    step_aside_for_read_mod,
 )
 
 
@@ -63,6 +64,9 @@ def main() -> None:
         return
 
     tool_name = str(payload.get("tool_name") or "")
+    if step_aside_for_read_mod(payload, __file__, category="shell", route="shell"):
+        return
+
     found = read_classifier.classify_shell(command, tool_name)
     access = read_classifier.primary(found)
     common = {

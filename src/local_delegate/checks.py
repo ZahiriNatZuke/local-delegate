@@ -2,7 +2,7 @@
 
 Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
 backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
-definición de «estar a punto»**: los treinta y tres elementos del andamiaje, cada uno con un
+definición de «estar a punto»**: los treinta y cuatro elementos del andamiaje, cada uno con un
 ``probe`` que responde en qué estado está. Los cinco de la entrega por plugin de Claude Code
 viven en ``checks_plugin``, pero se registran aquí como los demás.
 
@@ -13,7 +13,7 @@ Tres reglas ordenan el módulo:
 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
    un ``fix`` posterior sobrescribiría configuración ajena.
-3. **Es una lista, no un framework.** Treinta y tres checks son una tupla de objetos con una
+3. **Es una lista, no un framework.** Treinta y cuatro checks son una tupla de objetos con una
    función; no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso,
    el diseño se revisa antes de seguir.
 
@@ -2724,8 +2724,33 @@ def _probe_mod_loaded(ctx):
     )
 
 
+def _probe_read_overlap(ctx):
+    """F4-hooks-swap (REQ-023): the read mod and a read hook never act on the same read, and with
+    the option on one of them always does. The plugin's read hooks step aside by themselves
+    (decision 10); the ones in ``settings.json`` cannot, and with the read layer off neither acts."""
+    if absent := _claude_absent(ctx):
+        return absent
+    if skip := _plugin_not_applicable(ctx):
+        return skip
+    path, settings, reason = _plugin_settings(ctx)
+    if reason:
+        return Result(UNKNOWN, reason)
+    if not checks_plugin.read_mod_enabled(settings):
+        return Result(OK, i18n.t("doctor.probe.read_overlap.off"))
+    found = checks_plugin.settings_read_hooks(settings, ctx.hooks_dir)
+    if found:
+        return Result(
+            WARN,
+            i18n.t("doctor.probe.read_overlap.both", hooks=", ".join(found), path=path),
+            checks_plugin.UPDATE_HINT,
+        )
+    if not checks_plugin.read_layer_active(ctx):
+        return Result(WARN, i18n.t("doctor.probe.read_overlap.none"), checks_plugin.READ_LAYER_HINT)
+    return Result(OK, i18n.t("doctor.probe.read_overlap.ok"))
+
+
 # --- El registro --------------------------------------------------------------
-# Treinta y tres elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse
+# Treinta y cuatro elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse
 # solo, el problema no sería el registro sino el diseño.
 #
 # El número se dice en cinco sitios de este módulo y llegó a decir «once» con doce checks ya
@@ -2810,6 +2835,8 @@ CHECKS: tuple[Check, ...] = (
     ),
     # F2-mod-core (REQ-009): reads the heartbeat file the mod writes, without launching `claude`.
     Check("mod.loaded", "scaffold", "doctor.check.mod.loaded", _probe_mod_loaded),
+    # F4-hooks-swap (REQ-023): reads `settings.json` and `read-hook.json`, without launching `claude`.
+    Check("mod.read_overlap", "scaffold", "doctor.check.mod.read_overlap", _probe_read_overlap),
     Check("service.daemon", "service", "doctor.check.service.daemon", _probe_daemon),
     Check("service.backend", "service", "doctor.check.service.backend", _probe_backend_models),
     # En `service` y no en `scaffold` aunque lea las entradas MCP: sale a la red, y el grupo
@@ -2854,7 +2881,7 @@ CHECKS: tuple[Check, ...] = (
 
 
 def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
-    """Corre los treinta y tres probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+    """Corre los treinta y cuatro probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
 
     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
@@ -2868,7 +2895,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
             continue
         try:
             result = check.probe(ctx)
-        except Exception as exc:  # un check roto no debe impedir ver los otros treinta y dos
+        except Exception as exc:  # un check roto no debe impedir ver los otros treinta y tres
             result = Result(UNKNOWN, i18n.t("doctor.probe.failed", error=exc))
         results.append((check, result))
     return results

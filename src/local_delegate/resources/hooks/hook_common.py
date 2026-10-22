@@ -106,12 +106,22 @@ def context_of(payload: dict, script: str) -> dict:
     return {"version": version_de(script), "session_id": str(payload.get("session_id") or "")}
 
 
-def record(event: str, **metadata: object) -> None:
+def record(event: str, step_aside: str | None = None, **metadata: object) -> None:
+    """Una linea de telemetria. Con ``step_aside`` (por que se aparto el hook, p. ej.
+    ``STEP_ASIDE_READ_MOD``) la linea dice que el hook NO actuo y por que: ``reason`` pasa a
+    ``step_aside`` y ``suggested`` a falso, para que una medicion no la cuente como aviso del hook."""
     if not enabled():
         return
     destination = os.environ.get("LD_HOOK_TELEMETRY_LOG", "").strip()
     if not destination:
         return
+    if step_aside is not None:
+        metadata = {
+            **metadata,
+            "suggested": False,
+            "reason": "step_aside",
+            "step_aside": step_aside,
+        }
     payload = {"ts": datetime.now(UTC).isoformat(), "event": event, **metadata}
     try:
         path = Path(destination)
@@ -159,6 +169,88 @@ def mod_decision_fields(decision: object) -> dict:
     if blocked:
         fields["blocked"] = True
     return fields
+
+
+# --- El hook se aparta del mod de lectura (REQ-023, decision 10 del plan) -------------------------
+#
+# Con el mod de lectura encendido actuaban los dos sobre la misma lectura. El hook se aparta SOLO
+# cuando el mod va a hacer exactamente lo que habria hecho el, que son cuatro condiciones a la vez:
+#
+# 1. la opcion `read_mod_enabled` del plugin, que Claude Code pasa a los hooks como
+#    `CLAUDE_PLUGIN_OPTION_READ_MOD_ENABLED` (la entrega por settings no la tiene: alli actua siempre);
+# 2. el latido de SU MISMA sesion (`<CLAUDE_PLUGIN_DATA>/heartbeats/<session_id>.json`, decision 9)
+#    dice `read_mod_active` y `process_run`, y tiene menos de 24 h;
+# 3. la capa *bloquea* en `on`: en «solo registrar» el mod no actua, y si el hook se apartara la
+#    lectura no quedaria en ningun sitio;
+# 4. la via es clasificable: una lectura con fichero en disco y alcance conocido, por una tool cuyo
+#    resultado el mod sabe sustituir. Lo demas (otro MCP, `git show HEAD:x`) el mod lo deja pasar.
+#
+# Si falta cualquiera, el hook actua como en la 0.40: si el mod se apaga o falla, el hook vuelve.
+
+#: Opcion de la `userConfig` del plugin, tal como llega al entorno de un hook.
+READ_MOD_OPTION = "CLAUDE_PLUGIN_OPTION_READ_MOD_ENABLED"
+#: Carpeta de datos del plugin, donde el mod escribe los latidos.
+PLUGIN_DATA_VARIABLE = "CLAUDE_PLUGIN_DATA"
+#: Un latido mas viejo no dice que el mod siga vivo en esta sesion.
+HEARTBEAT_MAX_AGE_S = 24 * 3600
+#: Motivo con el que se aparta el hook (`record(step_aside=...)`).
+STEP_ASIDE_READ_MOD = "read_mod_active"
+#: Tools cuyo resultado sustituye el mod (`READ_SUMMARIZABLE_TOOLS` de `mod/read.js`).
+READ_MOD_TOOLS = frozenset({"Read", "Bash", "PowerShell"})
+#: Alcances que el mod trata; `unclassifiable` lo deja pasar.
+READ_MOD_SCOPES = frozenset({"whole", "range", "partial"})
+_SESSION_ID = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+
+
+def _parse_instant(value: object) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        moment = datetime.fromisoformat(value.strip())
+    except ValueError:
+        return None
+    return moment if moment.tzinfo is not None else moment.replace(tzinfo=UTC)
+
+
+def read_mod_active(session_id: object, *, now: datetime | None = None) -> bool:
+    """Condicion 2: el latido de ESTA sesion dice que el mod de lectura actua y que
+    `process.run` respondio, y es de hace menos de `HEARTBEAT_MAX_AGE_S`."""
+    session = str(session_id or "")
+    folder = os.environ.get(PLUGIN_DATA_VARIABLE, "").strip()
+    if not folder or not _SESSION_ID.match(session):
+        return False
+    try:
+        beat = json.loads((Path(folder) / "heartbeats" / f"{session}.json").read_text("utf-8"))
+    except (OSError, ValueError):
+        return False
+    if not isinstance(beat, dict) or beat.get("session_id") != session:
+        return False
+    if beat.get("read_mod_active") is not True or beat.get("process_run") not in (True, "ok"):
+        return False
+    written = _parse_instant(beat.get("at"))
+    if written is None:
+        return False
+    age = ((now or datetime.now(UTC)) - written).total_seconds()
+    # Un latido del futuro (reloj movido) no prueba nada: se toleran unos minutos de desfase.
+    return -300 <= age < HEARTBEAT_MAX_AGE_S
+
+
+def read_mod_covers(payload: dict, classified: dict) -> bool:
+    """Las cuatro condiciones de la decision 10. `classified` es la respuesta de
+    `read_classifier.classify` para esta llamada (la misma que recibe el mod)."""
+    if os.environ.get(READ_MOD_OPTION, "").strip().lower() not in TRUTHY:
+        return False
+    if block_state() != "on":
+        return False
+    if str(payload.get("tool_name") or "") not in READ_MOD_TOOLS:
+        return False
+    if (
+        classified.get("kind") != "read"
+        or not classified.get("path")
+        or classified.get("scope") not in READ_MOD_SCOPES
+    ):
+        return False
+    return read_mod_active(payload.get("session_id"))
 
 
 def emit(event: str, context: str, **metadata: object) -> None:
