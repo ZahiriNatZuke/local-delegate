@@ -1,0 +1,20 @@
+{
+  "commands.summarize.description": "Summarizes a file with the local model, without a model turn.",
+  "commands.summarize.hint": "<path>",
+  "commands.summarize.usage": "Usage: `/local-summarize` <file path>.",
+  "commands.summarize.missing": "The file {path} does not exist.",
+  "commands.commit.description": "Proposes a commit message for the staged changes (does not commit).",
+  "commands.commit.header": "Message proposed by the local model (nothing was committed):",
+  "commands.commit.no_changes": "Nothing is staged: run `git add` first.",
+  "commands.commit.no_process": "`/local-commit` needs `process.run`, which is not available on this surface or is blocked by policy.",
+  "commands.commit.git_failed": "`git diff --cached` failed: {detail}",
+  "commands.lint.description": "Summarizes lint or test output from a file or a command (30 s limit).",
+  "commands.lint.hint": "<file|command>",
+  "commands.lint.usage": "Usage: `/local-lint` <output file> or `/local-lint` <command>.",
+  "commands.lint.file_only": "`process.run` is not available here or is blocked by policy: `/local-lint` only accepts an existing file, and \"{arg}\" is not one.",
+  "commands.lint.bad_quotes": "The command has an unclosed quote.",
+  "commands.lint.run_failed": "Could not run \"{command}\" (30 s limit): {detail}",
+  "commands.error.mcp_down": "The `local-delegate` MCP is not responding: check that the daemon is running with `local-delegate doctor`. Details: {detail}",
+  "commands.error.tool_failed": "`local-delegate` returned an error: {detail}",
+  "commands.error.empty": "`local-delegate` returned no text."
+}
