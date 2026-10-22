@@ -290,6 +290,35 @@ export function engineCommon($) {
 }
 
 /**
+ * The text of a `local-delegate` tool's answer to `$.mcp.call`. FastMCP wraps the `str` a tool
+ * returns in `{ "result": … }`, as `structuredContent` and as the text block's JSON; without that
+ * wrapper the text blocks are taken as they come (a JSON that is not the wrapper stays as it is).
+ * Trimmed; `''` when there is no text. Telling an error or an empty answer apart is the caller's.
+ */
+export function toolResultText(result) {
+  const structured = result && result.structuredContent
+  if (structured && typeof structured === 'object' && typeof structured.result === 'string') {
+    return structured.result.trim()
+  }
+  const text = ((result && result.content) || [])
+    .filter(block => block && block.type === 'text' && typeof block.text === 'string')
+    .map(block => block.text)
+    .join('\n')
+    .trim()
+  if (text.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(text)
+      if (parsed && typeof parsed === 'object' && typeof parsed.result === 'string') {
+        return parsed.result.trim()
+      }
+    } catch {
+      // not JSON: a plain text answer
+    }
+  }
+  return text
+}
+
+/**
  * Writes this session's heartbeat, `heartbeats/<session_id>.json`, for `doctor` and the read hooks
  * (decision 9). One file per session: a session never goes by another one's heartbeat.
  *
