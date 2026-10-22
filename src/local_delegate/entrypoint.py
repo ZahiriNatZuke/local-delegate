@@ -85,6 +85,14 @@ def main() -> None:
 
     Sin argumentos no cambia nada, y es deliberado: así es como lo lanzan los hosts MCP.
     """
+    if sys.argv[1:2] == ["hook"]:
+        # `python -m local_delegate hook <nombre>`: el mismo despacho que `local_delegate.main`, que
+        # sale siempre con 0. Aquí ya se pagó el import del servidor; el plugin no entra por aquí.
+        from .hook import run_hook
+
+        run_hook(sys.argv[2:])
+        return
+
     if len(sys.argv) > 1:
         from . import cli
 

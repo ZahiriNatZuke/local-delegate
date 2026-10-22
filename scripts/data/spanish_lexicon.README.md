@@ -136,6 +136,14 @@ de diccionario.
     `test_fields_omitted_when_not_applicable`, nombre fijado por el plan) va, a mano, a inglés;
     las otras tres (`posted`, `thought`, `multi`) eran nombres propios del lote y se renombraron.
 
+22. Con el subcomando de los hooks y el interruptor del hook de lectura (lote F1-hook-entry del SDD
+    `claude-plugin-and-mods`, 2026-10-21) el detector informó de 10 palabras sin clasificar, a
+    mano, todas a inglés: `plugin` y `distro` (variables de entorno de la entrega por plugin y de
+    WSL que declara `config.py`), `gated`, `temporary`, `fraction` y `venv` (de `hook_entry.py`,
+    `read_switch.py` y `scripts/measure_hook_latency.py`) y `fingerprints`, `imported`,
+    `pythonutf` y `silently` (nombres de `tests/test_hook_entry.py`, dos de ellos fijados por el
+    plan).
+
 ## Heurísticas (no usan datos ajenos)
 
 En `detect_spanish_names.classify_word`, en este orden:
