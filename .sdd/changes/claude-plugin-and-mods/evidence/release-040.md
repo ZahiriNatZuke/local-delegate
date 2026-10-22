@@ -15,7 +15,7 @@ PyPI, ni tag, ni GitHub Release, ni `release.py` en modo real; nada instalado en
 | La PR de release sella `UNRELEASED` en `deprecations.py` | `deprecations.py:60` | No hay entradas `UNRELEASED`; `bump_version.py` no tuvo nada que sellar |
 | Captura del README atada a la versión | `docs/wiki/Publishing.md`, `tests/test_capture.py` | Regenerada contra la app de métricas del árbol (`/api/status` = 0.40.0) |
 | Nombres retirados «avisan hasta la 0.40.x» | `deprecations.py`, `name_exceptions.json`, README, wiki | No toca en esta release: es el horizonte; la retirada va en la ola 4 (`overdue("0.41.0")`) |
-| Sobrecarga de los hooks (+150 ms mediana / +300 ms p95) o se estrechan filtros «antes de la release» | `plan.md` (medición en vivo de F2) | **Queda**: lo mide el otro agente en `evidence/F2-live.md`; si se supera, este PR se rebasa |
+| Sobrecarga de los hooks (+150 ms mediana / +300 ms p95) o se estrechan filtros «antes de la release» | `plan.md` (medición en vivo de F2) | Cumplido según F2-live (#406): +80 ms de mediana con la capa de lectura apagada y +125 ms encendida (tope +150); no hay que estrechar filtros. Rebasado sobre `main` y la cifra va a la wiki `Claude-plugin.md` |
 | `measure_plugin_adoption.py --install <instante de la 0.40.0>` | `F2-attribution.md:67` | Queda para después de publicar e instalar (la sesión principal fija el instante) |
 
 ## `bump_version.py`
@@ -62,7 +62,7 @@ vacío, `## [0.40.0] - 2026-10-22` con párrafo de cabecera, y enlaces de compar
 
 - `CHANGELOG.md`: párrafo de la 0.40.0, «Lo que rompe y cómo actualizar» (migración por `update`,
   vuelta a settings respetada, bajar a la 0.39 con `uninstall` antes y su coste: cada hook carga el
-  paquete de la 0.39, ~1 s, y deja un error no bloqueante) y una línea de documentación.
+  paquete de la 0.39, 0,7–1,2 s medidos en F2-live, y sale con código 1 sin bloquear) y una línea de documentación.
 - `docs/wiki/Claude-plugin.md`: sección «Bajar a la 0.39».
 - `docs/wiki/Savings-and-metrics.md`: `mod_calls` en la fila de `/api/stats` y sección
   «Delegaciones del mod y adopción del plugin» con `scripts/measure_plugin_adoption.py`.

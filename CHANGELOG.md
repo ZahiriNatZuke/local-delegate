@@ -27,8 +27,8 @@ plugin, y las tools MCP no cambian de contrato.
 - **Bajar a la 0.39 exige `local-delegate uninstall` antes**, con la 0.40 todavía instalada. La 0.39
   no conoce el plugin y no lo quita. Si no lo haces, el plugin se queda y su `ld_bin` apunta al
   intérprete de `uv tool`, que ya tiene la 0.39: **cada hook carga el paquete de la 0.39**
-  (alrededor de 1 s, porque carga el servidor) **y deja un error no bloqueante en cada llamada**,
-  porque la 0.39 no tiene `local_delegate.hook`. No bloquea, pero frena cada prompt y cada tool, y
+  (medido: 0,7–1,2 s, porque carga el servidor) **y deja un error no bloqueante en cada llamada**
+  (sale con código 1), porque la 0.39 no tiene `local_delegate.hook`. No bloquea, pero frena cada prompt y cada tool, y
   el `install` de la 0.39 deja además los hooks duplicados. Arreglo a posteriori: `claude plugin
   uninstall local-delegate@local-delegate --scope user` y `claude plugin marketplace remove
   local-delegate`. Ver [Bajar a la 0.39](docs/wiki/Claude-plugin.md#bajar-a-la-039).
