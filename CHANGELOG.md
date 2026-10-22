@@ -19,6 +19,21 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `caller_session_key`; el id de sesión en claro sigue sin guardarse en ningún sitio. Las líneas
   anteriores no tienen clave y no cuentan para ninguna sesión.
 
+### Retira
+
+- **Los siete nombres retirados en la 0.38.0 salen del registro de obsoletos.** Se avisaron hasta
+  la 0.40.x, como estaba anunciado; desde esta versión `doctor` (check «nombres obsoletos») y
+  `local_status` ya no avisan de ellos, `update` e `install` ya no los migran, y el subcomando y la
+  opción viejos dan el error genérico de argparse (código 2) en vez del mensaje que nombraba el
+  nuevo. Siguen sin efecto, igual que desde la 0.38.0. Si alguno sigue puesto, renómbralo a mano:
+  `recalcular-coste` → `recompute-cost`, `--reiniciar-calibracion` → `--reset-calibration`,
+  `LD_HOOK_READ_BLOQUEAR` → `LD_HOOK_READ_BLOCK`, `LD_HOOK_READ_INTERRUPTOR` →
+  `LD_HOOK_READ_SWITCH_FILE`, `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO` →
+  `LOCAL_DELEGATE_STRUCTURED_SUMMARY`, `LOCAL_DELEGATE_COSTE_RESPALDO` →
+  `LOCAL_DELEGATE_COST_FALLBACK` y `~/.claude/local-delegate-bloqueo-apagado` →
+  `~/.claude/local-delegate-block-off`. Sin esto la 0.41.0 no podía salir: el test de horizonte
+  la ponía en rojo. (SDD `claude-plugin-and-mods`, retire-seven-names)
+
 ### Corrige
 
 - **Una delegación cuyo cliente se va ya no sigue hasta el final ni retiene el turno del

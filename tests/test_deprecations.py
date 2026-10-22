@@ -140,7 +140,9 @@ def test_old_names_are_unique():
     assert len(old_names) == len(set(old_names))
 
 
-# --- El registro real tras la retirada (REQ-001 de retire-legacy-aliases) -------------------
+# --- Los siete retirados de la 0.38.0, fuera del registro desde la 0.41.0 --------------------
+# Única copia de sus nombres en la suite (lista de excepciones del detector de nombres en español):
+# los demás tests los importan de aquí para probar que ya no quedan.
 SEVEN_RETIRED = (
     ("recalcular-coste", "recompute-cost", "cli_command"),
     ("--reiniciar-calibracion", "--reset-calibration", "cli_option"),
@@ -152,16 +154,30 @@ SEVEN_RETIRED = (
 )
 
 
-def test_registry_holds_exactly_the_seven_retired_names():
-    """Siete retirados con sucesor, en este orden, sin `_FAST` ni doble escritura."""
-    assert [(e.old, e.new, e.retired_from) for e in deprecations.DEPRECATED_NAMES] == list(
-        SEVEN_RETIRED
-    )
-    for e in deprecations.DEPRECATED_NAMES:
-        assert e.kind == "retired", e
-        # `bump_version` sella UNRELEASED con la versión que se publica: vale antes y después.
-        assert e.introduced in (deprecations.UNRELEASED, "0.38.0"), e
-        assert e.warn_until == "0.40.0", e
+def test_the_seven_retired_names_left_the_registry():
+    """SDD claude-plugin-and-mods, retire-seven-names: se avisaron hasta la 0.40.x y salen.
+
+    Ni el registro ni sus lectores los conocen, ni como nombre viejo ni como sucesor.
+    """
+    registered = {e.old for e in deprecations.DEPRECATED_NAMES}
+    new_names = {e.new for e in deprecations.DEPRECATED_NAMES}
+    for old, new, _surface in SEVEN_RETIRED:
+        assert old not in registered and deprecations.find(old) is None, old
+        assert new not in new_names, new
+    listed = deprecations.env_vars() + deprecations.switch_files() + deprecations.cli_entries()
+    assert not {e.old for e in listed} & {old for old, _new, _surface in SEVEN_RETIRED}
+
+
+def test_the_0_41_0_changelog_announces_the_seven_retired_names():
+    """La sección que publica la retirada (`[Unreleased]` hasta la release, `[0.41.0]` después)
+    nombra cada nombre viejo y su sucesor."""
+    sections = _changelog_sections((ROOT / "CHANGELOG.md").read_text(encoding="utf-8"))
+    names = [name for old, new, _surface in SEVEN_RETIRED for name in (old, new)]
+    missing = {
+        version: [name for name in names if name not in sections.get(version, "")]
+        for version in ("Unreleased", "0.41.0")
+    }
+    assert min(missing.values(), key=len) == [], missing
 
 
 # --- Horizonte (REQ-004) ------------------------------------------------------
@@ -170,9 +186,10 @@ def test_horizon_no_deprecated_name_is_overdue_in_the_current_version():
     _assert_horizon(_package_version())
 
 
-def test_registry_has_nothing_overdue_in_0_38_0():
-    """REQ-019: la 0.38.0 no deja nada vencido, sin tener que subir la versión del paquete."""
-    _assert_horizon("0.38.0")
+def test_registry_has_nothing_overdue_in_0_41_0():
+    """La 0.41.0 no deja nada vencido, sin tener que subir la versión del paquete: es la release
+    que no podía salir con los siete nombres de la 0.38.0 dentro (retire-seven-names)."""
+    _assert_horizon("0.41.0")
 
 
 ALIAS = DeprecatedName("env_var", "LD_OLD_TEST_ALIAS", "LD_TEST_ALIAS", "0.35.0")
@@ -467,28 +484,11 @@ def _stamped_deprecations(tmp_path, monkeypatch, version: str):
     return module
 
 
-def test_the_0_38_0_bump_keeps_the_registry_valid(tmp_path, monkeypatch):
-    """REQ-019: la PR de release sella las siete en 0.38.0 y avisan hasta la 0.40.x."""
-    stamped_module = _stamped_deprecations(tmp_path, monkeypatch, "0.38.0")
-    entries = stamped_module.DEPRECATED_NAMES
-    assert [e.old for e in entries] == [old for old, _new, _from in SEVEN_RETIRED]
-    assert {e.introduced for e in entries} == {"0.38.0"}
+def test_the_0_41_0_bump_keeps_the_real_registry_valid(tmp_path, monkeypatch):
+    """Tras sellar la PR de release de la 0.41.0, el registro sigue válido y sin vencidos."""
+    stamped_module = _stamped_deprecations(tmp_path, monkeypatch, "0.41.0")
     assert stamped_module.class_problems() == []
-    for version in ("0.38.0", "0.39.5", "0.40.9"):
-        assert stamped_module.overdue(version) == [], version
-    # Control positivo: en la 0.41.0 vencen las siete.
-    assert stamped_module.overdue("0.41.0") == [old for old, _new, _from in SEVEN_RETIRED]
-    with i18n.override("es"):
-        assert "0.38.0" in deprecation_notices.warning_text(entries[0])
-
-
-def test_the_0_38_0_changelog_still_announces_every_entry(tmp_path, monkeypatch):
-    """REQ-019: con `[Unreleased]` hecho `[0.38.0]`, la sección sigue nombrando viejo y nuevo."""
-    stamped_module = _stamped_deprecations(tmp_path, monkeypatch, "0.38.0")
-    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    assert "## [Unreleased]" in text
-    released = text.replace("## [Unreleased]", "## [0.38.0] - 2026-10-22", 1)
-    assert changelog_problems(released, stamped_module.DEPRECATED_NAMES) == []
+    assert stamped_module.overdue("0.41.0") == []
 
 
 def test_deprecations_imports_nothing_from_the_package():

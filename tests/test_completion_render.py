@@ -12,6 +12,7 @@ import importlib.resources
 import re
 
 import pytest
+from test_deprecations import SEVEN_RETIRED
 
 from local_delegate import completion, deprecations, i18n
 from local_delegate.version import get_version
@@ -255,8 +256,10 @@ def test_powershell_registers_both_executables():
 def test_hidden_names_do_not_appear(shell):
     """REQ-004: SUPPRESS help, subparsers without help and deprecated names stay out."""
     script = completion.render(shell, lang="es")
+    # The registry's CLI names plus the two retired from it in 0.41.0 (retire-seven-names).
     retired = [entry.old for entry in deprecations.cli_entries()]
-    assert len(retired) >= 2  # the old subcommand and the old option of recompute-cost
+    retired += [old for old, _new, kind in SEVEN_RETIRED if kind in ("cli_command", "cli_option")]
+    assert len(retired) >= 2  # the former subcommand and the former option of recompute-cost
     # Whole words: quotes delimit them in PowerShell, spaces and quotes in the case tables.
     words = set(re.findall(r"[A-Za-z0-9_.:/+-]+", script))
     for hidden in [*retired, "--api-key"]:  # `benchmark --api-key` has help=SUPPRESS

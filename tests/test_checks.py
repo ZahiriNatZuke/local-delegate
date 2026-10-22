@@ -2230,25 +2230,19 @@ def test_unreadable_settings_json_warns_with_the_reason(monkeypatch, tmp_path):
     assert "JSON" in r.detail
 
 
-def test_real_registry_retired_name_in_settings_json_env_warns_with_rename(monkeypatch, tmp_path):
-    """REQ-012 con el registro real: el viejo del bloqueo en el `env` de un HOME simulado."""
-    from local_delegate import config, deprecations
+def test_real_registry_old_block_name_in_settings_json_env_is_not_warned(monkeypatch, tmp_path):
+    """REQ-012 con el registro real desde la 0.41.0 (retire-seven-names): el viejo del bloqueo en
+    el `env` de un HOME simulado ya no da aviso. El control positivo con un retirado registrado es
+    `test_doctor_would_warn_if_the_names_were_still_registered` (test_hook_legacy_names.py)."""
+    from test_deprecations import SEVEN_RETIRED
 
-    entry = next(e for e in deprecations.DEPRECATED_NAMES if e.new == "LD_HOOK_READ_BLOCK")
-    assert entry.is_retired
-    monkeypatch.setattr(
-        config, "DEPRECATED_ENV_VALUES", {e.old: None for e in deprecations.env_vars()}
-    )
+    from local_delegate import config
+
+    old = next(o for o, new, _surface in SEVEN_RETIRED if new == "LD_HOOK_READ_BLOCK")
     monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", None)
     (tmp_path / ".claude").mkdir()
     settings = tmp_path / ".claude" / "settings.json"
-    settings.write_text(json.dumps({"env": {entry.new: "1"}}), encoding="utf-8")
-    # Control: con el nombre nuevo no hay nada que avisar.
-    assert checks._probe_deprecated_names(checks.Context(home=tmp_path)).status == checks.OK
-
-    settings.write_text(json.dumps({"env": {entry.old: "1"}}), encoding="utf-8")
+    settings.write_text(json.dumps({"env": {old: "1"}}), encoding="utf-8")
     r = checks._probe_deprecated_names(checks.Context(home=tmp_path))
-    assert r.status == checks.WARN
-    assert entry.old in r.detail and entry.new in r.detail and "settings.json" in r.detail
-    assert "ya no tiene efecto" in r.detail
-    assert f"renombra {entry.old} a {entry.new}" in r.fix_hint
+    assert r.status == checks.OK, r
+    assert old not in f"{r.detail} {r.fix_hint}"

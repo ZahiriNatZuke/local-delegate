@@ -8,6 +8,9 @@ Desde la 0.38.0 los hooks leen **solo** `LD_HOOK_READ_BLOCK`, `LD_HOOK_READ_SWIT
 `~/.claude/local-delegate-block-off`: los nombres viejos ni se aplican ni se detectan, y el evento
 de telemetría ya no lleva `deprecated_names` (REQ-010, REQ-011 filas 1–3). `doctor` sigue leyendo
 la cola de 7 días, donde solo llegan eventos de hooks 0.35–0.37 aún sin actualizar.
+
+Desde la 0.41.0 (SDD claude-plugin-and-mods, retire-seven-names) los tres nombres viejos salen del
+registro: siguen sin efecto en los hooks y `doctor` ya no avisa de ellos.
 """
 
 from __future__ import annotations
@@ -22,6 +25,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+from test_deprecations import SEVEN_RETIRED
 
 from local_delegate import (
     attribution,
@@ -35,11 +39,13 @@ from local_delegate import (
 from local_delegate import install as inst
 from local_delegate.resources.hooks import hook_common
 
-# Los nombres viejos salen del registro: el hook ya no los nombra (REQ-010).
-_SWITCH_ENTRY = deprecations.switch_files()[0]
-OLD_SWITCH, NEW_SWITCH = _SWITCH_ENTRY.old, _SWITCH_ENTRY.new
-OLD_BLOCK = next(e.old for e in deprecations.env_vars() if e.new == "LD_HOOK_READ_BLOCK")
-OLD_SWITCH_VAR = next(e.old for e in deprecations.env_vars() if e.new == "LD_HOOK_READ_SWITCH_FILE")
+# Los nombres viejos salen de la lista histórica de los siete: el hook ya no los nombra (REQ-010)
+# y, desde la 0.41.0, el registro tampoco.
+_OLD_BY_NEW = {new: old for old, new, _surface in SEVEN_RETIRED}
+NEW_SWITCH = "local-delegate-block-off"
+OLD_SWITCH = _OLD_BY_NEW[NEW_SWITCH]
+OLD_BLOCK = _OLD_BY_NEW["LD_HOOK_READ_BLOCK"]
+OLD_SWITCH_VAR = _OLD_BY_NEW["LD_HOOK_READ_SWITCH_FILE"]
 
 
 @pytest.fixture
@@ -75,7 +81,7 @@ def test_the_file_table_is_the_same_in_the_hooks_and_in_the_package():
 
 def test_the_hook_names_the_switch_with_its_own_constant_and_no_old_name():
     """El interruptor sale de la tabla de ficheros (ya no se lee el viejo) y el hook lo nombra con
-    una constante propia, que tiene que ser el sucesor del registro (REQ-010)."""
+    una constante propia, que tiene que ser el nombre nuevo (REQ-010)."""
     assert hook_common.SWITCH_FILE_NAME == NEW_SWITCH
     assert "switch_file" not in hook_common.FILE_NAMES
     assert "switch_file" not in legacy_names.FILE_NAMES
@@ -277,8 +283,8 @@ def test_the_7_day_tail_gives_the_names_and_looks_no_further_back(tmp_path):
     _write_telemetry(
         log,
         [
-            _event(now - timedelta(days=9), ["LD_HOOK_READ_INTERRUPTOR"]),
-            _event(now - timedelta(days=2), ["LD_HOOK_READ_BLOQUEAR"]),
+            _event(now - timedelta(days=9), [OLD_SWITCH_VAR]),
+            _event(now - timedelta(days=2), [OLD_BLOCK]),
             _event(now - timedelta(hours=1)),
             _event(now, [OLD_SWITCH]),
         ],
@@ -288,35 +294,56 @@ def test_the_7_day_tail_gives_the_names_and_looks_no_further_back(tmp_path):
 
     names = checks.deprecated_names_in_hook_telemetry(log, now=now)
 
-    assert names == {"LD_HOOK_READ_BLOQUEAR", OLD_SWITCH}
+    assert names == {OLD_BLOCK, OLD_SWITCH}
 
 
-def test_doctor_warns_about_what_the_hooks_read(tmp_path, monkeypatch):
-    """La cola de 7 días con un evento sintético de un hook 0.35–0.37 sigue dando `WARN` (REQ-010):
-    los hooks nuevos ya no escriben `deprecated_names`, pero los viejos sin actualizar sí."""
-    log = tmp_path / "telemetry.jsonl"
-    _write_telemetry(log, [_event(datetime.now(UTC), [OLD_BLOCK])])
+def _seed_every_old_name(home: Path, monkeypatch) -> None:
+    """Los siete nombres viejos por los tres sitios que mira `doctor`: la cola de telemetría de los
+    hooks, el `env` de `settings.json` y el interruptor viejo en `~/.claude/`."""
+    old_names = [old for old, _new, _surface in SEVEN_RETIRED]
+    log = home / "telemetry.jsonl"
+    _write_telemetry(log, [_event(datetime.now(UTC), old_names)])
     monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", log)
-    for name in config.DEPRECATED_ENV_VALUES:
-        monkeypatch.setitem(config.DEPRECATED_ENV_VALUES, name, None)
-    ctx = checks.Context(home=tmp_path)
-
-    result = checks._probe_deprecated_names(ctx)
-
-    assert result.status == checks.WARN
-    assert "leído por los hooks" in result.detail
-    assert deprecation_notices.warning_text(deprecations.find(OLD_BLOCK)) in result.detail
-
-
-def test_doctor_warns_about_the_old_switch_in_claude(tmp_path, monkeypatch):
-    monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", None)
-    for name in config.DEPRECATED_ENV_VALUES:
-        monkeypatch.setitem(config.DEPRECATED_ENV_VALUES, name, None)
-    claude = tmp_path / ".claude"
-    claude.mkdir()
+    claude = home / ".claude"
+    claude.mkdir(exist_ok=True)
+    env = {old: "1" for old, _new, surface in SEVEN_RETIRED if surface == "env_var"}
+    (claude / "settings.json").write_text(json.dumps({"env": env}), encoding="utf-8")
     (claude / OLD_SWITCH).write_text("", encoding="utf-8")
+
+
+def test_doctor_no_longer_warns_about_the_seven_names(tmp_path, monkeypatch):
+    """retire-seven-names: con los siete puestos en todos los sitios, el check da `OK` y no nombra
+    ninguno; ni la variable de la shell se lee ya (`DEPRECATED_ENV_VALUES` no los tiene)."""
+    _seed_every_old_name(tmp_path, monkeypatch)
+    old_names = [old for old, _new, _surface in SEVEN_RETIRED]
+    assert not set(config.DEPRECATED_ENV_VALUES) & set(old_names)
+
+    result = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+
+    assert result.status == checks.OK, result
+    assert not [old for old in old_names if old in f"{result.detail} {result.fix_hint}"]
+
+
+def test_doctor_would_warn_if_the_names_were_still_registered(tmp_path, monkeypatch):
+    """Control positivo del anterior: los mismos datos con los tres del interruptor de vuelta en
+    el registro dan `WARN` por la telemetría, el `env` y el fichero."""
+    _seed_every_old_name(tmp_path, monkeypatch)
+    entries = tuple(
+        deprecations.DeprecatedName("retired", old, new, "0.38.0", "0.40.0", retired_from=surface)
+        for old, new, surface in SEVEN_RETIRED
+        if new in ("LD_HOOK_READ_BLOCK", "LD_HOOK_READ_SWITCH_FILE", NEW_SWITCH)
+    )
+    monkeypatch.setattr(deprecations, "DEPRECATED_NAMES", entries)
 
     result = checks._probe_deprecated_names(checks.Context(home=tmp_path))
 
     assert result.status == checks.WARN
+    for entry in entries:
+        assert deprecation_notices.warning_text(entry) in result.detail
     assert f"renombra {OLD_SWITCH} a {NEW_SWITCH}" in result.fix_hint
+    # Sin el `env` ni el fichero, la telemetría sola también avisa.
+    (tmp_path / ".claude" / "settings.json").write_text("{}", encoding="utf-8")
+    (tmp_path / ".claude" / OLD_SWITCH).unlink()
+    result = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+    assert result.status == checks.WARN
+    assert "leído por los hooks" in result.detail

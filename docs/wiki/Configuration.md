@@ -628,10 +628,10 @@ nada, ni antes ni ahora.
 
 Cuatro variables cambiaron de nombre al pasar a inglés en la 0.35.0. El nombre viejo funcionó con
 aviso desde la 0.35.0 y **en la 0.38.0 se retiró**: ya no tiene efecto.
-La tabla queda como referencia de qué renombrar. `doctor` avisa del nombre viejo hasta la 0.40.x
-(check «nombres obsoletos») si lo ve en la shell o en el bloque `env` de
-`~/.claude/settings.json`, con el nombre por el que cambiarlo, y `local_status` dice los que vea en
-el entorno del daemon o del servidor por stdio.
+La tabla queda como referencia de qué renombrar **a mano**. Hasta la 0.40.x, `doctor` (check
+«nombres obsoletos») y `local_status` avisaban del nombre viejo; **desde la 0.41.0 ya no avisan**
+ni `update` lo migra: si lo tienes puesto, no hace nada y nadie te lo dice. Búscalo tú en la shell,
+en el bloque `env` de `~/.claude/settings.json` y en el lanzador del daemon.
 
 | Nombre nuevo | Nombre viejo |
 |---|---|
@@ -641,18 +641,19 @@ el entorno del daemon o del servidor por stdio.
 | `LOCAL_DELEGATE_COST_FALLBACK` | `LOCAL_DELEGATE_COSTE_RESPALDO` |
 
 Lo mismo pasó con el subcomando `recompute-cost` (antes `recalcular-coste`) y su opción
-`--reset-calibration` (antes `--reiniciar-calibracion`): los nombres viejos dan un error de
-argumento (código 2) que nombra el nuevo.
+`--reset-calibration` (antes `--reiniciar-calibracion`): hasta la 0.40.x los nombres viejos daban
+un error que nombraba el nuevo; desde la 0.41.0 son un subcomando o una opción desconocidos más, y
+el error de argumento (código 2) es el genérico, con la lista de subcomandos válidos.
 
 Y con el fichero que apaga el bloqueo: `~/.claude/local-delegate-block-off` (antes
-`local-delegate-bloqueo-apagado`). El viejo ya no apaga nada; `doctor` avisa si existe, y también
-si la telemetría de los hooks anteriores a la 0.38.0 dice que lo leyeron.
+`local-delegate-bloqueo-apagado`). El viejo ya no apaga nada y, desde la 0.41.0, `doctor` tampoco
+avisa si existe: bórralo y crea el nuevo.
 
-`local-delegate update` (y también `install`) migra lo que puede antes de diagnosticar: renombra
-las claves viejas del `env` de `~/.claude/settings.json` y el fichero interruptor viejo, y guarda
-antes una copia de `settings.json` en `settings.json.retired-names.bak` (con el `env` completo,
-que puede contener claves: bórrala cuando compruebes que todo va bien). No toca las variables del
-sistema, el perfil de la shell ni el lanzador del daemon: esas se cambian a mano.
+Entre la 0.38.0 y la 0.40.x, `local-delegate update` (y también `install`) migraba lo que podía:
+renombraba las claves viejas del `env` de `~/.claude/settings.json` y el fichero interruptor viejo,
+con una copia previa en `settings.json.retired-names.bak` (con el `env` completo, que puede contener
+claves: bórrala cuando compruebes que todo va bien). Desde la 0.41.0 ya no migra nada: quien salte
+desde una 0.37 o anterior renombra a mano.
 
 ### Nombres en disco que cambiaron
 

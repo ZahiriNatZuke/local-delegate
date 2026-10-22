@@ -50,84 +50,34 @@
       "title": "Nombre retirado con sucesor",
       "entries": [
         {
-          "name": "LD_HOOK_READ_BLOQUEAR",
-          "file": "src/local_delegate/deprecations.py",
-          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): entrada de `DEPRECATED_NAMES`, que lo conserva solo para avisar y migrar"
-        },
-        {
-          "name": "LD_HOOK_READ_BLOQUEAR",
-          "file": "tests/test_hook_legacy_names.py",
-          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): nombres de la telemetría de los hooks que el check de `doctor` sigue leyendo para avisar (REQ-012)"
-        },
-        {
-          "name": "LD_HOOK_READ_INTERRUPTOR",
-          "file": "src/local_delegate/deprecations.py",
-          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): entrada de `DEPRECATED_NAMES`, que lo conserva solo para avisar y migrar"
-        },
-        {
-          "name": "LD_HOOK_READ_INTERRUPTOR",
-          "file": "tests/test_hook_legacy_names.py",
-          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): nombres de la telemetría de los hooks que el check de `doctor` sigue leyendo para avisar (REQ-012)"
-        },
-        {
-          "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
-          "file": "src/local_delegate/deprecations.py",
-          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): entrada de `DEPRECATED_NAMES`, que lo conserva solo para avisar y migrar"
-        },
-        {
-          "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
-          "file": "tests/test_structured_summary.py",
-          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): la variable vieja tiene que faltar del entorno del proceso limpio en que se mide el valor por defecto"
-        },
-        {
-          "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
-          "file": "src/local_delegate/deprecations.py",
-          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): entrada de `DEPRECATED_NAMES`, que lo conserva solo para avisar y migrar"
-        },
-        {
-          "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
-          "file": "tests/test_density.py",
-          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): la variable vieja sigue en `config.ENVIRONMENT_VARIABLES`, que la lee solo para avisar (REQ-009)"
-        },
-        {
-          "name": "recalcular-coste",
-          "file": "src/local_delegate/deprecations.py",
-          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): entrada de `DEPRECATED_NAMES`, que lo conserva solo para avisar y migrar"
-        },
-        {
-          "name": "local-delegate-bloqueo-apagado",
-          "file": "src/local_delegate/deprecations.py",
-          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): entrada de `DEPRECATED_NAMES`, que lo conserva solo para avisar y migrar"
-        },
-        {
           "name": "recalcular-coste",
           "file": "tests/test_deprecations.py",
-          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): tabla de REQ-001 con la que se compara el registro real"
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisado hasta la 0.40.x y fuera del registro desde la 0.41.0 (SDD claude-plugin-and-mods, retire-seven-names): `SEVEN_RETIRED`, la única copia de los siete en la suite, con la que los demás tests prueban que ya no quedan"
         },
         {
           "name": "LD_HOOK_READ_BLOQUEAR",
           "file": "tests/test_deprecations.py",
-          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): tabla de REQ-001 con la que se compara el registro real"
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisado hasta la 0.40.x y fuera del registro desde la 0.41.0 (SDD claude-plugin-and-mods, retire-seven-names): `SEVEN_RETIRED`, la única copia de los siete en la suite, con la que los demás tests prueban que ya no quedan"
         },
         {
           "name": "LD_HOOK_READ_INTERRUPTOR",
           "file": "tests/test_deprecations.py",
-          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): tabla de REQ-001 con la que se compara el registro real"
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisado hasta la 0.40.x y fuera del registro desde la 0.41.0 (SDD claude-plugin-and-mods, retire-seven-names): `SEVEN_RETIRED`, la única copia de los siete en la suite, con la que los demás tests prueban que ya no quedan"
         },
         {
           "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
           "file": "tests/test_deprecations.py",
-          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): tabla de REQ-001 con la que se compara el registro real"
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisado hasta la 0.40.x y fuera del registro desde la 0.41.0 (SDD claude-plugin-and-mods, retire-seven-names): `SEVEN_RETIRED`, la única copia de los siete en la suite, con la que los demás tests prueban que ya no quedan"
         },
         {
           "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
           "file": "tests/test_deprecations.py",
-          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): tabla de REQ-001 con la que se compara el registro real"
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisado hasta la 0.40.x y fuera del registro desde la 0.41.0 (SDD claude-plugin-and-mods, retire-seven-names): `SEVEN_RETIRED`, la única copia de los siete en la suite, con la que los demás tests prueban que ya no quedan"
         },
         {
           "name": "local-delegate-bloqueo-apagado",
           "file": "tests/test_deprecations.py",
-          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (SDD retire-legacy-aliases, REQ-021): tabla de REQ-001 con la que se compara el registro real"
+          "reason": "nombre retirado con sucesor: sin efecto desde la 0.38.0, avisado hasta la 0.40.x y fuera del registro desde la 0.41.0 (SDD claude-plugin-and-mods, retire-seven-names): `SEVEN_RETIRED`, la única copia de los siete en la suite, con la que los demás tests prueban que ya no quedan"
         }
       ]
     },

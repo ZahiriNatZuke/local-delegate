@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 
 import pytest
+from test_deprecations import SEVEN_RETIRED
 
 from local_delegate import backend_params, cli, completion, deprecations, i18n
 from local_delegate.completion import (
@@ -21,6 +22,8 @@ from local_delegate.completion import (
     UnsupportedConstructError,
     build_model,
 )
+
+_CLI_KINDS = ("cli_command", "cli_option")
 
 
 def _set_language(monkeypatch, lang: str) -> None:
@@ -149,19 +152,26 @@ def test_hidden_real_names(real_model):
         s for node in real_model.nodes.values() for o in node.options for s in o.strings
     }
     checked = 0
-    for entry in deprecations.cli_entries():
-        if deprecations.effective_kind(entry) == "cli_command":
+    # The registry entries plus the two CLI names retired from it in 0.41.0 (retire-seven-names).
+    retired_cli = [
+        (old, new, surface) for old, new, surface in SEVEN_RETIRED if surface in _CLI_KINDS
+    ]
+    registered = [
+        (e.old, e.new, deprecations.effective_kind(e)) for e in deprecations.cli_entries()
+    ]
+    for old, new, surface in [*registered, *retired_cli]:
+        if surface == "cli_command":
             # Control: the successor is in the parser and offered, so the search finds names.
-            assert entry.new in commands and entry.new in offered_commands
-            assert entry.old not in commands
-            assert entry.old not in offered_commands
-            assert not any(entry.old in path for path in real_model.nodes)
+            assert new in commands and new in offered_commands
+            assert old not in commands
+            assert old not in offered_commands
+            assert not any(old in path for path in real_model.nodes)
         else:
-            assert entry.new in options and entry.new in offered_options
-            assert entry.old not in options
-            assert entry.old not in offered_options
+            assert new in options and new in offered_options
+            assert old not in options
+            assert old not in offered_options
         checked += 1
-    assert checked >= 2  # today: the old `recompute-cost` command and its old option
+    assert checked >= 2  # at least the retired `recompute-cost` command and its retired option
     assert "--api-key" in dict(parsers)[("benchmark",)]._option_string_actions
     assert _option(real_model.nodes[("benchmark",)], "--api-key") is None
     assert _option(real_model.nodes[("recompute-cost",)], "--reset-calibration") is not None

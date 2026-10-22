@@ -185,15 +185,17 @@ def test_hooks_never_name_a_retired_name():
 
     Ninguna constante de texto de un hook (variables, rutas, docstrings) puede ser el nombre viejo
     de una variable o un interruptor del registro: si lo fuera, el hook lo estaría leyendo, o
-    prometiendo en su documentación algo que ya no hace. Los nombres viejos salen del registro, no
-    de una lista a mano.
+    prometiendo en su documentación algo que ya no hace. Los nombres viejos salen del registro y,
+    desde que la 0.41.0 lo vació (retire-seven-names), de la lista histórica `SEVEN_RETIRED`.
     """
+    from test_deprecations import SEVEN_RETIRED
+
     from local_delegate import deprecations
 
     old_names = {e.old for e in deprecations.env_vars() + deprecations.switch_files()}
-    # Control positivo: el registro trae los tres nombres que leían los hooks.
-    assert len(old_names & {e.old for e in deprecations.switch_files()}) == 1
-    assert len(old_names) >= 3, old_names
+    old_names |= {old for old, _new, kind in SEVEN_RETIRED if kind in ("env_var", "switch_file")}
+    # Control positivo: la lista trae los tres nombres que leían los hooks.
+    assert len(old_names) >= 5, old_names
 
     hooks = Path(config.__file__).parent / "resources" / "hooks"
     found = {

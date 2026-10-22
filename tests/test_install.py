@@ -1053,28 +1053,24 @@ def test_retired_name_migration_records_one_date_per_name(monkeypatch, tmp_path)
     assert set(inst.read_migration_record(data_dir)) == set(second)
 
 
-def test_retired_name_migration_with_the_real_registry(tmp_path):
-    """REQ-015 con el registro real (L6): las cuatro variables y el interruptor se migran."""
-    from local_delegate import deprecations
+def test_the_real_registry_no_longer_migrates_the_seven_names(tmp_path):
+    """REQ-015 con el registro real desde la 0.41.0 (retire-seven-names): las cuatro variables y el
+    interruptor viejos ya no se migran; `install`/`update` no los tocan. El control positivo de la
+    migración, con un registro sintético, son los tests de `_retired_registry` de arriba."""
+    from test_deprecations import SEVEN_RETIRED
 
-    env_entries = deprecations.env_vars()
-    (switch,) = deprecations.switch_files()
-    assert len(env_entries) == 4 and all(e.is_retired for e in (*env_entries, switch))
-    original_env = {"KEEP": "k", **{e.old: f"v{i}" for i, e in enumerate(env_entries)}}
+    env_old_names = [old for old, _new, surface in SEVEN_RETIRED if surface == "env_var"]
+    (switch_old,) = (old for old, _new, surface in SEVEN_RETIRED if surface == "switch_file")
+    original_env = {"KEEP": "k", **{old: f"v{i}" for i, old in enumerate(env_old_names)}}
     home = _settings_home(tmp_path, {"hooks": {}, "env": original_env})
-    (home / ".claude" / switch.old).write_text("", encoding="utf-8")
+    (home / ".claude" / switch_old).write_text("", encoding="utf-8")
     data_dir = tmp_path / "data"
 
-    assert _migrate(home, data_dir) == 0
-    assert _settings(home) == {
-        "hooks": {},
-        "env": {"KEEP": "k", **{e.new: f"v{i}" for i, e in enumerate(env_entries)}},
-    }
-    assert (home / ".claude" / switch.new).is_file()
-    assert not (home / ".claude" / switch.old).exists()
-    assert set(inst.read_migration_record(data_dir)) == {e.old for e in (*env_entries, switch)}
-    # Lo que ya está migrado no vuelve a planear nada.
     assert inst.plan_retired_name_migration(home, data_dir) == []
+    assert _migrate(home, data_dir) == 0
+    assert _settings(home) == {"hooks": {}, "env": original_env}
+    assert (home / ".claude" / switch_old).is_file()
+    assert not (home / ".claude" / "local-delegate-block-off").exists()
 
 
 def test_retired_name_migration_never_writes_the_record_in_the_real_log_dir(monkeypatch, tmp_path):

@@ -680,8 +680,7 @@ def test_structured_mode_is_off_by_default():
     En un proceso limpio y sin la variable: recargar `config` aquí desharía el aislamiento de la
     suite, y comparar el texto fuente no prueba el valor cargado.
     """
-    names = {"LOCAL_DELEGATE_STRUCTURED_SUMMARY", "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO"}
-    env = {k: v for k, v in os.environ.items() if k not in names}
+    env = {k: v for k, v in os.environ.items() if k != "LOCAL_DELEGATE_STRUCTURED_SUMMARY"}
     output = subprocess.run(
         [
             sys.executable,

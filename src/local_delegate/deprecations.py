@@ -54,67 +54,11 @@ class DeprecatedName:
         return self.kind == "retired"
 
 
-DEPRECATED_NAMES: tuple[DeprecatedName, ...] = (
-    # Renombrados en la 0.35.0 (olas A1 y A2), alias con aviso en la 0.35.x, 0.36.x y 0.37.x;
-    # retirados con sucesor desde la 0.38.0 (SDD retire-legacy-aliases): ya no tienen efecto y
-    # solo se avisan (y se migran) hasta la 0.40.x. La PR de release sella `UNRELEASED`.
-    DeprecatedName(
-        "retired",
-        "recalcular-coste",
-        "recompute-cost",
-        "0.38.0",
-        "0.40.0",
-        retired_from="cli_command",
-    ),
-    DeprecatedName(
-        "retired",
-        "--reiniciar-calibracion",
-        "--reset-calibration",
-        "0.38.0",
-        "0.40.0",
-        retired_from="cli_option",
-    ),
-    DeprecatedName(
-        "retired",
-        "LD_HOOK_READ_BLOQUEAR",
-        "LD_HOOK_READ_BLOCK",
-        "0.38.0",
-        "0.40.0",
-        retired_from="env_var",
-    ),
-    DeprecatedName(
-        "retired",
-        "LD_HOOK_READ_INTERRUPTOR",
-        "LD_HOOK_READ_SWITCH_FILE",
-        "0.38.0",
-        "0.40.0",
-        retired_from="env_var",
-    ),
-    DeprecatedName(
-        "retired",
-        "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
-        "LOCAL_DELEGATE_STRUCTURED_SUMMARY",
-        "0.38.0",
-        "0.40.0",
-        retired_from="env_var",
-    ),
-    DeprecatedName(
-        "retired",
-        "LOCAL_DELEGATE_COSTE_RESPALDO",
-        "LOCAL_DELEGATE_COST_FALLBACK",
-        "0.38.0",
-        "0.40.0",
-        retired_from="env_var",
-    ),
-    DeprecatedName(
-        "retired",
-        "local-delegate-bloqueo-apagado",
-        "local-delegate-block-off",
-        "0.38.0",
-        "0.40.0",
-        retired_from="switch_file",
-    ),
-)
+# Vacío desde la 0.41.0 (SDD claude-plugin-and-mods, retire-seven-names): los siete nombres que
+# la 0.35.0 renombró y la 0.38.0 retiró se avisaron hasta la 0.40.x y salieron del registro (la
+# lista, en el CHANGELOG de la 0.41.0): nadie los lee ni avisa de ellos. La maquinaria se queda
+# para el próximo renombrado.
+DEPRECATED_NAMES: tuple[DeprecatedName, ...] = ()
 
 
 def parse_version(version: str) -> tuple[int, int, int]:

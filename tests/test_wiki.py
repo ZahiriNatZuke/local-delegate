@@ -255,13 +255,16 @@ def test_the_wiki_says_how_many_checks_there_really_are():
     assert phrase in text, f"la wiki no dice «{phrase}»; hay {len(checks.CHECKS)} comprobaciones"
 
 
-def test_the_deprecated_names_row_describes_the_0_38_behaviour():
-    """La fila del check «nombres obsoletos» dice lo que hace desde la 0.38.0 (REQ-023).
+def test_the_deprecated_names_row_describes_the_0_41_behaviour():
+    """La fila del check «nombres obsoletos» dice lo que hace desde la 0.41.0 (retire-seven-names).
 
-    Desde la 0.38.0 las variables del rol `fast` ya no se avisan y los nombres viejos ya no tienen
-    efecto. La fila nombra cada variable retirada con sucesor tal como la lista el registro, para
-    que una variable que se retire sin documentarse ponga la wiki en rojo.
+    Los siete nombres retirados en la 0.38.0 salieron del registro: la fila ya no los nombra como
+    avisados y dice que desde la 0.41.0 no se avisan. Cualquier variable retirada con sucesor que
+    vuelva a entrar en el registro tiene que salir nombrada, para que una retirada sin documentar
+    ponga la wiki en rojo.
     """
+    from test_deprecations import SEVEN_RETIRED
+
     text = (WIKI / "Integration-install.md").read_text(encoding="utf-8")
     rows = [
         line for line in text.splitlines() if line.startswith("| Entorno | nombres obsoletos |")
@@ -269,13 +272,28 @@ def test_the_deprecated_names_row_describes_the_0_38_behaviour():
     assert len(rows) == 1, f"se esperaba una fila del check, hay {len(rows)}"
     row = rows[0]
     assert "_FAST" not in row, "la fila sigue nombrando variables del rol `fast`"
-    assert "ya no tiene efecto" in row
-    env_vars = install.retired_names_with_successor("env_var")
-    assert env_vars, (
-        "el registro no trae variables retiradas con sucesor: el test no comprueba nada"
-    )
-    missing = [e.old for e in env_vars if f"`{e.old}`" not in row]
+    assert "0.41.0" in row
+    still_named = [old for old, _new, _surface in SEVEN_RETIRED if f"`{old}`" in row]
+    assert not still_named, f"la fila sigue nombrando nombres que ya no se avisan: {still_named}"
+    missing = [
+        e.old for e in install.retired_names_with_successor("env_var") if f"`{e.old}`" not in row
+    ]
     assert not missing, f"variables retiradas que la fila no nombra: {missing}"
+
+
+def test_the_configuration_page_says_the_seven_are_no_longer_warned():
+    """La sección de los nombres retirados de la 0.38.0 dice que desde la 0.41.0 ni `doctor` avisa
+    ni `update` migra, y sigue nombrando cada viejo con su nuevo para renombrar a mano."""
+    from test_deprecations import SEVEN_RETIRED
+
+    text = (WIKI / "Configuration.md").read_text(encoding="utf-8")
+    section = text.split("## Nombres retirados en la 0.38.0", 1)[1].split("\n## ", 1)[0]
+    assert "desde la 0.41.0 ya no avisan" in section
+    assert "Desde la 0.41.0 ya no migra nada" in section
+    missing = [
+        name for old, new, _surface in SEVEN_RETIRED for name in (old, new) if name not in section
+    ]
+    assert not missing, missing
 
 
 def _server_tools() -> list[str]:
