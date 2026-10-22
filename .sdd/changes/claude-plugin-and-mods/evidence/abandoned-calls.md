@@ -119,4 +119,23 @@ con `el backend no vio cerrarse la conexión: seguiría generando el trozo aband
 
 Suite completa (`-n 2`): 4387 passed, 28 skipped. `ruff check` y `ruff format --check` limpios.
 
-Pendiente: repetir la verificación en vivo (la sesión principal).
+## Verificación en vivo de la segunda vuelta (2026-10-22, 15:03–15:08Z)
+
+Daemon instalado desde esta rama (pid 59828), ventanas `w-20261022T150348Z` y `w-20261022T150629Z`.
+Mismo guion: puente propio con `local_summarize` del `CHANGELOG.md` (8 trozos, `gemma4-26b-a4b`) y
+después un `local_classify` (`gemma3-4b`, obliga a cambiar de modelo).
+
+| Corte | `inflight.json` vacío | Puente sale | `local_classify` después |
+|---|---|---|---|
+| kill a los 4 s (×2) | ≤ 1 s | — | 11,5 s y 10,8 s |
+| stdin cerrado a los 4 s (×2) | ≤ 1 s | 1 s y 2 s | 10,1 s y 10,3 s |
+| `notifications/cancelled` a los 5 s | ≤ 1 s | — | 3,4 s (medido 30 s después) |
+| kill a los 20 s | — | — | 4,8 s |
+| kill a los 40 s | — | — | 4,9 s |
+
+Antes del arreglo: 192 s; tras la primera vuelta: 29,7–29,8 s.
+
+**Lectura.** Con el corte durante la generación, la llamada siguiente tarda lo que cuesta cambiar de
+modelo (~4–5 s): criterio cumplido. Con el corte en los primeros segundos de un trozo, el backend
+está procesando el prompt (~8 K tokens) y llama.cpp no lo deja a medias: la siguiente espera ~10 s.
+Es un límite del backend, no del daemon; el daemon ya suelta turno, plaza y conexión al instante.
