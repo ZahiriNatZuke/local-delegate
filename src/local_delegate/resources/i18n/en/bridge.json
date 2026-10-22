@@ -1,0 +1,17 @@
+{
+  "bridge.config.foreign_entry": "{path} already has a `{key}` entry that is not the bridge; it is left alone unless explicitly asked",
+  "bridge.config.invalid_json": "{path} is not valid JSON; it is not rewritten",
+  "bridge.config.not_object": "{path} does not have the expected shape (an object with `mcpServers`); it is not rewritten",
+  "bridge.config.unreadable": "could not read {path}: {detail}",
+  "bridge.error.daemon_down": "could not reach the local-delegate daemon at {url} ({detail}). Is it running? Check with `local-delegate doctor`",
+  "bridge.error.http_status": "the local-delegate daemon answered HTTP {status} at {url}: {detail}",
+  "bridge.error.no_answer": "the local-delegate daemon closed the connection without answering (did it restart?); try again",
+  "bridge.error.parse": "unreadable JSON-RPC message: not JSON",
+  "bridge.error.session_lost": "the local-delegate daemon forgot the session and it could not be rebuilt; restart the server in Claude Desktop",
+  "bridge.error.token_rejected": "the local-delegate daemon rejected the token (HTTP 401). The bridge reads it from the Windows user variable `{variable}`: check that it exists and matches the one the daemon uses",
+  "bridge.error.usage": "usage: local-delegate desktop-bridge [--url URL]",
+  "bridge.log.session_recovered": "the local-delegate daemon forgot the session (did it restart?); rebuilt",
+  "bridge.log.started": "Claude Desktop bridge to {url} (token: {token})",
+  "bridge.log.token_absent": "not found; if the daemon requires one it will answer 401",
+  "bridge.log.token_present": "found"
+}

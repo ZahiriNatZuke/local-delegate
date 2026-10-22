@@ -855,6 +855,18 @@
       "text": "# local-delegate {version} completion {shell} lang={lang} (generated; do not edit)",
       "kind": "verbatim",
       "reason": "cabecera de los scripts de autocompletado (SDD cli-completion, REQ-009): contrato fijo y ASCII que `header_version` compara tal cual con la primera línea de los ficheros instalados (`doctor`, `update`); no cambia con el idioma"
+    },
+    {
+      "file": "src/local_delegate/desktop_config.py",
+      "text": "Claude",
+      "kind": "path",
+      "reason": "segmento de ruta de la configuración de Claude Desktop (`%APPDATA%/Claude`)"
+    },
+    {
+      "file": "src/local_delegate/token_source.py",
+      "text": "Environment",
+      "kind": "id",
+      "reason": "nombre de la clave del registro de Windows donde viven las variables de usuario (`HKCU\\Environment`)"
     }
   ]
 }
