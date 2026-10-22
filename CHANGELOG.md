@@ -50,6 +50,19 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `~/.claude/local-delegate-block-off`. Sin esto la 0.41.0 no podía salir: el test de horizonte
   la ponía en rojo. (SDD `claude-plugin-and-mods`, retire-seven-names)
 
+### Añade (medición de las vías de lectura)
+
+- **`scripts/measure_read_paths.py`: por qué vías se leen los ficheros.** Recorre los transcripts
+  de Claude Code (subagentes incluidos, sin las ventanas de `test-window`) y cuenta cada lectura
+  por vía: `Read` entero y por franjas, cada forma de shell (`cat`/`Get-Content`, `head`/`tail`,
+  `sed -n`, `awk`, `grep`, `python -c "open(…)"`, `git show`, con y sin tubería), `Grep` y las tools
+  de lectura de otros MCP; con el resultado (hecha o bloqueada por el hook), el tamaño del fichero
+  y lo que entró al contexto. Solo emite cifras; con `--corpus` escribe un corpus de comandos
+  anonimizado para el clasificador de lectura. En esta PC (30 días): `sed -n` mueve tanto volumen
+  como `Read` por franjas, y tras un `Read` bloqueado el fichero se rehace por franjas hasta el 96 %
+  (mediana); de ahí el umbral de 0,8 de la lectura acumulada. (SDD `claude-plugin-and-mods`,
+  F4-measure-reads)
+
 ### Corrige
 
 - **Una delegación cuyo cliente se va ya no sigue hasta el final ni retiene el turno del
