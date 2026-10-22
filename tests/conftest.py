@@ -6,8 +6,10 @@ import contextlib
 import importlib
 import json
 import os
+import shutil
 import socket
 import struct
+import subprocess
 import sys
 import threading
 from pathlib import Path
@@ -327,6 +329,177 @@ def reload_config(tmp_path):
     mp.undo()
     importlib.reload(config)
     isolate_logs()
+
+
+# --- SDD claude-plugin-and-mods, F1-delivery-core: the real `claude` never runs (I-3) ----------
+#: Names under which the Claude Code CLI can be launched, by OS and package manager.
+_CLAUDE_EXECUTABLES = frozenset({"claude", "claude.exe", "claude.cmd", "claude.ps1"})
+
+
+def _first_program(args) -> str:
+    """The program a `Popen` call would start: argv[0], or the first token of a shell string."""
+    if isinstance(args, bytes):
+        args = args.decode(errors="replace")
+    if isinstance(args, str):
+        token = args.strip().split(" ", 1)[0] if not args.lstrip().startswith('"') else None
+        if token is None:
+            token = args.lstrip()[1:].split('"', 1)[0]
+        return token
+    if isinstance(args, os.PathLike):
+        return os.fspath(args)
+    try:
+        return os.fspath(args[0])
+    except (TypeError, IndexError):
+        return ""
+
+
+def _launches_real_claude(program: str, env, allowed_root: Path) -> bool:
+    """True if `program` is the Claude Code CLI and not a double a test wrote under its tmp dir."""
+    if not program or Path(program).name.lower() not in _CLAUDE_EXECUTABLES:
+        return False
+    path = env.get("PATH") if isinstance(env, dict) else None
+    resolved = program if Path(program).is_absolute() else shutil.which(program, path=path)
+    if resolved is None:
+        return True  # it would fail anyway, but the test meant to launch the real CLI
+    try:
+        Path(resolved).resolve().relative_to(allowed_root.resolve())
+    except (ValueError, OSError):
+        return True
+    return False
+
+
+@pytest.fixture(autouse=True)
+def real_claude_cli_forbidden(monkeypatch, tmp_path_factory):
+    """No test reaches the real Claude Code configuration (plan, I-3).
+
+    Two halves. The environment: `CLAUDE_CONFIG_DIR` and `CLAUDE_PLUGIN_*` of whoever runs the
+    suite are removed, so a test that builds a child environment does not inherit the real config
+    folder or the options of an installed plugin. The CLI: any `Popen` (and so `subprocess.run`)
+    of the real `claude` raises. The plugin commands run through an injected runner
+    (`claude_plugin.Runner`, see `FakeClaude`); a test that needs a fake `claude` executable
+    writes it under its tmp dir, which stays allowed.
+    """
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+    for name in [n for n in os.environ if n.startswith("CLAUDE_PLUGIN_")]:
+        monkeypatch.delenv(name, raising=False)
+    allowed_root = tmp_path_factory.getbasetemp()
+    real_popen = subprocess.Popen
+
+    class GuardedPopen(real_popen):
+        def __init__(self, args, *pos, **kwargs):
+            program = kwargs.get("executable") or _first_program(args)
+            if _launches_real_claude(os.fspath(program), kwargs.get("env"), allowed_root):
+                raise RuntimeError(
+                    f"test tried to launch the real `claude` ({program!r}): inject a runner"
+                )
+            super().__init__(args, *pos, **kwargs)
+
+    monkeypatch.setattr(subprocess, "Popen", GuardedPopen)
+
+
+class FakeClaude:
+    """Double of the Claude Code CLI for `claude_plugin.Runner`: records every call.
+
+    It keeps the state the real CLI keeps (measured with 2.1.307 in an isolated
+    `CLAUDE_CONFIG_DIR`): `plugin list --json` returns a list of `{"id", "version", "enabled",
+    "scope", …}`, and `marketplace add`/`install` rewrite `settings.json` in their own format
+    (`rewrite_settings`), which is why the migration tests compare JSON and not bytes after
+    installing.
+    """
+
+    BIN = "C:/fake/bin/claude.exe"
+
+    def __init__(
+        self,
+        *,
+        present: bool = True,
+        version: str = "2.1.307",
+        version_output: str | None = None,
+        plugin_version: str = "0.40.0",
+        enabled: bool = True,
+        listed: bool = True,
+        already_installed: bool = False,
+        fail: frozenset[str] = frozenset(),
+        settings_path: Path | None = None,
+        rewrite_settings: bool = True,
+    ):
+        self.present = present
+        self.version_output = version_output or f"{version} (Claude Code)"
+        self.plugin_version = plugin_version
+        self.enabled = enabled
+        self.listed = listed
+        self.installed = already_installed
+        self.fail = fail
+        self.settings_path = settings_path
+        self.rewrite_settings = rewrite_settings
+        self.calls: list[tuple[list[str], dict | None]] = []
+        #: Hook for a test that must observe the disk at the moment of a given step.
+        self.on_step: dict[str, object] = {}
+
+    def which(self, name: str) -> str | None:
+        return self.BIN if self.present and name == "claude" else None
+
+    @staticmethod
+    def step_of(argv: list[str]) -> str:
+        rest = argv[1:]
+        if rest[:1] == ["--version"]:
+            return "version"
+        if rest[:3] == ["plugin", "marketplace", "add"]:
+            return "marketplace_add"
+        if rest[:3] == ["plugin", "marketplace", "remove"]:
+            return "marketplace_remove"
+        if rest[:2] == ["plugin", "install"]:
+            return "install"
+        if rest[:2] == ["plugin", "uninstall"]:
+            return "uninstall"
+        if rest[:2] == ["plugin", "list"]:
+            return "list"
+        return "other"
+
+    def steps(self) -> list[str]:
+        return [self.step_of(argv) for argv, _env in self.calls]
+
+    def _rewrite(self, key: str, value) -> None:
+        path = self.settings_path
+        if not self.rewrite_settings or path is None or not path.exists():
+            return
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+        data.setdefault(key, {}).update(value)
+        path.write_text(json.dumps(data, indent=4), encoding="utf-8")
+
+    def __call__(self, argv, env=None) -> subprocess.CompletedProcess:
+        argv = list(argv)
+        self.calls.append((argv, dict(env) if env is not None else None))
+        step = self.step_of(argv)
+        hook = self.on_step.get(step)
+        if callable(hook):
+            hook()
+        if step in self.fail:
+            return subprocess.CompletedProcess(argv, 1, "", f"{step} failed")
+        out = ""
+        if step == "version":
+            out = self.version_output
+        elif step == "marketplace_add":
+            self._rewrite("extraKnownMarketplaces", {"local-delegate": {"source": "directory"}})
+        elif step == "install":
+            self.installed = True
+            self._rewrite("enabledPlugins", {"local-delegate@local-delegate": True})
+            out = json.dumps({"command": "install", "outcome": "ok", "configApplied": True})
+        elif step == "uninstall":
+            self.installed = False
+        elif step == "list":
+            entries = []
+            if self.installed and self.listed:
+                entries.append(
+                    {
+                        "id": "local-delegate@local-delegate",
+                        "version": self.plugin_version,
+                        "scope": "user",
+                        "enabled": self.enabled,
+                    }
+                )
+            out = json.dumps(entries)
+        return subprocess.CompletedProcess(argv, 0, out, "")
 
 
 # --- HOME simulado, compartido por test_checks.py y test_doctor.py ------------
