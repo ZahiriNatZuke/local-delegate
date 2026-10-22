@@ -90,8 +90,7 @@ class Bridge:
         self.url = url
         self.session_id: str | None = None
         self.protocol_version: str | None = None
-        # Resuelto al llamar, no al definir: así la fuente es siempre la de `token_source` vigente.
-        self._provider = token_provider or (lambda: token_source.web_token())
+        self._provider = token_provider
         self._cached_token: str | None = None
         self._log = log or (lambda message: print(message, file=sys.stderr, flush=True))
         self._init_line: bytes | None = None
@@ -102,7 +101,10 @@ class Bridge:
 
     def _token(self, refresh: bool = False) -> str:
         if refresh or self._cached_token is None:
-            self._cached_token = (self._provider() or "").strip()
+            # Sin proveedor se busca `token_source.web_token` al llamar, no al construir: así la
+            # fuente es siempre la vigente (y la suite puede sustituirla).
+            provider = self._provider or token_source.web_token
+            self._cached_token = (provider() or "").strip()
         return self._cached_token
 
     def _headers(self, *, with_session: bool) -> dict[str, str]:
