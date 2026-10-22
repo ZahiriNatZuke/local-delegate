@@ -68,7 +68,7 @@ def language_lines() -> list[str]:
 def backend_params_lines() -> list[str]:
     """REQ-016/023 (SDD backend-extra-params, T9): the per-role backend parameters, as header lines.
 
-    Not a check: it changes neither the 32 checks nor the exit code. It reads the file of this
+    Not a check: it changes neither the 33 checks nor the exit code. It reads the file of this
     machine and `LOCAL_DELEGATE_BACKEND_PARAMS` of **this** shell, which may not be the daemon's,
     and says so. It repeats the warnings of `backend_params.report()` (context ones included).
     Values come only from accepted entries; a dropped entry shows its role, key and code, never its

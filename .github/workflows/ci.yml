@@ -397,6 +397,11 @@ jobs:
           echo "CLAUDE_CONFIG_DIR=$RUNNER_TEMP/claude-config" >> "$GITHUB_ENV"
           mkdir -p "$RUNNER_TEMP/claude-config"
 
+      # F2-mod-core: `register.js` no se versiona; lo genera `build_mod.py` desde `mod/*.js`
+      # (decisión 7). Va antes de validar, probar y construir la rueda, que lo necesitan.
+      - name: Construir register.js del mod
+        run: uv run python scripts/build_mod.py
+
       - name: claude plugin validate --strict (marketplaces y plugin)
         run: |
           set -euo pipefail
@@ -417,6 +422,34 @@ jobs:
             echo "validate aceptó un hooks.json roto"; exit 1
           fi
 
+      # F2-mod-core: los `*.test.ts` del mod (pinned-tools, common, commands) contra el motor de
+      # esta CLI. Se exige que corran los tres ficheros y ninguno falle: un runner que no encuentra
+      # tests también sale con 0.
+      - name: claude plugin test (mod)
+        run: |
+          set -euo pipefail
+          plugin=src/local_delegate/resources/claude-plugin/local-delegate
+          "$CLAUDE_BIN" plugin test "$plugin" 2>&1 | tee "$RUNNER_TEMP/plugin-test.log"
+          for file in pinned-tools common commands; do
+            grep -q "$file.test.ts" "$RUNNER_TEMP/plugin-test.log" || { echo "no corrió $file.test.ts"; exit 1; }
+          done
+          grep -qE '^ *0 fail' "$RUNNER_TEMP/plugin-test.log"
+
+      # Control negativo: con la pieza de tools fijas rota, `plugin test` tiene que fallar.
+      - name: plugin test falla con el mod roto
+        run: |
+          set -uo pipefail
+          broken="$RUNNER_TEMP/broken-mod"
+          cp -R src/local_delegate/resources/claude-plugin/local-delegate "$broken"
+          sed -i.bak 's/isDeferred: false/isDeferred: true/' "$broken/mod/pinned-tools.js"
+          rm "$broken/mod/pinned-tools.js.bak"
+          # `register.js` lleva las piezas pegadas: hay que regenerarlo en la copia.
+          uv run python scripts/build_mod.py --plugin-dir "$broken"
+          grep -q "isDeferred: true }" "$broken/register.js" || { echo "el mutante no llegó a register.js"; exit 1; }
+          if "$CLAUDE_BIN" plugin test "$broken"; then
+            echo "plugin test aceptó un mod que no fija ninguna tool"; exit 1
+          fi
+
       # La rueda lleva el plugin. Va aquí y no en la suite porque construir es pesado.
       - name: La rueda contiene el plugin
         run: |
@@ -431,6 +464,9 @@ jobs:
               base + ".claude-plugin/marketplace.json",
               base + "local-delegate/.claude-plugin/plugin.json",
               base + "local-delegate/hooks/hooks.json",
+              base + "local-delegate/register.js",
+              base + "local-delegate/mod/common.js",
+              base + "local-delegate/mod/pinned-tools.js",
           ]
           missing = [n for n in need if n not in names]
           if missing:

@@ -13,6 +13,8 @@ one; this module holds what they read, and never builds a ``Result``:
   of the installed ``uv tool`` environment.
 - ``hooks.duplicates``: our hooks in ``settings.json`` while the plugin is enabled, so every event
   runs twice (a downgrade to 0.39 without ``uninstall``).
+- ``mod.loaded`` (F2-mod-core): the newest heartbeat the mod wrote at a session's start
+  (``heartbeats/<session_id>.json`` in the plugin's data folder), with the state of each piece.
 
 Inside WSL Claude Code stays on settings (REQ-005): there no plugin is expected, and its absence
 is not a fault. The helpers ``uses_plugin`` and ``our_settings_hooks`` are also what the hooks
@@ -24,7 +26,9 @@ This one never imports ``checks`` (CodeQL ``py/cyclic-import``, PR #400).
 
 from __future__ import annotations
 
+import json
 import os
+import time
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -90,6 +94,42 @@ def our_settings_hooks(settings: dict | None, hooks_dir: Path) -> list[str]:
                     matcher = group.get("matcher")
                     found.append(f"{event}{'/' + matcher if matcher else ''}")
     return found
+
+
+# --- The mod's heartbeat (F2-mod-core, decision 9) -------------------------------------------
+#: A heartbeat older than this is not evidence that the mod loads today: the horizon decision 9
+#: gives the heartbeats.
+HEARTBEAT_MAX_AGE_DAYS = 7
+
+
+def heartbeat_dir(ctx) -> Path:
+    """Where the mod writes ``<session_id>.json``: the plugin's ``CLAUDE_PLUGIN_DATA`` (T0)."""
+    data = f"{claude_plugin.PLUGIN_NAME}-{claude_plugin.MARKETPLACE_NAME}"
+    return ctx.claude_dir / "plugins" / "data" / data / "heartbeats"
+
+
+def latest_heartbeat(ctx) -> tuple[Path, dict | None, str | None, float] | None:
+    """The newest heartbeat: its path, its content (or ``None`` and why) and its age in days.
+
+    ``None`` when no session has written one. By modification time: each session writes its own
+    file at its start, so the newest file is the last session that loaded the mod.
+    """
+    folder = heartbeat_dir(ctx)
+    try:
+        files = [p for p in folder.glob("*.json") if p.is_file()]
+    except OSError:
+        return None
+    if not files:
+        return None
+    newest = max(files, key=lambda p: p.stat().st_mtime)
+    age_days = max(0.0, (time.time() - newest.stat().st_mtime) / 86400)
+    try:
+        data = json.loads(newest.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return newest, None, str(exc), age_days
+    if not isinstance(data, dict):
+        return newest, None, type(data).__name__, age_days
+    return newest, data, None, age_days
 
 
 def same_path(a: str | Path, b: str | Path) -> bool:

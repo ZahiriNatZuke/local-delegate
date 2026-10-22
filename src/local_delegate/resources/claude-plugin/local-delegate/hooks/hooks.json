@@ -1,5 +1,8 @@
 {
-  "description": "Same events and filters as the settings.json delivery of 0.39. Every entry runs the uv tool interpreter with -I -m local_delegate.hook: an old, missing or broken install lets the call through instead of blocking it.",
+  "description": "Same events and filters as the settings.json delivery of 0.39. Every entry runs the uv tool interpreter with -I -m local_delegate.hook: an old, missing or broken install lets the call through instead of blocking it. The mod (register.js, built by scripts/build_mod.py) loads beside them; if it fails, these entries still run.",
+  "modules": [
+    "../register.js"
+  ],
   "hooks": {
     "UserPromptSubmit": [
       {

@@ -2,7 +2,7 @@
 
 Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
 backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
-definición de «estar a punto»**: los treinta y dos elementos del andamiaje, cada uno con un
+definición de «estar a punto»**: los treinta y tres elementos del andamiaje, cada uno con un
 ``probe`` que responde en qué estado está. Los cinco de la entrega por plugin de Claude Code
 viven en ``checks_plugin``, pero se registran aquí como los demás.
 
@@ -13,7 +13,7 @@ Tres reglas ordenan el módulo:
 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
    un ``fix`` posterior sobrescribiría configuración ajena.
-3. **Es una lista, no un framework.** Treinta y dos checks son una tupla de objetos con una
+3. **Es una lista, no un framework.** Treinta y tres checks son una tupla de objetos con una
    función; no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso,
    el diseño se revisa antes de seguir.
 
@@ -2655,8 +2655,44 @@ def _probe_hook_duplicates(ctx):
     return Result(OK, i18n.t("doctor.probe.hook_duplicates.none"))
 
 
+def _probe_mod_loaded(ctx):
+    """F2-mod-core (REQ-009): did the mod load? Its heartbeat, written at each session's start."""
+    if absent := _claude_absent(ctx):
+        return absent
+    if skip := _plugin_not_applicable(ctx):
+        return skip
+    hint = i18n.t("doctor.hint.mod_session")
+    found = checks_plugin.latest_heartbeat(ctx)
+    if found is None:
+        return Result(
+            WARN,
+            i18n.t("doctor.probe.mod_loaded.none", path=checks_plugin.heartbeat_dir(ctx)),
+            hint,
+        )
+    path, beat, error, age_days = found
+    if beat is None:
+        return Result(WARN, i18n.t("doctor.probe.mod_loaded.unreadable", path=path, detail=error))
+    if age_days > checks_plugin.HEARTBEAT_MAX_AGE_DAYS:
+        days = i18n.format_number(int(age_days))
+        return Result(WARN, i18n.t("doctor.probe.mod_loaded.stale", days=days, path=path), hint)
+    pieces = beat.get("pieces") if isinstance(beat.get("pieces"), dict) else {}
+    where = {"session": beat.get("session_id") or path.stem, "at": beat.get("at") or "?"}
+    failed = sorted(name for name, state in pieces.items() if state == "failed")
+    if failed:
+        return Result(
+            WARN, i18n.t("doctor.probe.mod_loaded.failed", failed=", ".join(failed), **where), hint
+        )
+    listed = ", ".join(f"{name} {state}" for name, state in sorted(pieces.items())) or "-"
+    return Result(
+        OK,
+        i18n.t(
+            "doctor.probe.mod_loaded.ok", version=beat.get("version") or "?", pieces=listed, **where
+        ),
+    )
+
+
 # --- El registro --------------------------------------------------------------
-# Treinta y dos elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse
+# Treinta y tres elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse
 # solo, el problema no sería el registro sino el diseño.
 #
 # El número se dice en cinco sitios de este módulo y llegó a decir «once» con doce checks ya
@@ -2739,6 +2775,8 @@ CHECKS: tuple[Check, ...] = (
         "doctor.check.hooks.duplicates",
         _probe_hook_duplicates,
     ),
+    # F2-mod-core (REQ-009): reads the heartbeat file the mod writes, without launching `claude`.
+    Check("mod.loaded", "scaffold", "doctor.check.mod.loaded", _probe_mod_loaded),
     Check("service.daemon", "service", "doctor.check.service.daemon", _probe_daemon),
     Check("service.backend", "service", "doctor.check.service.backend", _probe_backend_models),
     # En `service` y no en `scaffold` aunque lea las entradas MCP: sale a la red, y el grupo
@@ -2783,7 +2821,7 @@ CHECKS: tuple[Check, ...] = (
 
 
 def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
-    """Corre los treinta y dos probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+    """Corre los treinta y tres probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
 
     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
@@ -2797,7 +2835,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
             continue
         try:
             result = check.probe(ctx)
-        except Exception as exc:  # un check roto no debe impedir ver los otros treinta y uno
+        except Exception as exc:  # un check roto no debe impedir ver los otros treinta y dos
             result = Result(UNKNOWN, i18n.t("doctor.probe.failed", error=exc))
         results.append((check, result))
     return results
