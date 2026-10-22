@@ -913,7 +913,8 @@ Remote-backend.
     cuenta como lectura entera.
   - **Vías clasificables**:
     - Con diálogo (`hasDialog`): botones «resumir con el modelo local / leer entero».
-    - Sin diálogo: deniega con la sugerencia.
+    - Sin diálogo: el mod llama él mismo a `local_summarize` y entrega el resumen como resultado
+      (no deniega ni sugiere; REQ-021 v3). Si el resumen falla, deja pasar la lectura.
   - **Vías no clasificables**: solo aviso y registro.
   - **Telemetría**: cada decisión se registra con `hook record-read` y se escribe el latido de la
     sesión con `read_mod_active`.
@@ -924,7 +925,7 @@ Remote-backend.
       que aguanta `--resume`.
 - **Tests primero**: `read.test.ts`:
   - `accumulates_ranges_to_whole`
-  - `buttons_when_dialog` y `denies_without_dialog`
+  - `buttons_when_dialog` y `auto_summary_without_dialog`
   - `unclassifiable_only_warns`
   - `blocks_write_after_summary` y `allows_write_after_real_read`
   - `guard_survives_resume`
