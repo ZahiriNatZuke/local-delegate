@@ -40,6 +40,7 @@ from . import (
     attribution,
     autostart,
     backend_params,
+    cancellation,
     chains,
     clients,
     config,
@@ -115,7 +116,14 @@ mcp = MCPServer(
     # El SDK los aplica outermost-first, y el orden es deliberado: «observar primero, habilitar
     # después». Hoy son independientes —el observador solo lee, el otro solo deja el contexto al
     # alcance de las capas de abajo—, pero se fija para que nadie lo cambie creyendo que da igual.
-    middleware=[clients.observe_client, questions.remember_context],
+    #
+    # El de cancelación va el último, pegado al handler: da a cada `tools/call` su token y lo
+    # cancela si el cliente deja de esperarla (aviso, sesión cerrada, conexión cortada).
+    middleware=[
+        clients.observe_client,
+        questions.remember_context,
+        cancellation.middleware(lambda token: _log_cancelled(token)),
+    ],
 )
 
 
@@ -280,6 +288,10 @@ def _inflight_start(
     if chunks:
         entry["chunks"] = int(chunks)
         entry["chunk"] = 1
+    token = cancellation.current()
+    if token is not None and token.entry is None:
+        # Si la llamada se cancela, su evento de uso sale de aquí (`_log_cancelled`).
+        token.entry = {"tool": tool, "model": model, "source": source, "chars_in": chars_in}
 
     def _add(data: dict) -> None:
         data[key] = entry
@@ -767,6 +779,7 @@ def _log_event(
     backend_params: dict | None = None,
     backend_params_rejected: bool = False,
     reasoning_skipped: str | None = None,
+    cancel_reason: str | None = None,
 ) -> None:
     """Escribe una línea JSONL en el log activo (rotado por mes o fijo). Nunca rompe una tool.
 
@@ -858,6 +871,11 @@ def _log_event(
         # whether they went in the cut, in degenerate whitespace or in hidden reasoning.
         if chars_out_raw is not None:
             rec["chars_out_raw"] = int(chars_out_raw)
+        # Una llamada cancelada (`error: "cancelled"`): por qué. `notification` (el cliente mandó
+        # `notifications/cancelled`), `disconnect` (cortó la conexión) o `aborted` (se cerró la
+        # sesión u otra cancelación del SDK).
+        if cancel_reason is not None:
+            rec["cancel_reason"] = cancel_reason
         # B2e: each step of a chunked operation (map, regroup, reduce) with what it generated and
         # why it stopped, never its text. Without it a summary that lost something could not tell
         # whether a chunk note had already dropped it or whether the reduce was cut.
@@ -1361,6 +1379,26 @@ def _backend_on_loopback() -> bool:
     origen: un túnel en loopback hacia una máquina remota rechaza como loopback.
     """
     return config._is_loopback_host(config._split_host_port(config.BASE_URL)[0])
+
+
+def _log_cancelled(token: cancellation.Token) -> None:
+    """El evento de uso de una llamada cancelada: `ok: false`, `error: "cancelled"` y el motivo.
+
+    La operación no llega a escribir el suyo (sale con `CallCancelled` antes), así que sin esto
+    la llamada no constaría, o constaría como éxito si el hilo seguía hasta el final.
+    """
+    entry = token.entry or {}
+    _log_event(
+        tool=str(entry.get("tool") or token.tool or ""),
+        model=str(entry.get("model") or ""),
+        source=str(entry.get("source") or "inline"),
+        chars_in=int(entry.get("chars_in") or 0),
+        chars_out=0,
+        latency_ms=int((time.monotonic() - token.started) * 1000),
+        ok=False,
+        error="cancelled",
+        cancel_reason=token.reason or cancellation.REASON_ABORTED,
+    )
 
 
 def _post_chat(model: str, payload: dict) -> ChatResult:
@@ -1875,13 +1913,28 @@ class _OperationTurn:
 
         return on_wait, waiting
 
-    def _waiting_for(self, wait: Callable[[turn.OnWait], turn.Grant]) -> turn.Grant:
-        """Una espera de turno con su contabilidad: `turn_wait_ms` y las claves del panel."""
+    def _waiting_for(
+        self,
+        turn_state: turn.Turn,
+        wait: Callable[[turn.OnWait, Callable[[], bool] | None], turn.Grant],
+    ) -> turn.Grant:
+        """Una espera de turno con su contabilidad: `turn_wait_ms` y las claves del panel.
+
+        Si la llamada se cancela mientras espera, sale de la cola en el acto (`CallCancelled`).
+        """
         on_wait, waiting = self._on_wait_factory()
+        token = cancellation.current()
+        stop = token.is_cancelled if token is not None else None
+        remove = token.on_cancel(turn_state.wake) if token is not None else (lambda: None)
         t0 = time.monotonic()
         try:
-            grant = wait(on_wait)
+            try:
+                grant = wait(on_wait, stop)
+            except turn.AbandonedWait:
+                cancellation.checkpoint()
+                raise
         finally:
+            remove()
             if waiting[0]:
                 # Al conceder (o al salir por error), las tres claves fuera (REQ-008).
                 self.wait_ms += int((time.monotonic() - t0) * 1000)
@@ -1959,7 +2012,10 @@ class _OperationTurn:
         requested: str | None,
     ) -> None:
         turn_state = _turn
-        grant = self._waiting_for(lambda on_wait: turn_state.request(request, on_wait))
+        grant = self._waiting_for(
+            turn_state,
+            lambda on_wait, stop: turn_state.request(request, on_wait, should_stop=stop),
+        )
         self._turn = turn_state
         self._snapshot = snapshot
         self._chain = tuple(chain)
@@ -2023,7 +2079,10 @@ class _OperationTurn:
         """Sin plaza: espera la nueva concesión tras volver a la cabeza (REQ-004)."""
         assert self._turn is not None
         turn_state = self._turn
-        self._waiting_for(lambda on_wait: turn_state.wait_for_grant(self.op_id, on_wait))
+        self._waiting_for(
+            turn_state,
+            lambda on_wait, stop: turn_state.wait_for_grant(self.op_id, on_wait, should_stop=stop),
+        )
 
     def note_attempt(self, attempt: Attempt) -> None:
         """La primera llamada al alternativo: su espera de backend decide `affinity_failed`."""
@@ -2068,17 +2127,43 @@ def _slot(entry_id: int | None) -> Generator[None, None, None]:
     conseguirla (REQ-022). Con plaza libre no se escribe nada de más.
     """
     slots = _chat_slots
+    token = cancellation.current()
+    if token is not None:
+        # Cada trozo pasa por aquí: una llamada cancelada no manda ni uno más.
+        token.check()
     if not slots.acquire(blocking=False):
         if entry_id is not None:
             _inflight_local_wait(entry_id, "slot")
-        slots.acquire()
+        if token is None:
+            slots.acquire()
+        else:
+            while not slots.acquire(timeout=cancellation.POLL_S):
+                token.check()
         if entry_id is not None:
             _inflight_local_wait(entry_id, None)
     try:
+        if token is not None:
+            token.check()
         with turn.slot_taken():
             yield
     finally:
         slots.release()
+
+
+def _send(model: str, body: dict) -> ChatResult:
+    """UN envío al backend, dentro de `in_flight()` y contado como llamada propia.
+
+    En una `tools/call` se puede abandonar: si la llamada se cancela a mitad del envío,
+    `CallCancelled` sale ya y el envío termina por su cuenta (`cancellation.run_abandonable`). El
+    contador de vuelo y el de llamadas propias siguen el envío real, no a quien lo abandonó.
+    """
+    turn_state = _turn
+
+    def post() -> ChatResult:
+        with turn_state.in_flight(), _own_call(model):
+            return _post_chat(model, body)
+
+    return cancellation.run_abandonable(post)
 
 
 def _call_model(
@@ -2107,8 +2192,7 @@ def _call_model(
     tool_body = request_body
     if role_params is not None:
         request_body = role_params.body_for(model, request_body)
-    with _turn.in_flight(), _own_call(model):
-        result = _post_chat(model, request_body)
+    result = _send(model, request_body)
     responses = [result]
     if (
         not result.ok
@@ -2117,8 +2201,7 @@ def _call_model(
         and request_body != tool_body
         and role_params.claim_probe()
     ):
-        with _turn.in_flight(), _own_call(model):
-            retry = _post_chat(model, tool_body)
+        retry = _send(model, tool_body)
         responses.append(retry)
         if retry.ok:
             role_params.mark_rejected()
@@ -2128,8 +2211,7 @@ def _call_model(
         if json_schema_fallback:
             # El backend no soporta response_format con schema: reintenta en modo libre.
             request_body.pop("response_format", None)
-            with _turn.in_flight(), _own_call(model):
-                result = _post_chat(model, request_body)
+            result = _send(model, request_body)
             responses.append(result)
             json_schema_status = "fallback"
         else:

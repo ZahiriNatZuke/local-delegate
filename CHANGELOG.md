@@ -6,6 +6,21 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corrige
+
+- **Una delegación cuyo cliente se va ya no sigue hasta el final ni retiene el turno del
+  backend.** Antes, `notifications/cancelled` (el Esc de Claude Code), el `DELETE` de la sesión o
+  una conexión cortada no paraban nada: el SDK cancelaba el handler, pero la tool corre en un hilo
+  que no se enteraba, así que seguía mandando trozos (medido: un resumen de 256 KB, 302 s) y otra
+  llamada esperaba el turno todo ese tiempo (192 s con `local_wait: "turn"`). Ahora la llamada se
+  para: deja de esperar turno y plaza, abandona el envío en curso, no manda más trozos y sale de
+  `inflight.json`. El registro de uso la apunta con `ok: false`, `error: "cancelled"` y un campo
+  nuevo, `cancel_reason` (`notification`, `disconnect` o `aborted`). (SDD
+  `claude-plugin-and-mods`, abandoned-calls)
+- **`desktop-bridge` sale en ≤ 3 s al cerrarse stdin** aunque tenga peticiones en curso: tras
+  medio segundo de margen manda `notifications/cancelled` por cada una, corta y cierra la sesión.
+  Antes esperaba a que el daemon terminara y quedaba un proceso huérfano.
+
 ## [0.40.0] - 2026-10-22
 
 Entrega por plugin de Claude Code y su mod (SDD `claude-plugin-and-mods`, F1 y F2): `install` y

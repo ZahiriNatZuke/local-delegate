@@ -78,6 +78,13 @@ puede dar el token en la config. `install --desktop` escribe en
   borra la copia.
 - En macOS y Linux, `--desktop` se niega con un error y no escribe nada.
 - Reinicia Claude Desktop para que cargue la entrada.
+- Si Desktop cierra el puente (cierra su stdin) con una delegación en curso, el puente no la
+  espera: tras medio segundo de margen manda `notifications/cancelled` por cada petición que siga
+  abierta, corta sus conexiones, cierra la sesión con `DELETE` y sale en 3 s como mucho. El daemon
+  cancela la delegación (deja de esperar turno, no manda más trozos al backend, suelta la plaza y
+  la quita de `inflight.json`) y la apunta en el registro de uso con `ok: false`,
+  `error: "cancelled"` y `cancel_reason`. Lo mismo pasa con cualquier cliente que mande
+  `notifications/cancelled` (el Esc de Claude Code), cierre la sesión o corte la conexión.
 
 ## Cómo comprobarlo
 

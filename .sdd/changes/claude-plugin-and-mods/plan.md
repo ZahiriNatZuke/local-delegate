@@ -696,6 +696,53 @@ Un agente; usa `claude -p` y Desktop, que son recursos únicos. Todo en ventana 
   - Reinicia el daemon y el usuario hace `/mcp`.
   - Arranca la ventana de 14 días de REQ-024. La Mac la actualiza el usuario.
 
+### Ola 3c — Arreglo previo a la ola 4: llamadas abandonadas (un lote)
+
+Entra tras la reproducción del 2026-10-22 (12:41–12:53Z, ventanas de prueba `w-20261022T124408Z` y
+`w-20261022T125138Z`). La hipótesis de partida, «cerrar Desktop deja el daemon sin escuchar en
+9393», **no se reprodujo**: 186 sondas cada 3 s respondieron durante cerrar la ventana (va a la
+bandeja), `taskkill` normal y Ctrl+Q (Desktop los ignora), matar todo el árbol de Desktop, matar el
+puente con una llamada en curso y cerrarle stdin con una llamada en curso. Sí salió un defecto que
+para el cliente es un cuelgue:
+
+- Una llamada cuyo cliente desaparece **sigue ejecutándose hasta el final** (un `local_summarize`
+  de 256 KB tardó 302 s) y retiene el turno del backend: un `local_classify` de otro cliente esperó
+  192 s con `local_wait: "turn"` en `inflight.json`.
+- `notifications/cancelled` **tampoco la para** (el trozo siguió avanzando tras cancelarla), así que
+  afecta también al Esc de Claude Code, no solo al puente.
+- El puente, al cerrarse stdin, **espera** a sus peticiones en curso antes de salir
+  (`desktop_bridge.py`, `Bridge.run`: el grupo de tareas no se cancela): queda un proceso huérfano
+  hasta que el daemon acaba.
+
+#### Cancelar las llamadas abandonadas (abandoned-calls)
+
+- **Posee**: `src/local_delegate/desktop_bridge.py`, la parte del daemon/servidor que ejecuta las
+  tools y espera el turno del backend (localizarla; probablemente `server.py` y el cliente del
+  backend), `tests/test_desktop_bridge.py` y un test nuevo de cancelación del servidor.
+- **REQ**: 012 (el puente) y robustez del daemon; no cambia la letra de la spec.
+- **Diseño**:
+  - **Daemon**: `notifications/cancelled`, el `DELETE` de la sesión y la desconexión del flujo HTTP
+    cancelan la llamada: se deja de esperar el turno, no se mandan más trozos al backend y se suelta
+    el hueco de concurrencia. El registro de uso apunta la llamada como cancelada (`ok: false` y un
+    motivo), no como éxito.
+  - **Puente**: al cerrarse stdin manda `notifications/cancelled` por cada petición en curso,
+    cancela su grupo de tareas, hace el `DELETE` y sale en ≤ 3 s.
+  - Antes de tocar nada, medir dónde se pierde la cancelación (SDK de MCP, hilo del backend o
+    espera del turno); la causa no está vista, solo el efecto.
+- **Tests primero**:
+  - `test_desktop_bridge.py::test_stdin_eof_cancels_inflight_and_exits_fast`
+  - `::test_cancelled_notification_releases_backend_turn`, con un backend falso lento: una segunda
+    llamada no espera a la cancelada.
+  - `::test_session_delete_cancels_inflight`
+  - `::test_client_disconnect_cancels_inflight`
+- **Verificación en vivo**: repetir el guion de la reproducción (puente propio con un
+  `local_summarize` del `CHANGELOG.md`, cortar a los 4 s) y comprobar que `inflight.json` se vacía
+  en ≤ 5 s y que un `local_classify` posterior responde en < 5 s. Bajo ventana de prueba.
+- **Vuelta atrás**: revert.
+- **Sigue abierto**: el incidente del 2026-10-22 08:45 hora local (daemon vivo, sin escuchar, con
+  el cerrojo tomado) queda sin causa. Si vuelve a pasar, antes de matar nada: `netstat -ano` del
+  pid, volcado de pilas (`py-spy dump`) y los ficheros de estado.
+
 ### Ola 4 — F3, primera parte de F4 y retirada de nombres: tres lotes en paralelo
 
 #### Cuota y ahorro en la barra de estado (F3-status)

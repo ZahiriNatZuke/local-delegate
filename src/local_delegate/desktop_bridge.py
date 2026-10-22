@@ -16,6 +16,9 @@ Qué hace con el transporte *streamable HTTP* del daemon:
 - Un 401 hace releer el token una vez (pudo rotarse) y, si sigue, sale como error MCP que dice qué
   variable mirar. Daemon caído: error MCP con la URL. Sesión olvidada (el daemon se reinició): la
   rehace con el mismo `initialize` y repite la petición una vez.
+- Al cerrarse stdin (Desktop se fue) no espera a las peticiones en curso más de medio segundo:
+  manda `notifications/cancelled` por cada una que siga, corta sus conexiones, cierra la sesión con `DELETE` y
+  sale en unos 3 s como mucho. El daemon, con eso, deja de trabajar para nadie.
 - Desktop lanza cada servidor dos veces (chat y Cowork/Code): cada puente es un proceso con su
   sesión y no comparte nada en disco, así que dos a la vez no se estorban.
 
@@ -48,6 +51,15 @@ _ACCEPT = "application/json, text/event-stream"
 # Sin tope de lectura: una delegación a un modelo local puede tardar minutos con el SSE abierto.
 _TIMEOUT = httpx2.Timeout(connect=5.0, read=None, write=30.0, pool=None)
 _CLOSE_TIMEOUT = 2.0
+#: Al cerrarse stdin, margen para que acaben las peticiones rápidas (un `ping`, un `tools/list`
+#: que llegaron justo antes, como al pasar los mensajes por una tubería) y tope para avisar al
+#: daemon de las que siguen. Con `_CLOSE_TIMEOUT`, el puente sale en ≤ 3 s.
+_EOF_GRACE = 0.5
+_CANCEL_TIMEOUT = 0.5
+#: Sin sesión no hay nada en el daemon que cancelar ni que cerrar: el margen solo espera a que los
+#: errores de conexión del propio puente (en Windows, un puerto cerrado tarda ~2 s) lleguen a
+#: stdout. Sigue por debajo de los 3 s.
+_EOF_GRACE_NO_SESSION = 2.5
 _DETAIL_CHARS = 300
 
 Write = Callable[[bytes], Awaitable[None]]
@@ -98,6 +110,8 @@ class Bridge:
         self._client: httpx2.AsyncClient | None = None
         self._write_lock = anyio.Lock()
         self._session_lock = anyio.Lock()
+        #: Ids de las peticiones reenviadas que aún no tienen respuesta.
+        self._pending: list[object] = []
 
     def _token(self, refresh: bool = False) -> str:
         if refresh or self._cached_token is None:
@@ -135,9 +149,20 @@ class Bridge:
                             await self._emit_error(None, ERROR_PARSE, i18n.t("bridge.error.parse"))
                             continue
                         if self._is_request(message) and message["method"] != "initialize":
-                            group.start_soon(self._forward, line, message)
+                            # Se apunta ya, no cuando arranque la tarea: si stdin se cierra en
+                            # la misma vuelta, el margen de abajo tiene que verla.
+                            self._pending.append(message["id"])
+                            group.start_soon(self._forward, line, message, True)
                         else:
                             await self._forward(line, message)
+                    # stdin cerrado: quien preguntó se fue. Tras un margen corto, se avisa al
+                    # daemon de lo que sigue en curso y se corta, en vez de esperar a que acabe.
+                    grace = _EOF_GRACE if self.session_id else _EOF_GRACE_NO_SESSION
+                    with anyio.move_on_after(grace):
+                        while self._pending:
+                            await anyio.sleep(0.02)
+                    await self._cancel_pending()
+                    group.cancel_scope.cancel()
             finally:
                 await self._close_session()
 
@@ -145,7 +170,7 @@ class Bridge:
     def _is_request(message: object) -> bool:
         return isinstance(message, dict) and "method" in message and "id" in message
 
-    async def _forward(self, line: bytes, message: object) -> None:
+    async def _forward(self, line: bytes, message: object, tracked: bool = False) -> None:
         is_request = self._is_request(message)
         request_id = message.get("id") if is_request else None  # type: ignore[union-attr]
         is_init = is_request and message.get("method") == "initialize"  # type: ignore[union-attr]
@@ -160,6 +185,29 @@ class Bridge:
                 await self._emit_error(request_id, error.code, error.message)
             else:
                 self._log(error.message)
+        finally:
+            if tracked:
+                self._pending.remove(request_id)
+
+    async def _cancel_pending(self) -> None:
+        """`notifications/cancelled` por cada petición sin respuesta, con tope y sin insistir."""
+        if not self._pending or not self.session_id or self._client is None:
+            return
+        with anyio.move_on_after(_CANCEL_TIMEOUT):
+            for request_id in list(self._pending):
+                notice = {
+                    "jsonrpc": "2.0",
+                    "method": "notifications/cancelled",
+                    "params": {"requestId": request_id, "reason": "client closed stdin"},
+                }
+                try:
+                    await self._client.post(
+                        self.url,
+                        content=json.dumps(notice),
+                        headers=self._headers(with_session=True),
+                    )
+                except httpx2.HTTPError:
+                    return  # el daemon no está: no hay nada que cancelar allí
 
     async def _post(self, line: bytes, *, is_init: bool, request_id: object) -> bool:
         """Manda `line` y entrega lo que vuelva. Devuelve si llegó la respuesta a `request_id`."""
