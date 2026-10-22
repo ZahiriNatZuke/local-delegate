@@ -61,6 +61,8 @@ import sys
 
 import read_classifier
 from hook_common import (
+    READ_MOD_OPTION,
+    STEP_ASIDE_READ_MOD,
     backend_available,
     block_state,
     context_of,
@@ -71,6 +73,7 @@ from hook_common import (
     mod_decision_fields,
     new_id,
     path_digest,
+    read_mod_covers,
     record,
     record_block,
     summary_model,
@@ -180,6 +183,34 @@ def via_fields(access: read_classifier.Access | None) -> dict:
     return {"via": access.via, "scope": access.scope}
 
 
+def step_aside_for_read_mod(payload: dict, script: str, **fields: object) -> bool:
+    """REQ-023 (decision 10): si el mod de lectura va a tratar esta llamada, el hook se aparta y
+    solo deja en la telemetria que lo hizo y por que. Devuelve si se aparto.
+
+    `script` es el hook que llama (su huella va en la linea) y `fields` sus campos fijos
+    (`category`, `route`). Sin la opcion del plugin ni se clasifica: la entrega por settings y el
+    mod apagado no pagan nada."""
+    if os.environ.get(READ_MOD_OPTION, "").strip().lower() not in TRUTHY:
+        return False
+    classified = read_classifier.classify(payload, "on")
+    if not read_mod_covers(payload, classified):
+        return False
+    path = classified["path"]
+    line: dict = {
+        **fields,
+        "block": block_state(),
+        **context_of(payload, script),
+        "via": str(classified.get("via") or "none"),
+        "scope": str(classified.get("scope") or "unclassifiable"),
+        "path_sha": path_digest(path),
+        "ext": extension_of(path),
+    }
+    if isinstance(classified.get("bytes"), int):
+        line["size_kb"] = round(classified["bytes"] / 1024, 1)
+    record("PreToolUse", step_aside=STEP_ASIDE_READ_MOD, **line)
+    return True
+
+
 def record_mcp_read(tool_name: str, tool_input: dict, payload: dict) -> None:
     """Una lectura por la tool de OTRO MCP: se cuenta y nunca se bloquea ni se sugiere (P-6).
 
@@ -227,6 +258,9 @@ def main() -> None:
     tool_name = str(payload.get("tool_name") or "")
     if tool_name.startswith("mcp__"):
         record_mcp_read(tool_name, tool_input, payload)
+        return
+
+    if step_aside_for_read_mod({"tool_name": "Read", **payload}, __file__, category="read"):
         return
 
     access = read_classifier.classify_tool("Read", tool_input)

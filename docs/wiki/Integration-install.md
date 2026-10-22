@@ -327,7 +327,7 @@ legítimos (el CLI fuera del PATH si se instaló con `uvx`, o un cliente que no 
 
 Reinicia el cliente. Verifica con:
 
-- `local-delegate doctor` → comprueba de una vez las treinta y tres piezas (ver abajo), incluidos el
+- `local-delegate doctor` → comprueba de una vez las treinta y cuatro piezas (ver abajo), incluidos el
   daemon y el backend, que el reporte de `install` no mira a propósito.
 - `local_status` → backend, catálogo y si el cómputo es local o remoto.
 - Un prompt tipo "resume este archivo en cinco viñetas" → debe aparecer la sugerencia del hook.
@@ -442,7 +442,7 @@ de **piezas**, cada una con su interruptor en la `userConfig` del plugin:
 | tools fijas | `pinned_tools` (lista) | saca de ToolSearch las tools de local-delegate de la lista, para que el modelo las vea sin buscarlas. Por defecto `local_summarize`, `local_extract`, `local_lint_summary` y `local_commit_msg` (~2 000 tokens). Lista vacía = apagado. Solo admite tools `mcp__local-delegate__*` |
 | comandos | `commands_enabled` | `/local-summarize`, `/local-commit` y `/local-lint` sin turno del modelo |
 | banda de estado | `status_enabled` | `◆ local-delegate · ● qwen3-8b · 3 delegaciones · 12,3k tok ahorrados ≈ $0,18`, en la banda sobre el prompt, bajo una regla `─` atenuada que la separa del chat: el backend (punto verde listo, ámbar ocupado, rojo caído, con el modelo montado), las delegaciones y el ahorro neto de **esa** sesión según el daemon (`/api/stats?session=`, `/api/backend`, `/api/inflight`), el coste equivalente si `recompute-cost` dejó la cifra, y «lectura guiada» si `read_mod_enabled` está activo. Sin delegaciones dice «sin delegaciones aún»; con el daemon caído, «daemon sin respuesta»; sin token no dibuja nada. Se aparta ante una encuesta y quita primero lo menos importante si no cabe. No repite la cuota de Claude (la da la status line) ni usa `$.ui.status`, que Claude Code pinta con ⚠ amarillo |
-| lectura | `read_mod_enabled` (apagado) | desvío de lecturas grandes desde el mod (llega en una versión posterior) |
+| lectura | `read_mod_enabled` (apagado) | resume la prosa grande (`.md`, `.txt`, `.markdown`, `.rst` por encima de `LD_HOOK_READ_SUGGEST_KB`) con `local_summarize` cuando la capa que bloquea está encendida; el código, la config y los datos pasan literales. Con diálogo pregunta, sin diálogo resume solo. Mientras actúa en una sesión, los hooks de lectura de esa sesión se apartan (ver abajo) |
 
 Una pieza se apaga desde el menú de configuración de Claude Code (cada opción del plugin es una
 fila), **no** con `claude plugin disable`, que apaga también los hooks.
@@ -498,6 +498,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
 | Andamiaje | intérprete de los hooks del plugin | solo con el plugin: que la opción `ld_bin` del plugin (`pluginConfigs` de `~/.claude/settings.json`) exista (`[FALT]` si no) y sea el intérprete del entorno de `uv tool` de **esta** versión (`[WARN]` si apunta a otro). Un `ld_bin` que no existe deja los hooks sin actuar y sin avisar, porque nunca bloquean |
 | Andamiaje | hooks duplicados | hooks nuestros en `~/.claude/settings.json` **y** el plugin habilitado a la vez (`enabledPlugins`): cada evento corre dos veces. Pasa si se baja a la 0.39 sin `uninstall` antes. `[WARN]`; `update` retira los de settings |
 | Andamiaje | mod del plugin cargado | solo con el plugin: el **latido** que el mod escribe al iniciar cada sesión (`<config>/plugins/data/local-delegate-local-delegate/heartbeats/<sesión>.json`). Toma el más reciente y dice la sesión, la hora, la versión y el estado de cada pieza (`on`, `off`, `absent`, `failed`). `[WARN]` si no hay ninguno (el mod no cargó nunca), si el último tiene más de 7 días, si no se puede leer o si una pieza falló; lo arregla abrir una sesión nueva, y `claude --debug` dice por qué no cargó. Los hooks siguen funcionando aunque el mod no cargue |
+| Andamiaje | mod de lectura y hooks de lectura coordinados | solo con el plugin y `read_mod_enabled` encendido: que el mod de lectura y un hook de lectura no actúen sobre la misma lectura, y que con la opción encendida alguno actúe. `[WARN]` si quedan hooks de lectura en `~/.claude/settings.json` (no ven la opción del plugin y no se apartan; lo arregla `update`) o si la capa activa del hook de lectura está apagada (el mod no actúa y el hook tampoco; lo arregla `install --enable-read-hook`). Con la opción apagada es `[ OK ]`: actúan los hooks, como en la 0.40 |
 | Andamiaje | skill local-delegation | la skill **en cada cliente al que se le escribe**: `~/.claude/skills/local-delegation/SKILL.md` y `~/.config/opencode/skill/local-delegation/`. Mirar solo la de Claude Code daba un `[ OK ]` con la de opencode borrada |
 | Andamiaje | memoria global | el bloque entre marcadores en `CLAUDE.md` y `AGENTS.md`, y que sea **el del paquete** (sin contar saltos de línea ni espacios al final). Con otro texto da `warn` («desfasado») y `update` lo repone dejando el `.bak`; también si lo editaste a mano dentro de los marcadores |
 | Andamiaje | MCP en Claude Code | la entrada `local-delegate` en `~/.claude.json` |
@@ -529,7 +530,7 @@ Cuatro estados, y la diferencia entre los dos últimos importa:
 como «falta», un arreglo automático posterior sobrescribiría configuración que no es nuestra. El
 exit code es **0** sin avisos y **1** con al menos uno.
 
-De las treinta y tres comprobaciones, **«versión publicada» es la única que consulta PyPI**, con un timeout
+De las treinta y cuatro comprobaciones, **«versión publicada» es la única que consulta PyPI**, con un timeout
 de dos segundos y degradando a `[ -- ]` si no hay red. Y lo hace **solo en `doctor`**: ni el
 reporte de `install` ni el diagnóstico interno de `update` salen a internet por ella —el primero
 porque instalar unos hooks no es motivo para hacerlo, y el segundo porque ya pregunta la versión

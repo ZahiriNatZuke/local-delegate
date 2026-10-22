@@ -31,6 +31,23 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   parseo de `tracestate` sin límite). Va en `pyproject.toml` y no solo en `uv.lock` para que el
   wheel publicado lo lleve consigo, igual que el suelo de `anyio` de la 0.31.1.
 
+### Cambia (los hooks de lectura se apartan del mod de lectura)
+
+- **Con el mod de lectura activo, los hooks de lectura se apartan** (REQ-023): antes actuaban los
+  dos sobre la misma lectura (el mod resumía y el hook registraba o bloqueaba). `hooks.json` no
+  cambia; el hook de `Read` y el de `Bash|PowerShell` se apartan solo con cuatro condiciones a la
+  vez: la opción `read_mod_enabled` encendida, el latido de **su misma sesión** con
+  `read_mod_active` y `process_run` de menos de 24 h, la capa que bloquea en `on` y una lectura que
+  el mod sabe tratar (fichero en disco, alcance conocido). Si falta cualquiera, actúan como en la
+  0.40. Al apartarse dejan en `blocks.jsonl` una línea con `step_aside: "read_mod_active"`.
+- **El latido de la sesión dice `read_mod_active` desde el inicio**: `register.js` escribía el
+  latido de `session.start` después de la pieza de lectura y le pisaba el campo, así que solo
+  aparecía tras la primera lectura clasificada. Ahora el `onSessionStart` de una pieza puede
+  devolver campos para ese latido.
+- **Check nuevo de `doctor`, `mod.read_overlap`** (ya son 34): avisa si el mod de lectura está
+  encendido y quedan hooks de lectura en `settings.json`, que no ven la opción y no se apartan, o
+  si la capa activa del hook de lectura está apagada y no actúa ninguno.
+
 ### Añade (mod de lectura, apagado por defecto)
 
 - **Pieza `read` del mod del plugin** (REQ-020, REQ-021 y REQ-022), solo con la opción

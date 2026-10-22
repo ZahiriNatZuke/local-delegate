@@ -23,7 +23,7 @@
 // A piece of the mod: `scripts/build_mod.py` pastes it into `register.js`. It only declares at
 // load, and every top-level name carries `read`, so it cannot clash with another piece's.
 
-import { engineCommon } from './common.js'
+import { engineCommon, toolResultText } from './common.js'
 
 export const READ_SWITCH = 'read_mod_enabled'
 // REQ-020: ranges that cover this share of the file's lines count as reading it whole.
@@ -341,37 +341,12 @@ async function readNoteRealRead($, common, sessionId, key, classified, ran) {
   }
 }
 
-/** The text of a `local_summarize` answer: FastMCP wraps the `str` the tool returns in
- * `{ "result": … }`, as `structuredContent` and as the text block's JSON. Without that wrapper the
- * text blocks are taken as they come. */
-function readSummaryText(result) {
-  const structured = result && result.structuredContent
-  if (structured && typeof structured === 'object' && typeof structured.result === 'string') {
-    return structured.result.trim()
-  }
-  const text = ((result && result.content) || [])
-    .filter(block => block && block.type === 'text' && typeof block.text === 'string')
-    .map(block => block.text)
-    .join('\n')
-    .trim()
-  if (text.startsWith('{')) {
-    try {
-      const parsed = JSON.parse(text)
-      if (parsed && typeof parsed === 'object' && typeof parsed.result === 'string') {
-        return parsed.result.trim()
-      }
-    } catch {
-      // not JSON: a plain text answer
-    }
-  }
-  return text
-}
-
 /** Asks `local_summarize` for the file; the summary's text, or null when it fails. */
 async function readSummarize($, path) {
   try {
     const result = await $.mcp.call(READ_SERVER, READ_SUMMARY_TOOL, { path })
-    const text = readSummaryText(result)
+    // `common.js` unwraps FastMCP's `{ "result": … }` (shared with the commands).
+    const text = toolResultText(result)
     if (!text || (result && result.isError) || text.startsWith(READ_ERROR_PREFIX)) {
       return null
     }
@@ -515,18 +490,23 @@ async function readOnToolCall($, common, e, next) {
 }
 
 // At the session's start (and on `--resume`): this session's guarded files and the classifier's
-// tools. `register.js` holds the module's only `session.start` hook and calls this one.
+// tools. `register.js` holds the module's only `session.start` hook and calls this one; what it
+// resolves goes into the heartbeat `register.js` writes right after, so the session's heartbeat
+// says `read_mod_active` from its start and the read hooks step aside from the first read
+// (REQ-023, decision 10). A reload mid-session starts the module over without a `session.start`:
+// then `readBeat` says it at the first classified read.
 export async function onSessionStart($, e, common) {
   if (!READ_STATE.enabled) {
-    return
+    return undefined
   }
   const c = common || engineCommon($)
-  READ_STATE.beat = false
   await readLoadGuard($, c, await readSessionId($))
   const tools = await readListTools(c)
   if (tools) {
     READ_STATE.tools = tools
   }
+  READ_STATE.beat = true
+  return { read_mod_active: true }
 }
 
 /** Registers the `tool.call` hook, only with `read_mod_enabled` on (off by default). */

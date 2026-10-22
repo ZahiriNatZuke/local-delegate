@@ -110,8 +110,8 @@ def test_registry_ids_are_unique_and_groups_are_known():
 
 
 def test_check_ids_exact():
-    """A6 (REQ-011) and REQ-009: the 33 exact ids, in English. An id is a contract with its readers."""
-    assert len(checks.CHECKS) == 33
+    """A6 (REQ-011) and REQ-009: the 34 exact ids, in English. An id is a contract with its readers."""
+    assert len(checks.CHECKS) == 34
     assert {check.id for check in checks.CHECKS} == {
         "cli.path",
         "cli.published",
@@ -135,6 +135,7 @@ def test_check_ids_exact():
         "plugin.ld_bin",
         "hooks.duplicates",
         "mod.loaded",
+        "mod.read_overlap",
         "service.daemon",
         "service.backend",
         "service.credential",
@@ -516,7 +517,8 @@ def test_empty_home_reports_missing_with_fix_hint(tmp_path):
     # «no instalado (opcional)», no «falta».
     # `plugin.ld_bin` and `hooks.duplicates` neither: without the plugin delivery the first does
     # not apply and the second has nothing duplicated, so both are `ok` (F1-doctor). `mod.loaded`
-    # neither: without the plugin there is no mod to load (F2-mod-core).
+    # neither: without the plugin there is no mod to load (F2-mod-core), nor a read mod to
+    # overlap with the read hooks (`mod.read_overlap`, F4-hooks-swap).
     separate = {
         "scaffold.memory",
         "scaffold.hook_orphans",
@@ -524,6 +526,7 @@ def test_empty_home_reports_missing_with_fix_hint(tmp_path):
         "plugin.ld_bin",
         "hooks.duplicates",
         "mod.loaded",
+        "mod.read_overlap",
     }
     ctx = make_ctx(make_home(tmp_path, complete=False))
     scaffold = [

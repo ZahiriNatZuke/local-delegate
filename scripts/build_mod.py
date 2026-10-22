@@ -256,9 +256,13 @@ def build(plugin_dir: Path = PLUGIN_DIR, pieces: tuple[tuple[str, str], ...] = P
     out += [
         "",
         "  // Decision 9: the heartbeat says, per session, that the mod loaded and which pieces run.",
+        "  // A piece's `onSessionStart` may resolve fields for it (the read piece: `read_mod_active`),",
+        "  // so the one heartbeat of the session's start says them: written after the pieces, a field",
+        "  // a piece wrote on its own would be overwritten (REQ-023, decision 10).",
         "  on('session.start', async ($, e, next) => {",
         "    const started = await next(e)",
         "    hasDialog(e)",
+        "    const fields = {}",
     ]
     for name, _ in present:
         if name in starts:
@@ -266,14 +270,17 @@ def build(plugin_dir: Path = PLUGIN_DIR, pieces: tuple[tuple[str, str], ...] = P
             out += [
                 f"    if (pieces[{key}] === 'on') {{",
                 "      try {",
-                f"        await {_binding(name, 'start_')}($, e)",
+                f"        const said = await {_binding(name, 'start_')}($, e)",
+                "        if (said && typeof said === 'object') {",
+                "          Object.assign(fields, said)",
+                "        }",
                 "      } catch {",
                 f"        pieces[{key}] = 'failed'",
                 "      }",
                 "    }",
             ]
     out += [
-        "    await heartbeat($, { pieces })",
+        "    await heartbeat($, { ...fields, pieces })",
         "    return started",
         "  })",
         "}",

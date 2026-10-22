@@ -379,6 +379,21 @@ test('heartbeat_says_read_mod_active', async () => {
   expect(env.beats).toEqual([{ pieces: { read: 'on' }, read_mod_active: true }])
 })
 
+test('session_start_says_read_mod_active', async () => {
+  // REQ-023: the heartbeat `register.js` writes at the session's start carries what this resolves,
+  // so the read hooks step aside from the first read; the first read then writes no second beat.
+  const env = makeEnv({ classify: byInput })
+  registerInto(env, { read_mod_enabled: true })
+  const said = await onSessionStart(env.$, { cwd: CWD, isInteractive: false }, env.common)
+  expect(said).toEqual({ read_mod_active: true })
+  await call(env, { tool: 'Read', file_path: BIG })
+  expect(env.beats).toEqual([])
+  // Control: switched off, it says nothing.
+  const off = makeEnv({ classify: byInput })
+  registerInto(off, { read_mod_enabled: false })
+  expect(await onSessionStart(off.$, { cwd: CWD, isInteractive: false }, off.common)).toBeUndefined()
+})
+
 test('summary_is_the_clean_text', async () => {
   // Structured content and the text block's JSON both carry `{ result }`: the model gets the text.
   for (const result of [summaryResult(), { content: summaryResult().content, isError: false }]) {
