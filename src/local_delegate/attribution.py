@@ -205,7 +205,8 @@ def resolve_call(
 
     `notes` es el directorio de notas (por defecto, el del hook) y `projects` la raíz de la que
     tiene que colgar el transcript (por defecto, `~/.claude/projects`). Nunca devuelve el id de
-    sesión ni nada más del transcript que el modelo.
+    sesión ni nada más del transcript que el modelo: de la sesión solo pasa su clave de un solo
+    sentido (`caller_session_key`, `hook_common.session_key`).
     """
     if not tool_use_id or not _valid_id(tool_use_id):
         return {}
@@ -227,6 +228,10 @@ def resolve_call(
     effort = note.get("effort")
     if isinstance(effort, str) and effort:
         r["caller_effort"] = effort
+    # The session as its one-way key (REQ-017 of claude-plugin-and-mods), never the id itself.
+    key = note.get("session_key")
+    if isinstance(key, str) and len(key) == 32 and all(c in "0123456789abcdef" for c in key):
+        r["caller_session_key"] = key
 
     path = _transcript_de(note, projects or _projects_root())
     model = _find_model(path, tool_use_id, clock=clock, opener=opener) if path is not None else None

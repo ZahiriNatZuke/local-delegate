@@ -71,6 +71,7 @@ from .. import (
     topology,
     valuation,
 )
+from ..resources.hooks import hook_common
 from . import auth, sysinfo
 
 CHARS_PER_TOKEN = config.CHARS_PER_TOKEN  # aproximación: tokens ~ chars / 4
@@ -557,10 +558,15 @@ def stats(
     to: str | None = Query(None),
     include_tests: str | None = Query(None),
     lang: str | None = Query(None),
+    session: str | None = Query(None),
 ):
     language = _lang(lang)
     range_from, range_to = _resolve_range(from_, to)
     rows, _files_read = _load(range_from, range_to)
+    if session:
+        # The mod's status line (REQ-017 of claude-plugin-and-mods): only that session's lines,
+        # for the usage and for the cost alike. Lines without a key (older, other clients) drop.
+        rows = [r for r in rows if _session_matches(r, session)]
     usage, counts = _usage_rows(list(rows), _include_tests(include_tests))
     data = _aggregate(usage)
     data.update(counts)
@@ -582,6 +588,12 @@ def stats(
     }
     data["quota"] = _quota_block(aggregates, now, language)
     return JSONResponse(data)
+
+
+def _session_matches(row: dict, session_id: str) -> bool:
+    """Whether the line was asked for by that session: its key, never the id, is in the line."""
+    key = hook_common.session_key(session_id)
+    return key is not None and row.get("caller_session_key") == key
 
 
 def _now() -> datetime:
