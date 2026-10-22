@@ -72,9 +72,14 @@ def _variables_read_by_hooks() -> dict[str, set[str]]:
     declaran ni se limpian: quitarlas durante la suite rompería justo lo que se quiere probar.
     """
     hooks = Path(config.__file__).parent / "resources" / "hooks"
+    return _variables_read_by(sorted(hooks.glob("*.py")))
+
+
+def _variables_read_by(files: list[Path]) -> dict[str, set[str]]:
+    """Las variables nuestras que consulta cada fichero, por `os.environ` o `os.getenv`."""
     ours = ("LD_HOOK_", "LOCAL_DELEGATE_")
     found: dict[str, set[str]] = {}
-    for file in sorted(hooks.glob("*.py")):
+    for file in files:
         names: set[str] = set()
         for node in ast.walk(ast.parse(file.read_text(encoding="utf-8"))):
             # os.environ.get("X") / os.getenv("X")
@@ -266,3 +271,41 @@ def test_only_resolve_language_reads_the_system_language():
         f"Lecturas del idioma del sistema fuera de `hook_common.resolve_language`: {outside}. "
         "Usa `i18n.current()` (paquete) o `hook_common.resolve_language` (hooks)."
     )
+
+
+#: Las variables que estrenan la entrega por plugin y el puente de Desktop (plan, ola 1). Las leen
+#: otros módulos; `config.py` las declara para que la suite no herede las de quien la corre (un
+#: `CLAUDE_CONFIG_DIR` puesto llevaría `claude plugin …` de un test a la configuración real).
+PLUGIN_VARIABLES = frozenset(
+    {
+        "CLAUDE_CONFIG_DIR",
+        "CLAUDE_PLUGIN_ROOT",
+        "CLAUDE_PLUGIN_DATA",
+        "CLAUDE_PLUGIN_OPTION_READ_MOD_ENABLED",
+        "WSL_DISTRO_NAME",
+    }
+)
+
+
+def test_the_plugin_variables_are_in_the_inventory():
+    missing = sorted(PLUGIN_VARIABLES - config.ENVIRONMENT_VARIABLES)
+    assert missing == [], f"faltan en `config.py`: {missing}"
+    defined = sorted(name for name in PLUGIN_VARIABLES if name in os.environ)
+    assert defined == [], f"la suite hereda {defined} de esta máquina"
+
+
+def test_every_variable_the_hook_entry_reads_is_declared_in_config():
+    """El subcomando `hook` no importa `config` (coste de arranque): lee el entorno por su cuenta."""
+    package = Path(config.__file__).parent
+    per_file = _variables_read_by([package / "read_switch.py", package / "hook_entry.py"])
+    # Control positivo: `read_switch` lee al menos estas dos.
+    assert {"LOCAL_DELEGATE_LOG_DIR", "LD_HOOK_READ_ENABLED"} <= per_file.get(
+        "read_switch.py", set()
+    ), per_file
+    undeclared = sorted(
+        f"{file}:{name}"
+        for file, names in per_file.items()
+        for name in names
+        if name not in config.ENVIRONMENT_VARIABLES
+    )
+    assert undeclared == []

@@ -553,6 +553,23 @@ ASK_TIMEOUT = _env_int("LOCAL_DELEGATE_ASK_TIMEOUT", 30)
 FEEDBACK_ENABLED = _env_flag("LOCAL_DELEGATE_FEEDBACK", True)
 
 
+# --- Variables de la entrega por plugin y del puente de Desktop (SDD claude-plugin-and-mods) ---
+# Las leen otros módulos (`claude_plugin`, `install_state`, el puente), no este; se declaran aquí
+# solo para que entren en `ENVIRONMENT_VARIABLES` y la suite no las herede de quien la corre: con
+# `CLAUDE_CONFIG_DIR` puesta, un `claude plugin …` lanzado por un test escribiría en esa config.
+# Lista cerrada en el plan (ola 1); `LD_HOOK_READ_ENABLED`, `LD_HOOK_READ_BLOCK` y
+# `LOCAL_DELEGATE_WEB_TOKEN` ya estaban declaradas más arriba.
+PLUGIN_ENVIRONMENT_VARIABLES: tuple[str, ...] = (
+    "CLAUDE_CONFIG_DIR",
+    "CLAUDE_PLUGIN_ROOT",
+    "CLAUDE_PLUGIN_DATA",
+    "CLAUDE_PLUGIN_OPTION_READ_MOD_ENABLED",
+    "WSL_DISTRO_NAME",
+)
+for _name in PLUGIN_ENVIRONMENT_VARIABLES:
+    _read(_name)
+
+
 # --- Inventario de variables de entorno -------------------------------------
 # Se congela AQUÍ, al final, cuando ya se han evaluado todas las constantes de arriba y por tanto
 # se ha llamado a los helpers con todos los nombres. Va después a propósito: declararla antes
