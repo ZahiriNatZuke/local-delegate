@@ -15,6 +15,7 @@ from pathlib import Path
 import httpx2
 import pytest
 from conftest import (
+    FakeClaude,
     desktop_mcp_remote_entry,
     downgrade_to_0_34,
     make_home,
@@ -22,7 +23,15 @@ from conftest import (
     write_claude_desktop,
 )
 
-from local_delegate import checks, install, llamaswap_api, probes, recompute
+from local_delegate import (
+    checks,
+    claude_plugin,
+    install,
+    install_state,
+    llamaswap_api,
+    probes,
+    recompute,
+)
 from local_delegate.failures import BackendView
 
 
@@ -66,6 +75,14 @@ def make_ctx(home, **kwargs):
         # Séptimo colaborador de red: prueba un token concreto contra el puerto. Solo lo consulta
         # `service.desktop_auth`, y solo si hay fichero de Claude Desktop, que `make_home` no crea.
         "daemon_accepts_token": lambda host, port, token: True,
+        # The plugin delivery (F1-doctor): no `claude` on the PATH, outside WSL, no `uv tool`
+        # interpreter to compare with and no token for the Desktop bridge. Without these, a
+        # `run_all` would launch the real `claude` and read the real registry of the machine.
+        "claude_which": lambda name: None,
+        "claude_runner": None,
+        "environ": {},
+        "expected_ld_bin": lambda: claude_plugin.LdBin(None, "editable"),
+        "bridge_token": lambda: "",
     }
     defaults.update(kwargs)
     return checks.Context(home=home, **defaults)
@@ -88,9 +105,9 @@ def test_registry_ids_are_unique_and_groups_are_known():
     }
 
 
-def test_registry_ids_are_the_published_ones():
-    """A6 (REQ-011): los 27 ids exactos, en inglés. Un id es contrato con quien lea `checks`."""
-    assert len(checks.CHECKS) == 27
+def test_check_ids_exact():
+    """A6 (REQ-011) and REQ-009: the 32 exact ids, in English. An id is a contract with its readers."""
+    assert len(checks.CHECKS) == 32
     assert {check.id for check in checks.CHECKS} == {
         "cli.path",
         "cli.published",
@@ -101,6 +118,7 @@ def test_registry_ids_are_the_published_ones():
         "config.claude_settings",
         "config.cost",
         "metrics.test_windows",
+        "claude.delivery",
         "scaffold.hook_files",
         "scaffold.hook_orphans",
         "scaffold.hook_settings",
@@ -110,11 +128,15 @@ def test_registry_ids_are_the_published_ones():
         "scaffold.mcp_codex",
         "scaffold.mcp_opencode",
         "scaffold.shell_completion",
+        "plugin.ld_bin",
+        "hooks.duplicates",
         "service.daemon",
         "service.backend",
         "service.credential",
         "service.daemon_auth",
         "service.desktop_auth",
+        "claude.version",
+        "plugin.installed",
         "backend.llamaswap",
         "backend.llamaserver",
         "backend.residency",
@@ -461,11 +483,18 @@ def test_complete_home_is_all_ok(tmp_path, monkeypatch):
     recompute.write_aggregates(logs, {"version": 1, "check": {"verdict": "pass"}})
     # `backend.residency` y `backend.topology` leen la config de llama-swap (`doctor --config`):
     # se les da la de hoy, sin residente y con turno.
+    # `claude.delivery` reads the install state, which does not live in the HOME either; and
+    # `claude.version` asks a `claude` that answers a version above the plugin minimum.
+    version = checks._installed_version() or "0.0.0"
+    install_state.save(home, install_state.new_state(claude_plugin.SETTINGS, version), logs)
+    fake = FakeClaude()
     ctx = make_ctx(
         home,
         clients_seen=lambda: ([CLAUDE], None),
         log_dir=logs,
         config_path=RESIDENCY_FIXTURES / "today.yaml",
+        claude_which=fake.which,
+        claude_runner=fake,
     )
     for check, result in checks.run_all(ctx):
         assert result.status == checks.OK, f"{check.id}: {result.detail}"
@@ -480,7 +509,15 @@ def test_empty_home_reports_missing_with_fix_hint(tmp_path):
     # respuesta correcta es `ok` — no hay huérfanos que retirar.
     # `scaffold.shell_completion` tampoco: es opcional, y sin nada instalado la respuesta es `ok`
     # «no instalado (opcional)», no «falta».
-    separate = {"scaffold.memory", "scaffold.hook_orphans", "scaffold.shell_completion"}
+    # `plugin.ld_bin` and `hooks.duplicates` neither: without the plugin delivery the first does
+    # not apply and the second has nothing duplicated, so both are `ok` (F1-doctor).
+    separate = {
+        "scaffold.memory",
+        "scaffold.hook_orphans",
+        "scaffold.shell_completion",
+        "plugin.ld_bin",
+        "hooks.duplicates",
+    }
     ctx = make_ctx(make_home(tmp_path, complete=False))
     scaffold = [
         (check, result)
@@ -1199,8 +1236,15 @@ _NUMBER_WORDS = {
     25: "veinticinco",
     26: "veintiséis",
     27: "veintisiete",
+    28: "veintiocho",
+    29: "veintinueve",
+    30: "treinta",
+    31: "treinta y un",
+    32: "treinta y dos",
+    33: "treinta y tres",
+    34: "treinta y cuatro",
 }
-_NUMBER_WORDS_WITHOUT_NOUN = {**_NUMBER_WORDS, 21: "veintiuno"}
+_NUMBER_WORDS_WITHOUT_NOUN = {**_NUMBER_WORDS, 21: "veintiuno", 31: "treinta y uno"}
 
 
 def test_the_docstring_states_how_many_checks_there_really_are():
@@ -1420,14 +1464,19 @@ def _without_token(result):
     assert _TOKEN_DESKTOP not in (result.fix_hint or "")
 
 
-def test_desktop_with_a_token_the_daemon_accepts_is_ok_and_does_not_write(tmp_path):
-    """Control positivo del bloque: sin él, un probe que avisara siempre dejaría verdes a los demás."""
+def test_desktop_with_a_literal_token_the_daemon_accepts_warns_and_does_not_write(tmp_path):
+    """REQ-012: a token written in the file warns even when it works; it is still tested first.
+
+    The positive control of the block is `test_desktop_against_open_daemon_does_not_test_the_token`
+    (and the bridge entry in `test_checks_plugin.py`): without one, an always-warning probe would
+    leave the others green.
+    """
     home = _with_desktop(make_home(tmp_path), _desktop_entry())
     before = snapshot(home)
     calls: list[str] = []
     result = result_for("service.desktop_auth", _desktop_ctx(home, calls=calls))
 
-    assert result.status == checks.OK, result.detail
+    assert result.status == checks.WARN, result.detail
     assert calls == [_TOKEN_DESKTOP]  # el token que se prueba es el del fichero, no otro
     _without_token(result)
     assert snapshot(home) == before
@@ -1460,7 +1509,13 @@ def test_desktop_against_open_daemon_does_not_test_the_token(tmp_path):
     home = _with_desktop(make_home(tmp_path), _desktop_entry())
     result = result_for("service.desktop_auth", _desktop_ctx(home, requires=False, calls=calls))
 
-    assert result.status == checks.OK
+    # The daemon lets it in, but the token is still written in the file (REQ-012).
+    assert result.status == checks.WARN, result.detail
+    assert calls == []
+    _without_token(result)
+    home = _with_desktop(make_home(tmp_path / "no-header"), _desktop_entry(header=None))
+    result = result_for("service.desktop_auth", _desktop_ctx(home, requires=False, calls=calls))
+    assert result.status == checks.OK, result.detail
     assert calls == []
 
 
@@ -1514,12 +1569,18 @@ def test_desktop_pointing_to_another_host_is_not_tested_against_the_local_daemon
     home = _with_desktop(make_home(tmp_path), entry)
     result = result_for("service.desktop_auth", _desktop_ctx(home, calls=calls))
 
-    assert result.status == checks.UNKNOWN
+    # Not tested against our port; the token written in the file still warns (REQ-012).
+    assert result.status == checks.WARN, result.detail
     assert calls == []
+    _without_token(result)
 
 
 def test_desktop_with_referenced_variable_tests_its_value(tmp_path, monkeypatch):
-    """`mcp-remote` expande `${VAR}` en las cabeceras: el valor sale de `env` de la entrada o del entorno."""
+    """`mcp-remote` expande `${VAR}` en las cabeceras: el valor sale de `env` de la entrada o del entorno.
+
+    REQ-012: Desktop does not pass the user environment to its MCP servers, so even a value this
+    shell sees is a warning; it is still tested, so a rotated token says 401 and not only `${}`.
+    """
     monkeypatch.setenv("TOKEN_DESKTOP_TEST", "value-from-env")
     calls: list[str] = []
     home = _with_desktop(
@@ -1527,7 +1588,8 @@ def test_desktop_with_referenced_variable_tests_its_value(tmp_path, monkeypatch)
     )
     result = result_for("service.desktop_auth", _desktop_ctx(home, calls=calls))
 
-    assert result.status == checks.OK, result.detail
+    assert result.status == checks.WARN, result.detail
+    assert "${" in result.detail
     assert calls == ["value-from-env"]
 
 
@@ -1545,7 +1607,9 @@ def test_desktop_with_bearer_inside_the_variable_tests_only_the_token(tmp_path, 
     result = result_for("service.desktop_auth", _desktop_ctx(home, calls=calls))
 
     assert calls == ["good-token"]
-    assert result.status == checks.OK, result.detail
+    # The value lives literally in the entry's `env` (REQ-012): a warning, without printing it.
+    assert result.status == checks.WARN, result.detail
+    assert "good-token" not in result.detail
 
 
 def test_desktop_with_missing_variable_warns_as_suspicion(tmp_path, monkeypatch):
@@ -1565,8 +1629,12 @@ def test_desktop_unable_to_test_the_token_is_unknown(tmp_path):
     home = _with_desktop(make_home(tmp_path), _desktop_entry())
     result = result_for("service.desktop_auth", _desktop_ctx(home, accepts=None))
 
-    assert result.status == checks.UNKNOWN
+    # It could not be tested, but the token written in the file is a warning anyway (REQ-012).
+    assert result.status == checks.WARN, result.detail
     _without_token(result)
+    home = _with_desktop(make_home(tmp_path / "no-header"), _desktop_entry(header=None))
+    result = result_for("service.desktop_auth", _desktop_ctx(home, requires=None))
+    assert result.status == checks.UNKNOWN, result.detail
 
 
 def test_the_hook_count_does_not_count_pycache(tmp_path):

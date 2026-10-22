@@ -134,7 +134,7 @@ def resolve_ld_bin(prefix: Path | None = None) -> LdBin:
     install from a checkout and a ``.venv`` from a repo or worktree: any of them can disappear,
     and then every hook would stop acting without a word. Those go to settings, with a warning.
     """
-    from . import update  # lazy: update imports install, which will import this module
+    from . import install_origin as update  # leaf module: no import cycle through `checks`
 
     prefix = Path(prefix if prefix is not None else sys.prefix)
     if _in_uv_cache(prefix):

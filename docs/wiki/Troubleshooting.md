@@ -119,6 +119,32 @@ Cómo salir:
    versión la ruta va citada y con barras `/`, que funciona en sh, cmd y PowerShell.
 3. Comprueba con `local-delegate doctor` — «hooks registrados» debe salir `[ OK ]`.
 
+## `doctor` da `[WARN] hooks duplicados`
+
+Claude Code tiene los hooks de local-delegate dos veces: en `~/.claude/settings.json` y en el
+plugin. Cada evento corre dos veces. Suele pasar al bajar a la 0.39 sin `uninstall` antes: la
+0.39 no conoce el plugin y vuelve a escribir sus hooks en settings.
+
+- Para seguir en la 0.40 o posterior: `local-delegate update` retira los de settings y deja el
+  plugin.
+- Para volver a la 0.39: primero `local-delegate uninstall` con la versión actual, y luego la
+  instalación de la 0.39.
+- Para quedarse en settings con la versión actual: `local-delegate install --claude-delivery
+  settings`, que desinstala el plugin y repone los hooks en el mismo paso.
+
+Reinicia las sesiones abiertas de Claude Code después: los hooks se leen al empezar.
+
+## `doctor` da `[FALT]` o `[WARN]` en el plugin de Claude Code
+
+- **intérprete de los hooks del plugin** en `[FALT]`: la opción `ld_bin` apunta a un intérprete
+  que ya no existe (se borró o se movió el entorno de `uv tool`). Los hooks del plugin dejan
+  pasar todo sin actuar, así que no lo notarías. `local-delegate install` lo rellena de nuevo.
+- **plugin de Claude Code** con otra versión o en otro idioma: `local-delegate update` (versión)
+  o `local-delegate install` (idioma).
+- **versión de Claude Code** por debajo de 2.1.292: actualiza Claude Code (`claude update`);
+  hasta entonces `install` sigue por settings. La pestaña Code de Claude Desktop pide 2.1.286 y
+  la extensión de VS Code 2.1.299, y esas versiones no se pueden leer desde el CLI.
+
 ## `doctor` dice que el backend está CAÍDO pero llama-swap está corriendo
 
 Si responde a `curl` con **401**, no está caído: está arriba y **falta la credencial en ese
