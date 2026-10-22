@@ -6,6 +6,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corrige (Codex con comillas simples)
+
+- **`install` y `update` conservan `bearer_token_env_var` escrito con comillas simples** en
+  `~/.codex/config.toml`. `bearer_token_env_var = 'VAR'` (cadena literal TOML, como la deja quien
+  edita a mano u otro programa que reescribe el fichero) no se reconocía: la reinstalación quitaba
+  la variable y, con el daemon protegido por token, Codex recibía 401. Ahora se leen las dos formas
+  de cadena, con la variable nuestra o con otra del usuario, y una línea comentada ya no cuenta.
+- **`doctor` lee igual esa entrada**: `service.daemon_auth` ya no da por «sin cabecera» una entrada
+  de Codex con comillas simples, y `scaffold.mcp_codex` reconoce como HTTP `url='…'` sin espacios
+  alrededor del `=`.
+
 ### Seguridad
 
 - **Suelo para `opentelemetry-api`** (`>=1.45.1,<2`), dependencia transitiva que traen `mcp` y
