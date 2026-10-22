@@ -129,7 +129,9 @@ def _client_name(client: str) -> str:
 # tercer caso a esta expresión: el vocabulario de cada cliente se traduce una sola vez.
 _REFERENCED_VARIABLE = re.compile(r"\$\{([A-Z_][A-Z0-9_]*)\}|\{env:([A-Z_][A-Z0-9_]*)\}")
 # Una sola definición: `install` la usa para conservar la cabecera al reinstalar.
-_CODEX_BEARER_RE = install._CODEX_BEARER_RE
+# `url = "…"`, `url='…'`, con o sin espacios: lo que delata una entrada HTTP de Codex. Anclada al
+# principio de línea para no contar una clave comentada ni otra que acabe en `url`.
+_CODEX_URL_RE = re.compile(r"(?m)^[ 	]*url[ 	]*=")
 # El nombre de la variable, no su valor: el diagnóstico jamás imprime un secreto.
 TOKEN_VAR = "LOCAL_DELEGATE_WEB_TOKEN"
 # El comando que actualiza el paquete NO se escribe aquí: depende de cómo esté instalado, y esa
@@ -1099,7 +1101,7 @@ def _entry_mode(entry: dict) -> str:
 
 def _codex_mode(section: str) -> str:
     """Modo del bloque de Codex: el TOML no lleva ``type``, lo delata tener ``url``."""
-    return "http" if "url = " in section else "stdio"
+    return "http" if _CODEX_URL_RE.search(section) else "stdio"
 
 
 def _claude_mcp_entry(ctx: Context) -> dict | None:
@@ -1402,10 +1404,10 @@ def _probe_mcp_daemon_auth(ctx: Context) -> Result:
         entries.append(_entry_auth(_client_name("claude"), _entry_mode(entry), header))
     section = _codex_mcp_section(ctx)
     if section is not None:
-        found = _CODEX_BEARER_RE.search(section)
+        var = install.codex_bearer_variable(section)
         # Codex referencia la variable por nombre, sin `${...}`: se envuelve para que la
         # comprobación de «¿está en el entorno?» sea una sola para los tres clientes.
-        token = "${" + found.group(1) + "}" if found else None
+        token = "${" + var + "}" if var else None
         entries.append(_entry_auth(_client_name("codex"), _codex_mode(section), token))
     oc_entry, _path, _reason = _opencode_mcp_entry(ctx)
     if oc_entry is not None:

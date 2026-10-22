@@ -1477,6 +1477,40 @@ def test_codex_authenticates_with_its_own_key_and_that_also_counts(tmp_path, mon
     assert "Codex" not in result.detail
 
 
+def test_codex_with_a_single_quoted_variable_also_counts(tmp_path, monkeypatch):
+    """`bearer_token_env_var = 'VAR'` (cadena literal TOML) es tan válido como con comillas dobles.
+
+    Antes `doctor` solo leía las dobles y daba esta entrada por «sin cabecera» con Codex funcionando.
+    """
+    home = _home_with_credential(tmp_path, monkeypatch)
+    block = (
+        f"[mcp_servers.{install.SERVER_NAME}]\n"
+        "url = 'http://127.0.0.1:9393/mcp'\n"
+        "bearer_token_env_var = 'LOCAL_DELEGATE_WEB_TOKEN'"
+    )
+    (home / ".codex" / "config.toml").write_text(
+        install.upsert_codex_mcp("", block), encoding="utf-8"
+    )
+    ctx = make_ctx(home, daemon_needs_token=lambda host, port: True)
+    result = result_for("service.daemon_auth", ctx)
+
+    assert result.status == checks.OK, result.detail
+    assert "Codex" not in result.detail
+
+
+def test_codex_url_without_spaces_is_still_http(tmp_path):
+    """`url='…'` sin espacios alrededor del `=` sigue siendo una entrada HTTP para `doctor`."""
+    home = make_home(tmp_path)
+    block = f"[mcp_servers.{install.SERVER_NAME}]\nurl='http://127.0.0.1:9393/mcp'"
+    (home / ".codex" / "config.toml").write_text(
+        install.upsert_codex_mcp("", block), encoding="utf-8"
+    )
+    result = result_for("scaffold.mcp_codex", make_ctx(home))
+
+    assert result.status == checks.OK, result.detail
+    assert "http" in result.detail, result.detail
+
+
 def test_an_open_daemon_makes_no_noise(tmp_path):
     """Sin token en el puerto, que la entrada no lleve cabecera da igual."""
     ctx = make_ctx(make_home(tmp_path), daemon_needs_token=lambda host, port: False)

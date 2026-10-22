@@ -207,3 +207,51 @@ def test_the_dry_run_says_it_keeps_it_and_prints_no_literal_token(monkeypatch, t
 
     assert _install(home, "claude", "--mcp-mode", "http") == 0
     assert _claude_read(home) == f"Bearer {secret}"
+
+
+# --- Codex con cadena literal TOML (comillas simples) -------------------------
+# `bearer_token_env_var = 'VAR'` es TOML válido y es como lo deja quien edita a mano u otro programa
+# que reescribe el fichero. La lectura solo reconocía comillas dobles: `existing_header` devolvía
+# `None`, `install`/`update` reescribían la entrada sin la variable y Codex pasaba a 401.
+def _codex_write_single_quotes(home: Path, var: str, *, url_line: str | None = None) -> None:
+    lines = [
+        f"[mcp_servers.{inst.SERVER_NAME}]",
+        url_line or f"url = '{URL}'",
+        f"bearer_token_env_var = '{var}'",
+    ]
+    text = inst.upsert_codex_mcp("", "\n".join(lines))
+    (home / ".codex" / "config.toml").write_text(text, encoding="utf-8")
+
+
+@pytest.mark.parametrize("var", ["LOCAL_DELEGATE_WEB_TOKEN", "OTHER_VARIABLE"])
+def test_existing_header_reads_a_codex_literal_string(monkeypatch, tmp_path, var):
+    home = _home_with(monkeypatch, tmp_path, "codex", None)
+    _codex_write_single_quotes(home, var)
+
+    assert inst.existing_header(home, "codex") == f"Bearer ${{{var}}}"
+
+
+@pytest.mark.parametrize("var", ["LOCAL_DELEGATE_WEB_TOKEN", "OTHER_VARIABLE"])
+def test_install_keeps_a_codex_variable_written_with_single_quotes(monkeypatch, tmp_path, var):
+    """El caso de la avería: un `install` sin flag no deja a Codex en 401."""
+    home = _home_with(monkeypatch, tmp_path, "codex", None)
+    _codex_write_single_quotes(home, var)
+
+    assert _install(home, "codex", "--mcp-mode", "http") == 0
+
+    assert _codex_read(home) == f"Bearer ${{{var}}}"
+
+
+def test_a_codex_variable_inside_a_comment_is_not_kept(monkeypatch, tmp_path):
+    """Una línea comentada no es la configuración de Codex: no se resucita al reinstalar."""
+    home = _home_with(monkeypatch, tmp_path, "codex", None)
+    lines = [
+        f"[mcp_servers.{inst.SERVER_NAME}]",
+        f'url = "{URL}"',
+        '# bearer_token_env_var = "OTHER_VARIABLE"',
+    ]
+    (home / ".codex" / "config.toml").write_text(
+        inst.upsert_codex_mcp("", "\n".join(lines)), encoding="utf-8"
+    )
+
+    assert inst.existing_header(home, "codex") is None

@@ -1312,7 +1312,22 @@ def mcp_entry(
 # funcionaba, y contra un daemon con token el cliente pasaba a 401 al instante (2026-08-18). Por eso
 # el flag tiene tres estados y el de «no dijiste nada» conserva lo que hubiera. Se lee del disco y
 # no se deduce preguntando al daemon: `install` no sale a la red por contrato.
-_CODEX_BEARER_RE = re.compile(r'bearer_token_env_var\s*=\s*"([^"]+)"')
+# Las dos formas de cadena TOML: básica (`"VAR"`) y literal (`'VAR'`). Hasta la 0.40.0 solo se
+# reconocía la básica, y una entrada editada a mano o reescrita por otro programa con comillas
+# simples se reinstalaba sin la variable: Codex, a 401. Anclada al principio de línea para no leer
+# una clave comentada. Se queda en regex y no en `tomllib` a propósito: la sección se recorta del
+# fichero, que puede no ser TOML válido entero, y un fallo de análisis no puede dejar sin cabecera.
+_CODEX_BEARER_RE = re.compile(
+    r"""(?m)^[ \t]*bearer_token_env_var[ \t]*=[ \t]*(?:"([^"\n]+)"|'([^'\n]+)')"""
+)
+
+
+def codex_bearer_variable(section: str) -> str | None:
+    """El nombre de la variable de `bearer_token_env_var` en la sección de Codex, o ``None``."""
+    found = _CODEX_BEARER_RE.search(section)
+    return (found.group(1) or found.group(2)) if found else None
+
+
 # `Bearer ${VAR}` (Claude Code) o `Bearer {env:VAR}` (opencode). Lo que no casa es un token literal.
 _REFERENCE_RE = re.compile(r"^Bearer (?:\$\{([^}]+)\}|\{env:([^}]+)\})$")
 
@@ -1336,8 +1351,8 @@ def existing_header(home: Path, target: str) -> str | None:
         kind = "remote"
     elif target == "codex":
         section = _CODEX_SECTION_RE.search(_read_text(home / ".codex" / "config.toml"))
-        found = _CODEX_BEARER_RE.search(section.group(0)) if section else None
-        return f"Bearer ${{{found.group(1)}}}" if found else None
+        var = codex_bearer_variable(section.group(0)) if section else None
+        return f"Bearer ${{{var}}}" if var else None
     else:
         return None
     if not isinstance(entry, dict) or entry.get("type") != kind:
