@@ -7,7 +7,7 @@
 
 ## Reglas para el ejecutor
 
-1. Ejecutar las fases **en orden** (F1→F5 en esta sesión; F6 y F7 son sesiones aparte). Cada fase termina con: tests en verde (`uv run pytest`), `uv run ruff check .`, commit propio (`rtk git add` + `rtk git commit`, Conventional Commits) y checkbox marcado en este archivo.
+1. Ejecutar las fases **en orden** (F1→F5 en esta sesión; F6 y F7 son sesiones aparte). Cada fase termina con: tests en verde (`uv run pytest`), `uv run ruff check .`, commit propio (`git add` + `git commit`, Conventional Commits) y checkbox marcado en este archivo.
 2. No reformatear código no tocado; no reordenar imports fuera de lo que pida ruff.
 3. Compatibilidad hacia atrás: env vars existentes conservan su semántica; `usage.jsonl` viejo debe seguir leyéndose; el dashboard debe tolerar eventos sin los campos nuevos.
 4. Si algo del plan contradice el código real, gana el código: anota la discrepancia al final de este archivo y adapta.
@@ -110,9 +110,9 @@ Y en `local_lint_summary`: "Si ejecutaste un comando cuya salida es larga, vuél
 Cuando `source=="path"` y `ok`: anexar `\n\n(leído server-side: {chars_in:,} chars ≈ {tokens:,} tokens que no entraron a tu contexto)` usando tokens reales si existen, estimación si no. Env `LOCAL_DELEGATE_FEEDBACK=1` default on, `0` la apaga.
 
 ### F3.3 CLAUDE.md global (`~/.claude/CLAUDE.md`) — backup antes de editar
-- Mover la sección "Delegación a modelos locales" ARRIBA del bloque RTK.
-- Conectar los dos sistemas: "Si un comando produce salida larga y rtk no tiene filtro para él → vuelca a fichero y usa `local_lint_summary(path=...)`."
-- Comprimir el bloque RTK: conservar Golden Rule + tabla-resumen final, eliminar las secciones intermedias de ejemplos por categoría (~80 líneas menos). Mantener los marcadores `<!-- rtk-instructions v2 -->` … `<!-- /rtk-instructions -->` envolviendo el bloque comprimido.
+- Mover la sección "Delegación a modelos locales" ARRIBA del bloque de la CLI auxiliar de filtrado de salida.
+- Conectar los dos sistemas: "Si un comando produce salida larga y la CLI auxiliar no tiene filtro para él → vuelca a fichero y usa `local_lint_summary(path=...)`."
+- Comprimir el bloque de la CLI auxiliar: conservar la regla principal + tabla-resumen final, eliminar las secciones intermedias de ejemplos por categoría (~80 líneas menos). Mantener los marcadores HTML de apertura y cierre envolviendo el bloque comprimido.
 
 ### F3.4 Skill `delegacion-local` (`~/.claude/skills/delegacion-local/SKILL.md`)
 - Catálogo completo: las 9 tools actuales + `local_status` (10).

@@ -8,7 +8,7 @@ en el mismo entorno restringido que usa el agente **sin gastar cuota del modelo*
 - `main` en `16f8846`, limpia. Daemon 0.13.1 en `127.0.0.1:9393`.
 - Codex CLI bundled del Desktop; `[windows] sandbox = "elevated"` en el config global.
 - Ficheros tocados, los dos **fuera de git**: `D:\Projects\local-delegate\.codex\config.toml`
-  (7 líneas menos) y `C:\Users\Yohan\.local\bin\rtk.cmd` (nuevo).
+  (7 líneas menos) y `C:\Users\Yohan\.local\bin\<cli>.cmd` (nuevo).
 
 ## Resultado: **los dos hallazgos cerrados**
 
@@ -17,17 +17,17 @@ en el mismo entorno restringido que usa el agente **sin gastar cuota del modelo*
 | REQ-001 | `codex mcp list` con cwd en el repo | `Error: failed to load configuration / url is not supported for stdio in mcp_servers.github` | **exit 0**, lista completa |
 | REQ-002 | Los cuatro MCP del repo en la listada | — | `MCP_DOCKER`, `git`, `socket-mcp`, `jetbrains` ✓ y `local-delegate` (`http://127.0.0.1:9393/mcp`) ✓ |
 | REQ-003 | `github` una sola vez | duplicado con transportes incompatibles | una entrada, `https://api.githubcopilot.com/mcp/`, `Auth: Bearer token`, bearer por `CODEX_GITHUB_PERSONAL_ACCESS_TOKEN` |
-| REQ-004 | `Get-Command rtk` **dentro** del sandbox | *«The term 'rtk' is not recognized»* | `C:\Users\Yohan\.local\bin\rtk.cmd`, `rtk 0.34.0`, exit 0 |
-| REQ-005 | Un solo binario | — | el shim invoca `%USERPROFILE%\rtk.exe`; no hay copia ni hardlink |
+| REQ-004 | `Get-Command <cli>` **dentro** del sandbox | *«The term '<cli>' is not recognized»* | `C:\Users\Yohan\.local\bin\<cli>.cmd`, `<cli> 0.34.0`, exit 0 |
+| REQ-005 | Un solo binario | — | el shim invoca `%USERPROFILE%\<cli>.exe`; no hay copia ni hardlink |
 | REQ-006 | `git status --short` | — | solo `?? .sdd/changes/codex-config-local/` |
 
 ## La causa raíz no era la anotada
 
-El backlog decía *«`rtk` no está en el PATH que hereda Codex»*. Medido dentro del sandbox:
+El backlog decía *«`<cli>` no está en el PATH que hereda Codex»*. Medido dentro del sandbox:
 
 - `C:\Users\Yohan` **sí** está en su PATH (38 entradas).
-- `& 'C:\Users\Yohan\rtk.exe' --version` → **`rtk 0.34.0`**: el binario se ejecuta perfectamente.
-- `Get-Command rtk` → **no lo encuentra**.
+- `& 'C:\Users\Yohan\<cli>.exe' --version` → **`<cli> 0.34.0`**: el binario se ejecuta perfectamente.
+- `Get-Command <cli>` → **no lo encuentra**.
 - `Get-ChildItem 'C:\Users\Yohan'` → **falla**; `Get-ChildItem 'C:\Users\Yohan\.local\bin'` → funciona.
 
 O sea: bajo el *restricted token* del sandbox el raíz del perfil **no es enumerable**, y la
@@ -39,10 +39,10 @@ Dato de apoyo: dentro del sandbox `uvx` **sí** resuelve, y está justo en `.loc
 
 ## Las dos predicciones de la revisión del plan, comprobadas
 
-1. **Quoting del shim.** `rtk read "…\con espacios.txt"` dentro del sandbox devolvió el contenido
+1. **Quoting del shim.** `<cli> read "…\con espacios.txt"` dentro del sandbox devolvió el contenido
    (`linea uno | linea dos`). Los argumentos con espacios y comillas sobreviven a `cmd.exe`.
 2. **Cero regresión fuera del sandbox.** El mismo script fuera resuelve a
-   `C:\Users\Yohan\rtk.exe` — el `.exe` del raíz sigue ganando, porque `C:\Users\Yohan` precede a
+   `C:\Users\Yohan\<cli>.exe` — el `.exe` del raíz sigue ganando, porque `C:\Users\Yohan` precede a
    `.local\bin` en el PATH y la resolución agota extensiones directorio por directorio. El shim solo
    actúa donde antes no había nada.
 
@@ -59,16 +59,16 @@ Dato de apoyo: dentro del sandbox `uvx` **sí** resuelve, y está justo en `.loc
       lectura del perfil entero a un agente se descartó a propósito.
 - [x] `git check-ignore -v` confirma que `.gitignore:32` es `.codex/` y cubre también el `.bak`.
 - [x] Rollback listo: `.codex\config.toml.pre-github-fix-20260730.bak` (hash verificado idéntico
-      antes de editar) y borrar `rtk.cmd`.
+      antes de editar) y borrar `<cli>.cmd`.
 
 ## Deviations and residual risk
 
 - Solo se verificó con el **CLI bundled**, no con **Codex Desktop**. Comparten `config.toml`, así que
   el arreglo de `github` debería aplicarle igual; sin comprobar.
-- Si el actualizador de `rtk` **mueve** el `.exe` fuera del raíz del perfil, el shim rompe con un
+- Si el actualizador de `<cli>` **mueve** el `.exe` fuera del raíz del perfil, el shim rompe con un
   error de ruta. Es visible y de arreglo trivial.
 - La trampa de fondo sigue viva para cualquier otro proyecto: redefinir en un `.codex/config.toml`
   un servidor que ya existe en la global **con otro transporte** aborta la carga entera. La vía
   correcta es usar otro nombre de servidor. Queda anotado en memoria, no se construye defensa.
-- No se corrió ningún check nuevo sobre `rtk` en el CI: el shim es configuración de esta máquina y
+- No se corrió ningún check nuevo sobre `<cli>` en el CI: el shim es configuración de esta máquina y
   no tiene representación en el repositorio.

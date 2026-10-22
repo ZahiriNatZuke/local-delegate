@@ -1272,7 +1272,6 @@ tests/test_hook_shell.py::test_las_formas_simples_de_volcar_un_documento_se_bloq
 tests/test_hook_shell.py::test_las_formas_simples_de_volcar_un_documento_se_bloquean[more {p}]
 tests/test_hook_shell.py::test_las_formas_simples_de_volcar_un_documento_se_bloquean[Get-Content {p}]
 tests/test_hook_shell.py::test_las_formas_simples_de_volcar_un_documento_se_bloquean[gc {p}]
-tests/test_hook_shell.py::test_las_formas_simples_de_volcar_un_documento_se_bloquean[rtk read {p}]
 tests/test_hook_shell.py::test_las_formas_simples_de_volcar_un_documento_se_bloquean[head {p}]
 tests/test_hook_shell.py::test_las_formas_simples_de_volcar_un_documento_se_bloquean[cat "{p}"]
 tests/test_hook_shell.py::test_las_formas_simples_de_volcar_un_documento_se_bloquean[CAT {p}]

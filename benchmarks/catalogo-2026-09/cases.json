@@ -278,9 +278,9 @@
       "origen": "docs/recipes/claude-code-hooks.md",
       "media_type": "texto",
       "source_file": "resumen-md-10k.md",
-      "source_sha256": "c60af055250a8023ba36b6cf130756798d7d23e0ad1ade0cae31d412dbda8a33",
-      "source_bytes": 10480,
-      "source_chars": 10331,
+      "source_sha256": "72b0a5be5ff7ecb3535d08f5819c4337cef1a72a3e5dd17ff064c29dd10867fe",
+      "source_bytes": 10468,
+      "source_chars": 10319,
       "production": {
         "model": "gemma4-26b-a4b",
         "calls": 1

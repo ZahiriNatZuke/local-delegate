@@ -67,10 +67,10 @@ existía.
 El `.codex/` del repo está en `.gitignore:32`, así que es local de esta máquina y no viaja al
 repositorio.
 
-### 2. `rtk` no existe en el shell que usa Codex
+### 2. `<cli>` no existe en el shell que usa Codex
 
-Codex intentó `pwsh -Command "rtk read …SKILL.md"` y recibió *«The term 'rtk' is not recognized»*.
-Su `AGENTS.md` le indica usar RTK, pero el shim no está en el PATH que hereda. Coste real: un turno y
+Codex intentó `pwsh -Command "<cli> read …SKILL.md"` y recibió *«The term '<cli>' is not recognized»*.
+Su `AGENTS.md` le indica usar la CLI auxiliar, pero el shim no está en el PATH que hereda. Coste real: un turno y
 tokens perdidos por sesión, cada vez que lo intenta.
 
 ## Comprobaciones de calidad

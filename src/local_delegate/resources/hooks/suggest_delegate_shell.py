@@ -7,7 +7,7 @@ pasa por ahí: la conducta se mueve al comando de shell, la adopción medida sub
 solo token. La regla se declara sobre la **superficie de lectura**, no sobre una tool.
 
 **Falso negativo antes que falso positivo.** Solo se reconocen formas simples e inequívocas de
-volcar un fichero entero: `cat X`, `type X`, `more X`, `Get-Content X`, `gc X`, `rtk read X` y
+volcar un fichero entero: `cat X`, `type X`, `more X`, `Get-Content X`, `gc X` y
 `head X` sin recorte. Cualquier otra cosa —una tubería, una redirección, dos comandos encadenados,
 una sustitución, varios ficheros, o un flag que ya acota la lectura— **no se bloquea**, y se
 registra para tener el denominador. Bloquear un comando mal parseado no es un consejo malo: es
@@ -52,7 +52,6 @@ VERBS = {
     "get-content": 1,
     "gc": 1,
     "head": 1,
-    "rtk read": 2,
 }
 
 #: Cualquiera de estos convierte el comando en algo que este hook no entiende, y lo que no se

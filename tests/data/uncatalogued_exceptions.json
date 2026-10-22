@@ -731,12 +731,6 @@
       "reason": "expresion regular que se compara contra el prompt del usuario en los dos idiomas: sus raices son patrones, no salida"
     },
     {
-      "file": "src/local_delegate/resources/hooks/suggest_delegate_shell.py",
-      "text": "rtk read",
-      "kind": "verbatim",
-      "reason": "verbo de shell que el hook compara tal cual con el comando (`rtk read X`)"
-    },
-    {
       "file": "src/local_delegate/agents.py",
       "text": "^#{1,3}\\s*(?:Delegaci[oó]n a modelos locales|Delegation to local models)",
       "kind": "verbatim",

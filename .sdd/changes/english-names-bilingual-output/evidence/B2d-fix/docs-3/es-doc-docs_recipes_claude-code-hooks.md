@@ -82,7 +82,7 @@ Cerrar la tool `Read` y dejar `cat informe.md` abierto no cambia la conducta: la
 entonces la adopción medida sube sin que se ahorre un token.
 
 Reconoce solo formas simples e inequívocas de volcar un fichero entero —`cat`, `type`, `more`,
-`Get-Content`, `gc`, `rtk read`, `head`— sobre una única ruta. Con una tubería, una redirección,
+`Get-Content`, `gc`, `head`— sobre una única ruta. Con una tubería, una redirección,
 comandos encadenados, una sustitución o un flag que ya acota, **no bloquea** y se limita a contar
 el caso: un comando mal parseado que se rechaza no es un consejo malo, es impedir algo que el
 usuario pidió.

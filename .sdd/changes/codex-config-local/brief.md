@@ -1,5 +1,7 @@
 # Brief: Arregla los dos hallazgos de configuración de Codex
 
+> `<cli>` designa una CLI auxiliar externa que ya no está instalada; su nombre se retiró del repo.
+
 ## Problem
 
 Al probar Codex contra el daemon migrado (change `probar-codex-daemon`, 2026-07-30) salieron dos
@@ -19,18 +21,18 @@ defectos de configuración **de esta máquina**, ajenos al código del repo:
    `D:\Projects\local-delegate\.codex\config.toml:25-31`. Codex **fusiona** proyecto + global, la
    entrada acaba con `command` **y** `url`, y aborta la carga **entera**. Desde `C:\` funciona.
 
-2. **`rtk` no se resuelve en el shell que usa Codex.** Su `AGENTS.md` le dice usarlo, lo intenta,
-   recibe *«The term 'rtk' is not recognized»* y pierde un turno con sus tokens cada sesión.
+2. **`<cli>` no se resuelve en el shell que usa Codex.** Su `AGENTS.md` le dice usarlo, lo intenta,
+   recibe *«The term '<cli>' is not recognized»* y pierde un turno con sus tokens cada sesión.
 
 ## Desired outcome
 
-Dentro del repo, `codex mcp list` lista los MCP del proyecto y de la global sin abortar, y `rtk`
+Dentro del repo, `codex mcp list` lista los MCP del proyecto y de la global sin abortar, y `<cli>`
 se resuelve por nombre en el entorno donde Codex ejecuta comandos.
 
 ## In scope
 
 - La entrada `github` del `.codex/config.toml` del repo (fichero local, `.gitignore:32`).
-- Hacer `rtk` resoluble en el entorno de ejecución de Codex.
+- Hacer `<cli>` resoluble en el entorno de ejecución de Codex.
 - La traza SDD, que es lo único de este change que viaja a git.
 
 ## Out of scope

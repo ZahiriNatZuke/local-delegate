@@ -61,7 +61,6 @@ def document(tmp_path):
         "more {p}",
         "Get-Content {p}",
         "gc {p}",
-        "rtk read {p}",
         "head {p}",
         'cat "{p}"',
         "CAT {p}",
@@ -94,7 +93,7 @@ def test_the_simple_ways_to_dump_a_document_are_blocked(monkeypatch, capsys, doc
         "Get-Content -Tail 5 {p}",
         "grep hola {p}",
         "cat",
-        "rtk git status",
+        "git status",
         "catalogo {p}",
     ],
     ids=[
@@ -154,7 +153,7 @@ def test_every_command_leaves_a_trace_to_measure(monkeypatch, capsys, document, 
     log = tmp_path / "telemetry.jsonl"
 
     _run(monkeypatch, capsys, f"cat {document} | head -5", log=log)
-    _run(monkeypatch, capsys, "rtk git status", log=log)
+    _run(monkeypatch, capsys, "git status", log=log)
     _run(monkeypatch, capsys, f"cat {document}", log=log)
 
     events = [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines()]

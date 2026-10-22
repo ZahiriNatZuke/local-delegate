@@ -137,7 +137,7 @@ mediciones anteriores.
    - Requirements covered: REQ-F1-9
    - Detalle: hook `PreToolUse` con matcher `Bash` (y PowerShell, que es el shell primario de esta
      maquina) que reconoce **solo** formas simples e inequivocas de lectura completa: `cat X`,
-     `head X` sin `-n`, `Get-Content X` sin `-TotalCount`/`-Tail`, `type X`, `rtk read X`. Con
+     `head X` sin `-n`, `Get-Content X` sin `-TotalCount`/`-Tail`, `type X`. Con
      tuberia, redireccion, sustitucion, varios comandos encadenados o cualquier duda: **no bloquea**
      y cuenta el caso. Las tools de lectura de otros MCP se registran con su propio matcher y **no**
      se bloquean (decision P-6).

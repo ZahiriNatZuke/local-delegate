@@ -12,11 +12,11 @@ del repositorio:
    además la stdio de `npx @modelcontextprotocol/server-github` exige un token en el entorno y
    arranca un proceso por sesión, sin aportar nada frente a la HTTP.
 
-2. **`rtk` resoluble bajo el sandbox.** Se crea `C:\Users\Yohan\.local\bin\rtk.cmd`, un shim de una
-   línea que invoca `C:\Users\Yohan\rtk.exe` por ruta absoluta y propaga argumentos y código de
+2. **`<cli>` resoluble bajo el sandbox.** Se crea `C:\Users\Yohan\.local\bin\<cli>.cmd`, un shim de una
+   línea que invoca `C:\Users\Yohan\<cli>.exe` por ruta absoluta y propaga argumentos y código de
    salida. `.local\bin` ya está en el PATH (usuario y máquina) y **es enumerable** bajo el
    restricted token — demostrado: `uvx` resuelve desde ahí dentro del sandbox. Un shim y no una
-   copia del `.exe` (REQ-005: una actualización de `rtk` no debe dejar binarios desfasados) y no un
+   copia del `.exe` (REQ-005: una actualización de `<cli>` no debe dejar binarios desfasados) y no un
    hardlink (que quedaría apuntando al inode viejo si el actualizador reemplaza el fichero).
 
 No se toca el sandbox ni sus *readable roots*: arreglaría el síntoma dándole a un agente acceso de
@@ -38,13 +38,13 @@ lectura a todo el perfil del usuario.
      repo + `local-delegate` + `github`; `codex mcp get github` muestra transporte HTTP
    - Rollback: restaurar el `.bak` de la tarea 1
 
-3. **Crear el shim `rtk.cmd`**
-   - Ficheros: `C:\Users\Yohan\.local\bin\rtk.cmd` (nuevo)
+3. **Crear el shim `<cli>.cmd`**
+   - Ficheros: `C:\Users\Yohan\.local\bin\<cli>.cmd` (nuevo)
    - Requisitos: REQ-004, REQ-005
-   - Verificación: `codex sandbox pwsh -NoProfile -File <script>` con `Get-Command rtk` y
-     `rtk --version`; y fuera del sandbox, que `rtk` sigue resolviendo y funcionando
+   - Verificación: `codex sandbox pwsh -NoProfile -File <script>` con `Get-Command <cli>` y
+     `<cli> --version`; y fuera del sandbox, que `<cli>` sigue resolviendo y funcionando
    - Rollback: borrar el fichero — no había nada antes en esa ruta (comprobado: `.local\bin` no
-     contiene ningún `rtk*`)
+     contiene ningún `<cli>*`)
 
 4. **Comprobar que el repositorio no se ensucia**
    - Ficheros: ninguno
@@ -60,7 +60,7 @@ lectura a todo el perfil del usuario.
   - `codex mcp get github` desde dentro del repo, para confirmar el transporte que gana.
   - `codex sandbox pwsh -NoProfile -File diag-rtk2.ps1`, el mismo script que documentó el fallo, para
     que la evidencia sea comparable antes/después.
-  - `rtk --version` fuera del sandbox, para descartar que el shim tape al `.exe` con una regresión.
+  - `<cli> --version` fuera del sandbox, para descartar que el shim tape al `.exe` con una regresión.
 - **Checks del proyecto:** los cuatro pasos del CI (`ruff check .`, `ruff format --check .`,
   `pytest -q`, `extract_dashboard_js.py` + `node --check`) se corren igualmente antes del push, aunque
   este change no toque código, para dejar constancia de que nada se movió.
@@ -71,7 +71,7 @@ lectura a todo el perfil del usuario.
 
 - El `.codex/` del repo está en `.gitignore:32`: el cambio es local a esta máquina y no llega a
   otras. Ningún otro proyecto se ve afectado, la global no cambia.
-- El shim es aditivo: los consumidores actuales de `rtk` (esta sesión incluida) siguen resolviendo
+- El shim es aditivo: los consumidores actuales de `<cli>` (esta sesión incluida) siguen resolviendo
   al mismo binario, ahora posiblemente a través del `.cmd`. Se verifica que no hay regresión.
 - Si el usuario quisiera algún día la stdio de `github` en este repo, la vía correcta no es
   redefinir el mismo nombre: es usar un nombre distinto (`github-stdio`), porque el conflicto lo
@@ -84,7 +84,7 @@ Cuatro objeciones al plan y qué se hizo con cada una:
 1. **«El shim `.cmd` puede destrozar argumentos con espacios, comillas o metacaracteres, porque los
    pasa por `cmd.exe`.»** Riesgo real y no descartable en general. Se añade a la verificación una
    invocación con un argumento entrecomillado y con espacios, en vez de darlo por bueno.
-2. **«Un `rtk.cmd` en el PATH puede tapar al `.exe` fuera del sandbox y cambiar el comportamiento
+2. **«Un `<cli>.cmd` en el PATH puede tapar al `.exe` fuera del sandbox y cambiar el comportamiento
    diario.»** No ocurre, y por una razón que conviene dejar escrita: en el PATH,
    `C:\Users\Yohan` aparece **antes** que `C:\Users\Yohan\.local\bin`, y la resolución de Windows
    agota las extensiones **directorio por directorio**. Fuera del sandbox sigue ganando el `.exe`
@@ -101,5 +101,5 @@ Cuatro objeciones al plan y qué se hizo con cada una:
 - [x] Las operaciones destructivas tienen salvaguarda: la única edición destructiva (borrar 7 líneas)
       va precedida de un `.bak`; la creación del shim se revierte borrando el fichero.
 - [x] Dependencias y cambios de configuración explícitos: dos ficheros locales, ninguno en git.
-- [x] Sin trabajo ajeno: no se toca el sandbox, ni `AGENTS.md`, ni la instalación de `rtk`, ni el
+- [x] Sin trabajo ajeno: no se toca el sandbox, ni `AGENTS.md`, ni la instalación de `<cli>`, ni el
       código del proyecto.
