@@ -16,5 +16,7 @@
   "commands.lint.run_failed": "Could not run \"{command}\" (30 s limit): {detail}",
   "commands.error.mcp_down": "The `local-delegate` MCP is not responding: check that the daemon is running with `local-delegate doctor`. Details: {detail}",
   "commands.error.tool_failed": "`local-delegate` returned an error: {detail}",
-  "commands.error.empty": "`local-delegate` returned no text."
+  "commands.error.empty": "`local-delegate` returned no text.",
+  "status.line": "LD · 5h quota {quota}% · saved {saved} tok",
+  "status.saved_only": "LD · saved {saved} tok"
 }

@@ -441,7 +441,7 @@ de **piezas**, cada una con su interruptor en la `userConfig` del plugin:
 |---|---|---|
 | tools fijas | `pinned_tools` (lista) | saca de ToolSearch las tools de local-delegate de la lista, para que el modelo las vea sin buscarlas. Por defecto `local_summarize`, `local_extract`, `local_lint_summary` y `local_commit_msg` (~2 000 tokens). Lista vacía = apagado. Solo admite tools `mcp__local-delegate__*` |
 | comandos | `commands_enabled` | `/local-summarize`, `/local-commit` y `/local-lint` sin turno del modelo |
-| barra de estado | `status_enabled` | cuota y ahorro de la sesión (llega en una versión posterior) |
+| barra de estado | `status_enabled` | `LD · cuota 5h 42% · ahorro 12,3k tok`: el % de la ventana de 5 h que da Claude Code y el ahorro neto de **esa** sesión según el daemon (`/api/stats?session=`). Se oculta sin error si el daemon no responde o no hay token |
 | lectura | `read_mod_enabled` (apagado) | desvío de lecturas grandes desde el mod (llega en una versión posterior) |
 
 Una pieza se apaga desde el menú de configuración de Claude Code (cada opción del plugin es una

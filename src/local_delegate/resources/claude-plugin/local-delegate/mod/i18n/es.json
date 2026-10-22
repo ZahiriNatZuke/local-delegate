@@ -16,5 +16,7 @@
   "commands.lint.run_failed": "No se pudo ejecutar «{command}» (tope de 30 s): {detail}",
   "commands.error.mcp_down": "No responde el MCP `local-delegate`: comprueba que el daemon está en marcha con `local-delegate doctor`. Detalle: {detail}",
   "commands.error.tool_failed": "`local-delegate` devolvió un error: {detail}",
-  "commands.error.empty": "`local-delegate` no devolvió texto."
+  "commands.error.empty": "`local-delegate` no devolvió texto.",
+  "status.line": "LD · cuota 5h {quota}% · ahorro {saved} tok",
+  "status.saved_only": "LD · ahorro {saved} tok"
 }
