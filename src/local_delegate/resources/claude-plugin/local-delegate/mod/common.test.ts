@@ -148,7 +148,8 @@ test('hasDialog follows isInteractive of session.start', OPTIONS, async () => {
 })
 
 test('the heartbeat is written per session, with the pieces and never the token', OPTIONS, async ($, on) => {
-  mock.env(on, { CLAUDE_CONFIG_DIR: 'D:/cfg', LOCAL_DELEGATE_WEB_TOKEN: TOKEN })
+  // `/cfg` is absolute on every OS (a drive-letter path is relative on Linux and macOS).
+  mock.env(on, { CLAUDE_CONFIG_DIR: '/cfg', LOCAL_DELEGATE_WEB_TOKEN: TOKEN })
   const writes: { path: string; text: string }[] = []
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
   on('session.id', () => ({ value: 'sess-1' }))
@@ -158,8 +159,10 @@ test('the heartbeat is written per session, with the pieces and never the token'
   })
   await $.session.start({ cwd: 'D:/work', surface: null, isInteractive: false })
   expect(writes.length).toBe(1)
-  // The engine hands the path in the platform's own separators.
-  expect(writes[0].path.split('\\').join('/')).toBe('D:/cfg/plugins/data/local-delegate-local-delegate/heartbeats/sess-1.json')
+  // The engine hands the path resolved, in the platform's own separators (`C:\cfg\…` on Windows).
+  const written = writes[0].path.split('\\').join('/')
+  expect(written.endsWith('/cfg/plugins/data/local-delegate-local-delegate/heartbeats/sess-1.json')).toBe(true)
+  expect(written.includes('/claude-plugin/')).toBe(false)
   const beat = JSON.parse(writes[0].text)
   expect(beat.session_id).toBe('sess-1')
   expect(beat.pieces['pinned-tools']).toBe('on')
@@ -177,7 +180,7 @@ test(
   'a piece switched off is recorded off in the heartbeat',
   { options: { ld_bin: LD_BIN, pinned_tools: [] } },
   async ($, on) => {
-    mock.env(on, { CLAUDE_CONFIG_DIR: 'D:/cfg' })
+    mock.env(on, { CLAUDE_CONFIG_DIR: '/cfg' })
     const writes: string[] = []
     on('session.start', (_$, e) => ({ cwd: e.cwd }))
     on('session.id', () => ({ value: 'sess-2' }))

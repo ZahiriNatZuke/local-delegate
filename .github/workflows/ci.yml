@@ -442,6 +442,10 @@ jobs:
           broken="$RUNNER_TEMP/broken-mod"
           cp -R src/local_delegate/resources/claude-plugin/local-delegate "$broken"
           sed -i.bak 's/isDeferred: false/isDeferred: true/' "$broken/mod/pinned-tools.js"
+          rm "$broken/mod/pinned-tools.js.bak"
+          # `register.js` lleva las piezas pegadas: hay que regenerarlo en la copia.
+          uv run python scripts/build_mod.py --plugin-dir "$broken"
+          grep -q "isDeferred: true }" "$broken/register.js" || { echo "el mutante no llegó a register.js"; exit 1; }
           if "$CLAUDE_BIN" plugin test "$broken"; then
             echo "plugin test aceptó un mod que no fija ninguna tool"; exit 1
           fi
