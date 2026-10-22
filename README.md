@@ -354,8 +354,10 @@ El plugin trae además un **mod**, que corre dentro de Claude Code sin gastar tu
   lo muestra) y `/local-lint <fichero|comando>` llaman a la tool local directamente.
 - Deja fijas `local_summarize`, `local_extract`, `local_lint_summary` y `local_commit_msg`, para
   que el modelo no tenga que buscarlas con ToolSearch.
-- Pone en la barra de estado la cuota de 5 h de la sesión y lo que ahorró esa sesión
-  (`LD · cuota 5h 42% · ahorro 12,3k tok`); se oculta si el daemon no responde.
+- Pone sobre el prompt una banda con el estado de local-delegate en la sesión
+  (`◆ local-delegate · ● qwen3-8b · 3 delegaciones · 12,3k tok ahorrados ≈ $0,18`): el punto es
+  verde, ámbar o rojo según el backend esté listo, ocupado o caído. La cuota de Claude no va
+  aquí: es de la status line.
 
 En Windows, `install --desktop` añade el chat de **Claude Desktop**: escribe una entrada que lanza
 `local-delegate desktop-bridge`, un puente stdio hacia el daemon que lee el token él mismo, porque

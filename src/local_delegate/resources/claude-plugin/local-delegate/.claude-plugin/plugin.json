@@ -48,8 +48,8 @@
     },
     "status_enabled": {
       "type": "boolean",
-      "title": "Status line",
-      "description": "Quota and savings of the session in the status line.",
+      "title": "Status band",
+      "description": "A band above the prompt with the local backend's state (ready, busy or down, and the mounted model) and this session's delegations, savings and equivalent cost. The Claude quota is left to the status line.",
       "required": false,
       "default": true
     },

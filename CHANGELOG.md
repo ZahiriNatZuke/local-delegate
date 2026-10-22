@@ -36,6 +36,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   remoto y Daemon) explica cómo guardarlas; el LaunchAgent `remote-env` queda solo para Codex.
   (SDD `claude-plugin-and-mods`, macos-keychain)
 
+### Cambia (banda de estado del mod)
+
+- **La entrada del mod ya no sale con ⚠ amarillo como si fuera un aviso.** Claude Code 2.1.308 fija
+  todo texto de `$.ui.status` como aviso sin color y lo pinta `⚠ <plugin>: <texto>` en el color
+  `warning`, y `$.ui.status` no admite otro tono. La pieza `status` pasa a la banda sobre el prompt
+  (`ui.render` de `AbovePrompt`), donde elige sus colores del tema: `◆ local-delegate · ● qwen3-8b ·
+  3 delegaciones · 12,3k tok ahorrados ≈ $0,18`. El punto es verde (listo), ámbar (ocupado) o rojo
+  (backend caído); sin delegaciones dice «sin delegaciones aún» en vez de «0 tok»; con el daemon
+  caído, «daemon sin respuesta»; con `read_mod_enabled`, «lectura guiada». Si no cabe, quita primero
+  el coste y lo menos importante, y se aparta ante una encuesta. **Deja de mostrar la cuota de 5 h**:
+  ya la da la status line. (SDD `claude-plugin-and-mods`, F3-status)
+
 ### Añade (barra de estado del mod)
 
 - **Cuota y ahorro de la sesión en la barra de estado de Claude Code** (pieza `status` del mod,
