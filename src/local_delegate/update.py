@@ -419,6 +419,10 @@ def repair_install_options(
         "desktop_dir": opts.desktop_dir,
         "desktop_executable": opts.desktop_executable,
     }
+    if install_state.delivery_explicit(install_state.load(opts.home, opts.data_dir)):
+        # `install --claude-delivery settings` was a choice: the repairs keep it, and so does
+        # the migration of REQ-008 a, which `decide` turns down with this very option.
+        values["claude_delivery"] = claude_plugin.SETTINGS
     values.update(overrides)
     return install.Options(**values)
 
@@ -467,7 +471,8 @@ def plan_claude_delivery(by_id: dict, opts: Options, present: Collection[str]) -
 
     - The plugin is the delivery (the state says so, or `settings.json` has it enabled, the
       downgrade case of REQ-008 c): `_plan_plugin`.
-    - A settings install that meets REQ-005: the migration `install` would run.
+    - A settings install that meets REQ-005: the migration `install` would run, unless the
+      state says the user chose settings (`repair_install_options` passes that choice on).
     - Anything else: nothing, and the settings repairs stay as they were.
 
     An unreadable `settings.json` plans nothing: `unknown` never repairs.

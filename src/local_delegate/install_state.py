@@ -9,10 +9,16 @@ Shape::
     {
       "schema": 1,
       "claude_delivery": "plugin" | "settings",
+      "claude_delivery_explicit": true,            # optional, see below
       "version": "<package version that wrote it>",
       "updated_at": "<ISO 8601>",
       "pieces": {"plugin": {"at": "…", …}, "marketplace": {…}, "desktop_entry": {…}}
     }
+
+``claude_delivery_explicit`` is only there when the user asked for ``--claude-delivery settings``:
+``update`` then leaves the settings delivery alone instead of migrating it (REQ-008 a is for old
+installs, not for a choice). Any other ``install`` takes it out. It is optional on purpose, so the
+states written before it read the same and ``schema`` stays at 1.
 
 ``pieces`` lists only what ``install`` itself wrote, with its date. A piece that existed before
 and is not listed here is not ours, and nobody deletes it.
@@ -32,6 +38,8 @@ from . import install
 
 STATE_FILE = "install-state.json"
 SCHEMA_VERSION = 1
+#: Optional: present (and ``true``) only after ``install --claude-delivery settings``.
+EXPLICIT_FIELD = "claude_delivery_explicit"
 
 
 def now_iso() -> str:
@@ -91,6 +99,21 @@ def delivery(state: dict | None) -> str | None:
         return None
     value = state.get("claude_delivery")
     return value if isinstance(value, str) else None
+
+
+def delivery_explicit(state: dict | None) -> bool:
+    """True when the user chose the settings delivery with ``--claude-delivery settings``."""
+    return isinstance(state, dict) and state.get(EXPLICIT_FIELD) is True
+
+
+def with_delivery_explicit(state: dict, explicit: bool) -> dict:
+    """A copy of ``state`` with the mark of an explicit settings choice set or taken out."""
+    new = dict(state)
+    if explicit:
+        new[EXPLICIT_FIELD] = True
+    else:
+        new.pop(EXPLICIT_FIELD, None)
+    return new
 
 
 def piece(state: dict | None, name: str) -> dict | None:
