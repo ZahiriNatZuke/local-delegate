@@ -34,11 +34,32 @@ import urllib.error
 import urllib.request
 from collections.abc import Callable, Collection
 from dataclasses import dataclass
-from importlib import metadata  # noqa: F401 -- tests double `update.metadata.Distribution`
+from importlib import (
+    import_module,
+    metadata,  # noqa: F401 -- tests double `update.metadata.Distribution`
+)
 from pathlib import Path
 
-from . import checks, completion, config, deprecations, install, install_origin, shell_profiles
+from . import (
+    checks_plugin,
+    claude_plugin,
+    completion,
+    config,
+    deprecations,
+    desktop_config,
+    i18n,
+    install,
+    install_origin,
+    install_state,
+    plugin_migration,
+    shell_profiles,
+)
 from .i18n import t
+
+#: `checks` imports this module, inside two functions (`latest_version`, `upgrade_command`).
+#: Resolved by name, like `install._sibling`, so the two modules do not import each other (CodeQL
+#: `py/cyclic-import`); it is the same module object, so the tests double it as before.
+checks = import_module(f"{__package__}.checks")
 
 PACKAGE = install_origin.PACKAGE
 
@@ -106,6 +127,16 @@ class Options:
     # Lo mismo que en `install.Options`: dónde va `language.json` y la regla del idioma (REQ-047).
     data_dir: Path | None = None
     language_probe: Callable | None = None
+    # The Claude Code plugin delivery (SDD claude-plugin-and-mods, F1-update), injectable like in
+    # `install.Options`: the `claude` runner and lookup, an `ld_bin` already resolved, the platform,
+    # and where the Desktop config lives and which executable its bridge entry runs. `None` means
+    # the real ones.
+    claude_runner: Callable | None = None
+    claude_which: Callable[[str], str | None] | None = None
+    claude_ld_bin: object | None = None
+    platform: str | None = None
+    desktop_dir: Path | None = None
+    desktop_executable: Path | None = None
 
     def __post_init__(self) -> None:
         if self.runner is None:
@@ -292,9 +323,14 @@ def plan_repairs(
     by_id = {check.id: result for check, result in results}
     mcp_mode = _infer_mcp_mode(results)
     present = _present_targets(opts.home)
+    delivery = plan_claude_delivery(by_id, opts, present)
 
-    actions: list[install.Action] = []
+    actions: list[install.Action] = list(delivery.actions)
     for repair in REPAIRS:
+        if delivery.skip_settings_hooks and repair.check_id in SETTINGS_HOOK_CHECKS:
+            # With the plugin (or moving to it) these repairs would register our hooks in
+            # `settings.json` again, next to the plugin's: every event would run twice (REQ-010).
+            continue
         result = by_id.get(repair.check_id)
         if result is None or result.status not in repair.states:
             continue
@@ -306,29 +342,15 @@ def plan_repairs(
         for target in sorted(targets):
             actions.extend(
                 install.plan_install(
-                    install.Options(
-                        home=opts.home,
-                        components=set(repair.components),
+                    repair_install_options(
+                        opts,
+                        components=repair.components,
                         targets={target},
-                        python_exe=install.default_python(),
                         mcp_mode=mcp_mode,
                         # Reponer los hooks reescribe su registro, y `merge_hook_settings` retira
                         # antes todas nuestras entradas: sin esto, el hook de lectura desaparecía
                         # al actualizar y el bloqueo se apagaba sin que nadie lo pidiera.
                         enable_read_hook=install.read_hook_registered(opts.home / ".claude"),
-                        # Con un HOME simulado hay que escribir el fichero a mano: el camino
-                        # por CLI (`claude mcp add-json --scope user`) escribe SIEMPRE en el
-                        # `~/.claude.json` del usuario real, ignorando `home`. Se descubrió
-                        # ejecutando `update --home <tmp>` dos veces: la segunda pasada volvía
-                        # a planificar la misma acción —el probe seguía viendo el árbol
-                        # simulado vacío— mientras la config de verdad sí se había reescrito.
-                        use_cli=not opts.simulated_home,
-                        # La preferencia de idioma la escribe `run_update` una sola vez.
-                        write_language=False,
-                        # La migración de nombres retirados la hace `run_update` antes (REQ-014).
-                        migrate_retired_names=False,
-                        data_dir=opts.data_dir,
-                        language_probe=opts.language_probe,
                     )
                 )
             )
@@ -360,11 +382,273 @@ def plan_repairs(
         if (
             hint
             and check.id not in {r.check_id for r in REPAIRS}
+            and check.id not in delivery.handled
             # «Run `update`» said from `update`: `plan_completion_refresh` takes care of it.
             and hint != checks.SHELL_COMPLETION_UPDATE_HINT
         ):
             notes.append(f"{check.title}: {hint}")
+    notes.extend(delivery.notes)
     return unique, notes
+
+
+def repair_install_options(
+    opts: Options, *, components: Collection[str], targets: Collection[str], **overrides
+) -> install.Options:
+    """The `install` options of a repair: what `update` knows, plus ``overrides``."""
+    values: dict = {
+        "home": opts.home,
+        "components": set(components),
+        "targets": set(targets),
+        "python_exe": install.default_python(),
+        # Con un HOME simulado hay que escribir el fichero a mano: el camino por CLI (`claude mcp
+        # add-json --scope user`) escribe SIEMPRE en el `~/.claude.json` del usuario real,
+        # ignorando `home`. Se descubrió ejecutando `update --home <tmp>` dos veces: la segunda
+        # pasada volvía a planificar la misma acción —el probe seguía viendo el árbol simulado
+        # vacío— mientras la config de verdad sí se había reescrito.
+        "use_cli": not opts.simulated_home,
+        # La preferencia de idioma la escribe `run_update` una sola vez.
+        "write_language": False,
+        # La migración de nombres retirados la hace `run_update` antes (REQ-014).
+        "migrate_retired_names": False,
+        "data_dir": opts.data_dir,
+        "language_probe": opts.language_probe,
+        "claude_runner": opts.claude_runner,
+        "claude_which": opts.claude_which,
+        "claude_ld_bin": opts.claude_ld_bin,
+        "platform": opts.platform,
+        "desktop_dir": opts.desktop_dir,
+        "desktop_executable": opts.desktop_executable,
+    }
+    values.update(overrides)
+    return install.Options(**values)
+
+
+# --- Claude Code by plugin (SDD claude-plugin-and-mods, F1-update) ---------------------------
+#
+# `update` repeats no step of the plugin delivery: the migration and the reinstall are the very
+# action `install` plans (`install._plugin_delivery_action`, which runs the migration of
+# `plugin_migration`), and the removal of duplicates is `plugin_migration.remove_settings_hooks`.
+# What lives here is the decision of which one runs, and the two commands only `update` needs:
+# `claude plugin marketplace update` and `claude plugin update`.
+
+#: The checks whose repair is the settings delivery of the hooks (`plan_install` with
+#: `components={"hooks"}`). Never planned while Claude Code gets the plugin (REQ-010).
+SETTINGS_HOOK_CHECKS = frozenset(
+    {"scaffold.hook_files", "scaffold.hook_settings", "scaffold.hook_orphans"}
+)
+#: The plugin checks `update` answers for; their `fix_hint` («run update») is not repeated.
+PLUGIN_CHECKS = frozenset({"plugin.installed", "plugin.ld_bin", "hooks.duplicates"})
+
+
+@dataclass(frozen=True)
+class DeliveryPlan:
+    """What `update` does about the Claude Code delivery, before the rest of the repairs."""
+
+    actions: tuple[install.Action, ...] = ()
+    #: Check ids whose `fix_hint` this plan answers, so it is not printed as a note.
+    handled: frozenset[str] = frozenset()
+    #: True with the plugin in (or about to be): the settings hook repairs are skipped.
+    skip_settings_hooks: bool = False
+    notes: tuple[str, ...] = ()
+
+
+def _status(by_id: dict, check_id: str) -> str | None:
+    result = by_id.get(check_id)
+    return result.status if result is not None else None
+
+
+def _session_language(opts: Options) -> str:
+    """The language `install` would give the plugin (`--config language=…`)."""
+    return install.plan_language(install_options(opts)).lang
+
+
+def plan_claude_delivery(by_id: dict, opts: Options, present: Collection[str]) -> DeliveryPlan:
+    """REQ-008 a and REQ-010. Only reads (and asks `claude --version` when it has to decide).
+
+    - The plugin is the delivery (the state says so, or `settings.json` has it enabled, the
+      downgrade case of REQ-008 c): `_plan_plugin`.
+    - A settings install that meets REQ-005: the migration `install` would run.
+    - Anything else: nothing, and the settings repairs stay as they were.
+
+    An unreadable `settings.json` plans nothing: `unknown` never repairs.
+    """
+    if "claude" not in present:
+        return DeliveryPlan()
+    claude_dir = opts.home / ".claude"
+    settings, reason = checks.read_json(claude_dir / "settings.json")
+    if reason:
+        return DeliveryPlan()
+    recorded = install_state.delivery(install_state.load(opts.home, opts.data_dir))
+    if recorded == claude_plugin.PLUGIN or checks_plugin.plugin_enabled(settings):
+        return _plan_plugin(
+            by_id, opts, settings, claude_dir, recorded=recorded == claude_plugin.PLUGIN
+        )
+    return _plan_migration(by_id, opts, settings, claude_dir)
+
+
+def _plugin_decision(opts: Options):
+    """`(install options, decision)`: the same `claude_plugin.decide` that `install` runs."""
+    install_opts = repair_install_options(opts, components={"hooks"}, targets={"claude"})
+    return install_opts, install.claude_delivery_decision(install_opts)
+
+
+def _plan_migration(
+    by_id: dict, opts: Options, settings: dict | None, claude_dir: Path
+) -> DeliveryPlan:
+    hooks_dir = claude_dir / "hooks" / install.HOOKS_SUBDIR
+    ours = checks_plugin.our_settings_hooks(settings, hooks_dir)
+    failing = any(
+        _status(by_id, check_id) in (checks.MISSING, checks.WARN)
+        for check_id in SETTINGS_HOOK_CHECKS
+    )
+    if not ours and not failing:
+        return DeliveryPlan()
+    install_opts, decision = _plugin_decision(opts)
+    if decision.delivery != claude_plugin.PLUGIN:
+        # Settings as until 0.39: the repairs of `REPAIRS` take care of it.
+        return DeliveryPlan()
+    action = install._plugin_delivery_action(install_opts, decision, _session_language(opts))
+    return DeliveryPlan(
+        (_with_restart(action),),
+        handled=SETTINGS_HOOK_CHECKS,
+        skip_settings_hooks=True,
+        notes=(t("plugin_update.migration"),),
+    )
+
+
+def _plan_plugin(
+    by_id: dict, opts: Options, settings: dict | None, claude_dir: Path, *, recorded: bool
+) -> DeliveryPlan:
+    installed = _status(by_id, "plugin.installed")
+    listed = installed in (checks.OK, checks.WARN)
+    language = checks_plugin.plugin_options(settings).get("language")
+    lang = _session_language(opts)
+    reinstall = (
+        installed == checks.MISSING
+        or (listed and isinstance(language, str) and language != lang)
+        or _status(by_id, "plugin.ld_bin") in (checks.MISSING, checks.WARN)
+        # Enabled in `settings.json` without a state that says so (a downgrade without
+        # `uninstall`): the reinstall records the delivery, and retires the duplicates with it.
+        or (listed and not recorded)
+    )
+    refresh = installed == checks.WARN
+
+    actions: list[install.Action] = []
+    notes: list[str] = []
+    reinstalled = False
+    if reinstall or refresh:
+        install_opts, decision = _plugin_decision(opts)
+        if decision.delivery != claude_plugin.PLUGIN:
+            notes.append(t("plugin_update.cannot_repair", warning=decision.warning or ""))
+        else:
+            if refresh:
+                actions.extend(_refresh_actions(opts, decision))
+            if reinstall:
+                actions.append(install._plugin_delivery_action(install_opts, decision, lang))
+                reinstalled = True
+            actions[-1] = _with_restart(actions[-1])
+
+    hooks_dir = claude_dir / "hooks" / install.HOOKS_SUBDIR
+    leftovers = checks_plugin.our_settings_hooks(settings, hooks_dir) or hooks_dir.exists()
+    if leftovers and not reinstalled:
+        # The reinstall already removes them; without it, only the removal runs.
+        actions.append(_retire_action(claude_dir))
+    if install.orphan_hook_scripts(claude_dir):
+        actions.append(install._prune_orphans_action(claude_dir))
+    return DeliveryPlan(
+        tuple(actions),
+        handled=SETTINGS_HOOK_CHECKS | PLUGIN_CHECKS,
+        skip_settings_hooks=True,
+        notes=tuple(notes),
+    )
+
+
+def _with_restart(action: install.Action) -> install.Action:
+    """The same action, saying after it ran that open sessions need a restart (REQ-008 a)."""
+    inner = action.run
+
+    def _run() -> str:
+        result = inner() if callable(inner) else None
+        restart = t("plugin_update.restart_sessions")
+        return f"{result}\n    {restart}" if result else restart
+
+    return install.Action(action.kind, action.target, action.detail, _run, literal=action.literal)
+
+
+def _refresh_actions(opts: Options, decision) -> list[install.Action]:
+    """REQ-010: `claude plugin marketplace update`, then `claude plugin update`, in that order."""
+    from .version import get_version
+
+    runner = opts.claude_runner or claude_plugin.run_subprocess
+    claude_bin = decision.claude_bin
+    name, plugin = claude_plugin.MARKETPLACE_NAME, claude_plugin.PLUGIN_ID
+    steps = (
+        (
+            "marketplace",
+            [claude_bin, "plugin", "marketplace", "update", name],
+            t("plugin_update.marketplace_plan", name=name),
+            t("plugin_update.marketplace_done", name=name),
+        ),
+        (
+            "plugin",
+            [claude_bin, "plugin", "update", plugin],
+            t("plugin_update.update_plan", plugin=plugin, version=get_version()),
+            t("plugin_update.update_done", plugin=plugin),
+        ),
+    )
+    prefix = " ".join(f"{key}={value}" for key, value in (decision.env or {}).items())
+    actions = []
+    for kind, argv, plan, done in steps:
+        shown = claude_plugin._display(argv)
+
+        def _run(argv=argv, done=done, shown=shown) -> str:
+            result = runner(argv, decision.env)
+            if result.returncode != 0:
+                detail = (result.stderr or result.stdout or "").strip() or str(result.returncode)
+                raise RuntimeError(t("plugin_update.step_failed", command=shown, detail=detail))
+            return done
+
+        literal = f"{prefix} {shown}" if prefix else shown
+        # The target tells the two apart: `plan_repairs` deduplicates by `(kind, target)`.
+        actions.append(install.Action(kind, f"claude {argv[2]}", plan, _run, literal=literal))
+    return actions
+
+
+def _retire_action(claude_dir: Path) -> install.Action:
+    """Our hooks out of `settings.json` and their folder away: the plugin runs them (REQ-010)."""
+    hooks_dir = claude_dir / "hooks" / install.HOOKS_SUBDIR
+
+    def _run() -> str:
+        removed = plugin_migration.remove_settings_hooks(claude_dir)
+        return t("plugin_update.retire_done", n=i18n.format_number(removed), path=hooks_dir)
+
+    detail = t("plugin_update.retire_plan", plugin=claude_plugin.PLUGIN_ID, path=hooks_dir)
+    return install.Action("retire", claude_dir / "settings.json", detail, _run)
+
+
+def plan_desktop_bridge(opts: Options) -> list[install.Action]:
+    """REQ-012: the bridge entry `install --desktop` wrote follows the executable when it moves.
+
+    Only an entry the state records and that still has the bridge's shape: a foreign or edited one
+    is the user's, and one already pointing at this executable needs nothing. The write is
+    `install`'s own Desktop action.
+    """
+    state = install_state.load(opts.home, opts.data_dir)
+    if install_state.piece(state, "desktop_entry") is None:
+        return []
+    install_opts = repair_install_options(opts, components=(), targets=())
+    path = install.desktop_config_path(install_opts)
+    try:
+        data = desktop_config._load(path)
+    except desktop_config.DesktopConfigError:
+        return []
+    current = ((data or {}).get("mcpServers") or {}).get(desktop_config.ENTRY_KEY)
+    executable = install.desktop_executable(install_opts)
+    if not desktop_config.is_bridge_entry(current) or not executable.is_file():
+        return []
+    if current == desktop_config.bridge_entry(executable):
+        return []
+    return [install._desktop_action(install_opts)]
 
 
 #: El check cuya pista pide «renombra» los nombres viejos (REQ-012).
@@ -857,7 +1141,10 @@ def run_update(opts: Options, out=print) -> int:
     # última versión publicada la pregunta el paso 2 unas líneas más abajo, y dejar que el check
     # la preguntase otra vez sería consultar dos veces lo mismo en un solo comando.
     ctx = checks.Context(
-        home=opts.home, daemon_status=opts.daemon_status, latest_release=checks.SKIP_PYPI
+        home=opts.home,
+        daemon_status=opts.daemon_status,
+        latest_release=checks.SKIP_PYPI,
+        **_claude_collaborators(opts),
     )
     results = checks.run_all(ctx)
 
@@ -888,6 +1175,7 @@ def run_update(opts: Options, out=print) -> int:
     repairs, notes = plan_repairs(results, opts, migrated=migrated)
     actions.extend(repairs)
     actions.extend(plan_completion_refresh(opts))
+    actions.extend(plan_desktop_bridge(opts))
 
     out("")
     # La preferencia va aparte: guardarla no es reparar el andamiaje.
@@ -930,6 +1218,20 @@ def run_update(opts: Options, out=print) -> int:
         out("")
         code = max(code, restart_backend(opts, out=out))
     return code
+
+
+def _claude_collaborators(opts: Options) -> dict:
+    """The `claude` doubles of ``opts`` for ``checks.Context``; the real ones when not given."""
+    found: dict = {}
+    if opts.claude_which is not None:
+        found["claude_which"] = opts.claude_which
+    if opts.claude_runner is not None:
+        found["claude_runner"] = opts.claude_runner
+    if opts.claude_ld_bin is not None:
+        found["expected_ld_bin"] = lambda ld=opts.claude_ld_bin: ld
+    if opts.data_dir is not None:
+        found["log_dir"] = opts.data_dir
+    return found
 
 
 def _daemon_status_of(results: list[tuple[checks.Check, checks.Result]]) -> checks.Result | None:

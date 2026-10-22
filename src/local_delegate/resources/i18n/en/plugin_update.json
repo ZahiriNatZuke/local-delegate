@@ -1,0 +1,12 @@
+{
+  "plugin_update.cannot_repair": "The Claude Code plugin needs a repair, but it cannot be done now; no hooks are registered in settings.json (they would be duplicates). {warning}",
+  "plugin_update.marketplace_done": "Marketplace \"{name}\" up to date.",
+  "plugin_update.marketplace_plan": "refreshes the local marketplace \"{name}\" from the folder of the installed package",
+  "plugin_update.migration": "Claude Code moves from the settings delivery to the plugin: the hooks leave settings.json (a copy is kept) and the read-block switch is preserved.",
+  "plugin_update.restart_sessions": "Restart any open Claude Code sessions: the new plugin is only loaded when a session starts.",
+  "plugin_update.retire_done": "Removed {n} hook(s) from settings.json and the folder {path}: the plugin runs them.",
+  "plugin_update.retire_plan": "removes from settings.json the local-delegate hooks that duplicate those of the plugin {plugin}, and the folder {path}",
+  "plugin_update.step_failed": "`{command}` failed: {detail}",
+  "plugin_update.update_done": "Plugin {plugin} updated.",
+  "plugin_update.update_plan": "updates the plugin {plugin} to the package version ({version})"
+}
