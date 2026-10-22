@@ -564,7 +564,7 @@ def install_kind() -> str:
     It passes this module's `editable_origin`, looked up when called, so doubling
     `update.editable_origin` still changes the answer.
     """
-    return install_origin.install_kind(editable=lambda: editable_origin())
+    return install_origin.install_kind(editable=editable_origin)
 
 
 def upgrade_command() -> str:
