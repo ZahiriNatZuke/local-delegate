@@ -36,6 +36,7 @@ import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from importlib import import_module
 from importlib.resources import files as _resource_files
 from pathlib import Path, PurePath
 
@@ -140,6 +141,15 @@ _RETIRED_SKILLS: tuple[str, ...] = ("delegacion-local",)
 # al hook) y `uninstall` no la retiraría. Con el argumento, **el registro mismo es el
 # interruptor**: instalar lo enciende y desinstalar lo apaga, sin estado repartido.
 READ_HOOK_FLAG = "--enabled"
+
+
+def _sibling(name: str):
+    """A module that imports this one (`claude_plugin`, `install_state`, `plugin_migration`).
+
+    Resolved by name at call time, so the modules do not import each other (CodeQL
+    `py/cyclic-import`), the same way `completion.render` reaches `cli`.
+    """
+    return import_module(f"{__package__}.{name}")
 
 
 def resources_dir() -> Path:
@@ -2229,7 +2239,7 @@ def _record_agents(opts: Options, agents_dir: Path, record: dict) -> None:
     Merged with what earlier runs wrote: the tools added now join the ones added before, and a
     block counts as ours if any run inserted it.
     """
-    from . import install_state
+    install_state = _sibling("install_state")
 
     state = install_state.load(opts.home, opts.data_dir)
     previous = (install_state.piece(state, "agents") or {}).get("files") or {}
@@ -2252,7 +2262,8 @@ def _record_agents(opts: Options, agents_dir: Path, record: dict) -> None:
 def _revert_agents_action(opts: Options, agents_dir: Path, piece: dict) -> Action:
     """Undoes what `install --agents` wrote, as the state records it, and nothing else."""
     from . import agents as agents_mod
-    from . import install_state
+
+    install_state = _sibling("install_state")
 
     files = piece.get("files") or {}
 
@@ -2326,7 +2337,7 @@ def _copy_skill_action(dst: Path, lang: str, detail: str) -> Action:
 
 def claude_delivery_decision(opts: Options):
     """REQ-005: which delivery Claude Code gets. A `claude` that cannot even be asked → settings."""
-    from . import claude_plugin
+    claude_plugin = _sibling("claude_plugin")
 
     runner = opts.claude_runner or claude_plugin.run_subprocess
     which = opts.claude_which or shutil.which
@@ -2407,7 +2418,8 @@ def _settings_hook_actions(opts: Options, claude: Path, warning: str | None) -> 
 
 def _plugin_delivery_action(opts: Options, decision, lang: str) -> Action:
     """REQ-005/006: the plugin in, the settings delivery out, through `apply_plugin_delivery`."""
-    from . import claude_plugin, plugin_migration
+    claude_plugin = _sibling("claude_plugin")
+    plugin_migration = _sibling("plugin_migration")
     from .version import get_version
 
     version = get_version()
@@ -2441,7 +2453,8 @@ def _plugin_delivery_action(opts: Options, decision, lang: str) -> Action:
 
 def _revert_to_settings_action(opts: Options, claude: Path) -> Action:
     """REQ-008 b: `--claude-delivery settings` with the plugin in: out with it, settings back."""
-    from . import claude_plugin, plugin_migration
+    claude_plugin = _sibling("claude_plugin")
+    plugin_migration = _sibling("plugin_migration")
 
     runner = opts.claude_runner or claude_plugin.run_subprocess
     which = opts.claude_which or shutil.which
@@ -2477,14 +2490,15 @@ def _revert_to_settings_action(opts: Options, claude: Path) -> Action:
 
 
 def _installation_state(opts: Options) -> dict | None:
-    from . import install_state
+    install_state = _sibling("install_state")
 
     return install_state.load(opts.home, opts.data_dir)
 
 
 def _claude_hook_actions(opts: Options, claude: Path, lang: str) -> list[Action]:
     """The hooks of Claude Code by the delivery `decide` chose, and the read switch after them."""
-    from . import claude_plugin, install_state
+    claude_plugin = _sibling("claude_plugin")
+    install_state = _sibling("install_state")
 
     decision = claude_delivery_decision(opts)
     plugin_now = install_state.delivery(_installation_state(opts)) == claude_plugin.PLUGIN
@@ -2515,7 +2529,8 @@ def _claude_hook_actions(opts: Options, claude: Path, lang: str) -> list[Action]
 
 def write_read_switch(home: Path, data_dir: Path | None, active: bool) -> Path | None:
     """`read-hook.json` (`{"active", "since"}`); `since` only moves when the value changes."""
-    from . import install_state, plugin_migration
+    install_state = _sibling("install_state")
+    plugin_migration = _sibling("plugin_migration")
 
     target = plugin_migration.read_switch_path(home, data_dir)
     if target is None:
@@ -2533,7 +2548,7 @@ def write_read_switch(home: Path, data_dir: Path | None, active: bool) -> Path |
 
 def _read_switch_action(opts: Options, *, active: bool) -> Action | None:
     """The active layer of the read hook (REQ-004): `--enable-read-hook` / `--disable-read-hook`."""
-    from . import plugin_migration
+    plugin_migration = _sibling("plugin_migration")
 
     target = plugin_migration.read_switch_path(opts.home, opts.data_dir)
     if target is None:
@@ -2571,7 +2586,9 @@ def desktop_config_path(opts: Options) -> Path:
 
 def _desktop_action(opts: Options) -> Action:
     """Writes the bridge entry; a foreign one is replaced because `--desktop` asked, with a word."""
-    from . import desktop_config, install_state
+    from . import desktop_config
+
+    install_state = _sibling("install_state")
 
     path = desktop_config_path(opts)
     executable = desktop_executable(opts)
@@ -3139,13 +3156,13 @@ def plan_uninstall(opts: Options) -> list[Action]:
         actions.append(_remove_language_action(data_dir / hook_common.LANGUAGE_PREFERENCE_FILE))
     # The read switch and, last of all, the installation state (REQ-004, REQ-007).
     if "hooks" in opts.components and "claude" in opts.targets:
-        from . import plugin_migration
+        plugin_migration = _sibling("plugin_migration")
 
         switch = plugin_migration.read_switch_path(opts.home, opts.data_dir)
         if switch is not None and switch.exists():
             actions.append(_remove_file_action(switch, t("plugin_install.uninstall.switch_plan")))
     if full:
-        from . import install_state
+        install_state = _sibling("install_state")
 
         state_path = install_state.path(opts.home, opts.data_dir)
         if state_path is not None and state_path.exists():
@@ -3155,7 +3172,7 @@ def plan_uninstall(opts: Options) -> list[Action]:
 
 
 def _state_piece(state: dict | None, name: str) -> dict | None:
-    from . import install_state
+    install_state = _sibling("install_state")
 
     return install_state.piece(state, name)
 
@@ -3173,7 +3190,8 @@ def _remove_file_action(path: Path, detail: str) -> Action:
 
 def _uninstall_plugin_action(opts: Options, state: dict | None) -> Action:
     """Uninstalls the plugin and, if the state lists it, the marketplace (REQ-011)."""
-    from . import claude_plugin, install_state
+    claude_plugin = _sibling("claude_plugin")
+    install_state = _sibling("install_state")
 
     runner = opts.claude_runner or claude_plugin.run_subprocess
     which = opts.claude_which or shutil.which
@@ -3212,7 +3230,9 @@ def _uninstall_desktop_action(opts: Options, piece: dict) -> Action:
     A foreign entry it once replaced is NOT put back, because it could carry the token: the
     copy that holds it is named instead.
     """
-    from . import desktop_config, install_state
+    from . import desktop_config
+
+    install_state = _sibling("install_state")
 
     path = Path(piece["path"]) if piece.get("path") else desktop_config_path(opts)
 

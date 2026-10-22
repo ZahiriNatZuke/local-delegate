@@ -40,7 +40,7 @@ pesado.sh uv run pytest -q -p no:randomly tests/test_install_plugin_delivery.py 
 
 ## Mutantes (control positivo)
 
-Script del scratchpad `mutants.py`: cada mutante comprueba que el original aparece una sola vez y
+Script del scratchpad `mutants.py` (luego lo sobrescribió otro agente que comparte el scratchpad): cada mutante comprueba que el original aparece una sola vez y
 que el texto cambia; el fichero se restaura en `finally` (el `git diff --stat` queda igual).
 
 | Mutante | Test que falla | Assert que dispara |
@@ -75,6 +75,19 @@ el HOME simulado y no en el real.
 
 `pesado.sh uv run pytest -n 2 -q`: **4315 passed, 28 skipped** en 167 s (con la wiki nueva ya
 escrita; `test_wiki` incluido). `pesado.sh uv run ruff check .` y `ruff format --check .` limpios.
+
+## CI del PR #398: tres arreglos
+
+- `lint` (ruff `EXE001`): `scripts/check_plugin_install.py` tiene *shebang* y no era ejecutable;
+  modo `100755` en git (en Windows ruff no lo ve).
+- `test (ubuntu|macos)`: `test_replaced_foreign_desktop_entry_not_restored_and_backup_reported`
+  pasaba solo en Windows, porque `--desktop` solo se planifica en `win32`; el test fija
+  `platform="win32"` en sus opciones, como ya hacía `test_install_desktop.py`.
+- CodeQL `py/cyclic-import` (4 alertas en `install.py`): `install_state`, `claude_plugin` y
+  `plugin_migration` importan `install`, y `install` los importaba dentro de sus funciones.
+  Ahora los resuelve por nombre al llamar (`_sibling`, con `import_module`), como hace
+  `completion.render` con `cli` (ec2ad2c). Suite repetida: 4314 passed y un fallo, la palabra
+  `sibling` sin clasificar, que va al léxico. `check_plugin_install.py` pasó en los tres `plugin`.
 
 ## Ficheros fuera de la lista «Posee»
 
