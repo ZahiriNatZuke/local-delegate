@@ -216,6 +216,7 @@ def _cut_client(client: httpx2.Client) -> None:
     try:
         client.close()
     except Exception:
+        # El hilo del envío puede estar cerrándolo a la vez; si falla, ya no hay nada que cortar.
         pass
 
 
