@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "local-delegate": {
+      "type": "http",
+      "url": "http://127.0.0.1:9393/mcp",
+      "headers": { "Authorization": "Bearer ${LOCAL_DELEGATE_WEB_TOKEN}" }
+    }
+  }
+}

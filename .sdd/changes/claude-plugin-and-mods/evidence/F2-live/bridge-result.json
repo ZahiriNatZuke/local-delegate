@@ -1,0 +1,73 @@
+{
+ "env_names": [
+  "ALLUSERSPROFILE",
+  "APPDATA",
+  "COMMONPROGRAMFILES",
+  "COMMONPROGRAMFILES(X86)",
+  "COMPUTERNAME",
+  "ComSpec",
+  "HOMEDRIVE",
+  "HOMEPATH",
+  "LOCALAPPDATA",
+  "NUMBER_OF_PROCESSORS",
+  "OS",
+  "PATH",
+  "PATHEXT",
+  "PROCESSOR_ARCHITECTURE",
+  "PROCESSOR_IDENTIFIER",
+  "PROCESSOR_LEVEL",
+  "PROCESSOR_REVISION",
+  "PROGRAMFILES",
+  "PUBLIC",
+  "ProgramData",
+  "ProgramFiles(x86)",
+  "ProgramW6432",
+  "SYSTEMDRIVE",
+  "SYSTEMROOT",
+  "SystemRoot",
+  "TEMP",
+  "TMP",
+  "USERNAME",
+  "USERPROFILE",
+  "windir"
+ ],
+ "initialize": {
+  "error": null,
+  "server": {
+   "description": "Delegates mechanical text and image tasks to a local model through an OpenAI-compatible endpoint, to save subscription quota.",
+   "name": "local-delegate",
+   "title": "Local Delegate",
+   "version": "0.39.0",
+   "websiteUrl": "https://github.com/ZahiriNatZuke/local-delegate"
+  },
+  "protocol": "2025-06-18"
+ },
+ "tools_list": {
+  "error": null,
+  "count": 11,
+  "names": [
+   "local_summarize",
+   "local_classify",
+   "local_extract",
+   "local_boilerplate",
+   "local_delegate",
+   "local_lint_summary",
+   "local_commit_msg",
+   "local_translate",
+   "local_explain_code",
+   "local_describe_image",
+   "local_status"
+  ]
+ },
+ "local_status": {
+  "error": null,
+  "isError": false,
+  "chars": 1917,
+  "head": "local-delegate v0.39.0\nIdioma: es (preferencia; C:\\Users\\Yohan\\AppData\\Local\\local-delegate\\language.json)\n  para volver a seguir al sistema, borra `C:\\Users\\Yohan\\AppData\\Local\\local-delegate\\language.json` y ejecuta `local-delegate install`\nIdioma de respuesta del modelo: es (preferencia)\n\nBackend"
+ },
+ "exit_code": 0,
+ "stderr": [
+  "puente de Claude Desktop hacia http://127.0.0.1:9393/mcp (token: presente)"
+ ],
+ "token_in_any_output": false
+}

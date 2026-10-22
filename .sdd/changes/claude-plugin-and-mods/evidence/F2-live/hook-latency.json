@@ -1,0 +1,74 @@
+{
+ "prompt/off": {
+  "n": 25,
+  "median": 105.4,
+  "p95": 111.3,
+  "max": 112.9,
+  "exit_codes": [
+   0
+  ]
+ },
+ "record-call/off": {
+  "n": 25,
+  "median": 105.5,
+  "p95": 113.6,
+  "max": 114.3,
+  "exit_codes": [
+   0
+  ]
+ },
+ "read/off": {
+  "n": 25,
+  "median": 61.2,
+  "p95": 66.6,
+  "max": 69.7,
+  "exit_codes": [
+   0
+  ]
+ },
+ "mcp-read/off": {
+  "n": 25,
+  "median": 61.7,
+  "p95": 66.3,
+  "max": 66.6,
+  "exit_codes": [
+   0
+  ]
+ },
+ "shell/off": {
+  "n": 25,
+  "median": 61.6,
+  "p95": 70.7,
+  "max": 100.9,
+  "exit_codes": [
+   0
+  ]
+ },
+ "read/on": {
+  "n": 25,
+  "median": 104.3,
+  "p95": 115.0,
+  "max": 115.4,
+  "exit_codes": [
+   0
+  ]
+ },
+ "mcp-read/on": {
+  "n": 25,
+  "median": 105.2,
+  "p95": 112.4,
+  "max": 116.4,
+  "exit_codes": [
+   0
+  ]
+ },
+ "shell/on": {
+  "n": 25,
+  "median": 105.3,
+  "p95": 110.7,
+  "max": 111.0,
+  "exit_codes": [
+   0
+  ]
+ }
+}

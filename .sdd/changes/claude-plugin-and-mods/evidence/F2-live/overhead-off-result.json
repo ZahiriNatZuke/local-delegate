@@ -1,0 +1,34 @@
+{
+ "N": {
+  "n_warm": 54,
+  "median": 69.0,
+  "p95": 83,
+  "max": 97,
+  "cold_median": 757.5,
+  "n_cold": 6
+ },
+ "P": {
+  "n_warm": 54,
+  "median": 149.0,
+  "p95": 162,
+  "max": 167,
+  "cold_median": 854.5,
+  "n_cold": 6
+ },
+ "delta": {
+  "median": 80.0,
+  "p95": 79,
+  "cold_median": 97.0
+ },
+ "engine_hook_ms": {
+  "shell": {
+   "n": 60,
+   "median": 77.0,
+   "p95": 84,
+   "max": 89
+  }
+ },
+ "hook_statuses": [
+  "0"
+ ]
+}
