@@ -141,6 +141,7 @@ MOD_DECISIONS: dict[str, tuple[bool, bool, str]] = {
     "dismissed": (True, False, "large_prose"),  # cerro el dialogo sin elegir: la lectura pasa
     "summary_failed": (True, False, "summary_failed"),  # el resumen fallo: la lectura pasa
     "warned": (True, False, "unclassifiable"),  # via no clasificable: solo aviso
+    "not_prose": (False, False, "not_prose"),  # grande pero no prosa (codigo, datos): pasa literal
 }
 _MOD_DECISION_NAME = re.compile(r"^[a-z_]{1,32}$")
 

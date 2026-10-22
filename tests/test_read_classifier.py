@@ -339,7 +339,7 @@ def _seed_backend_alive(base: Path) -> None:
     marker.write_text(json.dumps({"ts": time.time(), "ok": True}), encoding="utf-8")
 
 
-CONTRACT_KEYS = ["kind", "path", "scope", "bytes", "range", "via", "read_switch"]
+CONTRACT_KEYS = ["kind", "path", "scope", "bytes", "range", "via", "read_switch", "summarizable"]
 
 
 def test_list_tools_covers_corpus_tools(tmp_path):
@@ -403,6 +403,7 @@ def test_classify_reports_read_switch(tmp_path, env_extra, switch_file, expected
         "range": [5, 40],
         "via": "shell_sed",
         "read_switch": expected,
+        "summarizable": True,
     }
 
 
@@ -420,7 +421,61 @@ def test_classify_contract_for_other_and_bad_input(tmp_path):
             "range": None,
             "via": "none",
             "read_switch": "inactive",
+            "summarizable": False,
         }
+
+
+def _sized(directory: Path, name: str, kb: int) -> Path:
+    directory.mkdir(parents=True, exist_ok=True)
+    target = directory / name
+    target.write_text("x = 1  # relleno\n" * (kb * 1024 // 17 + 1), encoding="utf-8")
+    return target
+
+
+@pytest.mark.parametrize(
+    ("name", "kb", "env_extra", "expected"),
+    [
+        ("big.md", 20, {}, True),
+        ("big.txt", 20, {}, True),
+        ("big.py", 20, {}, False),
+        ("big.json", 20, {}, False),
+        # Sin datos de logs en evidence/F4-read-paths.md: se quedan fuera, como en el hook.
+        ("big.log", 20, {}, False),
+        ("small.md", 4, {}, False),
+        # El umbral es la variable del hook, no un número propio.
+        ("big.md", 20, {"LD_HOOK_READ_SUGGEST_KB": "100"}, False),
+    ],
+    ids=["md", "txt", "py", "json", "log", "small-md", "md-under-threshold"],
+)
+def test_classify_says_whether_the_file_is_summarizable(tmp_path, name, kb, env_extra, expected):
+    """El mod solo resume la banda que bloquea el hook: prosa grande. El código pasa literal."""
+    env = {**_sandbox(tmp_path), **env_extra}
+    target = _sized(tmp_path / "work", name, kb)
+    stdin = json.dumps(
+        {"tool_name": "Read", "tool_input": {"file_path": str(target)}, "cwd": str(tmp_path)}
+    ).encode("utf-8")
+    result = _hook(["classify"], stdin, env)
+    assert result.returncode == 0, result.stderr
+    out = json.loads(result.stdout)
+    assert (out["kind"], out["scope"], out["bytes"]) == ("read", "whole", target.stat().st_size)
+    assert out["summarizable"] is expected
+
+
+def test_summarizable_uses_the_read_hook_constants():
+    """Una sola fuente: el hook toma la prosa del clasificador y el umbral es el de `config`."""
+    source = (HOOKS / "suggest_delegate_read.py").read_text("utf-8")
+    assert "PROSE_EXTENSIONS = read_classifier.PROSE_EXTENSIONS" in source
+    assert '".rst"' not in source
+    assert classifier.PROSE_EXTENSIONS == frozenset({".md", ".txt", ".markdown", ".rst"})
+    assert classifier.SUGGEST_KB_DEFAULT == config.HOOK_READ_SUGGEST_KB
+    assert f'"{classifier.SUGGEST_KB_VARIABLE}"' in source
+    # Y el borde es el del hook: hasta el umbral es «small», por encima se bloquea.
+    limit = int(config.HOOK_READ_SUGGEST_KB * 1024)
+    assert classifier.summarizable("a.md", limit) is False
+    assert classifier.summarizable("a.md", limit + 1) is True
+    assert classifier.summarizable("a.MD", limit + 1) is True
+    assert classifier.summarizable("a.md", None) is False
+    assert classifier.summarizable(None, limit + 1) is False
 
 
 def test_unresolvable_read_is_unclassifiable(tmp_path):

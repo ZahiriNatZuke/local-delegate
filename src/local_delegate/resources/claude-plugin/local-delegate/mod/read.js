@@ -6,12 +6,13 @@
 //     file; the rest go to `local-delegate hook classify` through `common.runLd`. No answer, or a
 //     `read_switch` other than `on`, and the call goes through untouched;
 //   - a read the classifier is sure of (`whole`, or ranges that add up to 80 % of the file's
-//     lines, the threshold fixed in evidence/F4-read-paths.md) of a file of 8 KB or more is
-//     summarized by `local_summarize`, and the summary is the tool's result: with a dialog the
+//     lines, the threshold fixed in evidence/F4-read-paths.md) of large prose (`summarizable`,
+//     the band the read hook blocks, decided in Python by `hook classify`) is summarized by `local_summarize`, and the summary is the tool's result: with a dialog the
 //     person picks «summarize with the local model / read it whole»; without one (`-p`, a
 //     subagent) the mod summarizes by itself (REQ-021 v3: delegating cannot hang on the model
 //     following a suggestion). A summary that fails lets the real read through: the mod never
 //     blocks without giving content;
+//   - a large read that is not prose (code, config, data) always goes through, and is logged;
 //   - a read it is not sure of (`unclassifiable`) goes through, with a note to the model;
 //   - after a summary, `Edit`, `Write`, `NotebookEdit` and recognizable shell writes on that file
 //     are refused until a real read of it (REQ-022). The list is kept per session in the data
@@ -340,15 +341,37 @@ async function readNoteRealRead($, common, sessionId, key, classified, ran) {
   }
 }
 
+/** The text of a `local_summarize` answer: FastMCP wraps the `str` the tool returns in
+ * `{ "result": … }`, as `structuredContent` and as the text block's JSON. Without that wrapper the
+ * text blocks are taken as they come. */
+function readSummaryText(result) {
+  const structured = result && result.structuredContent
+  if (structured && typeof structured === 'object' && typeof structured.result === 'string') {
+    return structured.result.trim()
+  }
+  const text = ((result && result.content) || [])
+    .filter(block => block && block.type === 'text' && typeof block.text === 'string')
+    .map(block => block.text)
+    .join('\n')
+    .trim()
+  if (text.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(text)
+      if (parsed && typeof parsed === 'object' && typeof parsed.result === 'string') {
+        return parsed.result.trim()
+      }
+    } catch {
+      // not JSON: a plain text answer
+    }
+  }
+  return text
+}
+
 /** Asks `local_summarize` for the file; the summary's text, or null when it fails. */
 async function readSummarize($, path) {
   try {
     const result = await $.mcp.call(READ_SERVER, READ_SUMMARY_TOOL, { path })
-    const text = ((result && result.content) || [])
-      .filter(block => block && block.type === 'text' && typeof block.text === 'string')
-      .map(block => block.text)
-      .join('\n')
-      .trim()
+    const text = readSummaryText(result)
     if (!text || (result && result.isError) || text.startsWith(READ_ERROR_PREFIX)) {
       return null
     }
@@ -454,6 +477,9 @@ async function readOnToolCall($, common, e, next) {
   }
   await readBeat($, common, sessionId)
   const big = typeof classified.bytes === 'number' && classified.bytes >= READ_MIN_BYTES
+  // The band comes from `hook classify` (the read hook's own constants): only large prose can be
+  // summarized. A classifier that does not say so is not trusted to summarize.
+  const prose = classified.summarizable === true
   const ctx = { classified, key, path: classified.path, sessionId }
   if (classified.scope === 'unclassifiable' || !READ_SUMMARIZABLE_TOOLS.includes(e.tool)) {
     // Not sure what enters the context, or a tool whose result the mod cannot stand in for: a
@@ -469,6 +495,11 @@ async function readOnToolCall($, common, e, next) {
   }
   if (!big) {
     return readPass($, common, e, next, ctx, null)
+  }
+  if (!prose) {
+    // Code, config, data: the literal text is what the reader needs (a subagent about to program),
+    // so the read always goes through, by ranges too, and is only logged.
+    return readPass($, common, e, next, ctx, 'not_prose')
   }
   if (classified.scope === 'whole') {
     return readSteer($, common, e, next, ctx)
