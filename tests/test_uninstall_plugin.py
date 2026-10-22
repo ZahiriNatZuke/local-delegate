@@ -49,6 +49,8 @@ def _opts(home, fake, tmp_path, **kwargs):
         claude_ld_bin=claude_plugin.LdBin(LD_BIN, None),
         desktop_dir=tmp_path / "appdata",
         desktop_executable=tmp_path / "bin" / "local-delegate.exe",
+        # `--desktop` is planned only on Windows: pinned so the test runs on every runner.
+        platform="win32",
         **kwargs,
     )
 
