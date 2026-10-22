@@ -18,5 +18,11 @@
   "commands.error.tool_failed": "`local-delegate` returned an error: {detail}",
   "commands.error.empty": "`local-delegate` returned no text.",
   "status.line": "LD · 5h quota {quota}% · saved {saved} tok",
-  "status.saved_only": "LD · saved {saved} tok"
+  "status.saved_only": "LD · saved {saved} tok",
+  "read.ask.question": "`{path}` is {kb} KB. Summarize it with the local model, or read it whole?",
+  "read.ask.summarize": "Summarize with the local model",
+  "read.ask.whole": "Read it whole",
+  "read.summary.header": "Summary of `{path}` made by the local model of `local-delegate` (not the literal content). To modify the file, read it first with `offset`/`limit`.",
+  "read.guard.refused": "`{path}` has only been read as a summary: read it with `offset`/`limit` before modifying it.",
+  "read.warn.large": "This read of `{path}` ({kb} KB) may put a lot of text in the context. If a summary is enough, use `local_summarize` with `path`."
 }

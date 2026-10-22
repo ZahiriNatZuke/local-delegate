@@ -6,6 +6,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Añade (mod de lectura, apagado por defecto)
+
+- **Pieza `read` del mod del plugin** (REQ-020, REQ-021 y REQ-022), solo con la opción
+  `read_mod_enabled` encendida, que sigue apagada por defecto. Pregunta a `local-delegate hook
+  classify` por cada llamada que puede leer o escribir un fichero. Una lectura entera de un fichero
+  de 8 KB o más, o unas franjas que juntas cubren el 80 % de sus líneas, pasa por `local_summarize`
+  y el resumen llega como resultado de la propia tool: con diálogo la persona elige «resumir con el
+  modelo local / leer entero»; sin diálogo (`-p`, subagentes) el mod resume solo. Si el resumen o el
+  clasificador fallan, la lectura real pasa: nunca bloquea sin dar contenido. Las lecturas que el
+  clasificador no puede acotar solo llevan un aviso. Tras un resumen, `Edit`, `Write`,
+  `NotebookEdit` y las escrituras de shell sobre ese fichero se rechazan hasta que haya una lectura
+  real; la lista se guarda por sesión y aguanta `--resume`. Cada decisión se registra con
+  `hook record-read`.
+
 ### Corrige (credenciales en macOS)
 
 - **En macOS, las credenciales salen también del Llavero, no solo del entorno del shell** (issue

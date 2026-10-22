@@ -192,10 +192,13 @@ console.log(JSON.stringify({ events: hooks.map(h => h.event), beat: JSON.parse(w
 
 
 def _fixture_plugin(tmp_path: Path) -> Path:
-    """The real plugin, plus a `status` piece that throws while registering; `read` stays absent."""
+    """The real plugin, plus a `status` piece that throws while registering; `read` left out, so
+    the fixture also holds a piece that is absent at build time."""
     plugin = tmp_path / "plugin"
     shutil.copytree(
-        PLUGIN_DIR, plugin, ignore=shutil.ignore_patterns("register.js", "*.test.ts", "types")
+        PLUGIN_DIR,
+        plugin,
+        ignore=shutil.ignore_patterns("register.js", "*.test.ts", "types", "read.js"),
     )
     (plugin / "mod" / "status.js").write_text(
         "export function register(on, options) {\n  throw new Error('status broke')\n}\n",
