@@ -311,3 +311,48 @@ test('switch_off_registers_nothing', async () => {
   register((...a: any[]) => hooks.push(a), { commands_enabled: false }, makeEnv().common)
   expect(hooks).toHaveLength(0)
 })
+
+// What FastMCP really answers for a tool that returns `str`: the text wrapped in
+// `{ "result": … }`, as `structuredContent` and as the text block's JSON (seen live, PR #419).
+function wrapped(text: string, over: Record<string, unknown> = {}) {
+  return { content: [{ type: 'text', text: JSON.stringify({ result: text }) }], structuredContent: { result: text }, isError: false, ...over }
+}
+
+test('wrapped_answer_is_unwrapped_for_every_command', async () => {
+  const summarize = makeEnv({ files: { 'C:\\work\\a.md': 'x' }, mcpImpl: () => wrapped('A short summary.') })
+  expect((await run(summarize, 'local-summarize', 'a.md')).text).toBe('A short summary.')
+
+  const commit = makeEnv({
+    procImpl: () => ({ exitCode: 0, stdout: DIFF, stderr: '', isStdoutTruncated: false, isStderrTruncated: false }),
+    mcpImpl: () => wrapped('feat: add key'),
+  })
+  expect((await run(commit, 'local-commit', '')).text).toBe('[es] commands.commit.header\n\nfeat: add key')
+
+  const lint = makeEnv({ files: { 'C:\\work\\out.log': 'E501' }, mcpImpl: () => wrapped('a.py: 1 E501') })
+  expect((await run(lint, 'local-lint', 'out.log')).text).toBe('a.py: 1 E501')
+})
+
+test('wrapped_answer_without_structured_content_is_unwrapped_from_the_text', async () => {
+  const env = makeEnv({
+    files: { 'C:\\work\\a.md': 'x' },
+    mcpImpl: () => ({ content: [{ type: 'text', text: JSON.stringify({ result: 'Only text block.' }) }], isError: false }),
+  })
+  expect((await run(env, 'local-summarize', 'a.md')).text).toBe('Only text block.')
+})
+
+test('wrapped_error_and_empty_count_as_failures', async () => {
+  const failed = makeEnv({ files: { 'C:\\work\\a.md': 'x' }, mcpImpl: () => wrapped('[local-delegate error] backend not responding') })
+  const r = await run(failed, 'local-summarize', 'a.md')
+  expect(r.text).toBe('[es] commands.error.tool_failed detail=backend not responding')
+  expect(r.exitCode).toBe(1)
+
+  const empty = makeEnv({ files: { 'C:\\work\\a.md': 'x' }, mcpImpl: () => wrapped('   ') })
+  const r2 = await run(empty, 'local-summarize', 'a.md')
+  expect(r2.text).toBe('[es] commands.error.empty')
+  expect(r2.exitCode).toBe(1)
+})
+
+test('plain_json_that_is_not_the_wrapper_is_shown_as_it_comes', async () => {
+  const env = makeEnv({ files: { 'C:\\work\\a.md': 'x' }, mcpImpl: () => ({ content: [{ type: 'text', text: '{"a": 1}' }], isError: false }) })
+  expect((await run(env, 'local-summarize', 'a.md')).text).toBe('{"a": 1}')
+})

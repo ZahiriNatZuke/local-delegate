@@ -58,6 +58,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   saltos de línea de verdad. Un error de la tool (`isError` o `[local-delegate error]`) cuenta como
   resumen fallido y la lectura real pasa.
 
+### Corrige (comandos del mod y medición de lecturas)
+
+- **`/local-summarize`, `/local-commit` y `/local-lint` enseñan el texto limpio**: antes enseñaban
+  el JSON crudo `{"result": "…"}` con el que FastMCP envuelve la respuesta de la tool. Sacan el
+  texto igual que el mod de lectura, con una sola función compartida en `mod/common.js`
+  (`toolResultText`), y un `[local-delegate error]` o un resumen vacío dentro del envoltorio
+  cuentan como fallo.
+- **`scripts/measure_read_paths.py` ya no lleva su propia copia de las reglas de lectura**: importa
+  el clasificador único. Sobre los mismos transcripts (30 días, 36 583 lecturas) da las mismas
+  cuentas, resultados, tamaños y caracteres por vía; cambian los nombres de alcance
+  (`unclassifiable` donde decía `unknown`, y también en búsquedas, imágenes, `git show` y otros
+  MCP, como en el contrato de `hook classify`) y, por normalizar las rutas igual que el
+  clasificador, unos pocos ficheros distintos se funden (`dir/../x` y `x` son el mismo).
+
 ### Añade (clasificador único de lectura)
 
 - **Un solo módulo decide qué lee cada llamada** (`resources/hooks/read_classifier.py`, REQ-019):

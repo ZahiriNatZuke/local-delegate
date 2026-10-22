@@ -8,7 +8,7 @@
 // test passes its own double as `register`'s third argument instead). Every name but `register`
 // carries the `commands` prefix and cannot clash with another piece's.
 
-import { engineCommon } from './common.js'
+import { engineCommon, toolResultText } from './common.js'
 
 const COMMANDS_SERVER = 'local-delegate'
 const COMMANDS_ERROR_PREFIX = '[local-delegate error]'
@@ -184,11 +184,7 @@ async function commandsCallTool($, common, tool, args) {
   } catch (err) {
     return { text: common.t('commands.error.mcp_down', { detail: commandsErrorText(err) }), exitCode: 1 }
   }
-  const text = (result?.content ?? [])
-    .filter((block) => block?.type === 'text' && typeof block.text === 'string')
-    .map((block) => block.text)
-    .join('\n')
-    .trim()
+  const text = toolResultText(result)
   if (result?.isError || text.startsWith(COMMANDS_ERROR_PREFIX)) {
     const detail = text.startsWith(COMMANDS_ERROR_PREFIX)
       ? text.slice(COMMANDS_ERROR_PREFIX.length).trim()

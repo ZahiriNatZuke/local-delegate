@@ -329,3 +329,27 @@ def test_test_windows_excluded(world, capsys):
     assert by_via["shell_cat"]["count"] == 1
     assert "shell_sed" not in by_via
     assert report["excluded"]["test_window"] == 1
+
+
+def test_vias_and_scopes_come_from_the_single_classifier(world, capsys):
+    """Desde F4-leftovers el script importa `read_classifier`: mide lo que deciden hooks y mod.
+
+    Tres casos en que la copia vieja de las reglas se separaba del clasificador: el valor de
+    `-TotalCount` delante de la ruta no es el fichero, una búsqueda es `unclassifiable` (la copia
+    decía `partial`) y un `Read` de un documento es `read_document` (la copia decía `read_whole`).
+    """
+    big = world.file("big.md", 400)
+    world.shell(f"Get-Content -TotalCount 20 {big}", tool="PowerShell")
+    world.shell(f"grep -n foo {big}")
+    extension = min(measure_read_paths.read_classifier.DOCUMENT_EXTENSIONS)
+    document = world.file("notes" + extension, 10)
+    world.call("Read", {"file_path": str(document)}, result={"type": "document"}, output="")
+    report, _ = world.run(capsys)
+    by_via = {row["via"]: row for row in report["by_via"]}
+
+    # El fichero de `-TotalCount 20 big.md` es big.md (400 líneas): cae en su tramo, no en `unknown`.
+    assert by_via["shell_cat_partial"]["by_size"] == {"8k_32k": 1}
+    assert by_via["shell_cat_partial"]["by_scope"] == {"range": 1}
+    assert by_via["shell_grep"]["by_scope"] == {"unclassifiable": 1}
+    assert by_via["read_document"]["count"] == 1
+    assert "read_whole" not in by_via

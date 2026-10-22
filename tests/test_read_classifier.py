@@ -13,6 +13,7 @@ con qué alcance. Lo usan los hooks de la entrega por settings y el mod de lectu
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import os
@@ -53,7 +54,8 @@ measure = _load("_rc_measure_read_paths", ROOT / "scripts" / "measure_read_paths
 # pero el comando va anonimizado: rutas y argumentos como `<path:hash>`/`<arg:hash>`, el código
 # como `<code:hash>`, los cuerpos de heredoc como una marca al final y como mucho 40 tokens. Para
 # clasificarlo se deshace lo que se puede (`_deanonymise`), y una fila entra en la prueba solo si
-# el propio script de la medición, sobre ese texto, reproduce su etiqueta: si no, la anonimización
+# el propio script de la medición (con las reglas que tenía antes de importar el clasificador; ver
+# `LOST_ROWS`), sobre ese texto, reproduce su etiqueta: si no, la anonimización
 # se llevó la información (un comando truncado, `git show rev:ruta`, un intérprete con ruta…) y la
 # fila no puede discriminar nada. `test_corpus_keeps_most_rows` vigila que ese filtro no se coma
 # el corpus.
@@ -131,14 +133,24 @@ def _expected(row: dict, tool_input: dict) -> tuple[str, str]:
     return via, scope
 
 
-def _reproducible(row: dict) -> bool:
-    """¿El script de la medición, sobre el texto anonimizado, reproduce la etiqueta de la fila?"""
-    if row["tool"] not in ("Bash", "PowerShell"):
-        return True
-    calls = measure.classify_shell(_deanonymise(row["command"]), row["tool"])
-    if row["via"] == "none":
-        return not calls
-    return (row["via"], row["scope"]) in {(c.via, c.scope) for c in calls}
+#: Las filas que el script de la medición, con sus propias reglas de entonces, NO reproducía sobre
+#: el texto anonimizado (índices en el corpus). Se congelaron en F4-leftovers, cuando el script pasó
+#: a importar este clasificador: desde entonces «el script la reproduce» sería «el clasificador la
+#: reproduce», y el filtro dejaría fuera justo las filas que `test_corpus` tiene que ver fallar.
+#: Si el corpus cambia, `test_corpus_is_the_frozen_one` lo dice y hay que volver a sacar la lista.
+LOST_ROWS = frozenset(
+    [217, 236, 243, 260, 272, 273, 274, 281, 283, 284, 301, 302, 313, 315, 316, 317, 318, 319]
+    + [321, 325, 326, 330, 331, 332, 339, 363, *range(370, 413), 417, 419, 424, 441, 454, 458]
+    + [467, 471, 472, 482, 486, 511, 514, 522, 540, 565, 578, 579, 585, 586, 594, 634, 639, 642]
+    + [652, 655, 656, 657]
+)
+#: sha256 de las filas del corpus (JSON con claves ordenadas) para el que vale esa lista.
+CORPUS_DIGEST = "6aaa4cce01dd956dde5ce8b8a94c2a17dd4d46305474dfcc772747b98d815a42"
+
+
+def _corpus_digest(rows: list[dict]) -> str:
+    blob = json.dumps(rows, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    return hashlib.sha256(blob).hexdigest()
 
 
 def _rows() -> list[dict]:
@@ -153,8 +165,28 @@ def _row_id(index: int, row: dict) -> str:
 
 ALL_ROWS = _rows()
 CORPUS_ROWS = [
-    pytest.param(row, id=_row_id(i, row)) for i, row in enumerate(ALL_ROWS) if _reproducible(row)
+    pytest.param(row, id=_row_id(i, row)) for i, row in enumerate(ALL_ROWS) if i not in LOST_ROWS
 ]
+
+
+def test_corpus_is_the_frozen_one():
+    """La lista de filas fuera vale solo para este corpus: si cambia, hay que rehacerla."""
+    assert len(ALL_ROWS) == 759
+    assert len(LOST_ROWS) == 97
+    assert _corpus_digest(ALL_ROWS) == CORPUS_DIGEST
+
+
+def test_measure_script_uses_this_classifier():
+    """El script de la medición no lleva reglas propias: sus lecturas son las del clasificador."""
+    assert not hasattr(measure, "_shell_read")
+    assert not hasattr(measure, "_FAMILY")
+    command = "grep -n foo notes.md; Get-Content -TotalCount 20 notes.md; sed -n 3,9p notes.md"
+    reads = [a for a in classifier.classify_shell(command, "PowerShell") if a.kind == "read"]
+    got = measure.classify_shell(command, "PowerShell")
+    assert [(a.via, a.scope, a.path, a.lines) for a in got] == [
+        (a.via, a.scope, a.path, a.lines) for a in reads
+    ]
+    assert len(got) == 3
 
 
 def test_corpus_keeps_most_rows():

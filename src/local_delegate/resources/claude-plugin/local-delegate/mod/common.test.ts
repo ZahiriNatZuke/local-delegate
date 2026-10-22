@@ -7,6 +7,7 @@
 // `$.process.run` does where it is not available. The heartbeat goes through the real plugin.
 import { expect, mock, test } from 'claude-code/testing'
 import { daemonFetch, dataPath, engineCommon, hasDialog, runLd, setup, t, token } from './common.js'
+import * as commonModule from './common.js'
 
 const LD_BIN = 'C:/tools/local-delegate/python.exe'
 const TOKEN = 'tok-7f3a-never-in-output'
@@ -250,3 +251,18 @@ test(
     expect(beat.dialog).toBe(true)
   },
 )
+
+test('toolResultText unwraps the FastMCP `{ result }` of a tool that returns str', OPTIONS, async () => {
+  const unwrap = (commonModule as any).toolResultText
+  expect(typeof unwrap).toBe('function')
+  const text = 'Line one.\nLine two.'
+  const block = { type: 'text', text: JSON.stringify({ result: text }) }
+  // structuredContent first, then the text block's JSON, then the text blocks as they come
+  expect(unwrap({ content: [block], structuredContent: { result: ` ${text} ` } })).toBe(text)
+  expect(unwrap({ content: [block] })).toBe(text)
+  expect(unwrap({ content: [{ type: 'text', text: 'plain' }, { type: 'image' }, { type: 'text', text: 'more' }] })).toBe('plain\nmore')
+  expect(unwrap({ content: [{ type: 'text', text: '{"a": 1}' }] })).toBe('{"a": 1}')
+  expect(unwrap({ content: [{ type: 'text', text: '{not json' }] })).toBe('{not json')
+  expect(unwrap(null)).toBe('')
+  expect(unwrap({})).toBe('')
+})

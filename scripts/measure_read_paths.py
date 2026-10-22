@@ -23,6 +23,11 @@ de un `Read` entero, de lo que devolvió) y los caracteres que entraron al conte
 - la cobertura de las franjas por fichero y transcript (`range_coverage`), de la que sale el umbral
   de REQ-020.
 
+La vía, el alcance y la ruta de cada llamada los da el clasificador único de REQ-019
+(`resources/hooks/read_classifier.py`): el script no lleva reglas de lectura propias, así que mide
+lo mismo que deciden los hooks y el mod. Solo el resultado de un `Read` las afina (una imagen, o
+una franja que en realidad cubrió el fichero entero).
+
 No cuentan las llamadas dentro de una ventana de `local-delegate test-window` (`excluded`).
 
 **Privacidad.** Ni el contenido de los ficheros ni la salida de las tools salen del proceso: solo
@@ -41,7 +46,6 @@ import collections
 import hashlib
 import hmac
 import json
-import os
 import re
 import secrets
 import statistics
@@ -52,6 +56,13 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from local_delegate import config, test_windows
+from local_delegate.hook_entry import hooks_dir
+
+# Las reglas de lectura viven en un solo sitio, el clasificador de REQ-019 (PR #416), que es un
+# módulo suelto de `resources/hooks/`: se importa como lo importan los hooks entre sí.
+if str(hooks_dir()) not in sys.path:
+    sys.path.insert(0, str(hooks_dir()))
+import read_classifier
 
 #: Desde este tamaño un fichero es «grande» para decidir qué vías cubre F4 (el hook de lectura
 #: actual bloquea la prosa desde 8 KB).
@@ -72,360 +83,57 @@ CORPUS_PER_VIA = 40
 #: Cuántos tokens de un comando van al corpus.
 CORPUS_MAX_TOKENS = 40
 
-SHELL_TOOLS = frozenset({"Bash", "PowerShell"})
+SHELL_TOOLS = frozenset(read_classifier.SHELL_TOOLS)
 
-#: Familia de cada verbo de shell que lee un fichero.
-_FAMILY = {
-    **dict.fromkeys(("cat", "type", "get-content", "gc", "more", "less", "bat", "tac"), "cat"),
-    **dict.fromkeys(("head", "tail"), "head_tail"),
-    "sed": "sed",
-    **dict.fromkeys(("awk", "gawk"), "awk"),
-    **dict.fromkeys(
-        ("grep", "egrep", "fgrep", "rg", "ag", "findstr", "select-string", "sls"), "grep"
-    ),
-    **dict.fromkeys(("python", "python3", "py", "pythonw"), "python"),
-    **dict.fromkeys(("nl", "xxd", "od", "strings", "jq", "yq", "hexdump"), "other"),
-}
-#: Verbos que solo leen en PowerShell (en Bash, `type` dice qué es un comando).
-_POWERSHELL_ONLY = frozenset({"type", "gc"})
-#: Opciones que llevan valor, por familia (para no tomar el valor por el fichero).
-_VALUE_FLAGS = {
-    "head_tail": {"-n", "-c"},
-    "sed": {"-e", "-f"},
-    "awk": {"-f", "-v", "-F"},
-    "grep": {"-e", "-f", "-A", "-B", "-C", "-m", "--max-count", "-g", "-t", "--type"},
-    "other": set(),
-    "cat": set(),
-}
-#: Prefijos que no son el verbo: se saltan para llegar a él.
-_WRAPPERS = frozenset({"sudo", "time", "command", "exec", "nohup", "env"})
-#: Verbos que el corpus conserva tal cual (además de los de `_FAMILY`).
+#: Verbos que el corpus conserva tal cual (además de los que leen y los envoltorios).
 _KEEP_WORDS_TEXT = """
         git show diff log status ls dir cd echo find wc sort uniq cut tr xargs select-object
         measure-object where-object foreach-object format-table out-string get-childitem test-path
         uv run pytest ruff node pnpm npm gh pr checks bash sh pwsh powershell set-location mkdir cp
         mv rm touch printf true false test if then else fi for do done while in
         """
-_KEEP_WORDS = frozenset(set(_FAMILY) | _WRAPPERS | set(_KEEP_WORDS_TEXT.split()))
+_KEEP_WORDS = frozenset(
+    set(read_classifier._FAMILY) | read_classifier._WRAPPERS | set(_KEEP_WORDS_TEXT.split())
+)
 _OPERATORS = frozenset({"|", "||", "&&", ";", ">", ">>", "<", "<<", "2>&1", "2>", "(", ")", "&"})
 
-_TOKEN = re.compile(
-    r"""'[^']*'|"(?:\\.|[^"\\])*"|\|\||&&|>>|<<-?|2>&1|2>|[|;<>()&]|\n|[^\s|;<>()&'"]+"""
-)
-_HEREDOC = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1")
-_HERESTRING = re.compile(r"@'.*?'@|@\".*?\"@", re.DOTALL)
 _FLAG = re.compile(r"^--?[A-Za-z][A-Za-z0-9-]{0,30}$")
 _NUMERIC = re.compile(r"^[+-]?\d+(?:,\d+)?p?$|^\d+[a-z]?$")
-_SED_RANGE = re.compile(r"^(\d+)(?:,(\d+))?p$")
-_GIT_BASH_DRIVE = re.compile(r"^/([a-zA-Z])/(.*)$")
 _LINE_PREFIX = re.compile(r"^\s*(\d+)\t", re.MULTILINE)
-#: Nombres de tools de otros MCP que leen (por la parte tras el servidor).
-_MCP_READ = re.compile(
-    r"(^|_)(read|get_file|file_contents|get_note|convert_to_markdown|get_page|fetch_file|cat)"
-)
-_PY_READS = ("open(", "read_text", "read_bytes", "readlines")
+_PY_READS = read_classifier._PY_READS
+_unquote = read_classifier._unquote
+strip_heredocs = read_classifier.strip_heredocs
+tokenize = read_classifier.tokenize
 
 
 # --- Clasificar ----------------------------------------------------------------------------------
 
-
-@dataclass
-class ReadCall:
-    """Una lectura clasificada: vía, alcance y lo que se sabe del fichero."""
-
-    via: str
-    scope: str  # whole | range | partial | unknown
-    path: str | None = None
-    lines: tuple[int, int | None] | None = None  # (primera, última) 1-based; última None = al final
-
-
-def _unquote(token: str) -> str:
-    if len(token) >= 2 and token[0] == token[-1] and token[0] in "'\"":
-        return token[1:-1]
-    return token
-
-
-def strip_heredocs(command: str) -> tuple[str, list[str]]:
-    """(comando sin los cuerpos de heredocs y here-strings, los cuerpos)."""
-    bodies = [m.group(0) for m in _HERESTRING.finditer(command)]
-    command = _HERESTRING.sub("@''@", command)
-    out: list[str] = []
-    lines = command.split("\n")
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-        out.append(line)
-        delimiters = [m.group(2) for m in _HEREDOC.finditer(line)]
-        i += 1
-        for delimiter in delimiters:
-            body: list[str] = []
-            while i < len(lines) and lines[i].strip() != delimiter:
-                body.append(lines[i])
-                i += 1
-            i += 1  # el delimitador de cierre
-            bodies.append("\n".join(body))
-    return "\n".join(out), bodies
-
-
-def tokenize(command: str) -> list[str]:
-    return _TOKEN.findall(command)
-
-
-@dataclass
-class Segment:
-    """Un comando de la línea: sus etapas de tubería y si su salida va a un fichero."""
-
-    stages: list[list[str]]
-    redirected: bool = False
-    heredoc: bool = False
-
-
-def _segments(tokens: list[str]) -> list[Segment]:
-    segments: list[Segment] = []
-    current = Segment([[]])
-    skip_next = False
-
-    def close() -> None:
-        current.stages = [s for s in current.stages if s]
-        if current.stages:
-            segments.append(current)
-
-    for tok in tokens:
-        if skip_next:
-            skip_next = False
-            continue
-        if tok in {"&&", "||", ";", "\n", "&", "(", ")"}:
-            close()
-            current = Segment([[]])
-        elif tok == "|":
-            current.stages.append([])
-        elif tok in {">", ">>"}:
-            current.redirected = True
-            skip_next = True
-        elif tok in {"2>", "<"}:
-            skip_next = True  # stderr a un fichero, o la entrada: no son operandos
-        elif tok.startswith("<<"):
-            current.heredoc = True
-            skip_next = True  # el delimitador
-        elif tok == "2>&1":
-            continue
-        else:
-            current.stages[-1].append(tok)
-    close()
-    return segments
-
-
-def _verb(stage: list[str]) -> tuple[str, list[str]]:
-    """(verbo normalizado, argumentos) de una etapa, saltando asignaciones y envoltorios."""
-    i = 0
-    while i < len(stage):
-        word = stage[i].lower()
-        if re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", stage[i]) or word in _WRAPPERS:
-            i += 1
-        elif word == "uv" and i + 1 < len(stage) and stage[i + 1] == "run":
-            i += 2
-            while i < len(stage) and stage[i].startswith("-"):
-                i += 1  # opciones de `uv run`
-        else:
-            break
-    if i >= len(stage):
-        return "", []
-    word = _unquote(stage[i]).replace("\\", "/").rsplit("/", 1)[-1].lower()
-    word = word.removesuffix(".exe")
-    return word, stage[i + 1 :]
-
-
-def _operands(args: list[str], value_flags: set[str]) -> list[str]:
-    """Los argumentos que no son opciones (ni el valor de las que lo llevan)."""
-    out: list[str] = []
-    skip = False
-    for a in args:
-        if skip:
-            skip = False
-            continue
-        if a.startswith("-") and len(a) > 1 and not re.fullmatch(r"-\d+", a):
-            if a in value_flags:
-                skip = True
-            continue
-        if re.fullmatch(r"-\d+", a):
-            continue
-        out.append(_unquote(a))
-    return out
-
-
-def _flag_value(args: list[str], *names: str) -> str | None:
-    lowered = [a.lower() for a in args]
-    for name in names:
-        if name in lowered:
-            index = lowered.index(name)
-            if index + 1 < len(args):
-                return _unquote(args[index + 1])
-    return None
-
-
-def _int(text: str | None) -> int | None:
-    try:
-        return int(str(text).lstrip("+-")) if text is not None else None
-    except ValueError:
-        return None
-
-
-def _shell_read(
-    verb: str, args: list[str], piped: bool, tool: str, bodies: Sequence[str]
-) -> ReadCall | None:
-    """La lectura de la primera etapa de una tubería, o `None` si no lee un fichero."""
-    family = _FAMILY.get(verb)
-    if verb in _POWERSHELL_ONLY and tool != "PowerShell":
-        return None
-    if verb == "git" and args[:1] == ["show"] and any(":" in a for a in args[1:]):
-        family = "git_show"
-    if family is None:
-        return None
-    positional = _operands(args, _VALUE_FLAGS.get(family, set()))
-    path: str | None = None
-    scope = "unknown"
-    lines: tuple[int, int | None] | None = None
-    lowered = [a.lower() for a in args]
-    if family == "cat":
-        path = _flag_value(args, "-path", "-literalpath") or (positional[0] if positional else None)
-        head = _int(_flag_value(args, "-totalcount", "-head", "-first"))
-        if path is None:
-            return None
-        if head is not None:
-            scope, lines = "range", (1, head)
-        elif "-tail" in lowered:
-            scope = "partial"
-        else:
-            scope = "partial" if piped else "whole"
-        if scope in {"range", "partial"} and not piped:
-            family = "cat_partial"
-    elif family == "head_tail":
-        if not positional:
-            return None
-        path = positional[-1]
-        n = _int(_flag_value(args, "-n")) or next(
-            (_int(a[1:]) for a in args if re.fullmatch(r"-\d+", a)), None
-        )
-        if verb == "head" and "-c" not in args:
-            scope, lines = "range", (1, n or 10)
-        else:
-            scope = "partial"
-    elif family == "sed":
-        if any(a.startswith("-i") for a in args) or not any(
-            re.fullmatch(r"-[a-zA-Z]*n[a-zA-Z]*", a) for a in args
-        ):
-            return None
-        if len(positional) < 2:
-            return None
-        path = positional[-1]
-        m = _SED_RANGE.match(positional[0])
-        if m:
-            first = int(m.group(1))
-            scope, lines = "range", (first, int(m.group(2) or first))
-        else:
-            scope = "partial"
-    elif family == "awk":
-        if len(positional) < 2:
-            return None
-        path, scope = positional[-1], "unknown"
-    elif family == "grep":
-        has_pattern_flag = "-e" in args or "-f" in args
-        if len(positional) < (1 if has_pattern_flag else 2):
-            return None
-        path, scope = positional[-1], "partial"
-    elif family == "python":
-        code = _flag_value(args, "-c") or ("\n".join(bodies) if "-" in args or not args else "")
-        if not code or not any(k in code for k in _PY_READS):
-            return None
-        scope = "unknown"
-    elif family == "other":
-        if not positional:
-            return None
-        path, scope = positional[-1], "whole"
-    elif family == "git_show":
-        scope = "whole"
-    via = f"shell_{family}" + ("_pipe" if piped else "")
-    return ReadCall(via, scope, path, lines)
+#: Una lectura clasificada (`kind="read"`): vía, alcance y lo que se sabe del fichero.
+ReadCall = read_classifier.Access
 
 
 def classify_shell(command: str, tool: str = "Bash") -> list[ReadCall]:
-    """Las lecturas de un comando de shell cuya salida entra al contexto.
+    """Las lecturas de un comando de shell cuya salida entra al contexto (las del clasificador).
 
     Una ruta relativa se une al último `cd` del propio comando; la de la llamada (`cwd`) se pone
     después, en `resolve`.
     """
-    stripped, bodies = strip_heredocs(command)
-    found: list[ReadCall] = []
-    cwd: str | None = None
-    for segment in _segments(tokenize(stripped)):
-        verb, args = _verb(segment.stages[0])
-        if verb in {"cd", "set-location", "pushd"} and args:
-            target = _unquote(args[0])
-            cwd = target if cwd is None or _is_absolute(target) else os.path.join(cwd, target)
-            continue
-        if segment.redirected and len(segment.stages) == 1:
-            continue  # `cat a > b`: copia, no lectura al contexto
-        call = _shell_read(verb, args, len(segment.stages) > 1, tool, bodies)
-        if call is None:
-            continue
-        if call.via == "shell_cat_pipe" and call.lines is None:
-            # `cat f | head -n N` (o `| Select-Object -First N`) es la franja 1..N.
-            next_verb, next_args = _verb(segment.stages[1])
-            if next_verb in {"head", "select-object"}:
-                n = _int(_flag_value(next_args, "-n", "-first")) or next(
-                    (_int(a[1:]) for a in next_args if re.fullmatch(r"-\d+", a)), None
-                )
-                if n:
-                    call.scope, call.lines = "range", (1, n)
-        if call.path and cwd and not _is_absolute(call.path):
-            call.path = os.path.join(cwd, call.path)
-        found.append(call)
-    return found
+    return [a for a in read_classifier.classify_shell(command, tool) if a.kind == "read"]
 
 
 def classify_tool(name: str, tool_input: dict) -> ReadCall | None:
     """La lectura de una tool que no es de shell, o `None` si no lee un fichero."""
-    if name == "Read":
-        path = tool_input.get("file_path")
-        offset, limit = tool_input.get("offset"), tool_input.get("limit")
-        if isinstance(offset, int) or isinstance(limit, int):
-            start = max(offset if isinstance(offset, int) else 1, 1)
-            end = start + limit - 1 if isinstance(limit, int) and limit > 0 else None
-            return ReadCall("read_range", "range", path, (start, end))
-        return ReadCall("read_whole", "whole", path)
-    if name == "Grep":
-        return ReadCall("grep_tool", "partial", tool_input.get("path"))
-    if name.startswith("mcp__"):
-        parts = name.split("__")
-        if len(parts) >= 3 and _MCP_READ.search(parts[-1].lower()):
-            path = next(
-                (tool_input.get(k) for k in ("path", "file_path", "uri") if tool_input.get(k)),
-                None,
-            )
-            server = re.sub(r"[^a-z0-9]+", "_", parts[1].lower()).strip("_")
-            return ReadCall(f"mcp_{server}", "whole", path if isinstance(path, str) else None)
-    return None
+    access = read_classifier.classify_tool(name, tool_input)
+    return access if access is not None and access.kind == "read" else None
 
 
 # --- Rutas y tamaños -----------------------------------------------------------------------------
 
 
-def _is_absolute(path: str) -> bool:
-    return bool(re.match(r"^([A-Za-z]:[\\/]|[\\/]|~)", path))
-
-
 def resolve(path: str | None, cwd: str | None) -> Path | None:
     """La ruta en disco de un operando (con `~`, `/d/…` de Git Bash y el `cwd` de la llamada)."""
-    if not path or any(c in path for c in "*?$`<>|\n"):
-        return None
-    path = os.path.expanduser(path)
-    m = _GIT_BASH_DRIVE.match(path.replace("\\", "/"))
-    if m and os.name == "nt":
-        path = f"{m.group(1).upper()}:/{m.group(2)}"
-    p = Path(path)
-    if not p.is_absolute() and cwd:
-        p = Path(cwd) / p
-    return p
+    resolved = read_classifier.resolve(path, cwd)
+    return Path(resolved) if resolved is not None else None
 
 
 def _stat_size(path: Path) -> int | None:
@@ -601,7 +309,7 @@ def _refine_read(call: ReadCall, event: Event) -> tuple[ReadCall, int | None, in
         isinstance(event.content, list)
         and any(isinstance(b, dict) and b.get("type") == "image" for b in event.content)
     ):
-        return ReadCall("read_image", "whole", call.path), None, None
+        return ReadCall("read", "read_image", "unclassifiable", call.path), None, None
     file = result.get("file") if isinstance(result, dict) else None
     if not isinstance(file, dict):
         if not event.is_error and isinstance(event.content, str) and call.scope == "range":
@@ -613,8 +321,12 @@ def _refine_read(call: ReadCall, event: Event) -> tuple[ReadCall, int | None, in
     seen = len(str(file.get("content") or "").encode("utf-8"))
     if isinstance(start, int) and isinstance(num, int) and isinstance(total, int):
         if start <= 1 and num >= total:
-            return ReadCall("read_whole", "whole", call.path), seen, total
-        return ReadCall("read_range", "range", call.path, (start, start + num - 1)), None, total
+            return ReadCall("read", "read_whole", "whole", call.path), seen, total
+        return (
+            ReadCall("read", "read_range", "range", call.path, (start, start + num - 1)),
+            None,
+            total,
+        )
     return call, (seen if call.scope == "whole" else None), None
 
 
