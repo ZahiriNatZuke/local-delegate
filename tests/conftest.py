@@ -125,20 +125,14 @@ def real_keychain_unreachable(monkeypatch):
     que es «sin credencial») y la caché por proceso empieza vacía. Los tests del Llavero ponen su
     propio `security` encima.
     """
-    from local_delegate import token_source
+    from local_delegate import keychain
 
     monkeypatch.setattr(
-        token_source,
-        "SECURITY_COMMAND",
-        ("/nonexistent/local-delegate-test/security",),
-        raising=False,
+        keychain, "SECURITY_COMMAND", ("/nonexistent/local-delegate-test/security",)
     )
-    cache = getattr(token_source, "_KEYCHAIN_CACHE", None)
-    if cache is not None:
-        cache.clear()
+    keychain._CACHE.clear()
     yield
-    if cache is not None:
-        cache.clear()
+    keychain._CACHE.clear()
 
 
 # --- T11: la consulta del CLI al daemon nunca llega al daemon real -----------------------------

@@ -21,7 +21,7 @@ from urllib.parse import urlsplit
 
 from platformdirs import user_data_dir
 
-from . import deprecations
+from . import deprecations, keychain
 
 APP_NAME = "local-delegate"
 
@@ -88,12 +88,10 @@ MAX_CONCURRENT_REQUESTS = max(1, _env_int("LOCAL_DELEGATE_MAX_CONCURRENT_REQUEST
 def auth_headers() -> dict[str, str]:
     """Headers del backend sin registrar ni exponer el secreto configurado.
 
-    La clave sale de `token_source.api_key`: la variable `API_KEY` y, si falta, en macOS el
+    La clave sale de `keychain.credential`: la variable `API_KEY` y, si falta, en macOS el
     Llavero (issue #409). `API_KEY` sigue siendo solo lo que trae el entorno del proceso.
     """
-    from . import token_source  # diferido: `token_source` importa este módulo
-
-    key = token_source.api_key()
+    key, _source = keychain.credential(API_KEY, keychain.API_KEY_SERVICE)
     return {"Authorization": f"Bearer {key}"} if key else {}
 
 
@@ -542,11 +540,9 @@ def web_auth_headers() -> dict[str, str]:
     diagnóstico al preguntarle por el backend). Sin esto, poner el token dejaría al CLI incapaz de
     hablar con su propio daemon, que es la clase de rotura que no se ve hasta que se despliega.
     """
-    from . import token_source  # diferido: `token_source` importa este módulo
-
     # El mismo token que protege el puerto (`token_source.daemon_token`): entorno y, en macOS,
     # el Llavero. Dos fuentes distintas aquí y en el daemon serían un 401 contra uno mismo.
-    token = token_source.daemon_token()
+    token, _source = keychain.credential(WEB_TOKEN, keychain.WEB_TOKEN_SERVICE)
     return {"Authorization": f"Bearer {token}"} if token else {}
 
 

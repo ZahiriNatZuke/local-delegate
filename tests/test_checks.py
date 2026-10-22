@@ -30,6 +30,7 @@ from local_delegate import (
     i18n,
     install,
     install_state,
+    keychain,
     llamaswap_api,
     probes,
     recompute,
@@ -800,7 +801,7 @@ def mac_keychain(monkeypatch):
         return subprocess.CompletedProcess(argv, 0, value + "\n", "")
 
     monkeypatch.setattr(token_source.sys, "platform", "darwin")
-    monkeypatch.setattr(token_source.subprocess, "run", fake_run)
+    monkeypatch.setattr(keychain.subprocess, "run", fake_run)
     monkeypatch.setattr(checks.config, "API_KEY", "")
     return stored
 

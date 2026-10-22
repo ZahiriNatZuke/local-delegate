@@ -11,6 +11,7 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import logging
+import re
 import subprocess
 import sys
 import time
@@ -18,7 +19,7 @@ import types
 
 import pytest
 
-from local_delegate import config, token_source
+from local_delegate import config, keychain, token_source
 
 REG_SZ = 1
 REG_EXPAND_SZ = 2
@@ -149,9 +150,9 @@ def macos(monkeypatch):
     """Simula macOS sin variables: devuelve el `security` falso para darle respuestas."""
     fake = _FakeSecurity({})
     monkeypatch.setattr(token_source.sys, "platform", "darwin")
-    monkeypatch.setattr(token_source.subprocess, "run", fake)
-    monkeypatch.setattr(token_source.getpass, "getuser", lambda: "ana")
-    monkeypatch.setattr(token_source, "SECURITY_COMMAND", ("/usr/bin/security",))
+    monkeypatch.setattr(keychain.subprocess, "run", fake)
+    monkeypatch.setattr(keychain.getpass, "getuser", lambda: "ana")
+    monkeypatch.setattr(keychain, "SECURITY_COMMAND", ("/usr/bin/security",))
     monkeypatch.setattr(config, "API_KEY", "")
     monkeypatch.setattr(config, "WEB_TOKEN", "")
     return fake
@@ -176,13 +177,13 @@ def test_keychain_supplies_the_api_key_when_the_variable_is_missing(macos):
         "local-delegate-remote",
         "-w",
     ]
-    assert timeout == token_source.KEYCHAIN_TIMEOUT_SECONDS
+    assert timeout == keychain.TIMEOUT_SECONDS
     assert timeout <= 5
 
 
 def test_the_default_program_is_the_absolute_security():
     """El de verdad (sin el doble de `conftest.py`), para que launchd no dependa de su PATH."""
-    source = importlib.util.find_spec("local_delegate.token_source").origin
+    source = importlib.util.find_spec("local_delegate.keychain").origin
     with open(source, encoding="utf-8") as handle:
         assert 'SECURITY_COMMAND: tuple[str, ...] = ("/usr/bin/security",)' in handle.read()
 
@@ -260,8 +261,8 @@ def test_a_hanging_security_is_cut_by_the_time_limit(monkeypatch, tmp_path):
     hang = tmp_path / "security.py"
     hang.write_text("import time\ntime.sleep(60)\n", encoding="utf-8")
     monkeypatch.setattr(token_source.sys, "platform", "darwin")
-    monkeypatch.setattr(token_source, "SECURITY_COMMAND", (sys.executable, str(hang)))
-    monkeypatch.setattr(token_source, "KEYCHAIN_TIMEOUT_SECONDS", 0.5)
+    monkeypatch.setattr(keychain, "SECURITY_COMMAND", (sys.executable, str(hang)))
+    monkeypatch.setattr(keychain, "TIMEOUT_SECONDS", 0.5)
     monkeypatch.setattr(config, "API_KEY", "")
 
     started = time.monotonic()
@@ -280,8 +281,8 @@ def test_a_real_program_answering_is_read(monkeypatch, tmp_path):
         encoding="utf-8",
     )
     monkeypatch.setattr(token_source.sys, "platform", "darwin")
-    monkeypatch.setattr(token_source.getpass, "getuser", lambda: "ana")
-    monkeypatch.setattr(token_source, "SECURITY_COMMAND", (sys.executable, str(answer)))
+    monkeypatch.setattr(keychain.getpass, "getuser", lambda: "ana")
+    monkeypatch.setattr(keychain, "SECURITY_COMMAND", (sys.executable, str(answer)))
     monkeypatch.setattr(config, "API_KEY", "")
 
     assert token_source.api_key() == SECRET
@@ -293,7 +294,7 @@ def test_outside_macos_security_is_never_called(monkeypatch, platform):
         raise AssertionError("security must not run outside macOS")
 
     monkeypatch.setattr(token_source.sys, "platform", platform)
-    monkeypatch.setattr(token_source.subprocess, "run", boom)
+    monkeypatch.setattr(keychain.subprocess, "run", boom)
     monkeypatch.setattr(token_source, "_winreg", lambda: _fake_winreg({}, []))
     monkeypatch.setattr(config, "API_KEY", "")
     monkeypatch.setattr(config, "WEB_TOKEN", "")
@@ -305,14 +306,26 @@ def test_outside_macos_security_is_never_called(monkeypatch, platform):
 
 
 def test_importing_does_not_ask_the_keychain(monkeypatch):
-    """Diferido: `token_source` no pregunta al importarse, solo al pedir la credencial."""
+    """Diferido: ni `keychain` ni `token_source` preguntan al importarse, solo al pedir la clave."""
     calls: list = []
     with monkeypatch.context() as patch:
         patch.setattr(sys, "platform", "darwin")
         patch.setattr(subprocess, "run", lambda *a, **k: calls.append(a))
+        importlib.reload(keychain)
         importlib.reload(token_source)
         assert calls == []
+    importlib.reload(keychain)
     importlib.reload(token_source)
+
+
+def test_keychain_is_a_leaf_without_package_imports():
+    """`config` y `token_source` la importan: si ella importara el paquete habría un ciclo."""
+    source = importlib.util.find_spec("local_delegate.keychain").origin
+    with open(source, encoding="utf-8") as handle:
+        text = handle.read()
+    assert not re.search(
+        r"^\s*from \.|^\s*import local_delegate|^\s*from local_delegate", text, re.MULTILINE
+    )
 
 
 def test_config_headers_use_the_keychain_on_macos(macos):

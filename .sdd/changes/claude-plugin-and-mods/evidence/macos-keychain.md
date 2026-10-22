@@ -8,8 +8,9 @@ apunta `token_source.SECURITY_COMMAND` a una ruta inexistente en cada test, tamb
 
 ## Qué cambia
 
-- `token_source.py`: orden común «entorno del proceso → Llavero» (`resolve`, `api_key`,
-  `daemon_token`); Llavero con `/usr/bin/security find-generic-password -a <usuario> -s <servicio>
+- `keychain.py` (hoja nueva, sin imports del paquete) y `token_source.py`: orden común «entorno
+  del proceso → Llavero» (`keychain.credential`; `token_source.resolve`, `api_key`,
+  `daemon_token` delegan en ella); Llavero con `/usr/bin/security find-generic-password -a <usuario> -s <servicio>
   -w`, tope 3 s, una consulta por proceso (también el «no hay»), diferida, sin registrar el valor.
   Servicios `local-delegate-remote` y `local-delegate-web-token`. En Windows el puente sigue con
   «registro → entorno» (`web_token`); Linux sin cambio. Docstring de la decisión 11 corregido.
@@ -43,7 +44,18 @@ la razón que dice, se aplicaron mutantes sobre la implementación y se miró qu
 | sin la guarda de plataforma | `test_outside_macos_security_is_never_called[linux]` | «security must not run outside macOS» |
 | sin `timeout=` | `…supplies_the_api_key…` y `test_a_hanging_security_is_cut_by_the_time_limit` | `None == 3.0`; 60 s `< 10` |
 | sin descartar `${VAR}` sin expandir | `test_an_unexpanded_reference_is_not_a_key` (×3) | fuente `environment` ≠ `keychain` |
+| `keychain.py` importa el paquete (`from . import config`) | `test_keychain_is_a_leaf_without_package_imports` | `assert not <re.Match … 'from .'>` |
 | `doctor` como antes (sin rama macOS) | `test_credential_on_macos_warns_when_the_key_is_only_in_the_shell` | `'ok' == 'warn'` |
+
+## Ciclo de imports (CodeQL #172 y #173)
+
+La primera versión resolvía en `config.auth_headers`/`web_auth_headers` con un
+`from . import token_source` diferido, y `token_source` importa `config`: CodeQL lo marcó como
+«Cyclic import». Se rompió de verdad: la consulta al Llavero, la caché, el tope y la detección de
+`${VAR}` sin expandir viven en `keychain.py`, que no importa nada del paquete; `config` resuelve con
+`keychain.credential(API_KEY, keychain.API_KEY_SERVICE)` y `token_source` delega en lo mismo. Un
+test nuevo exige que `keychain.py` siga siendo hoja. Los mutantes de la tabla se repitieron sobre
+`keychain.py` y cada uno cae por el mismo assert que antes.
 
 ## Suite
 
@@ -65,3 +77,4 @@ secretos.
 
 - `local_lint_summary(path=suite.txt)`: resumen de la corrida completa de pytest.
 - `local_commit_msg(path=diff)`: borrador del mensaje de commit (revisado y reescrito).
+- `local_lint_summary(path=suite3.txt)`: corrida completa tras romper el ciclo.
