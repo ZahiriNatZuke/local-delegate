@@ -23,7 +23,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
 
-from . import autostart, config, i18n, server
+from . import autostart, cancellation, config, i18n, server
 from .web import auth, metrics
 
 MCP_PATH = "/mcp"
@@ -216,6 +216,9 @@ def build_app(host: str | None = None, port: int | None = None) -> Starlette | a
     # Las rutas exactas deben quedar antes del mount raíz del dashboard.
     mcp_app.routes.insert(0, Route(DAEMON_STATUS_PATH, daemon_status, methods=["GET"]))
     mcp_app.routes.append(Mount("/", app=metrics.app))
+    # Una petición cuyo cliente corta la conexión cancela su llamada (llamadas abandonadas): el
+    # middleware de `cancellation` necesita saber de la desconexión, y el SDK no se la cuenta.
+    mcp_app.add_middleware(cancellation.DisconnectWatcher)
 
     # El token se exige envolviendo la raíz, o sea DESPUÉS de montar el dashboard: así una ruta
     # nueva queda protegida por existir, no por acordarse de protegerla. Sin token configurado

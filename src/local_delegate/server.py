@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import ast
 import base64
+import contextvars
 import json
 import math
 import os
@@ -40,6 +41,7 @@ from . import (
     attribution,
     autostart,
     backend_params,
+    cancellation,
     chains,
     clients,
     config,
@@ -115,6 +117,8 @@ mcp = MCPServer(
     # El SDK los aplica outermost-first, y el orden es deliberado: «observar primero, habilitar
     # después». Hoy son independientes —el observador solo lee, el otro solo deja el contexto al
     # alcance de las capas de abajo—, pero se fija para que nadie lo cambie creyendo que da igual.
+    # El de cancelación (`cancellation.middleware`) va el último, pegado al handler; se añade
+    # junto a `_log_cancelled`, que es quien apunta la llamada cancelada.
     middleware=[clients.observe_client, questions.remember_context],
 )
 
@@ -160,21 +164,60 @@ _client_lock = threading.Lock()
 _chat_slots = threading.BoundedSemaphore(config.MAX_CONCURRENT_REQUESTS)
 
 
+def _new_client() -> httpx2.Client:
+    # REQ-019: solo el plazo de CONEXIÓN baja a 10 s (o al total, si es menor). La espera de carga
+    # de un modelo es de lectura y sigue en HTTP_TIMEOUT. Sin esto el kernel decidía: ~21 s en
+    # Windows y ~75 s en macOS por cada fallo de la VPN.
+    return httpx2.Client(
+        timeout=httpx2.Timeout(
+            config.HTTP_TIMEOUT,
+            connect=min(config.DELEGATION_CONNECT_TIMEOUT, config.HTTP_TIMEOUT),
+        )
+    )
+
+
 def _get_client() -> httpx2.Client:
     global _client
     if _client is None:
         with _client_lock:
             if _client is None:
-                # REQ-019: solo el plazo de CONEXIÓN baja a 10 s (o al total, si es menor). La
-                # espera de carga de un modelo es de lectura y sigue en HTTP_TIMEOUT. Sin esto el
-                # kernel decidía: ~21 s en Windows y ~75 s en macOS por cada fallo de la VPN.
-                _client = httpx2.Client(
-                    timeout=httpx2.Timeout(
-                        config.HTTP_TIMEOUT,
-                        connect=min(config.DELEGATION_CONNECT_TIMEOUT, config.HTTP_TIMEOUT),
-                    )
-                )
+                _client = _new_client()
     return _client
+
+
+#: El cliente propio de UN envío que se puede cortar (una `tools/call`, ver `_send`). Fuera de
+#: ahí, `None`: se usa el compartido con keep-alive.
+_SEND_CLIENT: contextvars.ContextVar[httpx2.Client | None] = contextvars.ContextVar(
+    "local_delegate_send_client", default=None
+)
+
+
+def _cut_client(client: httpx2.Client) -> None:
+    """Corta en el acto las conexiones de `client` (un envío cancelado) y lo cierra.
+
+    `close()` solo no basta: en Linux y macOS cerrar un socket no despierta al hilo bloqueado en
+    `recv` ni manda el FIN, y el backend seguiría generando. `shutdown` sí, en los tres sistemas;
+    llama.cpp ve el cierre y para. El acceso al pool es interno de httpx2/httpcore2: si cambia,
+    queda el `close()`.
+    """
+    try:
+        pool = getattr(getattr(client, "_transport", None), "_pool", None)
+        for connection in list(getattr(pool, "connections", ()) or ()):
+            inner = getattr(connection, "_connection", None)
+            stream = getattr(inner, "_network_stream", None)
+            sock = stream.get_extra_info("socket") if stream is not None else None
+            if isinstance(sock, socket.socket):
+                try:
+                    sock.shutdown(socket.SHUT_RDWR)
+                except OSError:
+                    pass  # ya cerrado
+    except Exception:
+        pass  # cortar es una ayuda; el `close()` de abajo va igual
+    try:
+        client.close()
+    except Exception:
+        # El hilo del envío puede estar cerrándolo a la vez; si falla, ya no hay nada que cortar.
+        pass
 
 
 # --- Delegaciones en curso (visibilidad multi-proceso vía archivo compartido) ----------------
@@ -280,6 +323,10 @@ def _inflight_start(
     if chunks:
         entry["chunks"] = int(chunks)
         entry["chunk"] = 1
+    token = cancellation.current()
+    if token is not None and token.entry is None:
+        # Si la llamada se cancela, su evento de uso sale de aquí (`_log_cancelled`).
+        token.entry = {"tool": tool, "model": model, "source": source, "chars_in": chars_in}
 
     def _add(data: dict) -> None:
         data[key] = entry
@@ -767,6 +814,7 @@ def _log_event(
     backend_params: dict | None = None,
     backend_params_rejected: bool = False,
     reasoning_skipped: str | None = None,
+    cancel_reason: str | None = None,
 ) -> None:
     """Escribe una línea JSONL en el log activo (rotado por mes o fijo). Nunca rompe una tool.
 
@@ -858,6 +906,11 @@ def _log_event(
         # whether they went in the cut, in degenerate whitespace or in hidden reasoning.
         if chars_out_raw is not None:
             rec["chars_out_raw"] = int(chars_out_raw)
+        # Una llamada cancelada (`error: "cancelled"`): por qué. `notification` (el cliente mandó
+        # `notifications/cancelled`), `disconnect` (cortó la conexión) o `aborted` (se cerró la
+        # sesión u otra cancelación del SDK).
+        if cancel_reason is not None:
+            rec["cancel_reason"] = cancel_reason
         # B2e: each step of a chunked operation (map, regroup, reduce) with what it generated and
         # why it stopped, never its text. Without it a summary that lost something could not tell
         # whether a chunk note had already dropped it or whether the reduce was cut.
@@ -1363,10 +1416,35 @@ def _backend_on_loopback() -> bool:
     return config._is_loopback_host(config._split_host_port(config.BASE_URL)[0])
 
 
+def _log_cancelled(token: cancellation.Token) -> None:
+    """El evento de uso de una llamada cancelada: `ok: false`, `error: "cancelled"` y el motivo.
+
+    La operación no llega a escribir el suyo (sale con `CallCancelled` antes), así que sin esto
+    la llamada no constaría, o constaría como éxito si el hilo seguía hasta el final.
+    """
+    entry = token.entry or {}
+    _log_event(
+        tool=str(entry.get("tool") or token.tool or ""),
+        model=str(entry.get("model") or ""),
+        source=str(entry.get("source") or "inline"),
+        chars_in=int(entry.get("chars_in") or 0),
+        chars_out=0,
+        latency_ms=int((time.monotonic() - token.started) * 1000),
+        ok=False,
+        error="cancelled",
+        cancel_reason=token.reason or cancellation.REASON_ABORTED,
+    )
+
+
+# El último de la cadena, pegado al handler: da a cada `tools/call` su token y lo cancela si el
+# cliente deja de esperarla (aviso, sesión cerrada, conexión cortada).
+mcp.middleware.append(cancellation.middleware(_log_cancelled))
+
+
 def _post_chat(model: str, payload: dict) -> ChatResult:
     """POST al endpoint /chat/completions con reintento opcional si el backend está caído."""
     headers = config.auth_headers()
-    client = _get_client()
+    client = _SEND_CLIENT.get() or _get_client()
     for attempt in (1, 2):
         # Una sonda por intento: el plazo de lectura vuelve a contar en cada envío.
         probe = _LoadProbe(model, delay_s=_probe_delay())
@@ -1400,6 +1478,10 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                 reasoning_chars=reasoning_chars,
             )
         except httpx2.HTTPError as e:
+            token = cancellation.current()
+            # Lo cortó `_cut_client` porque la llamada se canceló: no hay backend que ofrecer
+            # arrancar. Sale por el error genérico de abajo, y nadie lee ya ese resultado.
+            cut = token is not None and token.cancelled
             # Un solo `except` para toda la familia, y la diferencia la marca el clasificador.
             # Antes había tres, y `ConnectTimeout` se colaba por el genérico: no es subclase de
             # `ConnectError` —son ramas hermanas—, así que un plazo de conexión agotado se
@@ -1409,7 +1491,7 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                 error_class = failures.classify(e, model_loaded=probe.model_loaded())
             else:
                 error_class = failures.classify(e)
-            if failures.is_backend_missing(e):
+            if failures.is_backend_missing(e) and not cut:
                 # REQ-018: un backend REMOTO no se arranca desde aquí, así que ni se pregunta ni
                 # se intenta, valga AUTOSTART lo que valga. Con origen local, como siempre.
                 local = config.backend_origin() == "local"
@@ -1875,13 +1957,28 @@ class _OperationTurn:
 
         return on_wait, waiting
 
-    def _waiting_for(self, wait: Callable[[turn.OnWait], turn.Grant]) -> turn.Grant:
-        """Una espera de turno con su contabilidad: `turn_wait_ms` y las claves del panel."""
+    def _waiting_for(
+        self,
+        turn_state: turn.Turn,
+        wait: Callable[[turn.OnWait, Callable[[], bool] | None], turn.Grant],
+    ) -> turn.Grant:
+        """Una espera de turno con su contabilidad: `turn_wait_ms` y las claves del panel.
+
+        Si la llamada se cancela mientras espera, sale de la cola en el acto (`CallCancelled`).
+        """
         on_wait, waiting = self._on_wait_factory()
+        token = cancellation.current()
+        stop = token.is_cancelled if token is not None else None
+        remove = token.on_cancel(turn_state.wake) if token is not None else (lambda: None)
         t0 = time.monotonic()
         try:
-            grant = wait(on_wait)
+            try:
+                grant = wait(on_wait, stop)
+            except turn.AbandonedWait:
+                cancellation.checkpoint()
+                raise
         finally:
+            remove()
             if waiting[0]:
                 # Al conceder (o al salir por error), las tres claves fuera (REQ-008).
                 self.wait_ms += int((time.monotonic() - t0) * 1000)
@@ -1959,7 +2056,10 @@ class _OperationTurn:
         requested: str | None,
     ) -> None:
         turn_state = _turn
-        grant = self._waiting_for(lambda on_wait: turn_state.request(request, on_wait))
+        grant = self._waiting_for(
+            turn_state,
+            lambda on_wait, stop: turn_state.request(request, on_wait, should_stop=stop),
+        )
         self._turn = turn_state
         self._snapshot = snapshot
         self._chain = tuple(chain)
@@ -2023,7 +2123,10 @@ class _OperationTurn:
         """Sin plaza: espera la nueva concesión tras volver a la cabeza (REQ-004)."""
         assert self._turn is not None
         turn_state = self._turn
-        self._waiting_for(lambda on_wait: turn_state.wait_for_grant(self.op_id, on_wait))
+        self._waiting_for(
+            turn_state,
+            lambda on_wait, stop: turn_state.wait_for_grant(self.op_id, on_wait, should_stop=stop),
+        )
 
     def note_attempt(self, attempt: Attempt) -> None:
         """La primera llamada al alternativo: su espera de backend decide `affinity_failed`."""
@@ -2068,17 +2171,58 @@ def _slot(entry_id: int | None) -> Generator[None, None, None]:
     conseguirla (REQ-022). Con plaza libre no se escribe nada de más.
     """
     slots = _chat_slots
+    token = cancellation.current()
+    if token is not None:
+        # Cada trozo pasa por aquí: una llamada cancelada no manda ni uno más.
+        token.check()
     if not slots.acquire(blocking=False):
         if entry_id is not None:
             _inflight_local_wait(entry_id, "slot")
-        slots.acquire()
+        if token is None:
+            slots.acquire()
+        else:
+            while not slots.acquire(timeout=cancellation.POLL_S):
+                token.check()
         if entry_id is not None:
             _inflight_local_wait(entry_id, None)
     try:
+        if token is not None:
+            token.check()
         with turn.slot_taken():
             yield
     finally:
         slots.release()
+
+
+def _send(model: str, body: dict) -> ChatResult:
+    """UN envío al backend, dentro de `in_flight()` y contado como llamada propia.
+
+    En una `tools/call` el envío va por un cliente propio y se puede cortar: si la llamada se
+    cancela, `CallCancelled` sale ya (`cancellation.run_abandonable`) y `_cut_client` cierra la
+    conexión de ESE envío, para que el backend deje de generar (medido en vivo el 2026-10-22: sin
+    el corte, llama-swap no cambiaba de modelo hasta acabar el trozo abandonado, ~30 s). Un cliente
+    propio y no el compartido porque cerrar el compartido cortaría los envíos de otras llamadas.
+    El contador de vuelo y el de llamadas propias siguen el envío real.
+    """
+    turn_state = _turn
+    token = cancellation.current()
+    if token is None:
+        with turn_state.in_flight(), _own_call(model):
+            return _post_chat(model, body)
+
+    own = _new_client()
+    remove = token.on_cancel(lambda: _cut_client(own))
+
+    def post() -> ChatResult:
+        _SEND_CLIENT.set(own)
+        try:
+            with turn_state.in_flight(), _own_call(model):
+                return _post_chat(model, body)
+        finally:
+            remove()
+            own.close()
+
+    return cancellation.run_abandonable(post)
 
 
 def _call_model(
@@ -2107,8 +2251,7 @@ def _call_model(
     tool_body = request_body
     if role_params is not None:
         request_body = role_params.body_for(model, request_body)
-    with _turn.in_flight(), _own_call(model):
-        result = _post_chat(model, request_body)
+    result = _send(model, request_body)
     responses = [result]
     if (
         not result.ok
@@ -2117,8 +2260,7 @@ def _call_model(
         and request_body != tool_body
         and role_params.claim_probe()
     ):
-        with _turn.in_flight(), _own_call(model):
-            retry = _post_chat(model, tool_body)
+        retry = _send(model, tool_body)
         responses.append(retry)
         if retry.ok:
             role_params.mark_rejected()
@@ -2128,8 +2270,7 @@ def _call_model(
         if json_schema_fallback:
             # El backend no soporta response_format con schema: reintenta en modo libre.
             request_body.pop("response_format", None)
-            with _turn.in_flight(), _own_call(model):
-                result = _post_chat(model, request_body)
+            result = _send(model, request_body)
             responses.append(result)
             json_schema_status = "fallback"
         else:

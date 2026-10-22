@@ -13,13 +13,16 @@ import logging
 import socket
 import threading
 import time
+from collections.abc import Callable
 from contextlib import contextmanager
+from pathlib import Path
 
 import anyio
 import httpx2
+import pytest
 import uvicorn
 
-from local_delegate import config, daemon, desktop_bridge, token_source
+from local_delegate import config, daemon, desktop_bridge, server, token_source
 
 TOKEN = "bridge-test-port-token-1234567890"
 INIT = {
@@ -293,3 +296,261 @@ def test_never_logs_token(monkeypatch, capsys, caplog):
     )
     assert logs, "la prueba no llegó a registrar nada"
     assert TOKEN not in everything
+
+
+# --- Llamadas abandonadas (SDD claude-plugin-and-mods, abandoned-calls) --------------------------
+#
+# Medido el 2026-10-22 contra el daemon 0.40.0: una `tools/call` cuyo cliente desaparece (puente
+# matado, stdin cerrado, `notifications/cancelled`) seguía hasta el final y retenía el turno del
+# backend. Aquí, con la app real del daemon y un backend falso lento: un `local_summarize` troceado
+# en ~20 llamadas de 0,4 s (unos 8 s en total) y, para el turno, la topología de hoy, donde el
+# modelo largo y el mecánico chocan. Cada test mide algo que sin cancelación sale distinto: el
+# puente tardaría los ~8 s en salir, la segunda llamada esperaría el turno ~8 s y la entrada de
+# `inflight.json` seguiría ahí ~8 s.
+
+TODAY_TOPOLOGY = Path(__file__).parent / "fixtures" / "topology" / "today.yaml"
+LONG_MODEL = "gemma4-26b-a4b"
+BACKEND_DELAY_S = 0.4
+SUMMARIZE = {
+    "jsonrpc": "2.0",
+    "id": 10,
+    "method": "tools/call",
+    "params": {
+        "name": "local_summarize",
+        "arguments": {
+            "text": "\n\n".join(f"p{i} " + ("palabra " * 75).strip() for i in range(1, 21))
+        },
+    },
+}
+CLASSIFY = {
+    "jsonrpc": "2.0",
+    "id": 11,
+    "method": "tools/call",
+    "params": {"name": "local_classify", "arguments": {"text": "hola", "labels": ["a", "b"]}},
+}
+_HTTP_TIMEOUT = httpx2.Timeout(connect=5.0, read=30.0, write=5.0, pool=5.0)
+
+
+class SlowBackend:
+    """`server._post_chat` falso: cada llamada tarda `delay` s y responde «a»."""
+
+    def __init__(self, delay: float) -> None:
+        self.delay = delay
+        self.calls: list[str] = []
+        self.active = 0
+        self._lock = threading.Lock()
+
+    def __call__(self, model: str, _payload: dict) -> server.ChatResult:
+        with self._lock:
+            self.calls.append(model)
+            self.active += 1
+        try:
+            time.sleep(self.delay)
+            return server.ChatResult(text="a", ok=True, finish_reason="stop")
+        finally:
+            with self._lock:
+                self.active -= 1
+
+    def count(self, model: str) -> int:
+        with self._lock:
+            return sum(1 for m in self.calls if m == model)
+
+
+def _settle(condition: Callable[[], object], cap: float) -> object:
+    end = time.monotonic() + cap
+    while time.monotonic() < end:
+        value = condition()
+        if value:
+            return value
+        time.sleep(0.02)
+    return condition()
+
+
+async def _until(condition: Callable[[], object], cap: float) -> None:
+    end = time.monotonic() + cap
+    while not condition():
+        assert time.monotonic() < end, "el guion no llegó a su punto de partida"
+        await anyio.sleep(0.02)
+
+
+@pytest.fixture
+def slow_backend(tmp_path, monkeypatch):
+    """Topología de hoy en una copia, backend en loopback, plazas 2 y un resumen en ~20 trozos."""
+    copy = tmp_path / "llamaswap.yaml"
+    copy.write_bytes(TODAY_TOPOLOGY.read_bytes())
+    monkeypatch.setenv("LLAMASWAP_CONFIG", str(copy))
+    monkeypatch.setattr(config, "BASE_URL", "http://127.0.0.1:9292/v1")
+    monkeypatch.setattr(server, "_chat_slots", threading.BoundedSemaphore(2))
+    monkeypatch.setattr(config, "LONG_INPUT_CHARS", 1000)
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 1000)
+    backend = SlowBackend(BACKEND_DELAY_S)
+    monkeypatch.setattr(server, "_post_chat", backend)
+    yield backend
+    # Lo que quede en el backend falso termina antes de que el siguiente test toque `server`.
+    _settle(lambda: backend.active == 0, cap=15)
+
+
+def _events(tmp_path: Path) -> list[dict]:
+    lines: list[str] = []
+    for file in sorted(tmp_path.glob("usage*.jsonl")):  # el registro rota por mes
+        lines += file.read_text(encoding="utf-8").splitlines()
+    return [json.loads(line) for line in lines if line.strip()]
+
+
+def _summarize_in_flight() -> bool:
+    return any(e.get("tool") == "local_summarize" for e in server.inflight_snapshot())
+
+
+class _RawSession:
+    """Un cliente MCP mínimo sobre HTTP, para mirar el daemon sin el puente por medio."""
+
+    def __init__(self, client: httpx2.AsyncClient, url: str) -> None:
+        self.client = client
+        self.url = url
+        self.session_id: str | None = None
+
+    def _headers(self) -> dict[str, str]:
+        headers = {
+            "Accept": "application/json, text/event-stream",
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {TOKEN}",
+            "Mcp-Protocol-Version": INIT["params"]["protocolVersion"],
+        }
+        if self.session_id:
+            headers["Mcp-Session-Id"] = self.session_id
+        return headers
+
+    async def open(self) -> None:
+        response = await self.client.post(self.url, json=INIT, headers=self._headers())
+        assert response.status_code == 200, response.text
+        self.session_id = response.headers["mcp-session-id"]
+        await self.notify(INITIALIZED)
+
+    async def notify(self, message: dict) -> None:
+        response = await self.client.post(self.url, json=message, headers=self._headers())
+        assert response.status_code < 300, response.text
+
+    async def call(self, message: dict) -> dict | None:
+        async with self.client.stream(
+            "POST", self.url, json=message, headers=self._headers()
+        ) as response:
+            body = (await response.aread()).decode("utf-8")
+        for line in body.splitlines():
+            if line.startswith("data:"):
+                data = json.loads(line[5:].strip())
+                if data.get("id") == message["id"]:
+                    return data
+        if body.strip().startswith("{"):
+            return json.loads(body)
+        return None
+
+    async def delete(self) -> None:
+        await self.client.delete(self.url, headers=self._headers())
+
+
+def _assert_summarize_stopped(backend: SlowBackend, at_cancel: int, tmp_path: Path, reason):
+    """Lo que tiene que pasar al cancelar: fuera de `inflight.json`, sin más trozos y apuntada."""
+    assert _settle(lambda: not _summarize_in_flight(), cap=2.0), (
+        "la llamada cancelada sigue en inflight.json 2 s después"
+    )
+    time.sleep(3 * BACKEND_DELAY_S)
+    assert backend.count(LONG_MODEL) <= at_cancel + 1, (
+        f"siguieron saliendo trozos al backend: {at_cancel} al cancelar, "
+        f"{backend.count(LONG_MODEL)} después"
+    )
+    events = [e for e in _events(tmp_path) if e.get("tool") == "local_summarize"]
+    assert events, "la llamada cancelada no quedó en el registro de uso"
+    assert events[-1]["ok"] is False and events[-1].get("error") == "cancelled", events[-1]
+    if reason is not None:
+        assert events[-1].get("cancel_reason") == reason, events[-1]
+
+
+def test_cancelled_notification_releases_backend_turn(monkeypatch, slow_backend, tmp_path):
+    """`notifications/cancelled` para la llamada larga: la segunda (otro modelo, choca) no la espera."""
+    with real_daemon(monkeypatch, TOKEN) as url:
+
+        async def scenario() -> tuple[int, float, dict | None]:
+            async with httpx2.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
+                session = _RawSession(client, url)
+                await session.open()
+                async with anyio.create_task_group() as group:
+                    group.start_soon(session.call, SUMMARIZE)
+                    await _until(lambda: slow_backend.count(LONG_MODEL) >= 1, cap=10)
+                    at_cancel = slow_backend.count(LONG_MODEL)
+                    await session.notify(
+                        {
+                            "jsonrpc": "2.0",
+                            "method": "notifications/cancelled",
+                            "params": {"requestId": SUMMARIZE["id"], "reason": "test"},
+                        }
+                    )
+                    started = time.monotonic()
+                    answer = await session.call(CLASSIFY)
+                    elapsed = time.monotonic() - started
+                    group.cancel_scope.cancel()
+                return at_cancel, elapsed, answer
+
+        at_cancel, elapsed, answer = anyio.run(scenario)
+        assert answer is not None and "result" in answer, answer
+        assert elapsed < 2.5, f"la segunda llamada esperó {elapsed:.1f} s a la cancelada"
+        _assert_summarize_stopped(slow_backend, at_cancel, tmp_path, "notification")
+
+
+def test_session_delete_cancels_inflight(monkeypatch, slow_backend, tmp_path):
+    """El `DELETE` de la sesión cancela lo que esa sesión tenga en curso."""
+    with real_daemon(monkeypatch, TOKEN) as url:
+
+        async def scenario() -> int:
+            async with httpx2.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
+                session = _RawSession(client, url)
+                await session.open()
+                async with anyio.create_task_group() as group:
+                    group.start_soon(session.call, SUMMARIZE)
+                    await _until(lambda: slow_backend.count(LONG_MODEL) >= 1, cap=10)
+                    at_cancel = slow_backend.count(LONG_MODEL)
+                    await session.delete()
+                    with anyio.move_on_after(3):
+                        while _summarize_in_flight():
+                            await anyio.sleep(0.02)
+                    group.cancel_scope.cancel()
+                return at_cancel
+
+        at_cancel = anyio.run(scenario)
+        _assert_summarize_stopped(slow_backend, at_cancel, tmp_path, None)
+
+
+def test_client_disconnect_cancels_inflight(monkeypatch, slow_backend, tmp_path):
+    """Si el cliente cierra la conexión de la petición, la llamada se cancela."""
+    with real_daemon(monkeypatch, TOKEN) as url:
+
+        async def scenario() -> int:
+            async with httpx2.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
+                session = _RawSession(client, url)
+                await session.open()
+                async with anyio.create_task_group() as group:
+                    group.start_soon(session.call, SUMMARIZE)
+                    await _until(lambda: slow_backend.count(LONG_MODEL) >= 1, cap=10)
+                    at_cancel = slow_backend.count(LONG_MODEL)
+                    group.cancel_scope.cancel()  # corta la conexión con la respuesta a medias
+                return at_cancel
+
+        at_cancel = anyio.run(scenario)
+        _assert_summarize_stopped(slow_backend, at_cancel, tmp_path, "disconnect")
+
+
+def test_stdin_eof_cancels_inflight_and_exits_fast(monkeypatch, slow_backend, tmp_path):
+    """stdin cerrado con una llamada en curso: el puente la cancela, cierra la sesión y sale ya."""
+    with real_daemon(monkeypatch, TOKEN) as url:
+        marks: dict[str, float] = {}
+
+        async def backend_started() -> None:
+            await _until(lambda: slow_backend.count(LONG_MODEL) >= 1, cap=10)
+            marks["at_cancel"] = slow_backend.count(LONG_MODEL)
+            marks["eof"] = time.monotonic()
+
+        _out, bridge = run_session(url, TOKEN, [INIT, INITIALIZED, SUMMARIZE, backend_started])
+        exit_s = time.monotonic() - marks["eof"]
+
+        assert exit_s <= 3.0, f"el puente tardó {exit_s:.1f} s en salir tras cerrarse stdin"
+        assert bridge.session_id
+        _assert_summarize_stopped(slow_backend, int(marks["at_cancel"]), tmp_path, "notification")

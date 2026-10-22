@@ -451,6 +451,7 @@ class Turn:
         op_id: str,
         on_wait: OnWait | None,
         on_grant: Callable[[Grant], None] | None,
+        should_stop: Callable[[], bool] | None = None,
     ) -> Grant:
         last_warning: tuple[int, tuple[str, ...]] | None = None
         try:
@@ -461,6 +462,10 @@ class Turn:
                         break
                     if op_id in self._flight.abandoned:
                         self._flight.abandoned.discard(op_id)
+                        raise AbandonedWait(op_id)
+                    if should_stop is not None and should_stop():
+                        # Quien pidió el turno ya no lo quiere (llamada cancelada): sale de la cola
+                        # por el mismo camino que un abandono.
                         raise AbandonedWait(op_id)
                     warning = self._warning(op_id)
                     tick = warning == last_warning
@@ -500,12 +505,14 @@ class Turn:
         request: PendingRequest,
         on_wait: OnWait | None = None,
         on_grant: Callable[[Grant], None] | None = None,
+        should_stop: Callable[[], bool] | None = None,
     ) -> Grant:
         """Pide turno y bloquea hasta obtenerlo (o hasta `AbandonedWait`).
 
         `on_wait(posicion, in_use)` se llama al quedar en cola y cada vez que cambian la
         posición o los modelos en uso; `on_grant(concesion)`, al obtener el turno. Los dos se
-        llaman fuera del cerrojo.
+        llaman fuera del cerrojo. `should_stop()`, si se da, se mira en cada vuelta de la espera:
+        si dice que sí, la petición sale de la cola con `AbandonedWait` (con `wake` se mira ya).
         """
         _check_without_slot()
         with self._cond:
@@ -515,7 +522,7 @@ class Turn:
                 self._state, queue=(*self._state.queue, Wait(request, self._clock()))
             )
             self._apply()  # punto 1: llega una petición
-        return self._wait(request.id, on_wait, on_grant)
+        return self._wait(request.id, on_wait, on_grant, should_stop)
 
     def choose_without_waiting(self, op_id: str, candidates: Sequence[str]) -> str | None:
         """La elección atómica de REQ-003, sin esperar: válida con una plaza en la mano.
@@ -538,13 +545,14 @@ class Turn:
         op_id: str,
         on_wait: OnWait | None = None,
         on_grant: Callable[[Grant], None] | None = None,
+        should_stop: Callable[[], bool] | None = None,
     ) -> Grant:
         """Espera la nueva concesión de una operación que volvió a la cabeza (REQ-004: sin plaza).
 
         Puede lanzar `AbandonedWait`.
         """
         _check_without_slot()
-        return self._wait(op_id, on_wait, on_grant)
+        return self._wait(op_id, on_wait, on_grant, should_stop)
 
     def choose(
         self,
@@ -609,6 +617,11 @@ class Turn:
             self._flight.abandoned.add(op_id)
             self._cond.notify_all()
             return True
+
+    def wake(self) -> None:
+        """Despierta a las esperas para que miren su `should_stop` sin esperar al tic."""
+        with self._cond:
+            self._cond.notify_all()
 
     def topology_change(self, clashes: Clashes) -> None:
         """La topología nueva rige desde la siguiente concesión (punto 5, REQ-009)."""
