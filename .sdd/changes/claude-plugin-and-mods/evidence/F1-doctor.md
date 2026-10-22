@@ -41,7 +41,7 @@ idénticos). Falla `test_doctor_flags_hooks_in_settings_and_plugin` en
 
 ## Suite
 
-`pesado.sh uv run pytest -n 2 -q`: 4308 passed, 28 skipped (tras rebasar sobre el #399). `ruff check .` y
+`pesado.sh uv run pytest -n 2 -q`: 4333 passed, 28 skipped (tras rebasar sobre el #398 de F1-install). `ruff check .` y
 `ruff format --check .` limpios.
 
 ## Desviaciones
