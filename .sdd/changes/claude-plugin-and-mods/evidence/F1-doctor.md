@@ -4,7 +4,8 @@ Fecha: 2026-10-22. Worktree `D:/Projects/ld-wt-f1-doctor`, rama `feat/f1-doctor`
 
 ## Qué se hizo (REQ-009, REQ-008 c, REQ-012)
 
-- `src/local_delegate/checks_plugin.py` (nuevo): cinco sondas registradas en `checks.CHECKS`.
+- Cinco sondas en `checks.py` (`_probe_delivery` y las demás), registradas en `checks.CHECKS`; lo que
+  leen vive en `src/local_delegate/checks_plugin.py` (nuevo), que no importa `checks`.
   - `claude.delivery` (entorno): la vía de `install-state.json`; sin estado, `unknown`; en WSL,
     settings.
   - `plugin.ld_bin` y `hooks.duplicates` (andamiaje): leen `settings.json`
@@ -33,14 +34,14 @@ assert de estado (`assert 'unknown' == 'warn'` / `== 'missing'`), no por import.
 
 ## Mutante
 
-Script en el scratchpad (`mutant.py`): cambia `if ours and plugin_enabled(settings):` por
-`if ours and False:` en `probe_hook_duplicates` (se comprueba `text != text0`) y lo revierte (bytes
+Script en el scratchpad (`mutant.py`): cambia `if ours and checks_plugin.plugin_enabled(settings):`
+por `if ours and False:` en `_probe_hook_duplicates` (repetido tras mover las sondas a `checks.py`) (se comprueba `text != text0`) y lo revierte (bytes
 idénticos). Falla `test_doctor_flags_hooks_in_settings_and_plugin` en
 `assert result.status == checks.WARN` (`'ok' == 'warn'`).
 
 ## Suite
 
-`pesado.sh uv run pytest -n 2 -q`: 4301 passed, 28 skipped. `ruff check .` y
+`pesado.sh uv run pytest -n 2 -q`: 4308 passed, 28 skipped (tras rebasar sobre el #399). `ruff check .` y
 `ruff format --check .` limpios.
 
 ## Desviaciones
@@ -54,6 +55,28 @@ idénticos). Falla `test_doctor_flags_hooks_in_settings_and_plugin` en
   valor en este shell y `Bearer` dentro de la variable pasan de `ok` a `warn`.
 - Fuera de Windows no hay puente: un token literal en la entrada de la Mac da `warn` con una pista
   que no es `install --desktop`.
+
+## Ciclos de import (CodeQL `py/cyclic-import`, alertas 162 y 163 del PR #400)
+
+- 163 (`checks` ↔ `checks_plugin`): las sondas pasan a `checks.py`; `checks_plugin` solo lee y no
+  importa `checks`.
+- 162 (`checks_plugin → claude_plugin → update → checks`): `install_kind`, `editable_origin`,
+  `EDITABLE`, `UV_TOOL`, `OTHER` y `PACKAGE` pasan al módulo hoja nuevo
+  `src/local_delegate/install_origin.py` (no importa nada del paquete). `update` los reexporta
+  (`install_kind` y `editable_origin` como envoltorios, para que doblar `update.editable_origin`
+  siga cambiando `update.install_kind`). En `claude_plugin.py` cambia solo la línea del import
+  diferido (`from . import install_origin as update`). `tests/test_claude_plugin.py` dobla ahora
+  `install_origin.install_kind` (dos líneas y el import). Autorizado por la sesión principal.
+- Comprobación local: script del scratchpad (`cycles.py`) que recorre con `ast` todos los imports
+  relativos del paquete, a cualquier profundidad, y saca las componentes fuertes. Rama: un solo
+  ciclo, `checks` ↔ `update`, que **ya estaba en `main`** (imports diferidos de `checks` a
+  `update.latest_version` y `update.upgrade_command`) y que este lote no crea.
+
+## Pregunta abierta para el usuario
+
+En la Mac no hay puente para el chat de Desktop (solo Windows) y su entrada lleva el token en `env`:
+`service.desktop_auth` dará `warn` siempre, y `doctor` saldrá con 1. ¿Se acepta así, o se rebaja a
+`ok` con nota fuera de Windows?
 
 ## Llamadas `local_*`
 

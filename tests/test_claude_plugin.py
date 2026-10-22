@@ -12,7 +12,7 @@ import sys
 import pytest
 from conftest import FakeClaude
 
-from local_delegate import claude_plugin, update
+from local_delegate import claude_plugin, install_origin, update
 
 LD_BIN = "C:/uv/tools/local-delegate-mcp/Scripts/python.exe"
 
@@ -152,7 +152,7 @@ def test_ld_bin_is_uv_tool_env(tmp_path, monkeypatch):
     python = prefix / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
     python.parent.mkdir(parents=True)
     python.write_bytes(b"")
-    monkeypatch.setattr(update, "install_kind", lambda: update.UV_TOOL)
+    monkeypatch.setattr(install_origin, "install_kind", lambda: update.UV_TOOL)
 
     found = claude_plugin.resolve_ld_bin(prefix=prefix)
 
@@ -183,7 +183,7 @@ def test_ld_bin_rejected_from_uvx_cache(tmp_path, monkeypatch, kind, cache, reas
     python.parent.mkdir(parents=True)
     python.write_bytes(b"")
     (prefix / "uv-receipt.toml").write_text('requires = ["local-delegate-mcp"]\n', "utf-8")
-    monkeypatch.setattr(update, "install_kind", lambda: kind)
+    monkeypatch.setattr(install_origin, "install_kind", lambda: kind)
 
     found = claude_plugin.resolve_ld_bin(prefix=prefix)
 

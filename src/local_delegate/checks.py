@@ -48,6 +48,7 @@ from . import (
     failures,
     i18n,
     install,
+    install_state,
     legacy_names,
     probes,
     recompute,
@@ -2470,6 +2471,190 @@ def _probe_shell_completion(ctx: Context) -> Result:
     return Result(status, " · ".join(details), hint)
 
 
+# --- Entrega por plugin de Claude Code (F1-doctor) ----------------------------
+def _plugin_settings(ctx: Context) -> tuple[Path, dict | None, str | None]:
+    path = ctx.claude_dir / "settings.json"
+    data, reason = read_json(path)
+    return path, data, reason
+
+
+def _plugin_not_applicable(ctx: Context) -> Result | None:
+    """``ok`` when the plugin is not the delivery here (WSL or settings), else ``None``."""
+    if checks_plugin.in_wsl(ctx):
+        return Result(OK, i18n.t("doctor.probe.plugin.wsl"))
+    if not checks_plugin.uses_plugin(ctx):
+        return Result(OK, i18n.t("doctor.probe.plugin.not_used"))
+    return None
+
+
+def _claude_cli_missing(ctx: Context) -> Result:
+    return Result(UNKNOWN, i18n.t("doctor.probe.claude_version.no_cli"))
+
+
+# Las cinco sondas de REQ-009. Viven aquí y no en `checks_plugin`, que solo lee: si estuvieran allí,
+# ese módulo tendría que importar este para construir `Result` (ciclo, CodeQL, PR #400).
+def _probe_delivery(ctx):
+    if absent := _claude_absent(ctx):
+        return absent
+    if checks_plugin.in_wsl(ctx):
+        return Result(OK, i18n.t("doctor.probe.claude_delivery.wsl"))
+    current = checks_plugin.state(ctx)
+    found = install_state.delivery(current)
+    path = install_state.path(ctx.home, ctx.log_dir)
+    if found in (claude_plugin.PLUGIN, claude_plugin.SETTINGS):
+        return Result(
+            OK,
+            i18n.t(
+                "doctor.probe.claude_delivery.recorded",
+                delivery=found,
+                version=(current or {}).get("version") or "?",
+                path=path,
+            ),
+        )
+    return Result(UNKNOWN, i18n.t("doctor.probe.claude_delivery.no_state", path=path or "-"))
+
+
+def _probe_claude_version(ctx):
+    if checks_plugin.in_wsl(ctx):
+        return Result(OK, i18n.t("doctor.probe.plugin.wsl"))
+    claude_bin = ctx.claude_which("claude")
+    if not claude_bin or ctx.claude_runner is None:
+        return _claude_cli_missing(ctx)
+    env = claude_plugin.child_env(ctx.home)
+    version, _raw = claude_plugin.claude_version(claude_bin, ctx.claude_runner, env)
+    minimum = claude_plugin.MIN_CLAUDE_PLUGIN_VERSION
+    if version is None:
+        return Result(UNKNOWN, i18n.t("doctor.probe.claude_version.unknown"))
+    if not claude_plugin.version_at_least(version, minimum):
+        return Result(
+            WARN,
+            i18n.t("doctor.probe.claude_version.below", found=version, minimum=minimum),
+            i18n.t("doctor.hint.claude_update"),
+        )
+    return Result(OK, i18n.t("doctor.probe.claude_version.ok", found=version, minimum=minimum))
+
+
+def _plugin_listed(ctx):
+    """``(entry, None)`` from ``claude plugin list --json``, or ``(None, an unknown Result)``."""
+    claude_bin = ctx.claude_which("claude")
+    if not claude_bin or ctx.claude_runner is None:
+        return None, _claude_cli_missing(ctx)
+    argv = claude_plugin.list_argv(claude_bin)
+    try:
+        done = ctx.claude_runner(argv, claude_plugin.child_env(ctx.home))
+    except Exception as exc:  # the CLI did not start or did not finish: nothing to claim
+        return None, Result(
+            UNKNOWN, i18n.t("doctor.probe.plugin_installed.list_failed", detail=exc)
+        )
+    if done.returncode != 0:
+        detail = ((done.stderr or done.stdout or "").strip() or str(done.returncode))[:200]
+        return None, Result(
+            UNKNOWN, i18n.t("doctor.probe.plugin_installed.list_failed", detail=detail)
+        )
+    return claude_plugin.listed_entry(done.stdout), None
+
+
+def _probe_plugin_installed(ctx):
+    if absent := _claude_absent(ctx):
+        return absent
+    if skip := _plugin_not_applicable(ctx):
+        return skip
+    entry, failure = _plugin_listed(ctx)
+    if failure is not None:
+        return failure
+    if entry is None:
+        return Result(
+            MISSING,
+            i18n.t("doctor.probe.plugin_installed.not_listed", plugin=claude_plugin.PLUGIN_ID),
+            checks_plugin.UPDATE_HINT,
+        )
+    problems: list[str] = []
+    hint = ""
+    if entry.get("enabled") is not True:
+        problems.append(i18n.t("doctor.probe.plugin_installed.disabled"))
+        hint = i18n.t("doctor.hint.plugin_enable", plugin=claude_plugin.PLUGIN_ID)
+    expected = _installed_version()
+    found = entry.get("version")
+    if expected and found != expected:
+        problems.append(
+            i18n.t("doctor.probe.plugin_installed.version", found=found or "?", expected=expected)
+        )
+        hint = hint or checks_plugin.UPDATE_HINT
+    _path, settings, _reason = _plugin_settings(ctx)
+    language = checks_plugin.plugin_options(settings).get("language")
+    current = i18n.lang()
+    if isinstance(language, str) and language != current:
+        problems.append(
+            i18n.t("doctor.probe.plugin_installed.language", found=language, current=current)
+        )
+        hint = hint or INSTALL_HINT
+    if problems:
+        return Result(WARN, " · ".join(problems), hint)
+    return Result(
+        OK,
+        i18n.t(
+            "doctor.probe.plugin_installed.ok",
+            plugin=claude_plugin.PLUGIN_ID,
+            version=found or "?",
+            language=language if isinstance(language, str) else "-",
+        ),
+    )
+
+
+def _probe_ld_bin(ctx):
+    if absent := _claude_absent(ctx):
+        return absent
+    if skip := _plugin_not_applicable(ctx):
+        return skip
+    path, settings, reason = _plugin_settings(ctx)
+    if reason:
+        return Result(UNKNOWN, reason)
+    value = checks_plugin.plugin_options(settings).get("ld_bin")
+    if not isinstance(value, str) or not value.strip():
+        return Result(MISSING, i18n.t("doctor.probe.ld_bin.not_set", path=path), INSTALL_HINT)
+    if not Path(value).is_file():
+        return Result(MISSING, i18n.t("doctor.probe.ld_bin.not_found", ld_bin=value), INSTALL_HINT)
+    expected = ctx.expected_ld_bin()
+    expected_path = getattr(expected, "path", None)
+    if expected_path is None:
+        return Result(
+            OK,
+            i18n.t(
+                "doctor.probe.ld_bin.not_compared",
+                ld_bin=value,
+                reason=getattr(expected, "reason", None) or "-",
+            ),
+        )
+    if not checks_plugin.same_path(value, expected_path):
+        return Result(
+            WARN,
+            i18n.t("doctor.probe.ld_bin.other_env", ld_bin=value, expected=expected_path),
+            INSTALL_HINT,
+        )
+    return Result(OK, i18n.t("doctor.probe.ld_bin.ok", ld_bin=value))
+
+
+def _probe_hook_duplicates(ctx):
+    if absent := _claude_absent(ctx):
+        return absent
+    path, settings, reason = _plugin_settings(ctx)
+    if reason:
+        return Result(UNKNOWN, reason)
+    ours = checks_plugin.our_settings_hooks(settings, ctx.hooks_dir)
+    if ours and checks_plugin.plugin_enabled(settings):
+        return Result(
+            WARN,
+            i18n.t(
+                "doctor.probe.hook_duplicates.found",
+                n=i18n.format_number(len(ours)),
+                path=path,
+                plugin=claude_plugin.PLUGIN_ID,
+            ),
+            checks_plugin.UPDATE_HINT,
+        )
+    return Result(OK, i18n.t("doctor.probe.hook_duplicates.none"))
+
+
 # --- El registro --------------------------------------------------------------
 # Treinta y dos elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse
 # solo, el problema no sería el registro sino el diseño.
@@ -2513,7 +2698,7 @@ CHECKS: tuple[Check, ...] = (
         "claude.delivery",
         "environment",
         "doctor.check.claude.delivery",
-        checks_plugin.probe_delivery,
+        _probe_delivery,
     ),
     Check("scaffold.hook_files", "scaffold", "doctor.check.scaffold.hook_files", _probe_hook_files),
     Check(
@@ -2547,12 +2732,12 @@ CHECKS: tuple[Check, ...] = (
         _probe_shell_completion,
     ),
     # REQ-009 and 008 c: they read `settings.json`, without launching `claude`.
-    Check("plugin.ld_bin", "scaffold", "doctor.check.plugin.ld_bin", checks_plugin.probe_ld_bin),
+    Check("plugin.ld_bin", "scaffold", "doctor.check.plugin.ld_bin", _probe_ld_bin),
     Check(
         "hooks.duplicates",
         "scaffold",
         "doctor.check.hooks.duplicates",
-        checks_plugin.probe_hook_duplicates,
+        _probe_hook_duplicates,
     ),
     Check("service.daemon", "service", "doctor.check.service.daemon", _probe_daemon),
     Check("service.backend", "service", "doctor.check.service.backend", _probe_backend_models),
@@ -2580,13 +2765,13 @@ CHECKS: tuple[Check, ...] = (
         "claude.version",
         "service",
         "doctor.check.claude.version",
-        checks_plugin.probe_claude_version,
+        _probe_claude_version,
     ),
     Check(
         "plugin.installed",
         "service",
         "doctor.check.plugin.installed",
-        checks_plugin.probe_plugin_installed,
+        _probe_plugin_installed,
     ),
     Check("backend.llamaswap", "backend", "doctor.check.backend.llamaswap", _probe_llamaswap),
     Check("backend.llamaserver", "backend", "doctor.check.backend.llamaserver", _probe_llamaserver),
