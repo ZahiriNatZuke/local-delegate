@@ -302,6 +302,14 @@ def test_the_expected_jobs_are_exactly_those_of_ci_yml():
     assert declared == set(ci_gate.EXPECTED_JOBS)
 
 
+def test_the_plugin_job_is_required_on_every_os():
+    """REQ-001 (SDD claude-plugin-and-mods, F1-package): `validate --strict`, the wheel with the
+    plugin and the install in an empty `CLAUDE_CONFIG_DIR` block the merge on the three systems.
+    Required, not optional: a plugin that only fails on macOS fails for the Mac."""
+    for os_name in ("ubuntu-latest", "windows-latest", "macos-latest"):
+        assert f"plugin ({os_name})" in ci_gate.EXPECTED_JOBS
+
+
 def test_the_cli_matrix_starts_at_the_oldest_supported_python():
     """La matriz cubre desde el `requires-python` del paquete (D8)."""
     import tomllib

@@ -1,0 +1,88 @@
+{
+  "description": "Same events and filters as the settings.json delivery of 0.39. Every entry runs the uv tool interpreter with -I -m local_delegate.hook: an old, missing or broken install lets the call through instead of blocking it.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${user_config.ld_bin}",
+            "args": [
+              "-I",
+              "-m",
+              "local_delegate.hook",
+              "prompt"
+            ],
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "mcp__local-delegate__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${user_config.ld_bin}",
+            "args": [
+              "-I",
+              "-m",
+              "local_delegate.hook",
+              "record-call"
+            ],
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${user_config.ld_bin}",
+            "args": [
+              "-I",
+              "-m",
+              "local_delegate.hook",
+              "read"
+            ],
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__.+__(read_[a-z_]*|get_file_contents)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${user_config.ld_bin}",
+            "args": [
+              "-I",
+              "-m",
+              "local_delegate.hook",
+              "mcp-read"
+            ],
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${user_config.ld_bin}",
+            "args": [
+              "-I",
+              "-m",
+              "local_delegate.hook",
+              "shell"
+            ],
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

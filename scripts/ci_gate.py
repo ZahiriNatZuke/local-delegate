@@ -102,6 +102,11 @@ EXPECTED_JOBS = (
     "cli-python-matrix (3.13)",
     "cli-python-matrix (3.14)",
     "cli-python-matrix (3.15)",
+    # El plugin de Claude Code contra la CLI real (SDD claude-plugin-and-mods, REQ-001): bloquea en
+    # los tres sistemas, como `test`.
+    "plugin (ubuntu-latest)",
+    "plugin (windows-latest)",
+    "plugin (macos-latest)",
 )
 
 # El plazo cubre COLA + EJECUCIÓN, que no es lo mismo que el `timeout-minutes` de un job: aquel
