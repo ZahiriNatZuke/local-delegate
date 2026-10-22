@@ -68,8 +68,27 @@ jobs:
       - name: Check lockfile up-to-date
         run: uv lock --check
 
+      # `register.js` (el mod del plugin) no se versiona: lo genera el hook de `hatch_build.py` en
+      # el build. PyPI no deja sobreescribir una versión, así que se comprueba antes de subir.
       - name: Build
         run: uv build
+
+      - name: La rueda lleva el mod del plugin
+        run: |
+          set -euo pipefail
+          python3 - <<'EOF'
+          import glob, sys, zipfile
+          (wheel,) = glob.glob("dist/*.whl")
+          name = "local_delegate/resources/claude-plugin/local-delegate/register.js"
+          try:
+              text = zipfile.ZipFile(wheel).read(name).decode()
+          except KeyError:
+              sys.exit(f"::error::{wheel} salió sin {name}")
+          for piece in ("commands", "pinned_tools"):
+              if f"register_{piece}(on, options)" not in text:
+                  sys.exit(f"::error::register.js de {wheel} sin la pieza {piece}")
+          print(f"{wheel}: lleva el mod")
+          EOF
 
       - name: Publish to PyPI (trusted publishing)
         # --check-url hace el publish idempotente: si la versión ya existe en el índice,

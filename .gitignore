@@ -37,3 +37,7 @@ AGENTS.md
 
 # IDEs de JetBrains
 .idea/
+
+# Módulo de hooks del mod: lo genera scripts/build_mod.py (y el hook de hatch_build.py en cada
+# build de la rueda) desde mod/*.js. No se versiona.
+src/local_delegate/resources/claude-plugin/local-delegate/register.js
