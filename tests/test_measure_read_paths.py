@@ -276,7 +276,7 @@ _LEAKS = [
     re.compile(r"[\w.-]+@[\w-]+\.\w+"),
     re.compile(r"(?i)yohan|gonz[aá]lez|almaguer"),
 ]
-_PLACEHOLDER = re.compile(r"^<(path|arg|code):[0-9a-f]{8}>$|^<code:reads-file>$")
+_PLACEHOLDER = re.compile(r"<(?:(?:path|arg|code):[0-9a-f]{8}|code:reads-file)>")
 
 
 def _assert_anonymised(rows: list[dict]) -> None:
@@ -286,10 +286,10 @@ def _assert_anonymised(rows: list[dict]) -> None:
             assert not leak.search(blob), (leak.pattern, blob)
         for token in row.get("command", "").split():
             if "/" in token or "\\" in token:
-                assert _PLACEHOLDER.match(token), token
+                assert _PLACEHOLDER.fullmatch(token), token
         path = (row.get("input") or {}).get("file_path")
         if path is not None:
-            assert _PLACEHOLDER.match(path), path
+            assert _PLACEHOLDER.fullmatch(path), path
 
 
 def test_corpus_is_anonymised(world, capsys, tmp_path):
