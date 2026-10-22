@@ -192,6 +192,39 @@ def process(
     return text, added, action
 
 
+def revert(text: str, added: list[str], *, remove_block: bool) -> str:
+    """Undoes :func:`process`: the tools it added to ``tools:`` and, if it inserted it, the block.
+
+    ``added`` and ``remove_block`` come from the installation state (REQ-011), so only what
+    ``install --agents`` wrote goes away. Anything the user wrote afterwards stays: the tools
+    line keeps every other name and the rest of the file is not touched.
+    """
+    lines = text.splitlines(keepends=True)
+    names = set(added)
+    for i, line in enumerate(lines[:60]):
+        if not line.lstrip().startswith("tools:") or ANCHOR not in line:
+            continue
+        newline = "\n" if line.endswith("\n") else ""
+        if line.endswith("\r\n"):
+            newline = "\r\n"
+        body = line[: len(line) - len(newline)] if newline else line
+        head, _, tools = body.partition(":")
+        kept = [part for part in tools.split(",") if part.strip() not in names]
+        lines[i] = head + ":" + ",".join(kept) + newline
+        break
+    text = "".join(lines)
+    if remove_block and CATALOG_BEGIN in text and CATALOG_END in text:
+        # The block, plus the blank line `_update_catalog_block` put after it.
+        text = re.sub(
+            re.escape(CATALOG_BEGIN) + r".*?" + re.escape(CATALOG_END) + r"\r?\n(?:\r?\n)?",
+            "",
+            text,
+            count=1,
+            flags=re.DOTALL,
+        )
+    return text
+
+
 def pending(
     agents_dir: Path, skill_md: Path, lang: str | None = None
 ) -> list[tuple[Path, str, list[str], str | None]]:

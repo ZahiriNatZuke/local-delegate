@@ -106,6 +106,9 @@ def _install_options(args: argparse.Namespace, targets: set[str], skip_codex_mcp
         # ignorando `--home`. Instalando duplicaba configuración; desinstalando la borraba.
         use_cli=not getattr(args, "no_client_cli", False) and not inst.is_simulated_home(home),
         skip_codex_mcp=skip_codex_mcp,
+        claude_delivery=getattr(args, "claude_delivery", None),
+        disable_read_hook=getattr(args, "disable_read_hook", False),
+        desktop=getattr(args, "desktop", False),
     )
 
 
@@ -219,6 +222,10 @@ def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
     from . import install as inst
 
     home = Path(args.home).expanduser() if args.home else Path.home()
+    # REQ-012: the Desktop bridge is Windows only. Refused before anything is written.
+    if getattr(args, "desktop", False) and sys.platform != "win32":
+        print(t("cli.install.desktop_not_windows", platform=sys.platform), file=sys.stderr)
+        return 2
     # REQ-030, fixed order: 1) clients (an error exits with 2 without writing anything);
     # 2) language; 3) completion; 4) «no client» branch or the clients flow.
     try:
@@ -1667,10 +1674,27 @@ def _add_install_parsers(sub) -> None:
         description=t("cli.help.install._description"),
     )
     _add_common_install_args(install)
-    install.add_argument(
+    read_switch = install.add_mutually_exclusive_group()
+    read_switch.add_argument(
         "--enable-read-hook",
         action="store_true",
         help=t("cli.help.install.enable_read_hook"),
+    )
+    read_switch.add_argument(
+        "--disable-read-hook",
+        action="store_true",
+        help=t("cli.help.install.disable_read_hook"),
+    )
+    install.add_argument(
+        "--claude-delivery",
+        choices=("plugin", "settings"),
+        default=None,
+        help=t("cli.help.install.claude_delivery"),
+    )
+    install.add_argument(
+        "--desktop",
+        action="store_true",
+        help=t("cli.help.install.desktop"),
     )
     install.add_argument(
         "--mcp-mode",
@@ -1746,6 +1770,18 @@ def _add_install_parsers(sub) -> None:
     _add_common_install_args(uninstall)
     _add_shell_completion_arg(uninstall, t("cli.help.uninstall.shell_completion"))
     uninstall.set_defaults(func=cmd_uninstall)
+
+    # REQ-012: what the Claude Desktop entry written by `install --desktop` runs.
+    bridge = sub.add_parser("desktop-bridge", help=t("cli.help.desktop_bridge"))
+    bridge.add_argument("--url", default=None, help=t("cli.help.desktop_bridge.url"))
+    bridge.set_defaults(func=cmd_desktop_bridge)
+
+
+def cmd_desktop_bridge(args: argparse.Namespace) -> int:
+    # Imported here: the bridge pulls the HTTP client, which no other command needs.
+    from . import desktop_bridge
+
+    return desktop_bridge.main(["--url", args.url] if args.url else [])
 
 
 def _add_shell_completion_arg(p: argparse.ArgumentParser, help_text: str) -> None:

@@ -487,6 +487,13 @@ jobs:
             echo "el comprobador dio por bueno un plugin con hooks.json roto"; exit 1
           fi
 
+      # F1-install: `install`/`uninstall` con plugin contra esta CLI, en un HOME simulado con su
+      # propio CLAUDE_CONFIG_DIR (el script no toca el del runner): migración desde settings,
+      # idempotencia, vuelta a settings, desinstalación y la orden de `hooks.json` para `prompt`.
+      - name: install y uninstall con plugin en un HOME simulado
+        timeout-minutes: 5
+        run: uv run python scripts/check_plugin_install.py "$CLAUDE_BIN"
+
   secrets:
     runs-on: ubuntu-latest
     timeout-minutes: 5

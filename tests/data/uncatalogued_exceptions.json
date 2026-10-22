@@ -867,6 +867,12 @@
       "text": "Environment",
       "kind": "id",
       "reason": "nombre de la clave del registro de Windows donde viven las variables de usuario (`HKCU\\Environment`)"
+    },
+    {
+      "file": "src/local_delegate/install.py",
+      "text": "Roaming",
+      "kind": "path",
+      "reason": "segmento de ruta de `AppData/Roaming` del HOME simulado, donde `install --desktop` escribe la config de Claude Desktop sin tocar la real"
     }
   ]
 }

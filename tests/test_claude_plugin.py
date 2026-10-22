@@ -68,7 +68,7 @@ def test_wsl_and_simulated_home_fall_back_to_settings(tmp_path, monkeypatch):
 
     monkeypatch.setattr(claude_plugin, "is_simulated_home", lambda _home: True)
     # A simulated HOME on a platform where CLAUDE_CONFIG_DIR was not verified: settings.
-    other_os = _decide(home, FakeClaude(), platform="linux")
+    other_os = _decide(home, FakeClaude(), platform="freebsd14")
     assert (other_os.delivery, other_os.reason) == (claude_plugin.SETTINGS, "simulated_home")
     assert other_os.warning
 

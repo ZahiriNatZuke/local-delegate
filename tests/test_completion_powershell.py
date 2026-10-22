@@ -106,7 +106,7 @@ def _cases(files_dir: Path) -> list[dict]:
         _case("install_mcp", "local-delegate install --mcp"),
         _case("serve_dashdash", "local-delegate serve --"),
         _case("serve_l", "local-delegate serve --l"),
-        _case("append_again", "local-delegate install --clients claude --cl"),
+        _case("append_again", "local-delegate install --clients claude --cli"),
         # REQ-014
         _case("mcp_mode", "local-delegate install --mcp-mode "),
         _case("mcp_mode_eq", "local-delegate install --mcp-mode=h"),
@@ -233,7 +233,7 @@ def test_subcommands_at_every_level(ps_run):
     _, report = ps_run
     root = _texts(report, "dot", "root")
     assert root == _root_subcommands()
-    assert len(root) == 13
+    assert len(root) == 14
     assert "completion" in root
     assert _texts(report, "dot", "root_ba") == ["backend-params"]
     assert _texts(report, "dot", "bp") == ["show", "set", "unset", "reset"]

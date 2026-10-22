@@ -22,7 +22,14 @@ from local_delegate import install as inst
 
 @pytest.fixture
 def claude_spy(monkeypatch) -> list[list[str]]:
-    """Finge que el binario `claude` existe y registra cada invocación, sin ejecutar nada."""
+    """Finge que el binario `claude` existe y registra cada invocación, sin ejecutar nada.
+
+    Solo cuenta las que van **sin aislar**. Una llamada con `CLAUDE_CONFIG_DIR` en su entorno es
+    la que diseñó REQ-005 (SDD claude-plugin-and-mods) para un HOME simulado: `claude plugin` y
+    `claude --version` respetan esa variable (medido en T0) y no tocan la config real. Lo que
+    este espía vigila es lo otro: `claude mcp add-json`, que ignora `--home` y escribe siempre
+    en el HOME de verdad.
+    """
     calls: list[list[str]] = []
     real_which = inst.shutil.which
 
@@ -30,7 +37,9 @@ def claude_spy(monkeypatch) -> list[list[str]]:
         return "/fake/claude" if name == "claude" else real_which(name, *a, **kw)
 
     def _run(argv, **kwargs):
-        calls.append(list(argv))
+        env = kwargs.get("env") or {}
+        if not env.get("CLAUDE_CONFIG_DIR"):
+            calls.append(list(argv))
         return subprocess.CompletedProcess(list(argv), returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr(inst.shutil, "which", _which)
