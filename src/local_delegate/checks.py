@@ -2060,7 +2060,8 @@ def _probe_deprecated_names(ctx: Context) -> Result:
 
     Sustituye a `config.rol_retirado` (REQ-003) y lo generaliza: la lista sale del registro único
     `deprecations.DEPRECATED_NAMES`, así que cada alias que añada una ola se avisa aquí sin tocar
-    el probe. Desde la ola A1 trae las cuatro variables renombradas (alias con aviso).
+    el probe. Desde la 0.41.0 el registro está vacío (retire-seven-names): da `OK` hasta el próximo
+    renombrado.
 
     Retirar algo tiene dos mitades y la segunda se olvida siempre: quitar el código es fácil, y
     quien tenía el nombre viejo en su entorno se queda creyendo que configura algo que ya no lo

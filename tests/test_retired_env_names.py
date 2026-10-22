@@ -1,4 +1,4 @@
-"""Variables del paquete con nombre viejo: sin efecto y con aviso (SDD retire-legacy-aliases, L4).
+"""Variables del paquete con nombre viejo: sin efecto (SDD retire-legacy-aliases, L4).
 
 REQ-009: `config` lee solo los nombres nuevos; el viejo sigue en `DEPRECATED_ENV_VALUES` (por la
 puerta `_read`, así que la suite lo aísla) solo para avisar.
@@ -6,7 +6,9 @@ REQ-011, filas 4 y 5: control positivo en un proceso nuevo, viejo y gemelo nuevo
 REQ-013: `local_status` lista los nombres viejos con sucesor puestos en el entorno de su proceso,
 sin imprimir el valor.
 
-Los nombres viejos salen del registro (`deprecations.DEPRECATED_NAMES`), no de literales.
+Desde la 0.41.0 (SDD claude-plugin-and-mods, retire-seven-names) las cuatro variables salen del
+registro: siguen sin efecto, `config` ya no las lee ni para avisar y `local_status` no las lista.
+Los nombres viejos salen de la lista histórica `SEVEN_RETIRED`, no de literales.
 """
 
 from __future__ import annotations
@@ -16,6 +18,7 @@ import subprocess
 import sys
 
 import pytest
+from test_deprecations import SEVEN_RETIRED
 
 from local_delegate import config, deprecation_notices, deprecations, i18n, server
 from local_delegate.deprecations import DeprecatedName
@@ -29,7 +32,7 @@ NEW_NAMES = (
 
 
 def _old(new: str) -> str:
-    return next(e.old for e in deprecations.DEPRECATED_NAMES if e.new == new)
+    return next(old for old, successor, _surface in SEVEN_RETIRED if successor == new)
 
 
 OLD = {new: _old(new) for new in NEW_NAMES}
@@ -89,15 +92,14 @@ def test_old_name_does_not_override_the_new_one():
     assert values == ["False", "", "False", ""]
 
 
-def test_old_names_stay_readable_only_to_warn(reload_config):
-    """`DEPRECATED_ENV_VALUES` sigue viendo el viejo (para el aviso) y el inventario lo aísla."""
-    old = OLD["LOCAL_DELEGATE_COST_FALLBACK"]
-    reload_config(**{old: "claude-haiku-4-5"})
-    assert config.DEPRECATED_ENV_VALUES[old] == "claude-haiku-4-5"
+def test_old_names_are_no_longer_read_even_to_warn(reload_config):
+    """retire-seven-names: ni `DEPRECATED_ENV_VALUES` ni el inventario ven ya los viejos."""
+    reload_config(**{old: "claude-haiku-4-5" for old in OLD.values()})
     assert config.COST_FALLBACK == ""
     for new, old in OLD.items():
         assert new in config.ENVIRONMENT_VARIABLES, new
-        assert old in config.ENVIRONMENT_VARIABLES, old
+        assert old not in config.ENVIRONMENT_VARIABLES, old
+        assert old not in config.DEPRECATED_ENV_VALUES, old
 
 
 # --- REQ-013: `local_status` -----------------------------------------------------------------
@@ -115,14 +117,14 @@ def offline_status(monkeypatch):
     monkeypatch.setattr(server, "_port_listening", lambda *_: False)
 
 
-def test_local_status_lists_a_retired_variable(reload_config, offline_status):
-    old = OLD["LOCAL_DELEGATE_COST_FALLBACK"]
-    entry = deprecations.find(old)
-    reload_config(**{old: "secret-value"})
+def test_local_status_no_longer_lists_the_four_old_variables(reload_config, offline_status):
+    """retire-seven-names: con las cuatro puestas, `local_status` no tiene sección de retirados.
+    El control positivo (un retirado registrado sí sale) es
+    `test_describe_lists_only_retired_names_with_a_new_name`."""
+    reload_config(**{old: "secret-value" for old in OLD.values()})
     text = server.local_status()
-    assert i18n.t("mcp.status.deprecated") in text
-    assert deprecation_notices.warning_text(entry) in text
-    assert old in text and "LOCAL_DELEGATE_COST_FALLBACK" in text
+    assert i18n.t("mcp.status.deprecated") not in text
+    assert not [old for old in OLD.values() if old in text]
     assert "secret-value" not in text
 
 

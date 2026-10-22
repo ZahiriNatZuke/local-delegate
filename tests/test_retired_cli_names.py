@@ -6,7 +6,10 @@ código 2 sin ejecutar nada. Un alias vigente **nunca** se rechaza. REQ-011, fil
 viejo no hace nada y su gemelo nuevo sí, con los mismos datos.
 
 Los casos con **registro sintético** marcan las entradas como retiradas y publicadas en la 0.38.0
-(o como alias vivos); desde el volteo (L6), los del final prueban además el registro real.
+(o como alias vivos). Desde la 0.41.0 el registro real ya no tiene nombres del CLI (SDD
+claude-plugin-and-mods, retire-seven-names): el sintético usa los nombres nuevos reales con un
+nombre viejo de mentira, y los del final prueban que los dos nombres viejos reales ya son solo
+argumentos desconocidos para argparse.
 """
 
 from __future__ import annotations
@@ -17,6 +20,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from test_deprecations import SEVEN_RETIRED
 from test_recompute import _delegation_with_n
 from test_transcripts import subagent
 
@@ -24,17 +28,31 @@ from local_delegate import cli, config, deprecations, entrypoint, i18n, recomput
 from local_delegate.deprecation_notices import warning_text
 
 _CLI_KINDS = ("cli_command", "cli_option")
+# Un subcomando y una opción reales con un nombre viejo de mentira: lo que la maquinaria del
+# chequeo previo necesita para seguir probada con el registro real vacío.
+SYNTHETIC_CLI = (
+    deprecations.DeprecatedName(
+        "cli_command", "old-recompute-cost", "recompute-cost", "UNRELEASED"
+    ),
+    deprecations.DeprecatedName(
+        "cli_option", "--old-reset-calibration", "--reset-calibration", "UNRELEASED"
+    ),
+)
+# Los dos nombres viejos reales del CLI, retirados del registro en la 0.41.0.
+RETIRED_COMMAND, RETIRED_OPTION = (
+    (old, new) for old, new, surface in SEVEN_RETIRED if surface in _CLI_KINDS
+)
 
 
 def retired_cli_registry(
     entries: tuple[deprecations.DeprecatedName, ...] | None = None,
 ) -> tuple[deprecations.DeprecatedName, ...]:
-    """El registro con sus entradas del CLI como retiradas con sucesor ya publicadas (0.38.0).
+    """Las entradas del CLI como retiradas con sucesor ya publicadas (0.38.0).
 
-    Sirve para alias (los marca retirados) y para el registro real, que ya los tiene retirados
-    pero aún `UNRELEASED`: así el aviso lleva la versión.
+    Sin argumento parte de `SYNTHETIC_CLI` (el registro real ya no tiene nombres del CLI); con
+    él, marca retirados los alias que recibe.
     """
-    source = deprecations.DEPRECATED_NAMES if entries is None else entries
+    source = SYNTHETIC_CLI if entries is None else entries
     return tuple(
         replace(
             e,
@@ -143,7 +161,7 @@ def test_retired_option_exits_2(form, retired, spy, tmp_path, capsys):
     assert spy == ["five_hour"]
 
 
-def test_retired_option_after_double_dash_is_not_checked():
+def test_retired_option_after_double_dash_is_not_checked(retired):
     entry = _entry("cli_option")
     assert cli._reject_retired_names(["x", "--", entry.old]) is None
 
@@ -175,7 +193,7 @@ def test_live_alias_is_never_rejected(monkeypatch, spy, tmp_path, capsys):
 
 
 def test_old_name_as_value_of_another_option_is_not_rejected(retired, capsys):
-    """`--label recalcular-coste`: el subcomando solo se mira en el primer token posicional."""
+    """`--label <viejo>`: el subcomando solo se mira en el primer token posicional."""
     entry = _entry("cli_command")
     assert cli._reject_retired_names(["test-window", "start", "--label", entry.old]) is None
     assert _run(["test-window", "start", "--label", entry.old]) == 0
@@ -191,23 +209,23 @@ def test_unknown_command_keeps_the_argparse_error(retired, capsys):
 
 
 def test_help_shows_only_the_new_names(capsys):
-    command, option = _entry("cli_command"), _entry("cli_option")
+    (old_command, command), (old_option, option) = RETIRED_COMMAND, RETIRED_OPTION
     assert _run(["--help"]) == 0
     top = capsys.readouterr().out
-    assert _run([command.new, "--help"]) == 0
+    assert _run([command, "--help"]) == 0
     sub = capsys.readouterr().out
-    assert command.new in top and option.new in sub
-    for old in (command.old, option.old, "SUPPRESS"):
+    assert command in top and option in sub
+    for old in (old_command, old_option, "SUPPRESS"):
         assert old not in top + sub, old
 
 
 def test_old_names_are_gone_from_the_parser():
     parser = cli.build_parser()
     sub = next(a for a in parser._actions if a.dest == "command")
-    command, option = _entry("cli_command"), _entry("cli_option")
-    assert command.new in sub.choices and command.old not in sub.choices
-    options = sub.choices[command.new]._option_string_actions
-    assert option.new in options and option.old not in options
+    (old_command, command), (old_option, option) = RETIRED_COMMAND, RETIRED_OPTION
+    assert command in sub.choices and old_command not in sub.choices
+    options = sub.choices[command]._option_string_actions
+    assert option in options and old_option not in options
 
 
 # --- Camino de los dos ejecutables ------------------------------------------------------------
@@ -224,39 +242,42 @@ def test_entrypoint_goes_through_the_check(prog, retired, spy, tmp_path, monkeyp
     assert spy == []
 
 
-# --- Con el registro real (L6): las dos entradas ya son retiradas con sucesor -------------------
+# --- Con el registro real desde la 0.41.0: los nombres viejos ya no se conocen -----------------
 
 
-def _real(new: str) -> deprecations.DeprecatedName:
-    """La entrada real por su nombre nuevo (sin escribir el viejo)."""
-    return next(e for e in deprecations.DEPRECATED_NAMES if e.new == new)
+def test_real_registry_has_no_cli_names():
+    assert deprecations.cli_entries() == ()
+    assert cli._reject_retired_names([RETIRED_COMMAND[0], "--claude-dir", "x"]) is None
+    assert cli._reject_retired_names([RETIRED_COMMAND[1], RETIRED_OPTION[0], "five_hour"]) is None
 
 
-def test_real_registry_rejects_the_old_command_and_option(spy, tmp_path, capsys):
-    command, option = _real("recompute-cost"), _real("--reset-calibration")
-    assert command.is_retired and option.is_retired
+def test_retired_real_command_and_option_are_plain_argparse_errors(spy, tmp_path, capsys):
+    """Sin aviso de retirada: el error genérico de argparse, código 2 y nada ejecutado."""
+    (old_command, command), (old_option, option) = RETIRED_COMMAND, RETIRED_OPTION
     claude = _claude_dir(tmp_path)
 
-    assert _run([command.old, "--claude-dir", str(claude)]) == 2
+    assert _run([old_command, "--claude-dir", str(claude)]) == 2
     err = capsys.readouterr().err
-    assert err == i18n.t("cli.error", detail=warning_text(command)) + "\n"
-    assert command.new in err and deprecations.UNRELEASED not in err
-    assert _run([command.new, "--claude-dir", str(claude), option.old, "five_hour"]) == 2
-    assert option.new in capsys.readouterr().err
+    assert old_command in err and command in err  # la lista de subcomandos de argparse
+    assert "0.38.0" not in err
+    assert _run([command, "--claude-dir", str(claude), old_option, "five_hour"]) == 2
+    err = capsys.readouterr().err
+    assert old_option in err and "0.38.0" not in err
     assert spy == []
 
     # Gemelo: los nombres nuevos, con los mismos datos, sí recalculan.
-    assert _run([command.new, "--claude-dir", str(claude), option.new, "five_hour"]) == 0
+    assert _run([command, "--claude-dir", str(claude), option, "five_hour"]) == 0
     assert spy == ["five_hour"]
 
 
 @pytest.mark.parametrize("prog", ["local-delegate", "local-delegate-mcp"])
-def test_real_registry_entrypoint_rejects_the_old_command(prog, spy, tmp_path, monkeypatch, capsys):
-    command = _real("recompute-cost")
-    monkeypatch.setattr(sys, "argv", [prog, command.old, "--claude-dir", str(tmp_path)])
+def test_retired_real_command_through_the_entrypoint_is_an_argparse_error(
+    prog, spy, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.setattr(sys, "argv", [prog, RETIRED_COMMAND[0], "--claude-dir", str(tmp_path)])
     with pytest.raises(SystemExit) as exc:
         entrypoint.main()
     assert exc.value.code == 2
-    # El mensaje del chequeo previo, no el error genérico de argparse (que también da 2).
-    assert capsys.readouterr().err == i18n.t("cli.error", detail=warning_text(command)) + "\n"
+    err = capsys.readouterr().err
+    assert RETIRED_COMMAND[0] in err and RETIRED_COMMAND[1] in err and "0.38.0" not in err
     assert spy == []

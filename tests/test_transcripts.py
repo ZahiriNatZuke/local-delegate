@@ -1,4 +1,4 @@
-"""Lectura de transcripts para `recalcular-coste`: cruce, `N`, caducidades y `cost-state` (T5).
+"""Lectura de transcripts para `recompute-cost`: cruce, `N`, caducidades y `cost-state` (T5).
 
 Todo es SINTÉTICO y vive en `tmp_path`: ningún id de sesión, ruta ni texto real. Los
 constructores de este fichero (`request_entry`, `result_entry`, `write_jsonl`…) los reutilizan

@@ -162,7 +162,7 @@ def test_sanitize_and_corrupt_lines(tmp_path):
 
 
 def test_a_malformed_previous_point_does_not_break_the_command(tmp_path):
-    """REQ-061 en `recalcular-coste`: un punto del JSON anterior sin `delta_pct` (editado a mano)
+    """REQ-061 en `recompute-cost`: un punto del JSON anterior sin `delta_pct` (editado a mano)
     se salta y cuenta como `linea_corrupta`, en vez de tumbar `quitar_solapados`."""
     claude, log = tmp_path / "claude", tmp_path / "log"
     write_jsonl(main_transcript(claude), [request_entry(0, "m0")])

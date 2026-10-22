@@ -161,8 +161,6 @@ def test_fallback_by_variable(monkeypatch):
 
 def test_the_fallback_variable_is_read_through_the_registered_door():
     assert "LOCAL_DELEGATE_COST_FALLBACK" in config.ENVIRONMENT_VARIABLES
-    # Retired name: read only to warn (retire-legacy-aliases, REQ-009).
-    assert "LOCAL_DELEGATE_COSTE_RESPALDO" in config.ENVIRONMENT_VARIABLES
 
 
 def test_family_marks():

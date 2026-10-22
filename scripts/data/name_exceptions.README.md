@@ -18,7 +18,9 @@ Los únicos motivos válidos (REQ-016):
 - alias de compatibilidad (REQ-001, REQ-002, REQ-012), con su versión de retirada;
 - nombre retirado con sucesor: sin efecto desde la 0.38.0, avisa hasta la 0.40.x (enmienda del
   2026-10-21, SDD retire-legacy-aliases, REQ-021): el nombre viejo que el registro conserva solo
-  para avisar, y los literales que los tests necesitan para probar que ya no tiene efecto;
+  para avisar, y los literales que los tests necesitan para probar que ya no tiene efecto. Desde la
+  0.41.0 (retire-seven-names) los siete salieron del registro y solo queda su lista histórica en
+  `tests/test_deprecations.py`;
 - lectura de formato viejo (excepción de REQ-005, REQ-006, REQ-007, REQ-008);
 - envoltorio de REQ-046;
 - dato de un tercero que no controla el paquete;

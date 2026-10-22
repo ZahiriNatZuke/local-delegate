@@ -24,6 +24,7 @@ import json
 
 import backend_mock
 import httpx2
+import pytest
 from fastapi.testclient import TestClient
 
 from local_delegate import chains, checks, config, server
@@ -140,11 +141,23 @@ def test_the_retired_model_is_not_valid_as_an_answer_to_the_question_either(monk
 
 
 # --- Las variables huérfanas: `doctor` ya no avisa (0.38.0) -------------------
-def _registered_old(new: str) -> str:
-    """El nombre viejo de un alias aún registrado, sacado del registro (sin literal en español)."""
+@pytest.fixture
+def registered_twin(monkeypatch) -> str:
+    """Un retirado con sucesor registrado, de mentira: el registro real está vacío desde la 0.41.0
+    (retire-seven-names). Se pide **después** de `reload_config`, para que su recarga final vea
+    ya el registro real."""
     from local_delegate import deprecations
 
-    return next(e.old for e in deprecations.DEPRECATED_NAMES if e.new == new)
+    entry = deprecations.DeprecatedName(
+        "retired",
+        "LD_OLD_TEST_TWIN",
+        "LD_NEW_TEST_TWIN",
+        "0.38.0",
+        "0.40.0",
+        retired_from="env_var",
+    )
+    monkeypatch.setattr(deprecations, "DEPRECATED_NAMES", (entry,))
+    return entry.old
 
 
 def test_without_retired_role_variables_the_check_is_ok(reload_config, tmp_path):
@@ -154,14 +167,16 @@ def test_without_retired_role_variables_the_check_is_ok(reload_config, tmp_path)
     assert result.status == checks.OK
 
 
-def test_a_fast_variable_alone_is_ok_while_a_registered_name_still_warns(reload_config, tmp_path):
+def test_a_fast_variable_alone_is_ok_while_a_registered_name_still_warns(
+    reload_config, tmp_path, registered_twin
+):
     """REQ-005 / REQ-011 fila 9: cada `_FAST` sola da `OK`; el gemelo registrado, `WARN`."""
     for variable in RETIRED_VARIABLES:
         reload_config(LD_HOOK_TELEMETRY_LOG="", **{variable: "whatever"})
         result = checks._probe_deprecated_names(checks.Context(home=tmp_path))
         assert result.status == checks.OK, f"{variable} sola todavía da aviso"
         assert variable not in result.detail
-    twin = _registered_old("LOCAL_DELEGATE_STRUCTURED_SUMMARY")
+    twin = registered_twin
     reload_config(LD_HOOK_TELEMETRY_LOG="", **{twin: "1"})
     result = checks._probe_deprecated_names(checks.Context(home=tmp_path))
     assert result.status == checks.WARN, "el check dejó de mirar los nombres registrados"
@@ -182,7 +197,9 @@ def test_the_check_is_in_the_registry(reload_config):
     assert check.group == "environment"
 
 
-def test_a_fast_variable_in_settings_json_env_is_not_warned(reload_config, tmp_path):
+def test_a_fast_variable_in_settings_json_env_is_not_warned(
+    reload_config, tmp_path, registered_twin
+):
     """El `env` de `settings.json` tampoco: la `_FAST` sola da `OK`, el gemelo registrado `WARN`."""
     reload_config(LD_HOOK_TELEMETRY_LOG="")
     claude = tmp_path / ".claude"
@@ -194,7 +211,7 @@ def test_a_fast_variable_in_settings_json_env_is_not_warned(reload_config, tmp_p
     )
     result = checks._probe_deprecated_names(checks.Context(home=tmp_path))
     assert result.status == checks.OK, "la `_FAST` del env de settings.json todavía da aviso"
-    twin = _registered_old("LOCAL_DELEGATE_STRUCTURED_SUMMARY")
+    twin = registered_twin
     settings.write_text(json.dumps({"env": {twin: "1", "OTHER": "1"}}), encoding="utf-8")
     result = checks._probe_deprecated_names(checks.Context(home=tmp_path))
     assert result.status == checks.WARN, "el gemelo del env de settings.json no dio aviso"

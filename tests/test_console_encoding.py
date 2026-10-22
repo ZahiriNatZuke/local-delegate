@@ -22,20 +22,26 @@ from conftest import DEAD_PORT, make_home
 from local_delegate import config, deprecations, entrypoint, install, server
 
 BOM = codecs.BOM_UTF8
-# The real retired variable of the live case, taken from the registry (the old Spanish name only
-# lives in `deprecations.py`, by rule of the Spanish-name detector).
+# The live case was the retired name of `LD_HOOK_READ_BLOCK`. Since 0.41.0 the real registry is
+# empty (SDD claude-plugin-and-mods, retire-seven-names), so the subprocess gets a synthetic retired
+# name with the same successor: the migration and its description run exactly as they did.
 NEW = "LD_HOOK_READ_BLOCK"
-OLD = next(e.old for e in deprecations.DEPRECATED_NAMES if e.new == NEW)
+OLD = "LD_HOOK_READ_OLD_TEST_BLOCK"
 
 # Runs the real console entry point; only the daemon probes are sent to the suite's dead port, so
 # the subprocess never reaches a real daemon (the same cut the `real_daemon_down` fixture makes).
 _BOOTSTRAP = """
 import sys
-from local_delegate import checks, cli, entrypoint
+from local_delegate import checks, cli, deprecations, entrypoint
 port = int(sys.argv[1])
 cli._daemon_target = lambda: ("127.0.0.1", port, {})
 checks._llamaswap_daemon_destination = lambda: ("127.0.0.1", port, {})
-sys.argv = ["local-delegate", *sys.argv[2:]]
+deprecations.DEPRECATED_NAMES = (
+    deprecations.DeprecatedName(
+        "retired", sys.argv[2], sys.argv[3], "0.38.0", "0.40.0", retired_from="env_var"
+    ),
+)
+sys.argv = ["local-delegate", *sys.argv[4:]]
 entrypoint.main()
 """
 
@@ -87,7 +93,7 @@ def test_update_finishes_with_the_output_piped_in_cp1252(request, tmp_path, bom)
     )
     args = ["update", "--home", str(home), "--no-restart", "--version", "0.37.0"]
     proc = subprocess.run(
-        [sys.executable, "-c", _BOOTSTRAP, str(request.node.stash[DEAD_PORT]), *args],
+        [sys.executable, "-c", _BOOTSTRAP, str(request.node.stash[DEAD_PORT]), OLD, NEW, *args],
         env=env,
         stdin=subprocess.DEVNULL,
         capture_output=True,

@@ -61,7 +61,7 @@ bloquee:
 
 - **el fichero `~/.claude/local-delegate-block-off`** (o la ruta de
   `LD_HOOK_READ_SWITCH_FILE`; el nombre viejo `local-delegate-bloqueo-apagado` se retiró en la
-  0.38.0 y ya no apaga nada): gana a la variable y se mira en cada lectura, así que apaga al
+  0.38.0, ya no apaga nada y desde la 0.41.0 `doctor` tampoco avisa de él): gana a la variable y se mira en cada lectura, así que apaga al
   momento sin cerrar la sesión; bórralo para volver a encender;
 - la variable a `0`, que no afecta a una sesión ya abierta, porque hereda el entorno del lanzador;
 - un backend local que no responde;
