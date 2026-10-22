@@ -18,8 +18,8 @@
     },
     "changelog.md": {
       "origen": "CHANGELOG.md",
-      "bytes": 166843,
-      "sha256": "a977799be627a68612fa1205e275ae99a5007b17447733a9768917ae50fcd0dc"
+      "bytes": 166831,
+      "sha256": "01bc27d5b8114a8bda36efc1f07428987e7721fede954ed4a22dd7b2ce4948d5"
     },
     "llama-swap-blackwell.md": {
       "origen": "docs/recipes/llama-swap-blackwell.md",

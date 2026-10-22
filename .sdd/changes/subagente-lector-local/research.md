@@ -100,7 +100,7 @@ tarea mínima (llamar a `SubagentHandback`), midiendo `usage` del **primer turno
 
 | Variante | Tokens del primer turno | Qué carga |
 | --- | --- | --- |
-| 11 tools `local_*` | 14 259 | CLAUDE.md global (4,8 k chars) + RTK.md (1,4 k) + **MEMORY.md del proyecto (16,8 k chars)** + entorno + esquemas |
+| 11 tools `local_*` | 14 259 | CLAUDE.md global (4,8 k chars) + otra guia global (1,4 k) + **MEMORY.md del proyecto (16,8 k chars)** + entorno + esquemas |
 | 1 tool (`local_summarize`) | 10 049 | lo mismo, sin 10 esquemas (~4,2 k tokens) |
 | 1 tool + `omitClaudeMd: true` | **2 274** | sin adjunto de instrucciones: **ni CLAUDE.md ni MEMORY.md** |
 

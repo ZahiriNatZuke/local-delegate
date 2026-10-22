@@ -2,21 +2,21 @@
 
 ## Summary
 
-Codex, dentro de `D:\Projects\local-delegate`, carga sus MCP sin abortar y resuelve `rtk` por
+Codex, dentro de `D:\Projects\local-delegate`, carga sus MCP sin abortar y resuelve `<cli>` por
 nombre en el entorno donde ejecuta comandos. Todo el cambio es configuración local de esta
 máquina; al repositorio solo llega la traza SDD.
 
 ## Diagnóstico que corrige la nota del backlog (hallazgo 2)
 
-El backlog decía *«`rtk` no está en el PATH que hereda Codex»*. **Es falso**, medido por ejecución:
+El backlog decía *«`<cli>` no está en el PATH que hereda Codex»*. **Es falso**, medido por ejecución:
 
 | Comprobación | Resultado |
 |---|---|
 | `C:\Users\Yohan` en el PATH persistido (usuario **y** máquina) | **sí** |
-| Ruta real del shim | `C:\Users\Yohan\rtk.exe` — **no** `.local\bin\rtk.cmd` |
+| Ruta real del shim | `C:\Users\Yohan\<cli>.exe` — **no** `.local\bin\<cli>.cmd` |
 | `C:\Users\Yohan` en el PATH **dentro** del sandbox de Codex | **sí** (38 entradas) |
-| `& 'C:\Users\Yohan\rtk.exe' --version` dentro del sandbox | **`rtk 0.34.0`** — se ejecuta |
-| `Get-Command rtk` dentro del sandbox | **no lo encuentra** |
+| `& 'C:\Users\Yohan\<cli>.exe' --version` dentro del sandbox | **`<cli> 0.34.0`** — se ejecuta |
+| `Get-Command <cli>` dentro del sandbox | **no lo encuentra** |
 | `Get-ChildItem 'C:\Users\Yohan'` dentro del sandbox | **falla** — no enumerable |
 | `Get-ChildItem 'C:\Users\Yohan\.local\bin'` dentro del sandbox | **funciona** (`uvx` resuelve ahí) |
 
@@ -40,10 +40,10 @@ descarta por riesgo.
   que viene de la global.
 - **REQ-003:** `github` queda definido **una sola vez**, por HTTP, en el `config.toml` global, y
   sigue apareciendo en la listada hecha desde dentro del repo.
-- **REQ-004:** Dentro del sandbox de Codex, `Get-Command rtk` devuelve una ruta y `rtk --version`
+- **REQ-004:** Dentro del sandbox de Codex, `Get-Command <cli>` devuelve una ruta y `<cli> --version`
   imprime su versión, sin usar rutas absolutas.
-- **REQ-005:** El arreglo de REQ-004 no duplica el binario: sigue habiendo un único `rtk.exe`, de
-  modo que una actualización de `rtk` no deja copias desfasadas.
+- **REQ-005:** El arreglo de REQ-004 no duplica el binario: sigue habiendo un único `<cli>.exe`, de
+  modo que una actualización de `<cli>` no deja copias desfasadas.
 - **REQ-006:** El repositorio no cambia salvo los artefactos de `.sdd/changes/codex-config-local/`.
   `git status` no muestra ningún otro fichero modificado.
 
@@ -56,11 +56,11 @@ descarta por riesgo.
 - **Entonces** el comando sale con código 0 y lista los cuatro MCP del repo, `local-delegate` y
   `github` (HTTP), sin error de configuración
 
-### Escenario: `rtk` se resuelve donde Codex ejecuta
+### Escenario: `<cli>` se resuelve donde Codex ejecuta
 
 - **Dado** el shim alcanzable desde un directorio del PATH que el sandbox **sí** puede enumerar
-- **Cuando** se ejecuta `codex sandbox pwsh -NoProfile -File <script>` con `Get-Command rtk`
-- **Entonces** devuelve la ruta del shim y `rtk --version` imprime `rtk 0.34.0`
+- **Cuando** se ejecuta `codex sandbox pwsh -NoProfile -File <script>` con `Get-Command <cli>`
+- **Entonces** devuelve la ruta del shim y `<cli> --version` imprime `<cli> 0.34.0`
 
 ### Escenario: la global sigue siendo la fuente de `github`
 
@@ -74,7 +74,7 @@ descarta por riesgo.
 - **Otro proyecto con la misma trampa:** cualquier `.codex/config.toml` que redefina un servidor
   global con otro transporte reproduce el fallo. Se documenta la regla en la memoria, no se
   construye defensa.
-- **`rtk` se actualiza:** el shim invoca por ruta absoluta, así que sigue apuntando al binario
+- **`<cli>` se actualiza:** el shim invoca por ruta absoluta, así que sigue apuntando al binario
   actualizado. Si el actualizador **mueve** el `.exe`, el shim rompe con un error claro de ruta.
 - **El sandbox cambia de política:** si algún día `C:\Users\Yohan` fuese enumerable, el shim queda
   redundante pero inofensivo.
@@ -91,13 +91,13 @@ descarta por riesgo.
 ## Non-goals
 
 - Probar Codex Desktop (la app) y probar `path` server-side desde Codex: siguen en el backlog.
-- Cambiar el `AGENTS.md` de Codex o su instrucción de usar RTK.
-- Mover o reinstalar `rtk` fuera del raíz del perfil.
+- Cambiar el `AGENTS.md` de Codex o su instrucción de usar la CLI auxiliar.
+- Mover o reinstalar `<cli>` fuera del raíz del perfil.
 
 ## Traceability
 
 | Req | Trabajo previsto | Evidencia |
 |---|---|---|
 | REQ-001, REQ-002, REQ-003 | Quitar `[mcp_servers.github]` del `.codex/config.toml` del repo | `codex mcp list` desde el repo |
-| REQ-004, REQ-005 | Shim `rtk.cmd` en `C:\Users\Yohan\.local\bin` que invoca el `.exe` por ruta absoluta | `codex sandbox` con `Get-Command rtk` y `rtk --version` |
+| REQ-004, REQ-005 | Shim `<cli>.cmd` en `C:\Users\Yohan\.local\bin` que invoca el `.exe` por ruta absoluta | `codex sandbox` con `Get-Command <cli>` y `<cli> --version` |
 | REQ-006 | Solo se escriben artefactos SDD | `git status --short` |

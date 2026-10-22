@@ -137,7 +137,7 @@ Absorbe el cambio abierto `read-obliga-a-delegar`, que queda cerrado por esta sp
   | Camino | Trato |
   | --- | --- |
   | Tool `Read` | **Se cierra** |
-  | `cat`, `head`, `sed`, `Get-Content`, `rtk read` por Bash o PowerShell, en lectura completa | **Se cierra** |
+  | `cat`, `head`, `sed`, `Get-Content` por Bash o PowerShell, en lectura completa | **Se cierra** |
   | Tools de lectura de otros MCP (`mcp__filesystem__read_text_file` y equivalentes) | **Se mide**, no se cierra |
   | Clientes sin hooks (Claude Desktop, REQ-F1-7) | Fuera de alcance hasta P-2 |
 

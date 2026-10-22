@@ -67,7 +67,7 @@ Cuatro fases, en este orden (decision del usuario, 2026-09-11):
 - **Riesgo de medicion**: una sesion abierta hereda la configuracion vieja. Toda medida debe anotar
   cuando arranco la sesion y con que version.
 - **Riesgo de desvio**: bloquear un camino de lectura no cierra los demas (`cat`, `Get-Content`,
-  `rtk read`, las tools de otros MCP). Si solo se cuenta el camino cerrado, la adopcion medida sube
+  las tools de otros MCP). Si solo se cuenta el camino cerrado, la adopcion medida sube
   sin que se ahorre un token. De ahi REQ-F1-9 y la pregunta P-6.
 - **Restriccion del cliente**: reescribir la salida de una herramienta antes de que entre al
   contexto no tiene mecanismo viable hoy, y esta medido (0.27.0, `CHANGELOG.md:127-141`). REQ-F1-4
@@ -91,7 +91,7 @@ Cuatro fases, en este orden (decision del usuario, 2026-09-11):
 - ~~**P-6**~~ **RESUELTA (2026-09-11): se cierran `Read` y las lecturas completas de shell; las tools de lectura de otros MCP solo se miden.** Pregunta original: de la superficie de lectura de REQ-F1-9, **que caminos se
   cierran** ademas de la tool `Read`. Opciones, de menos a mas: (a) solo `Read`, y los demas
   caminos se **miden** para saber cuanto se desvia; (b) `Read` mas las lecturas completas por
-  `cat`/`Get-Content`/`rtk read` en Bash y PowerShell, que es donde el desvio es trivial; (c)
+  `cat`/`Get-Content` en Bash y PowerShell, que es donde el desvio es trivial; (c)
   ademas, las tools de lectura de otros MCP. Recomendacion: **(b)**, porque (a) deja abierta la
   salida de un solo caracter y (c) toca superficie de terceros sin dato que lo justifique. En
   cualquier caso, medir **todos** los caminos es obligatorio: es lo unico que distingue «se

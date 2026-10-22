@@ -585,7 +585,7 @@ muda de sitio.
 Con `LD_HOOK_READ_BLOCK=1`, una lectura **completa** de un `.md` o un `.txt` por encima del
 umbral se rechaza con un mensaje que nombra la tool que sirve, el `path` para llamarla y la salida
 de emergencia: leer por franjas con `offset`/`limit`, que nunca se bloquean. Lo mismo con los
-volcados de shell (`cat`, `type`, `more`, `Get-Content`, `gc`, `rtk read`, `head`) sobre una única
+volcados de shell (`cat`, `type`, `more`, `Get-Content`, `gc`, `head`) sobre una única
 ruta; con una tubería, una redirección, comandos encadenados o un flag que ya acota, no se bloquea.
 
 Nace apagado. Estas son las formas de que no bloquee:

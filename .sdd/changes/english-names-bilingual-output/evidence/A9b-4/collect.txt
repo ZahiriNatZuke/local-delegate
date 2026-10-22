@@ -1264,7 +1264,6 @@ tests/test_hook_shell.py::test_the_simple_ways_to_dump_a_document_are_blocked[ty
 tests/test_hook_shell.py::test_the_simple_ways_to_dump_a_document_are_blocked[more {p}]
 tests/test_hook_shell.py::test_the_simple_ways_to_dump_a_document_are_blocked[Get-Content {p}]
 tests/test_hook_shell.py::test_the_simple_ways_to_dump_a_document_are_blocked[gc {p}]
-tests/test_hook_shell.py::test_the_simple_ways_to_dump_a_document_are_blocked[rtk read {p}]
 tests/test_hook_shell.py::test_the_simple_ways_to_dump_a_document_are_blocked[head {p}]
 tests/test_hook_shell.py::test_the_simple_ways_to_dump_a_document_are_blocked[cat "{p}"]
 tests/test_hook_shell.py::test_the_simple_ways_to_dump_a_document_are_blocked[CAT {p}]

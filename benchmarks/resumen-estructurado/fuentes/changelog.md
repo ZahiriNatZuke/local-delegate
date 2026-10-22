@@ -237,7 +237,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   va por ahí.
 
   Reconoce solo formas simples e inequívocas —`cat`, `type`, `more`, `Get-Content`, `gc`,
-  `rtk read`, `head`— sobre una única ruta. Con una tubería, una redirección, dos comandos
+  `head`— sobre una única ruta. Con una tubería, una redirección, dos comandos
   encadenados, una sustitución o un flag que ya acota, **no bloquea**: un comando mal parseado que
   se rechaza no es un consejo malo, es impedir algo que el usuario pidió.
 

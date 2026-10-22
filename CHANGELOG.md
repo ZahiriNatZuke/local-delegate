@@ -6,6 +6,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Cambiado
+
+- El hook de shell (`suggest_delegate_shell.py`) deja de reconocer el volcado de fichero de la CLI envolvente que ya no se usa; las formas que bloquea quedan en `cat`, `type`, `more`, `Get-Content`, `gc` y `head` sin recorte. Se retiran del repo las demás menciones a esa CLI.
+
 ## [0.39.0] - 2026-10-21
 
 Restos menores que quedaron abiertos tras la 0.37.0 y la 0.38.0 (SDD `backlog-minor-leftovers`):
@@ -1261,7 +1265,7 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
   va por ahí.
 
   Reconoce solo formas simples e inequívocas —`cat`, `type`, `more`, `Get-Content`, `gc`,
-  `rtk read`, `head`— sobre una única ruta. Con una tubería, una redirección, dos comandos
+  `head`— sobre una única ruta. Con una tubería, una redirección, dos comandos
   encadenados, una sustitución o un flag que ya acota, **no bloquea**: un comando mal parseado que
   se rechaza no es un consejo malo, es impedir algo que el usuario pidió.
 
