@@ -114,6 +114,6 @@ def main(argv: list[str]) -> int:
             args = [read_switch.ENABLED_FLAG]
         _utf8_streams()
         _run_script(hooks_dir() / script, args)
-    except BaseException as exc:  # incluye SystemExit(2): nunca bloquear
+    except (Exception, SystemExit) as exc:  # incluye SystemExit(2): nunca bloquear
         _log_failure(name, exc)
     return 0

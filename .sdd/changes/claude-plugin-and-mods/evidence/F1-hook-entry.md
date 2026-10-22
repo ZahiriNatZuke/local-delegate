@@ -5,7 +5,7 @@ Fecha: 2026-10-21 · Windows 11 · Python 3.11 (`.venv` del worktree) · REQ-003
 ## Qué se hizo
 
 - `local_delegate/hook.py`: `python -I -m local_delegate.hook <nombre>` (vía B de T0). `run()`
-  envuelve todo (`except BaseException`) y termina con `os._exit(0)`.
+  envuelve todo (`Exception`, `SystemExit` y `KeyboardInterrupt`; sin `BaseException` por CodeQL) y termina con `os._exit(0)`.
 - `local_delegate/hook_entry.py`: despacho de `prompt`, `record-call`, `read`, `mcp-read` y
   `shell` al script empaquetado de `resources/hooks/` con `runpy.run_path` (su ruta como
   `__file__`, así que `version_de` da la misma huella que en settings). Fuerza UTF-8 en stdin y

@@ -19,13 +19,13 @@ def run(target: Callable[[], object]) -> None:
     """Ejecuta `target` y termina el proceso con 0 pase lo que pase (no vuelve nunca)."""
     try:
         target()
-    except BaseException:
+    except (Exception, SystemExit, KeyboardInterrupt):
         # SystemExit(2) incluido: un hook nunca bloquea
         pass
     for stream in (sys.stdout, sys.stderr):
         try:
             stream.flush()
-        except BaseException:
+        except (OSError, ValueError):
             # una tubería cerrada no cambia el código
             pass
     # `os._exit` y no `sys.exit`: al cerrar el intérprete, un flush fallido sobre una tubería rota
