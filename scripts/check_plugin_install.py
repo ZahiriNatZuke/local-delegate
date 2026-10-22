@@ -15,7 +15,11 @@ Secuencia (plan, lote F1-install):
 3. La orden que declara el `hooks.json` **instalado** para `prompt`, leída de él y no escrita a
    mano, con una muestra por stdin: sale con 0 y da JSON o nada.
 4. Segunda pasada idéntica: settings.json igual que tras la primera.
-5. `--claude-delivery settings`: el plugin se va y vuelven los hooks, con el de lectura.
+4b. Reinstalar con el otro idioma sobre el plugin ya instalado (lo que hace la reparación de
+   `update`): `claude plugin install … --config` vuelve a aplicar las opciones, y
+   `pluginConfigs` lo refleja (F1-settings-choice; medido con la CLI 2.1.307).
+5. `--claude-delivery settings`: el plugin se va y vuelven los hooks, con el de lectura, y el
+   estado guarda que la vía la eligió el usuario (para que `update` no la deshaga).
 6. `uninstall`: ni plugin ni hooks nuestros; el hook ajeno, intacto.
 
 Uso: ``uv run python scripts/check_plugin_install.py <ruta del binario claude>``.
@@ -111,6 +115,11 @@ def run(actions: list[install.Action]) -> None:
         fail(f"{failures} acción(es) fallaron")
 
 
+def plugin_language(home: Path) -> str | None:
+    configs = settings(home).get("pluginConfigs", {}).get(claude_plugin.PLUGIN_ID, {})
+    return configs.get("options", {}).get("language")
+
+
 def installed_hooks_json(home: Path) -> Path:
     found = sorted((home / ".claude" / "plugins").rglob("hooks.json"))
     found = [p for p in found if "local-delegate" in p.as_posix()]
@@ -194,12 +203,32 @@ def main() -> int:
     if settings(home) != before or ours(home):
         fail("la segunda pasada cambió settings.json")
 
+    step("4b. Reinstalar con el otro idioma: --config se vuelve a aplicar")
+    first = plugin_language(home)
+    if first not in ("es", "en"):
+        fail(f"pluginConfigs no tiene el idioma tras instalar: {first!r}")
+    other = "en" if first == "es" else "es"
+    previous = os.environ.get("LOCAL_DELEGATE_LANG")
+    os.environ["LOCAL_DELEGATE_LANG"] = other
+    try:
+        run(install.plan_install(options(home, claude_bin)))
+    finally:
+        if previous is None:
+            os.environ.pop("LOCAL_DELEGATE_LANG", None)
+        else:
+            os.environ["LOCAL_DELEGATE_LANG"] = previous
+    if plugin_language(home) != other:
+        fail(f"la reinstalación no aplicó language={other}: {plugin_language(home)!r}")
+    print(f"   language: {first} -> {other}", flush=True)
+
     step("5. --claude-delivery settings: vuelta atrás")
     run(install.plan_install(options(home, claude_bin, claude_delivery="settings")))
     if listed(claude_bin, home) is not None:
         fail("el plugin sigue instalado tras volver a settings")
     if not install.read_hook_registered(home / ".claude"):
         fail("la vuelta atrás no repuso el hook de lectura")
+    if not install_state.delivery_explicit(install_state.load(home, data_dir)):
+        fail("el estado no guarda que settings lo eligió el usuario")
 
     step("6. uninstall")
     run(install.plan_uninstall(options(home, claude_bin, components=set(install.FULL_COMPONENTS))))

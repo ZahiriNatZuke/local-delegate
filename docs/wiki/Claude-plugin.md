@@ -35,7 +35,8 @@ cuando se cumple todo esto:
   `CLAUDE_CONFIG_DIR` (Windows, Linux y macOS).
 
 Si falla alguna, `install` usa la entrega por settings y **avisa del motivo**. Con
-`--claude-delivery settings` no avisa: es lo que se pidió.
+`--claude-delivery settings` no avisa: es lo que se pidió, y queda anotado para que `update` no lo
+deshaga (ver [Cómo deshacerlo](#cómo-deshacerlo)).
 
 ```bash
 local-delegate install --dry-run                     # muestra la vía elegida y los comandos `claude plugin …`
@@ -106,4 +107,9 @@ estaba antes de `install` se queda. Si `install --desktop` había reemplazado un
 `uninstall` **no la repone** (podía llevar el token): quita la nuestra y dice en qué copia está la
 anterior. Al final borra el interruptor del hook de lectura y el estado.
 
-La vuelta atrás de una instalación ya migrada es `install --claude-delivery settings`.
+La vuelta atrás de una instalación ya migrada es `install --claude-delivery settings`, y `update` la
+**respeta**: `install` con ese flag deja escrito en `install-state.json` que la vía la eligió el
+usuario (`"claude_delivery_explicit": true`), y con esa marca `update` repara los hooks en
+`settings.json` en vez de migrar al plugin. Para volver al plugin, `install` sin el flag o con
+`--claude-delivery plugin`: los dos quitan la marca. Una instalación vieja sin la marca (o sin
+estado) sí se migra al plugin en el siguiente `update`.

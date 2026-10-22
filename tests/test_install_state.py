@@ -76,3 +76,19 @@ def test_state_follows_language_dir_rule(tmp_path, monkeypatch):
     # An explicit data_dir wins, as in install.data_dir_for.
     other = tmp_path / "other"
     assert install_state.save(home, state, data_dir=other) == other / install_state.STATE_FILE
+
+
+def test_explicit_delivery_is_optional_and_keeps_schema():
+    """A state written before the mark reads as "not chosen"; setting it keeps `schema` at 1."""
+    old = install_state.new_state("settings", "0.39.0")
+    assert install_state.EXPLICIT_FIELD not in old
+    assert install_state.delivery_explicit(old) is False
+    assert install_state.delivery_explicit(None) is False
+
+    marked = install_state.with_delivery_explicit(old, True)
+    assert install_state.delivery_explicit(marked) is True
+    assert marked["schema"] == install_state.SCHEMA_VERSION == 1
+    assert install_state.EXPLICIT_FIELD not in old  # a copy, not in place
+
+    removed = install_state.with_delivery_explicit(marked, False)
+    assert removed == old

@@ -34,7 +34,7 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from importlib import import_module
 from importlib.resources import files as _resource_files
@@ -2495,6 +2495,41 @@ def _installation_state(opts: Options) -> dict | None:
     return install_state.load(opts.home, opts.data_dir)
 
 
+def _record_delivery_choice(opts: Options) -> None:
+    """Marks (``--claude-delivery settings``) or unmarks (anything else) the choice in the state.
+
+    Without the mark, `update` migrates a settings install that meets REQ-005 (REQ-008 a), and the
+    way back to settings would only last until the next `update`. Without a state and without a
+    choice to record, nothing is written: that is the old install REQ-008 a migrates.
+    """
+    claude_plugin = _sibling("claude_plugin")
+    install_state = _sibling("install_state")
+    from .version import get_version
+
+    explicit = opts.claude_delivery == claude_plugin.SETTINGS
+    state = install_state.load(opts.home, opts.data_dir)
+    if state is None and not explicit:
+        return
+    base = state or install_state.new_state(claude_plugin.SETTINGS, get_version())
+    if explicit:
+        base = {**base, "claude_delivery": claude_plugin.SETTINGS}
+    new = install_state.with_delivery_explicit(base, explicit)
+    if new != state:
+        install_state.save(opts.home, new, opts.data_dir)
+
+
+def _with_delivery_choice(opts: Options, action: Action) -> Action:
+    """``action`` that, once it has run, records whether the delivery was chosen by hand."""
+    inner = action.run
+
+    def _run() -> str | None:
+        result = inner() if callable(inner) else None
+        _record_delivery_choice(opts)
+        return result
+
+    return replace(action, run=_run)
+
+
 def _claude_hook_actions(opts: Options, claude: Path, lang: str) -> list[Action]:
     """The hooks of Claude Code by the delivery `decide` chose, and the read switch after them."""
     claude_plugin = _sibling("claude_plugin")
@@ -2520,6 +2555,7 @@ def _claude_hook_actions(opts: Options, claude: Path, lang: str) -> list[Action]
         )
     else:
         actions.extend(_settings_hook_actions(opts, claude, decision.warning))
+    actions[-1] = _with_delivery_choice(opts, actions[-1])
     if opts.enable_read_hook or opts.disable_read_hook:
         action = _read_switch_action(opts, active=not opts.disable_read_hook)
         if action is not None:

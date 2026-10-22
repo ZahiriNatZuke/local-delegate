@@ -430,3 +430,83 @@ def test_plan_pin_unchanged(tmp_path):
     assert f"{update.PACKAGE}=={VERSION}" in claude_json.read_text(encoding="utf-8")
     # The MCP entry stays in `~/.claude.json`, never in the plugin (REQ-010).
     assert "local-delegate" in json.loads(claude_json.read_text(encoding="utf-8"))["mcpServers"]
+
+
+# --- The settings delivery chosen by hand stays (F1-settings-choice) --------------------------
+#: The optional field of `install-state.json` that says `--claude-delivery settings` was explicit.
+EXPLICIT = "claude_delivery_explicit"
+
+
+def _install(home: Path, fake: Claude, ld: Path, delivery: str | None) -> None:
+    """`install` of the hooks for Claude Code, with ``--claude-delivery`` = ``delivery``."""
+    actions = install.plan_install(
+        install.Options(
+            home=home,
+            components={"hooks"},
+            targets={"claude"},
+            python_exe="python",
+            use_cli=False,
+            claude_runner=fake,
+            claude_which=fake.which,
+            claude_ld_bin=claude_plugin.LdBin(str(ld), None),
+            claude_delivery=delivery,
+        )
+    )
+    assert install.apply(actions, dry_run=False, out=lambda _line: None) == 0
+
+
+def _drop_settings_hooks(home: Path) -> None:
+    """Our entries out of `settings.json`: the `scaffold.hook_settings` repair has to run."""
+    data = _read_settings(home)
+    data.pop("hooks", None)
+    _write_settings(home, data)
+
+
+@pytest.mark.parametrize("case", ["intact", "broken"])
+def test_update_respects_explicit_settings_choice(tmp_path, case):
+    ld = _ld_bin(tmp_path)
+    home = _settings_home(tmp_path)
+    fake = _claude(home)  # a `claude` that can take the plugin: only the choice holds it back
+    _install(home, fake, ld, claude_plugin.SETTINGS)
+    if case == "broken":
+        _drop_settings_hooks(home)
+
+    code, text = _run(_opts(home, fake, ld))
+
+    assert code == 0, text
+    assert "install" not in fake.steps(), fake.steps()
+    assert install_state.delivery(install_state.load(home)) == claude_plugin.SETTINGS
+    # The settings delivery is still (or again) the one in place.
+    assert _our_hooks(home), "our hooks should be in settings.json"
+    assert _read_settings(home).get("enabledPlugins", {}).get(PLUGIN_ID) is None
+
+
+@pytest.mark.parametrize("delivery", [None, claude_plugin.PLUGIN])
+def test_install_without_explicit_settings_removes_the_choice(tmp_path, delivery):
+    ld = _ld_bin(tmp_path)
+    home = _settings_home(tmp_path)
+    state = {**install_state.new_state(claude_plugin.SETTINGS, VERSION), EXPLICIT: True}
+    install_state.save(home, state)
+    # Without the flag and an old `claude`, `install` stays on settings; with `plugin`, it moves.
+    fake = _claude(home, **({"version": "2.1.200"} if delivery is None else {}))
+
+    _install(home, fake, ld, delivery)
+
+    stored = install_state.load(home)
+    assert stored is not None
+    assert EXPLICIT not in stored, stored
+
+
+def test_old_settings_install_without_mark_still_migrates(tmp_path):
+    """Control of the two above: a state of today (no mark) keeps migrating (REQ-008 a)."""
+    ld = _ld_bin(tmp_path)
+    home = _settings_home(tmp_path)
+    install_state.save(home, install_state.new_state(claude_plugin.SETTINGS, "0.39.0"))
+    fake = _claude(home)
+
+    code, text = _run(_opts(home, fake, ld))
+
+    assert code == 0, text
+    assert "install" in fake.steps(), fake.steps()
+    assert install_state.delivery(install_state.load(home)) == claude_plugin.PLUGIN
+    assert EXPLICIT not in (install_state.load(home) or {})
