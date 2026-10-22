@@ -25,6 +25,40 @@
       "title": "Language",
       "description": "Language of the hook messages (es or en). `local-delegate install` fills it in.",
       "required": false
+    },
+    "pinned_tools": {
+      "type": "string",
+      "multiple": true,
+      "title": "Pinned tools",
+      "description": "local-delegate tools whose schema stays in the prompt instead of behind ToolSearch (short names such as local_summarize). An empty list turns this off.",
+      "required": false,
+      "default": [
+        "local_summarize",
+        "local_extract",
+        "local_lint_summary",
+        "local_commit_msg"
+      ]
+    },
+    "commands_enabled": {
+      "type": "boolean",
+      "title": "Slash commands",
+      "description": "The /local-summarize, /local-commit and /local-lint commands of the mod.",
+      "required": false,
+      "default": true
+    },
+    "status_enabled": {
+      "type": "boolean",
+      "title": "Status line",
+      "description": "Quota and savings of the session in the status line.",
+      "required": false,
+      "default": true
+    },
+    "read_mod_enabled": {
+      "type": "boolean",
+      "title": "Read steering by the mod",
+      "description": "Let the mod, instead of the read hooks, steer large reads to the local tools.",
+      "required": false,
+      "default": false
     }
   }
 }

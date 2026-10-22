@@ -327,7 +327,7 @@ legítimos (el CLI fuera del PATH si se instaló con `uvx`, o un cliente que no 
 
 Reinicia el cliente. Verifica con:
 
-- `local-delegate doctor` → comprueba de una vez las treinta y dos piezas (ver abajo), incluidos el
+- `local-delegate doctor` → comprueba de una vez las treinta y tres piezas (ver abajo), incluidos el
   daemon y el backend, que el reporte de `install` no mira a propósito.
 - `local_status` → backend, catálogo y si el cómputo es local o remoto.
 - Un prompt tipo "resume este archivo en cinco viñetas" → debe aparecer la sugerencia del hook.
@@ -431,6 +431,42 @@ local-delegate init-llamaswap --config config.yaml --swap gemma3-4b,gemma4-26b-a
   `i < N` (que van a RAM) y trata un `--mmproj` que no existe como **error de estimación** (código 2)
   en vez de ignorarlo.
 
+## El mod del plugin
+
+Desde la 0.40, el plugin de Claude Code trae, además de los hooks, un **mod**: código que corre
+dentro de Claude Code (`register.js`, declarado en `hooks/hooks.json` bajo `modules`). Está hecho
+de **piezas**, cada una con su interruptor en la `userConfig` del plugin:
+
+| Pieza | Interruptor | Qué hace |
+|---|---|---|
+| tools fijas | `pinned_tools` (lista) | saca de ToolSearch las tools de local-delegate de la lista, para que el modelo las vea sin buscarlas. Por defecto `local_summarize`, `local_extract`, `local_lint_summary` y `local_commit_msg` (~2 000 tokens). Lista vacía = apagado. Solo admite tools `mcp__local-delegate__*` |
+| comandos | `commands_enabled` | `/local-summarize`, `/local-commit` y `/local-lint` sin turno del modelo |
+| barra de estado | `status_enabled` | cuota y ahorro de la sesión (llega en una versión posterior) |
+| lectura | `read_mod_enabled` (apagado) | desvío de lecturas grandes desde el mod (llega en una versión posterior) |
+
+Una pieza se apaga desde el menú de configuración de Claude Code (cada opción del plugin es una
+fila), **no** con `claude plugin disable`, que apaga también los hooks.
+
+Lo que el mod promete (y comprueban `tests/test_mod_static.py` y `claude plugin test`):
+
+- Solo lee el secreto `LOCAL_DELEGATE_WEB_TOKEN`, y nunca lo escribe en un log, en la barra ni en el
+  latido. Las demás variables que lee solo dicen dónde está la carpeta de datos del plugin
+  (`CLAUDE_CONFIG_DIR`, `USERPROFILE`/`HOME`) y quién abrió la sesión (`CLAUDE_CODE_ENTRYPOINT`).
+- Solo habla con el daemon en `http://127.0.0.1:9393`. Un daemon en otro puerto
+  (`LOCAL_DELEGATE_WEB_PORT`) queda fuera del alcance del mod; los hooks y el MCP no cambian.
+- Si una pieza falla, las demás siguen; si el mod entero no carga, los hooks y el MCP siguen.
+
+`register.js` **no se versiona**: lo genera `scripts/build_mod.py` a partir de `mod/*.js` (el motor
+rechaza el `import()` dinámico, así que importa con `import` estático solo las piezas presentes y
+registra cada una dentro de su propio `try`). Lo corren el CI y el empaquetado antes de validar,
+probar o construir la rueda. Para probar el mod en local:
+
+```bash
+uv run python scripts/build_mod.py
+claude plugin validate --strict src/local_delegate/resources/claude-plugin/local-delegate
+claude plugin test src/local_delegate/resources/claude-plugin/local-delegate
+```
+
 ## Comprobar la instalación: `local-delegate doctor`
 
 `install` escribe; `doctor` **solo mira**. Recorre el registro único de comprobaciones
@@ -461,6 +497,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
 | Andamiaje | hooks registrados | entradas **nuestras** en `~/.claude/settings.json` (las ajenas no se cuentan). Con la entrega por **plugin** lo correcto es que **no** haya ninguna: los hooks vienen del plugin, y una nuestra en settings correría dos veces (`[WARN]`, lo arregla `update`) |
 | Andamiaje | intérprete de los hooks del plugin | solo con el plugin: que la opción `ld_bin` del plugin (`pluginConfigs` de `~/.claude/settings.json`) exista (`[FALT]` si no) y sea el intérprete del entorno de `uv tool` de **esta** versión (`[WARN]` si apunta a otro). Un `ld_bin` que no existe deja los hooks sin actuar y sin avisar, porque nunca bloquean |
 | Andamiaje | hooks duplicados | hooks nuestros en `~/.claude/settings.json` **y** el plugin habilitado a la vez (`enabledPlugins`): cada evento corre dos veces. Pasa si se baja a la 0.39 sin `uninstall` antes. `[WARN]`; `update` retira los de settings |
+| Andamiaje | mod del plugin cargado | solo con el plugin: el **latido** que el mod escribe al iniciar cada sesión (`<config>/plugins/data/local-delegate-local-delegate/heartbeats/<sesión>.json`). Toma el más reciente y dice la sesión, la hora, la versión y el estado de cada pieza (`on`, `off`, `absent`, `failed`). `[WARN]` si no hay ninguno (el mod no cargó nunca), si el último tiene más de 7 días, si no se puede leer o si una pieza falló; lo arregla abrir una sesión nueva, y `claude --debug` dice por qué no cargó. Los hooks siguen funcionando aunque el mod no cargue |
 | Andamiaje | skill local-delegation | la skill **en cada cliente al que se le escribe**: `~/.claude/skills/local-delegation/SKILL.md` y `~/.config/opencode/skill/local-delegation/`. Mirar solo la de Claude Code daba un `[ OK ]` con la de opencode borrada |
 | Andamiaje | memoria global | el bloque entre marcadores en `CLAUDE.md` y `AGENTS.md`, y que sea **el del paquete** (sin contar saltos de línea ni espacios al final). Con otro texto da `warn` («desfasado») y `update` lo repone dejando el `.bak`; también si lo editaste a mano dentro de los marcadores |
 | Andamiaje | MCP en Claude Code | la entrada `local-delegate` en `~/.claude.json` |
@@ -492,7 +529,7 @@ Cuatro estados, y la diferencia entre los dos últimos importa:
 como «falta», un arreglo automático posterior sobrescribiría configuración que no es nuestra. El
 exit code es **0** sin avisos y **1** con al menos uno.
 
-De las treinta y dos comprobaciones, **«versión publicada» es la única que consulta PyPI**, con un timeout
+De las treinta y tres comprobaciones, **«versión publicada» es la única que consulta PyPI**, con un timeout
 de dos segundos y degradando a `[ -- ]` si no hay red. Y lo hace **solo en `doctor`**: ni el
 reporte de `install` ni el diagnóstico interno de `update` salen a internet por ella —el primero
 porque instalar unos hooks no es motivo para hacerlo, y el segundo porque ya pregunta la versión

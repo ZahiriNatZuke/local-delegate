@@ -106,8 +106,8 @@ def test_registry_ids_are_unique_and_groups_are_known():
 
 
 def test_check_ids_exact():
-    """A6 (REQ-011) and REQ-009: the 32 exact ids, in English. An id is a contract with its readers."""
-    assert len(checks.CHECKS) == 32
+    """A6 (REQ-011) and REQ-009: the 33 exact ids, in English. An id is a contract with its readers."""
+    assert len(checks.CHECKS) == 33
     assert {check.id for check in checks.CHECKS} == {
         "cli.path",
         "cli.published",
@@ -130,6 +130,7 @@ def test_check_ids_exact():
         "scaffold.shell_completion",
         "plugin.ld_bin",
         "hooks.duplicates",
+        "mod.loaded",
         "service.daemon",
         "service.backend",
         "service.credential",
@@ -510,13 +511,15 @@ def test_empty_home_reports_missing_with_fix_hint(tmp_path):
     # `scaffold.shell_completion` tampoco: es opcional, y sin nada instalado la respuesta es `ok`
     # «no instalado (opcional)», no «falta».
     # `plugin.ld_bin` and `hooks.duplicates` neither: without the plugin delivery the first does
-    # not apply and the second has nothing duplicated, so both are `ok` (F1-doctor).
+    # not apply and the second has nothing duplicated, so both are `ok` (F1-doctor). `mod.loaded`
+    # neither: without the plugin there is no mod to load (F2-mod-core).
     separate = {
         "scaffold.memory",
         "scaffold.hook_orphans",
         "scaffold.shell_completion",
         "plugin.ld_bin",
         "hooks.duplicates",
+        "mod.loaded",
     }
     ctx = make_ctx(make_home(tmp_path, complete=False))
     scaffold = [

@@ -8,6 +8,7 @@ is a `FakeClaude`), reads the real registry (the bridge token is injected) or go
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from conftest import FakeClaude, desktop_mcp_remote_entry, make_home, write_claude_desktop
@@ -306,3 +307,81 @@ def test_desktop_literal_token_not_shown(tmp_path):
     no_token = result_for("service.desktop_auth", _desktop_ctx(home, token=""))
     assert no_token.status == checks.WARN, no_token.detail
     assert "LOCAL_DELEGATE_WEB_TOKEN" in no_token.detail
+
+
+# --- mod.loaded (F2-mod-core, REQ-009): the heartbeat the mod writes ---------------------------
+_PIECES = {"pinned-tools": "on", "commands": "on", "status": "absent", "read": "absent"}
+
+
+def _heartbeat(home: Path, session: str = "sess-1", **fields) -> Path:
+    """What `mod/common.js` writes at session start (`heartbeat`), with its field names."""
+    folder = (
+        home
+        / ".claude"
+        / "plugins"
+        / "data"
+        / f"{claude_plugin.PLUGIN_NAME}-{claude_plugin.MARKETPLACE_NAME}"
+        / "heartbeats"
+    )
+    folder.mkdir(parents=True, exist_ok=True)
+    beat = {
+        "session_id": session,
+        "version": checks._installed_version() or "0.0.0",
+        "entrypoint": "cli",
+        "process_run": True,
+        "dialog": True,
+        "read_mod_enabled": False,
+        "pieces": dict(_PIECES),
+        "at": "2026-10-22T10:00:00.000Z",
+    }
+    beat.update(fields)
+    path = folder / f"{session}.json"
+    path.write_text(json.dumps(beat), encoding="utf-8")
+    return path
+
+
+def test_mod_loaded_from_heartbeat(tmp_path):
+    home, data = _plugin_home(tmp_path, ld_bin=_ld_bin(tmp_path))
+    old = _heartbeat(home, "older", pieces={**_PIECES, "commands": "failed"})
+    os.utime(old, (old.stat().st_mtime - 3600, old.stat().st_mtime - 3600))
+    _heartbeat(home, "newest")
+    result = result_for("mod.loaded", _ctx(home, data))
+    # The newest session's heartbeat speaks: the older one's failed piece is history.
+    assert result.status == checks.OK, result.detail
+    assert "pinned-tools" in result.detail and "commands" in result.detail
+    assert "2026-10-22" in result.detail
+
+
+def test_no_heartbeat_warns(tmp_path):
+    home, data = _plugin_home(tmp_path, ld_bin=_ld_bin(tmp_path))
+    result = result_for("mod.loaded", _ctx(home, data))
+    assert result.status == checks.WARN, result.detail
+    assert "heartbeats" in result.detail
+    assert result.fix_hint
+    # Control: the same HOME with a heartbeat is ok, so the warn came from its absence.
+    _heartbeat(home)
+    assert result_for("mod.loaded", _ctx(home, data)).status == checks.OK
+
+
+def test_mod_failed_piece_or_stale_heartbeat_warns(tmp_path):
+    home, data = _plugin_home(tmp_path, ld_bin=_ld_bin(tmp_path))
+    _heartbeat(home, pieces={**_PIECES, "commands": "failed"})
+    failed = result_for("mod.loaded", _ctx(home, data))
+    assert failed.status == checks.WARN, failed.detail
+    assert "commands" in failed.detail
+
+    stale = _heartbeat(home)
+    eight_days = 8 * 24 * 3600
+    os.utime(stale, (stale.stat().st_mtime - eight_days, stale.stat().st_mtime - eight_days))
+    old = result_for("mod.loaded", _ctx(home, data))
+    assert old.status == checks.WARN, old.detail
+
+    broken = _heartbeat(home, "broken")
+    broken.write_text("{not json", encoding="utf-8")
+    assert result_for("mod.loaded", _ctx(home, data)).status == checks.WARN
+
+
+def test_mod_not_expected_without_plugin(tmp_path):
+    home = make_home(tmp_path, codex=False, opencode=False)
+    result = result_for("mod.loaded", make_ctx(home))
+    assert result.status == checks.OK, result.detail

@@ -4,8 +4,11 @@
 // reads it. Every text for the person comes from `common.t` (catalogs in `mod/i18n`).
 //
 // The engine only lets `$` reach functions declared at the top of the file, so the helpers are
-// top-level; `scripts/build_mod.py` concatenates the pieces, so every name but `register` carries
-// the `commands` prefix and cannot clash with another piece's.
+// top-level and take `common` as an argument: `engineCommon($)` builds it inside each hook (a
+// test passes its own double as `register`'s third argument instead). Every name but `register`
+// carries the `commands` prefix and cannot clash with another piece's.
+
+import { engineCommon } from './common.js'
 
 const COMMANDS_SERVER = 'local-delegate'
 const COMMANDS_ERROR_PREFIX = '[local-delegate error]'
@@ -313,16 +316,17 @@ async function commandsRegisterAll($, common) {
   }
 }
 
+// At the session's start the commands are registered. `register.js` holds the module's only
+// `session.start` hook (the engine refuses two without a matcher) and calls this one.
+export async function onSessionStart($, e, common) {
+  await commandsRegisterAll($, common || engineCommon($))
+}
+
 export function register(on, options, common) {
   const enabled = options?.commands_enabled
   if (enabled === false || enabled === 'false') return
 
-  on('session.start', async ($, e, next) => {
-    const started = await next(e)
-    await commandsRegisterAll($, common)
-    return started
-  })
-  on('command.run', { command: 'local-summarize' }, ($, e) => commandsSummarize($, common, e))
-  on('command.run', { command: 'local-commit' }, ($) => commandsCommit($, common))
-  on('command.run', { command: 'local-lint' }, ($, e) => commandsLint($, common, e))
+  on('command.run', { command: 'local-summarize' }, ($, e) => commandsSummarize($, common || engineCommon($), e))
+  on('command.run', { command: 'local-commit' }, ($) => commandsCommit($, common || engineCommon($)))
+  on('command.run', { command: 'local-lint' }, ($, e) => commandsLint($, common || engineCommon($), e))
 }

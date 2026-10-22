@@ -3,7 +3,7 @@
 // real `common.js` nor on the generated `register.js`. The `$` and `on` of the kit are not used:
 // nothing here loads the plugin.
 import { expect, test } from 'claude-code/testing'
-import { register } from './commands.js'
+import { onSessionStart, register } from './commands.js'
 
 const DATA = 'C:\\cfg\\plugins\\data\\local-delegate-local-delegate'
 const REMOVE_MARK = 'os.remove'
@@ -298,7 +298,7 @@ test('summarize_missing_file_and_usage', async () => {
 test('texts_follow_language', async () => {
   for (const language of ['es', 'en']) {
     const env = makeEnv({ language, process: false })
-    await env.hooks.find((h) => h.event === 'session.start').hook(env.$, { cwd: 'C:\\work' }, async () => ({}))
+    await onSessionStart(env.$, { cwd: 'C:\\work' }, env.common)
     expect(env.registered.map((c) => c.name)).toEqual(['local-summarize', 'local-commit', 'local-lint'])
     for (const spec of env.registered) expect(spec.description).toStartWith(`[${language}] commands.`)
     expect((await run(env, 'local-commit', '')).text).toBe(`[${language}] commands.commit.no_process`)

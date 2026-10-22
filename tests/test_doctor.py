@@ -291,8 +291,8 @@ def test_run_doctor_exit_0_when_everything_is_in_place(tmp_path, monkeypatch, ca
     lines = [line for line in out.splitlines() if line.startswith("  [")]
     assert lines and all(line.startswith("  [ OK ]") for line in lines)
     # A6 (REQ-011): no hay `doctor --json`, así que el contrato de los ids y grupos nuevos se mira
-    # en la salida de texto: los 32 checks, una línea cada uno, bajo el encabezado de su grupo.
-    assert len(lines) == len(checks.CHECKS) == 32
+    # en la salida de texto: los 33 checks, una línea cada uno, bajo el encabezado de su grupo.
+    assert len(lines) == len(checks.CHECKS) == 33
     headings = [*map(doctor.group_heading, doctor._GROUP_HEADINGS), doctor._versions_heading(False)]
     assert [h for h in headings if h in out] == headings
     for check in checks.CHECKS:
