@@ -172,8 +172,11 @@ siguen con la entrega por settings.** Hechos: `research.md`.
 - **REQ-021 — Lectura con elección.** Con entrega por plugin y el interruptor de REQ-004 encendido,
   para las vías **clasificables con seguridad** y por encima de los umbrales: en sesión con diálogo,
   botones «resumir con el modelo local / leer entero» (resumir llama a `local_summarize` y entrega el
-  resumen como resultado); sin diálogo (`-p`, subagentes), deniega con la sugerencia, como el
-  bloqueo actual. Para las vías **no clasificables con seguridad**: solo aviso y registro, nunca
+  resumen como resultado); sin diálogo (`-p`, subagentes), **el mod resume él mismo y entrega el
+  resumen como resultado**, sin denegar ni sugerir (decisión del usuario, 2026-10-22: la delegación
+  no puede depender de que el modelo obedezca una sugerencia; tres mediciones dieron cero). La
+  lectura real sigue disponible solo por franjas por debajo del umbral (REQ-020) y REQ-022 protege
+  las escrituras. Para las vías **no clasificables con seguridad**: solo aviso y registro, nunca
   bloqueo. Telemetría de REQ-004 por vía.
 - **REQ-022 — Nunca escribe sobre un resumen.** Tras una lectura resumida de un fichero (por
   cualquier vía), el mod rechaza `Edit`, `Write`, `NotebookEdit` y escrituras de shell reconocibles
