@@ -453,5 +453,9 @@ def test_hook_names_are_the_plugin_contract():
     assert set(hook_entry.HOOKS) == {"prompt", "record-call", "read", "shell", "mcp-read"}
     for script, _gated in hook_entry.HOOKS.values():
         assert (HOOKS / script).is_file(), script
-    digest = hashlib.sha256((HOOKS / "suggest_delegate_read.py").read_bytes()).hexdigest()[:8]
+    # La huella del hook de lectura incluye el clasificador (F4-classifier, REQ-019).
+    rules = (HOOKS / "suggest_delegate_read.py").read_bytes() + (
+        HOOKS / "read_classifier.py"
+    ).read_bytes()
+    digest = hashlib.sha256(rules).hexdigest()[:8]
     assert digest == common.version_de(str(hook_entry.hooks_dir() / "suggest_delegate_read.py"))

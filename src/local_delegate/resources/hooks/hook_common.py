@@ -60,6 +60,14 @@ def new_id() -> str:
     return uuid.uuid4().hex[:12]
 
 
+#: El clasificador unico de lectura (REQ-019), junto a los scripts.
+CLASSIFIER_FILE = "read_classifier.py"
+#: Hooks cuyas reglas de lectura viven en el clasificador: su huella lo incluye, asi que cambiar una
+#: regla abre un tramo nuevo de P-4 aunque el script no cambie. El clasificador no estampa eventos,
+#: asi que no entra en `HASHED_HOOKS` (`tests/test_hook_boundaries.py`).
+CLASSIFIER_HOOKS = frozenset({"suggest_delegate_read.py", "suggest_delegate_shell.py"})
+
+
 def version_de(script: str) -> str:
     """Huella del script que REALMENTE corrio: los ocho primeros hex de su sha256.
 
@@ -68,11 +76,18 @@ def version_de(script: str) -> str:
     leer una medicion no es que release estaba instalada, sino si el script que corrio era el nuevo
     o el viejo, y eso lo dice el contenido.
 
+    Para los hooks de `CLASSIFIER_HOOKS` la huella es la del script **mas** `read_classifier.py`:
+    las reglas que deciden estan alli.
+
     Devuelve `""` si el fichero no se puede leer: un evento sin huella es peor que ninguno, pero
     romperle la lectura al usuario por un hash es mucho peor.
     """
     try:
-        return hashlib.sha256(Path(script).read_bytes()).hexdigest()[:8]
+        path = Path(script)
+        data = path.read_bytes()
+        if path.name in CLASSIFIER_HOOKS:
+            data += (path.parent / CLASSIFIER_FILE).read_bytes()
+        return hashlib.sha256(data).hexdigest()[:8]
     except OSError:
         return ""
 
@@ -108,6 +123,41 @@ def record(event: str, **metadata: object) -> None:
         # puede crear o escribir (permisos, disco lleno, ruta inválida en LD_HOOK_TELEMETRY_LOG),
         # perder una línea de log es preferible a romperle la operación al usuario.
         pass
+
+
+# --- Decisiones del mod de lectura (`hook record-read`, plan Ola 5) ------------------------------
+#
+# Cuando el mod de lectura actua, el hook se aparta, pero la serie de P-4 no puede cortarse: el mod
+# llama `hook record-read` y se escribe la MISMA linea que habria escrito el hook, mas `decision`
+# y `source: "mod"` para poder separar las dos fuentes al medir.
+
+#: Decision del mod -> (`suggested`, `blocked`, `reason`) de la linea del hook equivalente.
+#: Los valores son los que manda `mod/read.js`. Un resumen sustituye a la lectura: cuenta como el
+#: bloqueo del hook. Leer entero, cerrar el dialogo o un resumen fallido dejan pasar la lectura.
+MOD_DECISIONS: dict[str, tuple[bool, bool, str]] = {
+    "summarized": (True, True, "large_prose"),  # con dialogo: eligio resumir con el modelo local
+    "auto_summarized": (True, True, "large_prose"),  # sin dialogo: el mod resume solo
+    "read_whole": (True, False, "large_prose"),  # con dialogo: eligio leer entero
+    "dismissed": (True, False, "large_prose"),  # cerro el dialogo sin elegir: la lectura pasa
+    "summary_failed": (True, False, "summary_failed"),  # el resumen fallo: la lectura pasa
+    "warned": (True, False, "unclassifiable"),  # via no clasificable: solo aviso
+}
+_MOD_DECISION_NAME = re.compile(r"^[a-z_]{1,32}$")
+
+
+def mod_decision_fields(decision: object) -> dict:
+    """Los campos de decision de una linea de `record-read`. Una decision desconocida se registra
+    igual (con `reason: mod_decision`): perder la linea cortaria la serie en silencio."""
+    name = str(decision or "")
+    if name in MOD_DECISIONS:
+        suggested, blocked, reason = MOD_DECISIONS[name]
+    else:
+        suggested, blocked, reason = False, False, "mod_decision"
+        name = name if _MOD_DECISION_NAME.match(name) else "other"
+    fields: dict = {"suggested": suggested, "reason": reason, "decision": name, "source": "mod"}
+    if blocked:
+        fields["blocked"] = True
+    return fields
 
 
 def emit(event: str, context: str, **metadata: object) -> None:

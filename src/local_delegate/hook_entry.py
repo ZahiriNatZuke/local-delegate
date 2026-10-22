@@ -14,6 +14,17 @@ Tres reglas, y las tres existen porque Claude Code bloquea el prompt o la tool c
 
 Con la capa «activo» del hook de lectura apagada, `read`, `mcp-read` y `shell` salen después de
 importar solo `read_switch`: en la entrega por plugin esas entradas van siempre declaradas.
+
+Dos subcomandos más no son hooks de `hooks.json`: los llama el mod de lectura por `$.process.run`
+(plan, Ola 5, «Contrato de `hook classify`»):
+
+- `hook classify`: stdin, la entrada de un hook `PreToolUse` (`tool_name`, `tool_input`, `cwd`,
+  `session_id`); stdout, `{"kind", "path", "scope", "bytes", "range", "via", "read_switch"}` de
+  `read_classifier.classify`. `hook classify --list-tools` da la lista JSON de tools que pueden
+  leer o escribir (`mcp__*` es un prefijo).
+- `hook record-read`: stdin, la salida de `classify` más `decision` y `session_id`; escribe en la
+  telemetría de los hooks la misma línea que habría escrito el hook de esa vía, más `decision` y
+  `source: "mod"` (`hook_common.MOD_DECISIONS`). No escribe nada en stdout.
 """
 
 from __future__ import annotations
@@ -31,6 +42,12 @@ HOOKS: dict[str, tuple[str, bool]] = {
     "mcp-read": ("suggest_delegate_read.py", True),
     "shell": ("suggest_delegate_shell.py", True),
 }
+
+#: Subcomandos del mod de lectura (no son hooks de `hooks.json`). Salen con 0 pase lo que pase.
+COMMANDS = ("classify", "record-read")
+
+#: Opción de `classify` que lista las tools en vez de clasificar.
+LIST_TOOLS_FLAG = "--list-tools"
 
 #: Log de fallos de los hooks, en `LOG_DIR`. Una línea por fallo: hora, hook y tipo de excepción.
 FAILURE_LOG = "hook-failures.jsonl"
@@ -76,6 +93,49 @@ def _run_script(script: Path, args: list[str]) -> None:
         sys.argv, sys.path[:] = saved_argv, saved_path
 
 
+def _load_hook_module(name: str):
+    """Un módulo suelto de `resources/hooks/` (como lo importan los scripts entre sí)."""
+    import importlib
+
+    folder = str(hooks_dir())
+    if folder not in sys.path:
+        sys.path.insert(0, folder)
+    return importlib.import_module(name)
+
+
+def _classify(args: list[str]) -> None:
+    import json
+
+    classifier = _load_hook_module("read_classifier")
+    if LIST_TOOLS_FLAG in args:
+        print(json.dumps(classifier.list_tools()))
+        return
+    try:
+        payload = json.load(sys.stdin)
+    except ValueError:
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+    from . import read_switch
+
+    if read_switch.enabled(environ=os.environ):
+        state = _load_hook_module("hook_common").block_state()
+    else:
+        state = "inactive"
+    print(json.dumps(classifier.classify(payload, state), ensure_ascii=False))
+
+
+def _record_read() -> None:
+    import json
+
+    entry = json.load(sys.stdin)
+    if not isinstance(entry, dict):
+        return
+    via = str(entry.get("via") or "")
+    script = "suggest_delegate_shell" if via.startswith("shell_") else "suggest_delegate_read"
+    _load_hook_module(script).record_decision(entry)
+
+
 def _log_failure(name: str, exc: BaseException) -> None:
     """Best-effort: ni rutas ni mensajes, que pueden llevar contenido del usuario; solo el tipo."""
     try:
@@ -99,6 +159,16 @@ def _log_failure(name: str, exc: BaseException) -> None:
 def main(argv: list[str]) -> int:
     """Despacha un hook. Devuelve siempre 0 y no lanza (salvo `KeyboardInterrupt` del todo)."""
     name = argv[0] if argv else ""
+    if name in COMMANDS:
+        try:
+            _utf8_streams()
+            if name == "classify":
+                _classify(argv[1:])
+            else:
+                _record_read()
+        except (Exception, SystemExit) as exc:
+            _log_failure(name, exc)
+        return 0
     entry = HOOKS.get(name)
     if entry is None:
         return 0
