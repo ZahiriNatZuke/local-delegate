@@ -398,7 +398,10 @@ jobs:
           mkdir -p "$RUNNER_TEMP/claude-config"
 
       # F2-mod-core: `register.js` no se versiona; lo genera `build_mod.py` desde `mod/*.js`
-      # (decisión 7). Va antes de validar, probar y construir la rueda, que lo necesitan.
+      # (decisión 7). La rueda lo lleva por el hook de `hatch_build.py` (build-mod-in-build), pero
+      # `validate` y `plugin test` miran el árbol de fuentes, que no pasa por un build: el editable
+      # de `uv run` puede salir de la caché de uv sin ejecutar el hook. El script y el hook llaman
+      # al mismo `build()`, así que el fichero es el mismo.
       - name: Construir register.js del mod
         run: uv run python scripts/build_mod.py
 
@@ -450,13 +453,18 @@ jobs:
             echo "plugin test aceptó un mod que no fija ninguna tool"; exit 1
           fi
 
-      # La rueda lleva el plugin. Va aquí y no en la suite porque construir es pesado.
+      # La rueda lleva el plugin. `uv build` sin `--wheel` construye el sdist y la rueda DESDE el
+      # sdist, como PyPI y `uv tool install .`: el sdist no lleva `register.js` (`.gitignore`), así
+      # que el de la rueda solo puede venir del hook de `hatch_build.py` (build-mod-in-build).
       - name: La rueda contiene el plugin
         run: |
           set -euo pipefail
-          uv build --wheel --out-dir "$RUNNER_TEMP/dist"
+          uv build --out-dir "$RUNNER_TEMP/dist"
           uv run --no-project python - "$RUNNER_TEMP/dist" <<'EOF'
-          import glob, sys, zipfile
+          import glob, sys, tarfile, zipfile
+          (sdist,) = glob.glob(sys.argv[1] + "/*.tar.gz")
+          if any(n.endswith("/local-delegate/register.js") for n in tarfile.open(sdist).getnames()):
+              sys.exit(f"{sdist} no debe llevar register.js: lo regenera el hook")
           (wheel,) = glob.glob(sys.argv[1] + "/*.whl")
           names = set(zipfile.ZipFile(wheel).namelist())
           base = "local_delegate/resources/claude-plugin/"
@@ -473,6 +481,10 @@ jobs:
               sys.exit(f"faltan en {wheel}: {missing}")
           if any(n.startswith(base + "local-delegate/bin/") for n in names):
               sys.exit("la raíz del plugin no debe llevar bin/")
+          register = zipfile.ZipFile(wheel).read(base + "local-delegate/register.js").decode()
+          for piece in ("commands", "pinned_tools"):
+              if f"register_{piece}(on, options)" not in register:
+                  sys.exit(f"register.js de la rueda sin la pieza {piece}")
           print(f"{wheel}: plugin completo")
           EOF
 

@@ -67,6 +67,24 @@ uvx --from local-delegate-mcp==X.Y.Z local-delegate --help
 curl -s "https://registry.modelcontextprotocol.io/v0/servers?search=io.github.ZahiriNatZuke/local-delegate" | jq '.servers[] | select(._meta."io.modelcontextprotocol.registry/official".isLatest) | .server.version'
 ```
 
+## El mod del plugin se genera en cada build
+
+`register.js`, el módulo de hooks del mod del plugin de Claude Code, **no se versiona**
+(`.gitignore`): `scripts/build_mod.py` lo arma desde `mod/*.js`. Para que ninguna rueda salga sin
+él, el hook de hatchling de [`hatch_build.py`](../../hatch_build.py) llama al mismo `build()` en
+**todo** build de la rueda: `uv build` (y por tanto `release.py` y `publish.yml`), `uv tool install .`,
+`pip install .` y la rueda que se construye desde el sdist. El sdist no lleva `scripts/`, pero sí
+`build_mod.py` en su raíz como `_build_mod.py`, que es lo que el hook necesita para regenerarlo.
+
+- **No hay paso que recordar** antes de `uv build`. `publish.yml` comprueba además, antes de subir
+  nada a PyPI, que la rueda lleva `register.js` con sus piezas.
+- **El árbol de fuentes** (para `claude plugin validate|test` o `--plugin-dir`): el editable de
+  `uv sync` también lo escribe, y `[tool.uv] cache-keys` hace que uv reconstruya cuando cambian
+  `mod/**`, `hatch_build.py` o `build_mod.py`. Si borraste `register.js` a mano, uv no lo nota:
+  `uv run python scripts/build_mod.py` lo rehace (es lo que hace el job `plugin` del CI).
+- **Instalar el código sin publicar**: `uv tool install --force --reinstall --no-cache ".[llamaswap]"`
+  sigue siendo la forma segura de que uv no reutilice una rueda vieja de la caché.
+
 ## `scripts/release.py`
 
 Un solo comando para todo el release: construye, crea la **GitHub Release** con las notas sacadas
@@ -166,6 +184,7 @@ mcp-publisher publish          # publica server.json (desde la raíz del repo)
 | `lint` | `uv lock --check`, `ruff check`, `ruff format --check` y `node --check` del `<script>` del dashboard |
 | `test` | `pytest` en **matriz de tres sistemas** (ubuntu, windows, macOS): rutas, locks entre procesos y ctypes se comportan distinto en cada uno |
 | `install-smoke` | el **único** que no usa `uv.lock`: construye el wheel, lo instala con resolución libre y le exige un handshake MCP. Es lo que caza un major de dependencia que rompa el import |
+| `plugin` | `claude plugin validate --strict` y `plugin test` del plugin en los tres sistemas, con la CLI mínima; construye sdist y rueda (desde el sdist) y exige que la rueda lleve `register.js` con sus piezas sin que el sdist lo traiga |
 | `secrets` | gitleaks |
 
 Además, en workflows propios: [`codeql.yml`](../../.github/workflows/codeql.yml) (análisis estático,
