@@ -2,8 +2,9 @@
 
 Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
 backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
-definición de «estar a punto»**: los veintisiete elementos del andamiaje, cada uno con un ``probe``
-que responde en qué estado está.
+definición de «estar a punto»**: los treinta y dos elementos del andamiaje, cada uno con un
+``probe`` que responde en qué estado está. Los cinco de la entrega por plugin de Claude Code
+viven en ``checks_plugin``, pero se registran aquí como los demás.
 
 Tres reglas ordenan el módulo:
 
@@ -12,9 +13,9 @@ Tres reglas ordenan el módulo:
 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
    un ``fix`` posterior sobrescribiría configuración ajena.
-3. **Es una lista, no un framework.** Veintisiete checks son una tupla de objetos con una función;
-   no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso, el
-   diseño se revisa antes de seguir.
+3. **Es una lista, no un framework.** Treinta y dos checks son una tupla de objetos con una
+   función; no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso,
+   el diseño se revisa antes de seguir.
 
 Los arreglos no viven aquí: un ``probe`` solo declara en ``fix_hint`` qué comando resuelve lo
 que encontró. Ejecutarlos es trabajo de ``update`` e ``install``.
@@ -38,9 +39,12 @@ from urllib.parse import urlsplit
 
 from . import (
     attribution,
+    checks_plugin,
+    claude_plugin,
     clients,
     config,
     cost,
+    desktop_config,
     failures,
     i18n,
     install,
@@ -48,6 +52,7 @@ from . import (
     probes,
     recompute,
     test_windows,
+    token_source,
 )
 
 # --- Estados -----------------------------------------------------------------
@@ -71,6 +76,8 @@ def status_label(status: str) -> str:
 
 
 INSTALL_HINT = "local-delegate install"
+#: REQ-012: the command that writes the bridge entry of the Claude Desktop chat.
+DESKTOP_INSTALL_HINT = "local-delegate install --desktop"
 #: The two fixes of `scaffold.shell_completion` (REQ-033): commands, the same in every language.
 SHELL_COMPLETION_INSTALL_HINT = "local-delegate install --shell-completion"
 SHELL_COMPLETION_UPDATE_HINT = "local-delegate update"
@@ -359,6 +366,31 @@ def NO_CLIENTS() -> tuple[list[dict], str | None]:
     return [], None
 
 
+def _default_claude_which(name: str) -> str | None:
+    return shutil.which(name)
+
+
+def _default_claude_runner(argv, env=None):
+    """`claude_plugin.run_subprocess`, looked up when called, with every failure as `OSError`.
+
+    The lookup at call time lets `run_doctor` tests double the module function. Any exception
+    (a timeout, the suite's guard against the real CLI) becomes `OSError`, which the callers
+    already read as "could not check" and never as "missing".
+    """
+    try:
+        return claude_plugin.run_subprocess(argv, env)
+    except Exception as exc:
+        raise OSError(f"{type(exc).__name__}: {exc}") from exc
+
+
+def _default_expected_ld_bin():
+    return claude_plugin.resolve_ld_bin()
+
+
+def _default_bridge_token() -> str:
+    return token_source.web_token()
+
+
 def _port_taken(host: str, port: int) -> bool:
     """True si alguien escucha en el puerto (sea o no nuestro daemon)."""
     try:
@@ -432,6 +464,23 @@ class Context:
     llamaswap_daemon: Callable[[], tuple] = field(
         default_factory=lambda f=_default_llamaswap_daemon: f
     )
+    # The plugin delivery (REQ-009, SDD claude-plugin-and-mods). `claude_which` finds the CLI and
+    # `claude_runner` runs it (`claude --version`, `claude plugin list --json`); the default runner
+    # never raises, a failure reads as "could not check". Doubled in both test harnesses: the suite
+    # forbids launching the real `claude`.
+    claude_which: Callable[[str], str | None] = field(
+        default_factory=lambda f=_default_claude_which: f
+    )
+    claude_runner: Callable | None = field(default_factory=lambda f=_default_claude_runner: f)
+    # `None` means `os.environ`, read when a probe runs. Only `WSL_DISTRO_NAME` is looked at.
+    environ: Mapping[str, str] | None = None
+    # The interpreter the plugin hooks should run: the `uv tool` environment of this version.
+    expected_ld_bin: Callable[[], object] = field(
+        default_factory=lambda f=_default_expected_ld_bin: f
+    )
+    # The token the Desktop bridge would read (user variable in the registry, then the process).
+    # Never printed: it only goes to `daemon_accepts_token`.
+    bridge_token: Callable[[], str] = field(default_factory=lambda f=_default_bridge_token: f)
 
     @property
     def claude_dir(self) -> Path:
@@ -771,6 +820,21 @@ def _probe_hook_files(ctx: Context) -> Result:
     entries, reason = _dir_entries(ctx.hooks_dir)
     if reason:
         return Result(UNKNOWN, reason)
+    if checks_plugin.uses_plugin(ctx):
+        # REQ-009: the plugin runs `local-delegate hook …`, not these scripts. With the plugin,
+        # no folder is right and a script left in it is an orphan nobody runs.
+        scripts = [name for name in entries or [] if name.endswith(".py")]
+        if scripts:
+            return Result(
+                WARN,
+                i18n.t(
+                    "doctor.probe.hook_files.plugin_orphans",
+                    n=i18n.format_number(len(scripts)),
+                    path=ctx.hooks_dir,
+                ),
+                checks_plugin.UPDATE_HINT,
+            )
+        return Result(OK, i18n.t("doctor.probe.hook_files.plugin_none", path=ctx.hooks_dir))
     if entries is None:
         return Result(
             MISSING, i18n.t("doctor.common.does_not_exist", path=ctx.hooks_dir), INSTALL_HINT
@@ -854,6 +918,21 @@ def _probe_hook_settings(ctx: Context) -> Result:
     data, reason = read_json(path)
     if reason:
         return Result(UNKNOWN, reason)
+    if checks_plugin.uses_plugin(ctx):
+        # REQ-009: the hooks come from the plugin, so none of ours in settings is the right state,
+        # and any of ours here runs twice. Before this branch, `update` would have put them back.
+        ours = checks_plugin.our_settings_hooks(data, ctx.hooks_dir)
+        if ours:
+            return Result(
+                WARN,
+                i18n.t(
+                    "doctor.probe.hook_settings.plugin_duplicated",
+                    n=i18n.format_number(len(ours)),
+                    path=path,
+                ),
+                checks_plugin.UPDATE_HINT,
+            )
+        return Result(OK, i18n.t("doctor.probe.hook_settings.plugin_none", path=path))
     if data is None:
         return Result(MISSING, i18n.t("doctor.common.does_not_exist", path=path), INSTALL_HINT)
     hooks = data.get("hooks")
@@ -1360,10 +1439,53 @@ def _desktop_connection(entry: dict) -> tuple[str | None, str | None]:
     return url, header
 
 
-def _probe_desktop_auth(ctx: Context) -> Result:
-    """¿Puede la entrada de Claude Desktop entrar al puerto del daemon con el token que lleva?
+def desktop_fix_hint() -> str:
+    """REQ-012: the bridge entry that `install --desktop` writes; outside Windows there is none."""
+    if sys.platform == "win32":
+        return DESKTOP_INSTALL_HINT
+    return i18n.t("doctor.probe.desktop_auth.fix_no_bridge")
 
-    Claude Desktop es el cliente que `install` no toca: su entrada está puesta a mano, va por
+
+def _probe_desktop_bridge(ctx: Context, entry: dict) -> Result:
+    """The bridge entry: its executable exists and the token the bridge reads opens the port."""
+    command = entry.get("command") or ""
+    if not Path(command).is_file():
+        return Result(
+            WARN,
+            i18n.t("doctor.probe.desktop_auth.bridge_missing", command=command),
+            DESKTOP_INSTALL_HINT,
+        )
+    host, port = daemon_host_port()
+    requires = ctx.daemon_needs_token(host, port)
+    if requires is None:
+        return Result(UNKNOWN, i18n.t("doctor.probe.daemon_auth.unknown", host=host, port=port))
+    if not requires:
+        return Result(OK, i18n.t("doctor.probe.desktop_auth.bridge_open"))
+    token = ctx.bridge_token()
+    if not token:
+        return Result(
+            WARN,
+            i18n.t("doctor.probe.desktop_auth.bridge_no_token", variable=TOKEN_VAR),
+            daemon_token_hint(),
+        )
+    accepts = ctx.daemon_accepts_token(host, port, token)
+    if accepts is None:
+        return Result(
+            UNKNOWN, i18n.t("doctor.probe.desktop_auth.cannot_test", host=host, port=port)
+        )
+    if not accepts:
+        return Result(
+            WARN,
+            i18n.t("doctor.probe.desktop_auth.bridge_rejected", variable=TOKEN_VAR),
+            daemon_token_hint(),
+        )
+    return Result(OK, i18n.t("doctor.probe.desktop_auth.bridge_ok"))
+
+
+def _probe_desktop_auth(ctx: Context) -> Result:
+    """¿Puede la entrada de Claude Desktop entrar al puerto del daemon, y sin el token a la vista?
+
+    Claude Desktop es el cliente que `install` no tocaba: su entrada estaba puesta a mano, va por
     `mcp-remote` y lleva el token **literal**. Si se rota el token del puerto, `install` arregla
     los tres clientes registrados y este se queda en 401 sin que nada lo diga — pasó en la 0.22.1
     con `doctor` diciendo que todo estaba bien. `service.daemon_auth` no lo ve porque solo mira los
@@ -1371,6 +1493,11 @@ def _probe_desktop_auth(ctx: Context) -> Result:
 
     Por eso no le basta con ver la cabecera, como a su hermano: un token literal viejo tiene la
     misma forma que uno bueno. Lo prueba contra el puerto, y el secreto no sale nunca en el texto.
+
+    REQ-012 (0.40): Desktop no pasa su entorno a los MCP ni expande `${VAR}` (medido el
+    2026-10-21). Así que, aunque el daemon lo acepte, un token escrito en la entrada (en la cabecera
+    o en su `env`) es `warn`, y un `${…}` también. La entrada buena es la del puente
+    (`local-delegate desktop-bridge`), que lee el token él mismo: se prueba ese token.
     """
     path = ctx.claude_desktop_config
     data, reason = read_json(path)
@@ -1383,6 +1510,28 @@ def _probe_desktop_auth(ctx: Context) -> Result:
             UNKNOWN, i18n.t("doctor.probe.desktop_auth.no_entry", server=install.SERVER_NAME)
         )
 
+    # Without the token: a `Bearer <value>` or a token variable with a value in `env` is found
+    # anyway, and the secret is only read where the bridge would read it.
+    report = desktop_config.check_entry(path, None)
+    if desktop_config.is_bridge_entry(entry):
+        connection = _probe_desktop_bridge(ctx, entry)
+    else:
+        connection = _desktop_connection_result(ctx, entry, path)
+    if connection.status == WARN:
+        return connection  # already broken: that comes first
+    if report.literal_token:
+        return Result(
+            WARN, i18n.t("doctor.probe.desktop_auth.literal_token", path=path), desktop_fix_hint()
+        )
+    if report.unexpanded_variable:
+        return Result(
+            WARN, i18n.t("doctor.probe.desktop_auth.unexpanded", path=path), desktop_fix_hint()
+        )
+    return connection
+
+
+def _desktop_connection_result(ctx: Context, entry: dict, path: Path) -> Result:
+    """The `mcp-remote` (or `{url, headers}`) entry: does its token open the daemon's port?"""
     url, header = _desktop_connection(entry)
     if url is None:
         return Result(UNKNOWN, i18n.t("doctor.probe.desktop_auth.stdio"))
@@ -1424,7 +1573,7 @@ def _probe_desktop_auth(ctx: Context) -> Result:
             return Result(
                 WARN,
                 i18n.t("doctor.probe.desktop_auth.variable_not_in_env", variable=variable),
-                fix,
+                desktop_fix_hint(),
             )
         token = _MCP_REMOTE_VARIABLE.sub(value, token)
         # Y otra vez aquí, después de expandir: la forma que recomienda `mcp-remote` —y la de la
@@ -2322,8 +2471,8 @@ def _probe_shell_completion(ctx: Context) -> Result:
 
 
 # --- El registro --------------------------------------------------------------
-# Veintisiete elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
-# el problema no sería el registro sino el diseño.
+# Treinta y dos elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse
+# solo, el problema no sería el registro sino el diseño.
 #
 # El número se dice en cinco sitios de este módulo y llegó a decir «once» con doce checks ya
 # dentro: `cli.path` entró después y nadie actualizó el texto. Hay un test que compara los
@@ -2359,6 +2508,13 @@ CHECKS: tuple[Check, ...] = (
         "doctor.check.metrics.test_windows",
         _probe_test_windows,
     ),
+    # REQ-009: reads `install-state.json` only, so `install` shows it too.
+    Check(
+        "claude.delivery",
+        "environment",
+        "doctor.check.claude.delivery",
+        checks_plugin.probe_delivery,
+    ),
     Check("scaffold.hook_files", "scaffold", "doctor.check.scaffold.hook_files", _probe_hook_files),
     Check(
         "scaffold.hook_orphans",
@@ -2390,6 +2546,14 @@ CHECKS: tuple[Check, ...] = (
         "doctor.check.scaffold.shell_completion",
         _probe_shell_completion,
     ),
+    # REQ-009 and 008 c: they read `settings.json`, without launching `claude`.
+    Check("plugin.ld_bin", "scaffold", "doctor.check.plugin.ld_bin", checks_plugin.probe_ld_bin),
+    Check(
+        "hooks.duplicates",
+        "scaffold",
+        "doctor.check.hooks.duplicates",
+        checks_plugin.probe_hook_duplicates,
+    ),
     Check("service.daemon", "service", "doctor.check.service.daemon", _probe_daemon),
     Check("service.backend", "service", "doctor.check.service.backend", _probe_backend_models),
     # En `service` y no en `scaffold` aunque lea las entradas MCP: sale a la red, y el grupo
@@ -2410,6 +2574,20 @@ CHECKS: tuple[Check, ...] = (
     Check(
         "service.desktop_auth", "service", "doctor.check.service.desktop_auth", _probe_desktop_auth
     ),
+    # REQ-009: in `service` because they launch `claude` (`--version`, `plugin list --json`), and
+    # the report of `install` (`environment` and `scaffold`) launches nothing.
+    Check(
+        "claude.version",
+        "service",
+        "doctor.check.claude.version",
+        checks_plugin.probe_claude_version,
+    ),
+    Check(
+        "plugin.installed",
+        "service",
+        "doctor.check.plugin.installed",
+        checks_plugin.probe_plugin_installed,
+    ),
     Check("backend.llamaswap", "backend", "doctor.check.backend.llamaswap", _probe_llamaswap),
     Check("backend.llamaserver", "backend", "doctor.check.backend.llamaserver", _probe_llamaserver),
     # REQ-036: leen la config de llama-swap (`--config` de `doctor` o `LLAMASWAP_CONFIG`) y no
@@ -2420,7 +2598,7 @@ CHECKS: tuple[Check, ...] = (
 
 
 def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
-    """Corre los veintisiete probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+    """Corre los treinta y dos probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
 
     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
@@ -2434,7 +2612,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
             continue
         try:
             result = check.probe(ctx)
-        except Exception as exc:  # un check roto no debe impedir ver los otros veintiséis
+        except Exception as exc:  # un check roto no debe impedir ver los otros treinta y uno
             result = Result(UNKNOWN, i18n.t("doctor.probe.failed", error=exc))
         results.append((check, result))
     return results

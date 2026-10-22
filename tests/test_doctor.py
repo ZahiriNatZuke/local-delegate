@@ -8,9 +8,26 @@ import argparse
 from datetime import UTC, datetime
 from pathlib import Path
 
-from conftest import desktop_mcp_remote_entry, make_home, snapshot, write_claude_desktop
+from conftest import (
+    FakeClaude,
+    desktop_mcp_remote_entry,
+    make_home,
+    snapshot,
+    write_claude_desktop,
+)
 
-from local_delegate import checks, daemon, doctor, install, probes, recompute, update
+from local_delegate import (
+    checks,
+    claude_plugin,
+    daemon,
+    doctor,
+    install,
+    install_state,
+    probes,
+    recompute,
+    token_source,
+    update,
+)
 from local_delegate.failures import BackendView
 
 
@@ -234,6 +251,12 @@ def _stub_environment(
     monkeypatch.setattr(
         update, "latest_version", lambda timeout=0: (checks._installed_version(), None)
     )
+    # The plugin checks (F1-doctor) launch `claude --version` and `claude plugin list --json`
+    # through `claude_plugin.run_subprocess`, looked up when called: a double that answers a
+    # version above the plugin minimum. And the Desktop bridge token, which would read the
+    # registry of the machine.
+    monkeypatch.setattr(claude_plugin, "run_subprocess", FakeClaude())
+    monkeypatch.setattr(token_source, "web_token", lambda: "")
 
 
 def test_run_doctor_exit_0_when_everything_is_in_place(tmp_path, monkeypatch, capsys):
@@ -251,6 +274,11 @@ def test_run_doctor_exit_0_when_everything_is_in_place(tmp_path, monkeypatch, ca
     recompute.write_aggregates(logs, {"version": 1, "check": {"verdict": "pass"}})
     _stub_environment(monkeypatch, log_dir=logs)
     home = make_home(tmp_path)
+    # `claude.delivery` reads `install-state.json` from the data folder, which a simulated HOME only
+    # uses when `LOCAL_DELEGATE_LOG_DIR` chose it (the rule of `language.json`).
+    monkeypatch.setenv("LOCAL_DELEGATE_LOG_DIR", str(logs))
+    version = checks._installed_version() or "0.0.0"
+    install_state.save(home, install_state.new_state(claude_plugin.SETTINGS, version))
     # Claude Desktop no lo escribe `install`, así que el HOME completo no lo trae: se le pone aquí.
     write_claude_desktop(home, {install.SERVER_NAME: desktop_mcp_remote_entry()})
     # `backend.residency` y `backend.topology` (T13) leen la config de llama-swap de `--config`: la
@@ -263,8 +291,8 @@ def test_run_doctor_exit_0_when_everything_is_in_place(tmp_path, monkeypatch, ca
     lines = [line for line in out.splitlines() if line.startswith("  [")]
     assert lines and all(line.startswith("  [ OK ]") for line in lines)
     # A6 (REQ-011): no hay `doctor --json`, así que el contrato de los ids y grupos nuevos se mira
-    # en la salida de texto: los 27 checks, una línea cada uno, bajo el encabezado de su grupo.
-    assert len(lines) == len(checks.CHECKS) == 27
+    # en la salida de texto: los 32 checks, una línea cada uno, bajo el encabezado de su grupo.
+    assert len(lines) == len(checks.CHECKS) == 32
     headings = [*map(doctor.group_heading, doctor._GROUP_HEADINGS), doctor._versions_heading(False)]
     assert [h for h in headings if h in out] == headings
     for check in checks.CHECKS:

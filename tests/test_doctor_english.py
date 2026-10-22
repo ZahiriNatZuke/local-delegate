@@ -84,9 +84,9 @@ def test_doctor_in_english_has_no_spanish(complete, tmp_path, monkeypatch, capsy
     assert len(words) >= 100, "sin palabras distintivas el test no discrimina"
     code_es, out_es = _doctor_output(tmp_path, monkeypatch, capsys, "es", complete=complete)
     code_en, out_en = _doctor_output(tmp_path, monkeypatch, capsys, "en", complete=complete)
-    # Guarda de «esto llegó a comprobar algo»: los dos corrieron los 27 checks, con el mismo veredicto.
+    # Guarda de «esto llegó a comprobar algo»: los dos corrieron los 32 checks, con el mismo veredicto.
     assert code_es == code_en
-    assert len(_check_lines(out_es)) == len(_check_lines(out_en)) == len(checks.CHECKS) == 27
+    assert len(_check_lines(out_es)) == len(_check_lines(out_en)) == len(checks.CHECKS) == 32
     assert "Language:" in out_en and "Idioma:" in out_es
     for fragment in sorted(PENDING_FRAGMENTS, key=len, reverse=True):
         out_en = out_en.replace(fragment, " ")
