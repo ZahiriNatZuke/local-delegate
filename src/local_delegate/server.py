@@ -116,14 +116,9 @@ mcp = MCPServer(
     # El SDK los aplica outermost-first, y el orden es deliberado: «observar primero, habilitar
     # después». Hoy son independientes —el observador solo lee, el otro solo deja el contexto al
     # alcance de las capas de abajo—, pero se fija para que nadie lo cambie creyendo que da igual.
-    #
-    # El de cancelación va el último, pegado al handler: da a cada `tools/call` su token y lo
-    # cancela si el cliente deja de esperarla (aviso, sesión cerrada, conexión cortada).
-    middleware=[
-        clients.observe_client,
-        questions.remember_context,
-        cancellation.middleware(lambda token: _log_cancelled(token)),
-    ],
+    # El de cancelación (`cancellation.middleware`) va el último, pegado al handler; se añade
+    # junto a `_log_cancelled`, que es quien apunta la llamada cancelada.
+    middleware=[clients.observe_client, questions.remember_context],
 )
 
 
@@ -1399,6 +1394,11 @@ def _log_cancelled(token: cancellation.Token) -> None:
         error="cancelled",
         cancel_reason=token.reason or cancellation.REASON_ABORTED,
     )
+
+
+# El último de la cadena, pegado al handler: da a cada `tools/call` su token y lo cancela si el
+# cliente deja de esperarla (aviso, sesión cerrada, conexión cortada).
+mcp.middleware.append(cancellation.middleware(_log_cancelled))
 
 
 def _post_chat(model: str, payload: dict) -> ChatResult:

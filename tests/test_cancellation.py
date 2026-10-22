@@ -73,7 +73,7 @@ def test_run_abandonable_returns_as_soon_as_cancelled():
     def target() -> None:
         try:
             run()
-        except BaseException as exc:
+        except Exception as exc:
             errors.append(exc)
 
     thread = threading.Thread(target=target, daemon=True)
@@ -136,7 +136,7 @@ def test_run_abandonable_propagates_backend_errors():
 def _capture(function, errors: list[BaseException]) -> None:
     try:
         function()
-    except BaseException as exc:
+    except Exception as exc:
         errors.append(exc)
 
 

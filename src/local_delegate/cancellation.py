@@ -164,7 +164,7 @@ def run_abandonable(fn: Callable[[], T]) -> T:
             _anyio_threadlocals.current_token = loop_token
         try:
             box["value"] = context.run(fn)
-        except BaseException as exc:  # se relanza en el hilo que espera
+        except Exception as exc:  # se relanza en el hilo que espera
             box["error"] = exc
         finally:
             box["done"] = True
@@ -180,6 +180,9 @@ def run_abandonable(fn: Callable[[], T]) -> T:
         token.check()
     if "error" in box:
         raise box["error"]
+    if "value" not in box:
+        # El envío murió con algo que no es `Exception` (`SystemExit`…): no hay resultado.
+        raise RuntimeError
     return box["value"]
 
 
