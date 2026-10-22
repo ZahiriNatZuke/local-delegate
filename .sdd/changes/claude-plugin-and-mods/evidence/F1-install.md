@@ -87,7 +87,8 @@ escrita; `test_wiki` incluido). `pesado.sh uv run ruff check .` y `ruff format -
   `plugin_migration` importan `install`, y `install` los importaba dentro de sus funciones.
   Ahora los resuelve por nombre al llamar (`_sibling`, con `import_module`), como hace
   `completion.render` con `cli` (ec2ad2c). Suite repetida: 4314 passed y un fallo, la palabra
-  `sibling` sin clasificar, que va al léxico. `check_plugin_install.py` pasó en los tres `plugin`.
+  `sibling` sin clasificar, que va al léxico. Tras rebasar sobre `44b10a1` (#399, conflicto solo en
+  `CHANGELOG.md`, se conservan las dos líneas): **4322 passed, 28 skipped**. `check_plugin_install.py` pasó en los tres `plugin`.
 
 ## Ficheros fuera de la lista «Posee»
 
