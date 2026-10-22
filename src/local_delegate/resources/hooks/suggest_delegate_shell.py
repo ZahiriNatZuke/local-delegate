@@ -6,12 +6,15 @@ lectura completa de un documento grande, pero `cat informe.md` hace exactamente 
 pasa por ahí: la conducta se mueve al comando de shell, la adopción medida sube y no se ahorra un
 solo token. La regla se declara sobre la **superficie de lectura**, no sobre una tool.
 
-**Falso negativo antes que falso positivo.** Solo se reconocen formas simples e inequívocas de
-volcar un fichero entero: `cat X`, `type X`, `more X`, `Get-Content X`, `gc X` y
-`head X` sin recorte. Cualquier otra cosa —una tubería, una redirección, dos comandos encadenados,
-una sustitución, varios ficheros, o un flag que ya acota la lectura— **no se bloquea**, y se
-registra para tener el denominador. Bloquear un comando mal parseado no es un consejo malo: es
-impedir algo que el usuario pidió, y se apaga el primer día.
+**Falso negativo antes que falso positivo.** Solo se bloquean formas simples e inequívocas de
+volcar un fichero entero: `cat X`, `more X`, `Get-Content X` y, en PowerShell, `type X` y `gc X`.
+Cualquier otra cosa —una tubería, una redirección, dos comandos encadenados, una sustitución,
+varios ficheros, un flag, o `head X`, que solo saca diez líneas— **no se bloquea**, y se registra
+con su vía y su alcance para tener el denominador. Bloquear un comando mal parseado no es un
+consejo malo: es impedir algo que el usuario pidió, y se apaga el primer día.
+
+Qué lee cada comando lo decide `read_classifier.py` (REQ-019), el mismo módulo que usa el mod de
+lectura de la entrega por plugin: este hook no lleva reglas de lectura propias.
 
 Se apaga igual que el de lectura: `LD_HOOK_READ_BLOCK=0`, un backend que no responde, o el
 interruptor general `LD_HOOK_ENABLED=0`. Sin dependencias (stdlib únicamente).
@@ -21,9 +24,9 @@ from __future__ import annotations
 
 import json
 import os
-import shlex
 import sys
 
+import read_classifier
 from hook_common import (
     backend_available,
     block_state,
@@ -31,6 +34,7 @@ from hook_common import (
     cooled_model,
     deny,
     hook_text,
+    mod_decision_fields,
     new_id,
     path_digest,
     record,
@@ -43,71 +47,6 @@ from suggest_delegate_read import (
     extension_of,
     is_enabled,
 )
-
-#: Verbos que vuelcan un fichero entero. El valor es cuántas palabras ocupa el verbo.
-VERBS = {
-    "cat": 1,
-    "type": 1,
-    "more": 1,
-    "get-content": 1,
-    "gc": 1,
-    "head": 1,
-}
-
-#: Cualquiera de estos convierte el comando en algo que este hook no entiende, y lo que no se
-#: entiende no se bloquea.
-METACHARACTERS = ("|", ">", "<", "&", ";", "`", "$(", "&&", "||", "\n")
-
-#: Flags que ya acotan la lectura: quien los usa sabe qué trozo quiere, igual que un `offset`.
-BOUNDING_FLAGS = {
-    "-n",
-    "-c",
-    "-totalcount",
-    "-tail",
-    "-first",
-    "-last",
-    "-head",
-    "-skip",
-}
-
-
-def split_words(command: str) -> list[str] | None:
-    """Las palabras del comando, o `None` si no se puede leer con seguridad."""
-    if any(meta in command for meta in METACHARACTERS):
-        return None
-    try:
-        # `posix=False` conserva las comillas, que es lo que hace PowerShell; se quitan después.
-        words = shlex.split(command, posix=False)
-    except ValueError:
-        return None
-    return [p.strip("\"'") for p in words if p.strip()] or None
-
-
-def whole_dump_path(command: str) -> str | None:
-    """La ruta que este comando vuelca entera, o `None` si no es uno de esos comandos.
-
-    Es deliberadamente estrecho. Todo lo que no encaje exactamente en «verbo + una ruta» sale por
-    `None`, que es el lado que deja pasar la lectura.
-    """
-    words = split_words(command)
-    if not words:
-        return None
-
-    lowered = [p.lower() for p in words]
-    for verb, length in VERBS.items():
-        if " ".join(lowered[:length]) == verb:
-            rest = words[length:]
-            break
-    else:
-        return None
-
-    if len(rest) != 1:
-        # Ni cero (un `cat` que lee de la entrada estándar) ni dos o más (varios ficheros, o un
-        # flag). Con un flag que acota, además, la lectura ya es intencionada.
-        return None
-    if rest[0].lower() in BOUNDING_FLAGS or rest[0].startswith("-"):
-        return None
-    return rest[0]
 
 
 def main() -> None:
@@ -123,14 +62,19 @@ def main() -> None:
     if not isinstance(command, str) or not command.strip():
         return
 
+    tool_name = str(payload.get("tool_name") or "")
+    found = read_classifier.classify_shell(command, tool_name)
+    access = read_classifier.primary(found)
     common = {
         "category": "shell",
         "route": "shell",
         "block": block_state(),
         **context_of(payload, __file__),
+        "via": access.via if access else "none",
+        "scope": access.scope if access else "unclassifiable",
     }
 
-    path = whole_dump_path(command)
+    path = read_classifier.simple_whole_dump(found)
     if path is None:
         # Se cuenta igual: sin el denominador no se sabe cuánta lectura se va por aquí, y esa era
         # justo la pregunta que la cuarta medición no pudo responder.
@@ -181,6 +125,31 @@ def main() -> None:
         id=block_id,
         **common,
     )
+
+
+def record_decision(entry: dict) -> None:
+    """`hook record-read` de una vía de shell: la línea que habría escrito este hook, con la
+    decisión del mod (`hook_common.mod_decision_fields`)."""
+    path = entry.get("path") if isinstance(entry.get("path"), str) else None
+    payload = {"session_id": entry.get("session_id")}
+    fields: dict = {
+        "category": "shell",
+        "route": "shell",
+        "block": block_state(),
+        **context_of(payload, __file__),
+        "via": str(entry.get("via") or "none"),
+        "scope": str(entry.get("scope") or "unclassifiable"),
+        **mod_decision_fields(entry.get("decision")),
+    }
+    if path:
+        fields["ext"] = extension_of(path)
+        if isinstance(entry.get("bytes"), int):
+            fields["size_kb"] = round(entry["bytes"] / 1024, 1)
+        fields["path_sha"] = path_digest(path)
+    if fields.get("blocked") and path:
+        fields["id"] = new_id()
+        record_block(fields["id"], path)
+    record("PreToolUse", **fields)
 
 
 if __name__ == "__main__":

@@ -81,10 +81,11 @@ La otra mitad de la superficie de lectura, y se instala con la **misma** bandera
 Cerrar la tool `Read` y dejar `cat informe.md` abierto no cambia la conducta: la muda de sitio, y
 entonces la adopción medida sube sin que se ahorre un token.
 
-Reconoce solo formas simples e inequívocas de volcar un fichero entero —`cat`, `type`, `more`,
-`Get-Content`, `gc`, `head`— sobre una única ruta. Con una tubería, una redirección,
-comandos encadenados, una sustitución o un flag que ya acota, **no bloquea** y se limita a contar
-el caso: un comando mal parseado que se rechaza no es un consejo malo, es impedir algo que el
+Reconoce solo formas simples e inequívocas de volcar un fichero entero —`cat`, `more`,
+`Get-Content` y, en PowerShell, `type` y `gc`— sobre una única ruta. Con una tubería, una
+redirección, comandos encadenados, una sustitución, un flag o `head` (que solo saca diez líneas),
+**no bloquea** y se limita a contar el caso con su vía y su alcance (`read_classifier.py`, el
+clasificador único de lectura): un comando mal parseado que se rechaza no es un consejo malo, es impedir algo que el
 usuario pidió.
 
 Una ruta relativa (`cat docs/x.md`) se resuelve con el `cwd` de la sesión antes de ofrecerla: el

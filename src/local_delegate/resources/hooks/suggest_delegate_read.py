@@ -59,6 +59,7 @@ import json
 import os
 import sys
 
+import read_classifier
 from hook_common import (
     backend_available,
     block_state,
@@ -67,6 +68,7 @@ from hook_common import (
     deny,
     emit,
     hook_text,
+    mod_decision_fields,
     new_id,
     path_digest,
     record,
@@ -155,11 +157,6 @@ def extension_of(file_path: str) -> str:
     return ext
 
 
-def is_bounded_read(tool_input: dict) -> bool:
-    """Una franja pedida con offset/limit es intencionada: el modelo ya sabe qué parte quiere."""
-    return tool_input.get("offset") is not None or tool_input.get("limit") is not None
-
-
 def block_on() -> bool:
     """Si la regla puede rechazar una lectura. Se consulta EN CADA invocación, a propósito.
 
@@ -175,6 +172,13 @@ def block_on() -> bool:
 MAX_TOOL = 80
 
 
+def via_fields(access: read_classifier.Access | None) -> dict:
+    """La vía y el alcance que decide el clasificador (REQ-019), para la telemetría por vía."""
+    if access is None:
+        return {"via": "none", "scope": "unclassifiable"}
+    return {"via": access.via, "scope": access.scope}
+
+
 def record_mcp_read(tool_name: str, tool_input: dict, payload: dict) -> None:
     """Una lectura por la tool de OTRO MCP: se cuenta y nunca se bloquea ni se sugiere (P-6).
 
@@ -185,6 +189,7 @@ def record_mcp_read(tool_name: str, tool_input: dict, payload: dict) -> None:
     if not isinstance(paths, list):
         paths = [tool_input.get("path") or tool_input.get("file_path")]
     paths = [item for item in paths if isinstance(item, str) and item]
+    access = read_classifier.classify_tool(tool_name, tool_input)
     fields: dict = {
         "category": "read",
         "route": "mcp",
@@ -193,6 +198,7 @@ def record_mcp_read(tool_name: str, tool_input: dict, payload: dict) -> None:
         "paths": len(paths),
         "block": block_state(),
         **context_of(payload, __file__),
+        **via_fields(access),
     }
     if paths:
         fields["path_sha"] = path_digest(paths[0])
@@ -222,9 +228,10 @@ def main() -> None:
         record_mcp_read(tool_name, tool_input, payload)
         return
 
-    file_path = tool_input.get("file_path")
-    if not file_path:
+    access = read_classifier.classify_tool("Read", tool_input)
+    if access is None or not access.path:
         return
+    file_path = access.path
 
     ext = extension_of(file_path)
     # La HUELLA de la ruta, nunca la ruta. Sin ella no se puede agrupar por fichero, y esa es la
@@ -235,11 +242,12 @@ def main() -> None:
         "path_sha": path_digest(file_path),
         "block": block_state(),
         **context_of(payload, __file__),
+        **via_fields(access),
     }
 
     # Las dos guardas siguientes registran en vez de callarse: sin denominador no hay puntería que
     # medir, y no poder medirla es lo que dejó a este hook tres semanas apuntando a código.
-    if is_bounded_read(tool_input):
+    if access.scope == "range":
         record(
             "PreToolUse",
             suggested=False,
@@ -314,6 +322,45 @@ def main() -> None:
         hook_text("read.suggest", strength=strength, size_kb=f"{size_kb:.0f}", target=target),
         **common,
     )
+
+
+def record_decision(entry: dict) -> None:
+    """`hook record-read` de una vía de `Read`, `Grep` o de otro MCP: la línea que habría escrito
+    este hook, con la decisión del mod (`hook_common.mod_decision_fields`)."""
+    via = str(entry.get("via") or "none")
+    path = entry.get("path") if isinstance(entry.get("path"), str) else None
+    payload = {"session_id": entry.get("session_id")}
+    fields: dict = {
+        "category": "read",
+        "block": block_state(),
+        **context_of(payload, __file__),
+        "via": via,
+        "scope": str(entry.get("scope") or "unclassifiable"),
+        **mod_decision_fields(entry.get("decision")),
+    }
+    if via.startswith("mcp_"):
+        fields["route"] = "mcp"
+        fields["tool"] = str(entry.get("tool_name") or via)[:MAX_TOOL]
+        fields["paths"] = 1 if path else 0
+    elif via == "grep_tool":
+        fields["route"] = "grep"
+    if path:
+        fields["path_sha"] = path_digest(path)
+        fields["ext"] = extension_of(path)
+        size = entry.get("bytes")
+        if isinstance(size, int):
+            size_kb = size / 1024
+            fields["size_kb"] = round(size_kb, 1)
+            if not via.startswith("mcp_"):
+                try:
+                    strong_kb = float(os.environ.get("LD_HOOK_READ_STRONG_KB", "100"))
+                except ValueError:
+                    strong_kb = 100.0
+                fields["band"] = "strong" if size_kb > strong_kb else "suggest"
+    if fields.get("blocked") and path:
+        fields["id"] = new_id()
+        record_block(fields["id"], path)
+    record("PreToolUse", **fields)
 
 
 if __name__ == "__main__":

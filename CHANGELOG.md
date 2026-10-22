@@ -20,6 +20,29 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   real; la lista se guarda por sesión y aguanta `--resume`. Cada decisión se registra con
   `hook record-read`.
 
+### Añade (clasificador único de lectura)
+
+- **Un solo módulo decide qué lee cada llamada** (`resources/hooks/read_classifier.py`, REQ-019):
+  si es leer un fichero, cuál y con qué alcance (`whole`, `range`, `partial` o `unclassifiable`),
+  y si es una escritura (`Edit`, `Write`, `NotebookEdit`, `>`, `tee`, `sed -i`, `Set-Content`,
+  `Out-File`, `cp`/`mv`…). Lo usan los hooks de lectura y de shell de la entrega por settings, que
+  ya no llevan reglas propias, y el mod de lectura del plugin (por `hook classify`). Sus reglas salen de la
+  medición de F4-measure-reads y se prueban contra su corpus de comandos reales.
+- **`local-delegate hook classify`** (stdin: la entrada de un hook `PreToolUse`; stdout:
+  `kind`, `path`, `scope`, `bytes`, `range`, `via` y `read_switch`), **`hook classify
+  --list-tools`** y **`hook record-read`**, que escribe en la telemetría de los hooks la misma
+  línea que habría escrito el hook, más `decision` y `source: "mod"` (`summarized` y `auto_summarized` cuentan como
+  bloqueo; `read_whole`, `dismissed`, `summary_failed` y `warned`, no): cuando el mod actúe, la serie
+  de P-4 no se corta.
+- **Telemetría por vía**: cada evento de los hooks de lectura y de shell lleva `via` y `scope`, y su
+  huella incluye la del clasificador, así que cambiar una regla abre un tramo nuevo de P-4.
+
+### Cambia (hook de shell)
+
+- **`head X` ya no se bloquea**: saca diez líneas, no el fichero entero. `type X` y `gc X` solo
+  cuentan como volcado en PowerShell (en Bash, `type` dice qué es un comando).
+  (SDD `claude-plugin-and-mods`, F4-classifier)
+
 ### Corrige (credenciales en macOS)
 
 - **En macOS, las credenciales salen también del Llavero, no solo del entorno del shell** (issue

@@ -873,6 +873,36 @@
       "text": "Roaming",
       "kind": "path",
       "reason": "segmento de ruta de `AppData/Roaming` del HOME simulado, donde `install --desktop` escribe la config de Claude Desktop sin tocar la real"
+    },
+    {
+      "file": "src/local_delegate/resources/hooks/read_classifier.py",
+      "text": "Bash",
+      "kind": "machine_name",
+      "reason": "nombre de la tool `Bash` de Claude Code que el clasificador de lectura reconoce"
+    },
+    {
+      "file": "src/local_delegate/resources/hooks/read_classifier.py",
+      "text": "Edit",
+      "kind": "machine_name",
+      "reason": "nombre de la tool `Edit` de Claude Code que el clasificador de lectura reconoce"
+    },
+    {
+      "file": "src/local_delegate/resources/hooks/read_classifier.py",
+      "text": "Grep",
+      "kind": "machine_name",
+      "reason": "nombre de la tool `Grep` de Claude Code que el clasificador de lectura reconoce"
+    },
+    {
+      "file": "src/local_delegate/resources/hooks/read_classifier.py",
+      "text": "Read",
+      "kind": "machine_name",
+      "reason": "nombre de la tool `Read` de Claude Code que el clasificador de lectura reconoce"
+    },
+    {
+      "file": "src/local_delegate/resources/hooks/read_classifier.py",
+      "text": "Write",
+      "kind": "machine_name",
+      "reason": "nombre de la tool `Write` de Claude Code que el clasificador de lectura reconoce"
     }
   ]
 }
