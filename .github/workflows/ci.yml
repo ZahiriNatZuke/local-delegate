@@ -333,6 +333,160 @@ jobs:
           grep -qx mechanical pwsh-reply || { echo "pwsh no completó mechanical:"; cat pwsh-reply; exit 1; }
           echo "autocompletado del wheel $version: cabeceras de los tres shells, bash y pwsh completan mechanical"
 
+  # El plugin de Claude Code que viaja en el paquete (SDD claude-plugin-and-mods, F1-package,
+  # REQ-001..003), contra la CLI real en la versión mínima que soportamos y en los tres sistemas:
+  # el motor de plugins es distinto por SO (rutas, shell) y la Mac lo usa. Sin sesión iniciada, `-p`
+  # emite el evento `init` (con `plugins` y, si algo no cargó, `plugin_errors`) antes de pedir nada
+  # a la API, así que se comprueba la carga sin gastar un turno ni necesitar credenciales.
+  #
+  # La CLI se instala con pnpm y `--ignore-scripts` (vía elegida en T0): no corre el `postinstall`,
+  # el `bin/claude.exe` del paquete queda como stub y el binario nativo es el del paquete de la
+  # plataforma. Socket, 2.1.292: el paquete base da supplyChain 92 y vulnerability 100; los binarios
+  # por plataforma, quality 38 y license 50, por ser el binario propietario oficial. Solo corre
+  # aquí: nunca viaja en el paquete.
+  plugin:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    env:
+      CLAUDE_CODE_VERSION: "2.1.292"
+      DISABLE_AUTOUPDATER: "1"
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.11"
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: "11.17.0"
+
+      - name: Claude Code CLI (versión mínima, sin scripts de instalación)
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          mkdir cc && cd cc
+          pnpm add --ignore-scripts --save-exact "@anthropic-ai/claude-code@$CLAUDE_CODE_VERSION"
+          case "$RUNNER_OS-$RUNNER_ARCH" in
+            Linux-X64) platform=linux-x64 ;;
+            macOS-ARM64) platform=darwin-arm64 ;;
+            macOS-X64) platform=darwin-x64 ;;
+            Windows-X64) platform=win32-x64 ;;
+            *) echo "plataforma sin binario conocido: $RUNNER_OS-$RUNNER_ARCH"; exit 1 ;;
+          esac
+          dir="node_modules/.pnpm/@anthropic-ai+claude-code-$platform@$CLAUDE_CODE_VERSION/node_modules/@anthropic-ai/claude-code-$platform"
+          bin="$PWD/$dir/claude"
+          [ -f "$bin" ] || bin="$bin.exe"
+          [ -f "$bin" ] || { echo "no está el binario nativo en $dir"; ls -la "$dir" || true; exit 1; }
+          "$bin" --version | grep -qF "$CLAUDE_CODE_VERSION"
+          echo "CLAUDE_BIN=$bin" >> "$GITHUB_ENV"
+          echo "CLAUDE_CONFIG_DIR=$RUNNER_TEMP/claude-config" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/claude-config"
+
+      - name: claude plugin validate --strict (marketplaces y plugin)
+        run: |
+          set -euo pipefail
+          for target in . src/local_delegate/resources/claude-plugin src/local_delegate/resources/claude-plugin/local-delegate; do
+            echo "== $target"
+            "$CLAUDE_BIN" plugin validate --strict --json "$target"
+          done
+
+      # Control negativo del validador: un `hooks.json` roto tiene que hacerlo fallar, o el paso
+      # anterior no estaría comprobando nada.
+      - name: validate falla con un hooks.json roto
+        run: |
+          set -uo pipefail
+          broken="$RUNNER_TEMP/broken-plugin"
+          cp -R src/local_delegate/resources/claude-plugin/local-delegate "$broken"
+          printf '{"hooks": {"UserPromptSubmit": [' > "$broken/hooks/hooks.json"
+          if "$CLAUDE_BIN" plugin validate --strict --json "$broken"; then
+            echo "validate aceptó un hooks.json roto"; exit 1
+          fi
+
+      # La rueda lleva el plugin. Va aquí y no en la suite porque construir es pesado.
+      - name: La rueda contiene el plugin
+        run: |
+          set -euo pipefail
+          uv build --wheel --out-dir "$RUNNER_TEMP/dist"
+          uv run --no-project python - "$RUNNER_TEMP/dist" <<'EOF'
+          import glob, sys, zipfile
+          (wheel,) = glob.glob(sys.argv[1] + "/*.whl")
+          names = set(zipfile.ZipFile(wheel).namelist())
+          base = "local_delegate/resources/claude-plugin/"
+          need = [
+              base + ".claude-plugin/marketplace.json",
+              base + "local-delegate/.claude-plugin/plugin.json",
+              base + "local-delegate/hooks/hooks.json",
+          ]
+          missing = [n for n in need if n not in names]
+          if missing:
+              sys.exit(f"faltan en {wheel}: {missing}")
+          if any(n.startswith(base + "local-delegate/bin/") for n in names):
+              sys.exit("la raíz del plugin no debe llevar bin/")
+          print(f"{wheel}: plugin completo")
+          EOF
+
+      - name: Instalar en un CLAUDE_CONFIG_DIR vacío sin tocar ~/.claude/plugins
+        run: |
+          set -euo pipefail
+          snapshot() { if [ -d "$HOME/.claude/plugins" ]; then (cd "$HOME/.claude/plugins" && find . | sort); else echo absent; fi; }
+          snapshot > "$RUNNER_TEMP/real-before.txt"
+          ld_bin="$(uv python find 3.11)"
+          "$CLAUDE_BIN" plugin marketplace add "$GITHUB_WORKSPACE/src/local_delegate/resources/claude-plugin"
+          "$CLAUDE_BIN" plugin install local-delegate@local-delegate --scope user \
+            --config "ld_bin=$ld_bin" --config language=en --json | tee "$RUNNER_TEMP/install.json"
+          grep -q '"outcome":"ok"' "$RUNNER_TEMP/install.json"
+          "$CLAUDE_BIN" plugin list --json | tee "$RUNNER_TEMP/list.json"
+          grep -q '"id": *"local-delegate@local-delegate"' "$RUNNER_TEMP/list.json"
+          snapshot > "$RUNNER_TEMP/real-after.txt"
+          diff "$RUNNER_TEMP/real-before.txt" "$RUNNER_TEMP/real-after.txt"
+          [ -n "$(ls -A "$CLAUDE_CONFIG_DIR/plugins")" ]
+
+      # `init` lista el plugin y no trae `plugin_errors`. Control negativo: el mismo comprobador
+      # sobre el plugin con el `hooks.json` roto (por `--plugin-dir`) tiene que fallar.
+      - name: La sesión carga el plugin sin errores (y no con un hooks.json roto)
+        timeout-minutes: 4
+        run: |
+          set -uo pipefail
+          cat > "$RUNNER_TEMP/check_init.py" <<'EOF'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as f:
+              events = [json.loads(line) for line in f if line.strip()]
+          init = next((e for e in events if e.get("subtype") == "init"), None)
+          if init is None:
+              sys.exit("no hay evento init")
+          names = [p.get("name") for p in init.get("plugins", [])]
+          errors = init.get("plugin_errors") or []
+          if "local-delegate" not in names or errors:
+              sys.exit(f"plugins={names} plugin_errors={errors}")
+          print(f"init: plugins={names}, sin plugin_errors")
+          EOF
+          check="uv run --no-project python $RUNNER_TEMP/check_init.py"
+          "$CLAUDE_BIN" -p "Reply OK" --max-turns 1 --output-format stream-json --verbose \
+            > "$RUNNER_TEMP/good.jsonl" || true
+          $check "$RUNNER_TEMP/good.jsonl" || exit 1
+          mkdir -p "$RUNNER_TEMP/cfg-broken"
+          CLAUDE_CONFIG_DIR="$RUNNER_TEMP/cfg-broken" "$CLAUDE_BIN" -p "Reply OK" --max-turns 1 \
+            --plugin-dir "$RUNNER_TEMP/broken-plugin" --output-format stream-json --verbose \
+            > "$RUNNER_TEMP/broken.jsonl" || true
+          if $check "$RUNNER_TEMP/broken.jsonl"; then
+            echo "el comprobador dio por bueno un plugin con hooks.json roto"; exit 1
+          fi
+
   secrets:
     runs-on: ubuntu-latest
     timeout-minutes: 5

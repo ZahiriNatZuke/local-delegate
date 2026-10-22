@@ -9,6 +9,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ### Añadido
 
 - Núcleo de la entrega por plugin para Claude Code, todavía sin llamadores: `install_state` guarda en `install-state.json` la vía de entrega y las piezas que escribió `install` (si falta, «no se sabe»); `claude_plugin` decide plugin o settings (CLI ≥ 2.1.292, fuera de WSL, `ld_bin` solo de una instalación `uv tool`) y arma los `claude plugin …` no interactivos con `CLAUDE_CONFIG_DIR` en HOME simulado; `plugin_migration` copia `settings.json` antes de todo, conserva el estado del bloqueo de lectura en `read-hook.json`, instala, comprueba `plugin list --json` y solo entonces retira nuestros hooks de settings, con vuelta atrás en un paso (SDD `claude-plugin-and-mods`, F1-delivery-core).
+- El paquete trae el plugin de Claude Code `local-delegate` (`src/local_delegate/resources/claude-plugin/`) y un marketplace que lo publica, también en la raíz del repo (`.claude-plugin/marketplace.json`). Sus hooks declaran los mismos eventos y filtros que la entrega por `settings.json` de la 0.39 y corren el intérprete del entorno de `uv tool` con `-I -m local_delegate.hook`, así que una instalación vieja, ausente o rota deja pasar en vez de bloquear. `bump_version.py` sube también su versión, y el CI gana el job `plugin` en los tres sistemas: `claude plugin validate --strict`, la rueda con el plugin y la carga en una configuración aislada con la CLI 2.1.292 (SDD `claude-plugin-and-mods`, F1-package). Todavía no lo instala nadie: `install` lo usará en la próxima ola.
 
 ### Cambiado
 

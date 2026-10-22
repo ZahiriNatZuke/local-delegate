@@ -1,0 +1,30 @@
+{
+  "name": "local-delegate",
+  "version": "0.39.0",
+  "description": "Hooks that steer mechanical work (summaries, logs, large files) to the local-delegate MCP tools.",
+  "author": {
+    "name": "Yohan González Almaguer"
+  },
+  "repository": "https://github.com/ZahiriNatZuke/local-delegate",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "local-models",
+    "delegation",
+    "hooks"
+  ],
+  "userConfig": {
+    "ld_bin": {
+      "type": "string",
+      "title": "Hook interpreter",
+      "description": "Absolute path of the Python interpreter of the local-delegate uv tool environment. `local-delegate install` fills it in.",
+      "required": true
+    },
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "description": "Language of the hook messages (es or en). `local-delegate install` fills it in.",
+      "required": false
+    }
+  }
+}

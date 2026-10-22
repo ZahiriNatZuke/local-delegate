@@ -34,6 +34,21 @@ def test_server_json_version_matches_pyproject():
     assert [p["version"] for p in server["packages"]] == [version]
 
 
+def test_plugin_json_version_matches_pyproject():
+    """REQ-001: the Claude Code plugin carries the package version, in its manifest and in both
+    marketplaces. A plugin that keeps its old `version` stays pinned in the users' cache."""
+    version = _pyproject()["project"]["version"]
+    plugin_root = ROOT / "src" / "local_delegate" / "resources" / "claude-plugin"
+    manifest = plugin_root / "local-delegate" / ".claude-plugin" / "plugin.json"
+    assert json.loads(manifest.read_text(encoding="utf-8"))["version"] == version
+    for marketplace in (
+        plugin_root / ".claude-plugin" / "marketplace.json",
+        ROOT / ".claude-plugin" / "marketplace.json",
+    ):
+        plugins = json.loads(marketplace.read_text(encoding="utf-8"))["plugins"]
+        assert [p["version"] for p in plugins] == [version], marketplace
+
+
 def test_server_json_points_at_the_published_pypi_package():
     package = _server_json()["packages"][0]
     assert package["registryType"] == "pypi"

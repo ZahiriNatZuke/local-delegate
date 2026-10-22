@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sube la versión del paquete en los CUATRO sitios donde vive, de una sola vez.
+"""Sube la versión del paquete en todos los sitios donde vive, de una sola vez.
 
 La versión está duplicada por razones ajenas a este repo: `pyproject.toml` es la fuente para
 el build, `server.json` la declara **dos veces** (el descriptor del registro MCP y el paquete
@@ -14,11 +14,16 @@ gratis en superficie de seguridad, a diferencia de automatizar el tag desde el C
 Uso:
     python scripts/bump_version.py 0.12.0            # aplica y regenera uv.lock
     python scripts/bump_version.py 0.12.0 --dry-run  # enseña el plan sin tocar nada
-    python scripts/bump_version.py --check           # ¿coinciden los cuatro? (sale 1 si no)
+    python scripts/bump_version.py --check           # ¿coinciden todos? (sale 1 si no)
     python scripts/bump_version.py --boundaries      # une las huellas de hoy de los hooks
     python scripts/bump_version.py 0.12.0 --boundaries  # las dos cosas, en el PR de release
 
 `--check` es lo mismo que comprueba el CI, disponible en local antes del push.
+
+Desde la 0.40 el plugin de Claude Code (SDD claude-plugin-and-mods, REQ-001) declara la misma versión
+en tres sitios más: su `plugin.json` y la entrada de los dos `marketplace.json` (el del paquete y el
+de la raíz del repo). Un plugin con la `version` vieja deja a los usuarios clavados en esa versión de
+la caché, así que van en el mismo bump y en el mismo `--check`.
 
 Al subir de versión también pone la versión en las entradas de `src/local_delegate/deprecations.py`
 que aún dicen `UNRELEASED`: es la primera versión publicada con ese renombrado, y de ella sale el
@@ -74,6 +79,14 @@ HASHED_HOOKS = (
     "suggest_delegate_read.py",
     "suggest_delegate_shell.py",
 )
+
+
+#: El plugin de Claude Code (REQ-001): su manifiesto y los dos marketplaces que lo publican.
+PLUGIN_ROOT = Path("src") / "local_delegate" / "resources" / "claude-plugin"
+PLUGIN_MANIFEST = PLUGIN_ROOT / "local-delegate" / ".claude-plugin" / "plugin.json"
+LOCAL_MARKETPLACE = PLUGIN_ROOT / ".claude-plugin" / "marketplace.json"
+REPO_MARKETPLACE = Path(".claude-plugin") / "marketplace.json"
+PLUGIN_VERSION_FILES = (PLUGIN_MANIFEST, LOCAL_MARKETPLACE, REPO_MARKETPLACE)
 
 
 class BumpError(RuntimeError):
@@ -142,6 +155,10 @@ def read_versions(root: Path = ROOT) -> dict[str, str]:
     for i, package in enumerate(server["packages"]):
         versions[f"server.json (packages[{i}].version)"] = package["version"]
 
+    for relative in plugin_version_files(root):
+        for where, version in _plugin_versions(json.loads((root / relative).read_text("utf-8"))):
+            versions[f"{relative.as_posix()} ({where})"] = version
+
     lock = root / "uv.lock"
     if lock.exists():
         name = pyproject["project"]["name"]
@@ -155,6 +172,36 @@ def read_versions(root: Path = ROOT) -> dict[str, str]:
             versions["uv.lock"] = match.group(1)
 
     return versions
+
+
+def plugin_version_files(root: Path = ROOT) -> tuple[Path, ...]:
+    """Los ficheros del plugin que declaran versión, o ninguno si el repo aún no tiene plugin.
+
+    Todo o nada: si existe uno y falta otro, el bump se saltaría el que falta sin decir nada, y ese
+    es justo el estado a medias que este script existe para evitar.
+    """
+    present = [relative for relative in PLUGIN_VERSION_FILES if (root / relative).exists()]
+    if not present:
+        return ()
+    missing = [relative.as_posix() for relative in PLUGIN_VERSION_FILES if relative not in present]
+    if missing:
+        raise BumpError(f"faltan ficheros del plugin que declaran versión: {', '.join(missing)}")
+    return PLUGIN_VERSION_FILES
+
+
+def _plugin_versions(data: dict) -> list[tuple[str, str]]:
+    """(dónde, versión) de un `plugin.json` (`version`) o un `marketplace.json` (`plugins[i]`)."""
+    if "plugins" in data:
+        return [(f"plugins[{i}].version", p["version"]) for i, p in enumerate(data["plugins"])]
+    return [("version", data["version"])]
+
+
+def _set_plugin_versions(data: dict, new_version: str) -> None:
+    if "plugins" in data:
+        for plugin in data["plugins"]:
+            plugin["version"] = new_version
+    else:
+        data["version"] = new_version
 
 
 def check(root: Path = ROOT) -> str:
@@ -200,6 +247,18 @@ def plan(new_version: str, root: Path = ROOT) -> dict[Path, tuple[str, str]]:
         )
     _verify_server_json(text, new_text, new_version)
     changes[server_path] = (new_text, newline)
+
+    for relative in plugin_version_files(root):
+        path = root / relative
+        text, newline = _read(path)
+        expected = len(_plugin_versions(json.loads(text)))
+        new_text, count = SERVER_VERSION_RE.subn(rf"\g<1>{new_version}\g<3>", text)
+        if count != expected:
+            raise BumpError(
+                f"{relative.as_posix()} tiene {count} claves 'version' y se esperaban {expected}"
+            )
+        _verify_plugin_json(relative, text, new_text, new_version)
+        changes[path] = (new_text, newline)
 
     deprecations_path = root / DEPRECATIONS_FILE
     if deprecations_path.exists():
@@ -289,6 +348,17 @@ def _verify_server_json(before: str, after: str, new_version: str) -> None:
         raise BumpError("la edición de server.json cambió algo más que las versiones")
 
 
+def _verify_plugin_json(relative: Path, before: str, after: str, new_version: str) -> None:
+    """Como `_verify_server_json`: solo cambian las versiones del plugin."""
+    old = json.loads(before)
+    new = json.loads(after)
+    if any(version != new_version for _, version in _plugin_versions(new)):
+        raise BumpError(f"{relative.as_posix()} no quedó con la versión pedida")
+    _set_plugin_versions(old, new_version)
+    if old != new:
+        raise BumpError(f"la edición de {relative.as_posix()} cambió algo más que la versión")
+
+
 def relock(root: Path = ROOT) -> None:
     """Regenera uv.lock. El CI corre `uv lock --check`, así que saltarlo rompe el push."""
     uv = shutil.which("uv")
@@ -320,7 +390,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--check",
         action="store_true",
-        help="solo verifica que los cuatro sitios coincidan (no escribe)",
+        help="solo verifica que todos los sitios coincidan (no escribe)",
     )
     parser.add_argument("--dry-run", action="store_true", help="enseña el plan sin escribir")
     parser.add_argument("--no-lock", action="store_true", help="no regenerar uv.lock")

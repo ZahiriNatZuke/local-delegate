@@ -1,0 +1,15 @@
+{
+  "name": "local-delegate",
+  "owner": {
+    "name": "Yohan González Almaguer"
+  },
+  "description": "Marketplace of the local-delegate plugin for Claude Code.",
+  "plugins": [
+    {
+      "name": "local-delegate",
+      "source": "./src/local_delegate/resources/claude-plugin/local-delegate",
+      "version": "0.39.0",
+      "description": "Hooks that steer mechanical work (summaries, logs, large files) to the local-delegate MCP tools."
+    }
+  ]
+}
