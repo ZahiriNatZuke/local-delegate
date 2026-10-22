@@ -1075,12 +1075,12 @@ def _daemon_status():
 def _llamaswap_status(daemon_answer=None):
     """REQ-039: `(origen, estado, por qué no se sabe)`. Por el daemon; si no responde, directo
     contra llama-swap con la key del shell; si tampoco, «no se sabe». Nunca pide la key."""
-    from . import config, llamaswap_api, server
+    from . import llamaswap_api, server, token_source
 
     status, why = daemon_answer if daemon_answer is not None else _daemon_status()
     if status is not None:
         return "daemon", status, ""
-    if not config.API_KEY:
+    if not token_source.api_key():
         return "", None, t("cli.residency.no_credential", why=why)
     status = llamaswap_api.query_status(
         llamaswap_api.local_backend(), own_delegations=len(server.inflight_snapshot())

@@ -115,6 +115,26 @@ def turn_and_topology_zeroed():
     clear()
 
 
+@pytest.fixture(autouse=True)
+def real_keychain_unreachable(monkeypatch):
+    """Ningún test lee el Llavero real de macOS (SDD claude-plugin-and-mods, macos-keychain).
+
+    En el runner `macos-latest` la resolución de credenciales llamaría a `/usr/bin/security` cada
+    vez que falta la variable: el resultado dependería del Llavero de esa máquina y, bloqueado,
+    podría abrir un diálogo. Aquí el programa apunta a una ruta que no existe (falla al arrancar,
+    que es «sin credencial») y la caché por proceso empieza vacía. Los tests del Llavero ponen su
+    propio `security` encima.
+    """
+    from local_delegate import keychain
+
+    monkeypatch.setattr(
+        keychain, "SECURITY_COMMAND", ("/nonexistent/local-delegate-test/security",)
+    )
+    keychain._CACHE.clear()
+    yield
+    keychain._CACHE.clear()
+
+
 # --- T11: la consulta del CLI al daemon nunca llega al daemon real -----------------------------
 DEAD_PORT = pytest.StashKey[int]()
 CUT_DAEMON = pytest.StashKey["RejectingServer"]()

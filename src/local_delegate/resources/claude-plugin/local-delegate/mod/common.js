@@ -34,9 +34,18 @@ export const DATA_FOLDER = 'local-delegate-local-delegate'
 
 const LANGUAGES = ['es', 'en']
 
-// What `setup` stores: the plugin's options, the embedded texts, the plugin's version, and the
-// `isInteractive` of the session's start.
-const STATE = { options: {}, catalogs: {}, version: null, interactive: null }
+// macOS (issue #409): without the variable, the token comes from the Keychain, the same service
+// `token_source.py` reads. A Mac app opened from the Dock only has launchd's environment, so
+// `$.env.get` comes back empty there. The absolute path: launchd's PATH is minimal. The time limit:
+// a locked Keychain can leave `security` waiting on a dialog, and a stuck hook is worse than none.
+export const KEYCHAIN_SERVICE = 'local-delegate-web-token'
+export const SECURITY_PROGRAM = '/usr/bin/security'
+export const KEYCHAIN_TIMEOUT_MS = 3000
+
+// What `setup` stores: the plugin's options, the embedded texts, the plugin's version, the
+// `isInteractive` of the session's start, and what the Keychain answered (`undefined` until asked;
+// `null`, «nothing», is remembered too, so it is asked once per load).
+const STATE = { options: {}, catalogs: {}, version: null, interactive: null, keychain: undefined }
 
 function isText(value) {
   return typeof value === 'string' && value.trim() !== ''
@@ -53,16 +62,62 @@ export function setup(options, extras = {}) {
   STATE.catalogs = extras.catalogs || {}
   STATE.version = extras.version || null
   STATE.interactive = null
+  STATE.keychain = undefined
 }
 
-/** The daemon token, or `null`. Never logged: callers put it in a header and nowhere else. */
+/**
+ * The macOS account to ask the Keychain for, or `null` off macOS.
+ *
+ * The mod has no platform noun and reads only the variables `test_mod_static.py` allows, so macOS
+ * is told by a `HOME` of `/Users/<account>` and no `USERPROFILE` (Windows); `<account>` is the
+ * `$USER` the docs store the item under.
+ */
+async function keychainAccount($) {
+  if (isText(await $.env.get('USERPROFILE'))) {
+    return null
+  }
+  const home = await $.env.get('HOME')
+  const match = isText(home) ? /^\/Users\/([^/]+)\/?$/.exec(home.trim()) : null
+  return match ? match[1] : null
+}
+
+/** The token stored in the macOS Keychain, or `null`; asked once per load, with a time limit. */
+async function keychainToken($) {
+  if (STATE.keychain !== undefined) {
+    return STATE.keychain
+  }
+  let found = null
+  try {
+    const account = await keychainAccount($)
+    if (account !== null) {
+      const argv = [SECURITY_PROGRAM, 'find-generic-password', '-a', account, '-s', KEYCHAIN_SERVICE, '-w']
+      const done = await $.process.run(argv, { timeoutMs: KEYCHAIN_TIMEOUT_MS })
+      if (done && done.exitCode === 0 && isText(done.stdout)) {
+        found = done.stdout.trim()
+      }
+    }
+  } catch {
+    found = null
+  }
+  STATE.keychain = found
+  return found
+}
+
+/**
+ * The daemon token, or `null`. Never logged: callers put it in a header and nowhere else.
+ *
+ * The variable first; without it, on macOS, the Keychain (the same order as `token_source.py`).
+ */
 export async function token($) {
   try {
     const value = await $.env.get('LOCAL_DELEGATE_WEB_TOKEN')
-    return isText(value) ? value.trim() : null
+    if (isText(value)) {
+      return value.trim()
+    }
   } catch {
-    return null
+    // An engine without the variable noun: the Keychain is still worth asking.
   }
+  return keychainToken($)
 }
 
 /**

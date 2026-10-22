@@ -105,6 +105,11 @@ def credential_hint() -> str:
     return i18n.t("doctor.hint.credential")
 
 
+def keychain_hint(service: str) -> str:
+    """Cómo guardar una credencial en el Llavero de macOS. `-w` al final la pide por teclado."""
+    return i18n.t("doctor.hint.keychain", service=service)
+
+
 def daemon_token_hint() -> str:
     return i18n.t("doctor.hint.daemon_token")
 
@@ -1270,7 +1275,25 @@ def _probe_mcp_credential(ctx: Context) -> Result:
         return Result(UNKNOWN, reason)
     if not requires:
         return Result(OK, i18n.t("doctor.probe.credential.open"))
-    if config.API_KEY:
+    in_env = bool(token_source.environment_value(token_source.API_KEY_VARIABLE))
+    if token_source.is_macos():
+        # En macOS el entorno de este proceso NO es testigo del de los clientes: `doctor` corre en
+        # un shell, y Claude Desktop abierto desde el Dock (o una sesión de Code cuyo entorno de
+        # login no se resolvió) solo tiene el de launchd (issue #409). El Llavero sí lo ven todos.
+        service = token_source.KEYCHAIN_SERVICES[token_source.API_KEY_VARIABLE]
+        in_keychain = token_source.read_keychain(service) is not None
+        if in_keychain:
+            key = (
+                "doctor.probe.credential.in_env_and_keychain"
+                if in_env
+                else "doctor.probe.credential.in_keychain"
+            )
+            return Result(OK, i18n.t(key, service=service))
+        if in_env:
+            return Result(
+                WARN, i18n.t("doctor.probe.credential.shell_only"), keychain_hint(service)
+            )
+    elif in_env:
         return Result(OK, i18n.t("doctor.probe.credential.in_env"))
 
     entries: list[tuple[str, str]] = []
@@ -1303,7 +1326,14 @@ def _probe_mcp_credential(ctx: Context) -> Result:
         else "doctor.probe.credential.blind_many"
     )
     clients = f" {i18n.t('doctor.and')} ".join(blind)
-    return Result(WARN, i18n.t(key, clients=clients), credential_hint())
+    # En macOS el daemon (LaunchAgent) tampoco tiene la clave si no está en el Llavero, así que el
+    # arreglo de `credential_hint` (pasar por el daemon) no lo es: lo es guardarla en el Llavero.
+    hint = (
+        keychain_hint(token_source.KEYCHAIN_SERVICES[token_source.API_KEY_VARIABLE])
+        if token_source.is_macos()
+        else credential_hint()
+    )
+    return Result(WARN, i18n.t(key, clients=clients), hint)
 
 
 # --- Probes de servicios y backend --------------------------------------------

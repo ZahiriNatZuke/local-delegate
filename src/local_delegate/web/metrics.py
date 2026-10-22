@@ -68,6 +68,7 @@ from .. import (
     recompute,
     server,
     test_windows,
+    token_source,
     topology,
     valuation,
 )
@@ -1021,7 +1022,7 @@ def system():
 
 
 def _require_web_token(request: Request) -> None:
-    token = config.WEB_TOKEN
+    token = token_source.daemon_token()
     if not token:
         return
     if auth.is_request_authorized(request.headers.get("authorization"), token):

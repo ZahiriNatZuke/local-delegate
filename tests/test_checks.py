@@ -9,6 +9,7 @@ es el que llevaría a un `fix` posterior a sobrescribir configuración ajena.
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -26,11 +27,14 @@ from conftest import (
 from local_delegate import (
     checks,
     claude_plugin,
+    i18n,
     install,
     install_state,
+    keychain,
     llamaswap_api,
     probes,
     recompute,
+    token_source,
 )
 from local_delegate.failures import BackendView
 
@@ -752,6 +756,8 @@ def test_credential_ok_when_the_entries_go_through_the_daemon(tmp_path, monkeypa
 
 
 def test_credential_warn_when_the_client_speaks_stdio_without_key(tmp_path, monkeypatch):
+    # Fuera de macOS, donde el arreglo es el daemon (en macOS es el Llavero, ver más abajo).
+    monkeypatch.setattr(token_source.sys, "platform", "linux")
     monkeypatch.setattr(checks.config, "API_KEY", "")
     ctx = make_ctx(_with_stdio(make_home(tmp_path)), backend_needs_key=lambda: (True, ""))
     result = result_for("service.credential", ctx)
@@ -760,11 +766,105 @@ def test_credential_warn_when_the_client_speaks_stdio_without_key(tmp_path, monk
     assert result.fix_hint == checks.credential_hint()
 
 
-def test_credential_ok_if_the_key_is_in_the_environment(tmp_path, monkeypatch):
-    """Con la variable cargada, la entrada stdio la hereda y el 401 no llega a pasar."""
+@pytest.mark.parametrize("platform", ["win32", "linux"])
+def test_credential_ok_if_the_key_is_in_the_environment(tmp_path, monkeypatch, platform):
+    """Con la variable cargada, la entrada stdio la hereda y el 401 no llega a pasar.
+
+    Fuera de macOS: allí el mismo caso es «solo en el shell» (ver los tests del Llavero).
+    """
+    monkeypatch.setattr(token_source.sys, "platform", platform)
     monkeypatch.setattr(checks.config, "API_KEY", "fake-secret")
     ctx = make_ctx(_with_stdio(make_home(tmp_path)), backend_needs_key=lambda: (True, ""))
-    assert result_for("service.credential", ctx).status == checks.OK
+    result = result_for("service.credential", ctx)
+    assert result.status == checks.OK
+    assert "entorno" in result.detail
+
+
+# --- Credencial del backend en macOS: el Llavero (issue #409, lote macos-keychain) -------------
+#
+# `doctor` corre en un shell, que casi siempre tiene la variable; Claude Desktop abierto desde el
+# Dock, o una sesión de Code cuyo entorno de login no se pudo resolver, no la tienen. Por eso en
+# macOS el `[ OK ]` «está en el entorno» era engañoso. `security` es simulado: nunca el real.
+
+KEYCHAIN_SECRET = "kc-doctor-secret-never-shown"
+
+
+@pytest.fixture
+def mac_keychain(monkeypatch):
+    """macOS con un Llavero simulado: el dict dice qué servicio tiene qué valor."""
+    stored: dict[str, str] = {}
+
+    def fake_run(argv, **_kwargs):
+        value = stored.get(argv[argv.index("-s") + 1])
+        if value is None:
+            return subprocess.CompletedProcess(argv, 44, "", "item not found")
+        return subprocess.CompletedProcess(argv, 0, value + "\n", "")
+
+    monkeypatch.setattr(token_source.sys, "platform", "darwin")
+    monkeypatch.setattr(keychain.subprocess, "run", fake_run)
+    monkeypatch.setattr(checks.config, "API_KEY", "")
+    return stored
+
+
+def _credential(tmp_path):
+    ctx = make_ctx(_with_stdio(make_home(tmp_path)), backend_needs_key=lambda: (True, ""))
+    return result_for("service.credential", ctx)
+
+
+def test_credential_on_macos_warns_when_the_key_is_only_in_the_shell(
+    tmp_path, monkeypatch, mac_keychain
+):
+    monkeypatch.setattr(checks.config, "API_KEY", "shell-only-secret")
+
+    result = _credential(tmp_path)
+
+    assert result.status == checks.WARN
+    assert "shell" in result.detail
+    assert 'security add-generic-password -U -a "$USER" -s local-delegate-remote -w' in (
+        result.fix_hint
+    )
+    assert "shell-only-secret" not in result.detail + result.fix_hint
+
+
+def test_credential_on_macos_ok_from_the_keychain(tmp_path, mac_keychain):
+    mac_keychain["local-delegate-remote"] = KEYCHAIN_SECRET
+
+    result = _credential(tmp_path)
+
+    assert result.status == checks.OK
+    assert "Llavero" in result.detail and "local-delegate-remote" in result.detail
+    assert KEYCHAIN_SECRET not in result.detail + result.fix_hint
+
+
+def test_credential_on_macos_ok_in_both_names_both(tmp_path, monkeypatch, mac_keychain):
+    mac_keychain["local-delegate-remote"] = KEYCHAIN_SECRET
+    monkeypatch.setattr(checks.config, "API_KEY", "env-secret")
+
+    result = _credential(tmp_path)
+
+    assert result.status == checks.OK
+    assert "entorno" in result.detail and "Llavero" in result.detail
+    assert KEYCHAIN_SECRET not in result.detail and "env-secret" not in result.detail
+
+
+def test_credential_on_macos_without_key_points_to_the_keychain(tmp_path, mac_keychain):
+    """Sin clave en ningún sitio, en macOS el arreglo es el Llavero: el daemon tampoco la ve."""
+    result = _credential(tmp_path)
+
+    assert result.status == checks.WARN
+    assert "401" in result.detail
+    assert "-s local-delegate-remote" in result.fix_hint
+
+
+def test_credential_on_macos_in_english(tmp_path, monkeypatch, mac_keychain):
+    monkeypatch.setattr(checks.config, "API_KEY", "shell-only-secret")
+
+    with i18n.override("en"):
+        result = _credential(tmp_path)
+
+    assert result.status == checks.WARN
+    assert "shell" in result.detail and "Keychain" in result.detail
+    assert "security add-generic-password" in result.fix_hint
 
 
 def test_credential_unknown_if_it_could_not_ask(tmp_path):

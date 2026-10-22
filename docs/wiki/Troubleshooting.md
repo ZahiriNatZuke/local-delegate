@@ -81,7 +81,9 @@ Si el backend está en otra máquina:
   `tailscale status` y `tailscale ping <PC>` desde la Mac.
 - `connect_timeout` o `no_route` (`Operation timed out` con `curl`): DNS resolvió, pero falta
   ruta/grant, Tailscale Serve no está activo o una VPN se come el tráfico.
-- `credential` (`401`): la red funciona; carga la key desde Keychain y confirma el header Bearer.
+- `credential` (`401`): la red funciona; guarda la key en el Llavero (servicio
+  `local-delegate-remote`, ver [Credenciales en el Llavero](Remote-backend.md#credenciales-en-el-llavero-claude-code-y-claude-desktop))
+  y mira qué fuente dice `local-delegate doctor` en «credencial del backend».
 - No cambies a MCP remoto completo para “arreglar” `path`: el MCP debe seguir local en la Mac.
 
 Guía completa: [Backend remoto Mac → PC](Remote-backend.md).

@@ -6,6 +6,22 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corrige (credenciales en macOS)
+
+- **En macOS, las credenciales salen también del Llavero, no solo del entorno del shell** (issue
+  #409). Claude Desktop abierto desde el Dock, o una sesión de Claude Code cuyo entorno de login
+  Desktop no llegó a resolver, arrancaban el MCP sin `LOCAL_DELEGATE_API_KEY` y el backend remoto
+  daba `401` en silencio. Ahora el MCP, el daemon y el mod del plugin buscan cada credencial en el
+  mismo orden: la variable de entorno y, si falta, el Llavero (`local-delegate-remote` para la clave
+  del backend, `local-delegate-web-token` para el token del puerto), con `/usr/bin/security`, tope
+  de 3 s y una consulta por proceso. Una referencia `${VAR}` que el cliente no expandió ya no cuenta
+  como clave. El valor no se registra ni se imprime. Windows y Linux no cambian.
+- **`doctor` dice de dónde sale la clave del backend.** En macOS da `[WARN]` cuando solo está en el
+  entorno del shell que lo corre (antes `[ OK ]`, aunque una app gráfica no la viera) y propone
+  `security add-generic-password -U -a "$USER" -s local-delegate-remote -w`. La wiki (Backend
+  remoto y Daemon) explica cómo guardarlas; el LaunchAgent `remote-env` queda solo para Codex.
+  (SDD `claude-plugin-and-mods`, macos-keychain)
+
 ### Añade (barra de estado del mod)
 
 - **Cuota y ahorro de la sesión en la barra de estado de Claude Code** (pieza `status` del mod,
