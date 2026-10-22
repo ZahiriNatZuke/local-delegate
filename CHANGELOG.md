@@ -6,6 +6,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Seguridad
+
+- **Suelo para `opentelemetry-api`** (`>=1.45.1,<2`), dependencia transitiva que traen `mcp` y
+  `fastapi`: hasta la 1.45.0 tenía GHSA-xcq7-p3pf-p88h (alerta 26 de Dependabot, gravedad media,
+  parseo de `tracestate` sin límite). Va en `pyproject.toml` y no solo en `uv.lock` para que el
+  wheel publicado lo lleve consigo, igual que el suelo de `anyio` de la 0.31.1.
+
 ### Añade (mod de lectura, apagado por defecto)
 
 - **Pieza `read` del mod del plugin** (REQ-020, REQ-021 y REQ-022), solo con la opción
