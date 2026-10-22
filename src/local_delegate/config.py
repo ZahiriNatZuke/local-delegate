@@ -86,8 +86,15 @@ MAX_CONCURRENT_REQUESTS = max(1, _env_int("LOCAL_DELEGATE_MAX_CONCURRENT_REQUEST
 
 
 def auth_headers() -> dict[str, str]:
-    """Headers del backend sin registrar ni exponer el secreto configurado."""
-    return {"Authorization": f"Bearer {API_KEY}"} if API_KEY else {}
+    """Headers del backend sin registrar ni exponer el secreto configurado.
+
+    La clave sale de `token_source.api_key`: la variable `API_KEY` y, si falta, en macOS el
+    Llavero (issue #409). `API_KEY` sigue siendo solo lo que trae el entorno del proceso.
+    """
+    from . import token_source  # diferido: `token_source` importa este módulo
+
+    key = token_source.api_key()
+    return {"Authorization": f"Bearer {key}"} if key else {}
 
 
 # --- Origen del cómputo: backend en esta máquina vs backend remoto -----------
@@ -535,7 +542,12 @@ def web_auth_headers() -> dict[str, str]:
     diagnóstico al preguntarle por el backend). Sin esto, poner el token dejaría al CLI incapaz de
     hablar con su propio daemon, que es la clase de rotura que no se ve hasta que se despliega.
     """
-    return {"Authorization": f"Bearer {WEB_TOKEN}"} if WEB_TOKEN else {}
+    from . import token_source  # diferido: `token_source` importa este módulo
+
+    # El mismo token que protege el puerto (`token_source.daemon_token`): entorno y, en macOS,
+    # el Llavero. Dos fuentes distintas aquí y en el daemon serían un 401 contra uno mismo.
+    token = token_source.daemon_token()
+    return {"Authorization": f"Bearer {token}"} if token else {}
 
 
 # --- Auto-arranque del backend (opt-in, específico de llama-swap) -----------

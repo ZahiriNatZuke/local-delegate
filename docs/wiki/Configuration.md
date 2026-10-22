@@ -8,13 +8,13 @@ Nada está hardcodeado.
 | Variable | Default | Descripción |
 |---|---|---|
 | `LOCAL_DELEGATE_BASE_URL` | `http://127.0.0.1:9292/v1` | Endpoint OpenAI-compatible |
-| `LOCAL_DELEGATE_API_KEY` | *(vacío)* | Bearer token, si el endpoint lo exige |
+| `LOCAL_DELEGATE_API_KEY` | *(vacío)* | Bearer token, si el endpoint lo exige. En macOS, si falta, se lee del Llavero (servicio `local-delegate-remote`) |
 | `LOCAL_DELEGATE_BACKEND_ORIGIN` | `auto` | `local`/`remote` fuerzan el origen del cómputo; `auto` lo deduce del host de `BASE_URL` (loopback = local). Decláralo si llegas al backend por un **túnel** (`ssh -L 9292:…`, port-forward de Tailscale): el endpoint se ve en `127.0.0.1` y el dashboard reportaría cómputo local para inferencia que salió de la máquina |
 | `LOCAL_DELEGATE_TIMEOUT` | `180` | Timeout HTTP (segundos) |
 | `LOCAL_DELEGATE_MAX_CONCURRENT_REQUESTS` | `2` | Máximo de llamadas al backend simultáneas por proceso; en el daemon se comparte entre clientes |
 
 Para una Mac que usa llama-swap en otra máquina, conserva el MCP en la Mac, fija
-`LOCAL_DELEGATE_AUTOSTART=0` y carga `LOCAL_DELEGATE_API_KEY` desde Keychain. Ver
+`LOCAL_DELEGATE_AUTOSTART=0` y guarda `LOCAL_DELEGATE_API_KEY` en el Llavero. Ver
 [Backend remoto Mac → PC](Remote-backend.md).
 
 ## Catálogo de modelos (roles)
@@ -184,7 +184,7 @@ En modo `stdio`, las mismas variables controlan únicamente la web embebida here
 | `LOCAL_DELEGATE_WEB_HOST` | `127.0.0.1` | Host de web/daemon |
 | `LOCAL_DELEGATE_WEB_PORT` | `9393` | Puerto único de web/daemon |
 | `LOCAL_DELEGATE_WEB_FONTS` | `1` | Tipografía de marca desde Google Fonts. `0` la desactiva y deja la página con **cero peticiones a terceros** (cae al stack de fuentes del sistema) |
-| `LOCAL_DELEGATE_WEB_TOKEN` | *(vacío)* | Token que exige **todo** el puerto del daemon: endpoint MCP, dashboard y `/api/*`. Vacío = sin autenticación (el comportamiento de siempre). Ponlo si el puerto está detrás de un proxy o publicado. Ver [Daemon](Daemon.md#autenticación-del-puerto) |
+| `LOCAL_DELEGATE_WEB_TOKEN` | *(vacío)* | Token que exige **todo** el puerto del daemon: endpoint MCP, dashboard y `/api/*`. Vacío = sin autenticación (el comportamiento de siempre). Ponlo si el puerto está detrás de un proxy o publicado. En macOS, si falta, se lee del Llavero (servicio `local-delegate-web-token`). Ver [Daemon](Daemon.md#autenticación-del-puerto) |
 | `LOCAL_DELEGATE_WEB_SESSION_DAYS` | `365` | Cuánto dura la sesión del navegador tras entrar una vez con el token, renovándose en cada visita. Solo afecta al navegador: los clientes MCP y el CLI mandan el token en cada llamada. `0` desactiva la sesión y vuelve a pedir credenciales en cada petición. Ver [Daemon](Daemon.md#la-sesión-del-navegador) |
 
 > Chart.js se sirve desde el propio paquete (`/vendor/chart.umd.min.js`), no desde un CDN: el

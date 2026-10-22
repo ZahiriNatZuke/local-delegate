@@ -23,7 +23,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
 
-from . import autostart, cancellation, config, i18n, server
+from . import autostart, cancellation, config, i18n, server, token_source
 from .web import auth, metrics
 
 MCP_PATH = "/mcp"
@@ -223,7 +223,7 @@ def build_app(host: str | None = None, port: int | None = None) -> Starlette | a
     # El token se exige envolviendo la raíz, o sea DESPUÉS de montar el dashboard: así una ruta
     # nueva queda protegida por existir, no por acordarse de protegerla. Sin token configurado
     # `protect` devuelve la misma app y aquí no cambia nada.
-    return auth.protect(mcp_app, config.WEB_TOKEN, config.WEB_SESSION_SECONDS)
+    return auth.protect(mcp_app, token_source.daemon_token(), config.WEB_SESSION_SECONDS)
 
 
 def registered_daemon() -> dict | None:

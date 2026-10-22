@@ -6,7 +6,7 @@
 // here with only the nouns each case needs: a noun that is missing throws when called, as
 // `$.process.run` does where it is not available. The heartbeat goes through the real plugin.
 import { expect, mock, test } from 'claude-code/testing'
-import { daemonFetch, dataPath, engineCommon, hasDialog, runLd, setup, t } from './common.js'
+import { daemonFetch, dataPath, engineCommon, hasDialog, runLd, setup, t, token } from './common.js'
 
 const LD_BIN = 'C:/tools/local-delegate/python.exe'
 const TOKEN = 'tok-7f3a-never-in-output'
@@ -64,6 +64,62 @@ test('engineCommon binds the helpers to one $, as the plan names them', OPTIONS,
   expect(common.t('k', { who: 'you' })).toBe('hi you')
   expect(await common.token()).toBe(null)
   expect(await common.daemonFetch('http://evil.example/')).toBe(null)
+})
+
+// Issue #409 (macos-keychain): on macOS, without the variable, the token comes from the Keychain
+// through `/usr/bin/security`, as `token_source` does. `security` here is a fake `process.run`.
+const MAC_HOME = { HOME: '/Users/ana' }
+const KEYCHAIN_ARGV = ['/usr/bin/security', 'find-generic-password', '-a', 'ana', '-s', 'local-delegate-web-token', '-w']
+
+function keychainEngine(variables: Record<string, string>, answer: () => Promise<unknown>) {
+  const seen: unknown[] = []
+  const engine = fakeEngine(variables, {
+    process: { run: async (argv: unknown, init: unknown) => (seen.push([argv, init]), answer()) },
+  })
+  return { engine, seen }
+}
+
+test('token comes from the macOS Keychain when the variable is missing, asked once', OPTIONS, async () => {
+  setup({}, {})
+  const { engine, seen } = keychainEngine(MAC_HOME, async () => ({ exitCode: 0, stdout: `${TOKEN}\n`, stderr: '' }))
+  expect(await token(engine)).toBe(TOKEN)
+  expect(await token(engine)).toBe(TOKEN)
+  expect(seen).toEqual([[KEYCHAIN_ARGV, { timeoutMs: 3000 }]])
+})
+
+test('the variable wins over the Keychain, which is then not asked', OPTIONS, async () => {
+  setup({}, {})
+  const { engine, seen } = keychainEngine({ ...MAC_HOME, LOCAL_DELEGATE_WEB_TOKEN: 'from-env' }, async () => ({
+    exitCode: 0,
+    stdout: TOKEN,
+    stderr: '',
+  }))
+  expect(await token(engine)).toBe('from-env')
+  expect(seen).toEqual([])
+})
+
+test('a Keychain that fails, is empty or overruns is no token, and is not asked again', OPTIONS, async () => {
+  const answers: (() => Promise<unknown>)[] = [
+    async () => ({ exitCode: 44, stdout: '', stderr: 'item not found' }),
+    async () => ({ exitCode: 0, stdout: '  \n', stderr: '' }),
+    async () => Promise.reject(new Error('timed out')),
+  ]
+  for (const answer of answers) {
+    setup({}, {})
+    const { engine, seen } = keychainEngine(MAC_HOME, answer)
+    expect(await token(engine)).toBe(null)
+    expect(await token(engine)).toBe(null)
+    expect(seen.length).toBe(1)
+  }
+})
+
+test('outside macOS the Keychain is never asked', OPTIONS, async () => {
+  for (const variables of [{ USERPROFILE: 'C:\\Users\\ana', HOME: '/Users/ana' }, { HOME: '/home/ana' }, {}]) {
+    setup({}, {})
+    const { engine, seen } = keychainEngine(variables, async () => ({ exitCode: 0, stdout: TOKEN, stderr: '' }))
+    expect(await token(engine)).toBe(null)
+    expect(seen).toEqual([])
+  }
 })
 
 test('daemonFetch_rejects_non_loopback', OPTIONS, async () => {

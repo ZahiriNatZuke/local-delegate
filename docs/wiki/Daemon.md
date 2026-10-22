@@ -195,7 +195,8 @@ corrección se borraba, y el cliente pasaba a `401` sin que nada lo dijera. Para
 propósito, `--no-web-token-env`.
 
 Para que funcione, **la variable tiene que existir también en el entorno del cliente**, no solo en
-el del daemon. Es el punto donde esto se rompe en silencio: si el cliente no la ve, manda un token
+el del daemon (en macOS el daemon puede sacarla del Llavero, pero la cabecera `${VAR}` la expande
+el cliente con **su** entorno). Es el punto donde esto se rompe en silencio: si el cliente no la ve, manda un token
 vacío y se lleva un `401` sin más explicación.
 
 El CLI se autentica solo si la variable está en su entorno. Si no la encuentra, `local-delegate
@@ -324,7 +325,20 @@ launchctl kickstart -k gui/$(id -u)/com.local-delegate.daemon
 ```
 
 `KeepAlive` hace que launchd lo reponga si muere. Si el backend está autenticado, la key no puede
-ir en el plist: exporta la variable desde un script envoltorio y apunta `ProgramArguments` a él.
+ir en el plist. **Guárdala en el Llavero** y el daemon la lee él mismo cuando la variable no está
+en su entorno (que, lanzado por launchd, no tiene nada de tu `~/.zshrc`). Lo mismo vale para el
+token del puerto:
+
+```bash
+security add-generic-password -U -a "$USER" -s local-delegate-remote -w      # clave del backend
+security add-generic-password -U -a "$USER" -s local-delegate-web-token -w   # token del puerto
+```
+
+Con `-w` al final, `security` pide el valor por teclado: no queda en el historial del shell. `-U`
+lo sustituye si ya existía. El orden es siempre el mismo: primero la variable de entorno y, si
+falta, el Llavero, con un tope de 3 s (un Llavero bloqueado puede dejar a `security` esperando un
+diálogo) y una sola consulta por proceso: si cambias el valor, reinicia el daemon con
+`launchctl kickstart -k`. Detalle y diagnóstico en [Backend remoto](Remote-backend.md#credenciales-en-el-llavero-claude-code-y-claude-desktop).
 
 ### Linux: `systemd --user`
 

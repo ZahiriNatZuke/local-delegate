@@ -813,6 +813,51 @@ para el cliente es un cuelgue:
   ellos.
 - **Vuelta atrás**: revert.
 
+### Ola 4b — Credenciales en macOS sin depender del shell (un lote, issue #409)
+
+Entra el 2026-10-22 a petición del usuario, antes de la próxima release. En la Mac (backend
+remoto Mac → PC) el MCP stdio solo saca `LOCAL_DELEGATE_API_KEY` y `LOCAL_DELEGATE_WEB_TOKEN` del
+entorno del proceso. Cuando Claude Code no hereda el de un shell (Desktop abierto desde el Dock,
+o el *fallback* de `[CCD]` a `process.env` cuando expira la extracción del shell de login), el
+backend da **401** en silencio, y `doctor` da `[ OK ]` porque corre en un shell que sí la tiene.
+`token_source` ya resuelve esto en Windows (`HKCU\Environment`), pero es solo Windows por la
+decisión 11, cuya premisa («en macOS no hay daemon local») no se cumple en la topología
+Remote-backend.
+
+#### Credenciales desde el Llavero de macOS (macos-keychain)
+
+- **Posee**: `src/local_delegate/token_source.py`, `src/local_delegate/config.py` (solo la
+  resolución de `API_KEY` y `WEB_TOKEN` y `auth_headers`), el probe de credencial de
+  `src/local_delegate/checks.py`, `<plugin>/mod/common.js` (lectura del token),
+  `tests/test_token_source.py`, tests nuevos de `config`/`checks`, `docs/wiki/Remote-backend.md`,
+  `docs/wiki/Daemon.md`, `<i18n>` de lo que toque.
+- **Diseño**:
+  - **Orden de fuentes, igual en todos los consumidores**: entorno del proceso → fuente del
+    sistema (Windows: `HKCU\Environment`, como hoy; macOS: Llavero con
+    `/usr/bin/security find-generic-password -a "$USER" -s <servicio> -w`). Servicios:
+    `local-delegate-remote` para la clave del backend (el que ya documenta la wiki) y
+    `local-delegate-web-token` para el token del daemon. Linux: sin cambio.
+  - El Llavero se consulta solo si falta la variable, **con tope de tiempo** (el comando puede
+    quedarse esperando un diálogo si el Llavero está bloqueado), una vez por proceso y en
+    diferido, nunca en la importación. El valor no se registra, no se imprime y no se escribe.
+  - `config.API_KEY` deja de ser la única verdad: `auth_headers` y los demás consumidores pasan
+    por la resolución anterior.
+  - **Mod**: si `$.env.get` no trae el token y la plataforma es macOS, lo pide al Llavero con
+    `process.run` (con tope); si no puede, sigue como hoy (sin token, la barra se oculta).
+  - **`doctor`**: dice **de dónde** sale cada credencial (entorno, registro, Llavero). En macOS,
+    si solo está en el entorno del shell que corre `doctor`, avisa (WARN) de que una app gráfica no
+    la verá y da el comando para guardarla en el Llavero.
+  - **Docs**: Remote-backend y Daemon recomiendan el Llavero para Claude Code y Desktop; la receta
+    del LaunchAgent `remote-env` queda solo para Codex. Se corrige el docstring de la decisión 11.
+- **Tests primero**: `security` simulado (nunca el real): lee la clave cuando falta la variable,
+  la variable gana al Llavero, el tope de tiempo no cuelga, un fallo o salida vacía es «sin
+  credencial», el valor nunca sale en logs ni en `doctor`, fuera de macOS no se llama a `security`,
+  `doctor` avisa del caso «solo en el shell» y da OK con el Llavero.
+- **Verificación en vivo**: en la Mac, la hace el usuario (`env -i` + MCP stdio + `local_status`,
+  como en el issue: sin variable y con la clave en el Llavero debe dar «arriba»). Pasos exactos en
+  el PR.
+- **Vuelta atrás**: revert; con la variable puesta no cambia nada.
+
 ### Ola 5 — F4, dos lotes en paralelo
 
 **Contrato de `hook classify`**, fijado aquí:

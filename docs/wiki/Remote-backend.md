@@ -65,6 +65,55 @@ PY
 source "$HOME/.zshrc"
 ```
 
+## Credenciales en el Llavero (Claude Code y Claude Desktop)
+
+El bloque de `~/.zshrc` de arriba solo llega a lo que arranca desde una terminal. Claude Desktop
+abierto desde el Dock recibe únicamente el entorno de launchd, y una sesión de Claude Code lanzada
+desde Desktop hereda el de tu shell de login solo si Desktop consigue resolverlo a tiempo (cuando
+no, su log dice `Shell environment extraction timed out`). Sin la variable, el MCP mandaba la
+petición sin clave y el backend contestaba `401` en silencio (issue #409).
+
+Desde la 0.41.0 el MCP, el daemon (LaunchAgent) y el mod del plugin buscan cada credencial en
+este orden: **la variable de entorno y, si falta, el Llavero**. Guarda las dos una vez:
+
+| Credencial | Variable | Servicio del Llavero |
+| --- | --- | --- |
+| Clave del backend (llama-swap de la PC) | `LOCAL_DELEGATE_API_KEY` | `local-delegate-remote` |
+| Token del puerto del daemon (mod, panel) | `LOCAL_DELEGATE_WEB_TOKEN` | `local-delegate-web-token` |
+
+```bash
+security add-generic-password -U -a "$USER" -s local-delegate-remote -w
+security add-generic-password -U -a "$USER" -s local-delegate-web-token -w   # si el daemon usa token
+```
+
+`-w` al final hace que `security` pida el valor por teclado (no queda en el historial); `-U` lo
+sustituye si ya estaba. Para comprobar que está **sin imprimirlo**:
+
+```bash
+security find-generic-password -a "$USER" -s local-delegate-remote >/dev/null && echo KEYCHAIN_OK
+```
+
+Cómo se comporta:
+
+- La consulta es `/usr/bin/security find-generic-password -a "$USER" -s <servicio> -w`, con ruta
+  absoluta (el `PATH` de launchd es mínimo) y un tope de **3 s**: con el Llavero bloqueado,
+  `security` puede quedarse esperando un diálogo, y colgar el MCP sería peor que el `401`. Si
+  macOS pregunta si permites el acceso, elige «Permitir siempre».
+- Se pregunta **una vez por proceso**, también cuando no hay nada. Si guardas o cambias el valor,
+  reinicia el cliente (o `launchctl kickstart -k gui/$(id -u)/com.local-delegate.daemon` para el
+  daemon).
+- El valor no se registra, no se imprime y no se escribe en ningún fichero.
+- `local-delegate doctor` dice de dónde sale la clave: `[ OK ]` con «sale del Llavero» o «está en
+  el entorno y en el Llavero», y `[WARN]` con el comando `security add-generic-password …` cuando
+  **solo** está en el entorno del shell que corre `doctor`, que es justo el caso que una app
+  gráfica no ve.
+- Límite: la entrada `--mcp-mode http` de Claude Code manda `Bearer ${LOCAL_DELEGATE_WEB_TOKEN}`, y
+  eso lo expande Claude Code con su propio entorno, no con el Llavero. La entrada `stdio` de esta
+  página no tiene ese problema: el proceso MCP lee la clave él mismo.
+
+El LaunchAgent `remote-env` de [Codex en la Mac](#codex-en-la-mac) sigue siendo la receta para
+Codex, que no lee el Llavero; Claude Code y Claude Desktop no lo necesitan.
+
 ## Actualizar la Mac tras una release
 
 Como la entrada lleva la versión fijada, cada release nueva pide cambiar el pin. Lo hace el propio
@@ -109,7 +158,9 @@ repositorio — **lo que ejecuta el usuario va al CLI; lo que ejecuta el reposit
 ## Claude Code en la Mac
 
 La entrada se fija a la versión actual durante el rollout. **Fija la actual, no una vieja**: un pin congela también los rangos de dependencias de aquel wheel, y las anteriores a la 0.12.2 pedían `mcp` sin techo, así que hoy mueren en el import. La key no se pega en el JSON: Claude expande la
-variable que cargaste desde Keychain al iniciar la sesión.
+variable que cargaste desde Keychain al iniciar la sesión y, si no la tiene (Claude Code lanzado
+sin tu shell), el MCP la lee él mismo del Llavero (ver
+[Credenciales en el Llavero](#credenciales-en-el-llavero-claude-code-y-claude-desktop)).
 
 ```bash
 claude mcp remove local-delegate 2>/dev/null || true
@@ -168,7 +219,7 @@ codex mcp list
 
 Reinicia Codex después de guardar la entrada. Codex CLI, la app y la extensión comparten
 `config.toml`. Para CLI basta abrir una terminal nueva. Si abres la app desde el Dock, instala una
-vez este LaunchAgent: obtiene la key desde Keychain al iniciar sesión y la deja en el entorno de
+vez este LaunchAgent (solo para Codex: Claude Code y Claude Desktop leen el Llavero ellos mismos): obtiene la key desde Keychain al iniciar sesión y la deja en el entorno de
 las aplicaciones, sin escribirla en disco.
 
 ```bash

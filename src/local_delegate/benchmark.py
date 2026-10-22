@@ -32,7 +32,7 @@ from typing import Any, Self
 
 import httpx2
 
-from . import backend_params, config, failures, legacy_names
+from . import backend_params, config, failures, legacy_names, token_source
 from .i18n import t
 
 # El muestreo frecuente de /metrics no debe convertir el benchmark en un log de cada GET.
@@ -1328,7 +1328,7 @@ def run_benchmark(args: argparse.Namespace) -> int:
     base_url = (args.endpoint or config.BASE_URL).rstrip("/")
     metrics_url = f"{_root_url(base_url)}/metrics"
     headers = {"Content-Type": "application/json"}
-    api_key = args.api_key or config.API_KEY
+    api_key = args.api_key or token_source.api_key()
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
 
