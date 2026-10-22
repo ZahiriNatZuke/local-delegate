@@ -6,6 +6,19 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Añade (barra de estado del mod)
+
+- **Cuota y ahorro de la sesión en la barra de estado de Claude Code** (pieza `status` del mod,
+  interruptor `status_enabled`). Tras cada turno muestra `LD · cuota 5h 42% · ahorro 12,3k tok`: el
+  % de la ventana de 5 h tal como lo da Claude Code (`session.measure`) y el ahorro neto
+  (`tokens_context_net`) de las delegaciones de **esa** sesión según el daemon. Si el daemon no
+  responde o no hay token, la entrada se borra sin error. (SDD `claude-plugin-and-mods`, F3-status)
+- **`/api/stats` acepta `session=`**: cuenta solo las delegaciones de esa sesión de Claude Code. El
+  hook `record-call` guarda en su nota una clave de un solo sentido de la sesión
+  (`session_key`, sha256 truncado) y el daemon la copia a la línea del log como
+  `caller_session_key`; el id de sesión en claro sigue sin guardarse en ningún sitio. Las líneas
+  anteriores no tienen clave y no cuentan para ninguna sesión.
+
 ### Corrige
 
 - **Una delegación cuyo cliente se va ya no sigue hasta el final ni retiene el turno del

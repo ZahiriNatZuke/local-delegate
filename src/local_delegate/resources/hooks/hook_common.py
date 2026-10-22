@@ -672,6 +672,23 @@ def _text(value: object) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
+#: Prefix of the session key, so the key is never the plain hash of an id someone else hashes.
+SESSION_KEY_PREFIX = "local-delegate-session:"
+
+
+def session_key(session_id: object) -> str | None:
+    """One-way key of a Claude Code session (claude-plugin-and-mods, REQ-017), or `None`.
+
+    The note and the log line carry this key and never the id itself (REQ-003 and REQ-072 of
+    coste-api-y-cuota). `/api/stats?session=<id>` hashes the id it receives the same way, so the
+    mod's status line can ask for the savings of its own session.
+    """
+    if not isinstance(session_id, str) or not session_id:
+        return None
+    digest = hashlib.sha256(f"{SESSION_KEY_PREFIX}{session_id}".encode())
+    return digest.hexdigest()[:32]
+
+
 def _prune_notes(directory: Path, now: float) -> None:
     """Borra, best-effort, las notas que ya no cuentan. Sin esto el directorio solo creceria."""
     try:
@@ -700,6 +717,7 @@ def record_call(hook_input: dict, directory: Path | None = None) -> bool:
             "agent_type": _text(hook_input.get("agent_type")),
             "effort": _effort_of(hook_input),
             "transcript_path": _text(hook_input.get("transcript_path")),
+            "session_key": session_key(hook_input.get("session_id")),
         }
         target.mkdir(parents=True, exist_ok=True)
         descriptor, tmp_name = tempfile.mkstemp(dir=target, prefix=".", suffix=".tmp")

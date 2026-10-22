@@ -425,15 +425,15 @@ jobs:
             echo "validate aceptó un hooks.json roto"; exit 1
           fi
 
-      # F2-mod-core: los `*.test.ts` del mod (pinned-tools, common, commands) contra el motor de
-      # esta CLI. Se exige que corran los tres ficheros y ninguno falle: un runner que no encuentra
+      # F2-mod-core: los `*.test.ts` del mod (pinned-tools, common, commands, status) contra el motor de
+      # esta CLI. Se exige que corran los cuatro ficheros y ninguno falle: un runner que no encuentra
       # tests también sale con 0.
       - name: claude plugin test (mod)
         run: |
           set -euo pipefail
           plugin=src/local_delegate/resources/claude-plugin/local-delegate
           "$CLAUDE_BIN" plugin test "$plugin" 2>&1 | tee "$RUNNER_TEMP/plugin-test.log"
-          for file in pinned-tools common commands; do
+          for file in pinned-tools common commands status; do
             grep -q "$file.test.ts" "$RUNNER_TEMP/plugin-test.log" || { echo "no corrió $file.test.ts"; exit 1; }
           done
           grep -qE '^ *0 fail' "$RUNNER_TEMP/plugin-test.log"
