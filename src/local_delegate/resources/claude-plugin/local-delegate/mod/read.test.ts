@@ -12,6 +12,13 @@ const DATA = 'C:/cfg/plugins/data/local-delegate-local-delegate'
 const BIG = 'C:/work/docs/big.md'
 const OTHER = 'C:/work/docs/other.md'
 const BIG_BYTES = 64 * 1024
+const CODE = 'C:/work/src/big.py'
+// What `local_summarize` really answers through `$.mcp.call`: FastMCP wraps the `str` it returns
+// in `{ "result": … }`, as structured content and as the text block's JSON (seen live with -p).
+const SUMMARY = '## Intro\nSUMMARY OF THE FILE'
+function summaryResult(text: string = SUMMARY, over: Record<string, unknown> = {}) {
+  return { content: [{ type: 'text', text: JSON.stringify({ result: text }) }], structuredContent: { result: text }, isError: false, ...over }
+}
 // A 100-line file: each range below is a percentage of it.
 const HUNDRED_LINES = Array.from({ length: 100 }, (_, i) => `line ${i + 1}`).join('\n') + '\n'
 
@@ -32,6 +39,7 @@ type Env = {
   session: string
   classify: (input: any) => Classified
   mcpFails: boolean
+  mcpResult: any
 }
 
 function t(key: string, vars?: Record<string, unknown>) {
@@ -47,6 +55,7 @@ function makeEnv(opts: {
   options?: Record<string, unknown>
   mcpFails?: boolean
   files_map?: Map<string, string>
+  mcpResult?: any
 } = {}): Env {
   const env: Env = {
     $: null,
@@ -63,6 +72,7 @@ function makeEnv(opts: {
     session: SESSION,
     classify: opts.classify ?? (() => null),
     mcpFails: opts.mcpFails ?? false,
+    mcpResult: opts.mcpResult ?? summaryResult(),
   }
   env.$ = {
     session: { id: async () => env.session, cwd: async () => CWD },
@@ -80,7 +90,7 @@ function makeEnv(opts: {
       call: async (server: string, tool: string, args: any) => {
         env.mcpCalls.push({ server, tool, args })
         if (env.mcpFails) throw new Error('MCP down')
-        return { content: [{ type: 'text', text: 'SUMMARY OF THE FILE' }], isError: false }
+        return env.mcpResult
       },
     },
     ui: {
@@ -157,6 +167,7 @@ function readCls(over: Record<string, unknown> = {}) {
     range: null,
     via: 'read_whole',
     read_switch: 'on',
+    summarizable: true,
     ...over,
   }
 }
@@ -166,10 +177,12 @@ function byInput(input: any): Classified {
   const ti = input.tool_input
   if (input.tool_name === 'Read') {
     const path = ti.file_path
+    // `hook classify` says which band the file is in: only large prose can be summarized.
+    const summarizable = path.endsWith('.md')
     if (typeof ti.offset === 'number') {
-      return readCls({ path, scope: 'range', range: [ti.offset, ti.offset + ti.limit - 1], via: 'read_range' })
+      return readCls({ path, summarizable, scope: 'range', range: [ti.offset, ti.offset + ti.limit - 1], via: 'read_range' })
     }
-    return readCls({ path })
+    return readCls({ path, summarizable })
   }
   if (input.tool_name === 'Bash' && /> *big\.md/.test(ti.command)) {
     return { kind: 'write', path: BIG, scope: 'whole', bytes: null, range: null, via: 'shell_redirect', read_switch: 'on' }
@@ -364,4 +377,80 @@ test('heartbeat_says_read_mod_active', async () => {
   await call(env, { tool: 'Read', file_path: BIG })
   // Once per load, keeping the pieces `register.js` wrote.
   expect(env.beats).toEqual([{ pieces: { read: 'on' }, read_mod_active: true }])
+})
+
+test('summary_is_the_clean_text', async () => {
+  // Structured content and the text block's JSON both carry `{ result }`: the model gets the text.
+  for (const result of [summaryResult(), { content: summaryResult().content, isError: false }]) {
+    const env = makeEnv({ classify: byInput, mcpResult: result })
+    const out = await call(env, { tool: 'Read', file_path: BIG })
+    const content: string = out.result.file.content
+    expect(content.includes('{"result"')).toBe(false)
+    expect(content.endsWith(`\n\n${SUMMARY}`)).toBe(true)
+    // Real line breaks, not the JSON escape `\n`.
+    expect(content.includes('\\n')).toBe(false)
+    expect(out.result.file.numLines).toBe(content.split('\n').length)
+  }
+  // A plain text block (no JSON) is still taken as it comes.
+  const plain = makeEnv({ classify: byInput, mcpResult: { content: [{ type: 'text', text: 'PLAIN SUMMARY' }], isError: false } })
+  const out = await call(plain, { tool: 'Read', file_path: BIG })
+  expect(out.result.file.content.endsWith('\n\nPLAIN SUMMARY')).toBe(true)
+})
+
+test('tool_error_lets_the_read_through', async () => {
+  for (const result of [
+    summaryResult('the backend is down', { isError: true }),
+    summaryResult('[local-delegate error] backend unreachable'),
+    { content: [{ type: 'text', text: '[local-delegate error] backend unreachable' }], isError: false },
+    summaryResult(''),
+  ]) {
+    const env = makeEnv({ classify: byInput, mcpResult: result })
+    const out = await call(env, { tool: 'Read', file_path: BIG })
+    expect(env.mcpCalls).toHaveLength(1)
+    expect(env.nexts).toHaveLength(1)
+    expect(out.result.file.content).toBe('REAL')
+    expect(decisions(env)).toEqual(['summary_failed'])
+  }
+})
+
+test('large_code_passes_without_summary', async () => {
+  // A subagent about to program needs the literal code: no summary, with or without a dialog.
+  for (const dialog of [false, true]) {
+    const env = makeEnv({ dialog, answer: 'read.ask.summarize', classify: byInput, files: { [CODE]: HUNDRED_LINES } })
+    const out = await call(env, { tool: 'Read', file_path: CODE })
+    expect(env.asks).toHaveLength(0)
+    expect(env.mcpCalls).toHaveLength(0)
+    expect(env.nexts).toHaveLength(1)
+    expect(out.result.file.content).toBe('REAL')
+    expect(decisions(env)).toEqual(['not_prose'])
+  }
+  // Read by ranges, past 80 % and to the end: every range is the real code.
+  const env = makeEnv({ classify: byInput, files: { [CODE]: HUNDRED_LINES } })
+  for (const offset of [1, 41, 81]) {
+    const out = await call(env, { tool: 'Read', file_path: CODE, offset, limit: 40 })
+    expect(out.result.file.content).toBe('REAL')
+  }
+  expect(env.mcpCalls).toHaveLength(0)
+  // A shell dump of code goes through too.
+  const shell = makeEnv({ classify: () => readCls({ path: CODE, via: 'shell_cat', summarizable: false }) })
+  const shellOut = await call(shell, { tool: 'Bash', command: 'cat src/big.py' })
+  expect(shellOut.result.stdout).toBe('REAL')
+  expect(shell.mcpCalls).toHaveLength(0)
+  // Guard: the same calls on large prose are summarized, so the zeros above are the band's doing.
+  const prose = makeEnv({ classify: byInput })
+  await call(prose, { tool: 'Read', file_path: BIG })
+  expect(prose.mcpCalls).toHaveLength(1)
+})
+
+test('large_prose_is_summarized_without_dialog', async () => {
+  const env = makeEnv({ dialog: false, classify: byInput })
+  const out = await call(env, { tool: 'Read', file_path: BIG })
+  expect(env.nexts).toHaveLength(0)
+  expect(out.result.file.content.includes('SUMMARY OF THE FILE')).toBe(true)
+  expect(decisions(env)).toEqual(['auto_summarized'])
+  // A classifier without the band (an older one) is not trusted to summarize: the read passes.
+  const old = makeEnv({ classify: () => { const c: any = readCls(); delete c.summarizable; return c } })
+  const real = await call(old, { tool: 'Read', file_path: BIG })
+  expect(old.mcpCalls).toHaveLength(0)
+  expect(real.result.file.content).toBe('REAL')
 })

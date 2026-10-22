@@ -85,6 +85,15 @@ _NULL_TARGETS = frozenset({"/dev/null", "$null", "nul", "null", "&1", "&2"})
 #: Extensiones que `Read` no entrega como texto: el resumen local no las sustituye.
 IMAGE_EXTENSIONS = frozenset({".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".ico"})
 DOCUMENT_EXTENSIONS = frozenset({".pdf", ".ipynb"})
+#: Prosa: lo que un resumen puede sustituir, y lo único que bloquea el hook de lectura (motivo
+#: `large_prose`). Vive aquí para que el hook y el campo `summarizable` de `hook classify` (lo que
+#: el mod resume) salgan de la misma lista. `.log` no entra: la medición de
+#: `evidence/F4-read-paths.md` no trae datos por extensión y el hook no tuvo ni un aviso de logs.
+PROSE_EXTENSIONS = frozenset({".md", ".txt", ".markdown", ".rst"})
+#: El umbral bajo del hook de lectura: hasta él una lectura es `small`. El default lo ata
+#: `config.HOOK_READ_SUGGEST_KB` en los tests.
+SUGGEST_KB_VARIABLE = "LD_HOOK_READ_SUGGEST_KB"
+SUGGEST_KB_DEFAULT = 8.0
 
 _TOKEN = re.compile(
     r"""'[^']*'|"(?:\\.|[^"\\])*"|\|\||&&|>>|<<-?|2>&1|2>|[|;<>()&]|\n|[^\s|;<>()&'"]+"""
@@ -549,13 +558,26 @@ def resolve(path: str | None, cwd: str | None) -> str | None:
     return os.path.normpath(path)
 
 
+def summarizable(path: str | None, size: int | None) -> bool:
+    """Si el fichero está en la banda que bloquea el hook de lectura: prosa por encima del umbral
+    bajo. Es lo único que el mod de lectura resume; el código, la config y los datos pasan."""
+    if not path or size is None or _extension(path) not in PROSE_EXTENSIONS:
+        return False
+    try:
+        threshold_kb = float(os.environ.get(SUGGEST_KB_VARIABLE, str(SUGGEST_KB_DEFAULT)))
+    except ValueError:
+        return False
+    return size / 1024 > threshold_kb
+
+
 def classify(payload: dict, read_switch: str | None = None) -> dict:
     """La respuesta de `hook classify` para la entrada de un hook `PreToolUse`.
 
     Campos y valores fijados por el plan (Ola 5, «Contrato de `hook classify`»):
     `kind` (`read`/`write`/`other`), `path` (absoluta o `null`), `scope`, `bytes` (tamaño del
     fichero o `null`), `range` (`[primera, última]`, última `null` = hasta el final; o `null`),
-    `via` (nombre de la vía, `none` si no toca un fichero) y `read_switch`.
+    `via` (nombre de la vía, `none` si no toca un fichero), `read_switch` y `summarizable` (si es
+    una lectura de un fichero en la banda que bloquea el hook, `summarizable()`).
 
     Una lectura cuyo fichero no se puede resolver (comodines, variables) sale `unclassifiable`:
     sin fichero no hay nada que resumir ni que acumular. Para `write` y `other` el alcance es
@@ -574,6 +596,7 @@ def classify(payload: dict, read_switch: str | None = None) -> dict:
             "range": None,
             "via": "none",
             "read_switch": read_switch,
+            "summarizable": False,
         }
     path = resolve(access.path, cwd if isinstance(cwd, str) else None)
     scope = access.scope if access.kind == "read" else "unclassifiable"
@@ -593,6 +616,7 @@ def classify(payload: dict, read_switch: str | None = None) -> dict:
         "range": list(access.lines) if access.lines and scope == "range" else None,
         "via": access.via,
         "read_switch": read_switch,
+        "summarizable": access.kind == "read" and summarizable(path, size),
     }
 
 

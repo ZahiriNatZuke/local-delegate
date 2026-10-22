@@ -80,8 +80,9 @@ TRUTHY = {"1", "true", "yes", "on"}
 FALSY = {"0", "false", "no", "off"}
 
 #: Prosa: lo que un resumen puede sustituir. Son las dos extensiones con volumen medido —`.md` 49
-#: y `.txt` 15 de los 85 avisos del periodo— y las únicas que se bloquean.
-PROSE_EXTENSIONS = frozenset({".md", ".txt", ".markdown", ".rst"})
+#: y `.txt` 15 de los 85 avisos del periodo— y las únicas que se bloquean. La lista vive en el
+#: clasificador, que la usa también para decirle al mod de lectura qué puede resumir.
+PROSE_EXTENSIONS = read_classifier.PROSE_EXTENSIONS
 
 #: Se leen para encontrar un valor exacto: un `package.json`, un `state.json`, la línea del error
 #: en un log. Se avisa, pero no se bloquea, porque ahí el resumen no sustituye a la lectura. De

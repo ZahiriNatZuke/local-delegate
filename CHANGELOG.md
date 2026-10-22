@@ -27,6 +27,19 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   real; la lista se guarda por sesión y aguanta `--resume`. Cada decisión se registra con
   `hook record-read`.
 
+### Corrige (mod de lectura: solo prosa y resumen limpio)
+
+- **El mod de lectura solo resume prosa grande**, la misma banda que bloquea el hook de lectura
+  (`.md`, `.txt`, `.markdown`, `.rst` por encima de `LD_HOOK_READ_SUGGEST_KB`). El código, la
+  config y los datos pasan literales, también por franjas, y se registran como `not_prose`: antes
+  resumía cualquier fichero de 8 KB o más, y un subagente que iba a programar no podía leer el
+  código. La banda la decide Python: `hook classify` lleva el campo nuevo `summarizable`, calculado
+  con las constantes del hook (la lista de prosa vive ahora en el clasificador). Los `.log` quedan
+  fuera: la medición de lecturas no trae datos por extensión.
+- **El resumen llega como texto limpio**, sin el envoltorio `{"result": …}` de FastMCP y con los
+  saltos de línea de verdad. Un error de la tool (`isError` o `[local-delegate error]`) cuenta como
+  resumen fallido y la lectura real pasa.
+
 ### Añade (clasificador único de lectura)
 
 - **Un solo módulo decide qué lee cada llamada** (`resources/hooks/read_classifier.py`, REQ-019):
