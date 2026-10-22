@@ -108,12 +108,23 @@ function band(bodyColumns = 120, hasSurvey = false) {
   } as any
 }
 
-/** What the band shows, read as one line, and each Text as `{ text, color }`. */
+const RULE = /^─+$/
+
+/**
+ * What the band shows: the rule above it (`{ text, dimColor }`, or `undefined`), the line under it
+ * read as one string, and each Text of that line as `{ text, color }`.
+ */
 async function drawn($: any, props = band()) {
   const ui = await $.ui.mount(props)
-  const texts = (await ui.findAll({ type: 'Text' })).map((t: any) => ({ text: t.text, color: t.props.color }))
+  const all = (await ui.findAll({ type: 'Text' })).map((t: any) => ({
+    text: t.text,
+    color: t.props.color,
+    dimColor: t.props.dimColor,
+  }))
   await ui.unmount()
-  return { line: texts.map((t: any) => t.text).join(''), texts }
+  const rule = RULE.test(all[0]?.text ?? '') ? all[0] : undefined
+  const texts = rule ? all.slice(1) : all
+  return { rule, line: texts.map((t: any) => t.text).join(''), texts }
 }
 
 function colorOf(texts: { text: string; color: unknown }[], glyph: string) {
@@ -217,10 +228,25 @@ test('a narrow band drops the least important parts first', { options: { ld_bin:
   expect((await drawn($, band(36))).line).toBe('◆ local-delegate · ● qwen3-8b')
 })
 
+test('a dim rule as wide as the band sets it apart from the chat', { options: { ld_bin: LD_BIN, read_mod_enabled: true } }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => UP)
+  await $.session.measure(measureInput())
+  // One row more, above the line: the rule spans the band's own width and is dim, like the
+  // engine's lines around the prompt.
+  for (const columns of [120, 60, 36]) {
+    const { rule, line } = await drawn($, band(columns))
+    expect(rule).toEqual({ text: '─'.repeat(columns), color: undefined, dimColor: true })
+    expect(line.startsWith('◆ local-delegate')).toBe(true)
+  }
+})
+
 test('yields the band to a survey', { options: { ld_bin: LD_BIN } }, async ($, on) => {
   engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => UP)
   await $.session.measure(measureInput())
-  expect((await drawn($, band(120, true))).line).toBe('engine')
+  const { rule, line } = await drawn($, band(120, true))
+  // Neither the line nor the rule: the survey has the band to itself.
+  expect(rule).toBeUndefined()
+  expect(line).toBe('engine')
 })
 
 test('draws nothing without the token', { options: { ld_bin: LD_BIN } }, async ($, on) => {
