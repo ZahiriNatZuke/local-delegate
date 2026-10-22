@@ -17,6 +17,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   de Codex con comillas simples, y `scaffold.mcp_codex` reconoce como HTTP `url='…'` sin espacios
   alrededor del `=`.
 
+### Corrige (separación de la banda del mod)
+
+- **La banda de estado ya no se confunde con la última línea del chat.** Lleva encima una regla `─`
+  atenuada del ancho de la banda, como las líneas que Claude Code pinta alrededor del prompt. Gasta
+  una sola fila más, no se pinta cuando la banda cede el sitio a una encuesta, y lo que la banda
+  quita cuando no cabe sigue igual. (SDD `claude-plugin-and-mods`, F3-status)
+
 ### Seguridad
 
 - **Suelo para `opentelemetry-api`** (`>=1.45.1,<2`), dependencia transitiva que traen `mcp` y

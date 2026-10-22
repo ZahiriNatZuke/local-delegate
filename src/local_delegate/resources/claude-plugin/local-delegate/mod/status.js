@@ -10,7 +10,8 @@
 //   - `/api/inflight`: whether it is working on a delegation right now.
 // The band draws `◆ local-delegate · ● <model> · 3 delegaciones · 12,3k tok ahorrados ≈ $0,18`, the
 // dot green, amber or red as the backend is ready, busy or down, and drops the least important
-// parts first when the band is narrow. The Claude quota is NOT here: the person's own status line
+// parts first when the band is narrow. A dim `─` rule as wide as the band goes above that line, so
+// the band does not read as the last line of the chat. The Claude quota is NOT here: the person's own status line
 // shows it.
 //
 // Why a band (`ui.render` on `AbovePrompt`) and not `$.ui.status`: `$.ui.status(text)` takes text
@@ -34,6 +35,7 @@ export const STATUS_READ_SWITCH = 'read_mod_enabled'
 const STATUS_SESSION_ID = /^[A-Za-z0-9_-]{1,128}$/
 const STATUS_MODEL_WIDTH = 28
 const STATUS_SEPARATOR = ' · '
+const STATUS_RULE = '─'
 
 // The glyphs carry the state on their own, for a terminal without color.
 const STATUS_GLYPH = { mark: '◆', ready: '●', busy: '◐', down: '○' }
@@ -156,8 +158,12 @@ export function statusFit(parts, columns) {
   return kept
 }
 
-/** The band's tree for these parts: one row of Texts, the joints dim. */
-function statusTree($, e, parts) {
+/**
+ * The band's tree for these parts: a dim rule as wide as the band, then one row of Texts with the
+ * joints dim. The rule is the band's one extra row: it sets the band apart from the last line of the
+ * chat, the way the engine's own `─` lines frame the prompt.
+ */
+function statusTree($, e, parts, columns) {
   const { Box, Text } = $.ui.resolve(e)
   const children = []
   for (const part of parts) {
@@ -170,7 +176,8 @@ function statusTree($, e, parts) {
     }
     children.push(h(Text, props, part.text))
   }
-  return h(Box, { flexDirection: 'row' }, ...children)
+  const rule = h(Text, { dimColor: true, wrap: 'truncate-end' }, STATUS_RULE.repeat(Math.max(1, columns)))
+  return h(Box, { flexDirection: 'column' }, rule, h(Box, { flexDirection: 'row' }, ...children))
 }
 
 /** What the daemon says for this session, or `null` (no token, no session id): no band. */
@@ -222,6 +229,7 @@ export function register(on, options) {
       return next(e)
     }
     const parts = statusParts(view.snapshot, options, language())
-    return statusTree($, e, statusFit(parts, e.props.bodyColumns))
+    const columns = e.props.bodyColumns
+    return statusTree($, e, statusFit(parts, columns), columns)
   })
 }
