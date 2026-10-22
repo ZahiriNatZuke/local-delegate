@@ -1,0 +1,20 @@
+{
+  "commands.summarize.description": "Resume un fichero con el modelo local, sin turno del modelo.",
+  "commands.summarize.hint": "<ruta>",
+  "commands.summarize.usage": "Uso: `/local-summarize` <ruta del fichero>.",
+  "commands.summarize.missing": "No existe el fichero {path}.",
+  "commands.commit.description": "Propone un mensaje de commit para los cambios preparados (no hace el commit).",
+  "commands.commit.header": "Mensaje propuesto por el modelo local (no se ha hecho ningún commit):",
+  "commands.commit.no_changes": "No hay cambios preparados: usa `git add` primero.",
+  "commands.commit.no_process": "`/local-commit` necesita `process.run`, que en esta superficie no está disponible o lo veta la política.",
+  "commands.commit.git_failed": "Falló `git diff --cached`: {detail}",
+  "commands.lint.description": "Resume la salida de lint o de tests de un fichero o de un comando (tope de 30 s).",
+  "commands.lint.hint": "<fichero|comando>",
+  "commands.lint.usage": "Uso: `/local-lint` <fichero de salida> o `/local-lint` <comando>.",
+  "commands.lint.file_only": "Aquí `process.run` no está disponible o lo veta la política: `/local-lint` solo acepta un fichero que exista, y «{arg}» no lo es.",
+  "commands.lint.bad_quotes": "El comando tiene comillas sin cerrar.",
+  "commands.lint.run_failed": "No se pudo ejecutar «{command}» (tope de 30 s): {detail}",
+  "commands.error.mcp_down": "No responde el MCP `local-delegate`: comprueba que el daemon está en marcha con `local-delegate doctor`. Detalle: {detail}",
+  "commands.error.tool_failed": "`local-delegate` devolvió un error: {detail}",
+  "commands.error.empty": "`local-delegate` no devolvió texto."
+}
