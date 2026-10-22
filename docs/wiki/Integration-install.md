@@ -457,8 +457,8 @@ Lo que el mod promete (y comprueban `tests/test_mod_static.py` y `claude plugin 
 - Si una pieza falla, las demás siguen; si el mod entero no carga, los hooks y el MCP siguen.
 
 `register.js` **no se versiona**: lo genera `scripts/build_mod.py` a partir de `mod/*.js` (el motor
-rechaza el `import()` dinámico, así que importa con `import` estático solo las piezas presentes y
-registra cada una dentro de su propio `try`). Lo corren el CI y el empaquetado antes de validar,
+rechaza el `import()` dinámico y solo deja pasar `$` a funciones del mismo fichero, así que pega
+en él las piezas presentes y registra cada una dentro de su propio `try`). Lo corren el CI y el empaquetado antes de validar,
 probar o construir la rueda. Para probar el mod en local:
 
 ```bash

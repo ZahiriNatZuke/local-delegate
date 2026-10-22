@@ -23,13 +23,23 @@ Plugins de borrador en el scratchpad (`va`…`ve`), cada uno con `validate --jso
 | `plugin test`: `ld_bin` es obligatoria | cada test pasa `{ options: { ld_bin } }`, o el módulo no carga |
 | `plugin test`: `$.fs.write` llega al hook con separadores del SO | el test normaliza `\` → `/` |
 
+**Con la mínima, 2.1.292, el validador es más estricto** (lo destapó el CI del primer push, en los
+tres SO): «`$` is followed only into a function declared in this same file, never across an
+import». Pasar `$` a una función importada, que la 2.1.307 acepta, la 2.1.292 lo rechaza. Medido
+después en local con el binario 2.1.292: la forma concatenada de abajo da `validate` correcto y
+29/29 en `plugin test`, también `engineCommon($)` (cierres sobre `$`).
+
 ## Diseño resultante (desviación de la interfaz del plan)
 
-- `scripts/build_mod.py` genera `register.js` (no se versiona) con **`import` estáticos solo de las
-  piezas presentes** y la llamada a cada `register(on, options)` dentro de su propio `try`. Las
-  ausentes quedan `absent`; la que lanza, `failed`; la apagada por `userConfig`, `off`. Una pieza
-  solo declara en su nivel superior (`check_piece`: funciones y `const`; importa solo de
-  `./common.js`; no engancha `session.start`), así que importarla no puede lanzar.
+- `scripts/build_mod.py` genera `register.js` (no se versiona) **pegando en un solo fichero, en el
+  nivel superior,** `mod/common.js` y las piezas presentes: quita los `import` de `./common.js` y
+  los `export`, renombra el `register` de cada pieza a `register_<pieza>` y su `onSessionStart` a
+  `start_<pieza>`, y para el build si dos ficheros declaran el mismo nombre (por eso cada pieza
+  prefija los suyos: `PINNED_*`, `COMMANDS_*`). El `register` exportado llama a cada pieza dentro de
+  su propio `try`. Las ausentes quedan `absent`; la que lanza, `failed`; la apagada por
+  `userConfig`, `off`. Una pieza solo declara en su nivel superior (`check_piece`: funciones y
+  `const`; importa solo de `./common.js`, para cargar sola en su `*.test.ts`; no engancha
+  `session.start`), así que cargarla no puede lanzar.
 - **`register.js` tiene el único `session.start`**: llama `hasDialog(e)`, el `onSessionStart($, e)`
   que exporte cada pieza encendida (en su `try`) y escribe el latido.
 - **`mod/common.js` exporta funciones con nombre que reciben `$`**: `token($)`,

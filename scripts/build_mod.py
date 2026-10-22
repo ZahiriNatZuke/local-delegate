@@ -1,25 +1,32 @@
 """Builds ``register.js``, the hooks module of the local-delegate mod, from its pieces in ``mod/``.
 
-SDD claude-plugin-and-mods, decision 7 (batch F2-mod-core). T0 measured that the engine refuses a
-module holding a dynamic import, and that with static ``import`` declarations a piece that is
-missing or throws while loading takes the whole mod down. So this script writes a ``register.js``
-that imports, with static ``import`` declarations, ``mod/common.js`` and only the pieces present at
-build time, and registers each piece inside its own ``try``:
+SDD claude-plugin-and-mods, decision 7 (batch F2-mod-core). What the engine's validator accepts
+decides the shape (T0 and this batch's evidence):
+
+- a dynamic import is refused (T0), and a static ``import`` of a piece that is missing or throws
+  while loading takes the whole mod down;
+- ``on`` and ``$`` may only be handed to functions declared at the top of the file; with the
+  minimum CLI (2.1.292) **never across an import**, and never to a method or a closure;
+- the value of a call that received ``on`` cannot be used;
+- two ``session.start`` hooks without a matcher in one module are refused.
+
+So this script **concatenates** ``mod/common.js`` and each piece present at build time into one
+``register.js``, every declaration at the top level: the ``import`` lines from ``./common.js`` and
+the ``export`` keywords go, each piece's ``register`` becomes ``register_<piece>`` and its
+``onSessionStart`` becomes ``start_<piece>``, and two files that declare the same top-level name
+stop the build. The exported ``register`` calls each piece inside its own ``try``:
 
 - a piece that is **absent** when the module is built (a later batch has not landed yet) is
   recorded as ``absent`` and the rest load;
-- a piece that **throws while registering** is ``failed`` and the rest load;
+- a piece that **throws while registering** (or in its ``onSessionStart``) is ``failed`` and the
+  rest load;
 - a piece whose **switch** in ``userConfig`` is off (``false``, or an empty list) is ``off``.
 
 Each piece (``mod/<name>.js``) is a plain ES module that exports ``register(on, options)``, which
-returns nothing, and imports by name only from ``./common.js``. The engine's validator (measured in
-this batch) hands ``on`` and ``$`` only to functions declared or imported by name at the top of a
-file, never to a method or a closure, and refuses using the value of a call that received ``on``:
-that rules out pasting the pieces into closures and a ``common`` object. A piece only declares at
-its top level (``check_piece``), so importing it cannot throw. A piece that acts when the session
-starts exports ``async function onSessionStart($, e)``: the engine refuses two ``session.start``
-hooks without a matcher in one module, so ``register.js`` holds the only one and calls it there. The texts of ``mod/i18n/<lang>.json`` and the
-plugin's version are embedded, so ``common.t`` needs no file read.
+returns nothing, may export ``async function onSessionStart($, e)``, and imports by name only from
+``./common.js``, so it also loads on its own (its ``*.test.ts`` imports it). Its top level only
+declares (``check_piece``), so loading it cannot throw. The texts of ``mod/i18n/<lang>.json`` and
+the plugin's version are embedded, so ``t`` needs no file read.
 
 ``register.js`` is generated and not committed: the CI and the packaging run this script before
 validating, testing or building the wheel.
@@ -54,6 +61,8 @@ PIECES: tuple[tuple[str, str], ...] = (
 
 COMMON = "common"
 LANGUAGES = ("es", "en")
+#: Names the generated part of ``register.js`` declares: no piece may declare them.
+GENERATED_NAMES = frozenset({"VERSION", "CATALOGS", "ABSENT", "isOff", "register"})
 
 _IMPORT_DECLARATION = re.compile(r"^\s*import\b.*$", re.MULTILINE)
 #: The one import a piece may hold: names from ``./common.js``.
@@ -61,12 +70,14 @@ _COMMON_IMPORT = re.compile(r"^import \{[\w\s,$]+\} from '\./common\.js'$")
 _DYNAMIC_IMPORT = re.compile(r"\bimport\s*\(")
 _REGISTER_EXPORT = re.compile(r"^export\s+function\s+register\s*\(", re.MULTILINE)
 _START_EXPORT = re.compile(r"^export\s+async\s+function\s+onSessionStart\s*\(", re.MULTILINE)
-#: The engine refuses two ``session.start`` hooks without a matcher in one module (measured):
-#: ``register.js`` holds the only one and calls each piece's ``onSessionStart($, e)``.
 _SESSION_START_HOOK = re.compile(r"\bon\(\s*['\"]session\.start['\"]")
 #: What a piece may start a top-level line with: declarations only, so loading it cannot throw.
 _TOP_LEVEL = re.compile(
     r"^(?:export\s+)?(?:async\s+function\b|function\b|const\s+[A-Za-z_$][\w$]*\s*=)"
+)
+_DECLARED = re.compile(
+    r"^(?:export\s+)?(?:(?:async\s+)?function\s+([A-Za-z_$][\w$]*)|const\s+([A-Za-z_$][\w$]*))",
+    re.MULTILINE,
 )
 
 
@@ -77,9 +88,9 @@ class BuildError(Exception):
 def check_piece(name: str, source: str, *, needs_register: bool = True) -> None:
     """Refuses a piece that imports, has no ``register`` or runs code while loading.
 
-    A static ``import`` of a piece is safe only if loading it cannot throw (T0: a throw at load
-    takes the whole mod down). So a piece's top level holds only ``function`` declarations and
-    ``const`` bindings, and its code runs when ``register`` is called, inside its ``try``.
+    A piece's top level holds only ``function`` declarations and ``const`` bindings, and its code
+    runs when ``register`` is called, inside its ``try``. It imports only from ``./common.js``, and
+    hooks ``session.start`` only through ``onSessionStart`` (one such hook per module).
     """
     if _DYNAMIC_IMPORT.search(source):
         raise BuildError(f"mod/{name}.js holds a dynamic import: the engine refuses it (T0)")
@@ -106,6 +117,35 @@ def check_piece(name: str, source: str, *, needs_register: bool = True) -> None:
             )
 
 
+def declared_names(source: str) -> set[str]:
+    """The top-level names a file declares (``function`` and ``const``)."""
+    return {a or b for a, b in _DECLARED.findall(source)}
+
+
+def _binding(name: str, prefix: str = "register_") -> str:
+    return prefix + re.sub(r"[^A-Za-z0-9]", "_", name)
+
+
+def _paste(name: str, source: str) -> str:
+    """The file's text for ``register.js``: no imports, no ``export``, entry points renamed."""
+    lines = [line for line in source.splitlines() if not _COMMON_IMPORT.match(line)]
+    text = "\n".join(lines).strip("\n")
+    if name != COMMON:
+        text = re.sub(
+            r"^export\s+function\s+register\s*\(",
+            f"function {_binding(name)}(",
+            text,
+            flags=re.MULTILINE,
+        )
+        text = re.sub(
+            r"^export\s+async\s+function\s+onSessionStart\s*\(",
+            f"async function {_binding(name, 'start_')}(",
+            text,
+            flags=re.MULTILINE,
+        )
+    return re.sub(r"^export\s+", "", text, flags=re.MULTILINE)
+
+
 def _catalogs(mod_dir: Path) -> dict[str, dict[str, str]]:
     catalogs: dict[str, dict[str, str]] = {}
     for lang in LANGUAGES:
@@ -125,46 +165,57 @@ def _version(plugin_dir: Path) -> str | None:
     return json.loads(manifest.read_text(encoding="utf-8")).get("version")
 
 
-def _binding(name: str, prefix: str = "register_") -> str:
-    return prefix + re.sub(r"[^A-Za-z0-9]", "_", name)
-
-
 def build(plugin_dir: Path = PLUGIN_DIR, pieces: tuple[tuple[str, str], ...] = PIECES) -> str:
     """The text of ``register.js`` for the pieces found in ``<plugin_dir>/mod``."""
     mod_dir = plugin_dir / "mod"
     common_path = mod_dir / f"{COMMON}.js"
     if not common_path.is_file():
         raise BuildError(f"{common_path} is missing: every piece needs it")
-    check_piece(COMMON, common_path.read_text(encoding="utf-8"), needs_register=False)
+    common = common_path.read_text(encoding="utf-8")
+    check_piece(COMMON, common, needs_register=False)
 
+    owners: dict[str, str] = dict.fromkeys(GENERATED_NAMES, "register.js")
+    files: list[tuple[str, str]] = [(COMMON, common)]
     present: list[tuple[str, str]] = []
     absent: list[tuple[str, str]] = []
     starts: set[str] = set()
     for name, switch in pieces:
         path = mod_dir / f"{name}.js"
-        if path.is_file():
-            source = path.read_text(encoding="utf-8")
-            check_piece(name, source)
-            present.append((name, switch))
-            if _START_EXPORT.search(source):
-                starts.add(name)
-        else:
+        if not path.is_file():
             absent.append((name, switch))
+            continue
+        source = path.read_text(encoding="utf-8")
+        check_piece(name, source)
+        files.append((name, source))
+        present.append((name, switch))
+        if _START_EXPORT.search(source):
+            starts.add(name)
+    for name, source in files:
+        names = declared_names(source)
+        if name != COMMON:
+            names -= {"register", "onSessionStart"}
+            names |= {_binding(name)} | ({_binding(name, "start_")} if name in starts else set())
+        for declared in sorted(names):
+            if declared in owners:
+                raise BuildError(
+                    f"mod/{name}.js declares `{declared}`, already declared by {owners[declared]}: "
+                    "every top-level name of a piece must be its own (prefix it)"
+                )
+            owners[declared] = f"mod/{name}.js"
 
     out: list[str] = [
         "// GENERATED by scripts/build_mod.py from mod/*.js: do not edit, and do not commit.",
-        "// Decision 7: only the pieces present at build time are imported, and each one registers",
-        "// inside its own `try`, so one that is absent, throws or is switched off leaves the others",
-        "// working (REQ-016). A piece only declares at load (`check_piece`): importing cannot throw.",
-        "",
-        "import { hasDialog, heartbeat, setup } from './mod/common.js'",
+        "// Decision 7: the pieces present at build time are pasted here at the top level (the",
+        "// engine hands `$` and `on` only to functions declared in this file), and each one",
+        "// registers inside its own `try`, so one that is absent, throws or is switched off leaves",
+        "// the others working (REQ-016).",
     ]
-    for n, _ in present:
-        names = f"register as {_binding(n)}"
-        if n in starts:
-            names += f", onSessionStart as {_binding(n, 'start_')}"
-        out.append(f"import {{ {names} }} from './mod/{n}.js'")
+    for name, source in files:
+        out += ["", f"// --- mod/{name}.js " + "-" * max(3, 80 - len(name) - 16), ""]
+        out.append(_paste(name, source))
     out += [
+        "",
+        "// --- register.js " + "-" * 63,
         "",
         f"const VERSION = {json.dumps(_version(plugin_dir))}",
         f"const CATALOGS = {json.dumps(_catalogs(mod_dir), ensure_ascii=False, sort_keys=True)}",

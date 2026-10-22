@@ -11,11 +11,13 @@
 // `$` (`await daemonFetch($, '/api/stats')`), or builds `engineCommon($)` there and hands that
 // object to its own top-level functions.
 //
-// `$` may be handed only to a function declared or imported by name at the top of a file: not to
-// a method (`common.token($)` is refused), so these are named exports and not an object. The
-// options and the texts are set once by `register.js` through `setup`.
+// `$` may be handed only to a function declared at the top of the same file (2.1.292 never
+// follows it across an import), never to a method (`common.token($)` is refused): so these are
+// top-level functions, and `scripts/build_mod.py` pastes this file and the pieces into one
+// `register.js`, dropping the imports. The options and the texts are set once by `register.js`
+// through `setup`.
 //
-// The module only declares at load, so importing it cannot throw.
+// The module only declares at load, so loading it cannot throw.
 
 // The only environment variables the mod reads. `test_mod_static.py` holds every `$.env.get` of
 // the mod to this list: the token is the one secret; the others locate the plugin's data folder

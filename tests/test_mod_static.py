@@ -207,28 +207,25 @@ def _fixture_plugin(tmp_path: Path) -> Path:
 def test_register_loads_pieces_dynamically_inside_try(tmp_path):
     plugin = _fixture_plugin(tmp_path)
     text = build_mod.build(plugin)
-    # Static: no dynamic import (T0), one import per present piece, each call inside a `try`.
-    assert not re.search(r"\bimport\s*\(", _code(text))
-    assert "import { register as register_status } from './mod/status.js'" in text
+    # Static: no import at all (2.1.292 does not follow `$` across one), each present piece pasted
+    # at the top level under its own name, each call inside a `try`, one `session.start`.
+    code = _code(text)
+    assert not re.search(r"^\s*import\b", code, re.MULTILINE)
+    assert not re.search(r"\bimport\s*\(", code)
+    assert "\nfunction register_status(on, options) {" in text
+    assert "\nasync function start_commands($, e, common) {" in text
     assert "./mod/read.js" not in text and '"read": "read_mod_enabled"' in text
     for name in ("pinned_tools", "commands", "status"):
         assert f"    try {{\n      register_{name}(on, options)\n" in text, name
     assert text.count("on('session.start'") == 1
+    assert len(re.findall(r"^export ", text, re.MULTILINE)) == 1
 
     node = shutil.which("node")
     if node is None:
         pytest.skip("node no está en PATH: queda la parte estática")
+    # node reads `.js` as CommonJS without a package.json: the module goes as `.mjs`.
     output = plugin / "register.mjs"
-    (plugin / "register.js").write_text(text, encoding="utf-8")
-    # node reads `.js` as CommonJS without a package.json: the copy goes as `.mjs`, and so does
-    # every piece it imports.
-    mjs = text.replace(".js'", ".mjs'")
-    output.write_text(mjs, encoding="utf-8")
-    for piece in (plugin / "mod").glob("*.js"):
-        piece.with_suffix(".mjs").write_text(
-            piece.read_text(encoding="utf-8").replace("./common.js'", "./common.mjs'"),
-            encoding="utf-8",
-        )
+    output.write_text(text, encoding="utf-8")
     driver = tmp_path / "driver.mjs"
     driver.write_text(NODE_DRIVER, encoding="utf-8")
     done = subprocess.run(
@@ -270,3 +267,12 @@ def test_build_check_flags_a_stale_register(tmp_path):
     assert build_mod.main(["--plugin-dir", str(plugin), "--check"]) == 0
     (plugin / "mod" / "status.js").unlink()
     assert build_mod.main(["--plugin-dir", str(plugin), "--check"]) == 1
+
+
+def test_build_refuses_two_pieces_with_the_same_top_level_name(tmp_path):
+    plugin = _fixture_plugin(tmp_path)
+    (plugin / "mod" / "status.js").write_text(
+        "const PINNED_SWITCH = 'x'\nexport function register(on, options) {}\n", encoding="utf-8"
+    )
+    with pytest.raises(build_mod.BuildError, match="PINNED_SWITCH"):
+        build_mod.build(plugin)

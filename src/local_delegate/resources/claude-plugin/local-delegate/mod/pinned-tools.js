@@ -7,16 +7,17 @@
 // the four of the spec by default, and an empty list turns the piece off. Only
 // `mcp__local-delegate__*` tools are accepted: this piece never moves another server's tools.
 //
-// A piece of the mod: `register.js` (built by `scripts/build_mod.py`) imports it and calls its
+// A piece of the mod: `scripts/build_mod.py` pastes it into `register.js`, which calls its
 // `register` inside its own `try`. It needs nothing from `common.js` and only declares at load, so
-// loading it cannot throw.
+// loading it cannot throw. Its top-level names carry `pinned`, so they cannot clash with another
+// piece's.
 
-export const SWITCH = 'pinned_tools'
-export const TOOL_PREFIX = 'mcp__local-delegate__'
+export const PINNED_SWITCH = 'pinned_tools'
+export const PINNED_TOOL_PREFIX = 'mcp__local-delegate__'
 export const DEFAULT_PINNED = ['local_summarize', 'local_extract', 'local_lint_summary', 'local_commit_msg']
 
-const SHORT_NAME = /^local_[a-z0-9_]+$/
-const FULL_NAME = /^mcp__local-delegate__local_[a-z0-9_]+$/
+const PINNED_SHORT_NAME = /^local_[a-z0-9_]+$/
+const PINNED_FULL_NAME = /^mcp__local-delegate__local_[a-z0-9_]+$/
 
 /**
  * The full tool names to pin, from the option's value.
@@ -42,8 +43,8 @@ export function pinnedTools(value) {
       continue
     }
     const name = raw.trim()
-    const tool = SHORT_NAME.test(name) ? `${TOOL_PREFIX}${name}` : name
-    if (FULL_NAME.test(tool) && !tools.includes(tool)) {
+    const tool = PINNED_SHORT_NAME.test(name) ? `${PINNED_TOOL_PREFIX}${name}` : name
+    if (PINNED_FULL_NAME.test(tool) && !tools.includes(tool)) {
       tools.push(tool)
     }
   }
@@ -52,7 +53,7 @@ export function pinnedTools(value) {
 
 /** Registers the `tool.describe` hook; nothing when the list is empty. */
 export function register(on, options) {
-  const tools = pinnedTools(options[SWITCH])
+  const tools = pinnedTools(options[PINNED_SWITCH])
   if (tools.length === 0) {
     return
   }
