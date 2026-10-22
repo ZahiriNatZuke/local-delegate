@@ -282,9 +282,12 @@ def _aggregate(rows: list[dict]) -> dict:
     # tests de un mes de trabajo real: es lo que obligó a cruzar a mano contra los transcripts en
     # la medición del 3-ago. Las líneas anteriores a que existiera el campo caen en "unknown"
     # —una casilla propia, ni repartidas ni descartadas—, que es lo que de verdad se sabe de ellas.
+    # `mod_calls`: cuántas de `calls` pidió el mod del plugin y no el modelo (REQ-015 de
+    # claude-plugin-and-mods). Siguen siendo uso: se cuentan aparte, no se quitan.
     by_client: dict[str, dict] = defaultdict(
         lambda: {
             "calls": 0,
+            "mod_calls": 0,
             "backend_calls": 0,
             "saved": 0,
             "net": 0,
@@ -330,6 +333,7 @@ def _aggregate(rows: list[dict]) -> dict:
     # Causa de cada fallo o salto (`configuration`, `model`, `cooldown`…): una de configuración
     # tiene que verse en el panel para que alguien la arregle (REQ-019).
     causes: dict[str, int] = defaultdict(int)
+    mod_calls = 0
 
     for r in rows:
         tool = str(r.get("tool", "?"))
@@ -382,6 +386,9 @@ def _aggregate(rows: list[dict]) -> dict:
         client = r.get("client")
         c = by_client[client if isinstance(client, str) and client else "unknown"]
         c["calls"] += 1
+        if attribution.is_mod_call(r):
+            c["mod_calls"] += 1
+            mod_calls += 1
         c["backend_calls"] += acc["backend_calls"]
         c["saved"] += acc["saved"]
         c["net"] += acc["net"]
@@ -453,6 +460,7 @@ def _aggregate(rows: list[dict]) -> dict:
         {
             "client": name,
             "calls": v["calls"],
+            "mod_calls": v["mod_calls"],
             "backend_calls": v["backend_calls"],
             "tokens_saved": v["saved"],
             "tokens_net": v["net"],
@@ -486,6 +494,8 @@ def _aggregate(rows: list[dict]) -> dict:
         "by_model": models,
         "by_backend": backends,
         "by_client": clients,
+        # Delegaciones que pidió el mod del plugin (`toolu_plugin_…`), ya dentro de `total.calls`.
+        "mod_calls": mod_calls,
     }
 
 
@@ -2092,11 +2102,15 @@ function renderClients(s){
 
   const totalCalls = rows.reduce((a,c)=>a+c.calls,0);
   document.getElementById('clientsHead').textContent = plural(rows.length, 'unit.client');
+  // Las del mod del plugin (`toolu_plugin_…`) van dentro de las delegaciones y se dicen aparte.
+  const modCell = c => (c.mod_calls||0)
+    ? ' <span style="color:var(--mut)">· ' + T('clients.mod_calls', {n: F.format(c.mod_calls)}) + '</span>'
+    : '';
 
   const body = rows.map(c=>{
     const p = totalCalls ? (c.calls/totalCalls*100) : 0;
     return '<tr><td class="mono" title="' + escHooks(c.client) + '">' + escHooks(labelFor('client', c.client)) + '</td>'
-      + '<td class="num">' + F.format(c.calls) + '</td>'
+      + '<td class="num">' + F.format(c.calls) + modCell(c) + '</td>'
       + '<td class="num" style="color:var(--tx2)">' + F.format(c.backend_calls) + '</td>'
       + '<td class="num" style="color:var(--green)">' + F.format(c.tokens_net) + '</td>'
       + '<td class="num" style="color:var(--cyan)">' + F1.format(p) + ' %</td></tr>';
