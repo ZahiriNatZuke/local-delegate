@@ -113,3 +113,26 @@ usuario (`"claude_delivery_explicit": true`), y con esa marca `update` repara lo
 `settings.json` en vez de migrar al plugin. Para volver al plugin, `install` sin el flag o con
 `--claude-delivery plugin`: los dos quitan la marca. Una instalación vieja sin la marca (o sin
 estado) sí se migra al plugin en el siguiente `update`.
+
+## Bajar a la 0.39
+
+La 0.39 no conoce el plugin: ni lo instala ni lo quita. Por eso, **antes de bajar, `uninstall` con
+la 0.40**, y después instala la 0.39 y su `install` como siempre:
+
+```bash
+local-delegate uninstall                                   # con la 0.40: quita plugin y marketplace
+uv tool install --force "local-delegate-mcp[llamaswap]==0.39.0"
+local-delegate install                                     # la 0.39 vuelve a los hooks en settings.json
+```
+
+Si bajas sin `uninstall`, el plugin se queda y su `ld_bin` sigue apuntando al intérprete de
+`uv tool`, que ahora tiene la 0.39. Cada hook arranca ese intérprete con
+`-I -m local_delegate.hook`, que en la 0.39 no existe: carga el paquete (alrededor de **1 s**,
+porque carga el servidor) y sale con un error **no bloqueante** en cada llamada. No bloquea nada,
+pero frena cada prompt y cada tool, y si además corres el `install` de la 0.39 tendrás los hooks
+dos veces. Para arreglarlo después, quita el plugin a mano:
+
+```bash
+claude plugin uninstall local-delegate@local-delegate --scope user
+claude plugin marketplace remove local-delegate
+```

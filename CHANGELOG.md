@@ -6,6 +6,33 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-10-22
+
+Entrega por plugin de Claude Code y su mod (SDD `claude-plugin-and-mods`, F1 y F2): `install` y
+`update` instalan los hooks como el plugin `local-delegate@local-delegate` en vez de escribirlos en
+`settings.json` y migran una instalación por settings conservando el bloqueo de lectura; el mod del
+plugin trae los comandos `/local-summarize`, `/local-commit` y `/local-lint`, que no gastan turno
+del modelo, y deja fijas cuatro tools para que no haya que buscarlas; `install --desktop` (solo
+Windows) conecta el chat de Claude Desktop por un puente stdio que lee el token él mismo; `doctor`
+pasa a 33 checks, y el panel cuenta aparte las delegaciones del mod. El MCP no va dentro del
+plugin, y las tools MCP no cambian de contrato.
+
+### Lo que rompe y cómo actualizar
+
+- **`local-delegate update` migra al plugin** una instalación por settings que cumpla las
+  condiciones (Claude Code ≥ 2.1.292, instalación con `uv tool`, fuera de WSL), con el interruptor
+  del bloqueo de lectura como estaba. Las sesiones abiertas siguen con los hooks que cargaron:
+  reinícialas. Para quedarte en settings: `local-delegate install --claude-delivery settings`, que
+  `update` respeta.
+- **Bajar a la 0.39 exige `local-delegate uninstall` antes**, con la 0.40 todavía instalada. La 0.39
+  no conoce el plugin y no lo quita. Si no lo haces, el plugin se queda y su `ld_bin` apunta al
+  intérprete de `uv tool`, que ya tiene la 0.39: **cada hook carga el paquete de la 0.39**
+  (alrededor de 1 s, porque carga el servidor) **y deja un error no bloqueante en cada llamada**,
+  porque la 0.39 no tiene `local_delegate.hook`. No bloquea, pero frena cada prompt y cada tool, y
+  el `install` de la 0.39 deja además los hooks duplicados. Arreglo a posteriori: `claude plugin
+  uninstall local-delegate@local-delegate --scope user` y `claude plugin marketplace remove
+  local-delegate`. Ver [Bajar a la 0.39](docs/wiki/Claude-plugin.md#bajar-a-la-039).
+
 ### Añadido
 
 - Toda rueda lleva el mod del plugin: un hook de hatchling (`hatch_build.py`) genera `register.js` desde `mod/*.js` en cada build (`uv build`, `uv tool install .`, `pip install .` y la rueda construida desde el sdist, que trae `build_mod.py` para eso); `.gitignore` lo deja fuera del repo, `[tool.uv] cache-keys` hace que `uv sync` lo regenere al cambiar el mod, y `publish.yml` comprueba que la rueda lo lleva antes de subirla a PyPI (SDD `claude-plugin-and-mods`, build-mod-in-build).
@@ -26,6 +53,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Cambiado
 
+- Documentación de la release: el README presenta el plugin de Claude Code, los comandos del mod e `install --desktop`; la wiki gana [Bajar a la 0.39](docs/wiki/Claude-plugin.md#bajar-a-la-039) y, en [Savings & metrics](docs/wiki/Savings-and-metrics.md#delegaciones-del-mod-y-adopción-del-plugin), `mod_calls` y la medición de adopción con `scripts/measure_plugin_adoption.py`.
 - El hook de shell (`suggest_delegate_shell.py`) deja de reconocer el volcado de fichero de la CLI envolvente que ya no se usa; las formas que bloquea quedan en `cat`, `type`, `more`, `Get-Content`, `gc` y `head` sin recorte. Se retiran del repo las demás menciones a esa CLI.
 
 ## [0.39.0] - 2026-10-21
@@ -3263,7 +3291,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.39.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.40.0...HEAD
+[0.40.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.39.0...v0.40.0
 [0.39.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.38.0...v0.39.0
 [0.38.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.37.0...v0.38.0
 [0.37.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.36.1...v0.37.0

@@ -476,7 +476,9 @@ habilitado, con la versión del paquete y el `language` vigente), `plugin.ld_bin
      (`<ld_bin> hook prompt` en la A, `<ld_bin> -I -m local_delegate.hook prompt` en la B), con
      `< muestra.json`: sale con 0 y da la salida esperada. El script lee la orden del propio
      `hooks.json` instalado, sin escribirla a mano.
-- **Vuelta atrás**: revert del PR. En una instalación ya migrada, `install --claude-delivery settings`.
+- **Vuelta atrás**: revert del PR. En una instalación ya migrada, `install --claude-delivery settings`,
+  y `update` la respeta: con la marca `claude_delivery_explicit` de `install-state.json` repara los
+  hooks de settings en vez de volver a migrar al plugin (F1-settings-choice, #404).
 
 #### `doctor` con plugin (F1-doctor)
 
@@ -1007,7 +1009,7 @@ apagada y el motivo queda en la wiki y en el backlog.
   B-1 garantiza que el plugin que queda en caché **no bloquea**, y `doctor` de la 0.40, si vuelve,
   marca los duplicados.
 - **Vuelta atrás**:
-  - `install --claude-delivery settings`, en un solo paso.
+  - `install --claude-delivery settings`, en un solo paso; `update` la respeta (#404).
   - Revert de cualquier PR.
   - Las piezas del mod se apagan por `userConfig`.
 

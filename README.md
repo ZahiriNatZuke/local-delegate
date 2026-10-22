@@ -309,7 +309,7 @@ a propósito:
 | Componente | Dónde | Qué hace |
 |---|---|---|
 | Entrada MCP | config de Claude Code / `~/.codex/config.toml` / `~/.config/opencode/opencode.json[c]` | registra el servidor (stdio con `uvx` o HTTP contra el daemon) |
-| Hooks | `~/.claude/hooks/local-delegate/` + `settings.json` | sugieren delegar; los de lectura además pueden **rechazar** una lectura completa de documentación, si se enciende; uno anota qué agente pidió cada delegación |
+| Hooks | plugin de Claude Code `local-delegate@local-delegate` (o `~/.claude/hooks/local-delegate/` + `settings.json`) | sugieren delegar; los de lectura además pueden **rechazar** una lectura completa de documentación, si se enciende; uno anota qué agente pidió cada delegación |
 | Skill | `~/.claude/skills/local-delegation/` y `~/.config/opencode/skill/local-delegation/` | regla de oro y catálogo de tools |
 | Memoria | bloque gestionado en `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` y `~/.config/opencode/AGENTS.md` | la regla en una nota corta siempre cargada |
 
@@ -324,11 +324,11 @@ daemon y los hooks lo usen también, y escriben la skill, el bloque de memoria y
 los subagentes en ese idioma. Precedencia y cómo volver a seguir al sistema:
 [Idioma](./docs/wiki/Language.md).
 
-Se instalan solos dos hooks: `UserPromptSubmit` (intenciones mecánicas) y `record_call.py`
+Actúan solos dos hooks: `UserPromptSubmit` (intenciones mecánicas) y `record_call.py`
 (`PreToolUse` sobre las tools de local-delegate), que no avisa ni bloquea: anota qué agente pidió
 cada delegación y con qué esfuerzo, para atribuir el coste equivalente a su modelo. Los dos de
 lectura —`PreToolUse`/`Read` y `PreToolUse`/`Bash|PowerShell`— quedan apagados salvo
-`--enable-read-hook`, que los registra y los enciende juntos (`uninstall` los apaga). Van juntos
+`--enable-read-hook`, que los enciende juntos (`--disable-read-hook` o `uninstall` los apagan). Van juntos
 porque son una regla sola sobre dos caminos: cerrar la tool `Read` y dejar `cat informe.md`
 abierto no cambia la conducta, la muda de sitio.
 
@@ -339,6 +339,26 @@ emergencia: leer por franjas nunca se bloquea. El motivo de que exista es que es
 veces— que sugerir no cambia la conducta.
 Ver [Instalación de la integración](./docs/wiki/Integration-install.md) y
 [`docs/recipes/claude-code-hooks.md`](./docs/recipes/claude-code-hooks.md).
+
+### Plugin de Claude Code, comandos del mod y Claude Desktop
+
+Desde la 0.40, con Claude Code 2.1.292 o posterior instalado con `uv tool`, `install` entrega los
+hooks como un **plugin** (`local-delegate@local-delegate`) en vez de escribirlos en
+`settings.json`, y migra sola una instalación anterior conservando el bloqueo de lectura. Si no se
+cumplen las condiciones, sigue con `settings.json` y dice por qué; `--claude-delivery settings`
+vuelve atrás a mano y `update` lo respeta. El MCP **no** va dentro del plugin.
+
+El plugin trae además un **mod**, que corre dentro de Claude Code sin gastar turnos del modelo:
+
+- `/local-summarize <ruta>`, `/local-commit` (propone el mensaje desde `git diff --cached`; solo
+  lo muestra) y `/local-lint <fichero|comando>` llaman a la tool local directamente.
+- Deja fijas `local_summarize`, `local_extract`, `local_lint_summary` y `local_commit_msg`, para
+  que el modelo no tenga que buscarlas con ToolSearch.
+
+En Windows, `install --desktop` añade el chat de **Claude Desktop**: escribe una entrada que lanza
+`local-delegate desktop-bridge`, un puente stdio hacia el daemon que lee el token él mismo, porque
+Desktop no pasa su entorno a los MCP. Para bajar a la 0.39, `uninstall` antes. Todo el detalle en
+[Entrega por plugin de Claude Code](./docs/wiki/Claude-plugin.md).
 
 ## Groups de llama-swap (opcional)
 
