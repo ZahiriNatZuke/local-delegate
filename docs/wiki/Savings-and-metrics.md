@@ -524,6 +524,37 @@ ventanas solos; `--include-tests` las desactiva. `measure_cooldown.py` aplica ad
 `--exclude` (con la misma regla de instantes), y su salida dice cuánto quitó cada fuente.
 `measure_adoption.py` aparta también, en el log de uso, las filas del cliente `mcp`.
 
+## Delegaciones del mod y adopción del plugin
+
+Desde la 0.40, el mod del [plugin de Claude Code](Claude-plugin.md) puede pedir delegaciones él
+mismo (los comandos `/local-summarize`, `/local-commit` y `/local-lint`). Esas filas llevan un
+`tool_use_id` que empieza por `toolu_plugin_` y **no** las decidió el modelo:
+
+- Siguen dentro del total y de cada KPI; no se apartan como las pruebas.
+- `/api/stats` las cuenta en `mod_calls`, en el total y en cada cliente de `by_client`. El panel
+  lo dice en «Quién delegó», junto a cada cliente («N del mod»).
+
+Para saber si el plugin hace que **el modelo** delegue más, la medición está fijada de antemano
+(REQ-024 del SDD `claude-plugin-and-mods`):
+
+```bash
+uv run python scripts/measure_plugin_adoption.py                                  # solo la base
+uv run python scripts/measure_plugin_adoption.py --install 2026-10-22T20:00:00Z   # base y 14 días después
+```
+
+- **Qué mide**: el % de sesiones interactivas de Claude Code (`cli` y la pestaña Code de Claude
+  Desktop) con al menos una delegación decidida por el modelo. Cruza el `tool_use_id` del log de
+  uso con el transcript principal de cada sesión en `~/.claude/projects`.
+- **Qué no cuenta**: las llamadas del mod, las pruebas (la regla común y las ventanas de
+  `test-window`), los subagentes y las sesiones `-p` o del SDK.
+- **Periodos**: la base va del 2026-10-08 (antes faltan los `tool_use_id`) hasta `--install`, el
+  instante en que se instaló la 0.40.0; el después, los 14 días siguientes.
+- **Criterio**: éxito si el después tiene al menos 30 sesiones y sube al menos 10 puntos sobre la
+  base. El JSON lo da en `criterion.status`: `no_install`, `too_early`, `too_few_sessions`, `met`
+  o `not_met`.
+
+Solo lee el `LOG_DIR` y los transcripts, e imprime cifras: no escribe nada ni saca su contenido.
+
 ## La web
 
 Dashboard en `http://127.0.0.1:9393`. Con `local-delegate serve` vive en el daemon singleton;
@@ -706,7 +737,7 @@ que todavía convivan clientes HTTP y procesos `stdio`.
 | `GET /` | Dashboard HTML |
 | `GET /api/daemon` | Estado, PID y URLs del daemon HTTP |
 | `GET /api/events?from=&to=&include_tests=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`, `excluded_tests` y `tests_in_range`). Sin `include_tests=1`, sin las pruebas. Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. Cada fila llega **fundida** con el relleno de `recompute-cost` (o el respaldo) y con su `density`, `family` y `marks` resueltas (y `caller_origin`: `line`, `backfill` o `fallback`): el JS no funde ni resuelve nada |
-| `GET /api/stats?from=&to=&include_tests=` | Agregados del mismo conjunto que `/api/events` (`excluded_tests`, `tests_in_range` y `open_test_windows` dicen qué se apartó y qué ventanas siguen abiertas) (por tool, por modelo, por origen del cómputo, por cliente, totales): `tokens_context_saved` (el **bruto**, ya sin fallos), `tokens_returned`, `tokens_context_net` (el **neto** del KPI), el desglose `chars_saved_text`, `bytes_saved_image`, `chars_saved_output` y `chars_returned`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. `by_tool`, `by_backend` y `by_client` llevan `tokens_net` junto a `tokens_saved`. Además: `cost` (la cifra o el motivo de que no la haya —`figure` y `reason`—, la barra de cobertura `bar`, el respaldo `fallback`, el origen de `N` `n_origin`, la densidad usada `density`, los modelos sin precio `unpriced`, lo que queda fuera de la base `outside_base`, el desglose `breakdown` y la fecha de la tabla `table`), `quota` (estado por tipo de ventana, `five_hour` y `seven_day`, con `status` `calibrated` o `uncalibrated`, `reason`, `points`, `rejection_points`, `discards`, `drift`, `reset`, `median_C`, `warning`, `a_pct`, `b_pct` y `pct_reason`; y `has_aggregates` y `command`), `images` (`n`, `bytes`, `chars_returned`) y `density_table`. Los tokens son de Claude, por densidad. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
+| `GET /api/stats?from=&to=&include_tests=` | Agregados del mismo conjunto que `/api/events` (`excluded_tests`, `tests_in_range` y `open_test_windows` dicen qué se apartó y qué ventanas siguen abiertas) (por tool, por modelo, por origen del cómputo, por cliente, totales): `tokens_context_saved` (el **bruto**, ya sin fallos), `tokens_returned`, `tokens_context_net` (el **neto** del KPI), el desglose `chars_saved_text`, `bytes_saved_image`, `chars_saved_output` y `chars_returned`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. `by_tool`, `by_backend` y `by_client` llevan `tokens_net` junto a `tokens_saved`. Además: `cost` (la cifra o el motivo de que no la haya —`figure` y `reason`—, la barra de cobertura `bar`, el respaldo `fallback`, el origen de `N` `n_origin`, la densidad usada `density`, los modelos sin precio `unpriced`, lo que queda fuera de la base `outside_base`, el desglose `breakdown` y la fecha de la tabla `table`), `quota` (estado por tipo de ventana, `five_hour` y `seven_day`, con `status` `calibrated` o `uncalibrated`, `reason`, `points`, `rejection_points`, `discards`, `drift`, `reset`, `median_C`, `warning`, `a_pct`, `b_pct` y `pct_reason`; y `has_aggregates` y `command`), `images` (`n`, `bytes`, `chars_returned`), `density_table` y `mod_calls` (las llamadas que pidió el mod del plugin, también por cliente en `by_client`; ver [Delegaciones del mod](#delegaciones-del-mod-y-adopción-del-plugin)). Los tokens son de Claude, por densidad. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
 | `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks` y, si la llamada espera dentro de local-delegate, `local_wait` con el motivo: `slot` o `turn`; con `turn`, también `turn_in_use` y `turn_position`) + `last_event_ts` y `now` para el indicador de actividad |
 | `GET /api/backend` | Sondeo del backend: `available`, `models` (con `status`; si no responde, la última lista buena de esa URL con `models_stale: true`), `running` y `running_ok` (si `/running` respondió; solo se pide cuando `/models` respondió), `causa`, `etiqueta` y `detalle` (los tres `null` si está conectado), y `origin`/`host` del endpoint |
 | `GET /api/status` | Versión, catálogo de modelos y tools, y un bloque `backend` con `available`, `models`, `models_stale`, `causa`, `etiqueta`, `detalle`, `origin` y `host` |
