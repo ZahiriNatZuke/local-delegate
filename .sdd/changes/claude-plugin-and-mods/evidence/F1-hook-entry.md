@@ -26,11 +26,9 @@ Fecha: 2026-10-21 · Windows 11 · Python 3.11 (`.venv` del worktree) · REQ-003
    `scripts/data/hook_hashes_after.json`, que este lote no posee; además corta la serie de P-4 en
    mitad de la ventana. La entrega por settings sigue encendiéndose con `--enabled` o la variable,
    como en la 0.39 (la vuelta atrás del plan lo admite).
-2. **Ficheros fuera de «Posee»**: `scripts/data/spanish_lexicon.json` y su README (10 palabras
-   inglesas nuevas, entrada 22, el procedimiento de siempre del guardián REQ-044). Sin ellas
-   `test_repo_has_no_spanish_name_outside_the_exception_list` falla; `plugin` y `distro` vienen de
-   los nombres de variable que fija el plan. Los otros lotes de la ola tocarán probablemente la
-   misma lista: conflicto de rebase, como `CHANGELOG.md`.
+2. **Léxico del detector de nombres**: 10 palabras inglesas nuevas (`distro`, `fingerprints`,
+   `fraction`, `gated`, `imported`, `plugin`, `pythonutf`, `silently`, `temporary`, `venv`). Las
+   añade la sesión principal en el PR #394; este lote no toca el léxico y se rebasa sobre él.
 3. Los segmentos de ruta de `LOG_DIR` en `read_switch.log_dir` van en variables y no en el
    `return`, para no necesitar filas nuevas en `tests/data/uncatalogued_exceptions.json` (ajeno).
 
