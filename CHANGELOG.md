@@ -6,6 +6,22 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido (F4-read-fixes)
+
+- **Las decisiones del diálogo del mod de lectura llegan a la telemetría.** En la 0.41.0 el mod
+  registraba sus decisiones solo con un proceso, y las que se tomaban en el diálogo («resumir» /
+  «leer entero» / cerrarlo) no llegaron nunca: no había ni una línea `summarized`, `read_whole` ni
+  `dismissed`. Ahora van primero al daemon (`POST /api/hook/record-read`, con token y solo desde
+  `127.0.0.1`), que escribe la misma línea que `hook record-read` con el entorno del cliente, y el
+  proceso queda de respaldo. Si ninguna vía la toma, queda rastro (log de depuración y
+  `hook-failures.jsonl`, sin ruta ni contenido) y se reintenta en la siguiente llamada a una tool.
+- **El resumen dice la regla real para leer el fichero literal.** Decía «léelo antes con
+  `offset`/`limit`», y una franja que llevaba lo leído del fichero al 80 % se volvía a resumir sin
+  explicar por qué. Ahora dice hasta cuántas líneas se pueden leer literales en la sesión y, si se
+  resumió una franja, que fue por lo acumulado (no por el tamaño del tramo), cuántas líneas se
+  llevan y cuántas quedan; y que para editar basta una lectura literal del tramo que se va a
+  cambiar. El rechazo de `Edit`/`Write` tras un resumen dice lo mismo. El criterio no cambia.
+
 ## [0.41.0] - 2026-10-23
 
 El mod de lectura del plugin de Claude Code, encendido por defecto (SDD `claude-plugin-and-mods`,

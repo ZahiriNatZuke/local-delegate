@@ -59,6 +59,12 @@ type Env = {
   vars: Record<string, string>
   now: number
   sleeps: number[]
+  // F4-read-fixes: what `$.ui.log` got, whether a dialog was shown, and whether `$.process.run`
+  // refuses to start once it was (the live 0.41.0 symptom: no dialog decision ever reached the log).
+  logs: { message: string; opts: any }[]
+  asked: boolean
+  refuseProcessAfterAsk: boolean
+  recordStatus: number | null
 }
 
 // `up` answers like `hook classify`; the rest are the ways the daemon can fail the mod.
@@ -82,6 +88,8 @@ function makeEnv(opts: {
   config?: any
   daemon?: Daemon
   vars?: Record<string, string> | null
+  refuseProcessAfterAsk?: boolean
+  recordStatus?: number | null
 } = {}): Env {
   const env: Env = {
     $: null,
@@ -107,6 +115,10 @@ function makeEnv(opts: {
     vars: opts.vars === null ? (null as any) : opts.vars ?? VARS,
     now: 1_000_000,
     sleeps: [],
+    logs: [],
+    asked: false,
+    refuseProcessAfterAsk: opts.refuseProcessAfterAsk ?? false,
+    recordStatus: opts.recordStatus === undefined ? 204 : opts.recordStatus,
   }
   // `$.fs.stat` takes either slash and either case of the drive.
   const lookup = (p: string) => [...env.files.keys()].find(k => k.toLowerCase() === p.replace(/\\/g, '/').toLowerCase())
@@ -137,10 +149,14 @@ function makeEnv(opts: {
     ui: {
       ask: async (question: string, options: any) => {
         env.asks.push({ question, options })
+        env.asked = true
         if (env.answer === null) throw new Error('dismissed')
         return env.answer
       },
       toast: async () => undefined,
+      log: async (message: string, opts: any) => {
+        env.logs.push({ message, opts })
+      },
     },
     // `$.env.get`: the variables of the Claude Code process (`vars: null`, an engine without it).
     env: {
@@ -168,6 +184,8 @@ function makeEnv(opts: {
     token: async () => (env.daemon === 'notoken' ? null : 'tok'),
     daemonFetch: env.daemon === 'none' ? undefined : (path: string, init: any) => daemonAnswer(env, path, init),
     runLd: async (args: string[], stdin?: string) => {
+      // `common.runLd` resolves null when `$.process.run` is refused.
+      if (env.refuseProcessAfterAsk && env.asked) return null
       const parsed = typeof stdin === 'string' ? JSON.parse(stdin) : undefined
       env.ldRuns.push({ args, stdin: parsed })
       if (args.includes('--config')) {
@@ -219,6 +237,11 @@ async function daemonAnswer(env: Env, path: string, init: any) {
   }
   if (path === '/api/hook/classify-config') {
     return ok(typeof env.config === 'string' ? env.config : JSON.stringify(env.config))
+  }
+  if (path === '/api/hook/record-read') {
+    // `null`: the request does not complete (refused, or no daemon).
+    if (env.recordStatus === null) return null
+    return { status: env.recordStatus, ok: env.recordStatus < 300, text: '', json: null }
   }
   if (path === '/api/hook/classify') {
     const answer = env.classify(body.payload)
@@ -290,6 +313,11 @@ function byInput(input: any): Classified {
 
 function decisions(env: Env): string[] {
   return env.ldRuns.filter(r => r.args.includes('record-read')).map(r => r.stdin.decision)
+}
+
+// The decisions the daemon took (`POST /api/hook/record-read`, F4-read-fixes).
+function daemonDecisions(env: Env): string[] {
+  return env.daemonCalls.filter(c => c.path === '/api/hook/record-read').map(c => c.body.payload.decision)
 }
 
 test('on_by_default', async () => {
@@ -721,10 +749,12 @@ test('classifies_through_the_daemon', async () => {
   // Not one process for `classify` or `--config`: the daemon answered both.
   expect(classifyRuns(env)).toHaveLength(0)
   expect(configRuns(env)).toHaveLength(0)
-  expect(daemonPaths(env)).toEqual(['/api/hook/classify-config', '/api/hook/classify'])
+  // The decision went to the daemon too (F4-read-fixes).
+  expect(daemonPaths(env)).toEqual(['/api/hook/classify-config', '/api/hook/classify', '/api/hook/record-read'])
   // Same answer, same decision as through the process.
   expect(out.result.file.content.includes('SUMMARY OF THE FILE')).toBe(true)
-  expect(decisions(env)).toEqual(['auto_summarized'])
+  expect(daemonDecisions(env)).toEqual(['auto_summarized'])
+  expect(decisions(env)).toEqual([])
   // The request: a POST with the hook's input and the client's classifier variables, and only those.
   const ask = env.daemonCalls[1]
   expect(ask.init.method).toBe('POST')
@@ -782,6 +812,130 @@ test('remembers_a_daemon_failure_for_a_while', async () => {
   env.now += 10 * 60 * 1000
   env.daemon = 'up'
   await call(env, { tool: 'Read', file_path: BIG })
-  expect(daemonPaths(env)).toEqual(['/api/hook/classify-config', '/api/hook/classify'])
+  expect(daemonPaths(env)).toEqual(['/api/hook/classify-config', '/api/hook/classify', '/api/hook/record-read'])
   expect(classifyRuns(env)).toHaveLength(4)
+})
+
+// --- F4-read-fixes: the dialog's decisions reach the log, and the summary says the real rule -------
+
+// The variables the record route needs on top of the classifier's (`hook_entry.RECORD_ENV`).
+const RECORD_VARS: Record<string, string> = {
+  ...VARS,
+  LD_HOOK_TELEMETRY_LOG: 'C:/Users/me/.claude/hooks/telemetry.jsonl',
+  LD_HOOK_ENABLED: '1',
+}
+const FAILURES = 'C:/data/ld/hook-failures.jsonl'
+
+test('dialog_decisions_are_recorded_by_the_daemon_when_the_process_is_refused', async () => {
+  // Live 0.41.0: after `$.ui.ask`, the `record-read` process never wrote its line. With the daemon
+  // up, each of the three dialog decisions still reaches the log, by HTTP.
+  for (const [answer, decision] of [
+    ['read.ask.summarize', 'summarized'],
+    ['read.ask.whole', 'read_whole'],
+    [null, 'dismissed'],
+  ] as const) {
+    const env = makeEnv({ dialog: true, answer, classify: byInput, daemon: 'up', vars: RECORD_VARS, refuseProcessAfterAsk: true })
+    await call(env, { tool: 'Read', file_path: BIG })
+    expect(env.asks).toHaveLength(1)
+    expect(daemonDecisions(env)).toEqual([decision])
+    const sent = env.daemonCalls.find(c => c.path === '/api/hook/record-read')!
+    expect(sent.init.method).toBe('POST')
+    expect(sent.body.payload).toMatchObject({ path: BIG, via: 'read_whole', session_id: SESSION, decision })
+    // The route gets what `record-read` reads: the destination and the experiment's switch too.
+    expect(sent.body.env).toEqual({
+      LD_HOOK_READ_ENABLED: '1',
+      LD_HOOK_READ_BLOCK: '1',
+      LD_HOOK_READ_SUGGEST_KB: '4',
+      LOCAL_DELEGATE_LOG_DIR: 'C:/data/ld',
+      USERPROFILE: 'C:/Users/me',
+      LD_HOOK_TELEMETRY_LOG: 'C:/Users/me/.claude/hooks/telemetry.jsonl',
+      LD_HOOK_ENABLED: '1',
+    })
+    // Recorded once: the process is not asked again after the daemon took the line.
+    expect(decisions(env)).toEqual([])
+    expect(env.logs).toHaveLength(0)
+  }
+})
+
+test('the_process_is_the_fallback_when_the_daemon_does_not_record', async () => {
+  for (const status of [404, 401, 500, null]) {
+    const env = makeEnv({ dialog: true, answer: 'read.ask.summarize', classify: byInput, daemon: 'up', vars: RECORD_VARS, recordStatus: status })
+    await call(env, { tool: 'Read', file_path: BIG })
+    expect(daemonDecisions(env)).toEqual(['summarized'])
+    expect(decisions(env)).toEqual(['summarized'])
+    expect(env.logs).toHaveLength(0)
+  }
+})
+
+test('a_lost_decision_leaves_a_trace_and_is_retried', async () => {
+  const env = makeEnv({
+    dialog: true,
+    answer: 'read.ask.summarize',
+    classify: byInput,
+    daemon: 'up',
+    vars: RECORD_VARS,
+    refuseProcessAfterAsk: true,
+    recordStatus: null,
+  })
+  const out = await call(env, { tool: 'Read', file_path: BIG })
+  // The read itself is not touched: the summary arrives.
+  expect(out.result.file.content.includes('SUMMARY OF THE FILE')).toBe(true)
+  // A debug line, without the file's content or its path.
+  expect(env.logs).toHaveLength(1)
+  expect(env.logs[0].opts).toEqual({ to: 'debug' })
+  expect(env.logs[0].message.includes('summarized')).toBe(true)
+  expect(env.logs[0].message.includes('SUMMARY')).toBe(false)
+  expect(env.logs[0].message.includes('big.md')).toBe(false)
+  // And a line in the hooks' failure log, the shape `hook_entry._log_failure` writes.
+  const failures = (env.files.get(FAILURES) ?? '').trim().split('\n').filter(Boolean).map(line => JSON.parse(line))
+  expect(failures).toHaveLength(1)
+  expect(failures[0]).toMatchObject({ hook: 'record-read', error: 'ModRecordLost', decision: 'summarized' })
+  expect(typeof failures[0].ts).toBe('string')
+  expect(JSON.stringify(failures[0]).includes('big.md')).toBe(false)
+
+  // The next tool call, with no dialog before it, records the lost line first.
+  env.recordStatus = 204
+  await call(env, { tool: 'Bash', command: 'git status' })
+  expect(daemonDecisions(env)).toEqual(['summarized', 'summarized'])
+  // Once recorded, it is not sent again.
+  await call(env, { tool: 'Bash', command: 'git status' })
+  expect(daemonDecisions(env)).toEqual(['summarized', 'summarized'])
+})
+
+test('the_failure_log_is_capped', async () => {
+  const env = makeEnv({
+    dialog: true,
+    answer: 'read.ask.whole',
+    classify: byInput,
+    daemon: 'up',
+    vars: RECORD_VARS,
+    refuseProcessAfterAsk: true,
+    recordStatus: null,
+  })
+  env.files.set(FAILURES, 'x')
+  env.sizes.set(FAILURES, 300 * 1024)
+  await call(env, { tool: 'Read', file_path: BIG })
+  expect(env.files.get(FAILURES)).toBe('x')
+  expect(env.logs).toHaveLength(1)
+})
+
+test('the_summary_says_how_much_can_be_read_literally', async () => {
+  const env = makeEnv({ classify: byInput })
+  const out = await call(env, { tool: 'Read', file_path: BIG })
+  const text: string = out.result.file.content
+  // 100 lines: under 80 % is up to 79 of them.
+  expect(text.startsWith(`read.summary.header_budget lines=79 path=${BIG} total=100`)).toBe(true)
+})
+
+test('a_range_summary_says_it_was_the_accumulated_share', async () => {
+  const env = makeEnv({ classify: byInput })
+  const range = (offset: number, limit: number) => call(env, { tool: 'Read', file_path: BIG, offset, limit })
+  await range(1, 50)
+  const out = await range(51, 40) // lines 51-90: with the first 50, 90 % of the file
+  expect(env.mcpCalls).toHaveLength(1)
+  const text: string = out.result.file.content
+  expect(text.startsWith(`read.summary.header_ranges left=29 lines=79 path=${BIG} pct=90 read=50 total=100`)).toBe(true)
+  // A range small enough still goes through literally after the summary.
+  const next = await range(91, 5)
+  expect(next.result.file.content).toBe('REAL')
 })

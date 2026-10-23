@@ -68,8 +68,27 @@ petición las variables que lee el clasificador (`LD_HOOK_READ_ENABLED`, `LD_HOO
 `XDG_DATA_HOME`, `USERPROFILE` y `HOME`) y el daemon usa esas y no las suyas. Si no hay token, el
 daemon no responde en 300 ms, contesta 401, no tiene la ruta (otra versión) o la respuesta no vale,
 el mod lanza el proceso de siempre (`python -I -m local_delegate.hook classify`) y deja de
-preguntarle al daemon durante 5 minutos. `record-read` sigue siendo un proceso: escribe la
-telemetría con el entorno del cliente y solo ocurre en las decisiones.
+preguntarle al daemon durante 5 minutos.
+
+Las decisiones (`record-read`) van igual desde la 0.41.1: primero `POST /api/hook/record-read`, que
+escribe la misma línea que `hook record-read` con el entorno que manda el mod (las variables de
+arriba más `LD_HOOK_TELEMETRY_LOG` y `LD_HOOK_ENABLED`), y si el daemon no la toma, el proceso. El
+destino tiene que ser un `.jsonl` con ruta absoluta; si no, el daemon responde 400 y escribe el
+proceso. En la 0.41.0 solo iba por el proceso, y las decisiones tomadas en el diálogo
+(`summarized`, `read_whole`, `dismissed`) no llegaron nunca a la telemetría. Si ninguna de las dos
+vías la toma, el mod deja rastro (una línea en el log de depuración y otra en
+`hook-failures.jsonl`, sin ruta ni contenido) y la vuelve a intentar al empezar la siguiente
+llamada a una tool.
+
+### Leer literal un fichero que llegó resumido
+
+Lo que el mod cuenta es **cuánto del fichero se ha leído en la sesión**, no el tamaño de cada
+tramo: las franjas literales (`Read` con `offset`/`limit`, `sed -n`, `head`…) se suman, y la que
+haría llegar al 80 % de las líneas del fichero cuenta como lectura entera y también se resume. El
+resumen lo dice con números: hasta cuántas líneas se pueden leer literales («hasta 79 de sus 100
+líneas») y, si fue una franja la que se resumió, cuántas se llevan leídas y cuántas quedan. Para
+editar basta **una** lectura literal del fichero: libera la guarda de escritura, así que lo práctico
+es leer solo el tramo que se va a cambiar.
 
 ### El hook de lectura y el mod de lectura
 

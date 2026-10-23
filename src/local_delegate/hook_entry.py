@@ -34,7 +34,10 @@ entorno que manda el mod (`CLASSIFY_ENV`); el proceso queda de respaldo (F4-clas
 
 - `hook record-read`: stdin, la salida de `classify` más `decision` y `session_id`; escribe en la
   telemetría de los hooks la misma línea que habría escrito el hook de esa vía, más `decision` y
-  `source: "mod"` (`hook_common.MOD_DECISIONS`). No escribe nada en stdout.
+  `source: "mod"` (`hook_common.MOD_DECISIONS`). No escribe nada en stdout. El mod lo pide antes
+  al daemon (`POST /api/hook/record-read`), que escribe con la misma `record_read` de aquí y con el
+  entorno que manda el mod (`RECORD_ENV`); el proceso queda de respaldo (F4-read-fixes: tras el
+  diálogo del mod, la vía del proceso se perdía en silencio).
 """
 
 from __future__ import annotations
@@ -79,6 +82,11 @@ CLASSIFY_ENV = (
     "USERPROFILE",
     "HOME",
 )
+
+#: Las de `record-read`: las de `classify` (el estado del bloqueo y `~`) más el destino de la
+#: telemetría y el interruptor del experimento (`hook_common.record`/`enabled`). El mod las manda en
+#: `POST /api/hook/record-read`; `test_mod_static.py` ata la lista del mod a esta.
+RECORD_ENV = (*CLASSIFY_ENV, "LD_HOOK_TELEMETRY_LOG", "LD_HOOK_ENABLED")
 
 #: Log de fallos de los hooks, en `LOG_DIR`. Una línea por fallo: hora, hook y tipo de excepción.
 FAILURE_LOG = "hook-failures.jsonl"
@@ -130,7 +138,8 @@ def _load_hook_module(name: str):
 
     folder = str(hooks_dir())
     if folder not in sys.path:
-        sys.path.insert(0, folder)
+        # Al final: en el daemon `sys.path` es de todos, y ningún nombre de la carpeta tapa a otro.
+        sys.path.append(folder)
     return importlib.import_module(name)
 
 
@@ -182,15 +191,27 @@ def _classify(args: list[str]) -> None:
     print(classify_text(payload, os.environ))
 
 
-def _record_read() -> None:
-    import json
+def record_read(entry: object, environ) -> None:
+    """Escribe la línea de `hook record-read` para `entry`, con `environ` como entorno.
 
-    entry = json.load(sys.stdin)
+    La única implementación: la usan el CLI (con `os.environ`) y el endpoint del daemon
+    `POST /api/hook/record-read` (con el entorno que manda el mod, `RECORD_ENV`). Corre el
+    `record_decision` del script de esa vía, el mismo que escribe la línea del hook, viendo
+    `environ` por `hook_common.run_with_environ`: no lee ni toca `os.environ` cuando le pasan otro.
+    """
     if not isinstance(entry, dict):
         return
     via = str(entry.get("via") or "")
     script = "suggest_delegate_shell" if via.startswith("shell_") else "suggest_delegate_read"
-    _load_hook_module(script).record_decision(entry)
+    module = _load_hook_module(script)
+    # El `hook_common` que importó el script (módulo suelto), no el del paquete: es el que lee.
+    _load_hook_module("hook_common").run_with_environ(environ, module.record_decision, entry)
+
+
+def _record_read() -> None:
+    import json
+
+    record_read(json.load(sys.stdin), os.environ)
 
 
 def _log_failure(name: str, exc: BaseException) -> None:

@@ -52,6 +52,9 @@ ALLOWED_VARIABLES = {
     "HOME",
     "CLAUDE_CODE_ENTRYPOINT",
     *hook_entry.CLASSIFY_ENV,
+    # And what `hook record-read` reads besides (`hook_entry.RECORD_ENV`), which the read piece sends
+    # to the daemon's `POST /api/hook/record-read` (F4-read-fixes).
+    *hook_entry.RECORD_ENV,
 }
 
 ENV_GET = re.compile(r"\$\.env\.get\(\s*([^)]*)\)")
@@ -298,3 +301,29 @@ def test_read_piece_sends_exactly_the_classifier_variables():
     assert all(name == got for name, got in sent), sent
     assert sorted(read) == sorted(hook_entry.CLASSIFY_ENV)
     assert len(sent) == len(read) == len(set(read))
+
+
+def test_read_piece_sends_exactly_the_record_variables():
+    """`readRecordVars` reads what `hook record-read` reads besides the classifier's variables
+    (`hook_entry.RECORD_ENV` minus `CLASSIFY_ENV`), no more and no less: the record route gets both
+    lists (F4-read-fixes). One missing and the daemon would write where, or when, the CLI does not."""
+    code = _code(_sources()["read.js"])
+    body = re.search(r"async function readRecordVars\(\$\) \{(.*?)\n\}", code, flags=re.DOTALL)
+    assert body, "readRecordVars not found"
+    read = re.findall(r"\$\.env\.get\('([A-Z_]+)'\)", body.group(1))
+    sent = re.findall(r"put\('([A-Z_]+)', await \$\.env\.get\('([A-Z_]+)'\)\)", body.group(1))
+    assert all(name == got for name, got in sent), sent
+    extra = [name for name in hook_entry.RECORD_ENV if name not in hook_entry.CLASSIFY_ENV]
+    assert extra, "RECORD_ENV adds nothing to CLASSIFY_ENV"
+    assert sorted(read) == sorted(extra)
+    assert len(sent) == len(read) == len(set(read))
+
+
+def test_read_piece_notes_lost_lines_where_the_hooks_do():
+    """The failure log the read piece writes when a decision is lost is the hooks' own
+    (`hook_entry.FAILURE_LOG`), with the same cap (`FAILURE_LOG_MAX_BYTES`)."""
+    code = _code(_sources()["read.js"])
+    assert f"const READ_FAILURE_LOG = '{hook_entry.FAILURE_LOG}'" in code
+    cap = re.search(r"const READ_FAILURE_LOG_MAX_BYTES = (\d+) \* (\d+)", code)
+    assert cap, "READ_FAILURE_LOG_MAX_BYTES not found"
+    assert int(cap.group(1)) * int(cap.group(2)) == hook_entry.FAILURE_LOG_MAX_BYTES
