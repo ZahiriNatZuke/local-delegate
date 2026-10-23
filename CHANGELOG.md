@@ -22,6 +22,32 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   llevan y cuántas quedan; y que para editar basta una lectura literal del tramo que se va a
   cambiar. El rechazo de `Edit`/`Write` tras un resumen dice lo mismo. El criterio no cambia.
 
+### Banda de estado: diseño propio por superficie y refresco en vivo (SDD `claude-plugin-and-mods`, F4-band)
+
+- **Terminal: una barra de una fila.** Con el fondo de los mensajes del tema, una etiqueta de
+  estado en vídeo inverso (` ● LISTO `, ` ◐ DELEGANDO `, ` ○ CAÍDO `, ` ◌ SIN DATOS `,
+  ` ○ SIN SERVICIO `), el modelo atenuado, las cifras en negrita con sus etiquetas atenuadas y el
+  modo de lectura a la derecha. Sin raya y sin filas vacías encima ni debajo: pasa de tres filas a
+  una. La opción nueva `status_style` (`bar` por defecto, `line`) deja la variante de línea: una
+  raya atenuada sobre `local-delegate · ● qwen3-8b listo · 3 delegaciones · 12,3k tokens
+  ahorrados ≈ $0,18 · lecturas: pregunta`, en dos filas.
+- **Claude Desktop: una fila nativa.** El nombre como enlace al panel (`http://localhost:9393`),
+  una píldora de borde redondeado con el punto y el estado, el modelo, la tool en curso, las
+  cifras en negrita y el modo de lectura atenuado a la derecha. Los tamaños de letra, la
+  monoespaciada y las cifras tabulares esperan a que la CLI mínima los acepte: la 2.1.292 rechaza
+  el árbol entero por `size` y dibuja su propia banda.
+- **Se refresca sin esperar al turno.** Un temporizador relee `/api/inflight` y `/api/backend`
+  (solo HTTP al daemon, nunca un proceso) cada segundo mientras hay una delegación en curso o un
+  modelo cargando, y cada 30 s si no; una llamada a una tool de local-delegate pone el ritmo rápido
+  al instante y, al acabar, trae las cifras de la sesión. Solo se redibuja si algo cambió, y el
+  temporizador se para al cerrar la sesión.
+- **Dice qué tool está trabajando.** En «delegando», la tool y los segundos que lleva
+  (`◐ qwen3-8b delegando · local_summarize 4 s`; con varias, la más antigua y `+N`), y el punto
+  gira (◐◓◑◒) con esos segundos.
+- **Textos más claros.** «modelo local listo / delegando / caído», «servicio local sin respuesta»,
+  «tokens ahorrados», un estado «sin datos» cuando el backend no responde a la consulta, el modo de
+  lectura según haya diálogo («lecturas: pregunta» o «lecturas: resume solo») y sin el rombo ◆.
+
 ## [0.41.0] - 2026-10-23
 
 El mod de lectura del plugin de Claude Code, encendido por defecto (SDD `claude-plugin-and-mods`,

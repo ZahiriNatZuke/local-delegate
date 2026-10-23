@@ -1681,6 +1681,11 @@
           "reason": "texto de salida del catálogo español (REQ-030): el detector toma por término de máquina los valores de una sola palabra («preferencia», «sistema»), que son rótulos para personas con su par en `en/` (ola B0a)"
         },
         {
+          "name": "*",
+          "file": "src/local_delegate/resources/claude-plugin/local-delegate/mod/i18n/es.json",
+          "reason": "texto de salida del catálogo español del mod (REQ-017): las etiquetas de una sola palabra de la banda de estado («LISTO», «Listo», «delegaciones») son rótulos para personas con su par en `en.json`, no nombres de máquina (SDD claude-plugin-and-mods, F4-band)"
+        },
+        {
           "name": "es[-_]*",
           "file": "tests/conftest.py",
           "reason": "código de idioma (`es-ES`, BCP 47) del `locale` del navegador de los tests del panel (REQ-043), no un nombre en español (ola B0a)"

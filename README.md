@@ -354,9 +354,12 @@ El plugin trae además un **mod**, que corre dentro de Claude Code sin gastar tu
   lo muestra) y `/local-lint <fichero|comando>` llaman a la tool local directamente.
 - Deja fijas `local_summarize`, `local_extract`, `local_lint_summary` y `local_commit_msg`, para
   que el modelo no tenga que buscarlas con ToolSearch.
-- Pone sobre el prompt una banda con el estado de local-delegate en la sesión
-  (`◆ local-delegate · ● qwen3-8b · 3 delegaciones · 12,3k tok ahorrados ≈ $0,18`): el punto es
-  verde, ámbar o rojo según el backend esté listo, ocupado o caído. La cuota de Claude no va
+- Pone sobre el prompt una banda con el estado de local-delegate en la sesión: en la terminal,
+  una barra de una fila con fondo y una etiqueta de estado (` ● LISTO `, ` ◐ DELEGANDO `,
+  ` ○ CAÍDO `), el modelo, la tool en curso y lo que lleva, las delegaciones y el ahorro de la
+  sesión y el modo de lectura (opción `status_style`: `bar` o `line`, una raya sobre una línea);
+  en Claude Desktop, una fila con una píldora de estado y el nombre como enlace al panel. Se
+  refresca sola cada segundo mientras hay una delegación en curso. La cuota de Claude no va
   aquí: es de la status line.
 - Desde la 0.41, el **mod de lectura** (encendido por defecto, opción `read_mod_enabled`) resume
   con `local_summarize` la prosa grande que se lee entera y entrega el resumen como resultado de

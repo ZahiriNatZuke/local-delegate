@@ -53,6 +53,17 @@
       "required": false,
       "default": true
     },
+    "status_style": {
+      "type": "string",
+      "title": "Status band style",
+      "description": "How the band looks in the terminal: bar (one row with a background and a state chip) or line (a dim rule over one plain line). Claude Desktop always draws its own row.",
+      "options": [
+        "bar",
+        "line"
+      ],
+      "required": false,
+      "default": "bar"
+    },
     "read_mod_enabled": {
       "type": "boolean",
       "title": "Read steering by the mod",
