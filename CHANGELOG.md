@@ -6,247 +6,151 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
-### Rendimiento (el mod de lectura clasifica por el daemon)
+## [0.41.0] - 2026-10-23
 
-- **El mod de lectura le pregunta al daemon en vez de arrancar un proceso.** `classify` y
-  `classify --config` pasan por dos rutas nuevas del daemon, `POST /api/hook/classify` y
-  `POST /api/hook/classify-config`, con el token del panel y solo desde loopback. Medido con un
-  daemon de prueba en Windows (30 repeticiones): 1,3 ms de mediana y 1,6 ms de p95, frente a
-  89–90 ms y 97–99 ms del proceso. La respuesta es la del CLI byte a byte (las dos salen de
-  `hook_entry.classify_text`/`config_text`; un test lo compara sobre todo el corpus de lecturas).
-  El mod manda las variables que lee el clasificador (`hook_entry.CLASSIFY_ENV`) y el daemon usa
-  esas y no las de su proceso, sin tocar `os.environ`. Sin token, con el daemon caído, a los
-  300 ms, con 401, con un daemon de otra versión o con una respuesta inválida, vuelve al proceso de
-  siempre y no le pregunta al daemon durante 5 minutos. `record-read` sigue siendo un proceso.
-  (SDD `claude-plugin-and-mods`, F4-classify-daemon)
+El mod de lectura del plugin de Claude Code, encendido por defecto (SDD `claude-plugin-and-mods`,
+F3 y F4): la prosa grande que se lee entera llega resumida por `local_summarize` como resultado de
+la propia tool, y mientras el mod actúa los hooks de lectura de esa sesión se apartan. Un solo
+clasificador decide qué lee cada llamada, para el mod y para los hooks, y el mod se lo pregunta al
+daemon en vez de arrancar un proceso: medido con `claude -p` en Windows, la sobrecarga por llamada
+`Bash` quedó en −9 ms de mediana y −49 ms de p95 (tope +150 / +300 ms), es decir, dentro del
+ruido. El mod gana una banda de estado sobre el prompt. En macOS las credenciales salen también
+del Llavero. Una delegación cuyo cliente se va se para de verdad. Los siete nombres retirados en
+la 0.38.0 salen del registro de obsoletos, y `doctor` pasa a 34 checks.
 
-### Rendimiento (coste del mod de lectura en cada `Bash`)
+### Lo que rompe y cómo actualizar
 
-- **El mod de lectura ya no carga el servidor en cada llamada.** `hook classify` y `hook
-  record-read` se lanzan con `python -I -m local_delegate.hook`, no con `-m local_delegate hook`,
-  que entraba por `entrypoint` e importaba el servidor y el SDK de MCP (654 ms solo en
-  importaciones). Cada `classify` baja de ~765 ms a ~125 ms de mediana (30 repeticiones, con
-  `python -I -c pass` ≈ 50 ms). Un test ejecuta los argumentos exactos de `mod/read.js` y falla
-  si cargan `local_delegate.server` o `mcp`. `hook_common` importa `urllib` solo cuando pregunta
-  al backend.
-- **Menos procesos: un prefiltro decide antes de `classify`.** Al empezar la sesión (o tras una
-  recarga) el mod pide una sola vez `hook classify --config` (subcomando nuevo): tools,
-  extensiones de prosa, umbral en bytes y primeros tokens inofensivos, sacados de
-  `read_classifier.py` y sin copia en JS. Después solo lanza `classify` cuando la llamada nombra
-  un fichero de prosa, un fichero guardado tras un resumen o un fichero de al menos el umbral
-  (comprobado con `$.fs.stat`, sin proceso, para que se siga registrando `not_prose`). En el
-  guion de F4-live (11 comandos), `classify` pasa de 6 llamadas a 0; una lectura de un `.md`
-  grande sigue llegando. `echo`, `printf`, `Write-Host` y `Write-Output` pasan a la lista de
-  inofensivos (con redirección siguen yendo al clasificador). Sin respuesta a `--config`, el mod
-  clasifica como antes. (SDD `claude-plugin-and-mods`, F4-read-mod-perf)
+- **Abre una sesión nueva de Claude Code tras actualizar.** Los mods se cargan al empezar la
+  sesión: las que ya estaban abiertas siguen con el mod de la 0.40 (sin lectura guiada ni banda
+  nueva) hasta que las cierres.
+- **El mod de lectura sale encendido.** Con el plugin, una lectura entera de prosa grande (`.md`,
+  `.txt`, `.markdown`, `.rst` por encima de `LD_HOOK_READ_SUGGEST_KB`) con la capa que bloquea
+  encendida ya no se rechaza: llega resumida (con diálogo, la persona elige «resumir con el modelo
+  local / leer entero»). Tras un resumen, escribir en ese fichero se rechaza hasta leerlo de
+  verdad. La opción `read_mod_enabled` **sin valor guardado cuenta como encendida** en el mod, en
+  los hooks de lectura del plugin y en `doctor`; solo `false` la apaga.
+  - Si en la 0.40.0 guardaste `read_mod_enabled` en `false` desde el menú de configuración del
+    plugin, **sigue apagado**: para encenderlo, vuelve a ese menú (el de configuración del plugin en Claude
+    Code, `/plugin`) y ponla en `true`; después abre una sesión nueva.
+  - Para volver al comportamiento de la 0.40, ponla en `false` en ese mismo menú.
+- **Los siete nombres retirados en la 0.38.0 salen del registro de obsoletos**: `doctor` y
+  `local_status` ya no avisan, `update` e `install` ya no los migran y el subcomando y la opción
+  viejos dan el error genérico de argparse (código 2). Siguen sin efecto, igual que desde la
+  0.38.0. Si alguno sigue puesto, renómbralo a mano: `recalcular-coste` → `recompute-cost`,
+  `--reiniciar-calibracion` → `--reset-calibration`, `LD_HOOK_READ_BLOQUEAR` →
+  `LD_HOOK_READ_BLOCK`, `LD_HOOK_READ_INTERRUPTOR` → `LD_HOOK_READ_SWITCH_FILE`,
+  `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO` → `LOCAL_DELEGATE_STRUCTURED_SUMMARY`,
+  `LOCAL_DELEGATE_COSTE_RESPALDO` → `LOCAL_DELEGATE_COST_FALLBACK` y
+  `~/.claude/local-delegate-bloqueo-apagado` → `~/.claude/local-delegate-block-off`.
+- **`head X` ya no se bloquea** en el hook de shell (saca diez líneas, no el fichero entero), y
+  `type X` y `gc X` solo cuentan como volcado en PowerShell (en Bash, `type` dice qué es un
+  comando).
 
-### Corrige (banda del mod centrada)
+### Añadido
 
-- **La línea de la banda de estado queda centrada** entre la regla `─` de arriba y la línea del
-  prompt. Debajo de la banda Claude Code deja una fila suya (a la derecha pinta avisos como
-  «Update installed» o «◐ medium · /effort»), así que la banda tenía poco aire arriba y mucho abajo.
-  Ahora lleva una fila vacía entre la regla y el texto (`marginTop: 1`), que equilibra esa fila. La
-  encuesta y el recorte por ancho no cambian. (SDD `claude-plugin-and-mods`, F3-status)
+- **Mod de lectura** (pieza `read` del mod, opción `read_mod_enabled`, encendida por defecto;
+  REQ-020 a REQ-022). Clasifica cada llamada que puede leer o escribir un fichero. Una lectura
+  entera de prosa grande, o unas franjas que juntas cubren el 80 % de sus líneas, pasa por
+  `local_summarize` y el resumen, como texto limpio (sin el envoltorio `{"result": …}`), llega como
+  resultado de la tool: con diálogo la persona elige, sin diálogo (`-p`, subagentes) el mod resume
+  solo. El código, la config y los datos pasan literales y se registran como `not_prose`. Si el
+  resumen o el clasificador fallan (también un `isError` o un `[local-delegate error]`), la lectura
+  real pasa: nunca bloquea sin dar contenido. Tras un resumen, `Edit`, `Write`, `NotebookEdit` y
+  las escrituras de shell sobre ese fichero se rechazan hasta una lectura real; la lista se guarda
+  por sesión y aguanta `--resume`. Cada decisión queda en la telemetría con `hook record-read`.
+  Verificado en vivo con `claude -p` en Windows: control positivo (sin el mod, `Write` pasa) y
+  negativo (con el mod, tras un resumen, `Write` se rechaza y el fichero no cambia), guarda tras
+  `--resume`, hook que se aparta y latido. **Pendiente de verificar en sesión interactiva**: los
+  botones «resumir / leer entero» y la guarda tras `--resume` en una terminal.
+- **Los hooks de lectura se apartan del mod de lectura** (REQ-023): el de `Read` y el de
+  `Bash|PowerShell` se apartan solo con cuatro condiciones a la vez (opción encendida, latido de su
+  misma sesión con `read_mod_active` y `process_run` de menos de 24 h, capa que bloquea en `on` y
+  una lectura que el mod sabe tratar). Si falta cualquiera, actúan como en la 0.40. Al apartarse
+  dejan `step_aside: "read_mod_active"` en `blocks.jsonl`. El latido de la sesión dice
+  `read_mod_active` desde el inicio. Check nuevo de `doctor`, **`mod.read_overlap`** (ya son 34):
+  avisa si quedan hooks de lectura en `settings.json` con el mod encendido, o si la opción está
+  encendida con la capa activa apagada.
+- **Clasificador único de lectura** (`resources/hooks/read_classifier.py`, REQ-019): decide si
+  una llamada lee un fichero, cuál y con qué alcance (`whole`, `range`, `partial` o
+  `unclassifiable`), y si escribe (`Edit`, `Write`, `NotebookEdit`, `>`, `tee`, `sed -i`,
+  `Set-Content`, `Out-File`, `cp`/`mv`…). Lo usan los hooks de lectura y de shell, que ya no
+  llevan reglas propias, y el mod. Comandos nuevos: `local-delegate hook classify` (con
+  `summarizable`), `hook classify --config` (tools, extensiones de prosa, umbral y primeros tokens
+  inofensivos, para que el mod no lleve copia de las reglas en JS), `hook classify --list-tools`
+  y `hook record-read`, que escribe la misma línea que el hook más `decision` y `source: "mod"`,
+  para que la serie de P-4 no se corte. Cada evento de los hooks de lectura y de shell lleva `via`
+  y `scope`, y su huella incluye la del clasificador.
+- **Rutas del daemon para clasificar**: `POST /api/hook/classify` y `POST /api/hook/classify-config`,
+  con el token del panel y solo desde loopback. La respuesta es la del CLI byte a byte (un test lo
+  compara sobre todo el corpus de lecturas); el daemon usa las variables que le manda el mod
+  (`hook_entry.CLASSIFY_ENV`), no las de su proceso.
+- **Banda de estado del mod** sobre el prompt (pieza `status`, opción `status_enabled`):
+  `◆ local-delegate · ● qwen3-8b · 3 delegaciones · 12,3k tok ahorrados ≈ $0,18`, bajo una regla
+  `─` atenuada que la separa del chat y con una fila vacía que la centra entre la regla y el
+  prompt. El punto es verde (listo), ámbar (ocupado) o rojo (backend caído); sin delegaciones dice
+  «sin delegaciones aún»; con el daemon caído, «daemon sin respuesta»; con el mod de lectura,
+  «lectura guiada». Si no cabe, quita primero lo menos importante, y se aparta ante una encuesta.
+  No enseña la cuota de Claude (es de la status line) ni usa `$.ui.status`, que Claude Code pinta
+  como aviso con ⚠ amarillo.
+- **`/api/stats` acepta `session=`**: cuenta solo las delegaciones de esa sesión de Claude Code.
+  `record-call` guarda una clave de un solo sentido de la sesión (`session_key`) y el daemon la
+  copia al log como `caller_session_key`; el id en claro no se guarda en ningún sitio. Las líneas
+  anteriores no cuentan para ninguna sesión.
+- **`scripts/measure_read_paths.py`**: cuenta, en los transcripts de Claude Code (subagentes
+  incluidos, sin ventanas de prueba), por qué vía se lee cada fichero, con el resultado, el tamaño
+  y lo que entró al contexto; usa el clasificador único y, con `--corpus`, escribe un corpus de
+  comandos anonimizado. En esta PC (30 días, 36 583 lecturas): `sed -n` mueve tanto volumen como
+  `Read` por franjas, y tras un `Read` bloqueado el fichero se rehace por franjas hasta el 96 %
+  (mediana); de ahí el umbral de 0,8.
 
-### Corrige (Codex con comillas simples)
+### Rendimiento
 
-- **`install` y `update` conservan `bearer_token_env_var` escrito con comillas simples** en
-  `~/.codex/config.toml`. `bearer_token_env_var = 'VAR'` (cadena literal TOML, como la deja quien
-  edita a mano u otro programa que reescribe el fichero) no se reconocía: la reinstalación quitaba
-  la variable y, con el daemon protegido por token, Codex recibía 401. Ahora se leen las dos formas
-  de cadena, con la variable nuestra o con otra del usuario, y una línea comentada ya no cuenta.
-- **`doctor` lee igual esa entrada**: `service.daemon_auth` ya no da por «sin cabecera» una entrada
-  de Codex con comillas simples, y `scaffold.mcp_codex` reconoce como HTTP `url='…'` sin espacios
-  alrededor del `=`.
+- **El mod de lectura le pregunta al daemon en vez de arrancar un proceso**: 1,3 ms de mediana y
+  1,6 ms de p95 por clasificación, frente a 89–90 ms y 97–99 ms del proceso (30 repeticiones). Sin
+  token, con el daemon caído, a los 300 ms, con 401, con un daemon de otra versión o con una
+  respuesta inválida, vuelve al proceso y no le pregunta al daemon durante 5 minutos.
+  `record-read` sigue siendo un proceso. En la medición de F4-live (`claude -p`, en caliente,
+  3 repeticiones por brazo) la sobrecarga por llamada `Bash` fue de −9 ms en la mediana y −49 ms
+  en el p95, sin ningún proceso del mod por llamada; con la clasificación por proceso había sido
+  de +49,5 / +92 ms.
+- **El proceso de respaldo ya no carga el servidor**: `hook classify` y `hook record-read` se
+  lanzan con `python -I -m local_delegate.hook`, sin importar el servidor ni el SDK de MCP; cada
+  `classify` baja de ~765 ms a ~125 ms de mediana. Un test ejecuta los argumentos exactos de
+  `mod/read.js` y falla si cargan `local_delegate.server` o `mcp`.
+- **Un prefiltro decide antes de clasificar**: el mod pide una vez por sesión `classify --config`
+  y después solo clasifica cuando la llamada nombra un fichero de prosa, un fichero guardado tras
+  un resumen o un fichero de al menos el umbral (comprobado con `$.fs.stat`, sin proceso). En el
+  guion de F4-live (11 comandos), las clasificaciones pasan de 6 a 0. `echo`, `printf`,
+  `Write-Host` y `Write-Output` pasan a la lista de inofensivos (con redirección siguen yendo al
+  clasificador).
 
-### Corrige (separación de la banda del mod)
+### Corregido
 
-- **La banda de estado ya no se confunde con la última línea del chat.** Lleva encima una regla `─`
-  atenuada del ancho de la banda, como las líneas que Claude Code pinta alrededor del prompt. Gasta
-  una sola fila más, no se pinta cuando la banda cede el sitio a una encuesta, y lo que la banda
-  quita cuando no cabe sigue igual. (SDD `claude-plugin-and-mods`, F3-status)
+- **`/local-summarize`, `/local-commit` y `/local-lint` enseñan el texto limpio**, no el JSON
+  crudo `{"result": "…"}` de FastMCP; un `[local-delegate error]` o un resumen vacío cuentan como
+  fallo.
+- **En macOS, las credenciales salen también del Llavero** (issue #409): el MCP, el daemon y el mod
+  buscan cada credencial en la variable de entorno y, si falta, en el Llavero
+  (`local-delegate-remote`, `local-delegate-web-token`) con `/usr/bin/security`, tope de 3 s y una
+  consulta por proceso; un `${VAR}` sin expandir ya no cuenta como clave. `doctor` dice de dónde
+  sale la clave y da `[WARN]` en macOS si solo está en el entorno del shell. Windows y Linux no
+  cambian.
+- **Una delegación cuyo cliente se va se para**: con `notifications/cancelled` (el Esc de Claude
+  Code), el `DELETE` de la sesión o una conexión cortada, deja de esperar turno y plaza, corta el
+  envío en curso, no manda más trozos y sale de `inflight.json` (antes seguía hasta el final: un
+  resumen de 256 KB, 302 s, con otra llamada esperando 192 s). El registro de uso la apunta con
+  `error: "cancelled"` y `cancel_reason`. `desktop-bridge` sale en ≤ 3 s al cerrarse stdin, sin
+  dejar un proceso huérfano.
+- **`install` y `update` conservan `bearer_token_env_var` con comillas simples** en
+  `~/.codex/config.toml` (antes la reinstalación la quitaba y Codex recibía 401), y `doctor` lee
+  igual esa entrada (`service.daemon_auth` y `scaffold.mcp_codex`, que ahora reconoce `url='…'`
+  sin espacios alrededor del `=`).
 
 ### Seguridad
 
-- **Suelo para `opentelemetry-api`** (`>=1.45.1,<2`), dependencia transitiva que traen `mcp` y
-  `fastapi`: hasta la 1.45.0 tenía GHSA-xcq7-p3pf-p88h (alerta 26 de Dependabot, gravedad media,
-  parseo de `tracestate` sin límite). Va en `pyproject.toml` y no solo en `uv.lock` para que el
-  wheel publicado lo lleve consigo, igual que el suelo de `anyio` de la 0.31.1.
-
-### Cambia (los hooks de lectura se apartan del mod de lectura)
-
-- **Con el mod de lectura activo, los hooks de lectura se apartan** (REQ-023): antes actuaban los
-  dos sobre la misma lectura (el mod resumía y el hook registraba o bloqueaba). `hooks.json` no
-  cambia; el hook de `Read` y el de `Bash|PowerShell` se apartan solo con cuatro condiciones a la
-  vez: la opción `read_mod_enabled` encendida, el latido de **su misma sesión** con
-  `read_mod_active` y `process_run` de menos de 24 h, la capa que bloquea en `on` y una lectura que
-  el mod sabe tratar (fichero en disco, alcance conocido). Si falta cualquiera, actúan como en la
-  0.40. Al apartarse dejan en `blocks.jsonl` una línea con `step_aside: "read_mod_active"`.
-- **El latido de la sesión dice `read_mod_active` desde el inicio**: `register.js` escribía el
-  latido de `session.start` después de la pieza de lectura y le pisaba el campo, así que solo
-  aparecía tras la primera lectura clasificada. Ahora el `onSessionStart` de una pieza puede
-  devolver campos para ese latido.
-- **Check nuevo de `doctor`, `mod.read_overlap`** (ya son 34): avisa si el mod de lectura está
-  encendido y quedan hooks de lectura en `settings.json`, que no ven la opción y no se apartan, o
-  si la capa activa del hook de lectura está apagada y no actúa ninguno.
-
-### Añade (mod de lectura, encendido por defecto)
-
-- **Pieza `read` del mod del plugin** (REQ-020, REQ-021 y REQ-022), con la opción
-  `read_mod_enabled`, que sale **encendida por defecto**. Pregunta a `local-delegate hook
-  classify` por cada llamada que puede leer o escribir un fichero. Una lectura entera de un fichero
-  de 8 KB o más, o unas franjas que juntas cubren el 80 % de sus líneas, pasa por `local_summarize`
-  y el resumen llega como resultado de la propia tool: con diálogo la persona elige «resumir con el
-  modelo local / leer entero»; sin diálogo (`-p`, subagentes) el mod resume solo. Si el resumen o el
-  clasificador fallan, la lectura real pasa: nunca bloquea sin dar contenido. Las lecturas que el
-  clasificador no puede acotar solo llevan un aviso. Tras un resumen, `Edit`, `Write`,
-  `NotebookEdit` y las escrituras de shell sobre ese fichero se rechazan hasta que haya una lectura
-  real; la lista se guarda por sesión y aguanta `--resume`. Cada decisión se registra con
-  `hook record-read`.
-- **Encendido por defecto tras la verificación en vivo** (F4-live): con `claude -p` en Windows
-  pasaron el control positivo (sin el mod, `Write` pasa) y el negativo (con el mod, tras un
-  resumen, `Write` se rechaza y el fichero no cambia), la guarda tras `--resume`, el hook que se
-  aparta y el latido. Una opción sin valor guardado cuenta como encendida en las tres piezas que la
-  leen (el mod, los hooks de lectura del plugin y `doctor`); solo `false` la apaga. Quien la haya
-  guardado en `false` desde el menú del plugin la conserva apagada: se enciende en ese mismo menú.
-  Queda **pendiente de verificar en sesión interactiva** la parte con diálogo: los botones
-  «resumir / leer entero» y la guarda tras `--resume` en una sesión de terminal.
-
-### Corrige (mod de lectura: solo prosa y resumen limpio)
-
-- **El mod de lectura solo resume prosa grande**, la misma banda que bloquea el hook de lectura
-  (`.md`, `.txt`, `.markdown`, `.rst` por encima de `LD_HOOK_READ_SUGGEST_KB`). El código, la
-  config y los datos pasan literales, también por franjas, y se registran como `not_prose`: antes
-  resumía cualquier fichero de 8 KB o más, y un subagente que iba a programar no podía leer el
-  código. La banda la decide Python: `hook classify` lleva el campo nuevo `summarizable`, calculado
-  con las constantes del hook (la lista de prosa vive ahora en el clasificador). Los `.log` quedan
-  fuera: la medición de lecturas no trae datos por extensión.
-- **El resumen llega como texto limpio**, sin el envoltorio `{"result": …}` de FastMCP y con los
-  saltos de línea de verdad. Un error de la tool (`isError` o `[local-delegate error]`) cuenta como
-  resumen fallido y la lectura real pasa.
-
-### Corrige (comandos del mod y medición de lecturas)
-
-- **`/local-summarize`, `/local-commit` y `/local-lint` enseñan el texto limpio**: antes enseñaban
-  el JSON crudo `{"result": "…"}` con el que FastMCP envuelve la respuesta de la tool. Sacan el
-  texto igual que el mod de lectura, con una sola función compartida en `mod/common.js`
-  (`toolResultText`), y un `[local-delegate error]` o un resumen vacío dentro del envoltorio
-  cuentan como fallo.
-- **`scripts/measure_read_paths.py` ya no lleva su propia copia de las reglas de lectura**: importa
-  el clasificador único. Sobre los mismos transcripts (30 días, 36 583 lecturas) da las mismas
-  cuentas, resultados, tamaños y caracteres por vía; cambian los nombres de alcance
-  (`unclassifiable` donde decía `unknown`, y también en búsquedas, imágenes, `git show` y otros
-  MCP, como en el contrato de `hook classify`) y, por normalizar las rutas igual que el
-  clasificador, unos pocos ficheros distintos se funden (`dir/../x` y `x` son el mismo).
-
-### Añade (clasificador único de lectura)
-
-- **Un solo módulo decide qué lee cada llamada** (`resources/hooks/read_classifier.py`, REQ-019):
-  si es leer un fichero, cuál y con qué alcance (`whole`, `range`, `partial` o `unclassifiable`),
-  y si es una escritura (`Edit`, `Write`, `NotebookEdit`, `>`, `tee`, `sed -i`, `Set-Content`,
-  `Out-File`, `cp`/`mv`…). Lo usan los hooks de lectura y de shell de la entrega por settings, que
-  ya no llevan reglas propias, y el mod de lectura del plugin (por `hook classify`). Sus reglas salen de la
-  medición de F4-measure-reads y se prueban contra su corpus de comandos reales.
-- **`local-delegate hook classify`** (stdin: la entrada de un hook `PreToolUse`; stdout:
-  `kind`, `path`, `scope`, `bytes`, `range`, `via` y `read_switch`), **`hook classify
-  --list-tools`** y **`hook record-read`**, que escribe en la telemetría de los hooks la misma
-  línea que habría escrito el hook, más `decision` y `source: "mod"` (`summarized` y `auto_summarized` cuentan como
-  bloqueo; `read_whole`, `dismissed`, `summary_failed` y `warned`, no): cuando el mod actúe, la serie
-  de P-4 no se corta.
-- **Telemetría por vía**: cada evento de los hooks de lectura y de shell lleva `via` y `scope`, y su
-  huella incluye la del clasificador, así que cambiar una regla abre un tramo nuevo de P-4.
-
-### Cambia (hook de shell)
-
-- **`head X` ya no se bloquea**: saca diez líneas, no el fichero entero. `type X` y `gc X` solo
-  cuentan como volcado en PowerShell (en Bash, `type` dice qué es un comando).
-  (SDD `claude-plugin-and-mods`, F4-classifier)
-
-### Corrige (credenciales en macOS)
-
-- **En macOS, las credenciales salen también del Llavero, no solo del entorno del shell** (issue
-  #409). Claude Desktop abierto desde el Dock, o una sesión de Claude Code cuyo entorno de login
-  Desktop no llegó a resolver, arrancaban el MCP sin `LOCAL_DELEGATE_API_KEY` y el backend remoto
-  daba `401` en silencio. Ahora el MCP, el daemon y el mod del plugin buscan cada credencial en el
-  mismo orden: la variable de entorno y, si falta, el Llavero (`local-delegate-remote` para la clave
-  del backend, `local-delegate-web-token` para el token del puerto), con `/usr/bin/security`, tope
-  de 3 s y una consulta por proceso. Una referencia `${VAR}` que el cliente no expandió ya no cuenta
-  como clave. El valor no se registra ni se imprime. Windows y Linux no cambian.
-- **`doctor` dice de dónde sale la clave del backend.** En macOS da `[WARN]` cuando solo está en el
-  entorno del shell que lo corre (antes `[ OK ]`, aunque una app gráfica no la viera) y propone
-  `security add-generic-password -U -a "$USER" -s local-delegate-remote -w`. La wiki (Backend
-  remoto y Daemon) explica cómo guardarlas; el LaunchAgent `remote-env` queda solo para Codex.
-  (SDD `claude-plugin-and-mods`, macos-keychain)
-
-### Cambia (banda de estado del mod)
-
-- **La entrada del mod ya no sale con ⚠ amarillo como si fuera un aviso.** Claude Code 2.1.308 fija
-  todo texto de `$.ui.status` como aviso sin color y lo pinta `⚠ <plugin>: <texto>` en el color
-  `warning`, y `$.ui.status` no admite otro tono. La pieza `status` pasa a la banda sobre el prompt
-  (`ui.render` de `AbovePrompt`), donde elige sus colores del tema: `◆ local-delegate · ● qwen3-8b ·
-  3 delegaciones · 12,3k tok ahorrados ≈ $0,18`. El punto es verde (listo), ámbar (ocupado) o rojo
-  (backend caído); sin delegaciones dice «sin delegaciones aún» en vez de «0 tok»; con el daemon
-  caído, «daemon sin respuesta»; con `read_mod_enabled`, «lectura guiada». Si no cabe, quita primero
-  el coste y lo menos importante, y se aparta ante una encuesta. **Deja de mostrar la cuota de 5 h**:
-  ya la da la status line. (SDD `claude-plugin-and-mods`, F3-status)
-
-### Añade (barra de estado del mod)
-
-- **Cuota y ahorro de la sesión en la barra de estado de Claude Code** (pieza `status` del mod,
-  interruptor `status_enabled`). Tras cada turno muestra `LD · cuota 5h 42% · ahorro 12,3k tok`: el
-  % de la ventana de 5 h tal como lo da Claude Code (`session.measure`) y el ahorro neto
-  (`tokens_context_net`) de las delegaciones de **esa** sesión según el daemon. Si el daemon no
-  responde o no hay token, la entrada se borra sin error. (SDD `claude-plugin-and-mods`, F3-status)
-- **`/api/stats` acepta `session=`**: cuenta solo las delegaciones de esa sesión de Claude Code. El
-  hook `record-call` guarda en su nota una clave de un solo sentido de la sesión
-  (`session_key`, sha256 truncado) y el daemon la copia a la línea del log como
-  `caller_session_key`; el id de sesión en claro sigue sin guardarse en ningún sitio. Las líneas
-  anteriores no tienen clave y no cuentan para ninguna sesión.
-
-### Retira
-
-- **Los siete nombres retirados en la 0.38.0 salen del registro de obsoletos.** Se avisaron hasta
-  la 0.40.x, como estaba anunciado; desde esta versión `doctor` (check «nombres obsoletos») y
-  `local_status` ya no avisan de ellos, `update` e `install` ya no los migran, y el subcomando y la
-  opción viejos dan el error genérico de argparse (código 2) en vez del mensaje que nombraba el
-  nuevo. Siguen sin efecto, igual que desde la 0.38.0. Si alguno sigue puesto, renómbralo a mano:
-  `recalcular-coste` → `recompute-cost`, `--reiniciar-calibracion` → `--reset-calibration`,
-  `LD_HOOK_READ_BLOQUEAR` → `LD_HOOK_READ_BLOCK`, `LD_HOOK_READ_INTERRUPTOR` →
-  `LD_HOOK_READ_SWITCH_FILE`, `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO` →
-  `LOCAL_DELEGATE_STRUCTURED_SUMMARY`, `LOCAL_DELEGATE_COSTE_RESPALDO` →
-  `LOCAL_DELEGATE_COST_FALLBACK` y `~/.claude/local-delegate-bloqueo-apagado` →
-  `~/.claude/local-delegate-block-off`. Sin esto la 0.41.0 no podía salir: el test de horizonte
-  la ponía en rojo. (SDD `claude-plugin-and-mods`, retire-seven-names)
-
-### Añade (medición de las vías de lectura)
-
-- **`scripts/measure_read_paths.py`: por qué vías se leen los ficheros.** Recorre los transcripts
-  de Claude Code (subagentes incluidos, sin las ventanas de `test-window`) y cuenta cada lectura
-  por vía: `Read` entero y por franjas, cada forma de shell (`cat`/`Get-Content`, `head`/`tail`,
-  `sed -n`, `awk`, `grep`, `python -c "open(…)"`, `git show`, con y sin tubería), `Grep` y las tools
-  de lectura de otros MCP; con el resultado (hecha o bloqueada por el hook), el tamaño del fichero
-  y lo que entró al contexto. Solo emite cifras; con `--corpus` escribe un corpus de comandos
-  anonimizado para el clasificador de lectura. En esta PC (30 días): `sed -n` mueve tanto volumen
-  como `Read` por franjas, y tras un `Read` bloqueado el fichero se rehace por franjas hasta el 96 %
-  (mediana); de ahí el umbral de 0,8 de la lectura acumulada. (SDD `claude-plugin-and-mods`,
-  F4-measure-reads)
-
-### Corrige
-
-- **Una delegación cuyo cliente se va ya no sigue hasta el final ni retiene el turno del
-  backend.** Antes, `notifications/cancelled` (el Esc de Claude Code), el `DELETE` de la sesión o
-  una conexión cortada no paraban nada: el SDK cancelaba el handler, pero la tool corre en un hilo
-  que no se enteraba, así que seguía mandando trozos (medido: un resumen de 256 KB, 302 s) y otra
-  llamada esperaba el turno todo ese tiempo (192 s con `local_wait: "turn"`). Ahora la llamada se
-  para: deja de esperar turno y plaza, corta la conexión del envío en curso (el backend deja de
-  generar ese trozo y puede cambiar de modelo ya), no manda más trozos y sale de
-  `inflight.json`. Cada envío de una llamada de tool usa ahora su propia conexión, para poder
-  cortarla sin tocar las de otras llamadas. El registro de uso la apunta con `ok: false`, `error: "cancelled"` y un campo
-  nuevo, `cancel_reason` (`notification`, `disconnect` o `aborted`). (SDD
-  `claude-plugin-and-mods`, abandoned-calls)
-- **`desktop-bridge` sale en ≤ 3 s al cerrarse stdin** aunque tenga peticiones en curso: tras
-  medio segundo de margen manda `notifications/cancelled` por cada una, corta y cierra la sesión.
-  Antes esperaba a que el daemon terminara y quedaba un proceso huérfano.
+- **Suelo para `opentelemetry-api`** (`>=1.45.1,<2`), dependencia transitiva de `mcp` y `fastapi`:
+  hasta la 1.45.0 tenía GHSA-xcq7-p3pf-p88h (alerta 26 de Dependabot, gravedad media). Va en
+  `pyproject.toml` para que el wheel publicado lo lleve consigo.
 
 ## [0.40.0] - 2026-10-22
 
@@ -3533,7 +3437,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.40.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.41.0...HEAD
+[0.41.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.40.0...v0.41.0
 [0.40.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.39.0...v0.40.0
 [0.39.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.38.0...v0.39.0
 [0.38.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.37.0...v0.38.0

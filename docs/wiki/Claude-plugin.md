@@ -75,7 +75,9 @@ telemetría con el entorno del cliente y solo ocurre en las decisiones.
 
 La opción `read_mod_enabled` del plugin sale **encendida por defecto** desde la 0.41: sin valor
 guardado cuenta como encendida, y solo `false` la apaga (desde el menú de configuración del plugin
-en Claude Code). Con ella encendida, el mod de lectura y los hooks de lectura
+en Claude Code). Quien la guardó en `false` con la 0.40.0 la conserva apagada: se enciende en ese
+mismo menú. Las sesiones abiertas siguen con el mod que cargaron al empezar: tras actualizar o
+cambiar la opción, abre una sesión nueva. Con ella encendida, el mod de lectura y los hooks de lectura
 (`Read` y `Bash|PowerShell`) no actúan los dos sobre la misma lectura. `hooks.json` no cambia: los
 hooks siguen declarados y **se apartan** solo cuando el mod va a hacer exactamente lo que habrían
 hecho ellos, es decir, cuando se cumplen las cuatro condiciones a la vez:
