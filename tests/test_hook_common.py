@@ -13,6 +13,7 @@ import importlib.util
 import json
 import time
 import urllib.error
+import urllib.request
 from pathlib import Path
 
 import pytest
@@ -220,7 +221,7 @@ def test_a_401_means_the_backend_IS_there(monkeypatch, tmp_path):
     def _raises_401(request, timeout=None):
         raise _Http401()
 
-    monkeypatch.setattr(common.urllib.request, "urlopen", _raises_401)
+    monkeypatch.setattr(urllib.request, "urlopen", _raises_401)
 
     assert common.backend_available(marker=tmp_path / "health.json") is True
 
@@ -237,7 +238,7 @@ def test_a_500_does_not_count_as_a_healthy_backend(monkeypatch, tmp_path):
         def __exit__(self, *a):
             return False
 
-    monkeypatch.setattr(common.urllib.request, "urlopen", lambda *a, **k: _Response())
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: _Response())
 
     assert common.backend_available(marker=tmp_path / "health.json") is False
 
