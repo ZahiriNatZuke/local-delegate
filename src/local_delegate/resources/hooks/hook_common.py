@@ -197,6 +197,42 @@ def mod_decision_fields(decision: object) -> dict:
     return fields
 
 
+#: El `id` que pone el mod a cada decision (F4-live-fixes): 12 hexadecimales, como `new_id`.
+_MOD_RECORD_ID = re.compile(r"^[0-9a-f]{12}$")
+#: Cuanto se lee de la cola de la telemetria para ver si ese `id` ya esta escrito. El reintento llega
+#: en la siguiente llamada a una tool (segundos despues): unas decenas de lineas, muy por debajo.
+RECORD_ID_TAIL_BYTES = 64 * 1024
+
+
+def mod_record_id(entry: Mapping) -> str | None:
+    """El `id` que mando el mod para esta decision, o `None` si no hay o no tiene la forma.
+
+    El mod lo pone UNA vez y lo manda por todas sus vias (daemon, proceso y reintento): en vivo
+    (2026-10-23) el daemon contesto despues del tope del mod, que dio la linea por perdida y la
+    reintento, y la decision quedo escrita dos veces. Con el mismo `id`, la segunda se descarta.
+    """
+    value = entry.get("id")
+    return value if isinstance(value, str) and _MOD_RECORD_ID.match(value) else None
+
+
+def already_recorded(record_id: str) -> bool:
+    """Si la cola del destino de la telemetria ya tiene una linea con `record_id`. Lee solo los
+    ultimos `RECORD_ID_TAIL_BYTES`; sin destino o sin fichero, `False` (se escribe como siempre)."""
+    destination = str(current_environ().get("LD_HOOK_TELEMETRY_LOG", "")).strip()
+    if not destination:
+        return False
+    needle = json.dumps({"id": record_id})[1:-1].encode("utf-8")
+    try:
+        with Path(destination).open("rb") as stream:
+            stream.seek(0, os.SEEK_END)
+            size = stream.tell()
+            stream.seek(max(0, size - RECORD_ID_TAIL_BYTES))
+            tail = stream.read()
+    except OSError:
+        return False
+    return needle in tail
+
+
 # --- El hook se aparta del mod de lectura (REQ-023, decision 10 del plan) -------------------------
 #
 # Con el mod de lectura encendido actuaban los dos sobre la misma lectura. El hook se aparta SOLO

@@ -275,3 +275,98 @@ def test_bad_bodies_are_rejected(client):
             RECORD, content=content, headers={"Content-Type": "application/json"}
         )
         assert response.status_code == 400, (content, response.status_code)
+
+
+# --- Idempotencia: el `id` que pone el mod (F4-live-fixes) -----------------------------------------
+#
+# En vivo (2026-10-23) una lectura resumida dejó DOS líneas `summarized`: el daemon contestó después
+# del tope de 1 s del mod, el mod probó el proceso (que el motor rechazó tras el diálogo), dio la
+# línea por perdida y la reintentó en la llamada siguiente, cuando el daemon ya la había escrito.
+# Ahora el mod pone el `id` de la línea UNA vez y lo manda por todas las vías; la escritura descarta
+# un `id` que ya está en la cola del fichero.
+
+MOD_ID = "a1b2c3d4e5f6"
+
+
+def _notes(tmp: Path) -> list[dict]:
+    hook_common = hook_entry._load_hook_module("hook_common")
+
+    path = tmp / hook_common.FILE_NAMES["block_notes"][1]
+    if not path.exists():
+        return []
+    return [json.loads(line) for line in path.read_text("utf-8").splitlines() if line]
+
+
+@pytest.mark.parametrize(
+    ("decision", "via"),
+    [("summarized", "read_whole"), ("summarized", "shell_cat"), ("read_whole", "read_whole")],
+)
+def test_the_same_id_is_written_once(tmp_path, monkeypatch, client, decision, via):
+    import tempfile
+
+    tmp = tmp_path / "tmp"
+    tmp.mkdir()
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp))
+    prose = _prose(tmp_path / "docs")
+    log = tmp_path / "telemetry.jsonl"
+    entry = _entry(prose, decision, via, id=MOD_ID)
+    env = _client_env(tmp_path, log)
+
+    # El daemon tarde, el reintento por el daemon y el proceso de respaldo: la misma entrada.
+    for _ in range(2):
+        response = client.post(RECORD, json={"payload": entry, "env": env})
+        assert response.status_code == 204, response.text
+    _cli_in_process(monkeypatch, entry, env)
+
+    lines = _lines(log)
+    assert [line["decision"] for line in lines] == [decision], lines
+    # La línea lleva el id del mod, también la que no bloquea (es la clave de la idempotencia).
+    assert lines[0]["id"] == MOD_ID
+    if decision == "summarized":
+        # Y la nota del bloqueo no se duplica: el daemon cruza la delegación por ese id.
+        assert [note["id"] for note in _notes(tmp)] == [MOD_ID]
+
+
+def test_a_new_id_is_a_new_line(tmp_path, client):
+    """Dos decisiones de verdad (dos lecturas) con ids distintos son dos líneas."""
+    prose = _prose(tmp_path / "docs")
+    log = tmp_path / "telemetry.jsonl"
+    env = _client_env(tmp_path, log)
+    for record_id in (MOD_ID, "0f0f0f0f0f0f"):
+        payload = _entry(prose, "read_whole", id=record_id)
+        assert client.post(RECORD, json={"payload": payload, "env": env}).status_code == 204
+    assert [line["id"] for line in _lines(log)] == [MOD_ID, "0f0f0f0f0f0f"]
+
+
+@pytest.mark.parametrize("record_id", [None, "../etc", "A1B2C3D4E5F6", "a1b2c3", 42])
+def test_without_a_valid_id_every_call_writes(tmp_path, client, record_id):
+    """Un mod de la 0.41.0 (sin id) o un id que no tiene la forma: se escribe como antes, y un id
+    raro no se copia a la línea (la de un bloqueo lleva uno nuevo)."""
+    prose = _prose(tmp_path / "docs")
+    log = tmp_path / "telemetry.jsonl"
+    env = _client_env(tmp_path, log)
+    extra = {} if record_id is None else {"id": record_id}
+    for _ in range(2):
+        payload = _entry(prose, "summarized", **extra)
+        assert client.post(RECORD, json={"payload": payload, "env": env}).status_code == 204
+    lines = _lines(log)
+    assert len(lines) == 2, lines
+    assert all(line["id"] != record_id for line in lines)
+    assert all(len(line["id"]) == 12 for line in lines)
+
+
+def test_only_the_tail_is_read(tmp_path, client):
+    """La comprobación lee la cola del fichero, no todo: un id que quedó muy atrás no frena una
+    línea nueva (y un fichero de telemetría grande no cuesta leerlo entero en cada decisión)."""
+    hook_common = hook_entry._load_hook_module("hook_common")
+
+    prose = _prose(tmp_path / "docs")
+    log = tmp_path / "telemetry.jsonl"
+    env = _client_env(tmp_path, log)
+    old = json.dumps({"event": "PreToolUse", "id": MOD_ID}) + "\n"
+    filler = json.dumps({"event": "PreToolUse", "pad": "x" * 200}) + "\n"
+    count = hook_common.RECORD_ID_TAIL_BYTES // len(filler) + 2
+    log.write_text(old + filler * count, encoding="utf-8")
+    payload = _entry(prose, "read_whole", id=MOD_ID)
+    assert client.post(RECORD, json={"payload": payload, "env": env}).status_code == 204
+    assert _lines(log)[-1].get("decision") == "read_whole"

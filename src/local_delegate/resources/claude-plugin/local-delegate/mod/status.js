@@ -30,10 +30,9 @@
 //     `local-delegate · ● qwen3-8b listo · 3 delegaciones · 12,3k tokens ahorrados ≈ $0,18 ·
 //     lecturas: pregunta`, color only on the dot (all of it red when the backend is down). The rule
 //     stays because a line without a background would read as the last line of the chat.
-//   - any other surface (Claude Desktop): one native row, the name a dim link to the panel, a
-//     round-bordered pill with the dot and the state, the model dim, the tool at work, the figures
-//     bold, and the read mode dim on the right (the typography props wait for the minimum CLI:
-//     see `statusDeskText`).
+//   - any other surface (Claude Desktop): one line of text in two tones, like the app's own
+//     (`local-delegate · ● Listo · qwen3-8b · 3 delegaciones · ...`), and the read mode dim on the
+//     right; no pill, no link, no typography props (see `statusDesktopTree`).
 // The read mode follows `hasDialog()`: with a person at the prompt the read mod asks before it
 // summarizes («lecturas: pregunta»), without one it summarizes on its own («lecturas: resume solo»).
 // While delegating the dot turns (◐◓◑◒) with the seconds the oldest call has run, so the turn costs
@@ -64,11 +63,6 @@ const STATUS_SEPARATOR = ' · '
 const STATUS_RULE = '─'
 const STATUS_TOOL_PREFIX = 'mcp__local-delegate__'
 const STATUS_TOOL = /^mcp__local-delegate__/
-// The daemon's panel. The engine's validator takes `http:` links to `localhost` alone, never to
-// 127.0.0.1 (where the daemon listens): the live test checks that the panel answers there.
-const STATUS_PANEL = 'http://localhost:9393'
-// Whether Desktop Texts carry `size`, `weight`, `mono` and `tabular` (see `statusDeskText`).
-const STATUS_TYPE_PROPS = false
 const STATUS_HOT_MS = 1000
 const STATUS_COLD_MS = 30000
 
@@ -116,7 +110,21 @@ function statusModelName(running) {
   return name ? statusCut(name) : null
 }
 
-/** The oldest delegation in flight as `{ tool, seconds, more, model }`, or `null`. */
+/**
+ * How far a delegation split in chunks has got (`chunks` and the 1-based `chunk` that
+ * `/api/inflight` lists), or `null`: one chunk, or none named, is no progress to show.
+ */
+function statusProgress(item) {
+  const chunks = statusNumber(item.chunks)
+  const chunk = statusNumber(item.chunk)
+  if (chunks === null || chunk === null || chunks <= 1 || chunk < 1) {
+    return null
+  }
+  const total = Math.floor(chunks)
+  return { chunk: Math.min(Math.floor(chunk), total), chunks: total }
+}
+
+/** The oldest delegation in flight as `{ tool, seconds, more, model, progress }`, or `null`. */
 function statusTask(list) {
   const items = list.filter(item => item && typeof item === 'object')
   if (items.length === 0) {
@@ -131,6 +139,7 @@ function statusTask(list) {
     seconds: Math.max(0, Math.floor(statusNumber(oldest.elapsed_s) ?? 0)),
     more: items.length - 1,
     model,
+    progress: statusProgress(oldest),
   }
 }
 
@@ -159,7 +168,7 @@ export function statusSnapshot(stats, backend, inflight) {
       state = 'down'
     } else if (count > 0) {
       state = 'busy'
-      task = statusTask(list) || { tool: null, seconds: 0, more: Math.max(0, count - 1), model: null }
+      task = statusTask(list) || { tool: null, seconds: 0, more: Math.max(0, count - 1), model: null, progress: null }
     } else {
       state = 'ready'
     }
@@ -195,15 +204,30 @@ function statusPart(rank, joint, ...pieces) {
   return { rank, joint, pieces }
 }
 
-function statusTaskPieces(task) {
+/** How long a delegation has run: `14 s` under a minute, `3 min 16 s` (`3m 16s`) from there. */
+function statusDuration(seconds) {
+  if (seconds < 60) {
+    return t('status.seconds', { n: seconds })
+  }
+  return t('status.minutes', { m: Math.floor(seconds / 60), s: seconds % 60 })
+}
+
+// The tool at work: its name, its chunk when it is split (`7/9`), and how long
+// it has run, dim: `local_summarize 7/9 · 3 min 16 s`, or `local_summarize 14 s` in one piece.
+function statusTaskPieces(task, moreKey = 'status.more') {
   const pieces = []
   if (task.tool) {
     pieces.push({ text: task.tool })
   }
-  const seconds = t('status.seconds', { n: task.seconds })
-  pieces.push({ text: task.tool ? ` ${seconds}` : seconds, dim: true })
+  if (task.progress) {
+    const progress = `${task.progress.chunk}/${task.progress.chunks}`
+    pieces.push({ text: task.tool ? ` ${progress}` : progress })
+  }
+  const time = statusDuration(task.seconds)
+  const lead = task.progress ? STATUS_SEPARATOR : task.tool ? ' ' : ''
+  pieces.push({ text: `${lead}${time}`, dim: true })
   if (task.more > 0) {
-    pieces.push({ text: ` ${t('status.more', { n: task.more })}`, dim: true })
+    pieces.push({ text: ` ${t(moreKey, { n: task.more })}`, dim: true })
   }
   return pieces
 }
@@ -344,6 +368,15 @@ function statusLineTree($, e, snapshot, options, columns) {
   return h(Box, { flexDirection: 'column' }, rule, h(Box, { flexDirection: 'row' }, ...statusTexts(Text, parts)))
 }
 
+/**
+ * The bar's left parts as drawn: whatever comes right after the chip joins it with a space, never
+ * with a separator (live 2026-10-23: with no model, `● LISTO · 29 delegaciones` left a loose `·`).
+ * After `statusFit`, so a part it dropped does not leave its neighbour's separator behind either.
+ */
+function statusAfterChip(parts) {
+  return parts.map((part, index) => (index === 1 && part.joint === STATUS_SEPARATOR ? { ...part, joint: ' ' } : part))
+}
+
 /** Terminal, `bar`: one row with the message background, the chip and figures left, reads right. */
 function statusBarTree($, e, snapshot, options, columns) {
   const { Box, Text } = $.ui.resolve(e)
@@ -351,7 +384,7 @@ function statusBarTree($, e, snapshot, options, columns) {
   // The right side fits like any other part (its joint is the gap); 2 cells of padding.
   const kept = statusFit(right ? [...parts, right] : parts, columns, 2)
   const keptRight = right && kept.includes(right) ? right : null
-  const left = h(Box, { flexDirection: 'row', flexShrink: 1 }, ...statusTexts(Text, kept.filter(part => part !== right)))
+  const left = h(Box, { flexDirection: 'row', flexShrink: 1 }, ...statusTexts(Text, statusAfterChip(kept.filter(part => part !== right))))
   const children = [left]
   if (keptRight) {
     children.push(h(Text, statusTextProps(keptRight.pieces[0]), keptRight.pieces[0].text))
@@ -370,111 +403,82 @@ function statusBarTree($, e, snapshot, options, columns) {
 }
 
 /**
- * A Desktop Text with the props the minimum CLI takes. The approved design asks for the
- * typography props (`size`, `weight`, `mono`, `tabular`), and the band writes them; but the engine
- * of the minimum CLI (2.1.292) refuses the whole tree over `size` ("Text prop "size" is not
- * allowed") and draws its own band, and the session cannot ask its engine's version
- * (`$.session.version` is not there in 2.1.292 nor in 2.1.309). So, until the minimum CLI takes
- * them (`STATUS_TYPE_PROPS`), a heavy `weight` becomes `bold` and the rest stay out.
+ * Desktop and the other remote surfaces (F4-live-fixes, design v2): ONE line of text, like the
+ * app's own `Opus 5.5 Medio` or `Se inició en este ordenador · local-delegate`. The left side is a
+ * single Text with inline Texts inside, so every span shares the baseline:
+ * `local-delegate · ● Listo · qwen3-8b · 3 delegaciones · 12,3k tokens ahorrados ≈ $0,18`, and the
+ * read mode dim on the right. Two tones and no more: the data (the state, the figures, the tool at
+ * work) in the normal color, everything else dim; color only on the dot, and on the word too when
+ * the model is down or the service does not answer. No border, background, link (the panel asks
+ * for the token: a link would open on a 401), `gap`, padding nor typography props (the minimum CLI,
+ * 2.1.292, refuses the whole tree over `size`): the spaces and the `·` are in the text.
+ *
+ * Live check pending: if Desktop stacks the inline Texts instead of running them on one line, the
+ * fallback is a row of sibling Texts, without boxes or `gap`.
  */
-function statusDeskText(Text, props, text) {
-  if (STATUS_TYPE_PROPS) {
-    return h(Text, props, text)
-  }
-  const { size, weight, mono, tabular, ...plain } = props
-  if (weight === 'semibold' || weight === 'bold') {
-    plain.bold = true
-  }
-  return h(Text, plain, text)
-}
-
-/** Desktop and the other remote surfaces: one native row with a pill. */
 function statusDesktopTree($, e, snapshot, options, columns) {
-  const { Box, Text, Link } = $.ui.resolve(e)
-  // Spacing in numbers: the minimum CLI (2.1.292) refuses step names (`'sm'`, `'xs'`) in `gap`.
-  const gap = 1
-  const small = 1
+  const { Box, Text } = $.ui.resolve(e)
   const lang = language()
-  const note = { size: 'footnote', wrap: 'truncate-end' }
   const glyph = statusGlyph(snapshot)
   let word
-  let color
+  let color = null
   if (snapshot.daemon === 'down') {
     word = t('status.pill_daemon_down')
     color = 'error'
   } else if (snapshot.backend === null) {
     word = t('status.pill_no_data')
-    color = null
   } else {
     word = t(`status.pill_${snapshot.backend}`)
     color = STATUS_COLOR[snapshot.backend]
   }
-  const pillProps = { flexDirection: 'row', borderStyle: 'round', paddingX: small }
-  const dotProps = { ...note }
-  const wordProps = { ...note, weight: 'medium' }
-  if (color) {
-    pillProps.borderColor = color
-    dotProps.color = color
-    if (color === 'error') {
-      wordProps.color = color
-    }
-  } else {
-    pillProps.borderDimColor = true
-    dotProps.dimColor = true
-    wordProps.dimColor = true
-  }
-  const name = h(Link, { href: STATUS_PANEL }, statusDeskText(Text, { ...note, weight: 'medium', dimColor: true }, t('status.name')))
-  const pill = h(Box, pillProps, statusDeskText(Text, dotProps, glyph), statusDeskText(Text, wordProps, ` ${word}`))
-  const left = [name, pill]
+  const dim = { dimColor: true }
+  const spans = [
+    h(Text, dim, t('status.name')),
+    h(Text, dim, STATUS_SEPARATOR),
+    h(Text, color ? { color } : dim, glyph),
+    h(Text, color === 'error' ? { color } : color ? {} : dim, ` ${word}`),
+  ]
   let right = null
   if (snapshot.daemon !== 'down') {
-    // The same parts as the terminal decide what fits; each becomes its own element here.
-    const { parts, right: reads } = statusBarParts(snapshot, options, lang)
-    const kept = statusFit(reads ? [...parts.slice(1), reads] : parts.slice(1), columns, 4 + word.length + t('status.name').length)
+    const { parts, right: reads } = statusDesktopParts(snapshot, options, lang)
+    const head = t('status.name').length + STATUS_SEPARATOR.length + glyph.length + 1 + word.length
+    const kept = statusFit(reads ? [...parts, reads] : parts, columns, head)
     for (const part of kept) {
       if (part === reads) {
-        right = statusDeskText(Text, { size: 'caption', dimColor: true, wrap: 'truncate-end' }, t(`status.reads_${statusReadMode(options)}_title`))
+        right = h(Text, { dimColor: true, wrap: 'truncate-end' }, part.pieces[0].text)
         continue
       }
-      left.push(...statusDesktopPart(Box, Text, part, note, small))
-    }
-  }
-  const row = h(Box, { flexDirection: 'row', alignItems: 'center', gap, flexShrink: 1 }, ...left)
-  return h(Box, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }, row, ...(right ? [right] : []))
-}
-
-/** One part of the bar as Desktop elements: the model, the tool at work, or a figure. */
-function statusDesktopPart(Box, Text, part, note, small) {
-  if (part.kind === 'model') {
-    return [statusDeskText(Text, { ...note, dimColor: true }, part.pieces[0].text)]
-  }
-  if (part.kind === 'task') {
-    // The tool at work: its name in mono, then how long it has run (and how many more), dim.
-    const out = []
-    const rest = []
-    for (const piece of part.pieces) {
-      if (piece.dim) {
-        rest.push(piece.text.trim())
-      } else {
-        out.push(statusDeskText(Text, { ...note, mono: true }, piece.text))
+      if (part.joint) {
+        spans.push(h(Text, dim, part.joint))
+      }
+      for (const piece of part.pieces) {
+        spans.push(h(Text, piece.dim ? dim : {}, piece.text))
       }
     }
-    out.push(statusDeskText(Text, { ...note, dimColor: true, tabular: true }, rest.join(' ')))
-    return out
   }
-  if (part.kind === 'empty') {
-    return [statusDeskText(Text, { ...note, dimColor: true }, t('status.empty_title'))]
+  const left = h(Text, { wrap: 'truncate-end' }, ...spans)
+  return h(Box, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }, left, ...(right ? [right] : []))
+}
+
+/**
+ * Desktop's parts, after the state word: the tool at work right behind it (`Delegando
+ * local_summarize 7/9 · 3 min 16 s +1 más`), then the model, the figures (no bold: the numbers
+ * stand out by tone alone) and, apart, the read mode. Ranks as the terminal's, for `statusFit`.
+ */
+function statusDesktopParts(snapshot, options, lang) {
+  const parts = []
+  if (snapshot.backend === 'busy' && snapshot.task) {
+    parts.push(statusPart(1, ' ', ...statusTaskPieces(snapshot.task, 'status.more_title')))
   }
-  if (part.kind === 'cost') {
-    return [statusDeskText(Text, { ...note, dimColor: true, tabular: true }, part.pieces[0].text)]
+  if (snapshot.model && snapshot.backend !== 'down') {
+    parts.push(statusPart(1, STATUS_SEPARATOR, { text: snapshot.model, dim: true }))
   }
-  // A figure: the number semibold and tabular, its label dim (`delegaciones ·` before the next one).
-  const label = part.kind === 'calls' ? `${part.pieces[1].text.trim()}${STATUS_SEPARATOR.trimEnd()}` : part.pieces[1].text.trim()
-  const children = [
-    statusDeskText(Text, { ...note, weight: 'semibold', tabular: true }, part.pieces[0].text),
-    statusDeskText(Text, { ...note, dimColor: true }, label),
-  ]
-  return [h(Box, { flexDirection: 'row', gap: small }, ...children)]
+  for (const part of statusFigures(snapshot, lang, STATUS_SEPARATOR)) {
+    parts.push({ ...part, pieces: part.pieces.map(({ bold, ...piece }) => piece) })
+  }
+  const mode = statusReadMode(options)
+  const right = mode ? statusPart(5, ' ', { text: t(`status.reads_${mode}_title`), dim: true }) : null
+  return { parts, right }
 }
 
 /** The session id the stats are asked for, or `null` (no token, no valid id): no band. */

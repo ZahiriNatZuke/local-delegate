@@ -6,6 +6,29 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido (F4-live-fixes)
+
+- **Una decisión del mod de lectura deja una sola línea en la telemetría.** En la prueba en vivo
+  una lectura resumida dejó dos líneas `summarized`: el daemon, ocupado, contestó después del tope
+  de 1 s del mod pero escribió la línea; el mod la dio por perdida (con su rastro en
+  `hook-failures.jsonl`) y la volvió a escribir en la llamada siguiente. Ahora cada decisión lleva
+  un `id` que el mod pone una vez y manda por todas las vías, y `record-read` no escribe un `id` que
+  ya está en la cola del fichero. Si el daemon se pasa del tope, la línea espera a la siguiente
+  llamada (sin lanzar el proceso a la vez ni dejar rastro) y solo queda rastro si ese intento
+  también falla.
+- **Banda: minutos, avance por trozos y sin «·» suelto.** Pasado el minuto, lo que lleva la
+  delegación sale en minutos (`3 min 16 s`; en inglés `3m 16s`) en vez de `196 s`; una delegación
+  partida en trozos dice por cuál va (`local_summarize 7/9 · 3 min 16 s`); y en la barra de la
+  terminal sin modelo cargado ya no queda un `·` pegado a la etiqueta (`● LISTO 29 delegaciones`).
+- **Banda en Claude Desktop rediseñada.** La píldora con borde parecía un botón e inflaba la
+  tarjeta, y el enlace al panel quedaba fuera de la línea base (y abría en 401, porque el panel pide
+  token). Ahora es una sola línea de texto en dos tonos, como las de la propia app:
+  `local-delegate · ● Listo · qwen3-8b · 3 delegaciones · 12,3k tokens ahorrados ≈ $0,18`, con los
+  datos en color normal, el resto atenuado, el color solo en el punto (y en la palabra cuando el
+  modelo está caído o el servicio no responde) y el modo de lectura a la derecha. Delegando:
+  `◐ Delegando local_summarize 7/9 · 3 min 16 s +1 más`. Sin borde, fondo, enlace ni props de
+  tipografía.
+
 ### Corregido (F4-read-fixes)
 
 - **Las decisiones del diálogo del mod de lectura llegan a la telemetría.** En la 0.41.0 el mod

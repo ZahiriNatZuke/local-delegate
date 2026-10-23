@@ -375,82 +375,197 @@ test('no read mode when the mod does not steer the reads', { options: { ...LINE,
   expect((await line($)).line.includes('lecturas')).toBe(false)
 })
 
-// --- Claude Desktop ----------------------------------------------------------------------------------
+// --- F4-live-fixes: minutes, progress by chunks and no loose separator ------------------------------
 
-test('desktop: one native row with a pill, a link to the panel and the read mode on the right', { options: { ld_bin: LD_BIN } }, async ($, on) => {
-  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => UP)
+/** One delegation in flight split in chunks, as `/api/inflight` lists it (`chunks`, 1-based `chunk`). */
+function chunked(elapsed: number, chunks: number, chunk: number) {
+  return { ...task('local_summarize', elapsed), chunks, chunk }
+}
+
+test('bar: past a minute the time is in minutes, and a split delegation shows its chunk', { options: QUIET }, async ($, on) => {
+  let items: any[] = []
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, inflight: () => inflight(items) }))
+  const cases: [any, string][] = [
+    // Live 2026-10-23: «196 s», and nothing said it was on chunk 7 of 9.
+    [chunked(196.5, 9, 7), 'local_summarize 7/9 · 3 min 16 s'],
+    [task('local_summarize', 14.2), 'local_summarize 14 s'],
+    [task('local_summarize', 59.9), 'local_summarize 59 s'],
+    [task('local_summarize', 60), 'local_summarize 1 min 0 s'],
+    // One chunk is no progress to show.
+    [chunked(75, 1, 1), 'local_summarize 1 min 15 s'],
+  ]
+  for (const [item, shown] of cases) {
+    items = [item]
+    await $.session.measure(measureInput())
+    const { left, boxes, texts } = await bar($)
+    // (The dot turns with the seconds: only the words are compared.)
+    expect(left.slice(3)).toBe(`DELEGANDO  qwen3-8b · ${shown} · 3 delegaciones · 12,3k tokens ahorrados ≈ $0,18`)
+    expectNoEmptyRows(boxes, texts)
+  }
+})
+
+test('line: minutes and chunks in English', { options: { ...LINE, language: 'en' } }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, inflight: () => inflight([chunked(196.5, 9, 7)]) }))
   await $.session.measure(measureInput())
-  const { texts, boxes, links } = await drawnAll($, desktop())
-  expect(boxes[0].props).toMatchObject({ flexDirection: 'row', justifyContent: 'space-between' })
+  const { line: text, boxes, texts } = await line($)
+  expect(text).toContain(' · local_summarize 7/9 · 3m 16s · ')
   expectNoEmptyRows(boxes, texts)
-  expect(texts.some((t: any) => /^─+$/.test(t.text))).toBe(false)
-  // The validator takes `localhost` alone, never 127.0.0.1.
-  expect(links.map((l: any) => l.props.href)).toEqual([PANEL])
-  expect(links[0].text.endsWith('local-delegate')).toBe(true)
-  const name = texts.find((t: any) => t.text === 'local-delegate')
-  expect(name?.props.dimColor).toBe(true)
-  // The minimum CLI (2.1.292) refuses the whole tree over a typography prop: none goes out.
-  for (const text of texts) {
-    // (`weight` is left out: 2.1.309 reads `bold` back as `weight: 'semibold'`.)
-    for (const key of ['size', 'mono', 'tabular']) {
+  // A narrow band still drops the task before the state (statusFit).
+  expect((await line($, band(40))).line).toBe('local-delegate · ◐ qwen3-8b delegating')
+})
+
+test('bar: without a model the chip is followed by the next part, with no loose separator', { options: QUIET }, async ($, on) => {
+  let daemon: Daemon = { ...UP, backend: () => backend(true, []) }
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => daemon)
+  await $.session.measure(measureInput())
+  let drawn = await bar($)
+  expect(drawn.left).toBe(' ● LISTO  3 delegaciones · 12,3k tokens ahorrados ≈ $0,18')
+  expectNoEmptyRows(drawn.boxes, drawn.texts)
+  // The same while delegating with no model named, and in a narrow band.
+  daemon = { ...UP, backend: () => backend(true, []), inflight: () => inflight([task('local_summarize', 4.2, '')]) }
+  await $.session.measure(measureInput())
+  drawn = await bar($)
+  expect(drawn.left).toBe(' ◐ DELEGANDO  local_summarize 4 s · 3 delegaciones · 12,3k tokens ahorrados ≈ $0,18')
+  expect((await bar($, band(40))).left).toBe(' ◐ DELEGANDO  local_summarize 4 s')
+  // Guard: with a model the separators between present parts stay.
+  daemon = UP
+  await $.session.measure(measureInput())
+  expect((await bar($)).left).toBe(' ● LISTO  qwen3-8b · 3 delegaciones · 12,3k tokens ahorrados ≈ $0,18')
+})
+
+test('line: without a model nothing is left loose either', { options: LINE }, async ($, on) => {
+  // Guard (the line already joined only present parts): the same case as the bar's.
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, backend: () => backend(true, []) }))
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toBe('local-delegate · ● modelo local listo · 3 delegaciones · 12,3k tokens ahorrados ≈ $0,18')
+  expect((await line($, band(60))).line).toBe('local-delegate · ● modelo local listo · 3 delegaciones')
+})
+
+// --- Claude Desktop (F4-live-fixes, design v2) ---------------------------------------------------------
+//
+// Live 2026-10-23, «visualmente es terrible»: the round-bordered pill looked like a button and
+// made the card grow, and the panel link sat off the baseline. Now one line of text in two tones,
+// like the app's own (`Opus 5.5 Medio`): the left side is a single Text with inline Texts inside.
+
+/** The Desktop band: its Boxes, its Texts, its Links, the left line (the outer Text) and the right. */
+async function desk($: any, columns = 160) {
+  const { texts, boxes, links } = await drawnAll($, desktop(columns))
+  const left = texts[0]
+  const right = texts.find((t: any) => /^(Lecturas|Reads):/.test(t.text))
+  return { texts, boxes, links, left, right }
+}
+
+function expectPlainDesktop(drawn: { texts: any[]; boxes: any[]; links: any[] }) {
+  // No pill, no background, no link, no gap and no typography props (the minimum CLI refuses
+  // `size`; `bold` would become a weight the app's own line does not use).
+  expect(drawn.links).toHaveLength(0)
+  expect(drawn.boxes).toHaveLength(1)
+  for (const box of drawn.boxes) {
+    for (const key of ['borderStyle', 'borderColor', 'backgroundColor', 'gap', 'paddingX']) {
+      expect(box.props[key]).toBeUndefined()
+    }
+  }
+  for (const text of drawn.texts) {
+    for (const key of ['size', 'weight', 'mono', 'tabular', 'bold']) {
       expect(text.props[key]).toBeUndefined()
     }
   }
-  const pill = boxes.find((b: any) => b.props.borderStyle === 'round')
-  expect(pill?.props).toMatchObject({ borderColor: 'success', paddingX: 1 })
-  expect(pill?.text).toBe('● Listo')
-  expect(colorOf(texts, '●')).toBe('success')
-  expect(texts.find((t: any) => t.text === 'qwen3-8b')?.props.dimColor).toBe(true)
-  expect(texts.find((t: any) => t.text === '3')?.props).toMatchObject({ bold: true })
-  expect(texts.find((t: any) => t.text === '12,3k')?.props).toMatchObject({ bold: true })
-  expect(texts.find((t: any) => t.text === 'tokens ahorrados')?.props.dimColor).toBe(true)
-  const reads = texts[texts.length - 1]
-  expect(reads.text).toBe('Lecturas: resume solo')
-  expect(reads.props).toMatchObject({ dimColor: true })
+  expectNoEmptyRows(drawn.boxes, drawn.texts)
+}
+
+function span(texts: any[], text: string) {
+  return texts.slice(1).find((t: any) => t.text === text)
+}
+
+test('desktop: one line of text in two tones, the read mode dim on the right', { options: { ld_bin: LD_BIN } }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => UP)
+  await $.session.measure(measureInput())
+  const drawn = await desk($)
+  expectPlainDesktop(drawn)
+  expect(drawn.boxes[0].props).toMatchObject({ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' })
+  // The left side is ONE Text, the spaces and the `·` inside it.
+  expect(drawn.left.text).toBe('local-delegate · ● Listo · qwen3-8b · 3 delegaciones · 12,3k tokens ahorrados ≈ $0,18')
+  expect(drawn.right?.text).toBe('Lecturas: resume solo')
+  expect(drawn.right?.props.dimColor).toBe(true)
+  // Two tones: the data normal, everything else dim; color only on the dot.
+  expect(span(drawn.texts, '●')?.props.color).toBe('success')
+  expect(span(drawn.texts, ' Listo')?.props.dimColor).toBeUndefined()
+  expect(span(drawn.texts, ' Listo')?.props.color).toBeUndefined()
+  expect(span(drawn.texts, '3')?.props.dimColor).toBeUndefined()
+  expect(span(drawn.texts, '12,3k')?.props.dimColor).toBeUndefined()
+  for (const dim of ['local-delegate', 'qwen3-8b', ' delegaciones', ' tokens ahorrados', '≈ $0,18']) {
+    expect(span(drawn.texts, dim)?.props.dimColor).toBe(true)
+  }
 })
 
-test('desktop: each state in the pill', { options: QUIET }, async ($, on) => {
+test('desktop: each state', { options: QUIET }, async ($, on) => {
   let daemon: Daemon = UP
   engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => daemon)
-  daemon = BUSY
+
+  daemon = { ...UP, inflight: () => inflight([chunked(196.5, 9, 7), task('local_extract', 3)]) }
   await $.session.measure(measureInput())
-  let drawn = await drawnAll($, desktop())
-  let pill = drawn.boxes.find((b: any) => b.props.borderStyle === 'round')
-  expect(pill?.props.borderColor).toBe('warning')
-  expect(pill?.text).toBe('◐ Delegando')
-  // The tool after the pill, and how long it has run.
-  expect(drawn.texts.find((t: any) => t.text === 'local_summarize')?.props.dimColor).toBeUndefined()
-  expect(drawn.texts.some((t: any) => t.text === '4 s')).toBe(true)
+  let drawn = await desk($)
+  expectPlainDesktop(drawn)
+  // (The dot turns with the seconds: 196 s is ◐.)
+  expect(drawn.left.text).toBe('local-delegate · ◐ Delegando local_summarize 7/9 · 3 min 16 s +1 más · qwen3-8b · 3 delegaciones · 12,3k tokens ahorrados ≈ $0,18')
+  expect(span(drawn.texts, '◐')?.props.color).toBe('warning')
+  expect(span(drawn.texts, 'local_summarize')?.props.dimColor).toBeUndefined()
+  expect(span(drawn.texts, ' 7/9')?.props.dimColor).toBeUndefined()
+  expect(span(drawn.texts, ' · 3 min 16 s')?.props.dimColor).toBe(true)
+  expect(span(drawn.texts, ' +1 más')?.props.dimColor).toBe(true)
 
   daemon = { ...UP, backend: () => backend(false) }
   await $.session.measure(measureInput())
-  drawn = await drawnAll($, desktop())
-  pill = drawn.boxes.find((b: any) => b.props.borderStyle === 'round')
-  expect(pill?.props.borderColor).toBe('error')
-  expect(pill?.text).toBe('○ Modelo local caído')
-  expect(drawn.texts.find((t: any) => t.text.includes('Modelo local caído'))?.props.color).toBe('error')
+  drawn = await desk($)
+  expectPlainDesktop(drawn)
+  expect(drawn.left.text.startsWith('local-delegate · ○ Modelo local caído · 3 delegaciones')).toBe(true)
+  expect(span(drawn.texts, '○')?.props.color).toBe('error')
+  expect(span(drawn.texts, ' Modelo local caído')?.props.color).toBe('error')
 
   daemon = { stats: UP.stats, inflight: UP.inflight }
   await $.session.measure(measureInput())
-  drawn = await drawnAll($, desktop())
-  pill = drawn.boxes.find((b: any) => b.props.borderStyle === 'round')
-  expect(pill?.props.borderDimColor).toBe(true)
-  expect(pill?.text).toBe('◌ Sin datos')
+  drawn = await desk($)
+  expectPlainDesktop(drawn)
+  expect(drawn.left.text.startsWith('local-delegate · ◌ Sin datos del modelo · 3 delegaciones')).toBe(true)
+  expect(span(drawn.texts, '◌')?.props.dimColor).toBe(true)
+  expect(span(drawn.texts, ' Sin datos del modelo')?.props.dimColor).toBe(true)
 
   daemon = {}
   await $.session.measure(measureInput())
-  drawn = await drawnAll($, desktop())
-  pill = drawn.boxes.find((b: any) => b.props.borderStyle === 'round')
-  expect(pill?.text).toBe('○ Servicio local sin respuesta')
-  expect(drawn.texts.map((t: any) => t.text)).toEqual(['local-delegate', '○', ' Servicio local sin respuesta'])
+  drawn = await desk($)
+  expectPlainDesktop(drawn)
+  expect(drawn.left.text).toBe('local-delegate · ○ Servicio local sin respuesta')
+  expect(span(drawn.texts, ' Servicio local sin respuesta')?.props.color).toBe('error')
+  // Without the service there is no right side.
+  expect(drawn.texts).toHaveLength(5)
 })
 
-test('desktop: an empty session says so instead of the figures', { options: QUIET }, async ($, on) => {
+test('desktop: an empty session says so instead of a zero', { options: QUIET }, async ($, on) => {
   engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, stats: () => stats(0, 0) }))
   await $.session.measure(measureInput())
-  const { texts } = await drawnAll($, desktop())
-  expect(texts.find((t: any) => t.text === 'Sin delegaciones aún')?.props.dimColor).toBe(true)
-  expect(texts.some((t: any) => t.text === '0')).toBe(false)
+  const drawn = await desk($)
+  expect(drawn.left.text).toBe('local-delegate · ● Listo · qwen3-8b · sin delegaciones aún')
+  expect(span(drawn.texts, 'sin delegaciones aún')?.props.dimColor).toBe(true)
+  expect(drawn.texts.some((t: any) => t.text === '0')).toBe(false)
+})
+
+test('desktop: a narrow band drops the least important parts first, and leaves no loose separator', { options: { ld_bin: LD_BIN } }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => UP)
+  await $.session.measure(measureInput())
+  // The head (`local-delegate · ● Listo`, 24 cells) always stays; then the model, the calls, ...
+  const narrow = await desk($, 60)
+  expect(narrow.left.text).toBe('local-delegate · ● Listo · qwen3-8b · 3 delegaciones')
+  expect(narrow.right).toBeUndefined()
+  expectPlainDesktop(narrow)
+  expect((await desk($, 30)).left.text).toBe('local-delegate · ● Listo')
+})
+
+test('desktop: in English', { options: { ld_bin: LD_BIN, language: 'en' } }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, inflight: () => inflight([chunked(75, 3, 2), task('local_extract', 3)]) }))
+  await $.session.measure(measureInput())
+  const drawn = await desk($)
+  expect(drawn.left.text.slice(19)).toBe('Delegating local_summarize 2/3 · 1m 15s +1 more · qwen3-8b · 3 delegations · 12.3k tokens saved ≈ $0.18')
+  expect(drawn.right?.text).toBe('Reads: auto-summary')
 })
 
 // --- live refresh -------------------------------------------------------------------------------------

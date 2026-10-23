@@ -356,9 +356,9 @@ El plugin trae además un **mod**, que corre dentro de Claude Code sin gastar tu
   que el modelo no tenga que buscarlas con ToolSearch.
 - Pone sobre el prompt una banda con el estado de local-delegate en la sesión: en la terminal,
   una barra de una fila con fondo y una etiqueta de estado (` ● LISTO `, ` ◐ DELEGANDO `,
-  ` ○ CAÍDO `), el modelo, la tool en curso y lo que lleva, las delegaciones y el ahorro de la
+  ` ○ CAÍDO `), el modelo, la tool en curso con su trozo (`7/9`) y lo que lleva (`3 min 16 s`), las delegaciones y el ahorro de la
   sesión y el modo de lectura (opción `status_style`: `bar` o `line`, una raya sobre una línea);
-  en Claude Desktop, una fila con una píldora de estado y el nombre como enlace al panel. Se
+  en Claude Desktop, una sola línea de texto en dos tonos, sin píldora ni enlace. Se
   refresca sola cada segundo mientras hay una delegación en curso. La cuota de Claude no va
   aquí: es de la status line.
 - Desde la 0.41, el **mod de lectura** (encendido por defecto, opción `read_mod_enabled`) resume

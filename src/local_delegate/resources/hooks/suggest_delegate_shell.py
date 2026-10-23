@@ -28,6 +28,7 @@ import sys
 
 import read_classifier
 from hook_common import (
+    already_recorded,
     backend_available,
     block_state,
     context_of,
@@ -35,6 +36,7 @@ from hook_common import (
     deny,
     hook_text,
     mod_decision_fields,
+    mod_record_id,
     new_id,
     path_digest,
     record,
@@ -134,6 +136,10 @@ def main() -> None:
 def record_decision(entry: dict) -> None:
     """`hook record-read` de una vía de shell: la línea que habría escrito este hook, con la
     decisión del mod (`hook_common.mod_decision_fields`)."""
+    # El mismo `id` por todas las vias del mod: una decision ya escrita no se escribe otra vez.
+    record_id = mod_record_id(entry)
+    if record_id and already_recorded(record_id):
+        return
     path = entry.get("path") if isinstance(entry.get("path"), str) else None
     payload = {"session_id": entry.get("session_id")}
     fields: dict = {
@@ -151,8 +157,10 @@ def record_decision(entry: dict) -> None:
             fields["size_kb"] = round(entry["bytes"] / 1024, 1)
         fields["path_sha"] = path_digest(path)
     if fields.get("blocked") and path:
-        fields["id"] = new_id()
+        fields["id"] = record_id or new_id()
         record_block(fields["id"], path)
+    elif record_id:
+        fields["id"] = record_id
     record("PreToolUse", **fields)
 
 

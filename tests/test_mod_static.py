@@ -103,17 +103,13 @@ def test_mod_talks_only_to_loopback():
             assert name == "common.js", f"{name} calls $.http directly; use daemonFetch"
             fetches += 1
         for url in URL_LITERAL.findall(code):
-            if name == "status.js" and url == "http://localhost:9393":
-                # F4-band: the band's link to the panel, for the person to open (the engine's
-                # validator takes `localhost` alone in a `Link`). It is never fetched.
-                continue
             assert url.startswith(("http://${DAEMON_HOST}", "http://127.0.0.1")), f"{name}: {url}"
         assert "socketPath" not in code, name
     status = _code(_sources()["status.js"])
-    # The panel's URL goes to the Link's `href` and nowhere else (never to daemonFetch).
-    assert status.count("http://localhost:9393") == 1
-    assert status.count("STATUS_PANEL") == 2
-    assert "{ href: STATUS_PANEL }" in status
+    # F4-live-fixes: the band no longer links to the panel (it asks for the token, so the link
+    # would open on a 401), and nothing else names `localhost`.
+    assert "localhost" not in status
+    assert "Link" not in status
     common = _code(_sources()["common.js"])
     assert "export const DAEMON_HOST = '127.0.0.1'" in common
     # The only fetch builds its URL from the loopback origin and checks it before the request.

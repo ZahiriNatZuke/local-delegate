@@ -64,7 +64,12 @@ type Env = {
   logs: { message: string; opts: any }[]
   asked: boolean
   refuseProcessAfterAsk: boolean
-  recordStatus: number | null
+  recordStatus: number | null | 'slow'
+  // F4-live-fixes: the lines that reached the telemetry file, by either road, written the way
+  // `hook_common.already_recorded` keeps them (an `id` already written is not written again), and
+  // the daemon's record answers still to come (`recordStatus: 'slow'`).
+  telemetry: { decision: string; id: unknown }[]
+  slowRecords: (() => void)[]
 }
 
 // `up` answers like `hook classify`; the rest are the ways the daemon can fail the mod.
@@ -89,7 +94,7 @@ function makeEnv(opts: {
   daemon?: Daemon
   vars?: Record<string, string> | null
   refuseProcessAfterAsk?: boolean
-  recordStatus?: number | null
+  recordStatus?: number | null | 'slow'
 } = {}): Env {
   const env: Env = {
     $: null,
@@ -119,6 +124,8 @@ function makeEnv(opts: {
     asked: false,
     refuseProcessAfterAsk: opts.refuseProcessAfterAsk ?? false,
     recordStatus: opts.recordStatus === undefined ? 204 : opts.recordStatus,
+    telemetry: [],
+    slowRecords: [],
   }
   // `$.fs.stat` takes either slash and either case of the drive.
   const lookup = (p: string) => [...env.files.keys()].find(k => k.toLowerCase() === p.replace(/\\/g, '/').toLowerCase())
@@ -201,6 +208,7 @@ function makeEnv(opts: {
         if (answer === 'fail') return { exitCode: 1, stdout: 'not json', stderr: 'boom' }
         return { exitCode: 0, stdout: JSON.stringify(answer), stderr: '' }
       }
+      if (args.includes('record-read')) writeTelemetry(env, parsed)
       return { exitCode: 0, stdout: '', stderr: '' }
     },
   }
@@ -239,8 +247,18 @@ async function daemonAnswer(env: Env, path: string, init: any) {
     return ok(typeof env.config === 'string' ? env.config : JSON.stringify(env.config))
   }
   if (path === '/api/hook/record-read') {
+    // `'slow'`: the daemon takes longer than the mod's limit, and writes the line when it answers.
+    if (env.recordStatus === 'slow') {
+      return new Promise(resolve => {
+        env.slowRecords.push(() => {
+          writeTelemetry(env, body.payload)
+          resolve({ status: 204, ok: true, text: '', json: null })
+        })
+      })
+    }
     // `null`: the request does not complete (refused, or no daemon).
     if (env.recordStatus === null) return null
+    if (env.recordStatus < 300) writeTelemetry(env, body.payload)
     return { status: env.recordStatus, ok: env.recordStatus < 300, text: '', json: null }
   }
   if (path === '/api/hook/classify') {
@@ -309,6 +327,14 @@ function byInput(input: any): Classified {
     return { kind: 'write', path: BIG, scope: 'whole', bytes: null, range: null, via: 'shell_redirect', read_switch: 'on' }
   }
   return { kind: 'other', path: null, scope: 'unclassifiable', bytes: null, range: null, via: 'other', read_switch: 'on' }
+}
+
+// A `record-read` line reaching the file, as `record_decision` writes it (F4-live-fixes): one whose
+// valid `id` is already there is dropped.
+function writeTelemetry(env: Env, entry: any) {
+  const id = entry && typeof entry.id === 'string' && /^[0-9a-f]{12}$/.test(entry.id) ? entry.id : null
+  if (id !== null && env.telemetry.some(line => line.id === id)) return
+  env.telemetry.push({ decision: entry.decision, id: entry.id })
 }
 
 function decisions(env: Env): string[] {
@@ -917,6 +943,91 @@ test('the_failure_log_is_capped', async () => {
   await call(env, { tool: 'Read', file_path: BIG })
   expect(env.files.get(FAILURES)).toBe('x')
   expect(env.logs).toHaveLength(1)
+})
+
+// --- F4-live-fixes: one decision, one line ----------------------------------------------------------
+
+function failureLines(env: Env): any[] {
+  return (env.files.get(FAILURES) ?? '').trim().split('\n').filter(Boolean).map(line => JSON.parse(line))
+}
+
+function recordIds(env: Env): unknown[] {
+  return [
+    ...env.daemonCalls.filter(c => c.path === '/api/hook/record-read').map(c => c.body.payload.id),
+    ...env.ldRuns.filter(r => r.args.includes('record-read')).map(r => r.stdin.id),
+  ]
+}
+
+for (const refuse of [true, false]) {
+  test(`a_daemon_slower_than_its_limit_that_writes_leaves_one_line_${refuse ? 'process_refused' : 'process_up'}`, async () => {
+    // Live 2026-10-23: the daemon answered after the mod's 1 s limit but wrote the line; the mod
+    // called it lost (6 ms after the line was there) and the next tool call wrote it again.
+    const env = makeEnv({
+      dialog: true,
+      answer: 'read.ask.summarize',
+      classify: byInput,
+      daemon: 'up',
+      vars: RECORD_VARS,
+      refuseProcessAfterAsk: refuse,
+      recordStatus: 'slow',
+    })
+    const out = await call(env, { tool: 'Read', file_path: BIG })
+    expect(out.result.file.content.includes('SUMMARY OF THE FILE')).toBe(true)
+    // Guard: the daemon's limit did run out (the answer is still to come).
+    expect(env.slowRecords).toHaveLength(1)
+    // A late answer is not a lost line: no trace, and no second writer racing the daemon.
+    expect(env.logs).toHaveLength(0)
+    expect(failureLines(env)).toHaveLength(0)
+    expect(decisions(env)).toEqual([])
+    // The daemon writes after all; the next call tries once more, with the same id.
+    env.slowRecords.splice(0).forEach(write => write())
+    env.recordStatus = 204
+    await call(env, { tool: 'Bash', command: 'git status' })
+    expect(daemonDecisions(env)).toEqual(['summarized', 'summarized'])
+    expect(env.telemetry).toEqual([{ decision: 'summarized', id: env.telemetry[0].id }])
+    expect(env.logs).toHaveLength(0)
+    expect(failureLines(env)).toHaveLength(0)
+    // And it is not sent a third time.
+    await call(env, { tool: 'Bash', command: 'git status' })
+    expect(daemonDecisions(env)).toHaveLength(2)
+  })
+}
+
+test('every_road_carries_the_same_id', async () => {
+  // Daemon down, process refused: lost, then retried by the daemon. Daemon down, process up: the
+  // process takes it. Each decision has one id, on every road, and two decisions two ids.
+  const lost = makeEnv({ dialog: true, answer: 'read.ask.summarize', classify: byInput, daemon: 'up', vars: RECORD_VARS, refuseProcessAfterAsk: true, recordStatus: null })
+  await call(lost, { tool: 'Read', file_path: BIG })
+  lost.recordStatus = 204
+  await call(lost, { tool: 'Bash', command: 'git status' })
+  const ids = recordIds(lost)
+  expect(ids).toHaveLength(2)
+  expect(String(ids[0])).toMatch(/^[0-9a-f]{12}$/)
+  expect(ids[1]).toBe(ids[0])
+  expect(lost.telemetry).toHaveLength(1)
+
+  const viaProcess = makeEnv({ dialog: true, answer: 'read.ask.whole', classify: byInput, daemon: 'up', vars: RECORD_VARS, recordStatus: null })
+  await call(viaProcess, { tool: 'Read', file_path: BIG })
+  await call(viaProcess, { tool: 'Read', file_path: OTHER })
+  const both = recordIds(viaProcess)
+  // daemon then process, for each of the two reads
+  expect(both).toHaveLength(4)
+  expect(both[0]).toMatch(/^[0-9a-f]{12}$/)
+  expect(new Set(both).size).toBe(2)
+})
+
+test('a_late_daemon_that_never_writes_is_traced_at_the_retry', async () => {
+  // The daemon is late twice and the process is refused: the line may really be lost, so the trace
+  // is written then (once), not left out.
+  const env = makeEnv({ dialog: true, answer: 'read.ask.summarize', classify: byInput, daemon: 'up', vars: RECORD_VARS, refuseProcessAfterAsk: true, recordStatus: 'slow' })
+  await call(env, { tool: 'Read', file_path: BIG })
+  expect(failureLines(env)).toHaveLength(0)
+  await call(env, { tool: 'Bash', command: 'git status' })
+  expect(failureLines(env)).toHaveLength(1)
+  expect(failureLines(env)[0]).toMatchObject({ hook: 'record-read', error: 'ModRecordLost', decision: 'summarized' })
+  expect(env.telemetry).toHaveLength(0)
+  await call(env, { tool: 'Bash', command: 'git status' })
+  expect(failureLines(env)).toHaveLength(1)
 })
 
 test('the_summary_says_how_much_can_be_read_literally', async () => {
