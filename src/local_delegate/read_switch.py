@@ -33,38 +33,49 @@ ENABLED_FLAG = "--enabled"
 _TRUTHY = frozenset({"1", "true", "yes", "on"})
 
 
-def log_dir() -> Path:
-    """`LOG_DIR` como lo resuelven `config.py` y `hook_common.log_dir`."""
-    target = os.environ.get("LOCAL_DELEGATE_LOG_DIR", "").strip()
+def home(environ=None) -> Path:
+    """La carpeta personal según `environ` (la variable que mira `Path.home()` en cada sistema).
+
+    El daemon clasifica con el entorno que manda el mod, no con el suyo; sin la variable en ese
+    entorno, la de este proceso (el mismo usuario)."""
+    env = os.environ if environ is None else environ
+    value = str(env.get("USERPROFILE" if os.name == "nt" else "HOME") or "").strip()
+    return Path(value) if value else Path.home()
+
+
+def log_dir(environ=None) -> Path:
+    """`LOG_DIR` como lo resuelven `config.py` y `hook_common.log_dir`, según `environ`."""
+    env = os.environ if environ is None else environ
+    target = str(env.get("LOCAL_DELEGATE_LOG_DIR") or "").strip()
     if target:
         return Path(target)
     # Segmentos de ruta de `platformdirs`, no texto: van en variables y no en el `return`.
     if sys.platform == "win32":
-        base = Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local")
+        base = Path(env.get("LOCALAPPDATA") or home(env) / "AppData" / "Local")
     elif sys.platform == "darwin":
-        base = Path.home() / "Library" / "Application Support"
+        base = home(env) / "Library" / "Application Support"
     else:
-        xdg = os.environ.get("XDG_DATA_HOME", "").strip()
-        base = Path(xdg) if xdg else Path.home() / ".local" / "share"
+        xdg = str(env.get("XDG_DATA_HOME") or "").strip()
+        base = Path(xdg) if xdg else home(env) / ".local" / "share"
     return base / "local-delegate"
 
 
-def path() -> Path:
+def path(environ=None) -> Path:
     """Dónde vive el fichero de estado."""
-    return log_dir() / FILE_NAME
+    return log_dir(environ) / FILE_NAME
 
 
-def _load() -> dict | None:
+def _load(environ=None) -> dict | None:
     try:
-        data = json.loads(path().read_text(encoding="utf-8"))
+        data = json.loads(path(environ).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
     return data if isinstance(data, dict) else None
 
 
-def active() -> bool:
+def active(environ=None) -> bool:
     """¿Dice el fichero que el hook de lectura está activo? Ante cualquier duda, no."""
-    data = _load()
+    data = _load(environ)
     return data is not None and data.get("active") is True
 
 
@@ -92,4 +103,4 @@ def enabled(argv: list[str] | tuple[str, ...] = (), environ: dict | None = None)
     env = os.environ if environ is None else environ
     if str(env.get("LD_HOOK_READ_ENABLED", "")).strip().lower() in _TRUTHY:
         return True
-    return active()
+    return active(env)

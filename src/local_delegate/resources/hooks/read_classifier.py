@@ -578,12 +578,27 @@ def simple_whole_dump(found: Sequence[Access]) -> str | None:
 # --- Rutas y salida del contrato -------------------------------------------------------------------
 
 
-def resolve(path: str | None, cwd: str | None) -> str | None:
+def _expand_home(path: str, environ) -> str:
+    """`os.path.expanduser` con la carpeta personal de `environ` (la del cliente, en el daemon).
+
+    Solo `~` y `~/…`; `~usuario` queda para `os.path.expanduser`, que no mira variables para eso.
+    Sin `environ`, `os.path.expanduser` tal cual (el CLI, con el entorno del cliente)."""
+    if environ is None or not path.startswith("~"):
+        return os.path.expanduser(path)
+    if path != "~" and path[1] not in ("/\\" if os.name == "nt" else "/"):
+        return os.path.expanduser(path)
+    home = str(environ.get("USERPROFILE" if os.name == "nt" else "HOME") or "").strip()
+    if not home:
+        return os.path.expanduser(path)
+    return home + path[1:]
+
+
+def resolve(path: str | None, cwd: str | None, environ=None) -> str | None:
     """La ruta absoluta en disco de un operando (con `~`, `/d/…` de Git Bash y el `cwd` de la
     llamada), o `None` si no se puede saber a qué fichero apunta."""
     if not path or any(c in path for c in _UNRESOLVABLE):
         return None
-    path = os.path.expanduser(path)
+    path = _expand_home(path, environ)
     m = _GIT_BASH_DRIVE.match(path.replace("\\", "/"))
     if m and os.name == "nt":
         path = f"{m.group(1).upper()}:/{m.group(2)}"
@@ -594,19 +609,20 @@ def resolve(path: str | None, cwd: str | None) -> str | None:
     return os.path.normpath(path)
 
 
-def summarizable(path: str | None, size: int | None) -> bool:
+def summarizable(path: str | None, size: int | None, environ=None) -> bool:
     """Si el fichero está en la banda que bloquea el hook de lectura: prosa por encima del umbral
     bajo. Es lo único que el mod de lectura resume; el código, la config y los datos pasan."""
     if not path or size is None or _extension(path) not in PROSE_EXTENSIONS:
         return False
     try:
-        threshold_kb = float(os.environ.get(SUGGEST_KB_VARIABLE, str(SUGGEST_KB_DEFAULT)))
+        env = os.environ if environ is None else environ
+        threshold_kb = float(env.get(SUGGEST_KB_VARIABLE, str(SUGGEST_KB_DEFAULT)))
     except ValueError:
         return False
     return size / 1024 > threshold_kb
 
 
-def classify(payload: dict, read_switch: str | None = None) -> dict:
+def classify(payload: dict, read_switch: str | None = None, environ=None) -> dict:
     """La respuesta de `hook classify` para la entrada de un hook `PreToolUse`.
 
     Campos y valores fijados por el plan (Ola 5, «Contrato de `hook classify`»):
@@ -618,6 +634,9 @@ def classify(payload: dict, read_switch: str | None = None) -> dict:
     Una lectura cuyo fichero no se puede resolver (comodines, variables) sale `unclassifiable`:
     sin fichero no hay nada que resumir ni que acumular. Para `write` y `other` el alcance es
     `unclassifiable`, porque el alcance describe una lectura.
+
+    `environ`: el entorno del cliente (`~` y el umbral); sin él, el del proceso. El daemon lo pasa
+    con lo que manda el mod, porque el suyo no es el de Claude Code.
     """
     tool_name = str(payload.get("tool_name") or "")
     tool_input = payload.get("tool_input") or {}
@@ -634,7 +653,7 @@ def classify(payload: dict, read_switch: str | None = None) -> dict:
             "read_switch": read_switch,
             "summarizable": False,
         }
-    path = resolve(access.path, cwd if isinstance(cwd, str) else None)
+    path = resolve(access.path, cwd if isinstance(cwd, str) else None, environ)
     scope = access.scope if access.kind == "read" else "unclassifiable"
     if path is None:
         scope = "unclassifiable"
@@ -652,7 +671,7 @@ def classify(payload: dict, read_switch: str | None = None) -> dict:
         "range": list(access.lines) if access.lines and scope == "range" else None,
         "via": access.via,
         "read_switch": read_switch,
-        "summarizable": access.kind == "read" and summarizable(path, size),
+        "summarizable": access.kind == "read" and summarizable(path, size, environ),
     }
 
 

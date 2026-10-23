@@ -56,6 +56,21 @@ puede usar (CLI vieja o ausente), `install` lo deja como está y no registra hoo
 - El apagado en caliente sigue siendo crear `~/.claude/local-delegate-block-off`: afecta solo a la
   capa que *bloquea*, no a la activa.
 
+### Cómo pregunta el mod de lectura al clasificador
+
+El clasificador vive solo en Python (`read_classifier.py`). Para cada llamada que puede llevar a
+una decisión, el mod le pregunta primero **al daemon**, por `POST /api/hook/classify` (y una vez
+por sesión `POST /api/hook/classify-config`), con el token del panel y solo desde `127.0.0.1`. La
+respuesta es la misma, byte a byte, que la de `hook classify` y `hook classify --config`: las dos
+salen de la misma función. Como el daemon no tiene el entorno de Claude Code, el mod manda en la
+petición las variables que lee el clasificador (`LD_HOOK_READ_ENABLED`, `LD_HOOK_READ_BLOCK`,
+`LD_HOOK_READ_SWITCH_FILE`, `LD_HOOK_READ_SUGGEST_KB`, `LOCAL_DELEGATE_LOG_DIR`, `LOCALAPPDATA`,
+`XDG_DATA_HOME`, `USERPROFILE` y `HOME`) y el daemon usa esas y no las suyas. Si no hay token, el
+daemon no responde en 300 ms, contesta 401, no tiene la ruta (otra versión) o la respuesta no vale,
+el mod lanza el proceso de siempre (`python -I -m local_delegate.hook classify`) y deja de
+preguntarle al daemon durante 5 minutos. `record-read` sigue siendo un proceso: escribe la
+telemetría con el entorno del cliente y solo ocurre en las decisiones.
+
 ### El hook de lectura y el mod de lectura
 
 La opción `read_mod_enabled` del plugin sale **encendida por defecto** desde la 0.41: sin valor

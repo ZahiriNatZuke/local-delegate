@@ -439,25 +439,35 @@ TRUTHY = {"1", "true", "yes", "on"}
 SWITCH_FILE_NAME = "local-delegate-block-off"
 
 
-def switch_path() -> Path:
+def _home(environ: Mapping[str, str]) -> Path:
+    """La carpeta personal segun `environ` (lo que mira `Path.home()`); sin ella, la del proceso.
+    Espejo de `read_switch.home`: este modulo es stdlib suelto y no puede importarlo."""
+    value = str(environ.get("USERPROFILE" if os.name == "nt" else "HOME") or "").strip()
+    return Path(value) if value else Path.home()
+
+
+def switch_path(environ: Mapping[str, str] | None = None) -> Path:
     """Donde vive el fichero que apaga el bloqueo. Fuera de `~/.claude/hooks/local-delegate/`, que
-    el instalador reescribe y poda."""
-    target = os.environ.get("LD_HOOK_READ_SWITCH_FILE", "").strip()
-    return Path(target) if target else Path.home() / ".claude" / SWITCH_FILE_NAME
+    el instalador reescribe y poda. `environ`: el entorno del cliente (el daemon clasifica con el
+    que manda el mod); sin el, el del proceso."""
+    env = os.environ if environ is None else environ
+    target = str(env.get("LD_HOOK_READ_SWITCH_FILE") or "").strip()
+    return Path(target) if target else _home(env) / ".claude" / SWITCH_FILE_NAME
 
 
-def switch_on() -> bool:
+def switch_on(environ: Mapping[str, str] | None = None) -> bool:
     """¿Esta puesto el fichero que apaga el bloqueo?"""
-    return switch_path().exists()
+    return switch_path(environ).exists()
 
 
-def block_state() -> str:
+def block_state(environ: Mapping[str, str] | None = None) -> str:
     """`on`, `off_file` u `off_variable` (antes `encendido`, `apagado_fichero` y
     `apagado_variable`). Va en cada evento, para que una medicion sepa en que estado estaba la regla
-    cuando decidio."""
-    if switch_on():
+    cuando decidio. `environ`: el entorno del cliente; sin el, el del proceso."""
+    env = os.environ if environ is None else environ
+    if switch_on(env):
         return "off_file"
-    if os.environ.get("LD_HOOK_READ_BLOCK", "0").strip().lower() in TRUTHY:
+    if str(env.get("LD_HOOK_READ_BLOCK") or "0").strip().lower() in TRUTHY:
         return "on"
     return "off_variable"
 
