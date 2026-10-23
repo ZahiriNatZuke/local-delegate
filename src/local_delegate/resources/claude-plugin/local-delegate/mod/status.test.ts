@@ -231,13 +231,30 @@ test('a narrow band drops the least important parts first', { options: { ld_bin:
 test('a dim rule as wide as the band sets it apart from the chat', { options: { ld_bin: LD_BIN, read_mod_enabled: true } }, async ($, on) => {
   engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => UP)
   await $.session.measure(measureInput())
-  // One row more, above the line: the rule spans the band's own width and is dim, like the
+  // Above the line (an empty row between them): the rule spans the band's own width and is dim, like the
   // engine's lines around the prompt.
   for (const columns of [120, 60, 36]) {
     const { rule, line } = await drawn($, band(columns))
     expect(rule).toEqual({ text: '─'.repeat(columns), color: undefined, dimColor: true })
     expect(line.startsWith('◆ local-delegate')).toBe(true)
   }
+})
+
+test('one empty row between the rule and the line balances the engine row under it', { options: { ld_bin: LD_BIN } }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => UP)
+  await $.session.measure(measureInput())
+  const ui = await $.ui.mount(band())
+  const boxes = await ui.findAll({ type: 'Box' })
+  await ui.unmount()
+  // The engine draws its own row (its notices on the right) between the band and the prompt's
+  // line; one empty row above the line gives it the same air on top, so it sits centred.
+  const row = boxes.find((b: any) => b.props.flexDirection === 'row')
+  expect(row?.text.startsWith('◆ local-delegate')).toBe(true)
+  expect(row?.props.marginTop).toBe(1)
+  // Only that one row: the rule stays the first thing in the band, right above the empty row.
+  expect(boxes[0].props.flexDirection).toBe('column')
+  expect(boxes[0].props.marginTop ?? 0).toBe(0)
+  expect(boxes[0].props.paddingTop ?? 0).toBe(0)
 })
 
 test('yields the band to a survey', { options: { ld_bin: LD_BIN } }, async ($, on) => {
