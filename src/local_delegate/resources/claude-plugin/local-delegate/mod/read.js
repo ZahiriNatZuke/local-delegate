@@ -7,7 +7,8 @@
 //     prose file, no guarded file and no large file. Its data (tools, prose extensions, threshold,
 //     harmless first words) comes from Python, once per load, with `hook classify --config`
 //     (F4-read-mod-perf: each `classify` is a process, and F4-live measured +724 ms per `Bash`).
-//     The rest go to `hook classify` through `common.runLd`. No answer, or a `read_switch` other
+//     The rest go to `hook classify`: first the daemon's copy (`POST /api/hook/classify`, with the
+//     classifier's variables, F4-classify-daemon), else the process through `common.runLd`. No answer, or a `read_switch` other
 //     than `on`, and the call goes through untouched;
 //   - a read the classifier is sure of (`whole`, or ranges that add up to 80 % of the file's
 //     lines, the threshold fixed in evidence/F4-read-paths.md) of large prose (`summarizable`,
@@ -47,6 +48,15 @@ const READ_RECORD = ['-I', '-m', 'local_delegate.hook', 'record-read']
 const READ_CONFIG_FLAG = '--config'
 const READ_CLASSIFY_TIMEOUT_MS = 10000
 const READ_RECORD_TIMEOUT_MS = 10000
+// The daemon's copy of the same two answers (F4-classify-daemon): `hook_entry.classify_text` and
+// `config_text` behind the panel's token, ~120 ms cheaper per question than a process on Windows.
+// Any failure (no token, no daemon, the time limit, 401, a daemon without the route, an answer
+// that is not the contract) falls back to the process, and the session leaves the daemon alone
+// for `READ_DAEMON_RETRY_MS` so a dead daemon costs the time limit once, not on every call.
+const READ_DAEMON_CLASSIFY = '/api/hook/classify'
+const READ_DAEMON_CONFIG = '/api/hook/classify-config'
+const READ_DAEMON_TIMEOUT_MS = 300
+const READ_DAEMON_RETRY_MS = 5 * 60 * 1000
 const READ_SESSION_ID = /^[A-Za-z0-9_-]{1,128}$/
 // The tools that write a file by a path argument of their own.
 const READ_WRITE_TOOLS = { Edit: 'file_path', Write: 'file_path', NotebookEdit: 'notebook_path' }
@@ -77,6 +87,10 @@ const READ_STATE = {
   guard: new Set(),
   guardSession: null,
   beat: false,
+  // The classifier's variables, read once per load (`undefined` until then, `null` if unreadable),
+  // and until when the daemon is not asked after a failure.
+  vars: undefined,
+  daemonDownUntil: 0,
 }
 
 function readText(value) {
@@ -269,16 +283,130 @@ async function readCwd($) {
   }
 }
 
-/** `hook classify`'s answer for this call, or null when it is not there or does not answer. */
-async function readClassify(common, e, sessionId, cwd) {
-  const stdin = JSON.stringify({ tool_name: e.tool, tool_input: readToolInput(e), cwd, session_id: sessionId })
+/**
+ * The variables `hook classify` reads (`hook_entry.CLASSIFY_ENV`, which `test_mod_static.py` holds
+ * this list to), as this session's process has them: the daemon has its own environment, not
+ * Claude Code's, and classifies with these instead. Read once per load; `null` when the engine
+ * cannot read them, and then the daemon is not asked (it would decide with the wrong switch).
+ */
+async function readClassifierVars($) {
+  if (READ_STATE.vars !== undefined) {
+    return READ_STATE.vars
+  }
+  const vars = {}
+  const put = (name, value) => {
+    if (typeof value === 'string' && value !== '') {
+      vars[name] = value
+    }
+  }
   try {
-    const done = await common.runLd(READ_CLASSIFY, stdin, READ_CLASSIFY_TIMEOUT_MS)
+    put('LD_HOOK_READ_ENABLED', await $.env.get('LD_HOOK_READ_ENABLED'))
+    put('LD_HOOK_READ_BLOCK', await $.env.get('LD_HOOK_READ_BLOCK'))
+    put('LD_HOOK_READ_SWITCH_FILE', await $.env.get('LD_HOOK_READ_SWITCH_FILE'))
+    put('LD_HOOK_READ_SUGGEST_KB', await $.env.get('LD_HOOK_READ_SUGGEST_KB'))
+    put('LOCAL_DELEGATE_LOG_DIR', await $.env.get('LOCAL_DELEGATE_LOG_DIR'))
+    put('LOCALAPPDATA', await $.env.get('LOCALAPPDATA'))
+    put('XDG_DATA_HOME', await $.env.get('XDG_DATA_HOME'))
+    put('USERPROFILE', await $.env.get('USERPROFILE'))
+    put('HOME', await $.env.get('HOME'))
+    READ_STATE.vars = vars
+  } catch {
+    READ_STATE.vars = null
+  }
+  return READ_STATE.vars
+}
+
+async function readNow($) {
+  try {
+    return await $.clock.now()
+  } catch {
+    return Date.now()
+  }
+}
+
+/**
+ * `promise`, or `null` once `ms` have gone by (`$.clock.sleep`: the module has no timers). The wait
+ * is called off as soon as `promise` settles, so it does not outlive the hook.
+ */
+async function readWithin($, promise, ms) {
+  const stop = typeof AbortController === 'function' ? new AbortController() : null
+  let late
+  try {
+    late = $.clock.sleep(ms, stop ? { signal: stop.signal } : undefined).then(
+      () => null,
+      () => null,
+    )
+  } catch {
+    return promise
+  }
+  try {
+    return await Promise.race([promise, late])
+  } finally {
+    if (stop) {
+      stop.abort()
+    }
+  }
+}
+
+/**
+ * Asks the daemon `path` with `body` plus this session's classifier variables, and hands its text to
+ * `parse`. Resolves what `parse` makes of it, or `null` (and the daemon is left alone for a while)
+ * on any failure: then the caller asks the process, as before. Never logs the body.
+ */
+async function readAskDaemon($, common, path, body, parse) {
+  if (typeof common.daemonFetch !== 'function') {
+    return null
+  }
+  const now = await readNow($)
+  if (now < READ_STATE.daemonDownUntil) {
+    return null
+  }
+  let answer = null
+  try {
+    const vars = await readClassifierVars($)
+    if (vars && typeof common.token === 'function' && (await common.token())) {
+      const init = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...body, env: vars }),
+      }
+      const done = await readWithin($, common.daemonFetch(path, init), READ_DAEMON_TIMEOUT_MS)
+      if (done && done.status === 200 && readText(done.text)) {
+        answer = parse(done.text)
+      }
+    }
+  } catch {
+    answer = null
+  }
+  if (answer === null) {
+    READ_STATE.daemonDownUntil = now + READ_DAEMON_RETRY_MS
+  }
+  return answer
+}
+
+/** `hook classify`'s answer, checked, or null when it is not that shape. */
+function readParseClassified(text) {
+  try {
+    const answer = JSON.parse(text)
+    return answer && typeof answer === 'object' && typeof answer.kind === 'string' ? answer : null
+  } catch {
+    return null
+  }
+}
+
+/** `hook classify`'s answer for this call (the daemon, else the process), or null. */
+async function readClassify($, common, e, sessionId, cwd) {
+  const input = { tool_name: e.tool, tool_input: readToolInput(e), cwd, session_id: sessionId }
+  const fromDaemon = await readAskDaemon($, common, READ_DAEMON_CLASSIFY, { payload: input }, readParseClassified)
+  if (fromDaemon) {
+    return fromDaemon
+  }
+  try {
+    const done = await common.runLd(READ_CLASSIFY, JSON.stringify(input), READ_CLASSIFY_TIMEOUT_MS)
     if (!done || done.exitCode !== 0) {
       return null
     }
-    const answer = JSON.parse(done.stdout)
-    return answer && typeof answer === 'object' && typeof answer.kind === 'string' ? answer : null
+    return readParseClassified(done.stdout)
   } catch {
     return null
   }
@@ -321,15 +449,19 @@ function readParseConfig(stdout) {
   }
 }
 
-/** Asks Python once per load for the prefilter's data; later calls reuse it (or its absence). */
-async function readLoadConfig(common) {
+/** Asks Python once per load for the prefilter's data (the daemon, else the process); later calls
+ * reuse it (or its absence). */
+async function readLoadConfig($, common) {
   if (READ_STATE.configAsked) {
     return
   }
   READ_STATE.configAsked = true
   try {
-    const done = await common.runLd([...READ_CLASSIFY, READ_CONFIG_FLAG], undefined, READ_CLASSIFY_TIMEOUT_MS)
-    const config = done && done.exitCode === 0 && readText(done.stdout) ? readParseConfig(done.stdout) : null
+    let config = await readAskDaemon($, common, READ_DAEMON_CONFIG, {}, readParseConfig)
+    if (!config) {
+      const done = await common.runLd([...READ_CLASSIFY, READ_CONFIG_FLAG], undefined, READ_CLASSIFY_TIMEOUT_MS)
+      config = done && done.exitCode === 0 && readText(done.stdout) ? readParseConfig(done.stdout) : null
+    }
     if (config) {
       READ_STATE.config = config
       READ_STATE.tools = config.tools
@@ -538,7 +670,7 @@ async function readOnToolCall($, common, e, next) {
   if (writeKey === undefined) {
     // The tool list and the harmless words come with the config: after a reload it is asked here.
     if (!READ_STATE.configAsked && (READ_STATE.tools || READ_DEFAULT_TOOLS).includes(e.tool)) {
-      await readLoadConfig(common)
+      await readLoadConfig($, common)
     }
     if (!readMayTouchFile(e)) {
       return next(e)
@@ -553,7 +685,7 @@ async function readOnToolCall($, common, e, next) {
   if (!(await readWorthClassifying($, e, cwd))) {
     return next(e)
   }
-  const classified = await readClassify(common, e, sessionId, cwd)
+  const classified = await readClassify($, common, e, sessionId, cwd)
   if (!classified) {
     return next(e)
   }
@@ -616,7 +748,7 @@ export async function onSessionStart($, e, common) {
   }
   const c = common || engineCommon($)
   await readLoadGuard($, c, await readSessionId($))
-  await readLoadConfig(c)
+  await readLoadConfig($, c)
   READ_STATE.beat = true
   return { read_mod_active: true }
 }
@@ -631,6 +763,8 @@ export function register(on, options, common) {
   READ_STATE.guard = new Set()
   READ_STATE.guardSession = null
   READ_STATE.beat = false
+  READ_STATE.vars = undefined
+  READ_STATE.daemonDownUntil = 0
   if (!READ_STATE.enabled) {
     return
   }

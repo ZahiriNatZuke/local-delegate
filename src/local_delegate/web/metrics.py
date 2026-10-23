@@ -1083,6 +1083,80 @@ def llamaswap_watch_result(wid: str):
     return JSONResponse(result)
 
 
+# --- El clasificador del mod de lectura (F4-classify-daemon) -----------------------------------------
+#
+# El mod de lectura pregunta aquí en vez de arrancar `python -I -m local_delegate.hook classify` en
+# cada llamada (~120 ms en Windows). La respuesta es la del CLI, byte a byte: las dos salen de
+# `hook_entry.classify_text`/`config_text`. El daemon no tiene el entorno de Claude Code, así que el
+# mod manda las variables que lee el clasificador (`hook_entry.CLASSIFY_ENV`) y aquí se usan esas y
+# solo esas, sin mirar ni tocar `os.environ` (el proceso atiende peticiones a la vez).
+#
+# Tras el token web, como el resto de lo que pide el CLI, y además solo desde loopback aunque el
+# panel se publique en la red: la respuesta dice si existe un fichero y cuánto pesa. Nunca registra
+# el contenido de la petición (el comando, las rutas).
+
+
+def _require_loopback(request: Request) -> None:
+    import ipaddress
+
+    host = request.client.host if request.client else ""
+    try:
+        loopback = ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        loopback = False
+    if not loopback:
+        raise HTTPException(status_code=403)
+
+
+_HOOK_CHECKS = [Depends(_require_web_token), Depends(_require_loopback)]
+
+
+async def _hook_body(request: Request) -> tuple[object, dict[str, str]]:
+    """(`payload`, entorno) de la petición: `{"payload": {...}, "env": {NOMBRE: valor}}`.
+
+    Del entorno solo pasan las variables de `CLASSIFY_ENV` con valor de texto; una que no viene no
+    se toma del daemon. Un cuerpo que no es ese objeto es un 400, sin traza ni contenido."""
+    from .. import hook_entry
+
+    try:
+        body = json.loads(await request.body())
+    except ValueError:
+        body = None
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400)
+    env = body.get("env", {})
+    payload = body.get("payload", {})
+    if not isinstance(env, dict) or not isinstance(payload, dict):
+        raise HTTPException(status_code=400)
+    allowed = {
+        name: value
+        for name, value in env.items()
+        if name in hook_entry.CLASSIFY_ENV and isinstance(value, str)
+    }
+    return payload, allowed
+
+
+@app.post("/api/hook/classify", dependencies=_HOOK_CHECKS)
+async def hook_classify(request: Request):
+    """`hook classify` para la entrada de un `PreToolUse` en `payload`, con el entorno de `env`."""
+    from starlette.concurrency import run_in_threadpool
+
+    from .. import hook_entry
+
+    payload, env = await _hook_body(request)
+    text = await run_in_threadpool(hook_entry.classify_text, payload, env)
+    return Response(text, media_type="application/json")
+
+
+@app.post("/api/hook/classify-config", dependencies=_HOOK_CHECKS)
+async def hook_classify_config(request: Request):
+    """`hook classify --config` con el entorno de `env` (el umbral bajo viene de ahí)."""
+    from .. import hook_entry
+
+    _payload, env = await _hook_body(request)
+    return Response(hook_entry.config_text(env), media_type="application/json")
+
+
 # Icono de marca: un corchete de terminal abrazando el chevrón de delegación — «lo que entra
 # aquí, se queda aquí». El corchete de cierre va a menos opacidad para que el chevrón sea lo
 # primero que se lee; a 16px la silueta son dos formas con aire entre ellas, que es lo que

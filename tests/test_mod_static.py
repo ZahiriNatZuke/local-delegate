@@ -18,6 +18,8 @@ from pathlib import Path
 
 import pytest
 
+from local_delegate import hook_entry
+
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
 PLUGIN_DIR = ROOT / "src" / "local_delegate" / "resources" / "claude-plugin" / "local-delegate"
@@ -40,13 +42,16 @@ def _load_build_mod():
 build_mod = _load_build_mod()
 
 #: Every variable the mod may read. The token is the only secret; the rest locate the plugin's
-#: data folder (T0: `CLAUDE_PLUGIN_DATA` does not reach the mod) or say who started the session.
+#: data folder (T0: `CLAUDE_PLUGIN_DATA` does not reach the mod), say who started the session, or
+#: are what `hook classify` reads (`hook_entry.CLASSIFY_ENV`), which the read piece sends to the
+#: daemon's classifier because the daemon has its own environment (F4-classify-daemon).
 ALLOWED_VARIABLES = {
     "LOCAL_DELEGATE_WEB_TOKEN",
     "CLAUDE_CONFIG_DIR",
     "USERPROFILE",
     "HOME",
     "CLAUDE_CODE_ENTRYPOINT",
+    *hook_entry.CLASSIFY_ENV,
 }
 
 ENV_GET = re.compile(r"\$\.env\.get\(\s*([^)]*)\)")
@@ -279,3 +284,17 @@ def test_build_refuses_two_pieces_with_the_same_top_level_name(tmp_path):
     )
     with pytest.raises(build_mod.BuildError, match="PINNED_SWITCH"):
         build_mod.build(plugin)
+
+
+def test_read_piece_sends_exactly_the_classifier_variables():
+    """The variables `readClassifierVars` reads are `hook_entry.CLASSIFY_ENV`, no more and no less:
+    one missing and the daemon would classify with its own value (or none) where the process used
+    the client's; the list lives in Python and this ties the mod's reads to it."""
+    code = _code(_sources()["read.js"])
+    body = re.search(r"async function readClassifierVars\(\$\) \{(.*?)\n\}", code, flags=re.DOTALL)
+    assert body, "readClassifierVars not found"
+    read = [m for m in re.findall(r"\$\.env\.get\('([A-Z_]+)'\)", body.group(1))]
+    sent = re.findall(r"put\('([A-Z_]+)', await \$\.env\.get\('([A-Z_]+)'\)\)", body.group(1))
+    assert all(name == got for name, got in sent), sent
+    assert sorted(read) == sorted(hook_entry.CLASSIFY_ENV)
+    assert len(sent) == len(read) == len(set(read))

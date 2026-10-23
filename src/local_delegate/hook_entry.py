@@ -28,6 +28,10 @@ Dos subcomandos más no son hooks de `hooks.json`: los llama el mod de lectura p
 El mod lanza los dos por `python -I -m local_delegate.hook`, nunca por `-m local_delegate hook`:
 esa vía entra por `entrypoint`, que importa el servidor y el SDK de MCP (654 ms de importación
 medidos en `evidence/F4-live.md`, frente a ~75 ms de esta).
+El mod pregunta antes al daemon (`POST /api/hook/classify` y `/api/hook/classify-config`, en
+`web/metrics.py`), que responde con las mismas `classify_text` y `config_text` de aquí y con el
+entorno que manda el mod (`CLASSIFY_ENV`); el proceso queda de respaldo (F4-classify-daemon).
+
 - `hook record-read`: stdin, la salida de `classify` más `decision` y `session_id`; escribe en la
   telemetría de los hooks la misma línea que habría escrito el hook de esa vía, más `decision` y
   `source: "mod"` (`hook_common.MOD_DECISIONS`). No escribe nada en stdout.
@@ -56,6 +60,25 @@ COMMANDS = ("classify", "record-read")
 LIST_TOOLS_FLAG = "--list-tools"
 #: Opción de `classify` que da los datos del prefiltro del mod (`read_classifier.prefilter_config`).
 CONFIG_FLAG = "--config"
+
+#: Las variables de entorno que leen `classify` y `classify --config`, y solo esas: la capa «activo»
+#: (`read_switch`: la variable y el fichero `LOG_DIR/read-hook.json`), la de bloqueo
+#: (`hook_common.block_state`: la variable y `~/.claude/local-delegate-block-off`), el umbral bajo
+#: (`read_classifier.summarizable`) y lo que sitúa `LOG_DIR` y la carpeta personal (`~` de las rutas).
+#: El daemon no tiene el entorno de Claude Code, así que el mod de lectura manda estas en la petición
+#: (`POST /api/hook/classify`) y el endpoint usa esas en vez de las de su proceso. El mod las lee
+#: una por una; `test_mod_static.py` ata su lista a esta.
+CLASSIFY_ENV = (
+    "LD_HOOK_READ_ENABLED",
+    "LD_HOOK_READ_BLOCK",
+    "LD_HOOK_READ_SWITCH_FILE",
+    "LD_HOOK_READ_SUGGEST_KB",
+    "LOCAL_DELEGATE_LOG_DIR",
+    "LOCALAPPDATA",
+    "XDG_DATA_HOME",
+    "USERPROFILE",
+    "HOME",
+)
 
 #: Log de fallos de los hooks, en `LOG_DIR`. Una línea por fallo: hora, hook y tipo de excepción.
 FAILURE_LOG = "hook-failures.jsonl"
@@ -111,29 +134,52 @@ def _load_hook_module(name: str):
     return importlib.import_module(name)
 
 
+def classify_text(payload: object, environ) -> str:
+    """La respuesta de `hook classify`, el JSON tal cual sale por stdout (sin el salto final).
+
+    La única implementación: la usan el CLI (con `os.environ`) y el endpoint del daemon
+    `POST /api/hook/classify` (con el entorno que manda el mod, `CLASSIFY_ENV`). No lee
+    `os.environ` cuando le pasan otro entorno ni lo toca: el daemon atiende peticiones a la vez.
+    Importa el clasificador como módulo del paquete, sin tocar `sys.path` (en el daemon, el
+    `sys.path` es de todos).
+    """
+    import json
+
+    from . import read_switch
+    from .resources.hooks import hook_common, read_classifier
+
+    if not isinstance(payload, dict):
+        payload = {}
+    if read_switch.enabled(environ=environ):
+        state = hook_common.block_state(environ)
+    else:
+        state = "inactive"
+    return json.dumps(read_classifier.classify(payload, state, environ), ensure_ascii=False)
+
+
+def config_text(environ) -> str:
+    """La respuesta de `hook classify --config` (sin el salto final); como `classify_text`."""
+    import json
+
+    from .resources.hooks import read_classifier
+
+    return json.dumps(read_classifier.prefilter_config(environ))
+
+
 def _classify(args: list[str]) -> None:
     import json
 
-    classifier = _load_hook_module("read_classifier")
     if LIST_TOOLS_FLAG in args:
-        print(json.dumps(classifier.list_tools()))
+        print(json.dumps(_load_hook_module("read_classifier").list_tools()))
         return
     if CONFIG_FLAG in args:
-        print(json.dumps(classifier.prefilter_config(os.environ)))
+        print(config_text(os.environ))
         return
     try:
         payload = json.load(sys.stdin)
     except ValueError:
         payload = {}
-    if not isinstance(payload, dict):
-        payload = {}
-    from . import read_switch
-
-    if read_switch.enabled(environ=os.environ):
-        state = _load_hook_module("hook_common").block_state()
-    else:
-        state = "inactive"
-    print(json.dumps(classifier.classify(payload, state), ensure_ascii=False))
+    print(classify_text(payload, os.environ))
 
 
 def _record_read() -> None:

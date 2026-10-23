@@ -53,7 +53,16 @@ type Env = {
   mcpResult: any
   sizes: Map<string, number>
   config: any
+  // The daemon (F4-classify-daemon): how it answers, what it was asked, and the clock the mod reads.
+  daemon: Daemon
+  daemonCalls: { path: string; init: any; body: any }[]
+  vars: Record<string, string>
+  now: number
+  sleeps: number[]
 }
+
+// `up` answers like `hook classify`; the rest are the ways the daemon can fail the mod.
+type Daemon = 'none' | 'up' | 'down' | 'hang' | '401' | '404' | 'invalid' | 'notoken'
 
 function t(key: string, vars?: Record<string, unknown>) {
   const tail = vars ? ' ' + Object.keys(vars).sort().map(k => `${k}=${String(vars[k])}`).join(' ') : ''
@@ -71,6 +80,8 @@ function makeEnv(opts: {
   mcpResult?: any
   sizes?: Record<string, number>
   config?: any
+  daemon?: Daemon
+  vars?: Record<string, string> | null
 } = {}): Env {
   const env: Env = {
     $: null,
@@ -91,6 +102,11 @@ function makeEnv(opts: {
     // What `$.fs.stat` says of each file: the files the classifier calls large are large on disk.
     sizes: new Map(Object.entries(opts.sizes ?? { [BIG]: BIG_BYTES, [OTHER]: BIG_BYTES, [CODE]: BIG_BYTES })),
     config: opts.config === undefined ? CONFIG : opts.config,
+    daemon: opts.daemon ?? 'none',
+    daemonCalls: [],
+    vars: opts.vars === null ? (null as any) : opts.vars ?? VARS,
+    now: 1_000_000,
+    sleeps: [],
   }
   // `$.fs.stat` takes either slash and either case of the drive.
   const lookup = (p: string) => [...env.files.keys()].find(k => k.toLowerCase() === p.replace(/\\/g, '/').toLowerCase())
@@ -126,6 +142,20 @@ function makeEnv(opts: {
       },
       toast: async () => undefined,
     },
+    // `$.env.get`: the variables of the Claude Code process (`vars: null`, an engine without it).
+    env: {
+      get: async (name: string) => {
+        if (env.vars === null) throw new Error('no env noun')
+        return env.vars[name]
+      },
+    },
+    // A daemon that hangs never answers; the mod's own time limit is a `$.clock.sleep`.
+    clock: {
+      now: async () => env.now,
+      sleep: async (ms: number) => {
+        env.sleeps.push(ms)
+      },
+    },
   }
   env.common = {
     t,
@@ -135,6 +165,8 @@ function makeEnv(opts: {
       env.beats.push(fields)
       return `${DATA}/heartbeats/${env.session}.json`
     },
+    token: async () => (env.daemon === 'notoken' ? null : 'tok'),
+    daemonFetch: env.daemon === 'none' ? undefined : (path: string, init: any) => daemonAnswer(env, path, init),
     runLd: async (args: string[], stdin?: string) => {
       const parsed = typeof stdin === 'string' ? JSON.parse(stdin) : undefined
       env.ldRuns.push({ args, stdin: parsed })
@@ -156,6 +188,43 @@ function makeEnv(opts: {
   }
   registerInto(env, opts.options ?? { read_mod_enabled: true })
   return env
+}
+
+// The variables the test process "has": what `hook_entry.CLASSIFY_ENV` names, plus one it does not.
+const VARS: Record<string, string> = {
+  LD_HOOK_READ_ENABLED: '1',
+  LD_HOOK_READ_BLOCK: '1',
+  LD_HOOK_READ_SUGGEST_KB: '4',
+  LOCAL_DELEGATE_LOG_DIR: 'C:/data/ld',
+  USERPROFILE: 'C:/Users/me',
+  PATH: 'C:/bin',
+}
+
+// What the daemon answers to `POST /api/hook/classify[-config]`, like `common.daemonFetch` resolves.
+async function daemonAnswer(env: Env, path: string, init: any) {
+  const body = init && typeof init.body === 'string' ? JSON.parse(init.body) : undefined
+  env.daemonCalls.push({ path, init, body })
+  const ok = (text: string) => ({ status: 200, ok: true, text, json: JSON.parse(text) })
+  switch (env.daemon) {
+    case 'down':
+      return null
+    case 'hang':
+      return new Promise(() => undefined)
+    case '401':
+      return { status: 401, ok: false, text: '{"detail":"no"}', json: { detail: 'no' } }
+    case '404':
+      return { status: 404, ok: false, text: '{"detail":"Not Found"}', json: { detail: 'Not Found' } }
+    case 'invalid':
+      return { status: 200, ok: true, text: '<html>', json: null }
+  }
+  if (path === '/api/hook/classify-config') {
+    return ok(typeof env.config === 'string' ? env.config : JSON.stringify(env.config))
+  }
+  if (path === '/api/hook/classify') {
+    const answer = env.classify(body.payload)
+    return answer === null || answer === 'fail' ? { status: 500, ok: false, text: '', json: null } : ok(JSON.stringify(answer))
+  }
+  return { status: 404, ok: false, text: '', json: null }
 }
 
 function registerInto(env: Env, options: Record<string, unknown>) {
@@ -637,4 +706,82 @@ test('without_config_every_candidate_is_classified', async () => {
     await call(env, { tool: 'Read', file_path: BIG })
     expect(classifyRuns(env)).toHaveLength(2)
   }
+})
+
+// --- The daemon's classifier (F4-classify-daemon) -------------------------------------------------
+
+function daemonPaths(env: Env): string[] {
+  return env.daemonCalls.map(c => c.path)
+}
+
+test('classifies_through_the_daemon', async () => {
+  const env = makeEnv({ classify: byInput, daemon: 'up' })
+  await onSessionStart(env.$, { cwd: CWD, isInteractive: false }, env.common)
+  const out = await call(env, { tool: 'Read', file_path: BIG })
+  // Not one process for `classify` or `--config`: the daemon answered both.
+  expect(classifyRuns(env)).toHaveLength(0)
+  expect(configRuns(env)).toHaveLength(0)
+  expect(daemonPaths(env)).toEqual(['/api/hook/classify-config', '/api/hook/classify'])
+  // Same answer, same decision as through the process.
+  expect(out.result.file.content.includes('SUMMARY OF THE FILE')).toBe(true)
+  expect(decisions(env)).toEqual(['auto_summarized'])
+  // The request: a POST with the hook's input and the client's classifier variables, and only those.
+  const ask = env.daemonCalls[1]
+  expect(ask.init.method).toBe('POST')
+  expect(ask.body.payload).toEqual({ tool_name: 'Read', tool_input: { file_path: BIG }, cwd: CWD, session_id: SESSION })
+  const { PATH, ...sent } = VARS
+  expect(PATH).toBe('C:/bin')
+  expect(ask.body.env).toEqual(sent)
+  expect(env.daemonCalls[0].body.env).toEqual(sent)
+  // With a time limit on each request.
+  expect(env.sleeps.length).toBeGreaterThan(0)
+  expect(env.sleeps.every(ms => ms <= 1000)).toBe(true)
+})
+
+test('daemon_config_feeds_the_prefilter', async () => {
+  const env = makeEnv({ classify: byInput, daemon: 'up', config: { ...CONFIG, min_bytes: 70 * 1024 } })
+  await onSessionStart(env.$, { cwd: CWD, isInteractive: false }, env.common)
+  // 64 KB of code is under the daemon's 70 KB: dropped without asking anyone.
+  await call(env, { tool: 'Bash', command: 'cat src/big.py' })
+  expect(configRuns(env)).toHaveLength(0)
+  expect(daemonPaths(env)).toEqual(['/api/hook/classify-config'])
+  expect(classifyRuns(env)).toHaveLength(0)
+})
+
+for (const failure of ['down', 'hang', '401', '404', 'invalid', 'notoken'] as Daemon[]) {
+  test(`falls_back_to_the_process_when_daemon_${failure}`, async () => {
+    const env = makeEnv({ classify: byInput, daemon: failure })
+    await onSessionStart(env.$, { cwd: CWD, isInteractive: false }, env.common)
+    const out = await call(env, { tool: 'Read', file_path: BIG })
+    // The call is not lost: the process classified it and the read was summarized as before.
+    expect(configRuns(env)).toHaveLength(1)
+    expect(classifyRuns(env)).toHaveLength(1)
+    expect(out.result.file.content.includes('SUMMARY OF THE FILE')).toBe(true)
+    expect(decisions(env)).toEqual(['auto_summarized'])
+    // Guard: the daemon was the first thing tried (without a token it is not even asked).
+    expect(env.daemonCalls.length).toBe(failure === 'notoken' ? 0 : 1)
+  })
+}
+
+test('falls_back_when_the_variables_cannot_be_read', async () => {
+  // Without the variables the daemon would classify with the wrong switch: the process, not a guess.
+  const env = makeEnv({ classify: byInput, daemon: 'up', vars: null })
+  await call(env, { tool: 'Read', file_path: BIG })
+  expect(env.daemonCalls).toHaveLength(0)
+  expect(classifyRuns(env)).toHaveLength(1)
+})
+
+test('remembers_a_daemon_failure_for_a_while', async () => {
+  const env = makeEnv({ classify: byInput, daemon: 'hang' })
+  await onSessionStart(env.$, { cwd: CWD, isInteractive: false }, env.common)
+  for (let i = 0; i < 4; i++) await call(env, { tool: 'Read', file_path: BIG })
+  // One timeout paid (the config), then straight to the process.
+  expect(env.daemonCalls).toHaveLength(1)
+  expect(classifyRuns(env)).toHaveLength(4)
+  // Some time later it is worth asking again, and a daemon back up is used.
+  env.now += 10 * 60 * 1000
+  env.daemon = 'up'
+  await call(env, { tool: 'Read', file_path: BIG })
+  expect(daemonPaths(env)).toEqual(['/api/hook/classify-config', '/api/hook/classify'])
+  expect(classifyRuns(env)).toHaveLength(4)
 })

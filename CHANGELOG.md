@@ -6,6 +6,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Rendimiento (el mod de lectura clasifica por el daemon)
+
+- **El mod de lectura le pregunta al daemon en vez de arrancar un proceso.** `classify` y
+  `classify --config` pasan por dos rutas nuevas del daemon, `POST /api/hook/classify` y
+  `POST /api/hook/classify-config`, con el token del panel y solo desde loopback. Medido con un
+  daemon de prueba en Windows (30 repeticiones): 1,3 ms de mediana y 1,6 ms de p95, frente a
+  89–90 ms y 97–99 ms del proceso. La respuesta es la del CLI byte a byte (las dos salen de
+  `hook_entry.classify_text`/`config_text`; un test lo compara sobre todo el corpus de lecturas).
+  El mod manda las variables que lee el clasificador (`hook_entry.CLASSIFY_ENV`) y el daemon usa
+  esas y no las de su proceso, sin tocar `os.environ`. Sin token, con el daemon caído, a los
+  300 ms, con 401, con un daemon de otra versión o con una respuesta inválida, vuelve al proceso de
+  siempre y no le pregunta al daemon durante 5 minutos. `record-read` sigue siendo un proceso.
+  (SDD `claude-plugin-and-mods`, F4-classify-daemon)
+
 ### Rendimiento (coste del mod de lectura en cada `Bash`)
 
 - **El mod de lectura ya no carga el servidor en cada llamada.** `hook classify` y `hook
