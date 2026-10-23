@@ -80,6 +80,13 @@ vías la toma, el mod deja rastro (una línea en el log de depuración y otra en
 `hook-failures.jsonl`, sin ruta ni contenido) y la vuelve a intentar al empezar la siguiente
 llamada a una tool.
 
+Cada decisión lleva un `id` que el mod pone una sola vez y manda por todas las vías (daemon, proceso
+y reintento); `record-read` mira la cola de la telemetría (los últimos 64 KB) y no escribe un `id`
+que ya está. Si el daemon no contesta dentro de su tope (1 s), la línea no se da por perdida ni se
+lanza el proceso a la vez: espera a la siguiente llamada, que la reintenta con el mismo `id`, y solo
+si ese intento también falla queda el rastro. Así una línea que el daemon escribió tarde no sale
+dos veces (prueba en vivo del 2026-10-23).
+
 ### Leer literal un fichero que llegó resumido
 
 Lo que el mod cuenta es **cuánto del fichero se ha leído en la sesión**, no el tamaño de cada

@@ -27,7 +27,12 @@
 // to the daemon (`POST /api/hook/record-read`, F4-read-fixes), else through the process: in 0.41.0
 // it only went through the process, and no decision taken in the dialog ever reached the log. A
 // line neither road takes leaves a trace (`$.ui.log` to debug, `hook-failures.jsonl`) and is tried
-// again at the start of the next tool call.
+// again at the start of the next tool call. Each decision carries one `id`, made here once and sent
+// on every road (F4-live-fixes), and `record-read` drops an id already in the log: in the live test
+// of 2026-10-23 the daemon wrote the line after the mod's limit, the mod called it lost and the
+// retry wrote it again. A daemon that runs out of time is not a lost line either: the line waits
+// for the next tool call (no process racing the daemon, no trace), and only if that try fails too
+// is it traced.
 //
 // A piece of the mod: `scripts/build_mod.py` pastes it into `register.js`. It only declares at
 // load, and every top-level name carries `read`, so it cannot clash with another piece's.
@@ -65,6 +70,8 @@ const READ_DAEMON_RETRY_MS = 5 * 60 * 1000
 // the variables it reads (`hook_entry.RECORD_ENV`: the classifier's plus these two). Answers 204.
 const READ_DAEMON_RECORD = '/api/hook/record-read'
 const READ_DAEMON_RECORD_TIMEOUT_MS = 1000
+// What `readWithin` resolves when the time limit runs out first: the request may still complete.
+const READ_TIMED_OUT = Symbol('timed out')
 // The hooks' failure log (`hook_entry.FAILURE_LOG`, capped at `FAILURE_LOG_MAX_BYTES`), in the
 // package's data folder: where a decision that reached neither the daemon nor the process is noted.
 const READ_FAILURE_LOG = 'hook-failures.jsonl'
@@ -353,7 +360,7 @@ async function readWithin($, promise, ms) {
   let late
   try {
     late = $.clock.sleep(ms, stop ? { signal: stop.signal } : undefined).then(
-      () => null,
+      () => READ_TIMED_OUT,
       () => null,
     )
   } catch {
@@ -458,24 +465,25 @@ async function readRecordVars($) {
 }
 
 /**
- * The line to the daemon's `record-read`. True when it took it (204). An answer that says it cannot
- * (401, 403, 404: a token it does not take, an older daemon without the route) leaves the route
- * alone for a while; a request that does not complete does not, so the next try asks again.
+ * The line to the daemon's `record-read`: `'taken'` when it took it (204), `'late'` when the time
+ * limit ran out first (the daemon may still write it), `'no'` otherwise. An answer that says it
+ * cannot (401, 403, 404: a token it does not take, an older daemon without the route) leaves the
+ * route alone for a while; a request that does not complete does not, so the next try asks again.
  */
 async function readRecordByDaemon($, common, entry) {
   if (typeof common.daemonFetch !== 'function') {
-    return false
+    return 'no'
   }
   const now = await readNow($)
   // Nor while the classifier's daemon is being left alone: a dead daemon costs its time limit once.
   if (now < READ_STATE.recordDownUntil || now < READ_STATE.daemonDownUntil) {
-    return false
+    return 'no'
   }
   try {
     const vars = await readClassifierVars($)
     const extra = await readRecordVars($)
     if (!vars || !extra || typeof common.token !== 'function' || !(await common.token())) {
-      return false
+      return 'no'
     }
     const init = {
       method: 'POST',
@@ -483,8 +491,11 @@ async function readRecordByDaemon($, common, entry) {
       body: JSON.stringify({ payload: entry, env: { ...vars, ...extra } }),
     }
     const done = await readWithin($, common.daemonFetch(READ_DAEMON_RECORD, init), READ_DAEMON_RECORD_TIMEOUT_MS)
+    if (done === READ_TIMED_OUT) {
+      return 'late'
+    }
     if (done && (done.status === 204 || done.status === 200)) {
-      return true
+      return 'taken'
     }
     if (done && [401, 403, 404].includes(done.status)) {
       READ_STATE.recordDownUntil = now + READ_DAEMON_RETRY_MS
@@ -492,20 +503,47 @@ async function readRecordByDaemon($, common, entry) {
   } catch {
     // the process is next
   }
-  return false
+  return 'no'
 }
 
-/** One try at recording `entry`: the daemon, else the process. True when one of them took it. */
-async function readRecordOnce($, common, entry) {
-  if (await readRecordByDaemon($, common, entry)) {
-    return true
+/**
+ * One try at recording `item.entry`: the daemon, else the process. `'taken'` when one of them took
+ * it, `'lost'` when neither did, `'late'` when the daemon ran out of time on the line's first late
+ * try: then the process is not started (it would race the daemon's write), and the line waits for
+ * the next tool call.
+ */
+async function readRecordOnce($, common, item) {
+  const byDaemon = await readRecordByDaemon($, common, item.entry)
+  if (byDaemon === 'taken') {
+    return 'taken'
+  }
+  if (byDaemon === 'late' && !item.late) {
+    item.late = true
+    return 'late'
   }
   try {
-    const done = await common.runLd(READ_RECORD, JSON.stringify(entry), READ_RECORD_TIMEOUT_MS)
-    return Boolean(done) && done.exitCode === 0
+    const done = await common.runLd(READ_RECORD, JSON.stringify(item.entry), READ_RECORD_TIMEOUT_MS)
+    if (done && done.exitCode === 0) {
+      return 'taken'
+    }
+    return 'lost'
   } catch {
-    return false
+    return 'lost'
   }
+}
+
+/** The `id` of one decision's line: 12 hex digits, the shape `hook_common.new_id` makes and
+ * `hook_common.mod_record_id` takes. */
+function readRecordId() {
+  const bytes = new Uint8Array(6)
+  try {
+    globalThis.crypto.getRandomValues(bytes)
+  } catch {
+    for (let i = 0; i < bytes.length; i++) {
+      bytes[i] = Math.floor(Math.random() * 256)
+    }
+  }
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')
 }
 
 /**
@@ -581,24 +619,42 @@ async function readRecordLost($, entry) {
  * covered three ways: a second road (HTTP), the trace, and the retry from a hook no dialog precedes.
  */
 async function readRecord($, common, classified, decision, sessionId) {
-  const entry = { ...classified, decision, session_id: sessionId }
-  if (await readRecordOnce($, common, entry)) {
+  const entry = { ...classified, decision, session_id: sessionId, id: readRecordId() }
+  const item = { entry, late: false, traced: false }
+  const done = await readRecordOnce($, common, item)
+  if (done === 'taken') {
     return
   }
-  await readRecordLost($, entry)
-  READ_STATE.pending.push(entry)
+  if (done === 'lost') {
+    await readRecordLost($, entry)
+    item.traced = true
+  }
+  readKeepPending(item)
+}
+
+function readKeepPending(item) {
+  READ_STATE.pending.push(item)
   if (READ_STATE.pending.length > READ_PENDING_MAX) {
     READ_STATE.pending.shift()
   }
 }
 
-/** The lines lost in an earlier call, tried once more; one that fails again is dropped (its trace is
- * already written). */
+/**
+ * The lines lost (or left waiting by a late daemon) in an earlier call, tried once more with the
+ * same `id`, so a line the daemon wrote late is not written twice. One that fails again is dropped,
+ * with its trace written now if it had none; one the daemon is late on for the first time waits
+ * once more.
+ */
 async function readFlushPending($, common) {
-  const lines = READ_STATE.pending
+  const items = READ_STATE.pending
   READ_STATE.pending = []
-  for (const entry of lines) {
-    await readRecordOnce($, common, entry)
+  for (const item of items) {
+    const done = await readRecordOnce($, common, item)
+    if (done === 'late') {
+      readKeepPending(item)
+    } else if (done === 'lost' && !item.traced) {
+      await readRecordLost($, item.entry)
+    }
   }
 }
 
