@@ -1,7 +1,7 @@
 // mod/read.js — large reads go through the local model (REQ-020, REQ-021, REQ-022; SDD
 // claude-plugin-and-mods, batch F4-read-mod; design in plan.md, wave 5).
 //
-// One `tool.call` hook, only with the `read_mod_enabled` option on (off by default):
+// One `tool.call` hook, only with the `read_mod_enabled` option on (on by default since 0.41):
 //   - a prefilter drops, without starting a process, the calls that cannot lead to a decision: a
 //     tool or a harmless first word that cannot read or write a file, and a call that names no
 //     prose file, no guarded file and no large file. Its data (tools, prose extensions, threshold,
@@ -27,9 +27,8 @@
 // A piece of the mod: `scripts/build_mod.py` pastes it into `register.js`. It only declares at
 // load, and every top-level name carries `read`, so it cannot clash with another piece's.
 
-import { engineCommon, toolResultText } from './common.js'
+import { engineCommon, readModOn, toolResultText } from './common.js'
 
-export const READ_SWITCH = 'read_mod_enabled'
 // REQ-020: ranges that cover this share of the file's lines count as reading it whole.
 export const READ_WHOLE_SHARE = 0.8
 // The read hook's lower band (`LD_HOOK_READ_SUGGEST_KB`, 8 KB): below it a read is left alone.
@@ -622,9 +621,9 @@ export async function onSessionStart($, e, common) {
   return { read_mod_active: true }
 }
 
-/** Registers the `tool.call` hook, only with `read_mod_enabled` on (off by default). */
+/** Registers the `tool.call` hook, only with `read_mod_enabled` on (on by default: `readModOn`). */
 export function register(on, options, common) {
-  READ_STATE.enabled = options?.[READ_SWITCH] === true
+  READ_STATE.enabled = readModOn(options)
   READ_STATE.tools = null
   READ_STATE.config = null
   READ_STATE.configAsked = false

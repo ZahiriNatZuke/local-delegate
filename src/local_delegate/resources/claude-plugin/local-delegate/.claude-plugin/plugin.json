@@ -58,7 +58,7 @@
       "title": "Read steering by the mod",
       "description": "Let the mod, instead of the read hooks, steer large reads to the local tools.",
       "required": false,
-      "default": false
+      "default": true
     }
   }
 }

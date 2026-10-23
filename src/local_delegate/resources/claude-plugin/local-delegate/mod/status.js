@@ -29,10 +29,9 @@
 // `register` inside its own `try`. It only declares at load, so loading it cannot throw. Its
 // top-level names carry `status`, so they cannot clash with another piece's.
 
-import { daemonFetch, language, t, token } from './common.js'
+import { daemonFetch, language, readModOn, t, token } from './common.js'
 
 export const STATUS_SWITCH = 'status_enabled'
-export const STATUS_READ_SWITCH = 'read_mod_enabled'
 
 const STATUS_SESSION_ID = /^[A-Za-z0-9_-]{1,128}$/
 const STATUS_MODEL_WIDTH = 28
@@ -140,7 +139,7 @@ export function statusParts(snapshot, options, lang) {
       parts.push({ text: `≈ ${statusMoney(snapshot.cost, lang)}`, color: 'subtle', joint: ' ', rank: 3 })
     }
   }
-  if (options[STATUS_READ_SWITCH] === true) {
+  if (readModOn(options)) {
     parts.push({ text: t('status.read_mod'), color: 'subtle', joint: STATUS_SEPARATOR, rank: 4 })
   }
   return parts

@@ -58,13 +58,16 @@ puede usar (CLI vieja o ausente), `install` lo deja como está y no registra hoo
 
 ### El hook de lectura y el mod de lectura
 
-Con la opción `read_mod_enabled` del plugin encendida, el mod de lectura y los hooks de lectura
+La opción `read_mod_enabled` del plugin sale **encendida por defecto** desde la 0.41: sin valor
+guardado cuenta como encendida, y solo `false` la apaga (desde el menú de configuración del plugin
+en Claude Code). Con ella encendida, el mod de lectura y los hooks de lectura
 (`Read` y `Bash|PowerShell`) no actúan los dos sobre la misma lectura. `hooks.json` no cambia: los
 hooks siguen declarados y **se apartan** solo cuando el mod va a hacer exactamente lo que habrían
 hecho ellos, es decir, cuando se cumplen las cuatro condiciones a la vez:
 
 1. la opción `read_mod_enabled` está encendida (llega al hook como
-   `CLAUDE_PLUGIN_OPTION_READ_MOD_ENABLED`);
+   `CLAUDE_PLUGIN_OPTION_READ_MOD_ENABLED`; sin valor guardado la variable no llega, y en un hook
+   del plugin cuenta como encendida);
 2. el latido de **la misma sesión** (`heartbeats/<sesión>.json` en la carpeta de datos del plugin)
    dice `read_mod_active` y que `process.run` respondió, y tiene menos de 24 h. El mod lo escribe
    al iniciar la sesión, así que vale desde la primera lectura;
@@ -79,6 +82,14 @@ en la 0.40: si el mod se apaga o falla, el hook vuelve. Los hooks de lectura que
 `settings.json` no ven la opción del plugin y no se apartan; `doctor` lo avisa en «mod de lectura y
 hooks de lectura coordinados» (`mod.read_overlap`), igual que avisa si la opción está encendida con
 la capa activa apagada (entonces no actúa ninguno).
+
+**Verificación.** Antes de encenderlo por defecto se probó en vivo con `claude -p` en Windows: el
+control positivo (sin el mod, `Write` pasa), el negativo (con el mod, tras un resumen, `Write` se
+rechaza y el fichero no cambia), la guarda tras `--resume`, que el hook se aparta y el latido.
+**Pendiente de verificar en sesión interactiva**: que aparezcan los botones «resumir con el modelo
+local / leer entero» y que el resumen llegue como resultado, que `Edit` se rechace tras el resumen
+y se acepte tras un `Read` con `offset`/`limit`, y que la guarda siga activa tras `--resume` en
+una sesión de terminal.
 
 ## Claude Desktop (`install --desktop`, solo Windows)
 

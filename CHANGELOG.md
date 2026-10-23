@@ -76,10 +76,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   encendido y quedan hooks de lectura en `settings.json`, que no ven la opción y no se apartan, o
   si la capa activa del hook de lectura está apagada y no actúa ninguno.
 
-### Añade (mod de lectura, apagado por defecto)
+### Añade (mod de lectura, encendido por defecto)
 
-- **Pieza `read` del mod del plugin** (REQ-020, REQ-021 y REQ-022), solo con la opción
-  `read_mod_enabled` encendida, que sigue apagada por defecto. Pregunta a `local-delegate hook
+- **Pieza `read` del mod del plugin** (REQ-020, REQ-021 y REQ-022), con la opción
+  `read_mod_enabled`, que sale **encendida por defecto**. Pregunta a `local-delegate hook
   classify` por cada llamada que puede leer o escribir un fichero. Una lectura entera de un fichero
   de 8 KB o más, o unas franjas que juntas cubren el 80 % de sus líneas, pasa por `local_summarize`
   y el resumen llega como resultado de la propia tool: con diálogo la persona elige «resumir con el
@@ -89,6 +89,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `NotebookEdit` y las escrituras de shell sobre ese fichero se rechazan hasta que haya una lectura
   real; la lista se guarda por sesión y aguanta `--resume`. Cada decisión se registra con
   `hook record-read`.
+- **Encendido por defecto tras la verificación en vivo** (F4-live): con `claude -p` en Windows
+  pasaron el control positivo (sin el mod, `Write` pasa) y el negativo (con el mod, tras un
+  resumen, `Write` se rechaza y el fichero no cambia), la guarda tras `--resume`, el hook que se
+  aparta y el latido. Una opción sin valor guardado cuenta como encendida en las tres piezas que la
+  leen (el mod, los hooks de lectura del plugin y `doctor`); solo `false` la apaga. Quien la haya
+  guardado en `false` desde el menú del plugin la conserva apagada: se enciende en ese mismo menú.
+  Queda **pendiente de verificar en sesión interactiva** la parte con diálogo: los botones
+  «resumir / leer entero» y la guarda tras `--resume` en una sesión de terminal.
 
 ### Corrige (mod de lectura: solo prosa y resumen limpio)
 

@@ -154,8 +154,10 @@ READ_HOOK_MATCHERS = frozenset(
 
 
 def read_mod_enabled(settings: dict | None) -> bool:
-    """The plugin's ``read_mod_enabled`` option (off by default)."""
-    return plugin_options(settings).get("read_mod_enabled") is True
+    """The plugin's ``read_mod_enabled`` option: on unless saved as off. It ships on (F4-live,
+    ``"default": true``), and ``pluginConfigs`` only holds the values someone saved."""
+    value = plugin_options(settings).get("read_mod_enabled")
+    return value is not False and str(value).strip().lower() != "false"
 
 
 def read_layer_active(ctx) -> bool:

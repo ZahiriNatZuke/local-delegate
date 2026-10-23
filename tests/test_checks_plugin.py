@@ -390,11 +390,16 @@ def test_mod_not_expected_without_plugin(tmp_path):
 # --- mod.read_overlap (F4-hooks-swap, REQ-023): the read mod and the read hooks ----------------
 
 
-def _read_mod(home: Path, data: Path, *, enabled: bool, layer: bool | None) -> None:
-    """The `read_mod_enabled` option in `pluginConfigs` and the read hook's active layer
+def _read_mod(home: Path, data: Path, *, enabled: bool | None, layer: bool | None) -> None:
+    """The `read_mod_enabled` option in `pluginConfigs` (`None` leaves it unset, as a plugin
+    installed without `--config read_mod_enabled=…`) and the read hook's active layer
     (`read-hook.json`, as `install --enable-read-hook` writes it; `None` leaves no file)."""
     settings = json.loads(_settings_path(home).read_text(encoding="utf-8"))
-    settings["pluginConfigs"][claude_plugin.PLUGIN_ID]["options"]["read_mod_enabled"] = enabled
+    options = settings["pluginConfigs"][claude_plugin.PLUGIN_ID]["options"]
+    if enabled is None:
+        options.pop("read_mod_enabled", None)
+    else:
+        options["read_mod_enabled"] = enabled
     _settings_path(home).write_text(json.dumps(settings, indent=2), encoding="utf-8")
     switch = plugin_migration.read_switch_path(home, data)
     assert switch is not None
@@ -462,3 +467,20 @@ def test_read_mod_and_read_hook_overlap_warns(tmp_path):
     # Without the plugin there is no read mod to overlap with.
     plain = make_home(tmp_path / "plain", codex=False, opencode=False)
     assert result_for("mod.read_overlap", make_ctx(plain)).status == checks.OK
+
+
+def test_read_mod_unset_counts_as_on(tmp_path):
+    # F4-live: the read mod ships on (`"default": true`), and a value never saved is that default.
+    # Unset, with the read hooks still in settings.json, both act on the same reads: it warns as
+    # with the option on.
+    home, data = _plugin_home(tmp_path / "unset", ld_bin=_ld_bin(tmp_path))
+    _settings_read_hooks(home)
+    _read_mod(home, data, enabled=None, layer=True)
+    unset = result_for("mod.read_overlap", _ctx(home, data))
+    assert unset.status == checks.WARN, unset.detail
+    assert "settings.json" in unset.detail
+    # Control: the same HOME with the option saved as false is the hooks alone, so the warn came
+    # from the unset option being read as on.
+    _read_mod(home, data, enabled=False, layer=True)
+    off = result_for("mod.read_overlap", _ctx(home, data))
+    assert off.status == checks.OK, off.detail

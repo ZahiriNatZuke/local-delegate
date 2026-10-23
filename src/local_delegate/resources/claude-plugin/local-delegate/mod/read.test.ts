@@ -223,12 +223,15 @@ function decisions(env: Env): string[] {
   return env.ldRuns.filter(r => r.args.includes('record-read')).map(r => r.stdin.decision)
 }
 
-test('off_by_default', async () => {
-  // Unset and false: no hook at all, so nothing can be steered.
-  expect(makeEnv({ options: {} }).hooks.filter(h => h.event === 'tool.call')).toHaveLength(0)
-  expect(makeEnv({ options: { read_mod_enabled: false } }).hooks.filter(h => h.event === 'tool.call')).toHaveLength(0)
-  // Guard: switched on, the hook is there, so the two zeros above are the switch's doing.
+test('on_by_default', async () => {
+  // F4-live passed: unset (a value never saved is the manifest's `"default": true`) and true
+  // register the hook.
+  expect(makeEnv({ options: {} }).hooks.filter(h => h.event === 'tool.call')).toHaveLength(1)
   expect(makeEnv({ options: { read_mod_enabled: true } }).hooks.filter(h => h.event === 'tool.call')).toHaveLength(1)
+  // Guard: switched off, as a boolean or as the text an option may arrive as, there is no hook,
+  // so the ones above are the switch's doing.
+  expect(makeEnv({ options: { read_mod_enabled: false } }).hooks.filter(h => h.event === 'tool.call')).toHaveLength(0)
+  expect(makeEnv({ options: { read_mod_enabled: 'false' } }).hooks.filter(h => h.event === 'tool.call')).toHaveLength(0)
 })
 
 test('respects_read_switch_off', async () => {

@@ -228,7 +228,8 @@ test('the heartbeat is written per session, with the pieces and never the token'
   expect(beat.dialog).toBe(false)
   // Nothing answers `process.run` beneath: the heartbeat says so instead of failing.
   expect(beat.process_run).toBe(false)
-  expect(beat.read_mod_enabled).toBe(false)
+  // F4-live: the read mod ships on, so with the option unset the heartbeat says it is on.
+  expect(beat.read_mod_enabled).toBe(true)
   expect(typeof beat.version).toBe('string')
   expect(writes[0].text.includes(TOKEN)).toBe(false)
 })

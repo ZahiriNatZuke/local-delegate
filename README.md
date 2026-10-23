@@ -358,6 +358,10 @@ El plugin trae además un **mod**, que corre dentro de Claude Code sin gastar tu
   (`◆ local-delegate · ● qwen3-8b · 3 delegaciones · 12,3k tok ahorrados ≈ $0,18`): el punto es
   verde, ámbar o rojo según el backend esté listo, ocupado o caído. La cuota de Claude no va
   aquí: es de la status line.
+- Desde la 0.41, el **mod de lectura** (encendido por defecto, opción `read_mod_enabled`) resume
+  con `local_summarize` la prosa grande que se lee entera y entrega el resumen como resultado de
+  la propia tool; con diálogo pregunta antes. Tras un resumen, escribir en ese fichero se rechaza
+  hasta leerlo de verdad. Mientras actúa, los hooks de lectura de la sesión se apartan.
 
 En Windows, `install --desktop` añade el chat de **Claude Desktop**: escribe una entrada que lanza
 `local-delegate desktop-bridge`, un puente stdio hacia el daemon que lee el token él mismo, porque
