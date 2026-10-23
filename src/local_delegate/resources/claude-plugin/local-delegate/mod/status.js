@@ -32,7 +32,8 @@
 //     stays because a line without a background would read as the last line of the chat.
 //   - any other surface (Claude Desktop): one line of text in two tones, like the app's own
 //     (`local-delegate · ● Listo · qwen3-8b · 3 delegaciones · ...`), and the read mode dim on the
-//     right; no pill, no link, no typography props (see `statusDesktopTree`).
+//     right; no pill, no link, no typography props (see `statusDesktopTree`). Its `·` sits between
+//     en spaces and its width is counted in its own letter (`statusDesktopCells`).
 // The read mode follows `hasDialog()`: with a person at the prompt the read mod asks before it
 // summarizes («lecturas: pregunta»), without one it summarizes on its own («lecturas: resume solo»).
 // While delegating the dot turns (◐◓◑◒) with the seconds the oldest call has run, so the turn costs
@@ -60,6 +61,21 @@ export const STATUS_STYLE = 'status_style'
 const STATUS_SESSION_ID = /^[A-Za-z0-9_-]{1,128}$/
 const STATUS_MODEL_WIDTH = 28
 const STATUS_SEPARATOR = ' · '
+// Desktop (F4-desktop-spacing, live 2026-10-23: «textos que quedan muy juntos»): its proportional
+// letter draws a plain space narrow, so ` · ` read as one smudge. An en space (U+2002) is half an em
+// wide whatever the font's own space is, and CSS does not collapse it (only space, tab and line
+// breaks collapse), so it survives at the edge of an inline span. A thin space (U+2009) would be
+// narrower than the plain one: the opposite of what was asked. The dot is bound to its word with a
+// no-break space (U+00A0): the same width as a space, but the two never part.
+const STATUS_DESKTOP_SEPARATOR = ' · '
+const STATUS_DESKTOP_BIND = ' '
+// Desktop's `bodyColumns` counts cells of the app's monospace font (`e.viewport` does too: width
+// over the code font's advance), but the band is drawn in its proportional letter, which takes about
+// three quarters of a cell (live capture: ~6.1 px a character, in a band whose cells measure 8 to
+// 9.8 px). Counting a character as 0.75 of a cell keeps the figures that do fit and still errs on the
+// wide side; the en space counts a whole cell. Whatever is left over, `truncate-end` cuts, on one row.
+const STATUS_DESKTOP_CELL = 0.75
+const STATUS_DESKTOP_WIDE = 1
 const STATUS_RULE = '─'
 const STATUS_TOOL_PREFIX = 'mcp__local-delegate__'
 const STATUS_TOOL = /^mcp__local-delegate__/
@@ -214,7 +230,7 @@ function statusDuration(seconds) {
 
 // The tool at work: its name, its chunk when it is split (`7/9`), and how long
 // it has run, dim: `local_summarize 7/9 · 3 min 16 s`, or `local_summarize 14 s` in one piece.
-function statusTaskPieces(task, moreKey = 'status.more') {
+function statusTaskPieces(task, moreKey = 'status.more', separator = STATUS_SEPARATOR) {
   const pieces = []
   if (task.tool) {
     pieces.push({ text: task.tool })
@@ -224,7 +240,7 @@ function statusTaskPieces(task, moreKey = 'status.more') {
     pieces.push({ text: task.tool ? ` ${progress}` : progress })
   }
   const time = statusDuration(task.seconds)
-  const lead = task.progress ? STATUS_SEPARATOR : task.tool ? ' ' : ''
+  const lead = task.progress ? separator : task.tool ? ' ' : ''
   pieces.push({ text: `${lead}${time}`, dim: true })
   if (task.more > 0) {
     pieces.push({ text: ` ${t(moreKey, { n: task.more })}`, dim: true })
@@ -233,7 +249,7 @@ function statusTaskPieces(task, moreKey = 'status.more') {
 }
 
 /** The figures as parts: `3 delegaciones · 12,3k tokens ahorrados ≈ $0,18`, or the empty note. */
-function statusFigures(snapshot, lang, joint) {
+function statusFigures(snapshot, lang, joint, separator = STATUS_SEPARATOR) {
   if (snapshot.calls <= 0) {
     return [{ ...statusPart(2, joint, { text: t('status.empty'), dim: true }), kind: 'empty' }]
   }
@@ -242,7 +258,7 @@ function statusFigures(snapshot, lang, joint) {
     { ...statusPart(2, joint, { text: String(snapshot.calls), bold: true }, { text: ` ${label}`, dim: true }), kind: 'calls' },
     statusPart(
       3,
-      STATUS_SEPARATOR,
+      separator,
       { text: statusTokens(snapshot.net, lang), bold: true },
       { text: ` ${t('status.saved_label')}`, dim: true },
     ),
@@ -313,17 +329,32 @@ export function statusBarParts(snapshot, options, lang) {
   return { parts, right }
 }
 
-function statusWidth(list) {
-  return list.reduce((sum, part) => sum + part.joint.length + part.pieces.reduce((n, piece) => n + piece.text.length, 0), 0)
+/** A text's width in terminal cells: one a character. */
+function statusCells(text) {
+  return text.length
+}
+
+/** A text's width in Desktop, in cells of its monospace font (see `STATUS_DESKTOP_CELL`). */
+export function statusDesktopCells(text) {
+  let cells = 0
+  for (const char of text) {
+    cells += char === ' ' ? STATUS_DESKTOP_WIDE : STATUS_DESKTOP_CELL
+  }
+  return cells
+}
+
+function statusWidth(list, measure) {
+  return list.reduce((sum, part) => sum + measure(part.joint) + part.pieces.reduce((n, piece) => n + measure(piece.text), 0), 0)
 }
 
 /**
  * The parts that fit in `columns` cells, dropping the highest ranks first (rank 0 always stays).
- * `extra` counts the cells the tree adds around them (padding).
+ * `extra` counts the cells the tree adds around them (padding); `measure` gives a text's width in
+ * cells (one a character in the terminal, `statusDesktopCells` in Desktop).
  */
-export function statusFit(parts, columns, extra = 0) {
+export function statusFit(parts, columns, extra = 0, measure = statusCells) {
   let kept = parts
-  while (statusWidth(kept) + extra > columns) {
+  while (statusWidth(kept, measure) + extra > columns) {
     const rank = Math.max(...kept.map(part => part.rank))
     if (rank === 0) {
       break
@@ -432,17 +463,20 @@ function statusDesktopTree($, e, snapshot, options, columns) {
     color = STATUS_COLOR[snapshot.backend]
   }
   const dim = { dimColor: true }
-  const spans = [
-    h(Text, dim, t('status.name')),
-    h(Text, dim, STATUS_SEPARATOR),
-    h(Text, color ? { color } : dim, glyph),
-    h(Text, color === 'error' ? { color } : color ? {} : dim, ` ${word}`),
-  ]
+  const name = t('status.name')
+  const spans = [h(Text, dim, name), h(Text, dim, STATUS_DESKTOP_SEPARATOR), h(Text, color ? { color } : dim, glyph)]
+  const wordAt = spans.length
+  spans.push(h(Text, color === 'error' ? { color } : color ? {} : dim, `${STATUS_DESKTOP_BIND}${word}`))
   let right = null
   if (snapshot.daemon !== 'down') {
     const { parts, right: reads } = statusDesktopParts(snapshot, options, lang)
-    const head = t('status.name').length + STATUS_SEPARATOR.length + glyph.length + 1 + word.length
-    const kept = statusFit(reads ? [...parts, reads] : parts, columns, head)
+    const head = statusDesktopCells(`${name}${STATUS_DESKTOP_SEPARATOR}${glyph}${STATUS_DESKTOP_BIND}${word}`)
+    const kept = statusFit(reads ? [...parts, reads] : parts, columns, head, statusDesktopCells)
+    // While delegating the turning dot already says so: the verb goes dim and the tool at work
+    // (the datum) keeps the normal color, so `Delegando local_summarize` no longer reads as one.
+    if (kept.some(part => part.kind === 'task' && part.pieces[0]?.text === snapshot.task?.tool)) {
+      spans[wordAt] = h(Text, dim, `${STATUS_DESKTOP_BIND}${word}`)
+    }
     for (const part of kept) {
       if (part === reads) {
         right = h(Text, { dimColor: true, wrap: 'truncate-end' }, part.pieces[0].text)
@@ -468,16 +502,19 @@ function statusDesktopTree($, e, snapshot, options, columns) {
 function statusDesktopParts(snapshot, options, lang) {
   const parts = []
   if (snapshot.backend === 'busy' && snapshot.task) {
-    parts.push(statusPart(1, ' ', ...statusTaskPieces(snapshot.task, 'status.more_title')))
+    const pieces = statusTaskPieces(snapshot.task, 'status.more_title', STATUS_DESKTOP_SEPARATOR)
+    parts.push({ ...statusPart(1, STATUS_DESKTOP_BIND, ...pieces), kind: 'task' })
   }
   if (snapshot.model && snapshot.backend !== 'down') {
-    parts.push(statusPart(1, STATUS_SEPARATOR, { text: snapshot.model, dim: true }))
+    parts.push(statusPart(1, STATUS_DESKTOP_SEPARATOR, { text: snapshot.model, dim: true }))
   }
-  for (const part of statusFigures(snapshot, lang, STATUS_SEPARATOR)) {
+  for (const part of statusFigures(snapshot, lang, STATUS_DESKTOP_SEPARATOR, STATUS_DESKTOP_SEPARATOR)) {
     parts.push({ ...part, pieces: part.pieces.map(({ bold, ...piece }) => piece) })
   }
   const mode = statusReadMode(options)
-  const right = mode ? statusPart(5, ' ', { text: t(`status.reads_${mode}_title`), dim: true }) : null
+  // Its joint is not drawn (the row's `space-between` sets it apart): it only keeps two cells of
+  // air between the sides when `statusFit` counts.
+  const right = mode ? statusPart(5, '  ', { text: t(`status.reads_${mode}_title`), dim: true }) : null
   return { parts, right }
 }
 
