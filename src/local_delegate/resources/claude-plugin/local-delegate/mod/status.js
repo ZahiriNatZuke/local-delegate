@@ -11,7 +11,9 @@
 // The band draws `◆ local-delegate · ● <model> · 3 delegaciones · 12,3k tok ahorrados ≈ $0,18`, the
 // dot green, amber or red as the backend is ready, busy or down, and drops the least important
 // parts first when the band is narrow. A dim `─` rule as wide as the band goes above that line, so
-// the band does not read as the last line of the chat. The Claude quota is NOT here: the person's own status line
+// the band does not read as the last line of the chat, and one empty row between them balances the
+// row the engine keeps under the band (its notices on the right), so the line sits centred between
+// the rule and the prompt's own line. The Claude quota is NOT here: the person's own status line
 // shows it.
 //
 // Why a band (`ui.render` on `AbovePrompt`) and not `$.ui.status`: `$.ui.status(text)` takes text
@@ -160,8 +162,9 @@ export function statusFit(parts, columns) {
 
 /**
  * The band's tree for these parts: a dim rule as wide as the band, then one row of Texts with the
- * joints dim. The rule is the band's one extra row: it sets the band apart from the last line of the
- * chat, the way the engine's own `─` lines frame the prompt.
+ * joints dim, one empty row between them. The rule sets the band apart from the last line of the
+ * chat, the way the engine's own `─` lines frame the prompt; the empty row matches the engine's row
+ * under the band (its notices on the right), so the line has the same air above and below.
  */
 function statusTree($, e, parts, columns) {
   const { Box, Text } = $.ui.resolve(e)
@@ -177,7 +180,7 @@ function statusTree($, e, parts, columns) {
     children.push(h(Text, props, part.text))
   }
   const rule = h(Text, { dimColor: true, wrap: 'truncate-end' }, STATUS_RULE.repeat(Math.max(1, columns)))
-  return h(Box, { flexDirection: 'column' }, rule, h(Box, { flexDirection: 'row' }, ...children))
+  return h(Box, { flexDirection: 'column' }, rule, h(Box, { flexDirection: 'row', marginTop: 1 }, ...children))
 }
 
 /** What the daemon says for this session, or `null` (no token, no session id): no band. */

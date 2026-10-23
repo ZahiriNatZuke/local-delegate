@@ -6,6 +6,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corrige (banda del mod centrada)
+
+- **La línea de la banda de estado queda centrada** entre la regla `─` de arriba y la línea del
+  prompt. Debajo de la banda Claude Code deja una fila suya (a la derecha pinta avisos como
+  «Update installed» o «◐ medium · /effort»), así que la banda tenía poco aire arriba y mucho abajo.
+  Ahora lleva una fila vacía entre la regla y el texto (`marginTop: 1`), que equilibra esa fila. La
+  encuesta y el recorte por ancho no cambian. (SDD `claude-plugin-and-mods`, F3-status)
+
 ### Corrige (Codex con comillas simples)
 
 - **`install` y `update` conservan `bearer_token_env_var` escrito con comillas simples** en
