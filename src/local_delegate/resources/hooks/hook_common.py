@@ -175,7 +175,9 @@ def mod_decision_fields(decision: object) -> dict:
 # cuando el mod va a hacer exactamente lo que habria hecho el, que son cuatro condiciones a la vez:
 #
 # 1. la opcion `read_mod_enabled` del plugin, que Claude Code pasa a los hooks como
-#    `CLAUDE_PLUGIN_OPTION_READ_MOD_ENABLED` (la entrega por settings no la tiene: alli actua siempre);
+#    `CLAUDE_PLUGIN_OPTION_READ_MOD_ENABLED`. Sale encendida por defecto (0.41): sin valor guardado
+#    la variable no llega, y en un hook del plugin (con `CLAUDE_PLUGIN_DATA`) cuenta como encendida.
+#    La entrega por settings no tiene ni la opcion ni esa carpeta: alli actua siempre;
 # 2. el latido de SU MISMA sesion (`<CLAUDE_PLUGIN_DATA>/heartbeats/<session_id>.json`, decision 9)
 #    dice `read_mod_active` y `process_run`, y tiene menos de 24 h;
 # 3. la capa *bloquea* en `on`: en «solo registrar» el mod no actua, y si el hook se apartara la
@@ -233,10 +235,19 @@ def read_mod_active(session_id: object, *, now: datetime | None = None) -> bool:
     return -300 <= age < HEARTBEAT_MAX_AGE_S
 
 
+def read_mod_option_on() -> bool:
+    """Condicion 1: la opcion del plugin. Con valor, manda el valor; sin el (nadie la guardo, y
+    sale encendida por defecto), cuenta como encendida solo en un hook del plugin."""
+    value = os.environ.get(READ_MOD_OPTION)
+    if value is not None and value.strip():
+        return value.strip().lower() in TRUTHY
+    return bool(os.environ.get(PLUGIN_DATA_VARIABLE, "").strip())
+
+
 def read_mod_covers(payload: dict, classified: dict) -> bool:
     """Las cuatro condiciones de la decision 10. `classified` es la respuesta de
     `read_classifier.classify` para esta llamada (la misma que recibe el mod)."""
-    if os.environ.get(READ_MOD_OPTION, "").strip().lower() not in TRUTHY:
+    if not read_mod_option_on():
         return False
     if block_state() != "on":
         return False

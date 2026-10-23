@@ -145,7 +145,7 @@ def test_every_piece_has_a_userconfig_switch():
     # Every piece in `mod/` is declared, so none can load without a switch.
     shipped = {p.stem for p in MOD_DIR.glob("*.js")} - {build_mod.COMMON}
     assert shipped <= set(declared), sorted(shipped - set(declared))
-    # REQ-013: the four tools of the spec by default; REQ-016 / decision 8: the read mod is off.
+    # REQ-013: the four tools of the spec by default; F4-live passed, so the read mod ships on.
     assert config["pinned_tools"]["multiple"] is True
     assert config["pinned_tools"]["default"] == [
         "local_summarize",
@@ -162,7 +162,7 @@ def test_every_piece_has_a_userconfig_switch():
         assert config[switch]["type"] == "boolean", switch
     assert config["commands_enabled"]["default"] is True
     assert config["status_enabled"]["default"] is True
-    assert config["read_mod_enabled"]["default"] is False
+    assert config["read_mod_enabled"]["default"] is True
     hooks = json.loads((PLUGIN_DIR / "hooks" / "hooks.json").read_text("utf-8"))
     assert hooks["modules"] == ["../register.js"]
 

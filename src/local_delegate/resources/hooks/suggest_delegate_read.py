@@ -61,7 +61,6 @@ import sys
 
 import read_classifier
 from hook_common import (
-    READ_MOD_OPTION,
     STEP_ASIDE_READ_MOD,
     backend_available,
     block_state,
@@ -74,6 +73,7 @@ from hook_common import (
     new_id,
     path_digest,
     read_mod_covers,
+    read_mod_option_on,
     record,
     record_block,
     summary_model,
@@ -190,7 +190,7 @@ def step_aside_for_read_mod(payload: dict, script: str, **fields: object) -> boo
     `script` es el hook que llama (su huella va en la linea) y `fields` sus campos fijos
     (`category`, `route`). Sin la opcion del plugin ni se clasifica: la entrega por settings y el
     mod apagado no pagan nada."""
-    if os.environ.get(READ_MOD_OPTION, "").strip().lower() not in TRUTHY:
+    if not read_mod_option_on():
         return False
     classified = read_classifier.classify(payload, "on")
     if not read_mod_covers(payload, classified):

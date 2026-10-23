@@ -187,11 +187,21 @@ def test_read_hook_steps_aside_when_mod_active(tmp_path):
 
 @pytest.mark.parametrize(
     "case",
-    ["option_off", "option_missing", "stale", "no_process_run", "not_active", "no_heartbeat"],
+    [
+        "option_off",
+        "option_missing_by_settings",
+        "stale",
+        "no_process_run",
+        "not_active",
+        "no_heartbeat",
+    ],
 )
 def test_read_hook_acts_when_mod_off_or_stale(tmp_path, case):
-    option = {"option_off": "false", "option_missing": None}.get(case, "true")
+    option = {"option_off": "false", "option_missing_by_settings": None}.get(case, "true")
     env = _env(tmp_path, option=option)
+    if case == "option_missing_by_settings":
+        # Delivered by settings.json: no plugin option and no plugin data folder.
+        env.pop("CLAUDE_PLUGIN_DATA")
     fields = {
         "stale": {"age": timedelta(hours=25)},
         "no_process_run": {"process_run": False},
@@ -364,3 +374,21 @@ def test_session_heartbeat_says_read_mod_active_from_start(tmp_path, switch):
         # Control: con la pieza apagada el latido no dice que el mod de lectura actúe.
         assert beat["pieces"]["read"] == "off"
         assert "read_mod_active" not in beat
+
+
+def test_read_hook_steps_aside_with_option_unset(tmp_path):
+    """F4-live: the read mod ships on (`"default": true`). A plugin hook whose option was never
+    saved gets no `CLAUDE_PLUGIN_OPTION_READ_MOD_ENABLED`; with the mod's heartbeat in its session
+    it steps aside as with the option on."""
+    env = _env(tmp_path, option=None)
+    _heartbeat(tmp_path)
+    done = _read(tmp_path, env)
+    assert not _denied(done)
+    assert [e["step_aside"] for e in _stepped_aside(tmp_path)] == [common.STEP_ASIDE_READ_MOD]
+    # Control: the same set-up with the option saved as false acts, so the step aside came from
+    # the unset option being read as on.
+    control = tmp_path / "control"
+    env_control = _env(control, option="false")
+    _heartbeat(control)
+    assert _denied(_read(control, env_control))
+    assert _stepped_aside(control) == []

@@ -57,6 +57,16 @@ function isText(value) {
  * @param {Record<string, unknown>} options what `register(on, options)` received
  * @param {{ catalogs?: Record<string, Record<string, string>>, version?: string | null }} [extras]
  */
+/**
+ * The read mod's switch (`read_mod_enabled`): on unless switched off. It ships on (F4-live), and a
+ * value never saved arrives unset, so only `false` (or the text `'false'`) turns it off.
+ * @param {Record<string, unknown> | null | undefined} options
+ */
+export function readModOn(options) {
+  const value = options?.read_mod_enabled
+  return value !== false && value !== 'false'
+}
+
 export function setup(options, extras = {}) {
   STATE.options = options || {}
   STATE.catalogs = extras.catalogs || {}
@@ -346,7 +356,7 @@ export async function heartbeat($, fields = {}) {
       entrypoint,
       process_run: await processRunWorks($),
       dialog: STATE.interactive === true,
-      read_mod_enabled: STATE.options.read_mod_enabled === true,
+      read_mod_enabled: readModOn(STATE.options),
       ...fields,
       at: new Date().toISOString(),
     }

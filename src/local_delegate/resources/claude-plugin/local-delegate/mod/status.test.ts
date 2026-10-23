@@ -131,7 +131,7 @@ function colorOf(texts: { text: string; color: unknown }[], glyph: string) {
   return texts.find(t => t.text.includes(glyph))?.color
 }
 
-test('shows backend, delegations and savings, never the quota nor a warning', { options: { ld_bin: LD_BIN } }, async ($, on) => {
+test('shows backend, delegations and savings, never the quota nor a warning', { options: { ld_bin: LD_BIN, read_mod_enabled: false } }, async ($, on) => {
   const seen = engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => UP)
   await $.session.measure(measureInput(42.4))
   const { line, texts } = await drawn($)
@@ -152,14 +152,14 @@ test('shows backend, delegations and savings, never the quota nor a warning', { 
   expect(line.includes(TOKEN)).toBe(false)
 })
 
-test('shows the band in English with the language option', { options: { ld_bin: LD_BIN, language: 'en' } }, async ($, on) => {
+test('shows the band in English with the language option', { options: { ld_bin: LD_BIN, language: 'en', read_mod_enabled: false } }, async ($, on) => {
   engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, stats: () => stats(1, 1500000, 2.5) }))
   await $.session.measure(measureInput(7))
   const { line } = await drawn($)
   expect(line).toBe('◆ local-delegate · ● qwen3-8b · 1 delegation · 1.5M tok saved ≈ $2.50')
 })
 
-test('an empty session says so instead of a zero', { options: { ld_bin: LD_BIN } }, async ($, on) => {
+test('an empty session says so instead of a zero', { options: { ld_bin: LD_BIN, read_mod_enabled: false } }, async ($, on) => {
   engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, stats: () => stats(0, 0) }))
   await $.session.measure(measureInput(4))
   const { line, texts } = await drawn($)
@@ -168,14 +168,14 @@ test('an empty session says so instead of a zero', { options: { ld_bin: LD_BIN }
   expect(texts.find(t => t.text.includes('sin delegaciones'))?.color).toBe('subtle')
 })
 
-test('a backend with nothing mounted is ready, without a model name', { options: { ld_bin: LD_BIN } }, async ($, on) => {
+test('a backend with nothing mounted is ready, without a model name', { options: { ld_bin: LD_BIN, read_mod_enabled: false } }, async ($, on) => {
   engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, backend: () => backend(true, []) }))
   await $.session.measure(measureInput())
   const { line } = await drawn($)
   expect(line).toContain('· ● backend listo ·')
 })
 
-test('a busy backend shows the half dot in the warning color', { options: { ld_bin: LD_BIN } }, async ($, on) => {
+test('a busy backend shows the half dot in the warning color', { options: { ld_bin: LD_BIN, read_mod_enabled: false } }, async ($, on) => {
   engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, inflight: () => inflight(2) }))
   await $.session.measure(measureInput())
   const { line, texts } = await drawn($)
@@ -183,7 +183,7 @@ test('a busy backend shows the half dot in the warning color', { options: { ld_b
   expect(colorOf(texts, '◐')).toBe('warning')
 })
 
-test('a backend that is down shows the empty dot in the error color', { options: { ld_bin: LD_BIN } }, async ($, on) => {
+test('a backend that is down shows the empty dot in the error color', { options: { ld_bin: LD_BIN, read_mod_enabled: false } }, async ($, on) => {
   engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, backend: () => backend(false) }))
   await $.session.measure(measureInput())
   const { line, texts } = await drawn($)
@@ -191,7 +191,7 @@ test('a backend that is down shows the empty dot in the error color', { options:
   expect(colorOf(texts, '○')).toBe('error')
 })
 
-test('says when the daemon stops answering', { options: { ld_bin: LD_BIN } }, async ($, on) => {
+test('says when the daemon stops answering', { options: { ld_bin: LD_BIN, read_mod_enabled: false } }, async ($, on) => {
   let up = true
   engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => (up ? UP : {}))
   // Guard: with the daemon up the band has the figures, so the change below is the daemon's doing.
@@ -204,7 +204,7 @@ test('says when the daemon stops answering', { options: { ld_bin: LD_BIN } }, as
   expect(colorOf(texts, '○')).toBe('error')
 })
 
-test('a refusal or a body that is not the stats reads as a daemon that does not answer', { options: { ld_bin: LD_BIN } }, async ($, on) => {
+test('a refusal or a body that is not the stats reads as a daemon that does not answer', { options: { ld_bin: LD_BIN, read_mod_enabled: false } }, async ($, on) => {
   const answers = [json({ detail: 'no' }, 401), { status: 200, ok: true, headers: {}, text: '<html>' }, json({ total: {} })]
   engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, stats: () => answers.shift() }))
   for (let i = 0; i < 3; i++) {
@@ -219,6 +219,13 @@ test('says when the mod steers the reads', { options: { ld_bin: LD_BIN, read_mod
   expect((await drawn($)).line).toBe(
     '◆ local-delegate · ● qwen3-8b · 3 delegaciones · 12,3k tok ahorrados ≈ $0,18 · lectura guiada',
   )
+})
+
+test('says the mod steers the reads when the option was never saved', { options: { ld_bin: LD_BIN } }, async ($, on) => {
+  // F4-live: the read mod ships on, so an unset option is on and the band says so.
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => UP)
+  await $.session.measure(measureInput())
+  expect((await drawn($)).line.endsWith(' · lectura guiada')).toBe(true)
 })
 
 test('a narrow band drops the least important parts first', { options: { ld_bin: LD_BIN, read_mod_enabled: true } }, async ($, on) => {
@@ -257,7 +264,7 @@ test('one empty row between the rule and the line balances the engine row under 
   expect(boxes[0].props.paddingTop ?? 0).toBe(0)
 })
 
-test('yields the band to a survey', { options: { ld_bin: LD_BIN } }, async ($, on) => {
+test('yields the band to a survey', { options: { ld_bin: LD_BIN, read_mod_enabled: false } }, async ($, on) => {
   engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => UP)
   await $.session.measure(measureInput())
   const { rule, line } = await drawn($, band(120, true))
@@ -266,7 +273,7 @@ test('yields the band to a survey', { options: { ld_bin: LD_BIN } }, async ($, o
   expect(line).toBe('engine')
 })
 
-test('draws nothing without the token', { options: { ld_bin: LD_BIN } }, async ($, on) => {
+test('draws nothing without the token', { options: { ld_bin: LD_BIN, read_mod_enabled: false } }, async ($, on) => {
   const seen = engine(on, {}, () => UP)
   await $.session.measure(measureInput(50))
   expect((await drawn($)).line).toBe('engine')

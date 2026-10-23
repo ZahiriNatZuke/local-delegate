@@ -588,7 +588,7 @@ de emergencia: leer por franjas con `offset`/`limit`, que nunca se bloquean. Lo 
 volcados de shell (`cat`, `more`, `Get-Content` y, en PowerShell, `type` y `gc`) sobre una única
 ruta; con una tubería, una redirección, comandos encadenados, un flag o `head` (diez líneas), no se
 bloquea. Qué lee cada comando lo decide un solo clasificador (`read_classifier.py`), el mismo que
-usará el mod de lectura del plugin; cada evento de telemetría lleva su `via` y su `scope`.
+usa el mod de lectura del plugin; cada evento de telemetría lleva su `via` y su `scope`.
 
 Nace apagado. Estas son las formas de que no bloquee:
 
