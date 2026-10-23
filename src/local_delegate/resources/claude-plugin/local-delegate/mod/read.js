@@ -23,7 +23,11 @@
 //     are refused until a real read of it (REQ-022). The list is kept per session in the data
 //     folder, so it survives `--resume`.
 // Each decision is logged with `local-delegate hook record-read`, the same line the read hook
-// writes in `blocks.jsonl`, and the session's heartbeat says `read_mod_active`.
+// writes in `blocks.jsonl`, and the session's heartbeat says `read_mod_active`. The line goes first
+// to the daemon (`POST /api/hook/record-read`, F4-read-fixes), else through the process: in 0.41.0
+// it only went through the process, and no decision taken in the dialog ever reached the log. A
+// line neither road takes leaves a trace (`$.ui.log` to debug, `hook-failures.jsonl`) and is tried
+// again at the start of the next tool call.
 //
 // A piece of the mod: `scripts/build_mod.py` pastes it into `register.js`. It only declares at
 // load, and every top-level name carries `read`, so it cannot clash with another piece's.
@@ -57,6 +61,17 @@ const READ_DAEMON_CLASSIFY = '/api/hook/classify'
 const READ_DAEMON_CONFIG = '/api/hook/classify-config'
 const READ_DAEMON_TIMEOUT_MS = 300
 const READ_DAEMON_RETRY_MS = 5 * 60 * 1000
+// The daemon's copy of `hook record-read` (F4-read-fixes): the same `hook_entry.record_read`, with
+// the variables it reads (`hook_entry.RECORD_ENV`: the classifier's plus these two). Answers 204.
+const READ_DAEMON_RECORD = '/api/hook/record-read'
+const READ_DAEMON_RECORD_TIMEOUT_MS = 1000
+// The hooks' failure log (`hook_entry.FAILURE_LOG`, capped at `FAILURE_LOG_MAX_BYTES`), in the
+// package's data folder: where a decision that reached neither the daemon nor the process is noted.
+const READ_FAILURE_LOG = 'hook-failures.jsonl'
+const READ_FAILURE_LOG_MAX_BYTES = 256 * 1024
+const READ_FAILURE_ERROR = 'ModRecordLost'
+// Lost lines kept for one more try at the next tool call; beyond this many the oldest go.
+const READ_PENDING_MAX = 20
 const READ_SESSION_ID = /^[A-Za-z0-9_-]{1,128}$/
 // The tools that write a file by a path argument of their own.
 const READ_WRITE_TOOLS = { Edit: 'file_path', Write: 'file_path', NotebookEdit: 'notebook_path' }
@@ -91,6 +106,11 @@ const READ_STATE = {
   // and until when the daemon is not asked after a failure.
   vars: undefined,
   daemonDownUntil: 0,
+  // `record-read`'s own variables (`undefined` until read), until when the daemon's record route is
+  // not asked after it answered that it cannot take the line, and the lines still to record.
+  recordVars: undefined,
+  recordDownUntil: 0,
+  pending: [],
 }
 
 function readText(value) {
@@ -412,13 +432,173 @@ async function readClassify($, common, e, sessionId, cwd) {
   }
 }
 
-/** Logs a decision with `hook record-read`; best effort, like all telemetry. */
-async function readRecord(common, classified, decision, sessionId) {
+/**
+ * The variables `hook record-read` reads besides the classifier's (`hook_entry.RECORD_ENV`, which
+ * `test_mod_static.py` holds this list and `readClassifierVars` to): where the line goes and the
+ * experiment's switch. Read once per load; `null` when the engine cannot read them.
+ */
+async function readRecordVars($) {
+  if (READ_STATE.recordVars !== undefined) {
+    return READ_STATE.recordVars
+  }
+  const vars = {}
+  const put = (name, value) => {
+    if (typeof value === 'string' && value !== '') {
+      vars[name] = value
+    }
+  }
   try {
-    const line = JSON.stringify({ ...classified, decision, session_id: sessionId })
-    await common.runLd(READ_RECORD, line, READ_RECORD_TIMEOUT_MS)
+    put('LD_HOOK_TELEMETRY_LOG', await $.env.get('LD_HOOK_TELEMETRY_LOG'))
+    put('LD_HOOK_ENABLED', await $.env.get('LD_HOOK_ENABLED'))
+    READ_STATE.recordVars = vars
   } catch {
-    // a lost line of telemetry must never reach the read
+    READ_STATE.recordVars = null
+  }
+  return READ_STATE.recordVars
+}
+
+/**
+ * The line to the daemon's `record-read`. True when it took it (204). An answer that says it cannot
+ * (401, 403, 404: a token it does not take, an older daemon without the route) leaves the route
+ * alone for a while; a request that does not complete does not, so the next try asks again.
+ */
+async function readRecordByDaemon($, common, entry) {
+  if (typeof common.daemonFetch !== 'function') {
+    return false
+  }
+  const now = await readNow($)
+  // Nor while the classifier's daemon is being left alone: a dead daemon costs its time limit once.
+  if (now < READ_STATE.recordDownUntil || now < READ_STATE.daemonDownUntil) {
+    return false
+  }
+  try {
+    const vars = await readClassifierVars($)
+    const extra = await readRecordVars($)
+    if (!vars || !extra || typeof common.token !== 'function' || !(await common.token())) {
+      return false
+    }
+    const init = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payload: entry, env: { ...vars, ...extra } }),
+    }
+    const done = await readWithin($, common.daemonFetch(READ_DAEMON_RECORD, init), READ_DAEMON_RECORD_TIMEOUT_MS)
+    if (done && (done.status === 204 || done.status === 200)) {
+      return true
+    }
+    if (done && [401, 403, 404].includes(done.status)) {
+      READ_STATE.recordDownUntil = now + READ_DAEMON_RETRY_MS
+    }
+  } catch {
+    // the process is next
+  }
+  return false
+}
+
+/** One try at recording `entry`: the daemon, else the process. True when one of them took it. */
+async function readRecordOnce($, common, entry) {
+  if (await readRecordByDaemon($, common, entry)) {
+    return true
+  }
+  try {
+    const done = await common.runLd(READ_RECORD, JSON.stringify(entry), READ_RECORD_TIMEOUT_MS)
+    return Boolean(done) && done.exitCode === 0
+  } catch {
+    return false
+  }
+}
+
+/**
+ * The package's data folder (`LOG_DIR`), as `hook_common.log_dir` finds it, from the variables the
+ * classifier already reads: `LOCAL_DELEGATE_LOG_DIR`; on Windows (a `USERPROFILE`) `LOCALAPPDATA`;
+ * on macOS (a `HOME` of `/Users/<account>`) `Library/Application Support`; else `XDG_DATA_HOME` or
+ * `~/.local/share`. `null` when none of them is there.
+ */
+function readLogDir(vars) {
+  const pick = name => (vars && readText(vars[name]) ? vars[name].trim().replace(/[\\/]+$/, '') : null)
+  const explicit = pick('LOCAL_DELEGATE_LOG_DIR')
+  if (explicit) {
+    return explicit
+  }
+  const profile = pick('USERPROFILE')
+  if (profile) {
+    return `${pick('LOCALAPPDATA') || `${profile}/AppData/Local`}/local-delegate`
+  }
+  const home = pick('HOME')
+  if (home && /^\/Users\/[^/]+$/.test(home)) {
+    return `${home}/Library/Application Support/local-delegate`
+  }
+  const xdg = pick('XDG_DATA_HOME')
+  if (xdg) {
+    return `${xdg}/local-delegate`
+  }
+  return home ? `${home}/.local/share/local-delegate` : null
+}
+
+/**
+ * The trace of a line neither road took: a debug line and one in the hooks' failure log, the shape
+ * `hook_entry._log_failure` writes (time, hook, type of failure) plus the decision's name. Neither
+ * carries the file's path or content. Best effort: a trace that fails is not retried.
+ */
+async function readRecordLost($, entry) {
+  const decision = String(entry.decision)
+  try {
+    await $.ui.log(`local-delegate: record-read lost (decision=${decision}, via=${String(entry.via)})`, { to: 'debug' })
+  } catch {
+    // no debug log here: the failure log below still counts
+  }
+  try {
+    const dir = readLogDir(await readClassifierVars($))
+    if (!dir) {
+      return
+    }
+    const path = `${dir}/${READ_FAILURE_LOG}`
+    let before = ''
+    try {
+      const stat = await $.fs.stat(path)
+      if (stat && typeof stat.size === 'number' && stat.size > READ_FAILURE_LOG_MAX_BYTES) {
+        return
+      }
+      before = await $.fs.read(path)
+    } catch {
+      before = ''
+    }
+    const line = JSON.stringify({ ts: new Date().toISOString(), hook: 'record-read', error: READ_FAILURE_ERROR, decision })
+    const head = typeof before === 'string' && before !== '' && !before.endsWith('\n') ? `${before}\n` : before || ''
+    await $.fs.write(path, `${head}${line}\n`)
+  } catch {
+    // the debug line is all that is left
+  }
+}
+
+/**
+ * Logs a decision with `hook record-read`: the daemon, else the process. Best effort, like all
+ * telemetry, and never in the read's way; a line neither takes leaves a trace and waits for the
+ * next tool call.
+ *
+ * Why not record before the dialog: the decision does not exist until the person answers it. So a
+ * road the engine refuses right after `$.ui.ask` (the live 0.41.0 symptom, cause not yet seen) is
+ * covered three ways: a second road (HTTP), the trace, and the retry from a hook no dialog precedes.
+ */
+async function readRecord($, common, classified, decision, sessionId) {
+  const entry = { ...classified, decision, session_id: sessionId }
+  if (await readRecordOnce($, common, entry)) {
+    return
+  }
+  await readRecordLost($, entry)
+  READ_STATE.pending.push(entry)
+  if (READ_STATE.pending.length > READ_PENDING_MAX) {
+    READ_STATE.pending.shift()
+  }
+}
+
+/** The lines lost in an earlier call, tried once more; one that fails again is dropped (its trace is
+ * already written). */
+async function readFlushPending($, common) {
+  const lines = READ_STATE.pending
+  READ_STATE.pending = []
+  for (const entry of lines) {
+    await readRecordOnce($, common, entry)
   }
 }
 
@@ -623,7 +803,7 @@ function readCanAsk(common, e) {
 async function readPass($, common, e, next, ctx, decision) {
   const ran = await next(e)
   if (decision) {
-    await readRecord(common, ctx.classified, decision, ctx.sessionId)
+    await readRecord($, common, ctx.classified, decision, ctx.sessionId)
   }
   await readNoteRealRead($, common, ctx.sessionId, ctx.key, ctx.classified, ran)
   return ran
@@ -655,8 +835,39 @@ async function readSteer($, common, e, next, ctx) {
   }
   READ_STATE.guard.add(key)
   await readSaveGuard($, common, sessionId)
-  await readRecord(common, classified, decision, sessionId)
-  return readAsResult(e, `${common.t('read.summary.header', { path })}\n\n${summary}`)
+  await readRecord($, common, classified, decision, sessionId)
+  return readAsResult(e, `${await readSummaryHeader($, common, ctx)}\n\n${summary}`)
+}
+
+/**
+ * How many of a file's `total` lines can be read literally in a session: ranges that reach
+ * `READ_WHOLE_SHARE` of them count as reading it whole (REQ-020), so the most is one line short.
+ */
+export function readLiteralBudget(total) {
+  return total > 0 ? Math.max(0, Math.ceil(total * READ_WHOLE_SHARE - 1e-9) - 1) : 0
+}
+
+/**
+ * The line above a summary: what it is and the real rule for reading the file literally (F4-read-
+ * fixes; 0.41.0 said «read it with offset/limit», and a range that took the session's reads of the
+ * file to 80 % was summarized again). With the file's line count: how many lines can be read
+ * literally; for a range summarized because of what was read before, that it was the share and not
+ * the range's size, how many lines were read and how many are left.
+ */
+async function readSummaryHeader($, common, ctx) {
+  const { path, key } = ctx
+  const entry = readFileEntry(key)
+  const total = await readTotalLines($, entry, path)
+  if (!total) {
+    return common.t('read.summary.header', { path })
+  }
+  const lines = readLiteralBudget(total)
+  if (typeof ctx.share === 'number') {
+    const read = Math.round(readCoverage(entry.ranges, total) * total)
+    const pct = Math.floor(ctx.share * 100 + 1e-9)
+    return common.t('read.summary.header_ranges', { path, pct, total, read, left: Math.max(0, lines - read), lines })
+  }
+  return common.t('read.summary.header_budget', { path, lines, total })
 }
 
 /** The write guard of REQ-022: a refusal while `key` was only read summarized, else `null`. */
@@ -666,6 +877,10 @@ function readGuardRefusal(common, key, path) {
 
 /** The whole hook: the write guard first, then the read steering. */
 async function readOnToolCall($, common, e, next) {
+  if (READ_STATE.pending.length > 0) {
+    // A decision lost in an earlier call (F4-read-fixes): this hook has no dialog before it.
+    await readFlushPending($, common)
+  }
   const writeKey = READ_WRITE_TOOLS[e.tool]
   if (writeKey === undefined) {
     // The tool list and the harmless words come with the config: after a reload it is asked here.
@@ -710,7 +925,7 @@ async function readOnToolCall($, common, e, next) {
     if (!big || !ran || ran.deny !== undefined) {
       return ran
     }
-    await readRecord(common, classified, 'warned', sessionId)
+    await readRecord($, common, classified, 'warned', sessionId)
     const kb = Math.round(classified.bytes / 1024)
     const note = common.t('read.warn.large', { path: classified.path, kb })
     return { ...ran, context: [...(ran.context || []), note] }
@@ -731,7 +946,8 @@ async function readOnToolCall($, common, e, next) {
   const total = range ? await readTotalLines($, entry, classified.path) : null
   const covered = range && total ? readCoverage([...entry.ranges, range], total) : 0
   if (!entry.whole && covered >= READ_WHOLE_SHARE) {
-    return readSteer($, common, e, next, ctx)
+    // Not the range's size: what this session has read of the file, this range included (REQ-020).
+    return readSteer($, common, e, next, { ...ctx, share: covered })
   }
   return readPass($, common, e, next, ctx, null)
 }
@@ -765,6 +981,9 @@ export function register(on, options, common) {
   READ_STATE.beat = false
   READ_STATE.vars = undefined
   READ_STATE.daemonDownUntil = 0
+  READ_STATE.recordVars = undefined
+  READ_STATE.recordDownUntil = 0
+  READ_STATE.pending = []
   if (!READ_STATE.enabled) {
     return
   }

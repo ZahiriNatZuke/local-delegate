@@ -12,6 +12,7 @@ tamaño y banda. El log se activa con ``LD_HOOK_TELEMETRY_LOG``.
 from __future__ import annotations
 
 import contextlib
+import contextvars
 import hashlib
 import json
 import os
@@ -24,6 +25,33 @@ from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import NamedTuple
+
+# --- El entorno de quien pide la línea (F4-read-fixes) -------------------------------------------
+#
+# Un hook corre en su propio proceso y lee `os.environ`. El daemon escribe también la línea de
+# `hook record-read` (`POST /api/hook/record-read`) con el entorno que manda el mod, no con el suyo,
+# y atiende peticiones a la vez: no puede tocar `os.environ`. Por eso `enabled`, `record` y
+# `block_state` miran `current_environ()`, que es `os.environ` salvo dentro de `run_with_environ`.
+_ENVIRON: contextvars.ContextVar[Mapping[str, str] | None] = contextvars.ContextVar(
+    "local_delegate_hook_environ", default=None
+)
+
+
+def current_environ() -> Mapping[str, str]:
+    """El entorno con el que decide el hook: el de `run_with_environ`, si lo hay; si no, el proceso."""
+    value = _ENVIRON.get()
+    return os.environ if value is None else value
+
+
+def _call_with_environ(environ: Mapping[str, str], function, args: tuple):
+    _ENVIRON.set(environ)
+    return function(*args)
+
+
+def run_with_environ(environ: Mapping[str, str], function, *args):
+    """`function(*args)` viendo `environ` como entorno, en un contexto copiado: no toca `os.environ`
+    ni el entorno de otra petición que corra a la vez."""
+    return contextvars.copy_context().run(_call_with_environ, environ, function, args)
 
 
 def enabled() -> bool:
@@ -40,7 +68,7 @@ def enabled() -> bool:
     `suggest_delegate_read.py`, y la razon de que ningun hook nuevo deba mirar aqui para saber
     si nacio encendido.
     """
-    return os.environ.get("LD_HOOK_ENABLED", "1").strip().lower() not in {
+    return str(current_environ().get("LD_HOOK_ENABLED", "1")).strip().lower() not in {
         "0",
         "false",
         "no",
@@ -110,7 +138,7 @@ def record(event: str, step_aside: str | None = None, **metadata: object) -> Non
     ``step_aside`` y ``suggested`` a falso, para que una medicion no la cuente como aviso del hook."""
     if not enabled():
         return
-    destination = os.environ.get("LD_HOOK_TELEMETRY_LOG", "").strip()
+    destination = str(current_environ().get("LD_HOOK_TELEMETRY_LOG", "")).strip()
     if not destination:
         return
     if step_aside is not None:
@@ -450,7 +478,7 @@ def switch_path(environ: Mapping[str, str] | None = None) -> Path:
     """Donde vive el fichero que apaga el bloqueo. Fuera de `~/.claude/hooks/local-delegate/`, que
     el instalador reescribe y poda. `environ`: el entorno del cliente (el daemon clasifica con el
     que manda el mod); sin el, el del proceso."""
-    env = os.environ if environ is None else environ
+    env = current_environ() if environ is None else environ
     target = str(env.get("LD_HOOK_READ_SWITCH_FILE") or "").strip()
     return Path(target) if target else _home(env) / ".claude" / SWITCH_FILE_NAME
 
@@ -464,7 +492,7 @@ def block_state(environ: Mapping[str, str] | None = None) -> str:
     """`on`, `off_file` u `off_variable` (antes `encendido`, `apagado_fichero` y
     `apagado_variable`). Va en cada evento, para que una medicion sepa en que estado estaba la regla
     cuando decidio. `environ`: el entorno del cliente; sin el, el del proceso."""
-    env = os.environ if environ is None else environ
+    env = current_environ() if environ is None else environ
     if switch_on(env):
         return "off_file"
     if str(env.get("LD_HOOK_READ_BLOCK") or "0").strip().lower() in TRUTHY:

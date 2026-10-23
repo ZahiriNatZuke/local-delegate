@@ -1111,12 +1111,17 @@ def _require_loopback(request: Request) -> None:
 _HOOK_CHECKS = [Depends(_require_web_token), Depends(_require_loopback)]
 
 
-async def _hook_body(request: Request) -> tuple[object, dict[str, str]]:
+async def _hook_body(
+    request: Request, names: tuple[str, ...] | None = None
+) -> tuple[object, dict[str, str]]:
     """(`payload`, entorno) de la petición: `{"payload": {...}, "env": {NOMBRE: valor}}`.
 
-    Del entorno solo pasan las variables de `CLASSIFY_ENV` con valor de texto; una que no viene no
-    se toma del daemon. Un cuerpo que no es ese objeto es un 400, sin traza ni contenido."""
+    Del entorno solo pasan las variables de `names` (por defecto `CLASSIFY_ENV`) con valor de texto;
+    una que no viene no se toma del daemon. Un cuerpo que no es ese objeto es un 400, sin traza ni
+    contenido."""
     from .. import hook_entry
+
+    allowed_names = hook_entry.CLASSIFY_ENV if names is None else names
 
     try:
         body = json.loads(await request.body())
@@ -1131,7 +1136,7 @@ async def _hook_body(request: Request) -> tuple[object, dict[str, str]]:
     allowed = {
         name: value
         for name, value in env.items()
-        if name in hook_entry.CLASSIFY_ENV and isinstance(value, str)
+        if name in allowed_names and isinstance(value, str)
     }
     return payload, allowed
 
@@ -1155,6 +1160,42 @@ async def hook_classify_config(request: Request):
 
     _payload, env = await _hook_body(request)
     return Response(hook_entry.config_text(env), media_type="application/json")
+
+
+# `hook record-read` del mod de lectura (F4-read-fixes). En la 0.41.0 el mod registraba sus decisiones
+# solo con `$.process.run`, y tras el diálogo (`$.ui.ask`) esa vía se perdía en silencio: ninguna
+# línea `summarized`, `read_whole` ni `dismissed` llegó nunca a la telemetría. Ahora el mod pide aquí
+# primero y el proceso queda de respaldo. La línea es la del CLI: las dos salen de
+# `hook_entry.record_read`, con el entorno que manda el mod (`RECORD_ENV`), incluido el destino.
+#
+# El destino viene de la petición, así que solo se acepta un `.jsonl` con ruta absoluta: el endpoint
+# añade una línea de telemetría, no escribe donde le digan. Sin destino no se escribe nada (como en
+# el CLI). Nunca registra el contenido de la petición.
+
+
+def _telemetry_destination_ok(value: str) -> bool:
+    text = value.strip()
+    return bool(text) and Path(text).is_absolute() and Path(text).suffix.lower() == ".jsonl"
+
+
+@app.post("/api/hook/record-read", dependencies=_HOOK_CHECKS)
+async def hook_record_read(request: Request):
+    """`hook record-read` para la línea de `payload`, con el entorno de `env`. 204 si se atendió."""
+    from starlette.concurrency import run_in_threadpool
+
+    from .. import hook_entry
+
+    payload, env = await _hook_body(request, hook_entry.RECORD_ENV)
+    destination = env.get("LD_HOOK_TELEMETRY_LOG")
+    if destination is not None and not _telemetry_destination_ok(destination):
+        raise HTTPException(status_code=400)
+    try:
+        await run_in_threadpool(hook_entry.record_read, payload, env)
+    except Exception as exc:
+        # Como el CLI: solo el tipo, en `hook-failures.jsonl`; el mod prueba entonces el proceso.
+        hook_entry._log_failure("record-read", exc)
+        raise HTTPException(status_code=500) from None
+    return Response(status_code=204)
 
 
 # Icono de marca: un corchete de terminal abrazando el chevrón de delegación — «lo que entra
