@@ -1,0 +1,2 @@
+drv: F4BASH {"sid":"0fe9bde0-d808-41b7-847f-baafcb4ee224","ms":[1720,1867,955,1841,920,1696,912,1629,931,1856,901],"kinds":["cold","pass","skip","pass","skip","pass","skip","pass","skip","pass","skip"],"last":"{\"result\":{\"stdout\":\"Thu Oct 22 20:59:51     2026\",\"stderr\":\"\",\"interrupted\":false,\"isImage\":false,\"noOutputExpected\":fa"}
+

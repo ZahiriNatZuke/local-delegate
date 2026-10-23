@@ -1,0 +1,13 @@
+{
+ "pluginConfigs": {
+  "local-delegate@local-delegate": {
+   "options": {
+    "ld_bin": "C:\\Users\\Yohan\\AppData\\Roaming\\uv\\tools\\local-delegate-mcp\\Scripts\\python.exe",
+    "language": "es",
+    "commands_enabled": true,
+    "status_enabled": true,
+    "read_mod_enabled": true
+   }
+  }
+ }
+}
