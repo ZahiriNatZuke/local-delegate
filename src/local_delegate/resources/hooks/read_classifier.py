@@ -94,6 +94,42 @@ PROSE_EXTENSIONS = frozenset({".md", ".txt", ".markdown", ".rst"})
 #: `config.HOOK_READ_SUGGEST_KB` en los tests.
 SUGGEST_KB_VARIABLE = "LD_HOOK_READ_SUGGEST_KB"
 SUGGEST_KB_DEFAULT = 8.0
+#: Primeros tokens de un comando de shell que ni leen ni escriben un fichero mientras el comando no
+#: lleve redirección, tubería ni encadenado (`> | ; &`). El mod de lectura descarta esas llamadas
+#: sin lanzar `hook classify` (prefiltro de `prefilter_config`); con redirección van igual al
+#: clasificador, empiecen por lo que empiecen. `echo` y compañía entran por F4-live: `echo` llegaba
+#: a `classify` y costaba un proceso por llamada.
+HARMLESS_FIRST = (
+    "git",
+    "gh",
+    "ls",
+    "dir",
+    "pwd",
+    "cd",
+    "uv",
+    "pnpm",
+    "npm",
+    "npx",
+    "node",
+    "pytest",
+    "ruff",
+    "which",
+    "where",
+    "whoami",
+    "date",
+    "mkdir",
+    "get-childitem",
+    "gci",
+    "test-path",
+    "get-location",
+    "set-location",
+    "claude",
+    "local-delegate",
+    "echo",
+    "printf",
+    "write-host",
+    "write-output",
+)
 
 _TOKEN = re.compile(
     r"""'[^']*'|"(?:\\.|[^"\\])*"|\|\||&&|>>|<<-?|2>&1|2>|[|;<>()&]|\n|[^\s|;<>()&'"]+"""
@@ -623,3 +659,29 @@ def classify(payload: dict, read_switch: str | None = None) -> dict:
 def list_tools() -> list[str]:
     """Los nombres de tool que pueden leer o escribir un fichero. `mcp__*` es un prefijo."""
     return sorted({*READ_TOOLS, *SHELL_TOOLS, *WRITE_TOOLS}) + [MCP_PREFIX + "*"]
+
+
+def _suggest_bytes(environ) -> int:
+    """El umbral bajo en bytes, con la misma variable que `summarizable` (mal escrita: el defecto)."""
+    try:
+        kb = float(environ.get(SUGGEST_KB_VARIABLE, str(SUGGEST_KB_DEFAULT)))
+    except ValueError:
+        kb = SUGGEST_KB_DEFAULT
+    return int(kb * 1024)
+
+
+def prefilter_config(environ=None) -> dict:
+    """Lo que el mod de lectura necesita para no lanzar `hook classify` en vano (`--config`).
+
+    Una sola llamada al empezar la sesión; con esto el mod descarta en JS, sin proceso, la llamada
+    que no nombra ningún fichero de prosa (`prose_extensions`), ni uno guardado tras un resumen, ni
+    un fichero de al menos `min_bytes` (para registrar `not_prose`). Las listas viven aquí y solo
+    aquí: el JS no lleva copia.
+    """
+    env = os.environ if environ is None else environ
+    return {
+        "tools": list_tools(),
+        "prose_extensions": sorted(PROSE_EXTENSIONS),
+        "min_bytes": _suggest_bytes(env),
+        "harmless_first": list(HARMLESS_FIRST),
+    }

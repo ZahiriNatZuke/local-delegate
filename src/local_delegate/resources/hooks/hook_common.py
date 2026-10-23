@@ -19,8 +19,6 @@ import re
 import sys
 import tempfile
 import time
-import urllib.error
-import urllib.request
 import uuid
 from collections.abc import Mapping
 from datetime import UTC, datetime
@@ -366,6 +364,11 @@ def _probe(timeout_s: float) -> bool:
     Solo es «no esta» lo que no llega a haber respuesta: conexion rechazada, plazo agotado, o una
     URL que ni siquiera se puede construir.
     """
+    # `urllib` aquí y no arriba: cuesta ~25 ms de importación y `hook classify` (una vez por
+    # llamada que pasa el prefiltro del mod) importa este módulo sin preguntar nunca al backend.
+    import urllib.error
+    import urllib.request
+
     base = os.environ.get("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9292/v1").rstrip("/")
     api_key = os.environ.get("LOCAL_DELEGATE_API_KEY", "").strip()
     try:

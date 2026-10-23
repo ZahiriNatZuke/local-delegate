@@ -24,6 +24,17 @@ const HUNDRED_LINES = Array.from({ length: 100 }, (_, i) => `line ${i + 1}`).joi
 
 type Classified = Record<string, unknown> | null | 'fail'
 
+// What `hook classify --config` answers (`read_classifier.prefilter_config`): the mod's prefilter
+// takes all of it from Python. The tests use these values unless they pass their own.
+const CONFIG = {
+  tools: ['Bash', 'Edit', 'Grep', 'MultiEdit', 'NotebookEdit', 'PowerShell', 'Read', 'Write', 'mcp__*'],
+  prose_extensions: ['.markdown', '.md', '.rst', '.txt'],
+  min_bytes: 8192,
+  harmless_first: ['cd', 'date', 'echo', 'git', 'ls', 'printf', 'pwd'],
+}
+const CLASSIFY_ARGS = ['-I', '-m', 'local_delegate.hook', 'classify']
+const RECORD_ARGS = ['-I', '-m', 'local_delegate.hook', 'record-read']
+
 type Env = {
   $: any
   common: any
@@ -40,6 +51,8 @@ type Env = {
   classify: (input: any) => Classified
   mcpFails: boolean
   mcpResult: any
+  sizes: Map<string, number>
+  config: any
 }
 
 function t(key: string, vars?: Record<string, unknown>) {
@@ -56,6 +69,8 @@ function makeEnv(opts: {
   mcpFails?: boolean
   files_map?: Map<string, string>
   mcpResult?: any
+  sizes?: Record<string, number>
+  config?: any
 } = {}): Env {
   const env: Env = {
     $: null,
@@ -73,7 +88,12 @@ function makeEnv(opts: {
     classify: opts.classify ?? (() => null),
     mcpFails: opts.mcpFails ?? false,
     mcpResult: opts.mcpResult ?? summaryResult(),
+    // What `$.fs.stat` says of each file: the files the classifier calls large are large on disk.
+    sizes: new Map(Object.entries(opts.sizes ?? { [BIG]: BIG_BYTES, [OTHER]: BIG_BYTES, [CODE]: BIG_BYTES })),
+    config: opts.config === undefined ? CONFIG : opts.config,
   }
+  // `$.fs.stat` takes either slash and either case of the drive.
+  const lookup = (p: string) => [...env.files.keys()].find(k => k.toLowerCase() === p.replace(/\\/g, '/').toLowerCase())
   env.$ = {
     session: { id: async () => env.session, cwd: async () => CWD },
     fs: {
@@ -85,6 +105,11 @@ function makeEnv(opts: {
         env.files.set(p, text)
       },
       exists: async (p: string) => env.files.has(p),
+      stat: async (p: string) => {
+        const key = lookup(p)
+        if (key === undefined) throw new Error('ENOENT')
+        return { kind: 'file', size: env.sizes.get(key) ?? env.files.get(key)!.length, mtimeMs: 0, isLink: false }
+      },
     },
     mcp: {
       call: async (server: string, tool: string, args: any) => {
@@ -113,6 +138,10 @@ function makeEnv(opts: {
     runLd: async (args: string[], stdin?: string) => {
       const parsed = typeof stdin === 'string' ? JSON.parse(stdin) : undefined
       env.ldRuns.push({ args, stdin: parsed })
+      if (args.includes('--config')) {
+        if (env.config === null) return null
+        return { exitCode: 0, stdout: typeof env.config === 'string' ? env.config : JSON.stringify(env.config), stderr: '' }
+      }
       if (args.includes('--list-tools')) {
         return { exitCode: 0, stdout: JSON.stringify(['Read', 'Bash', 'PowerShell', 'Grep']), stderr: '' }
       }
@@ -228,8 +257,8 @@ test('passes_when_classifier_unavailable', async () => {
   // The classifier was asked with the contract's input.
   const env = makeEnv({ classify: () => null })
   await call(env, { tool: 'Read', file_path: BIG })
-  const asked = env.ldRuns.find(r => r.args.includes('classify') && !r.args.includes('--list-tools'))!
-  expect(asked.args).toEqual(['-I', '-m', 'local_delegate', 'hook', 'classify'])
+  const asked = env.ldRuns.find(r => r.args.includes('classify') && !r.args.includes('--config'))!
+  expect(asked.args).toEqual(CLASSIFY_ARGS)
   expect(asked.stdin).toEqual({ tool_name: 'Read', tool_input: { file_path: BIG }, cwd: CWD, session_id: SESSION })
 })
 
@@ -468,4 +497,141 @@ test('large_prose_is_summarized_without_dialog', async () => {
   const real = await call(old, { tool: 'Read', file_path: BIG })
   expect(old.mcpCalls).toHaveLength(0)
   expect(real.result.file.content).toBe('REAL')
+})
+
+// --- The cost per call (F4-read-mod-perf, evidence/F4-live.md) -------------------------------------
+
+function classifyRuns(env: Env) {
+  return env.ldRuns.filter(r => r.args.includes('classify') && !r.args.includes('--config') && !r.args.includes('--list-tools'))
+}
+function configRuns(env: Env) {
+  return env.ldRuns.filter(r => r.args.includes('--config'))
+}
+// The F4-live script: five small reads that the old filter let through, five calls it already
+// dropped, and `echo`, which went to the classifier because it was not in the harmless list.
+const SMALL = 'C:/work/LICENSE'
+const IGNORE = 'C:/work/.gitignore'
+const F4_LIVE_SCRIPT = [
+  'cat LICENSE', 'head -5 .gitignore', 'sed -n 1,5p LICENSE', 'cat .gitignore', 'head -n 3 LICENSE',
+  'git status --short', 'pwd', 'ls', 'git log -1 --oneline', 'date', 'echo hi',
+]
+
+test('runs_the_light_path', async () => {
+  // `local_delegate.hook`, never `-m local_delegate hook` (entrypoint, then server, then the MCP SDK).
+  const env = makeEnv({ classify: byInput })
+  await onSessionStart(env.$, { cwd: CWD, isInteractive: false }, env.common)
+  await call(env, { tool: 'Read', file_path: BIG })
+  expect(configRuns(env).map(r => r.args)).toEqual([[...CLASSIFY_ARGS, '--config']])
+  expect(classifyRuns(env).map(r => r.args)).toEqual([CLASSIFY_ARGS])
+  const records = env.ldRuns.filter(r => r.args.includes('record-read'))
+  expect(records.length).toBe(1)
+  expect(records[0].args).toEqual(RECORD_ARGS)
+})
+
+test('prefilter_spares_the_f4_live_script', async () => {
+  const files = { [BIG]: HUNDRED_LINES, [OTHER]: HUNDRED_LINES, [SMALL]: 'MIT\n', [IGNORE]: 'node_modules\n' }
+  const env = makeEnv({ classify: byInput, files })
+  await onSessionStart(env.$, { cwd: CWD, isInteractive: false }, env.common)
+  for (const command of F4_LIVE_SCRIPT) {
+    const out = await call(env, { tool: 'Bash', command })
+    expect(out.result.stdout).toBe('REAL')
+  }
+  // No call in the script names prose or a large file: not one process.
+  expect(classifyRuns(env)).toHaveLength(0)
+  expect(env.nexts).toHaveLength(F4_LIVE_SCRIPT.length)
+  // Guard: a shell read of a large `.md` still reaches the classifier.
+  await call(env, { tool: 'Bash', command: 'cat docs/big.md' })
+  expect(classifyRuns(env)).toHaveLength(1)
+  expect(classifyRuns(env)[0].stdin.tool_input).toEqual({ command: 'cat docs/big.md' })
+  // So does a `Read` of one.
+  await call(env, { tool: 'Read', file_path: OTHER })
+  expect(classifyRuns(env)).toHaveLength(2)
+})
+
+test('prefilter_drops_small_non_prose_reads', async () => {
+  const files = { [SMALL]: 'MIT\n', 'C:/work/src/small.py': 'x = 1\n', [CODE]: HUNDRED_LINES }
+  const env = makeEnv({ classify: byInput, files, sizes: { [CODE]: BIG_BYTES } })
+  await call(env, { tool: 'Read', file_path: 'C:/work/src/small.py' })
+  await call(env, { tool: 'Bash', command: 'cat src/small.py' })
+  await call(env, { tool: 'Read', file_path: 'C:/work/missing.json' })
+  await call(env, { tool: 'Grep', pattern: 'foo' })
+  expect(classifyRuns(env)).toHaveLength(0)
+  // A large file that is not prose still goes to the classifier: its read is logged (`not_prose`).
+  await call(env, { tool: 'Read', file_path: CODE })
+  await call(env, { tool: 'Bash', command: 'cat src/big.py' })
+  expect(classifyRuns(env)).toHaveLength(2)
+  expect(decisions(env)[0]).toBe('not_prose')
+})
+
+test('prefilter_takes_its_data_from_python', async () => {
+  // Another prose list, threshold and harmless list from `--config`: the mod follows them.
+  const config = { ...CONFIG, prose_extensions: ['.prose'], min_bytes: 1 << 30, harmless_first: ['cat'] }
+  const files = { [BIG]: HUNDRED_LINES, 'C:/work/notes.prose': 'x\n' }
+  const env = makeEnv({ classify: byInput, files, config })
+  await onSessionStart(env.$, { cwd: CWD, isInteractive: false }, env.common)
+  await call(env, { tool: 'Read', file_path: BIG })
+  expect(classifyRuns(env)).toHaveLength(0)
+  await call(env, { tool: 'Read', file_path: 'C:/work/notes.prose' })
+  expect(classifyRuns(env)).toHaveLength(1)
+  // `cat` is harmless here, `echo` is not.
+  await call(env, { tool: 'Bash', command: 'cat notes.prose' })
+  expect(classifyRuns(env)).toHaveLength(1)
+  await call(env, { tool: 'Bash', command: 'echo notes.prose' })
+  expect(classifyRuns(env)).toHaveLength(2)
+  // The tool list comes from Python too: a tool it does not name is never classified.
+  const narrow = makeEnv({ classify: byInput, config: { ...CONFIG, tools: ['Bash'] } })
+  await onSessionStart(narrow.$, { cwd: CWD, isInteractive: false }, narrow.common)
+  await call(narrow, { tool: 'Read', file_path: BIG })
+  expect(classifyRuns(narrow)).toHaveLength(0)
+})
+
+test('echo_is_harmless_unless_it_writes', async () => {
+  const env = makeEnv({ classify: byInput })
+  await call(env, { tool: 'Bash', command: 'echo docs/big.md' })
+  expect(classifyRuns(env)).toHaveLength(0)
+  // A redirection can write: it goes to the classifier, and the guard can refuse it.
+  await call(env, { tool: 'Bash', command: 'echo x > big.md' })
+  expect(classifyRuns(env)).toHaveLength(1)
+})
+
+test('guarded_file_reaches_the_classifier', async () => {
+  // A guarded file named without a prose extension the list knows (a list saved under another
+  // config): the call still goes to the classifier, which sees the write.
+  const LOG = 'c:/work/out/report.log'
+  const env = makeEnv({
+    classify: (input: any) =>
+      /report\.log/.test(input.tool_input.command ?? '')
+        ? { kind: 'write', path: 'C:/work/out/report.log', scope: 'unclassifiable', bytes: null, range: null, via: 'shell_redirect', read_switch: 'on' }
+        : byInput(input),
+  })
+  env.files.set(`${DATA}/read-guard/${SESSION}.json`, JSON.stringify({ session_id: SESSION, paths: [LOG] }))
+  await call(env, { tool: 'Bash', command: 'git log > out/other.log' })
+  expect(classifyRuns(env)).toHaveLength(0)
+  const out = await call(env, { tool: 'Bash', command: 'printf x > out/report.log' })
+  expect(classifyRuns(env)).toHaveLength(1)
+  expect(typeof out.deny).toBe('string')
+})
+
+test('config_is_asked_once', async () => {
+  const env = makeEnv({ classify: byInput })
+  await onSessionStart(env.$, { cwd: CWD, isInteractive: false }, env.common)
+  for (let i = 0; i < 5; i++) await call(env, { tool: 'Bash', command: 'cat docs/big.md' })
+  expect(configRuns(env)).toHaveLength(1)
+  // A reload mid-session has no `session.start`: the first call that may need it asks, once.
+  registerInto(env, { read_mod_enabled: true })
+  for (let i = 0; i < 3; i++) await call(env, { tool: 'Bash', command: 'cat docs/other.md' })
+  expect(configRuns(env)).toHaveLength(2)
+})
+
+test('without_config_every_candidate_is_classified', async () => {
+  // A package that does not answer `--config` (or answers something else): the old filter, and the
+  // classifier decides; nothing is dropped on a guess.
+  for (const config of [null, 'not json', JSON.stringify({ kind: 'other' })]) {
+    const files = { [SMALL]: 'MIT\n' }
+    const env = makeEnv({ classify: byInput, files, config })
+    await onSessionStart(env.$, { cwd: CWD, isInteractive: false }, env.common)
+    await call(env, { tool: 'Bash', command: 'cat LICENSE' })
+    await call(env, { tool: 'Read', file_path: BIG })
+    expect(classifyRuns(env)).toHaveLength(2)
+  }
 })

@@ -686,3 +686,119 @@ def test_record_read_knows_every_mod_decision():
     sent |= {w for pair in re.findall(r"\? '([a-z_]+)' : '([a-z_]+)'", source) for w in pair}
     assert {"summarized", "auto_summarized", "warned"} <= sent, sent
     assert sorted(sent - set(common.MOD_DECISIONS)) == []
+
+
+# --- La vía barata del mod (F4-read-mod-perf, `evidence/F4-live.md`) ----------------------------------
+
+READ_JS = ROOT / "src" / "local_delegate" / "resources" / "claude-plugin" / "local-delegate" / "mod"
+READ_JS = READ_JS / "read.js"
+#: Lo que la vía del mod no puede cargar: el servidor y el SDK de MCP (654 ms de importación medidos
+#: por la vía `-m local_delegate hook`), ni `urllib`, que `classify` no usa.
+HEAVY_MODULES = {"local_delegate.entrypoint", "local_delegate.server", "local_delegate.config"}
+
+
+def _mod_args(name: str) -> list[str]:
+    """Los argumentos que `mod/read.js` pasa a `runLd` en la constante `name`."""
+    found = re.search(rf"const {name} = \[([^\]]*)\]", READ_JS.read_text("utf-8"))
+    assert found, name
+    return re.findall(r"'([^']*)'", found.group(1))
+
+
+def _imported(stderr: bytes) -> set[str]:
+    names = set()
+    for line in stderr.decode("utf-8", "replace").splitlines():
+        if line.startswith("import time:") and "|" in line:
+            names.add(line.rsplit("|", 1)[1].strip())
+    return names
+
+
+def _as_the_mod(name: str, extra: list[str], stdin: bytes, env: dict[str, str]):
+    """Como lo lanza el mod, con `-X importtime` delante para ver qué carga."""
+    args = _mod_args(name)
+    return subprocess.run(
+        [sys.executable, "-X", "importtime", *args, *extra],
+        input=stdin,
+        capture_output=True,
+        env=env,
+        timeout=TIMEOUT_S,
+        cwd=env["TMP"],
+    )
+
+
+def _heavy(modules: set[str]) -> set[str]:
+    heavy = {m for m in modules if m in HEAVY_MODULES or m == "mcp" or m.startswith("mcp.")}
+    return heavy | {m for m in modules if m == "urllib.request"}
+
+
+def test_mod_classify_path_does_not_import_server(tmp_path):
+    env = {**_sandbox(tmp_path), "LD_HOOK_READ_ENABLED": "1"}
+    prose = _prose(tmp_path / "docs")
+    stdin = json.dumps(
+        {"tool_name": "Bash", "tool_input": {"command": f"cat {prose}"}, "cwd": str(tmp_path)}
+    ).encode("utf-8")
+    for extra, feed in (([], stdin), (["--config"], b"")):
+        run = _as_the_mod("READ_CLASSIFY", extra, feed, env)
+        assert run.returncode == 0
+        modules = _imported(run.stderr)
+        # Guarda: el clasificador contestó de verdad y `-X importtime` informa.
+        assert "local_delegate.hook_entry" in modules, sorted(modules)[:20]
+        answer = json.loads(run.stdout)
+        assert answer["tools"] if extra else answer["summarizable"] is True
+        assert _heavy(modules) == set(), sorted(_heavy(modules))
+
+
+def test_mod_record_read_path_does_not_import_server(tmp_path):
+    env = _sandbox(tmp_path)
+    entry = {
+        "kind": "read",
+        "path": None,
+        "scope": "unclassifiable",
+        "bytes": None,
+        "range": None,
+        "via": "shell_awk",
+        "read_switch": "on",
+        "decision": "warned",
+        "session_id": "s-test",
+    }
+    run = _as_the_mod("READ_RECORD", [], json.dumps(entry).encode("utf-8"), env)
+    assert run.returncode == 0
+    modules = _imported(run.stderr)
+    # Guarda: la línea se escribió, así que `record-read` corrió entero.
+    assert len(_telemetry(tmp_path)) == 1
+    assert "local_delegate.hook_entry" in modules
+    loaded = {m for m in modules if m in HEAVY_MODULES or m == "mcp" or m.startswith("mcp.")}
+    assert loaded == set(), sorted(loaded)
+
+
+def test_classify_config_is_the_classifier_data(tmp_path):
+    """`hook classify --config`: lo que el prefiltro del mod necesita, sacado del clasificador."""
+    env = _sandbox(tmp_path)
+    run = _hook(["classify", "--config"], b"", env)
+    assert run.returncode == 0
+    answer = json.loads(run.stdout)
+    assert answer == {
+        "tools": classifier.list_tools(),
+        "prose_extensions": sorted(classifier.PROSE_EXTENSIONS),
+        "min_bytes": 8192,
+        "harmless_first": list(classifier.HARMLESS_FIRST),
+    }
+    assert answer == classifier.prefilter_config({})
+    # El umbral sigue a la variable del hook de lectura, como `summarizable`.
+    moved = _hook(["classify", "--config"], b"", {**env, classifier.SUGGEST_KB_VARIABLE: "16"})
+    assert json.loads(moved.stdout)["min_bytes"] == 16 * 1024
+    broken = _hook(["classify", "--config"], b"", {**env, classifier.SUGGEST_KB_VARIABLE: "x"})
+    assert json.loads(broken.stdout)["min_bytes"] == 8192
+
+
+@pytest.mark.parametrize("first", ["echo", "printf", "write-host", "write-output"])
+def test_output_commands_are_harmless(first):
+    """`echo` y compañía no leen ni escriben sin redirección: el mod los descarta sin proceso."""
+    assert first in classifier.HARMLESS_FIRST
+    assert classifier.classify_shell(f"{first} docs/notes.md") == []
+
+
+def test_harmless_first_tokens_never_write():
+    """Un primer token inofensivo, sin redirección, nunca es una escritura que la guarda deba ver."""
+    for first in classifier.HARMLESS_FIRST:
+        found = classifier.classify_shell(f"{first} docs/notes.md")
+        assert all(a.kind != "write" for a in found), (first, found)

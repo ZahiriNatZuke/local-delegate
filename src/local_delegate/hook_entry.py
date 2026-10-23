@@ -21,7 +21,13 @@ Dos subcomandos más no son hooks de `hooks.json`: los llama el mod de lectura p
 - `hook classify`: stdin, la entrada de un hook `PreToolUse` (`tool_name`, `tool_input`, `cwd`,
   `session_id`); stdout, `{"kind", "path", "scope", "bytes", "range", "via", "read_switch"}` de
   `read_classifier.classify`. `hook classify --list-tools` da la lista JSON de tools que pueden
-  leer o escribir (`mcp__*` es un prefijo).
+  leer o escribir (`mcp__*` es un prefijo); `hook classify --config`, los datos del prefiltro del
+  mod (`read_classifier.prefilter_config`: tools, extensiones de prosa, umbral en bytes y primeros
+  tokens inofensivos), que el mod pide una vez al empezar la sesión.
+
+El mod lanza los dos por `python -I -m local_delegate.hook`, nunca por `-m local_delegate hook`:
+esa vía entra por `entrypoint`, que importa el servidor y el SDK de MCP (654 ms de importación
+medidos en `evidence/F4-live.md`, frente a ~75 ms de esta).
 - `hook record-read`: stdin, la salida de `classify` más `decision` y `session_id`; escribe en la
   telemetría de los hooks la misma línea que habría escrito el hook de esa vía, más `decision` y
   `source: "mod"` (`hook_common.MOD_DECISIONS`). No escribe nada en stdout.
@@ -48,6 +54,8 @@ COMMANDS = ("classify", "record-read")
 
 #: Opción de `classify` que lista las tools en vez de clasificar.
 LIST_TOOLS_FLAG = "--list-tools"
+#: Opción de `classify` que da los datos del prefiltro del mod (`read_classifier.prefilter_config`).
+CONFIG_FLAG = "--config"
 
 #: Log de fallos de los hooks, en `LOG_DIR`. Una línea por fallo: hora, hook y tipo de excepción.
 FAILURE_LOG = "hook-failures.jsonl"
@@ -109,6 +117,9 @@ def _classify(args: list[str]) -> None:
     classifier = _load_hook_module("read_classifier")
     if LIST_TOOLS_FLAG in args:
         print(json.dumps(classifier.list_tools()))
+        return
+    if CONFIG_FLAG in args:
+        print(json.dumps(classifier.prefilter_config(os.environ)))
         return
     try:
         payload = json.load(sys.stdin)

@@ -6,6 +6,26 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Rendimiento (coste del mod de lectura en cada `Bash`)
+
+- **El mod de lectura ya no carga el servidor en cada llamada.** `hook classify` y `hook
+  record-read` se lanzan con `python -I -m local_delegate.hook`, no con `-m local_delegate hook`,
+  que entraba por `entrypoint` e importaba el servidor y el SDK de MCP (654 ms solo en
+  importaciones). Cada `classify` baja de ~765 ms a ~125 ms de mediana (30 repeticiones, con
+  `python -I -c pass` ≈ 50 ms). Un test ejecuta los argumentos exactos de `mod/read.js` y falla
+  si cargan `local_delegate.server` o `mcp`. `hook_common` importa `urllib` solo cuando pregunta
+  al backend.
+- **Menos procesos: un prefiltro decide antes de `classify`.** Al empezar la sesión (o tras una
+  recarga) el mod pide una sola vez `hook classify --config` (subcomando nuevo): tools,
+  extensiones de prosa, umbral en bytes y primeros tokens inofensivos, sacados de
+  `read_classifier.py` y sin copia en JS. Después solo lanza `classify` cuando la llamada nombra
+  un fichero de prosa, un fichero guardado tras un resumen o un fichero de al menos el umbral
+  (comprobado con `$.fs.stat`, sin proceso, para que se siga registrando `not_prose`). En el
+  guion de F4-live (11 comandos), `classify` pasa de 6 llamadas a 0; una lectura de un `.md`
+  grande sigue llegando. `echo`, `printf`, `Write-Host` y `Write-Output` pasan a la lista de
+  inofensivos (con redirección siguen yendo al clasificador). Sin respuesta a `--config`, el mod
+  clasifica como antes. (SDD `claude-plugin-and-mods`, F4-read-mod-perf)
+
 ### Corrige (banda del mod centrada)
 
 - **La línea de la banda de estado queda centrada** entre la regla `─` de arriba y la línea del

@@ -2,9 +2,13 @@
 // claude-plugin-and-mods, batch F4-read-mod; design in plan.md, wave 5).
 //
 // One `tool.call` hook, only with the `read_mod_enabled` option on (off by default):
-//   - a cheap filter drops, by tool name and first token, the calls that cannot read or write a
-//     file; the rest go to `local-delegate hook classify` through `common.runLd`. No answer, or a
-//     `read_switch` other than `on`, and the call goes through untouched;
+//   - a prefilter drops, without starting a process, the calls that cannot lead to a decision: a
+//     tool or a harmless first word that cannot read or write a file, and a call that names no
+//     prose file, no guarded file and no large file. Its data (tools, prose extensions, threshold,
+//     harmless first words) comes from Python, once per load, with `hook classify --config`
+//     (F4-read-mod-perf: each `classify` is a process, and F4-live measured +724 ms per `Bash`).
+//     The rest go to `hook classify` through `common.runLd`. No answer, or a `read_switch` other
+//     than `on`, and the call goes through untouched;
 //   - a read the classifier is sure of (`whole`, or ranges that add up to 80 % of the file's
 //     lines, the threshold fixed in evidence/F4-read-paths.md) of large prose (`summarizable`,
 //     the band the read hook blocks, decided in Python by `hook classify`) is summarized by `local_summarize`, and the summary is the tool's result: with a dialog the
@@ -29,13 +33,19 @@ export const READ_SWITCH = 'read_mod_enabled'
 // REQ-020: ranges that cover this share of the file's lines count as reading it whole.
 export const READ_WHOLE_SHARE = 0.8
 // The read hook's lower band (`LD_HOOK_READ_SUGGEST_KB`, 8 KB): below it a read is left alone.
+// `hook classify --config` sends the real one (`min_bytes`); this is only for a package that does
+// not answer it.
 export const READ_MIN_BYTES = 8 * 1024
 
 const READ_SERVER = 'local-delegate'
 const READ_SUMMARY_TOOL = 'local_summarize'
 const READ_ERROR_PREFIX = '[local-delegate error]'
-const READ_CLASSIFY = ['-I', '-m', 'local_delegate', 'hook', 'classify']
-const READ_RECORD = ['-I', '-m', 'local_delegate', 'hook', 'record-read']
+// `local_delegate.hook`, never `-m local_delegate hook`: that road goes through `entrypoint`, which
+// imports the server and the MCP SDK (654 ms of imports, evidence/F4-live.md). `test_read_classifier`
+// runs these very arguments and fails if they load `local_delegate.server` or `mcp`.
+const READ_CLASSIFY = ['-I', '-m', 'local_delegate.hook', 'classify']
+const READ_RECORD = ['-I', '-m', 'local_delegate.hook', 'record-read']
+const READ_CONFIG_FLAG = '--config'
 const READ_CLASSIFY_TIMEOUT_MS = 10000
 const READ_RECORD_TIMEOUT_MS = 10000
 const READ_SESSION_ID = /^[A-Za-z0-9_-]{1,128}$/
@@ -44,16 +54,16 @@ const READ_WRITE_TOOLS = { Edit: 'file_path', Write: 'file_path', NotebookEdit: 
 const READ_SHELL_TOOLS = ['Bash', 'PowerShell']
 // The tools whose result the mod can stand in for with a summary.
 const READ_SUMMARIZABLE_TOOLS = ['Read', 'Bash', 'PowerShell']
-// What `hook classify --list-tools` would say when it cannot be asked.
+// The tools to look at when `hook classify --config` cannot be asked: then every call of these
+// goes to the classifier, which decides (nothing is dropped on a guess).
 const READ_DEFAULT_TOOLS = ['Read', 'Bash', 'PowerShell', 'Grep']
-// First tokens of a shell command that neither read nor write a file, as long as the command has
-// no redirection, pipe or chaining (`> | ; &`): those go to the classifier whatever they start with.
-const READ_HARMLESS_FIRST = [
-  'git', 'gh', 'ls', 'dir', 'pwd', 'cd', 'uv', 'pnpm', 'npm', 'npx', 'node', 'pytest', 'ruff',
-  'which', 'where', 'whoami', 'date', 'mkdir', 'get-childitem', 'gci', 'test-path', 'get-location',
-  'set-location', 'claude', 'local-delegate',
-]
+// A harmless first word (`harmless_first`, from Python) only counts without redirection, pipe or
+// chaining (`> | ; &`): those go on to the prefilter whatever they start with.
 const READ_CHAINING = /[>|;&]/
+// The input keys that name a file for the size check (`Read`, `Grep`).
+const READ_PATH_KEYS = ['file_path', 'path']
+// Shell words looked at for the size check: at most this many, so a long command stays cheap.
+const READ_MAX_STATS = 8
 const READ_ENVELOPE_KEYS = ['tool', 'tool_use_id', 'agentId', 'requestMeta', 'consent']
 
 // The module's own memory, which a reload starts over: what each file has had read in this
@@ -62,6 +72,8 @@ const READ_ENVELOPE_KEYS = ['tool', 'tool_use_id', 'agentId', 'requestMeta', 'co
 const READ_STATE = {
   enabled: false,
   tools: null,
+  config: null,
+  configAsked: false,
   files: new Map(),
   guard: new Set(),
   guardSession: null,
@@ -136,7 +148,12 @@ function readFileEntry(key) {
   return entry
 }
 
-/** The cheap filter: whether the call may read or write a file, before asking the classifier. */
+/** The first word of a shell command, without its folder or `.exe`, in lower case. */
+function readFirstWord(command) {
+  return command.split(/\s+/)[0].replace(/^.*[\\/]/, '').replace(/\.exe$/i, '').toLowerCase()
+}
+
+/** The quick filter, no file system: whether the tool and the first word may read or write a file. */
 function readMayTouchFile(e) {
   const tools = READ_STATE.tools || READ_DEFAULT_TOOLS
   if (!tools.includes(e.tool)) {
@@ -147,14 +164,82 @@ function readMayTouchFile(e) {
     if (command === '') {
       return false
     }
-    if (!READ_CHAINING.test(command)) {
-      const first = command.split(/\s+/)[0].replace(/^.*[\\/]/, '').replace(/\.exe$/i, '').toLowerCase()
-      if (READ_HARMLESS_FIRST.includes(first)) {
-        return false
-      }
+    const harmless = READ_STATE.config ? READ_STATE.config.harmless : []
+    if (!READ_CHAINING.test(command) && harmless.includes(readFirstWord(command))) {
+      return false
     }
   }
   return true
+}
+
+/** The words of a call that may name a file: the shell command's words, or the string arguments. */
+function readWords(e) {
+  if (READ_SHELL_TOOLS.includes(e.tool)) {
+    return (typeof e.command === 'string' ? e.command : '')
+      .split(/[\s|;&<>()]+/)
+      .map(word => word.replace(/^['"`]+|['"`,]+$/g, ''))
+      .filter(word => word !== '' && !word.startsWith('-'))
+  }
+  return Object.values(readToolInput(e)).filter(readText)
+}
+
+/** Whether a word names a file with one of the prose extensions (`docs/a.md:12` too). */
+function readNamesProse(word, prose) {
+  const lower = word.toLowerCase()
+  return prose.some(ext => lower.endsWith(ext) || lower.includes(`${ext}:`))
+}
+
+/** Whether a word names a guarded file: the file's name, without case, ends the word. */
+function readNamesGuarded(word) {
+  const lower = word.replace(/\\/g, '/').toLowerCase()
+  for (const key of READ_STATE.guard) {
+    const name = key.slice(key.lastIndexOf('/') + 1).toLowerCase()
+    if (name !== '' && lower.endsWith(name)) {
+      return true
+    }
+  }
+  return false
+}
+
+/** Whether one of these words is a file of at least `min_bytes` (`$.fs.stat`, no process). */
+async function readNamesLargeFile($, words, cwd) {
+  const candidates = words.filter(word => /[./\\]/.test(word) && !/[*?$`]/.test(word)).slice(0, READ_MAX_STATS)
+  for (const word of candidates) {
+    const absolute = word.startsWith('/') || /^[A-Za-z]:[\\/]/.test(word)
+    const path = absolute || !readText(cwd) ? word : `${cwd.replace(/[\\/]+$/, '')}/${word}`
+    try {
+      const stat = await $.fs.stat(path)
+      if (stat && stat.kind === 'file' && typeof stat.size === 'number' && stat.size >= READ_STATE.config.minBytes) {
+        return true
+      }
+    } catch (error) {
+      if (error instanceof TypeError) {
+        // An engine without `$.fs.stat`: the classifier decides, as before the prefilter.
+        return true
+      }
+      // not a file there: nothing to read
+    }
+  }
+  return false
+}
+
+/**
+ * The prefilter, after the quick one: whether the call can end in a decision, so it is worth a
+ * process. Only prose is summarized, accumulated and guarded, so a call that names neither a prose
+ * file nor a guarded one cannot be steered; a large file of another kind is still classified, so
+ * its read is logged (`not_prose`, `warned`). Without Python's data, every candidate goes on.
+ */
+async function readWorthClassifying($, e, cwd) {
+  const config = READ_STATE.config
+  if (!config) {
+    return true
+  }
+  const words = readWords(e)
+  if (words.some(word => readNamesProse(word, config.prose) || readNamesGuarded(word))) {
+    return true
+  }
+  const paths = READ_SHELL_TOOLS.includes(e.tool) ? words : READ_PATH_KEYS.map(key => e[key]).filter(readText)
+  return readNamesLargeFile($, paths, cwd)
 }
 
 /** The tool's arguments as the classifier takes them: the envelope's own keys left out. */
@@ -210,27 +295,48 @@ async function readRecord(common, classified, decision, sessionId) {
   }
 }
 
-/** The tools `hook classify --list-tools` names (a JSON list, `{ tools }`, or one per line). */
-async function readListTools(common) {
+/** `hook classify --config`'s answer, checked, or null when it is not there or not that shape. */
+function readParseConfig(stdout) {
+  let parsed
   try {
-    const done = await common.runLd([...READ_CLASSIFY, '--list-tools'], undefined, READ_CLASSIFY_TIMEOUT_MS)
-    if (!done || done.exitCode !== 0 || !readText(done.stdout)) {
-      return null
-    }
-    let names
-    try {
-      const parsed = JSON.parse(done.stdout)
-      names = Array.isArray(parsed) ? parsed : parsed && parsed.tools
-    } catch {
-      names = done.stdout.split(/\r?\n/)
-    }
-    if (!Array.isArray(names)) {
-      return null
-    }
-    const tools = names.filter(readText).map(name => name.trim())
-    return tools.length > 0 ? tools : null
+    parsed = JSON.parse(stdout)
   } catch {
     return null
+  }
+  if (!parsed || typeof parsed !== 'object') {
+    return null
+  }
+  const list = value => (Array.isArray(value) ? value.filter(readText).map(v => v.trim()) : null)
+  const tools = list(parsed.tools)
+  const prose = list(parsed.prose_extensions)
+  const harmless = list(parsed.harmless_first)
+  const minBytes = parsed.min_bytes
+  if (!tools || tools.length === 0 || !prose || !harmless || typeof minBytes !== 'number' || !(minBytes >= 0)) {
+    return null
+  }
+  return {
+    tools,
+    prose: prose.map(ext => ext.toLowerCase()),
+    harmless: harmless.map(word => word.toLowerCase()),
+    minBytes,
+  }
+}
+
+/** Asks Python once per load for the prefilter's data; later calls reuse it (or its absence). */
+async function readLoadConfig(common) {
+  if (READ_STATE.configAsked) {
+    return
+  }
+  READ_STATE.configAsked = true
+  try {
+    const done = await common.runLd([...READ_CLASSIFY, READ_CONFIG_FLAG], undefined, READ_CLASSIFY_TIMEOUT_MS)
+    const config = done && done.exitCode === 0 && readText(done.stdout) ? readParseConfig(done.stdout) : null
+    if (config) {
+      READ_STATE.config = config
+      READ_STATE.tools = config.tools
+    }
+  } catch {
+    // no data: every candidate goes to the classifier, as before the prefilter
   }
 }
 
@@ -430,14 +536,23 @@ function readGuardRefusal(common, key, path) {
 /** The whole hook: the write guard first, then the read steering. */
 async function readOnToolCall($, common, e, next) {
   const writeKey = READ_WRITE_TOOLS[e.tool]
-  if (writeKey === undefined && !readMayTouchFile(e)) {
-    return next(e)
+  if (writeKey === undefined) {
+    // The tool list and the harmless words come with the config: after a reload it is asked here.
+    if (!READ_STATE.configAsked && (READ_STATE.tools || READ_DEFAULT_TOOLS).includes(e.tool)) {
+      await readLoadConfig(common)
+    }
+    if (!readMayTouchFile(e)) {
+      return next(e)
+    }
   }
   const sessionId = await readSessionId($)
   await readLoadGuard($, common, sessionId)
   const cwd = await readCwd($)
   if (writeKey !== undefined) {
     return readGuardRefusal(common, readNormalize(e[writeKey], cwd), e[writeKey]) || next(e)
+  }
+  if (!(await readWorthClassifying($, e, cwd))) {
+    return next(e)
   }
   const classified = await readClassify(common, e, sessionId, cwd)
   if (!classified) {
@@ -451,7 +566,8 @@ async function readOnToolCall($, common, e, next) {
     return next(e)
   }
   await readBeat($, common, sessionId)
-  const big = typeof classified.bytes === 'number' && classified.bytes >= READ_MIN_BYTES
+  const minBytes = READ_STATE.config ? READ_STATE.config.minBytes : READ_MIN_BYTES
+  const big = typeof classified.bytes === 'number' && classified.bytes >= minBytes
   // The band comes from `hook classify` (the read hook's own constants): only large prose can be
   // summarized. A classifier that does not say so is not trusted to summarize.
   const prose = classified.summarizable === true
@@ -489,8 +605,8 @@ async function readOnToolCall($, common, e, next) {
   return readPass($, common, e, next, ctx, null)
 }
 
-// At the session's start (and on `--resume`): this session's guarded files and the classifier's
-// tools. `register.js` holds the module's only `session.start` hook and calls this one; what it
+// At the session's start (and on `--resume`): this session's guarded files and the prefilter's
+// data from Python (`hook classify --config`, one process). `register.js` holds the module's only `session.start` hook and calls this one; what it
 // resolves goes into the heartbeat `register.js` writes right after, so the session's heartbeat
 // says `read_mod_active` from its start and the read hooks step aside from the first read
 // (REQ-023, decision 10). A reload mid-session starts the module over without a `session.start`:
@@ -501,10 +617,7 @@ export async function onSessionStart($, e, common) {
   }
   const c = common || engineCommon($)
   await readLoadGuard($, c, await readSessionId($))
-  const tools = await readListTools(c)
-  if (tools) {
-    READ_STATE.tools = tools
-  }
+  await readLoadConfig(c)
   READ_STATE.beat = true
   return { read_mod_active: true }
 }
@@ -513,6 +626,8 @@ export async function onSessionStart($, e, common) {
 export function register(on, options, common) {
   READ_STATE.enabled = options?.[READ_SWITCH] === true
   READ_STATE.tools = null
+  READ_STATE.config = null
+  READ_STATE.configAsked = false
   READ_STATE.files = new Map()
   READ_STATE.guard = new Set()
   READ_STATE.guardSession = null
