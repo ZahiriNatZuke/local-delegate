@@ -6,45 +6,56 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
-### Corregido (F4-desktop-spacing)
+## [0.41.1] - 2026-10-23
 
-- **Banda en Claude Desktop: textos menos pegados.** En la letra proporcional de Desktop el
-  espacio normal sale estrecho y ` · ` quedaba casi pegado a los textos. Ahora el `·` va entre dos
-  espacios de medio cuadratín (U+2002), que tienen ancho fijo y el navegador no colapsa, y el punto
-  de estado se une a su palabra con un espacio que no se parte (U+00A0). Mientras delega, el verbo
-  («Delegando») va atenuado y la tool en curso en color normal, para que se distingan. La terminal
-  no cambia.
-- **Banda en Claude Desktop: ya no pierde las cifras mientras delega.** El recorte contaba cada
-  letra como una celda de la fuente monoespaciada, pero Desktop dibuja la banda con su letra
-  proporcional, que ocupa unas tres cuartas partes de una celda, así que quitaba las cifras con
-  media tarjeta vacía. Ahora en Desktop cada letra cuenta 0,75 celdas (y el espacio ancho, una): en
-  una banda de unas 100 celdas siguen las delegaciones y los tokens ahorrados, y con sitio, también
-  el modo de lectura a la derecha. Siempre en una sola fila.
+La banda de estado del mod estrena diseño propio en la terminal y en Claude Desktop, se refresca
+sin esperar al turno y dice qué tool está trabajando, con minutos y trozos (SDD
+`claude-plugin-and-mods`, F4-band, F4-live-fixes y F4-desktop-spacing). Además, las decisiones del
+diálogo del mod de lectura llegan por fin a la telemetría, una sola línea por decisión, y el resumen
+dice la regla real para leer el fichero literal (F4-read-fixes y F4-live-fixes).
 
-### Corregido (F4-live-fixes)
+### Cómo actualizar
 
-- **Una decisión del mod de lectura deja una sola línea en la telemetría.** En la prueba en vivo
-  una lectura resumida dejó dos líneas `summarized`: el daemon, ocupado, contestó después del tope
-  de 1 s del mod pero escribió la línea; el mod la dio por perdida (con su rastro en
-  `hook-failures.jsonl`) y la volvió a escribir en la llamada siguiente. Ahora cada decisión lleva
-  un `id` que el mod pone una vez y manda por todas las vías, y `record-read` no escribe un `id` que
-  ya está en la cola del fichero. Si el daemon se pasa del tope, la línea espera a la siguiente
-  llamada (sin lanzar el proceso a la vez ni dejar rastro) y solo queda rastro si ese intento
-  también falla.
-- **Banda: minutos, avance por trozos y sin «·» suelto.** Pasado el minuto, lo que lleva la
-  delegación sale en minutos (`3 min 16 s`; en inglés `3m 16s`) en vez de `196 s`; una delegación
-  partida en trozos dice por cuál va (`local_summarize 7/9 · 3 min 16 s`); y en la barra de la
-  terminal sin modelo cargado ya no queda un `·` pegado a la etiqueta (`● LISTO 29 delegaciones`).
-- **Banda en Claude Desktop rediseñada.** La píldora con borde parecía un botón e inflaba la
-  tarjeta, y el enlace al panel quedaba fuera de la línea base (y abría en 401, porque el panel pide
-  token). Ahora es una sola línea de texto en dos tonos, como las de la propia app:
+- **Abre una sesión nueva de Claude Code (o de Claude Desktop) tras actualizar.** Los mods se
+  cargan al empezar la sesión: las abiertas siguen con la banda de la 0.41.0 hasta que las cierres.
+- **La banda tiene dos estilos:** la opción nueva `status_style` vale `bar` (por defecto, una fila)
+  o `line` (una raya sobre una línea de texto). Se cambia en el menú de configuración del plugin
+  (`/plugin`).
+
+### Añadido: la banda de estado nueva
+
+- **Terminal: una barra de una fila.** Con el fondo de los mensajes del tema, una etiqueta de
+  estado en vídeo inverso (` ● LISTO `, ` ◐ DELEGANDO `, ` ○ CAÍDO `, ` ◌ SIN DATOS `,
+  ` ○ SIN SERVICIO `), el modelo atenuado, las cifras en negrita con sus etiquetas atenuadas y el
+  modo de lectura a la derecha. Sin raya y sin filas vacías encima ni debajo: pasa de tres filas a
+  una, y sin modelo cargado ya no queda un `·` pegado a la etiqueta (`● LISTO 29 delegaciones`).
+  Con `status_style` = `line`, una raya atenuada sobre `local-delegate · ● qwen3-8b listo ·
+  3 delegaciones · 12,3k tokens ahorrados ≈ $0,18 · lecturas: pregunta`, en dos filas.
+- **Claude Desktop: una sola línea de texto en dos tonos, como las de la propia app.**
   `local-delegate · ● Listo · qwen3-8b · 3 delegaciones · 12,3k tokens ahorrados ≈ $0,18`, con los
   datos en color normal, el resto atenuado, el color solo en el punto (y en la palabra cuando el
   modelo está caído o el servicio no responde) y el modo de lectura a la derecha. Delegando:
-  `◐ Delegando local_summarize 7/9 · 3 min 16 s +1 más`. Sin borde, fondo, enlace ni props de
-  tipografía.
+  `◐ Delegando local_summarize 7/9 · 3 min 16 s +1 más`, con el verbo atenuado y la tool en color
+  normal para que se distingan. Sin borde, fondo, enlace ni props de tipografía: la primera versión
+  de F4-band (una píldora con borde y el nombre como enlace al panel) parecía un botón, inflaba la
+  tarjeta, sacaba el enlace de la línea base y lo abría en 401, porque el panel pide token. Los
+  tamaños de letra, la monoespaciada y las cifras tabulares esperan a que la CLI mínima los
+  acepte: la 2.1.292 rechaza el árbol entero por `size` y dibuja su propia banda.
+- **Se refresca sin esperar al turno.** Un temporizador relee `/api/inflight` y `/api/backend`
+  (solo HTTP al daemon, nunca un proceso) cada segundo mientras hay una delegación en curso o un
+  modelo cargando, y cada 30 s si no; una llamada a una tool de local-delegate pone el ritmo rápido
+  al instante y, al acabar, trae las cifras de la sesión. Solo se redibuja si algo cambió, y el
+  temporizador se para al cerrar la sesión.
+- **Dice qué tool está trabajando, con minutos y trozos.** En «delegando», la tool y lo que lleva
+  (`◐ qwen3-8b delegando · local_summarize 4 s`; con varias, la más antigua y `+N`), y el punto
+  gira (◐◓◑◒) con esos segundos. Pasado el minuto sale en minutos (`3 min 16 s`; en inglés
+  `3m 16s`) en vez de `196 s`, y una delegación partida en trozos dice por cuál va
+  (`local_summarize 7/9 · 3 min 16 s`).
+- **Textos más claros.** «modelo local listo / delegando / caído», «servicio local sin respuesta»,
+  «tokens ahorrados», un estado «sin datos» cuando el backend no responde a la consulta, el modo de
+  lectura según haya diálogo («lecturas: pregunta» o «lecturas: resume solo») y sin el rombo ◆.
 
-### Corregido (F4-read-fixes)
+### Corregido
 
 - **Las decisiones del diálogo del mod de lectura llegan a la telemetría.** En la 0.41.0 el mod
   registraba sus decisiones solo con un proceso, y las que se tomaban en el diálogo («resumir» /
@@ -53,38 +64,30 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `127.0.0.1`), que escribe la misma línea que `hook record-read` con el entorno del cliente, y el
   proceso queda de respaldo. Si ninguna vía la toma, queda rastro (log de depuración y
   `hook-failures.jsonl`, sin ruta ni contenido) y se reintenta en la siguiente llamada a una tool.
+- **Una decisión del mod de lectura deja una sola línea en la telemetría.** En la prueba en vivo
+  una lectura resumida dejó dos líneas `summarized`: el daemon, ocupado, contestó después del tope
+  de 1 s del mod pero escribió la línea; el mod la dio por perdida (con su rastro en
+  `hook-failures.jsonl`) y la volvió a escribir en la llamada siguiente. Ahora cada decisión lleva
+  un `id` que el mod pone una vez y manda por todas las vías, y `record-read` no escribe un `id` que
+  ya está en la cola del fichero. Si el daemon se pasa del tope, la línea espera a la siguiente
+  llamada (sin lanzar el proceso a la vez ni dejar rastro) y solo queda rastro si ese intento
+  también falla.
 - **El resumen dice la regla real para leer el fichero literal.** Decía «léelo antes con
   `offset`/`limit`», y una franja que llevaba lo leído del fichero al 80 % se volvía a resumir sin
   explicar por qué. Ahora dice hasta cuántas líneas se pueden leer literales en la sesión y, si se
   resumió una franja, que fue por lo acumulado (no por el tamaño del tramo), cuántas líneas se
   llevan y cuántas quedan; y que para editar basta una lectura literal del tramo que se va a
   cambiar. El rechazo de `Edit`/`Write` tras un resumen dice lo mismo. El criterio no cambia.
-
-### Banda de estado: diseño propio por superficie y refresco en vivo (SDD `claude-plugin-and-mods`, F4-band)
-
-- **Terminal: una barra de una fila.** Con el fondo de los mensajes del tema, una etiqueta de
-  estado en vídeo inverso (` ● LISTO `, ` ◐ DELEGANDO `, ` ○ CAÍDO `, ` ◌ SIN DATOS `,
-  ` ○ SIN SERVICIO `), el modelo atenuado, las cifras en negrita con sus etiquetas atenuadas y el
-  modo de lectura a la derecha. Sin raya y sin filas vacías encima ni debajo: pasa de tres filas a
-  una. La opción nueva `status_style` (`bar` por defecto, `line`) deja la variante de línea: una
-  raya atenuada sobre `local-delegate · ● qwen3-8b listo · 3 delegaciones · 12,3k tokens
-  ahorrados ≈ $0,18 · lecturas: pregunta`, en dos filas.
-- **Claude Desktop: una fila nativa.** El nombre como enlace al panel (`http://localhost:9393`),
-  una píldora de borde redondeado con el punto y el estado, el modelo, la tool en curso, las
-  cifras en negrita y el modo de lectura atenuado a la derecha. Los tamaños de letra, la
-  monoespaciada y las cifras tabulares esperan a que la CLI mínima los acepte: la 2.1.292 rechaza
-  el árbol entero por `size` y dibuja su propia banda.
-- **Se refresca sin esperar al turno.** Un temporizador relee `/api/inflight` y `/api/backend`
-  (solo HTTP al daemon, nunca un proceso) cada segundo mientras hay una delegación en curso o un
-  modelo cargando, y cada 30 s si no; una llamada a una tool de local-delegate pone el ritmo rápido
-  al instante y, al acabar, trae las cifras de la sesión. Solo se redibuja si algo cambió, y el
-  temporizador se para al cerrar la sesión.
-- **Dice qué tool está trabajando.** En «delegando», la tool y los segundos que lleva
-  (`◐ qwen3-8b delegando · local_summarize 4 s`; con varias, la más antigua y `+N`), y el punto
-  gira (◐◓◑◒) con esos segundos.
-- **Textos más claros.** «modelo local listo / delegando / caído», «servicio local sin respuesta»,
-  «tokens ahorrados», un estado «sin datos» cuando el backend no responde a la consulta, el modo de
-  lectura según haya diálogo («lecturas: pregunta» o «lecturas: resume solo») y sin el rombo ◆.
+- **Banda en Claude Desktop: textos menos pegados.** En la letra proporcional de Desktop el
+  espacio normal sale estrecho y ` · ` quedaba casi pegado a los textos. Ahora el `·` va entre dos
+  espacios de medio cuadratín (U+2002), que tienen ancho fijo y el navegador no colapsa, y el punto
+  de estado se une a su palabra con un espacio que no se parte (U+00A0). La terminal no cambia.
+- **Banda en Claude Desktop: ya no pierde las cifras mientras delega.** El recorte contaba cada
+  letra como una celda de la fuente monoespaciada, pero Desktop dibuja la banda con su letra
+  proporcional, que ocupa unas tres cuartas partes de una celda, así que quitaba las cifras con
+  media tarjeta vacía. Ahora en Desktop cada letra cuenta 0,75 celdas (y el espacio ancho, una): en
+  una banda de unas 100 celdas siguen las delegaciones y los tokens ahorrados, y con sitio, también
+  el modo de lectura a la derecha. Siempre en una sola fila.
 
 ## [0.41.0] - 2026-10-23
 
@@ -3517,7 +3520,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.41.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.41.1...HEAD
+[0.41.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.41.0...v0.41.1
 [0.41.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.40.0...v0.41.0
 [0.40.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.39.0...v0.40.0
 [0.39.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.38.0...v0.39.0
