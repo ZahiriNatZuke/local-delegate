@@ -361,7 +361,11 @@ El plugin trae además un **mod**, que corre dentro de Claude Code sin gastar tu
 - Desde la 0.41, el **mod de lectura** (encendido por defecto, opción `read_mod_enabled`) resume
   con `local_summarize` la prosa grande que se lee entera y entrega el resumen como resultado de
   la propia tool; con diálogo pregunta antes. Tras un resumen, escribir en ese fichero se rechaza
-  hasta leerlo de verdad. Mientras actúa, los hooks de lectura de la sesión se apartan.
+  hasta leerlo de verdad. Mientras actúa, los hooks de lectura de la sesión se apartan. Para
+  decidir qué lee cada llamada le pregunta al daemon, sin arrancar procesos (la sobrecarga medida
+  por llamada `Bash` queda dentro del ruido). Sin valor guardado cuenta como encendido; si lo
+  apagaste en la 0.40.0, se vuelve a encender en el menú de configuración del plugin.
+- Tras actualizar, abre una sesión nueva de Claude Code: los mods se cargan al empezar la sesión.
 
 En Windows, `install --desktop` añade el chat de **Claude Desktop**: escribe una entrada que lanza
 `local-delegate desktop-bridge`, un puente stdio hacia el daemon que lee el token él mismo, porque

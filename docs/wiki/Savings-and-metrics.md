@@ -76,7 +76,7 @@ con saltos pudo contaminarla un swap.
   `connect_timeout`, `credential`…; tabla en [Troubleshooting](Troubleshooting.md)). `error` sigue
   valiendo `connect_error`. Hasta la 0.34.0 la clave era `fallo_conexion` y los valores iban en
   español (`rechazada`, `timeout_conexion`…): se siguen leyendo.
-- `cancel_reason` (solo con `error: "cancelled"`, desde la versión siguiente a la 0.40.0): la
+- `cancel_reason` (solo con `error: "cancelled"`, desde la 0.41.0): la
   delegación se paró porque quien la pidió dejó de esperarla. `notification` (llegó
   `notifications/cancelled`, como el Esc de Claude Code o el puente de Desktop al cerrarse),
   `disconnect` (el cliente cortó la conexión de la petición) o `aborted` (se cerró la sesión u otra
