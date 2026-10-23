@@ -1,0 +1,201 @@
+{
+ "C": {
+  "warm_all": {
+   "n": 90,
+   "median": 1010.5,
+   "p95": 1278,
+   "max": 1684
+  },
+  "cold": {
+   "n": 6,
+   "median": 1849.0,
+   "p95": 2065,
+   "max": 2065
+  },
+  "warm_skip": {
+   "n": 30,
+   "median": 978.0,
+   "p95": 1140,
+   "max": 1186
+  },
+  "warm_code": {
+   "n": 30,
+   "median": 962.0,
+   "p95": 1278,
+   "max": 1338
+  },
+  "warm_prose": {
+   "n": 30,
+   "median": 1112.5,
+   "p95": 1568,
+   "max": 1684
+  }
+ },
+ "S": {
+  "warm_all": {
+   "n": 90,
+   "median": 961.0,
+   "p95": 1186,
+   "max": 1315
+  },
+  "cold": {
+   "n": 6,
+   "median": 1801.5,
+   "p95": 1987,
+   "max": 1987
+  },
+  "warm_skip": {
+   "n": 30,
+   "median": 966.5,
+   "p95": 1186,
+   "max": 1241
+  },
+  "warm_code": {
+   "n": 30,
+   "median": 956.0,
+   "p95": 1146,
+   "max": 1186
+  },
+  "warm_prose": {
+   "n": 30,
+   "median": 956.5,
+   "p95": 1246,
+   "max": 1315
+  }
+ },
+ "delta_C_minus_S": {
+  "warm_all": {
+   "median": 49.5,
+   "p95": 92
+  },
+  "cold": {
+   "median": 47.5,
+   "p95": 78
+  },
+  "warm_skip": {
+   "median": 11.5,
+   "p95": -46
+  },
+  "warm_code": {
+   "median": 6.0,
+   "p95": 132
+  },
+  "warm_prose": {
+   "median": 156.0,
+   "p95": 322
+  }
+ },
+ "engine_hook_ms": {
+  "C:PostToolUse:on-post-tool-use.sh": {
+   "n": 96,
+   "median": 673.5,
+   "p95": 752,
+   "max": 1200
+  },
+  "C:PreToolUse:pre-tool-use.mjs\"": {
+   "n": 96,
+   "median": 127.0,
+   "p95": 143,
+   "max": 152
+  },
+  "C:PreToolUse:shell": {
+   "n": 96,
+   "median": 146.0,
+   "p95": 340,
+   "max": 389
+  },
+  "S:PostToolUse:on-post-tool-use.sh": {
+   "n": 96,
+   "median": 674.5,
+   "p95": 722,
+   "max": 966
+  },
+  "S:PreToolUse:pre-tool-use.mjs\"": {
+   "n": 96,
+   "median": 126.0,
+   "p95": 150,
+   "max": 191
+  },
+  "S:PreToolUse:shell": {
+   "n": 96,
+   "median": 145.0,
+   "p95": 342,
+   "max": 525
+  }
+ },
+ "heartbeats": [
+  {
+   "run": "r1-C1",
+   "sid": "cb6784ac-daf6-4c77-8d88-318a35cb959e",
+   "read_mod_active": true,
+   "ok": true
+  },
+  {
+   "run": "r1-C2",
+   "sid": "ae23c717-2178-48c3-97f3-c2778be8925a",
+   "read_mod_active": true,
+   "ok": true
+  },
+  {
+   "run": "r1-S1",
+   "sid": "f69aa2a7-6049-4202-98fe-dd28f0910460",
+   "read_mod_active": null,
+   "ok": true
+  },
+  {
+   "run": "r1-S2",
+   "sid": "9b10dbc2-d997-411f-92f6-325a97557116",
+   "read_mod_active": null,
+   "ok": true
+  },
+  {
+   "run": "r2-C1",
+   "sid": "49bfe02a-741e-4195-9020-6638b3c8136c",
+   "read_mod_active": true,
+   "ok": true
+  },
+  {
+   "run": "r2-C2",
+   "sid": "8581af91-642c-4306-ab94-64bbc0dea206",
+   "read_mod_active": true,
+   "ok": true
+  },
+  {
+   "run": "r2-S1",
+   "sid": "e43a11a1-b015-4500-8a73-febe33c1a045",
+   "read_mod_active": null,
+   "ok": true
+  },
+  {
+   "run": "r2-S2",
+   "sid": "1d574ab3-e54b-4d6f-baa7-39fc510a2fa7",
+   "read_mod_active": null,
+   "ok": true
+  },
+  {
+   "run": "r3-C1",
+   "sid": "890874bf-6f08-4001-8089-3b7b2070d62a",
+   "read_mod_active": true,
+   "ok": true
+  },
+  {
+   "run": "r3-C2",
+   "sid": "42e11165-1099-4db4-a34d-07a7eab213b3",
+   "read_mod_active": true,
+   "ok": true
+  },
+  {
+   "run": "r3-S1",
+   "sid": "a98bfbd0-c4a9-45b6-a924-2bd7ee44ba1d",
+   "read_mod_active": null,
+   "ok": true
+  },
+  {
+   "run": "r3-S2",
+   "sid": "656d4a55-52eb-48a6-8343-45a0fc489864",
+   "read_mod_active": null,
+   "ok": true
+  }
+ ],
+ "heartbeats_all_ok": true
+}

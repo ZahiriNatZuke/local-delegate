@@ -1,0 +1,58 @@
+{
+ "C:cold": {
+  "calls": 6,
+  "processes": 0,
+  "process_ms_median": null,
+  "process_ms_max": null,
+  "mod_hook_settled_ms_median": 1847.1
+ },
+ "C:skip": {
+  "calls": 30,
+  "processes": 0,
+  "process_ms_median": null,
+  "process_ms_max": null,
+  "mod_hook_settled_ms_median": 976.75
+ },
+ "C:code": {
+  "calls": 30,
+  "processes": 0,
+  "process_ms_median": null,
+  "process_ms_max": null,
+  "mod_hook_settled_ms_median": 960.3
+ },
+ "C:prose": {
+  "calls": 30,
+  "processes": 30,
+  "process_ms_median": 136.5,
+  "process_ms_max": 342,
+  "mod_hook_settled_ms_median": 1110.65
+ },
+ "S:cold": {
+  "calls": 0,
+  "processes": 0,
+  "process_ms_median": null,
+  "process_ms_max": null,
+  "mod_hook_settled_ms_median": null
+ },
+ "S:skip": {
+  "calls": 0,
+  "processes": 0,
+  "process_ms_median": null,
+  "process_ms_max": null,
+  "mod_hook_settled_ms_median": null
+ },
+ "S:code": {
+  "calls": 0,
+  "processes": 0,
+  "process_ms_median": null,
+  "process_ms_max": null,
+  "mod_hook_settled_ms_median": null
+ },
+ "S:prose": {
+  "calls": 0,
+  "processes": 0,
+  "process_ms_median": null,
+  "process_ms_max": null,
+  "mod_hook_settled_ms_median": null
+ }
+}

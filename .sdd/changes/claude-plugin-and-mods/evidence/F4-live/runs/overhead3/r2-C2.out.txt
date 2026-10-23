@@ -1,0 +1,2 @@
+drv2: F4BASH {"sid":"8581af91-642c-4306-ab94-64bbc0dea206","ms":[2065,1090,1047,1568,882,972,1158,966,951,1231,981,929,1084,905,957,1130],"kinds":["cold","skip","code","prose","skip","code","prose","skip","code","prose","skip","code","prose","skip","code","prose"],"last":"{\"result\":{\"stdout\":\"---\\nname: Reporte de bug\\nabout: Algo no funciona como debería\",\"stderr\":\"\",\"interrupted\":false,\"i"}
+

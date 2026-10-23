@@ -149,3 +149,135 @@ la primera, comprobado), `count_processes.py`, `overhead2-result.json`, `process
 `runs/overhead2/` y `runs/trial2/` (prueba del montaje, fuera del análisis). `settings-con.json` y
 `settings-sin.json` se regeneraron desde las opciones actuales de `~/.claude/settings.json`, que
 ahora trae `read_mod_enabled: false`. Cada brazo lo fija igual con `--settings`.
+
+## Tercera medición, PC en reposo
+
+Mismo código (`main` en `8732158`, el del #426 más la evidencia del #427), sin reinstalar ni tocar el
+daemon. Ventana de prueba `w-20261023T015443Z` (01:54:43Z–01:59:05Z), abierta y cerrada; corridas
+de 01:55:03Z a 01:58:55Z, de una en una y con stdin cerrado. Mismo conductor (`drv2/`, `/f4bash3`),
+mismas tres mitades y comandos, 3 repeticiones × 2 sesiones por brazo intercaladas (con, sin, con,
+sin), primera llamada descartada. `settings-con.json` y `settings-sin.json` se regeneraron desde
+las opciones actuales de `~/.claude/settings.json` y salieron idénticos a los de la segunda
+(solo cambia `read_mod_enabled`). No se usó ningún fichero de prosa de 8 KB o más.
+
+**Reposo comprobado antes de empezar**: CPU 3–17 % (cinco muestras cada 2 s), GPU 0–5 % con
+1,47 GB de VRAM ocupados (el modelo residente de `llama-swap`), 15,6 GB de RAM libres de 31,1, sin
+juego ni otra aplicación con carga. La línea base volvió a la de la primera medición: una `Bash` sin
+el mod ronda los 960 ms (warp ~675 ms, hook `shell` ~145 ms, harness ~126 ms, iguales en los dos
+brazos).
+
+### Veredicto: CUMPLE
+
+| Llamadas en caliente | n por brazo | Mediana con | Mediana sin | Δ mediana (tope +150) | p95 con | p95 sin | Δ p95 (tope +300) |
+|---|---|---|---|---|---|---|---|
+| **Total** | 90 | 1010,5 ms | 961 ms | **+49,5 ms** ✓ | 1278 ms | 1186 ms | **+92 ms** ✓ |
+| 1. No pasan el filtro | 30 | 978 ms | 966,5 ms | +11,5 ms ✓ | 1140 ms | 1186 ms | −46 ms ✓ |
+| 2. Pequeños que no son prosa | 30 | 962 ms | 956 ms | +6 ms ✓ | 1278 ms | 1146 ms | +132 ms ✓ |
+| 3. Prosa pequeña | 30 | 1112,5 ms | 956,5 ms | +156 ms (6 ms sobre el tope) | 1568 ms | 1246 ms | +322 ms (22 ms sobre el tope) |
+| Primera de cada sesión (aparte) | 6 | 1849 ms | 1801,5 ms | +47,5 ms | 2065 ms | 1987 ms | +78 ms |
+
+El criterio se fijó sobre el total y lo cumple con margen. Sin ruido, la mitad 2 queda en +6 ms: los
++192,5 ms de la segunda medición eran ruido del juego, no las llamadas al motor que hace el mod antes
+de descartar. Lo que cuesta es la mitad 3, la única que lanza un proceso: unos +156 ms por llamada,
+justo el tope si se mirara sola. Eso solo pasa con ficheros de prosa, que es donde el mod tiene algo
+que decidir.
+
+### Procesos que lanza el mod (`count_processes.py`)
+
+| Mitad (brazo «con») | Llamadas | Procesos | Duración del proceso (mediana / máx) |
+|---|---|---|---|
+| 1. No pasan el filtro | 30 | **0** | — |
+| 2. Pequeños que no son prosa | 30 | **0** | — |
+| 3. Prosa pequeña | 30 | **30** (uno por llamada) | **136,5 ms** / 342 ms |
+
+El brazo «sin» no lanza ningún proceso del mod. En reposo, `classify` por la vía ligera tarda la
+mitad que con el juego (136,5 frente a 248 ms) y explica casi toda la diferencia de la mitad 3.
+
+### Latidos: VÁLIDA
+
+Las 6 sesiones «con» dicen `read_mod_active: true`; las 6 «sin» no tienen el campo. Detalle en
+`heartbeats` de `overhead3-result.json`.
+
+### Ficheros (tercera medición)
+
+`run_overhead.ps1 -Repeat 3 -Sub overhead3 -Drv drv2 -Cmd /f4bash3`, `overhead3-result.json`,
+`processes3-result.json` y `runs/overhead3/` (salidas y `--debug-file`). No queda ningún proceso de
+la prueba ni ninguna ventana abierta; quedan en el `~/.claude` real los 12 latidos y los transcripts
+de `-p` de estas sesiones.
+
+## Cuarta medición, clasificación por el daemon (#428)
+
+El **después** de la mejora: `main` en `c8c0910` (#428, ya instalado y con el daemon reiniciado), sin
+reinstalar ni tocar nada. Ahora el mod pregunta al daemon por HTTP (`POST /api/hook/classify` y
+`/api/hook/classify-config`) y el proceso de Python queda solo de respaldo. Ventana de prueba
+`w-20261023T023820Z` (02:38:20Z–02:41:46Z), abierta y cerrada; corridas de 02:38:27Z a 02:41:35Z, de
+una en una y con stdin cerrado. Montaje idéntico al de la tercera: `drv2/`, `/f4bash3`, las mismas
+tres mitades y comandos, 3 repeticiones × 2 sesiones por brazo intercaladas, primera llamada
+descartada. `settings-con.json` y `settings-sin.json` siguen iguales a las opciones actuales de
+`~/.claude/settings.json` (solo cambia `read_mod_enabled`), así que no hubo que regenerarlos. Sin
+ficheros de prosa de 8 KB o más.
+
+**Reposo comprobado antes de empezar**: CPU 4–13 % (cinco muestras cada 2 s), GPU 0 % con 1,5 GB de
+VRAM ocupados (el modelo residente de `llama-swap`), 15,6 GB de RAM libres de 31,1, sin juego ni otra
+aplicación con carga. La línea base salió más rápida que en la tercera **en los dos brazos por
+igual** (una `Bash` sin el mod ronda los 790 ms frente a 960: warp ~555 ms frente a ~675, hook `shell`
+~116 frente a ~145, harness ~101 frente a ~126). Es la máquina, no el mod; por eso la comparación
+justa es la diferencia con/sin de cada medición, no los valores absolutos.
+
+### Veredicto: CUMPLE
+
+| Llamadas en caliente | n por brazo | Medición | Mediana con | Mediana sin | Δ mediana (tope +150) | p95 con | p95 sin | Δ p95 (tope +300) | Procesos `classify` |
+|---|---|---|---|---|---|---|---|---|---|
+| **Total** | 90 | antes (3.ª) | 1010,5 ms | 961 ms | +49,5 ms | 1278 ms | 1186 ms | +92 ms | 30 |
+| **Total** | 90 | **después (4.ª)** | 781 ms | 790 ms | **−9 ms** ✓ | 942 ms | 991 ms | **−49 ms** ✓ | **0** |
+| 1. No pasan el filtro | 30 | antes | 978 ms | 966,5 ms | +11,5 ms | 1140 ms | 1186 ms | −46 ms | 0 |
+| 1. No pasan el filtro | 30 | después | 778 ms | 779,5 ms | −1,5 ms ✓ | 1030 ms | 950 ms | +80 ms ✓ | 0 |
+| 2. Pequeños que no son prosa | 30 | antes | 962 ms | 956 ms | +6 ms | 1278 ms | 1146 ms | +132 ms | 0 |
+| 2. Pequeños que no son prosa | 30 | después | 787 ms | 786,5 ms | +0,5 ms ✓ | 931 ms | 1076 ms | −145 ms ✓ | 0 |
+| 3. Prosa pequeña | 30 | antes | 1112,5 ms | 956,5 ms | +156 ms ✗ | 1568 ms | 1246 ms | +322 ms ✗ | 30 |
+| 3. Prosa pequeña | 30 | después | 776 ms | 803,5 ms | **−27,5 ms** ✓ | 910 ms | 996 ms | **−86 ms** ✓ | **0** |
+| Primera de cada sesión (aparte) | 6 | antes | 1849 ms | 1801,5 ms | +47,5 ms | 2065 ms | 1987 ms | +78 ms | — |
+| Primera de cada sesión (aparte) | 6 | después | 1455,5 ms | 1557 ms | −101,5 ms | 1526 ms | 1618 ms | −92 ms | — |
+
+La sobrecarga del mod desaparece dentro del ruido: el total queda en −9 ms de mediana y −49 de p95
+(los valores negativos son ruido, el mod no puede acelerar la llamada). La mitad 3, la única que
+quedaba en el tope (+156 y +322), baja a −27,5 y −86: lo que costaba era arrancar Python en cada
+consulta, y la consulta al daemon tarda **2 ms de mediana (máx. 3 ms)**.
+
+### Procesos que lanza el mod (`count_processes.py`)
+
+| Mitad (brazo «con») | Llamadas | Procesos antes (3.ª) | Procesos después (4.ª) |
+|---|---|---|---|
+| 1. No pasan el filtro | 30 | 0 | **0** |
+| 2. Pequeños que no son prosa | 30 | 0 | **0** |
+| 3. Prosa pequeña | 30 | 30 (136,5 ms de mediana) | **0** |
+
+El brazo «sin» tampoco lanza ninguno durante las llamadas medidas. Fuera de ellas, cada sesión de
+los **dos** brazos lanza 2 procesos del plugin (uno al empezar y otro al terminar, ~58 ms, 0 bytes de
+salida): no son del mod de lectura, porque salen igual con `read_mod_enabled: false`, y quedan fuera
+del tiempo medido.
+
+### Las consultas fueron por HTTP, no por el respaldo
+
+Comprobado en los `--debug-file`, que registran cada `$.http.fetch` y cada `$.process.run` del plugin:
+
+- Cada sesión «con» tiene **1** `POST http://127.0.0.1:9393/api/hook/classify-config` (la primera
+  vez que hace falta la configuración) y **5** `POST .../api/hook/classify`, una por cada llamada de
+  prosa; las 6 respuestas de cada sesión son `200` (36 de 36 en total, ninguna con error ni sin
+  respuesta). Las 30 consultas de `classify` tardaron 2 ms de mediana y 3 ms como máximo, muy lejos
+  del límite de 300 ms que activa el respaldo.
+- Ninguna sesión «con» tiene un `$.process.run` dentro de las llamadas medidas (`count_processes.py`
+  da 0), así que ninguna cayó al respaldo. Las sesiones «sin» no tienen ninguna petición
+  `/api/hook/classify*`.
+
+### Latidos: VÁLIDA
+
+Las 6 sesiones «con» dicen `read_mod_active: true`; las 6 «sin» no tienen el campo
+(`heartbeats_all_ok: true` en `overhead4-result.json`).
+
+### Ficheros (cuarta medición)
+
+`run_overhead.ps1 -Repeat 3 -Sub overhead4 -Drv drv2 -Cmd /f4bash3`, `overhead4-result.json`,
+`processes4-result.json` y `runs/overhead4/` (salidas y `--debug-file`). No queda ningún proceso de
+la prueba ni ninguna ventana abierta; quedan en el `~/.claude` real los 12 latidos y los transcripts
+de `-p` de estas sesiones.

@@ -1,0 +1,665 @@
+2026-10-23T01:55:03.479Z [DEBUG] MDM settings load completed in 1ms
+2026-10-23T01:55:03.492Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: C:\Program Files\ClaudeCode\managed-settings.json
+2026-10-23T01:55:03.496Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: D:\Projects\local-delegate\.claude\settings.json
+2026-10-23T01:55:03.499Z [DEBUG] CA certs: Config fallback - globalEnv keys: , settingsEnv keys: CLAUDE_CODE_USE_POWERSHELL_TOOL,LD_HOOK_TELEMETRY_LOG,LD_HOOK_READ_BLOCK
+2026-10-23T01:55:03.524Z [DEBUG] [init] configureGlobalMTLS starting
+2026-10-23T01:55:03.524Z [DEBUG] [init] configureGlobalMTLS complete
+2026-10-23T01:55:03.524Z [DEBUG] [init] configureGlobalAgents starting
+2026-10-23T01:55:03.525Z [DEBUG] CA certs: stores=bundled,system, extraCertsPath=undefined
+2026-10-23T01:55:03.525Z [DEBUG] CA certs: Loaded 117 bundled root certificates
+2026-10-23T01:55:03.536Z [DEBUG] CA certs: Dropped 11 expired certificate(s) from system store
+2026-10-23T01:55:03.536Z [DEBUG] CA certs: Loaded 121 system CA certificates
+2026-10-23T01:55:03.542Z [DEBUG] CA certs: Dropped blocked certificate d7a7a0fb5d7e2731d771e9484ebcdef71d5f0c3e0a2948782bc83ee0ea699ef4 from system
+2026-10-23T01:55:03.545Z [DEBUG] CA certs: Dropped blocked certificate d7a7a0fb5d7e2731d771e9484ebcdef71d5f0c3e0a2948782bc83ee0ea699ef4 from system
+2026-10-23T01:55:03.557Z [DEBUG] CA certs: Dropped 4 certificate(s) that do not chain to a root in the CA list
+2026-10-23T01:55:03.558Z [DEBUG] mTLS: Creating HTTPS agent with custom certificates
+2026-10-23T01:55:03.558Z [DEBUG] [init] configureGlobalAgents complete
+2026-10-23T01:55:03.559Z [DEBUG] Using bash path: "C:\Program Files\Git\bin\bash.exe"
+2026-10-23T01:55:03.562Z [DEBUG] Error log sink initialized
+2026-10-23T01:55:03.563Z [DEBUG] clearPluginCache: invalidating loadAllPlugins cache (preAction: --plugin-dir inline plugins)
+2026-10-23T01:55:03.577Z [DEBUG] Applying permission update: Adding 1 allow rule(s) to destination 'userSettings': ["mcp__local-delegate__*"]
+2026-10-23T01:55:03.578Z [DEBUG] Applying permission update: Adding 42 allow rule(s) to destination 'localSettings': ["PowerShell(winget uninstall:*)","PowerShell(Move-Item:*)","Bash(local-delegate serve:*)","Bash(uv run local-delegate serve:*)","PowerShell(Start-Process pwsh -WindowStyle Hidden -ArgumentList '-NoProfile','-File','D:\\\\Projects\\\\llms\\\\llama-swap\\\\lanzar-tanda-afinidad.ps1':*)","PowerShell(schtasks /End /TN LocalDelegateDaemon)","PowerShell(schtasks /Run /TN LocalDelegateDaemon)","PowerShell(Stop-Process -Id *)","Agent(general-purpose)","PowerShell(Copy-Item *)","PowerShell(uv run *)","Bash(gh pr merge:*)","Bash(uv run python scripts/release.py:*)","PowerShell(uv tool install --force --reinstall --no-cache \\\\\".[llamaswap]\\\\\")","Bash(git push -u origin sdd/*)","Bash(git push)","Bash(git push origin sdd/*)","Bash(git worktree add D:/Projects/ld-wt-*)","Bash(git worktree remove *)","Bash(git worktree prune)","Bash(git branch -D sdd/*)","Bash(git switch *)","Bash(git pull --ff-only*)","Bash(git log *)","Bash(git status*)","Bash(git diff *)","Bash(git show *)","Bash(bash ~/.claude/scripts/pesado.sh *)","Bash(uv tool install --force --reinstall --no-cache *)","Bash(local-delegate test-window *)","PowerShell(local-delegate test-window *)","PowerShell(schtasks /Query *)","Bash(pwsh -NoProfile -File C:\\\\Users\\\\Yohan\\\\.claude\\\\relevos\\\\*)","PowerShell(pwsh -NoProfile -File C:\\\\Users\\\\Yohan\\\\.claude\\\\relevos\\\\*)","Edit(//c/Users/Yohan/.claude/relevos/**)","Edit(//c/Users/Yohan/.claude/projects/D--Projects-local-delegate/memory/**)","mcp__obsidian__read_note","mcp__obsidian__read_note_lines","mcp__obsidian__patch_note","mcp__obsidian__get_note_outline","mcp__socket-mcp__depscore","mcp__socket-mcp__alerts"]
+2026-10-23T01:55:03.580Z [DEBUG] [ToolSearch:optimistic] mode=tst, ENABLE_TOOL_SEARCH=undefined, result=true
+2026-10-23T01:55:03.724Z [DEBUG] Ignoring dangerous permission Agent(general-purpose) from .claude\settings.local.json (bypasses classifier)
+2026-10-23T01:55:03.725Z [DEBUG] Ignoring dangerous permission PowerShell(pwsh -NoProfile -File C:\Users\Yohan\.claude\relevos\*) from .claude\settings.local.json (bypasses classifier)
+2026-10-23T01:55:03.725Z [DEBUG] Ignoring dangerous permission Bash(*) from cliArg (bypasses classifier)
+2026-10-23T01:55:03.725Z [DEBUG] Applying permission update: Removing 2 allow rule(s) from source 'localSettings': ["Agent(general-purpose)","PowerShell(pwsh -NoProfile -File C:\\\\Users\\\\Yohan\\\\.claude\\\\relevos\\\\*)"]
+2026-10-23T01:55:03.725Z [DEBUG] Applying permission update: Removing 1 allow rule(s) from source 'cliArg': ["Bash"]
+2026-10-23T01:55:03.725Z [DEBUG] [STARTUP] Loading MCP configs...
+2026-10-23T01:55:03.734Z [DEBUG] [plugins] skipping hidden skills-dir entry '.trash': dot-prefixed dirs are never adopted as plugins
+2026-10-23T01:55:03.734Z [DEBUG] [plugins] skipping skills-dir entry 'synced': the sync-owned root name is never adopted as a plugin
+2026-10-23T01:55:03.740Z [DEBUG] Loaded 2 installed plugins from C:\Users\Yohan\.claude\plugins\installed_plugins.json
+2026-10-23T01:55:03.747Z [DEBUG] [STARTUP] Running setup()...
+2026-10-23T01:55:03.755Z [DEBUG] Git remote URL: https://github.com/ZahiriNatZuke/local-delegate.git
+2026-10-23T01:55:03.755Z [DEBUG] Parsed repository: github.com/ZahiriNatZuke/local-delegate from URL: https://github.com/ZahiriNatZuke/local-delegate.git
+2026-10-23T01:55:03.767Z [DEBUG] --plugin-dir D:\Projects\local-delegate\.sdd\changes\claude-plugin-and-mods\evidence\F4-live\drv2 is one plugin: hooks at its top marks it
+2026-10-23T01:55:03.768Z [DEBUG] Loading skills from: managed=C:\Program Files\ClaudeCode\.claude\skills, user=C:\Users\Yohan\.claude\skills, project=[]
+2026-10-23T01:55:03.780Z [DEBUG] [skills] skipping reserved dir name 'synced' under C:\Users\Yohan\.claude\skills: 'synced' is the sync-owned root
+2026-10-23T01:55:03.780Z [DEBUG] Failed to stat directory C:\Program Files\ClaudeCode\.claude\agents: ENOENT: no such file or directory, stat 'C:\Program Files\ClaudeCode\.claude\agents'
+2026-10-23T01:55:03.783Z [DEBUG] Failed to stat directory C:\Program Files\ClaudeCode\.claude\commands: ENOENT: no such file or directory, stat 'C:\Program Files\ClaudeCode\.claude\commands'
+2026-10-23T01:55:03.794Z [INFO] [uds-messaging] Listening: \\.\pipe\LOCAL\cc-msg-135456938e9cac662585aa4f667c3e8b
+2026-10-23T01:55:03.795Z [INFO] [uds-messaging] Inject messages (auth line REQUIRED here; a pipe is not reachable via socat/AF_UNIX): node -e "const c=require('net').connect(process.argv[1],()=>{c.write(JSON.stringify({type:'auth',token:[REDACTED]})+'\n'+JSON.stringify({type:'user',message:{role:'user',content:'hello'}})+'\n');c.end()})" "\\.\pipe\LOCAL\cc-msg-135456938e9cac662585aa4f667c3e8b"
+2026-10-23T01:55:03.795Z [INFO] [uds-messaging] Connect when the data is ready (run the command first, then connect and write its output as ONE line, as in the node recipe above): a connection that sends no complete line within 30000 ms is closed
+2026-10-23T01:55:03.797Z [DEBUG] Error log sink initialized
+2026-10-23T01:55:03.803Z [DEBUG] [STARTUP] setup() completed in 56ms
+2026-10-23T01:55:03.804Z [DEBUG] Cleared mTLS configuration cache
+2026-10-23T01:55:03.804Z [DEBUG] Cleared proxy agent cache
+2026-10-23T01:55:03.804Z [DEBUG] mTLS: Creating HTTPS agent with custom certificates
+2026-10-23T01:55:03.851Z [DEBUG] [STARTUP] Loading commands and agents...
+2026-10-23T01:55:03.885Z [DEBUG] Read hooks.json for plugin drv2 (enabled=true): D:\Projects\local-delegate\.sdd\changes\claude-plugin-and-mods\evidence\F4-live\drv2\hooks\hooks.json
+2026-10-23T01:55:03.887Z [DEBUG] Read hooks.json for plugin warp (enabled=true): C:\Users\Yohan\.claude\plugins\cache\claude-code-warp\warp\2.4.0\hooks\hooks.json
+2026-10-23T01:55:03.887Z [DEBUG] Read hooks.json for plugin local-delegate (enabled=true): C:\Users\Yohan\AppData\Roaming\uv\tools\local-delegate-mcp\Lib\site-packages\local_delegate\resources\claude-plugin\local-delegate\hooks\hooks.json
+2026-10-23T01:55:03.888Z [DEBUG] Loaded inline plugin from path: drv2
+2026-10-23T01:55:03.888Z [DEBUG] Loaded 1 directory-loaded plugins
+2026-10-23T01:55:03.888Z [DEBUG] [plugins-scope] send: token carries user:plugins
+2026-10-23T01:55:03.909Z [DEBUG] Loaded 23 unique skills (23 unconditional, 0 conditional, managed: 0, user: 10, project: 0, additional: 0, legacy commands: 0)
+2026-10-23T01:55:03.916Z [DEBUG] [plugins-scope] send: token carries user:plugins
+2026-10-23T01:55:03.920Z [DEBUG] Loaded inline plugin from path: cowork-plugin-management
+2026-10-23T01:55:03.920Z [DEBUG] Loaded 1 directory-loaded plugins
+2026-10-23T01:55:03.922Z [DEBUG] Found 8 plugins (6 enabled, 2 disabled)
+2026-10-23T01:55:03.923Z [DEBUG] getPluginSkills: Processing 6 enabled plugins
+2026-10-23T01:55:03.923Z [DEBUG] Checking plugin drv2: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:03.923Z [DEBUG] Checking plugin warp: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:03.923Z [DEBUG] Checking plugin local-delegate: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:03.923Z [DEBUG] Checking plugin cc-plugin-agents-md: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:03.923Z [DEBUG] Checking plugin cc-plugin-telemetry: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:03.923Z [DEBUG] Checking plugin cc-plugin-plugin-authoring: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:03.923Z [DEBUG] Total plugin workflows loaded: 0
+2026-10-23T01:55:03.924Z [DEBUG] Total plugin commands loaded: 0
+2026-10-23T01:55:03.924Z [DEBUG] Total plugin skills loaded: 0 (0 duplicate/user-owned entries skipped)
+2026-10-23T01:55:03.925Z [DEBUG] Total plugin agents loaded: 0
+2026-10-23T01:55:03.925Z [DEBUG] Loading hooks from plugin: warp
+2026-10-23T01:55:03.925Z [DEBUG] Loading hooks from plugin: local-delegate
+2026-10-23T01:55:03.926Z [DEBUG] cc-plugin-sec-default@builtin not seated: no managed settings and not a Team or Enterprise organization (max)
+2026-10-23T01:55:03.928Z [DEBUG] getSkills returning: 23 skill dir commands, 0 plugin skills, 37 bundled skills, 1 builtin plugin skills
+2026-10-23T01:55:03.938Z [DEBUG] [STARTUP] Commands and agents loaded in 87ms
+2026-10-23T01:55:03.946Z [DEBUG] [servedCatalog] primary: using served rows (12 rows via cache over the org route, fetched 1744s ago); the served list replaces the compiled picker for this session
+2026-10-23T01:55:03.948Z [DEBUG] [LSP MANAGER] initializeLspServerManager() called
+2026-10-23T01:55:03.948Z [DEBUG] [LSP MANAGER] Created manager instance, state=pending
+2026-10-23T01:55:03.948Z [DEBUG] [LSP MANAGER] Starting async initialization (generation 1)
+2026-10-23T01:55:03.948Z [DEBUG] Starting background startup prefetches
+2026-10-23T01:55:03.948Z [DEBUG] [Bootstrap] Fetching
+2026-10-23T01:55:03.951Z [DEBUG] Passes: Using fresh cached eligibility data
+2026-10-23T01:55:03.953Z [DEBUG] [STARTUP] MCP configs resolved in 1ms (awaited at +228ms)
+2026-10-23T01:55:03.962Z [DEBUG] Cleared mTLS configuration cache
+2026-10-23T01:55:03.962Z [DEBUG] Cleared proxy agent cache
+2026-10-23T01:55:03.962Z [DEBUG] mTLS: Creating HTTPS agent with custom certificates
+2026-10-23T01:55:03.964Z [DEBUG] All plugins already exist, skipping migration
+2026-10-23T01:55:03.965Z [DEBUG] Initialized versioned plugins system with 2 plugins
+2026-10-23T01:55:03.968Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-10-23T01:55:03.969Z [DEBUG] [MCP] --mcp-config servers running fully async (nonblocking)
+2026-10-23T01:55:03.969Z [DEBUG] [MCP] claude.ai connectors running fully async (nonblocking)
+2026-10-23T01:55:03.970Z [DEBUG] [Perfetto] initializePerfettoTracing called, env value: undefined
+2026-10-23T01:55:03.970Z [DEBUG] [3P telemetry] isTelemetryEnabled=false (CLAUDE_CODE_ENABLE_TELEMETRY=undefined)
+2026-10-23T01:55:04.020Z [DEBUG] [event-loop-stall] detector started (interval=200ms, threshold=500ms)
+2026-10-23T01:55:04.034Z [DEBUG] Grove: Using fresh cached config
+2026-10-23T01:55:04.040Z [DEBUG] Total LSP servers loaded: 0
+2026-10-23T01:55:04.040Z [DEBUG] [LSP SERVER MANAGER] getAllLspServers returned 0 server(s)
+2026-10-23T01:55:04.040Z [DEBUG] LSP manager initialized with 0 servers
+2026-10-23T01:55:04.041Z [DEBUG] LSP server manager initialized successfully
+2026-10-23T01:55:04.041Z [DEBUG] LSP notification handlers registered successfully for all 0 server(s)
+2026-10-23T01:55:04.050Z [DEBUG] [3P telemetry] Event dropped (no event logger initialized): hook_registered
+2026-10-23T01:55:04.062Z [DEBUG] [servedCatalog] shadow compare logged (fetch=cache_fresh, rows=12, source=served)
+2026-10-23T01:55:04.062Z [DEBUG] [servedCatalog] primary: served list replaces the compiled picker; every compiled row is served
+2026-10-23T01:55:04.063Z [DEBUG] [sessionRegistry] sweep permitted (domain win32:desktop-lrnoj3v)
+2026-10-23T01:55:04.064Z [DEBUG] Watching for changes in skill/command directories: C:\Users\Yohan\.claude\skills, C:\Users\Yohan\.claude\skills\synced, C:\Users\Yohan\.claude\commands, C:\Users\Yohan\.claude\agents...
+2026-10-23T01:55:04.065Z [DEBUG] Watching for changes in setting files C:\Users\Yohan\.claude\settings.json, D:\Projects\local-delegate\.claude\settings.json, D:\Projects\local-delegate\.claude\settings.local.json...
+2026-10-23T01:55:04.065Z [DEBUG] Plugin autoupdate: skipped (auto-updater disabled)
+2026-10-23T01:55:04.069Z [DEBUG] Keeping C:\Users\Yohan\.claude\plugins\cache\claude-code-warp\warp: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-10-23T01:55:04.072Z [DEBUG] Keeping C:\Users\Yohan\.claude\plugins\cache\claude-code-warp: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-10-23T01:55:04.086Z [DEBUG] Keeping C:\Users\Yohan\.claude\plugins\cache\claude-plugins-official\pyright-lsp: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-10-23T01:55:04.088Z [DEBUG] Keeping C:\Users\Yohan\.claude\plugins\cache\claude-plugins-official: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-10-23T01:55:04.147Z [DEBUG] plugin cc-plugin-agents-md: no pluginConfigs["agents-md@builtin" or "cc-plugin-agents-md@builtin"].options in user, --settings or managed settings (project settings are not read); every option is its default
+2026-10-23T01:55:04.147Z [DEBUG] cc-plugin-telemetry: hooks telemetry for: anthropic, collector
+2026-10-23T01:55:04.148Z [DEBUG] hooks worker spawned (one for every plugin)
+2026-10-23T01:55:04.149Z [DEBUG] Keeping C:\Users\Yohan\.claude\plugins\cache\local-delegate\local-delegate: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-10-23T01:55:04.150Z [DEBUG] Keeping C:\Users\Yohan\.claude\plugins\cache\local-delegate: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-10-23T01:55:04.199Z [DEBUG] Ripgrep first use test: PASSED (mode=embedded, path=C:\Users\Yohan\.local\bin\claude.exe)
+2026-10-23T01:55:04.203Z [DEBUG] hooks module drv2@inline loaded (worker, environment 1, tier user); events: session.start,command.run
+2026-10-23T01:55:04.209Z [DEBUG] hooks module local-delegate@local-delegate loaded (worker, environment 2, tier user); events: tool.describe,command.run,session.measure,ui.render,tool.call,session.start
+2026-10-23T01:55:04.210Z [DEBUG] hooks module cc-plugin-agents-md@builtin loaded (native, environment 3, tier builtin); events: session.start,prompt.context,command.run,session.compact,prompt.submit,turn.start,turn.complete,agent.spawn,tool.call,prompt.mention
+2026-10-23T01:55:04.211Z [DEBUG] hooks module cc-plugin-telemetry@builtin loaded (native, environment 4, tier builtin); events: telemetry.*,telemetry.log,telemetry.mark,session.start,session.end,engine.create
+2026-10-23T01:55:04.211Z [DEBUG] hooks module cc-plugin-plugin-authoring@builtin loaded (native, environment 5, tier builtin); events: skill.prompt,tool.check,tool.call
+2026-10-23T01:55:04.213Z [DEBUG] hooks module cc-plugin-telemetry@builtin engine.create settled in 0.9ms (native hop, next() included)
+2026-10-23T01:55:04.214Z [DEBUG] engine.create: no plugin-provided interfaces; $ built for drv2,local-delegate,cc-plugin-agents-md,cc-plugin-telemetry,cc-plugin-plugin-authoring
+2026-10-23T01:55:04.214Z [DEBUG] plugin.register: cc-plugin-agents-md (builtin, cc-plugin-agents-md@builtin), judged by core alone: admitted
+2026-10-23T01:55:04.214Z [DEBUG] plugin.register: cc-plugin-telemetry (builtin, cc-plugin-telemetry@builtin), judged by core alone: admitted
+2026-10-23T01:55:04.214Z [DEBUG] plugin.register: cc-plugin-plugin-authoring (builtin, cc-plugin-plugin-authoring@builtin), judged by core alone: admitted
+2026-10-23T01:55:04.215Z [DEBUG] plugin.register: drv2 (user, drv2@inline), judged by core alone: admitted
+2026-10-23T01:55:04.215Z [DEBUG] plugin.register: local-delegate (user, local-delegate@local-delegate), judged by core alone: admitted
+2026-10-23T01:55:04.220Z [DEBUG] Registered 12 hooks from 6 plugins
+2026-10-23T01:55:04.223Z [DEBUG] settings.read: the engine's merge was raised (the loaded plugins changed) in 2.6 ms; 0 keys answered otherwise than the files.
+2026-10-23T01:55:04.223Z [DEBUG] settings.read: the engine's merge is not raised again (the loaded plugins changed): neither the loaded plugins nor the settings changed.
+2026-10-23T01:55:04.225Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 1.8ms (native link, next() included)
+2026-10-23T01:55:04.308Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-opus-5-5 modelSupported=true disableFastModeBreakerFires=false carouselAvailable=true canEnterAuto=true
+2026-10-23T01:55:04.313Z [DEBUG] Preserving file permissions: 100666
+2026-10-23T01:55:04.314Z [DEBUG] Writing to temp file: C:\Users\Yohan\.claude.json.tmp.29328.11915799791c
+2026-10-23T01:55:04.314Z [DEBUG] Applied original permissions to temp file
+2026-10-23T01:55:04.315Z [DEBUG] Temp file written successfully, size: 111412 bytes
+2026-10-23T01:55:04.315Z [DEBUG] Renaming C:\Users\Yohan\.claude.json.tmp.29328.11915799791c to C:\Users\Yohan\.claude.json
+2026-10-23T01:55:04.316Z [DEBUG] File C:\Users\Yohan\.claude.json written atomically
+2026-10-23T01:55:04.391Z [DEBUG] [fs.watch probe] verdict: delivers
+2026-10-23T01:55:04.507Z [DEBUG] Org fast mode: enabled
+2026-10-23T01:55:04.531Z [DEBUG] [Bootstrap] Fetch ok
+2026-10-23T01:55:04.532Z [DEBUG] [Bootstrap] Cache unchanged, skipping write
+2026-10-23T01:55:04.888Z [DEBUG] Hooks: Checking first line for async: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"session_start\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"plugin_version\":\"2.4.0\"}\u0007"}
+2026-10-23T01:55:04.888Z [DEBUG] Hooks: Parsed initial response: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"session_start\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"plugin_version\":\"2.4.0\"}\u0007"}
+2026-10-23T01:55:04.888Z [DEBUG] Hooks: Initial response is not async, continuing normal processing
+2026-10-23T01:55:04.901Z [DEBUG] Hooks: SessionStart:startup [C:\Users\Yohan\.claude\plugins\cache\claude-code-warp\warp\2.4.0/scripts/on-session-start.sh] (plugin warp@claude-code-warp) finished with status 0 (677ms)
+2026-10-23T01:55:04.904Z [DEBUG] Successfully parsed and validated hook JSON output
+2026-10-23T01:55:04.905Z [DEBUG] "Hook SessionStart:startup (SessionStart) success:\n{\"terminalSequence\":\"\\u001b]777;notify;warp://cli-agent;{\\\"v\\\":1,\\\"agent\\\":\\\"claude\\\",\\\"event\\\":\\\"session_start\\\",\\\"session_id\\\":[REDACTED]\\\",\\\"cwd\\\":\\\"D:\\\\\\\\Projects\\\\\\\\local-delegate\\\",\\\"project\\\":\\\"local-delegate\\\",\\\"plugin_version\\\":\\\"2.4.0\\\"}\\u0007\"}"
+2026-10-23T01:55:04.915Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 8.6ms (native link, next() included)
+2026-10-23T01:55:04.936Z [DEBUG] [ScheduledTasks] scheduler start() — enabled=false, hasTasks=false
+2026-10-23T01:55:04.940Z [DEBUG] session.start: raised (surface none, not interactive)
+2026-10-23T01:55:04.954Z [DEBUG] mcp runtime arm: v2 (source: growthbook)
+2026-10-23T01:55:04.955Z [DEBUG] [claudeai-mcp] Fetching from https://api.anthropic.com/v1/mcp_servers?limit=1000&include_additional_installs=true
+2026-10-23T01:55:04.960Z [DEBUG] $.command.register (drv2): /f4bash3 listed
+2026-10-23T01:55:04.960Z [DEBUG] getPluginSkills: Processing 6 enabled plugins
+2026-10-23T01:55:04.960Z [DEBUG] Checking plugin drv2: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.960Z [DEBUG] Checking plugin warp: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.961Z [DEBUG] Checking plugin local-delegate: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.961Z [DEBUG] Checking plugin cc-plugin-agents-md: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.961Z [DEBUG] Checking plugin cc-plugin-telemetry: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.961Z [DEBUG] Checking plugin cc-plugin-plugin-authoring: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.961Z [DEBUG] Total plugin workflows loaded: 0
+2026-10-23T01:55:04.961Z [DEBUG] Total plugin commands loaded: 0
+2026-10-23T01:55:04.964Z [DEBUG] Loading skills from: managed=C:\Program Files\ClaudeCode\.claude\skills, user=C:\Users\Yohan\.claude\skills, project=[]
+2026-10-23T01:55:04.965Z [DEBUG] hooks module cc-plugin-telemetry@builtin (native): telemetry.log nested in cc-plugin-agents-md#0
+2026-10-23T01:55:04.966Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.9ms (native link, next() included)
+2026-10-23T01:55:04.966Z [DEBUG] hooks module cc-plugin-telemetry@builtin session.start settled in 1.4ms (native link, next() included)
+2026-10-23T01:55:04.966Z [DEBUG] cc-plugin-telemetry (builtin) answered telemetry.log without next() in 1.1ms; nothing beneath it ran for this dispatch
+2026-10-23T01:55:04.966Z [DEBUG] hooks module cc-plugin-agents-md@builtin session.start settled in 1.8ms (native link, next() included)
+2026-10-23T01:55:04.973Z [DEBUG] [skills] skipping reserved dir name 'synced' under C:\Users\Yohan\.claude\skills: 'synced' is the sync-owned root
+2026-10-23T01:55:04.974Z [DEBUG] Total plugin skills loaded: 0 (0 duplicate/user-owned entries skipped)
+2026-10-23T01:55:04.977Z [DEBUG] $.command.register (local-delegate): /local-summarize listed
+2026-10-23T01:55:04.978Z [DEBUG] getPluginSkills: Processing 6 enabled plugins
+2026-10-23T01:55:04.978Z [DEBUG] Checking plugin drv2: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.978Z [DEBUG] Checking plugin warp: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.978Z [DEBUG] Checking plugin local-delegate: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.978Z [DEBUG] Checking plugin cc-plugin-agents-md: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.978Z [DEBUG] Checking plugin cc-plugin-telemetry: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.978Z [DEBUG] Checking plugin cc-plugin-plugin-authoring: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.978Z [DEBUG] Total plugin workflows loaded: 0
+2026-10-23T01:55:04.978Z [DEBUG] Total plugin commands loaded: 0
+2026-10-23T01:55:04.980Z [DEBUG] $.command.register (local-delegate): /local-commit listed
+2026-10-23T01:55:04.980Z [DEBUG] getPluginSkills: Processing 6 enabled plugins
+2026-10-23T01:55:04.980Z [DEBUG] Checking plugin drv2: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.980Z [DEBUG] Checking plugin warp: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.980Z [DEBUG] Checking plugin local-delegate: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.980Z [DEBUG] Checking plugin cc-plugin-agents-md: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.980Z [DEBUG] Checking plugin cc-plugin-telemetry: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.980Z [DEBUG] Checking plugin cc-plugin-plugin-authoring: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.980Z [DEBUG] Total plugin workflows loaded: 0
+2026-10-23T01:55:04.981Z [DEBUG] Total plugin commands loaded: 0
+2026-10-23T01:55:04.982Z [DEBUG] $.command.register (local-delegate): /local-lint listed
+2026-10-23T01:55:04.982Z [DEBUG] getPluginSkills: Processing 6 enabled plugins
+2026-10-23T01:55:04.982Z [DEBUG] Checking plugin drv2: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.982Z [DEBUG] Checking plugin warp: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.982Z [DEBUG] Checking plugin local-delegate: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.982Z [DEBUG] Checking plugin cc-plugin-agents-md: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.982Z [DEBUG] Checking plugin cc-plugin-telemetry: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.982Z [DEBUG] Checking plugin cc-plugin-plugin-authoring: skillsPath=none, skillsPaths=0 paths
+2026-10-23T01:55:04.982Z [DEBUG] Total plugin workflows loaded: 0
+2026-10-23T01:55:04.982Z [DEBUG] Total plugin commands loaded: 0
+2026-10-23T01:55:04.983Z [DEBUG] Failed to stat directory C:\Program Files\ClaudeCode\.claude\commands: ENOENT: no such file or directory, stat 'C:\Program Files\ClaudeCode\.claude\commands'
+2026-10-23T01:55:04.983Z [DEBUG] Loading skills from: managed=C:\Program Files\ClaudeCode\.claude\skills, user=C:\Users\Yohan\.claude\skills, project=[]
+2026-10-23T01:55:04.983Z [DEBUG] Loading skills from: managed=C:\Program Files\ClaudeCode\.claude\skills, user=C:\Users\Yohan\.claude\skills, project=[]
+2026-10-23T01:55:04.984Z [DEBUG] Loading skills from: managed=C:\Program Files\ClaudeCode\.claude\skills, user=C:\Users\Yohan\.claude\skills, project=[]
+2026-10-23T01:55:04.986Z [DEBUG] [skills] skipping reserved dir name 'synced' under C:\Users\Yohan\.claude\skills: 'synced' is the sync-owned root
+2026-10-23T01:55:04.988Z [DEBUG] [skills] skipping reserved dir name 'synced' under C:\Users\Yohan\.claude\skills: 'synced' is the sync-owned root
+2026-10-23T01:55:04.988Z [DEBUG] [skills] skipping reserved dir name 'synced' under C:\Users\Yohan\.claude\skills: 'synced' is the sync-owned root
+2026-10-23T01:55:04.988Z [DEBUG] Total plugin skills loaded: 0 (0 duplicate/user-owned entries skipped)
+2026-10-23T01:55:04.989Z [DEBUG] Total plugin skills loaded: 0 (0 duplicate/user-owned entries skipped)
+2026-10-23T01:55:04.989Z [DEBUG] Total plugin skills loaded: 0 (0 duplicate/user-owned entries skipped)
+2026-10-23T01:55:04.990Z [DEBUG] Failed to stat directory C:\Program Files\ClaudeCode\.claude\commands: ENOENT: no such file or directory, stat 'C:\Program Files\ClaudeCode\.claude\commands'
+2026-10-23T01:55:04.997Z [DEBUG] $.fs.read (local-delegate): C:\Users\Yohan\.claude\plugins\data\local-delegate-local-delegate\read-guard\cb6784ac-daf6-4c77-8d88-318a35cb959e.json failed: ENOENT: no such file or directory, open 'C:\Users\Yohan\.claude\plugins\data\local-delegate-local-delegate\read-guard\cb6784ac-daf6-4c77-8d88-318a35cb959e.json'
+2026-10-23T01:55:05.011Z [DEBUG] $.process.run (local-delegate): C:\Users\Yohan\AppData\Roaming\uv\tools\local-delegate-mcp\Scripts\python.exe with 5 args in D:\Projects\local-delegate (pid 35984)
+2026-10-23T01:55:05.024Z [DEBUG] Loaded 23 unique skills (23 unconditional, 0 conditional, managed: 0, user: 10, project: 0, additional: 0, legacy commands: 0)
+2026-10-23T01:55:05.026Z [DEBUG] getSkills returning: 23 skill dir commands, 0 plugin skills, 37 bundled skills, 1 builtin plugin skills
+2026-10-23T01:55:05.031Z [DEBUG] Loaded 23 unique skills (23 unconditional, 0 conditional, managed: 0, user: 10, project: 0, additional: 0, legacy commands: 0)
+2026-10-23T01:55:05.032Z [DEBUG] getSkills returning: 23 skill dir commands, 0 plugin skills, 37 bundled skills, 1 builtin plugin skills
+2026-10-23T01:55:05.035Z [DEBUG] Loaded 23 unique skills (23 unconditional, 0 conditional, managed: 0, user: 10, project: 0, additional: 0, legacy commands: 0)
+2026-10-23T01:55:05.036Z [DEBUG] getSkills returning: 23 skill dir commands, 0 plugin skills, 37 bundled skills, 1 builtin plugin skills
+2026-10-23T01:55:05.039Z [DEBUG] Loaded 23 unique skills (23 unconditional, 0 conditional, managed: 0, user: 10, project: 0, additional: 0, legacy commands: 0)
+2026-10-23T01:55:05.047Z [DEBUG] getSkills returning: 23 skill dir commands, 0 plugin skills, 37 bundled skills, 1 builtin plugin skills
+2026-10-23T01:55:05.117Z [DEBUG] $.process.run (local-delegate): C:\Users\Yohan\AppData\Roaming\uv\tools\local-delegate-mcp\Scripts\python.exe exited 0 in 117ms, 487 + 0 chars
+2026-10-23T01:55:05.132Z [DEBUG] $.process.run (local-delegate): C:\Users\Yohan\AppData\Roaming\uv\tools\local-delegate-mcp\Scripts\python.exe with 3 args in D:\Projects\local-delegate (pid 42536)
+2026-10-23T01:55:05.191Z [DEBUG] $.process.run (local-delegate): C:\Users\Yohan\AppData\Roaming\uv\tools\local-delegate-mcp\Scripts\python.exe exited 0 in 72ms, 0 + 0 chars
+2026-10-23T01:55:05.196Z [DEBUG] $.fs.write (local-delegate): C:\Users\Yohan\.claude\plugins\data\local-delegate-local-delegate\heartbeats\cb6784ac-daf6-4c77-8d88-318a35cb959e.json (346 bytes)
+2026-10-23T01:55:05.199Z [DEBUG] hooks module drv2@inline, local-delegate@local-delegate session.start settled in 258.3ms (worker hop, next() included)
+2026-10-23T01:55:05.217Z [DEBUG] Failed to stat directory C:\Program Files\ClaudeCode\.claude\output-styles: ENOENT: no such file or directory, stat 'C:\Program Files\ClaudeCode\.claude\output-styles'
+2026-10-23T01:55:05.217Z [DEBUG] Failed to stat directory C:\Users\Yohan\.claude\output-styles: ENOENT: no such file or directory, stat 'C:\Users\Yohan\.claude\output-styles'
+2026-10-23T01:55:05.217Z [DEBUG] Total plugin output styles loaded: 0
+2026-10-23T01:55:05.219Z [DEBUG] act_dont_rederive_arm_active source=growthbook
+2026-10-23T01:55:05.224Z [DEBUG] $.fs.ancestors (cc-plugin-agents-md): CLAUDE.md, .claude/CLAUDE.md, CLAUDE.local.md found 0 of 2 directories
+2026-10-23T01:55:05.226Z [DEBUG] $.fs.ancestors (cc-plugin-agents-md): AGENTS.md, .claude/AGENTS.md found 0 of 2 directories
+2026-10-23T01:55:05.227Z [DEBUG] hooks module cc-plugin-telemetry@builtin (native): telemetry.log nested in cc-plugin-agents-md#1
+2026-10-23T01:55:05.228Z [DEBUG] hooks module cc-plugin-telemetry@builtin (native): telemetry.mark nested in cc-plugin-agents-md#1
+2026-10-23T01:55:05.228Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.6ms (native link, next() included)
+2026-10-23T01:55:05.228Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.mark settled in 0.2ms (native link, next() included)
+2026-10-23T01:55:05.228Z [DEBUG] cc-plugin-telemetry (builtin) answered telemetry.mark without next() in 0.6ms; nothing beneath it ran for this dispatch
+2026-10-23T01:55:05.228Z [DEBUG] hooks module cc-plugin-agents-md@builtin prompt.context settled in 15.2ms (native link, next() included)
+2026-10-23T01:55:05.233Z [DEBUG] $.tool.call (drv2): Bash (command, description)
+2026-10-23T01:55:05.234Z [DEBUG] hooks module local-delegate@local-delegate: tool.call nested in drv2#1
+2026-10-23T01:55:05.240Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.3ms (native link, next() included)
+2026-10-23T01:55:05.324Z [DEBUG] [claudeai-mcp] Fetched 1 servers
+2026-10-23T01:55:05.327Z [DEBUG] installPluginsForHeadless: starting
+2026-10-23T01:55:05.369Z [DEBUG] Hooks: PreToolUse:Bash [node "C:/Users/Yohan/.personal-harness/generated/claude/hooks/pre-tool-use.mjs"] finished with status 0 (129ms)
+2026-10-23T01:55:05.369Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:05.392Z [DEBUG] Hooks: PreToolUse:Bash [${user_config.ld_bin} -I -m local_delegate.hook shell] (plugin local-delegate@local-delegate) finished with status 0 (151ms)
+2026-10-23T01:55:05.392Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:05.394Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.5ms (native link, next() included)
+2026-10-23T01:55:05.404Z [DEBUG] Server classifier skipped Bash or left it to this CLI: the tool's own allow stands
+2026-10-23T01:55:05.406Z [INFO] [Stall] tool_dispatch_start tool=Bash toolUseId=toolu_plugin_e1c88a8a7a5e44e0a5f19d9d60a5f385 permissionDecisionMs=9
+2026-10-23T01:55:05.410Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.5ms (native link, next() included)
+2026-10-23T01:55:05.410Z [DEBUG] Creating shell snapshot for bash (C:\Program Files\Git\bin\bash.exe)
+2026-10-23T01:55:05.410Z [DEBUG] Looking for shell config file: C:\Users\Yohan\.bashrc
+2026-10-23T01:55:05.419Z [DEBUG] Shell config file not found: C:\Users\Yohan\.bashrc, creating snapshot with Claude Code defaults only
+2026-10-23T01:55:05.419Z [DEBUG] Snapshots directory: C:\Users\Yohan\.claude\shell-snapshots
+2026-10-23T01:55:05.505Z [DEBUG] Spawn-env probe captured 117 keys
+2026-10-23T01:55:05.797Z [DEBUG] Creating snapshot at: C:\Users\Yohan\.claude\shell-snapshots\snapshot-bash-1792720505419-ly1x13.sh
+2026-10-23T01:55:05.797Z [DEBUG] Execution timeout: 10000ms
+2026-10-23T01:55:06.296Z [DEBUG] Shell snapshot created successfully (3199 bytes)
+2026-10-23T01:55:06.298Z [DEBUG] No session environment scripts found
+2026-10-23T01:55:06.298Z [DEBUG] Spawning shell without login (-l flag skipped)
+2026-10-23T01:55:06.387Z [INFO] [Stall] tool_dispatch_end tool=Bash toolUseId=toolu_plugin_e1c88a8a7a5e44e0a5f19d9d60a5f385 outcome=ok durationMs=981
+2026-10-23T01:55:06.390Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.7ms (native link, next() included)
+2026-10-23T01:55:06.391Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.1ms (native link, next() included)
+2026-10-23T01:55:07.045Z [DEBUG] Hooks: Checking first line for async: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:07.045Z [DEBUG] Hooks: Parsed initial response: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:07.045Z [DEBUG] Hooks: Initial response is not async, continuing normal processing
+2026-10-23T01:55:07.055Z [DEBUG] Hooks: PostToolUse:Bash [C:\Users\Yohan\.claude\plugins\cache\claude-code-warp\warp\2.4.0/scripts/on-post-tool-use.sh] (plugin warp@claude-code-warp) finished with status 0 (664ms)
+2026-10-23T01:55:07.055Z [DEBUG] Successfully parsed and validated hook JSON output
+2026-10-23T01:55:07.055Z [DEBUG] "Hook PostToolUse:Bash (PostToolUse) success:\n{\"terminalSequence\":\"\\u001b]777;notify;warp://cli-agent;{\\\"v\\\":1,\\\"agent\\\":\\\"claude\\\",\\\"event\\\":\\\"tool_complete\\\",\\\"session_id\\\":[REDACTED]\\\",\\\"cwd\\\":\\\"D:\\\\\\\\Projects\\\\\\\\local-delegate\\\",\\\"project\\\":\\\"local-delegate\\\",\\\"tool_name\\\":\\\"Bash\\\"}\\u0007\"}"
+2026-10-23T01:55:07.057Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.9ms (native link, next() included)
+2026-10-23T01:55:07.057Z [DEBUG] hooks module local-delegate@local-delegate tool.call settled in 1823.0ms (worker hop, next() included)
+2026-10-23T01:55:07.058Z [DEBUG] $.tool.call (drv2): Bash answered in 1825ms, 26 chars
+2026-10-23T01:55:07.059Z [DEBUG] $.tool.call (drv2): Bash (command, description)
+2026-10-23T01:55:07.059Z [DEBUG] hooks module local-delegate@local-delegate: tool.call nested in drv2#1
+2026-10-23T01:55:07.061Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.3ms (native link, next() included)
+2026-10-23T01:55:07.185Z [DEBUG] Hooks: PreToolUse:Bash [node "C:/Users/Yohan/.personal-harness/generated/claude/hooks/pre-tool-use.mjs"] finished with status 0 (124ms)
+2026-10-23T01:55:07.185Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:07.208Z [DEBUG] Hooks: PreToolUse:Bash [${user_config.ld_bin} -I -m local_delegate.hook shell] (plugin local-delegate@local-delegate) finished with status 0 (146ms)
+2026-10-23T01:55:07.208Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:07.210Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.6ms (native link, next() included)
+2026-10-23T01:55:07.213Z [INFO] [Stall] tool_dispatch_start tool=Bash toolUseId=toolu_plugin_c85f693b992b4ca1b6f23915ec2eb667 permissionDecisionMs=2
+2026-10-23T01:55:07.217Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.3ms (native link, next() included)
+2026-10-23T01:55:07.218Z [DEBUG] Spawning shell without login (-l flag skipped)
+2026-10-23T01:55:07.391Z [INFO] [Stall] tool_dispatch_end tool=Bash toolUseId=toolu_plugin_c85f693b992b4ca1b6f23915ec2eb667 outcome=ok durationMs=178
+2026-10-23T01:55:07.394Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.7ms (native link, next() included)
+2026-10-23T01:55:07.394Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.1ms (native link, next() included)
+2026-10-23T01:55:08.098Z [DEBUG] Hooks: Checking first line for async: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:08.098Z [DEBUG] Hooks: Parsed initial response: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:08.098Z [DEBUG] Hooks: Initial response is not async, continuing normal processing
+2026-10-23T01:55:08.106Z [DEBUG] Hooks: PostToolUse:Bash [C:\Users\Yohan\.claude\plugins\cache\claude-code-warp\warp\2.4.0/scripts/on-post-tool-use.sh] (plugin warp@claude-code-warp) finished with status 0 (713ms)
+2026-10-23T01:55:08.106Z [DEBUG] Successfully parsed and validated hook JSON output
+2026-10-23T01:55:08.106Z [DEBUG] "Hook PostToolUse:Bash (PostToolUse) success:\n{\"terminalSequence\":\"\\u001b]777;notify;warp://cli-agent;{\\\"v\\\":1,\\\"agent\\\":\\\"claude\\\",\\\"event\\\":\\\"tool_complete\\\",\\\"session_id\\\":[REDACTED]\\\",\\\"cwd\\\":\\\"D:\\\\\\\\Projects\\\\\\\\local-delegate\\\",\\\"project\\\":\\\"local-delegate\\\",\\\"tool_name\\\":\\\"Bash\\\"}\\u0007\"}"
+2026-10-23T01:55:08.108Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 1.0ms (native link, next() included)
+2026-10-23T01:55:08.109Z [DEBUG] hooks module local-delegate@local-delegate tool.call settled in 1049.8ms (worker hop, next() included)
+2026-10-23T01:55:08.109Z [DEBUG] $.tool.call (drv2): Bash answered in 1050ms, 71 chars
+2026-10-23T01:55:08.110Z [DEBUG] $.tool.call (drv2): Bash (command, description)
+2026-10-23T01:55:08.110Z [DEBUG] hooks module local-delegate@local-delegate: tool.call nested in drv2#1
+2026-10-23T01:55:08.114Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.3ms (native link, next() included)
+2026-10-23T01:55:08.238Z [DEBUG] Hooks: PreToolUse:Bash [node "C:/Users/Yohan/.personal-harness/generated/claude/hooks/pre-tool-use.mjs"] finished with status 0 (123ms)
+2026-10-23T01:55:08.238Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:08.257Z [DEBUG] Hooks: PreToolUse:Bash [${user_config.ld_bin} -I -m local_delegate.hook shell] (plugin local-delegate@local-delegate) finished with status 0 (142ms)
+2026-10-23T01:55:08.257Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:08.258Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.5ms (native link, next() included)
+2026-10-23T01:55:08.269Z [DEBUG] Server classifier skipped Bash or left it to this CLI: the tool's own allow stands
+2026-10-23T01:55:08.270Z [INFO] [Stall] tool_dispatch_start tool=Bash toolUseId=toolu_plugin_7aacafa28bc64324b9ecc1a0c5e139f9 permissionDecisionMs=11
+2026-10-23T01:55:08.272Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.2ms (native link, next() included)
+2026-10-23T01:55:08.272Z [DEBUG] Spawning shell without login (-l flag skipped)
+2026-10-23T01:55:08.384Z [INFO] [Stall] tool_dispatch_end tool=Bash toolUseId=toolu_plugin_7aacafa28bc64324b9ecc1a0c5e139f9 outcome=ok durationMs=114
+2026-10-23T01:55:08.387Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.6ms (native link, next() included)
+2026-10-23T01:55:08.387Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.1ms (native link, next() included)
+2026-10-23T01:55:09.028Z [DEBUG] Hooks: Checking first line for async: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:09.028Z [DEBUG] Hooks: Parsed initial response: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:09.028Z [DEBUG] Hooks: Initial response is not async, continuing normal processing
+2026-10-23T01:55:09.035Z [DEBUG] Hooks: PostToolUse:Bash [C:\Users\Yohan\.claude\plugins\cache\claude-code-warp\warp\2.4.0/scripts/on-post-tool-use.sh] (plugin warp@claude-code-warp) finished with status 0 (647ms)
+2026-10-23T01:55:09.035Z [DEBUG] Successfully parsed and validated hook JSON output
+2026-10-23T01:55:09.035Z [DEBUG] "Hook PostToolUse:Bash (PostToolUse) success:\n{\"terminalSequence\":\"\\u001b]777;notify;warp://cli-agent;{\\\"v\\\":1,\\\"agent\\\":\\\"claude\\\",\\\"event\\\":\\\"tool_complete\\\",\\\"session_id\\\":[REDACTED]\\\",\\\"cwd\\\":\\\"D:\\\\\\\\Projects\\\\\\\\local-delegate\\\",\\\"project\\\":\\\"local-delegate\\\",\\\"tool_name\\\":\\\"Bash\\\"}\\u0007\"}"
+2026-10-23T01:55:09.037Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.7ms (native link, next() included)
+2026-10-23T01:55:09.037Z [DEBUG] hooks module local-delegate@local-delegate tool.call settled in 926.9ms (worker hop, next() included)
+2026-10-23T01:55:09.038Z [DEBUG] $.tool.call (drv2): Bash answered in 928ms, 178 chars
+2026-10-23T01:55:09.039Z [DEBUG] $.tool.call (drv2): Bash (command, description)
+2026-10-23T01:55:09.039Z [DEBUG] hooks module local-delegate@local-delegate: tool.call nested in drv2#1
+2026-10-23T01:55:09.064Z [DEBUG] $.process.run (local-delegate): C:\Users\Yohan\AppData\Roaming\uv\tools\local-delegate-mcp\Scripts\python.exe with 4 args in D:\Projects\local-delegate (pid 54352)
+2026-10-23T01:55:09.195Z [DEBUG] $.process.run (local-delegate): C:\Users\Yohan\AppData\Roaming\uv\tools\local-delegate-mcp\Scripts\python.exe exited 0 in 154ms, 209 + 0 chars
+2026-10-23T01:55:09.199Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.6ms (native link, next() included)
+2026-10-23T01:55:09.325Z [DEBUG] Hooks: PreToolUse:Bash [node "C:/Users/Yohan/.personal-harness/generated/claude/hooks/pre-tool-use.mjs"] finished with status 0 (126ms)
+2026-10-23T01:55:09.325Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:09.338Z [DEBUG] Hooks: PreToolUse:Bash [${user_config.ld_bin} -I -m local_delegate.hook shell] (plugin local-delegate@local-delegate) finished with status 0 (138ms)
+2026-10-23T01:55:09.338Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:09.340Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.7ms (native link, next() included)
+2026-10-23T01:55:09.349Z [DEBUG] Server classifier skipped Bash or left it to this CLI: the tool's own allow stands
+2026-10-23T01:55:09.351Z [INFO] [Stall] tool_dispatch_start tool=Bash toolUseId=toolu_plugin_44a842901dde4729831fa77aa4652078 permissionDecisionMs=9
+2026-10-23T01:55:09.355Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 1.6ms (native link, next() included)
+2026-10-23T01:55:09.355Z [DEBUG] Spawning shell without login (-l flag skipped)
+2026-10-23T01:55:09.481Z [INFO] [Stall] tool_dispatch_end tool=Bash toolUseId=toolu_plugin_44a842901dde4729831fa77aa4652078 outcome=ok durationMs=130
+2026-10-23T01:55:09.484Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 1.2ms (native link, next() included)
+2026-10-23T01:55:09.485Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.1ms (native link, next() included)
+2026-10-23T01:55:09.967Z [DEBUG] $.http.fetch (cc-plugin-telemetry): POST https://api.anthropic.com/api/event_logging/v2/batch
+2026-10-23T01:55:10.140Z [DEBUG] Hooks: Checking first line for async: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:10.140Z [DEBUG] Hooks: Parsed initial response: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:10.140Z [DEBUG] Hooks: Initial response is not async, continuing normal processing
+2026-10-23T01:55:10.149Z [DEBUG] Hooks: PostToolUse:Bash [C:\Users\Yohan\.claude\plugins\cache\claude-code-warp\warp\2.4.0/scripts/on-post-tool-use.sh] (plugin warp@claude-code-warp) finished with status 0 (665ms)
+2026-10-23T01:55:10.149Z [DEBUG] Successfully parsed and validated hook JSON output
+2026-10-23T01:55:10.149Z [DEBUG] "Hook PostToolUse:Bash (PostToolUse) success:\n{\"terminalSequence\":\"\\u001b]777;notify;warp://cli-agent;{\\\"v\\\":1,\\\"agent\\\":\\\"claude\\\",\\\"event\\\":\\\"tool_complete\\\",\\\"session_id\\\":[REDACTED]\\\",\\\"cwd\\\":\\\"D:\\\\\\\\Projects\\\\\\\\local-delegate\\\",\\\"project\\\":\\\"local-delegate\\\",\\\"tool_name\\\":\\\"Bash\\\"}\\u0007\"}"
+2026-10-23T01:55:10.151Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.6ms (native link, next() included)
+2026-10-23T01:55:10.151Z [DEBUG] hooks module local-delegate@local-delegate tool.call settled in 1112.2ms (worker hop, next() included)
+2026-10-23T01:55:10.152Z [DEBUG] $.tool.call (drv2): Bash answered in 1113ms, 395 chars
+2026-10-23T01:55:10.152Z [DEBUG] $.tool.call (drv2): Bash (command, description)
+2026-10-23T01:55:10.153Z [DEBUG] hooks module local-delegate@local-delegate: tool.call nested in drv2#1
+2026-10-23T01:55:10.155Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.3ms (native link, next() included)
+2026-10-23T01:55:10.297Z [DEBUG] Hooks: PreToolUse:Bash [node "C:/Users/Yohan/.personal-harness/generated/claude/hooks/pre-tool-use.mjs"] finished with status 0 (141ms)
+2026-10-23T01:55:10.297Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:10.315Z [DEBUG] Hooks: PreToolUse:Bash [${user_config.ld_bin} -I -m local_delegate.hook shell] (plugin local-delegate@local-delegate) finished with status 0 (159ms)
+2026-10-23T01:55:10.315Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:10.317Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.5ms (native link, next() included)
+2026-10-23T01:55:10.321Z [DEBUG] Server classifier skipped Bash or left it to this CLI: the tool's own allow stands
+2026-10-23T01:55:10.322Z [INFO] [Stall] tool_dispatch_start tool=Bash toolUseId=toolu_plugin_0e740683a9b74fe08a6b3929229c526e permissionDecisionMs=5
+2026-10-23T01:55:10.324Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.2ms (native link, next() included)
+2026-10-23T01:55:10.324Z [DEBUG] Spawning shell without login (-l flag skipped)
+2026-10-23T01:55:10.346Z [DEBUG] $.http.fetch (cc-plugin-telemetry): 200 in 379ms, 39 chars
+2026-10-23T01:55:10.346Z [DEBUG] [cc-plugin-telemetry] $.ui.log (to debug): telemetry: sent 3 row(s)
+2026-10-23T01:55:10.412Z [INFO] [Stall] tool_dispatch_end tool=Bash toolUseId=toolu_plugin_0e740683a9b74fe08a6b3929229c526e outcome=ok durationMs=90
+2026-10-23T01:55:10.415Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.6ms (native link, next() included)
+2026-10-23T01:55:10.415Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.1ms (native link, next() included)
+2026-10-23T01:55:11.077Z [DEBUG] Hooks: Checking first line for async: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:11.077Z [DEBUG] Hooks: Parsed initial response: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:11.077Z [DEBUG] Hooks: Initial response is not async, continuing normal processing
+2026-10-23T01:55:11.084Z [DEBUG] Hooks: PostToolUse:Bash [C:\Users\Yohan\.claude\plugins\cache\claude-code-warp\warp\2.4.0/scripts/on-post-tool-use.sh] (plugin warp@claude-code-warp) finished with status 0 (670ms)
+2026-10-23T01:55:11.085Z [DEBUG] Successfully parsed and validated hook JSON output
+2026-10-23T01:55:11.085Z [DEBUG] "Hook PostToolUse:Bash (PostToolUse) success:\n{\"terminalSequence\":\"\\u001b]777;notify;warp://cli-agent;{\\\"v\\\":1,\\\"agent\\\":\\\"claude\\\",\\\"event\\\":\\\"tool_complete\\\",\\\"session_id\\\":[REDACTED]\\\",\\\"cwd\\\":\\\"D:\\\\\\\\Projects\\\\\\\\local-delegate\\\",\\\"project\\\":\\\"local-delegate\\\",\\\"tool_name\\\":\\\"Bash\\\"}\\u0007\"}"
+2026-10-23T01:55:11.087Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.5ms (native link, next() included)
+2026-10-23T01:55:11.087Z [DEBUG] hooks module local-delegate@local-delegate tool.call settled in 934.0ms (worker hop, next() included)
+2026-10-23T01:55:11.087Z [DEBUG] $.tool.call (drv2): Bash answered in 935ms, 26 chars
+2026-10-23T01:55:11.088Z [DEBUG] $.tool.call (drv2): Bash (command, description)
+2026-10-23T01:55:11.088Z [DEBUG] hooks module local-delegate@local-delegate: tool.call nested in drv2#1
+2026-10-23T01:55:11.091Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.4ms (native link, next() included)
+2026-10-23T01:55:11.224Z [DEBUG] Hooks: PreToolUse:Bash [node "C:/Users/Yohan/.personal-harness/generated/claude/hooks/pre-tool-use.mjs"] finished with status 0 (133ms)
+2026-10-23T01:55:11.224Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:11.245Z [DEBUG] Hooks: PreToolUse:Bash [${user_config.ld_bin} -I -m local_delegate.hook shell] (plugin local-delegate@local-delegate) finished with status 0 (153ms)
+2026-10-23T01:55:11.245Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:11.247Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.5ms (native link, next() included)
+2026-10-23T01:55:11.256Z [DEBUG] Server classifier skipped Bash or left it to this CLI: the tool's own allow stands
+2026-10-23T01:55:11.257Z [INFO] [Stall] tool_dispatch_start tool=Bash toolUseId=toolu_plugin_f40a282b2d1547e3be136525d733de89 permissionDecisionMs=8
+2026-10-23T01:55:11.259Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.3ms (native link, next() included)
+2026-10-23T01:55:11.260Z [DEBUG] Spawning shell without login (-l flag skipped)
+2026-10-23T01:55:11.370Z [INFO] [Stall] tool_dispatch_end tool=Bash toolUseId=toolu_plugin_f40a282b2d1547e3be136525d733de89 outcome=ok durationMs=113
+2026-10-23T01:55:11.379Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 1.0ms (native link, next() included)
+2026-10-23T01:55:11.379Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.1ms (native link, next() included)
+2026-10-23T01:55:12.062Z [DEBUG] Hooks: Checking first line for async: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:12.062Z [DEBUG] Hooks: Parsed initial response: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:12.062Z [DEBUG] Hooks: Initial response is not async, continuing normal processing
+2026-10-23T01:55:12.069Z [DEBUG] Hooks: PostToolUse:Bash [C:\Users\Yohan\.claude\plugins\cache\claude-code-warp\warp\2.4.0/scripts/on-post-tool-use.sh] (plugin warp@claude-code-warp) finished with status 0 (690ms)
+2026-10-23T01:55:12.069Z [DEBUG] Successfully parsed and validated hook JSON output
+2026-10-23T01:55:12.069Z [DEBUG] "Hook PostToolUse:Bash (PostToolUse) success:\n{\"terminalSequence\":\"\\u001b]777;notify;warp://cli-agent;{\\\"v\\\":1,\\\"agent\\\":\\\"claude\\\",\\\"event\\\":\\\"tool_complete\\\",\\\"session_id\\\":[REDACTED]\\\",\\\"cwd\\\":\\\"D:\\\\\\\\Projects\\\\\\\\local-delegate\\\",\\\"project\\\":\\\"local-delegate\\\",\\\"tool_name\\\":\\\"Bash\\\"}\\u0007\"}"
+2026-10-23T01:55:12.071Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.6ms (native link, next() included)
+2026-10-23T01:55:12.071Z [DEBUG] hooks module local-delegate@local-delegate tool.call settled in 983.1ms (worker hop, next() included)
+2026-10-23T01:55:12.072Z [DEBUG] $.tool.call (drv2): Bash answered in 984ms, 85 chars
+2026-10-23T01:55:12.072Z [DEBUG] $.tool.call (drv2): Bash (command, description)
+2026-10-23T01:55:12.073Z [DEBUG] hooks module local-delegate@local-delegate: tool.call nested in drv2#1
+2026-10-23T01:55:12.084Z [DEBUG] $.process.run (local-delegate): C:\Users\Yohan\AppData\Roaming\uv\tools\local-delegate-mcp\Scripts\python.exe with 4 args in D:\Projects\local-delegate (pid 67612)
+2026-10-23T01:55:12.194Z [DEBUG] $.process.run (local-delegate): C:\Users\Yohan\AppData\Roaming\uv\tools\local-delegate-mcp\Scripts\python.exe exited 0 in 120ms, 212 + 0 chars
+2026-10-23T01:55:12.197Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.4ms (native link, next() included)
+2026-10-23T01:55:12.307Z [DEBUG] Hooks: PreToolUse:Bash [node "C:/Users/Yohan/.personal-harness/generated/claude/hooks/pre-tool-use.mjs"] finished with status 0 (110ms)
+2026-10-23T01:55:12.307Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:12.328Z [DEBUG] Hooks: PreToolUse:Bash [${user_config.ld_bin} -I -m local_delegate.hook shell] (plugin local-delegate@local-delegate) finished with status 0 (131ms)
+2026-10-23T01:55:12.329Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:12.330Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.5ms (native link, next() included)
+2026-10-23T01:55:12.339Z [DEBUG] Server classifier skipped Bash or left it to this CLI: the tool's own allow stands
+2026-10-23T01:55:12.340Z [INFO] [Stall] tool_dispatch_start tool=Bash toolUseId=toolu_plugin_b5b7037a24b6453cac66177c7747d47b permissionDecisionMs=9
+2026-10-23T01:55:12.343Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.3ms (native link, next() included)
+2026-10-23T01:55:12.344Z [DEBUG] Spawning shell without login (-l flag skipped)
+2026-10-23T01:55:12.455Z [INFO] [Stall] tool_dispatch_end tool=Bash toolUseId=toolu_plugin_b5b7037a24b6453cac66177c7747d47b outcome=ok durationMs=114
+2026-10-23T01:55:12.457Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.9ms (native link, next() included)
+2026-10-23T01:55:12.458Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.1ms (native link, next() included)
+2026-10-23T01:55:13.141Z [DEBUG] Hooks: Checking first line for async: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:13.141Z [DEBUG] Hooks: Parsed initial response: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:13.141Z [DEBUG] Hooks: Initial response is not async, continuing normal processing
+2026-10-23T01:55:13.149Z [DEBUG] Hooks: PostToolUse:Bash [C:\Users\Yohan\.claude\plugins\cache\claude-code-warp\warp\2.4.0/scripts/on-post-tool-use.sh] (plugin warp@claude-code-warp) finished with status 0 (692ms)
+2026-10-23T01:55:13.149Z [DEBUG] Successfully parsed and validated hook JSON output
+2026-10-23T01:55:13.149Z [DEBUG] "Hook PostToolUse:Bash (PostToolUse) success:\n{\"terminalSequence\":\"\\u001b]777;notify;warp://cli-agent;{\\\"v\\\":1,\\\"agent\\\":\\\"claude\\\",\\\"event\\\":\\\"tool_complete\\\",\\\"session_id\\\":[REDACTED]\\\",\\\"cwd\\\":\\\"D:\\\\\\\\Projects\\\\\\\\local-delegate\\\",\\\"project\\\":\\\"local-delegate\\\",\\\"tool_name\\\":\\\"Bash\\\"}\\u0007\"}"
+2026-10-23T01:55:13.151Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.5ms (native link, next() included)
+2026-10-23T01:55:13.151Z [DEBUG] hooks module local-delegate@local-delegate tool.call settled in 1078.4ms (worker hop, next() included)
+2026-10-23T01:55:13.152Z [DEBUG] $.tool.call (drv2): Bash answered in 1079ms, 60 chars
+2026-10-23T01:55:13.152Z [DEBUG] $.tool.call (drv2): Bash (command, description)
+2026-10-23T01:55:13.153Z [DEBUG] hooks module local-delegate@local-delegate: tool.call nested in drv2#1
+2026-10-23T01:55:13.154Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.2ms (native link, next() included)
+2026-10-23T01:55:13.297Z [DEBUG] Hooks: PreToolUse:Bash [node "C:/Users/Yohan/.personal-harness/generated/claude/hooks/pre-tool-use.mjs"] finished with status 0 (142ms)
+2026-10-23T01:55:13.297Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:13.495Z [DEBUG] Hooks: PreToolUse:Bash [${user_config.ld_bin} -I -m local_delegate.hook shell] (plugin local-delegate@local-delegate) finished with status 0 (340ms)
+2026-10-23T01:55:13.495Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:13.497Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.4ms (native link, next() included)
+2026-10-23T01:55:13.504Z [DEBUG] Server classifier skipped Bash or left it to this CLI: the tool's own allow stands
+2026-10-23T01:55:13.504Z [INFO] [Stall] tool_dispatch_start tool=Bash toolUseId=toolu_plugin_fc2e15df10f8472391bb26e71bef47fd permissionDecisionMs=6
+2026-10-23T01:55:13.506Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.2ms (native link, next() included)
+2026-10-23T01:55:13.506Z [DEBUG] Spawning shell without login (-l flag skipped)
+2026-10-23T01:55:13.620Z [INFO] [Stall] tool_dispatch_end tool=Bash toolUseId=toolu_plugin_fc2e15df10f8472391bb26e71bef47fd outcome=ok durationMs=116
+2026-10-23T01:55:13.624Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 1.4ms (native link, next() included)
+2026-10-23T01:55:13.624Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.1ms (native link, next() included)
+2026-10-23T01:55:14.283Z [DEBUG] Hooks: Checking first line for async: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:14.283Z [DEBUG] Hooks: Parsed initial response: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:14.283Z [DEBUG] Hooks: Initial response is not async, continuing normal processing
+2026-10-23T01:55:14.290Z [DEBUG] Hooks: PostToolUse:Bash [C:\Users\Yohan\.claude\plugins\cache\claude-code-warp\warp\2.4.0/scripts/on-post-tool-use.sh] (plugin warp@claude-code-warp) finished with status 0 (667ms)
+2026-10-23T01:55:14.290Z [DEBUG] Successfully parsed and validated hook JSON output
+2026-10-23T01:55:14.290Z [DEBUG] "Hook PostToolUse:Bash (PostToolUse) success:\n{\"terminalSequence\":\"\\u001b]777;notify;warp://cli-agent;{\\\"v\\\":1,\\\"agent\\\":\\\"claude\\\",\\\"event\\\":\\\"tool_complete\\\",\\\"session_id\\\":[REDACTED]\\\",\\\"cwd\\\":\\\"D:\\\\\\\\Projects\\\\\\\\local-delegate\\\",\\\"project\\\":\\\"local-delegate\\\",\\\"tool_name\\\":\\\"Bash\\\"}\\u0007\"}"
+2026-10-23T01:55:14.292Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.6ms (native link, next() included)
+2026-10-23T01:55:14.292Z [DEBUG] hooks module local-delegate@local-delegate tool.call settled in 1139.6ms (worker hop, next() included)
+2026-10-23T01:55:14.292Z [DEBUG] $.tool.call (drv2): Bash answered in 1140ms, 211 chars
+2026-10-23T01:55:14.293Z [DEBUG] $.tool.call (drv2): Bash (command, description)
+2026-10-23T01:55:14.293Z [DEBUG] hooks module local-delegate@local-delegate: tool.call nested in drv2#1
+2026-10-23T01:55:14.297Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.3ms (native link, next() included)
+2026-10-23T01:55:14.426Z [DEBUG] Hooks: PreToolUse:Bash [node "C:/Users/Yohan/.personal-harness/generated/claude/hooks/pre-tool-use.mjs"] finished with status 0 (129ms)
+2026-10-23T01:55:14.427Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:14.452Z [DEBUG] Hooks: PreToolUse:Bash [${user_config.ld_bin} -I -m local_delegate.hook shell] (plugin local-delegate@local-delegate) finished with status 0 (155ms)
+2026-10-23T01:55:14.452Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:14.454Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.5ms (native link, next() included)
+2026-10-23T01:55:14.463Z [DEBUG] Server classifier skipped Bash or left it to this CLI: the tool's own allow stands
+2026-10-23T01:55:14.464Z [INFO] [Stall] tool_dispatch_start tool=Bash toolUseId=toolu_plugin_1a6ee9664a7445fcaa3dde52ea1fbf76 permissionDecisionMs=9
+2026-10-23T01:55:14.466Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.2ms (native link, next() included)
+2026-10-23T01:55:14.466Z [DEBUG] Spawning shell without login (-l flag skipped)
+2026-10-23T01:55:14.569Z [INFO] [Stall] tool_dispatch_end tool=Bash toolUseId=toolu_plugin_1a6ee9664a7445fcaa3dde52ea1fbf76 outcome=ok durationMs=105
+2026-10-23T01:55:14.572Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 1.0ms (native link, next() included)
+2026-10-23T01:55:14.572Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.2ms (native link, next() included)
+2026-10-23T01:55:14.966Z [DEBUG] cc-plugin-telemetry (builtin) answered telemetry.log without next() 1 more times in the last 10s (the last in 1.1ms)
+2026-10-23T01:55:15.215Z [DEBUG] Hooks: Checking first line for async: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:15.215Z [DEBUG] Hooks: Parsed initial response: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:15.215Z [DEBUG] Hooks: Initial response is not async, continuing normal processing
+2026-10-23T01:55:15.225Z [DEBUG] Hooks: PostToolUse:Bash [C:\Users\Yohan\.claude\plugins\cache\claude-code-warp\warp\2.4.0/scripts/on-post-tool-use.sh] (plugin warp@claude-code-warp) finished with status 0 (654ms)
+2026-10-23T01:55:15.225Z [DEBUG] Successfully parsed and validated hook JSON output
+2026-10-23T01:55:15.225Z [DEBUG] "Hook PostToolUse:Bash (PostToolUse) success:\n{\"terminalSequence\":\"\\u001b]777;notify;warp://cli-agent;{\\\"v\\\":1,\\\"agent\\\":\\\"claude\\\",\\\"event\\\":\\\"tool_complete\\\",\\\"session_id\\\":[REDACTED]\\\",\\\"cwd\\\":\\\"D:\\\\\\\\Projects\\\\\\\\local-delegate\\\",\\\"project\\\":\\\"local-delegate\\\",\\\"tool_name\\\":\\\"Bash\\\"}\\u0007\"}"
+2026-10-23T01:55:15.226Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.5ms (native link, next() included)
+2026-10-23T01:55:15.229Z [DEBUG] hooks module local-delegate@local-delegate tool.call settled in 935.8ms (worker hop, next() included)
+2026-10-23T01:55:15.230Z [DEBUG] $.tool.call (drv2): Bash answered in 937ms, 389 chars
+2026-10-23T01:55:15.231Z [DEBUG] $.tool.call (drv2): Bash (command, description)
+2026-10-23T01:55:15.231Z [DEBUG] hooks module local-delegate@local-delegate: tool.call nested in drv2#1
+2026-10-23T01:55:15.241Z [DEBUG] $.process.run (local-delegate): C:\Users\Yohan\AppData\Roaming\uv\tools\local-delegate-mcp\Scripts\python.exe with 4 args in D:\Projects\local-delegate (pid 39868)
+2026-10-23T01:55:15.362Z [DEBUG] $.process.run (local-delegate): C:\Users\Yohan\AppData\Roaming\uv\tools\local-delegate-mcp\Scripts\python.exe exited 0 in 130ms, 216 + 0 chars
+2026-10-23T01:55:15.364Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.3ms (native link, next() included)
+2026-10-23T01:55:15.479Z [DEBUG] Hooks: PreToolUse:Bash [node "C:/Users/Yohan/.personal-harness/generated/claude/hooks/pre-tool-use.mjs"] finished with status 0 (115ms)
+2026-10-23T01:55:15.479Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:15.501Z [DEBUG] Hooks: PreToolUse:Bash [${user_config.ld_bin} -I -m local_delegate.hook shell] (plugin local-delegate@local-delegate) finished with status 0 (136ms)
+2026-10-23T01:55:15.501Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:15.502Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.4ms (native link, next() included)
+2026-10-23T01:55:15.509Z [DEBUG] Server classifier skipped Bash or left it to this CLI: the tool's own allow stands
+2026-10-23T01:55:15.510Z [INFO] [Stall] tool_dispatch_start tool=Bash toolUseId=toolu_plugin_a6efd09b8f8a4c4d8f05f8204cf9ba13 permissionDecisionMs=7
+2026-10-23T01:55:15.512Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.2ms (native link, next() included)
+2026-10-23T01:55:15.513Z [DEBUG] Spawning shell without login (-l flag skipped)
+2026-10-23T01:55:15.630Z [INFO] [Stall] tool_dispatch_end tool=Bash toolUseId=toolu_plugin_a6efd09b8f8a4c4d8f05f8204cf9ba13 outcome=ok durationMs=120
+2026-10-23T01:55:15.632Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.6ms (native link, next() included)
+2026-10-23T01:55:15.633Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.1ms (native link, next() included)
+2026-10-23T01:55:16.236Z [DEBUG] Hooks: Checking first line for async: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:16.236Z [DEBUG] Hooks: Parsed initial response: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:16.236Z [DEBUG] Hooks: Initial response is not async, continuing normal processing
+2026-10-23T01:55:16.243Z [DEBUG] Hooks: PostToolUse:Bash [C:\Users\Yohan\.claude\plugins\cache\claude-code-warp\warp\2.4.0/scripts/on-post-tool-use.sh] (plugin warp@claude-code-warp) finished with status 0 (611ms)
+2026-10-23T01:55:16.243Z [DEBUG] Successfully parsed and validated hook JSON output
+2026-10-23T01:55:16.243Z [DEBUG] "Hook PostToolUse:Bash (PostToolUse) success:\n{\"terminalSequence\":\"\\u001b]777;notify;warp://cli-agent;{\\\"v\\\":1,\\\"agent\\\":\\\"claude\\\",\\\"event\\\":\\\"tool_complete\\\",\\\"session_id\\\":[REDACTED]\\\",\\\"cwd\\\":\\\"D:\\\\\\\\Projects\\\\\\\\local-delegate\\\",\\\"project\\\":\\\"local-delegate\\\",\\\"tool_name\\\":\\\"Bash\\\"}\\u0007\"}"
+2026-10-23T01:55:16.245Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.5ms (native link, next() included)
+2026-10-23T01:55:16.245Z [DEBUG] hooks module local-delegate@local-delegate tool.call settled in 1013.9ms (worker hop, next() included)
+2026-10-23T01:55:16.245Z [DEBUG] $.tool.call (drv2): Bash answered in 1014ms, 112 chars
+2026-10-23T01:55:16.246Z [DEBUG] $.tool.call (drv2): Bash (command, description)
+2026-10-23T01:55:16.246Z [DEBUG] hooks module local-delegate@local-delegate: tool.call nested in drv2#1
+2026-10-23T01:55:16.248Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.2ms (native link, next() included)
+2026-10-23T01:55:16.371Z [DEBUG] Hooks: PreToolUse:Bash [node "C:/Users/Yohan/.personal-harness/generated/claude/hooks/pre-tool-use.mjs"] finished with status 0 (122ms)
+2026-10-23T01:55:16.371Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:16.397Z [DEBUG] Hooks: PreToolUse:Bash [${user_config.ld_bin} -I -m local_delegate.hook shell] (plugin local-delegate@local-delegate) finished with status 0 (147ms)
+2026-10-23T01:55:16.397Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:16.398Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.5ms (native link, next() included)
+2026-10-23T01:55:16.403Z [DEBUG] Server classifier skipped Bash or left it to this CLI: the tool's own allow stands
+2026-10-23T01:55:16.404Z [INFO] [Stall] tool_dispatch_start tool=Bash toolUseId=toolu_plugin_47d7ef7a470e4cf48b9086baa5ed56f6 permissionDecisionMs=6
+2026-10-23T01:55:16.406Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.2ms (native link, next() included)
+2026-10-23T01:55:16.406Z [DEBUG] Spawning shell without login (-l flag skipped)
+2026-10-23T01:55:16.516Z [INFO] [Stall] tool_dispatch_end tool=Bash toolUseId=toolu_plugin_47d7ef7a470e4cf48b9086baa5ed56f6 outcome=ok durationMs=112
+2026-10-23T01:55:16.519Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.9ms (native link, next() included)
+2026-10-23T01:55:16.519Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.1ms (native link, next() included)
+2026-10-23T01:55:17.165Z [DEBUG] Hooks: Checking first line for async: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:17.165Z [DEBUG] Hooks: Parsed initial response: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:17.165Z [DEBUG] Hooks: Initial response is not async, continuing normal processing
+2026-10-23T01:55:17.173Z [DEBUG] Hooks: PostToolUse:Bash [C:\Users\Yohan\.claude\plugins\cache\claude-code-warp\warp\2.4.0/scripts/on-post-tool-use.sh] (plugin warp@claude-code-warp) finished with status 0 (654ms)
+2026-10-23T01:55:17.173Z [DEBUG] Successfully parsed and validated hook JSON output
+2026-10-23T01:55:17.173Z [DEBUG] "Hook PostToolUse:Bash (PostToolUse) success:\n{\"terminalSequence\":\"\\u001b]777;notify;warp://cli-agent;{\\\"v\\\":1,\\\"agent\\\":\\\"claude\\\",\\\"event\\\":\\\"tool_complete\\\",\\\"session_id\\\":[REDACTED]\\\",\\\"cwd\\\":\\\"D:\\\\\\\\Projects\\\\\\\\local-delegate\\\",\\\"project\\\":\\\"local-delegate\\\",\\\"tool_name\\\":\\\"Bash\\\"}\\u0007\"}"
+2026-10-23T01:55:17.174Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.5ms (native link, next() included)
+2026-10-23T01:55:17.175Z [DEBUG] hooks module local-delegate@local-delegate tool.call settled in 928.7ms (worker hop, next() included)
+2026-10-23T01:55:17.176Z [DEBUG] $.tool.call (drv2): Bash answered in 929ms, 28 chars
+2026-10-23T01:55:17.176Z [DEBUG] $.tool.call (drv2): Bash (command, description)
+2026-10-23T01:55:17.177Z [DEBUG] hooks module local-delegate@local-delegate: tool.call nested in drv2#1
+2026-10-23T01:55:17.180Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.3ms (native link, next() included)
+2026-10-23T01:55:17.303Z [DEBUG] Hooks: PreToolUse:Bash [node "C:/Users/Yohan/.personal-harness/generated/claude/hooks/pre-tool-use.mjs"] finished with status 0 (123ms)
+2026-10-23T01:55:17.303Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:17.318Z [DEBUG] Hooks: PreToolUse:Bash [${user_config.ld_bin} -I -m local_delegate.hook shell] (plugin local-delegate@local-delegate) finished with status 0 (138ms)
+2026-10-23T01:55:17.318Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:17.320Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.5ms (native link, next() included)
+2026-10-23T01:55:17.328Z [DEBUG] Server classifier skipped Bash or left it to this CLI: the tool's own allow stands
+2026-10-23T01:55:17.328Z [INFO] [Stall] tool_dispatch_start tool=Bash toolUseId=toolu_plugin_eaaed5564987424986bed641adf2be88 permissionDecisionMs=7
+2026-10-23T01:55:17.330Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.2ms (native link, next() included)
+2026-10-23T01:55:17.331Z [DEBUG] Spawning shell without login (-l flag skipped)
+2026-10-23T01:55:17.453Z [INFO] [Stall] tool_dispatch_end tool=Bash toolUseId=toolu_plugin_eaaed5564987424986bed641adf2be88 outcome=ok durationMs=125
+2026-10-23T01:55:17.457Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 1.2ms (native link, next() included)
+2026-10-23T01:55:17.457Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.1ms (native link, next() included)
+2026-10-23T01:55:18.137Z [DEBUG] Hooks: Checking first line for async: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:18.137Z [DEBUG] Hooks: Parsed initial response: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:18.137Z [DEBUG] Hooks: Initial response is not async, continuing normal processing
+2026-10-23T01:55:18.162Z [DEBUG] Hooks: PostToolUse:Bash [C:\Users\Yohan\.claude\plugins\cache\claude-code-warp\warp\2.4.0/scripts/on-post-tool-use.sh] (plugin warp@claude-code-warp) finished with status 0 (705ms)
+2026-10-23T01:55:18.162Z [DEBUG] Successfully parsed and validated hook JSON output
+2026-10-23T01:55:18.162Z [DEBUG] "Hook PostToolUse:Bash (PostToolUse) success:\n{\"terminalSequence\":\"\\u001b]777;notify;warp://cli-agent;{\\\"v\\\":1,\\\"agent\\\":\\\"claude\\\",\\\"event\\\":\\\"tool_complete\\\",\\\"session_id\\\":[REDACTED]\\\",\\\"cwd\\\":\\\"D:\\\\\\\\Projects\\\\\\\\local-delegate\\\",\\\"project\\\":\\\"local-delegate\\\",\\\"tool_name\\\":\\\"Bash\\\"}\\u0007\"}"
+2026-10-23T01:55:18.164Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.7ms (native link, next() included)
+2026-10-23T01:55:18.165Z [DEBUG] hooks module local-delegate@local-delegate tool.call settled in 987.9ms (worker hop, next() included)
+2026-10-23T01:55:18.165Z [DEBUG] $.tool.call (drv2): Bash answered in 989ms, 454 chars
+2026-10-23T01:55:18.166Z [DEBUG] $.tool.call (drv2): Bash (command, description)
+2026-10-23T01:55:18.167Z [DEBUG] hooks module local-delegate@local-delegate: tool.call nested in drv2#1
+2026-10-23T01:55:18.178Z [DEBUG] $.process.run (local-delegate): C:\Users\Yohan\AppData\Roaming\uv\tools\local-delegate-mcp\Scripts\python.exe with 4 args in D:\Projects\local-delegate (pid 57496)
+2026-10-23T01:55:18.302Z [DEBUG] $.process.run (local-delegate): C:\Users\Yohan\AppData\Roaming\uv\tools\local-delegate-mcp\Scripts\python.exe exited 0 in 135ms, 204 + 0 chars
+2026-10-23T01:55:18.305Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.3ms (native link, next() included)
+2026-10-23T01:55:18.435Z [DEBUG] Hooks: PreToolUse:Bash [node "C:/Users/Yohan/.personal-harness/generated/claude/hooks/pre-tool-use.mjs"] finished with status 0 (130ms)
+2026-10-23T01:55:18.436Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:18.450Z [DEBUG] Hooks: PreToolUse:Bash [${user_config.ld_bin} -I -m local_delegate.hook shell] (plugin local-delegate@local-delegate) finished with status 0 (145ms)
+2026-10-23T01:55:18.450Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:18.452Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.6ms (native link, next() included)
+2026-10-23T01:55:18.460Z [DEBUG] Server classifier skipped Bash or left it to this CLI: the tool's own allow stands
+2026-10-23T01:55:18.461Z [INFO] [Stall] tool_dispatch_start tool=Bash toolUseId=toolu_plugin_680d49d013f04192b23fefa28b9dbd52 permissionDecisionMs=8
+2026-10-23T01:55:18.463Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.2ms (native link, next() included)
+2026-10-23T01:55:18.463Z [DEBUG] Spawning shell without login (-l flag skipped)
+2026-10-23T01:55:18.582Z [INFO] [Stall] tool_dispatch_end tool=Bash toolUseId=toolu_plugin_680d49d013f04192b23fefa28b9dbd52 outcome=ok durationMs=121
+2026-10-23T01:55:18.585Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.7ms (native link, next() included)
+2026-10-23T01:55:18.585Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.1ms (native link, next() included)
+2026-10-23T01:55:19.259Z [DEBUG] Hooks: Checking first line for async: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:19.259Z [DEBUG] Hooks: Parsed initial response: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:19.259Z [DEBUG] Hooks: Initial response is not async, continuing normal processing
+2026-10-23T01:55:19.269Z [DEBUG] Hooks: PostToolUse:Bash [C:\Users\Yohan\.claude\plugins\cache\claude-code-warp\warp\2.4.0/scripts/on-post-tool-use.sh] (plugin warp@claude-code-warp) finished with status 0 (684ms)
+2026-10-23T01:55:19.269Z [DEBUG] Successfully parsed and validated hook JSON output
+2026-10-23T01:55:19.269Z [DEBUG] "Hook PostToolUse:Bash (PostToolUse) success:\n{\"terminalSequence\":\"\\u001b]777;notify;warp://cli-agent;{\\\"v\\\":1,\\\"agent\\\":\\\"claude\\\",\\\"event\\\":\\\"tool_complete\\\",\\\"session_id\\\":[REDACTED]\\\",\\\"cwd\\\":\\\"D:\\\\\\\\Projects\\\\\\\\local-delegate\\\",\\\"project\\\":\\\"local-delegate\\\",\\\"tool_name\\\":\\\"Bash\\\"}\\u0007\"}"
+2026-10-23T01:55:19.270Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.5ms (native link, next() included)
+2026-10-23T01:55:19.271Z [DEBUG] hooks module local-delegate@local-delegate tool.call settled in 1104.2ms (worker hop, next() included)
+2026-10-23T01:55:19.271Z [DEBUG] $.tool.call (drv2): Bash answered in 1105ms, 392 chars
+2026-10-23T01:55:19.271Z [DEBUG] $.tool.call (drv2): Bash (command, description)
+2026-10-23T01:55:19.272Z [DEBUG] hooks module local-delegate@local-delegate: tool.call nested in drv2#1
+2026-10-23T01:55:19.274Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.3ms (native link, next() included)
+2026-10-23T01:55:19.407Z [DEBUG] Hooks: PreToolUse:Bash [node "C:/Users/Yohan/.personal-harness/generated/claude/hooks/pre-tool-use.mjs"] finished with status 0 (133ms)
+2026-10-23T01:55:19.407Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:19.419Z [DEBUG] Hooks: PreToolUse:Bash [${user_config.ld_bin} -I -m local_delegate.hook shell] (plugin local-delegate@local-delegate) finished with status 0 (145ms)
+2026-10-23T01:55:19.419Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:19.421Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.5ms (native link, next() included)
+2026-10-23T01:55:19.426Z [DEBUG] Server classifier skipped Bash or left it to this CLI: the tool's own allow stands
+2026-10-23T01:55:19.426Z [INFO] [Stall] tool_dispatch_start tool=Bash toolUseId=toolu_plugin_7fa60b97c68d4b5cae4afd1d538f057e permissionDecisionMs=5
+2026-10-23T01:55:19.428Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.2ms (native link, next() included)
+2026-10-23T01:55:19.428Z [DEBUG] Spawning shell without login (-l flag skipped)
+2026-10-23T01:55:19.505Z [INFO] [Stall] tool_dispatch_end tool=Bash toolUseId=toolu_plugin_7fa60b97c68d4b5cae4afd1d538f057e outcome=ok durationMs=78
+2026-10-23T01:55:19.507Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.9ms (native link, next() included)
+2026-10-23T01:55:19.508Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.1ms (native link, next() included)
+2026-10-23T01:55:20.154Z [DEBUG] Hooks: Checking first line for async: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:20.154Z [DEBUG] Hooks: Parsed initial response: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:20.154Z [DEBUG] Hooks: Initial response is not async, continuing normal processing
+2026-10-23T01:55:20.161Z [DEBUG] Hooks: PostToolUse:Bash [C:\Users\Yohan\.claude\plugins\cache\claude-code-warp\warp\2.4.0/scripts/on-post-tool-use.sh] (plugin warp@claude-code-warp) finished with status 0 (654ms)
+2026-10-23T01:55:20.161Z [DEBUG] Successfully parsed and validated hook JSON output
+2026-10-23T01:55:20.161Z [DEBUG] "Hook PostToolUse:Bash (PostToolUse) success:\n{\"terminalSequence\":\"\\u001b]777;notify;warp://cli-agent;{\\\"v\\\":1,\\\"agent\\\":\\\"claude\\\",\\\"event\\\":\\\"tool_complete\\\",\\\"session_id\\\":[REDACTED]\\\",\\\"cwd\\\":\\\"D:\\\\\\\\Projects\\\\\\\\local-delegate\\\",\\\"project\\\":\\\"local-delegate\\\",\\\"tool_name\\\":\\\"Bash\\\"}\\u0007\"}"
+2026-10-23T01:55:20.162Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.5ms (native link, next() included)
+2026-10-23T01:55:20.163Z [DEBUG] hooks module local-delegate@local-delegate tool.call settled in 890.8ms (worker hop, next() included)
+2026-10-23T01:55:20.163Z [DEBUG] $.tool.call (drv2): Bash answered in 892ms, 2 chars
+2026-10-23T01:55:20.164Z [DEBUG] $.tool.call (drv2): Bash (command, description)
+2026-10-23T01:55:20.164Z [DEBUG] hooks module local-delegate@local-delegate: tool.call nested in drv2#1
+2026-10-23T01:55:20.169Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.3ms (native link, next() included)
+2026-10-23T01:55:20.293Z [DEBUG] Hooks: PreToolUse:Bash [node "C:/Users/Yohan/.personal-harness/generated/claude/hooks/pre-tool-use.mjs"] finished with status 0 (124ms)
+2026-10-23T01:55:20.293Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:20.316Z [DEBUG] Hooks: PreToolUse:Bash [${user_config.ld_bin} -I -m local_delegate.hook shell] (plugin local-delegate@local-delegate) finished with status 0 (146ms)
+2026-10-23T01:55:20.316Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:20.318Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.7ms (native link, next() included)
+2026-10-23T01:55:20.329Z [DEBUG] Server classifier skipped Bash or left it to this CLI: the tool's own allow stands
+2026-10-23T01:55:20.330Z [INFO] [Stall] tool_dispatch_start tool=Bash toolUseId=toolu_plugin_bae31af7efdf405e8b80c41bdff2e413 permissionDecisionMs=10
+2026-10-23T01:55:20.331Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.2ms (native link, next() included)
+2026-10-23T01:55:20.332Z [DEBUG] Spawning shell without login (-l flag skipped)
+2026-10-23T01:55:20.463Z [INFO] [Stall] tool_dispatch_end tool=Bash toolUseId=toolu_plugin_bae31af7efdf405e8b80c41bdff2e413 outcome=ok durationMs=133
+2026-10-23T01:55:20.465Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.6ms (native link, next() included)
+2026-10-23T01:55:20.465Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.1ms (native link, next() included)
+2026-10-23T01:55:21.104Z [DEBUG] Hooks: Checking first line for async: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:21.104Z [DEBUG] Hooks: Parsed initial response: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:21.104Z [DEBUG] Hooks: Initial response is not async, continuing normal processing
+2026-10-23T01:55:21.112Z [DEBUG] Hooks: PostToolUse:Bash [C:\Users\Yohan\.claude\plugins\cache\claude-code-warp\warp\2.4.0/scripts/on-post-tool-use.sh] (plugin warp@claude-code-warp) finished with status 0 (647ms)
+2026-10-23T01:55:21.112Z [DEBUG] Successfully parsed and validated hook JSON output
+2026-10-23T01:55:21.112Z [DEBUG] "Hook PostToolUse:Bash (PostToolUse) success:\n{\"terminalSequence\":\"\\u001b]777;notify;warp://cli-agent;{\\\"v\\\":1,\\\"agent\\\":\\\"claude\\\",\\\"event\\\":\\\"tool_complete\\\",\\\"session_id\\\":[REDACTED]\\\",\\\"cwd\\\":\\\"D:\\\\\\\\Projects\\\\\\\\local-delegate\\\",\\\"project\\\":\\\"local-delegate\\\",\\\"tool_name\\\":\\\"Bash\\\"}\\u0007\"}"
+2026-10-23T01:55:21.114Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.6ms (native link, next() included)
+2026-10-23T01:55:21.114Z [DEBUG] hooks module local-delegate@local-delegate tool.call settled in 949.9ms (worker hop, next() included)
+2026-10-23T01:55:21.114Z [DEBUG] $.tool.call (drv2): Bash answered in 950ms, 161 chars
+2026-10-23T01:55:21.116Z [DEBUG] $.tool.call (drv2): Bash (command, description)
+2026-10-23T01:55:21.117Z [DEBUG] hooks module local-delegate@local-delegate: tool.call nested in drv2#1
+2026-10-23T01:55:21.129Z [DEBUG] $.process.run (local-delegate): C:\Users\Yohan\AppData\Roaming\uv\tools\local-delegate-mcp\Scripts\python.exe with 4 args in D:\Projects\local-delegate (pid 47560)
+2026-10-23T01:55:21.251Z [DEBUG] $.process.run (local-delegate): C:\Users\Yohan\AppData\Roaming\uv\tools\local-delegate-mcp\Scripts\python.exe exited 0 in 133ms, 217 + 0 chars
+2026-10-23T01:55:21.253Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.3ms (native link, next() included)
+2026-10-23T01:55:21.391Z [DEBUG] Hooks: PreToolUse:Bash [${user_config.ld_bin} -I -m local_delegate.hook shell] (plugin local-delegate@local-delegate) finished with status 0 (136ms)
+2026-10-23T01:55:21.391Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:21.391Z [DEBUG] Hooks: PreToolUse:Bash [node "C:/Users/Yohan/.personal-harness/generated/claude/hooks/pre-tool-use.mjs"] finished with status 0 (138ms)
+2026-10-23T01:55:21.391Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-10-23T01:55:21.403Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 11.1ms (native link, next() included)
+2026-10-23T01:55:21.413Z [DEBUG] Server classifier skipped Bash or left it to this CLI: the tool's own allow stands
+2026-10-23T01:55:21.413Z [INFO] [Stall] tool_dispatch_start tool=Bash toolUseId=toolu_plugin_17c518550fce4c4fbf2e40775ec1159c permissionDecisionMs=9
+2026-10-23T01:55:21.415Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.2ms (native link, next() included)
+2026-10-23T01:55:21.416Z [DEBUG] Spawning shell without login (-l flag skipped)
+2026-10-23T01:55:21.533Z [INFO] [Stall] tool_dispatch_end tool=Bash toolUseId=toolu_plugin_17c518550fce4c4fbf2e40775ec1159c outcome=ok durationMs=120
+2026-10-23T01:55:21.536Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 1.6ms (native link, next() included)
+2026-10-23T01:55:21.536Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.1ms (native link, next() included)
+2026-10-23T01:55:22.240Z [DEBUG] Hooks: Checking first line for async: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:22.240Z [DEBUG] Hooks: Parsed initial response: {"terminalSequence":"\u001b]777;notify;warp://cli-agent;{\"v\":1,\"agent\":\"claude\",\"event\":\"tool_complete\",\"session_id\":[REDACTED]\",\"cwd\":\"D:\\\\Projects\\\\local-delegate\",\"project\":\"local-delegate\",\"tool_name\":\"Bash\"}\u0007"}
+2026-10-23T01:55:22.240Z [DEBUG] Hooks: Initial response is not async, continuing normal processing
+2026-10-23T01:55:22.249Z [DEBUG] Hooks: PostToolUse:Bash [C:\Users\Yohan\.claude\plugins\cache\claude-code-warp\warp\2.4.0/scripts/on-post-tool-use.sh] (plugin warp@claude-code-warp) finished with status 0 (713ms)
+2026-10-23T01:55:22.249Z [DEBUG] Successfully parsed and validated hook JSON output
+2026-10-23T01:55:22.249Z [DEBUG] "Hook PostToolUse:Bash (PostToolUse) success:\n{\"terminalSequence\":\"\\u001b]777;notify;warp://cli-agent;{\\\"v\\\":1,\\\"agent\\\":\\\"claude\\\",\\\"event\\\":\\\"tool_complete\\\",\\\"session_id\\\":[REDACTED]\\\",\\\"cwd\\\":\\\"D:\\\\\\\\Projects\\\\\\\\local-delegate\\\",\\\"project\\\":\\\"local-delegate\\\",\\\"tool_name\\\":\\\"Bash\\\"}\\u0007\"}"
+2026-10-23T01:55:22.251Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.8ms (native link, next() included)
+2026-10-23T01:55:22.252Z [DEBUG] hooks module local-delegate@local-delegate tool.call settled in 1135.3ms (worker hop, next() included)
+2026-10-23T01:55:22.252Z [DEBUG] $.tool.call (drv2): Bash answered in 1136ms, 61 chars
+2026-10-23T01:55:22.253Z [DEBUG] drv2 (user) answered command.run without next() in 17020.6ms; nothing beneath it ran for this dispatch
+2026-10-23T01:55:22.253Z [DEBUG] hooks module drv2@inline, local-delegate@local-delegate command.run settled in 17021.1ms (worker hop, next() included)
+2026-10-23T01:55:22.257Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 1.6ms (native link, next() included)
+2026-10-23T01:55:22.266Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-10-23T01:55:22.266Z [DEBUG] [session-notices] advertise=false mode=auto flag=true(payload) pollChannel=false ownEventsOnly=false remote=false remoteEnv=false nonInteractive=true
+2026-10-23T01:55:22.269Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-10-23T01:55:22.277Z [DEBUG] [uds-messaging] Shutting down
+2026-10-23T01:55:22.281Z [DEBUG] LSP server manager shut down successfully
+2026-10-23T01:55:22.283Z [DEBUG] Cleaned up session snapshot: C:\Users\Yohan\.claude\shell-snapshots\snapshot-bash-1792720505419-ly1x13.sh
+2026-10-23T01:55:22.286Z [DEBUG] hooks module cc-plugin-telemetry@builtin session.end settled in 0.2ms (native link, next() included)
+2026-10-23T01:55:22.707Z [DEBUG] Preserving file permissions: 100666
+2026-10-23T01:55:22.708Z [DEBUG] Writing to temp file: C:\Users\Yohan\.claude.json.tmp.29328.dbca2c92fe4f
+2026-10-23T01:55:22.708Z [DEBUG] Applied original permissions to temp file
+2026-10-23T01:55:22.710Z [DEBUG] Temp file written successfully, size: 111412 bytes
+2026-10-23T01:55:22.710Z [DEBUG] Renaming C:\Users\Yohan\.claude.json.tmp.29328.dbca2c92fe4f to C:\Users\Yohan\.claude.json
+2026-10-23T01:55:22.711Z [DEBUG] File C:\Users\Yohan\.claude.json written atomically
