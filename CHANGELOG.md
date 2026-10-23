@@ -32,8 +32,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   raya atenuada sobre `local-delegate · ● qwen3-8b listo · 3 delegaciones · 12,3k tokens
   ahorrados ≈ $0,18 · lecturas: pregunta`, en dos filas.
 - **Claude Desktop: una fila nativa.** El nombre como enlace al panel (`http://localhost:9393`),
-  una píldora de borde redondeado con el punto y el estado, el modelo, la tool en curso en
-  monoespaciada, las cifras en seminegrita tabular y el modo de lectura como pie a la derecha.
+  una píldora de borde redondeado con el punto y el estado, el modelo, la tool en curso, las
+  cifras en negrita y el modo de lectura atenuado a la derecha. Los tamaños de letra, la
+  monoespaciada y las cifras tabulares esperan a que la CLI mínima los acepte: la 2.1.292 rechaza
+  el árbol entero por `size` y dibuja su propia banda.
 - **Se refresca sin esperar al turno.** Un temporizador relee `/api/inflight` y `/api/backend`
   (solo HTTP al daemon, nunca un proceso) cada segundo mientras hay una delegación en curso o un
   modelo cargando, y cada 30 s si no; una llamada a una tool de local-delegate pone el ritmo rápido

@@ -31,8 +31,9 @@
 //     lecturas: pregunta`, color only on the dot (all of it red when the backend is down). The rule
 //     stays because a line without a background would read as the last line of the chat.
 //   - any other surface (Claude Desktop): one native row, the name a dim link to the panel, a
-//     round-bordered pill with the dot and the state, the model dim, the tool in mono, the figures
-//     semibold and tabular, and the read mode as a caption on the right.
+//     round-bordered pill with the dot and the state, the model dim, the tool at work, the figures
+//     bold, and the read mode dim on the right (the typography props wait for the minimum CLI:
+//     see `statusDeskText`).
 // The read mode follows `hasDialog()`: with a person at the prompt the read mod asks before it
 // summarizes («lecturas: pregunta»), without one it summarizes on its own («lecturas: resume solo»).
 // While delegating the dot turns (◐◓◑◒) with the seconds the oldest call has run, so the turn costs
@@ -66,6 +67,8 @@ const STATUS_TOOL = /^mcp__local-delegate__/
 // The daemon's panel. The engine's validator takes `http:` links to `localhost` alone, never to
 // 127.0.0.1 (where the daemon listens): the live test checks that the panel answers there.
 const STATUS_PANEL = 'http://localhost:9393'
+// Whether Desktop Texts carry `size`, `weight`, `mono` and `tabular` (see `statusDeskText`).
+const STATUS_TYPE_PROPS = false
 const STATUS_HOT_MS = 1000
 const STATUS_COLD_MS = 30000
 
@@ -366,13 +369,31 @@ function statusBarTree($, e, snapshot, options, columns) {
   )
 }
 
+/**
+ * A Desktop Text with the props the minimum CLI takes. The approved design asks for the
+ * typography props (`size`, `weight`, `mono`, `tabular`), and the band writes them; but the engine
+ * of the minimum CLI (2.1.292) refuses the whole tree over `size` ("Text prop "size" is not
+ * allowed") and draws its own band, and the session cannot ask its engine's version
+ * (`$.session.version` is not there in 2.1.292 nor in 2.1.309). So, until the minimum CLI takes
+ * them (`STATUS_TYPE_PROPS`), a heavy `weight` becomes `bold` and the rest stay out.
+ */
+function statusDeskText(Text, props, text) {
+  if (STATUS_TYPE_PROPS) {
+    return h(Text, props, text)
+  }
+  const { size, weight, mono, tabular, ...plain } = props
+  if (weight === 'semibold' || weight === 'bold') {
+    plain.bold = true
+  }
+  return h(Text, plain, text)
+}
+
 /** Desktop and the other remote surfaces: one native row with a pill. */
 function statusDesktopTree($, e, snapshot, options, columns) {
   const { Box, Text, Link } = $.ui.resolve(e)
-  // Spacing by step names where the surface takes them (desktop, mobile), in cells elsewhere.
-  const named = e.surface === 'desktop' || e.surface === 'mobile'
-  const gap = named ? 'sm' : 1
-  const small = named ? 'xs' : 1
+  // Spacing in numbers: the minimum CLI (2.1.292) refuses step names (`'sm'`, `'xs'`) in `gap`.
+  const gap = 1
+  const small = 1
   const lang = language()
   const note = { size: 'footnote', wrap: 'truncate-end' }
   const glyph = statusGlyph(snapshot)
@@ -402,8 +423,8 @@ function statusDesktopTree($, e, snapshot, options, columns) {
     dotProps.dimColor = true
     wordProps.dimColor = true
   }
-  const name = h(Link, { href: STATUS_PANEL }, h(Text, { ...note, weight: 'medium', dimColor: true }, t('status.name')))
-  const pill = h(Box, pillProps, h(Text, dotProps, glyph), h(Text, wordProps, ` ${word}`))
+  const name = h(Link, { href: STATUS_PANEL }, statusDeskText(Text, { ...note, weight: 'medium', dimColor: true }, t('status.name')))
+  const pill = h(Box, pillProps, statusDeskText(Text, dotProps, glyph), statusDeskText(Text, wordProps, ` ${word}`))
   const left = [name, pill]
   let right = null
   if (snapshot.daemon !== 'down') {
@@ -412,7 +433,7 @@ function statusDesktopTree($, e, snapshot, options, columns) {
     const kept = statusFit(reads ? [...parts.slice(1), reads] : parts.slice(1), columns, 4 + word.length + t('status.name').length)
     for (const part of kept) {
       if (part === reads) {
-        right = h(Text, { size: 'caption', dimColor: true, wrap: 'truncate-end' }, t(`status.reads_${statusReadMode(options)}_title`))
+        right = statusDeskText(Text, { size: 'caption', dimColor: true, wrap: 'truncate-end' }, t(`status.reads_${statusReadMode(options)}_title`))
         continue
       }
       left.push(...statusDesktopPart(Box, Text, part, note, small))
@@ -425,7 +446,7 @@ function statusDesktopTree($, e, snapshot, options, columns) {
 /** One part of the bar as Desktop elements: the model, the tool at work, or a figure. */
 function statusDesktopPart(Box, Text, part, note, small) {
   if (part.kind === 'model') {
-    return [h(Text, { ...note, dimColor: true }, part.pieces[0].text)]
+    return [statusDeskText(Text, { ...note, dimColor: true }, part.pieces[0].text)]
   }
   if (part.kind === 'task') {
     // The tool at work: its name in mono, then how long it has run (and how many more), dim.
@@ -435,23 +456,23 @@ function statusDesktopPart(Box, Text, part, note, small) {
       if (piece.dim) {
         rest.push(piece.text.trim())
       } else {
-        out.push(h(Text, { ...note, mono: true }, piece.text))
+        out.push(statusDeskText(Text, { ...note, mono: true }, piece.text))
       }
     }
-    out.push(h(Text, { ...note, dimColor: true, tabular: true }, rest.join(' ')))
+    out.push(statusDeskText(Text, { ...note, dimColor: true, tabular: true }, rest.join(' ')))
     return out
   }
   if (part.kind === 'empty') {
-    return [h(Text, { ...note, dimColor: true }, t('status.empty_title'))]
+    return [statusDeskText(Text, { ...note, dimColor: true }, t('status.empty_title'))]
   }
   if (part.kind === 'cost') {
-    return [h(Text, { ...note, dimColor: true, tabular: true }, part.pieces[0].text)]
+    return [statusDeskText(Text, { ...note, dimColor: true, tabular: true }, part.pieces[0].text)]
   }
   // A figure: the number semibold and tabular, its label dim (`delegaciones ·` before the next one).
   const label = part.kind === 'calls' ? `${part.pieces[1].text.trim()}${STATUS_SEPARATOR.trimEnd()}` : part.pieces[1].text.trim()
   const children = [
-    h(Text, { ...note, weight: 'semibold', tabular: true }, part.pieces[0].text),
-    h(Text, { ...note, dimColor: true }, label),
+    statusDeskText(Text, { ...note, weight: 'semibold', tabular: true }, part.pieces[0].text),
+    statusDeskText(Text, { ...note, dimColor: true }, label),
   ]
   return [h(Box, { flexDirection: 'row', gap: small }, ...children)]
 }

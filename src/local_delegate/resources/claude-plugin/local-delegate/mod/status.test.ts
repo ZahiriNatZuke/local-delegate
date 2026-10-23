@@ -388,18 +388,25 @@ test('desktop: one native row with a pill, a link to the panel and the read mode
   expect(links.map((l: any) => l.props.href)).toEqual([PANEL])
   expect(links[0].text.endsWith('local-delegate')).toBe(true)
   const name = texts.find((t: any) => t.text === 'local-delegate')
-  expect(name?.props).toMatchObject({ dimColor: true, size: 'footnote' })
+  expect(name?.props.dimColor).toBe(true)
+  // The minimum CLI (2.1.292) refuses the whole tree over a typography prop: none goes out.
+  for (const text of texts) {
+    // (`weight` is left out: 2.1.309 reads `bold` back as `weight: 'semibold'`.)
+    for (const key of ['size', 'mono', 'tabular']) {
+      expect(text.props[key]).toBeUndefined()
+    }
+  }
   const pill = boxes.find((b: any) => b.props.borderStyle === 'round')
-  expect(pill?.props).toMatchObject({ borderColor: 'success', paddingX: 'xs' })
+  expect(pill?.props).toMatchObject({ borderColor: 'success', paddingX: 1 })
   expect(pill?.text).toBe('● Listo')
   expect(colorOf(texts, '●')).toBe('success')
   expect(texts.find((t: any) => t.text === 'qwen3-8b')?.props.dimColor).toBe(true)
-  expect(texts.find((t: any) => t.text === '3')?.props).toMatchObject({ weight: 'semibold', tabular: true })
-  expect(texts.find((t: any) => t.text === '12,3k')?.props).toMatchObject({ weight: 'semibold', tabular: true })
+  expect(texts.find((t: any) => t.text === '3')?.props).toMatchObject({ bold: true })
+  expect(texts.find((t: any) => t.text === '12,3k')?.props).toMatchObject({ bold: true })
   expect(texts.find((t: any) => t.text === 'tokens ahorrados')?.props.dimColor).toBe(true)
   const reads = texts[texts.length - 1]
   expect(reads.text).toBe('Lecturas: resume solo')
-  expect(reads.props).toMatchObject({ size: 'caption', dimColor: true })
+  expect(reads.props).toMatchObject({ dimColor: true })
 })
 
 test('desktop: each state in the pill', { options: QUIET }, async ($, on) => {
@@ -411,8 +418,8 @@ test('desktop: each state in the pill', { options: QUIET }, async ($, on) => {
   let pill = drawn.boxes.find((b: any) => b.props.borderStyle === 'round')
   expect(pill?.props.borderColor).toBe('warning')
   expect(pill?.text).toBe('◐ Delegando')
-  // The tool in mono after the pill, and how long it has run.
-  expect(drawn.texts.find((t: any) => t.text === 'local_summarize')?.props.mono).toBe(true)
+  // The tool after the pill, and how long it has run.
+  expect(drawn.texts.find((t: any) => t.text === 'local_summarize')?.props.dimColor).toBeUndefined()
   expect(drawn.texts.some((t: any) => t.text === '4 s')).toBe(true)
 
   daemon = { ...UP, backend: () => backend(false) }
