@@ -6,6 +6,21 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido (F4-desktop-spacing)
+
+- **Banda en Claude Desktop: textos menos pegados.** En la letra proporcional de Desktop el
+  espacio normal sale estrecho y ` · ` quedaba casi pegado a los textos. Ahora el `·` va entre dos
+  espacios de medio cuadratín (U+2002), que tienen ancho fijo y el navegador no colapsa, y el punto
+  de estado se une a su palabra con un espacio que no se parte (U+00A0). Mientras delega, el verbo
+  («Delegando») va atenuado y la tool en curso en color normal, para que se distingan. La terminal
+  no cambia.
+- **Banda en Claude Desktop: ya no pierde las cifras mientras delega.** El recorte contaba cada
+  letra como una celda de la fuente monoespaciada, pero Desktop dibuja la banda con su letra
+  proporcional, que ocupa unas tres cuartas partes de una celda, así que quitaba las cifras con
+  media tarjeta vacía. Ahora en Desktop cada letra cuenta 0,75 celdas (y el espacio ancho, una): en
+  una banda de unas 100 celdas siguen las delegaciones y los tokens ahorrados, y con sitio, también
+  el modo de lectura a la derecha. Siempre en una sola fila.
+
 ### Corregido (F4-live-fixes)
 
 - **Una decisión del mod de lectura deja una sola línea en la telemetría.** En la prueba en vivo

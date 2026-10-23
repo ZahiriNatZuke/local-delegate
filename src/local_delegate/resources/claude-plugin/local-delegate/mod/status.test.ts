@@ -447,10 +447,20 @@ test('line: without a model nothing is left loose either', { options: LINE }, as
 // made the card grow, and the panel link sat off the baseline. Now one line of text in two tones,
 // like the app's own (`Opus 5.5 Medio`): the left side is a single Text with inline Texts inside.
 
+// F4-desktop-spacing (live 2026-10-23, «en desktop hay textos que quedan muy juntos»): Desktop
+// separates with an en space (U+2002) on each side of the `·` and binds the dot to its word with a
+// no-break space (U+00A0). `plain` reads them back as plain spaces, so the content checks below
+// stay readable; the spacing has a test of its own.
+const DESKTOP_SEPARATOR = ' · '
+
+function plain(text: string) {
+  return text.replaceAll(DESKTOP_SEPARATOR, ' · ').replaceAll(' ', ' ')
+}
+
 /** The Desktop band: its Boxes, its Texts, its Links, the left line (the outer Text) and the right. */
 async function desk($: any, columns = 160) {
   const { texts, boxes, links } = await drawnAll($, desktop(columns))
-  const left = texts[0]
+  const left = texts[0] && { ...texts[0], raw: texts[0].text as string, text: plain(texts[0].text) }
   const right = texts.find((t: any) => /^(Lecturas|Reads):/.test(t.text))
   return { texts, boxes, links, left, right }
 }
@@ -474,7 +484,7 @@ function expectPlainDesktop(drawn: { texts: any[]; boxes: any[]; links: any[] })
 }
 
 function span(texts: any[], text: string) {
-  return texts.slice(1).find((t: any) => t.text === text)
+  return texts.slice(1).find((t: any) => plain(t.text) === text)
 }
 
 test('desktop: one line of text in two tones, the read mode dim on the right', { options: { ld_bin: LD_BIN } }, async ($, on) => {
@@ -511,6 +521,8 @@ test('desktop: each state', { options: QUIET }, async ($, on) => {
   expect(span(drawn.texts, '◐')?.props.color).toBe('warning')
   expect(span(drawn.texts, 'local_summarize')?.props.dimColor).toBeUndefined()
   expect(span(drawn.texts, ' 7/9')?.props.dimColor).toBeUndefined()
+  // The dot already says it is at work: the verb goes dim, so the tool (the datum) stands out.
+  expect(span(drawn.texts, ' Delegando')?.props.dimColor).toBe(true)
   expect(span(drawn.texts, ' · 3 min 16 s')?.props.dimColor).toBe(true)
   expect(span(drawn.texts, ' +1 más')?.props.dimColor).toBe(true)
 
@@ -552,12 +564,59 @@ test('desktop: an empty session says so instead of a zero', { options: QUIET }, 
 test('desktop: a narrow band drops the least important parts first, and leaves no loose separator', { options: { ld_bin: LD_BIN } }, async ($, on) => {
   engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => UP)
   await $.session.measure(measureInput())
-  // The head (`local-delegate · ● Listo`, 24 cells) always stays; then the model, the calls, ...
-  const narrow = await desk($, 60)
+  // The head (`local-delegate · ● Listo`, 18.5 cells in Desktop's letter) always stays; then the
+  // model, the calls, ...
+  const narrow = await desk($, 45)
   expect(narrow.left.text).toBe('local-delegate · ● Listo · qwen3-8b · 3 delegaciones')
   expect(narrow.right).toBeUndefined()
   expectPlainDesktop(narrow)
-  expect((await desk($, 30)).left.text).toBe('local-delegate · ● Listo')
+  expect((await desk($, 20)).left.text).toBe('local-delegate · ● Listo')
+})
+
+test('desktop: the separators are wide spaces that do not collapse, never plain ones', { options: { ld_bin: LD_BIN } }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, inflight: () => inflight([chunked(107, 9, 4)]) }))
+  await $.session.measure(measureInput())
+  const drawn = await desk($)
+  // No ` · ` with plain spaces anywhere in Desktop's line, not even inside the task's own time.
+  expect(drawn.left.raw.includes(' · ')).toBe(false)
+  expect(drawn.left.raw.includes(' ·')).toBe(false)
+  expect(drawn.left.raw.includes('· ')).toBe(false)
+  expect(drawn.left.raw.split(DESKTOP_SEPARATOR)).toHaveLength(6)
+  // The dot is bound to its word with a no-break space: they never part.
+  expect(drawn.left.raw).toContain(' Delegando')
+  expect(drawn.left.text).toBe('local-delegate · ◒ Delegando local_summarize 4/9 · 1 min 47 s · qwen3-8b · 3 delegaciones · 12,3k tokens ahorrados ≈ $0,18')
+})
+
+// Live 2026-10-23: while delegating, Desktop lost the figures and the read mode with half the card
+// empty. `bodyColumns` counts cells of the app's monospace font, and its proportional letter takes
+// about three quarters of one (measured on the capture: ~6.1 px a character, cells of 8 to 9.8 px).
+function screenshotDaemon(): Daemon {
+  return {
+    stats: () => stats(32, 446000, 0.12),
+    backend: () => backend(true, [{ model: 'gemma4-26b-a4b', state: 'ready' }]),
+    inflight: () => inflight([{ ...chunked(107, 9, 4), model: 'gemma4-26b-a4b' }]),
+  }
+}
+
+test('desktop: delegating in a band of about 100 cells keeps the figures', { options: { ld_bin: LD_BIN } }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, screenshotDaemon)
+  await $.session.measure(measureInput())
+  const drawn = await desk($, 100)
+  expect(drawn.left.text).toBe('local-delegate · ◒ Delegando local_summarize 4/9 · 1 min 47 s · gemma4-26b-a4b · 32 delegaciones · 446k tokens ahorrados ≈ $0,12')
+  // At the narrow end of what the capture allows (96 cells), the cost goes before the figures.
+  expect((await desk($, 96)).left.text).toContain('· 32 delegaciones · 446k tokens ahorrados')
+  expectPlainDesktop(drawn)
+})
+
+test('desktop: with room for it, the read mode stays on the right while delegating', { options: { ld_bin: LD_BIN } }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, screenshotDaemon)
+  await $.session.measure(measureInput())
+  const drawn = await desk($, 120)
+  expect(drawn.left.text).toContain('· 32 delegaciones · 446k tokens ahorrados ≈ $0,12')
+  expect(drawn.right?.text).toBe('Lecturas: resume solo')
+  // Still one row: one Box, the left one Text, the right one Text.
+  expect(drawn.boxes).toHaveLength(1)
+  expect(drawn.boxes[0].props.flexDirection).toBe('row')
 })
 
 test('desktop: in English', { options: { ld_bin: LD_BIN, language: 'en' } }, async ($, on) => {
