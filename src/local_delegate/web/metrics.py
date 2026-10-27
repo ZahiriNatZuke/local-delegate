@@ -1331,7 +1331,14 @@ def run_in_thread(host: str | None = None, port: int | None = None):
         # sirve el mismo panel en el mismo puerto y el DNS rebinding la alcanza igual.
         from . import host_guard
 
-        guarded = host_guard.protect(app, host)
+        # Y el mismo token del puerto, envuelto igual que en `daemon.build_app`: el token por dentro
+        # y el `Host` por fuera. Sin esto, una sesión stdio que ganaba el puerto servía todo el panel
+        # y `/api/*` sin credencial aunque `LOCAL_DELEGATE_WEB_TOKEN` estuviera puesta. Sus clientes
+        # (el mod, el CLI, `doctor`, el navegador) ya mandan ese token: no saben qué proceso tiene
+        # el puerto.
+        guarded = host_guard.protect(
+            auth.protect(app, token_source.daemon_token(), config.WEB_SESSION_SECONDS), host
+        )
         cfg = uvicorn.Config(guarded, host=host, port=port, log_level="warning", access_log=False)
         server = uvicorn.Server(cfg)
         server.install_signal_handlers = lambda: None  # type: ignore[method-assign]

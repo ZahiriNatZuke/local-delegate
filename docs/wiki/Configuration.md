@@ -3,6 +3,11 @@
 Todo se configura por variables de entorno (en el bloque `env` de tu config MCP, o en el shell).
 Nada está hardcodeado.
 
+Una variable **vacía o solo con espacios cuenta como no puesta** y toma el valor por defecto de su
+tabla: así una entrada con `"${VAR}"` que expande a nada no deja, por ejemplo, el host del puerto
+en «todas las interfaces» o el modelo en blanco. Los interruptores (`LOCAL_DELEGATE_WEB`,
+`LOCAL_DELEGATE_FEEDBACK`…) siguen leyendo la vacía como apagado.
+
 ## Endpoint
 
 | Variable | Default | Descripción |
@@ -181,11 +186,11 @@ En modo `stdio`, las mismas variables controlan únicamente la web embebida here
 | Variable | Default | Descripción |
 |---|---|---|
 | `LOCAL_DELEGATE_WEB` | `1` | `0` desactiva la web embebida del modo `stdio` |
-| `LOCAL_DELEGATE_WEB_HOST` | `127.0.0.1` | Host de web/daemon |
+| `LOCAL_DELEGATE_WEB_HOST` | `127.0.0.1` | Host de web/daemon. Vacía cuenta como no puesta (loopback), no como «todas las interfaces» |
 | `LOCAL_DELEGATE_WEB_PORT` | `9393` | Puerto único de web/daemon |
 | `LOCAL_DELEGATE_WEB_ALLOWED_HOSTS` | *(vacío)* | Nombres extra que el puerto admite en la cabecera `Host`, separados por comas. Por defecto solo `127.0.0.1`, `localhost`, `::1` y el propio `WEB_HOST`: un `Host` distinto recibe **421** (defensa contra el DNS rebinding). Añade aquí el nombre con el que llega un proxy delante (`tailscale serve`); `*` desactiva la comprobación. Ver [Daemon](Daemon.md#el-host-de-cada-petición) |
 | `LOCAL_DELEGATE_WEB_FONTS` | `1` | Tipografía de marca desde Google Fonts. `0` la desactiva y deja la página con **cero peticiones a terceros** (cae al stack de fuentes del sistema) |
-| `LOCAL_DELEGATE_WEB_TOKEN` | *(vacío)* | Token que exige **todo** el puerto del daemon: endpoint MCP, dashboard y `/api/*`. Vacío = sin autenticación (el comportamiento de siempre). Ponlo si el puerto está detrás de un proxy o publicado. En macOS, si falta, se lee del Llavero (servicio `local-delegate-web-token`). Ver [Daemon](Daemon.md#autenticación-del-puerto) |
+| `LOCAL_DELEGATE_WEB_TOKEN` | *(vacío)* | Token que exige **todo** el puerto del daemon: endpoint MCP, dashboard y `/api/*`. Vacío = sin autenticación (el comportamiento de siempre). Ponlo si el puerto está detrás de un proxy o publicado. Lo exige también la web que levanta un proceso `stdio` cuando el daemon no corre. En macOS, si falta, se lee del Llavero (servicio `local-delegate-web-token`). Ver [Daemon](Daemon.md#autenticación-del-puerto) |
 | `LOCAL_DELEGATE_WEB_SESSION_DAYS` | `365` | Cuánto dura la sesión del navegador tras entrar una vez con el token, renovándose en cada visita. Solo afecta al navegador: los clientes MCP y el CLI mandan el token en cada llamada. `0` desactiva la sesión y vuelve a pedir credenciales en cada petición. Ver [Daemon](Daemon.md#la-sesión-del-navegador) |
 
 > Chart.js se sirve desde el propio paquete (`/vendor/chart.umd.min.js`), no desde un CDN: el
