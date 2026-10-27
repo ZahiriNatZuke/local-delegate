@@ -15,6 +15,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   tokens comunes con los que cortaba sus notas en todas las delegaciones troceadas. Si aun así
   queda un parcial cortado, el aviso dice qué trozo y sus líneas, y en el log el paso
   reemplazado lleva `"retried": true` (#455).
+- **El panel ya no confunde trozos con llamadas al backend en una delegación troceada.** «En
+  curso» mostraba «Trozo 3/3» y la actividad, al terminar, «4×»: eran 3 trozos y 1 combinación.
+  El log guarda ahora también `pieces` (los trozos) junto a `chunks` (que sigue contando las
+  llamadas, por compatibilidad), y la actividad pinta `3 +1` con el título «3 trozos · 4 llamadas
+  al backend»; el diálogo de detalle de la fila muestra las dos cifras. Los eventos viejos, sin
+  `pieces`, se ven como antes. «En curso» dice «Combinando 3 trozos…» durante la combinación y
+  «Reintentando trozo n/total» cuando un trozo cortado se vuelve a partir. (#454)
 
 ## [0.42.0] - 2026-10-27
 
