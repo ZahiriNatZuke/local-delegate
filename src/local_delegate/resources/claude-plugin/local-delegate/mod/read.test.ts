@@ -583,6 +583,36 @@ test('tool_error_lets_the_read_through', async () => {
   }
 })
 
+test('subagent_large_file_gets_locate_then_range_note', async () => {
+  // Issue #443: inside a subagent a large file read whole, code included, still goes through, and
+  // the note says to locate the lines with a `local_*` tool and read only that range.
+  const notes = (out: any) => (out.context ?? []).filter((line: string) => line.startsWith('read.'))
+  const sub = makeEnv({ dialog: true, answer: 'read.ask.summarize', classify: byInput, files: { [CODE]: HUNDRED_LINES } })
+  const subOut = await call(sub, { tool: 'Read', file_path: CODE, agentId: 'agent-1' })
+  expect(sub.nexts).toHaveLength(1)
+  expect(subOut.result.file.content).toBe('REAL')
+  expect(sub.asks).toHaveLength(0)
+  expect(sub.mcpCalls).toHaveLength(0)
+  expect(notes(subOut)).toEqual([`read.warn.subagent kb=64 path=${CODE}`])
+  expect(decisions(sub)).toEqual(['not_prose'])
+  // A range is already the pattern: no note.
+  const rangeOut = await call(sub, { tool: 'Read', file_path: CODE, offset: 1, limit: 40, agentId: 'agent-1' })
+  expect(notes(rangeOut)).toEqual([])
+  // The main thread keeps its behavior: the same whole read of code passes with no note.
+  for (const dialog of [false, true]) {
+    const main = makeEnv({ dialog, classify: byInput, files: { [CODE]: HUNDRED_LINES } })
+    const mainOut = await call(main, { tool: 'Read', file_path: CODE })
+    expect(mainOut.result.file.content).toBe('REAL')
+    expect(notes(mainOut)).toEqual([])
+  }
+  // An unclassifiable read in a subagent: the subagent note instead of «if a summary is enough».
+  const warn = makeEnv({ classify: () => readCls({ scope: 'unclassifiable', via: 'shell_grep', range: null }) })
+  const warnOut = await call(warn, { tool: 'Bash', command: 'grep -n foo docs/big.md | sort', agentId: 'agent-1' })
+  expect(warnOut.result.stdout).toBe('REAL')
+  expect(notes(warnOut)).toEqual([`read.warn.subagent kb=64 path=${BIG}`])
+  expect(decisions(warn)).toEqual(['warned'])
+})
+
 test('large_code_passes_without_summary', async () => {
   // A subagent about to program needs the literal code: no summary, with or without a dialog.
   for (const dialog of [false, true]) {

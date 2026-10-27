@@ -295,7 +295,10 @@ def main() -> None:
         )
         return
 
-    if ext in CODE_EXTENSIONS:
+    # Dentro de un subagente (issue #443) el codigo grande tambien recibe aviso: localizar con una
+    # tool local_* y leer solo el rango. En el hilo principal sigue pasando en silencio.
+    subagent = bool(str(payload.get("agent_id") or "").strip())
+    if ext in CODE_EXTENSIONS and not subagent:
         record(
             "PreToolUse", suggested=False, category="read", ext=ext, reason="code", **base_fields
         )
@@ -351,6 +354,17 @@ def main() -> None:
                 **common,
             )
             return
+
+    if subagent:
+        # Sin la excepcion «leelo si necesitas lineas exactas»: un subagente siempre las necesita
+        # (para citar o editar), y esa frase le daba permiso para leer el archivo entero.
+        emit(
+            "PreToolUse",
+            hook_text("read.subagent", size_kb=f"{size_kb:.0f}", path=file_path),
+            subagent=True,
+            **common,
+        )
+        return
 
     strength = hook_text(f"read.strength.{band}")
     target = hook_text("read.target.data" if ext in DATA_EXTENSIONS else "read.target.any")

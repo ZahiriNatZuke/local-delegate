@@ -74,6 +74,9 @@ OPENCODE_SCHEMA = "https://opencode.ai/config.json"
 _HOOK_EVENTS: tuple[tuple[str, str, str | None], ...] = (
     ("suggest_delegate_prompt.py", "UserPromptSubmit", None),
     ("record_call.py", "PreToolUse", "mcp__local-delegate__.*"),
+    # Issue #443: las tools `local_*` son diferidas y un subagente no las carga sin motivo; este
+    # hook le recuerda, al arrancar, que las cargue y que localice antes de leer. Solo aconseja.
+    ("subagent_start.py", "SubagentStart", None),
 )
 _READ_HOOK = ("suggest_delegate_read.py", "PreToolUse", "Read")
 
@@ -1137,6 +1140,7 @@ _SCRIPT_NAMES = (
     "suggest_delegate_read.py",
     "suggest_delegate_shell.py",
     "record_call.py",
+    "subagent_start.py",
 )
 
 

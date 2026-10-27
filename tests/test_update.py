@@ -1133,3 +1133,40 @@ def test_the_repairs_do_not_plan_the_migration_twice(monkeypatch, tmp_path):
     assert code == 0, text
     assert "[dry-run] [settings]" in text, "la prueba necesita una reparación de settings.json"
     assert text.count("[dry-run] [migrate]") == 1, text
+
+
+# --- Issue #443: el bloque con las reglas de subagentes llega a quien ya tenía el de la 0.41.1 ----
+
+
+def _without_subagent_rules(block: str) -> str:
+    """El bloque de la 0.41.1: el empaquetado sin el párrafo de subagentes (es o en)."""
+    for heading, tail in (
+        ("**Subagentes:**", "Detalle completo"),
+        ("**Subagents:**", "Full details"),
+    ):
+        if heading in block:
+            start, end = block.index(heading), block.index(tail)
+            return block[:start] + block[end:]
+    raise AssertionError("el bloque empaquetado no trae el párrafo de subagentes")
+
+
+def test_update_rewrites_an_old_block_with_the_subagent_rules(tmp_path):
+    home = make_home(tmp_path, complete=True)
+    files = [p for p in live_memory_files(home) if p.is_file()]
+    assert len(files) >= 2, "la prueba necesita CLAUDE.md y un AGENTS.md"
+    for path in files:
+        text = path.read_text(encoding="utf-8")
+        inner = install.managed_block(text, install.MD_BEGIN, install.MD_END)
+        assert inner is not None, path
+        path.write_text(text.replace(inner, _without_subagent_rules(inner)), encoding="utf-8")
+        assert install.memory_block_is_current(path.read_text(encoding="utf-8")) is False, path
+
+    by_id = {c.id: r for c, r in checks.run_all(_ctx(home))}
+    assert by_id["scaffold.memory"].status == checks.WARN, by_id["scaffold.memory"].detail
+    _update_once(home)
+
+    for path in files:
+        text = path.read_text(encoding="utf-8")
+        assert install.memory_block_is_current(text) is True, path
+        assert "mcp__local-delegate__local_extract" in text, path
+        assert "offset`/`limit`" in text, path

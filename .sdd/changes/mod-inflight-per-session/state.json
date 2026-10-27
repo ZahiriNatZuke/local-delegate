@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "slug": "mod-inflight-per-session",
+  "title": "La banda del mod solo dice DELEGANDO en la sesión que delega (issue #442)",
+  "mode": "lite",
+  "status": "verifying",
+  "createdAt": "2026-10-27T14:40:00.000Z",
+  "updatedAt": "2026-10-27T15:23:33.000Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-10-27T14:55:00.000Z",
+      "evidence": "spec.md lite: causa localizada en server._inflight_start, /api/inflight y mod/status.js statusSnapshot; identificador = clave de un solo sentido ya usada por /api/stats?session=; respaldo: sin clave no es de nadie",
+      "actor": "agent"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-10-27T14:55:00.000Z",
+      "evidence": "modo lite: el plan son los cuatro puntos de la sección Decisión de spec.md",
+      "actor": "agent"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-10-27T15:23:33.000Z",
+      "evidence": "pytest completo: 5218 passed, 28 skipped (tras renombrar dos tests que marcó el detector de nombres en español); claude plugin test: 127 pass 0 fail; ruff check y format limpios. Control positivo: con el código de main fallan 4/5 tests Python y 8 tests JS por las aserciones de estado",
+      "actor": "agent"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "implementing",
+      "at": "2026-10-27T14:40:00.000Z",
+      "reason": "issue #442 encargado por la sesión principal (modo lite)"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-10-27T15:23:33.000Z",
+      "reason": "tests Python y JS en verde con control positivo; PR abierto"
+    }
+  ]
+}

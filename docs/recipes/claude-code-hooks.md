@@ -46,7 +46,12 @@ registradas, este hook callaba por tamaño 24 veces y **las 24 eran documentaci�
 entre 8 y 16 KB. La franja donde vive la documentación de un repo quedaba muda, y lo que parecía
 desobediencia era un aviso que nunca llegaba.
 
-Aclara que una lectura directa sigue siendo correcta para líneas exactas usadas al razonar o editar.
+En el hilo principal aclara que una lectura directa sigue siendo correcta para líneas exactas usadas
+al razonar o editar. **Dentro de un subagente** (la entrada trae `agent_id`) esa excepción no va,
+porque un subagente siempre necesita líneas exactas y la leía como permiso para leer el archivo
+entero (issue #443): el aviso pide localizar las líneas con `local_extract` o `local_explain_code`
+(`path`) y leer solo ese rango con `offset`/`limit`, y vale también para el **código** grande, que
+en el hilo principal pasa en silencio.
 
 #### El bloqueo (`LD_HOOK_READ_BLOCK`, apagado por defecto)
 
@@ -94,6 +99,14 @@ delegación con el bloqueo.
 
 Registra **todos** los comandos, se bloqueen o no. Sin denominador no se sabe cuánta lectura se va
 por este camino, que es justo la pregunta que las mediciones anteriores no pudieron responder.
+
+### `subagent_start.py` — `SubagentStart`
+
+Al arrancar cada subagente le añade al principio de su conversación un recordatorio corto: las
+tools `local_*` son diferidas, se cargan con `ToolSearch("select:mcp__local-delegate__…")`, y ante
+un archivo grande se localiza con ellas y se lee solo el rango. No bloquea (el evento no puede), no
+escribe telemetría y sale con 0 también con la entrada rota. Se instala siempre, como el de
+`UserPromptSubmit` (issue #443).
 
 ### `record_call.py` — `PreToolUse`, matcher `mcp__local-delegate__.*`
 

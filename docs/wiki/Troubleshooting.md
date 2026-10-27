@@ -30,6 +30,10 @@ Se corrigió pasándole el host configurado, así que con `LOCAL_DELEGATE_WEB_HO
 protección no se activa y la LAN funciona. Si lo ves igualmente, comprueba que el cliente manda el
 header `Host` que esperas y que el daemon corre una versión **0.13.0 o posterior**.
 
+Desde `panel-host-check` la comprobación cubre **todo el puerto** (panel y `/api/*` incluidos), y el
+cuerpo dice `Invalid Host header`. Si llegas por un proxy (`tailscale serve`) o por un nombre que no
+es loopback, añádelo a `LOCAL_DELEGATE_WEB_ALLOWED_HOSTS`. Ver [Daemon](Daemon.md#el-host-de-cada-petición).
+
 ## El dashboard sigue enseñando los gráficos viejos tras actualizar
 
 No es un fallo: el endpoint sirve Chart.js con `Cache-Control: public, max-age=86400`, así que tras

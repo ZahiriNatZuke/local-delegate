@@ -843,9 +843,23 @@ function readAsResult(e, content) {
   return { result: { stdout: content, stderr: '', interrupted: false } }
 }
 
+/** Whether the call comes from a subagent: Claude Code puts its `agentId` in the event. */
+function readInSubagent(e) {
+  return Boolean(readText(e.agentId))
+}
+
+/**
+ * The note for a large file read in a subagent (issue #443): locate the lines with a `local_*` tool
+ * and read only that range. No «read it if you need exact lines»: a subagent always needs them
+ * (to quote `file:line` or to edit), so that exception was a standing permission to read it whole.
+ */
+function readSubagentNote(common, classified) {
+  return common.t('read.warn.subagent', { path: classified.path, kb: Math.round(classified.bytes / 1024) })
+}
+
 /** Whether a person can pick here: a session with a dialog, and not inside a subagent. */
 function readCanAsk(common, e) {
-  if (readText(e.agentId)) {
+  if (readInSubagent(e)) {
     return false
   }
   try {
@@ -983,7 +997,9 @@ async function readOnToolCall($, common, e, next) {
     }
     await readRecord($, common, classified, 'warned', sessionId)
     const kb = Math.round(classified.bytes / 1024)
-    const note = common.t('read.warn.large', { path: classified.path, kb })
+    const note = readInSubagent(e)
+      ? readSubagentNote(common, classified)
+      : common.t('read.warn.large', { path: classified.path, kb })
     return { ...ran, context: [...(ran.context || []), note] }
   }
   if (!big) {
@@ -991,8 +1007,14 @@ async function readOnToolCall($, common, e, next) {
   }
   if (!prose) {
     // Code, config, data: the literal text is what the reader needs (a subagent about to program),
-    // so the read always goes through, by ranges too, and is only logged.
-    return readPass($, common, e, next, ctx, 'not_prose')
+    // so the read always goes through, by ranges too, and is logged. A subagent that read it whole
+    // also gets the note to locate first and read the range next time (issue #443); a range is
+    // already that, and the main thread keeps its silence.
+    const ran = await readPass($, common, e, next, ctx, 'not_prose')
+    if (!readInSubagent(e) || classified.scope !== 'whole' || !ran || ran.deny !== undefined) {
+      return ran
+    }
+    return { ...ran, context: [...(ran.context || []), readSubagentNote(common, classified)] }
   }
   if (classified.scope === 'whole') {
     return readSteer($, common, e, next, ctx)

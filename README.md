@@ -217,6 +217,7 @@ cámbialos por los de tu backend.
 | `LOCAL_DELEGATE_ALLOWED_DIRS` | *(vacío = sin restricción)* | Raíces permitidas para `path`, separadas por `;` |
 | `LOCAL_DELEGATE_WEB` | `1` | Web embebida del modo `stdio` (`0` para desactivarla) |
 | `LOCAL_DELEGATE_WEB_HOST` / `_PORT` | `127.0.0.1` / `9393` | Host/puerto de la web o del daemon |
+| `LOCAL_DELEGATE_WEB_ALLOWED_HOSTS` | *(vacío)* | Nombres extra que el puerto admite en la cabecera `Host`, separados por comas (p. ej. el de `tailscale serve`). Por defecto solo loopback y `WEB_HOST`, contra el DNS rebinding; `*` desactiva la comprobación |
 | `LOCAL_DELEGATE_WEB_FONTS` | `1` | Tipografía de marca desde Google Fonts (`0` = cero peticiones a terceros) |
 | `LOCAL_DELEGATE_AUTOSTART` | `0` | Auto-arranque de llama-swap (opt-in) |
 | `LLAMASWAP_EXE` / `LLAMASWAP_CONFIG` / `LLAMASWAP_LISTEN` | — | Solo si `AUTOSTART=1`; `LLAMASWAP_CONFIG` además activa el turno y la afinidad del daemon (con el extra `[llamaswap]`) |
@@ -324,7 +325,8 @@ daemon y los hooks lo usen también, y escriben la skill, el bloque de memoria y
 los subagentes en ese idioma. Precedencia y cómo volver a seguir al sistema:
 [Idioma](./docs/wiki/Language.md).
 
-Actúan solos dos hooks: `UserPromptSubmit` (intenciones mecánicas) y `record_call.py`
+Actúan solos tres hooks: `UserPromptSubmit` (intenciones mecánicas), `SubagentStart` (le recuerda
+a cada subagente cargar las tools `local_*` y leer por rangos) y `record_call.py`
 (`PreToolUse` sobre las tools de local-delegate), que no avisa ni bloquea: anota qué agente pidió
 cada delegación y con qué esfuerzo, para atribuir el coste equivalente a su modelo. Los dos de
 lectura —`PreToolUse`/`Read` y `PreToolUse`/`Bash|PowerShell`— quedan apagados salvo

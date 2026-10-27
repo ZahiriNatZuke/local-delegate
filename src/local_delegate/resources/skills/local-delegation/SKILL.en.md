@@ -76,6 +76,34 @@ tasks over the whole (count, pick the maximum, a single global summary) use
   failure → `local_status`.
 - A first mechanical pass before your fine review.
 
+## Subagents
+
+A subagent does not load this skill nor the `local_*` tools by itself (they are deferred): if
+its prompt does not tell it to, it reads files whole with `Read`.
+
+**If you orchestrate**, step 1 of each subagent's prompt is a concrete delegation, not an
+«if it helps»:
+
+1. Load the tools: `ToolSearch("select:mcp__local-delegate__local_extract,mcp__local-delegate__local_explain_code")`.
+2. One call with tool, `path` and question.
+
+**If you are the subagent**, for a large file locate and read the range: ask `local_extract`
+or `local_explain_code` (with `path`) for the lines you need and read only that range with
+`Read(offset=…, limit=…)`. Quoting `file:line` or editing justifies reading the range, not the
+whole file.
+
+**Review** example (step 1 of a reviewer's prompt):
+
+> 1. Load the tools with `ToolSearch("select:mcp__local-delegate__local_extract,mcp__local-delegate__local_explain_code")`.
+> 2. `local_extract(path="src/api/orders.py", fields=["functions_that_validate_input_with_lines"])`.
+> 3. Read only those ranges with `offset`/`limit` and quote `file:line`.
+
+**Implementation** example (step 1 of the prompt of whoever programs):
+
+> 1. Load the tools as above.
+> 2. `local_explain_code(path="src/billing/invoice.py", question="Which lines compute the total and where are discounts applied?")`.
+> 3. Read only that part with `offset`/`limit` and edit it.
+
 ## When NOT to delegate
 - Design/architecture, trade-off decisions, broad refactors.
 - Multi-source research or chained reasoning.

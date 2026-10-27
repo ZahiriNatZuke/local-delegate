@@ -112,6 +112,43 @@ Para que `llamaswap residency` vea la recarga, llama-swap tiene que correr con `
 lo arranca el daemon, pon `LLAMASWAP_WATCH_CONFIG=1` en su lanzador (como en el ejemplo de
 [Arranque](#arranque)).
 
+## El `Host` de cada petición
+
+Sin token, el puerto está abierto a todo lo que corre en la máquina, **y también a cualquier web
+que visites**: con *DNS rebinding*, una página hace que su propio nombre resuelva a `127.0.0.1` y
+el navegador la trata como si fuera del mismo origen que el panel. Así leía `/api/events`,
+`/api/status`, `/api/system` y `/api/hooks`, y usaba `POST /api/hook/classify` para saber si existe
+cualquier fichero y cuánto pesa.
+
+Lo que esa página no puede cambiar es la cabecera `Host`: lleva su nombre, no `127.0.0.1`. Por eso
+**todo el puerto** —el panel, `/api/*`, `/daemon/status` y `/mcp`, y también la web del modo
+`stdio`— responde **421** a un `Host` que no sea:
+
+- `127.0.0.1`, `localhost` o `[::1]`, con cualquier puerto;
+- el propio `LOCAL_DELEGATE_WEB_HOST`, si es una interfaz concreta;
+- uno de `LOCAL_DELEGATE_WEB_ALLOWED_HOSTS` (separados por comas).
+
+Y responde **403** a una petición con `Origin` de otra web (`http(s)://` de otro host, o `null`):
+una página ajena puede mandar un POST directo a `127.0.0.1` sin rebinding, y su `Host` sería válido.
+
+**Si el puerto está detrás de un proxy**, añade el nombre con el que llega. Con `tailscale serve`
+es el de la tailnet, y es lo que hace que el enlace al panel de la máquina del backend
+(`panel_url`) funcione desde la otra:
+
+```powershell
+$env:LOCAL_DELEGATE_WEB_ALLOWED_HOSTS = 'own-pc.tailXXXX.ts.net'
+```
+
+La misma lista vale para `/mcp`, que antes tenía su propia comprobación (la del SDK) solo para
+loopback: una variable abre los dos sitios a la vez.
+
+Con `LOCAL_DELEGATE_WEB_HOST=0.0.0.0` y la variable vacía no se comprueba nada —no hay forma de
+saber por qué IP llegará la LAN—; con nombres en la variable, se aplica la lista. `*` la desactiva
+del todo.
+
+Esto **no es control de acceso**: un cliente que no sea un navegador manda el `Host` que quiera.
+Para eso está el token, abajo.
+
 ## Autenticación del puerto
 
 Por defecto el puerto **no pide nada**: el daemon escucha en loopback y exigir credenciales

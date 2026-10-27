@@ -607,10 +607,25 @@ HOOK_TEXTS: dict[str, dict[str, str]] = {
             "(resumen, campos, traduccion o explicacion), usa {target} para que no entre al "
             "contexto. Leelo directamente si necesitas lineas exactas para razonar o editar."
         ),
+        "read.subagent": (
+            "Subagente: este archivo pesa {size_kb} KB. Localiza antes de leer: pide a "
+            '`local_extract` o `local_explain_code` con `path="{path}"` las lineas que necesitas '
+            "y lee solo ese rango con `offset` y `limit`. Citar o editar lineas exactas justifica "
+            "leer el rango, no el archivo entero. Si aun no cargaste esas tools: "
+            '`ToolSearch("select:mcp__local-delegate__local_extract,'
+            'mcp__local-delegate__local_explain_code")`.'
+        ),
         "read.strength.strong": "Recomendacion fuerte",
         "read.strength.suggest": "Sugerencia",
         "read.target.any": "una tool local_* con path",
         "read.target.data": "local_extract con path, si lo que buscas son campos concretos",
+        "subagent.start": (
+            "Si tienes las tools `local_*` del MCP `local-delegate`, son diferidas: cargalas antes "
+            'de leer archivos grandes con `ToolSearch("select:mcp__local-delegate__local_extract,'
+            'mcp__local-delegate__local_explain_code,mcp__local-delegate__local_summarize")`. '
+            "Ante un archivo grande, pide a `local_extract` o `local_explain_code` (con `path`) las "
+            "lineas que necesitas y lee solo ese rango con `offset` y `limit`."
+        ),
         "shell.block": (
             "Este comando vuelca {size_kb} KB de prosa al contexto. Pasalo por una tool local "
             'con `path="{path}"`: `local_summarize` para el contenido, `local_extract` para '
@@ -638,10 +653,25 @@ HOOK_TEXTS: dict[str, dict[str, str]] = {
             "(summary, fields, translation or explanation), use {target} so that it does not "
             "enter the context. Read it directly if you need exact lines to reason or edit."
         ),
+        "read.subagent": (
+            "Subagent: this file is {size_kb} KB. Locate before reading: ask `local_extract` or "
+            '`local_explain_code` with `path="{path}"` for the lines you need and read only that '
+            "range with `offset` and `limit`. Quoting or editing exact lines justifies reading "
+            "the range, not the whole file. If you have not loaded those tools yet: "
+            '`ToolSearch("select:mcp__local-delegate__local_extract,'
+            'mcp__local-delegate__local_explain_code")`.'
+        ),
         "read.strength.strong": "Strong recommendation",
         "read.strength.suggest": "Suggestion",
         "read.target.any": "a local_* tool with path",
         "read.target.data": "local_extract with path, if what you need are specific fields",
+        "subagent.start": (
+            "If you have the `local_*` tools of the MCP `local-delegate`, they are deferred: load "
+            'them before reading large files with `ToolSearch("select:mcp__local-delegate__'
+            'local_extract,mcp__local-delegate__local_explain_code,mcp__local-delegate__local_summarize")`. '
+            "For a large file, ask `local_extract` or `local_explain_code` (with `path`) for the "
+            "lines you need and read only that range with `offset` and `limit`."
+        ),
         "shell.block": (
             "This command dumps {size_kb} KB of prose into the context. Pass it to a local tool "
             'with `path="{path}"`: `local_summarize` for the content, `local_extract` for '
