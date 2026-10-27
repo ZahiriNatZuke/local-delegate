@@ -24,7 +24,7 @@ from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
 
 from . import autostart, cancellation, config, i18n, server, token_source
-from .web import auth, metrics
+from .web import auth, host_guard, metrics
 
 MCP_PATH = "/mcp"
 DAEMON_STATUS_PATH = "/api/daemon"
@@ -188,10 +188,13 @@ def query_backend(host: str, port: int, timeout: float = 1.0) -> dict | None:
     return data if isinstance(data, dict) and "available" in data else None
 
 
-def build_app(host: str | None = None, port: int | None = None) -> Starlette | auth.PortToken:
+def build_app(
+    host: str | None = None, port: int | None = None
+) -> Starlette | auth.PortToken | host_guard.HostGuard:
     """Construye el ASGI combinado preservando el lifespan del server MCP.
 
-    Devuelve la app envuelta cuando hay token configurado. El tipo de retorno lo dice en vez de
+    Devuelve la app envuelta por la guarda del `Host` (salvo escucha en todas las interfaces) y por
+    el token cuando hay uno configurado. El tipo de retorno lo dice en vez de
     esconderlo tras un alias: quien lo lea tiene que saber que el objeto servido no siempre es la
     Starlette del SDK.
     """
@@ -208,7 +211,15 @@ def build_app(host: str | None = None, port: int | None = None) -> Starlette | a
     # `LOCAL_DELEGATE_WEB_HOST=0.0.0.0` —publicar en la red local, que el proyecto permite— no se
     # activa y el daemon sigue respondiendo a quien llegue por la IP de la LAN. Sin esto, ese
     # segundo escenario se rompía en silencio al migrar.
-    mcp_app = server.mcp.streamable_http_app(streamable_http_path=MCP_PATH, host=host)
+    #
+    # Desde `panel-host-check` los ajustes salen de `host_guard`, la misma lista que protege el
+    # resto del puerto: así `LOCAL_DELEGATE_WEB_ALLOWED_HOSTS` abre `/mcp` y el panel a la vez, y
+    # una interfaz concreta en `WEB_HOST` queda protegida también en `/mcp` (antes solo loopback).
+    mcp_app = server.mcp.streamable_http_app(
+        streamable_http_path=MCP_PATH,
+        host=host,
+        transport_security=host_guard.transport_security(host),
+    )
 
     async def daemon_status(_request: Request) -> JSONResponse:
         return JSONResponse(_daemon_payload(host, port))
@@ -223,7 +234,13 @@ def build_app(host: str | None = None, port: int | None = None) -> Starlette | a
     # El token se exige envolviendo la raíz, o sea DESPUÉS de montar el dashboard: así una ruta
     # nueva queda protegida por existir, no por acordarse de protegerla. Sin token configurado
     # `protect` devuelve la misma app y aquí no cambia nada.
-    return auth.protect(mcp_app, token_source.daemon_token(), config.WEB_SESSION_SECONDS)
+    #
+    # La guarda del `Host` va por FUERA del token: un `Host` ajeno es un navegador engañado por DNS
+    # rebinding, no un cliente sin credencial, y recibe 421 antes de llegar a pedirle nada. Cubre
+    # también `/daemon/status` y el panel montado en `/`, que la protección del SDK no alcanza.
+    return host_guard.protect(
+        auth.protect(mcp_app, token_source.daemon_token(), config.WEB_SESSION_SECONDS), host
+    )
 
 
 def registered_daemon() -> dict | None:
