@@ -21,6 +21,23 @@
         ]
       }
     ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${user_config.ld_bin}",
+            "args": [
+              "-I",
+              "-m",
+              "local_delegate.hook",
+              "subagent-start"
+            ],
+            "timeout": 30
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "mcp__local-delegate__.*",

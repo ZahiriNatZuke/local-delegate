@@ -31,6 +31,7 @@ HOOK_NAMES = {
     ("PreToolUse", "Read"): "read",
     ("PreToolUse", "mcp__.+__(read_[a-z_]*|get_file_contents)"): "mcp-read",
     ("PreToolUse", "Bash|PowerShell"): "shell",
+    ("SubagentStart", None): "subagent-start",
 }
 
 

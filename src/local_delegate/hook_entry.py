@@ -54,6 +54,7 @@ HOOKS: dict[str, tuple[str, bool]] = {
     "read": ("suggest_delegate_read.py", True),
     "mcp-read": ("suggest_delegate_read.py", True),
     "shell": ("suggest_delegate_shell.py", True),
+    "subagent-start": ("subagent_start.py", False),
 }
 
 #: Subcomandos del mod de lectura (no son hooks de `hooks.json`). Salen con 0 pase lo que pase.

@@ -342,6 +342,13 @@ def _cases(tmp_path: Path) -> list[tuple[str, str, bytes, tuple[str, ...], bool]
             ("--enabled",),
             True,
         ),
+        (
+            "subagent-start",
+            "subagent_start.py",
+            _payload(hook_event_name="SubagentStart", agent_id="ag-2", agent_type="Explore"),
+            (),
+            False,
+        ),
     ]
 
 
@@ -382,8 +389,8 @@ def test_plugin_and_settings_fingerprints_match(tmp_path):
     for name, script, stdin, args, gated in _cases(tmp_path):
         by_entry, by_script = _run_both(tmp_path, name, script, stdin, args, gated)
         versions = {e.get("version") for e in by_entry["telemetry"]}
-        if name == "record-call":
-            assert versions == set(), "record_call no escribe telemetría"
+        if name in ("record-call", "subagent-start"):
+            assert versions == set(), f"{name} no escribe telemetría"
             continue
         assert versions == {common.version_de(str(HOOKS / script))}, name
         assert versions == {e.get("version") for e in by_script["telemetry"]}, name
@@ -449,8 +456,15 @@ def test_failure_log_is_not_written_on_success(tmp_path):
 
 
 def test_hook_names_are_the_plugin_contract():
-    """Los cinco nombres de la decisión 2 del plan; `classify` llega en F4."""
-    assert set(hook_entry.HOOKS) == {"prompt", "record-call", "read", "shell", "mcp-read"}
+    """Los cinco nombres de la decisión 2 del plan, y `subagent-start` (issue #443)."""
+    assert set(hook_entry.HOOKS) == {
+        "prompt",
+        "record-call",
+        "read",
+        "shell",
+        "mcp-read",
+        "subagent-start",
+    }
     for script, _gated in hook_entry.HOOKS.values():
         assert (HOOKS / script).is_file(), script
     # La huella del hook de lectura incluye el clasificador (F4-classifier, REQ-019).
