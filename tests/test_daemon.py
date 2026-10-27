@@ -9,6 +9,10 @@ from filelock import FileLock
 
 from local_delegate import cli, config, daemon, server
 
+# The port's Host guard (`web/host_guard.py`) refuses TestClient's default `testserver`: the
+# daemon's legitimate clients reach it by loopback.
+_LOCAL = "http://127.0.0.1:19393"
+
 
 class _FakeResponse:
     def __init__(self, payload):
@@ -237,7 +241,7 @@ def test_with_token_the_whole_port_asks_for_credential(monkeypatch):
     monkeypatch.setattr(config, "WEB_TOKEN", "the-port-token")
     app = daemon.build_app("127.0.0.1", 19393)
 
-    with TestClient(app) as client:
+    with TestClient(app, base_url=_LOCAL) as client:
         for path in (daemon.DAEMON_STATUS_PATH, "/", "/api/status"):
             assert client.get(path).status_code == 401, f"{path} quedó sin proteger"
 
@@ -250,14 +254,14 @@ def test_without_token_the_port_stays_open_as_always(monkeypatch):
     monkeypatch.setattr(config, "WEB_TOKEN", "")
     app = daemon.build_app("127.0.0.1", 19393)
 
-    with TestClient(app) as client:
+    with TestClient(app, base_url=_LOCAL) as client:
         assert client.get(daemon.DAEMON_STATUS_PATH).status_code == 200
 
 
 def test_combined_app_serves_daemon_status_dashboard_and_mcp_route():
     app = daemon.build_app("127.0.0.1", 19393)
 
-    with TestClient(app) as client:
+    with TestClient(app, base_url=_LOCAL) as client:
         status = client.get(daemon.DAEMON_STATUS_PATH)
         assert status.status_code == 200
         assert status.json()["service"] == "local-delegate"

@@ -1327,7 +1327,12 @@ def run_in_thread(host: str | None = None, port: int | None = None):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             if s.connect_ex((host, port)) == 0:
                 return None  # ya hay algo escuchando: no montamos una segunda web
-        cfg = uvicorn.Config(app, host=host, port=port, log_level="warning", access_log=False)
+        # La misma guarda del `Host` que el daemon (`web/host_guard.py`): la web del modo stdio
+        # sirve el mismo panel en el mismo puerto y el DNS rebinding la alcanza igual.
+        from . import host_guard
+
+        guarded = host_guard.protect(app, host)
+        cfg = uvicorn.Config(guarded, host=host, port=port, log_level="warning", access_log=False)
         server = uvicorn.Server(cfg)
         server.install_signal_handlers = lambda: None  # type: ignore[method-assign]
         t = threading.Thread(target=server.run, daemon=True, name="metrics-web")
