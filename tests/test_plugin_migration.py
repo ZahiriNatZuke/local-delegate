@@ -179,13 +179,13 @@ def test_migration_refuses_when_switch_cannot_be_written(tmp_path, monkeypatch):
 def test_migration_removes_every_settings_hook_we_wrote(tmp_path):
     home = _seed(tmp_path, read_hook=True, legacy=True)
     hooks_dir = home / ".claude" / "hooks" / install.HOOKS_SUBDIR
-    assert len(_ours_left(home)) == 6  # guard: there was something to remove
+    assert len(_ours_left(home)) == 7  # guard: there was something to remove
     assert hooks_dir.is_dir()
 
     result = _apply(home, _fake(home))
 
     assert result.ok, result.messages
-    assert result.removed == 6
+    assert result.removed == 7
     ours_left = _ours_left(home)
     assert ours_left == []
     assert not hooks_dir.exists()
@@ -212,7 +212,7 @@ def test_migration_is_idempotent(tmp_path):
     home = _seed(tmp_path, read_hook=True, foreign=True)
     fake = _fake(home)
     first = _apply(home, fake)
-    assert first.ok and first.removed == 5
+    assert first.ok and first.removed == 6
     state_after_first = install_state.load(home)
     settings_after_first = json.loads(_settings_path(home).read_text(encoding="utf-8-sig"))
     switch_after_first = _switch_path().read_bytes()

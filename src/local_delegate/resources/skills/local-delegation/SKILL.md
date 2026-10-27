@@ -76,6 +76,34 @@ el conjunto (contar, elegir el máximo, un único resumen global) usa `local_sum
   fallo → `local_status`.
 - Primera pasada mecánica antes de tu revisión fina.
 
+## Subagentes
+
+Un subagente no carga esta skill ni las tools `local_*` por su cuenta (son diferidas): si su
+prompt no se lo manda, lee los archivos enteros con `Read`.
+
+**Si orquestas**, el paso 1 del prompt de cada subagente es una delegación concreta, no un
+«si te conviene»:
+
+1. Cargar las tools: `ToolSearch("select:mcp__local-delegate__local_extract,mcp__local-delegate__local_explain_code")`.
+2. Una llamada con tool, `path` y pregunta.
+
+**Si eres el subagente**, ante un archivo grande localiza y lee el rango: pide a
+`local_extract` o `local_explain_code` (con `path`) las líneas que necesitas y lee solo ese
+rango con `Read(offset=…, limit=…)`. Citar `archivo:línea` o editar justifica leer el rango,
+no el archivo entero.
+
+Ejemplo de **revisión** (paso 1 del prompt de un revisor):
+
+> 1. Carga las tools con `ToolSearch("select:mcp__local-delegate__local_extract,mcp__local-delegate__local_explain_code")`.
+> 2. `local_extract(path="src/api/orders.py", fields=["funciones_que_validan_entrada_con_lineas"])`.
+> 3. Lee solo esos rangos con `offset`/`limit` y cita `archivo:línea`.
+
+Ejemplo de **implementación** (paso 1 del prompt de quien programa):
+
+> 1. Carga las tools igual que arriba.
+> 2. `local_explain_code(path="src/billing/invoice.py", question="¿En qué líneas se calcula el total y dónde se aplican los descuentos?")`.
+> 3. Lee solo ese tramo con `offset`/`limit` y edítalo.
+
 ## Cuándo NO delegar
 - Diseño/arquitectura, decisiones de trade-offs, refactors amplios.
 - Research multi-fuente o razonamiento encadenado.

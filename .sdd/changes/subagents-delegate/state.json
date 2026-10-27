@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "slug": "subagents-delegate",
+  "title": "Los subagentes delegan en local_*: hook de Read, bloque de memoria, skill y SubagentStart (issue #443)",
+  "mode": "lite",
+  "status": "verification",
+  "createdAt": "2026-10-27T15:19:35.339174Z",
+  "updatedAt": "2026-10-27T15:19:35.339174Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-10-27T15:19:35.339174Z",
+      "evidence": "spec.md con R1-R6 sobre el issue #443; alcance acotado por el encargo de la sesion principal.",
+      "actor": "agent"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-10-27T15:19:35.339174Z",
+      "evidence": "Modo lite: el plan es la lista de requisitos de spec.md, una pieza por fichero.",
+      "actor": "agent"
+    }
+  }
+}

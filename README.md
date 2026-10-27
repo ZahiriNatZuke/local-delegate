@@ -324,7 +324,8 @@ daemon y los hooks lo usen también, y escriben la skill, el bloque de memoria y
 los subagentes en ese idioma. Precedencia y cómo volver a seguir al sistema:
 [Idioma](./docs/wiki/Language.md).
 
-Actúan solos dos hooks: `UserPromptSubmit` (intenciones mecánicas) y `record_call.py`
+Actúan solos tres hooks: `UserPromptSubmit` (intenciones mecánicas), `SubagentStart` (le recuerda
+a cada subagente cargar las tools `local_*` y leer por rangos) y `record_call.py`
 (`PreToolUse` sobre las tools de local-delegate), que no avisa ni bloquea: anota qué agente pidió
 cada delegación y con qué esfuerzo, para atribuir el coste equivalente a su modelo. Los dos de
 lectura —`PreToolUse`/`Read` y `PreToolUse`/`Bash|PowerShell`— quedan apagados salvo

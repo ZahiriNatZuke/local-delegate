@@ -7,7 +7,7 @@
   "install.agents.item": "{name} (+{n} tools)",
   "install.agents.item_with_catalog": "{name} (+{n} tools, catalog {action})",
   "install.agents.refresh_plan": "regenerates the outdated catalog ({names})",
-  "install.agents.rule": "Golden rule: if the step fits in one sentence with an explicit output format, delegate it; if it needs judgment, architecture or reasoning, do it yourself. Details in the `local-delegation` skill.",
+  "install.agents.rule": "Golden rule: if the step fits in one sentence with an explicit output format, delegate it; if it needs judgment, architecture or reasoning, do it yourself. For a large file, locate first with `local_extract` or `local_explain_code` (with `path`) and read only that range with `offset`/`limit`. Details in the `local-delegation` skill.",
   "install.agents.update_plan": "updates {n} subagent(s): {summary}",
   "install.agents.updated": "updated {n}: {names}",
   "install.completion.block_removed": "block removed",

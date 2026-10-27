@@ -190,3 +190,68 @@ def test_the_installed_hook_answers_in_the_preferred_language(
 
     prompt = _run(commands["UserPromptSubmit"], {"prompt": "resume este log"}, log_dir)
     assert prompt["additionalContext"].startswith(prompt_start), prompt
+
+
+# --- Issue #443: dentro de un subagente, localizar con local_* y leer el rango ----------------------
+
+
+def _run_raw(argv: list[str], hook_input: dict, log_dir: Path) -> bytes:
+    env = {**os.environ, "LOCAL_DELEGATE_LOG_DIR": str(log_dir)}
+    for name in ("LOCAL_DELEGATE_LANG", "LD_HOOK_READ_BLOCK", "LD_HOOK_TELEMETRY_LOG"):
+        env.pop(name, None)
+    return subprocess.run(
+        argv, input=json.dumps(hook_input).encode(), capture_output=True, env=env, timeout=60
+    ).stdout
+
+
+def _english_hooks(tmp_path) -> tuple[dict[str, list[str]], Path]:
+    commands = _installed(tmp_path / "home")
+    log_dir = tmp_path / "data"
+    log_dir.mkdir()
+    (log_dir / hook_common.LANGUAGE_PREFERENCE_FILE).write_text(
+        json.dumps({"lang": "en", "source": "system"}), encoding="utf-8"
+    )
+    return commands, log_dir
+
+
+@pytest.mark.parametrize("name", ["big.py", "notes.md"])
+def test_the_installed_read_hook_tells_a_subagent_to_read_only_the_range(tmp_path, name):
+    commands, log_dir = _english_hooks(tmp_path)
+    document = tmp_path / name
+    document.write_text("x" * 40_000, encoding="utf-8")
+    hook_input = {"tool_input": {"file_path": str(document)}, "agent_id": "agent-1"}
+
+    context = _run(commands["Read"], hook_input, log_dir)["additionalContext"]
+
+    assert context.startswith("Subagent: this file is 39 KB."), context
+    assert f'`local_extract` or `local_explain_code` with `path="{document}"`' in context
+    assert "read only that range with `offset` and `limit`" in context
+    assert "Read it directly" not in context, "la excepcion que daba permiso para leerlo entero"
+
+
+def test_the_main_thread_keeps_its_read_texts(tmp_path):
+    """Control: sin `agent_id`, el código grande sigue en silencio y la prosa con la sugerencia."""
+    commands, log_dir = _english_hooks(tmp_path)
+    code = tmp_path / "big.py"
+    code.write_text("x" * 40_000, encoding="utf-8")
+    assert _run_raw(commands["Read"], {"tool_input": {"file_path": str(code)}}, log_dir) == b""
+    prose = tmp_path / "notes.md"
+    prose.write_text("x" * 40_000, encoding="utf-8")
+    read = _run(commands["Read"], {"tool_input": {"file_path": str(prose)}}, log_dir)
+    assert read["additionalContext"].startswith("Suggestion: this file is 39 KB."), read
+
+
+def test_the_installed_subagent_start_hook_says_how_to_load_the_tools(tmp_path):
+    commands, log_dir = _english_hooks(tmp_path)
+    hook_input = {"hook_event_name": "SubagentStart", "agent_id": "a1", "agent_type": "Explore"}
+
+    out = _run(commands["SubagentStart"], hook_input, log_dir)
+
+    assert out["hookEventName"] == "SubagentStart"
+    assert 'ToolSearch("select:mcp__local-delegate__local_extract,' in out["additionalContext"]
+    assert "read only that range" in out["additionalContext"]
+    # Una entrada rota no rompe nada: sale sin texto.
+    broken = subprocess.run(
+        commands["SubagentStart"], input=b"not json", capture_output=True, timeout=60
+    )
+    assert broken.returncode == 0 and broken.stdout == b""

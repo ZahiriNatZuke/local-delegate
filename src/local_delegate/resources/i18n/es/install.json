@@ -7,7 +7,7 @@
   "install.agents.item": "{name} (+{n} tools)",
   "install.agents.item_with_catalog": "{name} (+{n} tools, catálogo {action})",
   "install.agents.refresh_plan": "regenera el catálogo desfasado ({names})",
-  "install.agents.rule": "Regla de oro: si el paso cabe en una frase con formato de salida explícito, delégalo; si necesita criterio, arquitectura o razonamiento, hazlo tú. Detalle en la skill `local-delegation`.",
+  "install.agents.rule": "Regla de oro: si el paso cabe en una frase con formato de salida explícito, delégalo; si necesita criterio, arquitectura o razonamiento, hazlo tú. Ante un archivo grande, localiza primero con `local_extract` o `local_explain_code` (con `path`) y lee solo ese rango con `offset`/`limit`. Detalle en la skill `local-delegation`.",
   "install.agents.update_plan": "actualiza {n} subagente(s): {summary}",
   "install.agents.updated": "actualizados {n}: {names}",
   "install.completion.block_removed": "bloque quitado",
