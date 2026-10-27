@@ -11,8 +11,8 @@
     "Lo comprueba `tests/test_capture.py`. Procedimiento: docs/wiki/Publishing.md."
   ],
   "file": "dashboard.png",
-  "version": "0.41.1",
+  "version": "0.42.0",
   "lang": "es",
-  "sha256": "585130fda4be5c641377e3af7f1e09fce674a0de92c48e38801d10119dcfc750",
-  "bytes": 822736
+  "sha256": "064938e364c50e159c05ca8cf2df702ef3fe687fe934f545519e8060bd7efda1",
+  "bytes": 822983
 }
