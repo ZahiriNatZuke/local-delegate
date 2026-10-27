@@ -2,7 +2,9 @@
 // SDD claude-plugin-and-mods, batches F3-status and F4-band).
 //
 // The piece asks the daemon three things and keeps the answer for the band:
-//   - `/api/stats?session=<id>`: this session's delegations (`total.calls`), the context they saved
+//   - `/api/stats?session=<id>`: this session's delegations (`total.calls` minus `total.errors`: an
+//     attempt that failed, above all one that never reached the backend, is not a delegation; the
+//     failures are shown apart, issue #436), the context they saved
 //     (`tokens_context_net`, the panel's KPI) and, when `recompute-cost` left its figures, what that
 //     is worth at API prices (`cost.figure.estimate`).
 //   - `/api/backend`: whether the local backend answers and which model it has mounted (or is still
@@ -195,7 +197,11 @@ export function statusSnapshot(stats, backend, inflight) {
   if (net === null) {
     return { daemon: 'down' }
   }
-  const calls = statusNumber(stats.total && stats.total.calls) ?? 0
+  // `total.calls` counts attempts; the band counts the delegations that answered and shows the
+  // failed ones apart (issue #436: 17 «delegaciones» with the backend down, 2 real).
+  const attempts = statusNumber(stats.total && stats.total.calls) ?? 0
+  const failed = Math.min(attempts, Math.max(0, statusNumber(stats.total && stats.total.errors) ?? 0))
+  const calls = attempts - failed
   const figure = stats.cost && stats.cost.figure
   const cost = figure ? statusNumber(figure.estimate) : null
   const running = backend && Array.isArray(backend.running) ? backend.running : []
@@ -216,7 +222,7 @@ export function statusSnapshot(stats, backend, inflight) {
   }
   const loading = running.some(item => item && typeof item.state === 'string' && item.state !== 'ready')
   const model = statusModelName(running) || (task && task.model) || null
-  return { daemon: 'up', calls, net, cost, backend: state, model, loading, task }
+  return { daemon: 'up', calls, failed, net, cost, backend: state, model, loading, task }
 }
 
 /** `asks`, `auto`, or `null` when the mod does not steer the reads. */
@@ -278,21 +284,34 @@ function statusTaskPieces(task, moreKey = 'status.more', separator = STATUS_SEPA
   return pieces
 }
 
-/** The figures as parts: `3 delegaciones · 12,3k tokens ahorrados ≈ $0,18`, or the empty note. */
+/**
+ * The figures as parts: `3 delegaciones · 12,3k tokens ahorrados ≈ $0,18`, with the failed
+ * attempts apart when there are any (`2 delegaciones · 15 fallidas · …`), or the empty note.
+ */
 function statusFigures(snapshot, lang, joint, separator = STATUS_SEPARATOR) {
-  if (snapshot.calls <= 0) {
+  const failed = snapshot.failed > 0 ? snapshot.failed : 0
+  if (snapshot.calls <= 0 && failed <= 0) {
     return [{ ...statusPart(2, joint, { text: t('status.empty'), dim: true }), kind: 'empty' }]
   }
   const label = snapshot.calls === 1 ? t('status.calls_label_one') : t('status.calls_label')
   const parts = [
     { ...statusPart(2, joint, { text: String(snapshot.calls), bold: true }, { text: ` ${label}`, dim: true }), kind: 'calls' },
+  ]
+  if (failed > 0) {
+    const failedLabel = failed === 1 ? t('status.failed_label_one') : t('status.failed_label')
+    parts.push({ ...statusPart(3, separator, { text: String(failed), bold: true }, { text: ` ${failedLabel}`, dim: true }), kind: 'failed' })
+  }
+  if (snapshot.calls <= 0) {
+    return parts
+  }
+  parts.push(
     statusPart(
       3,
       separator,
       { text: statusTokens(snapshot.net, lang), bold: true },
       { text: ` ${t('status.saved_label')}`, dim: true },
     ),
-  ]
+  )
   if (snapshot.cost !== null && snapshot.cost >= 0.005) {
     parts.push({ ...statusPart(4, ' ', { text: `≈ ${statusMoney(snapshot.cost, lang)}`, dim: true }), kind: 'cost' })
   }

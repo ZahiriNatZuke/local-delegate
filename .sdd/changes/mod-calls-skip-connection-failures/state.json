@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "slug": "mod-calls-skip-connection-failures",
+  "title": "El contador del mod no cuenta los fallos de conexión (issue #436)",
+  "mode": "lite",
+  "status": "verifying",
+  "createdAt": "2026-10-27T15:19:40.000Z",
+  "updatedAt": "2026-10-27T15:19:40.000Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-10-27T15:19:40.000Z",
+      "evidence": "Premisa reproducida leyendo el código: _aggregate suma calls en todos los eventos y _accounting/acct ponen backend_calls = chunks or 1 también con connection_failure. Decisión en spec.md: total.calls del servidor no cambia (denominador del % de errores del panel); el mod muestra calls - errors y los fallidos aparte.",
+      "actor": "agent"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-10-27T15:19:40.000Z",
+      "evidence": "ruff check/format limpios; pytest completo 5212 pasando antes de clasificar 'fallida' en el léxico y actualizar el dict esperado de test_accounting_one_call_without_chunking, luego los tres ficheros afectados 169 pasando; claude plugin test 123 pasando, 0 fail. Control positivo: 4 fallos en el mod y 2 en Python sin el arreglo; mutante de backend_calls detectado por la paridad y por 19 == 5.",
+      "actor": "agent"
+    }
+  }
+}

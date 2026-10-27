@@ -1098,7 +1098,13 @@ def _accounting(row: dict) -> dict:
     # `chunks` es el número REAL de llamadas al backend y se omite cuando vale 1 (ver
     # `_log_event`). Lo ha sido desde el commit que introdujo el chunking, así que esto
     # contabiliza bien también el histórico ya grabado. También en los fallos: se gastaron.
-    backend_calls = int(row.get("chunks") or 1)
+    # Salvo en un fallo de CONEXIÓN (`connection_failure`: `dns`, `refused`…, issue #436): la
+    # petición no llegó al backend, así que no gastó ninguna llamada. Si una troceada cae a mitad,
+    # `chunks` cuenta las que sí se hicieron antes (`len(attempts)`), y esas se mantienen; omitido
+    # (≤ 1) se lee como 0, que es el caso del backend inalcanzable desde el primer intento.
+    connection_failed = failed and bool(row.get("connection_failure"))
+    chunks = int(row.get("chunks") or 0)
+    backend_calls = chunks if connection_failed else (chunks or 1)
 
     raw_in = row.get("tokens_in")
     raw_out = row.get("tokens_out")
@@ -1184,6 +1190,8 @@ def _accounting(row: dict) -> dict:
         "chars_saved_output": chars_saved_output,
         "chars_returned": chars_returned,
         "failed": failed,
+        # Fallo sin llamada al backend (issue #436): no gasta `backend_calls`.
+        "connection_failed": connection_failed,
         "tool": row.get("tool"),
         "model": row.get("model"),
         "source": row.get("source"),
