@@ -1124,7 +1124,24 @@ def _require_loopback(request: Request) -> None:
         raise HTTPException(status_code=403)
 
 
-_HOOK_CHECKS = [Depends(_require_web_token), Depends(_require_loopback)]
+# Loopback no basta: un navegador de esta máquina también es loopback, y una web cualquiera puede
+# mandar un POST «simple» (`text/plain`, `mode: "no-cors"`) sin preflight. El mod y los hooks no son
+# un navegador: mandan `application/json` y nunca `Origin`. Exigir lo primero obliga a un navegador
+# a pedir preflight, que este servidor no concede; rechazar lo segundo corta cualquier página,
+# también la del propio panel. Las dos valen aunque no haya token (revisión de seguridad 2026-10-23).
+def _require_hook_client(request: Request) -> None:
+    if request.headers.get("origin") is not None:
+        raise HTTPException(status_code=403)
+    media_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if media_type != "application/json":
+        raise HTTPException(status_code=415)
+
+
+_HOOK_CHECKS = [
+    Depends(_require_web_token),
+    Depends(_require_loopback),
+    Depends(_require_hook_client),
+]
 
 
 async def _hook_body(
@@ -1184,14 +1201,34 @@ async def hook_classify_config(request: Request):
 # primero y el proceso queda de respaldo. La línea es la del CLI: las dos salen de
 # `hook_entry.record_read`, con el entorno que manda el mod (`RECORD_ENV`), incluido el destino.
 #
-# El destino viene de la petición, así que solo se acepta un `.jsonl` con ruta absoluta: el endpoint
-# añade una línea de telemetría, no escribe donde le digan. Sin destino no se escribe nada (como en
-# el CLI). Nunca registra el contenido de la petición.
+# El destino viene de la petición, pero el endpoint solo escribe en la telemetría que el propio daemon
+# conoce (`config.HOOK_TELEMETRY_LOG`, la del lanzador): hasta la 0.41.1 aceptaba cualquier `.jsonl`
+# absoluto, y una web abierta en esta máquina podía añadir una línea a cualquier `.jsonl` del disco
+# (el log de uso del mes, transcripts) y crear las carpetas que faltaran. Un destino distinto, o un
+# daemon sin telemetría, es un 403 sin escribir nada: el mod registra entonces por el proceso, con su
+# propio entorno. Sin destino no se escribe nada (como en el CLI). Los textos de la entrada tienen
+# tope. Nunca registra el contenido de la petición.
+
+#: Tope de los textos de la entrada de `record-read`: lo que manda el mod son nombres cortos
+#: (`via`, `scope`, `decision`, el id de la sesión) y una ruta, que solo se resume en un hash.
+RECORD_TEXT_MAX = 256
+RECORD_PATH_MAX = 4096
 
 
 def _telemetry_destination_ok(value: str) -> bool:
     text = value.strip()
-    return bool(text) and Path(text).is_absolute() and Path(text).suffix.lower() == ".jsonl"
+    own = config.HOOK_TELEMETRY_LOG
+    if not text or own is None or not Path(text).is_absolute():
+        return False
+    return os.path.normcase(os.path.abspath(text)) == os.path.normcase(os.path.abspath(own))
+
+
+def _record_entry_ok(payload: dict) -> bool:
+    for key, value in payload.items():
+        limit = RECORD_PATH_MAX if key == "path" else RECORD_TEXT_MAX
+        if isinstance(value, str) and len(value) > limit:
+            return False
+    return True
 
 
 @app.post("/api/hook/record-read", dependencies=_HOOK_CHECKS)
@@ -1202,9 +1239,11 @@ async def hook_record_read(request: Request):
     from .. import hook_entry
 
     payload, env = await _hook_body(request, hook_entry.RECORD_ENV)
+    if not _record_entry_ok(payload):
+        raise HTTPException(status_code=400)
     destination = env.get("LD_HOOK_TELEMETRY_LOG")
     if destination is not None and not _telemetry_destination_ok(destination):
-        raise HTTPException(status_code=400)
+        raise HTTPException(status_code=403)
     try:
         await run_in_threadpool(hook_entry.record_read, payload, env)
     except Exception as exc:
@@ -1308,9 +1347,62 @@ def render_index() -> str:
     )
 
 
+# Content-Security-Policy del panel (revisión de seguridad 2026-10-23): un texto del log que se colara
+# sin escapar en el HTML no puede correr. Solo corren los `<script>` del propio panel (por su hash,
+# calculado sobre la página ya rellena) y los de este origen (`/vendor/…`): nada de atributos
+# `on…=` ni scripts inyectados. `connect-src 'self'` impide además mandar datos a otro sitio con
+# `fetch`. Estilos, fuentes e imágenes no se tocan (el panel usa `style=` y Google Fonts).
+def inline_scripts(page: str) -> list[str]:
+    """El texto de cada `<script>` sin `src` de `page`, tal cual lo hashea el navegador."""
+    from html.parser import HTMLParser
+
+    class _Scripts(HTMLParser):
+        def __init__(self) -> None:
+            super().__init__(convert_charrefs=False)
+            self.bodies: list[str] = []
+            self._open: list[str] | None = None
+
+        def handle_starttag(self, tag, attrs):
+            if tag == "script" and not any(name == "src" for name, _ in attrs):
+                self._open = []
+
+        def handle_data(self, data):
+            if self._open is not None:
+                self._open.append(data)
+
+        def handle_endtag(self, tag):
+            if tag == "script" and self._open is not None:
+                self.bodies.append("".join(self._open))
+                self._open = None
+
+    parser = _Scripts()
+    parser.feed(page)
+    parser.close()
+    return parser.bodies
+
+
+def content_security_policy(page: str) -> str:
+    import base64
+    import hashlib
+
+    hashes = [
+        "'sha256-" + base64.b64encode(hashlib.sha256(body.encode("utf-8")).digest()).decode() + "'"
+        for body in inline_scripts(page)
+    ]
+    rules = [
+        ["script-src", "'self'", *hashes],
+        ["connect-src", "'self'"],
+        ["object-src", "'none'"],
+        ["base-uri", "'none'"],
+        ["form-action", "'none'"],
+    ]
+    return "; ".join(" ".join(parts) for parts in rules)
+
+
 @app.get("/", response_class=HTMLResponse)
 def index():
-    return render_index()
+    page = render_index()
+    return HTMLResponse(page, headers={"Content-Security-Policy": content_security_policy(page)})
 
 
 def run_in_thread(host: str | None = None, port: int | None = None):
@@ -2759,7 +2851,7 @@ function renderBackend(){
     const e = modelState({model:m, view, inflight:state.inflight});
     const busy = !e.dimmed && (e.state==='processing' || e.state==='running');
     const cls = (DOT[e.state]||'') + (busy && DOT[e.state]!=='busy' ? ' busy' : '');
-    const roles = roleLabels(m).map(l=>`<span class="mrole">${l}</span>`).join('');
+    const roles = roleLabels(m).map(l=>`<span class="mrole">${escHooks(l)}</span>`).join('');
     const chip = statusChip(statusById[m]);
     const badge = chip ? `<span class="mstatus ${chip}" title="${escHooks(statusById[m])}">${escHooks(labelFor('modelStatus', statusById[m]))}</span>` : '';
     const rowCls = (busy?' busy':'') + (e.dimmed?' dimmed':'');
@@ -2791,7 +2883,7 @@ function renderBackendStats(j){
   el.innerHTML = `<div class="bstats">
     <div class="bstat"><div class="bk">${T('stats.gen')}</div><div class="bv">${f1(gen.p50)}<span class="bp">p50</span></div><div class="bsub">p95 ${f1(gen.p95)}</div></div>
     <div class="bstat"><div class="bk">${T('stats.prompt')}</div><div class="bv">${f1(pr.p50)}<span class="bp">p50</span></div><div class="bsub">p95 ${f1(pr.p95)}</div></div>
-    <div class="bstat"><div class="bk">${T('stats.tokens')}</div><div class="bv">${F.format(s.total_input_tokens||0)}/${F.format(s.total_output_tokens||0)}</div><div class="bsub">${T('stats.cache', {n: F.format(s.total_cache_tokens||0)})}</div></div>
+    <div class="bstat"><div class="bk">${T('stats.tokens')}</div><div class="bv">${F.format(s.total_input_tokens||0)}/${F.format(s.total_output_tokens||0)}</div><div class="bsub">${escHooks(T('stats.cache', {n: F.format(s.total_cache_tokens||0)}))}</div></div>
   </div>`;
 }
 
@@ -2800,7 +2892,7 @@ function renderTools(){
   const busyTools = new Set((state.inflight||[]).map(it=>it.tool));
   document.getElementById('toolsCount').textContent = tools.length?('('+tools.length+')'):'';
   document.getElementById('toolsBody').innerHTML = tools.length
-    ? tools.map(t=>`<span class="tchip${busyTools.has(t.name)?' busy':''}" title="${(t.summary||'').replace(/"/g,'&quot;')}">${t.name}</span>`).join('')
+    ? tools.map(t=>`<span class="tchip${busyTools.has(t.name)?' busy':''}" title="${escHooks(t.summary||'')}">${escHooks(t.name)}</span>`).join('')
     : '<span class="tchip">' + T('tools.no_data') + '</span>';
 }
 
@@ -2867,13 +2959,13 @@ function renderInflight(){
 
   if(state.inflight.length){
     body.innerHTML = state.inflight.map(it=>{
-      const chunk = it.chunks ? `<span class="chunkchip">${T('backend.chunk', {n: it.chunk||1, total: it.chunks})}</span>` : '';
-      const org = it.backend ? `<span class="org ${it.backend}">${escHooks(labelFor('origin', it.backend))}</span>` : '';
+      const chunk = it.chunks ? `<span class="chunkchip">${escHooks(T('backend.chunk', {n: it.chunk||1, total: it.chunks}))}</span>` : '';
+      const org = it.backend ? `<span class="org ${escHooks(it.backend)}">${escHooks(labelFor('origin', it.backend))}</span>` : '';
       // Espera de turno del daemon (REQ-008): las mismas palabras que el title de la fila del modelo.
       const turnText = it.local_wait==='turn' ? turnWords(it) : '';
       const turnChip = turnText ? `<span class="chunkchip" title="${escHooks(turnText)}">${escHooks(turnText)}</span>` : '';
-      return `<div class="ifrow"><span class="spin"></span><span class="badge">${it.tool}</span>
-        <span class="badge model">${it.model}</span>${chunk}${turnChip}${org}
+      return `<div class="ifrow"><span class="spin"></span><span class="badge">${escHooks(it.tool)}</span>
+        <span class="badge model">${escHooks(it.model)}</span>${chunk}${turnChip}${org}
         <span class="num" style="color:var(--mut)">${escHooks(fmtSec((it.elapsed_s||0)*1000))} · ${F.format(it.chars_in||0)} ${T('unit.chars_short')}</span></div>`;
     }).join('');
     head.innerHTML = escHooks(T('backend.inflight')) + ' <span class="num" style="color:var(--amber)">('+state.inflight.length+')</span>';
@@ -2887,15 +2979,15 @@ function renderInflight(){
   if(ev && ev.ts){
     const skew = (state.activity && state.activity.skewMs) || 0;
     const ago = Math.max(0, Math.round((Date.now() - skew - Date.parse(ev.ts))/1000));
-    const org = ev.backend ? `<span class="org ${ev.backend}">${escHooks(labelFor('origin', ev.backend))}</span>` : '';
+    const org = ev.backend ? `<span class="org ${escHooks(ev.backend)}">${escHooks(labelFor('origin', ev.backend))}</span>` : '';
     const dur = ev.latency_ms!=null ? escHooks(fmtSec(ev.latency_ms))+' · ' : '';
     const mark = ev.ok===false
       ? '<span class="num" style="color:var(--red)">✕</span>'
       : '<span class="num" style="color:var(--ok)">✓</span>';
     body.innerHTML = `<div class="ifrow" style="opacity:.75">${mark}
-      <span class="num" style="color:var(--faint)">${T('backend.ago', {ago: fmtAgo(ago)})}</span>
-      <span class="badge">${ev.tool||'?'}</span>
-      <span class="badge model">${ev.model||'?'}</span>${org}
+      <span class="num" style="color:var(--faint)">${escHooks(T('backend.ago', {ago: fmtAgo(ago)}))}</span>
+      <span class="badge">${escHooks(ev.tool||'?')}</span>
+      <span class="badge model">${escHooks(ev.model||'?')}</span>${org}
       <span class="num" style="color:var(--mut)">${dur}${F.format(ev.chars_in||0)} ${T('unit.chars_short')}</span></div>`;
   } else {
     body.innerHTML = '<div class="ifrow" style="color:var(--faint)">' + T('backend.none_yet') + '</div>';
@@ -2977,7 +3069,7 @@ function renderSystem(j){
     }else{
       tbl.innerHTML = '<thead><tr><th>' + T('system.col.process') + '</th><th>PID</th><th>RAM</th><th>VRAM</th></tr></thead><tbody>'
         + procs.map(p=>`<tr><td class="mono">${escHooks(p.name)}${p.self?'<span class="selfchip">'+T('system.daemon_chip')+'</span>':''}</td>
-            <td class="mono">${p.pid}</td><td class="mono">${fmtMB(p.ram_mb||0)}</td>
+            <td class="mono">${escHooks(p.pid)}</td><td class="mono">${fmtMB(p.ram_mb||0)}</td>
             <td class="mono">${p.vram_mb!=null?fmtMB(p.vram_mb):'—'}</td></tr>`).join('')
         + '</tbody>';
     }
@@ -3405,20 +3497,20 @@ function drawActivity(ev){
     const org=e.backend||'unknown';
     const orgTxt=escHooks(labelFor('origin', org));
     // `chunks` del log son LLAMADAS al backend, no trozos: el título decía otra cosa que el dato
-    const chunks=e.chunks?`<span class="chunkchip" title="${escHooks(T('activity.chunks_title', {n: e.chunks}))}">${e.chunks}×</span>`:'';
+    const chunks=e.chunks?`<span class="chunkchip" title="${escHooks(T('activity.chunks_title', {n: e.chunks}))}">${escHooks(e.chunks)}×</span>`:'';
     // Hubo salto: respondió un respaldo. Se marca para que nadie lea esta fila como del modelo pedido.
     // El motivo (`fallback_reason`) es prosa ya escrita en el log y se enseña tal cual (REQ-033).
-    const fb=(e.model_requested && e.routing!=='affinity')?`<span class="chunkchip fbchip" title="${escHooks(T('activity.fallback_title', {model: e.model, requested: e.model_requested, cause: e.fallback_reason||e.fallback_class||T('activity.no_cause')}))}">↪ ${e.model_requested}</span>`:'';
+    const fb=(e.model_requested && e.routing!=='affinity')?`<span class="chunkchip fbchip" title="${escHooks(T('activity.fallback_title', {model: e.model, requested: e.model_requested, cause: e.fallback_reason||e.fallback_class||T('activity.no_cause')}))}">↪ ${escHooks(e.model_requested)}</span>`:'';
     const cause=(e.ok===false&&e.error_class)?` title="${escHooks(T('activity.cause_title', {cause: e.error_class}))}"`:'';
     const split=waitInferenceText(e), slow=slowMark(e);
     const timings=split?`<div class="mut" style="font-size:10px">${escHooks(split)}</div>`:'';
     const slowChip=slow?`<span class="chunkchip slowchip" title="${escHooks(T('activity.slow_title', {speed: fmtNum(e.tok_s,1), model: e.model}))}">${escHooks(slow)}</span>`:'';
     const marks=activityMarks(e);
     const aria=escHooks(T('activity.row_aria', {tool: e.tool, model: e.model}));
-    h+=`<tr data-i="${i}" tabindex="0" aria-label="${aria}"><td class="mono" title="${e.ts||''}">${time}</td><td><span class="badge">${e.tool}</span>${chunks}</td>
-      <td><span class="badge model">${e.model}</span>${fb}${marks}</td>
-      <td><span class="src ${e.source}">${e.source}</span></td>
-      <td><span class="org ${org}" title="${escHooks(e.backend_host||T('label.no_data'))}">${orgTxt}</span></td>
+    h+=`<tr data-i="${i}" tabindex="0" aria-label="${aria}"><td class="mono" title="${escHooks(e.ts)}">${escHooks(time)}</td><td><span class="badge">${escHooks(e.tool)}</span>${chunks}</td>
+      <td><span class="badge model">${escHooks(e.model)}</span>${fb}${marks}</td>
+      <td><span class="src ${escHooks(e.source)}">${escHooks(e.source)}</span></td>
+      <td><span class="org ${escHooks(org)}" title="${escHooks(e.backend_host||T('label.no_data'))}">${orgTxt}</span></td>
       <td class="mono">${F.format(e.chars_in||0)} <span class="flow">→</span> ${F.format(e.chars_out||0)}</td>
       <td class="mono">${escHooks(fmtSec(e.latency_ms))}${slowChip}${timings}</td>
       <td><span class="dot ${e.ok===false?'err':'ok'}"${cause}></span></td></tr>`; });
