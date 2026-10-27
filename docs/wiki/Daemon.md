@@ -120,8 +120,8 @@ el navegador la trata como si fuera del mismo origen que el panel. Así leía `/
 `/api/status`, `/api/system` y `/api/hooks`, y usaba `POST /api/hook/classify` para saber si existe
 cualquier fichero y cuánto pesa.
 
-Lo que esa página no puede cambiar es la cabecera `Host`: lleva su nombre, no `127.0.0.1`. Por eso
-**todo el puerto** —el panel, `/api/*`, `/daemon/status` y `/mcp`, y también la web del modo
+Lo que esa página no puede cambiar es la cabecera `Host`: lleva su nombre, no `127.0.0.1`. Por eso,
+desde la 0.42.0, **todo el puerto** —el panel, `/api/*`, `/daemon/status` y `/mcp`, y también la web del modo
 `stdio`— responde **421** a un `Host` que no sea:
 
 - `127.0.0.1`, `localhost` o `[::1]`, con cualquier puerto;

@@ -6,6 +6,104 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-10-27
+
+Esta versión cierra la mayor parte de la revisión de seguridad del 2026-10-23 sobre el panel y el
+puerto del daemon: rechaza un `Host` o un `Origin` ajenos (DNS rebinding), `record-read` ya no
+escribe donde diga la petición, el panel escapa lo que pinta y se sirve con una
+Content-Security-Policy, la web del modo stdio pide el token y una variable vacía ya no abre el
+panel a todas las interfaces. Además, con el backend inalcanzable las `local_*` dejan de insistir y
+los avisos dejan de sugerir delegar, la banda del mod no cuenta como delegaciones los intentos
+fallidos ni enseña las delegaciones de otra sesión, y los subagentes reciben sus propias reglas.
+
+### Cómo actualizar
+
+- **Abre una sesión nueva de Claude Code (o de Claude Desktop) tras actualizar.** Los mods y los
+  hooks se cargan al empezar la sesión: las abiertas siguen con los de la 0.41.1.
+- **Ejecuta `local-delegate update`.** Reescribe el bloque gestionado de `CLAUDE.md`/`AGENTS.md`
+  (con las reglas nuevas para subagentes) y añade el hook `SubagentStart` en las instalaciones por
+  settings. Quien use el plugin lo recibe con él.
+- **Si entras al panel por un nombre que no es `localhost`/`127.0.0.1`** (por ejemplo, con
+  `tailscale serve` o un proxy), **pon ese nombre en `LOCAL_DELEGATE_WEB_ALLOWED_HOSTS`** en el
+  entorno del daemon (su lanzador o tarea programada). Si no, el panel y `/api/*` responden 421.
+  Varios nombres van separados por comas.
+- **La web del modo stdio pide ahora el token.** Si tienes `LOCAL_DELEGATE_WEB_TOKEN` puesto, la web
+  que levanta un proceso stdio cuando el daemon no corre exige ese token igual que el daemon.
+- **Una variable vacía ya no cuenta como puesta.** Si alguna de tus variables de local-delegate
+  queda vacía (por ejemplo, un `${VAR}` que expande a nada), ahora toma su valor por defecto: en el
+  caso de `LOCAL_DELEGATE_WEB_HOST`, el panel y el MCP pasan a escuchar solo en `127.0.0.1`.
+- **En la Mac (o en cualquier equipo donde el daemon lo lance un script propio), comprueba que el
+  lanzador exporta `LD_HOOK_TELEMETRY_LOG`.** `record-read` solo escribe en la telemetría del propio
+  daemon; si el lanzador no la exporta, el daemon responde 403 y el mod registra sus decisiones por
+  el proceso, que puede perder alguna tras el diálogo.
+
+### Seguridad
+
+- **El puerto del daemon rechaza un `Host` o un `Origin` ajenos y cierra el DNS rebinding.** El
+  panel, `/api/*`, `/daemon/status` y `/mcp` (y la web del modo stdio) responden 421 a un `Host`
+  que no sea loopback o el propio `LOCAL_DELEGATE_WEB_HOST`, y 403 a un `Origin` de otra web.
+  Hasta ahora, sin token, una página cualquiera que hiciera rebinding a `127.0.0.1` podía leer todo
+  el panel y usar `/api/hook/classify` como oráculo para saber qué ficheros existen. La variable
+  nueva `LOCAL_DELEGATE_WEB_ALLOWED_HOSTS` añade nombres permitidos (SDD `panel-host-check`, #446).
+- **`record-read` solo escribe en la telemetría del propio daemon.** `POST /api/hook/record-read`
+  escribía en el fichero que dijera la petición; ahora solo en el `LD_HOOK_TELEMETRY_LOG` del
+  lanzador del daemon, y otro destino da 403 sin escribir (el mod registra entonces por el
+  proceso). Las rutas `/api/hook/*` exigen `application/json` y rechazan cualquier `Origin`, haya
+  token o no: una web abierta en el equipo podía añadir una línea a cualquier `.jsonl`
+  (SDD `panel-record-read-and-xss`, #448).
+- **El panel escapa lo que pinta y se sirve con una Content-Security-Policy.** Todos los campos del
+  log que el panel muestra se escapan, también dentro de atributos (una guarda en los tests cuenta
+  todas las plantillas), y la CSP solo deja correr los scripts del propio panel: una línea hostil
+  en el log ya no se ejecuta al abrirlo (#448).
+- **La web del modo stdio exige el token.** Cuando el daemon no corre, el proceso stdio levanta su
+  propia web; esa web servía el panel y `/api/*` sin credencial aunque `LOCAL_DELEGATE_WEB_TOKEN`
+  estuviera puesto. Ahora lo exige igual que el daemon (#451).
+- **Una variable vacía o solo con espacios cuenta como no puesta.** Con `LOCAL_DELEGATE_WEB_HOST`
+  vacía (un `${VAR}` que expande a nada), el panel y el MCP escuchaban en todas las interfaces y sin
+  la guarda del `Host`; ahora escuchan en `127.0.0.1`. Lo mismo vale para `BASE_URL`, los
+  `MODEL_*`, `BACKEND_ORIGIN` y `LLAMASWAP_LISTEN`, que toman su valor por defecto (#451).
+
+### Añadido
+
+- **Hook `SubagentStart`.** Al arrancar cada subagente le recuerda cargar las tools `local_*` (son
+  diferidas y un subagente no las tiene a mano) con `ToolSearch` y leer los ficheros grandes por
+  rangos. Se instala siempre, por plugin y por settings (issue #443, #447).
+- **Reglas para subagentes.** El bloque de `CLAUDE.md`/`AGENTS.md`, el catálogo de los subagentes y
+  la skill `local-delegation` (sección «Subagentes», con ejemplos de revisión e implementación)
+  explican cómo delegar desde un subagente. `update` reescribe los bloques viejos (#447).
+- **El backend inalcanzable se detecta y se deja de insistir.** Tras 3 fallos de conexión seguidos
+  (por ejemplo, una VPN que impide resolver el nombre del backend), las `local_*` responden al
+  momento que el backend no está y que hagas tú la tarea, sin llamarlo y sin contarlo como
+  delegación ni como fallo. Se recupera solo: al vencer la espera (60 s, que se dobla hasta 600 s)
+  la siguiente llamada vuelve a probar, y `local_status` o el panel lo cierran en cuanto ven el
+  backend. Mientras dura, los avisos de `Read`, de la shell y del prompt y el mod de lectura dejan
+  de sugerir delegar. Se ajusta con `LOCAL_DELEGATE_BACKEND_BREAKER`, `_FAILURES`, `_S` y `_MAX_S`
+  (issue #436, #449).
+- **`/api/stats` trae `total.connection_failures`** y **`/api/inflight` acepta `?session=<id>`**,
+  que marca cada entrada con `mine` (y añade `mine_count`); sin el parámetro responde igual que
+  antes (#444, #445).
+
+### Corregido
+
+- **La banda del mod ya no cuenta como delegaciones los intentos fallidos.** Con el backend
+  inalcanzable marcaba 17 delegaciones donde hubo 2; ahora dice `2 delegaciones · 15 fallidas`. Y un
+  fallo de conexión (`dns`, `refused`…) ya no suma «llamadas reales» al backend en el panel
+  (issue #436, #444).
+- **Solo la sesión que delega ve «DELEGANDO».** Las demás sesiones veían la tool, el tiempo y los
+  trozos de una delegación ajena como si fuera suya; ahora ven ` ● LISTO ` con «en uso por otra
+  sesión», sin detalles de la llamada (issue #442, #445).
+- **Los subagentes localizan con `local_*` y leen solo el rango.** Dentro de un subagente, el aviso
+  del hook de `Read` (mod y settings) daba permiso para leer entero un fichero grande «si necesitas
+  líneas exactas», y no valía para el código. Ahora pide localizar las líneas con
+  `local_extract`/`local_explain_code` (con `path`) y leer ese rango con `offset`/`limit`. El hilo
+  principal no cambia (issue #443, #447).
+
+### Dependencias
+
+- **Al día (#450, que agrupa los PRs #437–#441 de Dependabot, y #452):** `fastapi` 0.161.1,
+  `httpx2` y `httpcore2` 2.16.0, `filelock` 4.2.4, `platformdirs` 4.13.5; de desarrollo, `ruff`
+  0.17.2, `playwright` 1.64.1 y `virtualenv` 21.14.13. Socket les da 0,7 o más en todas.
+
 ## [0.41.1] - 2026-10-23
 
 La banda de estado del mod estrena diseño propio en la terminal y en Claude Desktop, se refresca
@@ -3520,7 +3618,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.41.1...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.42.0...HEAD
+[0.42.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.41.1...v0.42.0
 [0.41.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.41.0...v0.41.1
 [0.41.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.40.0...v0.41.0
 [0.40.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.39.0...v0.40.0
