@@ -23,9 +23,9 @@ const SESSION = 'sess-f3'
 const PANEL = 'http://localhost:9393'
 
 type Daemon = {
-  stats?: () => any
-  backend?: () => any
-  inflight?: () => any
+  stats?: (url: URL) => any
+  backend?: (url: URL) => any
+  inflight?: (url: URL) => any
 }
 
 type Seen = {
@@ -53,9 +53,9 @@ function json(body: unknown, status = 200) {
   return { status, ok: status >= 200 && status < 300, headers: {}, text: JSON.stringify(body) }
 }
 
-function stats(calls: number, net: number, estimate: number | null = null) {
+function stats(calls: number, net: number, estimate: number | null = null, errors?: number) {
   return json({
-    total: { calls },
+    total: errors === undefined ? { calls } : { calls, errors },
     tokens_context_net: net,
     cost: { figure: estimate === null ? null : { low_bound: estimate / 2, estimate } },
   })
@@ -95,7 +95,7 @@ function engine(on: On, variables: Record<string, string>, daemon: () => Daemon)
     if (!answer) {
       throw new Error('ECONNREFUSED')
     }
-    return { value: await answer() }
+    return { value: await answer(new URL(e.url)) }
   })
   on('ui.status', (_$, e) => {
     seen.statuses.push(e.text)
@@ -210,7 +210,7 @@ test('bar: one row with a background and a state chip, never the quota nor a war
   expect(seen.statuses).toEqual([])
   expect(seen.fetches.map(f => f.url).sort()).toEqual([
     'http://127.0.0.1:9393/api/backend?lang=es',
-    'http://127.0.0.1:9393/api/inflight',
+    `http://127.0.0.1:9393/api/inflight?session=${SESSION}`,
     `http://127.0.0.1:9393/api/stats?session=${SESSION}&lang=es`,
   ])
   expect(seen.fetches.every(f => f.auth === `Bearer ${TOKEN}`)).toBe(true)
@@ -275,6 +275,28 @@ test('bar: a narrow band drops the least important parts first', { options: { ld
   expect(narrow.left).toBe(' ● LISTO  qwen3-8b · 3 delegaciones')
   expect(narrow.right).toBeUndefined()
   expect((await bar($, band(24))).left).toBe(' ● LISTO  qwen3-8b')
+})
+
+test('bar: failed attempts are not delegations, they go apart (issue #436)', { options: QUIET }, async ($, on) => {
+  // The session of the issue: the backend unreachable, 17 attempts logged, 15 of them failed.
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, stats: () => stats(17, 4200, null, 15), backend: () => backend(false) }))
+  await $.session.measure(measureInput())
+  const { left, texts } = await bar($)
+  expect(left).toBe(' ○ CAÍDO  2 delegaciones · 15 fallidas · 4,2k tokens ahorrados')
+  expect(texts.find((t: any) => t.text === '15')?.props.bold).toBe(true)
+  expect(texts.find((t: any) => t.text === ' fallidas')?.props.dimColor).toBe(true)
+})
+
+test('bar: only failures, no delegation yet, says both', { options: QUIET }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, stats: () => stats(1, 0, null, 1), backend: () => backend(false) }))
+  await $.session.measure(measureInput())
+  expect((await bar($)).left).toBe(' ○ CAÍDO  0 delegaciones · 1 fallida')
+})
+
+test('line: failed attempts in English (issue #436)', { options: { ...LINE, language: 'en' } }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, stats: () => stats(3, 1500, null, 1) }))
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toContain('· 2 delegations · 1 failed · 1.5k tokens saved')
 })
 
 // --- terminal, line --------------------------------------------------------------------------------
@@ -534,6 +556,13 @@ test('desktop: each state', { options: QUIET }, async ($, on) => {
   expect(span(drawn.texts, '○')?.props.color).toBe('error')
   expect(span(drawn.texts, ' Modelo local caído')?.props.color).toBe('error')
 
+  // Issue #436 on Desktop: the failed attempts apart from the delegations, no bold.
+  daemon = { ...UP, stats: () => stats(17, 4200, null, 15), backend: () => backend(false) }
+  await $.session.measure(measureInput())
+  drawn = await desk($)
+  expectPlainDesktop(drawn)
+  expect(drawn.left.text).toBe('local-delegate · ○ Modelo local caído · 2 delegaciones · 15 fallidas · 4,2k tokens ahorrados')
+
   daemon = { stats: UP.stats, inflight: UP.inflight }
   await $.session.measure(measureInput())
   drawn = await desk($)
@@ -762,4 +791,113 @@ test('off_by_userconfig', { options: { ld_bin: LD_BIN, status_enabled: false } }
   expect((await drawnAll($)).texts.map((t: any) => t.text)).toEqual(['engine'])
   expect(seen.statuses).toEqual([])
   expect(seen.fetches).toEqual([])
+})
+
+// --- several sessions at once (issue #442) ------------------------------------------------------------
+//
+// With two sessions open, a delegation of one turned every band to ` ◐ DELEGANDO ` with its tool,
+// its time and its chunks. Now the mod asks `/api/inflight?session=<id>` and the daemon marks each
+// entry `mine`: only the session that asked for it sees it at work; the others see the backend in
+// use by another session, and nothing of that call.
+
+const OTHER = 'sess-other'
+
+/**
+ * `/api/inflight?session=<id>` as the daemon answers it: each entry `mine` only when the session
+ * that started it is the one asking now (an entry without a session is nobody's), and `mine_count`.
+ */
+function bySession(items: { session?: string; item: any }[]) {
+  return (url: URL) => {
+    const asking = url.searchParams.get('session')
+    const list = items.map(({ session, item }) => ({ ...item, mine: asking !== null && session === asking }))
+    const mine = list.filter(entry => entry.mine).length
+    return json({ inflight: list, count: list.length, mine_count: mine, last_event_ts: null, last_event: null })
+  }
+}
+
+const OTHERS_ONLY: Daemon = { ...UP, inflight: bySession([{ session: OTHER, item: chunked(196.5, 9, 7) }]) }
+const BOTH: Daemon = {
+  ...UP,
+  inflight: bySession([
+    { session: OTHER, item: chunked(196.5, 9, 7) },
+    { session: SESSION, item: task('local_extract', 3) },
+  ]),
+}
+
+test('several sessions: only its own delegation is at work in a band, never another session\'s', { options: QUIET }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => BOTH)
+  await $.session.measure(measureInput())
+  const { left, chip } = await bar($)
+  // Its own call (3 s, ◒), not the other session's older one (local_summarize 7/9, 3 min 16 s), and no `+1`.
+  expect(chip.text).toBe(' ◒ DELEGANDO ')
+  expect(left).toBe(' ◒ DELEGANDO  qwen3-8b · local_extract 3 s · 3 delegaciones · 12,3k tokens ahorrados ≈ $0,18')
+})
+
+test('several sessions: another session\'s delegation is only «in use», in each surface', { options: QUIET }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => OTHERS_ONLY)
+  await $.session.measure(measureInput())
+
+  const drawnBar = await bar($)
+  expect(drawnBar.chip.text).toBe(' ● LISTO ')
+  expect(drawnBar.chip.props).toMatchObject({ inverse: true, bold: true, color: 'success' })
+  expect(drawnBar.left).toBe(' ● LISTO  qwen3-8b · en uso por otra sesión · 3 delegaciones · 12,3k tokens ahorrados ≈ $0,18')
+  expect(drawnBar.texts.find((t: any) => t.text === 'en uso por otra sesión')?.props.dimColor).toBe(true)
+  expectNoEmptyRows(drawnBar.boxes, drawnBar.texts)
+
+  const drawn = await desk($)
+  expectPlainDesktop(drawn)
+  expect(drawn.left.text).toBe('local-delegate · ● Listo · en uso por otra sesión · qwen3-8b · 3 delegaciones · 12,3k tokens ahorrados ≈ $0,18')
+  expect(span(drawn.texts, '●')?.props.color).toBe('success')
+  expect(span(drawn.texts, 'en uso por otra sesión')?.props.dimColor).toBe(true)
+  // Desktop's separators stay wide there too.
+  expect(drawn.left.raw.includes(' · ')).toBe(false)
+
+  for (const text of [drawnBar.left, drawn.left.text]) {
+    expect(text).not.toContain('DELEGANDO')
+    expect(text).not.toContain('Delegando')
+    expect(text).not.toContain('local_summarize')
+    expect(text).not.toContain('7/9')
+    expect(text).not.toContain('min')
+  }
+})
+
+test('several sessions: the line, and in English', { options: { ...LINE, language: 'en' } }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => OTHERS_ONLY)
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toBe('local-delegate · ● qwen3-8b ready · in use by another session · 3 delegations · 12.3k tokens saved ≈ $0.18')
+  expect((await desk($)).left.text).toBe('local-delegate · ● Ready · in use by another session · qwen3-8b · 3 delegations · 12.3k tokens saved ≈ $0.18')
+})
+
+test('several sessions: the bar in English', { options: { ...QUIET, language: 'en' } }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => OTHERS_ONLY)
+  await $.session.measure(measureInput())
+  expect((await bar($)).left).toBe(' ● READY  qwen3-8b · in use by another session · 3 delegations · 12.3k tokens saved ≈ $0.18')
+})
+
+test('several sessions: in Spanish, the line too', { options: LINE }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => OTHERS_ONLY)
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toBe('local-delegate · ● qwen3-8b listo · en uso por otra sesión · 3 delegaciones · 12,3k tokens ahorrados ≈ $0,18')
+})
+
+test('several sessions: a delegation of no known session is never taken for its own', { options: QUIET }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, inflight: bySession([{ item: task('local_summarize', 4.2) }]) }))
+  await $.session.measure(measureInput())
+  expect((await bar($)).left).toBe(' ● LISTO  qwen3-8b · en uso por otra sesión · 3 delegaciones · 12,3k tokens ahorrados ≈ $0,18')
+})
+
+test('several sessions: when its own call ends while another runs, the figures are reread and the band says «in use»', { options: LINE }, async ($, on) => {
+  let daemon: Daemon = BOTH
+  const seen = engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => daemon)
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toContain('delegando · local_extract 3 s')
+  daemon = { ...OTHERS_ONLY, stats: () => stats(4, 20000, 0.25) }
+  const before = seen.fetches.length
+  await seen.clock.advance(1000)
+  expect(since(seen, before)).toContain('/api/stats')
+  expect((await line($)).line).toBe('local-delegate · ● qwen3-8b listo · en uso por otra sesión · 4 delegaciones · 20k tokens ahorrados ≈ $0,25')
+  // While the other session's call runs, the quick pace stays, so the note goes as soon as it ends.
+  daemon = { ...UP, stats: () => stats(4, 20000, 0.25), inflight: bySession([]) }
+  await seen.clock.advance(1000)
+  expect((await line($)).line).toBe('local-delegate · ● qwen3-8b listo · 4 delegaciones · 20k tokens ahorrados ≈ $0,25')
 })

@@ -213,11 +213,7 @@ def resolve_call(
     note = read_note(tool_use_id, directory=notes)
     if note is None:
         return {}
-    instant = time.time() if now is None else now
-    try:
-        if instant - float(note["ts"]) > NOTE_TTL_S:
-            return {}
-    except (KeyError, TypeError, ValueError):
+    if not _note_fresh(note, time.time() if now is None else now):
         return {}
 
     agent = note.get("agent_id")
@@ -229,8 +225,8 @@ def resolve_call(
     if isinstance(effort, str) and effort:
         r["caller_effort"] = effort
     # The session as its one-way key (REQ-017 of claude-plugin-and-mods), never the id itself.
-    key = note.get("session_key")
-    if isinstance(key, str) and len(key) == 32 and all(c in "0123456789abcdef" for c in key):
+    key = _note_session_key(note)
+    if key is not None:
         r["caller_session_key"] = key
 
     path = _transcript_de(note, projects or _projects_root())
@@ -241,6 +237,38 @@ def resolve_call(
         if "caller_effort" not in r and not _supports_effort(r["caller_model"]):
             r["caller_effort"] = "n/a"  # Haiku 4.5: no admite esfuerzo y no es un dato que falte
     return r
+
+
+def _note_fresh(note: dict, instant: float) -> bool:
+    """Whether the note still counts (REQ-003): younger than `NOTE_TTL_S`, with a readable `ts`."""
+    try:
+        return instant - float(note["ts"]) <= NOTE_TTL_S
+    except (KeyError, TypeError, ValueError):
+        return False
+
+
+def _note_session_key(note: dict) -> str | None:
+    """The session's one-way key the note carries (`hook_common.session_key`), or `None`."""
+    key = note.get("session_key")
+    if isinstance(key, str) and len(key) == 32 and all(c in "0123456789abcdef" for c in key):
+        return key
+    return None
+
+
+def current_session_key() -> str | None:
+    """The one-way key of the session behind the request in course, or `None` (issue #442).
+
+    Only the hook's note, never the transcript: `server._inflight_start` asks for it when a
+    delegation starts, when the transcript may not carry the call yet, and it must not memoize a
+    resolution without the model for the log line written later (`current_call`).
+    """
+    tool_use_id = clients.current_tool_use_id()
+    if not tool_use_id:
+        return None
+    note = read_note(tool_use_id)
+    if note is None or not _note_fresh(note, time.time()):
+        return None
+    return _note_session_key(note)
 
 
 def current_call() -> dict:
