@@ -30,6 +30,7 @@ import read_classifier
 from hook_common import (
     already_recorded,
     backend_available,
+    backend_down,
     block_state,
     context_of,
     cooled_model,
@@ -112,6 +113,9 @@ def main() -> None:
         return
     if not block_on():
         record("PreToolUse", suggested=False, reason="block_off", **common)
+        return
+    if backend_down():
+        record("PreToolUse", suggested=False, reason="backend_down", **common)
         return
     if not backend_available():
         record("PreToolUse", suggested=False, reason="backend_missing", **common)

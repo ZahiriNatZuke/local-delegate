@@ -7,7 +7,7 @@ import json
 import re
 import sys
 
-from hook_common import block_state, context_of, emit, hook_text, record
+from hook_common import backend_down, block_state, context_of, emit, hook_text, record
 
 _CATEGORIES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("summarize", re.compile(r"\b(resum|sintetiz|summary|summarize)\w*\b", re.IGNORECASE)),
@@ -68,6 +68,17 @@ def main() -> None:
     category = classify(prompt)
     if category is None:
         record("UserPromptSubmit", suggested=False, prompt_chars=len(prompt), **common)
+        return
+    if backend_down():
+        # Corte abierto (issue #436): recordar que delegue solo lo mandaria a un error.
+        record(
+            "UserPromptSubmit",
+            suggested=False,
+            category=category,
+            reason="backend_down",
+            prompt_chars=len(prompt),
+            **common,
+        )
         return
     context = hook_text("prompt.mechanical", category=category)
     emit("UserPromptSubmit", context, category=category, prompt_chars=len(prompt), **common)

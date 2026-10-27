@@ -334,6 +334,19 @@ COOLDOWN_FAILURES = max(1, _env_int("LOCAL_DELEGATE_COOLDOWN_FAILURES", 3))
 COOLDOWN_S = max(1.0, _env_float("LOCAL_DELEGATE_COOLDOWN_S", 120.0))
 COOLDOWN_MAX_S = max(COOLDOWN_S, _env_float("LOCAL_DELEGATE_COOLDOWN_MAX_S", 900.0))
 
+# --- Corte por backend inalcanzable (issue #436, punto 3) ---------------------
+# El mismo mecanismo que el enfriamiento, pero para la CONEXIÓN: tras N fallos de conexión seguidos
+# (`connection_failure`: dns, refused, connect_timeout…) las `local_*` responden al momento que el
+# backend no está, sin llamarlo ni registrar una delegación. Al vencer la espera, la siguiente
+# llamada va de verdad (prueba): si conecta, se cierra; si no, vuelve a cortar con la espera doblada
+# hasta el tope. Un sondeo bueno de `local_status` o del panel también lo cierra.
+BACKEND_BREAKER = _env_flag("LOCAL_DELEGATE_BACKEND_BREAKER", True)
+BACKEND_BREAKER_FAILURES = max(1, _env_int("LOCAL_DELEGATE_BACKEND_BREAKER_FAILURES", 3))
+BACKEND_BREAKER_S = max(1.0, _env_float("LOCAL_DELEGATE_BACKEND_BREAKER_S", 60.0))
+BACKEND_BREAKER_MAX_S = max(
+    BACKEND_BREAKER_S, _env_float("LOCAL_DELEGATE_BACKEND_BREAKER_MAX_S", 600.0)
+)
+
 
 # --- Respaldo entre modelos (F3: REQ-002, REQ-004, REQ-014) ------------------
 # Encendido por defecto (D-1), hasta 2 saltos (D-3). La cadena de cada rol la resuelve `chains.py`

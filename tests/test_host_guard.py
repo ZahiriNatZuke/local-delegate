@@ -109,7 +109,11 @@ def test_classify_is_no_file_oracle_for_a_rebinding_page(tmp_path):
         assert response.status_code == 421
         assert "5417" not in response.text and str(target) not in response.text
         # Control: from loopback the endpoint works, so the 421 above is the guard and not a broken route.
-        assert _classify(client, target, {"Host": f"127.0.0.1:{PORT}"}).status_code == 200
+        # `/api/hook/*` only takes JSON (a «simple» text/plain request gets 415 there), so the control sends JSON.
+        control = _classify(
+            client, target, {"Host": f"127.0.0.1:{PORT}", "Content-Type": "application/json"}
+        )
+        assert control.status_code == 200
 
 
 def test_a_post_from_another_site_is_refused_by_origin(tmp_path):
@@ -121,10 +125,11 @@ def test_a_post_from_another_site_is_refused_by_origin(tmp_path):
             )
             assert response.status_code == 403, origin
             assert "Invalid Origin" in response.text, "403 from another check, not the guard"
-        # The panel itself (same origin) and a non-web embedder are not refused.
+        # The panel itself (same origin) and a non-web embedder are not refused by the guard. They are
+        # checked on a panel route: `/api/hook/*` refuses every `Origin` on its own, the panel never calls it.
         for origin in (LOCAL, f"http://localhost:{PORT}", "app://claude"):
-            response = _classify(
-                client, tmp_path / "x", {"Host": f"127.0.0.1:{PORT}", "Origin": origin}
+            response = client.get(
+                "/api/events", headers={"Host": f"127.0.0.1:{PORT}", "Origin": origin}
             )
             assert response.status_code == 200, origin
 

@@ -832,6 +832,38 @@ def cooled_model(model: str) -> bool:
         return False
 
 
+# --- Backend cortado (issue #436, punto 3) -------------------------------------------------------
+#
+# Tras varios fallos de conexion seguidos el servidor abre un corte en `LOG_DIR/backend-breaker.json`
+# (`local_delegate.cooldown.backend_breaker`) y las `local_*` responden al momento que el backend no
+# esta. Mientras dure, sugerir delegar solo manda al agente a un error: los hooks callan. Mismo
+# criterio que `cooled_model`: ante cualquier duda, False (se sugiere como siempre).
+
+#: Copia de `local_delegate.cooldown.BREAKER_STATE_FILE`; `tests/test_backend_breaker.py` las ata.
+BACKEND_BREAKER_FILE = "backend-breaker.json"
+
+
+def backend_down(environ: Mapping[str, str] | None = None) -> bool:
+    """¿Esta abierto el corte por backend inalcanzable? Cualquier entrada vigente basta: el fichero
+    solo guarda el backend de esta maquina (`host[:puerto]`). `environ`: el del cliente, que el
+    daemon pasa al clasificar; sin el, el del proceso."""
+    env = os.environ if environ is None else environ
+    target = str(env.get("LOCAL_DELEGATE_LOG_DIR") or "").strip()
+    folder = Path(target) if target else log_dir()
+    try:
+        data = json.loads((folder / BACKEND_BREAKER_FILE).read_text(encoding="utf-8"))
+        now = time.time()
+        return any(
+            isinstance(entry, dict)
+            and isinstance(entry.get("until"), (int, float))
+            and not isinstance(entry.get("until"), bool)
+            and float(entry["until"]) > now
+            for entry in data.values()
+        )
+    except (OSError, ValueError, AttributeError, TypeError, OverflowError):
+        return False
+
+
 # --- Cruce entre el bloqueo y la delegacion que venga despues -----------------------------------
 #
 # El hook y el servidor MCP son procesos distintos que escriben en ficheros distintos, asi que

@@ -2333,7 +2333,41 @@ def _attempt(
         state.record_success(model)
     elif result.error_class is not None:
         state.record_failure(model, result.error_class)
+    _note_backend_reach(result)
     return result, schema
+
+
+def _note_backend_reach(result: ChatResult) -> None:
+    """El corte por backend inalcanzable (issue #436): un fallo de CONEXIÓN suma; cualquier otra
+    respuesta (un éxito, un 5xx, un plazo de lectura, un error del modelo) dice que el backend
+    responde y lo deja limpio. `record_success` sin entrada no escribe nada."""
+    breaker = cooldown.backend_breaker()
+    if result.connection_failure:
+        breaker.record_failure(cooldown.backend_key(), failures.FailureClass.ENDPOINT)
+    else:
+        breaker.record_success(cooldown.backend_key())
+
+
+def _backend_down_text() -> str | None:
+    """Con el corte abierto, el error que devuelve la tool AL MOMENTO, sin llamar al backend ni
+    registrar una delegación; `None` si hay que llamarlo (cerrado, o vencido: la llamada es la
+    prueba). Deja una línea `skip` en `backend-breaker-events.jsonl` para poder contarlas.
+    """
+    breaker = cooldown.backend_breaker()
+    key = cooldown.backend_key()
+    cut = breaker.lookup(key)
+    if cut is None:
+        return None
+    breaker.record_skip(key)
+    now = time.time()
+    since = cut.since if cut.since is not None else now
+    return ERROR_PREFIX + i18n.t(
+        "mcp.error.backend_down",
+        host=config.backend_host(),
+        minutes=_machine(max(0.0, now - since) / 60),
+        until=datetime.fromtimestamp(cut.until, UTC).strftime("%H:%M:%S UTC"),
+        remaining=_machine(cut.remaining_s),
+    )
 
 
 def _next_hop(
@@ -2966,6 +3000,9 @@ def _chat(
     OpenAI-compatible (p. ej. `[{"type":"text",...},{"type":"image_url",...}]` para
     local_describe_image).
     """
+    down = _backend_down_text()
+    if down is not None:
+        return down
     entry_id = _inflight_start(tool=tool, model=model, source=source, chars_in=chars_in)
     # Turno por operación (REQ-003): una llamada simple (también la de imagen) es una operación.
     op = _OperationTurn(entry_id, model, tool, role_name=role, explicit=explicit)
@@ -3406,6 +3443,9 @@ def _chat_chunked(
     el trozo en proceso. Si un trozo aun así sale truncado, se vuelve a partir y se reintenta:
     el resultado final llega completo en vez de con el aviso `[salida truncada]`.
     """
+    down = _backend_down_text()
+    if down is not None:
+        return down
     chunk_chars = chunk_chars or config.CHUNK_CHARS
     chunks = _chunk_text(content, chunk_chars)
     entry_id = _inflight_start(
@@ -3670,6 +3710,9 @@ def _chat_map_reduce(
     given, replaces it only in the steps that combine partials (reduce and regroup): the map keeps
     `max_tokens_for` (lint, B2e).
     """
+    down = _backend_down_text()
+    if down is not None:
+        return down
     budget = _map_budget(max_chars)
     if pieces is None:
         pieces = _chunk_text(content, budget)
@@ -5784,6 +5827,8 @@ def probe_backend() -> BackendState:
         cause = failures.connection_cause(exc, loopback=_backend_on_loopback())
         return _failed_probe(url, cause, endpoint=endpoint, exception=exc)
     _LAST_GOOD_LISTS[url] = models
+    # El sondeo barato que cierra el corte (issue #436): `local_status` o el panel ven el backend.
+    cooldown.backend_breaker().record_success(cooldown.backend_key())
     return BackendState(True, models, False, None, None, r.status_code)
 
 
@@ -5835,6 +5880,25 @@ def _llamaswap_running() -> str | None:
         f"{e.get('model', '?')} ({e.get('state', '?')})" for e in entries if isinstance(e, dict)
     ]
     return ", ".join(parts) if parts else i18n.t("mcp.status.running_none")
+
+
+def _describe_backend_breaker() -> list[str]:
+    """El corte por backend inalcanzable (issue #436): su configuración y, si está abierto, cuánto
+    le queda. `local_status` sondea antes, así que con el backend de vuelta ya sale cerrado."""
+    if not config.BACKEND_BREAKER:
+        return [i18n.t("mcp.status.breaker.off")]
+    lines = [
+        i18n.t(
+            "mcp.status.breaker.on",
+            failures=config.BACKEND_BREAKER_FAILURES,
+            seconds=_machine(config.BACKEND_BREAKER_S),
+            cap=_machine(config.BACKEND_BREAKER_MAX_S),
+        )
+    ]
+    cut = cooldown.backend_breaker().lookup(cooldown.backend_key())
+    if cut is not None:
+        lines.append(i18n.t("mcp.status.breaker.open", remaining=_machine(cut.remaining_s)))
+    return lines
 
 
 def _describe_cooldown() -> list[str]:
@@ -5974,6 +6038,7 @@ def local_status() -> str:
     lines.append(i18n.t("mcp.status.concurrency", n=config.MAX_CONCURRENT_REQUESTS))
     lines.append(_describe_turn())
     lines.extend(_describe_cooldown())
+    lines.extend(_describe_backend_breaker())
 
     current_log = _current_log_path()
     n_events = 0
