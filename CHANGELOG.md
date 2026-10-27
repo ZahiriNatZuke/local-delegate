@@ -21,7 +21,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   llamadas, por compatibilidad), y la actividad pinta `3 +1` con el título «3 trozos · 4 llamadas
   al backend»; el diálogo de detalle de la fila muestra las dos cifras. Los eventos viejos, sin
   `pieces`, se ven como antes. «En curso» dice «Combinando 3 trozos…» durante la combinación y
-  «Reintentando trozo n/total» cuando un trozo cortado se vuelve a partir. (#454)
+  «Reintentando trozo n/total» cuando un trozo cortado se vuelve a partir, también en el
+  map/reduce. (#454)
 
 ## [0.42.0] - 2026-10-27
 

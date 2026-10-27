@@ -22,7 +22,7 @@
     "quality": {
       "status": "pending",
       "updatedAt": "2026-10-27T21:00:00.000Z",
-      "evidence": "tests/test_pieces_vs_calls.py (4) y 3 tests nuevos en tests/test_dashboard_states.py; control positivo: 6 fallan con src de main por la razon esperada; mutante sin pop de phase falla; suite completa local 5392 passed; ruff limpio; falta CI del PR.",
+      "evidence": "tests/test_pieces_vs_calls.py (5, uno del reintento del map tras el #455) y 3 tests nuevos en tests/test_dashboard_states.py; control positivo: 6 fallan con src de main por la razon esperada; mutante sin pop de phase falla; suite completa local 5401 passed tras rebase sobre el #456; ruff limpio; falta CI del PR.",
       "actor": "agent"
     }
   },

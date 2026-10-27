@@ -3962,6 +3962,8 @@ def _chat_map_reduce(
         return _map_parts(parts, depth)
 
     def _map_parts(parts: list, depth: int) -> list[str] | None:
+        # Only reached when a piece is split again (cut output or context overflow): #454.
+        _inflight_phase(entry_id, "retry")
         outputs: list[str] = []
         for part in parts:
             sub = _map_piece(part, depth + 1)

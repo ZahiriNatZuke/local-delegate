@@ -114,3 +114,28 @@ def test_inflight_phase_is_best_effort_and_validated(monkeypatch, tmp_path):
         server._inflight_end(entry_id)
     server._inflight_phase(entry_id, "reduce")  # entry already gone: no error
     assert server.inflight_snapshot() == []
+
+
+def test_map_reduce_marks_the_retry_of_a_cut_piece(monkeypatch, tmp_path):
+    """Map/reduce: a map step cut by `length` is split and retried (#455) under `phase: "retry"`;
+    the next piece is plain map again and the reduce says «reduce».
+
+    Positive control (before the hook in `_map_parts`): the retry calls see no phase.
+    """
+    _setup(monkeypatch, tmp_path)
+    text = "\n\n".join(f"## Sección {i}\n\n" + ("contenido " * 200) for i in range(60))
+    seen: list = []
+    monkeypatch.setattr(server, "_post_chat", _recording_post(seen, ["length"]))
+
+    server.local_summarize(text=text)
+
+    (event,) = _records(tmp_path)
+    maps = sum(1 for s in event["steps"] if s["kind"] == "map" and not s.get("retried"))
+    pieces = event["pieces"]
+    retries = len(seen) - 1 - pieces  # calls beyond one per piece and the reduce
+    assert retries >= 2, (len(seen), pieces, maps)
+    assert seen[0] == (1, None)
+    assert seen[1 : 1 + retries] == [(1, "retry")] * retries, seen
+    assert seen[1 + retries] == (2, None), "the next piece drops the retry phase"
+    assert seen[-1][1] == "reduce"
+    assert event["chunks"] == len(seen)
