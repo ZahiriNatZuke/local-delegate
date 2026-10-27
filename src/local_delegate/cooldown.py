@@ -24,6 +24,12 @@ episodios hubo ni cómo acabaron, que es lo que decide el criterio de P-4 (tarea
 
 Este módulo decide el estado; quién lo consulta y qué hace con él (saltar al respaldo, fallar al
 momento) es de la tarea 28.
+
+El mismo mecanismo sirve de corte por backend inalcanzable (issue #436, punto 3): `backend_breaker()`
+devuelve un `CooldownState` con su propio fichero (`backend-breaker.json`), su registro
+(`backend-breaker-events.jsonl`) y una sola clave, el `host[:puerto]` del backend. Ahí solo cuenta lo
+que quien llama decide que es un fallo de conexión (`connection_failure`), y cualquier respuesta del
+backend lo cierra.
 """
 
 from __future__ import annotations
@@ -40,6 +46,11 @@ from filelock import FileLock, Timeout
 from . import config, legacy_names
 from .failures import FailureClass
 from .json_state import read_json, write_json_atomic
+
+#: El estado y el registro del corte por backend inalcanzable (issue #436). Sin nombre viejo. Los
+#: hooks leen el estado con su copia del nombre (`hook_common.BACKEND_BREAKER_FILE`).
+BREAKER_STATE_FILE = "backend-breaker.json"
+BREAKER_EVENTS_FILE = "backend-breaker-events.jsonl"
 
 #: Las clases que suman para el enfriamiento (tabla de F3). El resto son neutras: ni suman ni ponen
 #: a cero. Capacidad y configuración incluidas (plan, tarea 26): no dicen nada de si el modelo
@@ -86,6 +97,9 @@ class ActiveCooldown:
     remaining_s: float
     #: Cuántas veces seguidas ha vuelto a entrar sin un éxito de por medio (1 la primera).
     reentries: int
+    #: Cuándo empezó la racha de fallos que lo enfrió (el primero sin un éxito detrás), o None si
+    #: lo escribió una versión que no lo guardaba.
+    since: float | None = None
 
 
 def _entry(raw: object) -> dict:
@@ -99,10 +113,10 @@ def _entry(raw: object) -> dict:
         value = raw.get(key)
         if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
             entry[key] = value
-    for key in ("wait_s", "until"):
+    for key in ("wait_s", "until", "since"):
         value = raw.get(key)
         if isinstance(value, (int, float)) and not isinstance(value, bool):
-            entry[key] = float(value)
+            entry[key] = float(value)  # `since` solo si está: un fichero viejo no lo tiene
     return entry
 
 
@@ -116,10 +130,15 @@ class CooldownState:
         max_wait_s: float,
         enabled: bool = True,
         clock: Callable[[], float] = time.time,
+        counting: frozenset[FailureClass] = COUNTING_CLASSES,
+        events_file: str = EVENTS_FILE,
+        legacy_file: str | None = LEGACY_STATE_FILE,
     ) -> None:
         self._path = Path(path)
-        self._events_path = self._path.with_name(EVENTS_FILE)
-        self._legacy_path = self._path.with_name(LEGACY_STATE_FILE)
+        self._events_path = self._path.with_name(events_file)
+        # Sin nombre viejo (el corte por backend), el «viejo» es el mismo fichero: `_load` lo lee.
+        self._legacy_path = self._path.with_name(legacy_file) if legacy_file else self._path
+        self._counting = counting
         self._failures = max(1, int(failures))
         self._max_wait_s = float(max_wait_s)
         self._wait_s = min(float(wait_s), self._max_wait_s)
@@ -130,7 +149,7 @@ class CooldownState:
 
     def record_failure(self, model: str, failure_class: FailureClass | str) -> None:
         """Suma un fallo si su clase cuenta; enfría al llegar a N, o al primer fallo tras vencer."""
-        if FailureClass(failure_class) not in COUNTING_CLASSES:
+        if FailureClass(failure_class) not in self._counting:
             return
         now = self._clock()
         events: list[dict] = []
@@ -151,6 +170,8 @@ class CooldownState:
                 entry["failures"] = 0
                 events.append(_event_row(now, model, "reenter", entry, extra))
             else:
+                if entry["failures"] == 0 or entry.get("since") is None:
+                    entry["since"] = now  # empieza la racha
                 entry["failures"] += 1
                 if entry["failures"] >= self._failures:
                     entry["wait_s"] = self._wait_s
@@ -186,6 +207,22 @@ class CooldownState:
             return True
 
         self._mutate(apply, events)
+
+    def record_skip(self, model: str) -> None:
+        """Una línea `skip` en el registro: una llamada que no se hizo porque estaba cortado.
+
+        No toca el estado. Es lo que permite contar después cuántas llamadas se ahorró un episodio
+        sin registrarlas como delegaciones ni como fallos en el log de uso (issue #436).
+        """
+        if not self._enabled:
+            return
+        now = self._clock()
+        try:
+            with self._lock():
+                entry = _entry(self._load().get(model))
+                _append_lines(self._events_path, [_event_row(now, model, "skip", entry, {})])
+        except (Timeout, OSError):
+            return
 
     # --- Leer ----------------------------------------------------------------------------------
 
@@ -238,7 +275,12 @@ class CooldownState:
         until = entry["until"]
         if until is None or until <= now:
             return None
-        return ActiveCooldown(until=until, remaining_s=until - now, reentries=entry["reentries"])
+        return ActiveCooldown(
+            until=until,
+            remaining_s=until - now,
+            reentries=entry["reentries"],
+            since=entry.get("since"),
+        )
 
     def _lock(self) -> FileLock:
         return FileLock(str(self._path) + ".lock", timeout=LOCK_WAIT_S)
@@ -291,3 +333,26 @@ def from_config() -> CooldownState:
         max_wait_s=config.COOLDOWN_MAX_S,
         enabled=config.COOLDOWN,
     )
+
+
+def backend_breaker() -> CooldownState:
+    """El corte por backend inalcanzable con la configuración vigente (issue #436, punto 3).
+
+    Solo cuenta `FailureClass.ENDPOINT`, y quien llama solo la pasa con un `connection_failure`: un
+    5xx, un plazo de lectura o un error del modelo dicen que el backend responde, y no cortan.
+    """
+    return CooldownState(
+        config.LOG_DIR / BREAKER_STATE_FILE,
+        failures=config.BACKEND_BREAKER_FAILURES,
+        wait_s=config.BACKEND_BREAKER_S,
+        max_wait_s=config.BACKEND_BREAKER_MAX_S,
+        enabled=config.BACKEND_BREAKER,
+        counting=frozenset({FailureClass.ENDPOINT}),
+        events_file=BREAKER_EVENTS_FILE,
+        legacy_file=None,
+    )
+
+
+def backend_key() -> str:
+    """La clave del backend en el corte: `host[:puerto]`, sin esquema, ruta ni credenciales."""
+    return config.backend_host() or "backend"

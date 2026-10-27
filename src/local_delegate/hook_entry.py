@@ -164,6 +164,11 @@ def classify_text(payload: object, environ) -> str:
         state = hook_common.block_state(environ)
     else:
         state = "inactive"
+    if state == "on" and hook_common.backend_down(environ):
+        # Corte por backend inalcanzable (issue #436): el mod de lectura solo actúa con `on`, así
+        # que con este valor deja pasar la lectura sin resumir ni avisar, igual que con el bloqueo
+        # apagado. Sin tocar el mod: la condición vive aquí, en una sola implementación.
+        state = "backend_down"
     return json.dumps(read_classifier.classify(payload, state, environ), ensure_ascii=False)
 
 

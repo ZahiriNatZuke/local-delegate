@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "slug": "backend-down-circuit-breaker",
+  "title": "Corte por backend inalcanzable: las local_* dejan de insistir (issue #436, punto 3)",
+  "mode": "lite",
+  "status": "verifying",
+  "createdAt": "2026-10-27T16:00:00.000Z",
+  "updatedAt": "2026-10-27T17:30:00.000Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-10-27T16:00:00.000Z",
+      "evidence": "Premisa leída en el código: connection_failure solo se pone en _post_chat cuando is_backend_missing; ningún estado impedía la llamada siguiente. Decisión en spec.md: reutilizar CooldownState con fichero propio, no registrar las llamadas cortadas en el log de uso, half-open al vencer y cierre por probe_backend.",
+      "actor": "agent"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-10-27T17:30:00.000Z",
+      "evidence": "ruff check/format limpios; pytest completo 5237 pasando (worktree, venv propio). Control positivo: con _backend_down_text a None y backend_down a False fallan 10 tests por los asserts esperados (call_count 4 == 3, read_switch 'on', salida del hook no vacía) y pasan los de control; contando todo fallo fallan los 3 de 'no cortan'.",
+      "actor": "agent"
+    }
+  }
+}

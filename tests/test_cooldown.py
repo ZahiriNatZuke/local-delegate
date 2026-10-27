@@ -68,6 +68,15 @@ def test_three_consecutive_failures_cool_the_model_for_120_s(path, clock):
     assert cooled.reentries == 1
 
 
+def test_the_cooldown_remembers_when_the_streak_started(path, clock):
+    state = _state(path, clock)
+    _fail(state, "m", 1)
+    clock.advance(30)
+    _fail(state, "m", 2)
+    cooled = state.lookup("m")
+    assert cooled is not None and cooled.since == START
+
+
 def test_two_failures_do_not_cool(path, clock):
     """Control positivo del anterior: el umbral es N, no «cualquier fallo»."""
     state = _state(path, clock)
@@ -242,7 +251,7 @@ def test_the_file_only_stores_counters_and_dates(path, clock):
     data = json.loads(path.read_text(encoding="utf-8"))
     assert set(data) == {"m", "n"}
     for entry in data.values():
-        assert set(entry) == {"failures", "wait_s", "until", "reentries"}
+        assert set(entry) == {"failures", "wait_s", "until", "reentries", "since"}
         assert all(value is None or isinstance(value, (int, float)) for value in entry.values())
 
 
