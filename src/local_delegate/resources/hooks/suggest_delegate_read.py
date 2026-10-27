@@ -64,6 +64,7 @@ from hook_common import (
     STEP_ASIDE_READ_MOD,
     already_recorded,
     backend_available,
+    backend_down,
     block_state,
     context_of,
     cooled_model,
@@ -332,6 +333,12 @@ def main() -> None:
         "id": new_id(),
         **base_fields,
     }
+
+    if backend_down():
+        # El servidor tiene el corte abierto (issue #436): cualquier `local_*` responderia que el
+        # backend no esta. Ni bloqueo ni sugerencia; el motivo queda en el dato.
+        record("PreToolUse", suggested=False, reason="backend_down", **common)
+        return
 
     # Solo la prosa se bloquea, y solo si hay a donde delegar. Cada una de las tres guardas
     # siguientes registra su motivo: si la regla se equivoca a menudo, tiene que verse en el dato

@@ -149,6 +149,34 @@ episodios y 10 fallos que cuenten no hay datos para decidir).
 >
 > El daemon lee estas variables al arrancar: para cambiarlas hay que reiniciarlo.
 
+## Corte por backend inalcanzable
+
+El mismo mecanismo que el enfriamiento, pero para la **conexión** con el backend. Con el backend
+inalcanzable (una VPN corporativa que impide resolver el nombre de la tailnet, la red caída) cada
+`local_*` falla en milisegundos, y el agente las seguía llamando porque las instrucciones dicen que
+delegue. Tras varios **fallos de conexión** seguidos (`connection_failure`: `dns`, `refused`,
+`no_route`, `connect_timeout`…), las `local_*` responden al momento, sin llamar al backend, que no
+está disponible desde hace X minutos, que no reintente hasta una hora dada y que haga la tarea él
+mismo. Esas respuestas **no** se registran como delegación ni como fallo en el log de uso: van como
+línea `skip` a `backend-breaker-events.jsonl`, junto a `enter`, `reenter` y `clear`.
+
+Se recupera solo: al vencer la espera, la siguiente llamada va de verdad. Si conecta, el corte se
+cierra; si no, vuelve a cortar con la espera doblada hasta el tope. Un sondeo bueno de
+`local_status` o del panel también lo cierra, así que cuando vuelve la red no hay que reiniciar
+nada. Mientras dura, los hooks de sugerencia (`Read`, shell, prompt) y el mod de lectura dejan de
+proponer que delegues. El estado vive en `backend-breaker.json`, en la carpeta de datos, y lo
+comparten el daemon y todos los procesos stdio de la máquina.
+
+| Variable | Default | Qué hace |
+|---|---|---|
+| `LOCAL_DELEGATE_BACKEND_BREAKER` | `1` | `0` lo apaga |
+| `LOCAL_DELEGATE_BACKEND_BREAKER_FAILURES` | `3` | fallos de conexión seguidos que abren el corte |
+| `LOCAL_DELEGATE_BACKEND_BREAKER_S` | `60` | espera de la primera vez, en segundos |
+| `LOCAL_DELEGATE_BACKEND_BREAKER_MAX_S` | `600` | tope de la espera: cada prueba fallida la dobla hasta aquí |
+
+> **Qué cuenta:** solo los fallos de conexión. Un 5xx, un `capacity_or_load`, un plazo de lectura o
+> un error del modelo dicen que el backend contesta: no cortan y ponen la racha a cero.
+
 ## Turno, afinidad y lentitud
 
 Con un llama-swap **local** y su `config.yaml` legible (`LLAMASWAP_CONFIG` y el extra
