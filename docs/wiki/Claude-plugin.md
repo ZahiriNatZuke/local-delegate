@@ -73,8 +73,12 @@ preguntarle al daemon durante 5 minutos.
 Las decisiones (`record-read`) van igual desde la 0.41.1: primero `POST /api/hook/record-read`, que
 escribe la misma línea que `hook record-read` con el entorno que manda el mod (las variables de
 arriba más `LD_HOOK_TELEMETRY_LOG` y `LD_HOOK_ENABLED`), y si el daemon no la toma, el proceso. El
-destino tiene que ser un `.jsonl` con ruta absoluta; si no, el daemon responde 400 y escribe el
-proceso. En la 0.41.0 solo iba por el proceso, y las decisiones tomadas en el diálogo
+daemon solo escribe en **su** telemetría: el destino que manda el mod tiene que ser el mismo fichero
+que `LD_HOOK_TELEMETRY_LOG` en el entorno del daemon (el lanzador). Si es otro, o el daemon no la
+tiene, responde 403 sin escribir nada y escribe el proceso. Las tres rutas `/api/hook/*` exigen
+`Content-Type: application/json` y rechazan cualquier petición con `Origin`, haya token o no: una web
+abierta en el mismo equipo también llega desde `127.0.0.1` (revisión de seguridad del 2026-10-23;
+antes valía cualquier `.jsonl` absoluto). En la 0.41.0 solo iba por el proceso, y las decisiones tomadas en el diálogo
 (`summarized`, `read_whole`, `dismissed`) no llegaron nunca a la telemetría. Si ninguna de las dos
 vías la toma, el mod deja rastro (una línea en el log de depuración y otra en
 `hook-failures.jsonl`, sin ruta ni contenido) y la vuelve a intentar al empezar la siguiente

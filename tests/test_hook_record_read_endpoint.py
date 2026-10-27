@@ -13,6 +13,11 @@ su prueba:
   entorno del daemon no se toca;
 - **solo con token y solo desde loopback**, y un destino que no es un `.jsonl` absoluto se rechaza
   sin escribir nada (el endpoint no escribe donde le digan).
+
+Revisión de seguridad del 2026-10-23 (SDD `panel-record-read-and-xss`): el destino ya no lo decide la
+petición. Solo se escribe en la telemetría del propio daemon (`config.HOOK_TELEMETRY_LOG`); otro
+destino es un 403 sin escribir nada. La puerta exige `application/json` y rechaza cualquier `Origin`,
+también sin token, y los textos de la entrada tienen tope.
 """
 
 from __future__ import annotations
@@ -34,6 +39,14 @@ TOKEN = "record-test-token"
 RECORD = "/api/hook/record-read"
 LOOPBACK = ("127.0.0.1", 50000)
 TIMEOUT_S = 60
+
+
+@pytest.fixture(autouse=True)
+def daemon_telemetry(tmp_path, monkeypatch) -> Path:
+    """La telemetría que conoce el daemon (la del lanzador): el único destino que se acepta."""
+    log = tmp_path / "telemetry.jsonl"
+    monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", log)
+    return log
 
 
 @pytest.fixture
@@ -123,6 +136,7 @@ def test_the_endpoint_writes_the_line_the_cli_writes(tmp_path, monkeypatch, clie
     cli_log = tmp_path / "cli" / "telemetry.jsonl"
     http_log = tmp_path / "http" / "telemetry.jsonl"
     entry = _entry(prose, decision, via)
+    monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", http_log)
 
     _cli_in_process(monkeypatch, entry, _client_env(tmp_path, cli_log))
     for name in hook_entry.RECORD_ENV:
@@ -139,11 +153,12 @@ def test_the_endpoint_writes_the_line_the_cli_writes(tmp_path, monkeypatch, clie
     assert _without_ts(http_lines[0]) == _without_ts(cli_lines[0])
 
 
-def test_the_endpoint_matches_the_real_cli_process(tmp_path, client):
+def test_the_endpoint_matches_the_real_cli_process(tmp_path, monkeypatch, client):
     """El CLI en proceso de arriba es el de verdad: una fila por el proceso que lanza `runLd`."""
     prose = _prose(tmp_path / "docs")
     cli_log = tmp_path / "cli" / "telemetry.jsonl"
     http_log = tmp_path / "http" / "telemetry.jsonl"
+    monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", http_log)
     entry = _entry(prose, "summarized")
     base = {
         name: value
@@ -174,16 +189,17 @@ def test_the_endpoint_matches_the_real_cli_process(tmp_path, client):
 
 
 def test_the_request_environment_wins_over_the_daemon(tmp_path, monkeypatch, client):
-    """El daemon tiene otro destino, el experimento apagado y el bloqueo apagado por fichero."""
-    daemon_log = tmp_path / "daemon" / "telemetry.jsonl"
+    """El experimento y el bloqueo salen de la petición: el daemon los tiene apagados (el bloqueo,
+    por fichero) y la línea dice lo que manda el mod. El destino es el mismo en los dos."""
+    client_log = tmp_path / "client" / "telemetry.jsonl"
+    monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", client_log)
     daemon_switch = tmp_path / "daemon-block-off"
     daemon_switch.write_text("", encoding="utf-8")
-    monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(daemon_log))
+    monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(client_log))
     monkeypatch.setenv("LD_HOOK_ENABLED", "0")
     monkeypatch.setenv("LD_HOOK_READ_SWITCH_FILE", str(daemon_switch))
     before = dict(os.environ)
     prose = _prose(tmp_path / "docs")
-    client_log = tmp_path / "client" / "telemetry.jsonl"
 
     response = client.post(
         RECORD,
@@ -194,7 +210,6 @@ def test_the_request_environment_wins_over_the_daemon(tmp_path, monkeypatch, cli
     lines = _lines(client_log)
     assert len(lines) == 1
     assert lines[0]["block"] == "on"  # el del daemon diría `off_file`
-    assert not daemon_log.exists()
     assert dict(os.environ) == before
 
     # Control: con el experimento apagado en la petición no se escribe nada, como en el CLI.
@@ -220,23 +235,67 @@ def test_without_a_destination_nothing_is_written(tmp_path, monkeypatch, client)
 
 
 @pytest.mark.parametrize(
-    "destination", ["relative/telemetry.jsonl", "{base}/telemetry.txt", "{base}/notes.json", ""]
+    "destination",
+    [
+        "relative/telemetry.jsonl",
+        "{base}/telemetry.txt",
+        "{base}/notes.json",
+        "",
+        # Un `.jsonl` absoluto que no es la telemetría del daemon: el log de uso del mes o una
+        # carpeta que no existe (hasta la 0.41.1 se creaba).
+        "{base}/data/usage-202610.jsonl",
+        "{base}/created-by-the-request/sub/x.jsonl",
+    ],
 )
-def test_a_destination_that_is_not_an_absolute_jsonl_is_refused(tmp_path, client, destination):
+def test_a_destination_other_than_the_daemon_telemetry_is_refused(
+    tmp_path, client, daemon_telemetry, destination
+):
     prose = _prose(tmp_path / "docs")
     target = destination.replace("{base}", str(tmp_path))
     env = _client_env(tmp_path, tmp_path / "unused.jsonl", LD_HOOK_TELEMETRY_LOG=target)
     response = client.post(RECORD, json={"payload": _entry(prose, "summarized"), "env": env})
-    assert response.status_code == 400
+    assert response.status_code == 403
     assert not (tmp_path / "telemetry.txt").exists()
     assert not (tmp_path / "notes.json").exists()
-    # Control: el mismo cuerpo con un `.jsonl` absoluto entra.
-    good = _client_env(tmp_path, tmp_path / "ok.jsonl")
+    assert not (tmp_path / "data" / "usage-202610.jsonl").exists()
+    assert not (tmp_path / "created-by-the-request").exists()
+    assert not daemon_telemetry.exists()
+    # Control: el mismo cuerpo con la telemetría del daemon entra, escrita de otra forma (`..`, y en
+    # Windows otras mayúsculas): es el mismo fichero.
+    same = str(tmp_path / "x" / ".." / "telemetry.jsonl")
+    if os.name == "nt":
+        same = same.upper()
+    good = _client_env(tmp_path, Path(same))
     assert (
         client.post(RECORD, json={"payload": _entry(prose, "summarized"), "env": good}).status_code
         == 204
     )
-    assert len(_lines(tmp_path / "ok.jsonl")) == 1
+    assert len(_lines(daemon_telemetry)) == 1
+
+
+def test_a_daemon_without_telemetry_refuses_any_destination(tmp_path, monkeypatch, client):
+    """Sin `LD_HOOK_TELEMETRY_LOG` en el lanzador el daemon no sabe dónde va la línea: 403, y el mod
+    la registra por el proceso."""
+    monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", None)
+    prose = _prose(tmp_path / "docs")
+    log = tmp_path / "telemetry.jsonl"
+    body = {"payload": _entry(prose, "summarized"), "env": _client_env(tmp_path, log)}
+    assert client.post(RECORD, json=body).status_code == 403
+    assert not log.exists()
+
+
+@pytest.mark.parametrize(("field", "size"), [("scope", 5000), ("session_id", 300), ("path", 5000)])
+def test_long_texts_are_refused(tmp_path, client, daemon_telemetry, field, size):
+    prose = _prose(tmp_path / "docs")
+    env = _client_env(tmp_path, daemon_telemetry)
+    entry = _entry(prose, "summarized")
+    entry[field] = "s" * size
+    assert client.post(RECORD, json={"payload": entry, "env": env}).status_code == 400
+    assert not daemon_telemetry.exists()
+    # Control: la misma entrada sin el texto largo entra.
+    good = _entry(prose, "summarized")
+    assert client.post(RECORD, json={"payload": good, "env": env}).status_code == 204
+    assert len(_lines(daemon_telemetry)) == 1
 
 
 # --- Puerta ----------------------------------------------------------------------------------------
@@ -267,6 +326,33 @@ def test_only_from_loopback(monkeypatch, tmp_path):
     assert not log.exists()
     other_loopback = TestClient(metrics.app, client=("::1", 50000), headers=headers)
     assert other_loopback.post(RECORD, json=body).status_code == 204
+
+
+@pytest.mark.parametrize("with_token", [True, False])
+def test_a_browser_request_is_refused(monkeypatch, tmp_path, daemon_telemetry, with_token):
+    """Una web abierta en esta máquina es loopback: un POST «simple» (`text/plain`, sin preflight)
+    o cualquier petición con `Origin` no entra, haya token o no (revisión 2026-10-23)."""
+    monkeypatch.setattr(token_source, "daemon_token", lambda: TOKEN if with_token else "")
+    headers = {"Authorization": f"Bearer {TOKEN}"} if with_token else {}
+    web = TestClient(metrics.app, client=LOOPBACK, headers=headers)
+    prose = _prose(tmp_path / "docs")
+    body = {"payload": _entry(prose, "summarized"), "env": _client_env(tmp_path, daemon_telemetry)}
+    content = json.dumps(body)
+    for extra, status in (
+        ({"Content-Type": "text/plain;charset=UTF-8"}, 415),
+        ({"Content-Type": "application/x-www-form-urlencoded"}, 415),
+        ({}, 415),
+        ({"Content-Type": "application/json", "Origin": "http://evil.example"}, 403),
+        ({"Content-Type": "application/json", "Origin": "null"}, 403),
+        ({"Content-Type": "application/json", "Origin": "http://127.0.0.1:9393"}, 403),
+    ):
+        response = web.post(RECORD, content=content, headers=extra)
+        assert response.status_code == status, (extra, response.status_code)
+    assert not daemon_telemetry.exists()
+    # Control: lo que manda el mod (JSON, sin `Origin`) entra.
+    json_type = {"Content-Type": "application/json; charset=utf-8"}
+    assert web.post(RECORD, content=content, headers=json_type).status_code == 204
+    assert len(_lines(daemon_telemetry)) == 1
 
 
 def test_bad_bodies_are_rejected(client):
