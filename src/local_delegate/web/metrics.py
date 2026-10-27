@@ -1112,7 +1112,24 @@ def _require_loopback(request: Request) -> None:
         raise HTTPException(status_code=403)
 
 
-_HOOK_CHECKS = [Depends(_require_web_token), Depends(_require_loopback)]
+# Loopback no basta: un navegador de esta máquina también es loopback, y una web cualquiera puede
+# mandar un POST «simple» (`text/plain`, `mode: "no-cors"`) sin preflight. El mod y los hooks no son
+# un navegador: mandan `application/json` y nunca `Origin`. Exigir lo primero obliga a un navegador
+# a pedir preflight, que este servidor no concede; rechazar lo segundo corta cualquier página,
+# también la del propio panel. Las dos valen aunque no haya token (revisión de seguridad 2026-10-23).
+def _require_hook_client(request: Request) -> None:
+    if request.headers.get("origin") is not None:
+        raise HTTPException(status_code=403)
+    media_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if media_type != "application/json":
+        raise HTTPException(status_code=415)
+
+
+_HOOK_CHECKS = [
+    Depends(_require_web_token),
+    Depends(_require_loopback),
+    Depends(_require_hook_client),
+]
 
 
 async def _hook_body(
@@ -1172,14 +1189,34 @@ async def hook_classify_config(request: Request):
 # primero y el proceso queda de respaldo. La línea es la del CLI: las dos salen de
 # `hook_entry.record_read`, con el entorno que manda el mod (`RECORD_ENV`), incluido el destino.
 #
-# El destino viene de la petición, así que solo se acepta un `.jsonl` con ruta absoluta: el endpoint
-# añade una línea de telemetría, no escribe donde le digan. Sin destino no se escribe nada (como en
-# el CLI). Nunca registra el contenido de la petición.
+# El destino viene de la petición, pero el endpoint solo escribe en la telemetría que el propio daemon
+# conoce (`config.HOOK_TELEMETRY_LOG`, la del lanzador): hasta la 0.41.1 aceptaba cualquier `.jsonl`
+# absoluto, y una web abierta en esta máquina podía añadir una línea a cualquier `.jsonl` del disco
+# (el log de uso del mes, transcripts) y crear las carpetas que faltaran. Un destino distinto, o un
+# daemon sin telemetría, es un 403 sin escribir nada: el mod registra entonces por el proceso, con su
+# propio entorno. Sin destino no se escribe nada (como en el CLI). Los textos de la entrada tienen
+# tope. Nunca registra el contenido de la petición.
+
+#: Tope de los textos de la entrada de `record-read`: lo que manda el mod son nombres cortos
+#: (`via`, `scope`, `decision`, el id de la sesión) y una ruta, que solo se resume en un hash.
+RECORD_TEXT_MAX = 256
+RECORD_PATH_MAX = 4096
 
 
 def _telemetry_destination_ok(value: str) -> bool:
     text = value.strip()
-    return bool(text) and Path(text).is_absolute() and Path(text).suffix.lower() == ".jsonl"
+    own = config.HOOK_TELEMETRY_LOG
+    if not text or own is None or not Path(text).is_absolute():
+        return False
+    return os.path.normcase(os.path.abspath(text)) == os.path.normcase(os.path.abspath(own))
+
+
+def _record_entry_ok(payload: dict) -> bool:
+    for key, value in payload.items():
+        limit = RECORD_PATH_MAX if key == "path" else RECORD_TEXT_MAX
+        if isinstance(value, str) and len(value) > limit:
+            return False
+    return True
 
 
 @app.post("/api/hook/record-read", dependencies=_HOOK_CHECKS)
@@ -1190,9 +1227,11 @@ async def hook_record_read(request: Request):
     from .. import hook_entry
 
     payload, env = await _hook_body(request, hook_entry.RECORD_ENV)
+    if not _record_entry_ok(payload):
+        raise HTTPException(status_code=400)
     destination = env.get("LD_HOOK_TELEMETRY_LOG")
     if destination is not None and not _telemetry_destination_ok(destination):
-        raise HTTPException(status_code=400)
+        raise HTTPException(status_code=403)
     try:
         await run_in_threadpool(hook_entry.record_read, payload, env)
     except Exception as exc:
