@@ -380,6 +380,27 @@ def test_the_tests_step_has_its_own_limit_lower_than_the_jobs():
     )
 
 
+def test_the_lint_job_limit_leaves_room_for_the_browser_steps():
+    """El job `lint` no puede quedarse sin tiempo antes que sus propios pasos del navegador.
+
+    El 2026-10-27 el job tenía 5 minutos: una instalación lenta del navegador (3 min) se comió el
+    tiempo de los tests del panel y `lint` salió `cancelled` en main sin ningún fallo de código.
+    Cada paso del navegador declara su límite, y el job debe superar su suma con margen para el
+    resto de pasos (checkout, uv, ruff, Node), que en verde tardan ~20 s.
+    """
+    job = yaml.safe_load(CI_YML.read_text(encoding="utf-8"))["jobs"]["lint"]
+    names = ("Install browser for the dashboard UI tests", "Dashboard UI (Playwright)")
+    limits = {p["name"]: p.get("timeout-minutes") for p in job["steps"] if p.get("name") in names}
+    assert set(limits) == set(names), f"faltan pasos del navegador en `lint`: {limits}"
+    assert all(v is not None for v in limits.values()), f"paso sin `timeout-minutes`: {limits}"
+
+    margin = 2
+    assert job["timeout-minutes"] >= sum(limits.values()) + margin, (
+        f"el límite de `lint` ({job['timeout-minutes']}) debe ser al menos la suma de sus pasos "
+        f"del navegador ({sum(limits.values())}) más {margin} de margen"
+    )
+
+
 def test_the_classifiers_are_the_blocking_cells_of_the_matrix():
     """`pyproject.toml` declara justo las versiones de la matriz del CLI, que bloquean todas (D8)."""
     import tomllib
