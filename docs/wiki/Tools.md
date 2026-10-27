@@ -61,8 +61,10 @@ Resume un texto o archivo. Prefiérela a leer el archivo con `Read` cuando pasa 
 
 Enruta sola al modelo de contexto largo cuando la entrada es grande. Si aun así no cabe, hace
 map-reduce: el log del panel guarda **una** entrada con `chunks: N`, no N entradas. Si algún
-trozo se corta por `max_tokens`, el resultado lo avisa y el log lo registra (`finish_reason:
-length`, `truncated_out`).
+trozo se corta por `max_tokens`, se parte y se reintenta (desde la 0.43.0; antes el parcial cortado
+se daba por bueno). Si aun así queda alguno cortado, el resultado lo avisa con el trozo y sus líneas
+(«trozos afectados: 2 (líneas 41-80)») y el log lo registra (`finish_reason: length`,
+`truncated_out`).
 
 ### Resumen por secciones (experimental, apagado)
 
@@ -225,7 +227,8 @@ dar la explicación general. Si el archivo cabe en el rol de código, una llamad
 ninguna definición (los decoradores van con la suya), toma notas por función en cada trozo y
 redacta la explicación sobre las notas, la `question` y el **inventario de nombres de primer
 nivel**, calculado en el servidor, para que no dé por completa una lista a la que le faltan
-piezas. Un fichero sin definiciones de ese tipo se parte por párrafos y líneas.
+piezas. Desde la 0.43.0 las notas de cada trozo tienen un tope de salida propio, proporcional al
+trozo y hasta `LOCAL_DELEGATE_CHUNK_MAX_TOKENS`, en vez del común de 764 tokens que las cortaba. Un fichero sin definiciones de ese tipo se parte por párrafos y líneas.
 
 ## `local_describe_image`
 

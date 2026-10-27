@@ -171,14 +171,19 @@ endpoint y devuelve **solo texto**.
 por límites naturales —headers Markdown, párrafos, líneas— y procesan **un trozo por llamada**
 respetando el techo de `max_tokens`, concatenando las salidas en orden y conservando el formato en
 las costuras. Un documento de 20 000+ caracteres vuelve completo en vez de cortado a mitad. El log
-registra `chunks: N` y el dashboard muestra el progreso (`trozo 3/7`) mientras corre.
+registra `chunks: N` y el dashboard muestra el progreso (`trozo 3/7`) mientras corre. Desde la
+0.43.0, «En curso» dice también la fase: «Combinando 3 trozos…» mientras se juntan los parciales y
+«Reintentando trozo n/total» cuando un trozo cortado se vuelve a partir; y la actividad separa
+trozos de llamadas al backend (`3 +1`: tres trozos y una combinación).
 
 **Resúmenes de documentos enormes.** `local_summarize` y `local_lint_summary` hacen **map-reduce**
 cuando la entrada no cabe en el modelo: resumen cada parte y luego resumen los resúmenes, por
 niveles si hace falta. Antes truncaban —de un log de CI enorme se resumía el principio y el resto
 se descartaba en silencio, que es justo donde suelen estar los errores— y ahora se lee entero. Si
 algún trozo se corta por `max_tokens`, el resultado lo avisa y el log registra `finish_reason:
-length`.
+length`. Desde la 0.43.0 un parcial cortado ya no se da por bueno: se descarta, se parte el trozo
+(o el grupo del reagrupado) y se reintenta, hasta dos niveles; si aun así queda alguno cortado, el
+aviso dice qué trozo y sus líneas.
 Desde la 0.36.1, con un log que no cabe en una llamada, `local_lint_summary` da entrada solo a los
 diez ficheros más nombrados (y dice cuántos más hay), y las cifras del resumen final las pone el
 programa, no el modelo.

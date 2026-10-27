@@ -6,6 +6,22 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-10-27
+
+Esta versión cierra dos fallos de las delegaciones troceadas. El map/reduce ya no da por buenos los
+parciales que el modelo cortó por `max_tokens`: los parte y los reintenta, y si aun así queda alguno
+cortado, el aviso dice qué trozo y qué líneas. Y el panel deja de mezclar trozos con llamadas al
+backend: la actividad pinta `3 +1` (tres trozos y una combinación) y «En curso» dice en qué fase va.
+
+### Cómo actualizar
+
+- **Abre una sesión nueva de Claude Code (o de Claude Desktop) tras actualizar.** Las sesiones
+  abiertas siguen con el servidor MCP de la 0.42.0 hasta que se reinician.
+- **Ejecuta `local-delegate update`** (y reinicia el daemon si lo usas), como en cada versión.
+- **Si lees el log de uso con tus propios scripts:** los eventos troceados llevan ahora `pieces`
+  (el número de trozos). `chunks` no cambia de significado: sigue siendo el número de llamadas al
+  backend, así que lo que ya sumabas sigue valiendo. Los eventos anteriores no traen `pieces`.
+
 ### Corregido
 
 - El map/reduce ya no acepta un parcial cortado por `max_tokens`: si un paso del map o del
@@ -3636,7 +3652,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.42.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.43.0...HEAD
+[0.43.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.42.0...v0.43.0
 [0.42.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.41.1...v0.42.0
 [0.41.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.41.0...v0.41.1
 [0.41.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.40.0...v0.41.0
