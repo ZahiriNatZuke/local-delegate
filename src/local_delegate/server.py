@@ -323,6 +323,11 @@ def _inflight_start(
     if chunks:
         entry["chunks"] = int(chunks)
         entry["chunk"] = 1
+    # Issue #442: which session asked for it, as its one-way key (never the id), so the mod's band
+    # of THAT session alone says «delegating». Absent when unknown (no hook note, not Claude Code).
+    session_key = _caller_session_key()
+    if session_key is not None:
+        entry["caller_session_key"] = session_key
     token = cancellation.current()
     if token is not None and token.entry is None:
         # Si la llamada se cancela, su evento de uso sale de aquí (`_log_cancelled`).
@@ -333,6 +338,16 @@ def _inflight_start(
 
     _inflight_mutate(_add)
     return entry_id
+
+
+def _caller_session_key() -> str | None:
+    """The asking session's one-way key, or `None`. Observation: it never breaks a delegation."""
+    try:
+        from . import attribution
+
+        return attribution.current_session_key()
+    except Exception:
+        return None
 
 
 def _inflight_progress(entry_id: int, chunk: int) -> None:
@@ -444,6 +459,10 @@ def inflight_snapshot() -> list[dict]:
                 entry["turn_in_use"] = v.get("turn_in_use")
             if "turn_position" in v:
                 entry["turn_position"] = v.get("turn_position")
+            # Issue #442: the asking session's key, only when known. `/api/inflight` uses it to
+            # tell a session its own delegations and never hands it out.
+            if v.get("caller_session_key"):
+                entry["caller_session_key"] = v.get("caller_session_key")
             result.append(entry)
         for key in stale:
             data.pop(key, None)

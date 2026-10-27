@@ -7,7 +7,11 @@
 //     is worth at API prices (`cost.figure.estimate`).
 //   - `/api/backend`: whether the local backend answers and which model it has mounted (or is still
 //     loading: a `running` entry whose state is not `ready`).
-//   - `/api/inflight`: the delegations running right now, each with its tool and `elapsed_s`.
+//   - `/api/inflight?session=<id>`: the delegations running right now, each with its tool, its
+//     `elapsed_s` and whether this session asked for it (`mine`, issue #442). Only this session's
+//     own make the band say «delegating» with the tool, the time and the chunks; when the backend
+//     works for another session alone, the band says just that (` ● LISTO ` and «en uso por otra
+//     sesión», state `shared`), with nothing of the other session's call.
 //
 // When it asks (F4-band, live refresh):
 //   - after each `session.measure` (every main-thread turn) and when a call to a local-delegate tool
@@ -82,10 +86,11 @@ const STATUS_TOOL = /^mcp__local-delegate__/
 const STATUS_HOT_MS = 1000
 const STATUS_COLD_MS = 30000
 
-// The glyphs carry the state on their own, for a terminal without color.
-const STATUS_GLYPH = { ready: '●', down: '○', none: '◌' }
+// The glyphs carry the state on their own, for a terminal without color. `shared` (the backend
+// works for another session, issue #442) is still ready for this one: the same dot and color.
+const STATUS_GLYPH = { ready: '●', shared: '●', down: '○', none: '◌' }
 const STATUS_SPIN = ['◐', '◓', '◑', '◒']
-const STATUS_COLOR = { ready: 'success', busy: 'warning', down: 'error' }
+const STATUS_COLOR = { ready: 'success', shared: 'success', busy: 'warning', down: 'error' }
 
 /** A token count in a few characters: `850`, `12.3k`, `456k`, `1.2M` (`,` as the decimal in es). */
 export function statusTokens(value, lang) {
@@ -160,11 +165,30 @@ function statusTask(list) {
 }
 
 /**
+ * This session's own delegations in flight (`own`, `ownCount`) and how many of other sessions
+ * (`others`), from `/api/inflight?session=<id>` (issue #442). An entry is this session's only when
+ * the daemon marks it `mine: true`: one without a known session is never taken for its own. A
+ * daemon from before #442 marks none and sends no `mine_count`: then all count as this session's,
+ * as they did.
+ */
+export function statusInflight(inflight) {
+  const list = inflight && Array.isArray(inflight.inflight) ? inflight.inflight : []
+  const count = inflight ? statusNumber(inflight.count) ?? list.length : 0
+  const mineCount = inflight ? statusNumber(inflight.mine_count) : null
+  if (mineCount === null) {
+    return { own: list, ownCount: count, others: 0 }
+  }
+  const own = list.filter(item => item && item.mine === true)
+  return { own, ownCount: mineCount, others: Math.max(0, count - mineCount) }
+}
+
+/**
  * What the band shows, from the daemon's three answers (each a parsed body or `null`).
  *
  * `{ daemon: 'down' }` when the stats are not there; otherwise the figures, the backend's state
- * (`ready`, `busy`, `down`, or `null` when `/api/backend` did not answer), the model, whether the
- * backend is still loading one, and the oldest delegation in flight.
+ * (`ready`, `busy` with a delegation of this session, `shared` when only other sessions' run,
+ * `down`, or `null` when `/api/backend` did not answer), the model, whether the backend is still
+ * loading one, and this session's oldest delegation in flight.
  */
 export function statusSnapshot(stats, backend, inflight) {
   const net = stats ? statusNumber(stats.tokens_context_net) : null
@@ -175,16 +199,17 @@ export function statusSnapshot(stats, backend, inflight) {
   const figure = stats.cost && stats.cost.figure
   const cost = figure ? statusNumber(figure.estimate) : null
   const running = backend && Array.isArray(backend.running) ? backend.running : []
-  const list = inflight && Array.isArray(inflight.inflight) ? inflight.inflight : []
-  const count = inflight ? statusNumber(inflight.count) ?? list.length : 0
+  const { own, ownCount, others } = statusInflight(inflight)
   let state = null
   let task = null
   if (backend && typeof backend.available === 'boolean') {
     if (!backend.available) {
       state = 'down'
-    } else if (count > 0) {
+    } else if (ownCount > 0) {
       state = 'busy'
-      task = statusTask(list) || { tool: null, seconds: 0, more: Math.max(0, count - 1), model: null, progress: null }
+      task = statusTask(own) || { tool: null, seconds: 0, more: Math.max(0, ownCount - 1), model: null, progress: null }
+    } else if (others > 0) {
+      state = 'shared'
     } else {
       state = 'ready'
     }
@@ -210,7 +235,7 @@ function statusGlyph(snapshot) {
   if (snapshot.backend === 'busy') {
     return STATUS_SPIN[(snapshot.task ? snapshot.task.seconds : 0) % STATUS_SPIN.length]
   }
-  return snapshot.backend === 'ready' ? STATUS_GLYPH.ready : STATUS_GLYPH.none
+  return STATUS_GLYPH[snapshot.backend] || STATUS_GLYPH.none
 }
 
 // A part is `{ joint, rank, pieces }`: `joint` goes before it (dim), each piece is
@@ -218,6 +243,11 @@ function statusGlyph(snapshot) {
 // narrow (higher goes first; rank 0 always stays).
 function statusPart(rank, joint, ...pieces) {
   return { rank, joint, pieces }
+}
+
+/** The note of `shared`, dim: «en uso por otra sesión». Nothing of the other session's call. */
+function statusSharedPart(joint) {
+  return { ...statusPart(1, joint, { text: t('status.shared_note'), dim: true }), kind: 'shared' }
 }
 
 /** How long a delegation has run: `14 s` under a minute, `3 min 16 s` (`3m 16s`) from there. */
@@ -290,6 +320,9 @@ export function statusLineParts(snapshot, options, lang) {
     if (busy && snapshot.task) {
       parts.push(statusPart(1, STATUS_SEPARATOR, ...statusTaskPieces(snapshot.task)))
     }
+    if (snapshot.backend === 'shared') {
+      parts.push(statusSharedPart(STATUS_SEPARATOR))
+    }
   }
   parts.push(...statusFigures(snapshot, lang, STATUS_SEPARATOR))
   const mode = statusReadMode(options)
@@ -322,6 +355,9 @@ export function statusBarParts(snapshot, options, lang) {
   }
   if (snapshot.backend === 'busy' && snapshot.task) {
     parts.push({ ...statusPart(1, STATUS_SEPARATOR, ...statusTaskPieces(snapshot.task)), kind: 'task' })
+  }
+  if (snapshot.backend === 'shared') {
+    parts.push(statusSharedPart(STATUS_SEPARATOR))
   }
   parts.push(...statusFigures(snapshot, lang, STATUS_SEPARATOR))
   const mode = statusReadMode(options)
@@ -505,6 +541,9 @@ function statusDesktopParts(snapshot, options, lang) {
     const pieces = statusTaskPieces(snapshot.task, 'status.more_title', STATUS_DESKTOP_SEPARATOR)
     parts.push({ ...statusPart(1, STATUS_DESKTOP_BIND, ...pieces), kind: 'task' })
   }
+  if (snapshot.backend === 'shared') {
+    parts.push(statusSharedPart(STATUS_DESKTOP_SEPARATOR))
+  }
   if (snapshot.model && snapshot.backend !== 'down') {
     parts.push(statusPart(1, STATUS_DESKTOP_SEPARATOR, { text: snapshot.model, dim: true }))
   }
@@ -546,9 +585,10 @@ async function statusRead($, view, full) {
     return false
   }
   const lang = language()
-  const asks = [daemonFetch($, `/api/backend?lang=${lang}`), daemonFetch($, '/api/inflight')]
+  const session = encodeURIComponent(sessionId)
+  const asks = [daemonFetch($, `/api/backend?lang=${lang}`), daemonFetch($, `/api/inflight?session=${session}`)]
   if (full) {
-    asks.push(daemonFetch($, `/api/stats?session=${encodeURIComponent(sessionId)}&lang=${lang}`))
+    asks.push(daemonFetch($, `/api/stats?session=${session}&lang=${lang}`))
   }
   const [backend, inflight, stats] = await Promise.all(asks)
   view.backend = statusBody(backend)
@@ -566,7 +606,8 @@ async function statusApply($, view) {
     view.snapshot = snapshot
     await $.ui.invalidate('ui.render')
   }
-  const hot = snapshot.backend === 'busy' || snapshot.loading === true
+  // `shared` too: the band has to drop the note as soon as the other session's call ends.
+  const hot = snapshot.backend === 'busy' || snapshot.backend === 'shared' || snapshot.loading === true
   statusArm($, view, hot ? STATUS_HOT_MS : STATUS_COLD_MS)
 }
 
@@ -591,7 +632,8 @@ async function statusTick($, view) {
       statusStop(view)
       return
     }
-    const quiet = !view.inflight || !(statusNumber(view.inflight.count) > 0)
+    // Quiet for this session: another session's delegation does not hold its figures back.
+    const quiet = statusInflight(view.inflight).ownCount === 0
     // Both quick answers missing means the daemon itself is gone: ask the stats to know it.
     if ((wasBusy && quiet) || (view.backend === null && view.inflight === null)) {
       await statusRead($, view, true)

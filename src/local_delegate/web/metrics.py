@@ -768,19 +768,31 @@ def hooks(
 
 
 @app.get("/api/inflight")
-def inflight():
+def inflight(session: str | None = Query(None)):
     """Delegaciones en curso de todas las sesiones + señales de actividad del dashboard.
 
     `last_event_ts` es el evento más reciente de TODO el histórico y `now` la hora del
     servidor: con esos dos el cliente decide EN CURSO / EN VIVO / EN REPOSO sin depender del
     rango seleccionado ni de la hora (posiblemente desajustada) del navegador.
+
+    Con `?session=<id>` (issue #442, la banda del mod) la lista sigue siendo la de TODAS las
+    sesiones, pero cada entrada lleva `mine` y la respuesta `mine_count`: solo las de esa sesión
+    son suyas. Una entrada sin sesión conocida (cliente sin el hook, entrada vieja) no es de nadie.
+    La clave de sesión de cada entrada nunca sale de aquí.
     """
     snapshot = server.inflight_snapshot()
+    key = hook_common.session_key(session) if session else None
+    for entry in snapshot:
+        entry_key = entry.pop("caller_session_key", None)
+        if session:
+            entry["mine"] = key is not None and entry_key == key
     last = _last_event()
+    extra = {"mine_count": sum(1 for e in snapshot if e["mine"])} if session else {}
     return JSONResponse(
         {
             "inflight": snapshot,
             "count": len(snapshot),
+            **extra,
             "last_event_ts": (last or {}).get("ts"),
             # Resumen de la última delegación TERMINADA, para que el panel diga algo cuando no
             # hay nada corriendo. Solo los campos que se pintan: el log entero no hace falta.
