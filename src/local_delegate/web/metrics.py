@@ -1340,7 +1340,33 @@ def render_index() -> str:
 # calculado sobre la página ya rellena) y los de este origen (`/vendor/…`): nada de atributos
 # `on…=` ni scripts inyectados. `connect-src 'self'` impide además mandar datos a otro sitio con
 # `fetch`. Estilos, fuentes e imágenes no se tocan (el panel usa `style=` y Google Fonts).
-_INLINE_SCRIPT = re.compile(r"<script>(.*?)</script>", re.DOTALL)
+def inline_scripts(page: str) -> list[str]:
+    """El texto de cada `<script>` sin `src` de `page`, tal cual lo hashea el navegador."""
+    from html.parser import HTMLParser
+
+    class _Scripts(HTMLParser):
+        def __init__(self) -> None:
+            super().__init__(convert_charrefs=False)
+            self.bodies: list[str] = []
+            self._open: list[str] | None = None
+
+        def handle_starttag(self, tag, attrs):
+            if tag == "script" and not any(name == "src" for name, _ in attrs):
+                self._open = []
+
+        def handle_data(self, data):
+            if self._open is not None:
+                self._open.append(data)
+
+        def handle_endtag(self, tag):
+            if tag == "script" and self._open is not None:
+                self.bodies.append("".join(self._open))
+                self._open = None
+
+    parser = _Scripts()
+    parser.feed(page)
+    parser.close()
+    return parser.bodies
 
 
 def content_security_policy(page: str) -> str:
@@ -1349,7 +1375,7 @@ def content_security_policy(page: str) -> str:
 
     hashes = [
         "'sha256-" + base64.b64encode(hashlib.sha256(body.encode("utf-8")).digest()).decode() + "'"
-        for body in _INLINE_SCRIPT.findall(page)
+        for body in inline_scripts(page)
     ]
     rules = [
         ["script-src", "'self'", *hashes],

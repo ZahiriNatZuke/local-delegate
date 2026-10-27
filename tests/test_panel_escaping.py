@@ -34,8 +34,14 @@ SAFE_CALL = re.compile(r"^(?:escHooks|F\.format|F1\.format|f1|fmtMB|fmtNum|Math\
 LITERAL_TERNARY = re.compile(r"^[^?]+\?\s*('[^']*'|\"[^\"]*\")\s*:\s*('[^']*'|\"[^\"]*\")$")
 
 
+def _inline(page: str) -> list[str]:
+    """Los `<script>` en línea, cortando por las etiquetas exactas que escribe la plantilla del panel
+    (sin expresiones regulares: el HTML es el nuestro, no uno ajeno que filtrar)."""
+    return [chunk.split("</script>", 1)[0] for chunk in page.split("<script>")[1:]]
+
+
 def _main_script() -> str:
-    return re.findall(r"<script>(.*?)</script>", metrics.HTML, re.DOTALL)[-1]
+    return _inline(metrics.HTML)[-1]
 
 
 def _template_slots(js: str) -> list[str]:
@@ -146,7 +152,8 @@ def test_the_panel_is_served_with_a_policy_that_lets_its_own_scripts_run():
     assert "'unsafe-eval'" not in script_src
     assert rules.get("object-src") == ["'none'"]
     assert rules.get("connect-src") == ["'self'"]
-    inline = re.findall(r"<script>(.*?)</script>", response.text, re.DOTALL)
+    inline = _inline(response.text)
+    assert inline == metrics.inline_scripts(response.text)
     assert len(inline) == 2, len(inline)  # el del tema en <head> y el del panel
     for body in inline:
         digest = base64.b64encode(hashlib.sha256(body.encode("utf-8")).digest()).decode()

@@ -105,6 +105,7 @@ def test_a_hostile_log_line_is_text_not_code(hostile_panel, theme, with_policy):
             browser = pw.chromium.launch()
         except PlaywrightError as exc:
             pytest.skip(f"no hay navegador de Playwright instalado: {exc}")
+            raise AssertionError("inalcanzable: pytest.skip lanza Skipped") from exc
         try:
             # Sin la CSP, Playwright la ignora (`bypass_csp`): queda solo el escape.
             options = {"bypass_csp": not with_policy, "color_scheme": theme}
