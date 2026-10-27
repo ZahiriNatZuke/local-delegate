@@ -53,9 +53,9 @@ function json(body: unknown, status = 200) {
   return { status, ok: status >= 200 && status < 300, headers: {}, text: JSON.stringify(body) }
 }
 
-function stats(calls: number, net: number, estimate: number | null = null) {
+function stats(calls: number, net: number, estimate: number | null = null, errors?: number) {
   return json({
-    total: { calls },
+    total: errors === undefined ? { calls } : { calls, errors },
     tokens_context_net: net,
     cost: { figure: estimate === null ? null : { low_bound: estimate / 2, estimate } },
   })
@@ -275,6 +275,28 @@ test('bar: a narrow band drops the least important parts first', { options: { ld
   expect(narrow.left).toBe(' ● LISTO  qwen3-8b · 3 delegaciones')
   expect(narrow.right).toBeUndefined()
   expect((await bar($, band(24))).left).toBe(' ● LISTO  qwen3-8b')
+})
+
+test('bar: failed attempts are not delegations, they go apart (issue #436)', { options: QUIET }, async ($, on) => {
+  // The session of the issue: the backend unreachable, 17 attempts logged, 15 of them failed.
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, stats: () => stats(17, 4200, null, 15), backend: () => backend(false) }))
+  await $.session.measure(measureInput())
+  const { left, texts } = await bar($)
+  expect(left).toBe(' ○ CAÍDO  2 delegaciones · 15 fallidas · 4,2k tokens ahorrados')
+  expect(texts.find((t: any) => t.text === '15')?.props.bold).toBe(true)
+  expect(texts.find((t: any) => t.text === ' fallidas')?.props.dimColor).toBe(true)
+})
+
+test('bar: only failures, no delegation yet, says both', { options: QUIET }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, stats: () => stats(1, 0, null, 1), backend: () => backend(false) }))
+  await $.session.measure(measureInput())
+  expect((await bar($)).left).toBe(' ○ CAÍDO  0 delegaciones · 1 fallida')
+})
+
+test('line: failed attempts in English (issue #436)', { options: { ...LINE, language: 'en' } }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, stats: () => stats(3, 1500, null, 1) }))
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toContain('· 2 delegations · 1 failed · 1.5k tokens saved')
 })
 
 // --- terminal, line --------------------------------------------------------------------------------
@@ -533,6 +555,13 @@ test('desktop: each state', { options: QUIET }, async ($, on) => {
   expect(drawn.left.text.startsWith('local-delegate · ○ Modelo local caído · 3 delegaciones')).toBe(true)
   expect(span(drawn.texts, '○')?.props.color).toBe('error')
   expect(span(drawn.texts, ' Modelo local caído')?.props.color).toBe('error')
+
+  // Issue #436 on Desktop: the failed attempts apart from the delegations, no bold.
+  daemon = { ...UP, stats: () => stats(17, 4200, null, 15), backend: () => backend(false) }
+  await $.session.measure(measureInput())
+  drawn = await desk($)
+  expectPlainDesktop(drawn)
+  expect(drawn.left.text).toBe('local-delegate · ○ Modelo local caído · 2 delegaciones · 15 fallidas · 4,2k tokens ahorrados')
 
   daemon = { stats: UP.stats, inflight: UP.inflight }
   await $.session.measure(measureInput())

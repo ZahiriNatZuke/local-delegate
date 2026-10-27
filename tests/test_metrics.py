@@ -750,6 +750,7 @@ def test_accounting_one_call_without_chunking():
         "chars_saved_output": 0,
         "chars_returned": 400,
         "failed": False,
+        "connection_failed": False,
         "tool": "local_summarize",
         "model": "m",
         "source": "path",
@@ -1108,6 +1109,7 @@ _PARITY_FIELDS = (
     ("chars_saved_output", "charsSavedOutput"),
     ("chars_returned", "charsReturned"),
     ("failed", "failed"),
+    ("connection_failed", "connectionFailed"),
     ("tool", "tool"),
     ("model", "model"),
     ("source", "source"),
@@ -1228,6 +1230,10 @@ def test_acct_parity_between_python_and_the_dashboard_js(tmp_path):
         ),
         # Modelo fuera de la tabla: familia nueva supuesta.
         _ev(path="C:/src/app.py", caller_model="claude-unknown-9", tokens_in=1100),
+        # Issue #436: un fallo de conexión no llegó al backend (0 llamadas), y uno troceado que
+        # perdió la conexión tras dos trozos conserva esas dos.
+        _ev(ok=False, error="connect_error", error_class="endpoint", connection_failure="dns"),
+        _ev(ok=False, error="connect_error", connection_failure="refused", chunks=2),
     ]
     # Como en producción: las filas pasan antes por la fusión de Python (REQ-006, REQ-037). Sin
     # relleno en `tmp_path`, las que no traen `caller_model` toman el respaldo declarado.
@@ -1255,6 +1261,9 @@ def test_acct_parity_between_python_and_the_dashboard_js(tmp_path):
     assert any(c.get("error_class") == "configuracion" for c in cases), "falta la fila vieja"
     assert any(c.get("error_class") == "unclassified" for c in cases), "falta la fila nueva"
     assert any(py["cause"] == "configuration" for py in from_py)
+    # Issue #436: un fallo de conexión sin llamadas, y uno con las que sí se hicieron.
+    assert any(py["connection_failed"] and py["backend_calls"] == 0 for py in from_py)
+    assert any(py["connection_failed"] and py["backend_calls"] == 2 for py in from_py)
     # Guarda de REQ-037: un evento de cada origen de celda, de cada familia, y una imagen con
     # devuelto que da 0 en las dos copias.
     origins = {c["density"]["text"][1] for c in cases if c["density"]["text"]}

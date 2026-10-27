@@ -92,6 +92,49 @@ def test_stats_filters_by_session(tmp_path, monkeypatch):
     assert _stats("&session=")["total"]["calls"] == 4
 
 
+def test_connection_failures_spend_no_backend_call(tmp_path, monkeypatch):
+    """Issue #436, the session as the Mac logged it: 2 delegations that answered, 14 attempts with
+    the backend's name unresolved (`connection_failure: dns`) and one `capacity_or_load` failure.
+    The mod shows `total.calls - total.errors` as delegations; the DNS failures spend no call."""
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    key = _key("sess-down")
+    base = {"tool": "local_summarize", "model": "m", "source": "path", "caller_session_key": key}
+    ok = {**base, "ok": True, "chars_in": 4000, "chars_out": 10, "tokens_in": 1100}
+    dns = {
+        **base,
+        "ok": False,
+        "chars_in": 4000,
+        "chars_out": 144,
+        "latency_ms": 22,
+        "error": "connect_error",
+        "error_class": "endpoint",
+        "connection_failure": "dns",
+    }
+    load = {**base, "ok": False, "chars_in": 4000, "error": "http_503"}
+    load["error_class"] = "capacity_or_load"
+    rows = [{**ok, "ts": "2026-07-20T10:00:00+00:00"}, {**ok, "ts": "2026-07-20T10:01:00+00:00"}]
+    rows += [{**dns, "ts": f"2026-07-20T11:{minute:02d}:00+00:00"} for minute in range(14)]
+    # A split delegation that lost the backend on its third chunk: the two chunks before it
+    # did reach the backend (`chunks` counts the real calls), so those two still count.
+    rows.append({**dns, "ts": "2026-07-20T12:00:00+00:00", "chunks": 2})
+    rows.append({**load, "ts": "2026-07-20T13:00:00+00:00"})
+    _write_jsonl(tmp_path / "usage-202607.jsonl", rows)
+    metrics._FILE_CACHE.clear()
+
+    stats = _stats("&session=sess-down")
+    total = stats["total"]
+    # Guard: every line reached the aggregate, so a zero below means something.
+    assert total["calls"] == 18
+    assert total["errors"] == 16
+    # What the band shows as delegations: the two that answered.
+    assert total["calls"] - total["errors"] == 2
+    assert total["connection_failures"] == 15
+    # 2 answered + 2 chunks before the drop + 1 for the overloaded backend; the 14 DNS ones, 0.
+    assert stats["backend_calls"] == 5
+    assert total["backend_calls"] == 5
+
+
 def _hook_env(tmp_dir: Path) -> dict[str, str]:
     env = dict(os.environ)
     env.update({"TEMP": str(tmp_dir), "TMP": str(tmp_dir), "TMPDIR": str(tmp_dir)})
