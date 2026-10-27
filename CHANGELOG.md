@@ -6,6 +6,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- El map/reduce ya no acepta un parcial cortado por `max_tokens`: si un paso del map o del
+  reagrupado sale por `length`, se descarta, se parte el trozo (o el grupo) y se reintenta, hasta
+  dos niveles, como ya hacía el troceado de las transformaciones. `local_explain_code` tiene un
+  tope propio en el map (proporcional al trozo, hasta `CHUNK_MAX_TOKENS`) en vez de los 764
+  tokens comunes con los que cortaba sus notas en todas las delegaciones troceadas. Si aun así
+  queda un parcial cortado, el aviso dice qué trozo y sus líneas, y en el log el paso
+  reemplazado lleva `"retried": true` (#455).
+
 ## [0.42.0] - 2026-10-27
 
 Esta versión cierra la mayor parte de la revisión de seguridad del 2026-10-23 sobre el panel y el

@@ -158,6 +158,8 @@
   "mcp.warning.origin.reduce": "en la reducción",
   "mcp.warning.output_truncated": "salida truncada por max_tokens",
   "mcp.warning.output_truncated_calls": "salida truncada por max_tokens en {truncated} de {calls} llamadas; puede faltar parte del contenido",
+  "mcp.warning.truncated_pieces": "; trozos afectados: {pieces}",
+  "mcp.warning.truncated_piece_lines": "{piece} (líneas {first}-{last})",
   "mcp.warning.sections_not_summarized": "{n} secciones sin resumir por el límite de palabras o del modelo",
   "mcp.warning.sections_not_summarized_one": "1 sección sin resumir por el límite de palabras o del modelo"
 }

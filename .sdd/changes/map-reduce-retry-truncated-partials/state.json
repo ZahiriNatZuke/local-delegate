@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "slug": "map-reduce-retry-truncated-partials",
+  "title": "El map/reduce reintenta partiendo los parciales cortados por max_tokens",
+  "mode": "lite",
+  "status": "verifying",
+  "createdAt": "2026-10-27T20:00:00.000Z",
+  "updatedAt": "2026-10-27T20:00:00.000Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-10-27T20:00:00.000Z",
+      "evidence": "Premisa reproducida: con el src de main los tests nuevos de map y reagrupado hacen 3 y 2 llamadas (no parten) y el aviso no nombra trozos; explain_code mapea con 764 tokens. Criterios en spec.md.",
+      "actor": "agent"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-10-27T20:00:00.000Z",
+      "evidence": "Lite: _map_piece y un _regroup nuevo miran el finish_reason del ultimo paso (_last_cut) y, si es length, descartan el paso (_discard_last: retried, truncated_calls-1) y reintentan partido; _explain_map_max_tokens como tokens_for; _truncated_piece_entries/_truncated_pieces_notice para el aviso y report.",
+      "actor": "agent"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": "2026-10-27T20:00:00.000Z",
+      "evidence": "tests/test_map_reduce_retry_truncated.py 9 tests; control positivo: 7 fallan con el src de main por la razon que dicen (+1 test de extract ajustado); suite completa local; falta CI del PR.",
+      "actor": "agent"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "verifying",
+      "at": "2026-10-27T20:00:00.000Z",
+      "reason": "lite: implementado y probado en local"
+    }
+  ]
+}
