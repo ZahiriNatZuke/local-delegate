@@ -1335,9 +1335,36 @@ def render_index() -> str:
     )
 
 
+# Content-Security-Policy del panel (revisión de seguridad 2026-10-23): un texto del log que se colara
+# sin escapar en el HTML no puede correr. Solo corren los `<script>` del propio panel (por su hash,
+# calculado sobre la página ya rellena) y los de este origen (`/vendor/…`): nada de atributos
+# `on…=` ni scripts inyectados. `connect-src 'self'` impide además mandar datos a otro sitio con
+# `fetch`. Estilos, fuentes e imágenes no se tocan (el panel usa `style=` y Google Fonts).
+_INLINE_SCRIPT = re.compile(r"<script>(.*?)</script>", re.DOTALL)
+
+
+def content_security_policy(page: str) -> str:
+    import base64
+    import hashlib
+
+    hashes = [
+        "'sha256-" + base64.b64encode(hashlib.sha256(body.encode("utf-8")).digest()).decode() + "'"
+        for body in _INLINE_SCRIPT.findall(page)
+    ]
+    rules = [
+        ["script-src", "'self'", *hashes],
+        ["connect-src", "'self'"],
+        ["object-src", "'none'"],
+        ["base-uri", "'none'"],
+        ["form-action", "'none'"],
+    ]
+    return "; ".join(" ".join(parts) for parts in rules)
+
+
 @app.get("/", response_class=HTMLResponse)
 def index():
-    return render_index()
+    page = render_index()
+    return HTMLResponse(page, headers={"Content-Security-Policy": content_security_policy(page)})
 
 
 def run_in_thread(host: str | None = None, port: int | None = None):
@@ -2781,7 +2808,7 @@ function renderBackend(){
     const e = modelState({model:m, view, inflight:state.inflight});
     const busy = !e.dimmed && (e.state==='processing' || e.state==='running');
     const cls = (DOT[e.state]||'') + (busy && DOT[e.state]!=='busy' ? ' busy' : '');
-    const roles = roleLabels(m).map(l=>`<span class="mrole">${l}</span>`).join('');
+    const roles = roleLabels(m).map(l=>`<span class="mrole">${escHooks(l)}</span>`).join('');
     const chip = statusChip(statusById[m]);
     const badge = chip ? `<span class="mstatus ${chip}" title="${escHooks(statusById[m])}">${escHooks(labelFor('modelStatus', statusById[m]))}</span>` : '';
     const rowCls = (busy?' busy':'') + (e.dimmed?' dimmed':'');
@@ -2813,7 +2840,7 @@ function renderBackendStats(j){
   el.innerHTML = `<div class="bstats">
     <div class="bstat"><div class="bk">${T('stats.gen')}</div><div class="bv">${f1(gen.p50)}<span class="bp">p50</span></div><div class="bsub">p95 ${f1(gen.p95)}</div></div>
     <div class="bstat"><div class="bk">${T('stats.prompt')}</div><div class="bv">${f1(pr.p50)}<span class="bp">p50</span></div><div class="bsub">p95 ${f1(pr.p95)}</div></div>
-    <div class="bstat"><div class="bk">${T('stats.tokens')}</div><div class="bv">${F.format(s.total_input_tokens||0)}/${F.format(s.total_output_tokens||0)}</div><div class="bsub">${T('stats.cache', {n: F.format(s.total_cache_tokens||0)})}</div></div>
+    <div class="bstat"><div class="bk">${T('stats.tokens')}</div><div class="bv">${F.format(s.total_input_tokens||0)}/${F.format(s.total_output_tokens||0)}</div><div class="bsub">${escHooks(T('stats.cache', {n: F.format(s.total_cache_tokens||0)}))}</div></div>
   </div>`;
 }
 
@@ -2822,7 +2849,7 @@ function renderTools(){
   const busyTools = new Set((state.inflight||[]).map(it=>it.tool));
   document.getElementById('toolsCount').textContent = tools.length?('('+tools.length+')'):'';
   document.getElementById('toolsBody').innerHTML = tools.length
-    ? tools.map(t=>`<span class="tchip${busyTools.has(t.name)?' busy':''}" title="${(t.summary||'').replace(/"/g,'&quot;')}">${t.name}</span>`).join('')
+    ? tools.map(t=>`<span class="tchip${busyTools.has(t.name)?' busy':''}" title="${escHooks(t.summary||'')}">${escHooks(t.name)}</span>`).join('')
     : '<span class="tchip">' + T('tools.no_data') + '</span>';
 }
 
@@ -2889,13 +2916,13 @@ function renderInflight(){
 
   if(state.inflight.length){
     body.innerHTML = state.inflight.map(it=>{
-      const chunk = it.chunks ? `<span class="chunkchip">${T('backend.chunk', {n: it.chunk||1, total: it.chunks})}</span>` : '';
-      const org = it.backend ? `<span class="org ${it.backend}">${escHooks(labelFor('origin', it.backend))}</span>` : '';
+      const chunk = it.chunks ? `<span class="chunkchip">${escHooks(T('backend.chunk', {n: it.chunk||1, total: it.chunks}))}</span>` : '';
+      const org = it.backend ? `<span class="org ${escHooks(it.backend)}">${escHooks(labelFor('origin', it.backend))}</span>` : '';
       // Espera de turno del daemon (REQ-008): las mismas palabras que el title de la fila del modelo.
       const turnText = it.local_wait==='turn' ? turnWords(it) : '';
       const turnChip = turnText ? `<span class="chunkchip" title="${escHooks(turnText)}">${escHooks(turnText)}</span>` : '';
-      return `<div class="ifrow"><span class="spin"></span><span class="badge">${it.tool}</span>
-        <span class="badge model">${it.model}</span>${chunk}${turnChip}${org}
+      return `<div class="ifrow"><span class="spin"></span><span class="badge">${escHooks(it.tool)}</span>
+        <span class="badge model">${escHooks(it.model)}</span>${chunk}${turnChip}${org}
         <span class="num" style="color:var(--mut)">${escHooks(fmtSec((it.elapsed_s||0)*1000))} · ${F.format(it.chars_in||0)} ${T('unit.chars_short')}</span></div>`;
     }).join('');
     head.innerHTML = escHooks(T('backend.inflight')) + ' <span class="num" style="color:var(--amber)">('+state.inflight.length+')</span>';
@@ -2909,15 +2936,15 @@ function renderInflight(){
   if(ev && ev.ts){
     const skew = (state.activity && state.activity.skewMs) || 0;
     const ago = Math.max(0, Math.round((Date.now() - skew - Date.parse(ev.ts))/1000));
-    const org = ev.backend ? `<span class="org ${ev.backend}">${escHooks(labelFor('origin', ev.backend))}</span>` : '';
+    const org = ev.backend ? `<span class="org ${escHooks(ev.backend)}">${escHooks(labelFor('origin', ev.backend))}</span>` : '';
     const dur = ev.latency_ms!=null ? escHooks(fmtSec(ev.latency_ms))+' · ' : '';
     const mark = ev.ok===false
       ? '<span class="num" style="color:var(--red)">✕</span>'
       : '<span class="num" style="color:var(--ok)">✓</span>';
     body.innerHTML = `<div class="ifrow" style="opacity:.75">${mark}
-      <span class="num" style="color:var(--faint)">${T('backend.ago', {ago: fmtAgo(ago)})}</span>
-      <span class="badge">${ev.tool||'?'}</span>
-      <span class="badge model">${ev.model||'?'}</span>${org}
+      <span class="num" style="color:var(--faint)">${escHooks(T('backend.ago', {ago: fmtAgo(ago)}))}</span>
+      <span class="badge">${escHooks(ev.tool||'?')}</span>
+      <span class="badge model">${escHooks(ev.model||'?')}</span>${org}
       <span class="num" style="color:var(--mut)">${dur}${F.format(ev.chars_in||0)} ${T('unit.chars_short')}</span></div>`;
   } else {
     body.innerHTML = '<div class="ifrow" style="color:var(--faint)">' + T('backend.none_yet') + '</div>';
@@ -2999,7 +3026,7 @@ function renderSystem(j){
     }else{
       tbl.innerHTML = '<thead><tr><th>' + T('system.col.process') + '</th><th>PID</th><th>RAM</th><th>VRAM</th></tr></thead><tbody>'
         + procs.map(p=>`<tr><td class="mono">${escHooks(p.name)}${p.self?'<span class="selfchip">'+T('system.daemon_chip')+'</span>':''}</td>
-            <td class="mono">${p.pid}</td><td class="mono">${fmtMB(p.ram_mb||0)}</td>
+            <td class="mono">${escHooks(p.pid)}</td><td class="mono">${fmtMB(p.ram_mb||0)}</td>
             <td class="mono">${p.vram_mb!=null?fmtMB(p.vram_mb):'—'}</td></tr>`).join('')
         + '</tbody>';
     }
@@ -3427,20 +3454,20 @@ function drawActivity(ev){
     const org=e.backend||'unknown';
     const orgTxt=escHooks(labelFor('origin', org));
     // `chunks` del log son LLAMADAS al backend, no trozos: el título decía otra cosa que el dato
-    const chunks=e.chunks?`<span class="chunkchip" title="${escHooks(T('activity.chunks_title', {n: e.chunks}))}">${e.chunks}×</span>`:'';
+    const chunks=e.chunks?`<span class="chunkchip" title="${escHooks(T('activity.chunks_title', {n: e.chunks}))}">${escHooks(e.chunks)}×</span>`:'';
     // Hubo salto: respondió un respaldo. Se marca para que nadie lea esta fila como del modelo pedido.
     // El motivo (`fallback_reason`) es prosa ya escrita en el log y se enseña tal cual (REQ-033).
-    const fb=(e.model_requested && e.routing!=='affinity')?`<span class="chunkchip fbchip" title="${escHooks(T('activity.fallback_title', {model: e.model, requested: e.model_requested, cause: e.fallback_reason||e.fallback_class||T('activity.no_cause')}))}">↪ ${e.model_requested}</span>`:'';
+    const fb=(e.model_requested && e.routing!=='affinity')?`<span class="chunkchip fbchip" title="${escHooks(T('activity.fallback_title', {model: e.model, requested: e.model_requested, cause: e.fallback_reason||e.fallback_class||T('activity.no_cause')}))}">↪ ${escHooks(e.model_requested)}</span>`:'';
     const cause=(e.ok===false&&e.error_class)?` title="${escHooks(T('activity.cause_title', {cause: e.error_class}))}"`:'';
     const split=waitInferenceText(e), slow=slowMark(e);
     const timings=split?`<div class="mut" style="font-size:10px">${escHooks(split)}</div>`:'';
     const slowChip=slow?`<span class="chunkchip slowchip" title="${escHooks(T('activity.slow_title', {speed: fmtNum(e.tok_s,1), model: e.model}))}">${escHooks(slow)}</span>`:'';
     const marks=activityMarks(e);
     const aria=escHooks(T('activity.row_aria', {tool: e.tool, model: e.model}));
-    h+=`<tr data-i="${i}" tabindex="0" aria-label="${aria}"><td class="mono" title="${e.ts||''}">${time}</td><td><span class="badge">${e.tool}</span>${chunks}</td>
-      <td><span class="badge model">${e.model}</span>${fb}${marks}</td>
-      <td><span class="src ${e.source}">${e.source}</span></td>
-      <td><span class="org ${org}" title="${escHooks(e.backend_host||T('label.no_data'))}">${orgTxt}</span></td>
+    h+=`<tr data-i="${i}" tabindex="0" aria-label="${aria}"><td class="mono" title="${escHooks(e.ts)}">${escHooks(time)}</td><td><span class="badge">${escHooks(e.tool)}</span>${chunks}</td>
+      <td><span class="badge model">${escHooks(e.model)}</span>${fb}${marks}</td>
+      <td><span class="src ${escHooks(e.source)}">${escHooks(e.source)}</span></td>
+      <td><span class="org ${escHooks(org)}" title="${escHooks(e.backend_host||T('label.no_data'))}">${orgTxt}</span></td>
       <td class="mono">${F.format(e.chars_in||0)} <span class="flow">→</span> ${F.format(e.chars_out||0)}</td>
       <td class="mono">${escHooks(fmtSec(e.latency_ms))}${slowChip}${timings}</td>
       <td><span class="dot ${e.ok===false?'err':'ok'}"${cause}></span></td></tr>`; });
