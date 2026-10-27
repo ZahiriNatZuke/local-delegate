@@ -67,6 +67,12 @@ con saltos pudo contaminarla un swap.
   *Chunking* abajo). Ojo con el nombre: son llamadas, no trozos — en el map-reduce el *reduce*
   suma llamadas propias. Una operación por trozos es **un** evento, no N, así que quien agregue
   debe leerlo como `chunks or 1`.
+- `pieces` (solo en operaciones troceadas, desde la 0.43.0): **número de trozos** en que se partió
+  la entrada. Con `chunks` al lado se distinguen los trozos de las llamadas: `pieces: 3, chunks: 4`
+  son tres trozos y una combinación. Los eventos anteriores no lo traen.
+- `steps` (solo en operaciones troceadas): cada paso (`kind`: map, reagrupado o reduce) con sus
+  `chars_out` y su `finish_reason`, nunca su texto. Desde la 0.43.0 un paso cortado por `length`
+  que se reemplazó por su reintento partido lleva `"retried": true` y ya no cuenta como truncado.
 - `input_unit` (solo si no es `chars`): qué mide `chars_in`. En `local_describe_image` vale
   `bytes`, porque ahí la entrada es una imagen y **estimar tokens dividiendo bytes entre 4 da un
   número disparatado** (×46 medido contra el token real). Los eventos anteriores a la v0.14.0 no
@@ -630,6 +636,17 @@ chunks— y el modelo montado en llama-swap si el backend expone `/running`. Cua
 título pasa a **«Última delegación»** y enseña la última terminada; vuelve a «En curso» en cuanto
 hay una llamada viva.
 
+Desde la 0.43.0 el chip de progreso dice la **fase** de una operación troceada: `trozo i/N`
+mientras se procesan los trozos, **«Combinando N trozos…»** durante la combinación (reduce o
+reagrupado) y **«Reintentando trozo i/N»** cuando un trozo cortado o que no cabía se vuelve a
+partir. `/api/inflight` lo expone como `phase` (`reduce` o `retry`; sin el campo, los trozos).
+
+En la tabla de actividad, una operación troceada lleva un chip con sus trozos y las llamadas de
+más: **`3 +1`** son tres trozos y una combinación, con el título «3 trozos · 4 llamadas al
+backend»; `3×` son tres trozos sin llamadas extra. El diálogo de la fila da las dos cifras
+(«Trozos» y «Llamadas al backend»). Los eventos anteriores a la 0.43.0, sin `pieces`, se ven como
+antes (`4×`, que son llamadas).
+
 `/api/inflight` y `/api/backend` se piden **por separado**, como mucho una petición de cada uno en
 vuelo, y el siguiente sondeo sale 2 s **después de que termine** el anterior. Así un backend lento
 (una VPN que no contesta) no congela «En curso» ni apila peticiones.
@@ -708,7 +725,8 @@ Markdown → párrafos → líneas → corte duro) en trozos de `LOCAL_DELEGATE_
 llamada por trozo con `max_tokens <= LOCAL_DELEGATE_CHUNK_MAX_TOKENS`. Las salidas se concatenan
 en orden reponiendo el separador original de cada trozo, así que las costuras conservan el
 formato. Si un trozo aun así vuelve truncado, se vuelve a partir y se reintenta. El evento del
-log lleva `chunks: N` con la latencia y los tokens sumados de toda la operación.
+log lleva `chunks: N` (llamadas) y, desde la 0.43.0, `pieces` (trozos), con la latencia y los
+tokens sumados de toda la operación.
 
 ### Map-reduce en las tools de reducción
 
@@ -721,6 +739,12 @@ Por eso `local_summarize` y `local_lint_summary` hacen **map-reduce** cuando la 
 en el modelo: resumen cada parte (*map*) y luego resumen los resúmenes (*reduce*). Si los
 parciales tampoco caben, el reduce se repite por niveles, con un tope de tres. Como en el
 chunking, la operación deja **un** evento de log con `chunks: N`.
+
+Desde la 0.43.0 el map/reduce trata los parciales cortados igual que el chunking: si un paso del
+map o del reagrupado sale por `length`, se descarta, se parte el trozo (o el grupo) y se reintenta,
+hasta dos niveles. Antes el parcial cortado entraba tal cual en la combinación. Si aun así queda
+alguno cortado, el aviso nombra el trozo y sus líneas, y en `steps` el paso reemplazado lleva
+`"retried": true`.
 
 Hasta la 0.12.0 estas tools simplemente **truncaban** la entrada y avisaban: de un log de CI de
 200 000 caracteres se resumía el principio y el resto se descartaba, que es justo donde suelen
