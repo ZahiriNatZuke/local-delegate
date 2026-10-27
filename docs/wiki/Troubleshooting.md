@@ -78,6 +78,11 @@ pasar a «caído»; ver [Savings & metrics](Savings-and-metrics.md#estado-del-ba
   **conexión**; la lectura sigue en `LOCAL_DELEGATE_TIMEOUT` (180 s por defecto), así que la
   espera mientras llama-swap carga un modelo no cambia. Antes, con una VPN que se comía el tráfico,
   cada delegación se quedaba colgada 75–95 s hasta que el sistema operativo agotaba la conexión.
+- **Tras 3 fallos de conexión seguidos, las `local_*` dejan de intentarlo un rato.** Responden al
+  momento «el backend no responde desde hace X min… haz tú esta tarea», sin llamarlo y sin contar
+  como delegación ni como fallo. A los 60 s (doblando hasta 600 s) la siguiente llamada vuelve a
+  probar, y `local_status` lo cierra en cuanto ve el backend. Ver
+  [Corte por backend inalcanzable](Configuration.md#corte-por-backend-inalcanzable).
 
 Si el backend está en otra máquina:
 

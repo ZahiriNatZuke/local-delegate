@@ -241,6 +241,55 @@ def test_the_main_thread_keeps_its_read_texts(tmp_path):
     assert read["additionalContext"].startswith("Suggestion: this file is 39 KB."), read
 
 
+def _open_breaker(log_dir: Path, until: float) -> None:
+    """El corte por backend inalcanzable tal como lo deja el servidor (issue #436)."""
+    from local_delegate import cooldown
+
+    (log_dir / cooldown.BREAKER_STATE_FILE).write_text(
+        json.dumps(
+            {"test-backend": {"failures": 0, "wait_s": 60.0, "until": until, "reentries": 1}}
+        ),
+        encoding="utf-8",
+    )
+
+
+@pytest.mark.parametrize("down", [True, False], ids=["backend-down", "control"])
+@pytest.mark.parametrize("name", ["big.py", "notes.md"])
+def test_a_subagent_gets_no_suggestion_while_the_backend_is_down(tmp_path, name, down):
+    """Issue #443 + #436: la nota del subagente manda a una local_*; con el corte abierto, calla."""
+    import time
+
+    commands, log_dir = _english_hooks(tmp_path)
+    _open_breaker(log_dir, time.time() + (300 if down else -1))
+    document = tmp_path / name
+    document.write_text("x" * 40_000, encoding="utf-8")
+    hook_input = {"tool_input": {"file_path": str(document)}, "agent_id": "agent-1"}
+
+    out = _run_raw(commands["Read"], hook_input, log_dir)
+
+    if down:
+        assert out == b"", out
+    else:
+        context = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+        assert context.startswith("Subagent: this file is 39 KB."), context
+
+
+@pytest.mark.parametrize("down", [True, False], ids=["backend-down", "control"])
+def test_the_subagent_start_hook_is_quiet_while_the_backend_is_down(tmp_path, down):
+    import time
+
+    commands, log_dir = _english_hooks(tmp_path)
+    _open_breaker(log_dir, time.time() + (300 if down else -1))
+    hook_input = {"hook_event_name": "SubagentStart", "agent_id": "a1", "agent_type": "Explore"}
+
+    out = _run_raw(commands["SubagentStart"], hook_input, log_dir)
+
+    if down:
+        assert out == b"", out
+    else:
+        assert "ToolSearch" in json.loads(out)["hookSpecificOutput"]["additionalContext"]
+
+
 def test_the_installed_subagent_start_hook_says_how_to_load_the_tools(tmp_path):
     commands, log_dir = _english_hooks(tmp_path)
     hook_input = {"hook_event_name": "SubagentStart", "agent_id": "a1", "agent_type": "Explore"}
