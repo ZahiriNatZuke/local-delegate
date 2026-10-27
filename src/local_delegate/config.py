@@ -41,8 +41,18 @@ def _read(name: str) -> str | None:
 
 
 def _env(name: str, default: str) -> str:
+    """El valor de la variable, o `default` si no está puesta, está vacía o solo tiene espacios.
+
+    Vacía cuenta como no puesta a propósito: una entrada de cliente con
+    `"${LOCAL_DELEGATE_WEB_HOST}"` que expande a nada dejaba `WEB_HOST=""`, y uvicorn lee un host
+    vacío como todas las interfaces: el panel y el MCP quedaban abiertos a la red en vez de en
+    loopback. Solo cambia algo en las que tienen un defecto no vacío; las de defecto `""` reciben el
+    valor tal cual, como antes (alguna lo guarda crudo para su aviso, `output_language`).
+    """
     raw = _read(name)
-    return default if raw is None else raw
+    if raw is None or (default and not raw.strip()):
+        return default
+    return raw
 
 
 def _env_int(name: str, default: int) -> int:

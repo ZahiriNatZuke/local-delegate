@@ -1256,8 +1256,9 @@ def daemon_mcp_url() -> str:
     `opencode_mcp_entry`. Dos copias de «dónde escucha el daemon» es justo el defecto que este
     repo ya pagó con la cuenta de tokens y con el host del daemon.
     """
-    port = os.environ.get("LOCAL_DELEGATE_WEB_PORT", "9393")
-    host = os.environ.get("LOCAL_DELEGATE_WEB_HOST", "127.0.0.1")
+    # Vacía cuenta como no puesta, igual que en `config._env`: `http://:9393/mcp` no es una URL.
+    port = os.environ.get("LOCAL_DELEGATE_WEB_PORT", "").strip() or "9393"
+    host = os.environ.get("LOCAL_DELEGATE_WEB_HOST", "").strip() or "127.0.0.1"
     return f"http://{host}:{port}/mcp"
 
 

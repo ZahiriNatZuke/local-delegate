@@ -142,6 +142,10 @@ $env:LOCAL_DELEGATE_WEB_ALLOWED_HOSTS = 'own-pc.tailXXXX.ts.net'
 La misma lista vale para `/mcp`, que antes tenía su propia comprobación (la del SDK) solo para
 loopback: una variable abre los dos sitios a la vez.
 
+Una `LOCAL_DELEGATE_WEB_HOST` **vacía** (o solo con espacios) cuenta como no puesta y vale
+`127.0.0.1`: antes una entrada con `"${LOCAL_DELEGATE_WEB_HOST}"` que expandía a nada dejaba el
+puerto escuchando en todas las interfaces y sin esta comprobación.
+
 Con `LOCAL_DELEGATE_WEB_HOST=0.0.0.0` y la variable vacía no se comprueba nada —no hay forma de
 saber por qué IP llegará la LAN—; con nombres en la variable, se aplica la lista. `*` la desactiva
 del todo.
@@ -167,8 +171,11 @@ programada):
 $env:LOCAL_DELEGATE_WEB_TOKEN = '<un secreto largo y aleatorio>'
 ```
 
-Con ella, **todo** el puerto exige el token: el endpoint MCP, el dashboard y `/api/*`. Se acepta de
-tres formas, porque hay tres clases de cliente:
+Con ella, **todo** el puerto exige el token: el endpoint MCP, el dashboard y `/api/*`. También la
+web que levanta un proceso `stdio` cuando el daemon no está corriendo y el 9393 queda libre: sirve el
+mismo panel en el mismo puerto y exige el mismo token (antes lo servía sin pedir nada). Sus
+clientes no cambian: el mod, el CLI, `doctor` y el navegador ya mandan ese token, y no saben qué
+proceso tiene el puerto. Se acepta de tres formas, porque hay tres clases de cliente:
 
 | Cómo llega | Quién la usa |
 | --- | --- |
