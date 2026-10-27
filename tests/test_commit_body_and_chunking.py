@@ -215,13 +215,16 @@ def test_extract_with_several_values_reduces_with_the_model_and_the_schema(backe
 def test_extract_truncated_means_a_truncated_output_in_the_chunking(backend):
     """`truncated`/`warning` = salida truncada en un trozo (decisión 8 de B2)."""
     calls, state = backend
-    state["answer"] = lambda call: _ok('{"a": null}', "length" if len(calls) == 1 else "stop")
+    # #455: a cut map partial is split and retried twice; the first chunk stays cut only when
+    # its first quarter (third call, depth 2) is cut too.
+    state["answer"] = lambda call: _ok('{"a": null}', "length" if len(calls) <= 3 else "stop")
     data = server.local_extract(fields=["a"], text=_big_text(""))
     meta = data["_local_delegate"]
     assert meta["truncated"] is True
+    # Its lines repeat in the input, so the chunk is named by its number only.
     assert meta["warning"] == i18n.t(
         "mcp.warning.output_truncated_calls", truncated=1, calls=len(calls)
-    )
+    ) + i18n.t("mcp.warning.truncated_pieces", pieces="1")
 
 
 def test_extract_truncated_means_a_truncated_output_in_one_call(backend):

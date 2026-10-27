@@ -559,7 +559,8 @@ def test_overflow_in_a_chunk_is_split_by_sections(monkeypatch, tmp_path):
 def test_a_chunk_cut_by_length_is_logged_and_warned(monkeypatch, tmp_path):
     def _model(payload, n):
         text, _ = _answer_headings(payload, n)
-        return text, ("length" if n == 2 else "stop")
+        # #455: a cut partial is split and retried twice; the first quarter stays cut.
+        return text, ("length" if n in (2, 3, 4) else "stop")
 
     output, _ = _call_summary(monkeypatch, tmp_path, _model, text=_long_doc(), max_words=600)
     event = _events(tmp_path)[0]
@@ -573,7 +574,7 @@ def test_the_length_of_a_partial_is_also_logged_in_prose(monkeypatch, tmp_path):
     text = "\n\n".join("párrafo " * 250 for _ in range(40))
 
     def _model(_payload, n):
-        return "Resumen parcial.", ("length" if n == 1 else "stop")
+        return "Resumen parcial.", ("length" if n in (1, 2, 3) else "stop")  # see #455
 
     _out, _ = _call_summary(monkeypatch, tmp_path, _model, text=text)
     assert _events(tmp_path)[0]["finish_reason"] == "length"

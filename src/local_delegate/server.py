@@ -939,6 +939,8 @@ def _log_event(
                     "kind": str(s["kind"]),
                     "chars_out": int(s["chars_out"]),
                     "finish_reason": s.get("finish_reason"),
+                    # #455: a step cut by `length` and replaced by its split retry.
+                    **({"retried": True} if s.get("retried") else {}),
                 }
                 for s in steps
             ]
@@ -3622,6 +3624,48 @@ def _map_budget(max_chars: int) -> int:
     return max(config.CHUNK_MIN_CHARS, int(max_chars * 0.8))
 
 
+def _piece_lines(content: str, piece: Any) -> tuple[int, int] | None:
+    """#455: first and last line of `piece` in `content`, or None if it is not found only once."""
+    text = piece if isinstance(piece, str) else getattr(piece, "text", None)
+    if not isinstance(text, str) or not isinstance(content, str):
+        return None
+    text = text.strip()
+    if not text or content.count(text) != 1:
+        return None
+    first = content.count("\n", 0, content.find(text)) + 1
+    return first, first + text.count("\n")
+
+
+def _truncated_piece_entries(content: str, truncated: list[tuple[Any, Any]]) -> list[dict]:
+    """#455: `{"piece": n}` per map partial left cut, with `"lines": [a, b]` when known."""
+    entries: list[dict] = []
+    for number, piece in truncated:
+        entry: dict = {"piece": number}
+        lines = _piece_lines(content, piece)
+        if lines is not None:
+            entry["lines"] = list(lines)
+        entries.append(entry)
+    return entries
+
+
+def _truncated_pieces_notice(entries: list[dict]) -> str:
+    """#455: the tail of the truncation notice that names the pieces; empty without them."""
+    if not entries:
+        return ""
+    items = ", ".join(
+        i18n.t(
+            "mcp.warning.truncated_piece_lines",
+            piece=e["piece"],
+            first=e["lines"][0],
+            last=e["lines"][1],
+        )
+        if "lines" in e
+        else str(e["piece"])
+        for e in entries
+    )
+    return i18n.t("mcp.warning.truncated_pieces", pieces=items)
+
+
 def _dump_chunk_notes(
     folder: str, tool: str, entry_id: int, steps: list[dict], texts: list[str]
 ) -> None:
@@ -3776,6 +3820,21 @@ def _chat_map_reduce(
             truncated_calls += 1
         return _strip_think(result.text)
 
+    def _last_cut() -> bool:
+        """#455: whether the step `_one` just ran (and returned text) ended by `length`."""
+        return bool(steps) and steps[-1]["finish_reason"] == "length"
+
+    def _discard_last() -> None:
+        """#455: the last step was cut and is retried split: it stops counting as truncated."""
+        nonlocal truncated_calls, raw_chars
+        steps[-1]["retried"] = True
+        truncated_calls -= 1
+        raw_chars -= steps[-1]["chars_out"]
+
+    # #455: (number of the top-level piece, the piece) of each map partial still cut after the
+    # retries, to say in the notice which part of the input may be missing.
+    truncated_pieces: list[tuple[int, Any]] = []
+
     def _tokens(words: int) -> int:
         if max_tokens_for is not None:
             return max_tokens_for(words)
@@ -3846,6 +3905,14 @@ def _chat_map_reduce(
         nonlocal failed
         out = _one(_map_system(piece), _map_user(piece), _map_tokens(piece))
         if out is not None:
+            if _last_cut():
+                # #455: the OUTPUT was cut (`length`): split and retry like `_chat_chunked`,
+                # instead of handing the reduce a partial that already lost material.
+                parts = _split(piece) if depth < 2 and _can_split(piece) else []
+                if len(parts) >= 2:
+                    _discard_last()
+                    return _map_parts(parts, depth)
+                truncated_pieces.append((current.chunk, piece))
             return [out]
         if depth >= 2 or not _is_context_overflow(failed):
             return None
@@ -3853,6 +3920,9 @@ def _chat_map_reduce(
         if len(parts) < 2:
             return None  # indivisible: el error se queda como está
         failed = None  # el desborde deja de ser terminal en cuanto hay con qué reintentar
+        return _map_parts(parts, depth)
+
+    def _map_parts(parts: list, depth: int) -> list[str] | None:
         outputs: list[str] = []
         for part in parts:
             sub = _map_piece(part, depth + 1)
@@ -3860,6 +3930,31 @@ def _chat_map_reduce(
                 return None
             outputs.extend(sub)
         return outputs
+
+    def _can_split(piece) -> bool:
+        # The guard of `_chat_chunked`: a piece this small is not cut by its size.
+        text = piece if isinstance(piece, str) else getattr(piece, "text", None)
+        return not isinstance(text, str) or len(text) > config.CHUNK_MIN_CHARS
+
+    def _regroup(group: str, depth: int = 0) -> list[str] | None:
+        """One regroup step; if its output is cut (`length`), the group is split and retried."""
+        out = _one(
+            regroup_system, build_user(group.strip()), _final_tokens(partial_words), "regroup"
+        )
+        if out is None:
+            return None
+        if _last_cut() and depth < 2 and len(group) > config.CHUNK_MIN_CHARS:
+            halves = _chunk_text(group, max(config.CHUNK_MIN_CHARS, len(group) // 2))
+            if len(halves) >= 2:
+                _discard_last()
+                outputs: list[str] = []
+                for half in halves:
+                    sub = _regroup(half, depth + 1)
+                    if sub is None:
+                        return None
+                    outputs.extend(sub)
+                return outputs
+        return [out]
 
     try:
         summaries: list[str] = []
@@ -3902,15 +3997,10 @@ def _chat_map_reduce(
                     # Ni los parciales caben: se reducen por grupos y se repite.
                     grouped: list[str] = []
                     for group in _chunk_text(joined, budget):
-                        out = _one(
-                            regroup_system,
-                            build_user(group.strip()),
-                            _final_tokens(partial_words),
-                            "regroup",
-                        )
-                        if out is None:
+                        outs = _regroup(group)
+                        if outs is None:
                             break
-                        grouped.append(out)
+                        grouped.extend(outs)
                     if failed is not None:
                         break
                     summaries = grouped
@@ -3948,6 +4038,9 @@ def _chat_map_reduce(
                 notice = i18n.t(
                     "mcp.warning.output_truncated_calls", truncated=truncated_calls, calls=calls
                 )
+                notice += _truncated_pieces_notice(
+                    _truncated_piece_entries(content, truncated_pieces)
+                )
                 text += f"\n\n{WARNING_MARKER}{notice}]"
             text += current.notice(len(pieces) > 1)
 
@@ -3981,6 +4074,8 @@ def _chat_map_reduce(
     if report is not None:
         report.update(
             truncated_calls=truncated_calls if ok else 0,
+            # #455: which map pieces stayed cut (number and, when found, lines of `content`).
+            truncated_pieces=_truncated_piece_entries(content, truncated_pieces) if ok else [],
             calls=calls,
             pieces=len(pieces),
             # Las claves del contrato de `fallback` (REQ-010), sin el trozo interno.
@@ -4157,6 +4252,23 @@ def _guard(output_format: str, max_words: int | None = None) -> str:
         "Responde directo desde el input. NO uses herramientas, NO busques en internet. "
         f"Output EXACTO: {output_format}.{limit} Nada fuera del formato."
     )
+
+
+#: #455: chars of code per output token allowed in a map step of the chunked `local_explain_code`.
+#: With the shared `2·350+64 = 764` tokens, 15 of 15 chunked runs (October log) cut some map note,
+#: at ~3 100-3 200 characters (~4.2 per token) for chunks of ~12 000: the notes needed more than
+#: 27 % of the chunk. `len // 8` gives 1 500 tokens (~6 300 characters, half the chunk, twice the
+#: observed need) for 12 000 and 2 000 at the 16 000 of the `code` budget, under
+#: `CHUNK_MAX_TOKENS` (2 048); that chunk (~5 300 tokens at 3 chars/token) plus 2 000 asks the
+#: model about as much as the single call already does (20 000 characters plus 700 tokens). The reduce prompt is still
+#: measured against `budget`, and longer notes regroup instead of overflowing.
+EXPLAIN_MAP_CHARS_PER_TOKEN = 8
+
+
+def _explain_map_max_tokens(piece: str, words: int) -> int:
+    """The cap of each map step of the chunked `local_explain_code`; never below the shared one."""
+    shared = int(words * 2) + 64
+    return max(shared, min(len(piece) // EXPLAIN_MAP_CHARS_PER_TOKEN, config.CHUNK_MAX_TOKENS))
 
 
 # Output caps of `local_lint_summary` (B2d-2). Before: `2·w+96` in the single call (496 tokens for
@@ -5033,7 +5145,9 @@ def local_extract(
             "truncated": True,
             "warning": i18n.t(
                 "mcp.warning.output_truncated_calls", truncated=truncated_calls, calls=calls
-            ),
+            )
+            # #455: which pieces stayed cut, from `report` (the chunked path only).
+            + _truncated_pieces_notice(report.get("truncated_pieces") or []),
         }
 
     try:
@@ -5567,6 +5681,7 @@ def local_explain_code(
             raw_len=raw_len,
             path=path,
             pieces=_code_pieces(content, budget),
+            tokens_for=_explain_map_max_tokens,
             postprocess=_add_not_mentioned,
         )
 
