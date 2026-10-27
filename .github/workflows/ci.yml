@@ -23,9 +23,15 @@ concurrency:
 jobs:
   # ruff y el parser de JS dan el mismo veredicto en cualquier sistema: se corren una sola vez.
   # Lo que sí depende del SO son los tests, y por eso el job `test` va en matriz.
+  #
+  # El límite del job cubre los dos pasos del navegador con margen. Con 5 minutos, el 2026-10-27
+  # un `playwright install --with-deps` lento (3 min de apt en vez de ~25 s) dejó sin tiempo a
+  # los tests del panel (~2 min) y `lint` salió `cancelled` en main sin ningún fallo de código.
+  # Cada paso del navegador lleva su propio límite, y el job suma esos límites más un margen
+  # para el resto; `tests/test_ci_gate.py` lo ata.
   lint:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7
 
@@ -69,11 +75,13 @@ jobs:
       # falla si se salta con CI=true: un test que se salta en todas partes es verde sobre cero
       # comprobaciones, que es un fallo que este repo ya cometió.
       - name: Install browser for the dashboard UI tests
+        timeout-minutes: 5
         run: |
           uv sync --group dev --group ui
           uv run playwright install --with-deps chromium
 
       - name: Dashboard UI (Playwright)
+        timeout-minutes: 5
         run: uv run pytest tests/test_dashboard_ui.py -q
 
   # El paquete es multiplataforma de verdad: rutas, locks entre procesos y las llamadas a la
