@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "slug": "panel-host-check",
+  "title": "El puerto del daemon comprueba el Host (DNS rebinding)",
+  "mode": "lite",
+  "status": "verifying",
+  "createdAt": "2026-10-27T15:28:31.000Z",
+  "updatedAt": "2026-10-27T15:28:31.000Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-10-27T15:28:31.000Z",
+      "evidence": "Premisa reproducida con repro.py notoken de la revision del 2026-10-23 sobre main eb079a9: 200 con Host ajeno en /api/events y /api/system, classify devolvia path y bytes. Criterios en spec.md.",
+      "actor": "agent"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-10-27T15:28:31.000Z",
+      "evidence": "Lite: middleware ASGI propio en web/host_guard.py, envuelve la raiz del daemon por fuera del token y la web stdio; misma lista pasada al SDK para /mcp.",
+      "actor": "agent"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": "2026-10-27T15:28:31.000Z",
+      "evidence": "tests/test_host_guard.py 20 tests; control positivo 9 fallan con daemon.py y metrics.py de main; suite completa local; falta CI del PR.",
+      "actor": "agent"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "verifying",
+      "at": "2026-10-27T15:28:31.000Z",
+      "reason": "lite: implementado y probado en local"
+    }
+  ]
+}

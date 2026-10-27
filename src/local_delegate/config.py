@@ -487,6 +487,13 @@ MAX_IMAGE_MB = _env_int("LOCAL_DELEGATE_MAX_IMAGE_MB", 8)
 WEB_ENABLED = _env_flag("LOCAL_DELEGATE_WEB", True)
 WEB_HOST = _env("LOCAL_DELEGATE_WEB_HOST", "127.0.0.1")
 WEB_PORT = _env_int("LOCAL_DELEGATE_WEB_PORT", 9393)
+# Nombres extra que el puerto admite en la cabecera `Host`, separados por comas (`web/host_guard.py`).
+# Por defecto solo loopback y el propio WEB_HOST: es lo que cierra el DNS rebinding. Hace falta
+# añadir el nombre con el que llega un proxy delante (`tailscale serve`: `own-pc.tailXXXX.ts.net`);
+# `*` desactiva la comprobación.
+WEB_ALLOWED_HOSTS: list[str] = [
+    h.strip() for h in _env("LOCAL_DELEGATE_WEB_ALLOWED_HOSTS", "").split(",") if h.strip()
+]
 # Tipografía de marca desde Google Fonts: único recurso externo del dashboard y puramente
 # cosmético (sin red cae al stack del sistema). `0` la desactiva y deja la página con cero
 # peticiones a terceros. Chart.js se sirve siempre desde el propio paquete.

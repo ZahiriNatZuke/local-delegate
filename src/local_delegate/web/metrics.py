@@ -318,6 +318,8 @@ def _aggregate(rows: list[dict]) -> dict:
         "chars_in": 0,
         "chars_out": 0,
         "errors": 0,
+        # De `errors`, los que no llegaron al backend (`connection_failure`, issue #436).
+        "connection_failures": 0,
         "chars_in_path": 0,
         "tokens_in": 0,
         "tokens_out": 0,
@@ -421,6 +423,8 @@ def _aggregate(rows: list[dict]) -> dict:
             causes[acc["cause"]] += 1
         if failed:
             total["errors"] += 1
+        if acc["connection_failed"]:
+            total["connection_failures"] += 1
         if is_path:
             total["chars_in_path"] += ci
 
@@ -768,19 +772,31 @@ def hooks(
 
 
 @app.get("/api/inflight")
-def inflight():
+def inflight(session: str | None = Query(None)):
     """Delegaciones en curso de todas las sesiones + señales de actividad del dashboard.
 
     `last_event_ts` es el evento más reciente de TODO el histórico y `now` la hora del
     servidor: con esos dos el cliente decide EN CURSO / EN VIVO / EN REPOSO sin depender del
     rango seleccionado ni de la hora (posiblemente desajustada) del navegador.
+
+    Con `?session=<id>` (issue #442, la banda del mod) la lista sigue siendo la de TODAS las
+    sesiones, pero cada entrada lleva `mine` y la respuesta `mine_count`: solo las de esa sesión
+    son suyas. Una entrada sin sesión conocida (cliente sin el hook, entrada vieja) no es de nadie.
+    La clave de sesión de cada entrada nunca sale de aquí.
     """
     snapshot = server.inflight_snapshot()
+    key = hook_common.session_key(session) if session else None
+    for entry in snapshot:
+        entry_key = entry.pop("caller_session_key", None)
+        if session:
+            entry["mine"] = key is not None and entry_key == key
     last = _last_event()
+    extra = {"mine_count": sum(1 for e in snapshot if e["mine"])} if session else {}
     return JSONResponse(
         {
             "inflight": snapshot,
             "count": len(snapshot),
+            **extra,
             "last_event_ts": (last or {}).get("ts"),
             # Resumen de la última delegación TERMINADA, para que el panel diga algo cuando no
             # hay nada corriendo. Solo los campos que se pintan: el log entero no hace falta.
@@ -1311,7 +1327,12 @@ def run_in_thread(host: str | None = None, port: int | None = None):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             if s.connect_ex((host, port)) == 0:
                 return None  # ya hay algo escuchando: no montamos una segunda web
-        cfg = uvicorn.Config(app, host=host, port=port, log_level="warning", access_log=False)
+        # La misma guarda del `Host` que el daemon (`web/host_guard.py`): la web del modo stdio
+        # sirve el mismo panel en el mismo puerto y el DNS rebinding la alcanza igual.
+        from . import host_guard
+
+        guarded = host_guard.protect(app, host)
+        cfg = uvicorn.Config(guarded, host=host, port=port, log_level="warning", access_log=False)
         server = uvicorn.Server(cfg)
         server.install_signal_handlers = lambda: None  # type: ignore[method-assign]
         t = threading.Thread(target=server.run, daemon=True, name="metrics-web")
@@ -3078,7 +3099,10 @@ function claudeTokens(amount,kind,e){
 function acct(e){
   const failed = e.ok===false;
   const ci = e.chars_in||0, co = e.chars_out||0;
-  const calls = e.chunks || 1;            // `chunks` son LLAMADAS al backend; se omite cuando es 1
+  // `chunks` son LLAMADAS al backend; se omite cuando es 1. Un fallo de conexión no llegó al
+  // backend (issue #436): solo cuentan las que `chunks` diga que se hicieron antes, si las hubo.
+  const connectionFailed = failed && !!e.connection_failure;
+  const calls = connectionFailed ? (e.chunks || 0) : (e.chunks || 1);
   const tIn = e.tokens_in, tOut = e.tokens_out;
   const tInRep = tIn!==undefined&&tIn!==null, tOutRep = tOut!==undefined&&tOut!==null;
   // chars_in no siempre son caracteres: en local_describe_image son BYTES de la imagen
@@ -3112,7 +3136,7 @@ function acct(e){
     net:saved-returned, estimated:estimated, fallback:fallback, cause:cause,
     charsSavedText:charsSavedText, bytesSavedImage:bytesSavedImage,
     charsSavedOutput:charsSavedOutput, charsReturned:charsReturned, failed:failed,
-    tool:orNull(e.tool), model:orNull(e.model), source:orNull(e.source), unit:unit};
+    connectionFailed:connectionFailed, tool:orNull(e.tool), model:orNull(e.model), source:orNull(e.source), unit:unit};
 }
 
 function render(){
@@ -3130,7 +3154,8 @@ function render(){
   const net = s.tokens_context_net||0;
   const gen = s.tokens_generated_local||0;
   const costIn = s.tokens_local_input||0;
-  const bCalls = s.backend_calls||nEv;
+  // `??`, no `||`: con el backend inalcanzable las llamadas reales pueden ser 0 (issue #436).
+  const bCalls = s.backend_calls ?? nEv;
   const estN = s.estimated_events||0;
   // Las llamadas de más salen de trocear o de un respaldo que respondió: las dos gastan backend.
   // El desglose va al tooltip del ⓘ: la pista de cada KPI es UNA línea corta (REQ de simetría).
