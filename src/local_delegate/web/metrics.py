@@ -2966,7 +2966,9 @@ function renderInflight(){
 
   if(state.inflight.length){
     body.innerHTML = state.inflight.map(it=>{
-      const chunk = it.chunks ? `<span class="chunkchip">${escHooks(T('backend.chunk', {n: it.chunk||1, total: it.chunks}))}</span>` : '';
+      // Issue #454: the phase of a chunked delegation; none (map) keeps «piece n/total».
+      const chunkKey = it.phase==='reduce' ? 'backend.combining' : it.phase==='retry' ? 'backend.retrying' : 'backend.chunk';
+      const chunk = it.chunks ? `<span class="chunkchip">${escHooks(T(chunkKey, {n: it.chunk||1, total: it.chunks}))}</span>` : '';
       const org = it.backend ? `<span class="org ${escHooks(it.backend)}">${escHooks(labelFor('origin', it.backend))}</span>` : '';
       // Espera de turno del daemon (REQ-008): las mismas palabras que el title de la fila del modelo.
       const turnText = it.local_wait==='turn' ? turnWords(it) : '';
@@ -3468,6 +3470,9 @@ function eventRows(e){
   }
   add('status', status.join(''));
   add('reasoning_chars', Number(e.reasoning_chars) > 0 ? escHooks(F.format(Number(e.reasoning_chars))) : '');
+  // Issue #454: pieces and backend calls (`chunks`), each only when the log has it.
+  add('pieces', Number(e.pieces) > 0 ? escHooks(F.format(Number(e.pieces))) : '');
+  add('calls', Number(e.chunks) > 0 ? escHooks(F.format(Number(e.chunks))) : '');
   if(Array.isArray(e.steps) && e.steps.length){
     const counts = [];
     e.steps.forEach(s => {
@@ -3503,8 +3508,13 @@ function drawActivity(ev){
   rows.forEach((e,i)=>{ const time=fmtLocalTs(e.ts);   // hora LOCAL, el log guarda UTC
     const org=e.backend||'unknown';
     const orgTxt=escHooks(labelFor('origin', org));
-    // `chunks` del log son LLAMADAS al backend, no trozos: el título decía otra cosa que el dato
-    const chunks=e.chunks?`<span class="chunkchip" title="${escHooks(T('activity.chunks_title', {n: e.chunks}))}">${escHooks(e.chunks)}×</span>`:'';
+    // `chunks` del log son LLAMADAS al backend, no trozos: el título decía otra cosa que el dato.
+    // Issue #454: with `pieces`, the chip shows the pieces and the extra calls (`3 +1`); an old
+    // event without it keeps `4×`.
+    const calls=Number(e.chunks)||0, pieces=Number(e.pieces)>0?Number(e.pieces):0, extraCalls=pieces?calls-pieces:0;
+    const chunksLabel=pieces?(extraCalls>0?`${pieces} +${extraCalls}`:`${pieces}×`):String(e.chunks)+'×';
+    const chunksTitle=pieces?T('activity.pieces_title', {pieces: pieces, calls: calls}):T('activity.chunks_title', {n: e.chunks});
+    const chunks=e.chunks?`<span class="chunkchip" title="${escHooks(chunksTitle)}">${escHooks(chunksLabel)}</span>`:'';
     // Hubo salto: respondió un respaldo. Se marca para que nadie lea esta fila como del modelo pedido.
     // El motivo (`fallback_reason`) es prosa ya escrita en el log y se enseña tal cual (REQ-033).
     const fb=(e.model_requested && e.routing!=='affinity')?`<span class="chunkchip fbchip" title="${escHooks(T('activity.fallback_title', {model: e.model, requested: e.model_requested, cause: e.fallback_reason||e.fallback_class||T('activity.no_cause')}))}">↪ ${escHooks(e.model_requested)}</span>`:'';

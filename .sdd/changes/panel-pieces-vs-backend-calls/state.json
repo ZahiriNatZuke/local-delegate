@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "slug": "panel-pieces-vs-backend-calls",
+  "title": "El panel separa trozos y llamadas al backend y muestra la fase en curso",
+  "mode": "lite",
+  "status": "verifying",
+  "createdAt": "2026-10-27T21:00:00.000Z",
+  "updatedAt": "2026-10-27T21:00:00.000Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-10-27T21:00:00.000Z",
+      "evidence": "Premisa reproducida: con el src de main el evento troceado no lleva pieces (KeyError), la llamada del reduce ve la entrada en vuelo sin fase y la actividad pinta 4x. Criterios en spec.md.",
+      "actor": "agent"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-10-27T21:00:00.000Z",
+      "evidence": "Lite: _log_event(pieces=) en _chat_chunked y _chat_map_reduce; _inflight_phase (map/reduce/retry) y inflight_snapshot copia phase; _inflight_progress vuelve a map; metrics.py pinta el chip 3 +1, filas del dialogo y la fase en En curso; i18n es+en.",
+      "actor": "agent"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": "2026-10-27T21:00:00.000Z",
+      "evidence": "tests/test_pieces_vs_calls.py (5, uno del reintento del map tras el #455) y 3 tests nuevos en tests/test_dashboard_states.py; control positivo: 6 fallan con src de main por la razon esperada; mutante sin pop de phase falla; suite completa local 5401 passed tras rebase sobre el #456; ruff limpio; falta CI del PR.",
+      "actor": "agent"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "verifying",
+      "at": "2026-10-27T21:00:00.000Z",
+      "reason": "lite: implementado y probado en local"
+    }
+  ]
+}

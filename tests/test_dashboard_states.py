@@ -1060,3 +1060,76 @@ def test_mod_calls_shown_apart(tmp_path):
     assert i18n.t_lang("es", "panel.clients.mod_calls", n="0") not in codex_row
     assert "del mod" not in codex_row
     assert r["head"] == "2 clientes"
+
+
+# --- Issue #454: pieces vs backend calls, and the phase in «In progress» ----------------------
+
+
+def test_activity_chip_shows_pieces_and_extra_calls(tmp_path):
+    """With `pieces`, the chip is `3 +1` titled «3 trozos · 4 llamadas al backend»; without extra
+    calls, `3×`; an old event without `pieces` keeps `4×` and its old title.
+
+    Positive control (main): the first row shows `4×` → the `3 +1` assert fails.
+    """
+    extra, equal, old = _activity_html(
+        tmp_path,
+        f"{{{_BASE}, chunks: 4, pieces: 3}}",
+        f"{{{_BASE}, chunks: 3, pieces: 3}}",
+        f"{{{_BASE}, chunks: 4}}",
+    )
+    assert (
+        '<span class="chunkchip" title="3 trozos · 4 llamadas al backend">3 +1</span>' in extra
+    ), extra
+    assert '<span class="chunkchip" title="3 trozos · 3 llamadas al backend">3×</span>' in equal
+    old_title = i18n.t_lang("es", "panel.activity.chunks_title", n="4")
+    assert f'<span class="chunkchip" title="{old_title}">4×</span>' in old
+
+
+def test_event_dialog_rows_for_pieces_and_calls(tmp_path):
+    """The detail dialog adds «Trozos» and «Llamadas al backend» when the log has them; an old
+    event shows only the calls, and an unchunked one neither.
+
+    Positive control (main): no such rows → the label assert fails.
+    """
+    new, old, single = _event_rows(
+        tmp_path,
+        "{tool: 'local_explain_code', model: 'm', chunks: 4, pieces: 3}",
+        "{tool: 'local_explain_code', model: 'm', chunks: 4}",
+        "{tool: 'local_explain_code', model: 'm'}",
+    )
+
+    def label(key):
+        return i18n.t_lang("es", f"panel.event.key.{key}")
+
+    assert dict(new)[label("pieces")] == "3" and dict(new)[label("calls")] == "4"
+    assert label("pieces") not in dict(old) and dict(old)[label("calls")] == "4"
+    assert [k for k, _ in single] == [label("model")]
+
+
+def test_in_progress_shows_the_phase(tmp_path):
+    """«En curso»: map → «Trozo 2/3», reduce → «Combinando 3 trozos…», retry → «Reintentando
+    trozo 1/3».
+
+    Positive control (main): reduce still says «Trozo 3/3» → the «Combinando» assert fails.
+    """
+    r = _js(
+        tmp_path,
+        [_f("renderInflight")],
+        """
+        const base = {tool: 't', model: 'm', elapsed_s: 1, chars_in: 1, chunks: 3};
+        const out = [];
+        for (const extra of [{chunk: 2}, {chunk: 3, phase: 'reduce'}, {chunk: 1, phase: 'retry'}]) {
+          const state = {inflight: [Object.assign({}, base, extra)], activity: {skewMs: 0},
+                         lastEvent: null};
+          globalThis.state = state;
+          renderInflight();
+          out.push(_els.inflightBody.innerHTML);
+        }
+        emit(out);
+        """,
+        _DOM,
+    )
+    mapping, reducing, retrying = r
+    assert ">Trozo 2/3<" in mapping
+    assert ">Combinando 3 trozos…<" in reducing and "Trozo" not in reducing
+    assert ">Reintentando trozo 1/3<" in retrying

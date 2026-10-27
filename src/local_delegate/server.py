@@ -351,13 +351,42 @@ def _caller_session_key() -> str | None:
 
 
 def _inflight_progress(entry_id: int, chunk: int) -> None:
-    """Marca en qué trozo va una delegación por chunks (visible en el panel 'En curso')."""
+    """Marca en qué trozo va una delegación por chunks (visible en el panel 'En curso').
+
+    A new piece is back in the map phase: it drops any `phase` left by a retry (issue #454).
+    """
     key = f"{os.getpid()}:{entry_id}"
 
     def _update(data: dict) -> None:
         entry = data.get(key)
         if isinstance(entry, dict):
             entry["chunk"] = int(chunk)
+            entry.pop("phase", None)
+
+    _inflight_mutate(_update)
+
+
+_INFLIGHT_PHASES = frozenset({"map", "reduce", "retry"})
+
+
+def _inflight_phase(entry_id: int, phase: str) -> None:
+    """Publish the phase of a chunked delegation for the panel (issue #454). Best-effort.
+
+    `map` (the default, stored as absence), `reduce` (reduce and regroup: combining the pieces)
+    or `retry` (a truncated piece being split again).
+    """
+    if phase not in _INFLIGHT_PHASES:
+        return
+    key = f"{os.getpid()}:{entry_id}"
+
+    def _update(data: dict) -> None:
+        entry = data.get(key)
+        if not isinstance(entry, dict):
+            return
+        if phase == "map":
+            entry.pop("phase", None)
+        else:
+            entry["phase"] = phase
 
     _inflight_mutate(_update)
 
@@ -450,6 +479,9 @@ def inflight_snapshot() -> list[dict]:
             if v.get("chunks"):
                 entry["chunks"] = v.get("chunks")
                 entry["chunk"] = v.get("chunk")
+                # Issue #454: reduce/retry, so the panel does not stay on «piece n/n».
+                if v.get("phase"):
+                    entry["phase"] = v.get("phase")
             # REQ-022: la espera DENTRO de local-delegate, solo cuando la hay. Sin copiarla aquí
             # el panel no la vería nunca, aunque esté escrita en el fichero.
             if v.get("local_wait"):
@@ -812,6 +844,7 @@ def _log_event(
     path: str | None = None,
     json_schema: str | None = None,
     chunks: int | None = None,
+    pieces: int | None = None,
     input_unit: str = "chars",
     output_to_file: bool = False,
     model_requested: str | None = None,
@@ -899,6 +932,10 @@ def _log_event(
         # cuando vale 1, así que quien agregue debe leerlo como `chunks or 1`.
         if chunks is not None and chunks > 1:
             rec["chunks"] = int(chunks)
+            # Issue #454: the pieces announced to the panel, next to the calls (`chunks`), so
+            # «3 pieces · 4 calls» can be told apart. Only on chunked events.
+            if pieces is not None and pieces >= 1:
+                rec["pieces"] = int(pieces)
         # `chars_in` no siempre son caracteres de texto: en local_describe_image son BYTES de un
         # binario, y estimar tokens dividiéndolos entre 4 da un número disparatado (×46 medido).
         # Solo se escribe cuando NO es texto, para no engordar cada línea del log.
@@ -3495,6 +3532,7 @@ def _chat_chunked(
             # reintenta en vez de devolver la salida cortada.
             halves = _chunk_text(piece, max(config.CHUNK_MIN_CHARS, len(piece) // 2))
             if len(halves) > 1:
+                _inflight_phase(entry_id, "retry")
                 parts: list[str] = []
                 for half in halves:
                     out = _process(half, depth + 1)
@@ -3549,6 +3587,7 @@ def _chat_chunked(
         raw_len=raw_len,
         path=path if source == "path" else None,
         chunks=calls,
+        pieces=len(chunks),
         attempts=all_attempts,
         **current.log_fields(failed),
     )
@@ -3923,6 +3962,8 @@ def _chat_map_reduce(
         return _map_parts(parts, depth)
 
     def _map_parts(parts: list, depth: int) -> list[str] | None:
+        # Only reached when a piece is split again (cut output or context overflow): #454.
+        _inflight_phase(entry_id, "retry")
         outputs: list[str] = []
         for part in parts:
             sub = _map_piece(part, depth + 1)
@@ -3984,6 +4025,7 @@ def _chat_map_reduce(
                 # llamada extra.
                 text = shortcut
             else:
+                _inflight_phase(entry_id, "reduce")
                 for _level in range(3):
                     joined = "\n\n".join(summaries)
                     prompt = build_reduce(joined)
@@ -4062,6 +4104,7 @@ def _chat_map_reduce(
         raw_len=raw_len,
         path=path if source == "path" else None,
         chunks=calls,
+        pieces=len(pieces),
         num_sections=num_sections,
         focus=focus,
         json_schema=current.json_schema if response_format is not None else None,

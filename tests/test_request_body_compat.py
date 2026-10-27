@@ -105,8 +105,13 @@ def test_body_matches_main(captured):
         assert body == want, f"{name}: el cuerpo {index} no es el de {BASE_COMMIT}"
 
 
+#: Keys added to the usage event after the base commit, on purpose and additive: a reader of the
+#: old format ignores them. `pieces` (issue #454) goes with `chunks` on chunked events only.
+_ADDED_EVENT_KEYS = {"map_chunk": {"pieces"}, "reduce": {"pieces"}}
+
+
 @pytest.mark.parametrize("captured", _CASES, ids=_IDS, indirect=True)
 def test_event_keys_match_main(captured):
     name, result = captured
-    expected = _field(_fixture(name), "event_keys")
-    assert set(result["event_keys"]) == set(expected), name
+    expected = set(_field(_fixture(name), "event_keys")) | _ADDED_EVENT_KEYS.get(name, set())
+    assert set(result["event_keys"]) == expected, name
