@@ -46,6 +46,8 @@
   "status.empty": "no delegations yet",
   "status.calls_label": "delegations",
   "status.calls_label_one": "delegation",
+  "status.failed_label": "failed",
+  "status.failed_label_one": "failed",
   "status.saved_label": "tokens saved",
   "status.seconds": "{n} s",
   "status.minutes": "{m}m {s}s",
