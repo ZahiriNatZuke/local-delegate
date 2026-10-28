@@ -244,4 +244,7 @@ def test_extract_no_longer_marks_a_large_input_as_truncated(backend):
     state["answer"] = lambda call: _ok('{"a": null}')
     data = server.local_extract(fields=["a"], text=_big_text(""))
     assert len(calls) > 1
-    assert "_local_delegate" not in data
+    # #473: no metadata at all was the defect (a silent null); `truncated` stays absent.
+    meta = data["_local_delegate"]
+    assert "truncated" not in meta
+    assert meta["chunked"]["null_fields"] == ["a"]
