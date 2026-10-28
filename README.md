@@ -62,8 +62,10 @@ que **`uvx` no deja el comando disponible**: monta un entorno efímero y lo borr
 que después `local-delegate doctor` responderá «command not found». El propio `install` te lo avisa
 si detecta ese caso.
 
-Es idempotente, deja `.bak` de lo que edita, no toca configuración ajena y se revierte con
-`local-delegate uninstall`. Detalle y opciones en [Instalación de la integración](./docs/wiki/Integration-install.md).
+Es idempotente, deja `.bak` de lo que edita (la primera vez que lo toca; después no lo pisa), no
+toca configuración ajena y se revierte con `local-delegate uninstall`. Desde la 0.44.0 escribe de
+forma atómica, reaplica su cambio si Claude Code guarda el fichero a la vez, y si un fichero no está
+en UTF-8 (cp1252, UTF-16) la acción falla sin tocarlo. Detalle y opciones en [Instalación de la integración](./docs/wiki/Integration-install.md).
 
 ¿Autocompletado con Tab de subcomandos, opciones y valores? `local-delegate install
 --shell-completion` lo deja cargado en el perfil de PowerShell, zsh o bash (opt-in, reversible con
@@ -225,7 +227,7 @@ cámbialos por los de tu backend.
 | `LOCAL_DELEGATE_WEB_ALLOWED_HOSTS` | *(vacío)* | Nombres extra que el puerto admite en la cabecera `Host`, separados por comas (p. ej. el de `tailscale serve`). Por defecto solo loopback y `WEB_HOST`, contra el DNS rebinding (desde la 0.42.0: sin ella, entrar por otro nombre da 421); `*` desactiva la comprobación |
 | `LOCAL_DELEGATE_WEB_FONTS` | `1` | Tipografía de marca desde Google Fonts (`0` = cero peticiones a terceros) |
 | `LOCAL_DELEGATE_AUTOSTART` | `0` | Auto-arranque de llama-swap (opt-in) |
-| `LLAMASWAP_EXE` / `LLAMASWAP_CONFIG` / `LLAMASWAP_LISTEN` | — | Solo si `AUTOSTART=1`; `LLAMASWAP_CONFIG` además activa el turno y la afinidad del daemon (con el extra `[llamaswap]`) |
+| `LLAMASWAP_EXE` / `LLAMASWAP_CONFIG` / `LLAMASWAP_LISTEN` | — | Solo si `AUTOSTART=1`; `LLAMASWAP_CONFIG` además activa el turno y la afinidad del daemon (con el extra `[llamaswap]`). `LLAMASWAP_EXE` tiene que ser una ruta **absoluta** a un fichero que exista (si no, avisa y no arranca); sin ella, `llama-swap` se busca solo en las carpetas absolutas del `PATH`, nunca en la carpeta actual (desde la 0.44.0) |
 | `LLAMASWAP_WATCH_CONFIG` | `0` | `1` añade `-watch-config` al backend autoarrancado |
 | `LOCAL_DELEGATE_FALLBACK` | `1` | Respaldo entre modelos: si el modelo de un rol falla por su culpa, responde el siguiente de su cadena (`_MAX_HOPS`=2; cadenas con `_<ROL>`, ver la wiki). `0` lo apaga |
 | `LOCAL_DELEGATE_COOLDOWN` | `1` | Enfriamiento por modelo: 3 fallos seguidos (`_FAILURES`) lo paran 120 s (`_S`), doblando hasta 900 s (`_MAX_S`). `0` lo apaga |

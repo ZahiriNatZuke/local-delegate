@@ -6,6 +6,66 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.44.0] - 2026-10-28
+
+Esta versión blinda el instalador y afina dos tools. `install`, `uninstall` y `update` ya no
+reescriben un fichero de configuración que no saben leer, escriben de forma atómica y no pisan lo
+que Claude Code guarde mientras tanto; el arranque de llama-swap deja de ejecutar un `llama-swap.exe`
+de la carpeta actual. `local_explain_code` con `path` da números de línea reales, y
+`local_commit_msg` se ciñe a lo que trae el diff y sigue el idioma del historial del repo.
+
+### Cómo actualizar
+
+- **Abre una sesión nueva de Claude Code (o de Claude Desktop) tras actualizar.** Las sesiones
+  abiertas siguen con el servidor MCP de la 0.43.0 hasta que se reinician.
+- **Ejecuta `local-delegate update`** (y reinicia el daemon si lo usas), como en cada versión.
+- **Si usas `LLAMASWAP_EXE`:** tiene que ser una ruta **absoluta** a un fichero que exista. Con una
+  relativa o una que no existe, el arranque de llama-swap avisa y no arranca (antes la aceptaba o
+  caía al nombre suelto). Sin la variable, `llama-swap` se busca solo en las carpetas absolutas del
+  `PATH`.
+- **Si `install`/`update` falla diciendo que un fichero no es UTF-8:** guárdalo en UTF-8 (p. ej.
+  un `CLAUDE.md` en cp1252 o UTF-16) y repite; el fichero no se ha tocado.
+
+### Corregido
+
+- `install`, `uninstall` y `update` ya no reescriben un `CLAUDE.md`, `AGENTS.md`, el `config.toml`
+  de Codex o `~/.claude.json` que no esté en UTF-8 (cp1252, UTF-16) o no se pueda leer: antes lo
+  rehacían desde vacío y daban la acción por buena, perdiendo tus reglas y otros `[mcp_servers.*]`.
+  Ahora la acción falla con un mensaje claro y el fichero queda intacto (un UTF-8 con BOM sí vale y
+  el BOM se conserva). El `.bak` se crea **una sola vez**, la primera que se toca el fichero, y no
+  se pisa después; y `update` cambia el pin solo en la entrada de local-delegate (en
+  `~/.claude.json`, vía JSON), nunca en el resto del fichero (#462).
+- Las escrituras de `~/.claude.json`, `~/.claude/settings.json` y del resto de configuraciones son
+  atómicas (temporal en la misma carpeta + reemplazo, conservando BOM, fin de línea y permisos): un
+  corte a mitad ya no deja el fichero truncado. Si Claude Code guarda el fichero mientras `install`,
+  `uninstall` o `update` lo modifica, el cambio se reaplica sobre lo nuevo en vez de pisarlo; si
+  vuelve a cambiar, o sigue bloqueado en Windows, la acción falla con un mensaje claro sin tocarlo.
+  Si el JSON resultante es idéntico, ya no se reescribe ni se crea `.bak` (#467).
+- Un `--python` con espacios o `\` (p. ej. `C:\Program Files\Python312\python.exe`) ya no deja en
+  `settings.json` hooks que el shell parte en el espacio (y que en `UserPromptSubmit` bloqueaban
+  cada prompt): el intérprete se escribe con `/` y entre comillas, como la ruta del script; un
+  nombre suelto como `python` queda igual. Límite: un comando que empieza entre comillas no lo
+  ejecuta PowerShell; Claude Code ejecuta los hooks con `sh` (#465).
+- `local_explain_code` con `path` da números de línea reales: el modelo ve cada línea con su número
+  del fichero (también en cada trozo cuando se trocea) y el paso final conserva `nombre: línea`, así
+  que se puede preguntar dónde está algo y leer solo ese rango con `Read`. Con `code=` en línea no se
+  numera (#464, cierra #460).
+- `local_commit_msg` con diffs grandes ancla el mensaje a la lista de archivos (con su estado
+  A/M/D/R) y a las definiciones de primer nivel añadidas, quitadas o tocadas, calculadas del diff sin
+  modelo, para no mencionar cambios que no están en él. Sin `LOCAL_DELEGATE_COMMIT_LANGUAGE`, si el
+  diff está dentro de un repo cuyos últimos commits están claramente en español o en inglés (se lee
+  el reflog, sin lanzar `git`), el mensaje sigue ese idioma; si no, el del producto, como antes
+  (#463, cierra #461).
+
+### Seguridad
+
+- El arranque de llama-swap (`update --restart-backend`, el arranque que se ofrece y
+  `LOCAL_DELEGATE_AUTOSTART`) ya no ejecuta un `llama-swap.exe` que esté en la carpeta actual (en
+  Windows se buscaba ahí primero, así que uno incluido en un repo clonado corría con tus permisos):
+  lo busca solo en las carpetas absolutas del `PATH`. Si `LLAMASWAP_EXE` no es una ruta absoluta a
+  un fichero que exista, avisa y no arranca. El doctor tampoco ejecuta un `llama-server` suelto desde
+  la carpeta actual (#466).
+
 ## [0.43.0] - 2026-10-27
 
 Esta versión cierra dos fallos de las delegaciones troceadas. El map/reduce ya no da por buenos los
@@ -3652,7 +3712,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.43.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.44.0...HEAD
+[0.44.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.43.0...v0.44.0
 [0.43.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.42.0...v0.43.0
 [0.42.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.41.1...v0.42.0
 [0.41.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.41.0...v0.41.1
