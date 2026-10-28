@@ -8,7 +8,7 @@
     {
       "name": "local-delegate",
       "source": "./local-delegate",
-      "version": "0.44.1",
+      "version": "0.44.2",
       "description": "Hooks that steer mechanical work (summaries, logs, large files) to the local-delegate MCP tools."
     }
   ]

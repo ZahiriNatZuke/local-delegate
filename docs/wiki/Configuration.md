@@ -562,7 +562,15 @@ que no es dato viaja bajo la clave reservada `_local_delegate` para no ensuciar 
 
 // el modelo no devolvió JSON, o el backend falló
 { "_local_delegate": { "error": "response is not parseable as JSON", "raw": "…" } }
+
+// documento troceado con campos sin valor en todos los trozos (desde la 0.44.2, #473):
+// ese `null` significa «no visto», no «no existe»
+{ "host": "127.0.0.1", "port": null, "_local_delegate": { "chunked": { "pieces": 3, "null_fields": ["port"], "notice": "…" }, "warning": "…" } }
 ```
+
+`chunked` solo aparece si hubo troceo y algún campo quedó `null`; `warning` lleva su aviso si no
+había ya uno de truncado. Además, un campo que el paso final de combinación deja `null` toma el
+primer valor no nulo de los trozos, en orden, sin llamar al modelo. Las demás claves no cambian.
 
 **Contrato desde la 0.36.0 (REQ-010, cambio incompatible).** Las subclaves y los marcadores pasan a
 inglés y **no dependen del idioma** (`LOCAL_DELEGATE_LANG`); el texto que va dentro (`warning`,

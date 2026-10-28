@@ -106,6 +106,17 @@ líneas») y, si fue una franja la que se resumió, cuántas se llevan leídas y
 editar basta **una** lectura literal del fichero: libera la guarda de escritura, así que lo práctico
 es leer solo el tramo que se va a cambiar.
 
+Desde la 0.44.2 (#472) hay tres excepciones en que un rango pasa siempre literal:
+
+- **En un subagente**, una lectura por rango nunca se resume ni suma a la cuenta del 80 %, que es la
+  del hilo principal. Libera la guarda de escritura como cualquier lectura literal, y el hilo
+  principal puede seguir leyendo por rangos un fichero que el subagente leyó entero.
+- **En un fichero corto** (200 líneas o menos y menos de 32 KB), también en el hilo principal.
+- **Con un rango que empieza después de la última línea** del fichero, que no trae nada que resumir.
+
+Cuando un rango sí se resume, el aviso dice qué líneas no llegaron literales y cuántas se pueden
+pedir todavía en tramos más cortos, o que ya no queda margen en esta sesión.
+
 ### El hook de lectura y el mod de lectura
 
 La opción `read_mod_enabled` del plugin sale **encendida por defecto** desde la 0.41: sin valor

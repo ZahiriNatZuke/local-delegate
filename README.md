@@ -191,7 +191,9 @@ diez ficheros más nombrados (y dice cuántos más hay), y las cifras del resume
 programa, no el modelo.
 Desde la 0.36.0 también `local_commit_msg`, `local_explain_code` (por `def`/`class` de primer
 nivel, con el inventario de nombres en el paso final) y `local_extract` (un objeto parcial por
-trozo y un paso final con schema que los combina) leen la entrada entera.
+trozo y un paso final con schema que los combina) leen la entrada entera. Desde la 0.44.2, si tras
+trocear algún campo de `local_extract` queda `null` en todos los trozos, `_local_delegate.chunked`
+lo dice (`pieces`, `null_fields`, `notice`): ese `null` significa «no visto», no «no existe».
 
 ## Configuración
 
@@ -380,7 +382,10 @@ El plugin trae además un **mod**, que corre dentro de Claude Code sin gastar tu
   hasta leerlo de verdad. Mientras actúa, los hooks de lectura de la sesión se apartan. Para
   decidir qué lee cada llamada le pregunta al daemon, sin arrancar procesos (la sobrecarga medida
   por llamada `Bash` queda dentro del ruido). Sin valor guardado cuenta como encendido; si lo
-  apagaste en la 0.40.0, se vuelve a encender en el menú de configuración del plugin.
+  apagaste en la 0.40.0, se vuelve a encender en el menú de configuración del plugin. Desde la
+  0.44.2 una lectura por rango pasa siempre literal en un subagente (sin gastar el margen del
+  80 % del hilo principal), en un fichero corto (200 líneas o menos y menos de 32 KB) y cuando el
+  rango empieza después de la última línea.
 - Tras actualizar, abre una sesión nueva de Claude Code: los mods se cargan al empezar la sesión.
 
 En Windows, `install --desktop` añade el chat de **Claude Desktop**: escribe una entrada que lanza
