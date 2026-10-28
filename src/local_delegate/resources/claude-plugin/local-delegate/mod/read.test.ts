@@ -1080,3 +1080,38 @@ test('a_range_summary_says_it_was_the_accumulated_share', async () => {
   const next = await range(91, 5)
   expect(next.result.file.content).toBe('REAL')
 })
+
+test('image_read_gets_describe_image_never_ranges', async () => {
+  // Issue #469: `Read` of an image is not lines. A large image `local_describe_image` accepts gets
+  // that tool in a subagent and in the main thread; never `local_extract` ranges or the generic
+  // «summarize» note. A small one, or one that tool rejects (`.svg`), and a PDF pass in silence.
+  const notes = (out: any) => (out.context ?? []).filter((line: string) => line.startsWith('read.'))
+  const PNG = 'C:/work/shots/figma.png'
+  const image = (over: Record<string, unknown> = {}) =>
+    readCls({ path: PNG, scope: 'unclassifiable', via: 'read_image', summarizable: false, describable: true, ...over })
+  for (const agentId of ['agent-1', undefined]) {
+    const env = makeEnv({ dialog: true, answer: 'read.ask.summarize', classify: () => image(), files: { [PNG]: HUNDRED_LINES }, sizes: { [PNG]: BIG_BYTES } })
+    const out = await call(env, { tool: 'Read', file_path: PNG, agentId })
+    expect(env.nexts).toHaveLength(1)
+    expect(out.deny).toBeUndefined()
+    expect(env.asks).toHaveLength(0)
+    expect(env.mcpCalls).toHaveLength(0)
+    expect(notes(out)).toEqual([`read.warn.image kb=64 path=${PNG}`])
+    expect(decisions(env)).toEqual(['warned'])
+  }
+  const silent = [
+    image({ bytes: 1024 }),
+    image({ path: 'C:/work/shots/logo.svg', describable: false }),
+    readCls({ path: 'C:/work/docs/spec.pdf', scope: 'unclassifiable', via: 'read_document', summarizable: false, describable: false }),
+  ]
+  for (const cls of silent) {
+    for (const agentId of ['agent-1', undefined]) {
+      let classified = 0
+      const env = makeEnv({ classify: () => (classified++, cls), files: { [cls.path as string]: HUNDRED_LINES }, sizes: { [cls.path as string]: BIG_BYTES } })
+      const out = await call(env, { tool: 'Read', file_path: cls.path, agentId })
+      expect(env.nexts).toHaveLength(1)
+      expect(classified).toBe(1) // it reached the classifier: the silence is the mod's decision
+      expect(notes(out)).toEqual([])
+    }
+  }
+})

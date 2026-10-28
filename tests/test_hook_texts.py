@@ -241,6 +241,55 @@ def test_the_main_thread_keeps_its_read_texts(tmp_path):
     assert read["additionalContext"].startswith("Suggestion: this file is 39 KB."), read
 
 
+# --- Issue #469: an image is not lines; never `local_extract` ranges ------------------------------
+
+
+@pytest.mark.parametrize("agent_id", ["agent-1", None], ids=["subagent", "main-thread"])
+def test_a_large_image_gets_local_describe_image_never_ranges(tmp_path, agent_id):
+    commands, log_dir = _english_hooks(tmp_path)
+    image = tmp_path / "figma.png"
+    image.write_bytes(bytes([0x89]) + b"PNG" + bytes(40_000))
+    hook_input = {"tool_input": {"file_path": str(image)}}
+    if agent_id:
+        hook_input["agent_id"] = agent_id
+
+    context = _run(commands["Read"], hook_input, log_dir)["additionalContext"]
+
+    assert context.startswith("Suggestion: this image is 39 KB."), context
+    assert f'`local_describe_image` with `path="{image}"`' in context
+    for wrong in ("local_extract", "offset", "limit", "range"):
+        assert wrong not in context, (wrong, context)
+
+
+@pytest.mark.parametrize("agent_id", ["agent-1", None], ids=["subagent", "main-thread"])
+@pytest.mark.parametrize(
+    ("name", "size"),
+    [("small.png", 2_000), ("logo.svg", 40_000), ("icon.ico", 40_000), ("spec.pdf", 40_000)],
+)
+def test_other_images_and_documents_pass_in_silence(tmp_path, agent_id, name, size):
+    """A small image, one `local_describe_image` rejects, or a PDF: no tool fits, so no note."""
+    commands, log_dir = _english_hooks(tmp_path)
+    target = tmp_path / name
+    target.write_bytes(bytes(size))
+    hook_input = {"tool_input": {"file_path": str(target)}}
+    if agent_id:
+        hook_input["agent_id"] = agent_id
+
+    assert _run_raw(commands["Read"], hook_input, log_dir) == b""
+
+
+def test_a_large_image_gets_no_suggestion_while_the_backend_is_down(tmp_path):
+    import time
+
+    commands, log_dir = _english_hooks(tmp_path)
+    _open_breaker(log_dir, time.time() + 300)
+    image = tmp_path / "figma.png"
+    image.write_bytes(bytes(40_000))
+    hook_input = {"tool_input": {"file_path": str(image)}, "agent_id": "agent-1"}
+
+    assert _run_raw(commands["Read"], hook_input, log_dir) == b""
+
+
 def _open_breaker(log_dir: Path, until: float) -> None:
     """El corte por backend inalcanzable tal como lo deja el servidor (issue #436)."""
     from local_delegate import cooldown

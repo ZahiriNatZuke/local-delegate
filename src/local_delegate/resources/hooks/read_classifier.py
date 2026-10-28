@@ -85,6 +85,10 @@ _NULL_TARGETS = frozenset({"/dev/null", "$null", "nul", "null", "&1", "&2"})
 #: Extensiones que `Read` no entrega como texto: el resumen local no las sustituye.
 IMAGE_EXTENSIONS = frozenset({".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".ico"})
 DOCUMENT_EXTENSIONS = frozenset({".pdf", ".ipynb"})
+#: Images `local_describe_image` accepts (`server._IMAGE_MIME`; a test keeps them equal). The read
+#: hook and the mod steer a large one there, never to `local_extract` ranges (issue #469). `.svg`,
+#: `.bmp` and `.ico` stay out: that tool rejects them, so the hooks say nothing.
+DESCRIBABLE_IMAGE_EXTENSIONS = frozenset({".png", ".jpg", ".jpeg", ".gif", ".webp"})
 #: Prosa: lo que un resumen puede sustituir, y lo único que bloquea el hook de lectura (motivo
 #: `large_prose`). Vive aquí para que el hook y el campo `summarizable` de `hook classify` (lo que
 #: el mod resume) salgan de la misma lista. `.log` no entra: la medición de
@@ -628,8 +632,9 @@ def classify(payload: dict, read_switch: str | None = None, environ=None) -> dic
     Campos y valores fijados por el plan (Ola 5, «Contrato de `hook classify`»):
     `kind` (`read`/`write`/`other`), `path` (absoluta o `null`), `scope`, `bytes` (tamaño del
     fichero o `null`), `range` (`[primera, última]`, última `null` = hasta el final; o `null`),
-    `via` (nombre de la vía, `none` si no toca un fichero), `read_switch` y `summarizable` (si es
-    una lectura de un fichero en la banda que bloquea el hook, `summarizable()`).
+    `via` (nombre de la vía, `none` si no toca un fichero), `read_switch`, `summarizable` (si es
+    una lectura de un fichero en la banda que bloquea el hook, `summarizable()`) y `describable`
+    (si es un `Read` de una imagen que acepta `local_describe_image`, issue #469).
 
     Una lectura cuyo fichero no se puede resolver (comodines, variables) sale `unclassifiable`:
     sin fichero no hay nada que resumir ni que acumular. Para `write` y `other` el alcance es
@@ -652,6 +657,7 @@ def classify(payload: dict, read_switch: str | None = None, environ=None) -> dic
             "via": "none",
             "read_switch": read_switch,
             "summarizable": False,
+            "describable": False,
         }
     path = resolve(access.path, cwd if isinstance(cwd, str) else None, environ)
     scope = access.scope if access.kind == "read" else "unclassifiable"
@@ -672,6 +678,8 @@ def classify(payload: dict, read_switch: str | None = None, environ=None) -> dic
         "via": access.via,
         "read_switch": read_switch,
         "summarizable": access.kind == "read" and summarizable(path, size, environ),
+        "describable": access.via == "read_image"
+        and _extension(access.path) in DESCRIBABLE_IMAGE_EXTENSIONS,
     }
 
 

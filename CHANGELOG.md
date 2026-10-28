@@ -6,6 +6,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- **El aviso de lectura ya no manda a leer una imagen por rangos de líneas** (#469). Al hacer `Read`
+  de una imagen grande, el hook de lectura y el mod del plugin recomendaban `local_extract` y
+  `offset`/`limit` (en un subagente) o «una tool local_*» genérica (en el hilo principal), que no
+  sirven para un binario. Ahora una imagen que acepta `local_describe_image` (`.png`, `.jpg`,
+  `.jpeg`, `.gif`, `.webp`) recibe esa tool con `path`, en la misma banda de tamaño que antes, y el
+  resto (`.svg`, `.bmp`, `.ico`, una imagen pequeña y los documentos `.pdf`/`.ipynb`, que `Read`
+  tampoco muestra por líneas) pasa en silencio. `hook classify` añade el campo `describable`.
+
 ## [0.44.0] - 2026-10-28
 
 Esta versión blinda el instalador y afina dos tools. `install`, `uninstall` y `update` ya no
