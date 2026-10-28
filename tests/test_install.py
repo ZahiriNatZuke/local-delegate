@@ -8,11 +8,13 @@ from __future__ import annotations
 import json
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 import tomllib
 from pathlib import Path, PureWindowsPath
 
+import pytest
 from conftest import downgrade_to_0_34, live_memory_files, make_home, snapshot
 
 from local_delegate import install as inst
@@ -96,6 +98,111 @@ def test_hook_command_survives_a_windows_path(tmp_path):
 def test_hook_command_quotes_paths_with_spaces(tmp_path):
     command = inst.hook_command(tmp_path / "con espacio", "x.py", "python3")
     assert shlex.split(command)[1].endswith("con espacio/x.py")
+
+
+def test_hook_command_quotes_an_exe_with_spaces_and_backslash():
+    """`--python "C:\\Program Files\\..."` iba desnudo: el shell lo cortaba en el espacio.
+
+    Y Git Bash se comía además cada `\\`. En `UserPromptSubmit` eso bloquea cada prompt.
+    """
+    command = inst.hook_command(
+        PureWindowsPath(r"C:\Users\Yohan\.claude\hooks\local-delegate"),
+        "record_call.py",
+        r"C:\Program Files\Python312\python.exe",
+    )
+    assert "\\" not in command
+    words = shlex.split(command)
+    assert words[0] == "C:/Program Files/Python312/python.exe"
+    assert words[1] == "C:/Users/Yohan/.claude/hooks/local-delegate/record_call.py"
+
+
+def test_hook_command_keeps_a_bare_exe_untouched(tmp_path):
+    """La instalación por defecto no cambia ni un byte: `python` sigue desnudo."""
+    assert inst.hook_command(tmp_path, "x.py", "python").startswith("python ")
+    assert inst.hook_command(tmp_path, "x.py", "/usr/bin/python3").startswith("/usr/bin/python3 ")
+
+
+def test_hook_command_does_not_double_the_quotes_of_the_user(tmp_path):
+    command = inst.hook_command(tmp_path, "x.py", '"C:\\Program Files\\Python312\\python.exe"')
+    assert command.startswith('"C:/Program Files/Python312/python.exe" ')
+    assert shlex.split(command)[0] == "C:/Program Files/Python312/python.exe"
+
+
+def _exe_in_a_dir_with_spaces(base: Path) -> Path:
+    """A working Python inside a folder whose name has a space, or skip if none can be made.
+
+    On Windows the venv launcher is copied with its ``pyvenv.cfg`` (a ``.bat`` would not do:
+    Git Bash cannot hand a quoted ``.bat`` path with spaces to cmd). Elsewhere, a symlink.
+    """
+    folder = base / "Program Files" / "Py thon"
+    folder.mkdir(parents=True)
+    if sys.platform == "win32":
+        cfg = Path(sys.prefix) / "pyvenv.cfg"
+        if sys.prefix == sys.base_prefix or not cfg.is_file():
+            pytest.skip("needs a venv to copy a runnable python.exe")
+        exe = folder / "python.exe"
+        exe.write_bytes(Path(sys.executable).read_bytes())
+        (folder / "pyvenv.cfg").write_bytes(cfg.read_bytes())
+        return exe
+    exe = folder / "python3"
+    exe.symlink_to(os.path.realpath(sys.executable))
+    return exe
+
+
+def _shells_to_try() -> list[tuple[str, list[str] | None]]:
+    """(name, argv prefix) of each shell available here; ``None`` means cmd via ``shell=True``."""
+    shells: list[tuple[str, list[str] | None]] = []
+    sh = shutil.which("sh")
+    if sh and "system32" not in sh.lower():  # never WSL's launcher
+        shells.append(("sh", [sh, "-c"]))
+    if sys.platform == "win32":
+        shells.append(("cmd", None))
+    if not shells:
+        pytest.skip("no shell to run the hook command with")
+    return shells
+
+
+def test_hook_command_with_an_exe_with_spaces_really_runs(tmp_path):
+    """El comando, ejecutado de verdad por el shell, llega al script con sus argumentos."""
+    exe = _exe_in_a_dir_with_spaces(tmp_path)
+    hooks_dir = tmp_path / "hooks dir" / "local-delegate"
+    hooks_dir.mkdir(parents=True)
+    out = tmp_path / "reached.txt"
+    (hooks_dir / "probe.py").write_text(
+        "import sys, pathlib\n"
+        f"pathlib.Path({str(out)!r}).write_text(' '.join(sys.argv[1:]), encoding='utf-8')\n",
+        encoding="utf-8",
+    )
+    # The form the user types: native separators, so `\` on Windows.
+    command = inst.hook_command(hooks_dir, "probe.py", str(exe), ("--flag",))
+    ran = 0
+    for name, prefix in _shells_to_try():
+        out.unlink(missing_ok=True)
+        argv: str | list[str] = command if prefix is None else [*prefix, command]
+        result = subprocess.run(
+            argv, shell=prefix is None, capture_output=True, text=True, timeout=60
+        )
+        assert result.returncode == 0, f"{name}: {result.stderr}"
+        assert out.read_text(encoding="utf-8") == "--flag", name
+        ran += 1
+    assert ran  # guard: at least one shell really ran the command
+
+
+def test_hooks_with_a_quoted_exe_are_still_ours(tmp_path):
+    """Detección, reparación y desinstalación reconocen el comando nuevo como nuestro."""
+    hooks_dir = tmp_path / ".claude" / "hooks" / inst.HOOKS_SUBDIR
+    command = inst.hook_command(
+        hooks_dir, "record_call.py", r"C:\Program Files\Python312\python.exe"
+    )
+    assert inst._is_ours({"type": "command", "command": command}, hooks_dir)
+    # Re-registering replaces it instead of piling up a duplicate, and stripping removes it.
+    entries = [("PostToolUse", "mcp__local-delegate__.*", command)]
+    data, _ = inst.merge_hook_settings({}, entries, hooks_dir)
+    data, removed = inst.merge_hook_settings(data, entries, hooks_dir)
+    assert removed == 1
+    assert len(data["hooks"]["PostToolUse"]) == 1
+    _, removed = inst.strip_hook_settings(data, hooks_dir)
+    assert removed == 1
 
 
 def test_read_hook_is_opt_in(tmp_path):
