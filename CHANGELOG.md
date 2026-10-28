@@ -6,6 +6,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- **El mod de lectura ya no resume una lectura por rango en un subagente ni en un fichero corto**
+  (#472). Un rango que, sumado a lo leído antes en la sesión, llegaba al 80 % del fichero se
+  sustituía por un resumen; en un fichero de unas 130 líneas eso saltaba enseguida y un subagente
+  que necesitaba las líneas exactas acabó leyéndolo con `python -c` por Bash. Ahora en un subagente
+  un rango pasa siempre literal (y cuenta como leído, como cualquier rango), y en el hilo principal
+  también pasa literal si el fichero es corto: 200 líneas o menos y menos de 32 KB. Cuando un rango
+  sí se resume, el aviso dice qué líneas no llegaron literales y cuántas se pueden pedir todavía en
+  tramos más cortos, o que ya no queda margen en esta sesión.
+
 ## [0.44.1] - 2026-10-28
 
 Esta versión corrige el aviso de lectura con imágenes: al leer una imagen grande, el hook y el mod
