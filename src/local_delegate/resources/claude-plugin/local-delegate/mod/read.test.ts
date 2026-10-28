@@ -1115,3 +1115,110 @@ test('image_read_gets_describe_image_never_ranges', async () => {
     }
   }
 })
+
+// --- Issue #472: a range read of a short file, or in a subagent, is never summarized -------------
+
+const lines = (n: number) => Array.from({ length: n }, (_, i) => `line ${i + 1}`).join('\n') + '\n'
+// A range read classified as `hook classify` would, with the file's real size in bytes.
+function rangeOf(bytes: number) {
+  return (input: any): Classified => {
+    const ti = input.tool_input
+    return readCls({ path: ti.file_path, bytes, scope: 'range', range: [ti.offset, ti.offset + ti.limit - 1], via: 'read_range' })
+  }
+}
+
+test('a_subagent_range_read_is_never_summarized', async () => {
+  // 100 lines and 64 KB: in the main thread these two ranges are summarized (see above).
+  const env = makeEnv({ dialog: true, answer: 'read.ask.summarize', classify: byInput })
+  const range = (offset: number, limit: number) =>
+    call(env, { tool: 'Read', file_path: BIG, offset, limit, agentId: 'agent-1' })
+  await range(1, 50)
+  const out = await range(51, 50) // the whole file by ranges
+  expect(env.mcpCalls).toHaveLength(0)
+  expect(env.asks).toHaveLength(0)
+  expect(env.nexts).toHaveLength(2)
+  expect(out.result.file.content).toBe('REAL')
+})
+
+test('a_short_file_range_read_is_literal_in_the_main_thread', async () => {
+  // The issue's repro: ~130 lines and some 10 KB, the first 90 lines and then the rest.
+  const env = makeEnv({ classify: rangeOf(10 * 1024), files: { [BIG]: lines(130) } })
+  const range = (offset: number, limit: number) => call(env, { tool: 'Read', file_path: BIG, offset, limit })
+  await range(1, 90)
+  const out = await range(90, 41)
+  expect(env.mcpCalls).toHaveLength(0)
+  expect(env.nexts).toHaveLength(2)
+  expect(out.result.file.content).toBe('REAL')
+})
+
+test('a_short_file_is_both_few_lines_and_few_bytes', async () => {
+  // Over 200 lines, even small: the share still counts.
+  const many = makeEnv({ classify: rangeOf(10 * 1024), files: { [BIG]: lines(300) } })
+  const manyOut = await call(many, { tool: 'Read', file_path: BIG, offset: 1, limit: 250 })
+  expect(many.mcpCalls).toHaveLength(1)
+  expect(manyOut.result.file.content.includes('SUMMARY OF THE FILE')).toBe(true)
+  // Few lines but 32 KB or more: the share still counts.
+  const heavy = makeEnv({ classify: rangeOf(32 * 1024), files: { [BIG]: lines(130) } })
+  const heavyOut = await call(heavy, { tool: 'Read', file_path: BIG, offset: 1, limit: 120 })
+  expect(heavy.mcpCalls).toHaveLength(1)
+  expect(heavyOut.result.file.content.includes('SUMMARY OF THE FILE')).toBe(true)
+})
+
+test('a_range_summary_names_the_lines_it_left_out', async () => {
+  const env = makeEnv({ classify: byInput })
+  const range = (offset: number, limit: number) => call(env, { tool: 'Read', file_path: BIG, offset, limit })
+  await range(1, 50)
+  const out = await range(51, 40)
+  const header: string = out.result.file.content.split('\n\n')[0]
+  expect(header.endsWith(' read.summary.range_omitted first=51 last=90 left=29')).toBe(true)
+
+  // Nothing left to read literally: it says so instead of pointing to shorter ranges.
+  const full = makeEnv({ classify: byInput })
+  const fullRange = (offset: number, limit: number) => call(full, { tool: 'Read', file_path: BIG, offset, limit })
+  await fullRange(1, 79)
+  const last = await fullRange(80, 30) // to past the end: the last line named is the file's
+  const lastHeader: string = last.result.file.content.split('\n\n')[0]
+  expect(lastHeader.endsWith(' read.summary.range_omitted_none first=80 last=100')).toBe(true)
+})
+
+test('a_subagent_range_read_leaves_the_main_thread_budget_alone', async () => {
+  // Orchestrator → subagent reads the whole file by ranges → the main thread reads and edits.
+  const env = makeEnv({ classify: byInput })
+  const sub = (offset: number, limit: number) =>
+    call(env, { tool: 'Read', file_path: BIG, offset, limit, agentId: 'agent-1' })
+  await sub(1, 50)
+  await sub(51, 50)
+  const main = await call(env, { tool: 'Read', file_path: BIG, offset: 1, limit: 10 })
+  expect(env.mcpCalls).toHaveLength(0)
+  expect(main.result.file.content).toBe('REAL')
+  const write = await call(env, { tool: 'Edit', file_path: BIG, old_string: 'a', new_string: 'b' })
+  expect(write.deny).toBeUndefined()
+  expect(env.nexts.at(-1).tool).toBe('Edit')
+})
+
+test('a_subagent_range_read_still_lifts_the_write_guard', async () => {
+  const env = makeEnv({ classify: byInput })
+  await call(env, { tool: 'Read', file_path: BIG, agentId: 'agent-1' }) // whole: summarized, guarded
+  expect(env.mcpCalls).toHaveLength(1)
+  const refused = await call(env, { tool: 'Edit', file_path: BIG, old_string: 'a', new_string: 'b', agentId: 'agent-1' })
+  expect(typeof refused.deny).toBe('string')
+  await call(env, { tool: 'Read', file_path: BIG, offset: 1, limit: 10, agentId: 'agent-1' })
+  const out = await call(env, { tool: 'Edit', file_path: BIG, old_string: 'a', new_string: 'b', agentId: 'agent-1' })
+  expect(out.deny).toBeUndefined()
+})
+
+test('a_range_past_the_end_passes_and_a_summary_never_names_lines_past_it', async () => {
+  // 90 % already read literally while the file was short (10 KB); then it is not (64 KB).
+  let bytes = 10 * 1024
+  const env = makeEnv({ classify: (input: any) => rangeOf(bytes)(input) })
+  const range = (offset: number, limit: number) => call(env, { tool: 'Read', file_path: BIG, offset, limit })
+  await range(1, 90)
+  bytes = 64 * 1024
+  const past = await range(150, 10) // lines 150-159 of a 100-line file: Read returns nothing
+  expect(env.mcpCalls).toHaveLength(0)
+  expect(past.result.file.content).toBe('REAL')
+  const last = await range(95, 30)
+  expect(env.mcpCalls).toHaveLength(1)
+  const header: string = last.result.file.content.split('\n\n')[0]
+  expect(header.endsWith(' read.summary.range_omitted_none first=95 last=100')).toBe(true)
+})
