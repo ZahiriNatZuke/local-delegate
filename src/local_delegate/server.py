@@ -3207,49 +3207,94 @@ _SPLITTERS = (_split_by_diff_files, _split_by_headers, _split_by_paragraphs, _sp
 # primeros 20 000 chars del diff nombra el primer archivo por orden alfabético. Por eso el paso
 # que redacta el mensaje lo recibe SIEMPRE, y por eso se calcula aquí y no se le pide al modelo:
 # es un conteo, no un juicio.
-def _diff_inventory(diff: str) -> list[tuple[str, int, int]]:
-    """Devuelve `(ruta, líneas añadidas, líneas quitadas)` por archivo del diff.
+@dataclass
+class _DiffFile:
+    """What a diff says about one file, computed without a model (#461)."""
+
+    path: str
+    status: str = "M"  # A (added), M (modified), D (deleted), R (renamed)
+    added: int = 0
+    removed: int = 0
+    plus_symbols: list[str] = field(default_factory=list)
+    minus_symbols: list[str] = field(default_factory=list)
+
+    def symbols(self) -> tuple[list[str], list[str], list[str]]:
+        """`(added, removed, changed)` top-level names; changed = on both `+` and `-` lines."""
+        plus, minus = set(self.plus_symbols), set(self.minus_symbols)
+        added = [n for n in dict.fromkeys(self.plus_symbols) if n not in minus]
+        removed = [n for n in dict.fromkeys(self.minus_symbols) if n not in plus]
+        changed = [n for n in dict.fromkeys(self.plus_symbols) if n in minus]
+        return added, removed, changed
+
+
+# A top-level definition on a `+`/`-` line: column 0 (no indentation), so methods, nested
+# functions and locals stay out. Covers Python, JS/TS, Rust, Go and the like; what it misses is
+# simply not listed, it never invents a name.
+_DIFF_SYMBOL = re.compile(
+    r"(?:export\s+(?:default\s+)?)?(?:pub(?:\([\w:]+\))?\s+)?(?:declare\s+)?(?:abstract\s+)?"
+    r"(?:async\s+)?"
+    r"(?:def|class|function\*?|interface|type|enum|const|let|var|fn|func|struct|trait|mod)"
+    r"\s+([A-Za-z_$][\w$]*)"
+)
+
+
+def _diff_facts(diff: str) -> list[_DiffFile]:
+    """Per file of the diff: path, A/M/D/R status, `+`/`-` line counts and top-level names.
 
     El conteo distingue las cabeceras `--- `/`+++ ` de las líneas de contenido por su posición
     —solo son cabecera antes del primer `@@` del archivo— y no por su texto. Mirando el texto,
     borrar una línea que empiece por `--` se registraría como cabecera y no se contaría.
     """
-    files: list[tuple[str, int, int]] = []
-    path: str | None = None
-    added = removed = 0
+    files: list[_DiffFile] = []
+    current: _DiffFile | None = None
     in_hunk = False
-
-    def _close() -> None:
-        if path is not None:
-            files.append((path, added, removed))
 
     for line in diff.splitlines():
         if line.startswith("diff --git "):
-            _close()
             rest = line[len("diff --git ") :]
             pair = re.match(r"a/(.+) b/\1$", rest)
-            path = pair.group(1) if pair else rest.split(" b/", 1)[-1].lstrip("b/")
-            added = removed = 0
+            current = _DiffFile(pair.group(1) if pair else rest.split(" b/", 1)[-1].lstrip("b/"))
+            files.append(current)
             in_hunk = False
-        elif path is None:
+        elif current is None:
             continue
         elif line.startswith("@@"):
             in_hunk = True
         elif not in_hunk:
             # Zona de cabecera: `+++ b/x` manda sobre el nombre adivinado de `diff --git`, salvo
             # en un borrado (`+++ /dev/null`), donde el nombre bueno es el de `--- a/x`.
-            if line.startswith("+++ ") and line[4:] != "/dev/null":
-                path = line[4:].removeprefix("b/")
-            elif line.startswith("--- ") and line[4:] != "/dev/null":
-                path = line[4:].removeprefix("a/")
+            if line.startswith("+++ "):
+                if line[4:] == "/dev/null":
+                    current.status = "D"
+                else:
+                    current.path = line[4:].removeprefix("b/")
+            elif line.startswith("--- "):
+                if line[4:] == "/dev/null":
+                    current.status = "A"
+                else:
+                    current.path = line[4:].removeprefix("a/")
+            elif line.startswith("new file mode"):
+                current.status = "A"
+            elif line.startswith("deleted file mode"):
+                current.status = "D"
+            elif line.startswith("rename from "):
+                current.status = "R"
             elif line.startswith("rename to "):
-                path = line[len("rename to ") :]
+                current.path = line[len("rename to ") :]
         elif line.startswith("+"):
-            added += 1
+            current.added += 1
+            if symbol := _DIFF_SYMBOL.match(line, 1):
+                current.plus_symbols.append(symbol.group(1))
         elif line.startswith("-"):
-            removed += 1
-    _close()
+            current.removed += 1
+            if symbol := _DIFF_SYMBOL.match(line, 1):
+                current.minus_symbols.append(symbol.group(1))
     return files
+
+
+def _diff_inventory(diff: str) -> list[tuple[str, int, int]]:
+    """Devuelve `(ruta, líneas añadidas, líneas quitadas)` por archivo del diff."""
+    return [(f.path, f.added, f.removed) for f in _diff_facts(diff)]
 
 
 def _format_inventory(files: list[tuple[str, int, int]], max_chars: int) -> str:
@@ -3279,6 +3324,66 @@ def _format_inventory(files: list[tuple[str, int, int]], max_chars: int) -> str:
         for root, (n, added, removed) in by_root.items()
     )
     return f"{header} agrupados por directorio porque la lista completa no cabía\n{detail}"
+
+
+def _format_diff_symbols(facts: list[_DiffFile], max_chars: int) -> str:
+    """The top-level names each file adds (+), removes (-) or touches (~), within `max_chars`.
+
+    Files that do not fit are counted, not silently dropped: the model must know the list is
+    partial and must not read its end as «nothing else changed».
+    """
+    header = (
+        "Definiciones de primer nivel en las líneas +/- del diff (+ añadida, - quitada, ~ tocada):"
+    )
+    rows: list[str] = []
+    for fact in facts:
+        added, removed, changed = fact.symbols()
+        parts = [
+            f"{mark} {', '.join(names)}"
+            for mark, names in (("+", added), ("-", removed), ("~", changed))
+            if names
+        ]
+        if parts:
+            rows.append(f"  {fact.path}: {'; '.join(parts)}")
+    if not rows:
+        return ""
+    kept: list[str] = []
+    used = len(header)
+    for row in rows:
+        omitted_note = 60  # room for the «N more» line below
+        if used + 1 + len(row) + omitted_note > max_chars:
+            break
+        kept.append(row)
+        used += 1 + len(row)
+    if not kept:
+        return ""
+    if len(kept) < len(rows):
+        kept.append(
+            f"  (y {len(rows) - len(kept)} archivos más con definiciones, omitidos por espacio)"
+        )
+    return "\n".join([header, *kept])
+
+
+def _format_diff_facts(facts: list[_DiffFile], max_chars: int) -> str:
+    """Inventory with A/M/D/R status plus top-level names, the ground truth of the reduce (#461).
+
+    The file list goes first and keeps the collapse of `_format_inventory`; the names use what is
+    left of `max_chars`.
+    """
+    if not facts:
+        return ""
+    added_total = sum(f.added for f in facts)
+    removed_total = sum(f.removed for f in facts)
+    header = (
+        f"Archivos del cambio ({len(facts)} en total, +{added_total} -{removed_total}; "
+        "A añadido, M modificado, D borrado, R renombrado):"
+    )
+    detail = "\n".join(f"  {f.status} {f.path} | +{f.added} -{f.removed}" for f in facts)
+    files_block = f"{header}\n{detail}"
+    if len(files_block) > max_chars:
+        files_block = _format_inventory([(f.path, f.added, f.removed) for f in facts], max_chars)
+    symbols_block = _format_diff_symbols(facts, max_chars - len(files_block) - 2)
+    return f"{files_block}\n\n{symbols_block}" if symbols_block else files_block
 
 
 # --- Troceado de código por definiciones (local_explain_code, B2c) -----------------------------
@@ -4254,7 +4359,160 @@ COMMIT_MAX_TOKENS = 700
 COMMIT_REDUCE_MAX_WORDS = 250
 
 
-def _commit_language_instruction() -> str:
+# --- Commit language from the repository's own history (#461) ---------------------------------
+# A commit message follows the repo's convention, not the user's. The daemon's cwd is not the
+# user's repo, so the only anchor is the diff's `path`: if that file lives inside a work tree, the
+# subjects of its recent commits are read from the reflog (`logs/HEAD`, plain text) — no `git`
+# subprocess, so nothing in the repo's config or hooks can run. A diff dumped to a temp folder has
+# no repo above it and keeps the rule of before.
+_REFLOG_COMMIT = re.compile(r"^commit(?: \([^)]*\))?: (.+)$")
+_CONVENTIONAL_PREFIX = re.compile(r"^\w+(?:\([^)]*\))?!?:\s*")
+_ES_MARKERS = frozenset(
+    [
+        "de",
+        "la",
+        "el",
+        "los",
+        "las",
+        "que",
+        "para",
+        "con",
+        "por",
+        "del",
+        "una",
+        "un",
+        "al",
+        "sin",
+        "se",
+        "y",
+        "o",
+        "lo",
+        "su",
+        "ya",
+        "cuando",
+        "añade",
+        "agrega",
+        "quita",
+        "arregla",
+        "corrige",
+        "usa",
+        "evita",
+        "mueve",
+        "actualiza",
+    ]
+)
+_EN_MARKERS = frozenset(
+    [
+        "the",
+        "to",
+        "for",
+        "and",
+        "of",
+        "in",
+        "with",
+        "from",
+        "on",
+        "by",
+        "when",
+        "is",
+        "are",
+        "add",
+        "adds",
+        "fix",
+        "fixes",
+        "remove",
+        "removes",
+        "update",
+        "updates",
+        "use",
+        "uses",
+        "avoid",
+        "move",
+        "moves",
+        "bump",
+        "drop",
+        "handle",
+    ]
+)
+_REPO_LANGUAGE_MIN_VOTES = 5
+_REPO_LANGUAGE_MIN_SHARE = 0.7
+_REFLOG_TAIL_BYTES = 65_536
+
+
+def _git_dir_above(start: Path) -> Path | None:
+    """The git dir of the work tree that contains `start`, following a worktree's `.git` file."""
+    for folder in (start, *start.parents):
+        dot_git = folder / ".git"
+        try:
+            if dot_git.is_dir():
+                return dot_git
+            if dot_git.is_file():
+                text = dot_git.read_text(encoding="utf-8", errors="replace").strip()
+                if text.startswith("gitdir:"):
+                    target = Path(text[len("gitdir:") :].strip())
+                    target = target if target.is_absolute() else folder / target
+                    return target if target.is_dir() else None
+                return None
+        except OSError:
+            return None
+    return None
+
+
+def _recent_commit_subjects(git_dir: Path, limit: int = 20) -> list[str]:
+    """The subjects of the last `limit` commits made in this clone, newest last."""
+    reflog = git_dir / "logs" / "HEAD"
+    try:
+        with reflog.open("rb") as handle:
+            handle.seek(0, os.SEEK_END)
+            size = handle.tell()
+            handle.seek(max(0, size - _REFLOG_TAIL_BYTES))
+            tail = handle.read().decode("utf-8", errors="replace")
+    except OSError:
+        return []
+    subjects = []
+    for line in tail.splitlines():
+        _, _, message = line.partition("\t")
+        if match := _REFLOG_COMMIT.match(message):
+            subjects.append(match.group(1).strip())
+    return subjects[-limit:]
+
+
+def _guess_language(subjects: Sequence[str]) -> str | None:
+    """`"es"` or `"en"` when the subjects clearly agree; `None` when they are few or mixed.
+
+    Each subject votes by counting marker words (the Conventional prefix aside); an accented
+    letter counts as Spanish. Ties and subjects without markers do not vote.
+    """
+    votes = {"es": 0, "en": 0}
+    for subject in subjects:
+        text = _CONVENTIONAL_PREFIX.sub("", subject).lower()
+        words = re.findall(r"[a-záéíóúüñ]+", text)
+        es = sum(w in _ES_MARKERS for w in words) + len(re.findall(r"[áéíóúñ¿¡]", text))
+        en = sum(w in _EN_MARKERS for w in words)
+        if es != en:
+            votes["es" if es > en else "en"] += 1
+    total = votes["es"] + votes["en"]
+    if total < _REPO_LANGUAGE_MIN_VOTES:
+        return None
+    winner = max(votes, key=lambda k: votes[k])
+    return winner if votes[winner] / total >= _REPO_LANGUAGE_MIN_SHARE else None
+
+
+def _repo_commit_language(path: str | None) -> str | None:
+    """The language of the recent commits of the repo that holds the diff file, if clear."""
+    if not path:
+        return None
+    try:
+        start = Path(path).expanduser().resolve().parent
+    except (OSError, RuntimeError, ValueError):
+        return None
+    git_dir = _git_dir_above(start)
+    if git_dir is None:
+        return None
+    return _guess_language(_recent_commit_subjects(git_dir))
+
+
+def _commit_language_instruction(path: str | None = None) -> str:
     """La orden de idioma del prompt de sistema de `local_commit_msg` (REQ-044, REQ-028).
 
     Medido en la tanda de afinidad (2026-10-07): con el prompt de antes, que no pedía idioma, el
@@ -4263,6 +4521,8 @@ def _commit_language_instruction() -> str:
     `LOCAL_DELEGATE_COMMIT_LANGUAGE` si está puesta; si no, el idioma vigente del producto. La regla
     de antes, «el idioma predominante del diff», queda solo como el valor explícito `diff`: en repos
     bilingües el modelo elegía uno u otro. `LOCAL_DELEGATE_OUTPUT_LANGUAGE` no entra aquí.
+    #461: between the variable and the product language goes the language of the recent commits
+    of the repo that holds `path`, when the reflog says it clearly (`_repo_commit_language`).
     """
     code = config.commit_language()
     if code.lower() == COMMIT_LANGUAGE_DIFF:
@@ -4270,7 +4530,7 @@ def _commit_language_instruction() -> str:
             "Escribe el mensaje de commit entero (primera línea y cuerpo) en el idioma "
             "predominante de los textos del diff (comentarios, documentación y mensajes)."
         )
-    name = _language_name(code or i18n.lang())
+    name = _language_name(code or _repo_commit_language(path) or i18n.lang())
     return f"Escribe el mensaje de commit entero (primera línea y cuerpo) en {name}."
 
 
@@ -5542,7 +5802,7 @@ def local_commit_msg(
     # El idioma va solo donde se REDACTA el mensaje: este `system` es el de la llamada única y el
     # del reduce del map-reduce (`reduce_system=system`). El map y el reagrupado de partes usan
     # `map_system`, que produce notas intermedias que nadie lee y no lleva la orden.
-    system = f"{_guard(fmt)} {_commit_language_instruction()}"
+    system = f"{_guard(fmt)} {_commit_language_instruction(path)}"
     user = f"Escribe el mensaje de commit para este diff:\n\n{content}"
 
     if len(content) > config.max_chars_for_role("code"):
@@ -5551,16 +5811,23 @@ def local_commit_msg(
         # devolvía `chore: update GitHub Actions pages artifact version`, o sea el primer
         # archivo por orden alfabético de rutas. Ahora entra entero: parte por archivo, un
         # parte por trozo, y el mensaje se redacta sobre esos partes MÁS el inventario completo.
-        files = _diff_inventory(content)
+        # #461: the inventory carries the A/M/D/R status and the top-level names of each file,
+        # computed here without a model. With only per-chunk notes, a vague note («date
+        # utilities») let the reduce fill in neighbouring concepts («time zones») absent from
+        # the diff; these facts are what the reduce is told to stay within.
+        facts = _diff_facts(content)
+        files = [(f.path, f.added, f.removed) for f in facts]
         budget = max(config.CHUNK_MIN_CHARS, int(config.max_chars_for_role("code") * 0.8))
-        inventory = _format_inventory(files, int(budget * 0.25))
+        inventory = _format_diff_facts(facts, int(budget * 0.25))
         # El formato del map NO se describe con una plantilla del tipo `- ruta: qué cambió`:
         # medido, el modelo la devuelve copiada tal cual —`- ruta: qué cambió y para qué`— y ese
         # trozo se pierde entero. Se ancla con los nombres reales de los archivos, que ya se
         # conocen sin preguntarle a nadie.
         map_system = _guard(
             "una viñeta por archivo, empezando por su ruta literal seguida de dos puntos y de "
-            "qué cambia en él y para qué. Describe los cambios; no repitas estas instrucciones "
+            "qué cambia en él y para qué. Sé concreto: nombra las funciones, clases, "
+            "componentes o claves que aparecen en el fragmento y no generalices ni menciones "
+            "nada que no esté en él. Describe los cambios; no repitas estas instrucciones "
             "ni redactes ningún mensaje de commit todavía"
         )
         # Un archivo más grande que el presupuesto se subdivide, y las piezas 2..N no llevan
@@ -5570,7 +5837,10 @@ def local_commit_msg(
         current_file: dict[str, str | None] = {"file": None}
 
         def _build_map(piece: str) -> str:
-            piece_paths = [file_path for file_path, _, _ in _diff_inventory(piece)]
+            piece_facts = _diff_facts(piece)
+            piece_paths = [fact.path for fact in piece_facts]
+            names = _format_diff_symbols(piece_facts, 800)
+            names_block = f"\n{names}" if names else ""
             if piece_paths:
                 current_file["file"] = piece_paths[-1]
                 header = (
@@ -5584,14 +5854,17 @@ def local_commit_msg(
                 )
             else:
                 header = "Escribe una viñeta por archivo, con su ruta literal."
-            return f"{header}\n\nDi qué cambia en este fragmento de diff:\n\n{piece}"
+            return f"{header}{names_block}\n\nDi qué cambia en este fragmento de diff:\n\n{piece}"
 
         def _build_reduce(joined: str) -> str:
             head = f"{inventory}\n\n" if inventory else ""
             return (
                 f"{head}Estas son notas EN ORDEN sobre los archivos de un mismo cambio. La "
                 "lista de arriba es el inventario COMPLETO del diff; las notas pueden no "
-                "cubrirlo entero ni estar todas bien. El resumen describe el comportamiento que "
+                "cubrirlo entero ni estar todas bien. Menciona SOLO lo que respalden esa lista, "
+                "sus definiciones o las notas: no añadas funciones, conceptos ni temas que no "
+                "aparezcan ahí; si una nota es general, quédate en lo general y no la completes "
+                "con conceptos afines. El resumen describe el comportamiento que "
                 "cambia y para qué, no el número de archivos ni los tests que lo acompañan, y "
                 "el scope es un ámbito lógico, nunca un nombre de fichero. Escribe el mensaje "
                 "de commit del cambio completo, con su primera línea y un cuerpo de "
