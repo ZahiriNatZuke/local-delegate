@@ -605,6 +605,13 @@ dos: el de la tool `Read` y el de `Bash|PowerShell`. Van juntos a propósito —
 sobre dos caminos, y cerrar `Read` dejando `cat informe.md` abierto no cambia la conducta, la
 muda de sitio.
 
+**Imágenes y documentos.** Desde la 0.44.1, un `Read` de una imagen por encima del umbral que
+acepta `local_describe_image` (`.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`) recibe esa tool con
+`path`, nunca `local_extract` ni una lectura por rangos de líneas, que no sirven para un binario.
+El resto pasa en silencio: `.svg`, `.bmp`, `.ico`, una imagen por debajo del umbral y los
+documentos `.pdf`/`.ipynb`, que `Read` tampoco muestra por líneas. El mod de lectura del plugin
+sigue la misma regla.
+
 | Variable | Default | Descripción |
 |---|---|---|
 | `LD_HOOK_READ_ENABLED` | `0` | Enciende el hook de lectura. `install --enable-read-hook` lo pasa como argumento, así que no hace falta ponerla a mano |
