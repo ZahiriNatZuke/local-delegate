@@ -215,8 +215,23 @@ def default_python() -> str:
     return "python" if sys.platform == "win32" else "python3"
 
 
-def _quote(path: str) -> str:
-    return f'"{path}"' if " " in path else path
+def _shell_exe(python_exe: str) -> str:
+    """The interpreter as the first word of a hook command, safe for the shell that runs it.
+
+    A bare name (``python``, ``python3``) or a plain POSIX path goes untouched, so the command
+    of a default install stays byte for byte what it was. A path with spaces or ``\\``
+    (``--python "C:\\Program Files\\Python312\\python.exe"``) goes with ``/`` and between
+    double quotes, like the script path: unquoted, the shell cuts it at the space and Git Bash
+    also eats every ``\\``, so the hook dies and, on ``UserPromptSubmit``, blocks every prompt.
+    Quotes the user may have typed around it are dropped first, so they never end up doubled.
+    """
+    exe = python_exe.strip()
+    if len(exe) >= 2 and exe[0] == exe[-1] and exe[0] in "\"'":
+        exe = exe[1:-1]
+    if not exe or not any(c.isspace() or c in "\\\"'" for c in exe):
+        return exe
+    exe = exe.replace("\\", "/").replace('"', "")
+    return f'"{exe}"'
 
 
 @dataclass
@@ -1183,10 +1198,16 @@ def hook_command(
     problema, así que la forma citada y con barras funciona en los tres shells (sh, cmd,
     PowerShell) y en los tres sistemas.
 
+    El intérprete sigue la misma regla en cuanto lleva espacios o `\\` (``--python`` con una
+    ruta como `C:\\Program Files\\...`): ver ``_shell_exe``. El nombre por defecto
+    (``python``/``python3``) va desnudo, como siempre. Límite conocido: un comando que *empieza*
+    entre comillas lo aceptan sh y cmd, pero PowerShell lo lee como una cadena y no lo ejecuta;
+    sin comillas no lo ejecutaba ningún shell, y Claude Code corre estos hooks con sh.
+
     ``extra`` son argumentos para el script. Solo lo usa el hook de Read, y para que el propio
     registro sea el interruptor: ver el comentario de ``_READ_HOOK``.
     """
-    parts = [python_exe, f'"{(hooks_dir / script).as_posix()}"', *extra]
+    parts = [_shell_exe(python_exe), f'"{(hooks_dir / script).as_posix()}"', *extra]
     return " ".join(parts)
 
 
