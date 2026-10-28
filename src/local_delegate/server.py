@@ -3322,11 +3322,73 @@ def _code_pieces(text: str, budget: int) -> list[str] | None:
     return chunks
 
 
-def _format_names(names: list[str], max_chars: int) -> str:
+# --- Números de línea (#460) ---------------------------------------------------------------------
+# Sin números, «¿en qué línea está X?» no tenía respuesta: el modelo veía el código pelado y, al
+# trocear, cada trozo empezaba sin saber dónde caía. Con `path` cada línea llega como `N| línea`, con
+# N el número ABSOLUTO del fichero (el que usa `Read offset`), también dentro de cada trozo. Se
+# numera ANTES de empaquetar, así el presupuesto en chars mide lo que de verdad viaja.
+LINE_PREFIX_SEP = "| "
+
+
+def _number_lines(text: str, start: int = 1) -> str:
+    """`text` con `N| ` delante de cada línea, contando desde `start` y cortando solo en `\\n`.
+
+    Solo `\\n`, como `Read` (y `read_text` ya convirtió `\\r\\n`): `splitlines` cortaría también en
+    `\\f` o `\\u2028` y desfasaría la cuenta respecto al fichero.
+    """
+    lines = text.split("\n")
+    tail = lines.pop() if lines else ""
+    out = [f"{n}{LINE_PREFIX_SEP}{line}\n" for n, line in enumerate(lines, start)]
+    if tail:  # última línea sin salto final
+        out.append(f"{start + len(lines)}{LINE_PREFIX_SEP}{tail}")
+    return "".join(out)
+
+
+def _numbered_code_pieces(text: str, budget: int) -> list[str]:
+    """Trozos numerados de <= `budget` chars, cada uno con su numeración absoluta del fichero.
+
+    Las unidades se cortan sobre el texto SIN numerar (las definiciones de primer nivel, como
+    `_code_pieces`, o los párrafos si no hay ninguna: con prefijo ya no quedan líneas en blanco
+    que buscar), se numeran con su desplazamiento y luego se empaquetan; una unidad numerada que
+    no cabe se parte por líneas, que conservan su prefijo.
+    """
+    if _TOP_LEVEL_NAME.search(text):
+        units = _split_by_top_level_defs(text)
+    else:
+        units = _split_by_paragraphs(text)
+    numbered: list[str] = []
+    line = 1
+    for unit in units:
+        numbered.append(_number_lines(unit, line))
+        line += unit.count("\n")
+    chunks: list[str] = []
+    for chunk in _pack(numbered, budget):
+        chunks.extend(_chunk_text(chunk, budget) if len(chunk) > budget else [chunk])
+    return chunks
+
+
+def _top_level_names_with_lines(text: str) -> list[str]:
+    """Las definiciones de primer nivel como `nombre:línea` (línea absoluta del fichero)."""
+    return [
+        f"{m.group(1)}:{text.count(chr(10), 0, m.start()) + 1}"
+        for m in _TOP_LEVEL_NAME.finditer(text)
+    ]
+
+
+#: #460: lo que se le dice al modelo del prefijo, en todos los pasos de `local_explain_code` con
+#: `path`. Va antes de la orden de idioma, que cierra el system.
+_LINE_NUMBERS_CLAUSE = (
+    " Cada línea del código empieza por su número de línea en el fichero seguido de «| »; ese "
+    "prefijo no es parte del código. Cuando ubiques o cites algo, da ese número de línea."
+)
+
+
+def _format_names(names: list[str], max_chars: int, with_lines: bool = False) -> str:
     """El inventario de definiciones de primer nivel, recortado con su cuenta si no cabe."""
     if not names:
         return ""
-    header = f"Definiciones de primer nivel del fichero ({len(names)} en total):"
+    count = f"{len(names)} en total, como nombre:línea" if with_lines else f"{len(names)} en total"
+    header = f"Definiciones de primer nivel del fichero ({count}):"
     shown: list[str] = []
     used = len(header)
     for name in names:
@@ -5635,6 +5697,8 @@ def local_explain_code(
 
     Pass 'path' to read the file server-side (the full code does NOT enter Claude's context; only
     the explanation comes back) or 'code'. Optionally focus the explanation with 'question'.
+    With 'path' the model sees the file's line numbers, so it can answer where something is
+    ("name: line") and you can then Read only that range with offset/limit.
     Review the explanation: a local model writes it.
 
     Args:
@@ -5647,14 +5711,27 @@ def local_explain_code(
     max_chars = config.max_chars_for_role("code")
     extra = f" Enfócate en: {question}." if question else ""
     language = _response_language_clause()
+    # #460: con `path`, el modelo ve cada línea con su número absoluto del fichero, para que
+    # «¿en qué línea está X?» tenga respuesta y el agente lea luego solo ese rango con `Read`.
+    # Con `code=` no: quien llama ya tiene el texto delante y no hay fichero al que remitir, así
+    # que el texto en línea sigue igual byte a byte y sin el ~10-15 % de chars del prefijo.
+    numbered = bool(path)
+    lines_clause = _LINE_NUMBERS_CLAUSE if numbered else ""
+    model_content = _number_lines(content) if numbered else content
     system = (
         _guard(
             f"una explicación clara en prosa de qué hace el código y cómo.{extra}", max_words=250
         )
+        + lines_clause
         + language
     )
     source = "path" if path else "inline"
 
+    # Trocear o no se decide sobre el fichero PELADO, como antes: el prefijo no hace trocear un
+    # fichero que cabía (el corpus de calidad `explicar-install-20k` sigue siendo una llamada).
+    # La llamada única crece lo que pesa el prefijo (~5-6 chars por línea en un fichero de
+    # 20 000, ~15 %), holgado frente al contexto del modelo: el tope del rol es de calidad, no de
+    # contexto. En el troceado, en cambio, cada trozo se mide YA numerado contra el presupuesto.
     if len(content) > max_chars:
         # No cabe: notas por definición en cada trozo y la explicación sobre las notas MÁS el
         # inventario de nombres de primer nivel, con la pregunta y la orden de idioma (REQ-028).
@@ -5665,17 +5742,27 @@ def local_explain_code(
         registrations = _registered_names(content)
         registered = _format_registered(registrations, inventory_cap)
         names_cap = inventory_cap - len(registered) - 2 if registered else inventory_cap
-        names = _format_names(_TOP_LEVEL_NAME.findall(content), names_cap)
+        # #460: con `path` el inventario lleva la línea de cada definición, calculada por programa:
+        # aunque una nota del map la pierda, el reduce la tiene.
+        if numbered:
+            names = _format_names(_top_level_names_with_lines(content), names_cap, with_lines=True)
+        else:
+            names = _format_names(_TOP_LEVEL_NAME.findall(content), names_cap)
         if registered:
             names = f"{names}\n{registered}" if names else registered
-        map_system = (
-            _guard(
+        if numbered:
+            map_format = (
+                "una viñeta por cada función, clase o método de este fragmento, empezando por su "
+                "nombre literal y el número de línea donde empieza, como «nombre (línea N):», "
+                "seguido de qué hace. No expliques todavía el fichero entero"
+            )
+        else:
+            map_format = (
                 "una viñeta por cada función o clase de este fragmento, empezando por su nombre "
                 "literal seguido de dos puntos y de qué hace. No expliques todavía el fichero "
                 "entero"
             )
-            + language
-        )
+        map_system = _guard(map_format) + lines_clause + language
 
         def _build_map(piece: str) -> str:
             return f"Toma notas de este fragmento de código:\n\n{piece}"
@@ -5687,11 +5774,17 @@ def local_explain_code(
                 if registered
                 else ""
             )
+            keep_lines = (
+                " Las notas y la lista dan números de línea del fichero: consérvalos, y si se "
+                "pregunta dónde está algo, responde con «nombre: línea»."
+                if numbered
+                else ""
+            )
             return (
                 f"{head}Estas son notas EN ORDEN sobre los fragmentos de un mismo fichero de "
                 "código. La lista de arriba es el inventario COMPLETO de sus definiciones de "
-                f"primer nivel{also}; las notas pueden no cubrirlo entero. Explica el fichero "
-                f"completo:\n\n{joined}"
+                f"primer nivel{also}; las notas pueden no cubrirlo entero.{keep_lines} Explica el "
+                f"fichero completo:\n\n{joined}"
             )
 
         registered_items = [
@@ -5711,7 +5804,7 @@ def local_explain_code(
         return _chat_map_reduce(
             config.MODEL_CODE,
             map_system,
-            content,
+            model_content,
             _build_map,
             max_chars=max_chars,
             tool="local_explain_code",
@@ -5723,7 +5816,11 @@ def local_explain_code(
             build_reduce=_build_reduce,
             raw_len=raw_len,
             path=path,
-            pieces=_code_pieces(content, budget),
+            pieces=(
+                _numbered_code_pieces(content, budget)
+                if numbered
+                else _code_pieces(content, budget)
+            ),
             tokens_for=_explain_map_max_tokens,
             postprocess=_add_not_mentioned,
         )
@@ -5731,11 +5828,11 @@ def local_explain_code(
     return _chat(
         config.MODEL_CODE,
         system,
-        f"Explica el siguiente código:\n\n{content}",
+        f"Explica el siguiente código:\n\n{model_content}",
         max_tokens=700,
         tool="local_explain_code",
         role="code",
-        chars_in=len(content),
+        chars_in=len(model_content),
         source=source,
         raw_len=raw_len,
         path=path,
