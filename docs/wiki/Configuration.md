@@ -711,7 +711,7 @@ Solo se usa si `LOCAL_DELEGATE_AUTOSTART=1`. Específico de llama-swap.
 | Variable | Default | Descripción |
 |---|---|---|
 | `LOCAL_DELEGATE_AUTOSTART` | `0` | `1` intenta arrancar llama-swap si el endpoint no responde |
-| `LLAMASWAP_EXE` | *(busca `llama-swap` en PATH)* | Ruta al ejecutable |
+| `LLAMASWAP_EXE` | *(busca `llama-swap` en las carpetas absolutas del PATH)* | Ruta **absoluta** al ejecutable. Desde la 0.44.0, si no es absoluta o el fichero no existe, avisa y no arranca (no cae al `PATH`); y nunca se ejecuta un `llama-swap` de la carpeta actual |
 | `LLAMASWAP_CONFIG` | *(vacío)* | Ruta al `config.yaml` de llama-swap. Fuera del auto-arranque también la usan el turno y la afinidad (ver [arriba](#turno-afinidad-y-lentitud)) y `llamaswap residency` |
 | `LLAMASWAP_LISTEN` | `127.0.0.1:9292` | host:puerto de llama-swap |
 | `LLAMASWAP_WATCH_CONFIG` | `0` | `1` añade `-watch-config` cuando hay `LLAMASWAP_CONFIG` |

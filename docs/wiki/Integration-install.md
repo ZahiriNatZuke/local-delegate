@@ -64,7 +64,19 @@ Si no hay ninguno, no se escribe nada, se dice qué se buscó y el comando termi
 - **`--home` es de verdad un sandbox.** Con un HOME simulado no se invoca el binario `claude`,
   porque `claude mcp add-json --scope user` escribe siempre en tu `~/.claude.json` real, ignore
   lo que ignore el `--home`.
-- **Backups.** Cada archivo compartido que se edita deja un `.bak` al lado.
+- **Backups.** Cada archivo compartido que se edita deja un `.bak` al lado, **una sola vez**: la
+  primera que local-delegate lo toca. Después no se pisa (ni uno `.bak` que ya fuera tuyo), así que
+  guarda el estado de antes de la integración. Si el resultado es idéntico al fichero, no se
+  reescribe ni se crea `.bak`.
+- **Escrituras atómicas (desde la 0.44.0).** `~/.claude.json`, `~/.claude/settings.json` y el resto
+  se escriben en un temporal de la misma carpeta y se reemplazan de golpe, conservando BOM, fin de
+  línea y permisos: un corte a mitad no deja el fichero truncado. Justo antes de reemplazar se relee:
+  si Claude Code lo guardó entretanto, el cambio se reaplica sobre lo nuevo; si vuelve a cambiar, o
+  en Windows sigue bloqueado, la acción falla con un mensaje claro sin tocarlo.
+- **Solo UTF-8 (desde la 0.44.0).** Un `CLAUDE.md`, `AGENTS.md`, `config.toml` de Codex o
+  `~/.claude.json` que no esté en UTF-8 (cp1252, UTF-16) o no se pueda abrir no se reescribe: la
+  acción falla diciendo qué fichero es y lo deja intacto. Guárdalo en UTF-8 y repite. Un UTF-8 con
+  BOM sí vale. `update` cambia el pin de versión solo en la entrada de local-delegate.
 - **Sin secretos.** `--api-key-env` reenvía `LOCAL_DELEGATE_API_KEY` desde el entorno
   (`${LOCAL_DELEGATE_API_KEY}` en Claude Code, `env_vars` en Codex, `{env:LOCAL_DELEGATE_API_KEY}`
   en opencode — cada uno tiene su sintaxis y la del otro **no** se expande): la key nunca se escribe.
@@ -157,7 +169,7 @@ Cuatro reglas gobiernan lo que toca:
    verdad. Un test del propio paquete falla si esa tabla y el servidor MCP se separan.
 3. **Fuera de los marcadores `<!-- local-delegate:catalog:begin/end -->` no se toca nada**, y si
    no se reconoce dónde va el bloque, no se inserta: no se adivina.
-4. **Cada fichero modificado deja su `.bak`.**
+4. **Cada fichero modificado deja su `.bak`** la primera vez que se toca, y no se pisa después.
 
 `update` hace una parte de esto sin `--agents`: si un subagente **ya** trae los marcadores de
 catálogo y su bloque no es el del paquete (por ejemplo, el de la 0.34.0, que nombraba la skill

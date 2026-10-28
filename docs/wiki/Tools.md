@@ -200,6 +200,15 @@ Hace map-reduce sobre el diff, y eso importa más de lo que parece: un diff que 
 pide el idioma vigente del producto (desde la 0.36.0; con `diff`, el idioma predominante de los textos
 del diff, la regla de antes, que en repos bilingües elegía uno u otro). Antes no pedía ninguno y el modelo elegía:
 medido sobre 30 commits de un repo documentado en español, uno de los modelos escribió 17 en inglés.
+Desde la 0.44.0 la precedencia es: `LOCAL_DELEGATE_COMMIT_LANGUAGE` → el idioma de los últimos commits
+del repo que contiene el `path` (se leen los 20 últimos asuntos del reflog, sin lanzar `git`, y cuenta
+solo si al menos 5 se pueden clasificar y el 70 % coincide en español o inglés) → el idioma del
+producto. Un diff pasado como `diff=` o volcado en una carpeta temporal no tiene repo del que inferir.
+
+**Anclado al diff.** Desde la 0.44.0, en el map-reduce el paso final recibe, calculados sin modelo,
+la lista de archivos con su estado (A/M/D/R) y las definiciones de primer nivel añadidas, quitadas o
+tocadas, y se le pide no mencionar nada fuera de eso y de las notas: antes una nota vaga le dejaba
+inventar conceptos que no estaban en el diff.
 
 **Cuerpo.** Desde la 0.36.0 el mensaje lleva siempre un cuerpo de 2 a 6 viñetas que dicen qué
 cambia y para qué, también en el paso final del map-reduce. Topes: 700 tokens en la llamada única y
@@ -229,6 +238,12 @@ redacta la explicación sobre las notas, la `question` y el **inventario de nomb
 nivel**, calculado en el servidor, para que no dé por completa una lista a la que le faltan
 piezas. Desde la 0.43.0 las notas de cada trozo tienen un tope de salida propio, proporcional al
 trozo y hasta `LOCAL_DELEGATE_CHUNK_MAX_TOKENS`, en vez del común de 764 tokens que las cortaba. Un fichero sin definiciones de ese tipo se parte por párrafos y líneas.
+
+**Números de línea (desde la 0.44.0).** Con `path`, el modelo ve cada línea como `N| línea`, con su
+número real en el fichero, también dentro de cada trozo del map-reduce; las notas dicen
+`nombre (línea N)` y el paso final conserva `nombre: línea`. Así sirve para preguntar «¿en qué línea
+está X?» y luego leer solo ese rango con `Read` (`offset`/`limit`) en vez del fichero entero. Con
+`code=` en línea no se numera.
 
 ## `local_describe_image`
 
