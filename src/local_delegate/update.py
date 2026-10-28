@@ -834,16 +834,18 @@ def _set_pin_in_claude_json(path: Path, pin: str) -> bool:
     An unreadable file (not UTF-8, not JSON, cannot be opened) raises `UnreadableConfigError` and
     is left untouched; before, it was rewritten as ``""`` and `~/.claude.json` ended up empty.
     """
-    data = install._read_config_json(path)
-    args = _claude_entry_args(data)
-    if args is None:
-        return False
-    updated = [_PIN_RE.sub(pin, a) if isinstance(a, str) else a for a in args]
-    if updated == args:
-        return False
-    args[:] = updated
-    install._write_json(path, data, atomic=True)
-    return True
+
+    def _change_pin(data: dict) -> tuple[dict, bool]:
+        args = _claude_entry_args(data)
+        if args is None:
+            return data, False
+        updated = [_PIN_RE.sub(pin, a) if isinstance(a, str) else a for a in args]
+        if updated == args:
+            return data, False
+        args[:] = updated
+        return data, True
+
+    return install.update_config_json(path, _change_pin)
 
 
 def _set_pin_in_codex_toml(path: Path, pin: str) -> bool:
