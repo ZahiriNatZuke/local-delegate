@@ -18,6 +18,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   fichero es corto (200 líneas o menos y menos de 32 KB) o si empieza después de su última línea.
   Cuando un rango sí se resume, el aviso dice qué líneas no llegaron literales y cuántas se pueden
   pedir todavía en tramos más cortos, o que ya no queda margen en esta sesión.
+- **`local_extract` ya no devuelve campos `null` en silencio con un documento troceado** (#473).
+  Con un documento mayor que la ventana del modelo, si algún campo quedaba `null` en todos los
+  trozos el resultado no lo decía, y ese `null` se leía como «no existe» cuando solo significaba «no
+  visto». Ahora `_local_delegate.chunked` trae cuántos trozos hubo y qué campos quedaron sin valor
+  (`pieces`, `null_fields`, `notice`), y `warning` lleva el aviso si no había ya uno de truncado.
+  Las claves que ya existían no cambian.
 
 ## [0.44.1] - 2026-10-28
 

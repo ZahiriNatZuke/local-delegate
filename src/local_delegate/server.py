@@ -5474,6 +5474,7 @@ def local_extract(
         )
         truncated_calls = report.get("truncated_calls", 0)
         calls = report.get("calls", 0)
+        pieces = report.get("pieces", 0)
         if report.get("fallback"):
             fallback_info.update(report["fallback"])
     else:
@@ -5500,6 +5501,7 @@ def local_extract(
         )
         truncated_calls = 1 if report.get("truncated_out") else 0
         calls = 1
+        pieces = 1
     result = _strip_fences(raw)
 
     # `truncated`/`warning` significan desde B2c «salida truncada en un trozo» (REQ-010): la
@@ -5528,6 +5530,18 @@ def local_extract(
         return {"_local_delegate": {**error, **truncation}}
 
     meta: dict = dict(truncation)
+    # #473: a chunked document where some field stayed null in every chunk. No chunk saw the
+    # whole document, so that null may mean "not seen", not "absent": say so, with the count
+    # of chunks and the fields, instead of returning it silently.
+    null_fields = [f for f in fields if data.get(f) is None] if pieces > 1 else []
+    if null_fields:
+        notice = i18n.t(
+            "mcp.warning.extract_null_in_chunks", pieces=pieces, fields=", ".join(null_fields)
+        )
+        meta["chunked"] = {"pieces": pieces, "null_fields": null_fields, "notice": notice}
+        # A truncation warning keeps its exact text (#455 contract); it already says that
+        # material may be missing, and the detail stays in `chunked`.
+        meta.setdefault("warning", notice)
     if path and config.FEEDBACK_ENABLED:
         # Tokens de Claude de la fila en curso (REQ-035), no del modelo local.
         event = cost.in_flight_row(tool="local_extract", source="path", path=path)

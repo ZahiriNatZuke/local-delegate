@@ -160,6 +160,7 @@
   "mcp.warning.output_truncated_calls": "salida truncada por max_tokens en {truncated} de {calls} llamadas; puede faltar parte del contenido",
   "mcp.warning.truncated_pieces": "; trozos afectados: {pieces}",
   "mcp.warning.truncated_piece_lines": "{piece} (líneas {first}-{last})",
+  "mcp.warning.extract_null_in_chunks": "documento procesado en {pieces} trozos y ninguno dio valor para: {fields}; ese null puede significar «no visto», no «no existe»",
   "mcp.warning.sections_not_summarized": "{n} secciones sin resumir por el límite de palabras o del modelo",
   "mcp.warning.sections_not_summarized_one": "1 sección sin resumir por el límite de palabras o del modelo"
 }
