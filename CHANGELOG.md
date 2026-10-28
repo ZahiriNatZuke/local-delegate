@@ -24,6 +24,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   visto». Ahora `_local_delegate.chunked` trae cuántos trozos hubo y qué campos quedaron sin valor
   (`pieces`, `null_fields`, `notice`), y `warning` lleva el aviso si no había ya uno de truncado.
   Las claves que ya existían no cambian.
+- **La combinación final de `local_extract` ya no pierde un valor que algún trozo sí traía**
+  (#473). Cuando varios trozos traen datos, el modelo los combina y podía devolver `null` en un
+  campo que un trozo tenía. Ahora cada campo que queda `null` tras combinar toma el primer valor no
+  nulo de los trozos, en orden, sin llamar al modelo; nunca se sobrescribe un valor del modelo.
 
 ## [0.44.1] - 2026-10-28
 

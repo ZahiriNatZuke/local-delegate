@@ -110,6 +110,7 @@ Dos cosas que conviene saber y solo estaban en el código:
 - **Lee la entrada entera** (desde la 0.36.0). Si no cabe en el rol, extrae de cada trozo un objeto
   parcial (`null` en lo que no aparece) y un paso final, también con schema, los combina. Si solo
   un parcial trae datos, ese es el resultado y no hay paso final. Antes truncaba al tope del rol.
+  Un campo que el paso final deja `null` toma el primer valor no nulo de los parciales, en orden.
   Si tras trocear algún campo queda `null` en todos los trozos, `_local_delegate.chunked` lo dice
   (`pieces`, `null_fields` y `notice`) y `warning` lleva ese aviso si no hay otro: ese `null` puede
   significar «no visto», no «no existe» (#473).

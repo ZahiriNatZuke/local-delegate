@@ -117,3 +117,55 @@ def test_a_truncation_warning_keeps_its_text_and_the_detail_goes_to_chunked(back
     chunked = meta["chunked"]
     assert chunked["null_fields"] == ["a"]
     assert chunked["notice"] == _notice(chunked["pieces"], ["a"])
+
+
+# --- The reduce never drops a value a partial had (#473) ---------------------------------------
+
+
+def _two_values_answer(reduce_text: str):
+    """`a` only in the chunk with `a = AAA`, `b` only in the one with `b = BBB`."""
+
+    def answer(call):
+        if "Combina" in call["system"]:
+            return _ok(reduce_text)
+        has_a, has_b = "a = AAA" in call["user"], "b = BBB" in call["user"]
+        return _ok(json.dumps({"a": "AAA" if has_a else None, "b": "BBB" if has_b else None}))
+
+    return answer
+
+
+def _two_values_text() -> str:
+    return "b = BBB\n" + _big_text("a = AAA\n")
+
+
+def test_a_null_left_by_the_reduce_takes_the_partial_value(backend):
+    calls, state = backend
+    state["answer"] = _two_values_answer('{"a": null, "b": null}')
+    data = server.local_extract(fields=["a", "b"], text=_two_values_text())
+    assert any("Combina" in c["system"] for c in calls)  # guard: the model reduced
+    assert data["a"] == "AAA" and data["b"] == "BBB"
+    assert "_local_delegate" not in data
+
+
+def test_a_non_null_value_of_the_reduce_is_never_overwritten(backend):
+    _calls, state = backend
+    state["answer"] = _two_values_answer('{"a": "merged", "b": null}')
+    data = server.local_extract(fields=["a", "b"], text=_two_values_text())
+    assert data["a"] == "merged"
+    assert data["b"] == "BBB"
+
+
+def test_the_first_partial_value_wins_in_chunk_order():
+    data = {"a": None}
+    server._fill_nulls_from_partials(
+        data, ["a"], ['{"a": null}', "not json", '{"a": "first"}', '{"a": "second"}']
+    )
+    assert data == {"a": "first"}
+
+
+def test_a_field_null_in_the_reduce_and_every_partial_is_still_listed(backend):
+    _calls, state = backend
+    state["answer"] = _two_values_answer('{"a": null, "b": null, "c": null}')
+    data = server.local_extract(fields=["a", "b", "c"], text=_two_values_text())
+    assert data["a"] == "AAA" and data["b"] == "BBB" and data["c"] is None
+    assert data["_local_delegate"]["chunked"]["null_fields"] == ["c"]

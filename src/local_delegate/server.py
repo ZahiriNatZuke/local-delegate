@@ -4174,6 +4174,8 @@ def _chat_map_reduce(
                 break
             summaries.extend(outs)
 
+        # #473: the map partials in chunk order, before any regroup replaces them.
+        map_partials = list(summaries)
         current.chunk = None
         text = ""
         if failed is None:
@@ -4288,6 +4290,7 @@ def _chat_map_reduce(
             truncated_pieces=_truncated_piece_entries(content, truncated_pieces) if ok else [],
             calls=calls,
             pieces=len(pieces),
+            partials=map_partials if ok else [],
             # Las claves del contrato de `fallback` (REQ-010), sin el trozo interno.
             fallback=(
                 {k: v for k, v in current.hop.items() if k != "chunk"}
@@ -5400,6 +5403,29 @@ def _extract_shortcut(partials: list[str]) -> str | None:
     return json.dumps(with_values[0] if with_values else objects[0], ensure_ascii=False)
 
 
+def _fill_nulls_from_partials(data: dict, fields: list[str], partials: list[str]) -> None:
+    """#473: a requested field the reduce left null takes the first non-null value of the partials.
+
+    In chunk order; a non-null value of the reduce is never overwritten. A partial that is not a
+    JSON object is skipped. Deterministic: no model call.
+    """
+    objects: list[dict] = []
+    for partial in partials:
+        try:
+            parsed = json.loads(_strip_fences(partial))
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            objects.append(parsed)
+    for name in fields:
+        if data.get(name) is not None:
+            continue
+        for obj in objects:
+            if obj.get(name) is not None:
+                data[name] = obj[name]
+                break
+
+
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_extract"]))
 def local_extract(
     fields: list[str],
@@ -5529,6 +5555,8 @@ def local_extract(
         error = {"error": i18n.t("mcp.extract.not_object"), "raw": result}
         return {"_local_delegate": {**error, **truncation}}
 
+    if pieces > 1:
+        _fill_nulls_from_partials(data, fields, report.get("partials") or [])
     meta: dict = dict(truncation)
     # #473: a chunked document where some field stayed null in every chunk. No chunk saw the
     # whole document, so that null may mean "not seen", not "absent": say so, with the count
