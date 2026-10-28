@@ -60,7 +60,16 @@ def _vnum(version: str | None) -> int | None:
 
 
 def _run_version(exe: str) -> str | None:
-    """Corre ``<exe> --version`` y devuelve stdout+stderr. None si el binario no está o falla."""
+    """Corre ``<exe> --version`` y devuelve stdout+stderr. None si el binario no está o falla.
+
+    Un nombre suelto (``llama-server`` en el ``cmd`` del config.yaml) se resuelve en las carpetas
+    absolutas del PATH y nunca en el directorio actual; una ruta relativa no se ejecuta.
+    """
+    if not Path(exe).is_absolute():
+        resolved = autostart.which_absolute(exe)
+        if resolved is None:
+            return None
+        exe = resolved
     try:
         out = subprocess.run(
             [exe, "--version"],
