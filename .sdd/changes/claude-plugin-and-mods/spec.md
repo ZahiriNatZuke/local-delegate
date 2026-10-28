@@ -178,6 +178,13 @@ siguen con la entrega por settings.** Hechos: `research.md`.
   lectura real sigue disponible solo por franjas por debajo del umbral (REQ-020) y REQ-022 protege
   las escrituras. Para las vías **no clasificables con seguridad**: solo aviso y registro, nunca
   bloqueo. Telemetría de REQ-004 por vía.
+
+  > **Enmienda (2026-10-28, 0.44.2, #472).** Excepciones a «la lectura real sigue disponible solo
+  > por franjas por debajo del umbral»: (a) en un subagente, una lectura por rango nunca se resume
+  > ni suma a la cobertura compartida del fichero, igual que el principio del #443; (b) en el hilo
+  > principal, un fichero corto (≤ 200 líneas y < 32 KB) pasa literal; (c) un rango que empieza
+  > después de la última línea del fichero pasa literal. El texto de los REQ no cambia.
+
 - **REQ-022 — Nunca escribe sobre un resumen.** Tras una lectura resumida de un fichero (por
   cualquier vía), el mod rechaza `Edit`, `Write`, `NotebookEdit` y escrituras de shell reconocibles
   sobre ese fichero con el mensaje «léelo con `offset`/`limit` antes de modificarlo» hasta que haya

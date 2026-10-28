@@ -5440,9 +5440,11 @@ def local_extract(
     Pass 'path' to read the file server-side (spends no Claude context) or 'text'. Returns an
     object with exactly the requested keys, already validated: the caller does not have to parse
     a string. What is not data travels under the reserved key `_local_delegate` (`truncated` and
-    `warning`, `read_server_side`, `fallback`, or `error` and `raw`). Routes automatically to the
-    mechanical model (short inputs) or to the long-context model (large documents): the size probe
-    uses file bytes for 'path' and characters for 'text' (~5-10% difference in UTF-8, acceptable).
+    `warning`, `read_server_side`, `fallback`, or `error` and `raw`); with chunked input, `chunked`
+    says how many pieces there were and which fields stayed null in all of them. Routes
+    automatically to the mechanical model (short inputs) or to the long-context model (large
+    documents): the size probe uses file bytes for 'path' and characters for 'text' (~5-10%
+    difference in UTF-8, acceptable).
     By default it asks the backend for schema-constrained JSON (`LOCAL_DELEGATE_JSON_SCHEMA=auto`);
     if the backend does not support it, it retries in free mode.
 

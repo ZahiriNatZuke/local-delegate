@@ -6,6 +6,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.44.2] - 2026-10-28
+
+Esta versión corrige dos casos en que la delegación ocultaba información: el mod de lectura ya no
+resume una lectura por rango en un subagente ni en un fichero corto, y `local_extract` avisa cuando
+trocea un documento y algún campo queda sin valor, en vez de devolver `null` en silencio.
+
+### Cómo actualizar
+
+- **Abre una sesión nueva de Claude Code (o de Claude Desktop) tras actualizar.** Las sesiones
+  abiertas siguen con el servidor MCP y el mod de la 0.44.1 hasta que se reinician.
+- **Ejecuta `local-delegate update`** (y reinicia el daemon si lo usas), como en cada versión.
+
 ### Corregido
 
 - **El mod de lectura ya no resume una lectura por rango en un subagente ni en un fichero corto**
@@ -3757,7 +3769,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.44.1...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.44.2...HEAD
+[0.44.2]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.44.1...v0.44.2
 [0.44.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.44.0...v0.44.1
 [0.44.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.43.0...v0.44.0
 [0.43.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.42.0...v0.43.0
