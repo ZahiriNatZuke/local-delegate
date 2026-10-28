@@ -12,10 +12,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   (#472). Un rango que, sumado a lo leído antes en la sesión, llegaba al 80 % del fichero se
   sustituía por un resumen; en un fichero de unas 130 líneas eso saltaba enseguida y un subagente
   que necesitaba las líneas exactas acabó leyéndolo con `python -c` por Bash. Ahora en un subagente
-  un rango pasa siempre literal (y cuenta como leído, como cualquier rango), y en el hilo principal
-  también pasa literal si el fichero es corto: 200 líneas o menos y menos de 32 KB. Cuando un rango
-  sí se resume, el aviso dice qué líneas no llegaron literales y cuántas se pueden pedir todavía en
-  tramos más cortos, o que ya no queda margen en esta sesión.
+  un rango pasa siempre literal: permite editar el fichero después, como cualquier lectura literal,
+  pero no gasta el margen del 80 % del hilo principal, que puede seguir leyendo por rangos y
+  editando lo que el subagente leyó entero. En el hilo principal un rango también pasa literal si el
+  fichero es corto (200 líneas o menos y menos de 32 KB) o si empieza después de su última línea.
+  Cuando un rango sí se resume, el aviso dice qué líneas no llegaron literales y cuántas se pueden
+  pedir todavía en tramos más cortos, o que ya no queda margen en esta sesión.
 
 ## [0.44.1] - 2026-10-28
 

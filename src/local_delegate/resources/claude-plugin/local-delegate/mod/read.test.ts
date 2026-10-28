@@ -1180,3 +1180,45 @@ test('a_range_summary_names_the_lines_it_left_out', async () => {
   const lastHeader: string = last.result.file.content.split('\n\n')[0]
   expect(lastHeader.endsWith(' read.summary.range_omitted_none first=80 last=100')).toBe(true)
 })
+
+test('a_subagent_range_read_leaves_the_main_thread_budget_alone', async () => {
+  // Orchestrator → subagent reads the whole file by ranges → the main thread reads and edits.
+  const env = makeEnv({ classify: byInput })
+  const sub = (offset: number, limit: number) =>
+    call(env, { tool: 'Read', file_path: BIG, offset, limit, agentId: 'agent-1' })
+  await sub(1, 50)
+  await sub(51, 50)
+  const main = await call(env, { tool: 'Read', file_path: BIG, offset: 1, limit: 10 })
+  expect(env.mcpCalls).toHaveLength(0)
+  expect(main.result.file.content).toBe('REAL')
+  const write = await call(env, { tool: 'Edit', file_path: BIG, old_string: 'a', new_string: 'b' })
+  expect(write.deny).toBeUndefined()
+  expect(env.nexts.at(-1).tool).toBe('Edit')
+})
+
+test('a_subagent_range_read_still_lifts_the_write_guard', async () => {
+  const env = makeEnv({ classify: byInput })
+  await call(env, { tool: 'Read', file_path: BIG, agentId: 'agent-1' }) // whole: summarized, guarded
+  expect(env.mcpCalls).toHaveLength(1)
+  const refused = await call(env, { tool: 'Edit', file_path: BIG, old_string: 'a', new_string: 'b', agentId: 'agent-1' })
+  expect(typeof refused.deny).toBe('string')
+  await call(env, { tool: 'Read', file_path: BIG, offset: 1, limit: 10, agentId: 'agent-1' })
+  const out = await call(env, { tool: 'Edit', file_path: BIG, old_string: 'a', new_string: 'b', agentId: 'agent-1' })
+  expect(out.deny).toBeUndefined()
+})
+
+test('a_range_past_the_end_passes_and_a_summary_never_names_lines_past_it', async () => {
+  // 90 % already read literally while the file was short (10 KB); then it is not (64 KB).
+  let bytes = 10 * 1024
+  const env = makeEnv({ classify: (input: any) => rangeOf(bytes)(input) })
+  const range = (offset: number, limit: number) => call(env, { tool: 'Read', file_path: BIG, offset, limit })
+  await range(1, 90)
+  bytes = 64 * 1024
+  const past = await range(150, 10) // lines 150-159 of a 100-line file: Read returns nothing
+  expect(env.mcpCalls).toHaveLength(0)
+  expect(past.result.file.content).toBe('REAL')
+  const last = await range(95, 30)
+  expect(env.mcpCalls).toHaveLength(1)
+  const header: string = last.result.file.content.split('\n\n')[0]
+  expect(header.endsWith(' read.summary.range_omitted_none first=95 last=100')).toBe(true)
+})

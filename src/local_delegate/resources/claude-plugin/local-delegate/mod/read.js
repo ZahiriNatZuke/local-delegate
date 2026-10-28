@@ -797,7 +797,7 @@ async function readTotalLines($, entry, path) {
 }
 
 /** What a real read leaves behind: the file is no longer guarded, and its lines count as read. */
-async function readNoteRealRead($, common, sessionId, key, classified, ran) {
+async function readNoteRealRead($, common, sessionId, key, classified, ran, countRange = true) {
   if (!ran || ran.deny !== undefined || ran.isError === true) {
     return
   }
@@ -811,7 +811,7 @@ async function readNoteRealRead($, common, sessionId, key, classified, ran) {
   const range = readRange(classified.range)
   if (classified.scope === 'whole') {
     entry.whole = true
-  } else if (range) {
+  } else if (range && countRange) {
     entry.ranges.push(range)
   }
   if (READ_STATE.guard.delete(key)) {
@@ -880,7 +880,7 @@ async function readPass($, common, e, next, ctx, decision) {
   if (decision) {
     await readRecord($, common, ctx.classified, decision, ctx.sessionId)
   }
-  await readNoteRealRead($, common, ctx.sessionId, ctx.key, ctx.classified, ran)
+  await readNoteRealRead($, common, ctx.sessionId, ctx.key, ctx.classified, ran, ctx.countRange !== false)
   return ran
 }
 
@@ -951,8 +951,8 @@ async function readSummaryHeader($, common, ctx) {
       return header
     }
     // Issue #472: which lines did not come literally, and the one way to get them that way.
-    const first = ctx.range.start
-    const last = ctx.range.end === null ? total : Math.min(ctx.range.end, total)
+    const first = Math.min(ctx.range.start, total)
+    const last = ctx.range.end === null ? total : Math.max(first, Math.min(ctx.range.end, total))
     const omitted = left > 0
       ? common.t('read.summary.range_omitted', { first, last, left })
       : common.t('read.summary.range_omitted_none', { first, last })
@@ -1053,12 +1053,19 @@ async function readOnToolCall($, common, e, next) {
   }
   if (readInSubagent(e)) {
     // A subagent reads a range to quote or edit those very lines (issue #472, as #443): a summary in
-    // their place pushed it to dodge the hook through the shell. Literal, and noted like any range.
-    return readPass($, common, e, next, ctx, null)
+    // their place pushed it to dodge the hook through the shell. Literal, and it lifts the write
+    // guard like any real read, but its lines stay out of the shared coverage: the 80 % is the main
+    // thread's budget, and a subagent that read the file whole by ranges left the main thread
+    // summarized on any range and unable to edit (orchestrator → subagent reads → main edits).
+    return readPass($, common, e, next, { ...ctx, countRange: false }, null)
   }
   const range = readRange(classified.range)
   const entry = readFileEntry(key)
   const total = range ? await readTotalLines($, entry, classified.path) : null
+  if (range && total && range.start > total) {
+    // Past the end: `Read` returns no lines, so there is nothing to summarize.
+    return readPass($, common, e, next, ctx, null)
+  }
   if (readShortFile(total, classified.bytes)) {
     // A short file (issue #472): 80 % of it is a few lines, so the share was reached at once and the
     // summary saved next to nothing.
