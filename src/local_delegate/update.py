@@ -797,32 +797,90 @@ _PIN_RE = re.compile(re.escape(PACKAGE) + r"==[\d.]+")
 UNPINNED = "unpinned"
 
 
-def current_pin(path: Path) -> str | None:
-    """Versión fijada en el fichero, ``UNPINNED`` si está la entrada sin ``==``, o None."""
+def _claude_entry_args(data: dict) -> list | None:
+    """The ``args`` of our user-scope entry in `~/.claude.json`, or None if there are none."""
+    servers = data.get("mcpServers")
+    entry = servers.get(install.SERVER_NAME) if isinstance(servers, dict) else None
+    args = entry.get("args") if isinstance(entry, dict) else None
+    return args if isinstance(args, list) else None
+
+
+def _entry_text(path: Path) -> str | None:
+    """Only the text of our entry: the pin is looked for there and nowhere else.
+
+    Searching the whole file found `local-delegate-mcp==…` in other projects' entries or in the
+    history of `~/.claude.json`, and the substitution rewrote those too.
+    """
+    if path.name == ".claude.json":
+        args = _claude_entry_args(install._read_json(path))
+        return None if args is None else "\n".join(a for a in args if isinstance(a, str))
     text, _reason = checks.read_text(path)
+    section = install._CODEX_SECTION_RE.search(text) if text else None
+    return section.group(0) if section else None
+
+
+def current_pin(path: Path) -> str | None:
+    """Versión fijada en nuestra entrada, ``UNPINNED`` si está la entrada sin ``==``, o None."""
+    text = _entry_text(path)
     if text is None or PACKAGE not in text:
         return None
     match = re.search(re.escape(PACKAGE) + r"==([\d.]+)", text)
     return match.group(1) if match else UNPINNED
 
 
+def _set_pin_in_claude_json(path: Path, pin: str) -> bool:
+    """Changes the pin only in ``mcpServers.local-delegate.args``, through JSON and atomically.
+
+    An unreadable file (not UTF-8, not JSON, cannot be opened) raises `UnreadableConfigError` and
+    is left untouched; before, it was rewritten as ``""`` and `~/.claude.json` ended up empty.
+    """
+    data = install._read_config_json(path)
+    args = _claude_entry_args(data)
+    if args is None:
+        return False
+    updated = [_PIN_RE.sub(pin, a) if isinstance(a, str) else a for a in args]
+    if updated == args:
+        return False
+    args[:] = updated
+    install._write_json(path, data, atomic=True)
+    return True
+
+
+def _set_pin_in_codex_toml(path: Path, pin: str) -> bool:
+    """Changes the pin only inside ``[mcp_servers.local-delegate]``; the rest, byte for byte.
+
+    Strict UTF-8 reading: a comment in cp1252 used to be saved back as U+FFFD without a word.
+    """
+    text = install._read_text_for_rewrite(path)
+    section = install._CODEX_SECTION_RE.search(text)
+    if section is None:
+        return False
+    body = _PIN_RE.sub(pin, section.group(0))
+    if body == section.group(0):
+        return False
+    # `install._write_text` deja `.bak`, conserva el terminador de línea y el BOM del fichero.
+    install._write_text(path, text[: section.start()] + body + text[section.end() :])
+    return True
+
+
 def plan_pin(opts: Options, version: str) -> list[install.Action]:
     """Acciones que cambian el pin donde exista. Sin pin no hay nada que cambiar."""
     actions: list[install.Action] = []
+    pin = f"{PACKAGE}=={version}"
     for path in (opts.home / ".claude.json", opts.home / ".codex" / "config.toml"):
         current = current_pin(path)
         if current is None or current == UNPINNED or current == version:
             continue
+        rewrite_pin = (
+            _set_pin_in_claude_json if path.name == ".claude.json" else _set_pin_in_codex_toml
+        )
 
-        def _run(path=path, current=current) -> str:
-            text, _ = checks.read_text(path)
-            # `install._write_text` ya deja `.bak` y conserva el terminador de línea del
-            # fichero: en Windows, escribir con el de la plataforma convertiría a CRLF un
-            # `.claude.json` guardado en LF y el usuario vería el fichero entero modificado.
-            install._write_text(path, _PIN_RE.sub(f"{PACKAGE}=={version}", text or ""))
+        def _run(path=path, current=current, rewrite_pin=rewrite_pin) -> str:
+            if not rewrite_pin(path, pin):
+                return t("install.update.pin_missing", name=path.name)
             return t("install.update.pin_done", current=current, version=version, name=path.name)
 
-        plan = t("install.update.pin_plan", pin=f"{PACKAGE}=={version}")
+        plan = t("install.update.pin_plan", pin=pin)
         actions.append(install.Action("pin", path, plan, _run))
     return actions
 
