@@ -42,6 +42,8 @@
   "install.completion.written": "written",
   "install.config_unreadable": "{path} is left untouched: {reason}. {fix}",
   "install.config_unreadable.fix": "Fix it so it is a valid JSON object in UTF-8 (or move it aside) and run the command again; the file is left exactly as it was",
+  "install.config_changed": "{path} is not written: another program (probably Claude Code) changed it twice while it was being updated. It is left as that program wrote it; run the command again",
+  "install.config_locked": "{path} is not written: another process has it open ({reason}). It is left as it was; close that program (or wait for it to finish saving) and run the command again",
   "install.copied": "copied -> {path}",
   "install.hooks.copy_plan": "advisory hook scripts",
   "install.hooks.previous_removed": " ({n} previous entry(ies) removed)",

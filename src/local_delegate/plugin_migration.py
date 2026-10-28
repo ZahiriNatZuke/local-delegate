@@ -127,10 +127,9 @@ def remove_settings_hooks(claude_dir: Path) -> int:
     path = claude_dir / "settings.json"
     removed = 0
     if path.is_file():
-        settings = install._read_config_json(path)
-        settings, removed = install.strip_hook_settings(settings, hooks_dir)
-        if removed:
-            install._write_json(path, settings)
+        removed = install.update_config_json(
+            path, lambda settings: install.strip_hook_settings(settings, hooks_dir)
+        )
     if hooks_dir.is_dir():
         shutil.rmtree(hooks_dir)
     return removed

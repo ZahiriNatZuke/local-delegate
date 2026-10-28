@@ -42,6 +42,8 @@
   "install.completion.written": "escrito",
   "install.config_unreadable": "no se toca {path}: {reason}. {fix}",
   "install.config_unreadable.fix": "Corrígelo para que sea un objeto JSON válido en UTF-8 (o apártalo) y vuelve a ejecutar el comando; el fichero queda tal cual estaba",
+  "install.config_changed": "no se escribe {path}: otro programa (probablemente Claude Code) lo cambió dos veces mientras se actualizaba. Queda tal cual lo dejó ese programa; vuelve a ejecutar el comando",
+  "install.config_locked": "no se escribe {path}: otro proceso lo tiene abierto ({reason}). Queda tal cual estaba; cierra ese programa (o espera a que termine de guardar) y vuelve a ejecutar el comando",
   "install.copied": "copiado -> {path}",
   "install.hooks.copy_plan": "scripts de hooks consultivos",
   "install.hooks.previous_removed": " (retiradas {n} entrada(s) previa(s))",

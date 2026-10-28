@@ -33,12 +33,14 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from importlib import import_module
 from importlib.resources import files as _resource_files
 from pathlib import Path, PurePath
+from typing import TypeVar
 
 from . import completion, config, deprecations, i18n, shell_profiles
 from .i18n import t
@@ -292,7 +294,7 @@ def _write_text(path: Path, text: str) -> None:
     bom = codecs.BOM_UTF8 if _has_utf8_bom(path) else b""
     _backup(path)
     normalized = text.removeprefix("﻿").replace("\r\n", "\n").replace("\n", newline)
-    path.write_bytes(bom + normalized.encode("utf-8"))
+    _atomic_write(path, bom + normalized.encode("utf-8"))
 
 
 def _read_text(path: Path) -> str:
@@ -391,9 +393,7 @@ def _read_config_json(path: Path) -> dict:
     except OSError as exc:
         reason = str(exc.strerror or exc)
     else:
-        data, reason = _decode_config_json(raw)
-        if data is not None:
-            return data
+        return _parse_config_bytes(path, raw)
     raise UnreadableConfigError(
         t(
             "install.config_unreadable",
@@ -412,22 +412,97 @@ def _has_utf8_bom(path: Path) -> bool:
         return False
 
 
-def _write_json(path: Path, data: dict, *, atomic: bool = False) -> None:
-    """Writes `data` with the line ending and the UTF-8 BOM the file already had (REQ-026).
-
-    With ``atomic``, through a temporary + ``os.replace`` (`_atomic_write`): for `~/.claude.json`,
-    which Claude Code keeps rewriting, a half-written file would lose every session's state.
-    """
-    path.parent.mkdir(parents=True, exist_ok=True)
-    newline = _detect_newline(path)
-    bom = codecs.BOM_UTF8 if _has_utf8_bom(path) else b""
-    _backup(path)
+def _json_payload(data: dict, current: bytes | None) -> bytes:
+    """`data` serialized with the line ending and the UTF-8 BOM of `current` (the file's bytes,
+    ``None`` if it does not exist yet) (REQ-026)."""
+    current = current or b""
+    newline = "\r\n" if b"\r\n" in current else "\n"
+    bom = codecs.BOM_UTF8 if current.startswith(codecs.BOM_UTF8) else b""
     text = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
-    payload = bom + text.replace("\n", newline).encode("utf-8")
-    if atomic:
-        _atomic_write(path, payload)
-    else:
-        path.write_bytes(payload)
+    return bom + text.replace("\n", newline).encode("utf-8")
+
+
+def _write_json(path: Path, data: dict) -> None:
+    """Writes `data` atomically with the line ending and the UTF-8 BOM the file already had.
+
+    For a file another program may be rewriting at the same time (`~/.claude.json`,
+    `~/.claude/settings.json`) use `update_config_json`, which also notices that change.
+    """
+    try:
+        current: bytes | None = path.read_bytes()
+    except OSError:
+        current = None
+    _backup(path)
+    _atomic_write(path, _json_payload(data, current))
+
+
+class ConfigWriteError(OSError):
+    """A config file could not be replaced: it kept changing under us, or another process held it
+    open. Nothing was written and no temporary is left; the message says which and what to do."""
+
+
+class _ConfigChanged(Exception):
+    """Internal: the file is not what was read; `update_config_json` reads it again."""
+
+
+def _read_bytes_or_none(path: Path) -> bytes | None:
+    try:
+        return path.read_bytes()
+    except FileNotFoundError:
+        return None
+
+
+_T = TypeVar("_T")
+
+
+def update_config_json(path: Path, change: Callable[[dict], tuple[dict, _T]]) -> _T:
+    """Read-modify-write of a JSON config that Claude Code may be rewriting while we run.
+
+    `change` gets the parsed object and returns ``(new_object, result)``; it must depend only on
+    its argument, because it may run twice. The file is written only if the object changed, always
+    atomically (`_atomic_write`), keeping its BOM and line ending. Just before the ``os.replace``
+    the file is read again: if it is no longer the bytes `change` saw (Claude Code saved its
+    session state in between), `change` is applied once more on the new content, so what the other
+    process wrote is kept. If it changes again, the action fails with `ConfigWriteError` and the
+    file is left as the other process wrote it. The window between that last read and the replace
+    is a few microseconds: closing it would need a lock Claude Code does not take.
+
+    An unreadable file raises `UnreadableConfigError`, as `_read_config_json` does.
+    """
+    for _attempt in range(2):
+        before = _read_bytes_or_none(path)
+        data = {} if before is None else _parse_config_bytes(path, before)
+        original = json.loads(json.dumps(data))
+        new_data, result = change(data)
+        if new_data == original:
+            return result
+
+        def _unchanged(expected: bytes | None = before) -> None:
+            if _read_bytes_or_none(path) != expected:
+                raise _ConfigChanged
+
+        _backup(path)
+        try:
+            _atomic_write(path, _json_payload(new_data, before), before_replace=_unchanged)
+        except _ConfigChanged:
+            continue
+        return result
+    raise ConfigWriteError(t("install.config_changed", path=path))
+
+
+def _parse_config_bytes(path: Path, raw: bytes) -> dict:
+    """`_read_config_json` on bytes already read (so the parsed object is exactly those bytes)."""
+    data, reason = _decode_config_json(raw)
+    if data is not None:
+        return data
+    raise UnreadableConfigError(
+        t(
+            "install.config_unreadable",
+            path=path,
+            reason=reason,
+            fix=t("install.config_unreadable.fix"),
+        )
+    )
 
 
 def upsert_block(text: str, block: str, begin: str, end: str) -> str:
@@ -827,14 +902,44 @@ class CompletionPlan:
     notes: list[str] = field(default_factory=list)
 
 
-def _atomic_write(path: Path, data: bytes) -> None:
-    """Temporary in the same folder + ``os.replace``: never a half-written file (REQ-026)."""
+#: Windows: ``os.replace`` gives ``PermissionError`` while another process (Claude Code, an
+#: antivirus, an editor) holds the target open. A few short retries cover a save in progress.
+_REPLACE_ATTEMPTS = 5
+_REPLACE_DELAY_S = 0.1
+
+
+def _replace_with_retry(tmp: str, path: Path) -> None:
+    for attempt in range(_REPLACE_ATTEMPTS):
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError as exc:
+            if attempt == _REPLACE_ATTEMPTS - 1:
+                raise ConfigWriteError(
+                    t("install.config_locked", path=path, reason=exc.strerror or exc)
+                ) from exc
+            time.sleep(_REPLACE_DELAY_S)
+
+
+def _atomic_write(
+    path: Path, data: bytes, *, before_replace: Callable[[], None] | None = None
+) -> None:
+    """Temporary in the same folder + ``os.replace``: never a half-written file (REQ-026).
+
+    `before_replace` runs once the temporary is complete, right before the replace; if it raises,
+    nothing is replaced. The temporary never stays behind, whatever fails. The file keeps its
+    permission bits (``mkstemp`` creates the temporary as 0600).
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=path.name + ".", suffix=".tmp")
     try:
         with os.fdopen(fd, "wb") as handle:
             handle.write(data)
-        os.replace(tmp, path)
+        with contextlib.suppress(OSError):
+            os.chmod(tmp, path.stat().st_mode & 0o7777)
+        if before_replace is not None:
+            before_replace()
+        _replace_with_retry(tmp, path)
     except BaseException:
         with contextlib.suppress(OSError):
             os.unlink(tmp)
@@ -2482,8 +2587,7 @@ def _settings_hook_entries(hooks_dst: Path, python_exe: str, read_hook: bool) ->
 def _register_settings_hooks(claude: Path, entries: list) -> str:
     hooks_dst = claude / "hooks" / HOOKS_SUBDIR
     path = claude / "settings.json"
-    data, removed = merge_hook_settings(_read_config_json(path), entries, hooks_dst)
-    _write_json(path, data)
+    removed = update_config_json(path, lambda data: merge_hook_settings(data, entries, hooks_dst))
     note = t("install.hooks.previous_removed", n=removed) if removed else ""
     return t("install.hooks.registered", n=len(entries), note=note)
 
@@ -2988,13 +3092,16 @@ def _register_claude_mcp(opts: Options, entry: dict) -> str:
         except (OSError, subprocess.SubprocessError):
             pass  # cae al modo archivo
     path = opts.home / ".claude.json"
-    data = _read_config_json(path)
-    servers = data.setdefault("mcpServers", {})
-    if not isinstance(servers, dict):
-        servers = {}
-        data["mcpServers"] = servers
-    servers[SERVER_NAME] = entry
-    _write_json(path, data)
+
+    def _add(data: dict) -> tuple[dict, None]:
+        servers = data.setdefault("mcpServers", {})
+        if not isinstance(servers, dict):
+            servers = {}
+            data["mcpServers"] = servers
+        servers[SERVER_NAME] = entry
+        return data, None
+
+    update_config_json(path, _add)
     return t("install.mcp.written_to", path=path)
 
 
@@ -3176,8 +3283,7 @@ def plan_uninstall(opts: Options) -> list[Action]:
         def _run_settings(path=settings_path, hooks_dir=hooks_dst) -> str:
             if not path.is_file():
                 return t("install.uninstall.no_settings", name=path.name)
-            data, removed = strip_hook_settings(_read_config_json(path), hooks_dir)
-            _write_json(path, data)
+            removed = update_config_json(path, lambda data: strip_hook_settings(data, hooks_dir))
             return t("install.uninstall.hooks_removed", n=removed)
 
         actions.append(
@@ -3433,10 +3539,12 @@ def _unregister_claude_mcp(opts: Options) -> str:
             # atajo.
             pass
     path = opts.home / ".claude.json"
-    data = _read_config_json(path)
-    servers = data.get("mcpServers")
-    if isinstance(servers, dict) and servers.pop(SERVER_NAME, None) is not None:
-        _write_json(path, data)
+
+    def _remove(data: dict) -> tuple[dict, bool]:
+        servers = data.get("mcpServers")
+        return data, isinstance(servers, dict) and servers.pop(SERVER_NAME, None) is not None
+
+    if path.is_file() and update_config_json(path, _remove):
         return t("install.mcp.removed_from", path=path)
     return t("install.mcp.not_registered")
 
