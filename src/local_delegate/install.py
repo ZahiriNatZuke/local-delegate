@@ -240,8 +240,16 @@ class Action:
 
 # --- Utilidades de escritura -------------------------------------------------
 def _backup(path: Path) -> None:
-    if path.is_file():
-        shutil.copy2(path, path.with_suffix(path.suffix + ".bak"))
+    """Copies ``path`` to ``<path>.bak`` **only if that copy does not exist yet**.
+
+    Overwriting it on every write made it useless exactly when it was needed: after a write that
+    damaged the file, the next one replaced the good copy with the damaged version. Kept once, the
+    copy holds the state before local-delegate first touched the file (like the profiles' copy,
+    REQ-046), and a `.bak` the user had is never overwritten either.
+    """
+    copy = path.with_suffix(path.suffix + ".bak")
+    if path.is_file() and not copy.exists():
+        shutil.copy2(path, copy)
 
 
 def _detect_newline(path: Path) -> str:
@@ -259,26 +267,74 @@ def _detect_newline(path: Path) -> str:
 
 
 def _write_text(path: Path, text: str) -> None:
+    """Writes ``text`` in UTF-8 with the line ending and the UTF-8 BOM the file already had.
+
+    A leading U+FEFF in ``text`` is dropped and the BOM decided by the file: whether the caller
+    read it with ``utf-8`` (BOM in the text) or ``utf-8-sig`` (BOM gone), it ends up exactly once.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     newline = _detect_newline(path)
+    bom = codecs.BOM_UTF8 if _has_utf8_bom(path) else b""
     _backup(path)
-    normalized = text.replace("\r\n", "\n").replace("\n", newline)
-    path.write_bytes(normalized.encode("utf-8"))
+    normalized = text.removeprefix("﻿").replace("\r\n", "\n").replace("\n", newline)
+    path.write_bytes(bom + normalized.encode("utf-8"))
 
 
 def _read_text(path: Path) -> str:
+    """For read-only lookups: a missing or unreadable file reads as ``""``.
+
+    A step that rewrites the file afterwards must use `_read_text_for_rewrite`: rebuilding the file
+    from this ``""`` would wipe everything the user had in it.
+    """
     try:
-        return path.read_text(encoding="utf-8")
+        return path.read_text(encoding="utf-8-sig")
     except (OSError, UnicodeDecodeError):
         return ""
 
 
 class UnreadableConfigError(Exception):
-    """A config file exists but is not a readable JSON object.
+    """A config file exists but cannot be read (not a JSON object, not UTF-8, cannot be opened).
 
     The step that would rewrite it raises this instead, so the file stays byte for byte as it was
     and `apply` counts the action as a failure (REQ-027 of `retire-legacy-aliases`).
     """
+
+
+def _read_text_for_rewrite(path: Path) -> str:
+    """For a step that rewrites ``path``: ``""`` if it does not exist; `UnreadableConfigError` if
+    it exists but cannot be read as UTF-8 text.
+
+    `_read_text` gives ``""`` for both an empty file and one in cp1252 or UTF-16, and rebuilding
+    from that ``""`` left a `CLAUDE.md` with only our block (or empty, on uninstall) while the
+    command said OK. A UTF-8 BOM is fine and is dropped here; `_write_text` puts it back. NUL bytes
+    are refused too: UTF-16 without a BOM is valid UTF-8 byte by byte.
+    """
+    try:
+        raw = path.read_bytes()
+    except FileNotFoundError:
+        return ""
+    except OSError as exc:
+        reason = str(exc.strerror or exc)
+    else:
+        if raw.startswith(tuple(bom for bom, _codec in _UTF16_BOMS)):
+            reason = t("install.text_unreadable.reason.utf16")
+        elif b"\x00" in raw:
+            reason = t("install.completion.reason.nul_bytes")
+        else:
+            try:
+                # Universal newlines, as `read_text` did: the regexes (`[ \t]*\n`) expect `\n`,
+                # and `_write_text` puts back the file's own line ending.
+                return raw.decode("utf-8-sig").replace("\r\n", "\n").replace("\r", "\n")
+            except UnicodeDecodeError:
+                reason = t("install.migrate.reason.not_utf8")
+    raise UnreadableConfigError(
+        t(
+            "install.config_unreadable",
+            path=path,
+            reason=reason,
+            fix=t("install.text_unreadable.fix"),
+        )
+    )
 
 
 def _decode_config_json(raw: bytes) -> tuple[dict | None, str | None]:
@@ -341,14 +397,22 @@ def _has_utf8_bom(path: Path) -> bool:
         return False
 
 
-def _write_json(path: Path, data: dict) -> None:
-    """Writes `data` with the line ending and the UTF-8 BOM the file already had (REQ-026)."""
+def _write_json(path: Path, data: dict, *, atomic: bool = False) -> None:
+    """Writes `data` with the line ending and the UTF-8 BOM the file already had (REQ-026).
+
+    With ``atomic``, through a temporary + ``os.replace`` (`_atomic_write`): for `~/.claude.json`,
+    which Claude Code keeps rewriting, a half-written file would lose every session's state.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     newline = _detect_newline(path)
     bom = codecs.BOM_UTF8 if _has_utf8_bom(path) else b""
     _backup(path)
     text = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
-    path.write_bytes(bom + text.replace("\n", newline).encode("utf-8"))
+    payload = bom + text.replace("\n", newline).encode("utf-8")
+    if atomic:
+        _atomic_write(path, payload)
+    else:
+        path.write_bytes(payload)
 
 
 def upsert_block(text: str, block: str, begin: str, end: str) -> str:
@@ -2294,7 +2358,7 @@ def _revert_agents_action(opts: Options, agents_dir: Path, piece: dict) -> Actio
             if not path.is_file():
                 continue
             try:
-                current = _read_text(path)
+                current = _read_text_for_rewrite(path)
                 restored = agents_mod.revert(
                     current,
                     entry.get("added") or [],
@@ -2305,6 +2369,8 @@ def _revert_agents_action(opts: Options, agents_dir: Path, piece: dict) -> Actio
                     restored_names.append(name)
             except OSError as exc:
                 failed.append(_failure(name, exc))
+            except UnreadableConfigError as exc:
+                failed.append(f"{name} ({exc})")
         state = install_state.load(opts.home, opts.data_dir)
         if state is not None:
             install_state.save(
@@ -2762,7 +2828,7 @@ def plan_install(opts: Options) -> list[Action]:
             def _run_md(path=path, block=block) -> str:
                 from .agents import normalize_block
 
-                current = _read_text(path)
+                current = _read_text_for_rewrite(path)
                 updated = upsert_block(current, block, MD_BEGIN, MD_END)
                 if path.is_file() and normalize_block(updated) == normalize_block(current):
                     return t("install.memory.up_to_date")
@@ -2818,7 +2884,7 @@ def plan_install(opts: Options) -> list[Action]:
             codex_block = codex_mcp_block(_with_header(entry, kept), timeouts)
 
             def _run_codex(path=config_path, block=codex_block) -> str:
-                _write_text(path, upsert_codex_mcp(_read_text(path), block))
+                _write_text(path, upsert_codex_mcp(_read_text_for_rewrite(path), block))
                 return t("install.mcp.codex_updated", server=SERVER_NAME)
 
             actions.append(
@@ -3148,7 +3214,7 @@ def plan_uninstall(opts: Options) -> list[Action]:
             def _run_md(path=path) -> str:
                 if not path.is_file():
                     return t("install.uninstall.did_not_exist")
-                _write_text(path, remove_block(_read_text(path), MD_BEGIN, MD_END))
+                _write_text(path, remove_block(_read_text_for_rewrite(path), MD_BEGIN, MD_END))
                 return t("install.uninstall.block_removed")
 
             plan = t("install.uninstall.block_plan")
@@ -3175,7 +3241,7 @@ def plan_uninstall(opts: Options) -> list[Action]:
             def _run_codex(path=config_path) -> str:
                 if not path.is_file():
                     return t("install.uninstall.did_not_exist")
-                _write_text(path, remove_codex_mcp(_read_text(path)))
+                _write_text(path, remove_codex_mcp(_read_text_for_rewrite(path)))
                 return t("install.uninstall.entry_removed")
 
             plan = t("install.uninstall.codex_plan", server=SERVER_NAME)
