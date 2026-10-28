@@ -9,6 +9,8 @@ caracteres en una sola llamada. Los prompts y los topes se capturan con un backe
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from local_delegate import config, i18n, server
@@ -120,7 +122,8 @@ def test_explain_code_does_not_split_a_definition(backend, tmp_path):
     source = tmp_path / "big.py"
     source.write_text(_big_module(), encoding="utf-8")
     server.local_explain_code(path=str(source))
-    pieces = [c["user"].split("\n\n", 1)[1] for c in calls[:-1]]
+    # #460: con `path` cada línea llega como `N| línea`; aquí cuenta el código, sin el prefijo.
+    pieces = [re.sub(r"(?m)^\d+\| ", "", c["user"].split("\n\n", 1)[1]) for c in calls[:-1]]
     assert len(pieces) > 1
     for piece in pieces[1:]:
         assert piece.startswith(("@decorator(", "class ", "def ")), piece[:40]

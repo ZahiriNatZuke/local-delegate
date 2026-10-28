@@ -903,6 +903,12 @@ def capture_case(
         elif isinstance(user, str) and text and text in user:
             whole_input = True
             template = user.replace(text, MARKER, 1)
+        elif isinstance(user, str) and text and server._number_lines(text) in user:
+            # #460: con `path`, `local_explain_code` manda cada linea como `N| linea`. La entrada
+            # sigue entera y la plantilla es la misma; el corpus congelado (2026-09) se midio sin
+            # el prefijo y se sigue reproduciendo asi.
+            whole_input = True
+            template = user.replace(server._number_lines(text), MARKER, 1)
     return Capture(calls, role, models, whole_input, template)
 
 
