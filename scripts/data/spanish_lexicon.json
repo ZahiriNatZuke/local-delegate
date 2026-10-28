@@ -4544,6 +4544,7 @@
   "paste",
   "patch",
   "path",
+  "pathext",
   "pathlib",
   "paths",
   "pattern",
