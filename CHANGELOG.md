@@ -6,6 +6,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.44.1] - 2026-10-28
+
+Esta versión corrige el aviso de lectura con imágenes: al leer una imagen grande, el hook y el mod
+del plugin recomiendan ahora `local_describe_image` con `path` en vez de leerla por rangos de
+líneas, y los ficheros que ninguna tool local puede tratar pasan en silencio.
+
+### Cómo actualizar
+
+- **Abre una sesión nueva de Claude Code (o de Claude Desktop) tras actualizar.** Las sesiones
+  abiertas siguen con el servidor MCP y los hooks de la 0.44.0 hasta que se reinician.
+- **Ejecuta `local-delegate update`** (y reinicia el daemon si lo usas), como en cada versión.
+
 ### Corregido
 
 - **El aviso de lectura ya no manda a leer una imagen por rangos de líneas** (#469). Al hacer `Read`
@@ -3722,7 +3734,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.44.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.44.1...HEAD
+[0.44.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.44.0...v0.44.1
 [0.44.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.43.0...v0.44.0
 [0.43.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.42.0...v0.43.0
 [0.42.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.41.1...v0.42.0

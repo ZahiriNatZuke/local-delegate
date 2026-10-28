@@ -70,6 +70,11 @@ daemon no responde en 300 ms, contesta 401, no tiene la ruta (otra versión) o l
 el mod lanza el proceso de siempre (`python -I -m local_delegate.hook classify`) y deja de
 preguntarle al daemon durante 5 minutos.
 
+Desde la 0.44.1 la respuesta de `hook classify` trae además `describable`: `true` cuando la lectura
+es un `Read` de una imagen que acepta `local_describe_image` (`.png`, `.jpg`, `.jpeg`, `.gif`,
+`.webp`). Con él, el mod recomienda esa tool con `path` en vez de una lectura por rangos; el resto de
+imágenes y los `.pdf`/`.ipynb` pasan en silencio.
+
 Las decisiones (`record-read`) van igual desde la 0.41.1: primero `POST /api/hook/record-read`, que
 escribe la misma línea que `hook record-read` con el entorno que manda el mod (las variables de
 arriba más `LD_HOOK_TELEMETRY_LOG` y `LD_HOOK_ENABLED`), y si el daemon no la toma, el proceso. El

@@ -340,7 +340,10 @@ cada delegación y con qué esfuerzo, para atribuir el coste equivalente a su mo
 lectura —`PreToolUse`/`Read` y `PreToolUse`/`Bash|PowerShell`— quedan apagados salvo
 `--enable-read-hook`, que los enciende juntos (`--disable-read-hook` o `uninstall` los apagan). Van juntos
 porque son una regla sola sobre dos caminos: cerrar la tool `Read` y dejar `cat informe.md`
-abierto no cambia la conducta, la muda de sitio.
+abierto no cambia la conducta, la muda de sitio. Con una imagen grande que acepta
+`local_describe_image` (`.png`, `.jpg`, `.gif`, `.webp`) el aviso recomienda esa tool con `path`,
+no una lectura por rangos; `.svg`, `.bmp`, `.ico`, las imágenes pequeñas, los `.pdf` y los
+`.ipynb` pasan en silencio.
 
 Esos dos avisan; **rechazar** una lectura es otra cosa y viene aparte y apagada
 (`LD_HOOK_READ_BLOCK`). Solo alcanza a la lectura completa de un `.md` o un `.txt` grande, con
