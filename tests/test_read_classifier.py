@@ -371,7 +371,17 @@ def _seed_backend_alive(base: Path) -> None:
     marker.write_text(json.dumps({"ts": time.time(), "ok": True}), encoding="utf-8")
 
 
-CONTRACT_KEYS = ["kind", "path", "scope", "bytes", "range", "via", "read_switch", "summarizable"]
+CONTRACT_KEYS = [
+    "kind",
+    "path",
+    "scope",
+    "bytes",
+    "range",
+    "via",
+    "read_switch",
+    "summarizable",
+    "describable",
+]
 
 
 def test_list_tools_covers_corpus_tools(tmp_path):
@@ -436,6 +446,7 @@ def test_classify_reports_read_switch(tmp_path, env_extra, switch_file, expected
         "via": "shell_sed",
         "read_switch": expected,
         "summarizable": True,
+        "describable": False,
     }
 
 
@@ -454,7 +465,40 @@ def test_classify_contract_for_other_and_bad_input(tmp_path):
             "via": "none",
             "read_switch": "inactive",
             "summarizable": False,
+            "describable": False,
         }
+
+
+@pytest.mark.parametrize(
+    ("name", "via", "describable"),
+    [
+        ("shot.png", "read_image", True),
+        ("photo.JPEG", "read_image", True),
+        ("anim.webp", "read_image", True),
+        ("logo.svg", "read_image", False),
+        ("icon.ico", "read_image", False),
+        ("spec.pdf", "read_document", False),
+        ("notes.md", "read_whole", False),
+    ],
+)
+def test_classify_says_whether_local_describe_image_takes_the_file(
+    tmp_path, name, via, describable
+):
+    """Issue #469: the mod steers a large image to `local_describe_image` only when it is one."""
+    target = tmp_path / name
+    target.write_bytes(bytes([0x89]) + b"PNG" + bytes(40_000))
+    payload = {"tool_name": "Read", "tool_input": {"file_path": str(target)}}
+    out = classifier.classify(payload, "on", environ={})
+    assert out["via"] == via
+    assert out["describable"] is describable
+
+
+def test_describable_images_are_the_ones_the_server_takes():
+    """The hooks cannot import the package: their copy of the list is held to `server` here."""
+    from local_delegate import server
+
+    assert set(server._IMAGE_MIME) == classifier.DESCRIBABLE_IMAGE_EXTENSIONS
+    assert classifier.DESCRIBABLE_IMAGE_EXTENSIONS <= classifier.IMAGE_EXTENSIONS
 
 
 def _sized(directory: Path, name: str, kb: int) -> Path:

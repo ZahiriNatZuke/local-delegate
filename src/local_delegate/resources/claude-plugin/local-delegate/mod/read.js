@@ -995,8 +995,19 @@ async function readOnToolCall($, common, e, next) {
     if (!big || !ran || ran.deny !== undefined) {
       return ran
     }
-    await readRecord($, common, classified, 'warned', sessionId)
     const kb = Math.round(classified.bytes / 1024)
+    if (classified.via === 'read_image' || classified.via === 'read_document') {
+      // `Read` shows these as an image or pages, not lines: no `local_extract` ranges and no
+      // `offset`/`limit` (issue #469). An image `local_describe_image` accepts gets that tool;
+      // anything else passes in silence.
+      if (classified.describable !== true) {
+        return ran
+      }
+      await readRecord($, common, classified, 'warned', sessionId)
+      const image = common.t('read.warn.image', { path: classified.path, kb })
+      return { ...ran, context: [...(ran.context || []), image] }
+    }
+    await readRecord($, common, classified, 'warned', sessionId)
     const note = readInSubagent(e)
       ? readSubagentNote(common, classified)
       : common.t('read.warn.large', { path: classified.path, kb })

@@ -615,6 +615,12 @@ HOOK_TEXTS: dict[str, dict[str, str]] = {
             '`ToolSearch("select:mcp__local-delegate__local_extract,'
             'mcp__local-delegate__local_explain_code")`.'
         ),
+        "read.image": (
+            "{strength}: esta imagen pesa {size_kb} KB. Si te basta saber que muestra o el texto "
+            'que contiene, pasala por `local_describe_image` con `path="{path}"` para que no '
+            "entre al contexto; leela directamente si necesitas verla tu. Si aun no cargaste esa "
+            'tool: `ToolSearch("select:mcp__local-delegate__local_describe_image")`.'
+        ),
         "read.strength.strong": "Recomendacion fuerte",
         "read.strength.suggest": "Sugerencia",
         "read.target.any": "una tool local_* con path",
@@ -660,6 +666,12 @@ HOOK_TEXTS: dict[str, dict[str, str]] = {
             "the range, not the whole file. If you have not loaded those tools yet: "
             '`ToolSearch("select:mcp__local-delegate__local_extract,'
             'mcp__local-delegate__local_explain_code")`.'
+        ),
+        "read.image": (
+            "{strength}: this image is {size_kb} KB. If knowing what it shows or the text in it "
+            'is enough, pass it to `local_describe_image` with `path="{path}"` so that it does '
+            "not enter the context; read it directly if you need to see it yourself. If you have "
+            'not loaded that tool yet: `ToolSearch("select:mcp__local-delegate__local_describe_image")`.'
         ),
         "read.strength.strong": "Strong recommendation",
         "read.strength.suggest": "Suggestion",

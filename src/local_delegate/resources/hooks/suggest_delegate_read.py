@@ -248,6 +248,44 @@ def record_mcp_read(tool_name: str, tool_input: dict, payload: dict) -> None:
     record("PreToolUse", suggested=False, **fields)
 
 
+def suggest_media_read(
+    access: read_classifier.Access, file_path: str, ext: str, payload: dict, base_fields: dict
+) -> None:
+    """An image or a document (PDF, notebook): `Read` does not show them as lines, so neither
+    `local_extract` ranges nor `offset`/`limit` apply (issue #469). A large image that
+    `local_describe_image` accepts gets that tool; anything else passes in silence, logged."""
+    try:
+        suggest_kb = float(os.environ.get("LD_HOOK_READ_SUGGEST_KB", "8"))
+        strong_kb = float(os.environ.get("LD_HOOK_READ_STRONG_KB", "100"))
+        size_kb = os.path.getsize(file_path) / 1024
+    except (OSError, ValueError):
+        return
+    fields = {"category": "read", "ext": ext, "size_kb": round(size_kb, 1), **base_fields}
+    if access.via != "read_image" or ext not in read_classifier.DESCRIBABLE_IMAGE_EXTENSIONS:
+        record("PreToolUse", suggested=False, reason="not_prose", **fields)
+        return
+    if size_kb <= suggest_kb:
+        record("PreToolUse", suggested=False, reason="small", **fields)
+        return
+    band = "strong" if size_kb > strong_kb else "suggest"
+    common = {"band": band, "id": new_id(), **fields}
+    if backend_down():
+        record("PreToolUse", suggested=False, reason="backend_down", **common)
+        return
+    subagent = bool(str(payload.get("agent_id") or "").strip())
+    emit(
+        "PreToolUse",
+        hook_text(
+            "read.image",
+            strength=hook_text(f"read.strength.{band}"),
+            size_kb=f"{size_kb:.0f}",
+            path=file_path,
+        ),
+        **({"subagent": True} if subagent else {}),
+        **common,
+    )
+
+
 def main() -> None:
     if not is_enabled():
         return
@@ -282,6 +320,10 @@ def main() -> None:
         **context_of(payload, __file__),
         **via_fields(access),
     }
+
+    if access.via in ("read_image", "read_document"):
+        suggest_media_read(access, file_path, ext, payload, base_fields)
+        return
 
     # Las dos guardas siguientes registran en vez de callarse: sin denominador no hay puntería que
     # medir, y no poder medirla es lo que dejó a este hook tres semanas apuntando a código.
