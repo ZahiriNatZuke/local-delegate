@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "slug": "concurrencia-pc-mac",
+  "title": "Concurrencia y cola de delegaciones de la PC y la Mac en un solo turno visible",
+  "mode": "standard",
+  "status": "researching",
+  "createdAt": "2026-10-29T12:00:00.000Z",
+  "updatedAt": "2026-10-29T13:30:00.000Z",
+  "phase0": {
+    "mode": "lightweight",
+    "status": "in-review",
+    "branch": "feat/concurrency-log-fields",
+    "spec": "spec-step0.md",
+    "plan": "plan-step0.md",
+    "gates": {
+      "spec": {
+        "status": "approved",
+        "updatedAt": "2026-10-29T12:00:00.000Z",
+        "actor": "agent",
+        "evidence": "Revision propia explicita (spec-step0.md): 8 requisitos aditivos, cada uno con test que lo distingue; riesgo aceptado: req_headers de inflight sin comprobar contra llama-swap real, se mide en el paso 1."
+      },
+      "plan": {
+        "status": "approved",
+        "updatedAt": "2026-10-29T12:00:00.000Z",
+        "actor": "agent",
+        "evidence": "Revision propia explicita (plan-step0.md): no cambia contratos existentes; una sola zona de choque con el Frente 1 en _log_event; control positivo por mutante en 6 piezas."
+      },
+      "quality": {
+        "status": "approved",
+        "actor": "agent",
+        "updatedAt": "2026-10-29T13:30:00.000Z",
+        "evidence": "ruff check/format verdes; suite completa local -n 2: 5520 passed, 29 skipped; CI del PR #481 en verde (22 checks). El primer CI cazo que la muestra de /running rompia la regla de la afinidad (test_affinity): enmendado REQ-S0-4 (muestra solo si el POST lleva 3 s esperando)."
+      }
+    },
+    "pr": 481
+  },
+  "gates": {
+    "research": {
+      "status": "done",
+      "updatedAt": "2026-10-29T12:00:00.000Z",
+      "actor": "agent",
+      "evidence": "research.md: mapa de impacto con fichero:linea (turno, plazas, puente de Desktop, camino de la Mac, 421 y token), opciones A/B/C evaluadas, recomendacion B condicionada, plan de medicion del paso 1 con prompt para la Mac."
+    },
+    "spec": {
+      "status": "pending",
+      "blockedBy": "Medicion del paso 1 (research.md seccion 6), que necesita la PC y la Mac con el paso 0 publicado."
+    },
+    "plan": {
+      "status": "pending"
+    },
+    "quality": {
+      "status": "pending"
+    },
+    "conformance": {
+      "status": "pending"
+    },
+    "memory": {
+      "status": "pending"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-10-29T12:00:00.000Z",
+      "reason": "SDD change created (prioridad 1 del 2026-10-29)"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-10-29T12:00:00.000Z",
+      "reason": "Research con evidencia del codigo y paso 0 de instrumentacion en PR propio"
+    }
+  ]
+}

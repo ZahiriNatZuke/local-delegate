@@ -84,6 +84,9 @@ class Token:
         self.turn_wait_ms = 0
         self.slot_wait_ms = 0
         self.attempts: list[Any] = []
+        #: Concurrency PC+Mac, step 0: the operation's `concurrency.Trace`, so a stopped call's event
+        #: carries its phases too (set by `server._OperationTurn`).
+        self.concurrency_trace: Any = None
         #: The exception that stopped an operation that had started (`server._note_failure`): the
         #: operation never got to write its event, so `middleware` writes it with `on_failed`.
         self.failure: BaseException | None = None

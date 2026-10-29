@@ -885,7 +885,7 @@ def _running() -> tuple[list, bool]:
     base = config.BASE_URL.removesuffix("/v1")
     try:
         with httpx2.Client(timeout=server._probe_timeout()) as c:
-            r = c.get(f"{base}/running", headers=config.auth_headers())
+            r = c.get(f"{base}/running", headers=config.backend_headers())
         if not r.is_success:
             return [], False
         data = r.json()
@@ -917,7 +917,7 @@ def backend_stats(lang: str | None = Query(None)):
     loopback = server._backend_on_loopback()
     try:
         with httpx2.Client(timeout=server._probe_timeout()) as c:
-            r = c.get(endpoint, headers=config.auth_headers())
+            r = c.get(endpoint, headers=config.backend_headers())
         if not r.is_success:
             cause = failures.connection_cause(r.status_code, loopback=loopback)
             text = failures.detail(
