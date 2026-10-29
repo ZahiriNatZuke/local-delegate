@@ -8,6 +8,7 @@ ready or the send ends. Spec: `.sdd/changes/concurrencia-pc-mac/spec.md` REQ-001
 
 from __future__ import annotations
 
+import json
 import threading
 import time
 from collections.abc import Callable
@@ -44,6 +45,14 @@ def _running(*pairs: tuple[str, str]) -> httpx2.Response:
 def _entry(entry_id: int) -> dict:
     key = f"{server.os.getpid()}:{entry_id}"
     return next(e for e in server.inflight_snapshot() if e["id"] == key)
+
+
+def _file_entry(key: str) -> dict:
+    try:
+        data = json.loads(server._inflight_file().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return data.get(key) or {}
 
 
 def _until(check: Callable[[], bool], timeout: float = 5.0) -> bool:
@@ -234,7 +243,8 @@ def test_the_send_that_ends_first_leaves_the_other_ones_mark(monkeypatch):
         assert chat.arrived.acquire(timeout=5)
         second = _send_in_slot(entry_id)
         assert chat.arrived.acquire(timeout=5)
-        assert _until(lambda: len(server._backend_waits.get(key, {})) == 2)
+        # Both marks are in the FILE (the copy in memory is updated before the file write).
+        assert _until(lambda: len(_file_entry(key).get("backend_wait") or {}) == 2)
         chat.gates[0].set()
         first.join(5)
         # The other send still waits: its mark stays, and so does the state.
@@ -504,10 +514,10 @@ def test_a_stop_during_a_write_ends_with_a_clear():
     )
     writer.start()
     assert writing.wait(5)
-    stopper = threading.Thread(target=watch.stop, daemon=True)
-    stopper.start()
-    stopper.join(1)
-    assert not stopper.is_alive(), "stop() waited for the write"
+    stopping = threading.Thread(target=watch.stop, daemon=True)
+    stopping.start()
+    stopping.join(1)
+    assert not stopping.is_alive(), "stop() waited for the write"
     release.set()
     writer.join(5)
     assert result == [False]
