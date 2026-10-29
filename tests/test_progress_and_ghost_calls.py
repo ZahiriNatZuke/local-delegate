@@ -278,3 +278,73 @@ def test_cancelled_waiter_leaves_the_queue_and_the_next_moves_up(monkeypatch, sl
     assert b_op not in _turn_operations()
     # Nobody is left waiting for a turn once the calls are gone.
     assert _settle(lambda: not server._turn.snapshot().queue, cap=15)
+
+
+# --- 3. Hardening from the review of #485 ------------------------------------------------------
+
+
+def test_a_heartbeat_that_breaks_never_breaks_the_call(monkeypatch, slow_backend):
+    """If the progress text cannot be built, the call still answers (the heartbeat just stops).
+
+    Before, the exception went up the middleware's task group: it cancelled the call, the client got
+    an error, and the tool's thread went on working for nobody.
+    """
+
+    def broken(_self) -> str:
+        raise KeyError("missing placeholder in a translation")
+
+    monkeypatch.setattr(cancellation.Token, "progress_message", broken)
+    monkeypatch.setattr(config, "PROGRESS_INTERVAL_S", 0.05)
+
+    async def scenario() -> object:
+        async with Client(server.mcp) as client:
+            return await client.call_tool("local_classify", CLASSIFY["params"]["arguments"])
+
+    result = anyio.run(scenario)
+    assert getattr(result, "is_error", False) is not True, result
+    assert slow_backend.calls, "the classification never reached the backend"
+
+
+@pytest.mark.parametrize("path", ["chunked", "map_reduce"])
+def test_a_failure_before_the_operation_starts_leaves_no_live_key(monkeypatch, tmp_path, path):
+    """An exception while preparing a chunked operation leaves nothing behind.
+
+    `_inflight_live` protects its keys from the orphan TTL, so a key left there by a call that
+    never reached its `finally` would stay in `/api/inflight` until the process restarts.
+    """
+
+    def broken(_role, _explicit):
+        raise RuntimeError("role parameters unreadable")
+
+    monkeypatch.setattr(server, "_backend_down_text", lambda: None)
+    monkeypatch.setattr(server, "_role_params_for", broken)
+    before = set(server._inflight_live)
+    kwargs = {"tool": "local_summarize", "source": "text", "role": "long"}
+    with pytest.raises(RuntimeError, match="role parameters unreadable"):
+        if path == "chunked":
+            server._chat_chunked("m", "sys", "a b c " * 50, str, **kwargs)
+        else:
+            server._chat_map_reduce(
+                "m", "sys", "a b c " * 50, str, max_chars=100, max_words=50, **kwargs
+            )
+    assert set(server._inflight_live) == before
+    assert all(e.get("tool") != "local_summarize" for e in server.inflight_snapshot())
+
+
+def test_inflight_end_drops_the_live_key_even_if_the_write_fails(monkeypatch, tmp_path):
+    """`_inflight_end` drops the key from `_inflight_live` whatever the file write does."""
+    entry_id = server._inflight_start(tool="local_classify", model="m", source="text", chars_in=1)
+    key = next(k for k in server._inflight_live if k.endswith(f":{entry_id}"))
+
+    def broken(_mutate, **_kwargs) -> None:
+        raise ValueError("unexpected")
+
+    real_mutate = server._inflight_mutate
+    monkeypatch.setattr(server, "_inflight_mutate", broken)
+    with pytest.raises(ValueError):
+        server._inflight_end(entry_id)
+    assert key not in server._inflight_live
+    # Tidy this test's file (under `tmp_path`): never `monkeypatch.undo()`, which would also undo
+    # the conftest's isolation of `LOG_DIR` and point the write at the real log directory.
+    monkeypatch.setattr(server, "_inflight_mutate", real_mutate)
+    server._inflight_end(entry_id)

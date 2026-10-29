@@ -181,6 +181,9 @@ operación ──▶ turno (¿choca con lo que está en uso?) ──▶ plaza (M
   Y `inflight_snapshot` nunca poda una entrada de una llamada viva de su proceso
   (`_inflight_live`): el TTL de 1800 s es solo para huérfanas. Antes podaba también las vivas, y
   quedaban puestos ocupados en la cola del turno por llamadas que no se veían en ningún sitio.
+  `_inflight_live` solo conoce las llamadas del propio proceso: una de otro proceso (un servidor
+  `stdio`, como el de Codex) que pase de 1800 s se sigue podando por edad en el panel del daemon.
+  Ese proceso tiene su propio turno, así que no deja puestos invisibles en la cola del daemon.
 
 ## Módulos
 

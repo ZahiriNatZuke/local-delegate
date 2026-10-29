@@ -47,7 +47,9 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   de `/api/inflight` y del panel por la limpieza de entradas huérfanas, aunque seguía con su
   puesto en la cola del turno: las de detrás veían `turn_position: 5` sin nadie delante. Ahora una
   llamada viva del daemon sigue visible tenga la edad que tenga; la limpieza queda para las
-  huérfanas de verdad.
+  huérfanas de verdad. Límite: cada proceso solo conoce sus propias llamadas vivas. Una llamada de
+  más de 30 min de otro proceso (un servidor `stdio`, como el de Codex) se sigue quitando del panel
+  del daemon por edad, aunque siga en marcha.
 
 ## [0.44.2] - 2026-10-28
 

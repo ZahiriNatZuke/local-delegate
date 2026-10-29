@@ -343,13 +343,19 @@ def middleware(
                 interval = 0.0
 
         async def beat() -> None:
+            # It never stops the call: an exception here would go up the task group and cancel
+            # `call_next`, and the tool's thread would go on working for nobody. A heartbeat that
+            # cannot be built or sent just stops.
             sent = 0
-            while True:
-                await anyio.sleep(interval)
-                if finished or token.cancelled:
-                    return
-                sent += 1
-                await _report_progress(ctx, sent, token.progress_message())
+            try:
+                while True:
+                    await anyio.sleep(interval)
+                    if finished or token.cancelled:
+                        return
+                    sent += 1
+                    await _report_progress(ctx, sent, token.progress_message())
+            except Exception:
+                return
 
         result: Any = None
         try:

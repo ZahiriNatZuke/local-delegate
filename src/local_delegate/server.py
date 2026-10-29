@@ -556,9 +556,13 @@ def _inflight_end(entry_id: int) -> None:
     def _remove(data: dict) -> None:
         data.pop(key, None)
 
-    _inflight_mutate(_remove)
-    with _inflight_lock:
-        _inflight_live.discard(key)
+    try:
+        _inflight_mutate(_remove)
+    finally:
+        # Issue #479: whatever the file write does, the call is no longer live: a key left here
+        # would keep its entry safe from the orphan TTL for as long as the process runs.
+        with _inflight_lock:
+            _inflight_live.discard(key)
 
 
 def inflight_snapshot() -> list[dict]:
@@ -3974,9 +3978,9 @@ def _chat_chunked(
         return down
     chunk_chars = chunk_chars or config.CHUNK_CHARS
     chunks = _chunk_text(content, chunk_chars)
-    entry_id = _inflight_start(
-        tool=tool, model=model, source=source, chars_in=len(content), chunks=len(chunks)
-    )
+    # Issue #479: resolved before the operation registers as in flight, so nothing between
+    # `_inflight_start` and the `try` whose `finally` calls `_inflight_end` can raise.
+    role_params = _role_params_for(role, explicit)
     outputs: list[str] = []
     calls = 0
     latency_ms = 0
@@ -3986,12 +3990,6 @@ def _chat_chunked(
     truncated_out = False
     # Las llamadas reales de toda la operación, saltos incluidos (REQ-024).
     all_attempts: list[Attempt] = []
-    # Turno por operación (REQ-003): todos los trozos bajo el mismo turno.
-    op = _OperationTurn(entry_id, model, tool, role_name=role, explicit=explicit)
-    # The role's parameters, resolved once for every chunk and step (REQ-009, REQ-012).
-    current = _CurrentModel(
-        model, role, explicit, entry_id, op, role_params=_role_params_for(role, explicit)
-    )
 
     def _accumulate(result: ChatResult, ms: int, attempts: list[Attempt]) -> None:
         nonlocal calls, latency_ms, tokens_in, tokens_out
@@ -4031,6 +4029,13 @@ def _chat_chunked(
             truncated_out = True
         return _strip_think(result.text)
 
+    entry_id = _inflight_start(
+        tool=tool, model=model, source=source, chars_in=len(content), chunks=len(chunks)
+    )
+    # Turno por operación (REQ-003): todos los trozos bajo el mismo turno.
+    op = _OperationTurn(entry_id, model, tool, role_name=role, explicit=explicit)
+    # The role's parameters, resolved once for every chunk and step (REQ-009, REQ-012).
+    current = _CurrentModel(model, role, explicit, entry_id, op, role_params=role_params)
     try:
         for index, piece in enumerate(chunks, start=1):
             _inflight_progress(entry_id, index)
@@ -4289,9 +4294,9 @@ def _chat_map_reduce(
     budget = _map_budget(max_chars)
     if pieces is None:
         pieces = _chunk_text(content, budget)
-    entry_id = _inflight_start(
-        tool=tool, model=model, source=source, chars_in=len(content), chunks=len(pieces)
-    )
+    # Issue #479: resolved before the operation registers as in flight, so nothing between
+    # `_inflight_start` and the `try` whose `finally` calls `_inflight_end` can raise.
+    role_params = _role_params_for(role, explicit)
     calls = 0
     latency_ms = 0
     tokens_in: int | None = None
@@ -4300,12 +4305,6 @@ def _chat_map_reduce(
     truncated_calls = 0  # llamadas que acabaron por `length`: un parcial cortado ya perdió material
     # Las llamadas reales de toda la operación, saltos incluidos (REQ-024).
     all_attempts: list[Attempt] = []
-    # Turno por operación (REQ-003): map, reagrupados y reduce bajo el mismo turno.
-    op = _OperationTurn(entry_id, model, tool, role_name=role, explicit=explicit)
-    # The role's parameters, resolved once for every chunk and step (REQ-009, REQ-012).
-    current = _CurrentModel(
-        model, role, explicit, entry_id, op, role_params=_role_params_for(role, explicit)
-    )
 
     raw_chars = 0  # what the model generated, before `_strip_think` and the post-processing
     # B2e: one entry per step (map, regroup, reduce) for the usage log, without the text; the text
@@ -4487,6 +4486,13 @@ def _chat_map_reduce(
                 return outputs
         return [out]
 
+    entry_id = _inflight_start(
+        tool=tool, model=model, source=source, chars_in=len(content), chunks=len(pieces)
+    )
+    # Turno por operación (REQ-003): map, reagrupados y reduce bajo el mismo turno.
+    op = _OperationTurn(entry_id, model, tool, role_name=role, explicit=explicit)
+    # The role's parameters, resolved once for every chunk and step (REQ-009, REQ-012).
+    current = _CurrentModel(model, role, explicit, entry_id, op, role_params=role_params)
     try:
         summaries: list[str] = []
         for index, piece in enumerate(pieces, start=1):
