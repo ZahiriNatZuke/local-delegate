@@ -6,6 +6,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- **Las delegaciones abortadas ya cuentan como errores** (#476). Una llamada que se cortaba por
+  plazo o que moría con una excepción no dejaba línea en `usage-YYYYMM.jsonl`, y el panel
+  enseñaba 0 % de errores con fallos reales. Ahora queda con `ok: false`, el motivo y lo medido
+  hasta ese momento (duración, esperas de turno y de plaza, llamadas reales). El daemon tiene
+  además su propio plazo por llamada, `LOCAL_DELEGATE_CALL_MAX_S` (1800 s): un cliente que se
+  rinde no siempre se lo dice, y la operación seguía trabajando trozo a trozo sin que nadie la
+  esperara.
+- **Cola saturada con aviso claro** (#476). Si una espera seguida por el turno o por una plaza
+  pasa `LOCAL_DELEGATE_QUEUE_MAX_WAIT_S` (900 s), la llamada falla en el acto con «cola
+  saturada…», cuántas hay por delante y qué hacer, en vez de bloquear al cliente hasta su plazo.
+  Una llamada sola, sin cola, no cambia.
+
 ## [0.44.2] - 2026-10-28
 
 Esta versión corrige dos casos en que la delegación ocultaba información: el mod de lectura ya no

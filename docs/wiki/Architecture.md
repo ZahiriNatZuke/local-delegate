@@ -163,6 +163,15 @@ operación ──▶ turno (¿choca con lo que está en uso?) ──▶ plaza (M
   llama-swap y carga) y compara el `tok_s` del modelo que respondió con su mediana de referencia
   (`pace_rel`, `slow`). Observar nunca rompe una tool: si falla el cálculo, el evento se escribe sin
   esos campos. Ver [Savings & metrics](Savings-and-metrics.md#qué-se-mide).
+- **Plazos y abortos (issue #476).** Una espera seguida por el turno o por una plaza que pasa
+  `LOCAL_DELEGATE_QUEUE_MAX_WAIT_S` (900 s) sale de la cola con `QueueSaturated`: un error claro
+  para quien llama y `error: "queue_saturated"` en el log. Además el middleware de cancelación
+  (`cancellation.middleware`) cancela la llamada al pasar `LOCAL_DELEGATE_CALL_MAX_S` (1800 s)
+  con `cancel_reason: "deadline"`, porque un cliente que se rinde no siempre avisa. Y si una
+  operación ya empezada muere con una excepción antes de escribir su evento, la anota
+  (`_note_failure`) y el middleware la escribe al final (`error: "exception"`). Toda llamada
+  que llegó a empezar deja **una** línea: la suya, la de cancelada o la de abortada, con las
+  esperas y las llamadas reales que midió el token de la llamada.
 
 ## Módulos
 
