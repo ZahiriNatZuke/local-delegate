@@ -768,6 +768,13 @@ El estado en curso vive en `LOG_DIR/inflight.json` con lock y limpieza de PID: e
 llamadas de todas las sesiones que comparten el mismo usuario, incluso durante una migración en la
 que todavía convivan clientes HTTP y procesos `stdio`.
 
+La limpieza descarta la entrada de un proceso muerto en la siguiente lectura de `/api/inflight`.
+En Windows, desde la 0.45.0 (issue #483), un PID cuenta como vivo solo si su código de salida es
+`STILL_ACTIVE`: antes bastaba con poder abrir el proceso, y eso funciona mientras alguien conserve
+un handle suyo, así que las entradas de un daemon o un proceso `stdio` muerto esperaban los 30 min
+de caducidad. Un PID que existe pero es de otro usuario (acceso denegado) cuenta como vivo; la
+caducidad de 30 min sigue de red de seguridad.
+
 ## APIs
 
 | Endpoint | Devuelve |

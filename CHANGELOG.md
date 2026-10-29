@@ -9,6 +9,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ### Corregido
 
 - El mod y el panel ya no confunden la delegación que procesa el backend con las que esperan (issue #477): cada entrada de `/api/inflight` lleva `state` (`running`, `retrying` o `queued`, y `queue_position` en una espera de turno), sacado de la plaza que tiene la llamada y de su espera reales, no del texto de la fase. La banda del mod nombra primero la que está en el backend y, si no hay ninguna, la más antigua en cola diciendo que espera (`en cola · 4 min 0 s`); «En curso» del panel separa «Procesando (n)» y «En cola (m)». Con un daemon anterior, sin `state`, los dos se comportan como antes.
+- En Windows, «En curso» y la banda del mod ya no arrastran durante 30 min las delegaciones de un daemon o proceso `stdio` que murió (issue #483): `_pid_alive` comprobaba solo que el proceso se pudiera abrir, y eso funciona mientras alguien conserve un handle suyo. Ahora pide el código de salida y solo `STILL_ACTIVE` cuenta como vivo; el handle se cierra siempre. Un PID que existe pero no se puede consultar (otro usuario: acceso denegado en Windows, `EPERM` en Linux y macOS) cuenta como vivo, en vez de purgarse.
 
 ## [0.44.2] - 2026-10-28
 
