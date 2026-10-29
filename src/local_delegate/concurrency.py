@@ -233,6 +233,7 @@ def note_inflight(requests: Sequence[dict[str, str | None]]) -> None:
         try:
             trace.note_inflight(requests)
         except Exception:
+            # The trace is diagnostics only: a failure here must never break the delegation.
             pass
 
 
