@@ -15,6 +15,7 @@ from __future__ import annotations
 import ast
 import base64
 import contextvars
+import itertools
 import json
 import math
 import os
@@ -561,22 +562,76 @@ def _inflight_in_backend(entry_id: int, held: bool) -> None:
     _inflight_mutate(_update)
 
 
-#: The values of `state` in `/api/inflight` (issue #477).
-INFLIGHT_STATES = ("running", "retrying", "queued")
+#: Concurrency PC+Mac, lot 1 (REQ-001): per inflight key, the sends that wait for llama-swap to
+#: switch models, as `{send number: {other model: state}}`. The file holds the same; this copy
+#: gives the progress heartbeat the union without reading the file. Under `_inflight_lock`.
+_backend_waits: dict[str, dict[int, dict[str, str]]] = {}
+_send_numbers = itertools.count(1)
+
+
+def _backend_wait_loaded(waits: Iterable[dict[str, str]]) -> list[str]:
+    """The models that block a wait (REQ-003): `ready` or `starting`, sorted, without repeats."""
+    names = {m for w in waits for m, s in w.items() if s in ("ready", "starting")}
+    return sorted(names)
+
+
+def _inflight_backend_wait(entry_id: int, send_no: int, models: dict[str, str] | None) -> None:
+    """Mark (or, with `None`, unmark) ONE send of a delegation as waiting inside llama-swap.
+
+    Concurrency PC+Mac, lot 1 (REQ-001/002). Written by that send's `concurrency.SendWatch`: it
+    touches only its own sub-key of `backend_wait`, so two sends of the same entry (pieces in
+    parallel) never clear each other. `models` are the OTHER models `/running` had. Best-effort.
+    """
+    key = f"{os.getpid()}:{entry_id}"
+    sub = str(int(send_no))
+    with _inflight_lock:
+        waits = _backend_waits.setdefault(key, {})
+        if models is None:
+            waits.pop(int(send_no), None)
+        else:
+            waits[int(send_no)] = dict(models)
+        if not waits:
+            _backend_waits.pop(key, None)
+        loaded = _backend_wait_loaded(waits.values()) if waits else None
+    _call_status(backend_wait=loaded)
+
+    def _update(data: dict) -> None:
+        entry = data.get(key)
+        if not isinstance(entry, dict):
+            return
+        current = entry.get("backend_wait")
+        current = dict(current) if isinstance(current, dict) else {}
+        if models is None:
+            current.pop(sub, None)
+        else:
+            current[sub] = dict(models)
+        if current:
+            entry["backend_wait"] = current
+        else:
+            entry.pop("backend_wait", None)
+
+    _inflight_mutate(_update)
+
+
+#: The values of `state` in `/api/inflight` (issue #477; `waiting_backend`, concurrency lot 1).
+INFLIGHT_STATES = ("running", "retrying", "queued", "waiting_backend")
 
 
 def _inflight_state(entry: dict) -> str:
-    """`running`, `retrying` or `queued` for one `inflight.json` entry (issue #477).
+    """`running`, `retrying`, `waiting_backend` or `queued` for one `inflight.json` entry.
 
-    From the real wait and slot, never from the phase's text: a call waiting for its turn or for
-    a place (`local_wait`) is `queued`; one that never got to the backend (no `in_backend` key
-    yet) too. Otherwise it is at the backend or between two of its pieces: `retrying` while a cut
-    piece is split again (`phase: "retry"`), `running` the rest.
+    From the real wait and slot, never from the phase's text (issue #477): a call waiting for its
+    turn or for a place (`local_wait`) is `queued`; one that never got to the backend (no
+    `in_backend` key yet) too. Otherwise it is at the backend or between two of its pieces:
+    `retrying` while a cut piece is split again (`phase: "retry"`); `waiting_backend` while one of
+    its sends waits for llama-swap to switch models (`backend_wait`, REQ-001); `running` the rest.
     """
     if entry.get("local_wait") or "in_backend" not in entry:
         return "queued"
     if entry.get("phase") == "retry":
         return "retrying"
+    if entry.get("backend_wait"):
+        return "waiting_backend"
     return "running"
 
 
@@ -621,6 +676,7 @@ def _inflight_end(entry_id: int) -> None:
         # would keep its entry safe from the orphan TTL for as long as the process runs.
         with _inflight_lock:
             _inflight_live.discard(key)
+            _backend_waits.pop(key, None)
 
 
 def inflight_snapshot() -> list[dict]:
@@ -674,7 +730,16 @@ def inflight_snapshot() -> list[dict]:
                 entry["turn_in_use"] = v.get("turn_in_use")
             if "turn_position" in v:
                 entry["turn_position"] = v.get("turn_position")
-            # Issue #477: running / retrying / queued, from the wait and the slot it holds.
+            # Concurrency PC+Mac, lot 1 (REQ-001): the union of the sends that wait inside
+            # llama-swap, as `{other model: state}`; only while one waits.
+            waits = v.get("backend_wait")
+            if isinstance(waits, dict) and waits:
+                union: dict[str, str] = {}
+                for photo in waits.values():
+                    if isinstance(photo, dict):
+                        union.update({str(m): str(s) for m, s in photo.items()})
+                entry["backend_wait"] = union
+            # Issue #477: running / retrying / waiting_backend / queued, from the wait and slot.
             entry["state"] = _inflight_state(v)
             if (
                 entry["state"] == "queued"
@@ -1049,6 +1114,7 @@ def _log_event(
     num_sections: int | None = None,
     focus: bool = False,
     connection_failure: str | None = None,
+    read_timeout_cause: str | None = None,
     turn_wait_ms: int | None = None,
     turn: str | None = None,
     turn_yields: int | None = None,
@@ -1235,6 +1301,9 @@ def _log_event(
         # `connect_error`, para no engordar cada línea; `error` sigue siendo `connect_error`.
         if connection_failure is not None:
             rec["connection_failure"] = connection_failure
+        # Concurrency PC+Mac, lot 1 (REQ-005): why a `read_timeout` happened, only when known.
+        if read_timeout_cause is not None:
+            rec["read_timeout_cause"] = read_timeout_cause
         # Resumen estructurado (SDD resumen-por-secciones): cuántas secciones del nivel
         # estructural tenía el documento, y si se pidió un enfoque. Nunca el texto del enfoque
         # ni los títulos: el log no guarda contenido.
@@ -1472,6 +1541,10 @@ class ChatResult:
     #: REQ-018: characters of reasoning of the response (`reasoning_content` plus what
     #: `_strip_think` removes from `content`), or `None` without a parsed response. Never the text.
     reasoning_chars: int | None = None
+    #: Concurrency PC+Mac, lot 1 (REQ-005): why a `read_timeout` happened, from llama-swap's
+    #: `/running`: `model_swap` (another model was loaded and it never switched) or `busy` (the
+    #: requested one was loaded). `None` otherwise or when unknown. Goes to the log as is.
+    read_timeout_cause: str | None = None
 
 
 @dataclass(frozen=True)
@@ -1615,6 +1688,16 @@ def _llamaswap_state(model: str) -> str | None:
     llama-swap caído—, y el clasificador lo lee como carga, que no enfría: fuera de llama-swap, D-2
     no se cumple (enmienda de spec aprobada el 2026-09-15).
     """
+    photo = _running_photo()
+    if photo is None:
+        return None
+    state = photo.get(model)
+    return state if isinstance(state, str) else None
+
+
+def _running_photo() -> dict[str, str | None] | None:
+    """`/running` of llama-swap as `{model: state}` (`None` state when it is not text), or `None`
+    when it does not answer in `_PROBE_QUERY_CAP_S` or is not llama-swap."""
     base = config.BASE_URL.removesuffix("/v1")
     try:
         with httpx2.Client(timeout=_PROBE_QUERY_CAP_S) as c:
@@ -1624,12 +1707,15 @@ def _llamaswap_state(model: str) -> str | None:
             data = r.json()
     except (httpx2.HTTPError, ValueError):
         return None
-    entries = data.get("running") if isinstance(data, dict) else None
+    if not isinstance(data, dict):
+        return None
+    entries = data.get("running")
+    photo: dict[str, str | None] = {}
     for entry in entries or []:
-        if isinstance(entry, dict) and entry.get("model") == model:
+        if isinstance(entry, dict) and isinstance(entry.get("model"), str):
             state = entry.get("state")
-            return state if isinstance(state, str) else None
-    return None
+            photo.setdefault(entry["model"], state if isinstance(state, str) else None)
+    return photo
 
 
 class _LoadProbe:
@@ -1646,11 +1732,15 @@ class _LoadProbe:
         model: str,
         *,
         delay_s: float,
-        query: Callable[[str], str | None] = _llamaswap_state,
+        query: Callable[[str], str | None] | None = None,
     ) -> None:
         self._model = model
+        #: `None`: the default query, which also keeps the whole `/running` photo (REQ-005 of the
+        #: concurrency change: the `read_timeout` text names what was loaded). A custom `query`
+        #: (tests) gives only the state.
         self._query = query
         self._state: str | None = None
+        self._photo: dict[str, str | None] | None = None
         self._fired = threading.Event()
         self._ready = threading.Event()
         self._timer = threading.Timer(delay_s, self._sample)
@@ -1665,11 +1755,23 @@ class _LoadProbe:
     def _sample(self) -> None:
         self._fired.set()
         try:
-            self._state = self._query(self._model)
+            if self._query is None:
+                photo = _running_photo()
+                self._photo = photo
+                state = photo.get(self._model) if photo is not None else None
+                self._state = state if isinstance(state, str) else None
+            else:
+                self._state = self._query(self._model)
         except Exception:  # la sonda nunca puede tumbar la llamada que acompaña
             self._state = None
         finally:
             self._ready.set()
+
+    def photo(self) -> dict[str, str | None] | None:
+        """The `/running` photo of the sample, once taken (call after `model_loaded`), or `None`."""
+        if not (self._fired.is_set() and self._ready.is_set()):
+            return None
+        return None if self._photo is None else dict(self._photo)
 
     def model_loaded(self, *, wait_s: float = _PROBE_QUERY_CAP_S) -> bool | None:
         """True si estaba `ready`, False si `starting`; None si no hubo muestra a tiempo."""
@@ -1684,6 +1786,77 @@ class _LoadProbe:
         if self._state == "starting":
             return False
         return None
+
+
+def _read_timeout_photo(probe: _LoadProbe) -> dict[str, Any] | None:
+    """`/running` for the `read_timeout` text (REQ-005): the probe's sample first (the one that
+    decided `error_class`, so text and class agree), then the cached `/running`, then the
+    operation's own sample from the log trace. `None` when none is known."""
+    with suppress(Exception):
+        photo = probe.photo()
+        if photo is not None:
+            return photo
+    with suppress(Exception):
+        loaded = concurrency.loaded_models()
+        if loaded is not None:
+            return dict(loaded)
+    with suppress(Exception):
+        trace = concurrency.current()
+        if trace is not None and trace.backend_models is not None:
+            return dict(trace.backend_models)
+    return None
+
+
+def _read_timeout_text(model: str, probe: _LoadProbe) -> tuple[str, str | None]:
+    """The message of a `read_timeout` and its `read_timeout_cause` (REQ-005).
+
+    `model_swap`: the requested model was not loaded and llama-swap had another one `ready` or
+    `starting`, named in the text with the machines that were using it when the daemon saw them
+    (`inflight_seen`). `busy`: the requested one was `ready`. Otherwise today's text and `None`.
+
+    Without topology (a remote backend: the Mac) an alias cannot be resolved, so a requested name
+    that is not in `/running` may well be the loaded model under its real id: then nothing is
+    blamed on a swap and today's text goes, as `waiting_backend` does (REQ-001).
+    """
+    seconds = _machine(config.HTTP_TIMEOUT)
+    photo = _read_timeout_photo(probe)
+    if photo is not None:
+        resolved = None
+        with suppress(Exception):
+            resolved = _resolved_model_name(model)
+        names = {model} | ({resolved} if resolved else set())
+        if any(photo.get(name) == "ready" for name in names):
+            return (
+                i18n.t("mcp.error.read_timeout_busy", model=model, seconds=seconds),
+                "busy",
+            )
+        if resolved is None and not any(name in photo for name in names):
+            # Undecidable: maybe an alias of what is loaded. The prudent text, no cause.
+            return i18n.t("mcp.error.read_timeout", model=model, seconds=seconds), None
+        loaded = sorted(
+            m for m, s in photo.items() if m not in names and s in ("ready", "starting")
+        )
+        if loaded:
+            hosts = ""
+            with suppress(Exception):
+                trace = concurrency.current()
+                seen = (trace.inflight_seen if trace is not None else None) or []
+                found = sorted(
+                    {str(r["host"]) for r in seen if r.get("model") in loaded and r.get("host")}
+                )
+                if found:
+                    hosts = i18n.t("mcp.error.read_timeout_from", host=", ".join(found))
+            return (
+                i18n.t(
+                    "mcp.error.read_timeout_swap",
+                    model=model,
+                    seconds=seconds,
+                    loaded=", ".join(loaded),
+                    hosts=hosts,
+                ),
+                "model_swap",
+            )
+    return i18n.t("mcp.error.read_timeout", model=model, seconds=seconds), None
 
 
 def _backend_on_loopback() -> bool:
@@ -1895,18 +2068,16 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                     error_class=error_class,
                 )
             if isinstance(e, httpx2.ReadTimeout):
-                # El backend SÍ aceptó la conexión: lo más probable es que llama-swap esté
-                # montando el modelo. Arrancar otro backend no arregla nada aquí.
+                # El backend SÍ aceptó la conexión. Arrancar otro backend no arregla nada aquí.
+                # Concurrency PC+Mac, lot 1 (REQ-005): the text names what llama-swap had
+                # loaded, from the same sample that decided `error_class` above.
+                text, cause = _read_timeout_text(model, probe)
                 return ChatResult(
-                    text=ERROR_PREFIX
-                    + i18n.t(
-                        "mcp.error.read_timeout",
-                        model=model,
-                        seconds=_machine(config.HTTP_TIMEOUT),
-                    ),
+                    text=ERROR_PREFIX + text,
                     ok=False,
                     error="read_timeout",
                     error_class=error_class,
+                    read_timeout_cause=cause,
                 )
             return ChatResult(
                 text=ERROR_PREFIX + i18n.t("mcp.error.endpoint", url=config.BASE_URL, error=e),
@@ -2645,6 +2816,10 @@ def _slot(entry_id: int | None) -> Generator[None, None, None]:
                     token.slot_wait_ms += int((time.monotonic() - t0) * 1000)
                 if entry_id is not None:
                     _inflight_local_wait(entry_id, None)
+    # Concurrency PC+Mac, lot 1: the sends made with this place, so `_send` knows its entry and
+    # the place can stop their `waiting_backend` watches when it is let go (REQ-002).
+    watches: list[concurrency.SendWatch] = []
+    slot_ctx = _SLOT_SENDS.set((entry_id, watches))
     try:
         if token is not None:
             token.check()
@@ -2653,10 +2828,59 @@ def _slot(entry_id: int | None) -> Generator[None, None, None]:
         with turn.slot_taken():
             yield
     finally:
+        with suppress(ValueError):  # another context (never expected): the value dies with it
+            _SLOT_SENDS.reset(slot_ctx)
+        for watch in watches.copy():  # an abandoned send may remove its own meanwhile
+            watch.stop()  # safety net: an abandoned send's watch writes nothing more
         if entry_id is not None:
             _inflight_in_backend(entry_id, False)
         slots.release()
         _note_queue_progress()  # a slot changed hands (issue #476)
+
+
+#: Concurrency PC+Mac, lot 1: the entry and the watches of the place `_slot` holds right now.
+_SLOT_SENDS: contextvars.ContextVar[tuple[int | None, list[concurrency.SendWatch]] | None] = (
+    contextvars.ContextVar("local_delegate_slot_sends", default=None)
+)
+
+
+def _resolved_model_name(model: str) -> str | None:
+    """The id llama-swap shows for `model`, or `None` when it cannot be known (REQ-001).
+
+    Unlike `_real_model_name`, it does not fall back to the name as sent: without topology (a
+    remote backend, the Mac) an alias cannot be told apart, and `waiting_backend` must not guess.
+    """
+    if not _backend_on_loopback():
+        return None
+    snapshot = topology.snapshot()
+    if isinstance(snapshot, topology.Snapshot):
+        return snapshot.resolve(model)
+    return None
+
+
+@contextmanager
+def _backend_wait_watch(model: str) -> Generator[None, None, None]:
+    """The `waiting_backend` watch of one send (REQ-001/002), only inside a delegation's place."""
+    held = _SLOT_SENDS.get()
+    entry_id = held[0] if held is not None else None
+    if held is None or entry_id is None:
+        yield
+        return
+    watches = held[1]
+    send_no = next(_send_numbers)
+
+    def on_wait(models: dict[str, str] | None) -> None:
+        _inflight_backend_wait(entry_id, send_no, models)
+
+    def register(watch: concurrency.SendWatch) -> None:
+        watches.append(watch)
+
+    with concurrency.send_watch(model, _resolved_model_name, on_wait, register=register) as watch:
+        try:
+            yield
+        finally:
+            with suppress(ValueError):
+                watches.remove(watch)
 
 
 def _send(model: str, body: dict) -> ChatResult:
@@ -2676,6 +2900,7 @@ def _send(model: str, body: dict) -> ChatResult:
             turn_state.in_flight(),
             _own_call(model),
             concurrency.backend_phase(model, _real_model_name),
+            _backend_wait_watch(model),  # after the log's sample: it may reuse its `/running`
         ):
             return _post_chat(model, body)
 
@@ -2689,6 +2914,7 @@ def _send(model: str, body: dict) -> ChatResult:
                 turn_state.in_flight(),
                 _own_call(model),
                 concurrency.backend_phase(model, _real_model_name),
+                _backend_wait_watch(model),  # after the log's sample: it may reuse its `/running`
             ):
                 return _post_chat(model, body)
         finally:
@@ -3060,6 +3286,7 @@ def _with_fallback(
             tokens_out=base.tokens_out,
             error_class=base.error_class,
             connection_failure=base.connection_failure,
+            read_timeout_cause=base.read_timeout_cause,
         ),
         schema,
         attempts,
@@ -3359,6 +3586,7 @@ class _CurrentModel:
             "error_class": _class_value(failed.error_class) if failed else None,
             # REQ-017: la causa de un `connect_error` también en las delegaciones troceadas.
             "connection_failure": failed.connection_failure if failed else None,
+            "read_timeout_cause": failed.read_timeout_cause if failed else None,
         }
         if self.hop is not None:
             fields["model_requested"] = self.requested
@@ -3538,6 +3766,7 @@ def _chat(
         num_sections=num_sections,
         focus=focus,
         connection_failure=None if result.ok else result.connection_failure,
+        read_timeout_cause=None if result.ok else result.read_timeout_cause,
         attempts=attempts,
         **op.log_fields(),
         **_backend_params_log_fields(role_params),

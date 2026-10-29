@@ -40,6 +40,7 @@
   "status.chip_ready": "READY",
   "status.chip_shared": "READY",
   "status.chip_busy": "DELEGATING",
+  "status.chip_waiting_backend": "WAITING FOR BACKEND",
   "status.chip_down": "DOWN",
   "status.chip_no_data": "NO DATA",
   "status.chip_daemon_down": "NO SERVICE",
@@ -65,5 +66,6 @@
   "status.reads_asks_title": "Reads: asks",
   "status.reads_auto_title": "Reads: auto-summary",
   "status.queued": "queued",
-  "status.retrying": "retrying"
+  "status.retrying": "retrying",
+  "status.waiting_backend": "waiting for backend"
 }

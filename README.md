@@ -393,7 +393,8 @@ El plugin trae además un **mod**, que corre dentro de Claude Code sin gastar tu
   sesión y el modo de lectura (opción `status_style`: `bar` o `line`, una raya sobre una línea);
   en Claude Desktop, una sola línea de texto en dos tonos, sin píldora ni enlace. Desde la 0.45.0,
   con varias delegaciones a la vez nombra primero la que procesa el backend y, si todas esperan, la
-  más antigua con su espera (`en cola · 4 min 0 s`). Se
+  más antigua con su espera (`en cola · 4 min 0 s`). Una delegación que espera a que llama-swap
+  cambie de modelo dice ` ◐ ESPERANDO BACKEND ` con el modelo que pidió, no el cargado. Se
   refresca sola cada segundo mientras hay una delegación en curso. La cuota de Claude no va
   aquí: es de la status line.
 - Desde la 0.41, el **mod de lectura** (encendido por defecto, opción `read_mod_enabled`) resume

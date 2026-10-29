@@ -94,7 +94,8 @@ class Token:
         self.deadline_s = 0.0
         #: Issue #479: where the call is now, for the progress heartbeat's message. Written from
         #: the tool's thread (`server._inflight_*`), read by `middleware` on the event loop:
-        #: `wait` ("turn" or "slot"), `position`, `in_use`, `chunk`, `chunks`, `phase`.
+        #: `wait` ("turn" or "slot"), `position`, `in_use`, `chunk`, `chunks`, `phase`, and
+        #: `backend_wait` (the models llama-swap has while a send waits to switch, lot 1).
         self.status: dict[str, Any] = {}
         self._event = threading.Event()
         self._lock = threading.Lock()
@@ -165,6 +166,14 @@ class Token:
             )
         elif wait == "slot":
             phase = i18n.t("mcp.progress.slot")
+        elif "backend_wait" in status:
+            # Concurrency PC+Mac, lot 1 (REQ-003): a send waits for llama-swap to switch models.
+            loaded = ", ".join(status.get("backend_wait") or ())
+            phase = (
+                i18n.t("mcp.progress.backend_wait", loaded=loaded)
+                if loaded
+                else i18n.t("mcp.progress.backend_wait_unknown")
+            )
         elif status.get("phase") in ("reduce", "retry"):
             phase = i18n.t(f"mcp.progress.{status['phase']}")
         elif status.get("chunks"):

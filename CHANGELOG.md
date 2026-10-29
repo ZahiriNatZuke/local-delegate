@@ -22,6 +22,22 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   daemon gana una API sin bloqueo (`enqueue`, `poll`, `expire`, `remote_flight`, `wait_change`)
   que usará el turno compartido con la Mac, y al soltar o abandonar el turno se reevalúa la cola en
   el acto (la misma concesión que antes, sin esperar al siguiente tic).
+- **Estado `waiting_backend` en `/api/inflight`, el panel y la banda del mod** (concurrencia
+  PC+Mac, lote 1): una llamada cuyo envío lleva más de 3 s esperando a que llama-swap cambie de
+  modelo ya no sale como «procesando». `/api/inflight` lleva `state: "waiting_backend"` y
+  `backend_wait` con los modelos que tenía cargados; «En curso» la agrupa en «Esperando al backend»
+  con el modelo cargado; la banda dice «esperando backend» con el modelo **pedido**, y el progreso
+  MCP dice «esperando a que el backend cambie de modelo (cargado: X)». Cada envío se vigila aparte,
+  también los trozos 2 y siguientes y los que van en paralelo. Un envío que contesta en menos de 3 s
+  no consulta nada a llama-swap.
+
+### Cambiado
+
+- **El `read_timeout` nombra al culpable** (concurrencia PC+Mac, lote 1): con la foto de `/running`
+  que ya toma la sonda de carga, el mensaje dice qué modelo tenía cargado llama-swap y, si se sabe,
+  desde qué máquina lo usaban («llama-swap tenía cargado qwen… y no llegó a cambiar de modelo»), o
+  que el modelo pedido estaba cargado pero ocupado. Sin foto, el texto de siempre. `error` y
+  `error_class` no cambian; el log gana `read_timeout_cause` (`model_swap` o `busy`).
 
 ## [0.45.1] - 2026-10-29
 

@@ -227,6 +227,166 @@ def _sample_in_background(
         pass
 
 
+# --- `waiting_backend`: one watch per send (concurrency PC+Mac, lot 1, REQ-001/002) ----------
+
+#: How often a send that waits for llama-swap to switch models samples `/running` again.
+BACKEND_WAIT_RESAMPLE_S = 10.0
+#: At most this many models per send in `backend_wait`: the inflight file keeps no long lists.
+BACKEND_WAIT_MAX_MODELS = 8
+
+
+def waiting_for(
+    models: dict[str, str] | None, model: str, resolved: str | None
+) -> dict[str, str] | None:
+    """The OTHER models of `/running` when the POST of `model` waits behind them, else `None`.
+
+    `resolved` is the id llama-swap shows for `model` (an alias resolved by the topology), or
+    `None` when it cannot be known (no topology: the Mac). The requested model counts as ready
+    under either name. When neither name is in `/running` and the alias cannot be resolved, it is
+    undecidable and nothing is marked: a false «waiting for the backend» is worse than none
+    (REQ-001). The answer leaves the requested model out, under both names, and keeps at most
+    `BACKEND_WAIT_MAX_MODELS`; it may be empty (nothing else loaded, the requested one starting).
+    """
+    if models is None:
+        return None
+    names = {model} | ({resolved} if resolved else set())
+    states = {models.get(name) for name in names} - {None}
+    if "ready" in states:
+        return None
+    if not states and resolved is None:
+        return None
+    others = sorted((m, s) for m, s in models.items() if m not in names)
+    return dict(others[:BACKEND_WAIT_MAX_MODELS])
+
+
+class SendWatch:
+    """The `waiting_backend` watch of ONE send. `stop()` is idempotent and safe from any thread.
+
+    The stop flag works as the send's generation, guarded by a lock of THIS watch only (a slow
+    `inflight.json` write of one send never holds up the others' `stop()`). `on_wait` runs outside
+    the lock: the thread checks the flag and notes `marked` under the lock, writes, then checks
+    the flag again and undoes its own mark if `stop()` came in between. `stop()` raises the flag
+    under the lock BEFORE it clears. Whatever order the writes land in, the last one of a stopped
+    watch is a clear, so nothing is left after the cleanup, even when a `/running` query outlives
+    the send (REQ-002, race (h) of the plan).
+    """
+
+    def __init__(self, on_wait: Callable[[dict[str, str] | None], None]) -> None:
+        self._on_wait = on_wait
+        self._stop = threading.Event()
+        self._lock = threading.Lock()
+        self.marked = False
+
+    @property
+    def stopped(self) -> bool:
+        return self._stop.is_set()
+
+    def _write(self, others: dict[str, str] | None) -> bool:
+        """Mark (`others`) or unmark (`None`) unless stopped. False once stopped."""
+        with self._lock:
+            if self._stop.is_set():
+                return False
+            if others is None:
+                was_marked, self.marked = self.marked, False
+            else:
+                self.marked = True
+        if others is None:
+            if was_marked:
+                self._on_wait(None)
+            return True
+        self._on_wait(others)
+        with self._lock:
+            stopped = self._stop.is_set()
+        if stopped:
+            self._on_wait(None)  # `stop()` came in while writing: undo, so a clear is last
+            return False
+        return True
+
+    def stop(self) -> None:
+        with self._lock:
+            if self._stop.is_set():
+                return
+            self._stop.set()
+            marked, self.marked = self.marked, False
+        if marked:
+            try:
+                self._on_wait(None)
+            except Exception:  # cleaning is observation too: it never breaks the send
+                pass
+
+    def run(
+        self,
+        model: str,
+        resolve: Callable[[str], str | None] | None,
+        delay: float,
+    ) -> None:
+        """The watch thread: first sample after `delay`, then every `BACKEND_WAIT_RESAMPLE_S`
+        until the requested model is ready or the send ends. Never raises."""
+        try:
+            if self._stop.wait(max(0.0, delay)):
+                return
+            resolved: str | None = None
+            if resolve is not None:
+                try:
+                    resolved = resolve(model)
+                except Exception:
+                    resolved = None
+            while not self._stop.is_set():
+                models = loaded_models()
+                others = waiting_for(models, model, resolved)
+                if others is not None:
+                    if not self._write(others):
+                        return
+                elif models is not None and _is_ready(models, model, resolved):
+                    self._write(None)
+                    return
+                if self._stop.wait(BACKEND_WAIT_RESAMPLE_S):
+                    return
+        except Exception:  # a watch thread must never raise
+            pass
+
+
+def _is_ready(models: dict[str, str], model: str, resolved: str | None) -> bool:
+    return "ready" in (models.get(model), models.get(resolved) if resolved else None)
+
+
+@contextmanager
+def send_watch(
+    model: str,
+    resolve: Callable[[str], str | None] | None,
+    on_wait: Callable[[dict[str, str] | None], None],
+    *,
+    register: Callable[[SendWatch], None] | None = None,
+) -> Generator[SendWatch, None, None]:
+    """Watches ONE send for `waiting_backend` (REQ-001/002), apart from the log's single sample.
+
+    After `BACKEND_SAMPLE_DELAY_S` with the POST still pending, a thread (with a copy of the
+    caller's context) samples `/running`; if the requested model is not ready it calls
+    `on_wait(others)` and samples again every `BACKEND_WAIT_RESAMPLE_S`, until the model is ready
+    (`on_wait(None)`) or the send ends. A send that answers sooner queries nothing (the affinity
+    rule). On exit the watch stops and clears what it marked. `register` hands the watch to
+    whoever must also be able to stop it (the slot, when it lets the place go).
+    """
+    watch = SendWatch(on_wait)
+    try:
+        if register is not None:
+            register(watch)
+        ctx = contextvars.copy_context()
+        thread = threading.Thread(
+            target=ctx.run,
+            args=(watch.run, model, resolve, BACKEND_SAMPLE_DELAY_S),
+            name="local-delegate-send-watch",
+            daemon=True,
+        )
+        thread.start()
+    except Exception:  # observation: the POST goes on without the watch
+        pass
+    try:
+        yield watch
+    finally:
+        watch.stop()
+
+
 def note_inflight(requests: Sequence[dict[str, str | None]]) -> None:
     trace = _CURRENT.get()
     if trace is not None:
