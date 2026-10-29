@@ -50,6 +50,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   huérfanas de verdad. Límite: cada proceso solo conoce sus propias llamadas vivas. Una llamada de
   más de 30 min de otro proceso (un servidor `stdio`, como el de Codex) se sigue quitando del panel
   del daemon por edad, aunque siga en marcha.
+- En Windows, «En curso» y la banda del mod ya no arrastran durante 30 min las delegaciones de un daemon o proceso `stdio` que murió (issue #483): `_pid_alive` comprobaba solo que el proceso se pudiera abrir, y eso funciona mientras alguien conserve un handle suyo. Ahora pide el código de salida y solo `STILL_ACTIVE` cuenta como vivo; el handle se cierra siempre. Un PID que existe pero no se puede consultar (otro usuario: acceso denegado en Windows, `EPERM` en Linux y macOS) cuenta como vivo, en vez de purgarse.
 
 ## [0.44.2] - 2026-10-28
 
