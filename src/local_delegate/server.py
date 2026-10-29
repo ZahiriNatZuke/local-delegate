@@ -35,6 +35,7 @@ from typing import Any
 import httpx2
 from filelock import FileLock, Timeout
 from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 
 from . import (
@@ -162,6 +163,45 @@ def _annotations(title: str, *, writes: bool = False) -> ToolAnnotations:
 _client: httpx2.Client | None = None
 _client_lock = threading.Lock()
 _chat_slots = threading.BoundedSemaphore(config.MAX_CONCURRENT_REQUESTS)
+
+
+# Issue #476: how many calls are waiting for a slot right now, for the saturated queue's message.
+class _WaiterCount:
+    """A thread-safe count of the calls waiting for a slot."""
+
+    def __init__(self) -> None:
+        self._n = 0
+        self._lock = threading.Lock()
+
+    def enter(self) -> None:
+        with self._lock:
+            self._n += 1
+
+    def leave(self) -> None:
+        with self._lock:
+            self._n -= 1
+
+    def others(self) -> int:
+        """How many wait besides the caller (who is counted)."""
+        with self._lock:
+            return max(0, self._n - 1)
+
+
+_slot_waiters = _WaiterCount()
+# Issue #476 (review): the queue's last sign of life — a backend call that ended, or a slot or a
+# turn that changed hands. The saturated-queue limit measures time WITHOUT any of this, not the
+# length of the wait: a slow queue that moves never fails the one waiting behind it.
+_queue_progress_at = time.monotonic()
+
+
+def _note_queue_progress() -> None:
+    global _queue_progress_at
+    _queue_progress_at = time.monotonic()
+
+
+def _queue_stalled_s(since: float) -> float:
+    """Seconds without queue progress, counted from `since` (the start of the wait) at the earliest."""
+    return time.monotonic() - max(since, _queue_progress_at)
 
 
 def _new_client() -> httpx2.Client:
@@ -332,6 +372,9 @@ def _inflight_start(
     if token is not None and token.entry is None:
         # Si la llamada se cancela, su evento de uso sale de aquí (`_log_cancelled`).
         token.entry = {"tool": tool, "model": model, "source": source, "chars_in": chars_in}
+        if chunks:
+            # Issue #476: an aborted chunked call is logged with the pieces it announced.
+            token.entry["pieces"] = int(chunks)
 
     def _add(data: dict) -> None:
         data[key] = entry
@@ -911,6 +954,8 @@ def _log_event(
     backend_params_rejected: bool = False,
     reasoning_skipped: str | None = None,
     cancel_reason: str | None = None,
+    slot_wait_ms: int | None = None,
+    exception_type: str | None = None,
 ) -> None:
     """Escribe una línea JSONL en el log activo (rotado por mes o fijo). Nunca rompe una tool.
 
@@ -1011,6 +1056,12 @@ def _log_event(
         # sesión u otra cancelación del SDK).
         if cancel_reason is not None:
             rec["cancel_reason"] = cancel_reason
+        # Issue #476: an aborted call — how long it waited for a slot (only if it waited) and,
+        # for an unexpected error, the exception's type (never its message: it may carry content).
+        if slot_wait_ms is not None and slot_wait_ms > 0:
+            rec["slot_wait_ms"] = int(slot_wait_ms)
+        if exception_type is not None:
+            rec["exception_type"] = exception_type
         # B2e: each step of a chunked operation (map, regroup, reduce) with what it generated and
         # why it stopped, never its text. Without it a summary that lost something could not tell
         # whether a chunk note had already dropped it or whether the reduce was cut.
@@ -1526,13 +1577,15 @@ def _backend_on_loopback() -> bool:
     return config._is_loopback_host(config._split_host_port(config.BASE_URL)[0])
 
 
-def _log_cancelled(token: cancellation.Token) -> None:
-    """El evento de uso de una llamada cancelada: `ok: false`, `error: "cancelled"` y el motivo.
+def _log_stopped(token: cancellation.Token, **fields: Any) -> None:
+    """The usage event of a call that stopped before writing its own: `ok: false` (issue #476).
 
-    La operación no llega a escribir el suyo (sale con `CallCancelled` antes), así que sin esto
-    la llamada no constaría, o constaría como éxito si el hilo seguía hasta el final.
+    It carries what the call measured until then: its duration, the turn and slot waits, and its
+    real backend calls (`chunks`, and `wait_ms`/`inference_ms` from their timings), so the panel
+    counts it in Errors and the log says where the time went.
     """
     entry = token.entry or {}
+    attempts = list(token.attempts)
     _log_event(
         tool=str(entry.get("tool") or token.tool or ""),
         model=str(entry.get("model") or ""),
@@ -1541,14 +1594,75 @@ def _log_cancelled(token: cancellation.Token) -> None:
         chars_out=0,
         latency_ms=int((time.monotonic() - token.started) * 1000),
         ok=False,
-        error="cancelled",
-        cancel_reason=token.reason or cancellation.REASON_ABORTED,
+        chunks=len(attempts),
+        pieces=entry.get("pieces"),
+        attempts=attempts,
+        turn_wait_ms=token.turn_wait_ms,
+        slot_wait_ms=token.slot_wait_ms,
+        **fields,
     )
 
 
+def _log_cancelled(token: cancellation.Token) -> None:
+    """El evento de uso de una llamada cancelada: `ok: false`, `error: "cancelled"` y el motivo.
+
+    La operación no llega a escribir el suyo (sale con `CallCancelled` antes), así que sin esto
+    la llamada no constaría, o constaría como éxito si el hilo seguía hasta el final. The daemon's
+    own deadline (issue #476) is one more reason: `cancel_reason: "deadline"`.
+    """
+    _log_stopped(
+        token, error="cancelled", cancel_reason=token.reason or cancellation.REASON_ABORTED
+    )
+
+
+def _log_aborted(token: cancellation.Token) -> None:
+    """Issue #476: the event of an operation that ended with an exception before writing its own.
+
+    `error: "queue_saturated"` for a wait past `QUEUE_MAX_WAIT_S`; any other exception is
+    `error: "exception"` with its type. Before, such a call left no line and the panel showed
+    0 % errors with real failures in the same hour.
+    """
+    failure = token.failure
+    if isinstance(failure, QueueSaturated):
+        _log_stopped(token, error="queue_saturated")
+    else:
+        _log_stopped(token, error="exception", exception_type=type(failure).__name__)
+
+
+class QueueSaturated(ToolError):
+    """Issue #476: one wait for the turn or for a slot went past `config.QUEUE_MAX_WAIT_S`.
+
+    A `ToolError`, so the caller gets the message (and the SDK logs one INFO line); the usage
+    event is written by `_log_aborted` with `error: "queue_saturated"`.
+    """
+
+
+def _note_failure(exc: BaseException) -> None:
+    """Issue #476: an operation that had started ends with `exc` before writing its event.
+
+    Kept in the call's token so `cancellation.middleware` logs it (`_log_aborted`). A
+    cancellation is not kept here: `_log_cancelled` already writes it. The first one wins.
+    """
+    token = cancellation.current()
+    if token is None or token.failure is not None:
+        return
+    if isinstance(exc, cancellation.CallCancelled):
+        return
+    token.failure = exc
+
+
+def _queue_limit_s() -> float:
+    return max(0.0, float(config.QUEUE_MAX_WAIT_S))
+
+
 # El último de la cadena, pegado al handler: da a cada `tools/call` su token y lo cancela si el
-# cliente deja de esperarla (aviso, sesión cerrada, conexión cortada).
-mcp.middleware.append(cancellation.middleware(_log_cancelled))
+# cliente deja de esperarla (aviso, sesión cerrada, conexión cortada), o al agotar el plazo propio
+# del daemon (`LOCAL_DELEGATE_CALL_MAX_S`, issue #476).
+mcp.middleware.append(
+    cancellation.middleware(
+        _log_cancelled, on_failed=_log_aborted, deadline_s=lambda: config.CALL_MAX_S
+    )
+)
 
 
 def _post_chat(model: str, payload: dict) -> ChatResult:
@@ -2076,24 +2190,53 @@ class _OperationTurn:
 
         Si la llamada se cancela mientras espera, sale de la cola en el acto (`CallCancelled`).
         """
-        on_wait, waiting = self._on_wait_factory()
+        on_wait_marks, waiting = self._on_wait_factory()
         token = cancellation.current()
-        stop = token.is_cancelled if token is not None else None
         remove = token.on_cancel(turn_state.wake) if token is not None else (lambda: None)
         t0 = time.monotonic()
+        # Issue #476: the queue is saturated when this ONE wait goes past `QUEUE_MAX_WAIT_S`.
+        limit = _queue_limit_s()
+        seen: dict[str, Any] = {"position": None, "in_use": (), "saturated": False}
+
+        def on_wait(position: int, in_use: tuple[str, ...]) -> None:
+            seen["position"], seen["in_use"] = position, in_use
+            on_wait_marks(position, in_use)
+
+        def stop() -> bool:
+            if token is not None and token.is_cancelled():
+                return True
+            if limit > 0 and _queue_stalled_s(t0) > limit:
+                seen["saturated"] = True
+                return True
+            return False
+
         try:
             try:
                 grant = wait(on_wait, stop)
             except turn.AbandonedWait:
                 cancellation.checkpoint()
+                if seen["saturated"]:
+                    raise QueueSaturated(
+                        i18n.t(
+                            "mcp.error.queue_saturated_turn",
+                            stalled=round(_queue_stalled_s(t0)),
+                            waited=round(time.monotonic() - t0),
+                            position=seen["position"] or 1,
+                            models=", ".join(seen["in_use"]) or "-",
+                        )
+                    ) from None
                 raise
         finally:
             remove()
             if waiting[0]:
                 # Al conceder (o al salir por error), las tres claves fuera (REQ-008).
-                self.wait_ms += int((time.monotonic() - t0) * 1000)
+                waited_ms = int((time.monotonic() - t0) * 1000)
+                self.wait_ms += waited_ms
+                if token is not None:
+                    token.turn_wait_ms += waited_ms
                 _inflight_local_wait(self.entry_id, None)
                 _inflight_turn(self.entry_id, None, None)
+        _note_queue_progress()  # the turn changed hands (issue #476)
         if grant.forced:
             self.forced = True
         return grant
@@ -2253,6 +2396,7 @@ class _OperationTurn:
         if self._turn is not None:
             self._turn.release_slot(self.op_id)
             self._turn = None
+            _note_queue_progress()  # the turn changed hands (issue #476)
 
     def log_fields(self) -> dict:
         fields: dict[str, Any] = {
@@ -2288,13 +2432,36 @@ def _slot(entry_id: int | None) -> Generator[None, None, None]:
     if not slots.acquire(blocking=False):
         if entry_id is not None:
             _inflight_local_wait(entry_id, "slot")
-        if token is None:
-            slots.acquire()
-        else:
-            while not slots.acquire(timeout=cancellation.POLL_S):
-                token.check()
-        if entry_id is not None:
-            _inflight_local_wait(entry_id, None)
+        limit = _queue_limit_s()
+        t0 = time.monotonic()
+        _slot_waiters.enter()
+        try:
+            if token is None and limit <= 0:
+                slots.acquire()
+            else:
+                while not slots.acquire(timeout=cancellation.POLL_S):
+                    if token is not None:
+                        token.check()
+                    stalled = _queue_stalled_s(t0)
+                    if limit > 0 and stalled > limit:
+                        # Issue #476: the queue does not move; say so now, not at the deadline.
+                        others = _slot_waiters.others()
+                        raise QueueSaturated(
+                            i18n.t(
+                                "mcp.error.queue_saturated_slot",
+                                stalled=round(stalled),
+                                waited=round(time.monotonic() - t0),
+                                busy=getattr(slots, "_initial_value", None)
+                                or config.MAX_CONCURRENT_REQUESTS,
+                                waiting=others,
+                            )
+                        )
+        finally:
+            _slot_waiters.leave()
+            if token is not None:
+                token.slot_wait_ms += int((time.monotonic() - t0) * 1000)
+            if entry_id is not None:
+                _inflight_local_wait(entry_id, None)
     try:
         if token is not None:
             token.check()
@@ -2306,6 +2473,7 @@ def _slot(entry_id: int | None) -> Generator[None, None, None]:
         if entry_id is not None:
             _inflight_in_backend(entry_id, False)
         slots.release()
+        _note_queue_progress()  # a slot changed hands (issue #476)
 
 
 def _send(model: str, body: dict) -> ChatResult:
@@ -2405,17 +2573,21 @@ def _attempt(
 ) -> tuple[ChatResult, str | None]:
     """UNA llamada y su reintento sin schema, DENTRO de la plaza; anota el intento y el estado."""
     result, schema, ms = _call_model(model, payload, json_schema_fallback, role_params)
-    attempts.append(
-        Attempt(
-            model,
-            result.ok,
-            result.error,
-            result.error_class,
-            ms,
-            result.timings,
-            result.reasoning_chars,
-        )
+    _note_queue_progress()  # a backend call ended: the queue moves (issue #476)
+    attempt = Attempt(
+        model,
+        result.ok,
+        result.error,
+        result.error_class,
+        ms,
+        result.timings,
+        result.reasoning_chars,
     )
+    attempts.append(attempt)
+    token = cancellation.current()
+    if token is not None:
+        # Issue #476: if the call is aborted later, its event still has its real backend calls.
+        token.attempts.append(attempt)
     if result.ok:
         state.record_success(model)
     elif result.error_class is not None:
@@ -3111,6 +3283,9 @@ def _chat(
             op=op,
             role_params=role_params,
         )
+    except BaseException as exc:
+        _note_failure(exc)  # issue #476: logged by the middleware, never silently lost
+        raise
     finally:
         op.release_slot()
         _inflight_end(entry_id)
@@ -3767,6 +3942,9 @@ def _chat_chunked(
             if output is None:
                 break
             outputs.append(_reattach_separator(piece, output))
+    except BaseException as exc:
+        _note_failure(exc)  # issue #476: logged by the middleware, never silently lost
+        raise
     finally:
         op.release_slot()
         _inflight_end(entry_id)
@@ -4265,6 +4443,9 @@ def _chat_map_reduce(
                     summaries = grouped
                 else:
                     text = "\n\n".join(summaries)
+    except BaseException as exc:
+        _note_failure(exc)  # issue #476: logged by the middleware, never silently lost
+        raise
     finally:
         op.release_slot()
         _inflight_end(entry_id)
