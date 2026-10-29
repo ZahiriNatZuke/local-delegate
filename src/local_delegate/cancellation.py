@@ -92,6 +92,10 @@ class Token:
         self.failure: BaseException | None = None
         #: The daemon's budget for this call in seconds (`0`: none), for the deadline's message.
         self.deadline_s = 0.0
+        #: Issue #479: where the call is now, for the progress heartbeat's message. Written from
+        #: the tool's thread (`server._inflight_*`), read by `middleware` on the event loop:
+        #: `wait` ("turn" or "slot"), `position`, `in_use`, `chunk`, `chunks`, `phase`.
+        self.status: dict[str, Any] = {}
         self._event = threading.Event()
         self._lock = threading.Lock()
         self._callbacks: list[Callable[[], None]] = []
@@ -146,6 +150,31 @@ class Token:
         from . import i18n
 
         return i18n.t("mcp.error.call_deadline", seconds=round(self.deadline_s))
+
+    def progress_message(self) -> str:
+        """The heartbeat's text (issue #479): the phase when known, and the time so far."""
+        from . import i18n
+
+        status = dict(self.status)  # a copy: the tool's thread may write meanwhile
+        wait = status.get("wait")
+        if wait == "turn":
+            phase = i18n.t(
+                "mcp.progress.turn",
+                position=status.get("position") or 1,
+                models=", ".join(status.get("in_use") or ()) or "-",
+            )
+        elif wait == "slot":
+            phase = i18n.t("mcp.progress.slot")
+        elif status.get("phase") in ("reduce", "retry"):
+            phase = i18n.t(f"mcp.progress.{status['phase']}")
+        elif status.get("chunks"):
+            phase = i18n.t(
+                "mcp.progress.chunk", chunk=status.get("chunk") or 1, chunks=status["chunks"]
+            )
+        else:
+            phase = i18n.t("mcp.progress.running")
+        elapsed = round(time.monotonic() - self.started)
+        return i18n.t("mcp.progress.message", phase=phase, elapsed=elapsed)
 
 
 _CURRENT: contextvars.ContextVar[Token | None] = contextvars.ContextVar(
@@ -236,10 +265,30 @@ def _disconnect_event(ctx: Any) -> anyio.Event | None:
     return None
 
 
+async def _report_progress(ctx: Any, progress: float, message: str) -> None:
+    """One `notifications/progress` for this request (issue #479); a no-op without a token.
+
+    The SDK keeps the request's `progressToken` in the session's per-request channel and drops
+    the notification when the caller did not ask for progress. It never raises here: a heartbeat
+    that fails must not stop the call.
+    """
+    session = getattr(ctx, "session", None)
+    report = getattr(session, "report_progress", None)
+    if report is None:
+        return
+    try:
+        await report(progress, None, message)
+    except Exception:
+        # A notification that cannot be sent (a closed stream, a transport error) is dropped:
+        # the next beat tries again, and the call itself goes on untouched.
+        return
+
+
 def middleware(
     on_cancelled: Callable[[Token], None],
     on_failed: Callable[[Token], None] | None = None,
     deadline_s: Callable[[], float] | None = None,
+    progress_interval_s: Callable[[], float] | None = None,
 ) -> Callable[..., Any]:
     """El middleware del SDK que da a cada `tools/call` su token y lo cancela cuando toca.
 
@@ -250,6 +299,11 @@ def middleware(
     an exception before writing its event (`token.failure`): a saturated queue or an unexpected
     error. And `deadline_s()`, read per call, is the daemon's own budget: past it the call is
     cancelled with `REASON_DEADLINE`, because a client that gives up does not always say so.
+
+    Issue #479: every `progress_interval_s()` seconds (`0`: never) a live call sends
+    `notifications/progress` with its phase (`Token.progress_message`). The tool runs in a thread,
+    so the heartbeat is a task here, on the event loop, for as long as the call lives. It is what
+    keeps a queued or long call from being cut by the client's idle timeout (Claude Code: 300 s).
     """
 
     async def cancel_abandoned_calls(ctx: Any, call_next: Any) -> Any:
@@ -283,12 +337,36 @@ def middleware(
             if not finished:
                 token.cancel(REASON_DEADLINE)
 
+        interval = 0.0
+        if progress_interval_s is not None:
+            try:
+                interval = max(0.0, float(progress_interval_s()))
+            except Exception:
+                interval = 0.0
+
+        async def beat() -> None:
+            # It never stops the call: an exception here would go up the task group and cancel
+            # `call_next`, and the tool's thread would go on working for nobody. A heartbeat that
+            # cannot be built or sent just stops.
+            sent = 0
+            try:
+                while True:
+                    await anyio.sleep(interval)
+                    if finished or token.cancelled:
+                        return
+                    sent += 1
+                    await _report_progress(ctx, sent, token.progress_message())
+            except Exception:
+                return
+
         result: Any = None
         try:
             async with anyio.create_task_group() as group:
                 group.start_soon(watch)
                 if token.deadline_s > 0:
                     group.start_soon(expire)
+                if interval > 0:
+                    group.start_soon(beat)
                 try:
                     result = await call_next(ctx)
                 finally:

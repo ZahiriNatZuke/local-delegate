@@ -270,6 +270,23 @@ def _cut_client(client: httpx2.Client) -> None:
 _inflight_lock = threading.Lock()
 _inflight_next_id = 0
 _INFLIGHT_STALE_S = 1800  # red de seguridad: entrada huérfana (proceso muerto a media escritura)
+#: Issue #479: the keys of THIS process's delegations that are still running. The TTL above is
+#: for orphans; a live one of this process is never dropped, however old: before, a call that
+#: went past 1800 s vanished from `/api/inflight` while it still held its place in the turn's
+#: queue, and the ones behind it showed a `turn_position` with nobody visible ahead.
+_inflight_live: set[str] = set()
+
+
+def _call_status(**changes: Any) -> None:
+    """Issue #479: the call's phase for the progress heartbeat (`Token.status`). Best-effort."""
+    token = cancellation.current()
+    if token is None:
+        return
+    for name, value in changes.items():
+        if value is None:
+            token.status.pop(name, None)
+        else:
+            token.status[name] = value
 
 
 def _inflight_file() -> Path:
@@ -444,6 +461,9 @@ def _inflight_start(
     def _add(data: dict) -> None:
         data[key] = entry
 
+    with _inflight_lock:
+        _inflight_live.add(key)
+    _call_status(chunks=int(chunks) if chunks else None, chunk=1 if chunks else None)
     _inflight_mutate(_add)
     return entry_id
 
@@ -464,6 +484,7 @@ def _inflight_progress(entry_id: int, chunk: int) -> None:
     A new piece is back in the map phase: it drops any `phase` left by a retry (issue #454).
     """
     key = f"{os.getpid()}:{entry_id}"
+    _call_status(chunk=int(chunk), phase=None)
 
     def _update(data: dict) -> None:
         entry = data.get(key)
@@ -486,6 +507,7 @@ def _inflight_phase(entry_id: int, phase: str) -> None:
     if phase not in _INFLIGHT_PHASES:
         return
     key = f"{os.getpid()}:{entry_id}"
+    _call_status(phase=None if phase == "map" else phase)
 
     def _update(data: dict) -> None:
         entry = data.get(key)
@@ -508,6 +530,7 @@ def _inflight_local_wait(entry_id: int, reason: str | None) -> None:
     esto sin tocar el panel: un motivo que el panel no conoce se pinta tal cual.
     """
     key = f"{os.getpid()}:{entry_id}"
+    _call_status(wait=reason)
 
     def _update(data: dict) -> None:
         entry = data.get(key)
@@ -565,6 +588,11 @@ def _inflight_turn(entry_id: int, in_use: Iterable[str] | None, position: int | 
     `_inflight_local_wait`, el ayudante de siempre.
     """
     key = f"{os.getpid()}:{entry_id}"
+    if in_use is None:
+        _call_status(position=None, in_use=None)
+    else:
+        in_use = tuple(in_use)  # read twice: here and in `_update`
+        _call_status(position=int(position or 0), in_use=in_use)
 
     def _update(data: dict) -> None:
         entry = data.get(key)
@@ -586,7 +614,13 @@ def _inflight_end(entry_id: int) -> None:
     def _remove(data: dict) -> None:
         data.pop(key, None)
 
-    _inflight_mutate(_remove)
+    try:
+        _inflight_mutate(_remove)
+    finally:
+        # Issue #479: whatever the file write does, the call is no longer live: a key left here
+        # would keep its entry safe from the orphan TTL for as long as the process runs.
+        with _inflight_lock:
+            _inflight_live.discard(key)
 
 
 def inflight_snapshot() -> list[dict]:
@@ -598,6 +632,8 @@ def inflight_snapshot() -> list[dict]:
     """
     now = time.time()
     result: list[dict] = []
+    with _inflight_lock:
+        live = frozenset(_inflight_live)
 
     def _collect_and_prune(data: dict) -> None:
         result.clear()  # el fallback sin lock puede reejecutar esta función
@@ -608,7 +644,10 @@ def inflight_snapshot() -> list[dict]:
                 continue
             age = now - v.get("started_at", 0)
             pid = v.get("pid")
-            if age > _INFLIGHT_STALE_S or (pid is not None and not _pid_alive(pid)):
+            # Issue #479: a call of this process that is still running stays, however old.
+            if key not in live and (
+                age > _INFLIGHT_STALE_S or (pid is not None and not _pid_alive(pid))
+            ):
                 stale.append(key)
                 continue
             entry = {
@@ -1741,7 +1780,11 @@ def _queue_limit_s() -> float:
 # del daemon (`LOCAL_DELEGATE_CALL_MAX_S`, issue #476).
 mcp.middleware.append(
     cancellation.middleware(
-        _log_cancelled, on_failed=_log_aborted, deadline_s=lambda: config.CALL_MAX_S
+        _log_cancelled,
+        on_failed=_log_aborted,
+        deadline_s=lambda: config.CALL_MAX_S,
+        # Issue #479: the heartbeat that keeps the client from cutting a queued or long call.
+        progress_interval_s=lambda: config.PROGRESS_INTERVAL_S,
     )
 )
 
@@ -3993,9 +4036,9 @@ def _chat_chunked(
         return down
     chunk_chars = chunk_chars or config.CHUNK_CHARS
     chunks = _chunk_text(content, chunk_chars)
-    entry_id = _inflight_start(
-        tool=tool, model=model, source=source, chars_in=len(content), chunks=len(chunks)
-    )
+    # Issue #479: resolved before the operation registers as in flight, so nothing between
+    # `_inflight_start` and the `try` whose `finally` calls `_inflight_end` can raise.
+    role_params = _role_params_for(role, explicit)
     outputs: list[str] = []
     calls = 0
     latency_ms = 0
@@ -4005,12 +4048,6 @@ def _chat_chunked(
     truncated_out = False
     # Las llamadas reales de toda la operación, saltos incluidos (REQ-024).
     all_attempts: list[Attempt] = []
-    # Turno por operación (REQ-003): todos los trozos bajo el mismo turno.
-    op = _OperationTurn(entry_id, model, tool, role_name=role, explicit=explicit)
-    # The role's parameters, resolved once for every chunk and step (REQ-009, REQ-012).
-    current = _CurrentModel(
-        model, role, explicit, entry_id, op, role_params=_role_params_for(role, explicit)
-    )
 
     def _accumulate(result: ChatResult, ms: int, attempts: list[Attempt]) -> None:
         nonlocal calls, latency_ms, tokens_in, tokens_out
@@ -4050,6 +4087,13 @@ def _chat_chunked(
             truncated_out = True
         return _strip_think(result.text)
 
+    entry_id = _inflight_start(
+        tool=tool, model=model, source=source, chars_in=len(content), chunks=len(chunks)
+    )
+    # Turno por operación (REQ-003): todos los trozos bajo el mismo turno.
+    op = _OperationTurn(entry_id, model, tool, role_name=role, explicit=explicit)
+    # The role's parameters, resolved once for every chunk and step (REQ-009, REQ-012).
+    current = _CurrentModel(model, role, explicit, entry_id, op, role_params=role_params)
     try:
         for index, piece in enumerate(chunks, start=1):
             _inflight_progress(entry_id, index)
@@ -4308,9 +4352,9 @@ def _chat_map_reduce(
     budget = _map_budget(max_chars)
     if pieces is None:
         pieces = _chunk_text(content, budget)
-    entry_id = _inflight_start(
-        tool=tool, model=model, source=source, chars_in=len(content), chunks=len(pieces)
-    )
+    # Issue #479: resolved before the operation registers as in flight, so nothing between
+    # `_inflight_start` and the `try` whose `finally` calls `_inflight_end` can raise.
+    role_params = _role_params_for(role, explicit)
     calls = 0
     latency_ms = 0
     tokens_in: int | None = None
@@ -4319,12 +4363,6 @@ def _chat_map_reduce(
     truncated_calls = 0  # llamadas que acabaron por `length`: un parcial cortado ya perdió material
     # Las llamadas reales de toda la operación, saltos incluidos (REQ-024).
     all_attempts: list[Attempt] = []
-    # Turno por operación (REQ-003): map, reagrupados y reduce bajo el mismo turno.
-    op = _OperationTurn(entry_id, model, tool, role_name=role, explicit=explicit)
-    # The role's parameters, resolved once for every chunk and step (REQ-009, REQ-012).
-    current = _CurrentModel(
-        model, role, explicit, entry_id, op, role_params=_role_params_for(role, explicit)
-    )
 
     raw_chars = 0  # what the model generated, before `_strip_think` and the post-processing
     # B2e: one entry per step (map, regroup, reduce) for the usage log, without the text; the text
@@ -4506,6 +4544,13 @@ def _chat_map_reduce(
                 return outputs
         return [out]
 
+    entry_id = _inflight_start(
+        tool=tool, model=model, source=source, chars_in=len(content), chunks=len(pieces)
+    )
+    # Turno por operación (REQ-003): map, reagrupados y reduce bajo el mismo turno.
+    op = _OperationTurn(entry_id, model, tool, role_name=role, explicit=explicit)
+    # The role's parameters, resolved once for every chunk and step (REQ-009, REQ-012).
+    current = _CurrentModel(model, role, explicit, entry_id, op, role_params=role_params)
     try:
         summaries: list[str] = []
         for index, piece in enumerate(pieces, start=1):
