@@ -75,7 +75,7 @@ class _HeldChat:
 
 def _send_in_slot(entry_id: int, token: cancellation.Token | None = None) -> threading.Thread:
     """One send of `entry_id`, with its place, in its own thread (as a tool's thread would)."""
-    errors: list[BaseException] = []
+    errors: list[Exception] = []
 
     def run() -> None:
         if token is not None:
@@ -83,7 +83,7 @@ def _send_in_slot(entry_id: int, token: cancellation.Token | None = None) -> thr
         try:
             with server._slot(entry_id):
                 server._send(ASKED, BODY)
-        except BaseException as e:  # surfaced by the test through `errors`
+        except Exception as e:  # surfaced by the test through `errors` (CallCancelled too)
             errors.append(e)
 
     thread = threading.Thread(target=run, daemon=True)
