@@ -189,7 +189,10 @@ fase («esperando turno, puesto N», «procesando el trozo k/N»), así que Clau
 (`LOCAL_DELEGATE_CALL_MAX_S`, 1800 s) y, si la cola lleva 900 s sin avanzar, falla en el acto con
 «cola saturada» en vez de colgar al cliente. Las delegaciones abortadas quedan en el log como
 errores, «En curso» separa «Procesando (n)» de «En cola (m)», y cada entrada del log dice desde qué
-máquina vino (`host`) y cuánto esperó en cada fase (`concurrency`).
+máquina vino (`host`) y cuánto esperó en cada fase (`concurrency`). Desde la 0.46.0 una
+delegación troceada larga cede el turno entre trozos a la que choca con ella
+(`LOCAL_DELEGATE_TURN_YIELD_S`, 120 s), «En curso» agrupa en «Esperando al backend» la llamada que
+espera a que llama-swap cambie de modelo, y un `read_timeout` nombra el modelo que lo bloqueaba.
 
 **Resúmenes de documentos enormes.** `local_summarize` y `local_lint_summary` hacen **map-reduce**
 cuando la entrada no cabe en el modelo: resumen cada parte y luego resumen los resúmenes, por
