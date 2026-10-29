@@ -137,6 +137,76 @@ con saltos pudo contaminarla un swap.
   (versión del paquete) — todos opcionales; un dashboard viejo o un log legado sin estos
   campos se sigue leyendo sin romperse.
 
+### Concurrencia: máquina de origen y fases (desde la 0.45)
+
+Para saber quién esperó a quién cuando delegan a la vez la PC y la Mac (cada una con su propio
+proceso y su propio log), cada entrada lleva:
+
+- `host`: la máquina que escribió la entrada. Por defecto, el nombre corto del equipo (hasta el
+  primer punto); `LOCAL_DELEGATE_MACHINE_NAME` lo fija a mano ([Configuration](Configuration.md)).
+  Va en **todas** las entradas, también en las que no llegan al backend. Si la llamada llegó al
+  `/mcp` del daemon **desde otra máquina** (por ejemplo, la Mac por la tailnet), `host` es esa
+  máquina y no la del daemon, y `host_via` dice de dónde salió: `header` (el cliente mandó
+  `X-Local-Delegate-Host`), `forwarded` (un proxy local como `tailscale serve` pasó
+  `X-Forwarded-For`) o `ip` (la dirección de quien conectó). Sin `host_via`, la llamada es de la
+  propia máquina. Las entradas de `/api/inflight` de una llamada llegada desde otra máquina llevan los
+  mismos `host` y `host_via`; una entrada sin `host` es de la propia máquina del daemon.
+- `concurrency` (solo en las operaciones que pasaron por el backend), un objeto con:
+  - `requested_model`: el modelo que pidió la tool (el del rol o el explícito). `model` sigue siendo
+    el que respondió.
+  - `phases`: por cada fase que hubo, `{start, end, ms, n}`. `start` es la hora UTC (ISO, con
+    milisegundos) del primer paso por la fase, `end` la del último, `ms` la suma de duraciones y `n`
+    cuántas veces. Las fases:
+    - `turn`: la espera del **turno** del daemon. No aparece si la operación no pidió turno (backend
+      remoto, como la Mac, o sin topología).
+    - `slot`: la espera de una **plaza** de `LOCAL_DELEGATE_MAX_CONCURRENT_REQUESTS`.
+    - `backend`: el POST al backend, de principio a fin. **Incluye la cola de llama-swap y la carga
+      del modelo**: lo que el backend tardó en empezar no se distingue aquí de la inferencia; para
+      eso están `inference_ms` y `wait_ms`.
+  - `backend_models` y `backend_models_at_ms`: lo que `/running` de llama-swap tenía cargado
+    (`{modelo: estado}`) **mientras el POST esperaba**: solo se consulta si el envío sigue sin
+    respuesta 3 s después de salir (una vez por operación, desde un hilo aparte, con tope de 0,5 s y
+    reutilizada 2 s). Una llamada que responde antes no consulta nada: no cargó modelo (las cargas
+    medidas tardan 6-14 s) ni esperó a otro, y el daemon no pregunta a llama-swap sin necesidad. Si
+    `/running` no responde (otro backend, caído, sin permiso) el campo no aparece.
+  - `model_swap`: `true` si en ese momento el modelo del POST no estaba `ready` (llama-swap lo estaba
+    cargando, o esperaba a descargar otro para cargarlo). Solo aparece junto a `backend_models`.
+  - `inflight_seen`: solo en la PC, cuando el daemon ya miraba la foto `inflight` de llama-swap (la
+    afinidad): cada petición en vuelo como `{model, host}`. `host` sale de la cabecera
+    `X-Local-Delegate-Host`; `null` si la petición no la traía (otro cliente, o un MCP anterior a la
+    0.45). Incluye las propias de este daemon (con su mismo `host`). Máximo 20.
+
+Cada petición de este paquete al backend (`/chat/completions`, `/running`, `/models`…) lleva la
+cabecera `X-Local-Delegate-Host` con el mismo nombre. llama-swap la enseña en las cabeceras de cada
+petición de su foto `inflight`; de ellas el daemon **solo** lee esa, nunca la credencial.
+
+```json
+{"ts":"2026-10-29T18:21:03+00:00","tool":"local_summarize","model":"gemma4-26b-a4b",
+ "host":"pc","latency_ms":275900,"ok":false,
+ "concurrency":{"requested_model":"gemma4-26b-a4b",
+  "phases":{"turn":{"start":"2026-10-29T18:16:27.101+00:00","end":"2026-10-29T18:16:27.102+00:00","ms":1,"n":1},
+            "slot":{"start":"2026-10-29T18:16:27.102+00:00","end":"2026-10-29T18:16:27.102+00:00","ms":0,"n":1},
+            "backend":{"start":"2026-10-29T18:16:27.160+00:00","end":"2026-10-29T18:21:03.000+00:00","ms":275840,"n":1}},
+  "backend_models":{"qwen36-35b-a3b":"ready"},"backend_models_at_ms":3000,"model_swap":true}}
+```
+
+**¿Por dónde entra la Mac?** Hay dos caminos y conviven: si su cliente MCP apunta al `/mcp` del
+daemon de la PC (entrada `http`), sus llamadas pasan por el turno de la PC y quedan en el log **de
+la PC** con `host_via`; si corre su propio MCP en stdio contra `:9292`, quedan en el log **de la
+Mac** con su `host` y en la PC solo se ven en la foto `inflight` de llama-swap. Para que una entrada
+`http` se reconozca, añade a su entrada la cabecera `"headers": {"X-Local-Delegate-Host": "mac"}`:
+detrás de `tailscale serve` el daemon ve todas las conexiones desde `127.0.0.1`, así que sin la
+cabecera (y si el proxy no pasa `X-Forwarded-For`) una llamada de la Mac parece local.
+
+**Cruzar los logs de la PC y la Mac.** Copia el `usage-AAAAMM.jsonl` de la Mac junto al de la PC
+(cada línea dice su `host`, así que se pueden juntar sin perder el origen) y ordena por
+`concurrency.phases.backend.start`. Dos llamadas se pisaron si sus intervalos `backend`
+`[start, end]` se solapan; la que tiene `model_swap: true` y empezó mientras la otra tenía
+cargado su modelo es la que esperó el cambio. Los relojes de las dos máquinas deben estar en hora
+(NTP); un desfase de pocos segundos se nota en el orden pero no cambia qué intervalos se solapan
+en esperas de minutos. Las ventanas de `local-delegate test-window` de cada máquina marcan las
+pruebas.
+
 ## Cómo se calcula el ahorro… y el coste
 
 Son **dos magnitudes distintas**, y confundirlas era el defecto que el panel arrastraba: medía el

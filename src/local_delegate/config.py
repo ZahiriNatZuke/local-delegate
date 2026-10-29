@@ -105,6 +105,45 @@ def auth_headers() -> dict[str, str]:
     return {"Authorization": f"Bearer {key}"} if key else {}
 
 
+# --- Machine of origin (concurrency PC+Mac, step 0) --------------------------
+# Every usage-log entry says which machine it came from (`host`), and every request to the backend
+# carries it in `X-Local-Delegate-Host`, so llama-swap's `inflight` photo can tell the PC's calls
+# from the Mac's. Short host name by default; `LOCAL_DELEGATE_MACHINE_NAME` overrides it (two
+# machines with the same name, or a name the user prefers to read in the panel).
+HOST_HEADER = "X-Local-Delegate-Host"
+MACHINE_NAME_OVERRIDE = _env("LOCAL_DELEGATE_MACHINE_NAME", "")
+_MACHINE_NAME_MAX = 64
+
+
+def clean_machine_name(raw: str) -> str:
+    """`raw` reduced to letters, digits, `.`, `_` and `-` (max 64): safe in a header and a log."""
+    kept = "".join(c for c in raw.strip() if c.isascii() and (c.isalnum() or c in "._-"))
+    return kept[:_MACHINE_NAME_MAX]
+
+
+def machine_name() -> str:
+    """The short name of this machine: the override, else the host name up to the first dot."""
+    override = clean_machine_name(MACHINE_NAME_OVERRIDE)
+    if override:
+        return override
+    try:
+        import socket
+
+        name = clean_machine_name(socket.gethostname().split(".", 1)[0])
+    except OSError:
+        name = ""
+    return name or "unknown"
+
+
+def backend_headers() -> dict[str, str]:
+    """Headers for every request to the backend: the credential plus the machine of origin.
+
+    `auth_headers()` stays as it was (credential only): the panel and the CLI use it for the
+    daemon too, and the origin header is for the backend.
+    """
+    return {**auth_headers(), HOST_HEADER: machine_name()}
+
+
 # --- Origen del cómputo: backend en esta máquina vs backend remoto -----------
 # El MCP siempre corre en la máquina del cliente (por eso 'path' lee archivos locales),
 # pero la INFERENCIA puede ejecutarse en otra máquina (p. ej. Mac -> llama-swap de la PC

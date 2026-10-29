@@ -6,6 +6,19 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Añadido
+
+- **El log de uso dice desde qué máquina vino cada delegación y dónde esperó** (tarjeta
+  «Concurrencia y cola PC+Mac», paso 0). Cada entrada lleva `host` (nombre corto del equipo, o
+  `LOCAL_DELEGATE_MACHINE_NAME`) y, si pasó por el backend, `concurrency`: hora UTC de inicio y fin
+  de cada fase (turno, plaza, backend), el modelo pedido y, si la llamada lleva más de 3 s esperando
+  al backend, qué tenía cargado llama-swap en ese momento y si esperaba un cambio de modelo. Una
+  llamada que llega al `/mcp` del daemon desde otra máquina queda con el `host` de esa máquina (y
+  `host_via`) en el log y en `/api/inflight`. Toda petición al backend lleva la cabecera
+  `X-Local-Delegate-Host`, y el daemon apunta las peticiones en vuelo que ve en llama-swap con su
+  máquina de origen. Campos nuevos y opcionales: el panel y `/api/stats` leen igual los logs viejos.
+  Cómo cruzar los logs de la PC y la Mac, en `docs/wiki/Savings-and-metrics.md`.
+
 ### Corregido
 
 - El mod y el panel ya no confunden la delegación que procesa el backend con las que esperan (issue #477): cada entrada de `/api/inflight` lleva `state` (`running`, `retrying` o `queued`, y `queue_position` en una espera de turno), sacado de la plaza que tiene la llamada y de su espera reales, no del texto de la fase. La banda del mod nombra primero la que está en el backend y, si no hay ninguna, la más antigua en cola diciendo que espera (`en cola · 4 min 0 s`); «En curso» del panel separa «Procesando (n)» y «En cola (m)». Con un daemon anterior, sin `state`, los dos se comportan como antes.

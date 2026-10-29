@@ -117,6 +117,62 @@ _REQUEST_MEMORY: contextvars.ContextVar[dict | None] = contextvars.ContextVar(
 )
 
 
+# The machine a request over HTTP came from (concurrency PC+Mac, step 0), as `(host, via)`:
+# `via` is `header` (the client sent `X-Local-Delegate-Host`), `forwarded` (a local proxy such as
+# `tailscale serve` passed `X-Forwarded-For`) or `ip` (the remote address). `None` on stdio and for
+# a loopback remote without either header: then the request is from this machine.
+_CURRENT_ORIGIN: contextvars.ContextVar[tuple[str, str] | None] = contextvars.ContextVar(
+    "local_delegate_current_origin", default=None
+)
+
+
+def current_origin() -> tuple[str, str] | None:
+    """`(host, via)` of the HTTP request in course when it came from another machine, or `None`."""
+    return _CURRENT_ORIGIN.get()
+
+
+def _clean_ip(raw: str) -> str | None:
+    import ipaddress
+
+    try:
+        return str(ipaddress.ip_address(raw.strip()))
+    except ValueError:
+        return None
+
+
+def _is_loopback_ip(ip: str) -> bool:
+    import ipaddress
+
+    try:
+        return ipaddress.ip_address(ip).is_loopback
+    except ValueError:
+        return False
+
+
+def origin_from_request(request: Any) -> tuple[str, str] | None:
+    """Where an HTTP request came from: the header, else a local proxy's `X-Forwarded-For`, else a
+    non-loopback remote address. Observation only: it never decides access (`host_guard` and the
+    token do), so a forged value only mislabels a log line."""
+    headers = getattr(request, "headers", None)
+    if headers is None:
+        return None
+    named = headers.get(config.HOST_HEADER)
+    if isinstance(named, str):
+        cleaned = config.clean_machine_name(named)
+        if cleaned:
+            return cleaned, "header"
+    client = getattr(request, "client", None)
+    remote = _clean_ip(getattr(client, "host", "") or "")
+    if remote is None or _is_loopback_ip(remote):
+        proxied = headers.get("x-forwarded-for")
+        if isinstance(proxied, str) and proxied.strip():
+            first = _clean_ip(proxied.split(",", 1)[0])
+            if first is not None and not _is_loopback_ip(first):
+                return first, "forwarded"
+        return None
+    return remote, "ip"
+
+
 def current_tool_use_id() -> str | None:
     """El `tool_use_id` de la petición en curso, o `None` si el cliente no lo mandó o no hay una."""
     return _CURRENT_TOOL_USE_ID.get()
@@ -317,6 +373,11 @@ async def observe_client(ctx: Any, call_next: Any) -> Any:
             # `tool_use_id`, ni al revés. Y también ANTES de `call_next`, por lo mismo de arriba.
             _CURRENT_TOOL_USE_ID.set(_tool_use_id_from(ctx))
             _REQUEST_MEMORY.set({})
+        except Exception:
+            pass  # observar es best-effort; jamás propaga a la respuesta del cliente
+        try:
+            # Concurrency PC+Mac, step 0: which machine sent it (HTTP only; `None` on stdio).
+            _CURRENT_ORIGIN.set(origin_from_request(getattr(ctx, "request", None)))
         except Exception:
             pass  # observar es best-effort; jamás propaga a la respuesta del cliente
     return await call_next(ctx)
