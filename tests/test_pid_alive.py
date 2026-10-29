@@ -38,12 +38,9 @@ def _running_process() -> subprocess.Popen:
 @windows_only
 def test_a_finished_process_with_a_held_handle_is_dead():
     proc = _finished_process()
-    try:
-        # The guard: the handle is still open, which is exactly what fooled `OpenProcess`.
-        assert proc._handle  # type: ignore[attr-defined]
-        assert server._pid_alive(proc.pid) is False
-    finally:
-        del proc
+    # The guard: the handle is still open, which is exactly what fooled `OpenProcess`.
+    assert proc._handle  # type: ignore[attr-defined]
+    assert server._pid_alive(proc.pid) is False
 
 
 def test_a_running_process_is_alive():
@@ -87,7 +84,6 @@ def test_the_snapshot_prunes_the_entry_of_a_dead_pid(log_dir):
     finally:
         live.kill()
         live.wait(timeout=30)
-        del dead
 
 
 class _FakeKernel32:
