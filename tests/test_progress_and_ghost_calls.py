@@ -60,7 +60,7 @@ def _with_id(message: dict, request_id: int, *, progress: bool = False) -> dict:
     return copy
 
 
-def _turn_ops() -> set[str]:
+def _turn_operations() -> set[str]:
     """The operations in the turn's queue or holding it: the keys `inflight.json` must show."""
     state = server._turn.snapshot()
     return {e.id for e in state.queue} | {a.id for a in state.actives}
@@ -186,14 +186,16 @@ def test_live_call_older_than_the_orphan_ttl_stays_visible(monkeypatch, slow_bac
                     group.start_soon(session.call, _with_id(CLASSIFY, 31))
                     await _until(lambda: server._turn.snapshot().queue, cap=10)
                     await anyio.sleep(1.0)  # both past the (shortened) TTL, both still alive
-                    turn_ops = _turn_ops()
+                    turn_operations = _turn_operations()
                     visible = {e["id"] for e in server.inflight_snapshot()}
                     group.cancel_scope.cancel()
-                return turn_ops, visible
+                return turn_operations, visible
 
-        turn_ops, visible = anyio.run(scenario)
-    assert len(turn_ops) == 2, turn_ops
-    assert turn_ops <= visible, f"in the turn but not in /api/inflight: {turn_ops - visible}"
+        turn_operations, visible = anyio.run(scenario)
+    assert len(turn_operations) == 2, turn_operations
+    assert turn_operations <= visible, (
+        f"in the turn but not in /api/inflight: {turn_operations - visible}"
+    )
 
 
 def test_old_orphan_of_this_process_is_still_dropped(monkeypatch, tmp_path):
@@ -273,6 +275,6 @@ def test_cancelled_waiter_leaves_the_queue_and_the_next_moves_up(monkeypatch, sl
     assert seen["queue_after"] == [c_op], seen
     assert seen["left_after_s"] < 1.0, f"B left the queue {seen['left_after_s']:.1f} s later"
     assert [e["id"] for e in seen["classify_after"]] == [c_op], seen["classify_after"]
-    assert b_op not in _turn_ops()
+    assert b_op not in _turn_operations()
     # Nobody is left waiting for a turn once the calls are gone.
     assert _settle(lambda: not server._turn.snapshot().queue, cap=15)
