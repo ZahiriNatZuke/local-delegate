@@ -120,7 +120,7 @@ después un `local_commit_msg` de un diff de 38 KB, también a los 300 s.
 
 `host` en cada entrada (y `host_via` cuando la llamada llegó al `/mcp` del daemon desde otra
 máquina, también en `/api/inflight`), `concurrency.phases` (turn/slot/backend con inicio y fin UTC),
-`requested_model`, `backend_models` (de `/running` antes del primer POST), `model_swap`,
+`requested_model`, `backend_models` (de `/running`, solo si un POST lleva 3 s esperando: la regla de la afinidad es no preguntar a llama-swap sin necesidad), `model_swap`,
 `inflight_seen` con la máquina de cada petición, y la cabecera `X-Local-Delegate-Host` en toda
 petición al backend. Documentado en `docs/wiki/Savings-and-metrics.md` («Concurrencia: máquina de
 origen y fases»). Límite conocido: no se ha comprobado contra un llama-swap real que `req_headers`

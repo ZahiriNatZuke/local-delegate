@@ -9,11 +9,14 @@ llama-swap. To see who waited for whom, each usage-log entry carries, under `con
   `MAX_CONCURRENT_REQUESTS`; `backend` is the POST to the backend, so it includes llama-swap's own
   queue and the model load. A phase that never happened is left out (no turn on a remote backend).
 * `requested_model`: the model the tool asked for (the role's model, or the explicit one).
-* `backend_models`: the models of llama-swap's `/running` right before the first POST, as
-  `{model: state}`. Cached for a short while and queried with a short cap: it is observation, so it
-  never blocks a call for long and never breaks one. Left out when `/running` did not answer.
-* `model_swap`: whether the first POST went to a model that was not `ready` then (so the call
-  made llama-swap load it, or waited for a load). Left out when `backend_models` is.
+* `backend_models`: llama-swap's `/running` as `{model: state}`, sampled ONLY when a POST is still
+  waiting `BACKEND_SAMPLE_DELAY_S` (3 s) after it was sent, once per operation;
+  `backend_models_at_ms` says when. A quick call queries nothing: the daemon's rule is that it
+  does not ask llama-swap without a need (the affinity tests pin it), and a call that answers in
+  under 3 s neither loaded a model (6-14 s measured) nor waited behind one. Cached for a short
+  while and queried with a short cap, from a timer thread: it never delays the call.
+* `model_swap`: whether, at that moment, the model of the POST was not `ready` (llama-swap was
+  loading it, or waiting to unload another one to load it). Left out when `backend_models` is.
 * `inflight_seen`: the requests that the PC daemon saw in llama-swap's `inflight` photo when it
   already looked at it (affinity), as `{model, host}`; `host` comes from `X-Local-Delegate-Host`.
 
@@ -42,6 +45,8 @@ PHASES = ("turn", "slot", "backend")
 #: How long one `/running` answer is reused, and the cap of each query (connection included).
 RUNNING_CACHE_S = 2.0
 RUNNING_QUERY_CAP_S = 0.5
+#: How long a POST must be pending before `/running` is sampled (see the module docstring).
+BACKEND_SAMPLE_DELAY_S = 3.0
 #: At most this many `inflight_seen` entries per event: the log keeps no long lists.
 INFLIGHT_SEEN_MAX = 20
 
@@ -60,6 +65,7 @@ class Trace:
         self._phases: dict[str, dict[str, Any]] = {}
         self._backend_sampled = False
         self.backend_models: dict[str, str] | None = None
+        self.backend_models_at_ms: int | None = None
         self.model_swap: bool | None = None
         self.inflight_seen: list[dict[str, str | None]] | None = None
 
@@ -74,13 +80,18 @@ class Trace:
             entry["ms"] += ms
             entry["n"] += 1
 
-    def backend_starting(self, model: str, real: Callable[[str], str] | None = None) -> None:
-        """Before the FIRST POST of the operation: what llama-swap had loaded, and whether this
-        call needs a model that was not ready. Later POSTs of the operation do not sample again."""
+    def claim_backend_sample(self) -> bool:
+        """True only for the first caller: one `/running` sample per operation."""
         with self._lock:
             if self._backend_sampled:
-                return
+                return False
             self._backend_sampled = True
+            return True
+
+    def sample_backend(
+        self, model: str, real: Callable[[str], str] | None = None, at_ms: int = 0
+    ) -> None:
+        """What llama-swap had loaded while this POST waited, and whether its model was ready."""
         models = loaded_models()
         if models is None:
             return
@@ -92,6 +103,7 @@ class Trace:
                 name = model
         with self._lock:
             self.backend_models = models
+            self.backend_models_at_ms = int(at_ms)
             self.model_swap = models.get(name) != "ready" and models.get(model) != "ready"
 
     def note_inflight(self, requests: Sequence[dict[str, str | None]]) -> None:
@@ -119,6 +131,7 @@ class Trace:
                 fields["phases"] = phases
             if self.backend_models is not None:
                 fields["backend_models"] = dict(self.backend_models)
+                fields["backend_models_at_ms"] = self.backend_models_at_ms
                 fields["model_swap"] = bool(self.model_swap)
             if self.inflight_seen is not None:
                 fields["inflight_seen"] = list(self.inflight_seen)
@@ -167,13 +180,50 @@ def phase(name: str) -> Generator[None, None, None]:
             pass
 
 
-def backend_starting(model: str, real: Callable[[str], str] | None = None) -> None:
+@contextmanager
+def backend_phase(
+    model: str, real: Callable[[str], str] | None = None
+) -> Generator[None, None, None]:
+    """The `backend` phase of one POST, plus the delayed `/running` sample (module docstring).
+
+    The sample runs in a timer thread that fires only if the POST is still pending after
+    `BACKEND_SAMPLE_DELAY_S`; on exit the timer is cancelled, or, if it already fired, waited for
+    at most the query cap so the event gets it. With a delay of 0 or less it samples at once (tests).
+    """
     trace = _CURRENT.get()
     if trace is None:
+        yield
         return
+    timer: threading.Timer | None = None
     try:
-        trace.backend_starting(model, real)
+        if trace.claim_backend_sample():
+            delay = BACKEND_SAMPLE_DELAY_S
+            if delay <= 0:
+                trace.sample_backend(model, real, 0)
+            else:
+                timer = threading.Timer(
+                    delay, _sample_in_background, args=(trace, model, real, int(delay * 1000))
+                )
+                timer.daemon = True
+                timer.start()
     except Exception:  # observation: the POST goes on without the sample
+        timer = None
+    with phase("backend"):
+        try:
+            yield
+        finally:
+            if timer is not None:
+                timer.cancel()
+                if timer.is_alive():
+                    timer.join(RUNNING_QUERY_CAP_S + 0.5)
+
+
+def _sample_in_background(
+    trace: Trace, model: str, real: Callable[[str], str] | None, at_ms: int
+) -> None:
+    try:
+        trace.sample_backend(model, real, at_ms)
+    except Exception:  # a timer thread must never raise
         pass
 
 

@@ -153,11 +153,14 @@ proceso y su propio log), cada entrada lleva:
     - `backend`: el POST al backend, de principio a fin. **Incluye la cola de llama-swap y la carga
       del modelo**: lo que el backend tardó en empezar no se distingue aquí de la inferencia; para
       eso están `inference_ms` y `wait_ms`.
-  - `backend_models`: lo que `/running` de llama-swap tenía cargado justo antes del primer POST, como
-    `{modelo: estado}`. Se consulta con un tope de 0,5 s y se reutiliza 2 s; si no responde (otro
-    backend, caído, sin permiso) el campo no aparece y la llamada sigue igual.
-  - `model_swap`: `true` si el primer POST fue a un modelo que en ese momento no estaba `ready` (la
-    llamada provocó, o esperó, una carga). Solo aparece junto a `backend_models`.
+  - `backend_models` y `backend_models_at_ms`: lo que `/running` de llama-swap tenía cargado
+    (`{modelo: estado}`) **mientras el POST esperaba**: solo se consulta si el envío sigue sin
+    respuesta 3 s después de salir (una vez por operación, desde un hilo aparte, con tope de 0,5 s y
+    reutilizada 2 s). Una llamada que responde antes no consulta nada: no cargó modelo (las cargas
+    medidas tardan 6-14 s) ni esperó a otro, y el daemon no pregunta a llama-swap sin necesidad. Si
+    `/running` no responde (otro backend, caído, sin permiso) el campo no aparece.
+  - `model_swap`: `true` si en ese momento el modelo del POST no estaba `ready` (llama-swap lo estaba
+    cargando, o esperaba a descargar otro para cargarlo). Solo aparece junto a `backend_models`.
   - `inflight_seen`: solo en la PC, cuando el daemon ya miraba la foto `inflight` de llama-swap (la
     afinidad): cada petición en vuelo como `{model, host}`. `host` sale de la cabecera
     `X-Local-Delegate-Host`; `null` si la petición no la traía (otro cliente, o un MCP anterior a la
@@ -174,7 +177,7 @@ petición de su foto `inflight`; de ellas el daemon **solo** lee esa, nunca la c
   "phases":{"turn":{"start":"2026-10-29T18:16:27.101+00:00","end":"2026-10-29T18:16:27.102+00:00","ms":1,"n":1},
             "slot":{"start":"2026-10-29T18:16:27.102+00:00","end":"2026-10-29T18:16:27.102+00:00","ms":0,"n":1},
             "backend":{"start":"2026-10-29T18:16:27.160+00:00","end":"2026-10-29T18:21:03.000+00:00","ms":275840,"n":1}},
-  "backend_models":{"qwen36-35b-a3b":"ready"},"model_swap":true}}
+  "backend_models":{"qwen36-35b-a3b":"ready"},"backend_models_at_ms":3000,"model_swap":true}}
 ```
 
 **¿Por dónde entra la Mac?** Hay dos caminos y conviven: si su cliente MCP apunta al `/mcp` del

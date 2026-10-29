@@ -11,12 +11,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - **El log de uso dice desde qué máquina vino cada delegación y dónde esperó** (tarjeta
   «Concurrencia y cola PC+Mac», paso 0). Cada entrada lleva `host` (nombre corto del equipo, o
   `LOCAL_DELEGATE_MACHINE_NAME`) y, si pasó por el backend, `concurrency`: hora UTC de inicio y fin
-  de cada fase (turno, plaza, backend), el modelo pedido, lo que llama-swap tenía cargado antes del
-  primer envío y si la llamada provocó un cambio de modelo. Toda petición al backend lleva la
-  cabecera `X-Local-Delegate-Host`, y el daemon de la PC apunta las peticiones en vuelo que ve en
-  llama-swap con su máquina de origen. Una llamada que llega al `/mcp` del daemon desde otra máquina
-  queda con el `host` de esa máquina (y `host_via`) en el log y en `/api/inflight`. Campos nuevos y opcionales: el panel y `/api/stats` leen
-  igual los logs viejos. Cómo cruzar los logs de la PC y la Mac, en `docs/wiki/Savings-and-metrics.md`.
+  de cada fase (turno, plaza, backend), el modelo pedido y, si la llamada lleva más de 3 s esperando
+  al backend, qué tenía cargado llama-swap en ese momento y si esperaba un cambio de modelo. Una
+  llamada que llega al `/mcp` del daemon desde otra máquina queda con el `host` de esa máquina (y
+  `host_via`) en el log y en `/api/inflight`. Toda petición al backend lleva la cabecera
+  `X-Local-Delegate-Host`, y el daemon apunta las peticiones en vuelo que ve en llama-swap con su
+  máquina de origen. Campos nuevos y opcionales: el panel y `/api/stats` leen igual los logs viejos.
+  Cómo cruzar los logs de la PC y la Mac, en `docs/wiki/Savings-and-metrics.md`.
 
 ## [0.44.2] - 2026-10-28
 

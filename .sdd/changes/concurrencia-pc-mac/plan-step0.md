@@ -20,7 +20,8 @@ Rama `feat/concurrency-log-fields`, worktree `D:/Projects/ld-wt-concurrencia`.
      `concurrency_trace` (llega a `_log_event` por el `**op.log_fields()` que ya usan las tres
      operaciones, sin tocarlas).
    - `_waiting_for`: `phase("turn")`; `_slot`: `phase("slot")` sobre la adquisición; `_send`:
-     `backend_starting` + `phase("backend")` en los dos caminos (con y sin token de cancelación).
+     `backend_phase(model, …)` en los dos caminos (con y sin token de cancelación): fase `backend`
+     más la muestra retrasada de `/running` (REQ-S0-4 enmendado).
    - `_affinity_observe`: `llamaswap_api.in_flight_requests` + `note_inflight`, contando por modelo
      igual que antes.
 5. `llamaswap_api.py`: `_origin_host`, `_requests_of`, `_Stream._first_inflight`,
@@ -40,7 +41,9 @@ Rama `feat/concurrency-log-fields`, worktree `D:/Projects/ld-wt-concurrencia`.
 | sin `rec["host"]` | `test_an_entry_without_an_operation_still_has_the_host`, `test_the_entry_has_host_phases…` | `KeyError: 'host'` |
 | `_post_chat` con `auth_headers()` | `test_every_post_carries_the_origin_header` | `None == 'other-host'` |
 | sin `phase("slot")` | `test_the_entry_has_host_phases…` | `{'backend'} == {'backend','slot'}` |
-| sin `backend_starting` | `test_the_entry_has_host_phases…`, `test_no_swap…`, `test_running_is_cached…` | `KeyError: 'backend_models'` / `'model_swap'`, `call_count 0 == 1` |
+| sin la muestra de `/running` | `test_the_entry_has_host_phases…`, `test_no_swap…`, `test_running_is_cached…` | `KeyError: 'backend_models'` / `'model_swap'`, `call_count 0 == 1` |
+| muestra inmediata siempre (sin retraso) | `test_a_fast_call_asks_llama_swap_nothing` (y `test_affinity` en CI) | `call_count 1 == 0` |
+| sin arrancar el temporizador | `test_a_waiting_call_samples_running_while_it_waits` | `KeyError: 'backend_models'` |
 | sin `phase("turn")` | `test_a_turn_wait_is_recorded_with_its_duration` | `KeyError: 'phases'` |
 | sin `note_inflight` en la afinidad | `test_the_affinity_photo_feeds_inflight_seen` | `KeyError: 'inflight_seen'` |
 | `inflight_snapshot` sin copiar `host` | `test_the_inflight_entry_says_where_the_call_came_from` | `KeyError: 'host'` |

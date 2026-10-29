@@ -21,9 +21,14 @@ cargado llama-swap al empezar y si la llamada obligó a cambiar de modelo.
   cada fase que hubo (`turn`, `slot`, `backend`): `start` (UTC ISO con ms, primer paso), `end` (UTC,
   último), `ms` (suma) y `n` (veces). Una fase que no hubo no aparece.
 - **REQ-S0-4 (modelos).** `concurrency.requested_model` siempre; `backend_models` (`{modelo:
-  estado}` de `/running` justo antes del primer POST) y `model_swap` (el primer POST fue a un modelo
-  que no estaba `ready`) solo si `/running` respondió. La consulta lleva tope de 0,5 s y caché de
-  2 s (también del fallo) y nunca rompe ni retrasa más de ese tope la llamada.
+  estado}` de `/running`), `backend_models_at_ms` y `model_swap` (el modelo del POST no estaba
+  `ready`) solo si un POST sigue esperando 3 s después de salir (una muestra por operación, en un
+  hilo con temporizador) y `/running` respondió. Una llamada rápida no consulta nada. Tope de 0,5 s,
+  caché de 2 s (también del fallo); nunca retrasa la llamada. **Enmienda tras el CI del PR #481:** la
+  versión inicial consultaba `/running` antes de cada primer POST y rompía la regla de la afinidad
+  «sin foto si no hace falta» (`test_affinity`: `backend.paths == []` y el orden de las consultas
+  de REQ-013); muestrear solo las llamadas que esperan respeta la regla y mide justo el caso que
+  interesa (cola o carga en llama-swap).
 - **REQ-S0-5 (peticiones ajenas).** Donde el daemon ya lee la foto `inflight` de `/api/events` (la
   afinidad), la operación guarda `concurrency.inflight_seen` como `[{model, host}]` (máx. 20). De
   `req_headers` solo se lee `X-Local-Delegate-Host` (sin distinguir mayúsculas, valor `str` o

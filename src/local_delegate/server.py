@@ -2313,10 +2313,12 @@ def _send(model: str, body: dict) -> ChatResult:
     """
     turn_state = _turn
     token = cancellation.current()
-    # Step 0 of concurrency PC+Mac: what llama-swap had loaded before the first POST.
-    concurrency.backend_starting(model, _real_model_name)
     if token is None:
-        with turn_state.in_flight(), _own_call(model), concurrency.phase("backend"):
+        with (
+            turn_state.in_flight(),
+            _own_call(model),
+            concurrency.backend_phase(model, _real_model_name),
+        ):
             return _post_chat(model, body)
 
     own = _new_client()
@@ -2325,7 +2327,11 @@ def _send(model: str, body: dict) -> ChatResult:
     def post() -> ChatResult:
         _SEND_CLIENT.set(own)
         try:
-            with turn_state.in_flight(), _own_call(model), concurrency.phase("backend"):
+            with (
+                turn_state.in_flight(),
+                _own_call(model),
+                concurrency.backend_phase(model, _real_model_name),
+            ):
                 return _post_chat(model, body)
         finally:
             remove()

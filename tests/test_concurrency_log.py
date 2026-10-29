@@ -29,8 +29,10 @@ MODEL = "gemma4-26b-a4b"  # the `long` role in the test catalog is not needed: a
 
 
 @pytest.fixture(autouse=True)
-def fresh_running_cache():
+def fresh_running_cache(monkeypatch):
+    """Empty `/running` cache, and the sample taken at once (the delayed path has its own tests)."""
     concurrency.reset_cache()
+    monkeypatch.setattr(concurrency, "BACKEND_SAMPLE_DELAY_S", 0)
     yield
     concurrency.reset_cache()
 
@@ -149,6 +151,47 @@ def test_no_swap_when_the_requested_model_was_ready(reload_config, tmp_path):
     server.local_summarize(text=_text(500))
 
     assert _events(tmp_path)[-1]["concurrency"]["model_swap"] is False
+
+
+@backend_mock.mock
+def test_a_fast_call_asks_llama_swap_nothing(reload_config, tmp_path, monkeypatch):
+    """With the real delay, a POST that answers at once never queries `/running` (the daemon
+    does not ask llama-swap without a need: `test_affinity` pins it)."""
+    reload_config()
+    monkeypatch.setattr(concurrency, "BACKEND_SAMPLE_DELAY_S", 3.0)
+    _ok_answer()
+    running = backend_mock.get(RUNNING).mock(
+        return_value=httpx2.Response(200, json={"running": []})
+    )
+
+    server.local_summarize(text=_text(500))
+
+    assert running.call_count == 0
+    assert "backend_models" not in _events(tmp_path)[-1]["concurrency"]
+
+
+@backend_mock.mock
+def test_a_waiting_call_samples_running_while_it_waits(reload_config, tmp_path, monkeypatch):
+    reload_config()
+    monkeypatch.setattr(concurrency, "BACKEND_SAMPLE_DELAY_S", 0.05)
+
+    def slow(_request):
+        time.sleep(0.4)
+        return backend_mock.chat_response("resumen", tokens_in=10, tokens_out=5)
+
+    backend_mock.post(CHAT).mock(side_effect=slow)
+    backend_mock.get(RUNNING).mock(
+        return_value=httpx2.Response(
+            200, json={"running": [{"model": "qwen36-35b-a3b", "state": "ready"}]}
+        )
+    )
+
+    server.local_summarize(text=_text(500))
+
+    trace = _events(tmp_path)[-1]["concurrency"]
+    assert trace["backend_models"] == {"qwen36-35b-a3b": "ready"}
+    assert trace["backend_models_at_ms"] == 50
+    assert trace["model_swap"] is True
 
 
 @backend_mock.mock
