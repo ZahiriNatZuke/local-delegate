@@ -63,5 +63,7 @@
   "status.reads_asks": "reads: asks",
   "status.reads_auto": "reads: auto-summary",
   "status.reads_asks_title": "Reads: asks",
-  "status.reads_auto_title": "Reads: auto-summary"
+  "status.reads_auto_title": "Reads: auto-summary",
+  "status.queued": "queued",
+  "status.retrying": "retrying"
 }

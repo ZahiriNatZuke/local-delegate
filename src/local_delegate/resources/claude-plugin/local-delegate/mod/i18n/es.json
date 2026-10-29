@@ -63,5 +63,7 @@
   "status.reads_asks": "lecturas: pregunta",
   "status.reads_auto": "lecturas: resume solo",
   "status.reads_asks_title": "Lecturas: pregunta",
-  "status.reads_auto_title": "Lecturas: resume solo"
+  "status.reads_auto_title": "Lecturas: resume solo",
+  "status.queued": "en cola",
+  "status.retrying": "reintentando"
 }

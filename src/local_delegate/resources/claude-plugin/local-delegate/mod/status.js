@@ -147,13 +147,32 @@ function statusProgress(item) {
   return { chunk: Math.min(Math.floor(chunk), total), chunks: total }
 }
 
-/** The oldest delegation in flight as `{ tool, seconds, more, model, progress }`, or `null`. */
+// Which delegation the band names first, by its `state` in `/api/inflight` (issue #477): the one at
+// the backend, then one retrying a piece, then one waiting in the queue. A daemon from before #477
+// sends no `state`: every entry ranks the same and the oldest goes, as it did.
+const STATUS_STATE_RANK = { running: 0, retrying: 1, queued: 2 }
+
+function statusRank(item) {
+  return STATUS_STATE_RANK[item.state] ?? 0
+}
+
+/**
+ * The delegation the band names as `{ tool, seconds, more, model, progress, waiting }`, or `null`:
+ * the oldest among the ones the backend is processing, or else the oldest waiting. `waiting` is
+ * `queued` or `retrying` when that is what the named one is doing, `null` otherwise.
+ */
 function statusTask(list) {
   const items = list.filter(item => item && typeof item === 'object')
   if (items.length === 0) {
     return null
   }
-  const oldest = items.reduce((a, b) => ((statusNumber(b.elapsed_s) ?? 0) > (statusNumber(a.elapsed_s) ?? 0) ? b : a))
+  const oldest = items.reduce((a, b) => {
+    const rank = statusRank(b) - statusRank(a)
+    if (rank !== 0) {
+      return rank < 0 ? b : a
+    }
+    return (statusNumber(b.elapsed_s) ?? 0) > (statusNumber(a.elapsed_s) ?? 0) ? b : a
+  })
   const raw = typeof oldest.tool === 'string' ? oldest.tool.trim() : ''
   const tool = raw.startsWith(STATUS_TOOL_PREFIX) ? raw.slice(STATUS_TOOL_PREFIX.length) : raw
   const model = typeof oldest.model === 'string' && oldest.model.trim() ? statusCut(oldest.model.trim()) : null
@@ -163,6 +182,7 @@ function statusTask(list) {
     more: items.length - 1,
     model,
     progress: statusProgress(oldest),
+    waiting: oldest.state === 'queued' || oldest.state === 'retrying' ? oldest.state : null,
   }
 }
 
@@ -213,7 +233,7 @@ export function statusSnapshot(stats, backend, inflight) {
       state = 'down'
     } else if (ownCount > 0) {
       state = 'busy'
-      task = statusTask(own) || { tool: null, seconds: 0, more: Math.max(0, ownCount - 1), model: null, progress: null }
+      task = statusTask(own) || { tool: null, seconds: 0, more: Math.max(0, ownCount - 1), model: null, progress: null, waiting: null }
     } else if (others > 0) {
       state = 'shared'
     } else {
@@ -277,7 +297,9 @@ function statusTaskPieces(task, moreKey = 'status.more', separator = STATUS_SEPA
   }
   const time = statusDuration(task.seconds)
   const lead = task.progress ? separator : task.tool ? ' ' : ''
-  pieces.push({ text: `${lead}${time}`, dim: true })
+  // Issue #477: a named delegation that is not at the backend says so: `local_summarize · en cola · 4 min 0 s`.
+  const waiting = task.waiting ? `${task.progress || task.tool ? separator : ''}${t(`status.${task.waiting}`)}${separator}` : ''
+  pieces.push({ text: waiting ? `${waiting}${time}` : `${lead}${time}`, dim: true })
   if (task.more > 0) {
     pieces.push({ text: ` ${t(moreKey, { n: task.more })}`, dim: true })
   }
