@@ -282,9 +282,9 @@ Es el **turno** del daemon, no una avería: su modelo choca en llama-swap con un
   El daemon no siempre se entera de ese corte; por eso tiene su propio plazo,
   `LOCAL_DELEGATE_CALL_MAX_S` (1800 s), tras el que cancela la llamada y la deja en el log como
   fallo (`cancel_reason: "deadline"`).
-- **«Cola saturada»**: una espera seguida por el turno o por una plaza pasó
-  `LOCAL_DELEGATE_QUEUE_MAX_WAIT_S` (900 s). Hay demasiadas delegaciones a la vez para el
-  backend: reintenta más tarde o haz la tarea sin delegar. Queda en el log como
+- **«Cola saturada»**: llevabas `LOCAL_DELEGATE_QUEUE_MAX_WAIT_S` (900 s) esperando turno o
+  plaza sin que la cola avanzara (ninguna llamada al backend terminó). Algo está colgado o hay
+  demasiadas delegaciones a la vez para el backend: reintenta más tarde o haz la tarea sin delegar. Queda en el log como
   `error: "queue_saturated"` y cuenta en Errores. Bájalo si tu cliente corta antes (por ejemplo,
   por debajo de los 5 min de inactividad de Claude Code) para recibir el aviso a tiempo.
 - **Si no quieres turno**: sin `LLAMASWAP_CONFIG` en el daemon no lo hay, y el daemon vuelve a dejar

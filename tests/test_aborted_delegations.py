@@ -174,3 +174,58 @@ def test_a_call_alone_keeps_todays_behaviour(slow_backend, tmp_path):
     events = [e for e in _events(tmp_path) if e.get("tool") == "local_classify"]
     assert len(events) == 1 and events[0]["ok"] is True, events
     assert "slot_wait_ms" not in events[0] and "exception_type" not in events[0], events[0]
+
+
+def _behind_a_summary(url: str, backend, cap_s: float) -> tuple[dict | None, float]:
+    """`local_classify` queued for the turn behind a running `local_summarize` (they clash)."""
+
+    async def scenario() -> tuple[dict | None, float]:
+        async with httpx2.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
+            first = _RawSession(client, url)
+            await first.open()
+            second = _RawSession(client, url)
+            await second.open()
+            async with anyio.create_task_group() as group:
+                group.start_soon(first.call, SUMMARIZE)
+                end = time.monotonic() + 10
+                while backend.count(LONG_MODEL) < 1:
+                    assert time.monotonic() < end, "the summary never reached the backend"
+                    await anyio.sleep(0.02)
+                started = time.monotonic()
+                with anyio.fail_after(cap_s):
+                    answer = await second.call(CLASSIFY)
+                elapsed = time.monotonic() - started
+                group.cancel_scope.cancel()  # cuts the summary if it is still running
+            return answer, elapsed
+
+    return anyio.run(scenario)
+
+
+def test_a_queue_that_moves_never_saturates(monkeypatch, slow_backend, tmp_path):
+    """Review of #482: the limit is time WITHOUT progress, not the length of the wait.
+
+    The summary ahead takes ~8 s in 0.4 s pieces; the classify behind it waits far longer than the
+    1.5 s limit, but the queue moves every 0.4 s, so it must get its answer. With a limit on the
+    wait itself it fails with `queue_saturated`.
+    """
+    monkeypatch.setattr(config, "QUEUE_MAX_WAIT_S", 1.5)
+    with real_daemon(monkeypatch, TOKEN) as url:
+        answer, elapsed = _behind_a_summary(url, slow_backend, cap_s=25)
+    assert answer is not None and answer["result"].get("isError") is not True, answer
+    # Guard: it did wait well past the limit, so the test checked something.
+    assert elapsed > 3.0, f"the classify did not wait behind the summary ({elapsed:.1f} s)"
+    events = [e for e in _events(tmp_path) if e.get("tool") == "local_classify"]
+    assert events and events[-1]["ok"] is True, events
+
+
+def test_a_queue_that_does_not_move_saturates(monkeypatch, slow_backend, tmp_path):
+    """The piece ahead takes 5 s and nothing else moves: past 1 s the waiting call is told so."""
+    monkeypatch.setattr(config, "QUEUE_MAX_WAIT_S", 1.0)
+    slow_backend.delay = 5.0
+    with real_daemon(monkeypatch, TOKEN) as url:
+        answer, elapsed = _behind_a_summary(url, slow_backend, cap_s=25)
+    text = _error_text(answer)
+    assert "LOCAL_DELEGATE_QUEUE_MAX_WAIT_S" in text, text
+    assert elapsed < 4.0, f"the stalled queue held the caller {elapsed:.1f} s"
+    events = [e for e in _events(tmp_path) if e.get("tool") == "local_classify"]
+    assert len(events) == 1 and events[0]["error"] == "queue_saturated", events

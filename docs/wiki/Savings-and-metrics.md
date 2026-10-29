@@ -91,8 +91,8 @@ con saltos pudo contaminarla un swap.
   cuarto motivo, `deadline`: la llamada pasó `LOCAL_DELEGATE_CALL_MAX_S` (1800 s) en el daemon.
   Y el evento lleva lo medido hasta el corte: `turn_wait_ms`, `slot_wait_ms`, las llamadas reales
   (`chunks`, con `wait_ms` e `inference_ms` si las hubo) y, si era troceada, `pieces`.
-- `error: "queue_saturated"` (issue #476): una espera seguida por el turno o por una plaza pasó
-  `LOCAL_DELEGATE_QUEUE_MAX_WAIT_S` (900 s) y la llamada falló en el acto con «cola saturada».
+- `error: "queue_saturated"` (issue #476): quien esperaba turno o plaza llevaba
+  `LOCAL_DELEGATE_QUEUE_MAX_WAIT_S` (900 s) sin que la cola avanzara, y la llamada falló en el acto con «cola saturada».
   `slot_wait_ms` (solo si esperó plaza) dice cuánto esperó plaza.
 - `error: "exception"` y `exception_type` (issue #476): la operación había empezado y acabó con
   una excepción no controlada antes de escribir su evento. Solo se guarda el **tipo** de la
@@ -651,6 +651,14 @@ mientras se procesan los trozos, **«Combinando N trozos…»** durante la combi
 reagrupado) y **«Reintentando trozo i/N»** cuando un trozo cortado o que no cabía se vuelve a
 partir. `/api/inflight` lo expone como `phase` (`reduce` o `retry`; sin el campo, los trozos).
 
+Desde la 0.45.0 (issue #477) cada entrada de `/api/inflight` lleva `state`: **`running`** (tiene
+plaza y está en el backend, o entre dos trozos de una operación que ya llegó), **`retrying`**
+(reintentando un trozo cortado) o **`queued`** (espera turno o plaza, o aún no llegó al backend;
+con espera de turno, `queue_position` es su puesto). Sale de la espera y la plaza reales, no del
+texto de la fase. Con `state`, «En curso» separa **«Procesando (n)»** y **«En cola (m)»**: las de
+la cola llevan un círculo discontinuo en vez del giro, van atenuadas y, con turno, su puesto
+(`#3`). Un daemon anterior no manda `state` y el panel pinta la lista única de siempre.
+
 En la tabla de actividad, una operación troceada lleva un chip con sus trozos y las llamadas de
 más: **`3 +1`** son tres trozos y una combinación, con el título «3 trozos · 4 llamadas al
 backend»; `3×` son tres trozos sin llamadas extra. El diálogo de la fila da las dos cifras
@@ -778,7 +786,7 @@ que todavía convivan clientes HTTP y procesos `stdio`.
 | `GET /api/daemon` | Estado, PID y URLs del daemon HTTP |
 | `GET /api/events?from=&to=&include_tests=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`, `excluded_tests` y `tests_in_range`). Sin `include_tests=1`, sin las pruebas. Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. Cada fila llega **fundida** con el relleno de `recompute-cost` (o el respaldo) y con su `density`, `family` y `marks` resueltas (y `caller_origin`: `line`, `backfill` o `fallback`): el JS no funde ni resuelve nada |
 | `GET /api/stats?from=&to=&include_tests=&session=` | Agregados del mismo conjunto que `/api/events` (`excluded_tests`, `tests_in_range` y `open_test_windows` dicen qué se apartó y qué ventanas siguen abiertas) (por tool, por modelo, por origen del cómputo, por cliente, totales): `tokens_context_saved` (el **bruto**, ya sin fallos), `tokens_returned`, `tokens_context_net` (el **neto** del KPI), el desglose `chars_saved_text`, `bytes_saved_image`, `chars_saved_output` y `chars_returned`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. `by_tool`, `by_backend` y `by_client` llevan `tokens_net` junto a `tokens_saved`. Además: `cost` (la cifra o el motivo de que no la haya —`figure` y `reason`—, la barra de cobertura `bar`, el respaldo `fallback`, el origen de `N` `n_origin`, la densidad usada `density`, los modelos sin precio `unpriced`, lo que queda fuera de la base `outside_base`, el desglose `breakdown` y la fecha de la tabla `table`), `quota` (estado por tipo de ventana, `five_hour` y `seven_day`, con `status` `calibrated` o `uncalibrated`, `reason`, `points`, `rejection_points`, `discards`, `drift`, `reset`, `median_C`, `warning`, `a_pct`, `b_pct` y `pct_reason`; y `has_aggregates` y `command`), `images` (`n`, `bytes`, `chars_returned`), `density_table` y `mod_calls` (las llamadas que pidió el mod del plugin, también por cliente en `by_client`; ver [Delegaciones del mod](#delegaciones-del-mod-y-adopción-del-plugin)). Los tokens son de Claude, por densidad. Con `session=<id de sesión de Claude Code>` solo cuenta las delegaciones de esa sesión (lo usa la barra de estado del mod): la línea del log no guarda el id, sino su clave de un solo sentido `caller_session_key` (sha256 truncado), y el daemon calcula la misma clave del id que recibe; las líneas sin clave (anteriores a la 0.41, o de clientes sin el hook `record-call`) no cuentan. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
-| `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks` y, si la llamada espera dentro de local-delegate, `local_wait` con el motivo: `slot` o `turn`; con `turn`, también `turn_in_use` y `turn_position`) + `last_event_ts` y `now` para el indicador de actividad. Con `?session=<id>` (la banda del mod) cada entrada lleva además `mine` y la respuesta `mine_count`: solo son de esa sesión las que ella lanzó (se compara la clave de un solo sentido, nunca el id); sin parámetro, la respuesta es la de siempre |
+| `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks` y, si la llamada espera dentro de local-delegate, `local_wait` con el motivo: `slot` o `turn`; con `turn`, también `turn_in_use` y `turn_position`; desde la 0.45.0, `state` = `running`, `retrying` o `queued`, y `queue_position` en una espera de turno) + `last_event_ts` y `now` para el indicador de actividad. Con `?session=<id>` (la banda del mod) cada entrada lleva además `mine` y la respuesta `mine_count`: solo son de esa sesión las que ella lanzó (se compara la clave de un solo sentido, nunca el id); sin parámetro, la respuesta es la de siempre |
 | `GET /api/backend` | Sondeo del backend: `available`, `models` (con `status`; si no responde, la última lista buena de esa URL con `models_stale: true`), `running` y `running_ok` (si `/running` respondió; solo se pide cuando `/models` respondió), `causa`, `etiqueta` y `detalle` (los tres `null` si está conectado), y `origin`/`host` del endpoint |
 | `GET /api/status` | Versión, catálogo de modelos y tools, y un bloque `backend` con `available`, `models`, `models_stale`, `causa`, `etiqueta`, `detalle`, `origin` y `host` |
 | `GET /api/backend/stats` | Métricas de llama-swap (`/api/metrics/stats`). Sin datos trae `causa`, `etiqueta`, `detalle` y `status_http` |

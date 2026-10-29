@@ -8,17 +8,22 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- El mod y el panel ya no confunden la delegación que procesa el backend con las que esperan (issue #477): cada entrada de `/api/inflight` lleva `state` (`running`, `retrying` o `queued`, y `queue_position` en una espera de turno), sacado de la plaza que tiene la llamada y de su espera reales, no del texto de la fase. La banda del mod nombra primero la que está en el backend y, si no hay ninguna, la más antigua en cola diciendo que espera (`en cola · 4 min 0 s`); «En curso» del panel separa «Procesando (n)» y «En cola (m)». Con un daemon anterior, sin `state`, los dos se comportan como antes.
 - **Las delegaciones abortadas ya cuentan como errores** (#476). Una llamada que se cortaba por
   plazo o que moría con una excepción no dejaba línea en `usage-YYYYMM.jsonl`, y el panel
   enseñaba 0 % de errores con fallos reales. Ahora queda con `ok: false`, el motivo y lo medido
-  hasta ese momento (duración, esperas de turno y de plaza, llamadas reales). El daemon tiene
-  además su propio plazo por llamada, `LOCAL_DELEGATE_CALL_MAX_S` (1800 s): un cliente que se
-  rinde no siempre se lo dice, y la operación seguía trabajando trozo a trozo sin que nadie la
-  esperara.
-- **Cola saturada con aviso claro** (#476). Si una espera seguida por el turno o por una plaza
-  pasa `LOCAL_DELEGATE_QUEUE_MAX_WAIT_S` (900 s), la llamada falla en el acto con «cola
-  saturada…», cuántas hay por delante y qué hacer, en vez de bloquear al cliente hasta su plazo.
-  Una llamada sola, sin cola, no cambia.
+  hasta ese momento (duración, esperas de turno y de plaza, llamadas reales).
+- **Plazo propio del daemon por llamada: `LOCAL_DELEGATE_CALL_MAX_S`** (1800 s; `0` lo apaga)
+  (#476). Antes no había tope: un cliente que se rinde no siempre se lo dice al daemon, y la
+  operación seguía trabajando trozo a trozo sin que nadie la esperara. El plazo aplica a **todos**
+  los clientes, también a los de `stdio` y al puente de Claude Desktop: una llamada que pase de
+  1800 s en el daemon, cola incluida, se cancela con un error que dice por qué y queda en el log con
+  `cancel_reason: "deadline"`. Si de verdad necesitas llamadas más largas, súbelo o ponlo a `0`.
+- **Cola saturada con aviso claro** (#476). Si quien espera turno o plaza lleva
+  `LOCAL_DELEGATE_QUEUE_MAX_WAIT_S` (900 s) sin que la cola avance (ningún trozo terminado por quien
+  tiene el turno o la plaza, ni cambio de quién lo tiene), la llamada falla en el acto con «cola
+  saturada…», qué hay por delante y qué hacer, en vez de bloquear al cliente hasta su plazo. Una
+  cola lenta que avanza no corta a nadie, y una llamada sola, sin cola, no cambia.
 
 ## [0.44.2] - 2026-10-28
 
