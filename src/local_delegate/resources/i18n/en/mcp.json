@@ -173,6 +173,7 @@
   "mcp.warning.origin.reduce": "in the reduce step",
   "mcp.warning.output_truncated": "output truncated by max_tokens",
   "mcp.warning.output_truncated_calls": "output truncated by max_tokens in {truncated} of {calls} calls; part of the content may be missing",
+  "mcp.warning.retried_calls": " (besides, {retried} cut calls were redone on smaller chunks)",
   "mcp.warning.truncated_pieces": "; affected chunks: {pieces}",
   "mcp.warning.truncated_piece_lines": "{piece} (lines {first}-{last})",
   "mcp.warning.extract_null_in_chunks": "document processed in {pieces} chunks and none gave a value for: {fields}; that null may mean \"not seen\", not \"absent\"",

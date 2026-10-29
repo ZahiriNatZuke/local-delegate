@@ -25,6 +25,46 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   que el modelo pedido estaba cargado pero ocupado. Sin foto, el texto de siempre. `error` y
   `error_class` no cambian; el log gana `read_timeout_cause` (`model_swap` o `busy`).
 
+## [0.45.1] - 2026-10-29
+
+Versión de correcciones: el reintento partido de un trozo cortado ya no vuelve a cortarse en
+`local_explain_code`, el aviso de salida truncada cuadra con los pasos del log y el consejo de
+actualizar funciona también cuando el paquete se instaló con una versión fija.
+
+### Cómo actualizar
+
+- **Si instalaste con una versión fija** (`uv tool install "local-delegate-mcp==X.Y.Z"`, por
+  ejemplo `[llamaswap]==0.45.0`), `uv tool upgrade local-delegate-mcp` responde «Nothing to
+  upgrade» y no sube nada; tu versión todavía da ese consejo viejo. Reinstala sin fijación, con tus
+  extras: `uv tool install "local-delegate-mcp[llamaswap]@latest"` (o `local-delegate-mcp@latest`
+  sin extras). Desde esta versión `local-delegate update` y `doctor` lo detectan solos.
+- **Ejecuta `local-delegate update` y reinicia el daemon si lo usas**, como en cada versión: la
+  corrección del reintento vive en el proceso del servidor.
+- **Abre una sesión nueva de Claude Code (o de Claude Desktop) tras actualizar.** Las sesiones
+  abiertas siguen con el servidor MCP de la 0.45.0 hasta que se reinician.
+- No hay variables nuevas ni cambios de configuración.
+
+### Corregido
+
+- **Los trozos de `local_explain_code` ya no se cortan otra vez al reintentarlos** (#487). En
+  ficheros de código densos de unos 30 KB, el reintento partido de la 0.43.0 seguía acabando en
+  `finish_reason: "length"`: el tope de salida del map de esta tool crece con el trozo, así que al
+  partirlo se partía también el tope y las mitades volvían a quedarse cortas. Ahora cada parte
+  conserva al menos el tope del paso cortado del que viene. Las demás tools troceadas mandan el
+  mismo tope que antes.
+- **El aviso de salida truncada cuadra con los pasos del log** (#487). «N de M llamadas» solo
+  contaba los cortes que quedaban en el resultado, mientras `steps` mostraba también los que se
+  reintentaron («1 de 13» frente a 4 pasos en `length`). El aviso añade ahora «aparte, R llamadas
+  cortadas se repitieron partiendo su trozo», y `local_extract` lo da en el campo `retried_calls`
+  sin cambiar el texto de `warning`.
+- **El consejo de actualizar sirve también con una instalación de `uv tool` fijada a una versión**
+  (issue #488). Si se instaló con `uv tool install "local-delegate-mcp==X.Y.Z"`, `uv tool upgrade`
+  responde «Nothing to upgrade» con código 0 y no mueve nada. Ahora `local-delegate update` y
+  `doctor` leen el `uv-receipt.toml` del entorno de la tool y, si la fijación es exacta, dicen que
+  está fijada y recomiendan `uv tool install "local-delegate-mcp[<extras>]@latest"`, conservando los
+  extras con los que se instaló (p. ej. `[llamaswap]`). Si el receipt falta, no se lee o no se
+  reconoce, el consejo sigue siendo `uv tool upgrade local-delegate-mcp`.
+
 ## [0.45.0] - 2026-10-29
 
 Esta versión hace visibles las delegaciones que se atascan o se pierden: las abortadas cuentan como
@@ -3860,7 +3900,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.45.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.45.1...HEAD
+[0.45.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.45.0...v0.45.1
 [0.45.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.44.2...v0.45.0
 [0.44.2]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.44.1...v0.44.2
 [0.44.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.44.0...v0.44.1
