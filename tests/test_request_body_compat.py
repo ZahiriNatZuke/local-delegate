@@ -108,10 +108,17 @@ def test_body_matches_main(captured):
 #: Keys added to the usage event after the base commit, on purpose and additive: a reader of the
 #: old format ignores them. `pieces` (issue #454) goes with `chunks` on chunked events only.
 _ADDED_EVENT_KEYS = {"map_chunk": {"pieces"}, "reduce": {"pieces"}}
+#: Keys added to EVERY event after the base commit (concurrency PC+Mac, step 0): the machine of
+#: origin and the operation's phases. Additive too: nothing reads them by default.
+_ADDED_KEYS_EVERY_EVENT = {"host", "concurrency"}
 
 
 @pytest.mark.parametrize("captured", _CASES, ids=_IDS, indirect=True)
 def test_event_keys_match_main(captured):
     name, result = captured
-    expected = set(_field(_fixture(name), "event_keys")) | _ADDED_EVENT_KEYS.get(name, set())
+    expected = (
+        set(_field(_fixture(name), "event_keys"))
+        | _ADDED_EVENT_KEYS.get(name, set())
+        | _ADDED_KEYS_EVERY_EVENT
+    )
     assert set(result["event_keys"]) == expected, name
