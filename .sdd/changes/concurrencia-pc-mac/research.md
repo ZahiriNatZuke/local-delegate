@@ -70,6 +70,18 @@ hay dos caminos y no se da por hecho ninguno.
   (`server._inflight_file`, `server.py:235-236`). La espera real contra la PC es la cola interna de
   llama-swap, que para el daemon es solo un POST largo; lo único que la PC ve es la foto `inflight`
   de `/api/events`, y solo en la afinidad (`server._affinity_observe`).
+- **Lo que publica la PC en la tailnet (comprobado el 2026-10-29, solo lectura):** `tailscale serve
+  status` da dos proxies, ambos «tailnet only»: `https://own-pc.<tailnet>.ts.net:9292` → `http://
+  127.0.0.1:9292` (llama-swap) y `https://own-pc.<tailnet>.ts.net:9393` → `http://127.0.0.1:9393` (el
+  daemon). `Get-NetTCPConnection -LocalPort 9393 -State Listen` (sesión principal) lo confirma:
+  escuchan el daemon en 127.0.0.1 y `tailscaled.exe` en la IP de la tailnet. Así que **los dos
+  caminos están abiertos**, y por los dos el servidor ve la conexión **desde 127.0.0.1**: el daemon
+  no puede distinguir por IP una llamada de la Mac de una local (`host_via: ip` nunca sale por
+  aquí). Queda `forwarded` solo si `tailscale serve` añade `X-Forwarded-For` (no comprobado; el
+  paso 1 lo dirá) y, de forma fiable, `header`: **la entrada MCP `http` de la Mac debe mandar
+  `X-Local-Delegate-Host`** (`"headers": {"X-Local-Delegate-Host": "mac"}` junto al token), y el MCP
+  stdio de la Mac la manda solo desde el paso 0. Lo mismo vale para llama-swap: tras `serve`, sus
+  peticiones también llegan de 127.0.0.1.
 - **Cómo averiguar cuál usa (sin suponer):**
   1. En la Mac, `claude mcp get local-delegate` (o `~/.claude.json`, clave `mcpServers.local-delegate`):
      `"type": "http"` con URL `https://<pc>…:9393/mcp` = camino 1; `"type": "stdio"` con `uvx …` =
@@ -77,9 +89,11 @@ hay dos caminos y no se da por hecho ninguno.
      cada uno puede ir por un camino distinto.
   2. Con el paso 0 desplegado en la PC: cada entrada del log y de `/api/inflight` del daemon trae
      `host`/`host_via`. Una de la Mac por el camino 1 sale con `host_via` (`ip` = dirección de la
-     tailnet `100.x`; `forwarded` si entra por `tailscale serve`, que conecta desde loopback y pasa
-     `X-Forwarded-For` — por comprobar en el paso 1; `header` si su entrada lleva
-     `X-Local-Delegate-Host`). Una de la PC no lleva `host_via`.
+     tailnet `100.x`, que con `tailscale serve` delante no se da; `forwarded` si `serve` pasa
+     `X-Forwarded-For`, por comprobar en el paso 1; `header` si su entrada lleva
+     `X-Local-Delegate-Host`). Una de la PC no lleva `host_via`; **una de la Mac por `serve` sin
+     cabecera tampoco**, y se confundiría con una local: por eso el paso 1 añade la cabecera a la
+     entrada `http` de la Mac antes de medir.
   3. Camino 2: con la Mac en el paso 0, sus POST a llama-swap llevan `X-Local-Delegate-Host` y la
      foto `inflight` las muestra con ese `host` (`inflight_seen`); en el log de la Mac, `host` es la
      Mac y no hay `phases.turn`.
@@ -247,6 +261,11 @@ modelo B, lanzadas a la vez. Con los roles por defecto, `local_summarize` va al 
 **Paso previo en las dos máquinas:** fijar qué camino usa cada cliente de la Mac (§2.4, «Cómo
 averiguar cuál usa»). Si la Mac tiene clientes por los dos caminos, medir los dos escenarios.
 
+**Contexto del día de la medición:** el daemon de la PC se reinició a las ~12:56 UTC del 2026-10-29
+por trabajo fantasma en la cola (issue #479), y `_pid_alive` da por vivo un proceso terminado en
+Windows (issue #483): una entrada fantasma en `/api/inflight` puede contaminar la lectura del panel
+durante la prueba. Antes de medir, comprobar que `/api/inflight` está vacío.
+
 **Pasos en la PC (sesión principal):**
 
 1. `local-delegate test-window start --label "paso 1 concurrencia PC+Mac"` → guardar el id.
@@ -268,6 +287,10 @@ Vamos a medir la concurrencia de local-delegate entre esta Mac y la PC (paso 1 d
    Después ejecuta `claude mcp get local-delegate` y dime si la entrada es `stdio` o `http` (y la
    URL si es `http`; NO me muestres tokens ni cabeceras con secretos). Mira también si Codex o
    Claude Desktop de esta Mac tienen `local-delegate` configurado y por qué camino.
+   Si alguna entrada es `http` (contra `…:9393/mcp` de la PC), añádele la cabecera
+   `"X-Local-Delegate-Host": "mac"` junto a la de autorización que ya tenga (sin tocar ni mostrar el
+   token), para que el daemon de la PC sepa que la llamada es de la Mac; dime qué cambiaste y pide
+   que se reinicie la sesión antes del paso 2.
 2. Ejecuta `local-delegate test-window start --label "paso 1 concurrencia PC+Mac (Mac)"` y guarda el id.
 3. Llama a `local_status` y dime qué modelo resuelve el rol `code` y qué modelos ve cargados.
 4. Lanza A LA VEZ, en dos subagentes en paralelo (o dos llamadas seguidas sin esperar la primera),

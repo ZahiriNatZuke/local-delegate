@@ -184,8 +184,9 @@ petición de su foto `inflight`; de ellas el daemon **solo** lee esa, nunca la c
 daemon de la PC (entrada `http`), sus llamadas pasan por el turno de la PC y quedan en el log **de
 la PC** con `host_via`; si corre su propio MCP en stdio contra `:9292`, quedan en el log **de la
 Mac** con su `host` y en la PC solo se ven en la foto `inflight` de llama-swap. Para que una entrada
-`http` diga un nombre en vez de una IP, añade a su entrada la cabecera
-`"headers": {"X-Local-Delegate-Host": "mac"}`.
+`http` se reconozca, añade a su entrada la cabecera `"headers": {"X-Local-Delegate-Host": "mac"}`:
+detrás de `tailscale serve` el daemon ve todas las conexiones desde `127.0.0.1`, así que sin la
+cabecera (y si el proxy no pasa `X-Forwarded-For`) una llamada de la Mac parece local.
 
 **Cruzar los logs de la PC y la Mac.** Copia el `usage-AAAAMM.jsonl` de la Mac junto al de la PC
 (cada línea dice su `host`, así que se pueden juntar sin perder el origen) y ordena por
