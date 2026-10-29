@@ -144,7 +144,9 @@ def test_fields_omitted_when_not_applicable(env, tmp_path):
     """No parameters and no reasoning: the event has exactly the keys of the L0 fixture."""
     fixture = json.loads((FIXTURES / "simple.json").read_text(encoding="utf-8"))
     result = capture.capture("simple", tmp_path)
-    assert result["event_keys"] == sorted(fixture["event_keys"])
+    # `host` and `concurrency` (concurrency PC+Mac, step 0) go on every event since the fixture.
+    added = ["host", "concurrency"]
+    assert result["event_keys"] == sorted([*fixture["event_keys"], *added])
     event = _last_event()
     for name in NEW_FIELDS:
         assert name not in event, name
@@ -152,7 +154,7 @@ def test_fields_omitted_when_not_applicable(env, tmp_path):
     # With parameters (and still no reasoning) only `backend_params` is added.
     _write_roles({"mechanical": {"top_k": 20}})
     result = capture.capture("simple", tmp_path)
-    assert result["event_keys"] == sorted([*fixture["event_keys"], "backend_params"])
+    assert result["event_keys"] == sorted([*fixture["event_keys"], *added, "backend_params"])
     assert _last_event()["backend_params"] == {"role": "mechanical", "values": {"top_k": 20}}
 
 

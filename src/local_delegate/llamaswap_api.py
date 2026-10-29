@@ -11,14 +11,15 @@ Qué se le pregunta a llama-swap (v255) y qué se descarta:
   (`logData`, primero el del proxy, con un tope de unos 100 KB), el estado de los modelos y una foto
   `inflight` con las peticiones en curso **de cualquier cliente** (`operation: "snapshot"`). Cada
   petición de esa foto trae sus cabeceras (`req_headers`), así que de ella solo se cuenta cuántas
-  hay por modelo.
+  hay por modelo y, de las cabeceras, solo se lee `X-Local-Delegate-Host` (la máquina de origen que
+  manda este paquete desde la 0.45: `in_flight_requests`). Nunca la credencial.
 * La recarga con `-watch-config` (sondeo de 2 s) se ve en el log del proxy: «reloading
   configuration», y luego «configuration reloaded» o un rechazo («failed to reload config»,
   «failed to build new server during reload»). En una recarga válida el servidor viejo se apaga y
   **cierra el flujo** antes de que el nuevo escriba «configuration reloaded» (T2, hallazgo 2), así
   que la vigía se reconecta y busca en el historial lo que llegó después de lo último que vio.
 
-La credencial es la del proceso que pregunta (`config.auth_headers()`): en el daemon, la de su
+La credencial es la del proceso que pregunta (`config.backend_headers()`, que suma el origen): en el daemon, la de su
 lanzador; en el CLI sin daemon, la del shell. El CLI no pregunta directamente sin ella (REQ-039,
 punto 3): sin key, «no se sabe». Nada de este módulo imprime ni devuelve la key.
 """
@@ -112,7 +113,7 @@ class Backend:
 
 def local_backend() -> Backend:
     """El llama-swap de `LOCAL_DELEGATE_BASE_URL`, con la credencial de este proceso."""
-    return Backend(config.BASE_URL.removesuffix("/v1"), config.auth_headers())
+    return Backend(config.BASE_URL.removesuffix("/v1"), config.backend_headers())
 
 
 def _client(read: float = READ_S, connect: float = CONNECT_S) -> httpx2.Client:
@@ -201,6 +202,36 @@ def _count_by_model(data: Any) -> dict[str, int]:
     return counts
 
 
+def _origin_host(headers: Any) -> str | None:
+    """`X-Local-Delegate-Host` of one `inflight` request, or `None`. Nothing else is read.
+
+    llama-swap is written in Go: its headers may come as `{name: [values]}` and with the canonical
+    case, so the name is compared without case and a list gives its first value.
+    """
+    if not isinstance(headers, dict):
+        return None
+    wanted = config.HOST_HEADER.lower()
+    for name, value in headers.items():
+        if not isinstance(name, str) or name.lower() != wanted:
+            continue
+        if isinstance(value, list):
+            value = value[0] if value else None
+        if isinstance(value, str):
+            return config.clean_machine_name(value) or None
+    return None
+
+
+def _requests_of(data: Any) -> list[dict[str, str | None]]:
+    """Each request of an `inflight` photo as `{model, host}`: `host` is `None` without the header."""
+    requests = data.get("requests") if isinstance(data, dict) else None
+    found: list[dict[str, str | None]] = []
+    for req in requests or []:
+        model = req.get("model") if isinstance(req, dict) else None
+        if isinstance(model, str):
+            found.append({"model": model, "host": _origin_host(req.get("req_headers"))})
+    return found
+
+
 class _Stream:
     """Una conexión a `/api/events`, abierta hasta que se cierre a mano."""
 
@@ -223,13 +254,18 @@ class _Stream:
 
     def initial_load(self, cap_s: float) -> tuple[str, dict[str, int]]:
         """Lee hasta la primera foto `inflight`: (log del proxy, peticiones por modelo)."""
+        log, data = self._first_inflight(cap_s)
+        return log, _count_by_model(data)
+
+    def _first_inflight(self, cap_s: float) -> tuple[str, Any]:
+        """Lee hasta la primera foto `inflight`: (log del proxy, la foto tal cual llegó)."""
         deadline = time.monotonic() + cap_s
         log: list[str] = []
         for kind, data in _messages(self.lines):
             if kind == "logData":
                 log.append(_proxy_log(data))
             elif kind == "inflight":
-                return "".join(log), _count_by_model(data)
+                return "".join(log), data
             if time.monotonic() > deadline:
                 break
         raise QueryError(_no_inflight(cap_s))
@@ -252,6 +288,23 @@ def in_flight(
     stream = _Stream(backend, read=cap_s, connect=connect_s)
     try:
         return stream.initial_load(cap_s)[1]
+    except httpx2.TimeoutException:
+        raise QueryError(_no_inflight(cap_s)) from None
+    finally:
+        stream.close()
+
+
+def in_flight_requests(
+    backend: Backend, cap_s: float = IN_FLIGHT_CAP_S, connect_s: float = CONNECT_S
+) -> list[dict[str, str | None]]:
+    """Las peticiones en vuelo de cualquier cliente, una a una, como `{model, host}`.
+
+    Lo mismo que `in_flight`, sin agrupar: `host` es la máquina de origen si la petición trae
+    `X-Local-Delegate-Host` (este paquete desde la 0.45) y `None` si no (otro cliente, o un MCP viejo).
+    """
+    stream = _Stream(backend, read=cap_s, connect=connect_s)
+    try:
+        return _requests_of(stream._first_inflight(cap_s)[1])
     except httpx2.TimeoutException:
         raise QueryError(_no_inflight(cap_s)) from None
     finally:
