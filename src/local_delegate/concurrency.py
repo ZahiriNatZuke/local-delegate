@@ -234,9 +234,6 @@ BACKEND_WAIT_RESAMPLE_S = 10.0
 #: At most this many models per send in `backend_wait`: the inflight file keeps no long lists.
 BACKEND_WAIT_MAX_MODELS = 8
 
-#: Serialises the watch threads' writes with their own stop (see `SendWatch.stop`).
-_watch_lock = threading.Lock()
-
 
 def waiting_for(
     models: dict[str, str] | None, model: str, resolved: str | None
@@ -265,15 +262,19 @@ def waiting_for(
 class SendWatch:
     """The `waiting_backend` watch of ONE send. `stop()` is idempotent and safe from any thread.
 
-    The stop flag works as the send's generation: the watch thread writes only under
-    `_watch_lock` and only while the flag is down, and `stop()` raises it under the same lock
-    BEFORE it clears what was written. So nothing is written after the cleanup, even when a
-    `/running` query outlives the send (REQ-002, race (h) of the plan).
+    The stop flag works as the send's generation, guarded by a lock of THIS watch only (a slow
+    `inflight.json` write of one send never holds up the others' `stop()`). `on_wait` runs outside
+    the lock: the thread checks the flag and notes `marked` under the lock, writes, then checks
+    the flag again and undoes its own mark if `stop()` came in between. `stop()` raises the flag
+    under the lock BEFORE it clears. Whatever order the writes land in, the last one of a stopped
+    watch is a clear, so nothing is left after the cleanup, even when a `/running` query outlives
+    the send (REQ-002, race (h) of the plan).
     """
 
     def __init__(self, on_wait: Callable[[dict[str, str] | None], None]) -> None:
         self._on_wait = on_wait
         self._stop = threading.Event()
+        self._lock = threading.Lock()
         self.marked = False
 
     @property
@@ -282,19 +283,27 @@ class SendWatch:
 
     def _write(self, others: dict[str, str] | None) -> bool:
         """Mark (`others`) or unmark (`None`) unless stopped. False once stopped."""
-        with _watch_lock:
+        with self._lock:
             if self._stop.is_set():
                 return False
-            if others is not None:
-                self._on_wait(others)
+            if others is None:
+                was_marked, self.marked = self.marked, False
+            else:
                 self.marked = True
-            elif self.marked:
+        if others is None:
+            if was_marked:
                 self._on_wait(None)
-                self.marked = False
             return True
+        self._on_wait(others)
+        with self._lock:
+            stopped = self._stop.is_set()
+        if stopped:
+            self._on_wait(None)  # `stop()` came in while writing: undo, so a clear is last
+            return False
+        return True
 
     def stop(self) -> None:
-        with _watch_lock:
+        with self._lock:
             if self._stop.is_set():
                 return
             self._stop.set()

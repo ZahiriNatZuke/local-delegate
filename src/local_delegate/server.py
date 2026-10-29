@@ -1813,18 +1813,26 @@ def _read_timeout_text(model: str, probe: _LoadProbe) -> tuple[str, str | None]:
     `model_swap`: the requested model was not loaded and llama-swap had another one `ready` or
     `starting`, named in the text with the machines that were using it when the daemon saw them
     (`inflight_seen`). `busy`: the requested one was `ready`. Otherwise today's text and `None`.
+
+    Without topology (a remote backend: the Mac) an alias cannot be resolved, so a requested name
+    that is not in `/running` may well be the loaded model under its real id: then nothing is
+    blamed on a swap and today's text goes, as `waiting_backend` does (REQ-001).
     """
     seconds = _machine(config.HTTP_TIMEOUT)
     photo = _read_timeout_photo(probe)
     if photo is not None:
-        names = {model}
+        resolved = None
         with suppress(Exception):
-            names.add(_real_model_name(model))
+            resolved = _resolved_model_name(model)
+        names = {model} | ({resolved} if resolved else set())
         if any(photo.get(name) == "ready" for name in names):
             return (
                 i18n.t("mcp.error.read_timeout_busy", model=model, seconds=seconds),
                 "busy",
             )
+        if resolved is None and not any(name in photo for name in names):
+            # Undecidable: maybe an alias of what is loaded. The prudent text, no cause.
+            return i18n.t("mcp.error.read_timeout", model=model, seconds=seconds), None
         loaded = sorted(
             m for m, s in photo.items() if m not in names and s in ("ready", "starting")
         )

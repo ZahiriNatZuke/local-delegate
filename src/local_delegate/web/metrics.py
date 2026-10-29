@@ -1474,6 +1474,7 @@ __WEB_FONTS__
   --tx:#e8edf4; --tx2:#c3ccd9; --mut:#8b95a7; --faint:#5b6577;
   --acc:#34d399; --acc2:#6ee7b7; --acc-d:#059669;
   --blue:#60a5fa; --violet:#a78bfa; --amber:#fbbf24; --danger:#f87171; --cyan:#22d3ee; --pink:#f472b6;
+  --amber-tx:#fbbf24; /* amber as TEXT on a chip: the light theme darkens it for contrast */
   --glow:rgba(52,211,153,.14);
   --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 32px -8px rgba(0,0,0,.55);
   --shadow-h:0 1px 2px rgba(0,0,0,.5),0 20px 44px -10px rgba(0,0,0,.6);
@@ -1487,6 +1488,7 @@ __WEB_FONTS__
   color-scheme:light;
   --bg:#f6f8fc; --bg2:#eef2f8; --panel:#ffffff; --panel2:#f4f7fb; --bd:#e4e9f1; --bd2:#d4dbe6;
   --tx:#0e1526; --tx2:#33405a; --mut:#64748b; --faint:#94a3b8;
+  --amber-tx:#92400e;
   --glow:rgba(5,150,105,.10);
   --shadow:0 1px 2px rgba(15,23,42,.06),0 12px 28px -10px rgba(15,23,42,.14);
   --shadow-h:0 1px 2px rgba(15,23,42,.08),0 20px 40px -12px rgba(15,23,42,.2);
@@ -1759,7 +1761,8 @@ td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .queue-dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;border:2px dashed var(--faint)}
 .ifrow.queued{opacity:.72}
 .wait-dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;border:2px dashed var(--amber)}
-.chunkchip.loaded{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 45%,transparent)}
+.chunkchip.loaded{color:var(--amber-tx);background:color-mix(in srgb,var(--amber) 16%,transparent);
+  max-width:26ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ifgroup{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:8px 0 2px}
 .ifgroup:first-child{margin-top:0}
 .ifgroup .num{color:var(--amber)}

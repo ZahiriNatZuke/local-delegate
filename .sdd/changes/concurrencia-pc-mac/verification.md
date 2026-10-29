@@ -17,6 +17,9 @@ Rama `feat/concurrency-lot1-waiting-backend`. REQ-001..005, REQ-040, REQ-042.
 | La sonda no es la primera fuente | `test_the_probes_photo_is_the_first_source` | `2 == 1` (consultas a `/running`) |
 | `_slot` no para los vigilantes al soltar la plaza | `test_letting_the_place_go_stops_the_watch_of_an_abandoned_send` | `'backend_wait' not in {...}` |
 | Sin la guarda «sin topología no se marca» | (i) `test_without_topology_an_absent_name_is_not_marked` | `'waiting_backend' == 'running'` |
+| `read_timeout` sin cautela de alias (sin topología) | `test_without_topology_an_alias_is_not_blamed_on_a_swap` | `'model_swap' is None` |
+| Vigilante con `on_wait` bajo un cerrojo global (código anterior a la revisión) | `test_a_slow_write_of_one_send_does_not_hold_up_another_sends_stop`, `test_a_stop_during_a_write_ends_with_a_clear` | `(… - …) < 0.5` (5 s esperando); «stop() waited for the write» |
+| Sin deshacer la marca cuando la parada llega durante la escritura | `test_a_stop_during_a_write_ends_with_a_clear` | `[True] == [False]` |
 | Mod: sin rango propio de `waiting_backend` | `status.test.ts` «a running one still wins…», «a retrying one goes before…» | `toContain('· local_translate 5 s +2 ·')` |
 
 ### Excepción a «los tests existentes no se modifican»
@@ -34,3 +37,14 @@ más. El resto del fichero y de la suite, intactos.
 - Mod: `build_mod` + `claude plugin test`: 149 en verde, cinco ficheros.
 - Capturas del panel en claro y oscuro con una entrada `waiting_backend` simulada: en la entrega
   del lote (scratchpad de la sesión).
+
+### Tras la revisión independiente
+
+- El texto del `read_timeout` usa `_resolved_model_name`: sin topología, si el nombre pedido no
+  aparece en `/running` no se culpa a un cambio de modelo (el texto prudente, la causa `null`).
+- Cada vigilante tiene su propio cerrojo y `on_wait` se llama fuera de él. Si la parada llega
+  durante una escritura, el vigilante deshace su marca, así la última escritura es un borrado. Con
+  eso, el mutante «sin la guarda de parada inicial» ya no hace caer (h): esa guarda ahorra una
+  escritura, y la corrección la garantiza el deshacer, cuyo control es el test de arriba.
+- Chip «cargado: …» con `--amber-tx` (oscurecido en el tema claro), fondo ámbar suave y recorte
+  con puntos suspensivos.

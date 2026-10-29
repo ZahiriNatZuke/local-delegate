@@ -30,6 +30,9 @@ def probe_at_once(reload_config, monkeypatch):
     reload_config()
     concurrency.reset_cache()
     monkeypatch.setattr(server, "_probe_delay", lambda: 0.0)
+    # The PC: the topology resolves the requested name (here, to itself). The Mac's case, without
+    # topology, has its own tests below.
+    monkeypatch.setattr(server, "_resolved_model_name", lambda model: model)
     yield
     concurrency.reset_cache()
 
@@ -162,3 +165,36 @@ def test_the_cause_reaches_the_usage_event(tmp_path, monkeypatch):
     assert failed, "no read_timeout event was written"
     assert failed[-1]["read_timeout_cause"] == "model_swap"
     assert failed[-1]["error_class"] == failures.FailureClass.CAPACITY.value
+
+
+# --- Without topology (a remote backend: the Mac) -------------------------------------------
+
+
+@backend_mock.mock
+def test_without_topology_an_alias_is_not_blamed_on_a_swap(monkeypatch):
+    """The Mac asks for an alias; llama-swap shows the real id `ready`. That is the same model,
+    busy, not another one: no `model_swap`, the prudent text."""
+    monkeypatch.setattr(server, "_resolved_model_name", lambda model: None)
+    running = backend_mock.get(RUNNING).mock(return_value=_running((OTHER, "ready")))
+    backend_mock.post(CHAT).mock(side_effect=_timeout_after(0.3))
+
+    result = server._post_chat("long-alias", {"model": "long-alias"})
+
+    assert running.call_count >= 1  # guard: there was a photo to read
+    assert result.read_timeout_cause is None
+    assert result.text == server.ERROR_PREFIX + i18n.t(
+        "mcp.error.read_timeout", model="long-alias", seconds=_seconds()
+    )
+
+
+@backend_mock.mock
+def test_without_topology_a_requested_model_seen_starting_is_still_a_swap(monkeypatch):
+    """Decidable without topology: the requested name itself is in `/running`, not ready."""
+    monkeypatch.setattr(server, "_resolved_model_name", lambda model: None)
+    backend_mock.get(RUNNING).mock(return_value=_running((OTHER, "ready"), (ASKED, "starting")))
+    backend_mock.post(CHAT).mock(side_effect=_timeout_after(0.3))
+
+    result = server._post_chat(ASKED, {"model": ASKED})
+
+    assert result.read_timeout_cause == "model_swap"
+    assert OTHER in result.text

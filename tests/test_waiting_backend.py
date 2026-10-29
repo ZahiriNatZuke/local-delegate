@@ -448,3 +448,68 @@ def test_the_snapshot_keeps_old_entries_as_they_were(tmp_path, monkeypatch):
             assert "backend_wait" not in entry
     finally:
         server._inflight_end(entry_id)
+
+
+# --- one lock per watch: a slow write never holds up another send's stop ----------------------
+
+
+def test_a_slow_write_of_one_send_does_not_hold_up_another_sends_stop():
+    """`on_wait` writes `inflight.json` under a file lock (up to 2 s): one send's slow write must
+    not delay the end of another send."""
+    writing = threading.Event()
+    release = threading.Event()
+
+    def slow(models):
+        if models is not None:
+            writing.set()
+            release.wait(5)
+
+    slow_watch = concurrency.SendWatch(slow)
+    other_calls: list = []
+    other = concurrency.SendWatch(other_calls.append)
+    assert other._write({OTHER: "ready"})
+    writer = threading.Thread(target=slow_watch._write, args=({OTHER: "ready"},), daemon=True)
+    writer.start()
+    try:
+        assert writing.wait(5)  # guard: the slow write is in progress
+        t0 = time.monotonic()
+        other.stop()
+        assert time.monotonic() - t0 < 0.5
+        assert other_calls == [{OTHER: "ready"}, None]
+    finally:
+        release.set()
+        writer.join(5)
+        slow_watch.stop()
+
+
+def test_a_stop_during_a_write_ends_with_a_clear():
+    """`on_wait` runs outside the lock: when `stop()` lands while the mark is being written, the
+    last write of that send is still a clear."""
+    writing = threading.Event()
+    release = threading.Event()
+    calls: list = []
+    lock = threading.Lock()
+
+    def on_wait(models):
+        if models is not None:
+            writing.set()
+            release.wait(5)
+        with lock:
+            calls.append(models)
+
+    watch = concurrency.SendWatch(on_wait)
+    result: list = []
+    writer = threading.Thread(
+        target=lambda: result.append(watch._write({OTHER: "ready"})), daemon=True
+    )
+    writer.start()
+    assert writing.wait(5)
+    stopper = threading.Thread(target=watch.stop, daemon=True)
+    stopper.start()
+    stopper.join(1)
+    assert not stopper.is_alive(), "stop() waited for the write"
+    release.set()
+    writer.join(5)
+    assert result == [False]
+    assert calls[-1] is None
+    assert watch._write({OTHER: "ready"}) is False  # nothing after the cleanup
