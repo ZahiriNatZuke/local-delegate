@@ -16,7 +16,9 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import backend_mock
 import pytest
+from test_affinity import affinity  # noqa: F401  (fixture)
 
 from local_delegate import config, server, turn
 from local_delegate.turn import Active, Grant, PendingRequest, State, Turn, Wait
@@ -564,3 +566,73 @@ def test_operation_with_affinity_also_yields(with_topology, monkeypatch):
     assert op.yields == 1
     assert op.affinity is None
     assert op.log_fields()["turn_yields"] == 1
+
+
+# --- Ceder con afinidad real: se decide de nuevo y no deja `affinity_dropped` ----------------
+
+
+@backend_mock.mock
+@pytest.mark.usefixtures("affinity")
+@pytest.mark.parametrize("still_loaded", [True, False])
+def test_yield_with_real_affinity_decides_it_again_and_logs_no_drop(monkeypatch, still_loaded):
+    """La afinidad la elige `ensure` + `pick` con la config y el llama-swap simulados (el 26B
+    cargado, la tarea es del rol mecánico). Llega Qwen, que choca; la operación cede y, al volver,
+    la afinidad se decide de nuevo: con el 26B aún cargado vuelve a él; si ya no lo está, va al
+    rol. En ningún caso la cesión cuenta como fallo del alternativo (`affinity_dropped`).
+
+    Mutante (código de la primera versión del lote): al volver pide solo el rol → `affinity` queda
+    en `None` y `log_fields` escribe `affinity_dropped` como si el alternativo hubiera fallado.
+    """
+    from test_affinity import CODE as A_CODE
+    from test_affinity import LONG as A_LONG
+    from test_affinity import MECH as A_MECH
+    from test_affinity import _Backend
+
+    from local_delegate import matrix
+
+    # Solo la celda del 26B: con la de Qwen, la operación entraría junto a Y en Qwen (E-1).
+    monkeypatch.setattr(matrix, "CELLS", tuple(c for c in matrix.CELLS if c.alternative == A_LONG))
+    _Backend().install(ready={A_LONG: 120}, ended_ago={A_LONG: 10})
+    clock = Clock()
+    server._reset_turn()
+    fake = Turn(lambda _a, _b: False, tick=0.02, clock=clock, yield_s=120.0)
+    monkeypatch.setattr(server, "_turn", fake)
+    op = server._OperationTurn(4343, A_MECH, "local_translate", role_name="mechanical")
+
+    op.ensure(A_MECH, size=10)
+    model, skip = op.pick()
+    assert (model, skip) == (A_LONG, False)  # guarda: la afinidad eligió el 26B de verdad
+    op.note_attempt(server.Attempt(A_LONG, True, None, None, 5))
+    assert op.affinity == A_LONG and op.affinity_tried == A_LONG
+
+    fake.enqueue(PendingRequest("y", frozenset({A_CODE}), A_CODE))
+    assert fake.snapshot().queued("y") is not None  # guarda: Qwen choca con el 26B en uso
+    clock.t = 120.0
+    assert fake.must_yield(op.op_id), (fake.snapshot(), op._turn is fake)
+
+    if not still_loaded:
+        backend_mock._routes.clear()  # la primera ruta que casa gana: fuera la del 26B cargado
+        _Backend().install(ready={A_CODE: 120}, ended_ago={A_CODE: 1})
+    th = _Thread("X-ensure", op.ensure, A_MECH, size=10)
+    th.start()
+    try:
+        assert _until(lambda: isinstance(fake.poll("y"), Grant) or None), "X no cedió"
+        assert _until(lambda: fake.snapshot().queued(op.op_id))
+        fake.expire("y")
+        th.join(CAP_S)
+        assert not th.is_alive() and th.error is None, th.error
+        model, skip = op.pick()
+    finally:
+        fake.expire("y")
+        th.join(CAP_S)
+        op.release_slot()
+    assert op.yields == 1
+    fields = op.log_fields()
+    assert "affinity_dropped" not in fields, fields
+    assert fields["turn_yields"] == 1
+    if still_loaded:
+        assert (model, skip) == (A_LONG, False), "tras ceder no volvió al alternativo cargado"
+        assert op.affinity == A_LONG and fields.get("routing") == "affinity"
+    else:
+        assert (model, skip) == (A_MECH, False)  # guarda: esta vez la decisión es otra
+        assert op.affinity is None and "routing" not in fields
