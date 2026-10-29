@@ -19,6 +19,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   reintentaron («1 de 13» frente a 4 pasos en `length`). El aviso añade ahora «aparte, R llamadas
   cortadas se repitieron partiendo su trozo», y `local_extract` lo da en el campo `retried_calls`
   sin cambiar el texto de `warning`.
+- **El consejo de actualizar sirve también con una instalación de `uv tool` fijada a una versión**
+  (issue #488). Si se instaló con `uv tool install "local-delegate-mcp==X.Y.Z"`, `uv tool upgrade`
+  responde «Nothing to upgrade» con código 0 y no mueve nada. Ahora `local-delegate update` y
+  `doctor` leen el `uv-receipt.toml` del entorno de la tool y, si la fijación es exacta, dicen que
+  está fijada y recomiendan `uv tool install "local-delegate-mcp[<extras>]@latest"`, conservando los
+  extras con los que se instaló (p. ej. `[llamaswap]`). Si el receipt falta, no se lee o no se
+  reconoce, el consejo sigue siendo `uv tool upgrade local-delegate-mcp`.
 
 ## [0.45.0] - 2026-10-29
 

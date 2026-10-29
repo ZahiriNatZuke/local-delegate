@@ -168,6 +168,7 @@
   "install.update.uv_tool.cannot_1": "  `update` cannot update it: it would reinstall the environment it is running",
   "install.update.uv_tool.cannot_2": "  from, and that breaks the install. Do it yourself, in another terminal:",
   "install.update.uv_tool.installed": "The CLI is installed as a `uv tool` at version {installed}.",
+  "install.update.uv_tool.pinned": "  It is pinned to {version} (installed with `==`): `uv tool upgrade` will not move it.",
   "install.update.version_latest": "Latest published version: {version} ({source})",
   "install.update.version_requested": "Version requested with --version: {version}",
   "install.update.version_unknown": "Warning: {reason}. Continuing without touching the pins."

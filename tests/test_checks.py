@@ -379,6 +379,28 @@ def test_the_hint_depends_on_how_it_is_installed(tmp_path, monkeypatch):
     assert hint_for(update.OTHER, "c") == update.generic_upgrade()
 
 
+def test_a_pinned_uv_tool_install_is_told_why_and_gets_install_latest(tmp_path, monkeypatch):
+    """Issue #488: fijada con `==`, `uv tool upgrade` dice «Nothing to upgrade» y sale con 0."""
+    from local_delegate import update
+
+    prefix = tmp_path / "prefix"
+    prefix.mkdir()
+    (prefix / "uv-receipt.toml").write_text(
+        '[tool]\nrequirements = [{ name = "local-delegate-mcp", extras = ["llamaswap"], '
+        'specifier = "==0.16.0" }]\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(update, "editable_origin", lambda: None)
+    monkeypatch.setattr(update.sys, "prefix", str(prefix))
+    result = _published(tmp_path / "home", monkeypatch, "0.16.0", "0.17.0")
+    assert result.status == checks.WARN
+    assert result.fix_hint == 'uv tool install "local-delegate-mcp[llamaswap]@latest"'
+    assert result.detail == i18n.t(
+        "doctor.probe.published.behind_pinned", installed="0.16.0", latest="0.17.0", pinned="0.16.0"
+    )
+    (result.detail + result.fix_hint).encode("cp1252")
+
+
 def test_the_detail_and_hint_fit_the_windows_console(tmp_path, monkeypatch):
     """Una flecha `→` mata el doctor con UnicodeEncodeError en la consola cp1252."""
     result = _published(tmp_path, monkeypatch, "0.16.0", "0.17.0")
