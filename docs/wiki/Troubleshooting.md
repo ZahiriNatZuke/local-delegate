@@ -209,6 +209,26 @@ Después **reinicia el cliente**, y comprueba que una tool responde de verdad �
 Ojo: `--api-key-env` **no** resuelve este caso. Reenvía `${LOCAL_DELEGATE_API_KEY}`, que sale del
 mismo entorno que está vacío. Sirve cuando la variable sí existe y solo hay que propagarla.
 
+## `uv tool upgrade local-delegate-mcp` dice «Nothing to upgrade» y la versión no cambia
+
+Pasa cuando el paquete se instaló con una versión exacta
+(`uv tool install "local-delegate-mcp==X.Y.Z"`): uv guarda esa fijación en el `uv-receipt.toml`
+del entorno de la tool y `uv tool upgrade` la respeta, así que no actualiza nada y sale con código 0.
+
+Reinstala sin fijación, con los mismos extras con los que instalaste:
+
+```bash
+uv tool install "local-delegate-mcp[llamaswap]@latest"   # o local-delegate-mcp@latest sin extras
+```
+
+En las versiones posteriores a la 0.45.0 (issue #488), `local-delegate update` y
+`local-delegate doctor` lo detectan solos: leen el receipt en la raíz del entorno de la tool (en
+Windows `%APPDATA%\uv\tools\local-delegate-mcp\`, en macOS y Linux
+`~/.local/share/uv/tools/local-delegate-mcp/`), avisan de que la instalación está fijada y dan ese
+comando con tus extras en vez de `uv tool upgrade`. Si el receipt no se puede leer o no se
+reconoce, siguen recomendando `uv tool upgrade`. Hazlo en otra terminal: `update` no reinstala el
+entorno desde el que se está ejecutando.
+
 ## `uvx` no encuentra el comando / Claude no arranca el MCP
 
 - Usa la ruta absoluta a `uvx` en `command` (Claude Desktop puede no heredar tu PATH),

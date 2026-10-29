@@ -227,6 +227,7 @@
   "doctor.probe.plugin_installed.version": "the plugin is {found} and the package is {expected}",
   "doctor.probe.published.ahead": "installed {installed}, ahead of the published {latest}",
   "doctor.probe.published.behind": "installed {installed}, published {latest}: the installation is behind",
+  "doctor.probe.published.behind_pinned": "installed {installed}, published {latest}: the installation is behind and pinned to {pinned}, so `uv tool upgrade` will not move it",
   "doctor.probe.published.cannot_compare": "could not compare '{installed}' and '{latest}'",
   "doctor.probe.published.latest": "{installed} (the latest published)",
   "doctor.probe.published.no_latest": "installed {installed}; {reason}",

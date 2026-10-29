@@ -833,6 +833,12 @@
       "reason": "comando de la CLI de Claude Code que se nombra tal cual en el resultado de la acción"
     },
     {
+      "file": "src/local_delegate/install_origin.py",
+      "text": "uv tool install {target}",
+      "kind": "verbatim",
+      "reason": "comando que reinstala una instalación de `uv tool` fijada con `==` (issue #488); se copia y se ejecuta tal cual"
+    },
+    {
       "file": "src/local_delegate/update.py",
       "text": "uv tool upgrade {}",
       "kind": "verbatim",

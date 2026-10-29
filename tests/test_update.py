@@ -297,6 +297,89 @@ def test_an_unreadable_prefix_does_not_break_detection(monkeypatch):
     assert update.install_kind() == update.OTHER
 
 
+# --- Instalación de `uv tool` fijada con `==` (issue #488) ------------------------
+# `uv tool upgrade` no mueve una instalación fijada: «Nothing to upgrade», código 0. La forma del
+# receipt es la real de esta PC tras `uv tool install "local-delegate-mcp[llamaswap]==0.45.0"`.
+_PINNED_WITH_EXTRAS = (
+    "[tool]\n"
+    'requirements = [{ name = "local-delegate-mcp", extras = ["llamaswap"], '
+    'specifier = "==0.45.0" }]\n'
+    "entrypoints = [\n"
+    '    { name = "local-delegate", install-path = "C:/x/local-delegate.exe", '
+    'from = "local-delegate-mcp" },\n'
+    "]\n"
+)
+
+
+def test_a_pinned_install_with_extras_gets_install_latest_with_its_extras(monkeypatch, tmp_path):
+    _fake_prefix(monkeypatch, tmp_path, _PINNED_WITH_EXTRAS)
+    assert update.install_kind() == update.UV_TOOL
+    assert update.upgrade_command() == 'uv tool install "local-delegate-mcp[llamaswap]@latest"'
+
+
+def test_a_pinned_install_without_extras_gets_install_latest(monkeypatch, tmp_path):
+    _fake_prefix(
+        monkeypatch,
+        tmp_path,
+        '[tool]\nrequirements = [{ name = "local-delegate-mcp", specifier = "==0.44.2" }]\n',
+    )
+    assert update.upgrade_command() == "uv tool install local-delegate-mcp@latest"
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        '{ name = "local-delegate-mcp" }',  # tras `@latest`: sin especificador
+        '{ name = "local-delegate-mcp", extras = ["llamaswap"] }',
+        '{ name = "local-delegate-mcp", specifier = ">=0.40" }',  # rango: upgrade sí lo mueve
+        '{ name = "local-delegate-mcp", specifier = "==0.45.*" }',
+        '{ name = "local-delegate-mcp", specifier = "==0.45.0; rm -rf /" }',
+        '{ name = "local-delegate-mcp", specifier = "==0.45.0", extras = ["a b"] }',
+    ],
+)
+def test_without_an_exact_pin_the_usual_upgrade_stays(monkeypatch, tmp_path, entry):
+    _fake_prefix(monkeypatch, tmp_path, f"[tool]\nrequirements = [{entry}]\n")
+    assert update.upgrade_command() == update.UV_TOOL_UPGRADE
+
+
+@pytest.mark.parametrize(
+    "receipt",
+    [
+        f'[tool\nrequirements = "{update.PACKAGE}==0.45.0"',  # TOML roto que nombra el paquete
+        f'[tool]\nrequirements = "{update.PACKAGE}==0.45.0"\n',  # forma desconocida
+        f'[tool]\nname = "{update.PACKAGE}"\n',  # sin requirements
+    ],
+)
+def test_an_unreadable_receipt_keeps_the_usual_command(monkeypatch, tmp_path, receipt):
+    _fake_prefix(monkeypatch, tmp_path, receipt)
+    assert update.install_kind() == update.UV_TOOL
+    assert update.upgrade_command() == update.UV_TOOL_UPGRADE
+
+
+def test_a_missing_receipt_does_not_raise(monkeypatch, tmp_path):
+    _fake_prefix(monkeypatch, tmp_path, None)
+    assert update.install_origin.uv_tool_pin() is None
+    monkeypatch.setattr(update.sys, "prefix", "\x00 ruta imposible \x00")
+    assert update.install_origin.uv_tool_pin() is None
+
+
+def test_the_pin_keeps_version_and_extras(monkeypatch, tmp_path):
+    _fake_prefix(monkeypatch, tmp_path, _PINNED_WITH_EXTRAS)
+    pin = update.install_origin.uv_tool_pin()
+    assert pin == update.install_origin.UvToolPin("0.45.0", ("llamaswap",))
+
+
+def test_the_uv_tool_warning_of_a_pinned_install_says_why_and_how(monkeypatch, tmp_path):
+    _fake_prefix(monkeypatch, tmp_path, _PINNED_WITH_EXTRAS)
+    monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.45.0")
+    lines = update.uv_tool_lines("0.46.0")
+    text = "\n".join(lines)
+    assert update.UV_TOOL_UPGRADE not in text, "ese consejo no mueve una instalación fijada"
+    assert lines[-1].strip() == 'uv tool install "local-delegate-mcp[llamaswap]@latest"'
+    assert update.t("install.update.uv_tool.pinned", version="0.45.0") in lines
+    text.encode("cp1252")
+
+
 def test_the_uv_tool_warning_gives_the_version_and_the_command(monkeypatch, tmp_path):
     _fake_prefix(monkeypatch, tmp_path, f'[tool]\nname = "{update.PACKAGE}"')
     monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")

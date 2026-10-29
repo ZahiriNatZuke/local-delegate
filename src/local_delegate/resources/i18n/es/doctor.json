@@ -227,6 +227,7 @@
   "doctor.probe.plugin_installed.version": "el plugin es de la {found} y el paquete es la {expected}",
   "doctor.probe.published.ahead": "instalada {installed}, por delante de la publicada {latest}",
   "doctor.probe.published.behind": "instalada {installed}, publicada {latest}: la instalación está atrasada",
+  "doctor.probe.published.behind_pinned": "instalada {installed}, publicada {latest}: la instalación está atrasada y fijada a la {pinned}, así que `uv tool upgrade` no la moverá",
   "doctor.probe.published.cannot_compare": "no se pudieron comparar '{installed}' y '{latest}'",
   "doctor.probe.published.latest": "{installed} (la última publicada)",
   "doctor.probe.published.no_latest": "instalada {installed}; {reason}",

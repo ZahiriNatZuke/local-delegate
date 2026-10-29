@@ -168,6 +168,7 @@
   "install.update.uv_tool.cannot_1": "  `update` no puede actualizarlo: reinstalaría el entorno desde el que se está",
   "install.update.uv_tool.cannot_2": "  ejecutando, y eso deja la instalación rota. Hazlo tú, en otra terminal:",
   "install.update.uv_tool.installed": "El CLI está instalado como `uv tool` en la versión {installed}.",
+  "install.update.uv_tool.pinned": "  Está fijado a la {version} (se instaló con `==`): `uv tool upgrade` no lo moverá.",
   "install.update.version_latest": "Última versión publicada: {version} ({source})",
   "install.update.version_requested": "Versión pedida con --version: {version}",
   "install.update.version_unknown": "Aviso: {reason}. Se sigue sin tocar los pines."

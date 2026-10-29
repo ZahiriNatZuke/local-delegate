@@ -922,7 +922,18 @@ def upgrade_command() -> str:
     if kind == EDITABLE:
         origin = editable_origin()
         return f"git -C {origin} pull && uv sync --project {origin}"
-    return UV_TOOL_UPGRADE if kind == UV_TOOL else generic_upgrade()
+    return uv_tool_upgrade_command() if kind == UV_TOOL else generic_upgrade()
+
+
+def uv_tool_upgrade_command() -> str:
+    """`uv tool upgrade`, or `uv tool install …@latest` when the install is pinned (#488).
+
+    A pinned install (`uv tool install "local-delegate-mcp==X.Y.Z"`) ignores `uv tool upgrade`:
+    uv answers «Nothing to upgrade» with exit code 0. An unreadable or unknown receipt keeps the
+    usual command.
+    """
+    pin = install_origin.uv_tool_pin()
+    return UV_TOOL_UPGRADE if pin is None else install_origin.uv_tool_reinstall_command(pin)
 
 
 def uv_tool_lines(version: str | None) -> list[str]:
@@ -945,11 +956,15 @@ def uv_tool_lines(version: str | None) -> list[str]:
         return []
     # Sin línea en blanco delante: esto devuelve **el aviso**, no su maquetación. La separación
     # la pone quien imprime, que es el que sabe qué hay encima.
+    lines = [t("install.update.uv_tool.installed", installed=installed)]
+    pin = install_origin.uv_tool_pin()
+    if pin is not None:
+        lines.append(t("install.update.uv_tool.pinned", version=pin.version))
     return [
-        t("install.update.uv_tool.installed", installed=installed),
+        *lines,
         t("install.update.uv_tool.cannot_1"),
         t("install.update.uv_tool.cannot_2"),
-        f"    {UV_TOOL_UPGRADE}",
+        f"    {uv_tool_upgrade_command()}",
     ]
 
 

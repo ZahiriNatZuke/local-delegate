@@ -776,6 +776,16 @@ def _upgrade_hint() -> str:
     return update.upgrade_command()
 
 
+def _uv_tool_pinned_version() -> str | None:
+    """The exact version a `uv tool` install is pinned to, or None (also when unknown)."""
+    from . import install_origin, update
+
+    if update.install_kind() != update.UV_TOOL:
+        return None
+    pin = install_origin.uv_tool_pin()
+    return pin.version if pin else None
+
+
 def _probe_published(ctx: Context) -> Result:
     """¿La versión instalada es la última publicada?
 
@@ -798,11 +808,17 @@ def _probe_published(ctx: Context) -> Result:
             i18n.t("doctor.probe.published.cannot_compare", installed=installed, latest=latest),
         )
     if order < 0:
-        return Result(
-            WARN,
-            i18n.t("doctor.probe.published.behind", installed=installed, latest=latest),
-            _upgrade_hint(),
-        )
+        message = i18n.t("doctor.probe.published.behind", installed=installed, latest=latest)
+        if pinned := _uv_tool_pinned_version():
+            # Without this the hint looks like the usual one and nobody knows why the usual one
+            # (`uv tool upgrade`) did nothing (#488).
+            message = i18n.t(
+                "doctor.probe.published.behind_pinned",
+                installed=installed,
+                latest=latest,
+                pinned=pinned,
+            )
+        return Result(WARN, message, _upgrade_hint())
     if order > 0:
         return Result(
             OK, i18n.t("doctor.probe.published.ahead", installed=installed, latest=latest)

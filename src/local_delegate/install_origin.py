@@ -11,7 +11,9 @@ from __future__ import annotations
 import json
 import re
 import sys
+import tomllib
 from collections.abc import Callable
+from dataclasses import dataclass
 from importlib import metadata
 from pathlib import Path
 
@@ -85,3 +87,81 @@ def install_kind(editable: Callable[[], Path | None] | None = None) -> str:
     # para responder «¿este entorno es el nuestro?». `local-delegate-mcp` es distintivo de sobra;
     # con un nombre corto esta comparación por subcadena daría falsos positivos.
     return UV_TOOL if PACKAGE in text else OTHER
+
+
+# --- Instalación de `uv tool` fijada a una versión (issue #488) ------------------
+# Con `uv tool install "local-delegate-mcp==X.Y.Z"` uv guarda la fijación en el receipt, y
+# `uv tool upgrade` responde «Nothing to upgrade» con código 0: el consejo de siempre no mueve
+# nada. Lo que sí la mueve es `uv tool install <paquete>@latest`, que además quita la fijación.
+
+# Only safe tokens reach a command we print: a receipt is a local file, but the hint is meant to
+# be pasted into a shell, so anything odd in it means «not recognized», never «print it as is».
+_SAFE_VERSION = re.compile(r"^[0-9][0-9A-Za-z.+!_-]*$")
+_SAFE_EXTRA = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+# A shell command, not prose: same treatment as `update.UV_TOOL_UPGRADE`.
+UV_TOOL_INSTALL_LATEST = "uv tool install {target}"
+
+
+@dataclass(frozen=True)
+class UvToolPin:
+    """An exact pin found in the `uv tool` receipt: the version and the extras installed."""
+
+    version: str
+    extras: tuple[str, ...] = ()
+
+
+def _canonical(name: str) -> str:
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def uv_tool_pin() -> UvToolPin | None:
+    """The exact version the `uv tool` install is pinned to, or None.
+
+    None also covers every case where the receipt is missing, unreadable or has a shape this
+    does not recognize: then the usual advice (`uv tool upgrade`) stays. Never raises.
+    """
+    try:
+        receipt = Path(sys.prefix) / "uv-receipt.toml"
+        data = tomllib.loads(receipt.read_text(encoding="utf-8"))
+        requirements = data["tool"]["requirements"]
+        ours = [
+            entry
+            for entry in requirements
+            if isinstance(entry, dict) and _canonical(str(entry.get("name", ""))) == PACKAGE
+        ]
+        if len(ours) != 1:
+            return None
+        spec = ours[0].get("specifier")
+        if not isinstance(spec, str):
+            return None
+        spec = spec.strip()
+        if "," in spec:
+            return None
+        if spec.startswith("==="):
+            version = spec[3:].strip()
+        elif spec.startswith("=="):
+            version = spec[2:].strip()
+        else:
+            return None  # `>=`, `~=`, `<`…: a range that `uv tool upgrade` can still move
+        if not _SAFE_VERSION.match(version):  # also rejects `==0.45.*`
+            return None
+        raw_extras = ours[0].get("extras", [])
+        if not isinstance(raw_extras, list):
+            return None
+        extras = tuple(str(extra) for extra in raw_extras)
+        if not all(_SAFE_EXTRA.match(extra) for extra in extras):
+            return None
+        return UvToolPin(version, extras)
+    except Exception:  # sin receipt, TOML roto, claves ausentes, tipos raros: nada que afirmar
+        return None
+
+
+def uv_tool_reinstall_command(pin: UvToolPin) -> str:
+    """`uv tool install <paquete>[extras]@latest`: the command that moves a pinned install.
+
+    The extras go in: dropping `[llamaswap]` would reinstall without the backend it was installed
+    with. Quoted only when there are extras, because the brackets are a glob in zsh.
+    """
+    if not pin.extras:
+        return UV_TOOL_INSTALL_LATEST.format(target=f"{PACKAGE}@latest")
+    return UV_TOOL_INSTALL_LATEST.format(target=f'"{PACKAGE}[{",".join(pin.extras)}]@latest"')
