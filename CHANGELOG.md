@@ -6,6 +6,32 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.45.0] - 2026-10-29
+
+Esta versión hace visibles las delegaciones que se atascan o se pierden: las abortadas cuentan como
+errores, una llamada tiene plazo propio en el daemon, la cola saturada avisa en vez de colgar, cada
+llamada viva manda progreso para que Claude Code no la corte a los 300 s, y el panel y la banda del
+mod separan la que procesa el backend de las que esperan. Además, el log de uso apunta desde qué
+máquina vino cada delegación y cuánto esperó en cada fase, primer paso para medir la concurrencia
+entre la PC y la Mac.
+
+### Cómo actualizar
+
+- **Abre una sesión nueva de Claude Code (o de Claude Desktop) tras actualizar.** Las sesiones
+  abiertas siguen con el servidor MCP y el mod de la 0.44.2 hasta que se reinician.
+- **Ejecuta `local-delegate update` y reinicia el daemon si lo usas**, como en cada versión: el
+  plazo por llamada, la cola saturada y el progreso viven en el proceso del daemon.
+- **Si la Mac (u otro equipo) usa una entrada MCP `http` contra el `/mcp` del daemon de la PC**,
+  añádele la cabecera `"headers": {"X-Local-Delegate-Host": "mac"}` si quieres que sus llamadas se
+  distingan en el log de la PC: detrás de `tailscale serve` el daemon ve todas las conexiones desde
+  `127.0.0.1`. Un MCP propio en stdio no lo necesita: manda la cabecera solo.
+- **Variables nuevas, todas opcionales** (los valores por defecto sirven):
+  `LOCAL_DELEGATE_CALL_MAX_S` (1800 s; plazo de una llamada en el daemon, cola incluida; `0` lo
+  apaga), `LOCAL_DELEGATE_QUEUE_MAX_WAIT_S` (900 s sin que la cola avance antes de fallar con «cola
+  saturada»), `LOCAL_DELEGATE_PROGRESS_INTERVAL_S` (20 s entre avisos de progreso) y
+  `LOCAL_DELEGATE_MACHINE_NAME` (nombre de la máquina en el log y en la cabecera; por defecto, el
+  nombre corto del equipo). Detalle en `docs/wiki/Configuration.md`.
+
 ### Añadido
 
 - **El log de uso dice desde qué máquina vino cada delegación y dónde esperó** (tarjeta
@@ -3815,7 +3841,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.44.2...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.45.0...HEAD
+[0.45.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.44.2...v0.45.0
 [0.44.2]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.44.1...v0.44.2
 [0.44.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.44.0...v0.44.1
 [0.44.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.43.0...v0.44.0
