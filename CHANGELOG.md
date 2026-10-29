@@ -6,6 +6,25 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.45.1] - 2026-10-29
+
+Versión de correcciones: el reintento partido de un trozo cortado ya no vuelve a cortarse en
+`local_explain_code`, el aviso de salida truncada cuadra con los pasos del log y el consejo de
+actualizar funciona también cuando el paquete se instaló con una versión fija.
+
+### Cómo actualizar
+
+- **Si instalaste con una versión fija** (`uv tool install "local-delegate-mcp==X.Y.Z"`, por
+  ejemplo `[llamaswap]==0.45.0`), `uv tool upgrade local-delegate-mcp` responde «Nothing to
+  upgrade» y no sube nada; tu versión todavía da ese consejo viejo. Reinstala sin fijación, con tus
+  extras: `uv tool install "local-delegate-mcp[llamaswap]@latest"` (o `local-delegate-mcp@latest`
+  sin extras). Desde esta versión `local-delegate update` y `doctor` lo detectan solos.
+- **Ejecuta `local-delegate update` y reinicia el daemon si lo usas**, como en cada versión: la
+  corrección del reintento vive en el proceso del servidor.
+- **Abre una sesión nueva de Claude Code (o de Claude Desktop) tras actualizar.** Las sesiones
+  abiertas siguen con el servidor MCP de la 0.45.0 hasta que se reinician.
+- No hay variables nuevas ni cambios de configuración.
+
 ### Corregido
 
 - **Los trozos de `local_explain_code` ya no se cortan otra vez al reintentarlos** (#487). En
@@ -3862,7 +3881,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.45.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.45.1...HEAD
+[0.45.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.45.0...v0.45.1
 [0.45.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.44.2...v0.45.0
 [0.44.2]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.44.1...v0.44.2
 [0.44.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.44.0...v0.44.1

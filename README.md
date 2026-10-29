@@ -114,6 +114,11 @@ roto; `schtasks /End` no basta porque el lanzador está desacoplado, así que pa
 `pythonw` del daemon, instala y vuelve a lanzarlo. Después, `local-delegate update` repone hooks,
 skill y el bloque de `CLAUDE.md`/`AGENTS.md` si quedaron desfasados.
 
+Si instalaste con una versión fija (`uv tool install "local-delegate-mcp==X.Y.Z"`), `uv tool
+upgrade` dice «Nothing to upgrade» y no sube nada: reinstala con
+`uv tool install "local-delegate-mcp[llamaswap]@latest"` (con tus extras). Desde la 0.45.1,
+`local-delegate update` y `doctor` lo detectan y dan ese comando.
+
 > **La 0.36.0 habla en español o en inglés y sigue al idioma del sistema.** Con el sistema en
 > inglés pasarás a ver inglés: para quedarte en español, `LOCAL_DELEGATE_LANG=es local-delegate
 > install` (o `update`). Las claves de `_local_delegate` y los marcadores de las tools pasan a
