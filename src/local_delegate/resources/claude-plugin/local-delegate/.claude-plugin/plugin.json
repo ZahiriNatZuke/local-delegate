@@ -1,6 +1,6 @@
 {
   "name": "local-delegate",
-  "version": "0.45.0",
+  "version": "0.45.1",
   "description": "Hooks that steer mechanical work (summaries, logs, large files) to the local-delegate MCP tools.",
   "author": {
     "name": "Yohan González Almaguer"

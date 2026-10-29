@@ -221,7 +221,7 @@ Reinstala sin fijación, con los mismos extras con los que instalaste:
 uv tool install "local-delegate-mcp[llamaswap]@latest"   # o local-delegate-mcp@latest sin extras
 ```
 
-En las versiones posteriores a la 0.45.0 (issue #488), `local-delegate update` y
+Desde la 0.45.1 (issue #488), `local-delegate update` y
 `local-delegate doctor` lo detectan solos: leen el receipt en la raíz del entorno de la tool (en
 Windows `%APPDATA%\uv\tools\local-delegate-mcp\`, en macOS y Linux
 `~/.local/share/uv/tools/local-delegate-mcp/`), avisan de que la instalación está fijada y dan ese
