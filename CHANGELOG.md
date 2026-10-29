@@ -24,6 +24,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   tiene el turno o la plaza, ni cambio de quién lo tiene), la llamada falla en el acto con «cola
   saturada…», qué hay por delante y qué hacer, en vez de bloquear al cliente hasta su plazo. Una
   cola lenta que avanza no corta a nadie, y una llamada sola, sin cola, no cambia.
+- **Las delegaciones en cola ya no se cortan a los 300 s** (#479). Claude Code corta una tool
+  que pasa 300 s «sin respuesta ni progreso», y una delegación que esperaba turno o hacía una
+  inferencia larga no mandaba nada. Ahora cada llamada viva envía `notifications/progress` cada
+  `LOCAL_DELEGATE_PROGRESS_INTERVAL_S` (20 s) con su fase: «esperando turno, puesto N», «esperando
+  una plaza libre», «procesando el trozo k/N». Funciona en el daemon HTTP, en stdio y en el puente
+  de Claude Desktop, siempre que el cliente pida progreso (`progressToken`).
+- **Ninguna llamada ocupa el turno sin verse** (#479). Una delegación viva de más de 30 min salía
+  de `/api/inflight` y del panel por la limpieza de entradas huérfanas, aunque seguía con su
+  puesto en la cola del turno: las de detrás veían `turn_position: 5` sin nadie delante. Ahora una
+  llamada viva del daemon sigue visible tenga la edad que tenga; la limpieza queda para las
+  huérfanas de verdad.
 
 ## [0.44.2] - 2026-10-28
 

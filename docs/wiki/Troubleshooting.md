@@ -279,6 +279,8 @@ Es el **turno** del daemon, no una avería: su modelo choca en llama-swap con un
   menudo, algo se queda colgado con el turno en la mano: mira «En curso».
 - **Si el cliente corta antes**: Codex corta una tool MCP a los 60 s y Claude Code tras 5 min sin
   respuesta por HTTP. Súbelos como dice [Instalación](Integration-install.md#plazos-de-los-clientes-mcp).
+  Desde #479 el daemon manda progreso cada `LOCAL_DELEGATE_PROGRESS_INTERVAL_S` (20 s) mientras la
+  llamada espera o trabaja, así que el corte de Claude Code por inactividad no debería llegar.
   El daemon no siempre se entera de ese corte; por eso tiene su propio plazo,
   `LOCAL_DELEGATE_CALL_MAX_S` (1800 s), tras el que cancela la llamada y la deja en el log como
   fallo (`cancel_reason: "deadline"`).

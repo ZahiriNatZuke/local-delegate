@@ -174,6 +174,13 @@ operación ──▶ turno (¿choca con lo que está en uso?) ──▶ plaza (M
   (`_note_failure`) y el middleware la escribe al final (`error: "exception"`). Toda llamada
   que llegó a empezar deja **una** línea: la suya, la de cancelada o la de abortada, con las
   esperas y las llamadas reales que midió el token de la llamada.
+- **Progreso y visibilidad (issue #479).** Mientras una `tools/call` vive, el mismo middleware
+  manda `notifications/progress` cada `LOCAL_DELEGATE_PROGRESS_INTERVAL_S` (20 s) desde el bucle de
+  eventos (la tool corre en un hilo). El mensaje sale de `Token.status`, que escriben los
+  `_inflight_*` desde el hilo: puesto en la cola del turno, espera de plaza, trozo k/N, reducción.
+  Y `inflight_snapshot` nunca poda una entrada de una llamada viva de su proceso
+  (`_inflight_live`): el TTL de 1800 s es solo para huérfanas. Antes podaba también las vivas, y
+  quedaban puestos ocupados en la cola del turno por llamadas que no se veían en ningún sitio.
 
 ## Módulos
 

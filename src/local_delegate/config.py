@@ -382,6 +382,13 @@ CALL_MAX_S = max(0.0, _env_float("LOCAL_DELEGATE_CALL_MAX_S", 1800.0))
 # message arrives before the deadline. A call alone, without a queue, never waits. `0` disables it.
 QUEUE_MAX_WAIT_S = max(0.0, _env_float("LOCAL_DELEGATE_QUEUE_MAX_WAIT_S", 900.0))
 
+# --- Progress while a call waits or works (issue #479) ---------------------------------------
+# Every this many seconds a live tool call sends `notifications/progress` (when the request
+# carried a `progressToken`), with its phase: queue position, slot wait, piece k/N. Claude Code cuts
+# a call that sends "no response or progress for 300s", so a call queued behind others or in a long
+# inference was cut while the daemon kept working for nobody. `0` disables it.
+PROGRESS_INTERVAL_S = max(0.0, _env_float("LOCAL_DELEGATE_PROGRESS_INTERVAL_S", 20.0))
+
 # --- Espera frente a lentitud (daemon-reparte-el-backend, REQ-025) ----------------------------
 # Una llamada es `slow` si genera a menos de esta fracción de la velocidad normal de su modelo
 # (`pace_rel` < umbral). 0,5 por defecto, decisión del usuario.
