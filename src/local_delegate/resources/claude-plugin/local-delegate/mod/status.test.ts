@@ -901,3 +901,64 @@ test('several sessions: when its own call ends while another runs, the figures a
   await seen.clock.advance(1000)
   expect((await line($)).line).toBe('local-delegate · ● qwen3-8b listo · 4 delegaciones · 20k tokens ahorrados ≈ $0,25')
 })
+
+// --- Issue #477: the band names the delegation the backend is processing, not the oldest --------------
+
+/** One delegation in flight with its `state` (`running`, `retrying` or `queued`), as daemons from #477 list it. */
+function stated(tool: string, elapsed: number, state: string, extra: any = {}) {
+  return { ...task(tool, elapsed), state, ...extra }
+}
+
+test('line: the one at the backend goes first, even when a queued one is older (issue #477)', { options: LINE }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({
+    ...UP,
+    inflight: () =>
+      inflight([
+        stated('local_extract', 250, 'queued'),
+        stated('local_summarize', 400, 'retrying', { chunks: 9, chunk: 3, phase: 'retry' }),
+        stated('local_translate', 12.4, 'running'),
+      ]),
+  }))
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toContain('· local_translate 12 s +2 ·')
+})
+
+test('line: with none at the backend, the oldest queued one says it waits (issue #477)', { options: LINE }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({
+    ...UP,
+    inflight: () => inflight([stated('local_extract', 30, 'queued'), stated('local_summarize', 240, 'queued')]),
+  }))
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toContain('· local_summarize · en cola · 4 min 0 s +1 ·')
+})
+
+test('line: a retrying one goes before a queued one, and says so, in English (issue #477)', { options: { ...LINE, language: 'en' } }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({
+    ...UP,
+    inflight: () =>
+      inflight([stated('local_extract', 300, 'queued'), stated('local_summarize', 75, 'retrying', { chunks: 9, chunk: 3, phase: 'retry' })]),
+  }))
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toContain('· local_summarize 3/9 · retrying · 1m 15s +1 ·')
+})
+
+test('desktop: a queued delegation says it waits (issue #477)', { options: QUIET }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, inflight: () => inflight([stated('local_summarize', 240, 'queued')]) }))
+  await $.session.measure(measureInput())
+  expect((await desk($)).left.text).toContain('local_summarize · en cola · 4 min 0 s')
+})
+
+test('several sessions: another machine\'s running delegation never wins over this session\'s queued one (issue #477)', { options: LINE }, async ($, on) => {
+  // A delegation from the Mac (over HTTP) has no session of this one: it is never `mine`.
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({
+    ...UP,
+    inflight: bySession([
+      { item: { ...stated('local_extract', 500, 'running'), host: 'mac' } },
+      { session: SESSION, item: stated('local_summarize', 240, 'queued') },
+    ]),
+  }))
+  await $.session.measure(measureInput())
+  const shown = (await line($)).line
+  expect(shown).toContain('· local_summarize · en cola · 4 min 0 s ·')
+  expect(shown).not.toContain('local_extract')
+})

@@ -6,6 +6,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- El mod y el panel ya no confunden la delegación que procesa el backend con las que esperan (issue #477): cada entrada de `/api/inflight` lleva `state` (`running`, `retrying` o `queued`, y `queue_position` en una espera de turno), sacado de la plaza que tiene la llamada y de su espera reales, no del texto de la fase. La banda del mod nombra primero la que está en el backend y, si no hay ninguna, la más antigua en cola diciendo que espera (`en cola · 4 min 0 s`); «En curso» del panel separa «Procesando (n)» y «En cola (m)». Con un daemon anterior, sin `state`, los dos se comportan como antes.
+
 ## [0.44.2] - 2026-10-28
 
 Esta versión corrige dos casos en que la delegación ocultaba información: el mod de lectura ya no
