@@ -77,11 +77,17 @@ class Wait:
 
 @dataclass(frozen=True)
 class Active:
-    """Una operación con turno: su reserva (un modelo = elegido) y si entró forzada."""
+    """Una operación con turno: su reserva (un modelo = elegido) y si entró forzada.
+
+    `granted_at` es el instante de la concesión (concurrencia PC+Mac, REQ-030 c). Va al final y
+    fuera de la comparación: dos `Active` iguales lo siguen siendo aunque se concedieran en otro
+    instante, y quien construye uno a mano no tiene que darlo.
+    """
 
     wait: Wait
     reserve: frozenset[str]
     forced: bool = False
+    granted_at: float = field(default=0.0, compare=False)
 
     @property
     def id(self) -> str:
@@ -210,7 +216,7 @@ def evaluate(
     had_forced = False
 
     def do_grant(wait: Wait, reserve: frozenset[str], forced: bool) -> None:
-        actives.append(Active(wait, reserve, forced))
+        actives.append(Active(wait, reserve, forced, granted_at=now))
         queue.remove(wait)
         grants.append(Grant(wait.id, reserve, forced))
 
@@ -241,6 +247,32 @@ def evaluate(
                 i += 1
 
     return Decision(State(tuple(actives), tuple(queue)), tuple(grants))
+
+
+def must_yield(state: State, op_id: str, now: float, yield_s: float, clashes: Clashes) -> bool:
+    """La operación activa `op_id` debe ceder el turno entre dos trozos (PC+Mac, REQ-030).
+
+    Las tres condiciones a la vez:
+
+    (a) la cabeza de la cola no es concedible frente a `actives` y alguno de sus modelos choca
+        con la reserva de esta operación (así ceden **todas** las activas que la bloquean, cada
+        una al cumplir su propia condición c);
+    (b) la cabeza lleva `yield_s` esperando;
+    (c) esta operación tiene el turno desde hace al menos `yield_s` (`Active.granted_at`).
+
+    `yield_s <= 0` apaga la cesión. Sin cola o sin la operación en `actives`, nunca cede.
+    """
+    if yield_s <= 0 or not state.queue:
+        return False
+    own = state.active(op_id)
+    if own is None:
+        return False
+    head = state.queue[0]
+    if grantable(head.request, state.actives, clashes):
+        return False  # la cabeza entra en la siguiente evaluación: ceder no la adelanta
+    if all(compatible(m, own.reserve, clashes) for m in head.request.A):
+        return False  # esta operación no es la que la bloquea
+    return now - head.since >= yield_s and now - own.granted_at >= yield_s
 
 
 def compatible_when_choosing(state: State, op_id: str, clashes: Clashes) -> frozenset[str]:
@@ -344,6 +376,9 @@ class _Flight:
     calls: int = 0
     last_change: float = 0.0
     abandoned: set[str] = field(default_factory=set)
+    #: Operaciones remotas (sin hilo en el daemon) que declaran una llamada al backend en vuelo
+    #: (PC+Mac, REQ-013): mientras haya alguna, el reloj de la red de seguridad no corre.
+    remote: set[str] = field(default_factory=set)
 
 
 class Turn:
@@ -351,7 +386,12 @@ class Turn:
 
     `clock` es inyectable (por defecto `time.monotonic`); `tick` es el tope de cada `wait`
     (REQ-003, punto 6: 1 s por defecto). `on_tick`, opcional, se llama fuera del cerrojo antes de
-    cada reevaluación por tic (añadido en T10 para releer la topología, REQ-009).
+    cada reevaluación por tic (añadido en T10 para releer la topología, REQ-009). `yield_s` es el
+    `TURN_YIELD_S` de la cesión entre trozos (PC+Mac, REQ-030); `0`, el de partida, la apaga.
+
+    Además de la espera con hilo (`request`), las operaciones remotas usan una API **sin bloqueo**
+    (PC+Mac, REQ-011): `enqueue`, `poll`, `expire` y `remote_flight`; `wait_change` bloquea hasta
+    el siguiente cambio del estado (la espera larga del endpoint).
     """
 
     def __init__(
@@ -362,18 +402,25 @@ class Turn:
         tick: float = 1.0,
         clock: Callable[[], float] = time.monotonic,
         on_tick: Callable[[], None] | None = None,
+        yield_s: float = 0.0,
     ) -> None:
         self._clashes = clashes
         #: Se llama FUERA del cerrojo antes de cada reevaluación por tic de una espera. El daemon
         #: lo usa para releer la topología: una espera ya en cola ve la config nueva (REQ-009).
         self._on_tick = on_tick
         self._turn_max_s = turn_max_s
+        self._yield_s = max(0.0, yield_s)
         self._tic = tick
         self._clock = clock
-        self._cond = threading.Condition()
+        lock = threading.RLock()
+        self._cond = threading.Condition(lock)
+        #: Misma cerradura que `_cond`: la espera larga de `wait_change` (ver `_bump`).
+        self._changed = threading.Condition(lock)
         self._state = State()
         self._granted: dict[str, Grant] = {}
         self._flight = _Flight(last_change=clock())
+        #: Sube con cada cambio del estado del turno (`_notify`); lo mira `wait_change`.
+        self._version = 0
 
     # --- lectura -----------------------------------------------------------------------------
 
@@ -385,10 +432,30 @@ class Turn:
         with self._cond:
             return tuple(sorted(models(self._state.actives)))
 
+    def version(self) -> int:
+        """El contador de cambios del estado: lo que `wait_change(since=…)` compara."""
+        with self._cond:
+            return self._version
+
+    def wait_change(self, timeout: float, since: int | None = None) -> bool:
+        """Bloquea hasta el siguiente cambio del estado del turno o hasta `timeout` segundos.
+
+        `since` es una `version()` leída antes: si ya cambió desde entonces, vuelve en el acto (así
+        no se pierde un cambio que llegó entre dos llamadas). Devuelve si hubo cambio.
+        """
+        with self._cond:
+            start = self._version if since is None else since
+            return self._changed.wait_for(lambda: self._version != start, timeout=max(0.0, timeout))
+
+    def must_yield(self, op_id: str) -> bool:
+        """`must_yield` puro con el reloj, la topología y el `yield_s` de este turno (REQ-030)."""
+        with self._cond:
+            return must_yield(self._state, op_id, self._clock(), self._yield_s, self._clashes)
+
     # --- red de seguridad --------------------------------------------------------------------
 
     def _no_progress_since(self) -> float | None:
-        if self._flight.calls > 0:
+        if self._flight.calls > 0 or self._flight.remote:
             return None
         return self._flight.last_change
 
@@ -405,7 +472,37 @@ class Turn:
                 self._flight.calls -= 1
                 self._flight.last_change = self._clock()
 
+    def remote_flight(self, op_id: str, in_backend: bool) -> None:
+        """Una operación remota declara (o deja de declarar) una llamada al backend en vuelo.
+
+        Como `in_flight` para las locales: cada cambio pone a cero el reloj de la red de seguridad
+        y, mientras alguna la declara, ese reloj no corre (REQ-013). `expire` la quita.
+        """
+        with self._cond:
+            if in_backend == (op_id in self._flight.remote):
+                return
+            if in_backend:
+                self._flight.remote.add(op_id)
+            else:
+                self._flight.remote.discard(op_id)
+            self._flight.last_change = self._clock()
+            self._bump()
+
     # --- evaluación (con el cerrojo tomado) --------------------------------------------------
+
+    def _bump(self) -> None:
+        """Un cambio del estado: sube la versión y despierta solo a `wait_change`.
+
+        Va en su propia condición (sobre el mismo cerrojo) para no despertar a las esperas con
+        hilo en cambios que antes no las despertaban: su ritmo de tics no cambia.
+        """
+        self._version += 1
+        self._changed.notify_all()
+
+    def _notify(self) -> None:
+        """Un cambio del estado que además despierta a todas las esperas con hilo."""
+        self._bump()
+        self._cond.notify_all()
 
     def _apply(self) -> None:
         decision = evaluate(
@@ -423,7 +520,7 @@ class Turn:
                 # el mismo tic, antes de que la forzada llegue a hacer su primera llamada.
                 self._flight.last_change = self._clock()
         if decision.grants:
-            self._cond.notify_all()
+            self._notify()
 
     def _warning(self, op_id: str) -> tuple[int, tuple[str, ...]]:
         position = next(i for i, e in enumerate(self._state.queue, 1) if e.id == op_id)
@@ -490,7 +587,7 @@ class Turn:
                 if pending is not None:
                     self._state = release_slot(self._state, op_id)
                 if exited or pending is not None:
-                    self._cond.notify_all()
+                    self._notify()
             raise
         if on_grant is not None:
             try:
@@ -516,13 +613,73 @@ class Turn:
         """
         _check_without_slot()
         with self._cond:
-            if self._busy(request.id):
-                raise ValueError(t("cli.turn.already_in_turn", op=repr(request.id)))
-            self._state = replace(
-                self._state, queue=(*self._state.queue, Wait(request, self._clock()))
-            )
-            self._apply()  # punto 1: llega una petición
+            self._enqueue(request)
         return self._wait(request.id, on_wait, on_grant, should_stop)
+
+    def _enqueue(self, request: PendingRequest) -> None:
+        if self._busy(request.id):
+            raise ValueError(t("cli.turn.already_in_turn", op=repr(request.id)))
+        self._state = replace(self._state, queue=(*self._state.queue, Wait(request, self._clock())))
+        self._bump()
+        self._apply()  # punto 1: llega una petición
+
+    # --- API sin bloqueo (operaciones remotas, PC+Mac REQ-011) -------------------------------
+
+    def enqueue(self, request: PendingRequest) -> Grant | tuple[int, tuple[str, ...]]:
+        """Pide turno **sin** esperar: la operación entra al final de la cola y se reevalúa.
+
+        Devuelve lo que daría `poll` justo después: la concesión si ya la hay, o
+        `(posicion, en_uso)`. La concesión se entrega una sola vez (aquí o en un `poll`).
+        """
+        with self._cond:
+            self._enqueue(request)
+            result = self._poll(request.id)
+        if result is None:  # pragma: no cover - recién encolada: o concedida o en la cola
+            raise RuntimeError(request.id)
+        return result
+
+    def poll(self, op_id: str) -> Grant | tuple[int, tuple[str, ...]] | None:
+        """El estado de una operación sin hilo, tras reevaluar con el reloj de ahora.
+
+        `Grant` la primera vez que se mira tras concederse (la saca de las pendientes, como
+        `_wait`); `(posicion, en_uso)` mientras está en la cola; `None` si ya tiene el turno
+        entregado o no se conoce. Reevalúa porque nadie hace tic por ella: la red de seguridad
+        (`TURN_MAX_S`) de una cabeza remota depende de esta llamada o del tic de otra espera.
+        """
+        with self._cond:
+            self._apply()
+            return self._poll(op_id)
+
+    def _poll(self, op_id: str) -> Grant | tuple[int, tuple[str, ...]] | None:
+        grant = self._granted.pop(op_id, None)
+        if grant is not None:
+            return grant
+        if self._state.queued(op_id) is not None:
+            return self._warning(op_id)
+        return None
+
+    def expire(self, op_id: str) -> bool:
+        """La operación sale de todo: cola, `actives`, concesión pendiente y vuelo remoto.
+
+        Idempotente: devuelve si había algo que quitar. Reevalúa, así lo que esperaba detrás se
+        concede en este mismo `expire`.
+        """
+        with self._cond:
+            exited = self._dequeue(op_id)
+            active = self._state.active(op_id) is not None
+            if active:
+                self._state = release_slot(self._state, op_id)
+            pending = self._granted.pop(op_id, None) is not None
+            flying = op_id in self._flight.remote
+            if flying:
+                self._flight.remote.discard(op_id)
+                self._flight.last_change = self._clock()
+            self._flight.abandoned.discard(op_id)
+            changed = exited or active or pending or flying
+            if changed:
+                self._notify()
+                self._apply()
+            return changed
 
     def choose_without_waiting(self, op_id: str, candidates: Sequence[str]) -> str | None:
         """La elección atómica de REQ-003, sin esperar: válida con una plaza en la mano.
@@ -535,7 +692,7 @@ class Turn:
         """
         with self._cond:
             self._state, model = choose(self._state, op_id, candidates, self._clashes)
-            self._cond.notify_all()  # punto 3 (se reduce) o punto 2 (sale de `actives`)
+            self._notify()  # punto 3 (se reduce) o punto 2 (sale de `actives`)
             if model is None:
                 self._apply()
             return model
@@ -587,7 +744,7 @@ class Turn:
         """La reserva se reduce al modelo elegido (punto 3). Para elegir, usa `choose`."""
         with self._cond:
             self._state = reduce(self._state, op_id, model)
-            self._cond.notify_all()
+            self._notify()
 
     def back(
         self,
@@ -599,15 +756,20 @@ class Turn:
         _check_without_slot()
         with self._cond:
             self._state = back_to_head(self._state, op_id)
-            self._cond.notify_all()  # punto 2: sale de `actives`
+            self._notify()  # punto 2: sale de `actives`
             self._apply()
         return self._wait(op_id, on_wait, on_grant)
 
     def release_slot(self, op_id: str) -> None:
-        """La operación sale de `actives` (punto 2). Idempotente."""
+        """La operación sale de `actives` (punto 2). Idempotente.
+
+        Reevalúa en el acto (PC+Mac, REQ-011): una espera sin hilo se concede en este mismo
+        `release_slot` y no en el siguiente tic de otra espera. La concesión es la misma de antes.
+        """
         with self._cond:
             self._state = release_slot(self._state, op_id)
-            self._cond.notify_all()
+            self._notify()
+            self._apply()
 
     def abandon(self, op_id: str) -> bool:
         """Saca una espera de la cola (punto 4); su `request` lanza `AbandonedWait`."""
@@ -615,7 +777,8 @@ class Turn:
             if not self._dequeue(op_id):
                 return False
             self._flight.abandoned.add(op_id)
-            self._cond.notify_all()
+            self._notify()
+            self._apply()  # PC+Mac, REQ-011: lo que esperaba detrás se concede ya
             return True
 
     def wake(self) -> None:
@@ -627,4 +790,4 @@ class Turn:
         """La topología nueva rige desde la siguiente concesión (punto 5, REQ-009)."""
         with self._cond:
             self._clashes = clashes
-            self._cond.notify_all()
+            self._notify()

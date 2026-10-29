@@ -127,7 +127,9 @@ con saltos pudo contaminarla un swap.
     llamada lenta lleva además `free_ram_mb` (la RAM libre en ese momento, best-effort), porque la
     causa más común es que Windows haya echado parte del modelo de la VRAM.
 - **Turno del daemon:** `turn_wait_ms` (solo si > 0) es lo que la operación esperó turno; `turn:
-  "forced"` marca una concesión forzada por `LOCAL_DELEGATE_TURN_MAX_S`.
+  "forced"` marca una concesión forzada por `LOCAL_DELEGATE_TURN_MAX_S`; `turn_yields` (solo
+  si > 0) cuenta las veces que la operación cedió el turno entre dos trozos por
+  `LOCAL_DELEGATE_TURN_YIELD_S`, y la espera de después suma en `turn_wait_ms`.
 - **Afinidad** (ver [Tools](Tools.md#afinidad-usar-el-modelo-que-ya-está-cargado)): `routing:
   "affinity"` cuando respondió un alternativo ya cargado en lugar del modelo del rol, con
   `model_requested` (el del rol), `affinity_foreign_flight` (peticiones de otros clientes en vuelo
