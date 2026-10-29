@@ -128,22 +128,28 @@ def test_a_send_waiting_for_a_switch_is_waiting_backend():
 def test_a_later_sample_with_the_model_ready_unmarks_it():
     chat = _HeldChat()
     backend_mock.post(CHAT).mock(side_effect=chat)
-    answers = iter([_running((OTHER, "ready"), (ASKED, "starting"))])
+    loaded = threading.Event()  # the test decides when llama-swap has switched (no timing race)
 
     def running_now(_request):
-        return next(answers, _running((ASKED, "ready")))
+        if loaded.is_set():
+            return _running((ASKED, "ready"))
+        return _running((OTHER, "ready"), (ASKED, "starting"))
 
-    backend_mock.get(RUNNING).mock(side_effect=running_now)
+    running = backend_mock.get(RUNNING).mock(side_effect=running_now)
     entry_id = _start()
     try:
         thread = _send_in_slot(entry_id)
         assert _until(lambda: _entry(entry_id).get("state") == "waiting_backend")
+        seen = running.call_count
+        loaded.set()
         # Still pending, but the model is ready now: the call is processing.
         assert _until(lambda: _entry(entry_id).get("state") == "running")
         assert "backend_wait" not in _entry(entry_id)
+        assert running.call_count > seen  # guard: a later sample did the unmarking
         chat.gates[0].set()
         thread.join(5)
     finally:
+        chat.gates[0].set()
         server._inflight_end(entry_id)
 
 
