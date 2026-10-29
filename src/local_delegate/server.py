@@ -163,9 +163,31 @@ def _annotations(title: str, *, writes: bool = False) -> ToolAnnotations:
 _client: httpx2.Client | None = None
 _client_lock = threading.Lock()
 _chat_slots = threading.BoundedSemaphore(config.MAX_CONCURRENT_REQUESTS)
+
+
 # Issue #476: how many calls are waiting for a slot right now, for the saturated queue's message.
-_slot_waiters = 0
-_slot_waiters_lock = threading.Lock()
+class _WaiterCount:
+    """A thread-safe count of the calls waiting for a slot."""
+
+    def __init__(self) -> None:
+        self._n = 0
+        self._lock = threading.Lock()
+
+    def enter(self) -> None:
+        with self._lock:
+            self._n += 1
+
+    def leave(self) -> None:
+        with self._lock:
+            self._n -= 1
+
+    def others(self) -> int:
+        """How many wait besides the caller (who is counted)."""
+        with self._lock:
+            return max(0, self._n - 1)
+
+
+_slot_waiters = _WaiterCount()
 # Issue #476 (review): the queue's last sign of life — a backend call that ended, or a slot or a
 # turn that changed hands. The saturated-queue limit measures time WITHOUT any of this, not the
 # length of the wait: a slow queue that moves never fails the one waiting behind it.
@@ -2402,7 +2424,6 @@ def _slot(entry_id: int | None) -> Generator[None, None, None]:
     Si no hay plaza libre, la espera se publica como `local_wait: "slot"` y se borra al
     conseguirla (REQ-022). Con plaza libre no se escribe nada de más.
     """
-    global _slot_waiters
     slots = _chat_slots
     token = cancellation.current()
     if token is not None:
@@ -2413,8 +2434,7 @@ def _slot(entry_id: int | None) -> Generator[None, None, None]:
             _inflight_local_wait(entry_id, "slot")
         limit = _queue_limit_s()
         t0 = time.monotonic()
-        with _slot_waiters_lock:
-            _slot_waiters += 1
+        _slot_waiters.enter()
         try:
             if token is None and limit <= 0:
                 slots.acquire()
@@ -2425,8 +2445,7 @@ def _slot(entry_id: int | None) -> Generator[None, None, None]:
                     stalled = _queue_stalled_s(t0)
                     if limit > 0 and stalled > limit:
                         # Issue #476: the queue does not move; say so now, not at the deadline.
-                        with _slot_waiters_lock:
-                            others = max(0, _slot_waiters - 1)
+                        others = _slot_waiters.others()
                         raise QueueSaturated(
                             i18n.t(
                                 "mcp.error.queue_saturated_slot",
@@ -2438,8 +2457,7 @@ def _slot(entry_id: int | None) -> Generator[None, None, None]:
                             )
                         )
         finally:
-            with _slot_waiters_lock:
-                _slot_waiters -= 1
+            _slot_waiters.leave()
             if token is not None:
                 token.slot_wait_ms += int((time.monotonic() - t0) * 1000)
             if entry_id is not None:
