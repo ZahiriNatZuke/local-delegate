@@ -44,6 +44,7 @@ from . import (
     cancellation,
     chains,
     clients,
+    concurrency,
     config,
     cooldown,
     cost,
@@ -320,6 +321,12 @@ def _inflight_start(
         "pid": pid,
         "backend": config.backend_origin(),
     }
+    # Concurrency PC+Mac, step 0: a call that came to this daemon from ANOTHER machine says which
+    # (`host`, `host_via`). A local one keeps today's keys: no `host` means this machine.
+    with suppress(Exception):
+        origin = concurrency.origin_fields()
+        if "host_via" in origin:
+            entry.update(origin)
     if chunks:
         entry["chunks"] = int(chunks)
         entry["chunk"] = 1
@@ -495,6 +502,10 @@ def inflight_snapshot() -> list[dict]:
             # tell a session its own delegations and never hands it out.
             if v.get("caller_session_key"):
                 entry["caller_session_key"] = v.get("caller_session_key")
+            # Concurrency PC+Mac, step 0: which machine asked, only when known (old entries).
+            for origin_key in ("host", "host_via"):
+                if v.get(origin_key):
+                    entry[origin_key] = v.get(origin_key)
             result.append(entry)
         for key in stale:
             data.pop(key, None)
@@ -867,6 +878,7 @@ def _log_event(
     backend_params_rejected: bool = False,
     reasoning_skipped: str | None = None,
     cancel_reason: str | None = None,
+    concurrency_trace: dict | None = None,
 ) -> None:
     """Escribe una línea JSONL en el log activo (rotado por mes o fijo). Nunca rompe una tool.
 
@@ -898,6 +910,12 @@ def _log_event(
             # (`scripts/measurement_boundaries.py`): era el `package_version` propuesto por la spec.
             "v": _get_version(),
         }
+        # Concurrency PC+Mac, step 0: the machine of origin on every entry, and the operation's
+        # phases and backend observations (`concurrency.Trace`) when it went through the backend.
+        with suppress(Exception):
+            rec.update(concurrency.origin_fields())
+        if concurrency_trace:
+            rec["concurrency"] = concurrency_trace
         # Quién pidió la delegación. Sin esto el panel no puede distinguir un mes de smoke tests
         # de un mes de trabajo real: es el hueco que dejó la medición de adopción del 3-ago, donde
         # las 20 líneas de una prueba sólo se separaron cruzando a mano contra los transcripts.
@@ -1404,7 +1422,7 @@ def _llamaswap_state(model: str) -> str | None:
     base = config.BASE_URL.removesuffix("/v1")
     try:
         with httpx2.Client(timeout=_PROBE_QUERY_CAP_S) as c:
-            r = c.get(f"{base}/running", headers=config.auth_headers())
+            r = c.get(f"{base}/running", headers=config.backend_headers())
             if not r.is_success:
                 return None
             data = r.json()
@@ -1509,7 +1527,7 @@ mcp.middleware.append(cancellation.middleware(_log_cancelled))
 
 def _post_chat(model: str, payload: dict) -> ChatResult:
     """POST al endpoint /chat/completions con reintento opcional si el backend está caído."""
-    headers = config.auth_headers()
+    headers = config.backend_headers()
     client = _SEND_CLIENT.get() or _get_client()
     for attempt in (1, 2):
         # Una sonda por intento: el plazo de lectura vuelve a contar en cada envío.
@@ -1767,6 +1785,17 @@ def _topology() -> topology.Snapshot | topology.NoTopology:
     return snapshot
 
 
+def _real_model_name(model: str) -> str:
+    """The id llama-swap shows in `/running` for `model` (an alias resolves to its model), or
+    `model` itself without topology (remote backend, no config): then names are compared as sent."""
+    if not _backend_on_loopback():
+        return model
+    snapshot = topology.snapshot()
+    if isinstance(snapshot, topology.Snapshot):
+        return snapshot.resolve(model) or model
+    return model
+
+
 # --- Afinidad (REQ-010 a REQ-017 y los miembros de `loaded` de REQ-019, T15) -------------------
 # Un alternativo con celda aprobada y vigente (`matrix`) que ya está cargado responde en lugar del
 # modelo del rol. Solo en local (el turno exige topología y loopback: `_topology`), nunca con modelo
@@ -1908,9 +1937,15 @@ def _affinity_observe(
     ready = frozenset(real(e["id"]) for e in running if e["state"] == "ready")
     observed = replace(observed, ready=ready, ttl=ttl)
     try:
-        counts = llamaswap_api.in_flight(backend, cap_s=cap, connect_s=cap)
+        requests = llamaswap_api.in_flight_requests(backend, cap_s=cap, connect_s=cap)
     except _AFFINITY_QUERY_ERRORS:
         return observed
+    # Step 0 of concurrency PC+Mac: the requests seen, with their machine when they say it.
+    concurrency.note_inflight(requests)
+    counts: dict[str, int] = {}
+    for request in requests:
+        name = str(request["model"])
+        counts[name] = counts.get(name, 0) + 1
     in_flight: dict[str, int] = {}
     for model, count in counts.items():
         in_flight[real(model)] = in_flight.get(real(model), 0) + count
@@ -2008,6 +2043,8 @@ class _OperationTurn:
         #: La clase con la que falló el alternativo cuando un salto apagó la afinidad.
         self._dropped_class: str | None = None
         self._first_wait_ms: int | None = None
+        #: Phases and backend observations of the operation, for the usage log (step 0).
+        self.trace = concurrency.start(role_model)
 
     # --- pedir turno -------------------------------------------------------------------------
 
@@ -2039,7 +2076,8 @@ class _OperationTurn:
         t0 = time.monotonic()
         try:
             try:
-                grant = wait(on_wait, stop)
+                with concurrency.phase("turn"):
+                    grant = wait(on_wait, stop)
             except turn.AbandonedWait:
                 cancellation.checkpoint()
                 raise
@@ -2226,6 +2264,8 @@ class _OperationTurn:
         elif self.affinity_tried is not None:
             fields["affinity_dropped"] = self.affinity_tried
             fields["affinity_dropped_class"] = self._dropped_class
+        with suppress(Exception):
+            fields["concurrency_trace"] = self.trace.log_fields()
         return fields
 
 
@@ -2241,16 +2281,17 @@ def _slot(entry_id: int | None) -> Generator[None, None, None]:
     if token is not None:
         # Cada trozo pasa por aquí: una llamada cancelada no manda ni uno más.
         token.check()
-    if not slots.acquire(blocking=False):
-        if entry_id is not None:
-            _inflight_local_wait(entry_id, "slot")
-        if token is None:
-            slots.acquire()
-        else:
-            while not slots.acquire(timeout=cancellation.POLL_S):
-                token.check()
-        if entry_id is not None:
-            _inflight_local_wait(entry_id, None)
+    with concurrency.phase("slot"):
+        if not slots.acquire(blocking=False):
+            if entry_id is not None:
+                _inflight_local_wait(entry_id, "slot")
+            if token is None:
+                slots.acquire()
+            else:
+                while not slots.acquire(timeout=cancellation.POLL_S):
+                    token.check()
+            if entry_id is not None:
+                _inflight_local_wait(entry_id, None)
     try:
         if token is not None:
             token.check()
@@ -2272,8 +2313,10 @@ def _send(model: str, body: dict) -> ChatResult:
     """
     turn_state = _turn
     token = cancellation.current()
+    # Step 0 of concurrency PC+Mac: what llama-swap had loaded before the first POST.
+    concurrency.backend_starting(model, _real_model_name)
     if token is None:
-        with turn_state.in_flight(), _own_call(model):
+        with turn_state.in_flight(), _own_call(model), concurrency.phase("backend"):
             return _post_chat(model, body)
 
     own = _new_client()
@@ -2282,7 +2325,7 @@ def _send(model: str, body: dict) -> ChatResult:
     def post() -> ChatResult:
         _SEND_CLIENT.set(own)
         try:
-            with turn_state.in_flight(), _own_call(model):
+            with turn_state.in_flight(), _own_call(model), concurrency.phase("backend"):
                 return _post_chat(model, body)
         finally:
             remove()
@@ -6377,7 +6420,7 @@ def probe_backend() -> BackendState:
     # otra sorpresa del cuerpo, sale como causa y no como excepción hacia el panel o `local_status`.
     try:
         with httpx2.Client(timeout=_probe_timeout()) as c:
-            r = c.get(endpoint, headers=config.auth_headers())
+            r = c.get(endpoint, headers=config.backend_headers())
         if not r.is_success:
             cause = failures.connection_cause(r.status_code, loopback=_backend_on_loopback())
             return _failed_probe(url, cause, status=r.status_code, status_http=r.status_code)
@@ -6439,7 +6482,7 @@ def _llamaswap_running() -> str | None:
     base = config.BASE_URL.removesuffix("/v1")
     try:
         with httpx2.Client(timeout=_probe_timeout()) as c:
-            r = c.get(f"{base}/running", headers=config.auth_headers())
+            r = c.get(f"{base}/running", headers=config.backend_headers())
             if not r.is_success:
                 return None
             data = r.json()

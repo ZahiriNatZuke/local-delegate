@@ -289,7 +289,7 @@ def backend_probe() -> failures.BackendView:
 
         timeout = httpx2.Timeout(config.PROBE_READ_TIMEOUT, connect=config.PROBE_CONNECT_TIMEOUT)
         with httpx2.Client(timeout=timeout) as c:
-            response = c.get(endpoint, headers=config.auth_headers())
+            response = c.get(endpoint, headers=config.backend_headers())
     except Exception as exc:
         cause = failures.connection_cause(exc, loopback=loopback)
         text = failures.detail(cause, host=host, endpoint=endpoint, exception=exc)

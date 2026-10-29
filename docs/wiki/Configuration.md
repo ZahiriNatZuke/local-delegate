@@ -17,6 +17,7 @@ en «todas las interfaces» o el modelo en blanco. Los interruptores (`LOCAL_DEL
 | `LOCAL_DELEGATE_BACKEND_ORIGIN` | `auto` | `local`/`remote` fuerzan el origen del cómputo; `auto` lo deduce del host de `BASE_URL` (loopback = local). Decláralo si llegas al backend por un **túnel** (`ssh -L 9292:…`, port-forward de Tailscale): el endpoint se ve en `127.0.0.1` y el dashboard reportaría cómputo local para inferencia que salió de la máquina |
 | `LOCAL_DELEGATE_TIMEOUT` | `180` | Timeout HTTP (segundos) |
 | `LOCAL_DELEGATE_MAX_CONCURRENT_REQUESTS` | `2` | Máximo de llamadas al backend simultáneas por proceso; en el daemon se comparte entre clientes |
+| `LOCAL_DELEGATE_MACHINE_NAME` | *(nombre corto del equipo)* | Nombre de esta máquina en el log de uso (`host`) y en la cabecera `X-Local-Delegate-Host` que va al backend. Solo letras, dígitos, `.`, `_` y `-` (máx. 64). Útil si dos equipos se llaman igual. Ver [Savings & metrics](Savings-and-metrics.md#concurrencia-máquina-de-origen-y-fases-desde-la-045) |
 
 Para una Mac que usa llama-swap en otra máquina, conserva el MCP en la Mac, fija
 `LOCAL_DELEGATE_AUTOSTART=0` y guarda `LOCAL_DELEGATE_API_KEY` en el Llavero. Ver
