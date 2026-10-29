@@ -5,10 +5,10 @@
   "mode": "standard",
   "status": "researching",
   "createdAt": "2026-10-29T12:00:00.000Z",
-  "updatedAt": "2026-10-29T12:00:00.000Z",
+  "updatedAt": "2026-10-29T13:30:00.000Z",
   "phase0": {
     "mode": "lightweight",
-    "status": "implementing",
+    "status": "in-review",
     "branch": "feat/concurrency-log-fields",
     "spec": "spec-step0.md",
     "plan": "plan-step0.md",
@@ -24,8 +24,15 @@
         "updatedAt": "2026-10-29T12:00:00.000Z",
         "actor": "agent",
         "evidence": "Revision propia explicita (plan-step0.md): no cambia contratos existentes; una sola zona de choque con el Frente 1 en _log_event; control positivo por mutante en 6 piezas."
+      },
+      "quality": {
+        "status": "approved",
+        "actor": "agent",
+        "updatedAt": "2026-10-29T13:30:00.000Z",
+        "evidence": "ruff check/format verdes; suite completa local -n 2: 5520 passed, 29 skipped; CI del PR #481 en verde (22 checks). El primer CI cazo que la muestra de /running rompia la regla de la afinidad (test_affinity): enmendado REQ-S0-4 (muestra solo si el POST lleva 3 s esperando)."
       }
-    }
+    },
+    "pr": 481
   },
   "gates": {
     "research": {
