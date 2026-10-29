@@ -1117,6 +1117,7 @@ def _log_event(
     read_timeout_cause: str | None = None,
     turn_wait_ms: int | None = None,
     turn: str | None = None,
+    turn_yields: int | None = None,
     routing: str | None = None,
     affinity_foreign_flight: int | None = None,
     affinity_failed: bool | None = None,
@@ -1316,6 +1317,9 @@ def _log_event(
             rec["turn_wait_ms"] = int(turn_wait_ms)
         if turn is not None:
             rec["turn"] = turn
+        # PC+Mac, REQ-032: how many times the operation yielded the turn between chunks, only if any.
+        if turn_yields:
+            rec["turn_yields"] = int(turn_yields)
         # Afinidad (REQ-016): respondió un alternativo ya cargado en lugar del modelo del rol
         # (`model_requested`). No es un respaldo ni lleva aviso. `affinity_foreign_flight`: las
         # peticiones de otros clientes contra ese modelo en la foto; `affinity_failed`, sin
@@ -2161,7 +2165,12 @@ def _refresh_topology() -> None:
 def _new_turn() -> turn.Turn:
     # La relación de choques real llega con la primera foto (`_on_snapshot_seen`), antes de que nadie
     # pida turno; la de partida no decide nada.
-    return turn.Turn(lambda _a, _b: False, turn_max_s=config.TURN_MAX_S, on_tick=_refresh_topology)
+    return turn.Turn(
+        lambda _a, _b: False,
+        turn_max_s=config.TURN_MAX_S,
+        on_tick=_refresh_topology,
+        yield_s=config.TURN_YIELD_S,
+    )
 
 
 _turn = _new_turn()
@@ -2179,7 +2188,7 @@ _turn_version = _TurnVersion()
 
 
 def _reset_turn() -> None:
-    """El estado del turno, a cero, con el `TURN_MAX_S` vigente (lo usan los tests)."""
+    """El estado del turno, a cero, con el `TURN_MAX_S` y el `TURN_YIELD_S` vigentes (tests)."""
     global _turn
     with _turn_lock:
         _turn = _new_turn()
@@ -2452,6 +2461,8 @@ class _OperationTurn:
         self.model: str | None = None
         self.wait_ms = 0
         self.forced = False
+        #: Veces que la operación cedió el turno entre dos trozos (PC+Mac, REQ-030 y REQ-032).
+        self.yields = 0
         self._turn: turn.Turn | None = None
         self._snapshot: topology.Snapshot | None = None
         self._chain: tuple[str, ...] = ()
@@ -2461,6 +2472,8 @@ class _OperationTurn:
         self._loaded_hop = False
         #: Ya hubo una primera llamada: la afinidad solo se decide en ella.
         self._started = False
+        #: Tras ceder el turno (PC+Mac, REQ-030), la siguiente petición decide la afinidad de nuevo.
+        self._decide_again = False
         #: El alternativo que eligió la afinidad mientras siga siendo el modelo de la operación.
         self.affinity: str | None = None
         #: El alternativo que eligió la afinidad, aunque después un salto la apagara: el motivo de
@@ -2563,6 +2576,21 @@ class _OperationTurn:
     def ensure(
         self, model: str, chain: Sequence[str] = (), *, hop: bool = False, size: int = 0
     ) -> None:
+        if not hop and self._turn is not None and self._turn.must_yield(self.op_id):
+            # PC+Mac, REQ-030: ceder entre dos trozos, antes de las dos salidas tempranas de
+            # abajo. Los trozos de una operación van en serie y `ensure` corre sin plaza, así que
+            # no queda ningún envío propio en vuelo. Suelta el turno, olvida la afinidad y vuelve
+            # a pedirlo al final de la cola (la espera suma en `turn_wait_ms` y en la fase `turn`).
+            # La afinidad se decide de nuevo al volver (REQ-030): ceder no es un fallo del
+            # alternativo, así que tampoco deja `affinity_dropped` en el evento. Si un salto ya la
+            # había apagado por un fallo (`affinity_tried` sin `affinity`), no se vuelve a probar.
+            if self.affinity is not None:
+                self.affinity_tried = None
+                self.affinity_foreign_flight = None
+            self._decide_again = self.affinity_tried is None
+            self.affinity = None
+            self._reset()
+            self.yields += 1
         if not hop and self.affinity is not None and model == self.role:
             return  # los trozos siguientes siguen en el alternativo que eligió la afinidad
         if hop:
@@ -2577,7 +2605,9 @@ class _OperationTurn:
             self.model = model
             return
         acceptable = {model}
-        if not hop and not self._started and not self.explicit and model == self.role:
+        decide = not self._started or self._decide_again
+        self._decide_again = False
+        if not hop and decide and not self.explicit and model == self.role:
             acceptable.update(
                 _approved_alternatives(self.tool, self.role_name, self.role, snapshot, size)
             )
@@ -2714,6 +2744,8 @@ class _OperationTurn:
             "turn_wait_ms": self.wait_ms,
             "turn": "forced" if self.forced else None,
         }
+        if self.yields:
+            fields["turn_yields"] = self.yields
         if self.affinity is not None:
             fields["routing"] = "affinity"
             fields["affinity_foreign_flight"] = self.affinity_foreign_flight

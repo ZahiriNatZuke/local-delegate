@@ -405,6 +405,11 @@ FALLBACK_CHAINS: dict[str, str | None] = {
 # Red de seguridad del turno: la cabeza de la cola se concede forzada si lleva este tiempo
 # esperando Y el daemon lleva este tiempo sin ninguna llamada al backend en vuelo.
 TURN_MAX_S = _env_float("LOCAL_DELEGATE_TURN_MAX_S", 600.0)
+# Concurrency PC+Mac (REQ-030): an operation that has held the turn this long yields it between two
+# chunks when the head of the queue has waited this long for a model that clashes with its own; it
+# goes back to the end of the queue. Bounds how long a long operation keeps a clashing one waiting
+# (REQ-031). `0` disables yielding (the wait then depends on the longest operation, as before).
+TURN_YIELD_S = max(0.0, _env_float("LOCAL_DELEGATE_TURN_YIELD_S", 120.0))
 
 # --- Aborted delegations and a saturated queue (issue #476) ----------------------------------
 # The daemon's own budget for ONE tool call, queue included: past it the call is cancelled with

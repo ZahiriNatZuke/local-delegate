@@ -8,6 +8,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Añadido
 
+- **Una operación larga cede el turno a otra que choca con ella** (cambio SDD
+  `concurrencia-pc-mac`, lote 2). Si la primera de la cola lleva `LOCAL_DELEGATE_TURN_YIELD_S`
+  (120 s) esperando un modelo que choca con el de una operación que ya tiene el turno desde hace al
+  menos ese tiempo, esa operación lo suelta entre dos trozos y vuelve a pedirlo al final de la cola.
+  Así una delegación troceada de muchos minutos ya no deja esperando a otra hasta que acaba: la
+  espera queda acotada por ese tiempo más el trozo en curso. El evento de la operación que cedió
+  lleva `turn_yields` (cuántas veces cedió) y la espera de después suma en `turn_wait_ms`.
+  Si una operación cedió con la afinidad puesta, al volver se decide de nuevo (vuelve al alternativo
+  si sigue cargado). Coste: cuando dos operaciones largas chocan, como mucho una pareja de cargas de
+  modelo cada `LOCAL_DELEGATE_TURN_YIELD_S`; `LOCAL_DELEGATE_TURN_YIELD_S=0` lo apaga
+  (comportamiento anterior). Por dentro, el turno del
+  daemon gana una API sin bloqueo (`enqueue`, `poll`, `expire`, `remote_flight`, `wait_change`)
+  que usará el turno compartido con la Mac, y al soltar o abandonar el turno se reevalúa la cola en
+  el acto (la misma concesión que antes, sin esperar al siguiente tic).
 - **Estado `waiting_backend` en `/api/inflight`, el panel y la banda del mod** (concurrencia
   PC+Mac, lote 1): una llamada cuyo envío lleva más de 3 s esperando a que llama-swap cambie de
   modelo ya no sale como «procesando». `/api/inflight` lleva `state: "waiting_backend"` y
