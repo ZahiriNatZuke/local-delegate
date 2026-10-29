@@ -290,18 +290,25 @@ def _kernel32():
     global _win_kernel32
     if _win_kernel32 is None:
         import ctypes
-        from ctypes import wintypes
+        import ctypes.wintypes
 
         k32 = ctypes.WinDLL("kernel32", use_last_error=True)  # type: ignore[attr-defined]
         # restype/argtypes explícitos: sin ellos ctypes asume c_int y TRUNCA el HANDLE de
         # 64 bits, con lo que CloseHandle recibe un handle inválido y el daemon acaba
         # filtrando un handle por cada sondeo (el dashboard llama a esto cada 2 s).
-        k32.OpenProcess.restype = wintypes.HANDLE
-        k32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
-        k32.GetExitCodeProcess.restype = wintypes.BOOL
-        k32.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
-        k32.CloseHandle.restype = wintypes.BOOL
-        k32.CloseHandle.argtypes = [wintypes.HANDLE]
+        k32.OpenProcess.restype = ctypes.wintypes.HANDLE
+        k32.OpenProcess.argtypes = [
+            ctypes.wintypes.DWORD,
+            ctypes.wintypes.BOOL,
+            ctypes.wintypes.DWORD,
+        ]
+        k32.GetExitCodeProcess.restype = ctypes.wintypes.BOOL
+        k32.GetExitCodeProcess.argtypes = [
+            ctypes.wintypes.HANDLE,
+            ctypes.POINTER(ctypes.wintypes.DWORD),
+        ]
+        k32.CloseHandle.restype = ctypes.wintypes.BOOL
+        k32.CloseHandle.argtypes = [ctypes.wintypes.HANDLE]
         _win_kernel32 = k32
     return _win_kernel32
 
@@ -320,14 +327,14 @@ def _pid_alive_windows(pid: int) -> bool:
     panel is worse than keeping a dead one until the TTL, which stays as the safety net.
     """
     import ctypes
-    from ctypes import wintypes
+    import ctypes.wintypes
 
     k32 = _kernel32()
     handle = k32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
     if not handle:
         return ctypes.get_last_error() == _ERROR_ACCESS_DENIED
     try:
-        code = wintypes.DWORD()
+        code = ctypes.wintypes.DWORD()
         if not k32.GetExitCodeProcess(handle, ctypes.byref(code)):
             # Opened but unreadable: it existed a moment ago; the TTL decides, as before #483.
             return True
