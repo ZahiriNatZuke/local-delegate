@@ -178,6 +178,14 @@ registra `chunks: N` y el dashboard muestra el progreso (`trozo 3/7`) mientras c
 «Reintentando trozo n/total» cuando un trozo cortado se vuelve a partir; y la actividad separa
 trozos de llamadas al backend (`3 +1`: tres trozos y una combinación).
 
+**Llamadas largas y colas.** Desde la 0.45.0 cada llamada viva manda progreso MCP cada 20 s con su
+fase («esperando turno, puesto N», «procesando el trozo k/N»), así que Claude Code ya no corta a los
+300 s una delegación que espera en la cola. El daemon pone a cada llamada un plazo propio
+(`LOCAL_DELEGATE_CALL_MAX_S`, 1800 s) y, si la cola lleva 900 s sin avanzar, falla en el acto con
+«cola saturada» en vez de colgar al cliente. Las delegaciones abortadas quedan en el log como
+errores, «En curso» separa «Procesando (n)» de «En cola (m)», y cada entrada del log dice desde qué
+máquina vino (`host`) y cuánto esperó en cada fase (`concurrency`).
+
 **Resúmenes de documentos enormes.** `local_summarize` y `local_lint_summary` hacen **map-reduce**
 cuando la entrada no cabe en el modelo: resumen cada parte y luego resumen los resúmenes, por
 niveles si hace falta. Antes truncaban —de un log de CI enorme se resumía el principio y el resto
@@ -211,6 +219,7 @@ cámbialos por los de tu backend.
 | `LOCAL_DELEGATE_ASK_TIMEOUT` | `30` | Segundos de espera por una respuesta; agotados, la tool sigue como si no hubiera preguntado |
 | `LOCAL_DELEGATE_LOG_DIR` | *(dir de datos de usuario)* | Directorio de los `usage-YYYYMM.jsonl` rotados por mes y del `clients.jsonl` |
 | `LOCAL_DELEGATE_LOG` | *(vacío = rotación activa)* | Si se fija, ruta de un `usage.jsonl` explícito sin rotar (compatibilidad) |
+| `LOCAL_DELEGATE_MACHINE_NAME` | *(nombre corto del equipo)* | Nombre de esta máquina en el log de uso (`host`) y en la cabecera `X-Local-Delegate-Host` que va al backend; útil si dos equipos se llaman igual |
 | `LOCAL_DELEGATE_MODEL_MECHANICAL` | `gemma3-4b` | Modelo para clasificar/extraer/resumen corto |
 | `LOCAL_DELEGATE_MODEL_LONG` | `gemma4-26b-a4b` | Modelo para documentos largos |
 | `LOCAL_DELEGATE_MODEL_CODE` | `qwen36-35b-a3b` | Modelo para código |
@@ -376,7 +385,9 @@ El plugin trae además un **mod**, que corre dentro de Claude Code sin gastar tu
   una barra de una fila con fondo y una etiqueta de estado (` ● LISTO `, ` ◐ DELEGANDO `,
   ` ○ CAÍDO `), el modelo, la tool en curso con su trozo (`7/9`) y lo que lleva (`3 min 16 s`), las delegaciones y el ahorro de la
   sesión y el modo de lectura (opción `status_style`: `bar` o `line`, una raya sobre una línea);
-  en Claude Desktop, una sola línea de texto en dos tonos, sin píldora ni enlace. Se
+  en Claude Desktop, una sola línea de texto en dos tonos, sin píldora ni enlace. Desde la 0.45.0,
+  con varias delegaciones a la vez nombra primero la que procesa el backend y, si todas esperan, la
+  más antigua con su espera (`en cola · 4 min 0 s`). Se
   refresca sola cada segundo mientras hay una delegación en curso. La cuota de Claude no va
   aquí: es de la status line.
 - Desde la 0.41, el **mod de lectura** (encendido por defecto, opción `read_mod_enabled`) resume
