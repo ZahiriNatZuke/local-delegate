@@ -279,7 +279,9 @@ async def _report_progress(ctx: Any, progress: float, message: str) -> None:
     try:
         await report(progress, None, message)
     except Exception:
-        pass
+        # A notification that cannot be sent (a closed stream, a transport error) is dropped:
+        # the next beat tries again, and the call itself goes on untouched.
+        return
 
 
 def middleware(
