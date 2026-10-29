@@ -87,7 +87,17 @@ con saltos pudo contaminarla un swap.
   `notifications/cancelled`, como el Esc de Claude Code o el puente de Desktop al cerrarse),
   `disconnect` (el cliente cortó la conexión de la petición) o `aborted` (se cerró la sesión u otra
   cancelación del SDK). Va con `ok: false`, `chars_out: 0` y la latencia hasta la cancelación; el
-  modelo y `chars_in` son los de la operación que llegó a empezar.
+  modelo y `chars_in` son los de la operación que llegó a empezar. Desde el issue #476 hay un
+  cuarto motivo, `deadline`: la llamada pasó `LOCAL_DELEGATE_CALL_MAX_S` (1800 s) en el daemon.
+  Y el evento lleva lo medido hasta el corte: `turn_wait_ms`, `slot_wait_ms`, las llamadas reales
+  (`chunks`, con `wait_ms` e `inference_ms` si las hubo) y, si era troceada, `pieces`.
+- `error: "queue_saturated"` (issue #476): quien esperaba turno o plaza llevaba
+  `LOCAL_DELEGATE_QUEUE_MAX_WAIT_S` (900 s) sin que la cola avanzara, y la llamada falló en el acto con «cola saturada».
+  `slot_wait_ms` (solo si esperó plaza) dice cuánto esperó plaza.
+- `error: "exception"` y `exception_type` (issue #476): la operación había empezado y acabó con
+  una excepción no controlada antes de escribir su evento. Solo se guarda el **tipo** de la
+  excepción, nunca su mensaje. Antes esas llamadas, como las canceladas por plazo, no dejaban
+  línea y el panel enseñaba 0 % de errores.
 - `tool_use_id` (solo si el cliente lo manda; Claude Code sí, Codex y los scripts no): el id de la
   llamada en el transcript, leído de `_meta["claudecode/toolUseId"]`. Es la clave exacta para
   cruzar la línea con el transcript.
