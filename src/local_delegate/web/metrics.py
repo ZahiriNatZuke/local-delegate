@@ -1756,6 +1756,12 @@ td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .ifrow{display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding:6px 2px;font-size:12.5px;color:var(--tx2);font-family:var(--mono)}
 .spin{width:12px;height:12px;border-radius:50%;flex:0 0 auto;
   border:2px solid color-mix(in srgb,var(--amber) 28%,transparent);border-top-color:var(--amber);animation:rot .8s linear infinite}
+.queue-dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;border:2px dashed var(--faint)}
+.ifrow.queued{opacity:.72}
+.ifgroup{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:8px 0 2px}
+.ifgroup:first-child{margin-top:0}
+.ifgroup .num{color:var(--amber)}
+.ifgroup.queued .num{color:var(--mut)}
 @keyframes rot{to{transform:rotate(360deg)}}
 .meter-lbl{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
   font-size:10.5px;color:var(--faint);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
@@ -2965,7 +2971,9 @@ function renderInflight(){
   if(!body || !head) return;
 
   if(state.inflight.length){
-    body.innerHTML = state.inflight.map(it=>{
+    const ifRow = it=>{
+      // Issue #477: a call that waits for its turn or a place is not drawn as one being processed.
+      const queued = it.state==='queued';
       // Issue #454: the phase of a chunked delegation; none (map) keeps «piece n/total».
       const chunkKey = it.phase==='reduce' ? 'backend.combining' : it.phase==='retry' ? 'backend.retrying' : 'backend.chunk';
       const chunk = it.chunks ? `<span class="chunkchip">${escHooks(T(chunkKey, {n: it.chunk||1, total: it.chunks}))}</span>` : '';
@@ -2973,10 +2981,27 @@ function renderInflight(){
       // Espera de turno del daemon (REQ-008): las mismas palabras que el title de la fila del modelo.
       const turnText = it.local_wait==='turn' ? turnWords(it) : '';
       const turnChip = turnText ? `<span class="chunkchip" title="${escHooks(turnText)}">${escHooks(turnText)}</span>` : '';
-      return `<div class="ifrow"><span class="spin"></span><span class="badge">${escHooks(it.tool)}</span>
-        <span class="badge model">${escHooks(it.model)}</span>${chunk}${turnChip}${org}
+      const pos = queued && Number.isFinite(it.queue_position) && it.queue_position>0
+        ? `<span class="chunkchip" title="${escHooks(T('backend.queue_position_title', {n: it.queue_position}))}">#${escHooks(String(it.queue_position))}</span>` : '';
+      // The machine that asked for it, when the daemon says (a field the host work adds); never required.
+      const host = typeof it.host==='string' && it.host
+        ? `<span class="chunkchip" title="${escHooks(T('backend.host_title', {host: it.host}))}">${escHooks(it.host)}</span>` : '';
+      return `<div class="ifrow${queued ? ' queued' : ''}"><span class="${queued ? 'queue-dot' : 'spin'}"></span><span class="badge">${escHooks(it.tool)}</span>
+        <span class="badge model">${escHooks(it.model)}</span>${pos}${chunk}${turnChip}${org}${host}
         <span class="num" style="color:var(--mut)">${escHooks(fmtSec((it.elapsed_s||0)*1000))} · ${F.format(it.chars_in||0)} ${T('unit.chars_short')}</span></div>`;
-    }).join('');
+    };
+    // Issue #477: with `state` (daemons from 0.45 on), «Processing (n)» and «Queued (m)» apart; a
+    // daemon without it keeps the single list it always had.
+    if(state.inflight.some(it=>typeof it.state==='string')){
+      const queued = state.inflight.filter(it=>it.state==='queued');
+      const active = state.inflight.filter(it=>it.state!=='queued');
+      const group = (key, cls, items) => items.length
+        ? `<div class="ifgroup ${cls}" data-group="${cls}">${escHooks(T(key))} <span class="num">(${items.length})</span></div>` + items.map(ifRow).join('')
+        : '';
+      body.innerHTML = group('backend.group_running', 'running', active) + group('backend.group_queued', 'queued', queued);
+    } else {
+      body.innerHTML = state.inflight.map(ifRow).join('');
+    }
     head.innerHTML = escHooks(T('backend.inflight')) + ' <span class="num" style="color:var(--amber)">('+state.inflight.length+')</span>';
     return;
   }

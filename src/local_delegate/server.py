@@ -420,6 +420,42 @@ def _inflight_local_wait(entry_id: int, reason: str | None) -> None:
     _inflight_mutate(_update)
 
 
+def _inflight_in_backend(entry_id: int, held: bool) -> None:
+    """Publish whether a delegation holds a `_chat_slots` place right now (issue #477).
+
+    Written by `_slot`: `True` while the call is at the backend, `False` once it lets the place go.
+    The key stays at `False` between calls, so `inflight_snapshot` can tell an operation that
+    already reached the backend (between its pieces) from one that never did. Best-effort.
+    """
+    key = f"{os.getpid()}:{entry_id}"
+
+    def _update(data: dict) -> None:
+        entry = data.get(key)
+        if isinstance(entry, dict):
+            entry["in_backend"] = bool(held)
+
+    _inflight_mutate(_update)
+
+
+#: The values of `state` in `/api/inflight` (issue #477).
+INFLIGHT_STATES = ("running", "retrying", "queued")
+
+
+def _inflight_state(entry: dict) -> str:
+    """`running`, `retrying` or `queued` for one `inflight.json` entry (issue #477).
+
+    From the real wait and slot, never from the phase's text: a call waiting for its turn or for
+    a place (`local_wait`) is `queued`; one that never got to the backend (no `in_backend` key
+    yet) too. Otherwise it is at the backend or between two of its pieces: `retrying` while a cut
+    piece is split again (`phase: "retry"`), `running` the rest.
+    """
+    if entry.get("local_wait") or "in_backend" not in entry:
+        return "queued"
+    if entry.get("phase") == "retry":
+        return "retrying"
+    return "running"
+
+
 def _inflight_turn(entry_id: int, in_use: Iterable[str] | None, position: int | None) -> None:
     """Publica (o, con `None`, borra) los datos de una espera de turno (REQ-008).
 
@@ -498,6 +534,14 @@ def inflight_snapshot() -> list[dict]:
                 entry["turn_in_use"] = v.get("turn_in_use")
             if "turn_position" in v:
                 entry["turn_position"] = v.get("turn_position")
+            # Issue #477: running / retrying / queued, from the wait and the slot it holds.
+            entry["state"] = _inflight_state(v)
+            if (
+                entry["state"] == "queued"
+                and v.get("local_wait") == "turn"
+                and "turn_position" in v
+            ):
+                entry["queue_position"] = v.get("turn_position")
             # Issue #442: the asking session's key, only when known. `/api/inflight` uses it to
             # tell a session its own delegations and never hands it out.
             if v.get("caller_session_key"):
@@ -2295,9 +2339,13 @@ def _slot(entry_id: int | None) -> Generator[None, None, None]:
     try:
         if token is not None:
             token.check()
+        if entry_id is not None:
+            _inflight_in_backend(entry_id, True)  # issue #477: `state: running` in /api/inflight
         with turn.slot_taken():
             yield
     finally:
+        if entry_id is not None:
+            _inflight_in_backend(entry_id, False)
         slots.release()
 
 

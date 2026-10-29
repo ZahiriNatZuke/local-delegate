@@ -141,7 +141,8 @@ def test_without_session_the_answer_is_the_panels_as_before(daemon):
         answer = _inflight()
         assert answer["count"] == 1
         assert "mine_count" not in answer
-        assert set(answer["inflight"][0]) == PANEL_KEYS
+        # Issue #477 adds `state` to every entry (an additive field); nothing of the session leaks.
+        assert set(answer["inflight"][0]) == PANEL_KEYS | {"state"}
     finally:
         server._inflight_end(entry_id)
 
