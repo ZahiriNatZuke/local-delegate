@@ -4258,6 +4258,18 @@ def _truncated_pieces_notice(entries: list[dict]) -> str:
     return i18n.t("mcp.warning.truncated_pieces", pieces=items)
 
 
+def _truncated_calls_notice(truncated: int, calls: int, retried: int = 0) -> str:
+    """The «output truncated in N of M calls» notice of a chunked operation.
+
+    #487: `truncated` only counts the cuts left in the result; the cut calls that were split and
+    retried (`retried`) are named apart, so the notice adds up to the `length` steps of the log.
+    """
+    notice = i18n.t("mcp.warning.output_truncated_calls", truncated=truncated, calls=calls)
+    if retried:
+        notice += i18n.t("mcp.warning.retried_calls", retried=retried)
+    return notice
+
+
 def _dump_chunk_notes(
     folder: str, tool: str, entry_id: int, steps: list[dict], texts: list[str]
 ) -> None:
@@ -4361,6 +4373,8 @@ def _chat_map_reduce(
     tokens_out: int | None = None
     failed: ChatResult | None = None
     truncated_calls = 0  # llamadas que acabaron por `length`: un parcial cortado ya perdió material
+    # #487: calls cut by `length` and replaced by their split retry (`retried` in `steps`).
+    retried_calls = 0
     # Las llamadas reales de toda la operación, saltos incluidos (REQ-024).
     all_attempts: list[Attempt] = []
 
@@ -4412,9 +4426,11 @@ def _chat_map_reduce(
 
     def _discard_last() -> None:
         """#455: the last step was cut and is retried split: it stops counting as truncated."""
-        nonlocal truncated_calls, raw_chars
+        nonlocal truncated_calls, raw_chars, retried_calls
         steps[-1]["retried"] = True
         truncated_calls -= 1
+        # #487: still counted apart, so the notice adds up to the `length` steps of the log.
+        retried_calls += 1
         raw_chars -= steps[-1]["chars_out"]
 
     # #455: (number of the top-level piece, the piece) of each map partial still cut after the
@@ -4479,7 +4495,7 @@ def _chat_map_reduce(
             return split_for(piece)
         return _chunk_text(piece, max(config.CHUNK_MIN_CHARS, len(piece) // 2))
 
-    def _map_piece(piece, depth: int = 0) -> list[str] | None:
+    def _map_piece(piece, depth: int = 0, floor_tokens: int = 0) -> list[str] | None:
         """Resume un trozo; si el backend dice que no cabe, lo parte y reintenta.
 
         El presupuesto en chars es una estimación de cuántos tokens ocupará el trozo, y con
@@ -4487,9 +4503,16 @@ def _chat_map_reduce(
         nada: un diff de un fichero base64 baja de 0,75 chars/token— se deja que responda el
         backend y se reintenta más pequeño. Dos niveles: un trozo que no cabe partido en cuatro
         no es un problema de presupuesto.
+
+        #487: `floor_tokens` is the cap of the cut call this piece comes from. A cap that grows
+        with the piece (`_explain_map_max_tokens`) halved with it, so both halves were asked for
+        the same notes per character that had already not fitted and were cut again, down to the
+        depth limit. Each part keeps at least its parent's cap: the parent's input plus that cap
+        fitted the context, so a smaller part with the same cap fits too.
         """
         nonlocal failed
-        out = _one(_map_system(piece), _map_user(piece), _map_tokens(piece))
+        max_tokens = max(_map_tokens(piece), floor_tokens)
+        out = _one(_map_system(piece), _map_user(piece), max_tokens)
         if out is not None:
             if _last_cut():
                 # #455: the OUTPUT was cut (`length`): split and retry like `_chat_chunked`,
@@ -4497,7 +4520,7 @@ def _chat_map_reduce(
                 parts = _split(piece) if depth < 2 and _can_split(piece) else []
                 if len(parts) >= 2:
                     _discard_last()
-                    return _map_parts(parts, depth)
+                    return _map_parts(parts, depth, max_tokens)
                 truncated_pieces.append((current.chunk, piece))
             return [out]
         if depth >= 2 or not _is_context_overflow(failed):
@@ -4508,12 +4531,12 @@ def _chat_map_reduce(
         failed = None  # el desborde deja de ser terminal en cuanto hay con qué reintentar
         return _map_parts(parts, depth)
 
-    def _map_parts(parts: list, depth: int) -> list[str] | None:
+    def _map_parts(parts: list, depth: int, floor_tokens: int = 0) -> list[str] | None:
         # Only reached when a piece is split again (cut output or context overflow): #454.
         _inflight_phase(entry_id, "retry")
         outputs: list[str] = []
         for part in parts:
-            sub = _map_piece(part, depth + 1)
+            sub = _map_piece(part, depth + 1, floor_tokens)
             if sub is None:
                 return None
             outputs.extend(sub)
@@ -4636,9 +4659,7 @@ def _chat_map_reduce(
             finish_reason = "length"
         if report is None:
             if truncated_calls:
-                notice = i18n.t(
-                    "mcp.warning.output_truncated_calls", truncated=truncated_calls, calls=calls
-                )
+                notice = _truncated_calls_notice(truncated_calls, calls, retried_calls)
                 notice += _truncated_pieces_notice(
                     _truncated_piece_entries(content, truncated_pieces)
                 )
@@ -4676,6 +4697,8 @@ def _chat_map_reduce(
     if report is not None:
         report.update(
             truncated_calls=truncated_calls if ok else 0,
+            # #487: the cut calls redone split, for the same notice as the text path.
+            retried_calls=retried_calls if ok else 0,
             # #455: which map pieces stayed cut (number and, when found, lines of `content`).
             truncated_pieces=_truncated_piece_entries(content, truncated_pieces) if ok else [],
             calls=calls,
@@ -5891,6 +5914,7 @@ def local_extract(
             report=report,
         )
         truncated_calls = report.get("truncated_calls", 0)
+        retried_calls = report.get("retried_calls", 0)
         calls = report.get("calls", 0)
         pieces = report.get("pieces", 0)
         if report.get("fallback"):
@@ -5918,6 +5942,7 @@ def local_extract(
             report=report,
         )
         truncated_calls = 1 if report.get("truncated_out") else 0
+        retried_calls = 0
         calls = 1
         pieces = 1
     result = _strip_fences(raw)
@@ -5928,12 +5953,15 @@ def local_extract(
     if truncated_calls:
         truncation = {
             "truncated": True,
-            "warning": i18n.t(
-                "mcp.warning.output_truncated_calls", truncated=truncated_calls, calls=calls
-            )
+            "warning": _truncated_calls_notice(truncated_calls, calls)
             # #455: which pieces stayed cut, from `report` (the chunked path only).
             + _truncated_pieces_notice(report.get("truncated_pieces") or []),
         }
+        # #487: the cut calls redone split go in their own field, not in `warning`, whose text is
+        # part of the extract contract (REQ-010): `truncated_calls`-in-`warning` plus this one add
+        # up to the `length` steps of the log.
+        if retried_calls:
+            truncation["retried_calls"] = retried_calls
 
     try:
         data = json.loads(result)

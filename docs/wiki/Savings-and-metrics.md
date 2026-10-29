@@ -73,6 +73,10 @@ con saltos pudo contaminarla un swap.
 - `steps` (solo en operaciones troceadas): cada paso (`kind`: map, reagrupado o reduce) con sus
   `chars_out` y su `finish_reason`, nunca su texto. Desde la 0.43.0 un paso cortado por `length`
   que se reemplazó por su reintento partido lleva `"retried": true` y ya no cuenta como truncado.
+  Desde la versión siguiente a la 0.45.0 (#487), los pasos en `length` sin `retried` son
+  exactamente los que cuenta el aviso «N de M llamadas», y los que llevan `retried` son los que el
+  aviso nombra aparte («aparte, R llamadas cortadas se repitieron partiendo su trozo»; en
+  `local_extract`, el campo `retried_calls`).
 - `input_unit` (solo si no es `chars`): qué mide `chars_in`. En `local_describe_image` vale
   `bytes`, porque ahí la entrada es una imagen y **estimar tokens dividiendo bytes entre 4 da un
   número disparatado** (×46 medido contra el token real). Los eventos anteriores a la v0.14.0 no
@@ -833,6 +837,14 @@ map o del reagrupado sale por `length`, se descarta, se parte el trozo (o el gru
 hasta dos niveles. Antes el parcial cortado entraba tal cual en la combinación. Si aun así queda
 alguno cortado, el aviso nombra el trozo y sus líneas, y en `steps` el paso reemplazado lleva
 `"retried": true`.
+
+Desde la versión siguiente a la 0.45.0, cada parte del reintento conserva al menos el tope de
+salida (`max_tokens`) del paso cortado del que viene. En `local_explain_code` el tope del map
+crece con el trozo (`len // 8`), así que al partir el trozo se partía también el tope: las dos
+mitades pedían las mismas notas por carácter que ya no habían cabido y se volvían a cortar hasta
+agotar los niveles (issue #487). Las tools cuyo tope no depende del tamaño del trozo
+(`local_summarize`, `local_extract`, lint) mandan el mismo tope que antes. El aviso cuenta ahora también las llamadas cortadas que se repitieron, así
+que su suma cuadra con los pasos en `length` de `steps`.
 
 Hasta la 0.12.0 estas tools simplemente **truncaban** la entrada y avisaban: de un log de CI de
 200 000 caracteres se resumía el principio y el resto se descartaba, que es justo donde suelen

@@ -6,6 +6,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- **Los trozos de `local_explain_code` ya no se cortan otra vez al reintentarlos** (#487). En
+  ficheros de código densos de unos 30 KB, el reintento partido de la 0.43.0 seguía acabando en
+  `finish_reason: "length"`: el tope de salida del map de esta tool crece con el trozo, así que al
+  partirlo se partía también el tope y las mitades volvían a quedarse cortas. Ahora cada parte
+  conserva al menos el tope del paso cortado del que viene. Las demás tools troceadas mandan el
+  mismo tope que antes.
+- **El aviso de salida truncada cuadra con los pasos del log** (#487). «N de M llamadas» solo
+  contaba los cortes que quedaban en el resultado, mientras `steps` mostraba también los que se
+  reintentaron («1 de 13» frente a 4 pasos en `length`). El aviso añade ahora «aparte, R llamadas
+  cortadas se repitieron partiendo su trozo», y `local_extract` lo da en el campo `retried_calls`
+  sin cambiar el texto de `warning`.
+
 ## [0.45.0] - 2026-10-29
 
 Esta versión hace visibles las delegaciones que se atascan o se pierden: las abortadas cuentan como
