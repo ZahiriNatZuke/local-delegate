@@ -50,6 +50,8 @@ DISCONNECT_KEY = "local_delegate.disconnected"
 REASON_NOTIFICATION = "notification"
 REASON_DISCONNECT = "disconnect"
 REASON_ABORTED = "aborted"
+#: The daemon's own budget for the call (`config.CALL_MAX_S`) ran out (issue #476).
+REASON_DEADLINE = "deadline"
 
 
 class CallCancelled(ToolError):
@@ -59,8 +61,8 @@ class CallCancelled(ToolError):
     y no como un fallo inesperado con traza en el log del daemon.
     """
 
-    def __init__(self, reason: str) -> None:
-        super().__init__(reason)
+    def __init__(self, reason: str, message: str | None = None) -> None:
+        super().__init__(message or reason)
         self.reason = reason
 
 
@@ -76,6 +78,20 @@ class Token:
         #: La primera operación que abrió la llamada (`tool`, `model`, `source`, `chars_in`), para
         #: apuntarla en el registro de uso aunque no llegue a escribir su evento.
         self.entry: dict[str, Any] | None = None
+        #: Issue #476: what the call measured until it stopped, so an aborted call is logged with
+        #: its waits and its real backend calls, not only with its duration. Written from the
+        #: tool's thread (`server`), read when the call ends.
+        self.turn_wait_ms = 0
+        self.slot_wait_ms = 0
+        self.attempts: list[Any] = []
+        #: Concurrency PC+Mac, step 0: the operation's `concurrency.Trace`, so a stopped call's event
+        #: carries its phases too (set by `server._OperationTurn`).
+        self.concurrency_trace: Any = None
+        #: The exception that stopped an operation that had started (`server._note_failure`): the
+        #: operation never got to write its event, so `middleware` writes it with `on_failed`.
+        self.failure: BaseException | None = None
+        #: The daemon's budget for this call in seconds (`0`: none), for the deadline's message.
+        self.deadline_s = 0.0
         self._event = threading.Event()
         self._lock = threading.Lock()
         self._callbacks: list[Callable[[], None]] = []
@@ -120,7 +136,16 @@ class Token:
         """Punto de parada: lanza `CallCancelled` si la llamada se canceló."""
         if self._event.is_set():
             self.observed = True
-            raise CallCancelled(self.reason or REASON_ABORTED)
+            reason = self.reason or REASON_ABORTED
+            raise CallCancelled(reason, self._message(reason))
+
+    def _message(self, reason: str) -> str | None:
+        """What the caller reads: the deadline says why and what to do (issue #476)."""
+        if reason != REASON_DEADLINE:
+            return None
+        from . import i18n
+
+        return i18n.t("mcp.error.call_deadline", seconds=round(self.deadline_s))
 
 
 _CURRENT: contextvars.ContextVar[Token | None] = contextvars.ContextVar(
@@ -211,11 +236,20 @@ def _disconnect_event(ctx: Any) -> anyio.Event | None:
     return None
 
 
-def middleware(on_cancelled: Callable[[Token], None]) -> Callable[..., Any]:
+def middleware(
+    on_cancelled: Callable[[Token], None],
+    on_failed: Callable[[Token], None] | None = None,
+    deadline_s: Callable[[], float] | None = None,
+) -> Callable[..., Any]:
     """El middleware del SDK que da a cada `tools/call` su token y lo cancela cuando toca.
 
     `on_cancelled(token)` se llama al final si la llamada llegó a pararse en un punto de parada:
     es quien la apunta en el registro de uso como cancelada.
+
+    Issue #476: `on_failed(token)` is called instead when an operation that had started ended with
+    an exception before writing its event (`token.failure`): a saturated queue or an unexpected
+    error. And `deadline_s()`, read per call, is the daemon's own budget: past it the call is
+    cancelled with `REASON_DEADLINE`, because a client that gives up does not always say so.
     """
 
     async def cancel_abandoned_calls(ctx: Any, call_next: Any) -> Any:
@@ -224,6 +258,7 @@ def middleware(on_cancelled: Callable[[Token], None]) -> Callable[..., Any]:
         params = ctx.params if isinstance(ctx.params, Mapping) else {}
         name = params.get("name")
         token = Token(name if isinstance(name, str) else None)
+        token.deadline_s = max(0.0, float(deadline_s())) if deadline_s is not None else 0.0
         _CURRENT.set(token)
         finished = False
         disconnected = _disconnect_event(ctx)
@@ -243,21 +278,30 @@ def middleware(on_cancelled: Callable[[Token], None]) -> Callable[..., Any]:
                     token.cancel(reason)
                 raise
 
+        async def expire() -> None:
+            await anyio.sleep(token.deadline_s)
+            if not finished:
+                token.cancel(REASON_DEADLINE)
+
         result: Any = None
         try:
             async with anyio.create_task_group() as group:
                 group.start_soon(watch)
+                if token.deadline_s > 0:
+                    group.start_soon(expire)
                 try:
                     result = await call_next(ctx)
                 finally:
                     finished = True
                     group.cancel_scope.cancel()
         finally:
-            if token.observed:
-                try:
+            try:
+                if token.observed:
                     on_cancelled(token)
-                except Exception:
-                    pass  # apuntar es best-effort; nunca cambia lo que vuelve al cliente
+                elif token.failure is not None and on_failed is not None:
+                    on_failed(token)
+            except Exception:
+                pass  # apuntar es best-effort; nunca cambia lo que vuelve al cliente
         return result
 
     return cancel_abandoned_calls

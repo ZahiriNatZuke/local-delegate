@@ -406,6 +406,21 @@ FALLBACK_CHAINS: dict[str, str | None] = {
 # esperando Y el daemon lleva este tiempo sin ninguna llamada al backend en vuelo.
 TURN_MAX_S = _env_float("LOCAL_DELEGATE_TURN_MAX_S", 600.0)
 
+# --- Aborted delegations and a saturated queue (issue #476) ----------------------------------
+# The daemon's own budget for ONE tool call, queue included: past it the call is cancelled with
+# `cancel_reason: "deadline"` and logged as a failure. A client that gives up (Claude Code's idle
+# or total timeout) does not always tell the daemon, which kept going for many minutes and left no
+# trace in the usage log. 1800 s is also when the panel drops an in-flight entry as orphaned
+# (`_INFLIGHT_STALE_S`). `0` disables it.
+CALL_MAX_S = max(0.0, _env_float("LOCAL_DELEGATE_CALL_MAX_S", 1800.0))
+# How long a call waiting for the turn or for a slot tolerates the queue NOT moving (no backend
+# call ended, no slot or turn changed hands); not the length of the wait, so a slow queue that
+# moves never fails the one behind it. Past it the call fails at once with
+# `error: "queue_saturated"` and a clear message, instead of using up the client's budget in the
+# queue. Above `TURN_MAX_S`, so the turn's safety net acts first; below `CALL_MAX_S`, so the clear
+# message arrives before the deadline. A call alone, without a queue, never waits. `0` disables it.
+QUEUE_MAX_WAIT_S = max(0.0, _env_float("LOCAL_DELEGATE_QUEUE_MAX_WAIT_S", 900.0))
+
 # --- Espera frente a lentitud (daemon-reparte-el-backend, REQ-025) ----------------------------
 # Una llamada es `slow` si genera a menos de esta fracción de la velocidad normal de su modelo
 # (`pace_rel` < umbral). 0,5 por defecto, decisión del usuario.

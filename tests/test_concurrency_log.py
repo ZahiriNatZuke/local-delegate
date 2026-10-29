@@ -18,10 +18,13 @@ import backend_mock
 import httpx2
 import pytest
 from fastapi.testclient import TestClient
+from test_desktop_bridge import slow_backend as _bridge_slow_backend
 from test_fallback import _text
 
 from local_delegate import concurrency, config, llamaswap_api, server, turn
 from local_delegate.web import metrics
+
+slow_backend = _bridge_slow_backend
 
 CHAT = "http://test-backend/v1/chat/completions"
 RUNNING = "http://test-backend/running"
@@ -478,3 +481,21 @@ def test_the_mcp_middleware_reads_the_origin_of_the_request():
 
     seen = contextvars.Context().run(asyncio.run, clients.observe_client(ctx, call_next))
     assert seen == ("other-host", "header")
+
+
+def test_a_stopped_call_logs_its_host_and_phases(monkeypatch, slow_backend, tmp_path):
+    """A call cut by the daemon's deadline (issue #476) writes its event from the middleware, not
+    from the operation: it still carries `host` and the phases measured until the cut."""
+    import test_aborted_delegations as aborted
+    from test_desktop_bridge import TOKEN, real_daemon
+
+    # No `/running` sample: the fixture's backend is a stub on a loopback port nobody serves.
+    monkeypatch.setattr(concurrency, "BACKEND_SAMPLE_DELAY_S", 60.0)
+    monkeypatch.setattr(config, "MACHINE_NAME_OVERRIDE", "pc")
+    monkeypatch.setattr(config, "CALL_MAX_S", 1.0)
+    with real_daemon(monkeypatch, TOKEN) as url:
+        aborted._call(url, aborted.SUMMARIZE)
+    event = [e for e in _events(tmp_path) if e.get("tool") == "local_summarize"][-1]
+    assert event["ok"] is False and event["error"] == "cancelled", event
+    assert event["host"] == "pc"
+    assert "backend" in event["concurrency"]["phases"], event
