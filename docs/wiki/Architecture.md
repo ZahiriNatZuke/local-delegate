@@ -148,7 +148,14 @@ operación ──▶ turno (¿choca con lo que está en uso?) ──▶ plaza (M
   primera de la cola se concede si alguno de sus modelos es compatible con lo que está en uso; una
   que llega después solo se adelanta si no choca ni con lo que está en uso ni con lo que piden las de
   delante (E-1), así que nadie espera para siempre. Si la cola no avanza en
-  `LOCAL_DELEGATE_TURN_MAX_S` sin llamadas en vuelo, la cabeza se concede forzada. Un salto de
+  `LOCAL_DELEGATE_TURN_MAX_S` sin llamadas en vuelo, la cabeza se concede forzada. Una operación
+  que tiene el turno desde hace `LOCAL_DELEGATE_TURN_YIELD_S` (120 s) y bloquea a una cabeza que
+  lleva ese mismo tiempo esperando **cede** entre dos trozos: lo suelta antes de su siguiente envío,
+  olvida la afinidad y vuelve a pedirlo al final de la cola (`turn.must_yield`, en `ensure`). Con
+  eso la espera de la cabeza queda acotada por ese tiempo más el trozo en curso; las que llegan
+  después con el modelo en uso no la adelantan (E-1). Soltar o abandonar el turno reevalúa la cola
+  en el acto, y el turno tiene una API sin bloqueo (`enqueue`, `poll`, `expire`, `remote_flight`,
+  `wait_change`) para las operaciones que no tienen hilo en el daemon. Un salto de
   respaldo suelta la plaza y vuelve a pedir turno. El estado se ve en `local_status`, en
   `/api/inflight` (`local_wait`, `turn_in_use`, `turn_position`) y en el panel.
 - **Afinidad.** Con la plaza en la mano, en la primera llamada de la operación y solo si la tool

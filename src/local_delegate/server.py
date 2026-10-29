@@ -1051,6 +1051,7 @@ def _log_event(
     connection_failure: str | None = None,
     turn_wait_ms: int | None = None,
     turn: str | None = None,
+    turn_yields: int | None = None,
     routing: str | None = None,
     affinity_foreign_flight: int | None = None,
     affinity_failed: bool | None = None,
@@ -1247,6 +1248,9 @@ def _log_event(
             rec["turn_wait_ms"] = int(turn_wait_ms)
         if turn is not None:
             rec["turn"] = turn
+        # PC+Mac, REQ-032: how many times the operation yielded the turn between chunks, only if any.
+        if turn_yields:
+            rec["turn_yields"] = int(turn_yields)
         # Afinidad (REQ-016): respondió un alternativo ya cargado en lugar del modelo del rol
         # (`model_requested`). No es un respaldo ni lleva aviso. `affinity_foreign_flight`: las
         # peticiones de otros clientes contra ese modelo en la foto; `affinity_failed`, sin
@@ -1998,7 +2002,12 @@ def _refresh_topology() -> None:
 def _new_turn() -> turn.Turn:
     # La relación de choques real llega con la primera foto (`_on_snapshot_seen`), antes de que nadie
     # pida turno; la de partida no decide nada.
-    return turn.Turn(lambda _a, _b: False, turn_max_s=config.TURN_MAX_S, on_tick=_refresh_topology)
+    return turn.Turn(
+        lambda _a, _b: False,
+        turn_max_s=config.TURN_MAX_S,
+        on_tick=_refresh_topology,
+        yield_s=config.TURN_YIELD_S,
+    )
 
 
 _turn = _new_turn()
@@ -2016,7 +2025,7 @@ _turn_version = _TurnVersion()
 
 
 def _reset_turn() -> None:
-    """El estado del turno, a cero, con el `TURN_MAX_S` vigente (lo usan los tests)."""
+    """El estado del turno, a cero, con el `TURN_MAX_S` y el `TURN_YIELD_S` vigentes (tests)."""
     global _turn
     with _turn_lock:
         _turn = _new_turn()
@@ -2289,6 +2298,8 @@ class _OperationTurn:
         self.model: str | None = None
         self.wait_ms = 0
         self.forced = False
+        #: Veces que la operación cedió el turno entre dos trozos (PC+Mac, REQ-030 y REQ-032).
+        self.yields = 0
         self._turn: turn.Turn | None = None
         self._snapshot: topology.Snapshot | None = None
         self._chain: tuple[str, ...] = ()
@@ -2400,6 +2411,14 @@ class _OperationTurn:
     def ensure(
         self, model: str, chain: Sequence[str] = (), *, hop: bool = False, size: int = 0
     ) -> None:
+        if not hop and self._turn is not None and self._turn.must_yield(self.op_id):
+            # PC+Mac, REQ-030: ceder entre dos trozos, antes de las dos salidas tempranas de
+            # abajo. Los trozos de una operación van en serie y `ensure` corre sin plaza, así que
+            # no queda ningún envío propio en vuelo. Suelta el turno, olvida la afinidad y vuelve
+            # a pedirlo al final de la cola (la espera suma en `turn_wait_ms` y en la fase `turn`).
+            self.affinity = None
+            self._reset()
+            self.yields += 1
         if not hop and self.affinity is not None and model == self.role:
             return  # los trozos siguientes siguen en el alternativo que eligió la afinidad
         if hop:
@@ -2551,6 +2570,8 @@ class _OperationTurn:
             "turn_wait_ms": self.wait_ms,
             "turn": "forced" if self.forced else None,
         }
+        if self.yields:
+            fields["turn_yields"] = self.yields
         if self.affinity is not None:
             fields["routing"] = "affinity"
             fields["affinity_foreign_flight"] = self.affinity_foreign_flight
