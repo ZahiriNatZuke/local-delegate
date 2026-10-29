@@ -32,7 +32,8 @@ def test_state_from_the_wait_and_the_slot():
         server._inflight_state({"in_backend": False, "local_wait": "turn", "phase": "retry"})
         == "queued"
     )
-    assert set(server.INFLIGHT_STATES) == {"running", "retrying", "queued"}
+    # REQ-001 of concurrencia-pc-mac adds `waiting_backend` (its own tests: test_waiting_backend.py).
+    assert set(server.INFLIGHT_STATES) == {"running", "retrying", "queued", "waiting_backend"}
 
 
 def test_the_slot_marks_the_call_at_the_backend(tmp_path, monkeypatch):

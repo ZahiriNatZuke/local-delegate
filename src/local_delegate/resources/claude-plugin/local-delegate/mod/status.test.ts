@@ -962,3 +962,73 @@ test('several sessions: another machine\'s running delegation never wins over th
   expect(shown).toContain('· local_summarize · en cola · 4 min 0 s ·')
   expect(shown).not.toContain('local_extract')
 })
+
+// --- Concurrency PC+Mac, lot 1: `waiting_backend` (REQ-004) -------------------------------------------
+
+test('line: waiting_backend goes after running and retrying, before queued, and names the REQUESTED model', { options: LINE }, async ($, on) => {
+  // llama-swap has qwen loaded; the call asked for gemma and waits for the switch.
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({
+    ...UP,
+    inflight: () =>
+      inflight([
+        stated('local_extract', 500, 'queued'),
+        { ...task('local_summarize', 42, 'gemma4-26b-a4b'), state: 'waiting_backend', backend_wait: { 'qwen3-8b': 'ready' } },
+      ]),
+  }))
+  await $.session.measure(measureInput())
+  const shown = (await line($)).line
+  expect(shown).toContain('gemma4-26b-a4b delegando')
+  expect(shown).not.toContain('qwen3-8b')
+  expect(shown).toContain('· local_summarize · esperando backend · 42 s +1 ·')
+})
+
+test('line: a running one still wins over a waiting_backend one', { options: LINE }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({
+    ...UP,
+    inflight: () =>
+      inflight([
+        { ...task('local_summarize', 300, 'gemma4-26b-a4b'), state: 'waiting_backend' },
+        stated('local_translate', 5, 'running'),
+        stated('local_extract', 400, 'retrying'),
+      ]),
+  }))
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toContain('· local_translate 5 s +2 ·')
+})
+
+test('line: a retrying one goes before a waiting_backend one', { options: LINE }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({
+    ...UP,
+    inflight: () =>
+      inflight([
+        { ...task('local_summarize', 300, 'gemma4-26b-a4b'), state: 'waiting_backend' },
+        stated('local_extract', 20, 'retrying'),
+      ]),
+  }))
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toContain('· local_extract · reintentando · 20 s +1 ·')
+})
+
+test('bar: the chip says WAITING FOR BACKEND with the requested model, in English', { options: { ...QUIET, language: 'en' } }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({
+    ...UP,
+    inflight: () => inflight([{ ...task('local_summarize', 42, 'gemma4-26b-a4b'), state: 'waiting_backend' }]),
+  }))
+  await $.session.measure(measureInput())
+  const { chip, left } = await bar($)
+  expect(chip.text).toContain('WAITING FOR BACKEND')
+  expect(left).toContain('gemma4-26b-a4b')
+  expect(left).not.toContain('qwen3-8b')
+  expect(left).toContain('waiting for backend')
+})
+
+test('line: a state the mod does not know ranks and reads as running, as before', { options: LINE }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({
+    ...UP,
+    inflight: () => inflight([stated('local_extract', 500, 'queued'), stated('local_summarize', 42, 'something_new')]),
+  }))
+  await $.session.measure(measureInput())
+  const shown = (await line($)).line
+  expect(shown).toContain('· local_summarize 42 s +1 ·')
+  expect(shown).toContain('qwen3-8b delegando')
+})

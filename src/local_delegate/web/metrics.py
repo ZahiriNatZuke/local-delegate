@@ -1758,6 +1758,8 @@ td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
   border:2px solid color-mix(in srgb,var(--amber) 28%,transparent);border-top-color:var(--amber);animation:rot .8s linear infinite}
 .queue-dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;border:2px dashed var(--faint)}
 .ifrow.queued{opacity:.72}
+.wait-dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;border:2px dashed var(--amber)}
+.chunkchip.loaded{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 45%,transparent)}
 .ifgroup{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:8px 0 2px}
 .ifgroup:first-child{margin-top:0}
 .ifgroup .num{color:var(--amber)}
@@ -2974,6 +2976,9 @@ function renderInflight(){
     const ifRow = it=>{
       // Issue #477: a call that waits for its turn or a place is not drawn as one being processed.
       const queued = it.state==='queued';
+      // Concurrency PC+Mac, lot 1 (REQ-004): waiting inside llama-swap for a model switch is a
+      // wait too, not «processing»; the chip says what llama-swap had loaded (ready or starting).
+      const waitBackend = it.state==='waiting_backend';
       // Issue #454: the phase of a chunked delegation; none (map) keeps «piece n/total».
       const chunkKey = it.phase==='reduce' ? 'backend.combining' : it.phase==='retry' ? 'backend.retrying' : 'backend.chunk';
       const chunk = it.chunks ? `<span class="chunkchip">${escHooks(T(chunkKey, {n: it.chunk||1, total: it.chunks}))}</span>` : '';
@@ -2986,19 +2991,28 @@ function renderInflight(){
       // The machine that asked for it, when the daemon says (a field the host work adds); never required.
       const host = typeof it.host==='string' && it.host
         ? `<span class="chunkchip" title="${escHooks(T('backend.host_title', {host: it.host}))}">${escHooks(it.host)}</span>` : '';
-      return `<div class="ifrow${queued ? ' queued' : ''}"><span class="${queued ? 'queue-dot' : 'spin'}"></span><span class="badge">${escHooks(it.tool)}</span>
-        <span class="badge model">${escHooks(it.model)}</span>${pos}${chunk}${turnChip}${org}${host}
+      const loadedModels = waitBackend && it.backend_wait && typeof it.backend_wait==='object'
+        ? Object.keys(it.backend_wait).filter(m=>['ready','starting'].includes(it.backend_wait[m])).sort().join(', ') : '';
+      const waitTitle = loadedModels ? T('backend.wait_backend_title', {models: loadedModels}) : T('backend.wait_backend_unknown');
+      const loadedChip = waitBackend
+        ? `<span class="chunkchip loaded" title="${escHooks(waitTitle)}">${escHooks(loadedModels ? T('backend.loaded_chip', {models: loadedModels}) : T('backend.wait_backend_unknown'))}</span>` : '';
+      const dot = queued ? 'queue-dot' : waitBackend ? 'wait-dot' : 'spin';
+      return `<div class="ifrow${queued || waitBackend ? ' queued' : ''}"${waitBackend ? ` title="${escHooks(waitTitle)}"` : ''}><span class="${dot}"></span><span class="badge">${escHooks(it.tool)}</span>
+        <span class="badge model">${escHooks(it.model)}</span>${pos}${chunk}${turnChip}${loadedChip}${org}${host}
         <span class="num" style="color:var(--mut)">${escHooks(fmtSec((it.elapsed_s||0)*1000))} · ${F.format(it.chars_in||0)} ${T('unit.chars_short')}</span></div>`;
     };
     // Issue #477: with `state` (daemons from 0.45 on), «Processing (n)» and «Queued (m)» apart; a
     // daemon without it keeps the single list it always had.
     if(state.inflight.some(it=>typeof it.state==='string')){
       const queued = state.inflight.filter(it=>it.state==='queued');
-      const active = state.inflight.filter(it=>it.state!=='queued');
+      const waiting = state.inflight.filter(it=>it.state==='waiting_backend');
+      const active = state.inflight.filter(it=>it.state!=='queued' && it.state!=='waiting_backend');
       const group = (key, cls, items) => items.length
         ? `<div class="ifgroup ${cls}" data-group="${cls}">${escHooks(T(key))} <span class="num">(${items.length})</span></div>` + items.map(ifRow).join('')
         : '';
-      body.innerHTML = group('backend.group_running', 'running', active) + group('backend.group_queued', 'queued', queued);
+      body.innerHTML = group('backend.group_running', 'running', active)
+        + group('backend.group_waiting_backend', 'waiting', waiting)
+        + group('backend.group_queued', 'queued', queued);
     } else {
       body.innerHTML = state.inflight.map(ifRow).join('');
     }

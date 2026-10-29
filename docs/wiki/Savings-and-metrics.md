@@ -82,6 +82,10 @@ con saltos pudo contaminarla un swap.
   `connect_timeout`, `credential`…; tabla en [Troubleshooting](Troubleshooting.md)). `error` sigue
   valiendo `connect_error`. Hasta la 0.34.0 la clave era `fallo_conexion` y los valores iban en
   español (`rechazada`, `timeout_conexion`…): se siguen leyendo.
+- `read_timeout_cause` (solo en un `read_timeout` con la causa sabida): `model_swap` si llama-swap
+  tenía cargado otro modelo y no llegó a cambiar (el mensaje lo nombra, con la máquina que lo usaba
+  cuando se sabe) o `busy` si el modelo pedido estaba cargado pero no contestó a tiempo. `error`
+  sigue siendo `read_timeout` y `error_class` no cambia. Las líneas anteriores no lo traen.
 - `cancel_reason` (solo con `error: "cancelled"`, desde la 0.41.0): la
   delegación se paró porque quien la pidió dejó de esperarla. `notification` (llegó
   `notifications/cancelled`, como el Esc de Claude Code o el puente de Desktop al cerrarse),
@@ -728,6 +732,15 @@ con espera de turno, `queue_position` es su puesto). Sale de la espera y la plaz
 texto de la fase. Con `state`, «En curso» separa **«Procesando (n)»** y **«En cola (m)»**: las de
 la cola llevan un círculo discontinuo en vez del giro, van atenuadas y, con turno, su puesto
 (`#3`). Un daemon anterior no manda `state` y el panel pinta la lista única de siempre.
+
+Un cuarto valor, **`waiting_backend`**, marca la llamada que ya tiene plaza pero espera **dentro de
+llama-swap** a que cambie de modelo: su POST lleva más de 3 s pendiente y `/running` no tiene el
+modelo pedido `ready`. La entrada trae `backend_wait` con los **otros** modelos que tenía llama-swap
+(`{"qwen36-35b-a3b": "ready"}`). Precedencia: `queued` > `retrying` > `waiting_backend` >
+`running`. El panel la pone en su grupo, **«Esperando al backend (n)»**, entre «Procesando» y «En
+cola», con un círculo discontinuo ámbar y un chip `cargado: <modelo>` (el título da la frase
+entera). La banda del mod la ordena tras `running` y `retrying`, dice «esperando backend» y nombra
+el modelo **pedido**, no el cargado. Un panel o mod anterior la trata como `running`.
 
 En la tabla de actividad, una operación troceada lleva un chip con sus trozos y las llamadas de
 más: **`3 +1`** son tres trozos y una combinación, con el título «3 trozos · 4 llamadas al

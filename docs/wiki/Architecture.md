@@ -184,6 +184,27 @@ operación ──▶ turno (¿choca con lo que está en uso?) ──▶ plaza (M
   `_inflight_live` solo conoce las llamadas del propio proceso: una de otro proceso (un servidor
   `stdio`, como el de Codex) que pase de 1800 s se sigue podando por edad en el panel del daemon.
   Ese proceso tiene su propio turno, así que no deja puestos invisibles en la cola del daemon.
+- **Espera dentro de llama-swap: `waiting_backend` (concurrencia PC+Mac, lote 1).** Cada envío al
+  backend lleva su propio vigilante (`concurrency.send_watch`, en `server._send`), aparte de la
+  muestra única del log: si el POST sigue pendiente a los `BACKEND_SAMPLE_DELAY_S` (3 s), consulta
+  `/running` y, si el modelo pedido no está `ready` (por el nombre enviado o por el real que da la
+  topología), apunta el envío en `backend_wait` de su entrada de `inflight.json`, en una subclave
+  propia (`{"<n.º de envío>": {otro modelo: estado}}`), y vuelve a mirar cada
+  `BACKEND_WAIT_RESAMPLE_S` (10 s) hasta que el modelo esté listo o el envío acabe. Cada envío
+  borra solo lo suyo, así dos trozos en paralelo no se pisan. El vigilante solo escribe bajo un
+  cerrojo y con su parada sin marcar, y la limpieza marca la parada antes de borrar: una consulta
+  que tarde más que el envío no escribe nada después. Al soltar la plaza, `_slot` para los
+  vigilantes de sus envíos (red para un envío abandonado). Sin topología (la Mac) y sin el modelo
+  pedido en `/running` no se marca nada: podría ser un alias del que está cargado. Un envío que
+  contesta antes de 3 s no consulta nada (regla de la afinidad). El estado sale en `/api/inflight`
+  (`state: "waiting_backend"`, `backend_wait`), en el progreso MCP («esperando a que el backend
+  cambie de modelo (cargado: X)»), en «En curso» y en la banda del mod.
+- **`read_timeout` con causa (lote 1, REQ-005).** Al vencer el plazo de lectura, el mensaje usa la
+  foto de `/running` que ya tomó la sonda de carga (`_LoadProbe`, la misma que decide
+  `error_class`), luego `concurrency.loaded_models()` y luego la muestra de la operación. Si el
+  modelo pedido no estaba y había otro `ready`/`starting`, lo nombra (y la máquina que lo usaba, si
+  la foto `inflight` de llama-swap la traía); si estaba `ready`, dice «backend ocupado»; sin foto,
+  el texto de siempre. `error` y `error_class` no cambian; el evento lleva `read_timeout_cause`.
 
 ## Módulos
 

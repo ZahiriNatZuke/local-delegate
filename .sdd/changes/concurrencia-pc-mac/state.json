@@ -3,9 +3,9 @@
   "slug": "concurrencia-pc-mac",
   "title": "Concurrencia y cola de delegaciones de la PC y la Mac en un solo turno visible",
   "mode": "standard",
-  "status": "planning",
+  "status": "implementing",
   "createdAt": "2026-10-29T12:00:00.000Z",
-  "updatedAt": "2026-10-29T15:28:48.758Z",
+  "updatedAt": "2026-10-29T15:42:59.321Z",
   "phase0": {
     "mode": "lightweight",
     "status": "in-review",
@@ -107,6 +107,20 @@
       "to": "planning",
       "at": "2026-10-29T15:28:48.758Z",
       "reason": "Spec aprobada; plan de 5 lotes escrito"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-10-29T15:42:59.054Z",
+      "reason": "Plan aprobado en dos rondas (plan-review.md)"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-10-29T15:42:59.321Z",
+      "reason": "Lote 1 (waiting_backend, progreso y read_timeout con causa) en implementacion, rama feat/concurrency-lot1-waiting-backend; lote 2 en paralelo"
     }
   ]
 }

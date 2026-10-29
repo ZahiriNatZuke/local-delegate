@@ -148,9 +148,12 @@ function statusProgress(item) {
 }
 
 // Which delegation the band names first, by its `state` in `/api/inflight` (issue #477): the one at
-// the backend, then one retrying a piece, then one waiting in the queue. A daemon from before #477
-// sends no `state`: every entry ranks the same and the oldest goes, as it did.
-const STATUS_STATE_RANK = { running: 0, retrying: 1, queued: 2 }
+// the backend, then one retrying a piece, then one waiting for llama-swap to switch models
+// (`waiting_backend`, concurrency PC+Mac), then one waiting in the queue. A daemon from before #477
+// sends no `state`: every entry ranks the same and the oldest goes, as it did. A state this mod
+// does not know ranks as `running`.
+const STATUS_STATE_RANK = { running: 0, retrying: 1, waiting_backend: 2, queued: 3 }
+const STATUS_WAITING_STATES = new Set(['queued', 'retrying', 'waiting_backend'])
 
 function statusRank(item) {
   return STATUS_STATE_RANK[item.state] ?? 0
@@ -159,7 +162,8 @@ function statusRank(item) {
 /**
  * The delegation the band names as `{ tool, seconds, more, model, progress, waiting }`, or `null`:
  * the oldest among the ones the backend is processing, or else the oldest waiting. `waiting` is
- * `queued` or `retrying` when that is what the named one is doing, `null` otherwise.
+ * `queued`, `retrying` or `waiting_backend` when that is what the named one is doing, `null`
+ * otherwise. `model` is always the REQUESTED model, never the one llama-swap has loaded.
  */
 function statusTask(list) {
   const items = list.filter(item => item && typeof item === 'object')
@@ -182,7 +186,7 @@ function statusTask(list) {
     more: items.length - 1,
     model,
     progress: statusProgress(oldest),
-    waiting: oldest.state === 'queued' || oldest.state === 'retrying' ? oldest.state : null,
+    waiting: STATUS_WAITING_STATES.has(oldest.state) ? oldest.state : null,
   }
 }
 
@@ -241,7 +245,10 @@ export function statusSnapshot(stats, backend, inflight) {
     }
   }
   const loading = running.some(item => item && typeof item.state === 'string' && item.state !== 'ready')
-  const model = statusModelName(running) || (task && task.model) || null
+  // A call that waits for llama-swap to switch models names the model it ASKED for: the loaded
+  // one is the one it waits behind (seen on 2026-10-28).
+  const waitingBackend = task && task.waiting === 'waiting_backend' && task.model
+  const model = waitingBackend || statusModelName(running) || (task && task.model) || null
   return { daemon: 'up', calls, failed, net, cost, backend: state, model, loading, task }
 }
 
@@ -382,7 +389,10 @@ function statusChip(snapshot) {
   if (snapshot.backend === null) {
     return { text: ` ${glyph} ${t('status.chip_no_data')} `, dim: true }
   }
-  return { text: ` ${glyph} ${t(`status.chip_${snapshot.backend}`)} `, color: STATUS_COLOR[snapshot.backend] }
+  const chip = snapshot.backend === 'busy' && snapshot.task && snapshot.task.waiting === 'waiting_backend'
+    ? 'waiting_backend'
+    : snapshot.backend
+  return { text: ` ${glyph} ${t(`status.chip_${chip}`)} `, color: STATUS_COLOR[snapshot.backend] }
 }
 
 /** The bar's left parts (`status_style: bar`) and its read mode, for the right side. */
