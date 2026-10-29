@@ -83,8 +83,10 @@ def test_deadline_cancels_the_call_and_logs_it_once(monkeypatch, slow_backend, t
     assert event["cancel_reason"] == "deadline", event
     assert 900 <= event["latency_ms"] < 4000, event
     assert event["model"] == LONG_MODEL and event["chars_in"] > 0, event
-    # What it measured until the cut: the real backend calls it made and the pieces it announced.
-    assert event.get("chunks", 1) >= 2 and event.get("pieces", 0) >= 2, event
+    # What it measured until the cut: the pieces it announced, fixed at the start. How many backend
+    # calls fit before the 1 s cut (`chunks`) depends on the runner's speed, so it is not asserted:
+    # a slow runner gave one call on 2026-10-29 and failed this test.
+    assert event.get("pieces", 0) >= 2, event
     assert _panel_errors() == 1
 
 

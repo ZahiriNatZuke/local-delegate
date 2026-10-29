@@ -73,7 +73,7 @@ con saltos pudo contaminarla un swap.
 - `steps` (solo en operaciones troceadas): cada paso (`kind`: map, reagrupado o reduce) con sus
   `chars_out` y su `finish_reason`, nunca su texto. Desde la 0.43.0 un paso cortado por `length`
   que se reemplazó por su reintento partido lleva `"retried": true` y ya no cuenta como truncado.
-  Desde la versión siguiente a la 0.45.0 (#487), los pasos en `length` sin `retried` son
+  Desde la 0.45.1 (#487), los pasos en `length` sin `retried` son
   exactamente los que cuenta el aviso «N de M llamadas», y los que llevan `retried` son los que el
   aviso nombra aparte («aparte, R llamadas cortadas se repitieron partiendo su trozo»; en
   `local_extract`, el campo `retried_calls`).
@@ -840,7 +840,7 @@ hasta dos niveles. Antes el parcial cortado entraba tal cual en la combinación.
 alguno cortado, el aviso nombra el trozo y sus líneas, y en `steps` el paso reemplazado lleva
 `"retried": true`.
 
-Desde la versión siguiente a la 0.45.0, cada parte del reintento conserva al menos el tope de
+Desde la 0.45.1, cada parte del reintento conserva al menos el tope de
 salida (`max_tokens`) del paso cortado del que viene. En `local_explain_code` el tope del map
 crece con el trozo (`len // 8`), así que al partir el trozo se partía también el tope: las dos
 mitades pedían las mismas notas por carácter que ya no habían cabido y se volvían a cortar hasta
