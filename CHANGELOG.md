@@ -6,6 +6,28 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.46.0] - 2026-10-29
+
+Primeros pasos del turno compartido entre la PC y la Mac (cambio SDD `concurrencia-pc-mac`, lotes 1
+y 2): una delegación troceada larga ya no acapara el turno y cede entre trozos a la que choca con
+ella, y la llamada que espera a que llama-swap cambie de modelo se ve como tal en el panel, en la
+banda del mod y en el progreso MCP. Cuando una llamada se corta por `read_timeout`, el mensaje
+nombra el modelo que lo bloqueaba.
+
+### Cómo actualizar
+
+- **Abre una sesión nueva de Claude Code (o de Claude Desktop) tras actualizar.** Las sesiones
+  abiertas siguen con el servidor MCP y el mod de la 0.45.1 hasta que se reinician.
+- **Ejecuta `local-delegate update` y reinicia el daemon si lo usas**, como en cada versión: la
+  cesión del turno y la vigilancia de la espera al backend viven en el proceso del daemon.
+- **Si instalaste con una versión fija** (`uv tool install "local-delegate-mcp[llamaswap]==X.Y.Z"`),
+  `uv tool upgrade` no sube nada: reinstala sin fijación con
+  `uv tool install "local-delegate-mcp[llamaswap]@latest"` (con tus extras).
+- **En la Mac no hay que cambiar nada de la configuración MCP** tras actualizar: la entrada que ya
+  tienes sigue valiendo tal cual.
+- **Variable nueva, opcional:** `LOCAL_DELEGATE_TURN_YIELD_S` (120 s; `0` apaga la cesión del turno
+  entre trozos y deja el comportamiento anterior). Detalle en `docs/wiki/Configuration.md`.
+
 ### Añadido
 
 - **Una operación larga cede el turno a otra que choca con ella** (cambio SDD
@@ -3914,7 +3936,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.45.1...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.46.0...HEAD
+[0.46.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.45.1...v0.46.0
 [0.45.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.45.0...v0.45.1
 [0.45.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.44.2...v0.45.0
 [0.44.2]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.44.1...v0.44.2
