@@ -37,6 +37,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   tiene el turno o la plaza, ni cambio de quién lo tiene), la llamada falla en el acto con «cola
   saturada…», qué hay por delante y qué hacer, en vez de bloquear al cliente hasta su plazo. Una
   cola lenta que avanza no corta a nadie, y una llamada sola, sin cola, no cambia.
+- En Windows, «En curso» y la banda del mod ya no arrastran durante 30 min las delegaciones de un daemon o proceso `stdio` que murió (issue #483): `_pid_alive` comprobaba solo que el proceso se pudiera abrir, y eso funciona mientras alguien conserve un handle suyo. Ahora pide el código de salida y solo `STILL_ACTIVE` cuenta como vivo; el handle se cierra siempre. Un PID que existe pero no se puede consultar (otro usuario: acceso denegado en Windows, `EPERM` en Linux y macOS) cuenta como vivo, en vez de purgarse.
 
 ## [0.44.2] - 2026-10-28
 

@@ -276,28 +276,86 @@ def _inflight_file() -> Path:
     return config.LOG_DIR / "inflight.json"
 
 
+_STILL_ACTIVE = 259  # GetExitCodeProcess: the process has not exited yet
+_ERROR_ACCESS_DENIED = 5
+_win_kernel32 = None
+
+
+def _kernel32():
+    """kernel32 of our own, with explicit signatures and `use_last_error` (issue #483).
+
+    A private `WinDLL` rather than `ctypes.windll.kernel32`: the latter is shared by the whole
+    process, so setting `argtypes` there would change it for any other caller, and only a library
+    loaded with `use_last_error=True` makes `ctypes.get_last_error()` reliable.
+    """
+    global _win_kernel32
+    if _win_kernel32 is None:
+        import ctypes
+        import ctypes.wintypes
+
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)  # type: ignore[attr-defined]
+        # restype/argtypes explícitos: sin ellos ctypes asume c_int y TRUNCA el HANDLE de
+        # 64 bits, con lo que CloseHandle recibe un handle inválido y el daemon acaba
+        # filtrando un handle por cada sondeo (el dashboard llama a esto cada 2 s).
+        k32.OpenProcess.restype = ctypes.wintypes.HANDLE
+        k32.OpenProcess.argtypes = [
+            ctypes.wintypes.DWORD,
+            ctypes.wintypes.BOOL,
+            ctypes.wintypes.DWORD,
+        ]
+        k32.GetExitCodeProcess.restype = ctypes.wintypes.BOOL
+        k32.GetExitCodeProcess.argtypes = [
+            ctypes.wintypes.HANDLE,
+            ctypes.POINTER(ctypes.wintypes.DWORD),
+        ]
+        k32.CloseHandle.restype = ctypes.wintypes.BOOL
+        k32.CloseHandle.argtypes = [ctypes.wintypes.HANDLE]
+        _win_kernel32 = k32
+    return _win_kernel32
+
+
+def _pid_alive_windows(pid: int) -> bool:
+    """Issue #483: `OpenProcess` alone is not enough on Windows.
+
+    The process object outlives the process while anyone still holds a handle to it (a parent
+    that launched it, an antivirus, a debugger), so `OpenProcess` keeps succeeding on a dead PID
+    and its `inflight.json` entries waited the whole `_INFLIGHT_STALE_S`. Only an exit code of
+    `STILL_ACTIVE` counts as alive.
+
+    `ERROR_ACCESS_DENIED` on open means the PID exists and belongs to someone we may not query
+    (another user, a protected process): a PID that does not exist fails with
+    `ERROR_INVALID_PARAMETER` instead. That counts as alive: pruning a live delegation from the
+    panel is worse than keeping a dead one until the TTL, which stays as the safety net.
+    """
+    import ctypes
+    import ctypes.wintypes
+
+    k32 = _kernel32()
+    handle = k32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+    if not handle:
+        return ctypes.get_last_error() == _ERROR_ACCESS_DENIED
+    try:
+        code = ctypes.wintypes.DWORD()
+        if not k32.GetExitCodeProcess(handle, ctypes.byref(code)):
+            # Opened but unreadable: it existed a moment ago; the TTL decides, as before #483.
+            return True
+        # A process that exited with code 259 reads as alive: the TTL covers that rare case.
+        return code.value == _STILL_ACTIVE
+    finally:
+        k32.CloseHandle(handle)
+
+
 def _pid_alive(pid: int) -> bool:
     """Best-effort: True si el proceso con ese PID sigue vivo. Nunca lanza."""
     if pid == os.getpid():
         return True
     try:
         if sys.platform == "win32":
-            import ctypes
-            from ctypes import wintypes
-
-            # restype/argtypes explícitos: sin ellos ctypes asume c_int y TRUNCA el HANDLE de
-            # 64 bits, con lo que CloseHandle recibe un handle inválido y el daemon acaba
-            # filtrando un handle por cada sondeo (el dashboard llama a esto cada 2 s).
-            kernel32 = ctypes.windll.kernel32
-            kernel32.OpenProcess.restype = wintypes.HANDLE
-            kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
-            kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
-            handle = kernel32.OpenProcess(0x1000, False, pid)  # QUERY_LIMITED_INFORMATION
-            if not handle:
-                return False
-            kernel32.CloseHandle(handle)
-            return True
+            return _pid_alive_windows(pid)
         os.kill(pid, 0)
+        return True
+    except PermissionError:
+        # EPERM: the PID exists but belongs to another user; alive, as on Windows (#483).
         return True
     except Exception:
         return False
