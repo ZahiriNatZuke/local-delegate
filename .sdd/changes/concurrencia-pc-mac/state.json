@@ -3,9 +3,9 @@
   "slug": "concurrencia-pc-mac",
   "title": "Concurrencia y cola de delegaciones de la PC y la Mac en un solo turno visible",
   "mode": "standard",
-  "status": "researching",
+  "status": "planning",
   "createdAt": "2026-10-29T12:00:00.000Z",
-  "updatedAt": "2026-10-29T13:30:00.000Z",
+  "updatedAt": "2026-10-29T15:28:48.758Z",
   "phase0": {
     "mode": "lightweight",
     "status": "in-review",
@@ -42,11 +42,16 @@
       "evidence": "research.md: mapa de impacto con fichero:linea (turno, plazas, puente de Desktop, camino de la Mac, 421 y token), opciones A/B/C evaluadas, recomendacion B condicionada, plan de medicion del paso 1 con prompt para la Mac."
     },
     "spec": {
-      "status": "pending",
-      "blockedBy": "Medicion del paso 1 (research.md seccion 6), que necesita la PC y la Mac con el paso 0 publicado."
+      "status": "approved",
+      "updatedAt": "2026-10-29T15:28:30.324Z",
+      "evidence": "spec.md revisada en dos rondas por revisor independiente (spec-review.md): ronda 1 aprobar con cambios (4 bloqueantes: muestra por envio, API sin bloqueo de Turn, degradacion en tres casos, cota de REQ-031 verificable), ronda 2 aprobada sin bloqueantes. Evidencia de partida: medicion del paso 1 (measurement-step1.md) y choque qwen/gemma comprobado en la topologia real.",
+      "actor": "agent"
     },
     "plan": {
-      "status": "pending"
+      "status": "approved",
+      "updatedAt": "2026-10-29T15:28:30.523Z",
+      "evidence": "plan.md revisado por personal-sdd-plan-reviewer en dos rondas (plan-review.md): ronda 1 rechazado (6 bloqueantes: test de dos procesos importando main, aviso de cambios del turno, cesion remota, exencion por prefijo y Basic, muestreo por envio con carrera, auto-turno), ronda 2 aprobado con dos correcciones ya incorporadas (daemon_id nuevo, entorno de los hijos). 5 lotes con tests, control positivo, rollback sin publicar y verificacion en vivo con cifras del paso 1.",
+      "actor": "agent"
     },
     "quality": {
       "status": "pending"
@@ -72,6 +77,36 @@
       "to": "researching",
       "at": "2026-10-29T12:00:00.000Z",
       "reason": "Research con evidencia del codigo y paso 0 de instrumentacion en PR propio"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-10-29T15:28:30.324Z",
+      "evidence": "spec.md revisada en dos rondas por revisor independiente (spec-review.md): ronda 1 aprobar con cambios (4 bloqueantes: muestra por envio, API sin bloqueo de Turn, degradacion en tres casos, cota de REQ-031 verificable), ronda 2 aprobada sin bloqueantes. Evidencia de partida: medicion del paso 1 (measurement-step1.md) y choque qwen/gemma comprobado en la topologia real.",
+      "actor": "agent"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-10-29T15:28:30.523Z",
+      "evidence": "plan.md revisado por personal-sdd-plan-reviewer en dos rondas (plan-review.md): ronda 1 rechazado (6 bloqueantes: test de dos procesos importando main, aviso de cambios del turno, cesion remota, exencion por prefijo y Basic, muestreo por envio con carrera, auto-turno), ronda 2 aprobado con dos correcciones ya incorporadas (daemon_id nuevo, entorno de los hijos). 5 lotes con tests, control positivo, rollback sin publicar y verificacion en vivo con cifras del paso 1.",
+      "actor": "agent"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-10-29T15:28:48.551Z",
+      "reason": "Medicion del paso 1 hecha (measurement-step1.md); spec escrita y aprobada en dos rondas"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-10-29T15:28:48.758Z",
+      "reason": "Spec aprobada; plan de 5 lotes escrito"
     }
   ]
 }
