@@ -6,6 +6,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- **`local_summarize` sobre un diff ya no reparte los cambios por las secciones de un Markdown**
+  (#499). Con el resumen estructurado encendido, las líneas de contexto de un `CHANGELOG.md`
+  dentro del diff (` ## [0.46.0]`, con un espacio delante) se tomaban por títulos, y el modelo
+  recibía la orden de resumir «por secciones»: los hunks del fichero siguiente (constantes y
+  funciones de un `.py`) salían descritos como contenido de `[0.46.0]`, sin aviso. Ahora un diff
+  unificado (empieza por `diff --git`, `--- `, `Index:`, `diff -` o la cabecera de
+  `git format-patch`, y trae algún hunk `@@`) nunca tiene estructura de documento: se resume en
+  prosa, y el prompt le explica al modelo cómo leerlo (cabecera de cada fichero, `+`/`-` frente al
+  contexto). El prompt del resto de entradas no cambia.
+
 ## [0.46.0] - 2026-10-29
 
 Primeros pasos del turno compartido entre la PC y la Mac (cambio SDD `concurrencia-pc-mac`, lotes 1

@@ -716,3 +716,94 @@ def test_with_the_default_value_the_tool_summarizes_in_prose(monkeypatch, tmp_pa
     assert config.STRUCTURED_SUMMARY is False
     assert seen[0]["messages"][0]["content"] == MAIN_SYSTEM
     assert seen[0]["messages"][1]["content"] == f"Resume el siguiente contenido:\n\n{text}"
+
+
+# --- #499: un diff unificado no es un documento con secciones ---------------------------------
+
+# Forma del diff del issue: un CHANGELOG cuya sección anterior asoma como CONTEXTO (` ## [...]`, con
+# un espacio delante, que sí casa con un título ATX) y luego un `.py` con funciones nuevas.
+PR_DIFF = (
+    "diff --git a/CHANGELOG.md b/CHANGELOG.md\n"
+    "index 1111111..2222222 100644\n"
+    "--- a/CHANGELOG.md\n"
+    "+++ b/CHANGELOG.md\n"
+    "@@ -7,6 +7,10 @@\n"
+    " \n"
+    " ## [Unreleased]\n"
+    " \n"
+    "+### Corregido\n"
+    "+\n"
+    "+- Algo nuevo.\n"
+    "+\n"
+    " ## [0.46.0] - 2026-10-30\n"
+    " \n"
+    " ### Añadido\n"
+    "diff --git a/src/pkg/mod.py b/src/pkg/mod.py\n"
+    "index 3333333..4444444 100644\n"
+    "--- a/src/pkg/mod.py\n"
+    "+++ b/src/pkg/mod.py\n"
+    "@@ -1,3 +1,8 @@\n"
+    " import os\n"
+    "+\n"
+    "+NEW_LIMIT = 10\n"
+    "+\n"
+    "+def new_function():\n"
+    "+    return NEW_LIMIT\n"
+)
+
+
+def test_the_headings_of_a_diff_context_are_not_structure():
+    # Control: sin la guarda, estas dos líneas de contexto son dos títulos de nivel 2 y el hunk
+    # del `.py` cae dentro de la «sección» `[0.46.0]`.
+    assert [h.text for h in sections.markdown_headings(PR_DIFF) if h.level == 2] == [
+        "[Unreleased]",
+        "[0.46.0] - 2026-10-30",
+    ]
+    assert sections.is_unified_diff(PR_DIFF)
+    assert sections.detect(PR_DIFF) is None
+
+
+@pytest.mark.parametrize(
+    "first_line",
+    [
+        "From 0123456789abcdef0123456789abcdef01234567 Mon Sep 17 00:00:00 2001",
+        "--- a/CHANGELOG.md",
+        "Index: CHANGELOG.md",
+        "diff -u a/CHANGELOG.md b/CHANGELOG.md",
+    ],
+)
+def test_other_patch_headers_are_diffs(first_line):
+    text = f"\n{first_line}\n" + PR_DIFF.split("\n", 1)[1]
+    assert sections.is_unified_diff(text)
+    assert sections.detect(text) is None
+
+
+def test_a_markdown_that_shows_a_diff_keeps_its_sections():
+    text = "# Guía\n\nintro\n\n## Antes\n\n```diff\n" + PR_DIFF + "```\n\n## Después\n\nfin\n"
+    assert not sections.is_unified_diff(text)
+    assert sections.detect(text).texts == ["Antes", "Después"]
+
+
+def test_a_patch_header_without_hunks_is_not_a_diff():
+    assert not sections.is_unified_diff("--- a/x\n+++ b/x\n## Uno\n\n## Dos\n")
+
+
+def test_a_diff_is_summarized_in_prose_with_the_reading_note(monkeypatch, tmp_path):
+    path = tmp_path / "pr.diff"
+    path.write_bytes(PR_DIFF.encode("utf-8"))
+    _out, seen = _call_summary(monkeypatch, tmp_path, _echo_prose, path=str(path))
+    (payload,) = seen
+    system = payload["messages"][0]["content"]
+    assert system == MAIN_GUARD + server._DIFF_NOTE + LANGUAGE_ORDER
+    assert "las que empiezan por un espacio son contexto sin cambios" in system
+    assert payload["messages"][1]["content"] == f"Resume el siguiente contenido:\n\n{PR_DIFF}"
+    assert "sections" not in _events(tmp_path)[0]
+
+
+def test_a_diff_under_the_long_cap_keeps_the_note_in_every_map_step(monkeypatch, tmp_path):
+    big = PR_DIFF + "".join(f"+LINE_{i} = {i}\n" for i in range(6000))
+    assert len(big) > config.max_chars_for_role("long")
+    _out, seen = _call_summary(monkeypatch, tmp_path, _echo_prose, text=big)
+    maps = [p for p in seen if "Redacta un único resumen global" not in p["messages"][1]["content"]]
+    assert len(maps) >= 2
+    assert all(server._DIFF_NOTE in p["messages"][0]["content"] for p in maps)

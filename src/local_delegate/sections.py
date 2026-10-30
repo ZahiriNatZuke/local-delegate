@@ -123,8 +123,31 @@ def markdown_headings(text: str) -> list[Heading]:
     return headings
 
 
+# #499: the first line of a patch (`gh pr diff`, `git diff`, `git format-patch`, `diff -u`) and the
+# hunk header that every unified diff carries.
+_DIFF_START = re.compile(r"^(?:diff --git |diff -|--- |Index: |From [0-9a-f]{40} )")
+_HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@", re.MULTILINE)
+
+
+def is_unified_diff(text: str) -> bool:
+    """¿Es el texto un diff unificado? Empieza por una cabecera de parche y trae algún hunk `@@`.
+
+    Se mira la PRIMERA línea no vacía, no cualquiera: un Markdown que enseña un diff dentro de
+    una valla sigue siendo un documento con sus títulos.
+    """
+    first = next((line for line in text.splitlines() if line.strip()), "")
+    return bool(_DIFF_START.match(first)) and _HUNK.search(text) is not None
+
+
 def detect(text: str) -> Structure | None:
-    """Nivel estructural (el más alto con al menos dos títulos) y sus títulos, o None."""
+    """Nivel estructural (el más alto con al menos dos títulos) y sus títulos, o None.
+
+    Un diff unificado no tiene estructura de documento (#499): sus líneas de contexto de un
+    `.md` (` ## [0.46.0]`, con un espacio delante) parecían títulos, y el resumen estructurado
+    metía los hunks de los ficheros siguientes dentro de esa «sección».
+    """
+    if is_unified_diff(text):
+        return None
     headings = markdown_headings(text)
     for level in range(1, 7):
         at_level = tuple(t for t in headings if t.level == level)
