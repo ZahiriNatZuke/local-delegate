@@ -6,6 +6,25 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- **El reagrupado de un documento troceado ya no repite rondas sin avanzar** (#497).
+  `local_explain_code` con un fichero de ~48 000 caracteres tardaba unos 18 minutos y 65 llamadas:
+  cada paso de reagrupado salía cortado, se partía y se reintentaba con el mismo tope, así que la
+  ronda devolvía casi tanto texto como recibía y la siguiente volvía sobre lo mismo, tres veces,
+  para acabar sin el paso final. Ahora un paso de reagrupado cortado solo se parte si las partes
+  aún pueden reducir el grupo a la mitad; si una ronda no reduce el material al menos un 20 % y
+  las notas siguen sin caber en el paso final, se para y devuelve las notas agrupadas y en orden
+  con un aviso (`finish_reason: "length"`, `truncated_out: true`; `local_extract` lo da con
+  `truncated` y el aviso en `_local_delegate`). Los reintentos partidos del
+  map y del reagrupado comparten un tope de 4 llamadas por trozo, y la partición de un reintento
+  ya no deja un tercer pedazo de pocas decenas de caracteres que costaba una llamada más. En la
+  simulación del caso del issue: de 53 llamadas a 16.
+- **Al agotar los tres niveles de reagrupado, la salida sale marcada como truncada** (#497). Antes
+  devolvía las notas unidas como `stop` y sin aviso; ahora sale con `finish_reason: "length"`,
+  `truncated_out: true` y el aviso. Las métricas de truncado del panel subirán por esto, sin que
+  haya más cortes reales.
+
 ## [0.46.0] - 2026-10-29
 
 Primeros pasos del turno compartido entre la PC y la Mac (cambio SDD `concurrencia-pc-mac`, lotes 1
