@@ -183,3 +183,68 @@ Mac. La verificación en vivo (PC + Mac) es del lote 5.
   stdio, `waiting_backend`, wiki, CHANGELOG, aislamiento del entorno y guardianes de idioma),
   `-n 2`: 527 en verde, 1 saltado; el guardián de nombres pidió 4 palabras inglesas más, añadidas
   al léxico, y después esos guardianes dieron 90 en verde.
+
+## Lote 4 — Cliente del turno remoto e integración en las operaciones
+
+Rama `feat/remote-turn-client`. REQ-020..026, REQ-027 (`local_status`), REQ-030 (cliente),
+REQ-032 y REQ-040..042.
+
+### Piezas
+
+- `remote_turn.py` (nuevo): descubrimiento (`turn_url`: `auto`/`off`/URL; una URL con usuario o
+  contraseña, otro esquema o un puerto inválido no vale), guarda «a sí mismo» (loopback con el
+  `WEB_PORT` propio, sin petición; o `daemon_id` igual al del `daemon.json` local, soltando el
+  arrendamiento), cliente `httpx2` propio (conexión 3 s, lectura `heartbeat_s + 5`, sin seguir
+  redirecciones), credencial (`LOCAL_DELEGATE_REMOTE_WEB_TOKEN`/Llavero si existe; si no, la clave
+  del backend), caché de «inutilizable» por URL y motivo (60 s; 404/405 y `self`, 10 min) con un
+  aviso por proceso y motivo, `RemoteLease` y la línea de `local_status`.
+- `server.py`: `_OperationTurn.ensure` pide turno remoto sin topología local y con backend remoto
+  (o `TURN_URL` explícita); `_waiting_for` admite la espera remota (misma contabilidad, progreso
+  «en <máquina>», saturación con el reloj del daemon); `yield` y `lost` antes de cada envío;
+  `release_slot` suelta el arrendamiento; `remote_turn` en el evento; `_beat_state` (lo que manda
+  el latido: `in_backend`, `waiting_backend` del lote 1, `chunk`, `phase`), en memoria.
+- `config.py` (`TURN_URL`, `REMOTE_WEB_TOKEN`), `token_source.remote_web_token`, `keychain`
+  (servicio `local-delegate-remote-web-token`), `cancellation` (texto de progreso remoto), i18n
+  es+en, CHANGELOG y `docs/wiki/Configuration.md`.
+
+### Decisiones propias
+
+- **`v` mayor → `unsupported`** (REQ-041), no `bad_response` (REQ-025 los lista juntos; la tabla
+  de versiones mixtas manda).
+- **Sin turno por daemon inutilizable no hay fase `turn`** en el evento: queda como antes del lote
+  y solo `remote_turn` dice el motivo. Con turno (concedido, cancelado o saturado) la fase mide la
+  espera remota.
+- **Una respuesta perdida** (timeout) repite `acquire` una vez (lo permite el contrato); dos
+  seguidas son `unreachable`. Cualquier excepción del transporte, no solo `HTTPError`, degrada a
+  `unreachable`: el turno nunca hace fallar una delegación.
+- **`op` del arrendamiento = `<pid>-<entrada>`**: con `:` el saneado del daemon juntaba `12:34` y
+  `1:234` en `1234`.
+- **En la suite, `TURN_URL=off` por defecto** (`tests/conftest.py`): el backend de prueba
+  (`http://test-backend/v1`) es remoto y sin daemon, y con `auto` cada evento ganaba `remote_turn`
+  y caían 22 tests de compatibilidad de claves. Los tests del cliente fijan `TURN_URL`.
+- **`doctor` pasa al lote 5**: un check nuevo cambia el número de checks (34) que fijan tres tests
+  existentes y la wiki. La nota de los modelos con `:` o `/` queda en REQ-027.
+- **Ficheros reales:** el test de dos máquinas no compara hash de `~/.claude.json` ni del log
+  real (el daemon instalado y Claude Code los escriben mientras corre la suite); comprueba que
+  ninguna marca del test (`model-x`, `model-y`, `pc-test`, `mac-test`) aparece en ellos (en el
+  log, en lo añadido desde el principio del test).
+
+### Control positivo (mutante aplicado por script, test que cae y assert; luego revertido)
+
+| Mutante | Test que cae | Assert |
+|---|---|---|
+| Sin `RemoteLease` en `ensure` | `test_one_queue_for_two_machines` | la Mac no aparece en `/api/inflight` del daemon: «the Mac exited with 0» |
+| Sin hilo de latido | `test_without_heartbeat_thread_the_lease_expires` | «the lease expired: the heartbeat thread does not keep it» |
+| Sin guarda «a sí mismo» por puerto | `test_self_by_port_sends_nothing` | `DID NOT RAISE Unusable` |
+| Sin guarda «a sí mismo» por `daemon_id` | `test_self_by_daemon_id_releases_and_goes_without_turn` | `DID NOT RAISE Unusable` |
+| Lanzador sin `sys.path.insert` | `test_one_queue_for_two_machines` | el hijo sale con código 3 («local_delegate from D:\Projects\local-delegate\src…»): `assert 3 is None` |
+| Sin cesión remota en `ensure` | `test_operation_yields_before_the_next_chunk` | «the local operation never got the turn the remote one yielded» |
+| Sin volver a pedir tras `expired` | `test_operation_expired_midway_asks_again_before_the_next_send` | `1 == 2` acquires |
+| `release_slot` no suelta el arrendamiento | `test_operation_granted_logs_and_releases` | entrada `remote:mac-test/…` sigue en inflight |
+| Sin caché de «inutilizable» | `test_each_unusable_reason_is_remembered[404]` | «the remembered reason did not spare the request» (`2 == 1`) |
+| `TURN_URL` explícita gana a la topología local | `test_a_local_topology_rules_even_with_turn_url` | `op._turn is server._turn` (`None is <Turn>`) |
+| `auto` pregunta con backend local | `test_local_only_use_sends_nothing` | «a local-only process created the remote turn's client» |
+
+Un primer mutante de la guarda de topología (en `_remote_turn_url`) no hizo caer nada: `ensure`
+solo llama ahí sin topología, así que esa comprobación es redundante; se sustituyó por el mutante
+real («la URL explícita antes que la topología»), que sí cae.
