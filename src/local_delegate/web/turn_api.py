@@ -18,7 +18,8 @@ routes through (`auth.TURN_ROUTES`):
 - body of 4 KB at most, strict models (`extra="forbid"`), names cleaned like
   `config.clean_machine_name` and refused when empty (REQ-017).
 
-`LOCAL_DELEGATE_TURN_SERVER=off` answers 404, as an old daemon.
+Only the daemon serves it (`daemon.build_app` calls `enable`); elsewhere, and with
+`LOCAL_DELEGATE_TURN_SERVER=off`, it answers 404, as an old daemon.
 """
 
 from __future__ import annotations
@@ -87,12 +88,37 @@ def _matches(presented: str, secrets_: list[str]) -> bool:
     return found
 
 
-async def _require_turn_client(request: Request) -> None:
-    if not config.TURN_SERVER:
+class _Serving:
+    """Whether THIS process serves the endpoint, and with which port token.
+
+    Only the daemon does (`daemon.build_app` calls `enable`): a stdio process that wins the port
+    serves the panel but not a turn of its own, with a `daemon_id` no `daemon.json` names. The port
+    token is the one `PortToken` got at the same moment, so a rotation never leaves the two apart.
+    """
+
+    enabled = False
+    port_token = ""
+
+
+def enable(port_token: str) -> None:
+    """The daemon serves `/api/turn/*`, with the port token its `PortToken` uses."""
+    _Serving.port_token = port_token
+    _Serving.enabled = True
+
+
+def disable() -> None:
+    _Serving.enabled = False
+    _Serving.port_token = ""
+
+
+def _require_turn_client(request: Request) -> None:
+    # Sync on purpose: FastAPI runs it in the threadpool, so reading the backend key (on macOS,
+    # possibly the Keychain, `token_source`) never blocks the event loop that serves `/mcp`.
+    if not config.TURN_SERVER or not _Serving.enabled:
         raise TurnError(404, "not_found")
     if request.headers.get("origin") is not None:
         raise TurnError(403, "origin_not_allowed")
-    secrets_ = [s for s in (token_source.daemon_token(), token_source.api_key()) if s]
+    secrets_ = [s for s in (_Serving.port_token, token_source.api_key()) if s]
     if not secrets_:
         raise TurnError(403, "turn_needs_secret")
     presented = _bearer(request)
@@ -119,7 +145,8 @@ async def _json_body(request: Request) -> dict:
             raise TurnError(413, "body_too_large")
     try:
         body = json.loads(bytes(data))
-    except (ValueError, UnicodeDecodeError):
+    except (ValueError, UnicodeDecodeError, RecursionError):
+        # RecursionError: `[[[[…]]]]` under 4 KB nests deeper than the parser's limit.
         raise TurnError(400, "bad_request") from None
     if not isinstance(body, dict):
         raise TurnError(400, "bad_request")

@@ -49,6 +49,8 @@ MAX_HEARTBEAT_S = 5.0
 ENTRY_PREFIX = "remote:"
 #: Phases a heartbeat may publish (the same as `server._INFLIGHT_PHASES`).
 PHASES = frozenset({"map", "reduce", "retry"})
+#: Long waits open at once in the whole table (each holds a threadpool worker for `heartbeat_s`).
+MAX_LONG_WAITS = 16
 
 QUEUED = "queued"
 GRANTED = "granted"
@@ -144,6 +146,11 @@ class LeaseTable:
         self._by_op: dict[str, str] = {}
         self._reaper: threading.Thread | None = None
         self._stop = threading.Event()
+        #: Leases with a long wait open: at most one each (security review of #500).
+        self._waiting: set[str] = set()
+        #: Long waits open at once, all leases together: the threadpool is shared with the
+        #: panel, the hooks and the MCP tools, so past this a queued answer comes back at once.
+        self._long_waits = threading.BoundedSemaphore(MAX_LONG_WAITS)
 
     # --- reading ---------------------------------------------------------------------------
 
@@ -349,15 +356,8 @@ class LeaseTable:
 
     def _finish(self, lease: Lease, status: str) -> dict[str, Any]:
         """The bounded long wait of a queued lease, then the answer."""
-        deadline = time.monotonic() + heartbeat_seconds()
-        while status == QUEUED:
-            since = lease.turn.version()
-            with self._lock:
-                status = self._status_locked(lease)
-            remaining = deadline - time.monotonic()
-            if status != QUEUED or remaining <= 0:
-                break
-            lease.turn.wait_change(min(remaining, heartbeat_seconds()), since=since)
+        if status == QUEUED:
+            status = self._long_wait(lease)
         with self._lock:
             if status != EXPIRED and self._leases.get(lease.id) is lease:
                 # Answering is a sign of life too: the long wait does not eat into the lease.
@@ -365,6 +365,43 @@ class LeaseTable:
             elif status != EXPIRED:
                 status = EXPIRED  # released or expired by another request during the wait
         return self._answer(lease if status != EXPIRED else None, status)
+
+    def _long_wait(self, lease: Lease) -> str:
+        """Wait for the status of a queued lease to change, `heartbeat_s` at most.
+
+        Only one long wait per lease and `MAX_LONG_WAITS` in all: a request past either answers
+        `queued` at once. Without this, 60 heartbeats on one lease held the 40 workers of the
+        threadpool and `/api/inflight` took 4 s (security review of #500).
+        """
+        with self._lock:
+            if lease.id in self._waiting or not self._long_waits.acquire(blocking=False):
+                return QUEUED
+            self._waiting.add(lease.id)
+        try:
+            status = QUEUED
+            deadline = time.monotonic() + heartbeat_seconds()
+            while status == QUEUED:
+                since = lease.turn.version()
+                with self._lock:
+                    status = self._status_locked(lease)
+                remaining = deadline - time.monotonic()
+                if status != QUEUED or remaining <= 0:
+                    break
+                lease.turn.wait_change(min(remaining, heartbeat_seconds()), since=since)
+            return status
+        finally:
+            with self._lock:
+                self._waiting.discard(lease.id)
+            self._long_waits.release()
+
+    def try_reap(self) -> int | None:
+        """`reap` only if the table is free; `None` if it is busy (a local tick never waits here)."""
+        if not self._lock.acquire(blocking=False):
+            return None
+        try:
+            return self.reap()
+        finally:
+            self._lock.release()
 
     def _answer(
         self, lease: Lease | None, status: str, *, model: str | None = None
@@ -435,7 +472,9 @@ def reset(*, clock: Callable[[], float] = time.monotonic) -> LeaseTable:
 
 
 def _tick() -> None:
-    _table.reap()
+    # A local wait's tick skips the reap when the table is busy: the next tick or the reaper
+    # thread does it, and the local wait is never held up by a remote request.
+    _table.try_reap()
 
 
 def _register_tick_hook() -> None:

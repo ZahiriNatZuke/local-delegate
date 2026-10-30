@@ -112,3 +112,74 @@ Rama `feat/turn-lease-endpoint`. REQ-010..017, REQ-024 (lado servidor: `stalled_
   `scripts/data/spanish_lexicon.json`). Tras el arreglo, esos dos ficheros y el de los tests nuevos:
   128 en verde.
 - Tests existentes sin tocar.
+
+### Paso 0 del lote
+
+Resuelto por decisión del usuario, sin comprobación en vivo en este lote: el lanzador del daemon
+de la PC exporta `LOCAL_DELEGATE_API_KEY`, que es la misma clave que exige llama-swap y que usa la
+Mac. La verificación en vivo (PC + Mac) es del lote 5.
+
+### Contrato para el lote 4 (cliente)
+
+- **`acquire` una vez; luego `heartbeat`.** Tras un `acquire` que crea arrendamiento (`queued` o
+  `granted`), la espera y el mantenimiento siguen con `heartbeat` del mismo `lease`. `acquire` solo
+  se repite tras un `expired` o una respuesta perdida (sin respuesta legible). Motivo: un
+  `acquire` de una operación (`host/op`) que ya tiene arrendamiento caduca el viejo y entra al
+  final de la cola; un cliente que repitiera `acquire` mientras está `queued` volvería al final en
+  cada vuelta. Está también en `spec.md`, junto a REQ-012.
+- **Espera larga:** `acquire` y `heartbeat` de un arrendamiento `queued` responden al cambiar el
+  estado o a los `heartbeat_s`. Solo hay una espera larga abierta por arrendamiento y 16 en total:
+  la petición que pasa de ahí responde `queued` al momento, así que el cliente no debe lanzar
+  latidos en paralelo para el mismo `lease` (uno detrás de otro).
+- **`waiting_backend` del latido:** `true`, `false`/ausente, o un objeto `{modelo: estado}` (como
+  mucho 16 entradas; claves y valores saneados como `config.clean_machine_name`, el estado a 16
+  caracteres), con los OTROS modelos que llama-swap tiene cargados o cargando mientras el envío
+  espera (lo mismo que `SendWatch` apunta en local). Solo cuenta con el turno concedido. El daemon
+  lo guarda como `backend_wait: {"remote": {...}}`, y el panel lo pinta `waiting_backend`.
+- **Resto del latido:** `in_backend` (bool; con el turno concedido cuenta como llamada en vuelo
+  para `TURN_MAX_S`), `chunk` (entero ≥ 0) y `phase` (`map`, `reduce` o `retry`). Cualquier otro
+  campo da 400 (`extra="forbid"`).
+- **Pendiente opcional para el lote 4:** que `doctor` avise de los modelos cuyo nombre lleva `:` o
+  `/` (u otro carácter que `clean_machine_name` quita). El saneado los cambia y el daemon responde
+  `no_turn` porque no los encuentra en su topología. No lo hice en este lote.
+
+### Tras la revisión de seguridad y regresiones del PR #500
+
+- **Esperas largas acotadas:** una por arrendamiento (`_waiting`) y 16 en total (`MAX_LONG_WAITS`,
+  semáforo propio); la que pasa responde al momento. Antes, 60 latidos a la vez sobre un
+  arrendamiento en cola dejaban `/api/inflight` en 4,19 s.
+- **JSON muy anidado** (menos de 4 KB): `RecursionError` en `json.loads` → `400 bad_request`
+  (antes 500).
+- **`_require_turn_client` es `def` síncrona** (corre en el threadpool, nunca en el bucle de
+  `/mcp`), y el token del puerto es el que recibió `PortToken` al construir la app
+  (`turn_api.enable(port_token)` en `daemon.build_app`): tras una rotación no se desincronizan.
+- **Solo el daemon sirve el endpoint:** las rutas siguen montadas en `metrics.app`, pero
+  `daemon.build_app` las habilita (`turn_api.enable`); la web de un proceso stdio que gana el puerto
+  responde 404 en `/api/turn/*`. Se eligió habilitar en vez de montar solo en el daemon porque el
+  daemon monta `metrics.app` entero en `/`, y montar el router aparte exigía otra subapp FastAPI y
+  rehacer la enumeración de rutas sin ganar nada.
+- **El tic local no espera a la tabla:** `_tick` usa `try_reap` (`acquire(blocking=False)`) y se
+  salta el tic si la tabla está ocupada; el siguiente tic o el hilo de limpieza la revisan. La E/S de
+  `inflight.json` sigue bajo el cerrojo de la tabla: con el tic sin bloqueo, sacarla no compensaba.
+- **`main` traído a la rama** (#498, merge sin conflictos).
+
+#### Control positivo de los tests nuevos
+
+| Mutante | Test que cae | Assert |
+|---|---|---|
+| Sin la guarda de una espera por arrendamiento | `test_many_heartbeats_on_one_queued_lease_open_one_long_wait` | «16 long waits open on one lease» (`16 <= 1`) |
+| Sin tope global de esperas | `test_long_waits_have_a_global_cap` | «6 long waits open with a cap of 4» (`6 == 4`) |
+| `RecursionError` fuera del `except` | `test_deeply_nested_json_under_4_kb_is_a_400` | `RecursionError` sin capturar (500) |
+| El tic llama a `reap()` con bloqueo | `test_a_local_tick_does_not_wait_for_a_busy_table` | «the local tick waited 3.00 s» (`3.0 < 0.5`) |
+| Servido también fuera del daemon | `test_a_stdio_process_does_not_serve_the_endpoint` | `200 == 404` |
+| Token del puerto releído (no el de `PortToken`) | `test_the_port_token_is_the_one_the_port_guard_got_at_build_time` | `401 == 200` |
+| Dependencia `async` | `test_the_auth_dependency_is_sync` | `assert not True` |
+| `pid` distinto del daemon en la entrada `remote:` | `test_the_remote_entry_has_the_daemons_pid` | `0 == <pid>` |
+
+#### Ejecuciones tras la revisión
+
+- `tests/test_turn_api.py`: 46 (38 + 8 nuevos), en verde tres veces seguidas (12,8–13,1 s).
+- Ficheros relevantes (turno, daemon, `web/auth`, métricas, inflight, guarda del `Host`, panel
+  stdio, `waiting_backend`, wiki, CHANGELOG, aislamiento del entorno y guardianes de idioma),
+  `-n 2`: 527 en verde, 1 saltado; el guardián de nombres pidió 4 palabras inglesas más, añadidas
+  al léxico, y después esos guardianes dieron 90 en verde.

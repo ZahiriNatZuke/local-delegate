@@ -13,6 +13,7 @@ their own cap and fail with their own message.
 from __future__ import annotations
 
 import base64
+import json
 import os
 import subprocess
 import sys
@@ -70,6 +71,7 @@ def env(tmp_path, monkeypatch):
     turn_leases.reset()
     yield tmp_path
     turn_leases.reset()
+    turn_api.disable()  # `daemon.build_app` enabled it for this process: other tests start clean
 
 
 def use_turn(monkeypatch, turn_state: turn.Turn) -> turn.Turn:
@@ -160,16 +162,48 @@ def test_without_any_secret_the_endpoint_refuses_with_403(client, monkeypatch):
     assert response.json() == {"error": "turn_needs_secret"}
 
 
-def test_the_backend_key_and_the_port_token_open_it_and_a_wrong_one_does_not(client, monkeypatch):
-    assert _acquire(client).status_code == 200  # the backend key alone
-    monkeypatch.setattr(config, "API_KEY", "")
-    monkeypatch.setattr(config, "WEB_TOKEN", PORT_TOKEN)
-    ok = client.post(ACQUIRE, json=_acquire_body("op2"), headers=_bearer(PORT_TOKEN))
+def test_the_backend_key_and_the_port_token_open_it_and_a_wrong_one_does_not(port_client):
+    assert _acquire(port_client).status_code == 200  # the backend key
+    ok = port_client.post(ACQUIRE, json=_acquire_body("op2"), headers=_bearer(PORT_TOKEN))
     assert ok.status_code == 200
-    wrong = client.post(ACQUIRE, json=_acquire_body("op3"), headers=_bearer("not-the-secret"))
+    wrong = port_client.post(ACQUIRE, json=_acquire_body("op3"), headers=_bearer("not-the-secret"))
     assert wrong.status_code == 401
     assert wrong.json() == {"error": "unauthorized"}
-    assert client.post(ACQUIRE, json=_acquire_body("op4")).status_code == 401  # nothing at all
+    assert port_client.post(ACQUIRE, json=_acquire_body("op4")).status_code == 401  # nothing
+
+
+def test_the_port_token_is_the_one_the_port_guard_got_at_build_time(port_client, monkeypatch):
+    """A token rotated after the start does not open the routes while `PortToken` has the old one."""
+    monkeypatch.setattr(config, "API_KEY", "")
+    monkeypatch.setattr(config, "WEB_TOKEN", "rotated-token-0123456789")
+    old = port_client.post(ACQUIRE, json=_acquire_body(), headers=_bearer(PORT_TOKEN))
+    assert old.status_code == 200
+    new = port_client.post(
+        ACQUIRE, json=_acquire_body("op2"), headers=_bearer("rotated-token-0123456789")
+    )
+    assert new.status_code == 401
+    assert (
+        port_client.get("/api/daemon", headers=_bearer("rotated-token-0123456789")).status_code
+        == 401
+    )
+
+
+def test_the_auth_dependency_is_sync():
+    """It reads the backend key (on macOS, maybe the Keychain): never on the event loop."""
+    import inspect
+
+    assert not inspect.iscoroutinefunction(turn_api._require_turn_client)
+
+
+def test_a_stdio_process_does_not_serve_the_endpoint(env):
+    """Only `daemon.build_app` enables it: the stdio web (`metrics.app`) answers 404."""
+    turn_api.disable()
+    with TestClient(metrics.app, base_url=_LOCAL) as c:
+        response = _acquire(c)
+        assert response.status_code == 404
+        assert turn_leases.table().live() == 0
+    with TestClient(daemon.build_app("127.0.0.1", 19393), base_url=_LOCAL) as c:
+        assert _acquire(c).status_code == 200  # guard: the daemon's app does serve it
 
 
 def test_basic_with_a_valid_secret_is_refused(client):
@@ -616,3 +650,94 @@ def test_sixteen_long_waits_do_not_block_inflight(client, monkeypatch):
     assert not any(t.is_alive() for t in threads)
     statuses = sorted(t.result.json()["status"] for t in threads)
     assert statuses == ["granted"] * 16
+
+
+# --- review of #500: threadpool, deep JSON, pid, the local tick --------------------------------
+
+
+def _pending_after(threads: list[_Thread], seconds: float) -> int:
+    time.sleep(seconds)
+    return sum(1 for t in threads if t.is_alive())
+
+
+def test_many_heartbeats_on_one_queued_lease_open_one_long_wait(client, monkeypatch):
+    """More than the threadpool's 40 workers on ONE lease: one waits, the rest answer at once."""
+    monkeypatch.setattr(turn_leases, "MAX_HEARTBEAT_S", 5.0)
+    assert isinstance(_local("111:1", CODE), turn.Grant)
+    lease = _Thread(_acquire, client)
+    lease.start()
+    lease.join(7.0)  # its own long wait ends after 5 s, still queued
+    answer = lease.result.json()
+    assert answer["status"] == "queued"
+    beats = [_Thread(_beat, client, answer["lease"]) for _ in range(60)]
+    for beat in beats:
+        beat.start()
+    pending = _pending_after(beats, 1.0)
+    t0 = time.monotonic()
+    response = client.get("/api/inflight")
+    elapsed = time.monotonic() - t0
+    assert response.status_code == 200
+    assert elapsed < 1.0, f"/api/inflight took {elapsed:.2f} s with 60 heartbeats open"
+    assert pending <= 1, f"{pending} long waits open on one lease"
+    server._turn.release_slot("111:1")
+    for beat in beats:
+        beat.join(6.0)
+    assert not any(b.is_alive() for b in beats)
+    assert all(b.result.status_code == 200 for b in beats)
+
+
+def test_long_waits_have_a_global_cap(client, monkeypatch):
+    monkeypatch.setattr(turn_leases, "MAX_HEARTBEAT_S", 5.0)
+    monkeypatch.setattr(turn_leases, "MAX_LONG_WAITS", 4)
+    turn_leases.reset()
+    assert isinstance(_local("111:1", CODE), turn.Grant)
+    acquires = [_Thread(_acquire, client, f"op{i}", f"host{i % 3}", LONG) for i in range(6)]
+    for thread in acquires:
+        thread.start()
+    pending = _pending_after(acquires, 1.0)
+    assert turn_leases.table().live() == 6  # guard: all six are queued with a lease
+    assert pending == 4, f"{pending} long waits open with a cap of 4"
+    server._turn.release_slot("111:1")
+    for thread in acquires:
+        thread.join(6.0)
+    assert not any(t.is_alive() for t in acquires)
+
+
+def test_deeply_nested_json_under_4_kb_is_a_400(client):
+    body = b"[" * 2000 + b"]" * 2000
+    response = client.post(
+        ACQUIRE, content=body, headers={**_bearer(), "Content-Type": "application/json"}
+    )
+    assert response.status_code == 400
+    assert response.json() == {"error": "bad_request"}
+
+
+def test_the_remote_entry_has_the_daemons_pid(client):
+    assert _acquire(client).json()["status"] == "granted"
+    data = json.loads((config.LOG_DIR / "inflight.json").read_text(encoding="utf-8"))
+    assert data["remote:mac/op1"]["pid"] == os.getpid()
+
+
+def test_a_local_tick_does_not_wait_for_a_busy_table(client):
+    assert _acquire(client).json()["status"] == "granted"  # registers the tick hook
+    assert turn_leases._tick in server.TURN_TICK_HOOKS  # guard: the tick does reach the table
+    table = turn_leases.table()
+    held = threading.Event()
+    done = threading.Event()
+
+    def hold() -> None:
+        with table._lock:
+            held.set()
+            done.wait(3.0)
+
+    holder = threading.Thread(target=hold, daemon=True)
+    holder.start()
+    assert held.wait(2.0)
+    try:
+        t0 = time.monotonic()
+        server._refresh_topology()  # the hook of every local wait's tick
+        elapsed = time.monotonic() - t0
+    finally:
+        done.set()
+        holder.join(5.0)
+    assert elapsed < 0.5, f"the local tick waited {elapsed:.2f} s for the lease table"
