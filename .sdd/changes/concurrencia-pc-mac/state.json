@@ -3,9 +3,9 @@
   "slug": "concurrencia-pc-mac",
   "title": "Concurrencia y cola de delegaciones de la PC y la Mac en un solo turno visible",
   "mode": "standard",
-  "status": "implementing",
+  "status": "verifying",
   "createdAt": "2026-10-29T12:00:00.000Z",
-  "updatedAt": "2026-10-29T15:42:59.321Z",
+  "updatedAt": "2026-10-30T20:20:00.000Z",
   "phase0": {
     "mode": "lightweight",
     "status": "in-review",
@@ -54,10 +54,16 @@
       "actor": "agent"
     },
     "quality": {
-      "status": "pending"
+      "status": "approved",
+      "updatedAt": "2026-10-30T20:20:00.000Z",
+      "actor": "agent",
+      "evidence": "Lotes 1-5 mezclados (#494, #493, #500, #502, #503) con revision independiente de seguridad y regresiones en 3, 4 y 5; CI de main en verde tras cada merge; release 0.47.0 publicada (#510)."
     },
     "conformance": {
-      "status": "pending"
+      "status": "approved",
+      "updatedAt": "2026-10-30T20:20:00.000Z",
+      "actor": "agent",
+      "evidence": "Verificacion en vivo PC+Mac con 0.47.0 (verification.md, Lote 5): seis criterios cumplidos en la primera iteracion; degradacion correcta con etiqueta a corregir en #512."
     },
     "memory": {
       "status": "pending"
@@ -131,6 +137,13 @@
       "type": "note",
       "at": "2026-10-30T16:35:33.000Z",
       "reason": "Lote 4 mezclado: PR #502 (cliente del turno remoto e integracion en las operaciones), merge 54c02fcb. Evidencia: verification.md, seccion Lote 4 (11+19 mutantes cazados; auto solo con host privado tras la revision del #502). Pasan al lote 5 doctor (REQ-027) y la nota de modelos con ':' o '/'."
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-10-30T20:20:00.000Z",
+      "reason": "Verificacion en vivo PC+Mac superada con 0.47.0; queda la puerta de memoria"
     }
   ]
 }
