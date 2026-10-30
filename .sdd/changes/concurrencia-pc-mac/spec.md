@@ -42,7 +42,10 @@ después el turno remoto con la cesión entre trozos.
   `{"<n.º de envío>": {modelo: estado, …}}` (máx. 8 modelos por envío; como mucho tantos envíos
   como plazas). `inflight_snapshot` publica la unión (`backend_wait: {modelo: estado}`) y
   `_inflight_state` devuelve **`waiting_backend`** si algún envío de la entrada espera (precedencia:
-  `queued` > `retrying` > `waiting_backend` > `running`). `INFLIGHT_STATES` pasa a
+  `queued` > `waiting_backend` > `retrying` > `running`; **cambiada por el #508 el 2026-10-30**,
+  antes era `queued` > `retrying` > `waiting_backend` > `running`: un envío de un trozo re-partido
+  que espera a llama-swap está esperando, y «reintentando» culpaba al tamaño del trozo de lo que
+  era un cambio de modelo). `INFLIGHT_STATES` pasa a
   `("running", "retrying", "queued", "waiting_backend")`. «Pedido no `ready`» compara con el nombre
   real (`_real_model_name`) y con el nombre enviado; si en una máquina sin topología (la Mac) ninguno
   de los dos aparece en `/running` y no se puede saber si es un alias, **no** se marca (un falso

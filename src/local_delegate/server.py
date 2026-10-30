@@ -666,15 +666,18 @@ def _inflight_state(entry: dict) -> str:
     From the real wait and slot, never from the phase's text (issue #477): a call waiting for its
     turn or for a place (`local_wait`) is `queued`; one that never got to the backend (no
     `in_backend` key yet) too. Otherwise it is at the backend or between two of its pieces:
-    `retrying` while a cut piece is split again (`phase: "retry"`); `waiting_backend` while one of
-    its sends waits for llama-swap to switch models (`backend_wait`, REQ-001); `running` the rest.
+    `waiting_backend` while one of its sends waits for llama-swap to switch models (`backend_wait`,
+    REQ-001), also during a retry (issue #508); `retrying` while a cut piece is split again
+    (`phase: "retry"`); `running` the rest.
     """
     if entry.get("local_wait") or "in_backend" not in entry:
         return "queued"
-    if entry.get("phase") == "retry":
-        return "retrying"
+    # Issue #508: the wait goes first. A send of a split piece that waits for llama-swap is
+    # waiting, not retrying: «retrying» blames the piece's size for what is a model switch.
     if entry.get("backend_wait"):
         return "waiting_backend"
+    if entry.get("phase") == "retry":
+        return "retrying"
     return "running"
 
 
@@ -4617,6 +4620,9 @@ def _chat_chunked(
                     if out is None:
                         return None
                     parts.append(_reattach_separator(half, out))
+                if depth == 0:
+                    # Issue #508: the split of this chunk is over; the rest is plain map again.
+                    _inflight_phase(entry_id, "map")
                 return "".join(parts).strip()
         if result.finish_reason == "length":
             truncated_out = True
@@ -5112,6 +5118,9 @@ def _chat_map_reduce(
             if sub is None:
                 return None
             outputs.extend(sub)
+        if depth == 0:
+            # Issue #508: the split of this chunk is over; the rest is plain map again.
+            _inflight_phase(entry_id, "map")
         return outputs
 
     # #497: the split retries of cut outputs (map and regroup) share one budget of backend calls
