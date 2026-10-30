@@ -75,6 +75,12 @@ mejora mucho la salida (100 % de títulos en los documentos de prueba, frente a 
 pero en la medición con `claude -p` no redujo las veces que Claude vuelve a leer el fichero, que
 lo hace para comprobar datos. Detalle en `.sdd/changes/resumen-por-secciones/verification.md`.
 
+Desde la 0.47.0 (issue #499) un diff unificado (`git diff`, `git show`, `gh pr diff`,
+`git format-patch`, `diff -u`/`-r`, `svn diff`, con su hunk `@@`) nunca tiene estructura de
+documento: aunque lleve un `CHANGELOG.md` cuyas líneas de contexto parecen títulos, se resume en
+prosa, y el prompt le explica al modelo cómo leerlo (cabecera de cada fichero, `+`/`-` frente al
+contexto).
+
 ## `local_classify`
 
 ```python
@@ -248,6 +254,19 @@ número real en el fichero, también dentro de cada trozo del map-reduce; las no
 `nombre (línea N)` y el paso final conserva `nombre: línea`. Así sirve para preguntar «¿en qué línea
 está X?» y luego leer solo ese rango con `Read` (`offset`/`limit`) en vez del fichero entero. Con
 `code=` en línea no se numera.
+
+**La pregunta llega a cada paso (desde la 0.47.0, issue #504).** En un fichero troceado, cada trozo
+anota solo lo que sirve para responder la `question` (o «Nada relevante en este fragmento») y el
+paso final la responde o dice claramente que las notas no bastan. Con pregunta, la respuesta ya
+no lleva la línea de nombres registrados no mencionados. Sin pregunta no cambia nada.
+
+**Comprobación de las líneas citadas (desde la 0.47.0, issue #460).** Con `path` y `question`, el
+servidor revisa al final la respuesta contra el fichero entero: las líneas citadas (`línea N`,
+`líneas N-M`, `L123`, `nombre: 123`, `228/233/236`) en las que, ni en ellas ni una línea antes o
+después, aparece nada de lo que nombra la frase que las cita salen en un aviso de líneas dudosas.
+Además, cada identificador de código de la pregunta recibe una línea «Apariciones de `x` en el
+fichero (búsqueda exacta): 233, 270, …», con un tope de 20. La prosa del modelo no se toca. Con
+`code` o sin `question`, la salida no cambia.
 
 ## `local_describe_image`
 

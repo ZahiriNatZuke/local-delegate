@@ -755,8 +755,10 @@ la cola llevan un círculo discontinuo en vez del giro, van atenuadas y, con tur
 Un cuarto valor, **`waiting_backend`**, marca la llamada que ya tiene plaza pero espera **dentro de
 llama-swap** a que cambie de modelo: su POST lleva más de 3 s pendiente y `/running` no tiene el
 modelo pedido `ready`. La entrada trae `backend_wait` con los **otros** modelos que tenía llama-swap
-(`{"qwen36-35b-a3b": "ready"}`). Precedencia: `queued` > `retrying` > `waiting_backend` >
-`running`. El panel la pone en su grupo, **«Esperando al backend (n)»**, entre «Procesando» y «En
+(`{"qwen36-35b-a3b": "ready"}`). Precedencia: `queued` > `waiting_backend` > `retrying` >
+`running` (desde la 0.47.0, issue #508; antes `retrying` iba delante y tapaba la espera de un trozo
+re-partido). La fase `retry` se limpia en cuanto termina la re-partición del trozo, no cuando
+empieza el siguiente. El panel la pone en su grupo, **«Esperando al backend (n)»**, entre «Procesando» y «En
 cola», con un círculo discontinuo ámbar y un chip `cargado: <modelo>` (el título da la frase
 entera). La banda del mod la ordena tras `running` y `retrying`, dice «esperando backend» y nombra
 el modelo **pedido**, no el cargado. Un panel o mod anterior la trata como `running`.
@@ -874,6 +876,15 @@ agotar los niveles (issue #487). Las tools cuyo tope no depende del tamaño del 
 (`local_summarize`, `local_extract`, lint) mandan el mismo tope que antes. El aviso cuenta ahora también las llamadas cortadas que se repitieron, así
 que su suma cuadra con los pasos en `length` de `steps`.
 
+Desde la 0.47.0 (issue #497) el reagrupado converge o se para. Un paso de reagrupado cortado solo
+se parte si las partes aún pueden reducir el grupo a la mitad; si una ronda no reduce el material
+al menos un 20 % y las notas siguen sin caber en el paso final, se para y devuelve las notas
+agrupadas y en orden con un aviso (`finish_reason: "length"`, `truncated_out: true`;
+`local_extract` lo da con `truncated` y el aviso en `_local_delegate`). Lo mismo al agotar los
+tres niveles de reagrupado, que antes salía como `stop`. Los reintentos partidos del map y del
+reagrupado comparten un tope de 4 llamadas por trozo. Por eso las métricas de truncado pueden
+subir sin que haya más cortes reales.
+
 Hasta la 0.12.0 estas tools simplemente **truncaban** la entrada y avisaban: de un log de CI de
 200 000 caracteres se resumía el principio y el resto se descartaba, que es justo donde suelen
 estar los errores que importan. Ahora se lee entero.
@@ -903,7 +914,7 @@ caducidad de 30 min sigue de red de seguridad.
 | `GET /api/daemon` | Estado, PID y URLs del daemon HTTP |
 | `GET /api/events?from=&to=&include_tests=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`, `excluded_tests` y `tests_in_range`). Sin `include_tests=1`, sin las pruebas. Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. Cada fila llega **fundida** con el relleno de `recompute-cost` (o el respaldo) y con su `density`, `family` y `marks` resueltas (y `caller_origin`: `line`, `backfill` o `fallback`): el JS no funde ni resuelve nada |
 | `GET /api/stats?from=&to=&include_tests=&session=` | Agregados del mismo conjunto que `/api/events` (`excluded_tests`, `tests_in_range` y `open_test_windows` dicen qué se apartó y qué ventanas siguen abiertas) (por tool, por modelo, por origen del cómputo, por cliente, totales): `tokens_context_saved` (el **bruto**, ya sin fallos), `tokens_returned`, `tokens_context_net` (el **neto** del KPI), el desglose `chars_saved_text`, `bytes_saved_image`, `chars_saved_output` y `chars_returned`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. `by_tool`, `by_backend` y `by_client` llevan `tokens_net` junto a `tokens_saved`. Además: `cost` (la cifra o el motivo de que no la haya —`figure` y `reason`—, la barra de cobertura `bar`, el respaldo `fallback`, el origen de `N` `n_origin`, la densidad usada `density`, los modelos sin precio `unpriced`, lo que queda fuera de la base `outside_base`, el desglose `breakdown` y la fecha de la tabla `table`), `quota` (estado por tipo de ventana, `five_hour` y `seven_day`, con `status` `calibrated` o `uncalibrated`, `reason`, `points`, `rejection_points`, `discards`, `drift`, `reset`, `median_C`, `warning`, `a_pct`, `b_pct` y `pct_reason`; y `has_aggregates` y `command`), `images` (`n`, `bytes`, `chars_returned`), `density_table` y `mod_calls` (las llamadas que pidió el mod del plugin, también por cliente en `by_client`; ver [Delegaciones del mod](#delegaciones-del-mod-y-adopción-del-plugin)). Los tokens son de Claude, por densidad. Con `session=<id de sesión de Claude Code>` solo cuenta las delegaciones de esa sesión (lo usa la barra de estado del mod): la línea del log no guarda el id, sino su clave de un solo sentido `caller_session_key` (sha256 truncado), y el daemon calcula la misma clave del id que recibe; las líneas sin clave (anteriores a la 0.41, o de clientes sin el hook `record-call`) no cuentan. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
-| `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks` y, si la llamada espera dentro de local-delegate, `local_wait` con el motivo: `slot` o `turn`; con `turn`, también `turn_in_use` y `turn_position`; desde la 0.45.0, `state` = `running`, `retrying` o `queued`, y `queue_position` en una espera de turno) + `last_event_ts` y `now` para el indicador de actividad. Con `?session=<id>` (la banda del mod) cada entrada lleva además `mine` y la respuesta `mine_count`: solo son de esa sesión las que ella lanzó (se compara la clave de un solo sentido, nunca el id); sin parámetro, la respuesta es la de siempre |
+| `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks` y, si la llamada espera dentro de local-delegate, `local_wait` con el motivo: `slot` o `turn`; con `turn`, también `turn_in_use` y `turn_position`; desde la 0.45.0, `state` = `running`, `retrying` o `queued` (y desde la 0.46.0 `waiting_backend`, con `backend_wait`), y `queue_position` en una espera de turno) + `last_event_ts` y `now` para el indicador de actividad. Con `?session=<id>` (la banda del mod) cada entrada lleva además `mine` y la respuesta `mine_count`: solo son de esa sesión las que ella lanzó (se compara la clave de un solo sentido, nunca el id); sin parámetro, la respuesta es la de siempre |
 | `GET /api/backend` | Sondeo del backend: `available`, `models` (con `status`; si no responde, la última lista buena de esa URL con `models_stale: true`), `running` y `running_ok` (si `/running` respondió; solo se pide cuando `/models` respondió), `causa`, `etiqueta` y `detalle` (los tres `null` si está conectado), y `origin`/`host` del endpoint |
 | `GET /api/status` | Versión, catálogo de modelos y tools, y un bloque `backend` con `available`, `models`, `models_stale`, `causa`, `etiqueta`, `detalle`, `origin` y `host` |
 | `GET /api/backend/stats` | Métricas de llama-swap (`/api/metrics/stats`). Sin datos trae `causa`, `etiqueta`, `detalle` y `status_http` |

@@ -6,6 +6,42 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.47.0] - 2026-10-30
+
+El turno compartido entre la PC y la Mac queda completo (cambio SDD `concurrencia-pc-mac`, lotes 3
+a 5): el daemon de la máquina con el backend da turno con arrendamiento a las operaciones de la
+otra, la Mac lo pide sola cuando su backend está en la tailnet, y `doctor` comprueba la pareja. Se
+corrigen además el reagrupado del map/reduce que repetía rondas sin avanzar, un diff resumido
+como si fuera un Markdown con secciones, `local_explain_code` troceado que no contestaba la
+pregunta o citaba líneas corridas, y la fase «reintentando» que tapaba la espera al backend.
+
+### Cómo actualizar
+
+- **En la PC (daemon):** ejecuta `local-delegate update` o, si instalaste con versión fija,
+  reinstala con `uv tool install --force --no-cache "local-delegate-mcp[llamaswap]==0.47.0"` (con
+  tus extras). Reinicia el daemon y haz `/mcp` en Claude Code (o abre una sesión nueva): las
+  sesiones abiertas siguen con el servidor MCP de la 0.46.0 hasta entonces.
+- **El endpoint de turno se activa solo en el daemon** (`LOCAL_DELEGATE_TURN_SERVER`, encendido por
+  defecto) y **necesita un secreto** en su entorno: la clave del backend (`LOCAL_DELEGATE_API_KEY`)
+  o el token del puerto (`LOCAL_DELEGATE_WEB_TOKEN`). Sin ninguno responde `403 turn_needs_secret`
+  y nadie de fuera puede pedir turno; las operaciones locales no cambian.
+- **En la Mac:** actualiza igual. Si su `LOCAL_DELEGATE_BASE_URL` apunta a la PC por la tailnet
+  (`*.ts.net`, `100.x` o un nombre corto), el turno común se activa solo con
+  `LOCAL_DELEGATE_TURN_URL=auto` (el valor por defecto) y usa como credencial `Bearer` la clave del
+  backend que ya tiene (o `LOCAL_DELEGATE_REMOTE_WEB_TOKEN` si existe). A un backend público no se
+  le pide turno. Para apagarlo, `LOCAL_DELEGATE_TURN_URL=off`.
+- **Para volver atrás sin bajar de versión:** `LOCAL_DELEGATE_TURN_URL=off` en el cliente y
+  `LOCAL_DELEGATE_TURN_SERVER=off` en el daemon (y reiniciarlo). Detalle en
+  `docs/wiki/Remote-backend.md`.
+- **Cambios que se notan:**
+  - una salida troceada cuyo reagrupado no converge sale marcada con `finish_reason: "length"` y
+    `truncated_out: true`, así que las métricas de truncado del panel pueden subir sin que haya
+    más cortes reales;
+  - `local_explain_code` con `path` y `question` añade la línea «Apariciones de … (búsqueda
+    exacta)» y, si alguna línea citada no cuadra con el fichero, un aviso de líneas dudosas;
+  - `doctor` deja notas nuevas sobre el turno remoto (secreto del endpoint, credencial, nombres de
+    modelo con `:` o `/`), sin cambiar el veredicto a quien no usa la pareja PC+Mac.
+
 ### Añadido
 
 - **El daemon puede dar turno a las operaciones de otra máquina** (concurrencia PC+Mac, lote 3,
@@ -4032,7 +4068,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.46.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.0...HEAD
+[0.47.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.46.0...v0.47.0
 [0.46.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.45.1...v0.46.0
 [0.45.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.45.0...v0.45.1
 [0.45.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.44.2...v0.45.0
