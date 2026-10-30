@@ -54,6 +54,7 @@ from . import (
     i18n,
     json_state,
     legacy_names,
+    line_check,
     lint_patterns,
     llamaswap_api,
     llamaswap_config,
@@ -4380,6 +4381,33 @@ _LINE_NUMBERS_CLAUSE = (
 )
 
 
+def _verified_lines(answer: str, question: str, content: str, truncated: bool = False) -> str:
+    """#460: `answer` plus what the program checked of its line numbers against the whole file.
+
+    The model cites wrong lines even seeing the `N| ` prefix, so the numbers are not left to it:
+    citations whose line holds none of the identifiers they refer to get a warning, and each
+    code-like identifier of the question gets its exact lines, found by whole-word search. The
+    prose is not touched; with nothing to report, `answer` comes back byte for byte.
+    """
+    result = line_check.check(answer, question, content, truncated)
+    extra: list[str] = []
+    if result.mismatched:
+        cited = ", ".join(c.label() for c in result.mismatched)
+        extra.append(f"{WARNING_MARKER}{i18n.t('mcp.explain.lines_unverified', lines=cited)}]")
+    for name, lines in result.found:
+        if not lines:
+            extra.append(i18n.t("mcp.explain.occurrences_none", name=name))
+            continue
+        shown = ", ".join(str(n) for n in lines[: line_check.MAX_OCCURRENCES])
+        rest = len(lines) - line_check.MAX_OCCURRENCES
+        if rest > 0:
+            shown += i18n.t("mcp.explain.occurrences_more", count=rest)
+        extra.append(i18n.t("mcp.explain.occurrences", name=name, lines=shown))
+    if not extra:
+        return answer
+    return answer.rstrip() + "\n\n" + "\n".join(extra)
+
+
 def _format_names(names: list[str], max_chars: int, with_lines: bool = False) -> str:
     """El inventario de definiciones de primer nivel, recortado con su cuenta si no cabe."""
     if not names:
@@ -7053,8 +7081,11 @@ def local_explain_code(
     Pass 'path' to read the file server-side (the full code does NOT enter Claude's context; only
     the explanation comes back) or 'code'. Optionally focus the explanation with 'question'.
     With 'path' the model sees the file's line numbers, so it can answer where something is
-    ("name: line") and you can then Read only that range with offset/limit.
-    Review the explanation: a local model writes it.
+    ("name: line") and you can then Read only that range with offset/limit. With 'path' and a
+    'question', the server then checks those numbers against the file: cited lines that do not
+    contain what they are cited for get a warning, and each code identifier of the question
+    (`name`, name(), camelCase, snake_case) gets its exact lines, found by whole-word search.
+    Review the explanation: a local model writes it; the occurrence lines are exact.
 
     Args:
         code: Code to explain (use this or 'path').
@@ -7081,6 +7112,14 @@ def local_explain_code(
         + language
     )
     source = "path" if path else "inline"
+    # #460: the model cites wrong lines even seeing the prefix, so with `path` and a question the
+    # program checks them against the file and lists the question's identifiers where they really
+    # are. Without `path` (no file, no reliable numbers) or without a question, nothing is added.
+    check_lines: Callable[[str, bool], str] | None = None
+    if numbered and question:
+
+        def check_lines(answer: str, truncated: bool) -> str:
+            return _verified_lines(answer, question, content, truncated)
 
     # Trocear o no se decide sobre el fichero PELADO, como antes: el prefijo no hace trocear un
     # fichero que cabía (el corpus de calidad `explicar-install-20k` sigue siendo una llamada).
@@ -7216,8 +7255,9 @@ def local_explain_code(
             ),
             tokens_for=_explain_map_max_tokens,
             # #504: an answer to a question is not an inventory; appending the registered names
-            # it does not mention would turn it back into one.
-            postprocess=None if question else _add_not_mentioned,
+            # it does not mention would turn it back into one. #460: with `path`, its line
+            # numbers are checked at the end, on the whole answer and against the whole file.
+            postprocess=check_lines if question else _add_not_mentioned,
         )
 
     return _chat(
@@ -7231,6 +7271,7 @@ def local_explain_code(
         source=source,
         raw_len=raw_len,
         path=path,
+        postprocess=check_lines,
     )
 
 
