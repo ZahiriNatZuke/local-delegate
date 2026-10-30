@@ -45,6 +45,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   devolvía las notas unidas como `stop` y sin aviso; ahora sale con `finish_reason: "length"`,
   `truncated_out: true` y el aviso. Las métricas de truncado del panel subirán por esto, sin que
   haya más cortes reales.
+- **`local_summarize` sobre un diff ya no reparte los cambios por las secciones de un Markdown**
+  (#499). Con el resumen estructurado encendido, las líneas de contexto de un `CHANGELOG.md`
+  dentro del diff (` ## [0.46.0]`, con un espacio delante) se tomaban por títulos, y el modelo
+  recibía la orden de resumir «por secciones»: los hunks del fichero siguiente (constantes y
+  funciones de un `.py`) salían descritos como contenido de `[0.46.0]`, sin aviso. Lo mismo con
+  los comentarios de nivel superior de un `.py` en el contexto (` # …`): salían como títulos y con
+  el aviso de «secciones sin resumir». Ahora un diff
+  unificado (la salida de `gh pr diff`, `git diff`, `git show`, `git format-patch`, `diff -u`,
+  `diff -r` o `svn diff`, con su hunk `@@` o `@@@`; un `--- ` o un `Index:` sueltos al principio de
+  un Markdown no bastan) nunca tiene estructura de documento: se resume en
+  prosa, y el prompt le explica al modelo cómo leerlo (cabecera de cada fichero, `+`/`-` frente al
+  contexto). El prompt del resto de entradas no cambia.
 
 ## [0.46.0] - 2026-10-29
 

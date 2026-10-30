@@ -716,3 +716,179 @@ def test_with_the_default_value_the_tool_summarizes_in_prose(monkeypatch, tmp_pa
     assert config.STRUCTURED_SUMMARY is False
     assert seen[0]["messages"][0]["content"] == MAIN_SYSTEM
     assert seen[0]["messages"][1]["content"] == f"Resume el siguiente contenido:\n\n{text}"
+
+
+# --- #499: un diff unificado no es un documento con secciones ---------------------------------
+
+# Forma del diff del issue: un CHANGELOG cuya sección anterior asoma como CONTEXTO (` ## [...]`, con
+# un espacio delante, que sí casa con un título ATX) y luego un `.py` con funciones nuevas.
+PR_DIFF = (
+    "diff --git a/CHANGELOG.md b/CHANGELOG.md\n"
+    "index 1111111..2222222 100644\n"
+    "--- a/CHANGELOG.md\n"
+    "+++ b/CHANGELOG.md\n"
+    "@@ -7,6 +7,10 @@\n"
+    " \n"
+    " ## [Unreleased]\n"
+    " \n"
+    "+### Corregido\n"
+    "+\n"
+    "+- Algo nuevo.\n"
+    "+\n"
+    " ## [0.46.0] - 2026-10-30\n"
+    " \n"
+    " ### Añadido\n"
+    "diff --git a/src/pkg/mod.py b/src/pkg/mod.py\n"
+    "index 3333333..4444444 100644\n"
+    "--- a/src/pkg/mod.py\n"
+    "+++ b/src/pkg/mod.py\n"
+    "@@ -1,3 +1,8 @@\n"
+    " import os\n"
+    "+\n"
+    "+NEW_LIMIT = 10\n"
+    "+\n"
+    "+def new_function():\n"
+    "+    return NEW_LIMIT\n"
+)
+
+
+def test_the_headings_of_a_diff_context_are_not_structure():
+    # Control: sin la guarda, estas dos líneas de contexto son dos títulos de nivel 2 y el hunk
+    # del `.py` cae dentro de la «sección» `[0.46.0]`.
+    assert [h.text for h in sections.markdown_headings(PR_DIFF) if h.level == 2] == [
+        "[Unreleased]",
+        "[0.46.0] - 2026-10-30",
+    ]
+    assert sections.is_unified_diff(PR_DIFF)
+    assert sections.detect(PR_DIFF) is None
+
+
+# Casos de la revisión del #501. Todos llevan títulos que `markdown_headings` ve: en un diff, por
+# las líneas de contexto (` # a`); en un Markdown, los suyos.
+_HUNK_3_4 = "@@ -1,3 +1,4 @@\n"
+_SHA = "a" * 40
+PATCHES = {
+    "git_show": (
+        f"commit {_SHA}\nAuthor: x <x@y>\nDate: now\n\n    msg\n\n"
+        "diff --git a/x.md b/x.md\n--- a/x.md\n+++ b/x.md\n"
+        f"{_HUNK_3_4} ## [0.46.0]\n-a\n+b\n ## [0.45]\n"
+    ),
+    "format_patch": (
+        f"From {_SHA} Mon Sep 17 00:00:00 2001\nFrom: x\nSubject: y\n---\n x | 1 +\n\n"
+        f"diff --git a/x b/x\n--- a/x\n+++ b/x\n{_HUNK_3_4} # c\n+b\n # d\n"
+    ),
+    "svn": (
+        "Index: x.md\n" + "=" * 67 + "\n--- x.md\t(revision 1)\n+++ x.md\t(working copy)\n"
+        f"{_HUNK_3_4} # a\n+b\n # c\n"
+    ),
+    "diff_u": f"--- a.md\t2020\n+++ b.md\t2020\n{_HUNK_3_4} # a\n+b\n # c\n",
+    "diff_ru_only_in": f"Only in a: z\ndiff -ru a/x b/x\n--- a/x\n+++ b/x\n{_HUNK_3_4} # a\n # c\n",
+    "gh_pr_diff_leading_blank": f"\n\ndiff --git a/x b/x\n--- a/x\n+++ b/x\n{_HUNK_3_4} # a\n # b\n",
+    "bom": f"\ufeffdiff --git a/x b/x\n--- a/x\n+++ b/x\n{_HUNK_3_4} # a\n # b\n",
+    "crlf": ("diff --git a/x b/x\r\n--- a/x\r\n+++ b/x\r\n@@ -1,3 +1,4 @@\r\n # a\r\n # b\r\n"),
+    "hunk_without_counts": "diff --git a/x b/x\n--- a/x\n+++ b/x\n@@ -1 +1 @@\n # a\n # b\n",
+    "combined_diff": (
+        "diff --cc x\nindex a,b..c\n--- a/x\n+++ b/x\n@@@ -1,2 -1,2 +1,3 @@@\n # a\n # b\n"
+    ),
+}
+_FENCED_HUNK = f"```\n{_HUNK_3_4}```\n"
+MARKDOWNS = {
+    "front_matter_and_hunk_in_fence": f"---\ntitle: x\n---\n# A\ntext\n{_FENCED_HUNK}# B\nmore\n",
+    "dashes_with_text": f"--- draft ---\n# A\n{_FENCED_HUNK}# B\nx\n",
+    "dashes_and_trailing_space": f"--- \n# Changelog\n## 1.0\n{_FENCED_HUNK}## 0.9\n",
+    "horizontal_rule": f"---\n# A\n{_FENCED_HUNK}# B\n",
+    "index_prose": f"Index: list of topics\n# A\n{_FENCED_HUNK}# B\n",
+    # Cada condición de `Index:` con su caso: un título setext (con la raya `===` detrás) y una
+    # sola palabra sin la raya.
+    "index_setext_title": f"Index: list of topics\n=====\n\n# A\n{_FENCED_HUNK}# B\n",
+    "index_one_word": f"Index: topics\n# A\n{_FENCED_HUNK}# B\n",
+    "diff_dash_prose": f"diff -u is a command; @@ below\n# A\n{_FENCED_HUNK}# B\n",
+    "readme_with_hunk_in_fence": f"# Title\n```diff\n{_HUNK_3_4}```\n## B\n## C\n",
+    "patch_in_fence_after_prose": (
+        f"Intro\n# A\n```\ndiff --git a/x b/x\n--- a/x\n+++ b/x\n{_HUNK_3_4}```\n# B\n"
+    ),
+}
+
+
+@pytest.mark.parametrize("name", sorted(PATCHES))
+def test_every_patch_form_is_a_diff_without_sections(name):
+    text = PATCHES[name]
+    assert sections.markdown_headings(text), "el caso no tiene títulos: no comprobaría nada"
+    assert sections.is_unified_diff(text)
+    assert sections.detect(text) is None
+
+
+@pytest.mark.parametrize("name", sorted(MARKDOWNS))
+def test_a_markdown_with_a_hunk_in_a_fence_keeps_its_sections(name):
+    text = MARKDOWNS[name]
+    assert sections.is_unified_diff(text) is False
+    assert sections.detect(text) is not None
+
+
+def test_a_markdown_that_shows_a_diff_keeps_its_sections():
+    text = "# Guía\n\nintro\n\n## Antes\n\n```diff\n" + PR_DIFF + "```\n\n## Después\n\nfin\n"
+    assert not sections.is_unified_diff(text)
+    assert sections.detect(text).texts == ["Antes", "Después"]
+
+
+def test_a_patch_header_without_hunks_is_not_a_diff():
+    assert not sections.is_unified_diff("--- a/x\n+++ b/x\n## Uno\n\n## Dos\n")
+
+
+def test_a_diff_is_summarized_in_prose_with_the_reading_note(monkeypatch, tmp_path):
+    path = tmp_path / "pr.diff"
+    path.write_bytes(PR_DIFF.encode("utf-8"))
+    _out, seen = _call_summary(monkeypatch, tmp_path, _echo_prose, path=str(path))
+    (payload,) = seen
+    system = payload["messages"][0]["content"]
+    assert system == MAIN_GUARD + server._DIFF_NOTE + LANGUAGE_ORDER
+    assert "las que empiezan por un espacio son contexto sin cambios" in system
+    assert payload["messages"][1]["content"] == f"Resume el siguiente contenido:\n\n{PR_DIFF}"
+    assert "sections" not in _events(tmp_path)[0]
+
+
+def test_a_diff_under_the_long_cap_keeps_the_note_in_every_map_step(monkeypatch, tmp_path):
+    big = PR_DIFF + "".join(f"+LINE_{i} = {i}\n" for i in range(6000))
+    assert len(big) > config.max_chars_for_role("long")
+    _out, seen = _call_summary(monkeypatch, tmp_path, _echo_prose, text=big)
+    maps = [p for p in seen if "Redacta un único resumen global" not in p["messages"][1]["content"]]
+    assert len(maps) >= 2
+    assert all(server._DIFF_NOTE in p["messages"][0]["content"] for p in maps)
+
+
+# Segunda evidencia del #499: un diff de código Python largo. En una línea de contexto, un
+# comentario de nivel superior (` # …`, un espacio delante) casa con un título ATX de nivel 1.
+PY_DIFF_HEAD = (
+    "diff --git a/src/pkg/turn.py b/src/pkg/turn.py\n"
+    "index 5555555..6666666 100644\n"
+    "--- a/src/pkg/turn.py\n"
+    "+++ b/src/pkg/turn.py\n"
+    "@@ -10,6 +10,40 @@\n"
+    " # goes back to the end of the queue when it yields\n"
+    " QUEUE = []\n"
+    "+# The daemon's own budget for ONE tool call\n"
+    "+BUDGET_S = 600\n"
+    " # The turn is shared between hosts\n"
+)
+
+
+def test_python_comments_in_a_diff_are_not_sections():
+    assert [h.text for h in sections.markdown_headings(PY_DIFF_HEAD) if h.level == 1] == [
+        "goes back to the end of the queue when it yields",
+        "The turn is shared between hosts",
+    ]
+    assert sections.detect(PY_DIFF_HEAD) is None
+
+
+def test_a_long_python_diff_is_not_summarized_by_sections(monkeypatch, tmp_path):
+    body = "".join(f"+    value_{i} = compute({i})  # step {i}\n" for i in range(2500))
+    big = PY_DIFF_HEAD + body
+    assert len(big) > config.max_chars_for_role("long")
+    path = tmp_path / "pr.diff"
+    path.write_bytes(big.encode("utf-8"))
+    output, seen = _call_summary(monkeypatch, tmp_path, _echo_prose, path=str(path))
+    assert "sin resumir" not in output
+    assert all(
+        "una línea '## ' con el título tal cual" not in p["messages"][0]["content"] for p in seen
+    )
+    assert all("sections" not in event for event in _events(tmp_path))
