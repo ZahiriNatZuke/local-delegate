@@ -137,6 +137,13 @@ pregunta o citaba líneas corridas, y la fase «reintentando» que tapaba la esp
   sobre `waiting_backend`. Ahora la espera va primero (`queued` > `waiting_backend` > `retrying` >
   `running`), y la fase `retry` se limpia en cuanto termina la re-partición del trozo, no cuando
   empieza el siguiente.
+- **La captura del README vuelve a ser oscura y tiene versión clara.** Desde la 0.39.0 el panel
+  sigue el tema del sistema y Chromium headless se presenta como claro, así que la captura salía
+  clara. `scripts/dev/capture_dashboard.py` acepta `--theme dark|light` (por defecto `dark`), que
+  fija `color_scheme` y borra la elección guardada; `docs/assets/dashboard.png` es la oscura de
+  siempre y `docs/assets/dashboard-light.png` la clara, y el README las sirve con `<picture>` según
+  el tema de quien lo lee. Cada manifiesto guarda su `theme` y `tests/test_capture.py` comprueba las
+  dos.
 
 ## [0.46.0] - 2026-10-29
 

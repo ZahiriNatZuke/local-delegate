@@ -13,6 +13,7 @@
   "file": "dashboard.png",
   "version": "0.47.0",
   "lang": "es",
-  "sha256": "dafeda80d5dc737ed08325e5b79f149fef4e2a9c7c131e8ebf8b6dfd3ff6599d",
-  "bytes": 814646
+  "theme": "dark",
+  "sha256": "724c79f1d16a3f0c41a427a56d2b9797708c7c28ee395011772fd2d83cfabd6b",
+  "bytes": 806788
 }

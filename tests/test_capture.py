@@ -29,6 +29,11 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 SCREENSHOT = ROOT / "docs" / "assets" / "dashboard.png"
 MANIFEST = ROOT / "docs" / "assets" / "dashboard.json"
+# Las dos capturas del README: la oscura (la de siempre) y la clara, que sirve `<picture>`.
+THEMES = {
+    "dark": ROOT / "docs" / "assets" / "dashboard.png",
+    "light": ROOT / "docs" / "assets" / "dashboard-light.png",
+}
 SCRIPT = ROOT / "scripts" / "dev" / "capture_dashboard.py"
 PANEL = ROOT / "src" / "local_delegate" / "web" / "metrics.py"
 
@@ -45,14 +50,16 @@ REGENERATE = (
     '  uv run python -c "import uvicorn; from local_delegate.web import metrics; '
     "uvicorn.run(metrics.app, host='127.0.0.1', port=9494)\"\n"
     "  uv run python scripts/dev/capture_dashboard.py --url http://127.0.0.1:9494/\n"
+    "  uv run python scripts/dev/capture_dashboard.py --url http://127.0.0.1:9494/ --theme light\n"
     "Contra el repo, no contra el daemon del 9393: ese sirve la versión que tenga instalada."
 )
 
 
-def _manifest() -> dict:
-    if not MANIFEST.is_file():
-        pytest.fail(f"falta {MANIFEST.relative_to(ROOT)}, que declara la captura.\n{REGENERATE}")
-    return json.loads(MANIFEST.read_text(encoding="utf-8"))
+def _manifest(png: Path = SCREENSHOT) -> dict:
+    manifest = png.with_suffix(".json")
+    if not manifest.is_file():
+        pytest.fail(f"falta {manifest.relative_to(ROOT)}, que declara la captura.\n{REGENERATE}")
+    return json.loads(manifest.read_text(encoding="utf-8"))
 
 
 def _declared_version() -> str:
@@ -60,11 +67,13 @@ def _declared_version() -> str:
     return data["project"]["version"]
 
 
-def test_the_manifest_describes_the_screenshot_in_the_repo():
+@pytest.mark.parametrize("theme", sorted(THEMES))
+def test_the_manifest_describes_the_screenshot_in_the_repo(theme):
     """El hash del manifiesto es el del PNG real: nadie cambió la imagen por su cuenta."""
-    manifest = _manifest()
-    assert SCREENSHOT.is_file(), f"falta {SCREENSHOT.relative_to(ROOT)}"
-    blob = SCREENSHOT.read_bytes()
+    png = THEMES[theme]
+    manifest = _manifest(png)
+    assert png.is_file(), f"falta {png.relative_to(ROOT)}"
+    blob = png.read_bytes()
 
     real = hashlib.sha256(blob).hexdigest()
     assert manifest["sha256"] == real, (
@@ -72,12 +81,17 @@ def test_the_manifest_describes_the_screenshot_in_the_repo():
         f"(declarado {manifest['sha256'][:16]}…, real {real[:16]}…).\n{REGENERATE}"
     )
     assert manifest["bytes"] == len(blob)
-    assert manifest["file"] == SCREENSHOT.name
+    assert manifest["file"] == png.name
+    assert manifest.get("theme") == theme, (
+        f"{png.name} no se generó en tema {theme}: el panel sigue al sistema y Chromium\n"
+        f"headless se presenta como claro si no se fija `color_scheme`.\n{REGENERATE}"
+    )
 
 
-def test_the_screenshot_shows_the_current_project_version():
+@pytest.mark.parametrize("theme", sorted(THEMES))
+def test_the_screenshot_shows_the_current_project_version(theme):
     """La imagen luce el badge de versión: si el proyecto avanzó, la captura caducó."""
-    manifest = _manifest()
+    manifest = _manifest(THEMES[theme])
     version = _declared_version()
     assert manifest["version"] == version, (
         f"la captura se generó con la {manifest['version']} y el proyecto va por la {version}, "
@@ -85,11 +99,12 @@ def test_the_screenshot_shows_the_current_project_version():
     )
 
 
-def test_the_screenshot_is_in_the_language_of_the_readme():
+@pytest.mark.parametrize("theme", sorted(THEMES))
+def test_the_screenshot_is_in_the_language_of_the_readme(theme):
     """Desde la 0.36.0 el panel sigue al idioma del navegador, y Chromium sin `locale` dice
     `en-US`: la captura salía en inglés en un README en español. El manifiesto guarda el
     `<html lang>` de la página capturada."""
-    assert _manifest().get("lang") == "es", (
+    assert _manifest(THEMES[theme]).get("lang") == "es", (
         "la captura del README (en español) no se generó con el panel en español.\n" + REGENERATE
     )
 

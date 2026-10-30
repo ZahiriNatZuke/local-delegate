@@ -17,7 +17,10 @@ hace y por qué, en una página (es/en). Su fuente está en [`site/`](./site).
 
 <!-- URL absoluta a raw.githubusercontent.com para que la imagen también se renderice en
      PyPI (los links relativos solo se resuelven dentro de GitHub). -->
-![Dashboard de ahorro de local-delegate](https://raw.githubusercontent.com/ZahiriNatZuke/local-delegate/main/docs/assets/dashboard.png)
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/ZahiriNatZuke/local-delegate/main/docs/assets/dashboard-light.png">
+  <img alt="Dashboard de ahorro de local-delegate" src="https://raw.githubusercontent.com/ZahiriNatZuke/local-delegate/main/docs/assets/dashboard.png">
+</picture>
 
 *Dashboard embebido (datos de ejemplo): estado del backend local (modelos montados, delegación en curso con su progreso por trozos, tools MCP), RAM/VRAM del sistema con consumo por proceso, tokens de contexto conservados, ahorro por herramienta y modelo, dónde corrió el cómputo —esta máquina o un backend remoto— y actividad reciente paginada en tu hora local. Se sirve en `http://127.0.0.1:9393`.*
 
