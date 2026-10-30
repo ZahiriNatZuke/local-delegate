@@ -456,7 +456,6 @@ class LeaseTable:
 
 _table = LeaseTable()
 _hook_lock = threading.Lock()
-_hook_registered = False
 
 
 def table() -> LeaseTable:
@@ -479,9 +478,7 @@ def _tick() -> None:
 
 def _register_tick_hook() -> None:
     """Each tick of a local turn wait reaps too (REQ-012). Once per process."""
-    global _hook_registered
     with _hook_lock:
-        if _hook_registered:
-            return
-        _server().TURN_TICK_HOOKS.append(_tick)
-        _hook_registered = True
+        hooks = _server().TURN_TICK_HOOKS
+        if _tick not in hooks:
+            hooks.append(_tick)

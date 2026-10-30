@@ -142,13 +142,13 @@ class _Thread(threading.Thread):
         super().__init__(daemon=True)
         self._call = (function, args)
         self.result: object = None
-        self.error: BaseException | None = None
+        self.error: Exception | None = None
 
     def run(self) -> None:
         function, args = self._call
         try:
             self.result = function(*args)
-        except BaseException as e:  # the test looks at it
+        except Exception as e:  # the test looks at it
             self.error = e
 
 
