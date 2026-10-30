@@ -12,7 +12,9 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   (#499). Con el resumen estructurado encendido, las líneas de contexto de un `CHANGELOG.md`
   dentro del diff (` ## [0.46.0]`, con un espacio delante) se tomaban por títulos, y el modelo
   recibía la orden de resumir «por secciones»: los hunks del fichero siguiente (constantes y
-  funciones de un `.py`) salían descritos como contenido de `[0.46.0]`, sin aviso. Ahora un diff
+  funciones de un `.py`) salían descritos como contenido de `[0.46.0]`, sin aviso. Lo mismo con
+  los comentarios de nivel superior de un `.py` en el contexto (` # …`): salían como títulos y con
+  el aviso de «secciones sin resumir». Ahora un diff
   unificado (empieza por `diff --git`, `--- `, `Index:`, `diff -` o la cabecera de
   `git format-patch`, y trae algún hunk `@@`) nunca tiene estructura de documento: se resume en
   prosa, y el prompt le explica al modelo cómo leerlo (cabecera de cada fichero, `+`/`-` frente al
