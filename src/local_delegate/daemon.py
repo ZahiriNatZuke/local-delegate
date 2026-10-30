@@ -23,7 +23,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
 
-from . import autostart, cancellation, config, i18n, server, token_source
+from . import autostart, cancellation, config, i18n, server, token_source, turn_leases
 from .web import auth, host_guard, metrics
 
 MCP_PATH = "/mcp"
@@ -66,6 +66,8 @@ def _daemon_payload(host: str, port: int) -> dict:
         "port": port,
         "mcp_url": f"{base}{MCP_PATH}",
         "dashboard_url": f"{base}/",
+        # Concurrency PC+Mac, lot 3: this run of the daemon; a remote client tells a restart by it.
+        "daemon_id": turn_leases.DAEMON_ID,
     }
 
 

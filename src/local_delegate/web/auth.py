@@ -53,6 +53,22 @@ _VERSION = "ld-session|v1"
 #: regularidad no vuelve a ver la petición de credenciales.
 DEFAULT_DURATION = 365 * 24 * 3600
 
+#: The turn endpoint's three routes (concurrency PC+Mac, REQ-016): `PortToken` lets them through
+#: without its token because they check their own secret (`web/turn_api.py`: the port token OR the
+#: backend's key, Bearer only). Exact method and path, never a prefix: `/api/turn/x`, `/api/turn/`
+#: plus `..`, `//api/turn/acquire` or a `GET` still need the port token.
+TURN_ACQUIRE_PATH = "/api/turn/acquire"
+TURN_HEARTBEAT_PATH = "/api/turn/heartbeat"
+TURN_RELEASE_PATH = "/api/turn/release"
+TURN_ROUTES: frozenset[tuple[str, str]] = frozenset(
+    ("POST", path) for path in (TURN_ACQUIRE_PATH, TURN_HEARTBEAT_PATH, TURN_RELEASE_PATH)
+)
+
+
+def is_exempt(method: object, path: object) -> bool:
+    """Does `PortToken` let this request through without its token? Only the three turn routes."""
+    return (method, path) in TURN_ROUTES
+
 
 def _presented_token(header: str) -> str | None:
     """Extrae el token de una cabecera `Authorization`, o ``None`` si no lleva ninguno.
@@ -208,6 +224,11 @@ class PortToken:
         # dejaría al server MCP sin arrancar su propio ciclo de vida. Cualquier tipo que no sea
         # `http` pasa de largo por la misma razón.
         if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+
+        if is_exempt(scope.get("method"), scope.get("path")):
+            # Their own dependency checks the secret (and refuses Basic and the cookie).
             await self.app(scope, receive, send)
             return
 
