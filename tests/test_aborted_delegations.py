@@ -69,8 +69,26 @@ def test_deadline_cancels_the_call_and_logs_it_once(monkeypatch, slow_backend, t
     """Past `CALL_MAX_S` the call stops, the caller is told why, and ONE failed event is written.
 
     Without the fix the ~8 s chunked summary runs to the end and is logged as a success.
+
+    The first two backend calls answer at once and only the rest take the fixture's 0.4 s: the
+    event writes `pieces` only next to `chunks > 1` (two real calls), and with every call at 0.4 s
+    a slow Windows runner fitted one call before the 1 s cut (2026-10-30, CI of #505) and the
+    event came without `pieces`. Now two calls are done in the first milliseconds of the call,
+    and the summary still needs ~7 s more, far past the deadline.
     """
     monkeypatch.setattr(config, "CALL_MAX_S", 1.0)
+    quick = [0]
+    lock = threading.Lock()
+
+    def quick_start(model: str, payload: dict) -> server.ChatResult:
+        with lock:
+            quick[0] += 1
+            first_two = quick[0] <= 2
+        if first_two:
+            return server.ChatResult(text="a", ok=True, finish_reason="stop")
+        return slow_backend(model, payload)
+
+    monkeypatch.setattr(server, "_post_chat", quick_start)
     with real_daemon(monkeypatch, TOKEN) as url:
         answer, elapsed = _call(url, SUMMARIZE)
     text = _error_text(answer)
@@ -83,10 +101,12 @@ def test_deadline_cancels_the_call_and_logs_it_once(monkeypatch, slow_backend, t
     assert event["cancel_reason"] == "deadline", event
     assert 900 <= event["latency_ms"] < 4000, event
     assert event["model"] == LONG_MODEL and event["chars_in"] > 0, event
-    # What it measured until the cut: the pieces it announced, fixed at the start. How many backend
-    # calls fit before the 1 s cut (`chunks`) depends on the runner's speed, so it is not asserted:
-    # a slow runner gave one call on 2026-10-29 and failed this test.
+    # What it measured until the cut: the pieces it announced, fixed at the start, next to the real
+    # calls. Their exact number depends on the runner's speed (a slow one gave one 0.4 s call on
+    # 2026-10-29), so only the two instant ones are counted on.
+    assert event.get("chunks", 0) >= 2, event
     assert event.get("pieces", 0) >= 2, event
+    assert event["pieces"] > event["chunks"], event  # cut mid-operation, not at its end
     assert _panel_errors() == 1
 
 

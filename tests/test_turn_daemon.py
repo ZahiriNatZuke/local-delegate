@@ -88,8 +88,15 @@ def _of_tool(events: list[dict], tool: str) -> dict:
     return next((e for e in events if e.get("tool") == tool), {})
 
 
-def _wait(condition: Callable[[], object], cap: float = 2.0) -> object:
-    """El primer valor verdadero de `condition` antes del tope, o `None`."""
+def _wait(condition: Callable[[], object], cap: float = 10.0) -> object:
+    """El primer valor verdadero de `condition` antes del tope, o `None`.
+
+    Los topes de este fichero son generosos a propósito (un `x_inside.wait(2)` falló una vez en el
+    runner de Windows tras la 0.46.0): una espera que se cumple vuelve en cuanto se cumple, así que
+    el tope solo alarga un test que ya iba a fallar. Las esperas que retienen a X en el backend
+    (`continue_x`) son más largas que cualquier comprobación del hilo principal, para que X no se
+    suelte solo a mitad del guion; el `finally` de cada test las suelta.
+    """
     end = time.monotonic() + cap
     while time.monotonic() < end:
         value = condition()
@@ -166,11 +173,11 @@ def _two_tools(monkeypatch, tmp_path) -> tuple[backend_mock.ChangeCount, list[di
     startup = threading.Barrier(2)
 
     def commit() -> str:
-        startup.wait(2)
+        startup.wait(10)
         return server.local_commit_msg(diff=_diff(3))
 
     def lint() -> str:
-        startup.wait(2)
+        startup.wait(10)
         return server.local_lint_summary(text=_paragraphs(3))
 
     with backend_mock.mock:
@@ -260,7 +267,7 @@ def test_two_simultaneous_hops_do_not_block(with_topology, monkeypatch):
         if thread == "C":
             if not c1_inside.is_set():
                 c1_inside.set()
-                continue_c1.wait(5)
+                continue_c1.wait(10)
             return _ok()
         if model == LONG:
             with lock:
@@ -268,7 +275,7 @@ def test_two_simultaneous_hops_do_not_block(with_topology, monkeypatch):
                 if len(inside_ab) == 2:
                     ab_inside.set()
             one_inside.set()
-            fail.wait(5)
+            fail.wait(10)
             return _model_failure()
         return _ok(f"ok de {model}")
 
@@ -278,7 +285,7 @@ def test_two_simultaneous_hops_do_not_block(with_topology, monkeypatch):
     def inflight_progress(entry_id, chunk):
         # C no pide plaza para su segundo trozo hasta que A y B tienen las dos.
         if threading.current_thread().name == "C" and chunk == 2:
-            ab_inside.wait(5)
+            ab_inside.wait(10)
         progress(entry_id, chunk)
 
     def inflight_local_wait(entry_id, reason):
@@ -309,18 +316,18 @@ def test_two_simultaneous_hops_do_not_block(with_topology, monkeypatch):
     a = _Thread("A", server._chat, LONG, "s", "u", 8, tool="op_a", role="long")
     b = _Thread("B", server._chat, LONG, "s", "u", 8, tool="op_b", role="long")
     c.start()
-    assert c1_inside.wait(2), "C no llegó a su primer trozo"
+    assert c1_inside.wait(10), "C no llegó a su primer trozo"
     a.start()
     b.start()
-    assert one_inside.wait(2), "ni A ni B tomaron la plaza libre"
+    assert one_inside.wait(10), "ni A ni B tomaron la plaza libre"
     continue_c1.set()
-    assert ab_inside.wait(2), "A y B no llegaron a ocupar las dos plazas"
-    assert c_waits_slot.wait(2), "C no llegó a esperar plaza para su segundo trozo"
+    assert ab_inside.wait(10), "A y B no llegaron a ocupar las dos plazas"
+    assert c_waits_slot.wait(10), "C no llegó a esperar plaza para su segundo trozo"
     fail.set()  # A y B fallan a la vez con una clase que salta a Qwen3.6
 
-    assert c_done.wait(2), "sin progreso: bloqueo turno/plaza"
-    a.join(2)
-    b.join(2)
+    assert c_done.wait(10), "sin progreso: bloqueo turno/plaza"
+    a.join(10)
+    b.join(10)
     assert not a.is_alive() and not b.is_alive(), "A y B no terminaron tras C"
     assert c.error is None and "[local-delegate error]" not in str(c.result)
     assert f"ok de {CODE}" in str(a.result) and f"ok de {CODE}" in str(b.result)
@@ -409,7 +416,7 @@ def test_after_grant_entry_moves_from_turn_to_slot(with_topology, monkeypatch):
     def post_chat(model, _payload):
         if threading.current_thread().name == "X":
             x_inside.set()
-            continue_x.wait(5)
+            continue_x.wait(30)
         return _ok()
 
     monkeypatch.setattr(server, "_post_chat", post_chat)
@@ -418,7 +425,7 @@ def test_after_grant_entry_moves_from_turn_to_slot(with_topology, monkeypatch):
     taken_ones = 0
     try:
         x.start()
-        assert x_inside.wait(2), "X no llegó al backend"
+        assert x_inside.wait(10), "X no llegó al backend"
         assert server._chat_slots.acquire(blocking=False)  # la otra plaza, para el final
         taken_ones += 1
         y.start()
@@ -449,8 +456,8 @@ def test_after_grant_entry_moves_from_turn_to_slot(with_topology, monkeypatch):
         continue_x.set()
         for _ in range(taken_ones):
             server._chat_slots.release()
-        x.join(5)
-        y.join(5)
+        x.join(10)
+        y.join(10)
     assert not x.is_alive() and not y.is_alive()
     assert y.error is None
 
@@ -489,7 +496,7 @@ def _two_that_clash(monkeypatch, tmp_path) -> list[dict]:
     startup = threading.Barrier(2)
 
     def operation(model: str, role: str) -> str:
-        startup.wait(2)
+        startup.wait(10)
         return server._chat(model, "s", "u", 8, tool=f"op_{role}", role=role)
 
     threads = [_Thread("L", operation, LONG, "long"), _Thread("C", operation, CODE, "code")]
@@ -565,7 +572,7 @@ def test_new_topology_on_next_grant(with_topology, monkeypatch):
     def post_chat(_model, _payload):
         if threading.current_thread().name == "X":
             x_inside.set()
-            continue_x.wait(5)
+            continue_x.wait(30)
         return _ok()
 
     monkeypatch.setattr(server, "_post_chat", post_chat)
@@ -573,18 +580,18 @@ def test_new_topology_on_next_grant(with_topology, monkeypatch):
     y = _Thread("Y", server._chat, CODE, "s", "u", 8, tool="op_y", role="code")
     try:
         x.start()
-        assert x_inside.wait(2), "X no llegó al backend"
+        assert x_inside.wait(10), "X no llegó al backend"
         topology = server._topology()
         assert topology.clashes(LONG, CODE)  # guarda: con la de hoy, Qwen3.6 tendría que esperar
         # Con X en curso, la config pasa a una en la que el 26B y Qwen3.6 no chocan.
         with_topology.write_text(SEPARATE, encoding="utf-8")
         y.start()
-        y.join(2)
+        y.join(10)
         granted_with_new = not y.is_alive() and y.error is None
     finally:
         continue_x.set()
-        x.join(5)
-        y.join(5)
+        x.join(10)
+        y.join(10)
     assert granted_with_new
 
 
@@ -601,7 +608,7 @@ def test_forced_event_carries_turn_forced(with_topology, monkeypatch, tmp_path):
         # X tiene el turno y se atasca FUERA del backend antes de su segundo trozo.
         if piece.startswith("p2"):
             x_stuck.set()
-            continue_x.wait(10)
+            continue_x.wait(30)
         return piece
 
     x = _Thread(
@@ -619,14 +626,14 @@ def test_forced_event_carries_turn_forced(with_topology, monkeypatch, tmp_path):
     y = _Thread("Y", server._chat, CODE, "s", "u", 8, tool="op_y", role="code")
     try:
         x.start()
-        assert x_stuck.wait(2), "X no llegó a atascarse con el turno"
+        assert x_stuck.wait(10), "X no llegó a atascarse con el turno"
         y.start()
-        y.join(4)  # 0,3 s de espera y de falta de progreso, más un tic de 1 s
+        y.join(10)  # 0,3 s de espera y de falta de progreso, más un tic de 1 s
         assert not y.is_alive(), "Y no se concedió forzada"
     finally:
         continue_x.set()
-        x.join(5)
-        y.join(5)
+        x.join(10)
+        y.join(10)
     line = _of_tool(_events(tmp_path), "op_y")
     assert line.get("turn_wait_ms", 0) > 0  # guarda: Y esperó turno de verdad
     assert line.get("turn") == "forced"
@@ -647,7 +654,7 @@ def test_queued_wait_sees_new_topology(with_topology, monkeypatch):
     def post_chat(_model, _payload):
         if threading.current_thread().name == "X":
             x_inside.set()
-            continue_x.wait(10)
+            continue_x.wait(30)
         return _ok()
 
     monkeypatch.setattr(server, "_post_chat", post_chat)
@@ -655,16 +662,16 @@ def test_queued_wait_sees_new_topology(with_topology, monkeypatch):
     y = _Thread("Y", server._chat, CODE, "s", "u", 8, tool="op_y", role="code")
     try:
         x.start()
-        assert x_inside.wait(2), "X no llegó al backend"
+        assert x_inside.wait(10), "X no llegó al backend"
         y.start()
         assert _wait(lambda: (e := _in_progress("op_y")) and e.get("local_wait") == "turn")
         with_topology.write_text(SEPARATE, encoding="utf-8")
-        y.join(4)  # varios tics de 1 s
+        y.join(10)  # varios tics de 1 s
         granted = not y.is_alive()
     finally:
         continue_x.set()
-        x.join(5)
-        y.join(5)
+        x.join(10)
+        y.join(10)
     assert granted, "la espera en cola sigue con la topología vieja mientras X no acabe"
 
 
