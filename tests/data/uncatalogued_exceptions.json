@@ -975,6 +975,30 @@
       "text": "Write",
       "kind": "machine_name",
       "reason": "nombre de la tool `Write` de Claude Code que el clasificador de lectura reconoce"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "su nombre literal y el número de línea donde empieza, como «nombre (línea N):»",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#504): lleva la pregunta a cada paso del troceado de `local_explain_code`; no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "solo lo de este fragmento que sirva para responder a la pregunta «{}»: una viñeta por cada función, clase o método que tenga que ver con ella, empezando por {}, seguido de lo que aporta a la respuesta. Si nada del fragmento sirve, responde solo «Nada relevante en este fragmento». No respondas todavía la pregunta",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#504): lleva la pregunta a cada paso del troceado de `local_explain_code`; no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Toma notas de este fragmento de código para responder a la pregunta «{}»:\n\n{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#504): lleva la pregunta a cada paso del troceado de `local_explain_code`; no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "{}Estas son notas EN ORDEN sobre los fragmentos de un mismo fichero de código, tomadas para responder a una pregunta. La lista de arriba es el inventario COMPLETO de sus definiciones de primer nivel; las notas pueden no cubrirlo entero.{} Responde a la pregunta «{}» con lo que digan las notas y la lista. Si no bastan para responderla, dilo claramente; no expliques el fichero entero ni enumeres sus partes:\n\n{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#504): lleva la pregunta a cada paso del troceado de `local_explain_code`; no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
     }
   ]
 }
