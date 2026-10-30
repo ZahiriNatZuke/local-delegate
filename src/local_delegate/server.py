@@ -7096,7 +7096,25 @@ def local_explain_code(
             names = _format_names(_TOP_LEVEL_NAME.findall(content), names_cap)
         if registered:
             names = f"{names}\n{registered}" if names else registered
-        if numbered:
+        # #504: with a question, the map asked for one bullet per definition (an index of the
+        # file), the regroup reused it and the reduce was told to explain the whole file, so the
+        # answer was an index and the question only reached a clause of the reduce system. Now
+        # every step carries the question: each chunk notes what answers it, and the reduce
+        # answers it or says the notes do not. Without a question, every prompt is unchanged.
+        if question:
+            where = (
+                "su nombre literal y el número de línea donde empieza, como «nombre (línea N):»"
+                if numbered
+                else "su nombre literal seguido de dos puntos"
+            )
+            map_format = (
+                f"solo lo de este fragmento que sirva para responder a la pregunta «{question}»: "
+                "una viñeta por cada función, clase o método que tenga que ver con ella, "
+                f"empezando por {where}, seguido de lo que aporta a la respuesta. Si nada del "
+                "fragmento sirve, responde solo «Nada relevante en este fragmento». No respondas "
+                "todavía la pregunta"
+            )
+        elif numbered:
             map_format = (
                 "una viñeta por cada función, clase o método de este fragmento, empezando por su "
                 "nombre literal y el número de línea donde empieza, como «nombre (línea N):», "
@@ -7111,10 +7129,30 @@ def local_explain_code(
         map_system = _guard(map_format) + lines_clause + language
 
         def _build_map(piece: str) -> str:
+            if question:
+                return (
+                    "Toma notas de este fragmento de código para responder a la pregunta "
+                    f"«{question}»:\n\n{piece}"
+                )
             return f"Toma notas de este fragmento de código:\n\n{piece}"
 
         def _build_reduce(joined: str) -> str:
             head = f"{names}\n\n" if names else ""
+            if question:
+                where = (
+                    " Las notas y la lista dan números de línea del fichero: consérvalos, y si "
+                    "se pregunta dónde está algo, responde con «nombre: línea»."
+                    if numbered
+                    else ""
+                )
+                return (
+                    f"{head}Estas son notas EN ORDEN sobre los fragmentos de un mismo fichero de "
+                    "código, tomadas para responder a una pregunta. La lista de arriba es el "
+                    "inventario COMPLETO de sus definiciones de primer nivel; las notas pueden no "
+                    f"cubrirlo entero.{where} Responde a la pregunta «{question}» con lo que digan "
+                    "las notas y la lista. Si no bastan para responderla, dilo claramente; no "
+                    f"expliques el fichero entero ni enumeres sus partes:\n\n{joined}"
+                )
             also = (
                 " y de los nombres que registran sus funciones; nómbralos todos en la explicación"
                 if registered
@@ -7168,7 +7206,9 @@ def local_explain_code(
                 else _code_pieces(content, budget)
             ),
             tokens_for=_explain_map_max_tokens,
-            postprocess=_add_not_mentioned,
+            # #504: an answer to a question is not an inventory; appending the registered names
+            # it does not mention would turn it back into one.
+            postprocess=None if question else _add_not_mentioned,
         )
 
     return _chat(

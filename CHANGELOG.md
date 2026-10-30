@@ -30,6 +30,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_explain_code` con `question` contesta la pregunta también en un fichero troceado**
+  (#504). Con un fichero de ~72 KB devolvía un índice del fichero sin contestar: cada trozo pedía
+  una viñeta por cada definición, el reagrupado repetía esa orden y el paso final decía «explica el
+  fichero completo», así que la pregunta solo llegaba a una cláusula del paso final. Ahora cada
+  paso la lleva: cada trozo anota solo lo que sirve para responderla (o «Nada relevante en este
+  fragmento»), y el paso final la responde o dice claramente que las notas no bastan. Con
+  pregunta, la respuesta ya no lleva añadida la línea de nombres registrados no mencionados. Sin
+  pregunta, los prompts y el resultado no cambian.
 - **El reagrupado de un documento troceado ya no repite rondas sin avanzar** (#497).
   `local_explain_code` con un fichero de ~48 000 caracteres tardaba unos 18 minutos y 65 llamadas:
   cada paso de reagrupado salía cortado, se partía y se reintentaba con el mismo tope, así que la
