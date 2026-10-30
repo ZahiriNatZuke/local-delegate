@@ -36,7 +36,7 @@ BACKUP_SUFFIX = ".local-delegate.bak"
 
 # `Bearer <algo>` donde <algo> no es una referencia `${…}`: un token escrito tal cual.
 _LITERAL_BEARER = re.compile(r"Bearer\s+(?!\$\{)\S+", re.IGNORECASE)
-_UNEXPANDED = re.compile(r"\$\{[^}]*\}")
+_UNEXPANDED = re.compile(r"\$\{([^}]*)\}")
 _TOKEN_ENV_NAMES = frozenset({"LOCAL_DELEGATE_WEB_TOKEN", "AUTH_HEADER", "AUTHORIZATION"})
 
 
@@ -215,10 +215,26 @@ def check_entry(path: Path, token: str | None) -> EntryReport:
         )
 
     texts = list(_strings(entry))
-    unexpanded = any(_UNEXPANDED.search(text) for text in texts)
+    env = entry.get("env")
+    # A `${VAR}` whose VAR the entry's own `env` gives a value is not unexpanded: `mcp-remote`
+    # substitutes it from that env (`--header Authorization:${AUTH_HEADER}` with `AUTH_HEADER` in
+    # `env`, its documented form). What Desktop never expands is a variable from nowhere (#511).
+    defined = (
+        {
+            key
+            for key, value in env.items()
+            if isinstance(value, str) and value.strip() and not _UNEXPANDED.search(value)
+        }
+        if isinstance(env, dict)
+        else set()
+    )
+    unexpanded = any(
+        match.group(1).strip() not in defined
+        for text in texts
+        for match in _UNEXPANDED.finditer(text)
+    )
     literal = bool(token) and any(token in text for text in texts)
     literal = literal or any(_LITERAL_BEARER.search(text) for text in texts)
-    env = entry.get("env")
     if isinstance(env, dict):
         literal = literal or any(
             key.upper() in _TOKEN_ENV_NAMES
