@@ -510,6 +510,14 @@ def _parse(status_code: int, body: bytes) -> Answer:
         raise Unusable(BAD_RESPONSE) from None
 
 
+#: The largest `part`/`parts` a heartbeat sends: the daemon takes small counts only.
+MAX_PARTS = 10_000
+
+
+def _small_count(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and 1 <= value <= MAX_PARTS
+
+
 def _lease_in(body: bytes) -> str | None:
     """The lease named by a (maybe partial) answer, if it can be read; `None` otherwise."""
     try:
@@ -626,6 +634,8 @@ class RemoteLease:
         self._released = False
         #: The server's `stalled_s` at the last queued answer, and when it came (REQ-024).
         self._stalled: tuple[float, float] | None = None
+        #: Whether the heartbeat sends `part`/`parts`: a daemon from before them answers 400.
+        self._send_parts = True
 
     # --- waiting -----------------------------------------------------------------------------
 
@@ -767,6 +777,11 @@ class RemoteLease:
         phase = state.get("phase")
         if phase in ("map", "reduce", "retry"):
             body["phase"] = phase
+        # The part of a chunk split again, while it lasts (`server._ChunkParts`).
+        part, parts = state.get("part"), state.get("parts")
+        if self._send_parts and _small_count(part) and _small_count(parts) and part <= parts:
+            body["part"] = part
+            body["parts"] = parts
         return body
 
     def _start_beating(self) -> None:
@@ -788,17 +803,24 @@ class RemoteLease:
         while not self._stop.wait(self.heartbeat_s):
             if self.lease_id is None:
                 return
+            body = self._beat_body()
             try:
-                answer = _post(
-                    self.url,
-                    HEARTBEAT_PATH,
-                    self._beat_body(),
-                    read_s=self._read_s(),
-                    should_stop=self._stop.is_set,
-                )
+                answer = self._send_beat(body)
             except _Stopped:
                 return
-            except (Unusable, _Busy, _Lost):
+            except Unusable:
+                if "part" not in body:
+                    continue
+                # A daemon from before `part`/`parts` refuses a field it does not know (400):
+                # beat again without them now, and never send them to it again.
+                self._send_parts = False
+                try:
+                    answer = self._send_beat(self._beat_body())
+                except _Stopped:
+                    return
+                except (Unusable, _Busy, _Lost):
+                    continue
+            except (_Busy, _Lost):
                 # Nothing to do now: the next beat tries again, and a daemon that comes back with
                 # the lease gone answers `expired`.
                 continue
@@ -810,6 +832,15 @@ class RemoteLease:
             elif answer.status in ("expired", "no_turn"):
                 self.lost.set()
                 return
+
+    def _send_beat(self, body: dict[str, Any]) -> Answer:
+        return _post(
+            self.url,
+            HEARTBEAT_PATH,
+            body,
+            read_s=self._read_s(),
+            should_stop=self._stop.is_set,
+        )
 
     # --- giving it back -------------------------------------------------------------------------
 
