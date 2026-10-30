@@ -12,6 +12,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import httpx2
 import pytest
@@ -2405,3 +2406,80 @@ def test_real_registry_old_block_name_in_settings_json_env_is_not_warned(monkeyp
     r = checks._probe_deprecated_names(checks.Context(home=tmp_path))
     assert r.status == checks.OK, r
     assert old not in f"{r.detail} {r.fix_hint}"
+
+
+# --- #511: outside Windows a literal token in a file only you can read is fine -------------------
+
+_UID = 1000
+
+
+def _posix_with_mode(monkeypatch, mode: int, uid: int = _UID):
+    """Pretend to be macOS with the Desktop config at `mode`, owned by `uid` (works on Windows CI)."""
+    monkeypatch.setattr(checks.sys, "platform", "darwin")
+    monkeypatch.setattr(checks.os, "getuid", lambda: _UID, raising=False)
+    monkeypatch.setattr(
+        checks, "_file_stat", lambda path: SimpleNamespace(st_mode=0o100000 | mode, st_uid=uid)
+    )
+
+
+def test_desktop_literal_token_in_a_private_file_outside_windows_is_ok(tmp_path, monkeypatch):
+    _posix_with_mode(monkeypatch, 0o600)
+    home = _with_desktop(make_home(tmp_path), _desktop_entry())
+    result = result_for("service.desktop_auth", _desktop_ctx(home))
+
+    assert result.status == checks.OK, result.detail
+    assert result.detail == i18n.t("doctor.probe.desktop_auth.literal_token_private")
+    _without_token(result)
+
+
+def test_desktop_literal_token_readable_by_others_outside_windows_warns(tmp_path, monkeypatch):
+    _posix_with_mode(monkeypatch, 0o644)
+    home = _with_desktop(make_home(tmp_path), _desktop_entry())
+    result = result_for("service.desktop_auth", _desktop_ctx(home))
+
+    assert result.status == checks.WARN, result.detail
+    assert result.fix_hint == i18n.t("doctor.probe.desktop_auth.fix_no_bridge")
+
+
+def test_desktop_literal_token_in_a_private_file_of_another_user_warns(tmp_path, monkeypatch):
+    _posix_with_mode(monkeypatch, 0o600, uid=_UID + 1)
+    home = _with_desktop(make_home(tmp_path), _desktop_entry())
+    result = result_for("service.desktop_auth", _desktop_ctx(home))
+
+    assert result.status == checks.WARN, result.detail
+
+
+def test_desktop_literal_token_on_windows_still_warns_whatever_the_mode(tmp_path, monkeypatch):
+    _posix_with_mode(monkeypatch, 0o600)
+    monkeypatch.setattr(checks.sys, "platform", "win32")
+    home = _with_desktop(make_home(tmp_path), _desktop_entry())
+    result = result_for("service.desktop_auth", _desktop_ctx(home))
+
+    assert result.status == checks.WARN, result.detail
+    assert result.fix_hint == checks.DESKTOP_INSTALL_HINT
+
+
+def test_desktop_unexpanded_variable_in_a_private_file_still_warns(tmp_path, monkeypatch):
+    _posix_with_mode(monkeypatch, 0o600)
+    monkeypatch.setenv("TOKEN_DESKTOP_TEST", "value-from-env")
+    home = _with_desktop(
+        make_home(tmp_path), _desktop_entry(header="Authorization: Bearer ${TOKEN_DESKTOP_TEST}")
+    )
+    result = result_for("service.desktop_auth", _desktop_ctx(home))
+
+    assert result.status == checks.WARN, result.detail
+    assert "${" in result.detail
+
+
+def test_desktop_literal_token_and_unexpanded_variable_in_a_private_file_warns(
+    tmp_path, monkeypatch
+):
+    """A private file does not excuse a `${…}` that Desktop never expands (review of #514)."""
+    _posix_with_mode(monkeypatch, 0o600)
+    entry = _desktop_entry()
+    entry.setdefault("env", {})["LOCAL_DELEGATE_WEB_TOKEN"] = "${TOKEN_DESKTOP_TEST}"
+    home = _with_desktop(make_home(tmp_path), entry)
+    result = result_for("service.desktop_auth", _desktop_ctx(home))
+
+    assert result.status == checks.WARN, result.detail
+    _without_token(result)

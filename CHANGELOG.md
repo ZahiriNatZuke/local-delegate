@@ -6,6 +6,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- `doctor` fuera de Windows ya no avisa del token escrito en la entrada de Claude Desktop cuando
+  el fichero es tuyo y solo tú puedes leerlo (`0600`): allí no hay puente y eso es lo que pide la
+  pista. Si el grupo u otros pueden leerlo, sigue el aviso (#511).
+- El turno remoto trata un 502, 503 o 504 sin respuesta del protocolo (un proxy inverso como
+  `tailscale serve` o nginx con el daemon de detrás caído) como daemon inalcanzable, no como
+  respuesta inválida: usa su caché y en `doctor` con `auto` queda como nota (#512).
+
 ## [0.47.0] - 2026-10-30
 
 El turno compartido entre la PC y la Mac queda completo (cambio SDD `concurrencia-pc-mac`, lotes 3
