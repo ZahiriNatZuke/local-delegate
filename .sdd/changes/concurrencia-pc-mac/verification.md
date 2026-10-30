@@ -248,3 +248,57 @@ REQ-032 y REQ-040..042.
 Un primer mutante de la guarda de topología (en `_remote_turn_url`) no hizo caer nada: `ensure`
 solo llama ahí sin topología, así que esa comprobación es redundante; se sustituyó por el mutante
 real («la URL explícita antes que la topología»), que sí cae.
+
+### Tras la revisión de seguridad y regresiones del PR #502
+
+- **`auto` solo descubre hosts privados**, decidido por el texto y sin DNS (REQ-021 corregido): IP
+  de loopback, RFC 1918, 100.64/10, ULA y link-local; `.ts.net`, `.local`, `.lan`, `.home.arpa`,
+  `.internal`; nombres de una sola etiqueta. Un backend público no crea el cliente ni manda nada, y
+  el evento no lleva `remote_turn`; `local_status` dice `no disponible (public_host)`. El
+  `BASE_URL` de la Mac (`https://own-pc.<tailnet>.ts.net:9292/v1`) queda dentro.
+- **Puerto filtrado:** `ConnectTimeout` es `unreachable` en el acto, sin reintento; sin un
+  `granted` previo en el proceso se recuerda 10 min (tras un `granted`, 60 s).
+- **Transporte:** `trust_env=False`; cada respuesta se lee con plazo total (conexión + lectura;
+  `release`, `RELEASE_READ_S` en total), tope de 64 KiB y la cancelación mirada entre fragmentos.
+  Una parada a mitad del primer `acquire` suelta el arrendamiento que nombra lo ya leído.
+- **Respuestas rotas:** cualquier excepción al leerlas es `bad_response`; una excepción en el
+  hilo de latido marca `lost`; `in_use` (16 × 128, `[A-Za-z0-9._:/@-]`), `lease`
+  (`[A-Za-z0-9_-]{1,128}`) y `heartbeat_s`/`stalled_s` no finitos, saneados.
+- **Tope local de saturación** a 2 × `QUEUE_MAX_WAIT_S` aunque el daemon diga `stalled_s: 0`.
+- **Guarda «a sí mismo»** también con `127.1`, cualquier 127/8, `0.0.0.0`, `localhost.` y
+  `*.localhost`; `TURN_URL` sin consulta, fragmento ni ruta; aviso (una vez y en `local_status`)
+  con `http://` a un host no privado.
+- **Tests:** los que dejaban un arrendamiento vivo lo sueltan en un `finally`, y el fixture `env`
+  falla si queda un hilo `remote-turn-heartbeat` (con `-n 2` caía
+  `test_the_memory_of_an_unusable_daemon_lasts_its_time`, `3 == 2`). Un `release` desde otro hilo
+  termina también un `acquire` en curso.
+- **Opcional no hecho:** el tiempo perdido probando un daemon inutilizable no va a ningún campo del
+  evento (`phases.turn_probe`); queda anotado para el lote 5.
+
+#### Control positivo de los tests nuevos
+
+| Mutante | Test que cae | Assert |
+|---|---|---|
+| `auto` sin la comprobación de host privado | `test_a_public_backend_with_auto_sends_nothing` | «the client was created for a public backend» |
+| `ConnectTimeout` como respuesta perdida (reintenta) | `test_a_filtered_port_costs_one_request_per_ten_minutes` | `2 == 1` |
+| Sin los 10 min de «nunca alcanzado» | el mismo | `3 == 1` |
+| El hilo de latido no se para al soltar | `test_granted_at_once_then_released` (cierre del fixture) | «heartbeat threads left alive» |
+| Sin `trust_env=False` | `test_the_environment_proxy_is_ignored` | el proxy recibió `POST … Authorization: Bearer …` |
+| Sin plazo total | `test_a_dripping_daemon_does_not_hold_acquire` | «acquire took 20.2 s» |
+| Sin tope de tamaño | `test_a_huge_answer_is_a_bad_response` | `DID NOT RAISE Unusable` |
+| Sin cancelación entre fragmentos | `test_a_dripping_daemon_respects_cancellation` | «the cancellation waited 4.1 s» |
+| `_answer` sin captura general | `test_broken_answers_degrade[position-inf]` | `OverflowError` |
+| `json.loads` sin captura general | `test_broken_answers_degrade[deep-json]` | `RecursionError` |
+| El hilo de latido muere en silencio | `test_an_exception_in_the_heartbeat_thread_marks_the_lease_lost` | «the heartbeat thread died in silence» |
+| `lease` sin validar | `test_broken_answers_degrade[lease-bad-chars]` | `DID NOT RAISE Unusable` |
+| `heartbeat_s` sin `isfinite` | `test_answers_are_cleaned` | `nan == 5.0` |
+| `in_use` sin sanear | `test_answers_are_cleaned` | `'bad model'` en `in_use` |
+| Sin tope local de saturación | `test_our_own_cap_saturates_when_the_daemon_says_zero` | «held the wait past our cap» |
+| Guarda por dirección solo con `_is_loopback_host` | `test_self_by_address_variants[127.1]` | `assert False` |
+| `_valid` acepta consulta, fragmento y ruta | `test_turn_url_with_query_fragment_or_path_is_refused[…?x=1]` | `'http://pc:9393/?x=1/' is None` |
+| Sin aviso de texto plano | `test_plaintext_to_a_public_host_warns_once` | `0 == 1` |
+| La parada a mitad del primer `acquire` no suelta | `test_should_stop_releases_the_queued_lease` | «the abandoned lease stayed at the daemon» |
+
+Un primer mutante del hilo (quitar `self._stop.set()` en `release`) no hizo caer nada: el hilo
+también sale porque `lease_id` queda vacío y porque `_post` mira la parada; el mutante válido es
+un hilo que no se para nunca.

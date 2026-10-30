@@ -980,10 +980,11 @@ def test_our_own_cap_saturates_when_the_daemon_says_zero(env, mac, monkeypatch):
     counting = Counting(answer=_answering(200, json.dumps(queued).encode()))
     remote_turn.set_client_factory(lambda: counting)
     op = _operation()
-    t0 = time.monotonic()
-    with pytest.raises(server.QueueSaturated):
-        op.ensure(LONG)
-    assert time.monotonic() - t0 < 3.0
+    waiting = _Thread(op.ensure, LONG)
+    waiting.start()
+    waiting.join(3.0)
+    assert not waiting.is_alive(), "a daemon saying `stalled_s: 0` held the wait past our cap"
+    assert isinstance(waiting.error, server.QueueSaturated), repr(waiting.error)
 
 
 @pytest.mark.parametrize(
