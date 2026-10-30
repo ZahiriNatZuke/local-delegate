@@ -123,8 +123,61 @@ def markdown_headings(text: str) -> list[Heading]:
     return headings
 
 
+# #499: the hunk header every unified diff carries (`@@@` with two `-` ranges in a combined diff),
+# and the first lines that open a patch.
+_HUNK = re.compile(r"^(@@@?) (?:-\d+(?:,\d+)? )+\+\d+(?:,\d+)? \1", re.MULTILINE)
+_GIT_DIFF = re.compile(r"^diff --(?:git|cc|combined) ")
+_GIT_COMMIT = re.compile(r"^commit [0-9a-f]{40}\b")  # `git show`, `git log -p`
+_FORMAT_PATCH = re.compile(r"^From [0-9a-f]{40} ")  # `git format-patch`
+_SVN_INDEX = re.compile(r"^Index: \S+$")
+_SVN_RULE = re.compile(r"^=+$")
+
+
+def _opens_a_patch(lines: list[str]) -> bool:
+    """¿Abren estas líneas (sin las vacías del principio) un parche? Cada forma exige su pareja.
+
+    Sin la pareja, una primera línea suelta (`--- draft ---`, `Index: list of topics`, prosa que
+    empieza por `diff -`) bastaba para que un Markdown con un hunk en una valla perdiera sus
+    secciones.
+    """
+    first = lines[0]
+    second = lines[1] if len(lines) > 1 else ""
+    if _GIT_DIFF.match(first) or _FORMAT_PATCH.match(first):
+        return True
+    if _GIT_COMMIT.match(first):
+        return any(_GIT_DIFF.match(line) for line in lines)
+    if first.startswith("--- "):
+        return second.startswith("+++ ")
+    if _SVN_INDEX.match(first):
+        return bool(_SVN_RULE.match(second))
+    if first.startswith("diff -"):  # `diff -u`, `diff -ru`
+        return second.startswith("--- ")
+    return False
+
+
+def is_unified_diff(text: str) -> bool:
+    """¿Es el texto un diff unificado? Empieza por una cabecera de parche y trae algún hunk `@@`.
+
+    Se mira el PRINCIPIO, no cualquier línea: un Markdown que enseña un diff dentro de una valla
+    sigue siendo un documento con sus títulos. Se saltan el BOM, las líneas vacías y las
+    `Only in …` con que `diff -r` abre a veces su salida.
+    """
+    lines = [line.rstrip("\r") for line in text.lstrip("\ufeff").splitlines()]
+    lines = [line for line in lines if line.strip()]
+    while lines and lines[0].startswith("Only in "):
+        lines.pop(0)
+    return bool(lines) and _opens_a_patch(lines) and _HUNK.search(text) is not None
+
+
 def detect(text: str) -> Structure | None:
-    """Nivel estructural (el más alto con al menos dos títulos) y sus títulos, o None."""
+    """Nivel estructural (el más alto con al menos dos títulos) y sus títulos, o None.
+
+    Un diff unificado no tiene estructura de documento (#499): sus líneas de contexto de un
+    `.md` (` ## [0.46.0]`, con un espacio delante) parecían títulos, y el resumen estructurado
+    metía los hunks de los ficheros siguientes dentro de esa «sección».
+    """
+    if is_unified_diff(text):
+        return None
     headings = markdown_headings(text)
     for level in range(1, 7):
         at_level = tuple(t for t in headings if t.level == level)

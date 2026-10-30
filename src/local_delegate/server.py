@@ -5919,6 +5919,16 @@ _STRUCTURED_NOTE = (
     "título en las últimas."
 )
 
+# #499: how to read a unified diff. Without it the model mixed hunks of different files and took
+# context lines (no `+`/`-`) for changes. Only when `sections.is_unified_diff` says so: the prompt
+# of every other input stays byte for byte.
+_DIFF_NOTE = (
+    " El contenido es un diff unificado: cada fichero empieza en una línea 'diff --git a/… b/…' "
+    "(o '--- '/'+++ '), las líneas que empiezan por '+' se añaden, las que empiezan por '-' se "
+    "quitan y las que empiezan por un espacio son contexto sin cambios. Atribuye cada cambio al "
+    "fichero de su cabecera y no describas el contexto como si fuera un cambio."
+)
+
 
 def _focus_clause(focus: str | None) -> str:
     """El enfoque, ya saneado, delimitado como dato dentro del prompt de sistema."""
@@ -6125,7 +6135,10 @@ def local_summarize(
 
     # Sin estructura (o con el interruptor apagado): el camino de siempre. Desde la 0.36.0 lleva
     # la orden de idioma (REQ-028); los corpus congelados lo declaran en `PROMPT_BOUNDARIES`.
-    system = _guard("un resumen en prosa clara", max_words) + extra
+    # #499: a diff never takes the structured path (`sections.detect` returns None) and carries
+    # the note on how to read it, before the language order, which stays last.
+    diff_note = _DIFF_NOTE if sections.is_unified_diff(content) else ""
+    system = _guard("un resumen en prosa clara", max_words) + diff_note + extra
 
     def _build(piece: str) -> str:
         return f"Resume el siguiente contenido:\n\n{piece}"
