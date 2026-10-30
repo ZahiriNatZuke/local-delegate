@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SCREENSHOT = ROOT / "docs" / "assets" / "dashboard.png"
 MANIFEST = ROOT / "docs" / "assets" / "dashboard.json"
 # Las dos capturas del README: la oscura (la de siempre) y la clara, que sirve `<picture>`.
-THEMES = {
+SCREENSHOT_BY_THEME = {
     "dark": ROOT / "docs" / "assets" / "dashboard.png",
     "light": ROOT / "docs" / "assets" / "dashboard-light.png",
 }
@@ -67,10 +67,10 @@ def _declared_version() -> str:
     return data["project"]["version"]
 
 
-@pytest.mark.parametrize("theme", sorted(THEMES))
+@pytest.mark.parametrize("theme", sorted(SCREENSHOT_BY_THEME))
 def test_the_manifest_describes_the_screenshot_in_the_repo(theme):
     """El hash del manifiesto es el del PNG real: nadie cambió la imagen por su cuenta."""
-    png = THEMES[theme]
+    png = SCREENSHOT_BY_THEME[theme]
     manifest = _manifest(png)
     assert png.is_file(), f"falta {png.relative_to(ROOT)}"
     blob = png.read_bytes()
@@ -88,10 +88,10 @@ def test_the_manifest_describes_the_screenshot_in_the_repo(theme):
     )
 
 
-@pytest.mark.parametrize("theme", sorted(THEMES))
+@pytest.mark.parametrize("theme", sorted(SCREENSHOT_BY_THEME))
 def test_the_screenshot_shows_the_current_project_version(theme):
     """La imagen luce el badge de versión: si el proyecto avanzó, la captura caducó."""
-    manifest = _manifest(THEMES[theme])
+    manifest = _manifest(SCREENSHOT_BY_THEME[theme])
     version = _declared_version()
     assert manifest["version"] == version, (
         f"la captura se generó con la {manifest['version']} y el proyecto va por la {version}, "
@@ -99,12 +99,12 @@ def test_the_screenshot_shows_the_current_project_version(theme):
     )
 
 
-@pytest.mark.parametrize("theme", sorted(THEMES))
+@pytest.mark.parametrize("theme", sorted(SCREENSHOT_BY_THEME))
 def test_the_screenshot_is_in_the_language_of_the_readme(theme):
     """Desde la 0.36.0 el panel sigue al idioma del navegador, y Chromium sin `locale` dice
     `en-US`: la captura salía en inglés en un README en español. El manifiesto guarda el
     `<html lang>` de la página capturada."""
-    assert _manifest(THEMES[theme]).get("lang") == "es", (
+    assert _manifest(SCREENSHOT_BY_THEME[theme]).get("lang") == "es", (
         "la captura del README (en español) no se generó con el panel en español.\n" + REGENERATE
     )
 
