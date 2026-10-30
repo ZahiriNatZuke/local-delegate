@@ -45,12 +45,6 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
-- **Una delegación que espera a que llama-swap cambie de modelo ya no sale como «reintentando»**
-  (#508). Si un trozo se había re-partido por salida cortada, la banda del mod y el panel decían
-  «reintentando» aunque lo que pasaba era la espera del cambio de modelo: `retry` tenía prioridad
-  sobre `waiting_backend`. Ahora la espera va primero (`queued` > `waiting_backend` > `retrying` >
-  `running`), y la fase `retry` se limpia en cuanto termina la re-partición del trozo, no cuando
-  empieza el siguiente.
 - **`local_explain_code` con `question` contesta la pregunta también en un fichero troceado**
   (#504). Con un fichero de ~72 KB devolvía un índice del fichero sin contestar: cada trozo pedía
   una viñeta por cada definición, el reagrupado repetía esa orden y el paso final decía «explica el
@@ -87,6 +81,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   un Markdown no bastan) nunca tiene estructura de documento: se resume en
   prosa, y el prompt le explica al modelo cómo leerlo (cabecera de cada fichero, `+`/`-` frente al
   contexto). El prompt del resto de entradas no cambia.
+- **Una delegación que espera a que llama-swap cambie de modelo ya no sale como «reintentando»**
+  (#508). Si un trozo se había re-partido por salida cortada, la banda del mod y el panel decían
+  «reintentando» aunque lo que pasaba era la espera del cambio de modelo: `retry` tenía prioridad
+  sobre `waiting_backend`. Ahora la espera va primero (`queued` > `waiting_backend` > `retrying` >
+  `running`), y la fase `retry` se limpia en cuanto termina la re-partición del trozo, no cuando
+  empieza el siguiente.
 
 ## [0.46.0] - 2026-10-29
 
