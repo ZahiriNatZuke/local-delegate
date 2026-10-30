@@ -1604,7 +1604,11 @@ def _probe_desktop_auth(ctx: Context) -> Result:
     if connection.status == WARN:
         return connection  # already broken: that comes first
     if report.literal_token:
-        if sys.platform != "win32" and _readable_only_by_owner(path):
+        if (
+            sys.platform != "win32"
+            and not report.unexpanded_variable
+            and _readable_only_by_owner(path)
+        ):
             return Result(OK, i18n.t("doctor.probe.desktop_auth.literal_token_private"))
         return Result(
             WARN, i18n.t("doctor.probe.desktop_auth.literal_token", path=path), desktop_fix_hint()

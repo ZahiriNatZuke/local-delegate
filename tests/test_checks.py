@@ -2469,3 +2469,17 @@ def test_desktop_unexpanded_variable_in_a_private_file_still_warns(tmp_path, mon
 
     assert result.status == checks.WARN, result.detail
     assert "${" in result.detail
+
+
+def test_desktop_literal_token_and_unexpanded_variable_in_a_private_file_warns(
+    tmp_path, monkeypatch
+):
+    """A private file does not excuse a `${…}` that Desktop never expands (review of #514)."""
+    _posix_with_mode(monkeypatch, 0o600)
+    entry = _desktop_entry()
+    entry.setdefault("env", {})["LOCAL_DELEGATE_WEB_TOKEN"] = "${TOKEN_DESKTOP_TEST}"
+    home = _with_desktop(make_home(tmp_path), entry)
+    result = result_for("service.desktop_auth", _desktop_ctx(home))
+
+    assert result.status == checks.WARN, result.detail
+    _without_token(result)
