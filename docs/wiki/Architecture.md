@@ -133,8 +133,9 @@ sería escribir código que ningún cliente negocia.
 ## Turno, afinidad y lentitud
 
 Tres piezas del daemon que solo se encienden con un llama-swap **local** cuya config se puede leer
-(`LLAMASWAP_CONFIG` y el extra `[llamaswap]`). Sin eso, o con un backend remoto, el daemon se
-comporta como antes de tenerlas.
+(`LLAMASWAP_CONFIG` y el extra `[llamaswap]`). Sin eso el daemon se comporta como antes de
+tenerlas. Un proceso con backend **remoto** (la Mac contra la PC) no tiene turno propio: pide el
+del daemon de la máquina del backend (ver «Turno remoto» abajo).
 
 ```text
 operación ──▶ turno (¿choca con lo que está en uso?) ──▶ plaza (MAX_CONCURRENT_REQUESTS) ──▶ backend
@@ -212,6 +213,47 @@ operación ──▶ turno (¿choca con lo que está en uso?) ──▶ plaza (M
   modelo pedido no estaba y había otro `ready`/`starting`, lo nombra (y la máquina que lo usaba, si
   la foto `inflight` de llama-swap la traía); si estaba `ready`, dice «backend ocupado»; sin foto,
   el texto de siempre. `error` y `error_class` no cambian; el evento lleva `read_timeout_cause`.
+- **Turno remoto (concurrencia PC+Mac, lotes 3 y 4).** Tres piezas, una cola:
+  - **Endpoint** (`web/turn_api.py`, solo en el daemon: `daemon.build_app` lo habilita y
+    `LOCAL_DELEGATE_TURN_SERVER=off` lo deja en 404). Tres `POST` síncronos, que corren en el
+    threadpool de Starlette y nunca en el bucle que sirve `/mcp`: `/api/turn/acquire`,
+    `/api/turn/heartbeat` y `/api/turn/release`. `PortToken` deja pasar sin su token **solo** esas
+    tres rutas exactas (igualdad de método y ruta, `auth.TURN_ROUTES`), y su propia dependencia
+    exige `Authorization: Bearer` con el token del puerto o la clave del backend, sin `Origin` y
+    con `Content-Type: application/json`; sin ningún secreto configurado, `403 turn_needs_secret`.
+    Cuerpo de 4 KB como mucho, modelos estrictos (`extra="forbid"`) y nombres saneados como
+    `config.clean_machine_name`. Los errores llevan solo un código, nunca eco de la petición.
+  - **Arrendamientos** (`turn_leases.py`, sin FastAPI). `acquire` mete la operación al final del
+    **mismo** `turn.Turn` que las locales, como `PendingRequest(id="<host>/<op>")` con el modelo
+    resuelto por la topología del daemon (sin topología, backend no loopback o modelo desconocido:
+    `no_turn`). Usa la API sin bloqueo del turno (`enqueue`, `poll`, `expire`, `remote_flight`,
+    `must_yield`) y responde en cuanto cambia el estado o a los `heartbeat_s` (espera larga
+    acotada, una por arrendamiento y 16 en total). Un arrendamiento caduca a los
+    `LOCAL_DELEGATE_TURN_LEASE_S` sin `acquire` ni latido; la caducidad se revisa en cada petición,
+    en cada tic de una espera local (`server.TURN_TICK_HOOKS`, sin bloquear) y con un hilo de
+    limpieza que vive mientras haya arrendamientos. Un concedido que debe ceder responde `yield` y,
+    si no cede a tiempo, caduca. Cada arrendamiento tiene su entrada `remote:<host>/<op>` en
+    `inflight.json` (con el `pid` del daemon y `host_via: "lease"`), y toda concesión, liberación,
+    caducidad o cambio de `in_backend` mueve `_note_queue_progress`, para que una espera local
+    detrás de la Mac no se dé por saturada mientras la cola avanza. Un remoto con `in_backend: true`
+    cuenta como llamada en vuelo para `LOCAL_DELEGATE_TURN_MAX_S`. El daemon no escribe evento por
+    una operación remota. Límites: `LOCAL_DELEGATE_TURN_MAX_LEASES` (16) y 8 por máquina (`429`).
+    `daemon_id` (nuevo en cada arranque) va en `daemon.json`, `/api/daemon` y cada respuesta.
+  - **Cliente** (`remote_turn.py`). `_OperationTurn.ensure` pide turno remoto cuando no hay
+    topología local y el backend es de otra máquina (o con `LOCAL_DELEGATE_TURN_URL` explícita); la
+    URL sale de `turn_url` (`auto` solo con un host privado). Contrato: `acquire` una vez y luego
+    `heartbeat` del mismo arrendamiento, en cola (uno detrás de otro) y concedido (un hilo
+    `daemon=True` cada `heartbeat_s`); `acquire` solo se repite tras `expired` o una respuesta
+    perdida. Antes de cada envío mira `yield` y `lost`; `release_slot` lo suelta en el mismo
+    `finally` que el turno local. Cliente `httpx2` propio: conexión 3 s, lectura `heartbeat_s + 5`,
+    sin redirecciones ni proxy del entorno (`trust_env=False`), respuestas de 64 KiB como mucho y
+    con plazo total. Cualquier fallo del daemon degrada a «sin turno» con el motivo en el evento
+    (`remote_turn`) y en una caché por URL y motivo; nunca hace fallar la delegación. Guarda «a sí
+    mismo» por dirección y puerto y por `daemon_id`. `local_status` añade la línea «Turno remoto» y
+    `doctor` lo prueba en el check `backend.topology` (`remote_turn.probe`, un `release` de un
+    arrendamiento que nadie tiene).
+  El detalle para el usuario (configuración, seguridad, degradación y rollback) está en
+  [Remote backend](Remote-backend.md#turno-común-pcmac).
 
 ## Módulos
 
@@ -228,6 +270,9 @@ operación ──▶ turno (¿choca con lo que está en uso?) ──▶ plaza (M
 | `chains.py` | Cadenas de respaldo por rol, resueltas con la configuración vigente, con el paso `loaded` (los alternativos aprobados que ya están cargados) y el texto «sin residente» / «residente: X» |
 | `topology.py` | Lee los grupos de `LLAMASWAP_CONFIG` en caliente y dice qué modelos chocan, con la regla de llama-swap; si no puede, el motivo de «sin topología» |
 | `turn.py` | El turno del daemon: núcleo puro (cola, concesión, E-1, concesión forzada) y su envoltura asíncrona |
+| `turn_leases.py` | Los arrendamientos del turno para operaciones de otra máquina: `acquire`/`heartbeat`/`release`, caducidad, su entrada en `inflight.json` y `daemon_id` |
+| `web/turn_api.py` | Las tres rutas `POST /api/turn/*` del daemon, con su autenticación y sus límites |
+| `remote_turn.py` | El cliente del turno remoto: descubrimiento (`turn_url`), credencial, arrendamiento de una operación (`RemoteLease`), degradación, la línea de `local_status` y la prueba de `doctor` |
 | `matrix.py` | Las celdas aprobadas de la afinidad (`CELLS`) y la elección pura `choose(grantable, role, observed, own)` |
 | `footprint.py` | La huella de un modelo en la config (GGUF, flags, prompt) con la que se comparan las celdas |
 | `pace.py` | Ritmo de referencia por modelo (mediana de `tok_s`) y la regla de `pace_rel`/`slow` |

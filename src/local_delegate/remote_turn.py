@@ -407,7 +407,11 @@ def _new_client() -> httpx2.Client:
 
 
 class _Transport:
-    """One client per process, created on the first remote request (never in local-only use)."""
+    """One client per process, created on the first request to a daemon's `/api/turn/*`.
+
+    A delegation creates it only when it asks for a remote turn (never in local-only use); `doctor`
+    also creates it for `probe`, the question it asks this machine's daemon or the other one.
+    """
 
     lock = threading.Lock()
     client: httpx2.Client | None = None
@@ -864,3 +868,81 @@ def status_line(*, remote_backend: bool) -> str | None:
     if plaintext_to_public(url):
         return i18n.t("mcp.status.remote_turn.active_plaintext", url=display_url(url))
     return i18n.t("mcp.status.remote_turn.active", url=display_url(url))
+
+
+# --- `doctor` ---------------------------------------------------------------------------------
+
+#: The lease `probe` gives back. No daemon hands it out (theirs are 43 characters of
+#: `token_urlsafe(32)`), so its `release` changes nothing and still walks the whole authentication.
+PROBE_LEASE = "doctor-probe"
+#: What `probe` answers when the daemon took the request.
+REACHABLE = "reachable"
+#: `probe` with the credential, but this machine has none to send.
+NO_CREDENTIAL = "no_credential"
+
+
+def probe(url: str, *, with_credential: bool = True) -> str:
+    """REQ-027 (`doctor`): does the daemon at `url` serve the turn, and does it take this request?
+
+    A `release` of `PROBE_LEASE`: idempotent, it touches no lease, no queue and no file. Answers
+    `REACHABLE`, `SELF` (the daemon is this machine's own, by `daemon_id`), `NO_CREDENTIAL` or a
+    reason of REQ-025 (`unreachable`, `unsupported`, `unauthorized`, `needs_secret`,
+    `bad_response`). Without the credential it tells the PC's `doctor` whether its daemon has a
+    secret: `unauthorized` (it has one) or `needs_secret` (it has none). Never raises, and never
+    says the credential.
+    """
+    headers: dict[str, str] = {}
+    if with_credential:
+        secret = credential()
+        if not secret:
+            return NO_CREDENTIAL
+        headers["Authorization"] = f"Bearer {secret}"
+    data = bytearray()
+    deadline = time.monotonic() + CONNECT_TIMEOUT_S + RELEASE_READ_S
+    try:
+        with _Transport.get().stream(
+            "POST",
+            url + RELEASE_PATH,
+            json={"lease": PROBE_LEASE},
+            headers=headers,
+            timeout=httpx2.Timeout(RELEASE_READ_S, connect=CONNECT_TIMEOUT_S),
+        ) as response:
+            status_code = response.status_code
+            for piece in response.iter_bytes():
+                data += piece
+                if len(data) > MAX_ANSWER_BYTES:
+                    return BAD_RESPONSE
+                if time.monotonic() > deadline:
+                    return UNREACHABLE
+    except Exception:  # whatever the transport raises: the daemon could not be asked
+        return UNREACHABLE
+    return _probe_verdict(status_code, bytes(data))
+
+
+def _probe_verdict(status_code: int, body: bytes) -> str:
+    """What a `release` answer says about the daemon (see `probe`)."""
+    if status_code != 200:
+        try:
+            _parse(status_code, body)
+        except Unusable as unusable:
+            return unusable.reason
+        except Exception:  # `_Busy`: `release` is never limited, so it is not the daemon we know
+            return BAD_RESPONSE
+        return BAD_RESPONSE
+    try:
+        data = json.loads(body)
+    except Exception:  # broken, too deep (`RecursionError`), not UTF-8: all unreadable
+        return BAD_RESPONSE
+    if not isinstance(data, dict):
+        return BAD_RESPONSE
+    version = data.get("v")
+    if not isinstance(version, int) or isinstance(version, bool):
+        return BAD_RESPONSE
+    if version > API_VERSION:
+        return UNSUPPORTED
+    if data.get("status") != "released":
+        return BAD_RESPONSE
+    daemon_id = data.get("daemon_id")
+    if isinstance(daemon_id, str) and daemon_id and daemon_id == local_daemon_id():
+        return SELF
+    return REACHABLE

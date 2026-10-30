@@ -250,6 +250,117 @@ launchctl kickstart -k "gui/$(id -u)/com.local-delegate.remote-env"
 test -n "$(launchctl getenv LOCAL_DELEGATE_API_KEY)" && echo "CODEX_GUI_KEY_OK"
 ```
 
+## Turno común PC+Mac
+
+Desde la versión que trae el turno remoto, las operaciones de la Mac y las de la PC hacen **una
+sola cola** en el daemon de la PC. Antes cada máquina iba por su lado: la Mac mandaba directo a
+`:9292` y, si la PC estaba con otro modelo, llama-swap lo cambiaba a mitad de una operación de la
+PC (o la operación de la PC se quedaba esperando dentro de llama-swap hasta el `read_timeout`).
+
+```text
+Mac: operación ──▶ POST /api/turn/acquire (daemon de la PC, :9393) ──▶ latido cada 5 s ──▶ :9292 ──▶ release
+PC:  operación ──▶ turno local ─────────────── mismo turno.Turn ─────────────────────────▶ :9292
+```
+
+Cómo funciona:
+
+- **Qué pide la Mac.** Antes de cada operación (y en cada salto a otro modelo), el proceso de la
+  Mac pide turno al daemon de la PC con `POST /api/turn/acquire`. Entra al final de la misma cola
+  que las operaciones de la PC, con un **arrendamiento** que mantiene con un latido
+  (`/api/turn/heartbeat`, cada `heartbeat_s` que dice el daemon: un tercio de
+  `LOCAL_DELEGATE_TURN_LEASE_S`, 5 s como mucho) y suelta al terminar (`/api/turn/release`),
+  también si la llamada se cancela o falla. Si la Mac deja de latir, el arrendamiento caduca a los
+  `LOCAL_DELEGATE_TURN_LEASE_S` (30 s) y lo que esperaba detrás sigue.
+- **Cesión.** Si una operación de la Mac tiene el turno desde hace `LOCAL_DELEGATE_TURN_YIELD_S`
+  y bloquea a otra que lleva lo mismo esperando, el daemon le contesta `yield` y la Mac lo suelta
+  antes de su siguiente trozo, igual que una operación local.
+- **Visible en la PC.** Mientras vive, cada arrendamiento tiene su entrada en «En curso» del panel
+  de la PC y en `/api/inflight`, con la máquina (`host`, `host_via: "lease"`) y su estado (en cola,
+  procesando o esperando al backend). El daemon de la PC **no** escribe evento de uso por una
+  operación de la Mac: la registra solo el log de la Mac (sin doble cuenta).
+- **Mientras espera**, el progreso de la llamada en la Mac dice «esperando turno en <máquina>», y la
+  espera respeta `LOCAL_DELEGATE_QUEUE_MAX_WAIT_S` igual que en local.
+
+### Configuración por máquina
+
+| Máquina | Qué hace falta | Variables |
+|---|---|---|
+| PC (daemon con el backend) | El daemon de la versión nueva y **un secreto** en su entorno: la clave del backend (`LOCAL_DELEGATE_API_KEY`, la que exige llama-swap) o el token del puerto (`LOCAL_DELEGATE_WEB_TOKEN`). Sin ninguno, el endpoint responde `403 turn_needs_secret` | `LOCAL_DELEGATE_TURN_SERVER` (`on`), `LOCAL_DELEGATE_TURN_LEASE_S` (30), `LOCAL_DELEGATE_TURN_MAX_LEASES` (16), `LOCAL_DELEGATE_TURN_YIELD_S` (120) |
+| Mac (cliente con backend remoto) | Nada nuevo: con `LOCAL_DELEGATE_BASE_URL` apuntando a la tailnet, `auto` pide turno a `https://<mismo host>:9393/` con la clave del backend que ya tiene | `LOCAL_DELEGATE_TURN_URL` (`auto`), `LOCAL_DELEGATE_REMOTE_WEB_TOKEN` (opcional) |
+
+Con la configuración de esta página (`LOCAL_DELEGATE_BASE_URL=https://pc.example-tailnet.ts.net:9292/v1`),
+la Mac pide turno a `https://pc.example-tailnet.ts.net:9393/`. `tailscale serve` ya publica `9393`.
+Si el puerto web de la PC no es el de la Mac, o hay un túnel `ssh -L` que hace parecer local al
+backend, pon la URL explícita: `LOCAL_DELEGATE_TURN_URL=https://pc.example-tailnet.ts.net:9393`.
+
+Para comprobarlo: `local_status` en la Mac dice «Turno remoto: activo en …», y
+`local-delegate doctor` lo prueba de verdad en la línea «turno del daemon» (ver
+[Integration & install](Integration-install.md)): en la Mac, que el daemon de la PC acepta su
+credencial; en la PC, que su daemon tiene secreto y qué modelos no podría nombrar una operación
+remota (el endpoint quita `:`, `/` y otros caracteres del nombre del modelo, y entonces responde
+`no_turn`; la arreglas con un alias sin esos caracteres en la config de llama-swap, usado como
+nombre en la Mac). La prueba de `doctor` es un `release` de un arrendamiento que no existe: no
+ocupa turno ni toca nada.
+
+### Seguridad
+
+- **Credencial.** La Mac manda `Authorization: Bearer` con `LOCAL_DELEGATE_REMOTE_WEB_TOKEN` (o el
+  Llavero, servicio `local-delegate-remote-web-token`) si existe y, si no, **la clave del backend**
+  (`LOCAL_DELEGATE_API_KEY`), la misma que ya manda a `:9292`. El daemon de la PC acepta su token
+  del puerto o esa clave, comparados en tiempo constante. Las **tres rutas** de `/api/turn/` son
+  accesibles con la clave del backend aunque no tengas el token del puerto: quien la tiene ya puede
+  usar la GPU directamente, así que el turno no le da nada nuevo. El resto del puerto sigue pidiendo
+  su token. Solo `Bearer` (ni `Basic` ni la cookie del panel, ni peticiones con `Origin`: un
+  navegador no puede usarlas). La credencial nunca se registra ni se devuelve.
+- **`auto` nunca pregunta a un host público.** Solo descubre hosts privados, decididos por el texto
+  y sin resolver DNS: IP de loopback, de red local, de la tailnet (`100.64.0.0/10`, `fd7a:…`) o
+  link-local; un nombre `.ts.net`, `.local`, `.lan`, `.home.arpa` o `.internal`; o un nombre corto
+  sin puntos. Con un backend público (`https://api.example.com/v1`) no se hace **ninguna** petición
+  y la clave no sale; `local_status` dice «no disponible (public_host)».
+- **Texto plano.** Con una URL explícita `http://` hacia un host que no es privado, el cliente avisa
+  una vez en el log de errores y lo dice en `local_status` y en `doctor`: la credencial viajaría
+  sin cifrar. Usa `https` o la dirección de la tailnet.
+- **Nunca a sí mismo.** Una URL de loopback con el propio puerto web, o un daemon con el mismo
+  `daemon_id` que el `daemon.json` local, es `self`: no se pide turno remoto.
+
+### Degradación
+
+El turno es una mejora, nunca un bloqueo:
+
+- **Daemon de la PC inutilizable** (no responde, versión anterior o `TURN_SERVER=off` → 404,
+  credencial rechazada → 401/403, respuesta ilegible): la operación **sigue sin turno, como
+  antes**, y el evento lo dice en `remote_turn` (`unreachable`, `unsupported`, `unauthorized`,
+  `needs_secret`, `bad_response`). El motivo va una vez por proceso al log de errores y se recuerda
+  60 s (10 min con 404/405, o si no responde y nunca dio turno en ese proceso), para no pagar el plazo en cada
+  operación.
+- **Daemon lleno** (`429`, más de 16 arrendamientos o de 8 de una máquina): la Mac **espera** y
+  reintenta, dentro de `LOCAL_DELEGATE_QUEUE_MAX_WAIT_S`; no se va sin turno.
+- **Arrendamiento perdido** (`expired`: la Mac dejó de latir o la PC reinició el daemon): la llamada
+  en curso termina, y antes del siguiente envío se vuelve a pedir turno al final de la cola.
+
+Versiones mixtas: con una Mac anterior, la Mac va directa a `:9292` como siempre; con una PC
+anterior, `acquire` da 404 y la Mac sigue sin turno (`remote_turn: "unsupported"`).
+
+### Rollback
+
+- **En la Mac:** `LOCAL_DELEGATE_TURN_URL=off` (en `~/.zshrc` y en el entorno de los clientes
+  gráficos, como `LOCAL_DELEGATE_API_KEY` arriba). No pide turno nunca y vuelve al comportamiento
+  anterior; `local_status` dice «Turno remoto: desactivado».
+- **En la PC:** `LOCAL_DELEGATE_TURN_SERVER=off` en el entorno del daemon y reiniciarlo. El
+  endpoint responde 404, como un daemon anterior, y las Macs siguen sin turno sin romper nada.
+
+### Topología recomendada
+
+Mientras `:9292` esté publicado en la tailnet, un cliente viejo o ajeno puede saltarse la cola. Por
+orden:
+
+1. **Ahora:** nada que cambiar; espera a que la Mac tenga la versión con el turno remoto.
+2. **Con la Mac actualizada y `remote_turn: "granted"` en su log:** restringe `:9292` en la ACL de
+   la tailnet a los dispositivos que usan local-delegate, para que nada ajeno lo use.
+3. **Más adelante, si se mide tráfico que se salta la cola:** que el daemon publique el backend
+   detrás de sí (una ruta que exija un arrendamiento vivo) y quitar `:9292` de `tailscale serve`
+   (`tailscale serve --https=9292 off`). No está hecho: va en otra tarjeta.
+
 ## Verificación
 
 Después de reiniciar el cliente:

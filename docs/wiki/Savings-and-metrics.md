@@ -134,6 +134,18 @@ con saltos pudo contaminarla un swap.
   "forced"` marca una concesión forzada por `LOCAL_DELEGATE_TURN_MAX_S`; `turn_yields` (solo
   si > 0) cuenta las veces que la operación cedió el turno entre dos trozos por
   `LOCAL_DELEGATE_TURN_YIELD_S`, y la espera de después suma en `turn_wait_ms`.
+- **Turno remoto** (concurrencia PC+Mac; solo en las operaciones de un proceso que pidió turno al
+  daemon de **otra** máquina, como la Mac): `remote_turn` dice cómo fue. `granted` (lo tuvo),
+  `forced` (concedido forzado por la red de seguridad de aquel daemon), `no_turn` (aquel daemon no
+  tiene turno para ese modelo: sin topología, o un nombre de modelo que no reconoce), `self` (la URL
+  era este mismo daemon) o el motivo por el que siguió **sin turno**: `unreachable`,
+  `unsupported` (daemon anterior o `TURN_SERVER=off`), `unauthorized`, `needs_secret` o
+  `bad_response`. La espera remota suma en `turn_wait_ms`, `turn_yields` cuenta también las
+  cesiones que pidió aquel daemon, y la fase `turn` de `concurrency.phases` la mide; si el daemon
+  no se pudo usar, no hay fase `turn` y solo `remote_turn` lo dice. Una operación local no lleva el
+  campo, y con `LOCAL_DELEGATE_TURN_URL=off` o un backend público tampoco. El daemon de la máquina
+  del backend no escribe evento por esas operaciones (sin doble cuenta): solo la ve en «En curso»,
+  como una entrada `remote:<host>/<op>` con `host_via: "lease"`.
 - **Afinidad** (ver [Tools](Tools.md#afinidad-usar-el-modelo-que-ya-está-cargado)): `routing:
   "affinity"` cuando respondió un alternativo ya cargado en lugar del modelo del rol, con
   `model_requested` (el del rol), `affinity_foreign_flight` (peticiones de otros clientes en vuelo
@@ -167,8 +179,9 @@ proceso y su propio log), cada entrada lleva:
   - `phases`: por cada fase que hubo, `{start, end, ms, n}`. `start` es la hora UTC (ISO, con
     milisegundos) del primer paso por la fase, `end` la del último, `ms` la suma de duraciones y `n`
     cuántas veces. Las fases:
-    - `turn`: la espera del **turno** del daemon. No aparece si la operación no pidió turno (backend
-      remoto, como la Mac, o sin topología).
+    - `turn`: la espera del **turno** del daemon, el propio o, con backend remoto, el del daemon de
+      la máquina del backend (`remote_turn`). No aparece si la operación no pidió turno (sin
+      topología, o un daemon remoto que no se pudo usar).
     - `slot`: la espera de una **plaza** de `LOCAL_DELEGATE_MAX_CONCURRENT_REQUESTS`.
     - `backend`: el POST al backend, de principio a fin. **Incluye la cola de llama-swap y la carga
       del modelo**: lo que el backend tardó en empezar no se distingue aquí de la inferencia; para
