@@ -354,6 +354,12 @@
     },
     {
       "file": "src/local_delegate/server.py",
+      "text": " El contenido es un diff unificado: cada fichero empieza en una línea 'diff --git a/… b/…' (o '--- '/'+++ '), las líneas que empiezan por '+' se añaden, las que empiezan por '-' se quitan y las que empiezan por un espacio son contexto sin cambios. Atribuye cada cambio al fichero de su cabecera y no describas el contexto como si fuera un cambio.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#499): cómo leer un diff unificado en `local_summarize`; no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+    },
+    {
+      "file": "src/local_delegate/server.py",
       "text": " (el texto antes de la primera sección)",
       "kind": "verbatim",
       "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
