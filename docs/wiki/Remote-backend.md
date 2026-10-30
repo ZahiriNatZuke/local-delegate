@@ -330,7 +330,10 @@ El turno es una mejora, nunca un bloqueo:
 - **Daemon de la PC inutilizable** (no responde, versión anterior o `TURN_SERVER=off` → 404,
   credencial rechazada → 401/403, respuesta ilegible): la operación **sigue sin turno, como
   antes**, y el evento lo dice en `remote_turn` (`unreachable`, `unsupported`, `unauthorized`,
-  `needs_secret`, `bad_response`). El motivo va una vez por proceso al log de errores y se recuerda
+  `needs_secret`, `bad_response`). Un 502, 503 o 504 cuyo cuerpo no es del protocolo del turno (un
+  proxy inverso como `tailscale serve` o nginx con el daemon de detrás caído) cuenta como
+  `unreachable`, no como `bad_response` (desde la 0.47.1, issue #512). El motivo va una vez por
+  proceso al log de errores y se recuerda
   60 s (10 min con 404/405, o si no responde y nunca dio turno en ese proceso), para no pagar el plazo en cada
   operación.
 - **Daemon lleno** (`429`, más de 16 arrendamientos o de 8 de una máquina): la Mac **espera** y
