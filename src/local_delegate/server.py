@@ -499,6 +499,79 @@ def _inflight_progress(entry_id: int, chunk: int) -> None:
     _inflight_mutate(_update)
 
 
+def _inflight_parts(entry_id: int, part: int | None, parts: int | None) -> None:
+    """Publish (or, with `None`, clear) which part of a chunk split again is being sent.
+
+    Decision of 2026-10-30: the chunk total (`chunks`) stays the chunks of the document; a chunk
+    split again (a cut output or a context overflow) says apart how far its split has got, as
+    «chunk 3/4 · part 2/3». `parts` counts the parts known so far of THAT chunk: it grows when a
+    part is split again. Best-effort, like the other inflight updates.
+    """
+    key = f"{os.getpid()}:{entry_id}"
+    clear = part is None or parts is None
+    part = None if clear else int(part)
+    parts = None if clear else int(parts)
+    _call_status(part=part, parts=parts)
+    _entry_beat_set(key, part=part, parts=parts)
+
+    def _update(data: dict) -> None:
+        entry = data.get(key)
+        if not isinstance(entry, dict):
+            return
+        if clear:
+            entry.pop("part", None)
+            entry.pop("parts", None)
+        else:
+            entry["part"] = part
+            entry["parts"] = parts
+
+    _inflight_mutate(_update)
+
+
+class _ChunkParts:
+    """How far the split of ONE chunk has got: the part in sending order and the parts known.
+
+    Split in `k`, a chunk has `k` parts; a part split again in `k` adds `k - 1`. Each part that
+    comes back moves the position on, so the next send shows the next number: it never goes back
+    and never passes the parts. Nothing is published for a chunk that is not split. The log does
+    not see this: `pieces` and `chunks` stay the chunks announced and the backend calls.
+    """
+
+    def __init__(self, entry_id: int) -> None:
+        self.entry_id = entry_id
+        self.part = 1
+        self.parts = 0
+        self._shown: tuple[int, int] | None = None
+
+    def split(self, k: int) -> None:
+        """The piece being sent (the chunk, or one of its parts) is split in `k` parts."""
+        if k < 2:
+            return
+        self.parts = k if self.parts == 0 else self.parts + k - 1
+        self._publish()
+
+    def next_part(self) -> None:
+        """A part of the split is about to be sent."""
+        self._publish()
+
+    def done(self) -> None:
+        """A piece came back without being split again: the next send is the next part."""
+        if self.parts:
+            self.part += 1
+
+    def end(self) -> None:
+        """The split of the chunk is over (or the next chunk starts): the parts go."""
+        if self._shown is not None:
+            _inflight_parts(self.entry_id, None, None)
+        self.part, self.parts, self._shown = 1, 0, None
+
+    def _publish(self) -> None:
+        shown = (min(self.part, self.parts), self.parts)
+        if shown != self._shown:
+            self._shown = shown
+            _inflight_parts(self.entry_id, *shown)
+
+
 _INFLIGHT_PHASES = frozenset({"map", "reduce", "retry"})
 
 
@@ -813,6 +886,10 @@ def inflight_snapshot() -> list[dict]:
             if v.get("chunks"):
                 entry["chunks"] = v.get("chunks")
                 entry["chunk"] = v.get("chunk")
+                # The part of a chunk split again, only while it lasts (`_ChunkParts`).
+                if v.get("part") and v.get("parts"):
+                    entry["part"] = v.get("part")
+                    entry["parts"] = v.get("parts")
                 # Issue #454: reduce/retry, so the panel does not stay on «piece n/n».
                 if v.get("phase"):
                     entry["phase"] = v.get("phase")
@@ -4614,8 +4691,10 @@ def _chat_chunked(
             halves = _chunk_text(piece, max(config.CHUNK_MIN_CHARS, len(piece) // 2))
             if len(halves) > 1:
                 _inflight_phase(entry_id, "retry")
+                split.split(len(halves))
                 parts: list[str] = []
                 for half in halves:
+                    split.next_part()
                     out = _process(half, depth + 1)
                     if out is None:
                         return None
@@ -4623,7 +4702,9 @@ def _chat_chunked(
                 if depth == 0:
                     # Issue #508: the split of this chunk is over; the rest is plain map again.
                     _inflight_phase(entry_id, "map")
+                    split.end()
                 return "".join(parts).strip()
+        split.done()
         if result.finish_reason == "length":
             truncated_out = True
         return _strip_think(result.text)
@@ -4631,6 +4712,7 @@ def _chat_chunked(
     entry_id = _inflight_start(
         tool=tool, model=model, source=source, chars_in=len(content), chunks=len(chunks)
     )
+    split = _ChunkParts(entry_id)
     # Turno por operación (REQ-003): todos los trozos bajo el mismo turno.
     op = _OperationTurn(entry_id, model, tool, role_name=role, explicit=explicit)
     # The role's parameters, resolved once for every chunk and step (REQ-009, REQ-012).
@@ -5100,6 +5182,7 @@ def _chat_map_reduce(
                     _discard_last()
                     return _map_parts(parts, depth, max_tokens)
                 truncated_pieces.append((current.chunk, piece))
+            split.done()
             return [out]
         if depth >= 2 or not _is_context_overflow(failed):
             return None
@@ -5112,8 +5195,10 @@ def _chat_map_reduce(
     def _map_parts(parts: list, depth: int, floor_tokens: int = 0) -> list[str] | None:
         # Only reached when a piece is split again (cut output or context overflow): #454.
         _inflight_phase(entry_id, "retry")
+        split.split(len(parts))
         outputs: list[str] = []
         for part in parts:
+            split.next_part()
             sub = _map_piece(part, depth + 1, floor_tokens)
             if sub is None:
                 return None
@@ -5121,6 +5206,7 @@ def _chat_map_reduce(
         if depth == 0:
             # Issue #508: the split of this chunk is over; the rest is plain map again.
             _inflight_phase(entry_id, "map")
+            split.end()
         return outputs
 
     # #497: the split retries of cut outputs (map and regroup) share one budget of backend calls
@@ -5176,6 +5262,7 @@ def _chat_map_reduce(
     entry_id = _inflight_start(
         tool=tool, model=model, source=source, chars_in=len(content), chunks=len(pieces)
     )
+    split = _ChunkParts(entry_id)
     # Turno por operación (REQ-003): map, reagrupados y reduce bajo el mismo turno.
     op = _OperationTurn(entry_id, model, tool, role_name=role, explicit=explicit)
     # The role's parameters, resolved once for every chunk and step (REQ-009, REQ-012).

@@ -87,6 +87,9 @@ class Beat:
     waiting_backend: dict[str, str] | bool | None = None
     chunk: int | None = None
     phase: str | None = None
+    #: The part of a chunk split again and the parts known of it; both, or neither.
+    part: int | None = None
+    parts: int | None = None
 
 
 @dataclass
@@ -106,6 +109,8 @@ class Lease:
     forced: bool = False
     position: int | None = None
     in_use: tuple[str, ...] = ()
+    #: `(part, parts)` last published for a chunk split again, or `None`.
+    parts: tuple[int, int] | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -243,6 +248,13 @@ class LeaseTable:
                 changes["chunk"] = int(beat.chunk)
             if beat.phase is not None:
                 changes["phase"] = None if beat.phase == "map" else beat.phase
+            # A beat without them says the split is over (or the client predates them). Written
+            # only when it changes: most beats carry none and touch nothing.
+            valid = beat.part is not None and beat.parts is not None and beat.part <= beat.parts
+            shown = (int(beat.part), int(beat.parts)) if valid else None
+            if shown != lease.parts:
+                lease.parts = shown
+                changes["part"], changes["parts"] = shown or (None, None)
             if lease.granted:
                 if beat.waiting_backend:
                     detail = beat.waiting_backend if isinstance(beat.waiting_backend, dict) else {}

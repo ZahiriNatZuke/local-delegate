@@ -155,6 +155,7 @@ async def _json_body(request: Request) -> dict:
 
 _Text = Annotated[StrictStr, Field(max_length=256)]
 _Count = Annotated[StrictInt, Field(ge=0, le=10**12)]
+_Part = Annotated[StrictInt, Field(ge=1, le=10_000)]
 
 
 _M = TypeVar("_M", bound=BaseModel)
@@ -183,6 +184,9 @@ class HeartbeatBody(_Strict):
     ) = None
     chunk: _Count | None = None
     phase: Literal["map", "reduce", "retry"] | None = None
+    # The part of a chunk split again, while it lasts: «chunk 3/4 · part 2/3».
+    part: _Part | None = None
+    parts: _Part | None = None
 
 
 class ReleaseBody(_Strict):
@@ -242,7 +246,12 @@ def heartbeat(body: Annotated[dict, Depends(_json_body)]) -> JSONResponse:
             if config.clean_machine_name(k)
         }
     beat = turn_leases.Beat(
-        in_backend=data.in_backend, waiting_backend=waiting, chunk=data.chunk, phase=data.phase
+        in_backend=data.in_backend,
+        waiting_backend=waiting,
+        chunk=data.chunk,
+        phase=data.phase,
+        part=data.part,
+        parts=data.parts,
     )
     return JSONResponse(turn_leases.table().heartbeat(data.lease, beat))
 
