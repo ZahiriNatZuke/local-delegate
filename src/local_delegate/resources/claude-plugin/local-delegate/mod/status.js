@@ -144,7 +144,15 @@ function statusProgress(item) {
     return null
   }
   const total = Math.floor(chunks)
-  return { chunk: Math.min(Math.floor(chunk), total), chunks: total }
+  const progress = { chunk: Math.min(Math.floor(chunk), total), chunks: total }
+  // A chunk split again (`part`/`parts`, only while it lasts): `3/4 · dividido en 3 · parte 2`.
+  const part = statusNumber(item.part)
+  const parts = statusNumber(item.parts)
+  if (part !== null && parts !== null && part >= 1 && parts >= 2) {
+    progress.parts = Math.floor(parts)
+    progress.part = Math.min(Math.floor(part), progress.parts)
+  }
+  return progress
 }
 
 // Which delegation the band names first, by its `state` in `/api/inflight` (issue #477): the one at
@@ -186,7 +194,10 @@ function statusTask(list) {
     more: items.length - 1,
     model,
     progress: statusProgress(oldest),
-    waiting: STATUS_WAITING_STATES.has(oldest.state) ? oldest.state : null,
+    // A split chunk already says it with its parts: no «dividiendo» on top of them.
+    waiting: STATUS_WAITING_STATES.has(oldest.state) && !(oldest.state === 'retrying' && statusProgress(oldest)?.parts)
+      ? oldest.state
+      : null,
   }
 }
 
@@ -299,7 +310,10 @@ function statusTaskPieces(task, moreKey = 'status.more', separator = STATUS_SEPA
     pieces.push({ text: task.tool })
   }
   if (task.progress) {
-    const progress = `${task.progress.chunk}/${task.progress.chunks}`
+    const split = task.progress.parts
+      ? `${separator}${t('status.part', { parts: task.progress.parts, part: task.progress.part })}`
+      : ''
+    const progress = `${task.progress.chunk}/${task.progress.chunks}${split}`
     pieces.push({ text: task.tool ? ` ${progress}` : progress })
   }
   const time = statusDuration(task.seconds)

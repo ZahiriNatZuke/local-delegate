@@ -426,6 +426,39 @@ test('bar: past a minute the time is in minutes, and a split delegation shows it
   }
 })
 
+// --- Decision of 2026-10-30: a chunk split again says how far its split has got ------------------
+
+test('bar: a chunk split again shows its parts, and no «dividiendo» on top', { options: QUIET }, async ($, on) => {
+  let items: any[] = []
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, inflight: () => inflight(items) }))
+  const cases: [any, string][] = [
+    [{ ...chunked(196.5, 4, 3), part: 2, parts: 3 }, 'local_summarize 3/4 · dividido en 3 · parte 2 · 3 min 16 s'],
+    // A nested split: the parts grow, the chunk total does not.
+    [{ ...chunked(196.5, 4, 3), part: 2, parts: 5, state: 'retrying', phase: 'retry' }, 'local_summarize 3/4 · dividido en 5 · parte 2 · 3 min 16 s'],
+    // Without parts (a daemon or client from before them), the state still says it.
+    [{ ...chunked(196.5, 4, 3), state: 'retrying', phase: 'retry' }, 'local_summarize 3/4 · dividiendo · 3 min 16 s'],
+    // A part past the parts is never drawn.
+    [{ ...chunked(196.5, 4, 3), part: 7, parts: 3 }, 'local_summarize 3/4 · dividido en 3 · parte 3 · 3 min 16 s'],
+  ]
+  for (const [item, shown] of cases) {
+    items = [item]
+    await $.session.measure(measureInput())
+    const { left, boxes, texts } = await bar($)
+    // (A longer task leaves less room: only the task and what follows it are compared.)
+    expect(left.slice(3)).toStartWith(`DELEGANDO  qwen3-8b · ${shown} · 3 delegaciones`)
+    expectNoEmptyRows(boxes, texts)
+  }
+})
+
+test('line: a chunk split again, in English', { options: { ...LINE, language: 'en' } }, async ($, on) => {
+  engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({
+    ...UP,
+    inflight: () => inflight([{ ...chunked(196.5, 4, 3), part: 2, parts: 3, state: 'retrying', phase: 'retry' }]),
+  }))
+  await $.session.measure(measureInput())
+  expect((await line($)).line).toContain(' · local_summarize 3/4 · split in 3 · part 2 · 3m 16s · ')
+})
+
 test('line: minutes and chunks in English', { options: { ...LINE, language: 'en' } }, async ($, on) => {
   engine(on, { LOCAL_DELEGATE_WEB_TOKEN: TOKEN }, () => ({ ...UP, inflight: () => inflight([chunked(196.5, 9, 7)]) }))
   await $.session.measure(measureInput())
@@ -939,7 +972,7 @@ test('line: a retrying one goes before a queued one, and says so, in English (is
       inflight([stated('local_extract', 300, 'queued'), stated('local_summarize', 75, 'retrying', { chunks: 9, chunk: 3, phase: 'retry' })]),
   }))
   await $.session.measure(measureInput())
-  expect((await line($)).line).toContain('· local_summarize 3/9 · retrying · 1m 15s +1 ·')
+  expect((await line($)).line).toContain('· local_summarize 3/9 · splitting · 1m 15s +1 ·')
 })
 
 test('desktop: a queued delegation says it waits (issue #477)', { options: QUIET }, async ($, on) => {
@@ -1006,7 +1039,7 @@ test('line: a retrying one goes before a waiting_backend one', { options: LINE }
       ]),
   }))
   await $.session.measure(measureInput())
-  expect((await line($)).line).toContain('· local_extract · reintentando · 20 s +1 ·')
+  expect((await line($)).line).toContain('· local_extract · dividiendo · 20 s +1 ·')
 })
 
 test('bar: the chip says WAITING FOR BACKEND with the requested model, in English', { options: { ...QUIET, language: 'en' } }, async ($, on) => {

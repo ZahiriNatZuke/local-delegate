@@ -61,11 +61,12 @@
   "status.minutes": "{m} min {s} s",
   "status.more": "+{n}",
   "status.more_title": "+{n} más",
+  "status.part": "dividido en {parts} · parte {part}",
   "status.reads_asks": "lecturas: pregunta",
   "status.reads_auto": "lecturas: resume solo",
   "status.reads_asks_title": "Lecturas: pregunta",
   "status.reads_auto_title": "Lecturas: resume solo",
   "status.queued": "en cola",
-  "status.retrying": "reintentando",
+  "status.retrying": "dividiendo",
   "status.waiting_backend": "esperando backend"
 }
