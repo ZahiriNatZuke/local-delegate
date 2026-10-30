@@ -25,7 +25,7 @@ jobs:
   # tienen que decir la misma versión. Olvidar el bump de server.json es el error clásico, y
   # cuesta mucho más deshacerlo después de publicar en PyPI (donde no se puede sobreescribir).
   check-version:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     outputs:
@@ -52,7 +52,7 @@ jobs:
 
   pypi:
     needs: check-version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     environment: pypi
     permissions:
       contents: read
@@ -97,7 +97,7 @@ jobs:
 
   mcp-registry:
     needs: [check-version, pypi]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       id-token: write # necesario para `mcp-publisher login github-oidc`

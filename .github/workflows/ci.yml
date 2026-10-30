@@ -30,7 +30,7 @@ jobs:
   # Cada paso del navegador lleva su propio límite, y el job suma esos límites más un margen
   # para el resto; `tests/test_ci_gate.py` lo ata.
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7
@@ -138,7 +138,12 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    # `matrix.os` keeps the `ubuntu-latest` label because it names the check (`test (ubuntu-latest)`),
+    # which the `protect-main` ruleset requires and `scripts/ci_gate.py` expects by name; the Linux
+    # runner itself is pinned to ubuntu-26.04 so the image never changes under us when GitHub moves
+    # the `latest` label (actions/runner-images#14748). Not `matrix.include`: `tests/test_ci_gate.py`
+    # refuses it. macOS and Windows keep their `-latest` labels.
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && 'ubuntu-26.04' || matrix.os }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -203,7 +208,7 @@ jobs:
   # panel con Playwright, que REQ-043 nombra expresamente y que con `CI=true` no puede saltarse.
   # En Windows `LANG` no decide el idioma (REQ-018 mira la interfaz), así que solo Linux discrimina.
   test-lang-es:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     env:
       LANG: es_ES.UTF-8
@@ -253,7 +258,7 @@ jobs:
       fail-fast: false
       matrix:
         python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
@@ -285,7 +290,7 @@ jobs:
   # caché limpia, y con una versión vieja cacheada este job pasaría siempre — sería un check
   # incapaz de fallar.
   install-smoke:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # El más holgado de los cuatro, y por una razón concreta: es el único que depende de PyPI
     # en vivo, donde un índice lento es una espera legítima y no un cuelgue.
     timeout-minutes: 10
@@ -357,7 +362,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    # Same as `test`: the label names the check, the Linux runner is pinned to ubuntu-26.04.
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && 'ubuntu-26.04' || matrix.os }}
     timeout-minutes: 15
     defaults:
       run:
@@ -551,7 +557,7 @@ jobs:
         run: uv run python scripts/check_plugin_install.py "$CLAUDE_BIN"
 
   secrets:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
@@ -584,7 +590,7 @@ jobs:
   # `actions: read` es todo lo que pide, y solo lee: nunca cancela ni relanza nada. Concederle
   # `actions: write` habría sido la otra vía, y se descartó por eso mismo.
   ci-gate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # Cubre cola + ejecución del job más lento, no solo su ejecución: el script espera hasta 25 min.
     timeout-minutes: 30
     permissions:

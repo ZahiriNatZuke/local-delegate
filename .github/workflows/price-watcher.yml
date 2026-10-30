@@ -39,7 +39,7 @@ concurrency:
 
 jobs:
   prices:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # Cubre la espera a los checks del PR, que el script corta a los 45 min.
     timeout-minutes: 60
     steps:
@@ -55,7 +55,7 @@ jobs:
           WATCHER_DRY_RUN: ${{ inputs.dry_run }}
 
   limits:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
