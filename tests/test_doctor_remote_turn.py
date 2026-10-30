@@ -145,6 +145,10 @@ def test_probe_without_a_credential_to_send_asks_nothing(pc, monkeypatch):
         (403, b'{"error": "origin_not_allowed"}', remote_turn.UNAUTHORIZED),
         (429, b"", remote_turn.BAD_RESPONSE),
         (500, b"", remote_turn.BAD_RESPONSE),
+        (502, b"<html>Bad Gateway</html>", remote_turn.UNREACHABLE),
+        (503, b"", remote_turn.UNREACHABLE),
+        (504, b"<html>Gateway Timeout</html>", remote_turn.UNREACHABLE),
+        (503, b'{"v": 1, "status": "released"}', remote_turn.BAD_RESPONSE),
     ],
 )
 def test_probe_verdicts(tmp_path, monkeypatch, status_code, body, verdict):

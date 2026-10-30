@@ -161,6 +161,7 @@
   "doctor.probe.desktop_auth.fix_no_bridge": "outside Windows there is no bridge for the Claude Desktop chat: keep that file readable only by your user",
   "doctor.probe.desktop_auth.literal": "written literally in its configuration",
   "doctor.probe.desktop_auth.literal_token": "the Claude Desktop entry in {path} has the token written as is (not shown)",
+  "doctor.probe.desktop_auth.literal_token_private": "token written in the entry; file readable only by you (there is no bridge outside Windows)",
   "doctor.probe.desktop_auth.no_entry": "Claude Desktop has no {server} entry",
   "doctor.probe.desktop_auth.no_header": "the daemon port requires a token and Claude Desktop comes in without an authorization header: its local_* tools will answer 401",
   "doctor.probe.desktop_auth.not_configured": "Claude Desktop is not configured on this machine",

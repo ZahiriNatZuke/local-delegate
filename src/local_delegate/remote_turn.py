@@ -485,6 +485,10 @@ def _answer(data: dict) -> Answer:
     )
 
 
+#: Gateway errors: with a body that is not the turn protocol, the daemon is not there (#512).
+_GATEWAY_DOWN = (502, 503, 504)
+
+
 def _parse(status_code: int, body: bytes) -> Answer:
     """An answer of the daemon, or the exception that says what to do with it."""
     if status_code in (404, 405):
@@ -500,6 +504,9 @@ def _parse(status_code: int, body: bytes) -> Answer:
     if status_code == 403:
         error = data.get("error") if isinstance(data, dict) else None
         raise Unusable(NEEDS_SECRET if error == "turn_needs_secret" else UNAUTHORIZED)
+    if status_code in _GATEWAY_DOWN and not (isinstance(data, dict) and "v" in data):
+        # A reverse proxy (tailscale serve, nginx) whose daemon behind it is down (#512).
+        raise Unusable(UNREACHABLE)
     if status_code != 200 or not isinstance(data, dict):
         raise Unusable(BAD_RESPONSE)
     try:

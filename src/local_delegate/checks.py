@@ -1513,6 +1513,23 @@ def desktop_fix_hint() -> str:
     return i18n.t("doctor.probe.desktop_auth.fix_no_bridge")
 
 
+def _file_stat(path: Path) -> os.stat_result | None:
+    """`os.stat` of the file, or None if it cannot be read (tests replace it)."""
+    try:
+        return os.stat(path)
+    except OSError:
+        return None
+
+
+def _readable_only_by_owner(path: Path) -> bool:
+    """POSIX: the file belongs to the current user and neither group nor others can touch it."""
+    getuid = getattr(os, "getuid", None)
+    st = _file_stat(path)
+    if getuid is None or st is None:
+        return False
+    return st.st_mode & 0o077 == 0 and st.st_uid == getuid()
+
+
 def _probe_desktop_bridge(ctx: Context, entry: dict) -> Result:
     """The bridge entry: its executable exists and the token the bridge reads opens the port."""
     command = entry.get("command") or ""
@@ -1587,6 +1604,8 @@ def _probe_desktop_auth(ctx: Context) -> Result:
     if connection.status == WARN:
         return connection  # already broken: that comes first
     if report.literal_token:
+        if sys.platform != "win32" and _readable_only_by_owner(path):
+            return Result(OK, i18n.t("doctor.probe.desktop_auth.literal_token_private"))
         return Result(
             WARN, i18n.t("doctor.probe.desktop_auth.literal_token", path=path), desktop_fix_hint()
         )
