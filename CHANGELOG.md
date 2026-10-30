@@ -45,6 +45,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_explain_code` comprueba los números de línea que cita** (#460). Con `path`, el modelo ve
+  cada línea con su número y aun así citaba líneas corridas: para un `focus()` llamado en 233, 270,
+  328 y 336 respondió 228/233/236/270. Ahora, con `path` y `question`, el servidor revisa al final
+  la respuesta contra el fichero entero: las líneas citadas (`línea N`, `líneas N-M`, `L123`,
+  `nombre: 123`, `228/233/236`) que no contienen ninguno de los identificadores a los que se
+  refieren salen en un aviso, y cada identificador de código de la pregunta (entre comillas
+  invertidas, con `()`, camelCase o snake_case, de 3 caracteres o más y sin los comunes como
+  `this`) recibe una línea «Apariciones de `focus` en el fichero (búsqueda exacta): 233, 270, 328,
+  336», con un tope de 20 y «…y N más». La prosa del modelo no se toca. Vale igual para un fichero
+  troceado: la comprobación va después del paso final. Con `code` o sin `question`, la salida no
+  cambia.
 - **`local_explain_code` con `question` contesta la pregunta también en un fichero troceado**
   (#504). Con un fichero de ~72 KB devolvía un índice del fichero sin contestar: cada trozo pedía
   una viñeta por cada definición, el reagrupado repetía esa orden y el paso final decía «explica el
