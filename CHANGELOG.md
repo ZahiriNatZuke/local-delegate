@@ -6,6 +6,23 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.47.1] - 2026-10-30
+
+Versión de arreglos para la pareja PC+Mac, los dos visibles sobre todo en la Mac: `doctor` deja de
+avisar del token de Claude Desktop cuando el fichero solo lo lee su dueño, y el turno remoto toma
+un 502, 503 o 504 de un proxy con el daemon caído por lo que es, un daemon inalcanzable. Además, el
+cambio SDD `concurrencia-pc-mac` recoge la verificación en vivo PC+Mac del turno compartido con la
+0.47.0 (#513), y el CI de Linux queda fijado a `ubuntu-26.04` (#515), sin efecto para quien lo usa.
+
+### Cómo actualizar
+
+- **En la PC y en la Mac:** ejecuta `local-delegate update` o, si instalaste con versión fija,
+  reinstala con `uv tool install --force --no-cache "local-delegate-mcp[llamaswap]==0.47.1"` (con
+  tus extras). Reinicia el daemon y haz `/mcp` en Claude Code (o abre una sesión nueva): las
+  sesiones abiertas siguen con el servidor MCP de la 0.47.0 hasta entonces.
+- **Conviene actualizar la Mac:** los dos arreglos se notan allí (`doctor` fuera de Windows y el
+  turno remoto contra el daemon de la PC). No hay cambios de configuración ni variables nuevas.
+
 ### Corregido
 
 - `doctor` fuera de Windows ya no avisa del token escrito en la entrada de Claude Desktop cuando
@@ -4084,7 +4101,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.1...HEAD
+[0.47.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.0...v0.47.1
 [0.47.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.46.0...v0.47.0
 [0.46.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.45.1...v0.46.0
 [0.45.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.45.0...v0.45.1
