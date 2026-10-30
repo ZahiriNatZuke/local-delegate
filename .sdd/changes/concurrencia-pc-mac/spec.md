@@ -234,6 +234,15 @@ después el turno remoto con la cesión entre trozos.
   `config.clean_machine_name` quita (`:`, `/`…): el endpoint los sanea y responde `no_turn`, así
   que esas operaciones remotas irían sin turno. La parte de `doctor` va en el lote 5 (añadir un
   check cambia el número de checks que fijan tres tests existentes y la wiki).
+  *Decisión de la revisión del #503* (no cambiar el veredicto ni el código de salida a quien no
+  usa la pareja PC+Mac): va dentro del check «turno del daemon», sin añadir otro. En la PC, un
+  endpoint **sin secreto es una nota**, no WARN, que dice cómo ponerlo o apagarlo
+  (`TURN_SERVER=off`); el WARN de los modelos con `:` o `/` solo sale con secreto, y con el daemon
+  mudo no se pregunta. En la Mac, con `auto`, `unreachable`, `unsupported` y `no_credential` (que
+  también da un backend privado que no es nuestro) son una nota con el veredicto de antes y la
+  pista `LOCAL_DELEGATE_TURN_URL=off`; con una URL explícita son WARN. `unauthorized`,
+  `needs_secret` y `bad_response` son WARN siempre. Con un host público en `auto` el texto queda
+  idéntico al de antes, y el aviso de texto plano sale con cualquier respuesta.
 
 #### Reparto justo
 

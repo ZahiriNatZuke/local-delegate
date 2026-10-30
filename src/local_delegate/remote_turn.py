@@ -407,7 +407,11 @@ def _new_client() -> httpx2.Client:
 
 
 class _Transport:
-    """One client per process, created on the first remote request (never in local-only use)."""
+    """One client per process, created on the first request to a daemon's `/api/turn/*`.
+
+    A delegation creates it only when it asks for a remote turn (never in local-only use); `doctor`
+    also creates it for `probe`, the question it asks this machine's daemon or the other one.
+    """
 
     lock = threading.Lock()
     client: httpx2.Client | None = None

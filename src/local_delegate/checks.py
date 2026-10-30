@@ -1958,15 +1958,18 @@ def _probe_topology(ctx: Context) -> Result:
     backend propio, si el daemon de la otra le da turno; en la del backend, si su endpoint tiene
     secreto y qué modelos no podría reconocer por su nombre.
     """
-    result, config_path = _local_turn(ctx)
-    return _with_remote_turn(ctx, result, config_path)
+    status, why = ctx.llamaswap_daemon()
+    result, config_path = _local_turn(ctx, status, why)
+    return _with_remote_turn(ctx, result, config_path, daemon_silent=status is None)
 
 
-def _local_turn(ctx: Context) -> tuple[Result, Path | None]:
-    """El veredicto del turno de esta máquina y la config de llama-swap de la que sale, si hay."""
+def _local_turn(ctx: Context, status, why: str) -> tuple[Result, Path | None]:
+    """El veredicto del turno de esta máquina y la config de llama-swap de la que sale, si hay.
+
+    `status, why` es lo que contestó `ctx.llamaswap_daemon()`, preguntado una sola vez.
+    """
     from . import server, topology
 
-    status, why = ctx.llamaswap_daemon()
     if status is not None and status.turn_active is not None:
         config_path = Path(status.config_path) if status.config_path else ctx.config_path
         if status.turn_active:
@@ -2038,18 +2041,28 @@ def _appended(result: Result, status: str, note: str, fix_hint: str = "") -> Res
     return Result(status, f"{result.detail}; {note}", fix_hint or result.fix_hint)
 
 
-def _with_remote_turn(ctx: Context, result: Result, config_path: Path | None) -> Result:
+def _with_remote_turn(
+    ctx: Context, result: Result, config_path: Path | None, *, daemon_silent: bool = False
+) -> Result:
     """REQ-027: el turno remoto encima del veredicto del turno local.
+
+    Solo avisa (`warn`) cuando hay un turno remoto que alguien quiso y no funciona; a quien no usa
+    la pareja PC+Mac no le cambia el veredicto ni el código de salida (revisión del #503).
 
     - **Cliente** (backend en otra máquina, o `LOCAL_DELEGATE_TURN_URL` explícita y sin turno
       local, el caso del túnel `ssh -L`): con la URL que usaría una delegación (`remote_turn`),
-      se le pregunta al daemon de la otra máquina con la credencial de esta. `ok` si da turno;
-      `warn` con el motivo si no. Con `TURN_URL=off` el veredicto no cambia.
-    - **Servidor** (backend en loopback con turno activo): se le pregunta al daemon de ESTA
-      máquina sin credencial. `needs_secret` es `warn`: ninguna otra máquina podrá pedirle turno.
-      Si tiene secreto, además, `warn` con los modelos que una operación remota no podría nombrar
-      (`_models_without_remote_turn`). Un daemon que no responde o que no sirve el endpoint no
-      añade nada: de eso ya hablan `service.daemon` y el propio turno.
+      se le pregunta al daemon de la otra máquina con la credencial de esta. `ok` si da turno.
+      Si no: con una URL explícita, `warn` con el motivo; con `auto`, los motivos que también da
+      un backend privado que no es nuestro (ollama o llama-swap en la LAN: `unreachable`,
+      `unsupported`, `no_credential`) son una nota con el veredicto de antes, y los que delatan un
+      daemon nuestro mal configurado (`unauthorized`, `needs_secret`, `bad_response`), `warn`.
+      `http://` hacia un host que no es privado es `warn` con cualquier respuesta. Con
+      `TURN_URL=off` o un host público en `auto` el veredicto queda idéntico.
+    - **Servidor** (backend en loopback con turno activo y el daemon contestando): se le pregunta
+      al daemon de ESTA máquina sin credencial. Sin secreto, una nota (nadie más puede pedirle
+      turno; es lo normal con una sola máquina). Con secreto, `warn` con los modelos que una
+      operación remota no podría nombrar (`_models_without_remote_turn`). Un daemon mudo
+      (`daemon_silent`) no se vuelve a preguntar; uno viejo o con el endpoint apagado no añade nada.
 
     Las dos preguntas son un `release` de un arrendamiento que nadie tiene (`remote_turn.probe`):
     no ocupan turno ni tocan ningún fichero.
@@ -2059,35 +2072,51 @@ def _with_remote_turn(ctx: Context, result: Result, config_path: Path | None) ->
     remote_backend = not server._backend_on_loopback()
     if remote_backend or (remote_turn.explicit_url() and result.status != OK):
         return _client_remote_turn(ctx, result, remote_backend=remote_backend)
-    if result.status == OK:
+    if result.status == OK and not daemon_silent:
         return _server_remote_turn(ctx, result, config_path)
     return result
+
+
+def _soft_with_auto() -> frozenset[str]:
+    """Motivos que con `auto` son una nota: también los da un backend privado que no es nuestro."""
+    from . import remote_turn
+
+    return frozenset({remote_turn.UNREACHABLE, remote_turn.UNSUPPORTED, remote_turn.NO_CREDENTIAL})
 
 
 def _client_remote_turn(ctx: Context, result: Result, *, remote_backend: bool) -> Result:
     from . import remote_turn
 
-    if remote_turn._auto_public(remote_backend=remote_backend):
-        note = i18n.t("doctor.probe.topology.remote_public")
-        return _appended(result, result.status, note, remote_turn_hint(remote_turn.PUBLIC_HOST))
     url = remote_turn.turn_url(remote_backend=remote_backend)
     if url is None:
         if remote_turn.explicit_url():
             note = i18n.t("doctor.probe.topology.remote_bad_url")
             return _appended(result, WARN, note, remote_turn_hint(remote_turn.BAD_URL))
-        return result  # `off`, or `auto` without a daemon to name: nothing is asked
+        return result  # `off`, or `auto` with a local or public backend: nothing is asked
     shown = remote_turn.display_url(url)
     verdict = remote_turn.SELF if remote_turn.points_to_itself(url) else ctx.turn_probe(url, True)
     if verdict == remote_turn.SELF:
-        note = i18n.t("doctor.probe.topology.remote_self", url=shown)
-        return _appended(result, result.status, note)
+        return _appended(
+            result, result.status, i18n.t("doctor.probe.topology.remote_self", url=shown)
+        )
+    hints: list[str] = []
     if verdict == remote_turn.REACHABLE:
-        if remote_turn.plaintext_to_public(url):
-            note = i18n.t("doctor.probe.topology.remote_plaintext", url=shown)
-            return _appended(result, WARN, note, remote_turn_hint("plaintext"))
-        return _appended(result, OK, i18n.t("doctor.probe.topology.remote_active", url=shown), "")
-    note = i18n.t("doctor.probe.topology.remote_unusable", url=shown, reason=verdict)
-    return _appended(result, WARN, note, remote_turn_hint(verdict))
+        status, note = OK, i18n.t("doctor.probe.topology.remote_active", url=shown)
+    elif verdict in _soft_with_auto() and not remote_turn.explicit_url():
+        status = result.status
+        note = i18n.t("doctor.probe.topology.remote_unusable_auto", url=shown, reason=verdict)
+    else:
+        status = WARN
+        note = i18n.t("doctor.probe.topology.remote_unusable", url=shown, reason=verdict)
+        hints.append(remote_turn_hint(verdict))
+    out = _appended(result, status, note, "; ".join(hints) if status == WARN else "")
+    if status == OK:
+        out = Result(OK, out.detail, "")
+    if remote_turn.plaintext_to_public(url):
+        hints.append(remote_turn_hint("plaintext"))
+        plaintext = i18n.t("doctor.probe.topology.remote_plaintext", url=shown)
+        out = Result(WARN, f"{out.detail}; {plaintext}", "; ".join(hints))
+    return out
 
 
 def _local_daemon_url() -> str:
@@ -2102,10 +2131,10 @@ def _server_remote_turn(ctx: Context, result: Result, config_path: Path | None) 
 
     verdict = ctx.turn_probe(_local_daemon_url(), False)
     if verdict == remote_turn.NEEDS_SECRET:
-        note = i18n.t("doctor.probe.topology.server_needs_secret")
-        return _appended(result, WARN, note, remote_turn_hint(remote_turn.NEEDS_SECRET))
+        # A note, not a warning: with one machine an endpoint without a secret is the normal case.
+        return _appended(result, result.status, i18n.t("doctor.probe.topology.server_no_secret"))
     if verdict != remote_turn.UNAUTHORIZED:
-        return result  # down, old, `TURN_SERVER=off` or not ours: the endpoint is not in play
+        return result  # old, `TURN_SERVER=off` or not ours: the endpoint is not in play
     names = _models_without_remote_turn(config_path)
     if names:
         note = i18n.t("doctor.probe.topology.server_unnamed_models", models=", ".join(names))

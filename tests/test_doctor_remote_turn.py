@@ -16,6 +16,7 @@ leaves the process.
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
@@ -203,6 +204,11 @@ def _ctx(tmp_path, probe, **kwargs) -> checks.Context:
     return checks.Context(home=tmp_path, turn_probe=probe, **kwargs)
 
 
+def _before_the_pr(ctx: checks.Context) -> checks.Result:
+    """The verdict of the check as `main` gave it: the local turn alone, nothing asked."""
+    return checks._local_turn(ctx, *ctx.llamaswap_daemon())[0]
+
+
 def test_client_with_a_turn_is_ok_and_asks_the_tailnet_daemon_with_the_credential(mac):
     probe = Recorder(remote_turn.REACHABLE)
     r = checks._probe_topology(_ctx(mac, probe))
@@ -211,18 +217,40 @@ def test_client_with_a_turn_is_ok_and_asks_the_tailnet_daemon_with_the_credentia
     assert i18n.t("doctor.probe.topology.remote_active", url=TAILNET_TURN) in r.detail
 
 
-@pytest.mark.parametrize(
-    "reason",
-    [
-        remote_turn.UNREACHABLE,
-        remote_turn.UNSUPPORTED,
-        remote_turn.UNAUTHORIZED,
-        remote_turn.NEEDS_SECRET,
-        remote_turn.BAD_RESPONSE,
-        remote_turn.NO_CREDENTIAL,
-    ],
-)
-def test_client_without_a_turn_warns_with_the_reason_and_its_fix(mac, reason):
+#: Reasons a private backend that is not ours also gives (ollama, a bare llama-swap on the LAN).
+SOFT = [remote_turn.UNREACHABLE, remote_turn.UNSUPPORTED, remote_turn.NO_CREDENTIAL]
+#: Reasons only a daemon of ours, badly set up, gives.
+HARD = [remote_turn.UNAUTHORIZED, remote_turn.NEEDS_SECRET, remote_turn.BAD_RESPONSE]
+
+
+@pytest.mark.parametrize("reason", SOFT)
+def test_client_with_auto_and_a_backend_that_may_not_be_ours_only_notes_it(mac, reason):
+    ctx = _ctx(mac, Recorder(reason))
+    before = _before_the_pr(ctx)
+    r = checks._probe_topology(ctx)
+    assert r.status == before.status
+    assert not checks.is_warning(r.status)
+    note = i18n.t("doctor.probe.topology.remote_unusable_auto", url=TAILNET_TURN, reason=reason)
+    assert r.detail == f"{before.detail}; {note}"
+    assert "LOCAL_DELEGATE_TURN_URL=off" in note
+
+
+@pytest.mark.parametrize("reason", SOFT)
+def test_client_with_an_explicit_turn_url_warns_of_the_same_reasons(mac, monkeypatch, reason):
+    monkeypatch.setattr(config, "TURN_URL", TAILNET_TURN)
+    r = checks._probe_topology(_ctx(mac, Recorder(reason)))
+    assert r.status == checks.WARN
+    assert f"({reason})" in r.detail
+    assert r.fix_hint == checks.remote_turn_hint(reason)
+
+
+@pytest.mark.parametrize("explicit", [False, True])
+@pytest.mark.parametrize("reason", HARD)
+def test_client_warns_of_a_daemon_of_ours_badly_set_up_either_way(
+    mac, monkeypatch, reason, explicit
+):
+    if explicit:
+        monkeypatch.setattr(config, "TURN_URL", TAILNET_TURN)
     r = checks._probe_topology(_ctx(mac, Recorder(reason)))
     assert r.status == checks.WARN
     assert f"({reason})" in r.detail
@@ -238,19 +266,21 @@ def test_client_never_says_the_credential(mac):
 def test_client_with_turn_url_off_asks_nothing_and_keeps_the_old_verdict(mac, monkeypatch):
     monkeypatch.setattr(config, "TURN_URL", "off")
     probe = Recorder(remote_turn.REACHABLE)
-    r = checks._probe_topology(_ctx(mac, probe))
+    ctx = _ctx(mac, probe)
+    r = checks._probe_topology(ctx)
     assert probe.calls == []
-    assert r.status == checks.UNKNOWN
-    assert i18n.t("doctor.probe.topology.remote_active", url=TAILNET_TURN) not in r.detail
+    assert r == _before_the_pr(ctx)
 
 
-def test_client_with_a_public_backend_never_asks_it(mac, monkeypatch):
+def test_client_with_a_public_backend_never_asks_it_and_says_exactly_what_main_said(
+    mac, monkeypatch
+):
     monkeypatch.setattr(config, "BASE_URL", "https://api.example.com/v1")
     probe = Recorder(remote_turn.REACHABLE)
-    r = checks._probe_topology(_ctx(mac, probe))
+    ctx = _ctx(mac, probe)
+    r = checks._probe_topology(ctx)
     assert probe.calls == []
-    assert r.status == checks.UNKNOWN
-    assert i18n.t("doctor.probe.topology.remote_public") in r.detail
+    assert r == _before_the_pr(ctx)
 
 
 def test_client_with_a_bad_turn_url_warns_without_asking(mac, monkeypatch):
@@ -262,13 +292,26 @@ def test_client_with_a_bad_turn_url_warns_without_asking(mac, monkeypatch):
     assert r.fix_hint == checks.remote_turn_hint(remote_turn.BAD_URL)
 
 
-def test_client_in_plaintext_to_a_public_host_warns(mac, monkeypatch):
+@pytest.mark.parametrize(
+    "verdict", [remote_turn.REACHABLE, remote_turn.UNREACHABLE, remote_turn.UNAUTHORIZED]
+)
+def test_client_in_plaintext_to_a_public_host_warns_whatever_the_answer(mac, monkeypatch, verdict):
     monkeypatch.setattr(config, "TURN_URL", "http://203.0.113.5:9393")
-    probe = Recorder(remote_turn.REACHABLE)
+    probe = Recorder(verdict)
     r = checks._probe_topology(_ctx(mac, probe))
     assert probe.calls == [("http://203.0.113.5:9393/", True)]
     assert r.status == checks.WARN
-    assert r.fix_hint == checks.remote_turn_hint("plaintext")
+    shown = "http://203.0.113.5:9393/"
+    assert i18n.t("doctor.probe.topology.remote_plaintext", url=shown) in r.detail
+    assert checks.remote_turn_hint("plaintext") in r.fix_hint
+    if verdict != remote_turn.REACHABLE:
+        assert checks.remote_turn_hint(verdict) in r.fix_hint
+
+
+def test_client_in_plaintext_to_a_private_host_does_not_warn(mac, monkeypatch):
+    monkeypatch.setattr(config, "TURN_URL", "http://pc.example-tailnet.ts.net:9393")
+    r = checks._probe_topology(_ctx(mac, Recorder(remote_turn.REACHABLE)))
+    assert r.status == checks.OK
 
 
 def test_client_pointing_at_its_own_port_asks_nothing(mac, monkeypatch):
@@ -282,12 +325,22 @@ def test_client_pointing_at_its_own_port_asks_nothing(mac, monkeypatch):
 # --- `doctor`: the server side (this machine's daemon) ---------------------------------------
 
 
+def _answering_daemon():
+    """A daemon that answers but says nothing of its turn (the shell's config decides)."""
+    return llamaswap_api.Status(llamaswap_api.STATE_OK), ""
+
+
 @pytest.fixture
 def the_pc(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "LOG_DIR", tmp_path / "logs")
     monkeypatch.setattr(config, "BASE_URL", LOOPBACK_BASE)
     monkeypatch.setattr(config, "TURN_URL", "auto")
     return tmp_path
+
+
+def _pc_ctx(tmp_path, probe, **kwargs) -> checks.Context:
+    kwargs.setdefault("llamaswap_daemon", _answering_daemon)
+    return _ctx(tmp_path, probe, **kwargs)
 
 
 def _config_with(tmp_path: Path, *names: str, aliases: dict[str, list[str]] | None = None) -> Path:
@@ -303,19 +356,32 @@ def _config_with(tmp_path: Path, *names: str, aliases: dict[str, list[str]] | No
     return path
 
 
-def test_server_without_a_secret_warns(the_pc):
+def test_server_without_a_secret_only_notes_it(the_pc):
     probe = Recorder(remote_turn.NEEDS_SECRET)
-    r = checks._probe_topology(_ctx(the_pc, probe, config_path=_config_with(the_pc, "a", "b")))
+    ctx = _pc_ctx(the_pc, probe, config_path=_config_with(the_pc, "qwen3:30b", "b"))
+    before = _before_the_pr(ctx)
+    r = checks._probe_topology(ctx)
     # Asked without the credential: the question is whether the daemon has one, not ours.
     assert [with_credential for _url, with_credential in probe.calls] == [False]
-    assert r.status == checks.WARN
-    assert i18n.t("doctor.probe.topology.server_needs_secret") in r.detail
-    assert r.fix_hint == checks.remote_turn_hint(remote_turn.NEEDS_SECRET)
+    assert before.status == checks.OK
+    assert r.status == checks.OK
+    assert r.fix_hint == before.fix_hint
+    note = i18n.t("doctor.probe.topology.server_no_secret")
+    assert r.detail == f"{before.detail}; {note}"
+    # Its own words: a second machine, the two secrets, and how to turn the endpoint off.
+    for text in (
+        "LOCAL_DELEGATE_API_KEY",
+        "LOCAL_DELEGATE_WEB_TOKEN",
+        "LOCAL_DELEGATE_TURN_SERVER=off",
+    ):
+        assert text in note
+    # Without a secret, the models a remote operation cannot name are not looked at.
+    assert "qwen3:30b" not in note
 
 
 def test_server_with_a_secret_and_clean_names_is_ok(the_pc):
     r = checks._probe_topology(
-        _ctx(the_pc, Recorder(remote_turn.UNAUTHORIZED), config_path=_config_with(the_pc, "a"))
+        _pc_ctx(the_pc, Recorder(remote_turn.UNAUTHORIZED), config_path=_config_with(the_pc, "a"))
     )
     assert r.status == checks.OK
     assert i18n.t("doctor.probe.topology.server_ready") in r.detail
@@ -323,7 +389,9 @@ def test_server_with_a_secret_and_clean_names_is_ok(the_pc):
 
 def test_server_warns_of_models_a_remote_operation_cannot_name(the_pc):
     path = _config_with(the_pc, "qwen3:30b", "org/model", "clean-one")
-    r = checks._probe_topology(_ctx(the_pc, Recorder(remote_turn.UNAUTHORIZED), config_path=path))
+    r = checks._probe_topology(
+        _pc_ctx(the_pc, Recorder(remote_turn.UNAUTHORIZED), config_path=path)
+    )
     assert r.status == checks.WARN
     note = i18n.t("doctor.probe.topology.server_unnamed_models", models="qwen3:30b, org/model")
     assert note in r.detail
@@ -334,7 +402,9 @@ def test_server_warns_of_models_a_remote_operation_cannot_name(the_pc):
 def test_a_clean_alias_makes_a_model_nameable(the_pc):
     path = _config_with(the_pc, "qwen3:30b", aliases={"qwen3:30b": ["qwen3-30b"]})
     assert checks._models_without_remote_turn(path) == []
-    r = checks._probe_topology(_ctx(the_pc, Recorder(remote_turn.UNAUTHORIZED), config_path=path))
+    r = checks._probe_topology(
+        _pc_ctx(the_pc, Recorder(remote_turn.UNAUTHORIZED), config_path=path)
+    )
     assert r.status == checks.OK
 
 
@@ -342,17 +412,23 @@ def test_a_clean_alias_makes_a_model_nameable(the_pc):
     "verdict", [remote_turn.UNREACHABLE, remote_turn.UNSUPPORTED, remote_turn.BAD_RESPONSE]
 )
 def test_server_without_the_endpoint_in_play_keeps_the_old_verdict(the_pc, verdict):
-    path = _config_with(the_pc, "qwen3:30b")
-    plain = checks._local_turn(_ctx(the_pc, Recorder(verdict), config_path=path))[0]
-    r = checks._probe_topology(_ctx(the_pc, Recorder(verdict), config_path=path))
-    assert r == plain
+    ctx = _pc_ctx(the_pc, Recorder(verdict), config_path=_config_with(the_pc, "qwen3:30b"))
+    assert checks._probe_topology(ctx) == _before_the_pr(ctx)
 
 
 def test_server_side_is_not_asked_without_a_local_turn(the_pc):
     probe = Recorder(remote_turn.NEEDS_SECRET)
-    r = checks._probe_topology(_ctx(the_pc, probe, config_path=None))
+    r = checks._probe_topology(_pc_ctx(the_pc, probe, config_path=None))
     assert probe.calls == []
     assert r.status == checks.UNKNOWN
+
+
+def test_server_side_is_not_asked_when_the_daemon_is_silent(the_pc):
+    probe = Recorder(remote_turn.UNAUTHORIZED)
+    ctx = _ctx(the_pc, probe, config_path=_config_with(the_pc, "qwen3:30b"))  # NO_LLAMASWAP_DAEMON
+    r = checks._probe_topology(ctx)
+    assert probe.calls == []
+    assert r == _before_the_pr(ctx)
 
 
 def test_server_side_follows_the_daemons_config(the_pc):
@@ -375,17 +451,15 @@ def test_doctor_on_the_pc_with_the_real_probe(pc, monkeypatch, tmp_path):
         checks, "_llamaswap_daemon_destination", lambda: ("127.0.0.1", _DAEMON_PORT, {})
     )
     path = _config_with(tmp_path, "gemma3-4b", "qwen3:30b")
-    ctx = checks.Context(
-        home=tmp_path, config_path=path, llamaswap_daemon=checks.NO_LLAMASWAP_DAEMON
-    )
+    ctx = checks.Context(home=tmp_path, config_path=path, llamaswap_daemon=_answering_daemon)
     r = checks._probe_topology(ctx)
     assert r.status == checks.WARN
     assert i18n.t("doctor.probe.topology.server_unnamed_models", models="qwen3:30b") in r.detail
 
     monkeypatch.setattr(config, "API_KEY", "")
     r = checks._probe_topology(ctx)
-    assert r.status == checks.WARN
-    assert i18n.t("doctor.probe.topology.server_needs_secret") in r.detail
+    assert r.status == checks.OK
+    assert i18n.t("doctor.probe.topology.server_no_secret") in r.detail
 
 
 def test_doctor_on_the_mac_with_the_real_probe(pc, monkeypatch, tmp_path):
@@ -398,3 +472,63 @@ def test_doctor_on_the_mac_with_the_real_probe(pc, monkeypatch, tmp_path):
     assert r.status == checks.OK
     assert i18n.t("doctor.probe.topology.remote_active", url=_URL) in r.detail
     assert turn_leases.table().get(remote_turn.PROBE_LEASE) is None
+
+
+# --- the key case: a PC alone, no secret, no Mac ----------------------------------------------
+
+
+def test_a_pc_alone_without_a_secret_exits_as_on_main(tmp_path, monkeypatch, capsys):
+    """Review of #503: a user with one machine and no secret gets no warning from this check.
+
+    The whole `doctor` of `test_doctor` («everything in place», exit 0), with the daemon answering
+    for llama-swap (so the server side IS asked) and its endpoint without a secret.
+    """
+    import test_doctor
+    from conftest import desktop_mcp_remote_entry, make_home, write_claude_desktop
+
+    from local_delegate import claude_plugin, doctor, install, install_state, recompute
+
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    (logs / "clients.jsonl").write_text(
+        '{"ts": "2026-07-31T17:15:52+00:00", "client": "claude-code", "version": "2.1.220",'
+        ' "protocol": "2025-11-25", "caps": ["elicitation", "roots"]}\n',
+        encoding="utf-8",
+    )
+    recompute.write_aggregates(logs, {"version": 1, "check": {"verdict": "pass"}})
+    test_doctor._stub_environment(monkeypatch, log_dir=logs)
+    home = make_home(tmp_path)
+    monkeypatch.setenv("LOCAL_DELEGATE_LOG_DIR", str(logs))
+    version = checks._installed_version() or "0.0.0"
+    install_state.save(home, install_state.new_state(claude_plugin.SETTINGS, version))
+    write_claude_desktop(home, {install.SERVER_NAME: desktop_mcp_remote_entry()})
+    today = Path(__file__).parent / "fixtures" / "residency" / "today.yaml"
+    monkeypatch.setattr(config, "BASE_URL", LOOPBACK_BASE)
+    monkeypatch.setattr(
+        llamaswap_api,
+        "daemon_status",
+        lambda host, port, headers: (
+            llamaswap_api.Status(
+                llamaswap_api.STATE_OK, config_path=str(today), turn_active=True, turn_detail="x"
+            ),
+            "",
+        ),
+    )
+    asked: list[tuple[str, bool]] = []
+
+    def no_secret(url: str, *, with_credential: bool = True) -> str:
+        asked.append((url, with_credential))
+        return remote_turn.NEEDS_SECRET
+
+    monkeypatch.setattr(remote_turn, "probe", no_secret)
+    args = argparse.Namespace(config=str(today), online=False, home=str(home))
+    exit_code = doctor.run_doctor(args)
+    out = capsys.readouterr().out
+    # Guard: the server side was really asked, so the verdict below says something.
+    assert [with_credential for _url, with_credential in asked] == [False]
+    topology = [
+        line for line in out.splitlines() if i18n.t("doctor.check.backend.topology") in line
+    ]
+    assert topology and topology[0].startswith("  [ OK ]"), topology
+    assert i18n.t("doctor.probe.topology.server_no_secret") in out
+    assert exit_code == 0
