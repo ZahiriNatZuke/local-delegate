@@ -343,7 +343,7 @@ def test_should_stop_releases_the_queued_lease(transport):
     stop = threading.Event()
     waiting = _Thread(_lease().acquire, lambda *_: None, stop.is_set)
     waiting.start()
-    assert _wait(lambda: _remote_entries()), "never queued"
+    assert _wait(_remote_entries), "never queued"
     stop.set()
     waiting.join(3.0)
     assert not waiting.is_alive()
@@ -593,7 +593,7 @@ def test_operation_cancelled_while_queued_releases(transport, mac):
     op = _operation()
     waiting = _Thread(op.ensure, LONG, token=token)
     waiting.start()
-    assert _wait(lambda: _remote_entries()), "never queued"
+    assert _wait(_remote_entries), "never queued"
     token.cancel(cancellation.REASON_ABORTED)
     waiting.join(3.0)
     assert not waiting.is_alive()
@@ -686,7 +686,10 @@ def test_the_usage_event_carries_remote_turn(transport, mac, monkeypatch, env):
 def test_status_line(env, monkeypatch):
     monkeypatch.setattr(config, "TURN_URL", "auto")
     monkeypatch.setattr(config, "BASE_URL", "http://pc.tail1234.ts.net:9292/v1")
-    assert "pc.tail1234.ts.net:9393" in remote_turn.status_line(remote_backend=True)
+    expected = remote_turn.i18n.t(
+        "mcp.status.remote_turn.active", url="http://pc.tail1234.ts.net:9393/"
+    )
+    assert remote_turn.status_line(remote_backend=True) == expected
     remote_turn.remember("http://pc.tail1234.ts.net:9393/", remote_turn.UNAUTHORIZED)
     assert "unauthorized" in remote_turn.status_line(remote_backend=True)
     monkeypatch.setattr(config, "TURN_URL", "off")
@@ -814,7 +817,7 @@ class _Listener:
             try:
                 self._handle(conn)
             except OSError:
-                pass
+                return  # the client hung up first: nothing left to serve on this connection
 
     def close(self) -> None:
         self.stop.set()
