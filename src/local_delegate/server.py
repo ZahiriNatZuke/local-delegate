@@ -4847,6 +4847,10 @@ def _chat_map_reduce(
     # is not counted against it: without that split the operation fails.
     retry_budget = MAP_REDUCE_RETRY_CALLS_PER_PIECE * len(pieces)
 
+    # Two known limits of this budget, accepted: (1) it is checked when a split starts, so the
+    # sibling parts still pending when it runs out make their own first call; the map of a piece
+    # ends at most two calls past it (one sibling per depth). (2) `calls` counts every attempt,
+    # so a step answered by the fallback model counts twice and leaves less room for retries.
     def _retry_fits(parts: int) -> bool:
         return calls + parts <= retry_budget
 
@@ -4945,9 +4949,15 @@ def _chat_map_reduce(
                         break
                     summaries = grouped
                     # #497: a level that does not shrink the material would be followed by
-                    # another one over the same: stop and return what there is, marked.
-                    if len("\n\n".join(summaries)) > len(joined) * REGROUP_MIN_SHRINK:
-                        text = "\n\n".join(summaries)
+                    # another one over the same: stop and return what there is, marked. Only
+                    # when the notes still do not fit the reduce: a small shrink that makes them
+                    # fit is a legitimate convergence, and the next turn of the loop reduces.
+                    regrouped = "\n\n".join(summaries)
+                    if (
+                        len(build_reduce(regrouped)) > budget
+                        and len(regrouped) > len(joined) * REGROUP_MIN_SHRINK
+                    ):
+                        text = regrouped
                         unreduced = True
                         break
                 else:
@@ -6249,6 +6259,8 @@ def local_extract(
         retried_calls = report.get("retried_calls", 0)
         calls = report.get("calls", 0)
         pieces = report.get("pieces", 0)
+        # #497: the regroup stopped before the reduce; `raw` is the joined partials.
+        unreduced = bool(report.get("unreduced"))
         if report.get("fallback"):
             fallback_info.update(report["fallback"])
     else:
@@ -6277,6 +6289,7 @@ def local_extract(
         retried_calls = 0
         calls = 1
         pieces = 1
+        unreduced = False
     result = _strip_fences(raw)
 
     # `truncated`/`warning` significan desde B2c «salida truncada en un trozo» (REQ-010): la
@@ -6294,6 +6307,13 @@ def local_extract(
         # up to the `length` steps of the log.
         if retried_calls:
             truncation["retried_calls"] = retried_calls
+    if unreduced:
+        # #497: the log says `truncated_out`; the client hears it too. Appended to the warning
+        # of the cut calls, if any, so that text keeps its exact form (REQ-010).
+        stopped = i18n.t("mcp.warning.regroup_stopped", calls=calls)
+        truncation["truncated"] = True
+        previous = truncation.get("warning")
+        truncation["warning"] = f"{previous}; {stopped}" if previous else stopped
 
     try:
         data = json.loads(result)

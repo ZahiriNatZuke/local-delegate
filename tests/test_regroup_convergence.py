@@ -172,6 +172,63 @@ def test_a_level_that_does_not_shrink_stops_and_is_marked(backend, tmp_path):
     assert row["finish_reason"] == "length" and row["truncated_out"] is True
 
 
+def test_legitimate_convergence_in_two_rounds_reaches_the_reduce(backend, tmp_path):
+    """A regroup that keeps 85 % of what it reads, uncut, is under the 20 % rule but makes the
+    notes fit: the next turn reduces. Mutant "the 20 % rule without the fit check": no reduce,
+    6 calls and `length`; the reduce and call-count asserts fail."""
+    calls, state = backend
+
+    def answer(c):
+        if c["user"].startswith("MAP:"):
+            return _ok(_notes(2_750, len(c["user"])))
+        if c["user"].startswith("GRP:"):
+            return _ok(_notes(int(len(c["user"]) * 0.85), len(c["user"])))
+        return _ok("final")
+
+    state["answer"] = answer
+    out = _map_reduce(_distinct_lines(560))  # four chunks: 4 x 2 750 of notes > the budget
+    kinds = [c["user"][:4] for c in calls]
+    assert kinds.count("MAP:") == 4 and kinds.count("GRP:") >= 1  # guard: it regrouped
+    assert kinds[-1] == "RED:"
+    assert len(calls) == 7
+    assert out.startswith("final")
+    row = _row(tmp_path, "local_summarize")
+    assert row["finish_reason"] == "stop" and row.get("truncated_out") is not True
+
+
+def test_extract_hears_that_the_regroup_stopped(backend, tmp_path):
+    """Mutant "extract ignores `unreduced`": `not_json` without `truncated` nor the notice, while
+    the log says `truncated_out`."""
+    _calls, state = backend
+
+    def answer(c):
+        if "Combina" in c["system"]:
+            return _ok('{"a": "x"}')
+        # Every map and regroup step answers about as long as it reads: the regroup never shrinks.
+        return _ok('{"a": "' + "v" * int(len(c["user"]) * 0.9) + '"}')
+
+    state["answer"] = answer
+    text = _distinct_lines(700) + _distinct_lines(700).replace("line", "otra")  # > 48 000
+    data = server.local_extract(fields=["a"], text=text)
+    meta = data["_local_delegate"]
+    assert _row(tmp_path, "local_extract")["truncated_out"] is True  # guard: it stopped
+    assert meta["truncated"] is True
+    assert i18n.t("mcp.warning.regroup_stopped", calls=0).split(" tras ")[0] in meta["warning"]
+
+
+def test_a_single_cut_piece_stays_near_the_retry_budget(backend):
+    """One chunk whose every map step is cut: the retries stop at the budget of one chunk, plus
+    at most the two sibling parts still pending (documented next to `_retry_fits`)."""
+    calls, state = backend
+    state["answer"] = lambda c: _ok("nota", "length" if c["user"].startswith("MAP:") else "stop")
+    report: dict = {}
+    _map_reduce(_distinct_lines(140), report=report)  # ~9 500 characters: one chunk
+    assert report["pieces"] == 1  # guard
+    maps = sum(1 for c in calls if c["user"].startswith("MAP:"))
+    assert maps > 1  # guard: it did retry
+    assert maps <= server.MAP_REDUCE_RETRY_CALLS_PER_PIECE + 2
+
+
 def test_the_report_says_the_regroup_stopped(backend):
     _calls, state = backend
     state["answer"] = lambda c: (
