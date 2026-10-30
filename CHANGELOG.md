@@ -19,7 +19,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - **La Mac pide turno al daemon de la PC** (concurrencia PC+Mac, lote 4). Un proceso cuyo backend
   es el de otra máquina pide turno al daemon de esa máquina antes de cada operación
   (`LOCAL_DELEGATE_TURN_URL`, por defecto `auto`: el host de `LOCAL_DELEGATE_BASE_URL` con el
-  puerto web), lo mantiene con un latido, lo cede entre trozos cuando se lo piden y lo suelta al
+  puerto web, solo si ese host es privado, como el de la tailnet; a un backend público no se le
+  pide nada), lo mantiene con un latido, lo cede entre trozos cuando se lo piden y lo suelta al
   terminar, también si la llamada se cancela. Mientras espera, el progreso dice «esperando turno en
   <máquina>» y su «En curso» lo marca en cola. Si ese daemon no responde, es de una versión
   anterior o rechaza la credencial, la operación sigue sin turno, como antes, y el evento lo dice

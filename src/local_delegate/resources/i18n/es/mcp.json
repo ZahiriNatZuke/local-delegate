@@ -186,5 +186,7 @@
   "mcp.remote_turn.unusable": "local-delegate: el turno remoto en {url} no está disponible ({reason}); las delegaciones siguen sin turno, como antes",
   "mcp.status.remote_turn.active": "Turno remoto: activo en {url}",
   "mcp.status.remote_turn.off": "Turno remoto: desactivado (LOCAL_DELEGATE_TURN_URL=off)",
-  "mcp.status.remote_turn.unavailable": "Turno remoto: no disponible ({reason})"
+  "mcp.status.remote_turn.unavailable": "Turno remoto: no disponible ({reason})",
+  "mcp.remote_turn.plaintext": "local-delegate: el turno remoto en {url} va por http hacia un host que no es privado: la credencial viaja sin cifrar. Usa https o una dirección de la tailnet",
+  "mcp.status.remote_turn.active_plaintext": "Turno remoto: activo en {url} (aviso: http hacia un host que no es privado, la credencial viaja sin cifrar)"
 }

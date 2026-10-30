@@ -186,5 +186,7 @@
   "mcp.remote_turn.unusable": "local-delegate: the remote turn on {url} is not available ({reason}); delegations go on without a turn, as before",
   "mcp.status.remote_turn.active": "Remote turn: active on {url}",
   "mcp.status.remote_turn.off": "Remote turn: off (LOCAL_DELEGATE_TURN_URL=off)",
-  "mcp.status.remote_turn.unavailable": "Remote turn: not available ({reason})"
+  "mcp.status.remote_turn.unavailable": "Remote turn: not available ({reason})",
+  "mcp.remote_turn.plaintext": "local-delegate: the remote turn on {url} goes over http to a host that is not private: the credential travels unencrypted. Use https or a tailnet address",
+  "mcp.status.remote_turn.active_plaintext": "Remote turn: active on {url} (warning: http to a host that is not private, the credential travels unencrypted)"
 }

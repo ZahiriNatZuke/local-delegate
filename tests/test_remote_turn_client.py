@@ -60,15 +60,15 @@ class Counting:
         self.headers: list[dict] = []
         self._lock = threading.Lock()
 
-    def post(self, url: str, *, json: dict, headers: dict, timeout=None) -> httpx2.Response:
+    def stream(self, method: str, url: str, *, json: dict, headers: dict, timeout=None):
         path = url.split("/api/turn/", 1)[-1]
         with self._lock:
             self.requests.append((path, dict(json)))
             self.headers.append(dict(headers))
         if self.answer is not None:
-            return self.answer(path, json)
+            return _Loaded(self.answer(path, json))
         assert self.inner is not None
-        return self.inner.post(url, json=json, headers=headers)
+        return self.inner.stream(method, url, json=json, headers=headers)
 
     def count(self, path: str | None = None) -> int:
         with self._lock:
@@ -76,6 +76,23 @@ class Counting:
 
     def close(self) -> None:
         pass
+
+
+class _Loaded:
+    """A whole `httpx2.Response` behind the `stream(...)` context manager the client uses."""
+
+    def __init__(self, response: httpx2.Response) -> None:
+        self.response = response
+
+    def __enter__(self) -> httpx2.Response:
+        return self.response
+
+    def __exit__(self, *_exc) -> None:
+        self.response.close()
+
+
+def _heartbeat_threads() -> list[threading.Thread]:
+    return [t for t in threading.enumerate() if t.name == "remote-turn-heartbeat" and t.is_alive()]
 
 
 @pytest.fixture
@@ -99,10 +116,13 @@ def env(tmp_path, monkeypatch):
     turn_leases.reset()
     remote_turn.reset()
     yield tmp_path
+    # No heartbeat thread may outlive its test: it would beat into the next test's transport.
+    left = _wait(lambda: not _heartbeat_threads(), cap=3.0)
     remote_turn.set_client_factory(remote_turn._new_client)
     remote_turn.reset()
     turn_leases.reset()
     turn_api.disable()
+    assert left, f"heartbeat threads left alive: {_heartbeat_threads()}"
 
 
 def use_turn(monkeypatch, turn_state: turn.Turn) -> turn.Turn:
@@ -232,18 +252,22 @@ def test_queued_heartbeats_on_the_same_lease_then_granted(transport):
     """The contract of lot 3: `acquire` once, then `heartbeat` (never a second `acquire`)."""
     assert isinstance(_local("111:1", CODE), turn.Grant)
     seen: list[tuple[int, tuple[str, ...]]] = []
-    waiting = _Thread(_lease().acquire, lambda p, u: seen.append((p, u)))
+    lease = _lease()
+    waiting = _Thread(lease.acquire, lambda p, u: seen.append((p, u)))
     waiting.start()
-    assert _wait(lambda: transport.count("heartbeat") >= 3), "no heartbeats while queued"
-    assert waiting.is_alive()
-    assert seen and seen[0] == (1, (CODE,))
-    server._turn.release_slot("111:1")
-    waiting.join(3.0)
-    assert not waiting.is_alive(), "never granted after the release"
-    assert waiting.error is None
-    assert transport.count("acquire") == 1, "acquire repeated while queued"
-    leases = {body["lease"] for path, body in transport.requests if path == "heartbeat"}
-    assert len(leases) == 1
+    try:
+        assert _wait(lambda: transport.count("heartbeat") >= 3), "no heartbeats while queued"
+        assert waiting.is_alive()
+        assert seen and seen[0] == (1, (CODE,))
+        server._turn.release_slot("111:1")
+        waiting.join(3.0)
+        assert not waiting.is_alive(), "never granted after the release"
+        assert waiting.error is None
+        assert transport.count("acquire") == 1, "acquire repeated while queued"
+        leases = {body["lease"] for path, body in transport.requests if path == "heartbeat"}
+        assert len(leases) == 1
+    finally:
+        lease.release()
 
 
 def test_the_heartbeat_publishes_in_backend_and_chunk(transport):
@@ -298,15 +322,20 @@ def test_429_waits_and_then_is_granted(transport, monkeypatch):
     other = _lease(op="other")
     other.acquire(lambda *_: None)
     seen: list[int] = []
-    waiting = _Thread(_lease().acquire, lambda p, _u: seen.append(p))
+    lease = _lease()
+    waiting = _Thread(lease.acquire, lambda p, _u: seen.append(p))
     waiting.start()
-    assert _wait(lambda: transport.count("acquire") >= 3), "it did not retry after the 429"
-    assert waiting.is_alive(), f"a 429 made it leave: {waiting.error!r}"
-    assert seen and seen[0] == 0  # busy, not queued: no position yet
-    other.release()
-    waiting.join(3.0)
-    assert not waiting.is_alive() and waiting.error is None
-    assert isinstance(waiting.result, turn.Grant)
+    try:
+        assert _wait(lambda: transport.count("acquire") >= 3), "it did not retry after the 429"
+        assert waiting.is_alive(), f"a 429 made it leave: {waiting.error!r}"
+        assert seen and seen[0] == 0  # busy, not queued: no position yet
+        other.release()
+        waiting.join(3.0)
+        assert not waiting.is_alive() and waiting.error is None
+        assert isinstance(waiting.result, turn.Grant)
+    finally:
+        other.release()
+        lease.release()
 
 
 def test_should_stop_releases_the_queued_lease(transport):
@@ -656,9 +685,9 @@ def test_the_usage_event_carries_remote_turn(transport, mac, monkeypatch, env):
 
 def test_status_line(env, monkeypatch):
     monkeypatch.setattr(config, "TURN_URL", "auto")
-    monkeypatch.setattr(config, "BASE_URL", "http://pc.example:9292/v1")
-    assert "pc.example:9393" in remote_turn.status_line(remote_backend=True)
-    remote_turn.remember("http://pc.example:9393/", remote_turn.UNAUTHORIZED)
+    monkeypatch.setattr(config, "BASE_URL", "http://pc.tail1234.ts.net:9292/v1")
+    assert "pc.tail1234.ts.net:9393" in remote_turn.status_line(remote_backend=True)
+    remote_turn.remember("http://pc.tail1234.ts.net:9393/", remote_turn.UNAUTHORIZED)
     assert "unauthorized" in remote_turn.status_line(remote_backend=True)
     monkeypatch.setattr(config, "TURN_URL", "off")
     assert remote_turn.status_line(remote_backend=True) == i18n_off()
@@ -672,3 +701,321 @@ def i18n_off() -> str:
     from local_delegate import i18n
 
     return i18n.t("mcp.status.remote_turn.off")
+
+
+# --- review of #502 --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("base", "asks"),
+    [
+        ("https://own-pc.tail1234.ts.net:9292/v1", True),  # the Mac's, measured (research §2)
+        ("http://100.101.102.103:9292/v1", True),  # the tailnet's CGNAT
+        ("http://pc:9292/v1", True),  # MagicDNS short name
+        ("http://[fd7a:115c:a1e0::1]:9292/v1", True),  # the tailnet's ULA
+        ("http://192.168.1.5:9292/v1", True),
+        ("http://10.0.0.7:9292/v1", True),
+        ("http://pc.lan:9292/v1", True),
+        ("http://pc.home.arpa:9292/v1", True),
+        ("https://api.example.com/v1", False),
+        ("https://api.openai.com/v1", False),
+        ("http://8.8.8.8:9292/v1", False),
+        ("http://[2001:4860::8888]:9292/v1", False),
+        ("http://100.128.0.1:9292/v1", False),  # just outside 100.64/10
+    ],
+)
+def test_auto_discovers_only_private_hosts(monkeypatch, base, asks):
+    monkeypatch.setattr(config, "BASE_URL", base)
+    monkeypatch.setattr(config, "TURN_URL", "auto")
+    found = remote_turn.turn_url(remote_backend=True)
+    assert (found is not None) == asks, (base, found)
+
+
+def test_a_public_backend_with_auto_sends_nothing(env, mac, monkeypatch):
+    """Review of #502: `auto` never sends the backend key to a public host's port 9393."""
+    monkeypatch.setattr(config, "BASE_URL", "https://api.example.com/v1")
+    monkeypatch.setattr(config, "TURN_URL", "auto")
+    built: list[int] = []
+
+    def factory() -> httpx2.Client:
+        built.append(1)
+        return Counting(answer=_answering(200, json.dumps(_GOOD).encode()))  # type: ignore[return-value]
+
+    remote_turn.set_client_factory(factory)
+    op = _operation()
+    op.ensure(LONG)
+    op.release_slot()
+    assert built == [], "the client was created for a public backend"
+    assert op.remote_turn is None and "remote_turn" not in op.log_fields()
+    line = remote_turn.status_line(remote_backend=True)
+    assert line is not None and remote_turn.PUBLIC_HOST in line
+
+
+class FakeClock:
+    def __init__(self) -> None:
+        self.now = 1000.0
+
+    def __call__(self) -> float:
+        return self.now
+
+
+def test_a_filtered_port_costs_one_request_per_ten_minutes(env, monkeypatch):
+    """`ConnectTimeout` without a lease: `unreachable` at once, remembered 10 min if never granted."""
+    clock = FakeClock()
+    monkeypatch.setattr(remote_turn, "_now", clock)
+    counting = Counting(answer=_answering(0, raises=httpx2.ConnectTimeout("filtered")))
+    remote_turn.set_client_factory(lambda: counting)
+    for n in range(3):
+        with pytest.raises(remote_turn.Unusable) as raised:
+            _lease(op=f"op{n}").acquire(lambda *_: None)
+        assert raised.value.reason == remote_turn.UNREACHABLE
+        clock.now += 61
+    assert counting.count() == 1, counting.requests
+    # After a grant in this process, an unreachable daemon is remembered 60 s only.
+    remote_turn.reset()
+    remote_turn.set_client_factory(lambda: counting)
+    remote_turn.note_result(_URL, remote_turn.GRANTED)
+    for n in range(2):
+        with pytest.raises(remote_turn.Unusable):
+            _lease(op=f"again{n}").acquire(lambda *_: None)
+        clock.now += 61
+    assert counting.count() == 3
+
+
+class _Listener:
+    """A loopback TCP server that hands each connection to `handle`, in daemon threads."""
+
+    def __init__(self, handle: Callable) -> None:
+        import socket
+
+        self._sock = socket.socket()
+        self._sock.bind(("127.0.0.1", 0))
+        self._sock.listen(8)
+        self._sock.settimeout(0.2)
+        self.port = self._sock.getsockname()[1]
+        self.stop = threading.Event()
+        self._handle = handle
+        self._threads: list[threading.Thread] = []
+        self._accepting = threading.Thread(target=self._accept, daemon=True)
+        self._accepting.start()
+
+    def _accept(self) -> None:
+        while not self.stop.is_set():
+            try:
+                conn, _ = self._sock.accept()
+            except OSError:
+                continue
+            worker = threading.Thread(target=self._serve, args=(conn,), daemon=True)
+            self._threads.append(worker)
+            worker.start()
+
+    def _serve(self, conn) -> None:
+        with conn:
+            try:
+                self._handle(conn)
+            except OSError:
+                pass
+
+    def close(self) -> None:
+        self.stop.set()
+        self._accepting.join(5)
+        self._sock.close()
+        for worker in self._threads:
+            worker.join(5)
+        assert not any(t.is_alive() for t in [self._accepting, *self._threads])
+
+
+def test_the_environment_proxy_is_ignored(env, monkeypatch):
+    """`trust_env=False`: `HTTP(S)_PROXY` never sees the request (nor the credential)."""
+    seen: list[bytes] = []
+    proxy = _Listener(lambda conn: seen.append(conn.recv(4096)))
+    try:
+        monkeypatch.setenv("HTTP_PROXY", f"http://127.0.0.1:{proxy.port}")
+        monkeypatch.setenv("HTTPS_PROXY", f"http://127.0.0.1:{proxy.port}")
+        monkeypatch.delenv("NO_PROXY", raising=False)
+        monkeypatch.setattr(remote_turn, "CONNECT_TIMEOUT_S", 0.3)
+        remote_turn.set_client_factory(remote_turn._new_client)
+        lease = remote_turn.RemoteLease(
+            "http://10.255.255.1:9/", op="op1", host=MAC, tool="t", model=LONG
+        )
+        with pytest.raises(remote_turn.Unusable):
+            lease.acquire(lambda *_: None)
+        time.sleep(0.2)
+    finally:
+        proxy.close()
+    assert seen == [], f"the proxy got the request: {seen[:1]}"
+
+
+def _dripping(stop: threading.Event, every: float = 2.0, cap: float = 20.0) -> Callable:
+    """A daemon that answers 200 and then one byte every `every` seconds."""
+
+    def handle(conn) -> None:
+        conn.settimeout(1.0)
+        data = b""
+        while b"\r\n\r\n" not in data:
+            data += conn.recv(4096)
+        conn.sendall(
+            b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 4096\r\n\r\n"
+        )
+        end = time.monotonic() + cap
+        while not stop.is_set() and time.monotonic() < end:
+            conn.sendall(b" ")
+            if stop.wait(every):
+                return
+
+    return handle
+
+
+@pytest.fixture
+def drip(env, monkeypatch):
+    stop = threading.Event()
+    listener = _Listener(_dripping(stop))
+    # Read timeout 3 s (longer than the drip): only the total deadline can end the read.
+    monkeypatch.setattr(remote_turn, "CONNECT_TIMEOUT_S", 0.5)
+    monkeypatch.setattr(remote_turn, "DEFAULT_HEARTBEAT_S", 0.5)
+    monkeypatch.setattr(remote_turn, "READ_MARGIN_S", 2.5)
+    remote_turn.set_client_factory(remote_turn._new_client)
+    try:
+        yield f"http://127.0.0.1:{listener.port}/"
+    finally:
+        stop.set()
+        listener.close()
+
+
+def test_a_dripping_daemon_does_not_hold_acquire(drip):
+    lease = remote_turn.RemoteLease(drip, op="op1", host=MAC, tool="t", model=LONG)
+    t0 = time.monotonic()
+    with pytest.raises(remote_turn.Unusable) as raised:
+        lease.acquire(lambda *_: None)
+    elapsed = time.monotonic() - t0
+    assert raised.value.reason == remote_turn.UNREACHABLE
+    # Two tries (a lost answer is asked again once), each within connection + read = 3.5 s.
+    assert elapsed < 2 * 3.5 + 2.5, f"acquire took {elapsed:.1f} s"
+
+
+def test_a_dripping_daemon_respects_cancellation(drip):
+    lease = remote_turn.RemoteLease(drip, op="op1", host=MAC, tool="t", model=LONG)
+    t0 = time.monotonic()
+    with pytest.raises(turn.AbandonedWait):
+        lease.acquire(lambda *_: None, lambda: time.monotonic() - t0 > 1.0)
+    elapsed = time.monotonic() - t0
+    assert elapsed < 3.5, f"the cancellation waited {elapsed:.1f} s"
+
+
+def test_a_release_against_a_dripping_daemon_is_bounded(drip):
+    lease = remote_turn.RemoteLease(drip, op="op1", host=MAC, tool="t", model=LONG)
+    lease.lease_id = "some-lease"
+    t0 = time.monotonic()
+    lease.release()
+    elapsed = time.monotonic() - t0
+    assert elapsed < remote_turn.RELEASE_READ_S + 2.5, f"the release took {elapsed:.1f} s"
+
+
+def test_a_huge_answer_is_a_bad_response(env):
+    padded = json.dumps(_GOOD).encode()[:-1] + b" " * (1024 * 1024) + b"}"
+    counting = Counting(answer=_answering(200, padded))
+    remote_turn.set_client_factory(lambda: counting)
+    with pytest.raises(remote_turn.Unusable) as raised:
+        _lease().acquire(lambda *_: None)
+    assert raised.value.reason == remote_turn.BAD_RESPONSE
+
+
+def _with_position_inf() -> bytes:
+    body = json.dumps({**_GOOD, "status": "queued", "position": 12345})
+    return body.replace("12345", "1e999").encode()
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        b"[" * 30000 + b"]" * 30000,  # deeper than the parser's limit, under 64 KiB
+        _with_position_inf(),
+        json.dumps({**_GOOD, "lease": "bad lease!"}).encode(),
+        json.dumps({**_GOOD, "lease": "x" * 129}).encode(),
+    ],
+    ids=["deep-json", "position-inf", "lease-bad-chars", "lease-too-long"],
+)
+def test_broken_answers_degrade(env, body):
+    counting = Counting(answer=_answering(200, body))
+    remote_turn.set_client_factory(lambda: counting)
+    with pytest.raises(remote_turn.Unusable) as raised:
+        _lease().acquire(lambda *_: None)
+    assert raised.value.reason == remote_turn.BAD_RESPONSE
+
+
+def test_answers_are_cleaned():
+    body = {
+        **_GOOD,
+        "status": "queued",
+        "in_use": ["ok-model", "bad model", "x" * 129, *[f"m{i}" for i in range(30)]],
+        "heartbeat_s": float("nan"),
+        "stalled_s": float("inf"),
+    }
+    answer = remote_turn._parse(200, json.dumps(body).encode())
+    assert answer.in_use[0] == "ok-model" and "bad model" not in answer.in_use
+    assert "x" * 129 not in answer.in_use
+    assert len(answer.in_use) <= remote_turn.MAX_IN_USE
+    assert answer.heartbeat_s == remote_turn.DEFAULT_HEARTBEAT_S
+    assert answer.stalled_s == 0.0
+
+
+def test_an_exception_in_the_heartbeat_thread_marks_the_lease_lost(transport, monkeypatch):
+    lease = _lease()
+    lease.acquire(lambda *_: None)
+    try:
+
+        def broken(*_args, **_kwargs):
+            raise RuntimeError("something nobody expected")
+
+        monkeypatch.setattr(remote_turn, "_post", broken)
+        assert _wait(lease.lost.is_set), "the heartbeat thread died in silence"
+        monkeypatch.undo()
+    finally:
+        lease.release()
+
+
+def test_our_own_cap_saturates_when_the_daemon_says_zero(env, mac, monkeypatch):
+    monkeypatch.setattr(config, "QUEUE_MAX_WAIT_S", 0.3)
+    queued = {**_GOOD, "status": "queued", "position": 1, "heartbeat_s": 0.05, "stalled_s": 0}
+    counting = Counting(answer=_answering(200, json.dumps(queued).encode()))
+    remote_turn.set_client_factory(lambda: counting)
+    op = _operation()
+    t0 = time.monotonic()
+    with pytest.raises(server.QueueSaturated):
+        op.ensure(LONG)
+    assert time.monotonic() - t0 < 3.0
+
+
+@pytest.mark.parametrize(
+    "host", ["127.0.0.1", "127.1", "127.9.9.9", "0.0.0.0", "localhost", "localhost.", "a.localhost"]
+)
+def test_self_by_address_variants(monkeypatch, host):
+    monkeypatch.setattr(config, "WEB_PORT", 9393)
+    assert remote_turn.points_to_itself(f"http://{host}:9393/")
+    assert not remote_turn.points_to_itself(f"http://{host}:9394/")
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["http://pc:9393/?x=1", "http://pc:9393/#frag", "http://pc:9393/api/", "http://pc:9393/x"],
+)
+def test_turn_url_with_query_fragment_or_path_is_refused(monkeypatch, url):
+    monkeypatch.setattr(config, "TURN_URL", url)
+    assert remote_turn.turn_url(remote_backend=True) is None
+
+
+def test_plaintext_to_a_public_host_warns_once(env, monkeypatch, caplog):
+    caplog.set_level(logging.WARNING, logger="local_delegate.remote_turn")
+    monkeypatch.setattr(config, "TURN_URL", "http://203.0.113.5:9393/")
+    assert remote_turn.turn_url(remote_backend=True) == "http://203.0.113.5:9393/"
+    remote_turn.turn_url(remote_backend=True)
+    warnings = [r for r in caplog.records if r.name == "local_delegate.remote_turn"]
+    assert len(warnings) == 1 and "203.0.113.5" in warnings[0].getMessage()
+    line = remote_turn.status_line(remote_backend=True)
+    active = remote_turn.i18n.t("mcp.status.remote_turn.active", url="http://203.0.113.5:9393/")
+    assert line is not None and "203.0.113.5" in line and line != active
+    caplog.clear()
+    for quiet in ("https://203.0.113.5:9393/", "http://pc.tail1234.ts.net:9393/"):
+        monkeypatch.setattr(config, "TURN_URL", quiet)
+        remote_turn.turn_url(remote_backend=True)
+    assert not [r for r in caplog.records if r.name == "local_delegate.remote_turn"]

@@ -13,22 +13,30 @@ is kept to the letter:
 - `429` (the daemon is full): wait `heartbeat_s` and try again, inside `QUEUE_MAX_WAIT_S`.
 - The daemon unusable (REQ-025 case 1: no answer, 404/405, 401/403, unreadable answer or a higher
   `v`): the operation goes on WITHOUT a turn, as before this lot. The reason is remembered for
-  60 s (404/405: 10 min), so the next operations do not pay the timeout again, and it is logged
-  once per process and reason.
+  60 s (404/405, and an unreachable daemon that never granted a turn in this process: 10 min), so
+  the next operations do not pay the timeout again, and it is logged once per process and reason.
 - Never to itself (REQ-020): a loopback URL on this process's own `WEB_PORT`, or a daemon whose
   `daemon_id` is the one in this machine's `daemon.json`, is `self` and goes without a turn.
 
-Discovery (REQ-021) is `turn_url`: with `LOCAL_DELEGATE_TURN_URL=auto` (the default) and a backend
-on loopback there is no URL at all, so a local-only setup never sends a single request (REQ-040).
+Discovery (REQ-021) is `turn_url`: with `LOCAL_DELEGATE_TURN_URL=auto` (the default) it asks only
+when the backend is another machine's AND its host is private (a tailnet, a LAN; decided from the
+name or the address, never with DNS). A local backend or a public one gives no URL at all, so such a
+setup never sends a single request (REQ-040; review of #502).
 
 The credential (REQ-016) is `LOCAL_DELEGATE_REMOTE_WEB_TOKEN` (or the Keychain) when present, else
-the backend's key, always as `Authorization: Bearer`. It is never logged nor stored here.
+the backend's key, always as `Authorization: Bearer`. It is never logged nor stored here. Every
+answer is read with a total deadline and a size cap: a daemon that drips or floods cannot hold an
+operation.
 """
 
 from __future__ import annotations
 
+import ipaddress
 import json
 import logging
+import math
+import re
+import socket
 import threading
 import time
 from collections.abc import Callable
@@ -44,7 +52,7 @@ logger = logging.getLogger(__name__)
 
 #: The protocol version this client speaks; an answer with a higher `v` is `unsupported` (REQ-041).
 API_VERSION = 1
-#: Plazos de REQ-025: connection 3 s, read `heartbeat_s + 5` s.
+#: Plazos de REQ-025: connection 3 s, read `heartbeat_s + 5` s; the whole answer within both.
 CONNECT_TIMEOUT_S = 3.0
 READ_MARGIN_S = 5.0
 #: The interval before the first answer says otherwise (the server's `min(5, TURN_LEASE_S / 3)`).
@@ -52,8 +60,16 @@ DEFAULT_HEARTBEAT_S = 5.0
 #: How long an unusable daemon is remembered, by reason (REQ-025 case 1).
 UNUSABLE_TTL_S = 60.0
 UNSUPPORTED_TTL_S = 600.0
-#: How long a release may take: it is best-effort, the lease expires on its own anyway.
+#: An unreachable daemon that never granted a turn in this process (a filtered port, a daemon that
+#: is not there): remembered as long as a 404, so each operation does not pay the timeout again.
+NEVER_REACHED_TTL_S = 600.0
+#: The whole of a release, connection included: it is best-effort, the lease expires anyway.
 RELEASE_READ_S = 3.0
+#: The largest answer read; the server's are a few hundred bytes.
+MAX_ANSWER_BYTES = 64 * 1024
+#: At most this many models in `in_use`, of at most this many characters each.
+MAX_IN_USE = 16
+MAX_NAME_CHARS = 128
 
 ACQUIRE_PATH = "api/turn/acquire"
 HEARTBEAT_PATH = "api/turn/heartbeat"
@@ -71,8 +87,28 @@ NEEDS_SECRET = "needs_secret"
 BAD_RESPONSE = "bad_response"
 #: What `local_status` says for a `LOCAL_DELEGATE_TURN_URL` that is not a usable URL.
 BAD_URL = "bad_url"
+#: What `local_status` says when `auto` does not ask because the backend's host is not private.
+PUBLIC_HOST = "public_host"
 
 _STATUSES = frozenset({"queued", "granted", "yield", "expired", "no_turn"})
+_LEASE = re.compile(r"[A-Za-z0-9_-]{1,128}")
+_MODEL_NAME = re.compile(r"[A-Za-z0-9._:/@-]{1,128}")
+#: Private suffixes (review of #502): the tailnet's MagicDNS and the usual home and LAN names.
+_PRIVATE_SUFFIXES = (".ts.net", ".local", ".lan", ".home.arpa", ".internal")
+_PRIVATE_NETWORKS = tuple(
+    ipaddress.ip_network(n)
+    for n in (
+        "127.0.0.0/8",
+        "10.0.0.0/8",
+        "172.16.0.0/12",
+        "192.168.0.0/16",
+        "100.64.0.0/10",  # CGNAT, the tailnet's 100.x
+        "169.254.0.0/16",
+        "::1/128",
+        "fc00::/7",  # ULA, the tailnet's fd7a:115c:a1e0::/48 among them
+        "fe80::/10",
+    )
+)
 
 
 class Unusable(Exception):
@@ -91,6 +127,18 @@ class _Lost(Exception):
     """No answer to a request that may have arrived: a lease in hand may or may not be alive."""
 
 
+class _Stopped(Exception):
+    """The operation stopped (cancelled or saturated) while an answer was being read.
+
+    `lease` is the lease the part already read names, if any: the caller gives it back, so a
+    stop in the middle of the first `acquire` does not leave a lease at the daemon.
+    """
+
+    def __init__(self, lease: str | None = None) -> None:
+        super().__init__(lease)
+        self.lease = lease
+
+
 @dataclass(frozen=True)
 class Answer:
     status: str
@@ -102,6 +150,59 @@ class Answer:
     forced: bool
     heartbeat_s: float
     stalled_s: float
+
+
+def _now() -> float:
+    """The clock of the remembered reasons (the tests replace it)."""
+    return time.monotonic()
+
+
+# --- addresses -------------------------------------------------------------------------------
+
+
+def _address(host: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
+    """`host` as an IP address, also IPv4 shorthand (`127.1`); `None` for a name. Never DNS."""
+    try:
+        return ipaddress.ip_address(host)
+    except ValueError:
+        pass
+    if host and all(c.isdigit() or c == "." for c in host):
+        try:
+            return ipaddress.IPv4Address(socket.inet_aton(host))
+        except OSError:
+            return None
+    return None
+
+
+def _bare(host: str) -> str:
+    return host.strip().lower().rstrip(".")
+
+
+def is_private_host(host: str) -> bool:
+    """A host of a private network, decided from its text alone (review of #502, no DNS).
+
+    Loopback, RFC 1918, the tailnet's CGNAT (100.64/10), ULA (fc00::/7) and link-local addresses;
+    names under `.ts.net`, `.local`, `.lan`, `.home.arpa` or `.internal`; and one-label names
+    (MagicDNS short names such as `pc`).
+    """
+    bare = _bare(host)
+    if not bare:
+        return False
+    address = _address(bare)
+    if address is not None:
+        return any(address in network for network in _PRIVATE_NETWORKS)
+    if "." not in bare:
+        return True
+    return bare.endswith(_PRIVATE_SUFFIXES)
+
+
+def _is_this_machine(host: str) -> bool:
+    """Loopback (any 127/8, `127.1` included), unspecified (`0.0.0.0`, `::`) or `*.localhost`."""
+    bare = _bare(host)
+    if bare == "localhost" or bare.endswith(".localhost"):
+        return True
+    address = _address(bare)
+    return address is not None and (address.is_loopback or address.is_unspecified)
 
 
 # --- discovery -------------------------------------------------------------------------------
@@ -128,6 +229,9 @@ def _valid(url: str) -> bool:
         and bool(parts.hostname)
         and not parts.username
         and not parts.password
+        and not parts.query
+        and not parts.fragment
+        and parts.path in ("", "/")
     )
 
 
@@ -139,8 +243,8 @@ def turn_url(*, remote_backend: bool) -> str | None:
     """The daemon to ask for the turn, or `None` (no remote turn for this process).
 
     REQ-020/021: `off` → never; a URL → that one; `auto` → the backend machine's daemon, only when
-    the backend is not on loopback (`remote_backend`). A local backend with `auto` gives `None`
-    before anything else is looked at: that is the whole of REQ-040.
+    the backend is not on loopback (`remote_backend`) and its host is private. A local or public
+    backend with `auto` gives `None` before anything else is looked at: no client, no request.
     """
     mode = _mode()
     if mode == "off":
@@ -149,8 +253,29 @@ def turn_url(*, remote_backend: bool) -> str | None:
         if not remote_backend:
             return None
         url = config.remote_panel_url()
-        return url or None
-    return _normalized(mode) if _valid(mode) else None
+        if not url or not is_private_host(_host_of(url)):
+            return None
+        return url
+    if not _valid(mode):
+        return None
+    url = _normalized(mode)
+    if plaintext_to_public(url):
+        _warn_once("plaintext", "mcp.remote_turn.plaintext", url)
+    return url
+
+
+def _auto_public(*, remote_backend: bool) -> bool:
+    """`auto` with a remote backend whose host is not private: it does not ask (review of #502)."""
+    if _mode() not in ("", "auto") or not remote_backend:
+        return False
+    url = config.remote_panel_url()
+    return bool(url) and not is_private_host(_host_of(url))
+
+
+def plaintext_to_public(url: str) -> bool:
+    """`http://` to a host that is not private: the credential would cross a network in clear."""
+    parts = urlsplit(url)
+    return parts.scheme == "http" and not is_private_host(parts.hostname or "")
 
 
 def display_url(url: str) -> str:
@@ -168,13 +293,13 @@ def _host_of(url: str) -> str:
 
 
 def points_to_itself(url: str) -> bool:
-    """The guard by address (REQ-020): a loopback URL on this process's own web port."""
+    """The guard by address (REQ-020): this machine's address on this process's own web port."""
     parts = urlsplit(url)
     try:
         port = parts.port or (443 if parts.scheme == "https" else 80)
     except ValueError:
         return False
-    return config._is_loopback_host(parts.hostname or "") and port == config.WEB_PORT
+    return _is_this_machine(parts.hostname or "") and port == config.WEB_PORT
 
 
 def local_daemon_id() -> str | None:
@@ -202,6 +327,8 @@ class _Memory:
     unusable: ClassVar[dict[str, tuple[str, float]]] = {}
     logged: ClassVar[set[str]] = set()
     last: ClassVar[dict[str, str]] = {}
+    #: URLs that granted a turn at least once in this process.
+    reached: ClassVar[set[str]] = set()
 
 
 def remembered(url: str) -> str | None:
@@ -211,28 +338,43 @@ def remembered(url: str) -> str | None:
         if found is None:
             return None
         reason, until = found
-        if time.monotonic() >= until:
+        if _now() >= until:
             _Memory.unusable.pop(url, None)
             return None
         return reason
 
 
+def _ttl(url: str, reason: str) -> float:
+    if reason in (UNSUPPORTED, SELF):
+        return UNSUPPORTED_TTL_S
+    if reason == UNREACHABLE and url not in _Memory.reached:
+        return NEVER_REACHED_TTL_S
+    return UNUSABLE_TTL_S
+
+
+def _warn_once(kind: str, key: str, url: str, **fields: str) -> None:
+    with _Memory.lock:
+        first = kind not in _Memory.logged
+        _Memory.logged.add(kind)
+    if first:
+        logger.warning(i18n.t(key, url=display_url(url), **fields))
+
+
 def remember(url: str, reason: str) -> None:
     """Remember `url` as unusable and say it once per process and reason (REQ-025 case 1)."""
-    ttl = UNSUPPORTED_TTL_S if reason in (UNSUPPORTED, SELF) else UNUSABLE_TTL_S
     with _Memory.lock:
-        _Memory.unusable[url] = (reason, time.monotonic() + ttl)
+        _Memory.unusable[url] = (reason, _now() + _ttl(url, reason))
         _Memory.last[url] = reason
-        first = reason not in _Memory.logged
-        _Memory.logged.add(reason)
-    if first and reason != SELF:
-        logger.warning(i18n.t("mcp.remote_turn.unusable", url=display_url(url), reason=reason))
+    if reason != SELF:
+        _warn_once(reason, "mcp.remote_turn.unusable", url, reason=reason)
 
 
 def note_result(url: str, result: str) -> None:
-    """The last result against `url`, for `local_status`."""
+    """The last result against `url`, for `local_status`; a grant marks the URL as reached."""
     with _Memory.lock:
         _Memory.last[url] = result
+        if result in (GRANTED, FORCED):
+            _Memory.reached.add(url)
 
 
 def last_result(url: str) -> str | None:
@@ -246,6 +388,7 @@ def reset() -> None:
         _Memory.unusable.clear()
         _Memory.logged.clear()
         _Memory.last.clear()
+        _Memory.reached.clear()
     _Transport.close()
 
 
@@ -254,10 +397,12 @@ def reset() -> None:
 
 def _new_client() -> httpx2.Client:
     # Its own client and not the backend's: other timeouts (REQ-025), never redirects (a 3xx is a
-    # bad answer) and no cookies kept between requests.
+    # bad answer), no cookies kept between requests and no proxy from the environment: the
+    # credential goes to the daemon named here and nowhere else.
     return httpx2.Client(
         timeout=httpx2.Timeout(DEFAULT_HEARTBEAT_S + READ_MARGIN_S, connect=CONNECT_TIMEOUT_S),
         follow_redirects=False,
+        trust_env=False,
     )
 
 
@@ -293,28 +438,20 @@ def set_client_factory(factory: Callable[[], httpx2.Client]) -> None:
     _Transport.factory = staticmethod(factory)  # type: ignore[assignment]
 
 
-def _parse(response: httpx2.Response) -> Answer:
-    code = response.status_code
-    if code in (404, 405):
-        raise Unusable(UNSUPPORTED)
-    if code == 401:
-        raise Unusable(UNAUTHORIZED)
-    if code == 403:
-        try:
-            error = response.json().get("error")
-        except (ValueError, AttributeError):
-            error = None
-        raise Unusable(NEEDS_SECRET if error == "turn_needs_secret" else UNAUTHORIZED)
-    if code == 429:
-        raise _Busy
-    if code != 200:
-        raise Unusable(BAD_RESPONSE)
-    try:
-        data = response.json()
-    except ValueError:
-        raise Unusable(BAD_RESPONSE) from None
-    if not isinstance(data, dict):
-        raise Unusable(BAD_RESPONSE)
+def _finite(value: Any, default: float) -> float:
+    number = float(value) if value is not None else default
+    return number if math.isfinite(number) else default
+
+
+def _in_use(raw: Any) -> tuple[str, ...]:
+    """The models in use as the daemon says them, cleaned: what is not a model name is dropped."""
+    if not isinstance(raw, list):
+        return ()
+    names = [m for m in raw[:MAX_IN_USE] if isinstance(m, str) and _MODEL_NAME.fullmatch(m)]
+    return tuple(names)
+
+
+def _answer(data: dict) -> Answer:
     version = data.get("v")
     if not isinstance(version, int) or isinstance(version, bool):
         raise Unusable(BAD_RESPONSE)
@@ -323,46 +460,108 @@ def _parse(response: httpx2.Response) -> Answer:
     status = data.get("status")
     if status not in _STATUSES:
         raise Unusable(BAD_RESPONSE)
-    try:
-        heartbeat_s = float(data.get("heartbeat_s") or DEFAULT_HEARTBEAT_S)
-        stalled_s = float(data.get("stalled_s") or 0.0)
-        position = data.get("position")
-        position = int(position) if position is not None else None
-        in_use = tuple(str(m) for m in (data.get("in_use") or ()))
-    except (TypeError, ValueError):
-        raise Unusable(BAD_RESPONSE) from None
     lease = data.get("lease")
+    if lease is not None and not (isinstance(lease, str) and _LEASE.fullmatch(lease)):
+        raise Unusable(BAD_RESPONSE)
+    position = data.get("position")
+    position = int(position) if position is not None else None
     model = data.get("model")
+    daemon_id = data.get("daemon_id")
     return Answer(
         status=status,
-        lease=lease if isinstance(lease, str) and lease else None,
-        daemon_id=str(data.get("daemon_id") or ""),
+        lease=lease,
+        daemon_id=daemon_id if isinstance(daemon_id, str) else "",
         position=position,
-        in_use=in_use,
-        model=model if isinstance(model, str) and model else None,
+        in_use=_in_use(data.get("in_use")),
+        model=model if isinstance(model, str) and _MODEL_NAME.fullmatch(model) else None,
         forced=data.get("forced") is True,
-        # Never 0 nor absurd: the loop and the thread wait this long between requests.
-        heartbeat_s=min(max(heartbeat_s, 0.05), 60.0),
-        stalled_s=max(0.0, stalled_s),
+        # Never 0, absurd or not a number: the loop and the thread wait this long between requests.
+        heartbeat_s=min(max(_finite(data.get("heartbeat_s"), DEFAULT_HEARTBEAT_S), 0.05), 60.0),
+        stalled_s=max(0.0, _finite(data.get("stalled_s"), 0.0)),
     )
 
 
-def _post(url: str, path: str, body: dict[str, Any], *, read_s: float) -> Answer:
-    """One request to the daemon. `Unusable`, `_Busy` or `_Lost` when there is no usable answer."""
+def _parse(status_code: int, body: bytes) -> Answer:
+    """An answer of the daemon, or the exception that says what to do with it."""
+    if status_code in (404, 405):
+        raise Unusable(UNSUPPORTED)
+    if status_code == 401:
+        raise Unusable(UNAUTHORIZED)
+    if status_code == 429:
+        raise _Busy
     try:
-        response = _Transport.get().post(
+        data = json.loads(body)
+    except Exception:  # broken, too deep (`RecursionError`), not UTF-8: all unreadable
+        data = None
+    if status_code == 403:
+        error = data.get("error") if isinstance(data, dict) else None
+        raise Unusable(NEEDS_SECRET if error == "turn_needs_secret" else UNAUTHORIZED)
+    if status_code != 200 or not isinstance(data, dict):
+        raise Unusable(BAD_RESPONSE)
+    try:
+        return _answer(data)
+    except Unusable:
+        raise
+    except Exception:  # `1e999` (OverflowError), a list where a number goes...: unreadable
+        raise Unusable(BAD_RESPONSE) from None
+
+
+def _lease_in(body: bytes) -> str | None:
+    """The lease named by a (maybe partial) answer, if it can be read; `None` otherwise."""
+    try:
+        data = json.loads(body)
+        lease = data.get("lease") if isinstance(data, dict) else None
+    except Exception:  # a partial answer is unreadable more often than not
+        return None
+    return lease if isinstance(lease, str) and _LEASE.fullmatch(lease) else None
+
+
+def _post(
+    url: str,
+    path: str,
+    body: dict[str, Any],
+    *,
+    read_s: float,
+    total_s: float | None = None,
+    should_stop: Callable[[], bool] | None = None,
+) -> Answer:
+    """One request to the daemon. `Unusable`, `_Busy`, `_Lost` or `_Stopped` without an answer.
+
+    The whole answer must arrive within `total_s` (by default, connection plus `read_s`) and weigh
+    at most `MAX_ANSWER_BYTES`; `should_stop` is looked at between two pieces of it.
+    """
+    deadline = time.monotonic() + (total_s if total_s is not None else CONNECT_TIMEOUT_S + read_s)
+    connect_s = min(CONNECT_TIMEOUT_S, total_s) if total_s is not None else CONNECT_TIMEOUT_S
+    data = bytearray()
+    try:
+        with _Transport.get().stream(
+            "POST",
             url + path,
             json=body,
             headers={"Authorization": f"Bearer {credential()}"},
-            timeout=httpx2.Timeout(read_s, connect=CONNECT_TIMEOUT_S),
-        )
+            timeout=httpx2.Timeout(read_s, connect=connect_s),
+        ) as response:
+            status_code = response.status_code
+            for piece in response.iter_bytes():
+                data += piece
+                if len(data) > MAX_ANSWER_BYTES:
+                    raise Unusable(BAD_RESPONSE)
+                if should_stop is not None and should_stop():
+                    raise _Stopped(_lease_in(bytes(data)))
+                if time.monotonic() > deadline:
+                    raise _Lost
+    except (Unusable, _Lost, _Stopped):
+        raise
+    except httpx2.ConnectTimeout:
+        # Nothing arrived (a filtered port): no lease can be at stake, so no retry either.
+        raise Unusable(UNREACHABLE) from None
     except httpx2.TimeoutException:
         raise _Lost from None
     except Exception:
         # `HTTPError` and anything else the transport may raise (a bad proxy setting, a TLS
         # library error): the turn is a nicety, and a failure here never fails the delegation.
         raise Unusable(UNREACHABLE) from None
-    return _parse(response)
+    return _parse(status_code, bytes(data))
 
 
 # --- one operation's lease -------------------------------------------------------------------
@@ -452,7 +651,12 @@ class RemoteLease:
     def acquire(
         self, on_wait: turn.OnWait, should_stop: Callable[[], bool] | None = None
     ) -> turn.Grant:
-        stop = should_stop or (lambda: False)
+        asked_to_stop = should_stop or (lambda: False)
+
+        def stop() -> bool:
+            # A release from another thread ends the wait too: nothing may beat after it.
+            return self._released or asked_to_stop()
+
         reason = remembered(self.url)
         if reason is not None:
             raise Unusable(reason)
@@ -467,11 +671,15 @@ class RemoteLease:
             started = time.monotonic()
             try:
                 if self.lease_id is None:
-                    answer = _post(self.url, ACQUIRE_PATH, self._request, read_s=self._read_s())
+                    path, body = ACQUIRE_PATH, self._request
                 else:
-                    answer = _post(
-                        self.url, HEARTBEAT_PATH, self._beat_body(), read_s=self._read_s()
-                    )
+                    path, body = HEARTBEAT_PATH, self._beat_body()
+                answer = _post(self.url, path, body, read_s=self._read_s(), should_stop=stop)
+            except _Stopped as stopped:
+                if self.lease_id is None:
+                    self.lease_id = stopped.lease
+                self._give_back()
+                raise turn.AbandonedWait from None
             except _Busy:
                 self.busy = True
                 on_wait(0, ())
@@ -523,6 +731,9 @@ class RemoteLease:
             if answer.status == "yield":
                 self.yield_requested.set()
             note_result(self.url, FORCED if answer.forced else GRANTED)
+            if self._released:
+                self._give_back()  # released while the grant was on its way
+                raise turn.AbandonedWait
             self._start_beating()
             return turn.Grant(str(self._request["op"]), frozenset({self.model}), answer.forced)
 
@@ -555,19 +766,34 @@ class RemoteLease:
         return body
 
     def _start_beating(self) -> None:
-        self._stop.clear()
         self._thread = threading.Thread(
             target=self._beat_loop, name="remote-turn-heartbeat", daemon=True
         )
         self._thread.start()
 
     def _beat_loop(self) -> None:
+        try:
+            self._beating()
+        except Exception:
+            # Never dies in silence: whatever broke the beat, the lease cannot be counted on any
+            # more, and the next send asks for the turn again (REQ-025 case 3).
+            self.lost.set()
+
+    def _beating(self) -> None:
         # The only sender while granted: the heartbeats of a lease go one after the other.
         while not self._stop.wait(self.heartbeat_s):
             if self.lease_id is None:
                 return
             try:
-                answer = _post(self.url, HEARTBEAT_PATH, self._beat_body(), read_s=self._read_s())
+                answer = _post(
+                    self.url,
+                    HEARTBEAT_PATH,
+                    self._beat_body(),
+                    read_s=self._read_s(),
+                    should_stop=self._stop.is_set,
+                )
+            except _Stopped:
+                return
             except (Unusable, _Busy, _Lost):
                 # Nothing to do now: the next beat tries again, and a daemon that comes back with
                 # the lease gone answers `expired`.
@@ -588,8 +814,14 @@ class RemoteLease:
         if lease is None:
             return
         try:
-            _post(self.url, RELEASE_PATH, {"lease": lease}, read_s=RELEASE_READ_S)
-        except (Unusable, _Busy, _Lost):
+            _post(
+                self.url,
+                RELEASE_PATH,
+                {"lease": lease},
+                read_s=RELEASE_READ_S,
+                total_s=RELEASE_READ_S,
+            )
+        except (Unusable, _Busy, _Lost, _Stopped):
             pass  # best-effort: the lease expires on its own after `TURN_LEASE_S`
 
     def release(self) -> None:
@@ -617,6 +849,8 @@ def status_line(*, remote_backend: bool) -> str | None:
     mode = _mode()
     if mode == "off":
         return i18n.t("mcp.status.remote_turn.off") if remote_backend else None
+    if _auto_public(remote_backend=remote_backend):
+        return i18n.t("mcp.status.remote_turn.unavailable", reason=PUBLIC_HOST)
     url = turn_url(remote_backend=remote_backend)
     if url is None:
         if explicit_url():
@@ -627,4 +861,6 @@ def status_line(*, remote_backend: bool) -> str | None:
         reason = SELF
     if reason is not None:
         return i18n.t("mcp.status.remote_turn.unavailable", reason=reason)
+    if plaintext_to_public(url):
+        return i18n.t("mcp.status.remote_turn.active_plaintext", url=display_url(url))
     return i18n.t("mcp.status.remote_turn.active", url=display_url(url))

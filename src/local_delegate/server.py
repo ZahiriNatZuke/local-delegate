@@ -2682,6 +2682,11 @@ class _OperationTurn:
             if limit > 0 and stalled() > limit:
                 seen["saturated"] = True
                 return True
+            if remote is not None and limit > 0 and time.monotonic() - t0 > 2 * limit:
+                # Our own cap (review of #502): a daemon that keeps saying `stalled_s: 0` does
+                # not hold the operation past twice the limit.
+                seen["saturated"] = True
+                return True
             return False
 
         if remote is not None:

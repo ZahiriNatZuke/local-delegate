@@ -185,7 +185,15 @@ después el turno remoto con la cesión entre trozos.
   haya `TURN_URL`.
 - **REQ-021 (descubrimiento).** Con `LOCAL_DELEGATE_TURN_URL` en `auto` (por defecto), la URL del
   daemon es `config.remote_panel_url()`: mismo esquema y host que `BASE_URL`, con el puerto web
-  (`LOCAL_DELEGATE_WEB_PORT`, 9393). Con una URL explícita, esa.
+  (`LOCAL_DELEGATE_WEB_PORT`, 9393), **solo si ese host es privado**; si no, `auto` equivale a `off`
+  (cero peticiones, sin cliente y sin `remote_turn` en el evento). Privado, decidido por el texto y
+  sin resolver DNS: IP de loopback, RFC 1918, CGNAT de Tailscale (100.64.0.0/10), ULA (`fc00::/7`)
+  o link-local; un nombre terminado en `.ts.net`, `.local`, `.lan`, `.home.arpa` o `.internal`; o
+  un nombre de una sola etiqueta (MagicDNS corto). El `BASE_URL` de la Mac
+  (`https://own-pc.<tailnet>.ts.net:9292/v1`) queda dentro. Con una URL explícita, esa, hacia
+  cualquier host (con `http://` a un host no privado se avisa una vez y en `local_status`).
+  *Decisión de la revisión del #502:* `auto` no puede mandar la clave del backend a un backend
+  público (con `https://api.example.com/v1`, el cliente pedía turno al puerto 9393 de ese mismo host).
 - **REQ-022 (ciclo por operación).** `_OperationTurn` pide turno remoto en el mismo punto donde
   pediría el local (`ensure`, antes de la plaza de la primera llamada y en cada salto de modelo),
   lo mantiene con un hilo de latido cada `heartbeat_s` (lo dice el servidor; 5 s por defecto) que
