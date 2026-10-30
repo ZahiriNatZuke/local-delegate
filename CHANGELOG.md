@@ -6,6 +6,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Añadido
+
+- **El daemon puede dar turno a las operaciones de otra máquina** (concurrencia PC+Mac, lote 3,
+  #500). Nuevo endpoint `/api/turn/*` (`acquire`, `heartbeat`, `release`): una operación de la Mac
+  entra en la misma cola que las de la PC, con un arrendamiento que caduca a los 30 s sin latido
+  (`LOCAL_DELEGATE_TURN_LEASE_S`), se ve en «En curso» con su máquina y cede el turno entre trozos
+  igual que una local. Exige `Authorization: Bearer` con el token del puerto o la clave del backend;
+  como mucho 16 arrendamientos (`LOCAL_DELEGATE_TURN_MAX_LEASES`), 8 por máquina. Solo lo sirve el
+  daemon, y `LOCAL_DELEGATE_TURN_SERVER=off` lo apaga. El cliente que lo usa llega en una versión
+  próxima: con esta, nada cambia para quien no lo llame. `/api/daemon` y `daemon.json` llevan
+  `daemon_id`, nuevo en cada arranque.
+
 ### Corregido
 
 - **El reagrupado de un documento troceado ya no repite rondas sin avanzar** (#497).

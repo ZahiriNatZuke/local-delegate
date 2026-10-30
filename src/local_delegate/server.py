@@ -679,6 +679,54 @@ def _inflight_end(entry_id: int) -> None:
             _backend_waits.pop(key, None)
 
 
+# --- Entries under a given key (concurrency PC+Mac, lot 3: remote operations, REQ-014) -------
+# A remote operation has no entry id of this process: its key is `remote:<host>/<op>`, chosen by
+# the lease table (`turn_leases`). Same file, same lock and same `_inflight_live` as the rest.
+
+
+def _inflight_put(key: str, entry: dict) -> None:
+    """Write `entry` under `key`, live (safe from the orphan TTL) until `_inflight_drop`."""
+    with _inflight_lock:
+        _inflight_live.add(key)
+
+    def _add(data: dict) -> None:
+        data[key] = dict(entry)
+
+    _inflight_mutate(_add)
+
+
+def _inflight_patch(key: str, changes: dict[str, Any]) -> None:
+    """Set the fields of `changes` on the entry `key`; a `None` value removes that field.
+
+    Without an entry (already dropped), nothing: a late update never brings an entry back.
+    """
+
+    def _update(data: dict) -> None:
+        entry = data.get(key)
+        if not isinstance(entry, dict):
+            return
+        for name, value in changes.items():
+            if value is None:
+                entry.pop(name, None)
+            else:
+                entry[name] = value
+
+    _inflight_mutate(_update)
+
+
+def _inflight_drop(key: str) -> None:
+    """The entry `key` leaves the file and stops being live. Idempotent."""
+
+    def _remove(data: dict) -> None:
+        data.pop(key, None)
+
+    try:
+        _inflight_mutate(_remove)
+    finally:
+        with _inflight_lock:
+            _inflight_live.discard(key)
+
+
 def inflight_snapshot() -> list[dict]:
     """Delegaciones en curso de TODOS los procesos MCP activos, con `elapsed_s`.
 
@@ -2168,6 +2216,18 @@ def _refresh_topology() -> None:
         _topology()
     except Exception:  # la relectura es una mejora; la espera sigue con la relación que tenía
         pass
+    # Concurrency PC+Mac, lot 3 (REQ-012): each tick of a local wait also reaps the expired leases
+    # of remote operations, so a dead Mac never holds a local wait past `TURN_LEASE_S`.
+    for hook in tuple(TURN_TICK_HOOKS):
+        try:
+            hook()
+        except Exception:  # same rule: a hook never breaks a wait
+            pass
+
+
+#: Called on each tick of a local turn wait, after the topology is reread (`_refresh_topology`).
+#: `turn_leases` registers its reaper here on the first lease.
+TURN_TICK_HOOKS: list[Callable[[], None]] = []
 
 
 def _new_turn() -> turn.Turn:

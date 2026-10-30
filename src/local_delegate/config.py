@@ -410,6 +410,14 @@ TURN_MAX_S = _env_float("LOCAL_DELEGATE_TURN_MAX_S", 600.0)
 # goes back to the end of the queue. Bounds how long a long operation keeps a clashing one waiting
 # (REQ-031). `0` disables yielding (the wait then depends on the longest operation, as before).
 TURN_YIELD_S = max(0.0, _env_float("LOCAL_DELEGATE_TURN_YIELD_S", 120.0))
+# Concurrency PC+Mac, lot 3 (REQ-010..017): the daemon's turn endpoint (`/api/turn/*`), through
+# which a process whose backend is THIS machine's (the Mac) joins the same turn. A lease expires
+# after this many seconds without an `acquire` or a `heartbeat` (REQ-012).
+TURN_LEASE_S = max(3.0, _env_float("LOCAL_DELEGATE_TURN_LEASE_S", 30.0))
+# At most this many live leases in total (REQ-017); 8 per host on top of that.
+TURN_MAX_LEASES = max(1, _env_int("LOCAL_DELEGATE_TURN_MAX_LEASES", 16))
+# Kill switch of the endpoint (`off`: 404, as an old daemon), the rollback that needs no release.
+TURN_SERVER = _env_flag("LOCAL_DELEGATE_TURN_SERVER", True)
 
 # --- Aborted delegations and a saturated queue (issue #476) ----------------------------------
 # The daemon's own budget for ONE tool call, queue included: past it the call is cancelled with

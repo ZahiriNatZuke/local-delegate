@@ -121,6 +121,9 @@ después el turno remoto con la cesión entre trozos.
   `_note_queue_progress()` (#476), así una espera local detrás de la Mac no se da por saturada
   mientras la cola avanza. Interruptor del servidor: `LOCAL_DELEGATE_TURN_SERVER=off` apaga el
   endpoint (404, como un daemon viejo) sin publicar nada.
+  **Contrato del cliente (añadido en el lote 3):** tras un `acquire` que crea arrendamiento, la
+  espera sigue con `heartbeat`; `acquire` solo se repite tras un `expired` o una respuesta perdida
+  (repetirlo con el arrendamiento vivo lo caduca y vuelve al final de la cola).
 - **REQ-013 (red de seguridad).** `TURN_MAX_S` sigue: la cabeza de la cola entra **forzada** si
   lleva `TURN_MAX_S` esperando y el daemon `TURN_MAX_S` sin progreso. Una operación remota que
   declara `in_backend: true` en su último latido cuenta como llamada en vuelo para ese reloj
