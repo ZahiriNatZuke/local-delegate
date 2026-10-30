@@ -807,3 +807,41 @@ def test_a_diff_under_the_long_cap_keeps_the_note_in_every_map_step(monkeypatch,
     maps = [p for p in seen if "Redacta un único resumen global" not in p["messages"][1]["content"]]
     assert len(maps) >= 2
     assert all(server._DIFF_NOTE in p["messages"][0]["content"] for p in maps)
+
+
+# Segunda evidencia del #499: un diff de código Python largo. En una línea de contexto, un
+# comentario de nivel superior (` # …`, un espacio delante) casa con un título ATX de nivel 1.
+PY_DIFF_HEAD = (
+    "diff --git a/src/pkg/turn.py b/src/pkg/turn.py\n"
+    "index 5555555..6666666 100644\n"
+    "--- a/src/pkg/turn.py\n"
+    "+++ b/src/pkg/turn.py\n"
+    "@@ -10,6 +10,40 @@\n"
+    " # goes back to the end of the queue when it yields\n"
+    " QUEUE = []\n"
+    "+# The daemon's own budget for ONE tool call\n"
+    "+BUDGET_S = 600\n"
+    " # The turn is shared between hosts\n"
+)
+
+
+def test_python_comments_in_a_diff_are_not_sections():
+    assert [h.text for h in sections.markdown_headings(PY_DIFF_HEAD) if h.level == 1] == [
+        "goes back to the end of the queue when it yields",
+        "The turn is shared between hosts",
+    ]
+    assert sections.detect(PY_DIFF_HEAD) is None
+
+
+def test_a_long_python_diff_is_not_summarized_by_sections(monkeypatch, tmp_path):
+    body = "".join(f"+    value_{i} = compute({i})  # step {i}\n" for i in range(2500))
+    big = PY_DIFF_HEAD + body
+    assert len(big) > config.max_chars_for_role("long")
+    path = tmp_path / "pr.diff"
+    path.write_bytes(big.encode("utf-8"))
+    output, seen = _call_summary(monkeypatch, tmp_path, _echo_prose, path=str(path))
+    assert "sin resumir" not in output
+    assert all(
+        "una línea '## ' con el título tal cual" not in p["messages"][0]["content"] for p in seen
+    )
+    assert all("sections" not in event for event in _events(tmp_path))
