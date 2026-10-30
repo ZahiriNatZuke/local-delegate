@@ -96,10 +96,10 @@ def test_chunked_clears_the_retry_when_the_split_is_over(monkeypatch, tmp_path):
     server.local_translate("inglés", text=_chunked_text())
 
     assert _phases(events) == ["retry", "map"], events
-    cleared = events.index(("phase", "map"))
+    map_at = events.index(("phase", "map"))
     first_of_piece_2 = events.index(("call", 2))
-    assert cleared < first_of_piece_2, events
-    assert all(e == ("call", 1) for e in events[1:cleared] if e[0] == "call"), events
+    assert map_at < first_of_piece_2, events
+    assert all(e == ("call", 1) for e in events[1:map_at] if e[0] == "call"), events
 
 
 def test_chunked_a_nested_split_does_not_clear_the_outer_retry(monkeypatch, tmp_path):
@@ -146,5 +146,5 @@ def test_map_reduce_clears_the_retry_when_the_split_is_over(monkeypatch, tmp_pat
     phases = _phases(events)
     assert phases[:2] == ["retry", "map"], events
     assert phases[-1] == "reduce", events
-    cleared = events.index(("phase", "map"))
-    assert cleared < events.index(("call", 2)), events
+    map_at = events.index(("phase", "map"))
+    assert map_at < events.index(("call", 2)), events
