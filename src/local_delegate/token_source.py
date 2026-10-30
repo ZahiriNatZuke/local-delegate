@@ -114,6 +114,15 @@ def daemon_token() -> str:
     return resolve(TOKEN_VARIABLE)[0]
 
 
+def remote_web_token() -> str:
+    """El token del puerto del daemon de la máquina del backend, para su turno (PC+Mac, lote 4).
+
+    `LOCAL_DELEGATE_REMOTE_WEB_TOKEN` y, si falta, el Llavero (`local-delegate-remote-web-token`).
+    Cadena vacía si no hay: entonces el cliente del turno manda la clave del backend.
+    """
+    return keychain.credential(config.REMOTE_WEB_TOKEN, keychain.REMOTE_WEB_TOKEN_SERVICE)[0]
+
+
 def web_token() -> str:
     """El token del puerto del daemon para el puente de Desktop.
 
