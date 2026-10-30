@@ -14,7 +14,6 @@ import inspect
 import io
 import json
 import os
-import pathlib
 import re
 import shutil
 import socket
@@ -437,9 +436,9 @@ def test_the_dashboard_does_not_read_claude(env, monkeypatch):
 
     monkeypatch.setattr(builtins, "open", _open)
     monkeypatch.setattr(io, "open", _io_open)
-    monkeypatch.setattr(pathlib.Path, "open", _path_open)
-    monkeypatch.setattr(pathlib.Path, "read_text", _read_text)
-    monkeypatch.setattr(pathlib.Path, "read_bytes", _read_bytes)
+    monkeypatch.setattr(Path, "open", _path_open)
+    monkeypatch.setattr(Path, "read_text", _read_text)
+    monkeypatch.setattr(Path, "read_bytes", _read_bytes)
 
     # Control positivo: el espía ve una lectura bajo `~/.claude` cuando la hay (la misma lectura
     # pasa por varias capas: `read_text` → `open` → `io.open`, de ahí el conjunto).
