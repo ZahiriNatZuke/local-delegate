@@ -27,6 +27,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   (`remote_turn`); `local_status` añade la línea «Turno remoto». La credencial es la clave del
   backend o, si existe, `LOCAL_DELEGATE_REMOTE_WEB_TOKEN`. Con un backend local no cambia nada: no
   se hace ninguna petición. `LOCAL_DELEGATE_TURN_URL=off` lo apaga.
+- **`doctor` comprueba el turno remoto** (concurrencia PC+Mac, lote 5), dentro del check «turno del
+  daemon», sin añadir otro. En la máquina sin backend propio pregunta al daemon de la otra si acepta
+  su credencial: `ok` con el turno activo, `warn` con el motivo y qué hacer si no (sin respuesta,
+  versión anterior, credencial rechazada, sin secreto, texto plano hacia un host que no es privado
+  o una `LOCAL_DELEGATE_TURN_URL` no válida). En la del backend, avisa si su daemon no tiene
+  secreto para el endpoint y de los modelos cuyo nombre lleva `:`, `/` u otro carácter que el
+  endpoint quita, porque una operación de otra máquina con ese modelo iría sin turno (`no_turn`);
+  un alias sin esos caracteres lo resuelve. La prueba es un `release` de un arrendamiento que no
+  existe: no ocupa turno ni toca nada. La wiki documenta el turno común, su configuración por
+  máquina, la seguridad, la degradación y el rollback (`docs/wiki/Remote-backend.md`).
 
 ### Corregido
 

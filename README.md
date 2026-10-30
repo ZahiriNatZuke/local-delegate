@@ -94,7 +94,10 @@ bloque) y Claude Code corta una llamada HTTP **tras 5 min sin respuesta** (la va
 
 Para usar la GPU de otra máquina manteniendo los paths locales del cliente, usa un MCP local que
 apunte al backend remoto: [guía Mac → PC](./docs/wiki/Remote-backend.md) y
-[recipe técnica completa](./docs/recipes/remote-backend.md).
+[recipe técnica completa](./docs/recipes/remote-backend.md). Las operaciones de las dos máquinas
+hacen una sola cola: la que no tiene el backend pide turno al daemon de la otra, con la misma clave
+del backend y solo hacia un host privado (la tailnet), y si ese daemon no está disponible sigue sin
+turno, como antes ([turno común PC+Mac](./docs/wiki/Remote-backend.md#turno-común-pcmac)).
 
 > **No fijes una versión vieja «por estabilidad».** Un pin (`==X.Y.Z`) congela también los rangos de
 > dependencias que declaraba aquel wheel, y eso envejece mal: las versiones anteriores a la 0.12.2

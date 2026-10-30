@@ -121,6 +121,16 @@
       "to": "implementing",
       "at": "2026-10-29T15:42:59.321Z",
       "reason": "Lote 1 (waiting_backend, progreso y read_timeout con causa) en implementacion, rama feat/concurrency-lot1-waiting-backend; lote 2 en paralelo"
+    },
+    {
+      "type": "note",
+      "at": "2026-10-30T14:50:35.000Z",
+      "reason": "Lote 3 mezclado: PR #500 (endpoint /api/turn/* con arrendamiento en el daemon), merge 7253bd75. Evidencia: verification.md, seccion Lote 3 (46 tests nuevos de test_turn_api.py en verde tres veces, 7+8 mutantes cazados, revision de seguridad y regresiones aplicada)."
+    },
+    {
+      "type": "note",
+      "at": "2026-10-30T16:35:33.000Z",
+      "reason": "Lote 4 mezclado: PR #502 (cliente del turno remoto e integracion en las operaciones), merge 54c02fcb. Evidencia: verification.md, seccion Lote 4 (11+19 mutantes cazados; auto solo con host privado tras la revision del #502). Pasan al lote 5 doctor (REQ-027) y la nota de modelos con ':' o '/'."
     }
   ]
 }
