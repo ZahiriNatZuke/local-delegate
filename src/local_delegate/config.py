@@ -418,6 +418,11 @@ TURN_LEASE_S = max(3.0, _env_float("LOCAL_DELEGATE_TURN_LEASE_S", 30.0))
 TURN_MAX_LEASES = max(1, _env_int("LOCAL_DELEGATE_TURN_MAX_LEASES", 16))
 # Kill switch of the endpoint (`off`: 404, as an old daemon), the rollback that needs no release.
 TURN_SERVER = _env_flag("LOCAL_DELEGATE_TURN_SERVER", True)
+# Concurrency PC+Mac, lot 4 (REQ-020/021): where a process whose backend is ANOTHER machine's asks
+# for the turn. `auto` (the default): that machine's daemon, same scheme and host as `BASE_URL` with
+# the web port (`remote_panel_url`), only when the backend is not on loopback. `off`: never. A URL:
+# that daemon, also with a loopback backend (an `ssh -L` tunnel), unless there is a local topology.
+TURN_URL = _env("LOCAL_DELEGATE_TURN_URL", "auto").strip()
 
 # --- Aborted delegations and a saturated queue (issue #476) ----------------------------------
 # The daemon's own budget for ONE tool call, queue included: past it the call is cancelled with
@@ -622,6 +627,11 @@ COST_FALLBACK = _env("LOCAL_DELEGATE_COST_FALLBACK", "")
 # El secreto se lee del entorno y NUNCA se escribe en un fichero de configuración: los clientes lo
 # referencian por el nombre de la variable.
 WEB_TOKEN = _env("LOCAL_DELEGATE_WEB_TOKEN", "").strip()
+# Concurrency PC+Mac, lot 4 (REQ-016, client side): the port token of the daemon on the BACKEND'S
+# machine, for its `/api/turn/*`. Optional: without it the client sends the backend's key
+# (`LOCAL_DELEGATE_API_KEY`), which that daemon also accepts. On macOS it may live in the Keychain
+# (service `local-delegate-remote-web-token`).
+REMOTE_WEB_TOKEN = _env("LOCAL_DELEGATE_REMOTE_WEB_TOKEN", "").strip()
 
 # Cuánto dura la sesión del navegador, en días. Solo afecta al navegador: los clientes MCP y el CLI
 # mandan el token en cada llamada y no reciben cookie.

@@ -14,9 +14,19 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   (`LOCAL_DELEGATE_TURN_LEASE_S`), se ve en «En curso» con su máquina y cede el turno entre trozos
   igual que una local. Exige `Authorization: Bearer` con el token del puerto o la clave del backend;
   como mucho 16 arrendamientos (`LOCAL_DELEGATE_TURN_MAX_LEASES`), 8 por máquina. Solo lo sirve el
-  daemon, y `LOCAL_DELEGATE_TURN_SERVER=off` lo apaga. El cliente que lo usa llega en una versión
-  próxima: con esta, nada cambia para quien no lo llame. `/api/daemon` y `daemon.json` llevan
+  daemon, y `LOCAL_DELEGATE_TURN_SERVER=off` lo apaga. `/api/daemon` y `daemon.json` llevan
   `daemon_id`, nuevo en cada arranque.
+- **La Mac pide turno al daemon de la PC** (concurrencia PC+Mac, lote 4). Un proceso cuyo backend
+  es el de otra máquina pide turno al daemon de esa máquina antes de cada operación
+  (`LOCAL_DELEGATE_TURN_URL`, por defecto `auto`: el host de `LOCAL_DELEGATE_BASE_URL` con el
+  puerto web, solo si ese host es privado, como el de la tailnet; a un backend público no se le
+  pide nada), lo mantiene con un latido, lo cede entre trozos cuando se lo piden y lo suelta al
+  terminar, también si la llamada se cancela. Mientras espera, el progreso dice «esperando turno en
+  <máquina>» y su «En curso» lo marca en cola. Si ese daemon no responde, es de una versión
+  anterior o rechaza la credencial, la operación sigue sin turno, como antes, y el evento lo dice
+  (`remote_turn`); `local_status` añade la línea «Turno remoto». La credencial es la clave del
+  backend o, si existe, `LOCAL_DELEGATE_REMOTE_WEB_TOKEN`. Con un backend local no cambia nada: no
+  se hace ninguna petición. `LOCAL_DELEGATE_TURN_URL=off` lo apaga.
 
 ### Corregido
 

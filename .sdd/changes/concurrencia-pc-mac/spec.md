@@ -185,7 +185,15 @@ después el turno remoto con la cesión entre trozos.
   haya `TURN_URL`.
 - **REQ-021 (descubrimiento).** Con `LOCAL_DELEGATE_TURN_URL` en `auto` (por defecto), la URL del
   daemon es `config.remote_panel_url()`: mismo esquema y host que `BASE_URL`, con el puerto web
-  (`LOCAL_DELEGATE_WEB_PORT`, 9393). Con una URL explícita, esa.
+  (`LOCAL_DELEGATE_WEB_PORT`, 9393), **solo si ese host es privado**; si no, `auto` equivale a `off`
+  (cero peticiones, sin cliente y sin `remote_turn` en el evento). Privado, decidido por el texto y
+  sin resolver DNS: IP de loopback, RFC 1918, CGNAT de Tailscale (100.64.0.0/10), ULA (`fc00::/7`)
+  o link-local; un nombre terminado en `.ts.net`, `.local`, `.lan`, `.home.arpa` o `.internal`; o
+  un nombre de una sola etiqueta (MagicDNS corto). El `BASE_URL` de la Mac
+  (`https://own-pc.<tailnet>.ts.net:9292/v1`) queda dentro. Con una URL explícita, esa, hacia
+  cualquier host (con `http://` a un host no privado se avisa una vez y en `local_status`).
+  *Decisión de la revisión del #502:* `auto` no puede mandar la clave del backend a un backend
+  público (con `https://api.example.com/v1`, el cliente pedía turno al puerto 9393 de ese mismo host).
 - **REQ-022 (ciclo por operación).** `_OperationTurn` pide turno remoto en el mismo punto donde
   pediría el local (`ensure`, antes de la plaza de la primera llamada y en cada salto de modelo),
   lo mantiene con un hilo de latido cada `heartbeat_s` (lo dice el servidor; 5 s por defecto) que
@@ -221,7 +229,11 @@ después el turno remoto con la cesión entre trozos.
 - **REQ-027 (`local_status` y `doctor`).** `local_status` de un proceso con backend remoto añade una
   línea «Turno remoto: activo en <url> | no disponible (<motivo>) | desactivado». `doctor` comprueba
   en la Mac que el daemon remoto responde a `/api/turn/` con la credencial (OK / WARN con el motivo)
-  y en la PC que el daemon tiene algún secreto para el endpoint (WARN si no).
+  y en la PC que el daemon tiene algún secreto para el endpoint (WARN si no). **Añadido en el
+  lote 4:** `doctor` avisa (WARN) de los modelos de la topología cuyo nombre lleva un carácter que
+  `config.clean_machine_name` quita (`:`, `/`…): el endpoint los sanea y responde `no_turn`, así
+  que esas operaciones remotas irían sin turno. La parte de `doctor` va en el lote 5 (añadir un
+  check cambia el número de checks que fijan tres tests existentes y la wiki).
 
 #### Reparto justo
 

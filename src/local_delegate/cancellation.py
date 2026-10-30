@@ -158,7 +158,20 @@ class Token:
 
         status = dict(self.status)  # a copy: the tool's thread may write meanwhile
         wait = status.get("wait")
-        if wait == "turn":
+        if wait == "turn" and status.get("turn_host"):
+            # Concurrency PC+Mac, lot 4 (REQ-023): the turn is in the daemon of another machine;
+            # position 0 is a full daemon (429) that has not queued the operation yet.
+            host = status["turn_host"]
+            if not status.get("position"):
+                phase = i18n.t("mcp.progress.turn_remote_busy", host=host)
+            else:
+                phase = i18n.t(
+                    "mcp.progress.turn_remote",
+                    host=host,
+                    position=status["position"],
+                    models=", ".join(status.get("in_use") or ()) or "-",
+                )
+        elif wait == "turn":
             phase = i18n.t(
                 "mcp.progress.turn",
                 position=status.get("position") or 1,

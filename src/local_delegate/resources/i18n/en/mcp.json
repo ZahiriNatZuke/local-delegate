@@ -179,5 +179,14 @@
   "mcp.warning.truncated_piece_lines": "{piece} (lines {first}-{last})",
   "mcp.warning.extract_null_in_chunks": "document processed in {pieces} chunks and none gave a value for: {fields}; that null may mean \"not seen\", not \"absent\"",
   "mcp.warning.sections_not_summarized": "{n} sections not summarized because of the word limit or the model",
-  "mcp.warning.sections_not_summarized_one": "1 section not summarized because of the word limit or the model"
+  "mcp.warning.sections_not_summarized_one": "1 section not summarized because of the word limit or the model",
+  "mcp.error.queue_saturated_remote_turn": "queue saturated: {stalled} s without the queue moving while you wait for the turn on {host} ({waited} s waiting so far; position in the queue: {position}; models in use: {models}). Retry later or do it yourself without delegating (limit: LOCAL_DELEGATE_QUEUE_MAX_WAIT_S).",
+  "mcp.progress.turn_remote": "waiting for the turn on {host}, position {position} in the queue (models in use: {models})",
+  "mcp.progress.turn_remote_busy": "waiting for the turn on {host} (its queue is full)",
+  "mcp.remote_turn.unusable": "local-delegate: the remote turn on {url} is not available ({reason}); delegations go on without a turn, as before",
+  "mcp.status.remote_turn.active": "Remote turn: active on {url}",
+  "mcp.status.remote_turn.off": "Remote turn: off (LOCAL_DELEGATE_TURN_URL=off)",
+  "mcp.status.remote_turn.unavailable": "Remote turn: not available ({reason})",
+  "mcp.remote_turn.plaintext": "local-delegate: the remote turn on {url} goes over http to a host that is not private: the credential travels unencrypted. Use https or a tailnet address",
+  "mcp.status.remote_turn.active_plaintext": "Remote turn: active on {url} (warning: http to a host that is not private, the credential travels unencrypted)"
 }

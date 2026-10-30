@@ -60,6 +60,7 @@ from . import (
     matrix,
     pace,
     questions,
+    remote_turn,
     sections,
     test_windows,
     topology,
@@ -486,6 +487,7 @@ def _inflight_progress(entry_id: int, chunk: int) -> None:
     """
     key = f"{os.getpid()}:{entry_id}"
     _call_status(chunk=int(chunk), phase=None)
+    _entry_beat_set(key, chunk=int(chunk), phase=None)
 
     def _update(data: dict) -> None:
         entry = data.get(key)
@@ -509,6 +511,7 @@ def _inflight_phase(entry_id: int, phase: str) -> None:
         return
     key = f"{os.getpid()}:{entry_id}"
     _call_status(phase=None if phase == "map" else phase)
+    _entry_beat_set(key, phase=phase)
 
     def _update(data: dict) -> None:
         entry = data.get(key)
@@ -553,6 +556,7 @@ def _inflight_in_backend(entry_id: int, held: bool) -> None:
     already reached the backend (between its pieces) from one that never did. Best-effort.
     """
     key = f"{os.getpid()}:{entry_id}"
+    _entry_beat_set(key, in_backend=bool(held))
 
     def _update(data: dict) -> None:
         entry = data.get(key)
@@ -560,6 +564,44 @@ def _inflight_in_backend(entry_id: int, held: bool) -> None:
             entry["in_backend"] = bool(held)
 
     _inflight_mutate(_update)
+
+
+#: Concurrency PC+Mac, lot 4 (REQ-022): per inflight key of THIS process, what the remote turn's
+#: heartbeat publishes (`in_backend`, `chunk`, `phase`). In memory, so the heartbeat thread never
+#: reads `inflight.json`. Under `_inflight_lock`; gone with the entry (`_inflight_end`).
+_entry_beat: dict[str, dict[str, Any]] = {}
+
+
+def _entry_beat_set(key: str, **changes: Any) -> None:
+    with _inflight_lock:
+        if key not in _inflight_live:
+            return  # a late update after `_inflight_end` never brings the state back
+        state = _entry_beat.setdefault(key, {})
+        for name, value in changes.items():
+            if value is None:
+                state.pop(name, None)
+            else:
+                state[name] = value
+
+
+def _beat_state(entry_id: int) -> dict[str, Any]:
+    """What the remote turn's heartbeat says of ONE delegation of this process (REQ-022).
+
+    `in_backend` (it holds a place and is at the backend), `waiting_backend` (`{model: state}` of
+    the models llama-swap has while one of its sends waits, lot 1; `True` without detail),
+    `chunk` and `phase`.
+    """
+    key = f"{os.getpid()}:{entry_id}"
+    with _inflight_lock:
+        state = dict(_entry_beat.get(key, {}))
+        waits = _backend_waits.get(key)
+        union: dict[str, str] = {}
+        if waits:
+            for photo in waits.values():
+                union.update(photo)
+    if waits:
+        state["waiting_backend"] = union or True
+    return state
 
 
 #: Concurrency PC+Mac, lot 1 (REQ-001): per inflight key, the sends that wait for llama-swap to
@@ -677,6 +719,7 @@ def _inflight_end(entry_id: int) -> None:
         with _inflight_lock:
             _inflight_live.discard(key)
             _backend_waits.pop(key, None)
+            _entry_beat.pop(key, None)
 
 
 # --- Entries under a given key (concurrency PC+Mac, lot 3: remote operations, REQ-014) -------
@@ -1166,6 +1209,7 @@ def _log_event(
     turn_wait_ms: int | None = None,
     turn: str | None = None,
     turn_yields: int | None = None,
+    remote_turn: str | None = None,
     routing: str | None = None,
     affinity_foreign_flight: int | None = None,
     affinity_failed: bool | None = None,
@@ -1368,6 +1412,9 @@ def _log_event(
         # PC+Mac, REQ-032: how many times the operation yielded the turn between chunks, only if any.
         if turn_yields:
             rec["turn_yields"] = int(turn_yields)
+        # PC+Mac, lot 4 (REQ-026): how the remote turn went; only for an operation that asked one.
+        if remote_turn is not None:
+            rec["remote_turn"] = remote_turn
         # Afinidad (REQ-016): respondió un alternativo ya cargado en lugar del modelo del rol
         # (`model_requested`). No es un respaldo ni lleva aviso. `affinity_foreign_flight`: las
         # peticiones de otros clientes contra ese modelo en la foto; `affinity_failed`, sin
@@ -2289,6 +2336,29 @@ def _topology() -> topology.Snapshot | topology.NoTopology:
     return snapshot
 
 
+def _operation_topology() -> topology.Snapshot | topology.NoTopology:
+    """The topology an operation of THIS process asks its turn with (`_OperationTurn`).
+
+    The same as `_topology`; apart only so the in-process tests of the remote turn (lot 4) can
+    play a Mac (no topology, remote backend) while the lease table of the same process plays the
+    PC's daemon (topology on loopback).
+    """
+    return _topology()
+
+
+def _remote_turn_url(snapshot: topology.Snapshot | topology.NoTopology) -> str | None:
+    """The daemon to ask for a remote turn, or `None` (REQ-020/021).
+
+    A local topology rules (REQ-020: with topology and backend on loopback, the local turn even
+    with `TURN_URL`). Without one, `remote_turn.turn_url` decides: `auto` asks only when the
+    backend is another machine's; local-only use gets `None` here, so it never sends a request
+    (REQ-040).
+    """
+    if isinstance(snapshot, topology.Snapshot):
+        return None
+    return remote_turn.turn_url(remote_backend=snapshot.reason == NO_TURN_REMOTE_BACKEND)
+
+
 def _real_model_name(model: str) -> str:
     """The id llama-swap shows in `/running` for `model` (an alias resolves to its model), or
     `model` itself without topology (remote backend, no config): then names are compared as sent."""
@@ -2532,6 +2602,10 @@ class _OperationTurn:
         #: Veces que la operación cedió el turno entre dos trozos (PC+Mac, REQ-030 y REQ-032).
         self.yields = 0
         self._turn: turn.Turn | None = None
+        #: The turn held in the daemon of the backend's machine (PC+Mac, lot 4), if any.
+        self._remote: remote_turn.RemoteLease | None = None
+        #: `remote_turn` of the usage event (REQ-026): `None` for a local operation.
+        self.remote_turn: str | None = None
         self._snapshot: topology.Snapshot | None = None
         self._chain: tuple[str, ...] = ()
         #: La reserva concedida tiene que reducirse eligiendo con la plaza en la mano.
@@ -2574,20 +2648,29 @@ class _OperationTurn:
 
     def _waiting_for(
         self,
-        turn_state: turn.Turn,
+        turn_state: turn.Turn | None,
         wait: Callable[[turn.OnWait, Callable[[], bool] | None], turn.Grant],
+        *,
+        remote: remote_turn.RemoteLease | None = None,
     ) -> turn.Grant:
         """Una espera de turno con su contabilidad: `turn_wait_ms` y las claves del panel.
 
         Si la llamada se cancela mientras espera, sale de la cola en el acto (`CallCancelled`).
+        With `remote` (PC+Mac, lot 4) the wait is in another machine's daemon: the same
+        accounting, the progress text names that machine (REQ-023) and the saturated queue is
+        measured with that daemon's clock (REQ-024).
         """
         on_wait_marks, waiting = self._on_wait_factory()
         token = cancellation.current()
-        remove = token.on_cancel(turn_state.wake) if token is not None else (lambda: None)
+        wake = remote.wake if remote is not None else getattr(turn_state, "wake", None)
+        remove = token.on_cancel(wake) if token is not None and wake is not None else (lambda: None)
         t0 = time.monotonic()
         # Issue #476: the queue is saturated when this ONE wait goes past `QUEUE_MAX_WAIT_S`.
         limit = _queue_limit_s()
         seen: dict[str, Any] = {"position": None, "in_use": (), "saturated": False}
+
+        def stalled() -> float:
+            return remote.stalled_s(t0) if remote is not None else _queue_stalled_s(t0)
 
         def on_wait(position: int, in_use: tuple[str, ...]) -> None:
             seen["position"], seen["in_use"] = position, in_use
@@ -2596,30 +2679,48 @@ class _OperationTurn:
         def stop() -> bool:
             if token is not None and token.is_cancelled():
                 return True
-            if limit > 0 and _queue_stalled_s(t0) > limit:
+            if limit > 0 and stalled() > limit:
+                seen["saturated"] = True
+                return True
+            if remote is not None and limit > 0 and time.monotonic() - t0 > 2 * limit:
+                # Our own cap (review of #502): a daemon that keeps saying `stalled_s: 0` does
+                # not hold the operation past twice the limit.
                 seen["saturated"] = True
                 return True
             return False
 
+        if remote is not None:
+            _call_status(turn_host=remote.daemon_host)
         try:
             try:
-                with concurrency.phase("turn"):
-                    grant = wait(on_wait, stop)
+                if remote is None:
+                    with concurrency.phase("turn"):
+                        grant = wait(on_wait, stop)
+                else:
+                    grant = self._remote_wait(wait, on_wait, stop)
             except turn.AbandonedWait:
                 cancellation.checkpoint()
                 if seen["saturated"]:
-                    raise QueueSaturated(
-                        i18n.t(
-                            "mcp.error.queue_saturated_turn",
-                            stalled=round(_queue_stalled_s(t0)),
-                            waited=round(time.monotonic() - t0),
-                            position=seen["position"] or 1,
-                            models=", ".join(seen["in_use"]) or "-",
+                    fields = {
+                        "stalled": round(stalled()),
+                        "waited": round(time.monotonic() - t0),
+                        "position": seen["position"] or 1,
+                        "models": ", ".join(seen["in_use"]) or "-",
+                    }
+                    if remote is not None:
+                        message = i18n.t(
+                            "mcp.error.queue_saturated_remote_turn",
+                            host=remote.daemon_host,
+                            **fields,
                         )
-                    ) from None
+                    else:
+                        message = i18n.t("mcp.error.queue_saturated_turn", **fields)
+                    raise QueueSaturated(message) from None
                 raise
         finally:
             remove()
+            if remote is not None:
+                _call_status(turn_host=None)
             if waiting[0]:
                 # Al conceder (o al salir por error), las tres claves fuera (REQ-008).
                 waited_ms = int((time.monotonic() - t0) * 1000)
@@ -2632,6 +2733,30 @@ class _OperationTurn:
         if grant.forced:
             self.forced = True
         return grant
+
+    @staticmethod
+    def _remote_wait(
+        wait: Callable[[turn.OnWait, Callable[[], bool] | None], turn.Grant],
+        on_wait: turn.OnWait,
+        stop: Callable[[], bool],
+    ) -> turn.Grant:
+        """A remote turn wait, timed as the `turn` phase (REQ-026) unless the daemon is unusable.
+
+        An unusable daemon means no turn, as before this lot: its event keeps the phases it had
+        (no `turn`), and only `remote_turn` says why.
+        """
+        trace = concurrency.current()
+        ts0, t0 = time.time(), time.monotonic()
+        usable = True
+        try:
+            return wait(on_wait, stop)
+        except remote_turn.Unusable:
+            usable = False
+            raise
+        finally:
+            if usable and trace is not None:
+                with suppress(Exception):  # observing never breaks the call it observes
+                    trace.record("turn", ts0, time.time(), int((time.monotonic() - t0) * 1000))
 
     def _reset(self) -> None:
         self.release_slot()
@@ -2659,6 +2784,16 @@ class _OperationTurn:
             self.affinity = None
             self._reset()
             self.yields += 1
+        if not hop and self._remote is not None:
+            # PC+Mac, lot 4: the remote turn's flags, read before each send. `yield` (REQ-030):
+            # give it back and ask again at the end of the queue, like a local yield. `lost`
+            # (`expired`, REQ-025 case 3): the call that was running is not repeated, but the next
+            # send asks for the turn again before going to the backend.
+            if self._remote.yield_requested.is_set():
+                self._reset()
+                self.yields += 1
+            elif self._remote.lost.is_set():
+                self._reset()
         if not hop and self.affinity is not None and model == self.role:
             return  # los trozos siguientes siguen en el alternativo que eligió la afinidad
         if hop:
@@ -2666,8 +2801,12 @@ class _OperationTurn:
         if self.model == model and not self._pending:
             return
         self._reset()
-        snapshot = _topology()
+        snapshot = _operation_topology()
         if not isinstance(snapshot, topology.Snapshot) or snapshot.resolve(model) is None:
+            url = _remote_turn_url(snapshot)
+            if url is not None:
+                self._remote_grant(url, model, chain)
+                return
             # Sin turno para todo lo que quede con este modelo, también si el motivo era pasajero
             # (un `ilegible` por un `OSError`): REQ-002, cualquier `NoTopology` es «sin turno».
             self.model = model
@@ -2696,7 +2835,7 @@ class _OperationTurn:
         como a un destino suelto (T12)."""
         self.affinity = None
         self._reset()
-        snapshot = _topology()
+        snapshot = _operation_topology()
         known = [
             m for m in members if isinstance(snapshot, topology.Snapshot) and snapshot.resolve(m)
         ]
@@ -2732,6 +2871,47 @@ class _OperationTurn:
                 self.affinity = self.affinity_tried = grant.model
         else:
             self._pending = True
+
+    def _remote_grant(self, url: str, model: str, chain: Sequence[str]) -> None:
+        """The turn for `model` in the daemon at `url` (PC+Mac, lot 4, REQ-022..025).
+
+        Granted: the lease is kept (`release_slot` gives it back). Unusable, `no_turn` or `self`:
+        the operation goes on without a turn for this model, as before, and the event says why.
+        `QueueSaturated` and `CallCancelled` leave as in a local wait, with the lease released.
+        """
+        token = cancellation.current()
+        entry = (token.entry if token is not None else None) or {}
+        entry_id = self.entry_id
+        lease = remote_turn.RemoteLease(
+            url,
+            # `-` and not `:`: the daemon cleans names to `[A-Za-z0-9._-]`, and `12:34` and
+            # `1:234` would both become `1234`.
+            op=f"{os.getpid()}-{entry_id}",
+            host=config.machine_name(),
+            tool=self.tool or "unknown",
+            model=model,
+            role=self.role_name or "",
+            chain=tuple(chain),
+            chars_in=int(entry.get("chars_in") or 0),
+            chunks=entry.get("pieces"),
+            beat=lambda: _beat_state(entry_id),
+        )
+        granted = False
+        try:
+            grant = self._waiting_for(
+                None, lambda on_wait, stop: lease.acquire(on_wait, stop), remote=lease
+            )
+            granted = True
+        except remote_turn.Unusable as unusable:
+            self.remote_turn = unusable.reason
+            self.model = model
+            return
+        finally:
+            if not granted:
+                lease.release()  # cancelled, saturated or unusable: nothing stays at the daemon
+        self._remote = lease
+        self.model = model
+        self.remote_turn = remote_turn.FORCED if grant.forced else remote_turn.GRANTED
 
     # --- elegir con la plaza en la mano ------------------------------------------------------
 
@@ -2806,12 +2986,18 @@ class _OperationTurn:
             self._turn.release_slot(self.op_id)
             self._turn = None
             _note_queue_progress()  # the turn changed hands (issue #476)
+        if self._remote is not None:
+            # PC+Mac, lot 4 (REQ-022): the remote lease goes in the same `finally`.
+            lease, self._remote = self._remote, None
+            lease.release()
 
     def log_fields(self) -> dict:
         fields: dict[str, Any] = {
             "turn_wait_ms": self.wait_ms,
             "turn": "forced" if self.forced else None,
         }
+        if self.remote_turn is not None:
+            fields["remote_turn"] = self.remote_turn  # REQ-026; absent for a local operation
         if self.yields:
             fields["turn_yields"] = self.yields
         if self.affinity is not None:
@@ -7387,6 +7573,22 @@ def _describe_turn() -> str:
     )
 
 
+def _describe_remote_turn() -> list[str]:
+    """PC+Mac, REQ-027: the remote turn's line, only for a process that could ask for one.
+
+    Without a local topology: with one, the local turn rules (REQ-020) and there is no line.
+    Local-only use (loopback backend, `TURN_URL=auto`) has no line either, and no request is sent.
+    """
+    try:
+        snapshot = _topology()
+        if isinstance(snapshot, topology.Snapshot):
+            return []
+        line = remote_turn.status_line(remote_backend=snapshot.reason == NO_TURN_REMOTE_BACKEND)
+    except Exception:  # a diagnostic line never breaks `local_status`
+        return []
+    return [line] if line else []
+
+
 #: Las causas en las que ALGUIEN contesta: no es «caído» (el ámbar del badge, REQ-014/REQ-015).
 _CAUSES_WITH_RESPONSE = frozenset(
     {
@@ -7452,6 +7654,7 @@ def local_status() -> str:
     lines.extend(chains.describe())
     lines.append(i18n.t("mcp.status.concurrency", n=config.MAX_CONCURRENT_REQUESTS))
     lines.append(_describe_turn())
+    lines.extend(_describe_remote_turn())
     lines.extend(_describe_cooldown())
     lines.extend(_describe_backend_breaker())
 

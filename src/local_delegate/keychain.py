@@ -27,6 +27,8 @@ import threading
 API_KEY_SERVICE = "local-delegate-remote"
 #: Servicio del token del puerto del daemon.
 WEB_TOKEN_SERVICE = "local-delegate-web-token"
+#: Servicio del token del puerto del daemon de la OTRA máquina (la del backend), para su turno.
+REMOTE_WEB_TOKEN_SERVICE = "local-delegate-remote-web-token"
 #: Ruta absoluta: launchd da a las apps gráficas un PATH mínimo y no se depende de él.
 SECURITY_COMMAND: tuple[str, ...] = ("/usr/bin/security",)
 #: Tope de la consulta. Un Llavero desbloqueado responde en milisegundos.

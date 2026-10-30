@@ -183,3 +183,122 @@ Mac. La verificación en vivo (PC + Mac) es del lote 5.
   stdio, `waiting_backend`, wiki, CHANGELOG, aislamiento del entorno y guardianes de idioma),
   `-n 2`: 527 en verde, 1 saltado; el guardián de nombres pidió 4 palabras inglesas más, añadidas
   al léxico, y después esos guardianes dieron 90 en verde.
+
+## Lote 4 — Cliente del turno remoto e integración en las operaciones
+
+Rama `feat/remote-turn-client`. REQ-020..026, REQ-027 (`local_status`), REQ-030 (cliente),
+REQ-032 y REQ-040..042.
+
+### Piezas
+
+- `remote_turn.py` (nuevo): descubrimiento (`turn_url`: `auto`/`off`/URL; una URL con usuario o
+  contraseña, otro esquema o un puerto inválido no vale), guarda «a sí mismo» (loopback con el
+  `WEB_PORT` propio, sin petición; o `daemon_id` igual al del `daemon.json` local, soltando el
+  arrendamiento), cliente `httpx2` propio (conexión 3 s, lectura `heartbeat_s + 5`, sin seguir
+  redirecciones), credencial (`LOCAL_DELEGATE_REMOTE_WEB_TOKEN`/Llavero si existe; si no, la clave
+  del backend), caché de «inutilizable» por URL y motivo (60 s; 404/405 y `self`, 10 min) con un
+  aviso por proceso y motivo, `RemoteLease` y la línea de `local_status`.
+- `server.py`: `_OperationTurn.ensure` pide turno remoto sin topología local y con backend remoto
+  (o `TURN_URL` explícita); `_waiting_for` admite la espera remota (misma contabilidad, progreso
+  «en <máquina>», saturación con el reloj del daemon); `yield` y `lost` antes de cada envío;
+  `release_slot` suelta el arrendamiento; `remote_turn` en el evento; `_beat_state` (lo que manda
+  el latido: `in_backend`, `waiting_backend` del lote 1, `chunk`, `phase`), en memoria.
+- `config.py` (`TURN_URL`, `REMOTE_WEB_TOKEN`), `token_source.remote_web_token`, `keychain`
+  (servicio `local-delegate-remote-web-token`), `cancellation` (texto de progreso remoto), i18n
+  es+en, CHANGELOG y `docs/wiki/Configuration.md`.
+
+### Decisiones propias
+
+- **`v` mayor → `unsupported`** (REQ-041), no `bad_response` (REQ-025 los lista juntos; la tabla
+  de versiones mixtas manda).
+- **Sin turno por daemon inutilizable no hay fase `turn`** en el evento: queda como antes del lote
+  y solo `remote_turn` dice el motivo. Con turno (concedido, cancelado o saturado) la fase mide la
+  espera remota.
+- **Una respuesta perdida** (timeout) repite `acquire` una vez (lo permite el contrato); dos
+  seguidas son `unreachable`. Cualquier excepción del transporte, no solo `HTTPError`, degrada a
+  `unreachable`: el turno nunca hace fallar una delegación.
+- **`op` del arrendamiento = `<pid>-<entrada>`**: con `:` el saneado del daemon juntaba `12:34` y
+  `1:234` en `1234`.
+- **En la suite, `TURN_URL=off` por defecto** (`tests/conftest.py`): el backend de prueba
+  (`http://test-backend/v1`) es remoto y sin daemon, y con `auto` cada evento ganaba `remote_turn`
+  y caían 22 tests de compatibilidad de claves. Los tests del cliente fijan `TURN_URL`.
+- **`doctor` pasa al lote 5**: un check nuevo cambia el número de checks (34) que fijan tres tests
+  existentes y la wiki. La nota de los modelos con `:` o `/` queda en REQ-027.
+- **Ficheros reales:** el test de dos máquinas no compara hash de `~/.claude.json` ni del log
+  real (el daemon instalado y Claude Code los escriben mientras corre la suite); comprueba que
+  ninguna marca del test (`model-x`, `model-y`, `pc-test`, `mac-test`) aparece en ellos (en el
+  log, en lo añadido desde el principio del test).
+
+### Control positivo (mutante aplicado por script, test que cae y assert; luego revertido)
+
+| Mutante | Test que cae | Assert |
+|---|---|---|
+| Sin `RemoteLease` en `ensure` | `test_one_queue_for_two_machines` | la Mac no aparece en `/api/inflight` del daemon: «the Mac exited with 0» |
+| Sin hilo de latido | `test_without_heartbeat_thread_the_lease_expires` | «the lease expired: the heartbeat thread does not keep it» |
+| Sin guarda «a sí mismo» por puerto | `test_self_by_port_sends_nothing` | `DID NOT RAISE Unusable` |
+| Sin guarda «a sí mismo» por `daemon_id` | `test_self_by_daemon_id_releases_and_goes_without_turn` | `DID NOT RAISE Unusable` |
+| Lanzador sin `sys.path.insert` | `test_one_queue_for_two_machines` | el hijo sale con código 3 («local_delegate from D:\Projects\local-delegate\src…»): `assert 3 is None` |
+| Sin cesión remota en `ensure` | `test_operation_yields_before_the_next_chunk` | «the local operation never got the turn the remote one yielded» |
+| Sin volver a pedir tras `expired` | `test_operation_expired_midway_asks_again_before_the_next_send` | `1 == 2` acquires |
+| `release_slot` no suelta el arrendamiento | `test_operation_granted_logs_and_releases` | entrada `remote:mac-test/…` sigue en inflight |
+| Sin caché de «inutilizable» | `test_each_unusable_reason_is_remembered[404]` | «the remembered reason did not spare the request» (`2 == 1`) |
+| `TURN_URL` explícita gana a la topología local | `test_a_local_topology_rules_even_with_turn_url` | `op._turn is server._turn` (`None is <Turn>`) |
+| `auto` pregunta con backend local | `test_local_only_use_sends_nothing` | «a local-only process created the remote turn's client» |
+
+Un primer mutante de la guarda de topología (en `_remote_turn_url`) no hizo caer nada: `ensure`
+solo llama ahí sin topología, así que esa comprobación es redundante; se sustituyó por el mutante
+real («la URL explícita antes que la topología»), que sí cae.
+
+### Tras la revisión de seguridad y regresiones del PR #502
+
+- **`auto` solo descubre hosts privados**, decidido por el texto y sin DNS (REQ-021 corregido): IP
+  de loopback, RFC 1918, 100.64/10, ULA y link-local; `.ts.net`, `.local`, `.lan`, `.home.arpa`,
+  `.internal`; nombres de una sola etiqueta. Un backend público no crea el cliente ni manda nada, y
+  el evento no lleva `remote_turn`; `local_status` dice `no disponible (public_host)`. El
+  `BASE_URL` de la Mac (`https://own-pc.<tailnet>.ts.net:9292/v1`) queda dentro.
+- **Puerto filtrado:** `ConnectTimeout` es `unreachable` en el acto, sin reintento; sin un
+  `granted` previo en el proceso se recuerda 10 min (tras un `granted`, 60 s).
+- **Transporte:** `trust_env=False`; cada respuesta se lee con plazo total (conexión + lectura;
+  `release`, `RELEASE_READ_S` en total), tope de 64 KiB y la cancelación mirada entre fragmentos.
+  Una parada a mitad del primer `acquire` suelta el arrendamiento que nombra lo ya leído.
+- **Respuestas rotas:** cualquier excepción al leerlas es `bad_response`; una excepción en el
+  hilo de latido marca `lost`; `in_use` (16 × 128, `[A-Za-z0-9._:/@-]`), `lease`
+  (`[A-Za-z0-9_-]{1,128}`) y `heartbeat_s`/`stalled_s` no finitos, saneados.
+- **Tope local de saturación** a 2 × `QUEUE_MAX_WAIT_S` aunque el daemon diga `stalled_s: 0`.
+- **Guarda «a sí mismo»** también con `127.1`, cualquier 127/8, `0.0.0.0`, `localhost.` y
+  `*.localhost`; `TURN_URL` sin consulta, fragmento ni ruta; aviso (una vez y en `local_status`)
+  con `http://` a un host no privado.
+- **Tests:** los que dejaban un arrendamiento vivo lo sueltan en un `finally`, y el fixture `env`
+  falla si queda un hilo `remote-turn-heartbeat` (con `-n 2` caía
+  `test_the_memory_of_an_unusable_daemon_lasts_its_time`, `3 == 2`). Un `release` desde otro hilo
+  termina también un `acquire` en curso.
+- **Opcional no hecho:** el tiempo perdido probando un daemon inutilizable no va a ningún campo del
+  evento (`phases.turn_probe`); queda anotado para el lote 5.
+
+#### Control positivo de los tests nuevos
+
+| Mutante | Test que cae | Assert |
+|---|---|---|
+| `auto` sin la comprobación de host privado | `test_a_public_backend_with_auto_sends_nothing` | «the client was created for a public backend» |
+| `ConnectTimeout` como respuesta perdida (reintenta) | `test_a_filtered_port_costs_one_request_per_ten_minutes` | `2 == 1` |
+| Sin los 10 min de «nunca alcanzado» | el mismo | `3 == 1` |
+| El hilo de latido no se para al soltar | `test_granted_at_once_then_released` (cierre del fixture) | «heartbeat threads left alive» |
+| Sin `trust_env=False` | `test_the_environment_proxy_is_ignored` | el proxy recibió `POST … Authorization: Bearer …` |
+| Sin plazo total | `test_a_dripping_daemon_does_not_hold_acquire` | «acquire took 20.2 s» |
+| Sin tope de tamaño | `test_a_huge_answer_is_a_bad_response` | `DID NOT RAISE Unusable` |
+| Sin cancelación entre fragmentos | `test_a_dripping_daemon_respects_cancellation` | «the cancellation waited 4.1 s» |
+| `_answer` sin captura general | `test_broken_answers_degrade[position-inf]` | `OverflowError` |
+| `json.loads` sin captura general | `test_broken_answers_degrade[deep-json]` | `RecursionError` |
+| El hilo de latido muere en silencio | `test_an_exception_in_the_heartbeat_thread_marks_the_lease_lost` | «the heartbeat thread died in silence» |
+| `lease` sin validar | `test_broken_answers_degrade[lease-bad-chars]` | `DID NOT RAISE Unusable` |
+| `heartbeat_s` sin `isfinite` | `test_answers_are_cleaned` | `nan == 5.0` |
+| `in_use` sin sanear | `test_answers_are_cleaned` | `'bad model'` en `in_use` |
+| Sin tope local de saturación | `test_our_own_cap_saturates_when_the_daemon_says_zero` | «held the wait past our cap» |
+| Guarda por dirección solo con `_is_loopback_host` | `test_self_by_address_variants[127.1]` | `assert False` |
+| `_valid` acepta consulta, fragmento y ruta | `test_turn_url_with_query_fragment_or_path_is_refused[…?x=1]` | `'http://pc:9393/?x=1/' is None` |
+| Sin aviso de texto plano | `test_plaintext_to_a_public_host_warns_once` | `0 == 1` |
+| La parada a mitad del primer `acquire` no suelta | `test_should_stop_releases_the_queued_lease` | «the abandoned lease stayed at the daemon» |
+
+Un primer mutante del hilo (quitar `self._stop.set()` en `release`) no hizo caer nada: el hilo
+también sale porque `lease_id` queda vacío y porque `_post` mira la parada; el mutante válido es
+un hilo que no se para nunca.
