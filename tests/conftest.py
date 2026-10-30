@@ -60,6 +60,10 @@ def isolate_runtime_logs(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     monkeypatch.setenv("LOCAL_DELEGATE_LOG_DIR", str(tmp_path))
+    # Concurrency PC+Mac, lot 4: the suite's backend (`http://test-backend/v1`) is remote, and no
+    # daemon serves its turn. Off by default, so a test's event is what it was before the remote
+    # turn client; the tests of the client set `TURN_URL` themselves.
+    monkeypatch.setattr(config, "TURN_URL", "off")
     _reset_languages()
     yield
     _reset_languages()
@@ -337,6 +341,7 @@ def reload_config(tmp_path):
     def isolate_logs() -> None:
         config.LOG_DIR = tmp_path
         config.USAGE_LOG = tmp_path / "usage.jsonl"
+        config.TURN_URL = "off"  # as in `isolate_runtime_logs`: a reload would bring `auto` back
 
     def apply(**variables: str) -> None:
         mp.setenv("LOCAL_DELEGATE_BASE_URL", "http://test-backend/v1")

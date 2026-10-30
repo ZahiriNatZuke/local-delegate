@@ -221,7 +221,11 @@ después el turno remoto con la cesión entre trozos.
 - **REQ-027 (`local_status` y `doctor`).** `local_status` de un proceso con backend remoto añade una
   línea «Turno remoto: activo en <url> | no disponible (<motivo>) | desactivado». `doctor` comprueba
   en la Mac que el daemon remoto responde a `/api/turn/` con la credencial (OK / WARN con el motivo)
-  y en la PC que el daemon tiene algún secreto para el endpoint (WARN si no).
+  y en la PC que el daemon tiene algún secreto para el endpoint (WARN si no). **Añadido en el
+  lote 4:** `doctor` avisa (WARN) de los modelos de la topología cuyo nombre lleva un carácter que
+  `config.clean_machine_name` quita (`:`, `/`…): el endpoint los sanea y responde `no_turn`, así
+  que esas operaciones remotas irían sin turno. La parte de `doctor` va en el lote 5 (añadir un
+  check cambia el número de checks que fijan tres tests existentes y la wiki).
 
 #### Reparto justo
 
