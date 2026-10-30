@@ -679,6 +679,54 @@ def _inflight_end(entry_id: int) -> None:
             _backend_waits.pop(key, None)
 
 
+# --- Entries under a given key (concurrency PC+Mac, lot 3: remote operations, REQ-014) -------
+# A remote operation has no entry id of this process: its key is `remote:<host>/<op>`, chosen by
+# the lease table (`turn_leases`). Same file, same lock and same `_inflight_live` as the rest.
+
+
+def _inflight_put(key: str, entry: dict) -> None:
+    """Write `entry` under `key`, live (safe from the orphan TTL) until `_inflight_drop`."""
+    with _inflight_lock:
+        _inflight_live.add(key)
+
+    def _add(data: dict) -> None:
+        data[key] = dict(entry)
+
+    _inflight_mutate(_add)
+
+
+def _inflight_patch(key: str, changes: dict[str, Any]) -> None:
+    """Set the fields of `changes` on the entry `key`; a `None` value removes that field.
+
+    Without an entry (already dropped), nothing: a late update never brings an entry back.
+    """
+
+    def _update(data: dict) -> None:
+        entry = data.get(key)
+        if not isinstance(entry, dict):
+            return
+        for name, value in changes.items():
+            if value is None:
+                entry.pop(name, None)
+            else:
+                entry[name] = value
+
+    _inflight_mutate(_update)
+
+
+def _inflight_drop(key: str) -> None:
+    """The entry `key` leaves the file and stops being live. Idempotent."""
+
+    def _remove(data: dict) -> None:
+        data.pop(key, None)
+
+    try:
+        _inflight_mutate(_remove)
+    finally:
+        with _inflight_lock:
+            _inflight_live.discard(key)
+
+
 def inflight_snapshot() -> list[dict]:
     """Delegaciones en curso de TODOS los procesos MCP activos, con `elapsed_s`.
 
@@ -2168,6 +2216,18 @@ def _refresh_topology() -> None:
         _topology()
     except Exception:  # la relectura es una mejora; la espera sigue con la relación que tenía
         pass
+    # Concurrency PC+Mac, lot 3 (REQ-012): each tick of a local wait also reaps the expired leases
+    # of remote operations, so a dead Mac never holds a local wait past `TURN_LEASE_S`.
+    for hook in tuple(TURN_TICK_HOOKS):
+        try:
+            hook()
+        except Exception:  # same rule: a hook never breaks a wait
+            pass
+
+
+#: Called on each tick of a local turn wait, after the topology is reread (`_refresh_topology`).
+#: `turn_leases` registers its reaper here on the first lease.
+TURN_TICK_HOOKS: list[Callable[[], None]] = []
 
 
 def _new_turn() -> turn.Turn:
@@ -4477,6 +4537,40 @@ def _map_budget(max_chars: int) -> int:
     return max(config.CHUNK_MIN_CHARS, int(max_chars * 0.8))
 
 
+#: #497: a regroup level must leave at most this share of the material it was given; one that
+#: does not is not converging, and the map/reduce stops regrouping instead of repeating the level.
+REGROUP_MIN_SHRINK = 0.8
+
+#: #497: backend calls per chunk a map/reduce may reach and still split-retry a cut output (map
+#: and regroup): one split per chunk with one more level on average. The calls that do not retry
+#: (one per chunk, per regroup group and the reduce) are never refused.
+MAP_REDUCE_RETRY_CALLS_PER_PIECE = 4
+
+
+def _regroup_split_shrinks(group_chars: int, cut_chars: int, parts: int) -> bool:
+    """#497: whether splitting a cut regroup step can still halve its group.
+
+    The parts are asked with the same cap as the cut step, so in the worst case each of them is
+    cut too, at about `cut_chars`.
+    """
+    return parts * cut_chars * 2 <= group_chars
+
+
+def _split_in_two(text: str) -> list[str]:
+    """Halves of `text` for a split retry of the map/reduce (#455), in two parts when it can.
+
+    #497: packing by lines up to exactly half often leaves a third scrap of a few dozen
+    characters, which costs one more backend call. Only then is a 60 % cap tried, and kept if it
+    gives two parts; otherwise the split stays as before.
+    """
+    parts = _chunk_text(text, max(config.CHUNK_MIN_CHARS, len(text) // 2))
+    if len(parts) > 2:
+        wider = _chunk_text(text, max(config.CHUNK_MIN_CHARS, len(text) * 3 // 5))
+        if len(wider) == 2:
+            return wider
+    return parts
+
+
 def _piece_lines(content: str, piece: Any) -> tuple[int, int] | None:
     """#455: first and last line of `piece` in `content`, or None if it is not found only once."""
     text = piece if isinstance(piece, str) else getattr(piece, "text", None)
@@ -4636,6 +4730,9 @@ def _chat_map_reduce(
     truncated_calls = 0  # llamadas que acabaron por `length`: un parcial cortado ya perdió material
     # #487: calls cut by `length` and replaced by their split retry (`retried` in `steps`).
     retried_calls = 0
+    # #497: the regroup stopped before the reduce (a level that did not shrink, or three levels):
+    # the result is the regrouped notes joined, not one combined answer.
+    unreduced = False
     # Las llamadas reales de toda la operación, saltos incluidos (REQ-024).
     all_attempts: list[Attempt] = []
 
@@ -4754,7 +4851,7 @@ def _chat_map_reduce(
     def _split(piece) -> list:
         if split_for is not None:
             return split_for(piece)
-        return _chunk_text(piece, max(config.CHUNK_MIN_CHARS, len(piece) // 2))
+        return _split_in_two(piece)
 
     def _map_piece(piece, depth: int = 0, floor_tokens: int = 0) -> list[str] | None:
         """Resume un trozo; si el backend dice que no cabe, lo parte y reintenta.
@@ -4779,7 +4876,7 @@ def _chat_map_reduce(
                 # #455: the OUTPUT was cut (`length`): split and retry like `_chat_chunked`,
                 # instead of handing the reduce a partial that already lost material.
                 parts = _split(piece) if depth < 2 and _can_split(piece) else []
-                if len(parts) >= 2:
+                if len(parts) >= 2 and _retry_fits(len(parts)):
                     _discard_last()
                     return _map_parts(parts, depth, max_tokens)
                 truncated_pieces.append((current.chunk, piece))
@@ -4803,21 +4900,46 @@ def _chat_map_reduce(
             outputs.extend(sub)
         return outputs
 
+    # #497: the split retries of cut outputs (map and regroup) share one budget of backend calls
+    # for the whole operation. Each retry multiplies the steps, and a model that fills any cap
+    # it is given is cut again at every depth: 28 map calls for 4 chunks. Past the budget the cut
+    # output is kept, and counted as truncated. The split of an input that overflows the context
+    # is not counted against it: without that split the operation fails.
+    retry_budget = MAP_REDUCE_RETRY_CALLS_PER_PIECE * len(pieces)
+
+    # Two known limits of this budget, accepted: (1) it is checked when a split starts, so the
+    # sibling parts still pending when it runs out make their own first call; the map of a piece
+    # ends at most two calls past it (one sibling per depth). (2) `calls` counts every attempt,
+    # so a step answered by the fallback model counts twice and leaves less room for retries.
+    def _retry_fits(parts: int) -> bool:
+        return calls + parts <= retry_budget
+
     def _can_split(piece) -> bool:
         # The guard of `_chat_chunked`: a piece this small is not cut by its size.
         text = piece if isinstance(piece, str) else getattr(piece, "text", None)
         return not isinstance(text, str) or len(text) > config.CHUNK_MIN_CHARS
 
     def _regroup(group: str, depth: int = 0) -> list[str] | None:
-        """One regroup step; if its output is cut (`length`), the group is split and retried."""
+        """One regroup step; if its output is cut (`length`), the group is split and retried.
+
+        #497: only while the split can still shrink the material. Every part is asked with the
+        same cap, so a split returns up to `len(parts) × cut` characters: when that is not under
+        half the group, the parts come back as long as the group they replace, the level stops
+        shrinking and the next one regroups the same again (65 calls and 18 minutes for a 48 000
+        character file). The cut output is kept instead, and counted as truncated.
+        """
         out = _one(
             regroup_system, build_user(group.strip()), _final_tokens(partial_words), "regroup"
         )
         if out is None:
             return None
         if _last_cut() and depth < 2 and len(group) > config.CHUNK_MIN_CHARS:
-            halves = _chunk_text(group, max(config.CHUNK_MIN_CHARS, len(group) // 2))
-            if len(halves) >= 2:
+            halves = _split_in_two(group)
+            if (
+                len(halves) >= 2
+                and _regroup_split_shrinks(len(group), len(out), len(halves))
+                and _retry_fits(len(halves))
+            ):
                 _discard_last()
                 outputs: list[str] = []
                 for half in halves:
@@ -4886,8 +5008,22 @@ def _chat_map_reduce(
                     if failed is not None:
                         break
                     summaries = grouped
+                    # #497: a level that does not shrink the material would be followed by
+                    # another one over the same: stop and return what there is, marked. Only
+                    # when the notes still do not fit the reduce: a small shrink that makes them
+                    # fit is a legitimate convergence, and the next turn of the loop reduces.
+                    regrouped = "\n\n".join(summaries)
+                    if (
+                        len(build_reduce(regrouped)) > budget
+                        and len(regrouped) > len(joined) * REGROUP_MIN_SHRINK
+                    ):
+                        text = regrouped
+                        unreduced = True
+                        break
                 else:
+                    # #497: three levels and still no room for the reduce: marked as well.
                     text = "\n\n".join(summaries)
+                    unreduced = True
     except BaseException as exc:
         _note_failure(exc)  # issue #476: logged by the middleware, never silently lost
         raise
@@ -4916,7 +5052,7 @@ def _chat_map_reduce(
             text = postprocess(text, truncated_calls > 0)
         # Antes un parcial cortado por `length` se aceptaba en silencio y el evento decía `stop`:
         # el resumen perdía parte de un trozo sin que nadie lo supiera (revisión del plan, B6).
-        if truncated_calls:
+        if truncated_calls or unreduced:
             finish_reason = "length"
         if report is None:
             if truncated_calls:
@@ -4924,6 +5060,9 @@ def _chat_map_reduce(
                 notice += _truncated_pieces_notice(
                     _truncated_piece_entries(content, truncated_pieces)
                 )
+                text += f"\n\n{WARNING_MARKER}{notice}]"
+            if unreduced:
+                notice = i18n.t("mcp.warning.regroup_stopped", calls=calls)
                 text += f"\n\n{WARNING_MARKER}{notice}]"
             text += current.notice(len(pieces) > 1)
 
@@ -4941,7 +5080,7 @@ def _chat_map_reduce(
         tokens_in=tokens_in,
         tokens_out=tokens_out,
         truncated_in=False,  # el sentido de todo esto es que ya no se trunca
-        truncated_out=ok and truncated_calls > 0,
+        truncated_out=ok and (truncated_calls > 0 or unreduced),
         raw_len=raw_len,
         path=path if source == "path" else None,
         chunks=calls,
@@ -4960,6 +5099,8 @@ def _chat_map_reduce(
             truncated_calls=truncated_calls if ok else 0,
             # #487: the cut calls redone split, for the same notice as the text path.
             retried_calls=retried_calls if ok else 0,
+            # #497: the regroup stopped before the reduce; the text is the joined notes.
+            unreduced=ok and unreduced,
             # #455: which map pieces stayed cut (number and, when found, lines of `content`).
             truncated_pieces=_truncated_piece_entries(content, truncated_pieces) if ok else [],
             calls=calls,
@@ -6191,6 +6332,8 @@ def local_extract(
         retried_calls = report.get("retried_calls", 0)
         calls = report.get("calls", 0)
         pieces = report.get("pieces", 0)
+        # #497: the regroup stopped before the reduce; `raw` is the joined partials.
+        unreduced = bool(report.get("unreduced"))
         if report.get("fallback"):
             fallback_info.update(report["fallback"])
     else:
@@ -6219,6 +6362,7 @@ def local_extract(
         retried_calls = 0
         calls = 1
         pieces = 1
+        unreduced = False
     result = _strip_fences(raw)
 
     # `truncated`/`warning` significan desde B2c «salida truncada en un trozo» (REQ-010): la
@@ -6236,6 +6380,13 @@ def local_extract(
         # up to the `length` steps of the log.
         if retried_calls:
             truncation["retried_calls"] = retried_calls
+    if unreduced:
+        # #497: the log says `truncated_out`; the client hears it too. Appended to the warning
+        # of the cut calls, if any, so that text keeps its exact form (REQ-010).
+        stopped = i18n.t("mcp.warning.regroup_stopped", calls=calls)
+        truncation["truncated"] = True
+        previous = truncation.get("warning")
+        truncation["warning"] = f"{previous}; {stopped}" if previous else stopped
 
     try:
         data = json.loads(result)

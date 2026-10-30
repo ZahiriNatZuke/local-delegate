@@ -73,7 +73,7 @@ from .. import (
     valuation,
 )
 from ..resources.hooks import hook_common
-from . import auth, sysinfo
+from . import auth, sysinfo, turn_api
 
 CHARS_PER_TOKEN = config.CHARS_PER_TOKEN  # aproximación: tokens ~ chars / 4
 MAX_EVENTS = 5000  # tope de eventos servidos al cliente
@@ -81,6 +81,8 @@ _MONTH_FILE_RE = re.compile(r"^usage-(\d{6})\.jsonl$")
 
 app = FastAPI(title="local-delegate metrics")
 logger = logging.getLogger(__name__)
+# Concurrency PC+Mac, lot 3: `/api/turn/*`, the turn of operations from another machine.
+turn_api.install(app)
 
 # Lo que ve el navegador cuando no se abre una vigía: un texto fijo por familia de fallo. El
 # detalle de la excepción va al log del daemon, nunca a la respuesta (CodeQL

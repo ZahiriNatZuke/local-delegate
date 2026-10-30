@@ -23,8 +23,8 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
 
-from . import autostart, cancellation, config, i18n, server, token_source
-from .web import auth, host_guard, metrics
+from . import autostart, cancellation, config, i18n, server, token_source, turn_leases
+from .web import auth, host_guard, metrics, turn_api
 
 MCP_PATH = "/mcp"
 DAEMON_STATUS_PATH = "/api/daemon"
@@ -66,6 +66,8 @@ def _daemon_payload(host: str, port: int) -> dict:
         "port": port,
         "mcp_url": f"{base}{MCP_PATH}",
         "dashboard_url": f"{base}/",
+        # Concurrency PC+Mac, lot 3: this run of the daemon; a remote client tells a restart by it.
+        "daemon_id": turn_leases.DAEMON_ID,
     }
 
 
@@ -238,9 +240,11 @@ def build_app(
     # La guarda del `Host` va por FUERA del token: un `Host` ajeno es un navegador engañado por DNS
     # rebinding, no un cliente sin credencial, y recibe 421 antes de llegar a pedirle nada. Cubre
     # también `/daemon/status` y el panel montado en `/`, que la protección del SDK no alcanza.
-    return host_guard.protect(
-        auth.protect(mcp_app, token_source.daemon_token(), config.WEB_SESSION_SECONDS), host
-    )
+    port_token = token_source.daemon_token()
+    # Concurrency PC+Mac, lot 3: only the daemon serves `/api/turn/*`, with the same port token as
+    # its `PortToken` (a stdio process that wins the port answers 404 there).
+    turn_api.enable(port_token)
+    return host_guard.protect(auth.protect(mcp_app, port_token, config.WEB_SESSION_SECONDS), host)
 
 
 def registered_daemon() -> dict | None:
