@@ -127,7 +127,15 @@ uvicorn.run(metrics.app, host='127.0.0.1', port=9494)"
 
 # en otra
 uv run python scripts/dev/capture_dashboard.py --url http://127.0.0.1:9494/
+uv run python scripts/dev/capture_dashboard.py --url http://127.0.0.1:9494/ --theme light
 ```
+
+Son **dos capturas**: `dashboard.png` en tema oscuro (la de siempre, con el nombre que enlazan
+otros sitios) y `dashboard-light.png` en claro, que el README sirve con `<picture>` a quien tiene
+el sistema en claro. El script fija `color_scheme` según `--theme` (por defecto `dark`): desde la
+0.39.0 el panel sigue el tema del sistema y Chromium headless se presenta como claro, así que entre
+la 0.39.0 y la 0.46.0 la captura del README salió clara. Cada manifiesto guarda su `theme` y
+`tests/test_capture.py` comprueba las dos.
 
 El script escribe el PNG **y** su manifiesto. Si aun así capturas contra el daemon, no se cuela
 nada: el manifiesto registra la versión vieja —la que la imagen enseña de verdad— y el test sigue

@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """Regenera `docs/assets/dashboard.png`, la captura del dashboard que enseña el README.
 
+Hay dos: `dashboard.png` en tema oscuro (la de siempre, la que enlazan otros sitios) y
+`dashboard-light.png` en claro, que el README sirve con `<picture>` a quien tiene el sistema en
+claro. `--theme dark|light` elige cuál (por defecto `dark`). Desde la 0.39.0 el panel sigue el
+tema del sistema, y Chromium headless se presenta como claro: sin fijar `color_scheme`, la
+captura «oscura» salía clara.
+
 La captura tiene que lucir el panel **completo** —todos los gráficos con datos, un modelo
 montado y procesando, otro montado en reposo, VRAM ocupada de verdad— y eso no se consigue
 esperando a que tu log real tenga la forma adecuada. Se interceptan las respuestas de `/api/*`
@@ -63,6 +69,12 @@ from pathlib import Path
 ROOT = Path(__file__).parents[2]
 #: `locale` del navegador de la captura: el del README que la enseña (en español).
 README_LOCALE = "es-ES"
+#: Tema de cada captura y su fichero por defecto. La oscura conserva el nombre de siempre para
+#: no romper los enlaces externos a `dashboard.png`.
+THEME_FILES = {"dark": "dashboard.png", "light": "dashboard-light.png"}
+#: Clave con la que el panel guarda el tema elegido a mano; se borra antes de cargar la página
+#: para que mande `color_scheme` y no una elección guardada.
+THEME_STORAGE_KEY = "ld-theme"
 
 ABOUT_MANIFEST = [
     "Manifiesto de la captura del README. Es la FUENTE DE VERDAD de con qué versión se generó.",
@@ -92,7 +104,7 @@ def _dashboard_version(url: str) -> str:
     return str(version)
 
 
-def _write_manifest(png: Path, version: str, lang: str) -> Path:
+def _write_manifest(png: Path, version: str, lang: str, theme: str) -> Path:
     """Deja junto al PNG el manifiesto que lo describe. Devuelve su ruta.
 
     `lang` es el `<html lang>` de la página capturada: desde la 0.36.0 el panel sigue al idioma
@@ -108,6 +120,7 @@ def _write_manifest(png: Path, version: str, lang: str) -> Path:
                 "file": png.name,
                 "version": version,
                 "lang": lang,
+                "theme": theme,
                 "sha256": hashlib.sha256(blob).hexdigest(),
                 "bytes": len(blob),
             },
@@ -460,7 +473,7 @@ def _package_tables() -> dict:
     }
 
 
-async def run(url: str, out: Path, width: int, timezone: str) -> int:
+async def run(url: str, out: Path, width: int, timezone: str, theme: str = "dark") -> int:
     try:
         from playwright.async_api import async_playwright
     except ImportError:
@@ -490,6 +503,13 @@ async def run(url: str, out: Path, width: int, timezone: str) -> int:
                 viewport={"width": width, "height": 1400},
                 timezone_id=timezone,
                 locale=README_LOCALE,
+                # El panel sigue `prefers-color-scheme` cuando no hay elección guardada.
+                color_scheme=theme,
+            )
+            # Un contexto nuevo no trae `localStorage`, pero se borra igual la elección guardada:
+            # si algún día el contexto se reutiliza, el tema sigue siendo el pedido.
+            await context.add_init_script(
+                f"try{{localStorage.removeItem('{THEME_STORAGE_KEY}')}}catch(e){{}}"
             )
             page = await context.new_page()
             await page.goto(url, wait_until="networkidle")
@@ -503,7 +523,7 @@ async def run(url: str, out: Path, width: int, timezone: str) -> int:
             await page.screenshot(path=str(out), full_page=True)
             print(f"{out} — {total} eventos, indicador «{info['live']}», {info['canvas']} gráficos")
             lang = await page.evaluate("() => document.documentElement.lang")
-            manifest = _write_manifest(out, version, lang)
+            manifest = _write_manifest(out, version, lang, theme)
             print(f"{manifest} — versión {version}, la que sirvió el dashboard capturado")
         finally:
             await browser.close()
@@ -513,11 +533,18 @@ async def run(url: str, out: Path, width: int, timezone: str) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", default="http://127.0.0.1:9393/")
-    parser.add_argument("--out", type=Path, default=ROOT / "docs" / "assets" / "dashboard.png")
+    parser.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="por defecto docs/assets/dashboard.png (oscuro) o dashboard-light.png (claro)",
+    )
+    parser.add_argument("--theme", choices=sorted(THEME_FILES), default="dark")
     parser.add_argument("--width", type=int, default=1280)
     parser.add_argument("--timezone", default="America/Havana", help="zona del pie de página")
     args = parser.parse_args()
-    return asyncio.run(run(args.url, args.out, args.width, args.timezone))
+    out = args.out or ROOT / "docs" / "assets" / THEME_FILES[args.theme]
+    return asyncio.run(run(args.url, out, args.width, args.timezone, args.theme))
 
 
 if __name__ == "__main__":

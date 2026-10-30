@@ -17,7 +17,10 @@ hace y por qué, en una página (es/en). Su fuente está en [`site/`](./site).
 
 <!-- URL absoluta a raw.githubusercontent.com para que la imagen también se renderice en
      PyPI (los links relativos solo se resuelven dentro de GitHub). -->
-![Dashboard de ahorro de local-delegate](https://raw.githubusercontent.com/ZahiriNatZuke/local-delegate/main/docs/assets/dashboard.png)
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/ZahiriNatZuke/local-delegate/main/docs/assets/dashboard-light.png">
+  <img alt="Dashboard de ahorro de local-delegate" src="https://raw.githubusercontent.com/ZahiriNatZuke/local-delegate/main/docs/assets/dashboard.png">
+</picture>
 
 *Dashboard embebido (datos de ejemplo): estado del backend local (modelos montados, delegación en curso con su progreso por trozos, tools MCP), RAM/VRAM del sistema con consumo por proceso, tokens de contexto conservados, ahorro por herramienta y modelo, dónde corrió el cómputo —esta máquina o un backend remoto— y actividad reciente paginada en tu hora local. Se sirve en `http://127.0.0.1:9393`.*
 
@@ -196,6 +199,8 @@ máquina vino (`host`) y cuánto esperó en cada fase (`concurrency`). Desde la 
 delegación troceada larga cede el turno entre trozos a la que choca con ella
 (`LOCAL_DELEGATE_TURN_YIELD_S`, 120 s), «En curso» agrupa en «Esperando al backend» la llamada que
 espera a que llama-swap cambie de modelo, y un `read_timeout` nombra el modelo que lo bloqueaba.
+Desde la 0.47.0 esa espera se ve como tal aunque el trozo se esté reintentando (antes salía como
+«reintentando»).
 
 **Resúmenes de documentos enormes.** `local_summarize` y `local_lint_summary` hacen **map-reduce**
 cuando la entrada no cabe en el modelo: resumen cada parte y luego resumen los resúmenes, por
@@ -204,7 +209,10 @@ se descartaba en silencio, que es justo donde suelen estar los errores— y ahor
 algún trozo se corta por `max_tokens`, el resultado lo avisa y el log registra `finish_reason:
 length`. Desde la 0.43.0 un parcial cortado ya no se da por bueno: se descarta, se parte el trozo
 (o el grupo del reagrupado) y se reintenta, hasta dos niveles; si aun así queda alguno cortado, el
-aviso dice qué trozo y sus líneas.
+aviso dice qué trozo y sus líneas. Desde la 0.47.0 el reagrupado no repite rondas sin avanzar: si
+una ronda no reduce el material al menos un 20 % y las notas siguen sin caber en el paso final, se
+para y devuelve las notas agrupadas con un aviso, marcadas como truncadas (`finish_reason:
+length`, `truncated_out`). Y un diff unificado se resume en prosa, nunca «por secciones».
 Desde la 0.36.1, con un log que no cabe en una llamada, `local_lint_summary` da entrada solo a los
 diez ficheros más nombrados (y dice cuántos más hay), y las cifras del resumen final las pone el
 programa, no el modelo.
@@ -213,6 +221,9 @@ nivel, con el inventario de nombres en el paso final) y `local_extract` (un obje
 trozo y un paso final con schema que los combina) leen la entrada entera. Desde la 0.44.2, si tras
 trocear algún campo de `local_extract` queda `null` en todos los trozos, `_local_delegate.chunked`
 lo dice (`pieces`, `null_fields`, `notice`): ese `null` significa «no visto», no «no existe».
+Desde la 0.47.0 `local_explain_code` con `question` lleva la pregunta a cada trozo y, con `path`,
+comprueba al final las líneas que cita contra el fichero (avisa de las dudosas) y añade las
+apariciones exactas de cada identificador de la pregunta.
 
 ## Configuración
 
