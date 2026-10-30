@@ -208,7 +208,7 @@ def test_a_quick_send_queries_nothing(monkeypatch):
         server._inflight_end(entry_id)
 
 
-# --- (e) precedence: queued > retrying > waiting_backend > running --------------------------
+# --- (e) precedence: queued > waiting_backend > retrying > running (issue #508) -------------
 
 
 def test_the_precedence_of_the_states():
@@ -216,7 +216,7 @@ def test_the_precedence_of_the_states():
     assert server._inflight_state({"in_backend": True, "backend_wait": waits}) == "waiting_backend"
     assert (
         server._inflight_state({"in_backend": True, "backend_wait": waits, "phase": "retry"})
-        == "retrying"
+        == "waiting_backend"
     )
     assert (
         server._inflight_state({"in_backend": False, "backend_wait": waits, "local_wait": "slot"})

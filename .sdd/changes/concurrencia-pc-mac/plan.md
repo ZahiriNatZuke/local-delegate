@@ -62,7 +62,7 @@ Tests nuevos:
 - `tests/test_waiting_backend.py` (patrón de `tests/test_concurrency_log.py`, retraso parcheado):
   (a) pedido no `ready` → `state: "waiting_backend"` y `backend_wait`; (b) re-muestreo a `ready` →
   `running`; (c) fin del envío → sin clave; (d) envío rápido → 0 consultas a `/running`;
-  (e) precedencia con `queued`/`retrying`; (f) **dos envíos a la vez** de la misma entrada: el que
+  (e) precedencia con `queued`/`retrying` (desde el #508, `waiting_backend` va antes que `retrying`); (f) **dos envíos a la vez** de la misma entrada: el que
   acaba antes no borra la marca del otro; (g) **trozo 2+** de una operación también se marca;
   (h) **carrera**: consulta de `/running` bloqueada más que el `join` → tras la limpieza no queda
   `backend_wait`; (i) sin topología y nombre no reconocible → no marca; (j) `progress_message`.
