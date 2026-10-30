@@ -43,8 +43,9 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   funciones de un `.py`) salían descritos como contenido de `[0.46.0]`, sin aviso. Lo mismo con
   los comentarios de nivel superior de un `.py` en el contexto (` # …`): salían como títulos y con
   el aviso de «secciones sin resumir». Ahora un diff
-  unificado (empieza por `diff --git`, `--- `, `Index:`, `diff -` o la cabecera de
-  `git format-patch`, y trae algún hunk `@@`) nunca tiene estructura de documento: se resume en
+  unificado (la salida de `gh pr diff`, `git diff`, `git show`, `git format-patch`, `diff -u`,
+  `diff -r` o `svn diff`, con su hunk `@@` o `@@@`; un `--- ` o un `Index:` sueltos al principio de
+  un Markdown no bastan) nunca tiene estructura de documento: se resume en
   prosa, y el prompt le explica al modelo cómo leerlo (cabecera de cada fichero, `+`/`-` frente al
   contexto). El prompt del resto de entradas no cambia.
 

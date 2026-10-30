@@ -763,19 +763,66 @@ def test_the_headings_of_a_diff_context_are_not_structure():
     assert sections.detect(PR_DIFF) is None
 
 
-@pytest.mark.parametrize(
-    "first_line",
-    [
-        "From 0123456789abcdef0123456789abcdef01234567 Mon Sep 17 00:00:00 2001",
-        "--- a/CHANGELOG.md",
-        "Index: CHANGELOG.md",
-        "diff -u a/CHANGELOG.md b/CHANGELOG.md",
-    ],
-)
-def test_other_patch_headers_are_diffs(first_line):
-    text = f"\n{first_line}\n" + PR_DIFF.split("\n", 1)[1]
+# Casos de la revisión del #501. Todos llevan títulos que `markdown_headings` ve: en un diff, por
+# las líneas de contexto (` # a`); en un Markdown, los suyos.
+_HUNK_3_4 = "@@ -1,3 +1,4 @@\n"
+_SHA = "a" * 40
+PATCHES = {
+    "git_show": (
+        f"commit {_SHA}\nAuthor: x <x@y>\nDate: now\n\n    msg\n\n"
+        "diff --git a/x.md b/x.md\n--- a/x.md\n+++ b/x.md\n"
+        f"{_HUNK_3_4} ## [0.46.0]\n-a\n+b\n ## [0.45]\n"
+    ),
+    "format_patch": (
+        f"From {_SHA} Mon Sep 17 00:00:00 2001\nFrom: x\nSubject: y\n---\n x | 1 +\n\n"
+        f"diff --git a/x b/x\n--- a/x\n+++ b/x\n{_HUNK_3_4} # c\n+b\n # d\n"
+    ),
+    "svn": (
+        "Index: x.md\n" + "=" * 67 + "\n--- x.md\t(revision 1)\n+++ x.md\t(working copy)\n"
+        f"{_HUNK_3_4} # a\n+b\n # c\n"
+    ),
+    "diff_u": f"--- a.md\t2020\n+++ b.md\t2020\n{_HUNK_3_4} # a\n+b\n # c\n",
+    "diff_ru_only_in": f"Only in a: z\ndiff -ru a/x b/x\n--- a/x\n+++ b/x\n{_HUNK_3_4} # a\n # c\n",
+    "gh_pr_diff_leading_blank": f"\n\ndiff --git a/x b/x\n--- a/x\n+++ b/x\n{_HUNK_3_4} # a\n # b\n",
+    "bom": f"\ufeffdiff --git a/x b/x\n--- a/x\n+++ b/x\n{_HUNK_3_4} # a\n # b\n",
+    "crlf": ("diff --git a/x b/x\r\n--- a/x\r\n+++ b/x\r\n@@ -1,3 +1,4 @@\r\n # a\r\n # b\r\n"),
+    "hunk_without_counts": "diff --git a/x b/x\n--- a/x\n+++ b/x\n@@ -1 +1 @@\n # a\n # b\n",
+    "combined_diff": (
+        "diff --cc x\nindex a,b..c\n--- a/x\n+++ b/x\n@@@ -1,2 -1,2 +1,3 @@@\n # a\n # b\n"
+    ),
+}
+_FENCED_HUNK = f"```\n{_HUNK_3_4}```\n"
+MARKDOWNS = {
+    "front_matter_and_hunk_in_fence": f"---\ntitle: x\n---\n# A\ntext\n{_FENCED_HUNK}# B\nmore\n",
+    "dashes_with_text": f"--- draft ---\n# A\n{_FENCED_HUNK}# B\nx\n",
+    "dashes_and_trailing_space": f"--- \n# Changelog\n## 1.0\n{_FENCED_HUNK}## 0.9\n",
+    "horizontal_rule": f"---\n# A\n{_FENCED_HUNK}# B\n",
+    "index_prose": f"Index: list of topics\n# A\n{_FENCED_HUNK}# B\n",
+    # Cada condición de `Index:` con su caso: un título setext (con la raya `===` detrás) y una
+    # sola palabra sin la raya.
+    "index_setext_title": f"Index: list of topics\n=====\n\n# A\n{_FENCED_HUNK}# B\n",
+    "index_one_word": f"Index: topics\n# A\n{_FENCED_HUNK}# B\n",
+    "diff_dash_prose": f"diff -u is a command; @@ below\n# A\n{_FENCED_HUNK}# B\n",
+    "readme_with_hunk_in_fence": f"# Title\n```diff\n{_HUNK_3_4}```\n## B\n## C\n",
+    "patch_in_fence_after_prose": (
+        f"Intro\n# A\n```\ndiff --git a/x b/x\n--- a/x\n+++ b/x\n{_HUNK_3_4}```\n# B\n"
+    ),
+}
+
+
+@pytest.mark.parametrize("name", sorted(PATCHES))
+def test_every_patch_form_is_a_diff_without_sections(name):
+    text = PATCHES[name]
+    assert sections.markdown_headings(text), "el caso no tiene títulos: no comprobaría nada"
     assert sections.is_unified_diff(text)
     assert sections.detect(text) is None
+
+
+@pytest.mark.parametrize("name", sorted(MARKDOWNS))
+def test_a_markdown_with_a_hunk_in_a_fence_keeps_its_sections(name):
+    text = MARKDOWNS[name]
+    assert sections.is_unified_diff(text) is False
+    assert sections.detect(text) is not None
 
 
 def test_a_markdown_that_shows_a_diff_keeps_its_sections():
