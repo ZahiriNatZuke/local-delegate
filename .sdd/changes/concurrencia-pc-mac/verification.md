@@ -302,3 +302,29 @@ real («la URL explícita antes que la topología»), que sí cae.
 Un primer mutante del hilo (quitar `self._stop.set()` en `release`) no hizo caer nada: el hilo
 también sale porque `lease_id` queda vacío y porque `_post` mira la parada; el mutante válido es
 un hilo que no se para nunca.
+
+## Lote 5 — Verificación en vivo PC+Mac (0.47.0, 2026-10-30)
+
+Las dos máquinas con la 0.47.0 publicada (PC: daemon reinstalado desde PyPI; Mac: `uv tool install --no-cache` + `update`, daemon de Claude Desktop reiniciado). `doctor` en la Mac: «turno remoto activo» en el daemon de la PC. Ventanas `test-window`: PC `w-20261030T200158Z` (20:01:58–20:12:17 UTC) y Mac `w-20261030T200231Z` (20:02:31–20:11:07 UTC).
+
+**Escenario** (el de `measurement-step1.md`): a las 20:03:21 UTC la Mac lanza dos `local_explain_code` en paralelo (qwen, ficheros .ts de 20–40 KB); segundos después la PC lanza un `local_summarize` de 15 886 caracteres (gemma). Un solo modelo residente en llama-swap.
+
+**Lo observado** (muestreo de `inflight.json` del daemon cada 2 s, 57 muestras): las dos de la Mac como `remote:<máquina>/<op>` con `host_via: "lease"`, `in_backend`, fases `map`/`reduce` y `backend_wait`; la de la PC con `local_wait: "turn"` mientras la Mac tenía el turno, y después en el backend.
+
+| Criterio (fijado antes de medir) | Paso 1 (2026-10-29) | 0.47.0 | Cumple |
+|---|---|---|---|
+| Las tres operaciones visibles a la vez en la PC, las de la Mac con máquina y estado | solo la de la PC | las tres; Mac con `host` y `lease` | ✓ |
+| La operación de la PC sin `read_timeout` | `read_timeout` a los 180 s | `ok`, 119 851 ms | ✓ |
+| Su espera en `phases.turn`, con `phases.backend` < 60 s | backend 180 012 ms | turn 93 782 ms; backend 26 053 ms | ✓ |
+| Ninguna llamada muere por el corte de 300 s | — | 94 s, 106 s, 120 s | ✓ |
+| `remote_turn: "granted"` en la Mac y ningún evento duplicado | — | `granted` ×2 (turno en 105 y 64 ms); log de la PC con un único evento (el suyo) | ✓ |
+| `turn_yields` ≤ 2 y `model_swap` ≤ 2 por operación | 3 de 3 con cambio | 0 cesiones; un cambio de modelo por operación | ✓ |
+
+**Degradación:** daemon de la PC parado a las 20:07:20 UTC → la Mac delega sin turno y termina bien (`ok`, 53 645 ms, sin fase `turn`). Etiqueta `remote_turn: "bad_response"` en vez de `unreachable`: el 9393 se publica en la tailnet con un proxy HTTPS que responde 502 con el daemon caído → issue #512 (clasificar 502/503/504 sin JSON del protocolo como `unreachable`). Daemon de vuelta a las 20:09:55 → la siguiente operación sale `granted` (turno en 53 ms, `ok`, 49 945 ms).
+
+**Observaciones:**
+- `phases`, `model_swap` y `backend_models` viven en `concurrency.*`, no en el nivel superior del evento (la Mac los buscó arriba y los vio `null`; no es un fallo).
+- `model_swap: true` también en la última llamada de la Mac, sin concurrencia: entre la degradación y ella se reinició el daemon de la PC, que al arrancar puede montar su modelo residente. Hipótesis sin verificar; si se repite sin reinicio, se abre tarjeta.
+- Hallazgo aparte durante la actualización de la Mac: `doctor` avisa del token literal de Claude Desktop aunque el fichero sea `0600` → issue #511.
+
+Resultado: los seis criterios se cumplen en la primera iteración; no hizo falta tocar `TURN_YIELD_S` ni `TURN_LEASE_S`.
