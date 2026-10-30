@@ -10,6 +10,7 @@ lines of each code identifier of the question (whole-word search over the whole 
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 import pytest
@@ -191,3 +192,176 @@ def test_citation_forms(answer_text, expected):
 
 def test_a_citation_with_nothing_to_check_against_is_left_out():
     assert line_check.citations("Se llama en la línea 12.", [], total_lines=365) == []
+
+
+# --- the review of #507: correct answers must not warn ---------------------------------------
+#
+# The first version warned on 17 of 26 correct answers (a decorator above the `def`, the `if`
+# that opens a block, «port: 9393», «línea 4, 2 veces»...). A warning that almost always shows
+# gets ignored. These are the reviewer's 26 correct answers and 5 real errors; the goal is at
+# most 2 false warnings and the 5 errors caught.
+
+TS = """import { Component } from '@angular/core';
+
+@Component({ selector: 'app-dialog' })
+export class DialogComponent {
+  @HostListener('keydown', ['$event'])
+  onKeyDown(event: KeyboardEvent) {
+    if (event.key === 'Tab') {
+      this.trapFocus(event);
+    }
+  }
+
+  // move focus to the first element
+  private trapFocus(event: KeyboardEvent) {
+    const el = this.first;
+    el.focus();
+  }
+
+  open() {
+    const msg = "focus is restored on close";
+    this.lastActive = document.activeElement;
+    setTimeout(() => {
+      this.first.focus();
+    }, 0);
+  }
+}
+"""
+PY = """import functools
+
+@functools.lru_cache
+def load_config(path):
+    return read(path)
+
+class Server:
+    def __init__(self, port=9393):
+        self.port = port
+
+    @property
+    def url(self):
+        return f"http://localhost:{self.port}"
+
+    def handle(self, request):
+        if request.status == 404:
+            return None
+        return self.dispatch(request)
+"""
+
+# (question, answer, file, the citations it warns about)
+CORRECT = [
+    ("¿Dónde se define `load_config`?", "`load_config` se define en la línea 3 (con su decorador) y lee el fichero.", PY, []),
+    ("¿Qué hace `onKeyDown`?", "`onKeyDown` está en la línea 5, registrado con @HostListener para keydown.", TS, []),
+    ("¿Qué hace `onKeyDown`?", "El manejador ocupa las líneas 6-10 y llama a trapFocus si la tecla es Tab.", TS, []),
+    ("¿Dónde se llama `trapFocus`?", "Dentro del if de la línea 7 se llama a trapFocus.", TS, []),
+    ("¿Dónde se mueve el foco en `trapFocus`?", "El comentario de la línea 12 explica que se mueve el foco al primer elemento.", TS, []),
+    ("¿Qué hace `open()`?", "En la línea 19 se define un mensaje que dice que el foco se restaura al cerrar.", TS, []),
+    ("¿Dónde se llama `focus()`?", "Se llama a this.first.focus() en la línea 22 y a el.focus() en la línea 15.", TS, []),
+    ("¿Qué evento escucha `onKeyDown`?", "Escucha el evento keydown, registrado en la línea 5.", TS, []),
+    ("¿Qué hace `handle`?", "`handle` recibe 1 parámetro; tiene 3 ramas. Devuelve None con HTTP 404 (línea 16).", PY, []),
+    ("¿Qué puerto usa `Server`?", "Usa el puerto 9393 por defecto (línea 8).", PY, []),
+    ("¿Qué hace `load_config`?", "Desde la versión 1.2.3, `load_config` (línea 4) cachea; probado a las 12:30.", PY, []),
+    ("¿Qué hace `handle`?", "Paso 1: comprueba el status. Paso 2: llama a dispatch en la línea 18.", PY, []),
+    ("¿Dónde está `handle`?", "handle: 15", PY, []),
+    # The one false warning left: 18 holds `dispatch`, and the answer says «despacha».
+    ("¿Qué hace `handle`?", "`handle` (líneas 15, 16 y 18) despacha la petición.", PY, ["18"]),
+    ("¿Qué devuelve `url`?", "La propiedad url (línea 11, decorador @property) devuelve la URL.", PY, []),
+    ("¿Dónde está `trapFocus`?", "trapFocus está en la línea 12 justo tras el comentario.", TS, []),
+    ("¿Dónde está `trapFocus`?", "Ver L13-L16 para trapFocus.", TS, []),
+    ("¿cómo maneja el teclado?", "El teclado se maneja en onKeyDown (línea 6).", TS, []),
+    ("¿Qué hace `self.port`?", "El puerto se guarda en la línea 9 como atributo.", PY, []),
+    ("¿Dónde está `dispatch`?", "18| return self.dispatch(request)", PY, []),
+    ("¿Qué hace `__init__`?", "El constructor (línea 8) guarda el puerto.", PY, []),
+    ("¿Qué puerto usa `port`?", "`port`: 9393 por defecto.", PY, []),
+    ("¿Qué hace `load_config`?", "`load_config` lee de example.com:8080 en la línea 4.", PY, []),
+    ("¿Qué hace `load_config`?", "`load_config` está en la línea 4, 2 veces se llama.", PY, []),
+    ("¿Qué hace `load_config`?", "`load_config` está en la línea 4 y 3 módulos lo usan.", PY, []),
+    ("¿Qué hace `handle`?", "`handle` cambió el 1/2/3 (línea 15).", PY, []),
+]  # fmt: skip
+WRONG = [
+    ("¿Dónde está `handle`?", "`handle` está en la línea 12.", PY, ["12"]),
+    ("¿Dónde se llama `trapFocus`?", "Se llama a trapFocus en la línea 3.", TS, ["3"]),
+    ("¿Dónde se llama `dispatch`?", "Se llama en la línea 5.", PY, ["5"]),
+    ("¿Qué hace `open()`?", "`open()` se define en la línea 24.", TS, ["24"]),
+    ("¿Qué devuelve `url`?", "url en la línea 99.", PY, ["99"]),
+]  # fmt: skip
+
+
+def _warned(question: str, answer_text: str, content: str, truncated: bool = False) -> list[str]:
+    result = line_check.check(answer_text, question, content, truncated)
+    return [c.label() for c in result.mismatched]
+
+
+@pytest.mark.parametrize(("question", "answer_text", "content", "expected"), CORRECT + WRONG)
+def test_the_review_cases(question, answer_text, content, expected):
+    """Each adjustment of the review has a mutant that makes some of these fall (see the PR)."""
+    assert _warned(question, answer_text, content) == expected
+
+
+def test_at_most_two_false_warnings_and_every_real_error():
+    false_warnings = sum(bool(_warned(q, a, c)) for q, a, c, _ in CORRECT)
+    caught = sum(bool(_warned(q, a, c)) for q, a, c, _ in WRONG)
+    assert len(CORRECT) == 26 and len(WRONG) == 5  # guard: the reviewer's whole set
+    assert false_warnings <= 2
+    assert caught == 5
+
+
+def test_a_cited_number_does_not_confirm_itself():
+    """The answer's own «228» is not a word that confirms line 228, even if the line says 228.
+    Mutant «cited numbers count as words»: it stops warning."""
+    content = "".join(f"value = value + {n}; // paso {n}\n" for n in range(1, 301))
+    text = "`focus()` en la línea 228 según el modelo"
+    assert _warned("¿Dónde se llama `focus()`?", text, content) == ["228"]
+
+
+def test_the_citation_keyword_does_not_confirm_a_citation():
+    """«line» in the answer is the citation, not something it names: a `// line 12` comment does
+    not make «focus() at line 12» right. Mutant «the keyword counts as a word»: no warning."""
+    content = "".join(f"value = {n}  # line {n}\n" for n in range(1, 31)) + "focus()\n"
+    assert _warned("Where is `focus()` called?", "`focus()` is called at line 12", content) == [
+        "12"
+    ]
+
+
+def test_a_truncated_answer_does_not_check_its_last_line():
+    """Mutant «ignore `truncated`»: the cut «línea 2» of the last line warns."""
+    text = "`handle` en la línea 15.\n`handle` también en la línea 2"
+    assert _warned("¿`handle`?", text, PY, truncated=True) == []
+    assert _warned("¿`handle`?", text, PY) == ["2"]  # guard: untruncated, it does warn
+
+
+def test_a_truncated_answer_reaches_the_check_from_the_tool(answer, tmp_path, monkeypatch):
+    """`finish_reason: length` reaches `check` as `truncated` (mutant «pass False»: warns)."""
+    source = tmp_path / "server.py"
+    source.write_text(PY, encoding="utf-8")
+
+    def run_chat(model, system, user, max_tokens, temperature, **_):
+        text = "`handle` en la línea 15.\n`handle` en la línea 2"
+        result = server.ChatResult(text=text, ok=True, finish_reason="length")
+        return result, 0, None, [server.Attempt(model, True, None, None, 0)]
+
+    monkeypatch.setattr(server, "_run_chat", run_chat)
+    result = server.local_explain_code(path=str(source), question="¿Dónde está `handle`?")
+    assert i18n.t("mcp.explain.occurrences", name="handle", lines="15") in result  # guard
+    assert i18n.t("mcp.explain.lines_unverified", lines="2") not in result
+
+
+@pytest.mark.parametrize(
+    ("question", "expected"),
+    [
+        ("¿Qué importa `App.tsx`?", []),
+        ("¿Qué scripts tiene `package.json`?", []),
+        ("¿Qué hace `self.port`?", ["port"]),
+    ],
+)
+def test_a_backticked_file_name_is_not_an_identifier(question, expected):
+    """Mutant «keep the last part of a file name»: `tsx`/`json` come back."""
+    assert line_check.identifiers(question) == expected
+
+
+def test_the_colon_form_is_linear():
+    """Without the lookbehind, a 32 000-letter word with no colon took 21 s (each letter retried
+    the word); 16 000 take ~5 s that way and ~1 ms with it."""
+    text = "a" * 16_000
+    start = time.perf_counter()
+    line_check.citations(text, ["focus"], total_lines=365)
+    assert time.perf_counter() - start < 1.0

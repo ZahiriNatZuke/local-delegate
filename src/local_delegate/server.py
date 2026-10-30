@@ -4378,7 +4378,7 @@ _LINE_NUMBERS_CLAUSE = (
 )
 
 
-def _verified_lines(answer: str, question: str, content: str) -> str:
+def _verified_lines(answer: str, question: str, content: str, truncated: bool = False) -> str:
     """#460: `answer` plus what the program checked of its line numbers against the whole file.
 
     The model cites wrong lines even seeing the `N| ` prefix, so the numbers are not left to it:
@@ -4386,7 +4386,7 @@ def _verified_lines(answer: str, question: str, content: str) -> str:
     code-like identifier of the question gets its exact lines, found by whole-word search. The
     prose is not touched; with nothing to report, `answer` comes back byte for byte.
     """
-    result = line_check.check(answer, question, content)
+    result = line_check.check(answer, question, content, truncated)
     extra: list[str] = []
     if result.mismatched:
         cited = ", ".join(c.label() for c in result.mismatched)
@@ -7109,8 +7109,8 @@ def local_explain_code(
     check_lines: Callable[[str, bool], str] | None = None
     if numbered and question:
 
-        def check_lines(answer: str, _truncated: bool) -> str:
-            return _verified_lines(answer, question, content)
+        def check_lines(answer: str, truncated: bool) -> str:
+            return _verified_lines(answer, question, content, truncated)
 
     # Trocear o no se decide sobre el fichero PELADO, como antes: el prefijo no hace trocear un
     # fichero que cabía (el corpus de calidad `explicar-install-20k` sigue siendo una llamada).

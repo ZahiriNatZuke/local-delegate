@@ -49,10 +49,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   cada línea con su número y aun así citaba líneas corridas: para un `focus()` llamado en 233, 270,
   328 y 336 respondió 228/233/236/270. Ahora, con `path` y `question`, el servidor revisa al final
   la respuesta contra el fichero entero: las líneas citadas (`línea N`, `líneas N-M`, `L123`,
-  `nombre: 123`, `228/233/236`) que no contienen ninguno de los identificadores a los que se
-  refieren salen en un aviso, y cada identificador de código de la pregunta (entre comillas
-  invertidas, con `()`, camelCase o snake_case, de 3 caracteres o más y sin los comunes como
-  `this`) recibe una línea «Apariciones de `focus` en el fichero (búsqueda exacta): 233, 270, 328,
+  `nombre: 123`, `228/233/236`) que no tienen, ni en ellas ni una línea antes o después, nada de lo
+  que nombra la línea de la respuesta que las cita (sus identificadores, sus palabras de 4 letras o
+  más, sus números de 2 cifras o más) ni los identificadores de la pregunta salen en un aviso;
+  sobre 26 respuestas correctas de prueba avisa en una y detecta los 5 errores reales. Una
+  respuesta cortada por `max_tokens` no comprueba su última línea. Cada identificador de código de
+  la pregunta (entre comillas invertidas, con `()`, camelCase o snake_case, de 3 caracteres o más,
+  sin los comunes como `this` y sin nombres de fichero como `App.tsx`) recibe una línea «Apariciones de `focus` en el fichero (búsqueda exacta): 233, 270, 328,
   336», con un tope de 20 y «…y N más». La prosa del modelo no se toca. Vale igual para un fichero
   troceado: la comprobación va después del paso final. Con `code` o sin `question`, la salida no
   cambia.
