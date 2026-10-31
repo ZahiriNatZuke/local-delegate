@@ -6,6 +6,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- **`doctor` seguía avisando del token de Claude Desktop en la Mac con la forma de `mcp-remote`**
+  (#511, segunda parte): la entrada lleva el token en `env.AUTH_HEADER` y
+  `--header Authorization:${AUTH_HEADER}` en los argumentos. Esa `${AUTH_HEADER}` la sustituye el
+  propio `mcp-remote` desde el `env` de la entrada, pero `doctor` la contaba como «variable sin
+  expandir» y el aviso del fichero `0600` de la 0.47.1 nunca llegaba a salir. Ahora una `${VAR}`
+  cuya `VAR` tiene valor en el `env` de la misma entrada no cuenta como sin expandir; una que no lo
+  tiene sigue avisando.
+
 ## [0.47.1] - 2026-10-30
 
 Versión de arreglos para la pareja PC+Mac, los dos visibles sobre todo en la Mac: `doctor` deja de

@@ -2483,3 +2483,27 @@ def test_desktop_literal_token_and_unexpanded_variable_in_a_private_file_warns(
 
     assert result.status == checks.WARN, result.detail
     _without_token(result)
+
+
+def test_desktop_mcp_remote_env_header_in_a_private_file_outside_windows_is_ok(
+    tmp_path, monkeypatch
+):
+    """The Mac's real entry (#511): token in `env.AUTH_HEADER`, `${AUTH_HEADER}` in the args."""
+    _posix_with_mode(monkeypatch, 0o600)
+    entry = {
+        "command": "npx",
+        "args": [
+            "-y",
+            "mcp-remote",
+            "http://127.0.0.1:9393/mcp",
+            "--header",
+            "Authorization:${AUTH_HEADER}",
+            "--allow-http",
+        ],
+        "env": {"AUTH_HEADER": f"Bearer {_TOKEN_DESKTOP}"},
+    }
+    home = _with_desktop(make_home(tmp_path), entry)
+    result = result_for("service.desktop_auth", _desktop_ctx(home))
+
+    assert result.status == checks.OK, result.detail
+    _without_token(result)

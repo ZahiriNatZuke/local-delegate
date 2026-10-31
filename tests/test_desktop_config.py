@@ -227,6 +227,38 @@ def test_detects_unexpanded_var(cfg):
     assert report.literal_token is False
 
 
+def test_a_variable_defined_in_the_entry_env_is_not_unexpanded(cfg):
+    """`mcp-remote`'s documented form: it substitutes `${AUTH_HEADER}` from the entry's env (#511)."""
+    entry = {
+        "command": "npx",
+        "args": [
+            "mcp-remote",
+            "http://127.0.0.1:9393/mcp",
+            "--header",
+            "Authorization:${AUTH_HEADER}",
+        ],
+        "env": {"AUTH_HEADER": f"Bearer {SECRET}"},
+    }
+    _write(cfg, {"mcpServers": {"local-delegate": entry}})
+
+    report = desktop_config.check_entry(cfg, token=None)
+
+    assert report.unexpanded_variable is False
+    assert report.literal_token is True
+
+
+def test_a_variable_the_env_leaves_empty_or_unset_is_still_unexpanded(cfg):
+    for env in ({}, {"AUTH_HEADER": ""}, {"AUTH_HEADER": "${OTHER}"}, {"OTHER": "x"}):
+        entry = {
+            "command": "npx",
+            "args": ["mcp-remote", "--header", "Authorization:${AUTH_HEADER}"],
+            "env": env,
+        }
+        _write(cfg, {"mcpServers": {"local-delegate": entry}})
+
+        assert desktop_config.check_entry(cfg, token=None).unexpanded_variable is True, env
+
+
 def test_the_bridge_entry_is_clean(cfg):
     desktop_config.write_entry(cfg, EXE)
 
