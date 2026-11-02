@@ -18,10 +18,6 @@ from local_delegate import config, server, turn_leases
 from local_delegate.web import turn_api
 
 
-def _document(paragraphs: int, size: int) -> str:
-    return "".join(f"## Sección {i}\n\n{'palabra ' * (size // 8)}\n\n" for i in range(paragraphs))
-
-
 def _records(log_dir) -> list[dict]:
     return [
         json.loads(line)
@@ -51,14 +47,21 @@ def _recording_post(seen: list, finish_reasons: list[str]):
 
 
 def _three_chunks() -> str:
-    text = _document(3, 3000)
+    """Three chunks of four paragraphs: a chunk halves in two, and a half halves in two again."""
+    text = "\n\n".join(f"Párrafo {i}: " + "palabra " * 100 for i in range(12))
     pieces = server._chunk_text(text, config.CHUNK_CHARS)
     assert len(pieces) == 3, len(pieces)
-    assert len(pieces[0]) > config.CHUNK_MIN_CHARS * 4, "the first chunk must split twice"
+    halves = server._chunk_text(pieces[0], max(config.CHUNK_MIN_CHARS, len(pieces[0]) // 2))
+    assert len(halves) == 2, "the first chunk must split in two"
+    quarters = server._chunk_text(halves[0], max(config.CHUNK_MIN_CHARS, len(halves[0]) // 2))
+    assert len(quarters) == 2, "and its first half in two again"
+    quarters = server._chunk_text(halves[1], max(config.CHUNK_MIN_CHARS, len(halves[1]) // 2))
+    assert len(quarters) == 2, "and its second half too"
     return text
 
 
 def _assert_rules(seen: list, chunks: int) -> None:
+    """The rules of the decision, each with its own message (the mutants fire these)."""
     assert {total for _c, total, _p, _ps in seen} == {chunks}, f"the chunk total moved: {seen}"
     chunk_numbers = [c for c, *_ in seen]
     assert chunk_numbers == sorted(chunk_numbers), seen
@@ -69,10 +72,17 @@ def _assert_rules(seen: list, chunks: int) -> None:
         assert all(1 <= p <= ps for p, ps in parts), seen
 
 
+def _assert_split_of_chunk_one(seen: list, parts: int) -> None:
+    assert all(p is None for c, _t, p, _ps in seen if c != 1), f"the parts outlived it: {seen}"
+    known = [ps for c, _t, _p, ps in seen if c == 1 and ps is not None]
+    assert max(known) == parts, f"{parts} parts expected, {max(known)} shown: {seen}"
+
+
 def test_chunked_a_split_publishes_the_parts_and_clears_them(monkeypatch, tmp_path):
     """Chunk 1 is cut and split in two: «1/3», «1/3 · 2 parts · part 1», «… part 2», then «2/3».
 
-    Positive control (main): no `part`/`parts` in the entry during the split.
+    Positive control: not clearing the parts at the end of the split (`_ChunkParts.end`) fires
+    «the parts outlived it».
     """
     _setup(monkeypatch, tmp_path)
     seen: list = []
@@ -80,6 +90,8 @@ def test_chunked_a_split_publishes_the_parts_and_clears_them(monkeypatch, tmp_pa
 
     server.local_translate("inglés", text=_three_chunks())
 
+    _assert_rules(seen, 3)
+    _assert_split_of_chunk_one(seen, 2)
     assert seen == [
         (1, 3, None, None),
         (1, 3, 1, 2),
@@ -87,19 +99,24 @@ def test_chunked_a_split_publishes_the_parts_and_clears_them(monkeypatch, tmp_pa
         (2, 3, None, None),
         (3, 3, None, None),
     ], seen
-    _assert_rules(seen, 3)
     (event,) = _records(tmp_path)
     assert (event["pieces"], event["chunks"]) == (3, 5), "the log keeps pieces and calls"
 
 
 def test_chunked_a_nested_split_grows_the_parts(monkeypatch, tmp_path):
-    """Chunk 1 is cut, and so is its first half: the parts go 2 → 3; the part never goes back."""
+    """Chunk 1 is cut, and so is its first half: the parts go 2 → 3 (a part split in two adds ONE
+    part, `k - 1`); the part never goes back.
+
+    Positive control: adding `k` instead of `k - 1` fires «3 parts expected, 4 shown».
+    """
     _setup(monkeypatch, tmp_path)
     seen: list = []
     monkeypatch.setattr(server, "_post_chat", _recording_post(seen, ["length", "length"]))
 
     server.local_translate("inglés", text=_three_chunks())
 
+    _assert_rules(seen, 3)
+    _assert_split_of_chunk_one(seen, 3)
     assert seen == [
         (1, 3, None, None),
         (1, 3, 1, 2),
@@ -109,9 +126,33 @@ def test_chunked_a_nested_split_grows_the_parts(monkeypatch, tmp_path):
         (2, 3, None, None),
         (3, 3, None, None),
     ], seen
-    _assert_rules(seen, 3)
     (event,) = _records(tmp_path)
     assert (event["pieces"], event["chunks"]) == (3, 7)
+
+
+def test_chunked_a_nested_split_of_the_last_part_keeps_the_count(monkeypatch, tmp_path):
+    """Chunk 1 is cut; its first half comes back and its second half is cut too: the parts grow
+    to 3 while the part stays at 2, and goes on to 3 — never back to 1.
+
+    Positive control: restarting the part count at each split fires «a part went back».
+    """
+    _setup(monkeypatch, tmp_path)
+    seen: list = []
+    monkeypatch.setattr(server, "_post_chat", _recording_post(seen, ["length", "stop", "length"]))
+
+    server.local_translate("inglés", text=_three_chunks())
+
+    _assert_rules(seen, 3)
+    _assert_split_of_chunk_one(seen, 3)
+    assert seen == [
+        (1, 3, None, None),
+        (1, 3, 1, 2),
+        (1, 3, 2, 2),
+        (1, 3, 2, 3),
+        (1, 3, 3, 3),
+        (2, 3, None, None),
+        (3, 3, None, None),
+    ], seen
 
 
 def test_chunked_without_a_split_has_no_parts(monkeypatch, tmp_path):

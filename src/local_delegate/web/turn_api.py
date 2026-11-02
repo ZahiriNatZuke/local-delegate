@@ -184,7 +184,7 @@ class HeartbeatBody(_Strict):
     ) = None
     chunk: _Count | None = None
     phase: Literal["map", "reduce", "retry"] | None = None
-    # The part of a chunk split again, while it lasts: «chunk 3/4 · part 2/3».
+    # The part of a chunk split again, while it lasts: «chunk 3/4 · split in 3 · part 2».
     part: _Part | None = None
     parts: _Part | None = None
 

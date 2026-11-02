@@ -1132,4 +1132,63 @@ def test_in_progress_shows_the_phase(tmp_path):
     mapping, reducing, retrying = r
     assert ">Trozo 2/3<" in mapping
     assert ">Combinando 3 trozos…<" in reducing and "Trozo" not in reducing
-    assert ">Reintentando trozo 1/3<" in retrying
+    # Decision of 2026-10-30: the retry phase is a split, and says so («Dividiendo»).
+    assert ">Dividiendo trozo 1/3<" in retrying and "Reintentando" not in retrying
+
+
+def _inflight_html(tmp_path, items: list[dict]) -> list[str]:
+    """The «En curso» body for each in-flight entry of `items`, rendered alone."""
+    return _js(
+        tmp_path,
+        [_f("renderInflight")],
+        "const items = "
+        + json.dumps(items)
+        + """;
+        const base = {tool: 't', model: 'm', elapsed_s: 1, chars_in: 1, chunks: 4};
+        const out = [];
+        for (const extra of items) {
+          globalThis.state = {inflight: [Object.assign({}, base, extra)], activity: {skewMs: 0},
+                              lastEvent: null};
+          renderInflight();
+          out.push(_els.inflightBody.innerHTML);
+        }
+        emit(out);
+        """,
+        _DOM,
+    )
+
+
+def test_in_progress_shows_the_parts_of_a_split_chunk(tmp_path):
+    """Decision of 2026-10-30: a chunk split again shows «Trozo 3/4 · dividido en 3 · parte 2», with
+    the why in the chip's title; the chunk total stays the document's. Without parts, the retry
+    phase says «Dividiendo trozo n/total».
+
+    Positive control: without the `split` branch of `renderInflight` the chip says «Dividiendo
+    trozo 3/4» and the first assert fails.
+    """
+    split, splitting, plain = _inflight_html(
+        tmp_path,
+        [
+            {"chunk": 3, "phase": "retry", "part": 2, "parts": 3},
+            {"chunk": 3, "phase": "retry"},
+            {"chunk": 2},
+        ],
+    )
+    assert ">Trozo 3/4 · dividido en 3 · parte 2<" in split, split
+    title = (
+        'title="La respuesta del trozo 3 no cupo y se dividió en 3 partes más pequeñas; '
+        'se procesan una a una."'
+    )
+    assert title in split, split
+    assert "Dividiendo" not in split
+    assert ">Dividiendo trozo 3/4<" in splitting and "parte" not in splitting, splitting
+    assert '<span class="chunkchip">Trozo 2/4</span>' in plain, plain
+
+
+def test_in_progress_parts_are_escaped(tmp_path):
+    """What comes from `/api/inflight` is escaped in the chip and in its title."""
+    (html,) = _inflight_html(
+        tmp_path, [{"chunk": '3"><img src=x>', "phase": "retry", "part": 1, "parts": 2}]
+    )
+    assert "<img" not in html, html
+    assert "&lt;img src=x&gt;" in html and "3&quot;&gt;" in html, html

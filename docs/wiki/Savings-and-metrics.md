@@ -744,9 +744,21 @@ mientras se procesan los trozos, **«Combinando N trozos…»** durante la combi
 reagrupado) y **«Reintentando trozo i/N»** cuando un trozo cortado o que no cabía se vuelve a
 partir. `/api/inflight` lo expone como `phase` (`reduce` o `retry`; sin el campo, los trozos).
 
+Desde la 0.47.2 la fase `retry` dice lo que es, **«Dividiendo trozo i/N»** (en inglés,
+«Splitting chunk i/N»), y en cuanto se sabe en cuántas partes se dividió el trozo el chip dice
+cuánto lleva: **«Trozo 3/4 · dividido en 3 · parte 2»** («Chunk 3/4 · split in 3 · part 2»), con
+el porqué en su `title` («La respuesta del trozo 3 no cupo y se dividió en 3 partes más
+pequeñas; se procesan una a una.»). El total de trozos (`chunks`) sigue siendo el del documento y
+`chunk` no cambia de significado; la entrada de `/api/inflight` lleva **aparte** `part` (la parte
+que se manda, desde 1 y en orden de envío; nunca retrocede) y `parts` (las partes conocidas de
+ese trozo; sube si una parte se vuelve a partir). Los dos se borran al acabar la división. Con
+turno remoto, el latido de la Mac los manda al daemon de la PC; un daemon anterior que los
+rechaza con 400 recibe el latido sin ellos. El log de uso no cambia: `pieces` y `chunks` siguen
+como antes.
+
 Desde la 0.45.0 (issue #477) cada entrada de `/api/inflight` lleva `state`: **`running`** (tiene
 plaza y está en el backend, o entre dos trozos de una operación que ya llegó), **`retrying`**
-(reintentando un trozo cortado) o **`queued`** (espera turno o plaza, o aún no llegó al backend;
+(dividiendo un trozo cortado; el valor no cambia aunque el texto visible diga «dividiendo») o **`queued`** (espera turno o plaza, o aún no llegó al backend;
 con espera de turno, `queue_position` es su puesto). Sale de la espera y la plaza reales, no del
 texto de la fase. Con `state`, «En curso» separa **«Procesando (n)»** y **«En cola (m)»**: las de
 la cola llevan un círculo discontinuo en vez del giro, van atenuadas y, con turno, su puesto

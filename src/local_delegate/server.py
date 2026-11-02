@@ -504,7 +504,7 @@ def _inflight_parts(entry_id: int, part: int | None, parts: int | None) -> None:
 
     Decision of 2026-10-30: the chunk total (`chunks`) stays the chunks of the document; a chunk
     split again (a cut output or a context overflow) says apart how far its split has got, as
-    «chunk 3/4 · part 2/3». `parts` counts the parts known so far of THAT chunk: it grows when a
+    «chunk 3/4 · split in 3 · part 2». `parts` counts the parts known so far of THAT chunk: it grows when a
     part is split again. Best-effort, like the other inflight updates.
     """
     key = f"{os.getpid()}:{entry_id}"

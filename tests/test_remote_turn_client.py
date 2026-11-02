@@ -305,6 +305,119 @@ def test_without_heartbeat_thread_the_lease_expires(transport, monkeypatch):
         lease.release()
 
 
+def test_the_heartbeat_publishes_the_parts_and_clears_them(transport):
+    """A chunk split again (`part`/`parts`, decision of 2026-10-30) reaches the `remote:` entry,
+    and goes from it when the client's state no longer has them; a `part` above `parts` is never
+    sent.
+
+    Positive control: without the `part`/`parts` lines of `_beat_body` the entry never shows them
+    and the first `_wait` assert fails.
+    """
+    state: dict = {"chunk": 3, "phase": "retry", "part": 2, "parts": 3}
+    lease = _lease(beat=lambda: dict(state), chunks=4)
+    lease.acquire(lambda *_: None)
+    try:
+        entry = _wait(lambda: next((e for e in _remote_entries() if e.get("part")), None))
+        assert entry is not None, "the heartbeat never published the parts"
+        assert (entry["chunk"], entry["chunks"], entry["part"], entry["parts"]) == (3, 4, 2, 3)
+        state.pop("part")
+        state.pop("parts")
+        state["phase"] = "map"
+        assert _wait(lambda: not any("part" in e for e in _remote_entries())), "parts left"
+        state.update(part=4, parts=3)
+        sent = transport.count("heartbeat")
+        assert _wait(lambda: transport.count("heartbeat") >= sent + 2)
+        last = [body for path, body in transport.requests if path == "heartbeat"][-1]
+        assert "part" not in last and "parts" not in last, last
+    finally:
+        lease.release()
+
+
+class _OldDaemon(Counting):
+    """The daemon in process, but refusing `part`/`parts` with a 400 like a daemon from before."""
+
+    def stream(self, method: str, url: str, *, json: dict, headers: dict, timeout=None):
+        path = url.split("/api/turn/", 1)[-1]
+        if path == "heartbeat" and ("part" in json or "parts" in json):
+            with self._lock:
+                self.requests.append((path, dict(json)))
+                self.headers.append(dict(headers))
+            return _Loaded(
+                httpx2.Response(
+                    400,
+                    content=b'{"error": "bad_request"}',
+                    headers={"content-type": "application/json"},
+                )
+            )
+        return super().stream(method, url, json=json, headers=headers, timeout=timeout)
+
+
+def test_a_daemon_from_before_the_parts_gets_beats_without_them(env):
+    """A 400 to a beat with `part`/`parts`: the client beats again without them at once and never
+    sends them again; the lease lives on and the rest of the state still reaches the entry.
+
+    Positive control: without `self._send_parts = False` every beat carries the parts and the
+    «only once» assert fails.
+    """
+    with TestClient(daemon.build_app("127.0.0.1", _DAEMON_PORT), base_url=_URL) as c:
+        old = _OldDaemon(c)
+        remote_turn.set_client_factory(lambda: old)
+        lease = _lease(beat=lambda: {"chunk": 3, "phase": "retry", "part": 2, "parts": 3}, chunks=4)
+        lease.acquire(lambda *_: None)
+        try:
+            assert _wait(lambda: old.count("heartbeat") >= 5), "the beats stopped after the 400"
+            beats = [body for path, body in old.requests if path == "heartbeat"]
+            assert sum("part" in body for body in beats) == 1, beats
+            assert "part" in beats[0] and "part" not in beats[1], beats[:2]
+            assert not lease.lost.is_set()
+            (entry,) = _remote_entries()
+            assert entry["phase"] == "retry" and entry["chunk"] == 3 and "part" not in entry
+        finally:
+            lease.release()
+
+
+def test_the_daemon_writes_the_parts_only_when_they_change(transport, monkeypatch):
+    """`turn_leases.heartbeat` patches `part`/`parts` when they change and only then: the same
+    parts again touch nothing, and a beat without them clears them once.
+
+    Positive control: writing them on every beat makes the «same parts again» assert fail.
+    """
+    monkeypatch.setattr(turn_leases, "MAX_HEARTBEAT_S", 30.0)  # no beat of the thread meanwhile
+    lease = _lease(chunks=4)
+    lease.acquire(lambda *_: None)
+    patches: list[dict] = []
+    original = server._inflight_patch
+
+    def _spy(key: str, changes: dict) -> None:
+        patches.append(dict(changes))
+        original(key, changes)
+
+    monkeypatch.setattr(server, "_inflight_patch", _spy)
+    table = turn_leases.table()
+
+    def beat(**fields) -> dict:
+        patches.clear()
+        table.heartbeat(lease.lease_id, turn_leases.Beat(chunk=3, **fields))
+        assert len(patches) <= 1, patches
+        return patches[0] if patches else {}
+
+    def shown() -> tuple:
+        (entry,) = _remote_entries()
+        return entry.get("part"), entry.get("parts")
+
+    try:
+        changes = beat(phase="retry", part=1, parts=2)
+        assert (changes["part"], changes["parts"]) == (1, 2) and shown() == (1, 2)
+        assert "part" not in beat(phase="retry", part=1, parts=2), "the same parts written again"
+        changes = beat(phase="retry", part=2, parts=3)
+        assert (changes["part"], changes["parts"]) == (2, 3) and shown() == (2, 3)
+        changes = beat(phase="map")
+        assert (changes["part"], changes["parts"]) == (None, None) and shown() == (None, None)
+        assert "part" not in beat(phase="map"), "the cleared parts cleared again"
+    finally:
+        lease.release()
+
+
 def test_expired_midway_sets_lost(transport):
     lease = _lease()
     lease.acquire(lambda *_: None)
