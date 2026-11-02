@@ -61,11 +61,12 @@
   "status.minutes": "{m}m {s}s",
   "status.more": "+{n}",
   "status.more_title": "+{n} more",
+  "status.part": "split in {parts} · part {part}",
   "status.reads_asks": "reads: asks",
   "status.reads_auto": "reads: auto-summary",
   "status.reads_asks_title": "Reads: asks",
   "status.reads_auto_title": "Reads: auto-summary",
   "status.queued": "queued",
-  "status.retrying": "retrying",
+  "status.retrying": "splitting",
   "status.waiting_backend": "waiting for backend"
 }
