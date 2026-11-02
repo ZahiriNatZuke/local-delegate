@@ -76,7 +76,7 @@ def _file(tmp_path: Path) -> tuple[Path, int]:
 
 def test_the_chunk_holding_the_name_is_told_where_it_is(backend, tmp_path):
     """Mutant «no hint in the map» (`_map_hint` returns ""): the hint asserts fail."""
-    calls, _state = backend
+    calls = backend[0]
     file, line = _file(tmp_path)
     server.local_explain_code(path=str(file), question=QUESTION)
     maps = [c for c in calls if c["user"].startswith("Toma notas")]
@@ -99,7 +99,7 @@ def test_the_chunk_holding_the_name_is_told_where_it_is(backend, tmp_path):
 
 def test_the_reduce_gets_the_exact_lines_of_the_file(backend, tmp_path):
     """Mutant «no exact lines in the reduce» (`exact_lines = ""`): the reduce assert fails."""
-    calls, _state = backend
+    calls = backend[0]
     file, line = _file(tmp_path)
     server.local_explain_code(path=str(file), question=QUESTION)
     reduce = calls[-1]
@@ -117,7 +117,6 @@ def test_a_no_information_answer_with_the_name_in_the_file_is_flagged(backend, t
     Mutant «no contradiction warning» (the `claims_no_information` branch of `_verified_lines`
     removed): the warning assert fails, the occurrences line still comes.
     """
-    _calls, _state = backend
     file, line = _file(tmp_path)
     answer = server.local_explain_code(path=str(file), question=QUESTION)
     assert answer.startswith(NO_INFO)
@@ -128,7 +127,7 @@ def test_a_no_information_answer_with_the_name_in_the_file_is_flagged(backend, t
 
 def test_a_real_answer_gets_no_warning(backend, tmp_path):
     """Control: an answer that answers is not flagged, even if the notes were empty."""
-    _calls, state = backend
+    state = backend[1]
     state["reduce"] = "No: `summarizable` solo mira la extensión y el tamaño."
     file, line = _file(tmp_path)
     answer = server.local_explain_code(path=str(file), question=QUESTION)
@@ -138,8 +137,7 @@ def test_a_real_answer_gets_no_warning(backend, tmp_path):
 
 def test_no_information_is_not_flagged_when_the_name_is_not_in_the_file(backend, tmp_path):
     """Control: «no information» about a name the file does not hold is not a contradiction."""
-    _calls, _state = backend
-    file, _line = _file(tmp_path)
+    file = _file(tmp_path)[0]
     question = "¿Dónde se llama a load_protected_paths()?"
     answer = server.local_explain_code(path=str(file), question=question)
     assert answer.startswith(NO_INFO)
@@ -149,8 +147,8 @@ def test_no_information_is_not_flagged_when_the_name_is_not_in_the_file(backend,
 
 def test_the_inline_code_gets_no_hint(backend, tmp_path):
     """Without `path` there are no line numbers: no hint, no exact lines, no warning."""
-    calls, _state = backend
-    file, _line = _file(tmp_path)
+    calls = backend[0]
+    file = _file(tmp_path)[0]
     code = file.read_text(encoding="utf-8")
     answer = server.local_explain_code(code=code, question=QUESTION)
     assert all(HINT not in c["user"] and EXACT not in c["user"] for c in calls)
