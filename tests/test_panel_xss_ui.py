@@ -93,10 +93,10 @@ def test_a_hostile_log_line_is_text_not_code(hostile_panel, theme, with_policy):
             page.goto(hostile_panel)
             # El panel corrió: la fila de la delegación hostil y «la última» están pintadas.
             page.wait_for_selector("#activity tr[data-i]", timeout=15000)
-            page.wait_for_function(
-                "document.getElementById('inflightBody').textContent.includes('onerror')",
-                timeout=15000,
-            )
+            # Con selector y no con `wait_for_function`: el texto de esa espera se evalúa en la
+            # página, y con la CSP del panel (sin 'unsafe-eval') falla si la condición no se
+            # cumple a la primera. Era intermitente en `with-csp` (main, 2026-11-02).
+            page.wait_for_selector("#inflightBody:has-text('onerror')", timeout=15000)
             page.wait_for_timeout(500)  # una imagen rota dispara `onerror` enseguida
 
             assert page.evaluate("window.__xss || []") == []
