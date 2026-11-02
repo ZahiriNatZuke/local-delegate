@@ -192,5 +192,11 @@
   "mcp.status.remote_turn.off": "Remote turn: off (LOCAL_DELEGATE_TURN_URL=off)",
   "mcp.status.remote_turn.unavailable": "Remote turn: not available ({reason})",
   "mcp.remote_turn.plaintext": "local-delegate: the remote turn on {url} goes over http to a host that is not private: the credential travels unencrypted. Use https or a tailnet address",
-  "mcp.status.remote_turn.active_plaintext": "Remote turn: active on {url} (warning: http to a host that is not private, the credential travels unencrypted)"
+  "mcp.status.remote_turn.active_plaintext": "Remote turn: active on {url} (warning: http to a host that is not private, the credential travels unencrypted)",
+  "mcp.input.protected_read": "Protected path ({kind}, rule {rule}): local-delegate does not read it, even though the tool is allowed. If you really need it, read it yourself under Claude Code's permissions. Path: {path}",
+  "mcp.input.protected_write": "Protected path ({kind}, rule {rule}): local-delegate does not write there, even though the tool is allowed. Pick another target or write it yourself under Claude Code's permissions. Path: {path}",
+  "mcp.input.protected_kind.credential": "credentials",
+  "mcp.input.protected_kind.autostart": "autostart",
+  "mcp.input.protected_kind.executable_config": "configuration that runs code",
+  "mcp.input.protected_kind.user": "LOCAL_DELEGATE_DENY_PATHS"
 }
