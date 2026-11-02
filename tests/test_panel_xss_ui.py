@@ -16,13 +16,10 @@ Los dos, en tema claro y oscuro. La guarda estática que cuenta las plantillas e
 from __future__ import annotations
 
 import json
-import threading
-import time
 from datetime import UTC, datetime
-from typing import Self
 
 import pytest
-import uvicorn
+from panel_server import PanelServer
 
 from local_delegate import config
 from local_delegate.web import metrics
@@ -32,9 +29,8 @@ pytest.importorskip("playwright.sync_api", reason="Playwright no está instalado
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
 
-# Puerto fijo propio, y en el mismo grupo de xdist que los demás tests de navegador.
+# En el mismo grupo de xdist que los demás tests de navegador; el puerto lo asigna el sistema.
 pytestmark = pytest.mark.xdist_group("dashboard_ui")
-PORT = 9511
 
 
 def _payload(field: str) -> str:
@@ -43,27 +39,6 @@ def _payload(field: str) -> str:
 
 
 HOSTILE_FIELDS = ("tool", "model", "source", "model_requested", "backend", "chunks")
-
-
-class _Server:
-    def __init__(self, port: int) -> None:
-        self._server = uvicorn.Server(
-            uvicorn.Config(metrics.app, host="127.0.0.1", port=port, log_level="error")
-        )
-        self._thread = threading.Thread(target=self._server.run, daemon=True)
-        self.url = f"http://127.0.0.1:{port}/"
-
-    def __enter__(self) -> Self:
-        self._thread.start()
-        for _ in range(200):
-            if self._server.started:
-                return self
-            time.sleep(0.05)
-        raise RuntimeError("el panel no llegó a levantar")
-
-    def __exit__(self, *_exc) -> None:
-        self._server.should_exit = True
-        self._thread.join(timeout=10)
 
 
 @pytest.fixture(autouse=True)
@@ -93,7 +68,7 @@ def hostile_panel(tmp_path, monkeypatch):
     log = tmp_path / f"usage-{now:%Y%m}.jsonl"
     log.write_text(json.dumps(event, ensure_ascii=False) + "\n", encoding="utf-8")
     metrics._FILE_CACHE.clear()
-    with _Server(PORT) as server:
+    with PanelServer("el panel") as server:
         yield server.url
 
 

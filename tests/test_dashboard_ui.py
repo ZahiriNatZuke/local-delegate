@@ -25,14 +25,12 @@ from __future__ import annotations
 import json
 import os
 import re
-import threading
 import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Self
 
 import pytest
-import uvicorn
+from panel_server import PanelServer
 
 from local_delegate import config, i18n
 from local_delegate.web import metrics
@@ -42,9 +40,9 @@ pytest.importorskip("playwright.sync_api", reason="Playwright no está instalado
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
 
-# Todo el módulo en un mismo worker de `pytest-xdist` (`--dist loadgroup`): sus servidores
-# escuchan en puertos fijos (9495 lo comparten una docena de tests), así que dos workers
-# chocarían al levantarlos. En serie dentro del grupo, el resto de la suite sigue en paralelo.
+# Todo el módulo en un mismo worker de `pytest-xdist` (`--dist loadgroup`), para no abrir un
+# Chromium por worker. Ya no protege puertos: cada servidor pide uno libre (`panel_server`),
+# porque con pytest 9.2 y pytest-xdist 3.8.0 este grupo dejó de respetarse.
 pytestmark = pytest.mark.xdist_group("dashboard_ui")
 
 
@@ -95,29 +93,6 @@ def _events(count: int) -> str:
     return "\n".join(lines) + "\n"
 
 
-class _Server:
-    """Sirve el dashboard real en un hilo, contra un log de uso controlado."""
-
-    def __init__(self, port: int) -> None:
-        self._server = uvicorn.Server(
-            uvicorn.Config(metrics.app, host="127.0.0.1", port=port, log_level="error")
-        )
-        self._thread = threading.Thread(target=self._server.run, daemon=True)
-        self.url = f"http://127.0.0.1:{port}/"
-
-    def __enter__(self) -> Self:
-        self._thread.start()
-        for _ in range(200):
-            if self._server.started:
-                return self
-            time.sleep(0.05)
-        raise RuntimeError("el dashboard no llegó a levantar")
-
-    def __exit__(self, *_exc) -> None:
-        self._server.should_exit = True
-        self._thread.join(timeout=10)
-
-
 @pytest.fixture(autouse=True)
 def backend_down(request, monkeypatch):
     """El backend del panel de prueba es el servidor que corta cada conexión de la suite
@@ -139,7 +114,7 @@ def panel(tmp_path, monkeypatch):
     (tmp_path / f"usage-{today:%Y%m}.jsonl").write_text(_events(per_page + 3), encoding="utf-8")
     metrics._FILE_CACHE.clear()  # cachea por (mtime, size); el fichero es nuevo en cada test
 
-    with _Server(9498) as server:
+    with PanelServer() as server:
         yield server.url, per_page
 
 
@@ -387,7 +362,7 @@ def measurements(tmp_path_factory):
         mp.setattr(config, "USAGE_LOG", folder / "usage.jsonl")
         mp.setattr(config, "WEB_FONTS", True)
         metrics._FILE_CACHE.clear()
-        with _Server(9497) as server, sync_playwright() as pw:
+        with PanelServer() as server, sync_playwright() as pw:
             browser = _browser(pw)
             # `locale` explícito (REQ-043): el fixture `new_page` no llega a un fixture de módulo.
             page = browser.new_page(locale="es-ES")
@@ -583,7 +558,7 @@ def test_cards_only_use_the_panel_fonts(tmp_path, monkeypatch, state, new_page, 
     today = datetime.now(UTC)
     (tmp_path / f"usage-{today:%Y%m}.jsonl").write_text(_showcase_log(), encoding="utf-8")
     metrics._FILE_CACHE.clear()
-    with _Server(9496) as server, sync_playwright() as pw:
+    with PanelServer() as server, sync_playwright() as pw:
         browser = _browser(pw)
         page = new_page(browser, viewport={"width": 1440, "height": 1000})
         page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
@@ -703,7 +678,7 @@ def test_cost_quota_and_image_cards_carry_figures_not_paragraphs(
     idiomas, y las cifras con los separadores de cada uno (REQ-026)."""
     lang = _lang_of(browser_locale)
     _cost_and_image_log(tmp_path, monkeypatch)
-    with _Server(9495) as server, sync_playwright() as pw:
+    with PanelServer() as server, sync_playwright() as pw:
         browser = _browser(pw)
         page = new_page(browser)
         page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
@@ -733,7 +708,7 @@ def test_the_info_dialog_carries_the_text_and_closes_with_esc(tmp_path, monkeypa
     """El ⓘ de la tarjeta de coste abre un diálogo con los supuestos, la calibración de la cuota y
     la nota de las imágenes; Esc lo cierra y el foco vuelve al botón."""
     _cost_and_image_log(tmp_path, monkeypatch)
-    with _Server(9495) as server, sync_playwright() as pw:
+    with PanelServer() as server, sync_playwright() as pw:
         browser = _browser(pw)
         page = new_page(browser)
         page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
@@ -780,7 +755,7 @@ def test_the_calibrated_quota_appears_as_a_meter(tmp_path, monkeypatch, new_page
         data["quota"] = calibrated_quota
         path.fulfill(response=response, body=json.dumps(data))
 
-    with _Server(9495) as server, sync_playwright() as pw:
+    with PanelServer() as server, sync_playwright() as pw:
         browser = _browser(pw)
         page = new_page(browser)
         page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
@@ -949,7 +924,7 @@ def test_the_kpi_unit_is_not_cut_off(tmp_path, monkeypatch, fonts, new_page):
         path.fulfill(response=response, body=json.dumps(data))
 
     overflows = {}
-    with _Server(9495) as server, sync_playwright() as pw:
+    with PanelServer() as server, sync_playwright() as pw:
         browser = _browser(pw)
         for width in (1280, 1366, 1440):
             for theme in ("dark", "light"):
@@ -1016,7 +991,7 @@ def test_kpi_cards_keep_their_width_with_a_huge_figure(
         path.fulfill(response=response, body=json.dumps(data))
 
     measured = {}
-    with _Server(9495) as server, sync_playwright() as pw:
+    with PanelServer() as server, sync_playwright() as pw:
         browser = _browser(pw)
         for width in (1440, 1280, 720, 390):
             for figures in ("normales", "enormes"):
@@ -1112,7 +1087,7 @@ def test_kpi_edges_line_up_with_the_panels_above(
     capturas, cada tarjeta mide lo mismo de ancho y de alto."""
     _cost_and_image_log(tmp_path, monkeypatch)
     measured = {}
-    with _Server(9495) as server, sync_playwright() as pw:
+    with PanelServer() as server, sync_playwright() as pw:
         browser = _browser(pw)
         for width in (1440, 1280, 1024, 720, 390):
             for name, figures in _USER_FIGURES.items():
@@ -1218,7 +1193,7 @@ def test_large_figures_keep_clear_of_the_next_column(tmp_path, monkeypatch, font
         path.fulfill(response=response, body=json.dumps(data))
 
     measured = {}
-    with _Server(9495) as server, sync_playwright() as pw:
+    with PanelServer() as server, sync_playwright() as pw:
         browser = _browser(pw)
         for width in (1440, 1280, 1024):
             page = new_page(browser, viewport={"width": width, "height": 900})
@@ -1332,7 +1307,7 @@ def test_no_table_shows_internal_keys(tmp_path, monkeypatch):
     de modelo (primera columna del coste) ya empiezan en mayúscula; los de proceso y tool no pasan
     por aquí (son nombres propios)."""
     _cost_and_image_log(tmp_path, monkeypatch)
-    with _Server(9495) as server, sync_playwright() as pw:
+    with PanelServer() as server, sync_playwright() as pw:
         browser, page = _full_page(pw, server.url)
         cells = page.evaluate(_FIRST_COLUMNS)
         effort = page.inner_text("#costBody tbody tr td:nth-child(3)")
@@ -1380,7 +1355,7 @@ def test_all_tables_share_typography_per_column(tmp_path, monkeypatch):
     """Primera columna y cabecera con la misma familia y tamaño en todas las tablas del panel,
     también la de procesos de Sistema (antes en 12 px)."""
     _cost_and_image_log(tmp_path, monkeypatch)
-    with _Server(9495) as server, sync_playwright() as pw:
+    with PanelServer() as server, sync_playwright() as pw:
         browser, page = _full_page(pw, server.url)
         page.wait_for_selector("#procTable tbody td")
         tables = page.evaluate(_TABLE_TYPOGRAPHY)
@@ -1394,7 +1369,7 @@ def test_all_tables_share_typography_per_column(tmp_path, monkeypatch):
 def test_the_hooks_note_is_in_the_dialog(tmp_path, monkeypatch):
     """El párrafo de «los hooks sugieren» ya no está en la tarjeta: lo abre su ⓘ."""
     _cost_and_image_log(tmp_path, monkeypatch)
-    with _Server(9495) as server, sync_playwright() as pw:
+    with PanelServer() as server, sync_playwright() as pw:
         browser, page = _full_page(pw, server.url)
         body = page.inner_text("#hooksBody")
         paragraphs = page.evaluate(
@@ -1438,7 +1413,7 @@ def test_the_kpi_row_is_symmetric_and_uses_decimal_comma(tmp_path, monkeypatch, 
     ningún número usa punto decimal."""
     _cost_and_image_log(tmp_path, monkeypatch)
     results = {}
-    with _Server(9495) as server, sync_playwright() as pw:
+    with PanelServer() as server, sync_playwright() as pw:
         for width in (1280, 1366, 1440, 400):
             for theme in ("dark", "light"):
                 browser, page = _full_page(pw, server.url, width, theme, fonts)
@@ -1464,7 +1439,7 @@ def test_system_shows_the_gpu_load_as_a_bar(tmp_path, monkeypatch):
     """La cabecera de Sistema ya no lleva «GPU 68%»: la carga es una fila con barra, entre la RAM y
     la VRAM, y todas las cifras van con coma decimal y espacio antes de %."""
     _cost_and_image_log(tmp_path, monkeypatch)
-    with _Server(9495) as server, sync_playwright() as pw:
+    with PanelServer() as server, sync_playwright() as pw:
         browser, page = _full_page(pw, server.url)
         header = page.evaluate(
             "() => [...document.querySelectorAll('.panel-h')]"
@@ -1534,7 +1509,7 @@ def test_the_hero_line_does_not_overlap_its_hint(tmp_path, monkeypatch, fonts):
     en ubuntu la de reserva es más ancha)."""
     _cost_and_image_log(tmp_path, monkeypatch)
     measurements = {}
-    with _Server(9495) as server, sync_playwright() as pw:
+    with PanelServer() as server, sync_playwright() as pw:
         for width in (1280, 1366, 1440, 400):
             for theme in ("dark", "light"):
                 browser, page = _full_page(pw, server.url, width, theme, fonts)
@@ -1603,7 +1578,7 @@ def test_backend_and_in_flight_speak_spanish(tmp_path, monkeypatch, new_page):
             "total_cache_tokens": 214880,
         },
     }
-    with _Server(9495) as server, sync_playwright() as pw:
+    with PanelServer() as server, sync_playwright() as pw:
         browser = _browser(pw)
         page = new_page(browser)
         page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
@@ -1722,7 +1697,7 @@ def test_the_tests_switch_requests_all_three_with_the_parameter(tmp_path, monkey
     opened = test_windows.start(tmp_path, "en vivo", now=now + timedelta(seconds=5))
     metrics._FILE_CACHE.clear()
     requested: list[str] = []
-    with _Server(9487) as server, sync_playwright() as pw:
+    with PanelServer() as server, sync_playwright() as pw:
         browser = _browser(pw)
         page = new_page(browser, viewport={"width": 1440, "height": 1000})
         page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
@@ -1977,7 +1952,7 @@ def test_two_visitors_in_two_languages_against_one_daemon(tmp_path, monkeypatch,
     lo ve entero en inglés —también las causas y los roles que redacta el servidor—, y a uno
     `es-ES`, que lo ve en español."""
     _cost_and_image_log(tmp_path, monkeypatch)
-    with _Server(9499) as server, sync_playwright() as pw:
+    with PanelServer() as server, sync_playwright() as pw:
         browser = _browser(pw)
         english = _lang_page(new_page, browser, server.url, locale="en-US")
         spanish = _lang_page(new_page, browser, server.url, locale="es-ES")
@@ -2000,7 +1975,7 @@ def test_one_word_left_in_spanish_is_caught_in_the_english_DOM(tmp_path, monkeyp
     """Control positivo de REQ-025: «Latencia» sin traducir (el inglés con el texto español) salta."""
     _cost_and_image_log(tmp_path, monkeypatch)
     monkeypatch.setitem(i18n.catalog("en"), "panel.kpi.latency.label", "Latencia")
-    with _Server(9499) as server, sync_playwright() as pw:
+    with PanelServer() as server, sync_playwright() as pw:
         browser = _browser(pw)
         page = _lang_page(new_page, browser, server.url, locale="en-US")
         _open_full(page, server.url, "en")
@@ -2087,7 +2062,7 @@ def test_event_row_opens_dialog_with_enter(tmp_path, monkeypatch, new_page):
     }
     (tmp_path / f"usage-{now:%Y%m}.jsonl").write_text(json.dumps(event) + "\n", encoding="utf-8")
     metrics._FILE_CACHE.clear()
-    with _Server(9486) as server, sync_playwright() as pw:
+    with PanelServer() as server, sync_playwright() as pw:
         browser = _browser(pw)
         page = new_page(browser)
         page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
