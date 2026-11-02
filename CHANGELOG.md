@@ -6,6 +6,31 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.47.2] - 2026-11-02
+
+Versión de **seguridad** y arreglos. Lo principal: las tools que leen `path` o escriben `target`
+desde el servidor ya no tocan rutas sensibles aunque un comodín las permita. Las credenciales
+(`~/.ssh`, `.env`, `.npmrc`, `.claude.json`…) nunca se leen ni se escriben; las carpetas de
+arranque automático y la configuración que ejecuta código nunca se escriben; y en Windows se
+rechazan las rutas UNC y de dispositivo (#526). Además, el panel y la banda dicen cuánto lleva un
+trozo que se divide («Trozo 3/4 · dividido en 3 · parte 2», #516); `doctor` deja de contar como
+sin expandir la `${AUTH_HEADER}` que `mcp-remote` sustituye desde el `env` de la entrada de Claude
+Desktop en la Mac (#511); y `local_explain_code` troceado avisa cuando responde «no hay
+información» mientras la búsqueda exacta encuentra el nombre preguntado (#527). También entran
+actualizaciones de dependencias (`fastapi` 0.162.0, `platformdirs` 4.14.0, `opentelemetry-api`
+1.45.2 y las de desarrollo) y arreglos de tests sin efecto para quien lo usa (#518, #524).
+
+### Cómo actualizar
+
+- **En la PC y en la Mac:** ejecuta `local-delegate update` o, si instalaste con versión fija,
+  reinstala con `uv tool install --force --no-cache "local-delegate-mcp[llamaswap]==0.47.2"` (con
+  tus extras). Reinicia el daemon y haz `/mcp` en Claude Code (o abre una sesión nueva): las
+  sesiones abiertas siguen con el servidor MCP de la 0.47.1 hasta entonces.
+- **Conviene actualizar las dos máquinas** por la parte de seguridad. No hace falta cambiar la
+  configuración. Si alguna vez delegabas a propósito un fichero de la lista protegida (un `.env`,
+  por ejemplo), ahora se rechaza: léelo tú. La variable nueva `LOCAL_DELEGATE_DENY_PATHS` es
+  opcional y sirve para añadir rutas propias a la lista.
+
 ### Seguridad
 
 - **Las tools ya no leen ni escriben rutas sensibles, aunque estén permitidas con comodín**: las
@@ -4168,7 +4193,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.1...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.2...HEAD
+[0.47.2]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.1...v0.47.2
 [0.47.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.0...v0.47.1
 [0.47.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.46.0...v0.47.0
 [0.46.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.45.1...v0.46.0
