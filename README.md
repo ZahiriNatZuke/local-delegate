@@ -187,7 +187,10 @@ las costuras. Un documento de 20 000+ caracteres vuelve completo en vez de corta
 registra `chunks: N` y el dashboard muestra el progreso (`trozo 3/7`) mientras corre. Desde la
 0.43.0, «En curso» dice también la fase: «Combinando 3 trozos…» mientras se juntan los parciales y
 «Reintentando trozo n/total» cuando un trozo cortado se vuelve a partir; y la actividad separa
-trozos de llamadas al backend (`3 +1`: tres trozos y una combinación).
+trozos de llamadas al backend (`3 +1`: tres trozos y una combinación). Desde la 0.47.2 ese caso
+dice «Dividiendo trozo n/total» y, en cuanto se conocen las partes, cuánto lleva la división
+sin mover el total de trozos: «Trozo 3/4 · dividido en 3 · parte 2» en el panel y
+`3/4 · dividido en 3 · parte 2` en la banda.
 
 **Llamadas largas y colas.** Desde la 0.45.0 cada llamada viva manda progreso MCP cada 20 s con su
 fase («esperando turno, puesto N», «procesando el trozo k/N»), así que Claude Code ya no corta a los
@@ -199,8 +202,8 @@ máquina vino (`host`) y cuánto esperó en cada fase (`concurrency`). Desde la 
 delegación troceada larga cede el turno entre trozos a la que choca con ella
 (`LOCAL_DELEGATE_TURN_YIELD_S`, 120 s), «En curso» agrupa en «Esperando al backend» la llamada que
 espera a que llama-swap cambie de modelo, y un `read_timeout` nombra el modelo que lo bloqueaba.
-Desde la 0.47.0 esa espera se ve como tal aunque el trozo se esté reintentando (antes salía como
-«reintentando»).
+Desde la 0.47.0 esa espera se ve como tal aunque el trozo se esté dividiendo (antes salía como
+«reintentando»; desde la 0.47.2, «dividiendo»).
 
 **Resúmenes de documentos enormes.** `local_summarize` y `local_lint_summary` hacen **map-reduce**
 cuando la entrada no cabe en el modelo: resumen cada parte y luego resumen los resúmenes, por

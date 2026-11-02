@@ -2986,7 +2986,13 @@ function renderInflight(){
       const waitBackend = it.state==='waiting_backend';
       // Issue #454: the phase of a chunked delegation; none (map) keeps «piece n/total».
       const chunkKey = it.phase==='reduce' ? 'backend.combining' : it.phase==='retry' ? 'backend.retrying' : 'backend.chunk';
-      const chunk = it.chunks ? `<span class="chunkchip">${escHooks(T(chunkKey, {n: it.chunk||1, total: it.chunks}))}</span>` : '';
+      // A chunk split again says how far its split has got (`part`/`parts`, while it lasts):
+      // «Trozo 3/4 · dividido en 3 · parte 2», with the why in the chip's title.
+      const split = it.chunks && it.part>0 && it.parts>0;
+      const splitWords = {chunk: it.chunk||1, chunks: it.chunks, part: it.part, parts: it.parts};
+      const chunk = split
+        ? `<span class="chunkchip" title="${escHooks(T('backend.part_title', splitWords))}">${escHooks(T('backend.part', splitWords))}</span>`
+        : it.chunks ? `<span class="chunkchip">${escHooks(T(chunkKey, {n: it.chunk||1, total: it.chunks}))}</span>` : '';
       const org = it.backend ? `<span class="org ${escHooks(it.backend)}">${escHooks(labelFor('origin', it.backend))}</span>` : '';
       // Espera de turno del daemon (REQ-008): las mismas palabras que el title de la fila del modelo.
       const turnText = it.local_wait==='turn' ? turnWords(it) : '';

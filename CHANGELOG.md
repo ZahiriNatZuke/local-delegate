@@ -28,6 +28,19 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   conocidos (enlaces duros, la ventana entre comprobar y usar) en la wiki, *Configuration*, «Rutas
   protegidas».
 
+### Cambiado
+
+- **Un trozo que se vuelve a partir dice cuánto lleva la división** (#516): el panel («En curso»)
+  y la banda mostraban «Reintentando trozo 3/4» o «reintentando» mientras un trozo cortado, o que
+  no cabía, se procesaba en partes más pequeñas, sin decir cuántas ni por cuál iba. Ahora dicen
+  «Dividiendo trozo 3/4» y, en cuanto se conocen las partes, «Trozo 3/4 · dividido en 3 · parte 2»
+  (en inglés, «Chunk 3/4 · split in 3 · part 2»), con el porqué en el título del chip. El total de
+  trozos sigue siendo el del documento; si una parte se vuelve a partir, sube el número de partes
+  y la parte nunca retrocede. `/api/inflight` lo expone en dos campos nuevos, `part` y `parts`, que
+  se borran al acabar la división; `phase: "retry"` y el estado `retrying` no cambian, y el log de
+  uso tampoco. Con turno remoto el latido manda `part`/`parts` al daemon de la PC; si ese daemon es
+  anterior y los rechaza, el cliente repite el latido sin ellos y no vuelve a mandarlos.
+
 ### Corregido
 
 - **`doctor` seguía avisando del token de Claude Desktop en la Mac con la forma de `mcp-remote`**
