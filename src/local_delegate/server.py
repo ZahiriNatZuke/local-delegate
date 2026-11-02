@@ -6037,6 +6037,38 @@ def _lint_not_mentioned(answer: str, log: str) -> str:
     return f"{answer.rstrip()}\n\n{line}"
 
 
+def _lint_invented(answer: str, log: str) -> str:
+    """Issue #525: a visible warning when the summary names files the log does not carry.
+
+    The reverse of `_lint_not_mentioned`, in every call of the tool (both roles, single and
+    chunked): with an input it had nothing to take from, the `mechanical` model wrote errors in
+    `src/main.js` and `tests/main.test.js`, and the answer carried no sign of it.
+    """
+    invented = lint_patterns.invented_files(answer, log)
+    if not invented:
+        return answer
+    warning = i18n.t("mcp.warning.lint_invented_files", files=", ".join(invented))
+    return f"{answer.rstrip()}\n\n{WARNING_MARKER}{warning}]"
+
+
+def _lint_no_findings(verdict: str, path: str | None, chars_in: int) -> str:
+    """Issue #525: the answer of `local_lint_summary` to an input with nothing to summarize.
+
+    A fixed sentence, with the line of the log that says the run was clean when there is one
+    (`lint_patterns.clean_verdict`), and the usual receipt of a read made server-side. No model
+    is called, so no delegation is logged, as with the open backend breaker
+    (`_backend_down_text`): the usage log counts calls to the backend.
+    """
+    if verdict:
+        text = i18n.t("mcp.lint.no_findings_log", line=verdict)
+    else:
+        text = i18n.t("mcp.lint.no_findings")
+    if path and config.FEEDBACK_ENABLED:
+        event = cost.in_flight_row(tool="local_lint_summary", source="path", path=path)
+        text += _savings_feedback(chars_in, "chars", event=event)
+    return text
+
+
 def _lint_single_user(content: str, log: str, role: str) -> str:
     """The user prompt of the single `local_lint_summary` call.
 
@@ -6909,6 +6941,11 @@ def local_lint_summary(
     role, model = _role_for_size(probe_len)
     content, truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
     log = content
+    # Issue #525: with nothing to summarize the model invented errors in files that do not exist.
+    # Such an input is answered by the program, before the backend.
+    verdict = lint_patterns.clean_verdict(log)
+    if verdict is not None:
+        return _lint_no_findings(verdict, path, len(log))
     # B2d-4: the program, not the model, compacts the lines with the same problem and counts them.
     content, _groups = compact_repeated_lines(content)
     system = _lint_system(max_words)
@@ -6939,7 +6976,9 @@ def local_lint_summary(
             # B2e, respaldo decidido por el usuario el 2026-10-17 (la primera medición no llegó):
             # lo del inventario que el resumen no nombra lo añade el programa, en una línea y sin
             # cifras, para que el lector sepa qué ficheros y reglas del log quedaron fuera.
-            return _lint_not_mentioned(_lint_other_files(answer, left_out), log)
+            # Issue #525: and the reverse, the files the summary names that the log does not.
+            checked = _lint_invented(answer, log)
+            return _lint_not_mentioned(_lint_other_files(checked, left_out), log)
 
         return _chat_map_reduce(
             model,
@@ -6975,9 +7014,10 @@ def local_lint_summary(
         truncated_in=truncated_in,
         raw_len=raw_len,
         path=path,
-        postprocess=(lambda answer, _t: _lint_not_mentioned(answer, log))
+        # Issue #525: both roles flag the files the summary names that the log does not.
+        postprocess=(lambda answer, _t: _lint_not_mentioned(_lint_invented(answer, log), log))
         if role == "long"
-        else None,
+        else (lambda answer, _t: _lint_invented(answer, log)),
     )
     return _truncation_prefix(content, truncated_in, raw_len) + result
 

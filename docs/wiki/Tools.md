@@ -189,6 +189,18 @@ resumen final cortado ni inventa recuentos de tests por fichero. Algún paso int
 acabar cortado, y entonces la respuesta lo avisa; lo que se pierde ahí lo cubre la lista del
 programa.
 
+**Entrada sin nada que resumir.** Si la entrada está vacía, solo trae espacios, es un informe JSON
+sin diagnósticos (`[]`, `{}`, `null`, el `[{"filePath": …, "messages": []}]` de ESLint, el
+`{"results": [], "errors": []}` de Semgrep o Bandit, el `"diagnostics": []` de Biome) o solo trae
+líneas de «sin problemas» conocidas («All checks passed!», «0 problems», «✔ No problems found»,
+«0 errors», «Success: no issues found…», un pytest donde todo pasó), responde el programa sin
+llamar al modelo: «Sin hallazgos: la entrada no trae errores, avisos ni pruebas fallidas que
+resumir», citando la línea del log cuando la hay, y con el recibo de lectura de siempre si se pasó
+`path`. Como no corre ningún modelo, no se registra como delegación (igual que con el corte del
+backend abierto). Cualquier otra cosa va al modelo, y si el resumen nombra ficheros que no aparecen
+en la entrada, la respuesta termina con `[local-delegate warning: el resumen nombra ficheros que no aparecen en la entrada y
+pueden ser inventados: …]`.
+
 ## `local_commit_msg`
 
 ```python

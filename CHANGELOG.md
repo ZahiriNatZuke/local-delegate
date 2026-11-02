@@ -43,6 +43,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_lint_summary` inventaba errores cuando no había nada que resumir** (#525): con la salida
+  de un linter limpio (`[]` de 3 bytes, un fichero vacío, solo espacios, `{}`) el modelo mecánico
+  devolvía errores y avisos en ficheros que no existen (`src/main.js`, `tests/main.test.js`), sin
+  ningún aviso; con un pytest donde todo pasó inventaba «Regla 101: 80 instancias». Ahora el
+  programa reconoce antes del modelo la entrada sin diagnósticos (vacía, informes JSON vacíos o sin
+  mensajes de ESLint, stylelint, Biome, Semgrep, Bandit y RuboCop, las líneas de «sin problemas» de
+  ruff, ESLint, tsc, pyright y mypy, y un pytest con todo en verde) y responde «Sin hallazgos…» con
+  su recibo, sin llamar al backend ni registrar una delegación. Para lo que sí llega al modelo, la
+  respuesta lleva un `[local-delegate warning: …]` cuando el resumen nombra ficheros que no
+  aparecen en la entrada, en los dos roles y también troceado. Los prompts no cambian: el de
+  sistema es la huella de las celdas de afinidad de lint ya medidas.
 - **`doctor` seguía avisando del token de Claude Desktop en la Mac con la forma de `mcp-remote`**
   (#511, segunda parte): la entrada lleva el token en `env.AUTH_HEADER` y
   `--header Authorization:${AUTH_HEADER}` en los argumentos. Esa `${AUTH_HEADER}` la sustituye el
