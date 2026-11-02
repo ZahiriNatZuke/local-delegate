@@ -53,10 +53,10 @@ def _three_chunks() -> str:
     assert len(pieces) == 3, len(pieces)
     halves = server._chunk_text(pieces[0], max(config.CHUNK_MIN_CHARS, len(pieces[0]) // 2))
     assert len(halves) == 2, "the first chunk must split in two"
-    quarters = server._chunk_text(halves[0], max(config.CHUNK_MIN_CHARS, len(halves[0]) // 2))
-    assert len(quarters) == 2, "and its first half in two again"
-    quarters = server._chunk_text(halves[1], max(config.CHUNK_MIN_CHARS, len(halves[1]) // 2))
-    assert len(quarters) == 2, "and its second half too"
+    split_again = server._chunk_text(halves[0], max(config.CHUNK_MIN_CHARS, len(halves[0]) // 2))
+    assert len(split_again) == 2, "and its first half in two again"
+    split_again = server._chunk_text(halves[1], max(config.CHUNK_MIN_CHARS, len(halves[1]) // 2))
+    assert len(split_again) == 2, "and its second half too"
     return text
 
 
@@ -103,7 +103,7 @@ def test_chunked_a_split_publishes_the_parts_and_clears_them(monkeypatch, tmp_pa
     assert (event["pieces"], event["chunks"]) == (3, 5), "the log keeps pieces and calls"
 
 
-def test_chunked_a_nested_split_grows_the_parts(monkeypatch, tmp_path):
+def test_chunked_a_nested_split_adds_to_the_parts(monkeypatch, tmp_path):
     """Chunk 1 is cut, and so is its first half: the parts go 2 → 3 (a part split in two adds ONE
     part, `k - 1`); the part never goes back.
 
@@ -214,7 +214,7 @@ def test_map_reduce_a_split_publishes_the_parts_and_the_reduce_has_none(monkeypa
     assert event["chunks"] == len(seen), "`chunks` stays the number of backend calls"
 
 
-def test_map_reduce_a_nested_split_grows_the_parts(monkeypatch, tmp_path):
+def test_map_reduce_a_nested_split_adds_to_the_parts(monkeypatch, tmp_path):
     _setup(monkeypatch, tmp_path)
     seen: list = []
     monkeypatch.setattr(server, "_post_chat", _recording_post(seen, ["length", "length"]))
@@ -245,6 +245,6 @@ def test_the_daemon_takes_part_and_parts_and_refuses_bad_ones():
             turn_api.HeartbeatBody.model_validate({"lease": "x", **bad})
 
 
-def test_beat_dataclass_carries_the_parts():
+def test_beat_carries_the_parts():
     beat = turn_leases.Beat(chunk=3, phase="retry", part=2, parts=3)
     assert (beat.part, beat.parts) == (2, 3)
