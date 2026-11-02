@@ -3,12 +3,13 @@
   "slug": "concurrencia-pc-mac",
   "title": "Concurrencia y cola de delegaciones de la PC y la Mac en un solo turno visible",
   "mode": "standard",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-10-29T12:00:00.000Z",
-  "updatedAt": "2026-10-30T20:20:00.000Z",
+  "updatedAt": "2026-11-02T14:21:26.715Z",
   "phase0": {
     "mode": "lightweight",
-    "status": "in-review",
+    "status": "merged",
+    "mergedAt": "2026-10-29T13:36:32Z",
     "branch": "feat/concurrency-log-fields",
     "spec": "spec-step0.md",
     "plan": "plan-step0.md",
@@ -66,7 +67,10 @@
       "evidence": "Verificacion en vivo PC+Mac con 0.47.0 (verification.md, Lote 5): seis criterios cumplidos en la primera iteracion; degradacion correcta con etiqueta a corregir en #512."
     },
     "memory": {
-      "status": "pending"
+      "status": "approved",
+      "updatedAt": "2026-11-02T14:21:26.129Z",
+      "evidence": "Decisiones duraderas registradas en el vault: projects/local-delegate/jornada-2026-10-29-concurrencia-pc-mac-y-las-0-45.md y jornada-2026-10-30-turno-comun-pc-mac-y-las-0-47.md; puntero en la memoria de Claude Code. Aprobado por el usuario el 2026-11-02.",
+      "actor": "user"
     }
   },
   "history": [
@@ -144,6 +148,35 @@
       "to": "verifying",
       "at": "2026-10-30T20:20:00.000Z",
       "reason": "Verificacion en vivo PC+Mac superada con 0.47.0; queda la puerta de memoria"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-02T14:21:26.129Z",
+      "evidence": "Decisiones duraderas registradas en el vault: projects/local-delegate/jornada-2026-10-29-concurrencia-pc-mac-y-las-0-45.md y jornada-2026-10-30-turno-comun-pc-mac-y-las-0-47.md; puntero en la memoria de Claude Code. Aprobado por el usuario el 2026-11-02.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-02T14:21:26.335Z",
+      "reason": "Lotes 1-5 mezclados (#494, #493, #500, #502, #503) y publicados en 0.47.0 (#510)"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-02T14:21:26.530Z",
+      "reason": "conformidad aprobada (verificacion en vivo PC+Mac, verification.md)"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-02T14:21:26.715Z",
+      "reason": "memoria registrada y aprobada por el usuario el 2026-11-02"
     }
   ]
 }

@@ -96,6 +96,11 @@
       "to": "implementing",
       "at": "2026-10-21T22:21:39.514Z",
       "reason": "gate plan aprobado por el usuario; empieza la ola 0 (T0 y PR de documentos)"
+    },
+    {
+      "type": "note",
+      "at": "2026-11-02T14:22:03.000Z",
+      "reason": "Revision del 2026-11-02 de SDD sin cerrar: NO se cierra. Las olas 0-6 estan mezcladas y publicadas (0.40.0, 0.41.0 y 0.41.1), pero falta la lectura de la medicion de adopcion de REQ-024 (14 dias tras instalar la 0.40.0, prevista hacia el 2026-11-05, con scripts/measure_plugin_adoption.py) y las puertas quality, conformance y memory."
     }
   ]
 }

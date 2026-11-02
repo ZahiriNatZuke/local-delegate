@@ -3,9 +3,9 @@
   "slug": "panel-record-read-and-xss",
   "title": "record-read solo escribe en la telemetría del daemon y el panel no pinta HTML del log",
   "mode": "lite",
-  "status": "review",
+  "status": "closed",
   "createdAt": "2026-10-27T00:00:00.000Z",
-  "updatedAt": "2026-10-27T00:00:00.000Z",
+  "updatedAt": "2026-11-02T14:21:21.306Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -18,6 +18,76 @@
       "updatedAt": "2026-10-27T00:00:00.000Z",
       "evidence": "Suite completa con el cerrojo: 5294 passed, 28 skipped (-n 2 --dist loadgroup); ruff check y format limpios. Control positivo: con el metrics.py de main fallan los tests nuevos de record-read (204 donde se espera 403/415/400), la guarda estática marca 18 interpolaciones crudas, la de CSP no ve cabecera, y en Chromium corren 8 manejadores onerror; con el arreglo, repro.py notoken da 403/415 sin crear ficheros y el test de navegador pasa en claro y oscuro, con y sin CSP.",
       "actor": "agent"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-02T14:21:20.335Z",
+      "evidence": "Modo lite: el plan es la seccion de decision de spec.md, implementada tal cual en el PR #448.",
+      "actor": "agent"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-02T14:21:20.714Z",
+      "evidence": "Criterios de spec.md cubiertos por tests/test_hook_record_read_endpoint.py y tests/test_panel_escaping.py, que siguen en verde: 189 passed hoy (2026-11-02) en main 3d77dcd8 con -n 2 sobre los tests de los PRs del 2026-10-27. PR #448 mezclado (22/22 checks) y publicado en 0.42.0 (CHANGELOG).",
+      "actor": "agent"
+    },
+    "memory": {
+      "status": "approved",
+      "updatedAt": "2026-11-02T14:21:21.105Z",
+      "evidence": "Decisiones registradas en vault projects/local-delegate/jornada-2026-10-27-los-issues-de-la-mac-y-la-0-42-0.md (cita el PR #448) y puntero en el indice de jornadas de la memoria de Claude Code. Sin secretos ni PII.",
+      "actor": "agent"
     }
-  }
+  },
+  "history": [
+    {
+      "type": "note",
+      "at": "2026-11-02T14:20:47.000Z",
+      "reason": "Normalizado al esquema del harness para poder cerrarlo con personal-harness: status 'review' -> 'verifying' (nombre del harness); gates anadidas en pending: plan, conformance, memory; history creado."
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-02T14:21:20.335Z",
+      "evidence": "Modo lite: el plan es la seccion de decision de spec.md, implementada tal cual en el PR #448.",
+      "actor": "agent"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-02T14:21:20.521Z",
+      "reason": "PR #448 mezclado y publicado en 0.42.0"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-02T14:21:20.714Z",
+      "evidence": "Criterios de spec.md cubiertos por tests/test_hook_record_read_endpoint.py y tests/test_panel_escaping.py, que siguen en verde: 189 passed hoy (2026-11-02) en main 3d77dcd8 con -n 2 sobre los tests de los PRs del 2026-10-27. PR #448 mezclado (22/22 checks) y publicado en 0.42.0 (CHANGELOG).",
+      "actor": "agent"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-02T14:21:20.917Z",
+      "reason": "conformidad aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-02T14:21:21.105Z",
+      "evidence": "Decisiones registradas en vault projects/local-delegate/jornada-2026-10-27-los-issues-de-la-mac-y-la-0-42-0.md (cita el PR #448) y puntero en el indice de jornadas de la memoria de Claude Code. Sin secretos ni PII.",
+      "actor": "agent"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-02T14:21:21.306Z",
+      "reason": "trabajo mezclado y publicado en 0.42.0; se cierra el SDD que quedo abierto al terminar"
+    }
+  ]
 }
