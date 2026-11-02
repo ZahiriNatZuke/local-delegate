@@ -59,6 +59,11 @@
       "to": "specifying",
       "at": "2026-09-11T15:06:44.816Z",
       "reason": "brief.md y spec.md redactados: 17 requisitos, 12 escenarios, 4 decisiones pendientes del usuario (D-1 a D-4) antes del gate spec"
+    },
+    {
+      "type": "note",
+      "at": "2026-11-02T14:22:03.000Z",
+      "reason": "Revision del 2026-11-02 de SDD sin cerrar: NO se cierra como hecho aqui: este cambio quedo absorbido por delegacion-precisa-y-fiable, cuya fase F3 implemento la cadena de respaldo y el enfriamiento (#187-#199, publicado en 0.28.0). Su gate spec nunca se aprobo por separado (handoff.md); el harness no tiene estado 'absorbido', asi que queda en specifying y su cierre sigue al de delegacion-precisa-y-fiable."
     }
   ]
 }

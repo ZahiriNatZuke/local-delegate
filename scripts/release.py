@@ -63,6 +63,43 @@ def _changelog_notes(version: str) -> str:
     return match.group(1).strip()
 
 
+def _open_sdd_changes(root: Path | None = None) -> list[tuple[str, str]]:
+    """Cambios SDD de `.sdd/changes/` que no están en `closed`, como (slug, estado).
+
+    Un cambio terminado que nadie cierra se queda en `verifying` para siempre y el tablero miente.
+    Un `state.json` ilegible o ausente también cuenta: es justo el que hay que mirar.
+    """
+    changes = (root or ROOT) / ".sdd" / "changes"
+    if not changes.is_dir():
+        return []
+    pending = []
+    for folder in sorted(p for p in changes.iterdir() if p.is_dir()):
+        state_file = folder / "state.json"
+        try:
+            status = json.loads(state_file.read_text(encoding="utf-8")).get("status")
+        except FileNotFoundError:
+            status = "sin state.json"
+        except (OSError, ValueError, AttributeError):
+            status = "state.json ilegible"
+        if status != "closed":
+            pending.append((folder.name, str(status)))
+    return pending
+
+
+def _warn_open_sdd_changes(root: Path | None = None) -> None:
+    """Aviso, no bloqueo: un SDD abierto no impide publicar, pero se ve antes de hacerlo."""
+    pending = _open_sdd_changes(root)
+    if not pending:
+        return
+    print(f"AVISO: {len(pending)} cambios SDD sin cerrar en .sdd/changes/:")
+    for slug, status in pending:
+        print(f"  SDD sin cerrar: {slug} ({status})")
+    print(
+        "  Si su trabajo ya está mezclado y publicado, ciérralos con `personal-harness sdd approve`"
+        " y `personal-harness sdd transition` hasta `closed`; si no, déjalos como están."
+    )
+
+
 def _checks(version: str) -> None:
     if not re.fullmatch(r"\d+\.\d+\.\d+", version):
         _failure(f"la versión '{version}' no tiene forma X.Y.Z")
@@ -111,6 +148,7 @@ def main() -> int:
 
     print(f"Versión {version} coherente en los tres archivos, `main` al día, tag libre.")
     print(f"Notas tomadas del CHANGELOG ({len(notes.splitlines())} líneas).")
+    _warn_open_sdd_changes()
 
     if args.dry_run:
         print("\n--dry-run: no se crea nada. Se haría:")

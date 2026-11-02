@@ -6,6 +6,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Añadido
+
+- **`scripts/release.py` avisa de los cambios SDD sin cerrar.** Antes de publicar, también con
+  `--dry-run`, lista cada carpeta de `.sdd/changes/` cuyo `state.json` no está en `closed`
+  («SDD sin cerrar: <slug> (<estado>)») y sugiere cerrarlos. Es un aviso, no bloquea. Varios SDD
+  se habían quedado en `verifying` con su trabajo ya mezclado y publicado.
+
 ## [0.47.3] - 2026-11-02
 
 Arreglo de `local_explain_code`: con `path`, la respuesta podía empezar con el prefijo de línea

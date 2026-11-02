@@ -52,6 +52,11 @@
       "to": "researching",
       "at": "2026-09-09T01:56:35.688Z",
       "reason": "Research ejecutado: el hook de Read no se disparo (umbral 32 KB vs ficheros de 9,5 y 14,2 KB); 24 de 24 lecturas calladas por tamano son documentacion, 17 entre 8 y 16 KB."
+    },
+    {
+      "type": "note",
+      "at": "2026-11-02T14:22:03.000Z",
+      "reason": "Revision del 2026-11-02 de SDD sin cerrar: NO se cierra como hecho aqui: absorbido por delegacion-precisa-y-fiable (fase F1, implementada el 2026-09-12), como dice handoff.md. Queda en researching porque el harness no tiene estado 'absorbido'; su cierre sigue al de delegacion-precisa-y-fiable."
     }
   ]
 }

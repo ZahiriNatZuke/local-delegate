@@ -3,9 +3,9 @@
   "slug": "map-reduce-retry-truncated-partials",
   "title": "El map/reduce reintenta partiendo los parciales cortados por max_tokens",
   "mode": "lite",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-10-27T20:00:00.000Z",
-  "updatedAt": "2026-10-27T20:00:00.000Z",
+  "updatedAt": "2026-11-02T14:21:24.792Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,9 +20,21 @@
       "actor": "agent"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": "2026-10-27T20:00:00.000Z",
-      "evidence": "tests/test_map_reduce_retry_truncated.py 9 tests; control positivo: 7 fallan con el src de main por la razon que dicen (+1 test de extract ajustado); suite completa local; falta CI del PR.",
+      "status": "approved",
+      "updatedAt": "2026-11-02T14:21:23.811Z",
+      "evidence": "Lo que faltaba (CI del PR) se cumplio: PR #456 mezclado con 22/22 checks en SUCCESS; 189 passed hoy (2026-11-02) en main 3d77dcd8 con -n 2 sobre los tests de los PRs del 2026-10-27 (tests/test_map_reduce_retry_truncated.py).",
+      "actor": "agent"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-02T14:21:24.198Z",
+      "evidence": "Criterios de spec.md cubiertos por tests/test_map_reduce_retry_truncated.py, que siguen en verde: 189 passed hoy (2026-11-02) en main 3d77dcd8 con -n 2 sobre los tests de los PRs del 2026-10-27. PR #456 mezclado (22/22 checks) y publicado en 0.43.0 (CHANGELOG).",
+      "actor": "agent"
+    },
+    "memory": {
+      "status": "approved",
+      "updatedAt": "2026-11-02T14:21:24.595Z",
+      "evidence": "Decisiones registradas en vault projects/local-delegate/jornada-2026-10-27-tarde-trozos-cortados-y-la-0-43-0.md (cita el PR #456) y puntero en el indice de jornadas de la memoria de Claude Code. Sin secretos ni PII.",
       "actor": "agent"
     }
   },
@@ -33,6 +45,56 @@
       "to": "verifying",
       "at": "2026-10-27T20:00:00.000Z",
       "reason": "lite: implementado y probado en local"
+    },
+    {
+      "type": "note",
+      "at": "2026-11-02T14:20:47.000Z",
+      "reason": "Normalizado al esquema del harness para poder cerrarlo con personal-harness: gates anadidas en pending: conformance, memory."
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-02T14:21:23.811Z",
+      "evidence": "Lo que faltaba (CI del PR) se cumplio: PR #456 mezclado con 22/22 checks en SUCCESS; 189 passed hoy (2026-11-02) en main 3d77dcd8 con -n 2 sobre los tests de los PRs del 2026-10-27 (tests/test_map_reduce_retry_truncated.py).",
+      "actor": "agent"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-02T14:21:24.014Z",
+      "reason": "PR #456 mezclado y publicado en 0.43.0"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-02T14:21:24.198Z",
+      "evidence": "Criterios de spec.md cubiertos por tests/test_map_reduce_retry_truncated.py, que siguen en verde: 189 passed hoy (2026-11-02) en main 3d77dcd8 con -n 2 sobre los tests de los PRs del 2026-10-27. PR #456 mezclado (22/22 checks) y publicado en 0.43.0 (CHANGELOG).",
+      "actor": "agent"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-02T14:21:24.389Z",
+      "reason": "conformidad aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-02T14:21:24.595Z",
+      "evidence": "Decisiones registradas en vault projects/local-delegate/jornada-2026-10-27-tarde-trozos-cortados-y-la-0-43-0.md (cita el PR #456) y puntero en el indice de jornadas de la memoria de Claude Code. Sin secretos ni PII.",
+      "actor": "agent"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-02T14:21:24.792Z",
+      "reason": "trabajo mezclado y publicado en 0.43.0; se cierra el SDD que quedo abierto al terminar"
     }
   ]
 }

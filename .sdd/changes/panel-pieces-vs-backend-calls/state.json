@@ -3,9 +3,9 @@
   "slug": "panel-pieces-vs-backend-calls",
   "title": "El panel separa trozos y llamadas al backend y muestra la fase en curso",
   "mode": "lite",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-10-27T21:00:00.000Z",
-  "updatedAt": "2026-10-27T21:00:00.000Z",
+  "updatedAt": "2026-11-02T14:21:25.941Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,9 +20,21 @@
       "actor": "agent"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": "2026-10-27T21:00:00.000Z",
-      "evidence": "tests/test_pieces_vs_calls.py (5, uno del reintento del map tras el #455) y 3 tests nuevos en tests/test_dashboard_states.py; control positivo: 6 fallan con src de main por la razon esperada; mutante sin pop de phase falla; suite completa local 5401 passed tras rebase sobre el #456; ruff limpio; falta CI del PR.",
+      "status": "approved",
+      "updatedAt": "2026-11-02T14:21:24.988Z",
+      "evidence": "Lo que faltaba (CI del PR) se cumplio: PR #457 mezclado con 22/22 checks en SUCCESS; 189 passed hoy (2026-11-02) en main 3d77dcd8 con -n 2 sobre los tests de los PRs del 2026-10-27 (tests/test_pieces_vs_calls.py).",
+      "actor": "agent"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-02T14:21:25.372Z",
+      "evidence": "Criterios de spec.md cubiertos por tests/test_pieces_vs_calls.py, que siguen en verde: 189 passed hoy (2026-11-02) en main 3d77dcd8 con -n 2 sobre los tests de los PRs del 2026-10-27. PR #457 mezclado (22/22 checks) y publicado en 0.43.0 (CHANGELOG).",
+      "actor": "agent"
+    },
+    "memory": {
+      "status": "approved",
+      "updatedAt": "2026-11-02T14:21:25.757Z",
+      "evidence": "Decisiones registradas en vault projects/local-delegate/jornada-2026-10-27-tarde-trozos-cortados-y-la-0-43-0.md (cita el PR #457) y puntero en el indice de jornadas de la memoria de Claude Code. Sin secretos ni PII.",
       "actor": "agent"
     }
   },
@@ -33,6 +45,56 @@
       "to": "verifying",
       "at": "2026-10-27T21:00:00.000Z",
       "reason": "lite: implementado y probado en local"
+    },
+    {
+      "type": "note",
+      "at": "2026-11-02T14:20:47.000Z",
+      "reason": "Normalizado al esquema del harness para poder cerrarlo con personal-harness: gates anadidas en pending: conformance, memory."
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-02T14:21:24.988Z",
+      "evidence": "Lo que faltaba (CI del PR) se cumplio: PR #457 mezclado con 22/22 checks en SUCCESS; 189 passed hoy (2026-11-02) en main 3d77dcd8 con -n 2 sobre los tests de los PRs del 2026-10-27 (tests/test_pieces_vs_calls.py).",
+      "actor": "agent"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-02T14:21:25.181Z",
+      "reason": "PR #457 mezclado y publicado en 0.43.0"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-02T14:21:25.372Z",
+      "evidence": "Criterios de spec.md cubiertos por tests/test_pieces_vs_calls.py, que siguen en verde: 189 passed hoy (2026-11-02) en main 3d77dcd8 con -n 2 sobre los tests de los PRs del 2026-10-27. PR #457 mezclado (22/22 checks) y publicado en 0.43.0 (CHANGELOG).",
+      "actor": "agent"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-02T14:21:25.573Z",
+      "reason": "conformidad aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-02T14:21:25.757Z",
+      "evidence": "Decisiones registradas en vault projects/local-delegate/jornada-2026-10-27-tarde-trozos-cortados-y-la-0-43-0.md (cita el PR #457) y puntero en el indice de jornadas de la memoria de Claude Code. Sin secretos ni PII.",
+      "actor": "agent"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-02T14:21:25.941Z",
+      "reason": "trabajo mezclado y publicado en 0.43.0; se cierra el SDD que quedo abierto al terminar"
     }
   ]
 }
