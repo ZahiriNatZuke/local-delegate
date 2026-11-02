@@ -265,7 +265,10 @@ trozo y hasta `LOCAL_DELEGATE_CHUNK_MAX_TOKENS`, en vez del común de 764 tokens
 número real en el fichero, también dentro de cada trozo del map-reduce; las notas dicen
 `nombre (línea N)` y el paso final conserva `nombre: línea`. Así sirve para preguntar «¿en qué línea
 está X?» y luego leer solo ese rango con `Read` (`offset`/`limit`) en vez del fichero entero. Con
-`code=` en línea no se numera.
+`code=` en línea no se numera. Desde la 0.47.3 (issue #531), si el modelo copia ese prefijo `N| `
+al principio de una línea de prosa de la respuesta, el servidor lo quita antes de verificar y de
+devolverla; se conserva dentro de los bloques de código cercados y en una línea que reproduce tal
+cual la línea N del fichero, porque ahí es una cita.
 
 **La pregunta llega a cada paso (desde la 0.47.0, issue #504).** En un fichero troceado, cada trozo
 anota solo lo que sirve para responder la `question` (o «Nada relevante en este fragmento») y el

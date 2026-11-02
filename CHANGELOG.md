@@ -6,6 +6,22 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.47.3] - 2026-11-02
+
+Arreglo de `local_explain_code`: con `path`, la respuesta podía empezar con el prefijo de línea
+del código numerado (`98| Sí, la función…`). Ahora el servidor lo quita de la prosa antes de
+verificar las líneas citadas y de devolver la respuesta, en la llamada única y en la troceada; se
+conserva dentro de los bloques de código cercados y en una línea que reproduce tal cual la línea N
+del fichero, porque ahí es una cita (#531).
+
+### Cómo actualizar
+
+- **En la PC y en la Mac:** ejecuta `local-delegate update` o, si instalaste con versión fija,
+  reinstala con `uv tool install --force --no-cache "local-delegate-mcp[llamaswap]==0.47.3"` (con
+  tus extras). Reinicia el daemon y haz `/mcp` en Claude Code (o abre una sesión nueva): las
+  sesiones abiertas siguen con el servidor MCP de la 0.47.2 hasta entonces.
+- No hace falta cambiar la configuración.
+
 ### Corregido
 
 - **`local_explain_code` devolvía la respuesta con el prefijo de línea `98| ` delante** (#531): con
@@ -4205,7 +4221,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.2...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.3...HEAD
+[0.47.3]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.2...v0.47.3
 [0.47.2]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.1...v0.47.2
 [0.47.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.0...v0.47.1
 [0.47.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.46.0...v0.47.0
