@@ -60,6 +60,7 @@ from . import (
     llamaswap_config,
     matrix,
     pace,
+    path_guard,
     questions,
     remote_turn,
     sections,
@@ -950,6 +951,26 @@ def _current_log_path() -> Path:
     return config.LOG_DIR / f"usage-{_utcnow():%Y%m}.jsonl"
 
 
+def _check_protected(path: str, mode: str) -> None:
+    """Reject a protected path (credentials; autostart/executable config when writing).
+
+    Runs ALWAYS, with or without `LOCAL_DELEGATE_ALLOWED_DIRS`, and before anything is read or
+    any model is called: see `path_guard` for the list and why it exists.
+    """
+    denial = path_guard.check(path, mode)
+    if denial is None:
+        return
+    kind = i18n.t(f"mcp.input.protected_kind.{denial.kind}")
+    key = "mcp.input.protected_read" if mode == path_guard.READ else "mcp.input.protected_write"
+    raise ValueError(i18n.t(key, kind=kind, rule=denial.rule, path=path))
+
+
+def _check_path(path: str, mode: str) -> None:
+    """Every tool path goes through here: the protected list first, then `ALLOWED_DIRS`."""
+    _check_protected(path, mode)
+    _check_allowed_dir(path)
+
+
 def _check_allowed_dir(path: str) -> None:
     """Si LOCAL_DELEGATE_ALLOWED_DIRS está seteado, rechaza rutas fuera de esas raíces."""
     if not config.ALLOWED_DIRS:
@@ -975,7 +996,7 @@ def _validate_target(target: str, overwrite: bool) -> Path:
     p = Path(target)
     if not p.is_absolute():
         raise ValueError(i18n.t("mcp.input.target_not_absolute", target=target))
-    _check_allowed_dir(target)
+    _check_path(target, path_guard.WRITE)
     if p.is_dir():
         raise ValueError(i18n.t("mcp.input.target_is_dir", target=target))
     if p.exists() and not overwrite:
@@ -1019,7 +1040,7 @@ _NO_TRUNCATE = 2**31
 def _read_input(text: str | None, path: str | None, max_chars: int) -> tuple[str, bool, int]:
     """Devuelve (contenido, truncado, raw_len). Si viene 'path', lo lee server-side."""
     if path:
-        _check_allowed_dir(path)
+        _check_path(path, path_guard.READ)
         p = Path(path)
         if not p.is_file():
             raise ValueError(i18n.t("mcp.input.missing_file", path=path))
@@ -6190,7 +6211,7 @@ def _validate_image_path(path: str) -> str:
     Orden: raíces permitidas -> extensión soportada (sin tocar disco) -> el archivo existe
     -> tamaño <= MAX_IMAGE_MB (con stat(), sin leer el archivo completo solo para rechazarlo).
     """
-    _check_allowed_dir(path)
+    _check_path(path, path_guard.READ)
     p = Path(path)
     suffix = p.suffix.lower()
     if suffix not in _IMAGE_MIME:

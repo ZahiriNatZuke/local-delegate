@@ -193,5 +193,12 @@
   "mcp.status.remote_turn.off": "Turno remoto: desactivado (LOCAL_DELEGATE_TURN_URL=off)",
   "mcp.status.remote_turn.unavailable": "Turno remoto: no disponible ({reason})",
   "mcp.remote_turn.plaintext": "local-delegate: el turno remoto en {url} va por http hacia un host que no es privado: la credencial viaja sin cifrar. Usa https o una dirección de la tailnet",
-  "mcp.status.remote_turn.active_plaintext": "Turno remoto: activo en {url} (aviso: http hacia un host que no es privado, la credencial viaja sin cifrar)"
+  "mcp.status.remote_turn.active_plaintext": "Turno remoto: activo en {url} (aviso: http hacia un host que no es privado, la credencial viaja sin cifrar)",
+  "mcp.input.protected_read": "Ruta protegida ({kind}, regla {rule}): local-delegate no la lee, aunque la tool esté permitida. Si de verdad la necesitas, léela tú con los permisos de Claude Code. Ruta: {path}",
+  "mcp.input.protected_write": "Ruta protegida ({kind}, regla {rule}): local-delegate no escribe ahí, aunque la tool esté permitida. Elige otro destino o escríbelo tú con los permisos de Claude Code. Ruta: {path}",
+  "mcp.input.protected_kind.credential": "credenciales",
+  "mcp.input.protected_kind.autostart": "arranque automático",
+  "mcp.input.protected_kind.executable_config": "configuración que ejecuta código",
+  "mcp.input.protected_kind.user": "lista del usuario",
+  "mcp.input.protected_kind.network": "ruta de red o de dispositivo (UNC); solo se admite dentro de LOCAL_DELEGATE_ALLOWED_DIRS"
 }

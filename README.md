@@ -257,7 +257,8 @@ cámbialos por los de tu backend.
 | `LOCAL_DELEGATE_CHUNK_MIN_CHARS` | `400` | Trozo mínimo: por debajo ya no se vuelve a partir |
 | `LOCAL_DELEGATE_JSON_SCHEMA` | `auto` | `response_format` con schema en `local_extract`: `auto`/`on`/`off` |
 | `LOCAL_DELEGATE_FEEDBACK` | `1` | Línea de ahorro anexada al resultado cuando `source=path` (`0` la apaga). En `local_extract` no se anexa al texto —rompería el JSON—: va dentro de `_local_delegate` |
-| `LOCAL_DELEGATE_ALLOWED_DIRS` | *(vacío = sin restricción)* | Raíces permitidas para `path`, separadas por `;` |
+| `LOCAL_DELEGATE_ALLOWED_DIRS` | *(vacío = sin restricción adicional)* | Raíces permitidas para `path` y `target`, separadas por `;`. Las rutas protegidas (credenciales, arranque automático, configuración que ejecuta código) se rechazan siempre, con o sin esta variable: ver [Configuración](docs/wiki/Configuration.md#rutas-protegidas-siempre-activas) |
+| `LOCAL_DELEGATE_DENY_PATHS` | *(vacío)* | Rutas extra, separadas por `;`, que las tools no leen ni escriben; se suman a la lista protegida |
 | `LOCAL_DELEGATE_WEB` | `1` | Web embebida del modo `stdio` (`0` para desactivarla). Desde la 0.42.0 pide el token de `LOCAL_DELEGATE_WEB_TOKEN` si está puesto, igual que el daemon |
 | `LOCAL_DELEGATE_WEB_HOST` / `_PORT` | `127.0.0.1` / `9393` | Host/puerto de la web o del daemon. Vacía cuenta como no puesta |
 | `LOCAL_DELEGATE_WEB_ALLOWED_HOSTS` | *(vacío)* | Nombres extra que el puerto admite en la cabecera `Host`, separados por comas (p. ej. el de `tailscale serve`). Por defecto solo loopback y `WEB_HOST`, contra el DNS rebinding (desde la 0.42.0: sin ella, entrar por otro nombre da 421); `*` desactiva la comprobación |

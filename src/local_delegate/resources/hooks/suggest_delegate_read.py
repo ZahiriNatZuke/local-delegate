@@ -385,6 +385,12 @@ def main() -> None:
     # Solo la prosa se bloquea, y solo si hay a donde delegar. Cada una de las tres guardas
     # siguientes registra su motivo: si la regla se equivoca a menudo, tiene que verse en el dato
     # y no en la irritacion del usuario.
+    if read_classifier.protected(file_path):
+        # The `local_*` tools refuse a protected path: blocking would leave no way to read it,
+        # and a suggestion would point at a tool that says no.
+        record("PreToolUse", suggested=False, reason="protected_path", **common)
+        return
+
     if ext in PROSE_EXTENSIONS and block_on():
         if not backend_available():
             record("PreToolUse", suggested=False, reason="backend_missing", **common)
