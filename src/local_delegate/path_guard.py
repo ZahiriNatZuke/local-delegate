@@ -169,11 +169,18 @@ def _parts(path: Path) -> tuple[str, ...]:
 
 def _forms(path: Path) -> list[tuple[str, ...]]:
     """The path as given (made absolute) and with links resolved; deduplicated."""
-    forms = [Path(os.path.abspath(path))]
+    absolute = Path(os.path.abspath(path))
+    forms = [absolute]
     try:
         forms.append(Path(os.path.realpath(path)))
     except (OSError, ValueError):
-        pass
+        # The full path cannot be resolved (a name the OS rejects, a broken link loop): resolve
+        # its folder instead, so a link in the folder is still followed. Only if that also fails
+        # does the absolute form stand alone; the name rules still apply to it.
+        try:
+            forms.append(Path(os.path.realpath(absolute.parent)) / absolute.name)
+        except (OSError, ValueError):
+            forms.append(absolute)
     out: list[tuple[str, ...]] = []
     for form in forms:
         parts = _parts(form)

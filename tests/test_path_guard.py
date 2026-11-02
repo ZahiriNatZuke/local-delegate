@@ -22,7 +22,7 @@ import pytest
 from local_delegate import config, path_guard, server
 
 URL = "http://test-backend/v1/chat/completions"
-SECRET = "S3CR3T-VALUE-THAT-MUST-NOT-LEAK"
+CONTENT_MARKER = "S3CR3T-VALUE-THAT-MUST-NOT-LEAK"
 CASE_INSENSITIVE = sys.platform in ("win32", "darwin")
 
 
@@ -43,7 +43,7 @@ def home(tmp_path, monkeypatch) -> Path:
     return home
 
 
-def _file(path: Path, content: str = SECRET) -> Path:
+def _file(path: Path, content: str = CONTENT_MARKER) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
     return path
@@ -65,7 +65,7 @@ def _read_denied(path: Path) -> str:
     with pytest.raises(ValueError, match="Ruta protegida") as caught:
         server._read_input(None, str(path), max_chars=1000)
     message = str(caught.value)
-    assert SECRET not in message  # the refusal never carries the content
+    assert CONTENT_MARKER not in message  # the refusal never carries the content
     return message
 
 
@@ -76,7 +76,7 @@ def _write_denied(path: Path) -> str:
 
 
 # --- Credentials: denied for reading and writing ---------------------------------------------
-HOME_SECRETS = [
+HOME_PROTECTED = [
     ".ssh/id_rsa",
     ".ssh/config",
     ".aws/credentials",
@@ -99,18 +99,18 @@ HOME_SECRETS = [
 ]
 
 
-@pytest.mark.parametrize("rel", HOME_SECRETS)
+@pytest.mark.parametrize("rel", HOME_PROTECTED)
 def test_home_credentials_are_not_read(home, rel):
     message = _read_denied(_file(home / rel))
     assert "credenciales" in message
 
 
-@pytest.mark.parametrize("rel", HOME_SECRETS)
+@pytest.mark.parametrize("rel", HOME_PROTECTED)
 def test_home_credentials_are_not_written(home, rel):
     assert "credenciales" in _write_denied(home / rel)
 
 
-ANYWHERE_SECRETS = [
+ANYWHERE_PROTECTED = [
     ".env",
     ".env.local",
     ".env.production",
@@ -128,7 +128,7 @@ ANYWHERE_SECRETS = [
 ]
 
 
-@pytest.mark.parametrize("rel", ANYWHERE_SECRETS)
+@pytest.mark.parametrize("rel", ANYWHERE_PROTECTED)
 def test_secret_names_are_protected_in_any_folder(home, tmp_path, rel):
     _read_denied(_file(tmp_path / "project" / rel))
 
@@ -266,7 +266,7 @@ def test_a_junction_or_symlink_into_a_protected_folder_is_followed(home, tmp_pat
     project.mkdir()
     link = project / "innocent"
     _link_dir(link, home / ".ssh")
-    assert (link / "config").read_text(encoding="utf-8") == SECRET  # the link really works
+    assert (link / "config").read_text(encoding="utf-8") == CONTENT_MARKER  # the link really works
     message = _read_denied(link / "config")
     assert "~/.ssh" in message
 
@@ -281,11 +281,11 @@ def test_a_directory_link_into_startup_is_followed_for_writes(home, tmp_path):
 
 
 def test_a_file_symlink_to_a_secret_is_followed(home, tmp_path):
-    secret = _file(home / ".npmrc")
+    protected_file = _file(home / ".npmrc")
     link = tmp_path / "project" / "notes.txt"
     link.parent.mkdir(parents=True)
     try:
-        os.symlink(secret, link)
+        os.symlink(protected_file, link)
     except OSError as exc:  # Windows without Developer Mode or admin rights
         pytest.skip(f"file symlinks need a privilege here: {exc}")
     _read_denied(link)
@@ -298,8 +298,8 @@ def test_dot_dot_segments_are_normalised(home, tmp_path):
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows path spellings")
 def test_windows_extended_prefix_and_streams_do_not_dodge_the_rules(home, tmp_path):
-    secret = _file(home / ".aws" / "credentials")
-    assert path_guard.check("\\\\?\\" + str(secret), path_guard.READ) is not None
+    protected_file = _file(home / ".aws" / "credentials")
+    assert path_guard.check("\\\\?\\" + str(protected_file), path_guard.READ) is not None
     env = _file(tmp_path / "project" / ".env")
     assert path_guard.check(str(env) + "::$DATA", path_guard.READ) is not None
 
@@ -349,9 +349,9 @@ def test_allowed_dirs_do_not_open_a_protected_path(home, monkeypatch):
 @backend_mock.mock
 def test_summarize_refuses_a_secret_without_calling_the_backend(home):
     route = _reply()
-    secret = _file(home / ".npmrc")
+    protected_file = _file(home / ".npmrc")
     with pytest.raises(ValueError, match="Ruta protegida"):
-        server.local_summarize(path=str(secret))
+        server.local_summarize(path=str(protected_file))
     assert route.call_count == 0
 
 
