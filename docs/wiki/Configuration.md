@@ -626,18 +626,31 @@ se rechazan **antes** de leer nada o de llamar al modelo, con un error que dice 
 protegida es y qué regla saltó.
 
 La comparación se hace sobre la ruta tal cual y sobre la ruta con enlaces simbólicos y *junctions*
-resueltos, y en Windows y macOS sin distinguir mayúsculas.
+resueltos, y en Windows y macOS sin distinguir mayúsculas. Los hooks de lectura usan la misma lista:
+un fichero protegido no se bloquea para `Read` ni se manda a `local_summarize`, que lo rechazaría.
 
 **Credenciales** (ni lectura ni escritura):
 
 - Bajo el HOME: `.ssh/`, `.aws/`, `.gnupg/`, `.azure/`, `.kube/`, `.docker/config.json`,
-  `.config/gh/`, `.config/gcloud/`, `.claude/.credentials.json`, `.codex/auth.json` y, en Windows,
-  `%APPDATA%\GitHub CLI\`.
-- Por nombre, en cualquier carpeta: `.env` y `.env.*` (salvo `.env.example`, `.env.sample` y
-  `.env.template`), `.envrc`, `id_rsa*`, `id_dsa*`, `id_ecdsa*`, `id_ed25519*` (salvo las `.pub`
-  fuera de `~/.ssh`), `*.pem`, `*.key`, `*.p12`, `*.pfx`, `.npmrc`, `.pypirc`, `.netrc`, `_netrc`,
+  `.config/gh/`, `.config/hub`, `.config/gcloud/`, `.config/git/credentials`,
+  `.cargo/credentials(.toml)`, `.terraform.d/credentials.tfrc.json`, `.pgpass`, `.vault-token`,
+  `.m2/settings.xml`, `.gem/credentials`, `.claude/.credentials.json`, `.codex/auth.json` y, en
+  Windows, `%APPDATA%\GitHub CLI\` y `%APPDATA%\gcloud\`.
+- Por nombre, en cualquier carpeta: `.env` y `.env.*`, `.envrc`, las claves SSH por su nombre
+  exacto (`id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519` y sus `id_rsa.*`; `id_rsa_parser.py` no es
+  una clave), `*.pem`, `*.key`, `*.p12`, `*.pfx`, `.npmrc`, `.pypirc`, `.netrc`, `_netrc`,
   `.git-credentials`, `.claude.json` (y sus `.backup*`) y `claude_desktop_config.json` (y sus
   copias), que lleva el token del daemon escrito literal.
+- Excepciones por nombre: las plantillas `*.example`, `*.sample`, `*.template` y `.env.dist`, y
+  las claves públicas `id_*.pub` fuera de `~/.ssh`.
+- Ojo con `*.pem` y `*.key`: también bloquean los certificados y claves de prueba de un repo
+  (*fixtures*). Si necesitas uno, léelo tú.
+
+**Rutas de red y de dispositivo en Windows** (ni lectura ni escritura): cualquier ruta UNC o de
+dispositivo (`\\servidor\recurso`, `\\?\UNC\…`, `\\.\…`). `\\localhost\C$\…` llega a cualquier
+fichero local con un nombre que ninguna otra regla reconoce, y abrir una ruta de otro equipo le
+entrega el hash NTLM del usuario. Solo se admiten dentro de `LOCAL_DELEGATE_ALLOWED_DIRS`. Las
+formas `\\?\C:\…` y `\\.\C:\…` de una unidad local se tratan como `C:\…`.
 
 **Arranque automático y configuración que ejecuta código** (solo escritura; leerlos sí se puede):
 
@@ -648,15 +661,31 @@ resueltos, y en Windows y macOS sin distinguir mayúsculas.
   `.bash_logout`, `.profile`, `.zshrc`, `.zprofile`, `.zshenv`, `.zlogin`, `.zlogout` y
   `~/.config/fish/`; y los perfiles de PowerShell (`*profile.ps1` dentro de una carpeta
   `PowerShell` o `WindowsPowerShell`, también con Documentos en OneDrive).
-- En cualquier repo: `.git/hooks/` y `.git/config` (sus `core.hooksPath` o `core.fsmonitor` hacen
-  que git ejecute comandos).
-- Claude Code y Codex: `~/.claude/hooks/`, cualquier `.claude/settings*.json` (del usuario o del
-  proyecto) y `~/.codex/config.toml`.
+- Git: `~/.gitconfig`, `~/.config/git/config` y, en cualquier repo, toda carpeta `hooks/` por
+  debajo de `.git/` (también `.git/modules/<sub>/hooks/`) y todo `config` o `config.worktree` por
+  debajo de `.git/` (`.git/config`, `.git/modules/<sub>/config`, `.git/worktrees/<w>/config.worktree`):
+  sus `core.hooksPath`, `core.fsmonitor` o alias con `!` hacen que git ejecute comandos. Leer
+  `.git/config` sí se puede: es útil y casi nunca lleva secretos (límite asumido).
+- Claude Code y Codex: `~/.claude/hooks/`, `~/.claude/CLAUDE.md`, `~/.claude/agents/`,
+  `~/.claude/commands/`, `~/.claude/plugins/`, cualquier `.claude/settings*.json` (del usuario o del
+  proyecto), cualquier `.mcp.json` y `~/.codex/config.toml`.
+- Otras herramientas que ejecutan lo que encuentran: `.vscode/tasks.json`, `*.pth`,
+  `sitecustomize.py` y `usercustomize.py` (Python los ejecuta al arrancar) y `.yarnrc.yml`.
 - La configuración del propio local-delegate: los `*.json` del directorio de datos (`daemon.json`,
   `backend-params.json`, `language.json`…) y el YAML de `LLAMASWAP_CONFIG`.
 
-Límite conocido: un enlace duro (*hard link*) a un fichero protegido tiene su propio nombre y ruta y
-no se reconoce. Si necesitas leer una de estas rutas, hazlo tú con los permisos de Claude Code.
+`LOCAL_DELEGATE_DENY_PATHS` se lee **al arrancar** el servidor o el daemon: cambiarla exige
+reiniciarlo, y una ruta relativa se resuelve contra el directorio de trabajo del daemon, así que
+conviene ponerlas absolutas. En el error sale como «lista del usuario».
+
+Límites conocidos:
+
+- Un enlace duro (*hard link*) a un fichero protegido tiene su propio nombre y ruta y no se
+  reconoce.
+- Entre la comprobación y la lectura o escritura hay una ventana: si otro proceso cambia un enlace
+  simbólico o una *junction* justo en ese momento, la comprobación no lo ve.
+
+Si necesitas leer una de estas rutas, hazlo tú con los permisos de Claude Code.
 
 ## Hooks de lectura (opt-in, solo Claude Code)
 

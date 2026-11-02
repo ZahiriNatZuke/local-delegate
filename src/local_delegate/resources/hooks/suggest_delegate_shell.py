@@ -114,6 +114,10 @@ def main() -> None:
     if not block_on():
         record("PreToolUse", suggested=False, reason="block_off", **common)
         return
+    if read_classifier.protected(path):
+        # `local_summarize` refuses a protected path: blocking would leave no way to read it.
+        record("PreToolUse", suggested=False, reason="protected_path", **common)
+        return
     if backend_down():
         record("PreToolUse", suggested=False, reason="backend_down", **common)
         return

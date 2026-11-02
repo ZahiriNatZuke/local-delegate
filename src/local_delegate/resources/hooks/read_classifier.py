@@ -30,6 +30,11 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+try:  # as `local_delegate.resources.hooks.read_classifier` (daemon, `hook classify`)
+    from . import path_rules
+except ImportError:  # as a loose script next to the hooks, with a bare `python`
+    import path_rules
+
 #: Tools sin shell que leen ficheros (y las de shell, que pueden hacerlo).
 READ_TOOLS = ("Read", "Grep")
 SHELL_TOOLS = ("Bash", "PowerShell")
@@ -623,7 +628,17 @@ def summarizable(path: str | None, size: int | None, environ=None) -> bool:
         threshold_kb = float(env.get(SUGGEST_KB_VARIABLE, str(SUGGEST_KB_DEFAULT)))
     except ValueError:
         return False
-    return size / 1024 > threshold_kb
+    # A protected file is refused by `local_summarize`: blocking `Read` and sending the agent
+    # there would leave it no way to read the file at all.
+    return size / 1024 > threshold_kb and not protected(path, environ)
+
+
+def protected(path: str, environ=None) -> bool:
+    """Whether the MCP tools refuse to read `path` (`path_rules`, the list the server applies)."""
+    try:
+        return path_rules.check(path, path_rules.READ, environ=environ) is not None
+    except (OSError, ValueError):
+        return False
 
 
 def classify(payload: dict, read_switch: str | None = None, environ=None) -> dict:

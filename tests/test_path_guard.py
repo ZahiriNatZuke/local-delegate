@@ -11,6 +11,7 @@ Every test runs on a simulated HOME (`HOME`/`USERPROFILE`/`APPDATA`/`PROGRAMDATA
 from __future__ import annotations
 
 import os
+import socket
 import subprocess
 import sys
 from pathlib import Path
@@ -94,7 +95,17 @@ HOME_PROTECTED = [
     ".claude.json",
     ".claude/.credentials.json",
     ".codex/auth.json",
+    ".config/git/credentials",
+    ".config/hub",
+    ".cargo/credentials.toml",
+    ".cargo/credentials",
+    ".terraform.d/credentials.tfrc.json",
+    ".pgpass",
+    ".vault-token",
+    ".m2/settings.xml",
+    ".gem/credentials",
     "AppData/Roaming/GitHub CLI/hosts.yml",
+    "AppData/Roaming/gcloud/credentials.db",
     "AppData/Roaming/Claude/claude_desktop_config.json",
 ]
 
@@ -116,7 +127,11 @@ ANYWHERE_PROTECTED = [
     ".env.production",
     ".envrc",
     "id_rsa",
+    "id_dsa",
+    "id_ecdsa",
     "id_ed25519",
+    "id_rsa.old",
+    "id_ed25519.bak",
     "deploy/server.pem",
     "certs/tls.key",
     "certs/store.p12",
@@ -135,7 +150,19 @@ def test_secret_names_are_protected_in_any_folder(home, tmp_path, rel):
 
 @pytest.mark.parametrize(
     "rel",
-    [".env.example", ".env.sample", ".env.template", ".ssh/id_rsa.pub", "keys/id_ed25519.pub"],
+    [
+        ".env.example",
+        ".env.sample",
+        ".env.template",
+        ".env.dist",
+        ".env.local.example",
+        ".npmrc.sample",
+        "config/settings.env.template",
+        ".ssh/id_rsa.pub",
+        "keys/id_ed25519.pub",
+        "src/id_rsa_parser.py",  # a key's default name is exact, not a prefix
+        "src/id_ed25519_test.go",
+    ],
 )
 def test_templates_and_public_keys_outside_home_secrets_are_readable(home, tmp_path, rel):
     """Shareable halves stay readable; `.ssh/` itself is still protected as a whole in HOME."""
@@ -197,7 +224,13 @@ def test_write_only_rules_do_not_block_reading(home, rel):
         (".claude/settings.json", "ejecuta código"),
         (".claude/settings.local.json", "ejecuta código"),
         (".claude/hooks/pre.py", "ejecuta código"),
+        (".claude/CLAUDE.md", "ejecuta código"),
+        (".claude/agents/helper.md", "ejecuta código"),
+        (".claude/commands/go.md", "ejecuta código"),
+        (".claude/plugins/x/plugin.json", "ejecuta código"),
         (".codex/config.toml", "ejecuta código"),
+        (".gitconfig", "ejecuta código"),
+        (".config/git/config", "ejecuta código"),
     ],
 )
 def test_autostart_and_executable_config_in_home_are_not_written(home, rel, kind):
@@ -214,13 +247,40 @@ def test_programdata_startup_is_not_written(home, tmp_path):
     [
         ".git/hooks/pre-commit",
         "sub/.git/hooks/post-checkout",
+        ".git/modules/lib/hooks/pre-commit",
         ".git/config",
+        ".git/modules/lib/config",
+        ".git/worktrees/feature/config.worktree",
         ".claude/settings.json",
         ".claude/settings.local.json",
+        ".mcp.json",
+        "sub/.mcp.json",
+        ".vscode/tasks.json",
+        ".venv/Lib/site-packages/evil.pth",
+        ".venv/lib/python3.12/site-packages/sitecustomize.py",
+        "usercustomize.py",
+        ".yarnrc.yml",
     ],
 )
 def test_repo_hooks_and_project_settings_are_not_written(home, tmp_path, rel):
     assert "ejecuta código" in _write_denied(tmp_path / "project" / rel)
+
+
+@pytest.mark.parametrize(
+    "rel",
+    [
+        ".git/description",  # not config, not under hooks
+        ".git/info/exclude",
+        "src/hooks/use_thing.ts",  # a `hooks` folder outside `.git`
+        "src/config",  # a `config` file outside `.git`
+        ".vscode/settings.json",
+        "docs/mcp.json",
+        "src/site.py",
+    ],
+)
+def test_neighbours_of_the_write_rules_are_still_writable(home, tmp_path, rel):
+    target = tmp_path / "project" / rel
+    assert server._validate_target(str(target), overwrite=True) == target
 
 
 def test_local_delegate_own_config_is_not_written(home, monkeypatch, tmp_path):
@@ -302,6 +362,91 @@ def test_windows_extended_prefix_and_streams_do_not_dodge_the_rules(home, tmp_pa
     assert path_guard.check("\\\\?\\" + str(protected_file), path_guard.READ) is not None
     env = _file(tmp_path / "project" / ".env")
     assert path_guard.check(str(env) + "::$DATA", path_guard.READ) is not None
+    # The device spelling of a local drive is the same file.
+    assert path_guard.check("\\\\.\\" + str(protected_file), path_guard.READ) is not None
+
+
+# --- Windows UNC and device paths -------------------------------------------------------------
+def _unc_forms(tail: str) -> list[str]:
+    r"""Six spellings of `C:\<tail>` through the network stack, all pointing at this machine."""
+    return [
+        f"\\\\localhost\\C$\\{tail}",
+        f"\\\\127.0.0.1\\c$\\{tail}",
+        f"\\\\{socket.gethostname()}\\C$\\{tail}",
+        f"\\\\?\\UNC\\localhost\\C$\\{tail}",
+        f"\\\\.\\UNC\\localhost\\C$\\{tail}",
+        f"\\\\0--1.ipv6-literal.net\\C$\\{tail}",
+    ]
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="UNC paths are a Windows spelling")
+@pytest.mark.parametrize("form", range(6))
+def test_unc_paths_are_refused_for_reading_and_writing(home, form):
+    """`\\\\localhost\\C$\\…` reaches any local file under a name no other rule recognises."""
+    path = Path(_unc_forms("Users\\someone\\.ssh\\config")[form])
+    assert "red o de dispositivo" in _read_denied(path)
+    assert "red o de dispositivo" in _write_denied(path)
+    # And through the two tools, still before any read or write.
+    with pytest.raises(ValueError, match="Ruta protegida"):
+        server._read_input(None, _unc_forms("project\\notes.md")[form], max_chars=10)
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="UNC paths are a Windows spelling")
+def test_a_unc_path_inside_allowed_dirs_is_accepted(home, monkeypatch):
+    share = Path("\\\\fileserver\\team\\docs")
+    monkeypatch.setattr(config, "ALLOWED_DIRS", [share])
+    assert path_guard.check(share / "notes.md", path_guard.READ) is None
+    # Another share, or the root of that one, is still refused.
+    assert path_guard.check("\\\\fileserver\\other\\notes.md", path_guard.READ) is not None
+    assert path_guard.check("\\\\localhost\\C$\\x.md", path_guard.READ) is not None
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="on POSIX `//host/share` is a local path")
+def test_double_slash_is_not_unc_outside_windows(home, tmp_path):
+    target = _file(tmp_path / "project" / "notes.md", "fine")
+    assert path_guard.check("/" + str(target), path_guard.READ) is None
+
+
+# --- The read hook agrees with the server ----------------------------------------------------
+HOOKS = Path(server.__file__).parent / "resources" / "hooks"
+
+
+def test_the_read_classifier_does_not_send_a_protected_file_to_summarize(home, tmp_path):
+    """Large prose under `DENY_PATHS` is not «summarizable»: `local_summarize` would refuse it."""
+    from local_delegate.resources.hooks import read_classifier
+
+    private = tmp_path / "private"
+    target = _file(private / "report.md", "x" * 40 * 1024)
+    env = {"USERPROFILE": str(home), "HOME": str(home)}
+    size = target.stat().st_size
+    # Control: without the variable, the same file is in the blocking band.
+    assert read_classifier.summarizable(str(target), size, env) is True
+    env["LOCAL_DELEGATE_DENY_PATHS"] = str(private)
+    assert read_classifier.summarizable(str(target), size, env) is False
+    # A credential by name, too.
+    key = _file(tmp_path / "project" / "server.pem")
+    assert read_classifier.protected(str(key), env) is True
+    assert read_classifier.protected(str(tmp_path / "project" / "notes.md"), env) is False
+
+
+def test_the_classifier_finds_the_rules_as_a_loose_hook_script(home, tmp_path):
+    """Installed, the hooks run with a bare `python` that cannot import the package."""
+    target = _file(home / ".ssh" / "notes.md")
+    code = (
+        "import sys; sys.path.insert(0, sys.argv[1]); import read_classifier; "
+        "print(read_classifier.protected(sys.argv[2]), read_classifier.protected(sys.argv[3]))"
+    )
+    env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+    out = subprocess.run(
+        [sys.executable, "-I", "-c", code, str(HOOKS), str(target), str(tmp_path / "x.md")],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=True,
+        cwd=tmp_path,
+    ).stdout.split()
+    assert out == ["True", "False"]
 
 
 # --- LOCAL_DELEGATE_DENY_PATHS and ALLOWED_DIRS ----------------------------------------------
@@ -309,7 +454,7 @@ def test_user_deny_paths_block_reading_and_writing(home, monkeypatch, tmp_path):
     private = tmp_path / "private"
     monkeypatch.setattr(config, "DENY_PATHS", [private.resolve()])
     message = _read_denied(_file(private / "notes.md"))
-    assert "LOCAL_DELEGATE_DENY_PATHS" in message
+    assert "lista del usuario, regla LOCAL_DELEGATE_DENY_PATHS" in message
     _write_denied(private / "new.py")
     # A sibling folder is not swallowed by a prefix match on the text.
     target = _file(tmp_path / "private-not" / "notes.md", "fine")

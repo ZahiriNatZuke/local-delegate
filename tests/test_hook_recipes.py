@@ -364,6 +364,23 @@ def test_large_prose_is_blocked_and_the_message_says_the_way_out(tmp_path, monke
     assert "offset" in reason, "y la salida de emergencia: leer por franjas"
 
 
+def test_large_prose_on_a_protected_path_is_not_blocked(tmp_path, monkeypatch, capsys):
+    """`local_summarize` refuses a protected path: blocking `Read` there would be a dead end.
+
+    The control is the test above: the same 40 KB `.md`, outside the protected list, is blocked.
+    """
+    private = tmp_path / "private"
+    target = private / "report.md"
+    target.parent.mkdir()
+    target.write_text("x" * 40 * 1024, encoding="utf-8")
+    monkeypatch.setenv("LOCAL_DELEGATE_DENY_PATHS", str(private))
+
+    output = _run_with_block(monkeypatch, capsys, {"file_path": str(target)})
+
+    assert "deny" not in output
+    assert "local_summarize" not in output
+
+
 def test_a_large_json_is_warned_about_but_not_blocked(tmp_path, monkeypatch, capsys):
     """Control positivo del anterior. Un `state.json` se lee para sacar un valor exacto."""
     target = tmp_path / "state.json"

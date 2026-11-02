@@ -17,10 +17,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   leer o de llamar al modelo: credenciales (`~/.ssh`, `~/.aws`, `.env`, `*.pem`, `.npmrc`,
   `.claude.json`, `claude_desktop_config.json`…) ni se leen ni se escriben, y las carpetas de
   arranque automático y la configuración que ejecuta código (Startup, LaunchAgents, `.bashrc`,
-  perfiles de PowerShell, `.git/hooks`, `.claude/settings*.json`, la config de local-delegate) no
-  se escriben. Compara tras resolver enlaces y *junctions*, y sin distinguir mayúsculas en Windows y
-  macOS. La variable nueva `LOCAL_DELEGATE_DENY_PATHS` añade rutas propias. Lista completa en la
-  wiki, *Configuration*, «Rutas protegidas».
+  perfiles de PowerShell, `.gitconfig` y los `hooks/` y `config` de `.git/`, `.claude/settings*.json`,
+  `.mcp.json`, `*.pth`, la config de local-delegate) no se escriben. En Windows se rechaza además
+  toda ruta UNC o de dispositivo (`\\localhost\C$\…`, `\\?\UNC\…`, `\\.\…`) fuera de
+  `ALLOWED_DIRS`: llegaba a cualquier fichero local con otro nombre, y abrir un equipo remoto
+  entrega el hash NTLM. Compara tras resolver enlaces y *junctions*, y sin distinguir mayúsculas en
+  Windows y macOS. Los hooks de lectura usan la misma lista, así que un fichero protegido no se
+  bloquea para `Read` ni se manda a `local_summarize`, que lo rechazaría. La variable nueva
+  `LOCAL_DELEGATE_DENY_PATHS` añade rutas propias (se lee al arrancar). Lista completa y límites
+  conocidos (enlaces duros, la ventana entre comprobar y usar) en la wiki, *Configuration*, «Rutas
+  protegidas».
 
 ### Corregido
 

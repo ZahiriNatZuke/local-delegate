@@ -198,5 +198,6 @@
   "mcp.input.protected_kind.credential": "credenciales",
   "mcp.input.protected_kind.autostart": "arranque automático",
   "mcp.input.protected_kind.executable_config": "configuración que ejecuta código",
-  "mcp.input.protected_kind.user": "LOCAL_DELEGATE_DENY_PATHS"
+  "mcp.input.protected_kind.user": "lista del usuario",
+  "mcp.input.protected_kind.network": "ruta de red o de dispositivo (UNC); solo se admite dentro de LOCAL_DELEGATE_ALLOWED_DIRS"
 }
