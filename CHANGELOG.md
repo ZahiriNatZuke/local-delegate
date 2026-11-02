@@ -16,7 +16,10 @@ rechazan las rutas UNC y de dispositivo (#526). Además, el panel y la banda dic
 trozo que se divide («Trozo 3/4 · dividido en 3 · parte 2», #516); `doctor` deja de contar como
 sin expandir la `${AUTH_HEADER}` que `mcp-remote` sustituye desde el `env` de la entrada de Claude
 Desktop en la Mac (#511); y `local_explain_code` troceado avisa cuando responde «no hay
-información» mientras la búsqueda exacta encuentra el nombre preguntado (#527). También entran
+información» mientras la búsqueda exacta encuentra el nombre preguntado (#527). Y
+`local_lint_summary` ya no inventa diagnósticos con una entrada vacía o limpia: responde «Sin
+hallazgos» sin llamar al modelo y avisa si el resumen nombra ficheros que no están en la entrada
+(#525). También entran
 actualizaciones de dependencias (`fastapi` 0.162.0, `platformdirs` 4.14.0, `opentelemetry-api`
 1.45.2 y las de desarrollo) y arreglos de tests sin efecto para quien lo usa (#518, #524).
 
