@@ -127,6 +127,51 @@ def occurrences(lines: list[str], name: str) -> list[int]:
     return [n for n, line in enumerate(lines, 1) if pattern.search(line)]
 
 
+#: A line of a numbered piece: `N| code` (`server.LINE_PREFIX_SEP`), N the absolute file line.
+_NUMBERED_LINE = re.compile(r"(\d{1,7})\| ?(.*)")
+
+
+def piece_hits(piece: str, question: str) -> list[tuple[str, list[int]]]:
+    """#527: (identifier, absolute lines) of the question's identifiers inside a numbered piece.
+
+    Only lines that carry the `N| ` prefix count, so a piece of notes (the regroup) gives nothing.
+    Identifiers that do not appear in the piece are left out; the order is the question's.
+    """
+    names = identifiers(question)[:MAX_IDENTIFIERS]
+    if not names:
+        return []
+    numbered: list[tuple[int, str]] = []
+    for line in piece.split("\n"):
+        m = _NUMBERED_LINE.fullmatch(line.rstrip("\r"))
+        if m:
+            numbered.append((int(m.group(1)), m.group(2)))
+    hits: list[tuple[str, list[int]]] = []
+    for name in names:
+        pattern = _whole_word(name)
+        lines = [n for n, code in numbered if pattern.search(code)]
+        if lines:
+            hits.append((name, lines))
+    return hits
+
+
+#: #527: an answer that says the code (or the notes) is not enough to answer. Spanish and
+#: English, the languages of the prompts; worded narrowly, so a partial "cannot verify X" in an
+#: otherwise real answer does not count.
+_NO_INFORMATION = re.compile(
+    r"(?i)(?:\bsin\b|\bno\b)[^.\n]{0,60}?informaci[o\u00f3]n\s+suficiente"
+    r"|\bnada\s+relevante\b"
+    r"|\bno\s+bastan?\b"
+    r"|\b(?:not\s+enough|insufficient)\b[^.\n]{0,30}?\binformation\b"
+    r"|\bnothing\s+relevant\b"
+    r"|\b(?:do|does)\s+not\s+suffice\b"
+)
+
+
+def claims_no_information(answer: str) -> bool:
+    """#527: whether `answer` says there is not enough information (or nothing relevant)."""
+    return bool(_NO_INFORMATION.search(answer))
+
+
 @dataclass(frozen=True)
 class Citation:
     start: int

@@ -268,6 +268,13 @@ Además, cada identificador de código de la pregunta recibe una línea «Aparic
 fichero (búsqueda exacta): 233, 270, …», con un tope de 20. La prosa del modelo no se toca. Con
 `code` o sin `question`, la salida no cambia.
 
+**Un «no hay información» que contradice la búsqueda exacta lleva aviso (issue #527).** Con `path`
+y `question`, en un fichero troceado cada trozo recibe las líneas donde aparecen los identificadores
+de la pregunta (calculadas por programa) y no puede despacharse con «Nada relevante»; el paso final
+recibe esas líneas de todo el fichero. Si aun así la respuesta dice que no hay información
+suficiente mientras la búsqueda exacta encuentra alguno de esos identificadores, se añade un aviso
+`[local-delegate warning: …]`: la respuesta no se da por buena y conviene leer esas líneas.
+
 ## `local_describe_image`
 
 ```python

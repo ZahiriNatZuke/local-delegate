@@ -984,21 +984,39 @@
     },
     {
       "file": "src/local_delegate/server.py",
-      "text": "solo lo de este fragmento que sirva para responder a la pregunta «{}»: una viñeta por cada función, clase o método que tenga que ver con ella, empezando por {}, seguido de lo que aporta a la respuesta. Si nada del fragmento sirve, responde solo «Nada relevante en este fragmento». No respondas todavía la pregunta",
+      "text": "solo lo de este fragmento que sirva para responder a la pregunta «{}»: una viñeta por cada función, clase o método que tenga que ver con ella, empezando por {}, seguido de lo que aporta a la respuesta. Que el código muestre que algo de lo que plantea la pregunta NO ocurre también sirve: anótalo. Si nada del fragmento sirve, responde solo «Nada relevante en este fragmento». No respondas todavía la pregunta",
       "kind": "verbatim",
-      "reason": "prompt del modelo local (#504): lleva la pregunta a cada paso del troceado de `local_explain_code`; no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+      "reason": "prompt del modelo local (#504): lleva la pregunta a cada paso del troceado de `local_explain_code`; no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt; ampliado en el #527"
     },
     {
       "file": "src/local_delegate/server.py",
-      "text": "Toma notas de este fragmento de código para responder a la pregunta «{}»:\n\n{}",
+      "text": "Toma notas de este fragmento de código para responder a la pregunta «{}»{}:\n\n{}",
       "kind": "verbatim",
-      "reason": "prompt del modelo local (#504): lleva la pregunta a cada paso del troceado de `local_explain_code`; no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+      "reason": "prompt del modelo local (#504): lleva la pregunta a cada paso del troceado de `local_explain_code`; no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt; ampliado en el #527"
     },
     {
       "file": "src/local_delegate/server.py",
-      "text": "{}Estas son notas EN ORDEN sobre los fragmentos de un mismo fichero de código, tomadas para responder a una pregunta. La lista de arriba es el inventario COMPLETO de sus definiciones de primer nivel; las notas pueden no cubrirlo entero.{} Responde a la pregunta «{}» con lo que digan las notas y la lista. Si no bastan para responderla, dilo claramente; no expliques el fichero entero ni enumeres sus partes:\n\n{}",
+      "text": "{}{}Estas son notas EN ORDEN sobre los fragmentos de un mismo fichero de código, tomadas para responder a una pregunta. La lista de arriba es el inventario COMPLETO de sus definiciones de primer nivel; las notas pueden no cubrirlo entero.{} Responde a la pregunta «{}» con lo que digan las notas y la lista. Si no bastan para responderla, dilo claramente; no expliques el fichero entero ni enumeres sus partes:\n\n{}",
       "kind": "verbatim",
-      "reason": "prompt del modelo local (#504): lleva la pregunta a cada paso del troceado de `local_explain_code`; no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+      "reason": "prompt del modelo local (#504): lleva la pregunta a cada paso del troceado de `local_explain_code`; no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt; ampliado en el #527"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": ". Identificadores de la pregunta que aparecen en este fragmento (búsqueda exacta, por programa): {}. Anota qué hace el código en esas líneas respecto a la pregunta; este fragmento no es «Nada relevante». Fragmento",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#527): pista por programa de las líneas donde aparecen los identificadores de la pregunta en cada trozo y en la reducción de `local_explain_code`; no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Líneas del fichero donde aparecen los identificadores de la pregunta (búsqueda exacta, por programa; fiables): {}. Una nota «Nada relevante» no significa que el código no trate de ellos.\n\n",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#527): pista por programa de las líneas donde aparecen los identificadores de la pregunta en cada trozo y en la reducción de `local_explain_code`; no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "`{}` en las líneas {}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#527): pista por programa de las líneas donde aparecen los identificadores de la pregunta en cada trozo y en la reducción de `local_explain_code`; no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
     }
   ]
 }
