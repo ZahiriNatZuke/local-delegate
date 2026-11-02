@@ -6,6 +6,28 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Seguridad
+
+- **Las tools ya no leen ni escriben rutas sensibles, aunque estén permitidas con comodín**: las
+  tools leen `path` y escriben `target` desde el servidor, fuera de los diálogos de permisos de
+  Claude Code, y `LOCAL_DELEGATE_ALLOWED_DIRS` viene vacía. Una instrucción escondida en cualquier
+  fichero leído podía pedir un `local_summarize` de `~/.npmrc` (y el resumen del secreto volvía al
+  contexto) o un `local_boilerplate` que dejara un `.cmd` en la carpeta de inicio de Windows. Ahora
+  hay una lista protegida que se aplica siempre, con o sin `ALLOWED_DIRS`, y rechaza **antes** de
+  leer o de llamar al modelo: credenciales (`~/.ssh`, `~/.aws`, `.env`, `*.pem`, `.npmrc`,
+  `.claude.json`, `claude_desktop_config.json`…) ni se leen ni se escriben, y las carpetas de
+  arranque automático y la configuración que ejecuta código (Startup, LaunchAgents, `.bashrc`,
+  perfiles de PowerShell, `.gitconfig` y los `hooks/` y `config` de `.git/`, `.claude/settings*.json`,
+  `.mcp.json`, `*.pth`, la config de local-delegate) no se escriben. En Windows se rechaza además
+  toda ruta UNC o de dispositivo (`\\localhost\C$\…`, `\\?\UNC\…`, `\\.\…`) fuera de
+  `ALLOWED_DIRS`: llegaba a cualquier fichero local con otro nombre, y abrir un equipo remoto
+  entrega el hash NTLM. Compara tras resolver enlaces y *junctions*, y sin distinguir mayúsculas en
+  Windows y macOS. Los hooks de lectura usan la misma lista, así que un fichero protegido no se
+  bloquea para `Read` ni se manda a `local_summarize`, que lo rechazaría. La variable nueva
+  `LOCAL_DELEGATE_DENY_PATHS` añade rutas propias (se lee al arrancar). Lista completa y límites
+  conocidos (enlaces duros, la ventana entre comprobar y usar) en la wiki, *Configuration*, «Rutas
+  protegidas».
+
 ### Cambiado
 
 - **Un trozo que se vuelve a partir dice cuánto lleva la división** (#516): el panel («En curso»)

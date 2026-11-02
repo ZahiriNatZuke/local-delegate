@@ -613,7 +613,79 @@ valor de máquina `cooldown` (antes, «en enfriamiento»).
 
 | Variable | Default | Descripción |
 |---|---|---|
-| `LOCAL_DELEGATE_ALLOWED_DIRS` | *(vacío = sin restricción)* | Lista de directorios raíz separados por `;`. Cualquier `path` fuera de todos ellos se rechaza con un error que lista las raíces permitidas |
+| `LOCAL_DELEGATE_ALLOWED_DIRS` | *(vacío = sin restricción adicional)* | Lista de directorios raíz separados por `;`. Cualquier `path` o `target` fuera de todos ellos se rechaza con un error que lista las raíces permitidas. Vacía no restringe nada **más** que la lista de rutas protegidas de abajo, que se aplica siempre |
+| `LOCAL_DELEGATE_DENY_PATHS` | *(vacío)* | Rutas extra, ficheros o carpetas separados por `;`, que las tools no leen ni escriben. Se suman a la lista base; no la sustituyen |
+
+### Rutas protegidas (siempre activas)
+
+Las tools leen `path` y escriben `target` desde el servidor, fuera de los diálogos de permisos de
+Claude Code. Como lo normal es permitirlas con comodín, una instrucción escondida en cualquier
+fichero que el modelo lea podría pedir un `local_summarize` de una credencial o un
+`local_boilerplate` que deje un script de arranque. Por eso, haya o no `ALLOWED_DIRS`, estas rutas
+se rechazan **antes** de leer nada o de llamar al modelo, con un error que dice qué tipo de ruta
+protegida es y qué regla saltó.
+
+La comparación se hace sobre la ruta tal cual y sobre la ruta con enlaces simbólicos y *junctions*
+resueltos, y en Windows y macOS sin distinguir mayúsculas. Los hooks de lectura usan la misma lista:
+un fichero protegido no se bloquea para `Read` ni se manda a `local_summarize`, que lo rechazaría.
+
+**Credenciales** (ni lectura ni escritura):
+
+- Bajo el HOME: `.ssh/`, `.aws/`, `.gnupg/`, `.azure/`, `.kube/`, `.docker/config.json`,
+  `.config/gh/`, `.config/hub`, `.config/gcloud/`, `.config/git/credentials`,
+  `.cargo/credentials(.toml)`, `.terraform.d/credentials.tfrc.json`, `.pgpass`, `.vault-token`,
+  `.m2/settings.xml`, `.gem/credentials`, `.claude/.credentials.json`, `.codex/auth.json` y, en
+  Windows, `%APPDATA%\GitHub CLI\` y `%APPDATA%\gcloud\`.
+- Por nombre, en cualquier carpeta: `.env` y `.env.*`, `.envrc`, las claves SSH por su nombre
+  exacto (`id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519` y sus `id_rsa.*`; `id_rsa_parser.py` no es
+  una clave), `*.pem`, `*.key`, `*.p12`, `*.pfx`, `.npmrc`, `.pypirc`, `.netrc`, `_netrc`,
+  `.git-credentials`, `.claude.json` (y sus `.backup*`) y `claude_desktop_config.json` (y sus
+  copias), que lleva el token del daemon escrito literal.
+- Excepciones por nombre: las plantillas `*.example`, `*.sample`, `*.template` y `.env.dist`, y
+  las claves públicas `id_*.pub` fuera de `~/.ssh`.
+- Ojo con `*.pem` y `*.key`: también bloquean los certificados y claves de prueba de un repo
+  (*fixtures*). Si necesitas uno, léelo tú.
+
+**Rutas de red y de dispositivo en Windows** (ni lectura ni escritura): cualquier ruta UNC o de
+dispositivo (`\\servidor\recurso`, `\\?\UNC\…`, `\\.\…`). `\\localhost\C$\…` llega a cualquier
+fichero local con un nombre que ninguna otra regla reconoce, y abrir una ruta de otro equipo le
+entrega el hash NTLM del usuario. Solo se admiten dentro de `LOCAL_DELEGATE_ALLOWED_DIRS`. Las
+formas `\\?\C:\…` y `\\.\C:\…` de una unidad local se tratan como `C:\…`.
+
+**Arranque automático y configuración que ejecuta código** (solo escritura; leerlos sí se puede):
+
+- Carpetas de inicio de Windows (`%APPDATA%` y `%PROGRAMDATA%` `\Microsoft\Windows\Start
+  Menu\Programs\Startup`), `~/Library/LaunchAgents`, `/Library/LaunchAgents`,
+  `/Library/LaunchDaemons`, `~/.config/autostart`, `/etc/xdg/autostart` y `~/.config/systemd/user`.
+- Ficheros de arranque de shell en el HOME: `.bashrc`, `.bash_profile`, `.bash_login`,
+  `.bash_logout`, `.profile`, `.zshrc`, `.zprofile`, `.zshenv`, `.zlogin`, `.zlogout` y
+  `~/.config/fish/`; y los perfiles de PowerShell (`*profile.ps1` dentro de una carpeta
+  `PowerShell` o `WindowsPowerShell`, también con Documentos en OneDrive).
+- Git: `~/.gitconfig`, `~/.config/git/config` y, en cualquier repo, toda carpeta `hooks/` por
+  debajo de `.git/` (también `.git/modules/<sub>/hooks/`) y todo `config` o `config.worktree` por
+  debajo de `.git/` (`.git/config`, `.git/modules/<sub>/config`, `.git/worktrees/<w>/config.worktree`):
+  sus `core.hooksPath`, `core.fsmonitor` o alias con `!` hacen que git ejecute comandos. Leer
+  `.git/config` sí se puede: es útil y casi nunca lleva secretos (límite asumido).
+- Claude Code y Codex: `~/.claude/hooks/`, `~/.claude/CLAUDE.md`, `~/.claude/agents/`,
+  `~/.claude/commands/`, `~/.claude/plugins/`, cualquier `.claude/settings*.json` (del usuario o del
+  proyecto), cualquier `.mcp.json` y `~/.codex/config.toml`.
+- Otras herramientas que ejecutan lo que encuentran: `.vscode/tasks.json`, `*.pth`,
+  `sitecustomize.py` y `usercustomize.py` (Python los ejecuta al arrancar) y `.yarnrc.yml`.
+- La configuración del propio local-delegate: los `*.json` del directorio de datos (`daemon.json`,
+  `backend-params.json`, `language.json`…) y el YAML de `LLAMASWAP_CONFIG`.
+
+`LOCAL_DELEGATE_DENY_PATHS` se lee **al arrancar** el servidor o el daemon: cambiarla exige
+reiniciarlo, y una ruta relativa se resuelve contra el directorio de trabajo del daemon, así que
+conviene ponerlas absolutas. En el error sale como «lista del usuario».
+
+Límites conocidos:
+
+- Un enlace duro (*hard link*) a un fichero protegido tiene su propio nombre y ruta y no se
+  reconoce.
+- Entre la comprobación y la lectura o escritura hay una ventana: si otro proceso cambia un enlace
+  simbólico o una *junction* justo en ese momento, la comprobación no lo ve.
+
+Si necesitas leer una de estas rutas, hazlo tú con los permisos de Claude Code.
 
 ## Hooks de lectura (opt-in, solo Claude Code)
 

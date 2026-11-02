@@ -791,6 +791,12 @@
       "reason": "segmento de ruta de `LOG_DIR` en macOS (`Library/Application Support`), copia de `platformdirs`: se compara tal cual con el disco"
     },
     {
+      "file": "src/local_delegate/resources/hooks/path_rules.py",
+      "text": "Roaming",
+      "kind": "path",
+      "reason": "segmento de ruta de `%APPDATA%` en Windows (`AppData/Roaming`) cuando falta la variable: las rutas protegidas se comparan con el disco"
+    },
+    {
       "file": "src/local_delegate/resources/hooks/suggest_delegate_prompt.py",
       "text": "\\b(arquitect|diseñ|design|investig|research|multi[- ]?fuente|latest|actual(?:iza)?|seguridad|security|credencial|secret|deploy|publica|borra|elimina|migraci)\\w*\\b",
       "kind": "verbatim",

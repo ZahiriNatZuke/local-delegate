@@ -281,6 +281,15 @@ ALLOWED_DIRS: list[Path] = [
     Path(p.strip()).resolve() for p in _allowed_dirs_raw.split(";") if p.strip()
 ]
 
+# --- Rutas protegidas extra (se suman a la lista base de `path_guard`) --------
+# La lista base (credenciales, arranque automático, config ejecutable) se aplica SIEMPRE, haya o
+# no ALLOWED_DIRS. Esta variable solo añade: rutas separadas por ';', ficheros o carpetas, que las
+# tools no pueden leer ni escribir. Se resuelven igual que ALLOWED_DIRS.
+_deny_paths_raw = _env("LOCAL_DELEGATE_DENY_PATHS", "")
+DENY_PATHS: list[Path] = [
+    Path(p.strip()).expanduser().resolve() for p in _deny_paths_raw.split(";") if p.strip()
+]
+
 
 # --- Catálogo de modelos (roles configurables, defaults documentados) -------
 MODEL_MECHANICAL = _env(
