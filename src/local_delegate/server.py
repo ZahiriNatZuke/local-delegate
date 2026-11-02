@@ -4489,6 +4489,12 @@ def _verified_lines(answer: str, question: str, content: str, truncated: bool = 
     """
     result = line_check.check(answer, question, content, truncated)
     extra: list[str] = []
+    # #527: an answer that says there is nothing to answer with, while the question's identifiers
+    # are in the file, contradicts the exact search below: it is flagged, not presented as valid.
+    found_any = [name for name, lines in result.found if lines]
+    if found_any and line_check.claims_no_information(answer):
+        names = ", ".join(f"`{name}`" for name in found_any)
+        extra.append(f"{WARNING_MARKER}{i18n.t('mcp.explain.contradiction', names=names)}]")
     if result.mismatched:
         cited = ", ".join(c.label() for c in result.mismatched)
         extra.append(f"{WARNING_MARKER}{i18n.t('mcp.explain.lines_unverified', lines=cited)}]")
@@ -7266,9 +7272,10 @@ def local_explain_code(
             map_format = (
                 f"solo lo de este fragmento que sirva para responder a la pregunta «{question}»: "
                 "una viñeta por cada función, clase o método que tenga que ver con ella, "
-                f"empezando por {where}, seguido de lo que aporta a la respuesta. Si nada del "
-                "fragmento sirve, responde solo «Nada relevante en este fragmento». No respondas "
-                "todavía la pregunta"
+                f"empezando por {where}, seguido de lo que aporta a la respuesta. Que el código "
+                "muestre que algo de lo que plantea la pregunta NO ocurre también sirve: anótalo. "
+                "Si nada del fragmento sirve, responde solo «Nada relevante en este fragmento». "
+                "No respondas todavía la pregunta"
             )
         elif numbered:
             map_format = (
@@ -7284,13 +7291,49 @@ def local_explain_code(
             )
         map_system = _guard(map_format) + lines_clause + language
 
+        # #527: a chunk holding `summarizable()` answered «Nada relevante» like the others, and the
+        # reduce concluded there was no information while the exact search found the name. The
+        # question carried a premise the code does not meet ("before redirecting to …"), and the
+        # map was free to discard the chunk. With `path`, each chunk is now told, by program, which
+        # of the question's identifiers it holds and on which lines, and the reduce gets the exact
+        # lines of the whole file, so an empty note no longer reads as "the code does not do it".
+        def _map_hint(piece: str) -> str:
+            hits = line_check.piece_hits(piece, question) if numbered and question else []
+            if not hits:
+                return ""
+            found = "; ".join(
+                f"`{name}` en las líneas {', '.join(map(str, lines[: line_check.MAX_OCCURRENCES]))}"
+                for name, lines in hits
+            )
+            # Same paragraph as the order, so the code still starts after the first blank line.
+            return (
+                ". Identificadores de la pregunta que aparecen en este fragmento (búsqueda exacta, "
+                f"por programa): {found}. Anota qué hace el código en esas líneas respecto a la "
+                "pregunta; este fragmento no es «Nada relevante». Fragmento"
+            )
+
         def _build_map(piece: str) -> str:
             if question:
                 return (
                     "Toma notas de este fragmento de código para responder a la pregunta "
-                    f"«{question}»:\n\n{piece}"
+                    f"«{question}»{_map_hint(piece)}:\n\n{piece}"
                 )
             return f"Toma notas de este fragmento de código:\n\n{piece}"
+
+        exact_lines = ""
+        if numbered and question:
+            found_all = line_check.check("", question, content).found
+            shown = [
+                f"`{name}`: {', '.join(map(str, lines[: line_check.MAX_OCCURRENCES]))}"
+                for name, lines in found_all
+                if lines
+            ]
+            if shown:
+                exact_lines = (
+                    "Líneas del fichero donde aparecen los identificadores de la pregunta "
+                    f"(búsqueda exacta, por programa; fiables): {'; '.join(shown)}. Una nota "
+                    "«Nada relevante» no significa que el código no trate de ellos.\n\n"
+                )
 
         def _build_reduce(joined: str) -> str:
             head = f"{names}\n\n" if names else ""
@@ -7302,8 +7345,8 @@ def local_explain_code(
                     else ""
                 )
                 return (
-                    f"{head}Estas son notas EN ORDEN sobre los fragmentos de un mismo fichero de "
-                    "código, tomadas para responder a una pregunta. La lista de arriba es el "
+                    f"{head}{exact_lines}Estas son notas EN ORDEN sobre los fragmentos de un "
+                    "mismo fichero de código, tomadas para responder a una pregunta. La lista de arriba es el "
                     "inventario COMPLETO de sus definiciones de primer nivel; las notas pueden no "
                     f"cubrirlo entero.{where} Responde a la pregunta «{question}» con lo que digan "
                     "las notas y la lista. Si no bastan para responderla, dilo claramente; no "

@@ -50,6 +50,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   expandir» y el aviso del fichero `0600` de la 0.47.1 nunca llegaba a salir. Ahora una `${VAR}`
   cuya `VAR` tiene valor en el `env` de la misma entrada no cuenta como sin expandir; una que no lo
   tiene sigue avisando.
+- **`local_explain_code` troceado decía «no hay información suficiente» con el nombre preguntado en
+  el fichero** (#527): con `path` y una pregunta, todos los trozos podían anotar «Nada relevante en
+  este fragmento», incluido el que define la función preguntada, y la respuesta final afirmaba que
+  el código no bastaba mientras las apariciones exactas del final sí encontraban el nombre. La
+  pregunta partía de una premisa que el código no cumple y nada impedía al trozo descartarse.
+  Ahora cada trozo recibe, calculadas por programa, las líneas donde aparecen los identificadores
+  de la pregunta y la orden de anotarlas (también cuando el código muestra que algo *no* ocurre);
+  la reducción recibe esas líneas de todo el fichero; y si la respuesta aún dice que no hay
+  información mientras la búsqueda exacta encuentra el nombre, lleva un aviso
+  `[local-delegate warning: …]` en vez de presentarse como válida. Sin pregunta, o con `code=`, los
+  prompts no cambian.
 
 ## [0.47.1] - 2026-10-30
 
