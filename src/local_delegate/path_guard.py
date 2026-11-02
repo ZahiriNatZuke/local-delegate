@@ -269,7 +269,9 @@ def _match_name_write(parts: tuple[str, ...]) -> Denial | None:
         return Denial(KIND_EXECUTABLE_CONFIG, ".git/config")
     if parent == _fold(".claude") and fnmatch.fnmatchcase(name, _fold("settings*.json")):
         return Denial(KIND_EXECUTABLE_CONFIG, ".claude/settings*.json")
-    if _fold(parent) in _POWERSHELL_DIRS and fnmatch.fnmatchcase(name, _fold("*profile.ps1")):
+    # Folded always, even on Linux: pwsh spells the folder `PowerShell` or `powershell`, and a
+    # profile under either runs at every start.
+    if parent.casefold() in _POWERSHELL_DIRS and fnmatch.fnmatch(name.casefold(), "*profile.ps1"):
         return Denial(KIND_EXECUTABLE_CONFIG, "PowerShell profile")
     log_dir = _forms(config.LOG_DIR)
     if parts[:-1] in log_dir and fnmatch.fnmatchcase(name, "*.json"):
