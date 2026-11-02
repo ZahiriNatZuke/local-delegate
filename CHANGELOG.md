@@ -6,6 +6,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Corregido
+
+- **`local_explain_code` devolvía la respuesta con el prefijo de línea `98| ` delante** (#531): con
+  `path`, el modelo ve cada línea del código como `N| línea` y a veces copiaba ese prefijo al
+  principio de una línea de prosa (`98| Sí, la función…`). Ahora el servidor lo quita antes de
+  verificar las líneas citadas y de devolver la respuesta, en la llamada única y en la troceada.
+  Se conserva dentro de los bloques de código cercados y en una línea que reproduce tal cual la
+  línea N del fichero, porque ahí es una cita que la verificación comprueba.
+
 ## [0.47.2] - 2026-11-02
 
 Versión de **seguridad** y arreglos. Lo principal: las tools que leen `path` o escriben `target`

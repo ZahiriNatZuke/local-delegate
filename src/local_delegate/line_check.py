@@ -154,6 +154,42 @@ def piece_hits(piece: str, question: str) -> list[tuple[str, list[int]]]:
     return hits
 
 
+#: #531: the `N| ` prefix at the start of an answer line, with its indentation.
+_LEADING_PREFIX = re.compile(r"^(\s*)(\d{1,7})\| ?")
+#: A Markdown fence line (``` or ~~~), which opens or closes a code block.
+_FENCE = re.compile(r"^\s*(?:```|~~~)")
+
+
+def strip_line_prefixes(answer: str, content: str) -> str:
+    """#531: `answer` without the `N| ` prefix the model copied from its input onto prose lines.
+
+    The model sees every line as `N| line` and sometimes starts a line of prose with one
+    (`98| Sí, la función…`): it is the input's format, not part of the answer. Two cases keep it,
+    because there it is a citation the check verifies (`_PREFIX_FORM`): any line inside a fenced
+    code block, and a line outside one whose rest is the file's line N itself (an echoed line of
+    code, `233| this.focus();`). Without a prefix to drop, `answer` comes back byte for byte.
+    """
+    if "|" not in answer:
+        return answer
+    lines = content.split("\n")
+    out: list[str] = []
+    in_fence = False
+    changed = False
+    for line in answer.split("\n"):
+        if _FENCE.match(line):
+            in_fence = not in_fence
+        elif not in_fence:
+            m = _LEADING_PREFIX.match(line)
+            if m:
+                number, rest = int(m.group(2)), line[m.end() :]
+                copied = 1 <= number <= len(lines) and rest.strip() == lines[number - 1].strip()
+                if not copied:
+                    line = m.group(1) + rest
+                    changed = True
+        out.append(line)
+    return "\n".join(out) if changed else answer
+
+
 #: #527: an answer that says the code (or the notes) is not enough to answer. Spanish and
 #: English, the languages of the prompts; worded narrowly, so a partial "cannot verify X" in an
 #: otherwise real answer does not count.

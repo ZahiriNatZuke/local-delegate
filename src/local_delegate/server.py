@@ -7269,10 +7269,16 @@ def local_explain_code(
     # #460: the model cites wrong lines even seeing the prefix, so with `path` and a question the
     # program checks them against the file and lists the question's identifiers where they really
     # are. Without `path` (no file, no reliable numbers) or without a question, nothing is added.
+    # #531: with `path`, the `N| ` the model copies onto a line of prose is dropped first, so the
+    # check verifies (and the caller gets) the answer as it is returned; fenced code and echoed
+    # file lines keep it, and with it their citation.
     check_lines: Callable[[str, bool], str] | None = None
-    if numbered and question:
+    if numbered:
 
         def check_lines(answer: str, truncated: bool) -> str:
+            answer = line_check.strip_line_prefixes(answer, content)
+            if not question:
+                return answer
             return _verified_lines(answer, question, content, truncated)
 
     # Trocear o no se decide sobre el fichero PELADO, como antes: el prefijo no hace trocear un
@@ -7414,10 +7420,12 @@ def local_explain_code(
             item for _o, found, modules in registrations for item in found + modules
         ]
 
-        def _add_not_mentioned(answer: str, _truncated: bool) -> str:
+        def _add_not_mentioned(answer: str, truncated: bool) -> str:
             # B2e, the fallback of decision 3 of 2026-10-17 (the explain round of 2026-10-18 did
             # not reach): what the file registers and the explanation does not name is added by
             # the program, in one line, as in the chunked lint. Without registrations, nothing.
+            if check_lines is not None:  # #531: the copied `N| ` prefixes go first
+                answer = check_lines(answer, truncated)
             missing = [n for n in registered_items if not lint_patterns.mentions(n, answer)]
             if not missing:
                 return answer
