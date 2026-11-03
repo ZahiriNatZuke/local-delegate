@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "slug": "panel-queued-chunk-label",
+  "title": "Panel: queued chunked rows say which chunk waits and for how long",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-03T18:36:56.217Z",
+  "updatedAt": "2026-11-03T19:19:32.656Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-03T18:37:52.408Z",
+      "evidence": "spec REQ-001..005 traced to issue #547 and encargo; plan T1-T3 covers every REQ; sdd check green",
+      "actor": "orquestador"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-03T18:37:53.027Z",
+      "evidence": "spec REQ-001..005 traced to issue #547 and encargo; plan T1-T3 covers every REQ; sdd check green",
+      "actor": "orquestador"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-03T18:36:56.217Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-11-03T18:37:45.166Z",
+      "reason": "brief written from issue #547"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-11-03T18:37:45.469Z",
+      "reason": "code read: _inflight_local_wait, inflight_snapshot, renderInflight, mod status.js"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-03T18:37:52.408Z",
+      "evidence": "spec REQ-001..005 traced to issue #547 and encargo; plan T1-T3 covers every REQ; sdd check green",
+      "actor": "orquestador"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-03T18:37:52.685Z",
+      "reason": "spec approved"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-03T18:37:53.027Z",
+      "evidence": "spec REQ-001..005 traced to issue #547 and encargo; plan T1-T3 covers every REQ; sdd check green",
+      "actor": "orquestador"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-03T18:37:53.428Z",
+      "reason": "plan written"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-03T18:37:53.780Z",
+      "reason": "spec and plan approved"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-03T19:19:32.656Z",
+      "reason": "implemented; tests, mutants and screenshots done"
+    }
+  ]
+}

@@ -13,6 +13,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   («SDD sin cerrar: <slug> (<estado>)») y sugiere cerrarlos. Es un aviso, no bloquea. Varios SDD
   se habían quedado en `verifying` con su trabajo ya mezclado y publicado.
 
+### Corregido
+
+- **Panel: una delegación troceada «En cola» ya no parece estar mandando su trozo.** Entre trozo y
+  trozo la llamada vuelve a esperar plaza y el panel la mostraba en «En cola» con «Trozo 2/3», la
+  misma etiqueta que un trozo que se está procesando, y solo con el tiempo total. Ahora dice
+  «Espera trozo 2/3» (o «Espera combinar 3 trozos»), el título explica por qué espera (plaza libre
+  en el backend, su turno con su puesto, o que aún no ha empezado) y cuántos trozos van hechos, y
+  un chip dice cuánto lleva esperando («espera 41,2 s»), además del total. Para eso `/api/inflight` añade
+  `wait_s` a las entradas con `local_wait`; los campos de antes no cambian. Además, el tiempo y los
+  caracteres de cada fila de «En curso» ya no saltan a otra línea según el ancho de los números
+  (#547).
+
 ## [0.47.3] - 2026-11-02
 
 Arreglo de `local_explain_code`: con `path`, la respuesta podía empezar con el prefijo de línea

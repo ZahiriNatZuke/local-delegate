@@ -764,6 +764,16 @@ texto de la fase. Con `state`, «En curso» separa **«Procesando (n)»** y **«
 la cola llevan un círculo discontinuo en vez del giro, van atenuadas y, con turno, su puesto
 (`#3`). Un daemon anterior no manda `state` y el panel pinta la lista única de siempre.
 
+Una delegación troceada suelta su plaza al acabar cada trozo y vuelve a esperar otra para el
+siguiente, así que entre trozos está **en cola**. Desde el issue #547 esa fila dice **«Espera trozo
+2/3»** (o «Espera combinar 3 trozos» antes del paso final), no «Trozo 2/3», que es la etiqueta de
+un trozo que se está procesando. El título de la fila dice por qué espera (plaza libre en el
+backend, su turno con su puesto, o que aún no ha empezado) y el del trozo, cuántos van hechos.
+Con espera local, la entrada trae también **`wait_s`**: los segundos que lleva esa espera, aparte
+del total `elapsed_s`; el panel lo muestra en un chip («espera 41,2 s») y el total sigue en la
+columna de tiempo. El tiempo y los caracteres de cada fila van en una sola línea, alineados a la
+derecha, y los chips se reparten en su propia caja.
+
 Un cuarto valor, **`waiting_backend`**, marca la llamada que ya tiene plaza pero espera **dentro de
 llama-swap** a que cambie de modelo: su POST lleva más de 3 s pendiente y `/running` no tiene el
 modelo pedido `ready`. La entrada trae `backend_wait` con los **otros** modelos que tenía llama-swap

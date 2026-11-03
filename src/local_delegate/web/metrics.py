@@ -1757,7 +1757,11 @@ td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .tchip{font-family:var(--mono);font-size:10.5px;color:var(--mut);border:1px solid var(--bd);border-radius:7px;padding:3px 8px;cursor:default;transition:.13s}
 .tchip:hover{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 40%,transparent)}
 .tchip.busy{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 50%,transparent);background:color-mix(in srgb,var(--amber) 12%,transparent)}
-.ifrow{display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding:6px 2px;font-size:12.5px;color:var(--tx2);font-family:var(--mono)}
+.ifrow{display:flex;flex-wrap:nowrap;align-items:center;gap:9px;padding:6px 2px;font-size:12.5px;color:var(--tx2);font-family:var(--mono)}
+.ifchips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;flex:1 1 auto;min-width:0}
+.ifchips .chunkchip{margin-left:0}
+.ifmeta{flex:0 0 auto;margin-left:auto;min-width:26ch;text-align:right;white-space:nowrap;color:var(--mut)}
+@media (max-width:560px){.ifrow{flex-wrap:wrap}.ifmeta{margin-left:21px}}
 .spin{width:12px;height:12px;border-radius:50%;flex:0 0 auto;
   border:2px solid color-mix(in srgb,var(--amber) 28%,transparent);border-top-color:var(--amber);animation:rot .8s linear infinite}
 .queue-dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;border:2px dashed var(--faint)}
@@ -2990,9 +2994,28 @@ function renderInflight(){
       // «Trozo 3/4 · dividido en 3 · parte 2», with the why in the chip's title.
       const split = it.chunks && it.part>0 && it.parts>0;
       const splitWords = {chunk: it.chunk||1, chunks: it.chunks, part: it.part, parts: it.parts};
+      // Issue #547: between two chunks a call waits for a place again, so it is queued. Its chunk
+      // is the one that waits, not one being sent: «Espera trozo 2/3», with the done ones in the title.
+      const chunkWords = {n: it.chunk||1, total: it.chunks};
+      const queuedChunk = queued && it.chunks && !split && it.phase!=='retry';
+      const queuedChunkTitle = it.phase==='reduce'
+        ? '' : T('backend.chunk_waiting_title', {done: Math.max(0, (Number(it.chunk)||1) - 1), total: it.chunks, n: it.chunk||1});
       const chunk = split
         ? `<span class="chunkchip" title="${escHooks(T('backend.part_title', splitWords))}">${escHooks(T('backend.part', splitWords))}</span>`
-        : it.chunks ? `<span class="chunkchip">${escHooks(T(chunkKey, {n: it.chunk||1, total: it.chunks}))}</span>` : '';
+        : queuedChunk
+          ? `<span class="chunkchip"${queuedChunkTitle ? ` title="${escHooks(queuedChunkTitle)}"` : ''}>${escHooks(T(it.phase==='reduce' ? 'backend.combining_waiting' : 'backend.chunk_waiting', chunkWords))}</span>`
+          : it.chunks ? `<span class="chunkchip">${escHooks(T(chunkKey, chunkWords))}</span>` : '';
+      // Issue #547: why a queued row waits, in its title (never `slot`/`turn` as text).
+      const queuedTitle = !queued ? ''
+        : it.local_wait==='slot' ? T('backend.queued_slot_title')
+        : it.local_wait==='turn' ? (Number.isFinite(it.queue_position) && it.queue_position>0
+            ? T('backend.queued_turn_position_title', {n: it.queue_position}) : T('backend.queued_turn_title'))
+        : it.local_wait ? T('backend.queued_local_title')
+        : T('backend.queued_start_title');
+      // And how long this wait has lasted (`wait_s`, daemons with #547), as a chip beside the
+      // chunk; the call's total stays in the time column, like every other row.
+      const waited = queued && Number.isFinite(it.wait_s) && it.wait_s>=0
+        ? `<span class="chunkchip" title="${escHooks(T('backend.waited_title', {wait: fmtSec(it.wait_s*1000), total: fmtSec((it.elapsed_s||0)*1000)}))}">${escHooks(T('backend.waited', {t: fmtSec(it.wait_s*1000)}))}</span>` : '';
       const org = it.backend ? `<span class="org ${escHooks(it.backend)}">${escHooks(labelFor('origin', it.backend))}</span>` : '';
       // Espera de turno del daemon (REQ-008): las mismas palabras que el title de la fila del modelo.
       const turnText = it.local_wait==='turn' ? turnWords(it) : '';
@@ -3008,9 +3031,11 @@ function renderInflight(){
       const loadedChip = waitBackend
         ? `<span class="chunkchip loaded" title="${escHooks(waitTitle)}">${escHooks(loadedModels ? T('backend.loaded_chip', {models: loadedModels}) : T('backend.wait_backend_unknown'))}</span>` : '';
       const dot = queued ? 'queue-dot' : waitBackend ? 'wait-dot' : 'spin';
-      return `<div class="ifrow${queued || waitBackend ? ' queued' : ''}"${waitBackend ? ` title="${escHooks(waitTitle)}"` : ''}><span class="${dot}"></span><span class="badge">${escHooks(it.tool)}</span>
-        <span class="badge model">${escHooks(it.model)}</span>${pos}${chunk}${turnChip}${loadedChip}${org}${host}
-        <span class="num" style="color:var(--mut)">${escHooks(fmtSec((it.elapsed_s||0)*1000))} · ${F.format(it.chars_in||0)} ${T('unit.chars_short')}</span></div>`;
+      const rowTitle = waitBackend ? waitTitle : queuedTitle;
+      // Issue #547: the chips wrap inside their own box; time and characters never leave the line.
+      return `<div class="ifrow${queued || waitBackend ? ' queued' : ''}"${rowTitle ? ` title="${escHooks(rowTitle)}"` : ''}><span class="${dot}"></span><span class="ifchips"><span class="badge">${escHooks(it.tool)}</span>
+        <span class="badge model">${escHooks(it.model)}</span>${pos}${chunk}${waited}${turnChip}${loadedChip}${org}${host}</span>
+        <span class="num ifmeta">${escHooks(fmtSec((it.elapsed_s||0)*1000))} · ${F.format(it.chars_in||0)} ${T('unit.chars_short')}</span></div>`;
     };
     // Issue #477: with `state` (daemons from 0.45 on), «Processing (n)» and «Queued (m)» apart; a
     // daemon without it keeps the single list it always had.

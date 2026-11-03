@@ -1607,6 +1607,96 @@ def test_backend_and_in_flight_speak_spanish(tmp_path, monkeypatch, new_page):
     assert "caché" in m["performance"] and "cache " not in m["performance"], m["performance"]
 
 
+def _inflight_row(chunk, chunks, chars, state, **extra):
+    return {
+        "id": f"1:{chars}",
+        "tool": "local_summarize",
+        "model": "gemma4-26b-a4b",
+        "source": "path",
+        "chars_in": chars,
+        "backend": "remote",
+        "elapsed_s": 115.4,
+        "chunks": chunks,
+        "chunk": chunk,
+        "state": state,
+        **extra,
+    }
+
+
+# The capture of issue #547: two at the backend and three waiting for a place between chunks.
+IN_FLIGHT_547 = [
+    _inflight_row(2, 3, 94745, "running"),
+    _inflight_row(2, 4, 118284, "running"),
+    _inflight_row(2, 3, 94825, "queued", local_wait="slot", wait_s=41.2),
+    _inflight_row(2, 3, 83193, "queued", local_wait="slot", wait_s=8.6),
+    _inflight_row(
+        1,
+        4,
+        95006,
+        "queued",
+        local_wait="turn",
+        wait_s=113.0,
+        queue_position=2,
+        turn_in_use=["qwen36-35b-a3b"],
+    ),
+]
+
+_INFLIGHT_LINES = """() => [...document.querySelectorAll('#inflightBody .ifrow')].map(row => {
+  const meta = row.querySelector('.ifmeta').getBoundingClientRect();
+  const chips = row.querySelector('.ifchips').getBoundingClientRect();
+  return {text: row.innerText, height: Math.round(row.getBoundingClientRect().height),
+          metaHeight: meta.height, metaRight: Math.round(meta.right),
+          metaMiddle: meta.top + meta.height / 2, boxMiddle: chips.top + chips.height / 2};
+})"""
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_inflight_rows_keep_time_and_chars_on_one_line(tmp_path, monkeypatch, new_page, theme):
+    """Issue #547: time and characters of every «En curso» row stay on one line, on the tool's
+    line and with the same right edge, however wide the numbers; a queued row says «Espera trozo»
+    and how long it has waited.
+
+    Positive control: with the old `.ifrow{flex-wrap:wrap}`, the time and characters drop below
+    the chips and the `metaMiddle` assert fails; without the `min-width` of `.ifmeta`, the row of
+    118.284 characters is taller than the one of 94.745 and the height assert fails.
+    """
+    _cost_and_image_log(tmp_path, monkeypatch)
+    in_flight = {
+        "inflight": IN_FLIGHT_547,
+        "count": len(IN_FLIGHT_547),
+        "last_event_ts": datetime.now(UTC).isoformat(),
+        "now": datetime.now(UTC).isoformat(),
+    }
+    with PanelServer() as server, sync_playwright() as pw:
+        browser = _browser(pw)
+        page = new_page(browser, viewport={"width": 1366, "height": 1000}, color_scheme=theme)
+        page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+        page.route(re.compile(r"/api/inflight(\?|$)"), _json(in_flight))
+        page.goto(server.url)
+        page.wait_for_function(
+            "() => document.querySelectorAll('#inflightBody .ifrow').length === 5"
+        )
+        # Desktop widths, the 1280 of the issue's capture among them: the card's width moves the
+        # point where the chips run out of room.
+        by_width = {}
+        for width in range(1000, 1601, 4):
+            page.set_viewport_size({"width": width, "height": 1000})
+            by_width[width] = page.evaluate(_INFLIGHT_LINES)
+        browser.close()
+    metrics._FILE_CACHE.clear()
+    for width, rows in by_width.items():
+        assert len(rows) == 5, (width, rows)  # guard: the five rows were drawn
+        for row in rows:
+            assert row["metaHeight"] <= 22, (width, row)  # one line (~17 px); two are ~34
+            assert abs(row["metaMiddle"] - row["boxMiddle"]) <= 3, (width, row)
+        assert len({row["metaRight"] for row in rows}) == 1, (width, rows)
+        # Same chips, same height, whatever the width of the figures (94.745 vs 118.284 chars).
+        # (The queued rows carry their own wait, whose text changes the width of their chips.)
+        assert rows[0]["height"] == rows[1]["height"], (width, rows)
+        queued = [row["text"] for row in rows[2:]]
+        assert all("Espera trozo" in text and "espera " in text for text in queued), queued
+
+
 def test_the_input_origin_legend_is_in_spanish(panel, new_page):
     """«path»/«inline» pasan a «Por ruta (path)» y «Texto en línea (inline)»; el centro dice «por
     ruta». Se lee del gráfico de Chart.js: la leyenda se pinta en el canvas."""
