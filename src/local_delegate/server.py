@@ -6623,21 +6623,45 @@ def _fill_nulls_from_partials(data: dict, fields: list[str], partials: list[str]
                 break
 
 
-def _normalize_extract_keys(data: dict, fields: list[str]) -> tuple[list[str], list[str]]:
-    """Leave in `data` exactly the requested keys, in place; return (missing, dropped).
+_EXTRACT_META_KEY = "_local_delegate"
 
-    A requested key the model left out is set to null; a key it added is removed. Both lists keep
-    their order (request order, answer order). A key the model called `_local_delegate` is just
-    another unrequested key, unless the caller asked for a field with that name.
+
+def _key_shape(key: str) -> str:
+    """`fechaInicio`, `fecha_inicio`, `Fecha-Inicio` and `fecha inicio` share one shape."""
+    return re.sub(r"[\s_-]+", "", key).casefold()
+
+
+def _normalize_extract_keys(
+    data: dict, fields: list[str]
+) -> tuple[list[str], dict[str, str], dict[str, Any]]:
+    """Leave in `data` exactly the requested keys, in place; return (missing, renamed, dropped).
+
+    An unrequested key that has the shape of exactly one missing requested key (`_key_shape`), and
+    is the only unrequested key with that shape, is a spelling slip: its value moves to the
+    requested key (`renamed`, model key -> requested key). Any other unrequested key is removed
+    and its value kept in `dropped` (model output, so bounded by the call's `max_tokens`). A
+    requested key still absent is set to null (`missing`, request order). A key the model called
+    `_local_delegate` is just another unrequested key; a requested field with that name is left
+    out of the normalization (never filled with null), as before.
     """
     requested = set(fields)
-    dropped = [key for key in data if key not in requested]
-    for key in dropped:
-        del data[key]
-    missing = [name for name in dict.fromkeys(fields) if name not in data]
+    extras = [key for key in data if key not in requested]
+    absent = [n for n in dict.fromkeys(fields) if n not in data and n != _EXTRACT_META_KEY]
+    renamed: dict[str, str] = {}
+    for name in absent:
+        shape = _key_shape(name)
+        candidates = [key for key in extras if _key_shape(key) == shape]
+        others = [other for other in absent if _key_shape(other) == shape]
+        if len(candidates) == 1 and len(others) == 1:
+            key = candidates[0]
+            data[name] = data.pop(key)
+            renamed[key] = name
+            extras.remove(key)
+    dropped = {key: data.pop(key) for key in extras}
+    missing = [name for name in absent if name not in data]
     for name in missing:
         data[name] = None
-    return missing, dropped
+    return missing, renamed, dropped
 
 
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_extract"]))
@@ -6653,10 +6677,12 @@ def local_extract(
 
     Pass 'path' to read the file server-side (spends no Claude context) or 'text'. Returns an
     object with exactly the requested keys: the caller does not have to parse a string. A key the
-    model left out comes back as null and is listed in `missing_keys`; a key it added is dropped
-    and listed in `dropped_keys`. What is not data travels under the reserved key
-    `_local_delegate` (`truncated` and `warning`, `missing_keys`/`dropped_keys`,
-    `read_server_side`, `fallback`, or `error` and `raw`); with chunked input, `chunked`
+    model left out comes back as null and is listed in `missing_keys`; a key it spelled another
+    way (case, `_`, `-`, spaces) is mapped in `renamed_keys`; a key it added is dropped from the
+    data and kept, with its value, in `dropped` (names in `dropped_keys`). What is not data
+    travels under the reserved key `_local_delegate` (`truncated` and `warning`,
+    `missing_keys`/`renamed_keys`/`dropped_keys`/`dropped`, `read_server_side`, `fallback`, or
+    `error` and `raw`); with chunked input, `chunked`
     says how many pieces there were and which fields stayed null in all of them. Routes
     automatically to the mechanical model (short inputs) or to the long-context model (large
     documents): the size probe uses file bytes for 'path' and characters for 'text' (~5-10%
@@ -6669,6 +6695,9 @@ def local_extract(
         text: Source text (use this or 'path').
         path: Path to a source file (read server-side).
     """
+    if not any(isinstance(name, str) and name.strip() for name in fields or []):
+        # Nothing to extract: fail before reading the input or calling the backend.
+        raise ValueError(i18n.t("mcp.input.fields_required"))
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
     role, model = _role_for_size(probe_len)
@@ -6793,7 +6822,7 @@ def local_extract(
     # The contract is "exactly the requested keys": in free mode (`LOCAL_DELEGATE_JSON_SCHEMA=off`,
     # or `auto` after the backend refused the schema) nothing forces the model to it. Normalize
     # always, here, before `_local_delegate` is added (so it is never counted as an extra key).
-    missing_keys, dropped_keys = _normalize_extract_keys(data, fields)
+    missing_keys, renamed_keys, dropped = _normalize_extract_keys(data, fields)
     meta: dict = dict(truncation)
     # #473: a chunked document where some field stayed null in every chunk. No chunk saw the
     # whole document, so that null may mean "not seen", not "absent": say so, with the count
@@ -6807,18 +6836,22 @@ def local_extract(
         # A truncation warning keeps its exact text (#455 contract); it already says that
         # material may be missing, and the detail stays in `chunked`.
         meta.setdefault("warning", notice)
-    if missing_keys or dropped_keys:
+    if missing_keys or renamed_keys or dropped:
         notices = []
         if missing_keys:
             meta["missing_keys"] = missing_keys
             notices.append(
                 i18n.t("mcp.warning.extract_missing_keys", fields=", ".join(missing_keys))
             )
-        if dropped_keys:
-            meta["dropped_keys"] = dropped_keys
-            notices.append(
-                i18n.t("mcp.warning.extract_dropped_keys", fields=", ".join(dropped_keys))
-            )
+        if renamed_keys:
+            meta["renamed_keys"] = renamed_keys
+            pairs = ", ".join(f"{key} -> {name}" for key, name in renamed_keys.items())
+            notices.append(i18n.t("mcp.warning.extract_renamed_keys", pairs=pairs))
+        if dropped:
+            # The names in `dropped_keys`; the values are not lost, they travel in `dropped`.
+            meta["dropped_keys"] = list(dropped)
+            meta["dropped"] = dropped
+            notices.append(i18n.t("mcp.warning.extract_dropped_keys", fields=", ".join(dropped)))
         # An earlier warning (truncation, chunked nulls) keeps its exact text (#455 contract).
         meta.setdefault("warning", "; ".join(notices))
     if path and config.FEEDBACK_ENABLED:

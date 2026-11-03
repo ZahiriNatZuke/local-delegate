@@ -8,6 +8,8 @@ with a readable `warning`. Backend faked (`_run_chat` doubled), no network.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from local_delegate import config, i18n, server
@@ -47,6 +49,7 @@ def test_free_mode_missing_and_extra_keys_are_normalized(backend, monkeypatch):
     assert data == {"name": "x", "age": None}
     assert meta["missing_keys"] == ["age"]
     assert meta["dropped_keys"] == ["made_up"]
+    assert meta["dropped"] == {"made_up": 1}  # dropped from the data, not lost
     assert meta["warning"] == (
         i18n.t("mcp.warning.extract_missing_keys", fields="age")
         + "; "
@@ -63,8 +66,87 @@ def test_free_mode_only_extra_key(backend, monkeypatch):
     assert data == {"a": 1, "b": 2}
     assert meta == {
         "dropped_keys": ["zz"],
+        "dropped": {"zz": 3},
         "warning": i18n.t("mcp.warning.extract_dropped_keys", fields="zz"),
     }
+
+
+# --- A key spelled another way is mapped, not lost --------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("requested", "answered"),
+    [
+        ("Name", "name"),
+        ("endDate", "end_date"),
+        ("start_date", "Start-Date"),
+        ("start date", "startDate"),
+    ],
+)
+def test_a_key_written_another_way_keeps_its_value(backend, monkeypatch, requested, answered):
+    _calls, state = backend
+    monkeypatch.setattr(config, "JSON_SCHEMA_MODE", "off")
+    state["answer"] = lambda call: _ok(json.dumps({answered: "x"}))
+    data = server.local_extract(fields=[requested], text="x")
+    meta = data.pop("_local_delegate")
+    assert data == {requested: "x"}
+    assert meta == {
+        "renamed_keys": {answered: requested},
+        "warning": i18n.t("mcp.warning.extract_renamed_keys", pairs=f"{answered} -> {requested}"),
+    }
+
+
+def test_an_ambiguous_shape_is_not_mapped_and_its_values_are_kept(backend, monkeypatch):
+    """Two answered keys with the shape of one requested key: no guess; both kept in `dropped`."""
+    _calls, state = backend
+    monkeypatch.setattr(config, "JSON_SCHEMA_MODE", "off")
+    state["answer"] = lambda call: _ok('{"name": "x", "NAME": "y"}')
+    data = server.local_extract(fields=["Name"], text="x")
+    meta = data.pop("_local_delegate")
+    assert data == {"Name": None}
+    assert "renamed_keys" not in meta
+    assert meta["missing_keys"] == ["Name"]
+    assert meta["dropped"] == {"name": "x", "NAME": "y"}
+
+
+def test_a_shape_shared_by_two_requested_keys_is_not_mapped(backend, monkeypatch):
+    _calls, state = backend
+    monkeypatch.setattr(config, "JSON_SCHEMA_MODE", "off")
+    state["answer"] = lambda call: _ok('{"Start-Date": "x"}')
+    data = server.local_extract(fields=["start_date", "startDate"], text="x")
+    meta = data.pop("_local_delegate")
+    assert data == {"start_date": None, "startDate": None}
+    assert meta["dropped"] == {"Start-Date": "x"}
+
+
+def test_a_present_requested_key_is_never_overwritten_by_a_lookalike(backend, monkeypatch):
+    _calls, state = backend
+    monkeypatch.setattr(config, "JSON_SCHEMA_MODE", "off")
+    state["answer"] = lambda call: _ok('{"Name": "right", "name": "other"}')
+    data = server.local_extract(fields=["Name"], text="x")
+    meta = data.pop("_local_delegate")
+    assert data == {"Name": "right"}
+    assert meta["dropped"] == {"name": "other"}
+
+
+# --- Arguments and the reserved name -----------------------------------------------------------
+
+
+@pytest.mark.parametrize("fields", [[], [""], ["  ", "\t"]])
+def test_no_field_to_extract_is_rejected_before_the_backend(backend, fields):
+    calls, _state = backend
+    with pytest.raises(ValueError, match="fields"):
+        server.local_extract(fields=fields, text="x")
+    assert calls == []
+
+
+def test_a_requested_reserved_name_is_not_filled_with_null(backend, monkeypatch):
+    """As before this change: no `"_local_delegate": null` appears out of nowhere."""
+    _calls, state = backend
+    monkeypatch.setattr(config, "JSON_SCHEMA_MODE", "off")
+    state["answer"] = lambda call: _ok('{"a": 1}')
+    data = server.local_extract(fields=["a", "_local_delegate"], text="a=1")
+    assert data == {"a": 1}
 
 
 def test_a_model_made_up_reserved_key_is_dropped_and_named(backend, monkeypatch):
