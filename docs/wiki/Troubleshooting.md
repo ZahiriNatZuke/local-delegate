@@ -108,6 +108,15 @@ Los ids de modelo configurados no existen en tu backend. Ajusta
 `llama31-8b`, `qwen25-coder-14b` o `qwen3-vl-8b`, renómbralos allí o fija las variables a los ids
 que tengas.
 
+## `Error executing tool <nombre>` sin más texto
+
+Desde la 0.48.0 (issue #552) un error de validación de la entrada (sin `text` ni `path`,
+`fields=[]`, un `target` que ya existe, una ruta protegida o fuera de
+`LOCAL_DELEGATE_ALLOWED_DIRS`, una imagen inválida) llega con su mensaje detrás:
+`Error executing tool <nombre>: <qué corregir>`, por stdio y por el HTTP del daemon. Si ves la
+línea sin texto detrás, o tienes una versión anterior (actualiza), o es un fallo interno, que se
+sigue enmascarando a propósito.
+
 ## `UserPromptSubmit operation blocked by hook` — Claude Code no te deja escribir
 
 Síntoma exacto, en cada prompt:

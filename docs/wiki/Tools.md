@@ -81,6 +81,11 @@ documento: aunque lleve un `CHANGELOG.md` cuyas líneas de contexto parecen tít
 prosa, y el prompt le explica al modelo cómo leerlo (cabecera de cada fichero, `+`/`-` frente al
 contexto).
 
+Desde la 0.48.0 (issue #539) un `path` con extensión de código nunca va por el resumen por
+secciones, y si un título del resumen copia una línea de un literal de cadena multilínea que es
+dato (un fixture Markdown dentro de un test, por ejemplo), la respuesta lo avisa con
+`[local-delegate warning: …]`.
+
 ## `local_classify`
 
 ```python
@@ -122,6 +127,11 @@ Dos cosas que conviene saber y solo estaban en el código:
   significar «no visto», no «no existe» (#473).
 - **Si respondió un modelo de respaldo**, lo dice en `_local_delegate.fallback` (qué modelo
   respondió, en lugar de cuál y por qué), nunca dentro de los campos pedidos.
+- **Exactamente las claves pedidas, también en modo libre** (desde la 0.48.0, #541). Si el modelo
+  omite una, vuelve como `null` (`_local_delegate.missing_keys`); si la escribe de otra forma
+  (`Name` ~ `name`, `endDate` ~ `end_date`) y el emparejamiento es único, se renombra
+  (`renamed_keys`); la que sobra sale de los datos y su valor queda en `_local_delegate.dropped`
+  (`dropped_keys`). `fields` vacío o solo con blancos da un error sin llamar al backend.
 
 ## `local_boilerplate`
 
@@ -143,6 +153,9 @@ modelo de respaldo, el aviso va en el recibo, detrás; el fichero solo lleva lo 
 `target` es obligatorio **a propósito**: como parámetro opcional, el ahorro dependería de que quien
 llama se acuerde de usarlo, y de eso hay tres mediciones seguidas con cero adopción. El código
 generado no vuelve a tu contexto; para verlo, abre el archivo.
+
+Desde la 0.48.0 (#542), con `overwrite=False` la escritura es de creación exclusiva: si `target`
+aparece mientras el modelo genera, la tool da el error de «ya existe» y no lo trunca.
 
 > **Cambió en la 0.27.0.** Antes devolvía el código. Si tienes una integración vieja que esperaba
 > recibirlo, ahora recibe el recibo.
@@ -226,6 +239,11 @@ Desde la 0.44.0 la precedencia es: `LOCAL_DELEGATE_COMMIT_LANGUAGE` → el idiom
 del repo que contiene el `path` (se leen los 20 últimos asuntos del reflog, sin lanzar `git`, y cuenta
 solo si al menos 5 se pueden clasificar y el 70 % coincide en español o inglés) → el idioma del
 producto. Un diff pasado como `diff=` o volcado en una carpeta temporal no tiene repo del que inferir.
+Desde la 0.48.0, con `path`, si el idioma salió del producto porque no había repo o sus commits no
+lo dejaban claro, el mensaje lleva detrás un `[local-delegate warning: …]` que dice qué idioma se
+usó y cómo cambiarlo (#546). En un worktree recién creado, cuyo reflog aún no tiene commits, se lee
+también el del git dir común (#548). El comando `/local-commit` del mod guarda el diff dentro del
+git dir del repo (se borra al terminar), así que toma el idioma del repo.
 
 **Anclado al diff.** Desde la 0.44.0, en el map-reduce el paso final recibe, calculados sin modelo,
 la lista de archivos con su estado (A/M/D/R) y las definiciones de primer nivel añadidas, quitadas o
@@ -289,6 +307,13 @@ de la pregunta (calculadas por programa) y no puede despacharse con «Nada relev
 recibe esas líneas de todo el fichero. Si aun así la respuesta dice que no hay información
 suficiente mientras la búsqueda exacta encuentra alguno de esos identificadores, se añade un aviso
 `[local-delegate warning: …]`: la respuesta no se da por buena y conviene leer esas líneas.
+
+**Premisa sin apoyo (desde la 0.48.0, issues #538 y #553).** Con `path` y `question`, si la
+respuesta afirma una palabra de la pregunta que el fichero no contiene (por raíz, sin acentos, también
+como cognado inglés), sin negarla en ninguna frase ni apoyarla en una línea citada o un identificador
+del fichero, lleva un aviso: puede estar confirmando la premisa de la pregunta. Una respuesta que
+niega la premisa («no hay retención: nunca borra») no avisa. Es una guarda por programa; el prompt
+no cambia.
 
 ## `local_describe_image`
 
