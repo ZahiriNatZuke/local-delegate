@@ -4498,6 +4498,13 @@ def _verified_lines(answer: str, question: str, content: str, truncated: bool = 
     if result.mismatched:
         cited = ", ".join(c.label() for c in result.mismatched)
         extra.append(f"{WARNING_MARKER}{i18n.t('mcp.explain.lines_unverified', lines=cited)}]")
+    # #538: a word of the question that the file does not hold, asserted by the answer in a
+    # sentence that neither negates it nor stands on the code, may be the question's premise
+    # confirmed («implicit retention» of backups that are never deleted): flagged, not judged.
+    premises = line_check.unsupported_premises(answer, question, content)
+    if premises:
+        terms = ", ".join(f"«{term}»" for term in premises)
+        extra.append(f"{WARNING_MARKER}{i18n.t('mcp.explain.premise_unsupported', terms=terms)}]")
     for name, lines in result.found:
         if not lines:
             extra.append(i18n.t("mcp.explain.occurrences_none", name=name))

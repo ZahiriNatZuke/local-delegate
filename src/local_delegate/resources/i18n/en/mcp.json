@@ -29,6 +29,7 @@
   "mcp.explain.contradiction": "the answer says there is not enough information, but the exact search finds {names} in the file (lines below): do not take it as valid, read those lines",
   "mcp.explain.not_mentioned": "Not mentioned (registered by the file, not named by the explanation): {items}",
   "mcp.explain.lines_unverified": "cited lines that do not contain what the answer cites them for; do not trust those numbers: {lines}",
+  "mcp.explain.premise_unsupported": "the answer asserts {terms}, words of the question that the file does not contain, in a sentence that cites no code backing it: it may be the question's premise rather than what the code does; check it before taking it as valid",
   "mcp.explain.occurrences": "Occurrences of `{name}` in the file (exact search): {lines}",
   "mcp.explain.occurrences_more": " …and {count} more",
   "mcp.explain.occurrences_none": "Occurrences of `{name}` in the file (exact search): none",

@@ -13,6 +13,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   («SDD sin cerrar: <slug> (<estado>)») y sugiere cerrarlos. Es un aviso, no bloquea. Varios SDD
   se habían quedado en `verifying` con su trabajo ya mezclado y publicado.
 
+### Corregido
+
+- **`local_explain_code` ya no confirma sin aviso la premisa de la pregunta.** Preguntado «¿cómo
+  gestiona los backups y su retención?» sobre un módulo que nunca borra un backup, respondió que
+  había una «retención implícita», sin aviso. Ahora, con `path` y pregunta, si la respuesta afirma
+  una palabra de la pregunta que el fichero no contiene (comparando sus primeras letras, sin
+  acentos ni mayúsculas) en una frase que no la niega ni se apoya en el código (una línea citada
+  que contiene lo que cita, o un identificador que está en el fichero), lleva un aviso que dice
+  que puede ser la premisa de la pregunta. La respuesta que niega la premisa («no hay retención:
+  nunca borra») no avisa. Es una guarda por programa; el prompt no cambia (#538).
+
 ## [0.47.3] - 2026-11-02
 
 Arreglo de `local_explain_code`: con `path`, la respuesta podía empezar con el prefijo de línea
