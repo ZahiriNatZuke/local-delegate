@@ -8157,3 +8157,79 @@ def prepare_ctrl_break() -> None:
         # una mejora del cierre, no un requisito para servir, así que no poder hacerlo jamás debe
         # impedir que el servidor arranque.
         pass
+
+
+# --- Turn wait made visible (issue #537) ------------------------------------------------------
+
+
+def _turn_wait_notice() -> tuple[int, str] | None:
+    """The seconds this call waited for the common turn and their notice, or `None`.
+
+    `None` below `config.TURN_WAIT_NOTICE_S` (`0`: never) or outside a tool call. The wait is the
+    one the call's token summed over all its operations (`turn_wait_ms`, the same as the log).
+    """
+    threshold = config.TURN_WAIT_NOTICE_S
+    token = cancellation.current()
+    if threshold <= 0 or token is None:
+        return None
+    waited_s = token.turn_wait_ms / 1000
+    if waited_s < threshold:
+        return None
+    seconds = round(waited_s)
+    return seconds, i18n.t("mcp.warning.turn_wait", seconds=_machine(seconds))
+
+
+def _add_turn_wait_notice(result: Any) -> Any:
+    """The tool's result with the turn wait notice, if any (issue #537).
+
+    Text: a `WARNING_MARKER` line at the end, like the other notices. A dict (`local_extract`):
+    `_local_delegate.turn_wait`, and `warning` only if none is there (another warning keeps its
+    exact text). Anything else, or any failure building it, returns the result untouched.
+    """
+    try:
+        found = _turn_wait_notice()
+        if found is None:
+            return result
+        seconds, notice = found
+        if isinstance(result, str):
+            return f"{result}\n\n{WARNING_MARKER}{notice}]"
+        if isinstance(result, dict):
+            meta = result.get("_local_delegate")
+            meta = dict(meta) if isinstance(meta, dict) else {}
+            meta["turn_wait"] = {"seconds": seconds, "notice": notice}
+            meta.setdefault("warning", notice)
+            return {**result, "_local_delegate": meta}
+    except Exception:
+        pass  # a notice never breaks the answer
+    return result
+
+
+def _with_turn_wait_notice(fn: Callable[..., Any]) -> Callable[..., Any]:
+    """`fn` returning its result through `_add_turn_wait_notice`.
+
+    No `functools.wraps`: the SDK built the tool's schema from `fn` already, and `__wrapped__` is
+    enough to reach the original.
+    """
+
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return _add_turn_wait_notice(fn(*args, **kwargs))
+
+    wrapper.__wrapped__ = fn  # type: ignore[attr-defined]
+    wrapper.__turn_wait_notice__ = True  # type: ignore[attr-defined]
+    return wrapper
+
+
+def _install_turn_wait_notice() -> None:
+    """Wraps every registered tool once, after registration (issue #537).
+
+    The schema was built from the original function at `@mcp.tool`, so it does not change; only
+    what runs does. One place for every tool, and the tool bodies stay as they are. The module-level
+    functions stay unwrapped: a direct call (tests, hooks) has no call token and no notice anyway.
+    """
+    for tool in mcp._tool_manager.list_tools():
+        if tool.is_async or getattr(tool.fn, "__turn_wait_notice__", False):
+            continue
+        tool.fn = _with_turn_wait_notice(tool.fn)
+
+
+_install_turn_wait_notice()

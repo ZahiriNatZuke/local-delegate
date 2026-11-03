@@ -12,6 +12,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `--dry-run`, lista cada carpeta de `.sdd/changes/` cuyo `state.json` no está en `closed`
   («SDD sin cerrar: <slug> (<estado>)») y sugiere cerrarlos. Es un aviso, no bloquea. Varios SDD
   se habían quedado en `verifying` con su trabajo ya mezclado y publicado.
+- **Aviso de espera larga del turno común.** Si una llamada esperó el turno al menos
+  `LOCAL_DELEGATE_TURN_WAIT_NOTICE_S` (60 s; `0` lo desactiva), su respuesta termina con un aviso
+  `[local-delegate warning: …]` que dice cuánto esperó, que fue cola de otras delegaciones y no
+  lentitud del modelo, y que agrupar las llamadas por tool lo reduce; en `local_extract` va en
+  `_local_delegate.turn_wait` (y en `warning` si no había otro aviso). Vale para todas las tools.
+  Una ráfaga que alterna tools de modelos que no caben juntos puede esperar minutos: un resumen
+  tardó 343 s, 292 de ellos en el turno, y parecía un modelo lento. README y wiki
+  (Troubleshooting, Configuration) explican el caso (#537).
 
 ## [0.47.3] - 2026-11-02
 
