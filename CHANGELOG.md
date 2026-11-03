@@ -21,6 +21,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   «[escrito]» sin aviso. Ahora la escritura es de creación exclusiva y ese caso da el mismo error
   de «ya existe», con el archivo del usuario intacto. Con `overwrite=True` se escribe a un
   temporal del mismo directorio y se sustituye con `os.replace`, sin dejar temporales si falla.
+  Si la escritura falla, la fila del log de uso ya no marca `output_to_file`, así que el panel no
+  cuenta como ahorro una salida que no llegó a disco.
 
 ## [0.47.3] - 2026-11-02
 

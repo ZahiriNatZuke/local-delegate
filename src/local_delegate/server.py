@@ -4108,6 +4108,24 @@ def _chat(
             fallback_notice = _fallback_notice(fallback_info)
     if write_to is None:
         text += fallback_notice
+    # Un fallo del backend NO se escribe al archivo: `result.text` trae el mensaje de error, y
+    # dejarlo en disco con nombre de código fuente sería peor que no escribir nada. Se devuelve
+    # tal cual, igual que en cualquier otra tool.
+    # La escritura va ANTES del registro para que `output_to_file` diga lo que pasó de verdad:
+    # si falla (el destino apareció durante la inferencia, o `os.replace` no pudo), la fila no
+    # cuenta como ahorro una salida que nunca llegó a disco. El error se relanza tras registrar.
+    receipt: str | None = None
+    write_error: Exception | None = None
+    if write_to is not None and result.ok:
+        try:
+            receipt = _write_target(
+                write_to,
+                text,
+                event=cost.in_flight_row(tool=tool, source=source, path=path),
+                overwrite=write_overwrite,
+            )
+        except Exception as exc:
+            write_error = exc
     _log_event(
         tool=tool,
         model=served,
@@ -4127,7 +4145,7 @@ def _chat(
         path=path if source == "path" else None,
         json_schema=json_schema_status,
         input_unit=input_unit,
-        output_to_file=write_to is not None and result.ok,
+        output_to_file=receipt is not None,
         chunks=len(attempts),
         model_requested=model if fallback_info or op.affinity else None,
         fallback_reason=fallback_info["reason"] if fallback_info else None,
@@ -4141,20 +4159,10 @@ def _chat(
         **op.log_fields(),
         **_backend_params_log_fields(role_params),
     )
-    # Un fallo del backend NO se escribe al archivo: `result.text` trae el mensaje de error, y
-    # dejarlo en disco con nombre de código fuente sería peor que no escribir nada. Se devuelve
-    # tal cual, igual que en cualquier otra tool.
-    if write_to is not None and result.ok:
-        return (
-            _write_target(
-                write_to,
-                text,
-                event=cost.in_flight_row(tool=tool, source=source, path=path),
-                overwrite=write_overwrite,
-            )
-            + (truncation_notice if truncated_out else "")
-            + fallback_notice
-        )
+    if write_error is not None:
+        raise write_error
+    if receipt is not None:
+        return receipt + (truncation_notice if truncated_out else "") + fallback_notice
     # `feedback=False` lo usa quien va a PARSEAR el resultado: anexar la línea de ahorro al texto
     # rompería un JSON válido. Ver `local_extract`, que la recoloca dentro de `_local_delegate`.
     if feedback and source == "path" and result.ok and config.FEEDBACK_ENABLED:

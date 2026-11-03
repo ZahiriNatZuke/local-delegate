@@ -199,6 +199,25 @@ def test_a_file_created_during_generation_is_not_overwritten(tmp_path):
 
 
 @backend_mock.mock
+def test_the_race_does_not_record_output_savings(tmp_path, monkeypatch):
+    """Si la escritura falla, la fila no puede contar como ahorro una salida que no llegó."""
+    monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", False)
+    log = tmp_path / "usage.jsonl"
+    monkeypatch.setattr(config, "USAGE_LOG", log)
+    dest = tmp_path / "out" / "race.py"
+    dest.parent.mkdir()
+    _reply_with_race(dest, "TRABAJO DEL USUARIO\n", "print('generado')\n")
+
+    with pytest.raises(ValueError, match="overwrite"):
+        server.local_boilerplate("algo", "python", str(dest))
+
+    event = json.loads(log.read_text(encoding="utf-8").strip().splitlines()[-1])
+    assert event["tool"] == "local_boilerplate"  # guarda: la fila de esta llamada sí se registró
+    assert event["ok"] is True  # el backend respondió; lo que falló fue la escritura
+    assert not event.get("output_to_file")
+
+
+@backend_mock.mock
 def test_overwrite_true_replaces_a_file_created_during_generation(tmp_path):
     dest = tmp_path / "out" / "race.py"
     dest.parent.mkdir()
