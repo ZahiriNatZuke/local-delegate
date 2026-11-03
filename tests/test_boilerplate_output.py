@@ -12,6 +12,7 @@ peor de los dos errores posibles.
 from __future__ import annotations
 
 import json
+import os
 
 import backend_mock
 import httpx2
@@ -227,26 +228,30 @@ def test_overwrite_true_replaces_a_file_created_during_generation(tmp_path):
 
     assert output.startswith("[escrito] ")
     assert dest.read_bytes() == b"print('generado')\n"
-    assert sorted(p.name for p in dest.parent.iterdir()) == ["race.py"]  # sin temporales
 
 
 @backend_mock.mock
-def test_overwrite_true_leaves_no_temporary_when_the_replace_fails(tmp_path, monkeypatch):
+def test_overwrite_true_writes_through_a_symlink(tmp_path):
+    """Con `overwrite=True` el enlace sigue siendo enlace y su destino recibe el contenido.
+
+    Sustituir el enlace por un archivo normal (lo que haría un temporal + `os.replace`) rompería
+    unos dotfiles enlazados o un archivo compartido entre proyectos.
+    """
     _reply("codigo nuevo\n")
-    dest = tmp_path / "out" / "already.py"
-    dest.parent.mkdir()
-    dest.write_text("viejo\n", encoding="utf-8")
+    real = tmp_path / "real" / "shared.py"
+    real.parent.mkdir()
+    real.write_text("viejo\n", encoding="utf-8")
+    link = tmp_path / "out" / "link.py"
+    link.parent.mkdir()
+    try:
+        os.symlink(real, link)
+    except OSError as exc:  # Windows without Developer Mode or admin rights
+        pytest.skip(f"file symlinks need a privilege here: {exc}")
 
-    def _failing_replace(src, dst):
-        raise PermissionError("bloqueado")
+    server.local_boilerplate("otra cosa", "python", str(link), overwrite=True)
 
-    monkeypatch.setattr(server.os, "replace", _failing_replace)
-
-    with pytest.raises(PermissionError):
-        server.local_boilerplate("otra cosa", "python", str(dest), overwrite=True)
-
-    assert dest.read_text(encoding="utf-8") == "viejo\n"
-    assert sorted(p.name for p in dest.parent.iterdir()) == ["already.py"]
+    assert link.is_symlink()
+    assert real.read_bytes() == b"codigo nuevo\n"
 
 
 @backend_mock.mock

@@ -1013,8 +1013,10 @@ def _write_target(p: Path, content: str, *, event: dict, overwrite: bool = False
     `_validate_target` ya miró `exists()`, pero ANTES de una inferencia que puede durar minutos:
     si alguien crea el archivo entretanto, abrirlo con `"w"` lo truncaría sin avisar. Por eso,
     sin `overwrite`, la creación es exclusiva (`"x"`) y un archivo aparecido a destiempo da el
-    mismo error de «ya existe». Con `overwrite`, se escribe a un temporal del mismo directorio y
-    se sustituye de una vez con `os.replace`: nunca queda a medias el archivo de destino.
+    mismo error de «ya existe». Con `overwrite` se abre con `"w"` sobre el destino, como siempre:
+    así se sigue el symlink en vez de sustituirlo, se conservan permisos y enlaces duros, un
+    archivo de solo lectura sigue fallando, y en Windows se puede escribir aunque otro proceso
+    (IDE, vigilante, antivirus) lo tenga abierto, cosa que un `os.replace` no permite.
     """
     # Salto final garantizado: `_post_chat` y `_strip_fences` hacen `.strip()`, así que el texto
     # llega aquí sin él y el archivo saldría sin newline al final — cosa que la mitad de los
@@ -1024,23 +1026,12 @@ def _write_target(p: Path, content: str, *, event: dict, overwrite: bool = False
     p.parent.mkdir(parents=True, exist_ok=True)
     # newline explícito: el separador del archivo generado no debe depender de en qué sistema
     # operativo corra el daemon.
-    if overwrite:
-        tmp = p.with_name(f".{p.name}.{os.getpid()}.{threading.get_ident()}.tmp")
-        try:
-            with open(tmp, "x", encoding="utf-8", newline="\n") as fh:
-                fh.write(content)
-            os.replace(tmp, p)
-        except BaseException:
-            with suppress(OSError):
-                tmp.unlink()
-            raise
-    else:
-        try:
-            fh = open(p, "x", encoding="utf-8", newline="\n")  # noqa: SIM115
-        except FileExistsError:
-            raise ValueError(i18n.t("mcp.input.target_exists", target=p)) from None
-        with fh:
-            fh.write(content)
+    try:
+        fh = open(p, "w" if overwrite else "x", encoding="utf-8", newline="\n")  # noqa: SIM115
+    except FileExistsError:
+        raise ValueError(i18n.t("mcp.input.target_exists", target=p)) from None
+    with fh:
+        fh.write(content)
     receipt = i18n.t(
         "mcp.receipt.written",
         path=p,
@@ -4112,7 +4103,7 @@ def _chat(
     # dejarlo en disco con nombre de código fuente sería peor que no escribir nada. Se devuelve
     # tal cual, igual que en cualquier otra tool.
     # La escritura va ANTES del registro para que `output_to_file` diga lo que pasó de verdad:
-    # si falla (el destino apareció durante la inferencia, o `os.replace` no pudo), la fila no
+    # si falla (el destino apareció durante la inferencia, o el sistema no deja escribir), la fila no
     # cuenta como ahorro una salida que nunca llegó a disco. El error se relanza tras registrar.
     receipt: str | None = None
     write_error: Exception | None = None

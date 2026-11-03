@@ -19,8 +19,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   se comprobaba que `target` no existía antes de la inferencia, pero se abría con `"w"` después:
   si el archivo aparecía en ese intervalo (que puede durar minutos), se truncaba y el recibo decía
   «[escrito]» sin aviso. Ahora la escritura es de creación exclusiva y ese caso da el mismo error
-  de «ya existe», con el archivo del usuario intacto. Con `overwrite=True` se escribe a un
-  temporal del mismo directorio y se sustituye con `os.replace`, sin dejar temporales si falla.
+  de «ya existe», con el archivo del usuario intacto. Con `overwrite=True` no cambia nada: se
+  sigue escribiendo sobre el destino (respeta symlinks, permisos y enlaces duros).
   Si la escritura falla, la fila del log de uso ya no marca `output_to_file`, así que el panel no
   cuenta como ahorro una salida que no llegó a disco.
 
