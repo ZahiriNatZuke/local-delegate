@@ -87,6 +87,22 @@ def test_zero_disables_it(monkeypatch):
     assert _in_call(900_000, lambda: server._add_turn_wait_notice("summary")) == "summary"
 
 
+def test_error_text_is_left_alone():
+    error = f"{server.ERROR_PREFIX}read_timeout: the model did not answer"
+    assert _in_call(900_000, lambda: server._add_turn_wait_notice(error)) == error
+
+
+@pytest.mark.parametrize("language", ["es", "en"])
+def test_notice_goes_before_the_trailing_receipt_lines(language):
+    with i18n.override(language):
+        read = i18n.t("mcp.receipt.read_server_side", amount="10", unit="chars")
+        passes = i18n.t("mcp.receipt.map_reduce", parts=4, calls=5)
+        text = f"summary\n\n(an aside of the model)\n\n{passes}\n\n{read}"
+        out = _in_call(120_000, lambda: server._add_turn_wait_notice(text))
+        notice = f"{server.WARNING_MARKER}{_notice(120)}]"
+    assert out == f"summary\n\n(an aside of the model)\n\n{notice}\n\n{passes}\n\n{read}"
+
+
 def test_other_types_pass_through():
     value = ["a", "b"]
     assert _in_call(900_000, lambda: server._add_turn_wait_notice(value)) is value
@@ -141,11 +157,15 @@ def test_every_registered_tool_is_wrapped_once():
     tools = server.mcp._tool_manager.list_tools()
     assert len(tools) >= 10  # guard: the registry is the real one
     for tool in tools:
+        if tool.name in server._TURN_WAIT_NOTICE_EXCLUDED:
+            assert not getattr(tool.fn, "__turn_wait_notice__", False), tool.name
+            continue
         assert getattr(tool.fn, "__turn_wait_notice__", False), tool.name
         assert not getattr(tool.fn.__wrapped__, "__turn_wait_notice__", False), tool.name
     server._install_turn_wait_notice()  # idempotent: a second pass does not wrap again
     for tool in server.mcp._tool_manager.list_tools():
-        assert not getattr(tool.fn.__wrapped__, "__turn_wait_notice__", False), tool.name
+        if tool.name not in server._TURN_WAIT_NOTICE_EXCLUDED:
+            assert not getattr(tool.fn.__wrapped__, "__turn_wait_notice__", False), tool.name
 
 
 def _fake_chat(waited_ms: int, answer: str):
@@ -170,19 +190,41 @@ def _text(result) -> str:
     return "\n".join(b.text for b in result.content if getattr(b, "type", "") == "text")
 
 
-def test_mcp_text_tool_gets_the_notice(monkeypatch):
-    monkeypatch.setattr(server, "_chat", _fake_chat(292_000, "positive"))
-    result = _call("local_classify", {"text": "great", "labels": ["positive", "negative"]})
+def _receipt() -> str:
+    return i18n.t("mcp.receipt.chunked", calls=2)
+
+
+def test_mcp_text_tool_gets_the_notice_before_the_receipt(monkeypatch):
+    answer = f"hola\n\n{_receipt()}"
+    monkeypatch.setattr(server, "_chat_chunked", _fake_chat(292_000, answer))
+    result = _call("local_translate", {"target_lang": "Spanish", "text": "hello"})
     assert getattr(result, "is_error", False) is not True, result
-    assert result.structured_content["result"] == (
-        f"positive\n\n{server.WARNING_MARKER}{_notice(292)}]"
-    )
+    notice = f"{server.WARNING_MARKER}{_notice(292)}]"
+    assert result.structured_content["result"] == f"hola\n\n{notice}\n\n{_receipt()}"
 
 
 def test_mcp_text_tool_without_wait_is_unchanged(monkeypatch):
-    monkeypatch.setattr(server, "_chat", _fake_chat(10_000, "positive"))
+    answer = f"hola\n\n{_receipt()}"
+    monkeypatch.setattr(server, "_chat_chunked", _fake_chat(10_000, answer))
+    result = _call("local_translate", {"target_lang": "Spanish", "text": "hello"})
+    assert result.structured_content["result"] == answer
+
+
+def test_mcp_classify_keeps_the_exact_label(monkeypatch):
+    """`local_classify` returns one label of the list: a notice would break whoever compares it."""
+    monkeypatch.setattr(server, "_chat", _fake_chat(292_000, "positive"))
     result = _call("local_classify", {"text": "great", "labels": ["positive", "negative"]})
+    assert getattr(result, "is_error", False) is not True, result
     assert result.structured_content["result"] == "positive"
+
+
+def test_mcp_error_gets_no_notice(monkeypatch):
+    """An error would read «it was the queue, not the model» right under a model timeout."""
+    error = f"{server.ERROR_PREFIX}read_timeout: the model did not answer"
+    monkeypatch.setattr(server, "_chat_chunked", _fake_chat(292_000, error))
+    result = _call("local_translate", {"target_lang": "Spanish", "text": "hello"})
+    assert server.WARNING_MARKER not in _text(result)
+    assert error in _text(result)
 
 
 def test_mcp_extract_gets_it_inside_local_delegate(monkeypatch):

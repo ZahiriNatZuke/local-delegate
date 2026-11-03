@@ -13,10 +13,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   («SDD sin cerrar: <slug> (<estado>)») y sugiere cerrarlos. Es un aviso, no bloquea. Varios SDD
   se habían quedado en `verifying` con su trabajo ya mezclado y publicado.
 - **Aviso de espera larga del turno común.** Si una llamada esperó el turno al menos
-  `LOCAL_DELEGATE_TURN_WAIT_NOTICE_S` (60 s; `0` lo desactiva), su respuesta termina con un aviso
-  `[local-delegate warning: …]` que dice cuánto esperó, que fue cola de otras delegaciones y no
-  lentitud del modelo, y que agrupar las llamadas por tool lo reduce; en `local_extract` va en
-  `_local_delegate.turn_wait` (y en `warning` si no había otro aviso). Vale para todas las tools.
+  `LOCAL_DELEGATE_TURN_WAIT_NOTICE_S` (60 s; `0` lo desactiva), su respuesta lleva un aviso
+  `[local-delegate warning: …]` (junto a los demás avisos, antes de las líneas de ahorro) que dice
+  cuánto esperó, que fue cola de otras delegaciones y no lentitud del modelo, y que agrupar las
+  llamadas por tool lo reduce; en `local_extract` va en `_local_delegate.turn_wait` (y en
+  `warning` si no había otro aviso). Vale para todas las tools salvo `local_classify`, cuya
+  respuesta es la etiqueta exacta, y no se añade a una respuesta de error
+  (`[local-delegate error]`), que ya dice qué falló; la espera sigue en el log (`turn_wait_ms`).
   Una ráfaga que alterna tools de modelos que no caben juntos puede esperar minutos: un resumen
   tardó 343 s, 292 de ellos en el turno, y parecía un modelo lento. README y wiki
   (Troubleshooting, Configuration) explican el caso (#537).

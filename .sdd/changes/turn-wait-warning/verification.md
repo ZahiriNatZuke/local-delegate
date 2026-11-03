@@ -38,6 +38,18 @@ Without a declaration, list what was run. Never invent a command. -->
 - [x] Secret scanning passes.
 - [x] No unrelated changes are present.
 
+## Review follow-up (independent review of PR #544)
+
+| Finding | Change | Check | Result |
+| --- | --- | --- | --- |
+| Notice contradicted an error («queue, not the model» under a `read_timeout`) | no notice on a `str` starting with `ERROR_PREFIX`; the wait stays in the log | `test_error_text_is_left_alone`, `test_mcp_error_gets_no_notice` | pass; guard removed → both fail on the notice being present |
+| `local_classify` answer is an exact label | `_TURN_WAIT_NOTICE_EXCLUDED = {"local_classify"}`, left unwrapped | `test_mcp_classify_keeps_the_exact_label`, registry test | pass; exclusion emptied → fails with `'positive\n\n…' == 'positive'` |
+| Notice after the savings receipt | inserted before the trailing receipt paragraphs (`_RECEIPT_KEYS` prefixes in the current language) | `test_notice_goes_before_the_trailing_receipt_lines[es,en]`, MCP `local_translate` test | pass; loop disabled → 3 fail |
+
+Other exact-consumed outputs checked: `local_commit_msg` is only shown by the mod (it never runs
+`git commit`) and already carries fallback notices; `local_boilerplate` gets the notice in its
+receipt, never in the file; `local_status` never takes the turn. Only `local_classify` excluded.
+
 ## Deviations and residual risk
 
 - The wrapper replaces `Tool.fn` through `mcp._tool_manager` (SDK-internal, already used by the

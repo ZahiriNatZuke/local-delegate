@@ -8179,20 +8179,63 @@ def _turn_wait_notice() -> tuple[int, str] | None:
     return seconds, i18n.t("mcp.warning.turn_wait", seconds=_machine(seconds))
 
 
+#: The receipt lines a tool appends after its notices: `(leído server-side: …)`, `(resumido de …)`…
+_RECEIPT_KEYS = (
+    "mcp.receipt.read_server_side",
+    "mcp.receipt.read_server_side_tokens",
+    "mcp.receipt.chunked",
+    "mcp.receipt.map_reduce",
+    "mcp.receipt.commit_scope",
+)
+
+#: Tools whose answer is consumed exactly, so a notice would break it: `local_classify` returns one
+#: label of the list, and whoever compares it with the labels fails if a line is added.
+_TURN_WAIT_NOTICE_EXCLUDED = frozenset({"local_classify"})
+
+
+def _before_receipt_lines(text: str, notice: str) -> str:
+    """`text` with `notice` as a paragraph after the content and before the trailing receipts.
+
+    A receipt is a trailing paragraph that starts like one of `_RECEIPT_KEYS` in the current
+    language (the text before its first placeholder), so model text is never taken for one unless
+    it ends with exactly such a paragraph.
+    """
+    prefixes = tuple(
+        p
+        for key in _RECEIPT_KEYS
+        if (p := i18n.t(key, **dict.fromkeys(_RECEIPT_FIELDS, "\x00")).split("\x00")[0])
+    )
+    paragraphs = text.split("\n\n")
+    cut = len(paragraphs)
+    while cut > 1 and paragraphs[cut - 1].startswith(prefixes):
+        cut -= 1
+    return "\n\n".join([*paragraphs[:cut], notice, *paragraphs[cut:]])
+
+
+_RECEIPT_FIELDS = ("amount", "unit", "tokens", "calls", "parts", "files", "chars")
+
+
 def _add_turn_wait_notice(result: Any) -> Any:
     """The tool's result with the turn wait notice, if any (issue #537).
 
-    Text: a `WARNING_MARKER` line at the end, like the other notices. A dict (`local_extract`):
-    `_local_delegate.turn_wait`, and `warning` only if none is there (another warning keeps its
-    exact text). Anything else, or any failure building it, returns the result untouched.
+    Text: a `WARNING_MARKER` paragraph with the other notices, before the trailing receipt lines
+    (`_RECEIPT_KEYS`). A dict (`local_extract`): `_local_delegate.turn_wait`, and `warning` only if
+    none is there (another warning keeps its exact text). Anything else, or any failure building
+    it, returns the result untouched.
+
+    An error (`ERROR_PREFIX`) gets nothing: the notice says the time was the queue and not the
+    model, which would contradict an error such as a `read_timeout`; the error text already says
+    what failed, and the wait stays in the log (`turn_wait_ms`).
     """
     try:
+        if isinstance(result, str) and result.startswith(ERROR_PREFIX):
+            return result
         found = _turn_wait_notice()
         if found is None:
             return result
         seconds, notice = found
         if isinstance(result, str):
-            return f"{result}\n\n{WARNING_MARKER}{notice}]"
+            return _before_receipt_lines(result, f"{WARNING_MARKER}{notice}]")
         if isinstance(result, dict):
             meta = result.get("_local_delegate")
             meta = dict(meta) if isinstance(meta, dict) else {}
@@ -8225,8 +8268,11 @@ def _install_turn_wait_notice() -> None:
     The schema was built from the original function at `@mcp.tool`, so it does not change; only
     what runs does. One place for every tool, and the tool bodies stay as they are. The module-level
     functions stay unwrapped: a direct call (tests, hooks) has no call token and no notice anyway.
+    The tools of `_TURN_WAIT_NOTICE_EXCLUDED` are left as they are.
     """
     for tool in mcp._tool_manager.list_tools():
+        if tool.name in _TURN_WAIT_NOTICE_EXCLUDED:
+            continue
         if tool.is_async or getattr(tool.fn, "__turn_wait_notice__", False):
             continue
         tool.fn = _with_turn_wait_notice(tool.fn)
