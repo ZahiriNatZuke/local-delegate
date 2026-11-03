@@ -184,6 +184,7 @@
   "mcp.warning.output_truncated_calls": "output truncated by max_tokens in {truncated} of {calls} calls; part of the content may be missing",
   "mcp.warning.retried_calls": " (besides, {retried} cut calls were redone on smaller chunks)",
   "mcp.warning.regroup_stopped": "the partial notes could not be combined into one answer after {calls} calls: they are returned grouped and in order",
+  "mcp.warning.turn_wait": "this call waited {seconds} s for the common turn behind other delegations: it was the queue, not a slow model; grouping the calls by tool (not alternating tools of different models) reduces it",
   "mcp.warning.truncated_pieces": "; affected chunks: {pieces}",
   "mcp.warning.truncated_piece_lines": "{piece} (lines {first}-{last})",
   "mcp.warning.extract_dropped_keys": "the model returned keys that were not requested, left out of the data (their values are in `dropped`): {fields}",
