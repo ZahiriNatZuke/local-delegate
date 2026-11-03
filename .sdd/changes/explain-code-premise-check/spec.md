@@ -29,6 +29,12 @@ question that the file does not support, and stays silent when the answer denies
   - Request: "derived: the #460 contract (inline code and no question stay byte for byte)"
   - Verify: test tests/test_explain_code_premise.py::test_without_path_nothing_is_added
 
+- **REQ-005** — The denial is judged per word (#553): if any sentence of the answer that names the
+  word (as written or as its English cognate) denies it, the word does not warn in any sentence;
+  «no solo», «sin embargo», «not only» do not deny. The warning text has a space after its colon.
+  - Request: "si **alguna** frase de la respuesta niega el término (o su cognado) [...] ese término no avisa en ninguna frase"
+  - Verify: test tests/test_explain_code_premise.py::test_a_word_denied_in_one_sentence_does_not_warn_in_another
+
 ## Acceptance scenarios
 
 ### Scenario: the issue case
@@ -53,6 +59,10 @@ question that the file does not support, and stays silent when the answer denies
   (sesión/session). -dad/-ty (caducidad/expiry) cannot be fixed with a prefix. To be measured live.
 - Cognates with a soft `c` (rotación/TimedRotatingFileHandler, inicialización/`__init__`,
   duración/duration, creación/create) are held by the file and do not warn.
+
+- Known miss of REQ-005: a negation in a sentence that names the word is taken as denying it,
+  without parsing what it denies («La retención es implícita, ya que no se borra nada» does not
+  warn). Limiting negations («no solo», «not only») and connectors («sin embargo») are excluded.
 
 ## Non-functional requirements
 

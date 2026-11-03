@@ -327,10 +327,14 @@ def unsupported_premises(
 ) -> list[str]:
     """#538: the words of the question the answer asserts with nothing in the file behind them.
 
-    A word counts when the file does not hold it (`premise_terms`) and the answer uses it in a
-    sentence that does not negate it and is not anchored (`_anchored`). «No hay retención: nunca
-    borra» negates it; «la retención es implícita» asserts it. Fenced code is not prose. With
-    `truncated`, as in `check`, the last line is not judged: its citation may be cut in half.
+    A word counts when the file does not hold it (`premise_terms`), no sentence of the answer
+    that names it denies (`_denies`), and some sentence names it without standing on the code
+    (`_anchored`). #553: the denial is judged per word, not per sentence: «no implementa ninguna
+    política de retención… La retención es ilimitada» already answers the premise, and its second
+    sentence is not a fresh claim. «La retención es implícita» alone asserts it. The word is
+    matched by its stem as written or as its English cognate (`rotac`/`rotat`). Fenced code is not
+    prose. With `truncated`, as in `check`, the last line is not judged: its citation may be cut
+    in half.
     """
     terms = premise_terms(question, content)
     if not terms:
@@ -341,14 +345,33 @@ def unsupported_premises(
     sentences = [s for s in _SENTENCE_END.split(_without_fences(answer)) if s.strip()]
     out: list[str] = []
     for term in terms:
-        stem = re.compile(r"(?<![^\W\d_])" + re.escape(_fold(term)[:PREMISE_STEM_LEN]))
-        for sentence in sentences:
-            if not stem.search(_fold(sentence)) or _NEGATION.search(sentence):
-                continue
-            if not _anchored(sentence, question, content, lines):
-                out.append(term)
-                break
+        folded_term = _fold(term)
+        stems = {folded_term[:PREMISE_STEM_LEN], _SOFT_C.sub("t", folded_term)[:PREMISE_STEM_LEN]}
+        stem = re.compile(r"(?<![^\W\d_])(?:" + "|".join(map(re.escape, sorted(stems))) + ")")
+        naming = [s for s in sentences if stem.search(_fold(s))]
+        if any(_denies(s) for s in naming):
+            continue
+        if any(not _anchored(s, question, content, lines) for s in naming):
+            out.append(term)
     return out
+
+
+#: #553: words after «no»/«not» that limit instead of deny: «no solo aplica retención, sino…».
+_NOT_ONLY = re.compile(
+    r"(?i)\s+(?:s[o\xf3]lo|solamente|[u\xfa]nicamente|only|just|merely|simply)\b"
+)
+#: Connectors that carry a negation word and deny nothing: «sin embargo», «no obstante».
+_CONNECTOR = re.compile(r"(?i)\b(?:sin\s+embargo|no\s+obstante|nonetheless|nevertheless)\b")
+
+
+def _denies(sentence: str) -> bool:
+    """Whether `sentence` holds a negation that denies: not «no solo…» nor «sin embargo».
+
+    The negation may fall anywhere in the sentence that names the word («Respecto a la retención,
+    el código no implementa ninguna política de eliminación»): what it denies is not parsed.
+    """
+    text = _CONNECTOR.sub(" ", sentence)
+    return any(not _NOT_ONLY.match(text, m.end()) for m in _NEGATION.finditer(text))
 
 
 @dataclass(frozen=True)

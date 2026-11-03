@@ -29,7 +29,7 @@
   "mcp.explain.contradiction": "la respuesta dice que no hay información suficiente, pero la búsqueda exacta encuentra {names} en el fichero (líneas abajo): no la des por buena, lee esas líneas",
   "mcp.explain.not_mentioned": "Sin mencionar (los registra el fichero, no los nombra la explicación): {items}",
   "mcp.explain.lines_unverified": "líneas citadas que no contienen lo que la respuesta cita en ellas; no te fíes de esos números: {lines}",
-  "mcp.explain.premise_unsupported": "la respuesta afirma {terms}, de la pregunta, y la búsqueda no encuentra esas palabras en el fichero ni una cita que lo respalde:puede ser la premisa de la pregunta y no lo que hace el código; compruébalo antes de darlo por bueno",
+  "mcp.explain.premise_unsupported": "la respuesta afirma {terms}, de la pregunta, y la búsqueda no encuentra esas palabras en el fichero ni una cita que lo respalde: puede ser la premisa de la pregunta y no lo que hace el código; compruébalo antes de darlo por bueno",
   "mcp.explain.occurrences": "Apariciones de `{name}` en el fichero (búsqueda exacta): {lines}",
   "mcp.explain.occurrences_more": " …y {count} más",
   "mcp.explain.occurrences_none": "Apariciones de `{name}` en el fichero (búsqueda exacta): ninguna",
