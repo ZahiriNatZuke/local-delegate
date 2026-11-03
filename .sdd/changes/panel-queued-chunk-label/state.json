@@ -4,9 +4,9 @@
   "title": "Panel: queued chunked rows say which chunk waits and for how long",
   "mode": "lite",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-11-03T18:36:56.217Z",
-  "updatedAt": "2026-11-03T19:19:32.656Z",
+  "updatedAt": "2026-11-03T22:13:10.697Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,22 +21,22 @@
       "actor": "orquestador"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-03T22:12:21.513Z",
+      "evidence": "PR #550 (issues #547 y #551) mezclado con los 22 checks del CI en verde (tests en Windows, Mac y Linux, matriz 3.11-3.15, CodeQL, lint); suite completa local sin fallos propios; control positivo con mutantes documentado en verification.md; revisión independiente de regresiones hecha y sus hallazgos corregidos antes de mezclar.",
+      "actor": "orquestador"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-03T22:13:10.082Z",
+      "evidence": "Comprobado contra la spec y en vivo con el backend real el 2026-11-03 (ventanas test-window w-20261103T205544Z y w-20261103T221037Z); review.md con veredicto; main en verde tras la mezcla.",
+      "actor": "orquestador"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-03T22:13:10.481Z",
+      "evidence": "Jornada en el vault: projects/local-delegate/jornada-2026-11-03-issues-del-dia-y-la-0-48-0.md",
+      "actor": "orquestador"
     }
   },
   "history": [
@@ -104,6 +104,51 @@
       "to": "verifying",
       "at": "2026-11-03T19:19:32.656Z",
       "reason": "implemented; tests, mutants and screenshots done"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-03T22:12:21.513Z",
+      "evidence": "PR #550 (issues #547 y #551) mezclado con los 22 checks del CI en verde (tests en Windows, Mac y Linux, matriz 3.11-3.15, CodeQL, lint); suite completa local sin fallos propios; control positivo con mutantes documentado en verification.md; revisión independiente de regresiones hecha y sus hallazgos corregidos antes de mezclar.",
+      "actor": "orquestador"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-03T22:12:21.731Z",
+      "reason": "quality aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-03T22:13:10.082Z",
+      "evidence": "Comprobado contra la spec y en vivo con el backend real el 2026-11-03 (ventanas test-window w-20261103T205544Z y w-20261103T221037Z); review.md con veredicto; main en verde tras la mezcla.",
+      "actor": "orquestador"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-03T22:13:10.276Z",
+      "reason": "conformance aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-03T22:13:10.481Z",
+      "evidence": "Jornada en el vault: projects/local-delegate/jornada-2026-11-03-issues-del-dia-y-la-0-48-0.md",
+      "actor": "orquestador"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-03T22:13:10.697Z",
+      "reason": "memoria persistida; trabajo en main"
     }
   ]
 }

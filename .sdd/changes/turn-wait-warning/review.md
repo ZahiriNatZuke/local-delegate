@@ -7,16 +7,16 @@ Minimum: standard for lite, deep for standard. The diff may raise the level, nev
 Judges: the judge names separated by commas or semicolons; their count must reach the level's minimum,
 for example "Judges: result-reviewer-1, result-reviewer-2". -->
 
-- Level: TBD
-- Judges: TBD
-- Security reviewer: TBD
-- Verdict: TBD
+- Level: standard
+- Judges: regression-reviewer, orchestrator
+- Security reviewer: no — the change only appends a notice to tool output; no input parsing, paths or credentials
+- Verdict: conforms-with-notes
 
 ## Specification comparison
 
 | Requirement | Implemented | Verified | Notes |
 | --- | --- | --- | --- |
-| REQ-001 | | | |
+| REQ (all) | yes | yes | See verification.md; live: notice shown at 62-63 s waits on 2026-11-03 |
 
 ## Findings
 
@@ -25,8 +25,9 @@ decides and the decision goes in Resolution). -->
 
 | ID | Finding | Judge A | Judge B | Status | Resolution |
 | --- | --- | --- | --- | --- | --- |
-| TBD | | | | | |
+| F1 | Notice contradicted a model error (timeout) | regression-reviewer | orchestrator | confirmed | Fixed in PR #544: no notice on error output |
+| F2 | local_classify exact label broken by the notice | regression-reviewer | orchestrator | confirmed | Fixed in PR #544: classify excluded |
 
 ## Required follow-up
 
-- Identify work that must be completed before closure.
+- None: all findings fixed or documented as known limits; released in 0.48.0.
