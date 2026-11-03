@@ -18,7 +18,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   producto y ahora lleva detrás un bloque `[local-delegate warning: …]` que dice qué idioma se usó
   y cómo cambiarlo: guardar el diff dentro del repo o poner `LOCAL_DELEGATE_COMMIT_LANGUAGE`. Sin
   `path` no hay aviso (nunca hay repo que mirar). El docstring de la tool lo explica. El prompt
-  que recibe el modelo no cambia.
+  que recibe el modelo no cambia. Un clon o un submódulo recién hechos, cuyo reflog aún no tiene
+  commits, llevan su propio aviso («muy pocos commits»), distinto del de un historial mezclado.
+  El comando `/local-commit` del mod guarda ahora el diff dentro del git dir del repo donde se
+  ejecuta (nunca se commitea y se borra al terminar), así que toma el idioma del repo; si no hay
+  repo o no puede escribir ahí, usa la carpeta de datos como antes. Las rutas de red (UNC) en
+  los ficheros `.git` y `commondir` no se siguen.
 
 ### Corregido
 

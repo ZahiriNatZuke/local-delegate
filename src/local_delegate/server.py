@@ -5594,8 +5594,33 @@ _REPO_LANGUAGE_MIN_SHARE = 0.7
 _REFLOG_TAIL_BYTES = 65_536
 
 
+def _is_network_path(text: str) -> bool:
+    """A UNC path (`\\\\server\\share`, `//server/share`), checked as text before any `resolve()`.
+
+    The paths in `.git` files and in `commondir` are disk input: following one to a network share
+    would make the server open a remote location (and, on Windows, send credentials to it).
+    """
+    return text.startswith(("\\\\", "//"))
+
+
+def _is_git_dir(folder: Path) -> bool:
+    """`folder` is itself a git dir: a repo's `.git`, a submodule's or a linked worktree's."""
+    try:
+        return (folder / "HEAD").is_file() and (
+            (folder / "objects").is_dir() or (folder / "commondir").is_file()
+        )
+    except OSError:
+        return False
+
+
 def _git_dir_above(start: Path) -> Path | None:
-    """The git dir of the work tree that contains `start`, following a worktree's `.git` file."""
+    """The git dir of the work tree that contains `start`, following a worktree's `.git` file.
+
+    A diff file saved inside a git dir (the `/local-commit` command of the mod does that) gets
+    that git dir itself, so a submodule or a linked worktree reads its own reflog.
+    """
+    if _is_git_dir(start):
+        return start
     for folder in (start, *start.parents):
         dot_git = folder / ".git"
         try:
@@ -5604,7 +5629,10 @@ def _git_dir_above(start: Path) -> Path | None:
             if dot_git.is_file():
                 text = dot_git.read_text(encoding="utf-8", errors="replace").strip()
                 if text.startswith("gitdir:"):
-                    target = Path(text[len("gitdir:") :].strip())
+                    raw = text[len("gitdir:") :].strip()
+                    if _is_network_path(raw):
+                        return None
+                    target = Path(raw)
                     target = target if target.is_absolute() else folder / target
                     return target if target.is_dir() else None
                 return None
@@ -5656,7 +5684,7 @@ def _common_git_dir(git_dir: Path) -> Path | None:
     try:
         with (git_dir / "commondir").open("rb") as handle:
             raw = handle.read(4096).decode("utf-8", errors="strict").strip()
-        if not raw or "\n" in raw or "\x00" in raw:
+        if not raw or "\n" in raw or "\x00" in raw or _is_network_path(raw):
             return None
         target = Path(raw)
         target = (target if target.is_absolute() else git_dir / target).resolve()
@@ -5682,26 +5710,40 @@ def _guess_language(subjects: Sequence[str]) -> str | None:
     return winner if votes[winner] / total >= _REPO_LANGUAGE_MIN_SHARE else None
 
 
+#: Where the language of `local_commit_msg` came from (#546). The last four are the product
+#: language reached by default: with a `path` and no repo above it, with a repo whose reflog has
+#: too few commits to tell (a fresh clone or submodule), with a repo whose commits are split
+#: between languages, or with an inline diff (no `path`, so no repo to look at).
+COMMIT_LANGUAGE_FROM_VARIABLE = "variable"
+COMMIT_LANGUAGE_FROM_DIFF = "diff"
+COMMIT_LANGUAGE_FROM_REPO = "repo"
+COMMIT_LANGUAGE_FROM_NO_REPO = "no_repo"
+COMMIT_LANGUAGE_FROM_SHORT_HISTORY = "short_history"
+COMMIT_LANGUAGE_FROM_MIXED_REPO = "mixed_repo"
+COMMIT_LANGUAGE_FROM_INLINE = "inline"
+
+
 def _repo_commit_language(path: str | None) -> str | None:
     """The language of the recent commits of the repo that holds the diff file, if clear."""
     return _repo_commit_language_lookup(path)[0]
 
 
-def _repo_commit_language_lookup(path: str | None) -> tuple[str | None, bool]:
-    """`(language, repo_found)`: the repo's commit language, if clear, and whether a repo was found.
+def _repo_commit_language_lookup(path: str | None) -> tuple[str | None, str]:
+    """`(language, source)`: the repo's commit language, if clear, and why or why not.
 
-    #546: the second value tells «no repo above the diff file» from «a repo with a mixed or short
-    history», so the tool can say why it fell back to the product language.
+    #546: the source tells «no repo above the diff file» (`no_repo`) from «a reflog with too few
+    commits» (`short_history`) and «commits split between languages» (`mixed_repo`), so the tool
+    can say truthfully why it fell back to the product language.
     """
     if not path:
-        return None, False
+        return None, COMMIT_LANGUAGE_FROM_INLINE
     try:
         start = Path(path).expanduser().resolve().parent
     except (OSError, RuntimeError, ValueError):
-        return None, False
+        return None, COMMIT_LANGUAGE_FROM_NO_REPO
     git_dir = _git_dir_above(start)
     if git_dir is None:
-        return None, False
+        return None, COMMIT_LANGUAGE_FROM_NO_REPO
     subjects = _recent_commit_subjects(git_dir)
     # #548: a freshly made linked worktree has only `reset:`/`checkout:` lines in its own reflog;
     # the history lives in the shared git dir's. It is read only when the worktree's own reflog
@@ -5710,18 +5752,12 @@ def _repo_commit_language_lookup(path: str | None) -> tuple[str | None, bool]:
         common = _common_git_dir(git_dir)
         if common is not None:
             subjects = (_recent_commit_subjects(common) + subjects)[-20:]
-    return _guess_language(subjects), True
-
-
-#: Where the language of `local_commit_msg` came from (#546). The last three are the product
-#: language reached by default: with a `path` and no repo above it, with a repo whose history
-#: says nothing clear, or with an inline diff (no `path`, so no repo to look at).
-COMMIT_LANGUAGE_FROM_VARIABLE = "variable"
-COMMIT_LANGUAGE_FROM_DIFF = "diff"
-COMMIT_LANGUAGE_FROM_REPO = "repo"
-COMMIT_LANGUAGE_FROM_NO_REPO = "no_repo"
-COMMIT_LANGUAGE_FROM_MIXED_REPO = "mixed_repo"
-COMMIT_LANGUAGE_FROM_INLINE = "inline"
+    language = _guess_language(subjects)
+    if language:
+        return language, COMMIT_LANGUAGE_FROM_REPO
+    if sum(_language_votes(subjects).values()) < _REPO_LANGUAGE_MIN_VOTES:
+        return None, COMMIT_LANGUAGE_FROM_SHORT_HISTORY
+    return None, COMMIT_LANGUAGE_FROM_MIXED_REPO
 
 
 def _commit_language_choice(path: str | None = None) -> tuple[str, str]:
@@ -5735,15 +5771,9 @@ def _commit_language_choice(path: str | None = None) -> tuple[str, str]:
         return code, COMMIT_LANGUAGE_FROM_DIFF
     if code:
         return code, COMMIT_LANGUAGE_FROM_VARIABLE
-    repo_code, repo_found = _repo_commit_language_lookup(path)
+    repo_code, source = _repo_commit_language_lookup(path)
     if repo_code:
-        return repo_code, COMMIT_LANGUAGE_FROM_REPO
-    if not path:
-        source = COMMIT_LANGUAGE_FROM_INLINE
-    elif repo_found:
-        source = COMMIT_LANGUAGE_FROM_MIXED_REPO
-    else:
-        source = COMMIT_LANGUAGE_FROM_NO_REPO
+        return repo_code, source
     return i18n.lang(), source
 
 
@@ -5759,6 +5789,8 @@ def _commit_language_notice(path: str | None) -> str:
     code, source = _commit_language_choice(path)
     if source == COMMIT_LANGUAGE_FROM_NO_REPO:
         key = "mcp.warning.commit_language_no_repo"
+    elif source == COMMIT_LANGUAGE_FROM_SHORT_HISTORY:
+        key = "mcp.warning.commit_language_short_history"
     elif source == COMMIT_LANGUAGE_FROM_MIXED_REPO:
         key = "mcp.warning.commit_language_mixed_repo"
     else:

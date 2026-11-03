@@ -211,7 +211,7 @@ def _git(cwd: Path, *args: str) -> None:
 def test_a_diff_inside_a_fresh_worktree_follows_the_shared_history(monkeypatch, tmp_path):
     """A real `git worktree add`: its own reflog has no `commit:` line, the shared one has six in
     English. Mutant «do not read the shared git dir» (`_common_git_dir` returns None): the
-    `("en", "repo")` assert gets `("es", "mixed_repo")`."""
+    `("en", "repo")` assert gets `("es", "short_history")`."""
     repo = tmp_path / "repo"
     repo.mkdir()
     _git(repo, "init", "-q", "-b", "main")
@@ -250,3 +250,102 @@ def test_a_common_dir_in_an_odd_place_is_not_followed(tmp_path):
     assert server._repo_commit_language(str(work / "x.diff")) is None
     (wt_git / "commondir").write_text("../..\n", encoding="utf-8")
     assert server._common_git_dir(wt_git) == common.resolve()
+
+
+# --- Review of #549: a fresh copy, UNC paths and the mod's diff inside the git dir --------------
+SHORT_ES = "tiene muy pocos commits para saber su idioma"
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="needs git")
+def test_a_fresh_copy_says_short_history_not_mixed(monkeypatch, tmp_path):
+    """A real `git clone`: its reflog has one `clone:` line and no commit, so «the commits do not
+    make their language clear» would be false. Mutant «few votes count as mixed»: the
+    `short_history` assert gets `mixed_repo` and the `SHORT_ES` one fails."""
+    origin = tmp_path / "origin"
+    origin.mkdir()
+    _git(origin, "init", "-q", "-b", "main")
+    for i, subject in enumerate(ENGLISH):
+        (origin / "file.txt").write_text(f"{i}\n", encoding="utf-8")
+        _git(origin, "add", "-A")
+        _git(origin, "commit", "-q", "-m", subject)
+    copy = tmp_path / "copy"
+    _git(tmp_path, "clone", "-q", str(origin), str(copy))
+    path = _diff_file(copy / "sub")
+
+    assert server._commit_language_choice(path) == ("es", "short_history")
+    out, _ = _call(monkeypatch, tmp_path / "logs", path=path)
+    assert SHORT_ES in out
+    assert MIXED_ES not in out
+
+
+def test_a_short_reflog_by_hand_is_not_called_mixed(tmp_path):
+    """The same split without git: two English commits (too few) against six split ones."""
+    short = _repo_with_reflog(tmp_path / "short", ENGLISH[:2])
+    mixed = _repo_with_reflog(tmp_path / "mixed", ENGLISH[:3] + SPANISH)
+    assert server._commit_language_choice(str(short / "x.diff"))[1] == "short_history"
+    assert server._commit_language_choice(str(mixed / "x.diff"))[1] == "mixed_repo"
+
+
+@pytest.mark.parametrize("unc", [r"\\server\share\repo\.git", "//server/share/repo/.git"])
+def test_unc_paths_in_git_files_are_not_followed(tmp_path, monkeypatch, unc):
+    """`gitdir:` and `commondir` are disk input; a network path is refused as text, before any
+    `resolve()` or `is_dir()` touches it. Mutant «no UNC check»: the UNC path reaches one of
+    them and the `touched == []` assert fails. The spies never let it reach the network."""
+    touched: list[str] = []
+
+    def _spy(real):
+        def _wrapped(self, *args, **kwargs):
+            if "server" in str(self).replace("\\", "/").split("/")[:4]:
+                touched.append(str(self))
+                return False if real is real_is_dir else self
+            return real(self, *args, **kwargs)
+
+        return _wrapped
+
+    real_is_dir = Path.is_dir
+    monkeypatch.setattr(Path, "resolve", _spy(Path.resolve))
+    monkeypatch.setattr(Path, "is_dir", _spy(Path.is_dir))
+    work = tmp_path / "work"
+    work.mkdir()
+    (work / ".git").write_text(f"gitdir: {unc}\n", encoding="utf-8")
+    assert server._git_dir_above(work) is None
+
+    wt_git = tmp_path / "main" / ".git" / "worktrees" / "wt"
+    wt_git.mkdir(parents=True)
+    (wt_git / "commondir").write_text(f"{unc}\n", encoding="utf-8")
+    assert server._common_git_dir(wt_git) is None
+    assert touched == []
+    assert server._is_network_path(unc)
+    assert not server._is_network_path(str(tmp_path))
+
+
+def test_a_diff_saved_inside_the_git_dir_reads_that_repo(tmp_path):
+    """The mod's `/local-commit` saves the diff in the repo's git dir. Mutant «no git dir check»:
+    from `<repo>/.git/worktrees/wt` the walk finds the main `.git` and still says `en`, but from
+    a submodule's git dir (`<super>/.git/modules/sub`) it reads the super repo (Spanish) and the
+    last assert fails."""
+    repo = _repo_with_reflog(tmp_path / "repo", ENGLISH)
+    git_dir = repo / ".git"
+    (git_dir / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+    (git_dir / "objects").mkdir()
+    assert server._commit_language_choice(str(git_dir / "ld.diff")) == ("en", "repo")
+
+    sup = _repo_with_reflog(tmp_path / "super", ENGLISH[:1] + SPANISH * 2)
+    sub_git = sup / ".git" / "modules" / "sub"
+    (sub_git / "logs").mkdir(parents=True)
+    (sub_git / "objects").mkdir()
+    (sub_git / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+    (sub_git / "logs" / "HEAD").write_text(
+        "".join(f"a b c 1 +0000\tcommit: {s}\n" for s in ENGLISH), encoding="utf-8"
+    )
+    assert server._commit_language_choice(str(sub_git / "ld.diff")) == ("en", "repo")
+
+
+def test_the_read_guard_lets_the_tool_read_a_diff_in_the_git_dir(tmp_path):
+    """`path_guard` protects git hooks and config from WRITES; reading the mod's diff file inside
+    `.git/` must stay allowed, or `/local-commit` would break."""
+    from local_delegate import path_guard
+
+    target = tmp_path / "repo" / ".git" / "local-delegate-x-commit.diff"
+    assert path_guard.check(target, path_guard.READ) is None
+    assert path_guard.check(tmp_path / "repo" / ".git" / "hooks" / "pre-commit", path_guard.WRITE)
