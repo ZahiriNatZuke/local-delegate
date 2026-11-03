@@ -176,6 +176,8 @@
   "mcp.status.web.inactive": "inactiva",
   "mcp.status.web.line": "Web de métricas: {state} (http://{host}:{port})",
   "mcp.warning.answered_instead": "respondió {answered} en lugar de {instead} ({reason})",
+  "mcp.warning.commit_language_no_repo": "el fichero del diff no está dentro de un repo git, así que el mensaje va en el idioma del producto ({language}); para seguir el idioma de los commits del repo, guarda el diff dentro del repo o pon {variable}",
+  "mcp.warning.commit_language_mixed_repo": "los commits recientes del repo no dejan claro su idioma, así que el mensaje va en el idioma del producto ({language}); para fijar otro, pon {variable}",
   "mcp.warning.origin.chunk": "desde el trozo {chunk}",
   "mcp.warning.origin.reduce": "en la reducción",
   "mcp.warning.output_truncated": "salida truncada por max_tokens",

@@ -12,6 +12,21 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `--dry-run`, lista cada carpeta de `.sdd/changes/` cuyo `state.json` no está en `closed`
   («SDD sin cerrar: <slug> (<estado>)») y sugiere cerrarlos. Es un aviso, no bloquea. Varios SDD
   se habían quedado en `verifying` con su trabajo ya mezclado y publicado.
+- **`local_commit_msg` avisa cuando no pudo tomar el idioma del repo (#546).** Con `path`, si el
+  fichero del diff no está dentro de un repo git (lo habitual al volcarlo a una carpeta temporal)
+  o los commits recientes del repo no dejan claro su idioma, el mensaje sale en el idioma del
+  producto y ahora lleva detrás un bloque `[local-delegate warning: …]` que dice qué idioma se usó
+  y cómo cambiarlo: guardar el diff dentro del repo o poner `LOCAL_DELEGATE_COMMIT_LANGUAGE`. Sin
+  `path` no hay aviso (nunca hay repo que mirar). El docstring de la tool lo explica. El prompt
+  que recibe el modelo no cambia.
+
+### Corregido
+
+- **`local_commit_msg` detecta el idioma del repo también desde un worktree recién creado
+  (#548).** El reflog propio de un `git worktree add` nuevo no tiene ningún commit, así que la
+  detección del #461 no tenía votos y caía al idioma del producto. Ahora, si ese reflog no da
+  votos suficientes, se lee también el del git dir común (el que indica `commondir`, solo si está
+  donde git lo pone: dos carpetas por encima del git dir del worktree).
 
 ## [0.47.3] - 2026-11-02
 
