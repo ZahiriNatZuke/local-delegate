@@ -186,6 +186,118 @@ def detect(text: str) -> Structure | None:
     return None
 
 
+# --- Lines that are data, not structure (#539) ----------------------------------------------------
+#
+# A code file that builds a Markdown document inside a string literal (a JS template literal, a
+# Python triple-quoted string) carries lines that look like headings and are data. When the model
+# turns one of them into a heading of the summary, the structure of the summary comes from a test
+# fixture. These helpers find those lines so the server can say so.
+
+_INTERPOLATION = re.compile(r"\$\{[^}\n]*\}")
+_TRIPLE_QUOTES = ('"""', "'''")
+#: What may come right before the backtick that opens a template literal in code: an assignment,
+#: an argument, an element, a concatenation, a ternary branch or `return`. In Markdown prose a
+#: backtick follows a word and a space (`use \`x\``), so a stray one never opens a literal there.
+_TEMPLATE_OPENERS = ("=", "(", ",", ":", "[", "{", "+", "?", "return", "=>")
+
+
+def _opens_template(before: str) -> bool:
+    """Can a backtick preceded by `before` (the start of its line) open a template literal?"""
+    stripped = before.rstrip()
+    return not stripped or stripped.endswith(_TEMPLATE_OPENERS)
+
+
+def string_literal_lines(text: str) -> list[str]:
+    """The lines that lie inside a multi-line string literal: a backtick template or a `\"\"\"`.
+
+    A light scanner, not a parser: single and double quotes and comments close at the end of the
+    line, a backslash escapes the next character inside a string, and a run of three or more
+    backticks (a Markdown fence) is not a template delimiter. Only lines that the literal covers
+    from start to end count (not the line that opens it nor the one that closes it), so the code
+    around the literal is never taken for its content.
+    """
+    inside: list[str] = []
+    state: str | None = None  # "`", '"""', "'''", "'", '"' or "comment"
+    i, n = 0, len(text)
+    line_start = 0
+    line_opened_inside = False
+    while i < n:
+        c = text[i]
+        if c == "\n":
+            line = text[line_start:i].rstrip("\r")
+            if line_opened_inside and state in {"`", *_TRIPLE_QUOTES}:
+                inside.append(line)
+            if state in {"'", '"', "comment"}:
+                state = None
+            i += 1
+            line_start = i
+            line_opened_inside = state in {"`", *_TRIPLE_QUOTES}
+            continue
+        if state == "comment":
+            i += 1
+            continue
+        if state is not None and c == "\\":
+            i += 2
+            continue
+        if state is None:
+            if text.startswith(_TRIPLE_QUOTES, i):
+                state = text[i : i + 3]
+                i += 3
+                continue
+            if c == "`":
+                run = len(text[i : i + 3]) - len(text[i : i + 3].lstrip("`"))
+                if run >= 2:  # a fence, or an empty template / Markdown double-backtick code
+                    while i < n and text[i] == "`":
+                        i += 1
+                    continue
+                if _opens_template(text[line_start:i]):
+                    state = "`"
+            elif c in "'\"":
+                state = c
+            elif c == "#" or text.startswith("//", i):
+                state = "comment"
+            i += 1
+            continue
+        if state in _TRIPLE_QUOTES and text.startswith(state, i):
+            state = None
+            i += 3
+            continue
+        if c == state:  # closes "`", "'" or '"'
+            state = None
+        i += 1
+    return inside
+
+
+def _source_heading_text(line: str) -> str:
+    """The comparable form of a source line, without the `#`s of an ATX heading."""
+    atx = _ATX.match(line)
+    if atx:
+        return normalize_heading(_ATX_CLOSING.sub("", atx.group(2) or ""))
+    return normalize_heading(line)
+
+
+def string_literal_headings(output: str, source: str, *, code_file: bool = False) -> list[str]:
+    """Headings of `output` that copy a line of a string literal of `source`, in output order.
+
+    A heading counts when its normalized text equals the normalized text of a line inside a
+    multi-line string literal (`string_literal_lines`). In a code file (`code_file`) a heading
+    with an unresolved `${...}` that appears verbatim in the source counts too: that interpolation
+    only exists inside a template. Headings are returned as the model wrote them, once each.
+    """
+    literal = {_source_heading_text(line) for line in string_literal_lines(source)}
+    literal.discard("")
+    found: list[str] = []
+    lines = output.split("\n")
+    for index, normalized in heading_lines(output):
+        raw = lines[index].strip().lstrip("#").strip().strip("*_").rstrip(":").strip()
+        copied = normalized in literal or (
+            code_file and _INTERPOLATION.search(raw) is not None and raw in source
+        )
+        if copied and raw not in found:
+            found.append(raw)
+    return found
+
+
 # --- Normalización y emparejamiento --------------------------------------------------------------
 
 _NUMBERING = re.compile(r"^\s*(?:\d+|[ivxlc]+)[.)]\s+", re.IGNORECASE)

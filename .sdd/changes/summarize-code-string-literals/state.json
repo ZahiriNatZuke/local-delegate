@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "slug": "summarize-code-string-literals",
+  "title": "local_summarize: no sacar secciones de las cadenas de un fichero de código",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "implementing",
+  "createdAt": "2026-11-03T17:58:18.096Z",
+  "updatedAt": "2026-11-03T17:59:27.020Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-03T17:59:25.976Z",
+      "evidence": "spec revisada contra el issue 539 y la causa raiz en sections.detect y complete",
+      "actor": "orquestador"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-03T17:59:26.506Z",
+      "evidence": "plan revisado: tres tareas cubren REQ-001 a REQ-004",
+      "actor": "orquestador"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-03T17:58:18.096Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-11-03T17:59:21.690Z",
+      "reason": "causa raiz localizada en sections.detect"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-11-03T17:59:21.946Z",
+      "reason": "investigacion hecha"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-03T17:59:25.976Z",
+      "evidence": "spec revisada contra el issue 539 y la causa raiz en sections.detect y complete",
+      "actor": "orquestador"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-03T17:59:26.236Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-03T17:59:26.506Z",
+      "evidence": "plan revisado: tres tareas cubren REQ-001 a REQ-004",
+      "actor": "orquestador"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-03T17:59:26.761Z",
+      "reason": "plan escrito"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-03T17:59:27.020Z",
+      "reason": "plan aprobado"
+    }
+  ]
+}

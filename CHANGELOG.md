@@ -13,6 +13,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   («SDD sin cerrar: <slug> (<estado>)») y sugiere cerrarlos. Es un aviso, no bloquea. Varios SDD
   se habían quedado en `verifying` con su trabajo ya mezclado y publicado.
 
+### Corregido
+
+- **`local_summarize` ya no saca la estructura del resumen de las cadenas de un fichero de
+  código (#539).** Con un `.mjs` de tests de más de 6000 caracteres que montaba un documento
+  Markdown dentro de un template literal (`## Specs`, `## Tasks`, `campo: ${variable}`), el
+  resumen por secciones tomaba esas líneas por las secciones del fichero, se las daba al modelo
+  como lista a seguir y reponía las que faltaban: el resumen salía con el fixture como encabezados
+  y los tests colgados de `## Verify`, sin aviso. Ahora un `path` con extensión de código nunca va
+  por el resumen estructurado, y si un título del resumen copia una línea de un literal de cadena
+  multilínea (o, en código, una línea con `${…}` sin resolver), la respuesta lo avisa con
+  `[local-delegate warning: …]`. Un resumen correcto de un `.md` no lleva ese aviso.
+
 ## [0.47.3] - 2026-11-02
 
 Arreglo de `local_explain_code`: con `path`, la respuesta podía empezar con el prefijo de línea
