@@ -17,6 +17,7 @@ question) and how to word the result (`i18n`).
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass, field
 
 #: Shortest identifier worth checking: `i`, `x`, `id` match almost any line.
@@ -206,6 +207,148 @@ _NO_INFORMATION = re.compile(
 def claims_no_information(answer: str) -> bool:
     """#527: whether `answer` says there is not enough information (or nothing relevant)."""
     return bool(_NO_INFORMATION.search(answer))
+
+
+# --- #538: a premise of the question confirmed with nothing in the code behind it -------------
+# Asked «how does it handle the backups and their retention?» about a module that never deletes a
+# backup, the model answered there was an «implicit retention». The word came from the question,
+# the file has nothing like it, and the sentence that asserts it neither negates it nor cites code
+# that backs it. Those three facts are checked here, by program; the prose is not judged.
+
+#: Letters of a word compared with the file: «retención» and «retention» share `reten`, and a
+#: Spanish word that shares its first five letters with the code (`config`, `concurrent`) counts.
+PREMISE_STEM_LEN = 5
+#: Only nominalizations are compared: the abstract nouns of a feature or a process (retención,
+#: rotación, expiración, caducidad, persistencia, limpieza; retention, rotation, consistency).
+#: They are what a question presupposes («and its retention?»), and they keep their first letters
+#: across Spanish and English, so a Spanish question can be checked against English code. Any
+#: other word is not: «entrada», «copias», «pulsar» never appear in English code even when the
+#: answer that echoes them is right (5 false warnings out of 6 correct answers without this
+#: filter). Endings after folding accents and dropping a plural `s`/`es`.
+_NOMINALIZATION = re.compile(r"(?:cion|sion|tion|idad|ity|ncia|ncy|nce|eza)$")
+#: Nominalizations of asking, not of the domain, and cognates whose first letters differ between
+#: the two languages (opción/option, sección/section). Stems of PREMISE_STEM_LEN letters. The
+#: domain words (retention, rotation, expiration) are never listed: the check works for any.
+_QUESTION_STEMS = frozenset(
+    {
+        "funci", "funct", "infor", "expli", "expla", "descr", "imple", "ejecu", "execu",
+        "opcio", "optio", "secci", "secti", "versi", "condi", "situa", "canti", "difer",
+        "relac", "relat", "posib", "possi", "neces",
+    }
+)  # fmt: skip
+#: A plain word of the question long enough to compare, not glued to a backtick (`name`).
+_PREMISE_WORD = re.compile(r"(?<![\w`])([^\W\d_]{" + str(PREMISE_STEM_LEN) + r",})(?![\w`])")
+#: A negation in the sentence: the answer denies the premise, which is what it should do.
+_NEGATION = re.compile(
+    r"(?i)\b(?:no|ni|nunca|jam[a\xe1]s|ning[u\xfa]n[oa]?|nada|sin|tampoco|carece|"
+    r"not|never|none|nothing|without|neither|nor|lacks?|no\s+longer)\b|n't\b"
+)
+#: Sentence boundaries: a full stop, `!` or `?` before a space or the end, `;` or a new line. Not
+#: a bare `.` (`this.first.focus()`) nor `:` («retención implícita: se acumulan» is one claim).
+_SENTENCE_END = re.compile(r"[.!?](?=\s|$)|[;\n]")
+
+
+def _fold(text: str) -> str:
+    """`text` in lower case without accents: «Retención» and «retencion» compare equal."""
+    decomposed = unicodedata.normalize("NFKD", text.lower())
+    return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+
+
+def _without_fences(answer: str) -> str:
+    out: list[str] = []
+    in_fence = False
+    for line in answer.split("\n"):
+        if _FENCE.match(line):
+            in_fence = not in_fence
+        elif not in_fence:
+            out.append(line)
+    return "\n".join(out)
+
+
+def premise_terms(question: str, content: str) -> list[str]:
+    """#538: the nominalizations of `question` whose stem the file does not hold, in order.
+
+    Plain words (not code identifiers: those get their exact occurrences) ending as a
+    nominalization (`_NOMINALIZATION`) and not words of asking. The file is searched as a whole,
+    comments and strings included, without accents and ignoring case.
+    """
+    folded = _fold(content)
+    names = {_fold(name) for name in identifiers(question)}
+    terms: list[str] = []
+    stems: set[str] = set()
+    for word in _PREMISE_WORD.findall(question):
+        folded_word = _fold(word)
+        singular = re.sub(r"(?:(?<=[cs]ion)|(?<=dad))es$|(?<=[^s])s$", "", folded_word)
+        stem = folded_word[:PREMISE_STEM_LEN]
+        if (
+            not _NOMINALIZATION.search(singular)
+            or stem in stems
+            or stem in _QUESTION_STEMS
+            or folded_word in names
+        ):
+            continue
+        stems.add(stem)
+        if not _held(folded_word, folded):
+            terms.append(word)
+    return terms
+
+
+#: A Spanish `c` before `i` that English writes `t`: rotación/rotation, acción/action,
+#: inicialización/initialization. Only a variant is added, so it can only remove warnings.
+_SOFT_C = re.compile(r"c(?=i)")
+
+
+def _held(folded_word: str, folded: str) -> bool:
+    """Whether the folded file holds the folded word by its first letters, in either language.
+
+    The stem as written (`reten` of retención and retention), the stem with its `ci` written `ti`
+    (`rotac` → `rotat`, for `TimedRotatingFileHandler`) and, of that English form, its first four
+    letters at the start of a word (`init` of `__init__`, `crea` of `createBackup`).
+    """
+    english = _SOFT_C.sub("t", folded_word)
+    if folded_word[:PREMISE_STEM_LEN] in folded or english[:PREMISE_STEM_LEN] in folded:
+        return True
+    if english == folded_word:
+        return False
+    return re.search(r"(?<![^\W\d_])" + re.escape(english[:4]), folded) is not None
+
+
+def _anchored(sentence: str, question: str, content: str, lines: list[str]) -> bool:
+    """Whether `sentence` stands on the code: a cited line that holds what it cites, or a code
+    identifier of the sentence that is in the file."""
+    result = check(sentence, question, content)
+    if result.checked and not result.mismatched:
+        return True
+    return any(occurrences(lines, name) for name in identifiers(sentence))
+
+
+def unsupported_premises(
+    answer: str, question: str, content: str, truncated: bool = False
+) -> list[str]:
+    """#538: the words of the question the answer asserts with nothing in the file behind them.
+
+    A word counts when the file does not hold it (`premise_terms`) and the answer uses it in a
+    sentence that does not negate it and is not anchored (`_anchored`). «No hay retención: nunca
+    borra» negates it; «la retención es implícita» asserts it. Fenced code is not prose. With
+    `truncated`, as in `check`, the last line is not judged: its citation may be cut in half.
+    """
+    terms = premise_terms(question, content)
+    if not terms:
+        return []
+    if truncated:
+        answer = answer.rstrip("\n").rpartition("\n")[0]
+    lines = content.split("\n")
+    sentences = [s for s in _SENTENCE_END.split(_without_fences(answer)) if s.strip()]
+    out: list[str] = []
+    for term in terms:
+        stem = re.compile(r"(?<![^\W\d_])" + re.escape(_fold(term)[:PREMISE_STEM_LEN]))
+        for sentence in sentences:
+            if not stem.search(_fold(sentence)) or _NEGATION.search(sentence):
+                continue
+            if not _anchored(sentence, question, content, lines):
+                out.append(term)
+                break
+    return out
 
 
 @dataclass(frozen=True)

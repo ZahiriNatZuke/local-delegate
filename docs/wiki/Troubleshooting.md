@@ -294,6 +294,17 @@ Es el **turno** del daemon, no una avería: su modelo choca en llama-swap con un
 
 - **Es lo esperado** con dos tools de modelos distintos a la vez (un resumen largo y un mensaje de
   commit, por ejemplo). La espera queda en el log como `turn_wait_ms`.
+- **Una ráfaga que mezcla modelos puede esperar minutos** (issue #537). El turno atiende por orden
+  de llegada y solo deja adelantar a quien es compatible con todo lo que va delante, así que una
+  ráfaga que alterna tools de modelos que no caben juntos (resúmenes y explicaciones de código
+  intercaladas) cambia de modelo en cada relevo. Caso medido: un `local_summarize` de 29 000
+  caracteres tardó 343 s, de los que 292 fueron turno detrás de cuatro operaciones y cuatro
+  cambios de modelo; la inferencia fueron 38 s. No es lentitud: Claude Code pasa la llamada a
+  segundo plano a los 2 min y el resultado llega igual, porque el daemon manda progreso cada 20 s.
+  Desde entonces, si la espera del turno llega a `LOCAL_DELEGATE_TURN_WAIT_NOTICE_S` (60 s), la
+  respuesta lleva un aviso que lo dice (`[local-delegate warning: esta llamada esperó N s el
+  turno común…]`; en `local_extract`, `_local_delegate.turn_wait`). **Agrupar las llamadas por
+  tool** (todos los resúmenes, luego todo el código) evita los cambios de modelo y lo reduce.
 - **Si no avanza nunca**: a los `LOCAL_DELEGATE_TURN_MAX_S` (600 s) sin ninguna llamada al backend en
   vuelo, la primera de la cola se concede forzada (`turn: "forced"` en el log). Si ves forzadas a
   menudo, algo se queda colgado con el turno en la mano: mira «En curso».

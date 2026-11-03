@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "slug": "turn-wait-warning",
+  "title": "Visible common-turn wait warning",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-03T18:05:08.357Z",
+  "updatedAt": "2026-11-03T18:21:06.547Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-03T18:06:08.955Z",
+      "evidence": "spec REQ-001..007 and plan T1..T4 reviewed against research.md and issue #537",
+      "actor": "orquestador"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-03T18:06:08.956Z",
+      "evidence": "spec REQ-001..007 and plan T1..T4 reviewed against research.md and issue #537",
+      "actor": "orquestador"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-03T18:05:08.357Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-11-03T18:06:08.170Z",
+      "reason": "research from issue #537 copied as research.md"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-11-03T18:06:08.433Z",
+      "reason": "research done"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-03T18:06:08.955Z",
+      "evidence": "spec REQ-001..007 and plan T1..T4 reviewed against research.md and issue #537",
+      "actor": "orquestador"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-03T18:06:08.956Z",
+      "evidence": "spec REQ-001..007 and plan T1..T4 reviewed against research.md and issue #537",
+      "actor": "orquestador"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-03T18:06:14.003Z",
+      "reason": "spec approved"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-03T18:06:14.221Z",
+      "reason": "plan written"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-03T18:06:14.483Z",
+      "reason": "gates spec and plan approved"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-03T18:21:06.547Z",
+      "reason": "implemented; new tests 18 pass, full suite green except a name-detector hit fixed and re-run"
+    }
+  ]
+}

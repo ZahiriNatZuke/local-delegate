@@ -77,7 +77,7 @@ def _call(monkeypatch, logs: Path, **kwargs) -> tuple[str, list[dict]]:
     monkeypatch.setattr(config, "LOG_DIR", logs)
     monkeypatch.setattr(config, "USAGE_LOG", logs / "usage.jsonl")
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
-    monkeypatch.setattr(config, "FEEDBACK_ENABLED", False)
+    monkeypatch.setattr(config, "FEEDBACK_ENABLED", kwargs.pop("feedback", False))
     views: list[dict] = []
 
     def _handler(request: httpx2.Request) -> httpx2.Response:
@@ -171,8 +171,8 @@ def test_the_warning_also_follows_the_map_reduce_receipt(monkeypatch, tmp_path):
 
     assert len(views) > 2
     assert NO_REPO_ES in out
-    receipt = out.index("(alcance:")
-    assert receipt < out.index(server.WARNING_MARKER)
+    # The warning goes with the other warnings, before the receipts (`_before_receipt_lines`).
+    assert out.index(server.WARNING_MARKER) < out.index("(alcance:")
 
 
 def test_the_choice_names_its_source(tmp_path, monkeypatch):
@@ -349,3 +349,20 @@ def test_the_read_guard_lets_the_tool_read_a_diff_in_the_git_dir(tmp_path):
     target = tmp_path / "repo" / ".git" / "local-delegate-x-commit.diff"
     assert path_guard.check(target, path_guard.READ) is None
     assert path_guard.check(tmp_path / "repo" / ".git" / "hooks" / "pre-commit", path_guard.WRITE)
+
+
+def test_the_warnings_go_before_the_receipt_with_the_turn_wait_notice(monkeypatch, tmp_path):
+    """With the savings receipt on and a long turn wait (#537), the order is: the message, the
+    language warning, the turn wait warning, the receipt. Mutant «append the language warning at
+    the very end»: the `language < receipt` assert fails."""
+    path = _diff_file(tmp_path / "loose")
+    out, _ = _call(monkeypatch, tmp_path / "logs", path=path, feedback=True)
+    monkeypatch.setattr(server, "_turn_wait_notice", lambda: (120, "TURN-WAIT"))
+    out = server._add_turn_wait_notice(out)
+
+    message = out.index(ANSWER)
+    language = out.index(NO_REPO_ES)
+    turn = out.index("TURN-WAIT")
+    receipt = out.index(server.i18n.t("mcp.receipt.unit.chars"))
+    assert message < language < turn < receipt
+    assert out.startswith(ANSWER + "\n\n" + server.WARNING_MARKER)
