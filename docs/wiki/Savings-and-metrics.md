@@ -762,17 +762,18 @@ plaza y está en el backend, o entre dos trozos de una operación que ya llegó)
 con espera de turno, `queue_position` es su puesto). Sale de la espera y la plaza reales, no del
 texto de la fase. Con `state`, «En curso» separa **«Procesando (n)»** y **«En cola (m)»**: las de
 la cola llevan un círculo discontinuo en vez del giro, van atenuadas y, con turno, su puesto
-(`#3`). Un daemon anterior no manda `state` y el panel pinta la lista única de siempre.
+(desde el issue #547, en el título de la fila; antes, un chip `#3`). Un daemon anterior no manda `state` y el panel pinta la lista única de siempre.
 
 Una delegación troceada suelta su plaza al acabar cada trozo y vuelve a esperar otra para el
-siguiente, así que entre trozos está **en cola**. Desde el issue #547 esa fila dice **«Espera trozo
-2/3»** (o «Espera combinar 3 trozos» antes del paso final), no «Trozo 2/3», que es la etiqueta de
-un trozo que se está procesando. El título de la fila dice por qué espera (plaza libre en el
-backend, su turno con su puesto, o que aún no ha empezado) y el del trozo, cuántos van hechos.
-Con espera local, la entrada trae también **`wait_s`**: los segundos que lleva esa espera, aparte
-del total `elapsed_s`; el panel lo muestra en un chip («espera 41,2 s») y el total sigue en la
-columna de tiempo. El tiempo y los caracteres de cada fila van en una sola línea, alineados a la
-derecha, y los chips se reparten en su propia caja.
+siguiente, así que entre trozos está **en cola**. Desde el issue #547 esa fila lleva un solo chip
+de estado, **«Espera trozo 2/3 · 41 s»** (o «Espera combinar 3 trozos · …» antes del paso final),
+no «Trozo 2/3», que es la etiqueta de un trozo que se está procesando. El título de la fila dice
+por qué espera (plaza libre en el backend; turno del daemon, con el modelo en uso y su puesto; o
+que aún no ha empezado) y el del chip, cuántos trozos van hechos y el tiempo total. Con espera
+local, la entrada trae también **`wait_s`**: los segundos que lleva esa espera, aparte del total
+`elapsed_s`. Cada fila ocupa una línea en escritorio, con el tiempo y los caracteres a la
+derecha; la herramienta va sin el prefijo `local_` y el modelo se recorta con «…» si falta sitio,
+los dos con el nombre completo en el título.
 
 Un cuarto valor, **`waiting_backend`**, marca la llamada que ya tiene plaza pero espera **dentro de
 llama-swap** a que cambie de modelo: su POST lleva más de 3 s pendiente y `/running` no tiene el
@@ -845,7 +846,8 @@ texto: `slot` o `turn`) y se borra al terminar. Así «esperando turno» queda s
 llama-swap: el panel no le atribuye una espera nuestra. Un motivo nuevo que el panel no conozca se
 enseña tal cual en el `title` de la fila. Con `turn`, la entrada lleva además `turn_in_use` (los
 modelos que tienen el turno) y `turn_position` (su puesto en la cola), y el `title` de la fila y
-«En curso» dicen «esperando turno del daemon (en uso: <modelos>)».
+el de su fila en «En curso» dicen «esperando turno del daemon (en uso: <modelos>)», con el puesto
+detrás (desde el issue #547, solo en el `title`, no como chip).
 
 En la tabla de actividad, cada llamada cuyo backend manda `timings` enseña bajo la latencia
 «espera X s · inferencia Y s» (`wait_ms` e `inference_ms`), y una llamada lenta lleva la marca

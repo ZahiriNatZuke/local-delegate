@@ -17,13 +17,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 - **Panel: una delegación troceada «En cola» ya no parece estar mandando su trozo.** Entre trozo y
   trozo la llamada vuelve a esperar plaza y el panel la mostraba en «En cola» con «Trozo 2/3», la
-  misma etiqueta que un trozo que se está procesando, y solo con el tiempo total. Ahora dice
-  «Espera trozo 2/3» (o «Espera combinar 3 trozos»), el título explica por qué espera (plaza libre
-  en el backend, su turno con su puesto, o que aún no ha empezado) y cuántos trozos van hechos, y
-  un chip dice cuánto lleva esperando («espera 41,2 s»), además del total. Para eso `/api/inflight` añade
-  `wait_s` a las entradas con `local_wait`; los campos de antes no cambian. Además, el tiempo y los
-  caracteres de cada fila de «En curso» ya no saltan a otra línea según el ancho de los números
-  (#547).
+  misma etiqueta que un trozo que se está procesando, y solo con el tiempo total. Ahora lleva un
+  solo chip de estado, «Espera trozo 2/3 · 41 s» (o «Espera combinar 3 trozos · …»), y el motivo
+  (plaza libre en el backend, turno del daemon con el modelo en uso y su puesto, o que aún no ha
+  empezado), los trozos hechos y el tiempo total van en los títulos. Salen de la vista el chip de
+  prosa «esperando turno del daemon (en uso: …)» y el «#n» del puesto, que ya existían. Para eso
+  `/api/inflight` añade `wait_s` a las entradas con `local_wait`; los campos de antes no cambian.
+  Además, cada fila de «En curso» ocupa una sola línea en escritorio, con el tiempo y los
+  caracteres a la derecha: la herramienta se muestra sin el prefijo `local_` y el modelo se recorta
+  con «…» si falta sitio (los dos con el nombre completo en el título); en una tarjeta estrecha
+  todas las filas pasan a dos líneas iguales (#547).
 
 ## [0.47.3] - 2026-11-02
 

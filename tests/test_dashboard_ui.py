@@ -1644,21 +1644,28 @@ IN_FLIGHT_547 = [
 _INFLIGHT_LINES = """() => [...document.querySelectorAll('#inflightBody .ifrow')].map(row => {
   const meta = row.querySelector('.ifmeta').getBoundingClientRect();
   const chips = row.querySelector('.ifchips').getBoundingClientRect();
+  const status = row.querySelector('.ifchips > .chunkchip');
   return {text: row.innerText, height: Math.round(row.getBoundingClientRect().height),
           metaHeight: meta.height, metaRight: Math.round(meta.right),
-          metaMiddle: meta.top + meta.height / 2, boxMiddle: chips.top + chips.height / 2};
+          metaMiddle: meta.top + meta.height / 2, boxMiddle: chips.top + chips.height / 2,
+          boxBottom: chips.bottom, metaTop: meta.top,
+          body: document.getElementById('inflightBody').clientWidth,
+          statusCut: status ? status.scrollWidth > status.clientWidth + 1 : null};
 })"""
 
 
 @pytest.mark.parametrize("theme", ["light", "dark"])
 def test_inflight_rows_keep_time_and_chars_on_one_line(tmp_path, monkeypatch, new_page, theme):
-    """Issue #547: time and characters of every «En curso» row stay on one line, on the tool's
-    line and with the same right edge, however wide the numbers; a queued row says «Espera trozo»
-    and how long it has waited.
+    """Issue #547: every «En curso» row, queued ones included (the turn one, the longest, too),
+    is ONE line of the same height when the card has room (1366 px among them), with time and
+    characters beside the chips and the same right edge, however wide the numbers; in a narrower
+    card every row is the same two lines, chips above and time below. The queued status chip
+    («Espera trozo 1/4 · 1 min 53 s») is never cut, and no «#2» or «esperando turno…» shows as
+    text.
 
-    Positive control: with the old `.ifrow{flex-wrap:wrap}`, the time and characters drop below
-    the chips and the `metaMiddle` assert fails; without the `min-width` of `.ifmeta`, the row of
-    118.284 characters is taller than the one of 94.745 and the height assert fails.
+    Positive control: with `.ifchips{flex-wrap:wrap}` the queued rows take two lines and the height
+    assert fails; with the old `.ifrow{flex-wrap:wrap}`, the time and characters drop below the
+    chips and the `metaMiddle` assert fails.
     """
     _cost_and_image_log(tmp_path, monkeypatch)
     in_flight = {
@@ -1688,13 +1695,22 @@ def test_inflight_rows_keep_time_and_chars_on_one_line(tmp_path, monkeypatch, ne
         assert len(rows) == 5, (width, rows)  # guard: the five rows were drawn
         for row in rows:
             assert row["metaHeight"] <= 22, (width, row)  # one line (~17 px); two are ~34
-            assert abs(row["metaMiddle"] - row["boxMiddle"]) <= 3, (width, row)
+            if row["body"] >= 560:  # room for one line: the time beside the chips
+                assert abs(row["metaMiddle"] - row["boxMiddle"]) <= 3, (width, row)
+            else:  # a narrow card: the time under the chips, in every row alike
+                assert row["metaTop"] >= row["boxBottom"] - 1, (width, row)
+            assert row["statusCut"] is False, (width, row)  # the status chip reads whole
         assert len({row["metaRight"] for row in rows}) == 1, (width, rows)
-        # Same chips, same height, whatever the width of the figures (94.745 vs 118.284 chars).
-        # (The queued rows carry their own wait, whose text changes the width of their chips.)
-        assert rows[0]["height"] == rows[1]["height"], (width, rows)
-        queued = [row["text"] for row in rows[2:]]
-        assert all("Espera trozo" in text and "espera " in text for text in queued), queued
+        # One line each: the same height for all, processing and queued alike.
+        assert len({row["height"] for row in rows}) == 1, (width, rows)
+    assert by_width[1368][0]["body"] >= 560, by_width[1368][0]  # 1366 px is the one-line case
+    queued = [row["text"] for row in by_width[1368][2:]]
+    assert [t.splitlines()[2] for t in queued] == [
+        "Espera trozo 2/3 · 41 s",
+        "Espera trozo 2/3 · 9 s",
+        "Espera trozo 1/4 · 1 min 53 s",
+    ], queued
+    assert not any("#2" in t or "esperando turno" in t for t in queued), queued
 
 
 def test_the_input_origin_legend_is_in_spanish(panel, new_page):

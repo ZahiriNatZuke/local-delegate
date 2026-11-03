@@ -1758,10 +1758,14 @@ td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .tchip:hover{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 40%,transparent)}
 .tchip.busy{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 50%,transparent);background:color-mix(in srgb,var(--amber) 12%,transparent)}
 .ifrow{display:flex;flex-wrap:nowrap;align-items:center;gap:9px;padding:6px 2px;font-size:12.5px;color:var(--tx2);font-family:var(--mono)}
-.ifchips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;flex:1 1 auto;min-width:0}
+.ifchips{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;flex:1 1 0;min-width:0;overflow:hidden}
+.ifchips>*{flex:0 0 auto;white-space:nowrap}
 .ifchips .chunkchip{margin-left:0}
-.ifmeta{flex:0 0 auto;margin-left:auto;min-width:26ch;text-align:right;white-space:nowrap;color:var(--mut)}
-@media (max-width:560px){.ifrow{flex-wrap:wrap}.ifmeta{margin-left:21px}}
+.ifchips>.badge.model{flex:0 1 auto;min-width:6ch;overflow:hidden;text-overflow:ellipsis}
+.ifmeta{flex:0 0 auto;margin-left:auto;white-space:nowrap;color:var(--mut)}
+#inflightBody{container-type:inline-size}
+@container (max-width:559px){.ifrow{flex-wrap:wrap;row-gap:2px}.ifmeta{flex-basis:100%;margin-left:21px;text-align:left}}
+@media (max-width:560px){.ifchips{flex-wrap:wrap}}
 .spin{width:12px;height:12px;border-radius:50%;flex:0 0 auto;
   border:2px solid color-mix(in srgb,var(--amber) 28%,transparent);border-top-color:var(--amber);animation:rot .8s linear infinite}
 .queue-dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;border:2px dashed var(--faint)}
@@ -2994,34 +2998,37 @@ function renderInflight(){
       // «Trozo 3/4 · dividido en 3 · parte 2», with the why in the chip's title.
       const split = it.chunks && it.part>0 && it.parts>0;
       const splitWords = {chunk: it.chunk||1, chunks: it.chunks, part: it.part, parts: it.parts};
-      // Issue #547: between two chunks a call waits for a place again, so it is queued. Its chunk
-      // is the one that waits, not one being sent: «Espera trozo 2/3», with the done ones in the title.
+      // Issue #547: between two chunks a call waits for a place again, so it is queued. ONE status
+      // chip says what waits and for how long: «Espera trozo 2/3 · 41 s»; the done chunks, the
+      // reason, the model in use and the place in the queue go in titles, never as text.
       const chunkWords = {n: it.chunk||1, total: it.chunks};
       const queuedChunk = queued && it.chunks && !split && it.phase!=='retry';
-      const queuedChunkTitle = it.phase==='reduce'
-        ? '' : T('backend.chunk_waiting_title', {done: Math.max(0, (Number(it.chunk)||1) - 1), total: it.chunks, n: it.chunk||1});
+      const waitS = queued && Number.isFinite(it.wait_s) && it.wait_s>=0 ? Math.round(it.wait_s) : null;
+      const waitText = waitS===null ? '' : waitS < 60 ? `${waitS} s` : fmtSec(waitS*1000);
+      const statusLabel = queuedChunk
+        ? T(it.phase==='reduce' ? 'backend.combining_waiting' : 'backend.chunk_waiting', chunkWords)
+        : queued && waitText && !split && !it.chunks ? T('backend.waiting_short') : '';
+      const statusTitle = [
+        queuedChunk && it.phase!=='reduce'
+          ? T('backend.chunk_waiting_title', {done: Math.max(0, (Number(it.chunk)||1) - 1), total: it.chunks, n: it.chunk||1}) : '',
+        waitText ? T('backend.waited_title', {wait: waitText, total: fmtSec((it.elapsed_s||0)*1000)}) : '',
+      ].filter(Boolean).join('. ');
       const chunk = split
         ? `<span class="chunkchip" title="${escHooks(T('backend.part_title', splitWords))}">${escHooks(T('backend.part', splitWords))}</span>`
-        : queuedChunk
-          ? `<span class="chunkchip"${queuedChunkTitle ? ` title="${escHooks(queuedChunkTitle)}"` : ''}>${escHooks(T(it.phase==='reduce' ? 'backend.combining_waiting' : 'backend.chunk_waiting', chunkWords))}</span>`
+        : statusLabel
+          ? `<span class="chunkchip"${statusTitle ? ` title="${escHooks(statusTitle)}"` : ''}>${escHooks(waitText ? `${statusLabel} · ${waitText}` : statusLabel)}</span>`
           : it.chunks ? `<span class="chunkchip">${escHooks(T(chunkKey, chunkWords))}</span>` : '';
-      // Issue #547: why a queued row waits, in its title (never `slot`/`turn` as text).
-      const queuedTitle = !queued ? ''
+      // Why a queued row waits, in the row's title. The daemon's turn (REQ-008) keeps the same words
+      // as the title of the model row, with the place in the queue after them.
+      const turnText = it.local_wait==='turn' ? turnWords(it) : '';
+      const position = Number.isFinite(it.queue_position) && it.queue_position>0
+        ? T('backend.queue_position_title', {n: it.queue_position}) : '';
+      const queuedTitle = turnText ? [turnText, queued ? position : ''].filter(Boolean).join(' · ')
+        : !queued ? ''
         : it.local_wait==='slot' ? T('backend.queued_slot_title')
-        : it.local_wait==='turn' ? (Number.isFinite(it.queue_position) && it.queue_position>0
-            ? T('backend.queued_turn_position_title', {n: it.queue_position}) : T('backend.queued_turn_title'))
         : it.local_wait ? T('backend.queued_local_title')
         : T('backend.queued_start_title');
-      // And how long this wait has lasted (`wait_s`, daemons with #547), as a chip beside the
-      // chunk; the call's total stays in the time column, like every other row.
-      const waited = queued && Number.isFinite(it.wait_s) && it.wait_s>=0
-        ? `<span class="chunkchip" title="${escHooks(T('backend.waited_title', {wait: fmtSec(it.wait_s*1000), total: fmtSec((it.elapsed_s||0)*1000)}))}">${escHooks(T('backend.waited', {t: fmtSec(it.wait_s*1000)}))}</span>` : '';
       const org = it.backend ? `<span class="org ${escHooks(it.backend)}">${escHooks(labelFor('origin', it.backend))}</span>` : '';
-      // Espera de turno del daemon (REQ-008): las mismas palabras que el title de la fila del modelo.
-      const turnText = it.local_wait==='turn' ? turnWords(it) : '';
-      const turnChip = turnText ? `<span class="chunkchip" title="${escHooks(turnText)}">${escHooks(turnText)}</span>` : '';
-      const pos = queued && Number.isFinite(it.queue_position) && it.queue_position>0
-        ? `<span class="chunkchip" title="${escHooks(T('backend.queue_position_title', {n: it.queue_position}))}">#${escHooks(String(it.queue_position))}</span>` : '';
       // The machine that asked for it, when the daemon says (a field the host work adds); never required.
       const host = typeof it.host==='string' && it.host
         ? `<span class="chunkchip" title="${escHooks(T('backend.host_title', {host: it.host}))}">${escHooks(it.host)}</span>` : '';
@@ -3032,9 +3039,13 @@ function renderInflight(){
         ? `<span class="chunkchip loaded" title="${escHooks(waitTitle)}">${escHooks(loadedModels ? T('backend.loaded_chip', {models: loadedModels}) : T('backend.wait_backend_unknown'))}</span>` : '';
       const dot = queued ? 'queue-dot' : waitBackend ? 'wait-dot' : 'spin';
       const rowTitle = waitBackend ? waitTitle : queuedTitle;
-      // Issue #547: the chips wrap inside their own box; time and characters never leave the line.
-      return `<div class="ifrow${queued || waitBackend ? ' queued' : ''}"${rowTitle ? ` title="${escHooks(rowTitle)}"` : ''}><span class="${dot}"></span><span class="ifchips"><span class="badge">${escHooks(it.tool)}</span>
-        <span class="badge model">${escHooks(it.model)}</span>${pos}${chunk}${waited}${turnChip}${loadedChip}${org}${host}</span>
+      // Issue #547: one line per row on desktop. The tool goes without its common `local_` prefix
+      // (as in the mod's band) and the model gives way with an ellipsis when room runs out; both
+      // carry their full name in the title. Time and characters never leave the line.
+      const toolName = String(it.tool==null ? '' : it.tool);
+      const toolShort = toolName.startsWith('local_') ? toolName.slice(6) : toolName;
+      return `<div class="ifrow${queued || waitBackend ? ' queued' : ''}"${rowTitle ? ` title="${escHooks(rowTitle)}"` : ''}><span class="${dot}"></span><span class="ifchips"><span class="badge" title="${escHooks(toolName)}">${escHooks(toolShort)}</span>
+        <span class="badge model" title="${escHooks(it.model)}">${escHooks(it.model)}</span>${chunk}${loadedChip}${org}${host}</span>
         <span class="num ifmeta">${escHooks(fmtSec((it.elapsed_s||0)*1000))} · ${F.format(it.chars_in||0)} ${T('unit.chars_short')}</span></div>`;
     };
     // Issue #477: with `state` (daemons from 0.45 on), «Processing (n)» and «Queued (m)» apart; a

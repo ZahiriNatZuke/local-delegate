@@ -12,16 +12,16 @@ A queued chunked delegation reads as waiting for its next chunk, says why and fo
 - **REQ-001** — A queued row of a chunked delegation in the map phase shows «Waiting chunk n/total» («Espera trozo n/total»), never the processing label «Chunk n/total»; a queued reduce shows «Waiting to combine total pieces». Rows that are not queued keep their labels.
   - Request: "que se distinga el trozo que espera de los ya hechos"
   - Verify: test tests/test_inflight_state.py::test_panel_queued_chunk_says_it_waits
-- **REQ-002** — A queued row carries a title that says why it waits: a backend place (`slot`), its turn (`turn`, with the position when known), or not started yet; the chunk chip's title says how many chunks are done. No machine value (`slot`, `turn`) is shown as text.
+- **REQ-002** — A queued row carries a title that says why it waits: a backend place (`slot`), the daemon's turn (`turn`, with the models in use and the position when known), or not started yet; the status chip's title says how many chunks are done. No machine value (`slot`, `turn`), no «#n» chip and no «waiting for the daemon's turn…» prose chip is shown as text (revision 2026-11-03, coordinator review).
   - Request: "que el título (tooltip) diga por qué espera: plaza (slot) o turno (turn, con su puesto si lo hay)"
   - Verify: test tests/test_inflight_state.py::test_panel_queued_row_title_says_why
 - **REQ-003** — `/api/inflight` adds `wait_s` (seconds since the current local wait began) to entries with `local_wait`, and only to them; existing fields are unchanged.
   - Request: "Si /api/inflight no expone algún dato que necesites (p. ej. desde cuándo espera), añádelo en la API"
   - Verify: test tests/test_inflight_state.py::test_inflight_reports_how_long_it_waits
-- **REQ-004** — A queued row with `wait_s` shows the waited time with a short label next to the total time, with the explanation in the title.
+- **REQ-004** — A queued row with `wait_s` shows ONE status chip joining what waits and for how long («Espera trozo 2/3 · 41 s»; whole seconds under a minute, «1 min 53 s» above), with the explanation and the total in the title (revision 2026-11-03, coordinator review).
   - Request: "Mostrar cuánto lleva esperando la fila en cola, además del total, sin añadir prosa"
   - Verify: test tests/test_inflight_state.py::test_panel_queued_row_shows_the_wait
-- **REQ-005** — Time and characters of an «In progress» row stay on one line and right-aligned at desktop width, whatever the width of the numbers.
+- **REQ-005** — Every «In progress» row, queued ones included, is one line of the same height at desktop width (1366 px), with time and characters on the right, whatever the width of the numbers; in a narrow card every row is the same two lines (revision 2026-11-03, coordinator review).
   - Request: "Arreglar la fila de Processing que parte tiempo y caracteres a otra línea según el ancho del número"
   - Verify: test tests/test_dashboard_ui.py::test_inflight_rows_keep_time_and_chars_on_one_line
 

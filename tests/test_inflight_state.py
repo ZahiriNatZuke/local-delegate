@@ -161,7 +161,8 @@ def test_panel_splits_processing_from_queued(tmp_path):
         assert html.index(f">{tool}<") > head_queued, tool
     assert html.count('class="ifrow queued"') == 2
     assert html.count('class="queue-dot"') == 2 and html.count('class="spin"') == 2
-    assert ">#3<" in html
+    # Issue #547: the place in the turn queue goes in the row's title, no «#3» chip.
+    assert "Puesto 3 en la cola de turno" in html and ">#3<" not in html
 
 
 def test_panel_without_state_keeps_one_list(tmp_path):
@@ -227,7 +228,8 @@ def test_api_inflight_carries_the_wait(tmp_path, monkeypatch):
 
 
 def test_panel_queued_chunk_says_it_waits(tmp_path):
-    """A queued chunk is «Espera trozo 2/3», never «Trozo 2/3»; one at the backend keeps «Trozo».
+    """A queued chunk has ONE status chip, «Espera trozo 2/3 · 40 s», never «Trozo 2/3»; one at
+    the backend keeps «Trozo».
 
     Positive control: drawing a queued chunk with `backend.chunk` gives «Trozo 2/3» under «En cola»
     and the first assert fails.
@@ -242,16 +244,23 @@ def test_panel_queued_chunk_says_it_waits(tmp_path):
     )
     queued = html[html.index('data-group="queued"') :]
     running = html[: html.index('data-group="queued"')]
-    assert ">Espera trozo 2/3<" in queued and ">Trozo 2/3<" not in queued, queued
+    assert ">Espera trozo 2/3 · 40 s<" in queued and ">Trozo 2/3<" not in queued, queued
     assert ">Espera combinar 3 trozos<" in queued and "Combinando" not in queued, queued
     assert '<span class="chunkchip">Trozo 2/4</span>' in running and "Espera" not in running
-    assert 'title="1 de 3 trozos hechos; el trozo 2 espera para enviarse"' in queued, queued
+    title = (
+        'title="1 de 3 trozos hechos; el trozo 2 espera para enviarse. '
+        'Lleva 40 s esperando; 5,0 s desde que empezó la llamada"'
+    )
+    assert title in queued, queued
+    assert queued.count('class="chunkchip"') == 2, queued  # one status chip per queued row
 
 
 def test_panel_queued_row_title_says_why(tmp_path):
-    """The why of a queued row is in its title, in words; `slot`/`turn` never show as text.
+    """The why of a queued row, the model in use and the place in the queue are in its title, in
+    words; no `slot`/`turn`, no «#2» and no «esperando turno…» chip show as text.
 
-    Positive control: without `queuedTitle` the row has no title and the first assert fails.
+    Positive control: without `queuedTitle` the row has no title and the first assert fails; with
+    the old turn chip, «>esperando turno» shows as text and the loop assert fails.
     """
     rows = {
         "a": _row("a", "queued", local_wait="slot"),
@@ -262,32 +271,38 @@ def test_panel_queued_row_title_says_why(tmp_path):
     }
     html = {k: _render(tmp_path, [v]) for k, v in rows.items()}
     assert 'title="Espera una plaza libre en el backend"' in html["a"], html["a"]
-    assert 'title="Espera su turno (puesto 2)"' in html["b"], html["b"]
-    assert 'title="Espera su turno"' in html["c"], html["c"]
+    turn = 'title="esperando turno del daemon (en uso: x) · Puesto 2 en la cola de turno"'
+    assert turn in html["b"], html["b"]
+    assert 'title="esperando turno del daemon (en uso: nada)"' in html["c"], html["c"]
     assert 'title="Aún no ha empezado"' in html["d"], html["d"]
     assert '<div class="ifrow">' in html["e"], html["e"]  # a running row has no wait title
     for k, h in html.items():
         assert ">slot<" not in h and ">turn<" not in h, (k, h)
+        assert ">#" not in h and ">esperando turno" not in h, (k, h)
 
 
 def test_panel_queued_row_shows_the_wait(tmp_path):
-    """A chip «espera 40,0 s», explained in its title; the total stays in the time column.
+    """The wait goes in the status chip, in whole seconds under a minute and in the panel's
+    «1 min 53 s» above; the title explains it and the total stays in the time column.
 
-    Positive control: without `waited` the row has no wait chip and the first assert fails.
+    Positive control: without `waitText` in the chip the row says only «Espera trozo 1/4» and the
+    first assert fails.
     """
     html = _render(
         tmp_path,
         [
-            _row("q", "queued", local_wait="slot", wait_s=40, elapsed_s=115),
+            _row("q", "queued", local_wait="slot", chunks=4, chunk=1, wait_s=113, elapsed_s=115),
+            _row("s", "queued", local_wait="slot", wait_s=41.2, elapsed_s=115),
             _row("old", "queued", local_wait="slot", elapsed_s=115),
         ],
     )
-    first, second = html.split('class="ifrow queued"')[1:]
-    title = 'title="Lleva 40,0 s esperando; 1 min 55 s desde que empezó la llamada"'
-    assert f'<span class="chunkchip" {title}>espera 40,0 s</span>' in first, first
+    first, second, third = html.split('class="ifrow queued"')[1:]
+    assert ">Espera trozo 1/4 · 1 min 53 s<" in first, first
+    assert "Lleva 1 min 53 s esperando; 1 min 55 s desde que empezó la llamada" in first, first
     assert '<span class="num ifmeta">1 min 55 s · ' in first, first
-    assert ">espera " not in second, second  # older daemon: total only
-    assert '<span class="num ifmeta">1 min 55 s · ' in second, second
+    assert ">Espera · 41 s<" in second, second
+    assert "chunkchip" not in third, third  # older daemon: no wait, no chip, total only
+    assert '<span class="num ifmeta">1 min 55 s · ' in third, third
 
 
 def test_panel_queued_titles_are_escaped(tmp_path):
