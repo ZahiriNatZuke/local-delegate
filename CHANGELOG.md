@@ -12,6 +12,79 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `--dry-run`, lista cada carpeta de `.sdd/changes/` cuyo `state.json` no está en `closed`
   («SDD sin cerrar: <slug> (<estado>)») y sugiere cerrarlos. Es un aviso, no bloquea. Varios SDD
   se habían quedado en `verifying` con su trabajo ya mezclado y publicado.
+- **`local_commit_msg` avisa cuando no pudo tomar el idioma del repo (#546).** Con `path`, si el
+  fichero del diff no está dentro de un repo git (lo habitual al volcarlo a una carpeta temporal)
+  o los commits recientes del repo no dejan claro su idioma, el mensaje sale en el idioma del
+  producto y ahora lleva detrás un bloque `[local-delegate warning: …]` que dice qué idioma se usó
+  y cómo cambiarlo: guardar el diff dentro del repo o poner `LOCAL_DELEGATE_COMMIT_LANGUAGE`. Sin
+  `path` no hay aviso (nunca hay repo que mirar). El docstring de la tool lo explica. El prompt
+  que recibe el modelo no cambia. Un clon o un submódulo recién hechos, cuyo reflog aún no tiene
+  commits, llevan su propio aviso («muy pocos commits»), distinto del de un historial mezclado.
+  El comando `/local-commit` del mod guarda ahora el diff dentro del git dir del repo donde se
+  ejecuta (nunca se commitea y se borra al terminar), así que toma el idioma del repo; si no hay
+  repo o no puede escribir ahí, usa la carpeta de datos como antes. Las rutas de red (UNC) en
+  los ficheros `.git` y `commondir` no se siguen.
+- **Aviso de espera larga del turno común.** Si una llamada esperó el turno al menos
+  `LOCAL_DELEGATE_TURN_WAIT_NOTICE_S` (60 s; `0` lo desactiva), su respuesta lleva un aviso
+  `[local-delegate warning: …]` (junto a los demás avisos, antes de las líneas de ahorro) que dice
+  cuánto esperó, que fue cola de otras delegaciones y no lentitud del modelo, y que agrupar las
+  llamadas por tool lo reduce; en `local_extract` va en `_local_delegate.turn_wait` (y en
+  `warning` si no había otro aviso). Vale para todas las tools salvo `local_classify`, cuya
+  respuesta es la etiqueta exacta, y no se añade a una respuesta de error
+  (`[local-delegate error]`), que ya dice qué falló; la espera sigue en el log (`turn_wait_ms`).
+  Una ráfaga que alterna tools de modelos que no caben juntos puede esperar minutos: un resumen
+  tardó 343 s, 292 de ellos en el turno, y parecía un modelo lento. README y wiki
+  (Troubleshooting, Configuration) explican el caso (#537).
+
+### Corregido
+
+- **`local_commit_msg` detecta el idioma del repo también desde un worktree recién creado
+  (#548).** El reflog propio de un `git worktree add` nuevo no tiene ningún commit, así que la
+  detección del #461 no tenía votos y caía al idioma del producto. Ahora, si ese reflog no da
+  votos suficientes, se lee también el del git dir común (el que indica `commondir`, solo si está
+  donde git lo pone: dos carpetas por encima del git dir del worktree).
+
+- **`local_boilerplate` ya no pisa un archivo creado mientras genera.** Con `overwrite=False`
+  se comprobaba que `target` no existía antes de la inferencia, pero se abría con `"w"` después:
+  si el archivo aparecía en ese intervalo (que puede durar minutos), se truncaba y el recibo decía
+  «[escrito]» sin aviso. Ahora la escritura es de creación exclusiva y ese caso da el mismo error
+  de «ya existe», con el archivo del usuario intacto. Con `overwrite=True` no cambia nada: se
+  sigue escribiendo sobre el destino (respeta symlinks, permisos y enlaces duros).
+  Si la escritura falla, la fila del log de uso ya no marca `output_to_file`, así que el panel no
+  cuenta como ahorro una salida que no llegó a disco.
+
+- **`local_summarize` ya no saca la estructura del resumen de las cadenas de un fichero de
+  código (#539).** Con un `.mjs` de tests de más de 6000 caracteres que montaba un documento
+  Markdown dentro de un template literal (`## Specs`, `## Tasks`, `campo: ${variable}`), el
+  resumen por secciones tomaba esas líneas por las secciones del fichero, se las daba al modelo
+  como lista a seguir y reponía las que faltaban: el resumen salía con el fixture como encabezados
+  y los tests colgados de `## Verify`, sin aviso. Ahora un `path` con extensión de código nunca va
+  por el resumen estructurado, y si un título del resumen copia una línea de un literal de cadena
+  multilínea que es dato (asignado, pasado como argumento o devuelto; o, en código, una línea con
+  `${…}` sin resolver), la respuesta lo avisa con `[local-delegate warning: …]`. No avisan los
+  docstrings de Python ni los títulos que el documento también tiene como títulos reales, así que
+  un resumen correcto de un `.md` no lleva ese aviso.
+
+- **`local_extract` devuelve exactamente las claves pedidas, como dice su contrato.** En modo libre
+  (`LOCAL_DELEGATE_JSON_SCHEMA=off`, o `auto` cuando el backend rechaza el schema y se reintenta
+  sin él) el modelo podía omitir una clave pedida o inventar otra, y la tool lo entregaba tal cual
+  y sin aviso. Ahora la clave que falta vuelve como `null`; la que el modelo escribió de otra
+  forma (mayúsculas, `_`, `-`, espacios: `Name` ~ `name`, `endDate` ~ `end_date`) se empareja si
+  el emparejamiento es único (`renamed_keys`), y la que sobra sale de los datos pero conserva su
+  valor en `_local_delegate.dropped` (nombres en `dropped_keys`). También en el camino troceado,
+  con `missing_keys` y un `warning` legible (si ya había un aviso de truncado o de trozos, ese
+  conserva su texto). Con todas las claves en orden no aparece ningún aviso nuevo. Y
+  `fields` vacío o solo con blancos da un error claro sin llamar al backend.
+
+- **`local_explain_code` ya no confirma sin aviso la premisa de la pregunta.** Preguntado «¿cómo
+  gestiona los backups y su retención?» sobre un módulo que nunca borra un backup, respondió que
+  había una «retención implícita», sin aviso. Ahora, con `path` y pregunta, si la respuesta afirma
+  una palabra de la pregunta que el fichero no contiene (comparando sus primeras letras, sin
+  acentos ni mayúsculas, también como cognado inglés: rotación/`rotat`, inicialización/`init`) en
+  una frase que no la niega ni se apoya en el código (una línea citada
+  que contiene lo que cita, o un identificador que está en el fichero), lleva un aviso que dice
+  que puede ser la premisa de la pregunta. La respuesta que niega la premisa («no hay retención:
+  nunca borra») no avisa. Es una guarda por programa; el prompt no cambia (#538).
 
 ### Corregido
 

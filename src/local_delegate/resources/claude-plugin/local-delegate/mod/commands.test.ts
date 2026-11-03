@@ -36,6 +36,8 @@ function makeEnv(opts: {
   mcpImpl?: (tool: string, args: any, env: Env) => any
   files?: Record<string, string>
   runLd?: boolean
+  dirs?: string[]
+  readOnly?: string[]
 } = {}): Env {
   const cwd = opts.cwd ?? 'C:\\work'
   const language = opts.language ?? 'es'
@@ -53,10 +55,16 @@ function makeEnv(opts: {
     session: { cwd: async () => cwd },
     fs: {
       write: async (p: string, text: string) => {
+        if ((opts.readOnly ?? []).some((d) => p.startsWith(d))) throw new Error('write denied')
         env.files.set(p, text)
       },
-      exists: async (p: string) => env.files.has(p),
+      read: async (p: string) => {
+        if (!env.files.has(p)) throw new Error('missing')
+        return env.files.get(p)!
+      },
+      exists: async (p: string) => env.files.has(p) || (opts.dirs ?? []).includes(p),
       stat: async (p: string) => {
+        if ((opts.dirs ?? []).includes(p)) return { kind: 'dir', size: 0, mtimeMs: 0, isLink: false }
         if (!env.files.has(p)) throw new Error('missing')
         return { kind: 'file', size: env.files.get(p)!.length, mtimeMs: 0, isLink: false }
       },
@@ -255,6 +263,51 @@ test('commit_temp_file_removed', async () => {
   })
   await run(env, 'local-commit', '')
   for (const p of tempFiles(env)) expect(env.files.get(p)).toBe('')
+})
+
+// #546: the tool takes the commit language from the repo that holds the diff file, so the diff
+// goes inside the repo's git dir (never committed) and is removed afterwards.
+const STAGED = () => ({ exitCode: 0, stdout: DIFF, stderr: '', isStdoutTruncated: false, isStderrTruncated: false })
+
+test('commit_diff_goes_inside_the_git_dir', async () => {
+  // Mutant «always the data folder»: the `startsWith(C:\repo\.git\)` assert fails.
+  const env = makeEnv({ cwd: 'C:\\repo\\src', dirs: ['C:\\repo\\.git'], procImpl: STAGED })
+  await run(env, 'local-commit', '')
+  const path = env.mcpCalls[0].args.path
+  expect(path.startsWith('C:\\repo\\.git\\local-delegate-')).toBe(true)
+  expect(env.mcpCalls[0].seen).toBe(DIFF)
+  expect(env.files.has(path)).toBe(false)
+  expect(tempFiles(env)).toEqual([])
+})
+
+test('commit_diff_follows_a_worktree_git_file', async () => {
+  const env = makeEnv({
+    cwd: '/home/u/wt',
+    dirs: ['/home/u/repo/.git/worktrees/wt'],
+    files: { '/home/u/wt/.git': 'gitdir: /home/u/repo/.git/worktrees/wt\n' },
+    procImpl: STAGED,
+  })
+  await run(env, 'local-commit', '')
+  expect(env.mcpCalls[0].args.path.startsWith('/home/u/repo/.git/worktrees/wt/local-delegate-')).toBe(true)
+})
+
+test('commit_diff_falls_back_to_the_data_folder', async () => {
+  // No repo, a UNC `gitdir:` and a git dir that cannot be written: all go to the data folder.
+  const cases: Record<string, any> = {
+    no_repo: makeEnv({ procImpl: STAGED }),
+    unc: makeEnv({
+      cwd: 'C:\\wt',
+      dirs: ['\\\\server\\share\\.git'],
+      files: { 'C:\\wt\\.git': 'gitdir: \\\\server\\share\\.git\n' },
+      procImpl: STAGED,
+    }),
+    denied: makeEnv({ cwd: 'C:\\repo', dirs: ['C:\\repo\\.git'], readOnly: ['C:\\repo\\.git'], procImpl: STAGED }),
+  }
+  for (const [name, env] of Object.entries(cases)) {
+    await run(env, 'local-commit', '')
+    expect(env.mcpCalls[0].args.path.startsWith(DATA), name).toBe(true)
+    expect(env.mcpCalls[0].seen, name).toBe(DIFF)
+  }
 })
 
 test('daemon_down_clear_error', async () => {

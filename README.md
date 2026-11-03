@@ -205,6 +205,14 @@ espera a que llama-swap cambie de modelo, y un `read_timeout` nombra el modelo q
 Desde la 0.47.0 esa espera se ve como tal aunque el trozo se esté dividiendo (antes salía como
 «reintentando»; desde la 0.47.2, «dividiendo»).
 
+**Ráfagas que mezclan modelos.** El turno atiende por orden de llegada, así que una ráfaga que
+alterna tools de modelos que no caben juntos (resumir y explicar código, por ejemplo) obliga a
+cambiar de modelo en cada relevo, y la última puede esperar **minutos** sin que el modelo sea lento.
+Claude Code pasa a segundo plano la llamada que lleva 2 min y el resultado llega igual. Si la
+espera del turno pasa de `LOCAL_DELEGATE_TURN_WAIT_NOTICE_S` (60 s), la respuesta lleva un
+aviso que dice cuánto esperó. Agrupar las llamadas por tool (primero todos los resúmenes, luego
+todo el código) lo reduce.
+
 **Resúmenes de documentos enormes.** `local_summarize` y `local_lint_summary` hacen **map-reduce**
 cuando la entrada no cabe en el modelo: resumen cada parte y luego resumen los resúmenes, por
 niveles si hace falta. Antes truncaban —de un log de CI enorme se resumía el principio y el resto
@@ -276,6 +284,7 @@ cámbialos por los de tu backend.
 | `LOCAL_DELEGATE_TURN_YIELD_S` | `120` | Cesión del turno entre trozos: si la primera de la cola lleva estos segundos esperando un modelo que choca con el de una operación que tiene el turno desde hace otro tanto, esa operación lo suelta antes de su siguiente trozo y vuelve al final de la cola (`turn_yields` en el log). Coste: como mucho una pareja de cargas de modelo cada este tiempo cuando dos operaciones largas chocan. `0` lo desactiva |
 | `LOCAL_DELEGATE_CALL_MAX_S` | `1800` | Plazo propio del daemon para una llamada, cola incluida: al pasarlo se cancela y queda en el log como fallo (`cancel_reason: "deadline"`). `0` lo desactiva |
 | `LOCAL_DELEGATE_PROGRESS_INTERVAL_S` | `20` | Cada cuántos segundos una llamada viva manda `notifications/progress` con su fase (puesto en la cola, plaza, trozo k/N), para que el cliente no la corte por inactividad (Claude Code: 300 s). `0` lo desactiva |
+| `LOCAL_DELEGATE_TURN_WAIT_NOTICE_S` | `60` | Si una llamada esperó el turno al menos estos segundos, su respuesta lleva un aviso (`[local-delegate warning: …]`; en `local_extract`, `_local_delegate.turn_wait`) que dice cuánto esperó, que fue cola de otras delegaciones y no lentitud del modelo, y que agrupar las llamadas por tool lo reduce. No va en `local_classify` (etiqueta exacta) ni en una respuesta de error. `0` lo desactiva |
 | `LOCAL_DELEGATE_QUEUE_MAX_WAIT_S` | `900` | Máximo de segundos que quien espera turno o plaza aguanta **sin que la cola avance** (una cola lenta que avanza no corta a nadie): al pasarlo la llamada falla en el acto con «cola saturada» (`error: "queue_saturated"`). `0` lo desactiva |
 | `LOCAL_DELEGATE_SLOW_THRESHOLD` | `0.5` | Una llamada es «lenta» (`slow` en el log, «lento ×0,37» en el panel) si genera a menos de esta fracción de la velocidad normal de su modelo |
 | `LOCAL_DELEGATE_AFFINITY_MARGIN_S` | `5` | Afinidad: un modelo ya cargado solo se aprovecha si le quedan al menos estos segundos de TTL |

@@ -455,6 +455,13 @@ QUEUE_MAX_WAIT_S = max(0.0, _env_float("LOCAL_DELEGATE_QUEUE_MAX_WAIT_S", 900.0)
 # inference was cut while the daemon kept working for nobody. `0` disables it.
 PROGRESS_INTERVAL_S = max(0.0, _env_float("LOCAL_DELEGATE_PROGRESS_INTERVAL_S", 20.0))
 
+# --- Turn wait made visible (issue #537) -------------------------------------------------------
+# A call that waited at least this many seconds for the common turn ends its answer with a notice:
+# how long, that it was the queue of other delegations (not the model), and that grouping the calls
+# by tool reduces it. A burst that alternates models that cannot be loaded together can wait
+# minutes, and without the notice it looks like a slow model. `0` disables it.
+TURN_WAIT_NOTICE_S = max(0.0, _env_float("LOCAL_DELEGATE_TURN_WAIT_NOTICE_S", 60.0))
+
 # --- Espera frente a lentitud (daemon-reparte-el-backend, REQ-025) ----------------------------
 # Una llamada es `slow` si genera a menos de esta fracción de la velocidad normal de su modelo
 # (`pace_rel` < umbral). 0,5 por defecto, decisión del usuario.
