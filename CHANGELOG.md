@@ -15,6 +15,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_summarize` ya no saca la estructura del resumen de las cadenas de un fichero de
+  código (#539).** Con un `.mjs` de tests de más de 6000 caracteres que montaba un documento
+  Markdown dentro de un template literal (`## Specs`, `## Tasks`, `campo: ${variable}`), el
+  resumen por secciones tomaba esas líneas por las secciones del fichero, se las daba al modelo
+  como lista a seguir y reponía las que faltaban: el resumen salía con el fixture como encabezados
+  y los tests colgados de `## Verify`, sin aviso. Ahora un `path` con extensión de código nunca va
+  por el resumen estructurado, y si un título del resumen copia una línea de un literal de cadena
+  multilínea que es dato (asignado, pasado como argumento o devuelto; o, en código, una línea con
+  `${…}` sin resolver), la respuesta lo avisa con `[local-delegate warning: …]`. No avisan los
+  docstrings de Python ni los títulos que el documento también tiene como títulos reales, así que
+  un resumen correcto de un `.md` no lleva ese aviso.
+
 - **`local_extract` devuelve exactamente las claves pedidas, como dice su contrato.** En modo libre
   (`LOCAL_DELEGATE_JSON_SCHEMA=off`, o `auto` cuando el backend rechaza el schema y se reintenta
   sin él) el modelo podía omitir una clave pedida o inventar otra, y la tool lo entregaba tal cual

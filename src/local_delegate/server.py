@@ -6379,15 +6379,17 @@ def _structured_summary(
     truncated_in: bool,
     raw_len: int | None,
     path: str | None,
+    after: Callable[[str, bool], str] | None = None,
 ) -> str:
     plan = sections.sections_for_summary(content, structure)
     headings = [s.heading for s in plan]
     empty_in_document = frozenset(i for i, s in enumerate(plan) if s.empty)
 
     def _complete(text: str, truncated: bool) -> str:
-        return sections.complete(
+        text = sections.complete(
             text, headings, truncated=truncated, empty_in_document=empty_in_document
         ).text
+        return after(text, truncated) if after is not None else text
 
     max_chars = config.max_chars_for_role(role)
     if len(content) <= max_chars:
@@ -6457,6 +6459,38 @@ def _structured_summary(
     )
 
 
+def _source_kind(path: str | None) -> str:
+    """What `path` holds by its extension, for #539: "code", "prose" or "unknown" (also inline).
+
+    It reuses the classes of the panel (`cost.CLASS_BY_EXTENSION`); an extension they do not list
+    (`.vue`, `.svelte`, `.lua`…) is "unknown".
+    """
+    kind = cost.CLASS_BY_EXTENSION.get(Path(path).suffix.lower()) if path else None
+    return kind if kind in {"code", "prose"} else "unknown"
+
+
+def _string_literal_notice(content: str, *, kind: str) -> Callable[[str, bool], str]:
+    """#539: a postprocess that warns when a summary heading copies a string literal line.
+
+    The summary is not changed: the heading may still be a fair label for its part, but the caller
+    must know it comes from data (a fixture in a template literal), not from the structure of the
+    file. It runs as the `postprocess` of the call, so the notice goes before the savings receipt,
+    like the other warnings, and never on a backend error.
+    """
+
+    def _notice(text: str, _truncated: bool) -> str:
+        copied = sections.string_literal_headings(text, content, kind=kind)
+        if not copied:
+            return text
+        notice = i18n.t(
+            "mcp.warning.headings_from_string_literals",
+            headings=", ".join(f"«{heading}»" for heading in copied),
+        )
+        return f"{text.rstrip()}\n\n{WARNING_MARKER}{notice}]"
+
+    return _notice
+
+
 # --- Tools ------------------------------------------------------------------
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_summarize"]))
 def local_summarize(
@@ -6492,7 +6526,11 @@ def local_summarize(
     extra = _focus_clause(clean_focus) + _written_language_clause()
     # Solo con el modelo largo: el mecánico (4B, entradas cortas) se saltó la «Introducción» en la
     # etapa 1 de la v3 (0,86), y el criterio escrito antes de medir era limitarlo al rol `long`.
-    structured = config.STRUCTURED_SUMMARY and role == "long"
+    # #539: never on a code file: its `## ` lines live in string literals (test fixtures) and are
+    # data, and the structured path handed them to the model as the sections to follow.
+    kind = _source_kind(path)
+    literal_notice = _string_literal_notice(content, kind=kind)
+    structured = config.STRUCTURED_SUMMARY and role == "long" and kind != "code"
     structure = sections.detect(content) if structured else None
     if structure is not None:
         return _truncation_prefix(content, truncated_in, raw_len) + _structured_summary(
@@ -6507,6 +6545,7 @@ def local_summarize(
             truncated_in=truncated_in,
             raw_len=raw_len,
             path=path,
+            after=literal_notice,
         )
 
     # Sin estructura (o con el interruptor apagado): el camino de siempre. Desde la 0.36.0 lleva
@@ -6536,6 +6575,7 @@ def local_summarize(
             path=path,
             reduce_extra=extra,
             focus=clean_focus is not None,
+            postprocess=literal_notice,
         )
 
     user = _build(content)
@@ -6552,6 +6592,7 @@ def local_summarize(
         raw_len=raw_len,
         path=path,
         focus=clean_focus is not None,
+        postprocess=literal_notice,
     )
     return _truncation_prefix(content, truncated_in, raw_len) + result
 
