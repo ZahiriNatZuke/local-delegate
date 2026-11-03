@@ -6452,12 +6452,17 @@ def _structured_summary(
     )
 
 
-def _is_code_path(path: str | None) -> bool:
-    """Is `path` a source code file, by its extension (the `code` class of the panel)?"""
-    return bool(path) and cost.CLASS_BY_EXTENSION.get(Path(path).suffix.lower()) == "code"
+def _source_kind(path: str | None) -> str:
+    """What `path` holds by its extension, for #539: "code", "prose" or "unknown" (also inline).
+
+    It reuses the classes of the panel (`cost.CLASS_BY_EXTENSION`); an extension they do not list
+    (`.vue`, `.svelte`, `.lua`…) is "unknown".
+    """
+    kind = cost.CLASS_BY_EXTENSION.get(Path(path).suffix.lower()) if path else None
+    return kind if kind in {"code", "prose"} else "unknown"
 
 
-def _string_literal_notice(content: str, *, code_file: bool) -> Callable[[str, bool], str]:
+def _string_literal_notice(content: str, *, kind: str) -> Callable[[str, bool], str]:
     """#539: a postprocess that warns when a summary heading copies a string literal line.
 
     The summary is not changed: the heading may still be a fair label for its part, but the caller
@@ -6467,7 +6472,7 @@ def _string_literal_notice(content: str, *, code_file: bool) -> Callable[[str, b
     """
 
     def _notice(text: str, _truncated: bool) -> str:
-        copied = sections.string_literal_headings(text, content, code_file=code_file)
+        copied = sections.string_literal_headings(text, content, kind=kind)
         if not copied:
             return text
         notice = i18n.t(
@@ -6516,9 +6521,9 @@ def local_summarize(
     # etapa 1 de la v3 (0,86), y el criterio escrito antes de medir era limitarlo al rol `long`.
     # #539: never on a code file: its `## ` lines live in string literals (test fixtures) and are
     # data, and the structured path handed them to the model as the sections to follow.
-    code_file = _is_code_path(path)
-    literal_notice = _string_literal_notice(content, code_file=code_file)
-    structured = config.STRUCTURED_SUMMARY and role == "long" and not code_file
+    kind = _source_kind(path)
+    literal_notice = _string_literal_notice(content, kind=kind)
+    structured = config.STRUCTURED_SUMMARY and role == "long" and kind != "code"
     structure = sections.detect(content) if structured else None
     if structure is not None:
         return _truncation_prefix(content, truncated_in, raw_len) + _structured_summary(

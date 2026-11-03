@@ -169,7 +169,7 @@ def test_markdown_prose_with_stray_backticks_and_quotes_has_no_literal_lines():
 
 def test_copied_headings_are_named_once_in_output_order():
     output = COPYING_SUMMARY + "\n## Specs\n\nagain\n"
-    assert sections.string_literal_headings(output, MJS, code_file=True) == [
+    assert sections.string_literal_headings(output, MJS, kind="code") == [
         "state: ${status}",
         "Specs",
         "Verify",
@@ -181,16 +181,14 @@ def test_a_heading_with_an_unresolved_interpolation_counts_only_in_a_code_file()
     # and only for a code file.
     source = "const x = 1;\nconsole.log('field: ${variable}')\n"
     output = "## field: ${variable}\n\ntext\n"
-    assert sections.string_literal_headings(output, source, code_file=True) == [
-        "field: ${variable}"
-    ]
-    assert sections.string_literal_headings(output, source, code_file=False) == []
+    assert sections.string_literal_headings(output, source, kind="code") == ["field: ${variable}"]
+    assert sections.string_literal_headings(output, source, kind="unknown") == []
 
 
 def test_a_good_summary_of_the_code_has_no_copied_heading():
-    assert sections.string_literal_headings(GOOD_SUMMARY, MJS, code_file=True) == []
+    assert sections.string_literal_headings(GOOD_SUMMARY, MJS, kind="code") == []
     named = "## Test cases\n\n- case 1\n\n## Helpers\n\n`sddDocument` builds a document.\n"
-    assert sections.string_literal_headings(named, MJS, code_file=True) == []
+    assert sections.string_literal_headings(named, MJS, kind="code") == []
 
 
 # --- local_summarize end to end, with a fake backend -----------------------------------------------
@@ -253,3 +251,118 @@ def test_a_real_markdown_document_is_not_warned(monkeypatch, tmp_path):
     output, seen = _summarize(monkeypatch, tmp_path, answer, path=str(path))
     assert "Secciones, en orden" in seen[0]["messages"][1]["content"]
     assert server.WARNING_MARKER not in output
+
+
+# --- Review of the PR: time, docstrings and real headings ----------------------------------------
+
+
+def test_the_scan_is_linear_on_a_long_line_of_literals():
+    """Copying the line up to each backtick made it quadratic: 1.2 MB of `x=`a`;` on one line
+    took 9.4 s and 2.4 MB 73 s. Linear, 2 MB take well under a second; the cap is generous."""
+    import time
+
+    for unit in ("x=`a`;", '"a`"', "f(`a`, '`', \"`\");"):
+        text = unit * (2_000_000 // len(unit))
+        start = time.perf_counter()
+        sections.string_literal_headings("## a\n\ntext\n", text, kind="code")
+        assert time.perf_counter() - start < 2.0, unit
+
+
+PY_MODULE_DOCSTRING = '''\
+"""Tools to sync the mirror.
+
+Uso
+---
+
+Run it from cron.
+
+## Configuración
+
+Set MIRROR_URL.
+"""
+
+
+def sync(url):
+    """Sync one mirror.
+
+    Parameters
+    ----------
+    url : str
+        Where to read.
+
+    Returns
+    -------
+    int
+        Files copied.
+
+    Examples
+    --------
+    >>> sync("x")
+
+    Notes
+    -----
+    Idempotent.
+    """
+    return 0
+'''
+
+
+def test_python_docstrings_are_not_data():
+    # Module docstring with sections (setext and ATX) and a numpy-style function docstring: they
+    # document the code, and a summary that uses their sections as headings is not warned.
+    assert sections.string_literal_lines(PY_MODULE_DOCSTRING) == []
+    output = (
+        "## Uso\n\nFrom cron.\n\n## Configuración\n\nMIRROR_URL.\n\n"
+        "## Parameters\n\nurl.\n\n## Returns\n\nint.\n\n## Examples\n\nsync.\n\n## Notes\n\nok\n"
+    )
+    assert sections.string_literal_headings(output, PY_MODULE_DOCSTRING, kind="code") == []
+
+
+def test_a_python_string_assigned_to_a_name_is_still_data():
+    source = PY_MODULE_DOCSTRING + '\n\nFIXTURE = """\n## Specs\n\nbody\n"""\n'
+    output = "## Uso\n\nFrom cron.\n\n## Specs\n\nbody\n"
+    assert sections.string_literal_headings(output, source, kind="code") == ["Specs"]
+
+
+MARKDOWN_WITH_EXAMPLE = """\
+# Proyecto
+
+## Instalación
+
+Con uv.
+
+## Uso
+
+```js
+const readme = `
+## Uso
+
+Llama a la función.
+`;
+```
+
+## Licencia
+
+MIT.
+"""
+
+
+def test_a_real_heading_also_in_a_fenced_template_is_not_warned():
+    output = "## Instalación\n\nCon uv.\n\n## Uso\n\nUn ejemplo en JS.\n\n## Licencia\n\nMIT.\n"
+    for kind in ("prose", "unknown"):
+        assert sections.string_literal_headings(output, MARKDOWN_WITH_EXAMPLE, kind=kind) == []
+
+
+def test_a_heading_only_in_the_fenced_template_is_still_warned():
+    source = MARKDOWN_WITH_EXAMPLE.replace("const readme = `\n## Uso", "const readme = `\n## Demo")
+    output = "## Uso\n\nUn ejemplo.\n\n## Demo\n\nCopiado.\n"
+    assert sections.string_literal_headings(output, source, kind="prose") == ["Demo"]
+
+
+def test_an_unclosed_backtick_in_a_markdown_paragraph_does_not_cross_the_line():
+    # `y = `x` opens a "template" by the opener rule; in a Markdown file it ends with its line, so
+    # the headings below are not taken for its content.
+    source = "# Doc\n\nSet y = `x and go on.\n\n## Paso uno\n\nA.\n\n## Paso dos\n\nB.\n"
+    assert sections.string_literal_lines(source, prose=True) == []
+    output = "## Paso uno\n\nA.\n\n## Paso dos\n\nB.\n"
+    assert sections.string_literal_headings(output, source, kind="prose") == []

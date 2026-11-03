@@ -30,7 +30,20 @@
 - [ ] Secret scanning passes. (lo hace el CI: GitGuardian)
 - [x] No unrelated changes are present.
 
+## Review of the PR (#543)
+
+| Hallazgo | Arreglo | Control positivo |
+| --- | --- | --- |
+| Tiempo cuadrático en el escáner (2,4 MB en una línea → 73 s) | saltos por regex y ventana fija hacia atrás para el abridor | con la copia de la línea entera, 2 MB de `x=\`a\`;` tardan 37 s y falla `< 2.0`; arreglado, unos 0,4 s |
+| Docstrings de Python con secciones avisaban | una cadena triple solo cuenta detrás de un abridor (`=`, `(`, `,`, `return`…) | con `alone=True` fallan `test_python_docstrings_are_not_data` (27 líneas) y `…assigned_to_a_name…` (`['Uso', 'Specs']`) |
+| `.md` con `## Uso` real y otro en un template cercado avisaba | fuera de código, se descartan los títulos que el documento también tiene fuera de un literal | sin la resta, `['Uso']` |
+| Acento grave sin cerrar en un párrafo de Markdown | en `.md`/texto un literal no cruza la línea fuera de un bloque cercado | sin la regla, 8 líneas capturadas |
+
 ## Deviations and residual risk
+
+- `.vue`, `.svelte`, `.lua`, `.dart`, `.scala` no están en la clase `code` de
+  `cost.CLASS_BY_EXTENSION`: cuentan como "unknown" (siguen el camino estructurado, con la guarda).
+  No se cambia aquí porque afecta a la clasificación de coste del panel.
 
 - Texto en línea (sin `path`) que es código sigue yendo por el camino estructurado si tiene títulos:
   no hay extensión que mirar y cambiar `sections.detect` para todos arriesgaba documentos Markdown

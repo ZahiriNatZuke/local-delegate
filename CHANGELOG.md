@@ -22,8 +22,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   como lista a seguir y reponía las que faltaban: el resumen salía con el fixture como encabezados
   y los tests colgados de `## Verify`, sin aviso. Ahora un `path` con extensión de código nunca va
   por el resumen estructurado, y si un título del resumen copia una línea de un literal de cadena
-  multilínea (o, en código, una línea con `${…}` sin resolver), la respuesta lo avisa con
-  `[local-delegate warning: …]`. Un resumen correcto de un `.md` no lleva ese aviso.
+  multilínea que es dato (asignado, pasado como argumento o devuelto; o, en código, una línea con
+  `${…}` sin resolver), la respuesta lo avisa con `[local-delegate warning: …]`. No avisan los
+  docstrings de Python ni los títulos que el documento también tiene como títulos reales, así que
+  un resumen correcto de un `.md` no lleva ese aviso.
 
 ## [0.47.3] - 2026-11-02
 
