@@ -167,13 +167,13 @@ al contexto de Claude, y de ahí sale el ahorro.
 |---|---|---|
 | `local_summarize` | Resume texto o archivo; `focus` opcional para decir qué conservar (p. ej. «cifras de configuración») | mecánico / largo (auto) |
 | `local_classify` | Devuelve UNA etiqueta de una lista | mecánico |
-| `local_extract` | Extrae campos → **objeto validado**, no una cadena que haya que parsear | mecánico / largo (auto) |
+| `local_extract` | Extrae campos → **objeto validado** con exactamente las claves pedidas (las que falten, `null`), no una cadena que haya que parsear | mecánico / largo (auto) |
 | `local_boilerplate` | Genera código desde una spec y lo **escribe en `target`**; devuelve solo un recibo | código |
 | `local_delegate` | Escape genérico texto→texto | mecánico (o el que pases) |
 | `local_lint_summary` | Resume logs de lint/tests/CI | mecánico / largo (auto) |
-| `local_commit_msg` | Mensaje de commit desde un diff | código |
+| `local_commit_msg` | Mensaje de commit desde un diff; con `path` toma el idioma del repo y avisa si no pudo | código |
 | `local_translate` | Traduce texto o archivo | mecánico / largo (auto) |
-| `local_explain_code` | Explica código en prosa | código |
+| `local_explain_code` | Explica código en prosa; con `path` y pregunta avisa de líneas citadas dudosas y de una premisa que el código no sostiene | código |
 | `local_describe_image` | Describe una imagen o responde una pregunta sobre ella (imagen→texto) | visión |
 | `local_status` | Diagnóstico de solo lectura: backend, catálogo, log, VRAM, RAM de sistema | — (no llama al backend de chat) |
 
