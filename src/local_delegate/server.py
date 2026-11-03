@@ -8275,3 +8275,125 @@ def prepare_ctrl_break() -> None:
         # una mejora del cierre, no un requisito para servir, así que no poder hacerlo jamás debe
         # impedir que el servidor arranque.
         pass
+
+
+# --- Turn wait made visible (issue #537) ------------------------------------------------------
+
+
+def _turn_wait_notice() -> tuple[int, str] | None:
+    """The seconds this call waited for the common turn and their notice, or `None`.
+
+    `None` below `config.TURN_WAIT_NOTICE_S` (`0`: never) or outside a tool call. The wait is the
+    one the call's token summed over all its operations (`turn_wait_ms`, the same as the log).
+    """
+    threshold = config.TURN_WAIT_NOTICE_S
+    token = cancellation.current()
+    if threshold <= 0 or token is None:
+        return None
+    waited_s = token.turn_wait_ms / 1000
+    if waited_s < threshold:
+        return None
+    seconds = round(waited_s)
+    return seconds, i18n.t("mcp.warning.turn_wait", seconds=_machine(seconds))
+
+
+#: The receipt lines a tool appends after its notices: `(leído server-side: …)`, `(resumido de …)`…
+_RECEIPT_KEYS = (
+    "mcp.receipt.read_server_side",
+    "mcp.receipt.read_server_side_tokens",
+    "mcp.receipt.chunked",
+    "mcp.receipt.map_reduce",
+    "mcp.receipt.commit_scope",
+)
+
+#: Tools whose answer is consumed exactly, so a notice would break it: `local_classify` returns one
+#: label of the list, and whoever compares it with the labels fails if a line is added.
+_TURN_WAIT_NOTICE_EXCLUDED = frozenset({"local_classify"})
+
+
+def _before_receipt_lines(text: str, notice: str) -> str:
+    """`text` with `notice` as a paragraph after the content and before the trailing receipts.
+
+    A receipt is a trailing paragraph that starts like one of `_RECEIPT_KEYS` in the current
+    language (the text before its first placeholder), so model text is never taken for one unless
+    it ends with exactly such a paragraph.
+    """
+    prefixes = tuple(
+        p
+        for key in _RECEIPT_KEYS
+        if (p := i18n.t(key, **dict.fromkeys(_RECEIPT_FIELDS, "\x00")).split("\x00")[0])
+    )
+    paragraphs = text.split("\n\n")
+    cut = len(paragraphs)
+    while cut > 1 and paragraphs[cut - 1].startswith(prefixes):
+        cut -= 1
+    return "\n\n".join([*paragraphs[:cut], notice, *paragraphs[cut:]])
+
+
+_RECEIPT_FIELDS = ("amount", "unit", "tokens", "calls", "parts", "files", "chars")
+
+
+def _add_turn_wait_notice(result: Any) -> Any:
+    """The tool's result with the turn wait notice, if any (issue #537).
+
+    Text: a `WARNING_MARKER` paragraph with the other notices, before the trailing receipt lines
+    (`_RECEIPT_KEYS`). A dict (`local_extract`): `_local_delegate.turn_wait`, and `warning` only if
+    none is there (another warning keeps its exact text). Anything else, or any failure building
+    it, returns the result untouched.
+
+    An error (`ERROR_PREFIX`) gets nothing: the notice says the time was the queue and not the
+    model, which would contradict an error such as a `read_timeout`; the error text already says
+    what failed, and the wait stays in the log (`turn_wait_ms`).
+    """
+    try:
+        if isinstance(result, str) and result.startswith(ERROR_PREFIX):
+            return result
+        found = _turn_wait_notice()
+        if found is None:
+            return result
+        seconds, notice = found
+        if isinstance(result, str):
+            return _before_receipt_lines(result, f"{WARNING_MARKER}{notice}]")
+        if isinstance(result, dict):
+            meta = result.get("_local_delegate")
+            meta = dict(meta) if isinstance(meta, dict) else {}
+            meta["turn_wait"] = {"seconds": seconds, "notice": notice}
+            meta.setdefault("warning", notice)
+            return {**result, "_local_delegate": meta}
+    except Exception:
+        pass  # a notice never breaks the answer
+    return result
+
+
+def _with_turn_wait_notice(fn: Callable[..., Any]) -> Callable[..., Any]:
+    """`fn` returning its result through `_add_turn_wait_notice`.
+
+    No `functools.wraps`: the SDK built the tool's schema from `fn` already, and `__wrapped__` is
+    enough to reach the original.
+    """
+
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return _add_turn_wait_notice(fn(*args, **kwargs))
+
+    wrapper.__wrapped__ = fn  # type: ignore[attr-defined]
+    wrapper.__turn_wait_notice__ = True  # type: ignore[attr-defined]
+    return wrapper
+
+
+def _install_turn_wait_notice() -> None:
+    """Wraps every registered tool once, after registration (issue #537).
+
+    The schema was built from the original function at `@mcp.tool`, so it does not change; only
+    what runs does. One place for every tool, and the tool bodies stay as they are. The module-level
+    functions stay unwrapped: a direct call (tests, hooks) has no call token and no notice anyway.
+    The tools of `_TURN_WAIT_NOTICE_EXCLUDED` are left as they are.
+    """
+    for tool in mcp._tool_manager.list_tools():
+        if tool.name in _TURN_WAIT_NOTICE_EXCLUDED:
+            continue
+        if tool.is_async or getattr(tool.fn, "__turn_wait_notice__", False):
+            continue
+        tool.fn = _with_turn_wait_notice(tool.fn)
+
+
+_install_turn_wait_notice()
