@@ -93,6 +93,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   que contiene lo que cita, o un identificador que está en el fichero), lleva un aviso que dice
   que puede ser la premisa de la pregunta. La respuesta que niega la premisa («no hay retención:
   nunca borra») no avisa. Es una guarda por programa; el prompt no cambia (#538).
+- **El aviso de premisa de `local_explain_code` ya no salta si la respuesta la niega en otra
+  frase (#553).** En la prueba en vivo, la respuesta correcta («el código no implementa ninguna
+  política de eliminación automática… La retención es ilimitada…») avisó por la segunda frase.
+  Ahora la negación cuenta por palabra: si alguna frase que la nombra la niega, esa palabra no
+  avisa en ninguna. «No solo», «sin embargo» y «not only» no cuentan como negación, y la palabra
+  se reconoce también en inglés en la respuesta («no rotation» niega «rotación»). Además, el texto
+  del aviso tenía los dos puntos sin espacio detrás («respalde:puede»).
 
 ### Corregido
 

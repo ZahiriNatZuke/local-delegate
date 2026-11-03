@@ -13,6 +13,7 @@
 | REQ-002 | tests/test_explain_code_premise.py::test_the_issue_case_warns_and_the_correct_answer_does_not | pass | mutant «no negation check» makes the 8 correct backup answers warn; mutant «nothing anchors» fails the anchored case |
 | REQ-003 | tests/test_explain_code_premise.py::test_correct_answers_do_not_warn | pass | 0/26 of the #507 review set, 0/20 correct answers of the new set; mutant «every word counts» warns on 5 of 6 unanchored correct answers |
 | REQ-004 | tests/test_explain_code_premise.py::test_without_path_nothing_is_added | pass | inline output byte for byte; English warning test passes |
+| REQ-005 | tests/test_explain_code_premise.py::test_a_word_denied_in_one_sentence_does_not_warn_in_another and #553 tests | pass | mutants: «per sentence» fails the real #553 answer; «every negation denies» fails the 3 «no solo/sin embargo/not only» cases; «stem as written only» fails the English cognate case; the old «respalde:puede» text fails the format test |
 
 ## Commands
 

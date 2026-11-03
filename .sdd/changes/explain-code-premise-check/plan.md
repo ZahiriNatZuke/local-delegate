@@ -20,6 +20,11 @@ with no negation and (4) no anchor (verified cited line or identifier in the fil
   - Verification: tool tests with fake backend in tests/test_explain_code_premise.py
   - Depends on: T1
 
+- [x] T3 — per-word denial, cognate in the answer, space after the colon (REQ-005)
+  - Files or modules: src/local_delegate/line_check.py, resources/i18n/{es,en}/mcp.json
+  - Verification: tests/test_explain_code_premise.py (#553 real answer, mutants)
+  - Depends on: T1
+
 ## Test strategy
 
 - Unit: GOOD/BAD/OTHER_GOOD sets; the #507 review set measured (0/26 warned).

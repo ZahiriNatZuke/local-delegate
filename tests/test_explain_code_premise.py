@@ -11,6 +11,7 @@ doubled), no network, log in tmp.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -266,3 +267,63 @@ def test_the_warning_comes_in_english_too(answer, module, monkeypatch):
     result = server.local_explain_code(path=str(module), question=QUESTION)
     assert _warning("«retención»") in result
     assert "premise" in result
+
+
+# --- #553: the denial is judged per word, not per sentence --------------------------------------
+
+#: The real answer of the live check of #545 (backend, 2026-11-03), as the issue quotes it: right,
+#: and it warned because its second sentence names «retención» without a negation.
+REAL_553 = (
+    "Respecto a la retención, el código no implementa ninguna política de eliminación "
+    "automática. […] La retención es ilimitada y depende de la gestión externa del disco. […] "
+    "auditoría manual de la retención acumulada"
+)
+
+
+def test_a_word_denied_in_one_sentence_does_not_warn_in_another():
+    """Mutant «per sentence» (a denying sentence only skips itself): this assert falls."""
+    assert line_check.unsupported_premises(REAL_553, QUESTION, BACKUP_JS) == []
+    # Control: the invented answer still warns.
+    assert line_check.unsupported_premises(BAD[0][1], QUESTION, BACKUP_JS) == ["retención"]
+
+
+def test_the_tool_does_not_warn_on_the_real_answer_of_553(answer, module):
+    answer["text"] = REAL_553
+    result = server.local_explain_code(path=str(module), question=QUESTION)
+    assert server.WARNING_MARKER not in result
+
+
+@pytest.mark.parametrize(
+    ("question", "answer_text"),
+    [
+        (QUESTION, "No solo crea backups: aplica una retención por antigüedad."),
+        (QUESTION, "Sin embargo, la retención es implícita por la marca de tiempo."),
+        ("How does it handle backup retention?", "It not only copies the file, it also applies a retention by age."),
+    ],
+)  # fmt: skip
+def test_a_negation_that_limits_or_connects_does_not_deny(question, answer_text):
+    """«no solo», «sin embargo», «not only» carry a negation word and deny nothing.
+    Mutant «every negation denies» (`_NOT_ONLY` and `_CONNECTOR` ignored): these stop warning."""
+    assert line_check.unsupported_premises(answer_text, question, BACKUP_JS)
+
+
+def test_the_english_cognate_of_the_word_is_matched_in_the_answer():
+    """«rotación» asked, the answer in English: «no rotation» denies it, «rotation happens»
+    asserts it. Mutant «only the stem as written» (`rotac`): neither sentence names the word,
+    so the second assert falls."""
+    question = "¿cómo hace la rotación de los backups?"
+    denied = "There is no rotation. Rotation is left to whoever manages the disk."
+    asserted = "Rotation happens every night by timestamp."
+    assert line_check.unsupported_premises(denied, question, BACKUP_JS) == []
+    assert line_check.unsupported_premises(asserted, question, BACKUP_JS) == ["rotación"]
+
+
+@pytest.mark.parametrize("lang", ["es", "en"])
+def test_the_warning_text_has_a_space_after_each_colon(lang, monkeypatch):
+    """#553: «respalde:puede» lacked the space. Fixes the format in both languages."""
+    monkeypatch.setenv("LOCAL_DELEGATE_LANG", lang)
+    i18n.reset()
+    text = i18n.t("mcp.explain.premise_unsupported", terms="«retención»")
+    assert ":" in text
+    assert not re.search(r":\S", text), text
+    assert not re.search(r"\s[:;,]", text), text
