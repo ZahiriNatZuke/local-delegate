@@ -15,6 +15,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_extract` devuelve exactamente las claves pedidas, como dice su contrato.** En modo libre
+  (`LOCAL_DELEGATE_JSON_SCHEMA=off`, o `auto` cuando el backend rechaza el schema y se reintenta
+  sin él) el modelo podía omitir una clave pedida o inventar otra, y la tool lo entregaba tal cual
+  y sin aviso. Ahora la clave que falta vuelve como `null`; la que el modelo escribió de otra
+  forma (mayúsculas, `_`, `-`, espacios: `Name` ~ `name`, `endDate` ~ `end_date`) se empareja si
+  el emparejamiento es único (`renamed_keys`), y la que sobra sale de los datos pero conserva su
+  valor en `_local_delegate.dropped` (nombres en `dropped_keys`). También en el camino troceado,
+  con `missing_keys` y un `warning` legible (si ya había un aviso de truncado o de trozos, ese
+  conserva su texto). Con todas las claves en orden no aparece ningún aviso nuevo. Y
+  `fields` vacío o solo con blancos da un error claro sin llamar al backend.
+
 - **`local_explain_code` ya no confirma sin aviso la premisa de la pregunta.** Preguntado «¿cómo
   gestiona los backups y su retención?» sobre un módulo que nunca borra un backup, respondió que
   había una «retención implícita», sin aviso. Ahora, con `path` y pregunta, si la respuesta afirma
