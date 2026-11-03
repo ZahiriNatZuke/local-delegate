@@ -57,6 +57,14 @@ archivo creado mientras genera; y el panel muestra mejor las filas en cola y se 
 
 ### Corregido
 
+- **Los errores de validación de las tools llegan al cliente con su mensaje (#552).** Una llamada
+  sin `text` ni `path`, con `fields=[]`, a un `target` que ya existe, a una ruta protegida o fuera
+  de `LOCAL_DELEGATE_ALLOWED_DIRS`, o con una imagen inválida llegaba solo como `Error executing
+  tool <nombre>`, sin decir qué corregir. El SDK MCP solo pasa al cliente el texto de un
+  `ToolError` y enmascara cualquier otra excepción; esas comprobaciones lanzaban un `ValueError`
+  normal. Ahora lanzan `InputError`, que es `ToolError` y sigue siendo `ValueError`, y el mensaje
+  llega tras `Error executing tool <nombre>: `, igual por stdio que por el HTTP del daemon. Un
+  fallo interno sigue enmascarado. No es una regresión: la 0.47.3 ya lo hacía.
 - **`local_commit_msg` detecta el idioma del repo también desde un worktree recién creado
   (#548).** El reflog propio de un `git worktree add` nuevo no tiene ningún commit, así que la
   detección del #461 no tenía votos y caía al idioma del producto. Ahora, si ese reflog no da

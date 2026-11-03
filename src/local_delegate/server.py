@@ -948,6 +948,17 @@ def inflight_snapshot() -> list[dict]:
 
 
 # --- Helpers ----------------------------------------------------------------
+class InputError(ToolError, ValueError):
+    """Issue #552: the caller's arguments are wrong, and the message says how to fix them.
+
+    The SDK hands the client the text of a `ToolError` only; any other exception becomes a bare
+    `Error executing tool <name>`, so a plain `ValueError` hid every `mcp.input.*` message. Raise
+    this for input validation only (the text is for the caller): an internal failure stays a
+    plain exception and stays masked. Still a `ValueError`, so code and tests that catch one keep
+    working.
+    """
+
+
 def _utcnow() -> datetime:
     return datetime.now(UTC)
 
@@ -970,7 +981,7 @@ def _check_protected(path: str, mode: str) -> None:
         return
     kind = i18n.t(f"mcp.input.protected_kind.{denial.kind}")
     key = "mcp.input.protected_read" if mode == path_guard.READ else "mcp.input.protected_write"
-    raise ValueError(i18n.t(key, kind=kind, rule=denial.rule, path=path))
+    raise InputError(i18n.t(key, kind=kind, rule=denial.rule, path=path))
 
 
 def _check_path(path: str, mode: str) -> None:
@@ -986,7 +997,7 @@ def _check_allowed_dir(path: str) -> None:
     resolved = Path(path).resolve()
     if not any(resolved.is_relative_to(root) for root in config.ALLOWED_DIRS):
         roots = "; ".join(str(r) for r in config.ALLOWED_DIRS)
-        raise ValueError(i18n.t("mcp.input.outside_allowed", roots=roots, path=path))
+        raise InputError(i18n.t("mcp.input.outside_allowed", roots=roots, path=path))
 
 
 def _validate_target(target: str, overwrite: bool) -> Path:
@@ -1000,15 +1011,15 @@ def _validate_target(target: str, overwrite: bool) -> Path:
     eligió. Y se niega a pisar lo que ya está salvo permiso explícito.
     """
     if not target or not target.strip():
-        raise ValueError(i18n.t("mcp.input.target_required"))
+        raise InputError(i18n.t("mcp.input.target_required"))
     p = Path(target)
     if not p.is_absolute():
-        raise ValueError(i18n.t("mcp.input.target_not_absolute", target=target))
+        raise InputError(i18n.t("mcp.input.target_not_absolute", target=target))
     _check_path(target, path_guard.WRITE)
     if p.is_dir():
-        raise ValueError(i18n.t("mcp.input.target_is_dir", target=target))
+        raise InputError(i18n.t("mcp.input.target_is_dir", target=target))
     if p.exists() and not overwrite:
-        raise ValueError(i18n.t("mcp.input.target_exists", target=target))
+        raise InputError(i18n.t("mcp.input.target_exists", target=target))
     return p
 
 
@@ -1037,7 +1048,7 @@ def _write_target(p: Path, content: str, *, event: dict, overwrite: bool = False
     try:
         fh = open(p, "w" if overwrite else "x", encoding="utf-8", newline="\n")  # noqa: SIM115
     except FileExistsError:
-        raise ValueError(i18n.t("mcp.input.target_exists", target=p)) from None
+        raise InputError(i18n.t("mcp.input.target_exists", target=p)) from None
     with fh:
         fh.write(content)
     receipt = i18n.t(
@@ -1063,12 +1074,12 @@ def _read_input(text: str | None, path: str | None, max_chars: int) -> tuple[str
         _check_path(path, path_guard.READ)
         p = Path(path)
         if not p.is_file():
-            raise ValueError(i18n.t("mcp.input.missing_file", path=path))
+            raise InputError(i18n.t("mcp.input.missing_file", path=path))
         content = p.read_text(encoding="utf-8", errors="replace")
     elif text is not None:
         content = text
     else:
-        raise ValueError(i18n.t("mcp.input.text_or_path"))
+        raise InputError(i18n.t("mcp.input.text_or_path"))
     raw_len = len(content)
     truncated = raw_len > max_chars
     if truncated:
@@ -6426,15 +6437,15 @@ def _validate_image_path(path: str) -> str:
     p = Path(path)
     suffix = p.suffix.lower()
     if suffix not in _IMAGE_MIME:
-        raise ValueError(
+        raise InputError(
             i18n.t("mcp.input.image_extension", suffix=suffix, valid=sorted(_IMAGE_MIME))
         )
     if not p.is_file():
-        raise ValueError(i18n.t("mcp.input.missing_file", path=path))
+        raise InputError(i18n.t("mcp.input.missing_file", path=path))
     size = p.stat().st_size
     max_bytes = config.MAX_IMAGE_MB * 1024 * 1024
     if size > max_bytes:
-        raise ValueError(
+        raise InputError(
             i18n.t(
                 "mcp.input.image_too_large",
                 size=_machine(size / 1024 / 1024, 1),
@@ -6917,7 +6928,7 @@ def local_extract(
     """
     if not any(isinstance(name, str) and name.strip() for name in fields or []):
         # Nothing to extract: fail before reading the input or calling the backend.
-        raise ValueError(i18n.t("mcp.input.fields_required"))
+        raise InputError(i18n.t("mcp.input.fields_required"))
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
     role, model = _role_for_size(probe_len)
