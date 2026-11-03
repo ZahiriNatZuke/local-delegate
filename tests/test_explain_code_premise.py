@@ -134,6 +134,56 @@ def test_the_premise_terms_skip_words_of_asking_and_words_in_the_file():
     assert line_check.premise_terms(QUESTION, BACKUP_JS + "// retention: keep all\n") == []
 
 
+LOGS_PY = """import logging
+from logging.handlers import TimedRotatingFileHandler
+
+
+class Service:
+    def __init__(self):
+        self.handler = TimedRotatingFileHandler("app.log", when="midnight")
+        self.ready = True
+
+    def run(self, start, end):
+        duration = end - start
+        return create_report(duration)
+"""
+# Cognates whose Spanish `ci` is an English `ti`: the file holds them, the answer is right.
+COGNATES = [
+    ("¿cómo hace la rotación de los logs?", "La rotación de los logs ocurre cada medianoche."),
+    ("¿qué hace la inicialización?", "La inicialización deja el servicio listo."),
+    ("¿cómo calcula la duración?", "La duración se calcula restando el inicio al final."),
+    ("¿qué pasa tras la creación del informe?", "La creación del informe recibe la duración."),
+]  # fmt: skip
+
+
+@pytest.mark.parametrize(("question", "answer_text"), COGNATES)
+def test_cognates_with_a_soft_c_are_held_by_the_file(question, answer_text):
+    """rotación/TimedRotatingFileHandler, inicialización/__init__, duración/duration,
+    creación/create_report. Mutant «no `ci`→`ti` variant» (`_held` only compares the stem as
+    written): the four warn."""
+    assert line_check.premise_terms(question, LOGS_PY) == []
+    assert line_check.unsupported_premises(answer_text, question, LOGS_PY) == []
+
+
+def test_the_cognate_variant_does_not_hide_a_real_premise():
+    """Control: the variant is not a blanket pass; «retención» is still absent from LOGS_PY."""
+    question = "¿cómo gestiona la retención de los logs?"
+    answer_text = "La retención de los logs es implícita."
+    assert line_check.unsupported_premises(answer_text, question, LOGS_PY) == ["retención"]
+
+
+def test_a_truncated_answer_does_not_judge_its_last_line():
+    """The answer was cut by `max_tokens`: «línea 2» may be the start of «línea 22». As in
+    `check`, the last line is not judged. Mutant «`_verified_lines` does not pass `truncated`»:
+    the second assert falls."""
+    question = "¿Dónde hace `install` la comprobación?"
+    cut = "`install` escribe el fichero.\nLa comprobación está en la línea 2"
+    assert line_check.unsupported_premises(cut, question, BACKUP_JS) == ["comprobación"]
+    assert line_check.unsupported_premises(cut, question, BACKUP_JS, truncated=True) == []
+    result = server._verified_lines(cut, question, BACKUP_JS, truncated=True)
+    assert server.WARNING_MARKER not in result
+
+
 def test_an_anchored_assertion_is_not_flagged():
     """Known limit, by design: a sentence that names a real identifier counts as anchored.
     Mutant «nothing anchors» (`_anchored` always False): this assert falls."""

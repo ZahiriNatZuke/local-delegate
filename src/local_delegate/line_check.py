@@ -288,9 +288,29 @@ def premise_terms(question: str, content: str) -> list[str]:
         ):
             continue
         stems.add(stem)
-        if stem not in folded:
+        if not _held(folded_word, folded):
             terms.append(word)
     return terms
+
+
+#: A Spanish `c` before `i` that English writes `t`: rotación/rotation, acción/action,
+#: inicialización/initialization. Only a variant is added, so it can only remove warnings.
+_SOFT_C = re.compile(r"c(?=i)")
+
+
+def _held(folded_word: str, folded: str) -> bool:
+    """Whether the folded file holds the folded word by its first letters, in either language.
+
+    The stem as written (`reten` of retención and retention), the stem with its `ci` written `ti`
+    (`rotac` → `rotat`, for `TimedRotatingFileHandler`) and, of that English form, its first four
+    letters at the start of a word (`init` of `__init__`, `crea` of `createBackup`).
+    """
+    english = _SOFT_C.sub("t", folded_word)
+    if folded_word[:PREMISE_STEM_LEN] in folded or english[:PREMISE_STEM_LEN] in folded:
+        return True
+    if english == folded_word:
+        return False
+    return re.search(r"(?<![^\W\d_])" + re.escape(english[:4]), folded) is not None
 
 
 def _anchored(sentence: str, question: str, content: str, lines: list[str]) -> bool:
@@ -302,16 +322,21 @@ def _anchored(sentence: str, question: str, content: str, lines: list[str]) -> b
     return any(occurrences(lines, name) for name in identifiers(sentence))
 
 
-def unsupported_premises(answer: str, question: str, content: str) -> list[str]:
+def unsupported_premises(
+    answer: str, question: str, content: str, truncated: bool = False
+) -> list[str]:
     """#538: the words of the question the answer asserts with nothing in the file behind them.
 
     A word counts when the file does not hold it (`premise_terms`) and the answer uses it in a
     sentence that does not negate it and is not anchored (`_anchored`). «No hay retención: nunca
-    borra» negates it; «la retención es implícita» asserts it. Fenced code is not prose.
+    borra» negates it; «la retención es implícita» asserts it. Fenced code is not prose. With
+    `truncated`, as in `check`, the last line is not judged: its citation may be cut in half.
     """
     terms = premise_terms(question, content)
     if not terms:
         return []
+    if truncated:
+        answer = answer.rstrip("\n").rpartition("\n")[0]
     lines = content.split("\n")
     sentences = [s for s in _SENTENCE_END.split(_without_fences(answer)) if s.strip()]
     out: list[str] = []
