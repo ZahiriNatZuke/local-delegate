@@ -14,7 +14,8 @@ vacío; `local_explain_code` avisa cuando la respuesta confirma una premisa de l
 código no sostiene; `local_summarize` ya no toma las cadenas de un fichero de código por sus
 secciones; `local_commit_msg` avisa cuando no pudo tomar el idioma del repo y lo lee también desde
 un worktree; una llamada que esperó mucho el turno común lo dice; `local_boilerplate` ya no pisa un
-archivo creado mientras genera; y el panel muestra mejor las filas en cola y se lee en modo claro.
+archivo creado mientras genera; los errores de validación de las tools llegan al cliente con su
+mensaje; y el panel muestra mejor las filas en cola y se lee en modo claro.
 
 ### Cómo actualizar
 
