@@ -5623,8 +5623,33 @@ _REPO_LANGUAGE_MIN_SHARE = 0.7
 _REFLOG_TAIL_BYTES = 65_536
 
 
+def _is_network_path(text: str) -> bool:
+    """A UNC path (`\\\\server\\share`, `//server/share`), checked as text before any `resolve()`.
+
+    The paths in `.git` files and in `commondir` are disk input: following one to a network share
+    would make the server open a remote location (and, on Windows, send credentials to it).
+    """
+    return text.startswith(("\\\\", "//"))
+
+
+def _is_git_dir(folder: Path) -> bool:
+    """`folder` is itself a git dir: a repo's `.git`, a submodule's or a linked worktree's."""
+    try:
+        return (folder / "HEAD").is_file() and (
+            (folder / "objects").is_dir() or (folder / "commondir").is_file()
+        )
+    except OSError:
+        return False
+
+
 def _git_dir_above(start: Path) -> Path | None:
-    """The git dir of the work tree that contains `start`, following a worktree's `.git` file."""
+    """The git dir of the work tree that contains `start`, following a worktree's `.git` file.
+
+    A diff file saved inside a git dir (the `/local-commit` command of the mod does that) gets
+    that git dir itself, so a submodule or a linked worktree reads its own reflog.
+    """
+    if _is_git_dir(start):
+        return start
     for folder in (start, *start.parents):
         dot_git = folder / ".git"
         try:
@@ -5633,7 +5658,10 @@ def _git_dir_above(start: Path) -> Path | None:
             if dot_git.is_file():
                 text = dot_git.read_text(encoding="utf-8", errors="replace").strip()
                 if text.startswith("gitdir:"):
-                    target = Path(text[len("gitdir:") :].strip())
+                    raw = text[len("gitdir:") :].strip()
+                    if _is_network_path(raw):
+                        return None
+                    target = Path(raw)
                     target = target if target.is_absolute() else folder / target
                     return target if target.is_dir() else None
                 return None
@@ -5661,12 +5689,8 @@ def _recent_commit_subjects(git_dir: Path, limit: int = 20) -> list[str]:
     return subjects[-limit:]
 
 
-def _guess_language(subjects: Sequence[str]) -> str | None:
-    """`"es"` or `"en"` when the subjects clearly agree; `None` when they are few or mixed.
-
-    Each subject votes by counting marker words (the Conventional prefix aside); an accented
-    letter counts as Spanish. Ties and subjects without markers do not vote.
-    """
+def _language_votes(subjects: Sequence[str]) -> dict[str, int]:
+    """How many subjects vote Spanish and how many English (see `_guess_language`)."""
     votes = {"es": 0, "en": 0}
     for subject in subjects:
         text = _CONVENTIONAL_PREFIX.sub("", subject).lower()
@@ -5675,6 +5699,39 @@ def _guess_language(subjects: Sequence[str]) -> str | None:
         en = sum(w in _EN_MARKERS for w in words)
         if es != en:
             votes["es" if es > en else "en"] += 1
+    return votes
+
+
+def _common_git_dir(git_dir: Path) -> Path | None:
+    """The shared git dir of a linked worktree's git dir, or `None` (#548).
+
+    A linked worktree's git dir is `<common>/worktrees/<name>` and holds a `commondir` file with
+    the path to `<common>`, relative or absolute. That file is disk input: it is read with a size
+    cap, must be one plain line, and is followed only when it resolves to exactly the folder two
+    levels above `git_dir` (the layout git itself creates) and that folder holds a `HEAD`.
+    """
+    try:
+        with (git_dir / "commondir").open("rb") as handle:
+            raw = handle.read(4096).decode("utf-8", errors="strict").strip()
+        if not raw or "\n" in raw or "\x00" in raw or _is_network_path(raw):
+            return None
+        target = Path(raw)
+        target = (target if target.is_absolute() else git_dir / target).resolve()
+        here = git_dir.resolve()
+        if here.parent.name != "worktrees" or target != here.parent.parent:
+            return None
+        return target if (target / "HEAD").is_file() else None
+    except (OSError, RuntimeError, ValueError):
+        return None
+
+
+def _guess_language(subjects: Sequence[str]) -> str | None:
+    """`"es"` or `"en"` when the subjects clearly agree; `None` when they are few or mixed.
+
+    Each subject votes by counting marker words (the Conventional prefix aside); an accented
+    letter counts as Spanish. Ties and subjects without markers do not vote.
+    """
+    votes = _language_votes(subjects)
     total = votes["es"] + votes["en"]
     if total < _REPO_LANGUAGE_MIN_VOTES:
         return None
@@ -5682,18 +5739,103 @@ def _guess_language(subjects: Sequence[str]) -> str | None:
     return winner if votes[winner] / total >= _REPO_LANGUAGE_MIN_SHARE else None
 
 
+#: Where the language of `local_commit_msg` came from (#546). The last four are the product
+#: language reached by default: with a `path` and no repo above it, with a repo whose reflog has
+#: too few commits to tell (a fresh clone or submodule), with a repo whose commits are split
+#: between languages, or with an inline diff (no `path`, so no repo to look at).
+COMMIT_LANGUAGE_FROM_VARIABLE = "variable"
+COMMIT_LANGUAGE_FROM_DIFF = "diff"
+COMMIT_LANGUAGE_FROM_REPO = "repo"
+COMMIT_LANGUAGE_FROM_NO_REPO = "no_repo"
+COMMIT_LANGUAGE_FROM_SHORT_HISTORY = "short_history"
+COMMIT_LANGUAGE_FROM_MIXED_REPO = "mixed_repo"
+COMMIT_LANGUAGE_FROM_INLINE = "inline"
+
+
 def _repo_commit_language(path: str | None) -> str | None:
     """The language of the recent commits of the repo that holds the diff file, if clear."""
+    return _repo_commit_language_lookup(path)[0]
+
+
+def _repo_commit_language_lookup(path: str | None) -> tuple[str | None, str]:
+    """`(language, source)`: the repo's commit language, if clear, and why or why not.
+
+    #546: the source tells «no repo above the diff file» (`no_repo`) from «a reflog with too few
+    commits» (`short_history`) and «commits split between languages» (`mixed_repo`), so the tool
+    can say truthfully why it fell back to the product language.
+    """
     if not path:
-        return None
+        return None, COMMIT_LANGUAGE_FROM_INLINE
     try:
         start = Path(path).expanduser().resolve().parent
     except (OSError, RuntimeError, ValueError):
-        return None
+        return None, COMMIT_LANGUAGE_FROM_NO_REPO
     git_dir = _git_dir_above(start)
     if git_dir is None:
-        return None
-    return _guess_language(_recent_commit_subjects(git_dir))
+        return None, COMMIT_LANGUAGE_FROM_NO_REPO
+    subjects = _recent_commit_subjects(git_dir)
+    # #548: a freshly made linked worktree has only `reset:`/`checkout:` lines in its own reflog;
+    # the history lives in the shared git dir's. It is read only when the worktree's own reflog
+    # does not give enough votes, and its subjects go before the worktree's (older first).
+    if sum(_language_votes(subjects).values()) < _REPO_LANGUAGE_MIN_VOTES:
+        common = _common_git_dir(git_dir)
+        if common is not None:
+            subjects = (_recent_commit_subjects(common) + subjects)[-20:]
+    language = _guess_language(subjects)
+    if language:
+        return language, COMMIT_LANGUAGE_FROM_REPO
+    if sum(_language_votes(subjects).values()) < _REPO_LANGUAGE_MIN_VOTES:
+        return None, COMMIT_LANGUAGE_FROM_SHORT_HISTORY
+    return None, COMMIT_LANGUAGE_FROM_MIXED_REPO
+
+
+def _commit_language_choice(path: str | None = None) -> tuple[str, str]:
+    """`(code, source)`: the commit language (or `diff`) and where it came from (#546).
+
+    Same precedence as `_commit_language_instruction`, which is built on it: the variable, then
+    the repo that holds `path`, then the product language.
+    """
+    code = config.commit_language()
+    if code.lower() == COMMIT_LANGUAGE_DIFF:
+        return code, COMMIT_LANGUAGE_FROM_DIFF
+    if code:
+        return code, COMMIT_LANGUAGE_FROM_VARIABLE
+    repo_code, source = _repo_commit_language_lookup(path)
+    if repo_code:
+        return repo_code, source
+    return i18n.lang(), source
+
+
+def _commit_language_notice(path: str | None) -> str:
+    """#546: a visible warning when a `path` was given but its repo did not set the language.
+
+    The diff is usually dumped to a temp folder outside the repo, and the message then came out in
+    the product language with no sign of why. The warning goes after the message, in the same
+    `[local-delegate warning: …]` block as the other warnings, so it is not mistaken for part of
+    the message. Inline diffs get none: without a `path` there is never a repo to look at, and the
+    docstring says so.
+    """
+    code, source = _commit_language_choice(path)
+    if source == COMMIT_LANGUAGE_FROM_NO_REPO:
+        key = "mcp.warning.commit_language_no_repo"
+    elif source == COMMIT_LANGUAGE_FROM_SHORT_HISTORY:
+        key = "mcp.warning.commit_language_short_history"
+    elif source == COMMIT_LANGUAGE_FROM_MIXED_REPO:
+        key = "mcp.warning.commit_language_mixed_repo"
+    else:
+        return ""
+    notice = i18n.t(key, language=code, variable="LOCAL_DELEGATE_COMMIT_LANGUAGE")
+    return f"{WARNING_MARKER}{notice}]"
+
+
+def _with_commit_language_notice(message: str, path: str | None) -> str:
+    """`message` with the language warning, if any, after the content and before the receipts.
+
+    Same place as the other warnings (`_before_receipt_lines`): the receipts `(leído server-side:
+    …)` and `(alcance: …)` stay last, and the turn wait notice (#537) lands next to this one.
+    """
+    notice = _commit_language_notice(path)
+    return _before_receipt_lines(message, notice) if notice else message
 
 
 def _commit_language_instruction(path: str | None = None) -> str:
@@ -5708,13 +5850,13 @@ def _commit_language_instruction(path: str | None = None) -> str:
     #461: between the variable and the product language goes the language of the recent commits
     of the repo that holds `path`, when the reflog says it clearly (`_repo_commit_language`).
     """
-    code = config.commit_language()
-    if code.lower() == COMMIT_LANGUAGE_DIFF:
+    code, source = _commit_language_choice(path)
+    if source == COMMIT_LANGUAGE_FROM_DIFF:
         return (
             "Escribe el mensaje de commit entero (primera línea y cuerpo) en el idioma "
             "predominante de los textos del diff (comentarios, documentación y mensajes)."
         )
-    name = _language_name(code or _repo_commit_language(path) or i18n.lang())
+    name = _language_name(code)
     return f"Escribe el mensaje de commit entero (primera línea y cuerpo) en {name}."
 
 
@@ -7178,6 +7320,9 @@ def local_commit_msg(
     server-side, so the full diff does NOT enter Claude's context. Alternatively pass 'diff' as
     text. ALWAYS review the message before using it.
 
+    The language follows the recent commits of the git repo that holds the 'path' file (so dump
+    the diff inside the repo), unless LOCAL_DELEGATE_COMMIT_LANGUAGE is set.
+
     Args:
         diff: The diff as text (use this or 'path').
         path: Path to a file with the diff (read server-side).
@@ -7299,6 +7444,7 @@ def local_commit_msg(
             commit_message += "\n\n" + i18n.t(
                 "mcp.receipt.commit_scope", files=len(files), chars=_machine(len(content))
             )
+            commit_message = _with_commit_language_notice(commit_message, path)
         return commit_message
 
     result = _chat(
@@ -7315,6 +7461,8 @@ def local_commit_msg(
         raw_len=raw_len,
         path=path,
     )
+    if not result.startswith(ERROR_PREFIX):
+        result = _with_commit_language_notice(result, path)
     return _truncation_prefix(content, truncated_in, raw_len) + result
 
 

@@ -210,9 +210,67 @@ async function commandsDiscard($, common, path) {
   }
 }
 
+function commandsJoin(folder, name) {
+  const sep = commandsIsWindowsPath(folder) ? '\\' : '/'
+  return folder.endsWith('/') || folder.endsWith('\\') ? folder + name : folder + sep + name
+}
+
+// The git dir of the repo that holds `cwd` (a `.git` folder, or the target of a worktree's or
+// submodule's `.git` file), or null. #546: `local_commit_msg` takes the commit language from the
+// repo that holds the diff FILE, so the diff goes there; git never commits what is in its git
+// dir. A network (UNC) target is not followed.
+async function commandsGitDir($, cwd) {
+  if (!cwd) return null
+  let dir = cwd.length > 1 ? cwd.replace(/[\\/]+$/, '') : cwd
+  for (let i = 0; i < 64 && dir; i++) {
+    const dotGit = commandsJoin(dir, '.git')
+    try {
+      if (await $.fs.exists(dotGit)) {
+        const st = await $.fs.stat(dotGit)
+        if (st?.kind === 'dir') return dotGit
+        if (st?.kind !== 'file') return null
+        const text = String(await $.fs.read(dotGit)).trim()
+        if (!text.startsWith('gitdir:')) return null
+        const raw = text.slice('gitdir:'.length).trim()
+        if (!raw || raw.startsWith('\\\\') || raw.startsWith('//')) return null
+        const target = commandsAbsolute(dir, raw)
+        return (await $.fs.stat(target))?.kind === 'dir' ? target : null
+      }
+    } catch {
+      return null
+    }
+    const cut = Math.max(dir.lastIndexOf('/'), dir.lastIndexOf('\\'))
+    if (cut < 0) return null
+    const parent = cut === 0 ? '/' : dir.slice(0, cut)
+    if (parent === dir) return null
+    dir = parent
+  }
+  return null
+}
+
 // Writes `text` to a temporary file, hands its path to `tool` and always discards the file.
-async function commandsViaTempFile($, common, name, text, tool) {
+// With `folder` (the repo's git dir) the file goes there first; if it cannot be written there,
+// it goes to the data folder as before.
+async function commandsViaTempFile($, common, name, text, tool, folder) {
   const stamp = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+  if (folder) {
+    const inRepo = commandsJoin(folder, `local-delegate-${stamp}-${name}`)
+    let written = false
+    try {
+      await $.fs.write(inRepo, text)
+      written = true
+    } catch {
+      // the data folder below
+    }
+    if (written) {
+      try {
+        return await commandsCallTool($, common, tool, { path: inRepo })
+      } finally {
+        await commandsDiscard($, common, inRepo)
+      }
+    }
+    await commandsDiscard($, common, inRepo)
+  }
   const path = await common.dataPath(`tmp/${stamp}-${name}`)
   try {
     await $.fs.write(path, text)
@@ -249,7 +307,8 @@ async function commandsCommit($, common) {
     return { text: common.t('commands.commit.git_failed', { detail }), exitCode: 1 }
   }
   if (!diff.stdout.trim()) return { text: common.t('commands.commit.no_changes') }
-  const answer = await commandsViaTempFile($, common, 'commit.diff', diff.stdout, 'local_commit_msg')
+  const gitDir = await commandsGitDir($, await $.session.cwd())
+  const answer = await commandsViaTempFile($, common, 'commit.diff', diff.stdout, 'local_commit_msg', gitDir)
   if (answer.exitCode) return answer
   // Only shown: the mod never runs `git commit`.
   return { text: `${common.t('commands.commit.header')}\n\n${answer.text}` }

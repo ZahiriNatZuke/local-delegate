@@ -12,6 +12,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `--dry-run`, lista cada carpeta de `.sdd/changes/` cuyo `state.json` no está en `closed`
   («SDD sin cerrar: <slug> (<estado>)») y sugiere cerrarlos. Es un aviso, no bloquea. Varios SDD
   se habían quedado en `verifying` con su trabajo ya mezclado y publicado.
+- **`local_commit_msg` avisa cuando no pudo tomar el idioma del repo (#546).** Con `path`, si el
+  fichero del diff no está dentro de un repo git (lo habitual al volcarlo a una carpeta temporal)
+  o los commits recientes del repo no dejan claro su idioma, el mensaje sale en el idioma del
+  producto y ahora lleva detrás un bloque `[local-delegate warning: …]` que dice qué idioma se usó
+  y cómo cambiarlo: guardar el diff dentro del repo o poner `LOCAL_DELEGATE_COMMIT_LANGUAGE`. Sin
+  `path` no hay aviso (nunca hay repo que mirar). El docstring de la tool lo explica. El prompt
+  que recibe el modelo no cambia. Un clon o un submódulo recién hechos, cuyo reflog aún no tiene
+  commits, llevan su propio aviso («muy pocos commits»), distinto del de un historial mezclado.
+  El comando `/local-commit` del mod guarda ahora el diff dentro del git dir del repo donde se
+  ejecuta (nunca se commitea y se borra al terminar), así que toma el idioma del repo; si no hay
+  repo o no puede escribir ahí, usa la carpeta de datos como antes. Las rutas de red (UNC) en
+  los ficheros `.git` y `commondir` no se siguen.
 - **Aviso de espera larga del turno común.** Si una llamada esperó el turno al menos
   `LOCAL_DELEGATE_TURN_WAIT_NOTICE_S` (60 s; `0` lo desactiva), su respuesta lleva un aviso
   `[local-delegate warning: …]` (junto a los demás avisos, antes de las líneas de ahorro) que dice
@@ -25,6 +37,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   (Troubleshooting, Configuration) explican el caso (#537).
 
 ### Corregido
+
+- **`local_commit_msg` detecta el idioma del repo también desde un worktree recién creado
+  (#548).** El reflog propio de un `git worktree add` nuevo no tiene ningún commit, así que la
+  detección del #461 no tenía votos y caía al idioma del producto. Ahora, si ese reflog no da
+  votos suficientes, se lee también el del git dir común (el que indica `commondir`, solo si está
+  donde git lo pone: dos carpetas por encima del git dir del worktree).
 
 - **`local_boilerplate` ya no pisa un archivo creado mientras genera.** Con `overwrite=False`
   se comprobaba que `target` no existía antes de la inferencia, pero se abría con `"w"` después:
