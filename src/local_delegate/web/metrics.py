@@ -1477,6 +1477,9 @@ __WEB_FONTS__
   --acc:#34d399; --acc2:#6ee7b7; --acc-d:#059669;
   --blue:#60a5fa; --violet:#a78bfa; --amber:#fbbf24; --danger:#f87171; --cyan:#22d3ee; --pink:#f472b6;
   --amber-tx:#fbbf24; /* amber as TEXT on a chip: the light theme darkens it for contrast */
+  /* Issue #551: the other accents as TEXT on a chip, same idea (>= 4.5:1 on their tint). */
+  --blue-tx:var(--blue); --violet-tx:var(--violet); --cyan-tx:var(--cyan); --acc-tx:var(--acc);
+  --mut-tx:var(--mut);
   --glow:rgba(52,211,153,.14);
   --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 32px -8px rgba(0,0,0,.55);
   --shadow-h:0 1px 2px rgba(0,0,0,.5),0 20px 44px -10px rgba(0,0,0,.6);
@@ -1491,6 +1494,7 @@ __WEB_FONTS__
   --bg:#f6f8fc; --bg2:#eef2f8; --panel:#ffffff; --panel2:#f4f7fb; --bd:#e4e9f1; --bd2:#d4dbe6;
   --tx:#0e1526; --tx2:#33405a; --mut:#64748b; --faint:#94a3b8;
   --amber-tx:#92400e;
+  --blue-tx:#1d4ed8; --violet-tx:#6d28d9; --cyan-tx:#155e75; --acc-tx:#047857; --mut-tx:#526075;
   --glow:rgba(5,150,105,.10);
   --shadow:0 1px 2px rgba(15,23,42,.06),0 12px 28px -10px rgba(15,23,42,.14);
   --shadow-h:0 1px 2px rgba(15,23,42,.08),0 20px 40px -12px rgba(15,23,42,.2);
@@ -1687,20 +1691,20 @@ tbody td{color:var(--tx2)}
    columnas numéricas. Un `th.num`/`th.mono` partía la misma fila de cabecera en dos familias. */
 td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .badge{display:inline-block;padding:3px 9px;border-radius:7px;font-size:11.5px;font-weight:600;font-family:var(--mono);
-  background:color-mix(in srgb,var(--blue) 14%,transparent);color:var(--blue)}
-.badge.model{background:color-mix(in srgb,var(--violet) 14%,transparent);color:var(--violet)}
+  background:color-mix(in srgb,var(--blue) 14%,transparent);color:var(--blue-tx)}
+.badge.model{background:color-mix(in srgb,var(--violet) 14%,transparent);color:var(--violet-tx)}
 .src{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.03em;text-transform:uppercase}
-.src.path{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc)}
-.src.inline{background:color-mix(in srgb,var(--mut) 16%,transparent);color:var(--mut)}
+.src.path{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc-tx)}
+.src.inline{background:color-mix(in srgb,var(--mut) 16%,transparent);color:var(--mut-tx)}
 /* origen del CÓMPUTO (backend local de esta máquina vs GPU remota) */
 .org{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.03em;text-transform:uppercase}
-.org.local{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc)}
-.org.remote{background:color-mix(in srgb,var(--cyan) 16%,transparent);color:var(--cyan)}
-.org.unknown{background:color-mix(in srgb,var(--mut) 14%,transparent);color:var(--mut)}
+.org.local{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc-tx)}
+.org.remote{background:color-mix(in srgb,var(--cyan) 16%,transparent);color:var(--cyan-tx)}
+.org.unknown{background:color-mix(in srgb,var(--mut) 14%,transparent);color:var(--mut-tx)}
 .pill.org.local{color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent);border:1px solid color-mix(in srgb,var(--acc) 32%,transparent)}
 .pill.org.remote{color:var(--cyan);background:color-mix(in srgb,var(--cyan) 12%,transparent);border:1px solid color-mix(in srgb,var(--cyan) 32%,transparent)}
 .chunkchip{font-family:var(--mono);font-size:10px;font-weight:700;padding:1.5px 6px;border-radius:5px;margin-left:6px;
-  background:color-mix(in srgb,var(--violet) 14%,transparent);color:var(--violet)}
+  background:color-mix(in srgb,var(--violet) 14%,transparent);color:var(--violet-tx)}
 .fbchip{background:color-mix(in srgb,var(--amber,#d97706) 16%,transparent);color:var(--amber,#d97706)}
 .slowchip{background:color-mix(in srgb,var(--red,#dc2626) 14%,transparent);color:var(--red,#dc2626)}
 /* Backend params (REQ-019): the call reasoned, carried per-role params, or the backend rejected
@@ -1757,11 +1761,26 @@ td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .tchip{font-family:var(--mono);font-size:10.5px;color:var(--mut);border:1px solid var(--bd);border-radius:7px;padding:3px 8px;cursor:default;transition:.13s}
 .tchip:hover{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 40%,transparent)}
 .tchip.busy{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 50%,transparent);background:color-mix(in srgb,var(--amber) 12%,transparent)}
-.ifrow{display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding:6px 2px;font-size:12.5px;color:var(--tx2);font-family:var(--mono)}
+.ifrow{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;padding:6px 2px;font-size:12.5px;color:var(--tx2);font-family:var(--mono)}
+.ifchips{display:flex;flex-wrap:nowrap;align-items:center;gap:4px;flex:1 1 0;min-width:0;overflow:hidden}
+.ifchips>*{flex:0 0 auto;white-space:nowrap}
+.ifchips .chunkchip{margin-left:0}
+.ifchips>.badge{padding:3px 7px}.ifchips>.org{padding:2px 6px}
+/* The model chip has ONE width for every row: the catalogue's longest name (14 characters,
+   `gemma4-26b-a4b`, `qwen36-35b-a3b`) whole. A longer custom name ends in «…», the same in every
+   row. When the card cannot hold that and the longest row (a queued «Espera 1/4 · 1 min 53 s») on
+   one line, every row goes to the same two lines (the container query on #inflightBody). */
+.ifchips>.badge.model{width:calc(14ch + 14px);overflow:hidden;text-overflow:ellipsis}
+.ifmeta{flex:0 0 auto;margin-left:auto;white-space:nowrap;color:var(--mut-tx);font-size:11.5px}
+#inflightBody{container-type:inline-size}
+@container (max-width:609px){.ifrow{flex-wrap:wrap;row-gap:2px}.ifmeta{flex-basis:100%;margin-left:18px;text-align:left}}
+@media (max-width:560px){.ifchips{flex-wrap:wrap}}
 .spin{width:12px;height:12px;border-radius:50%;flex:0 0 auto;
   border:2px solid color-mix(in srgb,var(--amber) 28%,transparent);border-top-color:var(--amber);animation:rot .8s linear infinite}
 .queue-dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;border:2px dashed var(--faint)}
-.ifrow.queued{opacity:.72}
+/* Issue #551: a waiting row is told apart by its dashed dot and its outlined chips, never by fading
+   the text below a legible contrast. */
+.ifrow.queued .ifchips>*{background:transparent;box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 40%,transparent)}
 .wait-dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;border:2px dashed var(--amber)}
 .chunkchip.loaded{color:var(--amber-tx);background:color-mix(in srgb,var(--amber) 16%,transparent);
   max-width:26ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -2990,15 +3009,37 @@ function renderInflight(){
       // «Trozo 3/4 · dividido en 3 · parte 2», with the why in the chip's title.
       const split = it.chunks && it.part>0 && it.parts>0;
       const splitWords = {chunk: it.chunk||1, chunks: it.chunks, part: it.part, parts: it.parts};
+      // Issue #547: between two chunks a call waits for a place again, so it is queued. ONE status
+      // chip says what waits and for how long: «Espera trozo 2/3 · 41 s»; the done chunks, the
+      // reason, the model in use and the place in the queue go in titles, never as text.
+      const chunkWords = {n: it.chunk||1, total: it.chunks};
+      const queuedChunk = queued && it.chunks && !split && it.phase!=='retry';
+      const waitS = queued && Number.isFinite(it.wait_s) && it.wait_s>=0 ? Math.round(it.wait_s) : null;
+      const waitText = waitS===null ? '' : waitS < 60 ? `${waitS} s` : fmtSec(waitS*1000);
+      const statusLabel = queuedChunk
+        ? T(it.phase==='reduce' ? 'backend.combining_waiting' : 'backend.chunk_waiting', chunkWords)
+        : queued && waitText && !split && !it.chunks ? T('backend.waiting_short') : '';
+      const statusTitle = [
+        queuedChunk && it.phase!=='reduce'
+          ? T('backend.chunk_waiting_title', {done: Math.max(0, (Number(it.chunk)||1) - 1), total: it.chunks, n: it.chunk||1}) : '',
+        waitText ? T('backend.waited_title', {wait: waitText, total: fmtSec((it.elapsed_s||0)*1000)}) : '',
+      ].filter(Boolean).join('. ');
       const chunk = split
         ? `<span class="chunkchip" title="${escHooks(T('backend.part_title', splitWords))}">${escHooks(T('backend.part', splitWords))}</span>`
-        : it.chunks ? `<span class="chunkchip">${escHooks(T(chunkKey, {n: it.chunk||1, total: it.chunks}))}</span>` : '';
-      const org = it.backend ? `<span class="org ${escHooks(it.backend)}">${escHooks(labelFor('origin', it.backend))}</span>` : '';
-      // Espera de turno del daemon (REQ-008): las mismas palabras que el title de la fila del modelo.
+        : statusLabel
+          ? `<span class="chunkchip"${statusTitle ? ` title="${escHooks(statusTitle)}"` : ''}>${escHooks(waitText ? `${statusLabel} · ${waitText}` : statusLabel)}</span>`
+          : it.chunks ? `<span class="chunkchip">${escHooks(T(chunkKey, chunkWords))}</span>` : '';
+      // Why a queued row waits, in the row's title. The daemon's turn (REQ-008) keeps the same words
+      // as the title of the model row, with the place in the queue after them.
       const turnText = it.local_wait==='turn' ? turnWords(it) : '';
-      const turnChip = turnText ? `<span class="chunkchip" title="${escHooks(turnText)}">${escHooks(turnText)}</span>` : '';
-      const pos = queued && Number.isFinite(it.queue_position) && it.queue_position>0
-        ? `<span class="chunkchip" title="${escHooks(T('backend.queue_position_title', {n: it.queue_position}))}">#${escHooks(String(it.queue_position))}</span>` : '';
+      const position = Number.isFinite(it.queue_position) && it.queue_position>0
+        ? T('backend.queue_position_title', {n: it.queue_position}) : '';
+      const queuedTitle = turnText ? [turnText, queued ? position : ''].filter(Boolean).join(' · ')
+        : !queued ? ''
+        : it.local_wait==='slot' ? T('backend.queued_slot_title')
+        : it.local_wait ? T('backend.queued_local_title')
+        : T('backend.queued_start_title');
+      const org = it.backend ? `<span class="org ${escHooks(it.backend)}">${escHooks(labelFor('origin', it.backend))}</span>` : '';
       // The machine that asked for it, when the daemon says (a field the host work adds); never required.
       const host = typeof it.host==='string' && it.host
         ? `<span class="chunkchip" title="${escHooks(T('backend.host_title', {host: it.host}))}">${escHooks(it.host)}</span>` : '';
@@ -3008,9 +3049,15 @@ function renderInflight(){
       const loadedChip = waitBackend
         ? `<span class="chunkchip loaded" title="${escHooks(waitTitle)}">${escHooks(loadedModels ? T('backend.loaded_chip', {models: loadedModels}) : T('backend.wait_backend_unknown'))}</span>` : '';
       const dot = queued ? 'queue-dot' : waitBackend ? 'wait-dot' : 'spin';
-      return `<div class="ifrow${queued || waitBackend ? ' queued' : ''}"${waitBackend ? ` title="${escHooks(waitTitle)}"` : ''}><span class="${dot}"></span><span class="badge">${escHooks(it.tool)}</span>
-        <span class="badge model">${escHooks(it.model)}</span>${pos}${chunk}${turnChip}${loadedChip}${org}${host}
-        <span class="num" style="color:var(--mut)">${escHooks(fmtSec((it.elapsed_s||0)*1000))} · ${F.format(it.chars_in||0)} ${T('unit.chars_short')}</span></div>`;
+      const rowTitle = waitBackend ? waitTitle : queuedTitle;
+      // Issue #547: one line per row on desktop. The tool goes without its common `local_` prefix
+      // (as in the mod's band) and the model gives way with an ellipsis when room runs out; both
+      // carry their full name in the title. Time and characters never leave the line.
+      const toolName = String(it.tool==null ? '' : it.tool);
+      const toolShort = toolName.startsWith('local_') ? toolName.slice(6) : toolName;
+      return `<div class="ifrow${queued || waitBackend ? ' queued' : ''}"${rowTitle ? ` title="${escHooks(rowTitle)}"` : ''}><span class="${dot}"></span><span class="ifchips"><span class="badge" title="${escHooks(toolName)}">${escHooks(toolShort)}</span>
+        <span class="badge model" title="${escHooks(it.model)}">${escHooks(it.model)}</span>${chunk}${loadedChip}${org}${host}</span>
+        <span class="num ifmeta">${escHooks(fmtSec((it.elapsed_s||0)*1000))} · ${F.format(it.chars_in||0)} ${T('unit.chars_short')}</span></div>`;
     };
     // Issue #477: with `state` (daemons from 0.45 on), «Processing (n)» and «Queued (m)» apart; a
     // daemon without it keeps the single list it always had.

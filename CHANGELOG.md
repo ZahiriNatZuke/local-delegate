@@ -86,6 +86,29 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   que puede ser la premisa de la pregunta. La respuesta que niega la premisa («no hay retención:
   nunca borra») no avisa. Es una guarda por programa; el prompt no cambia (#538).
 
+### Corregido
+
+- **Panel: una delegación troceada «En cola» ya no parece estar mandando su trozo.** Entre trozo y
+  trozo la llamada vuelve a esperar plaza y el panel la mostraba en «En cola» con «Trozo 2/3», la
+  misma etiqueta que un trozo que se está procesando, y solo con el tiempo total. Ahora lleva un
+  solo chip de estado, «Espera 2/3 · 41 s» (o «Espera combinar 3 · …»), y el motivo
+  (plaza libre en el backend, turno del daemon con el modelo en uso y su puesto, o que aún no ha
+  empezado), los trozos hechos y el tiempo total van en los títulos. Salen de la vista el chip de
+  prosa «esperando turno del daemon (en uso: …)» y el «#n» del puesto, que ya existían. Para eso
+  `/api/inflight` añade `wait_s` a las entradas con `local_wait`; los campos de antes no cambian.
+  Además, cada fila de «En curso» ocupa una sola línea en escritorio, con el tiempo y los
+  caracteres a la derecha. La herramienta se muestra sin el prefijo `local_` (nombre completo en el
+  título) y el chip del modelo tiene el mismo ancho en todas las filas, el del nombre más largo del
+  catálogo entero (`gemma4-26b-a4b`). En una tarjeta estrecha todas las filas pasan a dos líneas
+  iguales (#547).
+- **Panel en modo claro: el texto de los chips se lee.** Los chips de herramienta, modelo, trozo y
+  cómputo usaban el color de acento como texto sobre su propio tinte (unos 2,1–2,3:1 en claro), y
+  las filas en cola bajaban además a `opacity: .72` (1,4–1,8:1). Ahora el texto usa tokens
+  `--*-tx` que en claro oscurecen el acento (≥ 6:1) y en oscuro no cambian, la columna de tiempo
+  usa `--mut-tx`, y las filas en cola se distinguen por el círculo discontinuo y los chips
+  perfilados, sin bajar la opacidad del texto. Afecta a los mismos chips en «Actividad reciente»,
+  también a los apagados (entrada `inline`, cómputo desconocido), que ahora usan `--mut-tx` (#551).
+
 ## [0.47.3] - 2026-11-02
 
 Arreglo de `local_explain_code`: con `path`, la respuesta podía empezar con el prefijo de línea

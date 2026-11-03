@@ -1607,6 +1607,234 @@ def test_backend_and_in_flight_speak_spanish(tmp_path, monkeypatch, new_page):
     assert "caché" in m["performance"] and "cache " not in m["performance"], m["performance"]
 
 
+def _inflight_row(chunk, chunks, chars, state, **extra):
+    return {
+        "id": f"1:{chars}",
+        "tool": "local_summarize",
+        "model": "gemma4-26b-a4b",
+        "source": "path",
+        "chars_in": chars,
+        "backend": "remote",
+        "elapsed_s": 115.4,
+        "chunks": chunks,
+        "chunk": chunk,
+        "state": state,
+        **extra,
+    }
+
+
+# The capture of issue #547: two at the backend and three waiting for a place between chunks.
+IN_FLIGHT_547 = [
+    _inflight_row(2, 3, 94745, "running"),
+    _inflight_row(2, 4, 118284, "running"),
+    _inflight_row(2, 3, 94825, "queued", local_wait="slot", wait_s=41.2),
+    _inflight_row(2, 3, 83193, "queued", local_wait="slot", wait_s=8.6),
+    _inflight_row(
+        1,
+        4,
+        95006,
+        "queued",
+        local_wait="turn",
+        wait_s=113.0,
+        queue_position=2,
+        turn_in_use=["qwen36-35b-a3b"],
+    ),
+]
+
+_INFLIGHT_LINES = """() => [...document.querySelectorAll('#inflightBody .ifrow')].map(row => {
+  const meta = row.querySelector('.ifmeta').getBoundingClientRect();
+  const chips = row.querySelector('.ifchips').getBoundingClientRect();
+  const status = row.querySelector('.ifchips > .chunkchip');
+  return {text: row.innerText, height: Math.round(row.getBoundingClientRect().height),
+          metaHeight: meta.height, metaRight: Math.round(meta.right),
+          metaMiddle: meta.top + meta.height / 2, boxMiddle: chips.top + chips.height / 2,
+          boxBottom: chips.bottom, metaTop: meta.top,
+          body: document.getElementById('inflightBody').clientWidth,
+          model: Math.round(row.querySelector('.badge.model').getBoundingClientRect().width),
+          modelCut: (m => m.scrollWidth > m.clientWidth + 1)(row.querySelector('.badge.model')),
+          clipped: [...row.querySelectorAll('.ifchips > *')].some(e => e.getBoundingClientRect().right > chips.right + 1),
+          statusCut: status ? status.scrollWidth > status.clientWidth + 1 : null};
+})"""
+
+
+# WCAG contrast of each chip's text and of the time column against what is really behind them (the
+# chip's own tint over the card), with the row's opacity applied: the text the eye reads.
+_INFLIGHT_RATIOS = """() => {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 1;
+  const cx = cv.getContext('2d', {willReadFrequently: true});
+  const rgba = c => { cx.clearRect(0, 0, 1, 1); cx.fillStyle = '#000'; cx.fillStyle = c;
+    cx.fillRect(0, 0, 1, 1); const d = cx.getImageData(0, 0, 1, 1).data;
+    return [d[0], d[1], d[2], d[3] / 255]; };
+  const over = (top, bot) => top.slice(0, 3).map((v, i) => v * top[3] + bot[i] * (1 - top[3]));
+  const lum = c => { const f = v => { v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b);
+    return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  let card = document.getElementById('inflightBody');
+  while (card && rgba(getComputedStyle(card).backgroundColor)[3] === 0) card = card.parentElement;
+  const panel = rgba(getComputedStyle(card).backgroundColor).slice(0, 3);
+  return [...document.querySelectorAll('#inflightBody .ifrow')].flatMap(row => {
+    const op = parseFloat(getComputedStyle(row).opacity);
+    const eff = c => c.map((v, i) => v * op + panel[i] * (1 - op));
+    return [...row.querySelectorAll('.ifchips > *, .ifmeta')].map(el => {
+      const st = getComputedStyle(el);
+      const bg = over(rgba(st.backgroundColor), panel);
+      return [el.textContent.trim(), Math.round(ratio(eff(over(rgba(st.color), bg)), eff(bg)) * 100) / 100];
+    });
+  });
+}"""
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_inflight_text_is_legible_in_light_and_dark(tmp_path, monkeypatch, new_page, theme):
+    """Issue #551: the text of every «En curso» chip and of the time column reaches 4.5:1 (WCAG
+    AA, small text) in both themes, queued rows included: they are told apart by their dot and
+    outlined chips, not by fading the text.
+
+    Positive control: with main's `.ifrow.queued{opacity:.72}` back, or the chips coloured with
+    the bare accents (`--violet`) in the light theme, the ratio assert fails.
+    """
+    _cost_and_image_log(tmp_path, monkeypatch)
+    in_flight = {
+        "inflight": IN_FLIGHT_547,
+        "count": len(IN_FLIGHT_547),
+        "last_event_ts": datetime.now(UTC).isoformat(),
+        "now": datetime.now(UTC).isoformat(),
+    }
+    with PanelServer() as server, sync_playwright() as pw:
+        browser = _browser(pw)
+        page = new_page(browser, viewport={"width": 1366, "height": 1000}, color_scheme=theme)
+        page.add_init_script(f"try{{localStorage.setItem('ld-theme','{theme}')}}catch(e){{}}")
+        page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+        page.route(re.compile(r"/api/inflight(\?|$)"), _json(in_flight))
+        page.goto(server.url)
+        page.wait_for_function(
+            "() => document.querySelectorAll('#inflightBody .ifrow').length === 5"
+        )
+        shown_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
+        ratios = page.evaluate(_INFLIGHT_RATIOS)
+        browser.close()
+    metrics._FILE_CACHE.clear()
+    assert shown_theme == theme  # guard: the theme under test is the one drawn
+    assert len(ratios) == 5 * 5, ratios  # guard: four chips and the time column, five rows
+    low = [(text, r) for text, r in ratios if r < 4.5]
+    assert not low, low
+
+
+_ACTIVITY_RATIOS = (
+    _INFLIGHT_RATIOS.replace(
+        "document.querySelectorAll('#inflightBody .ifrow')",
+        "document.querySelectorAll('#activity tbody tr')",
+    )
+    .replace(
+        "row.querySelectorAll('.ifchips > *, .ifmeta')",
+        "row.querySelectorAll('.badge, .src, .org')",
+    )
+    .replace("document.getElementById('inflightBody')", "document.getElementById('activity')")
+)
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_activity_badge_text_is_legible_in_light_and_dark(tmp_path, monkeypatch, new_page, theme):
+    """Issue #551: the same chips in «Actividad reciente» (tool, model, input, compute), the muted
+    ones included (`inline` input, unknown compute), reach 4.5:1 in both themes.
+
+    Positive control: with `.src.inline` back on the bare `--mut`, the light theme fails.
+    """
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    lines = [json.loads(line) for line in _events(4).splitlines()]
+    lines[1].update(source="inline")
+    lines[2].update(source="inline", backend=None)
+    lines[3].update(backend="remote")
+    (tmp_path / f"usage-{datetime.now(UTC):%Y%m}.jsonl").write_text(
+        "".join(json.dumps(e) + "\n" for e in lines), encoding="utf-8"
+    )
+    metrics._FILE_CACHE.clear()
+    with PanelServer() as server, sync_playwright() as pw:
+        browser = _browser(pw)
+        page = new_page(browser, viewport={"width": 1366, "height": 1000}, color_scheme=theme)
+        page.add_init_script(f"try{{localStorage.setItem('ld-theme','{theme}')}}catch(e){{}}")
+        page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+        page.goto(server.url)
+        page.wait_for_function("() => document.querySelectorAll('#activity tbody tr').length === 4")
+        ratios = page.evaluate(_ACTIVITY_RATIOS)
+        browser.close()
+    metrics._FILE_CACHE.clear()
+    texts = {text.lower() for text, _ in ratios}
+    assert {"inline", "path"} <= texts, texts  # guard: both inputs drawn
+    assert len(ratios) == 4 * 4, ratios  # guard: four chips in each of the four rows
+    low = [(text, r) for text, r in ratios if r < 4.5]
+    assert not low, low
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_inflight_rows_keep_time_and_chars_on_one_line(tmp_path, monkeypatch, new_page, theme):
+    """Issue #547: every «En curso» row, queued ones included (the turn one, the longest, too),
+    is ONE line of the same height when the card has room (1366 px among them), with time and
+    characters beside the chips and the same right edge, however wide the numbers; in a narrower
+    card every row is the same two lines, chips above and time below. The queued status chip
+    («Espera 1/4 · 1 min 53 s») is never cut, and no «#2» or «esperando turno…» shows as
+    text.
+
+    Positive control: with `.ifchips{flex-wrap:wrap}` the queued rows take two lines and the height
+    assert fails; with the old `.ifrow{flex-wrap:wrap}`, the time and characters drop below the
+    chips and the `metaMiddle` assert fails.
+    """
+    _cost_and_image_log(tmp_path, monkeypatch)
+    in_flight = {
+        "inflight": IN_FLIGHT_547,
+        "count": len(IN_FLIGHT_547),
+        "last_event_ts": datetime.now(UTC).isoformat(),
+        "now": datetime.now(UTC).isoformat(),
+    }
+    with PanelServer() as server, sync_playwright() as pw:
+        browser = _browser(pw)
+        page = new_page(browser, viewport={"width": 1366, "height": 1000}, color_scheme=theme)
+        page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+        page.route(re.compile(r"/api/inflight(\?|$)"), _json(in_flight))
+        page.goto(server.url)
+        page.wait_for_function(
+            "() => document.querySelectorAll('#inflightBody .ifrow').length === 5"
+        )
+        # Desktop widths, the 1280 of the issue's capture among them: the card's width moves the
+        # point where the chips run out of room.
+        by_width = {}
+        for width in range(1000, 1601, 4):
+            page.set_viewport_size({"width": width, "height": 1000})
+            by_width[width] = page.evaluate(_INFLIGHT_LINES)
+        browser.close()
+    metrics._FILE_CACHE.clear()
+    for width, rows in by_width.items():
+        assert len(rows) == 5, (width, rows)  # guard: the five rows were drawn
+        for row in rows:
+            assert row["metaHeight"] <= 22, (width, row)  # one line (~17 px); two are ~34
+            if row["body"] >= 610:  # room for one line: the time beside the chips
+                assert abs(row["metaMiddle"] - row["boxMiddle"]) <= 3, (width, row)
+            else:  # a narrow card: the time under the chips, in every row alike
+                assert row["metaTop"] >= row["boxBottom"] - 1, (width, row)
+            assert row["statusCut"] is False, (width, row)  # the status chip reads whole
+            assert row["clipped"] is False, (width, row)  # no chip hidden past the box
+        # The model chip has one width in every row: it is cut (if at all) the same everywhere.
+        assert len({row["model"] for row in rows}) == 1, (width, rows)
+        assert len({row["metaRight"] for row in rows}) == 1, (width, rows)
+        # One line each: the same height for all, processing and queued alike.
+        assert len({row["height"] for row in rows}) == 1, (width, rows)
+    assert by_width[1368][0]["body"] >= 610, by_width[1368][0]  # 1366 px is the one-line case
+    # The catalogue's longest name («gemma4-26b-a4b») whole in every row, at 1366 px and above.
+    for width, rows in by_width.items():
+        assert not any(row["modelCut"] for row in rows), (width, rows)
+    assert all("gemma4-26b-a4b" in row["text"] for row in by_width[1368]), by_width[1368]
+    queued = [row["text"] for row in by_width[1368][2:]]
+    assert [t.splitlines()[2] for t in queued] == [
+        "Espera 2/3 · 41 s",
+        "Espera 2/3 · 9 s",
+        "Espera 1/4 · 1 min 53 s",
+    ], queued
+    assert not any("#2" in t or "esperando turno" in t for t in queued), queued
+
+
 def test_the_input_origin_legend_is_in_spanish(panel, new_page):
     """«path»/«inline» pasan a «Por ruta (path)» y «Texto en línea (inline)»; el centro dice «por
     ruta». Se lee del gráfico de Chart.js: la leyenda se pinta en el canvas."""

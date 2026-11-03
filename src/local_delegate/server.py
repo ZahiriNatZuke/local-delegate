@@ -617,7 +617,11 @@ def _inflight_local_wait(entry_id: int, reason: str | None) -> None:
             return
         if reason is None:
             entry.pop("local_wait", None)
+            entry.pop("local_wait_since", None)
         else:
+            # Issue #547: when this wait began, so the panel shows how long it has waited. A wait
+            # that goes on (another reason, or the same again) keeps its start.
+            entry.setdefault("local_wait_since", time.time())
             entry["local_wait"] = reason
 
     _inflight_mutate(_update)
@@ -898,6 +902,10 @@ def inflight_snapshot() -> list[dict]:
             # el panel no la vería nunca, aunque esté escrita en el fichero.
             if v.get("local_wait"):
                 entry["local_wait"] = v.get("local_wait")
+                # Issue #547: how long this wait has lasted, apart from the call's `elapsed_s`.
+                since = v.get("local_wait_since")
+                if isinstance(since, int | float):
+                    entry["wait_s"] = round(max(0.0, now - since), 1)
             # REQ-008: con qué modelos y en qué puesto espera turno. Datos aparte, solo cuando están.
             if "turn_in_use" in v:
                 entry["turn_in_use"] = v.get("turn_in_use")

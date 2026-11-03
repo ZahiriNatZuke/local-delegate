@@ -161,7 +161,8 @@ def test_panel_splits_processing_from_queued(tmp_path):
         assert html.index(f">{tool}<") > head_queued, tool
     assert html.count('class="ifrow queued"') == 2
     assert html.count('class="queue-dot"') == 2 and html.count('class="spin"') == 2
-    assert ">#3<" in html
+    # Issue #547: the place in the turn queue goes in the row's title, no «#3» chip.
+    assert "Puesto 3 en la cola de turno" in html and ">#3<" not in html
 
 
 def test_panel_without_state_keeps_one_list(tmp_path):
@@ -178,3 +179,136 @@ def test_panel_shows_the_host_only_when_it_comes(tmp_path):
     )
     assert html.count(">remote-mac<") == 1
     assert 'title="Pedida desde remote-mac"' in html
+
+
+# --- Issue #547: a queued chunked call says which chunk waits, why and for how long ---------------
+
+
+def test_inflight_reports_how_long_it_waits(tmp_path, monkeypatch):
+    """`wait_s` counts from when the current local wait began, only while there is one.
+
+    Positive control: without `local_wait_since` in `_inflight_local_wait`, `wait_s` never comes
+    and the first assert fails.
+    """
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    clock = [1000.0]
+    monkeypatch.setattr(server.time, "time", lambda: clock[0])
+    entry_id = server._inflight_start(tool="t", model="m", source="inline", chars_in=5)
+    try:
+        clock[0] = 1030.0  # 30 s into the call, the wait for a place begins
+        server._inflight_local_wait(entry_id, "slot")
+        clock[0] = 1042.5
+        e = _entry(entry_id)
+        assert e["wait_s"] == 12.5 and e["elapsed_s"] == 42.5, e
+        # Going on waiting for another reason keeps the start of the wait.
+        server._inflight_local_wait(entry_id, "turn")
+        clock[0] = 1050.0
+        assert _entry(entry_id)["wait_s"] == 20.0
+        # The wait ends: no `wait_s`, and the next wait counts from its own start.
+        server._inflight_local_wait(entry_id, None)
+        assert "wait_s" not in _entry(entry_id)
+        clock[0] = 1060.0
+        server._inflight_local_wait(entry_id, "slot")
+        clock[0] = 1061.0
+        assert _entry(entry_id)["wait_s"] == 1.0
+    finally:
+        server._inflight_end(entry_id)
+
+
+def test_api_inflight_carries_the_wait(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    entry_id = server._inflight_start(tool="t", model="m", source="inline", chars_in=5)
+    try:
+        server._inflight_local_wait(entry_id, "slot")
+        (item,) = TestClient(metrics.app).get("/api/inflight").json()["inflight"]
+        assert item["state"] == "queued" and item["local_wait"] == "slot"
+        assert isinstance(item["wait_s"], int | float) and item["wait_s"] >= 0
+    finally:
+        server._inflight_end(entry_id)
+
+
+def test_panel_queued_chunk_says_it_waits(tmp_path):
+    """A queued chunk has ONE status chip, «Espera 2/3 · 40 s», never «Trozo 2/3»; one at
+    the backend keeps «Trozo».
+
+    Positive control: drawing a queued chunk with `backend.chunk` gives «Trozo 2/3» under «En cola»
+    and the first assert fails.
+    """
+    html = _render(
+        tmp_path,
+        [
+            _row("between", "queued", local_wait="slot", chunks=3, chunk=2, wait_s=40),
+            _row("sending", "running", chunks=4, chunk=2),
+            _row("to_reduce", "queued", local_wait="slot", chunks=3, chunk=3, phase="reduce"),
+        ],
+    )
+    queued = html[html.index('data-group="queued"') :]
+    running = html[: html.index('data-group="queued"')]
+    assert ">Espera 2/3 · 40 s<" in queued and ">Trozo 2/3<" not in queued, queued
+    assert ">Espera combinar 3<" in queued and "Combinando" not in queued, queued
+    assert '<span class="chunkchip">Trozo 2/4</span>' in running and "Espera" not in running
+    title = (
+        'title="1 de 3 trozos hechos; el trozo 2 espera para enviarse. '
+        'Lleva 40 s esperando; 5,0 s desde que empezó la llamada"'
+    )
+    assert title in queued, queued
+    assert queued.count('class="chunkchip"') == 2, queued  # one status chip per queued row
+
+
+def test_panel_queued_row_title_says_why(tmp_path):
+    """The why of a queued row, the model in use and the place in the queue are in its title, in
+    words; no `slot`/`turn`, no «#2» and no «esperando turno…» chip show as text.
+
+    Positive control: without `queuedTitle` the row has no title and the first assert fails; with
+    the old turn chip, «>esperando turno» shows as text and the loop assert fails.
+    """
+    rows = {
+        "a": _row("a", "queued", local_wait="slot"),
+        "b": _row("b", "queued", local_wait="turn", queue_position=2, turn_in_use=["x"]),
+        "c": _row("c", "queued", local_wait="turn"),
+        "d": _row("d", "queued"),
+        "e": _row("e", "running"),
+    }
+    html = {k: _render(tmp_path, [v]) for k, v in rows.items()}
+    assert 'title="Espera una plaza libre en el backend"' in html["a"], html["a"]
+    turn = 'title="esperando turno del daemon (en uso: x) · Puesto 2 en la cola de turno"'
+    assert turn in html["b"], html["b"]
+    assert 'title="esperando turno del daemon (en uso: nada)"' in html["c"], html["c"]
+    assert 'title="Aún no ha empezado"' in html["d"], html["d"]
+    assert '<div class="ifrow">' in html["e"], html["e"]  # a running row has no wait title
+    for k, h in html.items():
+        assert ">slot<" not in h and ">turn<" not in h, (k, h)
+        assert ">#" not in h and ">esperando turno" not in h, (k, h)
+
+
+def test_panel_queued_row_shows_the_wait(tmp_path):
+    """The wait goes in the status chip, in whole seconds under a minute and in the panel's
+    «1 min 53 s» above; the title explains it and the total stays in the time column.
+
+    Positive control: without `waitText` in the chip the row says only «Espera 1/4» and the
+    first assert fails.
+    """
+    html = _render(
+        tmp_path,
+        [
+            _row("q", "queued", local_wait="slot", chunks=4, chunk=1, wait_s=113, elapsed_s=115),
+            _row("s", "queued", local_wait="slot", wait_s=41.2, elapsed_s=115),
+            _row("old", "queued", local_wait="slot", elapsed_s=115),
+        ],
+    )
+    first, second, third = html.split('class="ifrow queued"')[1:]
+    assert ">Espera 1/4 · 1 min 53 s<" in first, first
+    assert "Lleva 1 min 53 s esperando; 1 min 55 s desde que empezó la llamada" in first, first
+    assert '<span class="num ifmeta">1 min 55 s · ' in first, first
+    assert ">Espera · 41 s<" in second, second
+    assert "chunkchip" not in third, third  # older daemon: no wait, no chip, total only
+    assert '<span class="num ifmeta">1 min 55 s · ' in third, third
+
+
+def test_panel_queued_titles_are_escaped(tmp_path):
+    """What comes from `/api/inflight` is escaped in the waiting chip and its title."""
+    html = _render(
+        tmp_path,
+        [_row("q", "queued", local_wait="slot", chunks=3, chunk='2"><img src=x>')],
+    )
+    assert "<img" not in html and "&lt;img src=x&gt;" in html, html
