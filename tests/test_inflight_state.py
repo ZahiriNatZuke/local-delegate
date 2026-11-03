@@ -228,7 +228,7 @@ def test_api_inflight_carries_the_wait(tmp_path, monkeypatch):
 
 
 def test_panel_queued_chunk_says_it_waits(tmp_path):
-    """A queued chunk has ONE status chip, «Espera trozo 2/3 · 40 s», never «Trozo 2/3»; one at
+    """A queued chunk has ONE status chip, «Espera 2/3 · 40 s», never «Trozo 2/3»; one at
     the backend keeps «Trozo».
 
     Positive control: drawing a queued chunk with `backend.chunk` gives «Trozo 2/3» under «En cola»
@@ -244,8 +244,8 @@ def test_panel_queued_chunk_says_it_waits(tmp_path):
     )
     queued = html[html.index('data-group="queued"') :]
     running = html[: html.index('data-group="queued"')]
-    assert ">Espera trozo 2/3 · 40 s<" in queued and ">Trozo 2/3<" not in queued, queued
-    assert ">Espera combinar 3 trozos<" in queued and "Combinando" not in queued, queued
+    assert ">Espera 2/3 · 40 s<" in queued and ">Trozo 2/3<" not in queued, queued
+    assert ">Espera combinar 3<" in queued and "Combinando" not in queued, queued
     assert '<span class="chunkchip">Trozo 2/4</span>' in running and "Espera" not in running
     title = (
         'title="1 de 3 trozos hechos; el trozo 2 espera para enviarse. '
@@ -285,7 +285,7 @@ def test_panel_queued_row_shows_the_wait(tmp_path):
     """The wait goes in the status chip, in whole seconds under a minute and in the panel's
     «1 min 53 s» above; the title explains it and the total stays in the time column.
 
-    Positive control: without `waitText` in the chip the row says only «Espera trozo 1/4» and the
+    Positive control: without `waitText` in the chip the row says only «Espera 1/4» and the
     first assert fails.
     """
     html = _render(
@@ -297,7 +297,7 @@ def test_panel_queued_row_shows_the_wait(tmp_path):
         ],
     )
     first, second, third = html.split('class="ifrow queued"')[1:]
-    assert ">Espera trozo 1/4 · 1 min 53 s<" in first, first
+    assert ">Espera 1/4 · 1 min 53 s<" in first, first
     assert "Lleva 1 min 53 s esperando; 1 min 55 s desde que empezó la llamada" in first, first
     assert '<span class="num ifmeta">1 min 55 s · ' in first, first
     assert ">Espera · 41 s<" in second, second

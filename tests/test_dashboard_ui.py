@@ -1651,6 +1651,7 @@ _INFLIGHT_LINES = """() => [...document.querySelectorAll('#inflightBody .ifrow')
           boxBottom: chips.bottom, metaTop: meta.top,
           body: document.getElementById('inflightBody').clientWidth,
           model: Math.round(row.querySelector('.badge.model').getBoundingClientRect().width),
+          modelCut: (m => m.scrollWidth > m.clientWidth + 1)(row.querySelector('.badge.model')),
           clipped: [...row.querySelectorAll('.ifchips > *')].some(e => e.getBoundingClientRect().right > chips.right + 1),
           statusCut: status ? status.scrollWidth > status.clientWidth + 1 : null};
 })"""
@@ -1721,13 +1722,60 @@ def test_inflight_text_is_legible_in_light_and_dark(tmp_path, monkeypatch, new_p
     assert not low, low
 
 
+_ACTIVITY_RATIOS = (
+    _INFLIGHT_RATIOS.replace(
+        "document.querySelectorAll('#inflightBody .ifrow')",
+        "document.querySelectorAll('#activity tbody tr')",
+    )
+    .replace(
+        "row.querySelectorAll('.ifchips > *, .ifmeta')",
+        "row.querySelectorAll('.badge, .src, .org')",
+    )
+    .replace("document.getElementById('inflightBody')", "document.getElementById('activity')")
+)
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_activity_badge_text_is_legible_in_light_and_dark(tmp_path, monkeypatch, new_page, theme):
+    """Issue #551: the same chips in «Actividad reciente» (tool, model, input, compute), the muted
+    ones included (`inline` input, unknown compute), reach 4.5:1 in both themes.
+
+    Positive control: with `.src.inline` back on the bare `--mut`, the light theme fails.
+    """
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    lines = [json.loads(line) for line in _events(4).splitlines()]
+    lines[1].update(source="inline")
+    lines[2].update(source="inline", backend=None)
+    lines[3].update(backend="remote")
+    (tmp_path / f"usage-{datetime.now(UTC):%Y%m}.jsonl").write_text(
+        "".join(json.dumps(e) + "\n" for e in lines), encoding="utf-8"
+    )
+    metrics._FILE_CACHE.clear()
+    with PanelServer() as server, sync_playwright() as pw:
+        browser = _browser(pw)
+        page = new_page(browser, viewport={"width": 1366, "height": 1000}, color_scheme=theme)
+        page.add_init_script(f"try{{localStorage.setItem('ld-theme','{theme}')}}catch(e){{}}")
+        page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+        page.goto(server.url)
+        page.wait_for_function("() => document.querySelectorAll('#activity tbody tr').length === 4")
+        ratios = page.evaluate(_ACTIVITY_RATIOS)
+        browser.close()
+    metrics._FILE_CACHE.clear()
+    texts = {text.lower() for text, _ in ratios}
+    assert {"inline", "path"} <= texts, texts  # guard: both inputs drawn
+    assert len(ratios) == 4 * 4, ratios  # guard: four chips in each of the four rows
+    low = [(text, r) for text, r in ratios if r < 4.5]
+    assert not low, low
+
+
 @pytest.mark.parametrize("theme", ["light", "dark"])
 def test_inflight_rows_keep_time_and_chars_on_one_line(tmp_path, monkeypatch, new_page, theme):
     """Issue #547: every «En curso» row, queued ones included (the turn one, the longest, too),
     is ONE line of the same height when the card has room (1366 px among them), with time and
     characters beside the chips and the same right edge, however wide the numbers; in a narrower
     card every row is the same two lines, chips above and time below. The queued status chip
-    («Espera trozo 1/4 · 1 min 53 s») is never cut, and no «#2» or «esperando turno…» shows as
+    («Espera 1/4 · 1 min 53 s») is never cut, and no «#2» or «esperando turno…» shows as
     text.
 
     Positive control: with `.ifchips{flex-wrap:wrap}` the queued rows take two lines and the height
@@ -1762,7 +1810,7 @@ def test_inflight_rows_keep_time_and_chars_on_one_line(tmp_path, monkeypatch, ne
         assert len(rows) == 5, (width, rows)  # guard: the five rows were drawn
         for row in rows:
             assert row["metaHeight"] <= 22, (width, row)  # one line (~17 px); two are ~34
-            if row["body"] >= 590:  # room for one line: the time beside the chips
+            if row["body"] >= 610:  # room for one line: the time beside the chips
                 assert abs(row["metaMiddle"] - row["boxMiddle"]) <= 3, (width, row)
             else:  # a narrow card: the time under the chips, in every row alike
                 assert row["metaTop"] >= row["boxBottom"] - 1, (width, row)
@@ -1773,12 +1821,16 @@ def test_inflight_rows_keep_time_and_chars_on_one_line(tmp_path, monkeypatch, ne
         assert len({row["metaRight"] for row in rows}) == 1, (width, rows)
         # One line each: the same height for all, processing and queued alike.
         assert len({row["height"] for row in rows}) == 1, (width, rows)
-    assert by_width[1368][0]["body"] >= 590, by_width[1368][0]  # 1366 px is the one-line case
+    assert by_width[1368][0]["body"] >= 610, by_width[1368][0]  # 1366 px is the one-line case
+    # The catalogue's longest name («gemma4-26b-a4b») whole in every row, at 1366 px and above.
+    for width, rows in by_width.items():
+        assert not any(row["modelCut"] for row in rows), (width, rows)
+    assert all("gemma4-26b-a4b" in row["text"] for row in by_width[1368]), by_width[1368]
     queued = [row["text"] for row in by_width[1368][2:]]
     assert [t.splitlines()[2] for t in queued] == [
-        "Espera trozo 2/3 · 41 s",
-        "Espera trozo 2/3 · 9 s",
-        "Espera trozo 1/4 · 1 min 53 s",
+        "Espera 2/3 · 41 s",
+        "Espera 2/3 · 9 s",
+        "Espera 1/4 · 1 min 53 s",
     ], queued
     assert not any("#2" in t or "esperando turno" in t for t in queued), queued
 

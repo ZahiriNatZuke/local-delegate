@@ -1695,12 +1695,12 @@ td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .badge.model{background:color-mix(in srgb,var(--violet) 14%,transparent);color:var(--violet-tx)}
 .src{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.03em;text-transform:uppercase}
 .src.path{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc-tx)}
-.src.inline{background:color-mix(in srgb,var(--mut) 16%,transparent);color:var(--mut)}
+.src.inline{background:color-mix(in srgb,var(--mut) 16%,transparent);color:var(--mut-tx)}
 /* origen del CÓMPUTO (backend local de esta máquina vs GPU remota) */
 .org{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.03em;text-transform:uppercase}
 .org.local{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc-tx)}
 .org.remote{background:color-mix(in srgb,var(--cyan) 16%,transparent);color:var(--cyan-tx)}
-.org.unknown{background:color-mix(in srgb,var(--mut) 14%,transparent);color:var(--mut)}
+.org.unknown{background:color-mix(in srgb,var(--mut) 14%,transparent);color:var(--mut-tx)}
 .pill.org.local{color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent);border:1px solid color-mix(in srgb,var(--acc) 32%,transparent)}
 .pill.org.remote{color:var(--cyan);background:color-mix(in srgb,var(--cyan) 12%,transparent);border:1px solid color-mix(in srgb,var(--cyan) 32%,transparent)}
 .chunkchip{font-family:var(--mono);font-size:10px;font-weight:700;padding:1.5px 6px;border-radius:5px;margin-left:6px;
@@ -1765,15 +1765,15 @@ td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .ifchips{display:flex;flex-wrap:nowrap;align-items:center;gap:4px;flex:1 1 0;min-width:0;overflow:hidden}
 .ifchips>*{flex:0 0 auto;white-space:nowrap}
 .ifchips .chunkchip{margin-left:0}
-/* The model chip has ONE width for every row, taken from the card's width (`cqw` of #inflightBody)
-   minus what the longest row needs besides it (a queued «Espera trozo 1/4 · 1 min 53 s»): the
-   full name (14 characters, the catalogue's longest) when there is room, the same cut in every row
-   when not. */
-.ifchips>.badge.model{width:clamp(calc(4ch + 18px), calc(100cqw - 545px), calc(14ch + 18px));overflow:hidden;text-overflow:ellipsis}
+.ifchips>.badge{padding:3px 7px}.ifchips>.org{padding:2px 6px}
+/* The model chip has ONE width for every row: the catalogue's longest name (14 characters,
+   `gemma4-26b-a4b`, `qwen36-35b-a3b`) whole. A longer custom name ends in «…», the same in every
+   row. When the card cannot hold that and the longest row (a queued «Espera 1/4 · 1 min 53 s») on
+   one line, every row goes to the same two lines (the container query on #inflightBody). */
+.ifchips>.badge.model{width:calc(14ch + 14px);overflow:hidden;text-overflow:ellipsis}
 .ifmeta{flex:0 0 auto;margin-left:auto;white-space:nowrap;color:var(--mut-tx);font-size:11.5px}
 #inflightBody{container-type:inline-size}
-@container (max-width:589px){.ifrow{flex-wrap:wrap;row-gap:2px}.ifmeta{flex-basis:100%;margin-left:18px;text-align:left}
-  .ifchips>.badge.model{width:clamp(calc(4ch + 18px), calc(100cqw - 370px), calc(14ch + 18px))}}
+@container (max-width:609px){.ifrow{flex-wrap:wrap;row-gap:2px}.ifmeta{flex-basis:100%;margin-left:18px;text-align:left}}
 @media (max-width:560px){.ifchips{flex-wrap:wrap}}
 .spin{width:12px;height:12px;border-radius:50%;flex:0 0 auto;
   border:2px solid color-mix(in srgb,var(--amber) 28%,transparent);border-top-color:var(--amber);animation:rot .8s linear infinite}

@@ -766,7 +766,7 @@ la cola llevan un círculo discontinuo en vez del giro, van atenuadas y, con tur
 
 Una delegación troceada suelta su plaza al acabar cada trozo y vuelve a esperar otra para el
 siguiente, así que entre trozos está **en cola**. Desde el issue #547 esa fila lleva un solo chip
-de estado, **«Espera trozo 2/3 · 41 s»** (o «Espera combinar 3 trozos · …» antes del paso final),
+de estado, **«Espera 2/3 · 41 s»** (o «Espera combinar 3 · …» antes del paso final),
 no «Trozo 2/3», que es la etiqueta de un trozo que se está procesando. El título de la fila dice
 por qué espera (plaza libre en el backend; turno del daemon, con el modelo en uso y su puesto; o
 que aún no ha empezado) y el del chip, cuántos trozos van hechos y el tiempo total. Con espera
