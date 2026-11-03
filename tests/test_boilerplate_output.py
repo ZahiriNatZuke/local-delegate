@@ -12,6 +12,7 @@ peor de los dos errores posibles.
 from __future__ import annotations
 
 import json
+import os
 
 import backend_mock
 import httpx2
@@ -162,6 +163,95 @@ def test_overwrite_true_does_overwrite(tmp_path):
     server.local_boilerplate("otra cosa", "python", str(dest), overwrite=True)
 
     assert dest.read_text(encoding="utf-8") == "codigo nuevo\n"
+
+
+def _reply_with_race(dest, user_content: str, code: str):
+    """Backend que, MIENTRAS genera, ve aparecer `dest` con trabajo del usuario dentro.
+
+    Reproduce la carrera real: `_validate_target` comprueba `exists()` antes de una inferencia
+    que puede durar minutos, y alguien crea el archivo en ese intervalo.
+    """
+
+    def _side_effect(request):
+        dest.write_text(user_content, encoding="utf-8")
+        return httpx2.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": code}, "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 40, "completion_tokens": 300},
+            },
+        )
+
+    return backend_mock.post(URL).mock(side_effect=_side_effect)
+
+
+@backend_mock.mock
+def test_a_file_created_during_generation_is_not_overwritten(tmp_path):
+    dest = tmp_path / "out" / "race.py"
+    dest.parent.mkdir()
+    route = _reply_with_race(dest, "TRABAJO DEL USUARIO\n", "print('generado')\n")
+
+    with pytest.raises(ValueError, match="overwrite"):
+        server.local_boilerplate("algo", "python", str(dest))
+
+    assert route.call_count == 1  # guarda: la carrera sí ocurrió durante la inferencia
+    assert dest.read_text(encoding="utf-8") == "TRABAJO DEL USUARIO\n"
+    assert sorted(p.name for p in dest.parent.iterdir()) == ["race.py"]  # sin temporales
+
+
+@backend_mock.mock
+def test_the_race_does_not_record_output_savings(tmp_path, monkeypatch):
+    """Si la escritura falla, la fila no puede contar como ahorro una salida que no llegó."""
+    monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", False)
+    log = tmp_path / "usage.jsonl"
+    monkeypatch.setattr(config, "USAGE_LOG", log)
+    dest = tmp_path / "out" / "race.py"
+    dest.parent.mkdir()
+    _reply_with_race(dest, "TRABAJO DEL USUARIO\n", "print('generado')\n")
+
+    with pytest.raises(ValueError, match="overwrite"):
+        server.local_boilerplate("algo", "python", str(dest))
+
+    event = json.loads(log.read_text(encoding="utf-8").strip().splitlines()[-1])
+    assert event["tool"] == "local_boilerplate"  # guarda: la fila de esta llamada sí se registró
+    assert event["ok"] is True  # el backend respondió; lo que falló fue la escritura
+    assert not event.get("output_to_file")
+
+
+@backend_mock.mock
+def test_overwrite_true_replaces_a_file_created_during_generation(tmp_path):
+    dest = tmp_path / "out" / "race.py"
+    dest.parent.mkdir()
+    _reply_with_race(dest, "TRABAJO DEL USUARIO\n", "print('generado')\n")
+
+    output = server.local_boilerplate("algo", "python", str(dest), overwrite=True)
+
+    assert output.startswith("[escrito] ")
+    assert dest.read_bytes() == b"print('generado')\n"
+
+
+@backend_mock.mock
+def test_overwrite_true_writes_through_a_symlink(tmp_path):
+    """Con `overwrite=True` el enlace sigue siendo enlace y su destino recibe el contenido.
+
+    Sustituir el enlace por un archivo normal (lo que haría un temporal + `os.replace`) rompería
+    unos dotfiles enlazados o un archivo compartido entre proyectos.
+    """
+    _reply("codigo nuevo\n")
+    real = tmp_path / "real" / "shared.py"
+    real.parent.mkdir()
+    real.write_text("viejo\n", encoding="utf-8")
+    link = tmp_path / "out" / "link.py"
+    link.parent.mkdir()
+    try:
+        os.symlink(real, link)
+    except OSError as exc:  # Windows without Developer Mode or admin rights
+        pytest.skip(f"file symlinks need a privilege here: {exc}")
+
+    server.local_boilerplate("otra cosa", "python", str(link), overwrite=True)
+
+    assert link.is_symlink()
+    assert real.read_bytes() == b"codigo nuevo\n"
 
 
 @backend_mock.mock
