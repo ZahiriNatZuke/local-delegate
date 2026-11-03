@@ -6,9 +6,28 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.48.0] - 2026-11-03
+
+Más avisos donde antes había silencio. `local_extract` devuelve exactamente las claves pedidas
+(rellena las que faltan, empareja las mal escritas y aparta las que sobran) y rechaza un `fields`
+vacío; `local_explain_code` avisa cuando la respuesta confirma una premisa de la pregunta que el
+código no sostiene; `local_summarize` ya no toma las cadenas de un fichero de código por sus
+secciones; `local_commit_msg` avisa cuando no pudo tomar el idioma del repo y lo lee también desde
+un worktree; una llamada que esperó mucho el turno común lo dice; `local_boilerplate` ya no pisa un
+archivo creado mientras genera; y el panel muestra mejor las filas en cola y se lee en modo claro.
+
+### Cómo actualizar
+
+- **En la PC y en la Mac:** ejecuta `local-delegate update` o, si instalaste con versión fija,
+  reinstala con `uv tool install --force --no-cache "local-delegate-mcp[llamaswap]==0.48.0"` (con
+  tus extras). Reinicia el daemon y haz `/mcp` en Claude Code (o abre una sesión nueva): las
+  sesiones abiertas siguen con el servidor MCP de la 0.47.3 hasta entonces.
+- No hace falta cambiar la configuración. La variable nueva `LOCAL_DELEGATE_TURN_WAIT_NOTICE_S`
+  (60 s por defecto; `0` desactiva el aviso) es opcional.
+
 ### Añadido
 
-- **`scripts/release.py` avisa de los cambios SDD sin cerrar.** Antes de publicar, también con
+- **`scripts/release.py` avisa de los cambios SDD sin cerrar (#535).** Antes de publicar, también con
   `--dry-run`, lista cada carpeta de `.sdd/changes/` cuyo `state.json` no está en `closed`
   («SDD sin cerrar: <slug> (<estado>)») y sugiere cerrarlos. Es un aviso, no bloquea. Varios SDD
   se habían quedado en `verifying` con su trabajo ya mezclado y publicado.
@@ -44,7 +63,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   votos suficientes, se lee también el del git dir común (el que indica `commondir`, solo si está
   donde git lo pone: dos carpetas por encima del git dir del worktree).
 
-- **`local_boilerplate` ya no pisa un archivo creado mientras genera.** Con `overwrite=False`
+- **`local_boilerplate` ya no pisa un archivo creado mientras genera (#542).** Con `overwrite=False`
   se comprobaba que `target` no existía antes de la inferencia, pero se abría con `"w"` después:
   si el archivo aparecía en ese intervalo (que puede durar minutos), se truncaba y el recibo decía
   «[escrito]» sin aviso. Ahora la escritura es de creación exclusiva y ese caso da el mismo error
@@ -65,7 +84,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   docstrings de Python ni los títulos que el documento también tiene como títulos reales, así que
   un resumen correcto de un `.md` no lleva ese aviso.
 
-- **`local_extract` devuelve exactamente las claves pedidas, como dice su contrato.** En modo libre
+- **`local_extract` devuelve exactamente las claves pedidas, como dice su contrato (#541).** En modo libre
   (`LOCAL_DELEGATE_JSON_SCHEMA=off`, o `auto` cuando el backend rechaza el schema y se reintenta
   sin él) el modelo podía omitir una clave pedida o inventar otra, y la tool lo entregaba tal cual
   y sin aviso. Ahora la clave que falta vuelve como `null`; la que el modelo escribió de otra
@@ -92,9 +111,6 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   avisa en ninguna. «No solo», «sin embargo» y «not only» no cuentan como negación, y la palabra
   se reconoce también en inglés en la respuesta («no rotation» niega «rotación»). Además, el texto
   del aviso tenía los dos puntos sin espacio detrás («respalde:puede»).
-
-### Corregido
-
 - **Panel: una delegación troceada «En cola» ya no parece estar mandando su trozo.** Entre trozo y
   trozo la llamada vuelve a esperar plaza y el panel la mostraba en «En cola» con «Trozo 2/3», la
   misma etiqueta que un trozo que se está procesando, y solo con el tiempo total. Ahora lleva un
@@ -111,7 +127,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - **Panel en modo claro: el texto de los chips se lee.** Los chips de herramienta, modelo, trozo y
   cómputo usaban el color de acento como texto sobre su propio tinte (unos 2,1–2,3:1 en claro), y
   las filas en cola bajaban además a `opacity: .72` (1,4–1,8:1). Ahora el texto usa tokens
-  `--*-tx` que en claro oscurecen el acento (≥ 6:1) y en oscuro no cambian, la columna de tiempo
+  `--*-tx` que en claro oscurecen el acento (6:1 o más) y en oscuro no cambian, la columna de tiempo
   usa `--mut-tx`, y las filas en cola se distinguen por el círculo discontinuo y los chips
   perfilados, sin bajar la opacidad del texto. Afecta a los mismos chips en «Actividad reciente»,
   también a los apagados (entrada `inline`, cómputo desconocido), que ahora usan `--mut-tx` (#551).
@@ -4331,7 +4347,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.3...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.48.0...HEAD
+[0.48.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.3...v0.48.0
 [0.47.3]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.2...v0.47.3
 [0.47.2]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.1...v0.47.2
 [0.47.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.0...v0.47.1
