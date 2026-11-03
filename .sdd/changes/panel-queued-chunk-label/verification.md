@@ -40,4 +40,5 @@ Without a declaration, list what was run. Never invent a command. -->
 - The mod band (`status.js`) is not changed: it already says `2/3 · en cola · <total>`.
 - One line at 1366 px needs room: the tool shows without `local_` and the model badge gives way with an ellipsis (full names in titles).
 - The existing assert `">#3<" in html` in tests/test_inflight_state.py was changed to look for the position in the title: the coordinator asked to drop the «#n» chip.
-- Light theme: chip text contrast is about 2.1–2.3:1 (main's palette) and 1.4–1.8:1 with main's `.ifrow.queued{opacity:.72}`; not changed here.
+- Model chip: one width for every row from the card width (`cqw`); full name only from ~1470 px, cut alike in every row below (coordinator review, 2026-11-03).
+- Issue #551 folded in: `--*-tx` text tokens and no opacity on queued rows; measured 6.0–6.8:1 light, 6.5–10.8:1 dark; test `test_inflight_text_is_legible_in_light_and_dark` with two mutants caught.

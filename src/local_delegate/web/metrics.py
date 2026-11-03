@@ -1477,6 +1477,9 @@ __WEB_FONTS__
   --acc:#34d399; --acc2:#6ee7b7; --acc-d:#059669;
   --blue:#60a5fa; --violet:#a78bfa; --amber:#fbbf24; --danger:#f87171; --cyan:#22d3ee; --pink:#f472b6;
   --amber-tx:#fbbf24; /* amber as TEXT on a chip: the light theme darkens it for contrast */
+  /* Issue #551: the other accents as TEXT on a chip, same idea (>= 4.5:1 on their tint). */
+  --blue-tx:var(--blue); --violet-tx:var(--violet); --cyan-tx:var(--cyan); --acc-tx:var(--acc);
+  --mut-tx:var(--mut);
   --glow:rgba(52,211,153,.14);
   --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 32px -8px rgba(0,0,0,.55);
   --shadow-h:0 1px 2px rgba(0,0,0,.5),0 20px 44px -10px rgba(0,0,0,.6);
@@ -1491,6 +1494,7 @@ __WEB_FONTS__
   --bg:#f6f8fc; --bg2:#eef2f8; --panel:#ffffff; --panel2:#f4f7fb; --bd:#e4e9f1; --bd2:#d4dbe6;
   --tx:#0e1526; --tx2:#33405a; --mut:#64748b; --faint:#94a3b8;
   --amber-tx:#92400e;
+  --blue-tx:#1d4ed8; --violet-tx:#6d28d9; --cyan-tx:#155e75; --acc-tx:#047857; --mut-tx:#526075;
   --glow:rgba(5,150,105,.10);
   --shadow:0 1px 2px rgba(15,23,42,.06),0 12px 28px -10px rgba(15,23,42,.14);
   --shadow-h:0 1px 2px rgba(15,23,42,.08),0 20px 40px -12px rgba(15,23,42,.2);
@@ -1687,20 +1691,20 @@ tbody td{color:var(--tx2)}
    columnas numéricas. Un `th.num`/`th.mono` partía la misma fila de cabecera en dos familias. */
 td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .badge{display:inline-block;padding:3px 9px;border-radius:7px;font-size:11.5px;font-weight:600;font-family:var(--mono);
-  background:color-mix(in srgb,var(--blue) 14%,transparent);color:var(--blue)}
-.badge.model{background:color-mix(in srgb,var(--violet) 14%,transparent);color:var(--violet)}
+  background:color-mix(in srgb,var(--blue) 14%,transparent);color:var(--blue-tx)}
+.badge.model{background:color-mix(in srgb,var(--violet) 14%,transparent);color:var(--violet-tx)}
 .src{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.03em;text-transform:uppercase}
-.src.path{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc)}
+.src.path{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc-tx)}
 .src.inline{background:color-mix(in srgb,var(--mut) 16%,transparent);color:var(--mut)}
 /* origen del CÓMPUTO (backend local de esta máquina vs GPU remota) */
 .org{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.03em;text-transform:uppercase}
-.org.local{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc)}
-.org.remote{background:color-mix(in srgb,var(--cyan) 16%,transparent);color:var(--cyan)}
+.org.local{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc-tx)}
+.org.remote{background:color-mix(in srgb,var(--cyan) 16%,transparent);color:var(--cyan-tx)}
 .org.unknown{background:color-mix(in srgb,var(--mut) 14%,transparent);color:var(--mut)}
 .pill.org.local{color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent);border:1px solid color-mix(in srgb,var(--acc) 32%,transparent)}
 .pill.org.remote{color:var(--cyan);background:color-mix(in srgb,var(--cyan) 12%,transparent);border:1px solid color-mix(in srgb,var(--cyan) 32%,transparent)}
 .chunkchip{font-family:var(--mono);font-size:10px;font-weight:700;padding:1.5px 6px;border-radius:5px;margin-left:6px;
-  background:color-mix(in srgb,var(--violet) 14%,transparent);color:var(--violet)}
+  background:color-mix(in srgb,var(--violet) 14%,transparent);color:var(--violet-tx)}
 .fbchip{background:color-mix(in srgb,var(--amber,#d97706) 16%,transparent);color:var(--amber,#d97706)}
 .slowchip{background:color-mix(in srgb,var(--red,#dc2626) 14%,transparent);color:var(--red,#dc2626)}
 /* Backend params (REQ-019): the call reasoned, carried per-role params, or the backend rejected
@@ -1757,19 +1761,26 @@ td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .tchip{font-family:var(--mono);font-size:10.5px;color:var(--mut);border:1px solid var(--bd);border-radius:7px;padding:3px 8px;cursor:default;transition:.13s}
 .tchip:hover{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 40%,transparent)}
 .tchip.busy{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 50%,transparent);background:color-mix(in srgb,var(--amber) 12%,transparent)}
-.ifrow{display:flex;flex-wrap:nowrap;align-items:center;gap:9px;padding:6px 2px;font-size:12.5px;color:var(--tx2);font-family:var(--mono)}
-.ifchips{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;flex:1 1 0;min-width:0;overflow:hidden}
+.ifrow{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;padding:6px 2px;font-size:12.5px;color:var(--tx2);font-family:var(--mono)}
+.ifchips{display:flex;flex-wrap:nowrap;align-items:center;gap:4px;flex:1 1 0;min-width:0;overflow:hidden}
 .ifchips>*{flex:0 0 auto;white-space:nowrap}
 .ifchips .chunkchip{margin-left:0}
-.ifchips>.badge.model{flex:0 1 auto;min-width:6ch;overflow:hidden;text-overflow:ellipsis}
-.ifmeta{flex:0 0 auto;margin-left:auto;white-space:nowrap;color:var(--mut)}
+/* The model chip has ONE width for every row, taken from the card's width (`cqw` of #inflightBody)
+   minus what the longest row needs besides it (a queued «Espera trozo 1/4 · 1 min 53 s»): the
+   full name (14 characters, the catalogue's longest) when there is room, the same cut in every row
+   when not. */
+.ifchips>.badge.model{width:clamp(calc(4ch + 18px), calc(100cqw - 545px), calc(14ch + 18px));overflow:hidden;text-overflow:ellipsis}
+.ifmeta{flex:0 0 auto;margin-left:auto;white-space:nowrap;color:var(--mut-tx);font-size:11.5px}
 #inflightBody{container-type:inline-size}
-@container (max-width:559px){.ifrow{flex-wrap:wrap;row-gap:2px}.ifmeta{flex-basis:100%;margin-left:21px;text-align:left}}
+@container (max-width:589px){.ifrow{flex-wrap:wrap;row-gap:2px}.ifmeta{flex-basis:100%;margin-left:18px;text-align:left}
+  .ifchips>.badge.model{width:clamp(calc(4ch + 18px), calc(100cqw - 370px), calc(14ch + 18px))}}
 @media (max-width:560px){.ifchips{flex-wrap:wrap}}
 .spin{width:12px;height:12px;border-radius:50%;flex:0 0 auto;
   border:2px solid color-mix(in srgb,var(--amber) 28%,transparent);border-top-color:var(--amber);animation:rot .8s linear infinite}
 .queue-dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;border:2px dashed var(--faint)}
-.ifrow.queued{opacity:.72}
+/* Issue #551: a waiting row is told apart by its dashed dot and its outlined chips, never by fading
+   the text below a legible contrast. */
+.ifrow.queued .ifchips>*{background:transparent;box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 40%,transparent)}
 .wait-dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;border:2px dashed var(--amber)}
 .chunkchip.loaded{color:var(--amber-tx);background:color-mix(in srgb,var(--amber) 16%,transparent);
   max-width:26ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

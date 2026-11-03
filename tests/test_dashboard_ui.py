@@ -1650,8 +1650,75 @@ _INFLIGHT_LINES = """() => [...document.querySelectorAll('#inflightBody .ifrow')
           metaMiddle: meta.top + meta.height / 2, boxMiddle: chips.top + chips.height / 2,
           boxBottom: chips.bottom, metaTop: meta.top,
           body: document.getElementById('inflightBody').clientWidth,
+          model: Math.round(row.querySelector('.badge.model').getBoundingClientRect().width),
+          clipped: [...row.querySelectorAll('.ifchips > *')].some(e => e.getBoundingClientRect().right > chips.right + 1),
           statusCut: status ? status.scrollWidth > status.clientWidth + 1 : null};
 })"""
+
+
+# WCAG contrast of each chip's text and of the time column against what is really behind them (the
+# chip's own tint over the card), with the row's opacity applied: the text the eye reads.
+_INFLIGHT_RATIOS = """() => {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 1;
+  const cx = cv.getContext('2d', {willReadFrequently: true});
+  const rgba = c => { cx.clearRect(0, 0, 1, 1); cx.fillStyle = '#000'; cx.fillStyle = c;
+    cx.fillRect(0, 0, 1, 1); const d = cx.getImageData(0, 0, 1, 1).data;
+    return [d[0], d[1], d[2], d[3] / 255]; };
+  const over = (top, bot) => top.slice(0, 3).map((v, i) => v * top[3] + bot[i] * (1 - top[3]));
+  const lum = c => { const f = v => { v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b);
+    return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  let card = document.getElementById('inflightBody');
+  while (card && rgba(getComputedStyle(card).backgroundColor)[3] === 0) card = card.parentElement;
+  const panel = rgba(getComputedStyle(card).backgroundColor).slice(0, 3);
+  return [...document.querySelectorAll('#inflightBody .ifrow')].flatMap(row => {
+    const op = parseFloat(getComputedStyle(row).opacity);
+    const eff = c => c.map((v, i) => v * op + panel[i] * (1 - op));
+    return [...row.querySelectorAll('.ifchips > *, .ifmeta')].map(el => {
+      const st = getComputedStyle(el);
+      const bg = over(rgba(st.backgroundColor), panel);
+      return [el.textContent.trim(), Math.round(ratio(eff(over(rgba(st.color), bg)), eff(bg)) * 100) / 100];
+    });
+  });
+}"""
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_inflight_text_is_legible_in_light_and_dark(tmp_path, monkeypatch, new_page, theme):
+    """Issue #551: the text of every «En curso» chip and of the time column reaches 4.5:1 (WCAG
+    AA, small text) in both themes, queued rows included: they are told apart by their dot and
+    outlined chips, not by fading the text.
+
+    Positive control: with main's `.ifrow.queued{opacity:.72}` back, or the chips coloured with
+    the bare accents (`--violet`) in the light theme, the ratio assert fails.
+    """
+    _cost_and_image_log(tmp_path, monkeypatch)
+    in_flight = {
+        "inflight": IN_FLIGHT_547,
+        "count": len(IN_FLIGHT_547),
+        "last_event_ts": datetime.now(UTC).isoformat(),
+        "now": datetime.now(UTC).isoformat(),
+    }
+    with PanelServer() as server, sync_playwright() as pw:
+        browser = _browser(pw)
+        page = new_page(browser, viewport={"width": 1366, "height": 1000}, color_scheme=theme)
+        page.add_init_script(f"try{{localStorage.setItem('ld-theme','{theme}')}}catch(e){{}}")
+        page.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+        page.route(re.compile(r"/api/inflight(\?|$)"), _json(in_flight))
+        page.goto(server.url)
+        page.wait_for_function(
+            "() => document.querySelectorAll('#inflightBody .ifrow').length === 5"
+        )
+        shown_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
+        ratios = page.evaluate(_INFLIGHT_RATIOS)
+        browser.close()
+    metrics._FILE_CACHE.clear()
+    assert shown_theme == theme  # guard: the theme under test is the one drawn
+    assert len(ratios) == 5 * 5, ratios  # guard: four chips and the time column, five rows
+    low = [(text, r) for text, r in ratios if r < 4.5]
+    assert not low, low
 
 
 @pytest.mark.parametrize("theme", ["light", "dark"])
@@ -1695,15 +1762,18 @@ def test_inflight_rows_keep_time_and_chars_on_one_line(tmp_path, monkeypatch, ne
         assert len(rows) == 5, (width, rows)  # guard: the five rows were drawn
         for row in rows:
             assert row["metaHeight"] <= 22, (width, row)  # one line (~17 px); two are ~34
-            if row["body"] >= 560:  # room for one line: the time beside the chips
+            if row["body"] >= 590:  # room for one line: the time beside the chips
                 assert abs(row["metaMiddle"] - row["boxMiddle"]) <= 3, (width, row)
             else:  # a narrow card: the time under the chips, in every row alike
                 assert row["metaTop"] >= row["boxBottom"] - 1, (width, row)
             assert row["statusCut"] is False, (width, row)  # the status chip reads whole
+            assert row["clipped"] is False, (width, row)  # no chip hidden past the box
+        # The model chip has one width in every row: it is cut (if at all) the same everywhere.
+        assert len({row["model"] for row in rows}) == 1, (width, rows)
         assert len({row["metaRight"] for row in rows}) == 1, (width, rows)
         # One line each: the same height for all, processing and queued alike.
         assert len({row["height"] for row in rows}) == 1, (width, rows)
-    assert by_width[1368][0]["body"] >= 560, by_width[1368][0]  # 1366 px is the one-line case
+    assert by_width[1368][0]["body"] >= 590, by_width[1368][0]  # 1366 px is the one-line case
     queued = [row["text"] for row in by_width[1368][2:]]
     assert [t.splitlines()[2] for t in queued] == [
         "Espera trozo 2/3 · 41 s",
