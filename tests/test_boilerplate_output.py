@@ -164,7 +164,7 @@ def test_overwrite_true_does_overwrite(tmp_path):
     assert dest.read_text(encoding="utf-8") == "codigo nuevo\n"
 
 
-def _reply_while_creating(dest, user_content: str, code: str):
+def _reply_with_race(dest, user_content: str, code: str):
     """Backend que, MIENTRAS genera, ve aparecer `dest` con trabajo del usuario dentro.
 
     Reproduce la carrera real: `_validate_target` comprueba `exists()` antes de una inferencia
@@ -188,7 +188,7 @@ def _reply_while_creating(dest, user_content: str, code: str):
 def test_a_file_created_during_generation_is_not_overwritten(tmp_path):
     dest = tmp_path / "out" / "race.py"
     dest.parent.mkdir()
-    route = _reply_while_creating(dest, "TRABAJO DEL USUARIO\n", "print('generado')\n")
+    route = _reply_with_race(dest, "TRABAJO DEL USUARIO\n", "print('generado')\n")
 
     with pytest.raises(ValueError, match="overwrite"):
         server.local_boilerplate("algo", "python", str(dest))
@@ -202,7 +202,7 @@ def test_a_file_created_during_generation_is_not_overwritten(tmp_path):
 def test_overwrite_true_replaces_a_file_created_during_generation(tmp_path):
     dest = tmp_path / "out" / "race.py"
     dest.parent.mkdir()
-    _reply_while_creating(dest, "TRABAJO DEL USUARIO\n", "print('generado')\n")
+    _reply_with_race(dest, "TRABAJO DEL USUARIO\n", "print('generado')\n")
 
     output = server.local_boilerplate("algo", "python", str(dest), overwrite=True)
 
