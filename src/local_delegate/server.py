@@ -4498,6 +4498,13 @@ def _verified_lines(answer: str, question: str, content: str, truncated: bool = 
     if result.mismatched:
         cited = ", ".join(c.label() for c in result.mismatched)
         extra.append(f"{WARNING_MARKER}{i18n.t('mcp.explain.lines_unverified', lines=cited)}]")
+    # #538: a word of the question that the file does not hold, asserted by the answer in a
+    # sentence that neither negates it nor stands on the code, may be the question's premise
+    # confirmed («implicit retention» of backups that are never deleted): flagged, not judged.
+    premises = line_check.unsupported_premises(answer, question, content, truncated)
+    if premises:
+        terms = ", ".join(f"«{term}»" for term in premises)
+        extra.append(f"{WARNING_MARKER}{i18n.t('mcp.explain.premise_unsupported', terms=terms)}]")
     for name, lines in result.found:
         if not lines:
             extra.append(i18n.t("mcp.explain.occurrences_none", name=name))
@@ -6372,15 +6379,17 @@ def _structured_summary(
     truncated_in: bool,
     raw_len: int | None,
     path: str | None,
+    after: Callable[[str, bool], str] | None = None,
 ) -> str:
     plan = sections.sections_for_summary(content, structure)
     headings = [s.heading for s in plan]
     empty_in_document = frozenset(i for i, s in enumerate(plan) if s.empty)
 
     def _complete(text: str, truncated: bool) -> str:
-        return sections.complete(
+        text = sections.complete(
             text, headings, truncated=truncated, empty_in_document=empty_in_document
         ).text
+        return after(text, truncated) if after is not None else text
 
     max_chars = config.max_chars_for_role(role)
     if len(content) <= max_chars:
@@ -6450,6 +6459,38 @@ def _structured_summary(
     )
 
 
+def _source_kind(path: str | None) -> str:
+    """What `path` holds by its extension, for #539: "code", "prose" or "unknown" (also inline).
+
+    It reuses the classes of the panel (`cost.CLASS_BY_EXTENSION`); an extension they do not list
+    (`.vue`, `.svelte`, `.lua`…) is "unknown".
+    """
+    kind = cost.CLASS_BY_EXTENSION.get(Path(path).suffix.lower()) if path else None
+    return kind if kind in {"code", "prose"} else "unknown"
+
+
+def _string_literal_notice(content: str, *, kind: str) -> Callable[[str, bool], str]:
+    """#539: a postprocess that warns when a summary heading copies a string literal line.
+
+    The summary is not changed: the heading may still be a fair label for its part, but the caller
+    must know it comes from data (a fixture in a template literal), not from the structure of the
+    file. It runs as the `postprocess` of the call, so the notice goes before the savings receipt,
+    like the other warnings, and never on a backend error.
+    """
+
+    def _notice(text: str, _truncated: bool) -> str:
+        copied = sections.string_literal_headings(text, content, kind=kind)
+        if not copied:
+            return text
+        notice = i18n.t(
+            "mcp.warning.headings_from_string_literals",
+            headings=", ".join(f"«{heading}»" for heading in copied),
+        )
+        return f"{text.rstrip()}\n\n{WARNING_MARKER}{notice}]"
+
+    return _notice
+
+
 # --- Tools ------------------------------------------------------------------
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_summarize"]))
 def local_summarize(
@@ -6485,7 +6526,11 @@ def local_summarize(
     extra = _focus_clause(clean_focus) + _written_language_clause()
     # Solo con el modelo largo: el mecánico (4B, entradas cortas) se saltó la «Introducción» en la
     # etapa 1 de la v3 (0,86), y el criterio escrito antes de medir era limitarlo al rol `long`.
-    structured = config.STRUCTURED_SUMMARY and role == "long"
+    # #539: never on a code file: its `## ` lines live in string literals (test fixtures) and are
+    # data, and the structured path handed them to the model as the sections to follow.
+    kind = _source_kind(path)
+    literal_notice = _string_literal_notice(content, kind=kind)
+    structured = config.STRUCTURED_SUMMARY and role == "long" and kind != "code"
     structure = sections.detect(content) if structured else None
     if structure is not None:
         return _truncation_prefix(content, truncated_in, raw_len) + _structured_summary(
@@ -6500,6 +6545,7 @@ def local_summarize(
             truncated_in=truncated_in,
             raw_len=raw_len,
             path=path,
+            after=literal_notice,
         )
 
     # Sin estructura (o con el interruptor apagado): el camino de siempre. Desde la 0.36.0 lleva
@@ -6529,6 +6575,7 @@ def local_summarize(
             path=path,
             reduce_extra=extra,
             focus=clean_focus is not None,
+            postprocess=literal_notice,
         )
 
     user = _build(content)
@@ -6545,6 +6592,7 @@ def local_summarize(
         raw_len=raw_len,
         path=path,
         focus=clean_focus is not None,
+        postprocess=literal_notice,
     )
     return _truncation_prefix(content, truncated_in, raw_len) + result
 
@@ -6623,6 +6671,47 @@ def _fill_nulls_from_partials(data: dict, fields: list[str], partials: list[str]
                 break
 
 
+_EXTRACT_META_KEY = "_local_delegate"
+
+
+def _key_shape(key: str) -> str:
+    """`fechaInicio`, `fecha_inicio`, `Fecha-Inicio` and `fecha inicio` share one shape."""
+    return re.sub(r"[\s_-]+", "", key).casefold()
+
+
+def _normalize_extract_keys(
+    data: dict, fields: list[str]
+) -> tuple[list[str], dict[str, str], dict[str, Any]]:
+    """Leave in `data` exactly the requested keys, in place; return (missing, renamed, dropped).
+
+    An unrequested key that has the shape of exactly one missing requested key (`_key_shape`), and
+    is the only unrequested key with that shape, is a spelling slip: its value moves to the
+    requested key (`renamed`, model key -> requested key). Any other unrequested key is removed
+    and its value kept in `dropped` (model output, so bounded by the call's `max_tokens`). A
+    requested key still absent is set to null (`missing`, request order). A key the model called
+    `_local_delegate` is just another unrequested key; a requested field with that name is left
+    out of the normalization (never filled with null), as before.
+    """
+    requested = set(fields)
+    extras = [key for key in data if key not in requested]
+    absent = [n for n in dict.fromkeys(fields) if n not in data and n != _EXTRACT_META_KEY]
+    renamed: dict[str, str] = {}
+    for name in absent:
+        shape = _key_shape(name)
+        candidates = [key for key in extras if _key_shape(key) == shape]
+        others = [other for other in absent if _key_shape(other) == shape]
+        if len(candidates) == 1 and len(others) == 1:
+            key = candidates[0]
+            data[name] = data.pop(key)
+            renamed[key] = name
+            extras.remove(key)
+    dropped = {key: data.pop(key) for key in extras}
+    missing = [name for name in absent if name not in data]
+    for name in missing:
+        data[name] = None
+    return missing, renamed, dropped
+
+
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_extract"]))
 def local_extract(
     fields: list[str],
@@ -6635,9 +6724,13 @@ def local_extract(
     Extracts structured fields from a text/file as JSON, with a local model.
 
     Pass 'path' to read the file server-side (spends no Claude context) or 'text'. Returns an
-    object with exactly the requested keys, already validated: the caller does not have to parse
-    a string. What is not data travels under the reserved key `_local_delegate` (`truncated` and
-    `warning`, `read_server_side`, `fallback`, or `error` and `raw`); with chunked input, `chunked`
+    object with exactly the requested keys: the caller does not have to parse a string. A key the
+    model left out comes back as null and is listed in `missing_keys`; a key it spelled another
+    way (case, `_`, `-`, spaces) is mapped in `renamed_keys`; a key it added is dropped from the
+    data and kept, with its value, in `dropped` (names in `dropped_keys`). What is not data
+    travels under the reserved key `_local_delegate` (`truncated` and `warning`,
+    `missing_keys`/`renamed_keys`/`dropped_keys`/`dropped`, `read_server_side`, `fallback`, or
+    `error` and `raw`); with chunked input, `chunked`
     says how many pieces there were and which fields stayed null in all of them. Routes
     automatically to the mechanical model (short inputs) or to the long-context model (large
     documents): the size probe uses file bytes for 'path' and characters for 'text' (~5-10%
@@ -6650,6 +6743,9 @@ def local_extract(
         text: Source text (use this or 'path').
         path: Path to a source file (read server-side).
     """
+    if not any(isinstance(name, str) and name.strip() for name in fields or []):
+        # Nothing to extract: fail before reading the input or calling the backend.
+        raise ValueError(i18n.t("mcp.input.fields_required"))
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
     role, model = _role_for_size(probe_len)
@@ -6771,6 +6867,10 @@ def local_extract(
 
     if pieces > 1:
         _fill_nulls_from_partials(data, fields, report.get("partials") or [])
+    # The contract is "exactly the requested keys": in free mode (`LOCAL_DELEGATE_JSON_SCHEMA=off`,
+    # or `auto` after the backend refused the schema) nothing forces the model to it. Normalize
+    # always, here, before `_local_delegate` is added (so it is never counted as an extra key).
+    missing_keys, renamed_keys, dropped = _normalize_extract_keys(data, fields)
     meta: dict = dict(truncation)
     # #473: a chunked document where some field stayed null in every chunk. No chunk saw the
     # whole document, so that null may mean "not seen", not "absent": say so, with the count
@@ -6784,6 +6884,24 @@ def local_extract(
         # A truncation warning keeps its exact text (#455 contract); it already says that
         # material may be missing, and the detail stays in `chunked`.
         meta.setdefault("warning", notice)
+    if missing_keys or renamed_keys or dropped:
+        notices = []
+        if missing_keys:
+            meta["missing_keys"] = missing_keys
+            notices.append(
+                i18n.t("mcp.warning.extract_missing_keys", fields=", ".join(missing_keys))
+            )
+        if renamed_keys:
+            meta["renamed_keys"] = renamed_keys
+            pairs = ", ".join(f"{key} -> {name}" for key, name in renamed_keys.items())
+            notices.append(i18n.t("mcp.warning.extract_renamed_keys", pairs=pairs))
+        if dropped:
+            # The names in `dropped_keys`; the values are not lost, they travel in `dropped`.
+            meta["dropped_keys"] = list(dropped)
+            meta["dropped"] = dropped
+            notices.append(i18n.t("mcp.warning.extract_dropped_keys", fields=", ".join(dropped)))
+        # An earlier warning (truncation, chunked nulls) keeps its exact text (#455 contract).
+        meta.setdefault("warning", "; ".join(notices))
     if path and config.FEEDBACK_ENABLED:
         # Tokens de Claude de la fila en curso (REQ-035), no del modelo local.
         event = cost.in_flight_row(tool="local_extract", source="path", path=path)

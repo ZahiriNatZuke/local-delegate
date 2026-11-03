@@ -24,6 +24,41 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   tardó 343 s, 292 de ellos en el turno, y parecía un modelo lento. README y wiki
   (Troubleshooting, Configuration) explican el caso (#537).
 
+### Corregido
+
+- **`local_summarize` ya no saca la estructura del resumen de las cadenas de un fichero de
+  código (#539).** Con un `.mjs` de tests de más de 6000 caracteres que montaba un documento
+  Markdown dentro de un template literal (`## Specs`, `## Tasks`, `campo: ${variable}`), el
+  resumen por secciones tomaba esas líneas por las secciones del fichero, se las daba al modelo
+  como lista a seguir y reponía las que faltaban: el resumen salía con el fixture como encabezados
+  y los tests colgados de `## Verify`, sin aviso. Ahora un `path` con extensión de código nunca va
+  por el resumen estructurado, y si un título del resumen copia una línea de un literal de cadena
+  multilínea que es dato (asignado, pasado como argumento o devuelto; o, en código, una línea con
+  `${…}` sin resolver), la respuesta lo avisa con `[local-delegate warning: …]`. No avisan los
+  docstrings de Python ni los títulos que el documento también tiene como títulos reales, así que
+  un resumen correcto de un `.md` no lleva ese aviso.
+
+- **`local_extract` devuelve exactamente las claves pedidas, como dice su contrato.** En modo libre
+  (`LOCAL_DELEGATE_JSON_SCHEMA=off`, o `auto` cuando el backend rechaza el schema y se reintenta
+  sin él) el modelo podía omitir una clave pedida o inventar otra, y la tool lo entregaba tal cual
+  y sin aviso. Ahora la clave que falta vuelve como `null`; la que el modelo escribió de otra
+  forma (mayúsculas, `_`, `-`, espacios: `Name` ~ `name`, `endDate` ~ `end_date`) se empareja si
+  el emparejamiento es único (`renamed_keys`), y la que sobra sale de los datos pero conserva su
+  valor en `_local_delegate.dropped` (nombres en `dropped_keys`). También en el camino troceado,
+  con `missing_keys` y un `warning` legible (si ya había un aviso de truncado o de trozos, ese
+  conserva su texto). Con todas las claves en orden no aparece ningún aviso nuevo. Y
+  `fields` vacío o solo con blancos da un error claro sin llamar al backend.
+
+- **`local_explain_code` ya no confirma sin aviso la premisa de la pregunta.** Preguntado «¿cómo
+  gestiona los backups y su retención?» sobre un módulo que nunca borra un backup, respondió que
+  había una «retención implícita», sin aviso. Ahora, con `path` y pregunta, si la respuesta afirma
+  una palabra de la pregunta que el fichero no contiene (comparando sus primeras letras, sin
+  acentos ni mayúsculas, también como cognado inglés: rotación/`rotat`, inicialización/`init`) en
+  una frase que no la niega ni se apoya en el código (una línea citada
+  que contiene lo que cita, o un identificador que está en el fichero), lleva un aviso que dice
+  que puede ser la premisa de la pregunta. La respuesta que niega la premisa («no hay retención:
+  nunca borra») no avisa. Es una guarda por programa; el prompt no cambia (#538).
+
 ## [0.47.3] - 2026-11-02
 
 Arreglo de `local_explain_code`: con `path`, la respuesta podía empezar con el prefijo de línea

@@ -186,6 +186,185 @@ def detect(text: str) -> Structure | None:
     return None
 
 
+# --- Lines that are data, not structure (#539) ----------------------------------------------------
+#
+# A code file that builds a Markdown document inside a string literal (a JS template literal, a
+# Python triple-quoted string) carries lines that look like headings and are data. When the model
+# turns one of them into a heading of the summary, the structure of the summary comes from a test
+# fixture. These helpers find those lines so the server can say so.
+
+_INTERPOLATION = re.compile(r"\$\{[^}\n]*\}")
+_TRIPLE_QUOTES = ('"""', "'''")
+#: What may come right before a string literal that is DATA: an assignment, an argument, an
+#: element, a concatenation, a ternary branch or `return`. In Markdown prose a backtick follows a
+#: word and a space (`use \`x\``), so a stray one never opens a literal there; and a Python
+#: docstring (a triple-quoted string alone at the start of a statement) is documentation of the
+#: code, whose sections a summary may well use as its own.
+_LITERAL_OPENERS = ("=", "(", ",", ":", "[", "{", "+", "?", "return", "=>")
+_OPENER_WINDOW = max(len(o) for o in _LITERAL_OPENERS)
+#: Where the scanner has to stop in each state; everything in between is skipped by the regex, so
+#: the scan is linear in the size of the text.
+_NEXT_IN_CODE = re.compile(r"[\n`'\"#/]")
+_NEXT_IN_STRING = {
+    "`": re.compile(r"[\n\\`]"),
+    "'": re.compile(r"[\n\\']"),
+    '"': re.compile(r'[\n\\"]'),
+    '"""': re.compile(r'[\n\\]|"""'),
+    "'''": re.compile(r"[\n\\]|'''"),
+}
+_MULTILINE = frozenset({"`", *_TRIPLE_QUOTES})
+
+
+def _opens_literal(text: str, line_start: int, at: int, *, alone: bool = True) -> bool:
+    """Is the literal that starts at `at` data, by what comes before it on its line?
+
+    `alone` is the answer when nothing but blanks precedes it: a template that continues an
+    assignment from the line above, yes; a triple-quoted string that opens a statement, no (a
+    docstring). Only the last non-blank characters are looked at (a fixed window), so a line full
+    of literals is still scanned in linear time (#539 review: copying the line up to each
+    backtick made a 2.4 MB one-line input take 73 s).
+    """
+    end = at
+    while end > line_start and text[end - 1] in " \t":
+        end -= 1
+    if end == line_start:
+        return alone
+    return text[max(line_start, end - _OPENER_WINDOW) : end].endswith(_LITERAL_OPENERS)
+
+
+def _literal_lines(text: str, *, prose: bool = False) -> list[tuple[int, str]]:
+    """(position, line) of each line covered by a multi-line string literal that is data.
+
+    A light scanner, not a parser: single and double quotes and comments close at the end of the
+    line, a backslash escapes the next character inside a string, a run of two or more backticks
+    (a Markdown fence or double-backtick code) is not a template delimiter, and a literal counts
+    only after an opener (`_opens_literal`), so docstrings and stray prose backticks do not. Only
+    the lines the literal covers from start to end count (not the line that opens it nor the one
+    that closes it), so the code around the literal is never taken for its content.
+
+    With `prose` (a Markdown or text file) a literal never crosses a line outside a fenced block:
+    an unclosed `` `x `` in a paragraph does not swallow the headings below it.
+    """
+    inside: list[tuple[int, str]] = []
+    state: str | None = None  # "`", '"""', "'''", "'", '"' or "comment"
+    counted = False  # does the open multi-line literal count as data?
+    in_fence = False  # prose only: inside a ``` block
+    i, n = 0, len(text)
+    line_start = 0
+    line_opened_inside = False
+    while i < n:
+        if state == "comment":
+            found = text.find("\n", i)
+            i = n if found < 0 else found
+            if i == n:
+                break
+        elif state is None:
+            m = _NEXT_IN_CODE.search(text, i)
+            if m is None:
+                break
+            i = m.start()
+        else:
+            m = _NEXT_IN_STRING[state].search(text, i)
+            if m is None:
+                break
+            i = m.start()
+        c = text[i]
+        if c == "\n":
+            if line_opened_inside and state in _MULTILINE and counted:
+                inside.append((line_start, text[line_start:i].rstrip("\r")))
+            if state in {"'", '"', "comment"} or (prose and state in _MULTILINE and not in_fence):
+                state = None
+            i += 1
+            line_start = i
+            line_opened_inside = state in _MULTILINE
+            continue
+        if state is not None:
+            if c == "\\":
+                # The escaped character is skipped, but never a line break: the line still ends.
+                i += 1 if text.startswith("\n", i + 1) else 2
+            elif state in _TRIPLE_QUOTES:
+                state = None
+                i += 3
+            else:  # closes "`", "'" or '"'
+                state = None
+                i += 1
+            continue
+        if text.startswith(_TRIPLE_QUOTES, i):
+            counted = _opens_literal(text, line_start, i, alone=False)
+            state = text[i : i + 3]
+            i += 3
+        elif c == "`":
+            run = i
+            while run < n and text[run] == "`":
+                run += 1
+            if run - i >= 2:  # a fence, or an empty template / Markdown double-backtick code
+                if run - i >= 3 and _opens_literal(text, line_start, i):
+                    in_fence = not in_fence
+                i = run
+                continue
+            counted = _opens_literal(text, line_start, i)
+            if counted or not prose:
+                state = "`"
+            i += 1
+        elif c in "'\"":
+            state = c
+            i += 1
+        elif c == "#" or text.startswith("//", i):
+            state = "comment"
+            i += 1
+        else:  # a lone `/`
+            i += 1
+    return inside
+
+
+def string_literal_lines(text: str, *, prose: bool = False) -> list[str]:
+    """The lines that lie inside a multi-line string literal that is data (`_literal_lines`)."""
+    return [line for _pos, line in _literal_lines(text, prose=prose)]
+
+
+def _source_heading_text(line: str) -> str:
+    """The comparable form of a source line, without the `#`s of an ATX heading."""
+    atx = _ATX.match(line)
+    if atx:
+        return normalize_heading(_ATX_CLOSING.sub("", atx.group(2) or ""))
+    return normalize_heading(line)
+
+
+def string_literal_headings(output: str, source: str, *, kind: str = "unknown") -> list[str]:
+    """Headings of `output` that copy a line of a string literal of `source`, in output order.
+
+    `kind` is what the source is, by the extension of its file: "code", "prose" (Markdown, text)
+    or "unknown" (inline text, another extension). A heading counts when its normalized text
+    equals the normalized text of a line inside a multi-line string literal (`_literal_lines`).
+    Outside a code file, a heading the document also has as a real heading (outside any literal)
+    does not count: a `## Usage` in a fenced example does not make the document's own `## Usage`
+    data. In a code file a heading with an unresolved `${...}` that appears verbatim in the source
+    counts too: that interpolation only exists inside a template. Headings are returned as the
+    model wrote them, once each.
+    """
+    code_file = kind == "code"
+    covered = _literal_lines(source, prose=kind == "prose")
+    literal = {_source_heading_text(line) for _pos, line in covered}
+    literal.discard("")
+    if not code_file and literal:
+        in_literal = {pos for pos, _line in covered}
+        literal -= {
+            normalize_heading(h.text)
+            for h in markdown_headings(source)
+            if h.start not in in_literal
+        }
+    found: list[str] = []
+    lines = output.split("\n")
+    for index, normalized in heading_lines(output):
+        raw = lines[index].strip().lstrip("#").strip().strip("*_").rstrip(":").strip()
+        copied = normalized in literal or (
+            code_file and _INTERPOLATION.search(raw) is not None and raw in source
+        )
+        if copied and raw not in found:
+            found.append(raw)
+    return found
+
+
 # --- Normalización y emparejamiento --------------------------------------------------------------
 
 _NUMBERING = re.compile(r"^\s*(?:\d+|[ivxlc]+)[.)]\s+", re.IGNORECASE)
