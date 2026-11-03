@@ -6623,6 +6623,23 @@ def _fill_nulls_from_partials(data: dict, fields: list[str], partials: list[str]
                 break
 
 
+def _normalize_extract_keys(data: dict, fields: list[str]) -> tuple[list[str], list[str]]:
+    """Leave in `data` exactly the requested keys, in place; return (missing, dropped).
+
+    A requested key the model left out is set to null; a key it added is removed. Both lists keep
+    their order (request order, answer order). A key the model called `_local_delegate` is just
+    another unrequested key, unless the caller asked for a field with that name.
+    """
+    requested = set(fields)
+    dropped = [key for key in data if key not in requested]
+    for key in dropped:
+        del data[key]
+    missing = [name for name in dict.fromkeys(fields) if name not in data]
+    for name in missing:
+        data[name] = None
+    return missing, dropped
+
+
 @mcp.tool(annotations=_annotations(TOOL_TITLES["local_extract"]))
 def local_extract(
     fields: list[str],
@@ -6635,9 +6652,11 @@ def local_extract(
     Extracts structured fields from a text/file as JSON, with a local model.
 
     Pass 'path' to read the file server-side (spends no Claude context) or 'text'. Returns an
-    object with exactly the requested keys, already validated: the caller does not have to parse
-    a string. What is not data travels under the reserved key `_local_delegate` (`truncated` and
-    `warning`, `read_server_side`, `fallback`, or `error` and `raw`); with chunked input, `chunked`
+    object with exactly the requested keys: the caller does not have to parse a string. A key the
+    model left out comes back as null and is listed in `missing_keys`; a key it added is dropped
+    and listed in `dropped_keys`. What is not data travels under the reserved key
+    `_local_delegate` (`truncated` and `warning`, `missing_keys`/`dropped_keys`,
+    `read_server_side`, `fallback`, or `error` and `raw`); with chunked input, `chunked`
     says how many pieces there were and which fields stayed null in all of them. Routes
     automatically to the mechanical model (short inputs) or to the long-context model (large
     documents): the size probe uses file bytes for 'path' and characters for 'text' (~5-10%
@@ -6771,6 +6790,10 @@ def local_extract(
 
     if pieces > 1:
         _fill_nulls_from_partials(data, fields, report.get("partials") or [])
+    # The contract is "exactly the requested keys": in free mode (`LOCAL_DELEGATE_JSON_SCHEMA=off`,
+    # or `auto` after the backend refused the schema) nothing forces the model to it. Normalize
+    # always, here, before `_local_delegate` is added (so it is never counted as an extra key).
+    missing_keys, dropped_keys = _normalize_extract_keys(data, fields)
     meta: dict = dict(truncation)
     # #473: a chunked document where some field stayed null in every chunk. No chunk saw the
     # whole document, so that null may mean "not seen", not "absent": say so, with the count
@@ -6784,6 +6807,20 @@ def local_extract(
         # A truncation warning keeps its exact text (#455 contract); it already says that
         # material may be missing, and the detail stays in `chunked`.
         meta.setdefault("warning", notice)
+    if missing_keys or dropped_keys:
+        notices = []
+        if missing_keys:
+            meta["missing_keys"] = missing_keys
+            notices.append(
+                i18n.t("mcp.warning.extract_missing_keys", fields=", ".join(missing_keys))
+            )
+        if dropped_keys:
+            meta["dropped_keys"] = dropped_keys
+            notices.append(
+                i18n.t("mcp.warning.extract_dropped_keys", fields=", ".join(dropped_keys))
+            )
+        # An earlier warning (truncation, chunked nulls) keeps its exact text (#455 contract).
+        meta.setdefault("warning", "; ".join(notices))
     if path and config.FEEDBACK_ENABLED:
         # Tokens de Claude de la fila en curso (REQ-035), no del modelo local.
         event = cost.in_flight_row(tool="local_extract", source="path", path=path)

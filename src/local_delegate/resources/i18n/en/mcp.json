@@ -184,6 +184,8 @@
   "mcp.warning.regroup_stopped": "the partial notes could not be combined into one answer after {calls} calls: they are returned grouped and in order",
   "mcp.warning.truncated_pieces": "; affected chunks: {pieces}",
   "mcp.warning.truncated_piece_lines": "{piece} (lines {first}-{last})",
+  "mcp.warning.extract_dropped_keys": "the model returned keys that were not requested, dropped: {fields}",
+  "mcp.warning.extract_missing_keys": "the model left out these requested keys, returned as null: {fields}",
   "mcp.warning.extract_null_in_chunks": "document processed in {pieces} chunks and none gave a value for: {fields}; that null may mean \"not seen\", not \"absent\"",
   "mcp.warning.lint_invented_files": "the summary names files that do not appear in the input and may be made up: {files}",
   "mcp.warning.sections_not_summarized": "{n} sections not summarized because of the word limit or the model",

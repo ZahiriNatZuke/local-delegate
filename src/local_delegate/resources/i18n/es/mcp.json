@@ -184,6 +184,8 @@
   "mcp.warning.regroup_stopped": "las notas parciales no se pudieron combinar en una sola respuesta tras {calls} llamadas: se devuelven agrupadas y en orden",
   "mcp.warning.truncated_pieces": "; trozos afectados: {pieces}",
   "mcp.warning.truncated_piece_lines": "{piece} (líneas {first}-{last})",
+  "mcp.warning.extract_dropped_keys": "el modelo devolvió claves que no se pidieron, descartadas: {fields}",
+  "mcp.warning.extract_missing_keys": "el modelo omitió estas claves pedidas, se devuelven a null: {fields}",
   "mcp.warning.extract_null_in_chunks": "documento procesado en {pieces} trozos y ninguno dio valor para: {fields}; ese null puede significar «no visto», no «no existe»",
   "mcp.warning.lint_invented_files": "el resumen nombra ficheros que no aparecen en la entrada y pueden ser inventados: {files}",
   "mcp.warning.sections_not_summarized": "{n} secciones sin resumir por el límite de palabras o del modelo",

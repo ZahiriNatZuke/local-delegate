@@ -13,6 +13,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   («SDD sin cerrar: <slug> (<estado>)») y sugiere cerrarlos. Es un aviso, no bloquea. Varios SDD
   se habían quedado en `verifying` con su trabajo ya mezclado y publicado.
 
+### Corregido
+
+- **`local_extract` devuelve exactamente las claves pedidas, como dice su contrato.** En modo libre
+  (`LOCAL_DELEGATE_JSON_SCHEMA=off`, o `auto` cuando el backend rechaza el schema y se reintenta
+  sin él) el modelo podía omitir una clave pedida o inventar otra, y la tool lo entregaba tal cual
+  y sin aviso. Ahora la clave que falta vuelve como `null` y la que sobra se descarta, también en
+  el camino troceado; `_local_delegate` lo dice en `missing_keys`/`dropped_keys` y en un
+  `warning` legible (si ya había un aviso de truncado o de trozos, ese conserva su texto). Con
+  todas las claves en orden no aparece ningún aviso nuevo.
+
 ## [0.47.3] - 2026-11-02
 
 Arreglo de `local_explain_code`: con `path`, la respuesta podía empezar con el prefijo de línea
