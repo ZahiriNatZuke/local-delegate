@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "slug": "explain-code-premise-check",
+  "title": "explain_code: flag answers that confirm an unanchored premise of the question",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-03T17:59:08.332Z",
+  "updatedAt": "2026-11-03T18:24:46.817Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-03T18:06:50.365Z",
+      "evidence": "spec REQ-001 to REQ-004 and plan T1-T2 reviewed against issue 538 and the 460/527 pattern",
+      "actor": "orquestador"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-03T18:06:50.366Z",
+      "evidence": "spec REQ-001 to REQ-004 and plan T1-T2 reviewed against issue 538 and the 460/527 pattern",
+      "actor": "orquestador"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-03T17:59:08.332Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-11-03T18:06:46.701Z",
+      "reason": "issue 538 read, line_check and _verified_lines located"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-11-03T18:06:48.298Z",
+      "reason": "research done, guard fits _verified_lines"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-03T18:06:50.365Z",
+      "evidence": "spec REQ-001 to REQ-004 and plan T1-T2 reviewed against issue 538 and the 460/527 pattern",
+      "actor": "orquestador"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-03T18:06:50.366Z",
+      "evidence": "spec REQ-001 to REQ-004 and plan T1-T2 reviewed against issue 538 and the 460/527 pattern",
+      "actor": "orquestador"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-03T18:06:55.574Z",
+      "reason": "spec approved"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-11-03T18:06:56.891Z",
+      "reason": "plan T1-T2 written"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-11-03T18:06:58.203Z",
+      "reason": "plan approved"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-03T18:24:46.817Z",
+      "reason": "implemented, targeted tests and full suite green"
+    }
+  ]
+}
