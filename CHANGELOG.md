@@ -13,6 +13,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   («SDD sin cerrar: <slug> (<estado>)») y sugiere cerrarlos. Es un aviso, no bloquea. Varios SDD
   se habían quedado en `verifying` con su trabajo ya mezclado y publicado.
 
+### Corregido
+
+- **`local_boilerplate` ya no pisa un archivo creado mientras genera.** Con `overwrite=False`
+  se comprobaba que `target` no existía antes de la inferencia, pero se abría con `"w"` después:
+  si el archivo aparecía en ese intervalo (que puede durar minutos), se truncaba y el recibo decía
+  «[escrito]» sin aviso. Ahora la escritura es de creación exclusiva y ese caso da el mismo error
+  de «ya existe», con el archivo del usuario intacto. Con `overwrite=True` se escribe a un
+  temporal del mismo directorio y se sustituye con `os.replace`, sin dejar temporales si falla.
+
 ## [0.47.3] - 2026-11-02
 
 Arreglo de `local_explain_code`: con `path`, la respuesta podía empezar con el prefijo de línea

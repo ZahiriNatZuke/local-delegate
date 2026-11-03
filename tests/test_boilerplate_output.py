@@ -164,6 +164,72 @@ def test_overwrite_true_does_overwrite(tmp_path):
     assert dest.read_text(encoding="utf-8") == "codigo nuevo\n"
 
 
+def _reply_while_creating(dest, user_content: str, code: str):
+    """Backend que, MIENTRAS genera, ve aparecer `dest` con trabajo del usuario dentro.
+
+    Reproduce la carrera real: `_validate_target` comprueba `exists()` antes de una inferencia
+    que puede durar minutos, y alguien crea el archivo en ese intervalo.
+    """
+
+    def _side_effect(request):
+        dest.write_text(user_content, encoding="utf-8")
+        return httpx2.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": code}, "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 40, "completion_tokens": 300},
+            },
+        )
+
+    return backend_mock.post(URL).mock(side_effect=_side_effect)
+
+
+@backend_mock.mock
+def test_a_file_created_during_generation_is_not_overwritten(tmp_path):
+    dest = tmp_path / "out" / "race.py"
+    dest.parent.mkdir()
+    route = _reply_while_creating(dest, "TRABAJO DEL USUARIO\n", "print('generado')\n")
+
+    with pytest.raises(ValueError, match="overwrite"):
+        server.local_boilerplate("algo", "python", str(dest))
+
+    assert route.call_count == 1  # guarda: la carrera sí ocurrió durante la inferencia
+    assert dest.read_text(encoding="utf-8") == "TRABAJO DEL USUARIO\n"
+    assert sorted(p.name for p in dest.parent.iterdir()) == ["race.py"]  # sin temporales
+
+
+@backend_mock.mock
+def test_overwrite_true_replaces_a_file_created_during_generation(tmp_path):
+    dest = tmp_path / "out" / "race.py"
+    dest.parent.mkdir()
+    _reply_while_creating(dest, "TRABAJO DEL USUARIO\n", "print('generado')\n")
+
+    output = server.local_boilerplate("algo", "python", str(dest), overwrite=True)
+
+    assert output.startswith("[escrito] ")
+    assert dest.read_bytes() == b"print('generado')\n"
+    assert sorted(p.name for p in dest.parent.iterdir()) == ["race.py"]  # sin temporales
+
+
+@backend_mock.mock
+def test_overwrite_true_leaves_no_temporary_when_the_replace_fails(tmp_path, monkeypatch):
+    _reply("codigo nuevo\n")
+    dest = tmp_path / "out" / "already.py"
+    dest.parent.mkdir()
+    dest.write_text("viejo\n", encoding="utf-8")
+
+    def _failing_replace(src, dst):
+        raise PermissionError("bloqueado")
+
+    monkeypatch.setattr(server.os, "replace", _failing_replace)
+
+    with pytest.raises(PermissionError):
+        server.local_boilerplate("otra cosa", "python", str(dest), overwrite=True)
+
+    assert dest.read_text(encoding="utf-8") == "viejo\n"
+    assert sorted(p.name for p in dest.parent.iterdir()) == ["already.py"]
+
+
 @backend_mock.mock
 def test_a_directory_as_target_is_not_mistaken_for_an_existing_file(tmp_path):
     """Sin la comprobación de `is_dir()` el error hablaría de un archivo que no existe."""
