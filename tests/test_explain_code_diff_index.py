@@ -112,13 +112,13 @@ def test_deleted_renamed_and_added_files_get_their_real_path():
         "diff --git a/gone.py b/gone.py\ndeleted file mode 100644\n--- a/gone.py\n+++ /dev/null\n"
         "@@ -1 +0,0 @@\n-x = 1\n"
         "diff --git a/old.py b/new.py\nsimilarity index 100%\nrename from old.py\nrename to new.py\n"
-        "diff --git a/born.py b/born.py\nnew file mode 100644\n--- /dev/null\n+++ b/born.py\n"
+        "diff --git a/added.py b/added.py\nnew file mode 100644\n--- /dev/null\n+++ b/added.py\n"
         "@@ -0,0 +1 @@\n+y = 2\n"
     )
     assert line_check.diff_file_ranges(text) == [
         (1, 6, "gone.py"),
         (7, 10, "new.py"),
-        (11, 16, "born.py"),
+        (11, 16, "added.py"),
     ]
 
 

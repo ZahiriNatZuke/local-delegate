@@ -8298,7 +8298,9 @@ def local_explain_code(
                     "Toma notas de este fragmento de código para responder a la pregunta "
                     f"«{question}»{_hints(piece)}:\n\n{piece}"
                 )
-            return f"Toma notas de este fragmento de código{_hints(piece)}:\n\n{piece}"
+            if hint := _diff_hint(piece):
+                return f"Toma notas de este fragmento de un diff{hint}. Fragmento:\n\n{piece}"
+            return f"Toma notas de este fragmento de código:\n\n{piece}"
 
         exact_lines = ""
         if numbered and question:
