@@ -21,10 +21,9 @@ from pathlib import Path
 import pytest
 from filelock import FileLock
 
-import local_delegate
 from local_delegate import checks, config, daemon, server
 
-_SRC = str(Path(local_delegate.__file__).resolve().parents[1])
+_SRC = str(Path(daemon.__file__).resolve().parents[1])
 #: Bound on how long a child may take to do what the test expects. Without the fix, the daemon of
 #: the first tests never exits: the bound is what turns that hang into a failure.
 _CAP_S = 40.0
