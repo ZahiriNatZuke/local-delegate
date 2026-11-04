@@ -158,6 +158,26 @@ def context_of(payload: dict, script: str) -> dict:
     return {"version": version_de(script), "session_id": str(payload.get("session_id") or "")}
 
 
+#: Set only inside `record_or_raise`: `record` then re-raises a write error instead of swallowing it.
+_RECORD_STRICT: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "local_delegate_record_strict", default=False
+)
+
+
+def record_or_raise(function, *args):
+    """`function(*args)` with `record` raising its `OSError` instead of swallowing it.
+
+    Only the mod's `record-read` road uses it: there the caller (the daemon endpoint or the
+    `record-read` CLI) must know the decision line was not written, so the mod retries it or logs
+    `ModRecordLost`. A normal hook never runs here and keeps its best-effort telemetry.
+    """
+    token = _RECORD_STRICT.set(True)
+    try:
+        return function(*args)
+    finally:
+        _RECORD_STRICT.reset(token)
+
+
 def record(event: str, step_aside: str | None = None, **metadata: object) -> None:
     """Una linea de telemetria. Con ``step_aside`` (por que se aparto el hook, p. ej.
     ``STEP_ASIDE_READ_MOD``) la linea dice que el hook NO actuo y por que: ``reason`` pasa a
@@ -184,7 +204,9 @@ def record(event: str, step_aside: str | None = None, **metadata: object) -> Non
         # La telemetría es best-effort y corre dentro de un hook del agente: si el destino no se
         # puede crear o escribir (permisos, disco lleno, ruta inválida en LD_HOOK_TELEMETRY_LOG),
         # perder una línea de log es preferible a romperle la operación al usuario.
-        pass
+        # On the mod's `record-read` road (`record_or_raise`) the caller must know instead.
+        if _RECORD_STRICT.get():
+            raise
 
 
 # --- Decisiones del mod de lectura (`hook record-read`, plan Ola 5) ------------------------------

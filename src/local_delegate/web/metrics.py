@@ -1235,7 +1235,8 @@ def _record_entry_ok(payload: dict) -> bool:
 
 @app.post("/api/hook/record-read", dependencies=_HOOK_CHECKS)
 async def hook_record_read(request: Request):
-    """`hook record-read` para la línea de `payload`, con el entorno de `env`. 204 si se atendió."""
+    """`hook record-read` para la línea de `payload`, con el entorno de `env`. 204 si se atendió;
+    500 if the line could not be written (`hook_common.record_or_raise`), so the mod tries again."""
     from starlette.concurrency import run_in_threadpool
 
     from .. import hook_entry
@@ -1250,7 +1251,7 @@ async def hook_record_read(request: Request):
         await run_in_threadpool(hook_entry.record_read, payload, env)
     except Exception as exc:
         # Como el CLI: solo el tipo, en `hook-failures.jsonl`; el mod prueba entonces el proceso.
-        hook_entry._log_failure("record-read", exc)
+        hook_entry._log_failure("record-read", exc, payload)
         raise HTTPException(status_code=500) from None
     return Response(status_code=204)
 
