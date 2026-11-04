@@ -54,6 +54,32 @@ def run_with_environ(environ: Mapping[str, str], function, *args):
     return contextvars.copy_context().run(_call_with_environ, environ, function, args)
 
 
+def utf8_stdio() -> None:
+    """stdin and stdout in UTF-8, whatever the system code page says.
+
+    Claude Code writes the hook input in UTF-8 and reads the output as UTF-8. With the settings
+    delivery the hook runs as `python "<script>"`, and on Windows that `python` opens its pipes in
+    the ANSI code page (cp1252): a path with `ñ` arrived as `Ã±`, `getsize` failed and the read
+    hook went quiet; `diseño` no longer matched the prompt rules; a byte with no cp1252 character
+    (`Á` = C3 81) broke `json.load`. Fixing it here, not in the registered command, covers the
+    installs that already exist: `update` recopies the scripts and leaves settings alone.
+
+    Each hook calls it first thing in `main()`, before reading anything: an encoding can only be
+    changed before the first read. Never at import time, because the server imports this module
+    and its stdio is the MCP transport. Streams without `reconfigure` (tests swap in a `StringIO`)
+    are left as they are.
+    """
+    for stream in (sys.stdin, sys.stdout):
+        encoding = str(getattr(stream, "encoding", "") or "").lower().replace("_", "-")
+        if encoding in {"utf-8", "utf8"}:
+            continue
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        with contextlib.suppress(Exception):
+            reconfigure(encoding="utf-8", errors="replace")
+
+
 def enabled() -> bool:
     """Interruptor del EXPERIMENTO, no el de encendido de un hook. La diferencia importa.
 

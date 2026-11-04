@@ -80,6 +80,7 @@ from hook_common import (
     record,
     record_block,
     summary_model,
+    utf8_stdio,
 )
 
 TRUTHY = {"1", "true", "yes", "on"}
@@ -259,6 +260,9 @@ def suggest_media_read(
         strong_kb = float(os.environ.get("LD_HOOK_READ_STRONG_KB", "100"))
         size_kb = os.path.getsize(file_path) / 1024
     except (OSError, ValueError):
+        record(
+            "PreToolUse", suggested=False, category="read", ext=ext, reason="no_file", **base_fields
+        )
         return
     fields = {"category": "read", "ext": ext, "size_kb": round(size_kb, 1), **base_fields}
     if access.via != "read_image" or ext not in read_classifier.DESCRIBABLE_IMAGE_EXTENSIONS:
@@ -287,6 +291,7 @@ def suggest_media_read(
 
 
 def main() -> None:
+    utf8_stdio()
     if not is_enabled():
         return
 
@@ -352,6 +357,11 @@ def main() -> None:
         strong_kb = float(os.environ.get("LD_HOOK_READ_STRONG_KB", "100"))
         size_kb = os.path.getsize(file_path) / 1024
     except (OSError, ValueError):
+        # Without a size there is nothing to decide, but the event still counts: when a path
+        # arrived mangled (cp1252 stdin) this exit hid the hook from the telemetry entirely.
+        record(
+            "PreToolUse", suggested=False, category="read", ext=ext, reason="no_file", **base_fields
+        )
         return
 
     if size_kb <= suggest_kb:

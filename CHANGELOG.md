@@ -8,6 +8,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **En Windows, los hooks instalados por `settings.json` leían la entrada en cp1252.** Claude Code
+  manda UTF-8, pero el `python` del PATH abre sus tuberías con la página de códigos del sistema:
+  una ruta con `ñ` o tildes llegaba deformada y el hook de lectura se callaba (sin bloquear y sin
+  telemetría); «Resume el diseño del panel» recibía el aviso de delegar que no le tocaba; y una
+  `Á` hacía fallar la lectura de la entrada. Ahora los hooks de lectura, shell, prompt y subagente
+  leen y escriben UTF-8 por sí mismos (`hook_common.utf8_stdio`), así que basta con
+  `local-delegate update`: el comando registrado no cambia. Además, cuando el hook de lectura no
+  puede medir el fichero deja su línea con `reason: "no_file"`, como el de shell, y la medición
+  de adopción (`scripts/measure_adoption.py`) no cuenta esas líneas como lecturas (las muestra
+  aparte, en `not_reads`). La entrega por plugin ya estaba bien.
+
 - **Una decisión del mod de lectura que no se pudo escribir ya no se da por escrita.** Si el destino
   de la telemetría (`LD_HOOK_TELEMETRY_LOG`) no se podía abrir (una carpeta con ese nombre,
   permisos, disco lleno, antivirus), `hook record-read` se comía el error: el daemon contestaba 204,

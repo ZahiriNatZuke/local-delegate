@@ -45,6 +45,9 @@ HOOK_SCRIPTS = {
     "read": "suggest_delegate_read.py",
 }
 
+#: Reasons of an event that is not a read the rule could act on (see `measure`).
+NOT_A_READ = frozenset({"no_file"})
+
 
 def hook_telemetry() -> Path:
     dest = os.environ.get("LD_HOOK_TELEMETRY_LOG", "").strip()
@@ -160,7 +163,13 @@ def measure(since: str | None, include_tests: bool = False, boundaries: dict | N
         usages = [e for e in usages if not attribution.test_reason(e)]
         outside["usage"] = before - len(usages)
 
-    reads = [e for e in hooks if e.get("category") in {"read", "shell"}]
+    # `no_file`: the hook could not size the file (it does not exist or cannot be read), so there
+    # was nothing to delegate. The shell hook always wrote these lines and the read hook started
+    # with the UTF-8 fix (#560): counted as reads, they would inflate the «after» denominator.
+    # They stay visible apart, in `not_reads`.
+    seen = [e for e in hooks if e.get("category") in {"read", "shell"}]
+    reads = [e for e in seen if e.get("reason") not in NOT_A_READ]
+    not_reads = dict(Counter(e["reason"] for e in seen if e.get("reason") in NOT_A_READ))
     offered = [e for e in reads if e.get("suggested")]
     blocks = [e for e in offered if e.get("blocked")]
 
@@ -197,6 +206,7 @@ def measure(since: str | None, include_tests: bool = False, boundaries: dict | N
             )
         ),
         "by_path": dict(Counter(e.get("route", "read") for e in reads)),
+        "not_reads": not_reads,
         "offered": len(offered),
         "blocks": len(blocks),
         "accepted": len(accepted),
@@ -248,6 +258,8 @@ def main() -> int:
     for reason, how_many in sorted(result["by_reason"].items(), key=lambda x: -x[1]):
         print(f"    {reason:20} {how_many}")
     print(f"Por camino:             {result['by_path']}")
+    if result["not_reads"]:
+        print(f"Sin contar (no_file):   {result['not_reads']}")
     print()
     print(f"Ofrecidos:              {result['offered']}")
     print(f"  de ellos, bloqueos:   {result['blocks']}")

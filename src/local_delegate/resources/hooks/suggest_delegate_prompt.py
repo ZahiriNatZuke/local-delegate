@@ -7,7 +7,15 @@ import json
 import re
 import sys
 
-from hook_common import backend_down, block_state, context_of, emit, hook_text, record
+from hook_common import (
+    backend_down,
+    block_state,
+    context_of,
+    emit,
+    hook_text,
+    record,
+    utf8_stdio,
+)
 
 _CATEGORIES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("summarize", re.compile(r"\b(resum|sintetiz|summary|summarize)\w*\b", re.IGNORECASE)),
@@ -53,6 +61,7 @@ def classify(prompt: str) -> str | None:
 
 
 def main() -> None:
+    utf8_stdio()
     try:
         payload = json.load(sys.stdin)
     except (json.JSONDecodeError, ValueError):
