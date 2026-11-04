@@ -40,6 +40,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   sea cual sea la velocidad del runner. La cota superior de tiempo (4 s) pasa a ser una guarda
   contra cuelgues (20 s): que el plazo cortó lo dicen el evento (`cancel_reason`, `pieces >
   chunks`) y el error, no el reloj. Solo cambia el test.
+- **Un `read_timeout` dice dónde se fue el plazo y en qué trozo (#572).** Un `local_commit_msg` de
+  ~58 KB falló con «estaba cargado pero no respondió en 180 s», y el log mostraba otra cosa: sin
+  cola en el daemon, el modelo cargándose a los 3 s y el primero de varios trozos agotando él solo
+  el plazo. El plazo de 180 s es por envío (no cuenta el turno del daemon, sí la carga del modelo
+  en llama-swap) y no se cambia. Ahora el mensaje, en español e inglés, dice si el modelo se estaba
+  cargando y a los cuántos segundos quedó listo (en vez de «estaba cargado»), si hubo espera de
+  turno antes del envío y, si la entrada iba troceada, qué trozo de cuántos falló. El evento de uso
+  lleva `read_timeout_load_ms`, `read_timeout_piece` y `pieces`.
 - **`local_commit_msg` toma el idioma del historial del repo, no del reflog (#548).** Desde un
   worktree de agente anidado en la copia principal, con el diff en su raíz o en una subcarpeta, el
   mensaje salía en el idioma del producto con el aviso «los commits recientes del repo no dejan claro
