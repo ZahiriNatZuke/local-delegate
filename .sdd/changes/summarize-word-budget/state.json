@@ -4,9 +4,9 @@
   "title": "local_summarize corta el resumen a mitad de frase con el max_words por defecto (#580)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "implementing",
+  "status": "verifying",
   "createdAt": "2026-11-04T17:47:23.841Z",
-  "updatedAt": "2026-11-04T17:48:19.621Z",
+  "updatedAt": "2026-11-04T18:00:01.557Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -90,6 +90,13 @@
       "to": "implementing",
       "at": "2026-11-04T17:48:19.621Z",
       "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-04T18:00:01.557Z",
+      "reason": "tests en verde"
     }
   ]
 }
