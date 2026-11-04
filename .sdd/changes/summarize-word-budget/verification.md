@@ -44,3 +44,11 @@
   coherente con el log del mes (todos los cortes planos exactamente en 2w+64). El recorte cubre el
   resto.
 - El map/reduce no recorta su salida final (su aviso cuenta las llamadas cortadas, no solo la última).
+
+## Final result
+
+- Merged in `main` as `e85c0519` (PR #581) on 2026-11-04T19:53:17Z.
+- PR checks: 22 of 22 green (`gh pr checks 581`: test and plugin on ubuntu/windows/macos, Python 3.11–3.15 matrix, lint, secrets, audit, install-smoke, test-lang-es, ci-gate, CodeQL, Socket, GitGuardian). macOS ran and passed; no bypass.
+- `main` CI on `e85c0519`: green (`gh run list --commit e85c0519`: CI, Vendor audit and CodeQL `success`).
+- Note: the PR also updated `test_request_body_compat.py` (declared `_CHANGED_MAX_TOKENS`, 364→514 only on the four `local_summarize` paths), besides the three asserts listed above.
+- Closed on 2026-11-04 by the closing PR `chore/close-sdd-2026-11-04-tarde`.

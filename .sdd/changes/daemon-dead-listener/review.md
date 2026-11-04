@@ -38,4 +38,5 @@ decides and the decision goes in Resolution). -->
 
 ## Required follow-up
 
-- Identify work that must be completed before closure.
+- Ninguno. Revisión independiente antes de mezclar (consta en `verification.md`, «Deviations and residual risk»; no hay comentario de revisión en el PR #578): «mezclar con cambios», con cinco ajustes aplicados en la rama: guarda de pid reutilizado también en `doctor`, reintento de `accept` con espera creciente 0,01 s → 1 s, riesgo de cola de `listen` llena anotado en `_refuses_connections`, excepción a «nunca señal a un pid leído de un fichero» escrita en `update._terminate` y en el CHANGELOG, y código de salida 75 (`EX_TEMPFAIL`) en vez de 3.
+- Mezclado en `main` como `d75c09cf` (PR #578) sin macOS: `test (macos-latest)` y `plugin (macos-latest)` quedaron `cancelled` (en el PR solo `plugin (macos-latest)`) y por eso `ci-gate` dio rojo, en el PR y en el CI de `main` de ese commit; el resto de checks en verde. El usuario autorizó expresamente esta mezcla sin macOS el 2026-11-04 (bypass temporal del ruleset `protect-main`, restaurado después; consta en el relevo de la jornada). El CI de `main` está en verde desde `e85c0519` y en `cf1474d8`.

@@ -57,3 +57,10 @@
 - La «línea correcta marcada como dudosa» del issue no se reprodujo: citas correctas en cuatro
   formatos (`ruta (líneas a-b)`, `ruta: a–b`…) no dan aviso sobre el diff sintético.
 - Sin prueba en vivo: el daemon corre la 0.48.0 instalada, no esta rama.
+
+## Final result
+
+- Merged in `main` as `cf1474d8` (PR #583) on 2026-11-04T20:18:11Z.
+- PR checks: 22 of 22 green (`gh pr checks 583`: test on ubuntu/windows/macos, plugin on ubuntu/windows/macos, cli-python-matrix 3.11–3.15, test-lang-es, lint, audit, secrets, install-smoke, ci-gate, CodeQL/Analyze, Socket, GitGuardian); macOS green after a rerun for lack of a runner (per the quality gate evidence), not merged with a bypass.
+- `main` CI on `cf1474d8`: green (`gh run list --commit cf1474d8`: CI, CodeQL, Vendor audit success).
+- Closed on 2026-11-04 by the closing PR `chore/close-sdd-2026-11-04-tarde`.

@@ -36,3 +36,10 @@
   verse desde este daemon; el texto no lo afirma.
 - Sin prueba en vivo con el backend real (necesita un plazo agotado de verdad); queda para la sesión
   principal si la quiere.
+
+## Final result
+
+- Merged in `main` as `fae612c7` (PR #575, 2026-11-04T16:49:33Z).
+- PR checks: 19 of 22 green (`gh pr checks 575`); `test (macos-latest)` and `plugin (macos-latest)` cancelled after ~20 min (reported as fail), so `ci-gate` failed. Merged without macOS; the user explicitly authorized merging without macOS on 2026-11-04 (temporary bypass of the `protect-main` ruleset, restored afterwards; recorded in the day's handoff).
+- `main` CI on `fae612c7` (run 41871378401): every job green except `test (macos-latest)` and `plugin (macos-latest)`, cancelled, and `ci-gate`, failed. CodeQL, Wiki and Vendor audit green. `main` CI green again on `576344b5` and `cf1474d8`.
+- Closed on 2026-11-04 by the closing PR `chore/close-sdd-2026-11-04-tarde`.

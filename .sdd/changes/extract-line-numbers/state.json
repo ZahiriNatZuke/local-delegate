@@ -4,9 +4,9 @@
   "title": "local_extract numera las líneas con path para campos de ubicación (#568)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-04T13:41:00.609Z",
-  "updatedAt": "2026-11-04T14:25:58.273Z",
+  "updatedAt": "2026-11-04T21:02:30.156Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-04T21:02:29.918Z",
+      "evidence": "vault projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md",
+      "actor": "user"
     }
   },
   "history": [
@@ -113,6 +113,28 @@
       "at": "2026-11-04T14:25:58.273Z",
       "evidence": "review.md: 2 jueces, conforms-with-notes; 6 REQ cumplidos con test o revisión; hallazgos F1-F6 arreglados con test, F7-F8 riesgo residual anotado",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-04T21:02:29.636Z",
+      "reason": "conformance approved; PR #573 merged in main as d4a3bb1f (macOS jobs not run: no hosted runner acquired)"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-04T21:02:29.918Z",
+      "evidence": "vault projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-04T21:02:30.156Z",
+      "reason": "PR #573 merged (d4a3bb1f), main CI green except macOS jobs without runner (green again on e85c0519 and cf1474d8), memory note written; closing PR chore/close-sdd-2026-11-04-tarde"
     }
   ]
 }

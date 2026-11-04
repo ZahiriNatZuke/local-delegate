@@ -54,3 +54,10 @@ Without a declaration, list what was run. Never invent a command. -->
   `serve` manual sí funcionan. launchd (`KeepAlive`) y systemd (`Restart=on-failure`) sí lo reponen.
 - La causa exacta del 2026-11-04 no se pudo observar (sin logs); la reproducida (WinError 64 en
   `accept`) produce exactamente los síntomas del issue y ocurre bajo la carga descrita.
+
+## Final result
+
+- Merged in `main` as `d75c09cf` (PR #578) on 2026-11-04T18:21:13Z.
+- PR checks (`gh pr checks 578`): 20 of 22 green (tests on ubuntu/windows/macos, Python 3.11–3.15 matrix, plugin ubuntu/windows, lint, secrets, audit, install-smoke, test-lang-es, CodeQL, Socket, GitGuardian); `plugin (macos-latest)` cancelled after 15 min and therefore `ci-gate` failed. Merged without that macOS job (bypass); the user explicitly authorized merging without macOS on 2026-11-04 (temporary bypass of the `protect-main` ruleset, restored afterwards; recorded in the day's handoff).
+- `main` CI on `d75c09cf` (`gh run list --commit d75c09cf…`): CodeQL, Wiki and Vendor audit green; CI red only because `test (macos-latest)` and `plugin (macos-latest)` were cancelled (ci-gate: `[FALLO] … conclusion=cancelled`). Every other job green. `main` CI green again from `e85c0519` and on `cf1474d8`.
+- Closed on 2026-11-04 by the closing PR `chore/close-sdd-2026-11-04-tarde`.

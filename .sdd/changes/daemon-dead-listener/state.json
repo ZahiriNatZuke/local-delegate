@@ -4,9 +4,9 @@
   "title": "El daemon sale (y se puede relevar) cuando su listener HTTP muere",
   "mode": "lite",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-11-04T14:57:45.127Z",
-  "updatedAt": "2026-11-04T16:38:21.257Z",
+  "updatedAt": "2026-11-04T21:02:54.078Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "agent"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-04T21:02:53.806Z",
+      "evidence": "vault projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md",
+      "actor": "user"
     }
   },
   "history": [
@@ -106,6 +106,35 @@
       "at": "2026-11-04T16:38:21.257Z",
       "evidence": "Dos jueces independientes (conforms-with-notes y does-not-conform sobre un estado intermedio); sus hallazgos F1-F5 corregidos (guarda de pid con tests doblados, skipif macOS y doctor sin promesa, segunda parada tolerada en el test, SIGKILL con recomprobación, verification.md al día) y F6 anotado como riesgo residual. PR #578: test windows/ubuntu, matriz CLI, plugin x3, lint, CodeQL, GitGuardian y Socket en verde; macOS en cola al cerrar.",
       "actor": "agent"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-04T21:02:53.316Z",
+      "reason": "quality and conformance approved; PR #578 merged in main as d75c09cf"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-04T21:02:53.568Z",
+      "reason": "result review done (review.md); PR #578 merged in main as d75c09cf without the cancelled macOS jobs"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-04T21:02:53.806Z",
+      "evidence": "vault projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-04T21:02:54.078Z",
+      "reason": "PR #578 merged (d75c09cf) without macOS jobs (cancelled); main CI green from e85c0519; memory note written; closing PR chore/close-sdd-2026-11-04-tarde"
     }
   ]
 }

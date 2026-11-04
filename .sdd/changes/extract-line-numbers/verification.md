@@ -38,3 +38,10 @@
   palabras genéricas que también están en la línea citada («Componente»), una línea equivocada
   pasa. Es un aviso conservador, no una prueba de exactitud.
 - El esquema de encabezados no va al recibo (gastaría contexto de Claude); solo al prompt.
+
+## Final result
+
+- Merged in `main` as `d4a3bb1f` (PR #573, 2026-11-04T16:42:22Z), without the macOS jobs.
+- PR checks: 19 of 22 green (`gh pr checks 573`: tests on ubuntu/windows, Python 3.11–3.15 matrix, lint, secrets, audit, install-smoke, plugin ubuntu/windows, test-lang-es, CodeQL, Socket, GitGuardian). `test (macos-latest)` and `plugin (macos-latest)` failed with no steps run (annotation: "The job was not acquired by Runner of type hosted even after multiple attempts"; macOS arm64 capacity constraints), so `ci-gate` failed too. The user explicitly authorized merging without macOS on 2026-11-04 (temporary bypass of the `protect-main` ruleset, restored afterwards; recorded in the day's handoff).
+- `main` CI on `d4a3bb1f` (run 41870089379): every Linux/Windows job green; `test (macos-latest)` and `plugin (macos-latest)` cancelled and `ci-gate` failed for the same runner reason; CodeQL and Vendor audit green. The later `main` commits `e85c0519` and `cf1474d8` have CI green (macOS included).
+- Closed on 2026-11-04 by the closing PR `chore/close-sdd-2026-11-04-tarde`.
