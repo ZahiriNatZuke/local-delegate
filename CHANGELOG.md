@@ -8,6 +8,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **`local_summarize` con `focus` ya no deja fuera en silencio la sección que trata el enfoque**
+  (#558). El enfoque llegaba al modelo, pero solo como una cláusula general, y en un informe de
+  ~16 KB el resumen se quedó con la introducción y la lista final sin nada de la sección cuyo
+  título tenía la palabra pedida. Ahora el mensaje al modelo nombra las secciones Markdown cuyo
+  título o cuerpo contiene alguna palabra significativa del enfoque (en cada trozo, solo las
+  suyas), y si el resumen no menciona ninguna de esas palabras aunque la entrada sí las tiene, la
+  salida lleva un aviso `[local-delegate warning: …]` que las nombra. Una palabra que el modelo
+  traduciría solo cuenta si la entrada está en el idioma del resumen; las que se copian tal cual
+  (`cp1252`, `utf8`, `config.json`, `readFile`, `API`) cuentan siempre. Un título copiado no
+  cuenta como mención. Sin `focus` nada cambia.
+
 - **En Windows, los hooks instalados por `settings.json` leían la entrada en cp1252.** Claude Code
   manda UTF-8, pero el `python` del PATH abre sus tuberías con la página de códigos del sistema:
   una ruta con `ñ` o tildes llegaba deformada y el hook de lectura se callaba (sin bloquear y sin
