@@ -4,9 +4,9 @@
   "title": "local_extract numera las líneas con path para campos de ubicación (#568)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "verifying",
+  "status": "result-review",
   "createdAt": "2026-11-04T13:41:00.609Z",
-  "updatedAt": "2026-11-04T13:51:41.775Z",
+  "updatedAt": "2026-11-04T14:25:58.273Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,16 +21,16 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-04T14:25:44.542Z",
+      "evidence": "PR #573: 22/22 checks en verde (CodeQL, GitGuardian, Socket incluidos); suite local 6504 passed / 30 skipped; ruff limpio",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-04T14:25:58.273Z",
+      "evidence": "review.md: 2 jueces, conforms-with-notes; 6 REQ cumplidos con test o revisión; hallazgos F1-F6 arreglados con test, F7-F8 riesgo residual anotado",
+      "actor": "user"
     },
     "memory": {
       "status": "pending",
@@ -90,6 +90,29 @@
       "to": "verifying",
       "at": "2026-11-04T13:51:41.775Z",
       "reason": "T1-T4 hechas, tests nuevos en verde"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-04T14:25:44.542Z",
+      "evidence": "PR #573: 22/22 checks en verde (CodeQL, GitGuardian, Socket incluidos); suite local 6504 passed / 30 skipped; ruff limpio",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-04T14:25:52.146Z",
+      "reason": "quality aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-04T14:25:58.273Z",
+      "evidence": "review.md: 2 jueces, conforms-with-notes; 6 REQ cumplidos con test o revisión; hallazgos F1-F6 arreglados con test, F7-F8 riesgo residual anotado",
+      "actor": "user"
     }
   ]
 }

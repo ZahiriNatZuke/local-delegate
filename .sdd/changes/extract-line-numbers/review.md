@@ -13,7 +13,7 @@
 | --- | --- | --- | --- |
 | REQ-001 | sí | test | reutiliza `_number_lines` y `_numbered_code_pieces` (#460) |
 | REQ-002 | sí | test | criterio estrechado tras la revisión |
-| REQ-003 | sí | test | el prefijo exige `| ` o fin de línea |
+| REQ-003 | sí | test | el prefijo exige barra y espacio, o fin de línea |
 | REQ-004 | sí | test | solo `.md`/`.markdown`/`.mdx`; el trozo descuenta el esquema (test de presupuesto) |
 | REQ-005 | sí | test | formas `[inicio, fin]` tratadas como rango |
 | REQ-006 | sí | review | skill y bloque de memoria es/en |
@@ -26,7 +26,7 @@
 | F2 | Esquema calculado para cualquier fichero (`# comentario` de Python) | sí | no | suspected | solo extensiones Markdown; test con `.py` |
 | F3 | `[inicio, fin]` comprobado como dos líneas; lista bajo clave de línea sin comprobar | sí | no | suspected | tratado como rango; test |
 | F4 | `isdigit` + `int` lanza con `²` | sí | no | suspected | `isascii` + `isdecimal` + longitud ≤ 6; test |
-| F5 | Prefijo quitado sin espacio (`12|34`) | sí | sí | confirmed | exige `| ` o fin de línea; test |
+| F5 | Prefijo quitado sin espacio (una fila de tabla «12 barra 34») | sí | sí | confirmed | exige barra y espacio, o fin de línea; test |
 | F6 | Descuento del esquema sin test | no | sí | suspected | test de presupuesto por llamada |
 | F7 | Llamada única puede pasar de `max_chars` y `max_tokens=512` corto para listas largas | sí | sí | confirmed | aceptado: mismo criterio que #460; anotado como riesgo residual |
 | F8 | Hook y aviso del mod siguen sin la aclaración | sí | no | suspected | fuera de alcance (el mod exige reconstrucción); queda anotado |
