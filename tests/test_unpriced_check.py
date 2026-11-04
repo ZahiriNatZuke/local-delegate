@@ -5,16 +5,78 @@ The Haiku 5.5 rows marked «real» are numbers of `cost-state` lines of this PC,
 fields and frozen here (as in `test_pricing.py`): they are not computed with the table. The rows
 marked «synthetic» are built by hand to tell the two tiers apart; their expected bounds are written
 out from the official prices (platform.claude.com/docs/en/about-claude/pricing, read 2026-11-04).
+
+The logic tests judge those rows against `FROZEN`, a copy of the prices that billed them, never
+against the package table: the price watcher updates `prices.json` when the official page changes,
+and a legitimate price change must not turn this suite red (#567). The package table itself is only
+held to invariants that a price change keeps.
 """
 
 from __future__ import annotations
 
 import copy
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+
 from local_delegate import checks, i18n, pricing, recompute, transcripts
 from local_delegate.pricing import check_rows, entry, load_prices, priced_verdict, verdict
+
+PRICE_FIELDS = ("input", "w5m", "w1h", "cache_read", "output")
+
+# The prices in force when the real rows below were billed (official page, read 2026-11-04).
+FROZEN = {
+    "consulted": "2026-11-04",
+    "web_search_per_1000": 10,
+    "models": {
+        "claude-opus-5-5": {
+            "input": 4,
+            "w5m": 5,
+            "w1h": 8,
+            "cache_read": 0.20,
+            "output": 20,
+            "family": "new",
+            "supports_effort": True,
+        },
+        "claude-haiku-5-5": {
+            "input": 0.10,
+            "w5m": 0.125,
+            "w1h": 0.20,
+            "cache_read": 0.01,
+            "output": 0.50,
+            "family": "new",
+            "supports_effort": True,
+        },
+        "claude-haiku-4-5": {
+            "input": 1,
+            "w5m": 1.25,
+            "w1h": 2,
+            "cache_read": 0.10,
+            "output": 5,
+            "family": "previous",
+            "supports_effort": False,
+        },
+    },
+    "long_prompt": {
+        "claude-haiku-5-5": {
+            "above_tokens": 100000,
+            "input": 0.50,
+            "w5m": 0.625,
+            "w1h": 1,
+            "cache_read": 0.05,
+            "output": 2.50,
+        }
+    },
+}
+
+
+@pytest.fixture
+def frozen_prices(monkeypatch):
+    """The code paths that read the package table (`transcripts`, `recompute`) see `FROZEN`."""
+    monkeypatch.setattr(pricing, "load_prices", lambda: copy.deepcopy(FROZEN))
+
 
 # Real: Haiku 5.5 with cache writes and reads and 6 web searches.
 ROW_HAIKU55_CACHE = {
@@ -68,54 +130,58 @@ def _unpriced(cost: float = 0.30) -> dict:
     return {"model": "claude-nobody-9", **_TOKENS, "costUSD": cost}
 
 
-def test_haiku_55_prices_from_the_official_page():
-    """REQ-001: the five prices of each tier, family and effort, and the table date."""
+def _positive_prices(prices: dict) -> bool:
+    return all(
+        isinstance(prices[f], int | float) and not isinstance(prices[f], bool) and prices[f] > 0
+        for f in PRICE_FIELDS
+    )
+
+
+def test_the_package_table_is_well_formed():
+    """REQ-001 and REQ-008, as invariants a legitimate price change keeps (not the figures).
+
+    Haiku 5.5 is priced, with its prompt-length tier; every entry has its five prices; every tier
+    belongs to a priced model and has a threshold and its five prices.
+    """
     table = load_prices()
-    assert table["consulted"] == "2026-11-04"
-    assert entry("claude-haiku-5-5") == {
-        "input": 0.10,
-        "w5m": 0.125,
-        "w1h": 0.20,
-        "cache_read": 0.01,
-        "output": 0.50,
-        "family": "new",
-        "supports_effort": True,
-    }
-    assert pricing.long_prompt("claude-haiku-5-5") == {
-        "above_tokens": 100000,
-        "input": 0.50,
-        "w5m": 0.625,
-        "w1h": 1,
-        "cache_read": 0.05,
-        "output": 2.50,
-    }
-    # Exact lookup after normalizing, like `entry`; a model without a tier has none.
-    assert pricing.long_prompt("claude-haiku-5-5-20261101") is not None
-    assert pricing.long_prompt("claude-opus-5-5") is None
-    assert pricing.long_prompt("claude-haiku-4-5") is None
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", table["consulted"])
+    haiku = entry("claude-haiku-5-5")
+    assert haiku is not None
+    assert haiku["family"] == "new"
+    assert haiku["supports_effort"] is True
+    for mid, e in table["models"].items():
+        assert _positive_prices(e), mid
+    tiers = table.get("long_prompt") or {}
+    assert "claude-haiku-5-5" in tiers
+    for mid, tier in tiers.items():
+        assert mid in table["models"], mid
+        assert isinstance(tier["above_tokens"], int) and tier["above_tokens"] > 0, mid
+        assert _positive_prices(tier), mid
 
 
-def test_already_priced_models_keep_their_prices():
-    """REQ-008: the entries that existed before #563 are unchanged."""
-    before = {
-        "claude-opus-5-5": (4, 5, 8, 0.20, 20),
-        "claude-sonnet-5-5": (2, 2.5, 4, 0.20, 10),
-        "claude-fable-5-1": (10, 12.5, 20, 0.25, 50),
-        "claude-haiku-4-5": (1, 1.25, 2, 0.10, 5),
-    }
-    for mid, prices in before.items():
-        e = entry(mid)
-        assert (e["input"], e["w5m"], e["w1h"], e["cache_read"], e["output"]) == prices, mid
+def test_long_prompt_lookup():
+    """REQ-001: exact lookup after normalizing, like `entry`; a model without a tier has none."""
+    assert (
+        pricing.long_prompt("claude-haiku-5-5", FROZEN) == FROZEN["long_prompt"]["claude-haiku-5-5"]
+    )
+    assert pricing.long_prompt("claude-haiku-5-5-20261101", FROZEN) is not None
+    assert pricing.long_prompt("claude-opus-5-5", FROZEN) is None
+    assert pricing.long_prompt("claude-haiku-4-5", FROZEN) is None
+    # Without `table`, the package one; the tier of Haiku 5.5 is found there as well.
+    assert (
+        pricing.long_prompt("claude-haiku-5-5-20261101")
+        == load_prices()["long_prompt"]["claude-haiku-5-5"]
+    )
 
 
 def test_real_haiku_55_rows_are_inside():
     """The Mac case: real Haiku 5.5 rows, judged against a price instead of `unpriced`."""
-    assert check_rows([ROW_HAIKU55_CACHE, ROW_HAIKU55_WEB], load_prices()) == ["inside", "inside"]
+    assert check_rows([ROW_HAIKU55_CACHE, ROW_HAIKU55_WEB], FROZEN) == ["inside", "inside"]
 
 
 def test_haiku_55_row_band_spans_both_tiers():
     """REQ-002: the band goes from all ≤100K (5m) to all >100K (1h)."""
-    table = load_prices()
+    table = FROZEN
     tolerance = 0.005
     # Mixed: above the ≤100K ceiling (0.12001), only a band with the long tier accepts it.
     assert check_rows([_haiku(0.30)], table) == ["inside"]
@@ -132,7 +198,7 @@ def _message(**usage) -> dict:
     return {"model": "claude-haiku-5-5", "usage": usage}
 
 
-def test_request_cost_uses_the_prompt_tier():
+def test_request_cost_uses_the_prompt_tier(frozen_prices):
     """REQ-003: per request, the prompt (input + writes + reads) picks the tier."""
     # 100,000 tokens exactly: still the base tier.
     at = transcripts.request_cost(
@@ -158,7 +224,7 @@ def test_request_cost_uses_the_prompt_tier():
 
 def test_unpriced_rows_leave_the_verdict():
     """REQ-004: the unpriced rows are counted apart and do not fail the verdict."""
-    results = check_rows([ROW_OPUS_55, _unpriced(), _unpriced()], load_prices())
+    results = check_rows([ROW_OPUS_55, _unpriced(), _unpriced()], FROZEN)
     assert results == ["inside", "unpriced", "unpriced"]
     assert priced_verdict(results) == "pass"
     # The old verdict still fails on them (its callers keep their behavior).
@@ -180,7 +246,7 @@ def _index_with_rows(rows: list[dict]) -> transcripts.Index:
     return index
 
 
-def test_outside_rows_by_model():
+def test_outside_rows_by_model(frozen_prices):
     """REQ-004 and REQ-007, through `recompute._check`: the saved check says who is outside."""
     bad_opus = dict(ROW_OPUS_55, costUSD=ROW_OPUS_55["costUSD"] * 2)
     index = _index_with_rows([ROW_OPUS_55, bad_opus, _unpriced(), ROW_HAIKU55_CACHE])
