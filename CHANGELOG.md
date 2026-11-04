@@ -15,6 +15,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   (cinco precios positivos por entrada, tramos con umbral y de un modelo con precio). Cambio
   interno de la suite; el producto no cambia.
 
+- **El test del plazo de una llamada ya no depende de la velocidad del runner (#570).** En un runner
+  de Windows cargado, `test_deadline_cancels_the_call_and_logs_it_once` vio `chunks` 0: el plazo de
+  1 s cuenta desde el inicio de la llamada y ese runner lo gastó entero antes de la primera llamada
+  al backend. El registro decía la verdad (ninguna llamada había llegado al backend); lo que fallaba
+  era la suposición del test. Ahora el reloj del plazo arranca cuando la llamada ya hizo dos
+  llamadas al backend, así que el corte sigue saliendo de `CALL_MAX_S`, a mitad de la operación,
+  sea cual sea la velocidad del runner. La cota superior de tiempo (4 s) pasa a ser una guarda
+  contra cuelgues (20 s): que el plazo cortó lo dicen el evento (`cancel_reason`, `pieces >
+  chunks`) y el error, no el reloj. Solo cambia el test.
 - **`local_commit_msg` toma el idioma del historial del repo, no del reflog (#548).** Desde un
   worktree de agente anidado en la copia principal, con el diff en su raíz o en una subcarpeta, el
   mensaje salía en el idioma del producto con el aviso «los commits recientes del repo no dejan claro
