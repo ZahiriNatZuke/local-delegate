@@ -75,6 +75,27 @@ def family(mid: str, table: dict | None = None) -> str | None:
     return e["family"] if e is not None else None
 
 
+def long_prompt(mid: str, table: dict | None = None) -> dict | None:
+    """Los precios del tramo de prompt largo del modelo, o `None` si su precio no depende de eso.
+
+    `{"above_tokens", "input", "w5m", "w1h", "cache_read", "output"}`: una petición cuyo prompt
+    (entrada + escrituras + lecturas de caché) pasa de `above_tokens` paga estos precios en vez de
+    los de `entry` (Claude Haiku 5.5). Búsqueda exacta tras normalizar, como `entry`.
+    """
+    tiers = (table if table is not None else load_prices()).get("long_prompt") or {}
+    return tiers.get(normalize_id(mid))
+
+
+def _row_cost(row: dict, p: dict, table: dict, write_price: str) -> float:
+    cost = (
+        (row.get("inputTokens") or 0) * p["input"]
+        + (row.get("cacheReadInputTokens") or 0) * p["cache_read"]
+        + (row.get("outputTokens") or 0) * p["output"]
+        + (row.get("cacheCreationInputTokens") or 0) * p[write_price]
+    ) / 1e6
+    return cost + (row.get("webSearchRequests") or 0) * table["web_search_per_1000"] / 1000
+
+
 def _judge(row: dict, table: dict) -> str | None:
     cost = row.get("costUSD") or 0.0
     if cost < MIN_JUDGED_COST:
@@ -82,17 +103,12 @@ def _judge(row: dict, table: dict) -> str | None:
     p = entry(row["model"], table)
     if p is None:
         return "unpriced"
-    base = (
-        (row.get("inputTokens") or 0) * p["input"]
-        + (row.get("cacheReadInputTokens") or 0) * p["cache_read"]
-        + (row.get("outputTokens") or 0) * p["output"]
-    ) / 1e6
-    base += (row.get("webSearchRequests") or 0) * table["web_search_per_1000"] / 1000
-    cache_write = row.get("cacheCreationInputTokens") or 0
     # Claude Code no dice qué parte de la escritura fue a 5 min y cuál a 1 h: la banda va de
     # toda a 5 min a toda a 1 h.
-    low = base + cache_write * p["w5m"] / 1e6
-    high = base + cache_write * p["w1h"] / 1e6
+    low = _row_cost(row, p, table, "w5m")
+    # Con tramo de prompt largo, la fila suma peticiones de los dos tramos sin decir cuántas de
+    # cada uno: el techo es todo al precio del tramo largo.
+    high = _row_cost(row, long_prompt(row["model"], table) or p, table, "w1h")
     tolerance = max(0.005, 0.005 * cost)
     return "inside" if low - tolerance <= cost <= high + tolerance else "outside"
 
@@ -111,3 +127,17 @@ def verdict(results: list[str | None]) -> str:
     """`fail` si al menos una fila salió `outside` o `unpriced`; si no, `pass`."""
     bad = {"outside", "unpriced"}
     return "fail" if any(r in bad for r in results) else "pass"
+
+
+def priced_verdict(results: list[str | None]) -> str:
+    """El veredicto solo con las filas que tienen precio: las `unpriced` se cuentan aparte.
+
+    `fail` si alguna fila salió `outside`, o si hubo filas sin precio y ninguna con precio que las
+    compense (nada avala la tabla). Sin filas juzgadas (todas por debajo de `MIN_JUDGED_COST`),
+    `pass`, como `verdict`.
+    """
+    if "outside" in results:
+        return "fail"
+    if "unpriced" in results and "inside" not in results:
+        return "fail"
+    return "pass"

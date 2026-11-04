@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "slug": "prices-claude-5-and-unpriced-models",
+  "title": "Haiku 5.5 price and price check that survives unpriced models (#563)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-04T12:48:03.301Z",
+  "updatedAt": "2026-11-04T13:05:24.707Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T12:48:57.800Z",
+      "evidence": "spec from issue #563, official pricing page read 2026-11-04 and read-only run over local transcripts; plan reviewed against spec: each REQ has a task and a test",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T12:48:57.801Z",
+      "evidence": "spec from issue #563, official pricing page read 2026-11-04 and read-only run over local transcripts; plan reviewed against spec: each REQ has a task and a test",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T13:01:47.071Z",
+      "evidence": "sdd check green; ruff check/format green; full suite 6421 passed, 7 env-only hook failures identical with src reverted (worktree imports main package); new tests with 7 mutants each caught",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T13:05:24.707Z",
+      "evidence": "two result reviewers: conforms-with-notes; F1 fixed with test and mutant, F5 fixed, rest recorded in review.md",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-04T12:48:03.301Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-04T12:48:57.551Z",
+      "reason": "brief filled"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-04T12:48:57.800Z",
+      "evidence": "spec from issue #563, official pricing page read 2026-11-04 and read-only run over local transcripts; plan reviewed against spec: each REQ has a task and a test",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-04T12:48:57.801Z",
+      "evidence": "spec from issue #563, official pricing page read 2026-11-04 and read-only run over local transcripts; plan reviewed against spec: each REQ has a task and a test",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-04T12:49:01.554Z",
+      "reason": "spec approved"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-04T12:49:01.815Z",
+      "reason": "plan approved"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-04T13:01:46.857Z",
+      "reason": "implementation done, suite run"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-04T13:01:47.071Z",
+      "evidence": "sdd check green; ruff check/format green; full suite 6421 passed, 7 env-only hook failures identical with src reverted (worktree imports main package); new tests with 7 mutants each caught",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-04T13:05:24.707Z",
+      "evidence": "two result reviewers: conforms-with-notes; F1 fixed with test and mutant, F5 fixed, rest recorded in review.md",
+      "actor": "user"
+    }
+  ]
+}

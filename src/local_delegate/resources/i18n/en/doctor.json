@@ -116,6 +116,7 @@
   "doctor.probe.cost.no_check": "no saved check in {path}: no transcripts on this machine or `{command}` never run",
   "doctor.probe.cost.no_detail": "no detail",
   "doctor.probe.cost.outside": "{n} row(s) outside the band",
+  "doctor.probe.cost.passed_unpriced": "{passed}; unpriced: {models}, {n} row(s) left out of the check",
   "doctor.probe.cost.unpriced": "models without a price in the table: {models}",
   "doctor.probe.credential.blind_many": "the backend requires a credential and {clients} talk over stdio without it: their local_* tools will answer 401",
   "doctor.probe.credential.blind_one": "the backend requires a credential and {clients} talks over stdio without it: its local_* tools will answer 401",

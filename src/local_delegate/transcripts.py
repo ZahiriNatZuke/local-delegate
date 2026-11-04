@@ -94,8 +94,13 @@ class Index:
 
 def request_cost(message: dict) -> float | None:
     """Coste a precio de lista de una petición (USD), con la escritura a 5 min y a 1 h separadas
-    según `usage.cache_creation`; `None` si el modelo no tiene precio (REQ-051)."""
-    p = pricing.entry(str(message.get("model") or ""))
+    según `usage.cache_creation`; `None` si el modelo no tiene precio (REQ-051).
+
+    Un modelo con tramo de prompt largo (`pricing.long_prompt`) paga ese tramo cuando el prompt
+    de la petición (entrada + escrituras + lecturas de caché) pasa del umbral.
+    """
+    model = str(message.get("model") or "")
+    p = pricing.entry(model)
     if p is None:
         return None
     u = message.get("usage") if isinstance(message.get("usage"), dict) else {}
@@ -104,6 +109,16 @@ def request_cost(message: dict) -> float | None:
     w1 = cc.get("ephemeral_1h_input_tokens")
     if w5 is None and w1 is None:
         w5, w1 = u.get("cache_creation_input_tokens") or 0, 0
+    tier = pricing.long_prompt(model)
+    if tier is not None:
+        prompt = (
+            (u.get("input_tokens") or 0)
+            + (w5 or 0)
+            + (w1 or 0)
+            + (u.get("cache_read_input_tokens") or 0)
+        )
+        if prompt > tier["above_tokens"]:
+            p = tier
     return (
         (u.get("input_tokens") or 0) * p["input"]
         + (w5 or 0) * p["w5m"]

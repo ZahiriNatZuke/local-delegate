@@ -116,6 +116,7 @@
   "doctor.probe.cost.no_check": "no hay cotejo guardado en {path}: sin transcripts en esta máquina o `{command}` nunca lanzado",
   "doctor.probe.cost.no_detail": "sin detalle",
   "doctor.probe.cost.outside": "{n} fila(s) fuera de la banda",
+  "doctor.probe.cost.passed_unpriced": "{passed}; sin precio: {models}, {n} fila(s) fuera del cotejo",
   "doctor.probe.cost.unpriced": "modelos sin precio en la tabla: {models}",
   "doctor.probe.credential.blind_many": "el backend exige credencial y {clients} hablan por stdio sin ella: sus tools local_* responderán 401",
   "doctor.probe.credential.blind_one": "el backend exige credencial y {clients} habla por stdio sin ella: sus tools local_* responderán 401",
