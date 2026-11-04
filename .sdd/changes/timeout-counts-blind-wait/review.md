@@ -29,3 +29,5 @@
 ## Required follow-up
 
 - Ninguno.
+- Revisión independiente antes de mezclar: la de los dos jueces de arriba («conforme con notas»), con F1–F6 aplicados en la rama del PR #590. En el PR no hay reviews ni comentarios de GitHub.
+- Mezclado en `main` como `8509e7da` (PR #590) con los 22 checks del PR en verde.

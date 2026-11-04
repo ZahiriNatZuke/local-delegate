@@ -69,3 +69,10 @@
   `test_build_hook.py::test_sdist_carries_what_regenerates_the_mod`, por un `register.js` generado
   e ignorado que dejó la propia suite en el worktree (el sdist de un worktree no lee `.gitignore`):
   borrado, el test pasa.
+
+## Final result
+
+- Merged in `main` as `c5f8333c` (PR #591, 2026-11-04T22:58:25Z), with `Refs #586` (the prompt part, REQ-005, stays open in the issue by the user's decision).
+- PR checks: 22 of 22 green (`gh pr checks 591`: tests on ubuntu/windows/macos, plugin ubuntu/windows/macos, Python 3.11–3.15 matrix, lint, secrets, audit, install-smoke, test-lang-es, ci-gate, CodeQL, Socket, GitGuardian).
+- `main` CI on `c5f8333c`: CI (run 41929860741), CodeQL, Vendor audit and Wiki green.
+- Closed on 2026-11-04 in the 0.49.0 release PR (`chore/release-0.49.0-b`).

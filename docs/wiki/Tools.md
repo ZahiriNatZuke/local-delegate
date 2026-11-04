@@ -64,7 +64,10 @@ map-reduce: el log del panel guarda **una** entrada con `chunks: N`, no N entrad
 trozo se corta por `max_tokens`, se parte y se reintenta (desde la 0.43.0; antes el parcial cortado
 se daba por bueno). Si aun así queda alguno cortado, el resultado lo avisa con el trozo y sus líneas
 («trozos afectados: 2 (líneas 41-80)») y el log lo registra (`finish_reason: length`,
-`truncated_out`).
+`truncated_out`). Desde la 0.49.0 (#580) el tope de salida deja unos 3 tokens por palabra pedida y
+el resumen termina en la última frase o línea completa, no a mitad de palabra; y con `focus` (#558)
+el mensaje al modelo nombra las secciones Markdown que tratan el enfoque y, si el resumen no
+menciona ninguna de sus palabras aunque la entrada sí las tiene, la salida lleva un aviso.
 
 ### Resumen por secciones (experimental, apagado)
 
@@ -144,6 +147,12 @@ Dos cosas que conviene saber y solo estaban en el código:
   con aviso. Una cifra menor se respeta. No se recuenta si el JSON ya trae un número cuyo nombre
   nombra la lista (`total_comments`, `meta.file_count`) o un total genérico (`total_count`,
   `total`, `count`), si la lista está anidada o si dos claves encajan.
+- **Números de línea con `path`** (desde la 0.49.0, #568). Si un campo pide líneas por su nombre
+  (`sections_with_lines`, `start_line`, `heading_line`, `lineas`…; no `location` ni una cantidad
+  como `total_lines`), el modelo ve cada línea como `N| línea` con su número real, también en cada
+  trozo, y en un Markdown recibe el esquema de encabezados con su línea. Las líneas citadas se
+  comprueban contra el fichero: las que no casan van en `_local_delegate.lines_unverified` con aviso.
+  Al trocear, esos campos los une el programa en orden. Sin un campo así, o con `text=`, nada cambia.
 
 ## `local_boilerplate`
 
@@ -254,7 +263,7 @@ producto. Un diff pasado como `diff=` o volcado en una carpeta temporal no tiene
 Desde la 0.48.0, con `path`, si el idioma salió del producto porque no había repo o sus commits no
 lo dejaban claro, el mensaje lleva detrás un `[local-delegate warning: …]` que dice qué idioma se
 usó y cómo cambiarlo (#546). En un worktree recién creado, cuyo reflog aún no tiene commits, se lee
-también el del git dir común (#548). Desde la versión siguiente a la 0.48.0, los asuntos salen de los
+también el del git dir común (#548). Desde la 0.49.0, los asuntos salen de los
 20 últimos commits de HEAD (siguiendo el primer padre), leídos del almacén de objetos de git (sueltos o
 en packs, también como deltas) sin lanzar `git`; el reflog completa los votos si los objetos no se
 pueden leer o dan muy pocos. De un commit de merge cuenta la primera línea del cuerpo (donde GitHub
@@ -332,6 +341,11 @@ como cognado inglés), sin negarla en ninguna frase ni apoyarla en una línea ci
 del fichero, lleva un aviso: puede estar confirmando la premisa de la pregunta. Una respuesta que
 niega la premisa («no hay retención: nunca borra») no avisa. Es una guarda por programa; el prompt
 no cambia.
+
+**Diff troceado (desde la 0.49.0, #582).** Con `path` y un diff unificado, el modelo sabe que los
+números de las cabeceras `@@` no son líneas del parche; al trocear, cada trozo sabe por programa qué
+ficheros tiene y en qué líneas, se toma una nota por fichero y la respuesta termina con el índice
+completo de ficheros y líneas, calculado sin modelo.
 
 ## `local_describe_image`
 

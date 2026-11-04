@@ -4,9 +4,9 @@
   "title": "La espera ciega sin turno cuenta en la explicación del plazo agotado (#575 + #579)",
   "mode": "lite",
   "traceability": "strict",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-11-04T21:48:37.193Z",
-  "updatedAt": "2026-11-04T22:08:48.499Z",
+  "updatedAt": "2026-11-04T23:27:58.126Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -33,10 +33,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-04T23:27:57.675Z",
+      "evidence": "vault projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md",
+      "actor": "user"
     }
   },
   "history": [
@@ -113,6 +113,28 @@
       "at": "2026-11-04T22:08:48.499Z",
       "evidence": "review.md: 2 jueces conforms-with-notes; F1-F6 arreglados con mutante comprobado; F7 aceptado",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-04T23:27:57.256Z",
+      "reason": "conformance approved; PR #590 merged in main as 8509e7da, main CI green"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-04T23:27:57.675Z",
+      "evidence": "vault projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-04T23:27:58.126Z",
+      "reason": "PR #590 merged (8509e7da), 22/22 PR checks and main CI green, memory note written; closed in the 0.49.0 release PR"
     }
   ]
 }
