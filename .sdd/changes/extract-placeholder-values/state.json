@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "slug": "extract-placeholder-values",
+  "title": "local_extract: marcadores de sin dato a null y cuentas de listas vacías",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-04T21:37:57.084Z",
+  "updatedAt": "2026-11-04T22:09:01.496Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T21:39:13.613Z",
+      "evidence": "spec contrastada con el issue 586, su comentario y el codigo de local_extract en server.py",
+      "actor": "agente"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T21:39:14.219Z",
+      "evidence": "plan: cuatro tareas cubren REQ-001 a REQ-008; sin celda de afinidad para local_extract",
+      "actor": "agente"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-04T21:37:57.084Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-04T21:39:13.613Z",
+      "evidence": "spec contrastada con el issue 586, su comentario y el codigo de local_extract en server.py",
+      "actor": "agente"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-04T21:39:14.219Z",
+      "evidence": "plan: cuatro tareas cubren REQ-001 a REQ-008; sin celda de afinidad para local_extract",
+      "actor": "agente"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-04T21:39:19.778Z",
+      "reason": "issue leido"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-04T21:39:20.078Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-04T21:39:20.351Z",
+      "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-04T22:09:01.496Z",
+      "reason": "implementado; suite y revision hechas"
+    }
+  ]
+}

@@ -207,6 +207,8 @@
   "mcp.warning.extract_renamed_keys": "the model spelled requested keys another way, mapped: {pairs}",
   "mcp.warning.extract_null_in_chunks": "document processed in {pieces} chunks and none gave a value for: {fields}; that null may mean \"not seen\", not \"absent\"",
   "mcp.warning.extract_lines_unverified": "cited lines that do not contain what the value names, or outside the file; do not trust those numbers: {lines}",
+  "mcp.warning.extract_placeholder_keys": "the model put a \"no data\" marker (such as N/A) in these keys, returned as null (the values are in `placeholder_keys`): {fields}",
+  "mcp.warning.extract_recounted_keys": "the program counted the list of the input JSON and corrected the model's figure (detail in `recounted_keys`): {pairs}",
   "mcp.warning.lint_invented_files": "the summary names files that do not appear in the input and may be made up: {files}",
   "mcp.warning.sections_not_summarized": "{n} sections not summarized because of the word limit or the model",
   "mcp.warning.sections_not_summarized_one": "1 section not summarized because of the word limit or the model",

@@ -7284,10 +7284,11 @@ def _fill_nulls_from_partials(data: dict, fields: list[str], partials: list[str]
         if isinstance(parsed, dict):
             objects.append(parsed)
     for name in fields:
-        if data.get(name) is not None:
+        if data.get(name) is not None and not _is_no_data_marker(data.get(name)):
             continue
         for obj in objects:
-            if obj.get(name) is not None:
+            # #586: a chunk's "N/A" is not a value; a later chunk may hold the real one.
+            if obj.get(name) is not None and not _is_no_data_marker(obj[name]):
                 data[name] = obj[name]
                 break
 
@@ -7331,6 +7332,142 @@ def _normalize_extract_keys(
     for name in missing:
         data[name] = None
     return missing, renamed, dropped
+
+
+# --- #586: "no data" markers and counts of a top-level list ---------------------------------------
+# The model answered "N/A" for a field the text does not hold: not null, so not in `missing_keys`
+# and no warning, and the caller took it for a value. A closed list of markers (compared whole,
+# casefolded, without a final period) becomes null. Left out on purpose: "none"/"ninguno" (a real
+# answer: zero items), "NA" (a code), "0"/"false", and any text that only contains a marker.
+
+#: The "no data" markers, casefolded. Only a whole top-level string value matches.
+_NO_DATA_MARKERS = frozenset(
+    {
+        "",
+        "n/a",
+        "n.a",
+        "n/d",
+        "s/d",
+        "null",
+        "undefined",
+        "unknown",
+        "desconocido",
+        "desconocida",
+        "no disponible",
+        "not available",
+        "no consta",
+        "no especificado",
+        "no especificada",
+        "not specified",
+        "unspecified",
+        "no mencionado",
+        "no mencionada",
+        "not mentioned",
+        "not found",
+        "no encontrado",
+        "no encontrada",
+        "no aplica",
+        "not applicable",
+        "sin datos",
+        "sin dato",
+        "no data",
+        "sin información",
+        "sin informacion",
+        "no information",
+        "-",
+        "--",
+        "---",
+        "—",
+        "–",
+        "?",
+        "...",
+        "…",
+    }
+)
+
+
+def _is_no_data_marker(value: Any) -> bool:
+    """True for a string that is, whole, a "no data" marker (`"N/A"`, `" unknown. "`, `""`)."""
+    if not isinstance(value, str):
+        return False
+    text = value.strip().casefold()
+    if text not in {"...", "…"}:
+        # A bare "." (`"rootDir": "."`) is a value: the period goes only if something is left.
+        text = text.removesuffix(".").rstrip() or text
+    return text in _NO_DATA_MARKERS
+
+
+def _null_placeholders(data: dict, fields: list[str]) -> dict[str, str]:
+    """Set to null, in place, each requested key whose value is a "no data" marker.
+
+    Returns {key: original value}, in request order. `_local_delegate` is left alone, as in
+    `_normalize_extract_keys`.
+    """
+    found: dict[str, str] = {}
+    for name in dict.fromkeys(fields):
+        if name != _EXTRACT_META_KEY and _is_no_data_marker(data.get(name)):
+            found[name] = data[name]
+            data[name] = None
+    return found
+
+
+#: A requested key that names the count of a list: `number_of_comments`, `num_reviews`,
+#: `count_of_files`, `count_items`, `comment_count` (after camelCase is split to snake_case).
+_COUNT_KEY = re.compile(r"^(?:number_of_|num_|count_of_|count_)(?P<a>.+)$|^(?P<b>.+?)_count$")
+
+
+def _count_target(name: str) -> str | None:
+    """The list a count key names (`number_of_comments` -> `comments`), or None."""
+    snake = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", name.strip())
+    snake = re.sub(r"[\s-]+", "_", snake).casefold()
+    match = _COUNT_KEY.match(snake)
+    if not match:
+        return None
+    return match.group("a") or match.group("b")
+
+
+def _recount_lists(data: dict, fields: list[str], content: str) -> dict[str, dict[str, Any]]:
+    """#586: a count key of a JSON input's top-level list gets the list's length, in place.
+
+    Only when the whole input is a JSON object and exactly one top-level key matches the counted
+    name (itself or with an `s`, `_key_shape`) and holds a list, and the JSON has no top-level key
+    of the requested key's own shape (`"comment_count": 57` next to a page of 10 comments: the
+    document already says the count). The model counted the comments of `"comments": []` as the
+    2 reviews; the program can count. Returns {key: {"model": v, "count": n, "source": list key}}
+    for the values it changed.
+    """
+    targets = {
+        name: target
+        for name in dict.fromkeys(fields)
+        if isinstance(name, str) and name != _EXTRACT_META_KEY and (target := _count_target(name))
+    }
+    body = content.lstrip("﻿ \t\r\n")
+    if not targets or not body.startswith("{"):
+        return {}
+    try:
+        document = json.loads(body)
+    except (ValueError, RecursionError):  # ValueError: also a >4300-digit integer (3.11+)
+        return {}
+    if not isinstance(document, dict):
+        return {}
+    shapes_in_document = {_key_shape(key) for key in document}
+    changed: dict[str, dict[str, Any]] = {}
+    for name, target in targets.items():
+        if _key_shape(name) in shapes_in_document:
+            continue
+        shapes = {_key_shape(target), _key_shape(target) + "s"}
+        sources = [key for key in document if _key_shape(key) in shapes]
+        if len(sources) != 1 or not isinstance(document[sources[0]], list):
+            continue
+        count = len(document[sources[0]])
+        value = data.get(name)
+        same = (
+            isinstance(value, (int, float)) and not isinstance(value, bool) and value == count
+        ) or (isinstance(value, str) and value.strip() == str(count))
+        if not same:
+            changed[name] = {"model": value, "count": count, "source": sources[0]}
+            data[name] = count
+    return changed
 
 
 # --- #568: line numbers in `local_extract` --------------------------------------------------------
@@ -7493,6 +7630,10 @@ def local_extract(
     `line_number`, `start_line`, `lineRange`; also in Spanish) makes the model see line numbers
     (and a Markdown file's headings with their lines), so it can answer for `Read` offset/limit;
     cited lines that do not hold in the file are listed in `lines_unverified`.
+    A value that is a "no data" marker ("N/A", "unknown", "-", "") comes back as null, listed in
+    `missing_keys`, with the model's text in `placeholder_keys`. With a JSON object as input, a
+    field that counts one of its top-level lists (`number_of_comments`) is counted by the program;
+    a figure of the model it corrected is in `recounted_keys`.
 
     Args:
         fields: Names of the fields to extract (JSON keys).
@@ -7673,6 +7814,18 @@ def local_extract(
     # or `auto` after the backend refused the schema) nothing forces the model to it. Normalize
     # always, here, before `_local_delegate` is added (so it is never counted as an extra key).
     missing_keys, renamed_keys, dropped = _normalize_extract_keys(data, fields)
+    # #586: a "no data" marker is null (and counts as missing); a count of a JSON input's list is
+    # the program's, not the model's.
+    placeholders = _null_placeholders(data, fields)
+    recounted = _recount_lists(data, fields, content)
+    for name in recounted:
+        if name in placeholders:
+            # What the model wrote, not the null it was turned into a line above.
+            recounted[name]["model"] = placeholders.pop(name)
+    omitted = [name for name in missing_keys if name not in recounted]
+    missing_keys = [
+        name for name in dict.fromkeys(fields) if name in omitted or name in placeholders
+    ]
     unverified: list[str] = []
     if numbered:
         # #568: the prefix is the input's format, not data: it leaves the other fields; the lines
@@ -7699,13 +7852,12 @@ def local_extract(
         # A truncation warning keeps its exact text (#455 contract); it already says that
         # material may be missing, and the detail stays in `chunked`.
         meta.setdefault("warning", notice)
-    if missing_keys or renamed_keys or dropped:
+    if missing_keys:
+        meta["missing_keys"] = missing_keys
+    if omitted or renamed_keys or dropped:
         notices = []
-        if missing_keys:
-            meta["missing_keys"] = missing_keys
-            notices.append(
-                i18n.t("mcp.warning.extract_missing_keys", fields=", ".join(missing_keys))
-            )
+        if omitted:
+            notices.append(i18n.t("mcp.warning.extract_missing_keys", fields=", ".join(omitted)))
         if renamed_keys:
             meta["renamed_keys"] = renamed_keys
             pairs = ", ".join(f"{key} -> {name}" for key, name in renamed_keys.items())
@@ -7717,6 +7869,23 @@ def local_extract(
             notices.append(i18n.t("mcp.warning.extract_dropped_keys", fields=", ".join(dropped)))
         # An earlier warning (truncation, chunked nulls) keeps its exact text (#455 contract).
         meta.setdefault("warning", "; ".join(notices))
+    late_notices = []
+    if placeholders:
+        # #586: appended, as #497 does: an earlier warning keeps its exact text (#455 contract).
+        meta["placeholder_keys"] = placeholders
+        late_notices.append(
+            i18n.t("mcp.warning.extract_placeholder_keys", fields=", ".join(placeholders))
+        )
+    if recounted:
+        meta["recounted_keys"] = recounted
+        pairs = ", ".join(
+            f"{name} = {info['count']} ({info['source']})" for name, info in recounted.items()
+        )
+        late_notices.append(i18n.t("mcp.warning.extract_recounted_keys", pairs=pairs))
+    if late_notices:
+        previous = meta.get("warning")
+        joined = "; ".join(late_notices)
+        meta["warning"] = f"{previous}; {joined}" if previous else joined
     if unverified:
         meta["lines_unverified"] = unverified
         # Appended, as #497 does: an earlier warning keeps its exact text and this one still shows.

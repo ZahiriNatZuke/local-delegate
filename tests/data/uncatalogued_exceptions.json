@@ -414,6 +414,12 @@
     },
     {
       "file": "src/local_delegate/server.py",
+      "text": "sin información",
+      "kind": "verbatim",
+      "reason": "marcador de «sin dato» de `_NO_DATA_MARKERS` (#586): se compara con la salida del modelo local para devolver null; son datos, nunca salida"
+    },
+    {
+      "file": "src/local_delegate/server.py",
       "text": "un objeto JSON válido con exactamente estas claves: {{}}",
       "kind": "verbatim",
       "reason": "prompt del modelo local: entra en la huella de afinidad (`matrix.PROMPT_INPUTS`) y en los corpus congelados (`scripts/build_corpus.py`), que lo comparan tal cual; no es texto de interfaz y su idioma lo decide REQ-028 (B2b-2 no lo traduce)"
