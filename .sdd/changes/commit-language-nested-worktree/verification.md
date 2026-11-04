@@ -43,7 +43,16 @@ Without a declaration, list what was run. Never invent a command. -->
 | merges | «use the merge subject» | `any(startswith("Merge pull request"))` |
 | short history filled from the reflog | «history replaces the reflog when not empty» | `("es","short_history") == ("en","repo")` |
 | delta depth cap | «no depth check» (both) | all six subjects come back |
-| huge packed-refs | «no size check» (both) | subjects come back |
+| huge packed-refs (one cap now, on bytes read) | «no packed-refs cap» | subjects come back |
+| hostile delta chain (review of #562) | «no call budget» | elapsed 14.1 s, not < 4.5 s |
+| call budget counts bytes | «spend ignores the bytes» | subjects come back |
+| directory in place of a loose object | «open anything» | `[] == ENGLISH` |
+| subject in history and reflog votes once | «no dedupe» | `('en','repo') == ('es','mixed_repo')` |
+
+Point 1 of the #562 review: `test_a_short_history_is_filled_from_the_reflog` (damaged loose
+`HEAD~2`, no repack) passes 3/3 on this PC with git 2.56.0.windows.4. After merging `origin/main`
+(#561): the 3 commit-language files plus the name and catalogue checks give 137 passed.
+`_guess_language` keeps its signature and body (#561 calls it in `server.py`).
 
 ## Quality checks
 
