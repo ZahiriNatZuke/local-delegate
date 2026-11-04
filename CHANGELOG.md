@@ -43,6 +43,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   y varias esperas de turno a la vez dejan de sondear en cuanto una decide que el daemon no
   responde. Con el daemon parado y el backend sano (#512) todo sigue funcionando, en serie.
 
+- **`local_explain_code` sobre un diff troceado da el índice completo con las líneas del parche
+  (#582).** Preguntado por los ficheros de un diff de 32 con sus líneas, daba 5 y un rango 242–257
+  para uno que está en 1–23. La numeración `N| ` de cada trozo era correcta: el 242–257 es el
+  `+242,16` de una cabecera `@@`, que el modelo tomó por líneas del parche. Y faltaban ficheros
+  porque el map pedía una viñeta por función (un diff no tiene definiciones en la columna 0) y el
+  reduce tenía prohibido enumerar. Ahora, con `path` y un diff unificado, el system dice que los
+  números de las cabeceras `@@` no son líneas del parche; al trocear, cada trozo sabe por programa
+  qué ficheros tiene y en qué líneas, el map toma una nota por fichero, el reduce recibe el índice
+  completo y la respuesta termina con ese índice, calculado sin modelo: hasta 200 ficheros si la
+  pregunta pide ficheros o líneas, 50 si no. El índice sigue las cuentas de cada hunk y entiende
+  `diff -ru`, SVN (`Index:`), series de `format-patch` y rutas entre comillas o con
+  `diff.mnemonicPrefix`. Con el recibo apagado, una respuesta troceada con pregunta o sobre un diff
+  dice de cuántos trozos sale; la explicación simple de un fichero sin pregunta no cambia.
+
 - **El daemon ya no se queda vivo sin escuchar ni bloquea al siguiente (#576).** En Windows, un
   `accept` que falla hace que asyncio cierre el socket de escucha para siempre y solo lo cuente a su
   manejador de errores. Basta un cliente que resetea su conexión antes de que se acepte, y eso es lo

@@ -4715,6 +4715,8 @@ def _code_pieces(text: str, budget: int) -> list[str] | None:
 # N el número ABSOLUTO del fichero (el que usa `Read offset`), también dentro de cada trozo. Se
 # numera ANTES de empaquetar, así el presupuesto en chars mide lo que de verdad viaja.
 LINE_PREFIX_SEP = "| "
+#: #582: the `N| ` of `_number_lines` at a line start, to know which lines a numbered piece holds.
+_PIECE_LINE = re.compile(r"(?m)^(\d{1,7})\| ")
 
 
 def _number_lines(text: str, start: int = 1) -> str:
@@ -4768,6 +4770,59 @@ _LINE_NUMBERS_CLAUSE = (
     " Cada línea del código empieza por su número de línea en el fichero seguido de «| »; ese "
     "prefijo no es parte del código. Cuando ubiques o cites algo, da ese número de línea."
 )
+
+# #582: asked for the lines of each file of a 32-file diff, the model gave 242–257 for a file at
+# lines 1–23 of the patch: exactly the `+242,16` of a hunk header. The `N| ` numbering was right;
+# the model read the header's numbers (lines of the file before and after) as lines of the patch.
+_DIFF_LINES_CLAUSE = (
+    " En este diff, ese número es la línea del propio parche; los números de las cabeceras "
+    "«@@ -a,b +c,d @@» son líneas de los ficheros antes y después del cambio, no del parche: no "
+    "los des como líneas del parche."
+)
+
+#: #582: files of a diff listed with their lines at the end of a chunked `local_explain_code`
+#: whose question asks for files or lines (`line_check.asks_for_files`) ...
+DIFF_INDEX_MAX_FILES = 200
+#: ... and for any other question, or none: the index costs the caller's context.
+DIFF_INDEX_SHORT_FILES = 50
+#: #582: files of the diff named in the hint of one map chunk.
+DIFF_HINT_MAX_FILES = 20
+
+
+def _diff_index_lines(
+    ranges: list[tuple[int, int, str]],
+    max_chars: int | None = None,
+    limit: int = DIFF_INDEX_MAX_FILES,
+    more_key: str = "mcp.explain.occurrences_more",
+) -> str:
+    """`- path: first–last` per file of the diff, cut at `limit` files or `max_chars`."""
+    out: list[str] = []
+    size = 0
+    for first, last, path in ranges[:limit]:
+        line = f"- {path}: {first}–{last}"
+        if max_chars is not None and size + len(line) + 1 > max_chars:
+            break
+        out.append(line)
+        size += len(line) + 1
+    rest = len(ranges) - len(out)
+    if rest > 0:
+        out.append(i18n.t(more_key, count=rest).strip())
+    return "\n".join(out)
+
+
+def _diff_hint_files(held: list[tuple[int, int, str]]) -> str:
+    """#582: the files of one chunk for its map hint, at most `DIFF_HINT_MAX_FILES` of them."""
+    listed = ", ".join(
+        f"{path} (líneas {first}–{last})" for first, last, path in held[:DIFF_HINT_MAX_FILES]
+    )
+    rest = len(held) - DIFF_HINT_MAX_FILES
+    return listed + (i18n.t("mcp.explain.occurrences_more", count=rest) if rest > 0 else "")
+
+
+def _diff_hint_reserve(ranges: list[tuple[int, int, str]]) -> int:
+    """#582: the most a chunk's diff hint can take, to leave it room in the chunk's budget."""
+    longest = sorted(ranges, key=lambda r: len(r[2]), reverse=True)[:DIFF_HINT_MAX_FILES]
+    return len(_diff_hint_files(longest)) + 200 if ranges else 0
 
 
 def _verified_lines(answer: str, question: str, content: str, truncated: bool = False) -> str:
@@ -8147,7 +8202,16 @@ def local_explain_code(
     # Con `code=` no: quien llama ya tiene el texto delante y no hay fichero al que remitir, así
     # que el texto en línea sigue igual byte a byte y sin el ~10-15 % de chars del prefijo.
     numbered = bool(path)
+    # #582: with `path` and a unified diff, each file's lines in the patch, by program; the model
+    # is told the `@@` numbers are not lines of the patch. Every other input: byte for byte.
+    diff_ranges = (
+        line_check.diff_file_ranges(content)
+        if numbered and sections.is_unified_diff(content)
+        else []
+    )
     lines_clause = _LINE_NUMBERS_CLAUSE if numbered else ""
+    if diff_ranges:
+        lines_clause += _DIFF_LINES_CLAUSE + _DIFF_NOTE
     model_content = _number_lines(content) if numbered else content
     system = (
         _guard(
@@ -8200,7 +8264,24 @@ def local_explain_code(
         # answer was an index and the question only reached a clause of the reduce system. Now
         # every step carries the question: each chunk notes what answers it, and the reduce
         # answers it or says the notes do not. Without a question, every prompt is unchanged.
-        if question:
+        if diff_ranges:
+            # #582: a diff has files, not top-level definitions (its lines start with `+`, `-` or
+            # a space), so «one bullet per function» left most chunks with «Nada relevante» and
+            # the files out of the answer. One bullet per file, every file of the chunk.
+            if question:
+                map_format = (
+                    f"notas para responder a la pregunta «{question}»: una viñeta por CADA "
+                    "fichero del diff de este fragmento, sin omitir ninguno, empezando por su ruta "
+                    "y sus líneas del parche, como «ruta (líneas A–B):», seguido de lo que cambia "
+                    "en él que sirva para responder. No respondas todavía la pregunta"
+                )
+            else:
+                map_format = (
+                    "una viñeta por CADA fichero del diff de este fragmento, sin omitir ninguno, "
+                    "empezando por su ruta y sus líneas del parche, como «ruta (líneas A–B):», "
+                    "seguido de qué cambia en él. No expliques todavía el diff entero"
+                )
+        elif question:
             where = (
                 "su nombre literal y el número de línea donde empieza, como «nombre (línea N):»"
                 if numbered
@@ -8249,12 +8330,32 @@ def local_explain_code(
                 "pregunta; este fragmento no es «Nada relevante». Fragmento"
             )
 
+        def _diff_hint(piece: str) -> str:
+            # #582: the files of the diff this chunk holds, with their lines, by program.
+            numbers = [int(m.group(1)) for m in _PIECE_LINE.finditer(piece)]
+            if not diff_ranges or not numbers:
+                return ""
+            low, high = numbers[0], numbers[-1]
+            held = [r for r in diff_ranges if r[0] <= high and r[1] >= low]
+            if not held:
+                return ""
+            return (
+                ". Ficheros del diff que hay en este fragmento, con sus líneas del parche "
+                f"(por programa, fiables): {_diff_hint_files(held)}"
+            )
+
+        def _hints(piece: str) -> str:
+            diff, ids = _diff_hint(piece), _map_hint(piece)
+            return f"{diff}. Fragmento" if diff and not ids else diff + ids
+
         def _build_map(piece: str) -> str:
             if question:
                 return (
                     "Toma notas de este fragmento de código para responder a la pregunta "
-                    f"«{question}»{_map_hint(piece)}:\n\n{piece}"
+                    f"«{question}»{_hints(piece)}:\n\n{piece}"
                 )
+            if hint := _diff_hint(piece):
+                return f"Toma notas de este fragmento de un diff{hint}. Fragmento:\n\n{piece}"
             return f"Toma notas de este fragmento de código:\n\n{piece}"
 
         exact_lines = ""
@@ -8272,8 +8373,32 @@ def local_explain_code(
                     "«Nada relevante» no significa que el código no trate de ellos.\n\n"
                 )
 
+        diff_head = (
+            "Índice COMPLETO de los ficheros del diff, con sus líneas del parche (por programa, "
+            f"fiable):\n{_diff_index_lines(diff_ranges, inventory_cap)}\n\n"
+            if diff_ranges
+            else ""
+        )
+
         def _build_reduce(joined: str) -> str:
             head = f"{names}\n\n" if names else ""
+            if diff_ranges:
+                # #582: the reduce was told «no enumeres sus partes» and had an empty inventory (a
+                # diff has no top-level definitions), so an index question kept 5 of 32 files.
+                task = (
+                    f"Responde a la pregunta «{question}» con lo que digan las notas y el índice; "
+                    "si pide los ficheros o sus líneas, usa el índice entero. Si no bastan para "
+                    "responderla, dilo claramente"
+                    if question
+                    else "Explica el cambio completo"
+                )
+                return (
+                    f"{diff_head}{head}{exact_lines}Estas son notas EN ORDEN sobre los fragmentos "
+                    "de un mismo diff unificado. El índice de arriba es COMPLETO y sus líneas son "
+                    "exactas; las notas pueden no cubrirlo entero. Los números de línea son del "
+                    "parche, no de las cabeceras @@: consérvalos, y si se pregunta dónde está "
+                    f"algo, responde con «ruta: líneas». {task}:\n\n{joined}"
+                )
             if question:
                 where = (
                     " Las notas y la lista dan números de línea del fichero: consérvalos, y si "
@@ -8323,6 +8448,47 @@ def local_explain_code(
             line = i18n.t("mcp.explain.not_mentioned", items=", ".join(missing))
             return f"{answer.rstrip()}\n\n{line}"
 
+        if diff_ranges:
+            # #582: the diff hint travels with each chunk, so it comes out of the chunk's budget.
+            piece_budget = max(config.CHUNK_MIN_CHARS, budget - _diff_hint_reserve(diff_ranges))
+            pieces = _numbered_code_pieces(content, piece_budget)
+        else:
+            pieces = (
+                _numbered_code_pieces(content, budget)
+                if numbered
+                else _code_pieces(content, budget)
+            )
+        if pieces is None:  # what `_chat_map_reduce` does without `pieces`, so the count is known
+            pieces = _chunk_text(model_content, budget)
+        # #504: an answer to a question is not an inventory; appending the registered names it
+        # does not mention would turn it back into one. #460: with `path`, its line numbers are
+        # checked at the end, on the whole answer and against the whole file.
+        finish = check_lines if question else _add_not_mentioned
+        chunked_notice = i18n.t("mcp.explain.chunked", pieces=len(pieces))
+
+        def _postprocess(answer: str, truncated: bool) -> str:
+            # #582: an answer to a question, or about a diff, built from chunks says so, feedback
+            # on or off, right after the prose and before what the program adds (exact lines,
+            # the diff's index). A plain explanation of a file keeps its output byte for byte
+            # (frozen by `test_without_a_question_the_prompts_are_unchanged`). With the feedback
+            # on, the receipt already says the parts and passes, so the notice is left out.
+            if (question or diff_ranges) and not config.FEEDBACK_ENABLED:
+                answer = f"{answer.rstrip()}\n\n{chunked_notice}"
+            if finish is not None:
+                answer = finish(answer, truncated)
+            if diff_ranges:
+                # The whole index only when the question asks for files or lines; otherwise a
+                # short one that says how to get the rest.
+                whole = line_check.asks_for_files(question)
+                listing = _diff_index_lines(
+                    diff_ranges,
+                    limit=DIFF_INDEX_MAX_FILES if whole else DIFF_INDEX_SHORT_FILES,
+                    more_key="mcp.explain.occurrences_more" if whole else "mcp.explain.diff_more",
+                )
+                header = i18n.t("mcp.explain.diff_index", count=len(diff_ranges))
+                answer = f"{answer.rstrip()}\n\n{header}\n{listing}"
+            return answer
+
         return _chat_map_reduce(
             config.MODEL_CODE,
             map_system,
@@ -8338,16 +8504,9 @@ def local_explain_code(
             build_reduce=_build_reduce,
             raw_len=raw_len,
             path=path,
-            pieces=(
-                _numbered_code_pieces(content, budget)
-                if numbered
-                else _code_pieces(content, budget)
-            ),
+            pieces=pieces,
             tokens_for=_explain_map_max_tokens,
-            # #504: an answer to a question is not an inventory; appending the registered names
-            # it does not mention would turn it back into one. #460: with `path`, its line
-            # numbers are checked at the end, on the whole answer and against the whole file.
-            postprocess=check_lines if question else _add_not_mentioned,
+            postprocess=_postprocess,
         )
 
     return _chat(

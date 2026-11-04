@@ -570,6 +570,173 @@ def markdown_outline(content: str) -> list[tuple[int, str]]:
     return out
 
 
+#: #582: words of a question that ask for the files of a diff or their lines, compared without
+#: accents or case, as whole words. A question with one of them gets the whole index; any other
+#: gets a short one. A closed list, not a judgment of the question: «¿qué cambia?» is not in it.
+FILE_QUESTION_WORDS = frozenset(
+    {
+        "fichero", "ficheros", "archivo", "archivos", "file", "files", "ruta", "rutas", "path",
+        "paths", "linea", "lineas", "line", "lines", "rango", "rangos", "range", "ranges",
+        "indice", "index",
+    }
+)  # fmt: skip
+_QUESTION_WORD = re.compile(r"[a-z]+")
+
+
+def asks_for_files(question: str | None) -> bool:
+    """#582: whether `question` asks for the files of a diff or their lines (`FILE_QUESTION_WORDS`)."""
+    if not question:
+        return False
+    return any(w in FILE_QUESTION_WORDS for w in _QUESTION_WORD.findall(_fold(question)))
+
+
+#: #582: a hunk header and its line counts (`-a,b +c,d`; a missing count is 1).
+_HUNK_COUNTS = re.compile(r"@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@")
+#: The `a/`, `b/` prefixes of git, and the `i/ w/ c/ o/` of `diff.mnemonicPrefix`.
+_DIFF_PREFIX = re.compile(r"[abiwco]/")
+_QUOTED_PATH = r'"(?:[^"\\]|\\.)*"'
+_GIT_SAME_PATH = re.compile(r"diff --git [abiwco]/(.+) [abiwco]/\1$")
+_GIT_PATH_PAIR = re.compile(rf"diff --git ({_QUOTED_PATH}|\S+) ({_QUOTED_PATH}|\S+)$")
+#: Where a file of a `format-patch` series stops: its signature, or the next patch's mail header.
+_SERIES_FROM = re.compile(r"From [0-9a-f]{40} ")
+_OCTAL = re.compile(r"[0-7]{1,3}")
+_C_ESCAPES = {"n": "\n", "t": "\t", "r": "\r", "a": "\a", "b": "\b", "f": "\f", "v": "\v"}
+
+
+def _unquote_path(name: str) -> str:
+    """A path as `core.quotePath` writes it (`"b/espa\\303\\261a.py"`), back to its text."""
+    if len(name) < 2 or name[0] != '"' or name[-1] != '"':
+        return name
+    body, out, i = name[1:-1], bytearray(), 0
+    while i < len(body):
+        if body[i] == "\\" and i + 1 < len(body):
+            octal = _OCTAL.match(body, i + 1)
+            if octal:
+                out.append(int(octal.group(), 8) & 0xFF)
+                i = octal.end()
+                continue
+            out += _C_ESCAPES.get(body[i + 1], body[i + 1]).encode("utf-8")
+            i += 2
+            continue
+        out += body[i].encode("utf-8")
+        i += 1
+    return out.decode("utf-8", "replace")
+
+
+def _diff_path(raw: str) -> str | None:
+    """The path of a `--- ` / `+++ ` header (or a `diff --git` token); `None` for `/dev/null`."""
+    name = raw.split("\t", 1)[0].rstrip() if not raw.startswith('"') else raw.rstrip()
+    name = _unquote_path(name)
+    if name == "/dev/null":
+        return None
+    return name[2:] if _DIFF_PREFIX.match(name) else name
+
+
+def _git_header_path(line: str) -> str:
+    """The path of a `diff --git` line (the new one), for a file without `---`/`+++` headers."""
+    same = _GIT_SAME_PATH.match(line)
+    if same:
+        return same.group(1)
+    pair = _GIT_PATH_PAIR.match(line)
+    if pair:
+        return _diff_path(pair.group(2)) or _diff_path(pair.group(1)) or ""
+    return line[len("diff --git ") :].split(" b/", 1)[-1]
+
+
+@dataclass
+class _DiffEntry:
+    start: int
+    header: str = ""
+    old: str | None = None
+    new: str | None = None
+    end: int | None = None
+
+
+def diff_file_ranges(content: str) -> list[tuple[int, int, str]]:
+    """#582: `(first, last, path)` of each file of a unified diff, in lines of the patch itself.
+
+    A file starts at its header: `diff --git`, or the `--- ` line followed by `+++ `, moved back
+    to a `diff -…`, `Index: ` or `===` line just before it (`diff -ru`, SVN). It ends on the line
+    before the next file, before a `format-patch` signature (`-- `) or the next patch's mail
+    (`From <sha> `), or on the last line, without the trailing empty lines of the patch. Inside a
+    hunk the counts of its `@@ -a,b +c,d @@` are followed, so a content line that looks like a
+    header (`--- comment`) does not open a file. Lines counted from 1 and split only on `\\n`,
+    like `_number_lines` and `Read`. The path is the one of `+++ b/x`, the one of `--- a/x` for a
+    deletion, the `rename to`, or the one of the `diff --git` line; quoted paths are unquoted and
+    the `a/ b/ i/ w/ c/ o/` prefixes dropped. Anything that is not a diff gives `[]`.
+    """
+    lines = content.split("\n")
+    files: list[_DiffEntry] = []
+    current: _DiffEntry | None = None
+    header_zone = False  # after a file starts and before its first hunk
+    pending: int | None = None  # a `diff -ru` / `Index:` line waiting for its `--- `
+    old_left = new_left = 0
+
+    def close(at: int) -> None:
+        if current is not None and current.end is None:
+            current.end = at
+
+    for i, line in enumerate(lines):
+        if old_left > 0 or new_left > 0:
+            mark = line[:1]
+            if mark in ("", " "):
+                old_left, new_left = old_left - 1, new_left - 1
+                continue
+            if mark == "-":
+                old_left -= 1
+                continue
+            if mark == "+":
+                new_left -= 1
+                continue
+            if mark == "\\":
+                continue
+            old_left = new_left = 0  # a malformed hunk: read the line as a header
+        if line.startswith("@@"):
+            counts = _HUNK_COUNTS.match(line)
+            if counts and current is not None:
+                old_left = int(counts.group(1)) if counts.group(1) is not None else 1
+                new_left = int(counts.group(2)) if counts.group(2) is not None else 1
+                header_zone = False
+            continue
+        if line.startswith("diff --git "):
+            close(i)
+            current = _DiffEntry(i, header=_git_header_path(line))
+            files.append(current)
+            header_zone, pending = True, None
+        elif line == "-- " or _SERIES_FROM.match(line):
+            close(i)
+            current, header_zone, pending = None, False, None
+        elif not header_zone and (
+            line.startswith(("diff ", "Index: ")) or (line.startswith("===") and pending is None)
+        ):
+            pending = i  # a `diff -ru` / SVN preamble: the next `--- ` file starts here
+        elif line.startswith("--- ") and i + 1 < len(lines) and lines[i + 1].startswith("+++ "):
+            if current is None or not header_zone:
+                start = pending if pending is not None else i
+                close(start)
+                current = _DiffEntry(start)
+                files.append(current)
+                header_zone = True
+            current.old = _diff_path(line[4:])
+            pending = None
+        elif line.startswith("+++ ") and current is not None and header_zone:
+            current.new = _diff_path(line[4:])
+        elif line.startswith("rename to ") and current is not None and header_zone:
+            current.new = _unquote_path(line[len("rename to ") :])
+
+    if current is not None and current.end is None:
+        end = len(lines)
+        while end - 1 > current.start and lines[end - 1] == "":
+            end -= 1
+        current.end = end
+    out: list[tuple[int, int, str]] = []
+    for entry in files:
+        path = entry.new or entry.old or entry.header
+        if path and entry.end is not None:
+            out.append((entry.start + 1, entry.end, path))
+    return out
+
+
 #: Keys of an extracted object whose number is a line bound: `{"heading": ..., "start": 12}`.
 _BOUND_KEYS = frozenset(
     {
