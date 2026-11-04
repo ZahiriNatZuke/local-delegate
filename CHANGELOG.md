@@ -6,6 +6,43 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.49.0] - 2026-11-04
+
+Más fiable bajo carga y con datos dudosos. `local_extract` puede dar números de línea reales
+con `path` y ya no toma un «N/A» por dato; con el turno de la otra máquina sin responder, las
+delegaciones van de una en una y se cortan pronto en vez de competir a ciegas por el backend; el
+daemon ya no se queda vivo sin escuchar; un plazo agotado dice dónde se fue el tiempo y en qué trozo;
+`local_summarize` no corta a mitad de palabra ni deja fuera la sección del enfoque;
+`local_explain_code` da el índice completo de un diff troceado; `local_commit_msg` toma el idioma de
+los commits de HEAD; y `recompute-cost` y el vigilante de precios entienden Claude Haiku 5.5.
+
+### Cómo actualizar
+
+- **En la PC y en la Mac:** ejecuta `local-delegate update` o, si instalaste con versión fija,
+  reinstala con `uv tool install --force --no-cache "local-delegate-mcp[llamaswap]==0.49.0"` (con
+  tus extras). Reinicia el daemon y haz `/mcp` en Claude Code (o abre una sesión nueva): las
+  sesiones abiertas siguen con el servidor MCP de la 0.48.0 hasta entonces.
+- No hace falta cambiar la configuración. La variable nueva `LOCAL_DELEGATE_REMOTE_TURN_CUT`
+  (`1` por defecto; `0` lo apaga) es opcional.
+
+### Añadido
+
+- **`local_extract` puede dar números de línea con `path` (#568).** Un campo de localización
+  (`secciones_con_lineas`) sobre un Markdown grande volvía `null` en los 8 trozos: el modelo nunca
+  veía un número de línea. Ahora, con `path` y un campo cuyo nombre pide líneas (una palabra
+  `lines`, `lineas`, `lineno`, o `line`/`linea` junto a `number`, `start`, `end`, `range`,
+  `heading`, `section`, `título` o `sección`: `sections_with_lines`, `start_line`, `heading_line`;
+  no `location`, `price_range`, `line_items` ni una cantidad como `lines_added`, `total_lines` o
+  `lines_of_code`), el modelo ve cada línea como `N| línea` con su número absoluto del fichero, también
+  en cada trozo (las piezas de #460); en un Markdown (`.md`, `.markdown`, `.mdx`) recibe además el
+  esquema de encabezados con su línea, calculado por programa, si cabe en el 15 % del trozo. El
+  prefijo que el modelo copie en los demás campos se quita, y las líneas citadas en los campos de localización
+  se comprueban contra el fichero: las que no casan van en `_local_delegate.lines_unverified` con
+  un aviso (añadido a los anteriores). Al trocear, los campos de localización los une el programa
+  a partir de los trozos, en orden, así que un reduce cortado por el tope de salida no pierde las
+  secciones. Sin un campo así, o con `text=`, nada cambia. La skill y el bloque de memoria dicen
+  ahora que el nombre del campo tiene que pedir líneas.
+
 ### Corregido
 
 - **`local_extract` ya no pasa por dato un «N/A» ni inventa la cuenta de una lista vacía (#586).**
@@ -104,22 +141,6 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   relevo. Los avisos y errores del daemon, y el motivo de cada salida o relevo, quedan en `daemon-errors.log` (como
   máximo dos ficheros de 256 KB), y `doctor` distingue «proceso vivo sin escuchar» de «no hay
   daemon».
-
-- **`local_extract` puede dar números de línea con `path` (#568).** Un campo de localización
-  (`secciones_con_lineas`) sobre un Markdown grande volvía `null` en los 8 trozos: el modelo nunca
-  veía un número de línea. Ahora, con `path` y un campo cuyo nombre pide líneas (una palabra
-  `lines`, `lineas`, `lineno`, o `line`/`linea` junto a `number`, `start`, `end`, `range`,
-  `heading`, `section`, `título` o `sección`: `sections_with_lines`, `start_line`, `heading_line`;
-  no `location`, `price_range`, `line_items` ni una cantidad como `lines_added`, `total_lines` o
-  `lines_of_code`), el modelo ve cada línea como `N| línea` con su número absoluto del fichero, también
-  en cada trozo (las piezas de #460); en un Markdown (`.md`, `.markdown`, `.mdx`) recibe además el
-  esquema de encabezados con su línea, calculado por programa, si cabe en el 15 % del trozo. El
-  prefijo que el modelo copie en los demás campos se quita, y las líneas citadas en los campos de localización
-  se comprueban contra el fichero: las que no casan van en `_local_delegate.lines_unverified` con
-  un aviso (añadido a los anteriores). Al trocear, los campos de localización los une el programa
-  a partir de los trozos, en orden, así que un reduce cortado por el tope de salida no pierde las
-  secciones. Sin un campo así, o con `text=`, nada cambia. La skill y el bloque de memoria dicen
-  ahora que el nombre del campo tiene que pedir líneas.
 
 - **Los tests de precios de Claude Haiku 5.5 ya no tumban el PR del vigilante (#567).** Fijaban a
   mano las cifras de la tabla, así que cualquier cambio legítimo de precio que propusiera el
@@ -4566,7 +4587,8 @@ los ficheros de datos. Lo que lee el usuario sigue en español.
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.48.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.49.0...HEAD
+[0.49.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.48.0...v0.49.0
 [0.48.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.3...v0.48.0
 [0.47.3]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.2...v0.47.3
 [0.47.2]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.47.1...v0.47.2

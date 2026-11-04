@@ -167,7 +167,7 @@ al contexto de Claude, y de ahí sale el ahorro.
 |---|---|---|
 | `local_summarize` | Resume texto o archivo; `focus` opcional para decir qué conservar (p. ej. «cifras de configuración») | mecánico / largo (auto) |
 | `local_classify` | Devuelve UNA etiqueta de una lista | mecánico |
-| `local_extract` | Extrae campos → **objeto validado** con exactamente las claves pedidas (las que falten, `null`), no una cadena que haya que parsear | mecánico / largo (auto) |
+| `local_extract` | Extrae campos → **objeto validado** con exactamente las claves pedidas (las que falten o vengan como «N/A», `null`), no una cadena que haya que parsear; con `path`, números de línea reales para un campo que los pida | mecánico / largo (auto) |
 | `local_boilerplate` | Genera código desde una spec y lo **escribe en `target`**; devuelve solo un recibo | código |
 | `local_delegate` | Escape genérico texto→texto | mecánico (o el que pases) |
 | `local_lint_summary` | Resume logs de lint/tests/CI | mecánico / largo (auto) |
