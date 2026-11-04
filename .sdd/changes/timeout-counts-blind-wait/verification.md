@@ -34,3 +34,10 @@
   este cambio: «cases.json ya no coincide con el constructor»); en CI se salta por checkout
   superficial y el CI de `main` está en verde. Fuera de alcance.
 - Sin prueba en vivo con un backend real (necesita un plazo agotado de verdad).
+
+## Final result
+
+- Merged in `main` as `8509e7da` (PR #590, 2026-11-04T22:26:51Z).
+- PR checks: 22 of 22 green (`gh pr checks 590`).
+- `main` CI on `8509e7da`: CI (run 41925350983), CodeQL and Vendor audit green.
+- Closed on 2026-11-04 in the 0.49.0 release PR (`chore/release-0.49.0-b`).

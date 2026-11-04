@@ -2,24 +2,26 @@
 
 ## Current state
 
-- SDD status:
-- Last completed gate:
-- Current revision:
+- SDD status: closed (cerrado en el PR de la release 0.49.0, rama `chore/release-0.49.0-b`)
+- Last completed gate: memory
+- Current revision: mezclado en `main` como `8509e7da` (PR #590, 2026-11-04T22:26:51Z)
 
 ## What changed
 
-- Summarize completed work without reproducing the full Git history.
+- La nota de un `read_timeout` («esperó N s…») cuenta también la espera sin turno: fases internas `turn_unusable` y `blind` en `QUEUE_PHASES`.
+- El log sigue publicando solo las fases de `PHASES` (`turn`, `slot`, `backend`); las internas no salen al evento.
+- Ajustes de la revisión: el test espera a que la segunda llamada esté en cola antes de dormir, conjunto literal en el assert del log, tests unitarios de cada fase sola y caso bajo 1 s.
 
 ## Decisions
 
-- Record decisions that a future session cannot reliably derive from code alone.
+- La nota puede pasar de `turn_wait_ms` con un daemon lento en fallar; se aceptó y se matizó en el CHANGELOG.
+- La nota suma esperas de trozos anteriores, igual que en #575 (F7, aceptado).
 
 ## Next action
 
-- State the single best next step and any prerequisite context.
+- Ninguna para este cambio. Falta una prueba en vivo con un plazo agotado de verdad, que no se hizo.
 
 ## Memory
 
-- Canonical note:
-- Indexes updated:
-
+- Canonical note: vault `projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md`
+- Indexes updated: índice de jornadas de `projects/local-delegate` (sesión principal)
