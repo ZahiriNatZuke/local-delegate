@@ -1340,6 +1340,8 @@ def _log_event(
     focus: bool = False,
     connection_failure: str | None = None,
     read_timeout_cause: str | None = None,
+    read_timeout_load_ms: int | None = None,
+    read_timeout_piece: int | None = None,
     turn_wait_ms: int | None = None,
     turn: str | None = None,
     turn_yields: int | None = None,
@@ -1530,6 +1532,14 @@ def _log_event(
         # Concurrency PC+Mac, lot 1 (REQ-005): why a `read_timeout` happened, only when known.
         if read_timeout_cause is not None:
             rec["read_timeout_cause"] = read_timeout_cause
+        # Issue #572: where a `read_timeout`'s deadline went, only when known: the model load seen
+        # inside it, and the piece of a chunked operation that ran out (0: the reduce), with the
+        # pieces announced, which `chunks` leaves out when the first call already failed.
+        if read_timeout_load_ms is not None:
+            rec["read_timeout_load_ms"] = int(read_timeout_load_ms)
+        if read_timeout_piece is not None and pieces is not None and pieces > 1:
+            rec["read_timeout_piece"] = int(read_timeout_piece)
+            rec.setdefault("pieces", int(pieces))
         # Resumen estructurado (SDD resumen-por-secciones): cuántas secciones del nivel
         # estructural tenía el documento, y si se pidió un enfoque. Nunca el texto del enfoque
         # ni los títulos: el log no guarda contenido.
@@ -1774,6 +1784,9 @@ class ChatResult:
     #: `/running`: `model_swap` (another model was loaded and it never switched) or `busy` (the
     #: requested one was loaded). `None` otherwise or when unknown. Goes to the log as is.
     read_timeout_cause: str | None = None
+    #: Issue #572: on a `read_timeout`, ms from the send to the moment its watch saw the
+    #: requested model `ready` after seeing it load; `None` when no load was seen.
+    read_timeout_load_ms: int | None = None
 
 
 @dataclass(frozen=True)
@@ -2088,6 +2101,43 @@ def _read_timeout_text(model: str, probe: _LoadProbe) -> tuple[str, str | None]:
     return i18n.t("mcp.error.read_timeout", model=model, seconds=seconds), None
 
 
+def _read_timeout_explained(model: str, text: str, cause: str | None) -> tuple[str, int | None]:
+    """Issue #572: what the server already knows of where the read deadline went.
+
+    The deadline (`HTTP_TIMEOUT`) is per send: it starts with the POST, so the daemon's turn and
+    slot waits are outside it, but llama-swap loading the model is inside. Two facts, each added
+    only when known, so without them the text is exactly `_read_timeout_text`'s:
+
+    * the send's `waiting_backend` watch saw the requested model loading and then `ready`: the
+      text says when, and how much of the deadline was left. With cause `busy` it REPLACES the
+      busy text, whose «it was loaded» is false for this send (#572: `starting` at 3 s, `ready`
+      at the deadline). Returns that load in ms for the usage event.
+    * the operation waited 1 s or more for the daemon's turn or a slot before sending.
+    """
+    load_ms: int | None = None
+    with suppress(Exception):
+        watch = _SEND_WATCH.get()
+        if watch is not None and watch.loading_seen and watch.ready_after_s is not None:
+            load_s = float(watch.ready_after_s)
+            load_ms = int(load_s * 1000)
+            values = {
+                "model": model,
+                "seconds": _machine(config.HTTP_TIMEOUT),
+                "load": round(load_s),
+                "left": max(0, round(config.HTTP_TIMEOUT - load_s)),
+            }
+            if cause == "busy":
+                text = i18n.t("mcp.error.read_timeout_loaded_late", **values)
+            else:
+                text += " " + i18n.t("mcp.error.read_timeout_loaded_note", **values)
+    with suppress(Exception):
+        trace = concurrency.current()
+        queued_ms = trace.phase_ms("turn", "slot") if trace is not None else 0
+        if queued_ms >= 1000:
+            text += " " + i18n.t("mcp.error.read_timeout_queued", queued=round(queued_ms / 1000))
+    return text, load_ms
+
+
 def _backend_on_loopback() -> bool:
     """¿El host REAL de BASE_URL es de loopback? Lo que pide la regla 7 del clasificador.
 
@@ -2301,12 +2351,15 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                 # Concurrency PC+Mac, lot 1 (REQ-005): the text names what llama-swap had
                 # loaded, from the same sample that decided `error_class` above.
                 text, cause = _read_timeout_text(model, probe)
+                # Issue #572: and where the deadline went (load, earlier wait), when known.
+                text, load_ms = _read_timeout_explained(model, text, cause)
                 return ChatResult(
                     text=ERROR_PREFIX + text,
                     ok=False,
                     error="read_timeout",
                     error_class=error_class,
                     read_timeout_cause=cause,
+                    read_timeout_load_ms=load_ms,
                 )
             return ChatResult(
                 text=ERROR_PREFIX + i18n.t("mcp.error.endpoint", url=config.BASE_URL, error=e),
@@ -3256,11 +3309,21 @@ def _backend_wait_watch(model: str) -> Generator[None, None, None]:
         watches.append(watch)
 
     with concurrency.send_watch(model, _resolved_model_name, on_wait, register=register) as watch:
+        # Issue #572: `_post_chat` reads what this watch saw when its read deadline runs out.
+        current_watch = _SEND_WATCH.set(watch)
         try:
             yield
         finally:
             with suppress(ValueError):
+                _SEND_WATCH.reset(current_watch)
+            with suppress(ValueError):
                 watches.remove(watch)
+
+
+#: Issue #572: the `waiting_backend` watch of the send in progress in this context, if any.
+_SEND_WATCH: contextvars.ContextVar[concurrency.SendWatch | None] = contextvars.ContextVar(
+    "local_delegate_send_watch", default=None
+)
 
 
 def _send(model: str, body: dict) -> ChatResult:
@@ -3667,6 +3730,7 @@ def _with_fallback(
             error_class=base.error_class,
             connection_failure=base.connection_failure,
             read_timeout_cause=base.read_timeout_cause,
+            read_timeout_load_ms=base.read_timeout_load_ms,
         ),
         schema,
         attempts,
@@ -3907,6 +3971,18 @@ class _CurrentModel:
         self.hop: dict | None = None
         #: El estado del schema JSON de la primera llamada que lo pidió (`local_extract` troceado).
         self.json_schema: str | None = None
+        #: Issue #572: the piece of the last `read_timeout` (0: the reduce), `None` without one.
+        self.timeout_piece: int | None = None
+
+    def timeout_note(self, failed: ChatResult | None, pieces: int) -> str:
+        """Issue #572: « It failed on piece X of N.» for a chunked `read_timeout`, else ""."""
+        if failed is None or failed.error != "read_timeout" or pieces <= 1:
+            return ""
+        if self.timeout_piece is None:
+            return ""
+        if self.timeout_piece == 0:
+            return " " + i18n.t("mcp.error.read_timeout_reduce", pieces=pieces)
+        return " " + i18n.t("mcp.error.read_timeout_piece", piece=self.timeout_piece, pieces=pieces)
 
     def call(
         self,
@@ -3936,6 +4012,9 @@ class _CurrentModel:
         )
         if self.json_schema is None:
             self.json_schema = schema
+        if not result.ok and result.error == "read_timeout":
+            # Issue #572: the piece whose send ran out of time; 0 outside the pieces (the reduce).
+            self.timeout_piece = self.chunk or 0
         info = _fallback_info(self.model, result, attempts, self.affinity_tried)
         if info is not None:
             if self.hop is None:
@@ -3967,6 +4046,12 @@ class _CurrentModel:
             # REQ-017: la causa de un `connect_error` también en las delegaciones troceadas.
             "connection_failure": failed.connection_failure if failed else None,
             "read_timeout_cause": failed.read_timeout_cause if failed else None,
+            "read_timeout_load_ms": failed.read_timeout_load_ms if failed else None,
+            "read_timeout_piece": (
+                self.timeout_piece
+                if failed is not None and failed.error == "read_timeout"
+                else None
+            ),
         }
         if self.hop is not None:
             fields["model_requested"] = self.requested
@@ -4166,6 +4251,7 @@ def _chat(
         focus=focus,
         connection_failure=None if result.ok else result.connection_failure,
         read_timeout_cause=None if result.ok else result.read_timeout_cause,
+        read_timeout_load_ms=None if result.ok else result.read_timeout_load_ms,
         attempts=attempts,
         **op.log_fields(),
         **_backend_params_log_fields(role_params),
@@ -4809,7 +4895,7 @@ def _chat_chunked(
         _inflight_end(entry_id)
 
     if failed is not None:
-        text = failed.text
+        text = failed.text + current.timeout_note(failed, len(chunks))  # issue #572
         ok = False
         error = failed.error
         finish_reason = failed.finish_reason
@@ -5420,6 +5506,7 @@ def _chat_map_reduce(
     ok = failed is None
     if not ok:
         text, error, finish_reason = failed.text, failed.error, failed.finish_reason
+        text += current.timeout_note(failed, len(pieces))  # issue #572: which piece ran out
         if _is_context_overflow(failed):
             # Aquí el reintento adaptativo ya partió el trozo y siguió sin caber. El error crudo
             # del backend no dice ni que el problema es el tamaño ni qué se puede tocar, así que

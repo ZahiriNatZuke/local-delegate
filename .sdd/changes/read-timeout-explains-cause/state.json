@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "slug": "read-timeout-explains-cause",
+  "title": "Un read_timeout dice si fue cola, carga o generación y en qué trozo (#572)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-04T14:28:02.324Z",
+  "updatedAt": "2026-11-04T14:49:38.487Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T14:29:11.935Z",
+      "evidence": "spec.md 4 REQ; evidencia del log de uso del 2026-11-04 en brief.md; encargo del orquestador",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T14:29:12.179Z",
+      "evidence": "plan.md T1-T3 cubren REQ-001..004; plazos sin cambiar",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T14:49:38.487Z",
+      "evidence": "verification.md: suite completa 6475 passed/30 skipped con pesado.sh; ruff check y format limpios; control positivo de los 8 tests nuevos",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-04T14:28:02.324Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-04T14:29:11.935Z",
+      "evidence": "spec.md 4 REQ; evidencia del log de uso del 2026-11-04 en brief.md; encargo del orquestador",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-04T14:29:12.179Z",
+      "evidence": "plan.md T1-T3 cubren REQ-001..004; plazos sin cambiar",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-04T14:49:25.143Z",
+      "reason": "issue #572"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-04T14:49:25.369Z",
+      "reason": "issue #572"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-04T14:49:25.620Z",
+      "reason": "issue #572"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-04T14:49:25.849Z",
+      "reason": "issue #572"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-04T14:49:38.487Z",
+      "evidence": "verification.md: suite completa 6475 passed/30 skipped con pesado.sh; ruff check y format limpios; control positivo de los 8 tests nuevos",
+      "actor": "user"
+    }
+  ]
+}
