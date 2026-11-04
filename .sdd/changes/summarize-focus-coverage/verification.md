@@ -74,3 +74,10 @@ entrada, así que en `test_a_heading_put_back_…` solo se juzga `cp1252` (liter
   vivo la hace la sesión principal tras instalar).
 - Coincidencia por prefijo: un término corto puede casar con otra palabra (`stdin` → `stdi…`); en
   el peor caso suprime un aviso o nombra una sección de más, nunca cambia la salida sin foco.
+
+## Final result
+
+- Merged in `main` as `69d7027e` (PR #561, closes #558).
+- PR checks: 22 of 22 green (`gh pr checks 561`: tests on ubuntu/windows/macos, Python 3.11–3.15 matrix, lint, secrets, ci-gate, CodeQL, Socket, GitGuardian).
+- `main` CI after the merge: green (`gh run list --branch main`).
+- Closed on 2026-11-04 by the closing PR `chore/close-sdd-2026-11-04`.

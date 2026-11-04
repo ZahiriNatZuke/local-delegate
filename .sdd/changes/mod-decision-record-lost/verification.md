@@ -36,3 +36,10 @@ Without a declaration, list what was run. Never invent a command. -->
 ## Deviations and residual risk
 
 - Record skipped checks, known limitations, and why the evidence is still sufficient or not.
+
+## Final result
+
+- Merged in `main` as `3e826b56` (PR #559).
+- PR checks: 22 of 22 green (`gh pr checks 559`: tests on ubuntu/windows/macos, Python 3.11–3.15 matrix, lint, secrets, ci-gate, CodeQL, Socket, GitGuardian).
+- `main` CI after the merge: green (`gh run list --branch main`).
+- Closed on 2026-11-04 by the closing PR `chore/close-sdd-2026-11-04`.

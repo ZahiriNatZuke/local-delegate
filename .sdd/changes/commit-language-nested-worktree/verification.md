@@ -80,3 +80,10 @@ Point 1 of the #562 review: `test_a_short_history_is_filled_from_the_reflog` (da
 - First full run had 2 failures (`test_density`, `test_dashboard_cost`) caused by editing
   `server.py` comments while the run was going (`inspect.getsource` read shifted lines); both pass
   alone and in the rerun.
+
+## Final result
+
+- Merged in `main` as `5b305b5d` (PR #562, closes #548).
+- PR checks: 22 of 22 green (`gh pr checks 562`: tests on ubuntu/windows/macos, Python 3.11–3.15 matrix, lint, secrets, ci-gate, CodeQL, Socket, GitGuardian).
+- `main` CI after the merge: green (`gh run list --branch main`).
+- Closed on 2026-11-04 by the closing PR `chore/close-sdd-2026-11-04`.

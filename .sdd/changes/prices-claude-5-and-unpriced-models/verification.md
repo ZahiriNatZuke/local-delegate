@@ -43,3 +43,10 @@
 - Sonnet 5.5 cache reads: page says $0.10, table and Claude Code's own `costUSD` use $0.20; left
   unchanged (spec non-goal).
 - Price watcher red since 2026-10-19 on Haiku 5.5 tier rows: issue #564.
+
+## Final result
+
+- Merged in `main` as `f0ecb390` (PR #565, closes #563).
+- PR checks: 22 of 22 green (`gh pr checks 565`: tests on ubuntu/windows/macos, Python 3.11–3.15 matrix, lint, secrets, ci-gate, CodeQL, Socket, GitGuardian).
+- `main` CI after the merge: green (`gh run list --branch main`).
+- Closed on 2026-11-04 by the closing PR `chore/close-sdd-2026-11-04`.
