@@ -197,6 +197,8 @@ def _listener_closed(uvicorn_server: object) -> bool:
 #: Windows errors of an `accept` whose client went away before the loop took it (#576):
 #: `ERROR_NETNAME_DELETED`, `ERROR_CONNECTION_ABORTED`, `WSAECONNABORTED`, `WSAECONNRESET`.
 _ACCEPT_RESET_WINERRORS = frozenset({64, 1236, 10053, 10054})
+#: Failed accepts in a row, other than client resets, before the listener is taken for broken.
+_ACCEPT_RETRIES = 50
 
 
 def _tolerate_accept_resets(loop: asyncio.AbstractEventLoop) -> bool:
@@ -206,7 +208,9 @@ def _tolerate_accept_resets(loop: asyncio.AbstractEventLoop) -> bool:
     socket for good. A client that resets its connection before it is accepted is enough, and
     remote-turn clients that give up over the network do exactly that: forty of them took a test
     daemon's listener down in one second. That error concerns the client that left, not the
-    listener, so the accept is posted again and the listener keeps serving everybody else.
+    listener, so the accept is posted again and the listener keeps serving everybody else. Any
+    `OSError` is retried while the listener is open (the reset codes vary with the Windows and
+    Python versions); errors other than a client reset, up to `_ACCEPT_RETRIES` in a row.
 
     Only the proactor (Windows) has `_proactor`; on any other loop this does nothing. Idempotent.
     """
@@ -218,11 +222,32 @@ def _tolerate_accept_resets(loop: asyncio.AbstractEventLoop) -> bool:
     def accept(listener: socket.socket) -> asyncio.Future:
         outer = loop.create_future()
         current: list[asyncio.Future] = []
+        failures = [0]
 
         def attempt() -> None:
-            inner = original(listener)
+            if outer.done():
+                return
+            try:
+                # `AcceptEx` can also fail right here, synchronously; unhandled, that exception
+                # would end in this callback and leave `outer` pending: no accept ever again.
+                inner = original(listener)
+            except OSError as exc:
+                failed(exc)
+                return
             current[:] = [inner]
             inner.add_done_callback(settle)
+
+        def failed(exc: OSError) -> None:
+            # A client reset is always retried: each one takes a real client, so it cannot spin.
+            # Any other error counts towards the cap.
+            if getattr(exc, "winerror", None) not in _ACCEPT_RESET_WINERRORS:
+                failures[0] += 1
+            if listener.fileno() != -1 and failures[0] <= _ACCEPT_RETRIES:
+                loop.call_soon(attempt)
+            else:
+                # A listener that fails this many times in a row is broken for real: let asyncio
+                # close it, and the listener watch stop the daemon.
+                outer.set_exception(exc)
 
         def settle(inner: asyncio.Future) -> None:
             if outer.done():
@@ -231,12 +256,8 @@ def _tolerate_accept_resets(loop: asyncio.AbstractEventLoop) -> bool:
                 outer.cancel()
                 return
             exc = inner.exception()
-            if (
-                isinstance(exc, OSError)
-                and getattr(exc, "winerror", None) in _ACCEPT_RESET_WINERRORS
-                and listener.fileno() != -1
-            ):
-                attempt()
+            if isinstance(exc, OSError):
+                failed(exc)
             elif exc is not None:
                 outer.set_exception(exc)
             else:

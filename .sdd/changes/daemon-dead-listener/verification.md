@@ -15,7 +15,7 @@
 | REQ-002 | `test_the_shutdown_is_bounded_and_the_listener_is_watched` | pass | mutante sin `timeout_graceful_shutdown` → `assert (None is not None)` |
 | REQ-003 | `test_serve_relieves_a_registered_daemon_that_no_longer_listens` + 5 tests de la decisión (acepta, recién arrancado, pid muerto, fichero reescrito, timeout ≠ rechazo) | pass | mutante `stale = None` → «the daemon exited early: lock ocupado…»; mutante timeout→rechazo → `assert True is False`; guarda de pid reutilizado (hora de creación del proceso ≤ `started_at`): mutante `if False` → fallan `test_a_pid_reused…` y `test_a_process_whose_age_cannot_be_told…`; e2e con `skipif` fuera de Windows/Linux |
 | REQ-004 | asserts sobre `daemon-errors.log` en los tests de REQ-001 y REQ-003 | pass | el log del caso Windows contiene `Accept failed on a socket` (asyncio) y `listening socket closed` (vigilante) |
-| REQ-006 | `test_resets_in_the_backlog_do_not_take_the_listener_down_on_windows` + `scratchpad/i576/turn_stress.py` (40 clientes de turno con RST, 60 s) | pass | sin el envoltorio: el test ve `exit 3`, y la prueba de carga pierde el puerto en 1 s; con él: 60 s, 43 842 peticiones, puerto vivo. Mutante sin filtro de log → «never retrieved» en el log |
+| REQ-006 | `test_resets_in_the_backlog_do_not_take_the_listener_down_on_windows` + `scratchpad/i576/turn_stress.py` (40 clientes de turno con RST, 60 s) | pass | sin el envoltorio: el test ve `exit 3`, y la prueba de carga pierde el puerto en 1 s; con él: 60 s, 43 842 peticiones, puerto vivo. Mutante sin filtro de log → «never retrieved» en el log. Tras el primer CI (Windows, Python 3.11.9: proceso vivo y puerto rechazando) se cubrió el fallo síncrono de `AcceptEx` y se separó el tope (solo errores que no son reset): 3 tests unitarios portables con proactor falso; mutantes «sin captura síncrona» y «tope también para resets» → falla cada uno su test; test de resets 5/5 en verde |
 | REQ-005 | `test_doctor_tells_an_alive_daemon_without_listener_from_no_daemon` + control negativo | pass | mutante `if False` → `assert 'missing' == 'warn'` |
 
 ## Commands
@@ -26,7 +26,7 @@ Without a declaration, list what was run. Never invent a command. -->
 | Command | Run | Result | Evidence |
 | --- | --- | --- | --- |
 | `ruff check .` / `ruff format --check .` | sí | pass | All checks passed; 439 files already formatted |
-| `pytest -q -n 2 --dist loadgroup` (suite completa, `PYTHONPATH=src`) | sí | pass | 1.ª corrida: 2 guardianes rojos (léxico y texto sin catalogar) → corregidos; 2.ª corrida: 6480 passed, 30 skipped; 3.ª (con REQ-006): 6480 passed, 30 skipped |
+| `pytest -q -n 2 --dist loadgroup` (suite completa, `PYTHONPATH=src`) | sí | pass | 1.ª corrida: 2 guardianes rojos (léxico y texto sin catalogar) → corregidos; 2.ª corrida: 6480 passed, 30 skipped; 3.ª (con REQ-006): 6480 passed, 30 skipped; 4.ª (tras el CI): 6482 passed, 30 skipped y 1 ajeno (`test_build_hook`: `register.js` generado por otro test en el worktree; tras borrarlo, 2 passed) |
 
 ## Quality checks
 

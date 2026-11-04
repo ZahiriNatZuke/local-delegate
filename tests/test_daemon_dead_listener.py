@@ -192,17 +192,101 @@ def test_resets_in_the_backlog_do_not_take_the_listener_down_on_windows(tmp_path
     port = _free_port()
     log = tmp_path / "child.log"
     env = _environment(tmp_path / "home", log_dir)
+    errors = log_dir / daemon.ERROR_LOG_NAME
+
+    def read_trace() -> str:
+        return errors.read_text(encoding="utf-8", errors="replace") if errors.exists() else ""
+
     with _child([str(script), "resets", str(port)], env, log) as process:
         _wait_listening(port, process, log)
         time.sleep(6.0)  # the five bursts go off between 0.5 s and 4.5 s after startup
-        assert process.poll() is None, f"the daemon stopped (exit {process.returncode})"
-        with socket.create_connection(("127.0.0.1", port), timeout=5):
-            pass
-        assert daemon.query_daemon("127.0.0.1", port, timeout=5.0) is not None
-    errors = log_dir / daemon.ERROR_LOG_NAME
-    trace = errors.read_text(encoding="utf-8") if errors.exists() else ""
+        assert process.poll() is None, (
+            f"the daemon stopped (exit {process.returncode}): {read_trace()}"
+        )
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=5):
+                pass
+        except OSError as exc:
+            raise AssertionError(f"the listener is gone ({exc}): {read_trace()[-4000:]}") from None
+        assert daemon.query_daemon("127.0.0.1", port, timeout=5.0) is not None, read_trace()[-4000:]
+    trace = read_trace()
     assert "Accept failed on a socket" not in trace, trace
     assert "never retrieved" not in trace, "tolerated resets must not flood the error log"
+
+
+class _WinError(OSError):
+    """An `OSError` with a `winerror`, on any platform (only Windows gives it one natively)."""
+
+    def __init__(self, winerror: int) -> None:
+        super().__init__(f"winerror {winerror}")
+        self.winerror = winerror
+
+
+class _FakeListener:
+    def fileno(self) -> int:
+        return 7
+
+
+def _tolerant_accept(script: list):
+    """A proactor whose `accept` plays ``script``: an exception raised now, one in the future, or a
+    result. Returns the tolerant `accept` installed on it, the loop and the attempts made."""
+    import asyncio
+    import types
+
+    loop = asyncio.new_event_loop()
+    attempts = []
+
+    def accept(_listener):
+        step = script[min(len(attempts), len(script) - 1)]
+        attempts.append(step)
+        kind, value = step
+        if kind == "raise":
+            raise value
+        future = loop.create_future()
+        if kind == "fail":
+            future.set_exception(value)
+        else:
+            future.set_result(value)
+        return future
+
+    proactor = types.SimpleNamespace(accept=accept)
+    fake_loop = types.SimpleNamespace(
+        _proactor=proactor, create_future=loop.create_future, call_soon=loop.call_soon
+    )
+    assert daemon._tolerate_accept_resets(fake_loop) is True
+    assert daemon._tolerate_accept_resets(fake_loop) is False  # idempotent
+    return proactor.accept, loop, attempts
+
+
+def _settle(loop, future):
+    try:
+        return loop.run_until_complete(future)
+    finally:
+        loop.close()
+
+
+def test_an_accept_that_fails_synchronously_is_retried():
+    """Unhandled, a synchronous failure left the accept pending forever: nobody accepted again."""
+    accept, loop, attempts = _tolerant_accept(
+        [("raise", _WinError(64)), ("fail", _WinError(64)), ("ok", ("conn", "addr"))]
+    )
+    assert _settle(loop, accept(_FakeListener())) == ("conn", "addr")
+    assert len(attempts) == 3
+
+
+def test_client_resets_are_retried_without_a_cap():
+    """A burst of 300 resets is 300 failures in a row of one accept: none of them is the listener's."""
+    accept, loop, attempts = _tolerant_accept([("fail", _WinError(64))] * 300 + [("ok", "conn")])
+    assert _settle(loop, accept(_FakeListener())) == "conn"
+    assert len(attempts) == 301
+
+
+def test_other_errors_give_the_listener_up_after_the_cap():
+    """A listener that fails for its own reasons must not spin forever: asyncio gets the error."""
+    accept, loop, attempts = _tolerant_accept([("fail", _WinError(10022))])
+    with pytest.raises(OSError):
+        _settle(loop, accept(_FakeListener()))
+    assert len(attempts) == daemon._ACCEPT_RETRIES + 1
 
 
 # A process that holds the singleton and is registered on a port nobody listens on: what the
