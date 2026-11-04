@@ -6,6 +6,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Cambiado
+
+- **La lectura de caché de Claude Sonnet 5.5 cuesta 0,10 USD por millón de tokens, no 0,20 (#567).**
+  El vigilante semanal de precios vio la cifra nueva en la página oficial y la tabla del paquete
+  (`prices.json`) la recoge; los costes de Sonnet 5.5 con lecturas de caché salen a la mitad en esa
+  parte.
+
 ### Corregido
 
 - **`local_extract` ya no pasa por dato un «N/A» ni inventa la cuenta de una lista vacía (#586).**
