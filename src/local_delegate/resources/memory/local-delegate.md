@@ -17,7 +17,8 @@ primero — el MCP los lee del lado del servidor y el contenido nunca entra al c
   pregunta) y la carga de las tools con `ToolSearch("select:mcp__local-delegate__local_extract,mcp__local-delegate__local_explain_code")`.
   Nada de «si te conviene»: un condicional se lee como permiso para no delegar.
 - **Si eres un subagente**, ante un archivo grande localiza primero: pide a
-  `local_extract` o `local_explain_code` (con `path`) las líneas que necesitas y lee solo
+  `local_extract` o `local_explain_code` (con `path`; a `local_extract`, con un campo que
+  pida líneas: `…_con_lineas`) las líneas que necesitas y lee solo
   ese rango con `offset`/`limit`. Citar o editar líneas exactas justifica leer el rango, no
   el archivo entero.
 
