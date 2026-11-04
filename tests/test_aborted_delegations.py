@@ -32,7 +32,7 @@ from test_desktop_bridge import (
 )
 from test_desktop_bridge import slow_backend as _bridge_slow_backend
 
-from local_delegate import config, server, turn
+from local_delegate import cancellation, config, server, turn
 from local_delegate.web import metrics
 
 # The fixture of `test_desktop_bridge` (backend in ~20 slow calls, two slots, today's topology),
@@ -65,6 +65,39 @@ def _panel_errors() -> int:
     return json.loads(response.body)["total"]["errors"]
 
 
+class _DeadlineAfterCalls:
+    """`anyio` for `cancellation`, whose deadline timer starts once the call made `calls` calls.
+
+    Only the deadline's sleep (the one of `token.deadline_s` seconds) waits; everything else is
+    `anyio` itself. If the calls never come, it gives up after `_GATE_CAP_S` (`opened` stays
+    False) instead of hanging. `held_s` is how long it held the timer: the runner's time before
+    the calls, which the test's upper bounds leave out.
+    """
+
+    _GATE_CAP_S = 10.0
+
+    def __init__(self, calls: int) -> None:
+        self._calls = calls
+        self.timer_started = False
+        self.opened = False
+        self.held_s = 0.0
+
+    def __getattr__(self, name: str):
+        return getattr(anyio, name)
+
+    async def sleep(self, seconds: float) -> None:
+        token = cancellation.current()
+        if token is not None and token.deadline_s > 0 and seconds == token.deadline_s:
+            self.timer_started = True
+            started = time.monotonic()
+            cap = started + self._GATE_CAP_S
+            while len(token.attempts) < self._calls and time.monotonic() < cap:
+                await anyio.sleep(0.005)
+            self.opened = len(token.attempts) >= self._calls
+            self.held_s = time.monotonic() - started
+        await anyio.sleep(seconds)
+
+
 def test_deadline_cancels_the_call_and_logs_it_once(monkeypatch, slow_backend, tmp_path):
     """Past `CALL_MAX_S` the call stops, the caller is told why, and ONE failed event is written.
 
@@ -89,17 +122,29 @@ def test_deadline_cancels_the_call_and_logs_it_once(monkeypatch, slow_backend, t
         return slow_backend(model, payload)
 
     monkeypatch.setattr(server, "_post_chat", quick_start)
+    # Issue #570: the deadline counts from the start of the call, so a loaded Windows runner that
+    # spent the whole second before the first backend call logged `chunks` 0 (true, but not what
+    # this test checks). Its clock now starts once two calls are recorded: the cut still comes from
+    # `CALL_MAX_S`, mid-operation, whatever the runner's speed.
+    gate = _DeadlineAfterCalls(2)
+    monkeypatch.setattr(cancellation, "anyio", gate)
     with real_daemon(monkeypatch, TOKEN) as url:
         answer, elapsed = _call(url, SUMMARIZE)
+    assert gate.timer_started, "the call had no deadline timer"
+    assert gate.opened, "the call never recorded two backend calls on its token"
     text = _error_text(answer)
     assert "LOCAL_DELEGATE_CALL_MAX_S" in text, text
-    assert elapsed < 4.0, f"the deadline did not cut the call: {elapsed:.1f} s"
+    # That the deadline cut it is told by the event (`cancel_reason`, `pieces > chunks`), not by the
+    # clock: with 16 CPU hogs on 12 cores the cut and its answer took 5.8 s past the gate (#570).
+    # This bound only keeps a call that never stops from hanging the suite.
+    elapsed -= gate.held_s
+    assert elapsed < 20.0, f"the call did not stop: {elapsed:.1f} s"
     events = [e for e in _events(tmp_path) if e.get("tool") == "local_summarize"]
     assert len(events) == 1, events  # one line for the whole chunked operation, not per piece
     event = events[0]
     assert event["ok"] is False and event["error"] == "cancelled", event
     assert event["cancel_reason"] == "deadline", event
-    assert 900 <= event["latency_ms"] < 4000, event
+    assert event["latency_ms"] >= 900, event  # the deadline's 1 s, after the gate
     assert event["model"] == LONG_MODEL and event["chars_in"] > 0, event
     # What it measured until the cut: the pieces it announced, fixed at the start, next to the real
     # calls. Their exact number depends on the runner's speed (a slow one gave one 0.4 s call on
@@ -145,19 +190,38 @@ def test_slot_wait_past_the_limit_fails_fast_and_is_logged(monkeypatch, slow_bac
                 slots.release()
                 slots.release()
 
-    # Without the limit the call would wait forever: the slots come back after 5 s, so the test
-    # ends (and fails on its asserts) instead of hanging.
-    timer = threading.Timer(5.0, free)
+    # Without the limit the call would wait forever: the slots come back 5 s after the call starts
+    # waiting for one, so the test ends (and fails on its asserts) instead of hanging. Issue #584:
+    # the 5 s used to count from the test's start, and a loaded Windows runner (or 16 CPU hogs on
+    # 12 cores, once in 40) reached the slot at 4.98 s, got it back at 5 s and answered fine.
+    stop = threading.Event()
+    waiting = threading.Event()
+
+    def free_after_the_wait() -> None:
+        cap = time.monotonic() + 60
+        while not stop.is_set() and time.monotonic() < cap:
+            if server._slot_waiters._n > 0:
+                waiting.set()
+                stop.wait(5.0)
+                break
+            stop.wait(0.005)
+        free()
+
+    timer = threading.Thread(target=free_after_the_wait, daemon=True)
     timer.start()
     try:
         with real_daemon(monkeypatch, TOKEN) as url:
             answer, elapsed = _call(url, CLASSIFY)
     finally:
-        timer.cancel()
+        stop.set()
+        timer.join(10)
         free()
+    assert waiting.is_set(), "the call never waited for a slot"
     text = _error_text(answer)
     assert "LOCAL_DELEGATE_QUEUE_MAX_WAIT_S" in text and "2" in text, text
-    assert elapsed < 3.0, f"the saturated queue held the caller {elapsed:.1f} s"
+    # That it failed fast, before the slots came back, is told by the error above (with them back
+    # it answers fine). This bound only keeps a call that never stops from hanging the suite.
+    assert elapsed < 20.0, f"the saturated queue held the caller {elapsed:.1f} s"
     assert slow_backend.calls == [], "a call that never got a slot reached the backend"
     events = [e for e in _events(tmp_path) if e.get("tool") == "local_classify"]
     assert len(events) == 1, events
@@ -241,13 +305,31 @@ def test_a_queue_that_moves_never_saturates(monkeypatch, slow_backend, tmp_path)
 
 
 def test_a_queue_that_does_not_move_saturates(monkeypatch, slow_backend, tmp_path):
-    """The piece ahead takes 5 s and nothing else moves: past 1 s the waiting call is told so."""
+    """The piece ahead never ends and nothing else moves: past 1 s the waiting call is told so.
+
+    Issue #584: the piece used to take 5 s from its start, so a waiting call that reached its turn
+    late (4.5 s on a loaded runner) saw it end, got the turn and answered fine. Now the piece ends
+    only when the test is done, whenever the waiting call arrives.
+    """
     monkeypatch.setattr(config, "QUEUE_MAX_WAIT_S", 1.0)
-    slow_backend.delay = 5.0
+    release = threading.Event()
+    slow_backend.delay = 0.0
+
+    def stalled(model: str, payload: dict) -> server.ChatResult:
+        result = slow_backend(model, payload)  # counted at once
+        release.wait(30)  # the piece ahead does not end while the test looks
+        return result
+
+    monkeypatch.setattr(server, "_post_chat", stalled)
     with real_daemon(monkeypatch, TOKEN) as url:
-        answer, elapsed = _behind_a_summary(url, slow_backend, cap_s=25)
+        try:
+            answer, elapsed = _behind_a_summary(url, slow_backend, cap_s=25)
+        finally:
+            release.set()  # before the daemon stops, so it does not wait for the piece
     text = _error_text(answer)
     assert "LOCAL_DELEGATE_QUEUE_MAX_WAIT_S" in text, text
-    assert elapsed < 4.0, f"the stalled queue held the caller {elapsed:.1f} s"
+    # That it failed fast is told by the error (without the limit it waits until `cap_s`). This
+    # bound only keeps a call that never stops from hanging the suite.
+    assert elapsed < 20.0, f"the stalled queue held the caller {elapsed:.1f} s"
     events = [e for e in _events(tmp_path) if e.get("tool") == "local_classify"]
     assert len(events) == 1 and events[0]["error"] == "queue_saturated", events

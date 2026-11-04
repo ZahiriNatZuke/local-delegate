@@ -8,6 +8,109 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **El error de plazo agotado dice también la espera sin turno (#575 + #579).** La nota «esperó N s
+  el turno o una plaza» de #575 salía de las fases `turn` y `slot` de la traza, pero la espera de la
+  plaza ciega de #579 (sin turno porque su daemon no responde, de una en una) solo sumaba a
+  `turn_wait_ms`, y el intento de turno contra un daemon inutilizable no quedaba en ninguna parte
+  de la traza: justo en el caso del #577 (~55 s de espera) el error no la mencionaba. Ahora las dos
+  quedan en la traza como fases internas (`turn_unusable` y `blind`) que la explicación suma; un
+  daemon que tarda en fallar sale en la nota aunque no en `turn_wait_ms`. El log de uso no cambia:
+  esas fases no salen en `concurrency.phases` (sin fase `turn` con el daemon inutilizable, como
+  antes), y `turn_wait_ms` cuenta lo mismo.
+
+- **La comprobación del corpus de afinidad ya no falla porque `main` crezca.** La ventana de 400
+  commits de la regla de selección se contaba desde la punta de `main`: cada commit posterior a la
+  fecha límite (2026-10-06) sacaba un candidato de la ventana y, desde `fea54181`, el constructor
+  salía por el paso 1 en vez del 0 guardado, así que
+  `test_affinity_check_is_ok_with_any_environment_language` fallaba en un checkout completo (en el
+  CI se omite). Ahora la ventana empieza en el primer commit anterior a la fecha límite, como ya
+  decía la regla escrita; el corpus versionado no cambia (los mismos 38 commits, paso 0, en `main`
+  y en `v0.48.0`).
+
+- **`local_summarize` ya no corta el resumen a mitad de palabra con el `max_words` por defecto
+  (#580).** La llamada única pedía `max_tokens = 2 × max_words + 64` (364 con 150) y, medido contra
+  el backend real, el modelo gasta 1,5–1,7 tokens por palabra en español y escribe hasta 1,5 veces
+  las palabras pedidas: todos los cortes del log caían justo en ese tope. Ahora el tope es
+  `3 × max_words + 64` (514 con 150), el mismo factor que ya usaba el resumen por secciones, también
+  en cada paso del map/reduce. Y si aun así el modelo se queda sin tokens, la respuesta acaba en su
+  última frase completa (o en su última línea completa), sin dejar un título, una etiqueta
+  `**…:**`, una lista sin elementos ni un bloque de código abierto, y el aviso dice «salida
+  truncada por max_tokens; se recortó hasta la última frase completa». El recorte es de la
+  llamada única: el reduce del map/reduce no se recorta y sigue con el aviso de siempre. Las
+  llamadas que acaban bien devuelven lo mismo que antes.
+
+- **Los tests de la cola saturada ya no dependen de la velocidad del runner (#584).** En Windows,
+  `test_slot_wait_past_the_limit_fails_fast_and_is_logged` vio terminar bien la llamada que debía
+  saturar: los dos huecos volvían 5 s después del inicio del test, y un runner cargado llegaba a
+  esperar el hueco a los 4,98 s (medido con 16 procesos quemando CPU, una vez de cada 40). Ahora los
+  huecos vuelven 5 s después de que la llamada empieza a esperar. Con el mismo defecto,
+  `test_a_queue_that_does_not_move_saturates` usaba un trozo de 5 s contado desde su inicio; ahora
+  el trozo no termina hasta que acaba el test. Las cotas superiores de tiempo pasan a ser guardas
+  contra cuelgues: que la cola saturó lo dice el error, no el reloj. Solo cambian los tests.
+- **Con el turno remoto sin responder, las delegaciones ya no compiten a ciegas por el backend
+  (#577).** Desde la Mac, con el turno de la PC caído y su backend ocupado, cinco
+  `local_describe_image` esperaron ~55 s el turno, fueron igualmente al backend dos a la vez y
+  cada una agotó sus 180 s (dos de ellas tras 180 s más en cola: ~415 s). Ahora, sin turno porque
+  su daemon no responde, las operaciones van de una en una en cada proceso (en orden de llegada;
+  una troceada larga suelta el sitio entre trozos si hay otra esperando, y una espera que no avanza
+  falla con «cola saturada»); si una agota su plazo de lectura en el backend (un 5xx al momento no
+  cuenta) se
+  abre el **corte de turno remoto** (`LOCAL_DELEGATE_REMOTE_TURN_CUT`, 120 s doblando hasta 600 s)
+  y las que esperaban, y las nuevas, fallan al momento con un aviso claro («el turno remoto no
+  responde; el backend puede estar ocupado por otra máquina; reintentar ahora no sirve») y
+  `error: "remote_turn_unreachable"` en el log. El error de una llamada que fue sin turno lo dice,
+  y varias esperas de turno a la vez dejan de sondear en cuanto una decide que el daemon no
+  responde. Con el daemon parado y el backend sano (#512) todo sigue funcionando, en serie.
+
+- **`local_explain_code` sobre un diff troceado da el índice completo con las líneas del parche
+  (#582).** Preguntado por los ficheros de un diff de 32 con sus líneas, daba 5 y un rango 242–257
+  para uno que está en 1–23. La numeración `N| ` de cada trozo era correcta: el 242–257 es el
+  `+242,16` de una cabecera `@@`, que el modelo tomó por líneas del parche. Y faltaban ficheros
+  porque el map pedía una viñeta por función (un diff no tiene definiciones en la columna 0) y el
+  reduce tenía prohibido enumerar. Ahora, con `path` y un diff unificado, el system dice que los
+  números de las cabeceras `@@` no son líneas del parche; al trocear, cada trozo sabe por programa
+  qué ficheros tiene y en qué líneas, el map toma una nota por fichero, el reduce recibe el índice
+  completo y la respuesta termina con ese índice, calculado sin modelo: hasta 200 ficheros si la
+  pregunta pide ficheros o líneas, 50 si no. El índice sigue las cuentas de cada hunk y entiende
+  `diff -ru`, SVN (`Index:`), series de `format-patch` y rutas entre comillas o con
+  `diff.mnemonicPrefix`. Con el recibo apagado, una respuesta troceada con pregunta o sobre un diff
+  dice de cuántos trozos sale; la explicación simple de un fichero sin pregunta no cambia.
+
+- **El daemon ya no se queda vivo sin escuchar ni bloquea al siguiente (#576).** En Windows, un
+  `accept` que falla hace que asyncio cierre el socket de escucha para siempre y solo lo cuente a su
+  manejador de errores. Basta un cliente que resetea su conexión antes de que se acepte, y eso es lo
+  que hacen los clientes del turno remoto que se cansan de esperar por la red (#577): en una prueba,
+  40 de ellos tumbaron el puerto de un daemon de prueba en un segundo. El proceso seguía vivo, con el
+  lock y `daemon.json`, y `Start-ScheduledTask` no podía arrancar otro. Ahora ese `accept` se vuelve
+  a lanzar en vez de cerrar el socket (el mismo daemon aguantó 60 s y unas 44 000 peticiones
+  cortadas). Como red de seguridad, el daemon vigila su socket cada segundo y, si aun así lo
+  pierde, sale con código 75 (`EX_TEMPFAIL`) y suelta el lock; su apagado tiene un plazo de 10 s
+  (antes esperaba sin límite a que cerraran los streams MCP abiertos). Un `serve` que encuentra el
+  lock retenido por un daemon registrado con más de un minuto de vida y cuyo puerto **rechaza** las
+  conexiones lo detiene y arranca en su lugar; uno que acepta la conexión aunque tarde no se toca.
+  Es la única vez que el paquete señala a un pid leído de un fichero (la regla de `update` es no
+  hacerlo nunca), y por eso solo con guardas: además, el proceso tiene que haberse creado antes de
+  registrarse, para no tocar uno que reutilizó el pid; donde no se puede saber (macOS), no hay
+  relevo. Los avisos y errores del daemon, y el motivo de cada salida o relevo, quedan en `daemon-errors.log` (como
+  máximo dos ficheros de 256 KB), y `doctor` distingue «proceso vivo sin escuchar» de «no hay
+  daemon».
+
+- **`local_extract` puede dar números de línea con `path` (#568).** Un campo de localización
+  (`secciones_con_lineas`) sobre un Markdown grande volvía `null` en los 8 trozos: el modelo nunca
+  veía un número de línea. Ahora, con `path` y un campo cuyo nombre pide líneas (una palabra
+  `lines`, `lineas`, `lineno`, o `line`/`linea` junto a `number`, `start`, `end`, `range`,
+  `heading`, `section`, `título` o `sección`: `sections_with_lines`, `start_line`, `heading_line`;
+  no `location`, `price_range`, `line_items` ni una cantidad como `lines_added`, `total_lines` o
+  `lines_of_code`), el modelo ve cada línea como `N| línea` con su número absoluto del fichero, también
+  en cada trozo (las piezas de #460); en un Markdown (`.md`, `.markdown`, `.mdx`) recibe además el
+  esquema de encabezados con su línea, calculado por programa, si cabe en el 15 % del trozo. El
+  prefijo que el modelo copie en los demás campos se quita, y las líneas citadas en los campos de localización
+  se comprueban contra el fichero: las que no casan van en `_local_delegate.lines_unverified` con
+  un aviso (añadido a los anteriores). Al trocear, los campos de localización los une el programa
+  a partir de los trozos, en orden, así que un reduce cortado por el tope de salida no pierde las
+  secciones. Sin un campo así, o con `text=`, nada cambia. La skill y el bloque de memoria dicen
+  ahora que el nombre del campo tiene que pedir líneas.
+
 - **Los tests de precios de Claude Haiku 5.5 ya no tumban el PR del vigilante (#567).** Fijaban a
   mano las cifras de la tabla, así que cualquier cambio legítimo de precio que propusiera el
   vigilante dejaba su CI en rojo. Ahora la lógica se prueba contra una copia congelada de los
@@ -15,6 +118,23 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   (cinco precios positivos por entrada, tramos con umbral y de un modelo con precio). Cambio
   interno de la suite; el producto no cambia.
 
+- **El test del plazo de una llamada ya no depende de la velocidad del runner (#570).** En un runner
+  de Windows cargado, `test_deadline_cancels_the_call_and_logs_it_once` vio `chunks` 0: el plazo de
+  1 s cuenta desde el inicio de la llamada y ese runner lo gastó entero antes de la primera llamada
+  al backend. El registro decía la verdad (ninguna llamada había llegado al backend); lo que fallaba
+  era la suposición del test. Ahora el reloj del plazo arranca cuando la llamada ya hizo dos
+  llamadas al backend, así que el corte sigue saliendo de `CALL_MAX_S`, a mitad de la operación,
+  sea cual sea la velocidad del runner. La cota superior de tiempo (4 s) pasa a ser una guarda
+  contra cuelgues (20 s): que el plazo cortó lo dicen el evento (`cancel_reason`, `pieces >
+  chunks`) y el error, no el reloj. Solo cambia el test.
+- **Un `read_timeout` dice dónde se fue el plazo y en qué trozo (#572).** Un `local_commit_msg` de
+  ~58 KB falló con «estaba cargado pero no respondió en 180 s», y el log mostraba otra cosa: sin
+  cola en el daemon, el modelo cargándose a los 3 s y el primero de varios trozos agotando él solo
+  el plazo. El plazo de 180 s es por envío (no cuenta el turno del daemon, sí la carga del modelo
+  en llama-swap) y no se cambia. Ahora el mensaje, en español e inglés, dice si el modelo se estaba
+  cargando y a los cuántos segundos quedó listo (en vez de «estaba cargado»), si hubo espera de
+  turno antes del envío y, si la entrada iba troceada, qué trozo de cuántos falló. El evento de uso
+  lleva `read_timeout_load_ms`, `read_timeout_piece` y `pieces`.
 - **`local_commit_msg` toma el idioma del historial del repo, no del reflog (#548).** Desde un
   worktree de agente anidado en la copia principal, con el diff en su raíz o en una subcarpeta, el
   mensaje salía en el idioma del producto con el aviso «los commits recientes del repo no dejan claro

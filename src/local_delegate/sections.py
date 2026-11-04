@@ -533,6 +533,77 @@ NOT_SUMMARIZED_FORMS = frozenset(
 #: `server`: valor de máquina que no cambia con el idioma.
 WARNING_MARKER = "[local-delegate warning: "
 
+#: #580: the end of a sentence: terminal punctuation, the marks that may close it (a parenthesis,
+#: quotes, the end of a bold or italic span), then whitespace or the end of the text. A dot followed
+#: by a digit or a letter (`0.36.0`, `server.py`) is not one. The full-width ends of Chinese and
+#: Japanese (`。！？`) need no space after them: those languages write none.
+_SENTENCE_END = re.compile(r"[.!?…][)\]\"'»”*_]*(?=\s|$)|[。！？][」』）)\]\"'”*_]*")
+#: #580: a bold span whose text ends a sentence (`**Una conclusión.**`): a sentence, not a label.
+_BOLD_SENTENCE = re.compile(r"\*\*.*[.!?…。！？]\*\*")
+#: #580: the line that opens or closes a fenced code block.
+_FENCE_LINE = re.compile(r"(?m)^[ \t]*(?:```|~~~)")
+#: #580: what precedes the dot of an ordered list marker (`1.`, `  12.`).
+_LIST_NUMBER = re.compile(r"[ \t]*\d+")
+
+
+def _announces(line: str) -> bool:
+    """#580: a line that introduces what follows (heading, bold label, line ending in `:`)."""
+    stripped = line.strip()
+    if not stripped:
+        return False
+    if stripped.startswith("#"):
+        return True
+    if stripped.startswith("**") and stripped.endswith("**"):
+        return not _BOLD_SENTENCE.fullmatch(stripped)
+    return stripped.strip("*_ ").endswith(":")
+
+
+def _close_structure(text: str) -> str:
+    """#580: drop an unclosed code block and the lines left announcing content that never came."""
+    fences = list(_FENCE_LINE.finditer(text))
+    if len(fences) % 2:
+        text = text[: fences[-1].start()]
+    lines = text.rstrip().split("\n")
+    while lines and (not lines[-1].strip() or _announces(lines[-1])):
+        lines.pop()
+    return "\n".join(lines).rstrip()
+
+
+def trim_to_last_sentence(text: str) -> str | None:
+    """#580: a cut answer up to its last complete sentence, with its Markdown left closed.
+
+    The answer ended by `max_tokens`: every line but the last one is complete (the model wrote its
+    line break), and the last one stops wherever the cap fell, often inside a word. The cut goes
+    after the last sentence end of that line whose inline code and bold spans are closed, or else
+    at the end of the previous line; then an unclosed code block is dropped, and so are the
+    headings, bold labels and `…:` lines that would be left introducing nothing (a list whose items
+    never came). A cut table row (a line starting with `|`) goes whole. `None` when there is
+    nothing complete to keep or nothing to remove: the caller then returns the answer as it came.
+
+    Known limit: the dot of an abbreviation followed by a space («p. ej.», «EE. UU.», «e.g.»)
+    counts as a sentence end, so the cut may fall right after one. The text kept is still complete
+    up to there; telling abbreviations apart would need a list per language.
+    """
+    head, newline, last = text.rpartition("\n")
+    # A table row cut midway has no sentence to keep: the row goes whole.
+    in_table = last.lstrip().startswith("|")
+    candidates = [
+        head + newline + last[: m.end()]
+        for m in reversed(list(_SENTENCE_END.finditer(last)))
+        if last[: m.end()].count("`") % 2 == 0
+        and last[: m.end()].count("**") % 2 == 0
+        # The `1.` of an ordered list item is its marker, not a sentence.
+        and not _LIST_NUMBER.fullmatch(last[: m.start()])
+        and not in_table
+    ]
+    if newline:
+        candidates.append(head)
+    for candidate in candidates:
+        cut = _close_structure(candidate)
+        if cut.strip():
+            return cut if cut != text.rstrip() else None
+    return None
+
 
 @dataclass
 class Completion:

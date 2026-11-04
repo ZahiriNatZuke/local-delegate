@@ -42,6 +42,15 @@ from . import clients, config
 
 PHASES = ("turn", "slot", "backend")
 
+#: Waits before a send that the usage log does not publish as phases (they stay in the trace):
+#: a remote turn attempt that ended with its daemon unusable (REQ-026 keeps `turn` out of that
+#: event) and the wait for the blind place without a turn (#577).
+TURN_UNUSABLE_PHASE = "turn_unusable"
+BLIND_PHASE = "blind"
+
+#: Every wait before a send that its read deadline does not count (#572, and #579's blind wait).
+QUEUE_PHASES = ("turn", "slot", TURN_UNUSABLE_PHASE, BLIND_PHASE)
+
 #: How long one `/running` answer is reused, and the cap of each query (connection included).
 RUNNING_CACHE_S = 2.0
 RUNNING_QUERY_CAP_S = 0.5
@@ -105,6 +114,12 @@ class Trace:
             self.backend_models = models
             self.backend_models_at_ms = int(at_ms)
             self.model_swap = models.get(name) != "ready" and models.get(model) != "ready"
+
+    def phase_ms(self, *names: str) -> int:
+        """The summed milliseconds recorded so far for `names` (issue #572: the turn and slot
+        waits before a send, which its read deadline does not count). 0 when none was recorded."""
+        with self._lock:
+            return sum(int(p["ms"]) for n in names if (p := self._phases.get(n)) is not None)
 
     def note_inflight(self, requests: Sequence[dict[str, str | None]]) -> None:
         with self._lock:
@@ -276,6 +291,12 @@ class SendWatch:
         self._stop = threading.Event()
         self._lock = threading.Lock()
         self.marked = False
+        #: Issue #572: what the samples saw of the requested model, for the `read_timeout` text.
+        #: `loading_seen`: a sample found it not `ready`; `ready_after_s`: seconds from the start
+        #: of the send to the first sample that found it `ready` AFTER that (10 s resolution).
+        self._t0 = time.monotonic()
+        self.loading_seen = False
+        self.ready_after_s: float | None = None
 
     @property
     def stopped(self) -> bool:
@@ -335,9 +356,12 @@ class SendWatch:
                 models = loaded_models()
                 others = waiting_for(models, model, resolved)
                 if others is not None:
+                    self.loading_seen = True
                     if not self._write(others):
                         return
                 elif models is not None and _is_ready(models, model, resolved):
+                    if self.loading_seen:
+                        self.ready_after_s = time.monotonic() - self._t0
                     self._write(None)
                     return
                 if self._stop.wait(BACKEND_WAIT_RESAMPLE_S):

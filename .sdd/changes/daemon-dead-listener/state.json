@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "slug": "daemon-dead-listener",
+  "title": "El daemon sale (y se puede relevar) cuando su listener HTTP muere",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "closed",
+  "createdAt": "2026-11-04T14:57:45.127Z",
+  "updatedAt": "2026-11-04T21:02:54.078Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T14:58:47.489Z",
+      "evidence": "Causa reproducida en scratchpad/i576/repro_accept.py: OSError 64 en accept del ProactorEventLoop de CPython 3.11 cierra el socket de escucha (proactor_events.py:861-868) con el loop vivo; uvicorn 0.54 shutdown espera sin plazo (server.py:281-311). Spec con 5 requisitos y plan de 5 tareas; el relevo exige rechazo TCP repetido, pid vivo, started_at>60s y daemon.json estable.",
+      "actor": "agent"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T14:58:47.490Z",
+      "evidence": "Causa reproducida en scratchpad/i576/repro_accept.py: OSError 64 en accept del ProactorEventLoop de CPython 3.11 cierra el socket de escucha (proactor_events.py:861-868) con el loop vivo; uvicorn 0.54 shutdown espera sin plazo (server.py:281-311). Spec con 5 requisitos y plan de 5 tareas; el relevo exige rechazo TCP repetido, pid vivo, started_at>60s y daemon.json estable.",
+      "actor": "agent"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T15:35:35.768Z",
+      "evidence": "Suite completa pytest -n 2 --dist loadgroup: 6480 passed, 30 skipped (corrida final con REQ-006); ruff check y format en verde; 10 mutantes, cada uno falla en su assert (verification.md); prueba de carga turn_stress.py: sin arreglo el puerto muere en 1 s, con arreglo 60 s y 43842 peticiones.",
+      "actor": "agent"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T16:38:21.257Z",
+      "evidence": "Dos jueces independientes (conforms-with-notes y does-not-conform sobre un estado intermedio); sus hallazgos F1-F5 corregidos (guarda de pid con tests doblados, skipif macOS y doctor sin promesa, segunda parada tolerada en el test, SIGKILL con recomprobación, verification.md al día) y F6 anotado como riesgo residual. PR #578: test windows/ubuntu, matriz CLI, plugin x3, lint, CodeQL, GitGuardian y Socket en verde; macOS en cola al cerrar.",
+      "actor": "agent"
+    },
+    "memory": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T21:02:53.806Z",
+      "evidence": "vault projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md",
+      "actor": "user"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-04T14:57:45.127Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-04T14:58:41.232Z",
+      "reason": "causa reproducida (WinError 64 en accept del Proactor cierra el listener)"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-04T14:58:47.489Z",
+      "evidence": "Causa reproducida en scratchpad/i576/repro_accept.py: OSError 64 en accept del ProactorEventLoop de CPython 3.11 cierra el socket de escucha (proactor_events.py:861-868) con el loop vivo; uvicorn 0.54 shutdown espera sin plazo (server.py:281-311). Spec con 5 requisitos y plan de 5 tareas; el relevo exige rechazo TCP repetido, pid vivo, started_at>60s y daemon.json estable.",
+      "actor": "agent"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-04T14:58:47.490Z",
+      "evidence": "Causa reproducida en scratchpad/i576/repro_accept.py: OSError 64 en accept del ProactorEventLoop de CPython 3.11 cierra el socket de escucha (proactor_events.py:861-868) con el loop vivo; uvicorn 0.54 shutdown espera sin plazo (server.py:281-311). Spec con 5 requisitos y plan de 5 tareas; el relevo exige rechazo TCP repetido, pid vivo, started_at>60s y daemon.json estable.",
+      "actor": "agent"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-04T15:10:51.910Z",
+      "reason": "plan escrito"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-04T15:10:52.132Z",
+      "reason": "spec y plan aprobados"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-04T15:10:52.359Z",
+      "reason": "tests y mutantes hechos"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-04T15:35:35.768Z",
+      "evidence": "Suite completa pytest -n 2 --dist loadgroup: 6480 passed, 30 skipped (corrida final con REQ-006); ruff check y format en verde; 10 mutantes, cada uno falla en su assert (verification.md); prueba de carga turn_stress.py: sin arreglo el puerto muere en 1 s, con arreglo 60 s y 43842 peticiones.",
+      "actor": "agent"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-04T16:38:21.257Z",
+      "evidence": "Dos jueces independientes (conforms-with-notes y does-not-conform sobre un estado intermedio); sus hallazgos F1-F5 corregidos (guarda de pid con tests doblados, skipif macOS y doctor sin promesa, segunda parada tolerada en el test, SIGKILL con recomprobación, verification.md al día) y F6 anotado como riesgo residual. PR #578: test windows/ubuntu, matriz CLI, plugin x3, lint, CodeQL, GitGuardian y Socket en verde; macOS en cola al cerrar.",
+      "actor": "agent"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-04T21:02:53.316Z",
+      "reason": "quality and conformance approved; PR #578 merged in main as d75c09cf"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-04T21:02:53.568Z",
+      "reason": "result review done (review.md); PR #578 merged in main as d75c09cf without the cancelled macOS jobs"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-04T21:02:53.806Z",
+      "evidence": "vault projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-04T21:02:54.078Z",
+      "reason": "PR #578 merged (d75c09cf) without macOS jobs (cancelled); main CI green from e85c0519; memory note written; closing PR chore/close-sdd-2026-11-04-tarde"
+    }
+  ]
+}

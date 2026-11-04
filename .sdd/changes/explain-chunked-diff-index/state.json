@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "slug": "explain-chunked-diff-index",
+  "title": "local_explain_code sobre un diff troceado: índice completo y líneas del patch (#582)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "closed",
+  "createdAt": "2026-11-04T18:27:43.399Z",
+  "updatedAt": "2026-11-04T21:02:27.609Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T18:28:30.125Z",
+      "evidence": "spec.md 6 REQ; alcance del encargo (#582), lite",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T18:28:30.337Z",
+      "evidence": "plan.md T1-T4, cada REQ con tarea y verificación",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T19:21:02.953Z",
+      "evidence": "PR 583: 22/22 checks en verde (CodeQL, GitGuardian, Socket incluidos; macOS tras un rerun por falta de runner); 375+210 tests afectados en local; ruff limpio",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T21:02:26.879Z",
+      "evidence": "review.md: REQ-001..006 implemented and verified (tests with positive control; REQ-005 narrowed by the frozen hash test); independent review before merge (verification.md 2nd round, commit 23ace1c2): eight adjustments applied; PR #583 22/22 checks green; main CI green on cf1474d8",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T21:02:27.377Z",
+      "evidence": "vault projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md",
+      "actor": "user"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-04T18:27:43.399Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-04T18:28:30.125Z",
+      "evidence": "spec.md 6 REQ; alcance del encargo (#582), lite",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-04T18:28:30.337Z",
+      "evidence": "plan.md T1-T4, cada REQ con tarea y verificación",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-04T18:36:22.511Z",
+      "reason": "spec escrita"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-04T18:36:22.762Z",
+      "reason": "plan escrito"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-04T18:36:23.002Z",
+      "reason": "puertas spec y plan aprobadas"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-04T18:36:23.256Z",
+      "reason": "implementado; tests en verde"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-04T19:21:02.953Z",
+      "evidence": "PR 583: 22/22 checks en verde (CodeQL, GitGuardian, Socket incluidos; macOS tras un rerun por falta de runner); 375+210 tests afectados en local; ruff limpio",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-04T21:02:26.526Z",
+      "reason": "quality approved; conformance pending the main session review"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-04T21:02:26.879Z",
+      "evidence": "review.md: REQ-001..006 implemented and verified (tests with positive control; REQ-005 narrowed by the frozen hash test); independent review before merge (verification.md 2nd round, commit 23ace1c2): eight adjustments applied; PR #583 22/22 checks green; main CI green on cf1474d8",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-04T21:02:27.121Z",
+      "reason": "conformance approved; PR #583 merged in main as cf1474d8"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-04T21:02:27.377Z",
+      "evidence": "vault projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-04T21:02:27.609Z",
+      "reason": "PR #583 merged (cf1474d8), main CI green, memory note written; closing PR chore/close-sdd-2026-11-04-tarde"
+    }
+  ]
+}

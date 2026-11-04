@@ -768,6 +768,24 @@
     },
     {
       "file": "src/local_delegate/server.py",
+      "text": " Cada línea del contenido empieza por su número de línea en el fichero seguido de «| »; ese prefijo no es parte del texto: no lo copies en los valores. En las claves de ubicación ({fields}) da esos números de línea, con lo que ubican (por ejemplo «Título: líneas 120-160»).",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#568, los números de línea de `local_extract` con `path` y un campo que pide líneas): no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Esquema de encabezados del documento completo (línea: encabezado; calculado por programa, fiable):\n",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#568, el esquema de encabezados de un Markdown que precede al contenido en `local_extract`): no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": " Deja a null las claves de ubicación: el programa une las de todos los objetos.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#568, el reduce de `local_extract` troceado con un campo que pide líneas): no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
+    },
+    {
+      "file": "src/local_delegate/server.py",
       "text": "{} en total, como nombre:línea",
       "kind": "verbatim",
       "reason": "prompt del modelo local (#460, los números de línea de `local_explain_code` con `path`): no es texto de interfaz y su idioma lo decide REQ-028 (los prompts no se traducen)"
@@ -1035,6 +1053,96 @@
       "text": "`{}` en las líneas {}",
       "kind": "verbatim",
       "reason": "prompt del modelo local (#527): pista por programa de las líneas donde aparecen los identificadores de la pregunta en cada trozo y en la reducción de `local_explain_code`; no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+    },
+    {
+      "file": "src/local_delegate/daemon.py",
+      "text": "listening socket closed under a running daemon; stopping with exit code %d",
+      "kind": "verbatim",
+      "reason": "línea del log de diagnóstico `daemon-errors.log` (#576), que va junto a las de asyncio y uvicorn en inglés; los tests y quien depura la buscan tal cual, y no es salida para la consola"
+    },
+    {
+      "file": "src/local_delegate/daemon.py",
+      "text": "relieving daemon pid=%d: alive but nothing listens on %s:%d",
+      "kind": "verbatim",
+      "reason": "línea del log de diagnóstico `daemon-errors.log` (#576), que va junto a las de asyncio y uvicorn en inglés; los tests y quien depura la buscan tal cual, y no es salida para la consola"
+    },
+    {
+      "file": "src/local_delegate/daemon.py",
+      "text": "could not stop daemon pid=%d: %s",
+      "kind": "verbatim",
+      "reason": "línea del log de diagnóstico `daemon-errors.log` (#576), que va junto a las de asyncio y uvicorn en inglés; los tests y quien depura la buscan tal cual, y no es salida para la consola"
+    },
+    {
+      "file": "src/local_delegate/daemon.py",
+      "text": "daemon pid=%d still holds the lock after being stopped",
+      "kind": "verbatim",
+      "reason": "línea del log de diagnóstico `daemon-errors.log` (#576), que va junto a las de asyncio y uvicorn en inglés; los tests y quien depura la buscan tal cual, y no es salida para la consola"
+    },
+    {
+      "file": "src/local_delegate/daemon.py",
+      "text": "never retrieved",
+      "kind": "verbatim",
+      "reason": "fragmento del mensaje que escribe asyncio («Task exception was never retrieved») y que el filtro del log del daemon compara tal cual (#576); traducirlo haría que no lo encontrara"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": " En este diff, ese número es la línea del propio parche; los números de las cabeceras «@@ -a,b +c,d @@» son líneas de los ficheros antes y después del cambio, no del parche: no los des como líneas del parche.",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#582): lectura de un diff troceado en `local_explain_code` (líneas del parche frente a cabeceras @@, una nota por fichero, índice por programa); no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "notas para responder a la pregunta «{}»: una viñeta por CADA fichero del diff de este fragmento, sin omitir ninguno, empezando por su ruta y sus líneas del parche, como «ruta (líneas A–B):», seguido de lo que cambia en él que sirva para responder. No respondas todavía la pregunta",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#582): lectura de un diff troceado en `local_explain_code` (líneas del parche frente a cabeceras @@, una nota por fichero, índice por programa); no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "una viñeta por CADA fichero del diff de este fragmento, sin omitir ninguno, empezando por su ruta y sus líneas del parche, como «ruta (líneas A–B):», seguido de qué cambia en él. No expliques todavía el diff entero",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#582): lectura de un diff troceado en `local_explain_code` (líneas del parche frente a cabeceras @@, una nota por fichero, índice por programa); no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "{} (líneas {}–{})",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#582): lectura de un diff troceado en `local_explain_code` (líneas del parche frente a cabeceras @@, una nota por fichero, índice por programa); no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": ". Ficheros del diff que hay en este fragmento, con sus líneas del parche (por programa, fiables): {}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#582): lectura de un diff troceado en `local_explain_code` (líneas del parche frente a cabeceras @@, una nota por fichero, índice por programa); no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "{}. Fragmento",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#582): lectura de un diff troceado en `local_explain_code` (líneas del parche frente a cabeceras @@, una nota por fichero, índice por programa); no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Toma notas de este fragmento de un diff{}. Fragmento:\n\n{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#582): lectura de un diff troceado en `local_explain_code` (líneas del parche frente a cabeceras @@, una nota por fichero, índice por programa); no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Índice COMPLETO de los ficheros del diff, con sus líneas del parche (por programa, fiable):\n{}\n\n",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#582): lectura de un diff troceado en `local_explain_code` (líneas del parche frente a cabeceras @@, una nota por fichero, índice por programa); no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "Responde a la pregunta «{}» con lo que digan las notas y el índice; si pide los ficheros o sus líneas, usa el índice entero. Si no bastan para responderla, dilo claramente",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#582): lectura de un diff troceado en `local_explain_code` (líneas del parche frente a cabeceras @@, una nota por fichero, índice por programa); no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
+    },
+    {
+      "file": "src/local_delegate/server.py",
+      "text": "{}{}{}Estas son notas EN ORDEN sobre los fragmentos de un mismo diff unificado. El índice de arriba es COMPLETO y sus líneas son exactas; las notas pueden no cubrirlo entero. Los números de línea son del parche, no de las cabeceras @@: consérvalos, y si se pregunta dónde está algo, responde con «ruta: líneas». {}:\n\n{}",
+      "kind": "verbatim",
+      "reason": "prompt del modelo local (#582): lectura de un diff troceado en `local_explain_code` (líneas del parche frente a cabeceras @@, una nota por fichero, índice por programa); no es texto de interfaz y su idioma lo decide REQ-028, como el resto de cláusulas del prompt"
     }
   ]
 }

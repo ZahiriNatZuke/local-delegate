@@ -655,6 +655,24 @@ def test_rule_widens_if_window_lacks_commits(tmp_path):
         build.select_commits(repo, before=CUTOFF, exclude=(), n_real=30, n_traps=10, steps=steps)
 
 
+def test_window_counts_from_the_deadline_not_from_the_tip(tmp_path):
+    """Commits after the deadline must not push candidates out of the window: the frozen affinity
+    corpus moved from step 0 to step 1 just because `main` kept growing."""
+    repo = _new_repo(tmp_path)
+    for i in range(1, 4):
+        _confirm(repo, f"feat: ok-{i}", f"f{i}.txt", date=f"2026-09-{i:02d}")
+    steps = ((3, 300, 700), (None, 300, 700))
+    assert (
+        build.select_commits(repo, before=CUTOFF, exclude=(), n_real=2, n_traps=1, steps=steps).step
+        == 0
+    )
+    for i in range(1, 6):
+        _confirm(repo, f"feat: late-{i}", f"late{i}.txt", date=f"2026-10-{10 + i:02d}")
+    sel = build.select_commits(repo, before=CUTOFF, exclude=(), n_real=2, n_traps=1, steps=steps)
+    assert sel.step == 0
+    assert _subjects(sel.real + sel.traps) == ["feat: ok-3", "feat: ok-2", "feat: ok-1"]
+
+
 def test_case_already_in_f2_and_private_diffs_not_chosen(tmp_path):
     repo = _new_repo(tmp_path)
     for i in range(1, 6):

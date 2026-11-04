@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "slug": "summarize-word-budget",
+  "title": "local_summarize corta el resumen a mitad de frase con el max_words por defecto (#580)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "closed",
+  "createdAt": "2026-11-04T17:47:23.841Z",
+  "updatedAt": "2026-11-04T21:03:47.267Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T17:48:03.711Z",
+      "evidence": "Causa reproducida contra el backend real (ventana w-20261104T174214Z): max_tokens=2w+64=364; medidos 1,46-1,67 tok/palabra y exceso hasta 1,49x; log del mes: todos los cortes planos en 2w+64. Cinco requisitos observables.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T17:48:19.417Z",
+      "evidence": "Plan de 3 tareas trazadas a REQ-001..005; el corpus versionado ya declara max_tokens de local_summarize en PROMPT_BOUNDARIES 0.36.0; _chat_map_reduce sin max_tokens_for queda igual; reintento descartado por coste.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T21:03:46.052Z",
+      "evidence": "ruff check and format pass; new test_summarize_word_budget.py (17 tests) with positive control (6 mutants + 4 after review, each caught by its assert); full suite -n 2 green except the worktree-only sdist test; PR #581 22/22 checks green",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T21:03:46.540Z",
+      "evidence": "review.md: REQ-001..005 implemented and verified (tests + mutants); review before merge: three adjustments applied (bold sentence line, CJK sentence ends, cut table row), abbreviation accepted as known limit; reviewer identity not recorded in the PR; PR #581 22/22 checks green incl. macOS; main CI green on e85c0519",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T21:03:47.006Z",
+      "evidence": "vault projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md",
+      "actor": "user"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-04T17:47:23.841Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-04T17:48:03.711Z",
+      "evidence": "Causa reproducida contra el backend real (ventana w-20261104T174214Z): max_tokens=2w+64=364; medidos 1,46-1,67 tok/palabra y exceso hasta 1,49x; log del mes: todos los cortes planos en 2w+64. Cinco requisitos observables.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-11-04T17:48:15.040Z",
+      "reason": "flujo lite 580"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-11-04T17:48:15.243Z",
+      "reason": "flujo lite 580"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-04T17:48:15.448Z",
+      "reason": "flujo lite 580"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-04T17:48:19.417Z",
+      "evidence": "Plan de 3 tareas trazadas a REQ-001..005; el corpus versionado ya declara max_tokens de local_summarize en PROMPT_BOUNDARIES 0.36.0; _chat_map_reduce sin max_tokens_for queda igual; reintento descartado por coste.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-04T17:48:19.621Z",
+      "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-04T18:00:01.557Z",
+      "reason": "tests en verde"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-04T21:03:46.052Z",
+      "evidence": "ruff check and format pass; new test_summarize_word_budget.py (17 tests) with positive control (6 mutants + 4 after review, each caught by its assert); full suite -n 2 green except the worktree-only sdist test; PR #581 22/22 checks green",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-11-04T21:03:46.297Z",
+      "reason": "quality approved; PR #581 merged in main as e85c0519"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-11-04T21:03:46.540Z",
+      "evidence": "review.md: REQ-001..005 implemented and verified (tests + mutants); review before merge: three adjustments applied (bold sentence line, CJK sentence ends, cut table row), abbreviation accepted as known limit; reviewer identity not recorded in the PR; PR #581 22/22 checks green incl. macOS; main CI green on e85c0519",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-11-04T21:03:46.770Z",
+      "reason": "conformance approved; PR #581 merged in main as e85c0519"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-11-04T21:03:47.006Z",
+      "evidence": "vault projects/local-delegate/jornada-2026-11-04-seis-arreglos-y-el-vigilante-de-precios.md",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-11-04T21:03:47.267Z",
+      "reason": "PR #581 merged (e85c0519), main CI green, memory note written; closing PR chore/close-sdd-2026-11-04-tarde"
+    }
+  ]
+}

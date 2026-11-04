@@ -28,6 +28,15 @@ Defaults:
 - Dashboard: `http://127.0.0.1:9393/`
 - Estado: `http://127.0.0.1:9393/api/daemon`
 - Lock/estado: directorio de datos del usuario (`daemon.lock` / `daemon.json`)
+- Errores del propio daemon: `daemon-errors.log` en ese mismo directorio (avisos y errores, como
+  máximo dos ficheros de 256 KB). Con `pythonw` es el único rastro de por qué se paró.
+
+En Windows, un cliente que resetea su conexión antes de que se acepte ya no tumba el socket de
+escucha: el daemon vuelve a lanzar ese `accept`. Si aun así el socket se cierra con el proceso vivo,
+el daemon **sale con código 75** (`EX_TEMPFAIL`) en vez de quedarse sin atender: la tarea programada queda libre para
+volver a arrancarlo. Y si un `serve` encuentra el lock retenido por un daemon registrado que lleva
+más de un minuto vivo y cuyo puerto **rechaza** las conexiones, lo detiene y arranca en su lugar;
+un daemon lento, que acepta la conexión aunque tarde en contestar, no se toca nunca.
 
 `--host`, `--port` y `--log-level` permiten cambiar la escucha. Mantén `127.0.0.1` salvo que
 hayas diseñado autenticación y firewall para exponerlo: el daemon no debe publicarse en la LAN.
