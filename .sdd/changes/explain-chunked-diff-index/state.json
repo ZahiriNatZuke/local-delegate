@@ -6,7 +6,7 @@
   "traceability": "strict",
   "status": "verifying",
   "createdAt": "2026-11-04T18:27:43.399Z",
-  "updatedAt": "2026-11-04T18:36:23.256Z",
+  "updatedAt": "2026-11-04T19:21:02.953Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,10 +21,10 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-11-04T19:21:02.953Z",
+      "evidence": "PR 583: 22/22 checks en verde (CodeQL, GitGuardian, Socket incluidos; macOS tras un rerun por falta de runner); 375+210 tests afectados en local; ruff limpio",
+      "actor": "user"
     },
     "conformance": {
       "status": "pending",
@@ -90,6 +90,14 @@
       "to": "verifying",
       "at": "2026-11-04T18:36:23.256Z",
       "reason": "implementado; tests en verde"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-11-04T19:21:02.953Z",
+      "evidence": "PR 583: 22/22 checks en verde (CodeQL, GitGuardian, Socket incluidos; macOS tras un rerun por falta de runner); 375+210 tests afectados en local; ruff limpio",
+      "actor": "user"
     }
   ]
 }
