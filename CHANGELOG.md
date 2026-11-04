@@ -8,6 +8,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- **Con el turno remoto sin responder, las delegaciones ya no compiten a ciegas por el backend
+  (#577).** Desde la Mac, con el turno de la PC caído y su backend ocupado, cinco
+  `local_describe_image` esperaron ~55 s el turno, fueron igualmente al backend dos a la vez y
+  cada una agotó sus 180 s (dos de ellas tras 180 s más en cola: ~415 s). Ahora, sin turno porque
+  su daemon no responde, las operaciones van de una en una; si una agota su plazo en el backend se
+  abre el **corte de turno remoto** (`LOCAL_DELEGATE_REMOTE_TURN_CUT`, 120 s doblando hasta 600 s)
+  y las que esperaban, y las nuevas, fallan al momento con un aviso claro («el turno remoto no
+  responde; el backend puede estar ocupado por otra máquina; reintentar ahora no sirve») y
+  `error: "remote_turn_unreachable"` en el log. El error de una llamada que fue sin turno lo dice,
+  y varias esperas de turno a la vez dejan de sondear en cuanto una decide que el daemon no
+  responde. Con el daemon parado y el backend sano (#512) todo sigue funcionando, en serie.
+
 - **Los tests de precios de Claude Haiku 5.5 ya no tumban el PR del vigilante (#567).** Fijaban a
   mano las cifras de la tabla, así que cualquier cambio legítimo de precio que propusiera el
   vigilante dejaba su CI en rojo. Ahora la lógica se prueba contra una copia congelada de los

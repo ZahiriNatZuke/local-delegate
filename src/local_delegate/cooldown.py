@@ -51,6 +51,9 @@ from .json_state import read_json, write_json_atomic
 #: hooks leen el estado con su copia del nombre (`hook_common.BACKEND_BREAKER_FILE`).
 BREAKER_STATE_FILE = "backend-breaker.json"
 BREAKER_EVENTS_FILE = "backend-breaker-events.jsonl"
+#: The state and log of the remote turn's cut (issue #577).
+REMOTE_TURN_CUT_STATE_FILE = "remote-turn-cut.json"
+REMOTE_TURN_CUT_EVENTS_FILE = "remote-turn-cut-events.jsonl"
 
 #: Las clases que suman para el enfriamiento (tabla de F3). El resto son neutras: ni suman ni ponen
 #: a cero. Capacidad y configuración incluidas (plan, tarea 26): no dicen nada de si el modelo
@@ -349,6 +352,25 @@ def backend_breaker() -> CooldownState:
         enabled=config.BACKEND_BREAKER,
         counting=frozenset({FailureClass.ENDPOINT}),
         events_file=BREAKER_EVENTS_FILE,
+        legacy_file=None,
+    )
+
+
+def remote_turn_cut() -> CooldownState:
+    """The remote turn's cut with the current configuration (issue #577).
+
+    Keyed by `backend_key()`. Only an attempt made WITHOUT a turn because the turn's daemon was
+    unreachable feeds it (the caller decides): a `read_timeout` or `capacity_or_load` counts, a
+    success clears it, and so does a remote turn granted again.
+    """
+    return CooldownState(
+        config.LOG_DIR / REMOTE_TURN_CUT_STATE_FILE,
+        failures=config.REMOTE_TURN_CUT_FAILURES,
+        wait_s=config.REMOTE_TURN_CUT_S,
+        max_wait_s=config.REMOTE_TURN_CUT_MAX_S,
+        enabled=config.REMOTE_TURN_CUT,
+        counting=frozenset({FailureClass.READ_TIMEOUT, FailureClass.CAPACITY}),
+        events_file=REMOTE_TURN_CUT_EVENTS_FILE,
         legacy_file=None,
     )
 

@@ -292,6 +292,11 @@ def _host_of(url: str) -> str:
     return urlsplit(url).hostname or ""
 
 
+def daemon_host(url: str) -> str:
+    """The host of the turn daemon at `url`, as the messages name that machine."""
+    return _host_of(url)
+
+
 def points_to_itself(url: str) -> bool:
     """The guard by address (REQ-020): this machine's address on this process's own web port."""
     parts = urlsplit(url)
@@ -383,13 +388,81 @@ def last_result(url: str) -> str | None:
 
 
 def reset() -> None:
-    """Forget everything (tests): reasons, what was logged and the shared client."""
+    """Forget everything (tests): reasons, what was logged, the blind places and the client."""
     with _Memory.lock:
         _Memory.unusable.clear()
         _Memory.logged.clear()
         _Memory.last.clear()
         _Memory.reached.clear()
+    with _Blind.cond:
+        _Blind.holders.clear()
+        _Blind.cond.notify_all()
     _Transport.close()
+
+
+# --- without a turn, one at a time (#577) ----------------------------------------------------
+
+
+class _Blind:
+    """Per daemon URL: the one operation of this process at the backend WITHOUT its turn.
+
+    An unreachable turn daemon (#577) does not mean a free backend: the other machine may be using
+    it. Operations that go on without a turn for that reason go one at a time, so they do not
+    compete blindly among themselves for a backend that may already be busy.
+    """
+
+    cond = threading.Condition()
+    holders: ClassVar[dict[str, str]] = {}
+
+
+#: How often a wait for the blind place looks at `should_stop` and at the cut.
+BLIND_POLL_S = 0.25
+
+
+class BlindCut(Exception):
+    """The wait for the blind place ended because the remote turn's cut opened (#577)."""
+
+
+def hold_blind(
+    url: str,
+    op: str,
+    *,
+    should_stop: Callable[[], bool],
+    cut_open: Callable[[], bool],
+    on_wait: Callable[[], None] = lambda: None,
+) -> None:
+    """Take the blind place of `url` for `op`; wait while another operation holds it.
+
+    Raises `turn.AbandonedWait` when `should_stop` says so and `BlindCut` when `cut_open` does:
+    both are looked at before taking the place and every `BLIND_POLL_S` while waiting, so the
+    operations queued behind one whose backend call timed out leave as soon as the cut opens.
+    `on_wait` is called once, when the wait starts. Re-entrant for the same `op`.
+    """
+    waiting = False
+    while True:
+        if should_stop():
+            raise turn.AbandonedWait
+        if cut_open():
+            raise BlindCut
+        with _Blind.cond:
+            holder = _Blind.holders.get(url)
+            if holder is None or holder == op:
+                _Blind.holders[url] = op
+                return
+        if not waiting:
+            waiting = True
+            on_wait()
+        with _Blind.cond:
+            if _Blind.holders.get(url) is not None:
+                _Blind.cond.wait(BLIND_POLL_S)
+
+
+def release_blind(url: str, op: str) -> None:
+    """Give the blind place of `url` back if `op` holds it. Idempotent; never raises."""
+    with _Blind.cond:
+        if _Blind.holders.get(url) == op:
+            del _Blind.holders[url]
+            _Blind.cond.notify_all()
 
 
 # --- transport -------------------------------------------------------------------------------
@@ -705,6 +778,7 @@ class RemoteLease:
                 self.busy = True
                 on_wait(0, ())
                 self._pause(self.heartbeat_s)
+                self._left_by_another()
                 continue
             except _Lost:
                 # No answer: a lease in hand may be gone. Ask again ONCE (the contract allows it
@@ -713,6 +787,7 @@ class RemoteLease:
                     self._fail(UNREACHABLE)
                 retried_lost = True
                 self.lease_id = None
+                self._left_by_another()
                 continue
             except Unusable as error:
                 self._fail(error.reason)
@@ -762,6 +837,18 @@ class RemoteLease:
         self._give_back()
         remember(self.url, reason)
         raise Unusable(reason)
+
+    def _left_by_another(self) -> None:
+        """Leave now if another operation already found this daemon unusable (#577).
+
+        Looked at only while this wait is not making progress (a lost answer, a `429`): several
+        operations that asked at once used to pay each its own probing (two read timeouts) after
+        the first one had already decided. A wait that gets answers is never cut short here.
+        """
+        reason = remembered(self.url)
+        if reason is not None:
+            self._give_back()
+            raise Unusable(reason)
 
     # --- keeping it ----------------------------------------------------------------------------
 

@@ -395,6 +395,19 @@ BACKEND_BREAKER_MAX_S = max(
     BACKEND_BREAKER_S, _env_float("LOCAL_DELEGATE_BACKEND_BREAKER_MAX_S", 600.0)
 )
 
+# --- Remote turn cut (issue #577) ---------------------------------------------
+# With the remote turn unreachable, operations go to the other machine's backend without a turn,
+# one at a time. If one of them runs out of time there (`read_timeout` or `capacity_or_load`), the
+# backend is busy with something this machine cannot see: for this long, the operations that would
+# go without a turn fail at once ("retrying now does not help") instead of paying the deadline
+# each. A success without a turn, or a turn granted again, closes it.
+REMOTE_TURN_CUT = _env_flag("LOCAL_DELEGATE_REMOTE_TURN_CUT", True)
+REMOTE_TURN_CUT_FAILURES = max(1, _env_int("LOCAL_DELEGATE_REMOTE_TURN_CUT_FAILURES", 1))
+REMOTE_TURN_CUT_S = max(1.0, _env_float("LOCAL_DELEGATE_REMOTE_TURN_CUT_S", 120.0))
+REMOTE_TURN_CUT_MAX_S = max(
+    REMOTE_TURN_CUT_S, _env_float("LOCAL_DELEGATE_REMOTE_TURN_CUT_MAX_S", 600.0)
+)
+
 
 # --- Respaldo entre modelos (F3: REQ-002, REQ-004, REQ-014) ------------------
 # Encendido por defecto (D-1), hasta 2 saltos (D-3). La cadena de cada rol la resuelve `chains.py`

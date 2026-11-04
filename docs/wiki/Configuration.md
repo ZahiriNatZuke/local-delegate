@@ -183,6 +183,33 @@ comparten el daemon y todos los procesos stdio de la máquina.
 > **Qué cuenta:** solo los fallos de conexión. Un 5xx, un `capacity_or_load`, un plazo de lectura o
 > un error del modelo dicen que el backend contesta: no cortan y ponen la racha a cero.
 
+## Corte de turno remoto
+
+Para la máquina cuyo backend es el de **otra** (la Mac contra la PC, `LOCAL_DELEGATE_TURN_URL`).
+Si el daemon del turno de esa máquina **no responde**, eso no quiere decir que el backend esté
+libre: la otra máquina puede estar usándolo. Desde el #577, en ese caso:
+
+- Las operaciones siguen sin turno, como antes, pero **de una en una** en cada proceso: ya no van
+  dos a la vez a un backend que puede estar ocupado. Con el daemon parado y el backend sano todo
+  sigue funcionando, solo que en serie.
+- Si una de ellas agota su plazo en el backend (`read_timeout` o `capacity_or_load`), se abre el
+  **corte de turno remoto**: durante la espera, las operaciones que irían sin turno (también las
+  que ya esperaban su sitio) fallan al momento, sin llamar al backend, con un aviso de que el
+  turno remoto no responde, de que el backend puede estar ocupado por otra máquina y de que
+  reintentar ahora no sirve. Esas llamadas quedan en el log de uso con `ok: false`,
+  `error: "remote_turn_unreachable"` y `remote_turn: "unreachable"`.
+- El error de una llamada que fue sin turno y falló lleva una nota que lo dice.
+- Una llamada sin turno que sale bien, o un turno remoto concedido otra vez, cierra el corte. El
+  estado vive en `remote-turn-cut.json` (y sus transiciones en `remote-turn-cut-events.jsonl`), en
+  la carpeta de datos, y lo comparten todos los procesos de la máquina.
+
+| Variable | Default | Qué hace |
+|---|---|---|
+| `LOCAL_DELEGATE_REMOTE_TURN_CUT` | `1` | `0` apaga el corte (la serie se queda) |
+| `LOCAL_DELEGATE_REMOTE_TURN_CUT_FAILURES` | `1` | plazos agotados sin turno que abren el corte |
+| `LOCAL_DELEGATE_REMOTE_TURN_CUT_S` | `120` | espera de la primera vez, en segundos |
+| `LOCAL_DELEGATE_REMOTE_TURN_CUT_MAX_S` | `600` | tope de la espera: cada prueba fallida la dobla hasta aquí |
+
 ## Turno, afinidad y lentitud
 
 Con un llama-swap **local** y su `config.yaml` legible (`LLAMASWAP_CONFIG` y el extra
