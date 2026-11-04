@@ -23,6 +23,21 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   clon completo recién hecho, un submódulo o una rama de un fork toman el idioma de su historial. El
   aviso de «muy pocos commits» ahora habla del historial leído (repo nuevo o clon con `--depth`).
 
+- **`recompute-cost` ya no da el cotejo de precios por fallido porque un modelo no esté en la
+  tabla, y la tabla trae Claude Haiku 5.5** (#563). Con un solo modelo sin precio
+  (`claude-haiku-5-5`) todo el cotejo salía «falla» y `doctor` dejaba un `[WARN] coste y relleno`
+  que no se iba nunca. Ahora las filas de un modelo sin precio salen del juicio y se cuentan aparte
+  («Sin precio: X, N fila(s) fuera del cotejo»); el veredicto lo deciden solo las filas con precio,
+  y `doctor` da `OK` nombrando los modelos sin precio. El cotejo guardado dice además cuántas filas
+  fuera de banda tiene cada modelo (`outside_by_model`), y el resumen las lista. La tabla (fecha
+  2026-11-04, de la página oficial de precios) añade Claude Haiku 5.5 con sus dos tramos: hasta
+  100 000 tokens de prompt, 0,10 / 0,125 / 0,20 / 0,01 / 0,50 USD por millón; por encima,
+  0,50 / 0,625 / 1 / 0,05 / 2,50. El tramo se decide por petición (entrada + escrituras +
+  lecturas de caché): así lo aplica el coste por petición de los puntos de cuota, y como una fila
+  del cotejo suma peticiones de los dos tramos, su banda va de todo al tramo bajo a todo al alto.
+  Los demás modelos no cambian. Un `cost-aggregates.json` escrito por la 0.48.0 sigue avisando
+  hasta que se vuelva a lanzar `local-delegate recompute-cost`.
+
 - **`local_summarize` con `focus` ya no deja fuera en silencio la sección que trata el enfoque**
   (#558). El enfoque llegaba al modelo, pero solo como una cláusula general, y en un informe de
   ~16 KB el resumen se quedó con la introducción y la lista final sin nada de la sección cuyo

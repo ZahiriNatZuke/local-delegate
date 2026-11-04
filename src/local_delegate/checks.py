@@ -2530,15 +2530,22 @@ def _probe_cost(ctx: Context) -> Result:
         return Result(WARN, i18n.t("doctor.probe.cost.and").join(warnings), RECOMPUTE_HINT)
     if check is not None and check.get("verdict") == "pass":
         judged = check.get("judged")
-        return Result(
-            OK,
-            i18n.t(
-                "doctor.probe.cost.check_passed",
-                date=date,
-                judged=i18n.format_number(judged) if isinstance(judged, int) else "?",
-                table=check.get("table_version") or "?",
-            ),
+        passed = i18n.t(
+            "doctor.probe.cost.check_passed",
+            date=date,
+            judged=i18n.format_number(judged) if isinstance(judged, int) else "?",
+            table=check.get("table_version") or "?",
         )
+        # Las filas de un modelo sin precio no tumban el cotejo (#563), pero se dicen.
+        unpriced_rows = check.get("unpriced_rows")
+        if check.get("unpriced") and isinstance(unpriced_rows, int) and unpriced_rows > 0:
+            passed = i18n.t(
+                "doctor.probe.cost.passed_unpriced",
+                passed=passed,
+                models=", ".join(str(m) for m in check["unpriced"]),
+                n=i18n.format_number(unpriced_rows),
+            )
+        return Result(OK, passed)
     return Result(
         UNKNOWN, i18n.t("doctor.probe.cost.no_check", path=log_dir, command=RECOMPUTE_HINT)
     )

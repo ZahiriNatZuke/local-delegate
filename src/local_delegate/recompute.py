@@ -178,13 +178,22 @@ def _check(index: transcripts.Index, *, now: datetime) -> dict | None:
     unpriced = sorted(
         {pricing.normalize_id(f["model"]) for f, r in zip(rows, results) if r == "unpriced"}
     )
+    outside_by_model: dict[str, int] = {}
+    for f, r in zip(rows, results):
+        if r == "outside":
+            mid = pricing.normalize_id(f["model"])
+            outside_by_model[mid] = outside_by_model.get(mid, 0) + 1
+    # Un modelo sin precio no tumba el cotejo: sus filas salen del juicio y se cuentan aparte
+    # (#563). `judged` cuenta solo las filas juzgadas contra un precio.
     return {
         "date": now.isoformat(timespec="seconds"),
         "table_version": table.get("consulted"),
-        "judged": sum(1 for r in results if r is not None),
-        "outside": sum(1 for r in results if r == "outside"),
+        "judged": sum(1 for r in results if r in ("inside", "outside")),
+        "outside": sum(outside_by_model.values()),
+        "outside_by_model": dict(sorted(outside_by_model.items())),
         "unpriced": unpriced,
-        "verdict": pricing.verdict(results),
+        "unpriced_rows": sum(1 for r in results if r == "unpriced"),
+        "verdict": pricing.priced_verdict(results),
     }
 
 
@@ -423,6 +432,22 @@ def summary_text(r: dict) -> str:
                 unpriced=", ".join(c.get("unpriced") or []) or none,
             )
         )
+        by_model = c.get("outside_by_model") or {}
+        if by_model:
+            lines.append(
+                i18n.t(
+                    "cli.recompute_cost.summary.outside_by_model",
+                    models=", ".join(f"{m} ({n(k)})" for m, k in by_model.items()),
+                )
+            )
+        if c.get("unpriced_rows"):
+            lines.append(
+                i18n.t(
+                    "cli.recompute_cost.summary.unpriced_rows",
+                    models=", ".join(c.get("unpriced") or []) or none,
+                    n=n(c["unpriced_rows"]),
+                )
+            )
     else:
         lines.append(i18n.t("cli.recompute_cost.summary.no_check"))
     for kind in quota.TYPES:
