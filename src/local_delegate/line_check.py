@@ -570,6 +570,66 @@ def markdown_outline(content: str) -> list[tuple[int, str]]:
     return out
 
 
+_GIT_HEADER = re.compile(r"diff --git a/(.+) b/\1$")
+
+
+def _header_path(line: str, after: str) -> str | None:
+    """The path of a `--- a/x` or `+++ b/x` header line, `None` for `/dev/null`."""
+    name = line[4:].split("\t", 1)[0].rstrip()
+    if name == "/dev/null":
+        return None
+    return name.removeprefix(after)
+
+
+def diff_file_ranges(content: str) -> list[tuple[int, int, str]]:
+    """#582: `(first, last, path)` of each file of a unified diff, in lines of the patch itself.
+
+    `first` is the line of the file's header (`diff --git`, or, in a diff without it, the `--- `
+    line followed by `+++ ` and a hunk `@@`); `last` is the line before the next header, or the
+    last non-empty line. Lines counted from 1 and split only on `\\n`, like `_number_lines` and
+    `Read`. The path is the one of `+++ b/x`, the one of `--- a/x` for a deletion, or the one of
+    the `diff --git` line. Anything that is not a diff gives `[]`.
+    """
+    lines = content.split("\n")
+    git = any(line.startswith("diff --git ") for line in lines)
+    starts: list[int] = []
+    for i, line in enumerate(lines):
+        if git:
+            if line.startswith("diff --git "):
+                starts.append(i)
+        elif (
+            line.startswith("--- ")
+            and i + 2 < len(lines)
+            and lines[i + 1].startswith("+++ ")
+            and lines[i + 2].startswith("@@")
+        ):
+            starts.append(i)
+    out: list[tuple[int, int, str]] = []
+    for k, start in enumerate(starts):
+        end = starts[k + 1] if k + 1 < len(starts) else len(lines)
+        while end - 1 > start and not lines[end - 1].strip():
+            end -= 1
+        path = ""
+        if git:
+            rest = lines[start][len("diff --git ") :]
+            pair = _GIT_HEADER.match(lines[start])
+            path = pair.group(1) if pair else rest.split(" b/", 1)[-1]
+        old = new = None
+        for line in lines[start:end]:
+            if line.startswith("@@"):
+                break
+            if line.startswith("--- "):
+                old = _header_path(line, "a/")
+            elif line.startswith("+++ "):
+                new = _header_path(line, "b/")
+            elif line.startswith("rename to "):
+                new = line[len("rename to ") :]
+        path = new or old or path
+        if path:
+            out.append((start + 1, end, path))
+    return out
+
+
 #: Keys of an extracted object whose number is a line bound: `{"heading": ..., "start": 12}`.
 _BOUND_KEYS = frozenset(
     {

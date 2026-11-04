@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "slug": "explain-chunked-diff-index",
+  "title": "local_explain_code sobre un diff troceado: índice completo y líneas del patch (#582)",
+  "mode": "lite",
+  "traceability": "strict",
+  "status": "verifying",
+  "createdAt": "2026-11-04T18:27:43.399Z",
+  "updatedAt": "2026-11-04T18:36:23.256Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T18:28:30.125Z",
+      "evidence": "spec.md 6 REQ; alcance del encargo (#582), lite",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-11-04T18:28:30.337Z",
+      "evidence": "plan.md T1-T4, cada REQ con tarea y verificación",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-11-04T18:27:43.399Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-11-04T18:28:30.125Z",
+      "evidence": "spec.md 6 REQ; alcance del encargo (#582), lite",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-11-04T18:28:30.337Z",
+      "evidence": "plan.md T1-T4, cada REQ con tarea y verificación",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "specifying",
+      "at": "2026-11-04T18:36:22.511Z",
+      "reason": "spec escrita"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-11-04T18:36:22.762Z",
+      "reason": "plan escrito"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-11-04T18:36:23.002Z",
+      "reason": "puertas spec y plan aprobadas"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-11-04T18:36:23.256Z",
+      "reason": "implementado; tests en verde"
+    }
+  ]
+}
