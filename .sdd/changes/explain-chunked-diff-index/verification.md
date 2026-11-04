@@ -31,7 +31,24 @@
 - [x] Secret scanning passes.
 - [x] No unrelated changes are present.
 
+## Revisión independiente (2.ª ronda)
+
+| Punto | Arreglo | Control positivo |
+| --- | --- | --- |
+| 1 líneas de contexto en blanco | recorte solo en el último fichero y solo `== ""` | con el `line_check.py` anterior `a.py` da (1, 6); mutante «recorta con `strip()`» falla en `b.py` |
+| 2 `format-patch` | corta en `-- ` y en `From <sha> ` | con el anterior: (7, 20) en vez de (7, 12) |
+| 3 rutas citadas / mnemónicas | quita comillas, deshace octal, prefijos `[abiwco]/` | con el anterior: la ruta sale con comillas y `Ã±` |
+| 4 `diff -ru` / SVN | el fichero empieza en `diff -…`/`Index:`/`===` | con el anterior: (2, 7) en vez de (1, 6) |
+| 5 recibo y aviso | con feedback encendido no va el aviso | mutante sin la condición: falla el assert de «no aviso» |
+| 6 pista del trozo | 20 ficheros + «…y N más», reservados del presupuesto | mutantes «sin tope» y «sin reserva»: el prompt de map pasa de presupuesto + 300 |
+| 7 índice final | 50 salvo pregunta de ficheros/líneas (200) | mutante «200 siempre»: falla el recuento |
+| 8 estado de hunk | cuentas de `@@` | con el anterior: `--- old`/`+++ new` + hunk siguiente abren un fichero falso |
+
 ## Deviations and residual risk
+
+- Un hunk con cuentas que no casan con su contenido (parche editado a mano) puede tragarse la
+  cabecera `--- ` de un diff sin `diff --git` que lo siga; con `diff --git` no, porque esa línea
+  no empieza por marca de hunk. Se eligió así para no abrir ficheros falsos en diffs bien formados.
 
 - REQ-005 se restringió: la explicación troceada sin pregunta ni diff no lleva el aviso, porque su
   salida está congelada por hash en un test existente que no se toca.

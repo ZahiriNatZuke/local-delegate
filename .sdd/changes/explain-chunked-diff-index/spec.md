@@ -10,14 +10,19 @@ las cabeceras `@@` con líneas del patch. Toda respuesta troceada avisa de que l
 
 - **REQ-001** — `line_check.diff_file_ranges(content)` devuelve, para un diff unificado, un
   `(inicio, fin, ruta)` por fichero: inicio = línea de su cabecera (`diff --git`, o `--- ` seguida
-  de `+++ ` y `@@` sin `diff --git`), fin = línea anterior a la cabecera siguiente o última línea no
-  vacía; líneas contadas desde 1 cortando solo en `\n`. Ruta de `+++ b/`, o de `--- a/` si es un
-  borrado, o de la cabecera `diff --git`. Para lo que no es diff, lista vacía.
+  de `+++ `, adelantada a un `diff -…`/`Index: `/`===` justo antes); fin = línea anterior al
+  fichero siguiente, a una firma `-- ` o a un `From <sha> ` de `format-patch`, o la última línea
+  sin las vacías (`== ""`) del final del parche. Dentro de un hunk se siguen las cuentas de
+  `@@ -a,b +c,d @@`, así una línea de contenido `--- x` no abre fichero. Líneas desde 1 cortando
+  solo en `\n`. Ruta de `+++`, de `---` si es un borrado, de `rename to` o de la cabecera, sin
+  comillas ni escapes octales (`core.quotePath`) y sin prefijo `a/ b/ i/ w/ c/ o/`. Para lo que no
+  es diff, lista vacía.
   - Request: "el índice de ficheros con sus rangos de línea en el patch se puede sacar sin modelo"
   - Verify: test tests/test_explain_code_diff_index.py
 - **REQ-002** — Con `path`, diff troceado: cada trozo del map lleva, por programa, los ficheros del
-  diff que contiene con sus líneas; el map pide una viñeta por fichero (no por función); el reduce
-  recibe el índice completo y no se le prohíbe enumerar.
+  diff que contiene con sus líneas (como mucho 20 y «…y N más», descontados del presupuesto del
+  trozo); el map pide una viñeta por fichero (no por función); el reduce recibe el índice completo
+  y no se le prohíbe enumerar.
   - Request: "que el reduce no tire trozos en preguntas de enumeración"
   - Verify: test tests/test_explain_code_diff_index.py
 - **REQ-003** — Con `path` y diff (troceado o no), el system dice que los números válidos son los
@@ -25,12 +30,15 @@ las cabeceras `@@` con líneas del patch. Toda respuesta troceada avisa de que l
   fichero, no del patch; e incluye la nota de lectura de diffs (`_DIFF_NOTE`).
   - Request: "¿el modelo cita números de las cabeceras `@@ -a,b +c,d @@` del propio diff en vez de los del fichero?"
   - Verify: test tests/test_explain_code_diff_index.py
-- **REQ-004** — Con `path`, diff troceado: la respuesta termina con el índice completo calculado por
-  programa (ruta: inicio–fin), hasta 200 ficheros y «…y N más».
+- **REQ-004** — Con `path`, diff troceado: la respuesta termina con el índice calculado por programa
+  (ruta: inicio–fin): hasta 200 ficheros si la pregunta pide ficheros o líneas (palabras de
+  `line_check.FILE_QUESTION_WORDS`, sin acentos ni mayúsculas), y si no hasta 50 con «…y N más
+  (pídelos con una pregunta sobre los ficheros o sus líneas)».
   - Request: "O el índice completo de los 32 ficheros con sus rangos reales"
   - Verify: test tests/test_explain_code_diff_index.py
 - **REQ-005** — Toda respuesta troceada de `local_explain_code` con pregunta o sobre un diff lleva
-  un aviso con el número de trozos, aunque `FEEDBACK_ENABLED` esté apagado. La explicación simple
+  un aviso con el número de trozos cuando `FEEDBACK_ENABLED` está apagado; encendido, ya lo dice el
+  recibo (partes y pasadas) y el aviso no se añade, para no dar dos cuentas. La explicación simple
   de un fichero sin pregunta queda byte a byte (su salida está congelada por hash en
   `test_without_a_question_the_prompts_are_unchanged`, que no se toca).
   - Request: "Que una respuesta construida desde trozos lo diga siempre"

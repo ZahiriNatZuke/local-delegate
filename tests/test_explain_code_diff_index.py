@@ -60,7 +60,7 @@ def _diff(files: int = FILES, git: bool = True) -> str:
             out.append(f"diff --git a/src/mod_{i}.py b/src/mod_{i}.py\nindex 111..222 100644\n")
         out.append(f"--- a/src/mod_{i}.py\n+++ b/src/mod_{i}.py\n")
         for h in range(2):
-            out.append(f"@@ -{240 + h * 40},15 +{242 + h * 40},16 @@ def f_{i}_{h}():\n")
+            out.append(f"@@ -{240 + h * 40},13 +{242 + h * 40},14 @@ def f_{i}_{h}():\n")
             out += [f"     ctx_{i}_{h}_{k} = compute({k})  # context line\n" for k in range(12)]
             out.append(f"-    old_{i}_{h} = 1\n+    new_{i}_{h} = 2\n+    extra_{i}_{h} = 3\n")
     return "".join(out)
@@ -244,3 +244,123 @@ def test_inline_diff_has_no_numbered_prompts(backend):
     assert all(server._DIFF_LINES_CLAUSE not in c["system"] for c in backend)
     assert i18n.t("mcp.explain.diff_index", count=FILES) not in result
     assert "(local-delegate:" in result
+
+
+# --- review of #583: the edges of the index ---------------------------------------------------
+
+
+def test_blank_context_lines_stay_in_their_file():
+    """Mutant «trim blank-looking lines of every file»: `a.py` ends at 6 and 7–8 are orphans."""
+    text = (
+        "diff --git a/a.py b/a.py\n--- a/a.py\n+++ b/a.py\n@@ -1,3 +1,3 @@\n-x\n+y\n \n \n"
+        "diff --git a/b.py b/b.py\n--- a/b.py\n+++ b/b.py\n@@ -1,2 +1,2 @@\n-p\n+q\n \n\n\n"
+    )
+    assert line_check.diff_file_ranges(text) == [(1, 8, "a.py"), (9, 15, "b.py")]
+
+
+def test_a_format_patch_series_stops_each_file_at_the_signature_and_the_next_mail():
+    """Mutant «no `-- ` / `From <sha>` stop»: the signature and the next mail fall in a file."""
+    sha = "0123456789abcdef0123456789abcdef01234567"
+    patch = (
+        f"From {sha} Mon Sep 17 00:00:00 2001\nSubject: [PATCH {{n}}/2] t\n\n---\n"
+        " {name} | 2 +-\n\n"
+        "diff --git a/{name} b/{name}\n--- a/{name}\n+++ b/{name}\n@@ -1 +1 @@\n-a\n+b\n"
+        "-- \n2.43.0\n\n"
+    )
+    text = patch.format(n=1, name="a.py") + patch.format(n=2, name="b.py")
+    assert line_check.diff_file_ranges(text) == [(7, 12, "a.py"), (22, 27, "b.py")]
+
+
+def test_quoted_and_mnemonic_paths_come_out_clean():
+    """Mutant «no unquoting» or «only a/ b/»: the path keeps quotes, octal or `w/`."""
+    quoted = (
+        r'diff --git "a/espa\303\261a.py" "b/espa\303\261a.py"'
+        "\n"
+        r'--- "a/espa\303\261a.py"'
+        "\n"
+        r'+++ "b/espa\303\261a.py"'
+        "\n@@ -1 +1 @@\n-a\n+b\n"
+    )
+    mnemonic = "diff --git i/a.py w/a.py\n--- i/a.py\n+++ w/a.py\n@@ -1 +1 @@\n-a\n+b\n"
+    renamed = 'diff --git a/x.py "b/con \\"comillas\\".py"\nrename from x.py\nrename to "con \\"comillas\\".py"\n'
+    assert line_check.diff_file_ranges(quoted) == [(1, 6, "españa.py")]
+    assert line_check.diff_file_ranges(mnemonic) == [(1, 6, "a.py")]
+    assert line_check.diff_file_ranges(renamed) == [(1, 3, 'con "comillas".py')]
+
+
+def test_diff_ru_and_svn_headers_open_their_own_file():
+    """Mutant «a file starts at its `--- `»: the next file's `diff -ru`/`Index:` stay behind."""
+    ru = (
+        "diff -ru a/x.c b/x.c\n--- a/x.c\t2024-01-01\n+++ b/x.c\t2024-01-02\n@@ -1 +1 @@\n-a\n+b\n"
+        "diff -ru a/y.c b/y.c\n--- a/y.c\t2024\n+++ b/y.c\t2024\n@@ -1 +1 @@\n-a\n+b\n"
+    )
+    svn = (
+        "Index: x.c\n" + "=" * 20 + "\n--- x.c\t(revision 1)\n+++ x.c\t(working copy)\n"
+        "@@ -1 +1 @@\n-a\n+b\n"
+        "Index: y.c\n" + "=" * 20 + "\n--- y.c\t(revision 1)\n+++ y.c\t(working copy)\n"
+        "@@ -1 +1 @@\n-a\n+b\n"
+    )
+    assert line_check.diff_file_ranges(ru) == [(1, 6, "x.c"), (7, 12, "y.c")]
+    assert line_check.diff_file_ranges(svn) == [(1, 7, "x.c"), (8, 14, "y.c")]
+
+
+def test_header_looking_lines_inside_a_hunk_do_not_open_a_file():
+    """Mutant «ignore the hunk counts»: `--- old`/`+++ new` content open a second file."""
+    # A removed `-- old` and an added `++ new` end the first hunk; the next hunk follows.
+    text = (
+        "--- a/q.sql\n+++ b/q.sql\n@@ -1,2 +1,2 @@\n x\n--- old comment\n+++ new comment\n"
+        "@@ -10 +10 @@\n-a\n+b\n"
+    )
+    assert line_check.diff_file_ranges(text) == [(1, 9, "q.sql")]
+
+
+def test_which_questions_ask_for_files():
+    assert line_check.asks_for_files(QUESTION)
+    assert line_check.asks_for_files("¿Qué archivos toca y en qué LÍNEAS?")
+    assert not line_check.asks_for_files("¿Qué cambia este parche?")
+    assert not line_check.asks_for_files(None)
+
+
+def _renames(tmp_path: Path, count: int = 600) -> Path:
+    parts = ["diff --git a/x.py b/x.py\n--- a/x.py\n+++ b/x.py\n@@ -1 +1 @@\n-a\n+b\n"]
+    for i in range(count):
+        p = f"src/very/deep/package/module_number_{i:04d}/implementation_file.py"
+        q = p.replace("implementation", "renamed")
+        parts.append(
+            f"diff --git a/{p} b/{q}\nsimilarity index 100%\nrename from {p}\nrename to {q}\n"
+        )
+    file = tmp_path / "renames.patch"
+    file.write_text("".join(parts), encoding="utf-8")
+    return file
+
+
+def test_the_diff_hint_is_capped_and_fits_the_chunk(backend, tmp_path):
+    """Mutant «hint without cap or reserve»: a map prompt passes the role's `max_chars`."""
+    server.local_explain_code(path=str(_renames(tmp_path)), question="¿Qué cambia?")
+    maps = [c for c in backend if c["user"].startswith("Toma notas")]
+    assert len(maps) > 1
+    more = i18n.t("mcp.explain.occurrences_more", count=1).split("1")[0]
+    assert any(more in c["user"].split("\n\n", 1)[0] for c in maps)
+    # The chunk plus its hint and the fixed words of the order stay within the chunk budget.
+    budget = server._map_budget(config.max_chars_for_role("code"))
+    assert max(len(c["user"]) for c in maps) <= budget + 300
+
+
+def test_the_final_index_is_short_unless_the_question_asks_for_files(backend, tmp_path):
+    """Mutant «always the whole index»: 200 lines where the question did not ask for files."""
+    file = _renames(tmp_path)
+    short = server.local_explain_code(path=str(file), question="¿Qué cambia?")
+    whole = server.local_explain_code(path=str(file), question="Lista los ficheros")
+    lines = lambda out: re.findall(r"(?m)^- src/\S+: \d+–\d+$", out)
+    assert len(lines(short)) == server.DIFF_INDEX_SHORT_FILES - 1  # plus `x.py` first
+    assert i18n.t("mcp.explain.diff_more", count=601 - 50) in short
+    assert len(lines(whole)) == server.DIFF_INDEX_MAX_FILES - 1
+    assert i18n.t("mcp.explain.occurrences_more", count=601 - 200).strip() in whole
+
+
+def test_with_the_feedback_on_the_receipt_replaces_the_notice(backend, patch, monkeypatch):
+    """Mutant «notice with the feedback on»: two counts that do not agree in one answer."""
+    monkeypatch.setattr(config, "FEEDBACK_ENABLED", True)
+    result = server.local_explain_code(path=str(patch), question=QUESTION)
+    assert "(local-delegate: respuesta construida" not in result
+    assert i18n.t("mcp.explain.diff_index", count=FILES) in result

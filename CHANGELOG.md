@@ -31,9 +31,11 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   reduce tenía prohibido enumerar. Ahora, con `path` y un diff unificado, el system dice que los
   números de las cabeceras `@@` no son líneas del parche; al trocear, cada trozo sabe por programa
   qué ficheros tiene y en qué líneas, el map toma una nota por fichero, el reduce recibe el índice
-  completo y la respuesta termina con ese índice, calculado sin modelo. Una respuesta troceada con
-  pregunta o sobre un diff dice de cuántos trozos sale, aunque el recibo esté apagado; la
-  explicación simple de un fichero sin pregunta no cambia.
+  completo y la respuesta termina con ese índice, calculado sin modelo: hasta 200 ficheros si la
+  pregunta pide ficheros o líneas, 50 si no. El índice sigue las cuentas de cada hunk y entiende
+  `diff -ru`, SVN (`Index:`), series de `format-patch` y rutas entre comillas o con
+  `diff.mnemonicPrefix`. Con el recibo apagado, una respuesta troceada con pregunta o sobre un diff
+  dice de cuántos trozos sale; la explicación simple de un fichero sin pregunta no cambia.
 
 - **El daemon ya no se queda vivo sin escuchar ni bloquea al siguiente (#576).** En Windows, un
   `accept` que falla hace que asyncio cierre el socket de escucha para siempre y solo lo cuente a su

@@ -4767,15 +4767,25 @@ _DIFF_LINES_CLAUSE = (
     "los des como líneas del parche."
 )
 
-#: #582: files of a diff listed with their lines at the end of a chunked `local_explain_code`.
+#: #582: files of a diff listed with their lines at the end of a chunked `local_explain_code`
+#: whose question asks for files or lines (`line_check.asks_for_files`) ...
 DIFF_INDEX_MAX_FILES = 200
+#: ... and for any other question, or none: the index costs the caller's context.
+DIFF_INDEX_SHORT_FILES = 50
+#: #582: files of the diff named in the hint of one map chunk.
+DIFF_HINT_MAX_FILES = 20
 
 
-def _diff_index_lines(ranges: list[tuple[int, int, str]], max_chars: int | None = None) -> str:
-    """`- path: first–last` per file of the diff, cut at `DIFF_INDEX_MAX_FILES` or `max_chars`."""
+def _diff_index_lines(
+    ranges: list[tuple[int, int, str]],
+    max_chars: int | None = None,
+    limit: int = DIFF_INDEX_MAX_FILES,
+    more_key: str = "mcp.explain.occurrences_more",
+) -> str:
+    """`- path: first–last` per file of the diff, cut at `limit` files or `max_chars`."""
     out: list[str] = []
     size = 0
-    for first, last, path in ranges[:DIFF_INDEX_MAX_FILES]:
+    for first, last, path in ranges[:limit]:
         line = f"- {path}: {first}–{last}"
         if max_chars is not None and size + len(line) + 1 > max_chars:
             break
@@ -4783,8 +4793,23 @@ def _diff_index_lines(ranges: list[tuple[int, int, str]], max_chars: int | None 
         size += len(line) + 1
     rest = len(ranges) - len(out)
     if rest > 0:
-        out.append(i18n.t("mcp.explain.occurrences_more", count=rest).strip())
+        out.append(i18n.t(more_key, count=rest).strip())
     return "\n".join(out)
+
+
+def _diff_hint_files(held: list[tuple[int, int, str]]) -> str:
+    """#582: the files of one chunk for its map hint, at most `DIFF_HINT_MAX_FILES` of them."""
+    listed = ", ".join(
+        f"{path} (líneas {first}–{last})" for first, last, path in held[:DIFF_HINT_MAX_FILES]
+    )
+    rest = len(held) - DIFF_HINT_MAX_FILES
+    return listed + (i18n.t("mcp.explain.occurrences_more", count=rest) if rest > 0 else "")
+
+
+def _diff_hint_reserve(ranges: list[tuple[int, int, str]]) -> int:
+    """#582: the most a chunk's diff hint can take, to leave it room in the chunk's budget."""
+    longest = sorted(ranges, key=lambda r: len(r[2]), reverse=True)[:DIFF_HINT_MAX_FILES]
+    return len(_diff_hint_files(longest)) + 200 if ranges else 0
 
 
 def _verified_lines(answer: str, question: str, content: str, truncated: bool = False) -> str:
@@ -8282,10 +8307,9 @@ def local_explain_code(
             held = [r for r in diff_ranges if r[0] <= high and r[1] >= low]
             if not held:
                 return ""
-            listed = ", ".join(f"{path} (líneas {first}–{last})" for first, last, path in held)
             return (
                 ". Ficheros del diff que hay en este fragmento, con sus líneas del parche "
-                f"(por programa, fiables): {listed}"
+                f"(por programa, fiables): {_diff_hint_files(held)}"
             )
 
         def _hints(piece: str) -> str:
@@ -8392,9 +8416,16 @@ def local_explain_code(
             line = i18n.t("mcp.explain.not_mentioned", items=", ".join(missing))
             return f"{answer.rstrip()}\n\n{line}"
 
-        pieces = (
-            _numbered_code_pieces(content, budget) if numbered else _code_pieces(content, budget)
-        )
+        if diff_ranges:
+            # #582: the diff hint travels with each chunk, so it comes out of the chunk's budget.
+            piece_budget = max(config.CHUNK_MIN_CHARS, budget - _diff_hint_reserve(diff_ranges))
+            pieces = _numbered_code_pieces(content, piece_budget)
+        else:
+            pieces = (
+                _numbered_code_pieces(content, budget)
+                if numbered
+                else _code_pieces(content, budget)
+            )
         if pieces is None:  # what `_chat_map_reduce` does without `pieces`, so the count is known
             pieces = _chunk_text(model_content, budget)
         # #504: an answer to a question is not an inventory; appending the registered names it
@@ -8407,14 +8438,23 @@ def local_explain_code(
             # #582: an answer to a question, or about a diff, built from chunks says so, feedback
             # on or off, right after the prose and before what the program adds (exact lines,
             # the diff's index). A plain explanation of a file keeps its output byte for byte
-            # (frozen by `test_without_a_question_the_prompts_are_unchanged`).
-            if question or diff_ranges:
+            # (frozen by `test_without_a_question_the_prompts_are_unchanged`). With the feedback
+            # on, the receipt already says the parts and passes, so the notice is left out.
+            if (question or diff_ranges) and not config.FEEDBACK_ENABLED:
                 answer = f"{answer.rstrip()}\n\n{chunked_notice}"
             if finish is not None:
                 answer = finish(answer, truncated)
             if diff_ranges:
+                # The whole index only when the question asks for files or lines; otherwise a
+                # short one that says how to get the rest.
+                whole = line_check.asks_for_files(question)
+                listing = _diff_index_lines(
+                    diff_ranges,
+                    limit=DIFF_INDEX_MAX_FILES if whole else DIFF_INDEX_SHORT_FILES,
+                    more_key="mcp.explain.occurrences_more" if whole else "mcp.explain.diff_more",
+                )
                 header = i18n.t("mcp.explain.diff_index", count=len(diff_ranges))
-                answer = f"{answer.rstrip()}\n\n{header}\n{_diff_index_lines(diff_ranges)}"
+                answer = f"{answer.rstrip()}\n\n{header}\n{listing}"
             return answer
 
         return _chat_map_reduce(
